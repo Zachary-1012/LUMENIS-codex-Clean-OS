@@ -1,5 +1,45 @@
 # AGENTS.md — 序境 / LUMENIS Production Execution Router
 
+## Latest direct PO correction — 2026-10-11: business outcomes, pervasive AI, browser-only scope
+
+LUMENIS remains the evidence-driven commerce operations and brand/market product.
+CTH and BMP are business domains. Shared content creation is independently usable:
+users may directly create a proposal/document, video or podcast from their own
+brief, writing or permitted assets. No CTH/BMP task, Subject/BrandFocus, case,
+Campaign or SourceBrief is a universal creation prerequisite. Continuing domain
+research into creation is an optional integration path. Keep workspace/project
+Permission, source-use checks for referenced assets, versions and recovery; user
+authorship is not Canonical external fact. The five delivery rounds are not a
+mandatory sequence that every user task must traverse.
+General computer/OS control is removed from the active product requirements and
+acceptance scope, not deferred and not accepted. Do not implement a desktop/OS
+executor, arbitrary installed-application control, or an Agent Zero GUI worker
+to close LUMENIS. Preserve their existing source, research, receipts and history;
+removal from scope is not authorization for unreviewed source deletion. The
+existing in-product controlled browser, collection, product media/file handling,
+developer tooling and SYSTEM runtime remain in scope.
+
+AI is a cross-product enhancement in SYSTEM, CTH, BMP and Shared, rather than a
+separate chat-only feature or work postponed entirely to round five. Every basic
+business path must remain useful without a model/API/GPU. Genuine AI-exclusive
+actions may be unavailable without blocking the supported normal task. AI output
+is derived content, never Canonical fact, Permission or an external-effect grant.
+
+Analysis and paper-derived mathematics belong in existing backend domain/Shared
+owners. Users express a business question, scope, time, objectives and relevant
+resources; they receive an analyzed report or usable deliverable with sources,
+limitations and next actions. Do not require users to select paper operations,
+enter arbitrary log weights, supply internal task IDs or assemble a report from
+developer diagnostics. Legitimate business constraints remain editable; method
+and assumptions remain inspectable without becoming the default workflow.
+
+Architecture defines the revised plan; Experience and CTH-10/BMP-04/SYS-06 define
+presentation and acceptance. This correction does not resume F, use VS Code,
+dispatch other windows, enable a model or authorize deployment. F remains paused
+under the latest direct PO order; M may correct these rules and continue the
+already-authorized backend/result-continuity work. Provenance:
+`00-GOVERNANCE/evidence/approvals/PO-20261011-BUSINESS-AI-BROWSER-SCOPE.json`.
+
 > Purpose: model-neutral routing, evidence, safety and completion rules for coding agents.
 > This file is not a second README, architecture book, handoff log, or proof of runtime state.
 
@@ -909,6 +949,10 @@ ACTIVE GATE / TICKET
 
 ## 4. Product ownership
 
+READMEs are stable Chinese/English guides. Keep dispatch, SHAs, progress and
+test/runtime observations in CURRENT/evidence. The Architecture user-work draft
+awaits PO review; publishing it accepts no implementation and resumes no frontend.
+
 ```text
 CTH             Subject-first Commerce Operations
 BMP             Brand / Market-first
@@ -1756,18 +1800,15 @@ not parallel Task Cards. Research/streaming/rule publication is not UI acceptanc
 Current dispatch/pause and M's 30-minute changed-outcome checks follow the top;
 without actionable work M waits.
 
-### Product-owned computer operation and internal browser — 2026-10-08
+### Product-owned internal browser — revised 2026-10-11
 
-The Product Owner requires LUMENIS itself to operate an authorized computer and
-provide an in-product controlled browser on Mobile, Desktop and Web Workspace.
-External opening is an explicit option, never the silent default or an automatic
-escape from an unimplemented internal path. Codex/CUA developer operation cannot
-prove this product capability. C2 owns Agent/tool planning; C6 owns the existing
-SYSTEM execution/session/API/runtime integration; C1 consumes its permitted
-collection path; F owns SYS-06 and task-preserving controls. General OS operation
-is a distinct required gap, not satisfied by browser-only automation. Implement
-within existing owners, never a second runtime, Permission or Evidence store.
-Architecture, Experience §11/§38, SYS-06 and the Real Delivery Overlay define the
-complete result and gates. Current source's read-only preview/loopback restriction
-is an implementation gap, not a scope reduction. No new paid host, unattended
-external write or protected-account access is approved by this requirement.
+Keep real browsing inside LUMENIS through the existing SYSTEM Browser Runtime:
+same authorized task/actor/session, actual page, navigation and supported page
+actions, exclusive human takeover, stop, task return and saved-result continuity.
+External opening is an explicit choice, never an automatic popup or substitute
+for an unfinished internal path. Manual browsing works without AI; an authorized
+Agent may enhance webpage work through the same Permission and effect contracts.
+General OS/computer operation and the Agent Zero desktop-worker milestone were
+withdrawn by the direct 2026-10-11 PO correction. Their 2026-10-08/09 evidence and
+source are historical, not current delivery obligations. Existing Collector,
+browser, file import/export and product media processing remain required.

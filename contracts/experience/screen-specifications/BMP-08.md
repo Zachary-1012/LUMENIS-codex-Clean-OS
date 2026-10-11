@@ -1,10 +1,22 @@
 # BMP-08 — 播客制作室
 
+## 2026-10-11 当前产品归属：Shared独立播客制作
+
+播客制作能力属于Shared/C4媒体与项目Owner，可以独立使用。用户直接新建节目、填写创作Brief/手写脚本、导入或录制获准音频，再编辑、试听、混音、保存版本、导出、重开与恢复；不需要先有品牌分析、CTH/BMP任务、BrandFocus或SourceBrief。AI增强脚本、转写及剪辑建议，缺模型不阻断正常人工制作。
+
+保留BMP-08既有屏幕ID/路由、历史BMP品牌场景和旧版本数据作为兼容入口；该标签不能把制作内核变成BMP独占。由BMP进入时保留真实品牌范围；从Shared独立创建时沿原制作项目/工作区权限接入，不自动补品牌或越权GLOBAL。跨入口的实际安全绑定仍需代码和运行证明，不由文档修改冒称完成。
+
+与视频使用现有 Shared 媒体编辑基础和项目版本体系，音频模式保留真实波形、剪切、混音、试听及节目导出；不新建另一套编辑器。切换模式不得删除原视频轨道、字幕叠加层或已保存内容。正常制作不要求额外 demo 勾选，真实素材权益和导出/发布权限继续核验。新增 REA 解析与原创适配按 Architecture 审核稿第11节接入，包内有限示例不证明完整播客体验已交付。
+
+下方品牌来源要求仅约束使用品牌业务资料的路径。采用既有研究/业务成果时保留引用、权益和版本；独立原创脚本及用户音频不以业务Evidence存在为前提。验收必须分别覆盖独立节目制作和可选品牌资料续接，保留全部既有音频质量、制作、保存、恢复和版本要求，F继续暂停。
+
 ```yaml
 screen_id: BMP-08
 status: OWNER_REVIEW
 revision: 2
 owner_domain: BMP
+owner_domain_role: compatibility screen and brand-business context, not exclusive production ownership
+production_capability_owner: Shared Capability / C4-W4
 binding_ids: [BACKEND-GAP-025]
 product_owner_approval: APPROVED_OVERALL_EXPERIENCE_CONSTITUTION_30_36
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
@@ -21,7 +33,7 @@ approval_reference: ROUND-13-BMP-CREATION-UI
 ## 1. User problem and product invariant
 
 - A brand operator needs to turn approved source material into a reviewable spoken episode while keeping script, source, audio version, publication and rights distinct.
-- BMP owns the brand content workflow; the existing podcast store is unfiltered and drops source references, so it cannot currently establish a brand-safe read.
+- BMP owns the brand-business context only; Shared/C4 owns podcast production, including independent creation. The retained brand-path finding is that the podcast store is unfiltered and drops source references, so that read cannot establish brand-safe access. This does not make brand scope a prerequisite for user-owned independent audio.
 - `BACKEND-GAP-025` blocks real source display. No audio, script or rights status is shown as verified until brand scope and source lineage are returned.
 - Scope modes are explicit: a globally scoped `GLOBAL_ALL` production set is valid only with global authorization and source lineage; `FOCUS` material must match the selected BrandFocus.
 
@@ -138,6 +150,13 @@ selected material/Evidence, constraints and upstream versions. Ask only for
 missing production inputs. A new manually imported project does not substitute
 for that cross-capability requirement or remove the older source binding gap.
 
+Independent podcast acceptance is a separate normal path: direct Shared entry ->
+user-authored creative intent/script and permitted imported or recorded audio ->
+edit/listen -> save/export -> close/reopen/revise/recover. No inherited business
+Brief, BrandFocus or research job is required. Workspace/project Permission and
+the actual audio/source rights remain mandatory. Keep the BMP-specific scope
+when continuing a brand task; do not infer it for independent creation.
+
 Required actual outcome: admitted files -> actual playback/listening -> actual
 waveform and stream/range/mix editing -> actual WAV export and listening -> saved
 version -> reopen -> meaningful revision and re-export -> return to the same
@@ -236,8 +255,11 @@ fresh owner check and isolate stale versions.
 
 ### Real podcast task acceptance
 
-Use an authorized real Brief and imported or user-recorded audio: open the same
-source/goal without re-entering or reselecting it -> listen to the actual audio
+Verify both independent creation and optional continuation. Use a user-authored
+creative Brief or an explicitly inherited business/research Brief with permitted
+imported or user-recorded audio. In continuation, retain the same source/goal
+without re-entering or reselecting it; in independent creation, impose no prior
+business task. Then listen to the actual audio
 -> inspect its real waveform -> edit/delete one selected passage and mix voice,
 music or effects -> adjust and verify audio quality -> enter or correct a
 transcript manually, with optional Gateway ASR only if actually available ->

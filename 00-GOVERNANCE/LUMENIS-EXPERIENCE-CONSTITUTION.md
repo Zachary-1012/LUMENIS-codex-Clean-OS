@@ -1,5 +1,21 @@
 # LUMENIS Experience Constitution — CURRENT
 
+## 2026-10-11 当前体验纠偏：业务成果、贯穿式 AI、浏览器边界
+
+CTH/BMP是业务领域；Shared内容制作提供独立入口。用户可直接新建文稿/提案、视频或播客，输入创作要求或导入获准素材并进行编辑，不先选商业主体/品牌、不先创建业务任务或来源简报。业务/研究成果进入制作属于可选续接路径；按用户选择带入资料与版本，不建立强制依赖。创作自己的Brief与项目由既有制作Owner管理，不能要求伪造业务上下文。
+
+默认交互围绕用户的业务目标与可用成果。采集清洗、统计、数学方法选择、业务分析及报告组织在后端完成，前端展示已分析的结果，并提供范围/时间/业务约束、筛选比较、直接编辑、保存修订、引用追溯和恢复操作。不要把内部工程流程、论文计算器或 Agent 参数表变成普通用户的工作前提。
+
+AI 在资料检索/理解、分析解释、研究、方案、创作与步骤辅助中上下文贯通；建议可检查、修改、拒绝，采用形成明确新版本。正常功能无模型仍可运行，AI 专属动作不可用应局部表达。不能把 AI 限成孤立聊天页，也不能让增强失败覆盖整个任务。
+
+**采集资料的视觉呈现**：使用序境既有二维手绘水彩/版画视觉和任务所需的卡片、列表、表格或时间线，展示实际标题/正文片段、真实代表封面、作者、平台/原帖、原生时间与采集时间、真实指标与缺失原因。来源类别同权；未取得字段显示“—”，真实零显示0。不得复制平台 Feed、伪造图片/热度，单封面不冒称媒体已读。原文、确定性派生、AI解释与人工判断分别可追溯。
+
+**报告的视觉与内容层级**：结论与业务问题 → 依据/比较/图表 → 不确定性与适用范围 → 可执行建议及继续动作；来源与方法可展开。不能只交样本统计、原文拼接或等待用户配置算法的空报告。部分成果标明缺口，保留已有编辑，不用增量更新覆盖用户改稿。
+
+通用电脑/OS控制从本产品撤回，§11与SYS-06只承担受控网页浏览、操作、接管、停止及任务返回。前端 F 仍暂停；本轮规格更正不证明已构建或接受任何页面。
+
+新增 REA 解析/原创适配成果按 Product Architecture 用户工作审核稿第11节采用：视频和播客复用现有 Shared 媒体编辑基础，根据项目选择视频/音频模式，保留各自的预览、质量与成品验收；文稿、表格和演示成果通过现有资料/成果入口编辑、保存和导出，采用已验证的格式能力，不以 DOCX-only 阻挡其他获准成果。普通制作不新增“这是demo”勾选关卡，真正的素材权益、权限、版本和发布审批仍须执行。切换模式不丢轨道、附件或人工改动。解析包不是完整厂商产品或已运行能力；当前只写入审核要求，前端保持暂停。
+
 > Status: **CANONICAL / SOLE EXPERIENCE DESIGN AUTHORITY**
 > Internal version: **3.2**
 > Effective: 2026-09-21
@@ -395,16 +411,20 @@ No fake thinking, fake progress, fake tool usage, fake confidence or fake succes
 
 ## 11. Internal browser / acquisition
 
-### 2026-10-08 approved task, computer and browser continuity
+### 2026-10-11 approved in-product browser and task continuity
 
-LUMENIS product code must perform the authorized computer/browser task without a
-Codex operator. Viewing, human takeover and Agent execution share the same task,
-actor, permitted device/session/target and source/version context. Browser control
-and general OS application control are separate capability claims. The latter
-must use a bounded executor inside the existing SYSTEM/Agent owners; a browser
-preview or CDP action is not proof of OS-wide operation. A phone may view/control
-the authorized execution computer; this does not imply arbitrary control of iOS
-or Android itself. Website remains explanation/demo only.
+The product provides a controlled browser within the originating business task.
+The latest direct PO removes general computer/OS and installed-application
+control from delivery; the browser remains. Source/import/export/media operations
+inside LUMENIS remain required. Preserve old OS/Agent Zero source and evidence as
+history, not a future acceptance debt or a completed capability.
+
+Manual browsing and authorized page actions work without a model. AI may assist
+web understanding and steps through the same task, actor, scope, session and
+Permission boundary. Page execution, secure action/state transport and the visible
+workspace viewport are separate responsibilities of existing owners. A static
+image, external popup or failed iframe does not satisfy an interactive browser.
+Website remains explanation/entry; Web Workspace is the first operable target.
 
 Mobile: return/close and task identity at the top, safe destination and real page
 viewport in the center, visible takeover/stop/current action, and a compact live
@@ -428,7 +448,7 @@ internal capability. No cookie, login or session state is copied to another app.
 Navigation history controls and Return-to-task have different meanings. Tabs and
 address editing are governed by actual existing supported actions, not inferred
 from the video. The reference video shows browser task/viewport/takeover/status;
-it does not prove the external option or full OS control.
+it does not prove the external option. General OS control was withdrawn on 2026-10-11.
 
 Agent control and human takeover have an exclusive server-owned control lease.
 Fresh target/frame/revision and coordinate transformation must be checked before
@@ -438,16 +458,16 @@ text entry, form submission and destructive/external writes are different effect
 and pass existing Permission → Firewall → Effect Fence → execution → verification
 and Evidence. Content is untrusted; no platform-challenge bypass, protected personal
 profile access, credential projection, hidden arbitrary shell/CDP or account-wide
-desktop access. Allow only task-authorized applications, files and device scope.
+desktop access. Allow only task-authorized browser sites, page actions and explicit product file transfers.
 No broad new account wall: remote/session security is implemented through existing
 owners, preserving permitted local access.
 
-Current baseline: SYS-06 is a source-implemented read-only preview; click/type/
-scroll, legitimate takeover, live action feed and secure non-loopback binding are
-not yet accepted. Generic OS executor was not found in the scoped current-source
-audit. These are required delivery gaps. F/C2/C6 close the normal product path;
-C1 reuses it for authorized acquisition. Detailed current source vs approved target
-and acceptance remain in SYS-06 and the Real Delivery Overlay.
+The dated source audit initially found a read-only preview and incomplete browser
+interaction/transport. Later bounded increments and current unaccepted browser
+requirements are recorded in SYS-06 and the Real Delivery Overlay; this paragraph
+does not freeze runtime status. General OS control was withdrawn on 2026-10-11
+and is no longer a delivery gap. Existing F/C2/C6 responsibilities apply to the
+retained browser path when dispatched; C1 reuses its authorized acquisition path.
 
 
 The internal browser is an Evidence/acquisition workspace, not a decorative browser demo.
@@ -540,6 +560,15 @@ Conclusion → context → drivers → Evidence → comparison/trend
 Interactive UI, export and report derive from the same truth and Evidence lineage.
 
 ## 16. Content & Creation
+
+Independent creation starts with the user's creative intent, handwritten content
+or permitted media -> editable Draft/Project -> preview/review -> saved version
+-> revise/reopen/recover and permitted export. It requires no CTH/BMP task,
+Subject/BrandFocus or pre-existing research report. Source/Evidence is required
+for factual claims and third-party material where applicable, not fabricated as
+a prerequisite to an original draft. The following chain is the optional path
+for continuing existing business/research context; publication and learning keep
+their separate approvals and are not required to finish an ordinary local work.
 
 ```text
 Brief → Context → Research/Evidence → Draft → Artifact
@@ -1030,9 +1059,9 @@ The 44 screen IDs and 54 binding records (`BACKEND-GAP-001..054`) define the sco
 | Analytics and decision support | Shared analytical capability with CTH/BMP-owned metric definitions | Cohort, compare, segment, trend, attribute, detect anomaly, explain change and export an auditable view | Shared computation keeps source domain, definition/version, scope, window, freshness, confidence and lineage; it cannot relabel a metric or combine incompatible scopes silently |
 | Business operations | CTH for commercial cases/actions; BMP for brand campaigns/marketing workflows | Convert a signal into an owned decision, accountable task, due date, status, approval and measurable follow-up | Each action is written by its source-domain owner; Shared provides orchestration/trace, not a replacement workflow truth |
 | Brand marketing and growth | BMP | Plan positioning, audience, campaign, creator/channel mix, content variants, launch calendar, budget/goal and evaluation | Proposed, approved, scheduled, published and measured are separate states; no simulated metric is presented as actual reach or ROI |
-| Media creation and propagation | Shared creation capability, with BMP or CTH owning business intent | Create/version assets, attach rights and provenance, adapt channel variants, route approval, prepare/publish through authorized adapters, capture delivery result and return to source campaign/subject | Asset lineage and source intent persist end-to-end; a queued/published adapter result is not proof of business impact |
+| Media creation and propagation | Independently usable Shared creation; BMP/CTH owns business intent only when its task is explicitly linked | Directly create/edit/version/export documents, video or podcasts; optionally adopt permitted research/domain assets and return to that linked task; publication retains separate authorization | Project/workspace rights and actual source lineage persist; no forced business task or invented Subject/BrandFocus; a queued/published adapter result is not proof of business impact |
 | Media platforms and connectors | SYSTEM integration adapters; product context remains CTH/BMP | Inspect existing Cookie/session connector health, quota, capability, schema mapping, sync status and recoverable errors; use the current authorized operational import/replacement path when recovery is needed | No new platform account/login flow is inferred; connector state is operational truth only; platform metrics retain source/time/definition and map into the originating product scope |
-| AI and Agent Groups | Shared capability operating within the caller's CTH/BMP context | Research, draft, explain, delegate or execute an explicitly permitted action with cited sources and reviewable trace | Model output is a proposal until independently grounded, authorized and, where needed, explicitly approved |
+| AI and Agent Groups | Existing shared enhancement within the actual calling CTH/BMP/Shared/SYSTEM task and permissions | Research, draft, explain or assist permitted product actions with relevant sources and reviewable trace; support independent creation without inventing a business context | Model output is derived content, not Canonical fact or authority; absent inference never blocks normal manual/deterministic work |
 | Evidence, evaluation, learning and reporting | Shared Capability | Preserve the evidence chain; evaluate source-backed outcomes; learn from reviewed feedback; produce reproducible reports/exports | Preserve `originDomain`, source IDs, actor, timestamp, policy/model/version and transformation lineage |
 | Runtime, security, collection and recovery | SYSTEM | Show health, collection/platform state, permissions, configuration, audit, backups and recovery actions | SYSTEM is infrastructure truth only; it must not acquire CTH/BMP business objects or metrics |
 

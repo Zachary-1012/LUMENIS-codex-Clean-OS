@@ -1,87 +1,79 @@
 # 序境 · LUMENIS
 
-**面向商业运营与品牌市场的证据驱动工作平台。**  
-An evidence-driven workspace for commerce operations and brand & market workflows.
+商业运营、品牌市场、独立研究与内容制作的一体化工作平台。
+An integrated workspace for commerce operations, brand and market work, independent research, and content production.
 
-## OpenAI Math v2：可用的有限数学情景与完整升级边界
+[产品蓝图 / Product blueprint](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) · [体验规范 / Experience](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md) · [开发规则 / Contributing rules](AGENTS.md)
 
-本次接入用户提供的 v2 源码，采用固定原文公式及精确有限语义，提供 16 个受控计算入口。现有 CTH 来源简报和 BMP 市场研究入口可声明问题、对象/权重或高级参数，经 Task/API 计算并保存数学成果，修订保留父版本，用原任务编号重新打开。没有 AI 仍可执行；声明情景与真实来源、市场发生率及 Canonical 事实严格区分。
+## 产品定位 / Product purpose
 
-[逐篇实现与验收记录](00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md)同时保留未完成的一般主算法、形式化证明与模型实验状态。有限枚举不是 FPRAS，二次势不是一般采样器，小型 Gibbs 参数训练不是 gpt-oss 模型能力。源码、实际加载版本、Artifact、UI 与模型收益各自核验，不凭文件/CI 宣布完整产品闭环。
+序境将真实资料、分析、业务判断和可编辑成果连接起来。CTH 与 BMP 是两个业务领域；共享能力中的研究、提案、视频和播客可以独立使用，也可以与业务工作联动。SYSTEM 提供共同的采集、浏览器、权限、数据、调度和恢复基础。
 
-> **Development status:** Active development. This repository is not evidence of a released, production-ready, or commercially validated product. Build success, green CI, available APIs, and stored artifacts do not establish end-to-end user acceptance.
+LUMENIS connects real materials, analysis, business decisions, and editable deliverables. CTH and BMP are business domains. Shared research, proposals, video, and podcasts can be used independently or connected to business work. SYSTEM provides acquisition, browsing, permissions, data, scheduling, and recovery.
 
-## Overview
+CTH 围绕商业主体工作，BMP 围绕品牌与市场工作，Shared Capability 提供独立、可复用的研究与制作能力。
+CTH is Subject-first, BMP is Brand/Market-first, and Shared Capability provides independent, reusable research and production.
 
-LUMENIS connects permitted source acquisition, traceable evidence, deterministic analysis, human decisions, versioned deliverables, and outcome evaluation in one product. AI is an **optional enhancement** to ordinary business workflows, not the authority for source facts or a prerequisite for core analytics.
+AI 贯穿适用的工作环节，辅助理解、分析、建议和创作；正常业务、确定性分析、人工编辑、保存与恢复不以模型、外部 AI API 或 GPU 为前提。原始事实、计算结果、AI 建议与人工决定分别保留出处。
 
-The product has four planned entry surfaces, sharing one Product Core:
+AI assists understanding, analysis, recommendations, and creation across applicable workflows. Ordinary business operations, deterministic analysis, manual editing, saving, and recovery do not require a model, external AI API, or GPU. Source facts, computed results, AI suggestions, and human decisions retain distinct provenance.
 
-| Surface | Role | Delivery priority |
-| --- | --- | --- |
-| Public Website | Product information and approved public entry points | First |
-| Web Workspace (Flutter) | Full business workflows | First |
-| Desktop (Windows / macOS) | Native workspace | Subsequent |
-| Mobile Companion (iOS) | Mobile review and continuation | Subsequent |
+## 用户如何工作 / User workflows
 
-Android and Linux native clients are not active delivery targets. Linux remains relevant for servers and CI. A target is **not** a claim of current availability.
+| 工作 / Work | 操作与成果 / Actions and outcomes |
+| --- | --- |
+| CTH · 商业运营 / Commerce operations | 围绕商业主体查看监测、事件、消费者反馈与风险，形成有依据的判断、行动和结果报告。 / Monitor a commercial subject, inspect events, consumer feedback and risks, and develop supported decisions, actions, and outcome reports. |
+| BMP · 品牌市场 / Brand and market | 研究品牌、市场、竞品、创作者和传播，制定及评价 Campaign。 / Research brands, markets, competitors, creators, and communications; plan and evaluate campaigns. |
+| 独立研究 / Independent research | 导入、查找、阅读、比较和引用资料，保存研究笔记、简报与报告。 / Import, find, read, compare, and cite materials; save research notes, briefs, and reports. |
+| 提案与文稿 / Proposals and documents | 从空白、创作要求或已有资料开始，编写、编辑、审阅和导出。 / Start from a blank document, creative brief, or existing material; write, edit, review, and export. |
+| 视频 / Video | 导入素材、编排与剪辑、调整声音和字幕、预览及渲染，保存成片与可编辑工程。 / Import and arrange media, edit clips, sound and captions, preview and render, and retain both the output and editable project. |
+| 播客 / Podcasts | 编写脚本、导入或录制音频、剪辑混音、管理章节与转写、试听及导出。 / Write scripts, import or record audio, edit and mix, manage chapters and transcripts, listen, and export. |
+| 内置浏览器 / In-product browser | 查看原帖和网页、进行获准操作，并返回原任务；人工接管必须明确发起。 / Inspect sources and webpages, perform permitted actions, and return to the original task; human takeover is explicit. |
 
-## Architecture
+独立研究与制作不要求先创建 CTH/BMP 任务、商业主体、品牌聚焦或业务研究报告。跨能力联动由用户选择，并传递所选来源、权限、约束和版本。产品内浏览器的范围为网页工作，不包含通用操作系统或任意桌面应用控制。
 
-**CTH · 商业运营** is Subject-first: place, events, risk and operating decisions.
-**BMP · 品牌市场** is Brand/Market-first: brands, creators, propagation and campaigns.
-The **Shared Capability** layer supplies evidence, research, creation and saved work;
-SYSTEM supplies their single runtime and permission boundaries.
+Independent research and production do not require a prior CTH/BMP task, commercial subject, brand focus, or business research report. Optional connections preserve the chosen sources, permissions, constraints, and versions. In-product browsing covers web work, not general operating-system or desktop-application control.
 
-```text
-Public Website / Web Workspace / Desktop / Mobile
-                       |
-                 Product Core
-                       |
-   +-------------------+-------------------+
-   |                   |                   |
- CTH                 BMP                Shared
- Commerce            Brand & Market     Evidence / Database
- Operations          Workflows          Research / Reporting
-                                        Content / Evaluation
-                                        Learning / Saved Work
-                       |
-                     SYSTEM
-   Runtime / Collector / Browser / Scheduler / Security
-            AI Gateway / Agent Runtime
-```
+## 数据与成果原则 / Data and deliverable principles
 
-A business task follows a **conditional** evidence and delivery chain:
+- **真实来源 / Real sources：** 六个主要社交平台与公开网页等来源按同一来源类别原则接入；具体质量、时效、身份和使用权分别判断。 / The six primary social platforms and public webpages follow equal source-category treatment; quality, freshness, identity, and usage rights are evaluated individually.
+- **清楚呈现 / Clear presentation：** 资料保留原文、封面、作者、链接、原生时间和真实指标；缺失显示“—”，不填假零值。 / Materials retain source content, covers, authors, links, native timestamps, and observed metrics. Missing values are shown as “—”, never fabricated zeros.
+- **结果优先 / Results first：** 用户提出工作问题和业务约束，后台处理适用分析，报告呈现结论、依据、限制及下一步。 / Users provide the question and practical constraints; backend analysis produces conclusions, evidence, limitations, and next actions.
+- **版本连续 / Version continuity：** 成果支持保存、局部修订、重开与恢复；旧版和修改原因保留。 / Work supports saving, local revision, reopening, and recovery, with prior versions and reasons retained.
+- **权限明确 / Explicit permissions：** 浏览、引用、制作、导出、发布及模型训练遵循各自适用的授权。 / Browsing, citation, production, export, publication, and training follow their respective permissions.
 
-```text
-Task purpose + actor + scope + permissions
-  -> permitted Source -> Evidence -> Canonical Data
-  -> deterministic functions and comparable metrics
-  -> CTH decision or BMP / Shared deliverable
-  -> human review -> versioned result -> reopen / revise / export
-  -> authorized action and independently observed outcome (when applicable)
-  -> Evaluation -> approved Learning (when applicable)
-```
+## 产品表面 / Product surfaces
 
-Read-only research does not require an external action or model training. External execution, publication, commercial effects, and model promotion require separate authorization and evidence. Unknown data must not be represented as zero; an internal status must not be represented as an external receipt.
+| 表面 / Surface | 用途 / Purpose |
+| --- | --- |
+| Public Website | 产品介绍、使用说明、帮助与工作区入口。 / Product information, guidance, help, and workspace entry. |
+| Web Workspace | 浏览器中的业务、研究与制作工作区。 / Browser-based business, research, and production workspace. |
+| Desktop · Windows / macOS | 原生桌面工作区。 / Native desktop workspace. |
+| Mobile Companion · iOS | 移动查阅、审阅与工作接续。 / Mobile reading, review, and work continuation. |
 
-## Project status and known limits
+各表面共用同一 Product Core、权限、资料和成果版本。语言与无障碍要求由体验规范定义。交付顺序归产品蓝图，README 不承担派工或验收记录。
 
-This README intentionally does **not** pin a supposedly live commit, service status, database count, model readiness, or completion percentage. Verify these against the actual revision and running environment.
+All surfaces share one Product Core, permissions, materials, and result versions. The Experience Constitution defines language and accessibility requirements. Delivery order belongs to the product blueprint; this README is not a dispatch or acceptance record.
 
-Areas requiring independent product-level verification include:
+## 工程结构 / Repository structure
 
-- End-to-end source identity, publication timestamps, scope, permissions, and data coverage across acquisition paths.
-- Backend response contracts versus Flutter screens; persistent actions, saved work, and reopening the same result.
-- Legacy report/export/task/artifact routes versus current actor, scope, provenance, and authorization boundaries.
-- Correct distinctions between observations, estimates, unknowns, internal actions, and externally confirmed outcomes.
-- Media rights, playable/editable video and podcast results, runtime recovery, and owned-AI task quality.
+| 路径 / Path | 职责 / Responsibility |
+| --- | --- |
+| [`app/`](app/) | Flutter Web、Windows/macOS 与 iOS 客户端。 / Flutter Web, Windows/macOS, and iOS clients. |
+| [`website/`](website/) | Astro 官网。 / Astro public website. |
+| [`lumenis/`](lumenis/) | 业务、共享能力和 SYSTEM 实现。 / Business, Shared, and SYSTEM implementation. |
+| [`contracts/`](contracts/) | 接口、体验与能力合同。 / Interface, experience, and capability contracts. |
+| [`scripts/`](scripts/) | 运行、维护、构建和验证工具。 / Runtime, maintenance, build, and verification tools. |
+| [`tests/`](tests/) | 工程回归与历史验证记录。 / Engineering regressions and retained verification records. |
+| [`00-GOVERNANCE/`](00-GOVERNANCE/) | 产品蓝图、Owner、体验、安全和验收要求。 / Product blueprint, ownership, experience, security, and acceptance requirements. |
 
-These are **audit and verification areas**, not a statement that every affected path is currently failing. Consult the current source and reproducible evidence before assigning severity or declaring a fix.
+CTH/BMP 负责各自业务规则；Shared 提供独立和复用能力；SYSTEM 提供共同运行边界。前端消费真实合同，不另建业务、数据或权限系统。
 
-## Repository guide
+CTH/BMP own their business rules, Shared provides independent and reusable capabilities, and SYSTEM supplies common runtime boundaries. Frontends consume these contracts without introducing parallel business, data, or permission systems.
 
-Contributor reading order (execution authority remains in AGENTS.md):
+## 本地开发 / Local development
+
+开发阅读顺序 / Contributor reading order:
 
 ```text
 AGENTS.md
@@ -89,65 +81,54 @@ AGENTS.md
 → 00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
-→ the current owner, source and acceptance evidence
+→ 对应能力合同与源码 / Relevant capability contracts and source
 ```
 
-| Path | Purpose |
-| --- | --- |
-| [`AGENTS.md`](AGENTS.md) | Sole execution router for coding agents and permitted changes |
-| [Product Architecture](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) | Product blueprint and delivery priorities |
-| [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md) | Component ownership, cross-chain requirements, J1–J8 / U01–U25 |
-| [Experience Constitution](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md) | UX and surface-specific rules |
-| [Real Delivery Overlay](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md) | Actual user-result acceptance requirements |
-| [Current handoff](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md) | Dated project observations; reverify before use |
-| [`app/`](app/) | Flutter workspace and client surfaces |
-| [`website/`](website/) | Public website (Astro) |
-| [`lumenis/`](lumenis/) | Shared product domains and system implementation |
+首先阅读 [`AGENTS.md`](AGENTS.md)、对应源码 Owner 和能力合同。所需 Python 依赖以仓库的 `requirements*.txt` 为准；Flutter/Dart 版本以 [`app/toolchain.json`](app/toolchain.json) 为准；官网使用 [`website/package.json`](website/package.json) 与锁文件。不要为阅读本说明而自动安装、升级或启动服务。
 
-**Authority:** The README is orientation, not an execution approval or an alternative to `AGENTS.md` and the named governance contracts. Historical reports and prior chat summaries are not current runtime evidence.
+Read [`AGENTS.md`](AGENTS.md), the relevant source owner, and capability contracts first. Use the repository's `requirements*.txt` for Python dependencies, [`app/toolchain.json`](app/toolchain.json) for Flutter/Dart, and [`website/package.json`](website/package.json) with its lockfile for the website. Reading this guide does not trigger installation, upgrades, or service startup.
 
-## Contribution workflow
-
-Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
-Repository: `Zachary-1012/LUMENIS-codex-Clean-OS`.
-Read the [AI-native Product Constitution](00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md) before the architecture and owner contracts.
-Create a scoped branch, verify the change with applicable isolated unit/integration and static/build checks, review a PR, then merge into main. Preserve unrelated local changes; never force-push main or automatically delete active branches. CI and real user acceptance remain separate.
-
-## Local development
-
-The documented Windows workspace is `D:\\LUMENIS_REBUILD\\序\\序境`. Do not assume this path exists on other machines.
-
-### Inspect the baseline (read-only)
+在仓库根目录核对本地修改和版本： / Inspect revisions and local changes from the repository root:
 
 ```powershell
+git rev-parse --show-toplevel
+git remote -v
+git branch --show-current
 git rev-parse HEAD
-git rev-parse origin/main
 git status --short
-git rev-list --left-right --count HEAD...origin/main
 ```
 
-To refresh remote tracking information, use `git fetch origin main` only when network access and repository permissions are available. Protect existing uncommitted work; do not use `reset --hard`, `clean -fd`, or broad staging to manufacture a clean state.
-
-### Start an authorized local runtime
+获准启动本机 Core 时使用既有入口；不要重复启动已在运行的实例： / When local Core startup is authorized, use the existing entry point without duplicating a running instance:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/start_production.ps1
 ```
 
-The documented Core health endpoint is `http://127.0.0.1:8201/healthz`; the workspace route is `/workspace`. Their availability and business correctness must be checked on the actual running build. The website and Flutter application have separate development instructions under [`website/`](website/) and [`app/`](app/).
+Core 健康检查路径为 `/healthz`，工作区路径为 `/workspace`。客户端与官网的构建配置见各自目录说明。采集、训练、部署及生产数据操作各自需要适用授权。
 
-**Do not start collectors, training, paid resources, deployment, or production migrations merely by following this README.** Those operations require their own current approval, source-use permissions, and owner procedures.
+Core exposes `/healthz` for health checks and `/workspace` for the workspace. Refer to each package's guide for client and website build configuration. Collection, training, deployment, and production-data operations require their applicable authorization.
 
-## Verification and contributions
+## 贡献与验证 / Contributing and verification
 
-Product changes must be evaluated against the **same task, actor, scope, sources, artifacts, and revision** across Source, Runtime, Database, CI, and User Outcome. A successful compilation or HTTP response is not acceptance. Preserve existing history, original materials, private credentials, sessions, and database backups.
+Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
+Coding agents must read the repository execution rules before making changes.
 
-Before proposing a change, read [`AGENTS.md`](AGENTS.md), identify the owning component and callers, verify the current baseline, and describe the user-visible result and rollback. No issue, pull request, or documentation change independently authorizes model training, external collection, deployment, or spending.
+源仓库 / Source repository: [`Zachary-1012/LUMENIS-codex-Clean-OS`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS).
 
-## License
+使用有界工作分支与经过审阅的 PR 合入 `main`。保留其他人的未提交修改，逐项暂存本次文件；不要强推、批量覆盖或删除历史证据。依变更范围进行适用的编译、静态、安全和隔离回归验证，并通过真实用户操作验证成果与恢复。
 
-The repository includes the [Apache License 2.0](LICENSE). Third-party dependencies, source materials, datasets, model weights, fonts, and media may have **separate licenses or usage restrictions**. The repository license does not grant rights to those external assets.
+Use scoped branches and reviewed pull requests into `main`. Preserve unrelated uncommitted work, stage exact paths, and avoid force pushes, broad overwrites, or deletion of historical evidence. Run applicable build, static, security, and isolated regression checks, and verify results and recovery through actual user operations.
 
----
+产品定义、实现和验收是不同记录。动态进度、提交与运行取证统一见 [CURRENT 接续记录](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md) 和 [真实交付要求](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)；不把快照复制到 README。
 
-**序境 / LUMENIS** · One product, one evidence chain, independently verifiable outcomes.
+Product definition, implementation, and acceptance are separate records. Dated progress, revision, and runtime observations belong in the [CURRENT handoff](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md) and [real delivery requirements](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md), rather than being copied into this README.
+
+## 安全与许可 / Security and license
+
+遵循 [安全边界](00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md)。凭据、Cookie、私人会话、生产数据库和受限原始材料不得提交到仓库或发送给未获准的服务。
+
+Follow the [security boundary](00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md). Do not commit credentials, cookies, private sessions, production databases, or restricted raw materials, or send them to unapproved services.
+
+仓库源码采用 [Apache License 2.0](LICENSE)。第三方软件、数据、模型、字体和媒体保留其各自许可与使用限制。
+
+Repository source is licensed under [Apache License 2.0](LICENSE). Third-party software, data, models, fonts, and media retain their own licenses and usage restrictions.

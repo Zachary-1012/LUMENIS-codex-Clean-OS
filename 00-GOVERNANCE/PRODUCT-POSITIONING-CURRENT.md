@@ -1,5 +1,13 @@
 # 序境 / LUMENIS — Current Product Positioning
 
+## 2026-10-11 最新 PO 定位校正
+
+序境是面向商业运营与品牌市场的证据驱动工作平台，保持 CTH/BMP/Shared/SYSTEM 与五轮架构。AI 在各领域增强理解、建议、生成和任务辅助，但普通业务无AI仍完成；第五轮是增强/模型/跨域终验收，不是AI首次进入产品。后端负责数据分析和数学方法，用户获得已分析报告与可操作成果，不承担论文算法配置。
+
+CTH/BMP是业务领域，Shared内容制作是独立可用的制作能力。用户可以直接创建和编辑提案/文稿、视频、播客，不必先完成业务分析或创建业务域任务；也可按需要采用业务/研究资料。共享表示统一复用能力，不表示依赖业务领域才能运行。
+
+通用电脑/OS、任意安装应用及远程桌面控制已撤出产品要求，不列后置欠项、不记完成。产品内受控浏览器、后台采集、正常文件/媒体处理、权限与保存恢复继续保留；历史源码和研究不删除。具体计划只归 Product Architecture，呈现只归 Experience；F当前暂停，Website/Web优先及原生Windows/macOS/iOS顺序不变。
+
 ## Product identity
 
 序境 / LUMENIS is one production product for commercial operations and brand-market intelligence. AI enhances its workflows; current Product Core, Runtime, Data, Permission and Evidence remain the owners of Production Truth.

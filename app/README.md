@@ -1,47 +1,79 @@
-# LUMENIS App
+# LUMENIS App｜序境应用
 
-This is the repository's **single canonical Flutter app target** for Web Workspace,
-Desktop and Mobile. Public Website is separately implemented under `website/`.
-The approved Product Architecture defines the complete outcome scope; historical
-Golden Pages and route counts are compatibility/evidence, not a product limit.
-Current implementation and acceptance state is read from CURRENT and exact source.
+This directory contains LUMENIS's Flutter application for the Web Workspace,
+Windows/macOS Desktop and iOS Mobile Companion. The public acquisition website
+is maintained separately in [`../website/`](../website/README.md).
 
-## Current direct-build and platform priority
+本目录是序境的 Flutter 应用，面向 Web Workspace、Windows/macOS 桌面端和
+iOS 移动伴侣。Public Website 独立维护在 [`../website/`](../website/README.md)。
 
-F builds Website/Web interactions directly from the existing Experience, screen specifications and real Core contracts; no separate design draft, Figma completion or M DESIGN_READY prerequisite. Keep source/design decisions and evidence in the existing screen record. First close Public Website and Web Workspace, then native Desktop Windows/macOS and native Mobile iOS only. Android/Linux native client delivery is superseded; preserve original source and historical checks. Linux CI/server, cross-OS browser use and narrow Web viewports remain separate. Real behavior, visual quality, rights/Permission, save/revise/reopen/recovery and current acceptance gates remain required.
+## Product and domain boundaries｜产品与领域边界
 
-## Retained implementation observations — not current acceptance
+LUMENIS is one product. The Flutter app presents existing Product Core
+capabilities; it does not own a second database, business-rule engine,
+Canonical Data, Evidence, Metric, Permission or runtime.
 
-- **Approved pre-beta boundary:** the LUMENIS product account is deferred until after internal beta and does not block App entry. Core's existing transport authentication remains separate from a product account. Media-platform Cookie/session/browser authorization is separate and remains in the existing SYSTEM collector path.
-- The launch surface reads the existing `GET /api/auth/config` transport configuration, then Product Core runtime identity. It does not call `/v4/auth/login` or load the account-scoped CTH Subject Registry at startup. The five Golden Pages call their existing `GET /api/experience/screen/<screen_id>` owner contracts. A returned Subject or a bound ViewModel does not establish actor-to-Subject authorization by itself.
-- The former login surface showed the four `ProductDomain` ownership definitions and Agent Groups as an information-only product map. Runtime context continues to come from Product Core identity; the removed login prompt did not choose the active domain.
-- The shell's neutral `启动身份已读取` label reports that the runtime identity request returned; it is not a continuous Core health check.
-- CTH-02 opens from CTH-01 as `浏览 CTH 主体登记目录`; it does not add a sixth top-level destination or change the active Subject/context. It requests metadata from the existing server-protected registry only when opened. A server denial is shown locally on CTH-02 and does not eject the user from the App. Subject → business unit → brand/format ownership remains `NOT_COLLECTED`; the full profile remains blocked until its owner, read permission and Evidence lineage are verified.
-- BMP BrandFocus is shown only when Core returns both `domain=zbmp` and `subject.product=ZBMP`; a CTH `brand_key` is not a BMP brand context. CTH remains Subject-first, BMP remains Brand/Market-first, Shared retains source-domain lineage, and SYSTEM remains infrastructure.
-- The five Golden Page slices use screen-specific mappings and compositions. Their presence does **not** mean the Experience contracts or full workflows are accepted. The repository defines 44 screen-specific UX blueprints and 54 truth-binding rows. The binding registry constrains data/API/actor/permission/Evidence truth; legacy `sectionTypes` do not prescribe layouts, and a generic renderer is prohibited.
-- Windows and Android Release compilation have been verified locally. The Windows packaged binary also passed a launch smoke with the expected window title and a responsive process; this does not establish authenticated Product Core or screen-workflow acceptance. Those Android build facts are historical, not an active target. Windows/macOS/iOS native acceptance follows Website/Web closure; Android/Linux native clients are no longer required.
+序境是一个产品。Flutter 应用负责呈现既有 Product Core 能力，不另建数据库、
+业务规则引擎、Canonical Data、Evidence、Metric、Permission 或 Runtime。
 
-Do not invent UI data, backend behavior, permission results or successful actions to make an unbound screen appear complete. Keep `UNKNOWN`, `NOT_AVAILABLE`, `NOT_COLLECTED`, `STALE`, `BLOCKED` and `ERROR` distinct. A contract or fixture is not proof of a working endpoint or feature.
+- **CTH** is Subject-first commerce operations. Preserve the authorized Subject,
+  business scope, source lineage and owner-provided results.
+- **BMP** is Brand/Market-first brand and market work. Preserve brand, market,
+  competitor, creator and campaign context; do not relabel a CTH page as BMP.
+- **Shared creation is independently usable.** Users may start research,
+  proposals, video or podcast work from the existing Shared entry points without
+  first creating a CTH/BMP task. Linking a Shared result to a business task is
+  optional and must retain the source domain and object context.
+- **Analysis is a backend capability.** Deterministic calculations and normal
+  business workflows must work without a model, external AI API, GPU or
+  inference service. AI may add explanations, suggestions or generation, but
+  it does not create Canonical facts or block the underlying task.
+- **Browser is in-product and controlled.** SYS-06 uses the existing SYSTEM
+  browser and permission contracts. The product scope is browser work, not
+  general operating-system or desktop control.
 
-## Product Core connection
+- **CTH** 是以 Subject 为中心的商业运营。保留已授权 Subject、业务范围、来源
+  关系和 Owner 提供的真实结果。
+- **BMP** 是以品牌/市场为中心的品牌与市场工作。保留品牌、市场、竞品、创作者
+  和 Campaign 上下文，不把 CTH 页面换名为 BMP。
+- **Shared 创作可独立使用。** 用户可从现有 Shared 入口直接开始研究、提案、
+  视频或播客工作，无须先创建 CTH/BMP 任务。把 Shared 成果关联到业务任务是
+  可选操作，并须保留原来源域与对象上下文。
+- **分析由后端能力驱动。** 确定性计算和正常业务流程必须在没有模型、外部 AI
+  API、GPU 或推理服务时可用。AI 可以补充解释、建议或生成，但不生产
+  Canonical 事实，也不阻断基础任务。
+- **浏览器在产品内受控运行。** SYS-06 使用现有 SYSTEM 浏览器与权限合同。产品
+  范围是浏览器工作，不包含通用操作系统或桌面控制。
 
-Default Core URL: `http://127.0.0.1:8201` on native clients; the current page's
-origin on Web Workspace. A browser installation must not silently send its
-requests to the visitor's localhost.
+## Product Core connection｜Product Core 连接
 
-Override for an authorized device/build:
+The default Core URL is `http://127.0.0.1:8201` for native clients. In the Web
+Workspace, the Core URL is the current page's origin; a browser build must not
+silently send requests to a visitor's localhost. An authorized device/build may
+override the URL with:
 
 ```text
 --dart-define=LUMENIS_CORE_BASE_URL=<authorized-core-url>
 ```
 
-`LUMENIS_CORE_BASE_URL` is the canonical define. Existing builds that still
-provide `LUMENIS_CORE_URL` remain compatible during migration; when both are
-present, `LUMENIS_CORE_BASE_URL` wins. Product Core requests do not follow HTTP
-redirects, so Subject/BrandFocus context headers cannot be forwarded to a
-different origin by a redirect response.
+`LUMENIS_CORE_BASE_URL` is canonical. `LUMENIS_CORE_URL` remains a migration
+alias, and the canonical value wins when both are present. Product Core requests
+do not follow redirects, preventing context headers from being forwarded to
+another origin.
 
-Product Core integration contracts:
+原生客户端默认连接 `http://127.0.0.1:8201`。Web Workspace 使用当前页面源站作为
+Core 地址；浏览器版本不得静默连接访问者自己的 localhost。经授权的设备或构建
+可使用以下参数指定地址：
+
+```text
+--dart-define=LUMENIS_CORE_BASE_URL=<authorized-core-url>
+```
+
+`LUMENIS_CORE_BASE_URL` 是规范参数。迁移兼容别名 `LUMENIS_CORE_URL` 仍可读取；
+两者同时存在时以规范参数为准。Product Core 请求不跟随重定向，避免上下文请求
+头被转发到其他源站。
+
+Existing integration contracts include:
 
 ```text
 GET /api/experience/runtime/identity
@@ -50,127 +82,185 @@ GET /api/settings/subjects?domain_id=CTH
 GET /api/auth/config
 ```
 
-### Core transport and product account boundary
+现有集成合同包括以上路由。Screen/ViewModel 数据必须经由其真实 Owner、
+Permission 和 Evidence 关系；合同存在不等于接口或用户流程已验收。
 
-- For a loopback Core on native platforms only, the App reads the existing Core Basic Auth header from `GET /api/auth/config` when Core authentication is enabled and keeps it in process memory. This is technical transport authentication, not a LUMENIS product account. If Core auth is disabled, the App sends no authorization header. Web builds never request or retain this reusable local credential.
-- The App never requests the reusable Basic header from a remote Core and never sends it to a non-loopback host. This avoids exposing the global Core credential through the unauthenticated configuration route. An authenticated remote Core requires its existing deployment-side transport path; the App does not replace that with a product-account prompt. Authenticated local requests do not follow redirects.
-- The pre-beta App does not call `/v4/auth/login` or `/v4/auth/logout`, persist product-account credentials, or block the workspace on product-account state. The account-backed CTH registry route remains the existing server Permission owner. CTH-02 presents a local denial state if that route refuses access; it does not substitute another registry endpoint or expose business data.
-- Registry access requires the server-side CTH `subject_registry/read` Permission. That Permission covers selection metadata only; it does not authorize business data for each Subject.
+### Transport authentication and account boundary｜传输认证与产品账户边界
 
-The App consumes LUMENIS Product Core. It must not create a second Evidence, Canonical Data, Metric, Permission, Runtime or business-truth owner. `GET /api/experience/subjects` is not used as a substitute for the protected CTH registry.
+- Native loopback clients may read the existing Core Basic Auth header from
+  `GET /api/auth/config` when Core transport authentication is enabled. The
+  header stays in process memory and is transport authentication, not a LUMENIS
+  product account.
+- Web builds never request or retain a reusable local Basic credential. The
+  App never requests that credential from a remote Core or sends it to a
+  non-loopback host. Authenticated remote Core transport belongs to the
+  existing deployment-side path.
+- Authenticated requests do not follow redirects. Do not forward Subject,
+  BrandFocus, actor or authorization context across origins.
+- CTH Subject selection metadata requires the existing server-side
+  `subject_registry/read` Permission. That permission does not grant access to
+  business data for every Subject.
 
-## Web Workspace build and host contract
+- 原生端连接 loopback Core 时，如启用了传输认证，可从
+  `GET /api/auth/config` 读取既有 Core Basic Auth 请求头。该请求头仅保存在进程
+  内存中，属于传输认证，不是序境产品账户。
+- Web 构建不得请求或保留可复用的本地 Basic 凭据。应用不得向远端 Core 请求该
+  凭据，也不得将其发送到非 loopback 主机。远端 Core 认证沿用现有部署侧传输路径。
+- 已认证请求不跟随重定向。不得跨源转发 Subject、BrandFocus、actor 或授权上下文。
+- CTH Subject 选择元数据须经过服务端既有 `subject_registry/read` Permission；
+  这项权限不等于取得任意 Subject 的业务数据权限。
 
-Build the same Flutter product target with
-`flutter build web --release --no-web-resources-cdn`. The source-owned bootstrap
-also resolves CanvasKit from the document base URL, so deep links use the bundled
-renderer without requiring access to Google's CDN. Deploy the complete
-`build/web/` directory, including `canvaskit/`; this does not make backend reads
-or AI execution available offline. The
-canonical Flask adapter in `lumenis/system/runtime/workspace_host.py` serves the
-generated artifact and rewrites extensionless `/workspace/*` document requests
-to `index.html`. Missing asset files remain 404; missing builds remain
-unavailable. This adapter does not own Product Core APIs or restore a legacy
-template frontend. No vendor-specific deployment is selected here.
+## Web Workspace build and hosting｜Web Workspace 构建与托管
 
-Verify the generated manifest, icon and font assets as well as `main.dart.js`.
-A source file under `app/web/` does not prove that the current build contains it.
-Same-origin routing, TLS, access control and complete user journeys still need
-deployment-specific acceptance.
+Build the same Flutter application target with:
 
-### Shared media workbench
+```powershell
+Set-Location app
+flutter build web --release --no-web-resources-cdn
+```
 
-The SH-01 workbench retrieves a saved content-project result through the existing
-Core/Artifact/Permission path. It never sends a platform source URL, Cookie or
-Core credential to a player. Windows uses `video_player` plus the bounded
-`video_player_win` adapter for authorized local MP4/WAV lease files. Web uses a
-browser media element for the same returned bytes. A codec or player error stays
-an explicit playback failure; the app does not download codecs or claim the
-source was played. A changed draft retains the earlier export as a distinct
-version and cannot control its media playhead. Full source-to-media user E2E,
-listening review and target-platform support remain acceptance work.
+The source-owned Flutter bootstrap resolves CanvasKit from the document base
+URL. Publish the complete `build/web/` output, including `canvaskit/`. This
+bundles the renderer; it does not make Core reads or AI execution available
+offline. The existing Flask adapter
+`lumenis/system/runtime/workspace_host.py` serves the build and rewrites
+extensionless `/workspace/*` document requests to `index.html`. Missing assets
+remain 404 and a missing build remains unavailable. This adapter does not own
+Product Core APIs or restore the retired template frontend.
 
-### Windows builds from the canonical Unicode checkout
+使用同一 Flutter 应用目标构建 Web：
 
-The local MSVC/Flutter toolchain can misinterpret the Unicode checkout path.
-Use an unused, checked `subst` drive pointing to the **same** canonical checkout
-when this occurs, and run the build from that drive's `app/` directory. This is
-a path alias, not another repository or production data directory. Never
-overwrite an existing drive mapping. CMake caches retain the build path, so
-re-establish the same checked mapping before the next incremental build.
-Build outputs remain under the canonical checkout's `app/build/` directory.
+```powershell
+Set-Location app
+flutter build web --release --no-web-resources-cdn
+```
 
-## Required development authority
+Flutter 源码维护的 bootstrap 从文档基础 URL 定位 CanvasKit。发布完整
+`build/web/`，包括 `canvaskit/`。这只把渲染器纳入构建，不代表 Core 读取或 AI
+执行可以离线使用。现有 Flask 适配器
+`lumenis/system/runtime/workspace_host.py` 提供构建产物服务，并将无扩展名的
+`/workspace/*` 文档请求重写到 `index.html`。缺失资源保持 404，缺少构建产物时
+明确不可用。该适配器不拥有 Product Core API，也不恢复已退役的模板前端。
 
-Follow `../00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` §§30–36 for app architecture, the current task-specific screen contracts, CTH/BMP/Shared/SYSTEM ownership, desktop/mobile composition, accessibility, motion and originality boundaries, ordered implementation and acceptance. That Constitution is the sole UI/UX and interaction authority. Do not create another visual design specification or copy historical web UI.
+Before accepting a Web build, inspect its generated manifest, icons, fonts,
+renderer and `main.dart.js`. Same-origin routing, TLS, access control and actual
+user workflows require their own environment-specific verification.
 
-The repository execution router is `../AGENTS.md`; the fixed lookup map is
-`../00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. C1-C6 retain all R01-R15
-acceptance dependencies and J/U outcomes. They do not impose fifteen serial
-development stages. Current user reference directions and Experience govern
-design; examples cannot remove capabilities or authorize copying a vendor UI.
+验收 Web 构建前，核对生成的 manifest、图标、字体、渲染器和 `main.dart.js`。
+同源路由、TLS、访问控制及真实用户流程需要在各自目标环境独立核验。
 
-The historical 44 route IDs preserve compatibility; they are neither a page quota nor a layout template. Compose the experience around the user job and current owner contracts. The product owner accepted this architecture and Experience Constitution §§30–36 on 2026-09-20; App implementation is now proceeding through reviewed screen specifications and source-backed vertical slices. That approval does not make a route, contract row or fixture proof of a working feature, and it does not permit generic screen templates.
+### Windows build path｜Windows 构建路径
 
-Bind each screen/action to its current source owner, API/ViewModel, Permission, Evidence lineage, real states and acceptance evidence before implementing it. Preserve these domain boundaries:
+If the local MSVC/Flutter toolchain cannot handle the Unicode checkout path,
+use an unused, verified `subst` drive mapped to this same checkout, then build
+from its `app/` directory. Do not overwrite an existing mapping or create a
+second repository/data directory. CMake caches retain their path; re-establish
+the same mapping for a later incremental build. Build output remains under the
+canonical checkout's `app/build/` directory.
 
-- **CTH:** authorized Subject first; changing context must not rewrite original data ownership or Evidence.
-- **BMP:** Brand/Market focus first, with market, competitor, creator and content relationships retained; it is not a relabeled CTH page.
-- **Shared Capability:** supports CTH and BMP while preserving its source domain and object context.
-- **SYSTEM:** permission-gated product infrastructure, not a third business domain.
+如果本机 MSVC/Flutter 工具链无法处理 Unicode 仓库路径，可使用一个未占用且核验
+过的 `subst` 驱动器映射到同一仓库，再从映射下的 `app/` 目录构建。不得覆盖已有
+映射，也不得创建第二份仓库或数据目录。CMake 缓存会保留构建路径，后续增量构建
+须重新建立同一映射。构建产物仍位于规范仓库的 `app/build/` 下。
 
-Complete the user workflow and real bindings assigned by the current owner,
-preserving all mapped capabilities. Each screen has its own hierarchy and
-interaction path. A historical five-page milestone is not a new prerequisite.
-Do not remove a capability before its behavior is preserved in its current owner.
+## Shared media playback｜Shared 媒体播放
 
-## Flutter implementation architecture and delivery standard
+The SH-01 workbench reads a saved content-project result through the existing
+Core, Artifact and Permission path. Players receive authorized returned media
+bytes; they must not receive a platform source URL, Cookie or Core credential.
+Windows playback uses `video_player` with the bounded `video_player_win`
+adapter for authorized local MP4/WAV lease files. Web playback uses a browser
+media element for the same returned bytes. Codec/player failures remain
+explicit; the App must not download codecs or claim media played when it did
+not. Editing creates a distinct version and does not alter the prior export or
+its playhead.
 
-This section governs the App code structure and engineering sequence. The Experience Constitution remains the sole authority for product interaction and screen composition.
+SH-01 工作台通过现有 Core、Artifact 和 Permission 路径读取已保存的内容工程结果。
+播放器只能接收已授权返回的媒体字节，不得接收平台原始 URL、Cookie 或 Core 凭据。
+Windows 使用 `video_player` 和受限的 `video_player_win` 适配器播放已授权的本地
+MP4/WAV 租约文件；Web 使用浏览器媒体元素播放相同返回字节。编解码器或播放器错误
+必须如实显示；应用不得下载编解码器，也不得在未播放时声称播放成功。编辑应生成
+独立版本，不改变旧导出或旧版本的播放头状态。
 
-- **Start from the shipped stack:** the current app is one Flutter codebase. `go_router` owns URL/deep-link presentation state and `http` supplies the browser-safe Core transport; neither may become a second Product Core, Permission, Evidence or workflow owner. Do not add a parallel framework or reorganize the bootstrap wholesale. Select another dependency only when an accepted vertical slice demonstrates the need and the target platforms are confirmed.
-- **Keep ownership visible:** group presentation code by the CTH/BMP capability that owns the task. Keep API DTOs and transport in data adapters, expose typed owner models to presentation, and put business orchestration in a use case only when it is non-trivial or reused. Promote code into `core` only when it has real stable use across owners. Views render; view models coordinate UI state; repositories/services call the existing Product Core contract. The App never becomes a second database, Evidence, Permission, Metric or business-truth owner.
-- **Route through canonical contracts:** every screen action resolves through the current API Owner Map and the binding registry. Keep authentication, domain scope, action permission, Evidence lineage, side effects, compatibility and error states explicit. A route or mock response is not proof of a working capability.
-- **Compose for available space, not device labels:** use Flutter layout constraints to decide when the task needs a desktop workspace, an intermediate split view, or a focused mobile flow. Do not shrink a PC page to phone width or switch only on “phone/tablet” hardware labels. Each reviewed screen specification must describe its own PC and mobile hierarchy, navigation, information density and return path. Preserve desktop keyboard/mouse behavior and mobile touch/focus behavior.
-- **Keep navigation deliberate:** canonical workspace URLs are `/workspace/CTH-01`, `/workspace/CTH-01/CTH-02`, `/workspace/BMP-01`, `/workspace/AI-01`, `/workspace/SH-01` and `/workspace/SYS-01`. `go_router` synchronizes those URLs with shell selection. Unknown routes fail safely, and browser entry to a Desktop-only capability shows a truthful Desktop-required state rather than emulating local execution.
-- **Use references within their limits:** [`motion-web`](https://github.com/Zachary-1012/motion-web) is research reading only. Its CC BY-NC 4.0 license bars commercial use of its Skill, prompts, cases and derivative workflows; do not bring its code, assets, cases, parameters, verification recipes or derivative workflows into LUMENIS. Define motion from LUMENIS state transitions and define acceptance from LUMENIS contracts and user tasks. For Korean product craft, the public [Toss Design System guide](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components) may be studied for documentation clarity and consistency practices, but its UI Kit materials are limited to the Apps in Toss service. Do not reuse its components, assets, visual patterns or screen layouts. For every external reference, record the named flow, source, abstract principle, LUMENIS workflow it informs and a distinct LUMENIS composition. Adapt the Product Owner-supplied references through the current Experience Constitution; do not impose one template across unrelated jobs.
+## Experience and implementation｜体验与实现
 
-### Ordered engineering gates
+The sole UI/UX authority is
+[`LUMENIS-EXPERIENCE-CONSTITUTION.md`](../00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md),
+with each screen's current contract under
+[`contracts/experience/screen-specifications/`](../contracts/experience/screen-specifications/).
+Keep each screen's task, hierarchy and interaction specific; shared components
+may share accessible behavior and tokens, not flatten different jobs into a
+generic template. Bind actions to their existing API/ViewModel, Permission,
+Evidence lineage, honest states and recovery behavior. Never invent data or
+successful actions to make a screen look complete.
 
-1. **Plan lock:** the product owner accepted this architecture and §§30–36 on 2026-09-20. Continue implementation without requesting overall-plan approval again; this approval is not per-screen acceptance.
-2. **Capability and owner mapping:** for the chosen workflow, reconcile existing behavior against its canonical module, route, fields, actor, scope, permission, Evidence, effects and regression tests. Record unresolved source claims as blocked; do not infer equivalence from filenames or a ViewModel.
-3. **Screen specification alongside implementation:** reuse the existing screen record; capture actual owner/callable, entry/return, information priority, state matrix, accessibility, effects and executable acceptance while directly constructing the current Web workflow. Separate design artifacts/M design approval are not coding prerequisites; native Windows/macOS/iOS layouts follow Website/Web closure.
-4. **Vertical slice:** implement one end-to-end workflow in its owning feature, reusing stable shared primitives only. Keep CTH Subject-first, BMP Brand/Market-first, Shared cross-domain, and SYSTEM infrastructure boundaries.
-5. **Acceptance before expansion:** verify current Website/Web source/auth (allowed, denied, missing, stale/error), actual API/results, ViewModel/repository, representative wide/narrow browser layouts, applicable keyboard/mouse/touch, accessibility, Evidence and recovery. Native Windows/macOS/iOS acceptance is deferred until Website/Web closure, not marked PASS. Review real running flows before acceptance.
-6. **Release gate:** only supported platforms with a real build and runtime acceptance may be listed as supported. Keep failed, skipped and unrun checks distinct in the release evidence.
+唯一 UI/UX 权威是
+[`LUMENIS-EXPERIENCE-CONSTITUTION.md`](../00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)，
+各屏当前合同位于
+[`contracts/experience/screen-specifications/`](../contracts/experience/screen-specifications/)。
+每个屏幕保留自己的任务、层级和交互路径；共享组件可以复用无障碍行为和设计变量，
+不能把不同任务压平成通用模板。每项操作都须绑定既有 API/ViewModel、Permission、
+Evidence 来源关系、真实状态和恢复行为。不得为使界面显得完整而虚构数据或成功操作。
 
-This is an implementation and acceptance path, not a completed-product claim.
-Preserve all fifteen mapped acceptance requirements; execution and pause state
-come only from AGENTS. Historical screen counts do not constrain reconstruction.
+Keep these data states distinct: `UNKNOWN`, `NOT_AVAILABLE`, `NOT_COLLECTED`,
+`STALE`, `BLOCKED` and `ERROR`. Missing values are not zero, and a route,
+fixture, build or HTTP response is not proof of a working user task.
 
-## Workspace asset updates
+保持以下数据状态彼此区分：`UNKNOWN`、`NOT_AVAILABLE`、`NOT_COLLECTED`、
+`STALE`、`BLOCKED` 和 `ERROR`。缺失值不等于零；路由、fixture、构建或 HTTP
+响应都不能单独证明用户任务正常工作。
 
-The source-owned `web/flutter_bootstrap.js` uses the installed Flutter loader
-without registering its deprecated generated service worker. Retain the SDK's
-generated legacy-worker cleanup stub at the same deployed path for existing
-clients. Do not clear unrelated browser storage or origin registrations.
-The canonical Workspace host must revalidate non-hashed bootstrap/runtime files;
-immutable caching is appropriate only for content-hashed assets. This frontend
-commit alone does not publish the separately owned Flask Workspace host binding.
+The app uses Flutter's shipped stack: `go_router` for URL/deep-link presentation
+state and `http` for browser-safe Core transport. Do not add a parallel
+framework or move business rules into widgets, controllers or local storage.
+The version authority for the Flutter/Dart toolchain is `toolchain.json`.
 
-Current frontend evidence, including typography, local appearance, Web and
-Windows builds and remaining platform/business gates, is in
-[`ROUND-08-REFERENCE-ADAPTATION-2026-09-24.md`](../00-GOVERNANCE/evidence/round-08/ROUND-08-REFERENCE-ADAPTATION-2026-09-24.md).
+应用使用现有 Flutter 技术栈：`go_router` 管理 URL/深链接呈现状态，`http` 提供
+适用于浏览器的 Core 传输。不得引入平行框架，也不得把业务规则转移到 Widget、
+Controller 或本地存储。Flutter/Dart 工具链版本以 `toolchain.json` 为准。
 
-## Current toolchain authority and historical development checks
+## Development commands｜开发命令
 
-- Toolchain machine authority: `app/toolchain.json` pins Flutter 3.47.5 (`6a19cca56475dbfba1478ee68d7bd0c2ef891da1`) and Dart 3.13.4; App Gate reads and verifies this same file. The historical Android API 36 / Build Tools 36 / JDK 21 prerequisites are not current client delivery requirements.
-- `flutter analyze`: passed with no issues.
-- `flutter test --no-pub`: 75 tests passed, including 1440 px / 390 px Shell and screen-layout coverage.
-- `py -3.13 -m pytest tests/test_experience_runtime.py tests/test_subject_registry.py tests/test_shared_database_migrations.py`: 48 passed; no background-thread leaks. The cookie-route test isolates the unrelated app-startup migration from its file/identity assertions.
-- Backend capability/permission regressions across BMP truth isolation, AI intent, App permission integration, Shared skills, RuntimeGuardian, login and dual-domain gates: 298 passed; no background-thread leaks.
-- `flutter build windows --release --no-pub`: succeeded; `build/windows/x64/runner/Release/lumenis_app.exe` launched locally with title `序境 - LUMENIS` and `Responding=True`.
-- `flutter build apk --release`: succeeded; `build/app/outputs/flutter-apk/app-release.apk`, 50,150,362 bytes, SHA-256 `F33E1F471343A0625EC3126FF40B78D895608997E880768DD821E8E22B0E6317`.
-- These results prove analysis, tests, compilation and the stated Windows launch smoke only. The APK currently uses the Flutter scaffold's debug signing key. Live authenticated Product Core acceptance, Windows screen-workflow E2E, required Windows/macOS/iOS native runtime/build/signing remain later checks after Website/Web closure. Historical Android/Linux native acceptance is no longer a delivery requirement.
+From the repository root, run Flutter commands in `app/`. These commands provide engineering checks;
+they do not substitute for the real Core-backed user operation, persistence,
+revision, reopen and recovery required by the applicable delivery contract.
 
-Run Flutter checks from `app/`; run the focused Python suite from the repository root. Keep each failed, skipped and unrun release check distinct. Never report a build as a screen acceptance or platform release.
+从仓库根目录运行以下 Flutter 命令。它们用于工程检查，不能替代适用交付合同要求
+的真实 Core 用户操作、持久化、修订、重开和恢复验收。
+
+```powershell
+Set-Location app
+flutter pub get
+flutter analyze
+flutter test --no-pub
+flutter build web --release --no-web-resources-cdn
+```
+
+For native targets, use the platform's supported Flutter toolchain. Native
+Desktop targets are Windows and macOS; the native Mobile target is iOS. Browser
+access remains available independently of the host operating system.
+
+原生目标须使用对应平台受支持的 Flutter 工具链。原生桌面目标为 Windows 和
+macOS，原生移动目标为 iOS。浏览器访问不受客户端操作系统范围影响。
+
+## External references and license boundaries｜外部参考与许可边界
+
+- [`motion-web`](https://github.com/Zachary-1012/motion-web) is reading-only
+  research. Its CC BY-NC 4.0 license bars commercial use of its Skill, prompts,
+  cases and derivative workflows. Do not bring its code, assets, cases,
+  parameters, verification recipes or derivative workflows into LUMENIS.
+- The public [Toss Design System guide](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components)
+  may inform documentation clarity and consistency only. Its UI Kit materials
+  are limited to the Apps in Toss service. Do not reuse its components, assets,
+  visual patterns or screen layouts.
+- Record each permitted reference's source, abstract principle and the distinct
+  LUMENIS task/composition it informs. Third-party licenses remain theirs.
+
+- [`motion-web`](https://github.com/Zachary-1012/motion-web) 仅供阅读研究。其
+  CC BY-NC 4.0 许可禁止将 Skill、提示词、案例及衍生工作流用于商业用途。不得把其
+  代码、素材、案例、参数、验证方案或衍生工作流带入序境。
+- 公开的 [Toss Design System 指南](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components)
+  仅可用于参考文档清晰度和一致性实践。其 UI Kit 材料仅限 Apps in Toss 服务使用；
+  不得复用其组件、素材、视觉模式或屏幕布局。
+- 对允许参考的材料，记录来源、抽象原则和受其启发的序境独立任务/构图。第三方
+  许可证仍归其权利人所有。
