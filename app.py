@@ -1817,7 +1817,13 @@ def _pg_resolve_operation_type(path, method):
     if method == 'POST' and re.fullmatch(r'/api/experience/saved-work/art-[0-9a-f]{16}/revise', p):
         return OperationType.DATA_EXPORT
     if method == 'POST' and re.fullmatch(
-        r'/api/experience/business-works(?:/work-[0-9a-f]{64}/(?:choose|cancel|interrupt|resume|action|outcome|outcome_unknown))?', p,
+        r'/api/experience/business-works/work-[0-9a-f]{64}/(?:save-request|save)', p,
+    ):
+        # Business work delegates immutable persistence to Shared SavedWork,
+        # which independently checks the exact DATA_EXPORT resource approval.
+        return OperationType.DATA_EXPORT
+    if method == 'POST' and re.fullmatch(
+        r'/api/experience/business-works(?:/work-[0-9a-f]{64}/(?:choose|adopt|cancel|interrupt|resume|action|outcome|outcome_unknown))?', p,
     ):
         # Domain records only; the service separately binds current actor,
         # exact scope, report revision and any actual creation-owner receipt.

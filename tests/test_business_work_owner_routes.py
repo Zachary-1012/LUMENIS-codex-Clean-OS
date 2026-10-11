@@ -177,3 +177,25 @@ def test_authenticated_actor_consumes_actual_owner_identity_layout(owners, monke
         con.commit()
     denied = ws["api"].get(BUSINESS + "/" + current["work_id"], headers=ws["headers"])
     assert denied.status_code in {401, 403}, denied.get_json()
+
+
+def test_business_work_http_permission_mapping_keeps_shared_save_at_data_export():
+    """Compile only the production resolver; no app startup or live services."""
+    import ast
+    import re
+    from pathlib import Path
+    from flask import request
+    from lumenis.system.security.permission import OperationType
+
+    tree = ast.parse(Path("app.py").read_text(encoding="utf-8-sig"))
+    node = next(item for item in tree.body if isinstance(item, ast.FunctionDef)
+                and item.name == "_pg_resolve_operation_type")
+    resolver = {}
+    exec(compile(ast.Module(body=[node], type_ignores=[]), "app.py", "exec"),
+         {"re": re, "request": request, "OperationType": OperationType}, resolver)
+    resolve = resolver["_pg_resolve_operation_type"]
+
+    work_id = "work-" + "a" * 64
+    assert resolve(f"{BUSINESS}/{work_id}/save-request", "POST") == OperationType.DATA_EXPORT
+    assert resolve(f"{BUSINESS}/{work_id}/save", "POST") == OperationType.DATA_EXPORT
+    assert resolve(f"{BUSINESS}/{work_id}/adopt", "POST") == OperationType.REPORT_REVIEW

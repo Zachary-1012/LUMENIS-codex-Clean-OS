@@ -23,7 +23,7 @@ PR Product Gate 的十个 XHS 回归失败已复现为测试装载器与现行�
 > 随后直接 PO 另授权一个 Luna/max 智能体处理 SYSTEM 自动采集弹窗 P0。该缺陷沿既有 Browser/Collector Owner、受控进程和唯一维护计划任务修复；不恢复其他研发窗口。它与本次六文件治理提交分开验收及发布，未验证的源码/运行/采集结果不得提前标为完成。
 > 历史 AI 非依赖/暂停审批 `evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json` 和串行/F审批保持原件，不删除或改写；其中仍有效的权益、安全、费用及无AI基础能力要求保留。
 
-> Direct-build/native-target correction: F builds real frontend immediately from existing contracts without separate design drafts/Figma or M DESIGN_READY coding prerequisite. Later native Desktop targets Windows/macOS only; Mobile targets iOS only. Android/Linux native client delivery requirements are superseded, with existing source/history preserved. Linux server/CI and browser access are separate.
+> Direct-build/native-target correction: when explicitly dispatched, F builds the existing frontend directly from current contracts without separate design drafts/Figma or M DESIGN_READY coding prerequisites. The latest 2026-10-11 PO instruction keeps F paused; reviewing and integrating already-existing frontend work does not resume it. Later native Desktop targets Windows/macOS only; Mobile targets iOS only. Android/Linux native client delivery requirements are superseded, with existing source/history preserved. Linux server/CI and browser access are separate.
 > Latest surface priority, 2026-10-08: close Public Website and Web Workspace first; defer dedicated Desktop/Mobile design, implementation, packaging and device acceptance until those two surfaces close. Preserve all four-surface requirements and existing work. Web-required Core/SYSTEM dependencies remain in scope. This changes order, not actual capability/acceptance or deployment/cost authority. Approval: `evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`.
 > 工程责任：M 总控/集成审查，F 前端/Experience，C1–C6 按原 Source Owner Index 保留源码边界。仅实际 PO 派工和新鲜证据可记录执行状态；历史 D01–D49 不与 R01–R15 混同。
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
@@ -312,7 +312,26 @@ not a new runtime or a claim of implementation. Evidence:
 
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 
-Latest bounded source delta — SYSTEM browser-popup P0, 2026-10-09:
+Current bounded publication — 2026-10-11, PR #11: preserve the existing
+Collector/Shared/Math/Flutter candidates and their history; repair the XHS
+regression harness and current rule conflicts; connect the existing CTH/BMP
+BusinessDecisionWorkflow adoption, revision readback and Shared save operations
+through their normal HTTP entry and existing permission owners. No frontend
+implementation is added by this repair. The existing Flutter candidate's 231
+isolated widget/unit regressions and XHS's 49 regressions pass at unchanged
+relevant source pins. These counts establish no product closure.
+
+The publication marker records this source batch, not runtime or whole-product
+acceptance. PR head, merged main, exact-SHA CI and actual runtime load must be
+read independently; until the controlled merge/readback succeeds the batch is
+not part of main. The 2026-10-11 real CTH operation already saved and independently
+reopened a 30-source brief and deterministic sample statistics with AI not
+requested. Its initial UI read failure recovered through the saved identifier;
+the page then displayed the persisted statistics. CTH/BMP final deliverables,
+revision/recovery and same-version runtime acceptance remain open until their
+actual operation receipts exist. No historical failure is relabelled PASS.
+
+Historical bounded source delta — SYSTEM browser-popup P0, 2026-10-09:
 existing automatic Browser/Collector/resident paths are explicitly headless;
 reuse/recovery requires the same registered profile, port, kernel, loopback
 listener PID and mode. Automatic work cannot switch to visible login or focus.
