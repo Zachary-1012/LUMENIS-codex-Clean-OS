@@ -3,6 +3,12 @@
 **面向商业运营与品牌市场的证据驱动工作平台。**  
 An evidence-driven workspace for commerce operations and brand & market workflows.
 
+## OpenAI Math v2：可用的有限数学情景与完整升级边界
+
+本次接入用户提供的 v2 源码，采用固定原文公式及精确有限语义，提供 16 个受控计算入口。现有 CTH 来源简报和 BMP 市场研究入口可声明问题、对象/权重或高级参数，经 Task/API 计算并保存数学成果，修订保留父版本，用原任务编号重新打开。没有 AI 仍可执行；声明情景与真实来源、市场发生率及 Canonical 事实严格区分。
+
+[逐篇实现与验收记录](00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md)同时保留未完成的一般主算法、形式化证明与模型实验状态。有限枚举不是 FPRAS，二次势不是一般采样器，小型 Gibbs 参数训练不是 gpt-oss 模型能力。源码、实际加载版本、Artifact、UI 与模型收益各自核验，不凭文件/CI 宣布完整产品闭环。
+
 > **Development status:** Active development. This repository is not evidence of a released, production-ready, or commercially validated product. Build success, green CI, available APIs, and stored artifacts do not establish end-to-end user acceptance.
 
 ## Overview

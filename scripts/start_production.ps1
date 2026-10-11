@@ -54,13 +54,34 @@ if ($LASTEXITCODE -ne 0) {
 Write-Output "Deps:   $check"
 Write-Output ''
 
-function Test-Http([string]$Url, [int]$TimeoutSec=3) {
+function Test-Http([string]$Url, [int]$TimeoutSec=3, [string]$ExpectedLaunchId='', [string]$ExpectedEntrySha256='') {
     try {
         $health = Invoke-RestMethod $Url -TimeoutSec $TimeoutSec
-        return ($health.ok -eq $true -and
-                $health.status -eq 'healthy' -and
-                $health.dependencies.database -eq 'ok')
+        if (-not ($health.ok -eq $true -and
+                  $health.status -eq 'healthy' -and
+                  $health.dependencies.database -eq 'ok')) { return $false }
+        if ($ExpectedLaunchId -and $health.core_instance.launch_id -cne $ExpectedLaunchId) { return $false }
+        if ($ExpectedEntrySha256 -and $health.core_instance.entry_sha256 -cne $ExpectedEntrySha256) { return $false }
+        if (($ExpectedLaunchId -or $ExpectedEntrySha256) -and
+            $health.core_instance.boot_id -cnotmatch '^[0-9a-f]{32}$') { return $false }
+        return $true
     } catch { return $false }
+}
+function Get-CoreStartupDecision([bool]$Healthy, [bool]$EntryMatches, [int]$SupervisorCount) {
+    if (-not $Healthy) { return 'CONVERGE_OWNED_STALE_PROCESS' }
+    if (-not $EntryMatches) { return 'BLOCKED_SOURCE_IDENTITY' }
+    if ($SupervisorCount -ne 1) { return 'BLOCKED_PROCESS_OWNERSHIP' }
+    return 'REUSE_MATCHING_CORE_ENTRY'
+}
+function Test-CorePortListening {
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $attempt = $client.BeginConnect('127.0.0.1', 8201, $null, $null)
+        if (-not $attempt.AsyncWaitHandle.WaitOne(1000)) { return $false }
+        $client.EndConnect($attempt)
+        return $true
+    } catch { return $false }
+    finally { $client.Dispose() }
 }
 function Test-ProcExists([string]$CmdPattern) {
     $hit = Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='msedge.exe'" |
@@ -82,9 +103,9 @@ function Get-CanonicalSupervisor {
     $ids = @($hits | ForEach-Object { [int]$_.ProcessId })
     @($hits | Where-Object { -not ($ids -contains [int]$_.ParentProcessId) })
 }
-function Wait-Healthz([string]$Url, [int]$Seconds=15) {
+function Wait-Healthz([string]$Url, [int]$Seconds=15, [string]$ExpectedLaunchId='', [string]$ExpectedEntrySha256='') {
     for ($i=0; $i -lt $Seconds; $i++) {
-        if (Test-Http $Url -TimeoutSec 2) { return $true }
+        if (Test-Http $Url -TimeoutSec 2 -ExpectedLaunchId $ExpectedLaunchId -ExpectedEntrySha256 $ExpectedEntrySha256) { return $true }
         Start-Sleep -Milliseconds 1000
     }
     return $false
@@ -96,9 +117,15 @@ function Wait-Healthz([string]$Url, [int]$Seconds=15) {
 # and app.py -> app.py competing for 8201. Now unhealthy always means: kill stale 8201 python, drop
 # stale lock, then start exactly ONE supervisor (whose own lock is atomic-create).
 $httpOk = Test-Http 'http://127.0.0.1:8201/healthz'
+$entrySha256 = (Get-FileHash -LiteralPath (Join-Path $Root 'app.py') -Algorithm SHA256).Hash.ToLowerInvariant()
+$entryMatches = $httpOk -and (Test-Http 'http://127.0.0.1:8201/healthz' -ExpectedEntrySha256 $entrySha256)
 $supervisors = @(Get-CanonicalSupervisor)
-if ($httpOk -and $supervisors.Count -eq 1) {
-    Write-Output '[LUMENIS-8201] healthy with exactly one canonical supervisor, skip'
+$startupDecision = Get-CoreStartupDecision $httpOk $entryMatches $supervisors.Count
+if ($startupDecision -like 'BLOCKED_*') {
+    throw "Core startup $startupDecision; the running service was preserved. A controlled load requires verified ownership and quiescence."
+}
+if ($startupDecision -eq 'REUSE_MATCHING_CORE_ENTRY') {
+    Write-Output '[LUMENIS-8201] healthy with matching Core entry bytes and one canonical supervisor, skip'
 } else {
     if ($httpOk -and $supervisors.Count -eq 0) {
         Write-Output '[LUMENIS-8201] healthy but supervisor missing; converging orphan app tree'
@@ -121,18 +148,21 @@ if ($httpOk -and $supervisors.Count -eq 1) {
         Write-Output ("[LUMENIS-8201] cleaning exact stale tree roots: " + (($treeRoots | ForEach-Object { $_.ProcessId }) -join ','))
         foreach ($rootProc in $treeRoots) {
             & taskkill.exe /PID $rootProc.ProcessId /T /F 2>$null | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Owned stale process cleanup was not confirmed; replacement was not started.' }
         }
         Start-Sleep -Seconds 3
     }
+    if (Test-CorePortListening) { throw '8201 is still owned by a listener; replacement was not started and the supervisor lock was preserved.' }
     Remove-Item (Join-Path $Root 'data\supervisor_8201.lock') -Force -ErrorAction SilentlyContinue
     $supOut = Join-Path $LogDir 'supervisor_console.log'
     $supErr = Join-Path $LogDir 'supervisor_console.err'
-    Start-Process -FilePath $Py -ArgumentList @('run_supervised.py','--host','0.0.0.0','--port','8201') -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $supOut -RedirectStandardError $supErr
+    $launchId = [guid]::NewGuid().ToString('N')
+    Start-Process -FilePath $Py -ArgumentList @('run_supervised.py','--host','0.0.0.0','--port','8201','--launch-id',$launchId) -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $supOut -RedirectStandardError $supErr
     Write-Output '[LUMENIS-8201] starting single supervisor (run_supervised.py --port 8201)'
     Write-Output '[LUMENIS-8201] waiting healthz (max 15s)...'
-    $up = Wait-Healthz 'http://127.0.0.1:8201/healthz' 15
+    $up = Wait-Healthz 'http://127.0.0.1:8201/healthz' 15 -ExpectedLaunchId $launchId -ExpectedEntrySha256 $entrySha256
     if ($up) {
-        Write-Output '[LUMENIS-8201] OK http://127.0.0.1:8201/healthz returned 200'
+        Write-Output '[LUMENIS-8201] OK healthy database and fresh launch match the requested Core entry bytes'
     } else {
         Write-Error '8201 did not pass 15s health check.'
         Write-Error "  stdout: $supOut"

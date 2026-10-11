@@ -7,12 +7,12 @@
 """
 from __future__ import annotations
 
+import sqlite3
 from contextlib import contextmanager
+from datetime import datetime
 import os
 from pathlib import Path
 import re
-import sqlite3
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from lumenis.shared.database import DatabaseRepository
@@ -53,6 +53,9 @@ class ScheduleDecisionStore:
         self.db_path = db_path
         self._repository = DatabaseRepository(db_path)
 
+    def _conn(self) -> sqlite3.Connection:
+        return self._repository.connect(timeout=15)
+
     @contextmanager
     def platform_attempt_lock(self, platform: str):
         """Keep one baseline worker per platform across processes and restarts.
@@ -89,10 +92,6 @@ class ScheduleDecisionStore:
                     msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
                 else:
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
-
-
-    def _conn(self) -> sqlite3.Connection:
-        return self._repository.connect(timeout=15)
 
     def ensure_schema(self) -> None:
         """幂等建表；只新增 schedule_decisions，不触碰任何既有表。"""
@@ -164,13 +163,24 @@ class ScheduleDecisionStore:
         running = bool(rows and rows[0]["result_status"] == "RUNNING")
         failures = 0
         last_failure = None
+        last_failure_status = None
+        last_progress = None
         last_success = None
         for row in rows:
             status = row["result_status"]
             if status == "FAILED":
+                is_progress = (row.get("scheduler_decision") == "BASELINE_PARTIAL_SOURCE_PROGRESS"
+                               and type(row.get("items_saved")) is int and row["items_saved"] > 0)
+                if is_progress and failures:
+                    break
                 failures += 1
                 if last_failure is None:
                     last_failure = parse(row["finished_at"]) or parse(row["started_at"])
+                    last_failure_status = row.get("error_code")
+                    if is_progress:
+                        last_progress = last_failure
+                if is_progress:
+                    break
             elif status == "SUCCESS":
                 last_success = parse(row["finished_at"]) or parse(row["started_at"])
                 break
@@ -180,11 +190,14 @@ class ScheduleDecisionStore:
                                   last_failure_at=last_failure,
                                   last_success_at=last_success,
                                   consecutive_failures=failures,
-                                  attempt_in_progress=running)
+                                  attempt_in_progress=running,
+                                  last_failure_status=last_failure_status,
+                                  last_progress_at=last_progress)
 
     def _baseline_rows(self, conn, plan_id):
         return [dict(row) for row in conn.execute(
-            """SELECT id, started_at, finished_at, result_status
+            """SELECT id, started_at, finished_at, result_status, error_code,
+                      scheduler_decision, items_saved
                  FROM schedule_decisions
                 WHERE platform='prelaunch_public_baseline' AND task_id=?
                 ORDER BY id DESC""", (plan_id,)
@@ -245,7 +258,8 @@ class ScheduleDecisionStore:
 
     def finish_public_baseline_attempt(self, plan, attempt_id: int, *,
                                        success: bool, now: datetime,
-                                       error_code: Optional[str] = None) -> bool:
+                                       error_code: Optional[str] = None,
+                                       partial_saved_count: int = 0) -> bool:
         """Persist one honest terminal outcome; a claimed attempt is completed once."""
         from .prelaunch_baseline import BaselineConfigError
         if not getattr(plan, "_signed_config_digest", ""):
@@ -254,17 +268,24 @@ class ScheduleDecisionStore:
             raise ValueError("success must be an explicit boolean")
         if not success and not error_code:
             raise ValueError("failed attempts require an error_code")
+        if (type(partial_saved_count) is not int or partial_saved_count < 0
+                or (partial_saved_count and (success or error_code not in {
+                    "PARTIAL_SCOPE_REVIEW_REQUIRED", "PARTIAL_ACQUISITION_PENDING",
+                    "PARTIAL_SOURCE_INTAKE_PENDING"}))):
+            raise ValueError("partial progress requires a failed partial Source outcome")
         c = self._conn()
         try:
             cur = c.execute(
                 """UPDATE schedule_decisions
                       SET finished_at=?, result_status=?, error_code=?,
-                          scheduler_decision=?
+                          scheduler_decision=?, items_saved=?
                     WHERE id=? AND platform='prelaunch_public_baseline'
                       AND task_id=? AND result_status='RUNNING'""",
                 (now.isoformat(timespec="seconds"),
                  "SUCCESS" if success else "FAILED", None if success else error_code,
-                 "BASELINE_SUCCESS" if success else "BASELINE_FAILED",
+                 "BASELINE_SUCCESS" if success else (
+                     "BASELINE_PARTIAL_SOURCE_PROGRESS" if partial_saved_count else "BASELINE_FAILED"),
+                 partial_saved_count,
                  int(attempt_id), plan.plan_id),
             )
             c.commit()

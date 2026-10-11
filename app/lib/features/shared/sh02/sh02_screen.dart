@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -329,7 +331,7 @@ class _WorkspaceState extends State<_Workspace> {
                     alignment: Alignment.centerLeft,
                     child: OutlinedButton.icon(
                       onPressed: viewModel.refresh,
-                      icon: const Icon(Icons.refresh_rounded),
+                      icon: const LumenisIcon(Icons.refresh_rounded),
                       label: Text(
                         _copy(context, '重新读取', 'Read again', '다시 읽기'),
                       ),
@@ -406,7 +408,7 @@ class _ScopeBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
+            LumenisIcon(
               Icons.filter_alt_outlined,
               color: LumenisTheme.of(context).shared,
               size: 19,
@@ -468,7 +470,7 @@ class _SearchRail extends StatelessWidget {
               'Search summary or source',
               '요약 또는 출처 검색',
             ),
-            prefixIcon: const Icon(Icons.search_rounded),
+            prefixIcon: const LumenisIcon(Icons.search_rounded),
             border: const OutlineInputBorder(),
           ),
         ),
@@ -573,12 +575,12 @@ class _BrowseModeSelector extends StatelessWidget {
       segments: [
         ButtonSegment(
           value: _BrowseMode.list,
-          icon: const Icon(Icons.view_list_rounded),
+          icon: const LumenisIcon(Icons.view_list_rounded),
           label: Text(_copy(context, '列表', 'List', '목록')),
         ),
         ButtonSegment(
           value: _BrowseMode.space,
-          icon: const Icon(Icons.space_dashboard_outlined),
+          icon: const LumenisIcon(Icons.space_dashboard_outlined),
           label: Text(_copy(context, '空间', 'Space', '공간')),
         ),
       ],
@@ -682,7 +684,7 @@ class _SpatialDesk extends StatelessWidget {
                   TextButton.icon(
                     key: const Key('sh02-space-reset'),
                     onPressed: () => camera.value = Matrix4.identity(),
-                    icon: const Icon(Icons.center_focus_strong_rounded),
+                    icon: const LumenisIcon(Icons.center_focus_strong_rounded),
                     label: Text(_copy(context, '重置视图', 'Reset view', '보기 초기화')),
                     style: TextButton.styleFrom(
                       minimumSize: const Size(48, 48),
@@ -861,7 +863,7 @@ class _SpaceMaterial extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Icon(
+                  LumenisIcon(
                     Icons.open_in_full_rounded,
                     size: 16,
                     color: LumenisTheme.of(context).quiet,
@@ -973,7 +975,7 @@ class _FocusedMaterial extends StatelessWidget {
         child: OutlinedButton.icon(
           key: const Key('sh02-focus-return'),
           onPressed: onReturn,
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const LumenisIcon(Icons.arrow_back_rounded),
           label: Text(returnLabel),
           style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
         ),
@@ -1462,7 +1464,7 @@ class _KindMark extends StatelessWidget {
       color: LumenisTheme.of(context).canvas,
       borderRadius: BorderRadius.circular(9),
     ),
-    child: Icon(
+    child: LumenisIcon(
       switch (kind) {
         Sh02EvidenceKind.metric => Icons.query_stats_rounded,
         Sh02EvidenceKind.source => Icons.link_rounded,

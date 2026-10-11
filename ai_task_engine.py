@@ -1273,6 +1273,32 @@ class TaskEngine:
             "user_input": user_input,
         }
 
+    def create_mathematical_task(self, user_input, context, *, created_by):
+        """One authenticated mathematical operation survives a lost creation ACK."""
+        request_id = context.get("openai_math_request_id")
+        if not isinstance(request_id, str) or re.fullmatch(r"[0-9a-f]{32}", request_id) is None:
+            raise ValueError("MATHEMATICAL_REQUEST_ID_REQUIRED")
+        identity = hashlib.sha256(json.dumps({"actor": created_by, "request": request_id},
+                                            sort_keys=True).encode()).hexdigest()
+        task_id = "task_" + identity[:16]
+        raw_context = json.dumps(context, ensure_ascii=False, sort_keys=True)
+        now = self._now()
+        with get_db() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            existing = conn.execute("SELECT user_input,context_json,created_by FROM ai_task WHERE task_id=?",
+                                    (task_id,)).fetchone()
+            if existing is not None:
+                if (existing[0] != user_input or json.loads(existing[1]) != context
+                        or existing[2] != created_by):
+                    raise ValueError("MATHEMATICAL_REQUEST_CONTENT_CHANGED")
+            else:
+                conn.execute("INSERT INTO ai_task (task_id,user_input,context_json,status,created_at,updated_at,created_by) "
+                             "VALUES (?,?,?,'pending',?,?,?)",
+                             (task_id, user_input, raw_context, now, now, created_by))
+        if existing is None:
+            self._db_add_trace(task_id, "task.create", "Authenticated mathematical operation", "ok")
+        return self._db_get_task(task_id)
+
     def create_pitch_task(self, context: Dict[str, Any], *, before_commit=None) -> Dict[str, Any]:
         """Persist internal-making intent in the existing task table, not a grant."""
         from lumenis.shared.reporting.saved_work import _digest, _json
@@ -2867,7 +2893,7 @@ class TaskEngine:
         try:
             context = task.get("context") or {}
             parse_input = task["user_input"]
-            if context.get("analysis_operation") == "source_statistics":
+            if context.get("analysis_operation") in {"source_statistics", "openai_math"}:
                 # An explicit read-only operation is not a free-form command.
                 # Revalidate its authenticated Owner input before routing it;
                 # the word "publication" must not turn date counts into publishing.
@@ -3010,7 +3036,7 @@ class TaskEngine:
         agent_step = self._db_add_step(task_id, StepPhase.AGENT_SELECT.value, "running")
         context = task.get("context") or {}
         agent = (self.agent_registry.get("analysis_agent")
-                 if context.get("analysis_operation") == "source_statistics"
+                 if context.get("analysis_operation") in {"source_statistics", "openai_math"}
                  else self.agent_registry.select_best_agent(intent, context))
 
         if agent is None:
@@ -3033,7 +3059,7 @@ class TaskEngine:
 
         # Skill 选择
         skill_step = self._db_add_step(task_id, StepPhase.SKILL_SELECT.value, "running")
-        skills = ([] if context.get("analysis_operation") == "source_statistics"
+        skills = ([] if context.get("analysis_operation") in {"source_statistics", "openai_math"}
                   else self.agent_registry.select_skills(agent, intent, context))
         primary_skill = skills[0] if skills else None
 
@@ -3392,6 +3418,10 @@ class TaskEngine:
 
             serialized = json.dumps(final_result, ensure_ascii=False, default=str)
             with get_db() as conn:
+                if completed and (task.get("context") or {}).get("analysis_operation") == "openai_math":
+                    from lumenis.shared.evaluation.openai_math_papers.product_outcome import verify_product_outcome
+                    if not verify_product_outcome(self, task, result_data, connection=conn):
+                        raise PermissionError("MATHEMATICAL_OUTCOME_CHANGED_BEFORE_TASK_COMMIT")
                 changed = conn.execute(
                     "UPDATE ai_task SET status=?, result_json=?, error=?, finished_at=?, updated_at=? "
                     "WHERE task_id=? AND status=?",
@@ -3514,6 +3544,17 @@ class TaskEngine:
     def _execute_analysis(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
         """Compute useful statistics over an admitted SourceBrief; AI is opt-in."""
         operation = (task.get("context") or {}).get("analysis_operation")
+        if operation == "openai_math":
+            from lumenis.shared.evaluation.openai_math_papers.product_outcome import execute_product_task
+            try:
+                return execute_product_task(self, task)
+            except (ValueError, PermissionError, LookupError, RuntimeError, ArithmeticError) as exc:
+                code = str(exc)
+                return {"analysis_operation": operation, "ai_required": False,
+                        "base_analysis_status": "unavailable",
+                        "error": code if re.fullmatch(r"[A-Z_0-9]{1,120}", code)
+                        else "MATHEMATICAL_COMPUTATION_UNAVAILABLE",
+                        "business_outcome": "NOT_OBSERVED"}
         result = {"analysis_type": intent, "method": "source_brief_statistics/v1",
                   "analysis_operation": operation,
                   "ai_required": False, "ai_analysis": None,
@@ -3886,6 +3927,9 @@ class TaskEngine:
             return False, "EXECUTION_RETURN"
         if task.get("agent_id") == "analysis_agent":
             try:
+                if (task.get("context") or {}).get("analysis_operation") == "openai_math":
+                    from lumenis.shared.evaluation.openai_math_papers.product_outcome import verify_product_outcome
+                    return verify_product_outcome(self, task, result), "VERSIONED_MATHEMATICAL_SCENARIO"
                 report = self._read_analysis_source(task)
                 valid = ((task.get("context") or {}).get("analysis_operation") == "source_statistics"
                          and result.get("analysis_operation") == "source_statistics"

@@ -8,6 +8,17 @@ from .registry import register_adapter
 
 logger = logging.getLogger(__name__)
 
+_TERMINAL_DETAIL_STATES = frozenset({
+    "VERIFICATION_REQUIRED",
+    "RATE_LIMITED",
+    "SESSION_UNAVAILABLE",
+    "SESSION_OR_RISK_REQUIRED",
+    "PLATFORM_RISK",
+    "NOT_CONFIGURED",
+    "PROVIDER_UNAVAILABLE",
+    "IDENTITY_MISMATCH",
+})
+
 
 class DouyinAdapter(BasePlatformAdapter):
     """抖音主链路适配器（薄封装 v4 DouyinAdapter 引擎）。
@@ -76,6 +87,121 @@ class DouyinAdapter(BasePlatformAdapter):
             }))
         return items
 
+    @staticmethod
+    def _native_aweme_id(item: dict) -> str | None:
+        raw = item.get("raw") if isinstance(item, dict) else None
+        value = raw.get("aweme_id") if isinstance(raw, dict) else None
+        if not isinstance(value, str) or not value or value != value.strip():
+            return None
+        return value
+
+    @staticmethod
+    def _detail_failure_state(error: str) -> str:
+        text = str(error or "").lower()
+        verification = ("captcha", "验证码", "安全验证", "need_verify", "verify")
+        rate_limit = ("rate limit", "rate_limit", "频控", "访问频繁", "too many", "http 429", " 429")
+        session = ("login", "登录", "cookie", "session", "会话", "失效", "expired")
+        risk = ("风控", "risk", "blocked", "封禁", "http 403", " 403")
+        if any(marker in text for marker in verification):
+            return "VERIFICATION_REQUIRED"
+        if any(marker in text for marker in rate_limit):
+            return "RATE_LIMITED"
+        has_session = any(marker in text for marker in session)
+        has_risk = any(marker in text for marker in risk)
+        if has_session and has_risk:
+            return "SESSION_OR_RISK_REQUIRED"
+        if has_session:
+            return "SESSION_UNAVAILABLE"
+        if has_risk:
+            return "PLATFORM_RISK"
+        if "not configured" in text or "not_configured" in text or "未配置" in text:
+            return "NOT_CONFIGURED"
+        if any(marker in text for marker in ("worker", "network", "timeout", "不可达", "provider")):
+            return "PROVIDER_UNAVAILABLE"
+        return "DETAIL_FAILED"
+
+    @staticmethod
+    def _begin_detail_observation(item: dict, native_id: str | None) -> dict:
+        raw = item.get("raw") if isinstance(item.get("raw"), dict) else {}
+        raw = dict(raw)
+        raw["search_summary_observation"] = {
+            "status": "OBSERVED",
+            "body_kind": "search_summary",
+            "text": item.get("content") if isinstance(item.get("content"), str) else None,
+            "title": item.get("title") if isinstance(item.get("title"), str) else None,
+            "source_url": item.get("url") if isinstance(item.get("url"), str) else None,
+            "native_id": native_id,
+            "native_id_locator": "$.data[].aweme_info.aweme_id",
+            "body_locator": "$.data[].aweme_info.desc",
+            "native_time": raw.get("create_time"),
+            "native_time_locator": "$.data[].aweme_info.create_time",
+            "metrics": {name: item.get(name) for name in ("likes", "comments", "collects", "shares")},
+            "metrics_locator": "$.data[].aweme_info.statistics",
+        }
+        item["raw"] = raw
+        return raw
+
+    @staticmethod
+    def _record_detail_outcome(item: dict, status: str, detail_item: dict | None = None,
+                               stop_reason: str | None = None) -> None:
+        raw = item.get("raw") if isinstance(item.get("raw"), dict) else {}
+        raw = dict(raw)
+        detail_raw = detail_item.get("raw") if isinstance(detail_item, dict) else None
+        detail_raw = detail_raw if isinstance(detail_raw, dict) else {}
+        body = detail_item.get("content") if isinstance(detail_item, dict) else None
+        body = body if isinstance(body, str) else None
+        success = detail_item is not None
+        body_status = ("DETAIL_BODY_AVAILABLE" if body else "DETAIL_BODY_EMPTY") if success else (
+            "PENDING" if status == "PENDING" else "SUMMARY_ONLY"
+        )
+        media_hints = detail_raw.get("media_hints") if success else None
+        media_state = detail_raw.get("media_state") if success else (
+            "PENDING" if status == "PENDING" else "DETAIL_NOT_OBSERVED"
+        )
+        raw["detail_observation"] = {
+            "status": status,
+            "stop_reason": stop_reason or (status if status in _TERMINAL_DETAIL_STATES else None),
+            "body_kind": "caption" if success else None,
+            "body": body,
+            "body_status": body_status,
+            "body_locator": detail_raw.get("body_locator") if success else None,
+            "source_url": detail_item.get("url") if success else None,
+            "native_time": detail_raw.get("create_time") if success else None,
+            "native_time_locator": detail_raw.get("native_time_locator") if success else None,
+            "native_time_status": ("OBSERVED" if detail_raw.get("create_time") is not None else "NOT_RETURNED_BY_DETAIL") if success else (
+                "PENDING" if status == "PENDING" else "SEARCH_ONLY"
+            ),
+            "native_metrics": detail_raw.get("metrics") if success else None,
+            "metrics_locator": detail_raw.get("metrics_locator") if success else None,
+            "metrics_status": ("OBSERVED" if detail_raw.get("metrics") is not None else "NOT_RETURNED_BY_DETAIL") if success else (
+                "PENDING" if status == "PENDING" else "SEARCH_ONLY"
+            ),
+            "media_hints": media_hints,
+            "media_state": media_state,
+            "media_bytes_saved": False,
+            "artifact_created": False,
+            "author_locator": detail_raw.get("author_locator") if success else None,
+        }
+        item["raw"] = raw
+        if not success:
+            # Keep the search text only in its explicitly labeled summary locator.
+            # The native-record caller falls back from an empty body to title,
+            # so clear both fields to prevent promoting a search summary as body.
+            item["content"] = ""
+            item["title"] = ""
+            return
+        item["content"] = body or ""
+        item["publish_datetime"] = detail_item.get("publish_datetime") or ""
+        item["url"] = detail_item.get("url") or item.get("url") or ""
+        item["title"] = detail_item.get("title") or ""
+        for field in ("likes", "comments", "collects", "shares"):
+            # None means the detail response did not supply a value; zero remains zero.
+            item[field] = detail_item.get(field)
+        for field in ("author_id", "author_nickname"):
+            value = detail_item.get(field)
+            if value not in (None, ""):
+                item[field] = value
+
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
         try:
             backend = self._load_backend()
@@ -86,15 +212,98 @@ class DouyinAdapter(BasePlatformAdapter):
                 result = backend.search(keyword, max_results=max_results)
             status = self._v4_status_to_main(result.success, result.notes, result.error)
             items = self._v4_notes_to_items(result.notes)
+            detail_counts = {"attempted": 0, "succeeded": 0, "failed": 0, "pending": 0,
+                             "not_attempted_no_native_id": 0, "reused_same_native_id": 0}
+            detail_stop_reason = None
+            detail_cache = {}
+            for item in items:
+                native_id = self._native_aweme_id(item)
+                self._begin_detail_observation(item, native_id)
+                if not native_id:
+                    self._record_detail_outcome(item, "NOT_ATTEMPTED_NO_NATIVE_ID")
+                    detail_counts["not_attempted_no_native_id"] += 1
+                    continue
+                if item.get("platform_content_id") != native_id:
+                    self._record_detail_outcome(item, "IDENTITY_MISMATCH")
+                    detail_counts["failed"] += 1
+                    detail_stop_reason = "IDENTITY_MISMATCH"
+                    continue
+                if detail_stop_reason:
+                    self._record_detail_outcome(item, "PENDING", stop_reason=detail_stop_reason)
+                    detail_counts["pending"] += 1
+                    continue
+                if native_id in detail_cache:
+                    self._record_detail_outcome(item, "REUSED_SAME_NATIVE_ID", detail_cache[native_id])
+                    detail_counts["succeeded"] += 1
+                    detail_counts["reused_same_native_id"] += 1
+                    continue
+                if not result.success:
+                    detail_stop_reason = self._detail_failure_state(result.error)
+                    self._record_detail_outcome(item, "PENDING", stop_reason=detail_stop_reason)
+                    detail_counts["pending"] += 1
+                    continue
+
+                detail_counts["attempted"] += 1
+                try:
+                    detail_result = backend.detail(aweme_id=native_id)
+                except Exception as exc:
+                    logger.error("抖音逐帖详情异常 error_type=%s", type(exc).__name__)
+                    detail_result = None
+                detail_candidates = self._v4_notes_to_items(detail_result.notes) if detail_result else []
+                matching_detail = next((candidate for candidate in detail_candidates
+                                        if self._native_aweme_id(candidate) == native_id), None)
+                if detail_result and detail_result.success and matching_detail is not None:
+                    detail_cache[native_id] = matching_detail
+                    self._record_detail_outcome(item, "SUCCESS", matching_detail)
+                    detail_counts["succeeded"] += 1
+                    continue
+
+                if detail_candidates and matching_detail is None:
+                    failure_state = "IDENTITY_MISMATCH"
+                else:
+                    failure_state = self._detail_failure_state(
+                        detail_result.error if detail_result else "provider unavailable"
+                    )
+                self._record_detail_outcome(item, failure_state)
+                detail_counts["failed"] += 1
+                if failure_state in _TERMINAL_DETAIL_STATES:
+                    detail_stop_reason = failure_state
+
+            detail_counts["pending"] = sum(
+                1 for item in items
+                if isinstance(item.get("raw"), dict)
+                and item["raw"].get("detail_observation", {}).get("status") == "PENDING"
+            )
+            detail_incomplete = bool(detail_counts["failed"] or detail_counts["pending"]
+                                     or detail_counts["not_attempted_no_native_id"])
+            detail_metadata = {
+                **detail_counts,
+                "stop_reason": detail_stop_reason,
+                "body_completeness": "NO_RESULTS" if not items else (
+                    "COMPLETE" if not detail_incomplete else "PARTIAL"
+                ),
+                "media_semantics": "URL_HINTS_ONLY_NO_BYTES_OR_ARTIFACT",
+            }
+            if detail_stop_reason:
+                status = {
+                    "VERIFICATION_REQUIRED": CollectionStatus.NEED_VERIFY,
+                    "RATE_LIMITED": CollectionStatus.COOLING_DOWN,
+                    "SESSION_UNAVAILABLE": CollectionStatus.SESSION_EXPIRED,
+                    "SESSION_OR_RISK_REQUIRED": CollectionStatus.RISK_WARNING,
+                    "PLATFORM_RISK": CollectionStatus.RISK_WARNING,
+                    "NOT_CONFIGURED": CollectionStatus.NOT_CONFIGURED,
+                    "PROVIDER_UNAVAILABLE": CollectionStatus.PROVIDER_UNAVAILABLE,
+                }.get(detail_stop_reason, CollectionStatus.COLLECT_ERROR)
             return CollectionResult(
                 status=status,
                 platform=self.platform,
                 items=items,
                 raw_count=result.raw_count,
                 new_count=len(items),
-                message=result.error or "",
+                message=(result.error or ("抖音搜索成功；部分原生详情未完成" if detail_incomplete else "")),
                 metadata={"engine": "v4_douyin_browser", "provider": "authorized_browser_worker",
-                          "duration_s": result.duration_seconds},
+                          "duration_s": result.duration_seconds, "detail": detail_metadata,
+                          **({"error_type": detail_stop_reason} if detail_stop_reason else {})},
             )
         except Exception as exc:
             logger.error("抖音主链路采集异常 error_type=%s", type(exc).__name__)

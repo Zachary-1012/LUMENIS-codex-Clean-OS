@@ -56,7 +56,18 @@ def _verify_seed_reference(reference, entry, platforms, seed):
         raise AcquisitionPlanError("topic seed needs an existing term and registered entity")
     from .adapters.platform_naming import normalize_platform
     aliases = {_normalised_key(alias) for alias, _ in entry["aliases"]}
-    if (_normalised_key(topic["entity"]) not in aliases
+    # This frozen input uses a disambiguated display label, while the existing
+    # Registry stores the Chinese name and the district in its English name.
+    # Bind only that reviewed input to its exact current canonical identity.
+    # This does not register an alias or establish any collected-source scope.
+    canonical_names = {alias for alias, kind in entry["aliases"] if kind == "registered_name"}
+    luohu_seed_binding = (
+        topic["entity"] == "深圳万象城（罗湖）"
+        and entry["domain_id"] == "CTH"
+        and entry["registry_id"] == "SUBJ-74f25e92c6744e738c7edf66"
+        and {"深圳万象城", "Shenzhen MixC Luohu"}.issubset(canonical_names)
+    )
+    if ((_normalised_key(topic["entity"]) not in aliases and not luohu_seed_binding)
             or normalize_platform(topic["platform"]) not in {normalize_platform(p) for p in platforms}
             or any(reference.get(key) != topic[field] for key, field in (
                 ("source_id", "source_id"), ("source_url", "source_url"),
@@ -765,8 +776,16 @@ def _purpose_queries(entries, requests, mode, focus_key):
         entry = next((e for e in entries if e["domain_id"] == domain
             and key in {e["registry_id"], e["subject_id"], e["brand_focus_id"]}), None)
         discovery = request.get("unregistered_discovery") is True
+        acquisition_stage = request.get("acquisition_stage")
+        if acquisition_stage == "":
+            acquisition_stage = None
+        if acquisition_stage not in (None, "SUBJECT_INTAKE"):
+            raise AcquisitionPlanError("acquisition_stage must be SUBJECT_INTAKE when supplied")
+        subject_intake = acquisition_stage == "SUBJECT_INTAKE"
         if entry is None and not (discovery and not key):
             raise AcquisitionPlanError("business target is not registered; unknown discovery must keep ID null")
+        if subject_intake and entry is None:
+            raise AcquisitionPlanError("subject intake requires an existing registered entity")
         purpose = _normalise_text(request.get("purpose"), field="purpose", max_length=256)
         dimension = request.get("dimension")
         if not purpose or dimension not in _BUSINESS_DIMENSIONS:
@@ -783,7 +802,7 @@ def _purpose_queries(entries, requests, mode, focus_key):
         aliases = _as_terms(request.get("aliases"), field="aliases")
         registered_aliases = [a for a, _ in entry["aliases"]] if entry else []
         if entry:
-            aliases = aliases or registered_aliases[:1]
+            aliases = aliases or (registered_aliases if subject_intake else registered_aliases[:1])
             if any(_normalised_key(a) not in {_normalised_key(x) for x in registered_aliases} for a in aliases):
                 raise AcquisitionPlanError("business alias is not supplied by the registry")
         elif aliases:
@@ -809,24 +828,46 @@ def _purpose_queries(entries, requests, mode, focus_key):
         tracking = request.get("tracking_sources") or []
         if not isinstance(tracking, (list, tuple)):
             raise AcquisitionPlanError("tracking_sources must be a list")
-        if not tracking and not topics:
+        if not tracking and not topics and not subject_intake:
             raise AcquisitionPlanError("select relevant topic terms; name-only is an identity seed, not a business plan")
         seeds = []
-        for alias in aliases or [""]:
-            for topic in topics:
-                parts = [alias] + [v for v in geography + venue if v not in alias] + [topic]
-                keyword = _normalise_text(" ".join(p for p in parts if p), field="business_query", max_length=256)
-                origin = ("TASK_SEMANTIC_EXPANSION" if expansion_term
-                          and _normalised_key(topic) == _normalised_key(expansion_term)
-                          else "TASK_SELECTED_TOPIC")
-                seeds.append((keyword, "DISCOVERY", None, origin))
+        if subject_intake:
+            alias_kinds = {_normalised_key(alias): kind for alias, kind in entry["aliases"]}
+            for alias in aliases:
+                alias_key = _normalised_key(alias)
+                disambiguation_terms = []
+                seen_disambiguation = set()
+                for term in geography + venue:
+                    term_key = _normalised_key(term)
+                    if term_key in alias_key or term_key in seen_disambiguation:
+                        continue
+                    seen_disambiguation.add(term_key)
+                    disambiguation_terms.append(term)
+                keyword = _normalise_text(
+                    " ".join([alias] + disambiguation_terms),
+                    field="business_query", max_length=256,
+                )
+                seeds.append((keyword, "DISCOVERY", None,
+                              "SUBJECT_INTAKE_REGISTRY_ALIAS", alias_kinds[alias_key]))
+        else:
+            for alias in aliases or [""]:
+                for topic in topics:
+                    parts = [alias] + [v for v in geography + venue if v not in alias] + [topic]
+                    keyword = _normalise_text(" ".join(p for p in parts if p), field="business_query", max_length=256)
+                    origin = ("TASK_SEMANTIC_EXPANSION" if expansion_term
+                              and _normalised_key(topic) == _normalised_key(expansion_term)
+                              else "TASK_SELECTED_TOPIC")
+                    seeds.append((keyword, "DISCOVERY", None, origin,
+                                  "task_selected_registered_alias"))
         for source in tracking:
             if (not isinstance(source, Mapping) or not source.get("evidence_ref")
                     or source.get("scope_key") != key or entry is None):
                 raise AcquisitionPlanError("tracking source needs matching entity and locatable identity evidence")
-            seeds.append((_public_query_target(source.get("url")), "TRACKING", str(source["evidence_ref"]), "SOURCE_TRACKING"))
+            seeds.append((_public_query_target(source.get("url")), "TRACKING",
+                          str(source["evidence_ref"]), "SOURCE_TRACKING",
+                          "task_selected_registered_alias"))
         for platform in platforms:
-            for keyword, kind, source_ref, query_origin in seeds:
+            for keyword, kind, source_ref, query_origin, query_alias_kind in seeds:
                 unique = (platform, domain, key, purpose, dimension, keyword.casefold())
                 if unique in seen:
                     continue
@@ -846,14 +887,17 @@ def _purpose_queries(entries, requests, mode, focus_key):
                     "user_seed_topic_ref": request.get("user_seed_topic_ref"),
                     "task_semantic_expansion": dict(expansion) if expansion is not None else None,
                 }
+                if subject_intake:
+                    context["acquisition_stage"] = "SUBJECT_INTAKE"
                 result.append(AcquisitionQuery(
                     keyword=keyword, domain_id=domain, product_id="CTH" if domain=="CTH" else "ZBMP",
                     registry_id=entry["registry_id"] if entry else "",
                     subject_id=entry["subject_id"] if entry else None,
                     brand_focus_id=entry["brand_focus_id"] if entry else None,
                     priority=0 if entry and focus_key in {entry["subject_id"],entry["brand_focus_id"]} else 10,
-                    reason_code="business_purpose" if entry else "unregistered_discovery",
-                    alias_kind="task_selected_registered_alias" if entry else "UNASSIGNED",
+                    reason_code=("subject_intake" if subject_intake and entry else
+                                 "business_purpose" if entry else "unregistered_discovery"),
+                    alias_kind=query_alias_kind if entry else "UNASSIGNED",
                     context_mode=mode, business_context=context,
                 ))
     return result
@@ -896,7 +940,8 @@ def assess_query_relevance(record: Mapping[str, Any], query: AcquisitionQuery) -
         except (ValueError, TypeError):
             reasons.append("NATIVE_PUBLICATION_PRECISION_OR_OFFSET_UNVERIFIED")
     terms = context.get("topic_terms", ())
-    if terms and not any(all(part.casefold() in text for part in str(term).split()) for term in terms):
+    if (context.get("acquisition_stage") != "SUBJECT_INTAKE" and terms
+            and not any(all(part.casefold() in text for part in str(term).split()) for term in terms)):
         reasons.append("TASK_TOPIC_NOT_OBSERVED")
     boundaries = context.get("geography_terms", ()) + context.get("venue_boundary_terms", ())
     if boundaries and not all(str(t).casefold() in text for t in boundaries):
@@ -908,26 +953,38 @@ def assess_query_relevance(record: Mapping[str, Any], query: AcquisitionQuery) -
             "admitted": False, "entity_scope_verified": False, "source_use_grant": None}
 
 def build_observed_topic_catalog(observations: Iterable[Mapping[str, Any]], *,
-                                 publication_since=None, publication_until=None) -> dict[str, Any]:
-    """Retain native topic provenance as a discovery asset, without admitting it.
+                                 publication_since=None, publication_until=None,
+                                 candidate_origin="NATIVE_PLATFORM_TOPIC") -> dict[str, Any]:
+    """Retain source-linked topic candidates without granting admission.
 
-    The caller supplies locators from inspected native fields. A count is the
-    number of distinct content IDs in this input sample, never platform heat or
-    representative demand. Unknown time, source and topic quality stay reviewable.
-    This pure function owns neither a store nor collection effects.
+    Native topics must carry inspected native-field locators. Derived text terms
+    must carry exact body locators, a verified body hash, and current READ and
+    ANALYZE audit/source references. This pure function owns no store or effects.
     """
     from datetime import datetime
 
+    allowed_origins = {"NATIVE_PLATFORM_TOPIC", "DERIVED_SOURCE_BODY"}
+    if not isinstance(candidate_origin, str) or candidate_origin not in allowed_origins:
+        raise AcquisitionPlanError("unsupported observed topic candidate origin")
+
     start, end = _validate_publication_period(publication_since, publication_until)
-    entries: dict[tuple[str, str], dict[str, Any]] = {}
+    entries: dict[tuple[str, str, str], dict[str, Any]] = {}
     review = []
     input_count = 0
+    required_formal_refs = (
+        "read_audit_ref", "analyze_audit_ref", "source_evidence_ref",
+        "source_artifact_ref", "source_evidence_version",
+    )
+
     for observation in observations:
         input_count += 1
         platform = str(observation.get("platform") or "").strip()
         native_id = str(observation.get("platform_content_id") or "").strip()
         raw_ref = observation.get("native_raw_ref") or {}
         reason = None
+        source_body = None
+        body_sha256 = None
+        source_use_refs = None
         try:
             source_url = _public_query_target(observation.get("source_url"))
             published = datetime.fromisoformat(str(observation.get("native_publication") or "").replace("Z", "+00:00"))
@@ -938,58 +995,203 @@ def build_observed_topic_catalog(observations: Iterable[Mapping[str, Any]], *,
                 reason = "OUTSIDE_REQUESTED_PUBLICATION_PERIOD"
             elif published > captured:
                 reason = "PUBLICATION_AFTER_ACTUAL_OBSERVATION"
-            if (not platform or not native_id or not isinstance(raw_ref, Mapping)
-                    or not re.fullmatch(r"[0-9a-f]{64}", str(raw_ref.get("sha256") or ""))
-                    or not raw_ref.get("path")):
-                reason = "NATIVE_SOURCE_REFERENCE_MISSING"
-        except (ValueError, TypeError):
+            if candidate_origin == "NATIVE_PLATFORM_TOPIC":
+                if (not platform or not native_id or not isinstance(raw_ref, Mapping)
+                        or not re.fullmatch(r"[0-9a-f]{64}", str(raw_ref.get("sha256") or ""))
+                        or not raw_ref.get("path")):
+                    reason = "NATIVE_SOURCE_REFERENCE_MISSING"
+            elif reason is None:
+                if not platform or not native_id:
+                    reason = "DERIVED_SOURCE_IDENTITY_MISSING"
+                else:
+                    source_body = observation.get("source_body")
+                    body_sha256 = observation.get("body_sha256")
+                    if not isinstance(source_body, str) or not source_body.strip():
+                        reason = "DERIVED_SOURCE_BODY_MISSING"
+                    elif (not isinstance(body_sha256, str)
+                          or not re.fullmatch(r"[0-9a-f]{64}", body_sha256)
+                          or hashlib.sha256(source_body.encode("utf-8")).hexdigest() != body_sha256):
+                        reason = "DERIVED_SOURCE_BODY_HASH_INVALID"
+                    else:
+                        formal_refs = observation.get("formal_refs")
+                        if (not isinstance(formal_refs, Mapping)
+                                or any(not isinstance(formal_refs.get(ref), str)
+                                       or not formal_refs[ref].strip()
+                                       for ref in required_formal_refs)):
+                            reason = "DERIVED_SOURCE_USE_REFS_INCOMPLETE"
+                        else:
+                            source_use_refs = {ref: formal_refs[ref] for ref in required_formal_refs}
+                        if reason is None and "derived_topics" not in observation:
+                            reason = "DERIVED_CANDIDATES_MISSING"
+                        elif reason is None and not isinstance(observation.get("derived_topics"), (list, tuple)):
+                            reason = "DERIVED_CANDIDATES_INVALID"
+        except (ValueError, TypeError, UnicodeEncodeError):
             reason = "NATIVE_TIME_OR_PUBLIC_SOURCE_UNVERIFIED"
+
+        def add_review(review_reason, *, candidate=None):
+            item = {"platform": platform, "platform_content_id": native_id,
+                    "reason": review_reason}
+            if candidate_origin == "NATIVE_PLATFORM_TOPIC":
+                item["native_raw_ref"] = dict(raw_ref) if isinstance(raw_ref, Mapping) else None
+            else:
+                item["candidate_origin"] = candidate_origin
+                if isinstance(body_sha256, str):
+                    item["source_body_sha256"] = body_sha256
+                if source_use_refs is not None:
+                    item["source_use_refs"] = dict(source_use_refs)
+                if isinstance(candidate, Mapping) and isinstance(candidate.get("term"), str):
+                    item["candidate_term"] = candidate["term"]
+            review.append(item)
+
         if reason:
-            review.append({"platform": platform, "platform_content_id": native_id,
-                           "native_raw_ref": dict(raw_ref) if isinstance(raw_ref, Mapping) else None,
-                           "reason": reason})
+            add_review(reason)
             continue
-        topics = observation.get("native_topics") or []
-        if not isinstance(topics, (list, tuple)):
-            raise AcquisitionPlanError("native_topics must contain inspected native fields")
+
+        if candidate_origin == "NATIVE_PLATFORM_TOPIC":
+            topics = observation.get("native_topics") or []
+            if not isinstance(topics, (list, tuple)):
+                raise AcquisitionPlanError("native_topics must contain inspected native fields")
+        else:
+            topics = observation["derived_topics"]
+
         for topic in topics:
-            if not isinstance(topic, Mapping):
-                raise AcquisitionPlanError("native topic text needs its original field locator")
-            literal = topic.get("text")
-            locator = str(topic.get("native_locator") or "")
-            if (not isinstance(literal, str) or not literal.strip()
-                    or _CONTROL_CHARS.search(literal) or len(literal) > 256
-                    or not locator.startswith("/") or locator == "/"):
-                review.append({"platform": platform, "platform_content_id": native_id,
-                               "native_raw_ref": dict(raw_ref), "reason": "NATIVE_TOPIC_LOCATOR_OR_TEXT_INVALID"})
-                continue
-            term = literal.strip().removeprefix("#")
-            if not term.strip():
-                review.append({"platform": platform, "platform_content_id": native_id,
-                               "native_raw_ref": dict(raw_ref), "reason": "NATIVE_TOPIC_EMPTY"})
-                continue
-            key = (platform, term.casefold())
-            node = entries.setdefault(key, {
+            if candidate_origin == "NATIVE_PLATFORM_TOPIC":
+                if not isinstance(topic, Mapping):
+                    raise AcquisitionPlanError("native topic text needs its original field locator")
+                literal = topic.get("text")
+                locator = str(topic.get("native_locator") or "")
+                if (not isinstance(literal, str) or not literal.strip()
+                        or _CONTROL_CHARS.search(literal) or len(literal) > 256
+                        or not locator.startswith("/") or locator == "/"):
+                    add_review("NATIVE_TOPIC_LOCATOR_OR_TEXT_INVALID", candidate=topic)
+                    continue
+                term = literal.strip().removeprefix("#")
+                if not term.strip():
+                    add_review("NATIVE_TOPIC_EMPTY", candidate=topic)
+                    continue
+                topic_id = topic.get("native_topic_id")
+                processing_version = None
+                body_locators = None
+                source_kind = None
+                occurrence_count = None
+            else:
+                if not isinstance(topic, Mapping):
+                    add_review("DERIVED_CANDIDATE_FIELDS_INVALID", candidate=topic)
+                    continue
+                literal = topic.get("term")
+                kind = topic.get("kind")
+                processing_version = topic.get("algorithm_version")
+                body_locators = topic.get("body_locators")
+                occurrence_count = topic.get("occurrence_count")
+                if (not isinstance(literal, str) or not literal.strip()
+                        or _CONTROL_CHARS.search(literal) or len(literal) > 256):
+                    add_review("DERIVED_CANDIDATE_TERM_INVALID", candidate=topic)
+                    continue
+                if (not isinstance(kind, str)
+                        or kind not in {"DERIVED_TEXT_KEYWORD", "VERBATIM_BODY_HASHTAG_LITERAL"}):
+                    add_review("DERIVED_CANDIDATE_KIND_UNSUPPORTED", candidate=topic)
+                    continue
+                if processing_version != "deterministic-collector-keywords:v1":
+                    add_review("DERIVED_PROCESSING_VERSION_UNSUPPORTED", candidate=topic)
+                    continue
+                if (topic.get("owned_inference") != "NOT_RUN"
+                        or topic.get("platform_heat") is not None
+                        or topic.get("representative_demand") is not None
+                        or topic.get("admitted") is not False
+                        or topic.get("automatic_adoption") is not False
+                        or topic.get("native_topic_id") not in (None, "")):
+                    add_review("DERIVED_CANDIDATE_STATE_INVALID", candidate=topic)
+                    continue
+                substring_count = source_body.count(literal)
+                if kind == "VERBATIM_BODY_HASHTAG_LITERAL":
+                    actual_count = sum(
+                        match.group(0) == literal
+                        for match in re.finditer(r"(?<!#)#[\w]+", source_body, flags=re.UNICODE)
+                    )
+                    valid_occurrence_counts = {actual_count}
+                else:
+                    english_pattern = re.compile(
+                        r"(?<![A-Za-z0-9])([A-Za-z][A-Za-z0-9]*)(?![A-Za-z0-9])"
+                    )
+                    english_count = sum(
+                        match.group(1) == literal
+                        and sum(char.isascii() and char.isalpha() for char in literal) >= 2
+                        for match in english_pattern.finditer(source_body)
+                    )
+                    valid_occurrence_counts = {substring_count, english_count}
+                if (not isinstance(body_locators, (list, tuple))
+                        or not 1 <= len(body_locators) <= 5
+                        or type(occurrence_count) is not int or occurrence_count < len(body_locators)
+                        or occurrence_count not in valid_occurrence_counts):
+                    add_review("DERIVED_CANDIDATE_LOCATORS_OR_COUNT_INVALID", candidate=topic)
+                    continue
+                checked_locators = []
+                locator_invalid = False
+                for body_locator in body_locators:
+                    if (not isinstance(body_locator, Mapping)
+                            or set(body_locator) != {"unit", "json_path", "start", "end", "offset_unit"}
+                            or body_locator.get("unit") != "source-body"
+                            or body_locator.get("json_path") != "$.body"
+                            or body_locator.get("offset_unit") != "unicode-codepoint"):
+                        locator_invalid = True
+                        break
+                    start_offset, end_offset = body_locator.get("start"), body_locator.get("end")
+                    if (type(start_offset) is not int or type(end_offset) is not int
+                            or not 0 <= start_offset < end_offset <= len(source_body)
+                            or source_body[start_offset:end_offset] != literal):
+                        locator_invalid = True
+                        break
+                    checked_locators.append({key: body_locator[key] for key in (
+                        "unit", "json_path", "start", "end", "offset_unit")})
+                if locator_invalid or len({(row["start"], row["end"]) for row in checked_locators}) != len(checked_locators):
+                    add_review("DERIVED_BODY_LOCATOR_INVALID", candidate=topic)
+                    continue
+                term = literal
+                topic_id = None
+                source_kind = kind
+                body_locators = checked_locators
+
+            key = (platform, candidate_origin, term.casefold())
+            node_defaults = {
                 "platform": platform, "term": term, "original_spellings": [],
                 "native_topic_ids": [], "observations": [],
                 "distinct_content_keys": [], "planned_tasks": [],
                 "canonical_entity_refs": None, "source_use_ref": None,
                 "admitted": False, "scope_status": "UNASSIGNED",
-            })
+            }
+            if candidate_origin == "DERIVED_SOURCE_BODY":
+                node_defaults.update({"candidate_origin": candidate_origin,
+                                      "processing_version": processing_version})
+            node = entries.setdefault(key, node_defaults)
             if literal not in node["original_spellings"]:
                 node["original_spellings"].append(literal)
-            topic_id = topic.get("native_topic_id")
             if topic_id not in (None, "") and str(topic_id) not in node["native_topic_ids"]:
                 node["native_topic_ids"].append(str(topic_id))
             native_key = platform + ":" + native_id
             if native_key not in node["distinct_content_keys"]:
                 node["distinct_content_keys"].append(native_key)
-            source = {"platform_content_id": native_id, "source_url": source_url,
-                      "native_publication": observation["native_publication"],
-                      "capture_observation_utc": observation["capture_observation_utc"],
-                      "native_raw_ref": dict(raw_ref), "native_locator": locator,
-                      "original_topic_text": literal, "rights": observation.get("rights"),
-                      "source_evidence_canonical_use_refs": observation.get("formal_refs")}
+            if candidate_origin == "NATIVE_PLATFORM_TOPIC":
+                source = {"platform_content_id": native_id, "source_url": source_url,
+                          "native_publication": observation["native_publication"],
+                          "capture_observation_utc": observation["capture_observation_utc"],
+                          "native_raw_ref": dict(raw_ref), "native_locator": locator,
+                          "original_topic_text": literal, "rights": observation.get("rights"),
+                          "source_evidence_canonical_use_refs": observation.get("formal_refs")}
+            else:
+                source = {"platform_content_id": native_id, "source_url": source_url,
+                    "native_publication": observation["native_publication"],
+                    "capture_observation_utc": observation["capture_observation_utc"],
+                    "rights": observation.get("rights"),
+                    "candidate_origin": candidate_origin,
+                    "candidate_kind": source_kind,
+                    "original_candidate_term": literal,
+                    "body_locators": body_locators,
+                    "occurrence_count": occurrence_count,
+                    "source_body_sha256": body_sha256,
+                    "source_use_refs": dict(source_use_refs),
+                    "source_evidence_canonical_use_refs": dict(source_use_refs),
+                    "processing_version": processing_version,
+                }
             if source not in node["observations"]:
                 node["observations"].append(source)
             task = observation.get("planned_task")
@@ -998,13 +1200,16 @@ def build_observed_topic_catalog(observations: Iterable[Mapping[str, Any]], *,
     nodes = list(entries.values())
     for node in nodes:
         node["sample_distinct_content_count"] = len(node["distinct_content_keys"])
-    return {"version": "lumenis.observed-topic-catalog.v2", "input_observation_count": input_count,
-            "publication_since": publication_since, "publication_until": publication_until,
-            "publication_boundary_basis": "NATIVE_CALENDAR_DATE_OR_EXPLICIT_OFFSET_INSTANT",
-            "time_role": "NATIVE_PUBLICATION_NOT_CAPTURE",
-            "terms": nodes, "review": review, "platform_heat": None,
-            "representative_demand": None, "automatic_adoption": False,
-            "purpose": "SOURCE_LINKED_DISCOVERY_AND_TASK_QUERY_REVIEW", "admitted": False}
+    catalog = {"version": "lumenis.observed-topic-catalog.v2", "input_observation_count": input_count,
+               "publication_since": publication_since, "publication_until": publication_until,
+               "publication_boundary_basis": "NATIVE_CALENDAR_DATE_OR_EXPLICIT_OFFSET_INSTANT",
+               "time_role": "NATIVE_PUBLICATION_NOT_CAPTURE",
+               "terms": nodes, "review": review, "platform_heat": None,
+               "representative_demand": None, "automatic_adoption": False,
+               "purpose": "SOURCE_LINKED_DISCOVERY_AND_TASK_QUERY_REVIEW", "admitted": False}
+    if candidate_origin == "DERIVED_SOURCE_BODY":
+        catalog["candidate_origin"] = candidate_origin
+    return catalog
 
 
 def resolve_query_plan(*args: Any, **kwargs: Any) -> AcquisitionPlan:

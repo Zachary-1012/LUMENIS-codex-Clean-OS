@@ -7,6 +7,7 @@ import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
 import 'ai01_draft_actions.dart';
 import 'ai01_draft_files.dart';
+import 'ai01_intent.dart';
 import 'ai01_repository.dart';
 import 'ai01_snapshot.dart';
 import 'ai01_view_model.dart';
@@ -126,6 +127,20 @@ class _Ai01ScreenState extends State<Ai01Screen> {
   }
 
   void _syncDraft() => _viewModel.updateDraft(_draftController.text);
+
+  String? _submitBlockedText(BuildContext context) {
+    final copy = context.lumenisL10n;
+    return switch (_viewModel.submitBlock) {
+      Ai01SubmitBlock.none => null,
+      Ai01SubmitBlock.notReady => copy.text('ai01.blocked_reason'),
+      Ai01SubmitBlock.emptyDraft => copy.text('ai01.submit.blocked.empty'),
+      Ai01SubmitBlock.tooLong => copy.text('ai01.submit.blocked.too_long'),
+      Ai01SubmitBlock.submitting => copy.text('ai01.submit.blocked.submitting'),
+      Ai01SubmitBlock.alreadySubmitted => copy.text(
+        'ai01.submit.blocked.submitted',
+      ),
+    };
+  }
 
   void _chooseSuggestion(Ai01Suggestion suggestion) {
     _viewModel.useSuggestion(suggestion);
@@ -253,9 +268,10 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                   focusNode: _draftFocus,
                   draftFiles: widget.draftFiles,
                   scopeLabel: widget.scopeLabel,
-                  blockedReason: context.lumenisL10n.text(
-                    'ai01.blocked_reason',
-                  ),
+                  submitBlockedReason: _submitBlockedText(context),
+                  onSubmit: _viewModel.canSubmit ? _viewModel.submit : null,
+                  submitPhase: _viewModel.submitPhase,
+                  intentResult: _viewModel.intentResult,
                   suggestions: snapshot?.suggestions ?? const [],
                   onChooseSuggestion: _chooseSuggestion,
                   onExpand: _openFocusedEditor,
@@ -418,7 +434,10 @@ class _ComposerPane extends StatelessWidget {
     required this.focusNode,
     required this.draftFiles,
     required this.scopeLabel,
-    required this.blockedReason,
+    required this.submitBlockedReason,
+    required this.onSubmit,
+    required this.submitPhase,
+    required this.intentResult,
     required this.suggestions,
     required this.onChooseSuggestion,
     required this.onExpand,
@@ -429,7 +448,10 @@ class _ComposerPane extends StatelessWidget {
   final FocusNode focusNode;
   final Ai01DraftFiles? draftFiles;
   final String? scopeLabel;
-  final String blockedReason;
+  final String? submitBlockedReason;
+  final VoidCallback? onSubmit;
+  final Ai01SubmitPhase submitPhase;
+  final Ai01IntentResult? intentResult;
   final List<Ai01Suggestion> suggestions;
   final ValueChanged<Ai01Suggestion> onChooseSuggestion;
   final VoidCallback onExpand;
@@ -574,13 +596,131 @@ class _ComposerPane extends StatelessWidget {
                   ),
                   SizedBox(
                     height: 48,
-                    child: _submitButton(context, blockedReason),
+                    child: _submitButton(
+                      context,
+                      onSubmit: onSubmit,
+                      blockedReason: submitBlockedReason,
+                      busy: submitPhase == Ai01SubmitPhase.submitting,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
+          if (submitPhase != Ai01SubmitPhase.idle) ...[
+            const SizedBox(height: 12),
+            _SubmitStatus(phase: submitPhase, result: intentResult),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _SubmitStatus extends StatelessWidget {
+  const _SubmitStatus({required this.phase, required this.result});
+
+  final Ai01SubmitPhase phase;
+  final Ai01IntentResult? result;
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final theme = LumenisTheme.of(context);
+    final result = this.result;
+    final headline = switch (phase) {
+      Ai01SubmitPhase.idle => '',
+      Ai01SubmitPhase.submitting => copy.text('ai01.submit.sending'),
+      Ai01SubmitPhase.completed => copy.text('ai01.submit.completed'),
+      Ai01SubmitPhase.notCompleted => copy.text('ai01.submit.not_completed'),
+      Ai01SubmitPhase.pendingApproval => copy.text(
+        'ai01.submit.pending_approval',
+      ),
+      Ai01SubmitPhase.denied => copy.text('ai01.submit.denied'),
+      Ai01SubmitPhase.invalid => copy.text('ai01.submit.invalid'),
+      Ai01SubmitPhase.authentication => copy.text('ai01.submit.auth'),
+      Ai01SubmitPhase.failed => copy.text('ai01.submit.failed'),
+      Ai01SubmitPhase.outcomeUnknown => copy.text('ai01.submit.unknown'),
+    };
+    final isCompleted = phase == Ai01SubmitPhase.completed;
+    final details = <Widget>[
+      if (result != null)
+        Text(
+          '${copy.text('ai01.submit.status_label')}: ${result.status}',
+          style: TextStyle(color: theme.muted),
+        ),
+      if (result?.executionId != null)
+        SelectableText(
+          '${copy.text('ai01.submit.execution_id')}: ${result!.executionId}',
+          style: TextStyle(color: theme.muted),
+        ),
+      if (result?.auditId != null)
+        SelectableText(
+          '${copy.text('ai01.submit.audit_id')}: ${result!.auditId}',
+          style: TextStyle(color: theme.muted),
+        ),
+      if (result?.evidenceRecorded != null)
+        Text(
+          copy.text(
+            result!.evidenceRecorded!
+                ? 'ai01.submit.evidence.recorded'
+                : 'ai01.submit.evidence.unconfirmed',
+          ),
+          style: TextStyle(color: theme.muted),
+        ),
+      if (result?.executionId != null)
+        Text(
+          copy.text('ai01.submit.trace_unavailable'),
+          style: TextStyle(color: theme.quiet, fontSize: 12),
+        ),
+    ];
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: Container(
+        key: const ValueKey('ai01-submit-status'),
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.canvas,
+          border: Border.all(color: theme.line),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (phase == Ai01SubmitPhase.submitting) ...[
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Text(
+                    headline,
+                    key: ValueKey(
+                      isCompleted
+                          ? 'ai01-submit-status-completed'
+                          : 'ai01-submit-status-${phase.name}',
+                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(height: 1.5),
+                  ),
+                ),
+              ],
+            ),
+            if (details.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              for (final detail in details) detail,
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -819,11 +959,23 @@ class _Ai01DetailsDialog extends StatelessWidget {
   }
 }
 
-Widget _submitButton(BuildContext context, String blockedReason) => Tooltip(
-  message: blockedReason,
+Widget _submitButton(
+  BuildContext context, {
+  required VoidCallback? onSubmit,
+  required String? blockedReason,
+  required bool busy,
+}) => Tooltip(
+  message: blockedReason ?? '',
   child: FilledButton.icon(
-    onPressed: null,
-    icon: const LumenisIcon(Icons.arrow_forward, size: 18),
+    key: const ValueKey('ai01-submit'),
+    onPressed: onSubmit,
+    icon: busy
+        ? const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : const LumenisIcon(Icons.arrow_forward, size: 18),
     label: Text(context.lumenisL10n.text('ai01.submit')),
     style: FilledButton.styleFrom(shape: const StadiumBorder()),
   ),

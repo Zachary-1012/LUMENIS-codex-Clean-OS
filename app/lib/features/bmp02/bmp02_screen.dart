@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
@@ -161,7 +163,7 @@ class _FocusBand extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
+            LumenisIcon(
               Icons.center_focus_strong,
               color: LumenisTheme.of(context).bmp,
             ),
@@ -300,7 +302,7 @@ class _PortfolioControls extends StatelessWidget {
               controller: controller,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const LumenisIcon(Icons.search),
                 hintText: copy.text('common.search'),
                 labelText: copy.text('common.search'),
                 border: const OutlineInputBorder(),
@@ -591,7 +593,7 @@ class _FilteredEmpty extends StatelessWidget {
               const SizedBox(height: 14),
               TextButton.icon(
                 onPressed: onClear,
-                icon: const Icon(Icons.filter_alt_off_outlined),
+                icon: const LumenisIcon(Icons.filter_alt_off_outlined),
                 label: Text(
                   context.lumenisL10n.text('bmp02.filters.clear'),
                 ),

@@ -123,6 +123,49 @@ class WechatPublicAdapter(BasePlatformAdapter):
             message='Public original-article route requires an actual source observation',
             metadata={'can_attempt': True, 'requires_auth': False, 'cookies_used': False})
 
+    def _discovery_original(self, source_url: str):
+        """Resolve an observed public index link before parsing the article.
+
+        Sogou redirect links are discovery locators, not WeChat article IDs.
+        Use the same public fetcher and its redirect/security policy; never
+        change backend or follow a verification page to manufacture a body.
+        """
+        if resolve_capability_route('wechat', 'detail', request_value=source_url):
+            return self.detail(source_url)
+        try:
+            parts = urlsplit(source_url)
+            if (parts.scheme != 'https' or parts.hostname != 'weixin.sogou.com'
+                    or parts.path != '/link' or parts.username or parts.password
+                    or parts.port not in (None, 443)):
+                return CollectionResult(CollectionStatus.NOT_SUPPORTED, self.platform,
+                    metadata={'reason': 'DISCOVERY_LINK_NOT_SUPPORTED',
+                              'original_body_available': False, 'network_attempted': False})
+            response = self.fetcher(source_url)
+            soup = BeautifulSoup(response.content, 'html.parser')
+            if _challenge(soup):
+                return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
+                    metadata={'reason': 'DISCOVERY_REDIRECT_VERIFICATION_REQUIRED',
+                              'original_body_available': False})
+            item = parse_public_article(response)
+            if item is None and urlsplit(response.url).hostname == 'weixin.sogou.com':
+                # A visible link is usable discovery. Opaque script arithmetic,
+                # anti-bot tokens and verification flows remain unsupported.
+                article_links = [urljoin(response.url, str(node.get('href')))
+                                 for node in soup.select('a[href]')]
+                article_url = next((url for url in article_links
+                    if resolve_capability_route('wechat', 'detail', request_value=url)), None)
+                if article_url:
+                    return self.detail(article_url)
+            return CollectionResult(CollectionStatus.SUCCESS if item else CollectionStatus.PROVIDER_UNAVAILABLE,
+                self.platform, items=[item] if item else [], raw_count=1 if item else 0,
+                metadata={**public_source_provenance(response, source_url),
+                          'provider': 'public_sogou_discovery_original_fetch',
+                          'reason': None if item else 'DISCOVERY_REDIRECT_ORIGINAL_UNAVAILABLE',
+                          'original_body_available': item is not None, 'index_only': item is None})
+        except Exception as exc:
+            return CollectionResult(CollectionStatus.PROVIDER_UNAVAILABLE, self.platform,
+                metadata={'error_type': type(exc).__name__, 'original_body_available': False})
+
     def detail(self, content_id: str, **kwargs):
         route = resolve_capability_route("wechat", "detail", request_value=content_id)
         if route is None:
@@ -172,7 +215,7 @@ class WechatPublicAdapter(BasePlatformAdapter):
             items = []
             original_outcomes = []
             for candidate in candidates[:max_results]:
-                result = self.detail(candidate['source_url'])
+                result = self._discovery_original(candidate['source_url'])
                 original_outcomes.append({'source_url': candidate['source_url'], 'status': result.status.value})
                 items.extend(result.items)
                 if result.status in {CollectionStatus.NEED_VERIFY, CollectionStatus.BLOCKED}:

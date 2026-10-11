@@ -918,7 +918,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                               minimumSize: const Size(48, 48),
                             ),
                             onPressed: () => _chooseInvokingDomain('CTH'),
-                            icon: const Icon(Icons.storefront_outlined),
+                            icon: const LumenisIcon(Icons.storefront_outlined),
                             label: Text(
                               context.lumenisL10n.text('navgroup.cth'),
                             ),
@@ -929,7 +929,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                               minimumSize: const Size(48, 48),
                             ),
                             onPressed: () => _chooseInvokingDomain('BMP'),
-                            icon: const Icon(Icons.branding_watermark_outlined),
+                            icon: const LumenisIcon(Icons.branding_watermark_outlined),
                             label: Text(
                               context.lumenisL10n.text('navgroup.bmp'),
                             ),
@@ -1634,7 +1634,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                 ),
                                 onPressed: () =>
                                     Navigator.of(sheetContext).pop(),
-                                icon: const Icon(Icons.close_rounded),
+                                icon: const LumenisIcon(Icons.close_rounded),
                               ),
                             ],
                           ),
@@ -1785,7 +1785,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               child: TextButton.icon(
                 style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                 onPressed: () => _copyReference(version.artifactId),
-                icon: const Icon(Icons.copy_outlined),
+                icon: const LumenisIcon(Icons.copy_outlined),
                 label: Text(_copy(context, 'copy_reference')),
               ),
             ),
@@ -1866,7 +1866,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                   _controller.needsOriginalFiles
               ? null
               : (onChoose ?? _choose),
-          icon: const Icon(Icons.add),
+          icon: const LumenisIcon(Icons.add),
           label: Text(_copy(context, 'choose')),
         ),
         if (timeline == null)
@@ -1918,7 +1918,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                   ),
                   tooltip: '${_copy(context, 'add')} · ${asset.filename}',
                   onPressed: _isBusy ? null : () => _add(asset),
-                  icon: const Icon(Icons.add_rounded),
+                  icon: const LumenisIcon(Icons.add_rounded),
                 ),
               ],
             ),
@@ -1965,7 +1965,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                             .58,
                           );
                         }),
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  icon: const LumenisIcon(Icons.keyboard_arrow_down_rounded),
                 ),
                 IconButton(
                   key: const Key('media-timeline-larger'),
@@ -2020,7 +2020,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                   tooltip: _copy(context, 'timeline_zoom'),
                   onSelected: (value) => setState(() => _timelineZoom = value),
                   initialValue: _timelineZoom,
-                  icon: const Icon(Icons.zoom_in_rounded),
+                  icon: const LumenisIcon(Icons.zoom_in_rounded),
                   itemBuilder: (_) => [
                     PopupMenuItem(
                       value: 0,

@@ -211,9 +211,14 @@ final class SourceBriefResult {
 }
 
 class SourceBriefViewModel extends ChangeNotifier {
-  SourceBriefViewModel({required this.client});
+  SourceBriefViewModel({required this.client, this.domainId = 'CTH'}) {
+    if (domainId != 'CTH' && domainId != 'BMP') {
+      throw const FormatException('Explicit source domain required.');
+    }
+  }
 
-  static const String _domainId = 'CTH';
+  final String domainId;
+  String get _domainId => domainId;
 
   final LumenisCoreClient client;
   bool _disposed = false;
@@ -228,10 +233,9 @@ class SourceBriefViewModel extends ChangeNotifier {
   String? statisticsTaskId;
   String? _statisticsJobId;
   Map<String, Object?>? sourceStatistics;
-
   Future<void> analyseSources({String? taskId}) async {
     if (_disposed || _busy) return;
-    final jobId = _result?.jobId;
+    final jobId = _result?.jobId ?? _jobId;
     final priorTaskId = _statisticsJobId == jobId ? statisticsTaskId : null;
     final operation = _beginOperation();
     final fresh = await _loadFreshContext(operation);
@@ -341,7 +345,7 @@ class SourceBriefViewModel extends ChangeNotifier {
 
   SourceBriefErrorKind? _errorKind;
   String? _scopeLabel;
-  _CthContextSelection? _selection;
+  _SourceContextSelection? _selection;
 
   SourceBriefPhase get phase => _phase;
   bool get busy => _busy;
@@ -574,7 +578,10 @@ class SourceBriefViewModel extends ChangeNotifier {
   /// The server still reauthorizes every report request independently.
   void syncContext() {
     if (_disposed || _selection == null) return;
-    final selection = _selectionFromEnvelope(client.currentContextEnvelope);
+    final selection = _selectionFromEnvelope(
+      client.currentContextEnvelope,
+      domainId: _domainId,
+    );
     if (selection != null && _selection!.sameScope(selection)) return;
 
     _generation += 1;
@@ -592,11 +599,14 @@ class SourceBriefViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<_FreshCthContext?> _loadFreshContext(int operation) async {
+  Future<_FreshSourceContext?> _loadFreshContext(int operation) async {
     try {
       final response = await client.settingsContext();
       if (!_isCurrent(operation)) return null;
-      final selection = _CthContextSelection.parse(response);
+      final selection = _SourceContextSelection.parse(
+        response,
+        domainId: _domainId,
+      );
       if (selection == null) {
         _forgetContext();
         _finish(
@@ -624,7 +634,7 @@ class SourceBriefViewModel extends ChangeNotifier {
       if (changed) _clearReportState();
       _selection = selection;
       _scopeLabel = selection.scopeLabel;
-      return _FreshCthContext(
+      return _FreshSourceContext(
         selection: selection,
         signature: responseSignature,
         scopeChanged: changed,
@@ -649,7 +659,7 @@ class SourceBriefViewModel extends ChangeNotifier {
     }
   }
 
-  bool _contextStillCurrent(_FreshCthContext fresh, int operation) {
+  bool _contextStillCurrent(_FreshSourceContext fresh, int operation) {
     if (!_isCurrent(operation)) return false;
     if (_contextSignature(client.currentContextEnvelope) == fresh.signature) {
       return true;
@@ -667,7 +677,10 @@ class SourceBriefViewModel extends ChangeNotifier {
 
   void _updateSelectionFromCurrentEnvelope() {
     _clearReportState();
-    final selection = _selectionFromEnvelope(client.currentContextEnvelope);
+    final selection = _selectionFromEnvelope(
+      client.currentContextEnvelope,
+      domainId: _domainId,
+    );
     if (selection == null) {
       _forgetContext();
       return;
@@ -678,7 +691,7 @@ class SourceBriefViewModel extends ChangeNotifier {
 
   Future<void> _applyTaskResponse(
     Map<String, dynamic> response, {
-    required _FreshCthContext fresh,
+    required _FreshSourceContext fresh,
     required int operation,
     String? expectedTaskId,
     String? expectedJobId,
@@ -751,7 +764,7 @@ class SourceBriefViewModel extends ChangeNotifier {
 
   Future<void> _readBackJob(
     String jobId, {
-    required _FreshCthContext fresh,
+    required _FreshSourceContext fresh,
     required int operation,
   }) async {
     if (!_contextStillCurrent(fresh, operation)) return;
@@ -819,7 +832,7 @@ class SourceBriefViewModel extends ChangeNotifier {
   void _fail(
     int operation,
     SourceBriefErrorKind errorKind, {
-    _FreshCthContext? fresh,
+    _FreshSourceContext? fresh,
   }) {
     if (!_isCurrent(operation)) return;
     if (fresh != null &&
@@ -906,7 +919,7 @@ class SourceBriefViewModel extends ChangeNotifier {
 SourceBriefResult _parseResult(
   Map<String, Object?> result, {
   required String expectedJobId,
-  required _CthContextSelection expectedContext,
+  required _SourceContextSelection expectedContext,
 }) {
   if (result['job_id'] != expectedJobId || result['job_state'] != 'completed') {
     throw const _InvalidSourceBriefResponse();
@@ -1053,12 +1066,12 @@ Map<String, int>? _optionalSampleCounts(Object? value) {
 }
 
 SourceBriefScope? _parseScope(Map<String, Object?>? value) {
-  if (value == null ||
-      value['product_id'] != 'CTH' ||
-      value['domain_id'] != 'cth' ||
-      value['global'] is! bool) {
-    return null;
-  }
+  if (value == null || value['global'] is! bool) return null;
+  final productId = value['product_id'];
+  final domainId = value['domain_id'];
+  final isCth = productId == 'CTH' && domainId == 'cth';
+  final isBmp = productId == 'ZBMP' && domainId == 'zbmp';
+  if (!isCth && !isBmp) return null;
   final globalScope = value['global'] as bool;
   final rawSubjectId = value['subject_id'];
   final rawBrandFocusId = value['brand_focus_id'];
@@ -1072,12 +1085,13 @@ SourceBriefScope? _parseScope(Map<String, Object?>? value) {
       (rawSubjectId != null && subjectId == null) ||
       (rawBrandFocusId != null && brandFocusId == null) ||
       (globalScope && (subjectId != null || brandFocusId != null)) ||
-      (!globalScope && (subjectId == null || brandFocusId != null))) {
+      (!globalScope && isCth && (subjectId == null || brandFocusId != null)) ||
+      (!globalScope && isBmp && (brandFocusId == null || subjectId != null))) {
     return null;
   }
   return SourceBriefScope(
-    productId: 'CTH',
-    domainId: 'cth',
+    productId: productId as String,
+    domainId: domainId as String,
     globalScope: globalScope,
     subjectId: subjectId,
     brandFocusId: brandFocusId,
@@ -1349,74 +1363,89 @@ Object? _canonicalValue(Object? value) {
   return value;
 }
 
-final class _CthContextSelection {
-  const _CthContextSelection({
+final class _SourceContextSelection {
+  const _SourceContextSelection({
+    required this.domainId,
     required this.globalScope,
     required this.subjectId,
+    required this.brandFocusId,
     required this.displayNames,
   });
-
+  final String domainId;
   final bool globalScope;
   final String? subjectId;
+  final String? brandFocusId;
   final Map<String, String> displayNames;
-
   String? get scopeLabel =>
       displayNames['zh-CN'] ??
       displayNames['en'] ??
       displayNames['ko'] ??
-      (globalScope ? '全球商业' : subjectId);
-
-  bool sameScope(_CthContextSelection other) =>
-      globalScope == other.globalScope &&
-      (globalScope || subjectId == other.subjectId);
-
-  bool matches(SourceBriefScope scope) =>
-      scope.productId == 'CTH' &&
-      scope.domainId == 'cth' &&
-      scope.globalScope == globalScope &&
-      scope.brandFocusId == null &&
       (globalScope
-          ? scope.subjectId == null
-          : scope.subjectId == subjectId && subjectId != null);
-
-  static _CthContextSelection? parse(Map<String, dynamic> response) {
-    if (response['ok'] != true ||
+          ? (domainId == 'CTH' ? '全球商业' : '全球品牌')
+          : subjectId ?? brandFocusId);
+  bool sameScope(_SourceContextSelection other) =>
+      domainId == other.domainId &&
+      globalScope == other.globalScope &&
+      subjectId == other.subjectId &&
+      brandFocusId == other.brandFocusId;
+  bool matches(SourceBriefScope scope) =>
+      scope.productId == (domainId == 'CTH' ? 'CTH' : 'ZBMP') &&
+      scope.domainId == (domainId == 'CTH' ? 'cth' : 'zbmp') &&
+      scope.globalScope == globalScope &&
+      scope.subjectId == subjectId &&
+      scope.brandFocusId == brandFocusId;
+  static _SourceContextSelection? parse(
+    Map<String, dynamic> response, {
+    required String domainId,
+  }) {
+    if ((domainId != 'CTH' && domainId != 'BMP') ||
+        response['ok'] != true ||
         response['contract'] != 'lumenis.context.v1' ||
         response['selection_only'] != true) {
       return null;
     }
     final context = _asMap(response['context']);
     if (context == null) return null;
-    final mode = context['mode'];
-    if (mode == 'GLOBAL_ALL' &&
-        context['domain_id'] == null &&
-        context['subject_id'] == null &&
-        context['brand_focus_id'] == null) {
-      return _CthContextSelection(
-        globalScope: true,
-        subjectId: null,
-        displayNames: _displayNames(context['display_name']),
-      );
+    final global = context['mode'] == 'GLOBAL_ALL';
+    String? subjectId;
+    String? brandFocusId;
+    if (global) {
+      if (context['domain_id'] != null ||
+          context['subject_id'] != null ||
+          context['brand_focus_id'] != null) {
+        return null;
+      }
+    } else {
+      if (context['mode'] != 'FOCUS' || context['domain_id'] != domainId) {
+        return null;
+      }
+      subjectId = _optionalIdentifier(context['subject_id']);
+      brandFocusId = _optionalIdentifier(context['brand_focus_id']);
+      if ((domainId == 'CTH' &&
+              (subjectId == null || context['brand_focus_id'] != null)) ||
+          (domainId == 'BMP' &&
+              (brandFocusId == null || context['subject_id'] != null))) {
+        return null;
+      }
     }
-    if (mode != 'FOCUS' ||
-        context['domain_id'] != 'CTH' ||
-        context['brand_focus_id'] != null) {
-      return null;
-    }
-    final subjectId = _safeIdentifier(context['subject_id']);
-    if (subjectId == null) return null;
-    return _CthContextSelection(
-      globalScope: false,
+    return _SourceContextSelection(
+      domainId: domainId,
+      globalScope: global,
       subjectId: subjectId,
+      brandFocusId: brandFocusId,
       displayNames: _displayNames(context['display_name']),
     );
   }
 }
 
-_CthContextSelection? _selectionFromEnvelope(Object? envelope) {
+_SourceContextSelection? _selectionFromEnvelope(
+  Object? envelope, {
+  required String domainId,
+}) {
   final response = _asMap(envelope);
-  if (response == null) return null;
-  return _CthContextSelection.parse(response);
+  return response == null
+      ? null
+      : _SourceContextSelection.parse(response, domainId: domainId);
 }
 
 Map<String, String> _displayNames(Object? value) {
@@ -1430,14 +1459,14 @@ Map<String, String> _displayNames(Object? value) {
   return Map.unmodifiable(result);
 }
 
-final class _FreshCthContext {
-  const _FreshCthContext({
+final class _FreshSourceContext {
+  const _FreshSourceContext({
     required this.selection,
     required this.signature,
     required this.scopeChanged,
   });
 
-  final _CthContextSelection selection;
+  final _SourceContextSelection selection;
   final String signature;
   final bool scopeChanged;
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -183,7 +185,7 @@ class _GuardPanel extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.shield_outlined, color: visual.color, size: 24),
+              LumenisIcon(Icons.shield_outlined, color: visual.color, size: 24),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -379,7 +381,7 @@ class _PathRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          LumenisIcon(
             Icons.arrow_right_rounded,
             color: LumenisTheme.of(context).accent,
             size: 20,

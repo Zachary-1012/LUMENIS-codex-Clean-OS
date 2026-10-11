@@ -1,12 +1,29 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
+## 2026-10-11 PR #11 收敛及真实业务链 — 当前有界执行
+
+直接 PO 授权 M 修复 PR 失败与有效规则冲突、保护并审查原有成果、安全合入 main，随后使用已有获准真实数据完成采集成果接收、无 AI 分析、CTH/BMP 业务成果、保存、修订、重开与恢复。VS Code 暂不用，F 继续暂停；本次不新增前端实现，不启动平台采集、外部模型、训练、付费资源或部署。
+
+准入时本地 `fix/flutter-baseline-20261011` 为 `f935d62ef1f3c5d48919a4776ecfe7c7402a4eac`，fresh main 为 `01588e9fd9568e3fcaf1e6c3d957bc498436fa48`，ahead 11 / behind 0，工作树干净；该记录不是今后执行的固定基线。原有成果保留在提交历史及受保护 `work/`，不以批量覆盖实现同步。
+
+PR Product Gate 的十个 XHS 回归失败已复现为测试装载器与现行采集签名、预算种类及已认证 checkpoint 合同不匹配。修复仅适配隔离测试输入和装载器，保留恢复、身份、风险拒绝及原始数据断言；网络封锁、临时数据库的定向验证为 49 passed。历史失败保留，真实采集与平台身份未由这组验证证明。
+
+当前规则清理沿 2026-10-10 已批准的 branch/PR 和隔离回归政策、五轮产品交付及窗口/模型事实语义实施；有日期的历史审批与失败证据不改写。既有 Flutter 候选进入集成审查不代表 F 恢复。源码合入、精确 SHA CI、实际加载 Runtime、数据库与用户成果分别验收；本段不提前声明 main 已更新、用户链已通过或产品 RELEASED。
+
+## 2026-10-10 OpenAI Math v2 本次交付边界
+
+精确 v2 输入和 `fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb` 原文已进入现有 Math 采用记录；16 个有限类型化计算接入现有 SourceBrief → Task → SavedWork/Artifact，而不是另建候选产品。真实来源 scope/rights 与声明数学情景分开，无 AI 可计算、保存、父版本修订、导出与重开。编译/静态结果、正式证明、用户操作与模型收益各自记账。
+
+产品 API 的实际 v1/v2、幂等读回、JSON 导出与跨域拒绝已有本机回执；Web 的 ACK 超时已定位并修复为有界等待及原任务重开，界面与证明最终状态以现有 Math 采用记录为准。整轮 SYSTEM、九项完整主算法、四端及 gpt-oss 模型增强仍不得宣称关闭。私人原帖/平台会话/实验数据/WSL 工具缓存不提交。已有其他 dirty 工作保留；本次授权不启停其他窗口。
+
+
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 > 2026-10-09 五轮治理规则已发布；产品交付唯一为 SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI。C1–C6/F/M/W1–W6 保留工程源码责任，不是六轮产品或单窗口调度限制。
 > Product Owner 决定当前窗口开工/暂停/恢复、模型和推理档位。这里只记录有时间和来源的事实，未知为 NOT_VERIFIED；历史暂停、恢复条件和默认无现行调度效力。治理发布不启动窗口；后续源码授权按下面明确范围执行。
 > 随后直接 PO 另授权一个 Luna/max 智能体处理 SYSTEM 自动采集弹窗 P0。该缺陷沿既有 Browser/Collector Owner、受控进程和唯一维护计划任务修复；不恢复其他研发窗口。它与本次六文件治理提交分开验收及发布，未验证的源码/运行/采集结果不得提前标为完成。
 > 历史 AI 非依赖/暂停审批 `evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json` 和串行/F审批保持原件，不删除或改写；其中仍有效的权益、安全、费用及无AI基础能力要求保留。
 
-> Direct-build/native-target correction: F builds real frontend immediately from existing contracts without separate design drafts/Figma or M DESIGN_READY coding prerequisite. Later native Desktop targets Windows/macOS only; Mobile targets iOS only. Android/Linux native client delivery requirements are superseded, with existing source/history preserved. Linux server/CI and browser access are separate.
+> Direct-build/native-target correction: when explicitly dispatched, F builds the existing frontend directly from current contracts without separate design drafts/Figma or M DESIGN_READY coding prerequisites. The latest 2026-10-11 PO instruction keeps F paused; reviewing and integrating already-existing frontend work does not resume it. Later native Desktop targets Windows/macOS only; Mobile targets iOS only. Android/Linux native client delivery requirements are superseded, with existing source/history preserved. Linux server/CI and browser access are separate.
 > Latest surface priority, 2026-10-08: close Public Website and Web Workspace first; defer dedicated Desktop/Mobile design, implementation, packaging and device acceptance until those two surfaces close. Preserve all four-surface requirements and existing work. Web-required Core/SYSTEM dependencies remain in scope. This changes order, not actual capability/acceptance or deployment/cost authority. Approval: `evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`.
 > 工程责任：M 总控/集成审查，F 前端/Experience，C1–C6 按原 Source Owner Index 保留源码边界。仅实际 PO 派工和新鲜证据可记录执行状态；历史 D01–D49 不与 R01–R15 混同。
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
@@ -295,7 +312,26 @@ not a new runtime or a claim of implementation. Evidence:
 
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 
-Latest bounded source delta — SYSTEM browser-popup P0, 2026-10-09:
+Current bounded publication — 2026-10-11, PR #11: preserve the existing
+Collector/Shared/Math/Flutter candidates and their history; repair the XHS
+regression harness and current rule conflicts; connect the existing CTH/BMP
+BusinessDecisionWorkflow adoption, revision readback and Shared save operations
+through their normal HTTP entry and existing permission owners. No frontend
+implementation is added by this repair. The existing Flutter candidate's 231
+isolated widget/unit regressions and XHS's 49 regressions pass at unchanged
+relevant source pins. These counts establish no product closure.
+
+The publication marker records this source batch, not runtime or whole-product
+acceptance. PR head, merged main, exact-SHA CI and actual runtime load must be
+read independently; until the controlled merge/readback succeeds the batch is
+not part of main. The 2026-10-11 real CTH operation already saved and independently
+reopened a 30-source brief and deterministic sample statistics with AI not
+requested. Its initial UI read failure recovered through the saved identifier;
+the page then displayed the persisted statistics. CTH/BMP final deliverables,
+revision/recovery and same-version runtime acceptance remain open until their
+actual operation receipts exist. No historical failure is relabelled PASS.
+
+Historical bounded source delta — SYSTEM browser-popup P0, 2026-10-09:
 existing automatic Browser/Collector/resident paths are explicitly headless;
 reuse/recovery requires the same registered profile, port, kernel, loopback
 listener PID and mode. Automatic work cannot switch to visible login or focus.

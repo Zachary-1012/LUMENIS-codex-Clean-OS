@@ -8,12 +8,14 @@ network ranges.  The existing ``secondary_collection`` surface remains the
 only Evidence/Canonical write boundary.
 """
 
+import hashlib
 import ipaddress
 import json
 import os
 import re
 import socket
 from collections import OrderedDict
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Iterable
@@ -23,6 +25,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.adapters import select_proxy
 
+from .platform_naming import normalize_platform
+
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_REDIRECTS = 3
@@ -31,6 +35,14 @@ USER_AGENT = "LUMENIS-Public-Collector/1.0 (+read-only; evidence-bound)"
 DOH_JSON_URL = "https://dns.google/resolve"
 MAX_DOH_BYTES = 16 * 1024
 _HOST_LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$", re.IGNORECASE)
+POST_COVER_MEDIA_HOSTS: dict[str, tuple[str, ...]] = {
+    "douyin": ("douyinpic.com", "byteimg.com"),
+    "instagram": ("cdninstagram.com", "fbcdn.net"),
+    "facebook": ("fbcdn.net",),
+    "x": ("pbs.twimg.com",),
+    "xiaohongshu": ("xhscdn.com", "xiaohongshu.com"),
+    "wechat": ("mmbiz.qpic.cn",),
+}
 
 
 class PublicSourceError(RuntimeError):
@@ -310,6 +322,27 @@ def validate_public_url(
     return validated
 
 
+def _validate_allowed_https_host(value: str, allowed_suffixes: tuple[str, ...]) -> None:
+    """Require HTTPS on an exact approved host or a subdomain of one."""
+    try:
+        parsed = urlsplit(str(value or ""))
+        scheme = parsed.scheme.lower()
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError as exc:
+        raise PublicSourceError("media URL is invalid") from exc
+    if scheme != "https" or parsed.username or parsed.password:
+        raise PublicSourceError("media URL must use HTTPS without credentials")
+    if not hostname or port not in (None, 443):
+        raise PublicSourceError("media URL authority is not approved")
+    hostname = _canonical_hostname(hostname)
+    if not any(
+        hostname == suffix or hostname.endswith("." + suffix)
+        for suffix in allowed_suffixes
+    ):
+        raise PublicSourceError("media URL host is not approved")
+
+
 class PublicSourceHTTPAdapter(HTTPAdapter):
     """Requests adapter implementing source-specific public address pins.
 
@@ -386,12 +419,26 @@ def fetch_public_url(
     timeout: float = 10.0,
     max_bytes: int = MAX_RESPONSE_BYTES,
     session: requests.Session | None = None,
+    allowed_host_suffixes: Iterable[str] | None = None,
 ) -> PublicResponse:
     """Fetch a small public response with bounded, revalidated redirects."""
     if _is_blocked_youtube_feed(url):
         raise PublicSourceError("YouTube video feeds are blocked pending an authorized access route")
     if max_bytes <= 0 or max_bytes > MAX_RESPONSE_BYTES:
         raise ValueError("max_bytes is outside the public-source safety bound")
+    allowed_suffixes = None
+    if allowed_host_suffixes is not None:
+        if isinstance(allowed_host_suffixes, str):
+            raise ValueError("allowed media host suffixes must be an iterable of host names")
+        try:
+            allowed_suffixes = tuple(
+                _canonical_hostname(suffix) for suffix in allowed_host_suffixes
+            )
+        except (PublicSourceError, TypeError) as exc:
+            raise ValueError("allowed media host suffixes are invalid") from exc
+        if not allowed_suffixes:
+            raise ValueError("allowed media host suffixes cannot be empty")
+        _validate_allowed_https_host(url, allowed_suffixes)
     host_pins = load_public_source_host_pins()
     resolution_trace: list[dict[str, str]] = []
     redirect_chain: list[str] = []
@@ -430,8 +477,11 @@ def fetch_public_url(
                     client.cookies.clear()
                 if 300 <= response.status_code < 400 and response.headers.get("Location"):
                     redirect_chain.append(current)
+                    redirect_target = urljoin(current, response.headers["Location"])
+                    if allowed_suffixes is not None:
+                        _validate_allowed_https_host(redirect_target, allowed_suffixes)
                     current, host_pins = _validate_public_url_and_pin(
-                        urljoin(current, response.headers["Location"]),
+                        redirect_target,
                         host_pins=host_pins,
                         resolution_trace=resolution_trace,
                     )
@@ -481,3 +531,200 @@ def fetch_public_url(
             client.adapters = original_adapters
             for adapter in transport_adapters:
                 adapter.close()
+
+
+def _post_cover_null_result(reason: str, native_locator: dict[str, str] | None = None) -> dict:
+    """Return a categorical unavailable result without manufacturing zeroes."""
+    return {
+        "status": "NULL",
+        "reason": reason,
+        "raw_bytes": None,
+        "sha256": None,
+        "size_bytes": None,
+        "content_type": None,
+        "extension": None,
+        "original_url": None,
+        "final_url": None,
+        "native_locator": native_locator,
+        "captured_at": None,
+    }
+
+
+def _native_cover_url(value: object) -> str | None:
+    """Read a URL only from the explicitly supported native cover shapes."""
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    if not isinstance(value, Mapping):
+        return None
+    url_list = value.get("url_list")
+    if isinstance(url_list, list):
+        if url_list and isinstance(url_list[0], str) and url_list[0].strip():
+            return url_list[0].strip()
+        return None
+    for key in ("url", "url_hint"):
+        candidate = value.get(key)
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return None
+
+
+def _post_cover_candidate(record: Mapping) -> tuple[str | None, dict[str, str] | None, str | None]:
+    """Select one observed cover, keeping the native field path and locator."""
+    sources: list[tuple[str, Mapping]] = []
+    seen: set[int] = set()
+    for key in ("source_raw", "raw_data", "raw"):
+        value = record.get(key)
+        if isinstance(value, Mapping) and id(value) not in seen:
+            sources.append((key, value))
+            seen.add(id(value))
+    if id(record) not in seen:
+        sources.append(("", record))
+
+    for source_name, source in sources:
+        prefix = f"{source_name}." if source_name else ""
+        video = source.get("video")
+        if isinstance(video, Mapping):
+            cover = video.get("cover")
+            if isinstance(cover, Mapping):
+                url_list = cover.get("url_list")
+                if isinstance(url_list, list) and url_list:
+                    candidate = url_list[0]
+                    if isinstance(candidate, str) and candidate.strip():
+                        return candidate.strip(), {"field_path": f"{prefix}video.cover.url_list[0]"}, None
+
+        for field_name in ("video_cover", "cover"):
+            if field_name in source:
+                candidate = _native_cover_url(source.get(field_name))
+                if candidate:
+                    return candidate, {"field_path": f"{prefix}{field_name}"}, None
+
+        if "display_uri" in source:
+            candidate = _native_cover_url(source.get("display_uri"))
+            if candidate:
+                return candidate, {"field_path": f"{prefix}display_uri"}, None
+
+        detail = source.get("detail_observation")
+        hints = detail.get("media_hints") if isinstance(detail, Mapping) else None
+        if isinstance(hints, list):
+            for index, hint in enumerate(hints):
+                if not isinstance(hint, Mapping) or str(hint.get("kind") or "").strip().lower() != "image":
+                    continue
+                locator = hint.get("locator")
+                locator_text = locator.strip()[:500] if isinstance(locator, str) else ""
+                native_locator = {
+                    "field_path": f"{prefix}detail_observation.media_hints[{index}]",
+                }
+                if locator_text:
+                    native_locator["source_locator"] = locator_text
+                if any(token in locator_text.lower() for token in (
+                    "avatar", "profile", "userpic", "user_pic", "头像", "用户头像", "个人头像",
+                )):
+                    return None, native_locator, "AVATAR_NOT_ELIGIBLE"
+                candidate = _native_cover_url(hint.get("url_hint"))
+                if candidate is None:
+                    candidate = _native_cover_url(hint.get("url"))
+                if candidate:
+                    return candidate, native_locator, None
+                return None, native_locator, "OBSERVED_COVER_URL_MISSING"
+    return None, None, None
+
+
+def _sanitize_post_cover_url(value: str) -> str | None:
+    """Remove signed query and fragment material from a returned media URL."""
+    try:
+        parsed = urlsplit(value)
+        hostname = parsed.hostname or ""
+        authority = f"[{hostname}]" if ":" in hostname else hostname
+        if parsed.port:
+            authority = f"{authority}:{parsed.port}"
+        return urlunsplit((parsed.scheme.lower(), authority, parsed.path, "", ""))[:2048]
+    except ValueError:
+        return None
+
+
+def _post_cover_magic_extension(content: bytes) -> str | None:
+    if content.startswith(b"\xff\xd8\xff"):
+        return ".jpg"
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if len(content) >= 12 and content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        return ".webp"
+    if len(content) >= 16 and content[4:8] == b"ftyp":
+        box_size = int.from_bytes(content[:4], "big")
+        if 16 <= box_size <= len(content):
+            brands = [content[8:12]]
+            brands.extend(content[offset:offset + 4] for offset in range(16, box_size, 4))
+            if b"avis" in brands:
+                return None
+            if b"avif" in brands:
+                return ".avif"
+    return None
+
+
+def fetch_observed_post_cover(platform: str, record: Mapping) -> dict:
+    """Fetch at most one observed post cover through the pinned public transport.
+
+    This helper returns raw bytes for the existing Collector intake path only.
+    It performs no image decoding, storage, rights assessment, or Evidence write.
+    """
+    canonical_platform = normalize_platform(platform)
+    allowed_hosts = POST_COVER_MEDIA_HOSTS.get(canonical_platform or "")
+    if allowed_hosts is None:
+        return _post_cover_null_result("UNSUPPORTED_PLATFORM")
+    if not isinstance(record, Mapping):
+        return _post_cover_null_result("INVALID_POST_RECORD")
+
+    original_url, native_locator, selection_error = _post_cover_candidate(record)
+    if selection_error:
+        return _post_cover_null_result(selection_error, native_locator)
+    if original_url is None:
+        return _post_cover_null_result("NO_OBSERVED_COVER")
+    try:
+        _validate_allowed_https_host(original_url, allowed_hosts)
+    except PublicSourceError:
+        return _post_cover_null_result("UNSAFE_OR_UNAPPROVED_URL", native_locator)
+
+    try:
+        response = fetch_public_url(
+            original_url,
+            timeout=3.0,
+            max_bytes=MAX_RESPONSE_BYTES,
+            allowed_host_suffixes=allowed_hosts,
+        )
+    except (PublicSourceError, requests.RequestException, ValueError):
+        return _post_cover_null_result("MEDIA_FETCH_FAILED", native_locator)
+
+    mime_extensions = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+        "image/avif": ".avif",
+    }
+    if not response.content:
+        return _post_cover_null_result("EMPTY_MEDIA_BODY", native_locator)
+    extension = mime_extensions.get(response.content_type.lower())
+    if extension is None:
+        return _post_cover_null_result("UNSUPPORTED_MEDIA_TYPE", native_locator)
+    magic_extension = _post_cover_magic_extension(response.content)
+    if magic_extension is None:
+        return _post_cover_null_result("UNSUPPORTED_MEDIA_BYTES", native_locator)
+    if extension != magic_extension:
+        return _post_cover_null_result("MEDIA_MIME_MAGIC_MISMATCH", native_locator)
+
+    sanitized_original = _sanitize_post_cover_url(original_url)
+    sanitized_final = _sanitize_post_cover_url(response.url)
+    if sanitized_original is None or sanitized_final is None:
+        return _post_cover_null_result("MEDIA_URL_SANITIZATION_FAILED", native_locator)
+    return {
+        "status": "AVAILABLE",
+        "reason": None,
+        "raw_bytes": response.content,
+        "sha256": hashlib.sha256(response.content).hexdigest(),
+        "size_bytes": len(response.content),
+        "content_type": response.content_type.lower(),
+        "extension": extension,
+        "original_url": sanitized_original,
+        "final_url": sanitized_final,
+        "native_locator": native_locator,
+        "captured_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }

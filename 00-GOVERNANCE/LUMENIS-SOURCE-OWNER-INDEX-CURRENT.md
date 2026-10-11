@@ -1,5 +1,17 @@
 # LUMENIS Source Owner Index — CURRENT
 
+## 2026-10-10 v2 数学能力源码定位（原责任不变）
+
+| 现有 Owner/调用者 | 当前唯一路径 | 采用与未闭边界 |
+| --- | --- | --- |
+| Shared Evaluation / C5，C3 消费 | `lumenis/shared/evaluation/openai_math_papers/` | 九 family 的有限/公式计算、输入预算、provenance；一般主算法逐项仍 OPEN。 |
+| SYSTEM Task/API / C2/C6，M 本次有界授权 | `agent_runtime/openai_math_paper_handler.py`、`ai_task_engine.py`、`ai_api.py` | 同 actor/scope/来源版本、请求幂等、既有 Artifact 事务、独立读回与终态 CAS；不更改其他 Owner 的事实。 |
+| F 现有 CTH-10/BMP-04 调用面 | `source_brief_*`、`lumenis_core_client.dart`、`bmp04_screen.dart` | 明确情景输入、实际计算、修订/原任务重开、来源返回；F 原有 dirty 保护，非全屏验收。 |
+| C2 既有 Learning / 模型研究 | `lumenis/system/ai_gateway/research/openai_math_papers/` | 小型 Gibbs 参数实验与现有 gpt-oss 是不同对象；精确训练准入/重载/独立 held-out 后才记录实验收益，无生产晋升授权。 |
+
+当前状态及固定来源/公式/回执见现有 `evidence/round-15/OPENAI-MATH-ADOPTION-20261007.{md,json}` 的 v2 增补。历史研究结论保留日期，不把先前未实现/未重放描述当作本轮当前事实；也不把新有限实现称为完整论文算法或模型能力。
+
+
 > 最新直接 PO，2026-10-09：本索引保留 C1–C6/F/M/W1–W6 的工程源码责任；唯一产品交付轮次归 Product Architecture：SYSTEM、CTH、BMP、Shared、Agent Groups / 自研 AI。
 > Status: **CURRENT EXECUTION INDEX / FIVE ARCHITECTURE ROUNDS / COMPLETE LEGACY COVERAGE**
 > 实际窗口开工、暂停、恢复、模型与推理档位由PO决定。本索引不固定窗口数量、单业务席位或模型；只记录有时间和证据的观察，不能核实时 NOT_VERIFIED。历史审批和工作原件保留但无当前派工效力。
@@ -192,7 +204,7 @@ These are blocking requirements for C1–C6 and mapped checkpoints:
 7. The frontend presents business intent, state, progress, result and recovery. Collection, routing, tool execution, model selection, Evidence creation and other processing remain in their current backend/runtime owners.
 8. Each of the 44 screen blueprints keeps its own task, information hierarchy, composition and interaction path. PC and mobile share business truth but use purpose-built semantic recomposition; neither is a scaled copy of the other.
 9. A local problem may change only its bounded owner/callers. It may not trigger a global auth, database, naming, architecture or design-system rewrite. Remove a path only after its unique behavior is preserved and accepted in the current owner.
-10. Every change proves the requested improvement and preservation of affected behavior with applicable build/static/security/data checks and, for user-visible workflows, real runtime/E2E evidence; unit/integration suites remain prohibited. A build, fixture, HTTP 200, screenshot or document alone is insufficient.
+10. Every change proves the requested improvement and preservation of affected behavior with applicable build/static/security/data checks and, for user-visible workflows, real runtime/E2E evidence. Under the current PO policy, targeted isolated unit/integration regressions may be used for a relevant defect; they are not blanket requirements and never replace real user outcome evidence. A build, fixture, HTTP 200, screenshot or document alone is insufficient.
 11. The approved ROUND 01 PDF/report/register are evidence and coverage indexes only. Their sketches remain `DESIGN_EXPLORATION`; implementation proceeds directly from current Experience and actual screen contracts, with records updated alongside code; separate design drafts/M DESIGN_READY are not prerequisites. Direct PDF/sketch implementation is `REWORK` when it merely copies an artifact into generic or unbound behavior; direct construction under current contracts remains authorized without a separate design phase.
 12. Product Skill Store is a named P0 capability under Shared Agent Skills and AI-04. Preserve discovery, trust/license, input/output, Permission, enablement, verified run, history, update, disable and uninstall semantics; do not reduce it to the historical `FUNCTION_MAP`.
 13. ROUND 02–15 cannot close on source, tests or governance evidence alone. Route each dispatched Owner Task Card and M acceptance decision through `LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`, including its real-user E2E, `REAL DELIVERY CARD` and Section 23 `COMMERCIAL OVERLAY IMPACT`; a commercial gap sets `COMMERCIAL_READY=NO` without falsely failing unrelated engineering work.
@@ -245,13 +257,17 @@ this mapping is navigation, not a second architecture or new window dispatch.
 | Identity candidates versus confirmed facts | Existing Registry/Canonical and CTH/BMP scope/relationship owners; pending raw records stay locatable without false subject/venue/brand binding or another store. |
 | Business analysis and user result | Existing CTH/BMP, Shared Research/SourceBrief/Reporting/SavedWork/Evaluation, SH-01 Discover and actual Web callers; no final business rule moves into Collector/UI/Controller. |
 
-C1 executes the existing full data-to-result task; M reserves only genuinely affected
-cross-owner regions and integrates frozen accepted source. Other paused roles do
-not resume. M retains its original non-C1 candidate/material convergence. Scope,
-source version/use, native time, state and error semantics pass through actual
-interfaces; no parent DATA_IMPORT receipt or name hit substitutes for later use.
-Only changed Web consumers are repaired; original 44-screen scope remains intact.
-Source/runtime/DB/user acceptance remain separate from this published routing.
+The 2026-10-09 assignment named C1 for the existing full data-to-result task;
+that dated dispatch is retained as provenance, not as current execution state.
+C1's source responsibility remains in force. M reserves genuinely affected
+cross-owner regions and integrates accepted source under current PO dispatch and
+reservations; no historical “other paused roles” clause determines today's
+window state. M's non-C1 candidate/material convergence remains an existing
+responsibility when directly authorized. Scope, source version/use, native time,
+state and error semantics pass through actual interfaces; no parent DATA_IMPORT
+receipt or name hit substitutes for later use. Only changed Web consumers are
+repaired; original 44-screen scope remains intact. Source/runtime/DB/user
+acceptance remain separate from this published routing.
 
 ### 2026-10-09 来源同权及已有数据工具流接续
 
@@ -474,12 +490,15 @@ C5 owns cross-material intake, source/rights/citation/research transfer and the
 receiving-owner handoff record; C3 consumes accepted research/business inputs for
 CTH/BMP outcomes. C1/C2/C6 own their respective data/AI/runtime inputs. Every recovered and newly discovered
 item gets a primary Owner; unread/missing remains an obligation. These are
-responsibility assignments, not activation. The latest direct PO instruction also
-authorizes M's research assistants to recover and read all unfinished originals,
+responsibility assignments, not activation. The 2026-10-09 PO instruction also
+authorized M's research assistants to recover and read unfinished originals,
 including local DeepSeek/ancestor materials and F/C4 references, and to converge
-existing non-C1 work. This does not resume paused delivery windows or transfer
-their architectural ownership. Reuse actual pinned readings; summaries, directory
-counts and unverified authorship do not close the original-material obligation.
+existing non-C1 work. Its statement that this did not then resume paused delivery
+windows is dated provenance, not a present dispatch rule; current task-specific PO
+instructions and fresh evidence control. Material recovery does not transfer
+another Owner's architectural ownership. Reuse actual pinned readings; summaries,
+directory counts and unverified authorship do not close the original-material
+obligation.
 
 Retained video/podcast timeline horizontal interaction maps to C4/F/C6 and J5/J6,
 U14/U15/U23. Developer mode maps to existing SYSTEM settings/security/runtime,
@@ -715,7 +734,7 @@ M rechecked these findings against the pinned source `52cd770cde458f73f99e407301
 
 ### 2026-10-08 日期与缺值更正的后续落实
 
-C1沿`acquisition_plan.py`和`adapters/scheduling/prelaunch_baseline.py`移除全局固定起点校验/默认/seed生成，复用原时间和计划版本Owner，保留用户显式范围及旧receipt可回读、不重放。C5/Shared Evidence负责原始时间和缺值原因；C3/Metric负责维度定义、单位、范围与可比性；F界面保留维度并显示“—”及可理解原因/最后核验；C2不能据缺值补造事实。这些架构责任不自动恢复暂停窗口。当前C1完成其获准闭环及必要调用方修复，跨Owner区域沿既有M/W6预约交接，M审阅与集成；F/C2–C6当前执行状态需PO决定及事实核验。具体合同和已定位源码缺口见Global§10；源码、运行和验收仍须各自证据证明。
+C1沿`acquisition_plan.py`和`adapters/scheduling/prelaunch_baseline.py`移除全局固定起点校验/默认/seed生成，复用原时间和计划版本Owner，保留用户显式范围及旧receipt可回读、不重放。C5/Shared Evidence负责原始时间和缺值原因；C3/Metric负责维度定义、单位、范围与可比性；F界面保留维度并显示“—”及可理解原因/最后核验；C2不能据缺值补造事实。该2026-10-08增补描述能力责任和当时的接续安排，不证明C1完整J1闭环已验收，也不决定当前窗口状态；暂停/恢复由最新直接PO指令决定。具体合同和已定位源码缺口见Global§10；源码、运行和验收仍须各自证据证明。
 
 ### 2026-10-08 逐步交付与逻辑接续定位
 
@@ -760,13 +779,15 @@ C3/C5/C4原职责复用已有SourceBrief/creation-upstream/SavedWork，补业务
 
 报告中的WeChat旧断言已随`6a1db538`接受发布，复用受影响证据。该SHA的App Gate `37706227173`已成功；Product Gate `37706227134`在两项Agent Memory learning-loop断言失败，C6协调C2修复，不重置旧WeChat修复为未完成、不把新失败写成PASS。此处仅为2026-10-08观察，运行加载/完整用户验收仍按CURRENT独立记录。
 
-## 2026-10-09 existing-owner AI-optional/source adoption delta
+## 2026-10-09 existing-owner AI-optional/source adoption delta — dated evidence only
+
+下表记录2026-10-09的源码采用和当时观察；其中Core健康、窗口暂停/派发、模型、运行与资源陈述均不是当前状态或调度命令。不得从“no other window dispatch”推断今天应暂停，也不得从历史运行状态推断当前已运行；应读取最新直接PO指令与新鲜证据。本轮最新PO明确要求F继续暂停，该事实不恢复或暂停其他窗口。
 
 | Existing owner / source | Current bounded adoption | Exact remaining operation |
 |---|---|---|
-| SYSTEM Browser/Collector; M bounded audit/P0 grant through existing owners | Published headless identity baseline reused; actor_ref now propagates through all HUMAN lower launchers and rollback; registered 9224 marker recovery observed; Core healthy on admitted local tree | Real authenticated pending-task HUMAN transition remains NOT_VERIFIED; current 9223/9224/9225/9226 modes must be read from runtime evidence. Six-platform/whole SYSTEM closure remains OPEN. No other window dispatch |
+| SYSTEM Browser/Collector; M bounded audit/P0 grant through existing owners | At the 2026-10-09 observation, the headless identity baseline and actor_ref propagation were recorded; registered 9224 marker recovery was observed | The authenticated HUMAN transition and six-platform/whole SYSTEM closure were OPEN at that snapshot. The phrase “No other window dispatch” describes only that dated observation; current runtime and dispatch require fresh evidence. |
 | M engineering tools; `.codex/local_workflow.py`, `scripts/local_development.ps1`, `.vscode/` | Deterministic Tasks, scoped static/build/format/recovery and real private receipts | Four-language local completion, syntax/type diagnostic recovery and real Dart definition navigation OBSERVED; editor path/PS host/Dart exclusions repaired; historical App test-source errors retained; tools do not close a product Job |
-| SYSTEM Browser / C6 and F SYS-06; M bounded integration of `ai_browser_runtime.py`, `ai_browser_api.py`, existing Core client/repository/screen/transport | Exclusive short lease and frame/target/revision/viewport binding; manual navigate/history/reload/scroll; server-listed visible-link selection with exact anchor re-resolution and pre-request main-document redirect checks; manual research-note Shared SavedWork save/list/reopen/revise; bounded isolated runtime entry | Server-authored Task/Run and source-use binding, safe remote authenticated Web, full captured-source Artifact/recovery and arbitrary click/input remain OPEN; manual notes are NOT_IMPORTED/NOT_VERIFIED/UNBOUND. Runtime evidence is in the existing M round-15 delivery, not implied by source. Paused Owner windows are not resumed. |
+| SYSTEM Browser / C6 and F SYS-06; M bounded integration of `ai_browser_runtime.py`, `ai_browser_api.py`, existing Core client/repository/screen/transport | At the 2026-10-09 observation, exclusive short lease and frame/target/revision/viewport binding; manual navigate/history/reload/scroll; server-listed visible-link selection with exact anchor re-resolution and pre-request main-document redirect checks; manual research-note Shared SavedWork save/list/reopen/revise; bounded isolated runtime entry | Server-authored Task/Run and source-use binding, safe remote authenticated Web, full captured-source Artifact/recovery and arbitrary click/input were OPEN at that snapshot; runtime/current pause state must be independently reverified. |
 | Same Browser owner; `lumenis/system/browser/runtime/browser_use_adapter.py` | Disabled optional readiness boundary only; no provider/model fallback | Server-owned Browser Task/Run and captured Source/use producers are absent; Collector queue leases and client task IDs cannot substitute. Then bind the existing typed owned Gateway, BaseChatModel/action bridge and enforced DNS/private-IP/redirect/WebSocket egress; no intelligent execution is accepted. |
 | Existing Agent/Task Runtime; `ai_task_engine.py`, `agent_runtime/agent_zero_gui_executor.py` | Disabled optional injected GUI executor contract; no parallel queue/database/runtime | No startup binder or implementation of its required `/api/lumenis/v1` worker protocol; stock Agent Zero APIs do not satisfy it. Independent manual GUI session and editable-document Artifact intake also remain open. Resource readback: 09:26 Beijing, no host Docker command, WSL Ubuntu stopped, 950 MiB free. No Docker/GUI runtime accepted; that historical observation does not establish current Owner dispatch. |
 | SYSTEM Gateway / C2; `lumenis/system/ai_gateway/core.py` | Explicitly authorized M cleanup: signatures/history retained, retired execution inert; owned functions unchanged | Owned model still NOT_BOUND; no new model/API/training authorization |
@@ -806,7 +827,7 @@ Core8201已授权恢复并有界加载本地工作树；后台维护仍 PARTIAL�
 SOURCE 发布、受保护本地 Runtime、DB 获准派生成果、用户样本统计各自记账，
 不证明整个 main Runtime/全候选/六平台/完整 SYSTEM。真实已认证待验证任务 HUMAN 正向、
 CTH/BMP 决策/报告/导出、媒体真实成品、AgentZero worker、AI-01 和全部 44 屏仍按原要求 OPEN。
-不恢复其他窗口，不运行模块测试，不改变模型/费用/权益/Permission，原始候选和失败保留。
+以上“不恢复其他窗口、不运行模块测试”是该2026-10-09批次的操作边界，不是当前测试政策或窗口调度；2026-10-10后适用隔离定向回归已恢复，当前调度由最新直接PO决定。该历史批次未改变模型/费用/权益/Permission，原始候选和失败继续保留。
 完整源码、操作、静态构建、回滚及开放项见
 [evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md](evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md)
 的本批段落；证据文件内用同目录相对路径。旧时间采样仍为历史，不作为当前运行禁令。

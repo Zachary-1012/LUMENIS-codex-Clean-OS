@@ -20,7 +20,7 @@ rights, data, cost, shared-write reservations and real acceptance remain binding
 
 数据分析的基础退出条件：使用同一组真实、获准、有版本的资料，在模型/GPU/API 未绑定时，经正常产品入口完成既定确定性指标、时间/范围比较或人工判断记录，得到可引用的分析/报告，并保存、关闭、重开、修订与恢复。记录来源、单位、分母、样本覆盖、不可比与未知；错误拒绝不掩盖基础正常路径缺失。AI 增强状态独立列出，增强不可用不能让已完成的基础分析丢失或全任务失败；真正 AI 专属动作不伪报成功。
 
-复用既有 Math 采用记录：验收时核对目标/约束、观察与推断区别、时间和总体/样本边界、真实计算及成本。数学采样不制造真实来源，论文复杂度不直接证明业务准确率或吞吐。采用声明、源码实现和真实无 AI 用户成果分别记录；不运行禁止的模块套件、不另立验收体系。
+复用既有 Math 采用记录：验收时核对目标/约束、观察与推断区别、时间和总体/样本边界、真实计算及成本。数学采样不制造真实来源，论文复杂度不直接证明业务准确率或吞吐。采用声明、源码实现和真实无 AI 用户成果分别记录。遵守根 `AGENTS.md` 与机器合同的当前验证政策：按实际缺陷可运行隔离、定向单元/集成回归；这类检查不替代真实用户成果，也不另立验收体系。
 
 
 序境所有基础业务能力在无模型、无外部 AI API、无 GPU、无推理服务时，仍须完成正常任务。AI 只增强效率、理解、建议、生成及辅助决策，不生产事实，不拥有 Canonical Data，不是核心业务链必经条件。AI 专属动作缺模型可准确标为 UNAVAILABLE，不能因此阻断普通任务。安全/权限拒绝、来源权益失效和真实输入缺失仍是有效阻塞，不能伪造或绕过。
@@ -41,7 +41,7 @@ A0/B0/C0 V2 本轮仅准入准备：外部模型条款/默认关闭设计审阅�
 
 > Status: **CURRENT SUBORDINATE REAL-DELIVERY OVERLAY / NOT A SECOND PRODUCT OR EXPERIENCE AUTHORITY**
 
-> 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。当前窗口/模型/推理档位只记录PO决定与有日期的实际核验，未知为NOT_VERIFIED；历史暂停与模型回执不决定当前执行。
+> 历史 PO 指令（2026-10-08，仅保留历史效力）：当时暂停单元/集成及换名模块测试，并记录了特定窗口/模型状态。该测试限制已由 2026-10-10 PO 指令取代；当前按根 `AGENTS.md` 和机器合同 v1.3.0 执行，允许适用的定向隔离回归，但不把它们当作真实产品 E2E。旧窗口、模型、effort 和暂停回执均不决定当前执行；未由最新直接 PO 指令及新鲜证据核实的状态记为 `NOT_VERIFIED`。
 >
 > Authority boundary: this overlay adds delivery evidence and commercial-readiness gates to the five architecture outcomes with retained C1–C6 source responsibilities and retained R01–R15 acceptance coverage. The historical numbered coverage groups below preserve acceptance provenance, not an execution schedule. This overlay does not create another queue, bypass dependencies, replace Product Architecture/Experience, or erase completed source work.
 >
@@ -96,7 +96,7 @@ local/GitHub/runtime/DB/user states, F all open gaps/impact/resume conditions.
 Use OBSERVED / INFERRED / NOT VERIFIED; only demonstrated applicable user
 acceptance permits ACCEPTED. M integrates exact frozen accepted paths and CURRENT
 with remote readback; publication never implies loaded Runtime or RELEASED.
-Existing R/J/U, three Gate tiers and no-unit/integration policy remain unchanged.
+Existing R/J/U and three Gate tiers remain unchanged. Targeted unit/integration regression is allowed under the current PO authorization when it addresses the change; it is not a blanket per-change requirement and never substitutes for a complete real-user outcome.
 C1 and M retain original source/candidate/material responsibilities. This record
 is not current dispatch/model selection; actual PO choice and dated evidence apply.
 
@@ -1219,7 +1219,7 @@ source and re-use same-content evidence without treating it as user acceptance.
 二十三、全局商业交付补充红线
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Whole-product completion condition: 以唯一 Source Owner Index 和 Real Delivery Overlay 维护的全产品已确认功能清单为验收全集，覆盖 CTH、BMP、全部 Shared/SYSTEM 能力和四端；保留 R01–R15、J1–J8、原六专项的每项义务。C1–C6 是完整任务分工，不能把六专项、少量代表样本或当前已实现子集当作产品全部功能。所有本轮应交付功能必须具有实际正常路径、真实有用结果、适用的保存/重开/Evidence/Evaluation/恢复证明；任一项未完成或缺少适用证明，不得宣布产品闭环。失败/缺失状态的正确呈现是必要质量要求，本身不通过该功能的正常结果验收。仅 Product Owner 已明确后置的事项单列保留，执行者不得自行遗漏或后置。
+Whole-product completion condition: 以唯一 Source Owner Index 和 Real Delivery Overlay 维护的全产品已确认功能清单为验收全集，覆盖 CTH、BMP、全部 Shared/SYSTEM 能力和四端；保留 R01–R15、J1–J8 和 C1–C6 的全部工程职责。C1–C6 是源码责任，不是六轮产品交付；不能把单个 Owner、少量代表样本或当前已实现子集当作产品全部功能。所有本轮应交付功能必须具有实际正常路径、真实有用结果、适用的保存/重开/Evidence/Evaluation/恢复证明；任一项未完成或缺少适用证明，不得宣布产品闭环。失败/缺失状态的正确呈现是必要质量要求，本身不通过该功能的正常结果验收。仅 Product Owner 已明确后置的事项单列保留，执行者不得自行遗漏或后置。
 
 Product Owner clarification (2026-10-02): 本轮工程/产品闭环必须完成冻结范围内真实、可用、可重复的功能与用户结果；商业授权采购、商业再分发许可和平台合作谈判后置，不得仅因这些商务事项未完成，把整项能力降为 helper、演示、禁用控件或 unavailable 并称为闭环。沿现有 owner 使用当前可用且允许的来源、自有/许可合适的素材和组件，完成真实输入→有用产物→保存/重开→Evidence→Evaluation→恢复。具体访问授权、账号边界、源用途与第三方代码/模型许可继续按实际条件执行；若某个承诺的专有字段/动作确实依赖未获授权，仅将该明确能力记录为未完成，不得伪造或用另一来源冒充。商业合作缺口单列 COMMERCIAL_READY，真实工程缺口仍须修复并如实保留。保留官方接口，未来授权后通过实际联调、范围/质量/限额及恢复验证再升级，不能预设授权自动保证能力完整。
 

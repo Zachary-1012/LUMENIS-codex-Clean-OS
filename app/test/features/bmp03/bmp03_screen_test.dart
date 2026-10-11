@@ -149,7 +149,8 @@ void main() {
 
     expect(find.text('市场情报'), findsWidgets);
     expect(find.text('体验机会'), findsWidgets);
-    expect(find.text('market.report'), findsOneWidget);
+    // The source is shown on each signal card and in the selected-signal detail.
+    expect(find.text('market.report'), findsWidgets);
     expect(find.byKey(const Key('bmp03-signal-SIG-TWO')), findsOneWidget);
     expect(_visibleCopy(tester), isNot(contains('Evidence')));
     expect(_visibleCopy(tester), isNot(contains('runtime')));

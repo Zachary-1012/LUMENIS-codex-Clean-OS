@@ -46,7 +46,7 @@ class TestFacebookAdapter:
         from lumenis.adapters.facebook import FacebookAdapter
         card = MagicMock()
         card.query_selector.return_value = None
-        assert FacebookAdapter._extract_metric(card, "span") == 0
+        assert FacebookAdapter._extract_metric(card, "span") is None
 
 
 class TestXAdapter:
@@ -103,6 +103,107 @@ def _x_element(text="", **attributes):
     element.inner_text.return_value = text
     element.get_attribute.side_effect = attributes.get
     return element
+
+
+@pytest.mark.parametrize("label,text,count", [
+    ("0 Likes", "0", 0),
+    ("1,234 shares", "1,234", 1234),
+    ("128条评论", "128", 128),
+    ("0赞", "0", 0),
+    ("Like", "2468", 2468),
+    ("1.2K Likes", "1.2K", None),
+    ("1.3万赞", "1.3万", None),
+    ("1,2 shares", "1,2", None),
+    ("-4 comments", "-4", None),
+    ("01 comments", "01", None),
+    ("2026 update 12", "unavailable", None),
+    ("", "", None),
+])
+def test_facebook_observation_keeps_exact_zero_and_original_compact_or_invalid_display(label, text, count):
+    from lumenis.adapters.facebook import FacebookAdapter
+
+    card = MagicMock()
+    card.query_selector.return_value = _x_element(text, **{"aria-label": label})
+    actual, display = FacebookAdapter._extract_metric_observation(card, "metric")
+
+    assert actual == count
+    assert display == ({key: value for key, value in (("aria_label", label), ("text", text)) if value} or None)
+
+
+def test_facebook_parser_preserves_long_body_and_metric_display_through_canonical_adapter():
+    import hashlib
+    from lumenis.adapters.facebook import FacebookAdapter
+    from lumenis.system.collector.adapters.facebook import FacebookAdapter as MainFacebookAdapter
+    from lumenis.system.collector.adapters.secondary_collection import _native_record
+
+    body = "原文段落\n" * 160 + "最后一段仍属同一帖子，不得截断。"
+    card = MagicMock()
+    card.query_selector.side_effect = {
+        '[data-ad-preview="message"], .x1iorvi4, .x1pi30zi': _x_element(body),
+        'h3 a, .xt0psk2 a, [role="link"] span': _x_element("Author"),
+        'a[href*="/posts/"], a[href*="/videos/"], a[href*="/photos/"]': _x_element(href="/page/posts/12345678901234567890"),
+        'span[aria-label*="赞"], .x193iq5w span': _x_element("0", **{"aria-label": "0 Likes"}),
+        'a[href*="comments"], span[aria-label*="评论"]': None,
+        'span[aria-label*="分享"], a[href*="shares"]': _x_element("1.2K", **{"aria-label": "1.2K shares"}),
+    }.get
+    note = FacebookAdapter(cookie_string="test-only")._parse_facebook_card(card, None)
+    item = MainFacebookAdapter(backend=object())._v4_notes_to_items([note])[0]
+    native = _native_record(item, "facebook", "原文段落", "2026-10-08T06:00:00+08:00")
+
+    assert note.content == item["content"] == native["content"] == body
+    assert note.raw_data["body_sha256"] == hashlib.sha256(body.encode("utf-8")).hexdigest()
+    assert note.raw_data["body_state"] == "VISIBLE_DOM_TEXT_COMPLETENESS_UNKNOWN"
+    assert native["source_raw"]["metric_display"]["shares"] == {"aria_label": "1.2K shares", "text": "1.2K"}
+    assert note.likes == item["likes"] == 0
+    assert item["comments"] is item["shares"] is item["collects"] is None
+    assert item["platform_content_id"] == ""  # No DOM-native ID was observed.
+    assert item["publish_datetime"] == ""  # Capture time cannot fill publication time.
+
+
+def test_facebook_main_mapping_does_not_invent_missing_backend_metrics():
+    from types import SimpleNamespace
+    from lumenis.system.collector.adapters.facebook import FacebookAdapter
+
+    item = FacebookAdapter(backend=object())._v4_notes_to_items([
+        SimpleNamespace(content="Body", raw_data={})
+    ])[0]
+    assert all(item[name] is None for name in ("likes", "comments", "collects", "shares"))
+
+
+def test_facebook_comment_body_is_not_truncated_or_assigned_zero_metrics():
+    from lumenis.adapters.facebook import FacebookAdapter
+
+    body = "Comment source paragraph. " * 32
+    comment = MagicMock()
+    comment.query_selector.side_effect = {
+        "h3 a, .xt0psk2 a": _x_element("Author"),
+        '.x193iq5w, [dir="auto"]': _x_element(body),
+        'span[aria-label*="赞"]': _x_element("1.2K", **{"aria-label": "1.2K Likes"}),
+    }.get
+    with patch("lumenis.adapters.human_browser.HumanBrowser") as browser, patch("lumenis.adapters.cookie_vault.inject_into_context"):
+        page = browser.return_value.new_page.return_value
+        page.query_selector.return_value = None
+        page.query_selector_all.return_value = [comment]
+        result = FacebookAdapter(cookie_string="test-only").comments("synthetic-post")
+
+    assert result.success and len(result.notes) == 1
+    note = result.notes[0]
+    assert note.content == body.strip()
+    assert note.likes is note.comments is note.collects is note.shares is None
+    assert note.raw_data["metric_display"]["likes"] == {"aria_label": "1.2K Likes", "text": "1.2K"}
+
+
+def test_x_parser_keeps_the_complete_observed_long_post():
+    from lumenis.adapters.x_platform import XAdapter
+
+    body = "Source text paragraph. " * 40 + "Final source paragraph."
+    tweet = MagicMock()
+    tweet.query_selector.side_effect = {'[data-testid="tweetText"]': _x_element(body)}.get
+    tweet.query_selector_all.return_value = []
+    note = XAdapter(cookie_string="test-only")._parse_x_tweet(tweet)
+    assert note.content == body
+    assert note.raw_data["tweet_id"] is None
+    assert note.publish_date == ""
 
 
 def test_x_parser_preserves_native_id_explicit_zero_unknown_counts_and_publish_time():

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -108,7 +110,7 @@ class _Workspace extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: OutlinedButton.icon(
                     onPressed: viewModel.refresh,
-                    icon: const Icon(Icons.refresh_rounded),
+                    icon: const LumenisIcon(Icons.refresh_rounded),
                     label: Text(_copy(context, '重新读取', 'Read again', '다시 읽기')),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(48, 48),

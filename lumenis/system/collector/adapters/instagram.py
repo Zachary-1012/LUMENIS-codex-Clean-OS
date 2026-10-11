@@ -17,6 +17,18 @@ from .public_source import fetch_public_url, public_source_provenance
 from .routing import resolve_capability_route
 
 
+_TERMINAL_IG_DETAIL_STATES = frozenset({
+    "VERIFICATION_REQUIRED",
+    "RATE_LIMITED",
+    "SESSION_UNAVAILABLE",
+    "SESSION_OR_RISK_REQUIRED",
+    "PLATFORM_RISK",
+    "NOT_CONFIGURED",
+    "PROVIDER_UNAVAILABLE",
+    "IDENTITY_MISMATCH",
+})
+
+
 def parse_public_instagram_document(response, shortcode):
     """Inspect only the matching public post, keeping media/caption times distinct."""
     from bs4 import BeautifulSoup
@@ -96,8 +108,8 @@ class InstagramAdapter(BasePlatformAdapter):
     This layer only maps v4 AdapterResult -> CollectionResult and normalizes fields.
     No subject filtering, risk scoring, or business logic lives here.
 
-    Default disabled: requires proxy + cookie. Enable at runtime after health_check
-    confirms both are configured.
+    Default disabled: readiness is resolved from the registered read-only worker;
+    actual session and source access remain separate runtime observations.
     """
 
     platform = "instagram"
@@ -126,6 +138,60 @@ class InstagramAdapter(BasePlatformAdapter):
         self._engine_loaded = True
         return self._engine
 
+    @staticmethod
+    def _verify_native_topic_reference(reference: Any) -> Optional[Dict[str, Any]]:
+        """Resolve one exact Instagram topic reference from the unchanged seed."""
+        if not isinstance(reference, dict):
+            return None
+        from ..acquisition_plan import (
+            APPROVED_TOPIC_SEED_SHA256, AcquisitionPlanError, load_approved_topic_seed,
+        )
+        from .platform_naming import normalize_platform
+
+        if reference.get("input_sha256") != APPROVED_TOPIC_SEED_SHA256:
+            return None
+        try:
+            seed = load_approved_topic_seed()
+        except (AcquisitionPlanError, OSError, TypeError, ValueError):
+            return None
+        topics = seed.get("topics") if isinstance(seed, dict) else None
+        if not isinstance(topics, list):
+            return None
+        topic = next((row for row in topics
+                      if isinstance(row, dict) and row.get("id") == reference.get("topic_id")), None)
+        if (topic is None or normalize_platform(topic.get("platform")) != "instagram"
+                or any(reference.get(key) != topic.get(field) for key, field in (
+                    ("source_id", "source_id"), ("source_url", "source_url"),
+                    ("term_preserved", "topic"), ("literal", "observed_literal")))):
+            return None
+        literal = topic.get("observed_literal")
+        if not isinstance(literal, str) or not literal:
+            return None
+        native_hashtag = None
+        reference_kind = "VALID_NON_HASHTAG"
+        if topic.get("term_type") == "原生话题标签":
+            if not literal.startswith("#") or literal.startswith("##"):
+                return None
+            native_hashtag = literal[1:]
+            if (not native_hashtag or native_hashtag in {".", ".."}
+                    or any(char.isspace() or char in r"\\/?#" for char in native_hashtag)):
+                return None
+            reference_kind = "VALID_NATIVE_HASHTAG"
+        return {
+            "topic_id": topic["id"],
+            "input_sha256": APPROVED_TOPIC_SEED_SHA256,
+            "source_id": topic["source_id"],
+            "source_url": topic["source_url"],
+            "term_preserved": topic["topic"],
+            "literal": literal,
+            "term_type": topic["term_type"],
+            "recommended_use": topic.get("recommended_use"),
+            "native_hashtag": native_hashtag,
+            "reference_kind": reference_kind,
+            "search_route": "NATIVE_HASHTAG" if native_hashtag is not None else "EXACT_QUERY",
+            "verification": "APPROVED_SEED_ROW_MATCH",
+        }
+
     # ------------------------------------------------------------------
     # Status mapping: v4 AdapterResult -> CollectionStatus
     # ------------------------------------------------------------------
@@ -142,6 +208,8 @@ class InstagramAdapter(BasePlatformAdapter):
             return CollectionStatus.NEED_VERIFY
         if any(k in error for k in ("频控", "风控", "try again later")):
             return CollectionStatus.BLOCKED
+        if any(k in err for k in ("network", "provider unavailable", "worker unavailable", "不可达", "暂不可用")):
+            return CollectionStatus.PROVIDER_UNAVAILABLE
         if "代理" in error or "proxy" in err:
             return CollectionStatus.COLLECT_ERROR
         return CollectionStatus.COLLECT_ERROR
@@ -156,10 +224,195 @@ class InstagramAdapter(BasePlatformAdapter):
             items.append(self.normalize_item(note_dict))
         return items
 
+    @staticmethod
+    def _shortcode_from_url(url: Any) -> Optional[str]:
+        if not isinstance(url, str):
+            return None
+        try:
+            parts = urlsplit(url)
+            port = parts.port
+        except (TypeError, ValueError):
+            return None
+        if (parts.scheme.lower() != "https"
+                or parts.hostname not in {"instagram.com", "www.instagram.com"}
+                or port not in (None, 443)
+                or parts.username or parts.password):
+            return None
+        match = re.fullmatch(r"/(?:p|reel|reels)/([A-Za-z0-9_-]+)/?", parts.path)
+        return match.group(1) if match else None
+
+    @classmethod
+    def _observed_shortcode(cls, item: Dict[str, Any]) -> tuple[Optional[str], Optional[str], bool]:
+        raw = item.get("raw") if isinstance(item, dict) else None
+        raw = raw if isinstance(raw, dict) else {}
+        raw_code = raw.get("shortcode")
+        if not isinstance(raw_code, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", raw_code):
+            raw_code = None
+        url_code = cls._shortcode_from_url(item.get("url"))
+        if raw_code and url_code and raw_code != url_code:
+            return None, None, True
+        if raw_code:
+            return raw_code, "raw_data.shortcode", False
+        if url_code:
+            return url_code, "source_url.pathname", False
+        return None, None, False
+
+    @classmethod
+    def _detail_shortcode_matches(cls, item: Dict[str, Any], expected: str) -> bool:
+        raw = item.get("raw") if isinstance(item, dict) else None
+        raw = raw if isinstance(raw, dict) else {}
+        identity = raw.get("native_identity")
+        observed = identity.get("shortcode") if isinstance(identity, dict) else None
+        return (isinstance(observed, str) and observed == expected
+                and identity.get("requested_shortcode") == expected
+                and identity.get("status") == "OBSERVED_MATCH"
+                and raw.get("shortcode") == expected
+                and cls._shortcode_from_url(item.get("url")) == expected)
+
+    @staticmethod
+    def _detail_failure_state(error: Any) -> str:
+        text = str(error or "").casefold()
+        if any(marker in text for marker in ("identity_mismatch", "identity mismatch", "身份不匹配")):
+            return "IDENTITY_MISMATCH"
+        if any(marker in text for marker in ("captcha", "验证码", "安全验证", "人机", "confirm", "need_verify")):
+            return "VERIFICATION_REQUIRED"
+        if any(marker in text for marker in ("rate limit", "rate_limit", "频控", "访问频繁", "too many", "http 429", " 429")):
+            return "RATE_LIMITED"
+        has_session = any(marker in text for marker in ("login", "登录", "cookie", "session", "会话", "失效", "expired"))
+        has_risk = any(marker in text for marker in ("风控", "risk", "blocked", "封禁", "http 403", " 403"))
+        if has_session and has_risk:
+            return "SESSION_OR_RISK_REQUIRED"
+        if has_session:
+            return "SESSION_UNAVAILABLE"
+        if has_risk:
+            return "PLATFORM_RISK"
+        if any(marker in text for marker in ("not configured", "not_configured", "未配置")):
+            return "NOT_CONFIGURED"
+        if any(marker in text for marker in ("network", "timeout", "不可达", "worker", "provider", "unavailable", "连接异常")):
+            return "PROVIDER_UNAVAILABLE"
+        return "DETAIL_FAILED"
+
+    @staticmethod
+    def _begin_detail_observation(item: Dict[str, Any], shortcode: Optional[str],
+                                  id_locator: Optional[str]) -> Dict[str, Any]:
+        raw = item.get("raw") if isinstance(item.get("raw"), dict) else {}
+        raw = dict(raw)
+        raw["search_summary_observation"] = {
+            "status": "OBSERVED",
+            "body_kind": "search_preview",
+            "body_status": "SEARCH_PREVIEW_ONLY",
+            "text": item.get("content") if isinstance(item.get("content"), str) else None,
+            "title": item.get("title") if isinstance(item.get("title"), str) else None,
+            "author_id": item.get("author_id"),
+            "author_nickname": item.get("author_nickname"),
+            "publish_datetime": item.get("publish_datetime"),
+            "source_url": item.get("url") if isinstance(item.get("url"), str) else None,
+            "native_shortcode": shortcode,
+            "native_shortcode_locator": id_locator,
+            "body_locator": "search_result.content",
+            "discovery_body_text": raw.get("discovery_body_text"),
+            "discovery_body_locator": "raw_data.discovery_body_text" if raw.get("discovery_body_text") is not None else None,
+            "image_alt": raw.get("image_alt"),
+            "metric_display": raw.get("metric_display"),
+            "metrics": {name: item.get(name) for name in ("likes", "comments", "collects", "shares")},
+        }
+        item["raw"] = raw
+        # A preview remains in its explicit observation above; it is never the
+        # canonical full-body field when detail is missing or incomplete.
+        item["content"] = ""
+        item["title"] = ""
+        item["author_id"] = ""
+        item["author_nickname"] = ""
+        item["publish_datetime"] = ""
+        for field in ("likes", "comments", "collects", "shares"):
+            item[field] = None
+        return raw
+
+    @staticmethod
+    def _record_detail_outcome(item: Dict[str, Any], status: str,
+                               detail_item: Optional[Dict[str, Any]] = None,
+                               stop_reason: Optional[str] = None) -> None:
+        raw = item.get("raw") if isinstance(item.get("raw"), dict) else {}
+        raw = dict(raw)
+        detail_raw = detail_item.get("raw") if isinstance(detail_item, dict) else None
+        detail_raw = detail_raw if isinstance(detail_raw, dict) else {}
+        body = detail_item.get("content") if isinstance(detail_item, dict) else None
+        body = body if isinstance(body, str) else None
+        body_observed = isinstance(body, str) and bool(body.strip())
+        succeeded = detail_item is not None
+        native_time = detail_item.get("publish_datetime") if succeeded else None
+        native_time_observed = isinstance(native_time, str) and bool(native_time.strip())
+        metrics = ({name: detail_item.get(name) for name in ("likes", "comments")}
+                   if succeeded else None)
+        metric_observations = detail_raw.get("metric_observations") if succeeded else None
+        if not isinstance(metric_observations, dict):
+            metric_observations = {}
+        media_hints = detail_raw.get("media_hints") if succeeded else None
+        media_hints = media_hints if isinstance(media_hints, list) else None
+        media_id = detail_raw.get("media_id") if succeeded else None
+        media_id_observed = isinstance(media_id, str) and media_id.isdigit()
+        body_state = detail_raw.get("caption_completeness") if succeeded else None
+        body_status = ("CAPTION_OBSERVED_COMPLETENESS_UNKNOWN" if body_observed
+                       else "NATIVE_BODY_UNAVAILABLE") if succeeded else (
+                           "PENDING" if status == "PENDING" else "SEARCH_ONLY")
+        raw["detail_observation"] = {
+            "status": status,
+            "stop_reason": stop_reason or (status if status in _TERMINAL_IG_DETAIL_STATES else None),
+            "body_kind": "native_caption" if succeeded and body_observed else None,
+            "body": body if succeeded else None,
+            "body_status": body_status,
+            "body_completeness": body_state if succeeded else None,
+            "body_locator": detail_raw.get("caption_locator") if succeeded else None,
+            "source_url": detail_item.get("url") if succeeded else None,
+            "native_time": native_time,
+            "native_time_locator": detail_raw.get("native_time_locator") if succeeded else None,
+            "native_time_status": ("OBSERVED" if native_time_observed else "NOT_OBSERVED") if succeeded else (
+                "PENDING" if status == "PENDING" else "SEARCH_ONLY"),
+            "native_metrics": metrics,
+            "metric_observations": metric_observations if succeeded else None,
+            "metrics_status": ("OBSERVED" if any(
+                isinstance(value, dict) and value.get("display") is not None
+                for value in metric_observations.values()) else "NOT_OBSERVED") if succeeded else (
+                    "PENDING" if status == "PENDING" else "SEARCH_ONLY"),
+            "media_hints": media_hints,
+            "media_state": ("URL_HINTS_OBSERVED" if media_hints else "NOT_OBSERVED") if succeeded else (
+                "PENDING" if status == "PENDING" else "DETAIL_NOT_OBSERVED"),
+            "media_bytes_saved": False,
+            "artifact_created": False,
+            "native_media_id": media_id if media_id_observed else None,
+            "native_media_id_status": "OBSERVED" if media_id_observed else "NOT_OBSERVED",
+            "native_media_id_locator": detail_raw.get("media_id_locator") if media_id_observed else None,
+        }
+        item["raw"] = raw
+        if not succeeded:
+            item["content"] = ""
+            item["title"] = ""
+            return
+        item["content"] = body if body_observed else ""
+        item["title"] = body[:80] if body_observed else ""
+        item["publish_datetime"] = native_time or ""
+        item["url"] = detail_item.get("url") or item.get("url") or ""
+        for field in ("likes", "comments", "collects", "shares"):
+            item[field] = detail_item.get(field)
+        for field in ("author_id", "author_nickname"):
+            value = detail_item.get(field)
+            if value not in (None, ""):
+                item[field] = value
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
+        raw_topic_reference = kwargs.get("native_topic_reference")
+        verified_topic_reference = None
+        if raw_topic_reference is not None:
+            verified_topic_reference = self._verify_native_topic_reference(raw_topic_reference)
+            if verified_topic_reference is None:
+                return CollectionResult(
+                    CollectionStatus.NOT_SUPPORTED, self.platform,
+                    message="Instagram topic reference is not an exact approved seed row",
+                    metadata={"native_topic_reference_status": "INVALID"},
+                )
         route = resolve_capability_route("instagram", "search", request_value=keyword)
         if route is None:
             return CollectionResult(
@@ -167,23 +420,147 @@ class InstagramAdapter(BasePlatformAdapter):
                 message="当前输入不匹配已实现的 Instagram 搜索/公开帖子路径",
                 metadata={"route_state": "UNKNOWN"},
             )
+        if (verified_topic_reference is not None
+                and (route.backend != "v4_instagram" or route.selector != "query")):
+            return CollectionResult(
+                CollectionStatus.NOT_SUPPORTED, self.platform,
+                message="Instagram seed topic reference requires the existing session query route",
+                metadata={"native_topic_reference_status": "ROUTE_MISMATCH"},
+            )
         if route.backend == "public_native_post_document":
             return self._public_detail(keyword)
         try:
             engine = self._get_engine()
-            result = engine.search(keyword, max_results=kwargs.get("max_results", 20))
-            items = self._notes_to_items(result.notes)
+            try:
+                requested_limit = int(kwargs.get("max_results", 20))
+            except (TypeError, ValueError, OverflowError):
+                requested_limit = 20
+            max_results = min(20, max(0, requested_limit))
+            if (verified_topic_reference is None
+                    or verified_topic_reference["native_hashtag"] is None):
+                result = engine.search(keyword, max_results=max_results)
+            else:
+                result = engine.search(
+                    keyword, max_results=max_results,
+                    native_hashtag=verified_topic_reference["native_hashtag"],
+                    native_topic_reference=verified_topic_reference,
+                )
+            items = self._notes_to_items((result.notes or [])[:max_results])
+            if verified_topic_reference is not None:
+                for item in items:
+                    raw = item.get("raw") if isinstance(item.get("raw"), dict) else {}
+                    raw = dict(raw)
+                    raw["verified_native_topic_reference"] = verified_topic_reference
+                    item["raw"] = raw
             status = self._map_status(result.success, result.notes, result.error)
+            detail_counts = {"attempted": 0, "succeeded": 0, "failed": 0, "pending": 0,
+                             "not_attempted_no_native_id": 0, "reused_same_native_id": 0}
+            detail_stop_reason = None if result.success else self._detail_failure_state(result.error or "search failed")
+            detail_cache = {}
+            for item in items:
+                shortcode, id_locator, identity_conflict = self._observed_shortcode(item)
+                self._begin_detail_observation(item, shortcode, id_locator)
+                if identity_conflict:
+                    self._record_detail_outcome(item, "IDENTITY_MISMATCH")
+                    detail_counts["failed"] += 1
+                    detail_stop_reason = "IDENTITY_MISMATCH"
+                    continue
+                if not shortcode:
+                    self._record_detail_outcome(item, "NOT_ATTEMPTED_NO_NATIVE_ID")
+                    detail_counts["not_attempted_no_native_id"] += 1
+                    continue
+                if detail_stop_reason:
+                    self._record_detail_outcome(item, "PENDING", stop_reason=detail_stop_reason)
+                    detail_counts["pending"] += 1
+                    continue
+                if shortcode in detail_cache:
+                    self._record_detail_outcome(item, "REUSED_SAME_NATIVE_ID", detail_cache[shortcode])
+                    detail_counts["succeeded"] += 1
+                    detail_counts["reused_same_native_id"] += 1
+                    continue
+
+                search_raw = item.get("raw") if isinstance(item.get("raw"), dict) else {}
+                media_type = "reel" if search_raw.get("media_type") == "reel" else "post"
+                detail_counts["attempted"] += 1
+                try:
+                    detail_result = engine.detail(shortcode, media_type=media_type)
+                except Exception as exc:
+                    logger.error("Instagram逐帖详情异常 error_type=%s", type(exc).__name__)
+                    detail_result = None
+                detail_candidates = self._notes_to_items(detail_result.notes) if detail_result else []
+                matching_detail = next((candidate for candidate in detail_candidates
+                                        if self._detail_shortcode_matches(candidate, shortcode)), None)
+                if detail_result and detail_result.success and matching_detail is not None:
+                    detail_cache[shortcode] = matching_detail
+                    self._record_detail_outcome(item, "SUCCESS", matching_detail)
+                    detail_counts["succeeded"] += 1
+                    continue
+
+                if detail_candidates and matching_detail is None:
+                    failure_state = "IDENTITY_MISMATCH"
+                elif detail_result is None:
+                    failure_state = "PROVIDER_UNAVAILABLE"
+                else:
+                    failure_state = self._detail_failure_state(
+                        detail_result.error or "detail returned no matching native post"
+                    )
+                    if failure_state == "DETAIL_FAILED" and detail_result.success:
+                        failure_state = "DETAIL_NOT_RETURNED"
+                self._record_detail_outcome(item, failure_state)
+                detail_counts["failed"] += 1
+                if (failure_state in _TERMINAL_IG_DETAIL_STATES
+                        or (detail_result is not None and not detail_result.success)):
+                    detail_stop_reason = failure_state
+
+            detail_counts["pending"] = sum(
+                1 for item in items
+                if isinstance(item.get("raw"), dict)
+                and item["raw"].get("detail_observation", {}).get("status") == "PENDING"
+            )
+            detail_incomplete = bool(detail_counts["failed"] or detail_counts["pending"]
+                                     or detail_counts["not_attempted_no_native_id"])
+            body_observation_incomplete = any(
+                not isinstance(item.get("raw"), dict)
+                or item["raw"].get("detail_observation", {}).get("body_status")
+                != "CAPTION_OBSERVED_COMPLETENESS_UNKNOWN"
+                or item["raw"].get("detail_observation", {}).get("native_time_status") != "OBSERVED"
+                for item in items
+            )
+            detail_metadata = {
+                **detail_counts,
+                "stop_reason": detail_stop_reason,
+                "body_completeness": "NO_RESULTS" if not items else (
+                    "PARTIAL" if detail_incomplete or body_observation_incomplete
+                    else "DOM_COMPLETENESS_UNKNOWN"
+                ),
+                "media_semantics": "URL_HINTS_ONLY_NO_BYTES_OR_ARTIFACT",
+            }
+            if detail_stop_reason:
+                status = {
+                    "VERIFICATION_REQUIRED": CollectionStatus.NEED_VERIFY,
+                    "RATE_LIMITED": CollectionStatus.COOLING_DOWN,
+                    "SESSION_UNAVAILABLE": CollectionStatus.SESSION_EXPIRED,
+                    "PLATFORM_RISK": CollectionStatus.RISK_WARNING,
+                    "NOT_CONFIGURED": CollectionStatus.NOT_CONFIGURED,
+                    "PROVIDER_UNAVAILABLE": CollectionStatus.PROVIDER_UNAVAILABLE,
+                }.get(detail_stop_reason, CollectionStatus.COLLECT_ERROR)
             return CollectionResult(
                 status=status,
                 platform=self.platform,
                 items=items,
                 raw_count=result.raw_count,
                 new_count=len(items),
-                message=result.error or "",
+                message=(result.error or ("Instagram搜索成功；部分原生详情未完成" if detail_incomplete else "")),
                 metadata={
                     "engine": "v4_instagram",
-                    "proxy_configured": bool(self._proxy_configured()),
+                    "provider": "authorized_browser_worker",
+                    "detail": detail_metadata,
+                    "original_query": keyword if verified_topic_reference is not None else None,
+                    "native_topic_reference": verified_topic_reference,
+                    "native_topic_reference_status": (
+                        verified_topic_reference["reference_kind"]
+                        if verified_topic_reference is not None else None
+                    ),
                 },
             )
         except Exception as exc:
@@ -231,7 +608,7 @@ class InstagramAdapter(BasePlatformAdapter):
             return self._public_detail(content_id)
         try:
             engine = self._get_engine()
-            media_type = kwargs.get("media_type", "post")
+            media_type = "reel" if kwargs.get("media_type") == "reel" else "post"
             result = engine.detail(content_id, media_type=media_type)
             items = self._notes_to_items(result.notes)
             status = self._map_status(result.success, result.notes, result.error)
@@ -245,7 +622,7 @@ class InstagramAdapter(BasePlatformAdapter):
                 metadata={
                     "engine": "v4_instagram",
                     "shortcode": content_id,
-                    "proxy_configured": bool(self._proxy_configured()),
+                    "provider": "authorized_browser_worker",
                 },
             )
         except Exception as exc:
@@ -341,12 +718,12 @@ class InstagramAdapter(BasePlatformAdapter):
             return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
                 metadata={'provider': 'public_native_post_document', 'requires_auth': False,
                           'healthcheck_scope': 'public_document_requires_actual_read'})
+        from lumenis.adapters.human_browser import readonly_worker_health
+        health = readonly_worker_health(self.platform)
         return CollectionResult(
-            status=CollectionStatus.NOT_CONFIGURED,
-            platform=self.platform,
-            message="INSTAGRAM_WORKER_NOT_REGISTERED: Instagram采集入口尚未就绪",
-            metadata={"availability": "UNAVAILABLE", "worker_binding_registered": False,
-                      "login_and_collection_verified": False, "legacy_cookie_checked": False},
+            status=CollectionStatus(health["status"]), platform=self.platform,
+            message="Instagram 专用只读浏览器状态；登录和采集结果仍需实际验证",
+            metadata=health["metadata"],
         )
 
     # ------------------------------------------------------------------

@@ -200,14 +200,16 @@ void main() {
       await tester.pumpWidget(_app(router));
       await tester.pumpAndSettle();
       expect(find.text('全局查看范围（未命名）'), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('acc03-entry-details')));
-      await tester.pumpAndSettle();
-      expect(find.text('访问受限'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('acc03-entry-details-close')));
-      await tester.pumpAndSettle();
-      final aiEntry = find.byKey(const ValueKey('acc03-start-task'));
-      await tester.ensureVisible(aiEntry);
-      await tester.tap(aiEntry);
+      // The launch map now embeds the AI-01 composer itself (there is no
+      // separate AI destination card) and keeps the business destinations.
+      expect(find.byType(Acc03Screen), findsOneWidget);
+      expect(find.byType(Ai01Screen), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('acc03-destination-CTH-01')),
+        findsOneWidget,
+      );
+      // AI-01 stays directly routable under a restricted scope.
+      router.go('/workspace/AI-01');
       await tester.pumpAndSettle();
       expect(find.byType(Ai01Screen), findsOneWidget);
       expect(
@@ -267,13 +269,14 @@ void main() {
         '/workspace/ACC-03',
       );
       expect(find.byType(Acc03Screen), findsOneWidget);
+      // The embedded composer is the AI entry on the launch map.
+      expect(find.byType(Ai01Screen), findsOneWidget);
 
       final destinations = [
         ('acc03-destination-CTH-01', '/workspace/CTH-01', Cth01Screen),
         ('acc03-destination-BMP-01', '/workspace/BMP-01', Bmp01Screen),
         ('acc03-destination-SH-02', '/workspace/SH-02', Sh02Screen),
         ('acc03-destination-SH-01', '/workspace/SH-01', Sh01Screen),
-        ('acc03-start-task', '/workspace/AI-01', Ai01Screen),
       ];
       for (var index = 0; index < destinations.length; index++) {
         if (index > 0) {

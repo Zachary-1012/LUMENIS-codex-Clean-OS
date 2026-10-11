@@ -11,6 +11,8 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/features/ai01/ai01_draft_files.dart';
+import 'package:lumenis_app/core/transport/lumenis_http_transport.dart';
+import 'package:lumenis_app/features/ai01/ai01_intent.dart';
 import 'package:lumenis_app/features/ai01/ai01_repository.dart';
 import 'package:lumenis_app/features/ai01/ai01_screen.dart';
 import 'package:lumenis_app/features/ai01/ai01_snapshot.dart';
@@ -82,7 +84,7 @@ void main() {
     expect(find.text('AI 助手'), findsNothing);
     expect(find.text('范围可选'), findsOneWidget);
     expect(
-      find.text('AI 任务提交能力尚未接入。草稿可编辑，但目前不会发送。'),
+      find.text('请输入任务内容后再开始分析。'),
       findsNothing,
       reason: 'The unavailable reason belongs in the disabled action tooltip.',
     );
@@ -143,7 +145,7 @@ void main() {
     final submit = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, '开始分析'),
     );
-    expect(submit.onPressed, isNull);
+    expect(submit.onPressed, isNotNull); // ready read + non-empty draft
     expect(tester.takeException(), isNull);
   });
 
@@ -175,7 +177,7 @@ void main() {
       expect(find.text('范围可选'), findsOneWidget);
       expect(find.textContaining('尚未确认可用'), findsNothing);
       expect(find.textContaining('暂不能开始分析'), findsNothing);
-      expect(find.byTooltip('AI 任务提交能力尚未接入。草稿可编辑，但目前不会发送。'), findsOneWidget);
+      expect(find.byTooltip('请输入任务内容后再开始分析。'), findsOneWidget);
       _expectSubmitDisabled(tester);
 
       final input = find.byKey(const ValueKey('ai01-task-input'));
@@ -391,6 +393,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  _submitTests();
+
   for (final locale in [
     const Locale('zh', 'CN'),
     const Locale('en'),
@@ -410,7 +414,7 @@ void main() {
         expect(find.text(copy.text('ai01.context.label')), findsOneWidget);
         expect(find.text(copy.text('ai01.draft.notice')), findsOneWidget);
         expect(
-          find.byTooltip(copy.text('ai01.blocked_reason')),
+          find.byTooltip(copy.text('ai01.submit.blocked.empty')),
           findsOneWidget,
         );
         final submit = tester.widget<FilledButton>(
@@ -517,7 +521,7 @@ void main() {
           tester.widget<TextButton>(detailsOpener).focusNode!.hasFocus,
           isTrue,
         );
-        _expectSubmitDisabled(tester);
+        _expectSubmitEnabled(tester); // ready read + non-empty draft
         expect(tester.takeException(), isNull);
       }
     },
@@ -584,7 +588,7 @@ void main() {
         const TextSelection(baseOffset: 5, extentOffset: 9),
       );
       expect(tester.state(actionsFinder), same(actionsState));
-      _expectSubmitDisabled(tester);
+      _expectSubmitEnabled(tester); // ready read + non-empty draft
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
@@ -884,7 +888,7 @@ void main() {
         const TextSelection(baseOffset: 1, extentOffset: 4),
       );
       expect(editable.focusNode.hasFocus, isTrue);
-      _expectSubmitDisabled(tester);
+      _expectSubmitEnabled(tester); // ready read + non-empty draft
       expect(tester.takeException(), isNull);
     },
   );
@@ -1193,6 +1197,215 @@ void _expectComposerSurface(WidgetTester tester) {
   expect(editor.maxLines, 10);
 }
 
+void _submitTests() {
+  FilledButton submitButton(WidgetTester tester) =>
+      tester.widget<FilledButton>(find.byKey(const ValueKey('ai01-submit')));
+
+  Future<void> pumpReady(
+    WidgetTester tester,
+    _FakeAi01Repository repository,
+  ) async {
+    await _setTestSurface(tester, const Size(390, 844));
+    addTearDown(() => _resetTestSurface(tester));
+    await tester.pumpWidget(_app(repository: repository));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('submit is enabled only with a valid draft and sends it once', (
+    tester,
+  ) async {
+    final repository = _FakeAi01Repository(
+      onSubmit: (_) async => const Ai01IntentResult(
+        kind: Ai01IntentKind.completed,
+        status: 'completed',
+        executionId: 'exec-ui-1',
+        evidenceRecorded: true,
+      ),
+    );
+    await pumpReady(tester, repository);
+    final input = find.byKey(const ValueKey('ai01-task-input'));
+
+    expect(submitButton(tester).onPressed, isNull);
+    await tester.enterText(input, '   ');
+    await tester.pump();
+    expect(submitButton(tester).onPressed, isNull);
+
+    await tester.enterText(input, '  检查本周风险变化  ');
+    await tester.pump();
+    expect(submitButton(tester).onPressed, isNotNull);
+    expect(find.byTooltip('请输入任务内容后再开始分析。'), findsNothing);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('ai01-submit')));
+    await tester.tap(find.byKey(const ValueKey('ai01-submit')));
+    await tester.pumpAndSettle();
+
+    expect(repository.submitted, ['检查本周风险变化']);
+    expect(
+      find.byKey(const ValueKey('ai01-submit-status-completed')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('exec-ui-1'), findsOneWidget);
+    expect(find.text('证据已记录'), findsOneWidget);
+    expect(find.text('来源级追溯暂不可用。'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(input).controller!.text,
+      '  检查本周风险变化  ',
+      reason: 'the draft is never cleared by submit',
+    );
+    expect(submitButton(tester).onPressed, isNull);
+    expect(find.byTooltip('这段内容已经提交。修改内容后才能再次提交。'), findsOneWidget);
+
+    await tester.enterText(input, '检查本周风险变化并列出来源');
+    await tester.pump();
+    expect(submitButton(tester).onPressed, isNotNull);
+    expect(repository.submitted, hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a failed execution is shown as not completed, never success', (
+    tester,
+  ) async {
+    final repository = _FakeAi01Repository(
+      onSubmit: (_) async => const Ai01IntentResult(
+        kind: Ai01IntentKind.notCompleted,
+        status: 'failed',
+        executionId: 'exec-ui-2',
+        evidenceRecorded: false,
+      ),
+    );
+    await pumpReady(tester, repository);
+    await tester.enterText(
+      find.byKey(const ValueKey('ai01-task-input')),
+      '检查风险',
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('ai01-submit')));
+    await tester.tap(find.byKey(const ValueKey('ai01-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('分析未完成，没有生成分析结果。'), findsOneWidget);
+    expect(find.textContaining('分析已完成'), findsNothing);
+    expect(find.text('服务返回状态: failed'), findsOneWidget);
+    expect(find.text('证据未确认记录'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('pending approval is not described as executed', (tester) async {
+    final repository = _FakeAi01Repository(
+      onSubmit: (_) async => const Ai01IntentResult(
+        kind: Ai01IntentKind.pendingApproval,
+        status: 'pending_approval',
+        auditId: 'aud-ui-1',
+      ),
+    );
+    await pumpReady(tester, repository);
+    await tester.enterText(
+      find.byKey(const ValueKey('ai01-task-input')),
+      '检查风险',
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('ai01-submit')));
+    await tester.tap(find.byKey(const ValueKey('ai01-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('该操作需要审批，尚未执行。'), findsOneWidget);
+    expect(find.textContaining('aud-ui-1'), findsOneWidget);
+    expect(find.text('来源级追溯暂不可用。'), findsNothing);
+    expect(find.textContaining('证据'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final failureCase in <({String name, Object error, String message})>[
+    (
+      name: '400 invalid input',
+      error: const LumenisCoreException(
+        'POST failed with HTTP 400',
+        statusCode: 400,
+      ),
+      message: '任务内容无效，未执行。请修改后再提交。',
+    ),
+    (
+      name: '401 authentication',
+      error: const LumenisCoreException(
+        'POST failed with HTTP 401',
+        statusCode: 401,
+      ),
+      message: '服务连接授权已失效，未执行。',
+    ),
+    (
+      name: '403 permission denied',
+      error: const LumenisCoreException(
+        'POST failed with HTTP 403',
+        statusCode: 403,
+      ),
+      message: '没有权限执行此分析，未执行任何操作。',
+    ),
+    (
+      name: '500 server error',
+      error: const LumenisCoreException(
+        'POST failed with HTTP 500',
+        statusCode: 500,
+      ),
+      message: '服务出错，无法确认是否已执行。请先核对，再决定是否重新提交。',
+    ),
+    (
+      name: 'transport timeout',
+      error: const LumenisTransportException('request timed out'),
+      message: '无法确认分析是否已执行，系统不会自动重试。请先核对，再决定是否重新提交。',
+    ),
+  ]) {
+    testWidgets('submit failure ${failureCase.name} keeps its own state', (
+      tester,
+    ) async {
+      final repository = _FakeAi01Repository(
+        onSubmit: (_) async => throw failureCase.error,
+      );
+      await pumpReady(tester, repository);
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-task-input')),
+        '检查风险',
+      );
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const ValueKey('ai01-submit')));
+      await tester.tap(find.byKey(const ValueKey('ai01-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(failureCase.message), findsOneWidget);
+      expect(find.textContaining('分析已完成'), findsNothing);
+      expect(repository.submitted, hasLength(1), reason: 'no automatic retry');
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('read failure keeps submit disabled even with a draft', (
+    tester,
+  ) async {
+    final repository = _FakeAi01Repository(
+      failure: const LumenisCoreException(
+        'GET screen failed with HTTP 503',
+        statusCode: 503,
+      ),
+    );
+    await pumpReady(tester, repository);
+    await tester.enterText(
+      find.byKey(const ValueKey('ai01-task-input')),
+      '检查风险',
+    );
+    await tester.pump();
+
+    expect(submitButton(tester).onPressed, isNull);
+    expect(find.byTooltip('AI 服务状态尚未读取成功，暂不能提交。'), findsOneWidget);
+    expect(repository.submitted, isEmpty);
+  });
+}
+
+void _expectSubmitEnabled(WidgetTester tester) {
+  final submit = tester.widget<FilledButton>(
+    find.byKey(const ValueKey('ai01-submit')),
+  );
+  expect(submit.onPressed, isNotNull);
+}
+
 void _expectSubmitDisabled(WidgetTester tester) {
   final submit = tester.widget<FilledButton>(
     find.widgetWithText(FilledButton, '开始分析'),
@@ -1264,11 +1477,22 @@ class _FakeAi01Repository implements Ai01Repository {
     this.failure,
     this.providerName = '本地模型',
     this.suggestions,
+    this.onSubmit,
   });
 
   final Object? failure;
   final String providerName;
   final List<Ai01Suggestion>? suggestions;
+  final Future<Ai01IntentResult> Function(String task)? onSubmit;
+  final submitted = <String>[];
+
+  @override
+  Future<Ai01IntentResult> submitIntent(String task) {
+    submitted.add(task);
+    final handler = onSubmit;
+    if (handler == null) throw StateError('unexpected submit');
+    return handler(task);
+  }
 
   @override
   Future<Ai01Snapshot> load() async {
@@ -1300,6 +1524,10 @@ class _FakeAi01Repository implements Ai01Repository {
 class _RecoveringAi01Repository implements Ai01Repository {
   _RecoveringAi01Repository(this.statusCode);
 
+  @override
+  Future<Ai01IntentResult> submitIntent(String task) =>
+      throw StateError('unexpected submit');
+
   final int statusCode;
   int calls = 0;
 
@@ -1318,6 +1546,10 @@ class _RecoveringAi01Repository implements Ai01Repository {
 
 class _ControlledAi01Repository implements Ai01Repository {
   _ControlledAi01Repository(this._responses);
+
+  @override
+  Future<Ai01IntentResult> submitIntent(String task) =>
+      throw StateError('unexpected submit');
 
   final List<Completer<Ai01Snapshot>> _responses;
   int _loadCount = 0;

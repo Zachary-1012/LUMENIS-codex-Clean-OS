@@ -44,6 +44,12 @@ shared-write reservations and real acceptance remain binding.
 历史审批 `00-GOVERNANCE/evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json`
 及其他暂停/恢复/模型回执保留为有日期的事实来源，不再作为现行调度命令。
 
+### 2026-10-10 OpenAI Math v2 — bounded product implementation
+
+Latest direct PO authorizes the exact v2 archive (SHA-256 `92e0d17982010b55d9043405164e9b5de79cab9ef053bdbb53ede1963d4607aa`) through existing Task/API, Permission, SourceBrief and Shared Artifact owners. This does not dispatch other windows or authorize paid compute, external models, production deployment or owned-model promotion. The single current implementation is `lumenis/shared/evaluation/openai_math_papers/`; use the updated existing Math adoption record for fixed sources, mathematical assumptions, finite implementation limits and remaining main algorithms.
+
+Typed mathematical scenarios use explicit user-declared parameters/variable meanings and immutable problem hashes. Source context is verified independently; a scenario is never Canonical fact, observed market probability, or model capability. Preserve real-source scope/rights, actor, saved parent versions, readback, cancellation and recovery. Use the same deterministic path without AI across the five architecture rounds. Exact finite results, numerical approximations, rigorous rational enclosures, formal theorem replay and model gains remain separate claims. A completed bounded scenario does not close the nine full-paper algorithms or all J/R/U requirements. Training still requires the existing exact model/data/Permission approval; an experiment or solver cannot silently become the gpt-oss production model.
+
 ### Retained verification policy and C1 source responsibility (not dispatch)
 
 Product Owner update (2026-10-10): unit tests and integration tests are
@@ -890,13 +896,13 @@ ACTIVE GATE / TICKET
 → inspect exact source owner / caller / contract / tests
 → verify existing capability before adding dependencies
 → reuse / adapt / bind
-→ implement on main
+→ implement on a scoped branch
 → applicable build / static security and data checks
 → actual affected user operation
 → runtime / E2E when required
 → evidence
 → coherent commit
-→ push origin main when safe
+→ reviewed PR merge into main when safe
 → main CI when required
 → next dependent gate
 ```
@@ -1511,7 +1517,7 @@ Public adapters such as ChatGPT/MCP must use allowlisted/versioned internal cont
 
 ```text
 IMPLEMENTED = code exists
-TESTED      = historical automated-test evidence only; not a current required stage
+TESTED      = isolated automated verification at its recorded scope; not real user closure
 VERIFIED    = runtime/E2E evidence proves behavior
 RELEASED    = required production/security/recovery/rollback gates pass
 OPERATING   = real operation produces required live/scheduled evidence

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
+import '../cth/cth10/source_brief_panel.dart';
+import '../cth/cth10/source_brief_copy.dart';
 import 'bmp04_repository.dart';
 import 'bmp04_snapshot.dart';
 import 'bmp04_view_model.dart';
@@ -18,6 +22,7 @@ class Bmp04Screen extends StatefulWidget {
 }
 
 class _Bmp04ScreenState extends State<Bmp04Screen> {
+  bool _showSourceBrief = false;
   late final Bmp04ViewModel _viewModel = Bmp04ViewModel(
     repository: widget.repository ?? CoreBmp04Repository(client: widget.client),
   );
@@ -39,20 +44,42 @@ class _Bmp04ScreenState extends State<Bmp04Screen> {
     return ColoredBox(
       color: LumenisTheme.of(context).canvas,
       child: SafeArea(
-        child: AnimatedBuilder(
-          animation: _viewModel,
-          builder: (context, _) => switch (_viewModel.phase) {
-            Bmp04LoadPhase.loading => const _LoadingState(),
-            Bmp04LoadPhase.failed => _FailureState(
-              kind: _viewModel.failureKind!,
-              onRetry: _viewModel.refresh,
-            ),
-            Bmp04LoadPhase.ready => _ReadyState(
-              snapshot: _viewModel.snapshot!,
-              viewModel: _viewModel,
-            ),
-          },
-        ),
+        child: _showSourceBrief
+            ? SourceBriefPanel(
+                client: widget.client,
+                domainId: 'BMP',
+                onReturn: () => setState(() => _showSourceBrief = false),
+              )
+            : Column(
+                children: [
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: TextButton.icon(
+                      onPressed: () => setState(() => _showSourceBrief = true),
+                      icon: const Icon(Icons.find_in_page_outlined),
+                      label: Text(
+                        SourceBriefCopy.of(context).text('entry'),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: AnimatedBuilder(
+                      animation: _viewModel,
+                      builder: (context, _) => switch (_viewModel.phase) {
+                        Bmp04LoadPhase.loading => const _LoadingState(),
+                        Bmp04LoadPhase.failed => _FailureState(
+                          kind: _viewModel.failureKind!,
+                          onRetry: _viewModel.refresh,
+                        ),
+                        Bmp04LoadPhase.ready => _ReadyState(
+                          snapshot: _viewModel.snapshot!,
+                          viewModel: _viewModel,
+                        ),
+                      },
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -162,7 +189,7 @@ class _FocusBand extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
+            LumenisIcon(
               Icons.center_focus_strong,
               color: LumenisTheme.of(context).bmp,
             ),

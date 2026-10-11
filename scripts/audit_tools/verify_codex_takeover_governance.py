@@ -968,14 +968,17 @@ def validate(*, staged: bool = False) -> None:
         skill_current_truth,
         "root `AGENTS.md` first",
         "only execution router",
-        "C1–C6 local/Codex Cloud assignments",
+        "C1–C6 engineering source responsibilities",
+        "Actual window, host and model assignment follow the latest direct Product Owner instruction",
+        "Cloud restrictions apply only to an explicitly authorized Cloud task",
         "must not depend on workstation-only instructions or skills",
         label="repository current-truth skill",
     )
     _require_collapsed(
         skill_task_router,
         "only repository execution router",
-        "six fixed C1–C6 execution rows",
+        "C1–C6 are not six product rounds or a fixed local/Cloud assignment",
+        "current Product Owner dispatch",
         "without workstation-only skills",
         label="repository task-router skill",
     )

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import datetime
+import os
+import re
 from typing import Any, Callable, Optional
 
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
@@ -35,17 +37,225 @@ class XiaohongshuAdapter(BasePlatformAdapter):
 
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
         try:
+            detail_media_mode = kwargs.get("detail_media_mode", "legacy")
+            if not isinstance(detail_media_mode, str) or detail_media_mode not in {"legacy", "cover_only"}:
+                return self._failed_result("INVALID_DETAIL_MEDIA_MODE")
+            effective_detail_media_mode = detail_media_mode
+            detail_media_mode_reason = "requested"
             backend = self._load_backend()
             fn = getattr(backend, "search_xiaohongshu")
+            acquisition_fingerprint = kwargs.get("acquisition_fingerprint")
+            if (acquisition_fingerprint is not None
+                    and (not isinstance(acquisition_fingerprint, str)
+                         or re.fullmatch(r"[0-9a-f]{64}", acquisition_fingerprint) is None)):
+                return self._failed_result("INVALID_ACQUISITION_FINGERPRINT")
+
+            if acquisition_fingerprint is not None:
+                requested_limit = kwargs.get("max_results")
+                if requested_limit is None:
+                    requested_limit = kwargs.get("max_details", 10)
+                if isinstance(requested_limit, bool):
+                    return self._failed_result("INVALID_MAX_RESULTS")
+                try:
+                    detail_limit = int(requested_limit)
+                except (TypeError, ValueError, OverflowError):
+                    return self._failed_result("INVALID_MAX_RESULTS")
+                if detail_limit <= 0:
+                    return self._failed_result("INVALID_MAX_RESULTS")
+                detail_limit = min(detail_limit, 20)
+                region = kwargs.get("region") or "intl"
+                account = kwargs.get("account")
+            else:
+                # Preserve the pre-existing legacy contract: zero means all
+                # observed cards for this invocation, and account/region remain
+                # selected by the existing collector policy owner.
+                try:
+                    detail_limit = int(kwargs.get("max_details", 10))
+                except (TypeError, ValueError, OverflowError):
+                    return self._failed_result("INVALID_MAX_DETAILS")
+                region = "intl"
+                account = None
+            output_path = kwargs.get("output_path")
+            resume_path = kwargs.get("resume_path") if acquisition_fingerprint is None else None
+            checkpoint_owner = None
+            resume_snapshot = None
+            prior = None
+            expected_identity_fingerprint = None
+            if acquisition_fingerprint is not None:
+                from ..guard.checkpoint import Checkpoint
+
+                checkpoint_owner = Checkpoint("xhs")
+                expected_identity_fingerprint = backend.xhs_expected_identity_fingerprint(
+                    account=account, region=region)
+                prior = checkpoint_owner.get_operational_resume(keyword, acquisition_fingerprint)
+                caller_resume_path = kwargs.get("resume_path")
+                if prior is not None and prior.get("continuation_required") is True:
+                    resume_snapshot = backend.verify_xhs_raw_checkpoint_reference(
+                        prior, acquisition_fingerprint=acquisition_fingerprint, keyword=keyword)
+                    if (resume_snapshot.get("complete") is True
+                            or resume_snapshot.get("continuation_required") is not True
+                            or resume_snapshot.get("identity_fingerprint") != expected_identity_fingerprint):
+                        return self._failed_result("XHS_CHECKPOINT_BINDING_MISMATCH")
+                    effective_detail_media_mode = resume_snapshot.get("detail_media_mode", "legacy")
+                    if (not isinstance(effective_detail_media_mode, str)
+                            or effective_detail_media_mode not in {"legacy", "cover_only"}):
+                        return self._failed_result("XHS_CHECKPOINT_MEDIA_MODE_INVALID")
+                    detail_media_mode_reason = (
+                        "checkpoint_resume"
+                        if effective_detail_media_mode == detail_media_mode
+                        else "legacy_resume" if effective_detail_media_mode == "legacy"
+                        else "checkpoint_mode_resume"
+                    )
+                    if (caller_resume_path
+                            and os.path.normcase(os.path.abspath(caller_resume_path))
+                            != os.path.normcase(resume_snapshot["raw_path"])):
+                        return self._failed_result("XHS_CHECKPOINT_REFERENCE_MISMATCH")
+                    resume_path = resume_snapshot["raw_path"]
+                elif caller_resume_path:
+                    # Purpose-bound resume is accepted only through the existing
+                    # metadata checkpoint owner and its exact task binding.
+                    return self._failed_result("XHS_CHECKPOINT_REFERENCE_MISSING")
+
+                try:
+                    output_path = output_path or backend.new_xhs_raw_checkpoint_path(
+                        acquisition_fingerprint, keyword)
+                    output_path = backend.validate_xhs_raw_checkpoint_path(
+                        output_path, must_be_new=True)
+                    if resume_path:
+                        resume_path = backend.validate_xhs_raw_checkpoint_path(
+                            resume_path, must_exist=True)
+                        if os.path.normcase(resume_path) == os.path.normcase(output_path):
+                            raise ValueError("XHS_CHECKPOINT_PATH_REUSED")
+                except (OSError, ValueError):
+                    return self._failed_result("XHS_CHECKPOINT_PATH_INVALID")
+
+            call_kwargs = {
+                "max_scroll": int(kwargs.get("max_scroll", 4)),
+                "output_path": output_path,
+                "max_details": detail_limit,
+                "region": region,
+                "account": account,
+                "worker_chunk_seconds": kwargs.get("worker_chunk_seconds", 300),
+                "acquisition_fingerprint": acquisition_fingerprint,
+                "detail_media_mode": effective_detail_media_mode,
+            }
+            if resume_path:
+                call_kwargs["resume_path"] = resume_path
+            if "time_budget" in kwargs:
+                call_kwargs["time_budget"] = kwargs.get("time_budget")
             raw = fn(
                 keyword,
-                max_scroll=int(kwargs.get("max_scroll", 4)),
-                output_path=kwargs.get("output_path"),
-                max_details=int(kwargs.get("max_details", 10)),
+                **call_kwargs,
             )
-            notes = raw.get("notes", []) if isinstance(raw, dict) else []
+            raw = raw if isinstance(raw, dict) else {}
+            notes = raw.get("notes", [])
+            notes = [item for item in notes if isinstance(item, dict)] if isinstance(notes, list) else []
             error = raw.get("error", "") if isinstance(raw, dict) else ""
             error_code = str(error or "").strip().upper()
+            actual_media_mode = raw.get("detail_media_mode")
+            if isinstance(actual_media_mode, str) and actual_media_mode in {"legacy", "cover_only"}:
+                if resume_snapshot is not None and actual_media_mode != effective_detail_media_mode:
+                    return self._failed_result(
+                        "XHS_CHECKPOINT_MEDIA_MODE_MISMATCH",
+                        items=[item for item in notes
+                               if raw.get("identity_verified") is True
+                               and item.get("detail_fetched") is True
+                               and item.get("detail_identity_verified") is True],
+                        continuation_required=True,
+                    )
+                if resume_snapshot is None and not resume_path and actual_media_mode != effective_detail_media_mode:
+                    return self._failed_result(
+                        "XHS_DETAIL_MEDIA_MODE_MISMATCH",
+                        items=[item for item in notes
+                               if raw.get("identity_verified") is True
+                               and item.get("detail_fetched") is True
+                               and item.get("detail_identity_verified") is True],
+                    )
+                effective_detail_media_mode = actual_media_mode
+                if resume_path and resume_snapshot is None and actual_media_mode != detail_media_mode:
+                    detail_media_mode_reason = "terminal_replay"
+
+            continuation_snapshot = None
+            continuation_persisted = None
+            if acquisition_fingerprint is not None:
+                if not os.path.isfile(output_path):
+                    # A provider/configuration failure before the worker writes
+                    # a new Raw chunk leaves the previously verified pointer intact.
+                    continuation_snapshot = resume_snapshot
+                    continuation_persisted = bool(resume_snapshot and prior)
+                else:
+                    try:
+                        continuation_snapshot = backend.inspect_xhs_raw_checkpoint(output_path)
+                        if (continuation_snapshot.get("identity_verified") is not True
+                                or continuation_snapshot.get("task_binding") != acquisition_fingerprint
+                                or continuation_snapshot.get("keyword") != keyword
+                                or continuation_snapshot.get("source_host") != "www.rednote.com"
+                                or continuation_snapshot.get("identity_fingerprint") != expected_identity_fingerprint):
+                            raise ValueError("XHS_CHECKPOINT_BINDING_MISMATCH")
+                    except Exception as exc:
+                        safe_code = str(exc).strip()
+                        if re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", safe_code) is None:
+                            safe_code = type(exc).__name__
+                        return self._failed_result(
+                            safe_code,
+                            items=[item for item in notes
+                                   if raw.get("identity_verified") is True
+                                   and item.get("detail_fetched") is True
+                                   and item.get("detail_identity_verified") is True],
+                            continuation_required=bool(resume_snapshot and resume_snapshot.get("continuation_required")),
+                        )
+
+                    saved = checkpoint_owner.save_operational_resume(
+                        keyword,
+                        acquisition_fingerprint,
+                        continuation_snapshot,
+                    )
+                    continuation_persisted = bool(saved)
+                    if (not saved and (continuation_snapshot.get("continuation_required")
+                                       or (resume_snapshot and resume_snapshot.get("continuation_required")))):
+                        return self._failed_result(
+                            "XHS_CHECKPOINT_SAVE_FAILED",
+                            items=[item for item in notes
+                                   if raw.get("identity_verified") is True
+                                   and item.get("detail_fetched") is True
+                                   and item.get("detail_identity_verified") is True],
+                            pending_note_ids=continuation_snapshot.get("pending_note_ids", []),
+                            continuation_required=bool(continuation_snapshot.get("continuation_required")),
+                        )
+
+            if acquisition_fingerprint is not None:
+                notes = [item for item in notes
+                         if raw.get("identity_verified") is True
+                         and item.get("detail_fetched") is True
+                         and item.get("detail_identity_verified") is True]
+
+            summary = raw.get("summary") if isinstance(raw.get("summary"), dict) else {}
+            raw_pending = summary.get("pending_note_ids", [])
+            pending_note_ids = [note_id for note_id in raw_pending
+                                if isinstance(note_id, str)
+                                and re.fullmatch(r"[0-9a-fA-F]{24}", note_id)] \
+                if isinstance(raw_pending, list) else []
+            if continuation_snapshot is not None:
+                pending_note_ids = list(continuation_snapshot.get("pending_note_ids", []))
+            continuation_required = bool(
+                continuation_snapshot.get("continuation_required")
+                if continuation_snapshot is not None else summary.get("continuation_required", False)
+            )
+            checkpoint_complete = (
+                continuation_snapshot.get("complete")
+                if continuation_snapshot is not None else None
+            )
+            checkpoint_identity_verified = bool(
+                continuation_snapshot.get("identity_verified")
+                if continuation_snapshot is not None else raw.get("identity_verified")
+            )
+            captured_at = (
+                continuation_snapshot.get("captured_at")
+                if continuation_snapshot is not None
+                else next((item.get("collected_at") for item in reversed(notes)
+                           if item.get("collected_at")), None)
+            )
+
             if error_code == "IP_RISK_OR_300012":
                 status = CollectionStatus.RISK_WARNING
             elif error_code == "SESSION_EXPIRED":
@@ -63,6 +273,9 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                 "COLLECTOR_ENDPOINT_UNAVAILABLE",
                 "COLLECTOR_SCRIPT_UNAVAILABLE",
                 "CDP_EMPTY_OR_LOAD_FAILED",
+                "CDP_TIMEOUT_PARTIAL",
+                "CDP_TIMEOUT_NO_CHECKPOINT",
+                "COLLECTOR_PROVIDER_FAILURE",
             }:
                 status = CollectionStatus.PROVIDER_UNAVAILABLE
             elif error_code:
@@ -100,6 +313,44 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                     "source_platform": "xhs",
                     "collected_at": str(collected_at)[:40],
                     "region": raw.get("region", "intl") if isinstance(raw, dict) else "intl",
+                    "detail_media_mode": (
+                        raw.get("detail_media_mode")
+                        if isinstance(raw.get("detail_media_mode"), str)
+                        and raw.get("detail_media_mode") in {"legacy", "cover_only"}
+                        else effective_detail_media_mode
+                    ),
+                    "detail_media_mode_requested": detail_media_mode,
+                    "detail_media_mode_effective": effective_detail_media_mode,
+                    "detail_media_mode_reason": detail_media_mode_reason,
+                    "partial": bool(raw.get("partial")),
+                    "pending_note_ids": pending_note_ids,
+                    "pagination_exhausted": False,
+                    "continuation_required": continuation_required,
+                    "continuation": {
+                        "keyword": keyword,
+                        "source_host": "www.rednote.com",
+                        "identity_verified": checkpoint_identity_verified,
+                        "partial": bool(raw.get("partial")),
+                        "pending_note_ids": pending_note_ids,
+                        "pagination_exhausted": False,
+                        "continuation_required": continuation_required,
+                        "checkpoint_complete": checkpoint_complete,
+                        "checkpoint_run_id": (
+                            continuation_snapshot.get("run_id")
+                            if continuation_snapshot is not None
+                            else (raw.get("checkpoint") or {}).get("run_id")
+                        ),
+                        "captured_at": captured_at,
+                    },
+                    "continuation_persisted": continuation_persisted,
+                    "checkpoint_complete": checkpoint_complete,
+                    "checkpoint_identity_verified": checkpoint_identity_verified,
+                    "checkpoint_run_id": (
+                        continuation_snapshot.get("run_id")
+                        if continuation_snapshot is not None
+                        else (raw.get("checkpoint") or {}).get("run_id")
+                    ),
+                    "captured_at": captured_at,
                     **({"error_type": status.value} if status not in {CollectionStatus.SUCCESS, CollectionStatus.NO_NEW_DATA} else {}),
                 },
             )
@@ -116,6 +367,30 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                     "error_type": type(exc).__name__,
                 },
             )
+
+    def _failed_result(self, error_code: str, *, items: Optional[list[dict[str, Any]]] = None,
+                       pending_note_ids: Optional[list[str]] = None,
+                       continuation_required: bool = False) -> CollectionResult:
+        return CollectionResult(
+            status=CollectionStatus.COLLECT_ERROR,
+            platform=self.platform,
+            items=items or [],
+            raw_count=len(items or []),
+            new_count=len(items or []),
+            message="现有小红书采集链未能完成本次请求",
+            metadata={
+                "provider": "existing_xhs_collector",
+                "source": "www.rednote.com",
+                "source_platform": "xhs",
+                "collected_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                "error_type": error_code,
+                "partial": bool(items),
+                "pagination_exhausted": False,
+                "pending_note_ids": pending_note_ids or [],
+                "continuation_required": continuation_required,
+                "continuation_persisted": False if continuation_required else None,
+            },
+        )
 
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:
         return CollectionResult(

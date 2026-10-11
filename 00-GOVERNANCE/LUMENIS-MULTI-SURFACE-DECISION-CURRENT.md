@@ -8,15 +8,13 @@
 
 This decision records how the approved commercial surfaces are delivered. It is not a second Product Architecture, Experience authority, data owner, runtime owner, or completion claim. Current executable source and runtime evidence remain authoritative.
 
-The Product Owner also accepted the ROUND 01 audit, missing-capability register and
-15-round coverage on 2026-09-21. Current dispatch follows C1–C6 in AGENTS.md
-with independent frontend F. The earlier approval is a coverage baseline, not implementation from the audit PDF or its sketches. All generated visual
+The Product Owner also accepted the ROUND 01 audit and missing-capability register on 2026-09-21; its 15-round coverage is a historical audit index, not the product delivery sequence. C1–C6 retain engineering source responsibilities, and F retains frontend ownership. These roles do not establish current dispatch, a fixed local/Cloud split or a concurrency limit; actual dispatch follows the latest direct PO instruction and verified live evidence. The earlier approval is a coverage baseline, not implementation from the audit PDF or its sketches. All generated visual
 artifacts remain `DESIGN_EXPLORATION` until the sole Experience authority and a
 current detailed screen specification establish `DESIGN_READY`.
 
 ### 2026-10-08 最新执行顺序：官网与 Web 优先闭环
 
-Product Owner 最新明确：先完成 Public Website 与 Web Workspace，Desktop App 与 Mobile Companion 的专项实现、打包和实机验收在前两端闭环后继续。四端最终范围、44 屏、官网内容家族和全部既定 R/J/U 要求仍保留；现有原件、源码、设计和回执不删除，后置项不标 PASS。M + 独立 F + 一个业务窗口及零新增付费不变。
+Product Owner 最新明确的产品交付优先级：先完成 Public Website 与 Web Workspace，Desktop App 与 Mobile Companion 的专项实现、打包和实机验收在前两端闭环后继续。四端最终范围、44 屏、官网内容家族和全部既定 R/J/U 要求仍保留；现有原件、源码、设计和回执不删除，后置项不标 PASS。此优先级不规定并行窗口拓扑或固定业务席位。本轮最新PO明确要求F继续暂停；该执行状态不缩减或删除前端范围。零新增付费边界不变。
 
 本轮完整交付官网既定内容与真实入口，以及 Web 适用的研究、业务、创作、来源和权限、成果保存/修改/重开/恢复/评价。Web 任务必需的 Core/SYSTEM 服务不因桌面客户端后置而后置；复用现有共享源码并保留兼容。官网展示不得夸大能力，Web 不用模拟后端或桌面端跳转代替已批准的 Web 能力。手机浏览器窄屏属于 Web 响应式验收，不等于原生 Mobile Companion。
 
@@ -179,15 +177,15 @@ Stop and return `BLOCKED` rather than creating a second truth when identity/tena
 四端共同要求：二维手绘水彩/版画方向、功能glyph与来源标识分层、颜色有节制、保留有用丰富交互，中英韩/无障碍；操作端避免不必要的整页上下滑动，长文等必要区域不截断。各端实际实现/运行证据独立记录，文档同步不提升已有状态。本轮仅更新规则和设计输入，不自动派工。
 
 
-### 2026-10-08 前端审计与工具维护增补
+### 2026-10-08 前端审计与工具维护增补（历史授权快照）
 
-按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；各窗完成 fresh admission 后执行既有完整成果。本轮仅同步派工规则，不提升运行或用户验收状态。
+按当时PO指令，前端直接构建真实源码，不等待独立设计稿/Figma或M逐屏DESIGN_READY审批；Figma和设计节点仅为有日期的局部证据，不作为实现前置。本段旧拓扑“独立F＋唯一业务窗口/W6占席”仅保留为2026-10-08历史授权，不再形成现行派工限制。当前并行安排由最新直接PO指令决定；本轮最新PO明确要求F继续暂停。实际代码、设计和验收状态仍需独立核实，本段不派发或恢复窗口。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
 ### 2026-10-08 成熟操作与智能增强的四端一致性
 
-按Product Architecture与Experience§38在当前优先的官网/Web验收基础可用与序境增强，Desktop/Mobile的专项验收后置；保留四端完整范围，不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要不上下滚动。当前PO指令为M+独立F+唯一业务窗口；选定窗口fresh admission后按现有依赖与门禁执行，其余等待。
+按Product Architecture与Experience§38，先完成官网/Web适用验收，再处理Desktop/Mobile专项验收；保留四端完整范围，不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要不上下滚动。产品优先级不等于当前派工；本轮最新PO明确F继续暂停，窗口状态由最新直接指令和证据核实。
 
 ### 2026-10-08 浏览器与受控电脑的端能力
 

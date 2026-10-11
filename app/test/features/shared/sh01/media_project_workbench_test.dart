@@ -1235,6 +1235,7 @@ void main() {
       await tester.pump();
       expect(tester.widget<OutlinedButton>(splitButton).onPressed, isNotNull);
 
+      await tester.ensureVisible(splitButton);
       await tester.tap(splitButton);
       await tester.pumpAndSettle();
       expect(controller.timeline!.tracks.single.clips, hasLength(2));

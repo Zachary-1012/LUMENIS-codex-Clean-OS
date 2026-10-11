@@ -1,5 +1,7 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/lumenis_icon.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../../l10n/lumenis_localizations.dart';
@@ -15,7 +17,7 @@ class Sys05AppearanceButton extends StatelessWidget {
     return IconButton(
       key: const ValueKey('appearance/open'),
       tooltip: context.lumenisL10n.text('appearance.title'),
-      icon: const Icon(Icons.palette_outlined, size: 20),
+      icon: const LumenisIcon(Icons.palette_outlined, size: 20),
       onPressed: () {
         FocusManager.instance.primaryFocus?.unfocus();
         if (MediaQuery.sizeOf(context).width >= 768) {
@@ -191,7 +193,7 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
               key: const ValueKey('appearance/close'),
               tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
               onPressed: widget.onClose,
-              icon: const Icon(Icons.close),
+              icon: const LumenisIcon(Icons.close),
             ),
         ],
       );
@@ -228,7 +230,7 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                             key: ValueKey('appearance/${mode.name}'),
                             label: Text(copy('appearance.mode.${mode.name}')),
                             selected: c.mode == mode,
-                            avatar: Icon(switch (mode) {
+                            avatar: LumenisIcon(switch (mode) {
                               WorkspaceBackdrop.frosted => Icons.blur_on,
                               WorkspaceBackdrop.wallpaper =>
                                 Icons.image_outlined,
@@ -319,7 +321,7 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                                       SizedBox(
                                         width: tileWidth - 16,
                                         height: (tileWidth - 16) * .56,
-                                        child: Icon(
+                                        child: LumenisIcon(
                                           Icons.image_not_supported_outlined,
                                           color: Theme.of(
                                             context,
@@ -365,7 +367,7 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                     onPressed: _choosing || c.resetting
                         ? null
                         : _chooseWallpaper,
-                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    icon: const LumenisIcon(Icons.add_photo_alternate_outlined),
                     label: Text(copy('appearance.chooseWallpaper')),
                   ),
                   if (c.wallpaper != null)
@@ -434,7 +436,7 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                   prefixText: '#',
                   suffixIcon: IconButton(
                     tooltip: copy('appearance.applyColor'),
-                    icon: const Icon(Icons.check),
+                    icon: const LumenisIcon(Icons.check),
                     onPressed: c.resetting
                         ? null
                         : () {
@@ -603,7 +605,7 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                               dimension: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.restart_alt_rounded),
+                          : const LumenisIcon(Icons.restart_alt_rounded),
                       label: Text(copy('appearance.resetLocal')),
                     ),
                 ],

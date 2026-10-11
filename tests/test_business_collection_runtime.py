@@ -67,7 +67,9 @@ def test_changed_task_rejects_stale_checkpoint_before_new_sources(monkeypatch):
 
 
 def test_native_period_and_task_review_preserve_raw_literals_and_null_metrics():
-    query = planner.build_acquisition_plan(business_requests=requests(('douyin',)), registry_loader=rows).queries[0]
+    reqs = requests(('douyin',))
+    reqs[0]['publication_since'] = '2026-01-01'
+    query = planner.build_acquisition_plan(business_requests=reqs, registry_loader=rows).queries[0]
     records = [
         {'content_id': 'dy:current', 'url': 'https://www.douyin.com/video/1', 'content': 'Nike 中国 新品',
          'create_time': 1788105600, 'digg_count': 0, 'play_count': None},

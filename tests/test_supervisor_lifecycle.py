@@ -1,7 +1,10 @@
 import builtins
 import errno
+import hashlib
+import json
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -11,11 +14,15 @@ import run_supervised
 
 
 class FakeProcess:
-    def __init__(self, pid, returncode=1, poll_error=None):
+    def __init__(self, pid, returncode=1, poll_error=None, launch_id=None,
+                 boot_id=None, entry_sha256=None):
         self.pid = pid
         self.returncode = returncode
         self.poll_error = poll_error
         self.wait_calls = []
+        self.launch_id = launch_id or uuid.uuid4().hex
+        self.boot_id = boot_id or uuid.uuid4().hex
+        self.entry_sha256 = entry_sha256 or "a" * 64
 
     def poll(self):
         if self.poll_error is not None:
@@ -50,6 +57,21 @@ class FakeSocket:
         pass
 
 
+class FakeHTTPResponse:
+    def __init__(self, payload, status=200):
+        self.payload = payload
+        self.status = status
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
+    def read(self, size):
+        return json.dumps(self.payload).encode("utf-8")[:size]
+
+
 class FakeEvent:
     def __init__(self, on_wait=None):
         self.wait_calls = []
@@ -72,7 +94,9 @@ def isolated_runtime_paths(monkeypatch, tmp_path):
     return tmp_path
 
 
-def _configure_main(monkeypatch, event, *, health_result=False, fake_clock=None):
+def _configure_main(monkeypatch, event, *, health_result=False, fake_clock=None,
+                    process_returncodes=1, launch_id=None, health_calls=None,
+                    stop_after_health=False):
     states = []
     spawned = []
     events = []
@@ -85,13 +109,32 @@ def _configure_main(monkeypatch, event, *, health_result=False, fake_clock=None)
     monkeypatch.setattr(run_supervised.socket, "socket", lambda *_args, **_kwargs: FakeSocket())
     monkeypatch.setattr(run_supervised, "write_state", lambda **state: (states.append(dict(state)) or True))
     monkeypatch.setattr(run_supervised, "log", lambda _message: None)
-    monkeypatch.setattr(run_supervised, "http_health", lambda _port: health_result)
-    monkeypatch.setattr(run_supervised.sys, "argv", ["run_supervised.py", "--port", "0"])
+    def record_health(_port, **expected_identity):
+        if health_calls is not None:
+            health_calls.append(dict(expected_identity))
+        if stop_after_health:
+            handlers[run_supervised.signal.SIGTERM](run_supervised.signal.SIGTERM, None)
+        return health_result
+
+    monkeypatch.setattr(run_supervised, "http_health", record_health)
+    argv = ["run_supervised.py", "--port", "0"]
+    if launch_id is not None:
+        argv.extend(["--launch-id", launch_id])
+    monkeypatch.setattr(run_supervised.sys, "argv", argv)
     if fake_clock is not None:
         monkeypatch.setattr(run_supervised, "time", SimpleNamespace(time=fake_clock))
 
-    def record_spawn(app, host, port):
-        process = FakeProcess(pid=1000 + len(spawned), returncode=1)
+    def record_spawn(app, host, port, *, launch_id=None):
+        index = len(spawned)
+        if isinstance(process_returncodes, (list, tuple)):
+            returncode = process_returncodes[index]
+        else:
+            returncode = process_returncodes
+        process = FakeProcess(
+            pid=1000 + index,
+            returncode=returncode,
+            launch_id=launch_id,
+        )
         spawned.append((app, host, port, process))
         events.append(("spawn", process.pid))
         return process
@@ -101,6 +144,7 @@ def _configure_main(monkeypatch, event, *, health_result=False, fake_clock=None)
 
 
 def test_spawn_closes_parent_output_handle_on_success_and_failure(monkeypatch, isolated_runtime_paths):
+    (isolated_runtime_paths / "app.py").write_bytes(b"core entry")
     handles = []
 
     def successful_popen(_args, **kwargs):
@@ -108,7 +152,8 @@ def test_spawn_closes_parent_output_handle_on_success_and_failure(monkeypatch, i
         return FakeProcess(pid=456, returncode=None)
 
     monkeypatch.setattr(run_supervised.subprocess, "Popen", successful_popen)
-    run_supervised.spawn("app.py", "127.0.0.1", "8201")
+    process = run_supervised.spawn("app.py", "127.0.0.1", "8201")
+    assert uuid.UUID(process.launch_id).hex == process.launch_id
     assert handles[-1].closed
 
     def failed_popen(_args, **kwargs):
@@ -119,6 +164,113 @@ def test_spawn_closes_parent_output_handle_on_success_and_failure(monkeypatch, i
     with pytest.raises(OSError, match="simulated process creation failure"):
         run_supervised.spawn("app.py", "127.0.0.1", "8201")
     assert handles[-1].closed
+
+
+def test_spawn_passes_loaded_entry_identity_and_uses_a_fresh_boot_id(
+    monkeypatch, isolated_runtime_paths
+):
+    entry_bytes = b"the exact Product Core entry bytes\n"
+    entry = isolated_runtime_paths / "app.py"
+    entry.write_bytes(entry_bytes)
+    calls = []
+
+    def record_popen(args, **kwargs):
+        calls.append((args, kwargs))
+        return FakeProcess(pid=500 + len(calls), returncode=None)
+
+    monkeypatch.setattr(run_supervised.subprocess, "Popen", record_popen)
+    launch_id = uuid.uuid4().hex
+    first = run_supervised.spawn("app.py", "127.0.0.1", "8201", launch_id=launch_id)
+    second = run_supervised.spawn(str(entry), "127.0.0.1", "8201", launch_id=launch_id)
+    expected_hash = hashlib.sha256(entry_bytes).hexdigest()
+
+    assert calls[0][0][4] == str(entry.resolve())
+    assert first.launch_id == second.launch_id == launch_id
+    assert first.entry_sha256 == second.entry_sha256 == expected_hash
+    assert first.boot_id != second.boot_id
+    assert uuid.UUID(first.boot_id).hex == first.boot_id
+    assert uuid.UUID(second.boot_id).hex == second.boot_id
+    for process, (_args, kwargs) in zip((first, second), calls):
+        child_env = kwargs["env"]
+        assert child_env["LUMENIS_CORE_LAUNCH_ID"] == process.launch_id
+        assert child_env["LUMENIS_CORE_BOOT_ID"] == process.boot_id
+        assert child_env["LUMENIS_CORE_ENTRY_SHA256"] == process.entry_sha256
+
+
+def test_spawn_rejects_missing_or_outside_root_core_entry(
+    monkeypatch, isolated_runtime_paths
+):
+    runtime_root = isolated_runtime_paths / "runtime"
+    runtime_root.mkdir()
+    monkeypatch.setattr(run_supervised, "ROOT", runtime_root)
+    outside_entry = isolated_runtime_paths / "outside.py"
+    outside_entry.write_bytes(b"outside")
+    monkeypatch.setattr(
+        run_supervised.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: pytest.fail("Popen must not run for an invalid entry"),
+    )
+
+    with pytest.raises(ValueError, match="within the runtime root"):
+        run_supervised.spawn(str(outside_entry), "127.0.0.1", "8201")
+    with pytest.raises(ValueError, match="must exist within the runtime root"):
+        run_supervised.spawn("missing.py", "127.0.0.1", "8201")
+
+
+def test_http_health_requires_each_supplied_core_instance_identity(monkeypatch):
+    expected = {
+        "launch_id": uuid.uuid4().hex,
+        "boot_id": uuid.uuid4().hex,
+        "entry_sha256": "b" * 64,
+    }
+    payload = {
+        "ok": True,
+        "status": "healthy",
+        "dependencies": {"database": "ok"},
+        "core_instance": dict(expected),
+    }
+
+    def use_payload(value):
+        monkeypatch.setattr(
+            run_supervised.urllib.request,
+            "urlopen",
+            lambda *_args, **_kwargs: FakeHTTPResponse(value),
+        )
+
+    use_payload(payload)
+    assert run_supervised.http_health(
+        8201,
+        expected_launch_id=expected["launch_id"],
+        expected_boot_id=expected["boot_id"],
+        expected_entry_sha256=expected["entry_sha256"],
+    )
+
+    for field, value in expected.items():
+        missing = dict(expected)
+        missing.pop(field)
+        payload["core_instance"] = missing
+        use_payload(payload)
+        assert not run_supervised.http_health(
+            8201,
+            expected_launch_id=expected["launch_id"],
+            expected_boot_id=expected["boot_id"],
+            expected_entry_sha256=expected["entry_sha256"],
+        )
+
+        mismatched = dict(expected)
+        mismatched[field] = value + "-other"
+        payload["core_instance"] = mismatched
+        use_payload(payload)
+        assert not run_supervised.http_health(
+            8201,
+            expected_launch_id=expected["launch_id"],
+            expected_boot_id=expected["boot_id"],
+            expected_entry_sha256=expected["entry_sha256"],
+        )
+
+    payload.pop("core_instance")
+    use_payload(payload)
+    assert run_supervised.http_health(8201)
 
 
 def test_lock_contention_is_duplicate_but_unexpected_lock_error_closes_handle(monkeypatch, tmp_path):
@@ -246,11 +398,69 @@ def test_shutdown_interrupts_escalated_crash_backoff_and_releases_after_cleanup(
     run_supervised.main()
 
     assert len(spawned) == run_supervised.FAST_CRASH_LIMIT
+    child_processes = [spawn[3] for spawn in spawned]
+    launch_ids = {process.launch_id for process in child_processes}
+    assert len(launch_ids) == 1
+    assert uuid.UUID(next(iter(launch_ids))).hex == next(iter(launch_ids))
+    assert len({process.boot_id for process in child_processes}) == len(child_processes)
     assert 1.0 in event.wait_calls
     assert states[-1]["status"] == "stopped"
     assert states[-1]["child_cleanup"] == "confirmed"
     assert lock.closed
     assert events.index(("kill", spawned[-1][3].pid)) < events.index(("lock_closed", None))
+
+
+def test_main_binds_health_and_state_to_restarted_child_identity(
+    monkeypatch, isolated_runtime_paths
+):
+    clock = [0.0]
+    health_calls = []
+    launch_id = uuid.uuid4().hex
+
+    def advance_clock(timeout):
+        clock[0] += timeout
+
+    event = FakeEvent(lambda _count, timeout: advance_clock(timeout))
+    states, spawned, events, _handlers, lock = _configure_main(
+        monkeypatch,
+        event,
+        health_result=True,
+        fake_clock=lambda: clock[0],
+        process_returncodes=[1, None],
+        launch_id=launch_id,
+        health_calls=health_calls,
+        stop_after_health=True,
+    )
+    monkeypatch.setattr(run_supervised, "HEALTH_INTERVAL", 1)
+    monkeypatch.setattr(run_supervised, "kill_tree", lambda process: events.append(("kill", process.pid)) or True)
+
+    run_supervised.main()
+
+    assert len(spawned) == 2
+    first_child = spawned[0][3]
+    current_child = spawned[1][3]
+    assert first_child.launch_id == current_child.launch_id == launch_id
+    assert first_child.boot_id != current_child.boot_id
+    assert health_calls == [{
+        "expected_launch_id": current_child.launch_id,
+        "expected_boot_id": current_child.boot_id,
+        "expected_entry_sha256": current_child.entry_sha256,
+    }]
+
+    starting_states = [state for state in states if state.get("status") == "starting"]
+    assert [state["pid"] for state in starting_states] == [first_child.pid, current_child.pid]
+    assert starting_states[1]["launch_id"] == current_child.launch_id
+    assert starting_states[1]["boot_id"] == current_child.boot_id
+    assert starting_states[1]["entry_sha256"] == current_child.entry_sha256
+    running_state = next(state for state in states if state.get("status") == "running")
+    assert running_state["pid"] == current_child.pid
+    assert running_state["launch_id"] == current_child.launch_id
+    assert running_state["boot_id"] == current_child.boot_id
+    assert running_state["entry_sha256"] == current_child.entry_sha256
+    assert states[-1]["status"] == "stopped"
+    assert states[-1]["child_cleanup"] == "confirmed"
+    assert events.index(("kill", current_child.pid)) < events.index(("lock_closed", None))
+    assert lock.closed
 
 
 def test_zombie_kill_failure_does_not_spawn_replacement_and_keeps_failure_state(
@@ -266,7 +476,10 @@ def test_zombie_kill_failure_does_not_spawn_replacement_and_keeps_failure_state(
         monkeypatch, event, health_result=False, fake_clock=lambda: clock[0]
     )
     zombie = FakeProcess(pid=7777, returncode=None)
-    monkeypatch.setattr(run_supervised, "spawn", lambda *_args: spawned.append(zombie) or zombie)
+    monkeypatch.setattr(
+        run_supervised, "spawn",
+        lambda *_args, **_kwargs: spawned.append(zombie) or zombie,
+    )
     monkeypatch.setattr(run_supervised, "POLL_INTERVAL", 2)
     monkeypatch.setattr(run_supervised, "HEALTH_INTERVAL", 1)
     kill_results = iter([False, True])
@@ -296,7 +509,10 @@ def test_loop_exception_cleans_child_before_terminal_state_and_lock_release(
     event = FakeEvent()
     states, spawned, events, _handlers, lock = _configure_main(monkeypatch, event)
     process = FakeProcess(pid=9876, returncode=None, poll_error=error)
-    monkeypatch.setattr(run_supervised, "spawn", lambda *_args: spawned.append(process) or process)
+    monkeypatch.setattr(
+        run_supervised, "spawn",
+        lambda *_args, **_kwargs: spawned.append(process) or process,
+    )
 
     def record_cleanup(child):
         events.append(("kill", child.pid))
@@ -321,7 +537,10 @@ def test_failed_final_cleanup_never_marks_stopped_or_explicitly_releases_lock(
     event = FakeEvent()
     states, spawned, _events, _handlers, lock = _configure_main(monkeypatch, event)
     process = FakeProcess(pid=9877, returncode=None, poll_error=error)
-    monkeypatch.setattr(run_supervised, "spawn", lambda *_args: spawned.append(process) or process)
+    monkeypatch.setattr(
+        run_supervised, "spawn",
+        lambda *_args, **_kwargs: spawned.append(process) or process,
+    )
     monkeypatch.setattr(run_supervised, "kill_tree", lambda _child: False)
     monkeypatch.setattr(run_supervised, "write_state", lambda **state: (states.append(dict(state)) or True))
 

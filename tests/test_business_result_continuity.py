@@ -319,3 +319,119 @@ def test_evaluation_recovery_does_not_change_committed_save_request(business, mo
     assert original["payload"]["business_work"]["evaluation"] == {
         "evaluation_id": recovered["evaluation"]["evaluation_id"], "evidence_ref": recovered["revision"]}
     assert ws["repo"].query_one("SELECT count(*) FROM lumenis_shared_artifacts WHERE kind='saved_document'")[0] == 1
+
+
+def test_business_work_http_save_adopt_reopen_and_revision_conflict(business, monkeypatch):
+    """Exercise the existing HTTP composition against disposable source and Shared stores."""
+    import lumenis_app_api
+    from lumenis.shared.reporting import saved_work
+    from lumenis.system.security import permission
+
+    ws = business
+    app = ws["app"]
+    app.register_blueprint(lumenis_app_api.domain_api_bp)
+    binding = lambda _operation: (ws["service"], ws["actor_ref"], ws["domain_scope"], ws["authorize"])
+    monkeypatch.setattr(lumenis_app_api, "_business_work_binding", binding)
+    api = app.test_client()
+    base = "/api/experience/business-works/" + ws["current"]["work_id"]
+    original = ws["current"]
+    first_body = {"request_id": "route-save-v1", "expected_revision": original["revision"],
+                  "citations": [ws["citation"]]}
+
+    malformed = api.post(base + "/save-request", json={**first_body, "actor": {"id": 7}})
+    assert malformed.status_code == 400
+    assert ws["repo"].query_one("SELECT count(*) FROM lumenis_shared_artifacts WHERE kind='saved_document'")[0] == 0
+
+    request_response = api.post(base + "/save-request", json=first_body)
+    assert request_response.status_code == 200, request_response.get_json()
+    request_result = request_response.get_json()["result"]
+    assert request_result["state"] == "AWAITING_SHARED_SAVE_PERMISSION"
+    assert request_result["publish_status"] == "not_performed"
+    assert ws["repo"].query_one("SELECT count(*) FROM lumenis_shared_artifacts WHERE kind='saved_document'")[0] == 0
+
+    # The Shared effect check receives the exact resource returned for this immutable request.
+    checks = []
+    gate_check = ws["gate"].check
+    def capture_check(operation_type, *args, **kwargs):
+        if operation_type is permission.OperationType.DATA_EXPORT:
+            checks.append(kwargs.get("resource"))
+        return gate_check(operation_type, *args, **kwargs)
+    monkeypatch.setattr(ws["gate"], "check", capture_check)
+    ws["gate"].grant_approval(permission.OperationType.DATA_EXPORT.value,
+                              resource=request_result["resource"], granted_by="isolated-test")
+    first_response = api.post(base + "/save", json=first_body)
+    assert first_response.status_code == 200, first_response.get_json()
+    assert checks and set(checks) == {request_result["resource"]}
+    first = first_response.get_json()["result"]["saved_work"]
+    assert first["document"]["version"] == 1
+    assert first["document"]["citations"][0]["evidence_id"] == ws["citation"]["evidence_id"]
+    assert first["document"]["payload"]["business_work"]["source_bindings"][0]["evidence_id"] == ws["citation"]["evidence_id"]
+
+    # A second resource request bound to revision 1 cannot be used after adoption creates revision 2.
+    stale_body = {"request_id": "route-stale-save", "expected_revision": original["revision"],
+                  "citations": [ws["citation"]], "previous_artifact_id": first["artifact"]["artifact_id"],
+                  "expected_draft_digest": first["document"]["draft_digest"]}
+    stale_request = api.post(base + "/save-request", json=stale_body)
+    assert stale_request.status_code == 200, stale_request.get_json()
+
+    replacement_report, replacement_citation = add_material(
+        ws, "route-replacement", "Replacement issuer statement. No consumer outcome measured.")
+    replacement_source = replacement_report["source_brief"]["records"][0]["source_id"]
+    replacement_options = make_options(replacement_source)
+    adopt_body = {"submission_id": "route-adopt-v2", "expected_revision": original["revision"],
+                  "payload": {"source_job_id": replacement_report["job_id"],
+                              "question": original["question"], "options": replacement_options,
+                              "decision": selection("B", "200"), "reason": "Adopt the reviewed replacement source."}}
+    adopted_response = api.post(base + "/adopt", json=adopt_body)
+    assert adopted_response.status_code == 200, adopted_response.get_json()
+    adopted = adopted_response.get_json()["result"]
+    assert adopted["adoption"]["source_changed"] is True
+    assert adopted["revision"] != original["revision"]
+
+    # Server-resolved actor/scope drift is denied before any save side effect.
+    wrong_scope = {**ws["domain_scope"], "domain_id": "zbmp" if ws["domain_scope"]["domain_id"] == "cth" else "cth"}
+    monkeypatch.setattr(lumenis_app_api, "_business_work_binding",
+                        lambda _operation: (ws["service"], ws["actor_ref"], wrong_scope, ws["authorize"]))
+    wrong_scope_response = api.get(base)
+    assert wrong_scope_response.status_code == 403
+    assert wrong_scope_response.get_json()["code"] == "BUSINESS_WORK_AUTHORIZATION_MISMATCH"
+    monkeypatch.setattr(lumenis_app_api, "_business_work_binding", binding)
+
+    ws["gate"].grant_approval(permission.OperationType.DATA_EXPORT.value,
+                              resource=stale_request.get_json()["result"]["resource"], granted_by="isolated-test")
+    stale_save = api.post(base + "/save", json=stale_body)
+    assert stale_save.status_code == 409, stale_save.get_json()
+    assert stale_save.get_json()["code"] == "BUSINESS_WORK_REVISION_CONFLICT"
+    assert ws["repo"].query_one("SELECT count(*) FROM lumenis_shared_artifacts WHERE kind='saved_document'")[0] == 1
+
+    historical = api.get(base, query_string={"revision": original["revision"]})
+    assert historical.status_code == 200, historical.get_json()
+    assert historical.get_json()["result"]["is_current_revision"] is False
+    assert historical.get_json()["result"]["revision"] == original["revision"]
+
+    second_body = {"request_id": "route-save-v2", "expected_revision": adopted["revision"],
+                   "citations": [replacement_citation], "previous_artifact_id": first["artifact"]["artifact_id"],
+                   "expected_draft_digest": first["document"]["draft_digest"]}
+    second_request = api.post(base + "/save-request", json=second_body)
+    assert second_request.status_code == 200, second_request.get_json()
+    ws["gate"].grant_approval(permission.OperationType.DATA_EXPORT.value,
+                              resource=second_request.get_json()["result"]["resource"], granted_by="isolated-test")
+    second_response = api.post(base + "/save", json=second_body)
+    assert second_response.status_code == 200, second_response.get_json()
+    second = second_response.get_json()["result"]["saved_work"]
+    assert second["document"]["version"] == 2
+    assert second["document"]["parent_artifact_id"] == first["artifact"]["artifact_id"]
+    assert second["document"]["citations"][0]["evidence_id"] == replacement_citation["evidence_id"]
+    replay = api.post(base + "/save", json=second_body)
+    assert replay.status_code == 200, replay.get_json()
+    assert replay.get_json()["result"]["saved_work"]["replayed"] is True
+
+    latest = api.get(base)
+    assert latest.status_code == 200 and latest.get_json()["result"]["revision"] == adopted["revision"]
+    reopened_second = saved_work.reopen_work(second["artifact"]["artifact_id"],
+                                             actor=ws["actor"], scope=ws["scope"])
+    reopened_first = saved_work.reopen_work(first["artifact"]["artifact_id"],
+                                            actor=ws["actor"], scope=ws["scope"])
+    assert reopened_first["document"]["version"] == 1
+    assert reopened_second["document"]["version"] == 2
+    assert reopened_second["document"]["citations"][0]["evidence_id"] == replacement_citation["evidence_id"]

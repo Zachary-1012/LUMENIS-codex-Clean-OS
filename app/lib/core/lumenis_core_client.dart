@@ -478,6 +478,20 @@ class LumenisCoreClient {
   Future<Map<String, dynamic>> screen(String screenId) =>
       _get('/api/experience/screen/${Uri.encodeComponent(screenId)}');
 
+  /// AI-01 intent submission. Only the task text and the low-risk `ANALYZE`
+  /// action are sent: the actor, domain, product and skill are never supplied
+  /// by the client (the server's PermissionGate owns them). The timeout covers
+  /// the whole synchronous execution; an elapsed timeout means the outcome is
+  /// unknown and the caller must not resubmit automatically.
+  Future<Map<String, dynamic>> submitAiIntent({required String task}) {
+    return _request(
+      'POST',
+      '/api/experience/ai/intent',
+      payload: {'task': task, 'action_type': 'ANALYZE'},
+      connectionTimeout: const Duration(minutes: 2),
+    );
+  }
+
   Future<Map<String, dynamic>> startSourceBriefTask({
     required String domainId,
     int limit = 30,
@@ -528,6 +542,7 @@ class LumenisCoreClient {
       'GET',
       '/api/experience/reports/source-brief/jobs/${Uri.encodeComponent(jobId)}',
       operationContext: _contentContext(domainId),
+      connectionTimeout: const Duration(seconds: 30),
     );
   }
 
@@ -571,6 +586,11 @@ class LumenisCoreClient {
       '/api/ai/tasks/${Uri.encodeComponent(taskId)}${run ? '/run' : ''}',
       operationContext: _contentContext(domainId),
       payload: run ? const <String, Object?>{} : null,
+      // Execution includes source/Permission revalidation and Artifact commit.
+      // A lost acknowledgement is recovered through the same task identifier.
+      connectionTimeout: run
+          ? const Duration(seconds: 60)
+          : const Duration(seconds: 30),
     );
   }
 

@@ -261,7 +261,9 @@ def _business_work_response(call):
         status = 401 if code == "AUTH_REQUIRED" else 403 if (
             isinstance(exc, PermissionError) or code == "CONTENT_SCOPE_DENIED"
         ) else (
-            404 if isinstance(exc, LookupError) else 503 if isinstance(exc, RuntimeError) else 400
+            404 if isinstance(exc, LookupError) else 409 if code in {
+                "BUSINESS_WORK_REVISION_CONFLICT", "BUSINESS_WORK_SUBMISSION_CONFLICT",
+            } else 503 if isinstance(exc, RuntimeError) else 400
         )
         response = jsonify({"ok": False, "code": code, "publish_status": "not_performed"})
         response.headers["Cache-Control"] = "no-store"
@@ -290,19 +292,36 @@ def api_business_work_prepare():
 @domain_api_bp.get("/api/experience/business-works/<work_id>")
 def api_business_work_read(work_id):
     def execute():
-        if request.args:
+        if (set(request.args) - {"revision"}
+                or any(len(request.args.getlist(key)) != 1 for key in request.args)
+                or ("revision" in request.args and not request.args["revision"])):
             raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
         service, actor_ref, scope, authorize = _business_work_binding("read")
-        return service.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize)
+        revision = request.args.get("revision")
+        return service.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize,
+                              revision=revision)
     return _business_work_response(execute)
 
 
 @domain_api_bp.post("/api/experience/business-works/<work_id>/<operation>")
 def api_business_work_advance(work_id, operation):
     def execute():
-        if operation not in {"choose", "cancel", "interrupt", "resume", "action", "outcome", "outcome_unknown"}:
+        if operation not in {"choose", "adopt", "cancel", "interrupt", "resume", "action", "outcome", "outcome_unknown",
+                             "save-request", "save"}:
             raise LookupError("BUSINESS_WORK_OPERATION_NOT_FOUND")
         data = _business_work_body()
+        if operation in {"save-request", "save"}:
+            required = {"request_id", "expected_revision", "citations"}
+            optional = {"previous_artifact_id", "expected_draft_digest"}
+            if (not required.issubset(data) or set(data) - required - optional
+                    or (("previous_artifact_id" in data) != ("expected_draft_digest" in data))
+                    or not isinstance(data["expected_revision"], str)
+                    or not isinstance(data["request_id"], str)
+                    or not isinstance(data["citations"], list)):
+                raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+            service, actor_ref, scope, authorize = _business_work_binding("save")
+            save = service.save_result_request if operation == "save-request" else service.save_result
+            return save(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize, **data)
         if set(data) != {"submission_id", "payload", "expected_revision"}:
             raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
         service, actor_ref, scope, authorize = _business_work_binding(operation)

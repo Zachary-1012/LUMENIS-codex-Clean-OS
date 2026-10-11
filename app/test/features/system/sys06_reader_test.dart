@@ -31,6 +31,8 @@ void main() {
       expect(repository.openCalls, 0);
       await tester.tap(find.byKey(const ValueKey('sys06-open')));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('sys06-acquire-control')));
+      await tester.pumpAndSettle();
 
       final address = find.byKey(const ValueKey('sys06-address'));
       expect(address, findsOneWidget);
@@ -76,6 +78,8 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('sys06-open')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sys06-acquire-control')));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('sys06-address')),
       'javascript:alert(1)',
@@ -99,6 +103,8 @@ void main() {
       ),
     );
     await tester.tap(find.byKey(const ValueKey('sys06-open')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sys06-acquire-control')));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('sys06-address')),
@@ -147,6 +153,8 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('sys06-open')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sys06-acquire-control')));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('sys06-address')),
       'https://example.com/pending',
@@ -171,11 +179,19 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('SYS-06 can stop while reload is pending', (tester) async {
+  testWidgets('SYS-06 can stop while control acquisition is pending', (
+    tester,
+  ) async {
     final repository = _ReaderRepository();
-    await _openReaderPage(tester, repository);
-    repository.reloadPending = Completer<Sys06BrowserSession>();
-    await tester.tap(find.byKey(const ValueKey('sys06-reload')));
+    await tester.pumpWidget(
+      _host(
+        Sys06Screen(client: LumenisCoreClient(), browserRepository: repository),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('sys06-open')));
+    await tester.pumpAndSettle();
+    repository.acquirePending = Completer<Sys06BrowserLease>();
+    await tester.tap(find.byKey(const ValueKey('sys06-acquire-control')));
     await tester.pump();
 
     final stop = tester.widget<OutlinedButton>(
@@ -187,7 +203,14 @@ void main() {
     expect(repository.stopCalls, 1);
     expect(repository.stoppedSessionId, 'bs_0123456789ab');
 
-    repository.reloadPending!.complete(_readerPageSession);
+    repository.acquirePending!.complete(
+      Sys06BrowserLease(
+        token: 'late-lease-token-for-test',
+        expiresAt: DateTime.now().add(const Duration(minutes: 10)),
+        ttlSeconds: 600,
+        humanActions: const {'navigate'},
+      ),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 120));
     expect(find.byKey(const ValueKey('sys06-open')), findsOneWidget);
@@ -224,8 +247,8 @@ void main() {
     (tester) async {
       final repository = _ReaderRepository();
       await _openReaderPage(tester, repository);
-      repository.reloadPending = Completer<Sys06BrowserSession>();
-      await tester.tap(find.byKey(const ValueKey('sys06-reload')));
+      repository.framePending = Completer<Sys06BrowserFrame>();
+      await tester.tap(find.byKey(const ValueKey('sys06-refresh-frame')));
       await tester.pump();
       repository.stopPending = Completer<void>();
 
@@ -245,9 +268,9 @@ void main() {
       expect(find.text('受控阅读暂时不可用。'), findsOneWidget);
       expect(find.byKey(const ValueKey('sys06-frame')), findsNothing);
 
-      repository.reloadPending!.completeError(
+      repository.framePending!.completeError(
         const LumenisCoreException(
-          'Reload was rejected.',
+          'Frame read was rejected.',
           errorCode: 'BROWSER_ACTION_REJECTED',
         ),
       );
@@ -282,6 +305,8 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('sys06-open')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sys06-acquire-control')));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('sys06-address')),
       'https://example.com/old',
@@ -309,7 +334,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 120));
 
     expect(find.byKey(const ValueKey('sys06-open')), findsNothing);
-    expect(find.text('会话已开启。输入一个允许的公开来源地址。'), findsOneWidget);
+    expect(newRepository.navigateCalls, 0);
+    expect(
+      find.byKey(const ValueKey('sys06-frame')),
+      findsOneWidget,
+      reason: 'the late old navigation must not replace the new session',
+    );
     expect(tester.takeException(), isNull);
   });
 }
@@ -324,6 +354,8 @@ Future<void> _openReaderPage(
     ),
   );
   await tester.tap(find.byKey(const ValueKey('sys06-open')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('sys06-acquire-control')));
   await tester.pumpAndSettle();
   await tester.enterText(
     find.byKey(const ValueKey('sys06-address')),
@@ -346,7 +378,8 @@ Widget _host(Widget child) => MaterialApp(
   home: Scaffold(body: child),
 );
 
-class _ReaderRepository implements Sys06BrowserRepository {
+class _ReaderRepository
+    implements Sys06BrowserRepository, Sys06BrowserHumanControlRepository {
   _ReaderRepository({this.staleFrame = false});
 
   final bool staleFrame;
@@ -364,12 +397,72 @@ class _ReaderRepository implements Sys06BrowserRepository {
     sessionId: 'bs_0123456789ab',
     status: 'running',
     engineLabel: 'Controlled browser',
-    targetId: null,
+    targetId: 'target_approved',
     pageRevision: 0,
     currentTitle: '',
     currentUrl: '',
     allowedActions: {'navigate', 'reload', 'frame'},
+    humanControlActive: false,
+    humanActionsRequireLease: true,
+    humanActions: {'navigate'},
   );
+  int acquireCalls = 0;
+  Completer<Sys06BrowserLease>? acquirePending;
+
+  @override
+  Future<Sys06BrowserLease> acquireHumanControl(String sessionId) async {
+    acquireCalls++;
+    if (acquirePending != null) return acquirePending!.future;
+    _session = const Sys06BrowserSession(
+      sessionId: 'bs_0123456789ab',
+      status: 'running',
+      engineLabel: 'Controlled browser',
+      targetId: 'target_approved',
+      pageRevision: 0,
+      currentTitle: '',
+      currentUrl: '',
+      allowedActions: {'navigate', 'reload', 'frame'},
+      humanControlActive: true,
+      humanActionsRequireLease: true,
+      humanActions: {'navigate'},
+    );
+    return Sys06BrowserLease(
+      token: 'lease-token-for-test',
+      expiresAt: DateTime.now().add(const Duration(minutes: 10)),
+      ttlSeconds: 600,
+      humanActions: const {'navigate'},
+    );
+  }
+
+  @override
+  Future<void> releaseHumanControl({
+    required String sessionId,
+    required String leaseToken,
+  }) async {}
+
+  @override
+  Future<void> humanNavigate({
+    required String sessionId,
+    required String url,
+    required String leaseToken,
+    required LumenisBrowserFrameBinding frameBinding,
+  }) async {
+    navigateCalls++;
+    if (navigatePending != null) {
+      await navigatePending!.future;
+      return;
+    }
+    _session = _readerPageSession;
+  }
+
+  @override
+  Future<void> humanAction({
+    required String sessionId,
+    required String action,
+    required String leaseToken,
+    required LumenisBrowserFrameBinding frameBinding,
+    String value = '',
+  }) async {}
 
   @override
   Future<Sys06BrowserSession> open() async {
@@ -382,29 +475,30 @@ class _ReaderRepository implements Sys06BrowserRepository {
     required String sessionId,
     required String url,
   }) async {
-    navigateCalls++;
-    if (navigatePending != null) return navigatePending!.future;
-    _session = _readerPageSession;
-    return _session;
+    throw StateError('direct navigation is not allowed without human control');
   }
 
   @override
   Future<Sys06BrowserFrame> readFrame(String sessionId) async {
     frameCalls++;
     if (framePending != null) return framePending!.future;
-    return staleFrame
-        ? Sys06BrowserFrame(
-            frame: LumenisBrowserFrame(
-              bytes: Uint8List.fromList(_png),
-              frameId: 'frame_approved',
-              targetId: 'target_approved',
-              pageRevision: 0,
-              capturedAt: DateTime.utc(2026, 10, 5, 10),
-              width: 1,
-              height: 1,
-            ),
-          )
-        : _readerFrame;
+    final revision = staleFrame
+        ? (_session.pageRevision > 0 ? _session.pageRevision - 1 : 0)
+        : _session.pageRevision;
+    return Sys06BrowserFrame(
+      frame: LumenisBrowserFrame(
+        bytes: Uint8List.fromList(_png),
+        frameId: 'frame_approved',
+        targetId: 'target_approved',
+        pageRevision: revision,
+        capturedAt: DateTime.utc(2026, 10, 5, 10),
+        width: 1,
+        height: 1,
+        viewportWidth: 1280,
+        viewportHeight: 720,
+        devicePixelRatio: 1,
+      ),
+    );
   }
 
   @override
@@ -434,6 +528,9 @@ const _readerPageSession = Sys06BrowserSession(
   currentTitle: 'Example source',
   currentUrl: 'https://example.com/article',
   allowedActions: {'navigate', 'reload', 'frame'},
+  humanControlActive: true,
+  humanActionsRequireLease: true,
+  humanActions: {'navigate'},
 );
 
 final _readerFrame = Sys06BrowserFrame(
@@ -445,6 +542,9 @@ final _readerFrame = Sys06BrowserFrame(
     capturedAt: DateTime.utc(2026, 10, 5, 10),
     width: 1,
     height: 1,
+    viewportWidth: 1280,
+    viewportHeight: 720,
+    devicePixelRatio: 1,
   ),
 );
 

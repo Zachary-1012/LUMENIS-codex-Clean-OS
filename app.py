@@ -1,6 +1,32 @@
 """LUMENIS Product Core compatibility entry; current product identity is 序境 / LUMENIS."""
 import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re, tempfile
+import hashlib
+import uuid
 from pathlib import Path
+from types import MappingProxyType
+
+
+def _core_instance_identity(entry_file, environ):
+    """Freeze the Core entry bytes and process attempt before startup effects."""
+    entry_sha256 = hashlib.sha256(Path(entry_file).read_bytes()).hexdigest()
+    expected = environ.get('LUMENIS_CORE_ENTRY_SHA256', '')
+    if expected and (
+        re.fullmatch(r'[0-9a-f]{64}', expected) is None
+        or expected != entry_sha256
+    ):
+        raise RuntimeError('Core entry source does not match the requested startup target')
+    identifiers = {}
+    for field, env_key in (
+        ('launch_id', 'LUMENIS_CORE_LAUNCH_ID'),
+        ('boot_id', 'LUMENIS_CORE_BOOT_ID'),
+    ):
+        value = environ.get(env_key, '')
+        if value and re.fullmatch(r'[0-9a-f]{32}', value) is None:
+            raise RuntimeError('Invalid Core startup attempt identifier')
+        identifiers[field] = value
+    identifiers['boot_id'] = identifiers['boot_id'] or uuid.uuid4().hex
+    identifiers['entry_sha256'] = entry_sha256
+    return MappingProxyType(identifiers)
 
 
 def _force_utf8_stdio():
@@ -266,6 +292,7 @@ def _load_dotenv(path='.env'):
             if k and k not in os.environ: os.environ[k]=v
     except Exception as e: print('[ENV] load failed:',e)
 
+_CORE_INSTANCE = _core_instance_identity(__file__, os.environ)
 _load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 
 # === 生产稳定性：原生崩溃(C段错误/被信号终止)默认无任何 Python 堆栈，是历史上“进程静默消失”无线索的根因。
@@ -1790,7 +1817,13 @@ def _pg_resolve_operation_type(path, method):
     if method == 'POST' and re.fullmatch(r'/api/experience/saved-work/art-[0-9a-f]{16}/revise', p):
         return OperationType.DATA_EXPORT
     if method == 'POST' and re.fullmatch(
-        r'/api/experience/business-works(?:/work-[0-9a-f]{64}/(?:choose|cancel|interrupt|resume|action|outcome|outcome_unknown))?', p,
+        r'/api/experience/business-works/work-[0-9a-f]{64}/(?:save-request|save)', p,
+    ):
+        # Business work delegates immutable persistence to Shared SavedWork,
+        # which independently checks the exact DATA_EXPORT resource approval.
+        return OperationType.DATA_EXPORT
+    if method == 'POST' and re.fullmatch(
+        r'/api/experience/business-works(?:/work-[0-9a-f]{64}/(?:choose|adopt|cancel|interrupt|resume|action|outcome|outcome_unknown))?', p,
     ):
         # Domain records only; the service separately binds current actor,
         # exact scope, report revision and any actual creation-owner receipt.
@@ -2546,7 +2579,7 @@ def api_brand_stats():
 @app.route('/')
 def index():
     # LUMENIS 用户入口由 Flutter App 提供；此 Flask 进程仅承载 Product Core/API。
-    return redirect('/lumenis/')
+    return redirect('/workspace/')
 @app.route('/favicon.ico')
 def favicon():
     # 消除浏览器自动请求 favicon 产生的 404 控制台报错
@@ -2646,14 +2679,6 @@ def api_ai_governance_status():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-def _collector_browser_actor_ref():
-    from flask import g
-    actor = getattr(g, 'current_user', None)
-    if not isinstance(actor, dict) or type(actor.get('id')) is not int:
-        raise PermissionError('AUTH_REQUIRED')
-    return f"actor:{actor['id']}"
-
-
 @app.route('/api/collector/browser/start', methods=['POST'])
 def api_collector_browser_start():
     """Start a headless BACKGROUND Worker or a permission-gated human session."""
@@ -2718,8 +2743,6 @@ def api_collector_browser_stop():
     except Exception as e:
         return jsonify({'ok': False, 'status': 'UNAVAILABLE', 'error': str(e)}), 409
 
-
-# ========== Phase4: 采集浏览器模式配置（内部AI浏览器默认，可切外部） ==========
 @app.route('/api/collector/browser-mode', methods=['GET'])
 def api_collector_browser_mode_get():
     try:
@@ -3566,6 +3589,7 @@ def healthz():
         'dependencies': {'database': database_status},
         'version': APP_VERSION,
         'service': CORE_SERVICE_NAME,
+        'core_instance': dict(_CORE_INSTANCE),
     }), (200 if healthy else 503)
 
 @app.route('/api/health')
@@ -5973,6 +5997,9 @@ def api_weibo_start_login():
     except Exception as e:
         return jsonify({'ok': False, 'status': 'UNAVAILABLE', 'error': type(e).__name__}), 409
 
+
+
+
 @app.route('/api/weibo/clear-login', methods=['POST'])
 def api_weibo_clear_login():
     """清除微博登录数据"""
@@ -6004,6 +6031,14 @@ def api_weibo_cookies():
         status = 503
     response.headers['Cache-Control'] = 'no-store'
     return response, status
+
+
+def _collector_browser_actor_ref():
+    from flask import g
+    actor = getattr(g, 'current_user', None)
+    if not isinstance(actor, dict) or type(actor.get('id')) is not int:
+        raise PermissionError('AUTH_REQUIRED')
+    return f"actor:{actor['id']}"
 
 
 def _weibo_session_metadata_actor():

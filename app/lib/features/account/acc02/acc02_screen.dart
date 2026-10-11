@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -405,7 +407,7 @@ class _ContextBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          LumenisIcon(
             Icons.tune_rounded,
             color: LumenisTheme.of(context).bmp,
             size: 21,
@@ -630,7 +632,7 @@ class _SubjectList extends StatelessWidget {
                 state == Acc02SubjectState.ready && candidateNavigationEnabled,
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: const LumenisIcon(Icons.search),
               hintText: context.lumenisL10n.text('common.search'),
               suffixIcon: searchController.text.isEmpty
                   ? null
@@ -644,7 +646,7 @@ class _SubjectList extends StatelessWidget {
                       onPressed: candidateNavigationEnabled
                           ? searchController.clear
                           : null,
-                      icon: const Icon(Icons.clear),
+                      icon: const LumenisIcon(Icons.clear),
                     ),
               border: const OutlineInputBorder(),
             ),
@@ -806,7 +808,7 @@ class _SubjectCandidateSheetState extends State<_SubjectCandidateSheet> {
                           ko: '후보 닫기',
                         ),
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close),
+                        icon: const LumenisIcon(Icons.close),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -836,7 +838,7 @@ class _SubjectCandidateSheetState extends State<_SubjectCandidateSheet> {
                                 reducedMotion: reducedMotion,
                               )
                             : null,
-                        icon: const Icon(Icons.chevron_left),
+                        icon: const LumenisIcon(Icons.chevron_left),
                         label: Text(
                           _copy(context, zh: '上一个', en: 'Previous', ko: '이전'),
                         ),
@@ -867,7 +869,7 @@ class _SubjectCandidateSheetState extends State<_SubjectCandidateSheet> {
                                 reducedMotion: reducedMotion,
                               )
                             : null,
-                        icon: const Icon(Icons.chevron_right),
+                        icon: const LumenisIcon(Icons.chevron_right),
                         label: Text(
                           _copy(context, zh: '下一个', en: 'Next', ko: '다음'),
                         ),
@@ -1059,7 +1061,7 @@ class _CandidateActions extends StatelessWidget {
                       dimension: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.check_rounded),
+                  : const LumenisIcon(Icons.check_rounded),
               label: Text(confirmLabel),
             ),
             if (onContinue != null)

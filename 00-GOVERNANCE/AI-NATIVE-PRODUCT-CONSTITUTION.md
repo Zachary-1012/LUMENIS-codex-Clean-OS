@@ -1,6 +1,6 @@
 # AI 原生产品研发宪法 — 轻量版 v1.0（序境适配）
 
-> 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。仅 M 与 C1 本轮恢复；C1 当前指定 GPT-6 Astra / ultra，其余窗口暂停状态按最新直接指令保留。
+> 历史来源与状态（2026-10-08）：当时曾暂停单元/集成及换名模块测试，并记录了特定窗口恢复和模型选择。这些内容仅是当日 PO 指令的历史证据，不是当前测试政策、派工或模型指令；原审批记录按日期保留。2026-10-10 PO 已恢复有界分支/PR与隔离单元、集成回归，见 `00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`。当前遵守根 `AGENTS.md` 与机器合同 v1.3.0：适用回归可执行但不是每次修改的固定门槛，仍不能替代真实用户 E2E；实际窗口、模型和推理档位只由最新直接 PO 指令决定，未核验时为 `NOT_VERIFIED`。
 
 > 来源：Product Owner 提供的 `AI_Native_Product_Development_Constitution_Light_v1.0.md` 和同版 Word，2026-09-26 核对，两者均含 18 项原则。原始 Markdown SHA-256：`3470BB520E91611E446D8B49A1F024B403642ECCC8BAC3B8A745B62DBB3E99D3`。本文是增补和适配，不是原件的逐字副本。
 
@@ -56,7 +56,7 @@ AI 输出默认是建议、推测或派生结果。业务事实、数据事实�
 
 ## 13. 人类产品负责人和 AI 执行分层
 
-产品负责人决定产品方向、商业边界与最终发布。序境的主控 M 负责产品/架构/Owner 判断与最终验收；F 与 C1–C6 按既有 Owner 交付完整成果，W6 集成发布。研发角色默认值为：M=`GPT-6 Astra / ultra`，F=`GPT-6 Astra / ultra`，C1–C6=`GPT-6.1 Sol / ultra`，任务型 Subagent=`GPT-6 Luna / max`。这些仅是未被覆盖时的序境研发默认值；Product Owner 在任一当前 Codex/Codex CLI 窗口的手动账号、模型、推理强度与速度/服务档位选择具有最高优先级并即时覆盖角色默认，显式 Subagent spawn 选择覆盖 Subagent 默认。Hook 不拥有模型选择权。M 仅在存在已分配或未闭合的批准工作时执行；无任务时停止并待命，不自行扩展后台工作。任何 AI 都不能自行扩大需求、拥有 Permission/Evidence/Production Truth，或替产品负责人作最终商业决定。
+产品负责人决定产品方向、商业边界与最终发布。序境的主控 M 负责产品/架构/Owner 判断与最终验收；F 与 C1–C6 保留既有源码职责，W6 按现行共享预约承担集成工作。手动账号、模型、推理强度与速度/服务档位选择具有最高优先级；Product Owner 决定实际窗口开工、暂停、恢复、模型、推理强度和服务档位，本文件不指派窗口或当前设置，只有当前直接指令及新鲜读回能证明其状态，否则记 `NOT_VERIFIED`。历史路由参考值（仅保留供兼容性审计，不构成当前指派）为 M=`GPT-6 Astra / ultra`，F=`GPT-6 Astra / ultra`，C1–C6=`GPT-6.1 Sol / ultra`，任务型 Subagent=`GPT-6 Luna / max`。Hook 不拥有模型选择权。M 仅在存在当前已分配或未闭合的授权工作时执行；无任务时停止并待命，不自行扩展后台工作。任何 AI 都不能自行扩大需求、拥有 Permission/Evidence/Production Truth，或替产品负责人作最终商业决定。
 
 ## 14. 状态诚实
 
@@ -68,7 +68,7 @@ PASS、PARTIAL、BLOCKED、UNKNOWN、FAILED 可作一般沟通用语。具体项
 
 ## 16. 生命周期 Gate
 
-Discovery 确认问题和用户；Definition 确认流程、范围、数据和验收；Development 完成实现与构建、静态/安全/数据检查；Integration 验证真实产品操作链路；Release 验证版本、部署、安全和回滚；Production 证明稳定运行；Commercial 闭合价值、合同、支持和合规。序境按 AGENTS.md 的 C1–C6 六轮执行；R01–R15 与 J1–J8 保留全部验收覆盖和真实依赖，不另立执行队列。
+Discovery 确认问题和用户；Definition 确认流程、范围、数据和验收；Development 完成实现与构建、静态/安全/数据检查；Integration 验证真实产品操作链路；Release 验证版本、部署、安全和回滚；Production 证明稳定运行；Commercial 闭合价值、合同、支持和合规。序境只有 Product Architecture 规定的五轮产品成果：SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI。C1–C6 是保留的工程源码职责，不是六轮产品交付或派工限制；R01–R15 与 J1–J8 保留全部验收覆盖和真实依赖，不另立执行队列。
 
 ## 17. 红线
 

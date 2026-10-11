@@ -344,3 +344,17 @@ receipt contract and requires equivalent signature/expiry/binding tests.
 ### 2026-10-09 development-only Ruff CLI
 
 Ruff 0.16.9 (Astral; MIT) is installed as a local static-analysis/format-preview CLI, matching the existing VS Code bundled version. Official [installation documentation](https://docs.astral.sh/ruff/installation/) and [versioned PyPI metadata](https://pypi.org/project/ruff/0.16.9/) identify the distribution. Windows wheel SHA-256: `6bd40fec8cd4c8a3d4dd589bd8ad4e6320c13c29234159bfd959a40d529d597b`; downloaded bytes were checked before installation. Runtime executable and rollback receipts remain workstation-local. This does not add a shipped LUMENIS dependency, AI provider, account, paid obligation, automatic fixer or product acceptance proof.
+
+### 2026-10-10 OpenAI Math v2 — optional local proof tooling
+
+The mathematical Python ports are independently authored v2 source with fixed paper/specification attribution; no complete upstream prover/LLM/provider is shipped. OpenAI Math [fixed license](https://github.com/openai/math/blob/fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb/LICENSE) is Apache-2.0. Upstream paper attribution/version and numerical limits remain attached; copying proof material for redistribution would also require its original license/notices.
+
+| Component | Exact pin / scope | License and replacement |
+| --- | --- | --- |
+| Lean | 4.34.1 Linux; official portable archive SHA `47bf4bbd78f70c2e9670598ab7124d92b6efb7330ff33e5fbb4030f6fd72e4e4` | Apache-2.0; isolated user-level proof compiler, not product Runtime. |
+| Mathlib | `d13f23b723b8a846827a245b89c10fc7d3f11612` plus declared locked dependencies | [Apache-2.0](https://github.com/leanprover-community/mathlib4/blob/d13f23b723b8a846827a245b89c10fc7d3f11612/LICENSE); fixed trusted compile cache, no runtime product dependency. |
+| Comparator | `d03acab154d269c06e60e4de7e4cc85deebff94b` | [Apache-2.0](https://github.com/leanprover/comparator/blob/d03acab154d269c06e60e4de7e4cc85deebff94b/LICENSE); theorem statement/kernel/axiom comparison, never fake sandbox. |
+| lean4export | `076e8e57707e813375e8f9da8bf989799ace9680` | [Apache-2.0](https://github.com/leanprover/lean4export/blob/076e8e57707e813375e8f9da8bf989799ace9680/LICENSE); compatible fixed dependency only. |
+| Landrun | 0.1.17 Linux official binary SHA `6ada66a06669e8994e174a7271af2db636308e55a0d6ec896cc7d326b46727f6` | [MIT](https://github.com/Zouuup/landrun/blob/v0.1.17/LICENSE); kernel ABI compatibility explicit, systemd AF_UNIX guard retained. |
+
+Tools are installed only under the existing development tool root and WSL user-local `lumenis-math-v2`; no global PATH, account, proxy, production dependency, service/provider, paid resource or elevated installation changed. Rollback is removal of this specifically inventoried portable tool directory after its own proof job ends; caches and original failure/source receipts remain recoverable. Mathematical execution in LUMENIS uses existing Python standard-library dependencies. Model data/weights/training/promotion keep separate Permission approval.

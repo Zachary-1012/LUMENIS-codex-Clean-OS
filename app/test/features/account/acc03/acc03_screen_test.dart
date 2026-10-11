@@ -56,7 +56,7 @@ void main() {
       );
       expect(
         tester.widget<Tooltip>(submitTooltip.first).message,
-        contains('AI 任务提交能力尚未接入'),
+        contains('AI 服务状态尚未读取成功'),
       );
 
       const destinations = <(String, Acc03Destination)>[
