@@ -194,6 +194,15 @@ Provider, Source store, approval or user-outcome claim.
 
 ## 1. Online reader's current-state snapshot
 
+### 2026-10-11 本次发布：用户工作审核稿与稳定双语说明
+
+Implementation publication state: `RULES_ONLY_PUBLICATION`
+Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+
+本批只发布既有蓝图/规则/屏幕规格、README、上下文导航及其文档分类校验。七条用户工作方式及新增解析采用内容仍供PO审核，不提升实现、运行或用户验收状态。现有业务源码修复保持本地受保护状态，F继续暂停。README不存进度；线上精确SHA/CI由本次PR和Git回读核验。
+
+PR #12 首次 Product Gate 拒绝了沿用旧 `PUBLISHED_SOURCE_VERIFIED` 的文档提交；本次纠正当期发布口径，并将 `website/README.md` 和已跟踪的 progressive-context 技能说明加入校验器既有精确文档路径分类。没有取消门禁或允许任意源码作为规则发布。下列2026-10-09等段落是有日期的历史采样，不能替代本次状态。
+
 ### 2026-10-09 现有审计断点修复：来源样本无 AI 成果与精确验收
 
 直接 PO「先解决这些问题」有界修复，父 main `79d384201ff45802b8dc0e2ab400f1095d8da58e`。
@@ -337,7 +346,7 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Historical 2026-10-09 implementation publication: `PUBLISHED_SOURCE_VERIFIED`
 
 Current bounded publication — 2026-10-11, PR #11: preserve the existing
 Collector/Shared/Math/Flutter candidates and their history; repair the XHS
