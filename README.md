@@ -36,8 +36,8 @@ Independent research and production do not require a prior CTH/BMP task, commerc
 
 ## 数据与成果原则 / Data and deliverable principles
 
-- **真实来源 / Real sources：** 六个主要社交平台与公开网页等来源按同一来源类别原则接入；具体质量、时效、身份和使用权分别判断。 / The six primary social platforms and public webpages follow equal source-category treatment; quality, freshness, identity, and usage rights are evaluated individually.
-- **清楚呈现 / Clear presentation：** 资料保留原文、封面、作者、链接、原生时间和真实指标；缺失显示“—”，不填假零值。 / Materials retain source content, covers, authors, links, native timestamps, and observed metrics. Missing values are shown as “—”, never fabricated zeros.
+- **真实来源 / Real sources：** 所有平台与公开网页的来源类别基础权重相同，贯穿采集、分析、研究与成果使用；具体质量、时效、身份和使用权分别判断。 / All platforms and public webpages receive equal source-category weight throughout acquisition, analysis, research, and deliverable use; quality, freshness, identity, and usage rights are evaluated individually.
+- **清楚呈现 / Clear presentation：** 资料保留原文、封面、作者、链接、原生时间和真实指标；缺失显示“—”，不填假零值。阅读、结果与操作采用序境自己的视觉语言，不改写原始证据或网页。 / Materials retain source content, covers, authors, links, native timestamps, and observed metrics. Missing values are shown as “—”, never fabricated zeros. Product readers, results, and controls follow LUMENIS’s visual language without altering original evidence or webpages.
 - **结果优先 / Results first：** 用户提出工作问题和业务约束，后台处理适用分析，报告呈现结论、依据、限制及下一步。 / Users provide the question and practical constraints; backend analysis produces conclusions, evidence, limitations, and next actions.
 - **版本连续 / Version continuity：** 成果支持保存、局部修订、重开与恢复；旧版和修改原因保留。 / Work supports saving, local revision, reopening, and recovery, with prior versions and reasons retained.
 - **权限明确 / Explicit permissions：** 浏览、引用、制作、导出、发布及模型训练遵循各自适用的授权。 / Browsing, citation, production, export, publication, and training follow their respective permissions.
@@ -84,9 +84,9 @@ AGENTS.md
 → 对应能力合同与源码 / Relevant capability contracts and source
 ```
 
-首先阅读 [`AGENTS.md`](AGENTS.md)、对应源码 Owner 和能力合同。所需 Python 依赖以仓库的 `requirements*.txt` 为准；Flutter/Dart 版本以 [`app/toolchain.json`](app/toolchain.json) 为准；官网使用 [`website/package.json`](website/package.json) 与锁文件。不要为阅读本说明而自动安装、升级或启动服务。
+首先阅读 [`AGENTS.md`](AGENTS.md)、对应源码 Owner 和能力合同；核对已有实现与调用关系，复用正确能力、修复冲突，只为确认的缺口补实现。所需 Python 依赖以仓库的 `requirements*.txt` 为准；Flutter/Dart 版本以 [`app/toolchain.json`](app/toolchain.json) 为准；官网使用 [`website/package.json`](website/package.json) 与锁文件。不要为阅读本说明而自动安装、升级或启动服务。
 
-Read [`AGENTS.md`](AGENTS.md), the relevant source owner, and capability contracts first. Use the repository's `requirements*.txt` for Python dependencies, [`app/toolchain.json`](app/toolchain.json) for Flutter/Dart, and [`website/package.json`](website/package.json) with its lockfile for the website. Reading this guide does not trigger installation, upgrades, or service startup.
+Read [`AGENTS.md`](AGENTS.md), the relevant source owner, and capability contracts. Inspect existing implementations and callers, reuse correct behavior, resolve conflicts, and add implementation only for verified gaps. Use the repository's `requirements*.txt` for Python dependencies, [`app/toolchain.json`](app/toolchain.json) for Flutter/Dart, and [`website/package.json`](website/package.json) with its lockfile for the website. Reading this guide does not trigger installation, upgrades, or service startup.
 
 在仓库根目录核对本地修改和版本： / Inspect revisions and local changes from the repository root:
 

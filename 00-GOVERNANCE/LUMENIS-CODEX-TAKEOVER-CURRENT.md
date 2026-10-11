@@ -1,14 +1,14 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
-## 2026-10-11 蓝图已确认；窗口执行安排待审核
+## 2026-10-11 全产品既有规则复用与体验一致性校正
 
-最新直接PO：“以上ok，然后更新，然后重新规划各窗口应该做的事情给我审核，目的仍旧是产品闭环运行能够上线”。Architecture的七条用户工作方式及REA解析采用方向已获确认；M本次只更新现有规则和Owner成果卡，供PO审核执行安排。没有复工派发，不改窗口模型或推理档位，不继续业务源码/Runtime/DB操作；F仍暂停、VS Code暂不用，M原产品研发Goal保持暂停。下列旧批次中的“执行/继续”仅属有日期的历史事实，不构成本次恢复授权。
+本批落实PO“先核对已有、不要重复新增”且“不止前端，是整个产品”的更正，复用已批准的七条用户工作方式、来源类别同权、后端分析、AI非依赖、独立研究/制作及REA采用方向。修正现行文件中把历史停工写成当前命令的内容，细化完整Experience与原Owner成果卡；不新建产品、调度体系、来源权重机制或设计权威。窗口的开工/暂停/恢复和模型设置只按直接PO指令在本地ledger及工具回执核验；GitHub规范不承担实时调度。历史审批保持原日期和内容，不能覆盖更新的直接授权。
 
-本次规划准入：本机HEAD、fresh origin/main、live main均为`fa2a863112bff453eb4ad525bae72e2d34bca219`，divergence0/0、staged0，8项tracked dirty及2项untracked保留。该基线Product Gate `38125266468`、App Gate `38125266525`已成功；本次未重新验证Runtime、Production DB或用户链，状态不得由源码/CI上调。原来源用途修复仍本地待审，REA包待源码准入及实际接线，不在本批混合提交。
+本批准入（北京时间2026-10-11 17:22）：本机HEAD、fresh origin/main、live main均为`111e527e3cb182c7159d0f952e6aff25c00579d7`，divergence0/0、staged0，8项tracked dirty及2项untracked逐项hash保护。仅复核本批规则与引用；未重新验证Runtime、Production DB或完整用户链，不由文档/CI上调能力。来源用途源码及REA待审输入不混入本次文档提交。
 
 窗口审核稿位于Source Owner Index现有“Complete outcome cards”内，逐项列M、C1–C6/W1–W6、F的完整成果、首个工作、源码和交接、完成出口，并按五轮实际依赖建议顺序。继续保留R/J/U、44屏、全部研究材料与失败证据；Shared独立制作、AI全域可选、后台分析和产品内浏览不得再次误解。Real Delivery补足真实可运行与上线裁决的使用方式。README保持稳定双语说明，不加入本次进度或派工。
 
-本轮授权及边界见`evidence/approvals/PO-20261011-USER-WORKFLOW-APPROVED-PLAN-REVIEW.json`。计划发布后等PO审核；批准蓝图、批准执行计划、实际派工、工程验收和生产部署分别记录。
+沿既有`PO-20261011-USER-WORKFLOW-APPROVED-PLAN-REVIEW`及`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`核对本批产品要求。建议执行安排仍供PO审核；任何已明确给出的直接派工在其本地范围生效，不等待在线状态改成RUNNING。批准蓝图、实际派工、工程验收和生产部署分别记录。
 
 ## 2026-10-11 历史：用户工作蓝图审核稿与 README 分工
 
@@ -20,19 +20,19 @@ README改为中英文对应的长期产品/开发说明；提交、运行、测�
 
 该包独立工作树基线为`2c004d8d...`，主工作区SavedWork/API与规则已有保护修改，后续须逐处合并；此文档批次不装wheel、不修改前端、不载入新Runtime。交接回执中较宽回归有PDF缺reportlab及提案API `_owner_authorized_root_request` 未定义的失败，完整计数未证；Flutter与实际产品E2E也未完成，均保留为未闭项。REA不成为产品运行前提，静态观察不等于厂商私有模型/算法复原。
 
-## 2026-10-11 当前优先纠偏：产品业务结果与 AI/浏览器范围
+## 2026-10-11 历史批次：产品业务结果与 AI/浏览器范围
 
 同轮最新PO纠正：CTH/BMP是业务领域；Shared内容制作独立运行，不依赖业务任务、主体/品牌、Case/Campaign或SourceBrief。已纠正本轮把能力过度串行化的蓝图/体验/Owner/验收表述，SH-01与BMP-08补充独立新建和可选业务续接的区别。当前两来源业务成果修复只针对对应引用链，不得改成全部Shared制作的前置限制。源码/实际独立制作仍须核验；本段不冒称已实现。
 
 直接 PO 要求先修复规则，并进一步明确“不需要操作电脑”，AI贯穿全产品但产品不能依赖AI才能工作。已将相应当前执行段、唯一蓝图、定位、Experience、Owner、Real Delivery、端合同与CTH-10/BMP-04/SYS-06规格统一：撤回通用OS/桌面控制，保留产品内浏览；分析和论文方法归后台，前端交付真实资料与已分析报告。此为范围/规格更正，不是界面已修、模型已可用或产品已验收。
 
-本批准入复取：local HEAD/fresh origin/main/live main = `2c004d8d9ec87f88b31b31cf6523357792490a74`，divergence 0/0；后续修订尚须受控发布并回读。既有未提交 Source/Shared 用途准入修复由原有两个有界执行者继续，不能覆盖其文件。F保持暂停、VSCode暂不用，不开启OS/AgentZero worker或外部模型。
+本批准入复取：local HEAD/fresh origin/main/live main = `2c004d8d9ec87f88b31b31cf6523357792490a74`，divergence 0/0；后续修订尚须受控发布并回读。既有未提交 Source/Shared 用途准入修复由原有两个有界执行者继续，不能覆盖其文件。当时F暂停、VSCode暂不用的记录仅保留为该批历史；不构成当前派工。OS控制现已撤出范围，外部模型仍须独立授权。
 
 M原目标保持：已完成PR失败修复/原有效成果合入后，继续用已获准真实来源贯通分析、CTH/BMP成果、保存、修订、重开和恢复；新增本次产品方向更正作为前置约束。规则发布不等于运行/DB/用户成果通过。历史电脑控制需求及失败记录不删除，状态为PO撤回的子范围，其余J/R/U与44屏要求保留。
 
-## 2026-10-11 PR #11 收敛及真实业务链 — 当前有界执行
+## 2026-10-11 历史批次：PR #11 收敛及真实业务链
 
-直接 PO 授权 M 修复 PR 失败与有效规则冲突、保护并审查原有成果、安全合入 main，随后使用已有获准真实数据完成采集成果接收、无 AI 分析、CTH/BMP 业务成果、保存、修订、重开与恢复。VS Code 暂不用，F 继续暂停；本次不新增前端实现，不启动平台采集、外部模型、训练、付费资源或部署。
+直接 PO 授权 M 修复 PR 失败与有效规则冲突、保护并审查原有成果、安全合入 main，随后使用已有获准真实数据完成采集成果接收、无 AI 分析、CTH/BMP 业务成果、保存、修订、重开与恢复。该历史批次限定VS Code不用、F暂停和不新增前端实现；不决定当前窗口状态。该批次未授权启动平台采集、外部模型、训练、付费资源或部署。
 
 准入时本地 `fix/flutter-baseline-20261011` 为 `f935d62ef1f3c5d48919a4776ecfe7c7402a4eac`，fresh main 为 `01588e9fd9568e3fcaf1e6c3d957bc498436fa48`，ahead 11 / behind 0，工作树干净；该记录不是今后执行的固定基线。原有成果保留在提交历史及受保护 `work/`，不以批量覆盖实现同步。
 
@@ -53,11 +53,11 @@ PR Product Gate 的十个 XHS 回归失败已复现为测试装载器与现行�
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 > 2026-10-09 五轮治理规则已发布；产品交付唯一为 SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI。C1–C6/F/M/W1–W6 保留工程源码责任，不是六轮产品或单窗口调度限制。
-> Product Owner 决定当前窗口开工/暂停/恢复、模型和推理档位。这里只记录有时间和来源的事实，未知为 NOT_VERIFIED；历史暂停、恢复条件和默认无现行调度效力。治理发布不启动窗口；后续源码授权按下面明确范围执行。
+> Product Owner 决定当前窗口开工/暂停/恢复、模型和推理档位。这里只记录有时间和来源的事实，未知为 NOT_VERIFIED；历史暂停、恢复条件和默认无现行调度效力。治理发布不启动窗口；下文旧批次源码授权仅为有日期的事实，当前工作按直接PO指令核验。
 > 随后直接 PO 另授权一个 Luna/max 智能体处理 SYSTEM 自动采集弹窗 P0。该缺陷沿既有 Browser/Collector Owner、受控进程和唯一维护计划任务修复；不恢复其他研发窗口。它与本次六文件治理提交分开验收及发布，未验证的源码/运行/采集结果不得提前标为完成。
 > 历史 AI 非依赖/暂停审批 `evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json` 和串行/F审批保持原件，不删除或改写；其中仍有效的权益、安全、费用及无AI基础能力要求保留。
 
-> Direct-build/native-target correction: when explicitly dispatched, F builds the existing frontend directly from current contracts without separate design drafts/Figma or M DESIGN_READY coding prerequisites. The latest 2026-10-11 PO instruction keeps F paused; reviewing and integrating already-existing frontend work does not resume it. Later native Desktop targets Windows/macOS only; Mobile targets iOS only. Android/Linux native client delivery requirements are superseded, with existing source/history preserved. Linux server/CI and browser access are separate.
+> Direct-build/native-target correction: F builds the existing frontend from current contracts without separate design drafts/Figma or M DESIGN_READY prerequisites. Current window state is established only by direct PO instruction and fresh local readback; dated receipts neither pause nor resume a window. Native Desktop targets Windows/macOS and Mobile targets iOS; Android/Linux native history is preserved outside delivery scope. Linux server/CI and browser access remain distinct. Source review is not user acceptance.
 > Latest surface priority, 2026-10-08: close Public Website and Web Workspace first; defer dedicated Desktop/Mobile design, implementation, packaging and device acceptance until those two surfaces close. Preserve all four-surface requirements and existing work. Web-required Core/SYSTEM dependencies remain in scope. This changes order, not actual capability/acceptance or deployment/cost authority. Approval: `evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`.
 > 工程责任：M 总控/集成审查，F 前端/Experience，C1–C6 按原 Source Owner Index 保留源码边界。仅实际 PO 派工和新鲜证据可记录执行状态；历史 D01–D49 不与 R01–R15 混同。
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
@@ -204,12 +204,12 @@ Provider, Source store, approval or user-outcome claim.
 
 ## 1. Online reader's current-state snapshot
 
-### 2026-10-11 本次发布：确认蓝图与待审窗口成果计划
+### 2026-10-11 本次发布：全产品复用、原Experience与执行边界一致化
 
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-本批只发布蓝图确认、既有Owner成果卡中的窗口执行审核稿、真实交付出口及直接PO回执。七条用户工作方式和解析采用方向已批准；窗口执行计划仍待审，未实施、运行或验收的能力不升级。现有业务源码修复保持本地受保护状态，F继续暂停，所有新开工仍需PO明确调度。README不变、不存进度；本批线上精确SHA/CI由PR和Git回读核验。
+本批只发布现有蓝图/Owner/Experience/端合同/44屏规格/文字草图中的必要纠正、稳定双语README及PO产品政策回执。类别同权及采集字段要求原已存在，本次扩明全链责任，不新增重复能力；全面前端升级不缩为接线或样板页，外来成果在原Owner适配并保留来源真实性。未实施、运行或验收的能力不升级；原dirty成果逐项保护，实时窗口状态不写成本在线命令。本批精确SHA/CI及线上文件由PR和Git回读核验。
 
 PR #12 首次 Product Gate 拒绝了沿用旧 `PUBLISHED_SOURCE_VERIFIED` 的文档提交；本次纠正当期发布口径，并将 `website/README.md` 和已跟踪的 progressive-context 技能说明加入校验器既有精确文档路径分类。没有取消门禁或允许任意源码作为规则发布。下列2026-10-09等段落是有日期的历史采样，不能替代本次状态。
 

@@ -1,15 +1,15 @@
 # LUMENIS 44 个既有屏幕：逐屏文字视觉草图
 
-当前内部修订：1.6（沿用原 1.5 文件路径，避免制造第二份草图权威）。
-与同目录《LUMENIS 前端最终目标与执行蓝图》1.6 逐项对应。本文件覆盖 44 个既有 Screen ID，作为完整业务能力的审查索引，不承诺最终产品固定恰好 44 个页面；适用时用当前页内抽屉、模态、播放器层、时间线状态表达，不复制造页。本文只用字符/区域说明目标形状、字段优先级、主次动作和关键状态；不是正式视觉稿，也不表示当前已经编码。
+当前内部修订：1.7（2026-10-11；沿用原1.5路径，历史1.6证据保留）。
+与同目录《LUMENIS 全产品用户操作与视觉参考》1.7逐项对应；两者均从属唯一Product Architecture、Experience与既有ScreenSpec。本文件覆盖 44 个既有 Screen ID，作为完整业务能力的审查索引，不承诺最终产品固定恰好 44 个页面；适用时用当前页内抽屉、模态、播放器层、时间线状态表达，不复制造页。本文只用字符/区域说明目标形状、字段优先级、主次动作和关键状态；不是正式视觉稿，也不表示当前已经编码。
 
 ## 当前状态读法
 
-- 1.6 审阅输入基线为 `bbe3310f095b788448a480c4615481bc5da029f8`；Universal Platform Acquisition 规则来源提交为 `3be8298a3ae853b98fde90b2fda943a5c9462a58`。该 SHA 仅冻结本轮审阅输入；实现/验收必须 fresh resolve 当前 main/runtime。原 1.5 的 `0c9394ef` 源码观察保留为 dated provenance；当前目标以 2026-10-07 权威规则与更新后的 Screen Spec 为准。`c7765b87`、`1b238c2f`和`0c9394ef`为治理/归档审阅提交，未修改前端Screen/API媒体/采集源码；当前静态源码快照有44个App Screen源文件；44份Screen-specific规范与ID对应。
+- 1.6 审阅输入基线为 `bbe3310f095b788448a480c4615481bc5da029f8`；Universal Platform Acquisition 规则来源提交为 `3be8298a3ae853b98fde90b2fda943a5c9462a58`。该 SHA 仅冻结本轮审阅输入；实现/验收必须 fresh resolve 当前 main/runtime。原 1.5 的 `0c9394ef` 源码观察保留为 dated provenance；当前目标以现行Product Architecture、Experience与ScreenSpec为准；2026-10-07记录仅属历史基线。`c7765b87`、`1b238c2f`和`0c9394ef`为治理/归档审阅提交，未修改前端Screen/API媒体/采集源码；当前静态源码快照有44个App Screen源文件；44份Screen-specific规范与ID对应。
 - Binding registry 生成源早于该 HEAD，历史状态为 Acceptance Pending；本任务没有运行产品、读取生产 DB、重跑绑定或任何产品 E2E。
 - 下方 `Screen Spec.status` 是屏幕规范/设计评审状态（例如 `DESIGN_READY` 或 `BLOCKED`），不是产品实现、服务可用或运行验收状态。每行同时保留源码/验收缺口与直接链接。
 - R01–R15/J1–J8/U01–U25 到本产品屏幕/流程的审阅导航见同目录主方案 §6.7；这些代码不是新的页面标签，也不会自动标为通过。
-- Website/Web/Desktop/Mobile与Windows/macOS/Linux、Android/iOS的职责和1920–360尺寸重组见主方案§4.3；本文件各屏线框为任务-specific形状，非操作系统通用模板。各ScreenSpec链接含当前Owner/状态/Binding及其实际提供的locale keys；主方案§3.4补足本目标中新增的字段、状态和辅助文案映射。
+- 四个Surface及交付顺序、原生目标（先Website/Web；后续Windows/macOS Desktop与iOS Mobile；Android/Linux原生客户端不属于交付目标；各支持操作系统上的浏览器Web和窄屏仍适用）及1920–360尺寸重组见主方案§4.3；本文件各屏线框为任务-specific形状，非操作系统通用模板。各ScreenSpec链接含当前Owner/状态/Binding及其实际提供的locale keys；主方案§3.4补足本目标中新增的字段、状态和辅助文案映射。
 - 页面字段是语义槽位；owner 不返回或语义未知时保留未知/缺失，不自行发明值。真实数据、授权、失败恢复、保存/重开、跨端续接和用户结果仍需各自的真实验收。
 - 以下每屏的字段都是语义槽位；若当前 owner 不返回或语义未知，显示缺失状态，不自行发明值。
 - 逐Screen的zh-CN/en/ko-KR目标标题、主要动作及核心状态词映射见主方案 §3.4；本文件中的 `GLOBAL/ALL`、Owner、Evidence、Viewer 等是审核/字段 shorthand，不是要求直接显示为技术大字。
@@ -139,19 +139,18 @@ ACC-02只是可选Focus选择器，不是Add Subject/BrandFocus的注册表单�
 
 ~~~text
 PC:
-┌序境     搜索     外观/语言┐
-│今天接着做（真实任务才显示） [继续] [看变化]│
-│目标/材料输入 [范围：全部 ▾] [开始一项任务]    │
-│观察变化 → 商业现场                          │
-│理解市场 → 品牌与竞品                        │
-│读研究材料 → Source / Evidence               │
-│完成创作 → Brief / 视频 / 播客 / 报告         │
-│待确认的真实结果/影响（有数据才显示）          │
-└─────────────────────────────────────────────┘
-Phone: 任务输入与主按钮优先；四类工作入口短列表；待确认项单条进入。
+┌序境     搜索     外观/语言────────────────────────────────┐
+│今天接着做（真实任务才显示） [继续] [看变化]               │
+│开始一项工作 [全部范围 ▾]                                  │
+│商业运营              品牌市场                             │
+│独立研究              直接创作：提案/文稿 · 视频 · 播客    │
+│创作可从空白、自写要求或获准素材开始；研究/业务联动可选    │
+│待确认的真实结果/影响（有数据才显示）                       │
+└────────────────────────────────────────────────────────────┘
+Phone: 任务输入与主按钮优先；商业、品牌、独立研究、直接创作分项进入；待确认项单条进入。
 ~~~
 
-无任务时不做虚构最近任务/数字。Focus只有当前任务确实选中时才出现小 chip；不使用大“当前查看范围/启动状态”说明。
+无任务时不做虚构最近任务/数字。Focus只有当前任务确实选中时才出现小 chip；不使用大“当前查看范围/启动状态”说明。Shared直接创作不要求先完成CTH/BMP任务、选择Subject/BrandFocus、创建Case/Campaign或生成SourceBrief；跨域研究是可选接续路径。
 
 ### ACC-04 原任务内的失败恢复（不是登录/权限页面）
 
@@ -225,7 +224,7 @@ review_status：未审/已接受/冲突/拒绝（仅Owner返回）
 
 现有接口事实：CTH-03 GET最多返回100条且会报告 `partial`；现有人工只读 search POST 当前仅支持一个`platform+keyword`或`business_requests`批次；`continuation`只续查询计划，不是post/comment/media native cursor；App当前只有Screen GET。UI目标显示完整两种模式和计划/原生分页能力，当前模式没有实现的字段列为owner contract gap，不能发往旧Route。筛选主键必须为稳定 `platform_id`，显示名不可作身份键；不移除已有Evidence projection校验。固定“广州太古汇”查询预填须清空。未返回的全文/媒体/评论/原生互动标“未取得/未绑定”，不可借别帖补齐。
 
-终态来源动作使用 `lumenis.source-target/v1`：Trace先显示同一row的Source/Evidence/时间/locator，再按 `READY / URL_MISSING / INVALID_URL / DENIED / UNSUPPORTED / SOURCE_WITHDRAWN / STALE / UNKNOWN` 决定是否提供 Open Original。打开后只把公开HTTPS交给系统浏览器，`HANDOFF_ACCEPTED`不等于页面加载成功；Return恢复原Scope、平台lane、筛选、选中项和滚动位置。六个平台是当前基线；新增平台沿相同稳定ID、SourceTarget和原生内容类型规则进入，不复制一个新CTH页面。
+终态来源动作使用 `lumenis.source-target/v1`：Trace先显示同一row的Source/Evidence/时间/locator，再按 `READY / URL_MISSING / INVALID_URL / DENIED / UNSUPPORTED / SOURCE_WITHDRAWN / STALE / UNKNOWN` 决定是否提供 Open Original。目标路径在LUMENIS受控Browser Runtime内打开真实页面，并显示真实加载/可读/失败状态；“外部打开”是用户明确选择的独立动作，不自动弹窗或替代产品内路径。`HANDOFF_ACCEPTED`不等于页面加载成功；Return恢复原Scope、平台lane、筛选、选中项、滚动位置和未保存草稿。若当前Browser callable未绑定，明确保留OPEN状态，不伪造页面成功。六个平台是当前基线；新增平台沿相同稳定ID、SourceTarget和原生内容类型规则进入，不复制一个新CTH页面。
 
 ### CTH-04 事件关系
 
@@ -328,7 +327,7 @@ BMP的新BrandFocus和CTH Subject调用现有 canonical subject registry owner�
 Phone：主题/范围状态→单个来源行→全屏原帖→回同一主题/筛选
 ~~~
 
-单帖显示平台/时间/scope/原生内容/真实取得的互动/来源版本；译文或AI摘要另标派生。按钮为[查看证据][标记待核实][带到研究]；一篇帖只是一条样本，不把它直接设置成趋势、品牌决策或消费者总体结论。只有现有metric/coverage owner提供可比时间序列、去重与分母时才显示聚合。
+单帖显示平台/时间/scope/原生内容/真实取得的互动/来源版本；译文或AI摘要另标派生。按钮为[查看证据][标记待核实][带到研究]；一篇帖只是一条样本，不把它直接设置成趋势、品牌决策或消费者总体结论。只有现有metric/coverage owner提供可比时间序列、去重与分母时才显示聚合。机会排序按当前任务采用的真实业务指标与可比条件解释，不能因来源来自某个平台或公开网页而加减类别权重。
 
 ### BMP-04 媒体传播
 
@@ -534,10 +533,14 @@ Phone: 主题/图片缩略图→裁切&对比预览→[本机应用]
 ### SYS-06 Controlled Browser/会话流程
 
 ~~~text
-PC: [当前任务/允许域/可用浏览器状态] | 实际viewport（若绑定）|来源状态
-    普通来源阅读→受控浏览，不等于采集/登录
-    RecoverySheet请求LOGIN_FORM/VERIFY→进入受控平台页面→完成合法人工步骤→返回RecoverySheet
-Phone: 当前工作→授权边界→受控来源（若可用）→状态/返回任务
+Desktop / Web:
+┌原任务/返回┬真实地址与来源状态┬受控页面viewport（实际加载）┐
+│实际导航历史/当前页│仅显示Browser owner支持的页面动作       │
+│[人工接管] [停止] [外部打开…（用户明确选择）]              │
+│返回原任务→恢复Task/Scope/筛选/草稿/位置/已保存成果        │
+└───────────────────────────────────────────────────────────┘
+Phone: 原任务/返回 → 真实受控页面 → 已支持的导航/页面动作 → [人工接管] [停止] → 返回原任务
+RecoverySheet仅在当前项确需LOGIN_FORM/VERIFY时进入受控页；健康复核由PlatformSession完成。
 ~~~
 
 SYS-06展示的是浏览器能力与当前任务授权范围，不是Collector连接灯，也不是平台账号管理中心。LumenisPlatformRecoverySheet负责恢复编排；只有当前恢复项需要网页交互时才调用SYS-06。QR可直接在Sheet显示；BLOCKED/IP风险/COOLDOWN不为了“有动作”而打开浏览器。
@@ -584,7 +587,7 @@ Phone: trace摘要→span顺序→错误原因/回到origin
 
 ### SH-01 Discover 与共享内容创作
 
-SH-01 属于 Shared Capability，不是第三个业务域。它与 SH-02 的原始资料阅读、BMP-03 的市场解释、BMP-07 的 Campaign 计划及 BMP-08 的 Podcast 编辑各有边界。规范目标是在同一 SH-01 内由持久的小导航切换“发现”与当前创作活动；切换不丢目标、筛选、来源定位和返回位置。
+SH-01 属于 Shared Capability，不是第三个业务域。它与 SH-02 的原始资料阅读、BMP-03 的市场解释、BMP-07 的 Campaign 计划及 BMP-08 的 Podcast 编辑各有边界。用户可从空白、自写创作要求或获准素材直接开始提案/文稿、视频或播客；Discover、CTH/BMP研究、SourceBrief和Subject/BrandFocus都是可选联动，不是创作前置。规范目标是在同一 SH-01 内由持久的小导航切换“发现”与当前创作活动；切换不丢目标、筛选、来源定位和返回位置。
 
 ~~~text
 桌面 / Web — Discover
@@ -603,12 +606,17 @@ SH-01 属于 Shared Capability，不是第三个业务域。它与 SH-02 的原�
 │ [查看依据] [选入当前Brief]      │
 └ 点选→可返回的详情层/页面；Back恢复筛选、选中项和位置 ┘
 
-桌面 / Web — 当前创作活动
-┌ [Discover] [当前创作]  Brief/输入来源  版本/回执 ┐
-│ 内容画布 / 当前选择 / 可编辑产物 / 来源抽屉       │
-│ 若活动是视频：上方 Viewer + Inspector；下方完整轨道、播放头、时间尺 │
-└ 保存版本 / 撤销重做 / 导出状态 / 重开回同一工程 ┘
+桌面 / Web — 直接开始或接续创作（Discover可选）
+┌ [Discover] [新建提案/文稿] [新建视频] [新建播客] ┐
+│ 起点：[空白] [自写创作要求] [选择获准素材]       │
+│ 可选：引用已有研究/CTH/BMP成果及其来源/版本     │
+├ 内容画布 / 当前选择 / 可编辑产物 / 来源抽屉     ┤
+│ 视频/播客按任务打开真实Viewer、Inspector/音轨    │
+└ 保存版本 / 撤销重做 / 导出状态 / 重开原工程      ┘
+Phone: 直接新建或接续作品→选空白/自写要求/获准素材→按文稿/媒体任务重排编辑→保存/重开。
 ~~~
+
+提案/文稿、视频和播客均可在Shared独立开始；Brief、SourceBrief、CTH/BMP研究与Subject/BrandFocus都不是统一前置。用户选择引用已有资料时，才沿原Source/Evidence/Artifact与使用权限带入同一版本。
 
 趋势只回答可比较观测期内发生了什么；热点只表示已知来源语料的观察，不伪称平台总榜或消费者总体；相似作品说明它与当前任务相合/不合的具体维度，不能只按热度排序。每个结果带真实 scope/platform/time、来源和可定位引用、方法/分母（若有）、相关性解释及缺失/部分状态。选取素材进入现有 Brief/视频创作 Owner，并执行新的 source-use/permission check；不强制创建空 Brief，不静默带入未授权全文/媒体。当前 callable 未冻结的操作必须显示不可用及原因，不能做假按钮或造推荐。
 
@@ -675,7 +683,7 @@ Desktop / Web
 ### SH-02 Evidence Library
 
 ~~~text
-PC: Search/Source/日期filters | identity rows | platform-native Reader | Evidence chain
+PC: Search/Source/日期filters（不按来源类别加权排序） | identity rows | platform-native Reader | Evidence chain
 Phone: 搜索→来源列表→单篇原生Reader→来源/版本与返回
 ~~~
 
@@ -757,7 +765,7 @@ Unknown / Unsupported
 
 平台自己的author/native ID/topic/location/metric/reply等字段作为typed extension进入对应Reader；未识别类型保留来源记录与明确“暂不可读”状态，不丢掉或伪造一个平台。
 
-每个正式Evidence item的来源动作统一为：`Trace → SourceTarget availability → Open Original → handoff state → Return`。如果 `URL_MISSING / INVALID_URL / DENIED / UNSUPPORTED / SOURCE_WITHDRAWN / STALE / UNKNOWN`，Reader只显示真实原因；不放裸URL按钮。`HANDOFF_ACCEPTED`不等于来源页已成功加载。Return恢复SH-02原Space/List模式、query/filter、选中item、scroll/camera和键盘焦点。
+每个正式Evidence item的来源动作统一为：`Trace → SourceTarget availability → Open Original in LUMENIS Browser → actual page state → Return`；用户可另选`Open externally`，不得自动弹窗。如果 `URL_MISSING / INVALID_URL / DENIED / UNSUPPORTED / SOURCE_WITHDRAWN / STALE / UNKNOWN`，Reader只显示真实原因；不放裸URL按钮。`HANDOFF_ACCEPTED`不等于来源页已成功加载。Return恢复SH-02原Space/List模式、query/filter、选中item、scroll/camera、草稿和键盘焦点。
 
 该参考集的 `source_scope=UNASSIGNED`、正式 Source/Evidence/Canonical refs 为空，commercial=`UNKNOWN`、`TRAIN=NOT_GRANTED`、design_state=`DESIGN_EXPLORATION`、frontend_implemented=`false`。只采用内部阅读层级，不复制正文、账号或媒体到产品/官网，不作训练输入。
 
@@ -1368,7 +1376,7 @@ Phone: 分lane通知列表→原Task/Approval/Artifact全屏→Return回原条�
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。此段原审批时的等待状态已被2026-10-08直接恢复指令取代；当前窗口按AGENTS实际派工继续。草图自身不控制全局暂停或恢复。
+采用用户当时前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本在该日期 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。此段是带日期的审阅记录，不定义当前窗口派发、开工、暂停或恢复；草图自身不控制实时调度。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -1378,8 +1386,8 @@ Phone: 分lane通知列表→原Task/Approval/Artifact全屏→Return回原条�
 
 这些是原草图的动线说明，未重绘美术资产、未创建Figma版本、未自动晋升DESIGN_READY。准确规则唯一归Experience §38；适用全部既有屏幕，复杂视频/播客仍使用完整编辑工作区。
 
-### 2026-10-08 SYS-06 视频适配动线（非独立设计权威）
+### 2026-10-08 SYS-06 视频适配动线（2026-10-11 产品内浏览器校正）
 
-手机：[返回当前任务｜任务名称｜更多/外部打开] → [安全网址与目标状态] → [真实受控页面，占主要可用空间] → [接管操作｜停止任务] → [实际当前动作｜Live或历史时间｜事件条]。键盘弹起/横屏保留返回与控制，允许页面内容必要滚动。回到任务保留原Brief、来源、草稿和位置。
+手机：[原任务/返回｜真实地址与来源状态] → [LUMENIS内真实受控页面] → [Browser owner支持的导航/页面动作] → [独占人工接管｜停止] → [真实当前状态/历史时间] → [返回原任务、草稿与已保存成果]。键盘弹起/横屏保留返回与控制，允许页面内容必要滚动；外部打开仅为用户明确选择。
 
-桌面/Web：[原任务/返回 + 来源工具栏] → [产品内真实页面 + 可收起的操作/证据侧栏]；用户可选外部打开，失败不自动弹出。电脑任务显示真实获准设备/应用范围；浏览页面与OS操作分别证明。颜色、图标、动效使用序境既有风格，不能照抄视频品牌外壳。视频只观察到任务切换、浏览器页面、操控入口和Live/事件条，未演示外部打开、恢复或OS应用控制；上述完整要求来自用户及当前规范。
+桌面/Web：[原任务/返回 + 来源工具栏] → [产品内真实页面 + 可收起的操作/证据侧栏] → [实际支持的页面动作/独占人工接管/停止] → [恢复同一Task、Scope、草稿、位置与已保存成果]；用户可明确选择外部打开，失败不自动弹出。通用电脑/OS及任意已安装应用控制已撤出当前产品范围，不设计设备/应用控制面。颜色、图标、动效使用序境既有二维手绘水彩/版画视觉，不能照抄视频品牌外壳。2026-10-08视频只作为浏览器任务/页面/操控入口/Live条的历史观察，不证明当前完整浏览器、外部打开或恢复已经实现；OS控制相关原要求已撤回，历史材料保留。
