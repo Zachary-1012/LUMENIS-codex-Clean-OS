@@ -1,0 +1,34 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261011-USER-WORKFLOW-APPROVED-PLAN-REVIEW",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-11",
+  "approval_source_type": "direct_product_owner_instruction",
+  "source_quotes": [
+    "以上ok，然后更新，然后重新规划各窗口应该做的事情给我审核，目的仍旧是产品闭环运行能够上线"
+  ],
+  "scope_manifest": {
+    "approved": [
+      "existing Product Architecture user-workflow blueprint for CTH, BMP, independent research, proposal/document, video, podcast and controlled in-product browser",
+      "REA adoption directions already described in the same blueprint, without promoting implementation or runtime evidence",
+      "M governance synchronization and revision of existing M/F/C1-C6 outcome cards for Product Owner review"
+    ],
+    "pending_review": [
+      "revised window execution plan, activation order and actual dispatch"
+    ],
+    "preservation": [
+      "all unretracted J1-J8/R01-R15/U01-U25 and 44-screen requirements",
+      "all existing dirty/untracked source, original research, designs, models, media, approvals and failed evidence",
+      "current F pause, VS Code non-use and paused product Goal",
+      "stable bilingual README without dynamic state"
+    ]
+  },
+  "constraints": [
+    "this approval does not resume or dispatch a product window, model, training or product Goal",
+    "no business source changes or product runtime/database operations in this planning publication",
+    "no new paid resource, external model/provider, account, production deployment or external business effect",
+    "unchanged source owners, reservations, Permission, source-use rights, Evidence, Canonical and release gates",
+    "blueprint approval is not implementation, user acceptance, release or operating evidence"
+  ]
+}

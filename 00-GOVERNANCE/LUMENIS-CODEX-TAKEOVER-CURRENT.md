@@ -1,6 +1,16 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
-## 2026-10-11 用户工作蓝图审核稿与 README 分工
+## 2026-10-11 蓝图已确认；窗口执行安排待审核
+
+最新直接PO：“以上ok，然后更新，然后重新规划各窗口应该做的事情给我审核，目的仍旧是产品闭环运行能够上线”。Architecture的七条用户工作方式及REA解析采用方向已获确认；M本次只更新现有规则和Owner成果卡，供PO审核执行安排。没有复工派发，不改窗口模型或推理档位，不继续业务源码/Runtime/DB操作；F仍暂停、VS Code暂不用，原产品Goal保持暂停。下列旧批次中的“执行/继续”仅属有日期的历史事实，不构成本次恢复授权。
+
+本次规划准入：本机HEAD、fresh origin/main、live main均为`fa2a863112bff453eb4ad525bae72e2d34bca219`，divergence0/0、staged0，8项tracked dirty及2项untracked保留。该基线Product Gate `38125266468`、App Gate `38125266525`已成功；本次未重新验证Runtime、Production DB或用户链，状态不得由源码/CI上调。原来源用途修复仍本地待审，REA包待源码准入及实际接线，不在本批混合提交。
+
+窗口审核稿位于Source Owner Index现有“Complete outcome cards”内，逐项列M、C1–C6/W1–W6、F的完整成果、首个工作、源码和交接、完成出口，并按五轮实际依赖建议顺序。继续保留R/J/U、44屏、全部研究材料与失败证据；Shared独立制作、AI全域可选、后台分析和产品内浏览不得再次误解。Real Delivery补足真实可运行与上线裁决的使用方式。README保持稳定双语说明，不加入本次进度或派工。
+
+本轮授权及边界见`evidence/approvals/PO-20261011-USER-WORKFLOW-APPROVED-PLAN-REVIEW.json`。计划发布后等PO审核；批准蓝图、批准执行计划、实际派工、工程验收和生产部署分别记录。
+
+## 2026-10-11 历史：用户工作蓝图审核稿与 README 分工
 
 最新直接PO要求先把完整用户工作方式写入，供本人审核。唯一Architecture中的“用户工作方式审阅稿”逐项展开CTH、BMP、独立研究、提案/文稿、视频、播客、内置浏览器的入口、操作、后台职责、成果、保存恢复、独立能力及可选联动，并保留资料呈现、行业案例、数学后台采用、AI非依赖、四表面和完整J/R/U要求。新增操作描述为审核稿，不能据此宣称源码已改、完整业务已验收或前端恢复。
 
@@ -194,12 +204,12 @@ Provider, Source store, approval or user-outcome claim.
 
 ## 1. Online reader's current-state snapshot
 
-### 2026-10-11 本次发布：用户工作审核稿与稳定双语说明
+### 2026-10-11 本次发布：确认蓝图与待审窗口成果计划
 
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-本批只发布既有蓝图/规则/屏幕规格、README、上下文导航及其文档分类校验。七条用户工作方式及新增解析采用内容仍供PO审核，不提升实现、运行或用户验收状态。现有业务源码修复保持本地受保护状态，F继续暂停。README不存进度；线上精确SHA/CI由本次PR和Git回读核验。
+本批只发布蓝图确认、既有Owner成果卡中的窗口执行审核稿、真实交付出口及直接PO回执。七条用户工作方式和解析采用方向已批准；窗口执行计划仍待审，未实施、运行或验收的能力不升级。现有业务源码修复保持本地受保护状态，F继续暂停，所有新开工仍需PO明确调度。README不变、不存进度；本批线上精确SHA/CI由PR和Git回读核验。
 
 PR #12 首次 Product Gate 拒绝了沿用旧 `PUBLISHED_SOURCE_VERIFIED` 的文档提交；本次纠正当期发布口径，并将 `website/README.md` 和已跟踪的 progressive-context 技能说明加入校验器既有精确文档路径分类。没有取消门禁或允许任意源码作为规则发布。下列2026-10-09等段落是有日期的历史采样，不能替代本次状态。
 
