@@ -10,10 +10,13 @@ bounded implementation Batch. It is a navigation and context-loading workflow;
 it does not create a new product authority, owner, data store, design system,
 or release gate.
 
-Use repository `AGENTS.md` as the only execution router. Its C1–C6 rows define
-the local/Codex Cloud route and Cloud restrictions; the Source Owner Index maps
-R01–R15 and J1–J8 into those rounds. Cloud workers must be able to follow these
-checked-in instructions without workstation-only skills or personal settings.
+Use repository `AGENTS.md` as the only execution router. Its C1–C6 rows retain
+engineering source responsibilities, not six product rounds or a fixed local/Cloud
+assignment. Product outcomes follow SYSTEM, CTH, BMP, Shared and Agent Groups / AI;
+the Source Owner Index maps and preserves R01–R15 and J1–J8 acceptance coverage. Actual
+dispatch and model settings require current Product Owner instruction and evidence.
+Any explicitly authorized Cloud worker follows the existing isolation constraints
+and these checked-in instructions without workstation-only skills or personal settings.
 
 ## Purpose
 

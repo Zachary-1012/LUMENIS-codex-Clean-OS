@@ -1,5 +1,13 @@
 # SYS-06 — Internal browser capability
 
+## 2026-10-11 当前目标：业务任务中的真实内置浏览器
+
+用户从原帖/引用/研究任务进入真实网页，能看到安全网址、当前页面和操作状态，进行获准导航与网页操作、独占接管、停止并返回原任务。默认在序境内呈现，外部浏览器由用户明确选择；无AI也可正常浏览。自动采集保持后台无头，不占用桌面焦点。
+
+既有 SYSTEM worker 执行网页；Core 核验 actor/task/scope/session、每次动作和来源用途；SYS-06只呈现真实画面与可用操作。不得用iframe失败、静态截图、raw CDP前端直连或另开桌面应用替代。方法参考公开浏览器会话/动作与画面原理，具体安全传输必须真实实现，不能宣称已复制GPT私有架构。
+
+通用操作系统、任意本机软件/键鼠与远程电脑控制已经撤出产品范围。历史AgentZero/OS代码保留，不再要求GUI worker才能完成本屏。既有浏览器任务绑定、支持的网页动作、受控文件传输、权限、来源保存与重开恢复缺口仍需实际验收；文档更正不能将其记为通过。F继续暂停。
+
 ```yaml
 screen_id: SYS-06
 status: IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED
@@ -77,15 +85,15 @@ IDs alone stay UNBOUND/UNVERIFIED and are not published as task Evidence.
 
 No model is required for these deterministic/manual controls. The optional
 Browser Use route stays UNAVAILABLE until Task/Source-use/Gateway/egress/action
-bridges are bound; it must not disable the manual path. Agent Zero is a separately
-disabled executor behind the existing Task Runtime, not a second runtime.
+bridges are bound; it must not disable the manual path. The disabled Agent Zero GUI adapter is retained historical source; general
+computer/OS control was withdrawn on 2026-10-11 and is not a delivery dependency.
 
 The loopback guard remains until secure remote actor/session transport exists.
-Remote Web use, session-result SavedWork/Artifact save/reopen/recovery, computer
-GUI operation and actual runtime/user acceptance remain OPEN. Source/static
+Remote Web use, session-result SavedWork/Artifact save/reopen/recovery and
+actual browser runtime/user acceptance remain OPEN. Source/static
 verification does not establish these outcomes or any full four-surface closure.
-Revision-4/5 text and historical tests below are provenance; historical suites
-are not current execution requirements under the formal PO testing policy.
+Revision-4/5 observations below are historical. Targeted unit/integration
+regressions were restored on 2026-10-10; they do not replace real user acceptance.
 
 ## 0.1 Historical source binding — 2026-10-05
 
@@ -164,10 +172,11 @@ QR-capable recovery remains in the shared RecoverySheet and need not open SYS-06
 
 When multiple platforms require attention, SYS-06 serves only the one active recovery item selected by the single RecoverySheet queue; platform-specific browser windows or stacked modal recovery surfaces are forbidden.
 
-## 0.3 Approved interactive computer/browser target — 2026-10-08
+## 0.3 Approved interactive browser target — revised 2026-10-11
 
 The Product Owner supplied `ScreenRecording_10-08-2026 06-26-05_1.mp4` and directly
-requires product-owned computer operation plus an internal browser on phone,
+originally requested computer control; the 2026-10-11 correction withdraws that
+OS scope and retains the in-product controlled browser on iOS,
 Desktop and Web, with explicit optional external opening. M reviewed the 12.34s
 visual flow. Experience §11/§38 remains the design authority. The existing
 DESIGN_READY/source decision applies to the implemented reader; the following
@@ -179,11 +188,11 @@ enforces their real contract; implement that owner gap instead of removing scope
 | Element | Complete required behavior | Owner/binding condition |
 |---|---|---|
 | Mobile task-to-browser | Open from current task to safe URL/title and real viewport; keep Return and draft/context; touch/keyboard/insets/landscape work | Existing router + SYS-06, same task/session/target |
-| Computer/browser control | Visible Agent action, current real frame, human takeover, stop; click/input/scroll/select/history when supported | Existing Browser actions; exclusive input owner, fresh frame/revision, Permission/Firewall/Fence |
+| Browser control | Visible Agent action, current real frame, human takeover, stop; click/input/scroll/select/history when supported | Existing Browser actions; exclusive input owner, fresh frame/revision, Permission/Firewall/Fence |
 | Live/history | Live only while fresh connected observation exists; event review shows actual earlier time; Return to live explicit | Existing Task/Trace/action observations; do not invent a second event store |
 | Desktop/Web | View and operate controlled browser inside workspace, adapting panels to available room | Existing SYSTEM worker, secure actor/session API; no arbitrary iframe or browser-private device access |
 | External option | User chooses safe external opening; no automatic popout; failed/unsupported internal path stays honestly unfinished | Existing SourceTarget URL/use/Return validation; migrate modes with existing callers |
-| Full computer tasks | Show authorized target/application and actual operation/result, stop and resume | C2/C6 add missing bounded OS executor inside existing Runtime; browser actions alone do not satisfy it |
+| Product scope | General OS/desktop control is removed, not deferred or accepted | Preserve old source/research; do not build a GUI worker for product closure |
 | Takeover/return | Grant exclusive control before input; Agent cannot race human; close view/stop task/end session remain separate | Same server-owned task/session/lease and action receipts |
 
 Fresh session/target/frame/revision/viewport binding is required for coordinate
@@ -201,7 +210,8 @@ Review adds no arbitrary desktop permission, paid worker or protected-account ac
 Acceptance extends the existing SYS06-ENTRY/SCOPE/FRAME/ACTION/RETURN/A11Y/TRUTH
 checks and Overlay J1/J7/J8: real in-product phone/Web/Desktop operation, explicit
 external option, exclusive takeover, stale frame rejection, stop/revoke/reconnect,
-unchanged task context and actual result. OS operation is separately evidenced.
+unchanged task context and actual browser result. General OS operation is no
+longer required under the direct 2026-10-11 scope correction.
 All new implementation/runtime/user acceptance remains OPEN until actually proved.
 
 ## Historical capacity-only specification — revision 2 provenance
@@ -510,5 +520,6 @@ SYS-06 presents a localized, keyboard-accessible page-link chooser with link tex
 and a redacted destination. Opening a link stays in the same product session;
 the existing manual note save/revise/reopen and return controls remain. This
 source increment does not close Task/Source bindings, arbitrary page control,
-remote Web transport, intelligent Browser Use or computer operation. Actual
+remote Web transport or intelligent Browser Use. General computer operation
+was withdrawn by PO and is no longer an acceptance gap. Actual
 operation and limits are recorded in the existing M delivery evidence.

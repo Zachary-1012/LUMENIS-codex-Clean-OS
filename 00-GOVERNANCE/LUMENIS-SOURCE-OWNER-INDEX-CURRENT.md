@@ -143,7 +143,7 @@ blocks that path without erasing the row or stopping unrelated work.
 | J1 | Establish, select and continuously maintain the real data universe | C1 C6 | Real Add Subject/BrandFocus, country/market and venue/tenant identities, approved platform-native acquisition and time series, signed Source/Evidence/Canonical, GLOBAL/Focus/Clear, due-only refresh, idempotence and actual scheduled recovery without a Codex/CUA/developer trigger; representative samples do not imply coverage. |
 | J2 | Complete a commercial Subject operating decision | C3 C1 C2 C5 | Exact venue/tenant and time scope; monitoring/events, consumer/market/risk analysis, Case -> supported insight -> internal decision -> authorized action where promised -> actual outcome/evaluation and saved result; useful owned analysis, task budget/resource feasibility where costs apply, recovery and return. |
 | J3 | Complete a BrandFocus market/content/campaign decision | C3 C1 C2 C5 | Brand/market/competitor/creator/propagation inputs with comparable metrics, grounded analysis, editable Brief and content/campaign lifecycle through creation owners, actual result/evaluation, task budget/resource feasibility where costs apply, saved/reopened output and recovery. |
-| J4 | Produce and revise an original professional pitch | C4 C2 C5 F | Real Brief and materials -> original reasoned concept/strategy and budget/resource-feasible alternatives -> editable customer-ready proposal -> review/revision/export/reopen and evaluation; manual and owned-AI paths both work where approved. |
+| J4 | Produce and revise an original professional pitch | C4 C2 C5 F | User-authored creative Brief or optionally inherited business/research Brief, with applicable permitted materials -> original reasoned concept/strategy and budget/resource-feasible alternatives -> editable customer-ready proposal -> review/revision/export/reopen and evaluation; manual and owned-AI paths both work where approved. No prior CTH/BMP task is required for independent creation. |
 | J5 | Produce and revise an editable video | C4 C2 C5 F | Real permitted media and actual budget/resource constraints -> editable Timeline -> preview/edit/render -> verified playable result and editable project -> review/revision/export/reopen/cancel/recovery; retain approved audio, subtitle, transition and quality requirements. |
 | J6 | Produce and revise a usable podcast | C4 C2 C5 F | Research/script/interview-or-story intent with actual budget/resource constraints -> actual audio and complete editable episode -> edit/mix/transcript/chapter/derivative work -> review/export/reopen/evaluation, with script changes distinguished from actual recorded/generated sound. |
 | J7 | Turn real materials and goals into reusable knowledge and useful owned-AI work | C2 C5 | Supported file/media intake and precise citations -> actual understanding/research/analysis, extensible case/method combination and task-relevant Discover recommendations -> saved searchable versioned result; actual owned Gateway/Agent/Skills/Memory work and Outcome -> Evaluation -> reviewed Learning -> held-out promotion/rollback. Public discovery and saved examples alone are not training; case mechanisms remain extensible, not a fixed creative template. |
@@ -742,17 +742,21 @@ C1沿`acquisition_plan.py`和`adapters/scheduling/prelaunch_baseline.py`移除�
 
 C3/C5/C4原职责复用已有SourceBrief/creation-upstream/SavedWork，补业务决策成果到制作的固定版本入口和逐条引用；C4补编辑Timeline→实际渲染→Artifact→重开，C5补引用影响与各自Owner的回滚衔接。当前C1自己改旧日期并接持久采集receipt/原生cursor/兼容入口，M只按既有预约处理跨Owner交接、审阅与集成，不切换C6。这些是原完整成果的依赖顺序，不增加另一组任务编号。具体源码行和未验证范围在同一审阅记录；实际派工依AGENTS最新PO路由，各窗口当前状态由PO决定并核验，架构归属与历史复工记录不构成当前派工。原合并本地窗口现承接C3，新建本地窗口承接C5，精确身份只依AGENTS当前绑定。
 
-### 2026-10-08 受控电脑与内置浏览器接续
+### 2026-10-11 业务结果与内置浏览器责任校正
 
-| Owner | 本次应完成的既有路径 | 精确源码/合同与验收 |
+本轮追加解析采用不新增 Owner：原创工具计划/上下文适配归 C2 原 Task/Plan/Agent；独立视频与播客共用制作入口、Timeline/媒体编辑和渲染归 C4；办公格式导入与 DOCX/XLSX/PPTX 可编辑输出/附件归 C5 原 Importer/Reporting/SavedWork；C6 处理共享调用与必要依赖/打包，F 仅保留原界面职责并继续暂停。去除无业务意义的 demo 勾选或 DOCX-only 门槛不去除素材权益、Permission、文件安全和版本检查。已接收代码包是待审集成输入，未证明正式运行；具体用户工作方式和未闭项归唯一 Architecture 审阅稿，接收证据归 CURRENT。
+
+| Owner | 现有职责与接线 | 当前边界 |
 |---|---|---|
-| C6 / SYSTEM Browser与Runtime | 既有session/action/observe/verify/capture/stop复用；安全远端actor/session绑定、输入与画面revision、独占接管/停止恢复、设备执行适配与共享API | `ai_browser_api.py`、`ai_browser_runtime.py`、`lumenis/system/browser/runtime/`；协调F的`app/lib/core/lumenis_core_client.dart`，不能只删loopback guard |
-| C2 / Agent与typed tools | 实际Agent调用上述浏览动作；授权OS电脑任务的真实executor适配既有Runtime/Permission/Effect链；观察/规划/动作/验证/checkpoint/撤权恢复 | `agent_runtime/`、`agent_capability/`、`agent_smart_tool/`、现有SYSTEM security；浏览器能力不等于OS能力；无人值守外部写入未获授权 |
-| C1 / Collector | 复用同一会话与当前允许身份，只读采集、受控验证恢复和Source→Evidence→Canonical；继续其他正常平台 | 既有Collector/PlatformSession；`VERIFY`不绕过，个人大陆小红书不触碰 |
-| F / Experience | SYS-06手机任务→电脑/浏览器视口→接管→停止→Return；Desktop/Web产品内真实浏览；外部打开可选，SourceTarget模式和调用者一致 | `sys06_screen.dart`、`sys06_browser_repository.dart`、core client、现有SourceTarget/CTH-03/SH-02；既有纯预览不是目标终态 |
-| C3/C4/C5 | 同Task/来源/版本消费操作结果与真实资料，不新建执行器 | 已有业务/创作/Artifact引用和回执；研究与训练准入分开 |
+| C1 / Collector | 主体/品牌驱动的获准原始资料、原生字段、来源/权限/去重/刷新恢复 | 业务解释后置；单封面不等于完整媒体理解，不接管个人电脑 |
+| C3 / CTH/BMP | 后端分析、指标与比较、业务判断/行动/结果，产出业务报告内容 | 用户提供业务参数；不得把选择论文/算法留给前端 |
+| C5 / Shared | 研究与行业案例、引用、报告组织、SavedWork/Artifact、修订读回恢复 | 原文/派生/AI/人工内容与版本分清；样本覆盖不是业务结论 |
+| C4 / 制作 | 独立新建提案/文稿、视频和播客项目，接受用户创作Brief/获准素材，编辑预览、导出、保存恢复；可选消费已有业务/研究成果 | 不依赖CTH/BMP或SourceBrief存在；正常人工制作无AI可用，增强建议可选且保留原件 |
+| C2 / Gateway/Agent | 各领域智能理解/建议/生成及受控网页步骤；原模型评估训练准入 | AI 全域增强，不拥有事实或权限；通用OS executor/AgentZero GUI已撤回，不再必交付 |
+| C6 / SYSTEM Browser/Runtime | `ai_browser_api.py`/`ai_browser_runtime.py`/既有SYSTEM Browser的会话、画面/动作、独占控制、停止恢复、安全Web绑定 | 不暴露raw CDP、不删loopback防护假称远端可用；不新增Runtime |
+| F / Experience | 资料与已分析报告、业务操作、SYS-06真实网页和 Trace → Open Original → Return | F仍暂停；规格更新不等于页面已实现，不启动独立前端工作 |
 
-基线409e6d2c：浏览器服务已有click/input/select/scroll/keyboard等动作，但Flutter只调用navigate/reload/frame，远端Core受loopback限制；未找到通用OS桌面executor。本次是源缺口与执行标准，不是runtime通过。逐项取证见 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`；新视频已进入现有材料清单，非训练素材批准。
+2026-10-08 `BROWSER-COMPUTER-CONTINUITY-20261008.md` 保留为历史来源。通用电脑控制由最新 PO 撤回；其中浏览器任务连续性继续适用，其余源码责任与 R/J/U 要求保留。已实现算法和AgentZero适配器保留，不因本次规格纠偏批量删除或宣称验收。
 
 ### 2026-10-08 用户只读审计：当前修复责任与后置边界
 
@@ -789,7 +793,7 @@ C3/C5/C4原职责复用已有SourceBrief/creation-upstream/SavedWork，补业务
 | M engineering tools; `.codex/local_workflow.py`, `scripts/local_development.ps1`, `.vscode/` | Deterministic Tasks, scoped static/build/format/recovery and real private receipts | Four-language local completion, syntax/type diagnostic recovery and real Dart definition navigation OBSERVED; editor path/PS host/Dart exclusions repaired; historical App test-source errors retained; tools do not close a product Job |
 | SYSTEM Browser / C6 and F SYS-06; M bounded integration of `ai_browser_runtime.py`, `ai_browser_api.py`, existing Core client/repository/screen/transport | At the 2026-10-09 observation, exclusive short lease and frame/target/revision/viewport binding; manual navigate/history/reload/scroll; server-listed visible-link selection with exact anchor re-resolution and pre-request main-document redirect checks; manual research-note Shared SavedWork save/list/reopen/revise; bounded isolated runtime entry | Server-authored Task/Run and source-use binding, safe remote authenticated Web, full captured-source Artifact/recovery and arbitrary click/input were OPEN at that snapshot; runtime/current pause state must be independently reverified. |
 | Same Browser owner; `lumenis/system/browser/runtime/browser_use_adapter.py` | Disabled optional readiness boundary only; no provider/model fallback | Server-owned Browser Task/Run and captured Source/use producers are absent; Collector queue leases and client task IDs cannot substitute. Then bind the existing typed owned Gateway, BaseChatModel/action bridge and enforced DNS/private-IP/redirect/WebSocket egress; no intelligent execution is accepted. |
-| Existing Agent/Task Runtime; `ai_task_engine.py`, `agent_runtime/agent_zero_gui_executor.py` | Disabled optional injected GUI executor contract; no parallel queue/database/runtime | No startup binder or implementation of its required `/api/lumenis/v1` worker protocol; stock Agent Zero APIs do not satisfy it. Independent manual GUI session and editable-document Artifact intake also remain open. Resource readback: 09:26 Beijing, no host Docker command, WSL Ubuntu stopped, 950 MiB free. No Docker/GUI runtime accepted; that historical observation does not establish current Owner dispatch. |
+| Existing Agent/Task Runtime; `ai_task_engine.py`, `agent_runtime/agent_zero_gui_executor.py` | Historical disabled GUI adapter; general computer control withdrawn by PO on 2026-10-11, not a current delivery dependency | No startup binder or implementation of its required `/api/lumenis/v1` worker protocol; stock Agent Zero APIs do not satisfy it. Those historical GUI-worker gaps no longer block product closure; normal product document intake remains with its existing Shared owner. Resource readback: 09:26 Beijing, no host Docker command, WSL Ubuntu stopped, 950 MiB free. No Docker/GUI runtime accepted; that historical observation does not establish current Owner dispatch. |
 | SYSTEM Gateway / C2; `lumenis/system/ai_gateway/core.py` | Explicitly authorized M cleanup: signatures/history retained, retired execution inert; owned functions unchanged | Owned model still NOT_BOUND; no new model/API/training authorization |
 | C2 Task / C3-C5 scoped analysis caller; `ai_task_engine.py`, `ai_api.py`, bounded `app.py` auth hook | Typed SourceBrief sample statistics completes without model; exact actor/current Scope/report hash, real sample denominator, dedup/platform/native-date counts, persisted Task/independent readback and same-task replay observed | This repairs the ordinary source-statistics path, not all business analysis. Optional AI is independent and cannot block it; unbound/ungrounded business outcomes stay OPEN |
 | C1/C3/C4/C5/C6/F existing contracts | Seven-domain normal-business no-AI requirement added to Architecture/Real Delivery/Experience | Each existing normal user chain must demonstrate permitted real inputs and results without inference; then separately measure AI gains; preserve all R/J/U scope |
@@ -826,7 +830,7 @@ ordinary paused-owner production modification is granted by this record.
 Core8201已授权恢复并有界加载本地工作树；后台维护仍 PARTIAL，不能把平台缺口写成成功。
 SOURCE 发布、受保护本地 Runtime、DB 获准派生成果、用户样本统计各自记账，
 不证明整个 main Runtime/全候选/六平台/完整 SYSTEM。真实已认证待验证任务 HUMAN 正向、
-CTH/BMP 决策/报告/导出、媒体真实成品、AgentZero worker、AI-01 和全部 44 屏仍按原要求 OPEN。
+此2026-10-09快照中的CTH/BMP决策/报告/导出、媒体、AI-01及44屏当时未闭；AgentZero GUI worker要求已于2026-10-11撤回，其历史未实现不再是当前产品阻塞。其余状态须据当前证据核验。
 以上“不恢复其他窗口、不运行模块测试”是该2026-10-09批次的操作边界，不是当前测试政策或窗口调度；2026-10-10后适用隔离定向回归已恢复，当前调度由最新直接PO决定。该历史批次未改变模型/费用/权益/Permission，原始候选和失败继续保留。
 完整源码、操作、静态构建、回滚及开放项见
 [evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md](evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md)

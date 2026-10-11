@@ -1,5 +1,25 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
+## 2026-10-11 用户工作蓝图审核稿与 README 分工
+
+最新直接PO要求先把完整用户工作方式写入，供本人审核。唯一Architecture中的“用户工作方式审阅稿”逐项展开CTH、BMP、独立研究、提案/文稿、视频、播客、内置浏览器的入口、操作、后台职责、成果、保存恢复、独立能力及可选联动，并保留资料呈现、行业案例、数学后台采用、AI非依赖、四表面和完整J/R/U要求。新增操作描述为审核稿，不能据此宣称源码已改、完整业务已验收或前端恢复。
+
+README改为中英文对应的长期产品/开发说明；提交、运行、测试、窗口调度、进度与缺口不再写入README。历史内容通过Git和受保护本机preimage保留；动态事实继续在本CURRENT及原证据处记录。当前两来源修复仍为独立未发布源码工作，不混入本次文档审核交付。
+
+2026-10-11追加解析接收：本机 `D:\REA-Review\2026-10-11\deliverables\LUMENIS-capability-review-2026-10-11.zip` 实读393,372字节，SHA256 `7948630e39149015c47870fff3fa626d643dd7e85ac3ee5587a3a5783b267cf2`；75个manifest条目逐项hash/长度一致。已读REVIEW与交接，原包/补丁/证据保留。Architecture按用户要求加入视频/播客共用编辑基础、正常导出取消demo门、办公三格式/附件、待执行工具计划与版本化编辑的用户用途。接收校验不等于源码全部审毕或已集成。
+
+该包独立工作树基线为`2c004d8d...`，主工作区SavedWork/API与规则已有保护修改，后续须逐处合并；此文档批次不装wheel、不修改前端、不载入新Runtime。交接回执中较宽回归有PDF缺reportlab及提案API `_owner_authorized_root_request` 未定义的失败，完整计数未证；Flutter与实际产品E2E也未完成，均保留为未闭项。REA不成为产品运行前提，静态观察不等于厂商私有模型/算法复原。
+
+## 2026-10-11 当前优先纠偏：产品业务结果与 AI/浏览器范围
+
+同轮最新PO纠正：CTH/BMP是业务领域；Shared内容制作独立运行，不依赖业务任务、主体/品牌、Case/Campaign或SourceBrief。已纠正本轮把能力过度串行化的蓝图/体验/Owner/验收表述，SH-01与BMP-08补充独立新建和可选业务续接的区别。当前两来源业务成果修复只针对对应引用链，不得改成全部Shared制作的前置限制。源码/实际独立制作仍须核验；本段不冒称已实现。
+
+直接 PO 要求先修复规则，并进一步明确“不需要操作电脑”，AI贯穿全产品但产品不能依赖AI才能工作。已将相应当前执行段、唯一蓝图、定位、Experience、Owner、Real Delivery、端合同与CTH-10/BMP-04/SYS-06规格统一：撤回通用OS/桌面控制，保留产品内浏览；分析和论文方法归后台，前端交付真实资料与已分析报告。此为范围/规格更正，不是界面已修、模型已可用或产品已验收。
+
+本批准入复取：local HEAD/fresh origin/main/live main = `2c004d8d9ec87f88b31b31cf6523357792490a74`，divergence 0/0；后续修订尚须受控发布并回读。既有未提交 Source/Shared 用途准入修复由原有两个有界执行者继续，不能覆盖其文件。F保持暂停、VSCode暂不用，不开启OS/AgentZero worker或外部模型。
+
+M原目标保持：已完成PR失败修复/原有效成果合入后，继续用已获准真实来源贯通分析、CTH/BMP成果、保存、修订、重开和恢复；新增本次产品方向更正作为前置约束。规则发布不等于运行/DB/用户成果通过。历史电脑控制需求及失败记录不删除，状态为PO撤回的子范围，其余J/R/U与44屏要求保留。
+
 ## 2026-10-11 PR #11 收敛及真实业务链 — 当前有界执行
 
 直接 PO 授权 M 修复 PR 失败与有效规则冲突、保护并审查原有成果、安全合入 main，随后使用已有获准真实数据完成采集成果接收、无 AI 分析、CTH/BMP 业务成果、保存、修订、重开与恢复。VS Code 暂不用，F 继续暂停；本次不新增前端实现，不启动平台采集、外部模型、训练、付费资源或部署。
@@ -9,6 +29,10 @@
 PR Product Gate 的十个 XHS 回归失败已复现为测试装载器与现行采集签名、预算种类及已认证 checkpoint 合同不匹配。修复仅适配隔离测试输入和装载器，保留恢复、身份、风险拒绝及原始数据断言；网络封锁、临时数据库的定向验证为 49 passed。历史失败保留，真实采集与平台身份未由这组验证证明。
 
 当前规则清理沿 2026-10-10 已批准的 branch/PR 和隔离回归政策、五轮产品交付及窗口/模型事实语义实施；有日期的历史审批与失败证据不改写。既有 Flutter 候选进入集成审查不代表 F 恢复。源码合入、精确 SHA CI、实际加载 Runtime、数据库与用户成果分别验收；本段不提前声明 main 已更新、用户链已通过或产品 RELEASED。
+
+2026-10-11 后续实际读回：PR #11 已合并为 `2c004d8d9ec87f88b31b31cf6523357792490a74`，本机 main、fresh origin/main 与 GitHub main 同步；该 SHA 的 Product Gate `38117602420`、App Gate `38117602452` 均成功。原工作分支、历史成果和受保护 `work/` 保留。这个发布关闭原 PR 集成缺口，不证明运行中的 Core 已加载新版本。
+
+真实本机产品 API 已使用现有广州太古汇和 Nike 材料保存 SourceBrief，完成无 AI 样本统计、CTH/BMP 业务方案选择，并分别完成中断、重新打开和恢复；原决定保留。成果进入 Shared 时发现来源范围 Evidence 与可引用正文 Evidence 的映射及用途批准缺口。PO 随后明确批准两个指定 URL 的本机内部研究、短句引用、CTH/BMP 简报保存、修订和重开；商业授权仍未知，不批准发布或训练。该授权必须经现有 Permission、Importer、Source/Evidence 和 Shared 成果所有者核验，不能改写历史来源权益或授予其他来源。此项后续修复、同版本加载和实际成果版本验收按当前证据分别记录，不以此段文字提前宣告完成。
 
 ## 2026-10-10 OpenAI Math v2 本次交付边界
 
@@ -96,8 +120,8 @@ SavedWork. Captured Source/Task-bound results and secure remote Web transport
 remain OPEN; the loopback safety guard is retained. Notes are user writing,
 not imported/verified webpage Evidence. The bounded M acceptance entry uses a
 fresh OS-temp DB and Web artifact; no production service is replaced. The complete
-screen, remote transport, Source-bound outcomes and computer operations remain
-OPEN. Actual evidence and source-version limits are in the existing delivery record.
+screen, remote transport and Source-bound outcomes remain OPEN at that
+historical snapshot. General computer operations were withdrawn on 2026-10-11. Actual evidence and source-version limits are in the existing delivery record.
 
 The deterministic observation API now rejects invalid/oversized options, reports
 capture failures instead of unconditional success and bounds returned content.
@@ -105,7 +129,8 @@ Missing element counts remain unknown. Query/fragment values are removed from
 public state and verification records while exact URL comparisons stay in memory.
 This is source/static evidence; the production process has not loaded this delta.
 
-Agent Zero is an optional disabled executor on the existing Task Engine; no startup
+Agent Zero is a retained disabled historical executor, no longer a product
+delivery dependency after the 2026-10-11 PO scope correction; no startup
 binder or worker implementation is installed. Its current executor expects
 LUMENIS-scoped `/api/lumenis/v1/capabilities` and task execute/cancel routes, not
 the upstream stock message/log/file APIs. No matching worker exists in this
@@ -180,7 +205,7 @@ Provider, Source store, approval or user-outcome claim.
 Core8201已授权恢复并有界加载本地工作树；后台维护仍 PARTIAL，不能把平台缺口写成成功。
 SOURCE 发布、受保护本地 Runtime、DB 获准派生成果、用户样本统计各自记账，
 不证明整个 main Runtime/全候选/六平台/完整 SYSTEM。真实已认证待验证任务 HUMAN 正向、
-CTH/BMP 决策/报告/导出、媒体真实成品、AgentZero worker、AI-01 和全部 44 屏仍按原要求 OPEN。
+此2026-10-09快照的CTH/BMP报告、媒体、AI-01及44屏当时未闭；AgentZero GUI worker于2026-10-11撤出要求。其他项依据当前证据更新，不借撤回将未完成能力写为PASS。
 不恢复其他窗口，不运行模块测试，不改变模型/费用/权益/Permission，原始候选和失败保留。
 完整源码、操作、静态构建、回滚及开放项见
 [evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md](evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md)
@@ -194,7 +219,7 @@ CTH/BMP 决策/报告/导出、媒体真实成品、AgentZero worker、AI-01 和
 本次 fresh fetch 与 GitHub main 回读相同（2026-10-09T18:12:56.028622+08:00）。该提交的 Product/App Gate
 均 SUCCESS，仅证明其实际检查；不代表产品轮次完成。M 当前有界工作是另获直接授权的
 SYSTEM 自动浏览器弹窗 P0，以及本次同权来源/已有数据优先工作流规则同步；不恢复其他窗口。
-此前工具/Browser/AgentZero、材料蒸馏采用、候选集成、C1和其他Owner未完成Goal完整保留。
+此前工具/Browser、材料蒸馏采用、候选集成、C1和其他Owner的现行未完成要求保留；AgentZero GUI/通用电脑控制于2026-10-11撤回，其源码与历史Goal证据保留但不再派发执行。
 原生 Goal 的当前API仅支持状态更改、不支持改写未完目标；本段更新当前优先执行目标，
 保留原生未完成Goal，不虚报已经改写/完成原生目标。
 
@@ -298,14 +323,16 @@ identities remain binding. A source/policy publication proves no user acceptance
 
 
 
-The user also requires product-owned computer operation and in-product browser
-use on Mobile/Desktop/Web, with explicit optional external opening. The supplied
+The dated 2026-10-08 request included computer operation and an in-product
+browser. The 2026-10-11 PO withdrew general computer control; the internal browser
+on iOS/Desktop/Web and explicit optional external opening remain required. The supplied
 12.34s video was visually reviewed across its flow; audio and every decoded frame
 were not reviewed. Material manifest now has 199 rows, including the user-supplied 12-finding security audit assigned through the existing owners. Architecture/Experience,
 SYS-06, SourceTarget compatibility scope, Overlay and existing wireframes are
 updated coherently. Source at 409e6d2c has browser action services but readonly
 Flutter preview and loopback-only binding; generic OS executor was not found in
-the targeted audit. These required gaps belong to C2/C6/F (C1 reuses acquisition),
+the targeted audit. Only the remaining browser gaps belong to C2/C6/F
+(C1 reuses acquisition); general OS control is withdrawn,
 not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
@@ -716,7 +743,7 @@ The Product Owner approved the fresh historical-package audit against synchroniz
 - C3 closes the CTH/BMP task loops and replaces fixed propagation/impact assumptions with Evidence-bounded state.
 - C4 consumes the same source/Brief/version chain for pitch/video/podcast and preserves source trace through edits and exports.
 - C5 owns SourceTarget, precise citation, historical quarantine, SavedWork/report/settings continuity and source-correction propagation.
-- C6 binds the shared API/runtime/in-product browser and explicit external option, same-SHA integration, recovery and release gates; the general computer executor remains its existing SYSTEM responsibility with C2.
+- C6 binds the shared API/runtime/in-product browser and explicit external option, same-SHA integration, recovery and release gates; the general computer executor/AgentZero GUI requirement was withdrawn on 2026-10-11, with historical source protected.
 - F implements task-specific LUMENIS presentation and `Trace → Open Original → Return` on the approved operational surfaces without copying platform UI.
 
 `contracts/experience/source-target-contract-v1.json` is an approved target contract, not implementation proof. The Experience binding snapshot is generated from accepted source-contract commit `3ebe60f99d0f928bbcc92aaea7ce99225535d65e`; the registry publication commit changes no product source, runtime or acceptance state. Historical package data remains `Production admission = 0`. Current Product/App/Critical E2E, six-platform live collection, Owned AI service binding and user verification remain open. Existing C1/C2/C5 dirty and `work/` stay protected and are not part of this governance/specification Batch.
