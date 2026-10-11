@@ -950,8 +950,8 @@ ACTIVE GATE / TICKET
 ## 4. Product ownership
 
 READMEs are stable Chinese/English guides. Keep dispatch, SHAs, progress and
-test/runtime observations in CURRENT/evidence. The Architecture user-work draft
-awaits PO review; publishing it accepts no implementation and resumes no frontend.
+test/runtime observations in CURRENT/evidence. PO approved the user-work blueprint;
+Owner execution plans await PO review. This publication resumes no window or Goal.
 
 ```text
 CTH             Subject-first Commerce Operations

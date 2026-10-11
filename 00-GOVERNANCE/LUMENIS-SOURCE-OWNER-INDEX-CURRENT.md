@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Shared Evaluation / C5，C3 消费 | `lumenis/shared/evaluation/openai_math_papers/` | 九 family 的有限/公式计算、输入预算、provenance；一般主算法逐项仍 OPEN。 |
 | SYSTEM Task/API / C2/C6，M 本次有界授权 | `agent_runtime/openai_math_paper_handler.py`、`ai_task_engine.py`、`ai_api.py` | 同 actor/scope/来源版本、请求幂等、既有 Artifact 事务、独立读回与终态 CAS；不更改其他 Owner 的事实。 |
-| F 现有 CTH-10/BMP-04 调用面 | `source_brief_*`、`lumenis_core_client.dart`、`bmp04_screen.dart` | 明确情景输入、实际计算、修订/原任务重开、来源返回；F 原有 dirty 保护，非全屏验收。 |
+| F 现有 CTH-10/BMP-04 调用面 | `source_brief_*`、`lumenis_core_client.dart`、`bmp04_screen.dart` | 依2026-10-11业务结果纠偏，用户只提供业务问题/范围/资源约束，后端选择适用数学方法；前端呈现已分析报告、依据和修订/重开，不将论文操作或内部参数表作为默认入口。旧实现存在不等于此体验已验收；F原有dirty保护。 |
 | C2 既有 Learning / 模型研究 | `lumenis/system/ai_gateway/research/openai_math_papers/` | 小型 Gibbs 参数实验与现有 gpt-oss 是不同对象；精确训练准入/重载/独立 held-out 后才记录实验收益，无生产晋升授权。 |
 
 当前状态及固定来源/公式/回执见现有 `evidence/round-15/OPENAI-MATH-ADOPTION-20261007.{md,json}` 的 v2 增补。历史研究结论保留日期，不把先前未实现/未重放描述当作本轮当前事实；也不把新有限实现称为完整论文算法或模型能力。
@@ -31,9 +31,9 @@
 The existing Experience Constitution §38 owns this approved later-execution
 requirement. Read its exact C1-C6/F table with the existing screen specification
 and caller; do not create another Task Card, generic renderer or capability owner.
-Status is `RESEARCH_ADOPTED`; mapped implementation is included in the current
-F/C1-C6 dispatch and proceeds after fresh owner admission. It is not thereby
-IMPLEMENTED.
+Status is `RESEARCH_ADOPTED`; mapped implementation belongs to the retained
+F/C1-C6 outcome scope and proceeds only after actual PO dispatch and fresh owner
+admission. This historical adoption is neither current dispatch nor IMPLEMENTED.
 
 | Owner | Current source entry | Required relationship |
 |---|---|---|
@@ -611,6 +611,91 @@ condition or a real blocker; dispatch never bypasses owner/effect/resource bound
 source routes in §3 to J/U/R coverage, the existing material manifest, and the
 Real Delivery Card/acceptance fields in the Overlay.
 
+### 2026-10-11 窗口执行审核稿：完整用户工作与上线准备
+
+**批准边界**：PO已确认Architecture中的七条用户工作方式及解析采用方向，现要求重新规划窗口工作“给我审核”。以下是这些既有完整成果卡的执行安排草案，不是开工命令。M本次只同步规则和计划；F及其他窗口不因本文恢复，M原产品研发Goal保持暂停；不从本稿推断其他窗口进程状态，不更改模型/effort/速度，不使用VS Code。实际进程/模型无新读回则`NOT_VERIFIED`。蓝图已确认、计划待审、实际派工和成果验收四者分开。
+
+**目标**：用户可在官网进入Web Workspace，独立开展CTH、BMP、研究、提案、视频、播客和内置浏览器工作，得到实际有用成果并保存、修改、关闭重开、追溯及故障恢复；通过原Release Gate后具备获准上线的条件。不是只跑通后台API，也不是只补前端页面。Website/Web先验；Windows/macOS及iOS专项随后完成，全产品四表面未验不能被Web成功覆盖。这里不批准公网部署或新费用。
+
+**基线与复用**：本次规划核对local HEAD、fresh origin/main及live main均为`fa2a863112bff453eb4ad525bae72e2d34bca219`，divergence0/0。8项tracked dirty、2项untracked仍保留，未暂存；它们是待审成果，不是已发布修复。该SHA的Product/App CI成功只证明相应工程检查。本次不重跑业务、不读取生产DB、不把历史Runtime/用户结果刷新为当前事实。后续实际开工重新做增量准入。
+
+#### M：让已有成果转化为一套可交付产品
+
+- 在现有架构、Owner表和W6预约内组织工作，冻结当前有效源码及原始资料，对独有候选逐处判定复用/修复/历史保留；不新增候选源码树。把本机来源用途修复、REA媒体/Office补丁及其他待集成成果分别交回其原Owner，不混成整包提交。
+- 先组织C6与C3/C5有界接收当前业务成果保存断点，再依真实依赖安排各完整成果；普通实现和故障由相应Owner连续完成。只有跨Owner边界、真实权限/费用或产品决定上提M，减少重复消息和逐函数审批。
+- 每批审源码范围、原始资料采用、独立正常路径、可选联动、真实结果及恢复证据；组织精确SHA合入、线上线下读回。保留R01–R15/J1–J8/U01–U25/44屏逐项开放状态，最终交PO重复操作和发布裁决；不以提交数、测试数或汇报量计进度。模型/窗口由PO决定。
+
+#### C1 / W1：可信数据供给和持续采集（J1、U01–U05、原映射R）
+
+- **完整成果**：主体/品牌/别名/市场登记 → 获准来源采集或资料接收 → 原始观察保存 → Source/Evidence/Canonical或明确Pending → 查询、刷新、去重与定时/重启续接。六主平台逐一保留实际可用、受限与缺失字段，公共网页与平台作为来源类别同权；无固定起始日期、每帖最多一张代表封面、未知不补零。
+- **先做什么**：复用已接收的真实资料，把C3/C5能够合法消费的正文、原生ID/链接、时间、指标、身份、用途及版本合同做通；再逐平台修当前实际故障。某平台未齐只影响该路径及覆盖声明，不能阻塞其他数据用于分析/制作。来源未定主体可Pending保存，不错绑事实，也不以业务关键词不匹配丢弃合法原始观察。
+- **源码/交接**：`subject_registry.py`、`lumenis/system/collector/`、现有Scheduler/Browser Session及Source/Evidence/Repository；Core共享区域经W6预约。给C3/C5可引用记录和缺失原因，给F真实资料呈现合同；不在Collector内做最终业务分析，不接触受保护个人XHS身份。
+- **完成出口**：实际许可内采集→正式/待核验接收→至少一个下游真实成果，重复不重复记事实；定时实际运行、会话失效/挑战、取消、断点与恢复可核验。六平台完整目标保留；任何未验证平台单独开放，已完成链持续使用。
+
+#### C2 / W2：贯穿产品的AI增强、Task/Agent正确性与自研模型（J7、U18–U20、原映射R）
+
+- **完整成果**：现有唯一Gateway/Agent/Skills/Memory/Task/Evaluation/Learning向各领域提供可取消、可解释来源、可修改/拒绝的增强；模型缺失只禁用专属增强，不让基础分析、编辑、保存或恢复失败。用户目标和上下文连续，执行返回不得直接当成用户成果已验证。
+- **先做什么**：核对现有Task Engine普通分析与验证器的当前实际状态，消化已完成修复，关闭剩余AI硬依赖和过宽完成判定；消费具体Owner的成果提交/读回/版本回执。采用REA已有Task/Plan/工具/上下文及局部编辑方法时复用原合同，不引入OS执行器、第二网关或另一个任务队列。
+- **源码/交接**：`ai_task_engine.py`、`agent_runtime/`、`lumenis/system/ai_gateway/`及现有Learning/Evaluation。C3负责领域计算和业务解释，C5负责Shared数学与研究/报告；C2接执行和增强，F只呈现业务动作/结果。Math v2按固定论文、假设、原算法/有限子实现/原创适配分别验，不把求解器结果或引用当模型能力。研发中用已核实方法约束契约、反例和正确性，不声称每段代码已由论文证明。
+- **完成出口**：无模型正常路径先通过；有实际获准模型后另验多领域收益、取消、权限撤回、失败恢复。自研模型保留实际训练、checkpoint取回/重载、独立新任务对照、增益与回滚要求；先核实原精确model/data/resource授权。训练/外部API/费用/部署未获准部分保持开放，不阻塞无AI基础成果，也不伪报全AI目标完成。
+
+#### C3 / W3：CTH与BMP两条完整业务结果（J2/J3、U06–U12、原映射R）
+
+- **CTH成果**：选择真实商业主体及时间/问题 → 监测、事件/日历、消费者反馈、风险 → Case/分析与判断 → 方案/决策 → 获准行动及真实结果记录 → 可用运营报告和Evaluation。场内/门店关系、事实/意见、统计/推断分别正确。
+- **BMP成果**：品牌/市场问题 → 竞品、创作者、传播和内容比较 → 研究结论及可编辑Brief/Campaign → 执行记录、结果与评价。计划不当实际执行，互动不当转化或因果；来源/样本、单位、时间、分母和不可比条件明确。
+- **先做什么/源码**：先接收当前`api_dual_domain.py`业务成果与来源用途修复，和C5完成现有两组获准数据的成果保存/修订/读回。沿`cth_cases.py`、`lumenis/bmp/`、现有指标/风险/Case/Decision服务完善有用的后台分析及报告内容，不再让用户选择论文、输入内部任务ID或自己组装分析。C5提供研究/数学方法与引用；C2增强可选；制作交C4按用户选择续接。
+- **完成出口**：CTH与BMP分别由真实用户问题产生有依据的分析、可操作判断及实际成果，保存、修订、重开、中断恢复、来源追溯；来源/预算变化只改受影响部分，保留未变内容及旧版。权限拒绝、空数据、读取错误和部分结果不混同。两条链各自验收，不能只交样本计数或模板报告。
+
+#### C4 / W4：独立制作提案、视频和播客（三个分别验收的成果，J4–J6/U13–U15）
+
+- **提案/文稿**：直接空白或创作要求起步 → 写作/方案编辑、适用预算资源 → 预览审阅 → 实际可编辑文档及导出 → 保存/修订/重开/恢复。可引用用户资料或选接研究/业务成果；没有CTH/BMP/SourceBrief也能开始正常制作。
+- **视频**：导入获准素材 → 可编辑Timeline，完成批准范围内的剪切、拆分、换源、音轨、字幕、转场及批量操作 → 实际预览、渲染和可播放导出 → 项目/素材版本保存、重开、撤销和中断恢复。有限单轨实现不能覆盖尚未完成的批准编辑范围。
+- **播客**：录音或音频导入、脚本/采访组织 → 波形剪辑、排列、混音与节目制作 → 实际试听与音频成品 → 工程和音频共同保存/修订/重开/恢复；Read Aloud、脚本或静态计划不能替代声音成果。共用媒体基础但各自成品和质量独立验。
+- **源码/先做什么**：在`lumenis/shared/content_creation/`、原Timeline/Artifact/rendering与`podcast/`中审查采用REA原创媒体适配；逐处合并，不重写内核或复制厂商私有实现。正常制作不加demo勾选，不取消真实素材权益/权限。C5提供附件/办公文件/版本及可选研究，C6提供稳定FFmpeg/播放器与共享API，F在获准后实现实际编辑操作。
+- **完成出口**：三类各有独立新建的正常成功链，再验可选业务/研究续接；用户实际看/听/修改成品，未选内容不乱变，失败可恢复，旧作品仍能打开。原71份直接材料及12项练习按原manifest保留，未读/未采用不能写成完成。
+
+#### C5 / W5：独立研究、行业案例、可信报告与可恢复成果（J7、U16/U17/U24、原映射R）
+
+- **完整成果**：用户直接提问题或导入获准文档/网页/媒体 → 准确解析、检索、比较、精确引用和研究 → 有结论/依据/局限的研究报告或可编辑成果 → 保存、导出、修订、重开、撤回与恢复；无CTH/BMP任务也可独立使用。行业案例必须支撑实际分析、提案与方法选择，不能只存目录。
+- **先做什么**：先完成受保护的Importer/Permission/SavedWork来源用途与正文Evidence衔接，验现有真实成果版本；继而由原Owner审查REA原创DOCX/XLSX/PPTX及附件适配的源码、许可证、依赖和跨Owner冲突，确定适用范围后接入，修其实际依赖/调用缺口；包接收和方向批准不是源码准入。由原报告/提案Owner组装有用输出，不保留无业务意义的DOCX-only阻断，也不把格式支持承诺为完整WPS或所有宏/嵌入对象可用。
+- **源码/交接**：`lumenis/importer/documents.py`、`lumenis/shared/reporting/{source_brief_job,saved_work}.py`、原Research/Citation/Artifact/通知/偏好和`lumenis/shared/evaluation/openai_math_papers/`。论文方法按实际业务条件接入C3分析、C4制作约束及Evaluation；基础计算不依赖AI，部分实现边界公开可查而非用户配置负担。
+- **资料采用**：沿原MATERIAL-OWNER-MANIFEST及RC映射逐项处理DeepSeek祖先材料、升级规划、官方资料、行业案例、论文与REA输入。保留原件、实际读取区间、权利、采用到源码/成果的证据；缺失和未读明确，199条直接索引不冒充完整资料宇宙。为当前成果补必要可信资料，未完成全量研究义务不删除，也不要求所有无关材料先读完才修当前断点。
+- **完成出口**：独立研究正常成功；各承诺格式解析/引用/输出内容和实际文件打开核验；同成果新旧版本、ACK丢失后重开、来源撤回、修订影响和恢复。作为C3/C4共享支撑时沿相同来源/版本合同，不建立第二资料库或事实库。
+
+#### C6 / W6：一套真实运行产品、安全集成与上线包（J8、U21–U25及原R覆盖）
+
+- **完整成果**：受控接收已有Owner成果 → 一个Core/API/数据库/Permission/Evidence/Browser/Scheduler Runtime → 各正常业务可操作 → 故障/重启恢复 → 可复现构建、安全发布包与回滚证据。后台自动采集不得弹桌面窗口，人工登录/接管须显式请求且同actor/task/租约连续。
+- **先做什么**：核对10项受保护候选和真实调用者，按C3/C5/C6职责逐处接收；后续REA补丁单独审许可证/依赖/冲突。先恢复同版本运行与成果读回条件，再逐批集成，不等所有Owner全做完才发布有界合格修复。不能仅凭端口/health/CI推断整个业务正常。
+- **源码/交接**：现有`app.py`、`lumenis_app_api.py`、`experience_runtime.py`、SYSTEM Browser/`ai_browser_api.py`/`ai_browser_runtime.py`、Shared Database/Security及启动/打包/CI。W6预约共享区域，C3业务、C4媒体、C5资料、C2AI各自拥有规则；F拥有界面，C6负责真实接口、身份和版本完整传递。
+- **浏览器出口**：产品内真实网页画面和受支持操作、导航、显式人工独占接管、停止、返回原任务、成果保存/修订/重开；外部打开由用户选择，不自动弹窗。无AI手动可用；OS/AgentZero桌面worker不再交付。部署拓扑必须保持凭据/CDP不外泄和安全访问，不能删除本地边界假称远程浏览已支持。
+- **发布出口**：补齐当前版本实际安全、数据一致性/备份恢复、权限撤回、可靠停止/重启、性能/资源实测、依赖许可证、所需打包与精确SHA CI，收齐真实任务Evidence/Artifact。准备后由M审工程可发布性并交PO重复操作；公网部署、账户/费用、外部效果按原边界另批。后续Windows/macOS/iOS包和实机未验收不标完成。
+
+#### F：让用户实际工作，先官网与Web（全部44屏、官网家族及跨端要求）
+
+- **当前**：继续暂停。本节仅列获准恢复后的完整工作，不先建新项目、不以规则发布恢复F、不要求先做独立设计稿/Figma。
+- **完整成果**：官网完整内容与真实产品入口；Web首页新建/续接、CTH/BMP、独立研究和三类制作、内置浏览器、资料/结果/版本、设置通知及失败恢复。依Experience和每屏合同直接构建，保持原创二维手绘水彩风格、中英韩、无障碍、窄屏和适用智能UI；不缩成七个演示页面。
+- **先做什么/源码**：复用`app/lib/`、`website/`及既有44屏规格；先纠正业务结果入口和来源呈现，再连接已存在真实Owner合同。用户输入问题/范围/目标，看到已分析报告和直接继续动作；不暴露论文运算、内部ID、权限诊断表作为默认流程。真实标题/正文片段、单封面、作者、平台/原帖、两种时间及指标/“—”有准确定义。
+- **独立与联动**：直接新建提案/视频/播客/研究，不强迫选CTH/BMP；用户选择业务续接才带入资料/上下文。产品内浏览和回到原任务保持工作不丢失；编辑器实际可操作，AI可选建议不覆盖人工修改。F不在界面另造分析模型、假后端或事实。
+- **完成出口**：官网→Web正常工作，七条完整用户链与全部适用屏幕入口/返回/结果/保存/修订/重开/恢复逐项实操，非只Widget或静态截图。Windows/macOS和iOS专项在Web里程碑后完成；OS电脑控制、Android/Linux原生目标不恢复。
+
+#### 按依赖推进的建议顺序（待审，不是新增产品阶段）
+
+| 既有架构轮 | 建议当前集中关闭的完整结果 | 可以独立推进的既有工作 | 原轮次退出要求 |
+| --- | --- | --- | --- |
+| SYSTEM | C6整合同版本运行和安全边界；C1正式可用数据/刷新恢复；C5与C3闭合当前来源到成果保存断点；C2解除基础路径AI硬依赖 | C4可用已有获准素材做独立制作，C5独立研究；F只在明确恢复后绑定真实合同 | 原Core/Collector/Browser/Scheduler/DB/Evidence/Permission/恢复全范围成立；一条样本通了不代表整轮完成 |
+| CTH | C3完成商业运营真实任务，C1/C5提供数据与研究，C2可选增强，F实现完整操作 | BMP和Shared已经具备输入/合同的无冲突能力可准备/修复，不等候编号 | 正常商业判断、行动/结果、报告、修订恢复和原映射验收 |
+| BMP | C3完成品牌/竞品/创作者/传播/Campaign真实结果；C4可选制作，C5保存评价 | 独立研究及制作始终可独立关闭，不能硬依赖业务域 | 品牌市场任务与真实结果/评价可持续使用，计划与已执行状态分明 |
+| Shared | C5完成研究/格式/引用/成果版本，C4分别完成提案/视频/播客 | 已获准AI增强在相同合同内接入，不等到第五轮才接线 | 每项独立使用及可选联动均验，真实文件、视听结果、修订恢复 |
+| Agent Groups / 自研AI | C2证明全域增强、Agent/Skills/Memory/Learning与获准模型实际收益；C6/F完成跨领域与最终产品验收 | 基础能力必须无AI独立验收，当前运行按证据记录；AI资源缺口不阻塞其正常任务，未验AI终态保留OPEN | 完整J/R/U、现有四入口跨域、适用表面、模型和用户验收满足原要求 |
+
+以上五轮是产品验收组织，不要求用户逐轮工作，不规定固定窗口数量或并发上限。审核后的具体开工以实际依赖和文件预约决定；共享文件同一区域只允许一个Writer，独占交接先冻结hash/输入和已完成证据再续接。窗口完成合格批次持续进入W6/M集成，只有完整自身成果通过才能标`JOB_CLOSED`。无真实新事实不反复读全仓、重跑无关检查或传消息。
+
+#### 给PO审核的完整范围与上线边界
+
+采用上面八个既有角色，不新建研发窗口/调度器。原J/U逐项表、R映射、RC/资料清单及真实验收卡继续是完整覆盖；本计划是同一卡片的执行细化，不替代或缩减它们。Website/Web工程可用与正式上线、原生端验收、AI收益、商业可用分别记录。无缺陷/运行证据不能声称完成，有部署条件但未获部署批准也不能实际部署。具体Release条件见Real Delivery本次补充。
+
+本次需要PO审核的是各窗口完整成果、职责交接及建议推进顺序。审核前只发布本计划；不发送复工消息，不将ELIGIBLE改成RUNNING，不启动采集/模型/训练/前端或业务运行验收。
+
 ### Research inputs consumed by the existing owners
 
 The retained RC identifiers below locate the existing research corpus, not new
@@ -633,7 +718,7 @@ dated assignment admitted M's assistants to read F-owned originals; it is not cu
 it does not grant a second Experience authority or automatic frontend acceptance.
 
 Verified improvements are applied promptly through the existing Architecture and
-detailed capability contracts. For the running C1 outcome, Global §10 is the
+detailed capability contracts. For C1 when actually dispatched, Global §10 is the
 single detailed route for original/partial coverage, source-preserving deduplication,
 native time/role/metric facts and downstream source continuity. C1 implements its
 own closure and necessary runtime dependencies through its approved source scope. M sends
@@ -686,8 +771,8 @@ contracts, not permission to bypass real dependencies or create parallel owners.
 | C2 | Inputs: the two C2 manifest materials (`LUMENIS_AI_capability_audit_20261003.txt` and `声音识听_中英韩与音乐情绪_Codex接入增补.md`), approved open foundation/recipe, the existing MODEL_TRAIN grant and only the already approved 8 training + 4 independent evaluation samples. Source: `lumenis/system/ai_gateway/owned_training*.py`, checkpoint/runtime/SSH owners, `owned_inference.py`, `owned_evaluation.py`, existing Agent/Skills/Memory/Learning; research routes RC-01/07/09. | C2 is eligible when dispatched. Validate the existing exact grant against the same input/resource; do not repeat approval for unchanged scope. Existing/free compute first; no historical payment instruction authorizes a rental and no paid fallback is implicit. Deliver actual load/optimizer step/loss, checkpoint bytes, reload/resume, held-out semantics, normal Gateway business inference, cancellation/disconnect recovery, Agent/Skills/Memory continuity, Evaluation/Learning evidence and controlled promotion/rollback. Acceptance J7/U18-U20/R07 on real CTH/BMP/creation work; samples/preflight/model files are not quality or deployment evidence. |
 | C3 | Inputs: real Subject/BrandFocus Briefs, C1 formal source/actor/scope, applicable research/citation outputs from C5, and owned analysis from C2 only when bound. Source: existing CTH/BMP domain owners, Case/Insight/Decision/Action/Outcome/Evaluation objects, `api_dual_domain.py` and mapped business services. | Deliver complete CTH/BMP business work: monitoring/events/calendar, consumer/media/trend/risk, market/competitor/creator/propagation intelligence, cases and decisions, campaign/content lifecycle, authorized actions where promised, actual outcomes and Evaluation. Preserve exact market/unit/time/denominator/source boundaries, uncertainty and recovery; save/reopen/revise the useful result. Acceptance J2/J3, U06-U12 and mapped R gates; a report or proposal is not an executed business outcome. |
 | C5 | Inputs: direct C5/importer/research/shared manifest rows plus second-level references assigned through the material route, approved files/web/audio/video, permitted source refs and versioned constraints. Source: `lumenis/importer/documents.py`, `lumenis/shared/reporting/source_brief_job.py`, `saved_work.py`, `artifact.py`, citation/research/reporting/notification/shared-preference owners and research routes RC01-RC14. | Deliver material import/library/search/precise citation, article-by-article research intake, useful research/report results, versioned Artifact/SavedWork, notifications/preferences and save/revise/reopen/export/rollback with exact source/rights/parent/digest/revocation lineage. The current 199-row manifest (191 original plus 8 supplements) is not the full corpus; official-site 4,797 URL inventory and dated 723+18 unread-body entries remain obligations until actually read/adopted or explicitly disposed. Dependencies: C1 source truth, C2 owned analysis only when bound, C3/C4 consumers and C6 shared Core/API/DB. Acceptance J7, U16/U17/U24 and mapped R gates; unread/unknown-rights/unadopted material remains explicit and cannot be called absorbed. |
-| C4 | Inputs: 71 direct C4 manifest materials, real Brief/inherited Evidence, permitted media and actual resource constraints; keep 12 editing exercises separate. Source: `lumenis/shared/content_creation/`, Timeline/Artifact/render owners and `podcast/`; research routes RC-08/09. | Deliver separate editable pitch, genuinely rendered/editable video and playable/listenable podcast. Read assigned V2/audio/media methods with exact visual/audio read intervals and rights. Verify timeline pan vs seek, ruler/track/playhead, edit/replace/render, save/export/reopen/cancel/recovery, human review and unaffected-part integrity. Dependencies: C3/C5 source inheritance and C6 runtime/FFmpeg/player; F interface work remains F-owned. Acceptance J4–J6/U13–U15, separate normal results for all three. |
-| C6 | Inputs: exact accepted C-owner deltas, source/runtime/DB/API/build/Artifact identity and existing test/runtime receipts. Source: `app.py`, `lumenis_app_api.py`, `experience_runtime.py`, `collector_status_api.py`, `lumenis/blueprint.py`, `lumenis/adapters/collector_service.py`, Shared Database/Evidence, FFmpeg/supervisor and deployment/release owners in §3. | Dependencies: real owner contracts and exact path reservations; preserve dirty/untracked work. Deliver one same-SHA integrated runtime/package with actual API/surface operation, failure/cancel/restart/rollback recovery, required gates and final evidence. For collection, converge existing canonical and V4 callers on one Collector/Task/status/write contract while preserving unique legacy behavior; bind task checkpoints through HTTP and distinguish task query checkpoints from platform-native page cursors. F-reported API-to-Flutter projection/POST issues remain F-owned and were not inspected by M. Developer mode remains user-deferred and recorded, not a blocker. Acceptance J8/U21–U25 and mapped R gates; code/build/health alone cannot prove operation or release. |
+| C4 | Inputs: 71 direct C4 manifest materials, user-authored creative Brief and permitted assets, or optionally inherited business/research Brief/Evidence, with actual resource constraints; keep 12 editing exercises separate. Source: `lumenis/shared/content_creation/`, Timeline/Artifact/render owners and `podcast/`; research routes RC-08/09. | Deliver separate editable pitch, genuinely rendered/editable video and playable/listenable podcast. Read assigned V2/audio/media methods with exact visual/audio read intervals and rights. Verify timeline pan vs seek, ruler/track/playhead, edit/replace/render, save/export/reopen/cancel/recovery, human review and unaffected-part integrity. Dependencies: C5 shared version/asset contracts and C6 runtime/FFmpeg/player; C3/C5 business/research inheritance is optional, never a prerequisite for independent creation; F interface work remains F-owned. Acceptance J4–J6/U13–U15, separate normal results for all three. |
+| C6 | Inputs: exact accepted C-owner deltas, source/runtime/DB/API/build/Artifact identity and existing test/runtime receipts. Source: `app.py`, `lumenis_app_api.py`, `experience_runtime.py`, `collector_status_api.py`, `lumenis/blueprint.py`, `lumenis/adapters/collector_service.py`, Shared Database/Evidence, FFmpeg/supervisor and deployment/release owners in §3. | Dependencies: real owner contracts and exact path reservations; preserve dirty/untracked work. Deliver one same-SHA integrated runtime/package with actual API/surface operation, failure/cancel/restart/rollback recovery, required gates and final evidence. For collection, converge existing canonical and V4 callers on one Collector/Task/status/write contract while preserving unique legacy behavior; bind task checkpoints through HTTP and distinguish task query checkpoints from platform-native page cursors. F owns the frontend caller and presentation; C6 owns shared API/projection/authentication bindings. Each fixes its actual affected region under reservation, without shifting backend business ownership into F. Developer mode remains user-deferred and recorded, not a blocker. Acceptance J8/U21–U25 and mapped R gates; code/build/health alone cannot prove operation or release. |
 | F | Independent four-surface Experience responsibility; detailed front-end source/input remains F-owned. Sole contract: Experience Constitution section 38 and screen-specific contracts maintained alongside direct implementation. F owns Experience across the five architecture product rounds and, when dispatched, owns existing Flutter/Website implementation, real API binding, screen/interaction/state behavior, responsive composition, zh-CN/en/ko localization and accessibility. | Deliver the complete approved Website/Web/Desktop/Mobile experience for every mapped capability, including loading/empty/error/denied/offline/cancel/retry/recovery states, saved-work continuity and user-operable flows. F does not redefine backend truth, Owner, Permission or business acceptance; its complete output and acceptance remain separately owned and feed M/W6 integration. |
 
 ### C1/C6 collector source audit — verified repair target, not a new owner
