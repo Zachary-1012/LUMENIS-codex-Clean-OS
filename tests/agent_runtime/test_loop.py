@@ -6,19 +6,14 @@ Integration tests for agent_runtime.loop
 import sys
 import os
 import json
-import pytest
 import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from tests.agent_runtime.formation_support import trusted_test_executor
-from agent_runtime.loop import AgentLoop, AgentConfig, AgentResult
-from agent_runtime.state_machine import AgentState
-from agent_runtime.planner import Plan, PlanStep, Planner, PlanMode
-from agent_runtime.replanner import Replanner
-from agent_runtime.observation import ObservationLayer
-from lumenis.shared.evaluation.trajectory import TrajectoryEvaluator
+from agent_runtime.loop import AgentLoop, AgentConfig
+from agent_runtime.planner import Planner
 from agent_runtime.durable_adapter import DurableExecutionAdapter
 
 
@@ -340,36 +335,70 @@ class TestEvaluationIntegration:
 # ──────────────────────────────────────────────────────────
 
 class TestEdgeCases:
+    def test_unbound_default_planner_fails_without_tool_execution(self):
+        calls = []
+
+        def counting_tool(step, context):
+            calls.append(step)
+            return {"success": True, "output": "unexpected", "estimated_cost": 0.0}
+
+        loop = AgentLoop(
+            planner=Planner(),
+            tool_binding=trusted_test_executor(counting_tool),
+            durable_adapter=DurableExecutionAdapter(enabled=False),
+        )
+        result = loop.run("test")
+
+        assert result.status == "failed"
+        assert result.plan["steps"] == []
+        assert result.metrics["steps"] == 0
+        assert result.error == "Planner returned empty plan"
+        assert calls == []
+
     def test_empty_plan_falls_back(self):
-        """AI 返回空 steps 时应降级为单步计划并执行成功。"""
+        """AI 返回空 steps 时保留失败状态，不合成可执行目标步骤。"""
         def empty_plan_chat(system, user, **kwargs):
-            return json.dumps({"steps": []}), "zhipu"
+            return json.dumps({"steps": []}), "test-fixture-provider"
+
+        calls = []
+
+        def counting_tool(step, context):
+            calls.append(step)
+            return {"success": True, "output": "unexpected", "estimated_cost": 0.0}
 
         loop = AgentLoop(
             planner=Planner(ai_chat_func=empty_plan_chat),
-            tool_binding=trusted_test_executor(_mock_tool_executor_success),
+            tool_binding=trusted_test_executor(counting_tool),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
-        # 空 steps 触发 fallback → 单步 direct_execution → 执行成功
-        assert result.status == "completed"
-        assert result.metrics["steps"] == 1
+        assert result.status == "failed"
+        assert result.plan["steps"] == []
+        assert result.metrics["steps"] == 0
         assert result.plan["is_fallback"] is True
+        assert calls == []
 
     def test_ai_exception_fallback(self):
-        """AI 异常时应降级为单步计划并执行。"""
+        """AI 异常时不合成工具步骤，也不调用工具执行器。"""
         def raising_chat(system, user, **kwargs):
             raise RuntimeError("AI down")
 
+        calls = []
+
+        def counting_tool(step, context):
+            calls.append(step)
+            return {"success": True, "output": "unexpected", "estimated_cost": 0.0}
+
         loop = AgentLoop(
             planner=Planner(ai_chat_func=raising_chat),
-            tool_binding=trusted_test_executor(_mock_tool_executor_success),
+            tool_binding=trusted_test_executor(counting_tool),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
-        # 降级为单步 direct_execution，应能完成
-        assert result.status == "completed"
-        assert result.metrics["steps"] == 1
+        assert result.status == "failed"
+        assert result.plan["steps"] == []
+        assert result.metrics["steps"] == 0
+        assert calls == []
 
     def test_tool_exception_handled(self):
         """工具执行异常应被捕获，不崩溃。"""

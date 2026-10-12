@@ -190,6 +190,9 @@ void main() {
       expect(repository.submitted, ['检查本周风险变化']);
       expect(viewModel.submitPhase, Ai01SubmitPhase.completed);
       expect(viewModel.intentResult?.executionId, 'exec-1');
+      expect(viewModel.latestSubmission?.task, '检查本周风险变化');
+      expect(viewModel.submissions, hasLength(1));
+      expect(viewModel.submissions.single.phase, Ai01SubmitPhase.completed);
       expect(viewModel.draft, '  检查本周风险变化  ', reason: 'draft is kept');
       expect(viewModel.submitBlock, Ai01SubmitBlock.alreadySubmitted);
       await viewModel.submit();
@@ -197,8 +200,48 @@ void main() {
 
       viewModel.updateDraft('检查本周风险变化，并列出来源');
       expect(viewModel.canSubmit, isTrue);
+      expect(viewModel.latestSubmission?.task, '检查本周风险变化');
+      expect(viewModel.intentResult?.executionId, 'exec-1');
       viewModel.dispose();
     });
+
+    test(
+      'keeps earlier task results when draft and later submissions change',
+      () async {
+        final repository = _FakeAi01Repository(
+          snapshot: _snapshot(),
+          onSubmit: (task) async => Ai01IntentResult(
+            kind: task == 'task one'
+                ? Ai01IntentKind.completed
+                : Ai01IntentKind.notCompleted,
+            status: task == 'task one' ? 'completed' : 'failed',
+            executionId: task == 'task one' ? 'exec-1' : 'exec-2',
+            evidenceRecorded: task == 'task one',
+          ),
+        );
+        final viewModel = await ready(repository);
+
+        viewModel.updateDraft(' task one ');
+        await viewModel.submit();
+        final first = viewModel.submissions.single;
+
+        viewModel.updateDraft('task two');
+        expect(viewModel.latestSubmission, same(first));
+        expect(viewModel.intentResult?.executionId, 'exec-1');
+        await viewModel.submit();
+
+        expect(viewModel.submissions, hasLength(2));
+        expect(viewModel.submissions[0].task, 'task one');
+        expect(viewModel.submissions[0].result?.executionId, 'exec-1');
+        expect(viewModel.submissions[0].phase, Ai01SubmitPhase.completed);
+        expect(viewModel.submissions[1].task, 'task two');
+        expect(viewModel.submissions[1].result?.executionId, 'exec-2');
+        expect(viewModel.submissions[1].phase, Ai01SubmitPhase.notCompleted);
+        expect(() => viewModel.submissions.add(first), throwsUnsupportedError);
+
+        viewModel.dispose();
+      },
+    );
 
     test('does not submit without a read, a draft, or within limits', () async {
       final repository = _FakeAi01Repository(
@@ -244,6 +287,8 @@ void main() {
 
       expect(viewModel.submitPhase, Ai01SubmitPhase.notCompleted);
       expect(viewModel.intentResult?.evidenceRecorded, isFalse);
+      expect(viewModel.latestSubmission?.task, 'task');
+      expect(viewModel.latestSubmission?.phase, Ai01SubmitPhase.notCompleted);
       viewModel.dispose();
     });
 
@@ -254,6 +299,7 @@ void main() {
           kind: Ai01IntentKind.pendingApproval,
           status: 'pending_approval',
           auditId: 'aud-1',
+          requiresApproval: true,
         ),
       );
       final viewModel = await ready(repository);
@@ -263,6 +309,8 @@ void main() {
 
       expect(viewModel.submitPhase, Ai01SubmitPhase.pendingApproval);
       expect(viewModel.intentResult?.executionId, isNull);
+      expect(viewModel.latestSubmission?.task, 'task');
+      expect(viewModel.latestSubmission?.result?.requiresApproval, isTrue);
       viewModel.dispose();
     });
 
@@ -310,6 +358,8 @@ void main() {
 
         expect(viewModel.submitPhase, failureCase.phase);
         expect(viewModel.intentResult, isNull);
+        expect(viewModel.latestSubmission?.task, 'task');
+        expect(viewModel.latestSubmission?.phase, failureCase.phase);
         expect(repository.submitted, hasLength(1), reason: 'no auto retry');
         viewModel.dispose();
       });
@@ -336,20 +386,42 @@ void main() {
       viewModel.dispose();
     });
 
-    test('a result arriving after dispose is dropped quietly', () async {
-      final gate = Completer<Ai01IntentResult>();
-      final repository = _FakeAi01Repository(
-        snapshot: _snapshot(),
-        onSubmit: (_) => gate.future,
-      );
-      final viewModel = await ready(repository);
-      viewModel.updateDraft('task');
+    test(
+      'an old client result cannot update the next client ViewModel',
+      () async {
+        final gate = Completer<Ai01IntentResult>();
+        final oldRepository = _FakeAi01Repository(
+          snapshot: _snapshot(),
+          onSubmit: (_) => gate.future,
+        );
+        final oldViewModel = await ready(oldRepository);
+        oldViewModel.updateDraft('old client task');
 
-      final pending = viewModel.submit();
-      viewModel.dispose();
-      gate.complete(completed);
-      await pending;
-    });
+        final pending = oldViewModel.submit();
+        oldViewModel.dispose();
+
+        final newRepository = _FakeAi01Repository(
+          snapshot: _snapshot(),
+          onSubmit: (_) async => completed,
+        );
+        final newViewModel = await ready(newRepository);
+        newViewModel.updateDraft('new client task');
+        await newViewModel.submit();
+
+        gate.complete(completed);
+        await pending;
+
+        expect(
+          oldViewModel.latestSubmission?.phase,
+          Ai01SubmitPhase.outcomeUnknown,
+        );
+        expect(oldViewModel.latestSubmission?.task, 'old client task');
+        expect(newViewModel.submissions, hasLength(1));
+        expect(newViewModel.latestSubmission?.task, 'new client task');
+        expect(newViewModel.latestSubmission?.result?.executionId, 'exec-1');
+        newViewModel.dispose();
+      },
+    );
   });
 }
 

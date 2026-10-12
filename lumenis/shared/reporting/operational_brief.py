@@ -30,6 +30,24 @@ def _content_evidence_ref(con, row, scope_ref):
             declared = json.loads(raw_ref)
         except ValueError:
             declared = None
+        if isinstance(declared, dict) and 'approved_internal_source_use' in declared:
+            from lumenis.importer.documents import resolve_approved_source_reference
+            from .saved_work import SavedWorkError
+
+            parent = declared['approved_internal_source_use']
+            if not isinstance(parent, dict) or not isinstance(row.get('content'), str):
+                return None
+            try:
+                resolved = resolve_approved_source_reference(
+                    con, source_id=row.get('source_id'), canonical_id=row.get('canonical_id'),
+                    domain_id=row.get('domain_id'), subject_id=row.get('subject_id') or None,
+                    brand_focus_id=row.get('brand_focus_id') or None,
+                    source_content_locator=parent.get('source_content_locator'),
+                    body_sha256=hashlib.sha256(row['content'].encode('utf-8')).hexdigest(),
+                )
+            except SavedWorkError:
+                return None
+            return resolved['content_evidence_ref']
         if isinstance(declared, dict) and 'content_evidence_ref' in declared:
             ref = declared['content_evidence_ref']
             if isinstance(ref, str) and re.fullmatch(r'app_evidence_records:[1-9]\d*', ref):
@@ -267,15 +285,27 @@ def build_scoped_source_brief(
         body = row.get("content")
         if include_analysis_text and isinstance(body, str) and body.strip() and len(analysis_sources) < 8:
             selected_text, selection = _analysis_window(body, analysis_question)
-            analysis_sources.append({
+            content_ref = _content_evidence_ref(con, row, scope_ref)
+            source = {
                 "source_id": source_id, "evidence_ref": scope_ref,
-                "content_evidence_ref": _content_evidence_ref(con, row, scope_ref),
+                "content_evidence_ref": content_ref,
                 "title": title, "text": selected_text, "truncated": len(body) > len(selected_text),
                 "text_selection": selection,
                 "body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
                 "publish_datetime": publish, "captured_at": captured,
                 "source_platform": row.get("source_platform") or "UNKNOWN",
-            })
+            }
+            raw_ref = row.get('raw_ref')
+            try:
+                raw_ref = json.loads(raw_ref) if isinstance(raw_ref, str) else raw_ref
+            except ValueError:
+                raw_ref = None
+            parent = raw_ref.get('approved_internal_source_use') if isinstance(raw_ref, dict) else None
+            if isinstance(parent, dict) and content_ref is not None:
+                source.update(canonical_id=row.get('canonical_id'),
+                              source_scope_locator=parent.get('scope_evidence_ref'),
+                              source_content_locator=parent.get('source_content_locator'))
+            analysis_sources.append(source)
 
     withheld_count = counts["rejected_count"] + unsafe_links + ambiguous_source_count
     truncated = result["truncated"]

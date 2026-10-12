@@ -4,6 +4,9 @@ from dataclasses import replace
 import json
 from copy import deepcopy
 import math
+from pathlib import Path
+import subprocess
+import wave
 
 import pytest
 
@@ -54,6 +57,157 @@ def test_fingerprint_uses_ffprobe_and_keeps_unverified_claims_empty(tmp_path, mo
     assert command[command.index("-format_whitelist") + 1] == video_editing.MEDIA_INPUT_DEMUXERS
     assert command.index("-format_whitelist") < command.index("-i")
     assert {"concat", "hls", "dash"}.isdisjoint(video_editing.MEDIA_INPUT_DEMUXERS.split(","))
+
+
+def _write_short_stereo_wave(path: Path) -> None:
+    with wave.open(str(path), "wb") as target:
+        target.setnchannels(2)
+        target.setsampwidth(2)
+        target.setframerate(48_000)
+        target.writeframes(bytes(4 * 4_800))
+
+
+def test_actual_ffprobe_wav_stream_metadata_preserves_missing_start_pts_as_null(tmp_path):
+    ffprobe = video_editing._ffprobe_path()
+    if not ffprobe or not Path(ffprobe).is_file():
+        pytest.skip("actual media metadata contract requires FFprobe")
+    source = tmp_path / "short-stereo.wav"
+    _write_short_stereo_wave(source)
+    result = subprocess.run(
+        [ffprobe, "-v", "error", "-protocol_whitelist", "file", "-format_whitelist", "wav",
+         "-show_entries", "stream=index,codec_type,sample_rate,channels,time_base,start_pts,duration_ts",
+         "-of", "json", "-i", str(source)],
+        capture_output=True, text=True, timeout=15, check=True, shell=False,
+    )
+    reported = json.loads(result.stdout)["streams"][0]
+
+    asset = fingerprint_local_media(str(source))
+    assert len(asset.stream_metadata) == 1
+    stream = asset.stream_metadata[0]
+    assert stream.kind == "audio" and stream.type_relative_ordinal == 0
+    assert stream.global_index == reported.get("index")
+    assert stream.sample_rate == 48_000 and stream.channels == 2
+    assert stream.time_base == reported.get("time_base")
+    raw_duration_ts = reported.get("duration_ts")
+    assert stream.duration_ts == (int(raw_duration_ts) if raw_duration_ts is not None else None)
+    # FFprobe may omit an undefined field. Omission stays null; it is never
+    # synthesized into a zero timestamp.
+    raw_start_pts = reported.get("start_pts")
+    expected_start_pts = int(raw_start_pts) if raw_start_pts is not None else None
+    assert stream.start_pts == expected_start_pts
+    if raw_start_pts is None:
+        assert asset.to_dict()["stream_metadata"][0]["start_pts"] is None
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("index", True), ("sample_rate", 48_000.0), ("channels", "stereo"),
+    ("time_base", "0/0"), ("start_pts", 1.5), ("duration_ts", -1),
+])
+def test_probe_rejects_present_malformed_stream_metadata(tmp_path, monkeypatch, field, value):
+    source = tmp_path / "malformed-stream.wav"
+    source.write_bytes(b"probe payload is isolated by the test")
+    stream = {
+        "index": 0, "codec_type": "audio", "duration": "1.0",
+        "sample_rate": "48000", "channels": 2, "time_base": "1/48000",
+        "start_pts": "0", "duration_ts": "48000",
+    }
+    stream[field] = value
+    payload = json.dumps({"streams": [stream], "format": {"duration": "1.0"}})
+    monkeypatch.setattr(video_editing, "_ffprobe_path", lambda: "ffprobe-test")
+    monkeypatch.setattr(
+        video_editing.subprocess, "run",
+        lambda *args, **kwargs: type("Probe", (), {"stdout": payload})(),
+    )
+    with pytest.raises(VideoEditingError, match="MEDIA_STREAM_METADATA_INVALID"):
+        fingerprint_local_media(str(source))
+
+
+def test_probe_retains_negative_start_pts_without_zero_or_seconds_conversion(tmp_path, monkeypatch):
+    source = tmp_path / "negative-start.wav"
+    source.write_bytes(b"probe payload is isolated by the test")
+    payload = json.dumps({"streams": [{
+        "index": 0, "codec_type": "audio", "duration": "1.0",
+        "sample_rate": "48000", "channels": 2, "time_base": "1/48000",
+        "start_pts": "-240", "duration_ts": "48000",
+    }]})
+    monkeypatch.setattr(video_editing, "_ffprobe_path", lambda: "ffprobe-test")
+    monkeypatch.setattr(
+        video_editing.subprocess, "run",
+        lambda *args, **kwargs: type("Probe", (), {"stdout": payload})(),
+    )
+    asset = fingerprint_local_media(str(source))
+    assert asset.stream_metadata[0].start_pts == -240
+    assert asset.stream_metadata[0].time_base == "1/48000"
+
+
+def test_tampered_verified_stream_metadata_is_rejected_on_timeline_reopen(tmp_path):
+    ffprobe = video_editing._ffprobe_path()
+    if not ffprobe or not Path(ffprobe).is_file():
+        pytest.skip("actual media metadata contract requires FFprobe")
+    source = tmp_path / "tamper-check.wav"
+    _write_short_stereo_wave(source)
+    asset = fingerprint_local_media(str(source))
+    timeline = Timeline.from_assets((asset,)).add_audio_track("voice", audio_role="voiceover")
+    timeline = timeline.add_clip(
+        asset.asset_id, source_in=0.01, source_out=0.08, track_id="voice",
+        timeline_start=0.2, audio_stream_index=0,
+    )
+    tampered = deepcopy(timeline.to_dict())
+    stored_stream = tampered["assets"][0]["stream_metadata"][0]
+    stored_stream["duration_ts"] = (stored_stream["duration_ts"] or 0) + 1
+    with pytest.raises(VideoEditingError, match="TIMELINE_REOPEN_ASSET_MISMATCH"):
+        Timeline.from_dict(tampered, assets=(asset,))
+
+
+@pytest.mark.parametrize("field,value", [
+    ("type_relative_ordinal", False), ("global_index", False),
+    ("duration_ts", 4800.0), ("sample_rate", 48000.0), ("channels", 2.0),
+])
+def test_timeline_reopen_rejects_wrong_metadata_types_even_when_numerically_equal(tmp_path, field, value):
+    source = tmp_path / "metadata-types.wav"
+    _write_short_stereo_wave(source)
+    asset = fingerprint_local_media(str(source))
+    document = Timeline.from_assets((asset,)).to_dict()
+    document["assets"][0]["stream_metadata"][0][field] = value
+    with pytest.raises(VideoEditingError, match="MEDIA_STREAM_METADATA_INVALID"):
+        Timeline.from_dict(document, assets=(asset,))
+
+
+def test_legacy_timeline_reopens_with_fresh_metadata_then_keeps_audio_edit_semantics(tmp_path):
+    ffprobe = video_editing._ffprobe_path()
+    if not ffprobe or not Path(ffprobe).is_file():
+        pytest.skip("actual media metadata contract requires FFprobe")
+    source = tmp_path / "legacy-reopen.wav"
+    _write_short_stereo_wave(source)
+    asset = fingerprint_local_media(str(source))
+    original = Timeline.from_assets((asset,)).add_audio_track("voice", audio_role="voiceover")
+    original = original.add_clip(
+        asset.asset_id, source_in=0.02, source_out=0.08, track_id="voice",
+        timeline_start=0.25, audio_stream_index=0,
+    )
+    saved_legacy = deepcopy(original.to_dict())
+    saved_legacy["assets"][0].pop("stream_metadata")
+    assert "stream_metadata" not in saved_legacy["assets"][0]
+
+    reopened = Timeline.from_dict(saved_legacy, assets=(asset,))
+    reopened_clip = reopened.tracks[1].clips[0]
+    assert (reopened_clip.source_in, reopened_clip.source_out, reopened_clip.timeline_start) == (
+        0.02, 0.08, 0.25,
+    )
+    assert reopened_clip.audio_stream_index == 0
+    assert reopened.to_dict()["assets"][0]["stream_metadata"] == asset.to_dict()["stream_metadata"]
+    # The old document is not rewritten in place; the next current serialization
+    # reflects metadata freshly admitted from the verified media bytes.
+    assert "stream_metadata" not in saved_legacy["assets"][0]
+
+    moved = reopened.move_audio_clip(reopened_clip.clip_id, timeline_start=0.4)
+    moved_clip = moved.tracks[1].clips[0]
+    assert (moved_clip.source_in, moved_clip.source_out, moved_clip.timeline_start) == (
+        0.02, 0.08, 0.4,
+    )
+    assert moved_clip.audio_stream_index == 0
+    recovered = Timeline.from_dict(moved.to_dict(), assets=(asset,))
+    assert recovered.tracks[1].clips[0] == moved_clip
 
 
 @pytest.mark.parametrize("network_path", ["//server/share/source.mp4", r"\\server\share\source.mp4"])
@@ -638,3 +792,230 @@ def test_caption_profile_is_not_a_title_or_permission_grant(caption_edit_asset):
         0, 1, "literal", layout_profile="literal-wide-720p-v2")
     assert captioned.to_dict()["approval_required"] is True
     assert captioned.assets[0].rights_status == "unknown" and captioned.assets[0].evidence_refs == ()
+
+
+def _real_ffprobe_voice_timeline(tmp_path):
+    ffprobe = video_editing._ffprobe_path()
+    if not ffprobe or not Path(ffprobe).is_file():
+        pytest.skip("Timeline edit batch requires actual local FFprobe")
+    source = tmp_path / "edit-batch-source.wav"
+    _write_short_stereo_wave(source)
+    asset = fingerprint_local_media(str(source))
+    assert asset.media_kind == "audio" and asset.audio_stream_count == 1
+    assert len(asset.stream_metadata) == 1 and asset.stream_metadata[0].kind == "audio"
+
+    timeline = Timeline.from_assets((asset,)).add_audio_track(
+        "voice", audio_role="voiceover"
+    )
+    timeline = timeline.add_clip(
+        asset.asset_id,
+        source_in=0.0,
+        source_out=asset.duration_sec,
+        track_id="voice",
+        audio_role="voiceover",
+        timeline_start=0.25,
+    )
+    clip = next(clip for track in timeline.tracks for clip in track.clips)
+    return source, asset, timeline, clip
+
+
+def test_timeline_apply_edit_batch_matches_owner_operations_and_reopens_with_metadata(
+    tmp_path, monkeypatch,
+):
+    source, asset, original, clip = _real_ffprobe_voice_timeline(tmp_path)
+    source_bytes = source.read_bytes()
+    original_version = original.version
+    mix = {"volume": 0.6, "fade_in_sec": 0.01, "fade_out_sec": 0.015, "ducking": True}
+    commands = [
+        {"op": "trim", "clip_id": clip.clip_id, "source_in": 0.01, "source_out": 0.09},
+        {"op": "audio_mix", "clip_id": clip.clip_id, "mix": mix},
+        {"op": "move_audio_clip", "clip_id": clip.clip_id, "timeline_start": 0.5},
+        {"op": "add_caption", "start_sec": 0.51, "end_sec": 0.55, "text": "Batch caption"},
+        {"op": "set_format", "format_ratio": "16:9"},
+    ]
+    # Keep generated overlay identity deterministic so the batch can be compared
+    # exactly with the same existing owner operations called one by one.
+    monkeypatch.setattr(video_editing, "_id", lambda prefix: f"{prefix}-batch-test")
+
+    edited = original.apply_edit_batch(commands, expected_version=original_version)
+    before_format = (
+        original.trim(clip.clip_id, source_in=0.01, source_out=0.09)
+        .set_audio_mix(clip.clip_id, AudioMix(**mix))
+        .move_audio_clip(clip.clip_id, timeline_start=0.5)
+        .add_caption(0.51, 0.55, "Batch caption")
+    )
+    expected = before_format.set_format("16:9")
+
+    assert edited.to_dict() == expected.to_dict()
+    assert edited.version == original_version + len(commands)
+    edited_clip = edited.tracks[1].clips[0]
+    assert (edited_clip.source_in, edited_clip.source_out, edited_clip.timeline_start) == (
+        0.01, 0.09, 0.5,
+    )
+    assert edited_clip.audio_mix == AudioMix(**mix)
+    assert edited.overlays[0].text == "Batch caption"
+    assert edited.format_ratio == "16:9"
+    export_request = edited.to_export_request()
+    assert export_request["status"] == "blocked"
+    assert export_request["approval_required"] is True
+    assert export_request["external_fetch"] is False
+    assert source.read_bytes() == source_bytes
+
+    reopened = Timeline.from_dict(edited.to_dict(), assets=(asset,))
+    assert reopened.to_dict() == edited.to_dict()
+    assert reopened.assets[0].sha256 == asset.sha256
+    assert reopened.assets[0].stream_metadata == asset.stream_metadata
+    assert reopened.assets[0].rights_status == "unknown"
+    assert reopened.assets[0].evidence_refs == ()
+
+    # Timeline history remains per operation: this undo reverses only set_format.
+    restored = edited.undo()
+    assert restored.version == edited.version + 1
+    assert restored.format_ratio == original.format_ratio
+    assert restored.tracks == edited.tracks and restored.overlays == edited.overlays
+    assert restored.assets[0].to_dict() == asset.to_dict()
+    assert restored.tracks[1].clips[0].source_in == 0.01
+    assert restored.tracks[1].clips[0].timeline_start == 0.5
+    assert restored.tracks[1].clips[0].audio_mix == AudioMix(**mix)
+    assert source.read_bytes() == source_bytes
+
+
+def test_timeline_apply_edit_batch_routes_split_reorder_delete_caption_and_undo(
+    tmp_path, monkeypatch,
+):
+    source = tmp_path / "planned-video.mp4"
+    source.write_bytes(b"isolated local timeline fixture")
+    monkeypatch.setattr(
+        video_editing, "_probe_media_info",
+        lambda _path: video_editing._MediaProbe(8.0, True, 1),
+    )
+    asset = fingerprint_local_media(str(source))
+    original = Timeline.from_assets((asset,)).add_clip(asset.asset_id, source_out=8.0)
+    original = original.add_caption(
+        0.25, 1.0, "Original caption", layout_profile="literal-wide-720p-v2"
+    ).add_text_overlay(0.0, 2.0, "Retained title")
+    clip = original.tracks[0].clips[0]
+    caption = next(item for item in original.overlays if item.kind == "caption")
+    title = next(item for item in original.overlays if item.kind == "text")
+    commands = [
+        {"op": "split", "clip_id": clip.clip_id, "at_sec": 4.0},
+        {"op": "reorder", "clip_id": f"{clip.clip_id}-b", "new_index": 0},
+        {"op": "delete", "clip_id": f"{clip.clip_id}-a", "ripple": True},
+        {
+            "op": "update_caption", "overlay_id": caption.overlay_id,
+            "start_sec": 0.5, "end_sec": 1.5, "text": "Updated caption",
+        },
+        {"op": "remove_overlay", "overlay_id": title.overlay_id},
+        {"op": "undo"},
+    ]
+
+    edited = original.apply_edit_batch(commands, expected_version=original.version)
+    expected = (
+        original.split(clip.clip_id, at_sec=4.0)
+        .reorder(f"{clip.clip_id}-b", new_index=0)
+        .delete(f"{clip.clip_id}-a", ripple=True)
+        .update_caption(
+            caption.overlay_id, 0.5, 1.5, "Updated caption",
+            layout_profile="literal-wide-720p-v2",
+        )
+        .remove_overlay(title.overlay_id)
+        .undo()
+    )
+
+    assert edited.to_dict() == expected.to_dict()
+    assert edited.version == original.version + len(commands)
+    assert len(edited.tracks[0].clips) == 1
+    assert edited.tracks[0].clips[0].clip_id == f"{clip.clip_id}-b"
+    assert edited.tracks[0].clips[0].timeline_start == 0.0
+    assert len(edited.overlays) == 2
+    updated_caption = next(item for item in edited.overlays if item.kind == "caption")
+    assert updated_caption.text == "Updated caption"
+    assert updated_caption.layout_profile == "literal-wide-720p-v2"
+    assert any(item.overlay_id == title.overlay_id for item in edited.overlays)
+    assert edited.assets[0].rights_status == "unknown"
+    assert edited.assets[0].evidence_refs == ()
+    assert edited.to_export_request()["status"] == "blocked"
+
+
+def test_timeline_apply_edit_batch_checks_exact_version_before_commands(tmp_path):
+    source, asset, original, clip = _real_ffprobe_voice_timeline(tmp_path)
+    original_digest = original._view_digest()
+    source_bytes = source.read_bytes()
+    commands = [
+        {"op": "trim", "clip_id": clip.clip_id, "source_in": 0.01, "source_out": 0.09},
+        {"op": "unsupported"},
+    ]
+
+    with pytest.raises(VideoEditingError, match="TIMELINE_VERSION_MISMATCH"):
+        original.apply_edit_batch(commands, expected_version=original.version - 1)
+    assert original._view_digest() == original_digest
+    assert original.assets[0].sha256 == asset.sha256
+    assert source.read_bytes() == source_bytes
+
+    base = Timeline.from_assets((asset,))
+    with pytest.raises(VideoEditingError, match="TIMELINE_VERSION_MISMATCH"):
+        base.apply_edit_batch([], expected_version=True)
+    assert base.version == 1 and base._view_digest() == Timeline.from_assets((asset,))._view_digest()
+
+
+def test_timeline_apply_edit_batch_mid_batch_failure_preserves_original_hash(tmp_path):
+    source, asset, original, clip = _real_ffprobe_voice_timeline(tmp_path)
+    original_digest = original._view_digest()
+    source_bytes = source.read_bytes()
+    commands = [
+        {"op": "trim", "clip_id": clip.clip_id, "source_in": 0.01, "source_out": 0.09},
+        {"op": "trim", "clip_id": clip.clip_id, "source_in": 0.02, "source_out": 1.0},
+    ]
+
+    with pytest.raises(VideoEditingError, match="TRIM_RANGE_OUTSIDE_MEDIA_ASSET"):
+        original.apply_edit_batch(commands, expected_version=original.version)
+    assert original._view_digest() == original_digest
+    assert original.assets[0].sha256 == asset.sha256
+    assert source.read_bytes() == source_bytes
+
+
+@pytest.mark.parametrize("failure", ["unknown_field", "unsupported_operation", "invalid_mix"])
+def test_timeline_apply_edit_batch_rejects_unknown_command_fields_and_operations(
+    tmp_path, failure,
+):
+    source, asset, original, clip = _real_ffprobe_voice_timeline(tmp_path)
+    original_digest = original._view_digest()
+    source_bytes = source.read_bytes()
+    if failure == "unknown_field":
+        command = {
+            "op": "trim", "clip_id": clip.clip_id, "source_in": 0.01,
+            "source_out": 0.09, "approved": True,
+        }
+        error = "EDIT_COMMAND_FIELDS_INVALID"
+    elif failure == "unsupported_operation":
+        command = {"op": "render"}
+        error = "EDIT_OPERATION_NOT_SUPPORTED"
+    else:
+        command = {
+            "op": "audio_mix", "clip_id": clip.clip_id,
+            "mix": {"volume": 0.5, "unreviewed_effect": True},
+        }
+        error = "INVALID_AUDIO_MIX"
+
+    with pytest.raises(VideoEditingError, match=error):
+        original.apply_edit_batch([command], expected_version=original.version)
+    assert original._view_digest() == original_digest
+    assert original.assets[0].sha256 == asset.sha256
+    assert source.read_bytes() == source_bytes
+
+
+def test_timeline_apply_edit_batch_accepts_128_commands_and_rejects_129(tmp_path):
+    source, asset, original, _clip = _real_ffprobe_voice_timeline(tmp_path)
+    original_digest = original._view_digest()
+    source_bytes = source.read_bytes()
+    commands = [{"op": "set_format", "format_ratio": "16:9"}] * 128
+
+    edited = original.apply_edit_batch(commands, expected_version=original.version)
+    assert edited.version == original.version + 128
+    assert edited.format_ratio == "16:9"
+
+    with pytest.raises(VideoEditingError, match="EDIT_COMMAND_COUNT_EXCEEDED"):
+        original.apply_edit_batch(commands + [{"op": "undo"}], expected_version=original.version)
+    assert original._view_digest() == original_digest
+    assert original.assets[0].sha256 == asset.sha256
+    assert source.read_bytes() == source_bytes

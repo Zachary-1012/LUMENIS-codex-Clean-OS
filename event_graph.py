@@ -27,13 +27,12 @@ v5.9.9 修复：从纯内存实现改为数据库持久化
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
-from lumenis.shared.database import get_repository, main_db_path
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
+from lumenis.shared.database import get_repository, main_db_path
 
 # 事件类型定义
 EVENT_TYPES = {
@@ -158,10 +157,11 @@ def init_db() -> None:
 class BrandEvent:
     """品牌事件基类"""
 
-    def __init__(self, event_type: str, title: str, event_time: str = None,
+    def __init__(self, event_type: str, title: str, event_time: str | None = None,
                  source: str = '', description: str = '', status: str = 'ongoing',
-                 metadata: Dict[str, Any] = None, event_id: str = None,
-                 source_event_id: int = None, created_at: str = None, updated_at: str = None):
+                 metadata: dict[str, Any] | None = None, event_id: str | None = None,
+                 source_event_id: int | None = None, created_at: str | None = None,
+                 updated_at: str | None = None):
         self.event_id = event_id or str(uuid.uuid4())[:8]
         self.event_type = event_type
         self.event_type_name = EVENT_TYPES.get(event_type, event_type)
@@ -175,10 +175,10 @@ class BrandEvent:
         self.source_event_id = source_event_id  # 关联现有events表的id
         self.created_at = created_at or _now()
         self.updated_at = updated_at or _now()
-        self.relations: List[EventRelation] = []
+        self.relations: list[EventRelation] = []
 
-    def add_relation(self, target_event: 'BrandEvent', relation_type: str,
-                     evidence: str = '', confidence: float = 0.5) -> 'EventRelation':
+    def add_relation(self, target_event: BrandEvent, relation_type: str,
+                     evidence: str = '', confidence: float = 0.5) -> EventRelation:
         """添加与目标事件的关系"""
         relation = EventRelation(
             source_event=self,
@@ -190,7 +190,7 @@ class BrandEvent:
         self.relations.append(relation)
         return relation
 
-    def get_related_events(self, relation_type: str = None) -> List['BrandEvent']:
+    def get_related_events(self, relation_type: str | None = None) -> list[BrandEvent]:
         """获取相关事件"""
         results = []
         for rel in self.relations:
@@ -198,7 +198,7 @@ class BrandEvent:
                 results.append(rel.target_event)
         return results
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             'event_id': self.event_id,
@@ -218,7 +218,7 @@ class BrandEvent:
         }
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> 'BrandEvent':
+    def from_row(cls, row: sqlite3.Row) -> BrandEvent:
         """从数据库行创建"""
         try:
             metadata = json.loads(row['metadata']) if row['metadata'] else {}
@@ -238,7 +238,7 @@ class BrandEvent:
             updated_at=row['updated_at'],
         )
 
-    def save_to_db(self, conn: sqlite3.Connection = None) -> None:
+    def save_to_db(self, conn: sqlite3.Connection | None = None) -> None:
         """保存到数据库（插入或更新）"""
         close_conn = False
         if conn is None:
@@ -278,7 +278,7 @@ class EventRelation:
 
     def __init__(self, source_event: BrandEvent, target_event: BrandEvent,
                  relation_type: str, evidence: str = '', confidence: float = 0.5,
-                 created_at: str = None):
+                 created_at: str | None = None):
         self.source_event = source_event
         self.target_event = target_event
         self.relation_type = relation_type
@@ -287,7 +287,7 @@ class EventRelation:
         self.confidence = confidence
         self.created_at = created_at or _now()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             'source_event_id': self.source_event.event_id,
@@ -301,7 +301,7 @@ class EventRelation:
             'created_at': self.created_at,
         }
 
-    def save_to_db(self, conn: sqlite3.Connection = None) -> None:
+    def save_to_db(self, conn: sqlite3.Connection | None = None) -> None:
         """保存到数据库"""
         close_conn = False
         if conn is None:
@@ -326,8 +326,8 @@ class EventGraph:
     """事件关系图谱（数据库持久化版）"""
 
     def __init__(self, auto_load: bool = True):
-        self.events: Dict[str, BrandEvent] = {}
-        self.relations: List[EventRelation] = []
+        self.events: dict[str, BrandEvent] = {}
+        self.relations: list[EventRelation] = []
         init_db()
         if auto_load:
             self.load_from_db()
@@ -355,7 +355,7 @@ class EventGraph:
                         target_event=target,
                         relation_type=rrow['relation_type'],
                         evidence=rrow['evidence'] or '',
-                        confidence=rrow['confidence'] or 0.5,
+                        confidence=rrow['confidence'],
                         created_at=rrow['created_at'],
                     )
                     source.relations.append(relation)
@@ -369,8 +369,9 @@ class EventGraph:
         return event
 
     def create_event(self, event_type: str, title: str, description: str = '',
-                     event_time: str = None, source: str = '', status: str = 'ongoing',
-                     metadata: Dict[str, Any] = None, source_event_id: int = None) -> BrandEvent:
+                     event_time: str | None = None, source: str = '', status: str = 'ongoing',
+                     metadata: dict[str, Any] | None = None,
+                     source_event_id: int | None = None) -> BrandEvent:
         """创建并保存新事件"""
         event = BrandEvent(
             event_type=event_type,
@@ -384,12 +385,12 @@ class EventGraph:
         )
         return self.add_event(event)
 
-    def get_event(self, event_id: str) -> Optional[BrandEvent]:
+    def get_event(self, event_id: str) -> BrandEvent | None:
         """获取事件"""
         return self.events.get(event_id)
 
     def add_relation(self, source_id: str, target_id: str, relation_type: str,
-                     evidence: str = '', confidence: float = 0.5, persist: bool = True) -> Optional[EventRelation]:
+                     evidence: str = '', confidence: float = 0.5, persist: bool = True) -> EventRelation | None:
         """添加事件关系"""
         source = self.get_event(source_id)
         target = self.get_event(target_id)
@@ -401,11 +402,11 @@ class EventGraph:
             relation.save_to_db()
         return relation
 
-    def get_events_by_type(self, event_type: str) -> List[BrandEvent]:
+    def get_events_by_type(self, event_type: str) -> list[BrandEvent]:
         """按类型获取事件"""
         return [e for e in self.events.values() if e.event_type == event_type]
 
-    def get_event_chain(self, event_id: str, max_depth: int = 5) -> List[BrandEvent]:
+    def get_event_chain(self, event_id: str, max_depth: int = 5) -> list[BrandEvent]:
         """获取事件链（从指定事件出发的所有关联事件）"""
         visited = set()
         chain = []
@@ -425,7 +426,7 @@ class EventGraph:
 
         return chain
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取图谱统计"""
         type_counts = {}
         for event in self.events.values():
@@ -444,7 +445,7 @@ class EventGraph:
             'relations_by_type': relation_counts,
         }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             'events': [e.to_dict() for e in self.events.values()],
@@ -536,18 +537,18 @@ class EventGraph:
             return imported
 
     @staticmethod
-    def get_all_event_types() -> Dict[str, str]:
+    def get_all_event_types() -> dict[str, str]:
         """获取所有事件类型"""
         return EVENT_TYPES.copy()
 
     @staticmethod
-    def get_all_relation_types() -> Dict[str, str]:
+    def get_all_relation_types() -> dict[str, str]:
         """获取所有关系类型"""
         return RELATION_TYPES.copy()
 
     def infer_and_link_relations(self, days_window: int = 21, parallel_hours: float = 36,
                                  min_follow_overlap: int = 1, min_derive_overlap: int = 3,
-                                 persist: bool = True, drop_auto_first: bool = True) -> Dict[str, Any]:
+                                 persist: bool = True, drop_auto_first: bool = True) -> dict[str, Any]:
         """GAP-07：基于【时间 + 主题词】双证据保守推断 follow/derive/parallel。
         - 无主题重叠或时间不可比 -> 不连边（绝不伪造关系）；
         - trigger 属强因果，不在此自动生成，保留人工/直接证据；
@@ -619,7 +620,7 @@ class EventGraph:
 
 
 # 全局单例
-_graph_instance: Optional[EventGraph] = None
+_graph_instance: EventGraph | None = None
 
 def get_event_graph() -> EventGraph:
     global _graph_instance
@@ -634,7 +635,7 @@ def reset_event_graph() -> None:
     _graph_instance = None
 
 
-def infer_and_persist_relations(**kwargs) -> Dict[str, Any]:
+def infer_and_persist_relations(**kwargs) -> dict[str, Any]:
     """便捷入口：对全局图谱执行一次保守关系推断并持久化。
 
     【生产状态文档（2026-09-06）】

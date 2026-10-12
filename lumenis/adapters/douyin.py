@@ -160,28 +160,50 @@ class DouyinAdapter(BaseAdapter):
             page.goto(url, wait_until="domcontentloaded", timeout=30000)
 
             # 等结果真正渲染（以时长徽标为锚），最多 ~18s；同时六态判断
-            rendered = True
             try:
                 page.wait_for_function(
                     "()=>(document.body.innerText.match(/\\b\\d{2}:\\d{2}\\b/g)||[]).length>=1",
                     timeout=18000)
-            except Exception:
-                rendered = False
+            except Exception as exc:
+                logger.debug("Douyin search render wait ended error_type=%s", type(exc).__name__)
 
-            state = hb.detect_state(
-                page,
-                extra_markers={
-                    PageState.BLOCKED: ["访问频繁", "系统繁忙", "稍后再试", "操作太频繁"],
-                    PageState.CAPTCHA: ["滑块", "拖动", "安全验证", "captcha_verify"],
-                    PageState.AUTH_FAILED: ["登录后即可", "验证码登录", "扫码登录", "登录解锁更多"],
-                },
-                success_selector=".videoImage",
-            )
+            def observed_search_failure():
+                state = hb.detect_state(
+                    page,
+                    extra_markers={
+                        PageState.BLOCKED: ["访问频繁", "系统繁忙", "稍后再试", "操作太频繁"],
+                        PageState.CAPTCHA: ["滑块", "拖动", "安全验证", "captcha_verify"],
+                        PageState.AUTH_FAILED: ["登录后即可", "验证码登录", "扫码登录", "登录解锁更多"],
+                    },
+                    success_selector=".videoImage",
+                )
+                failure = {
+                    PageState.AUTH_FAILED: "抖音登录态失效，请在采集专用 Profile 重新登录或更新 Cookie",
+                    PageState.CAPTCHA: "DOUYIN_CAPTCHA_REQUIRED: 抖音出现人机验证，需人工通过后再采",
+                    PageState.BLOCKED: "DOUYIN_RATE_LIMITED: 抖音访问频繁/风控，按熔断退避不硬刚",
+                    PageState.NETWORK_ERROR: "DOUYIN_NETWORK_UNAVAILABLE",
+                }.get(state)
+                if failure is None:
+                    return None
+                # Retain responses already observed in this attempt without
+                # scrolling, reading a fallback DOM, or opening post details.
+                observed = self._notes_from_bags(api_bags, max_results)
+                return AdapterResult(
+                    success=False, notes=observed, error=failure,
+                    raw_count=len(observed),
+                )
+
+            failure = observed_search_failure()
+            if failure is not None:
+                return failure
 
             # 拟人滚动加载更多（变速、偶发回滚），让 stream 接口逐页返回
             for _ in range(3):
                 hb.human_scroll(page, total_px=800, rounds=2)
                 hb.pause(1.4, 2.4)
+                failure = observed_search_failure()
+                if failure is not None:
+                    return failure
                 if len(self._notes_from_bags(api_bags, max_results)) >= max_results:
                     break
 
@@ -200,14 +222,6 @@ class DouyinAdapter(BaseAdapter):
                 return AdapterResult(success=True, notes=notes, raw_count=len(notes))
 
             # 无结果时按页面状态如实上报，绝不把风控/登录墙伪装成 0 条
-            if not rendered and state in (PageState.BLOCKED, PageState.CAPTCHA,
-                                          PageState.AUTH_FAILED, PageState.NETWORK_ERROR):
-                hint = {
-                    PageState.AUTH_FAILED: "抖音登录态失效，请在采集专用 Profile 重新登录或更新 Cookie",
-                    PageState.CAPTCHA: "抖音出现人机验证，需人工通过后再采",
-                    PageState.BLOCKED: "抖音访问频繁/风控，按熔断退避不硬刚",
-                }.get(state, f"抖音页面状态={state}")
-                return AdapterResult(success=False, error=hint)
             if not self._has_verified_empty_search_response(api_bags):
                 return AdapterResult(
                     success=False,
@@ -262,7 +276,11 @@ class DouyinAdapter(BaseAdapter):
                 desc = re.sub(r"\s+", " ", (ai.get("desc") or "").strip())
                 if not desc:
                     continue
-                st = ai.get("statistics") or {}
+                statistics = ai.get("statistics")
+                st = statistics if isinstance(statistics, dict) else {}
+                play_count = st.get("play_count")
+                if type(play_count) is not int or play_count < 0:
+                    play_count = None
                 au = ai.get("author") or {}
                 note = self._make_note(
                     title=desc[:80],
@@ -281,6 +299,7 @@ class DouyinAdapter(BaseAdapter):
                         "aweme_id": wid,
                         "author_id": au.get("uid") or au.get("short_id"),
                         "create_time": ai.get("create_time"),
+                        "play_count": play_count,
                     },
                 )
                 notes.append(note)

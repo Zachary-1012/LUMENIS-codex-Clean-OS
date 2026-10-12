@@ -224,6 +224,10 @@ def test_stale_parent_and_idempotency_conflict_preserve_versions(workspace):
     first = _save(workspace)
     wid, aid = first["document"]["work_id"], first["artifact"]["artifact_id"]
     second = _save(workspace, request_id="request-0002", work_id=wid, previous_artifact_id=aid)
+    assert second["document"]["version"] == 2
+    assert second["document"]["work_id"] == wid
+    assert second["document"]["parent_artifact_id"] == aid
+    assert second["artifact"]["artifact_id"] != aid
     with pytest.raises(ValueError, match="WORK_REVISION_CONFLICT"):
         _save(workspace, request_id="request-0003", work_id=wid, previous_artifact_id=aid)
     with pytest.raises(ValueError, match="WORK_REQUEST_REUSE_CONFLICT"):
@@ -915,3 +919,336 @@ def test_binary_doc_decodes_owned_original_and_preserves_source_fingerprint(tmp_
     assert parsed.metadata["embedded_macros"] == "disabled_by_ephemeral_profile"
     assert parsed.metadata["external_links"] == "updates_disabled_by_ephemeral_profile"
     assert all(item["unit"] == "converted_word_paragraph" for item in repeated)
+
+
+def _saved_work_test_ooxml(package_type, *, extra_members=(), compression=None, marker="A", padding=b"",
+                           main_xml_override=None, main_type_override=None,
+                           relationship_target_override=None, relationship_target_mode=None):
+    import zipfile
+
+    formats = {
+        "docx": (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "word/document.xml",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+            "w",
+            "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+            f'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>{marker}</w:t></w:r></w:p></w:body></w:document>',
+        ),
+        "xlsx": (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "xl/workbook.xml",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+            "x",
+            "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+            '<x:workbook xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:sheets/></x:workbook>',
+        ),
+        "pptx": (
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "ppt/presentation.xml",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+            "p",
+            "http://schemas.openxmlformats.org/presentationml/2006/main",
+            '<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldIdLst/></p:presentation>',
+        ),
+    }
+    media_type, main_part, main_type, prefix, _, main_xml = formats[package_type]
+    main_xml = main_xml if main_xml_override is None else main_xml_override
+    main_type = main_type if main_type_override is None else main_type_override
+    if padding:
+        extra_members = (*extra_members, ("custom/padding.bin", padding))
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        f'<Override PartName="/{main_part}" ContentType="{main_type}"/>'
+        '</Types>'
+    ).encode("utf-8")
+    relationship = (
+        f'<Relationship Id="rId1" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+        f'Target="{relationship_target_override or main_part}"'
+        + (f' TargetMode="{relationship_target_mode}"' if relationship_target_mode else "")
+        + '/>'
+    )
+    relationships = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + relationship + '</Relationships>'
+    ).encode("utf-8")
+    buffer = io.BytesIO()
+    if compression is None:
+        compression = zipfile.ZIP_DEFLATED
+    with zipfile.ZipFile(buffer, "w", compression=compression) as archive:
+        for name, content in (
+            ("[Content_Types].xml", content_types),
+            ("_rels/.rels", relationships),
+            (main_part, main_xml.encode("utf-8")),
+            *extra_members,
+        ):
+            info = zipfile.ZipInfo(name, date_time=(2026, 10, 11, 0, 0, 0))
+            info.compress_type = compression
+            archive.writestr(info, content)
+    return {"name": f"owned-{package_type}.{package_type}", "content": buffer.getvalue(), "media_type": media_type}
+
+
+def _saved_work_test_attachment_bytes(workspace, result):
+    with workspace["repo"].connection(read_only=True, wal=False) as con:
+        return [
+            workspace["work"]._read_attachment(
+                con, binding, result["document"]["context"], result["document"]["work_id"],
+            )
+            for binding in result["document"].get("attachments", [])
+        ]
+
+
+def test_saved_work_roundtrips_docx_xlsx_and_pptx_attachments(workspace):
+    attachments = [_saved_work_test_ooxml(kind) for kind in ("docx", "xlsx", "pptx")]
+    saved = _save(workspace, attachments=attachments)
+    bindings = saved["document"]["attachments"]
+    assert [binding["name"] for binding in bindings] == [item["name"] for item in attachments]
+    assert _saved_work_test_attachment_bytes(workspace, saved) == [item["content"] for item in attachments]
+
+    for binding, original in zip(bindings, attachments):
+        record = workspace["repo"].query_one(
+            "SELECT product_id,domain_id,kind,relative_path,media_type,sha256,size_bytes "
+            "FROM lumenis_shared_artifacts WHERE artifact_id=?",
+            (binding["artifact_id"],),
+        )
+        extension = "." + original["name"].rsplit(".", 1)[1]
+        assert record["product_id"] == "CTH" and record["domain_id"] == "cth"
+        assert record["kind"] == "saved_document_attachment"
+        assert record["relative_path"] == binding["artifact_id"] + extension
+        assert record["media_type"] == original["media_type"]
+        assert record["sha256"] == hashlib.sha256(original["content"]).hexdigest()
+        assert record["size_bytes"] == len(original["content"])
+
+    reopened = workspace["work"].reopen_work(
+        saved["artifact"]["artifact_id"], actor=workspace["actor"], scope=workspace["scope"],
+    )
+    assert reopened["document"]["attachments"] == bindings
+    replayed = _save(workspace, attachments=attachments)
+    assert replayed["replayed"] is True
+    assert replayed["artifact"]["artifact_id"] == saved["artifact"]["artifact_id"]
+    changed = _saved_work_test_ooxml("docx", compression=0, marker="B")
+    with pytest.raises(ValueError, match="WORK_REQUEST_REUSE_CONFLICT"):
+        _save(workspace, attachments=[changed])
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0] == 4
+
+
+def test_saved_work_attachment_resource_preserves_empty_digest_and_binds_content(workspace):
+    work = workspace["work"]
+    args = {
+        "title": "Resource binding fixture",
+        "markdown": "Resource binding fixture.",
+        "kind": "research",
+        "payload": {"note": "local test"},
+        "citations": [],
+        "request_id": "attachment-resource-0001",
+        "work_id": None,
+        "previous_artifact_id": None,
+        "actor": workspace["actor"],
+        "scope": workspace["scope"],
+    }
+    context = work.authorize(workspace["actor"], workspace["scope"], action="write")
+    expected_legacy = "saved-work:v1:" + work._digest({
+        "context": context, "title": args["title"], "markdown": args["markdown"],
+        "kind": args["kind"], "payload": args["payload"], "citations": args["citations"],
+        "request_id": args["request_id"], "work_id": None, "parent_artifact_id": None,
+        "expected_draft_digest": None, "contract": work._validate_contract(None, args["payload"]),
+        "task_id": None, "assertion_id": None,
+    })
+    assert work.work_write_resource(**args) == expected_legacy
+    assert work.work_write_resource(**args, attachments=None) == expected_legacy
+    assert work.work_write_resource(**args, attachments=[]) == expected_legacy
+
+    first = _saved_work_test_ooxml("docx", compression=0, marker="A")
+    second = _saved_work_test_ooxml("docx", compression=0, marker="B")
+    assert len(first["content"]) == len(second["content"])
+    first_resource = work.work_write_resource(**args, attachments=[first])
+    same_resource = work.work_write_resource(**args, attachments=[first])
+    changed_resource = work.work_write_resource(**args, attachments=[second])
+    assert first_resource == same_resource
+    assert first_resource != changed_resource
+
+
+def test_saved_work_rejects_invalid_ooxml_before_artifact_or_file_side_effect(workspace):
+    import struct
+    import zipfile
+
+    good = _saved_work_test_ooxml("docx")
+    bad_mime = {**good, "media_type": _saved_work_test_ooxml("xlsx")["media_type"]}
+    mislabeled = {**good, "name": "owned-docx.xlsx",
+                  "media_type": _saved_work_test_ooxml("xlsx")["media_type"]}
+    malformed = {**good, "content": b"not a ZIP package"}
+    wrong_root = _saved_work_test_ooxml(
+        "docx", main_xml_override='<w:wrong xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>',
+    )
+    wrong_type = _saved_work_test_ooxml("docx", main_type_override="application/xml")
+    external_office_part = _saved_work_test_ooxml(
+        "docx", relationship_target_mode="External",
+    )
+    prefixed = {**good, "content": b"unexpected prefix" + good["content"]}
+    trailing = {**good, "content": good["content"] + b"unexpected trailing bytes"}
+    traversal = _saved_work_test_ooxml("docx", extra_members=(("../outside.xml", b"<x/>"),))
+    dtd = _saved_work_test_ooxml(
+        "xlsx",
+        extra_members=(("custom/unsafe.xml", b'<!DOCTYPE x [<!ENTITY e "boom">]><x>&e;</x>'),),
+    )
+    bomb = _saved_work_test_ooxml("pptx", padding=b"A" * (8 * 1024 * 1024 + 1))
+    assert len(bomb["content"]) < 8 * 1024 * 1024
+    oversized = {**good, "content": b"0" * (8 * 1024 * 1024 + 1)}
+
+    encrypted = _saved_work_test_ooxml("xlsx")
+    encrypted_bytes = bytearray(encrypted["content"])
+    local_header = encrypted_bytes.find(b"PK\x03\x04")
+    central_header = encrypted_bytes.find(b"PK\x01\x02")
+    assert local_header >= 0 and central_header >= 0
+    local_flags = struct.unpack_from("<H", encrypted_bytes, local_header + 6)[0]
+    central_flags = struct.unpack_from("<H", encrypted_bytes, central_header + 8)[0]
+    struct.pack_into("<H", encrypted_bytes, local_header + 6, local_flags | 1)
+    struct.pack_into("<H", encrypted_bytes, central_header + 8, central_flags | 1)
+    encrypted["content"] = bytes(encrypted_bytes)
+
+    corrupt_crc = _saved_work_test_ooxml("pptx", compression=zipfile.ZIP_STORED)
+    main_xml = b'<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldIdLst/></p:presentation>'
+    corrupt_bytes = bytearray(corrupt_crc["content"])
+    main_offset = corrupt_bytes.find(main_xml)
+    assert main_offset >= 0
+    corrupt_bytes[main_offset + 12] ^= 1
+    corrupt_crc["content"] = bytes(corrupt_bytes)
+
+    invalid = [bad_mime, mislabeled, malformed, wrong_root, wrong_type, external_office_part,
+               prefixed, trailing, traversal, dtd, bomb, oversized, encrypted, corrupt_crc]
+    for index, attachment in enumerate(invalid):
+        with pytest.raises(ValueError, match="WORK_ATTACHMENT_INVALID"):
+            _save(workspace, request_id=f"attachment-invalid-{index:02d}", attachments=[attachment])
+        assert workspace["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0] == 0
+        root = workspace["root"] / "artifacts"
+        assert not root.exists() or not list(root.iterdir())
+
+    unsafe_name = {**good, "name": "../owned.docx"}
+    with pytest.raises(ValueError, match="WORK_ATTACHMENT_INVALID"):
+        _save(workspace, request_id="attachment-invalid-name", attachments=[unsafe_name])
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0] == 0
+    root = workspace["root"] / "artifacts"
+    assert not root.exists() or not list(root.iterdir())
+
+
+def test_saved_work_attachment_count_and_aggregate_byte_bounds(workspace):
+    nine = [_saved_work_test_ooxml("docx") | {"name": f"owned-{index}.docx"} for index in range(9)]
+    with pytest.raises(ValueError, match="WORK_ATTACHMENT_INVALID"):
+        _save(workspace, attachments=nine)
+
+    padding = b"x" * (4 * 1024 * 1024 + 64)
+    first = _saved_work_test_ooxml("xlsx", padding=padding, compression=0) | {"name": "large-a.xlsx"}
+    second = _saved_work_test_ooxml("xlsx", padding=padding, compression=0) | {"name": "large-b.xlsx"}
+    assert len(first["content"]) < 8 * 1024 * 1024 and len(second["content"]) < 8 * 1024 * 1024
+    with pytest.raises(ValueError, match="WORK_ATTACHMENT_INVALID"):
+        _save(workspace, request_id="attachment-aggregate-0001", attachments=[first, second])
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0] == 0
+    root = workspace["root"] / "artifacts"
+    assert not root.exists() or not list(root.iterdir())
+
+
+def test_saved_work_revision_preserves_verified_attachment_bytes(workspace):
+    attachments = [_saved_work_test_ooxml(kind) for kind in ("docx", "xlsx", "pptx")]
+    first = _save(workspace, attachments=attachments)
+    first_bindings = first["document"]["attachments"]
+    original_bytes = [item["content"] for item in attachments]
+
+    revised = workspace["work"].revise_work(
+        first["artifact"]["artifact_id"],
+        actor=workspace["actor"], scope=workspace["scope"],
+        request_id="attachment-revision-0002",
+        expected_sha256=first["artifact"]["sha256"],
+        reason="Keep the supplied editable office materials with the revised result.",
+        edits=[{"pointer": "/markdown", "expected": first["document"]["markdown"],
+                "value": "Revised draft retaining the submitted office files."}],
+    )
+    second_bindings = revised["document"]["attachments"]
+    assert revised["document"]["version"] == 2
+    assert revised["document"]["parent_artifact_id"] == first["artifact"]["artifact_id"]
+    assert revised["document"]["parent_sha256"] == first["artifact"]["sha256"]
+    assert [item["name"] for item in second_bindings] == [item["name"] for item in first_bindings]
+    assert [item["artifact_id"] for item in second_bindings] != [item["artifact_id"] for item in first_bindings]
+    assert [item["sha256"] for item in second_bindings] == [item["sha256"] for item in first_bindings]
+    assert _saved_work_test_attachment_bytes(workspace, first) == original_bytes
+    assert _saved_work_test_attachment_bytes(workspace, revised) == original_bytes
+
+    replayed = workspace["work"].revise_work(
+        first["artifact"]["artifact_id"],
+        actor=workspace["actor"], scope=workspace["scope"],
+        request_id="attachment-revision-0002",
+        expected_sha256=first["artifact"]["sha256"],
+        reason="Keep the supplied editable office materials with the revised result.",
+        edits=[{"pointer": "/markdown", "expected": first["document"]["markdown"],
+                "value": "Revised draft retaining the submitted office files."}],
+    )
+    assert replayed["replayed"] is True
+    assert replayed["artifact"]["artifact_id"] == revised["artifact"]["artifact_id"]
+    assert workspace["work"].reopen_work(
+        first["artifact"]["artifact_id"], actor=workspace["actor"], scope=workspace["scope"],
+    )["document"]["attachments"] == first_bindings
+
+
+def test_saved_work_attachment_tamper_blocks_read_and_revision_then_recovers(workspace):
+    attachment = _saved_work_test_ooxml("docx")
+    saved = _save(workspace, attachments=[attachment])
+    binding = saved["document"]["attachments"][0]
+    record = workspace["repo"].query_one(
+        "SELECT relative_path FROM lumenis_shared_artifacts WHERE artifact_id=?",
+        (binding["artifact_id"],),
+    )
+    path = workspace["root"] / "artifacts" / record["relative_path"]
+    original = path.read_bytes()
+    path.write_bytes(b"tampered")
+    with pytest.raises(ValueError, match="WORK_ATTACHMENT_INTEGRITY_FAILED"):
+        workspace["work"].reopen_work(
+            saved["artifact"]["artifact_id"], actor=workspace["actor"], scope=workspace["scope"],
+        )
+    with pytest.raises(ValueError, match="WORK_ATTACHMENT_INTEGRITY_FAILED"):
+        workspace["work"].revise_work(
+            saved["artifact"]["artifact_id"],
+            actor=workspace["actor"], scope=workspace["scope"],
+            request_id="tampered-attachment-revision",
+            expected_sha256=saved["artifact"]["sha256"], reason="Reject changed attachment bytes.",
+            edits=[{"pointer": "/markdown", "expected": saved["document"]["markdown"], "value": "Must not commit."}],
+        )
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0] == 2
+    path.write_bytes(original)
+    reopened = workspace["work"].reopen_work(
+        saved["artifact"]["artifact_id"], actor=workspace["actor"], scope=workspace["scope"],
+    )
+    assert reopened["document"]["attachments"] == saved["document"]["attachments"]
+    assert _saved_work_test_attachment_bytes(workspace, reopened) == [attachment["content"]]
+
+
+def test_saved_work_attachment_precommit_failure_rolls_back_and_retry_recovers(workspace):
+    attachment = _saved_work_test_ooxml("pptx")
+
+    def interrupt_before_commit(*_args):
+        raise RuntimeError("isolated attachment commit interruption")
+
+    with pytest.raises(RuntimeError, match="isolated attachment commit interruption"):
+        _save(workspace, attachments=[attachment], before_commit=interrupt_before_commit)
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0] == 0
+    root = workspace["root"] / "artifacts"
+    assert not root.exists() or not list(root.iterdir())
+
+    saved = _save(workspace, attachments=[attachment])
+    assert saved["replayed"] is False
+    assert _saved_work_test_attachment_bytes(workspace, saved) == [attachment["content"]]
+
+
+def test_saved_work_rejects_bomless_utf16le_dtd_xml_before_staging(workspace):
+    encoded_dtd = '<?xml version="1.0"?><!DOCTYPE x [<!ENTITY e "boom">]><x>&e;</x>'.encode("utf-16le")
+    attachment = _saved_work_test_ooxml("docx", extra_members=(("custom/unsafe.xml", encoded_dtd),))
+
+    with pytest.raises(ValueError, match="WORK_ATTACHMENT_INVALID"):
+        _save(workspace, request_id="utf16-dtd-reject-0001", attachments=[attachment])
+
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0] == 0
+    root = workspace["root"] / "artifacts"
+    assert not root.exists() or not list(root.iterdir())

@@ -23,6 +23,7 @@ lxml>=4.9.0
 
 # ===== 文档生成 =====
 python-docx>=0.8.11
+python-pptx==1.0.2  # existing Shared ReportExporter editable PPTX output
 reportlab>=3.6.0
 
 # ===== 浏览器自动化 =====

@@ -38,10 +38,11 @@ _NATIVE_EPOCH_UNITS = {
     "xiaohongshu": "milliseconds",
     "douyin": "seconds",
     "bilibili": "seconds",
+    "instagram": "seconds",
     "reddit": "seconds",
     "tiktok": "seconds",
 }
-_FLOAT_EPOCH_PLATFORMS = {"douyin", "reddit"}
+_FLOAT_EPOCH_PLATFORMS = {"douyin", "instagram", "reddit"}
 _ISO_DATE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 _ISO_DATETIME = re.compile(
     r"^[0-9]{4}-[0-9]{2}-[0-9]{2}[Tt ][0-9]{2}:[0-9]{2}"
@@ -66,8 +67,8 @@ def _format_epoch_publication(value: int | float, platform: str) -> str:
         not math.isfinite(value) or platform not in _FLOAT_EPOCH_PLATFORMS
     ):
         return ""
-    # Bilibili's native source uses zero as its missing-time sentinel.
-    if platform == "bilibili" and value == 0:
+    # These native source parsers treat zero as missing publication time.
+    if platform in {"bilibili", "douyin"} and value == 0:
         return ""
     try:
         timestamp = value / 1000 if unit == "milliseconds" else value

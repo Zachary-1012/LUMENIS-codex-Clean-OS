@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 from types import SimpleNamespace
@@ -17,6 +18,146 @@ ROOT = Path(__file__).resolve().parents[1]
 _TEST_COLLECTION_USER_ID = 'synthetic-xhs-test-user'
 _TEST_COLLECTION_IDENTITY_FINGERPRINT = hashlib.sha256(
     _TEST_COLLECTION_USER_ID.encode('utf-8')).hexdigest()
+
+
+@pytest.mark.parametrize('keyword', ['广州太古汇 开业活动', '深圳罗湖万象城 Nike', '  Le Labo 香水 + "2026" %  '])
+def test_search_fills_and_reads_back_exact_query_before_targeted_enter(monkeypatch, keyword):
+    events = []
+
+    class Input:
+        def fill(self, value, **kwargs):
+            assert kwargs == {'timeout': 6000}
+            events.append(('fill', value))
+
+        def input_value(self, **kwargs):
+            assert kwargs == {'timeout': 6000}
+            events.append(('readback', keyword))
+            return keyword
+
+        def press(self, value, **kwargs):
+            assert kwargs == {'timeout': 6000}
+            events.append(('press', value))
+
+    page = object()
+
+    def find_input(observed_page, selectors, timeout_ms):
+        assert observed_page is page
+        assert selectors == worker._SEARCH_INPUT_SEL and timeout_ms == 6000
+        return Input()
+
+    monkeypatch.setattr(worker, '_find_first', find_input)
+    monkeypatch.setattr(worker, 'log', lambda message: events.append(('log', message)))
+    worker.human_search_keyword(page, keyword)
+    assert events[:3] == [('fill', keyword), ('readback', keyword), ('press', 'Enter')]
+    assert keyword not in events[3][1]
+
+
+@pytest.mark.parametrize('failure', ['missing', 'fill_timeout', 'readback_timeout', 'mismatch'])
+def test_search_never_submits_an_unconfirmed_input(monkeypatch, failure):
+    events = []
+
+    class Input:
+        def fill(self, *_args, **_kwargs):
+            events.append('fill')
+            if failure == 'fill_timeout':
+                raise TimeoutError('synthetic non-actionable input')
+
+        def input_value(self, **_kwargs):
+            events.append('readback')
+            if failure == 'readback_timeout':
+                raise TimeoutError('synthetic detached input')
+            return 'unrelated query'
+
+        def press(self, *_args, **_kwargs):
+            pytest.fail('Unconfirmed exact query must not be submitted')
+
+    monkeypatch.setattr(worker, '_find_first', lambda *_args, **_kwargs: None if failure == 'missing' else Input())
+    expected = TimeoutError if 'timeout' in failure else RuntimeError
+    with pytest.raises(expected):
+        worker.human_search_keyword(object(), 'approved original query')
+    assert events == ([] if failure == 'missing' else ['fill'] if failure == 'fill_timeout' else ['fill', 'readback'])
+
+
+def _synthetic_search_state(**case):
+    """Evaluate the production JS against synthetic DOM data in Node, never a browser."""
+    node = shutil.which('node')
+    assert node is not None, 'Installed Node is required for this affected JS verification'
+    script = r"""
+const fs = require('node:fs');
+const vm = require('node:vm');
+const payload = JSON.parse(fs.readFileSync(0, 'utf8'));
+const scenario = payload.case;
+const visits = [];
+const inputs = Object.fromEntries(Object.entries(scenario.inputs || {}).map(([selector, data]) => [selector, {
+  value: data.value,
+  visibility: data.visibility || 'visible',
+  getBoundingClientRect: () => ({width: data.width ?? 100, height: data.height ?? 30})
+}]));
+const href = scenario.href || 'https://www.rednote.com/search_result?keyword=' + encodeURIComponent(scenario.keyword);
+const location = new URL(href);
+const context = {
+  URL, location,
+  getComputedStyle: element => ({visibility: element.visibility}),
+  document: {
+    body: {innerText: 'Synthetic native results'}, readyState: 'complete',
+    querySelector: selector => {visits.push(selector); return inputs[selector] || null;},
+    querySelectorAll: () => []
+  }
+};
+const state = vm.runInNewContext('(' + payload.script + ')', context)(scenario.keyword);
+process.stdout.write(JSON.stringify({state, visits}));
+"""
+    completed = subprocess.run(
+        [node, '-e', script],
+        input=json.dumps({'script': worker._SEARCH_STATE_JS, 'case': case}, ensure_ascii=False),
+        capture_output=True, text=True, encoding='utf-8', timeout=10, check=True,
+    )
+    return json.loads(completed.stdout)
+
+
+@pytest.mark.parametrize('selector', worker._SEARCH_INPUT_SEL)
+def test_search_diagnostic_uses_each_actual_input_selector(selector):
+    keyword = '深圳罗湖万象城 + 香水'
+    observed = _synthetic_search_state(keyword=keyword, inputs={selector: {'value': keyword}})
+    assert observed['state']['input_matches'] is True
+    assert observed['state']['query_matches'] is True
+    assert observed['state']['query_encoding'] == 'literal'
+    assert observed['visits'] == worker._SEARCH_INPUT_SEL[:worker._SEARCH_INPUT_SEL.index(selector) + 1]
+
+
+@pytest.mark.parametrize('hidden', [{'visibility': 'hidden'}, {'visibility': 'collapse'}, {'width': 0}, {'height': 0}])
+def test_search_diagnostic_follows_visible_selector_priority(hidden):
+    keyword = '广州太古汇 LV'
+    inputs = {
+        worker._SEARCH_INPUT_SEL[0]: dict(value='unrelated query', **hidden),
+        worker._SEARCH_INPUT_SEL[1]: {'value': keyword},
+    }
+    observed = _synthetic_search_state(keyword=keyword, inputs=inputs)
+    assert observed['state']['input_matches'] is True
+    assert observed['visits'] == worker._SEARCH_INPUT_SEL[:2]
+
+
+@pytest.mark.parametrize('input_value,expected', [('Le Labo 香水', True), ('different query', False)])
+def test_encoded_query_requires_exact_visible_input_confirmation(input_value, expected):
+    keyword = 'Le Labo 香水'
+    from urllib.parse import quote
+    href = 'https://www.rednote.com/search_result?keyword=' + quote(quote(keyword, safe=''), safe='')
+    observed = _synthetic_search_state(
+        keyword=keyword, href=href, inputs={worker._SEARCH_INPUT_SEL[0]: {'value': input_value}},
+    )
+    assert observed['state']['query_matches'] is expected
+    assert observed['state']['query_encoding'] == ('percent_encoded_once' if expected else 'unverified')
+
+
+def test_search_diagnostic_keeps_host_route_and_exact_value_guards():
+    keyword = 'approved query'
+    observed = _synthetic_search_state(
+        keyword=keyword, href='https://not-approved.example/explore?keyword=other',
+        inputs={worker._SEARCH_INPUT_SEL[0]: {'value': 'approved query '}},
+    )
+    for flag in ('host_matches', 'route_is_search', 'query_matches', 'input_matches'):
+        assert observed['state'][flag] is False
+    assert 'query' not in observed['state'] and 'url' not in observed['state']
 
 
 def collector_functions():

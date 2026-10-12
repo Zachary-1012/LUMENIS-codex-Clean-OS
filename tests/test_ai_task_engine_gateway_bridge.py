@@ -178,20 +178,52 @@ def test_noncompletion_state_reaches_task_without_fake_ai_response(status, provi
     if error:
         outcome["error"] = error
     engine = _engine()
-    engine._try_ai_analyze = lambda _text: outcome
+    ai_calls = []
+    engine._try_ai_analyze = lambda text: ai_calls.append(text) or outcome
 
     analysis = engine._execute_analysis({"user_input": "question"}, "reason")
     assist = engine._execute_ai_assist({"user_input": "question"}, "reason")
 
     assert analysis["ai_analysis"] is None
-    assert analysis["ai_analysis_status"] == status
-    assert analysis["analysis_provider"] == provider
+    # The normal analysis Owner now requires a permitted SourceBrief and does
+    # not implicitly invoke AI. The assistant remains an AI-exclusive action.
+    assert analysis["ai_analysis_status"] == "not_requested"
+    assert analysis["base_analysis_status"] == "unavailable"
+    assert analysis["error"] == "ANALYSIS_SOURCE_BRIEF_REQUIRED"
+    assert analysis["ai_required"] is False
+    assert ai_calls == ["question"]
     assert assist["ai_response"] is None
     assert assist["ai_status"] == status
     assert assist["provider"] == provider
     if error:
-        assert analysis["ai_analysis_error"] == error
         assert assist["ai_error"] == error
+
+
+def test_normal_analysis_retains_useful_source_statistics_without_ai():
+    engine = _engine()
+    engine._try_ai_analyze = lambda *_args: pytest.fail("normal analysis cannot start AI")
+    artifact = {"artifact_hash": "a" * 64}
+    engine._read_analysis_source = lambda _task: {
+        "job_id": "unit-source-brief", "artifact_outcome": artifact,
+        "source_brief": {
+            "records": [
+                {"source_id": "source-a", "source_platform": "public_web",
+                 "source_type": "article", "publish_datetime": "2026-10-02T10:00:00+08:00"},
+                {"source_id": "source-b", "source_platform": "public_web",
+                 "source_type": "article", "publish_datetime": None},
+            ],
+            "sample": {"size": 2}, "scope": {"domain_id": "cth"},
+        },
+    }
+    result = engine._execute_analysis({"context": {"analysis_operation": "source_statistics"}}, "analyze")
+    assert result["base_analysis_status"] == "completed"
+    assert result["base_analysis"]["unique_source_count"] == 2
+    assert result["base_analysis"]["publication_time_known_count"] == 1
+    assert result["base_analysis"]["publication_time_unknown_count"] == 1
+    assert result["base_analysis"]["coverage"] == "UNKNOWN"
+    assert result["artifact_outcome"] == artifact
+    assert result["ai_analysis"] is None
+    assert result["ai_analysis_status"] == "not_requested"
 
 
 @pytest.mark.parametrize(
@@ -202,6 +234,7 @@ def test_noncompletion_state_reaches_task_without_fake_ai_response(status, provi
             "ai_error": "OWNED_RUNTIME_NOT_BOUND",
         }, "OWNED_RUNTIME_NOT_BOUND"),
         ("analysis_agent", {
+            "ai_required": True,
             "ai_analysis": None, "ai_analysis_status": "unavailable",
             "analysis_provider": "owned", "ai_analysis_error": "OWNED_RUNTIME_NOT_BOUND",
         }, "OWNED_RUNTIME_NOT_BOUND"),

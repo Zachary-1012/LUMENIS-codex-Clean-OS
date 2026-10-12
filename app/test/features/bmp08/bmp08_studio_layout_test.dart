@@ -11,6 +11,143 @@ import 'package:lumenis_app/navigation/lumenis_leave_guard.dart';
 
 void main() {
   testWidgets(
+    'independent audio entry is available when legacy brand material is unverified',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1360, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final restricted = Bmp08Snapshot(
+        contractBound: true,
+        dataState: 'READY',
+        scope: const Bmp08Scope(
+          mode: 'FOCUS',
+          brandId: 'unverified-brand',
+          displayNames: {'zh-CN': '不得显示的品牌'},
+        ),
+        scopeApproved: false,
+        audioAvailable: false,
+        versioned: false,
+        rightsReady: false,
+        materials: const [
+          Bmp08Material(
+            name: '受限资料名称',
+            kind: 'AUDIO',
+            brandId: 'unverified-brand',
+          ),
+        ],
+        outline: const [
+          Bmp08OutlineSection(
+            title: '受限脚本段落',
+            timecode: '00:12',
+            hasSource: true,
+          ),
+        ],
+        grantedPermissions: const {'podcast:draft'},
+      );
+
+      await tester.pumpWidget(_app(restricted, client: _GlobalBmpClient()));
+      await tester.pumpAndSettle();
+      final entry = find.byKey(const Key('bmp08-open-audio-editor'));
+      expect(entry, findsOneWidget);
+      expect(find.text('不得显示的品牌'), findsNothing);
+
+      await tester.tap(entry);
+      await tester.pumpAndSettle();
+
+      expect(find.text('音频编辑'), findsOneWidget);
+      expect(
+        find.byKey(const Key('media-output-kind-selector')),
+        findsOneWidget,
+      );
+      expect(find.text('不得显示的品牌'), findsNothing);
+      expect(find.text('受限资料名称'), findsNothing);
+      expect(find.text('受限脚本段落'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('returning from audio keeps the script draft mounted', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1360, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(
+        _approvedSnapshot(audioAvailable: false),
+        client: _GlobalBmpClient(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final script = find.byType(TextFormField);
+    await tester.enterText(script, '保留在工作台里的脚本草稿');
+    await tester.tap(find.byKey(const Key('bmp08-open-audio-editor')));
+    await tester.pumpAndSettle();
+    expect(find.text('音频编辑'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('media-editor-back')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextFormField), findsOneWidget);
+    expect(find.text('保留在工作台里的脚本草稿'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('hidden script draft still participates in route leave guard', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1360, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final routeGuard = LumenisLeaveGuard();
+    addTearDown(routeGuard.dispose);
+    await tester.pumpWidget(
+      _app(
+        _approvedSnapshot(audioAvailable: false),
+        client: _GlobalBmpClient(),
+        guard: routeGuard,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), '隐藏后仍需保护');
+    await tester.tap(find.byKey(const Key('bmp08-open-audio-editor')));
+    await tester.pumpAndSettle();
+    expect(routeGuard.needsProtection, isTrue);
+
+    final leaving = routeGuard.requestLeave();
+    await tester.pumpAndSettle();
+    expect(find.text('放弃本次文字修订并离开？'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, '取消'));
+    await tester.pumpAndSettle();
+
+    expect(await leaving, isFalse);
+    expect(routeGuard.needsProtection, isTrue);
+    await tester.tap(find.byKey(const Key('media-editor-back')));
+    await tester.pumpAndSettle();
+    expect(find.text('隐藏后仍需保护'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('audio editor stays usable on a narrow large-text screen', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(
+        _approvedSnapshot(audioAvailable: false),
+        client: _GlobalBmpClient(),
+        textScale: 2,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bmp08-open-audio-editor')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-editor-back')), findsOneWidget);
+    expect(find.byKey(const Key('media-output-kind-selector')), findsOneWidget);
+    expect(find.text('音频编辑'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
     'desktop studio aligns sources, script, properties and empty audio',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(1360, 900));
@@ -273,6 +410,7 @@ Widget _app(
   String language = 'zh',
   double textScale = 1,
   LumenisLeaveGuard? guard,
+  LumenisCoreClient? client,
 }) => MaterialApp(
   theme: LumenisTheme.light,
   locale: Locale(language),
@@ -293,11 +431,18 @@ Widget _app(
   ],
   home: Scaffold(
     body: Bmp08Screen(
-      client: LumenisCoreClient(),
+      client: client ?? LumenisCoreClient(),
       repository: _FakeBmp08Repository(snapshot),
     ),
   ),
 );
+
+class _GlobalBmpClient extends LumenisCoreClient {
+  @override
+  Map<String, dynamic>? get currentContextEnvelope => const {
+    'context': {'mode': 'GLOBAL_ALL'},
+  };
+}
 
 class _FakeBmp08Repository implements Bmp08Repository {
   const _FakeBmp08Repository(this.snapshot);

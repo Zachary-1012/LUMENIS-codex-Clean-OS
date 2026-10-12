@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import sys
 import types
 from types import SimpleNamespace
@@ -78,7 +79,65 @@ def test_custom_handler_exception_is_failure():
 
     assert result["success"] is False
     assert result["source"] == "custom_handler"
-    assert result["error"] == "handler failed"
+    assert result["error"] == "SKILL_HANDLER_FAILED"
+    assert result["error_family"] == "RuntimeError"
+
+
+@pytest.mark.parametrize("source", ["custom_handler", "registered_mcp"])
+def test_exception_diagnostics_preserve_failure_without_private_text(
+    monkeypatch, caplog, source,
+):
+    secret = "synthetic-private-value-for-redaction-regression"
+
+    def fail(*_args):
+        raise RuntimeError(secret)
+
+    skill = None
+    handler = fail
+    if source == "registered_mcp":
+        module = types.ModuleType("mcp_skill_runtime")
+        module.invoke_registered_mcp = fail
+        monkeypatch.setitem(sys.modules, "mcp_skill_runtime", module)
+        skill = execution.SkillRuntimeInfo(
+            skill_id="mcp.test", config={"runtime": "mcp"},
+        )
+        handler = None
+
+    result = execution.execute_skill(
+        execution.SkillExecutionContext(skill_id="diagnostic.test"),
+        handler=handler, skill_info=skill,
+    )
+
+    assert result["success"] is False
+    assert result["source"] == source
+    assert secret not in json.dumps(result)
+    assert "traceback" not in result
+    assert result["error_family"] == "RuntimeError"
+    assert caplog.records
+    for record in caplog.records:
+        assert secret not in record.getMessage()
+        assert record.exc_info is None
+        assert record.exc_text is None
+
+    context = execution.SkillExecutionContext(skill_id="diagnostic.test")
+    context.execute_result = result
+    context.error = result["error"]
+    assert secret not in execution._trace_json(context.to_dict())
+    assert secret not in json.dumps(execution.build_evidence(context))
+
+
+def test_optional_adapter_failure_is_observable_and_fallback_remains_failed(
+    monkeypatch, caplog,
+):
+    _stub_osai(monkeypatch, available=True, error=RuntimeError("synthetic-private-value"))
+    _stub_registry(monkeypatch)
+
+    result = execution.execute_skill(execution.SkillExecutionContext(skill_id="missing.test"))
+
+    assert result["success"] is False
+    assert result["code"] == "NO_HANDLER"
+    assert any("optional_adapter" in record.getMessage() for record in caplog.records)
+    assert "synthetic-private-value" not in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -147,7 +206,8 @@ def test_registered_mcp_exception_is_failure(monkeypatch):
 
     assert result["success"] is False
     assert result["source"] == "registered_mcp"
-    assert result["error"] == "mcp failed"
+    assert result["error"] == "SKILL_MCP_FAILED"
+    assert result["error_family"] == "RuntimeError"
 
 
 @pytest.mark.parametrize(
@@ -231,8 +291,8 @@ def test_builtin_local_exception_and_no_handler_are_failures(monkeypatch):
         skill_info=execution.SkillRuntimeInfo(skill_id="shared.sample"),
     )
     assert failed["success"] is False
-    assert failed["source"] == "none"
-    assert failed["code"] == "NO_HANDLER"
+    assert failed["source"] == "builtin_local"
+    assert failed["result"]["code"] == "SHARED_SKILL_FAILED"
 
     _stub_registry(monkeypatch)
     missing = execution.execute_skill(

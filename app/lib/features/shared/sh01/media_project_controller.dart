@@ -27,7 +27,6 @@ abstract interface class MediaProjectRepository {
     required List<String> paths,
     required MediaProjectSnapshot timeline,
     required String outputKind,
-    required bool demoAcknowledged,
     List<String>? refs,
     String? previousArtifactId,
   });
@@ -64,7 +63,6 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     required List<String> paths,
     required MediaProjectSnapshot timeline,
     required String outputKind,
-    required bool demoAcknowledged,
     List<String>? refs,
     String? previousArtifactId,
   }) => client.exportContentProject(
@@ -73,7 +71,6 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     assetRefs: refs,
     timeline: timeline.toJson(),
     outputKind: outputKind,
-    demoAcknowledged: demoAcknowledged,
     previousArtifactId: previousArtifactId,
   );
 
@@ -172,7 +169,8 @@ final class MediaProjectVersion {
         (timeline['version'] as int) < 1 ||
         rights is! Map ||
         rights['state'] != 'unknown' ||
-        rights['demo_acknowledged'] != true ||
+        (rights.containsKey('demo_acknowledged') &&
+            rights['demo_acknowledged'] != true) ||
         render['state'] != 'rendered_verified' ||
         render['output_kind'] != kind ||
         duration is! num ||
@@ -418,17 +416,10 @@ final class MediaProjectController extends ChangeNotifier {
     }
   }
 
-  Future<void> export({
-    required String outputKind,
-    required bool demoAcknowledged,
-  }) async {
+  Future<void> export({required String outputKind}) async {
     if (_disposed || busy || _timeline == null) return;
     if (!contextMatches) {
       _fail('CONTENT_CONTEXT_CHANGED');
-      return;
-    }
-    if (!demoAcknowledged) {
-      _fail('CONTENT_DEMO_ACKNOWLEDGEMENT_REQUIRED');
       return;
     }
     if (_completionUnknown) {
@@ -449,7 +440,6 @@ final class MediaProjectController extends ChangeNotifier {
         refs: _sourceRefs,
         timeline: snapshot,
         outputKind: outputKind,
-        demoAcknowledged: demoAcknowledged,
         previousArtifactId: _version?.artifactId,
       );
       final result = response['result'];

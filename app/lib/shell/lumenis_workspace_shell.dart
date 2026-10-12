@@ -125,7 +125,7 @@ Widget buildLumenisWorkspaceScreen({
     'BMP-05' => Bmp05Screen(client: client),
     'BMP-06' => Bmp06Screen(client: client),
     'BMP-07' => Bmp07Screen(client: client),
-    'BMP-08' => Bmp08Screen(client: client),
+    'BMP-08' => Bmp08Screen(client: client, contextAvailable: contextAvailable),
     'BMP-09' => Bmp09Screen(client: client),
     'BMP-10' => Bmp10Screen(client: client),
     'BMP-11' => Bmp11Screen(client: client),

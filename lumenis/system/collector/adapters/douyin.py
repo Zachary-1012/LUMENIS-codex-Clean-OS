@@ -71,8 +71,16 @@ class DouyinAdapter(BasePlatformAdapter):
         """v4 CollectedNote → 主链路 items dict。"""
         items = []
         for n in notes or []:
-            items.append(self.normalize_item({
-                "platform_content_id": getattr(n, "raw_data", {}).get("aweme_id", "") if isinstance(getattr(n, "raw_data", None), dict) else "",
+            raw = getattr(n, "raw_data", {})
+            raw = raw if isinstance(raw, dict) else {}
+            if raw.get("engine") == "douyin_detail_api" or "metrics" in raw:
+                metrics = raw.get("metrics")
+                play_count = metrics.get("play_count") if isinstance(metrics, dict) else None
+            else:
+                play_count = raw.get("play_count")
+            views = play_count if type(play_count) is int and play_count >= 0 else None
+            item = self.normalize_item({
+                "platform_content_id": raw.get("aweme_id", ""),
                 "title": getattr(n, "title", ""),
                 "content": getattr(n, "content", ""),
                 "author_id": getattr(n, "author_id", ""),
@@ -83,8 +91,15 @@ class DouyinAdapter(BasePlatformAdapter):
                 "comments": getattr(n, "comments", None),
                 "collects": getattr(n, "collects", None),
                 "shares": getattr(n, "shares", None),
-                "raw": getattr(n, "raw_data", {}),
-            }))
+                "views": views,
+                "raw": raw,
+            })
+            # The shared transport normalizer intentionally keeps only its
+            # cross-platform fields. Restore this native optional metric on
+            # the Douyin item so its search observation can be archived before
+            # exact-ID detail replaces the current value.
+            item["views"] = views
+            items.append(item)
         return items
 
     @staticmethod
@@ -135,7 +150,7 @@ class DouyinAdapter(BasePlatformAdapter):
             "body_locator": "$.data[].aweme_info.desc",
             "native_time": raw.get("create_time"),
             "native_time_locator": "$.data[].aweme_info.create_time",
-            "metrics": {name: item.get(name) for name in ("likes", "comments", "collects", "shares")},
+            "metrics": {name: item.get(name) for name in ("likes", "comments", "collects", "shares", "views")},
             "metrics_locator": "$.data[].aweme_info.statistics",
         }
         item["raw"] = raw
@@ -189,7 +204,18 @@ class DouyinAdapter(BasePlatformAdapter):
             # so clear both fields to prevent promoting a search summary as body.
             item["content"] = ""
             item["title"] = ""
+            item["views"] = None
+            raw["play_count"] = None
             return
+        detail_metrics = detail_raw.get("metrics")
+        play_count = detail_metrics.get("play_count") if isinstance(detail_metrics, dict) else None
+        if type(play_count) is not int or play_count < 0:
+            play_count = None
+        item["views"] = play_count
+        raw["play_count"] = play_count
+        # Search time remains archived in search_summary_observation; the
+        # current native field follows this successful exact-ID detail only.
+        raw["create_time"] = detail_raw.get("create_time")
         item["content"] = body or ""
         item["publish_datetime"] = detail_item.get("publish_datetime") or ""
         item["url"] = detail_item.get("url") or item.get("url") or ""
@@ -211,6 +237,9 @@ class DouyinAdapter(BasePlatformAdapter):
             else:
                 result = backend.search(keyword, max_results=max_results)
             status = self._v4_status_to_main(result.success, result.notes, result.error)
+            search_failure_state = self._detail_failure_state(result.error) if not result.success else None
+            if search_failure_state == "DETAIL_FAILED":
+                search_failure_state = "SEARCH_FAILED"
             items = self._v4_notes_to_items(result.notes)
             detail_counts = {"attempted": 0, "succeeded": 0, "failed": 0, "pending": 0,
                              "not_attempted_no_native_id": 0, "reused_same_native_id": 0}
@@ -279,12 +308,16 @@ class DouyinAdapter(BasePlatformAdapter):
             detail_metadata = {
                 **detail_counts,
                 "stop_reason": detail_stop_reason,
-                "body_completeness": "NO_RESULTS" if not items else (
+                "search_state": status.value,
+                "search_failure_state": search_failure_state,
+                "body_completeness": ("NO_RESULTS" if result.success else "NOT_OBSERVED") if not items else (
                     "COMPLETE" if not detail_incomplete else "PARTIAL"
                 ),
                 "media_semantics": "URL_HINTS_ONLY_NO_BYTES_OR_ARTIFACT",
             }
-            if detail_stop_reason:
+            if detail_stop_reason and result.success:
+                # An unsuccessful search keeps its original access state even
+                # when already observed search cards remain pending detail.
                 status = {
                     "VERIFICATION_REQUIRED": CollectionStatus.NEED_VERIFY,
                     "RATE_LIMITED": CollectionStatus.COOLING_DOWN,
@@ -303,7 +336,8 @@ class DouyinAdapter(BasePlatformAdapter):
                 message=(result.error or ("抖音搜索成功；部分原生详情未完成" if detail_incomplete else "")),
                 metadata={"engine": "v4_douyin_browser", "provider": "authorized_browser_worker",
                           "duration_s": result.duration_seconds, "detail": detail_metadata,
-                          **({"error_type": detail_stop_reason} if detail_stop_reason else {})},
+                          **({"error_type": detail_stop_reason or search_failure_state}
+                             if detail_stop_reason or search_failure_state else {})},
             )
         except Exception as exc:
             logger.error("抖音主链路采集异常 error_type=%s", type(exc).__name__)

@@ -71,7 +71,7 @@ def _source_view(row, *, reference, body):
         "body_sha256": _sha(body.encode("utf-8")),
         "publish_datetime": row["publish_datetime"],
         "captured_at": row["captured_at"],
-        "source_platform": row["source_platform"] or "UNKNOWN",
+        "source_platform": "UNKNOWN",
     }
 
 
@@ -95,17 +95,18 @@ def prepare_synthetic_content_sources(client, monkeypatch):
     monkeypatch.setattr(shared_artifacts, "get_repository", lambda: repository)
     shared_artifacts.ensure_artifact_table()
 
-    with app.test_request_context(
-        "/", headers={"Host": "localhost"},
-        environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
-    ):
-        actor = permission.resolve_local_workspace_principal(module="reports", action="write")
-    if type(actor) is not permission.LocalWorkspacePrincipal:
-        raise AssertionError("the fixture requires the real loopback LocalWorkspacePrincipal")
-
     created_paths = []
     source_views = {}
+    request_context = app.test_request_context(
+        "/", headers={"Host": "localhost"},
+        environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
+    )
+    request_context.push()
     try:
+        actor = permission.resolve_local_workspace_principal(module="reports", action="write")
+        if type(actor) is not permission.LocalWorkspacePrincipal:
+            raise AssertionError("the fixture requires the real loopback LocalWorkspacePrincipal")
+
         with repository.transaction() as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
@@ -146,7 +147,7 @@ def prepare_synthetic_content_sources(client, monkeypatch):
                     source_provenance = {
                         "source_url": None,
                         "published_at": None,
-                        "captured_at": _CAPTURED_AT,
+                        "captured_at": row["captured_at"] or None,
                         "rights": "owner-approved",
                         "title": "Self-authored synthetic BusinessBrief source fixture",
                         "intended_use": "research_reference",
@@ -206,7 +207,8 @@ def prepare_synthetic_content_sources(client, monkeypatch):
                     current_ref = f"app_evidence_records:{evidence_id}"
                     raw_ref["content_evidence_ref"] = current_ref
                     connection.execute(
-                        "UPDATE canonical_data SET raw_ref=? WHERE canonical_id=? AND source_id=?",
+                        "UPDATE canonical_data SET raw_ref=?, source_platform='UNKNOWN' "
+                        "WHERE canonical_id=? AND source_id=?",
                         (json.dumps(raw_ref, ensure_ascii=False, sort_keys=True),
                          row["canonical_id"], source_id),
                     )
@@ -215,6 +217,8 @@ def prepare_synthetic_content_sources(client, monkeypatch):
         for path in created_paths:
             path.unlink(missing_ok=True)
         raise
+    finally:
+        request_context.pop()
 
     return {"actor": actor, "sources": source_views, "db_path": db_path, "app": app}
 

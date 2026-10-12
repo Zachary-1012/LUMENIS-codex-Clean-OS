@@ -43,6 +43,13 @@ class _Ai01ScreenState extends State<Ai01Screen> {
     debugLabel: 'ai01-details-opener',
   );
   final _ownedDialogs = <DialogRoute<void>>{};
+  final List<_Ai01SuggestionAdoption> _suggestionAdoptions = [];
+  Ai01Suggestion? _reviewedSuggestion;
+  bool _confirmSuggestionWithdrawal = false;
+
+  Ai01Suggestion? get _adoptedSuggestion => _suggestionAdoptions.isEmpty
+      ? null
+      : _suggestionAdoptions.last.suggestion;
 
   @override
   void initState() {
@@ -68,12 +75,14 @@ class _Ai01ScreenState extends State<Ai01Screen> {
       _closeOwnedDialogs();
       _viewModel.dispose();
       _viewModel = _createViewModel();
+      _clearSuggestionState();
       _syncDraft();
       _viewModel.refresh();
     }
     if (oldWidget.draftController == widget.draftController) return;
 
     _closeOwnedDialogs();
+    _clearSuggestionState();
     final previousController = _draftController;
     final previousValue = previousController.value;
     previousController.removeListener(_syncDraft);
@@ -128,6 +137,12 @@ class _Ai01ScreenState extends State<Ai01Screen> {
 
   void _syncDraft() => _viewModel.updateDraft(_draftController.text);
 
+  void _clearSuggestionState() {
+    _reviewedSuggestion = null;
+    _suggestionAdoptions.clear();
+    _confirmSuggestionWithdrawal = false;
+  }
+
   String? _submitBlockedText(BuildContext context) {
     final copy = context.lumenisL10n;
     return switch (_viewModel.submitBlock) {
@@ -142,12 +157,73 @@ class _Ai01ScreenState extends State<Ai01Screen> {
     };
   }
 
-  void _chooseSuggestion(Ai01Suggestion suggestion) {
-    _viewModel.useSuggestion(suggestion);
-    _draftController.value = TextEditingValue(
-      text: _viewModel.draft,
-      selection: TextSelection.collapsed(offset: _viewModel.draft.length),
+  void _reviewSuggestion(Ai01Suggestion suggestion) {
+    setState(() {
+      _reviewedSuggestion = suggestion;
+      _confirmSuggestionWithdrawal = false;
+    });
+  }
+
+  void _closeSuggestionReview() {
+    setState(() {
+      _reviewedSuggestion = null;
+      _confirmSuggestionWithdrawal = false;
+    });
+  }
+
+  void _adoptSuggestion(Ai01Suggestion suggestion) {
+    final intent = suggestion.safeIntent;
+    if (intent == null || intent.isEmpty) return;
+
+    final previousDraft = _draftController.value;
+    final nextText = _appendSafeIntent(previousDraft.text, intent);
+    if (nextText == null || nextText.trim().runes.length > ai01MaxTaskLength) {
+      return;
+    }
+    final adoptedDraft = TextEditingValue(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: nextText.length),
     );
+    setState(() {
+      _reviewedSuggestion = suggestion;
+      _suggestionAdoptions.add(
+        _Ai01SuggestionAdoption(
+          suggestion: suggestion,
+          before: previousDraft,
+          after: adoptedDraft,
+        ),
+      );
+      _confirmSuggestionWithdrawal = false;
+    });
+    _viewModel.updateDraft(nextText);
+    _draftController.value = adoptedDraft;
+  }
+
+  void _requestSuggestionWithdrawal() {
+    if (_suggestionAdoptions.isEmpty) return;
+    final adoption = _suggestionAdoptions.last;
+    if (_draftController.text == adoption.after.text) {
+      _withdrawSuggestion();
+      return;
+    }
+    setState(() => _confirmSuggestionWithdrawal = true);
+  }
+
+  void _withdrawSuggestion() {
+    if (_suggestionAdoptions.isEmpty) return;
+    final adoption = _suggestionAdoptions.last;
+    setState(() {
+      _suggestionAdoptions.removeLast();
+      _reviewedSuggestion = _suggestionAdoptions.isEmpty
+          ? adoption.suggestion
+          : _suggestionAdoptions.last.suggestion;
+      _confirmSuggestionWithdrawal = false;
+    });
+    _draftController.value = adoption.before;
+  }
+
+  void _cancelSuggestionWithdrawal() {
+    setState(() => _confirmSuggestionWithdrawal = false);
   }
 
   Future<void> _openFocusedEditor() async {
@@ -273,7 +349,15 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                   submitPhase: _viewModel.submitPhase,
                   intentResult: _viewModel.intentResult,
                   suggestions: snapshot?.suggestions ?? const [],
-                  onChooseSuggestion: _chooseSuggestion,
+                  reviewedSuggestion: _reviewedSuggestion,
+                  adoptedSuggestion: _adoptedSuggestion,
+                  confirmSuggestionWithdrawal: _confirmSuggestionWithdrawal,
+                  onReviewSuggestion: _reviewSuggestion,
+                  onCloseSuggestionReview: _closeSuggestionReview,
+                  onAdoptSuggestion: _adoptSuggestion,
+                  onRequestSuggestionWithdrawal: _requestSuggestionWithdrawal,
+                  onConfirmSuggestionWithdrawal: _withdrawSuggestion,
+                  onCancelSuggestionWithdrawal: _cancelSuggestionWithdrawal,
                   onExpand: _openFocusedEditor,
                   compact: phone,
                 ),
@@ -439,7 +523,15 @@ class _ComposerPane extends StatelessWidget {
     required this.submitPhase,
     required this.intentResult,
     required this.suggestions,
-    required this.onChooseSuggestion,
+    required this.reviewedSuggestion,
+    required this.adoptedSuggestion,
+    required this.confirmSuggestionWithdrawal,
+    required this.onReviewSuggestion,
+    required this.onCloseSuggestionReview,
+    required this.onAdoptSuggestion,
+    required this.onRequestSuggestionWithdrawal,
+    required this.onConfirmSuggestionWithdrawal,
+    required this.onCancelSuggestionWithdrawal,
     required this.onExpand,
     required this.compact,
   });
@@ -453,7 +545,15 @@ class _ComposerPane extends StatelessWidget {
   final Ai01SubmitPhase submitPhase;
   final Ai01IntentResult? intentResult;
   final List<Ai01Suggestion> suggestions;
-  final ValueChanged<Ai01Suggestion> onChooseSuggestion;
+  final Ai01Suggestion? reviewedSuggestion;
+  final Ai01Suggestion? adoptedSuggestion;
+  final bool confirmSuggestionWithdrawal;
+  final ValueChanged<Ai01Suggestion> onReviewSuggestion;
+  final VoidCallback onCloseSuggestionReview;
+  final ValueChanged<Ai01Suggestion> onAdoptSuggestion;
+  final VoidCallback onRequestSuggestionWithdrawal;
+  final VoidCallback onConfirmSuggestionWithdrawal;
+  final VoidCallback onCancelSuggestionWithdrawal;
   final VoidCallback onExpand;
   final bool compact;
 
@@ -492,7 +592,7 @@ class _ComposerPane extends StatelessWidget {
                 horizontal: 0,
                 vertical: compact ? 8 : 10,
               ),
-              counterStyle: TextStyle(color: LumenisTheme.of(context).quiet),
+              counterText: '',
               hintText: context.lumenisL10n.text('ai01.draft.hint'),
               alignLabelWithHint: true,
               border: InputBorder.none,
@@ -500,6 +600,8 @@ class _ComposerPane extends StatelessWidget {
               focusedBorder: InputBorder.none,
             ),
           ),
+          const SizedBox(height: 2),
+          _Ai01DraftLengthCounter(controller: controller),
           if (safeSuggestions.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(
@@ -513,10 +615,11 @@ class _ComposerPane extends StatelessWidget {
               spacing: 8,
               runSpacing: 6,
               children: [
-                for (final suggestion in safeSuggestions)
+                for (var index = 0; index < safeSuggestions.length; index++)
                   ActionChip(
-                    onPressed: () => onChooseSuggestion(suggestion),
-                    label: Text(suggestion.safeTitle!),
+                    key: ValueKey('ai01-suggestion-$index'),
+                    onPressed: () => onReviewSuggestion(safeSuggestions[index]),
+                    label: Text(safeSuggestions[index].safeTitle!),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     backgroundColor: LumenisTheme.of(
                       context,
@@ -530,6 +633,37 @@ class _ComposerPane extends StatelessWidget {
                     labelStyle: TextStyle(color: LumenisTheme.of(context).ai),
                   ),
               ],
+            ),
+          ],
+          if (reviewedSuggestion != null &&
+              reviewedSuggestion!.isProductSafe) ...[
+            const SizedBox(height: 10),
+            _Ai01SuggestionReview(
+              suggestion: reviewedSuggestion!,
+              isCurrentAdoption: _sameAi01Suggestion(
+                reviewedSuggestion!,
+                adoptedSuggestion,
+              ),
+              intentAlreadyInDraft: _containsSafeIntentLine(
+                controller.text,
+                reviewedSuggestion!.safeIntent!,
+              ),
+              intentWouldExceedTaskLimit: _wouldExceedAi01TaskLimit(
+                controller.text,
+                reviewedSuggestion!.safeIntent!,
+              ),
+              onClose: onCloseSuggestionReview,
+              onAdopt: () => onAdoptSuggestion(reviewedSuggestion!),
+            ),
+          ],
+          if (adoptedSuggestion != null) ...[
+            const SizedBox(height: 10),
+            _Ai01AdoptionControls(
+              adoptedSuggestion: adoptedSuggestion!,
+              confirmWithdrawal: confirmSuggestionWithdrawal,
+              onRequestWithdrawal: onRequestSuggestionWithdrawal,
+              onConfirmWithdrawal: onConfirmSuggestionWithdrawal,
+              onCancelWithdrawal: onCancelSuggestionWithdrawal,
             ),
           ],
           const SizedBox(height: 6),
@@ -616,6 +750,345 @@ class _ComposerPane extends StatelessWidget {
     );
   }
 }
+
+class _Ai01DraftLengthCounter extends StatelessWidget {
+  const _Ai01DraftLengthCounter({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) => ValueListenableBuilder<TextEditingValue>(
+    valueListenable: controller,
+    builder: (context, value, _) {
+      final count = value.text.trim().runes.length;
+      final overLimit = count > ai01MaxTaskLength;
+      final theme = LumenisTheme.of(context);
+      final countLabel = _ai01LocalCopy(
+        context,
+        zh: '草稿长度 $count/4000 字符',
+        en: 'Draft length $count of 4,000 characters',
+        ko: '초안 길이 $count/4000자',
+      );
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            label: countLabel,
+            child: ExcludeSemantics(
+              child: Text(
+                '$count/4000',
+                key: const ValueKey('ai01-draft-character-count'),
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: overLimit ? theme.danger : theme.quiet,
+                ),
+              ),
+            ),
+          ),
+          if (overLimit) ...[
+            const SizedBox(height: 2),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                _ai01LocalCopy(
+                  context,
+                  zh: '超出 4000 字符时不能提交或加入建议，草稿仍可编辑和保存。',
+                  en: 'Over 4,000 characters, submission and adding suggestions are disabled; you can still edit and save the draft.',
+                  ko: '4,000자를 넘으면 제출과 제안 추가는 제한되지만 초안은 계속 편집하고 저장할 수 있어요.',
+                ),
+                key: const ValueKey('ai01-draft-limit-note'),
+                textAlign: TextAlign.end,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: theme.danger),
+              ),
+            ),
+          ],
+        ],
+      );
+    },
+  );
+}
+
+class _Ai01SuggestionReview extends StatelessWidget {
+  const _Ai01SuggestionReview({
+    required this.suggestion,
+    required this.isCurrentAdoption,
+    required this.intentAlreadyInDraft,
+    required this.intentWouldExceedTaskLimit,
+    required this.onClose,
+    required this.onAdopt,
+  });
+
+  final Ai01Suggestion suggestion;
+  final bool isCurrentAdoption;
+  final bool intentAlreadyInDraft;
+  final bool intentWouldExceedTaskLimit;
+  final VoidCallback onClose;
+  final VoidCallback onAdopt;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = LumenisTheme.of(context);
+    final intent = suggestion.safeIntent!;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Container(
+        key: const ValueKey('ai01-suggestion-review'),
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.ai.withValues(alpha: 0.045),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: theme.ai.withValues(alpha: 0.16)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _ai01LocalCopy(
+                      context,
+                      zh: '将加入任务的内容',
+                      en: 'Text to add to the task',
+                      ko: '작업에 추가할 내용',
+                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelMedium?.copyWith(color: theme.muted),
+                  ),
+                ),
+                IconButton(
+                  key: const ValueKey('ai01-suggestion-review-close'),
+                  tooltip: _ai01LocalCopy(
+                    context,
+                    zh: '关闭建议说明',
+                    en: 'Close suggestion details',
+                    ko: '제안 설명 닫기',
+                  ),
+                  onPressed: onClose,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 48,
+                    height: 48,
+                  ),
+                  padding: EdgeInsets.zero,
+                  icon: const LumenisIcon(Icons.close_rounded, size: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              intent,
+              key: const ValueKey('ai01-suggestion-safe-intent'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: theme.foreground,
+                height: 1.4,
+              ),
+            ),
+            if (!intentAlreadyInDraft) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: const ValueKey('ai01-suggestion-adopt'),
+                onPressed: intentWouldExceedTaskLimit ? null : onAdopt,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                ),
+                icon: const LumenisIcon(Icons.add_task_rounded, size: 18),
+                label: Text(
+                  _ai01LocalCopy(
+                    context,
+                    zh: '加入任务',
+                    en: 'Add to task',
+                    ko: '작업에 추가',
+                  ),
+                ),
+              ),
+              if (intentWouldExceedTaskLimit) ...[
+                const SizedBox(height: 4),
+                Text(
+                  _ai01LocalCopy(
+                    context,
+                    zh: '加入后会超过 4000 字符限制，请先删减草稿。',
+                    en: 'Adding this would exceed the 4,000-character limit. Shorten the draft first.',
+                    ko: '추가하면 4,000자 제한을 넘습니다. 먼저 초안을 줄여 주세요.',
+                  ),
+                  key: const ValueKey('ai01-suggestion-too-long'),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: theme.muted),
+                ),
+              ],
+            ] else if (!isCurrentAdoption) ...[
+              const SizedBox(height: 8),
+              Text(
+                _ai01LocalCopy(
+                  context,
+                  zh: '这条内容已在任务中，无需重复加入。',
+                  en: 'This content is already in the task.',
+                  ko: '이 내용은 이미 작업에 있어요.',
+                ),
+                key: const ValueKey('ai01-suggestion-already-added'),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: theme.muted),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Ai01SuggestionAdoption {
+  const _Ai01SuggestionAdoption({
+    required this.suggestion,
+    required this.before,
+    required this.after,
+  });
+
+  final Ai01Suggestion suggestion;
+  final TextEditingValue before;
+  final TextEditingValue after;
+}
+
+String? _appendSafeIntent(String draft, String intent) {
+  if (_containsSafeIntentLine(draft, intent)) return null;
+  if (draft.isEmpty) return intent;
+  final separator = draft.endsWith('\n') ? '' : '\n';
+  return '$draft$separator$intent';
+}
+
+bool _containsSafeIntentLine(String draft, String intent) =>
+    draft.split(RegExp(r'\r\n|\r|\n')).any((line) => line.trim() == intent);
+
+bool _wouldExceedAi01TaskLimit(String draft, String intent) {
+  final appended = _appendSafeIntent(draft, intent);
+  return appended != null && appended.trim().runes.length > ai01MaxTaskLength;
+}
+
+class _Ai01AdoptionControls extends StatelessWidget {
+  const _Ai01AdoptionControls({
+    required this.adoptedSuggestion,
+    required this.confirmWithdrawal,
+    required this.onRequestWithdrawal,
+    required this.onConfirmWithdrawal,
+    required this.onCancelWithdrawal,
+  });
+
+  final Ai01Suggestion adoptedSuggestion;
+  final bool confirmWithdrawal;
+  final VoidCallback onRequestWithdrawal;
+  final VoidCallback onConfirmWithdrawal;
+  final VoidCallback onCancelWithdrawal;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = adoptedSuggestion.safeTitle!;
+    final message = confirmWithdrawal
+        ? _ai01LocalCopy(
+            context,
+            zh: '撤回会恢复采用前的草稿，并移除之后的编辑内容。',
+            en: 'Withdrawing restores the draft from before adoption and removes later edits.',
+            ko: '되돌리면 적용 전 초안으로 복원되고 이후 편집 내용은 사라져요.',
+          )
+        : _ai01LocalCopy(
+            context,
+            zh: '已加入任务「$title」，你可以继续编辑。',
+            en: '“$title” is in the task draft. You can keep editing.',
+            ko: '「$title」을(를) 작업 초안에 추가했어요. 계속 편집할 수 있어요.',
+          );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          liveRegion: true,
+          child: Text(
+            message,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: LumenisTheme.of(context).muted,
+            ),
+          ),
+        ),
+        if (confirmWithdrawal) ...[
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              TextButton(
+                key: const ValueKey('ai01-suggestion-withdraw-cancel'),
+                onPressed: onCancelWithdrawal,
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                child: Text(
+                  _ai01LocalCopy(
+                    context,
+                    zh: '保留当前编辑',
+                    en: 'Keep current edits',
+                    ko: '현재 편집 유지',
+                  ),
+                ),
+              ),
+              FilledButton.tonal(
+                key: const ValueKey('ai01-suggestion-withdraw-confirm'),
+                onPressed: onConfirmWithdrawal,
+                style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+                child: Text(
+                  _ai01LocalCopy(
+                    context,
+                    zh: '恢复采用前草稿',
+                    en: 'Restore previous draft',
+                    ko: '이전 초안 복원',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ] else
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              key: const ValueKey('ai01-suggestion-withdraw'),
+              onPressed: onRequestWithdrawal,
+              icon: const LumenisIcon(Icons.undo_rounded, size: 18),
+              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+              label: Text(
+                _ai01LocalCopy(
+                  context,
+                  zh: '撤回建议',
+                  en: 'Undo suggestion',
+                  ko: '제안 되돌리기',
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+String _ai01LocalCopy(
+  BuildContext context, {
+  required String zh,
+  required String en,
+  required String ko,
+}) => switch (context.lumenisL10n.locale.languageCode) {
+  'en' => en,
+  'ko' => ko,
+  _ => zh,
+};
+
+bool _sameAi01Suggestion(Ai01Suggestion first, Ai01Suggestion? second) =>
+    second != null &&
+    first.title == second.title &&
+    first.description == second.description &&
+    first.intent == second.intent;
 
 class _SubmitStatus extends StatelessWidget {
   const _SubmitStatus({required this.phase, required this.result});
@@ -818,10 +1291,11 @@ class _FocusedDraftEditorState extends State<_FocusedDraftEditor> {
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
-                              counterStyle: TextStyle(color: theme.quiet),
+                              counterText: '',
                             ),
                           ),
                         ),
+                        _Ai01DraftLengthCounter(controller: widget.controller),
                         Padding(
                           padding: EdgeInsets.symmetric(
                             vertical: short ? 4 : 12,

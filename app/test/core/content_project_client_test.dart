@@ -381,7 +381,7 @@ void main() {
   );
 
   test(
-    'export sends edit intent and demo choice, never publish or actor claims',
+    'export sends edit intent without obsolete demo or publish claims',
     () async {
       response = {
         'ok': true,
@@ -414,7 +414,6 @@ void main() {
           'asset_paths': ['local.wav'],
           'timeline': {'version': 3},
           'output_kind': 'audio',
-          'demo_acknowledged': true,
           'previous_artifact_id': 'ART-parent',
         },
       });
