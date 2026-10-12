@@ -85,6 +85,41 @@ class GovernanceHistoryRegressionTests(unittest.TestCase):
                 with self.assertRaisesRegex(AssertionError, 'retired rule source'):
                     gate._assert_unique_current_rule_sources()
 
+    def test_nested_execution_authorities_are_blocked_not_only_known_names(self) -> None:
+        import tempfile
+        from unittest.mock import patch
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+        current_agents = (gate.ROOT / "AGENTS.md").read_text("utf-8-sig")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "AGENTS.md").write_text(current_agents, encoding="utf8")
+            (root / "lumenis_shared_skills.py").write_text(
+                '_LOCAL_RESEARCH = ["00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"]',
+                encoding="utf8",
+            )
+            with patch.object(gate, "ROOT", root):
+                cases = (
+                    ("docs/ARCHITECTURE_DECISION_RECORD_20260830.md", "当前有效关系以：\n- CURRENT_BASELINE.md"),
+                    ("intelligence_library/09_Research-Hub/docs/MASTER/FINAL_EXECUTION_COMMAND.md", "# FINAL EXECUTION COMMAND\nThis is current"),
+                    ("intelligence_library/05_Runtime/architecture/lumenis_AI_PROGRAMMING_BASELINE_V1.md", "状态：正式施工基线"),
+                    ("docs/MASTER/FINAL_EXECUTION_COMMAND.md", "# FINAL EXECUTION COMMAND\nSTATUS: P0 / FINAL EXECUTION AUTHORITY"),
+                    ("docs/unlisted-later-master.md", "本文件是所有UI业务的统一执行母指令"),
+                )
+                for rel, bad in cases:
+                    path = root / rel
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(bad, encoding="utf8")
+                    try:
+                        with self.subTest(path=rel), self.assertRaisesRegex(
+                            AssertionError, "uncontrolled nested execution authority"
+                        ):
+                            gate._assert_unique_current_rule_sources()
+                    finally:
+                        path.unlink()
+                hist = root / "docs/ARCHITECTURE_DECISION_RECORD_20260830.md"
+                hist.write_text("# History only\nHISTORICAL / NOT EXECUTION", encoding="utf8")
+                gate._assert_unique_current_rule_sources()
+
     def test_retiring_release_copy_preserves_real_safety_requirements(self) -> None:
         import tempfile
         from unittest.mock import patch
@@ -272,6 +307,11 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             ".codex/model-routing.toml",
             ".codex/tests/test_engineering.py",
             "website/DEVELOPMENT-BRIEF.md",
+            "contracts/experience/BACKEND_GAP.json",
+            "contracts/experience/BINDING_MATRIX.json",
+            "contracts/experience/lumenis_app_binding_registry.json",
+            "contracts/experience/unknown-bindings.json",
+            "scripts/audit_tools/verify_experience_screen_blueprints.py",
         }
         _assert_current_publication_truth(rules_only, changed_paths=rules_paths)
 

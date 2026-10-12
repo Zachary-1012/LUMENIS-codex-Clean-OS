@@ -244,6 +244,12 @@ def _is_rules_only_publication_path(path: str) -> bool:
         # not runtime configuration. Keep arbitrary JSON outside this allowlist.
         "00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json",
         "contracts/experience/source-target-contract-v1.json",
+        # Exact developer binding ledgers and their validator, not runtime features.
+        "contracts/experience/BACKEND_GAP.json",
+        "contracts/experience/BINDING_MATRIX.json",
+        "contracts/experience/lumenis_app_binding_registry.json",
+        "contracts/experience/unknown-bindings.json",
+        "scripts/audit_tools/verify_experience_screen_blueprints.py",
     }:
         return True
     if path.startswith("00-GOVERNANCE/") and path.endswith(".md"):
@@ -514,6 +520,26 @@ def _assert_unique_current_rule_sources() -> None:
             resolved = posixpath.normpath(posixpath.join(posixpath.dirname(relative), target))
             if target in RETIRED_RULE_PATHS or resolved in RETIRED_RULE_PATHS:
                 raise AssertionError(f"active reference to retired instruction: {relative} -> {target}")
+
+    # Scan nested research/doc sources for executable declarations, not
+    # merely named retirements. Historical references may stay if neutralized.
+    nested_patterns = (
+        re.compile(r"(?im)^#{1,3}\s*FINAL EXECUTION COMMAND\s*$"),
+        re.compile(r"(?im)^\s*状态\s*[：:]\s*正式施工基线\s*$"),
+        re.compile(r"(?im)^\s*本文件是.{0,180}统一执行母指令"),
+        re.compile(r"(?im)^\s*当前有效关系以\s*[：:]\s*$"),
+    )
+    for family in (ROOT / "docs", ROOT / "intelligence_library"):
+        if not family.is_dir():
+            continue
+        for nested_doc in family.rglob("*.md"):
+            if not nested_doc.is_file():
+                continue
+            nested_text = nested_doc.read_text("utf-8-sig")
+            if any(pattern.search(nested_text) for pattern in nested_patterns):
+                raise AssertionError(
+                    f"uncontrolled nested execution authority: {nested_doc.relative_to(ROOT)}"
+                )
 
     # Active per-screen instructions must agree with the canonical surface policy.
     surface_paths = [ROOT / "contracts/experience/README.md"]
