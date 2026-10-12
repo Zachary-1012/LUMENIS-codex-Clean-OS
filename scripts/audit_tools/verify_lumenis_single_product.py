@@ -221,6 +221,17 @@ def main() -> int:
         ):
             if marker not in positioning_text:
                 errors.append(f"current product positioning marker missing: {marker}")
+        for stale in (
+            "Website/Web优先及原生Windows/macOS/iOS顺序不变",
+            "Public Website and Web Workspace close first.",
+            "Later native application targets",
+            "Exact seven-domain coverage",
+        ):
+            if stale in positioning_text:
+                errors.append(f"obsolete positioning rule: {stale}")
+        for current in ("built in parallel", "accepted independently", "Independently usable"):
+            if current not in positioning_text:
+                errors.append(f"positioning omits current surface/Shared boundary: {current}")
     if not README.is_file():
         errors.append("missing product definition and engineering entry point")
     else:

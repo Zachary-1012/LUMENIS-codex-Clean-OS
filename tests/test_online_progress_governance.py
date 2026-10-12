@@ -197,6 +197,16 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
         _assert_readme_routing_consistent(readme)
         with self.assertRaisesRegex(AssertionError, "obsolete execution/provider routes"):
             _assert_readme_routing_consistent(readme + "\n15 个顺序 Codex 任务")
+        positioning = (Path(__file__).resolve().parents[1] / "00-GOVERNANCE" /
+                       "PRODUCT-POSITIONING-CURRENT.md").read_text(encoding="utf-8")
+        for stale in ("Website/Web优先及原生Windows/macOS/iOS顺序不变",
+                      "Public Website and Web Workspace close first.",
+                      "Later native application targets", "Exact seven-domain coverage"):
+            with self.subTest(stale=stale):
+                self.assertNotIn(stale, positioning)
+        for current in ("built in parallel", "accepted independently", "Independently usable"):
+            with self.subTest(current=current):
+                self.assertIn(current, positioning)
 
     def test_missing_or_remapped_legacy_coverage_is_blocking(self) -> None:
         matrix = self._coverage_matrix()
