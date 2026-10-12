@@ -34,8 +34,13 @@ developer diagnostics. Legitimate business constraints remain editable; method
 and assumptions remain inspectable without becoming the default workflow.
 
 Across SYSTEM/CTH/BMP/Shared/AI, inspect requirements, owners and callers first:
-reuse correct work, repair conflicts, add only proven gaps. A PO question is not
-an addition request. Direct PO instructions and local readback govern windows
+reuse correct work and update the existing owner, function, contract and rule
+in place. Do not append another instruction block or create parallel files,
+wrappers, services or truth stores merely because new information arrived.
+Reconcile affected callers and retire conflicting active wording in its original
+location; preserve valid behavior, source history and protected local work. A
+genuinely absent capability needs a demonstrated gap and explicit approval before
+new structure is introduced. A PO question is not an addition request. Direct PO instructions and local readback govern windows
 and models; online rules and dated receipts cannot dispatch or pause them.
 Architecture owns product scope; Experience owns presentation. Provenance:
 `00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
@@ -51,7 +56,7 @@ execution instructions.
 
 ## 1. Authority
 
-**2026-10-10 PO precedence:** Task/feature/repair branches and pull requests are permitted for all subsequent work. The default is branch -> scoped tests/review -> merge into `main`; main remains the integration and release reference, not the only writable branch. Unit and integration tests are reinstated. Historical branch/test prohibitions are superseded. Preserve unknown dirty work, source rights and all Permission/Evidence/Canonical boundaries; no force-push or automatic branch deletion. This instruction does not authorize live collection, external models, training, spending or deployment. Exact PO provenance: `00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`.
+**2026-10-10 PO precedence:** Task/feature/repair branches and pull requests are permitted for all subsequent work. The mandatory integration path is development branch -> scoped tests/review -> PR -> required GitHub checks against the latest main -> merge into `main` -> remote readback. Main remains the integration and release reference, not the only writable branch. All authorized human and AI developers use this path; removing rule bypass does not revoke repository access. Do not push directly to main or bypass its ruleset. Current protection enforcement and exact check names are recorded in CURRENT, not inferred from a past green run. Unit and integration tests are reinstated. Historical branch/test prohibitions are superseded. Preserve unknown dirty work, source rights and all Permission/Evidence/Canonical boundaries; no force-push or automatic branch deletion. This instruction does not authorize live collection, external models, training, spending or deployment. Exact PO provenance: `00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`.
 
 
 ### 最新 PO：五轮架构交付与窗口/模型事实化 — 2026-10-09
@@ -496,9 +501,11 @@ origin/main truth
 → real user E2E when applicable
 → runtime / recovery evidence when applicable
 → blocking gates
-→ commit
-→ push
-→ remote verify
+→ commit on the development branch
+→ push the development branch and open/update its PR
+→ required checks and resolved review threads against current main
+→ merge the reviewed PR into main
+→ verify remote main and its applicable checks
 ```
 
 Classify unresolved requirements honestly: `MACHINE_BLOCKING` failures block
@@ -558,7 +565,7 @@ local unpushed commits
 origin/main
 ```
 
-Do not claim local-only work exists on GitHub. If local valid work is ahead, preserve it, integrate the newest `origin/main` without destructive overwrite, run proportional regression, then commit/push coherently.
+Do not claim local-only work exists on GitHub. If local valid work is ahead, preserve it, integrate the newest `origin/main` without destructive overwrite, run proportional regression, then commit and push only the development branch, pass its required PR checks and merge through GitHub. A fetched origin/main is not a merged local candidate.
 
 ### Accepted Batch online-publication gate
 
@@ -566,7 +573,7 @@ For every M-accepted implementation Batch, close local work and online truth in
 the same delivery cycle. M must inspect the exact staged files and diff,
 record the Batch's tests, runtime/E2E evidence and unresolved limits, update the
 owning Round evidence **and** this repository's CURRENT online status, then make
-a coherent mainline commit and push it. Before calling the Batch delivered or
+a coherent development-branch commit, then publish through a reviewed PR and required checks; never push the delivery directly to main. Before calling the Batch delivered or
 starting a dependent acceptance gate, fetch again and verify `HEAD`,
 `origin/main`, live `refs/heads/main`, and the published status/evidence paths
 refer to that accepted source. A progress-only commit never substitutes for
@@ -585,7 +592,7 @@ unrelated or unverified path, including credentials, Cookies and production DBs.
 - Create task/feature/repair branches from a freshly verified base; a working branch is not a second product.
 - Preserve unknown dirty/untracked work in the existing checkout; use an isolated worktree when needed.
 - Stage exact paths, run applicable unit/integration regressions and build/static/security checks, and review the complete diff before merging a PR into `main`.
-- Recheck the PR head, current main, required CI and conflicts before merge. Do not force-push main or use a merge to overwrite unrelated work.
+- Recheck the PR head, current main, required CI, unresolved review threads and conflicts before merge. Required checks must come from the configured GitHub Actions app. Do not bypass the active main ruleset, force-push main, delete main or use a merge to overwrite unrelated work.
 - Keep branch/source/runtime/DB/user-outcome evidence distinct. A merged repair does not establish whole-product release.
 - Branch inventories may contain active feature/repair branches; do not automatically delete them or absorb unreviewed work merely to obtain a single-branch inventory.
 
@@ -1549,7 +1556,7 @@ Public adapters such as ChatGPT/MCP must use allowlisted/versioned internal cont
 
 ## 20. Git discipline
 
-- use scoped branches and reviewed PRs; `main` remains the canonical integration/release branch;
+- use scoped branches and reviewed PRs with the required checks; `main` remains the canonical integration/release branch, never a direct-push development target;
 - preserve unknown/uncommitted local work before synchronizing;
 - use coherent-purpose commits;
 - do not force-push `main`;
