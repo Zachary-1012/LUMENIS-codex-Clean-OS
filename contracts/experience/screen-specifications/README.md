@@ -1,6 +1,6 @@
 # LUMENIS Screen Specifications
 
-This folder holds the reviewed implementation specification for each canonical App screen. The 44 rows in `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` §36 are distinct UX blueprints; they do not prove that routes, source fields, permissions, effects or acceptance behavior have been verified.
+This folder holds the reviewed implementation specification for each canonical App screen. The 44 rows in `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` §36 are distinct UX blueprints and a coverage baseline, not a ceiling on the product's pages or approved tasks; they do not prove that routes, source fields, permissions, effects or acceptance behavior have been verified.
 
 ## Rules
 
@@ -17,15 +17,15 @@ This folder holds the reviewed implementation specification for each canonical A
 
 ## Status lifecycle
 
-`DESIGN_EXPLORATION` → `OWNER_REVIEW` → `DESIGN_READY` → `IMPLEMENTED` → `ACCEPTED`
+Keep design review, implementation and outcome acceptance as separate evidence fields. The actual design-review record may progress `DESIGN_EXPLORATION` → `OWNER_REVIEW` → `DESIGN_READY`; implementation is recorded independently as `IMPLEMENTED`; user-outcome acceptance is recorded independently as `ACCEPTED` only after its real evidence passes. These are not one required serial lifecycle: direct construction under current contracts does not wait for DESIGN_READY, and none of the three fields implies another.
 
 Use `BLOCKED` when a verified owner, contract, authorization or acceptance dependency is missing. Design-review states record actual review and are not a mandatory coding sequence. Maintain each screen's existing specification with source changes. Do not fabricate DESIGN_READY or infer acceptance from code presence.
 
-## Delivery order
+## Surface scope and acceptance
 
-2026-10-08 PO surface order: close Public Website and Web Workspace first; dedicated native Desktop/Mobile work follows that closure. Preserve all 44 screen specifications, existing Website content families, original references, and the distinct surface requirements. Native targets are Windows/macOS Desktop and iOS Mobile; Android/Linux native-client source remains historical, while browser coverage across operating systems and Linux server/CI remain in scope. Direct construction needs no separate design draft/Figma or M DESIGN_READY approval.
+2026-10-11 PO correction: build Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile in parallel under their approved roles. Website uses the existing `website/`; Workspace/Desktop/Mobile share one Flutter `app/` and Product Core. Build the complete task-shaped frontend without waiting for all backend work; bind available real APIs/Core immediately and connect remaining existing-owner dependencies incrementally, keeping missing behavior OPEN/UNBOUND. Preserve the 44 ScreenSpecs as baseline, not a product ceiling. Native targets are Windows/macOS Desktop and iOS Mobile; Android/Linux native-client source remains historical, while browser coverage across operating systems and Linux server/CI remain in scope. Direct construction needs no separate design draft/Figma or M DESIGN_READY approval. Approval: `00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
 
-The full visual and interaction scope covers all 44 App screens and the existing Public Website content families. Golden Pages and workflow sequencing order implementation only; they do not cap or replace the complete screen/site scope. Website/Web is the first surface acceptance boundary; native completeness is later and remains OPEN until evidenced. This paragraph records product scope and surface order, not a current window dispatch state.
+The full visual and interaction scope covers all 44 baseline App screens, existing Public Website content families and any other approved product task/page. Golden Pages and workflow sequencing order implementation only; they do not cap or replace the complete screen/site scope. Each of the four surfaces has a distinct role and is accepted only from its own real operation, runtime and recovery evidence. One surface's acceptance does not pass another or the whole product. This paragraph records product scope, not current window dispatch state.
 
 ## Intelligent UI 全屏语义映射（2026-10-08）
 
@@ -89,17 +89,17 @@ Reuse the current Architecture and Experience corrections for the shared product
 ### 共用验收边界
 
 - Web Workspace、Desktop App、Mobile Companion、Public Website 共享 Product Core、ViewModel、Actor、Scope、Source/Evidence、Task、Artifact 和版本语义；布局按端侧职责区别。官网仅呈现已验证公开能力或清楚标记的示例。
-- 保留足够交互、序境二维手绘/水彩/版画视觉与可访问性；颜色有层次但不过量。创作人物服从用户脚本/描述，只借鉴手绘平面感觉，不复制参考人物，不采用3D AI质感。
+- 保留足够交互与可访问性；整体视觉依已批准研究、任务和屏幕合同，不固定二维或三维。手绘彩绘用于身份/对象图标及适合的页面元素；颜色有层次但不过量。人物服从用户脚本/描述，不复制参考人物。
 - 研究进入决策或创作时继续携带同一Brief、来源、Evidence、scope、时间、预算约束和版本，不要求用户重复解释或重选资料；变化时定位影响范围、显式采用新版本、保留父版本和回滚。
 - Intelligent UI 只改变呈现方式，不拥有数据真相、权限或效果执行。未知、未采集、过期、错误、拒绝和partial分别显示，不补零、不伪造成功。此映射不改变任一屏幕状态，也不自动批准 DESIGN_READY。
 
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
-既有前端责任覆盖全部44屏、官网家族和四端范围；Website/Web用户成果优先，Desktop/Mobile专项交付后置，C6协调既有共享绑定。此为来源责任与表面顺序，不表示任何窗口当前已派工或正在运行。保留可用的现有工程/Foundation/节点；无需Figma-first或等待逐屏DESIGN_READY后才编码，也不新增费用。
+既有前端责任覆盖44屏基线、官网家族和四端完整范围；四表面按既有角色并行建设，各自独立验收，C6协调既有共享绑定。Website使用现有`website/`；Workspace/Desktop/Mobile共用Flutter `app/`与同一Product Core。已有真实API/Core立即接入，尚未具备的接口由原Owner接续并保持OPEN/UNBOUND。此为产品范围与来源责任，不表示任何窗口当前已派工或正在运行。保留可用的现有工程/Foundation/节点；无需Figma-first或等待逐屏DESIGN_READY后才编码，也不新增费用。批准依据：`00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 现有映射为 `Screen ID → 设计规格 → 可编辑载体/路径/版本 → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence`。Figma 保留 file/node/revision；源码载体保留 Dart/Token/SVG 路径、版本、编辑和预览方式，不能称为原生 Figma。工具受限单独记录；禁止 PNG、PPT、静态截图、假 .fig 替代完整可编辑交付，不重复创建设计文件或新增收费服务。Experience仍是唯一设计权威。
 
-完整信息架构、组件/变量、全部44屏及官网家族直接通过可编辑源码和真实任务交互交付，不另立设计稿阶段；已有Flutter交互按其现有真实合同直接修复，不等待全部Figma页面完成。优先ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06接线，Golden Pages均为排序而非范围上限。保留四端、中英韩、主题、字号/宽度、可访问性、失败恢复和2D手绘水彩方向。Figma或源码载体均给出真实可编辑路径/版本、原有ScreenSpec映射和缺口；截图仅辅助。主题复用LumenisTheme，官网Astro/CSS保持既定边界；真实Core/Permission/来源/保存/恢复与跨端验收不可由Widget测试替代。
+完整信息架构、组件/变量、全部44屏及官网家族直接通过可编辑源码和真实任务交互交付，不另立设计稿阶段；已有Flutter交互按其现有真实合同直接修复，不等待全部Figma页面完成。优先ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06接线，Golden Pages均为排序而非范围上限。整体视觉依已批准研究与任务；手绘彩绘用于图标及适合页面元素。保留四端、中英韩、主题、字号/宽度、可访问性与失败恢复。Figma或源码载体均给出真实可编辑路径/版本、原有ScreenSpec映射和缺口；截图仅辅助。主题复用LumenisTheme，官网Astro/CSS保持既定边界；真实Core/Permission/来源/保存/恢复与跨端验收不可由Widget测试替代。
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 

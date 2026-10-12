@@ -33,15 +33,27 @@ PO已确认Architecture用户工作方式；窗口成果卡/建议执行顺序�
 
 **全产品复用与适配核验**沿原成果卡进行：先列原要求及现有实现/调用者，证明是复用、纠冲突或补真实缺口；不得把用户询问转换成重复能力。来源类别同权须沿实际输入、样本选择、领域分析、引用/制作及Evaluation传递，非只检查界面文案；逐条质量、时间、身份和用途差异保留。外来方法/解析/组件实际接入既有Owner的有用结果和恢复合同，不能以安装、引用或更名算完成。
 
-**整体Experience验收**覆盖44屏和官网家族各自任务、信息层级、独特布局、真实内容、编辑/导航/反馈及异常恢复，按现有规格保存实际视觉和操作证据；不是仅API接线、同模板换标题或少数样板页。所有外来能力与采集/导入材料的产品呈现适配序境视觉，原网页、原文、真实媒体及来源标记完整；来源类别同权不变成掩盖信息质量。中英韩、宽窄屏、键盘/触控/辅助技术及现有主题要求照常验收，原生专项按既定优先级。
+**整体Experience验收**覆盖全部现有44屏基线与官网家族，以及新增/未映射但已批准的产品任务与页面；逐项验收自身任务、信息层级、独特布局、真实内容、编辑/导航/反馈及异常恢复，保存各端真实视觉和操作证据。44屏不是范围上限。所有外来能力与采集/导入材料的产品呈现适配序境视觉，原网页、原文、真实媒体及来源标记完整；来源类别同权不变成掩盖信息质量。中英韩、宽窄屏、键盘/触控/辅助技术及现有主题要求照常验收，四表面按自身角色并行建设、独立验收。
 
 **Website/Web工程就绪**使用原门禁：全部适用用户链和屏幕可操作，前后端/Core/数据库/Artifact版本对应，权限拒绝与来源撤回正确，断网/取消/中断/重启/ACK丢失与备份恢复有实际证据，必要静态/安全/数据一致性、定向回归、实际构建及精确SHA CI成立。真实用户不看源码也能找到入口、读懂结果、编辑并恢复；开发者直接API操作只能支持后端证据，不能代替整条Web用户链。
 
-**上线裁决**仍归原Release/商业就绪规则：M/C6收齐适用R/J/U、真实关键E2E、发布包/配置/依赖许可、安全、可观测与回滚证据后，交PO重复操作；实际域名/托管/生产部署、对外效果或新费用须各自有效授权。Website/Web通过不等于Windows/macOS/iOS已通过，不自动宣称全产品RELEASED或OPERATING。新账户/密码重设计等原已后置事项保持原边界，不能借上线准备重新加账户墙。
+**上线裁决**仍归原Release/商业就绪规则：M/C6收齐适用R/J/U、真实关键E2E、发布包/配置/依赖许可、安全、可观测与回滚证据后，交PO重复操作；实际域名/托管/生产部署、对外效果或新费用须各自有效授权。任一表面通过都不代表其他表面已通过，也不自动宣称全产品RELEASED或OPERATING。新账户/密码重设计等原已后置事项保持原边界，不能借上线准备重新加账户墙。
 
 规划与验收表述不证明上述业务已经通过；在线验收要求不拥有当前窗口调度权。
 
 ## 2026-10-09 AI 非依赖原则与分层验收
+
+2026-10-12 PO 明确：已批准的必需能力不能以空白或未验证占位交付。沿既有
+REAL DELIVERY CARD 记录具体缺口、当前解决动作、输入/责任路径、用户结果与
+验收证据并持续修复。真实权限/来源/资源硬阻塞记录证据、影响和恢复条件，
+不伪造数据或成功；未闭项阻止对应任务及完整产品完成声明，独立工作继续。
+缺用户研究时补官方操作资料和可靠公开证据形成适配判断，不等于已验证普遍偏好。
+
+Hybrid 增强用同一获准版本语料及独立查询比较 BM25、向量、融合与交叉编码精排：
+核对召回/排序质量、精确编号、同名/跨语言、引用、空结果/撤回/越权隔离、延迟
+和资源成本，记录模型/索引/分词/配方版本与分母。真实入口取得可用结果并保存、
+修订、重开、恢复；无模型基础路径另验。相似分数、有限示例、未运行模型不证明
+生产增强可用，更不证明业务事实成立。不新增另一套验收体系。
 
 2026-10-11直接PO进一步明确：CTH/BMP是业务域，Shared内容制作必须独立验收。J4/J5/J6分别验证无需CTH/BMP任务、Subject/BrandFocus、Case/Campaign或先生成SourceBrief即可从直接新建/用户创作Brief/获准素材进入提案、视频和播客制作，完成编辑、预览/试听、保存/修订/重开/恢复及适用导出。另验可选的业务/研究→制作和制作→业务联动；只通过联动路径不能证明独立制作已闭环。原有工作区/项目权限、引用素材权益、版本和真实成果要求不变，原创内容不伪装成外部事实。
 
@@ -127,7 +139,7 @@ Existing R/J/U and three Gate tiers remain unchanged. Targeted unit/integration 
 C1 and M retain original source/candidate/material responsibilities. This record
 is not current dispatch/model selection; actual PO choice and dated evidence apply.
 
-2026-10-08 最新 PO 顺序：先验收 Public Website + Web Workspace 完整适用成果，再处理 Desktop App/Mobile Companion 专项实现、打包及实机验收。使用原 REAL DELIVERY CARD 与三层 Gate，逐项注明本轮适用表面、真实输入/结果/保存修订重开恢复/Evidence/版本和未完成项。官网内容、演示真实性、可用入口，以及 Web 业务正常成功路径必须实际验证；当前 Web 所需 Core/SYSTEM 不能随原生客户端后置。后置两端保留 OPEN/DEFERRED、原 Owner 和恢复条件（官网/Web 闭环），不得以原生包/设备缺失阻塞本轮表面成果，也不得标 PASS、删除 R/J/U 或宣告四端 Goal/整产品 RELEASED。原部署、费用及外部效果授权不变。后续原生目标仅Windows/macOS桌面和iOS移动；Android/Linux原生客户端不再是待交付项，保留历史源码/回执。前端直接构建，独立设计稿/Figma/M设计审批不作为实现前置；原真实结果与质量门禁不变。
+2026-10-11直接PO修正：Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有角色并行建设、逐端验收。使用原REAL DELIVERY CARD与三层Gate，注明适用表面、真实输入/结果/保存修订重开恢复/Evidence/版本和未完成项。已有真实Core/API立即接入，未有接口的既有行为由原Owner接续并保持OPEN/UNBOUND；不等待全部后端、不用模拟结果。官网内容、真实演示状态和入口，以及各端业务正常成功路径均实际验证。任一端的工程、设备或包缺口只阻止对应表面验收，不阻止其他端建设；不得把缺口标PASS、删除R/J/U或宣告全产品RELEASED。部署、费用及外部效果授权不变。原生目标仅Windows/macOS桌面和iOS移动；Android/Linux原生客户端不再是交付项，保留历史源码/回执。前端直接构建，独立设计稿/Figma/M设计审批不作为实现前置。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 本协议按五轮架构成果验收，C1–C6保留原工程源码责任。旧编号01–15仅为历史验收/依赖覆盖，映射继续保留；不是新的窗口、派工队列、六轮产品或十五段串行执行计划。
 
@@ -314,7 +326,7 @@ ONLINE DELIVERY / LOCAL-TO-MAIN CLOSURE：
 THREE-LANGUAGE SURFACE ACCEPTANCE：
 - latest native targets: Desktop Windows/macOS only; Mobile iOS only; Android/Linux native requirements superseded by direct PO, retain history without claiming PASS
 - F directly constructs from current contracts; separate design drafts/Figma/M DESIGN_READY approval do not gate coding; actual operation/visual quality/accessibility/E2E and all existing security gates remain
-- retain the promised four-surface matrix; current acceptance: Public Website / Web Workspace; Desktop / Mobile native-specific work follows Website/Web closure and stays OPEN/DEFERRED until verified
+- build and accept Public Website / Web Workspace / Windows/macOS Desktop / iOS Mobile in parallel under their approved roles; record each surface's actual user operation, runtime and recovery evidence independently, keeping unverified items OPEN
 - `zh-CN` / `en` / `ko` user task, result, error, denied and unavailable copy
 - locale switch, persistence, Trace/Return, responsive and accessibility evidence
 - missing locale or key remains an explicit screen/surface acceptance gap
@@ -1304,8 +1316,9 @@ it is not the easiest smaller capability. Reuse valid evidence, avoid unrelated
 tests/candidates and retain meaningful failure/recovery verification.
 
 Four-surface creative UI/UX/AIGC, rich useful interaction, no unnecessary vertical
-scrolling and the user's watercolor/hand-drawn reference are acceptance dimensions
-under the sole Experience Constitution. Every supplied reference video requires
+scrolling, and painted icons or suitable page elements informed by the user's
+reference are acceptance dimensions under the sole Experience Constitution;
+overall visuals follow approved research and task needs. Every supplied video requires
 frame-level coverage and adoption decisions;12 production exercises do not replace
 the larger historical reference corpus. Research must improve applicable product
 capabilities as well as approved model learning. A source file inventory, fetched
@@ -1492,7 +1505,7 @@ external document grants collection or deployment permission.
 沿既有 J1/J7/J8、U21、SYS-06 及 Owner 卡验证。通用 OS/电脑控制、任意桌面应用执行及 Agent Zero GUI worker 已由最新 PO 撤出要求；不因缺少它们阻塞产品验收，不将撤回记为 PASS，保留历史证据及其余 ID 要求。
 
 1. **真实浏览**：从正常业务任务进入产品内真实网页，完成获准导航、页面操作与资料复核；返回保留原任务、范围、选中来源和草稿。产品自身执行，开发 CUA 操作不能替代产品能力。
-2. **交互与端**：先验 Web Workspace，后验 Windows/macOS/iOS；用户明确选择外部打开，失败的内置浏览不靠弹窗冒充完成。只有真实画面而没有所需动作仍未完成。
+2. **交互与端**：按Web Workspace、Windows/macOS Desktop、iOS Mobile各自职责并行建设并独立验收；用户明确选择外部打开，失败的内置浏览不靠弹窗冒充完成。只有真实画面而没有所需动作仍未完成。Public Website保留自身说明、帮助、真实示例和获准入口职责。
 3. **控制与恢复**：无模型仍可人工操作；Agent/用户独占控制，旧 frame/target/revision、撤权、断线和取消不产生错误或重复动作；Live/历史、关闭视图/取消任务/结束会话明确区分。
 4. **资料与成果**：源网页打开、获准捕获、正式 Source/Evidence 接收、分析结果及 SavedWork/Artifact 分别核实；权限下完成保存、修订、关闭重开和中断恢复。
 5. **安全**：禁止个人档案/Cookie/secret/raw CDP 暴露或复制，不绕站点挑战；外部写入仍需其独立批准。自动采集后台静默，人工登录/接管显式请求。

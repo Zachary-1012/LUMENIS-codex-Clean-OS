@@ -109,6 +109,23 @@ checkout. A manifest never promotes a local-only change to online truth and
 never turns a test, fixture, HTTP 200, model response, or static document into
 real-user acceptance.
 
+## Compact/resume readback
+
+Use `.codex/engineering.py continuity` and the `continuity` section of the existing
+Owner work JSON record documented in `.codex/README.md`. Refresh at admission,
+material PO corrections and meaningful outcomes; retain the full goal/remaining
+requirements, evidence pointers and pending effects. This complements the native
+Goal; it never changes its status or creates another task.
+
+After compaction/resume, read the checkpoint, latest direct PO source and changed
+Owner/contracts/reservations before resumed writes. A matching hash is only a
+context check. Old Goal pauses, summaries and window messages are not current
+dispatch. Missing/changed context requires targeted reconciliation, not wholesale
+re-audit or global pause. Read existing operation receipts before retrying uncertain
+effects; never infer failed/not-run from an omitted summary. Preserve independent
+authorized work and manually selected models. No transcript scanning or raw prompt
+copying is necessary. Root AGENTS and native hook trust still apply.
+
 ## Loading and search limits
 
 - Prefer `rg` with a capability-specific path or term. Read the smallest useful

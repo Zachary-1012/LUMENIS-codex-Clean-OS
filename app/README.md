@@ -243,6 +243,37 @@ access remains available independently of the host operating system.
 原生目标须使用对应平台受支持的 Flutter 工具链。原生桌面目标为 Windows 和
 macOS，原生移动目标为 iOS。浏览器访问不受客户端操作系统范围影响。
 
+### Windows paths｜Windows 中文路径构建
+
+From the repository root, use PowerShell 7.2+ and the installed, version-matched
+Flutter SDK in an ASCII path:
+
+```powershell
+pwsh -NoProfile -File app/tool/build_windows.ps1 -FlutterSdk '<installed Flutter SDK>'
+```
+
+This entry builds the same `app/` through a verified ASCII directory junction
+under the current user's local application data. It prevents narrow-argument
+encoding failures in `gen_snapshot` without relocating source or changing the
+SDK, Windows language, drive mappings or user environment. `-AliasRoot` can
+select another ASCII location outside `app/`; an existing unrelated path is
+refused. Use this entry consistently and do not run concurrent Flutter builds
+against the same app. Required dependencies must already be installed; the
+command uses `--no-pub`.
+
+When the build path changes, only generated CMake cache metadata and Flutter's
+last-output marker are archived. Logs, actual exit codes, archived paths and
+the executable hash are saved in ignored `build/native-build-receipts/`.
+The executable remains `build/windows/x64/runner/Release/lumenis_app.exe`.
+Preserve its neighboring DLLs and `data/` when running or packaging it.
+
+在仓库根目录使用上述入口，并指定版本匹配且位于英文路径的 Flutter SDK。
+入口通过经校验的英文目录联接访问同一份源码，处理原生编译器的中文参数转码
+问题；不会迁移工程或修改 SDK、系统语言、盘符映射和用户环境变量。
+构建路径变化时，仅归档生成缓存和上次输出标记；日志、真实退出码和产物哈希
+保存在 `build/native-build-receipts/`。同一应用不可并发构建。
+构建成功与实际界面、业务流程验收分别记录。
+
 ## External references and license boundaries｜外部参考与许可边界
 
 - [`motion-web`](https://github.com/Zachary-1012/motion-web) is reading-only

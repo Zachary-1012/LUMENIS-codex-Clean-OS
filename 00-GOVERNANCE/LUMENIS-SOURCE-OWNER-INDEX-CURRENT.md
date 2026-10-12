@@ -18,11 +18,11 @@
 > 六文件治理发布不唤醒窗口；后续直接授权的 SYSTEM 浏览器弹窗 P0 沿既有 Owner 与预约单独执行。原J/R/U、44屏、权益、Permission/Evidence/Canonical、成本、生产数据及共享写入保护保留。
 > C1保留完整采集闭环和已有必要Core/Runtime/Scheduler/Permission依赖的获准源码范围；M保留原非C1候选、未集成成果及资料采用责任。实际执行须核验当前PO授权及Writer，不能用旧暂停或旧复工代替。按2026-10-10 PO批准恢复隔离单元/集成回归，保留静态、安全、数据一致性和真正E2E。
 
-### 最新 PO 当前成果优先级 — 官网 / Web，2026-10-08
+### 最新 PO 当前成果要求 — 四表面并行建设，2026-10-11
 
-后续直接修正：F直接构建真实前端，不先制作独立设计稿，不等待Figma或M逐屏DESIGN_READY；复用既有44屏和视觉规范并随代码更新。后续原生客户端仅Windows/macOS和iOS，Android/Linux原生客户端要求已被PO替换，不留为待交付；历史资料/源码仍保护。Linux服务端/CI和浏览器跨OS运行不受此限制。
+直接PO修正：Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有角色并行建设；Website使用现有`website/`，后三者共用单一Flutter `app/` 与同一Product Core。F直接构建完整任务化前端，不等待全部后端；已有真实API/Core立即接入，缺失行为沿现有Owner逐项连接并诚实记录OPEN/UNBOUND。44份ScreenSpec是覆盖基线而非页面或产品范围上限。无需先制作独立设计稿，不等待Figma或M逐屏DESIGN_READY；实现中的设计决定随代码更新既有规格。原生客户端仅Windows/macOS与iOS；Android/Linux历史资料/源码仍保留，Linux服务端/CI与跨OS浏览器不受影响。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-沿现有 Owner/源码表先完成 Public Website 与 Web Workspace；Desktop App/Mobile Companion 专项实现、打包和实机验收后置至前两端闭环，保留全部需求/Goal/设计/源码与未完成记录。F 负责当前两端的完整适用屏幕与官网家族；实际窗口调度由PO决定，不设单业务席位；共享集成仍按M/W6预约。业务、研究、数据、媒体与 AI 的当前 Web 必需合同及 Core/SYSTEM 继续完整推进，不把桌面客户端后置解释成停后端或改用模拟结果。Shared Flutter 修改保留兼容，不新增无关 native 工作。既有三层 Gate 按表面验收，完整四端 Release 不因本轮验收自动成立。具体顺序归 AGENTS/Multi-Surface Decision，真实验收归 Overlay；无新增 Owner/队列。
+沿现有Owner/源码表并行建设四个表面，按各自真实角色、任务、接口、保存恢复与端侧运行要求独立验收。F负责完整前端屏幕/官网内容家族与真实接口绑定；已有后端立即接入，其他能力由既有领域Owner与C6按原合同接续，缺失部分记OPEN/UNBOUND，不因接线未齐缩减前端任务、不用模拟结果。实际窗口调度仍由PO决定，共享集成按M/W6预约。保留全部R/J/U、44份规格基线及更广的产品要求，不新增产品、Owner、队列、设计系统或费用。一端验收不自动成立其余端或完整Release。具体端角色归本Decision与Experience，真实验收归Overlay。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 ## 1. Retained R01–R15 acceptance coverage and historical audit groups
 
@@ -241,7 +241,7 @@ mention alone cannot be marked implemented.
 | Creation, reporting, evaluation, learning and per-round frontier research/controlled capability upgrades | Product Architecture chain; `AGENTS.md` §§3–4; Real Delivery Overlay research and workflow gates |
 | Real permitted user E2E, operable page, Evidence Trace/Return and honest failure/recovery every related Round | sole Real Delivery Overlay; Experience Constitution; current Round Charter |
 | Data/source legality, secrets, version compatibility, backup/restore/deletion, tenant lifecycle and commercial operations | Real Delivery Overlay §23; `COMMERCIAL_READY=NO` until its six gates pass |
-| Windows/macOS/iOS native targets after Website/Web closure, clean clone, cross-surface return, rollback, internal beta and release | this index ROUND 15; Real Delivery Overlay release matrix; platform-specific runtime evidence |
+| Website, Web Workspace, Windows/macOS Desktop and iOS Mobile target coverage; clean clone, cross-surface return, rollback, internal beta and release | this index ROUND 15; Real Delivery Overlay release matrix; platform-specific runtime evidence |
 | Window/model/effort observations, never repository model assignments | Current direct PO choice + actual tool readback with verification time/evidence; unknown = NOT_VERIFIED; historical defaults/config values retained without dispatch authority |
 
 ### 2026-10-09 data-to-business upgrade: retained source responsibility and dependencies
@@ -613,13 +613,28 @@ Real Delivery Card/acceptance fields in the Overlay.
 
 ### 2026-10-11 窗口执行审核稿：完整用户工作与上线准备
 
-**批准边界**：PO已确认Architecture中的七条用户工作方式及解析采用方向，现要求重新规划窗口工作“给我审核”。以下是这些既有完整成果卡的执行安排草案，不是开工命令。具体窗口派工只按直接PO指令及本地ledger核验；本稿既不恢复窗口，也不规定当前停工，不覆盖已明确授权的工作。不更改模型/effort/速度，实际进程/模型无新读回则`NOT_VERIFIED`。蓝图已确认、计划待审、实际派工和成果验收四者分开。
+**批准边界**：PO已确认Architecture中的七条用户工作方式、解析采用方向及四表面并行建设；本成果卡按现有Owner与完整用户结果执行，并由M按指令分发。实际窗口派工/准入仍只按最新直接PO指令及本地ledger核验，不由本索引推断或改变模型/effort/速度；无新读回时实际进程/模型为`NOT_VERIFIED`。产品要求、工作安排、实际派工和成果验收分别记录。
 
-**目标**：用户可在官网进入Web Workspace，独立开展CTH、BMP、研究、提案、视频、播客和内置浏览器工作，得到实际有用成果并保存、修改、关闭重开、追溯及故障恢复；通过原Release Gate后具备获准上线的条件。不是只跑通后台API，也不是只补前端页面。Website/Web先验；Windows/macOS及iOS专项随后完成，全产品四表面未验不能被Web成功覆盖。这里不批准公网部署或新费用。
+**目标**：Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有角色并行建设；用户从适用入口独立开展CTH、BMP、研究、提案、视频、播客和内置浏览器工作，得到实际有用成果并保存、修改、关闭重开、追溯及故障恢复。不是只跑通后台API，也不是只补静态前端。已有真实API/Core立即绑定，剩余接口按原Owner接续并维持OPEN/UNBOUND，44份规格是基线而非范围上限；逐端用真实操作和适用端运行证据独立验收，单端成功不覆盖其他端。通过原Release Gate后具备获准上线的条件；这里不批准公网部署或新费用。审批：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 **基线与复用**：本次规划核对local HEAD、fresh origin/main及live main均为`fa2a863112bff453eb4ad525bae72e2d34bca219`，divergence0/0。8项tracked dirty、2项untracked仍保留，未暂存；它们是待审成果，不是已发布修复。该SHA的Product/App CI成功只证明相应工程检查。本次不重跑业务、不读取生产DB、不把历史Runtime/用户结果刷新为当前事实。后续实际开工重新做增量准入。
 
-**全产品共同执行方式**：每个Owner先读自己的已批准要求与实际源码/调用者/资料。已有正确实现复用；规则与实现冲突定向修正；仅对有证据的缺口补齐。PO询问是否存在不是新增命令；资料未读或未找到不等于不存在。沿原成果卡记录采用/差异/证据，不建另一套清单、权重系统或候选。来源同权复用Architecture原条款，从C1接收到C3分析判断、C5研究引用、C4制作采用、C2增强/Evaluation、C6接口及F呈现保持一致；质量、身份、时间、权限与未知仍逐项核验。
+**全产品共同执行方式**：每个Owner先读自己的已批准要求与实际源码/调用者/资料。已有正确实现复用；规则与实现冲突定向修正；仅对有证据的缺口补齐。PO询问是否存在不是新增命令；资料未读或未找到不等于不存在。沿原成果卡记录采用/差异/证据，不建另一套清单、权重系统或候选。保留既有MATERIAL-OWNER-MANIFEST及其原件/读取记录，逐项把产品资料、原则与升级要求映射到既有规则、Owner源码/调用者、实际操作及验收；未读、缺失、未采用或未经验证的部分明确标示，不以窗口数、44屏或资料目录存在替代覆盖。Nielsen十条可用性原则适用于所有相关用户操作并映射为可见真实状态、业务语言、控制/撤销/返回、一致行为、错误预防、识别、效率、克制、错误恢复和就地帮助；行业、媒体、数学、REA、AI资料按各自领域规则与原Owner接续，不都归F。来源同权复用Architecture原条款，从C1接收到C3分析判断、C5研究引用、C4制作采用、C2增强/Evaluation、C6接口及F呈现保持一致；质量、身份、时间、权限与未知仍逐项核验。
+
+**完整目标与当前动作分开维护（2026-10-12 PO）**：以下每个Owner的完整成果和原R/J/U要求持续有效；当前优先动作只确定先后，不能替代目标、缩小范围或成为完成一批后停工的条件。各Owner在原有Goal/continuity中逐项保留已完成证据、具体未完业务/界面、依赖及下一步，不以“其余全部OPEN”代替可执行的剩余要求。构建/测试/工具修复通过只结束对应检查，继续实际产品构建与用户成果；某接口、某平台或某端的验收阻塞只约束它自身。最新状态及逐Owner下一步见现有CURRENT；原生Goal若不能编辑，明确保留工具原目标，并在原continuity绑定最新完整目标与差异，不假完成再重建。
+
+**最新升级必须进入原目标，而不只藏在附录（2026-10-12）**：每个Owner在自己的原完整卡/continuity引用下表对应采用项与实际未完动作；下表补充既有能力，不新增产品或另建任务体系。
+
+| Owner | 原完整目标必须携带的当前升级 |
+| --- | --- |
+| M | 最新直接PO优先及防压缩漏项；完整产品/视觉/研究覆盖而非六窗口或44规格即全集；真实Owner冲突和成果集成；线上线下版本独立核验；本次整体视觉误读在原规则中纠正 |
+| F | 打开就是既有聊天/任务首页，架构导航直达全部独立能力；采用经核实GPT/Grok Bot操作与四产品官方研究，保留Logo、彩绘icon/适合局部彩绘、真实操作视频、完整UI/UX/智能UI/AIGC/三语/无障碍；整体风格不限定手绘或2D，按已批准研究落实；四表面完整并行构建，缺后端不阻塞独立构建 |
+| C1 | 来源类别同权、现有数据直达下游、原始观察/单封面/未知/日期/恢复合同；REA用于实际获准平台机制/字段排障，六平台各自缺口不阻断其他已准入数据工作；提供真实资料呈现而非复制平台外壳 |
+| C2 | 全产品AI可选增强与真实聊天结果/历史/取消恢复；与C5实现cosine+BM25+身份融合+cross-encoder，并分别验无AI基线和增强；Math贯穿后端及独立模型训练/推理；只复用已批准免费Kaggle/其他免费资源与checkpoint，模型重载/新任务收益另验 |
+| C3 | CTH/BMP完整确定性问题分析、GLOBAL/ALL及焦点、行业案例/数学方法按假设进入后端；消费真实来源和C5检索引用，AI可选；交已分析报告和决策而非内部参数/模板，来源/预算变化局部修订并恢复 |
+| C4 | 提案/视频/播客独立制作及可选业务联动；采用REA实际媒体/批量编辑与原资料；真实预览试听/成品/版本/恢复；Math用于适用制作约束/Evaluation，AI增强不阻断人工制作，Read Aloud不替代成品 |
+| C5 | 原始材料/DeepSeek/行业案例/REA/论文实际采用到导入、研究、报告和可恢复Artifact；Office/附件能力保留；既有检索承担BM25/融合/引用权限，与C2接向量/精排；报告不是技术JSON，模型/求解器/事实分账 |
+| C6 | 同版Core、真实任务结果与Shared独立制作/浏览器接口；实际派工/目标记录清旧条件并保留历史；精确W6预约、受控集成/CI及真实运行验收；不得用全局冻结拖住F或已释放领域，全部权限/数据/成本边界保留 |
 
 #### M：让已有成果转化为一套可交付产品
 
@@ -670,35 +685,105 @@ Real Delivery Card/acceptance fields in the Overlay.
 - **先做什么**：核对10项受保护候选和真实调用者，按C3/C5/C6职责逐处接收；后续REA补丁单独审许可证/依赖/冲突。先恢复同版本运行与成果读回条件，再逐批集成，不等所有Owner全做完才发布有界合格修复。不能仅凭端口/health/CI推断整个业务正常。
 - **源码/交接**：现有`app.py`、`lumenis_app_api.py`、`experience_runtime.py`、SYSTEM Browser/`ai_browser_api.py`/`ai_browser_runtime.py`、Shared Database/Security及启动/打包/CI。W6预约共享区域，C3业务、C4媒体、C5资料、C2AI各自拥有规则；F拥有界面，C6负责真实接口、身份和版本完整传递。
 - **浏览器出口**：产品内真实网页画面和受支持操作、导航、显式人工独占接管、停止、返回原任务、成果保存/修订/重开；外部打开由用户选择，不自动弹窗。无AI手动可用；OS/AgentZero桌面worker不再交付。部署拓扑必须保持凭据/CDP不外泄和安全访问，不能删除本地边界假称远程浏览已支持。
-- **发布出口**：补齐当前版本实际安全、数据一致性/备份恢复、权限撤回、可靠停止/重启、性能/资源实测、依赖许可证、所需打包与精确SHA CI，收齐真实任务Evidence/Artifact。准备后由M审工程可发布性并交PO重复操作；公网部署、账户/费用、外部效果按原边界另批。后续Windows/macOS/iOS包和实机未验收不标完成。
+- **发布出口**：补齐当前版本实际安全、数据一致性/备份恢复、权限撤回、可靠停止/重启、性能/资源实测、依赖许可证、所需打包与精确SHA CI，收齐真实任务Evidence/Artifact。准备后由M审工程可发布性并交PO重复操作；公网部署、账户/费用、外部效果按原边界另批。Windows/macOS/iOS各自包和实机未验收时，对应表面保持OPEN，不标完成。
 
-#### F：让用户实际工作，先官网与Web（全部44屏、官网家族及跨端要求）
+#### F：让用户实际工作，四表面并行（44屏基线、官网家族及跨端要求）
 
 - **执行边界**：按直接PO指令及本地准入执行完整F成果；规范不记录当前停/开状态。不先建新项目，不要求先做独立设计稿/Figma。
-- **完整成果**：官网完整内容与真实产品入口；Web首页新建/续接、CTH/BMP、独立研究和三类制作、内置浏览器、资料/结果/版本、设置通知及失败恢复。依Experience和每屏合同整体升级视觉/信息层级/布局/交互/反馈，保持原创二维手绘水彩风格、中英韩、无障碍、窄屏和适用智能UI；不缩成七个演示页面，也不只接线或改皮肤。
-- **先做什么/源码**：复用`app/lib/`、`website/`及既有44屏规格；先逐项核对既有页面、组件/变量、草图与真实Owner合同，复用正确成果，按完整任务纠正差距；同步实际受影响规格与现有可编辑视觉载体，不新建第二设计系统。所有外来能力与采集/导入资料的产品呈现采用序境自己的布局、操作和状态语言，保留原始来源内容与权益。用户输入问题/范围/目标，看到已分析报告和直接继续动作；不暴露论文运算、内部ID、权限诊断表作为默认流程。真实标题/正文片段、单封面、作者、平台/原帖、两种时间及指标/“—”有准确定义。
+- **完整成果**：官网完整内容与真实产品入口；Web首页新建/续接、CTH/BMP、独立研究和三类制作、内置浏览器、资料/结果/版本、设置通知及失败恢复；同一Flutter App的Windows/macOS与iOS Companion按既有角色提供对应完整操作。依Experience和每屏合同整体升级视觉/信息层级/布局/交互/反馈，整体视觉依已批准研究与真实任务，彩绘仅用于所需icon和适合的局部页面元素、不限定二维；保留中英韩、无障碍、窄屏及适用智能UI；不缩成七个演示页面，也不只接线或改皮肤。44份ScreenSpec为基线，产品要求不限于44页。
+- **先做什么/源码**：复用`app/lib/`、`website/`及既有44屏规格；逐项核对页面、组件/变量、草图与真实Owner合同，复用正确成果，按完整任务纠正差距；同步实际受影响规格与现有可编辑视觉载体，不新建第二设计系统。已有真实Core/API直接接入，未提供的既有接口沿原Owner补齐并保持OPEN/UNBOUND。所有外来能力与采集/导入资料的产品呈现采用序境自己的布局、操作和状态语言，保留原始来源内容与权益。用户输入问题/范围/目标，看到已分析报告和直接继续动作；不暴露论文运算、内部ID、权限诊断表作为默认流程。真实标题/正文片段、单封面、作者、平台/原帖、两种时间及指标/“—”有准确定义。
+- **构建顺序不缩范围**：完整建设工作区聊天首页及架构导航、CTH全部业务、BMP全部业务、独立研究、提案/文稿、视频、播客、产品内浏览器、资料与成果版本、设置/通知/权限及全部失败恢复状态；官网完整家族及适用Windows/macOS/iOS同步构建。沿原ScreenSpec逐项记录界面构造、真实交互、接口绑定与实际验收四种状态，不建立新阶段或第二清单。聊天优先不是只做聊天；F1–F5、Golden Pages、七类工作和44规格均不能截断其余已批准范围。后台缺接口时继续该界面已有可实现的导航、编辑、撤销、布局、键盘/触控/无障碍和诚实状态，缺失的真实操作由原后端Owner补齐后接入。不能以未经验证的本地存储、模拟回复或假保存冒充接通。
 - **独立与联动**：直接新建提案/视频/播客/研究，不强迫选CTH/BMP；用户选择业务续接才带入资料/上下文。产品内浏览和回到原任务保持工作不丢失；编辑器实际可操作，AI可选建议不覆盖人工修改。F不在界面另造分析模型、假后端或事实。
-- **完成出口**：官网→Web正常工作，七条完整用户链与全部适用屏幕入口/返回/结果/保存/修订/重开/恢复逐项实操，非只Widget或静态截图。Windows/macOS和iOS专项在Web里程碑后完成；OS电脑控制、Android/Linux原生目标不恢复。
+- **完成出口**：每个表面对其角色内的完整用户链及适用屏幕分别实操入口/返回/结果/保存/修订/重开/恢复，验证真实操作和端侧运行，非只Widget或静态截图。一端通过不替代其他端或全产品验收；OS电脑控制、Android/Linux原生目标不恢复。
 
-#### 按依赖推进的建议顺序（待审，不是新增产品阶段）
+#### 按依赖推进的既有建议顺序（已批准的产品要求；不是新增阶段）
+
+下表排列后端成果及跨域验收依赖，不限制F的完整界面建设顺序。F与这些工作并行构建全部批准页面/交互/视觉与四表面；未知接口只阻塞相应真实操作验收，不使整页/模块停工。
 
 | 既有架构轮 | 建议当前集中关闭的完整结果 | 可以独立推进的既有工作 | 原轮次退出要求 |
 | --- | --- | --- | --- |
-| SYSTEM | C6整合同版本运行和安全边界；C1正式可用数据/刷新恢复；C5与C3闭合当前来源到成果保存断点；C2解除基础路径AI硬依赖 | C4可用已有获准素材做独立制作，C5独立研究；F只在明确恢复后绑定真实合同 | 原Core/Collector/Browser/Scheduler/DB/Evidence/Permission/恢复全范围成立；一条样本通了不代表整轮完成 |
+| SYSTEM | C6整合同版本运行和安全边界；C1正式可用数据/刷新恢复；C5与C3闭合当前来源到成果保存断点；C2解除基础路径AI硬依赖 | C4可用已有获准素材做独立制作，C5独立研究；F按当前PO授权在四表面绑定已有真实合同并记录未接通项 | 原Core/Collector/Browser/Scheduler/DB/Evidence/Permission/恢复全范围成立；一条样本通了不代表整轮完成 |
 | CTH | C3完成商业运营真实任务，C1/C5提供数据与研究，C2可选增强，F实现完整操作 | BMP和Shared已经具备输入/合同的无冲突能力可准备/修复，不等候编号 | 正常商业判断、行动/结果、报告、修订恢复和原映射验收 |
 | BMP | C3完成品牌/竞品/创作者/传播/Campaign真实结果；C4可选制作，C5保存评价 | 独立研究及制作始终可独立关闭，不能硬依赖业务域 | 品牌市场任务与真实结果/评价可持续使用，计划与已执行状态分明 |
 | Shared | C5完成研究/格式/引用/成果版本，C4分别完成提案/视频/播客 | 已获准AI增强在相同合同内接入，不等到第五轮才接线 | 每项独立使用及可选联动均验，真实文件、视听结果、修订恢复 |
 | Agent Groups / 自研AI | C2证明全域增强、Agent/Skills/Memory/Learning与获准模型实际收益；C6/F完成跨领域与最终产品验收 | 基础能力必须无AI独立验收，当前运行按证据记录；AI资源缺口不阻塞其正常任务，未验AI终态保留OPEN | 完整J/R/U、现有四入口跨域、适用表面、模型和用户验收满足原要求 |
 
-以上五轮是产品验收组织，不要求用户逐轮工作，不规定固定窗口数量或并发上限。审核后的具体开工以实际依赖和文件预约决定；共享文件同一区域只允许一个Writer，独占交接先冻结hash/输入和已完成证据再续接。窗口完成合格批次持续进入W6/M集成，只有完整自身成果通过才能标`JOB_CLOSED`。无真实新事实不反复读全仓、重跑无关检查或传消息。
+以上五轮是产品验收组织，不要求用户逐轮工作，不规定固定窗口数量或并发上限。实际开工/暂停/恢复仍以最新直接PO派工、真实依赖及文件预约核验；本次要求与成果卡更新本身不改变其他窗口的当前状态。共享文件同一区域只允许一个Writer，独占交接先冻结hash/输入和已完成证据再续接。窗口完成合格批次持续进入W6/M集成，只有完整自身成果通过才能标`JOB_CLOSED`。无真实新事实不反复读全仓、重跑无关检查或传消息。
 
-#### 给PO审核的完整范围与上线边界
+#### PO已批准的完整范围与上线边界
 
-采用上面八个既有角色，不新建研发窗口/调度器。原J/U逐项表、R映射、RC/资料清单及真实验收卡继续是完整覆盖；本计划是同一卡片的执行细化，不替代或缩减它们。Website/Web工程可用与正式上线、原生端验收、AI收益、商业可用分别记录。无缺陷/运行证据不能声称完成，有部署条件但未获部署批准也不能实际部署。具体Release条件见Real Delivery本次补充。
+采用上面既有角色，不新建研发窗口/调度器。原J/U逐项表、R映射、RC/资料清单及真实验收卡继续是完整覆盖；本计划是同一卡片的执行细化，不替代或缩减它们。四表面分别记录工程、真实运行和验收；跨端一致性、AI收益、商业可用及正式上线也分别按适用门槛核验。无缺陷/运行证据不能声称完成，有部署条件但未获部署批准也不能实际部署。具体Release条件见Real Delivery。
 
-交PO审核各窗口完整成果、职责交接及建议推进顺序；已经获得明确直接PO派工的角色按其授权连续工作，其余不得从计划发布推断开工。真实准入后才能记录RUNNING；不从本表启用采集、模型、训练或部署。
+按PO已批准的成果卡更新目标并分发给对应Owner；已有明确直接PO派工的角色按授权连续工作，其他窗口状态不得从本次规则发布推断。真实准入后才能记录RUNNING；不从本表启用采集、模型、训练或部署。
 
 ### Research inputs consumed by the existing owners
+
+**2026-10-12 PO：先预防偏移，持续解决缺口。** 每个资料/研究缺失、规则冲突、
+源码/调用缺陷和未完成验收，沿原完整成果卡明确问题、当前动作、输入/责任路径
+和成功条件。Owner 处理普通问题，不因空白、NOT_VERIFIED 或消息往返而搁置；
+没有可靠用户评论时继续研究官网/帮助/演示/更新/评测，标清证据与设计判断。
+真实事实不伪造；权限/资源硬阻塞具备证据和恢复条件，独立工作继续。M 开发前
+同步已明确要求并处理跨域冲突，不等待各窗口实施错误后才纠偏。
+
+最新 Hybrid 生产增强要求沿原职责执行：C5 维护资料/片段/引用与原检索合同；
+C2 负责已准入向量和交叉编码模型、配方与效果评价；C3 负责真实业务问题/领域
+过滤；C1 保留来源身份/时间/权益且类别同权；C6 组合现有 API/权限、索引版本和
+恢复；F 呈现资料、结果、引用和继续操作；C4 按需消费同一获准资料。流程为
+scope/rights 过滤 → cosine 与 BM25 召回 → 稳定身份融合去重 → cross-encoder
+精排 → 原成果保存/修订/重开。完整增强须有真实模型与独立查询效果证据，基础
+词法路径持续可用。数学用于产品后端及自研 AI 训练/推理的假设、验证器、合法
+数据、checkpoint 重载与独立新任务对照归现有 Math 采用记录和 C2/C5 原成果卡；
+不新增训练、费用、外部模型或数据使用授权。
+
+**2026-10-11 直接 PO：REA 用于全产品当前研发。** 每个现有窗口均可复用已提供的
+REA 解析/逆向推理代码与已有研究，对本职功能所需的网站、App 和 GitHub 前沿实现
+进行有目标的研究。小红书、抖音、AI 机器人等仅是例子，不限制对象或能力范围；
+也不要求全部窗口重复研究同一对象。先查已有采用、源码与调用者，只补能解决当前
+功能、交互、数据质量或恢复问题的缺口，研究工具自身完成不计产品完成。
+
+沿原材料/成果记录完成：来源与版本 → 实际功能/用户流程/输入输出/状态/恢复解析
+→ 区分观察、推断和未知 → ADOPT/ADAPT/DEFER/REJECT → 原 Owner 源码和合同采用
+→ 真实用户成果与恢复验收。采集缺失时定向核查对应平台的页面加载、允许接口、
+字段/分页/会话与现有 Adapter，修复能修的路径，保留仍不可访问的真实原因；
+不把逆向推断当原始来源，不绕过登录、验证、访问限制或受保护个人身份。
+
+C1 采用采集/来源方法；C2 采用 AI/Agent 方法及独立效果评价；C3 采用行业任务、
+指标与业务分析；C4 采用制作/编辑/视听流程；C5 采用导入/解析/研究/引用与成果；
+C6 采用 SYSTEM/API/运行恢复；F 采用实际用户操作、UI/UX/动效与四端适配。
+M 审跨域冲突和采用成果，不增加新职责或平行运行系统。许可、假设及版本核验后
+才复用代码，来源信息与限制可追溯。源码研究、实际接入、运行证明和用户验收分开。
+
+**2026-10-12 首页聊天接线。** F 在现有 ACC-03/AI-01 及 App Shell 实现打开工作区
+即聊天/任务输入，导航进入其他既有架构能力；复用同一草稿、上下文和结果。
+以 GPT 与 Grok Bot 经核验的输入/附件、编辑、对话、渐进结果、智能 UI、停止/续做、
+引用/成果/恢复操作为参考，采用序境原创视觉。C2 给真实执行/增强/取消/结果状态，
+C6 给已有权限/API/持久化/恢复，C3/C4/C5 保持原领域和成果 Owner；不重复建 Chat
+后端，不让模型不可用阻断独立业务入口。F 自行同步这两个已有规格与实际源码，
+M 同步 Architecture/Experience，不互写已认领源文件。
+
+REA 是 Codex/现有 Owner 的研发工具，不能成为最终用户前置步骤。沿当前 Task
+Card 做一次有用的闭环：具体缺陷/能力 → 对应优秀产品的官方操作与获准程序/
+页面 → 用已安装 REA 的适用静态/页面分析读取实际实现线索 → 核对原源码调用
+与合同 → 原 Owner 修复 → 实际正常/失败恢复结果。已有有效分析直接复用，
+仅补当前缺口；既有工具缺必要依赖时按已批准免费可信安装边界解决。
+静态 JS/PE 不能证明私有服务端算法，动态页面观察不能取代来源/账号权限，
+未知关系要补查并实测，不把猜测或一次成功改成完整能力。无需 REA 的确定性
+内部错误直接修，不为用工具而重复分析或改变产品范围。
+
+已供复用的本机开发入口为 `D:/REA/rea.ps1`（REA 6.4.0；本机路径不是产品依赖）；
+原包 `D:/REA-Review/2026-10-11` 的 Task Card、源码补丁/哈希和应用索引保留。
+复用 `workspace.propose_edit` 可对已认领文件先生成精确 hash/diff 建议，写入仍由
+原 Owner 核准并再次比较当前字节。公开网页使用已授权隔离浏览器的准确 target
+与 origin，不附着个人会话；默认不读取 storage/Cookie，也不自动下载私有数据。
+已知客户端、公开页面和官方说明各自只证明其观察范围。上述开发采用不是
+产品安装 REA、新增云服务或接管操作系统的授权。
+
+数学/模型/算法推理归既有后端 Owner，不在普通业务页保留研究沙盒、算法选择器、
+论文运算或内部推理参数。用户提供业务问题与真实约束，收到分析后的报告/成果、
+来源、覆盖与不确定性及可执行操作；AI 聊天可呈现用户可理解的分析说明、工作进展
+和可核验依据，不展示私有内部思维链。外来能力按唯一 Experience 重新呈现。
+原账号/来源权限、个人 XHS 保护、权益/许可、费用、外部模型和部署边界保持；
+本次授权不恢复产品通用 OS 控制，不将研究访问自动变成数据或训练使用授权。
 
 The retained RC identifiers below locate the existing research corpus, not new
 work queues or completed adoption. Original locators, actual read intervals and
@@ -812,8 +897,8 @@ M rechecked these findings against the pinned source `52cd770cde458f73f99e407301
 | C4 | `lumenis/shared/content_creation/{video_editing,rendering}.py`、`shared_artifacts.py`、`podcast/intelligence/episode_runtime.py`、原音视频研究材料 | J4提案、J5视频、J6播客分别交付；连已有trim/split/reorder/delete/undo/mix/fade/transition/caption/FFmpeg；核单视频轨限制；播客按播放/真波形/录音/混音→降噪转录/脚本声音关联。与F协调原SH-01/BMP-08；不另建Timeline或Runtime |
 | C5 | Importer/Research、`lumenis/shared/reporting/saved_work.py`、Artifact/引用/材料清单 | 资料全文和方法采用进入产品能力；J4/J7现有编辑/审核/预算/版本/重开/导出，提供C4有rights的素材/原文时间码和版本合同；承接GenStudio式审阅修订复用，保持原文及父版本 |
 | C6 | 当前Core/API/experience_runtime、FFmpeg/FFprobe、Artifact/DB/恢复集成 | 关闭Flutter→API→既有Owner断链；每种预览/导出/保存/重开有对应真实版本；按目标OS核二进制与媒体许可/资源。App/Product Gate故障继续修复，不因新规则延后；没有真实效果不可通过 |
-| F | Experience§38，既有44ScreenSpec及可编辑设计映射；本次仅SH-01/BMP-08增加具体媒体规则 | 普通操作可发现、可直接控制、反馈与撤回；横向时间轴/真实播放器/波形/触控键盘/完整状态；先基础可用再增强智能呈现，保留四端角色和手绘水彩。完整F成果按当前派发执行，fresh admission 后进入 RUNNING |
-| M | 同一Blueprint/Experience/Overlay、两增补及现有有效研究、精确Main/dirty/Owner/CI | M 每30分钟轻量核对有变化的完整成果、共享冲突、CI/风险；解决跨窗冲突并审查完整成果；无实际可处理事项立即待命 |
+| F | Experience§38，既有44ScreenSpec及可编辑设计映射；本次仅SH-01/BMP-08增加具体媒体规则 | 普通操作可发现、可直接控制、反馈与撤回；横向时间轴/真实播放器/波形/触控键盘/完整状态；先基础可用再增强智能呈现，保留四端角色、彩绘icon及适合的局部页面装饰；不把彩绘或二维平面作为全产品风格。完整F成果按当前派发执行，fresh admission 后进入 RUNNING |
+| M | 同一Blueprint/Experience/Overlay、两增补及现有有效研究、精确Main/dirty/Owner/CI | M 按用户在现有自动化中批准的节奏轻量核对有变化的完整成果、共享冲突、CI/风险；解决跨窗冲突并审查完整成果；无实际可处理事项立即待命 |
 
 复用方案必须经过第三方登记册的当前版本/许可/平台/性能/安全/回退准入。FFmpeg现有优先；OTIO仅交换；RNNoise仅有降噪缺口；whisper.cpp仅有ASR缺口；播放器/录音组件仅现有工程不足时；OpenShot/MLT须证明现有renderer不能合理满足原批准功能。未选择/未验证的库不能登记为产品已接入。
 

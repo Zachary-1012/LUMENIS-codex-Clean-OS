@@ -10,7 +10,7 @@ from scripts.audit_tools.verify_codex_takeover_governance import (
     _assert_execution_boundaries,
     _assert_legacy_coverage_mapping,
     _assert_readme_routing_consistent,
-    _assert_six_round_routing,
+    _assert_engineering_owner_routing,
 )
 
 
@@ -58,17 +58,17 @@ class GovernanceHistoryRegressionTests(unittest.TestCase):
 
     def test_human_routing_mirror_keeps_c1_through_c6_exactly_once(self) -> None:
         matrix = self._agents_matrix()
-        _assert_six_round_routing(matrix)
+        _assert_engineering_owner_routing(matrix)
 
         without_c4 = "\n".join(line for line in matrix.splitlines() if "C4 / W4" not in line)
         with self.assertRaisesRegex(AssertionError, "C4"):
-            _assert_six_round_routing(without_c4)
+            _assert_engineering_owner_routing(without_c4)
 
         remapped = matrix.replace("| C3 / W3 |", "| C3 / W4 |", 1)
         with self.assertRaisesRegex(AssertionError, "routing mismatch"):
-            _assert_six_round_routing(remapped)
+            _assert_engineering_owner_routing(remapped)
 
-    def test_current_snapshot_must_report_all_six_rounds(self) -> None:
+    def test_current_snapshot_must_report_all_six_source_owners(self) -> None:
         current = self._agents_matrix() + "\nAGENTS.md\nLUMENIS-SOURCE-OWNER-INDEX-CURRENT.md"
         _assert_current_round_statuses(current)
 
@@ -124,6 +124,9 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             "00-GOVERNANCE/evidence/round-15/NEW-RULES-REPORT.md",
             "scripts/audit_tools/verify_codex_takeover_governance.py",
             "tests/test_online_progress_governance.py",
+            ".codex/model-routing.toml",
+            ".codex/tests/test_engineering.py",
+            "website/DEVELOPMENT-BRIEF.md",
         }
         _assert_current_publication_truth(rules_only, changed_paths=rules_paths)
 
@@ -138,6 +141,10 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             "data/runtime/governance/live_dispatch.json",
             "lumenis/system/browser/config.json",
             "contracts/experience/unreviewed-runtime.json",
+            ".codex/config.toml",
+            ".codex/tests/unreviewed_test.py",
+            "website/src/components/UnreviewedBehavior.astro",
+            "tests/test_unrelated_product.py",
         ):
             with self.subTest(runtime_path=runtime_path):
                 with self.assertRaisesRegex(AssertionError, "governance/documentation paths only"):

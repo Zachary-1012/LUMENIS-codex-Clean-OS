@@ -40,7 +40,7 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 
 ### 本次实际顺序
 
-先统一当前规则与详细合同；继续已授权的真实来源→分析→CTH/BMP→成果保存/修订/重开/恢复；再按完整五轮退出条件关闭其余真实缺口。Website/Web 业务优先，Windows/macOS、iOS 专项后续。R01–R15/J1–J8/U01–U25 和 44 屏保留，只有通用电脑控制的明确子要求撤回，不删整项 ID。窗口实际开工、暂停与恢复只服从直接PO指令及本地事实记录，不写作线上产品约束。文档变更不证明界面已改、业务已验收或 Runtime 已加载。
+先统一当前规则与详细合同；继续已授权的真实来源→分析→CTH/BMP→成果保存/修订/重开/恢复；再按完整五轮退出条件关闭其余真实缺口。Public Website、Web Workspace、Windows/macOS Desktop 与 iOS Mobile 并行推进；Website 保持既有独立展示边界，Workspace/Desktop/Mobile 使用同一 Flutter `app/` 与同一 Product Core。先形成任务化的完整真实前端，不等待全部后端；已有真实 API/Core 合同立即绑定，其他依赖按既有 Owner 逐项接入并将缺口标为 OPEN/UNBOUND，不以模拟结果替代。44 份现有屏幕规格是覆盖基线，不是页面数或产品范围上限；每个表面独立通过自身真实任务验收。该执行更新经 `PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE` 批准。R01–R15/J1–J8/U01–U25 和既有设计/历史证据保留，只有通用电脑控制的明确子要求撤回，不删整项 ID。窗口实际开工、暂停与恢复只服从直接PO指令及本地事实记录，不写作线上产品约束。文档变更不证明界面已改、业务已验收或 Runtime 已加载。
 
 ### 用户工作方式蓝图 — 2026-10-11（PO 已确认）
 
@@ -121,6 +121,8 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 
 #### 9. 每条工作都共用的资料、结果与恢复规则
 
+**工作区首页与导航（2026-10-12 PO）。** 打开工作区直接进入聊天/任务界面；复用 ACC-03 与 AI-01 同一输入、对话、草稿、上下文和成果合同。导航栏提供 CTH、BMP、Shared 独立研究、提案/视频/播客制作、内置浏览器与 SYSTEM 既有入口。聊天采用 GPT 与 Grok Bot 中经官网操作说明/获准 REA 核实的适用优点，包含任务输入、附件、上下文编辑、分段回复、智能 UI、停止/续做、结果引用及保存恢复；按序境原创 Experience 呈现。进入某能力不必先让 AI 执行一轮，无模型时仍能从同一导航完成正常业务。四端角色、独立制作、来源权限和完整验收不变；官网仍承接介绍与进入工作区。
+
 **采集与资料呈现。** 用户选择主体/品牌/主题、明确范围和可选时间，系统接收获准平台、公开网页、上传或导入的数据；原始观察、待核验与正式接收分别可辨。无统一“2026-01-01起”的硬截断。六主平台不是数据上限，词条随时间/品牌/活动/事件增补并保留原词。平台与公开网页类别同权，不等于每条内容质量相同。一个平台受限不阻塞已有获准数据的研究、分析和制作。
 
 资料应显示真实封面、正文、作者/来源、原帖、原生发布时间与采集时间、实际点赞/评论等维度及缺失原因。未知显示“—”并与真实零区分。初采最多一张代表封面，其余媒体位置和后续处理能力保留；没有观看/解析的部分明确标记，不宣称已理解全部内容。资料按用户任务组织，不复制社交平台信息流，不用后台诊断或数学输入表替代用户成果。
@@ -130,6 +132,33 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 **报告与智能交互。** 报告首先回答用户问题，再提供依据、对比、方法口径、局限与可操作建议。图表、比较表、阅读器、编辑画布与时间轴按任务选择；简单问题用清楚文字。后台可逐步返回有用结果，明确尚未完成部分；用户已编辑的内容不被后续返回覆盖。方法、样本/遗漏和计算假设可查看，但不成为必填工程步骤。
 
 **行业材料与数学方法。** 按实际问题采用有出处的行业案例、机制、结果与反例；资料不足时说明受限结论，补充能改善当前结果的材料。论文方法在后端按假设和适用性采用，业务参数来自真实数据或用户明确声明。相同原则用于研发：先固定问题/约束，检查反例与结果，审查适用证明；不把名称、引用、有限枚举或工具安装当成整篇算法或模型能力。
+
+最新直接 PO 的 REA 研究授权覆盖各 Owner 对当前功能所需网站、App、GitHub 前沿
+实现的定向解析和采用，小红书、抖音及 AI 机器人仅为例子。对采集缺失核查真实页面、
+允许接口与字段/分页/恢复路径，修复既有 Collector；不能用推断补造原始数据。
+具体采用沿现有 Source Owner Index，保留身份、来源权益、许可及外部效果边界。
+普通产品流程不展示内部数学/模型推理操作台，后端产出有用的分析后报告/成果；
+AI 聊天可提供面向用户的分析说明和工作进展，其余页面保留真实业务约束、来源与
+不确定性和后续操作。AI 不可用仍能完成对应基础任务，真实计算与真实模型收益分验。
+
+**2026-10-12 PO：缺口必须解决，不能留空交付。** 每个已批准能力的资料不足、规则
+冲突、实现/接线缺失和未验收项，必须在既有 Owner 成果卡落实具体问题、当前解决
+动作、输入和验收出口，连续处理；不能以空白、未验证或暂无反馈结束研发。缺少
+真实用户评价时，补查对应官网、帮助、演示、更新记录和可靠评测，形成有依据的
+适配判断，不能把官方宣传或单例评论写成用户共识。业务事实未知仍如实保留，
+不编造数据、不绕过权限。真正不可解除的外部阻塞须有证据、影响和恢复条件，
+独立工作继续。必需缺口未闭时，不宣称对应任务或全产品完成，不通过缩减范围、
+把必需修复标为 DEFER 或新建另一套规划消除未完成项。
+
+**AI 与产品增强检索。** 复用现有资料/研究检索和唯一 AI Gateway：按 actor、
+workspace、Subject/BrandFocus、来源用途/撤回和版本先过滤获准集合，再以向量
+余弦相似度与 BM25 并行召回，按稳定来源/片段身份融合去重，由已准入交叉编码
+Reranker 对查询与候选二次精排。不同量纲分数不直接相加；余弦重排、字符串权重
+不冒充交叉编码模型。精确编号/实体另行匹配，BM25 不代替身份确认；排名只表示
+相关性，不是事实可信度或业务准确率，不按平台类别降权。模型/分词/索引/配方与
+资料版本可追溯，失效来源排除。无模型时词法和精确检索仍可完成正常工作，但
+不能把降级当完整 Hybrid + Reranker 验收。用户看到资料、引用及成果，不配置
+向量、算法或内部参数。不新增资料库、模型网关、事实源或未授权费用/模型服务。
 
 用户可检索、阅读、比较案例的行业/市场/时间/条件与实际结果，选择适用部分加入报告或方案并保留引用。行业案例资料与 CTH 运营 Case 是不同对象：前者帮助理解经验，后者记录自己的业务问题及处理，不因读过案例就生成已执行的业务事实。
 
@@ -141,7 +170,7 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 
 **共同管理。** 搜索、偏好、语言、中英韩、无障碍、通知、任务状态、权限与设置继续属于完整产品；通知应打开对应工作，设置实际生效并可恢复。产品账号重构不成为新增的工作入口障碍，既有服务端权限仍执行。Skill 商店/GitHub 等已批准增强保留各自授权；它们不成为普通工作必需，也不因此批准外部模型或费用。
 
-**使用表面。** 官网负责产品说明、帮助、真实示例和进入工作区；Web Workspace 承担完整业务与制作。Windows/macOS 桌面及 iOS Companion 保留既定专项要求，后续验收；移动端以查阅、审阅与接续等既定角色适配，不压成一张桌面长页。原生 Android/Linux 不再是交付目标，已有资料/源码保留，Linux 服务端和窄屏浏览器支持不受影响。
+**使用表面。** 官网负责产品说明、帮助、真实示例和进入工作区；Web Workspace、Windows/macOS Desktop 与 iOS Companion 按既有角色并行建设，共用一个 Product Core，后三者共用现有 Flutter `app/`。移动端按查阅、审阅与接续等既定角色适配，不压成一张桌面长页。已有后端合同直接接入；缺少的绑定保持 OPEN/UNBOUND 并沿现有 Owner 补齐。各端按本端任务与运行证据独立验收。原生 Android/Linux 不再是交付目标，已有资料/源码保留，Linux 服务端和窄屏浏览器支持不受影响。
 
 #### 10. 独立使用和可选联动的确认对照
 
@@ -189,9 +218,9 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 | 内置浏览器 | 已有SYSTEM受控浏览、任务与笔记保存源码和有界旧回执 | 真正网页画面/操作、人工独占接管、安全返回、当前登录身份传递和恢复需同版证明；只读画面或接口成功不足以关闭浏览器目标 |
 | AI与数学增强 | 已有唯一Gateway、有限数学计算、研究采用和版本合同 | 完整主算法、适用性、各业务有效增益、实际模型训练/重载/独立评价分别未全闭合；基础链不等待它们 |
 | 本轮解析/媒体办公适配 | 接收包、75项清单字节校验与原始说明已核对；包含独立补丁和隔离工程回执 | 尚未正式接入主仓与当前Runtime；较宽回归的PDF依赖和提案API错误仍未关闭；Flutter/真实用户链缺证据，不将示例和工程检查当成产品完成 |
-| 全产品与四表面 | 已有既定44屏规格、客户端与Core源码；本轮规则纠偏不改前端 | Website/Web全部真实任务、跨能力正常联动、来源变化的影响传播和恢复仍需完成；Windows/macOS/iOS专项后续。窗口状态在本地按直接PO指令核验，本稿不证明实现或发布 |
+| 全产品与四表面 | 已有44份屏幕规格、客户端与Core源码；44份规格是覆盖基线而非范围上限 | Website、Web、Windows/macOS Desktop 与 iOS Mobile 的真实任务、跨能力正常联动、来源变化影响传播和恢复按端并行建设、独立验收。窗口状态在本地按直接PO指令核验，本稿不证明实现或发布 |
 
-验收依据是用户能否完成上面的工作，而非模块、提交或测试数量。本次未缩减保留的 J1–J8、R01–R15、U01–U25 与44屏；各工作对应原Owner及验收清单，通用电脑控制只有被明确撤回的子要求退出。蓝图确认不升级第12节任何实现/运行状态。窗口工作与依赖安排在[Source Owner Index的完整成果卡](LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)中更新为待审计划；[Real Delivery](LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)保留真实用户与上线门槛。未批准执行计划前，不恢复研发窗口或部署。
+验收依据是用户能否完成上面的工作，而非模块、提交或测试数量。本次未缩减保留的 J1–J8、R01–R15、U01–U25 与44屏；各工作对应原Owner及验收清单，通用电脑控制只有被明确撤回的子要求退出。蓝图确认不升级第12节任何实现/运行状态。窗口工作与依赖安排在[Source Owner Index的完整成果卡](LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)中记录；[Real Delivery](LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)保留真实用户与上线门槛。实际窗口按最新直接PO指令与新鲜准入核验；本蓝图不构成派工。公网部署、生产发布、新费用和外部效果仍按各自现有授权门槛执行。
 
 ## 2026-10-10 Product Owner amendment — branches and testing reinstated
 
@@ -232,9 +261,9 @@ Scoped development branches and PRs are permitted globally; validate and review 
 基本业务先证明无 AI 正常链，智能增强收益单独证明；前四轮的可选 AI 缺失不能阻断基础任务，
 第五轮既定智能要求仍须真实兑现，不能借 AI 可选原则取消。
 
-保留 J1–J8、R01–R15、U01–U25、44 屏及原资料/设计/历史证据全部要求。
-Website / Web Workspace 实际业务优先；Windows/macOS Desktop 与 iOS Companion
-专项验收后续完成，不以本次文档提交宣称 SYSTEM、原生端或全产品闭环。
+保留 J1–J8、R01–R15、U01–U25、既有44份屏幕规格及原资料/设计/历史证据全部要求；44份规格不是新增映射屏幕或官网内容家族的上限。
+Public Website、Web Workspace、Windows/macOS Desktop 与 iOS Companion 并行建设，按各自角色和真实任务独立验收；单端结果不替代其他端或全产品闭环。
+不以本次文档提交宣称 SYSTEM、任一表面或全产品闭环。
 不新增费用、账号、模型服务、训练或部署；按2026-10-10批准恢复隔离单元/集成回归，
 保留编译、静态、安全、数据一致性与真实用户 E2E。
 
@@ -268,11 +297,18 @@ BMP is Brand-first / Primary Focus, with Brand/Market-first business work. The
 Shared Capability Layer is independently usable and also serves both domains. Agent Groups coordinate through
 the existing Agent Runtime and never become another business or security owner.
 
-**Multi-surface product direction:** Public Website, Flutter Web Workspace,
-Desktop on Windows/macOS, and Mobile on iOS share the same Core.
-Platform availability and acceptance are verified separately from this target.
-
-2026-10-08 最新 PO 顺序：优先闭环 Public Website + Web Workspace；Desktop App/Mobile Companion 专项实现、打包与实机验收后置至前两端闭环以后。保留全部四端/44屏/官网家族及 R/J/U 能力，不删旧成果、不将后置项记为通过。当前 Web 所需业务与 Core/SYSTEM 能力仍完整推进，沿既有 Owner/Permission/Evidence 与真实保存、修改、重开、恢复、评价链验收。既有三层 Gate 按本轮表面记录，四端完整 Goal/Release 不因本轮完成自动关闭。具体表面边界见 Multi-Surface Decision；零新增费用不变；实际窗口由PO决定，不再固定单业务窗口拓扑。
+**Multi-surface product direction:** Public Website and one Flutter `app/` for
+Web Workspace, Windows/macOS Desktop and iOS Mobile share one Product Core.
+All four surfaces build in parallel with their approved roles and separate
+real-task acceptance. Build the complete task-shaped frontend without waiting
+for all backend work; bind available real APIs/Core immediately, and track
+missing bindings as OPEN/UNBOUND for incremental connection through existing
+owners. The 44 existing screen specifications are a baseline, not a page or
+product-scope ceiling. No new product, owner, design system or paid service is
+introduced. Platform availability and acceptance are verified separately from
+this target. This 2026-10-11 update supersedes the 2026-10-08 Website/Web-first
+execution order; the historical receipt remains provenance. Approval:
+`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
 
 
 ## 2026-10-09 AI 非依赖原则与分层验收
@@ -347,7 +383,7 @@ Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Eval
 OpenAI Math/Lean/Comparator 是方法来源，不构成序境已获形式化证明、商业因果或训练授权。
 具体实现、证据和未验证运行范围见同一语义清单及 Math 采用记录。
 
-Latest PO: F builds real frontend directly from current Experience, screen contracts and source; no separate design draft, Figma completion or M DESIGN_READY approval is a coding prerequisite. Update existing specifications alongside code. Existing design artifacts and review states remain provenance, not proof of implementation. Do not authorize implementation from a PDF, screenshot, fixture, Figma frame or a generic swapped-title renderer alone; the current contracts and direct PO construction instruction govern. Website/Web closes first, then native Windows/macOS and iOS only. Android/Linux native clients are no longer delivery targets; preserve historical source/evidence. Linux server/CI and browser access remain separate. Preserve all other current capabilities and acceptance requirements.
+Latest PO: F builds the complete task-shaped frontend directly from current Experience, screen contracts and source across Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile in parallel. Website remains the public presentation surface; one Flutter `app/` serves Web/Desktop/Mobile over the same Product Core. No separate design draft, Figma completion or M DESIGN_READY approval is a coding prerequisite. Update existing specifications alongside code. Bind available real APIs/Core immediately; connect remaining existing-owner dependencies incrementally and keep missing behavior OPEN/UNBOUND without mock results. Existing design artifacts and review states remain provenance, not proof of implementation. Do not authorize implementation from a PDF, screenshot, fixture, Figma frame or a generic swapped-title renderer alone; the current contracts and direct PO construction instruction govern. Keep each surface's role, actual user operation and acceptance evidence distinct. The 44 existing specifications are a baseline, not a ceiling. Android/Linux native clients are no longer delivery targets; preserve historical source/evidence. Linux server/CI and browser access remain separate. No new product, owner, design system or paid service is introduced. This 2026-10-11 rule supersedes the 2026-10-08 Website/Web-first order. Approval: `evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
 
 一、闭环后，用户实际得到什么
 
@@ -377,7 +413,7 @@ Latest PO: F builds real frontend directly from current Experience, screen contr
 
 例如商业体比较能检查城市与时间口径；活动预算调整能看到受影响段落和镜头；媒体编辑能在同一来源/脚本/时间轴中定位并只改选中部分；来源撤回能定位对应结论；采集/模型不可用时能理解缺口并继续不依赖它的工作。设置、通知、任务状态和恢复入口也按实际动作与返回关系设计。模型只提出有依据的解释/方案，UI和AI都不创造事实、权限或外部效果。
 
-唯一Experience §38细化八项要求与验收；44屏在既有screen-specifications中明确各自任务和视觉动线，既有文字草图同步增补，四端角色见Multi-Surface Decision。保留二维手绘水彩、丰富且有用的交互、中英韩与无障碍、操作端避免不必要整页滚动。该蓝图定义闭环目标，不能据此把规则更新等同功能已上线或屏幕已验收。
+唯一Experience §38细化八项要求与验收；44屏在既有screen-specifications中明确各自任务和视觉动线，既有文字草图同步增补，四端角色见Multi-Surface Decision。整体视觉依已批准研究与当前任务；手绘彩绘限于图标及适合页面元素，不固定二维或三维。保留丰富且有用的交互、中英韩、无障碍及操作端避免不必要整页滚动。该蓝图定义闭环目标，不能据此把规则更新等同功能已上线或屏幕已验收。
 
 二、锁定的产品组成
 
@@ -400,7 +436,7 @@ SYSTEM：采集、产品浏览器、Scheduler、AI Gateway、Agent/Skills/Memory
 | Desktop App | 本地媒体处理、专业编辑、文件操作与高级工作 | 同一任务和版本；视频/播客真实播放器、横向时间轴、导出、重开恢复 | 不另建业务数据库；本机工具能力与服务器能力分别反馈 |
 | Mobile Companion | 查看、审阅、批准、轻操作、通知与任务接续 | 真实任务/成果/版本、适配触控、返回路径与权限 | 按移动任务重组，不缩小PC界面，也不冒称所有桌面重计算能力已在手机运行 |
 
-四端共同遵守：原创二维手绘水彩/版画纸感；线性功能glyph、彩绘对象identity icon、第三方来源icon分层；颜色丰富但不滥用；人物根据脚本或描述生成；合理的AIGC呈现按任务设计，不使用助手虚构的70–80%/20–30%固定配额。除官网外避免无必要的整页纵向滚动，必要长文和无障碍操作不被截断。增加有用交互，不做换标题的模板页。
+四端共同遵守：整体视觉方向依据用户已批准研究、当前任务与屏幕合同，不固定二维或三维；手绘彩绘用于五位架构身份/功能图标及适合的局部页面元素。线性功能glyph、彩绘身份图标、第三方来源icon分层；颜色丰富但不滥用；人物根据脚本或描述生成；AIGC呈现按任务设计，不使用助手虚构的70–80%/20–30%固定配额。除官网外避免无必要的整页纵向滚动，必要长文和无障碍操作不被截断。增加有用交互，不做换标题的模板页。
 
 产品账号重设计、实时对话语音、开发者模式仍按已明确后置范围保留。当前开放产品入口，不加新的登录/升级墙；服务端权限、平台授权和效果控制继续执行。
 
@@ -573,7 +609,7 @@ website/                     committed Public Website implementation; release st
 
 This is an ownership target, not permission to mass-move files. Every move requires owner/caller/read-write/runtime/test tracing.
 
-For each vertical delivery slice, record the surface matrix over one Product Core contract: Web Workspace primary/available; Desktop enhanced/exclusive; Mobile view/notify/approve/light action; Public Website explanation/demo only. Layouts need not match, but business meaning and state semantics must. Start current acceptance on actual Website/Web browsers; native Windows/macOS and iOS hosts follow Website/Web closure; record unavailable device/runtime combinations as `UNVERIFIED`, and do not claim a surface or OS release until its build and runtime flows pass.
+For each vertical delivery slice, record the surface matrix over one Product Core contract: Web Workspace primary/available; Desktop enhanced/exclusive; Mobile view/notify/approve/light action; Public Website explanation/demo only. Layouts need not match, but business meaning and state semantics must. Build and evaluate the four surfaces in parallel; accept each on its actual platform through its own real task and runtime flow. Record unavailable device/runtime combinations as `UNVERIFIED`, and do not claim a surface or OS release until its build and runtime flows pass. One surface's closure does not gate another surface's construction or acceptance.
 
 ### Current runtime caller map
 
@@ -700,7 +736,7 @@ Product Owner 直接更正（2026-10-11复核为既有要求，不另建权重�
 
 自动采集继续无头后台运行，人工登录/验证/接管必须由用户明确发起，复用获准的隔离身份。普通浏览不用 AI；AI 可在相同会话与权限内增强网页理解和受控步骤。用户可停止或独占接管，返回恢复原任务、范围、选中来源和草稿。浏览动作与正式 Source/Evidence 接收分别处理，只有获准保存才生成相应资料/成果版本。
 
-保留明确的外部浏览器选项；禁止自动外弹、读取个人浏览器档案、暴露 raw CDP、绕过网页安全限制，不能简单删除 loopback 防护冒称 Web 可用。无需通用桌面/OS executor，不安装 Agent Zero GUI 来满足本链。端能力按 Website/Web 优先、后续 Windows/macOS/iOS 核实。模型/远端工作机/部署可用性各自据实，不因类比 ChatGPT 承诺关机后持续运行。
+保留明确的外部浏览器选项；禁止自动外弹、读取个人浏览器档案、暴露 raw CDP、绕过网页安全限制，不能简单删除 loopback 防护冒称 Web 可用。无需通用桌面/OS executor，不安装 Agent Zero GUI 来满足本链。Website、Web、Windows/macOS Desktop 与 iOS Mobile 并行构建并按端独立核验。模型/远端工作机/部署可用性各自据实，不因类比 ChatGPT 承诺关机后持续运行。
 
 工程参考（2026-10-11 核读）：[OpenAI browser environment integration](https://developers.openai.com/api/docs/guides/tools-computer-use-integration#prepare-an-environment) 提供会话保持、浏览器自动化和画面获取的公开实践；[ChatGPT cloud browser](https://help.openai.com/en/articles/20001280-using-cloud-browser-in-chatgpt) 说明独立会话、人工接管和网站/重要动作授权。这里只采用适用的公开原则，不宣称取得 ChatGPT 私有实现，不将其云电脑/付费资源带入序境。
 

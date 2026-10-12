@@ -12,6 +12,12 @@ AGENTS_PATH = ROOT / "AGENTS.md"
 CURRENT_PATH = ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md"
 
 EXPECTED_ROLES = {"M", "F", "C1", "C2", "C3", "C4", "C5", "C6"}
+FORBIDDEN_ROLE_SELECTION_FIELDS = {
+    "model",
+    "model_provider",
+    "reasoning_effort",
+    "service_tier",
+}
 EXPECTED_C_WINDOWS = {f"C{i}": f"W{i}" for i in range(1, 7)}
 EXPECTED_STATES = [
     "ELIGIBLE",
@@ -109,18 +115,42 @@ def validate_model_routing(contract: dict) -> None:
     routing = tomllib.loads(routing_path.read_text(encoding="utf-8-sig"))
     config = tomllib.loads(config_path.read_text(encoding="utf-8-sig"))
 
-    if routing.get("manual_window_selection_wins") is not semantics["manual_window_selection_wins"]:
-        fail("manual-window selection precedence drift")
-    if routing.get("hooks_may_change_model") is not semantics["hooks_may_change_model"]:
-        fail("Hook model authority drift")
-    if routing.get("profiles_are_launch_helpers_only") is not semantics["profiles_are_launch_helpers_only"]:
-        fail("profile model authority drift")
+    required_selection_policy = {
+        "manual_window_selection_wins": True,
+        "selection_authority": "PRODUCT_OWNER_PER_WINDOW",
+        "selection_observation": "FACTUAL_READBACK_ONLY",
+        "unavailable_selection_state": "NOT_VERIFIED",
+        "automatic_settings_mutation": False,
+        "hooks_may_change_model": False,
+        "profiles_are_launch_helpers_only": True,
+    }
+    for key, required in required_selection_policy.items():
+        semantic_value = semantics.get(key)
+        routing_value = routing.get(key)
+        semantic_matches = (
+            semantic_value is required
+            if isinstance(required, bool)
+            else semantic_value == required
+        )
+        routing_matches = (
+            routing_value is required
+            if isinstance(required, bool)
+            else routing_value == required
+        )
+        if not semantic_matches:
+            fail(f"model selection policy weakened or drifted: {key}")
+        if not routing_matches:
+            fail(f"structured model selection policy drift: {key}")
 
     roles = routing.get("roles", {})
-    for role, expected in semantics["role_defaults"].items():
-        actual = roles.get(role, {})
-        if actual.get("model") != expected["model"] or actual.get("reasoning_effort") != expected["reasoning_effort"]:
-            fail(f"structured model routing mismatch for {role}")
+    if not isinstance(roles, dict) or set(roles) - EXPECTED_ROLES:
+        fail("structured model routing contains an unknown role")
+    for role, settings in roles.items():
+        if not isinstance(settings, dict):
+            fail(f"structured role routing must be a table: {role}")
+        assigned = FORBIDDEN_ROLE_SELECTION_FIELDS.intersection(settings)
+        if assigned:
+            fail(f"fixed model/effort/tier assignment forbidden for {role}: {sorted(assigned)}")
 
     expected_sub = semantics["subagents"]
     actual_sub = routing.get("subagents", {})
@@ -158,7 +188,7 @@ def validate_contract() -> dict:
     c = load_json(CONTRACT_PATH)
     if c.get("schema") != "lumenis.governance-machine-contract/v1":
         fail("unexpected governance contract schema")
-    if c.get("contract_id") != "lumenis-governance-machine" or c.get("contract_version") != "1.3.0":
+    if c.get("contract_id") != "lumenis-governance-machine" or c.get("contract_version") != "1.4.0":
         fail("unexpected governance contract identity/version")
     if c.get("status") != "ACTIVE" or c.get("scope") != "GOVERNANCE_ONLY":
         fail("governance machine contract must remain ACTIVE and GOVERNANCE_ONLY")

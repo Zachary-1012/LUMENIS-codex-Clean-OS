@@ -51,9 +51,9 @@ Independent research and production do not require a prior CTH/BMP task, commerc
 | Desktop · Windows / macOS | 原生桌面工作区。 / Native desktop workspace. |
 | Mobile Companion · iOS | 移动查阅、审阅与工作接续。 / Mobile reading, review, and work continuation. |
 
-各表面共用同一 Product Core、权限、资料和成果版本。语言与无障碍要求由体验规范定义。交付顺序归产品蓝图，README 不承担派工或验收记录。
+四类表面按各自角色并行建设、独立验收，共用同一 Product Core、权限、资料和成果版本。Workspace、Windows/macOS与iOS复用同一Flutter实现；语言、视觉与无障碍归唯一体验规范。README不派工，也不把单端通过算成全产品完成。
 
-All surfaces share one Product Core, permissions, materials, and result versions. The Experience Constitution defines language and accessibility requirements. Delivery order belongs to the product blueprint; this README is not a dispatch or acceptance record.
+Build the four surfaces in parallel and accept each independently over one Product Core, permissions, materials and result versions. Workspace, Windows/macOS and iOS reuse one Flutter implementation. Language, visual and accessibility requirements belong to the sole Experience Constitution; this README neither dispatches work nor treats one surface as full-product acceptance.
 
 ## 工程结构 / Repository structure
 
