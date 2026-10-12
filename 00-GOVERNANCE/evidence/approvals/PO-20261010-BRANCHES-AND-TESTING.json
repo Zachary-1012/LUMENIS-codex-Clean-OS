@@ -23,5 +23,31 @@
     "no force push or automatic deletion of branches",
     "do not weaken Permission/Evidence/Canonical or user-outcome acceptance",
     "no live collection, external model calls, GPU training, paid resources or production deployment under this grant"
+  ],
+  "amendments": [
+    {
+      "approved_at": "2026-10-12",
+      "approved_by": "Product Owner",
+      "status": "APPROVED",
+      "approval_source_type": "direct_product_owner_instruction",
+      "source_quotes": [
+        "为github main启动强制合并及保护规则",
+        "现在的工作流程是这个吧，本次的改动有无需要线上线下更新的，记住以后有新的东西，不要新增什么文字代码，而是在原有基础上更新调整，这才不会出错"
+      ],
+      "scope_manifest": {
+        "platform_branch_protection_required_now": true,
+        "harden_at": "EXPLICIT_PO_APPROVAL",
+        "main_only": true,
+        "ruleset_id": 24907551,
+        "mandatory_pr_and_required_checks": true,
+        "update_existing_contract_validator_and_rules_in_place": true
+      },
+      "constraints": [
+        "preserve every original 2026-10-10 approval field and source quote",
+        "no direct-main push, force push, deletion or ruleset bypass",
+        "no revocation of existing developer access or modification of model settings",
+        "no new product owner, parallel implementation, live collection, training, spending or deployment grant"
+      ]
+    }
   ]
 }

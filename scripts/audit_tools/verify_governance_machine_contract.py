@@ -282,8 +282,8 @@ def validate_contract() -> dict:
     branch = c.get("branch_policy", {})
     if branch.get("phase") != "PRE_INTERNAL_BETA_CLOSURE":
         fail("unexpected branch-governance phase")
-    if branch.get("platform_branch_protection_required_now") is not False:
-        fail("pre-beta closure should not silently force PR/branch-protection workflow")
+    if branch.get("platform_branch_protection_required_now") is not True:
+        fail("current PO requires platform branch protection")
     if branch.get("direct_main_allowed") is not False or branch.get("force_push_allowed") is not False:
         fail("reviewed branch integration/no-force-push policy drift")
     for key in ("working_branches_allowed", "pull_requests_allowed", "merge_requires_current_head_review"):
@@ -296,8 +296,19 @@ def validate_contract() -> dict:
     branch_receipt = load_json(ROOT / branch["approval_receipt"])
     if branch_receipt.get("status") != "APPROVED" or branch_receipt.get("approved_by") != "Product Owner":
         fail("branch workflow lacks PO approval receipt")
-    if branch.get("harden_at") != "INTERNAL_BETA_ENTRY":
+    if branch.get("harden_at") != "EXPLICIT_PO_APPROVAL":
         fail("branch hardening trigger drift")
+    amendments = branch_receipt.get("amendments", [])
+    if not isinstance(amendments, list) or not any(
+            isinstance(item, dict) and item.get("status") == "APPROVED"
+            and item.get("approved_by") == "Product Owner"
+            and item.get("approved_at") == "2026-10-12"
+            and item.get("approval_source_type") == "direct_product_owner_instruction"
+            and isinstance(item.get("scope_manifest"), dict)
+            and item["scope_manifest"].get("platform_branch_protection_required_now") is True
+            and item["scope_manifest"].get("harden_at") == branch["harden_at"]
+            for item in amendments):
+        fail("current main protection requires its dated PO amendment")
 
     runtime_rel = dispatch.get("runtime_state_path")
     if not isinstance(runtime_rel, str) or not runtime_rel.startswith("data/runtime/governance/"):
@@ -388,7 +399,7 @@ def main() -> None:
     print(" - live dispatch stays local/untracked")
     print(" - PO approvals require receipts; agents cannot self-approve")
     print(" - Change / Owner Closure / Release gates remain distinct")
-    print(" - branch hardening is deferred to INTERNAL_BETA_ENTRY")
+    print(" - main protection is required by explicit PO approval; GitHub enforcement needs readback")
 
 
 if __name__ == "__main__":

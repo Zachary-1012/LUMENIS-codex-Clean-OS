@@ -232,6 +232,7 @@ def _is_rules_only_publication_path(path: str) -> bool:
         '.agents/skills/lumenis-release-completion/SKILL.md',
 
         "tests/test_online_progress_governance.py",
+        "tests/test_governance_machine_contract.py",  # This policy owner's regression, not product behavior.
         # These exact JSON files are material/approved-target documentation,
         # not runtime configuration. Keep arbitrary JSON outside this allowlist.
         "00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json",

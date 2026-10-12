@@ -272,11 +272,11 @@
   },
   "branch_policy": {
     "phase": "PRE_INTERNAL_BETA_CLOSURE",
-    "platform_branch_protection_required_now": false,
+    "platform_branch_protection_required_now": true,
     "direct_main_allowed": false,
     "force_push_allowed": false,
     "branch_delete_allowed": false,
-    "harden_at": "INTERNAL_BETA_ENTRY",
+    "harden_at": "EXPLICIT_PO_APPROVAL",
     "hardening_target": [
       "protect_main",
       "disallow_force_push",

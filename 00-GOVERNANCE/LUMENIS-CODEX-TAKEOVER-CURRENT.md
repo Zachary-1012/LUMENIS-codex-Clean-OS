@@ -1,12 +1,12 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
-## 2026-10-12 main 分支保护 CI 准入（PR #15；管理配置待验证）
+## 2026-10-12 main 分支保护与既有规则同步（PR #15 CI 前置已合并）
 
-当前用户指令：main 改为强制 PR 合并并要求必要 CI 通过，禁止未经核验的直接提交、强推和删除。GitHub 查询基线为 main `1fdb23d27da9f7f15d5dc0a2ab723e8befc371af`、分支 `protected=false`、rulesets 为空；当前 GitHub 插件虽具有代码维护权限，却无 Administration API 保护规则写入能力，因此**本次源码/CI 改动不等于保护规则已经生效**。最终必须由获准的仓库管理员在 GitHub 上启用并回读设置。
+OBSERVED：本次维护基线为 main `9d54e0925b43dd8e24f7d209c703fb4266704809`；GitHub规则集 `24907551` 已为 `active`，只匹配 `refs/heads/main`，`main.protected=true`，绕过名单为空。必须PR、解决审阅讨论、使用最新main基线并满足两项检查，禁止强推及删除main；所需他人批准数为0，不额外阻断单人维护。此处是有日期的配置读回，不代替未来每次集成前的重新核验。
 
-PR #15 只修改现有 `.github/workflows/app-verify.yml` 的 `pull_request` 路径过滤，使 `Flutter application foundation` 对所有指向 main 的 PR 运行；保留 `push` 的路径过滤以减少普通提交成本。否则将 App Gate 设为 required 后，后端或文档 PR 无匹配检查而无法合并。现有 `production source integrity + runtime prerequisites` 已对所有 PR 运行。两项检查名称来自 GitHub 最新 main 的真实 check-runs；受保护规则应绑定 GitHub Actions 作为检查来源。
+PR #15 已使现有 App Gate 对所有指向main的PR运行，保留push路径过滤。两项必需检查为 `production source integrity + runtime prerequisites` 与 `Flutter application foundation`，均绑定GitHub Actions（integration_id `15368`）。前置提交 `9d54e092...` 的两项检查已通过；后续提交必须取得自己的结果，不能沿用该PASS。先前“管理配置待验证”已由实际保护回读替代，原状态保留在Git历史及私有配置备份。
 
-目标仓库保护：必须 PR、两个确切检查通过、分支最新基线、无绕过、禁止强推/删除；单人维护阶段无需他人批准人数（不伪造审批），保留代码审阅和检查。这里只记录必要的 CI 前置修复，未修改生产业务、运行/DB、部署、账号或模型。本次提交的源码、CURRENT 与实际 CI 结果分别复核，保护规则启用需另行核验 `main.protected` 及必需检查，不能凭文档或 PR 合并宣布成功。
+按本次直接PO要求，工作流与“先复用、原位调整”在现有AGENTS条款内合并压缩，文档体积不增加且不扩大上下文预算；新信息先核原Owner/源码/调用者，调整原条目并消除冲突引用，不另建规则文件或平行实现；原机器合同branch_policy、原校验器及原测试同步；规则发布分类只补入对应机器合同回归测试，仍拒绝无关测试或产品源码，原审批文件保留2026-10-10字段并注明2026-10-12修订，保护不再后置。线上、本地工作树和运行环境分别核验；相关本地规则按精确段落同步，保留未提交成果及当前分支/索引。RDC连接守护只在已有本机工具目录维护，不纳入产品运行依赖。无业务代码、数据库、模型配置、工具授权或部署变更；规则及CI合格不等于产品闭环完成。
 
 ## 2026-10-11 全产品既有规则复用与体验一致性校正
 
