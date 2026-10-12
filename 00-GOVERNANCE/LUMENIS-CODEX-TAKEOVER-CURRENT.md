@@ -1,5 +1,13 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
+## 2026-10-12 main 分支保护 CI 准入（PR #15；管理配置待验证）
+
+当前用户指令：main 改为强制 PR 合并并要求必要 CI 通过，禁止未经核验的直接提交、强推和删除。GitHub 查询基线为 main `1fdb23d27da9f7f15d5dc0a2ab723e8befc371af`、分支 `protected=false`、rulesets 为空；当前 GitHub 插件虽具有代码维护权限，却无 Administration API 保护规则写入能力，因此**本次源码/CI 改动不等于保护规则已经生效**。最终必须由获准的仓库管理员在 GitHub 上启用并回读设置。
+
+PR #15 只修改现有 `.github/workflows/app-verify.yml` 的 `pull_request` 路径过滤，使 `Flutter application foundation` 对所有指向 main 的 PR 运行；保留 `push` 的路径过滤以减少普通提交成本。否则将 App Gate 设为 required 后，后端或文档 PR 无匹配检查而无法合并。现有 `production source integrity + runtime prerequisites` 已对所有 PR 运行。两项检查名称来自 GitHub 最新 main 的真实 check-runs；受保护规则应绑定 GitHub Actions 作为检查来源。
+
+目标仓库保护：必须 PR、两个确切检查通过、分支最新基线、无绕过、禁止强推/删除；单人维护阶段无需他人批准人数（不伪造审批），保留代码审阅和检查。这里只记录必要的 CI 前置修复，未修改生产业务、运行/DB、部署、账号或模型。本次提交的源码、CURRENT 与实际 CI 结果分别复核，保护规则启用需另行核验 `main.protected` 及必需检查，不能凭文档或 PR 合并宣布成功。
+
 ## 2026-10-11 全产品既有规则复用与体验一致性校正
 
 本批落实PO“先核对已有、不要重复新增”且“不止前端，是整个产品”的更正，复用已批准的七条用户工作方式、来源类别同权、后端分析、AI非依赖、独立研究/制作及REA采用方向。修正现行文件中把历史停工写成当前命令的内容，细化完整Experience与原Owner成果卡；不新建产品、调度体系、来源权重机制或设计权威。窗口的开工/暂停/恢复和模型设置只按直接PO指令在本地ledger及工具回执核验；GitHub规范不承担实时调度。历史审批保持原日期和内容，不能覆盖更新的直接授权。
