@@ -1134,3 +1134,16 @@ entire reviewed batch is compared to target main; CURRENT and PO receipt guards
 remain effective. Real temporary Git merge regressions cover both valid
 co-publication and rejection of a product merge missing CURRENT. The initial
 failed GitHub run is retained; it is not a product acceptance failure or a pass.
+
+
+## 2026-10-13 有界复用接入候选：响应结构与静态导入诊断
+
+本批根据用户直接批准的复用ZIP，在现有抖音适配器结果合同中加入值隔离的结构诊断，
+并为既有Windows构建辅助入口接入可选单文件静态DLL导入观察；原生指标、风控失败、
+来源和权限语义保留，无新增采集器/数据真相/模型/运行依赖。原根许可证不变。
+本地82项、隔离main候选59项适配器回归，以及各5+5项构建辅助回归通过；这些是
+隔离工程证据，不是实际采集或新版本App构建。现存EXE静态观察20imports，未启动。
+源码只在独立 `codex/reuse-diagnostics-20261013` 候选和受保护本地工作区；PR检查、
+合入main、加载运行、同任务诊断持久化/回看和真实用户验收仍须各自核验。
+原PR21规则整理及其他dirty工作没有混入本批。完整影响、精确输入、源码/日志哈希、
+失败恢复和未闭项见 [本批原位证据](evidence/round-15/REUSE-DIAGNOSTICS-20261013.md)。
