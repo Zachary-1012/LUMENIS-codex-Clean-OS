@@ -168,15 +168,30 @@ CURRENT_RUNTIME_STATES = {"NOT_LOADED_OR_NOT_VERIFIED", "LOADED_AND_VERIFIED"}
 
 
 def _publication_changed_paths(*, staged: bool = False) -> set[str]:
-    command = (["git", "diff", "--cached", "--name-only", "HEAD"] if staged else
-               ["git", "diff-tree", "--root", "--first-parent", "--diff-merges=first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"])
-    proc = subprocess.run(
-        command,
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    """Validate whole PR delta on branch; on detached CI merge use first parent.
+
+    PR branch comparison includes older commits, not only the last commit.
+    """
+    if staged:
+        command = ["git", "diff", "--cached", "--name-only", "HEAD"]
+    else:
+        command = [
+            "git", "-c", "core.quotePath=false", "diff-tree", "--root", "--first-parent",
+            "--diff-merges=first-parent", "--no-commit-id", "--name-only", "-r", "HEAD",
+        ]
+        branch = subprocess.run(
+            ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
+            cwd=ROOT, capture_output=True, text=True, check=False,
+        )
+        if branch.returncode == 0 and branch.stdout.strip() not in {"", "main"}:
+            base = subprocess.run(
+                ["git", "merge-base", "origin/main", "HEAD"],
+                cwd=ROOT, capture_output=True, text=True, check=False,
+            )
+            sha = base.stdout.strip()
+            if base.returncode == 0 and re.fullmatch(r"[0-9a-f]{40,64}", sha):
+                command = ["git", "-c", "core.quotePath=false", "diff", "--name-only", sha, "HEAD"]
+    proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
     if proc.returncode != 0:
         raise AssertionError(f"cannot inspect publication changed paths: {proc.stderr.strip()}")
     return {line.strip() for line in proc.stdout.splitlines() if line.strip()}

@@ -490,5 +490,29 @@ def test_publication_paths_keep_staged_and_committed_evidence_separate(monkeypat
     assert gate._publication_changed_paths() == {'README.md'}
     assert gate._publication_changed_paths(staged=True) == {
         'collection_api.py', '00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md'}
-    assert '--cached' not in seen[0]
-    assert '--cached' in seen[1]
+    assert any('--cached' not in cmd for cmd in seen)
+    assert any('--cached' in cmd for cmd in seen)
+
+def test_pr_publication_uses_full_branch_history_not_last_commit(monkeypatch):
+    from types import SimpleNamespace
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    calls = []
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        if "symbolic-ref" in command:
+            return SimpleNamespace(returncode=0, stdout="fix/my-pr\n", stderr="")
+        if "merge-base" in command:
+            return SimpleNamespace(returncode=0, stdout=("a" * 40) + "\n", stderr="")
+        if "diff" in command:
+            return SimpleNamespace(returncode=0, stdout="lumenis_shared_skills.py\n00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md\n", stderr="")
+        return SimpleNamespace(returncode=0, stdout="README.md\n", stderr="")
+    monkeypatch.setattr(gate.subprocess, "run", fake_run)
+    observed = gate._publication_changed_paths()
+    assert observed == {"lumenis_shared_skills.py", "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"}
+    assert any("merge-base" in cmd for cmd in calls)
+    assert any("diff" in cmd and "a"*40 in cmd for cmd in calls)
+    import pytest
+    marker = chr(96)
+    rules = "\n## 1. Online reader's current-state snapshot\nImplementation publication state: " + marker + "RULES_ONLY_PUBLICATION" + marker + "\nRuntime load state: " + marker + "NOT_LOADED_OR_NOT_VERIFIED" + marker + "\n### Approved D1"
+    with pytest.raises(AssertionError, match="governance/documentation paths only"):
+        gate._assert_current_publication_truth(rules, changed_paths=observed)
