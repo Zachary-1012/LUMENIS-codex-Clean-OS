@@ -37,10 +37,11 @@ This prevents two common failures:
 - treating a short README as the whole product history;
 - repeating a full-repository scan when one capability can be routed locally.
 
-Historical research, handoffs, screenshots, reports, and sketches are inputs
-for reasoning and provenance. They may reveal an intended capability or a
-useful constraint, but they cannot override executable source, current
-contracts, runtime evidence, Permission, Evidence, Canonical Data, or the
+Original user instructions and approved corrections determine required outcomes
+and scope; source/runtime evidence establishes what is implemented and verified,
+not what requirements may be discarded. Research, handoffs, screenshots, reports
+and sketches retain their source and adoption context; they do not independently
+grant authority or overwrite current Permission, Evidence, Canonical Data or the
 Experience Constitution.
 
 ## Required workflow
@@ -134,15 +135,16 @@ copying is necessary. Root AGENTS and native hook trust still apply.
 - Use the existing locator families and Source Owner Index. If no family fits,
   record the missing route and resolve it explicitly; do not invent a parallel
   owner to avoid the ambiguity.
-- A full-repository re-audit is allowed only for a structural trigger defined
-  by the current Source Owner Index or when the active owner cannot be resolved
-  after targeted inspection. Record that trigger in the manifest.
+- Complete a full-repository audit when explicitly requested, when a structural
+  trigger is defined by the current Source Owner Index, or when targeted inspection
+  cannot resolve the active owner. Record the actual scope or trigger; never narrow
+  an explicitly requested comprehensive review to a sampled local check.
 - Keep secrets, cookies, production databases, and private session material out
   of manifests, command output, commits, and research notes.
 
 ## Completion
 
-Before returning the Batch to Sol, report:
+Before returning results to the current authorized reviewer, report:
 
 ```text
 CONTEXT_READY | CONTEXT_BLOCKED
@@ -156,4 +158,4 @@ next bounded action
 
 This skill does not authorize implementation, migration, collection, publishing,
 external effects, or release. Those actions still require their canonical owner,
-Permission/Evidence boundary, proportional verification, and Sol acceptance.
+Permission/Evidence boundary, proportional verification and required independent review.

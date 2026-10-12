@@ -260,16 +260,16 @@
       "gap_id": "BACKEND-GAP-016",
       "screen": "CTH-09",
       "field": "decision",
-      "current_api": "No current Decision record, API, or action callable was verified for BACKEND-GAP-016.",
-      "permission": "GET screen route: optional global Basic Auth only; no per-screen READ Permission or authenticated actor-to-Subject authorization is enforced.",
-      "evidence": "No Permission decision or Decision write exists for this row. A static action declaration is not an authorization check.",
-      "action": "Keep decision behavior absent until the canonical CTH Decision owner and Permission/Evidence contract are implemented.",
+      "current_api": "CoreCth09Repository.load reads settingsContext and screen CTH-09. Existing api_dual_domain.BusinessDecisionWorkflow.prepare/advance/reopen/save_result is exposed by lumenis_app_api /api/experience/business-works. The CTH-09 screen-to-business-work decision action binding has not been verified; reuse these owners, not a new Decision implementation.",
+      "permission": "The existing business-work owner resolves the server actor and exact scope and rechecks its Permission contract. CTH-09 screen-specific read/action authorization and its connection to that owner remain NOT_VERIFIED; source checks are not live permission evidence.",
+      "evidence": "Existing business-work and SavedWork owners contain source, actor, version and result-lineage checks. No current end-to-end CTH-09 decision result is accepted for this row; an implemented owner does not establish live lineage or an executed external action.",
+      "action": "Connect CTH-09 to the existing BusinessDecisionWorkflow and SavedWork owners with exact actor/scope, source and version continuity; verify normal operation, denial, save/reopen and recovery. Do not recreate the owner or promote acceptance from source existence.",
       "product_owner": "CTH",
-      "source_status": "ABSENT",
-      "app_status": "NO_FLUTTER_SCREEN",
+      "source_status": "PARTIAL",
+      "app_status": "FLUTTER_READ_SCREEN_EXISTS_DECISION_ACTION_UNVERIFIED",
       "acceptance_status": "PENDING",
       "viewmodel_contract_status": "READY",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_READ_SCREEN_EXISTS_DECISION_ACTION_UNVERIFIED",
       "implementation_owner": "CODEX",
       "owner": "CTH"
     },
@@ -924,6 +924,8 @@
     "frontend_viewmodel": "Current Flutter App implementation and acceptance status; mirrors app_status and does not imply runtime verification.",
     "viewmodel_contract_status": "Readiness of the ViewModel contract/design, separate from Flutter App implementation.",
     "owner": "Canonical product capability owner.",
-    "implementation_owner": "Current delivery executor; CODEX here is not the capability owner."
+    "implementation_owner": "Current delivery executor; CODEX here is not the capability owner.",
+    "source_status": "Source classification for the specific recorded screen/field and its audited consumer. EXISTS_BUT_UNSCOPED means missing proven actor/Subject/BrandFocus data scoping, not exclusion from product scope. Verify current caller/source before reuse or deletion.",
+    "acceptance_status": "Acceptance evidence for this recorded binding only. PENDING is not zero product progress or a complete count of all user outcomes; source, runtime and user-result verification remain separate."
   }
 }

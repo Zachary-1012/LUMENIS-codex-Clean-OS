@@ -124,10 +124,10 @@
     {
       "screen": "CTH-09",
       "field": "decision",
-      "current_source": "No current Decision record, API, or action callable was verified for BACKEND-GAP-016.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "current_source": "CoreCth09Repository.load reads settingsContext and screen CTH-09. Existing api_dual_domain.BusinessDecisionWorkflow.prepare/advance/reopen/save_result is exposed by lumenis_app_api /api/experience/business-works. The CTH-09 screen-to-business-work decision action binding has not been verified; reuse these owners, not a new Decision implementation.",
+      "frontend_viewmodel": "FLUTTER_READ_SCREEN_EXISTS_DECISION_ACTION_UNVERIFIED",
       "owner": "CTH",
-      "status": "ABSENT"
+      "status": "PARTIAL"
     },
     {
       "screen": "CTH-10",

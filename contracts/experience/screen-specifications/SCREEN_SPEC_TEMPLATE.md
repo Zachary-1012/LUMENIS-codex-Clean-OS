@@ -14,7 +14,7 @@ reviewed_at: UNKNOWN
 approval_reference: UNKNOWN
 ```
 
-Latest PO direct-build rule: reuse current screen records and implement from real contracts without a separate design draft/Figma or M DESIGN_READY prerequisite. Design review fields above record facts, not a coding gate. Website/Web first; native Windows/macOS and iOS later. Unknown business/auth contracts still block dependent actions; acceptance requires actual operation.
+Latest PO direct-build rule: reuse current screen records and implement from real contracts without a separate design draft/Figma or M DESIGN_READY prerequisite. Design review fields above record facts, not a coding gate. Website/Web, Windows/macOS and iOS proceed in parallel with independent acceptance. Unknown business/auth contracts still block dependent actions; acceptance requires actual operation.
 
 ## 0. Authority basis and artifact disposition
 
@@ -100,7 +100,7 @@ List exact route/method, request and response fields, pagination/cancellation be
 - Screen-reader names, hierarchy and dynamic announcements:
 - Chart/table non-visual equivalents:
 - Reduced-motion behavior and interruptibility:
-- Chinese/English copy and long-text behavior:
+- Chinese/English/Korean copy and long-text behavior:
 
 ## 9. Executable acceptance
 
@@ -128,7 +128,7 @@ Acceptance must prove the real owner callable, server-side authorization, origin
 - **真实任务与完成信号：** 用户本屏完成什么，何种真实回执表示完成。
 - **屏幕专属呈现：** 为什么选文字、图表、原生Reader、表格、时间轴、编辑器等组合；列出现有字段与Action边界。
 - **来源、范围与版本连续性：** Task/Brief/Actor/Scope/时间窗/Budget/Source/Evidence/Artifact如何按既有Owner传递，何时需用户采用新版本。
-- **四端差异：** 分别说明Web Workspace、Desktop App、Mobile Companion、Public Website的职责；官网不适合操作时，只呈现已验证公开能力/明确标记示例。保留足够交互、二维手绘水彩/版画视觉和可访问性。
+- **四端差异：** 分别说明Web Workspace、Desktop App、Mobile Companion、Public Website的职责；官网不适合操作时，只呈现已验证公开能力/明确标记示例。保留完整交互与可访问性；彩绘用于图标及适合的局部元素，整体视觉按唯一Experience和真实任务设计，不强制全产品二维水彩或纸感。
 - **失败与恢复：** stale/partial/unknown/denied/offline/error/取消/效果未知的呈现，原任务与未提交工作的恢复方式，禁止重试/效果的条件。
 - **补充验收：** 覆盖真实成功、权限/数据失败、跨屏上下文继承及四端职责，并引用验收ID和真实证据要求。
 

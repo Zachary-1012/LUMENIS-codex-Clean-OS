@@ -14,8 +14,13 @@ current source / runtime / Permission / Evidence truth
 → implementation and executable acceptance
 ```
 
-- `lumenis_app_binding_registry.json` and `BACKEND_GAP.json` are fail-closed truth,
-  owner, Permission and Evidence inventories. They do not define layout.
+- `lumenis_app_binding_registry.json` and `BACKEND_GAP.json` record binding-specific
+  source claims and unverified acceptance, not an exhaustive live product-status feed.
+  Recheck the actual source/caller/version before treating a row as current.
+  `EXISTS_BUT_UNSCOPED` concerns actor/Subject/BrandFocus filtering, not removed
+  product scope. `PENDING` neither authorizes an action nor means zero progress.
+  Keep genuine failures and unknowns; update the original row and its mirrors
+  together when new evidence changes it. These inventories do not define layout.
 - `screens/`, `actions/`, `states/`, `permissions/`, `evidence/` and `viewmodels/`
   constrain the product meaning that every approved surface must preserve.
 - `source-target-contract-v1.json` defines the subordinate `lumenis.source-target/v1`
@@ -25,8 +30,8 @@ current source / runtime / Permission / Evidence truth
 - `screen-specifications/` is the existing per-screen implementation/acceptance record.
   Latest PO: F constructs directly from real contracts and updates records with code;
   separate design drafts/Figma or M DESIGN_READY approval are not coding prerequisites.
-  Website/Web closes first; native Windows/macOS and iOS follow. Android/Linux native
-  client targets are superseded; Linux server/CI and browser access are not.
+  Website/Web, Windows/macOS and iOS proceed in parallel with independent acceptance.
+  Android/Linux native clients are outside the active target; Linux server/CI and browser access remain.
 - Audit PDFs, taskbooks, screenshots, wireframes, Figma frames and fixtures remain
   `DESIGN_EXPLORATION`; they cannot become a second authority or direct code target.
 - Web Workspace, Desktop and Mobile may recompose interaction and density over the

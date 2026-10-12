@@ -36,7 +36,7 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | Priority | UI field / action | Source / callable | Definition and missing behavior | Binding |
 | --- | --- | --- | --- | --- |
 | P0 | Risk register | CTH risk owner | Requires `risks[]`, stable risk ID, level, score when actually returned, description and trusted `evidence[]` | `BACKEND-GAP-015`, currently not scope/lineage safe |
-| P0 | Decision ledger | CTH Decision owner | Requires `decisions[]`, owner/status, requested action and explicit action contract state | `BACKEND-GAP-016`, currently ABSENT |
+| P0 | Decision ledger | CTH Decision owner | Requires `decisions[]`, owner/status, requested action and explicit action contract state | `BACKEND-GAP-016`: existing BusinessDecisionWorkflow and Flutter reader; decision action composition and live acceptance unverified |
 | P1 | Source trail | Canonical Evidence owner | Only allowlisted IDs are displayed; `NOTE:<id>` is not Evidence | Current response cannot satisfy this |
 | EFFECT | Confirm action | Permission + approval + Effect Fence + real result contract | Disabled unless all exact gates and a callable are present; this UI has no mutation client | Not bound |
 

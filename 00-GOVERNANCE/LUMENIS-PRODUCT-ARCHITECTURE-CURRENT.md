@@ -357,7 +357,7 @@ Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Eval
 | Source / Evidence / Canonical | 来源、可定位且带出处的证据、经当前合同接收的规范事实 | 研究笔记、AI 输出、缓存、文件存在、mock、旧报告不能自行升级为 Production Truth |
 | Metric / Truth Table / ViewModel | 按明确单位/分母/时间口径计算及表达事实 | `0` 是已知数值，`UNKNOWN`/缺测不是零；ViewModel 不创建另一份业务真相 |
 | Product AI | 单一 SYSTEM Owned AI Gateway 及获准绑定的执行版本 | Codex/Astra/Sol/Luna 是工程资源；兼容 Provider 注册和状态枚举不证明产品推理可用或允许 fallback |
-| 四 Surface | Public Website / Web Workspace / Desktop / Mobile Companion | Desktop App 是 Desktop 的描述性名称；Flutter 是实现技术；历史 APP ONLY/Web-only 不再决定产品范围 |
+| 四 Surface | Public Website / Web Workspace / Desktop / Mobile Companion | Desktop App 是 Desktop 的描述性名称；Flutter 是实现技术；四表面按各自角色并行建设、独立验收 |
 
 状态必须随其已有 Owner/字段解释：例如 `query_plan.status=READY` 只说明查询计划可提交，
 不证明平台 Session 已就绪；`collector_guard=NEED_VERIFY` 是平台验证挑战，旧
@@ -487,7 +487,7 @@ R01–R15仅作为保留的验收依赖，不再成为另一套派工日程。C1
 
 七、优先完成能力的执行顺序
 
-P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 是唯一执行路由；本蓝图是唯一产品蓝图；Source Owner Index 只负责定位，CURRENT 只记当下事实。`README.md` 的四入口说明以当前源码校准：Public Website 承载官网，Flutter 同源承载 Web Workspace/Desktop/Mobile 并共用 Core。source-bound/v3 是当前新增来源绑定合同，v1/v2 仅作兼容；业务数据使用 canonical 数据库，符合 §9 条件的 SYSTEM 操作队列是受限例外；历史APP ONLY、旧双库/资料删除规则、旧硬编码全盘扫描脚本及过时 locator 路由/候选状态只作有固定版本的历史证据，不能重新成为执行入口。现行能力 locator 继续按本任务词和 Source Owner Index 路由。发现新的当前源码冲突时，直接修正对应所有者文件并与该成果同轮发布，不新建平行规则或审计队列。
+P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 是唯一执行路由；本蓝图是唯一产品蓝图；Source Owner Index 只负责定位，CURRENT 只记当下事实。`README.md` 的四入口说明以当前源码校准：Public Website 承载官网，Flutter 同源承载 Web Workspace/Desktop/Mobile 并共用 Core。source-bound/v3 是当前新增来源绑定合同，v1/v2 仅作兼容；业务数据使用 canonical 数据库，符合 §9 条件的 SYSTEM 操作队列是受限例外；研发只使用当前有效入口和真实版本；具体历史证据不承担执行指令。现行能力 locator 继续按本任务词和 Source Owner Index 路由。发现新的当前源码冲突时，直接修正对应所有者文件并与该成果同轮发布，不新建平行规则或审计队列。
 
 第一批：正式资料/采集→研究→source-bound创作→CTH/BMP使用。沿现主线已接通的v3继续使用真实许可材料、正式refs与范围，闭合用户可用内容、保存、修订、重开和Evaluation。把20项已经在main的集成文件从“待合候选”工作入口退出。
 

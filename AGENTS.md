@@ -31,9 +31,12 @@ arbitrary log weights, internal task IDs or developer-diagnostic assembly.
 Business constraints stay editable; methods and assumptions remain inspectable.
 
 Across SYSTEM/CTH/BMP/Shared/AI, inspect requirements, owners and callers first:
-Update existing code/rules in place; reconcile callers, not parallel files or
-append-only patches. Preserve history. New structure needs a proven gap and PO
-approval; questions are not addition requests. Direct PO instructions and local readback govern windows
+Update existing code/rules in place and reconcile their actual callers. Keep one
+current instruction set: remove retired rule bodies, redundant rule entry files
+and their active references; do not keep old rule copies with warning banners,
+backup names or parallel replacement documents. Preserve research/source evidence,
+uncommitted product work and Git history, not competing execution instructions.
+New structure needs a proven gap and PO approval; questions are not addition requests. Direct PO instructions and local readback govern windows
 and models; online rules and dated receipts cannot dispatch or pause them.
 Architecture owns product scope; Experience owns presentation. Provenance:
 `00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
@@ -78,8 +81,6 @@ shared-write reservations and real acceptance remain binding.
 
 基础业务及数据分析不得依赖 AI/API/GPU。AI 不生产 Canonical 事实；先验无 AI 成果，再验增强。
 数学研究按 Architecture/Math 采用记录落实计算与约束；权限、权益和数据保护不变。
-历史审批 `00-GOVERNANCE/evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json`
-及其他暂停/恢复/模型回执保留为有日期的事实来源，不再作为现行调度命令。
 
 ### 2026-10-10 OpenAI Math v2 — bounded product implementation
 
@@ -89,25 +90,9 @@ Typed mathematical scenarios use explicit user-declared parameters/variable mean
 
 ### Retained verification policy and C1 source responsibility (not dispatch)
 
-Product Owner update (2026-10-10): unit tests and integration tests are
-permitted again for targeted defect reproduction, regression verification and
-engineering quality. The previous prohibition on creating or running these
-tests is superseded. Keep unit, integration and real user E2E evidence distinct:
-a passing isolated test never proves a complete user task or production outcome.
-Preserve historical tests and receipts; use existing owners, safe isolated data,
-and the current approved source, runtime and permission boundaries.
-Do not invoke live collectors, model training, paid resources or deployment
-merely because testing is now allowed.
-
-Use real task -> existing-source repair -> build/run -> actual user operation ->
-real result -> save/revise/reopen -> recovery -> acceptance -> formal integration.
-Retain applicable compilation, static quality/security, Permission/Evidence/
-Canonical/Effect Fence, data consistency, source rights and real user E2E.
-Real E2E must exercise the complete running product with genuine permitted inputs
-and persistent outcomes, never mocks/fixtures, isolated module calls or HTTP 200.
-Change/Owner Closure/Release remain distinct under the machine contract; only
-checks actually retained and executed may pass. Earlier unit/integration mandates
-in historical receipts are provenance only, not current instructions.
+Unit/integration/widget regressions and real user E2E follow section 14.
+Testing permission grants no live collection, model, training, paid resource or
+deployment effect. Keep original failure evidence and protected data intact.
 
 C1 retains full J1/U01-U05 and mapped R collection responsibilities, including
 necessary Core/Scheduler/Permission dependencies through existing reservations.
@@ -118,7 +103,6 @@ in-flight/process protection, rollback and unrelated work remain protected.
 Website/Web, Windows/macOS and iOS proceed in parallel, with actual acceptance
 recorded separately for each surface. DeepSeek/ancestor inputs, upgraded plans and unfinished material adoption
 remain retained; training/API/corpus/deployment need their existing separate grants.
-Historical C1 resume/pause receipts retain their dates and evidence, not dispatch.
 
 ## Engineering responsibilities and factual window observations
 
@@ -194,14 +178,13 @@ not removed by this native-client decision. All remaining capabilities, 44 scree
 Website families and applicable R/J/U acceptance continue. Existing historical
 platform lists/design-first instructions are superseded for execution by this rule.
 
-### Cost, integration and historical scheduling provenance
+### Cost and integration boundaries
 
 No new paid GPU/account/seat/subscription/service or recurring infrastructure is
 authorized. Permission, dependencies, shared-writer reservations, completion gates
-and exact source/runtime evidence remain binding. Historical topology approval
-`00-GOVERNANCE/evidence/approvals/PO-20261008-SERIAL-BUSINESS-INDEPENDENT-F-ZERO-COST.json`
-is retained as dated provenance; its one-business-slot/F dispatch restriction is
-superseded. This publication starts no product work and changes no model settings.
+and exact source/runtime evidence remain binding. Scheduling follows the
+current direct PO task, not an archived topology. Rule maintenance starts no
+product work and changes no model settings.
 
 Existing J1-J8/U01-U25 retain mature useful operations and LUMENIS source/context/
 version continuity. Reuse correct source, repair real callers and record actual
@@ -210,7 +193,7 @@ new product/design/security authorities. A document or installation proves no
 associated capability. M performs only authorized meaningful review/work and waits
 when none remains; a historical monitoring schedule does not self-dispatch work.
 
-### Cross-window scheduling provenance — dated observations only
+### Cross-window request provenance
 
 A relayed request must identify the original Product Owner instruction, time,
 source window and exact applicable task/roles. An agent paraphrase, old receipt,
@@ -1278,6 +1261,8 @@ Tests/staging must use explicit isolated/disposable DBs and prove the protected 
 `data/monitor.db` selected by `ZBC_DB_PATH` is the sole business/Canonical Production Truth database. A separately owned SYSTEM operational store such as the durable task queue may remain only when its path and schema owner are explicit, it contains no CTH/BMP business truth or Evidence, it opens through `lumenis/shared/database` repository/connection abstractions, and its durability/replay/recovery is proved by actual runtime and recovery evidence. Do not add another per-module SQLite file silently; consolidating an existing store requires a data-preserving migration.
 
 Do not delete, rewrite, migrate or repair real production data without required evidence and approval.
+Before an approved migration, verify a restorable data backup and rollback path;
+retain existing fields and history unless their migration is explicitly justified.
 
 ## 10. Evidence and lineage
 
@@ -1295,6 +1280,11 @@ availability before actual authorization. AI may request one named platform;
 do not silently widen that request or enable AUTO. Session continuity uses
 permitted refresh, conservative pacing, bounded retries and human re-login when
 needed, never an immunity-to-ban claim or bypass of platform challenges.
+On session expiry, expose the platform, failure cause, affected task and cooldown,
+with a legitimate re-authentication entry and return/resume action in the product.
+Collector replacement requires isolated comparison of fields, time, scope,
+deduplication, failure states and ingestion before switching the production entry;
+do not run duplicate live acquisition without its existing explicit authorization.
 
 When touching XHS/RedNote or any new acquisition path:
 
@@ -1468,6 +1458,10 @@ security, permission and data-consistency guards, and genuine full-product E2E
 with allowed real inputs. No mock, fixture, isolated service assertion, HTTP 200
 or screenshot substitutes for a complete actual result. Keep unit/integration/contract tests identified by their actual scope; do not
 relabel them as real user E2E.
+
+Each release records changed source, database migrations, actual verification,
+known risks and rollback; keep one product across its approved surfaces, with
+Subject/BrandFocus data, configuration and metric scope traceable.
 
 Change Gate checks the bounded change's applicable build/static/security/data and
 real-operation result; Owner Closure retains full mapped R/J/U, normal operation,
@@ -1680,10 +1674,11 @@ Do not auto-admit the seed to MODEL_TRAIN or depend on developer attachment path
 
 ### Local development configuration — 2026-10-04
 
-This historical configuration batch authorized no window, product/runtime or
-account change. Canonical rules override plugin defaults. Back up proven stale
-entries before removal; avoid duplicate installation/research. Installed,
-discovered, invoked and product-bound remain separate states.
+Canonical rules control development-tool use. Remove proven stale instruction
+entries and their references in place; do not create rule backups or quarantine
+copies in development search paths. This maintenance grants no window, product
+runtime or account action. Installed, discovered, invoked and product-bound
+remain separate evidence states.
 
 Product Design is a proprietary development aid. Its saved context points to
 the current LUMENIS Experience and screen owner, existing Astro/Flutter stack,
@@ -1699,10 +1694,11 @@ render engine or no-code animation builder; its standard license restricts
 competing visual animation builders. Product manifests/source remain unchanged
 until the existing frontend owner chooses and validates that binding.
 
-Use repository progressive-context; its conflicting global copy and retired
-Ollama config remain privately quarantined for recovery. Launchers must preserve
-manual account/model/effort/tier, never historical lcodex pins or global-config
-rewrites. Missing effective-setting readback is `SETTINGS_UNVERIFIED`.
+Use the existing repository progressive-context entry as the sole project
+continuation source. Remove redundant rule copies after checking their valid
+requirements and callers; do not restore stopped providers. Launchers preserve
+the user-selected account/model/effort/tier and never rewrite global settings
+from a task instruction. Missing readback is `SETTINGS_UNVERIFIED`.
 
 ### Intelligent UI full-product coverage — 2026-10-08 Product Owner clarification
 
@@ -1766,8 +1762,9 @@ main baseline plus the accepted source/rule changes in isolation.
 Keep one current implementation per capability on main and one existing complete
 Task Card per outcome. Do not create parallel long-lived source candidates or
 repeated research matrices. Exact, temporary verification environments are not
-development owners and never enter the execution navigation. Preserve original
-research/media, model versions, Artifact history, backups and failed evidence.
+development owners and never enter execution navigation. Preserve original
+research/media, model versions, Artifact history, protected data backups and
+failed evidence; retired development-rule backups are not a second rule source.
 Before retiring a duplicate, compare its unique changes, retain any valid
 behavior and record immutable provenance. The approved 49-item disposition
 record is under evidence/round-15; it records actions, not a new authority.
