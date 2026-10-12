@@ -19,7 +19,7 @@ on:
       - "scripts/audit_tools/verify_current_configuration.py"
       - "scripts/audit_tools/verify_experience_*.py"
       - ".github/workflows/app-verify.yml"
-  # Required branch-protection job: run on every PR, even backend/docs-only changes.
+  # Required branch-protection job: always run on main PRs, including backend/docs changes.
   pull_request:
     branches: [main]
   workflow_dispatch:
