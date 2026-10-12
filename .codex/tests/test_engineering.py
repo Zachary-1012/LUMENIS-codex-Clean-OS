@@ -34,6 +34,15 @@ class EngineeringTests(unittest.TestCase):
         eng.HOOKS.STATE_ROOT = isolated_state_root
         h.STATE_ROOT = isolated_state_root
         self.git("init", "-q")
+        # Disposable fixtures must not spawn background Git maintenance or
+        # inherit a workstation fsmonitor. Cleanup remains strict; no retry or
+        # ignore_errors hides a live writer racing TemporaryDirectory removal.
+        for key, value in (
+            ("core.fsmonitor", "false"), ("gc.auto", "0"),
+            ("maintenance.auto", "false"), ("gc.autoDetach", "false"),
+            ("maintenance.autoDetach", "false"),
+        ):
+            self.git("config", "--local", key, value)
         self.git("config", "user.email", "engineering-test@example.invalid")
         self.git("config", "user.name", "Engineering test")
         (self.root / "AGENTS.md").write_text("# LUMENIS test fixture", "utf-8")
@@ -70,7 +79,7 @@ class EngineeringTests(unittest.TestCase):
         self.temp.cleanup()
 
     def git(self, *args):
-        p = subprocess.run(["git", "-C", str(self.root), *args], capture_output=True, encoding="utf-8")
+        p = subprocess.run(["git", "-c", "core.fsmonitor=false", "-c", "gc.auto=0", "-c", "maintenance.auto=false", "-C", str(self.root), *args], capture_output=True, encoding="utf-8", timeout=20)
         self.assertEqual(p.returncode, 0, p.stderr)
         return p.stdout
 
@@ -1125,6 +1134,12 @@ class EngineeringTests(unittest.TestCase):
             )
 
     def test_pytest_runner_clears_inherited_plugin_and_network_overrides(self):
+        for key, expected in (
+            ("core.fsmonitor", "false"), ("gc.auto", "0"),
+            ("maintenance.auto", "false"), ("gc.autoDetach", "false"),
+            ("maintenance.autoDetach", "false"),
+        ):
+            self.assertEqual(self.git("config", "--local", "--get", key).strip(), expected)
         command = [sys.executable, "-X", "utf8", "-m", "pytest", "-q"]
         with mock.patch.dict(os.environ, {
             "PYTEST_ADDOPTS": "-k unsafe",
