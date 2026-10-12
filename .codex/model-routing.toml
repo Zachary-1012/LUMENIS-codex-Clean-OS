@@ -1,40 +1,14 @@
 schema_version = 1
 manual_window_selection_wins = true
+selection_authority = "PRODUCT_OWNER_PER_WINDOW"
+selection_observation = "FACTUAL_READBACK_ONLY"
+unavailable_selection_state = "NOT_VERIFIED"
+automatic_settings_mutation = false
 hooks_may_change_model = false
 profiles_are_launch_helpers_only = true
 
 [roles.M]
-model = "gpt-6-astra"
-reasoning_effort = "ultra"
 work_policy = "execute_assigned_or_unresolved_approved_work_then_wait"
-
-[roles.F]
-model = "gpt-6-astra"
-reasoning_effort = "ultra"
-
-[roles.C1]
-model = "gpt-6.1-sol"
-reasoning_effort = "ultra"
-
-[roles.C2]
-model = "gpt-6.1-sol"
-reasoning_effort = "ultra"
-
-[roles.C3]
-model = "gpt-6.1-sol"
-reasoning_effort = "ultra"
-
-[roles.C4]
-model = "gpt-6.1-sol"
-reasoning_effort = "ultra"
-
-[roles.C5]
-model = "gpt-6.1-sol"
-reasoning_effort = "ultra"
-
-[roles.C6]
-model = "gpt-6.1-sol"
-reasoning_effort = "ultra"
 
 [subagents]
 model = "gpt-6-luna"

@@ -1,7 +1,7 @@
 {
   "schema": "lumenis.governance-machine-contract/v1",
   "contract_id": "lumenis-governance-machine",
-  "contract_version": "1.3.0",
+  "contract_version": "1.4.0",
   "status": "ACTIVE",
   "scope": "GOVERNANCE_ONLY",
   "product_semantics_may_change": false,
@@ -320,42 +320,12 @@
     "routing_source": ".codex/model-routing.toml",
     "project_config_source": ".codex/config.toml",
     "manual_window_selection_wins": true,
+    "selection_authority": "PRODUCT_OWNER_PER_WINDOW",
+    "selection_observation": "FACTUAL_READBACK_ONLY",
+    "unavailable_selection_state": "NOT_VERIFIED",
+    "automatic_settings_mutation": false,
     "hooks_may_change_model": false,
     "profiles_are_launch_helpers_only": true,
-    "role_defaults": {
-      "M": {
-        "model": "gpt-6-astra",
-        "reasoning_effort": "ultra"
-      },
-      "F": {
-        "model": "gpt-6-astra",
-        "reasoning_effort": "ultra"
-      },
-      "C1": {
-        "model": "gpt-6.1-sol",
-        "reasoning_effort": "ultra"
-      },
-      "C2": {
-        "model": "gpt-6.1-sol",
-        "reasoning_effort": "ultra"
-      },
-      "C3": {
-        "model": "gpt-6.1-sol",
-        "reasoning_effort": "ultra"
-      },
-      "C4": {
-        "model": "gpt-6.1-sol",
-        "reasoning_effort": "ultra"
-      },
-      "C5": {
-        "model": "gpt-6.1-sol",
-        "reasoning_effort": "ultra"
-      },
-      "C6": {
-        "model": "gpt-6.1-sol",
-        "reasoning_effort": "ultra"
-      }
-    },
     "subagents": {
       "model": "gpt-6-luna",
       "reasoning_effort": "max",

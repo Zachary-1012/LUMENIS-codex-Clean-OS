@@ -8,8 +8,9 @@ apply only to their dated changes; they do not resume F or freeze the Website.
 ## Current product requirement
 
 Use Cue as the Website visual/rhythm reference and the 319b video only for this
-surface. Keep original 2D hand-painted/watercolor/print identity, useful creative
-interaction, Chinese/English/Korean access, controlled operation video and real
+surface. Use approved research for task-shaped space, hierarchy and motion;
+painted icons and suitable local artwork do not prescribe a flat-2D or all-3D
+product style. Retain useful interaction, Chinese/English/Korean access, operation video and real
 configured workspace/help/contact entries. Label fictional demos; never present
 them as actual customer or owned-AI results. Do not use an invented AIGC quota.
 Website may scroll. Operational surfaces adapt suitable principles to their own
@@ -284,6 +285,36 @@ operation evidence. Required repository blocking validators and W6 integration
 publication are recorded separately with the final F package. Public hosting,
 real configured destinations, Product Owner review and operational App work
 are not established by this Website result.
+
+### F direct-source continuation — 2026-10-11
+
+Current source base: `1fdb23d27da9f7f15d5dc0a2ab723e8befc371af` plus
+protected local work. This section records the current Website increment;
+historical acceptance below retains its original scope and date. Experience
+section 38 remains the only visual authority. Figma quota is not a prerequisite.
+
+- Reuse the existing Astro surface and three locales. Introduce original flat
+  painted object marks for research, writing, video and audio, alongside existing
+  linear controls. These are decorative task identities, never status signals.
+- Present the existing independent Shared writing/video/podcast paths with
+  addressable, keyboard-operable choices. Without JavaScript every path remains
+  readable. Browser Back to the creation entry restores the initial panel.
+  Workflow illustrations are labeled as illustrations, not executed results.
+- Use one actual local AI-01 draft recording: expand, revise, save to a browser
+  download, clear the authored text, reopen the exact downloaded file and compare
+  its text. The recording contains no AI inference or backend analysis; the
+  unavailable service state remains visible. It does not prove video/podcast
+  rendering, full AI execution or a released product.
+- Video uses original capture timing, native controls, an actual captured poster,
+  three caption tracks, an accessible text description and download fallback.
+  No autoplay, loop, external player or new tracking dependency.
+- Use product language for entry and device choices; retain unavailable entries
+  honestly without exposing implementation terminology as marketing copy.
+
+Verification and exact asset hashes are recorded with the current F outcome.
+Each surface progresses in parallel under its approved role and has separate
+real-device/user-outcome acceptance. The 44 screen specifications are a retained
+coverage baseline, not a scope ceiling. This record alone proves no integration.
 
 ### M acceptance — 2026-10-02
 

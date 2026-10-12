@@ -12,15 +12,15 @@ The Product Owner also accepted the ROUND 01 audit and missing-capability regist
 artifacts remain `DESIGN_EXPLORATION` until the sole Experience authority and a
 current detailed screen specification establish `DESIGN_READY`.
 
-### 2026-10-08 最新执行顺序：官网与 Web 优先闭环
+### 2026-10-11 最新 PO 修正：四表面并行建设与独立验收
 
-Product Owner 最新明确的产品交付优先级：先完成 Public Website 与 Web Workspace，Desktop App 与 Mobile Companion 的专项实现、打包和实机验收在前两端闭环后继续。四端最终范围、44 屏、官网内容家族和全部既定 R/J/U 要求仍保留；现有原件、源码、设计和回执不删除，后置项不标 PASS。此优先级不规定并行窗口拓扑或固定业务席位。实际窗口调度只在本地按直接PO指令核验，不写作线上产品范围约束。零新增付费边界不变。
+Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有端角色并行建设，按本端真实任务、运行、恢复与适用验收独立记录。Website使用既有`website/`；Workspace/Desktop/Mobile共用单一Flutter `app/` 和同一Product Core。直接建设任务化完整前端，不等待全部后端；已有真实API/Core立即接入，缺失行为沿现有Owner逐项连接并保持OPEN/UNBOUND，不用模拟结果。44份现有ScreenSpec是覆盖基线，不是页面或产品范围上限。保留全部R/J/U、官网内容家族、原件/源码/设计/回执；一个表面通过不代表其他表面或整产品通过。此规则不派发窗口、不更改实际调度或零新增付费边界。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-本轮完整交付官网既定内容与真实入口，以及 Web 适用的研究、业务、创作、来源和权限、成果保存/修改/重开/恢复/评价。Web 任务必需的 Core/SYSTEM 服务不因桌面客户端后置而后置；复用现有共享源码并保留兼容。官网展示不得夸大能力，Web 不用模拟后端或桌面端跳转代替已批准的 Web 能力。手机浏览器窄屏属于 Web 响应式验收，不等于原生 Mobile Companion。
+四个表面各自交付其既有角色适用的完整真实任务、研究/业务/创作、来源和权限、成果保存/修改/重开/恢复/评价。已存在的Core/API均直接接入；其他依赖由对应Owner继续，不因表面排期或客户端类型而遗漏。官网展示不得夸大能力，Web不使用模拟后端或桌面端跳转代替已批准能力。手机浏览器窄屏属于Web响应式验收，不等于原生Mobile Companion。
 
-按既有 Gate 独立验收官网/Web 当前成果；后置两端不阻塞本轮门槛，但四端完整 Goal、跨端 parity 与完整产品 Release 仍待各自真实证据，不能从本轮自动宣告完成。部署、费用、身份和外部效果的授权边界不变。最新直接授权见 `evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`。
+按既有Gate分别验收四个表面；每端的Goal/任务闭环只由本端真实证据支持，跨端一致性及整产品Release仍需各自适用证据，不能由单端自动宣告。部署、费用、身份和外部效果的授权边界不变。2026-10-08 Website/Web-first回执仅为历史记录，当前顺序由2026-10-11直接PO修正：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-最新直接补充：F 不先做独立设计稿，依既有 Experience/ScreenSpec/真实合同直接构建，必要设计决定随代码回写原规范；不等待 Figma 或 M 的 DESIGN_READY 前置审批。原有设计和审核状态作为事实保留，不能据此冒称真实用户验收。后续原生客户端目标仅 Windows/macOS 与 iOS；Android/Linux 原生客户端已从交付目标移除，原件/源码/旧构建证据保留为历史，不列后续待交付。Linux 服务端/CI、各操作系统浏览器与窄屏 Web 不受该原生平台修正影响。
+F依既有Experience/ScreenSpec/真实合同直接建设四表面，不先做独立设计稿，不等待Figma或M的DESIGN_READY前置审批；必要设计决定随代码回写原规范。既有设计/审核状态只记录实际评审，不等同真实用户验收。原生目标为Windows/macOS与iOS；Android/Linux原生客户端已移出交付要求，原件/源码/旧构建证据保留为历史。Linux服务端/CI、各操作系统浏览器与窄屏Web不受影响。已有真实API/Core立即接入，缺失合同/行为按原Owner标OPEN/UNBOUND。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 ## 1. Approved product-surface structure
 
@@ -47,6 +47,8 @@ The surfaces may recompose navigation, density and interaction for their devices
 
 ## 2. Product boundary by surface
 
+Latest 2026-10-12 PO: entering an operational workspace opens the existing conversation/task home directly, with navigation to the other existing architecture capabilities. Reuse ACC-03/AI-01 and one draft/task/result contract on Web, Windows/macOS and iOS, recomposed for each approved surface role. The conversation adopts verified applicable GPT/Grok Bot operation and Intelligent UI principles in the original LUMENIS visual language. Public Website retains its own truthful introduction/help/workspace-entry role. Chat is not a model prerequisite for independent normal business, research or creation. Actual default routing, conversation operations and return/recovery require per-surface runtime acceptance.
+
 | Surface | Product role | Permitted capability | Hard boundary |
 | --- | --- | --- | --- |
 | Public Website | Commercial introduction and acquisition | Product/domain explanation, industries and use cases, customer cases, truthful demo, trial request, enterprise contact, help, login/workspace entry | No Production Truth, operational workflow, privileged action, Canonical Data owner or client-side provider secret |
@@ -56,8 +58,10 @@ The surfaces may recompose navigation, density and interaction for their devices
 
 ### Four-surface upgrade requirement — 2026-10-03
 
-All four surfaces receive the user's creative UI/UX/AIGC, historical-reference,
-hand-drawn watercolor and interaction upgrades under the Experience Constitution.
+All four surfaces receive the approved creative UI/UX/AIGC, reference-informed
+and interaction upgrades under the Experience Constitution. Painted style
+applies to original icons and suitable page elements; overall visuals follow
+approved research and task needs, with no fixed 2D/3D style.
 The roles above constrain actual execution and data ownership, not design ambition
 or which surface receives improvements. Device-appropriate composition preserves
 the user's capabilities and continuity; it does not justify a generic thin shell,
@@ -72,8 +76,8 @@ The approved route is hybrid and keeps one Product Core:
 ```text
 Public Website     SEO-capable independent presentation deployment
 Web Workspace      Flutter Web target from the existing app/ codebase
-Desktop App        Flutter Windows/macOS targets from app/ (after Website/Web closure)
-Mobile Companion   Flutter iOS target from app/ (after Website/Web closure)
+Desktop App        Flutter Windows/macOS targets from app/ (parallel build; independent acceptance)
+Mobile Companion   Flutter iOS target from app/ (parallel build; independent acceptance)
 Product Core       existing Python/Flask canonical API and runtime owners
 ```
 
@@ -174,7 +178,7 @@ Stop and return `BLOCKED` rather than creating a second truth when identity/tena
 | Desktop | 延续同一工作对象，适配多窗格、大文件、真实播放器、横向轨道/选区和本机系统朗读。 | 不新建本地业务真相；本机处理/服务端执行分别显示；关闭/重启恢复版本及用户选区，修改后旧播放不继续。 |
 | Mobile Companion | 用触控顺序重排事实、依据、审阅、允许的轻编辑/参数调整、审批和通知返回；可把复杂工作接续到Web/Desktop。 | 不把不可运行的重计算假装在手机完成；可用动作与原权限一致，不重新解释任务或重复选择来源；焦点与回退可达。 |
 
-四端共同要求：二维手绘水彩/版画方向、功能glyph与来源标识分层、颜色有节制、保留有用丰富交互，中英韩/无障碍；操作端避免不必要的整页上下滑动，长文等必要区域不截断。各端实际实现/运行证据独立记录，文档同步不提升已有状态。本轮仅更新规则和设计输入，不自动派工。
+四端共同要求：整体视觉依用户已批准研究、当前任务和屏幕合同，不固定二维或三维；原创手绘彩绘用于身份/功能图标及适合的局部页面元素。功能glyph与第三方来源标识分层，颜色有节制；保留有用丰富交互、中英韩/无障碍，操作端避免不必要整页上下滑动且不截断必要长文。各端实际实现/运行证据独立记录，文档同步不提升已有状态。本轮仅更新规则和设计输入，不自动派工。
 
 
 ### 2026-10-08 前端审计与工具维护增补（历史授权快照）
@@ -185,15 +189,15 @@ Stop and return `BLOCKED` rather than creating a second truth when identity/tena
 
 ### 2026-10-08 成熟操作与智能增强的四端一致性
 
-按Product Architecture与Experience§38，先完成官网/Web适用验收，再处理Desktop/Mobile专项验收；保留四端完整范围，不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要不上下滚动。产品优先级不等于当前派工；窗口状态由最新直接指令及本地新鲜证据核实。
+按Product Architecture与Experience§38，四表面按既有角色并行建设、分别验收；保留完整范围，不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要上下滚动。产品范围不等于当前派工；窗口状态由最新直接指令及本地新鲜证据核实。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 ### 2026-10-11 产品内浏览器的端能力（通用电脑控制撤回）
 
 | 端 | 当前交付要求 | 边界 |
 |---|---|---|
-| Web Workspace | 在原任务中显示真实网页、完成获准操作、人工接管/停止、返回及保存恢复；当前优先 | 由既有 SYSTEM 会话/权限服务执行，不是任意 iframe 或控制访客电脑 |
-| Desktop Windows/macOS | 同一浏览器与业务合同的原生工作区承载；后续专项验收 | 不控制任意本机/远程应用，不读取个人浏览器档案 |
-| iOS Companion | 当前任务内浏览器视口、触控/键盘、状态、接管/停止、返回；后续专项验收 | 不控制手机或远程电脑操作系统 |
+| Web Workspace | 在原任务中显示真实网页、完成获准操作、人工接管/停止、返回及保存恢复；按Web任务独立验收 | 由既有 SYSTEM 会话/权限服务执行，不是任意 iframe 或控制访客电脑 |
+| Desktop Windows/macOS | 同一浏览器与业务合同的原生工作区承载；与其他表面并行建设和独立验收 | 不控制任意本机/远程应用，不读取个人浏览器档案 |
+| iOS Companion | 当前任务内浏览器视口、触控/键盘、状态、接管/停止、返回；与其他表面并行建设和独立验收 | 不控制手机或远程电脑操作系统 |
 | Public Website | 说明已验证能力、标记演示并进入 Workspace | 不以宣传视频替代运行证明 |
 
 移除的是通用桌面/OS控制要求；原生客户端、产品内浏览、文件导入导出和媒体编辑范围保留。AI 增强跨端复用同一任务/版本，缺模型不阻断正常业务。

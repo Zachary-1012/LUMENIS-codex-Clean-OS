@@ -1,10 +1,16 @@
 import importlib.util
+import io
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
+from unittest import mock
 
 HOOK = Path(__file__).resolve().parents[1] / "hooks" / "lumenis_hooks.py"
 ENGINEERING = Path(__file__).resolve().parents[1] / "engineering.py"
@@ -20,12 +26,31 @@ class EngineeringTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="lumenis-test-")
         self.root = Path(self.temp.name) / "序境"
         self.root.mkdir()
+        self.previous_eng_root = eng.ROOT
+        self.previous_state_root = eng.HOOKS.STATE_ROOT
+        self.previous_test_hook_state_root = h.STATE_ROOT
+        eng.ROOT = self.root
+        isolated_state_root = Path(self.temp.name) / "engineering-state"
+        eng.HOOKS.STATE_ROOT = isolated_state_root
+        h.STATE_ROOT = isolated_state_root
         self.git("init", "-q")
         self.git("config", "user.email", "engineering-test@example.invalid")
         self.git("config", "user.name", "Engineering test")
         (self.root / "AGENTS.md").write_text("# LUMENIS test fixture", "utf-8")
+        (self.root / "README.md").write_text("# Fixture README", "utf-8")
+        (self.root / "pytest.ini").write_text("[pytest]\n", "utf-8")
         (self.root / "sample.py").write_text("value = 1\n", "utf-8")
-        self.git("add", "AGENTS.md", "sample.py")
+        governance = self.root / "00-GOVERNANCE"
+        governance.mkdir()
+        machine_contract = h.VERIFICATION_POLICY_PATH.as_posix()
+        for relative in h.CONTINUITY_RULES:
+            if relative in {"AGENTS.md", "README.md", machine_contract}:
+                continue
+            authority = self.root / relative
+            authority.parent.mkdir(parents=True, exist_ok=True)
+            authority.write_text("{}\n" if authority.suffix == ".json" else f"# Fixture {authority.stem}\n", "utf-8")
+        authority_paths = [value for value in h.CONTINUITY_RULES if value != machine_contract]
+        self.git("add", "--", "sample.py", "pytest.ini", *authority_paths)
         self.git("commit", "-qm", "isolated fixture")
         policy_path = self.root / h.VERIFICATION_POLICY_PATH
         policy_path.parent.mkdir(parents=True, exist_ok=True)
@@ -39,6 +64,9 @@ class EngineeringTests(unittest.TestCase):
         self.handle("SessionStart", source="startup")
 
     def tearDown(self):
+        eng.ROOT = self.previous_eng_root
+        eng.HOOKS.STATE_ROOT = self.previous_state_root
+        h.STATE_ROOT = self.previous_test_hook_state_root
         self.temp.cleanup()
 
     def git(self, *args):
@@ -56,6 +84,7 @@ class EngineeringTests(unittest.TestCase):
     def verify(self, code=0, command="python -m unittest discover", **extra):
         if command == "python -m unittest discover":
             self.handle("PostToolUse", tool_name="Bash", tool_input={"command": "python -m py_compile sample.py"}, tool_response={"exit_code": 0})
+            self.handle("PostToolUse", tool_name="Bash", tool_input={"command": "ruff check --select F sample.py"}, tool_response={"exit_code": 0})
         self.handle("PostToolUse", tool_name="Bash", tool_input={"command": command}, tool_response={"exit_code": code, **extra})
 
     def test_unicode_root(self):
@@ -94,6 +123,16 @@ class EngineeringTests(unittest.TestCase):
         self.edit()
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
+    def test_compile_alone_does_not_satisfy_code_change(self):
+        self.edit()
+        self.verify(0, "python -m compileall -q sample.py")
+        self.assertEqual(self.handle("Stop").get("decision"), "block")
+
+    def test_static_alone_does_not_satisfy_code_change(self):
+        self.edit()
+        self.verify(0, "ruff check --select F sample.py")
+        self.assertEqual(self.handle("Stop").get("decision"), "block")
+
     def test_failed_test_blocks(self):
         self.edit(); self.verify(1)
         self.assertEqual(self.handle("Stop").get("decision"), "block")
@@ -128,6 +167,1056 @@ class EngineeringTests(unittest.TestCase):
         self.handle("SessionStart", source="compact")
         self.assertEqual(self.state["baseline"]["fingerprint"], before)
         self.assertTrue(self.state["mutation_observed"])
+
+    def test_session_start_reports_current_head_not_old_baseline(self):
+        old_head = self.state["baseline"]["head"]
+        (self.root / "sample.py").write_text("value = 4\n", "utf-8")
+        self.git("add", "sample.py")
+        self.git("commit", "-qm", "advance fixture head")
+        current_head = self.git("rev-parse", "HEAD").strip()
+        output = self.handle("SessionStart", source="resume")
+        context = output["hookSpecificOutput"]["additionalContext"]
+        self.assertIn(f"Current local HEAD={current_head}", context)
+        self.assertNotIn(f"Current local HEAD={old_head}", context)
+        self.assertEqual(self.state["baseline"]["head"], old_head)
+
+    def test_model_context_does_not_inject_historical_model_defaults(self):
+        context = h.model_policy_context({"model": "manually-selected-model"})
+        self.assertIn("Observed event model=manually-selected-model", context)
+        for historical in ("GPT-6 Luna", "GPT-6.1 Sol", "GPT-6 Astra"):
+            self.assertNotIn(historical, context)
+
+    def test_continuity_rejects_missing_session_identity(self):
+        with self.assertRaises(ValueError):
+            h.state_file({}, self.root)
+        with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "", "CODEX_SESSION_ID": "", "CODEX_AGENT_ID": ""}):
+            with self.assertRaises(ValueError):
+                eng.dispatch("continuity", {"mode": "read", "record": "work/checkpoint.json", "section": "continuity"})
+
+    def test_continuity_rejects_conflicting_thread_and_session_identity(self):
+        self.make_continuity_record()
+        with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-a", "CODEX_SESSION_ID": "session-b"}):
+            with self.assertRaises(ValueError):
+                eng.dispatch("continuity", {"mode": "save", "record": "work/checkpoint.json", "section": "continuity"})
+
+    def test_continuity_state_isolated_by_session(self):
+        first = h.state_file({"session_id": "session-a"}, self.root)
+        second = h.state_file({"session_id": "session-b"}, self.root)
+        self.assertNotEqual(first, second)
+
+    def continuity_item(self, pending_effects=None):
+        return {
+            "owner": "C4",
+            "objective": "Complete the existing video deliverable outcome with save, reopen, recovery, and acceptance evidence.",
+            "po_source": "Direct PO instruction dated 2026-10-11; source declaration only, not dispatch authorization.",
+            "constraints": ["Keep this checkpoint in the existing C4 owner record."],
+            "completed": ["Engineering continuity wrapper is being validated; this does not prove product E2E."],
+            "remaining": ["Complete real user operation, save/reopen/recovery, and acceptance."],
+            "next_action": "Read the pinned owner record and reconcile current source and receipts before writing.",
+            "pending_effects": list(pending_effects or []),
+            "source_paths": ["sample.py"],
+            "evidence_paths": ["work/evidence.json"],
+            "native_goal": "NOT_VERIFIED",
+        }
+
+    def make_continuity_record(self, pending_effects=None):
+        work = self.root / "work"
+        work.mkdir(exist_ok=True)
+        (work / "evidence.json").write_text(json.dumps({"status": "NOT_VERIFIED"}), "utf-8")
+        record = work / "checkpoint.json"
+        record.write_text(json.dumps({"continuity": self.continuity_item(pending_effects), "keep": "existing"}), "utf-8")
+        return record
+
+    def bind_continuity_scope(self):
+        self.make_continuity_record()
+        event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
+        h.continuity_save(self.root, self.state, event, "work/checkpoint.json", "continuity")
+
+    def observe_patch_mutation(self):
+        self.handle("PostToolUse", tool_name="apply_patch", tool_input={"command": "patch"}, tool_response={"exit_code": 0})
+
+    def continuity_dispatch(self, mode, session="engineering-test-thread", include_record=True):
+        params = {"mode": mode}
+        if mode == "save" or include_record:
+            params.update({"record": "work/checkpoint.json", "section": "continuity"})
+        with mock.patch.dict(os.environ, {
+            "CODEX_THREAD_ID": session,
+            "CODEX_SESSION_ID": "",
+            "CODEX_AGENT_ID": "bounded-test-agent",
+        }):
+            return eng.dispatch("continuity", params)
+
+    def continuity_cli(self, mode, include_record=True):
+        capture = type("StdoutCapture", (), {"buffer": io.BytesIO()})()
+        params = {"mode": mode}
+        if mode == "save" or include_record:
+            params.update({"record": "work/checkpoint.json", "section": "continuity"})
+        arguments = [str(ENGINEERING), "continuity", "--params", json.dumps(params)]
+        with mock.patch.dict(os.environ, {
+            "CODEX_THREAD_ID": "engineering-cli-thread",
+            "CODEX_SESSION_ID": "",
+            "CODEX_AGENT_ID": "cli-test-agent",
+        }), mock.patch.object(sys, "argv", arguments), mock.patch.object(sys, "stdout", capture):
+            self.assertEqual(eng.main(), 0)
+        return json.loads(capture.buffer.getvalue().decode("utf-8"))
+
+    def bind_verification_scope(self, source_paths=None, owner="C4", pending_effects=None):
+        record = self.make_continuity_record(pending_effects)
+        payload = json.loads(record.read_text("utf-8"))
+        payload["continuity"]["owner"] = owner
+        if source_paths is not None:
+            payload["continuity"]["source_paths"] = list(source_paths)
+        record.write_text(json.dumps(payload), "utf-8")
+        self.continuity_dispatch("save")
+
+    def run_verification(self, kind, argv, timeout_seconds=10):
+        with mock.patch.dict(os.environ, {
+            "CODEX_THREAD_ID": "engineering-test-thread",
+            "CODEX_SESSION_ID": "",
+            "CODEX_AGENT_ID": "bounded-test-agent",
+        }):
+            return eng.dispatch("verification_run", {
+                "kind": kind, "argv": argv, "timeout_seconds": timeout_seconds,
+            })
+
+    def engineering_state(self):
+        event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
+        path = eng.HOOKS.state_file(event, self.root)
+        return path, json.loads(path.read_text("utf-8"))
+
+    def pytest_receipt_is_current(self, accepted, scope):
+        event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
+        _, state = self.engineering_state()
+        try:
+            binding = eng._verification_continuity_binding(
+                state, event, scope, accepted["pytest_owner_approved_paths"]
+            )
+        except (OSError, ValueError, KeyError, TypeError, RuntimeError):
+            return False
+        paths = sorted(set([*scope, *accepted["additional_paths"]]))
+        current = h.snapshot(self.root)
+        policy_path = str(h.VERIFICATION_POLICY_PATH)
+        receipt = {
+            "runner": "engineering_cli", "kind": "test", "status": "SUCCEEDED",
+            "continuity_binding_stable": True,
+            "continuity_binding_start": binding,
+            "continuity_binding_fingerprint_end": binding["fingerprint"],
+            "head_end": current["head"], "verification_paths": paths,
+            "source_pins_end": h.continuity_pins(self.root, paths),
+            "policy_pins_end": h.continuity_pins(self.root, [policy_path]),
+            "package_root": None, "pytest_review_receipt": accepted["pytest_review_receipt"],
+            "pytest_active_conftest_paths": accepted["pytest_active_conftest_paths"],
+            "pytest_selected_config": accepted["pytest_selected_config"],
+            "pytest_owner_approved_paths": accepted["pytest_owner_approved_paths"],
+            "command_argv": accepted["argv"],
+            "fingerprint": h.verification_fingerprint(self.root, state, current),
+        }
+        return h.verification_receipt_current(self.root, state, receipt, current)
+
+    def make_verification_probe(self):
+        tests = self.root / ".codex" / "tests"
+        tests.mkdir(parents=True, exist_ok=True)
+        path = tests / "test_verification_probe.py"
+        path.write_text(
+            "import time\nimport unittest\n\n"
+            "class VerificationProbe(unittest.TestCase):\n"
+            "    def test_runner_probe(self):\n"
+            "        time.sleep(2)\n",
+            "utf-8",
+        )
+        return path
+
+    def make_flutter_verification_fixture(self):
+        app = self.root / "app"
+        (app / "lib").mkdir(parents=True)
+        (app / "test").mkdir(parents=True)
+        (app / "pubspec.yaml").write_text("name: runner_fixture\n", "utf-8")
+        source = app / "lib" / "main.dart"
+        source.write_text("void main() {}\n", "utf-8")
+        test_file = app / "test" / "widget_test.dart"
+        test_file.write_text("void main() {}\n", "utf-8")
+        return source, test_file
+
+    def test_continuity_save_read_pins_existing_record(self):
+        self.make_continuity_record()
+        self.continuity_dispatch("save")
+        result = self.continuity_dispatch("read")
+        self.assertEqual(result["status"], "PINNED_CONTEXT")
+        self.assertEqual(result["context"]["owner"], "C4")
+        self.assertFalse(result["dispatch_authorized"])
+        self.assertFalse(result["product_accepted"])
+
+    def test_continuity_authority_change_requires_rebind_before_runner(self):
+        self.bind_verification_scope(["sample.py"])
+        architecture = self.root / "00-GOVERNANCE" / "LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
+        architecture.write_text("# Changed current architecture\n", "utf-8")
+        with mock.patch.object(eng, "_execute_verification_process") as execute:
+            with self.assertRaisesRegex(ValueError, "authority"):
+                self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
+        execute.assert_not_called()
+
+    def test_continuity_save_pins_astro_css_and_log_then_reconciles_changes(self):
+        sources = {
+            "website/continuity-sample.astro": "---\nconst title = 'F';\n---\n<h1>{title}</h1>\n",
+            "website/continuity-sample.css": ".page { color: #243; }\n",
+            "work/frontend-build.log": "frontend build result: NOT_VERIFIED\n",
+        }
+        for relative, content in sources.items():
+            path = self.root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, "utf-8")
+
+        record = self.make_continuity_record()
+        payload = json.loads(record.read_text("utf-8"))
+        payload["continuity"]["owner"] = "F"
+        payload["continuity"]["objective"] = "Complete the existing frontend outcome with saved, responsive artifacts and verification."
+        payload["continuity"]["source_paths"] = list(sources)
+        record.write_text(json.dumps(payload), "utf-8")
+
+        saved = self.continuity_dispatch("save")
+        self.assertEqual(saved["status"], "PINNED_CONTEXT")
+        event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
+        state_path = eng.HOOKS.state_file(event, self.root)
+        state = json.loads(state_path.read_text("utf-8"))
+        self.assertTrue(set(sources).issubset(state["continuity"]["pins"]))
+
+        for relative, content in sources.items():
+            (self.root / relative).write_text(content + "updated\n", "utf-8")
+        result = self.continuity_dispatch("read")
+        self.assertEqual(result["status"], "RECONCILE_REQUIRED")
+        self.assertEqual(set(result["changed_paths"]), set(sources))
+
+    def test_continuity_cli_saves_and_reads_existing_record(self):
+        self.make_continuity_record()
+        self.continuity_cli("save")
+        result = self.continuity_cli("read", include_record=False)
+        self.assertEqual(result["status"], "PINNED_CONTEXT")
+        self.assertEqual(result["context"]["owner"], "C4")
+
+    def test_continuity_mode_only_read_does_not_rewrite_engineering_state(self):
+        self.make_continuity_record()
+        self.continuity_dispatch("save")
+        event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
+        state_path = eng.HOOKS.state_file(event, self.root)
+        before = state_path.read_bytes()
+        result = self.continuity_dispatch("read", include_record=False)
+        self.assertEqual(result["status"], "PINNED_CONTEXT")
+        self.assertEqual(state_path.read_bytes(), before)
+
+    def test_continuity_new_session_cannot_reuse_another_session_checkpoint(self):
+        self.make_continuity_record()
+        self.continuity_dispatch("save", session="session-original")
+        result = self.continuity_dispatch("read", session="session-new", include_record=False)
+        self.assertEqual(result["status"], "READBACK_REQUIRED")
+        self.assertNotIn("context", result)
+
+    def test_continuity_new_prompt_hash_requires_reconciliation(self):
+        self.make_continuity_record()
+        self.continuity_dispatch("save")
+        event = {
+            "hook_event_name": "UserPromptSubmit",
+            "session_id": "engineering-test-thread",
+            "agent_id": "bounded-test-agent",
+            "prompt": "A new user request arrived after this checkpoint.",
+        }
+        state_path = eng.HOOKS.state_file(event, self.root)
+        state = json.loads(state_path.read_text("utf-8"))
+        eng.HOOKS.handle(event, self.root, state)
+        eng.HOOKS.save(state_path, state)
+        result = self.continuity_dispatch("read", include_record=False)
+        self.assertEqual(result["status"], "RECONCILE_REQUIRED")
+        self.assertIn("NEW_MESSAGE_SINCE_CHECKPOINT", result["reasons"])
+
+    def test_continuity_cached_origin_main_change_requires_reconciliation(self):
+        self.make_continuity_record()
+        head = self.git("rev-parse", "HEAD").strip()
+        self.git("update-ref", "refs/remotes/origin/main", head)
+        self.continuity_dispatch("save")
+        tree = self.git("rev-parse", "HEAD^{tree}").strip()
+        alternate = self.git("commit-tree", tree, "-m", "alternate remote ref fixture").strip()
+        self.git("update-ref", "refs/remotes/origin/main", alternate)
+        result = self.continuity_dispatch("read", include_record=False)
+        self.assertEqual(result["status"], "RECONCILE_REQUIRED")
+        self.assertIn("CACHED_ORIGIN_CHANGED", result["reasons"])
+
+    def test_continuity_optional_read_record_and_section_must_match_binding(self):
+        self.make_continuity_record()
+        self.continuity_dispatch("save")
+        other = self.root / "work" / "other.json"
+        other.write_text("{}", "utf-8")
+        with mock.patch.dict(os.environ, {
+            "CODEX_THREAD_ID": "engineering-test-thread",
+            "CODEX_SESSION_ID": "",
+            "CODEX_AGENT_ID": "bounded-test-agent",
+        }):
+            with self.assertRaises(ValueError):
+                eng.dispatch("continuity", {"mode": "read", "record": "work/checkpoint.json"})
+            with self.assertRaises(ValueError):
+                eng.dispatch("continuity", {"mode": "read", "record": "work/other.json", "section": "continuity"})
+
+    def test_continuity_reconciles_scope_source_change(self):
+        self.make_continuity_record()
+        self.continuity_dispatch("save")
+        (self.root / "sample.py").write_text("value = 99\n", "utf-8")
+        result = self.continuity_dispatch("read")
+        self.assertEqual(result["status"], "RECONCILE_REQUIRED")
+        self.assertIn("sample.py", result["changed_paths"])
+
+    def test_continuity_stop_ignores_other_owner_dirty_mutation(self):
+        self.assertEqual(self.git("status", "--porcelain").strip(), "")
+        self.assertEqual(self.state["baseline"]["files"], {})
+        self.bind_continuity_scope()
+        (self.root / "other_owner.py").write_text("other_owner_value = 1\n", "utf-8")
+        self.observe_patch_mutation()
+        self.assertTrue(self.state["mutation_observed"])
+        self.assertEqual(self.handle("Stop"), {})
+
+    def test_continuity_stop_requires_checks_for_bound_source_dirty_change(self):
+        self.bind_continuity_scope()
+        (self.root / "sample.py").write_text("value = 99\n", "utf-8")
+        self.observe_patch_mutation()
+        result = self.handle("Stop")
+        self.assertEqual(result.get("decision"), "block")
+        self.assertEqual(self.state["verification_status"], "BLOCKED_MISSING_SUCCESSFUL_CHECK")
+
+    def test_continuity_stop_detects_committed_bound_source_with_clean_tree(self):
+        baseline_head = self.state["baseline"]["head"]
+        self.bind_continuity_scope()
+        (self.root / "sample.py").write_text("value = 99\n", "utf-8")
+        self.git("add", "sample.py", "work/checkpoint.json", "work/evidence.json")
+        self.git("commit", "-qm", "change bound source")
+        self.assertEqual(self.git("status", "--porcelain").strip(), "")
+        self.handle("PostToolUse", tool_name="Bash", tool_input={"command": "git commit"}, tool_response={"exit_code": 0})
+        self.assertTrue(self.state["mutation_observed"])
+        self.assertNotEqual(self.git("rev-parse", "HEAD").strip(), baseline_head)
+        self.assertIn("sample.py", h.changed_scope_paths(self.root, self.state, h.snapshot(self.root)))
+        result = self.handle("Stop")
+        self.assertEqual(result.get("decision"), "block")
+        self.assertEqual(self.state["verification_status"], "BLOCKED_MISSING_SUCCESSFUL_CHECK")
+
+    def test_continuity_stop_ignores_commit_outside_bound_scope(self):
+        baseline_head = self.state["baseline"]["head"]
+        self.bind_continuity_scope()
+        (self.root / "other_owner.py").write_text("other_owner_value = 1\n", "utf-8")
+        self.git("add", "other_owner.py", "work/checkpoint.json", "work/evidence.json")
+        self.git("commit", "-qm", "change another owner source")
+        self.assertEqual(self.git("status", "--porcelain").strip(), "")
+        self.handle("PostToolUse", tool_name="Bash", tool_input={"command": "git commit"}, tool_response={"exit_code": 0})
+        self.assertTrue(self.state["mutation_observed"])
+        self.assertNotEqual(self.git("rev-parse", "HEAD").strip(), baseline_head)
+        self.assertEqual(h.changed_scope_paths(self.root, self.state, h.snapshot(self.root)), set())
+        self.assertEqual(self.handle("Stop"), {})
+
+    def test_continuity_reconciles_record_change(self):
+        record = self.make_continuity_record()
+        self.continuity_dispatch("save")
+        payload = json.loads(record.read_text("utf-8"))
+        payload["continuity"]["next_action"] = "Changed after the saved checkpoint."
+        record.write_text(json.dumps(payload), "utf-8")
+        result = self.continuity_dispatch("read")
+        self.assertEqual(result["status"], "RECONCILE_REQUIRED")
+        self.assertIn("work/checkpoint.json", result["changed_paths"])
+
+    def bind_scope_and_record_targeted_check(self):
+        self.make_continuity_record()
+        event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
+        h.continuity_save(self.root, self.state, event, "work/checkpoint.json", "continuity")
+        check_event = {
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "python -m py_compile sample.py"},
+            "tool_response": {"exit_code": 0},
+        }
+        h.handle(check_event, self.root, self.state)
+        return self.state["receipts"][-1]["fingerprint"]
+
+    def test_continuity_bound_targeted_check_ignores_other_owner_but_tracks_scope_source(self):
+        original_fingerprint = self.bind_scope_and_record_targeted_check()
+        (self.root / "other_owner.py").write_text("other_owner_value = 1\n", "utf-8")
+        after_other_owner = h.verification_fingerprint(self.root, self.state, h.snapshot(self.root))
+        self.assertEqual(after_other_owner, original_fingerprint)
+        self.assertTrue(any(receipt["fingerprint"] == after_other_owner for receipt in self.state["receipts"]))
+
+        (self.root / "sample.py").write_text("value = 100\n", "utf-8")
+        after_bound_source = h.verification_fingerprint(self.root, self.state, h.snapshot(self.root))
+        self.assertNotEqual(after_bound_source, original_fingerprint)
+        self.assertFalse(any(receipt["fingerprint"] == after_bound_source for receipt in self.state["receipts"]))
+
+    def test_continuity_bound_targeted_check_is_invalidated_by_policy_change(self):
+        original_fingerprint = self.bind_scope_and_record_targeted_check()
+        policy_path = self.root / h.VERIFICATION_POLICY_PATH
+        policy = json.loads(policy_path.read_text("utf-8"))
+        policy["verification_policy"]["fixture_revision"] = 2
+        policy_path.write_text(json.dumps(policy), "utf-8")
+        after_policy_change = h.verification_fingerprint(self.root, self.state, h.snapshot(self.root))
+        self.assertNotEqual(after_policy_change, original_fingerprint)
+        self.assertFalse(any(receipt["fingerprint"] == after_policy_change for receipt in self.state["receipts"]))
+
+    def test_unknown_pending_effect_is_retained_without_dispatch(self):
+        pending = ["operation-unknown-7 | UNKNOWN | work/receipts/op-7.json | NOT_VERIFIED"]
+        self.make_continuity_record(pending)
+        self.continuity_dispatch("save")
+        original_run = eng.HOOKS.subprocess.run
+        commands = []
+
+        def track_run(args, *positional, **keywords):
+            commands.append(args)
+            return original_run(args, *positional, **keywords)
+
+        with mock.patch.object(eng.HOOKS.subprocess, "run", side_effect=track_run):
+            result = self.continuity_dispatch("read")
+        self.assertEqual(result["status"], "RECONCILE_REQUIRED")
+        self.assertEqual(result["context"]["pending_effects"], pending)
+        self.assertFalse(result["automatic_effect_replay"])
+        self.assertFalse(result["dispatch_authorized"])
+        self.assertTrue(commands)
+        self.assertTrue(all(args[0] == "git" for args in commands))
+
+    def test_continuity_rejects_non_work_or_unknown_params(self):
+        self.make_continuity_record()
+        with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "engineering-test-thread", "CODEX_SESSION_ID": ""}):
+            with self.assertRaises(ValueError):
+                eng.dispatch("continuity", {"mode": "read", "record": "AGENTS.md", "section": "continuity"})
+            with self.assertRaises(ValueError):
+                eng.dispatch("continuity", {"mode": "read", "record": "work/checkpoint.json", "section": "continuity", "extra": True})
+
+    def test_verification_runner_records_real_zero_exit_and_native_unknown_cannot_overwrite(self):
+        self.bind_verification_scope()
+        result = self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
+        self.assertEqual(result["status"], "SUCCEEDED")
+        self.assertEqual(result["process_exit_code"], 0)
+        self.assertEqual(result["exit_code"], 0)
+        self.assertEqual(result["head_start"], result["head_end"])
+        self.assertEqual(result["source_pins_start"], result["source_pins_end"])
+
+        state_path, state = self.engineering_state()
+        receipt = state["receipts"][-1]
+        self.assertEqual(receipt["runner"], "engineering_cli")
+        self.assertTrue(h.verification_receipt_current(self.root, state, receipt, h.snapshot(self.root)))
+        receipt_ids = [item.get("receipt_id") for item in state["receipts"]]
+        state["compile_envelope_probe"] = "temporary diagnostic value"
+        state["compile_event_probe"] = {"temporary": "event data"}
+        runner_command = "python .codex/engineering.py verification_run --params '{}'"
+        h.handle({
+            "hook_event_name": "PostToolUse", "tool_name": "Bash",
+            "tool_input": {"command": runner_command}, "tool_response": "",
+        }, self.root, state)
+        self.assertEqual([item.get("receipt_id") for item in state["receipts"]], receipt_ids)
+        self.assertNotIn("compile_envelope_probe", state)
+        self.assertNotIn("compile_event_probe", state)
+        self.assertFalse(state["last_shell_response_shape"]["exit_status_available"])
+
+        state_path.write_text(json.dumps(state), "utf-8")
+        (self.root / "sample.py").write_text("value = 2\n", "utf-8")
+        state = json.loads(state_path.read_text("utf-8"))
+        self.assertFalse(h.verification_receipt_current(self.root, state, state["receipts"][-1], h.snapshot(self.root)))
+
+    def test_verification_runner_records_nonzero_process_exit(self):
+        self.bind_verification_scope()
+        (self.root / "sample.py").write_text("if :\n", "utf-8")
+        result = self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
+        self.assertEqual(result["status"], "FAILED")
+        self.assertNotEqual(result["process_exit_code"], 0)
+        self.assertNotEqual(result["exit_code"], 0)
+        _, state = self.engineering_state()
+        self.assertEqual(state["receipts"][-1]["process_exit_code"], result["process_exit_code"])
+
+    def test_verification_runner_rejects_owner_record_drift_before_execution(self):
+        self.bind_verification_scope()
+        record = self.root / "work" / "checkpoint.json"
+        payload = json.loads(record.read_text("utf-8"))
+        payload["continuity"]["objective"] = "A new task objective that was not reviewed in the binding."
+        payload["continuity"]["remaining"] = ["New unreviewed work item."]
+        payload["continuity"]["pending_effects"] = ["C6 publication receipt remains unresolved."]
+        record.write_text(json.dumps(payload), "utf-8")
+        with mock.patch.object(eng, "_execute_verification_process") as execute:
+            with self.assertRaisesRegex(ValueError, "reread and rebind"):
+                self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
+        execute.assert_not_called()
+
+    def test_verification_runner_rejects_new_prompt_before_execution(self):
+        self.bind_verification_scope()
+        state_path, state = self.engineering_state()
+        state["last_prompt_hash"] = "new-unreviewed-prompt-hash"
+        h.save(state_path, state)
+        with mock.patch.object(eng, "_execute_verification_process") as execute:
+            with self.assertRaisesRegex(ValueError, "new prompt"):
+                self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
+        execute.assert_not_called()
+
+    def test_verification_runner_retains_pending_effect_without_replay(self):
+        pending = ["C6 publication receipt: work/product-closure-20261011/context-continuity/status.json; UNKNOWN"]
+        self.bind_verification_scope(pending_effects=pending)
+        result = self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
+        self.assertEqual(result["status"], "SUCCEEDED")
+        _, state = self.engineering_state()
+        receipt = state["receipts"][-1]
+        self.assertEqual(receipt["continuity_binding_start"]["pending_effects"], pending)
+        self.assertEqual(receipt["continuity_binding_end"]["pending_effects"], pending)
+        self.assertTrue(receipt["continuity_binding_start"]["pending_effects_retained_only"])
+        self.assertFalse(receipt["continuity_binding_start"]["pending_effects_replayed"])
+        self.assertTrue(receipt["continuity_binding_stable"])
+
+    def test_verification_runner_timeout_is_not_a_pass(self):
+        probe = self.make_verification_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        self.bind_verification_scope(["sample.py", probe_rel])
+        command = ["python", "-X", "utf8", "-m", "unittest", "discover", "-s", ".codex/tests",
+                   "-p", "test_verification_probe.py", "-k", "test_runner_probe", "-v"]
+        result = self.run_verification("test", command, timeout_seconds=1)
+        self.assertEqual(result["status"], "TIMED_OUT_PROCESS_TREE_UNVERIFIED")
+        self.assertTrue(result["timed_out"])
+        self.assertFalse(result["process_tree_exit_verified"])
+        self.assertEqual(result["timeout_recovery_state"], "DIRECT_TOOL_PROCESS_TERMINATED_DESCENDANTS_UNVERIFIED")
+        self.assertNotEqual(result["exit_code"], 0)
+        _, state = self.engineering_state()
+        self.assertTrue(state["receipts"][-1]["executed"])
+        self.assertIsNotNone(state["receipts"][-1]["head_end"])
+        self.assertIsNotNone(state["receipts"][-1]["source_pins_end"])
+
+    def test_verification_runner_source_drift_blocks_zero_process_exit(self):
+        probe = self.make_verification_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        self.bind_verification_scope(["sample.py", probe_rel])
+        command = ["python", "-X", "utf8", "-m", "unittest", "discover", "-s", ".codex/tests",
+                   "-p", "test_verification_probe.py", "-k", "test_runner_probe", "-v"]
+        started = threading.Event()
+        results = []
+        errors = []
+        execute = eng._execute_verification_process
+
+        def tracked_execute(*args, **kwargs):
+            started.set()
+            return execute(*args, **kwargs)
+
+        def run_check():
+            try:
+                results.append(self.run_verification("test", command, timeout_seconds=10))
+            except Exception as error:
+                errors.append(error)
+
+        with mock.patch.object(eng, "_execute_verification_process", side_effect=tracked_execute):
+            worker = threading.Thread(target=run_check)
+            worker.start()
+            self.assertTrue(started.wait(5))
+            time.sleep(0.2)
+            (self.root / "sample.py").write_text("value = 88\n", "utf-8")
+            worker.join(10)
+        self.assertFalse(worker.is_alive())
+        self.assertFalse(errors, errors)
+        self.assertEqual(results[0]["process_exit_code"], 0)
+        self.assertEqual(results[0]["status"], "SOURCE_CHANGED_DURING_RUN")
+        self.assertIsNone(results[0]["exit_code"])
+        self.assertFalse(results[0]["source_stable"])
+
+    def test_verification_runner_skipped_target_is_not_a_pass(self):
+        tests = self.root / ".codex" / "tests"
+        tests.mkdir(parents=True, exist_ok=True)
+        probe = tests / "test_verification_skipped.py"
+        probe.write_text(
+            "import unittest\n\n"
+            "class SkippedProbe(unittest.TestCase):\n"
+            "    @unittest.skip('not an executed check')\n"
+            "    def test_skipped_probe(self):\n"
+            "        self.fail('must not run')\n",
+            "utf-8",
+        )
+        probe_rel = probe.relative_to(self.root).as_posix()
+        self.bind_verification_scope(["sample.py", probe_rel])
+        command = ["python", "-X", "utf8", "-m", "unittest", "discover", "-s", ".codex/tests",
+                   "-p", "test_verification_skipped.py", "-k", "test_skipped_probe", "-v"]
+        result = self.run_verification("test", command)
+        self.assertEqual(result["process_exit_code"], 0)
+        self.assertEqual(result["test_count"], 1)
+        self.assertEqual(result["tests_passed"], 0)
+        self.assertEqual(result["status"], "TEST_COUNT_MISMATCH")
+        self.assertIsNone(result["exit_code"])
+
+    def test_verification_runner_rejects_arbitrary_commands_before_execution(self):
+        probe = self.make_verification_probe()
+        self.bind_verification_scope(["sample.py"])
+        with mock.patch.object(eng, "_execute_verification_process") as execute:
+            with self.assertRaises(ValueError):
+                self.run_verification("compile", ["python", "-c", "print('not allowed')"])
+            with self.assertRaises(ValueError):
+                self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "other.py"])
+            with self.assertRaisesRegex(ValueError, "bound Owner scope"):
+                self.run_verification("test", ["python", "-X", "utf8", "-m", "unittest", "discover", "-s", ".codex/tests",
+                                                 "-p", probe.name, "-k", "test_runner_probe", "-v"])
+            with self.assertRaisesRegex(ValueError, "bound Owner scope"):
+                self.run_verification("test", ["python", "-X", "utf8", "-m", "pytest", "-q", "--no-header",
+                                                 "-p", "no:cacheprovider",
+                                                 ".codex/tests/test_verification_probe.py::VerificationProbe::test_runner_probe"])
+        execute.assert_not_called()
+
+    def make_pytest_probe(self, contents="def test_runner_probe():\n    assert 2 + 2 == 4\n"):
+        path = self.root / ".codex" / "tests" / "test_pytest_runner_probe.py"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(contents, "utf-8")
+        return path
+
+    def make_reviewed_admission_sources(self, relative_paths):
+        """Build isolated AST admission specimens, never business-success fixtures."""
+        specimens = {
+            "tests/conftest.py": "import socket\n",
+            "tests/test_saved_work_pptx_exports.py": (
+                "import socket\n"
+                "def test_saved_work_pptx_is_editable_and_preserves_every_section_in_memory():\n"
+                "    raise AssertionError('Admission specimen must never execute as a product test')\n"
+            ),
+            "tests/test_business_approved_source_continuity.py": (
+                "pytest_plugins = (\n"
+                '    "tests.test_business_result_continuity",\n'
+                '    "tests.test_saved_document_workflow",\n'
+                ")\n"
+                "def test_approved_source_survives_domain_save_revision_reopen_and_recovery():\n"
+                "    raise AssertionError('Admission specimen must never execute as a product test')\n"
+            ),
+            "tests/test_business_result_continuity.py": (
+                'pytest_plugins = ("tests.test_saved_document_workflow",)\n'
+            ),
+            "tests/test_saved_document_workflow.py": "import subprocess\n",
+        }
+        copied, registry = {}, {}
+        for relative in relative_paths:
+            raw = specimens[relative].encode("utf-8")
+            destination = self.root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(raw)
+            copied[relative] = destination
+            # Copy metadata for the intended dependency graph, but scope the test
+            # hashes to the isolated bytes. Production review entries are untouched.
+            review = json.loads(json.dumps(eng.PYTEST_SOURCE_REVIEW_RECEIPTS[relative]))
+            review["sha256"] = eng.hashlib.sha256(raw).hexdigest()
+            registry[relative] = review
+        patcher = mock.patch.dict(eng.PYTEST_SOURCE_REVIEW_RECEIPTS, registry)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return copied
+
+    def pytest_argv(self, path, node="test_runner_probe"):
+        relative = path.relative_to(self.root).as_posix()
+        return ["python", "-X", "utf8", "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider",
+                f"{relative}::{node}"]
+
+    def test_pytest_runner_executes_one_bound_literal_node(self):
+        probe = self.make_pytest_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        self.bind_verification_scope(["sample.py", "pytest.ini", probe_rel])
+        if importlib.util.find_spec("pytest") is None:
+            self.skipTest("pytest is unavailable in this workspace runtime")
+        result = self.run_verification("test", self.pytest_argv(probe), timeout_seconds=30)
+        self.assertEqual(result["process_exit_code"], 0)
+        self.assertEqual(result["test_count"], 1)
+        self.assertEqual(result["tests_passed"], 1)
+        self.assertEqual(result["status"], "SUCCEEDED")
+        state_path, state = self.engineering_state()
+        receipt = state["receipts"][-1]
+        self.assertIn("pytest.ini", receipt["verification_paths"])
+        self.assertEqual(receipt["pytest_selected_config"], "pytest.ini")
+        self.assertEqual(receipt["command_argv"][receipt["command_argv"].index("-c") + 1],
+                         str((self.root / "pytest.ini").resolve()))
+        self.assertEqual(receipt["command_argv"][receipt["command_argv"].index("--rootdir") + 1],
+                         str(self.root.resolve()))
+        self.assertEqual(receipt["requested_argv"], self.pytest_argv(probe))
+
+    def test_pytest_root_quiet_addopts_keep_real_test_count_available(self):
+        probe = self.make_pytest_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        (self.root / "pytest.ini").write_text(
+            "[pytest]\naddopts = -q -p no:cacheprovider --strict-markers\n", "utf-8"
+        )
+        self.bind_verification_scope(["sample.py", "pytest.ini", probe_rel])
+        if importlib.util.find_spec("pytest") is None:
+            self.skipTest("pytest is unavailable in this workspace runtime")
+        result = self.run_verification("test", self.pytest_argv(probe), timeout_seconds=30)
+        self.assertEqual(result["process_exit_code"], 0)
+        self.assertTrue(result["output_capture_complete"])
+        self.assertEqual(result["test_count"], 1)
+        self.assertEqual(result["tests_passed"], 1)
+        self.assertEqual(result["status"], "SUCCEEDED")
+        _, state = self.engineering_state()
+        command = state["receipts"][-1]["command_argv"]
+        self.assertIn("--verbosity=1", command)
+        self.assertEqual(command[command.index("--rootdir") + 1], str(self.root.resolve()))
+
+    def test_pytest_addopts_rejects_explicit_plugin_load_spellings(self):
+        probe = self.make_pytest_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        scope = ["sample.py", "pytest.ini", probe_rel]
+        configs = [
+            "[pytest]\naddopts = -q -p unreviewed_plugin\n",
+            "[pytest]\naddopts = -q -p=unreviewed_plugin\n",
+            "[pytest]\naddopts = -q -punreviewed_plugin\n",
+        ]
+        for contents in configs:
+            with self.subTest(contents=contents):
+                (self.root / "pytest.ini").write_text(contents, "utf-8")
+                self.bind_verification_scope(scope)
+                with mock.patch.object(eng, "_execute_verification_process") as execute:
+                    with self.assertRaisesRegex(ValueError, "explicit plugin control"):
+                        self.run_verification("test", self.pytest_argv(probe))
+                execute.assert_not_called()
+
+    def test_pyproject_pytest_addopts_plugin_load_is_rejected(self):
+        probe = self.make_pytest_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        pytest_ini = self.root / "pytest.ini"
+        pytest_ini.unlink()
+        pyproject = self.root / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.pytest.ini_options]\naddopts = \"-q -p unreviewed_plugin\"\n", "utf-8"
+        )
+        scope = ["sample.py", "pyproject.toml", probe_rel]
+        self.bind_verification_scope(scope)
+        with mock.patch.object(eng, "_execute_verification_process") as execute:
+            with self.assertRaisesRegex(ValueError, "explicit plugin control"):
+                self.run_verification("test", self.pytest_argv(probe))
+        execute.assert_not_called()
+
+    def test_pytest_native_toml_addopts_plugin_load_is_rejected(self):
+        probe = self.make_pytest_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        pytest_ini = self.root / "pytest.ini"
+        pytest_ini.unlink()
+        pyproject = self.root / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.pytest]\naddopts = [\"-q\", \"-p\", \"unreviewed_plugin\"]\n", "utf-8"
+        )
+        scope = ["sample.py", "pyproject.toml", probe_rel]
+        self.bind_verification_scope(scope)
+        with mock.patch.object(eng, "_pytest_version_tuple", return_value=(9, 0)):
+            with mock.patch.object(eng, "_execute_verification_process") as execute:
+                with self.assertRaisesRegex(ValueError, "explicit plugin control"):
+                    self.run_verification("test", self.pytest_argv(probe))
+        execute.assert_not_called()
+
+    def test_pytest_native_toml_config_addopts_parser(self):
+        config = self.root / "pytest.toml"
+        config.write_text("[pytest]\naddopts = [\"-q\", \"-p\", \"no:cacheprovider\"]\n", "utf-8")
+        with mock.patch.object(eng, "_pytest_version_tuple", return_value=(9, 0)):
+            self.assertEqual(eng._review_pytest_addopts(config), ["-q", "-p", "no:cacheprovider"])
+
+    def test_pytest_stdout_claim_cannot_override_nonzero_process_exit(self):
+        probe = self.make_pytest_probe(
+            "def test_runner_probe():\n    print('9 passed')\n    assert False, 'controlled failure'\n"
+        )
+        probe_rel = probe.relative_to(self.root).as_posix()
+        self.bind_verification_scope(["sample.py", "pytest.ini", probe_rel])
+        if importlib.util.find_spec("pytest") is None:
+            self.skipTest("pytest is unavailable in this workspace runtime")
+        result = self.run_verification("test", self.pytest_argv(probe), timeout_seconds=30)
+        self.assertEqual(result["process_exit_code"], 1)
+        self.assertEqual(result["status"], "FAILED")
+        self.assertEqual(result["exit_code"], 1)
+
+    def test_pytest_config_change_invalidates_receipt(self):
+        probe = self.make_pytest_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        self.bind_verification_scope(["sample.py", "pytest.ini", probe_rel])
+        if importlib.util.find_spec("pytest") is None:
+            self.skipTest("pytest is unavailable in this workspace runtime")
+        result = self.run_verification("test", self.pytest_argv(probe), timeout_seconds=30)
+        self.assertEqual(result["status"], "SUCCEEDED")
+        _, state = self.engineering_state()
+        receipt = state["receipts"][-1]
+        pytest_config = self.root / "pytest.ini"
+        self.assertIn(pytest_config.relative_to(self.root).as_posix(), receipt["pytest_config_paths"])
+        pytest_config.write_text("[pytest]\naddopts = -ra\n", "utf-8")
+        self.assertFalse(h.verification_receipt_current(self.root, state, receipt, h.snapshot(self.root)))
+
+    def test_pytest_higher_precedence_config_appearance_invalidates_receipt(self):
+        probe = self.make_pytest_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        self.bind_verification_scope(["sample.py", "pytest.ini", probe_rel])
+        if importlib.util.find_spec("pytest") is None:
+            self.skipTest("pytest is unavailable in this workspace runtime")
+        result = self.run_verification("test", self.pytest_argv(probe), timeout_seconds=30)
+        self.assertEqual(result["status"], "SUCCEEDED")
+        _, state = self.engineering_state()
+        receipt = state["receipts"][-1]
+        pytest_config = self.root / ".codex" / "tests" / "pytest.ini"
+        pytest_config.parent.mkdir(parents=True, exist_ok=True)
+        self.assertIn(pytest_config.relative_to(self.root).as_posix(), receipt["pytest_config_paths"])
+        pytest_config.write_text("[pytest]\n", "utf-8")
+        self.assertFalse(h.verification_receipt_current(self.root, state, receipt, h.snapshot(self.root)))
+
+    def test_pytest_conftest_appearance_invalidates_receipt(self):
+        probe = self.make_pytest_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        self.bind_verification_scope(["sample.py", "pytest.ini", probe_rel])
+        if importlib.util.find_spec("pytest") is None:
+            self.skipTest("pytest is unavailable in this workspace runtime")
+        result = self.run_verification("test", self.pytest_argv(probe), timeout_seconds=30)
+        self.assertEqual(result["status"], "SUCCEEDED")
+        _, state = self.engineering_state()
+        receipt = state["receipts"][-1]
+        conftest = self.root / ".codex" / "tests" / "conftest.py"
+        self.assertIn(conftest.relative_to(self.root).as_posix(), receipt["verification_paths"])
+        conftest.write_text("# Newly appeared pytest setup\n", "utf-8")
+        self.assertFalse(h.verification_receipt_current(self.root, state, receipt, h.snapshot(self.root)))
+
+    def test_pytest_empty_or_skipped_selection_cannot_pass(self):
+        command = [sys.executable, "-X", "utf8", "-m", "pytest", "-q", "--no-header",
+                   "-p", "no:cacheprovider", ".codex/tests/test_probe.py::test_probe"]
+        self.assertEqual(eng._test_execution_counts("test", command, b"no tests ran in 0.01s\n"), (None, None))
+        self.assertEqual(eng._test_execution_counts("test", command, b"s [100%]\n1 skipped in 0.01s\n"), (1, 0))
+        self.assertEqual(eng._test_execution_counts("test", command, b"x [100%]\n1 xfailed in 0.01s\n"), (1, 0))
+
+    def test_pytest_network_and_training_source_requires_owner_review(self):
+        samples = [
+            "import requests\ndef test_runner_probe():\n    assert True\n",
+            "import torch\ndef test_runner_probe():\n    model.train()\n",
+        ]
+        for contents in samples:
+            with self.subTest(contents=contents):
+                probe = self.make_pytest_probe(contents)
+                probe_rel = probe.relative_to(self.root).as_posix()
+                self.bind_verification_scope(["sample.py", "pytest.ini", probe_rel])
+                with mock.patch.object(eng, "_execute_verification_process") as execute:
+                    with self.assertRaisesRegex(ValueError, "owner review required"):
+                        self.run_verification("test", self.pytest_argv(probe))
+                execute.assert_not_called()
+
+    def test_pytest_target_allowlist_requires_exact_source_scope(self):
+        probe = self.make_pytest_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        self.bind_verification_scope(["sample.py", "pytest.ini", probe_rel])
+        scope = ["sample.py", "pytest.ini", probe_rel]
+        accepted = eng._allowlisted_verification("test", self.pytest_argv(probe), scope)
+        self.assertIn(probe_rel, accepted["additional_paths"])
+        self.assertIn("pytest.ini", accepted["pytest_config_paths"])
+        self.assertIn("-c", accepted["argv"])
+        self.assertEqual(accepted["argv"][accepted["argv"].index("--rootdir") + 1], str(self.root.resolve()))
+        self.assertEqual(accepted["pytest_selected_config"], "pytest.ini")
+        self.assertEqual(accepted["argv"][-1], f"{probe_rel}::test_runner_probe")
+        with self.assertRaisesRegex(ValueError, "exact function"):
+            eng._allowlisted_verification("test", self.pytest_argv(probe, "test_runner_probe[case]"),
+                                          scope)
+
+    def test_pytest_uses_effective_scoped_config_and_pins_non_pytest_candidates(self):
+        probe = self.make_pytest_probe()
+        probe_rel = probe.relative_to(self.root).as_posix()
+        nested_pyproject = self.root / ".codex" / "tests" / "pyproject.toml"
+        nested_pyproject.write_text("[project]\nname = 'not-pytest-config'\n", "utf-8")
+        scope = ["sample.py", "pytest.ini", probe_rel]
+        self.bind_verification_scope(scope)
+
+        accepted = eng._allowlisted_verification("test", self.pytest_argv(probe), scope)
+        receipt = accepted["pytest_review_receipt"]
+        self.assertEqual(receipt["selected_config"]["path"], "pytest.ini")
+        self.assertEqual(receipt["config_candidate_pins"][".codex/tests/pyproject.toml"],
+                         eng.hashlib.sha256(nested_pyproject.read_bytes()).hexdigest())
+        self.assertEqual(receipt["config_candidate_pins"][".codex/tests/pytest.ini"], "ABSENT")
+        self.assertEqual(accepted["argv"][accepted["argv"].index("-c") + 1], str((self.root / "pytest.ini").resolve()))
+        self.assertEqual(accepted["argv"][accepted["argv"].index("--rootdir") + 1], str(self.root.resolve()))
+        with self.assertRaisesRegex(ValueError, "effective pytest configuration must be in the bound Owner scope"):
+            eng._allowlisted_verification("test", self.pytest_argv(probe), ["sample.py", probe_rel])
+
+    def test_pytest_source_authority_task_record_and_evidence_cannot_change_as_source(self):
+        protected_paths = ["AGENTS.md", "work/checkpoint.json", "work/evidence.json"]
+        for protected in protected_paths:
+            with self.subTest(protected=protected):
+                probe = self.make_pytest_probe()
+                probe_rel = probe.relative_to(self.root).as_posix()
+                scope = ["sample.py", "pytest.ini", probe_rel, protected]
+                self.bind_verification_scope(scope)
+                path = self.root / protected
+                if protected == "work/checkpoint.json":
+                    payload = json.loads(path.read_text("utf-8"))
+                    payload["keep"] = "changed after Owner checkpoint"
+                    path.write_text(json.dumps(payload), "utf-8")
+                elif protected == "work/evidence.json":
+                    payload = json.loads(path.read_text("utf-8"))
+                    payload["status"] = "changed after Owner checkpoint"
+                    path.write_text(json.dumps(payload), "utf-8")
+                else:
+                    path.write_bytes(path.read_bytes() + b"\nchanged after Owner checkpoint\n")
+                with mock.patch.object(eng, "_execute_verification_process") as execute:
+                    with self.assertRaisesRegex(ValueError, "Owner task, authority, evidence"):
+                        self.run_verification("test", self.pytest_argv(probe))
+                execute.assert_not_called()
+
+    def test_c5_reviewed_admission_fixture_is_owner_and_hash_bound(self):
+        target_rel = "tests/test_saved_work_pptx_exports.py"
+        conftest_rel = "tests/conftest.py"
+        copied = self.make_reviewed_admission_sources([target_rel, conftest_rel])
+        scope = ["pytest.ini", conftest_rel, target_rel]
+        self.bind_verification_scope(scope, owner="C5")
+        selection = f"{target_rel}::test_saved_work_pptx_is_editable_and_preserves_every_section_in_memory"
+        approved = eng._allowlisted_verification("test", self.pytest_argv(copied[target_rel], selection.split("::", 1)[1]),
+                                                  scope, owner="C5")
+        receipt = approved["pytest_review_receipt"]
+        reviews = {value["path"]: value for value in receipt["reviewed_sources"]}
+        self.assertEqual(reviews[conftest_rel]["sha256"], eng.hashlib.sha256(copied[conftest_rel].read_bytes()).hexdigest())
+        self.assertEqual(reviews[conftest_rel]["purpose"],
+                         "Reviewed autouse guard blocks public TCP connections while allowing loopback and private targets.")
+        self.assertEqual(reviews[target_rel]["purpose"],
+                         "Reviewed in-memory PPTX export tests patch socket.create_connection to fail and assert no network access.")
+        self.assertEqual(receipt["fixture_dependency_edges"], [])
+        self.assertTrue(self.pytest_receipt_is_current(approved, scope))
+        self.assertIn("ZBC_ALLOW_NETWORK", eng._verification_process_environment(
+            "test", approved["argv"], Path(self.temp.name) / "cache"
+        ))
+
+        wrong_owner_scope = scope
+        with self.assertRaisesRegex(ValueError, "owner review required"):
+            eng._allowlisted_verification("test", self.pytest_argv(copied[target_rel], selection.split("::", 1)[1]),
+                                          wrong_owner_scope, owner="C4")
+
+        copied[target_rel].write_text(copied[target_rel].read_text("utf-8") + "\n# changed hash\n", "utf-8")
+        self.assertFalse(self.pytest_receipt_is_current(approved, scope))
+        with self.assertRaisesRegex(ValueError, "owner review required"):
+            eng._allowlisted_verification("test", self.pytest_argv(copied[target_rel], selection.split("::", 1)[1]),
+                                          scope, owner="C5")
+
+    def test_c4_socket_guard_review_is_owner_and_hash_specific(self):
+        conftest_rel = "tests/conftest.py"
+        copied = self.make_reviewed_admission_sources([conftest_rel])[conftest_rel]
+        raw = copied.read_bytes()
+        review = eng._pytest_source_review(copied, self.root, "C4", raw)
+        self.assertEqual(review["sha256"], eng.hashlib.sha256(raw).hexdigest())
+        self.assertEqual(review["allowed_imports"], ["socket"])
+        self.assertIn("database-copy isolation", review["purpose"])
+        self.assertIsNone(eng._pytest_source_review(copied, self.root, "C4", raw + b"\n# changed\n"))
+
+    def test_c3_reviewed_pytest_plugins_pin_recursive_fixture_dependency_chain(self):
+        paths = [
+            "tests/conftest.py",
+            "tests/test_business_approved_source_continuity.py",
+            "tests/test_business_result_continuity.py",
+            "tests/test_saved_document_workflow.py",
+        ]
+        copied = self.make_reviewed_admission_sources(paths)
+        scope = ["pytest.ini", *paths]
+        self.bind_verification_scope(scope, owner="C3")
+        target_rel = "tests/test_business_approved_source_continuity.py"
+        target = copied[target_rel]
+        accepted = eng._allowlisted_verification(
+            "test",
+            self.pytest_argv(target, "test_approved_source_survives_domain_save_revision_reopen_and_recovery"),
+            scope,
+            owner="C3",
+        )
+        receipt = accepted["pytest_review_receipt"]
+        reviews = {value["path"]: value for value in receipt["reviewed_sources"]}
+        self.assertEqual(set(reviews), set(paths))
+        edges = {(edge["declared_by"], edge["module"], edge["path"]) for edge in receipt["fixture_dependency_edges"]}
+        self.assertEqual(edges, {
+            (target_rel, "tests.test_business_result_continuity", "tests/test_business_result_continuity.py"),
+            (target_rel, "tests.test_saved_document_workflow", "tests/test_saved_document_workflow.py"),
+            ("tests/test_business_result_continuity.py", "tests.test_saved_document_workflow",
+             "tests/test_saved_document_workflow.py"),
+        })
+        for path in paths:
+            self.assertEqual(reviews[path]["sha256"], eng.hashlib.sha256(copied[path].read_bytes()).hexdigest())
+            self.assertTrue(reviews[path]["purpose"])
+        self.assertIn("pytest.ini", accepted["pytest_owner_approved_paths"])
+        self.assertIn("tests/conftest.py", accepted["pytest_owner_approved_paths"])
+        self.assertTrue(self.pytest_receipt_is_current(accepted, scope))
+
+        copied[target_rel].write_text(copied[target_rel].read_text("utf-8").replace(
+            '"tests.test_saved_document_workflow",', '"tests.unknown_fixture_plugin",', 1), "utf-8")
+        self.assertFalse(self.pytest_receipt_is_current(accepted, scope))
+        with self.assertRaisesRegex(ValueError, "exact owner-reviewed fixture dependency"):
+            eng._allowlisted_verification(
+                "test", self.pytest_argv(target, "test_approved_source_survives_domain_save_revision_reopen_and_recovery"),
+                scope, owner="C3",
+            )
+
+    def test_pytest_runner_clears_inherited_plugin_and_network_overrides(self):
+        command = [sys.executable, "-X", "utf8", "-m", "pytest", "-q"]
+        with mock.patch.dict(os.environ, {
+            "PYTEST_ADDOPTS": "-k unsafe",
+            "PYTEST_PLUGINS": "unreviewed.plugin",
+            "ZBC_ALLOW_NETWORK": "1",
+        }, clear=False):
+            env = eng._verification_process_environment("test", command, Path(self.temp.name) / "cache")
+        self.assertEqual(env["ZBC_ALLOW_NETWORK"], "0")
+        self.assertNotIn("PYTEST_ADDOPTS", env)
+        self.assertNotIn("PYTEST_PLUGINS", env)
+        self.assertEqual(env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"], "1")
+
+    def test_verification_runner_accepts_scoped_f_static_and_existing_flutter_commands(self):
+        source, widget_test = self.make_flutter_verification_fixture()
+        source_rel = source.relative_to(self.root).as_posix()
+        test_rel = widget_test.relative_to(self.root).as_posix()
+        self.bind_verification_scope([source_rel, test_rel], owner="F")
+
+        dart_prefix = ["D:/installed/dart.exe"]
+        flutter_prefix = ["D:/installed/dart.exe", "--disable-dart-dev", "D:/installed/flutter_tools.snapshot"]
+        with mock.patch.object(eng, "_resolve_tool_argv", side_effect=lambda tool, args: [*(dart_prefix if tool == "dart" else flutter_prefix), *args]):
+            dart = eng._allowlisted_verification("static", ["dart", "analyze", source_rel], [source_rel])
+            self.assertEqual(dart["argv"], [*dart_prefix, "analyze", "lib/main.dart"])
+            self.assertEqual(dart["cwd"], source.parents[1])
+            flutter_analyze = eng._allowlisted_verification("static", ["flutter", "analyze", "--no-pub"], [source_rel])
+            self.assertEqual(flutter_analyze["argv"], [*flutter_prefix, "analyze", "--no-pub"])
+            self.assertEqual(flutter_analyze["package_root"], "app")
+            build = eng._allowlisted_verification(
+                "compile", ["flutter", "build", "web", "--release", "--no-web-resources-cdn", "--no-pub"], [source_rel]
+            )
+            self.assertEqual(build["argv"], [*flutter_prefix, "build", "web", "--release", "--no-web-resources-cdn", "--no-pub"])
+            widget = eng._allowlisted_verification(
+                "test", ["flutter", "test", "--no-pub", test_rel, "--name", "Widget route handles F"], [source_rel, test_rel]
+            )
+            self.assertTrue(any(value.startswith("--name=^") and value.endswith("$") for value in widget["argv"]))
+            self.assertEqual(widget["additional_paths"], [test_rel])
+        with self.assertRaisesRegex(ValueError, "bound Owner scope"):
+            eng._allowlisted_verification(
+                "test", ["flutter", "test", "--no-pub", test_rel, "--name", "Widget route handles F"], [source_rel]
+            )
+
+    def test_windows_dart_and_flutter_batch_launchers_resolve_native_executables(self):
+        tool_root = Path(self.temp.name) / "flutter-sdk"
+        flutter_bin = tool_root / "bin"
+        dart_bin = flutter_bin / "cache" / "dart-sdk" / "bin"
+        dart_bin.mkdir(parents=True)
+        flutter_launcher = flutter_bin / "flutter.bat"
+        flutter_launcher.parent.mkdir(parents=True, exist_ok=True)
+        flutter_launcher.write_text("@echo off\n", "utf-8")
+        flutter_tools = flutter_bin / "cache" / "flutter_tools.snapshot"
+        flutter_tools.write_bytes(b"fixture snapshot")
+        dart_launcher = dart_bin / "dart.bat"
+        dart_launcher.write_text("@echo off\n", "utf-8")
+        flutter_bin_dart_launcher = flutter_bin / "dart.bat"
+        flutter_bin_dart_launcher.write_text("@echo off\n", "utf-8")
+        dart_exe = dart_bin / "dart.exe"
+        dart_exe.write_bytes(b"fixture executable")
+
+        def which(name):
+            if name == "flutter":
+                return str(flutter_launcher)
+            if name == "dart":
+                return str(dart_launcher)
+            return None
+
+        with mock.patch.object(eng.shutil, "which", side_effect=which):
+            self.assertEqual(eng._resolve_tool_argv("dart", ["analyze", "lib/main.dart"]),
+                             [str(dart_exe.resolve()), "analyze", "lib/main.dart"])
+            self.assertEqual(eng._resolve_tool_argv("flutter", ["analyze", "--no-pub"]),
+                             [str(dart_exe.resolve()), "--disable-dart-dev", str(flutter_tools.resolve()),
+                              "analyze", "--no-pub"])
+
+        with mock.patch.object(eng.shutil, "which", side_effect=lambda name: (
+                str(flutter_bin_dart_launcher) if name == "dart" else None)):
+            self.assertEqual(eng._resolve_tool_argv("dart", ["--version"]),
+                             [str(dart_exe.resolve()), "--version"])
+
+        flutter_tools.unlink()
+        with mock.patch.object(eng.shutil, "which", side_effect=which):
+            with self.assertRaisesRegex(ValueError, "Flutter executable is UNAVAILABLE"):
+                eng._resolve_tool_argv("flutter", ["build", "web"])
+
+        with mock.patch.object(eng.shutil, "which", return_value=None):
+            with self.assertRaisesRegex(ValueError, "Dart executable is UNAVAILABLE"):
+                eng._resolve_tool_argv("dart", ["analyze", "lib/main.dart"])
+        ruff = eng._allowlisted_verification(
+            "static", ["ruff.cmd", "check", "--select", "F", "--no-cache", "sample.py"], ["sample.py"]
+        )
+        self.assertEqual(ruff["argv"][1:5], ["check", "--select", "F", "--no-cache"])
+        if shutil.which("ruff.cmd"):
+            actual = eng._execute_verification_process("static", ruff["argv"], self.root, 20)
+            self.assertEqual(actual["returncode"], 0)
 
     def test_dirty_current_is_local_candidate_only(self):
         current = self.root / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md"
@@ -165,7 +1254,22 @@ class EngineeringTests(unittest.TestCase):
         self.assertEqual(self.handle("Stop"), {})
 
     def test_exit_decoding(self):
-        for data, expected in [({"exit_code": 1}, 1), ({"output": "Process exited with code 0"}, 0), ({"isError": True}, 1), ("all good", None), ({"exit_code": True}, None)]:
+        cases = [
+            ({"exit_code": 1}, 1),
+            ({"exitCode": 0}, 0),
+            ({"returncode": -2}, -2),
+            ({"output": "Process exited with code 0"}, None),
+            ({"stdout": "Exit code: 0"}, None),
+            ({"content": [{"text": "Process completed with exit code 0"}]}, None),
+            ({"stdout": {"exit_code": 0}}, None),
+            ([{"exit_code": 0}], None),
+            ({"isError": True}, None),
+            ("Process exited with code 0", None),
+            ("all good", None),
+            ({"exit_code": "0"}, None),
+            ({"exit_code": True}, None),
+        ]
+        for data, expected in cases:
             self.assertEqual(h.exit_status(data), expected)
 
     def test_sensitive_paths_are_excluded(self):
@@ -200,13 +1304,84 @@ class EngineeringTests(unittest.TestCase):
         self.assertIn("def source_read(", text)
         self.assertIn("def route_task(", text)
 
+    def test_validation_plan_uses_current_policy_and_separates_e2e(self):
+        plan = eng.validation_plan(["sample.py"])
+        text = " ".join(plan["plan"])
+        self.assertIn("current machine policy permits", text)
+        self.assertIn("real-user E2E separate", text)
+        self.assertNotIn("do not create or run module suites", text)
+
     def test_utf8_hook_subprocess(self):
         event = {"hook_event_name": "PreToolUse", "cwd": str(self.root), "session_id": "unit-test", "tool_name": "Bash", "tool_input": {"command": "git reset --hard HEAD"}}
-        proc = subprocess.run([sys.executable, "-X", "utf8", str(HOOK)], input=json.dumps(event, ensure_ascii=False).encode(), capture_output=True)
+        isolated_home = Path(self.temp.name) / "subprocess-home"
+        isolated_home.mkdir()
+        environment = os.environ.copy()
+        environment["USERPROFILE"] = str(isolated_home)
+        environment["HOME"] = str(isolated_home)
+        proc = subprocess.run([sys.executable, "-X", "utf8", str(HOOK)], input=json.dumps(event, ensure_ascii=False).encode(), capture_output=True, env=environment)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
         state = h.state_file(event, self.root)
         state.unlink(missing_ok=True)
+
+    def lock_child(self, code, *arguments):
+        return [sys.executable, "-X", "utf8", "-c", code, str(HOOK), *map(str, arguments)]
+
+    def test_kernel_lock_is_released_after_process_crash(self):
+        state_path = Path(self.temp.name) / "crash-state.json"
+        lock_path = state_path.with_suffix(".lock")
+        code = """
+import importlib.util, os, sys
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('lock_test_hooks', sys.argv[1])
+hook = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(hook)
+with hook.locked(Path(sys.argv[2])):
+    os._exit(7)
+"""
+        child = subprocess.run(self.lock_child(code, state_path), capture_output=True, text=True, timeout=15)
+        self.assertEqual(child.returncode, 7, child.stderr)
+        self.assertTrue(lock_path.exists(), "Kernel lock marker should survive process exit")
+        with h.locked(state_path):
+            self.assertTrue(lock_path.exists(), "Lock acquisition must not depend on deleting the marker")
+        self.assertTrue(lock_path.exists(), "Marker file should persist after releasing the kernel lock")
+
+    def test_kernel_lock_cannot_be_bypassed_while_another_process_holds_it(self):
+        state_path = Path(self.temp.name) / "active-state.json"
+        ready_path = Path(self.temp.name) / "lock-ready.txt"
+        code = """
+import importlib.util, sys, time
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('lock_test_hooks', sys.argv[1])
+hook = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(hook)
+with hook.locked(Path(sys.argv[2])):
+    Path(sys.argv[3]).write_text('locked', encoding='utf-8')
+    time.sleep(15)
+"""
+        child = subprocess.Popen(self.lock_child(code, state_path, ready_path), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            deadline = time.monotonic() + 8
+            while not ready_path.exists() and child.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.025)
+            self.assertTrue(ready_path.exists(), "Lock holder subprocess did not report acquisition")
+            with self.assertRaisesRegex(RuntimeError, "Concurrent state write"):
+                with h.locked(state_path):
+                    self.fail("An active process lock was bypassed")
+            self.assertIsNone(child.poll(), "The competing process must still hold its lock")
+        finally:
+            if child.poll() is None:
+                child.terminate()
+            child.communicate(timeout=5)
+
+    def test_empty_legacy_lock_is_rejected_for_manual_verification(self):
+        state_path = Path(self.temp.name) / "legacy-state.json"
+        lock_path = state_path.with_suffix(".lock")
+        lock_path.write_bytes(b"")
+        with self.assertRaisesRegex(RuntimeError, r"(?i)(legacy|verify|verification|核实)"):
+            with h.locked(state_path):
+                self.fail("An empty legacy lock must not be taken over")
+        self.assertEqual(lock_path.read_bytes(), b"", "Legacy marker must remain untouched")
 
 if __name__ == "__main__":
     unittest.main()

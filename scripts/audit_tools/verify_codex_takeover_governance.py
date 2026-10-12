@@ -14,7 +14,7 @@ EXPECTED_VERSION = "1.1.0"
 EXPECTED_FINGERPRINT = "68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f"
 EXPECTED_LOCAL_REPO = "Zachary-1012/LUMENIS-codex-Clean-OS"
 CONTRACT_BASENAME = "LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json"
-SIX_DELIVERY_IDS = {"C1", "C2", "C3", "C4", "C5", "C6"}
+ENGINEERING_OWNER_IDS = {"C1", "C2", "C3", "C4", "C5", "C6"}
 
 # Historical coverage maps below remain regression evidence; current execution semantics live in the governance machine contract.
 ROUND_COVERAGE = {
@@ -120,24 +120,24 @@ def _routing_rows(text: str) -> dict[str, str]:
         round_id, window_number = match.groups()
         if round_id != f"C{window_number}":
             raise AssertionError(
-                f"six-round routing mismatch: {round_id} must map to W{round_id[1:]}"
+                f"engineering-owner routing mismatch: {round_id} must map to W{round_id[1:]}"
             )
         if round_id in rows:
-            raise AssertionError(f"six-round routing duplicates {round_id}/W{window_number}")
+            raise AssertionError(f"engineering-owner routing duplicates {round_id}/W{window_number}")
         rows[round_id] = line
     return rows
 
 
 
-def _assert_six_round_routing(agents: str) -> None:
+def _assert_engineering_owner_routing(agents: str) -> None:
     """Human-doc mirror only: keep C1/W1..C6/W6 rows present exactly once.
 
     Current role responsibilities, environments, dispatch semantics and model routing
     are validated by verify_governance_machine_contract.py from structured sources.
     """
     rows = _routing_rows(agents)
-    missing = sorted(SIX_DELIVERY_IDS - set(rows))
-    extra = sorted(set(rows) - SIX_DELIVERY_IDS)
+    missing = sorted(ENGINEERING_OWNER_IDS - set(rows))
+    extra = sorted(set(rows) - ENGINEERING_OWNER_IDS)
     if missing or extra:
         raise AssertionError(
             f"AGENTS.md human routing mirror mismatch: missing={missing}, extra={extra}"
@@ -145,8 +145,8 @@ def _assert_six_round_routing(agents: str) -> None:
 
 def _assert_current_round_statuses(current: str) -> None:
     rows = _routing_rows(current)
-    missing = sorted(SIX_DELIVERY_IDS - set(rows))
-    extra = sorted(set(rows) - SIX_DELIVERY_IDS)
+    missing = sorted(ENGINEERING_OWNER_IDS - set(rows))
+    extra = sorted(set(rows) - ENGINEERING_OWNER_IDS)
     if missing or extra:
         raise AssertionError(
             f"CURRENT status table must report C1–C6 exactly once: missing={missing}, extra={extra}"
@@ -155,7 +155,7 @@ def _assert_current_round_statuses(current: str) -> None:
         current,
         "AGENTS.md",
         "LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
-        label="CURRENT six-round snapshot",
+        label="CURRENT engineering-owner snapshot",
     )
 
 
@@ -187,6 +187,7 @@ def _is_product_behavior_source(path: str) -> bool:
     if path in {
         ".codex/hooks/lumenis_hooks.py", ".codex/engineering.py",
         ".codex/local_workflow.py", ".codex/mcp/server.mjs",
+        ".codex/tests/test_engineering.py",  # Same engineering owner regression.
         "scripts/production_baseline_check.py", "scripts/lean_footprint.py",
     }:
         return False
@@ -220,6 +221,11 @@ def _is_rules_only_publication_path(path: str) -> bool:
         '.vscode/tasks.json',
         '.vscode/extensions.json',
         '.codex/README.md',
+        # These exact existing files belong to this rule/engineering owner.
+        # Arbitrary model configuration, tests or Website behavior remain denied.
+        '.codex/model-routing.toml',
+        '.codex/tests/test_engineering.py',
+        'website/DEVELOPMENT-BRIEF.md',
         '.agents/skills/lumenis-local-engineering-tools/SKILL.md',
 
         '.github/workflows/platform-verify.yml',
@@ -680,7 +686,7 @@ def validate(*, staged: bool = False) -> None:
     _assert_repository_model_neutrality()
 
     _assert_single_machine_contract()
-    _assert_six_round_routing(agents)
+    _assert_engineering_owner_routing(agents)
     _assert_current_round_statuses(takeover)
     if staged:
         current_path = str(PATHS["takeover"].relative_to(ROOT)).replace("\\", "/")
@@ -952,7 +958,7 @@ def validate(*, staged: bool = False) -> None:
         launch_plan,
         "SUBORDINATE ROUND 15 LAUNCH GATE / NOT THE TASK-SEQUENCE AUTHORITY",
         "D:\\LUMENIS_REBUILD\\序\\序境",
-        "six-round dispatch and complete legacy acceptance coverage",
+        "engineering source responsibility and complete retained acceptance coverage",
         label="launch convergence plan",
     )
 
@@ -1037,7 +1043,7 @@ def validate(*, staged: bool = False) -> None:
         "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
         "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
         "00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
-        "### Six-round execution windows and retained acceptance coverage",
+        "### Engineering source responsibilities and retained acceptance coverage",
         "**C1 / W1 — Data and Collection**",
         "**C2 / W2 — Owned AI and Agent**",
         "**C3 / W3 — CTH and BMP Business Workflows**",

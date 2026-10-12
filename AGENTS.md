@@ -19,19 +19,16 @@ removal from scope is not authorization for unreviewed source deletion. The
 existing in-product controlled browser, collection, product media/file handling,
 developer tooling and SYSTEM runtime remain in scope.
 
-AI is a cross-product enhancement in SYSTEM, CTH, BMP and Shared, rather than a
-separate chat-only feature or work postponed entirely to round five. Every basic
-business path must remain useful without a model/API/GPU. Genuine AI-exclusive
-actions may be unavailable without blocking the supported normal task. AI output
-is derived content, never Canonical fact, Permission or an external-effect grant.
+AI enhances SYSTEM, CTH, BMP and Shared, not only chat or round five. Basic
+business works without model/API/GPU; unavailable AI-exclusive actions do not
+block normal tasks. AI output is derived, never Canonical fact, Permission
+or an external-effect grant.
 
-Analysis and paper-derived mathematics belong in existing backend domain/Shared
-owners. Users express a business question, scope, time, objectives and relevant
-resources; they receive an analyzed report or usable deliverable with sources,
-limitations and next actions. Do not require users to select paper operations,
-enter arbitrary log weights, supply internal task IDs or assemble a report from
-developer diagnostics. Legitimate business constraints remain editable; method
-and assumptions remain inspectable without becoming the default workflow.
+Analysis and mathematics belong to existing backend domain/Shared owners. Users
+provide questions, scope, time and resources; they receive analyzed deliverables,
+sources, limitations and next actions. Do not require paper/algorithm selection,
+arbitrary log weights, internal task IDs or developer-diagnostic assembly.
+Business constraints stay editable; methods and assumptions remain inspectable.
 
 Across SYSTEM/CTH/BMP/Shared/AI, inspect requirements, owners and callers first:
 Update existing code/rules in place; reconcile callers, not parallel files or
@@ -57,10 +54,9 @@ execution instructions.
 
 ### 最新 PO：五轮架构交付与窗口/模型事实化 — 2026-10-09
 
-The six-file governance publication is delivered; it did not dispatch windows.
-The later direct PO grants M and one Luna/max agent the SYSTEM browser-popup P0
-repair, runtime acceptance and controlled publication. Other work/Goals remain
-protected; this bounded grant resumes no other window.
+Published governance records ownership and product scope. Actual window dispatch
+and model choices require the latest direct Product Owner instruction and factual
+readback; a historical repair authorization is not a current execution order.
 
 Latest PO data rule: all platforms and public webpages have equal source-category
 weight. After real acquisition/intake/recovery proof, prioritize existing admitted
@@ -119,8 +115,8 @@ Registry growth, task dates/no universal start date, honest dimensions, cover-on
 intake with later media understanding, Source rights and protected identities
 remain mandatory under Global §10 and the Collector contract. Source ownership,
 in-flight/process protection, rollback and unrelated work remain protected.
-Website/Web business closure is first; Windows/macOS and iOS specialist acceptance
-follows. DeepSeek/ancestor inputs, upgraded plans and unfinished material adoption
+Website/Web, Windows/macOS and iOS proceed in parallel, with actual acceptance
+recorded separately for each surface. DeepSeek/ancestor inputs, upgraded plans and unfinished material adoption
 remain retained; training/API/corpus/deployment need their existing separate grants.
 Historical C1 resume/pause receipts retain their dates and evidence, not dispatch.
 
@@ -135,31 +131,48 @@ another product, owner, data store, model service or acceptance standard.
 Actual scheduling belongs to the Product Owner, with current evidence readback.
 OpenCode remains shelved, not an execution fallback.
 
-### 2026-10-08 latest surface priority: Website and Web first
+### 2026-10-11 surface execution: parallel construction, independent acceptance
 
-The Product Owner now requires **Public Website + Web Workspace closure first**.
-Desktop App and Mobile Companion specific implementation, packaging and
-device acceptance follow after those two surfaces close. Preserve their complete
-requirements, source, editable designs and evidence as deferred work; do not delete
-or mark them accepted. The zero-new-cost boundary remains. Authorized owners focus their
-existing Goals on the Website/Web result first; no extra task queue or framework.
+The approved Public Website, Web Workspace, Windows/macOS Desktop and iOS
+Companion proceed in parallel through the existing Website and shared Flutter
+implementation. Native work does not wait for Website/Web closure. Preserve each
+surface's approved role, complete requirements, editable assets and outstanding
+acceptance. The zero-new-cost boundary remains; update existing full-outcome
+Goals/continuity records without creating another queue, framework or product.
 
 Complete all approved Website content families and applicable Web screen/workflow
 requirements, with real Core/Permission/Source/Evidence, useful results,
 save/revise/reopen/recovery and Evaluation where applicable. Backend/SYSTEM work
-needed for a Web task remains in scope even when it runs on a local machine;
-postponing the Desktop client does not postpone that dependency or permit a mock.
-Shared Flutter/Core changes preserve existing compatibility without starting
-unneeded native platform work. Website/Web browser viewport, locale and
+needed for a Web task remains in scope even when it runs on a local machine.
+Shared Flutter/Core changes preserve one business and permission contract across
+all supported targets. Website/Web browser viewport, locale and
 accessibility coverage remains required, including narrow screens.
 
-Accept bounded Website/Web outcomes using the existing gate tiers and explicit
-surface evidence. Native builds/devices and full four-surface parity are later
-checks, not preconditions for this current milestone. Missing native evidence
-stays OPEN/DEFERRED, never PASS; do not close a full four-surface Goal or claim
-whole-product RELEASED from this milestone. Paid hosting, deployment and external
-effects keep their existing approval boundaries. Exact provenance:
-`00-GOVERNANCE/evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`.
+Build the complete task-shaped frontend, including original identity/icons,
+illustration, genuine operation videos, usable UI/UX and applicable AIGC/motion,
+under the existing Experience Constitution. Existing screen specifications retain
+capability coverage; 44 is not a page-count, navigation or product-scope ceiling.
+Available backend contracts are connected immediately. Unavailable contracts keep
+honest OPEN/UNBOUND states while independent editing/layout/interaction proceeds;
+no mock backend, fake save or decorative progress can represent business success.
+
+Accept each surface using its applicable gate tiers and real operation evidence.
+Unavailable native build/device evidence stays OPEN/NOT_VERIFIED, never PASS;
+it blocks that acceptance, not independent work on other targets. A completed
+surface never closes the full product Goal or Release. Paid hosting, deployment
+and external effects retain their own approval boundaries. Exact provenance:
+`00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
+
+Retain all approved whole-product research and principles in their current owners:
+source/material -> method or constraint -> actual source/caller -> user operation
+-> acceptance evidence. This includes frontend usability/visual references,
+industry cases, DeepSeek/ancestor inputs, REA adaptations and Math/AI research.
+The existing material/adoption records distinguish unread, missing, adopted,
+implemented and verified; a directory, six owner labels or a summary cannot prove
+complete coverage. Remove approved obsolete executable instructions and their
+active references, preserving originals, historical approvals/failures and valid
+capabilities. REA may study permitted websites, apps and GitHub implementations
+for current capabilities through the existing Owner Index adoption path.
 
 ### Latest direct frontend build and native targets — 2026-10-08
 
@@ -172,7 +185,7 @@ record when such review occurred, not a synthetic promotion or mandatory phase.
 Unknown owner/Permission/lineage still blocks the dependent action, and actual
 usability, visual quality, security and end-to-end acceptance remain mandatory.
 
-Website/Web closure is first. Later native Desktop delivery targets **Windows and
+Parallel native Desktop delivery targets **Windows and
 macOS only**; native Mobile delivery targets **iOS only**. Android and Linux native
 clients are removed from the active delivery requirements, not deferred obligations.
 Preserve their original source/history without unsupported deletion. Linux servers,
@@ -307,8 +320,8 @@ GPU, new rental, recharge or retired model providers.
    service tier for each window. Preserve the manual selection; do not apply
    historical role defaults, launcher/profile pins or Hook changes as a new order.
    Record the executed model/effort, verification time and evidence only when
-   readback proves them; otherwise `NOT_VERIFIED`. Historical routing/configuration
-   values are retained compatibility data, not current model assignments.
+   readback proves them; otherwise `NOT_VERIFIED`. Dated routing/configuration evidence
+   is historical; current routing contains no fixed full-window model assignment.
    M continues authorized unfinished controller work, then waits; no automatic
    model fallback, new background work or OpenCode execution is authorized.
 
@@ -418,9 +431,10 @@ The machine-readable execution/governance contract is
 `00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json`. It defines the
 canonical source-role set, observation vocabulary, completion ladder, gate tiers,
 approval receipts, capability-evolution dual outputs and protected-main branch
-policy. Historical model defaults/dispatch records in structured files do not
-authorize current model selection or window execution under the latest direct PO.
-This six-file change does not mutate those configuration/contract bytes. It is a governance contract only and has no authority to redefine
+policy. Structured model-selection policy records manual PO authority and factual
+readback; it does not assign window models or execute dispatch. The 2026-10-11
+approved cleanup removes obsolete role assignments and their validator bindings
+under its same-change approval receipt. The contract has no authority to redefine
 Product Architecture, business capability, Experience, Source/Evidence/Canonical
 truth or Permission.
 
@@ -439,7 +453,7 @@ Product Owner's newest explicit instruction.
 
 The final product standard remains strict; the inner development loop is intentionally lighter so Codex spends effort on implementation rather than repeatedly proving the same unchanged context.
 
-1. **Full bootstrap once, delta bootstrap thereafter.** Run the full canonical bootstrap when a window/session starts, when relevant authority/main changed, after a conflicting handoff, or when current truth is uncertain. During continuous work on the same admitted task, refresh `origin/main`, worktree/dirty ownership and only the changed/relevant authority + owner/caller/contract slice; do not reread the entire governance corpus on every function or retry.
+1. **Full bootstrap once, delta bootstrap thereafter.** Bootstrap at session start, changed authority/main, conflicting handoff or uncertain truth. Otherwise refresh origin/main, protected dirty ownership and only relevant changed authority/Owner/caller/contract context; do not reread the full governance corpus per function/retry. On compact/resume use the existing `.codex/README.md` continuity readback before writes; it preserves full scope without dispatching or accepting work.
 2. **Research only when it can change the repair.** A repository-internal deterministic defect (wrong field, stale assertion, internal caller mismatch, obvious transaction bug) may go directly reproduce → owner/caller → repair → affected verification. Current official/upstream research is mandatory when the failure depends on an external framework/API/platform/standard, when root cause is genuinely uncertain, or when the chosen implementation needs current external evidence.
 3. **Incremental engineering is allowed; completion language stays strict.** A bounded correct repair may be integrated after its applicable build, static/security/data guards and real-operation checks pass; it need not pretend the entire Job is closed. Use the state ladder `DEFINED → IMPLEMENTED → INTEGRATED → VERIFIED → JOB_CLOSED → RELEASED → OPERATING`. Only `JOB_CLOSED` or a later state counts the mapped user outcome as complete.
 4. **Gate scope is proportional inside the loop.** Each bounded change verifies its applicable build, static/security/data guards and actual user-operation outcome. Owner closure runs the owner's full mapped acceptance. Whole-product release runs the complete R01-R15/J1-J8/U01-U25 and release evidence ladder. Do not rerun unrelated expensive suites merely to restate already valid evidence.
@@ -749,10 +763,9 @@ revision and receive a readback. A message or candidate count is not delivery.
 
 ### Engineering source responsibilities and retained acceptance coverage
 
-Historical locator label (compatibility only, not a heading/route or current rounds):
-`### Six-round execution windows and retained acceptance coverage`.
-Existing guards retain this legacy marker to locate the unchanged C/W source map;
-the only product rounds are SYSTEM / CTH / BMP / Shared / Agent Groups–自研 AI.
+The five product rounds are SYSTEM / CTH / BMP / Shared / Agent Groups–自研 AI.
+Validators locate this engineering-responsibility heading directly; source roles
+and retained acceptance mappings are not product delivery rounds.
 
 C1–C6/W1–W6 preserve the six engineering source responsibility assignments below.
 They do not define six product deliveries or a single-window limit. F retains the
@@ -907,7 +920,7 @@ Production Truth. Improvements are versioned and pass applicable real E2E,
 page/effect evaluation, regression, observability and rollback. If no upgrade
 is justified, record RESEARCH COMPLETE / NO JUSTIFIED UPGRADE with evidence.
 
-When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and current screen-specific contract. Website/Web acceptance is first; Windows/macOS Desktop and iOS native acceptance follows. Separate design-draft or M DESIGN_READY review is not a coding prerequisite. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
+When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and current screen-specific contract. Website/Web, Windows/macOS Desktop and iOS progress in parallel; each surface requires its own actual acceptance. Separate design-draft or M DESIGN_READY review is not a coding prerequisite. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
 
 The Product Owner accepted the ROUND 01 source audit, missing-capability
 register and multi-surface direction on 2026-09-21 as planning evidence. The
@@ -1036,10 +1049,11 @@ not a competing design authority, and their age is not grounds for discarding
 them. Restore unique user requirements into the current Experience Constitution
 and detailed specifications before implementation. Retired templates/static
 renderers remain retired; reference study does not grant third-party code/asset
-rights. The Product Owner's 2026-10-03 correction requires four-surface creative
-UI/UX/AIGC, the supplied hand-drawn watercolor visual direction, useful rich
-interaction and no unnecessary vertical scrolling. It is not storyboard-only
-or a mandate to reduce interactions.
+rights. The Product Owner's 2026-10-03 correction requires full four-surface creative
+UI/UX/AIGC, useful rich interaction and no unnecessary scrolling. The 2026-10-12
+clarification confines painted style to icons and suitable page elements;
+overall visuals follow approved research and task needs, without fixed 2D/3D
+style or a storyboard-only/reduced-interaction limit.
 
 The approved audit PDF, its 44 sketches and any later AI/Figma/wireframe output are
 `DESIGN_EXPLORATION` unless the applicable `<SCREEN-ID>.md` has been reviewed and
@@ -1419,7 +1433,8 @@ The product owner accepted §§30–36, including all 44 screen-specific UX blue
 Screen design states are distinct from implementation states:
 
 ```text
-DESIGN_EXPLORATION → DESIGN_READY → IMPLEMENTED → ACCEPTED
+Design evidence: DESIGN_EXPLORATION or DESIGN_READY when actually reviewed
+Implementation/outcome evidence: IMPLEMENTED -> ACCEPTED when actually verified
 ```
 
 Only an actual detailed design review establishes the design record `DESIGN_READY`; the latest PO instruction allows direct frontend construction without waiting for that design-review state. Keep actual implementation and outcome acceptance evidence separate.
@@ -1665,12 +1680,10 @@ Do not auto-admit the seed to MODEL_TRAIN or depend on developer attachment path
 
 ### Local development configuration — 2026-10-04
 
-The earlier configuration-only batch did not itself resume F or alter product code,
-active Collector/Core/GPU processes, user accounts, manually selected models or
-other projects. Existing canonical rules always override plugin defaults.
-Use verified current tools, remove only evidenced obsolete/conflicting active
-entries with private backups, and avoid repeat research/installation/restarts.
-Installed, discovered, function-called and product-bound states remain distinct.
+This historical configuration batch authorized no window, product/runtime or
+account change. Canonical rules override plugin defaults. Back up proven stale
+entries before removal; avoid duplicate installation/research. Installed,
+discovered, invoked and product-bound remain separate states.
 
 Product Design is a proprietary development aid. Its saved context points to
 the current LUMENIS Experience and screen owner, existing Astro/Flutter stack,
@@ -1678,7 +1691,7 @@ user style/Brief/references and the current explicit execution state. It may not
 authority, replace the product with a generic starter, clone vendor assets or
 force another three-direction/prototype round for an approved actual design.
 F retains code, scoped reference-video research, testing and design obligations;
-only the current AGENTS execution instruction may resume that window.
+only a current direct Product Owner instruction dispatches or resumes the window.
 
 GSAP3.15.0 is configured in the separate workstation development toolchain for
 permitted Website/interface motion. It is not a Flutter/media Timeline owner,
@@ -1686,15 +1699,10 @@ render engine or no-code animation builder; its standard license restricts
 competing visual animation builders. Product manifests/source remain unchanged
 until the existing frontend owner chooses and validates that binding.
 
-Standalone skill discovery uses the repository canonical progressive-context;
-the conflicting same-name global copy is disabled, retained for recovery.
-The retired Ollama standalone config is privately quarantined, not reactivated.
-CLI main-controller work must preserve the active manually selected account,
-model, reasoning effort and service tier. Use a launcher only if its effective
-arguments preserve that selection; do not apply a historical lcodex model/effort
-pin. Do not edit global defaults or user configuration to align them with this
-router. If the effective selection cannot be read back, report
-`SETTINGS_UNVERIFIED`.
+Use repository progressive-context; its conflicting global copy and retired
+Ollama config remain privately quarantined for recovery. Launchers must preserve
+manual account/model/effort/tier, never historical lcodex pins or global-config
+rewrites. Missing effective-setting readback is `SETTINGS_UNVERIFIED`.
 
 ### Intelligent UI full-product coverage — 2026-10-08 Product Owner clarification
 
@@ -1704,8 +1712,9 @@ navigation, source/results, editing, settings, notifications and failure/recover
 Do not limit adoption to AI chat, a homepage or decorative result cards. Each
 screen records its real job, source/action/version contract, task-specific visual
 interaction, four-surface differences and normal-success/recovery acceptance in
-its existing specification. Preserve full product scope and the hand-drawn 2D
-watercolor direction. AI-independent deterministic work remains operable when
+its existing specification. Preserve full scope; paint icons and suitable page
+elements. Overall visuals follow approved research and task needs, without a
+fixed 2D/3D style. AI-independent deterministic work remains operable when
 inference is unavailable. The sole blueprint, Experience, surface decision,
 Owner index, screen specs, existing text wireframes and README are co-published.
 Historical sketches remain evidence; amendments do not self-promote to
@@ -1716,12 +1725,9 @@ OpenAI UI SDK.
 
 ### Current frontend implementation routing
 
-The Product Owner's 2026-10-08 Intelligent UI request is researched and mapped
-in Experience Constitution §38 and the Source Owner Index. It is part of the
-current PO-authorized C1-C6/F outcomes; actual dispatch and RUNNING status follow
-the live ledger, tool receipts and fresh admission.
-Use its typed task/context/action continuity and screen-specific acceptance;
-do not infer an OpenAI SDK installation, a second renderer or a model change.
+Experience §38 and Source Owner Index map Intelligent UI into existing outcomes,
+typed task/context/action continuity and screen acceptance. Direct PO dispatch
+and fresh receipts establish execution, never an inferred SDK, renderer or model.
 
 The Product Owner approved local System Read Aloud on 2026-10-08 in existing
 Shared/Media/Flutter platform owners. Bind the same shared action to already
@@ -1772,7 +1778,7 @@ does not replace product integration; unread/missing assets remain explicit.
 
 ### 2026-10-08 前端审计与工具维护增补
 
-按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。C1–C6/F/M/W1–W6 保留原源码责任和完整成果；实际开工、暂停、恢复、模型与推理档位由 Product Owner 决定，本文件只记录有时间和证据来源的已核实事实，不设单业务窗口限制；实际派发/准入状态以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。本轮只同步派工规则，不代表 Figma 工程、智能 UI 实现或用户验收完成。
+前端执行、设计记录、窗口事实化统一依本文件现行 Authority、Experience 与源码责任章节，不另设阶段。已有 Figma 工程及局部节点的本地收据保留，当前云端版本未核；免费受限时按 Experience §38 使用可编辑源码，不等待付费，不冒称原生 Figma 交付。规则发布不证明界面实现或用户验收。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -1799,8 +1805,8 @@ progressively useful Intelligent UI. Experience §38 owns component choice, usef
 partial results, factual correction, user-edit preservation and wait-time review;
 Architecture retains full J1-J8/U01-U25. Keep existing owner/source gap records,
 not parallel Task Cards. Research/streaming/rule publication is not UI acceptance.
-Current dispatch/pause and M's 30-minute changed-outcome checks follow the top;
-without actionable work M waits.
+Current dispatch/pause and the existing monitoring cadence follow direct PO
+instructions and current observations; without actionable work M waits.
 
 ### Product-owned internal browser — revised 2026-10-11
 

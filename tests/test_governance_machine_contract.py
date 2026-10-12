@@ -21,7 +21,7 @@ class GovernanceMachineSemanticTests(unittest.TestCase):
 
     def test_current_machine_contract_and_structured_model_routing_validate(self) -> None:
         contract = validate_contract()
-        self.assertEqual(contract["contract_version"], "1.3.0")
+        self.assertEqual(contract["contract_version"], "1.4.0")
         validate_model_routing(contract)
         validate_approval_receipts(contract)
         branch = contract["branch_policy"]
@@ -125,12 +125,38 @@ class GovernanceMachineSemanticTests(unittest.TestCase):
         )
         validate_semantic_change_receipt(self.contract, {machine_path, receipt_path})
 
-    def test_model_routing_semantics_are_read_from_structured_toml(self) -> None:
-        validate_model_routing(self.contract)
-        changed = copy.deepcopy(self.contract)
-        changed["model_routing"]["role_defaults"]["C2"]["model"] = "invalid-model"
-        with self.assertRaisesRegex(AssertionError, "C2"):
-            validate_model_routing(changed)
+    def test_model_routing_is_manual_fact_only_and_rejects_role_defaults(self) -> None:
+        import shutil
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        from scripts.audit_tools import verify_governance_machine_contract as machine
+
+        with tempfile.TemporaryDirectory(prefix="lumenis-routing-policy-") as directory:
+            isolated_root = Path(directory)
+            (isolated_root / ".codex").mkdir()
+            shutil.copyfile(machine.ROOT / ".codex" / "config.toml", isolated_root / ".codex" / "config.toml")
+            (isolated_root / "AGENTS.md").write_text("isolated policy test\n", encoding="utf-8")
+            route_path = isolated_root / ".codex" / "model-routing.toml"
+            route_text = (machine.ROOT / ".codex" / "model-routing.toml").read_text(encoding="utf-8")
+            with patch.object(machine, "ROOT", isolated_root), patch.object(
+                machine, "AGENTS_PATH", isolated_root / "AGENTS.md"
+            ):
+                route_path.write_text(route_text, encoding="utf-8")
+                validate_model_routing(self.contract)
+
+                changed = copy.deepcopy(self.contract)
+                changed["model_routing"]["automatic_settings_mutation"] = True
+                with self.assertRaisesRegex(AssertionError, "automatic_settings_mutation"):
+                    validate_model_routing(changed)
+
+                route_path.write_text(
+                    route_text + '\n[roles.C2]\nmodel = "gpt-6.1-sol"\nreasoning_effort = "ultra"\n',
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(AssertionError, "fixed model/effort/tier assignment"):
+                    validate_model_routing(self.contract)
 
 
 class ConstitutionTestAuthorizationTests(unittest.TestCase):
