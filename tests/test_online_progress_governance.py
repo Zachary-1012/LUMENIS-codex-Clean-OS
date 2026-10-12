@@ -56,6 +56,32 @@ class GovernanceHistoryRegressionTests(unittest.TestCase):
         )
         return "\n".join(f"| {row} |" for row in rows)
 
+    def test_retired_root_rules_are_removed_not_banners_or_copies(self) -> None:
+        import tempfile
+        from unittest.mock import patch
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+        gate._assert_legacy_root_docs_classified()
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'lumenis_shared_skills.py').write_text(
+                '_LOCAL_RESEARCH = ["00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"]',
+                encoding='utf8')
+            with patch.object(gate, 'ROOT', root):
+                gate._assert_legacy_root_docs_classified()
+                for rel in gate.RETIRED_ROOT_RULE_PATHS:
+                    for suffix in ('', '.bak', '.old'):
+                        path = root / (rel + suffix)
+                        path.write_text('HISTORICAL / NOT CURRENT. Old instructions still here.', encoding='utf8')
+                        try:
+                            with self.subTest(path=path.name), self.assertRaisesRegex(AssertionError, 'retired instruction files remain'):
+                                gate._assert_legacy_root_docs_classified()
+                        finally:
+                            path.unlink()
+                (root / 'lumenis_shared_skills.py').write_text(
+                    '_LOCAL_RESEARCH = ["ARCHITECTURE.md"]', encoding='utf8')
+                with self.assertRaisesRegex(AssertionError, 'retired rule source'):
+                    gate._assert_legacy_root_docs_classified()
+
     def test_human_routing_mirror_keeps_c1_through_c6_exactly_once(self) -> None:
         matrix = self._agents_matrix()
         _assert_engineering_owner_routing(matrix)

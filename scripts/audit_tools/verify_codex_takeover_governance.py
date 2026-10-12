@@ -471,69 +471,30 @@ def _assert_current_authority_consistency(source_index: str, agents: str) -> Non
             "AGENTS.md reintroduced the retired minimum-subset execution wording"
         )
 
+RETIRED_ROOT_RULE_PATHS = ('AI_POLICY.md', 'AI_PROVIDER_RUNTIME_POLICY_V1.md', 'ARCHITECTURE.md', 'CAPABILITY_REGISTRY.md', 'COMPLIANCE_BY_DESIGN_RELEASE_GATE_V1.md', 'CURRENT_BASELINE.md', 'DEPLOYMENT.md', 'DOUBAO_GITHUB_UPGRADE_PROTOCOL.md', 'LOCAL_AI_CONTINUOUS_RUNTIME_P0.md', 'LUMENIS_AI_MASTER_UPGRADE_INCREMENT_V1.md', 'LUMENIS_FUNCTION_MAP.md', 'LUMENIS_PRODUCT_ARCHITECTURE_FINAL.md', 'PLATFORM_README.md', 'PROJECT_STATUS.md', 'REBUILD_ROADMAP.md', 'UPGRADE.md', 'USER_GUIDE.md', 'VIDEO_INTELLIGENCE_CONTRACT_V1.md')
+
+
 def _assert_legacy_root_docs_classified() -> None:
-    """Prevent visually authoritative legacy root docs from competing with current truth."""
-    required_markers = {
-        "LUMENIS_PRODUCT_ARCHITECTURE_FINAL.md": (
-            "SUPERSEDED / HISTORICAL PRODUCT ARCHITECTURE",
-            "NOT CURRENT PRODUCT AUTHORITY",
-        ),
-        "DOUBAO_GITHUB_UPGRADE_PROTOCOL.md": (
-            "HISTORICAL / RETIRED ENGINEERING PROTOCOL",
-            "NOT ACTIVE",
-        ),
-        "USER_GUIDE.md": (
-            "HISTORICAL LEGACY USER GUIDE",
-            "NOT CURRENT PRODUCT OR EXPERIENCE AUTHORITY",
-        ),
-        "REBUILD_ROADMAP.md": (
-            "HISTORICAL ROADMAP SNAPSHOT",
-            "NOT CURRENT EXECUTION STATUS OR TASK PLAN",
-        ),
-        "UPGRADE.md": (
-            "HISTORICAL / LEGACY UPGRADE GUIDE",
-            "NOT CURRENT RUNTIME OR RELEASE AUTHORITY",
-        ),
-        "AI_POLICY.md": (
-            "SUPPORTING HISTORICAL AI POLICY",
-            "NOT CURRENT EXECUTION/PROVIDER AUTHORITY",
-        ),
-        "AI_PROVIDER_RUNTIME_POLICY_V1.md": (
-            "SUPERSEDED / HISTORICAL PROVIDER SNAPSHOT",
-            "NOT CURRENT EXECUTION POLICY",
-        ),
-        "CAPABILITY_REGISTRY.md": (
-            "HISTORICAL / SUPPORTING CAPABILITY INVENTORY",
-            "NOT CURRENT OWNER OR EXECUTION AUTHORITY",
-        ),
-        "LUMENIS_FUNCTION_MAP.md": (
-            "HISTORICAL / SUPPORTING FUNCTION INVENTORY",
-            "NOT CURRENT PRODUCT/CAPABILITY AUTHORITY",
-        ),
-        "LOCAL_AI_CONTINUOUS_RUNTIME_P0.md": (
-            "SUPERSEDED / HISTORICAL LOCAL-AI REQUIREMENT",
-            "NOT CURRENT AI RUNTIME POLICY",
-        ),
-        "LUMENIS_AI_MASTER_UPGRADE_INCREMENT_V1.md": (
-            "HISTORICAL / REQUIREMENT-MAPPING AI UPGRADE RECORD",
-            "NOT CURRENT AI ARCHITECTURE OR EXECUTION AUTHORITY",
-        ),
-        "RELEASE_POLICY.md": (
-            "SUPPORTING RELEASE SAFETY POLICY",
-            "NOT A SECOND PRODUCT/EXECUTION AUTHORITY",
-        ),
-    }
-    for rel, markers in required_markers.items():
-        path = ROOT / rel
-        if not path.is_file():
-            continue
-        text = path.read_text("utf-8-sig")
-        missing = [m for m in markers if m not in text[:2400]]
-        if missing:
-            raise AssertionError(
-                f"legacy root document can compete with current authority: {rel}; "
-                f"missing={missing}"
-            )
+    """Retired instruction files must be absent, not merely prefixed with a warning."""
+    present = [rel for rel in RETIRED_ROOT_RULE_PATHS if (ROOT / rel).exists()]
+    copies = [p.name for p in ROOT.iterdir() if p.is_file() and
+              any(p.name.startswith(rel + ".") for rel in RETIRED_ROOT_RULE_PATHS)]
+    if present or copies:
+        raise AssertionError(f"retired instruction files remain: {sorted(set(present + copies))}")
+    catalog = (ROOT / "lumenis_shared_skills.py").read_text(encoding="utf-8-sig")
+    import ast
+    tree = ast.parse(catalog)
+    values = [ast.literal_eval(node.value) for node in tree.body
+              if isinstance(node, ast.Assign) and any(
+                  isinstance(t, ast.Name) and t.id == "_LOCAL_RESEARCH" for t in node.targets)]
+    if len(values) != 1 or len(values[0]) != len(set(values[0])):
+        raise AssertionError("Shared research authority must be unique")
+    if any(ref in RETIRED_ROOT_RULE_PATHS for ref in values[0]):
+        raise AssertionError("Shared catalog loads a retired rule source")
+    if "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md" not in values[0]:
+        raise AssertionError("Shared catalog omits the current product architecture")
+
+
 
     release_policy = ROOT / "RELEASE_POLICY.md"
     if release_policy.is_file():
@@ -547,7 +508,6 @@ def _assert_legacy_root_docs_classified() -> None:
             "C6/W6 owns integration/runtime/release",
             label="supporting release safety policy",
         )
-
 
 
 def _assert_repository_model_neutrality() -> None:
@@ -739,7 +699,7 @@ def validate(*, staged: bool = False) -> None:
         "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
         "git rev-parse origin/main",
         EXPECTED_FINGERPRINT,
-        "Approved D1–D5 convergence",
+        "Current owner continuation",
         "source-target-contract-v1.json",
         label="CURRENT takeover provenance/mirror",
     )
@@ -1074,7 +1034,7 @@ def validate(*, staged: bool = False) -> None:
 
     # Dated source-audit SHAs may remain as provenance. What must never regress is
     # the CURRENT takeover path pretending a fixed SHA is the live HEAD.
-    if "current HEAD = READ WITH git fetch + git rev-parse origin/main" not in takeover:
+    if not all(item in takeover for item in ("git rev-parse HEAD", "git rev-parse origin/main", "HEAD...origin/main", "GitHub main")):
         raise AssertionError("CURRENT takeover must resolve origin/main dynamically")
 
 
