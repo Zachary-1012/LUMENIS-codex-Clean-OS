@@ -210,6 +210,7 @@ def _is_rules_only_publication_path(path: str) -> bool:
         ".agents/skills/lumenis-flutter-experience/SKILL.md",
         ".agents/skills/lumenis-progressive-context/SKILL.md",
         "scripts/audit_tools/verify_codex_takeover_governance.py",
+        "scripts/audit_tools/verify_lumenis_single_product.py",  # Existing positioning/Only-One governance validator.
         'scripts/production_baseline_check.py',
         'scripts/lean_footprint.py',
         '.codex/hooks/lumenis_hooks.py',
