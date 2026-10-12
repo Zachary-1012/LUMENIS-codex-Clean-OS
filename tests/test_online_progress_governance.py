@@ -56,6 +56,95 @@ class GovernanceHistoryRegressionTests(unittest.TestCase):
         )
         return "\n".join(f"| {row} |" for row in rows)
 
+    def test_retired_root_rules_are_removed_not_banners_or_copies(self) -> None:
+        import tempfile
+        from unittest.mock import patch
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+        gate._assert_unique_current_rule_sources()
+        current_agents = (gate.ROOT / "AGENTS.md").read_text("utf-8-sig")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "AGENTS.md").write_text(current_agents, encoding="utf8")
+            (root / 'lumenis_shared_skills.py').write_text(
+                '_LOCAL_RESEARCH = ["00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"]',
+                encoding='utf8')
+            with patch.object(gate, 'ROOT', root):
+                gate._assert_unique_current_rule_sources()
+                for rel in gate.RETIRED_RULE_PATHS:
+                    for suffix in ('', '.bak', '.old'):
+                        path = root / (rel + suffix)
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text('HISTORICAL / NOT CURRENT. Old instructions still here.', encoding='utf8')
+                        try:
+                            with self.subTest(path=path.name), self.assertRaisesRegex(AssertionError, 'retired instruction files remain'):
+                                gate._assert_unique_current_rule_sources()
+                        finally:
+                            path.unlink()
+                (root / 'lumenis_shared_skills.py').write_text(
+                    '_LOCAL_RESEARCH = ["ARCHITECTURE.md"]', encoding='utf8')
+                with self.assertRaisesRegex(AssertionError, 'retired rule source'):
+                    gate._assert_unique_current_rule_sources()
+
+    def test_retiring_release_copy_preserves_real_safety_requirements(self) -> None:
+        import tempfile
+        from unittest.mock import patch
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+        source = (gate.ROOT / "AGENTS.md").read_text("utf-8-sig")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "lumenis_shared_skills.py").write_text(
+                '_LOCAL_RESEARCH = ["00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"]', encoding="utf8")
+            with patch.object(gate, "ROOT", root):
+                for requirement in (
+                    "verify a restorable data backup and rollback path",
+                    "Collector replacement requires isolated comparison",
+                    "On session expiry, expose the platform, failure cause, affected task and cooldown",
+                    "Each release records changed source, database migrations, actual verification",
+                    "keep one product across its approved surfaces",
+                ):
+                    with self.subTest(requirement=requirement):
+                        (root / "AGENTS.md").write_text(source.replace(requirement, "removed"), encoding="utf8")
+                        with self.assertRaises(AssertionError):
+                            gate._assert_unique_current_rule_sources()
+
+    def test_nested_screen_template_cannot_restore_old_surface_or_visual_policy(self) -> None:
+        import tempfile
+        from unittest.mock import patch
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+        source = (gate.ROOT / "AGENTS.md").read_text("utf-8-sig")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "AGENTS.md").write_text(source, encoding="utf8")
+            (root / "lumenis_shared_skills.py").write_text(
+                '_LOCAL_RESEARCH = ["00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"]', encoding="utf8")
+            p = root / "contracts/experience/screen-specifications/SCREEN_SPEC_TEMPLATE.md"
+            p.parent.mkdir(parents=True)
+            with patch.object(gate, "ROOT", root):
+                for obsolete in ("Website/Web closes first", "Website/Web first; native", "二维手绘水彩/版画视觉"):
+                    p.write_text(obsolete, encoding="utf8")
+                    with self.subTest(phrase=obsolete), self.assertRaisesRegex(AssertionError, "obsolete surface instruction"):
+                        gate._assert_unique_current_rule_sources()
+                p.write_text("parallel construction, independent acceptance", encoding="utf8")
+                gate._assert_unique_current_rule_sources()
+                reference = root / "contracts/experience/README.md"
+                reference.write_text("[old entry](../../RELEASE_POLICY.md)", encoding="utf8")
+                with self.assertRaisesRegex(AssertionError, "active reference to retired instruction"):
+                    gate._assert_unique_current_rule_sources()
+                reference.write_text("[current entry](../../AGENTS.md)", encoding="utf8")
+                gate._assert_unique_current_rule_sources()
+
+    def test_shared_rule_references_are_not_executable_module_bindings(self) -> None:
+        import lumenis_shared_skills as shared
+        card = shared.get_shared_skill('shared.social_card')
+        self.assertIn('00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md', card['research_basis'])
+        result = shared._binding_state(card)
+        self.assertTrue(result['available'])
+        self.assertEqual([row['module'] for row in result['bindings']], ['lumenis_shared_skills.py'])
+        for spec in shared.SHARED_SKILL_CATALOG:
+            for binding in spec['bindings']:
+                with self.subTest(skill=spec['metadata']['skill_id'], binding=binding['module']):
+                    self.assertTrue(binding['module'].endswith('.py'))
+
     def test_human_routing_mirror_keeps_c1_through_c6_exactly_once(self) -> None:
         matrix = self._agents_matrix()
         _assert_engineering_owner_routing(matrix)

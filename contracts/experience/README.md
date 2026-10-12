@@ -25,8 +25,8 @@ current source / runtime / Permission / Evidence truth
 - `screen-specifications/` is the existing per-screen implementation/acceptance record.
   Latest PO: F constructs directly from real contracts and updates records with code;
   separate design drafts/Figma or M DESIGN_READY approval are not coding prerequisites.
-  Website/Web closes first; native Windows/macOS and iOS follow. Android/Linux native
-  client targets are superseded; Linux server/CI and browser access are not.
+  Website/Web, Windows/macOS and iOS proceed in parallel with independent acceptance.
+  Android/Linux native clients are outside the active target; Linux server/CI and browser access remain.
 - Audit PDFs, taskbooks, screenshots, wireframes, Figma frames and fixtures remain
   `DESIGN_EXPLORATION`; they cannot become a second authority or direct code target.
 - Web Workspace, Desktop and Mobile may recompose interaction and density over the

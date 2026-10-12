@@ -471,83 +471,71 @@ def _assert_current_authority_consistency(source_index: str, agents: str) -> Non
             "AGENTS.md reintroduced the retired minimum-subset execution wording"
         )
 
-def _assert_legacy_root_docs_classified() -> None:
-    """Prevent visually authoritative legacy root docs from competing with current truth."""
-    required_markers = {
-        "LUMENIS_PRODUCT_ARCHITECTURE_FINAL.md": (
-            "SUPERSEDED / HISTORICAL PRODUCT ARCHITECTURE",
-            "NOT CURRENT PRODUCT AUTHORITY",
-        ),
-        "DOUBAO_GITHUB_UPGRADE_PROTOCOL.md": (
-            "HISTORICAL / RETIRED ENGINEERING PROTOCOL",
-            "NOT ACTIVE",
-        ),
-        "USER_GUIDE.md": (
-            "HISTORICAL LEGACY USER GUIDE",
-            "NOT CURRENT PRODUCT OR EXPERIENCE AUTHORITY",
-        ),
-        "REBUILD_ROADMAP.md": (
-            "HISTORICAL ROADMAP SNAPSHOT",
-            "NOT CURRENT EXECUTION STATUS OR TASK PLAN",
-        ),
-        "UPGRADE.md": (
-            "HISTORICAL / LEGACY UPGRADE GUIDE",
-            "NOT CURRENT RUNTIME OR RELEASE AUTHORITY",
-        ),
-        "AI_POLICY.md": (
-            "SUPPORTING HISTORICAL AI POLICY",
-            "NOT CURRENT EXECUTION/PROVIDER AUTHORITY",
-        ),
-        "AI_PROVIDER_RUNTIME_POLICY_V1.md": (
-            "SUPERSEDED / HISTORICAL PROVIDER SNAPSHOT",
-            "NOT CURRENT EXECUTION POLICY",
-        ),
-        "CAPABILITY_REGISTRY.md": (
-            "HISTORICAL / SUPPORTING CAPABILITY INVENTORY",
-            "NOT CURRENT OWNER OR EXECUTION AUTHORITY",
-        ),
-        "LUMENIS_FUNCTION_MAP.md": (
-            "HISTORICAL / SUPPORTING FUNCTION INVENTORY",
-            "NOT CURRENT PRODUCT/CAPABILITY AUTHORITY",
-        ),
-        "LOCAL_AI_CONTINUOUS_RUNTIME_P0.md": (
-            "SUPERSEDED / HISTORICAL LOCAL-AI REQUIREMENT",
-            "NOT CURRENT AI RUNTIME POLICY",
-        ),
-        "LUMENIS_AI_MASTER_UPGRADE_INCREMENT_V1.md": (
-            "HISTORICAL / REQUIREMENT-MAPPING AI UPGRADE RECORD",
-            "NOT CURRENT AI ARCHITECTURE OR EXECUTION AUTHORITY",
-        ),
-        "RELEASE_POLICY.md": (
-            "SUPPORTING RELEASE SAFETY POLICY",
-            "NOT A SECOND PRODUCT/EXECUTION AUTHORITY",
-        ),
-    }
-    for rel, markers in required_markers.items():
-        path = ROOT / rel
+RETIRED_RULE_PATHS = ('AI_POLICY.md', 'AI_PROVIDER_RUNTIME_POLICY_V1.md', 'ARCHITECTURE.md', 'CAPABILITY_REGISTRY.md', 'COMPLIANCE_BY_DESIGN_RELEASE_GATE_V1.md', 'CURRENT_BASELINE.md', 'DEPLOYMENT.md', 'DOUBAO_GITHUB_UPGRADE_PROTOCOL.md', 'LOCAL_AI_CONTINUOUS_RUNTIME_P0.md', 'LUMENIS_AI_MASTER_UPGRADE_INCREMENT_V1.md', 'LUMENIS_FUNCTION_MAP.md', 'LUMENIS_PRODUCT_ARCHITECTURE_FINAL.md', 'PLATFORM_README.md', 'PROJECT_STATUS.md', 'REBUILD_ROADMAP.md', 'UPGRADE.md', 'USER_GUIDE.md', 'VIDEO_INTELLIGENCE_CONTRACT_V1.md', 'docs/DOUBAO_2200_EXECUTION.md', 'docs/REPOSITORY-FACT-BASELINE.md', 'docs/MASTER_DEVELOPMENT_BASELINE.md', 'docs/UNIFIED_PRODUCTION_ARCHITECTURE_v1.0.md', 'intelligence_library/09_Research-Hub/shared-intelligence/docs/protocols/CHATGPT-INTERVENTION-PROTOCOL.md', 'intelligence_library/09_Research-Hub/shared-intelligence/docs/operations/AI-AUDIT-SCHEDULE.md', 'intelligence_library/09_Research-Hub/shared-intelligence/docs/operations/DOUBAO-HANDOFF-R-2026-0002.md', 'intelligence_library/09_Research-Hub/shared-intelligence/protocols/CONTINUOUS-RESEARCH-AND-DEVELOPMENT-POLICY.md', 'intelligence_library/09_Research-Hub/shared-intelligence/docs/protocols/AI-WORK-LOG-AND-REALTIME-PUSH-PROTOCOL.md', 'intelligence_library/09_Research-Hub/shared-intelligence/docs/operations/TASK-QUEUE-INTEGRATION-PROTOCOL.md', 'output/final-audit-2026-09-21/LUMENIS_AGENTS_EXECUTION_RULES_2026-09-21.txt', 'intelligence_library/05_Runtime/LOCAL_AI_CONTINUOUS_RUNTIME_P0.md', 'RELEASE_POLICY.md', 'docs/DOUBAO_READ_FIRST.md', 'docs/RELEASE_GATE_AND_DOUBAO_2200.md', 'docs/AI-D-RESEARCH-ROADMAP.md', 'docs/BLUEPRINT_brand_intel_platform.md')
+
+
+def _assert_unique_current_rule_sources() -> None:
+    """Reject removed instruction files and copies at root and nested entry paths."""
+    present = [rel for rel in RETIRED_RULE_PATHS if (ROOT / rel).exists()]
+    copies = [str(copy.relative_to(ROOT)) for rel in RETIRED_RULE_PATHS
+              for copy in (ROOT / rel).parent.glob((ROOT / rel).name + ".*")
+              if copy.is_file() or copy.is_symlink()]
+    if present or copies:
+        raise AssertionError(f"retired instruction files remain: {sorted(set(present + copies))}")
+    catalog = (ROOT / "lumenis_shared_skills.py").read_text(encoding="utf-8-sig")
+    import ast
+    tree = ast.parse(catalog)
+    values = [ast.literal_eval(node.value) for node in tree.body
+              if isinstance(node, ast.Assign) and any(
+                  isinstance(t, ast.Name) and t.id == "_LOCAL_RESEARCH" for t in node.targets)]
+    if len(values) != 1 or len(values[0]) != len(set(values[0])):
+        raise AssertionError("Shared research authority must be unique")
+    if any(ref in RETIRED_RULE_PATHS for ref in values[0]):
+        raise AssertionError("Shared catalog loads a retired rule source")
+    if "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md" not in values[0]:
+        raise AssertionError("Shared catalog omits the current product architecture")
+
+
+
+    # Check actual live document references as well as absence of old files.
+    import posixpath
+    instructions = {ROOT / "AGENTS.md", ROOT / "README.md"}
+    instructions.update((ROOT / ".agents/skills").glob("*/SKILL.md"))
+    instructions.update((ROOT / "00-GOVERNANCE").glob("*-CURRENT.md"))
+    instructions.update((ROOT / "contracts/experience").rglob("*.md"))
+    for path in instructions:
+        if not path.is_file():
+            continue
+        relative = path.relative_to(ROOT).as_posix()
+        for match in re.finditer(r"\]\(([^)\s]+)\)|`([^`\n]+)`", path.read_text("utf-8-sig")):
+            target = (match.group(1) or match.group(2)).split("#", 1)[0]
+            if "://" in target:
+                continue
+            resolved = posixpath.normpath(posixpath.join(posixpath.dirname(relative), target))
+            if target in RETIRED_RULE_PATHS or resolved in RETIRED_RULE_PATHS:
+                raise AssertionError(f"active reference to retired instruction: {relative} -> {target}")
+
+    # Active per-screen instructions must agree with the canonical surface policy.
+    surface_paths = [ROOT / "contracts/experience/README.md"]
+    surface_paths.extend((ROOT / "contracts/experience/screen-specifications").glob("*.md"))
+    obsolete = ("Website/Web closes first", "Website/Web first; native", "二维手绘水彩/版画视觉")
+    for path in surface_paths:
         if not path.is_file():
             continue
         text = path.read_text("utf-8-sig")
-        missing = [m for m in markers if m not in text[:2400]]
-        if missing:
-            raise AssertionError(
-                f"legacy root document can compete with current authority: {rel}; "
-                f"missing={missing}"
-            )
+        if any(phrase in text for phrase in obsolete):
+            raise AssertionError(f"obsolete surface instruction in {path.relative_to(ROOT)}")
 
-    release_policy = ROOT / "RELEASE_POLICY.md"
-    if release_policy.is_file():
-        text = release_policy.read_text("utf-8-sig")
-        _require_collapsed(
-            text,
-            "SUPPORTING RELEASE SAFETY POLICY",
-            "NO_SCOPE_REDUCTION_ON_RELEASE",
-            "SINGLE_PRODUCT_FOUR_SURFACES",
-            "C6_W6_RELEASE_OWNER",
-            "C6/W6 owns integration/runtime/release",
-            label="supporting release safety policy",
-        )
-
+    agents = (ROOT / "AGENTS.md").read_text("utf-8-sig")
+    _require_collapsed(
+        agents,
+        "verify a restorable data backup and rollback path",
+        "Collector replacement requires isolated comparison",
+        "On session expiry, expose the platform, failure cause, affected task and cooldown",
+        "Each release records changed source, database migrations, actual verification",
+        "keep one product across its approved surfaces",
+        label="current release safety in the canonical execution router",
+    )
 
 
 def _assert_repository_model_neutrality() -> None:
@@ -683,7 +671,7 @@ def validate(*, staged: bool = False) -> None:
     contract = json.loads(_read("contract"))
 
     _assert_current_authority_consistency(source_index, agents)
-    _assert_legacy_root_docs_classified()
+    _assert_unique_current_rule_sources()
     _assert_repository_model_neutrality()
 
     _assert_single_machine_contract()
@@ -739,7 +727,7 @@ def validate(*, staged: bool = False) -> None:
         "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
         "git rev-parse origin/main",
         EXPECTED_FINGERPRINT,
-        "Approved D1–D5 convergence",
+        "Current owner continuation",
         "source-target-contract-v1.json",
         label="CURRENT takeover provenance/mirror",
     )
@@ -1074,7 +1062,7 @@ def validate(*, staged: bool = False) -> None:
 
     # Dated source-audit SHAs may remain as provenance. What must never regress is
     # the CURRENT takeover path pretending a fixed SHA is the live HEAD.
-    if "current HEAD = READ WITH git fetch + git rev-parse origin/main" not in takeover:
+    if not all(item in takeover for item in ("git rev-parse HEAD", "git rev-parse origin/main", "HEAD...origin/main", "GitHub main")):
         raise AssertionError("CURRENT takeover must resolve origin/main dynamically")
 
 

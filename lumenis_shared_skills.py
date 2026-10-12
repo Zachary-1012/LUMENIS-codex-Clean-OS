@@ -93,8 +93,7 @@ def _metadata(
 
 
 _LOCAL_RESEARCH = [
-    "LUMENIS_PRODUCT_ARCHITECTURE_FINAL.md",
-    "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
     "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
     "00-GOVERNANCE/LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1-20260911.md",
     "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-08-meta-framework-seed-to-world-20260903.md",
@@ -229,7 +228,6 @@ SHARED_SKILL_CATALOG: List[Dict[str, Any]] = [
         research_basis=_LOCAL_RESEARCH + ["用户提供：quizang-social-card-skill 规格"],
         bindings=[
             {"module": "lumenis_shared_skills.py", "functions": ["_render_social_card"]},
-            {"module": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md", "functions": ["material / point / trace language"]},
         ],
     ),
     _metadata(
@@ -255,7 +253,6 @@ SHARED_SKILL_CATALOG: List[Dict[str, Any]] = [
         research_basis=_LOCAL_RESEARCH + ["database.py", "用户提供：last30days-skill 规格"],
         bindings=[
             {"module": "database.py", "functions": ["get_notes_by_date_range", "get_stats_by_date_range"]},
-            {"module": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md", "functions": ["Observe -> Understand -> Evidence"]},
         ],
     ),
 ]
