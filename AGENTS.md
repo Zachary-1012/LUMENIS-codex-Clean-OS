@@ -193,14 +193,13 @@ not removed by this native-client decision. All remaining capabilities, 44 scree
 Website families and applicable R/J/U acceptance continue. Existing historical
 platform lists/design-first instructions are superseded for execution by this rule.
 
-### Cost, integration and historical scheduling provenance
+### Cost and integration boundaries
 
 No new paid GPU/account/seat/subscription/service or recurring infrastructure is
 authorized. Permission, dependencies, shared-writer reservations, completion gates
-and exact source/runtime evidence remain binding. Historical topology approval
-`00-GOVERNANCE/evidence/approvals/PO-20261008-SERIAL-BUSINESS-INDEPENDENT-F-ZERO-COST.json`
-is retained as dated provenance; its one-business-slot/F dispatch restriction is
-superseded. This publication starts no product work and changes no model settings.
+and exact source/runtime evidence remain binding. Scheduling follows the
+current direct PO task, not an archived topology. Rule maintenance starts no
+product work and changes no model settings.
 
 Existing J1-J8/U01-U25 retain mature useful operations and LUMENIS source/context/
 version continuity. Reuse correct source, repair real callers and record actual
@@ -209,7 +208,7 @@ new product/design/security authorities. A document or installation proves no
 associated capability. M performs only authorized meaningful review/work and waits
 when none remains; a historical monitoring schedule does not self-dispatch work.
 
-### Cross-window scheduling provenance — dated observations only
+### Cross-window request provenance
 
 A relayed request must identify the original Product Owner instruction, time,
 source window and exact applicable task/roles. An agent paraphrase, old receipt,

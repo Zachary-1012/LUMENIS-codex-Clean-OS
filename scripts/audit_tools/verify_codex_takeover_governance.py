@@ -471,14 +471,15 @@ def _assert_current_authority_consistency(source_index: str, agents: str) -> Non
             "AGENTS.md reintroduced the retired minimum-subset execution wording"
         )
 
-RETIRED_ROOT_RULE_PATHS = ('AI_POLICY.md', 'AI_PROVIDER_RUNTIME_POLICY_V1.md', 'ARCHITECTURE.md', 'CAPABILITY_REGISTRY.md', 'COMPLIANCE_BY_DESIGN_RELEASE_GATE_V1.md', 'CURRENT_BASELINE.md', 'DEPLOYMENT.md', 'DOUBAO_GITHUB_UPGRADE_PROTOCOL.md', 'LOCAL_AI_CONTINUOUS_RUNTIME_P0.md', 'LUMENIS_AI_MASTER_UPGRADE_INCREMENT_V1.md', 'LUMENIS_FUNCTION_MAP.md', 'LUMENIS_PRODUCT_ARCHITECTURE_FINAL.md', 'PLATFORM_README.md', 'PROJECT_STATUS.md', 'REBUILD_ROADMAP.md', 'UPGRADE.md', 'USER_GUIDE.md', 'VIDEO_INTELLIGENCE_CONTRACT_V1.md')
+RETIRED_RULE_PATHS = ('AI_POLICY.md', 'AI_PROVIDER_RUNTIME_POLICY_V1.md', 'ARCHITECTURE.md', 'CAPABILITY_REGISTRY.md', 'COMPLIANCE_BY_DESIGN_RELEASE_GATE_V1.md', 'CURRENT_BASELINE.md', 'DEPLOYMENT.md', 'DOUBAO_GITHUB_UPGRADE_PROTOCOL.md', 'LOCAL_AI_CONTINUOUS_RUNTIME_P0.md', 'LUMENIS_AI_MASTER_UPGRADE_INCREMENT_V1.md', 'LUMENIS_FUNCTION_MAP.md', 'LUMENIS_PRODUCT_ARCHITECTURE_FINAL.md', 'PLATFORM_README.md', 'PROJECT_STATUS.md', 'REBUILD_ROADMAP.md', 'UPGRADE.md', 'USER_GUIDE.md', 'VIDEO_INTELLIGENCE_CONTRACT_V1.md', 'docs/DOUBAO_2200_EXECUTION.md', 'docs/REPOSITORY-FACT-BASELINE.md', 'docs/MASTER_DEVELOPMENT_BASELINE.md', 'docs/UNIFIED_PRODUCTION_ARCHITECTURE_v1.0.md', 'intelligence_library/09_Research-Hub/shared-intelligence/docs/protocols/CHATGPT-INTERVENTION-PROTOCOL.md', 'intelligence_library/09_Research-Hub/shared-intelligence/docs/operations/AI-AUDIT-SCHEDULE.md', 'intelligence_library/09_Research-Hub/shared-intelligence/docs/operations/DOUBAO-HANDOFF-R-2026-0002.md', 'intelligence_library/09_Research-Hub/shared-intelligence/protocols/CONTINUOUS-RESEARCH-AND-DEVELOPMENT-POLICY.md', 'intelligence_library/09_Research-Hub/shared-intelligence/docs/protocols/AI-WORK-LOG-AND-REALTIME-PUSH-PROTOCOL.md', 'intelligence_library/09_Research-Hub/shared-intelligence/docs/operations/TASK-QUEUE-INTEGRATION-PROTOCOL.md', 'output/final-audit-2026-09-21/LUMENIS_AGENTS_EXECUTION_RULES_2026-09-21.txt')
 
 
-def _assert_legacy_root_docs_classified() -> None:
-    """Retired instruction files must be absent, not merely prefixed with a warning."""
-    present = [rel for rel in RETIRED_ROOT_RULE_PATHS if (ROOT / rel).exists()]
-    copies = [p.name for p in ROOT.iterdir() if p.is_file() and
-              any(p.name.startswith(rel + ".") for rel in RETIRED_ROOT_RULE_PATHS)]
+def _assert_unique_current_rule_sources() -> None:
+    """Reject removed instruction files and copies at root and nested entry paths."""
+    present = [rel for rel in RETIRED_RULE_PATHS if (ROOT / rel).exists()]
+    copies = [str(copy.relative_to(ROOT)) for rel in RETIRED_RULE_PATHS
+              for copy in (ROOT / rel).parent.glob((ROOT / rel).name + ".*")
+              if copy.is_file() or copy.is_symlink()]
     if present or copies:
         raise AssertionError(f"retired instruction files remain: {sorted(set(present + copies))}")
     catalog = (ROOT / "lumenis_shared_skills.py").read_text(encoding="utf-8-sig")
@@ -489,7 +490,7 @@ def _assert_legacy_root_docs_classified() -> None:
                   isinstance(t, ast.Name) and t.id == "_LOCAL_RESEARCH" for t in node.targets)]
     if len(values) != 1 or len(values[0]) != len(set(values[0])):
         raise AssertionError("Shared research authority must be unique")
-    if any(ref in RETIRED_ROOT_RULE_PATHS for ref in values[0]):
+    if any(ref in RETIRED_RULE_PATHS for ref in values[0]):
         raise AssertionError("Shared catalog loads a retired rule source")
     if "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md" not in values[0]:
         raise AssertionError("Shared catalog omits the current product architecture")
@@ -643,7 +644,7 @@ def validate(*, staged: bool = False) -> None:
     contract = json.loads(_read("contract"))
 
     _assert_current_authority_consistency(source_index, agents)
-    _assert_legacy_root_docs_classified()
+    _assert_unique_current_rule_sources()
     _assert_repository_model_neutrality()
 
     _assert_single_machine_contract()
