@@ -24,6 +24,27 @@ class GovernanceMachineSemanticTests(unittest.TestCase):
         self.assertEqual(contract["contract_version"], "1.3.0")
         validate_model_routing(contract)
         validate_approval_receipts(contract)
+        branch = contract["branch_policy"]
+        self.assertTrue(branch["platform_branch_protection_required_now"])
+        self.assertEqual(branch["harden_at"], "EXPLICIT_PO_APPROVAL")
+        from unittest.mock import patch
+        from pathlib import Path
+        from scripts.audit_tools import verify_governance_machine_contract as validator
+        for field, bad in (("platform_branch_protection_required_now", False),
+                           ("harden_at", "INTERNAL_BETA_ENTRY")):
+            altered = copy.deepcopy(contract)
+            altered["branch_policy"][field] = bad
+            with patch.object(validator, "load_json", side_effect=lambda path:
+                    altered if Path(path) == CONTRACT_PATH else load_json(path)):
+                with self.assertRaisesRegex(AssertionError, "branch protection|hardening trigger"):
+                    validate_contract()
+        receipt_path = validator.ROOT / branch["approval_receipt"]
+        original_receipt = load_json(receipt_path)
+        missing_amendment = {key: value for key, value in original_receipt.items() if key != "amendments"}
+        with patch.object(validator, "load_json", side_effect=lambda path:
+                missing_amendment if Path(path) == receipt_path else load_json(path)):
+            with self.assertRaisesRegex(AssertionError, "dated PO amendment"):
+                validate_contract()
 
     def test_c1_through_c6_window_environment_semantics_are_structured(self) -> None:
         for number in range(1, 7):

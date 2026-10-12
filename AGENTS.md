@@ -417,7 +417,7 @@ records facts only, with NOT_VERIFIED where current execution cannot be proved.
 The machine-readable execution/governance contract is
 `00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json`. It defines the
 canonical source-role set, observation vocabulary, completion ladder, gate tiers,
-approval receipts, capability-evolution dual outputs and pre-Internal-Beta branch
+approval receipts, capability-evolution dual outputs and protected-main branch
 policy. Historical model defaults/dispatch records in structured files do not
 authorize current model selection or window execution under the latest direct PO.
 This six-file change does not mutate those configuration/contract bytes. It is a governance contract only and has no authority to redefine
