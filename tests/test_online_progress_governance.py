@@ -312,6 +312,10 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             "contracts/experience/lumenis_app_binding_registry.json",
             "contracts/experience/unknown-bindings.json",
             "scripts/audit_tools/verify_experience_screen_blueprints.py",
+            "docs/ARCHITECTURE_DECISION_RECORD_20260830.md",
+            "docs/MASTER/FINAL_EXECUTION_COMMAND.md",
+            "intelligence_library/05_Runtime/architecture/lumenis_AI_PROGRAMMING_BASELINE_V1.md",
+            "intelligence_library/09_Research-Hub/docs/MASTER/FINAL_EXECUTION_COMMAND.md",
         }
         _assert_current_publication_truth(rules_only, changed_paths=rules_paths)
 
@@ -326,6 +330,7 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             "data/runtime/governance/live_dispatch.json",
             "lumenis/system/browser/config.json",
             "contracts/experience/unreviewed-runtime.json",
+            "docs/unreviewed-rule-file.md",
             ".codex/config.toml",
             ".codex/tests/unreviewed_test.py",
             "website/src/components/UnreviewedBehavior.astro",

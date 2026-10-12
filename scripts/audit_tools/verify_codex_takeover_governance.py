@@ -250,6 +250,11 @@ def _is_rules_only_publication_path(path: str) -> bool:
         "contracts/experience/lumenis_app_binding_registry.json",
         "contracts/experience/unknown-bindings.json",
         "scripts/audit_tools/verify_experience_screen_blueprints.py",
+        # Four exact in-place historical doc demotions (never production config).
+        "docs/ARCHITECTURE_DECISION_RECORD_20260830.md",
+        "docs/MASTER/FINAL_EXECUTION_COMMAND.md",
+        "intelligence_library/05_Runtime/architecture/lumenis_AI_PROGRAMMING_BASELINE_V1.md",
+        "intelligence_library/09_Research-Hub/docs/MASTER/FINAL_EXECUTION_COMMAND.md",
     }:
         return True
     if path.startswith("00-GOVERNANCE/") and path.endswith(".md"):
