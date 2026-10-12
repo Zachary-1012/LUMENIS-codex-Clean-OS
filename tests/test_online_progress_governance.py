@@ -123,6 +123,7 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             "AGENTS.md",
             "00-GOVERNANCE/evidence/round-15/NEW-RULES-REPORT.md",
             "scripts/audit_tools/verify_codex_takeover_governance.py",
+            "scripts/audit_tools/verify_lumenis_single_product.py",
             "tests/test_online_progress_governance.py",
             ".codex/model-routing.toml",
             ".codex/tests/test_engineering.py",
@@ -145,6 +146,8 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             ".codex/tests/unreviewed_test.py",
             "website/src/components/UnreviewedBehavior.astro",
             "tests/test_unrelated_product.py",
+            "scripts/audit_tools/verify_unreviewed_runtime.py",
+            "scripts/audit_tools/verify_lumenis_single_product.py.backup",
         ):
             with self.subTest(runtime_path=runtime_path):
                 with self.assertRaisesRegex(AssertionError, "governance/documentation paths only"):
