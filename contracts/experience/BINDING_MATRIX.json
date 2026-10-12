@@ -77,7 +77,7 @@
       "screen": "CTH-04",
       "field": "graph",
       "current_source": "experience_screens._build_cth04() → curated event records; requested relationship-graph edges are not supplied.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "CTH",
       "status": "PARTIAL"
     },
@@ -85,7 +85,7 @@
       "screen": "CTH-05",
       "field": "calendar",
       "current_source": "experience_screens._build_cth05() → current daily data source for the calendar; source read errors can be converted to zero.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "CTH",
       "status": "PARTIAL"
     },
@@ -93,7 +93,7 @@
       "screen": "CTH-06",
       "field": "items",
       "current_source": "experience_screens._build_cth06() → negative/high-risk note source; actual row fields differ from the declared high-risk-item contract.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "CTH",
       "status": "PARTIAL"
     },
@@ -101,7 +101,7 @@
       "screen": "CTH-07",
       "field": "trend",
       "current_source": "experience_screens._build_cth07() → database.get_stats_by_date_range(); the declared get_metric_trend callable is not used.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "CTH",
       "status": "PARTIAL"
     },
@@ -109,7 +109,7 @@
       "screen": "CTH-08",
       "field": "cases",
       "current_source": "experience_screens._build_cth08() → high-risk notes/events; no canonical Case ID, state, or lifecycle source is present.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "CTH",
       "status": "PARTIAL"
     },
@@ -117,7 +117,7 @@
       "screen": "CTH-09",
       "field": "risk",
       "current_source": "experience_screens._build_cth09() → risk note/summary; NOTE:<id> is not an Evidence record and the declared Evidence query is not called.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "CTH",
       "status": "PARTIAL"
     },
@@ -133,7 +133,7 @@
       "screen": "CTH-10",
       "field": "report",
       "current_source": "experience_screens._build_cth10() reads the latest daily report and queries the shared Evidence store without product/Subject/origin filtering.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "CTH / Shared Evidence",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -149,7 +149,7 @@
       "screen": "BMP-02",
       "field": "brands",
       "current_source": "experience_screens._build_bmp02() → web_discovery.get_brand_directory(); curated directory/category data exists, not per-brand health/voice/engagement.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "BMP",
       "status": "PARTIAL"
     },
@@ -157,7 +157,7 @@
       "screen": "BMP-03",
       "field": "intel",
       "current_source": "experience_screens._build_bmp03() reads admitted intelligence_assets FACT/VERIFIED aggregates without product/domain/brand filtering.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "BMP",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -165,7 +165,7 @@
       "screen": "BMP-04",
       "field": "channels",
       "current_source": "experience_screens._build_bmp04() → brand_propagation.get_all_dashboards()/list_entities() without BrandFocus; engine construction can initialize schema and errors can look like zero.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "BMP",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -173,7 +173,7 @@
       "screen": "BMP-05",
       "field": "creators",
       "current_source": "experience_screens._build_bmp05() → kos_engine.get_stats()/list_profiles(); profiles are not filtered by brand and omit content/conversion/Evidence refs.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "BMP",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -181,7 +181,7 @@
       "screen": "BMP-06",
       "field": "assets",
       "current_source": "experience_screens._build_bmp06() → content_generation.list_evidence() with defaults; no product/domain scope and source errors may collapse to empty.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "BMP / Shared Evidence",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -189,7 +189,7 @@
       "screen": "BMP-07",
       "field": "campaign",
       "current_source": "experience_screens._build_bmp07() → topic_campaign.get_campaign_rate_status() for process quota/cooldown only; no read-only campaign activity list exists.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "BMP",
       "status": "PARTIAL"
     },
@@ -197,7 +197,7 @@
       "screen": "BMP-08",
       "field": "podcast",
       "current_source": "experience_screens._build_bmp08() → podcast_store.get_stats()/list_entities(); no brand filter, Evidence IDs are dropped, and reads can initialize schema.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "BMP",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -205,7 +205,7 @@
       "screen": "BMP-09",
       "field": "eval",
       "current_source": "experience_screens._build_bmp09() → evaluation summary/records without actor/domain/brand filters; builder drops evidence_ref and imports may initialize tables.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "BMP / Shared Evaluation",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -213,7 +213,7 @@
       "screen": "BMP-10",
       "field": "risk",
       "current_source": "experience_screens._build_bmp10() reuses CTH Subject-based curated events/risk notes; this is not BMP BrandFocus risk.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "BMP",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -221,7 +221,7 @@
       "screen": "BMP-11",
       "field": "benchmark",
       "current_source": "experience_screens._build_bmp11() → kos_intel.competitor_benchmark() uses configured terms/global note scores, not selected BrandFocus.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "BMP",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -245,7 +245,7 @@
       "screen": "AI-02",
       "field": "task_orchestration",
       "current_source": "experience_screens._build_ai02() → task timeline/execution history; current query returns global executions, not orchestration controls.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "Shared Capability / Agent Groups",
       "status": "PARTIAL"
     },
@@ -253,7 +253,7 @@
       "screen": "AI-03",
       "field": "thread",
       "current_source": "No verified persistent conversation thread/turn store or streaming callable was found; execution history is not a conversation API.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "Shared Capability / AI",
       "status": "ABSENT"
     },
@@ -261,7 +261,7 @@
       "screen": "AI-03",
       "field": "evidence_jump",
       "current_source": "experience_screens._build_ai03() queries global Evidence; _evidence_items() supplies generic hard-coded lineage rather than joining Evidence to an execution.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "Shared Evidence / AI",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -269,7 +269,7 @@
       "screen": "AI-04",
       "field": "registry",
       "current_source": "experience_screens._build_ai04() reads function_registry.FUNCTION_MAP; canonical SkillRegistry.list_all()/stats() is already available in lumenis/shared/agents/skills/registry.py.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM / Agent Groups",
       "status": "PARTIAL"
     },
@@ -277,7 +277,7 @@
       "screen": "AI-05",
       "field": "status",
       "current_source": "experience_screens._build_ai05() → AI governance/provider status; no full provider readiness acceptance.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM / AI Gateway",
       "status": "PARTIAL"
     },
@@ -293,7 +293,7 @@
       "screen": "SYS-02",
       "field": "collectors",
       "current_source": "experience_screens._build_sys02() → collector_status_api.get_all_status(); registered collector health/status exists.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM Collector",
       "status": "PARTIAL"
     },
@@ -301,7 +301,7 @@
       "screen": "SYS-03",
       "field": "db",
       "current_source": "experience_screens._build_sys03() → canonical_data.self_check()/get_schema_versions() for database and schema checks.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM / Canonical Data",
       "status": "PARTIAL"
     },
@@ -309,7 +309,7 @@
       "screen": "SYS-04",
       "field": "perm",
       "current_source": "experience_screens._build_sys04() reads PermissionLevel/OperationType enums; its archive action declaration is not a Permission decision API.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM Permission",
       "status": "PARTIAL"
     },
@@ -317,7 +317,7 @@
       "screen": "SYS-05",
       "field": "prefs",
       "current_source": "Flutter/browser local preference storage only; no backend preference endpoint or synchronized setting owner was verified.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM Settings",
       "status": "LOCAL_ONLY"
     },
@@ -325,7 +325,7 @@
       "screen": "SYS-06",
       "field": "browser",
       "current_source": "Existing Browser Surface APIs and browser_surface.capability_report()/browser_surface_api routes provide capability/session data.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM Browser / CDP",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -333,7 +333,7 @@
       "screen": "SYS-07",
       "field": "acceptance",
       "current_source": "experience_screens._build_sys07() → ai_governance.get_owasp_security_status()/get_skills_light_status().",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM Security / AI Gateway",
       "status": "PARTIAL"
     },
@@ -341,7 +341,7 @@
       "screen": "SYS-08",
       "field": "logs",
       "current_source": "experience_screens._build_sys08() → logger.get_log_summary() for sanitized filename/count summary.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM Observability",
       "status": "PARTIAL"
     },
@@ -397,7 +397,7 @@
       "screen": "SH-02",
       "field": "library",
       "current_source": "experience_screens._build_sh02() → evidence_store.query_evidence()/get_stats() with global unscoped list/total.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "Shared Capability / Evidence",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -405,7 +405,7 @@
       "screen": "SH-03",
       "field": "canonical",
       "current_source": "experience_screens._build_sh03() → canonical_data.count_canonical() global table aggregates.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM / Canonical Data",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -413,7 +413,7 @@
       "screen": "SH-04",
       "field": "export",
       "current_source": "experience_screens._build_sh04() → report_engine.list_domain_reports() read-only catalog; export EFFECT route remains gated/unfinished.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "Shared Capability / Reporting",
       "status": "PARTIAL"
     },
@@ -421,7 +421,7 @@
       "screen": "SH-05",
       "field": "assets",
       "current_source": "experience_screens._build_sh05() → lumenis.shared.learning.collector.get_learning_history(); records exist globally without actor/domain scope.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "Shared Capability / Learning",
       "status": "EXISTS_BUT_UNSCOPED"
     },
@@ -429,7 +429,7 @@
       "screen": "SH-06",
       "field": "tasks",
       "current_source": "experience_screens._build_sh06() → TaskEngine list_tasks()/get_dlq()/health_check(); queue/task state is global.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED",
       "owner": "SYSTEM TaskEngine",
       "status": "EXISTS_BUT_UNSCOPED"
     }

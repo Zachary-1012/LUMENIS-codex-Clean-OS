@@ -10,9 +10,9 @@
     "Account": "Authenticated account actor; selected CTH/BMP lens must remain explicit. Actual auth and scope enforcement UNKNOWN.",
     "CTH": "Subject-first commercial-operations lens; preserve active Subject identity and lineage. Actual actor/scope binding UNKNOWN.",
     "BMP": "Brand/Market-first primary-focus lens; preserve selected brand/market identity and lineage. Actual actor/scope binding UNKNOWN.",
-    "AI": "Inherit authenticated caller and selected CTH/BMP lens; never widen caller scope. Actual propagation UNKNOWN.",
+    "AI": "Inherit the authorized task workspace/project and optional CTH/BMP context; never widen scope or create Permission. Actual propagation and model execution require separate evidence.",
     "SYSTEM": "Infrastructure and platform operations only; must not create a third business-product truth. Actual actor/scope binding UNKNOWN.",
-    "Shared": "Shared capabilities serve CTH/BMP with origin domain and source lineage preserved. Actual propagation UNKNOWN."
+    "Shared": "Independent workspace/project-scoped research and creation; CTH/BMP continuation is optional and retains origin/source-use lineage. Actual scope propagation and user acceptance require separate evidence."
   },
   "screen_count": 44,
   "binding_count": 54,
@@ -43,15 +43,15 @@
     },
     {
       "file": "contracts/experience/unknown-bindings.json",
-      "sha256": "0e134326a23c13738e3ac868bcbbe5b1b97866a65899d85537059090ef5e2e22"
+      "sha256": "6b9fbf19bd8a541bc37bb56a2444ab1780a6aaaf1b9b6162eb87a539dfc4d752"
     },
     {
       "file": "contracts/experience/BINDING_MATRIX.json",
-      "sha256": "822d8c6896e89e9c4a0fe3e115b36be21521d098015eb955ccc65e246f02fa5a"
+      "sha256": "148bb862751bbdc0deb3cb8fc9bec44bf02ec349e8d953d44f6b0388abba1cf4"
     },
     {
       "file": "contracts/experience/BACKEND_GAP.json",
-      "sha256": "48b1373c543391060a263745d93d1f65a1831bb5b6ae473c9422b8f2e9158440"
+      "sha256": "2834c8112e8f76426a9d02d7634e974825a494673a75066c8e3105b145621a2e"
     }
   ],
   "screens": [
@@ -1719,7 +1719,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_cth04() → curated event records; requested relationship-graph edges are not supplied.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "CTH Subject-first; selected Subject must be authorized for the actor.",
@@ -1828,7 +1828,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_cth05() → current daily data source for the calendar; source read errors can be converted to zero.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "CTH Subject-first; selected Subject must be authorized for the actor.",
@@ -1934,7 +1934,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_cth06() → negative/high-risk note source; actual row fields differ from the declared high-risk-item contract.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "CTH Subject-first; selected Subject must be authorized for the actor.",
@@ -2042,7 +2042,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_cth07() → database.get_stats_by_date_range(); the declared get_metric_trend callable is not used.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "CTH Subject-first; selected Subject must be authorized for the actor.",
@@ -2150,7 +2150,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_cth08() → high-risk notes/events; no canonical Case ID, state, or lifecycle source is present.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "CTH Subject-first; selected Subject must be authorized for the actor.",
@@ -2258,7 +2258,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_cth09() → risk note/summary; NOTE:<id> is not an Evidence record and the declared Evidence query is not called.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "CTH Subject-first; selected Subject must be authorized for the actor.",
@@ -2543,7 +2543,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_cth10() reads the latest daily report and queries the shared Evidence store without product/Subject/origin filtering.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "CTH Subject-first; selected Subject must be authorized for the actor.",
@@ -2763,7 +2763,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_bmp02() → web_discovery.get_brand_directory(); curated directory/category data exists, not per-brand health/voice/engagement.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "BMP Brand/Market-first; selected BrandFocus must be authorized for the actor.",
@@ -2871,7 +2871,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_bmp03() reads admitted intelligence_assets FACT/VERIFIED aggregates without product/domain/brand filtering.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "BMP Brand/Market-first; selected BrandFocus must be authorized for the actor.",
@@ -2979,7 +2979,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_bmp04() → brand_propagation.get_all_dashboards()/list_entities() without BrandFocus; engine construction can initialize schema and errors can look like zero.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "BMP Brand/Market-first; selected BrandFocus must be authorized for the actor.",
@@ -3087,7 +3087,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_bmp05() → kos_engine.get_stats()/list_profiles(); profiles are not filtered by brand and omit content/conversion/Evidence refs.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "BMP Brand/Market-first; selected BrandFocus must be authorized for the actor.",
@@ -3195,7 +3195,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_bmp06() → content_generation.list_evidence() with defaults; no product/domain scope and source errors may collapse to empty.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "BMP Brand/Market-first; selected BrandFocus must be authorized for the actor.",
@@ -3303,7 +3303,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_bmp07() → topic_campaign.get_campaign_rate_status() for process quota/cooldown only; no read-only campaign activity list exists.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "BMP Brand/Market-first; selected BrandFocus must be authorized for the actor.",
@@ -3410,7 +3410,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_bmp08() → podcast_store.get_stats()/list_entities(); no brand filter, Evidence IDs are dropped, and reads can initialize schema.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "BMP Brand/Market-first; selected BrandFocus must be authorized for the actor.",
@@ -3521,7 +3521,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_bmp09() → evaluation summary/records without actor/domain/brand filters; builder drops evidence_ref and imports may initialize tables.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "BMP Brand/Market-first; selected BrandFocus must be authorized for the actor.",
@@ -3632,7 +3632,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_bmp10() reuses CTH Subject-based curated events/risk notes; this is not BMP BrandFocus risk.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "BMP Brand/Market-first; selected BrandFocus must be authorized for the actor.",
@@ -3743,7 +3743,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_bmp11() → kos_intel.competitor_benchmark() uses configured terms/global note scores, not selected BrandFocus.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "BMP Brand/Market-first; selected BrandFocus must be authorized for the actor.",
@@ -4085,7 +4085,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_ai02() → task timeline/execution history; current query returns global executions, not orchestration controls.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "Shared Capability preserves the authorized origin domain and source lineage for CTH or BMP.",
@@ -4196,7 +4196,7 @@
         "unknown_bindings_has_non_unknown_api_claim": false,
         "backend_gap_api": "No verified persistent conversation thread/turn store or streaming callable was found; execution history is not a conversation API.",
         "binding_matrix_api_status": "ABSENT",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "Shared Capability preserves the authorized origin domain and source lineage for CTH or BMP.",
@@ -4304,7 +4304,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_ai03() queries global Evidence; _evidence_items() supplies generic hard-coded lineage rather than joining Evidence to an execution.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "Shared Capability preserves the authorized origin domain and source lineage for CTH or BMP.",
@@ -4412,7 +4412,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_ai04() reads function_registry.FUNCTION_MAP; canonical SkillRegistry.list_all()/stats() is already available in lumenis/shared/agents/skills/registry.py.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -4520,7 +4520,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_ai05() → AI governance/provider status; no full provider readiness acceptance.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -4740,7 +4740,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_sys02() → collector_status_api.get_all_status(); registered collector health/status exists.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -4848,7 +4848,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_sys03() → canonical_data.self_check()/get_schema_versions() for database and schema checks.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -4957,7 +4957,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_sys04() reads PermissionLevel/OperationType enums; its archive action declaration is not a Permission decision API.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -5065,7 +5065,7 @@
         "unknown_bindings_has_non_unknown_api_claim": false,
         "backend_gap_api": "Flutter/browser local preference storage only; no backend preference endpoint or synchronized setting owner was verified.",
         "binding_matrix_api_status": "LOCAL_ONLY",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -5171,7 +5171,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "Existing Browser Surface APIs and browser_surface.capability_report()/browser_surface_api routes provide capability/session data.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -5279,7 +5279,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_sys07() → ai_governance.get_owasp_security_status()/get_skills_light_status().",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -5387,7 +5387,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_sys08() → logger.get_log_summary() for sanitized filename/count summary.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -6173,7 +6173,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_sh02() → evidence_store.query_evidence()/get_stats() with global unscoped list/total.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "Shared Capability preserves the authorized origin domain and source lineage for CTH or BMP.",
@@ -6281,7 +6281,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_sh03() → canonical_data.count_canonical() global table aggregates.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -6389,7 +6389,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_sh04() → report_engine.list_domain_reports() read-only catalog; export EFFECT route remains gated/unfinished.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "Shared Capability preserves the authorized origin domain and source lineage for CTH or BMP.",
@@ -6497,7 +6497,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_sh05() → lumenis.shared.learning.collector.get_learning_history(); records exist globally without actor/domain scope.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "Shared Capability preserves the authorized origin domain and source lineage for CTH or BMP.",
@@ -6605,7 +6605,7 @@
         "unknown_bindings_has_non_unknown_api_claim": true,
         "backend_gap_api": "experience_screens._build_sh06() → TaskEngine list_tasks()/get_dlq()/health_check(); queue/task state is global.",
         "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_BINDING_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
@@ -6650,7 +6650,7 @@
       "source_snapshot_head": "c7bb3301a7aec8f011cdebabb9a5e02ee3b95cf7"
     }
   ],
-  "source_snapshot_scope": "Hashes pin the current assembled source-contract files. Only BACKEND-GAP-016 was rechecked against existing Decision owner, HTTP caller and Flutter reader at c7bb3301a7aec8f011cdebabb9a5e02ee3b95cf7. The other 53 binding claims are carried forward, not newly source-verified or live-accepted. This snapshot is not a current running-build identity or complete progress audit.",
+  "source_snapshot_scope": "Hashes pin current source-contract files. Decision owner/reader review and the separately enumerated Flutter-presence review retain their exact baselines. Other callable/permission/Evidence and all runtime/user-outcome claims remain unverified; this is not a running-build identity or a full-product acceptance audit.",
   "source_review_coverage": {
     "source_baseline": "c7bb3301a7aec8f011cdebabb9a5e02ee3b95cf7",
     "reconciled_bindings": [
@@ -6658,6 +6658,46 @@
     ],
     "remaining_bindings": "CARRIED_FORWARD_NOT_REVERIFIED",
     "previous_inventory_baseline": "3ebe60f99d0f928bbcc92aaea7ce99225535d65e",
-    "runtime_and_user_outcomes": "NOT_VERIFIED"
+    "runtime_and_user_outcomes": "NOT_VERIFIED",
+    "screen_presence_review": {
+      "source_baseline": "dded08273de58ddc5a010b55375ec437764881f7",
+      "bindings": [
+        "BACKEND-GAP-010",
+        "BACKEND-GAP-011",
+        "BACKEND-GAP-012",
+        "BACKEND-GAP-013",
+        "BACKEND-GAP-014",
+        "BACKEND-GAP-015",
+        "BACKEND-GAP-017",
+        "BACKEND-GAP-019",
+        "BACKEND-GAP-020",
+        "BACKEND-GAP-021",
+        "BACKEND-GAP-022",
+        "BACKEND-GAP-023",
+        "BACKEND-GAP-024",
+        "BACKEND-GAP-025",
+        "BACKEND-GAP-026",
+        "BACKEND-GAP-027",
+        "BACKEND-GAP-028",
+        "BACKEND-GAP-031",
+        "BACKEND-GAP-032",
+        "BACKEND-GAP-033",
+        "BACKEND-GAP-034",
+        "BACKEND-GAP-035",
+        "BACKEND-GAP-037",
+        "BACKEND-GAP-038",
+        "BACKEND-GAP-039",
+        "BACKEND-GAP-040",
+        "BACKEND-GAP-041",
+        "BACKEND-GAP-042",
+        "BACKEND-GAP-043",
+        "BACKEND-GAP-050",
+        "BACKEND-GAP-051",
+        "BACKEND-GAP-052",
+        "BACKEND-GAP-053",
+        "BACKEND-GAP-054"
+      ],
+      "verified_dimension": "Widget source and shell registration only; not field contract, action integration, permission, runtime or user acceptance."
+    }
   }
 }

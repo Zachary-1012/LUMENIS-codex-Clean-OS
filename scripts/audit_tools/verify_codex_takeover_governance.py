@@ -518,7 +518,8 @@ def _assert_unique_current_rule_sources() -> None:
     # Active per-screen instructions must agree with the canonical surface policy.
     surface_paths = [ROOT / "contracts/experience/README.md"]
     surface_paths.extend((ROOT / "contracts/experience/screen-specifications").glob("*.md"))
-    obsolete = ("Website/Web closes first", "Website/Web first; native", "二维手绘水彩/版画视觉")
+    obsolete = ("Website/Web closes first", "Website/Web first; native", "二维手绘水彩/版画视觉",
+                "二维手绘水彩/版画色彩语言", "只借鉴手绘平面笔触与色彩", "不用3D质感")
     for path in surface_paths:
         if not path.is_file():
             continue

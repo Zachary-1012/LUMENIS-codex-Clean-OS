@@ -120,7 +120,8 @@ class GovernanceHistoryRegressionTests(unittest.TestCase):
             p = root / "contracts/experience/screen-specifications/SCREEN_SPEC_TEMPLATE.md"
             p.parent.mkdir(parents=True)
             with patch.object(gate, "ROOT", root):
-                for obsolete in ("Website/Web closes first", "Website/Web first; native", "二维手绘水彩/版画视觉"):
+                for obsolete in ("Website/Web closes first", "Website/Web first; native", "二维手绘水彩/版画视觉",
+                                 "二维手绘水彩/版画色彩语言", "只借鉴手绘平面笔触与色彩", "不用3D质感"):
                     p.write_text(obsolete, encoding="utf8")
                     with self.subTest(phrase=obsolete), self.assertRaisesRegex(AssertionError, "obsolete surface instruction"):
                         gate._assert_unique_current_rule_sources()
@@ -153,6 +154,39 @@ class GovernanceHistoryRegressionTests(unittest.TestCase):
         if registry["truth_status"] == "UNVERIFIED_ACCEPTANCE_PENDING":
             self.assertEqual(gap["acceptance_status"], "PENDING")
         self.assertIn("EXISTS_BUT_UNSCOPED", json.loads((contracts / "BACKEND_GAP.json").read_text("utf8"))["field_semantics"]["source_status"])
+
+    def test_current_binding_summary_and_mirrors_reject_drift(self) -> None:
+        import copy
+        import json
+        from scripts.audit_tools import verify_experience_screen_blueprints as screen_gate
+        root = Path(__file__).resolve().parents[1]
+        registry = json.loads((root / "contracts/experience/lumenis_app_binding_registry.json").read_text("utf8"))
+        sources = {p: json.loads((root / p).read_text("utf8")) for p in screen_gate.SOURCE_FILES}
+        screen_gate._validate_source_ids(registry, sources)
+        for key in ("total", "bound", "absent", "local_only", "status_counts", "bound_screens"):
+            changed = copy.deepcopy(sources)
+            summary = changed["contracts/experience/unknown-bindings.json"]["ledger_summary"]
+            summary[key] = {} if key == "status_counts" else [] if key == "bound_screens" else -1
+            with self.subTest(field=key), self.assertRaisesRegex(AssertionError, "binding summary"):
+                screen_gate._validate_source_ids(registry, changed)
+        changed = copy.deepcopy(sources)
+        changed["contracts/experience/BACKEND_GAP.json"]["gaps"][0]["app_status"] = "NO_FLUTTER_SCREEN"
+        with self.assertRaisesRegex(AssertionError, "Flutter presence claims disagree"):
+            screen_gate._validate_source_ids(registry, changed)
+
+    def test_existing_flutter_widgets_are_not_declared_absent(self) -> None:
+        import json
+        import re
+        root = Path(__file__).resolve().parents[1]
+        shell = (root / "app/lib/shell/lumenis_workspace_shell.dart").read_text("utf8")
+        rows = json.loads((root / "contracts/experience/BACKEND_GAP.json").read_text("utf8"))["gaps"]
+        for row in rows:
+            sid = row["screen"].replace("-", "").lower()
+            for path in (root / "app/lib/features").rglob(sid + "_screen.dart"):
+                for widget in re.findall(r"class\s+(\w+)\s+extends\s+(?:StatefulWidget|StatelessWidget)", path.read_text("utf8")):
+                    if not widget.startswith("_") and re.search(r"\b" + re.escape(widget) + r"\s*\(", shell):
+                        with self.subTest(binding=row["gap_id"], widget=widget):
+                            self.assertNotEqual(row["app_status"], "NO_FLUTTER_SCREEN")
 
     def test_shared_rule_references_are_not_executable_module_bindings(self) -> None:
         import lumenis_shared_skills as shared
