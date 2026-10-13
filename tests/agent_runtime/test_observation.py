@@ -119,6 +119,20 @@ class TestAIStatusObserver:
         assert result["provider_status"] == "CONFIGURED_NOT_VERIFIED"
         assert result["service_binding"] == "NOT_VERIFIED"
 
+    def test_status_does_not_publish_private_diagnostic_values(self, monkeypatch):
+        from lumenis.system.ai_gateway import core, user_api_adapter
+
+        monkeypatch.setattr(user_api_adapter, "is_selected", lambda: False)
+        monkeypatch.setattr(core, "owned_inference_status", lambda: {
+            "available": False, "state": "private diagnostic", "service_binding": {"secret": "value"},
+            "reason": "https://user:secret@private.invalid",
+        })
+        result = AIStatusObserver().observe()
+        assert result["status"] == "unavailable"
+        assert result["provider_status"] == "UNKNOWN"
+        assert result["service_binding"] == "NOT_VERIFIED"
+        assert result["error"] == "OWNED_RUNTIME_UNAVAILABLE"
+
 
 class TestToolStatusObserver:
     def test_injected_registry_func(self):

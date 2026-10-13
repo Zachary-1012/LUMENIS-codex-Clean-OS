@@ -186,13 +186,19 @@ class AIStatusObserver(BaseObserver):
                 raise TypeError("owned Gateway status is not an object")
             binding = gateway.get("service_binding")
             state = gateway.get("state")
+            def public_code(value, fallback):
+                return value if (isinstance(value, str) and 0 < len(value) <= 128
+                                 and value.isascii() and value.replace("_", "").isalnum()) else fallback
+
+            binding = public_code(binding, "NOT_VERIFIED")
+            state = public_code(state, "UNKNOWN")
             available = gateway.get("available") is True and binding == "BOUND"
             result.update(
                 status="ok" if available else "unavailable",
                 provider="owned",
                 provider_status=state if isinstance(state, str) else "UNKNOWN",
                 service_binding=binding if isinstance(binding, str) else "UNKNOWN",
-                error=None if available else gateway.get("reason") or state or "OWNED_RUNTIME_UNAVAILABLE",
+                error=None if available else public_code(gateway.get("reason"), "OWNED_RUNTIME_UNAVAILABLE"),
             )
         except Exception:
             result.update(

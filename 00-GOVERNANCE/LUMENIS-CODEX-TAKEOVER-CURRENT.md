@@ -64,7 +64,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 显式选择 user_api 的已有通用接口保留；状态读取不调用外部模型、不探测端点，配置完成仍为 CONFIGURED_NOT_VERIFIED，不能冒称可用或自动切回 owned。
