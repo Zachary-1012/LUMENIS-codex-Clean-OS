@@ -106,6 +106,20 @@ class TestAIStatusObserver:
         assert result["error"] == "OWNED_RUNTIME_NOT_BOUND"
 
 
+    def test_explicit_user_api_configuration_is_not_runtime_verification(self, monkeypatch):
+        from lumenis.system.ai_gateway import core, user_api_adapter
+
+        monkeypatch.setattr(user_api_adapter, "is_selected", lambda: True)
+        monkeypatch.setattr(user_api_adapter, "is_configured", lambda: True)
+        monkeypatch.setattr(core, "owned_inference_status", lambda: pytest.fail("wrong selected route"))
+        monkeypatch.setattr(user_api_adapter, "chat", lambda *_a, **_k: pytest.fail("external model call"))
+        result = AIStatusObserver().observe()
+        assert result["provider"] == "user_api"
+        assert result["status"] == "unknown"
+        assert result["provider_status"] == "CONFIGURED_NOT_VERIFIED"
+        assert result["service_binding"] == "NOT_VERIFIED"
+
+
 class TestToolStatusObserver:
     def test_injected_registry_func(self):
         observer = ToolStatusObserver(tool_registry_func=lambda: {

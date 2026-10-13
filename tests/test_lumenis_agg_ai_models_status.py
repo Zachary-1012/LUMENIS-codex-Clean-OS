@@ -1,3 +1,5 @@
+import pytest
+
 from flask import Flask
 
 import lumenis_agg_api
@@ -81,3 +83,27 @@ def test_intelligence_models_does_not_claim_runtime_ready_when_status_read_fails
     assert body["gateway"]["service_binding"] == "NOT_VERIFIED"
     assert body["gateway"]["reason"] == "OWNED_RUNTIME_STATUS_UNAVAILABLE"
     assert "private diagnostic" not in str(body)
+
+
+@pytest.mark.parametrize("configured", [True, False])
+def test_explicit_user_api_is_not_replaced_or_probed(monkeypatch, configured):
+    from lumenis.system.ai_gateway import user_api_adapter
+
+    monkeypatch.setattr(user_api_adapter, "is_selected", lambda: True)
+    monkeypatch.setattr(user_api_adapter, "is_configured", lambda: configured)
+    monkeypatch.setattr(user_api_adapter, "config", lambda: {
+        "model": "user-chosen-model", "api_key": "test-only-secret", "base_url": "https://private.invalid",
+    })
+    monkeypatch.setattr(user_api_adapter, "chat", lambda *_a, **_k: pytest.fail("external model call"))
+    monkeypatch.setattr(ai_gateway_core, "owned_inference_status", lambda: {
+        "available": True, "service_binding": "BOUND", "state": "READY", "model_id": "owned-model",
+    })
+    body = _client().get("/api/intelligence/models").get_json()
+    assert body["active_provider"] == "user_api"
+    assert body["runtime_available"] is None
+    assert body["gateway"]["state"] == ("CONFIGURED_NOT_VERIFIED" if configured else "NOT_CONFIGURED")
+    assert body["fallback_chain"] == []
+    assert body["providers"][0]["active"] is False
+    assert body["providers"][1]["configured"] is configured
+    assert "test-only-secret" not in str(body)
+    assert "private.invalid" not in str(body)

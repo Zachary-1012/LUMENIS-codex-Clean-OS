@@ -138,21 +138,43 @@ def intelligence_models():
         "service_binding": binding,
         "fallback_allowed": False,
     }
+    providers = [provider]
+    selected_provider = "owned"
+    selected_available = available
+    selected_gateway = {
+        "provider": "owned", "state": state, "service_binding": binding,
+        "available": available, "reason": reason, "fallback_allowed": False,
+    }
+    from lumenis.system.ai_gateway import user_api_adapter
+
+    if user_api_adapter.is_selected():
+        # Explicit selection is retained; configuration never proves a live call.
+        configured = user_api_adapter.is_configured()
+        user_model = user_api_adapter.config().get("model") if configured else None
+        if not isinstance(user_model, str) or len(user_model) > 128:
+            user_model = None
+        user_state = "CONFIGURED_NOT_VERIFIED" if configured else "NOT_CONFIGURED"
+        provider["active"] = False
+        selected_provider = "user_api"
+        selected_available = None
+        providers.append({
+            "provider": "user_api", "kind": "user_selected", "model": user_model,
+            "configured": configured, "credential_present": None, "active": True,
+            "available": None, "state": user_state, "service_binding": "NOT_VERIFIED",
+            "fallback_allowed": False,
+        })
+        selected_gateway = {
+            "provider": "user_api", "state": user_state, "service_binding": "NOT_VERIFIED",
+            "available": None, "reason": "USER_API_NOT_PROBED", "fallback_allowed": False,
+        }
     return jsonify({
         "ok": True,
-        "active_provider": "owned",
+        "active_provider": selected_provider,
         "provider_agnostic": True,
         "fallback_chain": [],
-        "runtime_available": available,
-        "gateway": {
-            "provider": "owned",
-            "state": state,
-            "service_binding": binding,
-            "available": available,
-            "reason": reason,
-            "fallback_allowed": False,
-        },
-        "providers": [provider],
+        "runtime_available": selected_available,
+        "gateway": selected_gateway,
+        "providers": providers,
         "truth_boundary": "AI is enhancement only; ZBC rules remain Production Truth",
     })
 

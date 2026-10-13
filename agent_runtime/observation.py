@@ -169,6 +169,16 @@ class AIStatusObserver(BaseObserver):
             "provider_status": "UNKNOWN", "service_binding": "NOT_VERIFIED", "error": None,
         }
         try:
+            from lumenis.system.ai_gateway import user_api_adapter
+
+            if user_api_adapter.is_selected():
+                configured = user_api_adapter.is_configured()
+                return {
+                    **result, "provider": "user_api",
+                    "status": "unknown" if configured else "unavailable",
+                    "provider_status": "CONFIGURED_NOT_VERIFIED" if configured else "NOT_CONFIGURED",
+                    "service_binding": "NOT_VERIFIED", "error": "USER_API_NOT_PROBED",
+                }
             from lumenis.system.ai_gateway.core import owned_inference_status
 
             gateway = owned_inference_status()
