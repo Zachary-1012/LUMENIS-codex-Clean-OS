@@ -518,19 +518,20 @@ def _bridge_to_recovery_center(platform: str, source_state: str, detail: str, ki
     """
     try:
         from auth_recovery_center import recovery_center, AuthIssueType
+        _disp = RECOVERY_PROFILES.get(platform, {}).get("display", platform)
         state_upper = (source_state or "").upper()
         if state_upper in ("AUTH_REQUIRED", "AUTH_FAILED", "SESSION_EXPIRED"):
             issue_type = AuthIssueType.COOKIE_EXPIRED.value
-            title = "小红书登录失效 - 需要扫码恢复"
+            title = _disp + "登录失效 - 需要扫码恢复"
         elif state_upper in ("CAPTCHA", "NEED_VERIFY"):
             issue_type = AuthIssueType.CAPTCHA.value
-            title = "小红书人机验证 - 需要人工通过"
+            title = _disp + "人机验证 - 需要人工通过"
         elif state_upper == "BLOCKED":
             issue_type = AuthIssueType.IP_RISK.value
-            title = "小红书IP风控熔断 - 冷却中"
+            title = _disp + "IP风控熔断 - 冷却中"
         else:
             issue_type = AuthIssueType.SESSION_INVALID.value
-            title = "小红书采集认证异常 - 需要恢复"
+            title = _disp + "采集认证异常 - 需要恢复"
         desc = detail or ("采集链路检测到 " + (source_state or "认证异常") + ", kind=" + kind + ", 请在系统内完成验证后恢复。")
         recovery_url = ""
         cfg = RECOVERY_PROFILES.get(platform, {})
