@@ -214,6 +214,34 @@ def _validate_source_ids(registry: dict[str, Any], sources: dict[str, Any]) -> N
             raise AssertionError(f"binding registry ID/key mismatch for {binding_id}")
 
 
+    # Summary is derived from the same rows, never a second status truth.
+    from collections import Counter
+    summary = unknown_data.get("ledger_summary")
+    expected_counts = dict(Counter(row.get("source_status") for row in unknown_bindings.values()))
+    if not isinstance(summary, dict) or summary.get("status_counts") != expected_counts:
+        raise AssertionError("binding summary disagrees with source rows")
+    expected_bound = sum(row.get("source_status") in {"PARTIAL", "EXISTS_BUT_UNSCOPED"}
+                         for row in unknown_bindings.values())
+    if (summary.get("total") != len(unknown_bindings)
+            or summary.get("bound") != expected_bound
+            or summary.get("absent") != expected_counts.get("ABSENT", 0)
+            or summary.get("local_only") != expected_counts.get("LOCAL_ONLY", 0)):
+        raise AssertionError("binding summary counts disagree with source rows")
+    expected_screens = sorted({row["screen"] for row in unknown_bindings.values()
+                               if row.get("source_status") in {"PARTIAL", "EXISTS_BUT_UNSCOPED"}})
+    if summary.get("bound_screens") != expected_screens:
+        raise AssertionError("binding summary screens disagree with source rows")
+    matrix_by_key = {(row["screen"], row["field"]): row for row in matrix_rows}
+    for binding_id, gap in gaps.items():
+        state = gap.get("app_status")
+        declaration = registry_bindings[binding_id].get("api_claims_requiring_code_verification", {}).get("viewmodel_binding_declaration")
+        if (gap.get("frontend_viewmodel") != state
+                or unknown_bindings[binding_id].get("frontend_viewmodel") != state
+                or matrix_by_key[(gap["screen"], gap["field"])].get("frontend_viewmodel") != state
+                or declaration != state):
+            raise AssertionError(f"{binding_id}: Flutter presence claims disagree")
+
+
 def _blueprint_rows() -> dict[str, list[str]]:
     text = CONSTITUTION.read_text(encoding="utf-8")
     try:

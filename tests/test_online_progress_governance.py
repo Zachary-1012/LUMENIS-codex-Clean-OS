@@ -56,6 +56,185 @@ class GovernanceHistoryRegressionTests(unittest.TestCase):
         )
         return "\n".join(f"| {row} |" for row in rows)
 
+    def test_retired_root_rules_are_removed_not_banners_or_copies(self) -> None:
+        import tempfile
+        from unittest.mock import patch
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+        gate._assert_unique_current_rule_sources()
+        current_agents = (gate.ROOT / "AGENTS.md").read_text("utf-8-sig")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "AGENTS.md").write_text(current_agents, encoding="utf8")
+            (root / 'lumenis_shared_skills.py').write_text(
+                '_LOCAL_RESEARCH = ["00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"]',
+                encoding='utf8')
+            with patch.object(gate, 'ROOT', root):
+                gate._assert_unique_current_rule_sources()
+                for rel in gate.RETIRED_RULE_PATHS:
+                    for suffix in ('', '.bak', '.old'):
+                        path = root / (rel + suffix)
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text('HISTORICAL / NOT CURRENT. Old instructions still here.', encoding='utf8')
+                        try:
+                            with self.subTest(path=path.name), self.assertRaisesRegex(AssertionError, 'retired instruction files remain'):
+                                gate._assert_unique_current_rule_sources()
+                        finally:
+                            path.unlink()
+                (root / 'lumenis_shared_skills.py').write_text(
+                    '_LOCAL_RESEARCH = ["ARCHITECTURE.md"]', encoding='utf8')
+                with self.assertRaisesRegex(AssertionError, 'retired rule source'):
+                    gate._assert_unique_current_rule_sources()
+
+    def test_nested_execution_authorities_are_blocked_not_only_known_names(self) -> None:
+        import tempfile
+        from unittest.mock import patch
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+        current_agents = (gate.ROOT / "AGENTS.md").read_text("utf-8-sig")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "AGENTS.md").write_text(current_agents, encoding="utf8")
+            (root / "lumenis_shared_skills.py").write_text(
+                '_LOCAL_RESEARCH = ["00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"]',
+                encoding="utf8",
+            )
+            with patch.object(gate, "ROOT", root):
+                cases = (
+                    ("docs/ARCHITECTURE_DECISION_RECORD_20260830.md", "当前有效关系以：\n- CURRENT_BASELINE.md"),
+                    ("intelligence_library/09_Research-Hub/docs/MASTER/FINAL_EXECUTION_COMMAND.md", "# FINAL EXECUTION COMMAND\nThis is current"),
+                    ("intelligence_library/05_Runtime/architecture/lumenis_AI_PROGRAMMING_BASELINE_V1.md", "状态：正式施工基线"),
+                    ("docs/MASTER/FINAL_EXECUTION_COMMAND.md", "# FINAL EXECUTION COMMAND\nSTATUS: P0 / FINAL EXECUTION AUTHORITY"),
+                    ("docs/unlisted-later-master.md", "本文件是所有UI业务的统一执行母指令"),
+                )
+                for rel, bad in cases:
+                    path = root / rel
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(bad, encoding="utf8")
+                    try:
+                        with self.subTest(path=rel), self.assertRaisesRegex(
+                            AssertionError, "uncontrolled nested execution authority"
+                        ):
+                            gate._assert_unique_current_rule_sources()
+                    finally:
+                        path.unlink()
+                hist = root / "docs/ARCHITECTURE_DECISION_RECORD_20260830.md"
+                hist.write_text("# History only\nHISTORICAL / NOT EXECUTION", encoding="utf8")
+                gate._assert_unique_current_rule_sources()
+
+    def test_retiring_release_copy_preserves_real_safety_requirements(self) -> None:
+        import tempfile
+        from unittest.mock import patch
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+        source = (gate.ROOT / "AGENTS.md").read_text("utf-8-sig")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "lumenis_shared_skills.py").write_text(
+                '_LOCAL_RESEARCH = ["00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"]', encoding="utf8")
+            with patch.object(gate, "ROOT", root):
+                for requirement in (
+                    "verify a restorable data backup and rollback path",
+                    "Collector replacement requires isolated comparison",
+                    "On session expiry, expose the platform, failure cause, affected task and cooldown",
+                    "Each release records changed source, database migrations, actual verification",
+                    "keep one product across its approved surfaces",
+                ):
+                    with self.subTest(requirement=requirement):
+                        (root / "AGENTS.md").write_text(source.replace(requirement, "removed"), encoding="utf8")
+                        with self.assertRaises(AssertionError):
+                            gate._assert_unique_current_rule_sources()
+
+    def test_nested_screen_template_cannot_restore_old_surface_or_visual_policy(self) -> None:
+        import tempfile
+        from unittest.mock import patch
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+        source = (gate.ROOT / "AGENTS.md").read_text("utf-8-sig")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "AGENTS.md").write_text(source, encoding="utf8")
+            (root / "lumenis_shared_skills.py").write_text(
+                '_LOCAL_RESEARCH = ["00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"]', encoding="utf8")
+            p = root / "contracts/experience/screen-specifications/SCREEN_SPEC_TEMPLATE.md"
+            p.parent.mkdir(parents=True)
+            with patch.object(gate, "ROOT", root):
+                for obsolete in ("Website/Web closes first", "Website/Web first; native", "二维手绘水彩/版画视觉",
+                                 "二维手绘水彩/版画色彩语言", "只借鉴手绘平面笔触与色彩", "不用3D质感"):
+                    p.write_text(obsolete, encoding="utf8")
+                    with self.subTest(phrase=obsolete), self.assertRaisesRegex(AssertionError, "obsolete surface instruction"):
+                        gate._assert_unique_current_rule_sources()
+                p.write_text("parallel construction, independent acceptance", encoding="utf8")
+                gate._assert_unique_current_rule_sources()
+                reference = root / "contracts/experience/README.md"
+                reference.write_text("[old entry](../../RELEASE_POLICY.md)", encoding="utf8")
+                with self.assertRaisesRegex(AssertionError, "active reference to retired instruction"):
+                    gate._assert_unique_current_rule_sources()
+                reference.write_text("[current entry](../../AGENTS.md)", encoding="utf8")
+                gate._assert_unique_current_rule_sources()
+
+    def test_decision_binding_inventory_does_not_erase_existing_owner(self) -> None:
+        import json
+        root = Path(__file__).resolve().parents[1]
+        contracts = root / "contracts/experience"
+        gap = next(row for row in json.loads((contracts / "BACKEND_GAP.json").read_text("utf8"))["gaps"] if row["gap_id"] == "BACKEND-GAP-016")
+        unknown = next(row for row in json.loads((contracts / "unknown-bindings.json").read_text("utf8"))["bindings"] if row["binding_id"] == gap["gap_id"])
+        matrix = next(row for row in json.loads((contracts / "BINDING_MATRIX.json").read_text("utf8"))["matrix"] if (row["screen"], row["field"]) == (gap["screen"], gap["field"]))
+        registry = next(row for row in json.loads((contracts / "lumenis_app_binding_registry.json").read_text("utf8"))["bindings"] if row["binding_id"] == gap["gap_id"])
+        self.assertEqual(gap["current_api"], unknown["current_api"])
+        self.assertEqual(gap["current_api"], matrix["current_source"])
+        self.assertEqual(gap["current_api"], registry["api_callable"])
+        self.assertIn("BusinessDecisionWorkflow", gap["current_api"])
+        self.assertNotEqual(gap["source_status"], "ABSENT")
+        self.assertNotEqual(gap["app_status"], "NO_FLUTTER_SCREEN")
+        self.assertEqual(gap["source_status"], unknown["source_status"])
+        self.assertEqual(gap["source_status"], matrix["status"])
+        # Source presence must not silently promote the separate live result.
+        if registry["truth_status"] == "UNVERIFIED_ACCEPTANCE_PENDING":
+            self.assertEqual(gap["acceptance_status"], "PENDING")
+        self.assertIn("EXISTS_BUT_UNSCOPED", json.loads((contracts / "BACKEND_GAP.json").read_text("utf8"))["field_semantics"]["source_status"])
+
+    def test_current_binding_summary_and_mirrors_reject_drift(self) -> None:
+        import copy
+        import json
+        from scripts.audit_tools import verify_experience_screen_blueprints as screen_gate
+        root = Path(__file__).resolve().parents[1]
+        registry = json.loads((root / "contracts/experience/lumenis_app_binding_registry.json").read_text("utf8"))
+        sources = {p: json.loads((root / p).read_text("utf8")) for p in screen_gate.SOURCE_FILES}
+        screen_gate._validate_source_ids(registry, sources)
+        for key in ("total", "bound", "absent", "local_only", "status_counts", "bound_screens"):
+            changed = copy.deepcopy(sources)
+            summary = changed["contracts/experience/unknown-bindings.json"]["ledger_summary"]
+            summary[key] = {} if key == "status_counts" else [] if key == "bound_screens" else -1
+            with self.subTest(field=key), self.assertRaisesRegex(AssertionError, "binding summary"):
+                screen_gate._validate_source_ids(registry, changed)
+        changed = copy.deepcopy(sources)
+        changed["contracts/experience/BACKEND_GAP.json"]["gaps"][0]["app_status"] = "NO_FLUTTER_SCREEN"
+        with self.assertRaisesRegex(AssertionError, "Flutter presence claims disagree"):
+            screen_gate._validate_source_ids(registry, changed)
+
+    def test_existing_flutter_widgets_are_not_declared_absent(self) -> None:
+        import json
+        import re
+        root = Path(__file__).resolve().parents[1]
+        shell = (root / "app/lib/shell/lumenis_workspace_shell.dart").read_text("utf8")
+        rows = json.loads((root / "contracts/experience/BACKEND_GAP.json").read_text("utf8"))["gaps"]
+        for row in rows:
+            sid = row["screen"].replace("-", "").lower()
+            for path in (root / "app/lib/features").rglob(sid + "_screen.dart"):
+                for widget in re.findall(r"class\s+(\w+)\s+extends\s+(?:StatefulWidget|StatelessWidget)", path.read_text("utf8")):
+                    if not widget.startswith("_") and re.search(r"\b" + re.escape(widget) + r"\s*\(", shell):
+                        with self.subTest(binding=row["gap_id"], widget=widget):
+                            self.assertNotEqual(row["app_status"], "NO_FLUTTER_SCREEN")
+
+    def test_shared_rule_references_are_not_executable_module_bindings(self) -> None:
+        import lumenis_shared_skills as shared
+        card = shared.get_shared_skill('shared.social_card')
+        self.assertIn('00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md', card['research_basis'])
+        result = shared._binding_state(card)
+        self.assertTrue(result['available'])
+        self.assertEqual([row['module'] for row in result['bindings']], ['lumenis_shared_skills.py'])
+        for spec in shared.SHARED_SKILL_CATALOG:
+            for binding in spec['bindings']:
+                with self.subTest(skill=spec['metadata']['skill_id'], binding=binding['module']):
+                    self.assertTrue(binding['module'].endswith('.py'))
+
     def test_human_routing_mirror_keeps_c1_through_c6_exactly_once(self) -> None:
         matrix = self._agents_matrix()
         _assert_engineering_owner_routing(matrix)
@@ -128,6 +307,15 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             ".codex/model-routing.toml",
             ".codex/tests/test_engineering.py",
             "website/DEVELOPMENT-BRIEF.md",
+            "contracts/experience/BACKEND_GAP.json",
+            "contracts/experience/BINDING_MATRIX.json",
+            "contracts/experience/lumenis_app_binding_registry.json",
+            "contracts/experience/unknown-bindings.json",
+            "scripts/audit_tools/verify_experience_screen_blueprints.py",
+            "docs/ARCHITECTURE_DECISION_RECORD_20260830.md",
+            "docs/MASTER/FINAL_EXECUTION_COMMAND.md",
+            "intelligence_library/05_Runtime/architecture/lumenis_AI_PROGRAMMING_BASELINE_V1.md",
+            "intelligence_library/09_Research-Hub/docs/MASTER/FINAL_EXECUTION_COMMAND.md",
         }
         _assert_current_publication_truth(rules_only, changed_paths=rules_paths)
 
@@ -142,6 +330,7 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             "data/runtime/governance/live_dispatch.json",
             "lumenis/system/browser/config.json",
             "contracts/experience/unreviewed-runtime.json",
+            "docs/unreviewed-rule-file.md",
             ".codex/config.toml",
             ".codex/tests/unreviewed_test.py",
             "website/src/components/UnreviewedBehavior.astro",
@@ -301,5 +490,29 @@ def test_publication_paths_keep_staged_and_committed_evidence_separate(monkeypat
     assert gate._publication_changed_paths() == {'README.md'}
     assert gate._publication_changed_paths(staged=True) == {
         'collection_api.py', '00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md'}
-    assert '--cached' not in seen[0]
-    assert '--cached' in seen[1]
+    assert any('--cached' not in cmd for cmd in seen)
+    assert any('--cached' in cmd for cmd in seen)
+
+def test_pr_publication_uses_full_branch_history_not_last_commit(monkeypatch):
+    from types import SimpleNamespace
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    calls = []
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        if "symbolic-ref" in command:
+            return SimpleNamespace(returncode=0, stdout="fix/my-pr\n", stderr="")
+        if "merge-base" in command:
+            return SimpleNamespace(returncode=0, stdout=("a" * 40) + "\n", stderr="")
+        if "diff" in command:
+            return SimpleNamespace(returncode=0, stdout="lumenis_shared_skills.py\n00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md\n", stderr="")
+        return SimpleNamespace(returncode=0, stdout="README.md\n", stderr="")
+    monkeypatch.setattr(gate.subprocess, "run", fake_run)
+    observed = gate._publication_changed_paths()
+    assert observed == {"lumenis_shared_skills.py", "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"}
+    assert any("merge-base" in cmd for cmd in calls)
+    assert any("diff" in cmd and "a"*40 in cmd for cmd in calls)
+    import pytest
+    marker = chr(96)
+    rules = "\n## 1. Online reader's current-state snapshot\nImplementation publication state: " + marker + "RULES_ONLY_PUBLICATION" + marker + "\nRuntime load state: " + marker + "NOT_LOADED_OR_NOT_VERIFIED" + marker + "\n### Approved D1"
+    with pytest.raises(AssertionError, match="governance/documentation paths only"):
+        gate._assert_current_publication_truth(rules, changed_paths=observed)
