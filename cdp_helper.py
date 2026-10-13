@@ -804,7 +804,7 @@ def auto_collect_with_cdp(collect_func, port=DEFAULT_CDP_PORT, profile_dir=None,
             # 执行采集
             return results
         
-        results = auto_collect_with_cdp(my_collect, keyword="广州太古汇")
+        results = auto_collect_with_cdp(my_collect, keyword="user-supplied topic")
     """
     with CDPBrowserContext(port=port, profile_dir=profile_dir, auto_start=True, auto_close=True) as browser_info:
         if not browser_info.get('available'):

@@ -383,7 +383,7 @@ compatibility section. The Semantic Calibration Ledger under evidence/round-15
 is a source-backed index, not another authority. Context is routing metadata,
 never Permission: unknown/conflicting domain IDs are rejected, BMP resolves to
 its existing ZBMP storage identifier, and no selection invents a reference Subject.
-Only an explicitly named legacy reference filter may retain that reference scope;
+Only an explicit reference filter retains its scope; no subject-specific default;
 GLOBAL consumers use existing scoped Canonical/Evidence services.
 
 OpenAI Math methods are applied inside existing owners when their assumptions
@@ -894,7 +894,7 @@ implementation, screen, provider, migration or release claim. M accepts each
 complete C-window outcome against current source/local/remote evidence and the
 applicable mapped R gates.
 
-Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE remain Experience-principle references only. Codex/Codex CLI and Akang (GrokBot) are the current peer engineering runtimes, dispatched only by the PO; OpenCode is shelved and not part of the current execution route. Legacy Ollama/local-model-provider, Zhipu and Jev routes are retired: retain compatibility interfaces and historical artifacts, but do not call, auto-discover, probe, fall back to or reactivate them. Gateway readback: CURRENT. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Accounts (free Google/email codes; Apple after developer-account activation; settings and 30-day deletion undo), both developer modes, all six commercial-readiness capabilities, visuals, logo and role art are in-loop. User mode requires reviewed terms, informed consent, backup and reversible disablement; founder mode requires restricted access, checks, signed staged updates and rollback. Ordinary work has no account wall; Permission/effect fences remain. Only real-user validation and paid/licensed sources follow launch; engineering operation/security/recovery remain pre-launch. Settings structure may be adapted; LUMENIS visuals remain original. This grants no deployment or spending.
+Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE remain Experience-principle references only. Codex/Codex CLI and Akang (GrokBot) are the current peer engineering runtimes, dispatched only by the PO; OpenCode is shelved and not part of the current execution route. Legacy Ollama/local-model-provider, Zhipu and Jev routes are retired: retain compatibility interfaces and historical artifacts, but do not call, auto-discover, probe, fall back to or reactivate them. Gateway status: CURRENT. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Accounts (free Google/email codes; Apple after developer-account activation; settings and 30-day deletion undo), both developer modes, all six commercial-readiness capabilities, visuals, logo and role art are in-loop. User mode requires reviewed terms, informed consent, backup and reversible disablement; founder mode requires restricted access, checks, signed staged updates and rollback. Ordinary work has no account wall; Permission/effect fences remain. Only real-user validation and paid/licensed sources follow launch; engineering operation/security/recovery remain pre-launch. Settings structure may be adapted; LUMENIS visuals remain original. This grants no deployment or spending.
 
 Business work is selected in this order: Product Positioning → Industry Business
 Logic → Real User Jobs → Deliverable Outcomes → Experience → Data/Runtime
@@ -1276,9 +1276,9 @@ When touching RedNote (HK/international account; code id xhs) or any new acquisi
   only. They must remain outside every startup, scheduler, collector, browser, recovery,
   E2E and release path unless the Product Owner explicitly changes this rule;
 - resolve other platform capability from existing secret-safe configuration and
-  registered owners before asking the Product Owner for credentials. Never print or
-  commit a secret; report unavailable/blocked honestly when a real integration cannot
-  authenticate;
+  registered owners before requesting credentials; child processes inherit only the
+  registered identity/profile; CDP verifies its session. Never expose secrets; unavailable
+  authentication remains blocked;
 - primary ingestion must not be broken by a non-critical Evidence side-write failure unless the canonical contract explicitly changes;
 - preserve source identity, source URL, capture time, provider, domain/product context and trace metadata where available;
 - do not collapse distinct source provenance merely because normalized content text matches;

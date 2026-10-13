@@ -61,7 +61,7 @@ SOURCE_TYPE_NOTE = "note"
 SOURCE_TYPE_WEB_MENTION = "web_mention"
 SOURCE_TYPE_COLLECTED = "collected_note"
 
-PRODUCT_CTH = "CTH"  # 广州太古汇客户交付版
+PRODUCT_CTH = "CTH"  # CTH commerce-operations domain
 PRODUCT_ZBMP = "ZBMP"  # Z-Brand Monitoring Platform 母平台
 
 

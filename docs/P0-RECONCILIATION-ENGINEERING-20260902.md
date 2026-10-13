@@ -5,7 +5,7 @@
 
 ## 一、施工前核验（最新仓库说明）
 
-读取 Z-Brand-Core 最新：AGENTS.md（V2.0 协作宪法）/ CURRENT_BASELINE.md / CHANGELOG.md（5.9.9-t0/t1/t2）/ 迭代工单与时间评估.md。
+当时读取 Z-Brand-Core：AGENTS.md（V2.0 协作宪法）/ CURRENT_BASELINE.md / CHANGELOG.md（5.9.9-t0/t1/t2）/ [历史迭代工单固定版本](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/5cc9440082e8b77d68d0fa4e36d2979e7cfda6da/迭代工单与时间评估.md)。这些是2026-09-02审计输入；现行KOS指标要求见 `docs/reference/CTR-KOS-METRICS-P1-01.md`，执行入口以根AGENTS为准。
 确认 GitHub main 最新 HEAD=d4df89d（含 v5.9.9-t2 小红书 P0 编排层），对账基线（本地 545a3ab）落后于最新代码，施工前以最新代码重核各 P0 项。
 
 ## 二、P0 缺口最新核验结果
