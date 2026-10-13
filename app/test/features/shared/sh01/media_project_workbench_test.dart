@@ -156,7 +156,7 @@ class _Client extends LumenisCoreClient {
     List<String>? assetRefs,
     required Map<String, dynamic> timeline,
     required String outputKind,
-    required bool demoAcknowledged,
+    bool? demoAcknowledged,
     String? previousArtifactId,
   }) async {
     exports++;
@@ -182,7 +182,7 @@ class _Client extends LumenisCoreClient {
             'schema_version': 1,
             'output_kind': outputKind,
             'timeline': timeline,
-            'rights': {'state': 'unknown', 'demo_acknowledged': true},
+            'rights': {'state': 'unknown', 'label': 'rights unknown'},
             'source_artifact_refs': assetRefs ?? const <String>[],
           },
           'render': {
@@ -300,9 +300,8 @@ Widget _app(
     GlobalCupertinoLocalizations.delegate,
   ],
   builder: (context, child) => MediaQuery(
-    data: MediaQuery.of(
-      context,
-    ).copyWith(textScaler: TextScaler.linear(scale), viewInsets: viewInsets),
+    data: MediaQuery.of(context)
+        .copyWith(textScaler: TextScaler.linear(scale), viewInsets: viewInsets),
     child: child!,
   ),
   home: guard == null
@@ -409,7 +408,7 @@ void main() {
     (tester) async {
       await _prepareEditableProject(client, controller);
       client.successfulExport = true;
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       client.contextEnvelope = {
         'context': {
           'mode': 'FOCUS',
@@ -453,7 +452,7 @@ void main() {
     (tester) async {
       await _prepareEditableProject(client, controller);
       client.successfulExport = true;
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       await tester.pumpWidget(_app(client, controller));
       await tester.tap(find.byKey(const Key('media-open-saved')));
       await tester.pumpAndSettle();
@@ -479,7 +478,7 @@ void main() {
     (tester) async {
       await _prepareEditableProject(client, controller);
       client.successfulExport = true;
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       final fresh = MediaProjectController(
         repository: CoreMediaProjectRepository(client),
         domain: 'BMP',
@@ -523,7 +522,7 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await _prepareEditableProject(client, controller);
       client.successfulExport = true;
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       final fresh = MediaProjectController(
         repository: CoreMediaProjectRepository(client),
         domain: 'BMP',
@@ -930,14 +929,6 @@ void main() {
       await tester.ensureVisible(exportButton);
       await tester.tap(exportButton);
       await tester.pumpAndSettle();
-      expect(client.exports, 0);
-      await tester.ensureVisible(find.byType(CheckboxListTile));
-      await tester.tap(find.byType(CheckboxListTile));
-      await tester.pumpAndSettle();
-      await _openActionsForTarget(tester, exportButton);
-      await tester.ensureVisible(exportButton);
-      await tester.tap(exportButton);
-      await tester.pumpAndSettle();
       expect(client.exports, 1);
       expect(client.exportedRefs, ['ART-source']);
       expect(controller.timeline!.tracks.single.clips.single.sourceOut, 20);
@@ -1038,8 +1029,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await _openActionsForTarget(tester, find.byKey(const Key('media-export')));
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        '版权状态尚未核实；导出不代表获准发布。',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('media-rights-unknown')), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNothing);
     client.pendingExport = Completer<void>();
     await tester.tap(find.byKey(const Key('media-export')));
     await tester.pump();
@@ -1086,8 +1083,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_app(client, controller));
     await _openActionsForTarget(tester, find.byKey(const Key('media-export')));
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-rights-unknown')), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNothing);
     await tester.tap(find.byKey(const Key('media-export')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('media-reopen-ART-version')), findsOneWidget);
@@ -1242,7 +1239,7 @@ void main() {
       expect(controller.hasUnsavedChanges, isTrue);
       expect(guard.needsProtection, isTrue);
 
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       await tester.pumpAndSettle();
       expect(controller.version?.artifactId, 'ART-version');
       expect(client.exports, 1);
@@ -1267,7 +1264,7 @@ void main() {
         _app(client, controller, guard: guard, onBack: () => backCalls++),
       );
       await tester.pumpAndSettle();
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       await tester.pumpAndSettle();
       expect(controller.hasUnsavedChanges, isFalse);
 
@@ -1307,7 +1304,7 @@ void main() {
 
     await tester.pumpWidget(_app(client, controller, guard: guard));
     await tester.pumpAndSettle();
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     await tester.pumpAndSettle();
     expect(controller.version?.artifactId, 'ART-version');
     expect(controller.hasUnsavedChanges, isFalse);
@@ -1345,7 +1342,7 @@ void main() {
 
       await tester.pumpWidget(_app(client, controller, guard: guard));
       await tester.pumpAndSettle();
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       await tester.pumpAndSettle();
       final endField = find.byWidgetPredicate(
         (widget) =>
@@ -1466,10 +1463,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     client.pendingExport = Completer<void>();
-    final export = controller.export(
-      outputKind: 'video',
-      demoAcknowledged: true,
-    );
+    final export = controller.export(outputKind: 'video');
     await tester.pump();
     expect(controller.busy, isTrue);
     expect(guard.needsProtection, isTrue);
@@ -1504,8 +1498,8 @@ void main() {
     await tester.pumpAndSettle();
     final exportButton = find.byKey(const Key('media-export'));
     await _openActionsForTarget(tester, exportButton);
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pump();
+    expect(find.byKey(const Key('media-rights-unknown')), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNothing);
     client.pendingExport = Completer<void>();
     await tester.ensureVisible(exportButton);
     await tester.tap(exportButton);
@@ -1544,7 +1538,7 @@ void main() {
       _app(client, controller, guard: guard, onBack: () => backCalls++),
     );
     await tester.pumpAndSettle();
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     await tester.pumpAndSettle();
 
     client.pendingRetrieval = Completer<void>();
@@ -1586,7 +1580,7 @@ void main() {
       client.successfulExport = true;
       await tester.pumpWidget(_app(client, controller));
       await tester.pumpAndSettle();
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       await tester.pumpAndSettle();
 
       final action = find.byKey(const Key('media-version-preview'));
@@ -1692,7 +1686,7 @@ void main() {
       client.successfulExport = true;
       await tester.pumpWidget(_app(client, controller));
       await tester.pumpAndSettle();
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       await tester.pumpAndSettle();
 
       final previewAction = find.byKey(const Key('media-version-preview'));
@@ -1749,7 +1743,7 @@ void main() {
       client.successfulExport = true;
       await tester.pumpWidget(_app(client, controller));
       await tester.pumpAndSettle();
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       await tester.pumpAndSettle();
 
       final previewAction = find.byKey(const Key('media-version-preview'));
@@ -1826,7 +1820,7 @@ void main() {
     expect(find.text('导出后可预览真实成片。'), findsOneWidget);
     expect(find.byKey(const Key('media-load-preview')), findsNothing);
 
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     await tester.pumpAndSettle();
     final load = find.byKey(const Key('media-load-preview'));
     expect(load, findsOneWidget);
@@ -1867,7 +1861,7 @@ void main() {
     client.successfulExport = true;
     await tester.pumpWidget(_app(client, controller));
     await tester.pumpAndSettle();
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
@@ -1903,7 +1897,7 @@ void main() {
     final files = _Files();
     await tester.pumpWidget(_app(client, controller, files: files));
     await tester.pumpAndSettle();
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
@@ -1933,7 +1927,7 @@ void main() {
       client.successfulExport = true;
       await tester.pumpWidget(_app(client, controller));
       await tester.pumpAndSettle();
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
@@ -1964,12 +1958,12 @@ void main() {
     await tester.pumpWidget(_app(client, controller));
     await tester.pumpAndSettle();
 
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     await tester.pumpAndSettle();
     expect(controller.version?.artifactId, 'ART-version');
     expect(client.exports, 1);
 
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     await tester.pumpAndSettle();
     expect(controller.failureCode, 'CONTENT_PROJECT_NO_CHANGES');
     expect(find.text('先修改内容，再保存新版本。当前作品已保留。'), findsOneWidget);
@@ -1978,7 +1972,7 @@ void main() {
     controller.edit((snapshot) => snapshot.undo());
     expect(controller.hasUnsavedChanges, isTrue);
     client.exportFailureCode = 'CONTENT_PROJECT_PARENT_REVISION_REQUIRED';
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     await tester.pumpAndSettle();
 
     expect(controller.failureCode, 'CONTENT_PROJECT_PARENT_REVISION_REQUIRED');

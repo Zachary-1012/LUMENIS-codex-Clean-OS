@@ -256,7 +256,8 @@ def test_tampered_package_and_inactive_account_are_denied_with_recovery(media_st
     assert artifacts.read_content_source_artifact(artifact_id, actor=ACTOR, **SCOPE) == result
 
 
-def test_audio_project_real_render_reopen_revision_and_download(media_store):
+@pytest.mark.parametrize("legacy_demo", [None, False, True])
+def test_audio_project_real_render_reopen_revision_and_download(media_store, legacy_demo):
     approve(media_store)
     source = import_source(media_store)
     source_id = source["artifact"]["artifact_id"]
@@ -266,7 +267,8 @@ def test_audio_project_real_render_reopen_revision_and_download(media_store):
         timeline = timeline.add_clip(asset.asset_id, track_id="voice", audio_role="voiceover", source_out=0.4)
         result = artifacts.stage_timeline_artifact(
             timeline, actor=ACTOR, **SCOPE, source_execution_id="isolated-export",
-            demo_acknowledged=True, output_kind="audio", source_artifact_refs=[source_id],
+            output_kind="audio", source_artifact_refs=[source_id],
+            **({} if legacy_demo is None else {"demo_acknowledged": legacy_demo}),
         )
     project_id = result["artifact"]["artifact_id"]
     reopened = artifacts.read_content_project(project_id, actor=ACTOR, **SCOPE)
@@ -291,12 +293,14 @@ def test_audio_project_real_render_reopen_revision_and_download(media_store):
     assert hashlib.sha256(media["data"]).hexdigest() == result["render"]["media_sha256"]
     assert media["media_type"] == "audio/wav"
     assert result["rights_state"] == "unknown" and result["publish_status"] == "not_performed"
+    assert reopened["project"]["rights"] == {"state": "unknown", "label": "rights unknown"}
+    assert "demo_acknowledged" not in result
     with artifacts.resolve_content_source_assets([source_id], actor=ACTOR, **SCOPE) as sources:
         restored = Timeline.from_dict(reopened["project"]["timeline"], assets=[item["asset"] for item in sources])
         revised = restored.add_audio_track("music", audio_role="bgm")
         second = artifacts.stage_timeline_artifact(
             revised, actor=ACTOR, **SCOPE, source_execution_id="isolated-revision",
-            demo_acknowledged=True, output_kind="audio", source_artifact_refs=[source_id],
+            output_kind="audio", source_artifact_refs=[source_id],
             previous_artifact_id=project_id,
         )
     assert second["project"]["parent_artifact_id"] == project_id

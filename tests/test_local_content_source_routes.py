@@ -167,7 +167,7 @@ def imported_audio_project(client, store):
     timeline = timeline.add_clip(asset.asset_id, track_id="voice", source_out=.4)
     return {
         "asset_refs": [imported["artifact"]["artifact_id"]], "timeline": timeline.to_dict(),
-        "output_kind": "audio", "demo_acknowledged": True,
+        "output_kind": "audio",
     }
 
 
