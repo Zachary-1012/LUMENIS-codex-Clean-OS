@@ -6,7 +6,7 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any other handoff/todo/progress note dated before 2026-10-13 is superseded where it conflicts and is kept only as history.
 
-- Loop path: `AGENTS.md` rules -> this CURRENT -> branch -> tests -> PR -> Product Gate + App Gate green -> normal merge -> local `D:/LUMENIS_REBUILD/序/序境` equals `origin/main`, clean status. One local path only; no extra worktrees.
+- Loop path: `AGENTS.md` rules -> this CURRENT -> branch -> tests -> PR -> Product Gate + App Gate green -> normal merge -> verify published main and the integration checkout separately; retain the active owner branch and its dirty work. This authorized repair uses temporary isolated branches from fresh origin/main to protect the active checkout; they are not another product authority.
 - Rule entry points: `AGENTS.md`; this file; governance machine contract (`scripts/audit_tools/verify_governance_machine_contract.py`); PO decisions in `00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/USER-ADDITIONS-20261004.md`; approvals in `00-GOVERNANCE/evidence/approvals/`.
 - Current progress: local work-in-progress (170 files) is preserved unmerged on branch `akang/wip-business-decision` (draft PR #31; it breaks `tests/test_business_decision_workflow.py`; owner to finish) and in `D:/LUMENIS_AUDIT/20261013_akang_governance/pre-sync.patch`. PO role names (Pim/Bram/Ness/Jas/Aris, English only) and the AI watermark are recorded in USER-ADDITIONS.
 - Next steps (nothing dropped; in order):
@@ -16,7 +16,7 @@ This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any o
   4. Draft PR #31 (business-decision WIP): owner to finish and pass both gates.
   5. Cleanup: stale worktrees (`D:/LUMENIS_AUDIT/20261012_rules_publish/*`, `序境-runtime-03dc8d93`, leftover `rea-merge-wt` folder), temp files, stale branches/docs, stash `akang-pre-dd0-merge`.
   6. Akang1: browser migration (WIP in the main working tree), `COLLECTOR_ENDPOINT`, tasks 1-3 (Gateway executor stub, AI-01 submit chain, stop/resume, SH-06 inbox, decision-card receipts).
-  7. After the loop closes: logo r5 (named/unnamed + 16px), 5 role images + stickers, analysis of ~290 PC images + 47 WeChat videos, frontend (frontend todo: AI-01 non-executable response is shown as '响应无效'; it must show the honest not-executable state). 阿康（bot）
+  7. In-loop: original visual style, logo r5 (named/unnamed + 16px), five role images/stickers, relevant visual research and frontend functionality. Build and verify them alongside the backend; only real-user validation and paid/licensed sources follow launch.
   8. In-loop (阿康1（bot））: grant the SH-06 `operational_inbox` read permission to the intended accounts (account system is in-loop; until it lands SH-06 shows "通知与待办暂不显示"); decision-card receipt stays pending for the CTH-09 Decision owner (BACKEND-GAP-016), no App card while the frontend is paused (USER-ADDITIONS:7,63).
 
 ## 2026-10-13 SYS-06 built-in browser live stream (dated readback, PR #35)
@@ -52,12 +52,14 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 5. Brand names = official-site names with source URL.
 6. The developer runs end-to-end tests for newly added subjects and keeps them in CI.
 7. Retired AI providers (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) have their calling code and config deleted; the owned 序境 model is default, one generic OpenAI-compatible adapter serves only a user-selected own API (AI_PROVIDER=user_api), with no automatic fallback.
-8. In-loop: collection, CTH, BMP, Shared, AI, no-shell tools in built-in browser, chat UI cards, full Skill Store, GitHub connector, MCP, frontend functions, competitor proofs, accounts (email/Apple/Google, ChatGPT-style settings), user and founder developer modes, commercial-readiness items, visuals, logo, role art. Post-launch: real-user validation, paid/licensed sources.
+8. In-loop: collection, CTH, BMP, Shared, AI, no-shell tools in built-in browser, chat UI cards, full Skill Store, GitHub connector, MCP, frontend functions, competitor proofs, accounts (free email codes/Google; Apple after developer-account activation; original settings presentation), user and founder developer modes, commercial-readiness items, visuals, logo, role art. Post-launch: real-user validation, paid/licensed sources.
 
 ## 1. Online reader's current-state snapshot
 
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+
+本批仅治理/文档：原位统一账号、两种开发者模式、商业六项、视觉/Logo/角色的闭环要求，明确免费登录例外，修正旧登录禁令与重复规划编号。工程操作、安全、保存与恢复验收仍在闭环内；本批不证明产品实现、运行、训练或发布。各类源码修复、屏幕增补、Gibbs证据与资料全文采用按各自证据单独收口。
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
 

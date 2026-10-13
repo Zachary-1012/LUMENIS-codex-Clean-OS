@@ -40,7 +40,7 @@
 | O4 | CI 全绿即可合并，不等 PO | A:59 原文要求 required checks → merge，与新指令不冲突，只是去掉了等待 PO 这一步 | 已存入 memory |
 | O5 | 品牌名只用官网名，并记录来源 URL | 旧种子里的翻译名 | #34 record_official_name |
 | O6 | 新增主体由开发自己做端到端测试，并加进 CI | GLB:79-81 原本就要求有真实用户新增路径 | PO 直接指令 |
-| O7 | logo、角色图、前端放到闭环之后再做（暂缓，不是取消） | CUR:19 | PO 直接指令 |
+| O7 | 账号、两类开发者模式、商业六项、视觉、Logo、角色与前端均闭环内，普通工作无账号墙；仅真实用户验证与付费/授权来源上线后 | AGENTS / CURRENT / MASTER-CHECKLIST | PO 2026-10-14直接指令 |
 
 ## 2. 全产品模块对照表
 负责人：阿康＝前端/采集/主体（F、C1）；阿康1＝后端（C2/C3/C5/C6 的 API 部分）；Codex＝与两人同级，由 PO 分工（A:55）。
@@ -60,8 +60,8 @@
 | Shared 提案/视频/播客 C4 | 三类分别验收：可编辑成品、真实渲染和试听（ARCH:82-111、SOI:683-687） | Timeline、渲染、导出有历史成果；不再要求勾 demo | 独立新建→编辑→导出→重开的完整链没有验收 | 阿康1（后端），阿康（界面） | 闭环内 |
 | Shared 检索 | cosine＋BM25＋融合＋cross-encoder 精排（ARCH:153-161） | 没有核实 | 需要真实模型和效果证据 | 阿康1 | 闭环内 |
 | **Agent / 自研 AI** C2 | 取消/恢复、Skills 商店、Memory、受控学习（SOI:224,669-672） | 首页聊天提交以前是 `onPressed:null`（UA:28）；#31 正在补 | AI-01 提交链、SH-06 收件箱、决策卡回执 | 阿康1 | 闭环内 |
-| **四表面** F | 官网 Astro、Web、Win/macOS、iOS 并行建设、各自验收；后三者共用一套 Flutter 实现（README:54、MSD:17）；打开工作区直接进入聊天首页（ARCH:124）；中英韩三语和无障碍（SOI:230） | 有官网基础版、Flutter Web 和 /workspace | 前端功能与后端并行闭环开发 | 阿康 | 前端功能与视觉风格/logo/角色图均闭环内（与后端并行，按 sketches/FRONTEND-BUILD-PLAN.md 分步建设） |
-| 品牌与角色 | Pim/Bram/Ness/Jas/Aris；AI 水印；logo 带名/不带名两版（UA:90-104） | 已登记 | 随前端分步建设（FRONTEND-BUILD-PLAN 第 F12 步） | 阿康 | 闭环内 |
+| **四表面** F | 官网 Astro、Web、Win/macOS、iOS 并行建设、各自验收；后三者共用一套 Flutter 实现（README:54、MSD:17）；打开工作区直接进入聊天首页（ARCH:124）；中英韩三语和无障碍（SOI:230） | 有官网基础版、Flutter Web 和 /workspace | 前端功能与后端并行闭环开发 | 阿康 | 前端功能与视觉风格/logo/角色图均闭环内（与后端并行，按 sketches/UI-STEP-PLAN.md 分步建设） |
+| 品牌与角色 | Pim/Bram/Ness/Jas/Aris；AI 水印；logo 带名/不带名两版（UA:90-104） | 已登记 | 随前端分步建设（UI-STEP-PLAN 第 F12 步） | 阿康 | 闭环内 |
 | 小插件进度 | 只有一个进度入口，即 CURRENT（CUR:7） | 正在改成读 CURRENT | 需要合 PR | 阿康 | 闭环内 |
 
 ## 3. 常见决策的规则答案（直接照做，不要问 PO）
@@ -77,7 +77,7 @@
 | 品牌名？ | 用官网名并记录来源 URL；同名暂缓；不改别人的品牌名 | O5、CUR:15,50 |
 | 配置或写库审批？ | 研发阶段开发自己执行，写回 CURRENT（O3）；写前必须先备份 | O3、A:1252 |
 | 合并 PR？ | CI 全绿就合并（O4） | A:59 |
-| 用 worktree 或副本？ | 不用，只用一个主路径；保护别人的 dirty 工作 | CUR:9、A:512 |
+| 保护活动分支？ | 不切换或修改 akang/auto-scope-all-subjects；本次在origin/main新分支的临时隔离工作区处理，保留其全部dirty | PO 2026-10-14 |
 | 遇到外部 API/框架的 bug？ | 查官方文档和 GitHub，然后自己修 | A:651-674 |
 | 要不要新加第三方组件？ | 放在 adapter 后面，许可证查清楚并登记 | A:1503-1526 |
 | 训练、花钱、部署？ | 需要 PO 单独授权（真实阻塞） | A:186,1581 |
@@ -293,7 +293,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | X35 | SYS-02:166；CTH-03:246 | 旧固定起始日期字面量 | 主题驱动、无统一起始日 |
 | X36 | CTH-10:87；SH-02:156 | 自有推理未绑定；要求不存在的六平台原生 reader | 默认自有模型 / owner 落地 |
 | X37 | AI-01:93；canonical_data.py:870 | 服务端默认 actor=experience_user、domain/product=CTH | GLOBAL_ALL 默认、真实 actor |
-| X38 | spec README:32,92,102；SYS-05 全文 | 44 屏全量视觉升级、手绘图标、壁纸/材质迭代现在做 | 前端视觉/logo/角色图闭环内，按 FRONTEND-BUILD-PLAN 分步做 |
+| X38 | spec README:32,92,102；SYS-05 全文 | 44 屏全量视觉升级、手绘图标、壁纸/材质迭代现在做 | 前端视觉/logo/角色图闭环内，按 UI-STEP-PLAN 分步做 |
 | X39 | SYS-06:9,88,195 | AgentZero/通用 OS 代码"保留为历史" | 已撤回范围应删除 |
 | X40 | CTH-03:40,115；swire_group.py:32；ai_analyzer.py:144；schema swire_* 三表 | 太古系/单主体硬编码与验收 | 全部已登记主体 |
 | X41 | ark_llm.py:23；ai_api.py api_ark_*；local_ai_client.py:21,29；case_ai_evaluate.py:20；config.py:258 | 豆包/智谱/Ollama 代码与配置键保留 | 删豆包/智谱/Ollama 专用代码，替换为单一通用 BYO-API 适配器；旧通道直接删除 |
@@ -315,20 +315,20 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 ## 11. 仓库研究资料升级（2026-10-14，第二轮含 X 帖与 SwiftChat/Intelligent UI，main 96697530；只升级不降级，旧文与现行决策冲突时按现行决策改写）
 | # | 能力 | 闭环内验收标准 | 来源 | 归属 |
 |---|---|---|---|---|
-| G94 | **Skills 商店（完整）** | Discover→Inspect→信任/许可→权限审批→隔离安装/自测→启用→真实执行→Evidence→历史→版本更新/回滚→停用→卸载 全链；支持 LUMENIS `skill.json` 与 Agent Skills `SKILL.md`、本地目录/ZIP/GitHub 精确 revision 来源；未验证项只能 disabled+not_installed；至少 1 个 Skill 真实完成 CTH/BMP 业务任务；前端有安装/启用/停用/更新/卸载按钮（用户可选） | SOI §2-12、RD:717-760、AI-04、docs/architecture/LUMENIS-GITHUB-SKILL-MCP-CONTRACT-V1.md §3、FULL-UPGRADE U19、IC-004/IC-009 | 阿康1 后端 / 阿康 前端并行 |
-| G95 | **GitHub 连接器** | 按原设计：用户同意→GitHub App user-to-server 授权/选择安装→外部凭证提供器（不存/不打印 Token）→仓库白名单→只读 GitHub API→GitHub Adapter→Evidence/Canonical/AI/CTH/BMP/Shared；6 态 NOT_CONFIGURED/READY_FOR_AUTHORIZATION/CONNECTED(/user 健康检查)/SESSION_EXPIRED/BLOCKED/PROVIDER_UNAVAILABLE 前端可见；默认 write_enabled=false；授权回调+CSRF state 核验+加密凭证库实测；不依赖产品账号体系（ARCH:557 保留其自身授权） | 同上 §1-2、ARCH:557、AGENTS:1129、github_connector.py、platform_adapters/github.py | 阿康1 / 阿康 |
-| G96 | **MCP 接入** | 发现→工具 schema 审查→域/端点白名单→权限审查→人工批准→隔离自测→版本化注册；MCP 不得直达 Cookie/CDP/原始库/未授权外部写 | 同上 §4 | 阿康1 |
-| G97 | 内置浏览器完整能力 | 标签列表/新建/关闭/切换、地址栏、前进后退、书签、历史(上限1000)、Reader 元数据/正文、轻量 A11y DOM、多引擎搜索、strict/allowlist/open 策略门+SSRF；生产 UI（标签栏+地址栏+Reader/DOM 面板、可折叠）实测 | IL/11_前沿研究/AgentOrg/05-IC-052、IC-051、IC-053 | 阿康/阿康1 |
-| G98 | 国家/市场/主体关系 | 总部/发源地/法人/经营/营销/场所分开；同 Canonical 多市场；反例验收：Nike 美国品牌∕中国经营并存、罗湖万象城≠万象天地 | IL/07/COUNTRY-MARKET-RELATIONSHIP-NAVIGATION、FULL-UPGRADE U01/U05 | 阿康1 |
-| G99 | 场内经营关系 | 主体→项目/场所→门店/业态→品牌/活动，租户关系带来源与有效期；场内门店事件不污染品牌全国 | FULL-UPGRADE U05、CTH-DATA-INTELLIGENCE-ADOPTION | 阿康1 |
-| G100 | 自动维护与 freshness | 只处理到期项；幂等/退避/断点/重启恢复；真实定时周期不依赖开发工具，记录失败与恢复 | U04、COLLECTOR-CONTINUITY-RESEARCH | 阿康1 |
-| G101 | 正文质量与来源分工 | 官方/媒体证身份事实、社媒证传播/消费者表达；正文抽取小样评测（Trafilatura 对照现有）；会话/无会话逐平台逐字段对比 | U02/U03、COLLECTOR-CONTINUITY | 阿康1 |
-| G102 | 平台扩展（同权按用途） | B站公开原生、微博官方 weibo-cli（免费，可作 Skill/MCP 工具）、抖音/视频号/Instagram/TikTok/YouTube 等走统一 PlatformManifest/Session/恢复；不使用付费授权源 | docs/research/2026-platform-crawling-rules.md、IL/07/BILIBILI-PUBLIC-NATIVE、ARCH:536-538 | 阿康1 |
-| G103 | 韩语能力 | 语言字段 zh/ko/en；韩文分词(Kiwi/Okt)、空格校正、情感/主题/NER、韩文风险规则；Naver Blog/Cafe、Daum 适配；韩文 UI 预留 30-50% 长度与本地化格式；模型只用自有/BYO（旧文 HyperClova 云端按现行规则不接） | docs/research/korean-nlp-resources.md、research/intelligence/03_*/Korean_Content_Intelligence_Collection | 阿康1/阿康 |
-| G104 | 韩剧对白/字幕本地化创作 | 场景先行/潜台词/人物声音/克制/留白；敬语、直译意译增省译、情绪等值、术语统一+人工审校，作为 Shared 制作可选风格并有质检用例 | docs/content-learning/KDRAMA_*、IL/02/品牌营销知识-13 | 阿康1 |
-| G105 | 视频工程交换 | Timeline 交换损失预检（volume/fade/ducking/muted/多音轨/overlay/dissolve/间隙/多轨）→OTIO/FCPXML/EDL 导出（有理时基，30000/1001 等往返测试）；缺时基/重链报 UNKNOWN 不判可交付；字幕/音轨/叠层；剪辑全链见 §14 E1–E11 | IL/01/VIDEO-WORKFLOW-INTERCHANGE-RESEARCH、U14 | 阿康1/阿康 |
-| G106 | 播客制作全链 | 选题→嘉宾→提纲→脚本→录音/导入→转写/说话人/章节→文本剪辑→可选配音→混音母带（-16 LUFS±1、真峰≤-1 dBTP）→发布包（音频+show notes+章节+字幕稿+RSS）→切片→复盘；工程细则见 §14 P1–P12 | U15、IC-030、docs/research/PODCAST_MODULE_RESEARCH_V1.md、podcast/research | 阿康1/阿康 |
-| G107 | 研究库别名/版本/范围 | 文档/表格/网页/媒体导入；来源定位、引文、别名、版本；检索结果保留范围 | U16 | 阿康1 |
+| G185 | **Skills 商店（完整）** | Discover→Inspect→信任/许可→权限审批→隔离安装/自测→启用→真实执行→Evidence→历史→版本更新/回滚→停用→卸载 全链；支持 LUMENIS `skill.json` 与 Agent Skills `SKILL.md`、本地目录/ZIP/GitHub 精确 revision 来源；未验证项只能 disabled+not_installed；至少 1 个 Skill 真实完成 CTH/BMP 业务任务；前端有安装/启用/停用/更新/卸载按钮（用户可选） | SOI §2-12、RD:717-760、AI-04、docs/architecture/LUMENIS-GITHUB-SKILL-MCP-CONTRACT-V1.md §3、FULL-UPGRADE U19、IC-004/IC-009 | 阿康1 后端 / 阿康 前端并行 |
+| G186 | **GitHub 连接器** | 按原设计：用户同意→GitHub App user-to-server 授权/选择安装→外部凭证提供器（不存/不打印 Token）→仓库白名单→只读 GitHub API→GitHub Adapter→Evidence/Canonical/AI/CTH/BMP/Shared；6 态 NOT_CONFIGURED/READY_FOR_AUTHORIZATION/CONNECTED(/user 健康检查)/SESSION_EXPIRED/BLOCKED/PROVIDER_UNAVAILABLE 前端可见；默认 write_enabled=false；授权回调+CSRF state 核验+加密凭证库实测；不依赖产品账号体系（ARCH:557 保留其自身授权） | 同上 §1-2、ARCH:557、AGENTS:1129、github_connector.py、platform_adapters/github.py | 阿康1 / 阿康 |
+| G187 | **MCP 接入** | 发现→工具 schema 审查→域/端点白名单→权限审查→人工批准→隔离自测→版本化注册；MCP 不得直达 Cookie/CDP/原始库/未授权外部写 | 同上 §4 | 阿康1 |
+| G188 | 内置浏览器完整能力 | 标签列表/新建/关闭/切换、地址栏、前进后退、书签、历史(上限1000)、Reader 元数据/正文、轻量 A11y DOM、多引擎搜索、strict/allowlist/open 策略门+SSRF；生产 UI（标签栏+地址栏+Reader/DOM 面板、可折叠）实测 | IL/11_前沿研究/AgentOrg/05-IC-052、IC-051、IC-053 | 阿康/阿康1 |
+| G176 | 国家/市场/主体关系 | 总部/发源地/法人/经营/营销/场所分开；同 Canonical 多市场；反例验收：Nike 美国品牌∕中国经营并存、罗湖万象城≠万象天地 | IL/07/COUNTRY-MARKET-RELATIONSHIP-NAVIGATION、FULL-UPGRADE U01/U05 | 阿康1 |
+| G177 | 场内经营关系 | 主体→项目/场所→门店/业态→品牌/活动，租户关系带来源与有效期；场内门店事件不污染品牌全国 | FULL-UPGRADE U05、CTH-DATA-INTELLIGENCE-ADOPTION | 阿康1 |
+| G178 | 自动维护与 freshness | 只处理到期项；幂等/退避/断点/重启恢复；真实定时周期不依赖开发工具，记录失败与恢复 | U04、COLLECTOR-CONTINUITY-RESEARCH | 阿康1 |
+| G179 | 正文质量与来源分工 | 官方/媒体证身份事实、社媒证传播/消费者表达；正文抽取小样评测（Trafilatura 对照现有）；会话/无会话逐平台逐字段对比 | U02/U03、COLLECTOR-CONTINUITY | 阿康1 |
+| G180 | 平台扩展（同权按用途） | B站公开原生、微博官方 weibo-cli（免费，可作 Skill/MCP 工具）、抖音/视频号/Instagram/TikTok/YouTube 等走统一 PlatformManifest/Session/恢复；不使用付费授权源 | docs/research/2026-platform-crawling-rules.md、IL/07/BILIBILI-PUBLIC-NATIVE、ARCH:536-538 | 阿康1 |
+| G181 | 韩语能力 | 语言字段 zh/ko/en；韩文分词(Kiwi/Okt)、空格校正、情感/主题/NER、韩文风险规则；Naver Blog/Cafe、Daum 适配；韩文 UI 预留 30-50% 长度与本地化格式；模型只用自有/BYO（旧文 HyperClova 云端按现行规则不接） | docs/research/korean-nlp-resources.md、research/intelligence/03_*/Korean_Content_Intelligence_Collection | 阿康1/阿康 |
+| G182 | 韩剧对白/字幕本地化创作 | 场景先行/潜台词/人物声音/克制/留白；敬语、直译意译增省译、情绪等值、术语统一+人工审校，作为 Shared 制作可选风格并有质检用例 | docs/content-learning/KDRAMA_*、IL/02/品牌营销知识-13 | 阿康1 |
+| G183 | 视频工程交换 | Timeline 交换损失预检（volume/fade/ducking/muted/多音轨/overlay/dissolve/间隙/多轨）→OTIO/FCPXML/EDL 导出（有理时基，30000/1001 等往返测试）；缺时基/重链报 UNKNOWN 不判可交付；字幕/音轨/叠层；剪辑全链见 §14 E1–E11 | IL/01/VIDEO-WORKFLOW-INTERCHANGE-RESEARCH、U14 | 阿康1/阿康 |
+| G184 | 播客制作全链 | 选题→嘉宾→提纲→脚本→录音/导入→转写/说话人/章节→文本剪辑→可选配音→混音母带（-16 LUFS±1、真峰≤-1 dBTP）→发布包（音频+show notes+章节+字幕稿+RSS）→切片→复盘；工程细则见 §14 P1–P12 | U15、IC-030、docs/research/PODCAST_MODULE_RESEARCH_V1.md、podcast/research | 阿康1/阿康 |
+| G189 | 研究库别名/版本/范围 | 文档/表格/网页/媒体导入；来源定位、引文、别名、版本；检索结果保留范围 | U16 | 阿康1 |
 | G108 | AI 弃答与确定性优先 | 确定性计算先行，生成/分类分路，结构化校验，证据不足弃答（替代旧文 fallback） | U18 | 阿康1 |
 | G109 | Agent 记忆与可靠性 | 写路径先校验、记忆分层(Experience/Skill/Project)、多用户隔离、Checkpoint 断点续跑、Critic 双审、防 Sycophancy、失败案例→回归用例 | IL/11/AgentOrg/04-IMPROVEMENT-QUEUE IC-001..012、IC-037/043 | 阿康1 |
 | G110 | 受控学习晋升 | shadow→promotion，保留集+真实任务均优于旧版才晋升，可回滚 | U20、IL/05/LEARNING-PROMOTION-ENGINE | 阿康1 |
@@ -368,16 +368,16 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 ## 12. 找回的遗失能力（研究资料中设计过、规划里缺失或被弱化）
 | 能力 | 原状态 | 找回为 | 来源 |
 |---|---|---|---|
-| Skills 商店 | 仅第62行与 G21 提及；AI-04 被写成只读目录 | G94 全生命周期 | SOI §2-12、RD:751 |
-| GitHub 连接器 | 规划完全缺失 | G95 | LUMENIS-GITHUB-SKILL-MCP-CONTRACT-V1 |
-| MCP 接入 | 缺失 | G96 | 同上 §4 |
-| 内置浏览器书签/历史/Reader/多引擎搜索 | 仅浏览器动作循环 | G97 | IC-052 |
-| 国家/市场关系 | 缺失 | G98 | COUNTRY-MARKET |
-| 韩语舆情与本地化创作 | 只有界面三语 | G103/G104 | korean-nlp、KDRAMA |
-| 视频 OTIO/EDL 交换 | 缺失 | G105 | VIDEO-WORKFLOW |
-| 播客转写/响度/章节 | 弱化 | G106 | U15 |
+| Skills 商店 | 仅第62行与 G21 提及；AI-04 被写成只读目录 | G185 全生命周期 | SOI §2-12、RD:751 |
+| GitHub 连接器 | 规划完全缺失 | G186 | LUMENIS-GITHUB-SKILL-MCP-CONTRACT-V1 |
+| MCP 接入 | 缺失 | G187 | 同上 §4 |
+| 内置浏览器书签/历史/Reader/多引擎搜索 | 仅浏览器动作循环 | G188 | IC-052 |
+| 国家/市场关系 | 缺失 | G176 | COUNTRY-MARKET |
+| 韩语舆情与本地化创作 | 只有界面三语 | G181/G182 | korean-nlp、KDRAMA |
+| 视频 OTIO/EDL 交换 | 缺失 | G183 | VIDEO-WORKFLOW |
+| 播客转写/响度/章节 | 弱化 | G184 | U15 |
 | 弃答、记忆分层、Checkpoint、Critic | 缺失 | G108/G109 | U18、IC 队列 |
-| 微博官方 CLI / B站公开源 | 缺失 | G102 | crawling-rules、BILIBILI |
+| 微博官方 CLI / B站公开源 | 缺失 | G180 | crawling-rules、BILIBILI |
 | Agent 无 Shell 工具+浏览器 API | 只有浏览器动作循环 G82 | G115 | X 帖 a、SwiftChat |
 | 聊天智能 UI 卡片 | 仅 §10 约束解码与 AI-01 分段 | G116 | X 帖 b、OpenAI Intelligent UI |
 | 语义事件聚类 | 缺失 | G117 | CTR-EVENT-CLUSTER |
@@ -422,8 +422,8 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G150 | 评分校准与预测区间 | 所有“概率/预测”经 isotonic/Platt 校准（ECE 报告）；预测给 conformal 区间（覆盖率在保留集达名义±5%）；CTR 预测器从启发式升级为校准模型后才显示概率 | scikit-learn(BSD)、MAPIE(BSD-3) | 阿康1 |
 | G151 | 营销组合与预算（公开数据自上而下，见 G166–G169） | 不依赖用户输入：用财报营销费用、公开刊例×已采集曝光估算的渠道花费代理、公开销售/客流/租金为结果，按 品牌/集团×季度/半年/年 运行 Bayesian MMM（adstock+饱和），输出渠道贡献/边际 ROI 区间与预算再分配（凸优化，用户设约束）；用户自填数据为可选细化输入；期数不足（季度<12 期）或渠道无变化则 INSUFFICIENT；样本外 MAPE 报告 | Meridian(Apache-2.0)/PyMC-Marketing(Apache-2.0)、cvxpy(Apache-2.0)；BMP Campaign | 阿康1 |
 | G152 | 内容实验与选择 | Thompson Sampling 多臂老虎机做标题/封面/文案多版本选择（用户启用时）；A/B 用贝叶斯或序贯检验并显示停止条件 | mabwiser(Apache-2.0) 或 numpy 自实现；G78/G121 | 阿康1 |
-| G153 | 主题/情感/立场校准 | BERTopic+HDBSCAN 主题（并 G117）；情感/立场分类器在人工标注保留集报告 F1 与校准曲线，低置信标 UNKNOWN 不计入比率；中/英/韩分别评估 | BERTopic(MIT)、hdbscan(BSD-3)；G118、G103 | 阿康1 |
-| G154 | 实体消歧 | Fellegi-Sunter 概率匹配做品牌/门店/账号同一性（并 G98）；低于阈值进人工确认队列；精确率/召回在标注集报告 | splink(MIT) | 阿康1 |
+| G153 | 主题/情感/立场校准 | BERTopic+HDBSCAN 主题（并 G117）；情感/立场分类器在人工标注保留集报告 F1 与校准曲线，低置信标 UNKNOWN 不计入比率；中/英/韩分别评估 | BERTopic(MIT)、hdbscan(BSD-3)；G118、G181 | 阿康1 |
+| G154 | 实体消歧 | Fellegi-Sunter 概率匹配做品牌/门店/账号同一性（并 G176）；低于阈值进人工确认队列；精确率/召回在标注集报告 | splink(MIT) | 阿康1 |
 | G155 | 新颖度与信息量 | 内容/话题相对历史分布的 KL/惊奇度与 embedding 距离，标“新话题/新角度”；创作反模板（G80）用重复度/新颖度量化 | scipy、numpy | 阿康1 |
 | G156 | 份额与口碑指数 | SOV（声量份额，带分母与平台覆盖）、净情感/类 NPS 指数（推荐/贬损比例+区间）；SOM 仅在用户提供销售时计算；竞品同口径（G49 竞品证明复用） | canonical_metrics.py | 阿康1/阿康 |
 | G157 | 多准则决策 | AHP（一致性比 CR<0.1）/TOPSIS 做选址、选号、方案比稿排序，权重由用户设定并可保存；展示敏感性 | pymcdm(MIT) 或 numpy | 阿康1/阿康 |
@@ -432,11 +432,11 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G160 | **OpenAI Math 九项一般主算法（主引擎 OPEN 项）** | 每 family 按采用文档表补原缺口：102 归约/主定理证明重放；103 一般机器/去随机化同语义资源界重放；104 获胜集算法与随机复杂度；107 原张量提取与实测乘法程序；113 一般图 FPRAS 与面结构；114 一般独立性 oracle 公共基；115 model/graph/…/采样器全链；139 一般势/oracle 采样与总成本；140 条件标签/副本恒等与有限内存重放。验收：小规模精确基线+反例+正式命题重放分别通过；误用防护项（如“熵≠业务质量”“少查询≠提速”）写成测试 | OPENAI-MATH-ADOPTION §九项主算法 | C2/C5 Math（阿康1） |
 | G161 | OpenAI Math 产品落点（按采用文档 Owner 表） | SYSTEM/C1：104 shadow 调度评估（需授权日志校准概率）、115 抽样框/代表性与覆盖分母、139/140 端到端成本与信息保持口径；CTH/BMP/C3：102/113/114 先分 可行性/优化/计数，creator↔岗位一对一用精确匹配/min-cost flow，确需“方案数/脆弱性”时用 113/114；Shared/C5：SourceBrief 冻结问题/变量/假设与 hash、检索 BM25+向量+融合+cross-encoder（Recall@k/MRR/NDCG）；Agent/C2：Comparator 七项不变量；C4：来源/版本约束不变；F：显示结果/采样范围/缺失/时间/限定状态，数学留后端。每个落点一条真实任务 E2E（保存/修订/重开/恢复） | OPENAI-MATH-ADOPTION 跨 Owner 表、2026-10-09/10-12 节 | 阿康1/阿康 |
 | G162 | 基础分析不等 AI | `ai_task_engine._execute_analysis` 产生真实确定性计算结果；`_owned_ai_failure_code` 不再要求 AI 完成基础分析；AI 为可选增强 | OPENAI-MATH-ADOPTION 2026-10-09 节 | 阿康1 |
-| G163 | 数学驱动自研 AI（训练与新任务增益） | 按采用文档 6 步：问题/约束/验证器 → rights 与 train/val/新任务隔离 → 复用免费 Kaggle 成果 → 已核验约束/奖励接入训练入口 → checkpoint 重载、同基座同预算前后对照、模型独立与模型+求解器分报 → 经唯一 Gateway 进入产品成果；Gibbs 113 小型实验在精确审批后 CPU≤120s 运行并独立 held-out | OPENAI-MATH-ADOPTION §数学驱动自研 AI | C2（阿康1） |
+| G163 | 数学驱动自研 AI（训练与新任务增益）— OPEN | 按采用文档 6 步：问题/约束/验证器 → rights 与 train/val/新任务隔离 → 复用免费 Kaggle 成果 → 已核验约束/奖励接入训练入口 → checkpoint 重载、同基座同预算前后对照、模型独立与模型+求解器分报 → 经唯一 Gateway 进入产品成果；Gibbs 113 小型实验在精确审批后 CPU≤120s 运行并独立 held-out | OPENAI-MATH-ADOPTION §数学驱动自研 AI | C2（阿康1） |
 | G164 | Lean/Comparator 证明重放 | 113 MatchingEntropyBounds 比较完成（允许公理仅 propext/Quot.sound/Classical.choice），其余已声明形式化 family 逐项重放并记录；证明工具不进产品 Runtime | REGISTER §OpenAI Math v2、ADOPTION §固定正式证明 | 阿康1 |
 | G165 | 上游撤回/修订跟踪 | 定期核对 openai/math 撤回与修订（如 10-07 撤回三稿），所用 family 若被撤回则对应 operation 自动标 REVOKED 并停止新计算 | ADOPTION v2 节 | 阿康1 |
 | G166 | **公开财报数据管线** | 采集上市公司年报/中报/季报：HKEX 披露易、上交所/深交所、SEC EDGAR（XBRL frames：SellingAndMarketingExpense/MarketingAndAdvertisingExpense/ifrs AdvertisingExpense，免 key）、韩国 OpenDART（免费 key）；抽取 营销/销售费用、分部收入、零售额、租户销售增速、客流描述、出租率、租金收入；每数值带 文件/页码/期间/币种/口径（附注 vs 主表），未披露=MISSING | 例：太古地产 2026 中报披露广州太古汇零售额 +9%、租金 +11%、出租率 100%（未单列客流）；SEC EDGAR API 文档；OpenDART 指南 | 阿康1 |
-| G167 | 申报主体↔登记主体关联（通用） | 以官方名称/证券代码/LEI/统一社会信用代码/子品牌与场所归属关系把申报主体映射到已登记品牌/集团/商业体（不硬编码任何主体）；集团级数据按披露口径下放到品牌/项目时必须有分部或项目披露，否则只在集团级使用 | G98、G154、subject_registry | 阿康1 |
+| G167 | 申报主体↔登记主体关联（通用） | 以官方名称/证券代码/LEI/统一社会信用代码/子品牌与场所归属关系把申报主体映射到已登记品牌/集团/商业体（不硬编码任何主体）；集团级数据按披露口径下放到品牌/项目时必须有分部或项目披露，否则只在集团级使用 | G176、G154、subject_registry | 阿康1 |
 | G168 | 花费代理估计 | 渠道花费代理＝公开刊例价/CPM/CPC 区间（平台公开价目与费率披露）×已采集曝光/内容量×商单/广告识别概率，输出区间而非点值；公开活动披露（新闻稿、获奖案例、招标公告）作锚点；无刊例或无曝光则 MISSING | G119 广告识别、ad_intelligence 平台页、IL/02 品牌营销知识 | 阿康1 |
 | G169 | 自上而下 MMM 与宏观控制 | 按 集团/品牌×季度（中报/年报对齐）建模：因变量为申报收入/零售额/租户销售；自变量为财报营销费用、G168 花费代理、已采集声量；控制变量用国家统计局社零（月）、CPI（月）、文旅/假日出游、商务局商圈客流公开转引；输出贡献与 ROI 后验区间，滚动样本外检验；期数不足→INSUFFICIENT；用户自填明细可作可选更细粒度层 | Meridian/PyMC-Marketing（Apache-2.0）、NBS、G141/G140 零授权 | 阿康1 |
 
@@ -451,7 +451,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | E5 | 多画幅重排 | 9:16/16:9/1:1/4:5 预设 → 主体感知裁切 + 安全区 + 版式重排（非拉伸） | 一个 Timeline→多画幅成片 | 像素比 1:1 不拉伸；字幕与标题在安全区内；16:9 用桌面素材重排 | SH-01、BMP-06 | CUE、品牌营销知识-24 |
 | E6 | B-roll 建议 | 逐词稿关键词 → 用户已授权素材库检索 → 候选插入 | 稿+素材库→插入提议 | 只用授权素材并显示权利状态；不联网抓取 | BMP-06 | VWI §5 |
 | E7 | 混音与响度 | AudioMix（音量/淡入淡出/ducking）→ 降噪 → loudnorm 两遍线性 → 真峰检测 | 多轨→混音 | 目标响度按平台预设可选并显示实测值；真峰 ≤ 目标；不重复施加增益 | SH-01、BMP-06、BMP-08 | FFmpeg loudnorm、VWI |
-| E8 | 渲染导出与交换 | FFmpeg H.264/AAC 成片 + OTIO/FCPXML 导出前损失预检（G105，J5-INTERCHANGE-LOSS-PREFLIGHT：只读、确定性、逐项 code/严重度/受影响 clip，无结果不得判 PASS）；分发用 FFmpeg 二进制须先定许可（GPL/LGPL 构建） | Timeline→成片/工程 | 成片可播放可重开；预检列全部损失；取消不改项目 | SH-01、SH-04 | VWI §6 |
+| E8 | 渲染导出与交换 | FFmpeg H.264/AAC 成片 + OTIO/FCPXML 导出前损失预检（G183，J5-INTERCHANGE-LOSS-PREFLIGHT：只读、确定性、逐项 code/严重度/受影响 clip，无结果不得判 PASS）；分发用 FFmpeg 二进制须先定许可（GPL/LGPL 构建） | Timeline→成片/工程 | 成片可播放可重开；预检列全部损失；取消不改项目 | SH-01、SH-04 | VWI §6 |
 | E9 | 脚本与分镜 | 视频短脚本模板（0–3s Hook…，时长按平台参数）→ 每镜 visual/台词/时长/目的/素材 | Brief→分镜表 | Brief 未完成不生成；事实挂 Evidence 或 UNKNOWN | BMP-06 | KOS §4E、G98 |
 | E10 | 产品演示视频 | 真实界面录屏 → 「操作 A→状态 B→结果 C」镜头语法 → 交互节奏（0.5–2s 一变化）→ 局部放大/指针波纹；短版按完整动作闭环重切（不截半个动作）；产品未验收前演示片冻结 | 录屏→演示片 | 必须是真实操作录屏；横竖各自录制；附镜头表与可编辑工程 | SH-01 | CUE |
 | E12 | 参考片逐帧学习 | 顺序解码全部帧 → 相邻帧亮度差/变化面积/边缘密度 → 峰值候选 + 0.5s 接触表人工核对 → 镜头/交互拆解表 | 参考视频→镜头表 | 全帧计数与已看帧数如实记录；采样不得称逐帧完成；只学节奏与交互语法，不复用商标/角色/音乐 | BMP-06、SYS-07 | Cue 逐帧审计、VIDEO-OWNER-HANDOFF |

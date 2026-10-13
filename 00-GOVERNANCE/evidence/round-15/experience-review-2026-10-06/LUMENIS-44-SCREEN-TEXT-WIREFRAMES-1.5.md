@@ -44,7 +44,7 @@
 
 | Screen | 既有领域owner | 应由现有API/ViewModel提供的输入 | 需要验收的结果链 |
 |---|---|---|---|
-| ACC-01..04 | App Shell / optional Focus / task-local recovery | 启动状态、可选Scope、真实导航与当前任务恢复 | 直接进入开放工作区；无产品登录/账号/角色设置UI；具体外部动作仍由服务端Permission和原任务确认 |
+| ACC-01..04 | App Shell / optional Focus / task-local recovery | 启动状态、可选Scope、真实导航与当前任务恢复 | 直接进入开放工作区；可选账号与设置在闭环内；具体外部动作仍由服务端Permission和原任务确认 |
 | CTH-01..10 | CTH / Metrics / Source-Evidence / Case | GLOBAL或精确Subject、时间范围、来源、metric definitions、Case/Action；CTH-03现有只读搜索动作与逐条Source身份 | 真实材料→人工确认只读搜索→Source/Evidence/Canonical→单帖阅读→事件/决策/报告→Action/Outcome→Evaluation |
 | BMP-01..11 | BMP / Brand-Market / Source-Evidence / Creation | 可核实品牌/市场/受众/竞品/创作者/活动/内容 | 研究→Brief→内容/Campaign→审核→真实结果/评价 |
 | AI-01..05 | AI Gateway / Task / Agent / Skill / Evaluation | 当前调用范围、被允许的输入、实际能力、任务状态 | 输入→可执行检查→真实执行或真实失败→引用结果/Artifact→重开/评价 |
@@ -59,7 +59,7 @@ App 页面按已有 screen repository/Client 读取；本任务不运行其中�
 
 | Screen | 现有Owner边界 | 目标数据/后端依赖 | 当前源状态 / 尚欠 | 当前 Screen Spec（owner / status / binding gaps） |
 |---|---|---|---|---|
-| ACC-01 | App Shell / open product entry | 直接进入开放工作区；若底层核心不可用则保留返回路径；账号UI不进入当前目标 | 旧Screen Spec仍记录其历史设计状态，但Product Owner当前明确暂缓产品账号/登录设计；不得实现账户表单/占位菜单 | owner_domain=SYSTEM / Experience entry; source spec status=DESIGN_READY (prior contract provenance only); current user scope defers account UI; [ACC-01.md](../../../../contracts/experience/screen-specifications/ACC-01.md) |
+| ACC-01 | App Shell / open product entry | 直接进入开放工作区；若底层核心不可用则保留返回路径；可选账号入口不形成账号墙 | 现行Screen Spec包含可选登录/账号设置及恢复；功能必须真实接线 | owner_domain=SYSTEM / Experience entry; source spec status=DESIGN_READY (prior contract provenance only); account UI is in-loop and optional for ordinary work; [ACC-01.md](../../../../contracts/experience/screen-specifications/ACC-01.md) |
 | ACC-02 | App Context / Subject / BrandFocus | 当前身份允许范围、实体名/alias/region/source/relationships | 源码/路由存在；GLOBAL可进入；实体精确关系未逐项验 | owner_domain=SYSTEM settings / CTH Subject Registry / BMP BrandFocus; status=BLOCKED; no BACKEND-GAP ID in frontmatter; [ACC-02.md](../../../../contracts/experience/screen-specifications/ACC-02.md) |
 | ACC-03 | App Shell + ACC03 + AI01 | global context、真实task/restoration record、导航回调 | 源码存在；root目前CTH01冲突；主页接受和任务重开未验 | owner_domain=SYSTEM / Shared Capability presentation; status=DESIGN_READY; no BACKEND-GAP ID in frontmatter; [ACC-03.md](../../../../contracts/experience/screen-specifications/ACC-03.md) |
 | ACC-04 | App Shell / Access Recovery | Core权限/Scope失败原因和可恢复动作 | 源码/路由存在；各类错误/返回E2E未验 | owner_domain=SYSTEM Permission / recovery boundary; status=DESIGN_READY; no BACKEND-GAP ID in frontmatter; [ACC-04.md](../../../../contracts/experience/screen-specifications/ACC-04.md) |
@@ -110,7 +110,7 @@ App 页面按已有 screen repository/Client 读取；本任务不运行其中�
 
 ## ACC：入口和恢复
 
-### ACC-01 产品入口直达（当前不绘制账号页）
+### ACC-01 开放入口与可选账号登录
 
 ~~~text
 Desktop/Web/Mobile启动：
@@ -121,7 +121,7 @@ Desktop/Web/Mobile启动：
 └────────────────────────────────────────┘
 ~~~
 
-没有登录、注册、找回账号、角色问卷、账号菜单或未来占位。账号/登录是否重新规划等整体产品闭环后再由Product Owner决定。旧 ACC-01 Screen Spec 仍作为Source/历史合同状态记录，不构成当前前端账号页许可。
+产品默认直达开放工作区；可选账号入口支持免费Google登录、邮箱验证码与账号恢复，Apple入口待开发者账号开通。账号/设置闭环内构建，按当前ACC-01合同，不能阻断普通未登录工作或绕过服务端权限。
 
 ### ACC-02 可选范围选择
 
@@ -514,7 +514,7 @@ Phone: 链路步骤 → field detail → 来源/计算定义
 ### SYS-04 Permission/Audit
 
 ~~~text
-当前不呈现产品角色/账号/通用权限设置页。
+按现有权限合同提供账号、安全与两类开发者设置；普通工作保持开放，角色与敏感操作由服务端核验。
 具体业务动作 → 原任务内显示内容/影响 → 用户确认
 → 服务端返回允许/拒绝/待审批 → 原任务显示回执/原因/来源
 ~~~

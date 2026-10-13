@@ -17,23 +17,23 @@
 | CREATIVE_METHODS_2026 | 9 案例→7 规律 | G121 来源 | — | 已覆盖 |
 | 品牌营销知识-04 4A | 实时文化连接、UGC 飞轮、世界观、病毒三要素 | 部分 | — | **G121 原句升级** |
 | 品牌营销知识-11 反模板 | 多维组合、去重、seed、名句 remix、4–8 词、提案结构 | G101/G104/G121 | — | **G121 补 4–8 词与重叠度校验** |
-| 品牌营销知识-13 情感共鸣 | 韩剧 8 手法+文学手法、手法×主题适配 | G80/G101/G104(韩剧) | — | 已覆盖 |
+| 品牌营销知识-13 情感共鸣 | 韩剧 8 手法+文学手法、手法×主题适配 | G80/G101/G182(韩剧) | — | 已覆盖 |
 | 品牌营销知识-15 高奢克制 | 6 法则、LUX 专属手法 | G100 | — | 已覆盖（原文中的智谱联网研究属已退役路线，不采用） |
 | 品牌营销知识-24 出海视频 | 7 区域节点、TikTok/IG/YT/KOC/小店矩阵 | 节点在 G105(营销日历)；矩阵缺 | 缺 | **新增 G173** |
 | 品牌营销知识-25 播客营销 | 媒介价值、三横一纵、两种运营模式、五力、6 合作模式、合规 | G107 | BMP-08 | 已覆盖 |
-| podcast-intelligence 0903 | 资产链、OSS、ADOPT/ADAPT/BUILD | G79/G106 | BMP-08 | 已覆盖 |
+| podcast-intelligence 0903 | 资产链、OSS、ADOPT/ADAPT/BUILD | G79/G184 | BMP-08 | 已覆盖 |
 | liangzi 案例 | A–F 六层、24 维、反抄袭 | G79 | BMP-08 P3 | 已覆盖 |
 | PODCAST_MODULE_RESEARCH_V1 | 能力表、9 指标、运行元数据、内容图谱、AI 不可用主链照常 | 指标/元数据缺 | 缺 | **§14 P12 补** |
 | 2026-podcast-ai-landscape | Whisper/WhisperX、文本→双人播客、分析管线、选题挖掘、嘉宾匹配 | 嘉宾/双人缺 | 缺 | **§14 P2/P4 补**（原文“本地 Qwen 离线兜底”与无回退规则冲突，不采用） |
-| PODCAST-PLAN-SAVED-WORK | 结构化计划、WebVTT、章节、版本 | G106 | BMP-08 | 已覆盖 |
-| VIDEO-WORKFLOW-INTERCHANGE | 格式边界、磁性/预览分离、OTIO 风险、9 类损失、预检 | G105/G12 | BMP-06 预检条 | **G105 补 FCPXML/有理时基** |
+| PODCAST-PLAN-SAVED-WORK | 结构化计划、WebVTT、章节、版本 | G184 | BMP-08 | 已覆盖 |
+| VIDEO-WORKFLOW-INTERCHANGE | 格式边界、磁性/预览分离、OTIO 风险、9 类损失、预检 | G183/G12 | BMP-06 预检条 | **G183 补 FCPXML/有理时基** |
 | ROUND-07 视频时间线 | 哈希/探测、rights unknown、导出 blocked、FFmpeg 许可 | G64/G55 | BMP-06 | **§14 E1/E8 补** |
 | VIDEO-OWNER-HANDOFF | 参考视频逐帧研究分工 | G12 | — | 研究本身未完成（见未读） |
 | INTERNAL-CREATION-SOURCE | 内部创作源 DOCX 链路证据 | G33/G38 | — | 已覆盖 |
 | SYSTEM_CREATOR_OPS | 成本未接入显示未接入不显示 $0 | G19/SYS-08 | SYS-08 | 已覆盖 |
 | GLOBAL_BIL_CREATOR_AI_DISCOVERY | 创作者→AI 发现图谱、指标不合并、证据规则 | 缺 | 缺 | **新增 G172** |
-| korean-nlp-resources | 分词/敬语/空格/情感/主题 | G103/G135 | — | 已覆盖（原文“离线兜底”不采用） |
+| korean-nlp-resources | 分词/敬语/空格/情感/主题 | G181/G135 | — | 已覆盖（原文“离线兜底”不采用） |
 | 本地 Cue 逐帧审计 | 真实交互、0.5–2s 节奏、横竖分别重排、镜头表 | 缺 | 缺 | **§14 E5/E10 补** |
 | 本地 小红书发布文案 V1/V2 | 合规边界：不冒充原生 App/自动评测/保分 | G80 | — | 已覆盖（并入 E10 验收） |
 
-合计 30 份：已覆盖 19；本次补齐 11（新增 G170–G173 + §14 E1–E11/P1–P12 + G105/G106/G119/G121 原句升级 + BMP-06/BMP-08 草图）。
+合计 30 份：已覆盖 19；本次补齐 11（新增 G170–G173 + §14 E1–E11/P1–P12 + G183/G184/G119/G121 原句升级 + BMP-06/BMP-08 草图）。

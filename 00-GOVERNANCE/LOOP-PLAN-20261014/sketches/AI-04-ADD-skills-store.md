@@ -1,6 +1,6 @@
 # AI-04 — 草图增补：Skills 商店
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G21,G94,G130。
+> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G21,G185,G130。
 
 ## 5. Purpose-built desktop composition
 ```
