@@ -19,12 +19,12 @@
       }
     }
   },
-  "x-url-map-rule-count": 838,
+  "x-url-map-rule-count": 848,
   "x-static-route-count": 1,
-  "x-route-count": 837,
-  "x-path-count": 797,
-  "x-operation-count": 861,
-  "x-operation-group-count": 849,
+  "x-route-count": 847,
+  "x-path-count": 807,
+  "x-operation-count": 871,
+  "x-operation-group-count": 859,
   "x-duplicate-operation-group-count": 12,
   "x-duplicate-operation-candidate-count": 24,
   "x-duplicate-operation-candidates": [
@@ -1378,8 +1378,7 @@
           }
         ],
         "operationId": "api_evidence_upload",
-        "x-flask-rule": "/api/app_evidence/upload",
-        "summary": "上传证据（截图+手动填写字段）"
+        "x-flask-rule": "/api/app_evidence/upload"
       }
     },
     "/api/app_evidence/{record_id}": {
@@ -1406,8 +1405,7 @@
           }
         ],
         "operationId": "api_evidence_delete",
-        "x-flask-rule": "/api/app_evidence/<int:record_id>",
-        "summary": "删除证据"
+        "x-flask-rule": "/api/app_evidence/<int:record_id>"
       },
       "get": {
         "tags": [
@@ -1459,8 +1457,7 @@
           }
         ],
         "operationId": "api_evidence_confirm",
-        "x-flask-rule": "/api/app_evidence/<int:record_id>/confirm",
-        "summary": "确认证据（人工确认后进入Shadow）"
+        "x-flask-rule": "/api/app_evidence/<int:record_id>/confirm"
       }
     },
     "/api/app_evidence/{record_id}/reject": {
@@ -1487,8 +1484,34 @@
           }
         ],
         "operationId": "api_evidence_reject",
-        "x-flask-rule": "/api/app_evidence/<int:record_id>/reject",
-        "summary": "拒绝证据"
+        "x-flask-rule": "/api/app_evidence/<int:record_id>/reject"
+      }
+    },
+    "/api/app_evidence/{record_id}/restore": {
+      "post": {
+        "tags": [
+          "api/app_evidence"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "api_evidence_restore",
+        "x-flask-rule": "/api/app_evidence/<int:record_id>/restore"
       }
     },
     "/api/app_evidence/{record_id}/shadow": {
@@ -1515,8 +1538,7 @@
           }
         ],
         "operationId": "api_evidence_shadow",
-        "x-flask-rule": "/api/app_evidence/<int:record_id>/shadow",
-        "summary": "标记为Shadow（已确认但仅作影子数据，不进入生产）"
+        "x-flask-rule": "/api/app_evidence/<int:record_id>/shadow"
       }
     },
     "/api/architecture/status": {
@@ -1807,7 +1829,7 @@
         ],
         "operationId": "auth_config_api",
         "x-flask-rule": "/api/auth/config",
-        "summary": "P0-B(2026-09-02): 前端 Auth 动态注入端点 — 前端从此读取凭证，前端代码库不再硬编码任何凭证。"
+        "summary": "Public authentication metadata; credentials stay on the server."
       }
     },
     "/api/auth/domain-identity": {
@@ -2307,7 +2329,7 @@
         ],
         "operationId": "api_brand_industry_recompute",
         "x-flask-rule": "/api/brand-industry/recompute",
-        "summary": "品牌业态统计一键重算：用实时 LIKE 口径刷新预聚合字段，修复历史统计污染"
+        "summary": "兼容入口保留；未绑定精确品牌范围时不得重写全库预聚合。"
       }
     },
     "/api/brand-industry/stats": {
@@ -3339,6 +3361,62 @@
         "summary": "执行 Browser Action（核心接口，带完整 Verification 闭环）。"
       }
     },
+    "/api/browser/sessions/{session_id}/agent/run": {
+      "post": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "ai_browser_runtime.run_browser_agent_step",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/agent/run",
+        "summary": "Use the existing session only; no model/provider fallback is allowed."
+      }
+    },
+    "/api/browser/sessions/{session_id}/agent/status": {
+      "get": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "ai_browser_runtime.browser_agent_status",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/agent/status",
+        "summary": "Report the optional intelligent-browser gates without invoking a model."
+      }
+    },
     "/api/browser/sessions/{session_id}/evidence": {
       "get": {
         "tags": [
@@ -3395,6 +3473,34 @@
         "summary": "Return an uncached frame from the calling login's isolated page."
       }
     },
+    "/api/browser/sessions/{session_id}/frames/stream": {
+      "get": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "ai_browser_runtime.stream_session_frames",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/frames/stream",
+        "summary": "Push fresh frames of this isolated session to its authorized viewer (SSE)."
+      }
+    },
     "/api/browser/sessions/{session_id}/human-approval": {
       "post": {
         "tags": [
@@ -3421,6 +3527,174 @@
         "operationId": "ai_browser_runtime.human_approval",
         "x-flask-rule": "/api/browser/sessions/<session_id>/human-approval",
         "summary": "人工审批确认接口（用于 Human Escalation 后恢复操作）。"
+      }
+    },
+    "/api/browser/sessions/{session_id}/human-control/acquire": {
+      "post": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "ai_browser_runtime.acquire_human_control",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/human-control/acquire",
+        "summary": "Acquire an in-memory exclusive lease for this authenticated browser owner."
+      }
+    },
+    "/api/browser/sessions/{session_id}/human-control/action": {
+      "post": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "ai_browser_runtime.human_control_action",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/human-control/action",
+        "summary": "Execute one existing Action Firewall operation against the pinned frame."
+      }
+    },
+    "/api/browser/sessions/{session_id}/human-control/links": {
+      "post": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "ai_browser_runtime.human_control_links",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/human-control/links",
+        "summary": "List bounded, visible, policy-approved links for the current frame."
+      }
+    },
+    "/api/browser/sessions/{session_id}/human-control/navigate": {
+      "post": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "ai_browser_runtime.human_control_navigate",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/human-control/navigate",
+        "summary": "Navigate from the currently displayed, version-pinned frame."
+      }
+    },
+    "/api/browser/sessions/{session_id}/human-control/open-link": {
+      "post": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "ai_browser_runtime.human_control_open_link",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/human-control/open-link",
+        "summary": "Open only a server-listed link that still matches the current page."
+      }
+    },
+    "/api/browser/sessions/{session_id}/human-control/release": {
+      "post": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "ai_browser_runtime.release_human_control",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/human-control/release",
+        "summary": "Release the bearer lease supplied only in the request header."
       }
     },
     "/api/browser/sessions/{session_id}/navigate": {
@@ -3505,6 +3779,34 @@
         "operationId": "ai_browser_runtime.stop_session",
         "x-flask-rule": "/api/browser/sessions/<session_id>/stop",
         "summary": "关闭 Session。"
+      }
+    },
+    "/api/browser/sessions/{session_id}/stream-policy": {
+      "get": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "ai_browser_runtime.stream_policy",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/stream-policy",
+        "summary": "Read-only PO defaults for this session's frame stream and agent pause."
       }
     },
     "/api/browser/sessions/{session_id}/verify": {
@@ -3623,7 +3925,7 @@
         ],
         "operationId": "case_analysis_ai_evaluate",
         "x-flask-rule": "/api/case-analysis/ai-evaluate",
-        "summary": "案例库 AI 评估：4维评分(影响/创新/可复制/风险) + 推荐处置模板 + 建议（智谱增强层）"
+        "summary": "案例评估兼容入口；本地模板与实际 Owned AI 执行状态分开。"
       }
     },
     "/api/case-analysis/crisis-sop": {
@@ -4181,7 +4483,7 @@
         ],
         "operationId": "api_collector_browser_start",
         "x-flask-rule": "/api/collector/browser/start",
-        "summary": "手动启动浏览器"
+        "summary": "Start a headless BACKGROUND Worker or a permission-gated human session."
       }
     },
     "/api/collector/browser/stop": {
@@ -4200,7 +4502,7 @@
         ],
         "operationId": "api_collector_browser_stop",
         "x-flask-rule": "/api/collector/browser/stop",
-        "summary": "手动关闭浏览器"
+        "summary": "Gracefully stop only an exact idle LUMENIS Worker; never terminate a process."
       }
     },
     "/api/collector/history": {
@@ -11948,25 +12250,6 @@
         "summary": "Expose selection-only context; data routes reauthorize every use."
       }
     },
-    "/api/settings/developer/execute": {
-      "post": {
-        "tags": [
-          "api/settings"
-        ],
-        "parameters": [],
-        "security": [
-          {
-            "httpBasic": []
-          },
-          {
-            "v4Auth": []
-          }
-        ],
-        "operationId": "settings.developer_execute",
-        "x-flask-rule": "/api/settings/developer/execute",
-        "summary": "开发者工具 - 执行代码（需开发者模式）"
-      }
-    },
     "/api/settings/developer/logs": {
       "get": {
         "tags": [
@@ -15125,7 +15408,7 @@
         ],
         "operationId": "api_weibo_cookies",
         "x-flask-rule": "/api/weibo/cookies",
-        "summary": "获取微博cookies（用于采集）"
+        "summary": "Compatibility state endpoint; cookie material never leaves its owner."
       }
     },
     "/api/weibo/login-status": {
@@ -15163,7 +15446,7 @@
         ],
         "operationId": "api_weibo_start_login",
         "x-flask-rule": "/api/weibo/start-login",
-        "summary": "启动微博扫码登录（异步）"
+        "summary": "Route an explicit request through the registered SYSTEM browser worker."
       }
     },
     "/api/workspace/file": {

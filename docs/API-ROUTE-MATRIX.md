@@ -1,8 +1,8 @@
 # API 路由矩阵（由当前 Flask url_map 自动生成，勿手改）
 
-- Flask url_map rules：**838**（static：**1**；API routes：**837**）
-- 唯一路径：**797**；operation groups：**849**
-- route operation candidates：**861**；重复冲突组：**12**（候选项：**24**）
+- Flask url_map rules：**848**（static：**1**；API routes：**847**）
+- 唯一路径：**807**；operation groups：**859**
+- route operation candidates：**871**；重复冲突组：**12**（候选项：**24**）
 - 认证：public=/healthz；v4Auth=/v4/* 独立 token；其余 httpBasic 或 v4 会话。
 
 | 路径 | 方法 | Endpoint candidate | Flask rule | 认证 | 分组 |
@@ -69,6 +69,7 @@
 | `/api/app_evidence/{record_id}` | GET | api_evidence_get | `/api/app_evidence/<int:record_id>` | basic/v4 | api/app_evidence |
 | `/api/app_evidence/{record_id}/confirm` | POST | api_evidence_confirm | `/api/app_evidence/<int:record_id>/confirm` | basic/v4 | api/app_evidence |
 | `/api/app_evidence/{record_id}/reject` | POST | api_evidence_reject | `/api/app_evidence/<int:record_id>/reject` | basic/v4 | api/app_evidence |
+| `/api/app_evidence/{record_id}/restore` | POST | api_evidence_restore | `/api/app_evidence/<int:record_id>/restore` | basic/v4 | api/app_evidence |
 | `/api/app_evidence/{record_id}/shadow` | POST | api_evidence_shadow | `/api/app_evidence/<int:record_id>/shadow` | basic/v4 | api/app_evidence |
 | `/api/architecture/status` | GET | architecture.architecture_status | `/api/architecture/status` | basic/v4 | api/architecture |
 | `/api/ark/chat` | POST | ai_api.api_ark_chat | `/api/ark/chat` | basic/v4 | api/ark |
@@ -163,12 +164,22 @@
 | `/api/browser/sessions` | POST | ai_browser_runtime.create_session | `/api/browser/sessions` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}` | GET | ai_browser_runtime.get_session_status | `/api/browser/sessions/<session_id>` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/action` | POST | ai_browser_runtime.execute_action | `/api/browser/sessions/<session_id>/action` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/agent/run` | POST | ai_browser_runtime.run_browser_agent_step | `/api/browser/sessions/<session_id>/agent/run` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/agent/status` | GET | ai_browser_runtime.browser_agent_status | `/api/browser/sessions/<session_id>/agent/status` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/evidence` | GET | ai_browser_runtime.get_evidence | `/api/browser/sessions/<session_id>/evidence` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/frame` | GET | ai_browser_runtime.read_session_frame | `/api/browser/sessions/<session_id>/frame` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/frames/stream` | GET | ai_browser_runtime.stream_session_frames | `/api/browser/sessions/<session_id>/frames/stream` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/human-approval` | POST | ai_browser_runtime.human_approval | `/api/browser/sessions/<session_id>/human-approval` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/human-control/acquire` | POST | ai_browser_runtime.acquire_human_control | `/api/browser/sessions/<session_id>/human-control/acquire` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/human-control/action` | POST | ai_browser_runtime.human_control_action | `/api/browser/sessions/<session_id>/human-control/action` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/human-control/links` | POST | ai_browser_runtime.human_control_links | `/api/browser/sessions/<session_id>/human-control/links` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/human-control/navigate` | POST | ai_browser_runtime.human_control_navigate | `/api/browser/sessions/<session_id>/human-control/navigate` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/human-control/open-link` | POST | ai_browser_runtime.human_control_open_link | `/api/browser/sessions/<session_id>/human-control/open-link` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/human-control/release` | POST | ai_browser_runtime.release_human_control | `/api/browser/sessions/<session_id>/human-control/release` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/navigate` | POST | ai_browser_runtime.navigate | `/api/browser/sessions/<session_id>/navigate` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/observe` | POST | ai_browser_runtime.observe | `/api/browser/sessions/<session_id>/observe` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/stop` | POST | ai_browser_runtime.stop_session | `/api/browser/sessions/<session_id>/stop` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/stream-policy` | GET | ai_browser_runtime.stream_policy | `/api/browser/sessions/<session_id>/stream-policy` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/verify` | POST | ai_browser_runtime.verify_state | `/api/browser/sessions/<session_id>/verify` | basic/v4 | api/browser |
 | `/api/cache/create` | POST | api_cache_create | `/api/cache/create` | basic/v4 | api/cache |
 | `/api/cache/data` | GET | api_cache_data | `/api/cache/data` | basic/v4 | api/cache |
@@ -594,7 +605,6 @@
 | `/api/settings/context` | DELETE | domain_api.api_settings_context | `/api/settings/context` | basic/v4 | api/settings |
 | `/api/settings/context` | GET | domain_api.api_settings_context | `/api/settings/context` | basic/v4 | api/settings |
 | `/api/settings/context` | PUT | domain_api.api_settings_context | `/api/settings/context` | basic/v4 | api/settings |
-| `/api/settings/developer/execute` | POST | settings.developer_execute | `/api/settings/developer/execute` | basic/v4 | api/settings |
 | `/api/settings/developer/logs` | GET | settings.developer_logs | `/api/settings/developer/logs` | basic/v4 | api/settings |
 | `/api/settings/domain` | GET | settings.get_domain_config | `/api/settings/domain` | basic/v4 | api/settings |
 | `/api/settings/domain` | POST | settings.update_domain_config | `/api/settings/domain` | basic/v4 | api/settings |
