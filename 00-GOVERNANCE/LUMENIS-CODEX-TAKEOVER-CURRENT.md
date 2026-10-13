@@ -27,7 +27,7 @@ This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any o
   5. Cleanup: stale worktrees (`D:/LUMENIS_AUDIT/20261012_rules_publish/*`, `序境-runtime-03dc8d93`, leftover `rea-merge-wt` folder), temp files, stale branches/docs, stash `akang-pre-dd0-merge`.
   6. Akang1: browser migration (WIP in the main working tree), `COLLECTOR_ENDPOINT`, tasks 1-3 (Gateway executor stub, AI-01 submit chain, stop/resume, SH-06 inbox, decision-card receipts).
   6b. Collection follow-ups (2026-10-13, tracked from PR #36 review): XHS search returns EMPTY_NO_API with a valid 9223 session (run 18:27, 3/28 keywords, 0 inserted; diagnose the rednote.com search API interception); BMP typed persistence for XHS (BMP queries currently deferred); default background run per platform; WeChat OA background worker registration (recovery returns RECOVERY_WORKER_NOT_REGISTERED until then); shared-alias disambiguation across subjects; desensitizer refresh on registry change; full registry cycle is 91 plan pages (cadence 720 min) - raise throughput.
-  7. After the loop closes: logo r5 (named/unnamed + 16px), 5 role images + stickers, analysis of ~290 PC images + 47 WeChat videos, frontend. 阿康（bot）
+  7. After the loop closes: logo r5 (named/unnamed + 16px), 5 role images + stickers, analysis of ~290 PC images + 47 WeChat videos, frontend (frontend todo: AI-01 non-executable response is shown as '响应无效'; it must show the honest not-executable state). 阿康（bot）
 
 ## 2026-10-13 SYS-06 built-in browser live stream (dated readback, PR #35)
 
