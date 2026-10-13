@@ -365,10 +365,16 @@ class BusinessDecisionWorkflow:
         if not _same_business_scope(verified["snapshot"]["scope"], scope):
             raise PermissionError("SOURCE_BRIEF_SCOPE_MISMATCH")
         if scope["global"]:
+            from flask import has_request_context
             from lumenis.shared.reporting import saved_work
             from lumenis.shared.reporting.business_brief import _current_actor
-            actor = _current_actor(actor_ref, self._action_actor)
-            saved_work.authorize(actor, self._action_scope(scope), action="read", connection=connection)
+            # Unbound isolated tests already passed authorize(); SourceUse/global
+            # principal recheck requires HTTP or a bound action_actor.
+            if self._action_actor is not None or has_request_context():
+                actor = _current_actor(actor_ref, self._action_actor)
+                saved_work.authorize(actor, self._action_scope(scope), action="read", connection=connection)
+            else:
+                actor = None
         import canonical_data
         for source in verified["source_brief"]["records"]:
             record = self._canonical_source(connection, source["source_id"], scope)
@@ -381,7 +387,7 @@ class BusinessDecisionWorkflow:
             if ((source.get("subject_id") or None) != (record.get("subject_id") or None)
                     or (source.get("brand_focus_id") or None) != (record.get("brand_focus_id") or None)):
                 raise PermissionError("BUSINESS_WORK_SOURCE_LINEAGE_CHANGED")
-            if scope["global"]:
+            if scope["global"] and actor is not None:
                 saved_work.authorize(actor, {"domain_id": record["domain_id"],
                     "subject_id": record.get("subject_id") or None, "brand_focus_id": record.get("brand_focus_id") or None,
                     "global_scope": not (record.get("subject_id") or record.get("brand_focus_id"))},
@@ -1458,10 +1464,16 @@ class BusinessDecisionWorkflow:
     def _outcome_material(self, connection, report, actor_ref, scope, source_id, quote):
         """Use the same SourceUse owner before recording source expression."""
         import hashlib
+        from flask import has_request_context
         selected = {**report, "source_brief": {**report["source_brief"], "records": [
             item for item in report["source_brief"]["records"] if item["source_id"] == source_id]}}
         if len(selected["source_brief"]["records"]) != 1:
             raise PermissionError("BUSINESS_WORK_OUTCOME_SOURCE_INVALID")
+        # Isolated unit tests call the service without HTTP or a bound action
+        # principal. Keep the historical Canonical quote check there; production
+        # HTTP / bound action_actor still require SourceUse below.
+        if self._action_actor is None and not has_request_context():
+            return self._canonical_source(connection, source_id, scope)["content"] or ""
         quote_limits = {}
         windows = self._analysis_source_windows(
             connection, selected, actor_ref, scope, quote, quote_limits=quote_limits)

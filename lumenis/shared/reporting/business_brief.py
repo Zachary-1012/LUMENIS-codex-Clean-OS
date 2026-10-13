@@ -141,12 +141,14 @@ def _business_payload(material, *, quote_limits=None):
 def _current_actor(actor_ref, actor=None):
     """Use a server-held actor or current authenticated request, never its ID alone."""
     if actor is None:
-        from lumenis.auth.service import get_current_user
-        actor = get_current_user(read_only=True)
+        from flask import has_request_context
+        if has_request_context():
+            from lumenis.auth.service import get_current_user
+            actor = get_current_user(read_only=True)
         if actor is None:
             from lumenis.system.security import permission
             actor = permission.resolve_local_workspace_principal(module='reports', action='read')
-    if _actor_ref(actor) != actor_ref:
+    if actor is None or _actor_ref(actor) != actor_ref:
         raise PermissionError('BUSINESS_BRIEF_ACTOR_MISMATCH')
     return actor
 
