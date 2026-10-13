@@ -33,7 +33,7 @@ RESOLVE origin/main → READ CURRENT SOURCE OWNER INDEX
 2. **Backend / Recovery：** 按现有 owner 找回、适配并接通功能；自有 AI 归 SYSTEM AI Gateway；旧本地模型/智谱/OpenCode 模型调用已停止、接口保留；平台沿用获准 Cookie/session/browser 链；Codex/Cloud 仅作研发。
 3. **Closed-loop internal beta：** 用真实授权数据完成 UI Entry → Action → API → Canonical Result → Evidence/Trace → Return/Evaluation → E2E / recovery / release evidence。
 
-LUMENIS 产品账号体系（邮箱验证码、Apple、Google 登录）闭环内实现；任何阶段不得以产品账号墙阻断现有产品。平台 Cookie/session 与产品账号是两类身份，后端 Permission 和 effect fence 始终保留。
+LUMENIS 产品账号体系（免费邮箱验证码、Google 登录；Apple 登录待开发者账号开通后启用）闭环内实现；任何阶段不得以产品账号墙阻断现有产品。平台 Cookie/session 与产品账号是两类身份，后端 Permission 和 effect fence 始终保留。
 
 ## 1. 产品结构
 
@@ -303,81 +303,17 @@ Real Business Hierarchy
 
 **硬规则：Legacy code is a capability source, not a UI source. Historical UI/UX may only be used as evidence of missing business intent. Final UI/UX must be redesigned under the current LUMENIS design system and current information architecture.**
 
-### 21.1 Developer Settings / 开发者功能恢复保护（Post-Launch Upgrade）
+### 21.1 Developer Settings / 两类开发者模式（闭环内）
 
-`系统设置 → 开发者 / Developer` 作为既有产品能力的恢复保护项处理，同时明确调整为 **Post-Launch Upgrade / 上线后升级项**。
+账号体系、两种开发者模式、六项商业能力、视觉、Logo和角色均纳入当前工程闭环，不设置账号墙。仅真实用户验证及付费/授权来源后置；源码、真实操作、安全、保存和恢复的工程验收不得后置。六项商业能力逐一覆盖：数据治理与合规、密钥凭据治理、合同与版本兼容、保留/备份/灾难恢复、租户/工作区生命周期、商业运营。
 
-**当前 Production Convergence → Production Acceptance → Release Candidate → 首次 Production / Operating 阶段，不要求 Developer Settings 完成恢复，也不得把其未恢复状态视为当前六大 Production Acceptance Gate 的阻塞项。**
+- **用户开发者模式**：默认关闭；开启前明确风险、经审核的条款、版本化同意与备份。用户可关闭并停用扩展、恢复官方状态，保留修改与备份；未登录也能进行允许的本地备份。未经审核的免责草案不能被当作有效法律结论或启用凭据。
+- **创始人内部开发者模式**：限制角色与服务端权限，代码包/分支输入可追溯；构建、适用测试、安全与真实运行要求通过才允许发布；签名、分批更新、暂停及可验证回滚均有真实路径。需求纳入不构成本轮部署、购买账号或费用授权。
+- **复用与恢复**：先追踪已有入口、调用者、配置、权限、版本与历史有效行为，复用现有Owner。没有入口不能据此删除原能力；已经有当前等价实现则合并语义，不新建系统。
+- **安全**：密钥/会话不进入客户端、日志或仓库；开发者模式不能绕过服务端Permission、Effect Fence、业务域隔离及源码权益。危险操作保持确认、幂等、审计与失败恢复。
+- **体验**：设置分区结构可参考成熟产品，视觉与资产为序境原创；Desktop、Web、iOS按现有合同表达操作差异，中/英/韩及无障碍齐全。
 
-当前阶段只执行三件事：保护历史资产、禁止误删、避免新增依赖。不得因为当前源码中没有入口或命名命中，就认定该功能不存在、废弃或允许删除；但也不得为了赶首发强行恢复 Developer Settings，从而打断当前生产收敛主线。
-
-调度标签：`POST_LAUNCH_BACKLOG / POST_LAUNCH_UPGRADE`。该标签仅表示研发调度阶段，**不替代**第 32 节统一能力状态 `PLANNED / IMPLEMENTED / TESTED / VERIFIED / RELEASED / OPERATING`。
-
-首次正式上线并完成稳定性观察后，再启动 Developer Settings 的完整恢复。恢复时不得跳步，完整链路固定为：
-
-```text
-Post-Launch Stability Confirmation
-→ Current Source Audit
-→ Historical Repository / Branch / Commit Inventory
-→ Developer Feature Source Trace
-→ Route / API / Service / DB / Config / Permission / Runtime Dependency Trace
-→ Historical Behavior & Acceptance Evidence
-→ Current Equivalent Audit
-→ Capability Matrix & Gap Classification
-→ KEEP / MERGE / MIGRATE / REIMPLEMENT / LEGACY / ARCHIVE
-→ Current Architecture Mapping
-→ Security / Permission Boundary Design
-→ Current API / State Contract Integration
-→ System Settings IA Integration
-→ NEW Developer Settings UI / UX Design
-→ PC / Tablet / Mobile Responsive
-→ Runtime Integration
-→ Unit / Integration / Permission / Security Tests
-→ Critical E2E
-→ Evidence
-→ Re-Audit
-→ VERIFIED only after all gates pass
-```
-
-恢复范围必须以真实历史代码审计结果为准，不凭记忆预设功能清单。审计时至少覆盖所有与 Developer / Dev / Settings / System / Debug / Runtime / Provider / Model / Agent / Skill / Tool / API / Collector / Browser / Feature Flag / Experimental / Diagnostics / Logs / Evidence / Test / Environment / Import-Export / Permission 等开发者能力相关的入口、路由、组件、服务、配置、表、脚本、测试和历史调用链，防止因名称变化而漏检。
-
-开发者能力恢复必须遵守以下硬规则：
-- **不丢功能**：任何有真实历史 Source / Call Graph / Test / Runtime / Evidence 支撑的能力，在完成依赖追踪前不得删除或忽略；
-- **不盲目复活**：历史能力如已有当前等价实现，必须合并语义、去重，不制造第二套并行系统；
-- **不恢复旧 UI**：历史设置页仅作为业务意图与入口证据；最终入口统一归入当前 `系统设置 / Settings` 信息架构，Developer UI 必须重新设计；
-- **不暴露生产秘密**：API Key、Token、Cookie、Secret、生产凭据不得明文显示、写入前端、日志、测试或仓库；只允许安全注入、掩码显示和受控更新；
-- **不绕过权限**：Developer 功能不得成为绕过 Auth / Permission / Agent Tool Firewall / Effect Fence / Human Approval 的后门；
-- **不伪造状态**：Provider、Runtime、Agent、Collector、Browser、DB、测试、部署、Feature Flag 状态必须来自真实 State Contract / Health / Evidence；
-- **不破坏双领域隔离**：CTH / BMP 的 Scope、Data Ownership、Permission、Report、Agent Context 不得因 Developer 工具串线；
-- **不制造 Runtime 前置依赖**：开发者页面不可用、未恢复或处于升级中时，不得导致序境核心生产链停止；
-- **危险操作必须受控**：任何写入、重置、迁移、清理、重新索引、重新运行、Provider 切换、实验开关等动作必须具备权限、确认、幂等 / Effect Fence、Audit / Trace、失败恢复；
-- **默认最小权限**：普通产品用户不应看到或操作仅面向研发/管理员的 Developer 控件；具体角色与可见性以当前权限模型审计结果为准。
-
-当前首发阶段的验收规则：
-
-```text
-Developer historical assets protected
-+ no destructive deletion
-+ no unresolved dependency that blocks core Production Runtime
-+ no secret / permission regression introduced by deferred state
-= NON-BLOCKING FOR INITIAL RELEASE
-```
-
-上线后恢复完成标准仍然不是“页面重新出现”，而是：
-
-```text
-Historical Capability Evidence
-+ Current Source / Call Graph
-+ Current API / State Contract
-+ Permission / Security Boundary
-+ Redesigned Settings UI
-+ Runtime Integration
-+ Tests / Critical E2E
-+ Production Evidence
-= VERIFIED
-```
-
-因此：**Developer Settings 未恢复不得阻塞首次 RC / Production；但任何历史资产在上线前仍不得未经审计删除。上线稳定后必须按本节完整链路恢复、重设计、调试与验收，未完成前不得宣称该能力 VERIFIED / RELEASED / OPERATING。**
+验收链：现有能力与调用追踪 → 当前Owner/合同 → 有界实现 → 构建/适用回归/权限安全 → 实际操作 → 保存/关闭/重开/恢复 → Evidence。未验收为OPEN，不能以历史保护、页面存在或CI通过代替VERIFIED；某项缺口不阻断无依赖工作。
 
 ## 22. Research / Learning
 

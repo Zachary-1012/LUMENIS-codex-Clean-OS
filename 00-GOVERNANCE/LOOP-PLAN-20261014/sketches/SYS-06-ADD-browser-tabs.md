@@ -1,6 +1,6 @@
 # SYS-06 — 草图增补：内置浏览器：标签/地址栏/前进后退/折叠/查看原文
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G1,G97。
+> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G1,G188。
 
 ## 5. Purpose-built desktop composition
 ```

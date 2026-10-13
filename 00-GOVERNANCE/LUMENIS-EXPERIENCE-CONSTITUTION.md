@@ -94,7 +94,7 @@ It is not:
 - an Apple clone;
 - a Linear clone;
 - a Notion clone;
-- a ChatGPT clone;
+- a copy of ChatGPT visual identity or proprietary assets; settings-section information structure may be studied and adapted with original LUMENIS presentation;
 - a Korean-brand website clone;
 - a generic AI-gradient interface.
 

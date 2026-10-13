@@ -183,32 +183,23 @@ platform lists/design-first instructions are superseded for execution by this ru
 
 ### Cost and integration boundaries
 
-No new paid GPU/account/seat/subscription/service or recurring infrastructure is
-authorized. Permission, dependencies, shared-writer reservations, completion gates
-and exact source/runtime evidence remain binding. Scheduling follows the
-current direct PO task, not an archived topology. Rule maintenance starts no
-product work and changes no model settings.
-
-Existing J1-J8/U01-U25 retain mature useful operations and LUMENIS source/context/
-version continuity. Reuse correct source, repair real callers and record actual
-outcomes in Real Delivery. GPT/Apple/Tesla remain operation references, never
-new product/design/security authorities. A document or installation proves no
-associated capability. M performs only authorized meaningful review/work and waits
-when none remains; a historical monitoring schedule does not self-dispatch work.
+No new paid resource, account, subscription, deployment or external effect is
+approved by rule publication. Existing Permission, source rights, shared-writer
+reservations and exact source/runtime acceptance remain binding. Product Owner
+alone dispatches work and selects models. Preserve every J1-J8/U01-U25 outcome,
+source/context/version continuity and task-appropriate operation; reference
+products and installed tools are evidence, not authorities. M waits when no
+authorized unfinished work remains.
 
 ### Cross-window request provenance
 
-A relayed request must identify the original Product Owner instruction, time,
-source window and exact applicable task/roles. An agent paraphrase, old receipt,
-finished batch or historical Goal cannot pause/resume another window. Direct
-current PO orders control their scope; preserve uncertain state without expanding
-it into a global order. Model/effort/tier selections remain the PO's choice.
-
-Frontend retains editable Figma/Foundation/source, all 44 screens, Website families,
-surface variants, zh/en/ko and accessibility. Direct construction need not wait for
-a separate draft or Figma approval. Five Golden Pages only order design work;
-they are not the five product rounds. Source is not native Figma; screenshots/PPT
-are not editable delivery. Any new frontend execution needs actual PO dispatch.
+Relays identify the original PO instruction, time, source and applicable roles/task.
+Agent paraphrases, old receipts and historical Goals cannot dispatch or pause peers.
+Preserve unverified state without expanding it globally; only current PO orders and
+factual readback select windows/models. F retains editable assets, complete screen
+capabilities, Website families, surface variants, zh/en/ko and accessibility. Source
+is not native Figma and screenshots are not editable delivery. Direct construction
+needs current PO dispatch, not historical DESIGN_READY or Golden Page ordering.
 
 ### Live dispatch semantics — NON-BYPASS
 
@@ -904,7 +895,7 @@ implementation, screen, provider, migration or release claim. M accepts each
 complete C-window outcome against current source/local/remote evidence and the
 applicable mapped R gates.
 
-Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE remain Experience-principle references only. Codex/Codex CLI and Akang (GrokBot) are the current peer engineering runtimes, dispatched only by the PO; OpenCode is shelved and not part of the current execution route. Legacy Ollama/local-model-provider, Zhipu and Jev routes are retired: retain compatibility interfaces and historical artifacts, but do not call, auto-discover, probe, fall back to or reactivate them. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. The product account system (email code sign-up, Apple and Google sign-in, ChatGPT-style settings, 30-day undo on deletion), both developer modes and the commercial-readiness items, visual style, logo and role art are in-loop; there is never an account wall, and server Permission and effect fences stay enforced. Only real-user validation and paid/licensed sources follow launch.
+Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE remain Experience-principle references only. Codex/Codex CLI and Akang (GrokBot) are the current peer engineering runtimes, dispatched only by the PO; OpenCode is shelved and not part of the current execution route. Legacy Ollama/local-model-provider, Zhipu and Jev routes are retired: retain compatibility interfaces and historical artifacts, but do not call, auto-discover, probe, fall back to or reactivate them. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Accounts (free Google/email codes; Apple after developer-account activation; settings and 30-day deletion undo), both developer modes, all six commercial-readiness capabilities, visuals, logo and role art are in-loop. User mode requires reviewed terms, informed consent, backup and reversible disablement; founder mode requires restricted access, checks, signed staged updates and rollback. Ordinary work has no account wall; Permission/effect fences remain. Only real-user validation and paid/licensed sources follow launch; engineering operation/security/recovery remain pre-launch. Settings structure may be adapted; LUMENIS visuals remain original. This grants no deployment or spending.
 
 Business work is selected in this order: Product Positioning → Industry Business
 Logic → Real User Jobs → Deliverable Outcomes → Experience → Data/Runtime
@@ -1217,7 +1208,7 @@ source fixture / real public source
 → runtime/E2E
 ```
 
-No API key/OAuth/cloud dependency may be added to this zero-auth program without a separate architecture and legal/commercial decision.
+Anonymous acquisition retains its no-account/no-key boundary. Product account login is a separate explicit exception: free Google OAuth and email verification codes are permitted; Apple sign-in is enabled only after developer-account activation. These login methods do not authorize collection sessions, paid resources or model providers. Other acquisition API key/OAuth/cloud dependencies still require their applicable architecture and source-rights approval.
 
 ## 9. Data truth and DB safety
 

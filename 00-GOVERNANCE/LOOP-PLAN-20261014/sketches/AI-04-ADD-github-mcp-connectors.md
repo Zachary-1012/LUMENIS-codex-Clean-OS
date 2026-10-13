@@ -1,6 +1,6 @@
 # AI-04 — 草图增补：连接器：GitHub（只读、仓库白名单）与 MCP（审查→白名单→人工批准）
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G95,G96。
+> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G186,G187。
 
 ## 5. Purpose-built desktop composition
 ```
