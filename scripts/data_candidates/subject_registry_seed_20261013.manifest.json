@@ -1,0 +1,16 @@
+{
+  "created_utc": "2026-10-13T05:30:00+00:00",
+  "candidate_only": false,
+  "import_path": "scripts/import_subject_registry_seed.py -> subject_registry.add_subject",
+  "source": "Brio R-J1 (2026-10-13) cleaned and online-verified by 阿康（bot）; unverified rows excluded",
+  "record_count": 610,
+  "by_domain": {
+    "BMP": 139,
+    "CTH": 471
+  },
+  "verification": "zh/en Wikipedia page + Wikidata (type-filtered), zhwiki list pages, official sites; verified_at=2026-10-13",
+  "relations_imported": 0,
+  "relations_note": "TENANT_OF candidates excluded: require captured verified Evidence",
+  "no_product_db_write_until_apply": true,
+  "sha256_jsonl": "4d3706bf9b7b4206eb7eef3864792111b02fdc5f3b2755b0b5abcfcc9886e655"
+}
