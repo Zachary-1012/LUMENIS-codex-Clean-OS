@@ -560,7 +560,11 @@ def register_data_query_api(app):
                 'total': len(risks),
                 'by_level': by_level,
                 'limit': limit,
-                'risk_policy_version': policy.policy_version,
+                # Persisted Canonical scores have no applied-policy field.
+                # Do not relabel historical values with today's policy.
+                'risk_policy_version': None,
+                'risk_policy_version_state': 'NOT_RECORDED',
+                'current_risk_policy_version': policy.policy_version,
                 'canonical_returned': canonical.get('returned_count', len(records)),
                 'canonical_candidate_count': canonical.get('candidate_count'),
                 'truncated': canonical.get('truncated'),

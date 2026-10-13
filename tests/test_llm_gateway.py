@@ -3,6 +3,7 @@
 import os
 import shutil
 import sys
+import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import intelligence
 from lumenis.system.ai_gateway import channel as ai_channel
@@ -207,7 +208,11 @@ def test_review_note_uses_verified_scope_without_reference_subject(monkeypatch):
 
     monkeypatch.setattr(intelligence, "chat", capture)
     note = {"title": "测试广场停车", "content": "停车场出口排队"}
-    rule = {"verified": True, "summary": "测试广场停车反馈", "topics": ["停车"]}
+    rule = {"verified": True, "summary": "测试广场停车反馈", "topics": ["停车"],
+            "verified_scope": {"domain_id": "cth", "product_id": "CTH",
+                               "subject_id": "MALL_SCOPE_1", "brand_focus_id": None,
+                               "global_scope": False, "display_name": "测试广场",
+                               "aliases": ["测试商场"]}}
     result = intelligence.review_note(note, rule)
     assert len(calls) == 1
     system, user = calls[0]
@@ -215,9 +220,29 @@ def test_review_note_uses_verified_scope_without_reference_subject(monkeypatch):
     assert "当前已核验业务范围" in system
     assert "不得自行假定或替换主体" in system
     assert note["title"] in user and rule["summary"] in user
+    assert "MALL_SCOPE_1" in user and "测试商场" in user
     assert result["summary"] == rule["summary"]
     assert result["provider"] == "rule"
     assert result["verification"] == "review"
     rejected = intelligence.review_note(note, {"verified": False, "verify_reason": "scope rejected"})
     assert rejected["verification"] == "rejected"
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize("scope", [None, {},
+    {"domain_id": "cth", "product_id": "ZBMP", "subject_id": "MALL_SCOPE_1",
+     "brand_focus_id": None, "global_scope": False, "display_name": "测试广场"},
+    {"domain_id": "cth", "product_id": "CTH", "subject_id": "MALL_SCOPE_1",
+     "brand_focus_id": None, "global_scope": False},
+    {"domain_id": "cth", "product_id": "CTH", "subject_id": None,
+     "brand_focus_id": None, "global_scope": True, "display_name": "全部"},
+])
+def test_review_note_missing_or_ambiguous_scope_keeps_rules_without_ai(monkeypatch, scope):
+    monkeypatch.setattr(intelligence, "chat", _unexpected_call([], "unscoped inference"))
+    result = intelligence.review_note({"title": "甲乙两家商场对比"}, {
+        "verified": True, "summary": "已取得文本，主体审阅待核验", "verified_scope": scope,
+    })
+    assert result["provider"] == "rule"
+    assert result["verification"] == "review"
+    assert result["summary"] == "已取得文本，主体审阅待核验"
+    assert result["enhancement_state"] == "VERIFIED_SCOPE_REQUIRED"

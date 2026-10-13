@@ -64,7 +64,7 @@ Published governance records ownership and product scope. Actual window dispatch
 and model choices require the latest direct Product Owner instruction and factual
 readback; a historical repair authorization is not a current execution order.
 
-Platforms/public webpages have equal source-category weight; subject names alone do not imply risk. After real acquisition/intake/recovery proof, prioritize existing admitted
+Platforms/public webpages share equal source-category weight; names are not risk. Unrecorded versions stay unknown. After acquisition/intake/recovery proof, prioritize admitted
 data through analysis and downstream useful workflows. Incomplete platforms block
 only their own paths/coverage claims, never independent ready workflows. Preserve
 source quality, identity, time, rights, unknowns and full platform scope; see Architecture.

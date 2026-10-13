@@ -213,7 +213,9 @@ class TestRiskCompatibilityRoute:
         assert "total" in data
         assert "by_level" in data
         assert data["source"] == "permission-checked canonical_data.list_scoped_canonical"
-        assert data["risk_policy_version"] == "cth-risk-v2.1"
+        assert data["risk_policy_version"] is None
+        assert data["risk_policy_version_state"] == "NOT_RECORDED"
+        assert data["current_risk_policy_version"] == "cth-risk-v2.1"
         assert data["dismissal_state"] == "APPLIED_FOR_CANONICAL_NOTE_SOURCE_IDS"
         assert data["total"] == len(data["risks"])
 
@@ -265,6 +267,10 @@ class TestRiskCompatibilityRoute:
         ]
         assert data["by_level"] == {"critical": 1, "high": 1, "medium": 1}
         assert data["total"] == 3
+        assert data["risk_policy_version"] is None
+        assert data["risk_policy_version_state"] == "NOT_RECORDED"
+        assert data["current_risk_policy_version"] == "cth-risk-v2.1"
+        assert canonical["records"][0]["risk_level"] == "critical"
 
     def test_dismissed_note_is_not_returned_as_an_active_risk(
         self, cth_client, monkeypatch
