@@ -132,6 +132,65 @@ def collection_policy_gate(account=None, region='intl'):
     return rednote_policy.collection_gate(account=requested, region=region)
 
 
+
+_TAIKOO_MARKERS = ('太古汇', 'taikoo')
+
+
+def _verify_note_for_query(note, query):
+    """Verify a note against the registered Subject that produced its keyword.
+
+    Taikoo Hui keeps its location verifier; any other registered subject is
+    verified by its own registered alias appearing in the note text.
+    """
+    title = note.get('title', '') or ''
+    content = note.get('content', '') or ''
+    keyword = str(getattr(query, 'keyword', '') or note.get('source_keyword') or '')
+    if any(m in keyword.lower() for m in _TAIKOO_MARKERS):
+        return ai_analyzer.verify_taikoo_location(title, content)
+    if not keyword:
+        return False, 'no registered subject for note'
+    text = f"{title}\n{content}".lower()
+    if keyword.lower() in text:
+        return True, f'registered alias matched: {keyword}'
+    return False, f'registered alias not in note: {keyword}'
+
+_AUTO_PLAN_CURSOR_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'private', 'xhs_auto_plan_cursor.json')
+
+
+def _load_plan_cursor():
+    try:
+        with open(_AUTO_PLAN_CURSOR_FILE, 'r', encoding='utf-8') as f:
+            value = json.load(f)
+        return value if isinstance(value, dict) else None
+    except Exception:
+        return None
+
+
+def _save_plan_cursor(cursor):
+    try:
+        os.makedirs(os.path.dirname(_AUTO_PLAN_CURSOR_FILE), exist_ok=True)
+        if cursor:
+            with open(_AUTO_PLAN_CURSOR_FILE, 'w', encoding='utf-8') as f:
+                json.dump(dict(cursor), f, ensure_ascii=False)
+        elif os.path.exists(_AUTO_PLAN_CURSOR_FILE):
+            os.remove(_AUTO_PLAN_CURSOR_FILE)
+    except Exception:
+        pass
+
+
+def _resolve_registry_page(keywords=None):
+    """Registry-wide plan that advances through every page across runs."""
+    from lumenis.system.collector.acquisition_plan import build_acquisition_plan
+    if keywords is not None:
+        return build_acquisition_plan(keywords)
+    cursor = _load_plan_cursor()
+    try:
+        plan = build_acquisition_plan(None, continuation=cursor) if cursor else build_acquisition_plan(None)
+    except Exception:
+        plan = build_acquisition_plan(None)
+    _save_plan_cursor(getattr(plan, 'next_cursor', None))
+    return plan
+
 def _resolve_acquisition_plan(
     keywords=None, *, context_mode='GLOBAL_ALL', domain_id=None,
     subject_id=None, brand_focus_id=None,
@@ -832,8 +891,20 @@ def sync(keywords=None, max_scroll=6, account=None):
             'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
             'finished_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
+    # Typed persistence: the XHS writer persists CTH scope only. Non-CTH (BMP)
+    # queries are deferred (reported, not dropped silently) instead of blocking
+    # every CTH target in the same plan.
+    deferred_queries = [q for q in query_plan.queries if q.domain_id != 'CTH']
+    if deferred_queries:
+        import dataclasses as _dc
+        _cth = tuple(q for q in query_plan.queries if q.domain_id == 'CTH')
+        query_plan = _dc.replace(query_plan, queries=_cth)
+        query_plan_payload = dict(query_plan_payload or {})
+        query_plan_payload['deferred_non_cth'] = [
+            {'keyword': q.keyword, 'domain_id': q.domain_id,
+             'reason': 'XHS_TYPED_SCOPE_IMPORT_REQUIRED'} for q in deferred_queries]
     plan_domains = {query.domain_id for query in query_plan.queries}
-    if any(domain != 'CTH' for domain in plan_domains):
+    if not plan_domains or any(domain != 'CTH' for domain in plan_domains):
         return {
             'ok': False, 'task_state': 'BLOCKED', 'state_counts': {},
             'keywords': list(query_plan.keywords), 'raw_unique': 0,
@@ -930,9 +1001,10 @@ def sync(keywords=None, max_scroll=6, account=None):
             pass
         results.append({'stage':'blocked','reason':top_block,'detail':blocked_summary})
     inserted=updated=rejected=0
+    query_by_keyword = {q.keyword: q for q in query_plan.queries}
     persisted_by_keyword = {}
     for n in raw.values():
-        ok,reason=ai_analyzer.verify_taikoo_location(n.get('title',''),n.get('content',''))
+        ok,reason=_verify_note_for_query(n, query_by_keyword.get(n.get('source_keyword')))
         n['is_taikoo_verified']=1 if ok else 0; n['verify_reason']=reason; n['source_platform']='xhs'
         if not ok: rejected+=1; continue
         n['captured_at']=str(n.get('captured_at') or n.get('collected_at') or datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -1061,7 +1133,8 @@ def create_task(keywords=None,max_scroll=6,run_type='manual',account=None):
         raise ValueError("run_type must be 'manual' or 'auto'")
 
     # Resolve registry-owned scope before account/profile/rate-limit work.
-    query_plan = _resolve_acquisition_plan(keywords)
+    query_plan = (_resolve_registry_page(keywords) if run_type == 'auto'
+                  else _resolve_acquisition_plan(keywords))
     if not query_plan.is_runnable:
         raise RuntimeError(
             f"采集计划未就绪：{query_plan.reason_code or query_plan.reason or 'ACQUISITION_PLAN_BLOCKED'}"

@@ -357,6 +357,10 @@ def _blocked_plan(
     )
 
 
+# Registry statuses that never become collection targets (subject_registry.py treats them as inactive).
+INACTIVE_STATUSES = frozenset({"archived", "disabled", "deleted"})
+
+
 def build_acquisition_plan(
     keywords: Optional[Iterable[str]] = None,
     *,
@@ -464,7 +468,7 @@ def build_acquisition_plan(
             invalid_count += 1
             continue
         status = str(row.get("status") or "configured").strip().lower()
-        if status == "archived":
+        if status in INACTIVE_STATUSES:
             continue
         try:
             domain = _normalise_domain(row.get("domain_id"))
