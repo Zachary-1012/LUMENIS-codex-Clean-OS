@@ -316,7 +316,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 |---|---|---|---|---|
 | G185 | **Skills 商店（完整）** | Discover→Inspect→信任/许可→权限审批→隔离安装/自测→启用→真实执行→Evidence→历史→版本更新/回滚→停用→卸载 全链；支持 LUMENIS `skill.json` 与 Agent Skills `SKILL.md`、本地目录/ZIP/GitHub 精确 revision 来源；未验证项只能 disabled+not_installed；至少 1 个 Skill 真实完成 CTH/BMP 业务任务；前端有安装/启用/停用/更新/卸载按钮（用户可选） | SOI §2-12、RD:717-760、AI-04、docs/architecture/LUMENIS-GITHUB-SKILL-MCP-CONTRACT-V1.md §3、FULL-UPGRADE U19、IC-004/IC-009 | 阿康1 后端 / 阿康 前端并行 |
 | G186 | **GitHub 连接器** | 按原设计：用户同意→GitHub App user-to-server 授权/选择安装→外部凭证提供器（不存/不打印 Token）→仓库白名单→只读 GitHub API→GitHub Adapter→Evidence/Canonical/AI/CTH/BMP/Shared；6 态 NOT_CONFIGURED/READY_FOR_AUTHORIZATION/CONNECTED(/user 健康检查)/SESSION_EXPIRED/BLOCKED/PROVIDER_UNAVAILABLE 前端可见；默认 write_enabled=false；授权回调+CSRF state 核验+加密凭证库实测；不依赖产品账号体系（ARCH:557 保留其自身授权） | 同上 §1-2、ARCH:557、AGENTS:1129、github_connector.py、platform_adapters/github.py | 阿康1 / 阿康 |
-| G187 | **MCP 接入** | 发现→工具 schema 审查→域/端点白名单→权限审查→人工批准→隔离自测→版本化注册；MCP 不得直达 Cookie/CDP/原始库/未授权外部写 | 同上 §4 | 阿康1 |
+| G187 | **MCP 接入** | 发现→工具 schema 审查→域/端点白名单→权限审查→人工批准→隔离自测→版本化注册；MCP通过既有类型化业务API，不直达 Cookie/CDP/原始库/未授权外部写；协议版本、凭证audience、范围、Origin/SSRF及取消恢复按§17逐项验收，不因使用SDK或原生JSON-RPC而免除 | 同上 §4 | 阿康1 |
 | G188 | 内置浏览器完整能力 | 标签列表/新建/关闭/切换、地址栏、前进后退、书签、历史(上限1000)、Reader 元数据/正文、轻量 A11y DOM、多引擎搜索、strict/allowlist/open 策略门+SSRF；生产 UI（标签栏+地址栏+Reader/DOM 面板、可折叠）实测 | IL/11_前沿研究/AgentOrg/05-IC-052、IC-051、IC-053 | 阿康/阿康1 |
 | G176 | 国家/市场/主体关系 | 总部/发源地/法人/经营/营销/场所分开；同 Canonical 多市场；反例验收：Nike 美国品牌∕中国经营并存、罗湖万象城≠万象天地 | IL/07/COUNTRY-MARKET-RELATIONSHIP-NAVIGATION、FULL-UPGRADE U01/U05 | 阿康1 |
 | G177 | 场内经营关系 | 主体→项目/场所→门店/业态→品牌/活动，租户关系带来源与有效期；场内门店事件不污染品牌全国 | FULL-UPGRADE U05、CTH-DATA-INTELLIGENCE-ADOPTION | 阿康1 |
@@ -328,8 +328,8 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G183 | 视频工程交换 | Timeline 交换损失预检（volume/fade/ducking/muted/多音轨/overlay/dissolve/间隙/多轨）→OTIO/FCPXML/EDL 导出（有理时基，30000/1001 等往返测试）；缺时基/重链报 UNKNOWN 不判可交付；字幕/音轨/叠层；剪辑全链见 §14 E1–E11 | IL/01/VIDEO-WORKFLOW-INTERCHANGE-RESEARCH、U14 | 阿康1/阿康 |
 | G184 | 播客制作全链 | 选题→嘉宾→提纲→脚本→录音/导入→转写/说话人/章节→文本剪辑→可选配音→混音母带（-16 LUFS±1、真峰≤-1 dBTP）→发布包（音频+show notes+章节+字幕稿+RSS）→切片→复盘；工程细则见 §14 P1–P12 | U15、IC-030、docs/research/PODCAST_MODULE_RESEARCH_V1.md、podcast/research | 阿康1/阿康 |
 | G189 | 研究库别名/版本/范围 | 文档/表格/网页/媒体导入；来源定位、引文、别名、版本；检索结果保留范围 | U16 | 阿康1 |
-| G108 | AI 弃答与确定性优先 | 确定性计算先行，生成/分类分路，结构化校验，证据不足弃答（替代旧文 fallback） | U18 | 阿康1 |
-| G109 | Agent 记忆与可靠性 | 复用Experience/Skill/Project记忆与现有Task checkpoint：稳定偏好、任务事实、检索证据和授权状态分开；附来源/时间/范围/版本/更正与失效，用户可查改/忘记，持久化与实际检索分别验收。压缩后重读最新指令/任务/版本/未完项，记忆不扩权限、不恢复旧命令；保持多用户隔离、Critic及失败案例回归。子任务有界上下文与回调，崩溃先核已提交效果再续跑 | IL/11/AgentOrg/04-IMPROVEMENT-QUEUE IC-001..012、IC-037/043 | 阿康1 |
+| G108 | AI 弃答与确定性优先 | 确定性计算先行，生成/分类分路，结构化校验；Hybrid+Reranker后核对来源/时间/范围，低支撑有界改写检索，仍不足时交付有依据部分并说明缺口。保留无AI普通检索与业务；§17细化上下文预算和路由验收 | U18 | 阿康1 |
+| G109 | Agent 记忆与可靠性 | 复用Experience/Skill/Project记忆与现有Task checkpoint：稳定偏好、任务事实、检索证据和授权状态分开；附来源/时间/范围/版本/更正与失效，用户可查改/忘记，持久化与实际检索分别验收。压缩后重读最新指令/任务/版本/未完项，记忆不扩权限、不恢复旧命令；保持多用户隔离、Critic及失败案例回归。子任务有界上下文与回调，崩溃先核已提交效果再续跑；工作/情节/语义记忆、检索驱逐、纠正/删除传播及压缩保真按§17验证，不删除审计事实 | IL/11/AgentOrg/04-IMPROVEMENT-QUEUE IC-001..012、IC-037/043 | 阿康1 |
 | G110 | 受控学习晋升 | shadow→promotion，保留集+真实任务均优于旧版才晋升，可回滚 | U20、IL/05/LEARNING-PROMOTION-ENGINE | 阿康1 |
 | G111 | 通知/设置/诊断 | 进度来自实际任务状态，可查看和停止；通知复用现有FocusProtector/NotificationRouter与SavedWork通知feed，由真实有用结果、需决定或重要异常触发。普通片段/内部final文本不自动全部广播，通知有范围/收件人/任务版本/去重键/发送回执，失败可恢复；必要审批不因静默被抑制。偏好不改变事实或权限，三语与无障碍完整 | U24 | 阿康/阿康1 |
 | G112 | 发布与备份 | 依赖锁定/许可、备份恢复、分平台打包与同 SHA 验证 | U25 | 阿康1 |
@@ -530,3 +530,44 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 - Instinct：[官网](https://instinct.com/)、[条款](https://instinct.com/terms)。只采用简单入口方法，不引入其交易/训练/数据条款；商业模式动机保持未证实，不作为产品决策事实。
 - OpenClaw固定[c86d0f8](https://github.com/openclaw/openclaw/tree/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336)：[memory](https://github.com/openclaw/openclaw/blob/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336/docs/concepts/memory.md)、[sessions](https://github.com/openclaw/openclaw/blob/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336/docs/concepts/session-tool.md)、[announce](https://github.com/openclaw/openclaw/blob/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336/docs/tools/subagents/announce.md)、[spawn源码](https://github.com/openclaw/openclaw/blob/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336/src/agents/tools/sessions-spawn-tool.ts)、[silence源码](https://github.com/openclaw/openclaw/blob/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336/src/auto-reply/tokens.ts)。MIT许可，活跃维护；仅原理ADAPT，未安装/复制源码或建第二Runtime，不采用其自动模型切换。客户端相似或名称相同的Muse开源库不能证明Meta Muse血缘。
 - 个案：[Cursor跨Bot联络](https://forum.cursor.com/t/chief-of-staff-unable-to-communicate-with-other-bots/173238)、[状态可见性](https://forum.cursor.com/t/grok-bot-no-glanceable-working-finishing-signal-unless-the-pointer-is-on-the-bot-icon/168456)、[Muse讨论](https://www.reddit.com/r/MuseAgent/comments/1x2dtux/muse_getting_dumber/)。用于形成针对性恢复验收，不作为官方能力/根因/总体满意率。来源含动态内容，不把宣传或未经核实用户评论升级为Canonical事实。
+
+
+## 17. 长图工程建议：逐项理解、原理核验与现有能力适配
+
+来源为PO于2026-10-14提交的长图（原图1110×9850；保留原件）。图中实际编号为1–7、9、10、13–15；8、11、12未出现，不补写成已收到要求。以下覆盖引言、每项“构建/为什么/用途”，区分建议、上游证据与序境采用；不把夸张或未测数字变成事实。全部沿本规划原条目/现有Owner落实，不建立第二Runtime、向量真相、研发调度器或验收体系。新增生成动效与本节分开：原有动效、触发、风格和设置全部保留。
+
+| 原图内容与完整意图 | 原文/源码核实与需纠正的推断 | 序境采用、实际落点与完成出口 |
+| --- | --- | --- |
+| 引言：通读Anthropic源码控制工程文，用于两种开发者模式/工程治理；研究Claude、OpenAI、Grok、Muse公开实现提升产品 | Scion是Anthropic特定大仓库/大量并发变更下的内部实现；文章不等于公开了可安装Scion，也未证明序境需要替换Git。不可把其他团队规模、性能、发布策略搬为本产品结论 | ADAPT：复用不可变提交/父版本/内容hash、可重建派生索引、小范围审查及缓存失效思想；现有branch→PR→当前组合版本CI/审查→合并→远端读回保持。两种开发者模式沿既有沙箱/变更预览/签名更新/回滚，不赋任意写库、修改权限或上线能力；不安装源码管理系统、不降低合并门禁 |
+| 1 动态上下文组装器，产品：预算工作记忆、工具schema、检索文档；防上下文溢出，“提示工程已死/#1杀手” | 官方将上下文工程视为提示工程延伸，非取消提示；没有本产品故障排行证据。长上下文仍受相关性/噪声影响 | G83/G108/G109：既有Agent/Task/Gateway请求组装按已选模型真实窗口预留输出与工具结果，分别计量规则、任务状态、schema、检索预算；原始引用按需载入，保留最新PO/用户约束、未完任务、actor/scope/版本及副作用回执。压缩不能删需求、改模型或丢函数调用配对。超预算可解释拒绝/缩短可选上下文。验超长资料、压缩恢复、未知模型上限及旧指令不复活 |
+| 2 持久状态机，研发Codex/阿康：checkpoint、指数退避、人工Slack审批；Temporal或LangGraph DAG支撑长任务/崩溃恢复 | 持久checkpoint与跨会话store不同；RAM示例不能重启恢复。重试本身不保证外部效果只发生一次，也不证明所有任务必需DAG框架 | G83/G109：复用Task Engine、agent_runtime/durable_adapter.py及原预约/续接；保存task/attempt/lease、已提交成果、下一步与累积预算，重试有上限/退避/取消。人工审批关联真实发起者/动作/范围/版本/有效期；Slack仅在既有连接已授权并接通时承载通知与审批回执，不新增连接或授予审批权；普通消息/代理ACK不构成批准。验崩溃重启不重复写、撤权后拒绝、旧审批/过期回调不生效。仅借鉴，不安装Temporal/LangGraph或新后台队列 |
+| 3 原始MCP服务/客户端，产品及研发：JSON-RPC、范围凭证、数据库与API工具、减少私有包装 | MCP规范并不要求抛弃官方SDK；手写协议不天然安全或更可扩展。协议标准化不能消除业务授权；上游明确反对token透传 | G187及mcp_skill_runtime.py/mcp_discovery.py：复用版本化工具schema、注册与类型化业务API；禁止暴露原始SQL、库句柄、Cookie或CDP凭证。验证协商版本、请求ID、结果/error、超时/取消、参数边界、凭证audience、Origin/回环与SSRF。工具清单可见不等于可调用，数据权限逐次验证；既有SDK/适配层可保留 |
+| 4 系统一级分诊，产品：95%快速类型化决策模型，5%重量推理；控制单位经济 | 95/5是提案中的比例，不是官方通用最优或实测值；快/便宜不证明足够正确。产品模型路由与研发窗口手选模型不是同一设置 | G108、唯一Gateway：确定性业务直接计算；按任务类型、风险、输入大小、已准入模型能力与用户选择作显式路由，记录原因/真实用量/质量与延迟。只有已授权服务可执行，不自动切provider/充值/降模型，未知资源显示不可用且不堵基础链。同题同质量比较后才能采纳比例；保存原模型/recipe版本，升级路径需实际可用 |
+| 5 自我修正RAG，产品及研发：批判搜索结果、重写模糊查询、薄弱时明确弃答；知道何时再搜 | Contextual Retrieval支持补充块级语境、BM25+embedding和重排；它不等于自动实现自我纠错，论文/厂商收益不可套用。模型自信不是证据充分性 | G108/G109及现有Importer/Research：保持向量余弦+BM25→cross-encoder重排→来源/范围/时间核验；原文与派生块语境分开，新增上下文不得伪造事实。检索重试有预算、去重、结束原因；矛盾/撤回/弱证据给可用部分、引用及缺口。普通关键词/精确引用无AI可用，不冒称完整Hybrid。验多语同名主体、精确ID、失效来源、无支持、重写不扩权及真实资料检索效果 |
+| 6 三层记忆，产品：工作草稿、情节摘要、语义向量与重要性评分/驱逐；避免失忆和无限膨胀 | 三层是可采用设计；“第五轮必失败”无通用证据。持久保存、检索召回和压缩保真分别成立 | G109复用agent_memory/working.py、episodic.py、semantic.py和Shared Learning；任务/用户/组织范围分离，重要性由版本化规则与证据决定。驱逐仅控制检索缓存/工作上下文，不擅删Canonical、审计与成果历史；更正/忘记/撤权传到摘要及索引并可读回。semantic.py当前词项打分不算已具向量语义检索。验重启恢复、冲突记忆、跨用户拒绝及检索预算，不新建记忆数据库 |
+| 7 轨迹CI，研发：工具序列对黄金DAG评分，偏离阻PR；定位最终答案隐藏的过程错误 | 轨迹帮助追责，但单条黄金调用顺序会误拒等价安全路径；执行轨迹不是私有推理链。分数不能代替真正成果 | G83/G134、lumenis/shared/evaluation/trajectory.py及原CI：按任务声明允许动作/关键偏序/权限拒绝/幂等/取消/成果读回不变量；等价路径可通过，安全越界或缺必要提交拒绝。轨迹与当前组合源码、输入/版本、独立OutcomeAssertion绑定，脱敏保留失败。单位/集成回归和真实E2E分开；不因新分数取消原门禁或把他人旧回执迁给新组合版本 |
+| 9 实时语音打断，现有产品语音升级：VAD、亚1秒中断、SSE/WebSocket及感知延迟 | Realtime官方区分WebRTC与WebSocket；SSE仅服务端下行，不能单独承担双向音频。停止生成、停止播放、截断未播放上下文是不同动作；亚1秒需实际测量 | 现有owned_speech.py、Read Aloud/AI-01及媒体Owner：用户发起、录音权限、转写可修订；按实际transport实现打断/停止音频队列/清理未听内容、重连及任务返回，记录p50/p95打断和首音时延。现有Whisper离线评估或本地朗读不等于实时对话已接通；无模型保留手写/编辑/播放，不自动开麦/接外部语音API。隐私、语言/平台可用性及音视频成品验收保持独立 |
+| 10 DPO反馈飞轮，产品：点踩→偏好对→夜间LoRA；利用真实失败/边缘案例 | DPO需要同一输入下preferred/non-preferred成对回答及可信偏好；点踩单独只有负反馈。DPO目标与LoRA参数化是不同维度；夜间不是训练授权 | 现有Shared Learning/training_review.py及C2：原输出/纠正/来源/模型版本和同意分存，补齐人审偏好对，过滤隐私/权益/重复/错标签，独立held-out防泄漏。精确MODEL_TRAIN授权及免费资源验证后才可训练，checkpoint重载/新任务对照/安全回归/晋升回滚分别验收。保留夜间批处理作为获准任务的调度选项，默认不自动触发训练，不改生产模型 |
+| 13 计算机使用回退，研发及产品适配：REST失败404后无头浏览器，处理遗留门户 | 404可能是路径/版本/权限掩码错误，不能自动视为允许浏览器；有API失败不说明网页登录同等授权 | 沿已批准Browser/Collector能力核对API错误、原任务范围与来源许可后，才选择已有受控浏览器适配。401/403/429、挑战、会话失效各走原恢复，不能绕认证/限速；写动作先核外部回执避免重复。产品仍无通用OS/电脑控制；研发工具使用也不能扩大个人会话权限。验合法匿名网页、既有获准会话、人工接管/返回、取消恢复 |
+| 14 PII解掩码，产品：进入上下文前敏感数据替换UUID，生成后恢复并审计；保护客户数据 | 可逆替换是去标识化而非匿名化；Presidio示例明确共享映射非线程安全，不能原样投入多用户并发。Regex/token遮盖不证明所有PII已检测 | 既有安全入口/Permission/Gateway：最小化字段，按租户/用户/任务绑定映射；映射不进模型、日志或公共成果。只对已认证且仍有权的接收者恢复已知占位符，模型新造UUID/跨任务映射拒绝。脱敏审计记录版本/动作不含原秘密；撤权/删除策略覆盖缓存。验中文/英文/韩文、结构化与文档输入、并发隔离、误报漏报与恢复失败；不宣称绝对防泄漏 |
+| 15 公共架构拆解，研发日志及进度审计：3个已发布深度剖析、系统图、成本/延迟基准、ADR | 文章数量不等于产品质量；缺同口径实测不能写提升百分比。内部私库发布与向公共互联网发布是不同授权 | 沿现有规划/审计记录形成三份可审阅案例：上下文与恢复；资料检索到成果；受控浏览器与权限。每份给真实输入/数据流、版本、实测口径、失败和取舍，未知标未测；只发布已获准且脱敏的内容，未获公开授权不外发，不为凑篇数新建治理体系。原产品验收仍以用户任务为准 |
+
+### 一手来源、固定源码与采用边界
+
+核对日期2026-10-14。以下是针对具体机制的阅读，不声称逐字读完各仓库所有源码；研究/规则采用不等于功能实现或运行通过。
+
+- [Anthropic源码控制工程](https://www.anthropic.com/engineering/redesigning-source-control)（2026-10-13）与[上下文工程](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)（2025-09-29）：内容寻址、派生索引和上下文按需加载/压缩；原规模/收益只属原案例。
+- [LangGraph持久化](https://docs.langchain.com/oss/python/langgraph/persistence)：checkpoint/store、内存与持久恢复区别；仅对照现有机制，未引入依赖。[MCP 2025-11-25 transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)及[安全规范](https://modelcontextprotocol.io/docs/2025-11-25/tutorials/security/security_best_practices)：固定协议版本，不混用draft。
+- [Anthropic Contextual Retrieval](https://www.anthropic.com/engineering/contextual-retrieval)：块语境、BM25+embedding及reranking；保留序境已批准cosine/cross-encoder要求，其实验百分比不写为序境收益。
+- [OpenAI DPO](https://developers.openai.com/api/docs/guides/direct-preference-optimization)及[Realtime交互](https://developers.openai.com/api/docs/guides/realtime-conversations)：从官方文档MCP获取正文；只采用方法/事件语义，不启用收费API。
+- [Claude Agent SDK Python@f33ec2b](https://github.com/anthropics/claude-agent-sdk-python/tree/f33ec2b1e31abf9d6a285eb286e13336f283a00e)：已读LICENSE、README及permission callback例子。LICENSE为MIT，README另列Commercial Terms，不能把SDK代码许可等同服务免费。`allowed_tools`是自动允许列表，不移除工具；例子的宽泛只读/命令放行不照搬。可借鉴类型化权限回调、工具错误与会话快照版本；不安装/启动Claude客户端。
+- [OpenAI Agents Python@5eb47a5](https://github.com/openai/openai-agents-python/tree/5eb47a5bdeab8ba9f6087de288c7e606816c76c6)：核对sessions与guardrails中相关段落；MIT。审批恢复保持同一session/store，不能叠加两个会话真相；并行输入guardrail可能晚于工具效果，因此序境Permission在效果前同步生效。会话保存不能把拒绝输出/原凭据带入下次上下文；现有Owner适配，不引入第二SDK运行体系。
+- [Grok Build@2bdd1d6](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8)：已读README、`crates/codegen/xai-grok-config-types/src/permission.rs`；一方Apache-2.0、vendored组件各守原许可。遗漏action默认Deny、未知工具拒绝反序列化可作为验收反例；不是Grok Bot完整服务源码或产品权限替代。不安装、不读取外部会话、不上传仓库。
+- [Muse官方安全工程](https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse)：采用代理与权限/凭据隔离、显式接管/审批思想；对应既有Permission/Effect Fence/受控浏览器，不复制VM/OS能力。此次官方页面与关联GitHub检索未核得Muse agent完整官方开源实现；同名词向量MUSE、音乐bot和第三方复刻不是它。未核得源码保持NOT_VERIFIED，但已核官方工程原则继续落地，不虚构代码血缘。
+- [Presidio@2523c7b](https://github.com/microsoft/presidio/tree/2523c7b74a469270c5c78bb253f140eafca21e31)，MIT；已读`docs/samples/python/pseudonymization.ipynb`说明与映射设计。借鉴占位符/反向映射及并发风险；未安装模型或替换现有安全Owner。
+
+### 当前代码与验收缺口（本次固定基线ed212ce3）
+
+`agent_runtime/loop.py`/`durable_adapter.py`已有恢复scope校验、累积预算和checkpoint；`agent_memory/working.py`已有短期记录和显式持久失败计数，episodic/semantic已有检索但词项匹配不能冒称向量检索。`mcp_skill_runtime.py`已有受控安装、注册调用及人工审批检查。`lumenis/shared/evaluation/trajectory.py`已有确定性操作评分和独立OutcomeAssertion，不能把操作分数当用户成果通过。`owned_speech.py`是固定离线Whisper评估适配，Read Aloud是用户发起本地朗读；完整双向实时语音尚不能从这两者推出。`training_review.py`已有精确MODEL_TRAIN人审资源，不能用新图覆盖它。checkpoint当前识别凭据的遮盖不是通用多语PII识别证明。
+
+以上缺口落在本表对应原G项和现有Owner；要求仍全部保留。闭环验收分别取得基础无AI结果、增强效果、恢复/撤权、运行组合版本、模型训练/晋升证据；此研究提交不把任何未运行能力改成ACCEPTED。
