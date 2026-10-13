@@ -76,9 +76,26 @@ class TestRiskPolicyDefinitions:
         assert CTH_RISK_POLICY.keyword_weights != ZBMP_RISK_POLICY.keyword_weights
 
     def test_cth_has_specific_keywords(self):
-        """CTH 必须有太古汇专项关键词（歧视/KOC集中/舆情扩散等）。"""
+        """CTH 保留商业运营风险关键词（歧视/KOC集中/舆情扩散等）。"""
         kws = CTH_RISK_POLICY.keyword_weights
         assert "歧视" in kws or "KOC集中" in kws or "舆情扩散" in kws
+
+    @pytest.mark.parametrize("subject", ["广州太古汇", "Taikoo Hui", "其他商业主体"])
+    def test_subject_name_does_not_increase_operational_risk(self, subject):
+        def score(text):
+            return compute_domain_risk_score(
+                text=text, sentiment="neutral", engagement=0, domain_id="cth",
+            )
+
+        baseline = score("停车场正常营业")
+        named = score(f"{subject}停车场正常营业")
+        assert named["risk_score"] == baseline["risk_score"] == 0.0
+        assert named["matched_keywords"] == baseline["matched_keywords"] == []
+        assert named["policy_version"] == "cth-risk-v2.1"
+        complaint = score(f"{subject}停车服务投诉")
+        generic_complaint = score("停车服务投诉")
+        assert complaint["risk_score"] == generic_complaint["risk_score"] > 0
+        assert complaint["matched_keywords"] == generic_complaint["matched_keywords"]
 
     def test_zbmp_has_specific_keywords(self):
         """ZBMP 必须有多品牌专项关键词（品牌危机/竞品冲击/传播异常等）。"""

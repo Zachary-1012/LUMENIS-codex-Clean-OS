@@ -325,11 +325,11 @@ class DomainRiskPolicy:
     description: str
 
 
-# CTH 域风险策略：太古汇专项风险
+# CTH 域风险策略：商业运营风险，主体名称本身不构成风险信号
 CTH_RISK_POLICY = DomainRiskPolicy(
     domain_id="cth",
     product_id="CTH",
-    policy_version="cth-risk-v2.0",
+    policy_version="cth-risk-v2.1",
     risk_thresholds={
         "low": 20.0,
         "medium": 45.0,
@@ -337,14 +337,14 @@ CTH_RISK_POLICY = DomainRiskPolicy(
         "critical": 90.0,
     },
     keyword_weights={
-        # 太古汇专项高权重关键词
+        # 商业运营风险关键词
         "食品安全": 30.0, "卫生问题": 28.0, "安全隐患": 28.0,
         "歧视": 35.0, "侮辱": 30.0, "性骚扰": 40.0,
         "官威": 25.0, "封路": 22.0, "乱收费": 25.0,
         "宰客": 28.0, "黑店": 30.0, "天价": 22.0,
         "集体维权": 35.0, "联名投诉": 32.0, "媒体曝光": 30.0,
         "上热搜": 28.0, "舆情扩散": 32.0, "KOC集中": 25.0,
-        "集中负面": 30.0, "太古汇": 5.0, "广州太古汇": 5.0,
+        "集中负面": 30.0,
         # 通用负面（CTH 权重偏高，因为生产域敏感）
         "投诉": 15.0, "维权": 18.0, "曝光": 16.0,
         "翻车": 14.0, "欺骗": 20.0, "诈骗": 25.0,
@@ -357,9 +357,9 @@ CTH_RISK_POLICY = DomainRiskPolicy(
         {"condition": "contains_safety_issue", "action": "escalate_to_high", "reason": "安全类内容至少high"},
     ],
     risk_dimensions=[
-        "太古汇专项风险", "舆情扩散", "安全", "歧视", "集中负面", "KOC集中传播",
+        "商业运营风险", "舆情扩散", "安全", "歧视", "集中负面", "KOC集中传播",
     ],
-    description="CTH 太古汇生产真相域风险策略：侧重舆情扩散、安全事故、歧视事件、集中负面和KOC集中传播",
+    description="CTH 商业运营域风险策略：侧重舆情扩散、安全事故、歧视事件、集中负面和KOC集中传播",
 )
 
 # ZBMP 域风险策略：多品牌平台风险
