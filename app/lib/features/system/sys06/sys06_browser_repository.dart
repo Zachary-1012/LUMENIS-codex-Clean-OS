@@ -206,6 +206,12 @@ abstract interface class Sys06BrowserRepository {
   Future<void> stop(String sessionId);
 }
 
+/// Optional live frame stream (SSE) for read-only viewing of the same
+/// authorized session.  Frames are display-only: never stored, never sent to AI.
+abstract interface class Sys06BrowserFrameStreamRepository {
+  Stream<Sys06BrowserFrame> watchFrames(String sessionId);
+}
+
 /// Optional, explicitly lease-gated human control. Read-only Browser
 /// repositories do not gain these capabilities through the base interface.
 abstract interface class Sys06BrowserHumanControlRepository {
@@ -461,6 +467,7 @@ abstract interface class Sys06BrowserResearchRepository {
 class CoreSys06BrowserRepository
     implements
         Sys06BrowserRepository,
+        Sys06BrowserFrameStreamRepository,
         Sys06BrowserHumanControlRepository,
         Sys06BrowserVisibleLinksRepository,
         Sys06BrowserResearchRepository {
@@ -899,6 +906,11 @@ class CoreSys06BrowserRepository
   @override
   Future<Sys06BrowserFrame> readFrame(String sessionId) async =>
       Sys06BrowserFrame(frame: await client.browserFrame(sessionId));
+
+  @override
+  Stream<Sys06BrowserFrame> watchFrames(String sessionId) => client
+      .browserFrameStream(sessionId)
+      .map((frame) => Sys06BrowserFrame(frame: frame));
 
   @override
   Future<void> stop(String sessionId) async {

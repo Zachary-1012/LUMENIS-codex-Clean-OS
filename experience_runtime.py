@@ -3533,6 +3533,44 @@ def content_evidence_detail(evidence_id: str):
     }})
 
 
+def _verified_execution_evidence(ctx) -> bool:
+    """AI-01 receipt check: Evidence counts as recorded only after read-back.
+
+    The execution chain's own ``{"ok": True}`` flag is not trusted by itself. The
+    Evidence owner must return the record it wrote for this exact execution:
+    skill_execution source, source/task/trace bound to ``execution_id``, an intact
+    content hash, and a payload naming the same execution. Anything else is
+    reported as not recorded (AI-01.md section 1/2: no fake output or trace).
+    """
+    record = getattr(ctx, "evidence_record", None)
+    execution_id = getattr(ctx, "execution_id", None)
+    if not isinstance(record, dict) or record.get("ok") is not True:
+        return False
+    evidence_id = record.get("evidence_id")
+    if type(evidence_id) is not str or not evidence_id:
+        return False
+    if type(execution_id) is not str or not execution_id:
+        return False
+    try:
+        from lumenis.shared.evidence import EvidenceStore
+        from lumenis.shared.evidence.chain import compute_content_hash
+
+        evidence = EvidenceStore().get_evidence(evidence_id)
+        if evidence is None or evidence.evidence_id != evidence_id:
+            return False
+        if evidence.source_type != "skill_execution":
+            return False
+        if (evidence.source_id, evidence.task_id, evidence.trace_id) != (
+                execution_id, execution_id, execution_id):
+            return False
+        if compute_content_hash(evidence.raw_content) != evidence.content_hash:
+            return False
+        payload = json.loads(evidence.raw_content)
+        return isinstance(payload, dict) and payload.get("execution_id") == execution_id
+    except Exception:  # noqa: BLE001 - an unreadable receipt is not a recorded one
+        return False
+
+
 @experience_bp.route("/api/experience/ai/intent", methods=["POST"])
 def ai_intent():
     """AI-01 composer 提交：先过标准权限门（P0-WRITEPERM-02），通过后复用既有
@@ -3608,7 +3646,7 @@ def ai_intent():
             "audit_id": decision.audit_id,
             "execution_id": ctx.execution_id,
             "status": ctx.status.value,
-            "evidence_recorded": bool(getattr(ctx, "evidence_record", {}).get("ok", False)),
+            "evidence_recorded": _verified_execution_evidence(ctx),
             "ai_is_derivative": True,
             "note": "AI 输出为派生结果，不覆盖 Evidence/Canonical；前端须展示引用与可追溯状态。",
         })

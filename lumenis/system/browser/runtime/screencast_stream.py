@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Zachary OS AI · Internal Browser —— 实时画面流（Screencast over SSE）
+"""[Moved 2026-10-13 from repo-root internal_browser_stream.py; single owner lumenis/system/browser/runtime]
+Zachary OS AI · Internal Browser —— 实时画面流（Screencast over SSE）
 
 与 internal_browser.py 的「一次截图一条短连接」不同，本模块为每个驻场账号维护
 一条持久 CDP WebSocket，用 Page.startScreencast 让浏览器**主动推帧**（云浏览器/
