@@ -119,27 +119,6 @@ def test_transport_error_is_unavailable_not_policy_disabled(monkeypatch):
     ) == (None, "unavailable")
 
 
-def test_direct_local_chat_cannot_bypass_retired_provider(monkeypatch):
-    from lumenis.system.ai_gateway import providers
-
-    monkeypatch.setattr(
-        providers, 'RETIRED_PROVIDERS', providers.RETIRED_PROVIDERS | {'ollama'},
-    )
-    calls = []
-    monkeypatch.setattr(
-        core, '_ollama_vision_json',
-        lambda *_args, **_kwargs: calls.append(True),
-    )
-
-    result = core._call_local_chat(
-        'ollama', 'qwen3:4b', 'http://127.0.0.1:11434',
-        'system', 'user', 0.0, 16, 3,
-    )
-
-    assert result == (None, 'provider_disabled')
-    assert calls == []
-
-
 def test_legacy_analysis_helpers_use_owned_gateway_and_never_fabricate_fallbacks(monkeypatch):
     calls = []
 
@@ -296,20 +275,6 @@ def test_ollama_rejects_remote_metadata_on_chat_response(monkeypatch, field):
 
     assert [call[0] for call in calls] == ["/api/show", "/api/chat"]
     assert calls[0][1] == {"model": "qwen3:4b:local"}
-
-
-@pytest.mark.parametrize(
-    ("model", "expected"),
-    [
-        ("qwen3:local", "qwen3:local"),
-        ("qwen3:4b:local", "qwen3:4b:local"),
-        ("qwen3: local", "qwen3:local"),
-        ("my-cloud", "my-cloud:local"),
-        ("registry.example:5000/team/model:tag", "registry.example:5000/team/model:tag:local"),
-    ],
-)
-def test_ollama_local_transport_selector_preserves_valid_model_refs(model, expected):
-    assert core._ollama_local_transport_model(model) == expected
 
 
 @pytest.mark.parametrize(

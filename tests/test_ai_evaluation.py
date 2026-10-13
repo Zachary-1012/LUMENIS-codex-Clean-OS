@@ -179,7 +179,7 @@ class TestAICallLogger:
 
     def test_provider_status_registry(self):
         assert acl.get_provider_status('zhipu') == 'DISABLED'
-        assert acl.get_provider_status('ark') == 'LEGACY'
+        assert acl.get_provider_status('ark') == 'DISABLED'
         assert acl.get_provider_status('ollama') == 'DISABLED'
         assert acl.get_provider_status('nonexistent') == 'UNKNOWN'
 
@@ -433,15 +433,6 @@ class TestAINotReplacingRules:
         assert len(subject_check) == 1
         assert subject_check[0]['passed'] is True
 
-    def test_ark_llm_marked_legacy(self):
-        """ark_llm 已标记为 LEGACY。"""
-        import ark_llm
-        assert ark_llm.MODULE_STATUS == 'LEGACY'
-        assert 'DEPRECATION_NOTE' in dir(ark_llm)
-        # 当前 AI_PROVIDER=zhipu 时 ark 通道应禁用
-        assert ark_llm.PROVIDER_ACTIVE is False or os.getenv('AI_PROVIDER', 'zhipu') != 'ark'
-
-
 # ============================================================
 # 4. Provider Fallback
 # ============================================================
@@ -616,8 +607,8 @@ class TestModuleStatusMarkers:
     def test_all_ai_modules_have_status(self):
         """所有核心 AI 模块都应有 MODULE_STATUS 标记。"""
         modules = [
-            'ai_analyzer', 'ai_filter', 'ark_llm', 'ai_governance',
-            'ai_resource_packs', 'local_ai_client',
+            'ai_analyzer', 'ai_filter', 'ai_governance',
+            'ai_resource_packs',
             'lumenis.system.ai_gateway.channel',
             'lumenis.system.ai_gateway.core',
         ]

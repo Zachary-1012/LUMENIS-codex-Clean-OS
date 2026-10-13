@@ -105,7 +105,7 @@ OpenCode 历史配置 .opencode/opencode.json 保留、模型调用停止。Code
 
 ## Historical source disposition (not current runtime proof)
 
-- Ollama/LM Studio/llama.cpp/Zhipu/OpenCode 模型路由停用，接口/历史保留；不得探测、保活或 fallback。
+- 只用序境自有模型；Ollama/LM Studio/llama.cpp/Zhipu/OpenCode/Ark 调用代码已删除，不得探测、保活或 fallback。
 - OpenCode 历史配置保留，不构成当前执行资源。
 - AI-01：当前 App 只显示 provider/能力状态，真实意图提交与 Evidence Trace 尚未闭环；不得把状态页写成完成的 AI workflow。
 

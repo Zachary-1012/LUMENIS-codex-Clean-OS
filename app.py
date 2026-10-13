@@ -425,14 +425,6 @@ except Exception as _pe:
     _proxy_mgr = None; _load_proxy_nodes = None; _ProxyCfg = None
     PROXY_POOL_AVAILABLE = False
     print('[ProxyPool] 模块不可用（不影响系统运行）:', _pe)
-# 豆包AI API（可选辅助功能，导入失败不影响系统启动）
-try:
-    import ark_llm
-    ARK_LLM_AVAILABLE = True
-except Exception as e:
-    ark_llm = None
-    ARK_LLM_AVAILABLE = False
-    print(f'[ARK] 豆包AI模块导入失败（不影响系统运行）: {e}')
 from subject_rules import SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS, subject_hit, subject_sql_and_values
 # 品牌Logo管理系统
 import brand_logo_manager

@@ -581,26 +581,6 @@ def get_channel_status_detailed():
     }
 
 
-# ============================================================
-# Track B 补全：豆包最小兜底通道配置
-# ============================================================
-def get_doubao_fallback_config():
-    """Return legacy Doubao metadata without enabling an implicit fallback."""
-    return {
-        "provider": "doubao",
-        "role": "compatibility_only",
-        "status": "NOT_IN_AUTOMATIC_CHAIN",
-        "priority": None,
-        "model": None,
-        "endpoint": None,
-        "max_tokens": None,
-        "temperature": None,
-        "timeout_sec": None,
-        "description": "Legacy compatibility metadata; not an Owned Gateway fallback",
-        "circuit_breaker": get_provider_breaker('doubao').snapshot(),
-    }
-
-
 def full_fallback_chain():
     """Return only an explicitly configured chain; never synthesize fallbacks."""
     return provider_chain()
@@ -698,14 +678,7 @@ import uuid as _uuid
 
 # Preserved response metadata. Retired providers are reported disabled and are
 # never eligible for dispatch; this table is not the active fallback contract.
-PROVIDER_LAYERS_V1 = [
-    {"layer": 1, "provider": "zhipu",   "role": "retired_compatibility", "models": ["glm-4.5-air", "glm-5.3", "glm-4.6v", "web-search-pro"]},
-    {"layer": 2, "provider": "ark",     "role": "compatibility_only", "models": ["doubao-lite-4k", "doubao-pro-32k"]},
-    {"layer": 3, "provider": "qwen",    "role": "explicit_selection_only", "models": ["qwen-flash", "qwen-turbo"]},
-    {"layer": 4, "provider": "ollama",  "role": "retired_compatibility", "models": ["qwen2.5-coder:7b-agent"]},
-    {"layer": 5, "provider": "lmstudio","role": "retired_compatibility", "models": ["local-model"]},
-    {"layer": 6, "provider": "rule",    "role": "deterministic_non_ai", "models": ["deterministic_rule"]},
-]
+PROVIDER_LAYERS_V1 = []
 
 # 切换审计日志（内存环形缓冲，最近 200 条）
 _FAILOVER_LOG = []
@@ -782,29 +755,8 @@ def get_failover_log(limit=50):
 
 
 def build_fallback_chain_v1():
-    """Compatibility entry; retired primary means no provider discovery/fallback."""
-    if _known_provider_disabled('zhipu'):
-        return ['rule']
-    ensure_env_loaded()
-    chain = []
-    # L1 智谱（必须有 key）
-    if _env("ZHIPU_API_KEY") and not _known_provider_disabled('zhipu'):
-        chain.append("zhipu")
-    # L2 ARK/豆包（必须有 key）
-    if _env("ARK_API_KEY"):
-        chain.append("ark")
-    # L3 千问（必须有 key）
-    if _env("DASHSCOPE_API_KEY") or _env("QWEN_API_KEY"):
-        chain.append("qwen")
-    # L4 Ollama（本地，默认可用）
-    if not _known_provider_disabled('ollama'):
-        chain.append("ollama")
-    # L5 LM Studio / llama.cpp（本地，默认可用）
-    if not _known_provider_disabled('lmstudio'):
-        chain.append("lmstudio")
-    # L6 本地确定性规则（最终兜底，始终在链中）
-    chain.append("rule")
-    return chain
+    """PO: owned models only; no third-party provider and no fallback chain."""
+    return []
 
 
 def route_with_fallback_v1(call_fn, providers=None, on_result=None,

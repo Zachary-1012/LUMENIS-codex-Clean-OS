@@ -148,7 +148,7 @@ def test_channel_health_available_flag():
         # Legacy compatibility providers remain observable but unavailable.
         h = ac.channel_health('ark', 'doubao-test')
         assert h['available'] is False and h['provider'] == 'ark'
-        assert h['provider_status'] == 'LEGACY'
+        assert h['provider_status'] == 'DISABLED'
         b.record_failure('network')
         h2 = ac.channel_health('ark', 'doubao-test')
         assert h2['available'] is False and h2['state'] == 'OPEN'

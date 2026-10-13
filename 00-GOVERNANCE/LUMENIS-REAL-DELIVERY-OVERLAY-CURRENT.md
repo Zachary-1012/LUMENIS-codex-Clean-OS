@@ -763,8 +763,8 @@ Discover
 至少一个 Skill 必须真实完成业务任务。
 
 CURRENT C2 AI INPUT / RETAINED R07 COVERAGE：
-- Retired local-model/Zhipu/OpenCode routes and Jev stay inactive; retain history
-  and interfaces, without call/probe/auto-discovery/fallback/reactivation.
+- Retired local-model/Zhipu/OpenCode/Ark routes and Jev stay inactive; calling
+  code deleted, without call/probe/auto-discovery/fallback/reactivation.
 - Approved owned weights, real training, held-out useful business outputs,
   multimodal input consumption, tools and resumable tasks are required.
 - Preserve model/data/license/scope/version, feedback/evaluation and controlled

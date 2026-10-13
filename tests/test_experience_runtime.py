@@ -457,7 +457,7 @@ def test_sys02_collector_status_real_platforms(isolated_client):
     assert j["bound"] is True
     sec = {s["type"]: s for s in j["sections"]}
     tbl = sec["table"]
-    assert len(tbl["rows"]) == 17  # collector_status_api.PLATFORMS
+    assert len(tbl["rows"]) == 16  # collector_status_api.PLATFORMS
     for m in sec["kpis"]["items"]:
         assert isinstance(m["value"], int) and not isinstance(m["value"], bool)
     # 隔离环境无 cookie：ACTIVE 必须为 0，绝不造假

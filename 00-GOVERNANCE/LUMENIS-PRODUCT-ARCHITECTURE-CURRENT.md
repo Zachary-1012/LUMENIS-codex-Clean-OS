@@ -512,7 +512,7 @@ Current provider and engineering roles (2026-10-01/02):
   held-out business evaluation; existing/free resources first. Codex Cloud
   configuration is not proof of production inference or free GPU capacity.
 - Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are stopped in product
-  and development. Retain interfaces/history; no calls, probes, auto-discovery,
+  and development; calling code deleted; no calls, probes, auto-discovery,
   fallback or reactivation. Jev is an inactive historical typed candidate,
   not a prerequisite or default comparison provider.
 - Owned AI must prove understanding, reasoning, original creation, tools,
