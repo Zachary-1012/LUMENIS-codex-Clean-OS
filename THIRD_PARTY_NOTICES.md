@@ -31,3 +31,23 @@ Model weights, training data and optional media tools such as FFmpeg retain thei
 separate terms. No such material is added or newly distributed by this change.
 VERIFY_BEFORE_RELEASE / NOT VERIFIED entries in the register remain unresolved;
 this index neither silently passes them nor relicenses them.
+
+
+## 2026-10-13 bounded response-shape and static-import reuse
+
+- `lumenis/system/collector/adapters/response_shape.py`: original Python adaptation
+  of shape/key/pagination observation ideas in Dvurechensky/Browser.Reverse.Engineering.Toolkit,
+  commit `ecbe61af5004f6efa493749a623fbd98ab307a37`, `SiteSnapshotter/injector.js`.
+  No injector, browser launcher, storage/session sampler or acquisition code copied.
+  This integration adds bounded invocation-local observations and typed validation;
+  it does not authorize collection or create Evidence/Canonical facts.
+- `scripts/audit_tools/binnexus_imports.py`: verbatim `dll_pattern` and `parse_imports`
+  from Dvurechensky/BinNexus commit `269444ef4433cc582a57f7fa6854c2448ad5ba6b`,
+  `app/binnexus/analysis/static/imports.py`, lines 16-24; provenance/header added.
+  `dll_imports.py` is the separately authored single-file, timeout-bounded wrapper.
+  No DLL loading, target execution, recursive scan or new runtime dependency.
+
+Retain the complete [upstream MIT notice](vendor/lumenis-reuse-notices/Dvurechensky-MIT.txt)
+and [delivery MIT notice](vendor/lumenis-reuse-notices/Delivery-MIT.txt) with copies.
+The root Apache-2.0 license is unchanged. Build/static observations do not prove
+runtime dependency resolution, current-main build identity or product acceptance.
