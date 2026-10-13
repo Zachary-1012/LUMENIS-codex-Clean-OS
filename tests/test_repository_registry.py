@@ -404,3 +404,14 @@ class TestModifiedFilesImport:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
+
+
+def test_ai_runtime_path_is_provider_neutral_and_override_is_preserved(clean_registry, monkeypatch, tmp_path):
+    registry = clean_registry.RepositoryRegistry(repo_root=str(tmp_path))
+    assert registry.ai_runtime_dir == tmp_path / "data" / "runtime" / "ai"
+    assert not registry.ai_runtime_dir.exists()
+    explicit = tmp_path / "configured-model-artifacts"
+    monkeypatch.setenv("ZBC_AI_RUNTIME_DIR", str(explicit))
+    registry = clean_registry.RepositoryRegistry(repo_root=str(tmp_path))
+    assert registry.ai_runtime_dir == explicit
+    assert not explicit.exists()

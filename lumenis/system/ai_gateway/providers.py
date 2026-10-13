@@ -1,13 +1,9 @@
 """LUMENIS Provider Registry.
 
-Retired providers keep their adapters for compatibility, but status mutation,
-discovery and stale runtime state cannot make them callable again.
+Retired provider identities remain denial/history metadata only. No probe or
+execution adapter is retained here; current requests use the one Gateway.
 """
 from typing import Dict, List, Optional
-import os
-import json
-import urllib.request
-import urllib.error
 
 # Provider 状态枚举
 ACTIVE = "ACTIVE"
@@ -106,53 +102,9 @@ def registry_summary() -> Dict[str, int]:
     return counts
 
 
-def _probe_endpoint(base_url: str, path: str, timeout: float = 3.0) -> bool:
-    """探测本地 HTTP 端点是否可访问且返回非空模型列表。"""
-    try:
-        url = base_url.rstrip("/") + path
-        req = urllib.request.Request(url, headers={"User-Agent": "ZBC-ProviderProbe/1.0"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            if resp.status != 200:
-                return False
-            data = json.loads(resp.read().decode("utf-8", "replace"))
-            # Ollama: {"models": [...]}; LM Studio / llama.cpp: {"data": [...]}
-            models = data.get("models") or data.get("data") or []
-            return len(models) > 0
-    except Exception:
-        return False
-
-
 def probe_local_providers() -> Dict[str, str]:
-    """运行时探测所有本地 Provider，更新 Registry 状态。
-
-    返回 {provider_name: new_status} 映射。
-    - 探测成功（有可用模型）→ ACTIVE
-    - 探测失败 → BLOCKED
-    仅影响 ollama / lmstudio / llama_cpp，不触碰云端 Provider。
-    """
-    results: Dict[str, str] = {}
-    local_names = ["ollama", "lmstudio", "llama_cpp"]
-    for name in local_names:
-        if is_provider_retired(name):
-            results[name] = DISABLED
-            continue
-        entry = PROVIDER_REGISTRY.get(name)
-        if not entry:
-            continue
-        base_url = os.environ.get(entry.get("probe_url_env", ""), "") or entry.get("probe_url_default", "")
-        path = entry.get("probe_path", "/api/tags")
-        ok = _probe_endpoint(base_url, path)
-        new_status = ACTIVE if ok else BLOCKED
-        entry["status"] = new_status
-        entry["last_probe"] = _now_iso()
-        entry["probe_ok"] = ok
-        results[name] = new_status
-    return results
-
-
-def _now_iso() -> str:
-    from datetime import datetime
-    return datetime.now().isoformat(timespec="seconds")
+    """Read historical local-provider denial states; never probe an endpoint."""
+    return {name: DISABLED for name in ("ollama", "lmstudio", "llama_cpp")}
 
 
 def set_provider_status(name: str, status: str) -> None:
