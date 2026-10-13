@@ -10,6 +10,10 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 `AGENTS.md` is pinned to LF in `.gitattributes`, so the Codex `project_doc_max_bytes` budget (131072, with 16384 headroom) is measured on the same bytes on Windows and in CI; the text did not change. The six T04 historical PO prohibitions are structured `red_lines` keys in the governance machine contract. The blocking validator `verify_governance_machine_contract.py` rejects dropping or allowing any of them. The PR #24 prose-anchor test has been replaced. AGENTS.md carries a one-line LF note so existing Windows clones rewrite it on update (PR #28 review). PO receipt: `PO-20261013-AGENTS-LF-AND-T04-STRUCTURED-RED-LINES`. 阿康（bot）
 
+## 2026-10-13 Local/main single-path sync and PO role names (dated readback)
+
+The local repo D:/LUMENIS_REBUILD/序/序境 (dd0baf0e plus 170 uncommitted files) was committed and merged with origin/main cef1d237 in one PR, so local and main share one path again. The pre-sync patch is kept at D:/LUMENIS_AUDIT/20261013_akang_governance/pre-sync.patch. USER-ADDITIONS-20261004.md records the PO-decided English-only role names (Pim/Bram/Ness/Jas/Aris) and the AI watermark. 阿康（bot）
+
 ## 1. Online reader's current-state snapshot
 
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`

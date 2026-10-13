@@ -28,7 +28,7 @@ class CoreSh04Repository implements Sh04SavedWorkRepository {
   const CoreSh04Repository({
     required LumenisCoreClient client,
     this.screenReader,
-  }) : _client = client;
+  }) : _client = client; // ignore: prefer_initializing_formals
 
   final LumenisCoreClient _client;
   final Sh04ScreenReader? screenReader;
