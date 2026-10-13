@@ -9,7 +9,7 @@
 |---|---|---|
 | 新增 `kos_metrics.py`（12KB） | `kos_metrics.py` | funnel_metrics / cost_metrics / tier_benchmark / koc_reward_tier / koc_campaign_review / set_manual |
 | 新增 4 路由 | `kos_routes.py` | `/api/kos/funnel` `/api/kos/cost` `/api/kos/tier` `/api/kos/koc-tier` |
-| 工单登记 | `迭代工单与时间评估.md` §八 | ZBC-P1-KM-01~06（3 项施工中 / 3 项待启动） |
+| 历史工单登记 | [删除前固定提交中的工单 §八](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/5cc9440082e8b77d68d0fa4e36d2979e7cfda6da/迭代工单与时间评估.md)；现行指标合同：`docs/reference/CTR-KOS-METRICS-P1-01.md` | ZBC-P1-KM-01~06（当时3项施工中 / 3项待启动；历史观察，不是当前派工） |
 
 ## 二、验证结果
 - py_compile：kos_metrics.py / kos_routes.py / kos_intel.py 通过

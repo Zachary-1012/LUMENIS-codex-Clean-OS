@@ -31,7 +31,7 @@ SENTIMENT_LABELS = ("positive", "neutral", "negative", "unknown")
 # 风险等级数值映射（仅用于排序/聚合，不用于覆盖原始标签）
 logger = logging.getLogger(__name__)
 
-_RISK_SCORE = {"low": 1, "medium": 2, "high": 3, "critical": 4, "unknown": 0}
+_RISK_SCORE = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 _SENTIMENT_SCORE = {"positive": 1, "neutral": 0, "negative": -1, "unknown": None}
 
 
@@ -44,13 +44,10 @@ def _is_unknown(value) -> bool:
     return False
 
 
-def _safe_div(numerator: float, denominator: float) -> float:
-    """安全除法：0/0 返回 0.0（而非崩溃），但调用方应明确这是"无数据"而非"零值"。
-
-    Track3：禁止把 0/0 伪造为有意义的 0；返回 0.0 同时调用方应检查 data_available。
-    """
-    if denominator == 0:
-        return 0.0
+def _safe_div(numerator: float, denominator: float):
+    """Return None for an undefined ratio; retain a measured zero numerator."""
+    if denominator is None or denominator == 0:
+        return None
     return numerator / denominator
 
 
@@ -184,7 +181,7 @@ def evaluate_risk(
         "risk_adjusted": risk_adjusted,
         "data_available": data_available,
         "low_confidence": low_confidence,
-        "risk_score": _RISK_SCORE.get(final_risk, 0),
+        "risk_score": _RISK_SCORE.get(final_risk),
         "sentiment_score": _SENTIMENT_SCORE.get(norm_sentiment),
         "threshold": threshold,
         "engagement_available": engagement_available,
@@ -215,7 +212,8 @@ def aggregate_risk(items: list) -> dict:
             "total": 0, "with_data": 0, "unknown_count": 0,
             "risk_distribution": {}, "sentiment_distribution": {},
             "avg_severity": None, "avg_confidence": None,
-            "max_risk": "unknown", "dominant_sentiment": "unknown",
+            "max_risk": "unknown", "max_risk_score": None,
+            "dominant_sentiment": "unknown",
             "data_available": False, "fabrication_safe": True,
         }
 
@@ -228,7 +226,7 @@ def aggregate_risk(items: list) -> dict:
     confidence_count = 0
     with_data = 0
     unknown_count = 0
-    max_risk_score = 0
+    max_risk_score = None
     max_risk = "unknown"
 
     for item in items:
@@ -256,8 +254,8 @@ def aggregate_risk(items: list) -> dict:
         if conf is not None and item.get("confidence_available"):
             confidence_sum += conf
             confidence_count += 1
-        rs = _RISK_SCORE.get(r, 0)
-        if rs > max_risk_score:
+        rs = _RISK_SCORE.get(r)
+        if rs is not None and (max_risk_score is None or rs > max_risk_score):
             max_risk_score = rs
             max_risk = r
 
@@ -282,6 +280,7 @@ def aggregate_risk(items: list) -> dict:
         "severity_sample_count": severity_count,
         "confidence_sample_count": confidence_count,
         "max_risk": max_risk,
+        "max_risk_score": max_risk_score,
         "dominant_sentiment": dominant_sentiment,
         "data_available": with_data > 0,
         "fabrication_safe": True,
@@ -424,8 +423,8 @@ def get_risk_policy(domain_id: _Optional[str] = None) -> DomainRiskPolicy:
 def compute_domain_risk_score(
     text: str = "",
     sentiment: str = "unknown",
-    engagement: int = 0,
-    negative_count: int = 0,
+    engagement: int | None = None,
+    negative_count: int | None = None,
     domain_id: _Optional[str] = None,
     extra_keywords: _Optional[List[str]] = None,
 ) -> Dict[str, _Any]:
@@ -444,45 +443,50 @@ def compute_domain_risk_score(
     """
     policy = get_risk_policy(domain_id)
 
-    # 0/0 安全处理：无数据时 risk_score=0 但标记 data_available=False
-    data_available = bool(text) or sentiment != "unknown" or engagement > 0 or negative_count > 0
+    text_value = text.strip() if isinstance(text, str) else ""
+    sentiment_value = sentiment.strip().lower() if isinstance(sentiment, str) else "unknown"
+    sentiment_available = sentiment_value in {"positive", "neutral", "negative"}
+    engagement_value = engagement if type(engagement) is int and engagement >= 0 else None
+    negative_count_value = negative_count if type(negative_count) is int and negative_count >= 0 else None
+    data_available = bool(text_value) or sentiment_available or engagement_value is not None or negative_count_value is not None
     if not data_available:
         return {
             "domain_id": policy.domain_id,
             "product_id": policy.product_id,
             "policy_version": policy.policy_version,
-            "risk_score": 0.0,
+            "risk_score": None,
             "risk_level": "unknown",  # 无数据保持 unknown，不伪造为 low
             "risk_dimensions": policy.risk_dimensions,
             "matched_keywords": [],
             "escalation_triggered": [],
             "data_available": False,
-            "note": "No data available; risk preserved as unknown (0/0 safe, not fabricated as low)",
+            "thresholds_used": dict(policy.risk_thresholds),
+            "note": "No data available; risk score is unknown",
         }
 
     # 1. 关键词权重累加
     risk_score = 0.0
     matched_keywords = []
-    text_lower = (text or "").lower()
+    text_lower = text_value.lower()
     for kw, weight in policy.keyword_weights.items():
         if kw.lower() in text_lower:
             risk_score += weight
             matched_keywords.append({"keyword": kw, "weight": weight})
 
     # 2. 情感加成
-    if sentiment == "negative":
+    if sentiment_value == "negative":
         risk_score += 10.0
-    elif sentiment == "positive":
+    elif sentiment_value == "positive":
         risk_score = max(0, risk_score - 5.0)
 
     # 3. 互动量加成（对数缩放，避免极端值）
-    if engagement > 0:
+    if engagement_value is not None and engagement_value > 0:
         import math
-        risk_score += min(20.0, math.log10(engagement + 1) * 8.0)
+        risk_score += min(20.0, math.log10(engagement_value + 1) * 8.0)
 
     # 4. 负面数量加成
-    if negative_count > 0:
-        risk_score += min(15.0, negative_count * 2.0)
+    if negative_count_value is not None and negative_count_value > 0:
+        risk_score += min(15.0, negative_count_value * 2.0)
 
     # 5. 额外关键词
     if extra_keywords:
@@ -506,13 +510,13 @@ def compute_domain_risk_score(
     for rule in policy.escalation_rules:
         cond = rule["condition"]
         triggered = False
-        if cond == "negative_count >= 5" and negative_count >= 5:
+        if cond == "negative_count >= 5" and negative_count_value is not None and negative_count_value >= 5:
             triggered = True
-        elif cond == "negative_count >= 10" and negative_count >= 10:
+        elif cond == "negative_count >= 10" and negative_count_value is not None and negative_count_value >= 10:
             triggered = True
-        elif cond == "engagement > 10000" and engagement > 10000:
+        elif cond == "engagement > 10000" and engagement_value is not None and engagement_value > 10000:
             triggered = True
-        elif cond == "engagement > 50000" and engagement > 50000:
+        elif cond == "engagement > 50000" and engagement_value is not None and engagement_value > 50000:
             triggered = True
         elif cond == "contains_discrimination" and contains_discrimination:
             triggered = True
@@ -520,7 +524,7 @@ def compute_domain_risk_score(
             triggered = True
         elif cond == "contains_brand_crisis" and contains_brand_crisis:
             triggered = True
-        elif cond == "koc_count >= 3" and negative_count >= 3:
+        elif cond == "koc_count >= 3" and negative_count_value is not None and negative_count_value >= 3:
             triggered = True  # 简化：用 negative_count 近似 KOC 数量
 
         if triggered:
@@ -564,8 +568,8 @@ def compute_domain_risk_score(
 def compare_domain_risk(
     text: str = "",
     sentiment: str = "unknown",
-    engagement: int = 0,
-    negative_count: int = 0,
+    engagement: int | None = None,
+    negative_count: int | None = None,
 ) -> Dict[str, _Any]:
     """同一条数据在 CTH 和 ZBMP 两域的风险对比。
 
@@ -576,8 +580,14 @@ def compare_domain_risk(
     return {
         "cth": cth_result,
         "zbmp": zbmp_result,
-        "same_risk_level": cth_result["risk_level"] == zbmp_result["risk_level"],
-        "score_diff": round(abs(cth_result["risk_score"] - zbmp_result["risk_score"]), 2),
+        "same_risk_level": (
+            cth_result["risk_level"] == zbmp_result["risk_level"]
+            if cth_result["data_available"] and zbmp_result["data_available"] else None
+        ),
+        "score_diff": (
+            round(abs(cth_result["risk_score"] - zbmp_result["risk_score"]), 2)
+            if cth_result["risk_score"] is not None and zbmp_result["risk_score"] is not None else None
+        ),
         "thresholds_independent": (
             cth_result["thresholds_used"] != zbmp_result["thresholds_used"]
         ),
@@ -799,7 +809,7 @@ def evaluate_risk_with_sensational(title: str = "", content: str = "",
 
     base["sensational_signal"] = sensational
     base["final_risk"] = final_risk
-    base["risk_score"] = _RISK_SCORE.get(final_risk, 0)
+    base["risk_score"] = _RISK_SCORE.get(final_risk)
     base["note"] = base.get("note", "") + "; IC-044 sensational/synthetic factor applied"
 
     return base
