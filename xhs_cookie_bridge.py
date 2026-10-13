@@ -133,7 +133,7 @@ def collection_policy_gate(account=None, region='intl'):
 
 
 
-_TAIKOO_MARKERS = ('太古汇', 'taikoo')
+_TAIKOO_MARKERS = ('广州太古汇', 'taikoo hui guangzhou', 'guangzhou taikoo hui')
 
 
 def _verify_note_for_query(note, query):
@@ -188,7 +188,6 @@ def _resolve_registry_page(keywords=None):
         plan = build_acquisition_plan(None, continuation=cursor) if cursor else build_acquisition_plan(None)
     except Exception:
         plan = build_acquisition_plan(None)
-    _save_plan_cursor(getattr(plan, 'next_cursor', None))
     return plan
 
 def _resolve_acquisition_plan(
@@ -1009,9 +1008,13 @@ def sync(keywords=None, max_scroll=6, account=None):
             # PO rule 2026-10-13 #1: in-product login popup, then resume this task.
             try:
                 from lumenis.adapters import auth_recovery as _ar
-                _ar.register_resume('xiaohongshu', lambda _k=list(keywords), _s=max_scroll, _a=account: sync(keywords=_k, max_scroll=_s, account=_a))
-                _ar.request_recovery('xiaohongshu', 'LOGIN_REQUIRED', blocked_summary)
-                results.append({'stage':'auth_recovery','status':'LOGIN_POPUP_REQUESTED','resume':'queued'})
+                _rec = _ar.request_recovery('xiaohongshu', 'LOGIN_REQUIRED', blocked_summary)
+                if isinstance(_rec, dict) and _rec.get('success'):
+                    # Resume re-enters the guarded task path (admission, rate limit, policy).
+                    _ar.register_resume('xiaohongshu', lambda _k=list(keywords), _s=max_scroll, _a=account: create_task(keywords=_k, max_scroll=_s, run_type='manual', account=_a))
+                    results.append({'stage':'auth_recovery','status':'LOGIN_POPUP_REQUESTED','resume':'queued'})
+                else:
+                    results.append({'stage':'auth_recovery','status':'RECOVERY_UNAVAILABLE','error':(_rec or {}).get('error') if isinstance(_rec, dict) else None})
             except Exception as _exc:
                 results.append({'stage':'auth_recovery','status':'FAILED','error':type(_exc).__name__})
     inserted=updated=rejected=0
@@ -1202,6 +1205,8 @@ def create_task(keywords=None,max_scroll=6,run_type='manual',account=None):
         guard_msg = '（测试模式：已旁路冷却/新账号保护）' if is_test_mode() else ''
     type_label = '手动触发' if run_type == 'manual' else '自动采集'
     if not _lock.acquire(blocking=False): raise RuntimeError('已有小红书 Cookie 同步任务运行中')
+    if run_type == 'auto':
+        _save_plan_cursor(getattr(query_plan, 'next_cursor', None))  # advance only after admission
     task_id=f"xhs-{datetime.now():%Y%m%d%H%M%S}-{int(time.time()*1000)%1000:03d}"
     _tasks[task_id]={
         'task_id':task_id,'status':'running','progress':5,'run_type':run_type,
