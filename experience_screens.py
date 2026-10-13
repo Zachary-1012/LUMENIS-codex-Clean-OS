@@ -23,6 +23,7 @@ import datetime as _dt
 import hashlib
 import json
 import os
+import re
 from typing import Any, Dict, List, Optional
 
 # 复用 experience_runtime 的同构构造器与状态常量，保证两处输出完全一致
@@ -1099,49 +1100,176 @@ def _build_sh04() -> Dict[str, Any]:
     return _envelope("SH-04", sections, truth={"domains": list(cat.keys())})
 
 
-def _build_sh06() -> Dict[str, Any]:
-    """通知/任务中心：TaskEngine.list_tasks/get_dlq/health_check（真实）。"""
+_SH06_REFERENCE = re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
+_SH06_DIGEST = re.compile(r"^[a-f0-9]{64}$")
+_SH06_FOCUS_KEYS = ("subject_id", "brand_focus_id", "focus_id")
+
+
+def _sh06_verified_task_chain(rows: Any) -> Optional[Dict[str, Any]]:
+    """Verify one TaskEngine Evidence hash chain end to end (SH-06 lineage gate).
+
+    TaskEngine writes current_hash = SHA256(previous|evidence_id|task_id|content|created_at).
+    The chain must start at genesis, link every row exactly once and recompute
+    each digest; otherwise the task cannot prove Evidence linkage and is dropped.
+    """
+    if not isinstance(rows, list) or not rows:
+        return None
+    by_previous: Dict[Optional[str], Dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            return None
+        previous = row.get("previous_hash") or None
+        if previous in by_previous:
+            return None
+        by_previous[previous] = row
+    cursor: Optional[str] = None
+    last: Optional[Dict[str, Any]] = None
+    for _ in range(len(rows)):
+        row = by_previous.get(cursor)
+        if row is None:
+            return None
+        payload = "|".join(str(part) for part in (
+            cursor or "genesis", row.get("evidence_id"), row.get("task_id"),
+            row.get("content"), row.get("created_at"),
+        ))
+        digest = row.get("current_hash")
+        if type(digest) is not str or not _SH06_DIGEST.match(digest):
+            return None
+        if hashlib.sha256(payload.encode("utf-8")).hexdigest() != digest:
+            return None
+        cursor, last = digest, row
+    evidence_id = last.get("evidence_id") if last else None
+    if type(evidence_id) is not str or not _SH06_REFERENCE.match(evidence_id):
+        return None
+    return {"evidence_id": evidence_id, "digest": cursor, "length": len(rows)}
+
+
+def _sh06_task_scope(task: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Read the task's stored row scope; malformed context is unscoped (dropped)."""
+    raw = task.get("context_json")
+    try:
+        context = json.loads(raw) if isinstance(raw, str) and raw.strip() else {}
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(context, dict):
+        return None
+    nested = context.get("scope") if isinstance(context.get("scope"), dict) else {}
+    found = {key: (context.get(key) or nested.get(key)) for key in _SH06_FOCUS_KEYS}
+    found = {key: value for key, value in found.items() if value not in (None, "")}
+    if not found:
+        return {"mode": "GLOBAL_ALL"}
+    if len(found) != 1 or not all(isinstance(value, str) for value in found.values()):
+        return None
+    domain = str(context.get("domain_id") or context.get("domain")
+                 or nested.get("domain_id") or nested.get("domain") or "").upper()
+    domain = "BMP" if domain == "ZBMP" else domain
+    if domain not in {"CTH", "BMP"}:
+        return None
+    key, value = next(iter(found.items()))
+    return {"mode": "FOCUS", "domain_id": domain, "key": key, "id": value}
+
+
+def _sh06_scope_accepts(row_scope: Dict[str, Any], binding: Dict[str, Any]) -> bool:
+    if binding["canonical_scope"] == "GLOBAL_ALL":
+        return row_scope["mode"] == "GLOBAL_ALL"
+    if row_scope["mode"] != "FOCUS" or row_scope["domain_id"] != binding["domain_id"]:
+        return False
+    expected = binding.get("brand_focus_id") if binding["domain_id"] == "BMP" else binding.get("subject_id")
+    return row_scope["id"] == expected
+
+
+_SH06_PRIORITY = {"L0": "LOW", "L1": "LOW", "L2": "MEDIUM", "L3": "HIGH", "L4": "HIGH"}
+
+
+def _build_sh06(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """SH-06 read-only inbox (SH-06.md §1-§5).
+
+    Only an authorized actor-bound GLOBAL_ALL / exact FOCUS binding yields items.
+    Each TaskEngine task must carry a matching stored row scope and a fully
+    verified Evidence hash chain, emitted as row projection v2; anything else is
+    dropped. No approve/assign/snooze/retry/dismiss action is emitted, and no
+    global queue, totals or DLQ/raw diagnostics are exposed.
+    """
+    note = section("note", STATE_READY, kind="RULE", code="SH06-READ-ONLY",
+                   text="只读收件箱：卡片只显示状态，不提供审批、指派、稍后提醒或重试。")
+    if not binding or binding.get("read_allowed") is not True:
+        blocked = section("note", "blocked", kind="SCOPE", code="SH06-SCOPE",
+                          text="通知与待办暂不显示：范围或读取授权不可用。")
+        return _envelope("SH-06", [_head("SH-06"), blocked, note],
+                         truth={"data_state": "scope_unavailable"})
+
     import ai_task_engine as te
 
     eng = te.get_task_engine()
-    tasks = _safe(eng.list_tasks, limit=20, default=[])
-    dlq = _safe(eng.get_dlq, default=[])
+    tasks = _safe(eng.list_tasks, limit=50, default=None)
     hc = _safe(eng.health_check, default={})
-    tasks = tasks if isinstance(tasks, list) else []
-    dlq = dlq if isinstance(dlq, list) else []
     hc = hc if isinstance(hc, dict) and not _is_err(hc) else {}
-
-    def _g(o: Any, k: str) -> Any:
-        return o.get(k) if isinstance(o, dict) else getattr(o, k, None)
-
-    kpis = [
-        metric("sh06.tasks", "在列任务", value=len(tasks) or None,
-               state=STATE_READY if tasks else STATE_EMPTY, icon="ai",
-               source="TaskEngine.list_tasks"),
-        metric("sh06.dlq", "死信队列", value=len(dlq), state=STATE_READY,
-               icon="ops", source="TaskEngine.get_dlq"),
-    ]
-    rows = []
-    for t in tasks:
-        st = _g(t, "status")
-        st = st if isinstance(st, str) else getattr(st, "value", "—")
-        rows.append({"任务": str(_g(t, "task_id") or _g(t, "id") or "—")[:22],
-                     "状态": st, "技能": str(_g(t, "skill_id") or "—"),
-                     "创建": str(_g(t, "created_at") or "")[:16]})
-    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="任务 / 通知（真实）",
-                  columns=[{"label": "任务", "key": "任务"}, {"label": "状态", "key": "状态"},
-                           {"label": "技能", "key": "技能"}, {"label": "创建", "key": "创建"}], rows=rows)
-    cb = hc.get("circuit_breaker") if isinstance(hc.get("circuit_breaker"), dict) else {}
-    rt = section("runtime", title="任务引擎健康（真实）", items=[
-        {"name": "总体", "state": {"healthy": "ok", "ok": "ok", "degraded": "warn"}.get(
-            str(hc.get("status")).lower(), "idle"), "detail": str(hc.get("status") or "—")},
-        {"name": "熔断器", "state": "ok" if cb.get("state") == "closed" else "warn",
-         "detail": f"state={cb.get('state', '—')} · failures={_int_or_none(cb.get('failure_count')) or 0}"},
-        {"name": "DB", "state": "ok" if hc.get("db") == "connected" else "bad",
-         "detail": str(hc.get("db") or "—")},
-    ])
-    sections = [_head("SH-06"), section("kpis", STATE_READY, items=kpis), tbl, rt]
-    return _envelope("SH-06", sections, truth={"engine_status": hc.get("status")})
+    engine_state = str(hc.get("status") or "").lower()
+    operational = ("READY" if engine_state in {"healthy", "ok"} else
+                   "DEGRADED" if engine_state == "degraded" else
+                   "OFFLINE" if tasks is None else "UNCONFIRMED")
+    mode = binding["canonical_scope"]
+    view_scope: Dict[str, Any] = {"mode": mode,
+                                  "global_all_granted": mode == "GLOBAL_ALL"}
+    if mode == "FOCUS":
+        view_scope["domain_id"] = binding["domain_id"]
+        if binding["domain_id"] == "BMP":
+            view_scope["brand_focus_id"] = binding["brand_focus_id"]
+        else:
+            view_scope["subject_id"] = binding["subject_id"]
+    items: List[Dict[str, Any]] = []
+    dropped = 0
+    for task in tasks if isinstance(tasks, list) else []:
+        task_id = task.get("task_id") if isinstance(task, dict) else None
+        if type(task_id) is not str or not _SH06_REFERENCE.match(task_id):
+            dropped += 1
+            continue
+        row_scope = _sh06_task_scope(task)
+        if row_scope is None or not _sh06_scope_accepts(row_scope, binding):
+            dropped += 1
+            continue
+        chain = _sh06_verified_task_chain(_safe(eng.get_evidence, task_id, default=None))
+        if chain is None:
+            dropped += 1
+            continue
+        status = task.get("status")
+        status = status if isinstance(status, str) else getattr(status, "value", None)
+        title = task.get("intent") or task.get("user_input") or ""
+        items.append({
+            "id": task_id,
+            "kind": "TASK",
+            "title": str(title)[:120],
+            "source_label": "任务引擎",
+            "priority": _SH06_PRIORITY.get(str(task.get("risk_level") or "").upper()),
+            "state": status,
+            "projection": {
+                "contract": "lumenis.shared.experience-row-projection", "version": 2,
+                "read_allowed": True, "origin_verified": True,
+                "scope": dict(view_scope),
+                "stored_scope": {key: row_scope[key] for key in row_scope if key != "key"},
+                "evidence": {
+                    "canonical_reference": f"evidence:canonical:task:{chain['evidence_id']}",
+                    "evidence_id": chain["evidence_id"], "chain_length": chain["length"],
+                },
+                "integrity": {
+                    "integrity_version": 2, "verified": True, "lineage_verified": True,
+                    "algorithm": "sha256", "digest": chain["digest"],
+                    "assurance": "content-integrity-only",
+                },
+            },
+        })
+    response = _envelope("SH-06", [_head("SH-06"), note], truth={
+        "data_state": "available" if items else "empty",
+        "dropped_unverified": dropped,
+    })
+    response["scope"] = dict(view_scope)
+    if mode == "FOCUS":
+        response["scope"]["display_name"] = binding.get("display_name")
+    response["permission"] = {"decision": "ALLOW", "read": True, "module": binding["module"]}
+    response["data"] = {"tasks": items, "notifications": [], "alerts": [],
+                        "operational_state": operational}
+    response["focus_binding" if mode == "FOCUS" else "global_binding"] = binding
+    return response
 
 
 def _build_bmp06() -> Dict[str, Any]:
