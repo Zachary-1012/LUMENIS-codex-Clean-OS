@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:shared_preferences_platform_interface/types.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/cth/cth10/cth10_repository.dart';
@@ -87,6 +93,113 @@ void main() {
 
     _expectSkipUnavailable(tester);
     expect(find.text('已保存并重新核验'), findsOneWidget);
+  });
+
+  testWidgets('scroll before motion preference loads suppresses late reveal', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    final previousPlatform = SharedPreferencesAsyncPlatform.instance;
+    final preferences = _DelayedMotionPreferences();
+    SharedPreferencesAsyncPlatform.instance = preferences;
+    addTearDown(() {
+      preferences.resolveRead(null);
+      SharedPreferencesAsyncPlatform.instance = previousPlatform;
+    });
+    final client = _SourceBriefClient()
+      ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+      ..jobResponse = _savedJobEnvelope();
+
+    await _showCompletedResult(tester, client);
+    await tester.drag(find.text('来源简报'), const Offset(0, -80));
+    await tester.pumpAndSettle();
+
+    preferences.resolveRead(null);
+    await tester.pumpAndSettle();
+
+    _expectSkipUnavailable(tester);
+  });
+
+  testWidgets(
+    'backgrounding before motion preference loads suppresses reveal',
+    (tester) async {
+      final previousPlatform = SharedPreferencesAsyncPlatform.instance;
+      final preferences = _DelayedMotionPreferences();
+      SharedPreferencesAsyncPlatform.instance = preferences;
+      addTearDown(() {
+        preferences.resolveRead(null);
+        SharedPreferencesAsyncPlatform.instance = previousPlatform;
+      });
+      final client = _SourceBriefClient()
+        ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+        ..jobResponse = _savedJobEnvelope();
+
+      await _showCompletedResult(tester, client);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      preferences.resolveRead(null);
+      await tester.pumpAndSettle();
+
+      _expectSkipUnavailable(tester);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    },
+  );
+
+  testWidgets(
+    'pointer interaction before motion preference loads suppresses reveal',
+    (tester) async {
+      final previousPlatform = SharedPreferencesAsyncPlatform.instance;
+      final preferences = _DelayedMotionPreferences();
+      SharedPreferencesAsyncPlatform.instance = preferences;
+      addTearDown(() {
+        preferences.resolveRead(null);
+        SharedPreferencesAsyncPlatform.instance = previousPlatform;
+      });
+      final client = _SourceBriefClient()
+        ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+        ..jobResponse = _savedJobEnvelope();
+
+      await _showCompletedResult(tester, client);
+      await tester.tap(find.text('已保存并重新核验'));
+      await tester.pump();
+      preferences.resolveRead(null);
+      await tester.pumpAndSettle();
+
+      _expectSkipUnavailable(tester);
+    },
+  );
+
+  testWidgets('semantic copy activation cancels pending result reveal', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 2600));
+    final previousPlatform = SharedPreferencesAsyncPlatform.instance;
+    final preferences = _DelayedMotionPreferences();
+    SharedPreferencesAsyncPlatform.instance = preferences;
+    addTearDown(() {
+      preferences.resolveRead(null);
+      SharedPreferencesAsyncPlatform.instance = previousPlatform;
+    });
+    final client = _SourceBriefClient()
+      ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+      ..jobResponse = _savedJobEnvelope();
+
+    await _showCompletedResult(tester, client);
+    final semantics = tester.ensureSemantics();
+    try {
+      final copyNode = tester.getSemantics(
+        find.byKey(const ValueKey('source-brief/copy-job')),
+      );
+      copyNode.owner!.performAction(copyNode.id, SemanticsAction.tap);
+      await tester.pumpAndSettle();
+      preferences.resolveRead(null);
+      await tester.pumpAndSettle();
+
+      _expectSkipUnavailable(tester);
+    } finally {
+      semantics.dispose();
+    }
   });
 
   testWidgets('saved result effect can be disabled by the user', (
@@ -322,6 +435,35 @@ Future<void> _tapCreate(WidgetTester tester) async {
   final create = find.byKey(const ValueKey('source-brief/create'));
   await tester.ensureVisible(create);
   await tester.tap(create);
+}
+
+Future<void> _showCompletedResult(
+  WidgetTester tester,
+  _SourceBriefClient client,
+) async {
+  await tester.pumpWidget(_panelApp(client));
+  await tester.pumpAndSettle();
+  await _tapCreate(tester);
+  await tester.pumpAndSettle();
+  expect(find.text('已保存并重新核验'), findsOneWidget);
+}
+
+base class _DelayedMotionPreferences extends InMemorySharedPreferencesAsync {
+  _DelayedMotionPreferences() : super.empty();
+
+  final Completer<String?> _motionPreference = Completer<String?>();
+
+  @override
+  Future<String?> getString(String key, SharedPreferencesOptions options) {
+    if (key == 'lumenis.source_brief.result_reveal.choice.v1') {
+      return _motionPreference.future;
+    }
+    return super.getString(key, options);
+  }
+
+  void resolveRead(String? value) {
+    if (!_motionPreference.isCompleted) _motionPreference.complete(value);
+  }
 }
 
 Widget _cth10App(

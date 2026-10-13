@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumenis_app/core/generated_result_reveal.dart';
 import 'package:lumenis_app/features/shared/read_aloud_action.dart';
 import 'package:lumenis_app/features/shared/read_aloud_contract.dart';
 import 'package:lumenis_app/features/shared/read_aloud_service.dart';
@@ -318,6 +320,99 @@ void main() {
     await tester.pumpAndSettle();
     service.dispose();
   });
+
+  testWidgets(
+    'semantic read-aloud activation cancels result reveal without pointer input',
+    (tester) async {
+      final platform = _FakeReadAloudPlatform();
+      final service = ReadAloudService(platform: platform);
+      final revealKey = GlobalKey<GeneratedResultRevealState>();
+      var userInteractions = 0;
+      void cancelReveal() {
+        userInteractions++;
+        revealKey.currentState?.cancelForScrollOrInteraction();
+      }
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            fontFamily: 'LumenisSansSC',
+            fontFamilyFallback: const ['LumenisSansKR', 'LumenisEmoji'],
+          ),
+          locale: const Locale('zh', 'CN'),
+          localizationsDelegates: const [
+            LumenisLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: LumenisLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: GeneratedResultReveal(
+                key: revealKey,
+                resultVersion: 'scope:brief:immutable-hash',
+                arrivalToken: 'new-result-event',
+                choice: GeneratedResultMotionChoice.full,
+                skipLabel: '跳过',
+                accent: Colors.blue,
+                foreground: Colors.white,
+                onUserInteraction: cancelReveal,
+                child: SizedBox(
+                  height: 1200,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Saved brief result'),
+                      ReadAloudAction(
+                        service: service,
+                        sessionId: 'source-brief:1',
+                        scopeVersion: 'scope:brief:immutable-hash',
+                        text: 'Visible saved brief text',
+                        purpose: ReadAloudPurpose.sourceBrief,
+                        onUserInteraction: cancelReveal,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      for (var frame = 0; frame < 5; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(revealKey.currentState?.isPlaying, isTrue);
+      expect(
+        find.byKey(const ValueKey('generated-result-reveal/paint')),
+        findsOneWidget,
+      );
+
+      final semantics = tester.ensureSemantics();
+      try {
+        final toggle = tester.getSemantics(
+          find.byKey(const ValueKey('read-aloud/toggle')),
+        );
+        toggle.owner!.performAction(toggle.id, SemanticsAction.tap);
+        await tester.pump();
+
+        expect(userInteractions, 1);
+        expect(revealKey.currentState?.isPlaying, isFalse);
+        expect(
+          find.byKey(const ValueKey('generated-result-reveal/paint')),
+          findsNothing,
+        );
+        expect(platform.requests, hasLength(1));
+      } finally {
+        semantics.dispose();
+      }
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      service.dispose();
+    },
+  );
 
   testWidgets('offers exact locale/rate and stops when bound text changes', (
     tester,

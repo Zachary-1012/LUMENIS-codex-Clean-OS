@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' as rendering;
+import 'package:flutter/services.dart';
 
 enum GeneratedResultMotionChoice { full, followSystem, off }
 
@@ -23,6 +24,7 @@ class GeneratedResultReveal extends StatefulWidget {
     required this.skipLabel,
     required this.accent,
     required this.foreground,
+    this.onUserInteraction,
     super.key,
   });
 
@@ -38,6 +40,7 @@ class GeneratedResultReveal extends StatefulWidget {
   final String skipLabel;
   final Color accent;
   final Color foreground;
+  final VoidCallback? onUserInteraction;
 
   @override
   State<GeneratedResultReveal> createState() => GeneratedResultRevealState();
@@ -61,6 +64,7 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
   final GlobalKey _measuredChild = GlobalKey();
   late final AnimationController _controller = AnimationController(
     vsync: this,
+    animationBehavior: AnimationBehavior.preserve,
     duration: Duration(
       microseconds: (_upstreamDrawingDuration.inMicroseconds * _runEnd).round(),
     ),
@@ -79,6 +83,7 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    HardwareKeyboard.instance.addHandler(_onHardwareKeyEvent);
     PaintingBinding.instance.systemFonts.addListener(_onSystemFontsChanged);
     final token = widget.arrivalToken;
     if (token != null && token.isNotEmpty) {
@@ -143,6 +148,33 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
 
   void _onSystemFontsChanged() => _finishImmediately();
 
+  bool _onHardwareKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && _focusIsWithinResult()) {
+      _notifyUserInteraction();
+    }
+    return false;
+  }
+
+  bool _focusIsWithinResult() {
+    final focusedContext = FocusManager.instance.primaryFocus?.context;
+    final resultContext = _measuredChild.currentContext;
+    if (focusedContext == null || resultContext == null) return false;
+    var isWithinResult = false;
+    focusedContext.visitAncestorElements((element) {
+      if (element == resultContext) {
+        isWithinResult = true;
+        return false;
+      }
+      return true;
+    });
+    return isWithinResult;
+  }
+
+  void _notifyUserInteraction() {
+    widget.onUserInteraction?.call();
+    _finishImmediately();
+  }
+
   void _schedulePreparation(String token, String version) {
     if (token.isEmpty || version.isEmpty || token == _consumedArrivalToken) {
       return;
@@ -175,6 +207,10 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
     // bundled families plus completed RenderParagraph layout in
     // _measureResult. Repeated frames below check geometry stability only.
     for (var frame = 0; frame < 3; frame++) {
+      if (!mounted || revision != _preparationRevision) return;
+      // This preparation starts from a post-frame callback. Request the next
+      // frame explicitly so endOfFrame cannot wait forever on an idle screen.
+      WidgetsBinding.instance.scheduleFrame();
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted ||
           revision != _preparationRevision ||
@@ -469,7 +505,7 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
             children: [
               Listener(
                 behavior: HitTestBehavior.deferToChild,
-                onPointerDown: (_) => _finishImmediately(),
+                onPointerDown: (_) => _notifyUserInteraction(),
                 child: KeyedSubtree(key: _measuredChild, child: widget.child),
               ),
               if (_playing && geometry != null && geometryMatchesConstraints)
@@ -502,6 +538,7 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    HardwareKeyboard.instance.removeHandler(_onHardwareKeyEvent);
     PaintingBinding.instance.systemFonts.removeListener(_onSystemFontsChanged);
     _controller
       ..removeStatusListener(_onAnimationStatus)

@@ -135,11 +135,13 @@ all supported targets. Website/Web browser viewport, locale and
 accessibility coverage remains required, including narrow screens.
 
 Build the full task-based UI with original identity/icons, illustration, genuine
-operation videos, usable UX and applicable AIGC/motion. Preserve original motion.
-The optional result reveal is independently selectable/skippable and plays once
-for newly persisted results after registered bundled-font paragraph layout is ready;
-unregistered dynamic fonts skip it. Follow Experience Constitution. Update existing
-specs from sketches; keep full coverage—44 is not a page-count/navigation/scope ceiling.
+operation videos, usable UX and applicable AIGC/motion; preserve all existing motion,
+timing and preferences. The optional result reveal is selectable/skippable and runs
+once for a newly persisted result after readback and stable registered-font layout.
+Full preserves user choice; Follow System honors OS motion reduction. Unregistered
+dynamic fonts skip it. Follow Experience Constitution. Update existing specs from
+sketches; keep full coverage; 44 is not a scope ceiling.
+
 Connect available backend contracts immediately. Unavailable ones stay honestly
 OPEN/UNBOUND while independent UI proceeds; no mock backend, fake save or
 decorative progress may count as business success.

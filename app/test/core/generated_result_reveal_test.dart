@@ -9,6 +9,11 @@ void main() {
     addTearDown(host.dispose);
 
     await tester.pumpWidget(host.build());
+    expect(
+      tester.binding.hasScheduledFrame,
+      isTrue,
+      reason: 'Post-frame preparation must request its next layout frame.',
+    );
     final resultRectBefore = tester.getRect(find.byKey(host.resultKey));
     _expectNoReveal(tester);
     await _pumpPreparationWindow(tester);
@@ -42,6 +47,66 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('full choice preserves motion when the OS reduces animation', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(
+      tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    );
+    final host = _RevealHost();
+    addTearDown(host.dispose);
+
+    await tester.pumpWidget(host.build());
+    await _pumpPreparationWindow(tester);
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(host.revealKey.currentState?.isPlaying, isTrue);
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/paint')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('follow-system choice honors reduced motion', (tester) async {
+    tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(
+      tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    );
+    final host = _RevealHost();
+    addTearDown(host.dispose);
+
+    await tester.pumpWidget(
+      host.build(choice: GeneratedResultMotionChoice.followSystem),
+    );
+    await _pumpPreparationWindow(tester);
+
+    _expectNoReveal(tester);
+  });
+
+  testWidgets(
+    'keyboard activation cancels reveal and still activates control',
+    (tester) async {
+      final host = _RevealHost();
+      addTearDown(host.dispose);
+
+      await tester.pumpWidget(host.build(includeKeyboardAction: true));
+      await _pumpPreparationWindow(tester);
+      expect(host.revealKey.currentState?.isPlaying, isTrue);
+
+      host.keyboardActionFocusNode.requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+
+      expect(host.keyboardActionActivated, isTrue);
+      expect(host.userInteractionCount, 1);
+      _expectNoReveal(tester);
+    },
+  );
 
   testWidgets('scroll cancels preparation before the reveal can start', (
     tester,
@@ -190,6 +255,12 @@ class _RevealHost {
   final GlobalKey<GeneratedResultRevealState> revealKey =
       GlobalKey<GeneratedResultRevealState>();
   final Key resultKey = const ValueKey('generated-result-reveal/result');
+  final Key keyboardActionKey = const ValueKey(
+    'generated-result-reveal/action',
+  );
+  final FocusNode keyboardActionFocusNode = FocusNode();
+  var keyboardActionActivated = false;
+  var userInteractionCount = 0;
   late final ScrollController scrollController = ScrollController()
     ..addListener(_cancelForScroll);
 
@@ -200,6 +271,8 @@ class _RevealHost {
     String fontFamily = 'LumenisSansSC',
     String? inlineFontFamily,
     bool includeBundledIcon = false,
+    bool includeKeyboardAction = false,
+    GeneratedResultMotionChoice choice = GeneratedResultMotionChoice.full,
   }) => MaterialApp(
     theme: ThemeData(
       fontFamily: fontFamily,
@@ -212,10 +285,11 @@ class _RevealHost {
           key: revealKey,
           resultVersion: 'scope:job:immutable-hash',
           arrivalToken: 'new-result-event',
-          choice: GeneratedResultMotionChoice.full,
+          choice: choice,
           skipLabel: '跳过',
           accent: Colors.blue,
           foreground: Colors.white,
+          onUserInteraction: () => userInteractionCount++,
           child: SizedBox(
             key: resultKey,
             height: 1200,
@@ -232,6 +306,13 @@ class _RevealHost {
                         : TextStyle(fontFamily: inlineFontFamily),
                   ),
                   if (includeBundledIcon) const Icon(Icons.copy),
+                  if (includeKeyboardAction)
+                    TextButton(
+                      key: keyboardActionKey,
+                      focusNode: keyboardActionFocusNode,
+                      onPressed: () => keyboardActionActivated = true,
+                      child: const Text('Keyboard action'),
+                    ),
                 ],
               ),
             ),
@@ -242,6 +323,7 @@ class _RevealHost {
   );
 
   void dispose() {
+    keyboardActionFocusNode.dispose();
     scrollController
       ..removeListener(_cancelForScroll)
       ..dispose();

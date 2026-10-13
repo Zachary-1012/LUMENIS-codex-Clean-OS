@@ -46,6 +46,7 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
   bool _foreground = true;
   bool _motionPreferenceReady = false;
   bool _motionPreferenceSaveFailed = false;
+  String? _cancelledResultArrivalToken;
   int _motionPreferenceWriteRevision = 0;
   Future<void> _motionPreferenceWrites = Future<void>.value();
   GeneratedResultMotionChoice _motionChoice =
@@ -61,8 +62,21 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
     unawaited(_model.initialize());
   }
 
-  void _finishRevealOnScroll() =>
-      _resultRevealKey.currentState?.cancelForScrollOrInteraction();
+  void _finishRevealOnScroll() => _cancelRevealForUserInteraction();
+
+  void _cancelRevealForUserInteraction() {
+    final token = _model.resultArrivalToken;
+    if (token != null &&
+        token.isNotEmpty &&
+        token != _cancelledResultArrivalToken) {
+      if (mounted) {
+        setState(() => _cancelledResultArrivalToken = token);
+      } else {
+        _cancelledResultArrivalToken = token;
+      }
+    }
+    _resultRevealKey.currentState?.cancelForScrollOrInteraction();
+  }
 
   Future<void> _loadMotionChoice() async {
     try {
@@ -122,6 +136,7 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = state == AppLifecycleState.resumed;
+    if (!_foreground) _cancelRevealForUserInteraction();
     _schedulePoll();
   }
 
@@ -144,6 +159,7 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
   }
 
   Future<void> _copy(String value) async {
+    _cancelRevealForUserInteraction();
     final copy = SourceBriefCopy.of(context);
     var message = copy.text('copied');
     try {
@@ -442,11 +458,16 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
       key: _resultRevealKey,
       resultVersion:
           '${result.scope.scopeKey}:${result.jobId}:${result.artifactHash}',
-      arrivalToken: _motionPreferenceReady ? _model.resultArrivalToken : null,
+      arrivalToken:
+          _motionPreferenceReady &&
+              _model.resultArrivalToken != _cancelledResultArrivalToken
+          ? _model.resultArrivalToken
+          : null,
       choice: _motionChoice,
       skipLabel: copy.text('motionSkip'),
       accent: palette.accent,
       foreground: palette.foreground,
+      onUserInteraction: _cancelRevealForUserInteraction,
       child: _resultSummary(copy, result),
     );
   }
@@ -475,17 +496,28 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
         spacing: 8,
         children: [
           TextButton.icon(
+            key: const ValueKey('source-brief/copy-task'),
             onPressed: () => _copy(_model.taskId!),
             icon: const Icon(Icons.copy_outlined, size: 16),
             label: Text(copy.text('copyTask')),
           ),
           TextButton(
-            onPressed: _model.busy ? null : _model.refreshTask,
+            onPressed: _model.busy
+                ? null
+                : () {
+                    _cancelRevealForUserInteraction();
+                    _model.refreshTask();
+                  },
             child: Text(copy.text('refresh')),
           ),
           if (_model.canResume)
             FilledButton(
-              onPressed: _model.busy ? null : _model.resume,
+              onPressed: _model.busy
+                  ? null
+                  : () {
+                      _cancelRevealForUserInteraction();
+                      _model.resume();
+                    },
               child: Text(copy.text('resume')),
             ),
         ],
@@ -508,6 +540,7 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
       const SizedBox(height: 16),
       SelectableText(result.jobId),
       TextButton.icon(
+        key: const ValueKey('source-brief/copy-job'),
         onPressed: () => _copy(result.jobId),
         icon: const Icon(Icons.copy_outlined, size: 16),
         label: Text(copy.text('copyJob')),
@@ -522,7 +555,12 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
       Text(copy.text('sourceStatisticsHint')),
       const SizedBox(height: 8),
       FilledButton.tonal(
-        onPressed: _model.busy ? null : () => _model.analyseSources(),
+        onPressed: _model.busy
+            ? null
+            : () {
+                _cancelRevealForUserInteraction();
+                _model.analyseSources();
+              },
         child: Text(copy.text('calculateSources')),
       ),
       if (_model.sourceStatistics case final statistics?) ...[
@@ -587,6 +625,7 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
               '${result.scope.scopeKey}:${result.reportId}:${result.artifactHash}',
           text: _speechText(result, analysis),
           purpose: ReadAloudPurpose.sourceBrief,
+          onUserInteraction: _cancelRevealForUserInteraction,
         ),
       if (result.analysis case final analysis?) ...[
         if (result.businessQuestion case final question?) ...[
