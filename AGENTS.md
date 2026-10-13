@@ -1803,3 +1803,5 @@ General OS/computer operation and the Agent Zero desktop-worker milestone were
 withdrawn by the direct 2026-10-11 PO correction. Their 2026-10-08/09 evidence and
 source are historical, not current delivery obligations. Existing Collector,
 browser, file import/export and product media processing remain required.
+
+<!-- Line endings: LF on every OS (.gitattributes), so Codex project_doc_max_bytes holds on Windows. -->
