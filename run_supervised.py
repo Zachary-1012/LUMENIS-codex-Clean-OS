@@ -139,28 +139,88 @@ def port_listening(port):
         s.close()
 
 
+def _kill_windows_owned_tree(proc, timeout):
+    """Freeze and reap only the owned Popen tree, with PID-reuse protection."""
+    import psutil
+
+    deadline = time.monotonic() + max(0.0, float(timeout))
+    owned = list(getattr(proc, '_owned_windows_processes', ()))
+    frozen = []
+    confirmed = False
+    try:
+        if proc.poll() is None:
+            root = psutil.Process(proc.pid)
+            # The Popen handle proves this PID still belongs to this child.
+            if proc.poll() is not None or not root.is_running():
+                return False
+            owned.insert(0, root)
+        owned = list({(p.pid, p.create_time()): p for p in owned}.values())
+        identities = {(p.pid, p.create_time()) for p in owned}
+        proc._owned_windows_processes = tuple(owned)
+        index = 0
+        while index < len(owned):
+            if time.monotonic() >= deadline:
+                raise subprocess.TimeoutExpired('owned process discovery', timeout)
+            member = owned[index]
+            index += 1
+            if not member.is_running():
+                # Do not infer that an exiting parent left no descendants.
+                # A retry may skip only a previously fully discovered tree.
+                if not getattr(proc, '_owned_windows_tree_discovered', False):
+                    return False
+                continue
+            # Freeze each parent before discovering its immediate children.
+            # Once every discovered member is frozen, no member can spawn more.
+            member.suspend()
+            frozen.append(member)
+            for child in member.children():
+                identity = (child.pid, child.create_time())
+                if identity not in identities:
+                    identities.add(identity)
+                    owned.append(child)
+                    proc._owned_windows_processes = tuple(owned)
+        proc._owned_windows_tree_discovered = True
+        for member in reversed(frozen):
+            try:
+                member.kill()
+            except psutil.NoSuchProcess:
+                continue
+        _, alive = psutil.wait_procs(owned, timeout=max(0.0, deadline - time.monotonic()))
+        if alive:
+            log(f'未确认全部 owned 子进程退出 PID={proc.pid}')
+            return False
+        proc.wait(timeout=max(0.0, deadline - time.monotonic()))
+        confirmed = proc.poll() is not None
+        if confirmed:
+            proc._owned_windows_processes = ()
+            log(f'已确认 owned 进程树退出 PID={proc.pid}, members={len(identities)}')
+        return confirmed
+    except (psutil.Error, OSError, subprocess.TimeoutExpired) as exc:
+        log(f'停止 owned 进程树未获确认 PID={proc.pid}: {type(exc).__name__}')
+        return False
+    finally:
+        if not confirmed:
+            # Failed cleanup must not leave live owned members suspended.
+            # Their identity-fenced objects remain attached for the final retry.
+            for member in reversed(frozen):
+                try:
+                    if member.is_running():
+                        member.resume()
+                except psutil.Error:
+                    log(f'恢复 owned 进程暂停状态失败 PID={member.pid}')
+
+
 def kill_tree(proc, timeout=CHILD_SHUTDOWN_TIMEOUT):
-    """终止由本监督器启动的子进程树，并确认根子进程已退出。"""
+    """终止由本监督器启动的子进程树，并确认全部已知成员退出。"""
     if proc is None:
         return True
     try:
-        if proc.poll() is not None:
+        if proc.poll() is not None and not getattr(proc, '_owned_windows_processes', ()):
             proc.wait(timeout=0)
             return True
 
         if sys.platform == 'win32':
-            result = subprocess.run(
-                ['taskkill', '/PID', str(proc.pid), '/T', '/F'],
-                capture_output=True, creationflags=0x08000000, timeout=timeout,
-                check=False,
-            )  # CREATE_NO_WINDOW; scope is the child PID owned by this supervisor.
-            if result.returncode != 0:
-                try:
-                    proc.wait(timeout=timeout)
-                except subprocess.TimeoutExpired:
-                    pass
-                log(f'taskkill 未确认进程树退出 PID={proc.pid}, rc={result.returncode}')
-                return False
+            return _kill_windows_owned_tree(proc, timeout)
         else:
             # The supervisor itself requires the Windows msvcrt lock. This direct-child
             # path keeps the helper testable on other platforms without scanning processes.
@@ -225,7 +285,7 @@ def _process_identity(proc):
     }
 
 
-def spawn(app, host, port, launch_id=None):
+def spawn(app, host, port, launch_id=None, *, no_scheduler=False):
     launch_id = _normalize_launch_id(launch_id)
     entry = _resolve_core_entry(app)
     # This identifies the exact entry file and spawn attempt, not the full runtime tree.
@@ -241,9 +301,12 @@ def spawn(app, host, port, launch_id=None):
         'LUMENIS_CORE_BOOT_ID': boot_id,
         'LUMENIS_CORE_ENTRY_SHA256': entry_sha256,
     }
+    child_args = [sys.executable, '-X', 'utf8', '-u', str(entry), '--host', host, '--port', str(port)]
+    if no_scheduler:
+        child_args.append('--no-scheduler')
     with open(APP_OUT, 'a', encoding='utf-8') as out:
         proc = subprocess.Popen(
-            [sys.executable, '-X', 'utf8', '-u', str(entry), '--host', host, '--port', str(port)],
+            child_args,
             cwd=str(ROOT), stdout=out, stderr=subprocess.STDOUT,
             creationflags=creationflags, env=env,
         )
@@ -322,6 +385,8 @@ def main():
     ap.add_argument('--host', default='0.0.0.0')
     ap.add_argument('--port', default='8201')
     ap.add_argument('--launch-id', type=uuid.UUID, default=None)
+    ap.add_argument('--no-scheduler', action='store_true',
+                    help='Start the Core child without scheduler automation.')
     args = ap.parse_args()
     launch_id = _normalize_launch_id(args.launch_id)
 
@@ -390,7 +455,8 @@ def main():
             signal.signal(signal.SIGTERM, _sig)
 
         log(f'Supervisor 启动(常驻+健康探测)，目标: {sys.executable} {args.app} --host {args.host} --port {args.port}')
-        proc = spawn(args.app, args.host, args.port, launch_id=launch_id)
+        proc = spawn(args.app, args.host, args.port, launch_id=launch_id,
+                     no_scheduler=args.no_scheduler)
         child_started = True
         started = time.time()
         health_fails = 0
@@ -421,7 +487,8 @@ def main():
                 if _wait_or_stop(stop_event, lambda: stopping, RESTART_GRACE + backoff):
                     break
                 log('拉起 app.py 子进程 ...')
-                proc = spawn(args.app, args.host, args.port, launch_id=launch_id)
+                proc = spawn(args.app, args.host, args.port, launch_id=launch_id,
+                             no_scheduler=args.no_scheduler)
                 started = time.time()
                 health_fails = 0
                 last_health = 0.0
@@ -463,7 +530,8 @@ def main():
                             if _wait_or_stop(stop_event, lambda: stopping, 2):
                                 break
                             crash_times.append(time.time())
-                            proc = spawn(args.app, args.host, args.port, launch_id=launch_id)
+                            proc = spawn(args.app, args.host, args.port, launch_id=launch_id,
+                                         no_scheduler=args.no_scheduler)
                             started = time.time()
                             health_fails = 0
                             last_health = 0.0

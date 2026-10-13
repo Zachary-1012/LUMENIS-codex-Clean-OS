@@ -18,6 +18,66 @@ lumenis_bp = Blueprint("lumenis", __name__, url_prefix="/lumenis")
 # Domain API blueprint (root-level, no /lumenis prefix — for xujing-viz.js /api/* calls)
 domain_api_bp = Blueprint("domain_api", __name__)
 
+_SHARED_WORKSPACE_SCOPE_HEADER = "X-Lumenis-Workspace-Scope"
+_SHARED_WORKSPACE_SCOPE_KEYS = frozenset({"scope_kind", "version"})
+_SHARED_WORKSPACE_LEGACY_HEADERS = frozenset({
+    "X-Domain-Id", "X-Product-Id", "X-Lumenis-Context-Mode",
+    "X-Subject-ID", "X-Brand-Focus-ID", "X-Actor-ID", "X-Principal-Ref",
+    "X-Project-ID", "X-Workspace-ID",
+})
+_SHARED_WORKSPACE_LEGACY_QUERY = frozenset({
+    "domain_id", "domainid", "domain", "product_id", "productid", "product",
+    "subject_id", "subjectid", "subject", "brand_focus_id", "brandfocusid",
+    "brand_focus", "global_scope", "globalscope", "context_mode", "contextmode",
+    "scope", "scope_kind", "scopekind", "version", "scope_version",
+    "actor_id", "actorid", "principal_ref", "principalref",
+    "project_id", "projectid", "workspace_id", "workspaceid",
+})
+
+
+def _reject_shared_workspace_legacy_selectors():
+    if (any(name in request.headers for name in _SHARED_WORKSPACE_LEGACY_HEADERS)
+            or any(key.lower() in _SHARED_WORKSPACE_LEGACY_QUERY for key in request.args)):
+        raise ValueError("SHARED_WORKSPACE_SCOPE_MIXED")
+
+
+def _parse_shared_workspace_scope_header():
+    """Parse only the exact, actor-free Shared discriminator on a registered owner route."""
+    if _SHARED_WORKSPACE_SCOPE_HEADER not in request.headers:
+        return None
+    values = request.headers.getlist(_SHARED_WORKSPACE_SCOPE_HEADER)
+    if len(values) != 1 or not isinstance(values[0], str) or len(values[0].encode("utf-8")) > 256:
+        raise ValueError("SHARED_WORKSPACE_SCOPE_INVALID")
+
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("SHARED_WORKSPACE_SCOPE_INVALID")
+            result[key] = value
+        return result
+
+    try:
+        scope = json.loads(
+            values[0], object_pairs_hook=unique_pairs,
+            parse_constant=lambda _value: (_ for _ in ()).throw(
+                ValueError("SHARED_WORKSPACE_SCOPE_INVALID")),
+        )
+        from lumenis.system.security.permission import validate_shared_workspace_scope
+        scope = validate_shared_workspace_scope(scope)
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise ValueError("SHARED_WORKSPACE_SCOPE_INVALID") from exc
+    _reject_shared_workspace_legacy_selectors()
+    return scope
+
+
+def _shared_workspace_scope_body(scope):
+    if not isinstance(scope, dict) or not (_SHARED_WORKSPACE_SCOPE_KEYS & set(scope)):
+        return None
+    _reject_shared_workspace_legacy_selectors()
+    from lumenis.system.security.permission import validate_shared_workspace_scope
+    return validate_shared_workspace_scope(scope)
+
 
 def _internal_pitch_body():
     """Bounded JSON only; client identity and server file paths are forbidden."""
@@ -53,9 +113,21 @@ def _internal_pitch_body():
 
 
 def _internal_pitch_scope(data=None):
+    header_scope = _parse_shared_workspace_scope_header()
     if data is not None:
         scope = data.get("scope")
+        shared_scope = _shared_workspace_scope_body(scope)
+        if shared_scope is not None:
+            if request.args or (header_scope is not None and header_scope != shared_scope):
+                raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
+            return shared_scope
+        if header_scope is not None:
+            raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
     else:
+        if header_scope is not None:
+            if request.args:
+                raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
+            return header_scope
         if set(request.args) != {"domain_id", "subject_id", "brand_focus_id", "global_scope"} or any(
                 len(request.args.getlist(key)) != 1 for key in request.args):
             raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
@@ -75,7 +147,7 @@ def _internal_pitch_actor(action):
     from lumenis.system.security.permission import resolve_local_workspace_principal
     actor = resolve_local_workspace_principal(module="reports", action=action)
     if actor is None:
-        actor = get_current_user()
+        actor = get_current_user(read_only=True)
     if actor is None:
         raise PermissionError("AUTH_REQUIRED")
     return actor
@@ -87,14 +159,27 @@ def _internal_pitch_local_access_allowed():
     from lumenis.shared.reporting.saved_work import authorize
     from lumenis.system.security.permission import resolve_local_workspace_principal
     prefix = "/api/experience/creation/internal-pitches"
-    path = request.path
-    expected = {"domain_api.api_internal_pitch_prepare", "domain_api.api_internal_pitch_read",
-                "domain_api.api_internal_pitch_action", "domain_api.api_internal_pitch_export"}
-    if request.endpoint not in expected:
+    routes = {
+        "domain_api.api_internal_pitch_prepare": (prefix, "POST"),
+        "domain_api.api_internal_pitch_read": (prefix + "/<task_id>", "GET"),
+        "domain_api.api_internal_pitch_action": (prefix + "/<task_id>/<action>", "POST"),
+        "domain_api.api_internal_pitch_export": (prefix + "/<task_id>/export", "GET"),
+    }
+    expected = routes.get(request.endpoint)
+    if (expected is None or request.url_rule is None
+            or request.url_rule.rule != expected[0] or request.method != expected[1]):
         return False
-    if not ((path == prefix and request.method == "POST") or
-            (re.fullmatch(re.escape(prefix) + r"/task-pitch-[0-9a-f]{24}(?:/(?:run|cancel|export))?", path)
-             and request.method in {"GET", "POST"})):
+    path = request.path
+    if request.endpoint == "domain_api.api_internal_pitch_prepare":
+        path_valid = path == prefix
+    elif request.endpoint == "domain_api.api_internal_pitch_read":
+        path_valid = re.fullmatch(re.escape(prefix) + r"/task-pitch-[0-9a-f]{24}", path) is not None
+    elif request.endpoint == "domain_api.api_internal_pitch_action":
+        path_valid = (re.fullmatch(re.escape(prefix) + r"/task-pitch-[0-9a-f]{24}/(?:run|cancel)", path)
+                      is not None)
+    else:
+        path_valid = re.fullmatch(re.escape(prefix) + r"/task-pitch-[0-9a-f]{24}/export", path) is not None
+    if not path_valid:
         return False
     action = "read" if request.method == "GET" else "write"
     actor = resolve_local_workspace_principal(module="reports", action=action)
@@ -102,7 +187,12 @@ def _internal_pitch_local_access_allowed():
         return False
     try:
         data = _internal_pitch_body() if request.method == "POST" else None
-        authorize(actor, _internal_pitch_scope(data), action=action)
+        scope = _internal_pitch_scope(data)
+        if scope.get("scope_kind") == "shared_workspace":
+            from lumenis.shared.content_creation.internal_pitch import _context
+            _context(actor, scope, action)
+        else:
+            authorize(actor, scope, action=action)
         return True
     except (ValueError, PermissionError):
         return False
@@ -125,6 +215,8 @@ def _internal_pitch_response(call):
             code = "INTERNAL_PITCH_OWNER_FAILED"
         if code == "AUTH_REQUIRED":
             status = 401
+        elif "UNAVAILABLE" in code:
+            status = 503
         elif isinstance(exc, PermissionError) or "PERMISSION" in code or "DENIED" in code:
             status = 403
         elif isinstance(exc, LookupError):
@@ -277,10 +369,12 @@ def _business_work_response(call):
 def api_business_work_prepare():
     def execute():
         data = _business_work_body()
-        common = {"submission_id", "kind", "options"}
+        common = {"submission_id", "kind"}
         source_fields = common | {"source_job_id", "question"}
         case_fields = common | {"case_id"}
-        if set(data) not in (source_fields, case_fields):
+        optional = {"options", "planning_constraints"}
+        required = case_fields if "case_id" in data else source_fields
+        if not required.issubset(data) or set(data) - required - optional:
             raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
         service, actor_ref, scope, authorize = _business_work_binding("prepare")
         if "case_id" in data:

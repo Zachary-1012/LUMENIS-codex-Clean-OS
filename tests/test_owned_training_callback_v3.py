@@ -16,6 +16,8 @@ from lumenis.system.ai_gateway.owned_training_phases import TrainingPhaseClient
 from lumenis.system.security import permission as p, training_receipts as receipts
 from tests.test_owned_training_phase_http_v2 import phase_http, strict_permission_mode
 
+__all__ = ["phase_http", "strict_permission_mode"]
+
 
 def _context(request):
     return {"scope_descriptors": {scope: {

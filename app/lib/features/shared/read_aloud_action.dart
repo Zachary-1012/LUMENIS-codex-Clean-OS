@@ -209,70 +209,89 @@ class _ReadAloudActionState extends State<ReadAloudAction>
     if (widget.text.trim().isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 10,
-            runSpacing: 8,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final scale = MediaQuery.textScalerOf(context).scale(1);
+          double controlWidth(double base) => (base * scale).clamp(
+            0.0,
+            constraints.hasBoundedWidth ? constraints.maxWidth : base * scale,
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(labels['title']!),
-              Text(labels['locale']!),
-              DropdownButton<ReadAloudLocale>(
-                key: const ValueKey('read-aloud/locale'),
-                value: _locale,
-                onChanged: (value) {
-                  if (value != null) unawaited(_selectLocale(value));
-                },
-                items: ReadAloudLocale.values
-                    .map(
-                      (locale) => DropdownMenuItem(
-                        value: locale,
-                        child: Text(labels['locale.${locale.name}']!),
-                      ),
-                    )
-                    .toList(growable: false),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  Text(labels['title']!),
+                  Text(labels['locale']!),
+                  SizedBox(
+                    width: controlWidth(200),
+                    child: DropdownButton<ReadAloudLocale>(
+                      isExpanded: true,
+                      itemHeight: null,
+                      key: const ValueKey('read-aloud/locale'),
+                      value: _locale,
+                      onChanged: (value) {
+                        if (value != null) unawaited(_selectLocale(value));
+                      },
+                      items: ReadAloudLocale.values
+                          .map(
+                            (locale) => DropdownMenuItem(
+                              value: locale,
+                              child: Text(labels['locale.${locale.name}']!),
+                            ),
+                          )
+                          .toList(growable: false),
+                    ),
+                  ),
+                  Text(labels['rate']!),
+                  SizedBox(
+                    width: controlWidth(160),
+                    child: DropdownButton<ReadAloudRate>(
+                      isExpanded: true,
+                      itemHeight: null,
+                      key: const ValueKey('read-aloud/rate'),
+                      value: _rate,
+                      onChanged: (value) {
+                        if (value != null) unawaited(_selectRate(value));
+                      },
+                      items: ReadAloudRate.values
+                          .map(
+                            (rate) => DropdownMenuItem(
+                              value: rate,
+                              child: Text(labels['rate.${rate.name}']!),
+                            ),
+                          )
+                          .toList(growable: false),
+                    ),
+                  ),
+                  TextButton.icon(
+                    key: const ValueKey('read-aloud/toggle'),
+                    onPressed: active || platformSupported
+                        ? () => unawaited(_startOrStop())
+                        : null,
+                    icon: Icon(active ? Icons.stop_rounded : Icons.volume_up),
+                    label: Text(active ? labels['stop']! : labels['play']!),
+                  ),
+                ],
               ),
-              Text(labels['rate']!),
-              DropdownButton<ReadAloudRate>(
-                key: const ValueKey('read-aloud/rate'),
-                value: _rate,
-                onChanged: (value) {
-                  if (value != null) unawaited(_selectRate(value));
-                },
-                items: ReadAloudRate.values
-                    .map(
-                      (rate) => DropdownMenuItem(
-                        value: rate,
-                        child: Text(labels['rate.${rate.name}']!),
-                      ),
-                    )
-                    .toList(growable: false),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  _statusLabel(labels, state, localeAvailable, availability),
+                  key: const ValueKey('read-aloud/status'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
-              TextButton.icon(
-                key: const ValueKey('read-aloud/toggle'),
-                onPressed: active || platformSupported
-                    ? () => unawaited(_startOrStop())
-                    : null,
-                icon: Icon(active ? Icons.stop_rounded : Icons.volume_up),
-                label: Text(active ? labels['stop']! : labels['play']!),
+              Text(
+                labels['purpose.${widget.purpose.name}']!,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
-          ),
-          Semantics(
-            liveRegion: true,
-            child: Text(
-              _statusLabel(labels, state, localeAvailable, availability),
-              key: const ValueKey('read-aloud/status'),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-          Text(
-            labels['purpose.${widget.purpose.name}']!,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
+          );
+        },
       ),
     );
   }

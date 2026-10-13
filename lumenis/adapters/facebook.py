@@ -18,13 +18,15 @@ Facebook 内容采集适配器
 
 只读红线：不点赞、不评论、不关注、不私信、不发布、不执行任何账号写操作。
 """
-import re
-import logging
 import hashlib
+import logging
+import re
 from datetime import datetime, timezone
 from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 
-from .base import BaseAdapter, AdapterResult, CollectedNote
+from playwright.sync_api import Error as PlaywrightError
+
+from .base import AdapterResult, BaseAdapter, CollectedNote
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,15 @@ class FacebookAdapter(BaseAdapter):
 
     _OFFICIAL_HOSTS = {"facebook.com", "www.facebook.com", "m.facebook.com"}
     _NATIVE_POST_ID = re.compile(r"[A-Za-z0-9]+")
+    _DETAIL_BODY_SELECTORS = (
+        '[data-ad-comet-preview="message"]',
+        '[data-ad-preview="message"]',
+    )
+    _DETAIL_EXPANDER_SELECTOR = 'button, [role="button"]'
+    _DETAIL_EXPAND_LABELS = frozenset({
+        "see more", "show more", "查看更多", "显示更多", "展开全文",
+    })
+    _DETAIL_EXPANDER_SCAN_LIMIT = 20
 
     _DEFAULT_UA = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -80,7 +91,7 @@ class FacebookAdapter(BaseAdapter):
         post_match = re.search(r"(?:^|/)posts/([A-Za-z0-9]+)$", path.rstrip("/"))
         if post_match:
             post_id = post_match.group(1)
-            canonical = urlunsplit(("https", "www.facebook.com", path.rstrip("/"), "", "", ""))
+            canonical = urlunsplit(("https", "www.facebook.com", path.rstrip("/"), "", ""))
             return {"post_id": post_id, "url": canonical, "id_locator": "permalink_path.posts"}
 
         if path.rstrip("/").lower() not in {"/permalink.php", "/story.php"}:
@@ -101,7 +112,7 @@ class FacebookAdapter(BaseAdapter):
         if page_id and cls._NATIVE_POST_ID.fullmatch(page_id):
             identity_query.append(("id", page_id))
         canonical_path = path.rstrip("/")
-        canonical = urlunsplit(("https", "www.facebook.com", canonical_path, "",
+        canonical = urlunsplit(("https", "www.facebook.com", canonical_path,
                                 urlencode(identity_query), ""))
         return {"post_id": post_id, "url": canonical,
                 "id_locator": "permalink_query.story_fbid"}
@@ -125,7 +136,7 @@ class FacebookAdapter(BaseAdapter):
         identity = cls.observed_post_permalink(candidate)
         if identity:
             return identity["url"]
-        return urlunsplit(("https", "www.facebook.com", parsed.path or "/", "", "", ""))
+        return urlunsplit(("https", "www.facebook.com", parsed.path or "/", "", ""))
 
     @staticmethod
     def _is_non_post_media_url(value: str) -> bool:
@@ -222,7 +233,7 @@ class FacebookAdapter(BaseAdapter):
                 or parsed.username is not None or parsed.password is not None
                 or port not in (None, 443)):
             return ""
-        return urlunsplit(("https", host, parsed.path or "/", "", "", ""))
+        return urlunsplit(("https", host, parsed.path or "/", "", ""))
 
     @classmethod
     def _media_hints(cls, card, base_url: str) -> list[dict]:
@@ -307,9 +318,10 @@ class FacebookAdapter(BaseAdapter):
         """浏览器 CDP 采集 Facebook 搜索结果。"""
         hb = None
         try:
-            from .human_browser import HumanBrowser, configured_readonly_worker_url
-            from .cookie_vault import inject_into_context
             from urllib.parse import quote
+
+            from .cookie_vault import inject_into_context
+            from .human_browser import HumanBrowser, configured_readonly_worker_url
 
             hb = HumanBrowser(
                 cdp_url=configured_readonly_worker_url("facebook"),
@@ -457,6 +469,146 @@ class FacebookAdapter(BaseAdapter):
             },
         )
 
+    @classmethod
+    def _detail_article_matches(cls, article, page_url: str, expected_post_id: str) -> bool:
+        page_identity = cls.observed_post_permalink(page_url)
+        article_identity = cls._post_permalink_from_card(article, page_url)
+        return bool(
+            page_identity and article_identity
+            and page_identity["post_id"] == expected_post_id
+            and article_identity["post_id"] == expected_post_id
+        )
+
+    @classmethod
+    def _detail_body_element(cls, article):
+        for selector in cls._DETAIL_BODY_SELECTORS:
+            try:
+                element = article.query_selector(selector)
+            except (PlaywrightError, RuntimeError, TypeError, ValueError) as error:
+                logger.debug("Facebook message locator unavailable error_type=%s", type(error).__name__)
+                continue
+            if element:
+                return element, selector
+        return None, None
+
+    @classmethod
+    def _expand_detail_post_body(cls, body_element, article, page) -> tuple[str, dict]:
+        """Expand at most one exact See-more control nested in the post body."""
+        result = {"status": "NO_EXPANDER_OBSERVED", "label": None, "click_count": 0}
+        try:
+            before = body_element.inner_text()
+            before = before.strip() if isinstance(before, str) else ""
+        except (PlaywrightError, RuntimeError, TypeError, ValueError):
+            return "", {**result, "status": "BODY_READ_FAILED"}
+
+        try:
+            controls = body_element.query_selector_all(cls._DETAIL_EXPANDER_SELECTOR)
+        except (PlaywrightError, RuntimeError, TypeError, ValueError):
+            return before, {**result, "status": "EXPANDER_SCAN_FAILED"}
+        controls = list(controls or [])
+        if len(controls) > cls._DETAIL_EXPANDER_SCAN_LIMIT:
+            return before, {**result, "status": "EXPANDER_SCAN_LIMIT_REACHED"}
+
+        for control in controls:
+            matched_label = None
+            for observed in ("inner_text", "aria-label"):
+                try:
+                    value = control.inner_text() if observed == "inner_text" else control.get_attribute("aria-label")
+                except (PlaywrightError, RuntimeError, TypeError, ValueError) as error:
+                    logger.debug("Facebook expansion label unavailable error_type=%s", type(error).__name__)
+                    continue
+                if not isinstance(value, str):
+                    continue
+                label = " ".join(value.split()).casefold().rstrip(" .…")
+                if len(label) <= 40 and label in cls._DETAIL_EXPAND_LABELS:
+                    matched_label = label
+                    break
+            if not matched_label:
+                continue
+            try:
+                control.click(timeout=2000)
+            except (PlaywrightError, RuntimeError, TypeError, ValueError):
+                return before, {**result, "status": "EXPANSION_FAILED", "label": matched_label}
+            render_wait = "STATE_CHANGE_NOT_OBSERVED"
+            try:
+                changed = page.wait_for_function(
+                    "([element, before]) => !element.isConnected || element.innerText.trim() !== before",
+                    arg=[body_element, before], timeout=2000,
+                )
+                changed.dispose()
+                render_wait = "BODY_CHANGED_OR_REPLACED"
+            except (PlaywrightError, RuntimeError, TypeError, ValueError) as error:
+                # A bounded wait expiring never proves the complete body. The
+                # fresh message container is read below without changing scope.
+                logger.debug("Facebook bounded render wait ended error_type=%s", type(error).__name__)
+            try:
+                fresh_body, _ = cls._detail_body_element(article)
+                if fresh_body is None:
+                    raise ValueError("DETAIL_MESSAGE_NOT_OBSERVED_AFTER_EXPANSION")
+                after = fresh_body.inner_text()
+                after = after.strip() if isinstance(after, str) else ""
+            except (PlaywrightError, RuntimeError, TypeError, ValueError):
+                return before, {
+                    **result, "status": "EXPANSION_READ_FAILED", "label": matched_label,
+                    "click_count": 1, "render_wait": render_wait,
+                }
+            return after, {
+                **result,
+                "status": "EXPANDED" if after != before else "CLICKED_NO_TEXT_CHANGE",
+                "label": matched_label,
+                "click_count": 1,
+                "render_wait": render_wait,
+            }
+        return before, result
+
+    def _parse_facebook_detail_article(self, article, page, expected_post_id: str):
+        """Read the body only after matching the page and target article identity."""
+        if not self._detail_article_matches(article, page.url, expected_post_id):
+            return None, "IDENTITY_MISMATCH: TARGET_ARTICLE_PRE_READ_ID_MISMATCH"
+
+        body_element, body_locator = self._detail_body_element(article)
+        if body_element:
+            body, expansion = self._expand_detail_post_body(body_element, article, page)
+            post_read_identity_matches = self._detail_article_matches(
+                article, page.url, expected_post_id
+            )
+            failure = self._page_failure_state(page)
+            if failure:
+                return None, failure
+            if not post_read_identity_matches:
+                return None, "IDENTITY_MISMATCH: TARGET_ARTICLE_POST_READ_ID_MISMATCH"
+        else:
+            body = ""
+            expansion = {"status": "BODY_NOT_OBSERVED", "label": None, "click_count": 0}
+
+        try:
+            note = self._parse_facebook_card(article, page)
+        except (PlaywrightError, RuntimeError, TypeError, ValueError):
+            note = None
+        if not self._detail_article_matches(article, page.url, expected_post_id):
+            return None, "IDENTITY_MISMATCH: TARGET_ARTICLE_POST_READ_ID_MISMATCH"
+        if not note or note.raw_data.get("post_id") != expected_post_id:
+            return None, "IDENTITY_MISMATCH: TARGET_ARTICLE_POST_ID_MISMATCH"
+
+        observed_body = body.strip()
+        raw = note.raw_data if isinstance(note.raw_data, dict) else {}
+        raw.update({
+            "body_kind": "NATIVE_POST_BODY" if observed_body else None,
+            "body_status": "OBSERVED_COMPLETENESS_UNKNOWN" if observed_body else "NOT_OBSERVED",
+            "body_sha256": hashlib.sha256(observed_body.encode("utf-8")).hexdigest() if observed_body else None,
+            "body_locator": body_locator if body_element else None,
+            "body_state": "VISIBLE_TARGET_ARTICLE_TEXT_COMPLETENESS_UNKNOWN" if observed_body else "NOT_OBSERVED",
+            "body_completeness": "UNKNOWN" if observed_body else "NOT_OBSERVED",
+            "body_expansion": expansion,
+            "detail_source_url": self.observed_post_permalink(page.url)["url"],
+            "detail_post_id_status": "OBSERVED_AND_MATCHED",
+            "detail_post_id_locator": "article a[href] (exact requested native id)",
+        })
+        note.content = observed_body
+        note.title = observed_body[:80].replace("\n", " ") if observed_body else ""
+        note.raw_data = raw
+        return note, ""
+
     @staticmethod
     def _parse_exact_metric(value: str) -> int | None:
         """Accept exact count labels, preserving compact displays as unknown."""
@@ -498,8 +650,8 @@ class FacebookAdapter(BaseAdapter):
 
         hb = None
         try:
-            from .human_browser import HumanBrowser, configured_readonly_worker_url
             from .cookie_vault import inject_into_context
+            from .human_browser import HumanBrowser, configured_readonly_worker_url
 
             hb = HumanBrowser(
                 cdp_url=configured_readonly_worker_url("facebook"),
@@ -525,15 +677,14 @@ class FacebookAdapter(BaseAdapter):
                 identity = self._post_permalink_from_card(article, page.url)
                 if not identity or identity["post_id"] != requested["post_id"]:
                     continue
-                note = self._parse_facebook_card(article, page)
+                note, parse_error = self._parse_facebook_detail_article(article, page, requested["post_id"])
+                if parse_error:
+                    return AdapterResult(success=False, error=parse_error)
                 if note and note.raw_data.get("post_id") == requested["post_id"]:
                     matching_note = note
                     break
 
             if matching_note:
-                matching_note.raw_data["detail_source_url"] = requested["url"]
-                matching_note.raw_data["detail_post_id_status"] = "OBSERVED_AND_MATCHED"
-                matching_note.raw_data["detail_post_id_locator"] = "article a[href] (exact requested native id)"
                 return AdapterResult(success=True, notes=[matching_note], raw_count=1)
             if articles:
                 return AdapterResult(success=False, error="IDENTITY_MISMATCH: TARGET_ARTICLE_NOT_OBSERVED")
@@ -549,8 +700,8 @@ class FacebookAdapter(BaseAdapter):
         """Facebook 评论采集（浏览器 CDP，滚动加载）。"""
         hb = None
         try:
-            from .human_browser import HumanBrowser, configured_readonly_worker_url
             from .cookie_vault import inject_into_context
+            from .human_browser import HumanBrowser, configured_readonly_worker_url
 
             hb = HumanBrowser(
                 cdp_url=configured_readonly_worker_url("facebook"),
@@ -610,8 +761,8 @@ class FacebookAdapter(BaseAdapter):
         """Facebook 主页/用户信息采集。"""
         hb = None
         try:
-            from .human_browser import HumanBrowser, configured_readonly_worker_url
             from .cookie_vault import inject_into_context
+            from .human_browser import HumanBrowser, configured_readonly_worker_url
 
             hb = HumanBrowser(
                 cdp_url=configured_readonly_worker_url("facebook"),

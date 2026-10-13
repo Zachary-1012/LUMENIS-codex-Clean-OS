@@ -7,7 +7,7 @@ AI 不参与授权判定，完全由规则+DB状态决定。
 """
 from .models import get_db
 
-VALID_PRODUCTS = ("ZBMP", "CTH", "SYSTEM")
+VALID_PRODUCTS = ("ZBMP", "CTH", "SYSTEM", "SHARED")
 VALID_ACTIONS = ("read", "write")
 
 

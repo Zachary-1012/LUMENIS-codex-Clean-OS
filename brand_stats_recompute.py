@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Recompute brand aggregates from the existing scoped Canonical owner.
 
 The aggregation table is a compatibility projection. This module does not
@@ -10,7 +9,8 @@ from __future__ import annotations
 
 import os
 import sqlite3
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any
 
 from canonical_metrics import (
     engagement_count,
@@ -19,7 +19,6 @@ from canonical_metrics import (
     sentiment_count,
 )
 from lumenis.shared.database import DatabaseRepository, main_db_path
-
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = main_db_path()
@@ -36,14 +35,14 @@ _SNAPSHOT_FIELDS = {
 _AUDIT_FIELDS = ("permission_audit_ref", "operation_audit_ref")
 
 
-def _to_int(value: Any) -> Optional[int]:
+def _to_int(value: Any) -> int | None:
     """Compatibility wrapper using the canonical exact-count parser."""
     return engagement_count(value)
 
 
-def _brand_keys(chinese_name: Any, english_name: Any) -> List[str]:
+def _brand_keys(chinese_name: Any, english_name: Any) -> list[str]:
     """Return the existing nonempty brand-name keys without inventing aliases."""
-    keys: List[str] = []
+    keys: list[str] = []
     if isinstance(chinese_name, str) and chinese_name.strip():
         keys.append(chinese_name.strip())
     english = english_name.strip() if isinstance(english_name, str) else ""
@@ -61,7 +60,7 @@ def _known_complete(counts: Mapping[str, Any], *, buckets: Iterable[str], total:
 
 def aggregate_brand_observations(
     rows: Iterable[Mapping[str, Any]], *, complete_scan: bool,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Aggregate scoped Canonical rows without turning unknown into zero.
 
     ``complete_scan`` describes the validated snapshot boundary. It must be an
@@ -72,7 +71,7 @@ def aggregate_brand_observations(
         raise TypeError("complete_scan must be an explicit boolean")
     if isinstance(rows, (str, bytes, Mapping)):
         raise TypeError("rows must be an iterable of Canonical row mappings")
-    normalized: List[Dict[str, Any]] = []
+    normalized: list[dict[str, Any]] = []
     for row in rows:
         if not isinstance(row, Mapping):
             raise TypeError("each Canonical row must be a mapping")
@@ -84,7 +83,7 @@ def aggregate_brand_observations(
     observed_count = len(normalized)
 
     if observed_count == 0:
-        state = "NOT_COLLECTED"
+        state = "NOT_COLLECTED" if complete_scan else "PARTIAL"
     else:
         sentiment_complete = sentiment["unknown"] == 0
         risk_complete = _known_complete(
@@ -106,7 +105,7 @@ def aggregate_brand_observations(
         total=observed_count,
     )
 
-    values: Dict[str, Any] = {
+    values: dict[str, Any] = {
         "note_count": observed_count if complete_scan and observed_count else None,
         "positive_count": (
             sentiment["positive"] if complete_scan and sentiment_complete else None
@@ -163,7 +162,7 @@ def aggregate_brand_observations(
     }
 
 
-def _validated_snapshot(snapshot: Any) -> Tuple[List[Dict[str, Any]], bool, Dict[str, Any]]:
+def _validated_snapshot(snapshot: Any) -> tuple[list[dict[str, Any]], bool, dict[str, Any]]:
     if not isinstance(snapshot, dict) or not _SNAPSHOT_FIELDS.issubset(snapshot):
         raise ValueError("scoped Canonical snapshot is malformed")
     records = snapshot["records"]
@@ -275,14 +274,14 @@ def _validated_snapshot(snapshot: Any) -> Tuple[List[Dict[str, Any]], bool, Dict
     }
 
 
-def _authorization_receipt(authorize: Callable[[], Any]) -> Dict[str, str]:
+def _authorization_receipt(authorize: Callable[[], Any]) -> dict[str, str]:
     try:
         receipt = authorize()
     except Exception:
         raise PermissionError("brand aggregate authorization is unavailable") from None
     if not isinstance(receipt, Mapping):
         raise PermissionError("brand aggregate authorization is invalid")
-    values: Dict[str, str] = {}
+    values: dict[str, str] = {}
     for field in _AUDIT_FIELDS:
         value = receipt.get(field)
         if type(value) is not str or not value.strip() or value != value.strip():
@@ -292,12 +291,12 @@ def _authorization_receipt(authorize: Callable[[], Any]) -> Dict[str, str]:
 
 
 def recompute_brand_stats(
-    db_path: Optional[str] = DB_PATH,
+    db_path: str | None = DB_PATH,
     verbose: bool = True,
     *,
-    read_brand_records: Optional[Callable[[sqlite3.Connection, Mapping[str, Any]], Any]] = None,
-    authorize: Optional[Callable[[], Any]] = None,
-) -> Dict[str, Any]:
+    read_brand_records: Callable[[sqlite3.Connection, Mapping[str, Any]], Any] | None = None,
+    authorize: Callable[[], Any] | None = None,
+) -> dict[str, Any]:
     """Refresh compatibility aggregates from a server-bound scoped Canonical read.
 
     The callbacks are required and must be supplied by server-side existing
@@ -313,8 +312,8 @@ def recompute_brand_stats(
     negative_brands = set()
     positive_brands = set()
     samples = []
-    brand_results: List[Dict[str, Any]] = []
-    final_authorization_receipt: Dict[str, str] = {}
+    brand_results: list[dict[str, Any]] = []
+    final_authorization_receipt: dict[str, str] = {}
 
     with repository.transaction() as conn:
         # DatabaseRepository.transaction supplies commit/rollback/close; acquire
@@ -436,4 +435,4 @@ def recompute_brand_stats(
     return result
 
 
-__all__ = ["aggregate_brand_observations", "recompute_brand_stats", "_to_int"]
+__all__ = ["_to_int", "aggregate_brand_observations", "recompute_brand_stats"]

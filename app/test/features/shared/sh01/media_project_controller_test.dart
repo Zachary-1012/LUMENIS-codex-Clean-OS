@@ -36,6 +36,7 @@ final class _Repository implements MediaProjectRepository {
   };
   int calls = 0;
   int referenceInspections = 0;
+  Map<String, dynamic>? rightsOverride;
   Object? referenceFailure;
   Completer<void>? pendingReferenceInspection;
   Completer<void>? referenceInspectionStarted;
@@ -71,13 +72,15 @@ final class _Repository implements MediaProjectRepository {
       'schema_version': 1,
       'output_kind': outputKind,
       'timeline': timeline.toJson(),
-      'rights': legacyRightsFormat
+      'rights':
+          rightsOverride ??
+          (legacyRightsFormat
           ? {
               'state': 'unknown',
               'demo_acknowledged': true,
               'label': 'demo-only / rights unknown',
             }
-          : {'state': 'unknown', 'label': 'rights unknown'},
+          : {'state': 'unknown', 'label': 'rights unknown'}),
     };
     return {
       'ok': true,
@@ -238,6 +241,29 @@ void main() {
       expect(controller.failureCode, isNull);
     },
   );
+  test('explicit false legacy receipt is rejected as unverified', () async {
+    await create();
+    repository.rightsOverride = {
+      'state': 'unknown',
+      'demo_acknowledged': false,
+    };
+
+    await controller.export(outputKind: 'video');
+
+    expect(controller.version, isNull);
+    expect(controller.failureCode, 'CONTENT_RESPONSE_INVALID');
+    expect(controller.completionUnknown, isTrue);
+  });
+
+  test('legacy true receipt remains readable with unknown rights', () async {
+    await create();
+    repository.rightsOverride = {'state': 'unknown', 'demo_acknowledged': true};
+
+    await controller.export(outputKind: 'video');
+
+    expect(controller.version?.artifactId, 'ART-1');
+    expect(controller.failureCode, isNull);
+  });
 
   test(
     'export captures a version and preserves concurrent newer edits',

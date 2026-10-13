@@ -4,8 +4,9 @@ import json
 
 import pytest
 
-from tests.test_saved_document_workflow import workspace
 from api_dual_domain import BusinessDecisionWorkflow
+
+pytest_plugins = ("tests.test_saved_document_workflow",)
 
 
 @pytest.fixture(params=["CTH", "BMP"])
@@ -136,6 +137,164 @@ def test_domain_save_replay_creation_inheritance_and_budget_revision(business):
     assert json.loads(ws["work"].export_work(second["saved_work"]["artifact"]["artifact_id"], actor=ws["actor"], scope=ws["scope"])["content"])["version"] == 2
 
 
+def test_owned_source_quote_is_not_restricted_by_unrelated_internal_receipt(business):
+    ws = business
+    body = "User-authored internal review material. " * 8
+    report, _citation = add_material(ws, "owned-long-quote", body)
+    source = report["source_brief"]["records"][0]
+    ws["current"] = adopt(ws, report, make_options(source["source_id"]), selection("A", "100"))
+    ws["citation"] = ws["documents"].locate_quote(
+        int(source["evidence_id"]), actor=ws["actor"], scope=ws["scope"], start=0, end=200,
+    )["citation"]
+
+    saved = save(ws, request_id="save-owned-source-long-quote")["saved_work"]
+    assert saved["document"]["citations"][0]["quote"] == body[:200]
+    reopened = ws["work"].reopen_work(
+        saved["artifact"]["artifact_id"], actor=ws["actor"], scope=ws["scope"],
+    )
+    assert reopened["document"] == saved["document"]
+    assert saved["document"]["payload"]["business_work"]["source_bindings"][0]["source_id"] == source["source_id"]
+
+
+def test_business_save_adapter_maps_scope_evidence_to_distinct_content_evidence(business, monkeypatch):
+    import hashlib
+
+    from lumenis.shared.evidence import store
+    from lumenis.shared.reporting import operational_brief
+
+    ws = business
+    source = ws["current"]["source_brief"]["records"][0]
+    source_evidence = ws["repo"].query_one(
+        "SELECT collection_metadata FROM app_evidence_records WHERE id=?",
+        (int(source["evidence_id"]),),
+    )
+    source_metadata = json.loads(source_evidence[0])
+    body = source_metadata["parsed_text"]
+    source_url = source_metadata["provenance"]["source_url"]
+    with ws["repo"].transaction() as con:
+        content_evidence_id = store.record_evidence(
+            connection=con,
+            source="importer",
+            project="LUMENIS",
+            product="CTH" if ws["domain_scope"]["domain_id"] == "cth" else "ZBMP",
+            feature_id="BUSINESS_CONTENT_EVIDENCE_FIXTURE",
+            asset_id=source["source_id"],
+            version="business-content-reference:test-v1",
+            test_name="business-content-reference-fixture",
+            result="PASS",
+            status="verified",
+            inputs={"source_ids": [source["source_id"]]},
+            outputs={"body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest()},
+            raw_content=body,
+                collection_metadata={"context": ws["scope"], "parsed_text": body,
+                                     "source_url": source_url,
+                                 "provenance": {"rights": "UNREVIEWED"}},
+            domain_id=ws["scope"]["domain_id"],
+            subject_id=ws["scope"]["subject_id"],
+            brand_focus_id=ws["scope"]["brand_focus_id"],
+            global_scope=ws["scope"]["global_scope"],
+        )
+    content_ref = f"app_evidence_records:{content_evidence_id}"
+    monkeypatch.setattr(operational_brief, "_content_evidence_ref",
+                        lambda _con, _row, _scope_ref: content_ref)
+
+    with ws["repo"].connection() as con:
+        args = ws["service"]._saved_result_args(
+            con, ws["current"], actor_ref=ws["actor_ref"], scope=ws["domain_scope"],
+            request_id="adapter-scope-to-content-reference",
+            citations=[ws["citation"]], previous_artifact_id=None, expected_draft_digest=None,
+        )
+
+    assert args["citations"][0]["evidence_id"] == content_evidence_id
+    assert len(args["payload"]["business_work"]["source_bindings"]) == 1
+    binding = args["payload"]["business_work"]["source_bindings"][0]
+    assert binding["source_id"] == source["source_id"]
+    assert binding["scope_evidence_ref"] == source["scope_evidence_ref"]
+    assert binding["content_evidence_ref"] == content_ref
+    assert binding["evidence_id"] == content_evidence_id
+    assert args["citations"][0]["quote"] == ws["citation"]["quote"]
+
+
+def test_business_save_adapter_resolves_approved_source_to_child_evidence(business, monkeypatch):
+    import hashlib
+
+    from lumenis.importer import documents
+
+    ws = business
+    source = ws["current"]["source_brief"]["records"][0]
+    with ws["repo"].connection() as con:
+        row = ws["service"]._canonical_source(con, source["source_id"], ws["domain_scope"])
+    source_scope_ref = str(source.get("scope_evidence_ref") or source["evidence_id"])
+    assert source_scope_ref.isdecimal()
+    row = dict(row)
+    row["scope_evidence_ref"] = source_scope_ref
+    source_evidence = ws["repo"].query_one(
+        "SELECT collection_metadata FROM app_evidence_records WHERE id=?",
+        (int(source_scope_ref),),
+    )
+    source_metadata = json.loads(source_evidence[0])
+    body = row.get("content") or source_metadata["parsed_text"]
+    source_url = row.get("url") or row.get("canonical_url") or source_metadata["provenance"]["source_url"]
+    body_sha256 = hashlib.sha256(body.encode("utf-8")).hexdigest()
+    if ws["domain_scope"]["domain_id"] == "cth":
+        scope_locator = "notes:109"
+        source_content_locator = "notes:109"
+        snapshot_kind = "existing_canonical_content_snapshot_not_native_capture"
+        raw_ref = {"table": "notes", "note_id": source["source_id"], "id": 109}
+    else:
+        scope_locator = f"app_evidence_records:{source_scope_ref}"
+        source_content_locator = f"app_evidence_records:{source_scope_ref}"
+        snapshot_kind = "existing_source_evidence_snapshot"
+        raw_ref = {"content_evidence_ref": source_content_locator}
+    child_evidence_id = int(source_scope_ref) + 10000
+    child_ref = f"app_evidence_records:{child_evidence_id}"
+    parent = {
+        "receipt_id": "PO-TEST-SOURCE-USE-20261011",
+        "source_id": source["source_id"],
+        "source_url": source_url,
+        "domain_id": ws["domain_scope"]["domain_id"],
+        "subject_id": ws["domain_scope"]["subject_id"],
+        "brand_focus_id": ws["domain_scope"]["brand_focus_id"],
+        "scope_evidence_ref": scope_locator,
+        "source_content_locator": source_content_locator,
+        "derived_content_evidence_ref": child_ref,
+        "body_sha256": body_sha256,
+        "snapshot_kind": snapshot_kind,
+    }
+    raw_ref["approved_internal_source_use"] = parent
+    row["raw_ref"] = json.dumps(raw_ref)
+    monkeypatch.setattr(ws["service"], "_canonical_source",
+                        lambda _con, _source_id, _scope: row)
+    monkeypatch.setattr(
+        documents, "resolve_approved_source_reference",
+        lambda _con, **kwargs: {
+            "evidence_id": child_evidence_id,
+            "content_evidence_ref": child_ref,
+            "scope_evidence_ref": scope_locator,
+            "source_content_locator": source_content_locator,
+            "body_sha256": body_sha256,
+            "canonical_id": row["canonical_id"],
+            "source_reference_parent": parent,
+        },
+    )
+
+    with ws["repo"].connection() as con:
+        args = ws["service"]._saved_result_args(
+            con, ws["current"], actor_ref=ws["actor_ref"], scope=ws["domain_scope"],
+            request_id="approved-source-adapter-test",
+            citations=[{**ws["citation"], "evidence_id": int(source_scope_ref)}],
+            previous_artifact_id=None, expected_draft_digest=None,
+        )
+
+    assert args["citations"][0]["evidence_id"] == child_evidence_id
+    binding = args["payload"]["business_work"]["source_bindings"][0]
+    assert binding["scope_evidence_ref"] == source_scope_ref
+    assert binding["source_scope_locator"] == scope_locator
+    assert binding["source_content_locator"] == source_content_locator
+    assert binding["content_evidence_ref"] == child_ref
+    assert binding["evidence_id"] == child_evidence_id
+
+
 def test_source_withdrawal_adopts_new_input_without_rewriting_old_artifact(business):
     ws = business
     first = save(ws)["saved_work"]
@@ -173,7 +332,9 @@ def test_withdrawn_quote_rights_block_old_use_and_allow_explicit_replacement(bus
             read(artifact["artifact_id"], actor=ws["actor"], scope=ws["scope"])
     with pytest.raises(ValueError, match="WORK_SOURCE_RIGHTS_UNVERIFIED"):
         resolve_creation_upstream(first["creation_upstream"], actor=ws["actor"], scope=ws["scope"])
-    with pytest.raises(ValueError, match="WORK_SOURCE_RIGHTS_UNVERIFIED"):
+    # Derived analysis rechecks the same withdrawn source before Shared's
+    # citation-only save fence; preserve the exact underlying denial code.
+    with pytest.raises(PermissionError, match="BUSINESS_WORK_ANALYSIS_SOURCE_USE_UNAVAILABLE:WORK_SOURCE_RIGHTS_UNVERIFIED"):
         save(ws)
     report, citation = add_material(ws, "rights-replacement", "A separately permitted replacement source.")
     ws["current"] = adopt(ws, report, make_options(report["source_brief"]["records"][0]["source_id"]), selection("B", "100"))

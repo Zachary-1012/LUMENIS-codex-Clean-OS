@@ -9,6 +9,7 @@ import 'sh01_repository.dart';
 import 'sh01_snapshot.dart';
 import 'sh01_view_model.dart';
 import 'media_project_workbench.dart';
+import 'manuscript_editor.dart';
 
 String _catalogFailureCopy(String? error) => switch (error) {
   '登录已失效，请重新登录后读取。' => 'sh01.failure.auth',
@@ -149,7 +150,7 @@ class Sh01Screen extends StatefulWidget {
 }
 
 class _Sh01ScreenState extends State<Sh01Screen> {
-  bool _editing = false;
+  String? _editing;
   late final Sh01ViewModel _viewModel = Sh01ViewModel(
     repository: widget.repository ?? CoreSh01Repository(client: widget.client),
   );
@@ -167,12 +168,20 @@ class _Sh01ScreenState extends State<Sh01Screen> {
   }
 
   @override
-  Widget build(BuildContext context) => _editing
+  Widget build(BuildContext context) => _editing == 'writing'
+      ? ManuscriptEditor(
+          client: widget.client,
+          invokingDomain: widget.invokingDomain,
+          contextAvailable: widget.contextAvailable,
+          onBack: () => setState(() => _editing = null),
+        )
+      : _editing != null
       ? MediaProjectWorkbench(
           client: widget.client,
           invokingDomain: widget.invokingDomain,
           contextAvailable: widget.contextAvailable,
-          onBack: () => setState(() => _editing = false),
+          initialOutputKind: _editing == 'audio' ? 'audio' : 'video',
+          onBack: () => setState(() => _editing = null),
         )
       : ColoredBox(
           color: LumenisTheme.of(context).canvas,
@@ -183,11 +192,47 @@ class _Sh01ScreenState extends State<Sh01Screen> {
                   alignment: Alignment.centerLeft,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: OutlinedButton.icon(
-                      key: const Key('sh01-open-video-editor'),
-                      onPressed: () => setState(() => _editing = true),
-                      icon: const LumenisIcon(Icons.video_collection_outlined),
-                      label: Text(context.lumenisL10n.text('sh01.media.open')),
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          key: const Key('sh01-open-manuscript-editor'),
+                          onPressed: () => setState(() => _editing = 'writing'),
+                          icon: const LumenisIcon(Icons.edit_note_rounded),
+                          label: Text(switch (Localizations.localeOf(
+                            context,
+                          ).languageCode) {
+                            'zh' => '写文稿',
+                            'ko' => '문서 작성',
+                            _ => 'Write a document',
+                          }),
+                        ),
+                        OutlinedButton.icon(
+                          key: const Key('sh01-open-video-editor'),
+                          onPressed: () => setState(() => _editing = 'video'),
+                          icon: const LumenisIcon(
+                            Icons.video_collection_outlined,
+                          ),
+                          label: Text(
+                            context.lumenisL10n.text('sh01.media.open'),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          key: const Key('sh01-open-audio-editor'),
+                          onPressed: () => setState(() => _editing = 'audio'),
+                          icon: const LumenisIcon(
+                            Icons.multitrack_audio_rounded,
+                          ),
+                          label: Text(switch (Localizations.localeOf(
+                            context,
+                          ).languageCode) {
+                            'zh' => '编辑音频',
+                            'ko' => '오디오 편집',
+                            _ => 'Edit audio',
+                          }),
+                        ),
+                      ],
                     ),
                   ),
                 ),

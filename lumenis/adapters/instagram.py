@@ -28,6 +28,36 @@ from .cookie_vault import inject_into_context
 
 logger = logging.getLogger(__name__)
 
+_SAFE_IG_EXCEPTION_REASONS = frozenset({
+    "READONLY_WORKER_NOT_REGISTERED",
+    "READONLY_WORKER_NOT_CONFIGURED",
+    "READONLY_WORKER_PROFILE_UNAVAILABLE",
+    "READONLY_WORKER_BOUNDARY_INVALID",
+    "READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE",
+    "BROWSER_PROFILE_OWNER_UNAVAILABLE",
+    "BROWSER_WORKER_KERNEL_OR_IDENTITY_UNVERIFIED",
+    "BROWSER_WORKER_PROFILE_OR_MODE_UNAVAILABLE",
+    "PROTECTED_PROFILE_FORBIDDEN",
+    "INSTAGRAM_AUTH_REQUIRED",
+    "INSTAGRAM_CHALLENGE_REQUIRED",
+    "INSTAGRAM_RATE_LIMITED",
+    "INSTAGRAM_NETWORK_UNAVAILABLE",
+    "INSTAGRAM_WORKER_UNAVAILABLE",
+})
+
+
+def _safe_collection_error(exc: Exception) -> str:
+    """Return only an allowlisted reason code or a non-sensitive exception class."""
+    if isinstance(exc, RuntimeError):
+        args = exc.args
+        if len(args) == 1 and isinstance(args[0], str):
+            reason = args[0]
+            if reason in _SAFE_IG_EXCEPTION_REASONS:
+                return reason
+    name = type(exc).__name__
+    safe_name = name if name.isascii() and name.isidentifier() else "Exception"
+    return f"INSTAGRAM_COLLECT_ERROR:{safe_name}"
+
 
 class InstagramAdapter(BaseAdapter):
     """Instagram 精确关键词搜索适配器（注册只读 Worker + CDP DOM 主路径）"""
@@ -171,14 +201,7 @@ class InstagramAdapter(BaseAdapter):
             )
         except Exception as e:
             logger.error("Instagram search failed error_type=%s", type(e).__name__)
-            safe_worker_codes = {
-                "READONLY_WORKER_NOT_REGISTERED", "READONLY_WORKER_NOT_CONFIGURED",
-                "READONLY_WORKER_PROFILE_UNAVAILABLE", "READONLY_WORKER_BOUNDARY_INVALID",
-            }
-            code = str(e) if isinstance(e, RuntimeError) else ""
-            if code in safe_worker_codes:
-                return AdapterResult(success=False, error="INSTAGRAM_WORKER_UNAVAILABLE: registered read-only worker is unavailable")
-            return AdapterResult(success=False, error="INSTAGRAM_NETWORK_OR_PROVIDER_UNAVAILABLE")
+            return AdapterResult(success=False, error=_safe_collection_error(e))
 
     def _search_browser(self, keyword, max_results, proxy=None, *,
                         native_hashtag=None, native_topic_reference=None) -> AdapterResult:
@@ -710,7 +733,7 @@ class InstagramAdapter(BaseAdapter):
             return self._detail_browser(shortcode, "reel" if media_type == "reel" else "post")
         except Exception as e:
             logger.error("Instagram 详情采集异常 error_type=%s", type(e).__name__)
-            return AdapterResult(success=False, error="Instagram provider unavailable")
+            return AdapterResult(success=False, error=_safe_collection_error(e))
 
     def _detail_browser(self, shortcode, media_type, proxy=None) -> AdapterResult:
         kind = "reel" if media_type == "reel" else "p"
@@ -977,8 +1000,22 @@ class InstagramAdapter(BaseAdapter):
         try:
             return self._comments_browser(shortcode.strip(), max_comments)
         except Exception as e:
-            logger.exception("Instagram 评论采集异常")
-            return AdapterResult(success=False, error=f"Instagram 评论采集异常: {e}")
+            error_name = type(e).__name__
+            safe_name = (
+                error_name
+                if error_name.isascii() and error_name.isidentifier()
+                else "Exception"
+            )
+            logger.error(
+                "Instagram comments failed error_type=%s",
+                safe_name,
+                exc_info=(
+                    RuntimeError,
+                    RuntimeError(f"REDACTED_ORIGINAL_EXCEPTION:{safe_name}"),
+                    e.__traceback__,
+                ),
+            )
+            return AdapterResult(success=False, error=_safe_collection_error(e))
 
     def _comments_browser(self, shortcode, max_comments, proxy=None) -> AdapterResult:
         url = f"https://www.instagram.com/p/{shortcode}/"
@@ -1105,8 +1142,22 @@ class InstagramAdapter(BaseAdapter):
         try:
             return self._creator_browser(username.strip().lstrip("@"))
         except Exception as e:
-            logger.exception("Instagram 作者采集异常")
-            return AdapterResult(success=False, error=f"Instagram 作者采集异常: {e}")
+            error_name = type(e).__name__
+            safe_name = (
+                error_name
+                if error_name.isascii() and error_name.isidentifier()
+                else "Exception"
+            )
+            logger.error(
+                "Instagram creator failed error_type=%s",
+                safe_name,
+                exc_info=(
+                    RuntimeError,
+                    RuntimeError(f"REDACTED_ORIGINAL_EXCEPTION:{safe_name}"),
+                    e.__traceback__,
+                ),
+            )
+            return AdapterResult(success=False, error=_safe_collection_error(e))
 
     def _creator_browser(self, username, proxy=None) -> AdapterResult:
         url = f"https://www.instagram.com/{username}/"

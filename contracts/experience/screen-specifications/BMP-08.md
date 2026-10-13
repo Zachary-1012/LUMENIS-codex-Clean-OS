@@ -174,6 +174,24 @@ The older podcast read remains blocked wherever its real scope/lineage is absent
 
 ## Audio timeline panning completeness — 2026-10-03
 
+### 2026-10-11 audio entry continuation (LOCAL_ONLY; acceptance open)
+
+The BMP-08 audio entry reuses SH-01's existing media timeline with initial
+`outputKind=audio`; its BMP caller scope is explicit, and GLOBAL/ALL does not
+invent a BrandFocus. The entry remains reachable when the legacy brand/script
+read is unavailable. A saved project's returned output kind stays authoritative.
+Audio controls use audio-specific copy and hide inapplicable video presentation;
+conflicting video/overlay material is retained and explained rather than lost.
+Export still checks actual media streams, source rights and server state.
+
+Script and audio editors retain separate unsaved guards under the existing
+route guard. Returning to the script switches the visible area while preserving
+audio edits; the inactive editor stops media/read-aloud playback. A real route
+exit or context change protects both drafts. This does not make local script
+editing modify audio bytes. Actual import/playback/waveform/edit/export/version
+and recovery evidence remains required by the full outcome below; widget
+regressions are not that acceptance.
+
 Podcast/audio editing must satisfy Experience §37 through the existing shared Timeline owner. Horizontal panning, actual audio seek/playhead, segment selection, zoom anchor and long-episode endpoints must work without forcing page-level vertical travel or corrupting segment/source positions. Reopen/Return retains the appropriate viewing context. F owns the viewport, C4 owns actual audio behavior, C6 integration; an existing video scrollbar cannot alone accept podcast behavior.
 
 ## Complete podcast creation and editing — requirement update 2026-10-08

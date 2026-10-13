@@ -15,6 +15,8 @@ void main() {
         'status': 'failed',
         'execution_id': 'exec-9',
         'evidence_recorded': false,
+        'ai_is_derivative': true,
+        'note': '执行链已登记，但当前结果未完成。',
       },
     );
     addTearDown(server.close);
@@ -25,7 +27,11 @@ void main() {
     final result = await repository.submitIntent('检查本周风险变化');
 
     expect(result.status, 'failed');
+    expect(result.permissionStatus, 'granted');
     expect(result.executionId, 'exec-9');
+    expect(result.evidenceRecorded, isFalse);
+    expect(result.aiIsDerivative, isTrue);
+    expect(result.note, '执行链已登记，但当前结果未完成。');
     expect(server.requests, hasLength(1));
     final request = server.requests.single;
     expect(request.method, 'POST');

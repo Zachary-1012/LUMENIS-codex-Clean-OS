@@ -389,18 +389,331 @@ def test_cdp_search_propagates_session_expired_summary(monkeypatch, tmp_path):
     assert result['summary']['session_expired'] is True
 
 
-def test_system_xhs_adapter_preserves_session_expired_status():
-    from lumenis.system.collector.adapters.base import CollectionStatus
+def _system_xhs_adapter_failure_result(
+    error, *, notes=None, partial=True, search_diagnostics=None
+):
     from lumenis.system.collector.adapters.xhs import XiaohongshuAdapter
+
+    notes = notes or []
 
     class Backend:
         def search_xiaohongshu(self, *_args, **_kwargs):
-            return {'notes': [], 'total': 0, 'error': 'SESSION_EXPIRED',
-                    'summary': {'session_expired': True}, 'channel': 'authorized_browser_worker'}
+            result = {'notes': notes, 'total': len(notes), 'error': error, 'partial': partial,
+                      'channel': 'authorized_browser_worker'}
+            if search_diagnostics is not None:
+                result['search_diagnostics'] = search_diagnostics
+            return result
 
-    result = XiaohongshuAdapter(backend=Backend()).search('synthetic keyword')
+    return XiaohongshuAdapter(backend=Backend()).search('synthetic keyword')
+
+
+def test_system_xhs_adapter_preserves_session_expired_status():
+    from lumenis.system.collector.adapters.base import CollectionStatus
+
+    note = {'note_id': 'synthetic-note', 'desc': 'accepted body'}
+    result = _system_xhs_adapter_failure_result('SESSION_EXPIRED', notes=[note])
     assert result.status is CollectionStatus.SESSION_EXPIRED
     assert result.metadata['error_type'] == 'SESSION_EXPIRED'
+    assert result.message == '小红书登录会话失效或设备登录受限，请在获准的香港/国际账号上重新登录'
+    assert result.items == [note]
+    assert result.metadata['partial'] is True
+    assert result.metadata['detail'] == {'state': 'SESSION_EXPIRED', 'reason': 'SESSION_EXPIRED'}
+
+
+@pytest.mark.parametrize(('error', 'expected_status', 'reason', 'message'), [
+    ('CDP_TIME_BUDGET_PARTIAL', 'COLLECT_ERROR', 'CDP_TIME_BUDGET_PARTIAL',
+     '现有小红书采集链未能完成本次请求'),
+    ('IP_RISK_OR_300012', 'RISK_WARNING', 'IP_RISK_OR_300012', '平台返回风险信号，已停止采集'),
+])
+def test_system_xhs_adapter_preserves_safe_failure_detail(
+    error, expected_status, reason, message
+):
+    from lumenis.system.collector.adapters.base import CollectionStatus
+
+    note = {'note_id': 'synthetic-note', 'desc': 'accepted body'}
+    result = _system_xhs_adapter_failure_result(error, notes=[note])
+    assert result.status is getattr(CollectionStatus, expected_status)
+    assert result.metadata['error_type'] == expected_status
+    assert result.message == message
+    assert result.items == [note]
+    assert result.metadata['partial'] is True
+    assert result.metadata['detail'] == {'state': expected_status, 'reason': reason}
+
+
+@pytest.mark.parametrize(('error', 'reason'), [
+    ('upstream error Authorization: Bearer synthetic-secret-value', 'XHS_UPSTREAM_ERROR_UNKNOWN'),
+    ('CDP_EXCEPTION: Authorization=Bearer synthetic-secret-value', 'CDP_EXCEPTION'),
+])
+def test_system_xhs_adapter_failure_detail_does_not_expose_raw_error(error, reason):
+    from lumenis.system.collector.adapters.base import CollectionStatus
+
+    note = {'note_id': 'synthetic-note', 'desc': 'accepted body'}
+    result = _system_xhs_adapter_failure_result(error, notes=[note])
+    assert result.status is CollectionStatus.COLLECT_ERROR
+    assert result.metadata['error_type'] == 'COLLECT_ERROR'
+    assert result.items == [note]
+    assert result.metadata['partial'] is True
+    assert result.metadata['detail'] == {'state': 'COLLECT_ERROR', 'reason': reason}
+    assert 'synthetic-secret-value' not in repr(result.metadata)
+    assert error not in repr(result.metadata)
+
+
+def test_system_xhs_adapter_projects_safe_search_diagnostics_on_failure():
+    from lumenis.system.collector.adapters.base import CollectionStatus
+
+    note = {'note_id': 'synthetic-note', 'desc': 'accepted body'}
+    diagnostics = {
+        'version': 'xhs-search-state-v1',
+        'observations': [{
+            'phase': 'search_wait_failed',
+            'observed_at': '2026-10-11T13:44:47.484740+08:00',
+            'host_matches': True,
+            'route_is_search': True,
+            'query_matches': True,
+            'input_matches': False,
+            'query_encoding': 'percent_encoded_once',
+            'document_ready_state': 'complete',
+            'selector_counts': {
+                'section.note-item': 2,
+                'a.cover': 3,
+                '.feeds-container': 1,
+                'private-selector': 'untrusted',
+            },
+            'note_link_count': 2,
+            'body_character_count': 160,
+            'loading_element_count': 0,
+            'native_empty_indicators': ['No results found'],
+            'wait_error_type': 'TimeoutError',
+            'diagnostic_error_type': 'TypeError',
+            'query': 'synthetic-private-query',
+            'url': 'https://www.rednote.com/search_result/?keyword=private',
+            'cookie': 'synthetic-private-cookie',
+        }],
+    }
+
+    result = _system_xhs_adapter_failure_result(
+        'CDP_TIME_BUDGET_PARTIAL', notes=[note], search_diagnostics=diagnostics
+    )
+
+    assert result.status is CollectionStatus.COLLECT_ERROR
+    assert result.items == [note]
+    assert result.items[0]['desc'] == 'accepted body'
+    assert result.metadata['partial'] is True
+    assert result.metadata['detail'] == {
+        'state': 'COLLECT_ERROR',
+        'reason': 'CDP_TIME_BUDGET_PARTIAL',
+        'search_diagnostics': {
+            'version': 'xhs-search-state-v1',
+            'observations': [{
+                'phase': 'search_wait_failed',
+                'observed_at': '2026-10-11T13:44:47.484740+08:00',
+                'host_matches': True,
+                'route_is_search': True,
+                'query_matches': True,
+                'input_matches': False,
+                'query_encoding': 'percent_encoded_once',
+                'document_ready_state': 'complete',
+                'selector_counts': {
+                    'section.note-item': 2,
+                    'a.cover': 3,
+                    '.feeds-container': 1,
+                },
+                'note_link_count': 2,
+                'body_character_count': 160,
+                'loading_element_count': 0,
+                'native_empty_indicators': ['No results found'],
+                'wait_error_type': 'TimeoutError',
+                'diagnostic_error_type': 'TypeError',
+            }],
+        },
+    }
+    assert 'synthetic-private-query' not in repr(result.metadata)
+    assert 'www.rednote.com/search_result' not in repr(result.metadata)
+    assert 'synthetic-private-cookie' not in repr(result.metadata)
+    from lumenis.system.collector.adapters.secondary_collection import (
+        _credential_free_observations,
+    )
+
+    assert _credential_free_observations(result.metadata['detail']) == result.metadata['detail']
+
+
+def test_system_xhs_adapter_does_not_add_failure_detail_to_success():
+    from lumenis.system.collector.adapters.base import CollectionStatus
+
+    note = {'note_id': 'synthetic-note', 'desc': 'accepted body'}
+    diagnostics = {
+        'version': 'xhs-search-state-v1',
+        'observations': [{'phase': 'search_ready', 'host_matches': True}],
+    }
+    result = _system_xhs_adapter_failure_result(
+        '', notes=[note], search_diagnostics=diagnostics
+    )
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert result.items == [note]
+    assert 'detail' not in result.metadata
+    assert 'error_type' not in result.metadata
+    assert 'search_diagnostics' not in result.metadata
+
+
+def test_system_xhs_search_diagnostic_filters_secrets_and_invalid_types():
+    secret = 'synthetic-secret-value'
+    diagnostics = {
+        'version': 'xhs-search-state-v1',
+        'observations': [{
+            'phase': secret,
+            'observed_at': '2026-02-30T03:04:05+08:00',
+            'host_matches': 1,
+            'route_is_search': False,
+            'query_matches': 'true',
+            'input_matches': [],
+            'query_encoding': secret,
+            'document_ready_state': {'state': 'complete'},
+            'selector_counts': {
+                'section.note-item': -1,
+                'a.cover': True,
+                '.feeds-container': secret,
+                'private-selector': secret,
+            },
+            'note_link_count': True,
+            'body_character_count': -1,
+            'loading_element_count': 1_000_001,
+            'native_empty_indicators': [[], {}, secret, '暂无搜索结果'],
+            'wait_error_type': {'error': secret},
+            'diagnostic_error_type': f'PrivateError: {secret}',
+            'raw_query': secret,
+            'final_url': f'https://user:{secret}@private.example/{secret}',
+        }],
+    }
+
+    result = _system_xhs_adapter_failure_result(
+        'CDP_TIME_BUDGET_PARTIAL', search_diagnostics=diagnostics
+    )
+    observation = result.metadata['detail']['search_diagnostics']['observations'][0]
+
+    assert observation == {
+        'phase': None,
+        'observed_at': None,
+        'host_matches': None,
+        'route_is_search': False,
+        'query_matches': None,
+        'input_matches': None,
+        'query_encoding': None,
+        'document_ready_state': None,
+        'selector_counts': {
+            'section.note-item': None,
+            'a.cover': None,
+            '.feeds-container': None,
+        },
+        'note_link_count': None,
+        'body_character_count': None,
+        'loading_element_count': None,
+        'native_empty_indicators': ['暂无搜索结果'],
+        'wait_error_type': 'UNRECOGNIZED_ERROR_TYPE',
+        'diagnostic_error_type': 'UNRECOGNIZED_ERROR_TYPE',
+    }
+    assert secret not in repr(result.metadata)
+
+
+@pytest.mark.parametrize('diagnostics', [
+    'not-a-dictionary',
+    {'version': 'xhs-search-state-v2', 'observations': [{'phase': 'landing'}]},
+    {'version': 'xhs-search-state-v1', 'observations': 'not-a-list'},
+    {'version': 'xhs-search-state-v1', 'observations': [None]},
+])
+def test_system_xhs_adapter_ignores_unknown_or_malformed_search_diagnostics(diagnostics):
+    result = _system_xhs_adapter_failure_result(
+        'CDP_TIME_BUDGET_PARTIAL', search_diagnostics=diagnostics
+    )
+
+    assert result.metadata['detail'] == {
+        'state': 'COLLECT_ERROR',
+        'reason': 'CDP_TIME_BUDGET_PARTIAL',
+    }
+
+
+def test_system_xhs_search_diagnostic_timestamps_preserve_known_and_unknown_offsets():
+    diagnostics = {
+        'version': 'xhs-search-state-v1',
+        'observations': [
+            {'phase': 'landing', 'observed_at': '2026-10-11T13:44:47.484740+08:00'},
+            {'phase': 'search_ready', 'observed_at': '2026-10-11T13:44:47'},
+        ],
+    }
+
+    result = _system_xhs_adapter_failure_result(
+        'CDP_TIME_BUDGET_PARTIAL', search_diagnostics=diagnostics
+    )
+    observations = result.metadata['detail']['search_diagnostics']['observations']
+
+    assert observations[0]['observed_at'] == '2026-10-11T13:44:47.484740+08:00'
+    assert observations[1]['observed_at'] == '2026-10-11T13:44:47'
+
+
+def test_system_xhs_search_diagnostic_is_bounded_to_last_twelve_observations():
+    diagnostics = {
+        'version': 'xhs-search-state-v1',
+        'observations': [
+            {'phase': 'landing', 'host_matches': bool(index % 2)}
+            for index in range(14)
+        ],
+    }
+
+    result = _system_xhs_adapter_failure_result(
+        'CDP_TIME_BUDGET_PARTIAL', search_diagnostics=diagnostics
+    )
+    observations = result.metadata['detail']['search_diagnostics']['observations']
+
+    assert len(observations) == 12
+    assert [item['host_matches'] for item in observations] == [
+        bool(index % 2) for index in range(2, 14)
+    ]
+
+
+
+def test_system_xhs_adapter_preserves_observed_unverified_search_transition():
+    diagnostics = {
+        'version': 'xhs-search-state-v1',
+        'observations': [{
+            'phase': 'search_wait_failed',
+            'observed_at': '2026-10-11T21:44:34.919074+08:00',
+            'host_matches': True,
+            'route_is_search': False,
+            'query_matches': False,
+            'input_matches': False,
+            'query_encoding': 'unverified',
+            'document_ready_state': 'unknown',
+            'selector_counts': {'section.note-item': 8, 'a.cover': 8, '.feeds-container': 1},
+            'note_link_count': 0,
+            'body_character_count': 235,
+            'loading_element_count': 0,
+            'native_empty_indicators': [],
+            'wait_error_type': 'TimeoutError',
+        }],
+    }
+    result = _system_xhs_adapter_failure_result(
+        'SEARCH_TRANSITION_UNVERIFIED', search_diagnostics=diagnostics
+    )
+    assert result.status.value == 'COLLECT_ERROR'
+    assert result.metadata['detail']['reason'] == 'SEARCH_TRANSITION_UNVERIFIED'
+    assert result.metadata['detail']['search_diagnostics'] == diagnostics
+
+
+@pytest.mark.parametrize(('indicators', 'expected'), [
+    (None, None),
+    ({'private': 'not-observed'}, None),
+    (['not-a-native-empty-indicator'], None),
+    ([], []),
+])
+def test_system_xhs_search_diagnostic_keeps_unobserved_empty_state_unknown(indicators, expected):
+    result = _system_xhs_adapter_failure_result(
+        'SEARCH_TRANSITION_UNVERIFIED', search_diagnostics={
+            'version': 'xhs-search-state-v1',
+            'observations': [{'phase': 'search_wait_failed', 'native_empty_indicators': indicators}],
+        }
+    )
+    observation = result.metadata['detail']['search_diagnostics']['observations'][0]
+    assert observation['native_empty_indicators'] == expected
 
 
 def test_denied_identity_stops_before_new_page_creation():

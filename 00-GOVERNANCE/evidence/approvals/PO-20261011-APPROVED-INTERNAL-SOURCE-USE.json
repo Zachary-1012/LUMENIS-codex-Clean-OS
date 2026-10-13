@@ -1,0 +1,84 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "source_use_schema": "lumenis.approved-internal-source-use/v1",
+  "receipt_id": "PO-20261011-APPROVED-INTERNAL-SOURCE-USE",
+  "approval_id": "PO-20261011-APPROVED-INTERNAL-SOURCE-USE",
+  "approval_source_type": "direct_product_owner_instruction",
+  "approved_at": "2026-10-11",
+  "approved_by": "Product Owner",
+  "status": "APPROVED",
+  "approval_basis": "Product Owner directly approved internal use of exactly these two source records for CTH/BMP research and brief save, revision, reopen, and recovery in the active task.",
+  "approval_date": "2026-10-11",
+  "scope_manifest": {
+    "allowed": [
+      "derive immutable internal reference snapshots from the two exact existing Canonical/source-Evidence records",
+      "use short quotations from those exact source snapshots in the corresponding CTH or BMP internal brief",
+      "save, revise, reopen and recover those internal briefs with current source-use revalidation"
+    ],
+    "sources": [
+      "public-http:f23bf6b5247f75b692bfbe317ebb37af",
+      "2108916710510088619"
+    ],
+    "purpose_by_domain": {
+      "cth": "cth_brief",
+      "zbmp": "bmp_brief"
+    }
+  },
+  "constraints": [
+    "preserve the existing source, Evidence, Canonical content and rights records; add only a derivative immutable internal-reference Evidence snapshot",
+    "revalidate exact source identity, content hash, current scope and approved purpose/operation for every use",
+    "the existing rights states UNKNOWN and UNREVIEWED remain unchanged and are not licenses",
+    "no commercial use, publication, external effect, redistribution or training use",
+    "no general DATA_IMPORT, DATA_EXPORT, account, actor or scope permission; retain existing Permission and Effect Fence checks",
+    "each unique source contributes at most 160 Unicode code points of quotation per saved work under this receipt only"
+  ],
+  "sources": [
+    {
+      "source_id": "public-http:f23bf6b5247f75b692bfbe317ebb37af",
+      "source_url": "https://www.taikoohui.com/zh-CN",
+      "canonical_id": "can_note_public-http:f23bf6b5247f75b692bfbe317ebb37af",
+      "domain_id": "cth",
+      "subject_id": "SUBJ-89269ecd7273fb3c4b6d3fbe",
+      "brand_focus_id": null,
+      "scope_evidence_ref": "notes:109",
+      "content_evidence_ref": "notes:109",
+      "body_sha256": "14df1c3f1713dddfa3ab19f9daaa2af54570658dade44e77959b236f86d69ec6",
+      "rights_state": "UNKNOWN",
+      "snapshot_kind": "existing_canonical_content_snapshot_not_native_capture",
+      "allowed_purposes": ["internal_research", "short_quote", "cth_brief"],
+      "allowed_operations": ["derive_reference", "read", "save", "revise", "reopen"],
+      "commercial_state": "UNKNOWN",
+      "publication_state": "NOT_APPROVED",
+      "training_state": "NOT_APPROVED"
+    },
+    {
+      "source_id": "2108916710510088619",
+      "source_url": "https://x.com/nikestore/status/2108916710510088619",
+      "canonical_id": "can_note_2108916710510088619",
+      "domain_id": "zbmp",
+      "subject_id": null,
+      "brand_focus_id": "BRAND-8b9f5ffaeea603d31bf0d7e8",
+      "scope_evidence_ref": "app_evidence_records:7915",
+      "content_evidence_ref": "app_evidence_records:7916",
+      "body_sha256": "208f0de7dae51afaed9c66adbbad583c2a81d723af6902ac39f0a44c42779a08",
+      "rights_state": "UNREVIEWED",
+      "snapshot_kind": "existing_source_evidence_snapshot",
+      "allowed_purposes": ["internal_research", "short_quote", "bmp_brief"],
+      "allowed_operations": ["derive_reference", "read", "save", "revise", "reopen"],
+      "commercial_state": "UNKNOWN",
+      "publication_state": "NOT_APPROVED",
+      "training_state": "NOT_APPROVED"
+    }
+  ],
+  "quote_limit": {
+    "max_unique_unicode_codepoints_per_source_per_saved_work": 160,
+    "measurement": "unicode-codepoints",
+    "scope": "This receipt only; not a general LUMENIS rights or citation policy."
+  },
+  "explicit_non_grants": [
+    "No legal license or ownership rights are asserted or upgraded.",
+    "No commercial use, publication, external effect, redistribution, or training use is approved.",
+    "No general DATA_IMPORT, DATA_EXPORT, account, actor, or scope permission is granted.",
+    "Existing source, Evidence, Canonical content and rights records remain unchanged; derivative internal-reference snapshots are separately identified."
+  ]
+}

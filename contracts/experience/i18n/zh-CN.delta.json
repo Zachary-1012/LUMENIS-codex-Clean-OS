@@ -842,7 +842,7 @@
   "shared.read_aloud.purpose.sourceBrief": "研究稿朗读预览；使用本机语音，不会生成或保存音频。",
   "shared.read_aloud.purpose.podcastScript": "播客脚本朗读仅用于预听，不是最终播客音频。",
   "shared.read_aloud.purpose.videoCaption": "视频字幕朗读仅用于预听，不是视频配音。",
-  "shared.read_aloud.purpose.savedPreview": "已保存成果文本预览，不会修改或重新生成成果。",
+  "shared.read_aloud.purpose.savedPreview": "当前可见文本朗读预览；使用本机语音，不会生成或保存音频。",
   "shell.connecting": "正在连接",
   "shell.offline": "服务未连接",
   "shell.auth_unavailable": "连接授权已失效",

@@ -55,6 +55,7 @@ The table records direct manifest entries, not every transitive dependency.
 | beautifulsoup4 | PRODUCTION | HTML parsing | Acquisition/parser adapter | VERIFY_BEFORE_RELEASE | Yes |
 | lxml | PRODUCTION | XML/HTML parsing | Parser adapter | VERIFY_BEFORE_RELEASE | Yes |
 | python-docx | PRODUCTION | DOCX generation | Report/export adapter | VERIFY_BEFORE_RELEASE | Yes |
+| [python-pptx](https://pypi.org/project/python-pptx/1.0.2/) 1.0.2 | PRODUCTION | Editable SavedWork PPTX export | Existing Shared ReportExporter; no PowerPoint/OS executor or new Artifact owner | MIT; full wheel notice retained in THIRD_PARTY_NOTICES.md. Existing Pillow/lxml/XlsxWriter/typing-extensions reused; packaged dependency graph/notices still require release reconciliation | Yes |
 | reportlab | PRODUCTION | PDF/report generation | Report/export adapter | VERIFY_BEFORE_RELEASE | Yes |
 | playwright | PRODUCTION | Browser automation | Browser/Collector adapter boundary | VERIFY_BEFORE_RELEASE | Yes, high-cost |
 | cryptography | PRODUCTION SECURITY ADAPTER | Ed25519 training-phase verification; pinned in requirements.txt | Existing SYSTEM Security; evidence and packaging details in the bounded training signature adapter section below | VERIFY_BEFORE_RELEASE | Yes |
@@ -159,6 +160,7 @@ released package version.
 | cupertino_icons | 1.0.9 | PRODUCTION ASSET | Cupertino icon font required by Flutter mobile/Web builds | Experience icon asset only | MIT (pub.dev publisher metadata; notice reconciliation still required) | Yes |
 | go_router | 18.0.1 | PRODUCTION | Declarative workspace URL and browser-history synchronization | Presentation routing only | VERIFY_BEFORE_RELEASE | Yes, medium-cost |
 | http | 1.6.0 | PRODUCTION | Browser-safe Product Core HTTP transport | `app/lib/core/transport` adapter | VERIFY_BEFORE_RELEASE | Yes |
+| [crypto](https://pub.dev/packages/crypto/versions/3.0.7) | 3.0.7 | PRODUCTION | Verify downloaded SavedWork export bytes against the server's `X-Content-SHA256` | Existing Product Core client download boundary; no Permission, signature or business-truth ownership | BSD-3-Clause ([versioned original license](https://github.com/dart-lang/core/blob/crypto-v3.0.7/pkgs/crypto/LICENSE)); installed package notice inspected 2026-10-11 | Yes |
 | [file_selector](https://github.com/flutter/packages/tree/main/packages/file_selector/file_selector) | 1.1.0 | PRODUCTION | Local wallpaper image picker in SYS-05 | `sys05_appearance_editor.dart`; user-selected bytes only | BSD-3-Clause (installed package `LICENSE`) | Yes |
 | [shared_preferences](https://github.com/flutter/packages/tree/main/packages/shared_preferences/shared_preferences) | 2.5.5 | PRODUCTION | Device-local SYS-05 appearance and wallpaper preference persistence | `Sys05AppearanceController` via `SharedPreferencesAsync`; no server or business-data ownership | BSD-3-Clause (installed package `LICENSE`) | Yes |
 | [flutter_acrylic](https://github.com/alexmercerind/flutter_acrylic) | 1.1.4 | PRODUCTION | Windows acrylic host-window material adapter | `lumenis_window_material_io.dart`; Windows native appearance only | MIT (installed package `LICENSE`) | Yes |
@@ -172,6 +174,16 @@ and `LICENSE` under the local Pub cache. The Flutter Authors packages use the
 three-clause BSD license text; `flutter_acrylic` and `macos_window_utils`
 include MIT license text. This records local package evidence only and does not
 replace shipped-artifact notice reconciliation at release.
+
+The 2026-10-11 SH-04 download-integrity repair uses the existing installed
+`crypto` 3.0.7 package as a direct dependency. Its locked package digest is
+`c8ea0233063ba03258fbcf2ca4d6dadfefe14f02fab57702265467a19f27fadf`.
+The official version metadata and installed `pubspec.yaml`/`LICENSE` agree on
+the Dart project authors and BSD-3-Clause terms. Preserve the complete original
+copyright, conditions and disclaimer when distributing the package; this source
+record does not verify the generated application license bundle. A matching
+digest checks returned bytes; it is not an independent authenticity signature
+or a grant to read/export the associated source.
 
 ### 2026-10-05 media preview dependency decision
 

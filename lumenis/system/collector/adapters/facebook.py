@@ -37,6 +37,11 @@ class FacebookAdapter(BasePlatformAdapter):
     def _v4_status_to_main(success: bool, notes: list, error: str) -> CollectionStatus:
         if success:
             return CollectionStatus.SUCCESS if notes else CollectionStatus.NO_NEW_DATA
+        if error in (
+            "PROVIDER_UNAVAILABLE: SEARCH_CARDS_NOT_OBSERVED",
+            "PROVIDER_UNAVAILABLE: SEARCH_CARDS_WITHOUT_POST_OBSERVATIONS",
+        ):
+            return CollectionStatus.COLLECT_ERROR
         err_lower = (error or "").lower()
         if any(k in err_lower for k in ("登录", "login", "cookie", "session", "失效", "未登录")):
             return CollectionStatus.SESSION_EXPIRED
@@ -95,6 +100,11 @@ class FacebookAdapter(BasePlatformAdapter):
     @staticmethod
     def _detail_failure_state(error: Any) -> str:
         text = error if isinstance(error, str) else ""
+        if text in (
+            "PROVIDER_UNAVAILABLE: SEARCH_CARDS_NOT_OBSERVED",
+            "PROVIDER_UNAVAILABLE: SEARCH_CARDS_WITHOUT_POST_OBSERVATIONS",
+        ):
+            return "SEARCH_FAILED"
         lower = text.casefold()
         if any(marker in lower for marker in ("identity_mismatch", "invalid_post_permalink")):
             return "IDENTITY_MISMATCH"
@@ -109,6 +119,34 @@ class FacebookAdapter(BasePlatformAdapter):
         if any(marker in lower for marker in ("detail_not_returned", "target_article_not_observed")):
             return "DETAIL_NOT_RETURNED"
         return "DETAIL_FAILED"
+
+    @classmethod
+    def _safe_failure_observation(cls, error: Any) -> dict:
+        """Retain known backend failure codes without copying raw error text."""
+        reason = error.partition(":")[2].strip() if isinstance(error, str) else ""
+        allowed_reasons = {
+            "TIMEOUT", "WORKER_DISCONNECTED", "INVALID_FINAL_URL", "FOREIGN_FINAL_URL",
+            "VERIFICATION_REQUIRED", "LOGIN_REQUIRED", "CONTENT_UNAVAILABLE", "BROWSER_ERROR",
+            "INVALID_POST_PERMALINK", "FINAL_URL_POST_ID_MISMATCH",
+            "TARGET_ARTICLE_PRE_READ_ID_MISMATCH", "TARGET_ARTICLE_POST_READ_ID_MISMATCH",
+            "TARGET_ARTICLE_NOT_OBSERVED",
+            "SEARCH_CARDS_NOT_OBSERVED", "SEARCH_CARDS_WITHOUT_POST_OBSERVATIONS",
+        }
+        return {"state": cls._detail_failure_state(error),
+                "reason": reason if reason in allowed_reasons else None}
+
+    @staticmethod
+    def _has_verified_native_detail_body(item: dict | None) -> bool:
+        if not isinstance(item, dict):
+            return False
+        raw = item.get("raw") if isinstance(item.get("raw"), dict) else {}
+        body = item.get("content")
+        return bool(
+            raw.get("detail_post_id_status") == "OBSERVED_AND_MATCHED"
+            and raw.get("body_kind") == "NATIVE_POST_BODY"
+            and raw.get("body_status") == "OBSERVED_COMPLETENESS_UNKNOWN"
+            and isinstance(body, str) and body.strip()
+        )
 
     @staticmethod
     def _begin_detail_observation(item: dict, native_id: str | None) -> dict:
@@ -147,6 +185,14 @@ class FacebookAdapter(BasePlatformAdapter):
         succeeded = detail_item is not None
         body = detail_item.get("content") if succeeded else None
         body = body if isinstance(body, str) else None
+        source_body_kind = detail_raw.get("body_kind") if succeeded else None
+        native_body_observed = bool(
+            succeeded and source_body_kind == "NATIVE_POST_BODY"
+            and isinstance(body, str) and body.strip()
+            and detail_raw.get("body_status") == "OBSERVED_COMPLETENESS_UNKNOWN"
+            and detail_raw.get("detail_post_id_status") == "OBSERVED_AND_MATCHED"
+        )
+        observed_body = body if native_body_observed else None
         native_time = detail_item.get("publish_datetime") if succeeded else None
         native_time = native_time if isinstance(native_time, str) and native_time else None
         metrics = ({name: detail_item.get(name) for name in ("likes", "comments", "collects", "shares")}
@@ -159,11 +205,16 @@ class FacebookAdapter(BasePlatformAdapter):
             "stop_reason": stop_reason or (status if status in {
                 "SESSION_EXPIRED", "RISK_WARNING", "BLOCKED", "PROVIDER_UNAVAILABLE", "IDENTITY_MISMATCH"
             } else None),
-            "body_kind": "NATIVE_POST_BODY" if succeeded and body else None,
-            "body": body,
-            "body_status": ("OBSERVED_COMPLETENESS_UNKNOWN" if body else "NOT_OBSERVED") if succeeded else (
+            "body_kind": "NATIVE_POST_BODY" if native_body_observed else None,
+            "observed_body_kind": source_body_kind,
+            "body": observed_body,
+            "preview_text": body if succeeded and source_body_kind == "SEARCH_PREVIEW" and body else None,
+            "body_status": detail_raw.get("body_status") if succeeded else (
                 "PENDING" if status == "PENDING" else "DETAIL_NOT_OBSERVED"),
             "body_locator": detail_raw.get("body_locator") if succeeded else None,
+            "body_expansion": detail_raw.get("body_expansion") if succeeded else None,
+            "body_completeness": detail_raw.get("body_completeness", "UNKNOWN") if native_body_observed else (
+                "NOT_OBSERVED" if succeeded else None),
             "source_url": detail_item.get("url") if succeeded else None,
             "native_post_id": detail_raw.get("post_id") if succeeded else None,
             "native_post_id_locator": detail_raw.get("post_id_locator") if succeeded else None,
@@ -189,8 +240,8 @@ class FacebookAdapter(BasePlatformAdapter):
             item["title"] = ""
             item["content"] = ""
             return
-        item["title"] = detail_item.get("title") if isinstance(detail_item.get("title"), str) else ""
-        item["content"] = body or ""
+        item["title"] = detail_item.get("title") if native_body_observed and isinstance(detail_item.get("title"), str) else ""
+        item["content"] = observed_body or ""
         item["publish_datetime"] = native_time or ""
         item["url"] = detail_item.get("url") or item.get("url") or ""
         for field in ("likes", "comments", "collects", "shares"):
@@ -215,6 +266,8 @@ class FacebookAdapter(BasePlatformAdapter):
                              "not_attempted_no_native_id": 0, "reused_same_native_id": 0}
             detail_stop_reason = None
             detail_cache: dict[str, dict] = {}
+            detail_failure_outcomes = []
+            search_failure = self._safe_failure_observation(result.error) if not result.success else None
             if not result.success:
                 detail_stop_reason = self._detail_failure_state(result.error)
                 if detail_stop_reason == "DETAIL_FAILED":
@@ -243,10 +296,12 @@ class FacebookAdapter(BasePlatformAdapter):
                     continue
 
                 detail_counts["attempted"] += 1
+                detail_exception_type = None
                 try:
                     detail_result = backend.detail(item.get("url", ""))
                 except Exception as exc:
                     logger.error("Facebook 逐帖详情失败 error_type=%s", type(exc).__name__)
+                    detail_exception_type = type(exc).__name__
                     detail_result = None
                 detail_candidates = self._v4_notes_to_items(detail_result.notes or []) if detail_result else []
                 matching_detail = None
@@ -259,9 +314,13 @@ class FacebookAdapter(BasePlatformAdapter):
                         break
 
                 if detail_result and detail_result.success and matching_detail is not None:
-                    detail_cache[native_id] = matching_detail
-                    self._record_detail_outcome(item, "SUCCESS", matching_detail)
-                    detail_counts["succeeded"] += 1
+                    if self._has_verified_native_detail_body(matching_detail):
+                        detail_cache[native_id] = matching_detail
+                        self._record_detail_outcome(item, "SUCCESS", matching_detail)
+                        detail_counts["succeeded"] += 1
+                    else:
+                        self._record_detail_outcome(item, "DETAIL_NOT_RETURNED", matching_detail)
+                        detail_counts["failed"] += 1
                     continue
 
                 if detail_candidates and matching_detail is None:
@@ -274,6 +333,9 @@ class FacebookAdapter(BasePlatformAdapter):
                     failure_state = self._detail_failure_state(detail_result.error)
                 self._record_detail_outcome(item, failure_state)
                 detail_counts["failed"] += 1
+                observed_failure = self._safe_failure_observation(detail_result.error) if detail_result else {}
+                detail_failure_outcomes.append({**observed_failure, "native_post_id": native_id,
+                    "state": failure_state, "error_type": detail_exception_type})
                 if failure_state in {
                     "SESSION_EXPIRED", "RISK_WARNING", "BLOCKED", "PROVIDER_UNAVAILABLE", "IDENTITY_MISMATCH"
                 }:
@@ -289,8 +351,10 @@ class FacebookAdapter(BasePlatformAdapter):
             detail_metadata = {
                 **detail_counts,
                 "stop_reason": detail_stop_reason,
-                "body_completeness": "NO_RESULTS" if not items else (
-                    "COMPLETE" if not detail_incomplete else "PARTIAL"
+                "search_failure": search_failure,
+                "failure_outcomes": detail_failure_outcomes,
+                "body_completeness": ("NO_RESULTS" if result.success else "NOT_OBSERVED") if not items else (
+                    "PARTIAL" if detail_incomplete else "UNKNOWN"
                 ),
                 "media_semantics": "URL_HINTS_ONLY_NO_BYTES_OR_ARTIFACT",
             }

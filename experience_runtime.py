@@ -2044,7 +2044,44 @@ def _source_brief_job_error(exc):
 
 
 
+def _shared_saved_work_route_allowed():
+    routes = {
+        "experience_runtime.save_shared_work": (
+            "/api/experience/saved-work", "POST", r"/api/experience/saved-work"),
+        "experience_runtime.revise_shared_work": (
+            "/api/experience/saved-work/<artifact_id>/revise", "POST",
+            r"/api/experience/saved-work/ART-[0-9a-f]{16}/revise"),
+        "experience_runtime.search_shared_work": (
+            "/api/experience/saved-work", "GET", r"/api/experience/saved-work"),
+        "experience_runtime.read_shared_work": (
+            "/api/experience/saved-work/<artifact_id>", "GET",
+            r"/api/experience/saved-work/ART-[0-9a-f]{16}"),
+        "experience_runtime.export_shared_work": (
+            "/api/experience/saved-work/<artifact_id>/export", "GET",
+            r"/api/experience/saved-work/ART-[0-9a-f]{16}/export"),
+    }
+    expected = routes.get(request.endpoint)
+    return (expected is not None and request.url_rule is not None
+            and request.url_rule.rule == expected[0] and request.method == expected[1]
+            and re.fullmatch(expected[2], request.path) is not None)
+
+
 def _shared_work_actor_scope(action):
+    if "X-Lumenis-Workspace-Scope" in request.headers:
+        if not _shared_saved_work_route_allowed():
+            raise ValueError("SHARED_WORKSPACE_SCOPE_NOT_SUPPORTED")
+        from lumenis_app_api import _parse_shared_workspace_scope_header
+        from lumenis.auth.service import get_current_user
+        from lumenis.shared.reporting.saved_work import authorize_saved_work
+        from lumenis.system.security.permission import resolve_local_workspace_principal
+        scope = _parse_shared_workspace_scope_header()
+        actor = resolve_local_workspace_principal(module="reports", action=action)
+        if actor is None:
+            actor = get_current_user(read_only=True)
+        if actor is None:
+            raise PermissionError("AUTH_REQUIRED")
+        authorize_saved_work(actor, scope, action=action)
+        return actor, scope
     from lumenis.shared.reporting.saved_work import authorize
     actor_ref, _audit, material, actor = _source_brief_context(action, include_actor=True)
     scope = {"domain_id": "cth" if material["product_id"] == "CTH" else "zbmp",
@@ -2070,6 +2107,8 @@ def _shared_work_response(call):
             code = "SHARED_WORK_UNAVAILABLE"
         if code == "AUTH_REQUIRED":
             status = 401
+        elif code.endswith("_UNAVAILABLE"):
+            status = 503
         elif isinstance(exc, PermissionError) or any(term in code for term in ("PERMISSION", "RIGHTS", "NOT_AUTHORIZED", "SCOPE_DENIED")):
             status = 403
         elif isinstance(exc, LookupError) or code in {"WORK_NOT_FOUND", "WORK_EVIDENCE_MISSING"}:
@@ -2091,6 +2130,9 @@ def _shared_work_response(call):
 def _shared_work_local_access_allowed():
     from lumenis.system.security.permission import resolve_local_workspace_principal
     endpoints = {"experience_runtime.import_shared_document": "POST",
+                 "experience_runtime.import_approved_source_reference": "POST",
+                 "experience_runtime.prepare_approved_source_reference_request": "POST",
+                 "experience_runtime.confirm_approved_source_reference_request": "POST",
                  "experience_runtime.read_shared_document": "GET",
                  "experience_runtime.download_shared_document": "GET",
                  "experience_runtime.quote_shared_document": "GET",
@@ -2103,6 +2145,9 @@ def _shared_work_local_access_allowed():
                  "experience_runtime.read_reporting_notifications": "GET",
                  "experience_runtime.revise_shared_work": "POST"}
     if endpoints.get(request.endpoint) != request.method:
+        return False
+    if ("X-Lumenis-Workspace-Scope" in request.headers
+            and not _shared_saved_work_route_allowed()):
         return False
     action = "read" if request.method == "GET" or request.endpoint == "experience_runtime.quote_shared_document" else "write"
     if resolve_local_workspace_principal(module="reports", action=action) is None:
@@ -2165,6 +2210,101 @@ def import_shared_document():
     return _shared_work_response(execute)
 
 
+@experience_bp.post("/api/experience/materials/source-references")
+def import_approved_source_reference():
+    """Admit one PO-approved exact existing Canonical source snapshot."""
+    def execute():
+        from lumenis.importer.documents import (
+            create_approved_source_reference, prepare_approved_source_reference,
+        )
+        from lumenis.system.security.permission import (
+            check_approved_source_reference_import,
+            prepare_approved_source_reference_confirmation,
+        )
+
+        actor, scope, body = _approved_source_reference_request()
+        prepared = prepare_approved_source_reference(actor=actor, scope=scope, **body)
+        decision = check_approved_source_reference_import(actor=actor, scope=scope, prepared=prepared)
+        if decision.allowed is not True:
+            if decision.requires_approval is not True:
+                raise PermissionError("SOURCE_REFERENCE_IMPORT_DENIED")
+            confirmation = prepare_approved_source_reference_confirmation(
+                actor=actor, scope=scope, request=body,
+            )
+            _source_reference_confirmation_result(confirmation)
+            response = jsonify({"ok": False, "code": "SOURCE_REFERENCE_APPROVAL_REQUIRED",
+                                "requires_approval": True, "confirmation": confirmation,
+                                "publish_status": "not_performed"})
+            response.headers["Cache-Control"] = "no-store"
+            return response, 403
+        return create_approved_source_reference(actor=actor, scope=scope, **body)
+    return _shared_work_response(execute)
+
+
+def _approved_source_reference_request():
+    """Resolve the actual principal and exact input before preparing approval."""
+    from lumenis_app_api import _internal_pitch_body
+
+    if not _content_source_same_origin():
+        raise PermissionError("SOURCE_REFERENCE_ORIGIN_DENIED")
+    body = _internal_pitch_body()
+    if set(body) != {"source_id", "canonical_id", "expected_body_sha256", "request_id"}:
+        raise ValueError("SOURCE_USE_REQUEST_INVALID")
+    actor, scope = _shared_work_actor_scope("write")
+    return actor, scope, body
+
+
+def _source_reference_confirmation_result(result, *, allow_cancel=False):
+    """Keep the Permission owner's denial and cancellation states in normal responses."""
+    import re
+
+    if not isinstance(result, dict):
+        raise RuntimeError("SOURCE_REFERENCE_CONFIRMATION_UNAVAILABLE")
+    if result.get("allowed") is True:
+        return result
+    code = result.get("code")
+    if (allow_cancel and code == "APPROVED_SOURCE_REFERENCE_CONFIRMATION_CANCELLED"
+            and result.get("state") == "cancelled"):
+        return result
+    if not isinstance(code, str) or re.fullmatch(r"[A-Z_0-9]{1,100}", code) is None:
+        code = "SOURCE_REFERENCE_CONFIRMATION_UNAVAILABLE"
+    if result.get("verification_state") == "unavailable":
+        raise RuntimeError(code)
+    raise PermissionError(code)
+
+
+@experience_bp.post("/api/experience/materials/source-references/prepare")
+def prepare_approved_source_reference_request():
+    """Prepare an exact source review without admitting the import effect."""
+    def execute():
+        from lumenis.system.security.permission import prepare_approved_source_reference_confirmation
+
+        actor, scope, body = _approved_source_reference_request()
+        result = prepare_approved_source_reference_confirmation(actor=actor, scope=scope, request=body)
+        return _source_reference_confirmation_result(result)
+    return _shared_work_response(execute)
+
+
+@experience_bp.post("/api/experience/materials/source-references/confirmations/<confirmation_id>")
+def confirm_approved_source_reference_request(confirmation_id):
+    """Confirm or cancel one current, principal-bound source import review."""
+    def execute():
+        from lumenis_app_api import _internal_pitch_body
+        from lumenis.system.security.permission import confirm_approved_source_reference_confirmation
+
+        if not _content_source_same_origin():
+            raise PermissionError("SOURCE_REFERENCE_ORIGIN_DENIED")
+        body = _internal_pitch_body()
+        if set(body) != {"confirmed"} or type(body["confirmed"]) is not bool:
+            raise ValueError("SOURCE_REFERENCE_CONFIRMATION_INVALID")
+        actor, scope = _shared_work_actor_scope("write")
+        result = confirm_approved_source_reference_confirmation(
+            actor=actor, scope=scope, confirmation_id=confirmation_id, confirmed=body["confirmed"],
+        )
+        return _source_reference_confirmation_result(result, allow_cancel=body["confirmed"] is False)
+    return _shared_work_response(execute)
+
+
 @experience_bp.get("/api/experience/materials/documents/<int:evidence_id>")
 def read_shared_document(evidence_id):
     def execute():
@@ -2187,7 +2327,9 @@ def download_shared_document(evidence_id):
         if request.args:
             raise ValueError("DOCUMENT_REQUEST_INVALID")
         actor, scope = _shared_work_actor_scope("read")
-        result = reopen_imported_source(evidence_id, actor=actor, scope=scope)
+        result = reopen_imported_source(
+            evidence_id, actor=actor, scope=scope, _source_use_operation="export",
+        )
         response = send_file(io.BytesIO(result["content"]), as_attachment=True,
                              download_name=result["filename"], max_age=0)
         response.headers["Cache-Control"] = "no-store"

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Risk 双域策略测试（ZBC V2.0）
 ==============================
@@ -14,14 +13,19 @@ Risk 双域策略测试（ZBC V2.0）
 """
 import os
 import sys
+
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from risk_engine import (
-    CTH_RISK_POLICY, ZBMP_RISK_POLICY, DOMAIN_RISK_POLICIES,
-    get_risk_policy, compute_domain_risk_score, compare_domain_risk,
-    get_risk_policy_summary, evaluate_risk,
+    CTH_RISK_POLICY,
+    ZBMP_RISK_POLICY,
+    compare_domain_risk,
+    compute_domain_risk_score,
+    evaluate_risk,
+    get_risk_policy,
+    get_risk_policy_summary,
 )
 
 
@@ -29,10 +33,14 @@ from risk_engine import (
 def isolated_domain_context():
     """Keep policy-selection tests independent of stale request/job context."""
     from domain_isolation import (
-        clear_domain_context, get_domain_context, set_domain_context,
+        clear_domain_context,
+        get_domain_context,
+        set_domain_context,
     )
     from subject_context import (
-        clear_thread_context, get_thread_context, set_thread_context,
+        clear_thread_context,
+        get_thread_context,
+        set_thread_context,
     )
 
     prior_domain = get_domain_context()
@@ -132,7 +140,11 @@ class TestGetRiskPolicy:
     def test_default_without_context_is_unselected_and_does_not_leak(
         self, isolated_domain_context,
     ):
-        from domain_isolation import DomainContext, clear_domain_context, set_domain_context
+        from domain_isolation import (
+            DomainContext,
+            clear_domain_context,
+            set_domain_context,
+        )
 
         with pytest.raises(ValueError, match="DOMAIN_NOT_SELECTED"):
             get_risk_policy(None)
@@ -173,7 +185,50 @@ class TestComputeDomainRiskScore:
         result = compute_domain_risk_score(text="", sentiment="unknown", domain_id="cth")
         assert result["risk_level"] == "unknown"
         assert result["data_available"] is False
-        assert result["risk_score"] == 0.0
+        assert result["risk_score"] is None
+
+    def test_negative_posts_do_not_establish_distinct_koc_count(self):
+        result = compute_domain_risk_score(
+            text="已记录三条负面内容", sentiment="negative",
+            negative_count=3, domain_id="cth",
+        )
+        assert result["risk_level"] == "low"
+        assert not any(
+            rule["condition"] == "koc_count >= 3"
+            for rule in result["escalation_triggered"]
+        )
+        assert any(
+            rule["condition"] == "koc_count >= 3"
+            for rule in result["escalation_unavailable"]
+        )
+
+    @pytest.mark.parametrize("koc_count,expected_level", [(0, "low"), (2, "low"), (3, "high")])
+    def test_koc_escalation_requires_actual_distinct_count(self, koc_count, expected_level):
+        result = compute_domain_risk_score(
+            text="正常记录", domain_id="cth", koc_count=koc_count,
+        )
+        assert result["risk_level"] == expected_level
+        assert not any(
+            rule["condition"] == "koc_count >= 3"
+            for rule in result["escalation_unavailable"]
+        )
+
+    def test_koc_count_can_establish_available_input(self):
+        result = compute_domain_risk_score(domain_id="cth", koc_count=3)
+        assert result["data_available"] is True
+        assert result["risk_level"] == "high"
+
+    @pytest.mark.parametrize("koc_count", [-1, 1.5, True, "3"])
+    def test_invalid_koc_count_is_rejected(self, koc_count):
+        with pytest.raises(ValueError, match="KOC_COUNT_INVALID"):
+            compute_domain_risk_score(text="test", domain_id="cth", koc_count=koc_count)
+
+    def test_unimplemented_competitor_spike_is_not_reported_as_evaluated(self):
+        result = compute_domain_risk_score(text="正常记录", domain_id="bmp")
+        assert any(
+            rule["condition"] == "competitor_mention_spike > 2x"
+            for rule in result["escalation_unavailable"]
+        )
 
     def test_zero_engagement_safe(self):
         """0 互动量安全处理，不崩溃。"""
@@ -227,6 +282,18 @@ class TestCompareDomainRisk:
         assert "zbmp" in comparison
         assert comparison["cth"]["domain_id"] == "cth"
         assert comparison["zbmp"]["domain_id"] == "zbmp"
+
+    def test_no_data_preserves_unknown_score_in_both_domains(self):
+        comparison = compare_domain_risk()
+        assert comparison["cth"]["risk_score"] is None
+        assert comparison["zbmp"]["risk_score"] is None
+        assert comparison["score_diff"] is None
+        assert comparison["thresholds_independent"] is True
+
+    def test_comparison_forwards_actual_koc_count(self):
+        comparison = compare_domain_risk(text="正常记录", koc_count=3)
+        assert comparison["cth"]["risk_level"] == "high"
+        assert comparison["zbmp"]["risk_level"] == "low"
 
     def test_thresholds_independent_in_comparison(self):
         comparison = compare_domain_risk(text="test", sentiment="neutral")

@@ -51,9 +51,14 @@ from .state_machine import AgentState, AgentStateMachine, StateTransitionError
 from .observation import ObservationLayer, Observation
 from .planner import Plan, PlanStep, Planner, PlanMode
 from .replanner import Replanner, ReplanDecision
-from lumenis.shared.evaluation.trajectory import TrajectoryEvaluator, TrajectoryMetrics, TrajectoryEvaluation
+from lumenis.shared.evaluation import trajectory as _trajectory
 from .durable_adapter import DurableExecutionAdapter, _sanitize_checkpoint_value
 from agent_capability.formation import FormationError
+
+# Retain the existing public class bindings without restricting star imports.
+TrajectoryEvaluation = _trajectory.TrajectoryEvaluation
+TrajectoryEvaluator = _trajectory.TrajectoryEvaluator
+TrajectoryMetrics = _trajectory.TrajectoryMetrics
 
 
 @dataclass
@@ -117,6 +122,8 @@ class AgentLoop:
         ai_chat_func: Optional[Callable] = None,
         permission_gate: Optional[Any] = None,
         tool_binding: Optional[Any] = None,
+        *,
+        owned_request_factory: Callable | None = None,
     ):
         """
         Args:
@@ -130,10 +137,17 @@ class AgentLoop:
                            未绑定则返回真实 unavailable，不执行或模拟成功
             ai_chat_func: AI 调用函数（用于 planner）
             permission_gate: 权限门实例（None 则延迟获取）
+            owned_request_factory: Server-owned typed Gateway request assembly.
+                                   Never supplied by task context or model output.
         """
         self.config = config or AgentConfig()
+        if owned_request_factory is not None and (planner is not None or ai_chat_func is not None):
+            raise ValueError("owned_request_factory requires the default owned planner")
         self._ai_chat_func = ai_chat_func
-        self._planner = planner or Planner(ai_chat_func=ai_chat_func)
+        self._planner = planner or Planner(
+            ai_chat_func=ai_chat_func, owned_request_factory=owned_request_factory,
+            is_cancelled=self._is_cancelled,
+        )
         self._replanner = replanner or Replanner(
             planner=self._planner, max_replans=self.config.max_replans)
         self._observation_layer = observation_layer or ObservationLayer(
@@ -487,6 +501,10 @@ class AgentLoop:
             ))
             result.plan = plan.to_dict()
             self._current_plan = plan
+            if self._is_cancelled():
+                sm.cancel(reason="cancelled during planning")
+                result.status = "cancelled"
+                return self._finalize(result, sm)
             if not resuming:
                 self._current_cost += self._estimate_plan_cost(plan)
                 plan.outcome_contract_sha256 = self._evaluator.form_outcome_contract(task_id)

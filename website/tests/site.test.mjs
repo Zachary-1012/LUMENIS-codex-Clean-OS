@@ -12,9 +12,59 @@ async function page(path) {
   return readFile(new URL(path, root), "utf8");
 }
 
+test("independent creation paths are localized, addressable and complete without JavaScript", async () => {
+  const labels = {
+    "index.html": ["方案与文稿", "视频剪辑", "播客制作", "创作流程示意"],
+    "en/index.html": ["Proposals &amp; writing", "Video editing", "Podcast production", "Creative workflow illustration"],
+    "ko/index.html": ["제안서와 글쓰기", "영상 편집", "팟캐스트 제작", "창작 흐름 예시"],
+  };
+  for (const [path, expected] of Object.entries(labels)) {
+    const html = await page(path);
+    for (const label of expected) assert.ok(html.includes(label), `${path}: ${label}`);
+    for (const id of ["document", "video", "audio"]) {
+      assert.match(html, new RegExp(`href="#create-${id}"`));
+      const panel = html.match(new RegExp(`<article id="create-${id}"([^>]*)>`));
+      assert.ok(panel, `${path}: ${id} exists for direct linking`);
+      assert.doesNotMatch(panel[1], /\shidden\b/, `${path}: no-JS reader retains ${id}`);
+      assert.match(panel[1], new RegExp(`aria-labelledby="create-${id}-title"`));
+    }
+    assert.match(html, /data-creation-root/);
+    assert.doesNotMatch(html, /data-optical-field|hero-field__glass/);
+  }
+});
+
 function attribute(html, name) {
   return html.match(new RegExp(`<meta[^>]+name=["']${name}["'][^>]+content=["']([^"']+)["']`, "i"))?.[1];
 }
+
+test("operation recording ships real media and readable captions without autoplay", async () => {
+  const languages = ["zh-CN", "en", "ko"];
+  for (const [index, path] of pages.entries()) {
+    const html = await page(path);
+    const video = html.match(/<video\b([^>]*)>([\s\S]*?)<\/video>/);
+    assert.ok(video, `${path}: recording is present`);
+    assert.match(video[1], /\bcontrols\b/);
+    assert.doesNotMatch(video[1], /\b(?:autoplay|loop)\b/);
+    const media = video[2].match(/<source[^>]*src="([^"]+)"/)[1];
+    const bytes = await readFile(new URL(media.slice(1), root));
+    assert.ok(bytes.length > 1000, `${path}: packaged MP4 is nonempty`);
+    assert.equal(bytes.subarray(4, 8).toString(), "ftyp", `${path}: packaged media is MP4`);
+    const tracks = [...video[2].matchAll(/<track\b([^>]*)>/g)].map(([, attrs]) => ({
+      language: attrs.match(/srclang="([^"]+)"/)[1],
+      src: attrs.match(/src="([^"]+)"/)[1],
+      isDefault: /\bdefault(?:\s|=|$)/.test(attrs),
+    }));
+    assert.deepEqual(tracks.map(track => track.language), languages);
+    assert.deepEqual(tracks.filter(track => track.isDefault).map(track => track.language), [languages[index]]);
+    for (const track of tracks) {
+      const captions = await readFile(new URL(track.src.slice(1), root), "utf8");
+      assert.match(captions, /^WEBVTT/);
+      assert.ok((captions.match(/-->/g) ?? []).length >= 3, `${track.src}: editing, saving and recovery captions`);
+    }
+    assert.match(html, new RegExp(`href="${media}"[^>]*download`));
+    assert.match(html, /<details class="operation-demo__details">/);
+  }
+});
 
 test("renders every locale as a semantic, localized document", async () => {
   for (const path of pages) {
@@ -152,15 +202,15 @@ test("public copy avoids retired local-AI claims and states capability availabil
   const localizedCapabilityStatus = {
     "index.html": {
       retiredAiClaim: /设备本地\s*AI|本地\s*AI|本地模型|在线模型可用/,
-      availability: "各表面可提供的能力取决于运行环境与部署配置。",
+      availability: "功能会因设备和已开放的服务而不同，以当前版本提供的功能为准。",
     },
     "en/index.html": {
       retiredAiClaim: /device-local\s*AI|local\s*AI|local model|live model availability/i,
-      availability: "Available capabilities vary by surface, runtime, and deployment.",
+      availability: "Available features depend on your device and enabled services.",
     },
     "ko/index.html": {
       retiredAiClaim: /기기 내\s*AI|로컬\s*AI|기기 내 모델|실시간 모델 제공/,
-      availability: "각 표면에서 제공하는 기능은 실행 환경과 배포 설정에 따라 다릅니다.",
+      availability: "사용할 수 있는 기능은 기기와 활성화된 서비스에 따라 다릅니다.",
     },
   };
 

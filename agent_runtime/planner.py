@@ -3,28 +3,27 @@
 Planner — 基于 OSAI Contract 的规划器
 ======================================
 将 goal（自然语言目标）分解为步骤列表。
-调用智谱 GLM：glm-5.3 做深度规划，glm-4.5-air 做常规规划。
+AI 规划只消费现有 SYSTEM AI Gateway 的受信任 typed Owned 请求。
 
 每步包含：action、tool、params、expected_output、risk_level。
 
 复用：
-  - intelligence._chat() 调用智谱 GLM（不重写 AI 调用）
+  - SYSTEM AI Gateway 校验模型、SourceUse、Permission 和版本
   - ai_task_engine 持久化规划结果到 ai_task 表（复用）
 
 设计原则：
   - AI 输出必须经过 JSON 解析和结构验证，不直接信任
-  - 规划失败时降级为单步计划（直接执行 goal）
+  - 规划失败返回无可执行步骤，不隐式执行原始目标
   - 规划结果可持久化、可人工修正
   - 不引入 OSAI 运行时依赖，通过 Contract 接口对齐
 
 与 OSAI Contract 对齐点（C-01 Agent Runtime Contract）：
   - Plan 结构：steps[].{action, tool, params, expected_output, risk_level}
-  - 规划模型选择：deep=glm-5.3, routine=glm-4.5-air
+  - routine/deep 是规划要求，模型身份来自真实 Gateway 回执
 """
 from __future__ import annotations
 
 import json
-import re
 import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
@@ -34,8 +33,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 class PlanMode(str, Enum):
     """规划模式。"""
-    ROUTINE = "routine"       # 常规规划，glm-4.5-air
-    DEEP = "deep"             # 深度规划，glm-5.3
+    ROUTINE = "routine"       # 常规规划
+    DEEP = "deep"             # 深度规划
     RULE_BASED = "rule_based"  # 规则降级，不调用 AI
 
 
@@ -84,6 +83,8 @@ class Plan:
     outcome_contract_sha256: Optional[str] = None
     # Populated only from independently read canonical committed output receipts.
     outcome_receipt_bindings: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    # Actual Gateway provenance, separate from model-generated steps/authority.
+    inference_receipt: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
@@ -142,31 +143,24 @@ class Planner:
         ai_chat_func: Optional[Callable] = None,
         persist_func: Optional[Callable] = None,
         default_mode: PlanMode = PlanMode.ROUTINE,
+        *,
+        owned_request_factory: Callable | None = None,
+        is_cancelled: Callable[[], bool] | None = None,
     ):
         """
         Args:
             ai_chat_func: AI 调用函数 callback(system, user, model) -> (content, provider)
-                          None 则使用 intelligence._chat
+                          显式注入的兼容调用，不选择旧 Provider
             persist_func: 规划结果持久化回调 callback(plan) -> None
             default_mode: 默认规划模式
+            owned_request_factory: 服务端绑定的请求工厂；调用方提供真实 actor、
+                                   SourceUse、Evidence、scope 和输入版本
         """
         self._ai_chat_func = ai_chat_func
         self._persist_func = persist_func
         self._default_mode = default_mode
-
-    def _get_ai_chat(self) -> Callable:
-        """获取 AI 调用函数。"""
-        if self._ai_chat_func:
-            return self._ai_chat_func
-        # 复用 ZBC 现有 AI 调用（智谱 GLM）
-        from intelligence import _chat as zbc_chat
-        return zbc_chat
-
-    def _select_model(self, mode: PlanMode) -> str:
-        """根据规划模式选择模型。"""
-        if mode == PlanMode.DEEP:
-            return "glm-5.3"
-        return "glm-4.5-air"
+        self._owned_request_factory = owned_request_factory
+        self._is_cancelled = is_cancelled
 
     def plan(
         self,
@@ -186,27 +180,32 @@ class Planner:
         Returns:
             Plan 规划结果
         """
-        mode = mode or self._default_mode
-        model = self._select_model(mode)
-        plan = Plan(goal=goal, mode=mode.value, model=model)
+        mode = PlanMode(mode or self._default_mode)
+        plan = Plan(goal=goal, mode=mode.value)
+        if (type(goal) is not str or not goal.strip()
+                or type(max_steps) is not int or not 1 <= max_steps <= 15
+                or (context is not None and type(context) is not dict)):
+            return self._fallback_plan(goal, plan, "PLANNING_INPUT_INVALID")
 
         if mode == PlanMode.RULE_BASED:
             return self._rule_based_plan(goal, plan)
 
         try:
             user_prompt = self._build_user_prompt(goal, context, max_steps)
-            chat_func = self._get_ai_chat()
-
-            content, provider = chat_func(
-                _PLANNER_SYSTEM_PROMPT,
-                user_prompt,
-                model=model,
-                temperature=0.1,
-                max_tokens=2000,
-            )
+            user_prompt += f"\n规划模式：{mode.value}"
+            system_prompt = _PLANNER_SYSTEM_PROMPT.replace("最多输出 15 个步骤", f"最多输出 {max_steps} 个步骤")
+            if self._owned_request_factory is not None:
+                content = self._run_owned_plan(plan, system_prompt, user_prompt, max_steps)
+                if content is None:
+                    return self._fallback_plan(goal, plan, plan.fallback_reason)
+            elif self._ai_chat_func is not None:
+                content, _provider = self._ai_chat_func(
+                    system_prompt, user_prompt, model=None, temperature=0.1, max_tokens=2000,
+                )
+            else:
+                return self._fallback_plan(goal, plan, "OWNED_PLANNING_REQUEST_NOT_BOUND")
 
             plan.raw_response = content or ""
-            plan.token_usage = self._extract_token_usage()
 
             if not content:
                 return self._fallback_plan(goal, plan, "AI returned empty response")
@@ -219,15 +218,70 @@ class Planner:
             plan.is_fallback = False
 
         except Exception as e:
-            return self._fallback_plan(goal, plan, f"AI planning failed: {str(e)[:200]}")
+            # Exception messages can contain credentials or private payloads.
+            return self._fallback_plan(goal, plan, f"AI planning failed: {type(e).__name__}")
 
         # 持久化
+        return self._persist_plan(plan)
+
+    def _run_owned_plan(self, plan: Plan, system_prompt: str, user_prompt: str,
+                        max_steps: int) -> str | None:
+        from lumenis.system.ai_gateway import core
+        from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
+
+        schema = self._response_schema(max_steps)
+        schema_json = json.dumps(schema, ensure_ascii=False, sort_keys=True, allow_nan=False)
+        request = self._owned_request_factory(
+            system_prompt=system_prompt, user_payload=user_prompt,
+            response_schema_json=schema_json, max_output_tokens=2000,
+        )
+        # No context field may mint SourceUse/Permission or replace the full task.
+        if (type(request) is not OwnedServiceRequest or request.operation != "agent_plan"
+                or request.system_prompt != system_prompt or request.user_payload != user_prompt
+                or request.response_schema_json != schema_json or request.max_output_tokens != 2000):
+            plan.fallback_reason = "OWNED_PLANNING_REQUEST_MISMATCH"
+            return None
+        result = core.run_owned_analysis(request=request, is_cancelled=self._is_cancelled)
+        plan.inference_receipt = {key: value for key, value in result.items()
+                                  if key not in {"analysis", "text", "runtime"}}
+        if result.get("ok") is not True or result.get("status") != "COMPLETED":
+            plan.fallback_reason = result.get("code") or "OWNED_PLANNING_UNAVAILABLE"
+            return None
+        plan.model = result["model_id"]
+        plan.token_usage = {key: result[key] for key in (
+            "prompt_tokens", "completion_tokens", "total_tokens") if key in result}
+        analysis = result.get("analysis")
+        return (json.dumps(analysis, ensure_ascii=False, allow_nan=False)
+                if type(analysis) is dict else result.get("text"))
+
+    @staticmethod
+    def _response_schema(max_steps: int) -> dict[str, Any]:
+        return {
+            "type": "object", "required": ["steps"], "additionalProperties": False,
+            "properties": {"steps": {
+                "type": "array", "minItems": 1, "maxItems": max_steps,
+                "items": {
+                    "type": "object", "additionalProperties": False,
+                    "required": ["action", "tool", "params", "expected_output", "risk_level"],
+                    "properties": {
+                        "action": {"type": "string", "minLength": 1},
+                        "tool": {"type": "string", "minLength": 1},
+                        "params": {"type": "object"},
+                        "expected_output": {"type": "string", "minLength": 1},
+                        "risk_level": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+                    },
+                },
+            }},
+        }
+
+    def _persist_plan(self, plan: Plan) -> Plan:
         if self._persist_func:
             try:
                 self._persist_func(plan)
             except Exception:
-                pass
-
+                plan.steps = []
+                plan.is_fallback = True
+                plan.fallback_reason = "PLANNING_PERSISTENCE_FAILED"
         return plan
 
     def _build_user_prompt(
@@ -238,8 +292,8 @@ class Planner:
     ) -> str:
         """构建用户提示词。"""
         parts = [f"目标：{goal}", f"最大步骤数：{max_steps}"]
-        if context:
-            parts.append(f"上下文：{json.dumps(context, ensure_ascii=False, default=str)[:500]}")
+        if context is not None:
+            parts.append(f"上下文：{json.dumps(context, ensure_ascii=False, allow_nan=False)}")
         parts.append("请输出规划 JSON。")
         return "\n".join(parts)
 
@@ -250,31 +304,39 @@ class Planner:
         if not json_str:
             return []
 
+        from lumenis.system.ai_gateway.owned_service import (
+            OwnedServiceBlocked,
+            _strict_json,
+        )
         try:
-            data = json.loads(json_str)
-        except json.JSONDecodeError:
+            data = _strict_json(json_str)
+            # JSON's numeric syntax can overflow (e.g. 1e999) without invoking
+            # parse_constant. Reject it anywhere, including arbitrary params.
+            json.dumps(data, ensure_ascii=False, allow_nan=False)
+        except (OwnedServiceBlocked, ValueError, TypeError):
             return []
-
-        raw_steps = data.get("steps", [])
-        if not isinstance(raw_steps, list):
+        if type(data) is not dict or set(data) != {"steps"}:
+            return []
+        raw_steps = data["steps"]
+        if type(raw_steps) is not list or not 1 <= len(raw_steps) <= max_steps:
             return []
 
         steps = []
-        for i, raw in enumerate(raw_steps[:max_steps]):
-            if not isinstance(raw, dict):
-                continue
+        for i, raw in enumerate(raw_steps):
+            if (type(raw) is not dict
+                    or set(raw) != {"action", "tool", "params", "expected_output", "risk_level"}
+                    or any(type(raw[key]) is not str or not raw[key].strip()
+                           for key in ("action", "tool", "expected_output"))
+                    or type(raw["params"]) is not dict
+                    or type(raw["risk_level"]) is not str
+                    or raw["risk_level"] not in {"low", "medium", "high", "critical"}):
+                return []
             step = PlanStep(
                 index=i,
-                action=str(raw.get("action", "")).strip(),
-                tool=str(raw.get("tool", "")).strip(),
-                params=raw.get("params", {}) if isinstance(raw.get("params"), dict) else {},
-                expected_output=str(raw.get("expected_output", "")).strip(),
-                risk_level=str(raw.get("risk_level", "low")).lower(),
+                action=raw["action"], tool=raw["tool"], params=raw["params"],
+                expected_output=raw["expected_output"], risk_level=raw["risk_level"],
             )
-            if step.risk_level not in ("low", "medium", "high", "critical"):
-                step.risk_level = "low"
-            if step.action:  # 至少要有 action
-                steps.append(step)
+            steps.append(step)
 
         return steps
 
@@ -288,43 +350,42 @@ class Planner:
         except json.JSONDecodeError:
             pass
 
-        # 尝试提取第一个 {...} 块
-        match = re.search(r'\{[\s\S]*\}', text)
-        if match:
-            candidate = match.group(0)
-            try:
-                json.loads(candidate)
-                return candidate
-            except json.JSONDecodeError:
-                pass
-
-        # 尝试提取 ```json ... ``` 块
-        match = re.search(r'```json\s*([\s\S]*?)\s*```', text)
-        if match:
-            candidate = match.group(1).strip()
-            try:
-                json.loads(candidate)
-                return candidate
-            except json.JSONDecodeError:
-                pass
-
-        return None
+        # Balanced top-level objects avoid greedy prose braces and never pick
+        # a valid nested fragment out of a malformed enclosing object.
+        candidates = []
+        start, depth, quoted, escaped = None, 0, False, False
+        for index, character in enumerate(text):
+            if depth and quoted:
+                if escaped:
+                    escaped = False
+                elif character == "\\":
+                    escaped = True
+                elif character == '"':
+                    quoted = False
+                continue
+            if depth and character == '"':
+                quoted = True
+            elif character == "{":
+                if depth == 0:
+                    start = index
+                depth += 1
+            elif character == "}" and depth:
+                depth -= 1
+                if depth == 0:
+                    candidate = text[start:index + 1]
+                    try:
+                        json.loads(candidate)
+                        candidates.append(candidate)
+                    except json.JSONDecodeError:
+                        pass
+        return candidates[0] if len(candidates) == 1 and depth == 0 else None
 
     def _fallback_plan(self, goal: str, plan: Plan, reason: str) -> Plan:
-        """降级规划：单步直接执行。"""
+        """规划不可用；完整目标保留，执行器不收到合成步骤。"""
         plan.is_fallback = True
         plan.fallback_reason = reason
-        plan.steps = [
-            PlanStep(
-                index=0,
-                action=f"执行目标：{goal}",
-                tool="direct_execution",
-                params={"goal": goal},
-                expected_output="目标执行结果",
-                risk_level="medium",
-            )
-        ]
-        return plan
+        plan.steps = []
+        return self._persist_plan(plan)
 
     def _rule_based_plan(self, goal: str, plan: Plan) -> Plan:
         """规则规划（不调用 AI）。"""
@@ -340,21 +401,7 @@ class Planner:
                 risk_level="low",
             )
         ]
-        return plan
-
-    @staticmethod
-    def _extract_token_usage() -> Dict[str, int]:
-        """从 intelligence 模块提取 token 使用量。"""
-        try:
-            from intelligence import _get_call_meta
-            meta = _get_call_meta()
-            return {
-                "prompt_tokens": meta.get("prompt_tokens", 0),
-                "completion_tokens": meta.get("completion_tokens", 0),
-                "total_tokens": meta.get("total_tokens", 0),
-            }
-        except Exception:
-            return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        return self._persist_plan(plan)
 
     def validate_plan(self, plan: Plan) -> List[str]:
         """验证规划结果的完整性和安全性。

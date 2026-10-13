@@ -377,8 +377,10 @@ def _verify_sources(timeline: Timeline) -> None:
             current = fingerprint_local_media(str(path))
         except (OSError, ValueError) as exc:
             raise VideoEditingError("SOURCE_MEDIA_NOT_READABLE") from exc
-        if (current.sha256, current.duration_sec, current.has_video, current.audio_stream_count) != (
-            asset.sha256, asset.duration_sec, asset.has_video, asset.audio_stream_count
+        if (current.sha256, current.duration_sec, current.has_video, current.audio_stream_count,
+                current.stream_metadata) != (
+            asset.sha256, asset.duration_sec, asset.has_video, asset.audio_stream_count,
+            asset.stream_metadata,
         ):
             raise VideoEditingError("SOURCE_MEDIA_CHANGED")
 

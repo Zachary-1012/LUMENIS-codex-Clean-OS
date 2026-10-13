@@ -6,8 +6,11 @@ prompt, or a replacement for Evidence/Permission truth.
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, Optional, Tuple
 
 
 class ContentContractError(ValueError):
@@ -228,7 +231,227 @@ class ShotPlan:
         }
 
 
+@dataclass(frozen=True)
+class AudiovisualPlan:
+    """Immutable authoring intent over existing ShotPlan/PodcastPlan contracts.
+
+    Method references are research provenance, never material Evidence or an
+    execution grant. Predicate observations remain declarations to revalidate
+    on actual media. This contract selects no footage and renders no output.
+    """
+
+    document: str = field(repr=False)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.document, str):
+            raise ContentContractError("AV_PLAN_INPUT_INVALID")
+
+        def pairs(items):
+            result = {}
+            for key, value in items:
+                if key in result:
+                    raise ContentContractError("AV_PLAN_DUPLICATE_KEY")
+                result[key] = value
+            return result
+
+        def constant(_value):
+            raise ContentContractError("AV_PLAN_NONFINITE_VALUE")
+
+        try:
+            if len(self.document.encode("utf-8")) > 512 * 1024:
+                raise ContentContractError("AV_PLAN_INPUT_INVALID")
+            value = json.loads(self.document, object_pairs_hook=pairs, parse_constant=constant)
+            self._validate(value)
+            serialized = json.dumps(value, ensure_ascii=False, allow_nan=False,
+                                    sort_keys=True, separators=(",", ":"))
+            serialized.encode("utf-8")
+        except (TypeError, ValueError, RecursionError, OverflowError) as exc:
+            if isinstance(exc, ContentContractError):
+                raise
+            raise ContentContractError("AV_PLAN_INPUT_INVALID") from exc
+        object.__setattr__(self, "document", serialized)
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> AudiovisualPlan:
+        try:
+            serialized = json.dumps(value, ensure_ascii=False, allow_nan=False)
+        except (TypeError, ValueError, RecursionError, OverflowError) as exc:
+            raise ContentContractError("AV_PLAN_INPUT_INVALID") from exc
+        return cls(serialized)
+
+    @staticmethod
+    def _provenance(value, *, unknown=False):
+        kinds = {"USER_EXPLICIT", "MEDIA_PROBE", "DIRECT_OBSERVATION", "VERIFIED_DOCUMENTATION",
+                 "MEASURED", "PLANNER_PROPOSAL", "UNKNOWN"}
+        if (not isinstance(value, dict) or set(value) != {"kind", "locator"}
+                or value["kind"] not in kinds
+                or (unknown and value["kind"] != "UNKNOWN")
+                or (value["kind"] == "UNKNOWN" and value["locator"] is not None)
+                or (value["kind"] != "UNKNOWN" and
+                    (not isinstance(value["locator"], str) or not value["locator"].strip()))):
+            raise ContentContractError("AV_PLAN_PROVENANCE_INVALID")
+
+    @staticmethod
+    def _seconds(value):
+        if type(value) not in {int, float} or not math.isfinite(value) or value < 0:
+            raise ContentContractError("AV_PLAN_DURATION_INVALID")
+
+    @classmethod
+    def _plan_duration(cls, output):
+        plan = output["plan"]
+        if plan is None:
+            return None
+        if output["medium"] == "video":
+            if not isinstance(plan, dict) or set(plan) != {"shots", "brief_ref", "evidence_refs"}:
+                raise ContentContractError("AV_PLAN_SHOT_PLAN_INVALID")
+            if not isinstance(plan["shots"], list) or not 1 <= len(plan["shots"]) <= 128:
+                raise ContentContractError("AV_PLAN_SHOT_PLAN_INVALID")
+            if (not isinstance(plan["brief_ref"], str)
+                    or not isinstance(plan["evidence_refs"], list)
+                    or any(not isinstance(ref, str) for ref in plan["evidence_refs"])):
+                raise ContentContractError("AV_PLAN_SHOT_PLAN_INVALID")
+            for fields in plan["shots"]:
+                if (not isinstance(fields, dict)
+                        or any(not isinstance(text, str) for name, text in fields.items()
+                               if name not in {"duration_sec", "hold_sec", "evidence_refs"})
+                        or not isinstance(fields.get("evidence_refs", []), list)
+                        or any(not isinstance(ref, str) for ref in fields.get("evidence_refs", []))):
+                    raise ContentContractError("AV_PLAN_SHOT_PLAN_INVALID")
+            shot_plan = ShotPlan(tuple(Shot(**shot) for shot in plan["shots"]),
+                                 brief_ref=plan["brief_ref"], evidence_refs=tuple(plan["evidence_refs"]))
+            shot_plan.validate()
+            if shot_plan.to_dict() != plan:
+                raise ContentContractError("AV_PLAN_SHOT_PLAN_INVALID")
+            durations = []
+            for shot in shot_plan.shots:
+                for seconds in (shot.duration_sec, shot.hold_sec):
+                    if seconds is not None:
+                        cls._seconds(seconds)
+                if ((output["sound"]["voice"] == "forbidden"
+                     and (shot.voice_over or shot.audio_role in {"voice", "voiceover", "voice_over"}))
+                        or (output["sound"]["original"] == "forbidden"
+                            and (shot.original_sound or shot.audio_role == "original"))
+                        or (output["sound"]["music"] == "forbidden" and shot.audio_role in {"bgm", "music"})):
+                    raise ContentContractError("AV_PLAN_SOUND_CONFLICT")
+                durations.append(shot.duration_sec)
+            return None if None in durations else math.fsum(durations)
+        from podcast.intelligence.episode_runtime import PodcastPlan
+        podcast = PodcastPlan.from_dict(plan)
+        if all(policy == "forbidden" for policy in output["sound"].values()):
+            raise ContentContractError("AV_PLAN_SOUND_CONFLICT")
+        return math.fsum(segment.duration for segment in podcast.segments)
+
+    @classmethod
+    def _validate(cls, value):
+        if (not isinstance(value, dict) or set(value) != {"schema", "brief_text", "method_source", "outputs", "rule_assessments"}
+                or value["schema"] != "lumenis.audiovisual-plan/v1"
+                or not isinstance(value["brief_text"], str) or not value["brief_text"].strip()):
+            raise ContentContractError("AV_PLAN_INPUT_INVALID")
+        method = value["method_source"]
+        if (not isinstance(method, dict) or set(method) != {"reference", "sha256"}
+                or not isinstance(method["reference"], str) or not method["reference"].strip()
+                or not isinstance(method["sha256"], str) or len(method["sha256"]) != 64
+                or any(char not in "0123456789abcdef" for char in method["sha256"])):
+            raise ContentContractError("AV_PLAN_METHOD_SOURCE_INVALID")
+        outputs = value["outputs"]
+        if not isinstance(outputs, list) or not 1 <= len(outputs) <= 16:
+            raise ContentContractError("AV_PLAN_OUTPUTS_INVALID")
+        ids = set()
+        for output in outputs:
+            if (not isinstance(output, dict) or set(output) != {"output_id", "medium", "purpose", "canvas_ratio",
+                    "duration", "sound", "languages", "constraints", "provenance", "plan"}
+                    or not isinstance(output["output_id"], str) or not output["output_id"].strip()
+                    or output["output_id"] in ids or output["medium"] not in {"video", "podcast"}
+                    or not isinstance(output["purpose"], str) or not output["purpose"].strip()
+                    or output["canvas_ratio"] not in {None, "16:9", "9:16", "1:1"}
+                    or (output["medium"] == "podcast" and output["canvas_ratio"] is not None)
+                    or not isinstance(output["languages"], list)
+                    or any(not isinstance(language, str) or not language.strip() for language in output["languages"])
+                    or len(set(output["languages"])) != len(output["languages"])
+                    or not isinstance(output["constraints"], dict)):
+                raise ContentContractError("AV_PLAN_OUTPUT_INVALID")
+            ids.add(output["output_id"])
+            duration, sound = output["duration"], output["sound"]
+            if not isinstance(duration, dict) or set(duration) != {"min_seconds", "max_seconds", "tolerance_seconds"}:
+                raise ContentContractError("AV_PLAN_DURATION_INVALID")
+            for seconds in duration.values():
+                if seconds is not None:
+                    cls._seconds(seconds)
+            if (duration["min_seconds"] is not None and duration["max_seconds"] is not None
+                    and duration["min_seconds"] > duration["max_seconds"]):
+                raise ContentContractError("AV_PLAN_DURATION_INVALID")
+            if (not isinstance(sound, dict) or set(sound) != {"original", "voice", "music"}
+                    or any(policy not in {"required", "optional", "forbidden", "unknown"} for policy in sound.values())):
+                raise ContentContractError("AV_PLAN_SOUND_INVALID")
+            provenance = output["provenance"]
+            if not isinstance(provenance, dict) or set(provenance) != {"purpose", "canvas_ratio", "duration", "languages", "constraints", "original", "voice", "music"}:
+                raise ContentContractError("AV_PLAN_PROVENANCE_INVALID")
+            for name, source in provenance.items():
+                unknown = ((name in sound and sound[name] == "unknown")
+                           or (name == "duration" and all(seconds is None for seconds in duration.values()))
+                           or (name == "languages" and not output["languages"])
+                           or (name == "canvas_ratio" and output["medium"] == "video" and output[name] is None))
+                cls._provenance(source, unknown=unknown)
+            total = cls._plan_duration(output)
+            tolerance = duration["tolerance_seconds"]
+            if (total is not None and tolerance is not None
+                    and ((duration["min_seconds"] is not None and total < duration["min_seconds"] - tolerance)
+                         or (duration["max_seconds"] is not None and total > duration["max_seconds"] + tolerance))):
+                raise ContentContractError("AV_PLAN_PLANNED_DURATION_CONFLICT")
+        rules = value["rule_assessments"]
+        if not isinstance(rules, list) or len(rules) > 128:
+            raise ContentContractError("AV_PLAN_RULE_INVALID")
+        seen = set()
+        for rule in rules:
+            if (not isinstance(rule, dict) or set(rule) != {"rule_ref", "output_ids", "required_conditions", "exclusions"}
+                    or not isinstance(rule["rule_ref"], str) or not rule["rule_ref"].strip()
+                    or rule["rule_ref"] in seen or not isinstance(rule["output_ids"], list)
+                    or not rule["output_ids"] or any(item not in ids for item in rule["output_ids"])
+                    or len(set(rule["output_ids"])) != len(rule["output_ids"])
+                    or not isinstance(rule["required_conditions"], list) or not rule["required_conditions"]
+                    or not isinstance(rule["exclusions"], list)):
+                raise ContentContractError("AV_PLAN_RULE_INVALID")
+            seen.add(rule["rule_ref"])
+            for predicate in rule["required_conditions"] + rule["exclusions"]:
+                if (not isinstance(predicate, dict) or set(predicate) != {"predicate", "value", "provenance"}
+                        or not isinstance(predicate["predicate"], str) or not predicate["predicate"].strip()
+                        or (predicate["value"] is not None and type(predicate["value"]) is not bool)):
+                    raise ContentContractError("AV_PLAN_PREDICATE_INVALID")
+                cls._provenance(predicate["provenance"], unknown=predicate["value"] is None)
+
+    def to_dict(self) -> dict[str, Any]:
+        return json.loads(self.document)
+
+    def snapshot(self) -> dict[str, Any]:
+        value = self.to_dict()
+        decisions = []
+        for rule in value["rule_assessments"]:
+            conditions, exclusions = rule["required_conditions"], rule["exclusions"]
+            confirmed = lambda item: item["provenance"]["kind"] not in {"UNKNOWN", "PLANNER_PROPOSAL"}
+            if any(item["value"] is True and confirmed(item) for item in exclusions):
+                decision = "EXCLUDED"
+            elif any(item["value"] is False and confirmed(item) for item in conditions):
+                decision = "NOT_APPLICABLE"
+            elif any(item["value"] is None or item["provenance"]["kind"] in {"UNKNOWN", "PLANNER_PROPOSAL"}
+                     for item in conditions + exclusions):
+                decision = "NEEDS_REVIEW"
+            else:
+                decision = "SELECTABLE_CANDIDATE"
+            decisions.append({"rule_ref": rule["rule_ref"], "output_ids": rule["output_ids"], "decision": decision})
+        return {"input": value, "input_sha256": hashlib.sha256(self.document.encode("utf-8")).hexdigest(),
+                "brief_sha256": hashlib.sha256(value["brief_text"].encode("utf-8")).hexdigest(),
+                "rule_decisions": decisions,
+                "outputs": [{"output_id": output["output_id"], "medium": output["medium"],
+                             "status": "NEEDS_MATERIAL" if output["plan"] is None else "PLANNED_NOT_EXECUTED",
+                             "estimated_duration_seconds": self._plan_duration(output),
+                             "constraints": "NOT_EVALUATED_ON_MEDIA"} for output in value["outputs"]],
+                "execution": "NOT_EXECUTED", "predicate_evidence": "DECLARED_NOT_REVALIDATED",
+                "reviews": {name: "NEEDS_REVIEW" for name in ("visual", "audio", "facts", "rights")},
+                "rendition_binding": None}
+
+
 __all__ = [
+    "AudiovisualPlan",
     "ContentContractError",
     "EmotionExperiencePattern",
     "NarrativePattern",

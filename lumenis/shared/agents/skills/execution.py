@@ -1,14 +1,59 @@
-# -*- coding: utf-8 -*-
 """LUMENIS — canonical Skill Execution Chain (适配接入，不重写 skill_registry)。
 执行链：Task → Permission → Agent → Skill → Tool → Action Firewall
        → Effect Fence / Idempotency → Execute → Evidence → Evaluation → Trace
 """
 from __future__ import annotations
-import json, traceback, uuid
-from dataclasses import dataclass, field, asdict, replace
+
+import json
+import logging
+import re
+import uuid
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
+
+
+def _error_family(error: BaseException) -> str:
+    # Use a builtin ancestor, never a plugin-defined name or exception value.
+    for family in (TimeoutError, ConnectionError, PermissionError, OSError,
+                   ValueError, TypeError, LookupError, ArithmeticError,
+                   ImportError, RuntimeError, Exception):
+        if isinstance(error, family):
+            return family.__name__
+    return "BaseException"
+
+
+class _SkillFailureFilter(logging.Filter):
+    """Remove raw exception values/stacks before any handler sees the record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.exc_info:
+            family = _error_family(record.exc_info[1])
+            record.msg = "Skill stage %s failed (%s); execution_id=%s"
+            record.args = (getattr(record, "skill_stage", "unknown"), family,
+                           getattr(record, "skill_execution_id", "unavailable"))
+            record.error_family = family
+            record.exc_info = None
+            record.exc_text = None
+            record.stack_info = None
+        return True
+
+
+logger = logging.getLogger(__name__)
+logger.addFilter(_SkillFailureFilter())
+
+
+def _failure_context(stage, ctx=None):
+    execution_id = getattr(ctx, "execution_id", None)
+    safe_id = (execution_id if isinstance(execution_id, str)
+               and re.fullmatch(r"[a-fA-F0-9]{16,32}", execution_id) else "unavailable")
+    return {"skill_stage": stage, "skill_execution_id": safe_id}
+
+
+def _failure_result(error, source, code):
+    return {"success": False, "error": code, "code": code,
+            "error_family": _error_family(error), "source": source}
 
 
 class SkillState(str, Enum):
@@ -37,12 +82,12 @@ _VALID_TRANSITIONS = {
 class SkillExecutionContext:
     execution_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
     skill_id: str = ""
-    user_id: Optional[int] = None
-    permission_role: Optional[str] = None
-    domain: str = "SYSTEM"
+    user_id: int | None = None
+    permission_role: str | None = None
+    domain: str | None = "SYSTEM"
     product: str = "SYSTEM"
     task: str = ""
-    input_payload: Dict[str, Any] = field(default_factory=dict)
+    input_payload: dict[str, Any] = field(default_factory=dict)
     # Server-derived upload identity. It is never read from input_payload and
     # is intentionally omitted from serialized execution context.
     content_source_import: Any = field(default=None, repr=False)
@@ -52,14 +97,14 @@ class SkillExecutionContext:
     workspace_principal: Any = field(default=None, repr=False)
     action_type: ActionType = ActionType.ANALYZE
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    permission_result: Optional[Dict[str, Any]] = None
-    firewall_result: Optional[Dict[str, Any]] = None
-    effect_fence_result: Optional[Dict[str, Any]] = None
-    execute_result: Optional[Dict[str, Any]] = None
-    evidence: Optional[Dict[str, Any]] = None
-    evaluation: Optional[Dict[str, Any]] = None
+    permission_result: dict[str, Any] | None = None
+    firewall_result: dict[str, Any] | None = None
+    effect_fence_result: dict[str, Any] | None = None
+    execute_result: dict[str, Any] | None = None
+    evidence: dict[str, Any] | None = None
+    evaluation: dict[str, Any] | None = None
     status: ExecutionStatus = ExecutionStatus.PENDING
-    error: Optional[str] = None
+    error: str | None = None
     def to_dict(self):
         # Exclude opaque server objects before asdict traverses/deep-copies them.
         public_context = replace(
@@ -79,8 +124,8 @@ class SkillRuntimeInfo:
     product: str = "SYSTEM"; domain: str = "system"; version: str = "1.0.0"
     state: SkillState = SkillState.REGISTERED
     enabled: bool = False
-    config: Dict[str, Any] = field(default_factory=dict)
-    cross_domain_allowed: List[str] = field(default_factory=list)
+    config: dict[str, Any] = field(default_factory=dict)
+    cross_domain_allowed: list[str] = field(default_factory=list)
     source: str = "builtin"
     def to_dict(self):
         d = asdict(self); d["state"] = self.state.value; return d
@@ -90,6 +135,7 @@ try:
     from lifecycle_mixin import LifecycleMixin as _LifecycleMixin
     _LIFECYCLE_AVAILABLE = True
 except Exception:
+    logger.exception("Skill operation failed", extra=_failure_context("lifecycle_import"))
     _LifecycleMixin = None
     _LIFECYCLE_AVAILABLE = False
 
@@ -118,16 +164,37 @@ def check_permission(ctx, user_role="user", skill_info=None):
         return {"allowed": False, "reason": f"skill '{ctx.skill_id}' is disabled", "code": "SKILL_DISABLED"}
     if skill_info and skill_info.product != "SHARED":
         caller = ctx.product.upper(); sk = skill_info.product.upper()
-        if caller != sk and caller != "SYSTEM":
-            if caller not in [a.upper() for a in skill_info.cross_domain_allowed]:
-                return {"allowed": False, "reason": f"cross-domain denied: caller={caller}, skill={sk}",
-                        "code": "CROSS_DOMAIN_DENIED"}
+        if (caller != sk and caller != "SYSTEM"
+                and caller not in [a.upper() for a in skill_info.cross_domain_allowed]):
+            return {"allowed": False, "reason": f"cross-domain denied: caller={caller}, skill={sk}",
+                    "code": "CROSS_DOMAIN_DENIED"}
+
+    shared_source_context = False
+    if ctx.content_source_import is not None:
+        from lumenis.system.security import (
+            ContentSourceImport,
+            LocalWorkspacePrincipal,
+            check_content_source_import_permission,
+        )
+
+        upload = ctx.content_source_import
+        # This identifies only the exact named Shared import arm. The fresh
+        # canonical check below still owns identity, scope and private approval.
+        shared_source_context = (
+            type(upload) is ContentSourceImport
+            and upload.scope_kind == "shared_workspace"
+            and type(upload.scope_version) is int and upload.scope_version == 1
+            and ctx.skill_id == "shared.content_project"
+            and ctx.action_type is ActionType.WRITE
+            and ctx.domain is None and ctx.product == "SHARED"
+            and ctx.permission_role is None
+        )
 
     # Preserve the existing least-privilege role boundary, but do not let it
     # become a second permission authority.
     if user_role not in ("owner", "admin") and ctx.action_type in (
         ActionType.WRITE, ActionType.COMMIT, ActionType.PUSH,
-    ):
+    ) and not shared_source_context:
         low_write_roles = {
             "cth": "cth_operator",
             "bmp": "zbmp_operator",
@@ -136,17 +203,13 @@ def check_permission(ctx, user_role="user", skill_info=None):
         }
         if (
             ctx.action_type is not ActionType.WRITE
+            or str(ctx.domain or "").lower() not in low_write_roles
             or ctx.permission_role != low_write_roles.get(str(ctx.domain or "").lower())
         ):
             return {"allowed": False, "reason": f"role '{user_role}' cannot execute {ctx.action_type.value}",
                     "code": "INSUFFICIENT_ROLE"}
 
     if ctx.content_source_import is not None:
-        from lumenis.system.security import (
-            ContentSourceImport, LocalWorkspacePrincipal, check_content_source_import_permission,
-        )
-
-        upload = ctx.content_source_import
         local_import = ctx.workspace_principal is not None
         identity_matches = (
             type(ctx.workspace_principal) is LocalWorkspacePrincipal
@@ -166,8 +229,11 @@ def check_permission(ctx, user_role="user", skill_info=None):
             and ctx.skill_id == "shared.content_project"
             and ctx.action_type is ActionType.WRITE
             and identity_matches
-            and domain_aliases.get(str(ctx.domain or "").strip().lower()) == upload.domain_id
-            and product_aliases.get(str(ctx.product or "").strip().lower()) == upload.domain_id
+            and (shared_source_context or (
+                upload.domain_id in ("cth", "bmp")
+                and domain_aliases.get(str(ctx.domain or "").strip().lower()) == upload.domain_id
+                and product_aliases.get(str(ctx.product or "").strip().lower()) == upload.domain_id
+            ))
             and skill_info is not None
             and skill_info.skill_id == "shared.content_project"
             and skill_info.enabled is True
@@ -185,8 +251,16 @@ def check_permission(ctx, user_role="user", skill_info=None):
             )
         else:
             decision = check_content_source_import_permission({"id": ctx.user_id}, upload)
-        payload = decision.to_dict()
-        payload["code"] = "PERMISSION_GRANTED" if decision.allowed else (
+        # This named import caller needs the scope receipt, rather than the
+        # legacy serializer which deliberately omits verification and lineage.
+        payload = decision.to_scope_dict()
+        payload["allowed"] = decision.allowed and decision.verification_state == "verified"
+        if decision.allowed and not payload["allowed"]:
+            payload["reason"] = "content source permission verification unavailable"
+            payload["code"] = "PERMISSION_UNAVAILABLE"
+            return payload
+        payload["scope_code"] = decision.code
+        payload["code"] = "PERMISSION_GRANTED" if payload["allowed"] else (
             "APPROVAL_REQUIRED" if decision.requires_approval else "PERMISSION_DENIED"
         )
         return payload
@@ -221,7 +295,10 @@ def _check_sensitive_data(payload):
 def action_firewall(ctx, extra_policy=None):
     """Consume canonical Permission and run the canonical SYSTEM Action Firewall."""
     from lumenis.system.security import (
-        ActionRequest, AgentAction, PermissionResult, validate_action,
+        ActionRequest,
+        AgentAction,
+        PermissionResult,
+        validate_action,
     )
     target = str(
         (ctx.permission_result or {}).get("resource")
@@ -363,9 +440,9 @@ def _product_result_is_success(value: Any) -> bool:
     if not populated:
         return explicit_no_records
     for key, item in populated:
-        if key in _RESULT_VALUE_FIELDS or isinstance(item, (dict, list, tuple, set)):
-            if not _product_result_is_success(item):
-                return False
+        if ((key in _RESULT_VALUE_FIELDS or isinstance(item, (dict, list, tuple, set)))
+                and not _product_result_is_success(item)):
+            return False
     return True
 
 
@@ -395,7 +472,8 @@ def execute_skill(ctx, handler=None, skill_info=None):
                 "error": None if success else _product_result_error(result),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "traceback": traceback.format_exc()[-500:], "source": "custom_handler"}
+            logger.exception("Skill operation failed", extra=_failure_context("custom_handler", ctx))
+            return _failure_result(e, "custom_handler", "SKILL_HANDLER_FAILED")
     # Registered MCP Skills use the same execution chain as built-ins.  The
     # adapter is deliberately read-only and fail-closed; the Skill metadata is
     # passed through the existing registry rather than creating a new one.
@@ -419,9 +497,8 @@ def execute_skill(ctx, handler=None, skill_info=None):
                 "error": None if success else _product_result_error(mcp_result),
             }
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "traceback": traceback.format_exc()[-500:],
-                    "source": "registered_mcp"}
+            logger.exception("Skill operation failed", extra=_failure_context("registered_mcp", ctx))
+            return _failure_result(e, "registered_mcp", "SKILL_MCP_FAILED")
     try:
         from lumenis_skill_adapter import get_skill_adapter
         adapter = get_skill_adapter()
@@ -442,7 +519,7 @@ def execute_skill(ctx, handler=None, skill_info=None):
                 }
             # OSAI 不可用，回退到内置本地
     except Exception:
-        pass
+        logger.exception("Skill operation failed", extra=_failure_context("optional_adapter", ctx))
     try:
         from .registry import get_skill_registry
         reg = get_skill_registry()
@@ -458,7 +535,7 @@ def execute_skill(ctx, handler=None, skill_info=None):
                     "error": None if success else _product_result_error(local),
                 }
     except Exception:
-        pass
+        logger.exception("Skill operation failed", extra=_failure_context("builtin_registry", ctx))
     return {"success": False, "error": "no executable handler available", "source": "none", "code": "NO_HANDLER"}
 
 
@@ -468,21 +545,23 @@ def _execute_builtin_local(ctx, meta):
         try:
             from lumenis_shared_skills import run_shared_skill
             return run_shared_skill(sid, task=ctx.task, input_payload=ctx.input_payload)
-        except Exception:
-            # Keep the execution chain's existing fail-closed behavior.  The
-            # caller receives NO_HANDLER/failed evidence instead of a fake
-            # successful tool result.
-            return None
+        except Exception as error:
+            logger.exception("Skill operation failed", extra=_failure_context("shared_handler", ctx))
+            return _failure_result(error, "builtin_local", "SHARED_SKILL_FAILED")
     if sid == "zbc.subject_authority_read":
         try:
             from .registry import get_skill_registry
             return {"subject_words_count": 0, "registry_total": get_skill_registry().stats().get("total", 0)}
-        except Exception: return None
+        except Exception as error:
+            logger.exception("Skill operation failed", extra=_failure_context("subject_registry_read", ctx))
+            return _failure_result(error, "builtin_local", "SKILL_REGISTRY_UNAVAILABLE")
     elif sid == "zbc.skill_registry_snapshot":
         try:
             from .registry import get_skill_registry
             return get_skill_registry().stats()
-        except Exception: return None
+        except Exception as error:
+            logger.exception("Skill operation failed", extra=_failure_context("registry_snapshot", ctx))
+            return _failure_result(error, "builtin_local", "SKILL_REGISTRY_UNAVAILABLE")
     elif sid == "zbc.agent_boundary_audit":
         return {"identity": {"agent_id": ctx.execution_id, "role": "skill_executor"},
                 "permission_scope": ["READ", "ANALYZE"]}
@@ -533,11 +612,13 @@ def ensure_skill_executions_table():
                 duration_ms INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now','localtime')))""")
             conn.commit()
         finally: conn.close()
-    except Exception: pass
+    except Exception:
+        logger.exception("Skill operation failed", extra=_failure_context("trace_schema"))
 
 def _trace_json(value, limit=128 * 1024):
-    from agent_runtime.durable_adapter import _sanitize_checkpoint_value
     import hashlib
+
+    from agent_runtime.durable_adapter import _sanitize_checkpoint_value
     safe, _sensitive = _sanitize_checkpoint_value(value)
     text = json.dumps(safe, ensure_ascii=False, default=str, allow_nan=False)
     if len(text.encode("utf-8")) <= limit:
@@ -583,7 +664,9 @@ def write_trace(ctx, duration_ms=0, *, connection=None):
         finally:
             if connection is None:
                 conn.close()
-    except Exception: return False
+    except Exception:
+        logger.exception("Skill operation failed", extra=_failure_context("trace_write", ctx))
+        return False
 
 
 def _reserve_package_execution(ctx, skill_info):
@@ -624,6 +707,7 @@ def _reserve_package_execution(ctx, skill_info):
                 raise RuntimeError("Skill execution reservation could not be persisted")
         return "reserved"
     except Exception:
+        logger.exception("Skill operation failed", extra=_failure_context("package_reservation", ctx))
         return "SKILL_EXECUTION_RESERVATION_UNAVAILABLE"
 
 def query_executions(skill_id=None, limit=50, status=None, offset=0, *, strict=False):
@@ -639,6 +723,7 @@ def query_executions(skill_id=None, limit=50, status=None, offset=0, *, strict=F
             return [dict(r) for r in conn.execute(sql, params).fetchall()]
         finally: conn.close()
     except Exception:
+        logger.exception("Skill operation failed", extra=_failure_context("trace_query"))
         if strict:
             raise
         return []
@@ -691,7 +776,9 @@ def record_execution_evidence(ctx):
         )
         return {"ok": True, "evidence_id": ev.evidence_id, "is_new": is_new}
     except Exception as e:
-        return {"ok": False, "error": str(e), "note": "evidence bridge failed, main chain unaffected"}
+        logger.exception("Skill operation failed", extra=_failure_context("evidence_write", ctx))
+        return {"ok": False, "error": "SKILL_EVIDENCE_UNAVAILABLE",
+                "error_family": _error_family(e), "note": "evidence bridge failed"}
 
 
 def run_execution_chain(skill_id, task="", input_payload=None, action_type=ActionType.ANALYZE,
@@ -746,7 +833,7 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
                     ctx.effect_fence_result.get("idempotency_key"), success=False,
                 )
             except Exception:
-                pass
+                logger.exception("Skill operation failed", extra=_failure_context("rejected_effect_finalization", ctx))
             return ctx
         ctx.permission_result = check_permission(
             ctx, user_role=user_role, skill_info=skill_info,
@@ -760,7 +847,7 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
                     ctx.effect_fence_result.get("idempotency_key"), success=False,
                 )
             except Exception:
-                pass
+                logger.exception("Skill operation failed", extra=_failure_context("rejected_effect_finalization", ctx))
             return ctx
         ctx.firewall_result = action_firewall(ctx)
         if not ctx.firewall_result["allowed"]:
@@ -772,7 +859,7 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
                     ctx.effect_fence_result.get("idempotency_key"), success=False,
                 )
             except Exception:
-                pass
+                logger.exception("Skill operation failed", extra=_failure_context("rejected_effect_finalization", ctx))
             return ctx
     reservation = None if source_import else _reserve_package_execution(ctx, skill_info)
     if reservation not in (None, "reserved"):
@@ -781,6 +868,7 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
         return ctx
     ctx.status = ExecutionStatus.RUNNING
     ctx.execute_result = execute_skill(ctx, handler=handler, skill_info=skill_info)
+    effect_finalized = True
     try:
         from lumenis.system.security import get_effect_fence
         get_effect_fence().complete(
@@ -788,13 +876,23 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
             success=bool(ctx.execute_result.get("success")),
         )
     except Exception:
-        pass
+        logger.exception("Skill operation failed", extra=_failure_context("effect_finalization", ctx))
+        effect_finalized = False
+        ctx.effect_fence_result = {**ctx.effect_fence_result,
+                                  "completion_error": "EFFECT_FENCE_FINALIZATION_FAILED",
+                                  "retry_safe": False}
     ctx.evidence = build_evidence(ctx)
     ctx.evaluation = evaluate_execution(ctx)
     if ctx.execute_result.get("success"):
         ctx.status = ExecutionStatus.COMPLETED
     else:
         ctx.status = ExecutionStatus.FAILED; ctx.error = ctx.execute_result.get("error", "execution failed")
+    if not effect_finalized:
+        ctx.status = ExecutionStatus.FAILED
+        ctx.error = "EFFECT_FENCE_FINALIZATION_FAILED"
+        ctx.evaluation = {**ctx.evaluation, "success": False, "quality_score": 0.0,
+                          "validation_status": "failed_effect_fence",
+                          "reason": "execution result retained; reconcile effect before retry"}
     if source_import and ctx.status is not ExecutionStatus.COMPLETED:
         return ctx
     ctx.evidence_record = record_execution_evidence(ctx)
@@ -830,7 +928,8 @@ def get_skills_light_status(product=None):
                 "description": s.get("description", ""), "product": s.get("product", "SYSTEM"),
                 "domain": s.get("domain", "system"), "status": "enabled", "state": "enabled",
                 "version": s.get("version", "1.0"), "source": "db"})
-    except Exception: pass
+    except Exception:
+        logger.exception("Skill operation failed", extra=_failure_context("account_skill_status"))
     try:
         from .registry import get_skill_registry
         existing = {r["skill_id"] for r in results}
@@ -840,5 +939,6 @@ def get_skills_light_status(product=None):
                 "description": meta.description, "product": getattr(meta, "product", "SYSTEM"),
                 "domain": getattr(meta, "domain", "system"), "status": "registered", "state": "registered",
                 "version": meta.version, "risk_level": meta.risk_level.value, "source": "builtin_registry"})
-    except Exception: pass
+    except Exception:
+        logger.exception("Skill operation failed", extra=_failure_context("registry_skill_status"))
     return results
