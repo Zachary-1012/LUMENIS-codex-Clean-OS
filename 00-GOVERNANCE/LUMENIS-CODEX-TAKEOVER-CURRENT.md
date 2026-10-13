@@ -17,7 +17,7 @@ This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any o
   5. Cleanup: stale worktrees (`D:/LUMENIS_AUDIT/20261012_rules_publish/*`, `序境-runtime-03dc8d93`, leftover `rea-merge-wt` folder), temp files, stale branches/docs, stash `akang-pre-dd0-merge`.
   6. Akang1: browser migration (WIP in the main working tree), `COLLECTOR_ENDPOINT`, tasks 1-3 (Gateway executor stub, AI-01 submit chain, stop/resume, SH-06 inbox, decision-card receipts).
   7. After the loop closes: logo r5 (named/unnamed + 16px), 5 role images + stickers, analysis of ~290 PC images + 47 WeChat videos, frontend (frontend todo: AI-01 non-executable response is shown as '响应无效'; it must show the honest not-executable state). 阿康（bot）
-  8. Post-loop (阿康1（bot））: grant the SH-06 `operational_inbox` read permission to the intended accounts (account system is post-loop; until then SH-06 shows "通知与待办暂不显示"); decision-card receipt stays pending for the CTH-09 Decision owner (BACKEND-GAP-016), no App card while the frontend is paused (USER-ADDITIONS:7,63).
+  8. In-loop (阿康1（bot））: grant the SH-06 `operational_inbox` read permission to the intended accounts (account system is in-loop; until it lands SH-06 shows "通知与待办暂不显示"); decision-card receipt stays pending for the CTH-09 Decision owner (BACKEND-GAP-016), no App card while the frontend is paused (USER-ADDITIONS:7,63).
 
 ## 2026-10-13 SYS-06 built-in browser live stream (dated readback, PR #35)
 
@@ -52,7 +52,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 5. Brand names = official-site names with source URL.
 6. The developer runs end-to-end tests for newly added subjects and keeps them in CI.
 7. Retired AI providers (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) have their calling code and config deleted; the owned 序境 model is default, one generic OpenAI-compatible adapter serves only a user-selected own API (AI_PROVIDER=user_api), with no automatic fallback.
-8. In-loop: collection, CTH, BMP, Shared, AI, no-shell tools in built-in browser, chat UI cards, full Skill Store, GitHub connector, MCP, frontend functions, competitor proofs. Post-loop: accounts, visuals, logo, role art.
+8. In-loop: collection, CTH, BMP, Shared, AI, no-shell tools in built-in browser, chat UI cards, full Skill Store, GitHub connector, MCP, frontend functions, competitor proofs, accounts (email/Apple/Google, ChatGPT-style settings), user and founder developer modes, commercial-readiness items, visuals, logo, role art. Post-launch: real-user validation, paid/licensed sources.
 
 ## 1. Online reader's current-state snapshot
 
