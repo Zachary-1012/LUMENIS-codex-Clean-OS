@@ -611,7 +611,7 @@ def persist_social_note(con, n: CollectedNote, keyword: str) -> str:
             source_platform, source_keyword, captured_at, collected_at,
             collector_version, status, verification_status, ai_filter_status,
             is_taikoo_verified, relevance_status, data_quality_status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (note_id, n.title, n.content, n.content, n.url, n.cover, n.author_id,
          n.author, n.likes, n.comments, n.collects, n.shares,
          n.publish_date, n.publish_date, platform, keyword, now, now,

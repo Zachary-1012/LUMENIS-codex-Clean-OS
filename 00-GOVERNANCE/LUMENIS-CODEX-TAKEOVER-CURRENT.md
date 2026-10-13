@@ -12,7 +12,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
@@ -26,6 +26,8 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 本轮在现有规则型提交的精确文件白名单内，原位降级四份存活旧执行语义：历史 ADR、两份内容制作母指令与 AI 编程旧基线，均只保留归档研究身份；有效 J6/C4 的 Daily/Weekly/Monthly 播客选题与可编辑成品要求已在现有 Owner 保留。此项来源清理不等于开发、运行或产品验收完成。
 
 2026-10-13 REA 媒体/办公接入（PO 授权逐段合并）：把 `D:/REA-Review/2026-10-11/product-patch` 的12个文件补丁在当前 main 上逐段接入原 Owner——C4/C6 `shared_artifacts.py`/`experience_runtime.py` 与 SH-01 正常制作不再要求 demo 勾选（旧参数仅可选兼容，`rights=unknown` 不升级）；C5 `lumenis/shared/reporting/saved_work.py` 增加 DOCX/XLSX/PPTX 精确 OOXML 校验与回读；F `app/lib/features/shared/sh01` 视频/播客共用 Timeline。FFmpeg 继续由 `LUMENIS_FFMPEG_PATH`/`LUMENIS_FFPROBE_PATH` 配置，不硬编码研究目录；REA 适配 wheel 未作为产品依赖。运行加载与真实用户验收仍为 NOT_VERIFIED。
+
+2026-10-13 广州太古汇场内分布入库（PO 批准 PO-20261013-TKH-DIRECTORY-INGEST，原话：“这个表格是最新的，最准的，直接入库，然后数据源闭环，闭环前这些数据就ok，以后就只是新增主体，官网没更新”）：新增来源类别 `PO_PROVIDED_AUTHORITATIVE`，PO 提供的文件以 sha256 固定、以 `po-provided://` URI 标识、清单记录批准号；经既有采集持久化 Owner 写一条来源笔记、既有 Evidence Owner 签名、`persist_existing_note_scope` 绑定精确 CTH 场所范围后，才由 `record_venue_tenant_claim` 写 TENANT_OF（一律 UNREVIEWED）。`scripts/import_tkh_directory_relations.py` 与 `scripts/import_subject_registry_seed.py --seed tkh`（137个新 BMP 品牌）均默认 dry-run，`--apply` 须经 PermissionGate 精确人工审批；种子导入新增同名异体保护（英文或中文单边同名即暂缓，不建近似重复）。文华东方（MOH）铺位及酒店餐饮/水疗不属商场铺位，不写入。顺带修复 `persist_social_note` 25列/24占位符缺陷。闭环前数据源规则：闭环前数据源 = PR #25 的610条主体种子 + 本场内分布；闭环后只做新增主体，不替换既有基线。生产库写入与用户验收另行取证。
 
 运行与结果：RUNTIME、DATABASE、USER OUTCOME均须独立取证。未取得本轮证据时标记NOT_VERIFIED，不复制旧进程、端口、账号状态、测试数、模型状态或历史PASS。
 
