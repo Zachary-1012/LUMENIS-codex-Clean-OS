@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 测试专用凭证
 os.environ.setdefault('TAIKOO_AUTH_USER', 'Zachary')
-os.environ.setdefault('TAIKOO_AUTH_PASSWORD', 'Zachary01')
+os.environ.setdefault('TAIKOO_AUTH_PASSWORD', os.environ.get('LUMENIS_TEST_AUTH_PASS', 'test-only-pass'))
 
 # ============================================================
 # L4 测试结果收集器

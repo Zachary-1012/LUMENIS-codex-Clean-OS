@@ -15,7 +15,7 @@ import base64
 import pytest
 
 TEST_USER = 'Zachary'
-TEST_PASS = 'Zachary01'
+TEST_PASS = os.environ.get('LUMENIS_TEST_AUTH_PASS', 'test-only-pass')
 
 
 @pytest.fixture

@@ -66,14 +66,14 @@
 
 ```bash
 # 安全 header 验证
-curl.exe -s -I -u "Zachary:Zachary01" http://127.0.0.1:8201/lumenis/
+curl.exe -s -I -u "$LUMENIS_BASIC_AUTH" http://127.0.0.1:8201/lumenis/
 
 # CSRF token 验证
-curl.exe -s -u "Zachary:Zachary01" http://127.0.0.1:8201/api/csrf-token
+curl.exe -s -u "$LUMENIS_BASIC_AUTH" http://127.0.0.1:8201/api/csrf-token
 
 # 数据库检查
 python _shardC_db_audit.py
 
 # 页面渲染验证
-curl.exe -s -o NUL -w "%{http_code}" -u "Zachary:Zachary01" http://127.0.0.1:8201/lumenis/{route}
+curl.exe -s -o NUL -w "%{http_code}" -u "$LUMENIS_BASIC_AUTH" http://127.0.0.1:8201/lumenis/{route}
 ```

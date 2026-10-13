@@ -206,7 +206,7 @@ TEST_CONFIG = {
     'test_port': 8201,
     'test_host': '127.0.0.1',
     'auth_user': 'Zachary',
-    'auth_pass': 'Zachary01',
+    'auth_pass': os.environ.get('LUMENIS_TEST_AUTH_PASS', 'test-only-pass'),
 }
 
 # 测试鉴权隔离（P1-9 权限审计修复）：

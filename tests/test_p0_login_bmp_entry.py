@@ -28,7 +28,7 @@ TIMEOUT = 15
 
 # 测试账号（从环境变量或默认）
 TEST_USER = os.environ.get('TEST_USER', 'Zachary')
-TEST_PASS = os.environ.get('TEST_PASS', 'Zachary01')
+TEST_PASS = os.environ.get('TEST_PASS', os.environ.get('LUMENIS_TEST_AUTH_PASS', 'test-only-pass'))
 
 results = []
 passed = 0

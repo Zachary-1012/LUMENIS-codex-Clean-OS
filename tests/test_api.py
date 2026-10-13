@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 @pytest.fixture
 def auth_headers():
     """认证请求头"""
-    auth = base64.b64encode(b"Zachary:Zachary01").decode()
+    auth = base64.b64encode((os.environ.get('LUMENIS_TEST_AUTH_USER','Zachary')+':'+os.environ.get('LUMENIS_TEST_AUTH_PASS','test-only-pass')).encode()).decode()
     return {'Authorization': f'Basic {auth}'}
 
 class TestDashboardAPI:
