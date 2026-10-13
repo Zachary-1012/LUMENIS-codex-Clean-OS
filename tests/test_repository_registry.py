@@ -377,7 +377,7 @@ class TestModifiedFilesImport:
     def test_case_ai_evaluate_imports(self):
         """case_ai_evaluate 可 import"""
         import case_ai_evaluate
-        assert hasattr(case_ai_evaluate, "_ZHIPU_URL")
+        assert callable(case_ai_evaluate.evaluate_case)
 
     def test_case_deep_analysis_imports(self):
         """case_deep_analysis 可 import"""

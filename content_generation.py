@@ -2,7 +2,7 @@
 """
 content_generation.py — ZBC 统一内容生成引擎
 =============================================
-整合：统一智能网关（本地 Ollama 优先，云端显式启用） + 研究库检索 + Evidence链 + 4维Evaluation评分 + 人工反馈迭代。
+整合：SYSTEM AI Gateway（仅显式授权路由）+ 研究库检索 + Evidence链 + 4维Evaluation评分 + 人工反馈迭代。
 
 设计原则：
 - AI是增强层，规则与数据是最终真值
@@ -10,7 +10,7 @@ content_generation.py — ZBC 统一内容生成引擎
 - 每次生成必须有Evaluation(相关性/创意性/品牌契合度/平台适配度)
 - 研究库检索在AI生成前自动执行，结果注入prompt
 - 支持人工反馈→修正→再生成
-- Provider-Agnostic：本地模型优先，明确失败降级到本地规则，不静默切换云端
+- AI 增强只经现有 SYSTEM AI Gateway；不可用时如实返回，不切换模型或伪造生成结果
 - 不修改SUBJECT_WORDS/subject_hit()，不碰生产数据
 """
 from __future__ import annotations
@@ -348,28 +348,18 @@ HUMAN_INTERACTION_LAYER = """【人类交互模式层 — 所有内容生成必�
 # AI 调用（复用 SYSTEM AI Gateway 统一通道）
 # ============================================================
 def _call_ai(system_prompt: str, user_prompt: str, level: str = "high") -> Tuple[Optional[str], str, Dict]:
-    """调用统一智能网关，失败返回(None, 'rule', meta)，不抛异常。
-    本地 Ollama 已配置时不消耗云端资源包；云端只有在显式选择时才会调用。
-    每次调用前清除intelligence.py的provider缓存（30s TTL），确保使用.env中配置的provider。
-    自动注入人类交互模式层（HUMAN_INTERACTION_LAYER）。
-    """
+    """Use the SYSTEM Gateway route and return its honest unavailable/error state."""
     try:
-        from lumenis.system.ai_gateway import core as intel
-        # 清除provider缓存，避免30秒TTL导致使用旧的ollama检测结果
-        if hasattr(intel, '_CACHE'):
-            intel._CACHE['ts'] = 0
-            intel._CACHE['provider'] = None
-        # 注入人类交互模式层（角色prompt + 人类模式 = 有温度的专业创作）
-        enhanced_system = HUMAN_INTERACTION_LAYER + "\n\n【角色与任务】\n" + system_prompt
-        out, provider, meta = intel.chat(
-            enhanced_system, user_prompt, level=level, use_cache=False,
-            pack_id="glm_4_5_air",
-        )
-        return out, provider, meta
-    except Exception as e:
-        logger.error(f"AI call error: {e}")
-        return None, "error", {"error": str(e)}
+        from lumenis.system.ai_gateway import core as gateway
 
+        enhanced_system = HUMAN_INTERACTION_LAYER + "\n\n【角色与任务】\n" + system_prompt
+        output, route, meta = gateway.chat(
+            enhanced_system, user_prompt, level=level, use_cache=False,
+        )
+        return output, route, meta
+    except Exception as exc:
+        logger.error("AI Gateway call error: %s", exc)
+        return None, "provider_disabled", {"status": "ERROR", "error": str(exc)}
 
 def _parse_json_output(text: str) -> Optional[Dict]:
     """从AI输出中提取JSON。"""
@@ -582,7 +572,7 @@ def generate_content(
     output_json = _parse_json_output(out_text) if out_text else None
     status = "success" if output_json else ("partial" if out_text else "failed")
     error = "" if output_json else ("AI输出非JSON" if out_text else "AI调用失败/无输出")
-    model = meta.get("model", "") or (provider if provider != "error" else "")
+    model = meta.get("model", "") or (provider if provider != "provider_disabled" else "unavailable")
     confidence = round(min(1.0, 0.5 + (0.05 * len(str(output_json or ""))) / 100), 2) if output_json else 0.0
 
     # 4. Evidence记录
@@ -863,7 +853,7 @@ def api_ad_strategy():
 
 @content_bp.route("/video-analyze", methods=["POST"])
 def api_video_analyze():
-    """视频智能分析（接入智谱视觉理解）。"""
+    """视频文字材料分析（可选 AI 增强经 SYSTEM Gateway）。"""
     data = request.get_json(silent=True) or {}
     evidence_id = data.get("evidence_id", "")
     note_id = data.get("note_id", "")
@@ -873,7 +863,7 @@ def api_video_analyze():
         return jsonify({"ok": False, "error": "evidence_id 和 note_id 必填"}), 400
     try:
         from video_intelligence import VideoIntelligenceEngine, VideoEvidence
-        # 用智谱AI作为provider分析文本内容
+        # 可选增强只经SYSTEM Gateway；基础OCR/ASR材料仍保留。
         combined = f"OCR文字: {ocr_text}\nASR语音: {asr_text}"
         ai_out, provider, meta = _call_ai(
             "你是视频内容分析专家。分析以下视频的OCR文字和ASR语音转写，输出JSON：{\"scenes\":[{\"desc\":\"场景描述\"}],\"entities\":[\"实体1\"],\"topics\":[\"话题1\"],\"sentiment\":\"positive/negative/neutral\",\"risk_level\":\"low/medium/high\",\"marketing_signals\":[\"信号1\"]}",
@@ -884,7 +874,7 @@ def api_video_analyze():
         def _provider(ev):
             return parsed or {}
 
-        engine = VideoIntelligenceEngine(provider=_provider, provider_name="zhipu", model_version=meta.get("model", "glm-4.5-air"))
+        engine = VideoIntelligenceEngine(provider=_provider, provider_name=provider, model_version=meta.get("model") or "unavailable")
         vid_ev = VideoEvidence(evidence_id=evidence_id, note_id=note_id, ocr_text=ocr_text, asr_text=asr_text)
         result = engine.analyze(vid_ev)
         # 记录Evidence

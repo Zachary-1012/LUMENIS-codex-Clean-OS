@@ -9,7 +9,6 @@ import copy
 import hashlib
 import json
 from dataclasses import asdict, replace
-from types import SimpleNamespace
 
 import pytest
 
@@ -202,20 +201,6 @@ def _valid_analysis(**changes) -> dict:
     return analysis
 
 
-def _forbid_legacy_provider(monkeypatch) -> list[tuple]:
-    calls = []
-
-    def forbidden(name):
-        def fail(*args, **kwargs):
-            calls.append((name, args, kwargs))
-            raise AssertionError(f"legacy provider helper called: {name}")
-        return fail
-
-    monkeypatch.setattr(case_ai_evaluate, "_get_zhipu_key", forbidden("_get_zhipu_key"))
-    monkeypatch.setattr(case_ai_evaluate, "_chat", forbidden("_chat"))
-    return calls
-
-
 def _install_harness(
     monkeypatch,
     case: dict,
@@ -287,7 +272,6 @@ def test_schema_requires_all_finite_bounded_scores_and_nonempty_advice():
 
 def test_missing_request_is_unavailable_and_templates_remain_advisory(monkeypatch):
     case = _signed_case()
-    provider_calls = _forbid_legacy_provider(monkeypatch)
 
     def forbidden_db_read(*args, **kwargs):
         raise AssertionError("Case database read must not happen without a typed request")
@@ -304,7 +288,6 @@ def test_missing_request_is_unavailable_and_templates_remain_advisory(monkeypatc
     assert result["ai"]["status"] == "UNAVAILABLE"
     assert result["ai"]["code"] == "CASE_OWNED_REQUEST_REQUIRED"
     _assert_advisory_templates(result)
-    assert provider_calls == []
 
 
 def test_valid_owned_result_preserves_case_payload_lineage_and_formula(monkeypatch):
@@ -313,7 +296,6 @@ def test_valid_owned_result_preserves_case_payload_lineage_and_formula(monkeypat
     request = _request(case, materials)
     gateway_result = _owned_success(request, _valid_analysis())
     harness = _install_harness(monkeypatch, case, gateway_result)
-    provider_calls = _forbid_legacy_provider(monkeypatch)
     cancel_check = lambda: False
 
     validation_calls = []
@@ -389,7 +371,6 @@ def test_valid_owned_result_preserves_case_payload_lineage_and_formula(monkeypat
     assert gateway_result["real_input_bound"] is True
     assert metadata["prompt_tokens"] + metadata["completion_tokens"] == metadata["total_tokens"]
     _assert_advisory_templates(result)
-    assert provider_calls == []
 
 
 @pytest.mark.parametrize(
@@ -402,7 +383,6 @@ def test_bad_dimension_values_never_receive_scores_or_overall(monkeypatch, bad_v
     request = _request(case, _materials(case))
     result = _owned_success(request, _valid_analysis(impact=bad_value))
     _install_harness(monkeypatch, case, result)
-    _forbid_legacy_provider(monkeypatch)
 
     outcome = case_ai_evaluate.evaluate_case(case, request=request)
 
@@ -416,7 +396,6 @@ def test_missing_dimension_never_defaults_to_five_or_computes_overall(monkeypatc
     analysis = _valid_analysis()
     analysis.pop(missing_field)
     _install_harness(monkeypatch, case, _owned_success(request, analysis))
-    _forbid_legacy_provider(monkeypatch)
 
     result = case_ai_evaluate.evaluate_case(case, request=request)
 
@@ -428,7 +407,6 @@ def test_invalid_advice_fails_the_owned_evaluation(monkeypatch, advice):
     case = _signed_case()
     request = _request(case, _materials(case))
     _install_harness(monkeypatch, case, _owned_success(request, _valid_analysis(advice=advice)))
-    _forbid_legacy_provider(monkeypatch)
 
     result = case_ai_evaluate.evaluate_case(case, request=request)
 
@@ -474,7 +452,6 @@ def test_request_mismatch_fails_before_gateway(monkeypatch, mutation):
         raise AssertionError("invalid request must not reach the Gateway")
 
     monkeypatch.setattr(core, "run_owned_request", forbidden_gateway)
-    _forbid_legacy_provider(monkeypatch)
 
     result = case_ai_evaluate.evaluate_case(case, request=request)
 
@@ -511,7 +488,6 @@ def test_materials_must_bind_exact_sources_and_body_hashes(monkeypatch, mutation
         raise AssertionError("unbound or duplicate material must not reach the Gateway")
 
     monkeypatch.setattr(core, "run_owned_request", forbidden_gateway)
-    _forbid_legacy_provider(monkeypatch)
 
     result = case_ai_evaluate.evaluate_case(case, request=request)
 
@@ -536,7 +512,6 @@ def test_replayed_or_mismatched_gateway_result_is_discarded(monkeypatch, field, 
     result = _owned_success(request, _valid_analysis())
     result[field] = value
     _install_harness(monkeypatch, case, result)
-    _forbid_legacy_provider(monkeypatch)
 
     outcome = case_ai_evaluate.evaluate_case(case, request=request)
 
@@ -553,7 +528,6 @@ def test_incomplete_gateway_provenance_or_token_metadata_fails_closed(monkeypatc
     result = _owned_success(request, _valid_analysis())
     result.pop(field)
     _install_harness(monkeypatch, case, result)
-    _forbid_legacy_provider(monkeypatch)
 
     outcome = case_ai_evaluate.evaluate_case(case, request=request)
 
@@ -580,7 +554,6 @@ def test_gateway_failure_is_unavailable_without_scores_or_raw_details(monkeypatc
         "debug_detail": "SENTINEL_PRIVATE_DETAIL_MUST_NOT_ESCAPE",
     }
     _install_harness(monkeypatch, case, gateway_failure)
-    _forbid_legacy_provider(monkeypatch)
 
     result = case_ai_evaluate.evaluate_case(case, request=request)
 
@@ -602,7 +575,6 @@ def test_case_change_after_gateway_read_discards_result(monkeypatch, second_case
         changed["source_report_hash"] = _sha("newer source report")
     result = _owned_success(request, _valid_analysis())
     harness = _install_harness(monkeypatch, case, result, second_case=changed)
-    _forbid_legacy_provider(monkeypatch)
 
     outcome = case_ai_evaluate.evaluate_case(case, request=request)
 
@@ -620,7 +592,6 @@ def test_reader_revocation_after_generation_discards_result_and_sanitizes_error(
         _owned_success(request, _valid_analysis()),
         second_error=PermissionError("SENTINEL_PRIVATE_READER_DETAIL"),
     )
-    _forbid_legacy_provider(monkeypatch)
 
     result = case_ai_evaluate.evaluate_case(case, request=request)
 
@@ -653,46 +624,9 @@ def test_case_must_match_current_signed_snapshot_before_gateway(monkeypatch, mut
 
     monkeypatch.setattr(cth_cases, "get_cth_case", get_case)
     monkeypatch.setattr(core, "run_owned_request", run_owned_request)
-    _forbid_legacy_provider(monkeypatch)
 
     result = case_ai_evaluate.evaluate_case(case, request=request)
 
     assert reads
     assert gateway_calls == []
     _assert_no_scores(result)
-
-
-def test_legacy_provider_shims_are_inert_without_env_or_network(monkeypatch):
-    class ForbiddenEnvironment:
-        def get(self, *args, **kwargs):
-            raise AssertionError("legacy key helper read environment")
-
-    network_calls = []
-
-    def forbidden_urlopen(*args, **kwargs):
-        network_calls.append((args, kwargs))
-        raise AssertionError("provider network call blocked by test")
-
-    monkeypatch.setattr(
-        case_ai_evaluate,
-        "os",
-        SimpleNamespace(environ=ForbiddenEnvironment(), getenv=ForbiddenEnvironment().get),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        case_ai_evaluate,
-        "urllib",
-        SimpleNamespace(request=SimpleNamespace(urlopen=forbidden_urlopen)),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        case_ai_evaluate,
-        "time",
-        SimpleNamespace(sleep=lambda _seconds: None),
-        raising=False,
-    )
-
-    assert case_ai_evaluate._get_zhipu_key() == ""
-    assert case_ai_evaluate._chat("hermetic compatibility probe") == ""
-    assert hasattr(case_ai_evaluate, "_ZHIPU_URL")
-    assert network_calls == []

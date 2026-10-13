@@ -210,7 +210,7 @@ def test_ai01_provider_kpi_excludes_non_provider_components(isolated_client):
         and section["side"][0].get("type") == "runtime"
     )
     assert all(item.get("kind") == "provider" for item in providers)
-    assert {item["name"] for item in providers} <= {"智谱 · 可选", "本地 Ollama"}
+    assert {item["name"] for item in providers} == {"Owned AI Gateway"}
 
 
 def test_ai01_composer_present_and_no_cot_leak(isolated_client):
