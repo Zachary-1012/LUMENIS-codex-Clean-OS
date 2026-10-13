@@ -252,7 +252,7 @@ Research adds no dependency or new owner. Source/service status, terms, and vers
 ## 10. Task-semantic vocabulary and continuous acquisition
 
 Six primary platforms are Instagram, Facebook, WeChat Official Accounts,
-RedNote/XHS, Douyin and X. C1 begins/resumes actual eligible acquisition routes
+RedNote (HK/intl account), Douyin and X. C1 begins/resumes actual eligible acquisition routes
 for all six; names/registrations/imports are not proof of platform collection.
 Keep other existing platforms. Every platform has its own native fields, access
 state, permitted identity, exact entity/domain/market/purpose and Evidence path.
@@ -439,7 +439,7 @@ Product Owner明确取消“所有数据必须采全”的要求。产品必须�
 | 2.1 查询计划 | C1追实际 `acquisition_plan.py` 的 Registry、DEFAULT_QUERY_LIMIT/MAX_QUERY_LIMIT、next_cursor/input_fingerprint、`assess_query_relevance` 和 `build_observed_topic_catalog`；保留许可、边界与恢复。相关性、热点、词条/文本关联是可复核派生判断，不是合法原始观察持久化的前置门槛。 |
 | 2.2 真实写入链 | C1追 `secondary_collection.py` 的 `collect_search`、`collect_business_queries`、`_business_source_reviews`、`_prelaunch_entity_mentions`、review_candidates/review_pending 至原 Source/Evidence/Canonical；每条来源可恢复、去向可查，不因业务筛选先缩小而丢原文。`_persist_post_intake_keyword_candidates` 若卡事务则移入已有后处理；分析失败不抹去已合法提交来源，可单独续跑。 |
 | 2.3 有效吞吐 | 先测真实返回量、原生分页/cursor、计划连续执行、重复请求、同步分析/封面、DB写入/事务/去重、平台锁、风控/频率/session/冷却与跨平台隔离；通过分页、增量、批处理、持久checkpoint提速。不得粗删 MAX_RESULTS=20 等边界或无界并发。计划恢复回执、原生cursor和权限各自独立。 |
-| 3 六平台 | RedNote/XHS、抖音、公众号、Facebook、Instagram、X分别实证获准身份/范围、单帖详情/原生字段时间指标、分页回补、封面/元数据、Source/Evidence/Canonical、定时/取消/重启/续跑/重复处理。各平台分别保留真实任务、原帖及事务回执/计数/分母/时窗；BLOCKED路径不带停其他路径，不能被其他平台成功抵消。历史记录、打开页面、HTTP200不证实时可用。 |
+| 3 六平台 | RedNote（香港/国际账号）、抖音、公众号、Facebook、Instagram、X分别实证获准身份/范围、单帖详情/原生字段时间指标、分页回补、封面/元数据、Source/Evidence/Canonical、定时/取消/重启/续跑/重复处理。各平台分别保留真实任务、原帖及事务回执/计数/分母/时窗；BLOCKED路径不带停其他路径，不能被其他平台成功抵消。历史记录、打开页面、HTTP200不证实时可用。 |
 | 4 全产品消费 | 按下表核对真实受影响 Shared、CTH、BMP、Research/Reporting/Evaluation、SYSTEM 调用方；已有数据与确定性合法业务不因 AI 不可用停下。跨 Owner 由 M 原预约有界交接，C1必要Core/runtime/Scheduler/Permission修复仍自己完成，不额外唤醒暂停窗口。 |
 | 5 实际 Web | 官网/Web优先，仅修数据链改变影响的现有界面；主体选择/创建在权限内，真实范围/平台/时间/进度与状态、来源/业务关系/不确定性可查看，进入业务成果、保存/修订/重开，原帖在受控浏览器打开并返回原任务。无假数据墙、模拟后端、重复仪表盘或重做44屏。 |
 | 6 旧路径收敛 | 追真实caller后替换已证失效的耦合/重复入口/旧启动路径、错误GLOBAL默认、兼容映射、吞错假成功、未写Source/Evidence或提前checkpoint、重复拉取/无界重试/session反复启动；保留唯一能力、兼容迁移、原数据/研究/测试/失败/Git史，不因目录旧而删除。 |
