@@ -492,11 +492,11 @@ def _verified_content_project(
         or project_data.get("schema_version") != 1
         or project_data.get("context") != expected_context
         or project_data.get("output_kind") not in {"video", "audio"}
-        or project_data.get("rights") != {
+        or project_data.get("rights") not in ({"state": "unknown", "label": "rights unknown"}, {
             "state": "unknown",
             "demo_acknowledged": True,
             "label": "demo-only / rights unknown",
-        }
+        })
         or not isinstance(project_data.get("timeline"), dict)
         or _contains_local_path_field(project_data.get("timeline"))
         or not isinstance(source_artifact_refs, list)
@@ -1015,12 +1015,17 @@ def stage_timeline_artifact(
     brand_focus_id: Optional[str] = None,
     global_scope: bool = False,
     source_execution_id: str,
-    demo_acknowledged: bool,
+    demo_acknowledged: Optional[bool] = None,
     output_kind: str = "video",
     previous_artifact_id: Optional[str] = None,
     source_artifact_refs: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """Render and register one permission-scoped, reopenable content project."""
+    """Render a permission-scoped project without an additional demo checkbox.
+
+    The optional legacy demo argument is accepted for older clients, but never
+    authorizes rendering. Source read/write scope and DATA_EXPORT admission are
+    checked independently; unknown rights remain unknown in the stored result.
+    """
     actor_id, scope = _authorize_content_project(
         actor,
         domain_id=domain_id,
@@ -1031,8 +1036,8 @@ def stage_timeline_artifact(
     )
     if not isinstance(source_execution_id, str) or not source_execution_id.strip():
         raise LocalArtifactError("SOURCE_EXECUTION_ID_REQUIRED")
-    if type(demo_acknowledged) is not bool:
-        raise LocalArtifactError("CONTENT_DEMO_ACKNOWLEDGEMENT_REQUIRED")
+    if demo_acknowledged is not None and type(demo_acknowledged) is not bool:
+        raise LocalArtifactError("INVALID_CONTENT_INPUT")
     if output_kind not in {"video", "audio"}:
         raise LocalArtifactError("OUTPUT_KIND_NOT_SUPPORTED")
 
@@ -1049,8 +1054,6 @@ def stage_timeline_artifact(
         raise LocalArtifactError("CONTENT_TIMELINE_INVALID")
     if any(getattr(asset, "rights_status", "unknown") != "unknown" for asset in timeline.assets):
         raise LocalArtifactError("CONTENT_RIGHTS_STATE_UNAVAILABLE")
-    if not demo_acknowledged:
-        raise LocalArtifactError("CONTENT_DEMO_ACKNOWLEDGEMENT_REQUIRED")
 
     source_refs, source_entries, _ = _validate_content_source_refs(
         [] if source_artifact_refs is None else source_artifact_refs,
@@ -1098,7 +1101,6 @@ def stage_timeline_artifact(
     export_resource = "content-project-export:v1:" + hashlib.sha256(_json_bytes({
         "context": expected_context, "timeline": timeline_data, "source_refs": source_refs,
         "output_kind": output_kind, "parent_artifact_id": previous_artifact_id,
-        "demo_acknowledged": demo_acknowledged,
     })).hexdigest()
     gate = get_permission_gate()
     caller = expected_context["principal_ref"] if actor_id is None else f"actor:{actor_id}"
@@ -1160,8 +1162,7 @@ def stage_timeline_artifact(
                 "parent_artifact_id": previous_artifact_id,
                 "rights": {
                     "state": "unknown",
-                    "demo_acknowledged": True,
-                    "label": "demo-only / rights unknown",
+                    "label": "rights unknown",
                 },
                 "output_kind": output_kind,
             }
@@ -1216,7 +1217,6 @@ def stage_timeline_artifact(
         "project": project,
         "render": dict(render_result or {}),
         "rights_state": "unknown",
-        "demo_acknowledged": True,
         "approval_required": True,
         "publish_status": "not_performed",
     }

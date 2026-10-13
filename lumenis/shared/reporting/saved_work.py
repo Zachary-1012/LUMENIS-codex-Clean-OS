@@ -7,11 +7,15 @@ DB; retries identify the same request; a stale parent cannot overwrite work.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import re
+import stat
 import tempfile
 import uuid
+import zipfile
+import xml.etree.ElementTree as ET
 from contextlib import ExitStack, contextmanager
 from datetime import datetime, timezone
 from typing import Any, Mapping
@@ -28,12 +32,133 @@ _TABLE = "lumenis_shared_artifacts"
 _ID = re.compile(r"ART-[0-9a-f]{16}\Z")
 _WORK = re.compile(r"WORK-[0-9a-f]{24}\Z")
 _LIMIT = 8 * 1024 * 1024
+_MAX_OOXML_ENTRIES = 4096
+_MAX_OOXML_MEMBER_BYTES = 8 * 1024 * 1024
+_MAX_OOXML_TOTAL_BYTES = 64 * 1024 * 1024
+_MAX_OOXML_METADATA_BYTES = 2 * 1024 * 1024
+_ATTACHMENT_NAME = re.compile(r"[A-Za-z0-9_-]{1,80}\.(docx|xlsx|pptx)\Z")
+_OFFICE_FORMATS = {
+    "docx": {
+        "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "main_part": "word/document.xml",
+        "main_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+        "main_root": "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}document",
+    },
+    "xlsx": {
+        "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "main_part": "xl/workbook.xml",
+        "main_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+        "main_root": "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}workbook",
+    },
+    "pptx": {
+        "media_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "main_part": "ppt/presentation.xml",
+        "main_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+        "main_root": "{http://schemas.openxmlformats.org/presentationml/2006/main}presentation",
+    },
+}
 _KINDS = {"research", "report", "podcast_episode", "delivery_preferences"}
 _SCOPE_KEYS = ("domain_id", "subject_id", "brand_focus_id", "global_scope")
 
 
 class SavedWorkError(ValueError):
     """Stable error codes for the Product Core adapter."""
+
+
+def _attachment_spec(name: Any, media_type: Any) -> dict | None:
+    """Return the exact supported OOXML format for a safe basename/MIME pair."""
+    if not isinstance(name, str):
+        return None
+    match = _ATTACHMENT_NAME.fullmatch(name)
+    if match is None:
+        return None
+    extension = match.group(1)
+    spec = _OFFICE_FORMATS[extension]
+    if media_type != spec["media_type"]:
+        return None
+    return {"extension": "." + extension, **spec}
+
+
+def _read_ooxml_xml(archive: zipfile.ZipFile, name: str, maximum: int):
+    """Read a bounded UTF-8 XML member without permitting DTD/entity expansion."""
+    info = archive.getinfo(name)
+    if info.is_dir() or not 0 < info.file_size <= maximum:
+        raise ValueError("invalid OOXML XML part size")
+    raw = archive.read(info)
+    if len(raw) != info.file_size:
+        raise ValueError("truncated OOXML XML part")
+    # OOXML package XML is UTF-8; rejecting alternate encodings prevents DTD
+    # declarations from evading the explicit entity prohibition below.
+    text = raw.decode("utf-8-sig", errors="strict")
+    upper = text.upper()
+    if "<!DOCTYPE" in upper or "<!ENTITY" in upper:
+        raise ValueError("DTD and entity declarations are not accepted")
+    return ET.fromstring(text)
+
+
+def _valid_ooxml_attachment(raw: bytes, spec: Mapping[str, Any]) -> bool:
+    """Validate a bounded, exact-format OOXML ZIP package without extracting it."""
+    if not isinstance(raw, bytes) or not 0 < len(raw) <= _LIMIT:
+        return False
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw), "r") as archive:
+            infos = archive.infolist()
+            if not 3 <= len(infos) <= _MAX_OOXML_ENTRIES:
+                return False
+            members = {}
+            total_uncompressed = 0
+            for info in infos:
+                name = info.filename
+                path_name = name[:-1] if name.endswith("/") else name
+                if (not path_name or name.startswith("/") or "\\" in name or ":" in name
+                        or "\x00" in name
+                        or any(part in {"", ".", ".."} for part in path_name.split("/"))
+                        or name in members or info.flag_bits & 0x1
+                        or info.compress_type not in {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
+                        or info.file_size < 0 or info.compress_size < 0
+                        or info.file_size > _MAX_OOXML_MEMBER_BYTES
+                        or stat.S_ISLNK((info.external_attr >> 16) & 0xFFFF)):
+                    return False
+                if info.is_dir() and info.file_size != 0:
+                    return False
+                total_uncompressed += info.file_size
+                if total_uncompressed > _MAX_OOXML_TOTAL_BYTES:
+                    return False
+                members[name] = info
+
+            main_part = spec["main_part"]
+            if any(name not in members for name in ("[Content_Types].xml", "_rels/.rels", main_part)):
+                return False
+            # Check every member's CRC and actual size, within the caps above.
+            if archive.testzip() is not None:
+                return False
+
+            package_ns = "{http://schemas.openxmlformats.org/package/2006/content-types}"
+            types = _read_ooxml_xml(archive, "[Content_Types].xml", _MAX_OOXML_METADATA_BYTES)
+            if types.tag != package_ns + "Types":
+                return False
+            overrides = [node for node in types.findall(package_ns + "Override")
+                         if node.attrib.get("PartName") == "/" + main_part]
+            if len(overrides) != 1 or overrides[0].attrib.get("ContentType") != spec["main_type"]:
+                return False
+
+            rel_ns = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+            relationships = _read_ooxml_xml(archive, "_rels/.rels", _MAX_OOXML_METADATA_BYTES)
+            if relationships.tag != rel_ns + "Relationships":
+                return False
+            office_type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+            office_rels = [node for node in relationships.findall(rel_ns + "Relationship")
+                           if node.attrib.get("Type") == office_type]
+            if (len(office_rels) != 1
+                    or office_rels[0].attrib.get("Target") not in {main_part, "/" + main_part}
+                    or office_rels[0].attrib.get("TargetMode") == "External"):
+                return False
+
+            main = _read_ooxml_xml(archive, main_part, _MAX_OOXML_MEMBER_BYTES)
+            return main.tag == spec["main_root"]
+    except Exception:
+        # Parser failures on untrusted bytes become a stable invalid-input result.
+        return False
 
 
 def _json(value: Any) -> bytes:
@@ -361,6 +486,9 @@ def _read_attachment(con, binding, context, work_id):
     if (not isinstance(binding, dict) or set(binding) != {"name", "artifact_id", "sha256", "size_bytes", "media_type"}
             or not isinstance(binding["artifact_id"], str) or not _ID.fullmatch(binding["artifact_id"])):
         raise SavedWorkError("WORK_ATTACHMENT_INVALID")
+    spec = _attachment_spec(binding["name"], binding["media_type"])
+    if spec is None:
+        raise SavedWorkError("WORK_ATTACHMENT_INTEGRITY_FAILED")
     row = con.execute(f"SELECT * FROM {_TABLE} WHERE artifact_id=?", (binding["artifact_id"],)).fetchone()
     if row is None:
         raise SavedWorkError("WORK_ATTACHMENT_MISSING")
@@ -368,14 +496,15 @@ def _read_attachment(con, binding, context, work_id):
     if (record["kind"] != "saved_document_attachment" or record["domain_id"] != context["domain_id"]
             or record["product_id"] != ("CTH" if context["domain_id"] == "cth" else "ZBMP")
             or record["source_execution_id"] != work_id
-            or record["relative_path"] != binding["artifact_id"] + ".docx"
+            or record["relative_path"] != binding["artifact_id"] + spec["extension"]
             or any(record[k] != binding[k] for k in ("sha256", "size_bytes", "media_type"))):
         raise SavedWorkError("WORK_ATTACHMENT_INTEGRITY_FAILED")
     path = shared_artifacts.artifact_root() / record["relative_path"]
     if path.is_symlink() or not path.is_file() or not 0 < path.stat().st_size <= _LIMIT:
         raise SavedWorkError("WORK_ATTACHMENT_INTEGRITY_FAILED")
     raw = path.read_bytes()
-    if len(raw) != binding["size_bytes"] or hashlib.sha256(raw).hexdigest() != binding["sha256"]:
+    if (len(raw) != binding["size_bytes"] or hashlib.sha256(raw).hexdigest() != binding["sha256"]
+            or not _valid_ooxml_attachment(raw, spec)):
         raise SavedWorkError("WORK_ATTACHMENT_INTEGRITY_FAILED")
     return raw
 
@@ -451,12 +580,14 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
         raise SavedWorkError("WORK_COMMIT_CALLBACK_INVALID")
     attachment_bytes = []
     for item in attachments or []:
-        if (not isinstance(item, dict) or set(item) != {"name", "content", "media_type"}
-                or not isinstance(item["name"], str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}\.docx", item["name"])
-                or item["media_type"] != "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                or not isinstance(item["content"], bytes) or not 0 < len(item["content"]) <= _LIMIT):
+        if not isinstance(item, dict) or set(item) != {"name", "content", "media_type"}:
             raise SavedWorkError("WORK_ATTACHMENT_INVALID")
-        attachment_bytes.append(dict(item))
+        spec = _attachment_spec(item["name"], item["media_type"])
+        if (spec is None or not isinstance(item["content"], bytes)
+                or not 0 < len(item["content"]) <= _LIMIT
+                or not _valid_ooxml_attachment(item["content"], spec)):
+            raise SavedWorkError("WORK_ATTACHMENT_INVALID")
+        attachment_bytes.append({**item, "extension": spec["extension"]})
     if (len(attachment_bytes) > 8 or len({a["name"] for a in attachment_bytes}) != len(attachment_bytes)
             or sum(len(a["content"]) for a in attachment_bytes) > _LIMIT):
         raise SavedWorkError("WORK_ATTACHMENT_INVALID")
@@ -529,7 +660,7 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
                 for item in attachment_bytes:
                     attached, attached_path = _stage_bytes(
                         con, raw=item["content"], context=context, kind="saved_document_attachment",
-                        source_execution_id=assigned_work, extension=".docx", media_type=item["media_type"])
+                        source_execution_id=assigned_work, extension=item["extension"], media_type=item["media_type"])
                     attachment_paths.append(attached_path)
                     document["attachments"].append({"name": item["name"], "artifact_id": attached["artifact_id"],
                                                     "sha256": attached["sha256"], "size_bytes": attached["size_bytes"],

@@ -6,6 +6,7 @@ import hashlib
 import io
 import subprocess
 import sys
+import zipfile
 
 import pytest
 from flask import Flask
@@ -68,6 +69,60 @@ def _save(workspace, *, request_id="request-0001", **changes):
               "scope": workspace["scope"]}
     params.update(changes)
     return workspace["work"].save_work(**params)
+
+
+_TEST_OFFICE_FORMATS = {
+    "docx": (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "word/document.xml",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+        b'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>',
+    ),
+    "xlsx": (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "xl/workbook.xml",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+        b'<x:workbook xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:sheets/></x:workbook>',
+    ),
+    "pptx": (
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "ppt/presentation.xml",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+        b'<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldIdLst/></p:presentation>',
+    ),
+}
+
+
+def _office_attachment(package_type, *, padding=b"", extra_members=(), compression=zipfile.ZIP_DEFLATED,
+                       main_xml=None):
+    media_type, main_part, main_content_type, default_main_xml = _TEST_OFFICE_FORMATS[package_type]
+    main_xml = main_xml or default_main_xml
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        f'<Override PartName="/{main_part}" ContentType="{main_content_type}"/>'
+        '</Types>'
+    ).encode()
+    relationship = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+        f'Target="{main_part}"/>'
+        '</Relationships>'
+    ).encode()
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=compression) as archive:
+        archive.writestr("[Content_Types].xml", content_types)
+        archive.writestr("_rels/.rels", relationship)
+        archive.writestr(main_part, main_xml)
+        for name, content in extra_members:
+            archive.writestr(name, content)
+        if padding:
+            archive.writestr("padding.bin", padding)
+    return {"name": f"sample.{package_type}", "content": buffer.getvalue(), "media_type": media_type}
 
 
 def test_import_cite_save_reopen_revise_export_and_retry(workspace):
@@ -915,3 +970,103 @@ def test_binary_doc_decodes_owned_original_and_preserves_source_fingerprint(tmp_
     assert parsed.metadata["embedded_macros"] == "disabled_by_ephemeral_profile"
     assert parsed.metadata["external_links"] == "updates_disabled_by_ephemeral_profile"
     assert all(item["unit"] == "converted_word_paragraph" for item in repeated)
+
+
+def test_saved_work_roundtrips_docx_xlsx_and_pptx_with_exact_staging_types(workspace):
+    attachments = [_office_attachment(kind) for kind in ("docx", "xlsx", "pptx")]
+    saved = _save(workspace, attachments=attachments)
+    bindings = saved["document"]["attachments"]
+    assert [binding["name"] for binding in bindings] == [item["name"] for item in attachments]
+
+    reopened = workspace["work"].reopen_work(
+        saved["artifact"]["artifact_id"], actor=workspace["actor"], scope=workspace["scope"],
+    )
+    assert reopened["document"]["attachments"] == bindings
+    for binding, original in zip(bindings, attachments):
+        record = workspace["repo"].query_one(
+            "SELECT relative_path, media_type, sha256, size_bytes FROM lumenis_shared_artifacts WHERE artifact_id=?",
+            (binding["artifact_id"],),
+        )
+        extension = "." + original["name"].rsplit(".", 1)[1]
+        assert record["relative_path"] == binding["artifact_id"] + extension
+        assert record["media_type"] == original["media_type"]
+        assert record["sha256"] == binding["sha256"]
+        assert record["size_bytes"] == len(original["content"])
+        assert (workspace["root"] / "artifacts" / record["relative_path"]).read_bytes() == original["content"]
+
+    replayed = _save(workspace, attachments=attachments)
+    assert replayed["replayed"] is True
+    assert replayed["artifact"]["artifact_id"] == saved["artifact"]["artifact_id"]
+    assert workspace["repo"].query_one(
+        "SELECT COUNT(*) FROM lumenis_shared_artifacts WHERE kind='saved_document_attachment'",
+    )[0] == 3
+
+
+def test_saved_work_rejects_mislabeled_malformed_and_unsafe_office_attachments(workspace):
+    valid_docx = _office_attachment("docx")
+    wrong_mime = {**valid_docx, "media_type": _TEST_OFFICE_FORMATS["xlsx"][0]}
+    wrong_suffix = {**valid_docx, "name": "sample.xlsx"}
+    not_a_zip = {**valid_docx, "content": b"not an OOXML ZIP"}
+    wrong_main = _office_attachment("docx", main_xml=b"<document/>")
+    traversal = _office_attachment("docx", extra_members=(("../outside.xml", b"<part/>"),))
+    bomb = _office_attachment("docx", padding=b"A" * (workspace["work"]._LIMIT + 1))
+    assert len(bomb["content"]) < workspace["work"]._LIMIT
+
+    encrypted = _office_attachment("xlsx")
+    encrypted_bytes = bytearray(encrypted["content"])
+    local_header = encrypted_bytes.find(b"PK\x03\x04")
+    central_header = encrypted_bytes.find(b"PK\x01\x02")
+    assert local_header >= 0 and central_header >= 0
+    encrypted_bytes[local_header + 6] |= 1
+    encrypted_bytes[central_header + 8] |= 1
+    encrypted["content"] = bytes(encrypted_bytes)
+
+    corrupt_crc = _office_attachment("pptx", compression=zipfile.ZIP_STORED)
+    main_xml = _TEST_OFFICE_FORMATS["pptx"][3]
+    corrupt_bytes = bytearray(corrupt_crc["content"])
+    main_offset = corrupt_bytes.find(main_xml)
+    assert main_offset >= 0
+    corrupt_bytes[main_offset + 10] ^= 1
+    corrupt_crc["content"] = bytes(corrupt_bytes)
+
+    unsafe_name = {**valid_docx, "name": "../sample.docx"}
+    for index, item in enumerate((wrong_mime, wrong_suffix, not_a_zip, wrong_main, traversal,
+                                  bomb, encrypted, corrupt_crc, unsafe_name)):
+        with pytest.raises(ValueError, match="WORK_ATTACHMENT_INVALID"):
+            _save(workspace, request_id=f"invalid-{index:02d}", attachments=[item])
+    assert workspace["repo"].query_one(
+        "SELECT COUNT(*) FROM lumenis_shared_artifacts WHERE kind IN ('saved_document', 'saved_document_attachment')",
+    )[0] == 0
+    artifact_root = workspace["root"] / "artifacts"
+    assert not artifact_root.exists() or not list(artifact_root.glob("ART-*"))
+
+
+def test_saved_work_retains_attachment_count_and_aggregate_size_limits(workspace):
+    nine = [_office_attachment("docx") | {"name": f"sample-{index}.docx"} for index in range(9)]
+    with pytest.raises(ValueError, match="WORK_ATTACHMENT_INVALID"):
+        _save(workspace, attachments=nine)
+
+    large = [_office_attachment("xlsx", padding=b"x" * 4_300_000, compression=zipfile.ZIP_STORED)
+             | {"name": f"large-{index}.xlsx"} for index in range(2)]
+    assert all(len(item["content"]) < workspace["work"]._LIMIT for item in large)
+    assert sum(len(item["content"]) for item in large) > workspace["work"]._LIMIT
+    with pytest.raises(ValueError, match="WORK_ATTACHMENT_INVALID"):
+        _save(workspace, request_id="aggregate-limit-0001", attachments=large)
+    assert workspace["repo"].query_one(
+        "SELECT COUNT(*) FROM lumenis_shared_artifacts WHERE kind IN ('saved_document', 'saved_document_attachment')",
+    )[0] == 0
+
+
+def test_attachment_staging_rolls_back_all_artifacts_on_precommit_failure(workspace):
+    attachment = _office_attachment("pptx")
+
+    def fail_before_commit(*_args):
+        raise RuntimeError("isolated commit interruption")
+
+    with pytest.raises(RuntimeError, match="isolated commit interruption"):
+        _save(workspace, attachments=[attachment], before_commit=fail_before_commit)
+    assert workspace["repo"].query_one(
+        "SELECT COUNT(*) FROM lumenis_shared_artifacts WHERE kind IN ('saved_document', 'saved_document_attachment')",
+    )[0] == 0
+    artifact_root = workspace["root"] / "artifacts"
+    assert not artifact_root.exists() or not list(artifact_root.iterdir())
