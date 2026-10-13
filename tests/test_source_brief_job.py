@@ -180,6 +180,8 @@ def test_reopen_downgrades_legacy_media_provider_without_changing_saved_snapshot
     monkeypatch.setattr(jobs, "_multimodal_snapshot", lambda *_args, **_kwargs: old_media)
     with sqlite3.connect(job_db) as conn:
         conn.row_factory = sqlite3.Row
+        _source(conn)
+        conn.commit()
         result = _request(conn, job_id="job-legacy-media-0001", multimodal_result={"state": "complete"})
     with sqlite3.connect(job_db) as conn:
         row = conn.execute(
@@ -194,6 +196,28 @@ def test_reopen_downgrades_legacy_media_provider_without_changing_saved_snapshot
             (jobs._evaluation_ids(result["job_id"])["multimodal_analysis_integrity"],),
         ).fetchone()
     assert prior_evaluation == (1.0, "pass")
+
+    # Other current readers must downgrade the historical inference even before
+    # the SourceBrief is reopened; the original database receipt stays intact.
+    from flask import Flask
+    import system_ai_data_api
+    from lumenis.shared.evaluation.recorder import get_evaluation_records, get_evaluation_summary
+
+    summary = get_evaluation_summary(db_path=str(job_db))
+    assert summary["counts"]["unknown"] == 1
+    assert summary["counts"]["pass"] == 2
+    unknown = get_evaluation_records(status="unknown", db_path=str(job_db))
+    assert [item["metric_name"] for item in unknown] == ["multimodal_analysis_integrity"]
+    assert unknown[0]["inference_status"] == "HISTORICAL_NOT_REVERIFIED"
+    passed = get_evaluation_records(status="pass", db_path=str(job_db))
+    assert len(passed) == 2
+    app = Flask("evaluation-assurance")
+    app.register_blueprint(system_ai_data_api.system_ai_bp)
+    api_result = app.test_client().get("/api/ai/evaluations").get_json()
+    assert api_result["stats"] == {"pass": 2, "unknown": 1}
+    api_media = next(item for item in api_result["items"] if item["metric_name"] == "multimodal_analysis_integrity")
+    assert api_media["decision"] == "unknown"
+    assert api_media["inference_status"] == "HISTORICAL_NOT_REVERIFIED"
 
     historical_readback = {
         **old_media, "state": "historical_not_reverified", "real_input_bound": True,

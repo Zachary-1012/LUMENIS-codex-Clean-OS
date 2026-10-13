@@ -91,7 +91,7 @@ class TestAIStatusObserver:
 
         monkeypatch.setattr(channel, "get_provider_status_v1", lambda: pytest.fail("retired registry read"))
         monkeypatch.setattr(channel, "channel_health", lambda *_a, **_k: pytest.fail("legacy channel read"))
-        monkeypatch.setattr(core, "owned_inference_status", lambda: {
+        monkeypatch.setattr(core, "owned_inference_status", lambda domain_id=None: {
             "provider": "owned", "available": False, "service_binding": "NOT_BOUND",
             "state": "UNAVAILABLE", "reason": "OWNED_RUNTIME_NOT_BOUND",
         })
@@ -123,7 +123,7 @@ class TestAIStatusObserver:
         from lumenis.system.ai_gateway import core, user_api_adapter
 
         monkeypatch.setattr(user_api_adapter, "is_selected", lambda: False)
-        monkeypatch.setattr(core, "owned_inference_status", lambda: {
+        monkeypatch.setattr(core, "owned_inference_status", lambda domain_id=None: {
             "available": False, "state": "private diagnostic", "service_binding": {"secret": "value"},
             "reason": "https://user:secret@private.invalid",
         })
@@ -132,6 +132,21 @@ class TestAIStatusObserver:
         assert result["provider_status"] == "UNKNOWN"
         assert result["service_binding"] == "NOT_VERIFIED"
         assert result["error"] == "OWNED_RUNTIME_UNAVAILABLE"
+
+    def test_observer_reads_the_task_domain_binding(self, monkeypatch):
+        from lumenis.system.ai_gateway import core, user_api_adapter
+
+        monkeypatch.setattr(user_api_adapter, "is_selected", lambda: False)
+        observed = []
+
+        def status(domain):
+            observed.append(domain)
+            return {"available": True, "service_binding": "BOUND", "state": "SERVICE_BOUND"}
+
+        monkeypatch.setattr(core, "owned_inference_status", status)
+        result = AIStatusObserver().observe({"domain_id": "bmp"})
+        assert result["status"] == "ok"
+        assert observed == ["bmp"]
 
 
 class TestToolStatusObserver:

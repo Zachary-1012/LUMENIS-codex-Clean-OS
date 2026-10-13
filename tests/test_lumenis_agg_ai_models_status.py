@@ -20,7 +20,7 @@ def test_intelligence_models_reports_only_owned_gateway_runtime(monkeypatch):
     monkeypatch.setattr(
         ai_gateway_core,
         "owned_inference_status",
-        lambda: {
+        lambda domain_id=None: {
             "provider": "owned",
             "available": False,
             "service_binding": "NOT_BOUND",
@@ -73,7 +73,7 @@ def test_intelligence_models_does_not_claim_runtime_ready_when_status_read_fails
     monkeypatch.setattr(
         ai_gateway_core,
         "owned_inference_status",
-        lambda: (_ for _ in ()).throw(RuntimeError("private diagnostic")),
+        lambda domain_id=None: (_ for _ in ()).throw(RuntimeError("private diagnostic")),
     )
 
     body = _client().get("/api/intelligence/models").get_json()
@@ -91,11 +91,11 @@ def test_explicit_user_api_is_not_replaced_or_probed(monkeypatch, configured):
 
     monkeypatch.setattr(user_api_adapter, "is_selected", lambda: True)
     monkeypatch.setattr(user_api_adapter, "is_configured", lambda: configured)
-    monkeypatch.setattr(user_api_adapter, "config", lambda: {
+    monkeypatch.setattr(user_api_adapter, "config", lambda domain_id=None: {
         "model": "user-chosen-model", "api_key": "test-only-secret", "base_url": "https://private.invalid",
     })
     monkeypatch.setattr(user_api_adapter, "chat", lambda *_a, **_k: pytest.fail("external model call"))
-    monkeypatch.setattr(ai_gateway_core, "owned_inference_status", lambda: {
+    monkeypatch.setattr(ai_gateway_core, "owned_inference_status", lambda domain_id=None: {
         "available": True, "service_binding": "BOUND", "state": "READY", "model_id": "owned-model",
     })
     body = _client().get("/api/intelligence/models").get_json()
@@ -107,3 +107,31 @@ def test_explicit_user_api_is_not_replaced_or_probed(monkeypatch, configured):
     assert body["providers"][1]["configured"] is configured
     assert "test-only-secret" not in str(body)
     assert "private.invalid" not in str(body)
+
+
+def test_scoped_service_binding_is_not_replaced_by_candidate_status(monkeypatch):
+    from lumenis.system.ai_gateway import owned_inference, owned_service, user_api_adapter
+
+    monkeypatch.setattr(user_api_adapter, "is_selected", lambda: False)
+    monkeypatch.setattr(owned_inference, "owned_inference_status", lambda: pytest.fail("candidate read"))
+    observed = []
+
+    def status(domain):
+        observed.append(domain)
+        bound = domain == "cth"
+        return {"available": bound, "service_binding": "BOUND" if bound else "NOT_BOUND",
+                "state": "SERVICE_BOUND" if bound else "UNAVAILABLE", "model_id": "owned-model"}
+
+    monkeypatch.setattr(owned_service, "owned_service_status", status)
+    body = _client().get("/api/intelligence/models?domain_id=cth").get_json()
+    assert body["runtime_available"] is True
+    assert observed == ["cth"]
+    observed.clear()
+    aggregate = _client().get("/api/intelligence/models").get_json()
+    assert observed == ["cth", "bmp"]
+    assert aggregate["runtime_available"] is False
+    assert aggregate["domain_statuses"]["cth"]["available"] is True
+    assert aggregate["domain_statuses"]["bmp"]["available"] is False
+    assert aggregate["gateway"]["state"] == "PARTIAL"
+    invalid = _client().get("/api/intelligence/models?domain_id=unknown").get_json()
+    assert invalid["gateway"]["reason"] == "OWNED_SERVICE_DOMAIN_INVALID"

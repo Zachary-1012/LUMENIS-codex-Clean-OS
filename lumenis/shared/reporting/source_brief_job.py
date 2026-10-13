@@ -266,14 +266,7 @@ def _record_evaluations(verified: dict[str, Any]) -> list[dict[str, Any]]:
                 if (prior.get("dimension") != "report" or prior.get("metric_name") != metric
                         or prior.get("evidence_ref") != expected_ref):
                     raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
-                records.append({
-                    **prior,
-                    "metric_value": None,
-                    "status": "unknown",
-                    "historical_record_status": prior.get("status"),
-                    "inference_status": "HISTORICAL_NOT_REVERIFIED",
-                    "current_inference_verified": False,
-                })
+                records.append(prior)
                 continue
         record = record_evaluation(
             dimension="report", metric_name=metric, metric_value=value,
@@ -577,14 +570,7 @@ def get_source_brief_job(job_id: str, *, actor_id: str,
                     or record.get("metric_name") != "multimodal_analysis_integrity"
                     or record.get("evidence_ref") != expected_ref):
                 raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
-            projected.append({
-                **record,
-                "metric_value": None,
-                "status": "unknown",
-                "historical_record_status": record.get("status"),
-                "inference_status": "HISTORICAL_NOT_REVERIFIED",
-                "current_inference_verified": False,
-            })
+            projected.append(record)
         present = projected
     state = "recorded" if len(present) == len(evaluations) else "pending_recovery"
     result = _response(verified, present)

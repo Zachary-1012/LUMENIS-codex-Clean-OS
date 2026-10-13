@@ -106,9 +106,9 @@ def _git_info(repo_path: Path):
 def intelligence_models():
     """Report the bound Owned Gateway route; configuration strings are not runtime proof."""
     try:
-        from lumenis.system.ai_gateway.core import owned_inference_status
+        from lumenis.system.ai_gateway.core import owned_service_observation
 
-        raw_status = owned_inference_status()
+        raw_status = owned_service_observation(request.args.get("domain_id"))
     except Exception:
         raw_status = None
     status = raw_status if isinstance(raw_status, dict) else {}
@@ -175,6 +175,7 @@ def intelligence_models():
         "runtime_available": selected_available,
         "gateway": selected_gateway,
         "providers": providers,
+        "domain_statuses": status.get("domains", {}),
         "truth_boundary": "AI is enhancement only; ZBC rules remain Production Truth",
     })
 

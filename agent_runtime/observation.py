@@ -179,9 +179,9 @@ class AIStatusObserver(BaseObserver):
                     "provider_status": "CONFIGURED_NOT_VERIFIED" if configured else "NOT_CONFIGURED",
                     "service_binding": "NOT_VERIFIED", "error": "USER_API_NOT_PROBED",
                 }
-            from lumenis.system.ai_gateway.core import owned_inference_status
+            from lumenis.system.ai_gateway.core import owned_service_observation
 
-            gateway = owned_inference_status()
+            gateway = owned_service_observation((context or {}).get("domain_id"))
             if not isinstance(gateway, dict):
                 raise TypeError("owned Gateway status is not an object")
             binding = gateway.get("service_binding")
@@ -199,6 +199,7 @@ class AIStatusObserver(BaseObserver):
                 provider_status=state if isinstance(state, str) else "UNKNOWN",
                 service_binding=binding if isinstance(binding, str) else "UNKNOWN",
                 error=None if available else public_code(gateway.get("reason"), "OWNED_RUNTIME_UNAVAILABLE"),
+                domain_statuses=gateway.get("domains", {}),
             )
         except Exception:
             result.update(
