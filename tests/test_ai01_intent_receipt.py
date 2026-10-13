@@ -102,3 +102,35 @@ def test_tampered_evidence_content_is_not_recorded(intent_client, monkeypatch):
     assert body["evidence_recorded"] is False
 
 
+
+
+@pytest.mark.parametrize("domain,expected", [("CTH", ("CTH", "CTH")), ("BMP", ("ZBMP", "ZBMP"))])
+def test_submit_derives_coherent_product_accepted_by_evidence_store(intent_client, monkeypatch, domain, expected):
+    cli, _state, _rt = intent_client
+    seen = {}
+
+    def _capture(*_a, **kwargs):
+        seen.update(kwargs)
+        return types.SimpleNamespace(execution_id="exec-p", status=types.SimpleNamespace(value="failed"),
+                                     evidence_record={"ok": False})
+
+    from lumenis.shared.agents.skills import execution as skill_execution
+    monkeypatch.setattr(skill_execution, "run_execution_chain", _capture)
+    body = cli.post("/api/experience/ai/intent",
+                    json={"task": "分析", "action_type": "ANALYZE", "domain": domain}).get_json()
+    assert body["ok"] is True
+    assert (seen["domain"], seen["product"]) == expected
+    from lumenis.shared.evidence import EvidenceStore
+    ev, _ = EvidenceStore().add_evidence(
+        source_type="skill_execution", source_url="skill://x/exec-p", source_id="exec-p",
+        raw_content="{}", subject_scope="GLOBAL / ALL", task_id="exec-p", trace_id="exec-p",
+        provider="lumenis.shared.agents.skills.execution",
+        domain_id=seen["domain"], product_id=seen["product"])
+    assert ev.evidence_id
+
+
+def test_free_form_or_mismatched_product_is_rejected_before_execution(intent_client):
+    cli, _state, _rt = intent_client
+    for extra in ({"product": "LUMENIS"}, {"domain": "CTH", "product": "ZBMP"}, {"domain": "XX"}):
+        r = cli.post("/api/experience/ai/intent", json={"task": "分析", "action_type": "ANALYZE", **extra})
+        assert r.status_code == 400 and r.get_json()["ok"] is False

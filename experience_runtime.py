@@ -3676,6 +3676,19 @@ def ai_intent():
         return jsonify({"ok": False, "status": "denied",
                         "reason": f"action_type {raw_action} 未注册权限映射（fail-closed）"}), 403
     operation_type, risk_level = gate_spec
+    # Evidence identity must be a coherent domain/product pair (domain_isolation:
+    # CTH<->CTH, BMP/ZBMP<->ZBMP, SYSTEM). Product is derived from the domain, never
+    # a free-form label, so the execution Evidence write is not rejected.
+    from domain_isolation import resolve_domain_identity
+    try:
+        intent_domain, intent_product = resolve_domain_identity(
+            body.get("domain", "CTH"), body.get("product") or None)
+    except ValueError:
+        return jsonify({"ok": False, "status": "denied",
+                        "reason": "domain/product identity is invalid"}), 400
+    if not intent_domain:
+        return jsonify({"ok": False, "status": "denied",
+                        "reason": "domain identity is required"}), 400
     decision = get_permission_gate().check(
         operation_type,
         resource=body.get("skill_id") or "zbc.generic_analysis",
@@ -3705,8 +3718,8 @@ def ai_intent():
             input_payload=body.get("input", {}),
             action_type=action_type,
             user_id=body.get("user_id"),
-            product=body.get("product", "LUMENIS"),
-            domain=body.get("domain", "CTH"),
+            product=intent_product,
+            domain=intent_domain.upper(),
         )
         return jsonify({
             "ok": True,
