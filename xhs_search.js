@@ -3,11 +3,9 @@
 import { chromium } from 'playwright';
 import path from 'node:path';
 import fs from 'node:fs';
+import { registeredXhsProfile } from './xhs_profile_guard.js';
 
-const userDataDir = (process.env.XHS_PROFILE_DIR || '').trim();
-if (!userDataDir) {
-  throw new Error('XHS_PROFILE_DIR_REQUIRED: use the profile registered for the selected account');
-}
+const userDataDir = registeredXhsProfile();
 
 function parseArgs() {
   const args = process.argv.slice(2);

@@ -188,15 +188,18 @@ def verify_xhs_raw_checkpoint_reference(descriptor, *, acquisition_fingerprint, 
 # Runtime collection scope is resolved from the canonical Subject/BrandFocus registry.
 MONITOR_KEYWORDS = None
 
-def _check_profile_lock():
-    """检查持久化 Chromium profile 是否可能被其他进程占用。
-
-    旧版会直接删除 SingletonLock/SingletonCookie/SingletonSocket。
-    这在 Windows 上尤其危险：如果另一个 Chromium 实例正在使用 profile，
-    强删锁文件可能导致 profile 损坏或两个浏览器同时写入。现在只做检测，
-    真正的锁冲突交给 Playwright 返回错误。
-    """
-    lock_dir = os.path.expanduser('~/.skills-router/rednote/instances/taikoo')
+def _check_profile_lock(profile_dir):
+    """Check only the registered HK/intl profile and never remove lock files."""
+    if not isinstance(profile_dir, (str, os.PathLike)) or not str(profile_dir).strip():
+        raise ValueError('XHS_PROFILE_DIR_REQUIRED')
+    from xhs_cookie_bridge import ACCOUNT_PROFILES, XHS_RETINAUT_NAME
+    binding = ACCOUNT_PROFILES.get(XHS_RETINAUT_NAME)
+    if not isinstance(binding, (tuple, list)) or len(binding) != 2 or not binding[1]:
+        raise PermissionError('XHS_REGISTERED_PROFILE_UNAVAILABLE')
+    lock_dir = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(profile_dir))))
+    registered_dir = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(binding[1]))))
+    if os.path.normcase(lock_dir) != os.path.normcase(registered_dir):
+        raise PermissionError('XHS_REGISTERED_PROFILE_BINDING_MISMATCH')
     return any(os.path.exists(os.path.join(lock_dir, f)) for f in ('SingletonLock', 'SingletonCookie', 'SingletonSocket'))
 
 # CDP 真人通道（9223 香港/国际 RedNote；仅复用已登录的本机驻场实例）
@@ -236,17 +239,43 @@ def _collection_env(account=None, region='intl', cdp_url=None):
     env = os.environ.copy()
     env.pop('XHS_COOKIE_FILE', None)
     env.pop('XHS_EXPECTED_COLLECTION_USER_ID', None)
+    env.pop('XHS_PROFILE_DIR', None)
+    env.pop('XHS_COOKIE_HEADER', None)
+    env.pop('XHS_COOKIES_JSON', None)
     selected_region = region or 'intl'
     env['XHS_COLLECTION_REGION'] = selected_region
     env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
     if cdp_url:
         env['XHS_CDP_URL'] = cdp_url
-    from xhs_cookie_bridge import ACCOUNT_PROFILES, DEFAULT_COLLECTION_ACCOUNT, XHS_RETINAUT_NAME, XHS_RETINAUT
+    from xhs_cookie_bridge import (
+        ACCOUNT_PROFILES,
+        DEFAULT_COLLECTION_ACCOUNT,
+        PRIVATE_DATA_DIR,
+        XHS_RETINAUT,
+        XHS_RETINAUT_NAME,
+        _extract_user_id_from_cookie_text,
+    )
     selected = account or DEFAULT_COLLECTION_ACCOUNT
     profile = ACCOUNT_PROFILES.get(selected)
-    if selected != XHS_RETINAUT_NAME or selected_region != 'intl' or not XHS_RETINAUT or not profile:
+    if (selected != XHS_RETINAUT_NAME or selected_region != 'intl' or not XHS_RETINAUT
+            or not isinstance(profile, (tuple, list)) or len(profile) != 2
+            or not profile[0] or not profile[1]):
         raise PermissionError('POLICY_BLOCKED: approved HK identity/profile unavailable')
-    env['XHS_COOKIE_FILE'] = str(profile[0])
+    cookie_file = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(profile[0]))))
+    profile_dir = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(profile[1]))))
+    expected_cookie = os.path.realpath(os.path.join(PRIVATE_DATA_DIR, 'xhs_cookie_retinaut.txt'))
+    expected_profile = os.path.realpath(os.path.join(PRIVATE_DATA_DIR, 'profiles', 'xhs-retinaut'))
+    if (os.path.normcase(cookie_file) != os.path.normcase(expected_cookie)
+            or os.path.normcase(profile_dir) != os.path.normcase(expected_profile)):
+        raise PermissionError('XHS_REGISTERED_PROFILE_BINDING_MISMATCH')
+    if not os.path.isfile(cookie_file):
+        raise PermissionError('XHS_REGISTERED_COOKIE_UNAVAILABLE')
+    with open(cookie_file, encoding='utf-8', errors='replace') as cookie_stream:
+        if _extract_user_id_from_cookie_text(cookie_stream.read()) != XHS_RETINAUT:
+            raise PermissionError('XHS_REGISTERED_COOKIE_IDENTITY_MISMATCH')
+    env['XHS_COOKIE_FILE'] = cookie_file
+    env['XHS_PROFILE_DIR'] = profile_dir
+    env['XHS_COLLECTION_ACCOUNT'] = selected
     env['XHS_EXPECTED_COLLECTION_USER_ID'] = XHS_RETINAUT
     env['PYTHONIOENCODING'] = 'utf-8'
     env['PYTHONUTF8'] = '1'

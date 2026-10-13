@@ -657,10 +657,39 @@ def _run_search(keyword,max_scroll=6):
     os.makedirs(PRIVATE_DATA_DIR, exist_ok=True)
     out=os.path.join(PRIVATE_DATA_DIR,f'xhs_{int(time.time()*1000)}.json')
     env=os.environ.copy()
-    # 双子星库 Contract：传 select_account() 选择的身份对应 Cookie 文件（Node 进程读取一致）
-    env['XHS_COOKIE_FILE'] = _effective_cookie_file()
+    # Resolve the approved identity and profile through the existing Python owners.
+    # The child environment carries consistency data; it is not an authorization grant.
+    selected = _ACTIVE_ACCOUNT or DEFAULT_COLLECTION_ACCOUNT
+    policy = collection_policy_gate(account=selected, region='intl')
+    binding = ACCOUNT_PROFILES.get(selected)
+    if (selected != XHS_RETINAUT_NAME or not policy.get('ok')
+            or not isinstance(binding, (tuple, list)) or len(binding) != 2
+            or not binding[0] or not binding[1] or not XHS_RETINAUT):
+        raise PermissionError('XHS_APPROVED_HK_INTL_IDENTITY_UNAVAILABLE')
+    cookie_file = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(binding[0]))))
+    expected_cookie_file = os.path.realpath(os.path.join(PRIVATE_DATA_DIR, 'xhs_cookie_retinaut.txt'))
+    profile_dir = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(binding[1]))))
+    expected_profile_dir = os.path.realpath(os.path.join(PRIVATE_DATA_DIR, 'profiles', 'xhs-retinaut'))
+    if (os.path.normcase(cookie_file) != os.path.normcase(expected_cookie_file)
+            or os.path.normcase(profile_dir) != os.path.normcase(expected_profile_dir)):
+        raise PermissionError('XHS_REGISTERED_PROFILE_BINDING_MISMATCH')
+    # Check the exact registered Cookie file; a fallback environment header must
+    # not authorize a child process whose registered Cookie has another identity.
+    try:
+        with open(cookie_file, encoding='utf-8', errors='replace') as cookie_stream:
+            registered_user_id = _extract_user_id_from_cookie_text(cookie_stream.read())
+    except OSError as exc:
+        raise PermissionError('XHS_REGISTERED_COOKIE_UNAVAILABLE') from exc
+    if registered_user_id != XHS_RETINAUT:
+        raise PermissionError('XHS_REGISTERED_COOKIE_IDENTITY_MISMATCH')
+    env['XHS_COLLECTION_ACCOUNT'] = XHS_RETINAUT_NAME
+    env['XHS_EXPECTED_COLLECTION_USER_ID'] = XHS_RETINAUT
+    env['XHS_COOKIE_FILE'] = cookie_file
+    env['XHS_PROFILE_DIR'] = profile_dir
     env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
     env['XHS_COLLECTION_REGION'] = 'intl'
+    env.pop('XHS_COOKIE_HEADER', None)
+    env.pop('XHS_COOKIES_JSON', None)
     # 搜索只复用香港/国际身份的常驻 CDP；JS 侧 CDP 不可达会按既有适配器策略处理
     env['XHS_CDP_URL'] = cdp_url_for()
     cmd=[_NODE_BIN,SEARCH_JS,'--keyword',keyword,'--output',out,'--max-scroll',str(effective_scroll)]
