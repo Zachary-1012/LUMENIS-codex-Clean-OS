@@ -2,6 +2,14 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-14 research adoption (documentation, not runtime acceptance)
+
+PO transitions-ui-generation addition is adopted in Experience §19, the existing plan/sketches/AI-01/CTH-10 specs and third-party register. All original motion remains; the new full reveal is optional and bound to newly generated, layout-ready results. No installed/runtime outcome is claimed by this publication.
+
+The remaining 18 brand, 2 KDRAMA, 15 XHS, 3 case-benchmark documents and adoption lines480–742 were read in full at the stated scope; line743 is absent. All26 fixed local mathematics transcripts were read through appendices/references. The existing coverage record lists paths, boundaries and adoption. Original research/history stays intact. Product-plan G78/G81/G99/G102–104/G109/G111/G143/G158/G160–164/G170/G182 now distinguish actual evidence, algorithm hypotheses, finite implementation, proof and model gains; G163 stays OPEN.
+
+The PO's complete person-like-agent argument is mapped claim by claim in the existing plan§16, with official Bot/Muse/Instinct sources, fixed OpenClaw source and community observations. Existing Architecture/Experience and AI-01/SH-06/sketches carry responsive multi-task conversation, scoped memory, bounded delegation, completion readback and selective delivery. This publication adds no Runtime, provider, external IM, computer control or dispatch; async product operation and four-surface E2E remain NOT_VERIFIED until actual owner evidence exists. Paid-source access and model/training/deployment authority are unchanged.
+
 ## 2026-10-13 Single product closed-loop entry (dated readback; start here)
 
 This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any other handoff/todo/progress note dated before 2026-10-13 is superseded where it conflicts and is kept only as history.
@@ -56,7 +64,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 本批移除指定采集脚本的参考主体profile默认值和CDP示例；主体名称不选择账户；Python 原账户 Owner 核验批准身份和精确 Cookie/Profile 后传入子进程，JS 拒绝任意 profile、目录逃逸、错误身份和不安全 Cookie 域/URL；不读取真实凭据进行验收。ACC-02保持GLOBAL默认与既有参考覆盖维度，不把参考主体作为默认值。删除PO指定旧工单，历史证据链接固定到删除前提交，现行KOS要求仍由既有合同承接。关键词零命中只适用退役可执行路径/硬编码默认值，真实资料和历史证据保留。PR #61/#63/#62规则、草图、隧道及PR #64 Gateway/Gibbs、PR #65缺失数据修复已发布；G163仍OPEN。编译、静态和隔离回归不代表当前Runtime或真实用户验收；未操作原工作分支、浏览器、Cookie、DB、模型或运行服务。

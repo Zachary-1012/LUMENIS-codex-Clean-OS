@@ -151,8 +151,8 @@ and external effects retain their own approval boundaries. Exact provenance:
 `00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
 
 Retain all approved whole-product research and principles in their current owners:
-source/material -> method or constraint -> actual source/caller -> user operation
--> acceptance evidence. This includes frontend usability/visual references,
+source/material -> bounded adoption -> existing owner/caller -> real outcome.
+Current asynchronous chat adoption is in LOOP-PLAN-20261014/product-plan-full.md §16. This includes frontend usability/visual references,
 industry cases, DeepSeek/ancestor inputs, REA adaptations and Math/AI research.
 The existing material/adoption records distinguish unread, missing, adopted,
 implemented and verified; a directory, six owner labels or a summary cannot prove
@@ -816,8 +816,7 @@ evidence, recollect the original material pack or reactivate old rev4.
 
 #### Codex Cloud window constraints
 
-The following safeguards apply to historical handoff or a future explicitly
-authorized Cloud task. They do not resume current C3/C5 Cloud execution.
+These safeguards govern authorized Cloud work; they resume no window.
 
 When explicitly authorized in the future, Cloud workers use Codex Cloud only as an isolated development environment. Product
 Owner confirmation that Cloud is configured does not prove LUMENIS deployment,

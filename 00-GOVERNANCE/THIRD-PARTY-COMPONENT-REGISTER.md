@@ -383,3 +383,11 @@ retain older native-field/failure-state/build safeguards and unrelated dirty wor
 ## 2026-10-13 Selected component: rich-text editor
 
 `flutter_quill` (pub.dev) is the selected rich-text editor, used only behind a LUMENIS adapter; its stored format must align with the SavedWork contract (backend owner). Not yet added to `app/pubspec.yaml`. License: VERIFY_BEFORE_RELEASE.
+
+### 2026-10-14 transitions-ui-generation — generated-result motion
+
+Source: [Jakubantalik/transitions.dev@9398105c07dafe877e43197b71c15a10a3b0e3f6](https://github.com/Jakubantalik/transitions.dev/tree/9398105c07dafe877e43197b71c15a10a3b0e3f6/skills/transitions-ui-generation); reviewed SKILL.md, both mode references, ui-generation.js/css and LICENSE.txt. Source runtime hashes: JS `b6f63c95cf1a20048f350d3200e907511f464c85216ffe58f4691cd8f53f4bfe`; CSS `1a55fce94aad06dcea99a67089175ac67c7666c8ebecf5b54a67a9a08fc8117d`. Verified 2026-10-14.
+
+License: custom Transitions.dev, free personal/commercial use, modification and distribution inside a product; no repackaged competing transition library/motion pack. Tooling elsewhere is MIT, but this skill/runtime is not under that blanket license. No paid plan, external inference, network runtime or account is needed for these files. Preserve upstream attribution/license when distributing adapted source; product branding is excluded. No whole skill collection is installed or redistributed.
+
+Decision: ADAPT in existing Flutter/Core visual primitives and permitted result consumers under Experience §19. The upstream measures DOM and cannot directly measure Flutter canvas; use actual Flutter render geometry with explicit font/layout readiness. Existing Astro Website remains its own DOM surface. No global auto() scan, route/list-row reveal, fake generation texts, or replacement of approved product motion. This documentation decision alone is not an implemented/runtime-verified claim; code/actual target results remain separately recorded in CURRENT. The effect remains removable without changing data, permission or result identity.

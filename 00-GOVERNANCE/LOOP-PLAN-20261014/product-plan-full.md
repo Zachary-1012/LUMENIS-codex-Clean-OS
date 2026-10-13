@@ -1,6 +1,5 @@
 # 序境 / LUMENIS 全产品规划对照表（替代 plan-map.md）
-基线：origin/main `72c96d94`（#35 已合并，2026-10-13 18:04 Asia/Shanghai 读取）。本机主路径 HEAD `25a08341`，有 20 处未提交修改（阿康1 的 SYS-06 浏览器迁移，属于他人在途工作，已保护未动）。
-基线：origin/main `72c96d94`（#35 已合并；读取时间 2026-10-13 18:04 Asia/Shanghai）。本机主路径上次核实时 HEAD 为 `25a08341`；工作区状态本轮没有重新核实。
+原规划采样：origin/main `72c96d94`（#35，2026-10-13 18:04 Asia/Shanghai）；当时主路径 `25a08341` 及20处他人在途修改仅为历史基线。当前发布版本和受保护工作树分别见 CURRENT；本文是完整要求，阅读/采用不等于实现或验收。
 
 ## 0. 已读文件（证明覆盖范围）
 | 文件 | 行数 | 读法 |
@@ -150,7 +149,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G11 | ApplicationTrace | 产物须记录 learning_asset/pattern/evidence/model_version/prompt_contract_version | COL:485-507 | 阿康1 | 闭环内 |
 | G12 | 视频/播客 | 横向时间轴 pan/seek 分离、轨道同步、平移不改工程 | EXP:1235-1246、RD:1354 | 阿康 | 闭环内 |
 | G13 | Read Aloud | 本地朗读 0.75/1/1.25×，单会话，源变更即停 | EXP:1219-1233 | 阿康 | 闭环内 |
-| G14 | 智能UI | 9 条逐步交付合同（首个有用结果、分段身份/修订号、旧 run 不覆盖、延迟计量） | EXP:1343-1359 | 阿康1(C2/C6)/阿康 | 闭环内 |
+| G14 | 智能UI | 9 条逐步交付合同（首个有用结果、分段身份/修订号、旧 run 不覆盖、延迟计量）；新增结果到达动效按Experience §19：原有动效全部保留，真实结果/字体/布局就绪后测量点阵线框并一次揭示；等待用普通骨架，不在切页/每行列表重复；独立全量/随减少动态偏好/关闭选择及立即跳过，未生成/重开不冒充生成 | EXP:1343-1359 | 阿康1(C2/C6)/阿康 | 闭环内 |
 | G15 | 三语 | zh-CN/en/ko 任一缺失该屏不得验收 | EXP:643-651 | 阿康 | 闭环内（前端功能，与后端并行） |
 | G16 | 性能/无障碍 | 60fps、p95≤16.7ms、WCAG 2.2 AA、200% 字号 | EXP:1083-1089 | 阿康 | 闭环内（含视觉微调） |
 | G17 | 训练 | 真实 optimizer step/loss/checkpoint/reload/held-out 才算训练；付费算力需 PO 授权 | RD:1360-1366,1384 | 阿康1 | 闭环内（PO 授权） |
@@ -165,8 +164,8 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G53 | A-BMP | 610/137/185 生产注册、跨品牌权限、品牌-门店-作者归属、真指标报告、关系证据回读 | 审计补录 | 阿康/阿康1 | 闭环内 |
 | G54 | A-Shared研究 | 自有资料→索引/查询/引用片段/版本/导出；来源撤回修订可追溯 | 审计补录 | 阿康/阿康1 | 闭环内 |
 | G55 | A-Shared制作 | 无前置新建→编辑→预览试听→可编辑工程+成品→导出→重开修订；视频、播客分别验收 | 审计补录 | 阿康/阿康1 | 闭环内 |
-| G56 | A-AI-01/Agent | 真实 Gateway、可执行意图、前端非执行态、有效 Evidence/Artifact、取消恢复、评估与模型增益；AI 不阻断无 AI 业务 | 审计补录 | 阿康/阿康1 | 闭环内 |
-| G57 | A-SH-06 | 授权见应见、不见越权、打开继续原任务；通知/提醒/操作 | 审计补录 | 阿康/阿康1 | 闭环内（授权账号随账号体系同步） |
+| G56 | A-AI-01/Agent | 首页同一对话可持续追加独立任务、补充或停止指定任务，及时确认真实接收，不等待长任务结束；后台沿既有Task/Agent调度，短问答可直接返回。每个子任务保留原actor/scope/来源版本、取消/恢复和可读回成果；AI不阻断无AI业务。界面交付结果/依据/可选动作，不展示私有推理链；对应完整采用与验收见§16 | 审计补录 | 阿康/阿康1 | 闭环内 |
+| G57 | A-SH-06 | 现有SH-06承接同一对话后台任务的成果、必要失败与人审，授权见应见、不见越权；点开返回原任务和已提交版本，支持断线后读回。普通进度可查询但不逐步刷消息，结果通知去重；已发/待发/失败与业务完成分别记录，不把通知成功当任务成功 | 审计补录 | 阿康/阿康1 | 闭环内（授权账号随账号体系同步） |
 | G58 | A-四表面 | 官网/Web/Win/macOS/iOS 安装启动、工作流、保存恢复、权限、语言分端实测（前端功能与后端并行） | 审计补录 | 阿康/阿康1 | 闭环内 |
 | G59 | A-GAP54 | 34 PARTIAL/15 UNSCOPED/4 ABSENT（AI-03 持久对话、SH-01 Pattern 检索、Fact Wall 逐 Claim 验证、SH-01 持久 AI 对话）/1 LOCAL_ONLY | 审计补录 | 阿康/阿康1 | 闭环内 |
 | G60 | B 效率 | 记录工时/token/修复次数/任务时长，未测前不宣称提效 | 审计补录 | 阿康/阿康1 | 闭环内起测 |
@@ -186,12 +185,12 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G75 | H 四闭环 | 工程结构、AI 模型、真实用户工作、商业变现 分别验收，互不替代 | 审计补录 | 阿康/阿康1 | 工程闭环内；AI 模型需训练；商业变现能力闭环内，真实用户与付费验证上线后 |
 | G76 | 内容结构（XHS） | Shared 制作提供类型化结构骨架（种草/情绪/知识/活动/短视频 Hook→场景→细节→判断→轻 CTA；短视频 0-3s/3-10s/10-25s/25-40s/40-60s 节奏）与 8 角度标题；出口：用户选类型生成可编辑大纲，非固定模板 | R0914-C01；BMP/KOS 规范在仓 | 阿康/阿康1 | 闭环内（并 G33/G38） |
 | G77 | 人设与 Brief | 账号 persona（受众/支柱/口吻/禁区/商业边界/CTA 风格）+ 每条 Brief 字段为 Shared/BMP 对象；KOS/KOL/KOC/UGC 分层任务；评论回复四类受 persona 约束、Risk 转人工 | R0914-C02 | 阿康/阿康1 | 闭环内 |
-| G78 | 复盘维度+负样本 | 复盘按 Topic/Hook/Persona/Template/CTA 拆，低表现保留为负样本；不只按点赞 | R0914-C02/C05 | 阿康/阿康1 | 闭环内 |
+| G78 | 复盘维度+负样本 | 复盘按 Topic/Hook/Persona/Template/CTA 拆，保留普通/低表现/失败样本；案例逐项附原始URL、日期、市场、平台、方法、分母和证据等级。原帖及可核数据、部分访谈、行业假设、二手线索分开；生成示例不入真实案例池。KOS/员工Persona/线索路径可作可编辑假设，不能把二手收益写成因果或目标KPI；不只按点赞 | R0914-C02/C05 | 阿康/阿康1 | 闭环内 |
 | G79 | 播客资产链 | Person→Interview→Story→Human Problem→Asset→Platform→Signal→Learning；Transcript 记录开头30s/问题序列/情绪与洞察峰值时间戳/产出率/失败点；制作闭环 策划→前采→录制→粗剪→补录→精剪→多平台发布→复盘 | R0914-C03；liangzi/podcast 在仓 | 阿康/阿康1 | 闭环内（并 G33 播客） |
 | G80 | 文案质检 | 反模板=结构稳定表达变化；8 类表达机制、高奢克制 6 法则作为可选风格；质检清单（标题兑现、具体细节、未证实事实/夸大、语气一致、伪创新、同批重复）在保存/导出前提示 | R0914-C04 | 阿康/阿康1 | 闭环内 |
-| G81 | 爆款对照与跨平台 | 爆款研究须含普通/失败样本，相关≠因果；长内容→章节/短切/金句/人物卡/图文，按平台重做包装，复用故事节点而非成片 | R0914-C05 | 阿康/阿康1 | 闭环内 |
+| G81 | 爆款对照与跨平台 | 爆款研究须含普通/失败样本，相关≠因果；按当前ContentContext重建素材用途/事实，不能复制案例文案、标签、时间或指标。BIL按机制覆盖选择案例，区分品牌健康、社媒热度、UGC、触达质量、文化/购买意图、品牌DNA、本地执行、门店体验、增长、创作者归因及AI发现/传统曝光，不做品牌排名。长内容→章节/短切/金句/人物卡/图文，按平台重做包装，复用故事节点而非成片 | R0914-C05 | 阿康/阿康1 | 闭环内 |
 | G82 | 浏览器 Agent 循环 | 内置浏览器动作 Observe→Plan→Act→Verify：observe(URL/readyState/DOM+A11y/必要截图)、verify_action(expected vs actual，失败不报成功)、stall_detect；AI 定位+确定性执行，提取受 schema（约束解码）；离线 benchmark 含 UNACHIEVABLE | R0914-E01/E03；参照 OpenAI | 阿康/阿康1 | 闭环内（并 G32） |
-| G83 | Agent 生产控制链 | Intent→Orchestrator→注册 Tool（schema/读写/域/风险/Evidence/幂等）→Evidence→必要人审→受控 Effect→Evaluation/Trace；Agent 无 COMMIT/DELETE/生产写；AI 输出与原始/人工/决定分存 | R0914-E01 | 阿康/阿康1 | 闭环内（并 G31） |
+| G83 | Agent 生产控制链 | Intent→既有Orchestrator→有界注册Tool/子任务（schema/actor/scope/风险/Evidence/幂等/版本/预算/单写者）→成果Owner读回→必要人审→受控Effect→Evaluation/Trace；长工作异步回到父任务，短工作不强制委派；Agent无任意COMMIT/DELETE/生产写，派生输出与原始/人工/决定分存，不新增Runtime或队列 | R0914-E01 | 阿康/阿康1 | 闭环内（并 G31） |
 | G84 | Provider 失败（按现行规则覆盖） | 自有模型不可用→UNAVAILABLE 可观察状态，无自动回退；BYO-API 仅用户显式选择；确定性采集/统计/报告主链照常 | R0914-E01 vs PO | 阿康/阿康1 | 闭环内（并 G50） |
 | G85 | 数据真相链 | External→Evidence→Canonical→确定性函数→Metric→Truth→ViewModel→Report；Metric/Report 单一生产入口；报告事实与 AI 摘要分区并记 snapshot/evidence 引用；人工修正可追溯可撤销 | R0914-E02 | 阿康/阿康1 | 闭环内 |
 | G86 | 数据红线 | NO_DATA/UNKNOWN≠0（并 X33）；publish_datetime 与 captured_at 分离；同平台 content_hash+platform_id 去重、跨平台转载 REVIEW；详情失败保留主记录 | R0914-E02 | 阿康/阿康1 | 闭环内 |
@@ -243,12 +242,12 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G96 | 删除临时隧道 | start_tunnel.py 已删（b13），登记/基线/清单引用同删；CHANGELOG 历史不改 | PO 10-14 | 阿康 | 闭环内（已备） |
 | G97 | 内容生产链（KOS 规范） | Brief 未完成不生成；Campaign→Series→Post(Title/Hook/Body/CTA/Hashtags/Visual Brief)；版本存 prompt/model/template/输入/校验/人工修改/终稿；模板选择= weighted performance+context fit−risk，权重配置化有版本；一个超级 Prompt 包办禁止 | 02_BMP/KOS_CONTENT_TEMPLATE_EXECUTION_SPEC；FINAL_DATA_PIPELINE | 阿康/阿康1 | 闭环内（并 G76/G77/G80） |
 | G98 | 模板注册表 | template_id/版本/状态/input_schema/output_schema/risk_rules；小红书笔记、海报、视频分镜（每镜 visual/台词/时长/目的/素材）、评论回复（自动/建议/必人审三策略） | FINAL_DATA_PIPELINE | 阿康/阿康1 | 闭环内（输出受约束解码 §10） |
-| G99 | 创意方法论 L0–L3 | 芥子(原子技巧)→单线公式→多线战役六维(人群/内容/渠道/节奏/场域/预算)→品牌世界观；正向下钻出方案、反向上抽沉淀知识；每判断挂真实信号 | BMP 知识 08 | 阿康/阿康1 | 闭环内 |
+| G99 | 创意方法论 L0–L3 | 芥子(原子技巧)→单线公式→多线战役六维(人群/内容/渠道/节奏/场域/预算)→品牌世界观；每层保存父引用、版本及上下文指纹，用户修改只重算实际依赖并显式采用新版本；正向下钻出方案、反向上抽沉淀知识；每判断挂真实信号 | BMP 知识 08 | 阿康/阿康1 | 闭环内 |
 | G100 | 调性坐标 | mass/premium/luxury 为强制变量，同一 Big Idea 三调性出不同执行；高奢克制 6 法则仅 luxury 用 | BMP 05/08/15 | 阿康/阿康1 | 闭环内（并 G80） |
 | G101 | 反模板创意引擎 | 机制×张力句式×角度×语义角色×预算≥3维组合；批次去重；seed 可复现（禁止就地 shuffle 共享 list）；占位符零残留；情感共鸣手法按主题语义角色白名单（服务类只用写实） | BMP 11/13/14/16 | 阿康/阿康1 | 闭环内 |
-| G102 | 主题提取去污染 | 查询主体词及完整品牌名 n-gram 入 stop_terms；系统生成摘要不进提取语料 | BMP 10/13 | 阿康 | 闭环内 |
-| G103 | 三方视角适配 | 同一方案按甲方/乙方/丙方重排章节/KPI/下一步，事实不变 | BMP 12 | 阿康/阿康1 | 闭环内（提案 C4） |
-| G104 | 提案结构与导出 | 10 段比稿骨架+4A 叙事弧+One Slide One Job；预算档 low/mid/high；方案拆解支持 txt/md/json/csv/docx/pptx 上传并导出 Word | BMP 03/05/11/16/17 | 阿康/阿康1 | 闭环内（并 G33） |
+| G102 | 主题提取去污染 | 只从真实原生标题/正文提取，标题权重单列；查询主体词及完整品牌名 n-gram 入 stop_terms；系统摘要/合成标记/互动指标字段及其标签词不混入原文词频，保留原文与派生主题的来源关系 | BMP 10/13 | 阿康 | 闭环内 |
+| G103 | 三方视角适配 | 同一事实和方案按甲方/乙方/丙方的收益、语言、决策权限重排章节/KPI/下一步，事实不变；各视角明确谁使用、做何决定、下一动作及其依据，不用角色名称替代实际适配 | BMP 12 | 阿康/阿康1 | 闭环内（提案 C4） |
+| G104 | 提案结构与导出 | 10 段比稿骨架+4A 叙事弧+One Slide One Job；STP、4P/4C/4R、CDV=TCV−TCC、品牌资产及营销5.0按问题映射已有输入/分析/策略/长期指标，不只贴术语或虚构百分比；预算档 low/mid/high；方案拆解支持 txt/md/json/csv/docx/pptx 上传并导出 Word | BMP 03/05/11/16/17 | 阿康/阿康1 | 闭环内（并 G33） |
 | G105 | 营销日历 | 节气/节日/大促/7 垂直行业/海外 26 节点/区域节点；行业×节气×海外交叉；创意自动绑定当月节点；报告带 marketing_nodes；CSV 排期导出 | BMP 17–24 | 阿康/阿康1 | 闭环内 |
 | G106 | 平台算法信号 | 停留/完播/重看/私发转发/评论/收藏 > 点赞；创作者内容按 ROI 不按点赞；同创意按平台原生改写 | BMP 07/08 | 阿康/阿康1 | 闭环内（并 G78/G81） |
 | G107 | 播客合作评估 | 影响/内容/人群/矩阵/变现五力；6 种合作模式；选题挂营销日历 | BMP 25 | 阿康/阿康1 | 闭环内（并 G79） |
@@ -325,19 +324,19 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G179 | 正文质量与来源分工 | 官方/媒体证身份事实、社媒证传播/消费者表达；正文抽取小样评测（Trafilatura 对照现有）；会话/无会话逐平台逐字段对比 | U02/U03、COLLECTOR-CONTINUITY | 阿康1 |
 | G180 | 平台扩展（同权按用途） | B站公开原生、微博官方 weibo-cli（免费，可作 Skill/MCP 工具）、抖音/视频号/Instagram/TikTok/YouTube 等走统一 PlatformManifest/Session/恢复；不使用付费授权源 | docs/research/2026-platform-crawling-rules.md、IL/07/BILIBILI-PUBLIC-NATIVE、ARCH:536-538 | 阿康1 |
 | G181 | 韩语能力 | 语言字段 zh/ko/en；韩文分词(Kiwi/Okt)、空格校正、情感/主题/NER、韩文风险规则；Naver Blog/Cafe、Daum 适配；韩文 UI 预留 30-50% 长度与本地化格式；模型只用自有/BYO（旧文 HyperClova 云端按现行规则不接） | docs/research/korean-nlp-resources.md、research/intelligence/03_*/Korean_Content_Intelligence_Collection | 阿康1/阿康 |
-| G182 | 韩剧对白/字幕本地化创作 | 场景先行/潜台词/人物声音/克制/留白；敬语、直译意译增省译、情绪等值、术语统一+人工审校，作为 Shared 制作可选风格并有质检用例 | docs/content-learning/KDRAMA_*、IL/02/品牌营销知识-13 | 阿康1 |
+| G182 | 韩剧对白/字幕本地化创作 | 场景先行/潜台词/人物声音/克制/留白；自然度、具体性、潜台词、角色归属、节奏、情绪转折、记忆点、画面适配、余味、原创性十维可编辑审校。敬语及直译/意译/增省译经过语义、人物声音、自然表达、情绪等值、文化、节奏、校对七阶段与原创检查；35/42分是原研究编辑启发，非验证阈值或全创作硬门。作为Shared可选风格，不复刻受限整段字幕；缺失音频参考保留待核，不以文字已读顶替 | docs/content-learning/KDRAMA_*、IL/02/品牌营销知识-13 | 阿康1 |
 | G183 | 视频工程交换 | Timeline 交换损失预检（volume/fade/ducking/muted/多音轨/overlay/dissolve/间隙/多轨）→OTIO/FCPXML/EDL 导出（有理时基，30000/1001 等往返测试）；缺时基/重链报 UNKNOWN 不判可交付；字幕/音轨/叠层；剪辑全链见 §14 E1–E11 | IL/01/VIDEO-WORKFLOW-INTERCHANGE-RESEARCH、U14 | 阿康1/阿康 |
 | G184 | 播客制作全链 | 选题→嘉宾→提纲→脚本→录音/导入→转写/说话人/章节→文本剪辑→可选配音→混音母带（-16 LUFS±1、真峰≤-1 dBTP）→发布包（音频+show notes+章节+字幕稿+RSS）→切片→复盘；工程细则见 §14 P1–P12 | U15、IC-030、docs/research/PODCAST_MODULE_RESEARCH_V1.md、podcast/research | 阿康1/阿康 |
 | G189 | 研究库别名/版本/范围 | 文档/表格/网页/媒体导入；来源定位、引文、别名、版本；检索结果保留范围 | U16 | 阿康1 |
 | G108 | AI 弃答与确定性优先 | 确定性计算先行，生成/分类分路，结构化校验，证据不足弃答（替代旧文 fallback） | U18 | 阿康1 |
-| G109 | Agent 记忆与可靠性 | 写路径先校验、记忆分层(Experience/Skill/Project)、多用户隔离、Checkpoint 断点续跑、Critic 双审、防 Sycophancy、失败案例→回归用例 | IL/11/AgentOrg/04-IMPROVEMENT-QUEUE IC-001..012、IC-037/043 | 阿康1 |
+| G109 | Agent 记忆与可靠性 | 复用Experience/Skill/Project记忆与现有Task checkpoint：稳定偏好、任务事实、检索证据和授权状态分开；附来源/时间/范围/版本/更正与失效，用户可查改/忘记，持久化与实际检索分别验收。压缩后重读最新指令/任务/版本/未完项，记忆不扩权限、不恢复旧命令；保持多用户隔离、Critic及失败案例回归。子任务有界上下文与回调，崩溃先核已提交效果再续跑 | IL/11/AgentOrg/04-IMPROVEMENT-QUEUE IC-001..012、IC-037/043 | 阿康1 |
 | G110 | 受控学习晋升 | shadow→promotion，保留集+真实任务均优于旧版才晋升，可回滚 | U20、IL/05/LEARNING-PROMOTION-ENGINE | 阿康1 |
-| G111 | 通知/设置/诊断 | 进度来自任务状态；通知直达结果；深层日志按需；偏好独立于业务事实 | U24 | 阿康/阿康1 |
+| G111 | 通知/设置/诊断 | 进度来自实际任务状态，可查看和停止；通知复用现有FocusProtector/NotificationRouter与SavedWork通知feed，由真实有用结果、需决定或重要异常触发。普通片段/内部final文本不自动全部广播，通知有范围/收件人/任务版本/去重键/发送回执，失败可恢复；必要审批不因静默被抑制。偏好不改变事实或权限，三语与无障碍完整 | U24 | 阿康/阿康1 |
 | G112 | 发布与备份 | 依赖锁定/许可、备份恢复、分平台打包与同 SHA 验证 | U25 | 阿康1 |
 | G113 | BMP 创作者合作链 | Creator shortlist→合作 Brief→内容/反馈；适配性/受众证据/合作历史/成本来源分开，不以粉丝数代替 | U11、BMP-DATA-INTELLIGENCE-ADOPTION | 阿康1 |
 | G114 | 品牌营销知识库 | 营销日历、全球大促节点、海外算法、奢品安静叙事、品类情绪叙事、比稿方法作为版本化学习资产供 Shared/BMP 调用 | IL/02/品牌营销知识 01-25、IL/09/研究收件箱 | 阿康1 |
 | G115 | **Agent 无 Shell 工具集 + 内置浏览器工具** | 注册 6 类无 Shell 工具（读/搜/取网页/结构化抽取/文件产物/受控 HTTP），每个有 schema、读写类别、域白名单、风险级、Evidence、幂等；Agent 在内置浏览器同一登录态内操作页面并经浏览器调用平台 API，权限按任务授予、任务结束 100% 撤销；无代码执行接口；高风险动作人工确认 | X @llqoli 2109988479690244360（SwiftChat：6 no-shell 工具+浏览器集成，模型自发经浏览器访问 API）、aws-samples/swift-chat websearch/appgen、IL/09/AI操作系统研究/09/13、learning-feed/github-benchmarks-02（typed capability） | 阿康1/阿康 |
-| G116 | **聊天智能 UI（交互卡片）**（另见 evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008） | 聊天内按注册组件目录渲染决策卡/表格/表单/图表/证据卡/比较卡，流式逐段出现；只渲染目录内组件（schema 校验，约束解码见 §10），交互本地状态不必再调模型；数值以后端为准（不信任卡片内计算）；用户可在设置选“简洁”；卡片动作走 Permission+Evidence | X @llqoli 2109977435597103363、OpenAI《GPT-6 and Intelligent UI》与 Help 20001598、MCP Apps(SEP-1865)、EXP:1297-1350、evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008 | 阿康（前端）/阿康1 |
+| G116 | **聊天智能 UI（交互卡片）**（另见 evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008） | 首页聊天按任务渲染已注册文字/决策/表格/表单/图表/证据/比较组件，流式交付已成立的有用内容；长任务期间输入仍可用，多任务结果明确归属，旧回调不覆盖新修订。schema校验，不执行生成HTML/JS，局部操作不强制再调模型，数值由后端提供；保留简洁模式、检查依据、停止/恢复/保存/修订/重开，卡片动作经Permission+Evidence | X @llqoli 2109977435597103363、OpenAI《GPT-6 and Intelligent UI》与 Help 20001598、MCP Apps(SEP-1865)、EXP:1297-1350、evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008 | 阿康（前端）/阿康1 |
 | G117 | 舆情事件聚类 | 语义嵌入+增量/密度聚类（HDBSCAN 类）替代纯规则；簇内代表句+摘要；事件可回溯原帖 | docs/reference/CTR-EVENT-CLUSTER-P1-01.md | 阿康1 |
 | G118 | 观点/立场绑定 | Stance 绑定 Target/Claim，局部活动态度不外推品牌整体；“用户说了什么/系统推测/证据”三分 | IL/09/research/…OPINION_INTELLIGENCE_UPGRADE_BASELINE_V1、LEARNING-UNITS-REGISTRY | 阿康1 |
 | G119 | KOS 漏斗与合规留资 | 三阶漏斗+CPL/成本指标进 KOS 报告；免税等场景标签与分层建议；矩阵号相似度>50% 判搬运预警；AI 参与内容按平台规则自动带披露（“AI辅助生成”说明/#AI创作 话题，用户可见可改不可删）；强监管类目绝对化用语替换提示；矩阵号错峰与行为差异提示；评论回复/私信只生成草稿（不自动发）；私信通为合规留资路径（企业号授权时启用，用户可选） | CTR-KOS-METRICS、CTR-XHS-LEADS、CONTRACT_IC047、KOS-RULES-CONTENT-ENGAGEMENT、KOS-ZHIPU-REPLY（模型改走自有/BYO） | 阿康1 |
@@ -406,13 +405,13 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | OpenAI Math 主引擎与九项主算法/产品闭环/训练增益 | §13 初版遗漏，只列经典库 | §13 重构、G160–G165 | OPENAI-MATH-ADOPTION、REGISTER v2 |
 | 公开数据 MMM/归因（财报/统计/刊例） | 初版依赖用户输入 | G166–G169、G151/G149 改写 | 太古地产中报、SEC/DART API |
 
-## 13. 数学模型驱动的智能（主引擎＝OpenAI Math；2026-10-14 重构，main 07c80483）
-**主引擎：** 固定上游 `openai/math@fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb`（v2 ZIP SHA-256 92e0d179…07aa，Apache-2.0），九 family 102/103/104/107/113/114/115/139/140 已在 `lumenis/shared/evaluation/openai_math_papers/`（16 个类型化 operation，`dispatch.py` 无 eval/exec/shell/网络/模型调用）经 `agent_runtime/openai_math_paper_handler.py`→Task/API→SourceBrief→Permission→SavedWork/Artifact 接入；C2 `lumenis/system/ai_gateway/research/openai_math_papers/`（Gibbs 113 小型策略 train/evaluate，数据24/6/8冻结，既有120-step训练和独立评价回执已核：已训练、未上线）；Lean 4.34.1/Mathlib/Comparator 仅本地证明工具（113 MatchingEntropyBounds 比较进行中）。现状：九项一般主算法、全产品闭环、LLM 训练/新任务增益 **OPEN**。规则：**只有数学条件实际匹配的代码才采用对应算法或证明**；不匹配时用已有确定性方法或下列经典统计补充并记录理由。来源：00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md、THIRD-PARTY-COMPONENT-REGISTER.md §2026-10-10 OpenAI Math v2、ARCH:88-92/398、SOI:9-14/231/322。
+## 13. 数学模型驱动的智能（现有 OpenAI Math owner；研究采用与运行验收分开）
+**主引擎：** 固定上游 `openai/math@fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb`（v2 ZIP SHA-256 92e0d179…07aa，Apache-2.0），九 family 102/103/104/107/113/114/115/139/140 已在 `lumenis/shared/evaluation/openai_math_papers/`（16 个类型化 operation，`dispatch.py` 无 eval/exec/shell/网络/模型调用）经 `agent_runtime/openai_math_paper_handler.py`→Task/API→SourceBrief→Permission→SavedWork/Artifact 接入；C2 `lumenis/system/ai_gateway/research/openai_math_papers/`（Gibbs 113 小型策略 train/evaluate，数据24/6/8冻结，既有120-step训练和独立评价回执已核：已训练、未上线）；Lean/Mathlib/Comparator 仅作为版本固定的本地证明工具；当前正式重放状态按采用记录及精确回执核对，不能从本规划推定完成。现状：九项一般主算法、全产品闭环、LLM 训练/新任务增益 **OPEN**。规则：**只有数学条件实际匹配的代码才采用对应算法或证明**；不匹配时用已有确定性方法或下列经典统计补充并记录理由。来源：00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md、THIRD-PARTY-COMPONENT-REGISTER.md §2026-10-10 OpenAI Math v2、ARCH:88-92/398、SOI:9-14/231/322。
 **补充层：** 经典统计/计量开源库（BSD/MIT/Apache）只在 OpenAI Math 无匹配数学条件处使用，与主引擎同一 Math Engine 注册表、Evidence、版本、弃答规则。
-通用原则：数学确定性计算，AI 只解释；每个输出带 模型ID@版本、输入 Evidence 引用、样本量、区间/置信度、数据状态（COMPLETE/PARTIAL/INSUFFICIENT/NO_DATA）；样本不足返回 INSUFFICIENT 并弃答，不补 0、不给中性默认；全部本地开源可商用许可；广告花费等经营数据只来自用户自填或已采集，不接付费源；用户可选是否启用每个模型与参数。
+通用原则：数学确定性计算，AI 只解释；每个输出带 模型ID@版本、输入 Evidence 引用、样本量、区间/置信度、数据状态（COMPLETE/PARTIAL/INSUFFICIENT/NO_DATA）；样本不足返回 INSUFFICIENT 并弃答，不补 0、不给中性默认；全部本地开源可商用许可；广告花费等经营数据只来自用户自填或已采集，不接付费源；用户编辑业务目标、时间、预算与约束；后端选择适用方法，方法/假设可检查，不能要求用户逐个选择论文、模型或内部参数才能完成任务。
 | # | 能力 | 闭环内验收标准 | 来源/依据 | 归属 |
 |---|---|---|---|---|
-| G143 | **数学引擎层（Math Engine）** | 不新建第二分析引擎：以现有 `lumenis/shared/evaluation/openai_math_papers/`（Shared Evaluation/C5）为主，扩展同一注册表登记补充层模型；模型注册表（id/版本/参数/许可/最小样本/输入 schema/输出 schema）；纯函数+固定随机种子可复现；每次运行写 Evidence（输入哈希、版本、输出、区间）；作为注册 Tool 供 AI Gateway/Agent 调用（G115），输出经约束解码 schema（§10）进入 AI 解释与 G116 卡片；同输入同版本结果逐位一致；版本升级需保留集回测不劣化（G125） | canonical_metrics.py、§10、G115/G116/G125、本地 semantic-math 报告“先固定语义再验证实现” | 阿康1 |
+| G143 | **数学引擎层（Math Engine）** | 复用现有lumenis/shared/evaluation/openai_math_papers注册表与Shared Evaluation owner；登记id/版本/许可/假设/输入输出/最小样本/误差/随机性。冻结输入与运行环境，确定性结果按合同复现；浮点按声明容差而非跨环境虚诺逐位一致。派生计算回执引用原始Evidence，不能覆写来源事实；供既有Task/Gateway/Agent调用，无AI也能给有效结果。方法按业务条件后台选择，版本升级保留对照与回滚 | canonical_metrics.py、§10、G115/G116/G125、本地 semantic-math 报告“先固定语义再验证实现” | 阿康1 |
 | G144 | **现有指数纠偏（只升级）** | `calculate_risk_index` 无数据返回 0、`neg_ratio` 不可算按 0 计入 → 改为 NO_DATA/INSUFFICIENT；`calculate_brand_health_score` 无数据返回 50 → NO_DATA；KOS 评分/归因系数、ctr_predictor 启发式参数登记为 v1 并标“启发式未校准”，在 G150 校准后才可称“预测” | lumenis/shared/reporting/daily.py:38-130、kos_metrics.py、kos_attribution.py、ad_intelligence/models/ctr_predictor.py、G86 | 阿康1 |
 | G145 | 趋势/异常/拐点 | STL 分解+EWMA/CUSUM 告警+变点检测（PELT）替代固定“环比≥200%/阈值”；ETS/ARIMA 短期预测带区间；CTH 事件、BMP 声量、舆情日报；回测：历史注入异常召回≥0.8、误报率可报告；<14 个点返回 INSUFFICIENT | statsmodels(BSD)、ruptures(BSD-2)、statsforecast(Apache-2.0)；alert_engine.py 阈值 | 阿康1 |
 | G146 | 小样本置信与排序 | Beta-Binomial/Wilson 区间显示所有比率（负面率、互动率、转化率）；经验贝叶斯收缩用于 KOS/创作者/门店排行，避免小样本冲顶；界面显示 n 与区间 | scipy(BSD)；G119 KOS 排行 | 阿康1/阿康 |
@@ -427,18 +426,37 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G155 | 新颖度与信息量 | 内容/话题相对历史分布的 KL/惊奇度与 embedding 距离，标“新话题/新角度”；创作反模板（G80）用重复度/新颖度量化 | scipy、numpy | 阿康1 |
 | G156 | 份额与口碑指数 | SOV（声量份额，带分母与平台覆盖）、净情感/类 NPS 指数（推荐/贬损比例+区间）；SOM 仅在用户提供销售时计算；竞品同口径（G49 竞品证明复用） | canonical_metrics.py | 阿康1/阿康 |
 | G157 | 多准则决策 | AHP（一致性比 CR<0.1）/TOPSIS 做选址、选号、方案比稿排序，权重由用户设定并可保存；展示敏感性 | pymcdm(MIT) 或 numpy | 阿康1/阿康 |
-| G158 | 运筹与组合（与 G160 113/114/102 衔接） | 达人组合/排期在预算与覆盖约束下用整数规划（OR-Tools Apache-2.0）；本地数学报告中 FPRAS/计数/抽样结论用于“代表性抽样框”而非优化器；均值收益博弈类结论暂不落地 | 本地 序境-audit-reports/20261007-semantic-math/research-113-115、102-104-107；ortools | 阿康1 |
+| G158 | 运筹与组合（与 G160 113/114/102 衔接） | 达人组合/排期在预算与覆盖约束下用整数规划（OR-Tools Apache-2.0）；数学计数/采样只作用于满足各论文假设的可行对象，不能产生真实采集总体代表性或覆盖保证，也不替代优化器；均值收益博弈类只按G161的有证据shadow范围评估 | 本地 序境-audit-reports/20261007-semantic-math/research-113-115、102-104-107；ortools | 阿康1 |
 | G159 | 数学结果的 AI 呈现 | AI 只读取数学引擎结构化输出生成解释，必须引用模型ID@版本与区间；不得改写数值；卡片显示“方法/样本/置信/局限”，用户可切换简洁 | §10、G116、G108 弃答 | 阿康/阿康1 |
-| G160 | **OpenAI Math 九项一般主算法（主引擎 OPEN 项）** | 每 family 按采用文档表补原缺口：102 归约/主定理证明重放；103 一般机器/去随机化同语义资源界重放；104 获胜集算法与随机复杂度；107 原张量提取与实测乘法程序；113 一般图 FPRAS 与面结构；114 一般独立性 oracle 公共基；115 model/graph/…/采样器全链；139 一般势/oracle 采样与总成本；140 条件标签/副本恒等与有限内存重放。验收：小规模精确基线+反例+正式命题重放分别通过；误用防护项（如“熵≠业务质量”“少查询≠提速”）写成测试 | OPENAI-MATH-ADOPTION §九项主算法 | C2/C5 Math（阿康1） |
-| G161 | OpenAI Math 产品落点（按采用文档 Owner 表） | SYSTEM/C1：104 shadow 调度评估（需授权日志校准概率）、115 抽样框/代表性与覆盖分母、139/140 端到端成本与信息保持口径；CTH/BMP/C3：102/113/114 先分 可行性/优化/计数，creator↔岗位一对一用精确匹配/min-cost flow，确需“方案数/脆弱性”时用 113/114；Shared/C5：SourceBrief 冻结问题/变量/假设与 hash、检索 BM25+向量+融合+cross-encoder（Recall@k/MRR/NDCG）；Agent/C2：Comparator 七项不变量；C4：来源/版本约束不变；F：显示结果/采样范围/缺失/时间/限定状态，数学留后端。每个落点一条真实任务 E2E（保存/修订/重开/恢复） | OPENAI-MATH-ADOPTION 跨 Owner 表、2026-10-09/10-12 节 | 阿康1/阿康 |
+| G160 | **OpenAI Math 九项一般主算法（主引擎 OPEN 项）** | 九family原要求完整保留并区分算法/证明：102复杂度归约与主定理重放；103受资源界约束的概率近似/去随机化；104有限博弈获胜集与对应复杂度；107张量提取/证书与实际乘法；113一般图计数采样与熵面结构；114拟阵/整数多拟阵oracle公共基；115固定边际表的近似或精确采样；139一般势一阶oracle采样；140有限状态回归内存下界。每项分别固定假设、输入表示、输出、复杂度和原文证明，记录完整/有限子实现/原创适配/未完成，不把困难性证明当求解器。小规模基线、反例、正式命题重放与真实产品适配分开，详见本节全文审阅裁决 | OPENAI-MATH-ADOPTION §九项主算法 | C2/C5 Math（阿康1） |
+| G161 | OpenAI Math 产品落点（按采用文档 Owner 表） | SYSTEM/C1：104仅在任务可建成有限博弈且概率经授权日志核实时shadow评估，重启需核前缀累计损失；115在准确边际/容量条件下生成可行表，真实采集覆盖/分母独立核验；139查询与总成本分账、140只在匹配有限状态Gaussian任务时适用下界。CTH/BMP/C3：102/113/114区分困难性/可行性/优化/计数，creator↔岗位普通指派用既有精确匹配/min-cost flow，实际图/拟阵/整数次模rank对象满足假设才用113/114，不泛称方案数/脆弱性。Shared/C5：SourceBrief冻结问题/含义/假设/hash；BM25+余弦向量+融合+cross-encoder依独立检索证据（Recall@k/MRR/NDCG），不冒称115/140推导。Agent/C2：Comparator七项不变量，求解器与模型训练收益分账；C4来源/版本不变。F显示有用结果、来源/假设/范围/缺失/时间/限制和下一步，不要求用户挑论文/内部参数。每个适用落点用无AI正常任务验保存/修订/重开/恢复，再单独验AI增益 | OPENAI-MATH-ADOPTION 跨 Owner 表、2026-10-09/10-12 节 | 阿康1/阿康 |
 | G162 | 基础分析不等 AI | `ai_task_engine._execute_analysis` 产生真实确定性计算结果；`_owned_ai_failure_code` 不再要求 AI 完成基础分析；AI 为可选增强 | OPENAI-MATH-ADOPTION 2026-10-09 节 | 阿康1 |
 | G163 | 数学驱动自研 AI（训练与新任务增益）— OPEN | 按采用文档 6 步：问题/约束/验证器 → rights 与 train/val/新任务隔离 → 复用免费 Kaggle 成果 → 已核验约束/奖励接入训练入口 → checkpoint 重载、同基座同预算前后对照、模型独立与模型+求解器分报 → 经唯一 Gateway 进入产品成果；Gibbs 113 小型参数策略既有120-step及6/8验证/holdout回执已核：已训练、未上线；仅合成有限图，不计为LLM训练或业务收益，G163仍OPEN | OPENAI-MATH-ADOPTION §数学驱动自研 AI | C2（阿康1） |
-| G164 | Lean/Comparator 证明重放 | 113 MatchingEntropyBounds 比较完成（允许公理仅 propext/Quot.sound/Classical.choice），其余已声明形式化 family 逐项重放并记录；证明工具不进产品 Runtime | REGISTER §OpenAI Math v2、ADOPTION §固定正式证明 | 阿康1 |
+| G164 | Lean/Comparator 证明重放 | 按固定Lean/Mathlib/Comparator版本与论文命题逐项实际重放，包括113 MatchingEntropyBounds；核准允许公理、输入命题/库/源码hash和错误日志；历史比较记录不自动迁移为当前PASS，未重放项保持OPEN。证明工具不进入产品Runtime | REGISTER §OpenAI Math v2、ADOPTION §固定正式证明 | 阿康1 |
 | G165 | 上游撤回/修订跟踪 | 定期核对 openai/math 撤回与修订（如 10-07 撤回三稿），所用 family 若被撤回则对应 operation 自动标 REVOKED 并停止新计算 | ADOPTION v2 节 | 阿康1 |
 | G166 | **公开财报数据管线** | 采集上市公司年报/中报/季报：HKEX 披露易、上交所/深交所、SEC EDGAR（XBRL frames：SellingAndMarketingExpense/MarketingAndAdvertisingExpense/ifrs AdvertisingExpense，免 key）、韩国 OpenDART（免费 key）；抽取 营销/销售费用、分部收入、零售额、租户销售增速、客流描述、出租率、租金收入；每数值带 文件/页码/期间/币种/口径（附注 vs 主表），未披露=MISSING | 例：太古地产 2026 中报披露广州太古汇零售额 +9%、租金 +11%、出租率 100%（未单列客流）；SEC EDGAR API 文档；OpenDART 指南 | 阿康1 |
 | G167 | 申报主体↔登记主体关联（通用） | 以官方名称/证券代码/LEI/统一社会信用代码/子品牌与场所归属关系把申报主体映射到已登记品牌/集团/商业体（不硬编码任何主体）；集团级数据按披露口径下放到品牌/项目时必须有分部或项目披露，否则只在集团级使用 | G176、G154、subject_registry | 阿康1 |
 | G168 | 花费代理估计 | 渠道花费代理＝公开刊例价/CPM/CPC 区间（平台公开价目与费率披露）×已采集曝光/内容量×商单/广告识别概率，输出区间而非点值；公开活动披露（新闻稿、获奖案例、招标公告）作锚点；无刊例或无曝光则 MISSING | G119 广告识别、ad_intelligence 平台页、IL/02 品牌营销知识 | 阿康1 |
 | G169 | 自上而下 MMM 与宏观控制 | 按 集团/品牌×季度（中报/年报对齐）建模：因变量为申报收入/零售额/租户销售；自变量为财报营销费用、G168 花费代理、已采集声量；控制变量用国家统计局社零（月）、CPI（月）、文旅/假日出游、商务局商圈客流公开转引；输出贡献与 ROI 后验区间，滚动样本外检验；期数不足→INSUFFICIENT；用户自填明细可作可选更细粒度层 | Meridian/PyMC-Marketing（Apache-2.0）、NBS、G141/G140 零授权 | 阿康1 |
+
+
+### 全文审阅裁决：26 份固定数学稿，不把理论承诺搬成业务事实
+
+2026-10-14已连续读完本地26份PDF对应全文提取文本（正文、附录及参考文献；逐份路径/行数见既有 `sketches/CREATION-COVERAGE-20261014.md`）。这是全文研究，未声称逐页公式图像校对、独立证明或新训练。上游复核到 [1581d4c](https://github.com/openai/math/commit/1581d4cbdd69a0faf34b2089614fe2a814316a6a)：相对固定fd4aeeb仅两笔工作流提交，所审论文没有新字节变化；[官方历史](https://github.com/openai/math/blob/1581d4cbdd69a0faf34b2089614fe2a814316a6a/history.md)所记撤回/修订仍须逐稿适用。官网声明与模型生成稿不是独立有效性证明。九family完整要求不缩减，已提供有限实现继续复用；不能为普通业务硬套不匹配定理。
+
+| 既有 family / 原文性质 | 必须满足的实际条件与输出 | 序境适配及不能冒称的内容 |
+|---|---|---|
+| 102：UGT、Max-Cut、DFVS、Min-UnCut、Vertex Cover困难性 | 固定gap/有限字母表/指定图类的归约与复杂度定理；102保留正式证明重放 | 约束优化方法选择和可承诺精度；不是业务分析算法、求解器或训练能力 |
+| 103：L/RL/BPL去随机化 | 多项式时间、logspace且每条随机带停机的机，显式资源界；精度q时空间O(log n+q)、时间poly(n)·2^O(q) | 复用有限预算/误差分配/证书/全生命周期内存核算；不是RAG、上下文压缩或任意业务正确性保证 |
+| 104：确定/随机/随机节点/Parity均值收益博弈 | 有限无死端图，玩家/机会节点、整数reward、有证据有理概率、liminf或其期望；各稿目标与复杂度独立 | 只对自然满足映射的有界任务shadow比较；小折扣/证书/前缀累计损失与重启分别核验，不把传播或ROI随意视作博弈；整数化/估计误差另计 |
+| 107：Nine Fourths、Complex matrix、Staggered extraction | 复数/特定域、张量与字符构造、精确证书、渐近算术复杂度；非构造性存在与可实施方案分开 | 不能直接承诺现有硬件提速、bit成本、数值稳定性或任意尺寸收益；先具体程序/规模/环境比较 |
+| 113：FPRAS与Entropy Face | 有限简单图、合法完美匹配面/边际；相对误差、失败概率或总变差界，零计数单独处理 | 计数/采样/熵各自有输入契约；熵不是业务质量，采样不是平台真实总体覆盖，理论多项式不保证低延迟 |
+| 114：Matroid / Polymatroid公共基 | 同ground set与同rank、精确独立性oracle；多拟阵需规范化单调整数次模rank/二进制容量 | 普通达人/岗位指派先用既有匹配/优化；不把任意业务筛选器伪称拟阵oracle |
+| 115：有界单元与精确均匀表 | 固定行列边际/单元上界（含0）及可行性；近似TV与精确采样不同；精确法期望多项式仍有罕见长分支 | 只生成条件可行表，不证明数据代表性；超时/取消不能冒称精确样本，无硬实时保证 |
+| 139：强log-concave采样 | 已知mode、正规化势与梯度、I≤Hessian≤2I、精确一阶oracle和固定TV目标；查询模型条件严格 | 分开计oracle次数、内部计算、bit精度与墙钟成本；少查询不等于产品提速，不适用于任意资料分布 |
+| 140：Gaussian回归内存下界六稿 | 有限状态单遍、无噪声Gaussian样本、球面参数、成功率/角误差和M=o(d²)条件 | 内存/样本复杂度边界，不是LLM记忆、Reranker或训练配方；后验/副本恒等仅在原分布条件下使用 |
+
+数学采用、有限运行、正式证明和自研模型增益分账。普通CTH/BMP分析不等待九稿全部重放；无匹配数学条件仍完成原有确定性业务。G163保留已训练未上线的Gibbs有限实验及未闭的checkpoint重载/真实新任务对照，不据此升级模型或发布状态。
 
 ## 14. 剪辑与播客工程能力（2026-10-14 创作研究全读后升级；自有模型默认，BYO API 仅用户选择，不可用即显示「不可用」不切换；手动路径始终可用）
 来源缩写：VWI=IL/01/VIDEO-WORKFLOW-INTERCHANGE-RESEARCH；PMR=docs/research/PODCAST_MODULE_RESEARCH_V1；PAL=docs/research/2026-podcast-ai-landscape；BMK25=品牌营销知识-25；LZ=liangzi-interview-record-v1；KOS=KOS_CONTENT_TEMPLATE_EXECUTION_SPEC；CUE=本地 Cue 逐帧审计；R07=ROUND-07-LOCAL-VIDEO-TIMELINE-CORE；PSW=PODCAST-PLAN-SAVED-WORK。
@@ -469,9 +487,46 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | P11 | 切片与跨平台 | 先出 2–3 分钟卡段（小故事闭环+金句）→ 故事节点→切片候选→9:16 音频图/引语卡→各平台重包装 | 节目→切片组 | 每切片挂时间码与来源；平台包装各不同 | BMP-08、BMP-06 | 内容研究 05、LZ E 层 |
 | P12 | 分析与学习 | story_node_density/emotion_peak_density/insight_density/question_quality/interview_yield/asset_reuse/retention 曲线（有平台数据时）；每次运行记 run_id/pipeline/model/prompt/input_hash | 节目+观测→指标 | AI 派生指标标注非权威；跨平台不互推；缺数据=缺失 | BMP-08、SH-05 | PMR §5-6 |
 | P13 | 研究阅读器与学习晋升 | 研究分级（事实/观察/模式/假设/验证/可迁移/不可照搬）；证据侧抽屉不打断阅读位置；学习候选需证据，≥2 次验证才晋升，出现反例即否决；指标不混用不同平台分母 | 案例→可复用规则 | 无证据结论标「未核实」；AI 建议不自动成为事实 | BMP-08、SH-05 | podcast/research、learning.py、research_pipeline.py |
-| G170 | 内容学习源合同落地 | Narrative/Copy/Visual/Motion/Campaign/Evaluation 六个模式注册表 + ContentLearningAsset；按 Brief 范围检索不全文注入；事实墙（事实→Evidence，创意→模式，未知→UNKNOWN）；13 段生产链 Brief→…→Learning；中韩英按语义意图重写不直译 | Brief→原创产物 | 合同 §14 十项验收全过 | BMP-06、SH-05 | LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1 |
+| G170 | 内容学习源合同落地 | Narrative/Copy/Visual/Motion/Campaign/Evaluation 六个模式注册表 + ContentLearningAsset；按 Brief 范围检索不全文注入；事实墙（事实→Evidence，创意→模式，未知→UNKNOWN）；13 段生产链 Brief→…→Learning保留父引用、版本、上下文指纹及变更依赖；中韩英按语义意图重写不直译 | Brief→原创产物 | 合同 §14 十项验收全过 | BMP-06、SH-05 | LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1 |
 | G171 | 内容审核与客户解释 | ContentReview 9 维（平台/节点/品牌/情绪一致/视觉叙事/话题/搜索/商业/风险）→ READY/NEEDS_REVISION/BLOCKED/NOT_VERIFIED；视觉叙事 7 角色；话题 5 层；每次 2–4 个候选附取舍；专业理由+客户版解释 | 候选→审核结论 | 推荐与已验证表现分开显示；不承诺流量池 | BMP-06 | CONTENT-INTELLIGENCE-SPEC-v1 |
 | G172 | 创作者→AI 发现观测 | Creator→Content→AI 引用/推荐观测，链接类型 direct/source/thematic/unknown；指标不合并成单分 | 观测→分层指标 | 共现不作因果；Unknown 不转 Missing | BMP-05 | GLOBAL_BIL_CREATOR_AI_DISCOVERY_V1 |
 | G173 | 出海视频矩阵 | TikTok/IG Reels/YT Shorts/KOC 金字塔/店铺闭环 + 7 区域营销节点自动带入视频脚本 | 区域+节点→脚本与矩阵 | 节点来自营销日历数据；各平台重写包装 | BMP-06、BMP-07 | 品牌营销知识-24 |
 | G174 | 播客现有代码违反「缺失≠0」的待修项 | ① podcast/intelligence/topic_score.py 旧版信号默认 0.0 并夹取，应并入 topic_scoring.py（缺失=需补输入）后删除旧版；② breakout.py 基线≤0 返回 normal，应返回「基线缺失」；③ podcast_routes /content-yield 引用不存在的 content_yield 模块，应补实现或下线该路由并显式报不可用；④ podcast_store.upsert_entity 缺 observed_at 时填当前时间，应拒绝或标未知；⑤ test_podcast_smoke 授予全局审批 '*'，应改为最小范围；⑥ 实体路由在有域/焦点/操作者列的迁移前保持 503 | 读码 2026-10-14 | 阿康1(C) | 闭环内 |
 | G175 | 能力分层验收 | 凡学习/创作能力按 SOURCE→RUNTIME→DATABASE→TEST→USER OUTCOME 分层报告；自动化 PASS 不得表述为用户已达成效果；外部数据集按许可证署名（如 CC BY 4.0）并标改动；第三方密钥只放服务端私有变量；文化内容不把刻板印象当规则 | KMS AUDIT-52、EDUCATION-OUTCOME-GATE、NONCOMMERCIAL-SOURCES | 阿康1(C) | 闭环内（USER OUTCOME 属真实用户验证，闭环后） |
+
+## 16. 同一对话承接长期工作：逐项核实与现有能力采用
+
+本节完整承接2026-10-14 PO提供的person-like agent分析；其产品问题不缩减，但把官方声明、公开源码、个人反馈与商业/技术推断分开。不是新增产品、IM服务、Agent Runtime、调度器或电脑控制。以下均为研究采用与闭环要求，不能写成当前运行完成。
+
+| 原文命题/问题 | 核实结论 | 现有序境落点与验收 |
+|---|---|---|
+| Instinct是personal agent；Muse可能也是 | Instinct官网明称personal assistant；Meta官方明确Muse是personal agent，不需保留“可能”。个人定位不证明只做私人小事 | 保持序境商业运营/品牌市场定位及独立Shared制作；面向真实工作目标，不能改成私人管家产品 |
+| Grok Bot不是且不想是personal agent，承接办公/创业/长任务 | 官方称持久AI teammates，公开工作案例和跨任务协作支持“范围更广”；“不想是”属动机推断，不能替厂商断言 | G56/G83覆盖研究、业务分析、制作等已有长任务；由成果而非角色数量定义完成 |
+| Instinct抽佣、Meta交互广告、Bot订阅，因此偏好多烧token | Instinct条款含付费/订阅，没有取得“主要抽佣”依据；Meta明说Muse对话/VM数据不共享给广告系统；Bot含订阅额度及可选额外用量，但用量增加不等于利润增加 | 不把未经证实的商业动机写入序境策略。SYS-08沿真实用量/预算/用户授权，优化每个有效成果成本，不为消耗额度委派或发消息 |
+| person-like一类；祖宗是OpenClaw；几乎无限能力装进IM | person-like可作交互分析名称，不是官方统一分类；没有证据证明上述闭源产品继承OpenClaw代码；能力有工具/权限/资源边界 | 采用易懂对话入口，不宣传万能或无边界，不取消原架构导航及独立业务/制作入口 |
+| 人有记忆；LLM无状态且上下文有限 | 单次推理上下文与产品外部持久记忆分开；长对话不能靠无限追加上下文解决 | G109复用agent_memory、Shared Learning、Task checkpoint：有来源的偏好/任务/资料分层检索，更正/失效/删除传播；记忆不产生Canonical事实或授权 |
+| session列表造成负担，一个session又难承载多需求；豆包案例 | 会话过载是需验收的问题；“唯一国民级”及多数用户不知道新会话未取得可靠总体证据。Muse主聊天仍保留侧聊，不等于强制所有内容混在一个上下文 | 首页一个输入可追加多个任务，任务身份/范围/版本独立；按需打开历史、项目或分支，不强迫新会话；也不把不同任务混作同一事实/权限 |
+| 推理耗时造成发送后被迫等候 | 官方支持在工作中继续发消息与后台工作；实际延迟/满意度仍须序境实测 | 输入不锁死，及时给真实接收/必要范围澄清；主对话能继续，长工作在已有后台执行；记录首个有用反馈/最终成果时间而非假进度 |
+| 单入口并发、不展示推理中间态、直接交付、鼓励异步 | 采用不展示私有思维链；官网同时保留任务活动、授权和结果。不能误解为隐藏所有进度或永不回复 | G56/G111：可看实际状态/停止/改优先级，默认少打扰；有用部分结果可交付并声明范围，最后给真实成果/依据/局限/后续动作 |
+| IM像与人交代多事，做完通知；用户不应学复杂workflow | 官网支持自然对话和长期任务，但安全/权限仍有确定控件 | 输入问题与材料即可沿已有Owner处理；真实任务卡/停止/审批/修订入口清楚，不暴露论文选择、内部run ID或代理配置作为必填 |
+| Instinct无头、iMessage；Muse/Bot相同设计；市场反响好 | Instinct首页主打text/call，但条款也含App/工作区，不能绝对说无客户端；Muse/Bot有各自客户端。个别反馈不能证明总体市场反响 | 采用低心智入口和异步方式，不照搬渠道、外部帐号或UI；用户期待用目标任务走查验证，不按下载量或轶事替代 |
+| 主loop及时回复、长时间idle，绝大多数交给subagent | OpenClaw可核非阻塞spawn与完成交回；Grok公开异步handoff但没有证明其所有任务内部delegate实现或原提示词 | G83在已有Task Engine/Agent Runtime内分离对话接收与长任务执行；重I/O/长计算可有界委派，短问答/确定性轻操作直接做。idle是可响应的结果，不是人为目标；有并发/预算/深度/单写者限制 |
+| 子任务完成回调唤醒主loop | 公开文档有completion handoff；接收、执行、提交、成果验收、通知分别发生 | 原actor/task/attempt/version校验、取消栅栏、幂等回调、Owner成果读回、原会话路由；恢复先核已提交结果，旧回调不能复活取消任务或覆盖新版本 |
+| final assistant text自动发声会让模型不能闭嘴 | 这是可验证的设计风险，不是所有模型必然行为；OpenClaw存在NO_REPLY和独立delivery控制 | 在现有通知/回复边界将内部摘要与用户可见消息分开；低价值过程留状态，重要完成/失败/请求决定才送达；用户主动问进度仍应答 |
+| senduser是唯一voice、text只是snippet | 未找到可验证的Grok官方源码/提示词来确认该引文；保留为PO提出的采用方向，不冒称逆向还原 | 用现有NotificationRouter/消息投递合同实现单一可见发送边界；最终文本不能绕过它双发。确定schema、收件人/会话/权限/事件版本/去重键、回执与失败恢复；只含可公开摘要，不输出隐藏思考 |
+| 群聊/私聊同构；自主选择发言，优于全员回答或强制@ | Grok帮助支持普通群消息自主回应、可选@/Reply；不同敏感动作仍有私密确认差异 | 沿已批准Agent Groups/多人能力复用同一task/result/delivery协议，私聊与群聊仅参与者/可见范围不同；不新建群聊产品。不能把群成员当授权者，避免共享私聊记忆/凭据；@是可选指向，明确分工防重复 |
+| 社区反馈如何进入产品 | Cursor论坛有无直观运行信号、跨Bot联络失败；Muse社区有表现下降的抱怨和不同解释，均是个案，原因/发生率未独立证明 | 增加真实验收：任务交接不丢、结果消息不漏不重、可看运行状态、错误不假成功、纠正后不反复引用旧记忆；不用个案宣称竞品普遍失败 |
+
+### 现有源码落点及完成出口
+
+本轮固定eaa20ac源码审阅：`agent_runtime/loop.py`已有同步run/cancel和持久恢复检查，`agent_runtime/durable_adapter.py`复用Task Engine；`agent_memory/`和`lumenis/shared/learning/memory.py`已有记忆/学习生命周期；`agent_focus/notification.py`已有静默进度/重要信号/人工决定三级及去重/限频；`lumenis/shared/reporting/delivery_preferences.py`与`experience_runtime.read_reporting_notifications`已有成果通知feed；AI-01经现有Skill execution提交，SH-06有授权任务投影。**这些源码存在不证明非阻塞多任务、可靠完成唤醒或完整跨端交付已经接通。** 未接线项继续归G56/G57/G83/G109/G111/G116，不新增平行管理清单或假接口。
+
+统一工程出口：用户先交研究A，再交独立创作B，随后修订A/停止B；同一输入区始终可用，A/B来源和范围隔离；网络中断或Core重启后读回原任务，已提交成果不重复产生，取消B后的旧回调无效；A给可用Artifact与引用，能保存、修订、重开；只给必要且去重的通知，授权请求不能被静默吞掉；群内不暴露私聊资料。无模型时原业务/手工制作仍可完成；若当前Owner接口缺失，修接口并实操验收，不用模型口头回报填空。Web、Windows/macOS、iOS分别验中英韩/无障碍/后台生命周期；关闭客户端不等于宿主Core继续运行，离线/休眠能力按实际运行边界如实显示。
+
+### 固定来源、权利和采纳边界
+
+- Grok Bot：[定位](https://docs.x.ai/grok-bot/overview)、[消息与协作](https://docs.x.ai/grok-bot/chat-and-collaboration)、[成果](https://docs.x.ai/grok-bot/files-and-results)、[权限](https://docs.x.ai/grok-bot/approvals-security-and-privacy)、[用量计费](https://cursor.com/help/grok-bot/plans)。公开官方说明，2026-10-14读取；ADAPT操作方法，不复制界面/资产/私有实现。
+- Muse：[官方发布与隐私边界](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/)、[设计原文](https://introducing.muse.ai/)、[安全工程](https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse)。ADAPT低打扰、任务透明及受控浏览器接管；其VM/终端/OS能力不进入序境。
+- Instinct：[官网](https://instinct.com/)、[条款](https://instinct.com/terms)。只采用简单入口方法，不引入其交易/训练/数据条款；商业模式动机保持未证实，不作为产品决策事实。
+- OpenClaw固定[c86d0f8](https://github.com/openclaw/openclaw/tree/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336)：[memory](https://github.com/openclaw/openclaw/blob/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336/docs/concepts/memory.md)、[sessions](https://github.com/openclaw/openclaw/blob/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336/docs/concepts/session-tool.md)、[announce](https://github.com/openclaw/openclaw/blob/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336/docs/tools/subagents/announce.md)、[spawn源码](https://github.com/openclaw/openclaw/blob/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336/src/agents/tools/sessions-spawn-tool.ts)、[silence源码](https://github.com/openclaw/openclaw/blob/c86d0f80023d8dc22dcd1f8ed1cc1b7271414336/src/auto-reply/tokens.ts)。MIT许可，活跃维护；仅原理ADAPT，未安装/复制源码或建第二Runtime，不采用其自动模型切换。客户端相似或名称相同的Muse开源库不能证明Meta Muse血缘。
+- 个案：[Cursor跨Bot联络](https://forum.cursor.com/t/chief-of-staff-unable-to-communicate-with-other-bots/173238)、[状态可见性](https://forum.cursor.com/t/grok-bot-no-glanceable-working-finishing-signal-unless-the-pointer-is-on-the-bot-icon/168456)、[Muse讨论](https://www.reddit.com/r/MuseAgent/comments/1x2dtux/muse_getting_dumber/)。用于形成针对性恢复验收，不作为官方能力/根因/总体满意率。来源含动态内容，不把宣传或未经核实用户评论升级为Canonical事实。

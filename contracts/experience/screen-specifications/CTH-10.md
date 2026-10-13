@@ -156,6 +156,8 @@ analysis successful. No period or export is supplied by this increment, and
 | CTH10-SB-003 | Reopen result after navigation/Core recovery verifies same Job/source/hash and keeps HUMAN_PENDING | Saved → reopened | Actual saved Job | Integration + live E2E |
 | CTH10-SB-004 | Clear/focus change drops late result; foreign/unknown/hostile source identities are withheld | Any → GLOBAL/new focus | 390 / 1440; keyboard and screen reader | Widget + repository + live E2E |
 
+新增成果揭示遵循Experience §19，保留本屏原有动效：只有本次请求产生的真实新版本（不是接收回执/旧成果重开）在字体和最终布局就绪后播放一次完整点阵线框。等待使用普通骨架；用户独立选择完整/随减少动态偏好/关闭，可立即跳过；交互、来源、保存、修订和返回不被动效阻挡，不显示内部推理或虚构生成日志。
+
 ## 8. Review decision and open dependencies
 
 - **Decision:** full CTH-10 remains BLOCKED; §3.1–3.2 SourceBrief increment is M-approved DESIGN_READY, not IMPLEMENTED/ACCEPTED evidence. Period/weekly/export controls remain blocked.
