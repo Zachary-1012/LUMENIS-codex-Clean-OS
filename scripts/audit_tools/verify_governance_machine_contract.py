@@ -205,12 +205,34 @@ def validate_contract() -> dict:
     if any(not data.get("eligible") for data in roles.values()):
         fail("all canonical delivery roles must remain eligible")
     for role, window in EXPECTED_C_WINDOWS.items():
-        if roles[role].get("window") != window or roles[role].get("environment") != "Local Codex":
+        if roles[role].get("window") != window or roles[role].get("environment") != "PO-selected engineering environment":
             fail(f"{role} delivery window/environment drift")
     if roles["M"].get("kind") != "controller_integrator_acceptance":
         fail("M controller/integration/acceptance role drift")
     if roles["F"].get("kind") != "frontend_experience":
         fail("F Experience role drift")
+
+
+    if any(roles[role].get("environment") != "PO-selected engineering environment" for role in EXPECTED_ROLES):
+        fail("engineering environment may not be hardcoded to one development agent")
+    assigned = c.get("agent_assignment", {})
+    if assigned.get("development_peers") != ["Codex", "Akang (GrokBot)"]:
+        fail("PO-approved equal engineering peers drift")
+    if assigned.get("assignment_authority") != "Product Owner":
+        fail("only the Product Owner may assign or partition work")
+    for key in ("equal_product_development_scope", "existing_source_owner_roles_unchanged",
+                "existing_shared_writer_and_safety_gates_unchanged",
+                "brio_returns_to_on_demand_after_delivery", "publication_starts_no_tasks"):
+        if assigned.get(key) is not True:
+            fail(f"PO engineering/data-research assignment policy drift: {key}")
+    for key in ("agent_to_agent_dispatch_allowed", "automatic_task_partition_allowed",
+                "brio_product_code_or_live_collection_by_this_policy", "gpt_standing_dispatch_authority"):
+        if assigned.get(key) is not False:
+            fail(f"unsupported automatic dispatch or product-effect authority: {key}")
+    if (assigned.get("brio_role") != "global_data_source_research_and_acquisition_target_inventory"
+            or assigned.get("brio_output") != "one_time_verified_markdown_inventory"
+            or assigned.get("brio_future_dispatch_authority") != "Product Owner"):
+        fail("Brio research-only on-demand PO assignment drift")
 
     dispatch = c.get("dispatch", {})
     if dispatch.get("published_state_is_live_scheduler") is not False:

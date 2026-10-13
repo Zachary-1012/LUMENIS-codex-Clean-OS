@@ -21,7 +21,6 @@
 """
 import re
 import json
-import time
 import logging
 import datetime
 import urllib.parse
@@ -122,6 +121,9 @@ class DouyinAdapter(BaseAdapter):
             return AdapterResult(success=False, error=f"抖音浏览器采集异常: {e}")
 
     def _search_browser(self, keyword, max_results) -> AdapterResult:
+        from lumenis.system.collector.adapters.response_shape import SearchShapeDiagnostics
+
+        shape_observer = SearchShapeDiagnostics()
         hb = _new_browser_worker()
         hb.connect()
         injected = inject_into_context(hb._context, "douyin")  # Cookie 兜底/换号
@@ -138,15 +140,24 @@ class DouyinAdapter(BaseAdapter):
                 # Playwright's response event fires when headers arrive; reading
                 # a streamed body there can block the sync dispatcher. The
                 # requestfinished event means the response body is available.
+                shape_observer.response_observed()
                 resp = request.response()
                 if resp is None:
                     return
                 if "stream" in u:
-                    api_bags.extend(_iter_json_objects(resp.text()))
+                    objects = _iter_json_objects(resp.text())
+                    api_bags.extend(objects)
+                    if not objects:
+                        shape_observer.parse_failed()
+                    for obj in objects:
+                        shape_observer.observe_json(obj)
                 else:
-                    api_bags.append(resp.json())
+                    obj = resp.json()
+                    api_bags.append(obj)
+                    shape_observer.observe_json(obj)
             except Exception:
-                # 单个响应解析失败不影响整体，交由 DOM 兜底
+                # Preserve the business fallback without exposing the response.
+                shape_observer.parse_failed()
                 return
 
         page = None
@@ -160,28 +171,50 @@ class DouyinAdapter(BaseAdapter):
             page.goto(url, wait_until="domcontentloaded", timeout=30000)
 
             # 等结果真正渲染（以时长徽标为锚），最多 ~18s；同时六态判断
-            rendered = True
             try:
                 page.wait_for_function(
                     "()=>(document.body.innerText.match(/\\b\\d{2}:\\d{2}\\b/g)||[]).length>=1",
                     timeout=18000)
-            except Exception:
-                rendered = False
+            except Exception as exc:
+                logger.debug("Douyin search render wait ended error_type=%s", type(exc).__name__)
 
-            state = hb.detect_state(
-                page,
-                extra_markers={
-                    PageState.BLOCKED: ["访问频繁", "系统繁忙", "稍后再试", "操作太频繁"],
-                    PageState.CAPTCHA: ["滑块", "拖动", "安全验证", "captcha_verify"],
-                    PageState.AUTH_FAILED: ["登录后即可", "验证码登录", "扫码登录", "登录解锁更多"],
-                },
-                success_selector=".videoImage",
-            )
+            def observed_search_failure():
+                state = hb.detect_state(
+                    page,
+                    extra_markers={
+                        PageState.BLOCKED: ["访问频繁", "系统繁忙", "稍后再试", "操作太频繁"],
+                        PageState.CAPTCHA: ["滑块", "拖动", "安全验证", "captcha_verify"],
+                        PageState.AUTH_FAILED: ["登录后即可", "验证码登录", "扫码登录", "登录解锁更多"],
+                    },
+                    success_selector=".videoImage",
+                )
+                failure = {
+                    PageState.AUTH_FAILED: "抖音登录态失效，请在采集专用 Profile 重新登录或更新 Cookie",
+                    PageState.CAPTCHA: "DOUYIN_CAPTCHA_REQUIRED: 抖音出现人机验证，需人工通过后再采",
+                    PageState.BLOCKED: "DOUYIN_RATE_LIMITED: 抖音访问频繁/风控，按熔断退避不硬刚",
+                    PageState.NETWORK_ERROR: "DOUYIN_NETWORK_UNAVAILABLE",
+                }.get(state)
+                if failure is None:
+                    return None
+                # Retain responses already observed in this attempt without
+                # scrolling, reading a fallback DOM, or opening post details.
+                observed = self._notes_from_bags(api_bags, max_results)
+                return AdapterResult(
+                    success=False, notes=observed, error=failure,
+                    raw_count=len(observed), diagnostics=shape_observer.snapshot()
+                )
+
+            failure = observed_search_failure()
+            if failure is not None:
+                return failure
 
             # 拟人滚动加载更多（变速、偶发回滚），让 stream 接口逐页返回
             for _ in range(3):
                 hb.human_scroll(page, total_px=800, rounds=2)
                 hb.pause(1.4, 2.4)
+                failure = observed_search_failure()
+                if failure is not None:
+                    return failure
                 if len(self._notes_from_bags(api_bags, max_results)) >= max_results:
                     break
 
@@ -197,23 +230,15 @@ class DouyinAdapter(BaseAdapter):
                 for nt in notes:
                     nt.raw_data = dict(nt.raw_data or {})
                     nt.raw_data["engine"] = source
-                return AdapterResult(success=True, notes=notes, raw_count=len(notes))
+                return AdapterResult(success=True, notes=notes, raw_count=len(notes), diagnostics=shape_observer.snapshot())
 
             # 无结果时按页面状态如实上报，绝不把风控/登录墙伪装成 0 条
-            if not rendered and state in (PageState.BLOCKED, PageState.CAPTCHA,
-                                          PageState.AUTH_FAILED, PageState.NETWORK_ERROR):
-                hint = {
-                    PageState.AUTH_FAILED: "抖音登录态失效，请在采集专用 Profile 重新登录或更新 Cookie",
-                    PageState.CAPTCHA: "抖音出现人机验证，需人工通过后再采",
-                    PageState.BLOCKED: "抖音访问频繁/风控，按熔断退避不硬刚",
-                }.get(state, f"抖音页面状态={state}")
-                return AdapterResult(success=False, error=hint)
             if not self._has_verified_empty_search_response(api_bags):
                 return AdapterResult(
                     success=False,
-                    error="抖音搜索未返回可验证的结构化结果，不能确认为无新内容",
+                    error="抖音搜索未返回可验证的结构化结果，不能确认为无新内容", diagnostics=shape_observer.snapshot()
                 )
-            return AdapterResult(success=True, notes=[], raw_count=0)
+            return AdapterResult(success=True, notes=[], raw_count=0, diagnostics=shape_observer.snapshot())
         finally:
             if page is not None:
                 try:
@@ -262,7 +287,11 @@ class DouyinAdapter(BaseAdapter):
                 desc = re.sub(r"\s+", " ", (ai.get("desc") or "").strip())
                 if not desc:
                     continue
-                st = ai.get("statistics") or {}
+                statistics = ai.get("statistics")
+                st = statistics if isinstance(statistics, dict) else {}
+                play_count = st.get("play_count")
+                if type(play_count) is not int or play_count < 0:
+                    play_count = None
                 au = ai.get("author") or {}
                 note = self._make_note(
                     title=desc[:80],
@@ -281,6 +310,7 @@ class DouyinAdapter(BaseAdapter):
                         "aweme_id": wid,
                         "author_id": au.get("uid") or au.get("short_id"),
                         "create_time": ai.get("create_time"),
+                        "play_count": play_count,
                     },
                 )
                 notes.append(note)

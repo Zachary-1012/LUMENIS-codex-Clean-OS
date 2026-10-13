@@ -15,7 +15,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Callable
+from typing import List, Optional, Callable
 from ..config import ADAPTER_CONFIG
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,7 @@ class AdapterResult:
     error: str = ""
     raw_count: int = 0
     duration_seconds: float = 0
+    diagnostics: dict = field(default_factory=dict)
 
 
 class CircuitBreaker:

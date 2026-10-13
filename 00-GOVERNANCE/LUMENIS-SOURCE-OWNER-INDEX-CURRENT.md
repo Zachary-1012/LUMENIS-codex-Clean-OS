@@ -26,6 +26,13 @@ Copying Subject/BrandFocus or campaign configuration must not copy source/histor
 
 沿现有Owner/源码表并行建设四个表面，按各自真实角色、任务、接口、保存恢复与端侧运行要求独立验收。F负责完整前端屏幕/官网内容家族与真实接口绑定；已有后端立即接入，其他能力由既有领域Owner与C6按原合同接续，缺失部分记OPEN/UNBOUND，不因接线未齐缩减前端任务、不用模拟结果。实际窗口调度仍由PO决定，共享集成按M/W6预约。保留全部R/J/U、44份规格基线及更广的产品要求，不新增产品、Owner、队列、设计系统或费用。一端验收不自动成立其余端或完整Release。具体端角色归本Decision与Experience，真实验收归Overlay。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
+
+### 2026-10-13 PO personnel clarification — engineering peers and independent research
+
+Codex and **Akang (GrokBot)** are **equal-level engineering agents**, each eligible for any of the existing C1–C6/F/M product-development and integration assignments **only when directly allocated by the Product Owner**. PO Zachary personally partitions their tasks; neither agent is the other's manager, and this index must not auto-assign or invent a division of their product scope. Existing Owner identifiers are *source responsibilities*, not permanent agent appointments. Shared-file exclusivity, Permission, exact-SHA review, source/data protection and real user acceptance remain unchanged.
+
+**Brio (Muse)** is reassigned to **global data-source research, usable source/field/legal-access inventory and concrete acquisition target lists**, with a one-time verified Markdown handoff to Codex/Akang. Research is not authorized live collection or implementation. Upon delivery Brio is on-call **only for new direct PO instructions**; GPT/Codex/Akang do not control, automatically schedule or requisition its further work. GPT may advise when asked but has no standing dispatch authority.
+
 ## 1. Retained R01–R15 acceptance coverage and historical audit groups
 
 ### 2026-10-08 Intelligent UI research adoption routing
@@ -53,6 +60,12 @@ Directory navigation is not proof of implementation; resolve exact current
 paths through the capability locator before changing source. Research source,
 limits and decisions are in
 `evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md`.
+Global external data-source research (C1 Collector/Source input, current single
+version v3.1) is `evidence/round-06/GLOBAL-DATA-SOURCE-RESEARCH-20261013.md` with
+its retail/commercial detail `evidence/round-06/GLOBAL-DATA-SOURCE-RESEARCH-20261013-C-RETAIL.md`; it is research
+evidence, not a dispatch source; per-source classifications outside C are
+researcher-reported and NOT VERIFIED in-repo;
+verified registry seed: `scripts/data_candidates/subject_registry_seed_20261013.jsonl`.
 
 Live dispatch follows the current instruction at the top of AGENTS.md; eligibility/ownership in this index does not assert that a local window is currently running. C1–C6 are retained engineering source responsibilities, not product rounds; R01–R15 are retained acceptance/dependency requirements mapped into those outcomes. The numbered table below is historical coverage context, not a second execution schedule and not the R01–R15 identifier list. D01–D49 are audit dispositions; their original audit labels are not product requirements. This index does not activate paused windows or create sequential dispatch. Valid evidence may cover multiple IDs. No mapping turns a missing gate into PASS. M accepts complete outcomes; W6 integrates when authorized.
 

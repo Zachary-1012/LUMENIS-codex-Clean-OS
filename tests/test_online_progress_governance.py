@@ -472,6 +472,25 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             _assert_legacy_coverage_mapping(changed, require_assertions=True)
 
 
+# T04 (阿康（bot）): historical prohibitions must stay present in the single execution route.
+_PROHIBITION_ANCHORS = (
+    ("no-direct-push-force-push", "No direct push, bypass, force-push or main deletion"),
+    ("no-unauthorized-external-effects", "No collection/model/training/spending/deployment effects are granted"),
+    ("protect-dirty-worktree", "never use reset/clean/checkout/restore or broad staging to overwrite a protected dirty worktree"),
+    ("preserve-unclassified-work", "Never reset, clean or overwrite valid local work merely to make the tree look clean"),
+    ("no-mock-as-success", "no mock backend, fake save or decorative progress can represent business success"),
+    ("os-control-retired", "General computer/OS control is removed from the active product requirements"),
+)
+
+
+class HistoricalProhibitionAnchorsTest(unittest.TestCase):
+    def test_agents_keeps_every_prohibition(self) -> None:
+        agents = Path(__file__).resolve().parents[1] / "AGENTS.md"
+        text = " ".join(agents.read_text(encoding="utf-8").split())
+        missing = [pid for pid, anchor in _PROHIBITION_ANCHORS if " ".join(anchor.split()) not in text]
+        self.assertEqual(missing, [], f"AGENTS.md lost historical prohibitions: {missing}")
+
+
 if __name__ == "__main__":
     unittest.main()
 

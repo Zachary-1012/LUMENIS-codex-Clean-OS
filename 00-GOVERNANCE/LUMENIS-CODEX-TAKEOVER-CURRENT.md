@@ -2,6 +2,10 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-13 PO agent-role change (dated readback, not dispatch)
+
+The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-development agents; the PO alone partitions and dispatches their work. Brio (Muse) is the PO-only global-data-source research and verified acquisition-target inventory contributor, delivering one Markdown research handoff and then acting only on direct PO instructions. The operative routing is in `AGENTS.md` and the machine/source-owner contracts; this dated handoff is neither a new agent authority nor permission to run research, collection, code, training, payment, deployment or PR merge automatically.
+
 ## 1. Online reader's current-state snapshot
 
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
@@ -11,7 +15,7 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 本次修改范围：移除经全文核对的退役执行正文、嵌套副本与活动引用，包含旧ZBC/OSAI执行基线及双仓库硬门；有效安全、复用、资料采用与验收要求由原AGENTS/Architecture/Experience/Owner承接。原缺口清单及绑定镜像纠正CTH-09已有Decision Owner与Flutter reader却标ABSENT的失真，并纠正已见Widget和Shell入口的屏幕不存在声明；汇总由同一批原记录计算。44份实际屏幕规范中的全局二维/禁3D旧限制已在原段纠正，未以模板更新代替消费者修正。屏幕存在、字段接线、动作、权限和用户验收分开，PENDING不改成通过，其余源码/运行语义不由存在性检查升级。 旧蓝图55章中的有效差异/置信度/配置管理/服务与采集诊断/格式失败边界已回填原Owner职责，旧Provider配方与示例值不恢复；这是要求承接而非11个新项目或实现完成。Shared目录仅按当前架构和真实Python绑定读取。原源码、未完成候选、研究原件、审批、业务数据与失败结果不因清理规则删除。
 
-本PR除了治理和研究文档，还在原 lumenis_shared_skills.py 修正了失效的研究引用与误作Python调用的Markdown绑定，因此整份PR确实包含可审查的产品源码变动，必须按源码发布口径校验。合并前仍是分支候选；`PUBLISHED_SOURCE_VERIFIED`不代表生产已加载、真实用户任务验收或已经发布到main。合并前它仍属于分支候选；合并后以实际Git对象和Actions结果核实，不在文档中冻结“当前main”的SHA。
+当前发布包含主体登记种子的产品源码：`scripts/import_subject_registry_seed.py`（默认 dry-run；`--apply` 须经既有 PermissionGate 的 CONFIG_MODIFY 高风险精确人工审批，且只经既有 `subject_registry.add_subject` 幂等写入）与已在线核实的种子 `scripts/data_candidates/subject_registry_seed_20261013.jsonl`（610条，清单固定sha256），并登记全球数据源研究现行版；场内 TENANT_OF 关系仍为候选、未写入。`PUBLISHED_SOURCE_VERIFIED`不代表生产已加载、种子已写入生产库、真实用户任务验收或产品功能完成。此前 AGENTS.md 重复叙述精简（PR #26）与 T04 历史禁止项锚点（PR #24）按规则型发布，第7节复用诊断源码已由 PR #23 按源码口径发布；结果以实际Git对象和Actions核实，不在文档中冻结“当前main”的SHA。
 
 本轮在现有规则型提交的精确文件白名单内，原位降级四份存活旧执行语义：历史 ADR、两份内容制作母指令与 AI 编程旧基线，均只保留归档研究身份；有效 J6/C4 的 Daily/Weekly/Monthly 播客选题与可编辑成品要求已在现有 Owner 保留。此项来源清理不等于开发、运行或产品验收完成。
 
@@ -81,3 +85,8 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 本次已核规则删除及原入口修复，必须通过原治理门、退役文件重现拒绝回归、当前Shared目录引用和线上线下字节/删除状态核对。旧工作树、仓库外规则副本、活跃会话注入与应用端缓存尚未独立核实前，不能由这批根目录清理宣称整个研发环境全部清空。
 
 不创建旧规则备份目录或替代权威文件，不自动删除承载独有未提交代码、研究材料或活跃进程的工作树。先判断独有内容和消费者，再清理对应旧规则入口；不以加“历史”标签冒充已移除。
+
+## 7. 独立复用接入
+
+- 抖音响应结构诊断与可选静态DLL导入观察：源码来自 `codex/reuse-diagnostics-20261013`（`72db140a`），经 PR #23 发布，按用户直接批准的复用ZIP有界接入，不从ZIP重新覆盖；原生指标、风控失败、来源和权限语义保留，无新增采集器、数据真相、模型或运行依赖；值隔离，失败恢复沿原适配器合同。
+- 现有证据为隔离工程回归（本地82项、隔离main候选59项适配器回归、各5+5项构建辅助回归），不是实际采集、新版本App构建、加载运行或真实用户验收；这些仍须各自核验。精确输入、哈希、失败恢复与未闭项见 [本批原位证据](evidence/round-15/REUSE-DIAGNOSTICS-20261013.md)。

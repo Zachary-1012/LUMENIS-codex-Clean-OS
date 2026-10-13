@@ -144,7 +144,7 @@ jobs:
           import pytest
           raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
               'tests/test_rectification_truth_chain_20261010.py',
-              'tests/test_governance_machine_contract.py', '.codex/tests/test_engineering.py',
+              'tests/test_governance_machine_contract.py', 'tests/test_online_progress_governance.py', '.codex/tests/test_engineering.py',
               'tests/test_ai_task_engine.py', 'tests/test_content_generation_parent_evidence.py',
               'tests/test_xhs_cdp_native_truth.py', 'tests/test_source_brief_job.py',
               'tests/test_business_decision_workflow.py', 'tests/agent_capability/test_router.py',
