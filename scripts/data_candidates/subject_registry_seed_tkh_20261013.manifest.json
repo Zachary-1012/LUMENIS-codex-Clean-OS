@@ -1,0 +1,17 @@
+{
+  "approval_ref": "PO-20261013-TKH-DIRECTORY-INGEST",
+  "approval_quote": "这个表格是最新的，最准的，直接入库，然后数据源闭环，闭环前这些数据就ok，以后就只是新增主体，官网没更新",
+  "source_class": "PO_PROVIDED_AUTHORITATIVE",
+  "source_file": "TKH_directory_20261013.xlsx",
+  "source_sha256": "da96656cd42470df3944d7eb12375e87254febc94dc9ea8f795575052d0c122c",
+  "source_uri": "po-provided://TKH_directory_20261013.xlsx#sha256=da96656cd42470df3944d7eb12375e87254febc94dc9ea8f795575052d0c122c",
+  "provided_at": "2026-10-13",
+  "provided_by": "Product Owner 张志宏",
+  "record_count": 137,
+  "by_domain": {
+    "BMP": 137
+  },
+  "candidate_only": false,
+  "import_path": "scripts/import_subject_registry_seed.py --seed tkh -> subject_registry.add_subject",
+  "sha256_jsonl": "a7cec7866920433772a5b571c7e557681f22f3b807788ee900698adf15b376a7"
+}

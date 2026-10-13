@@ -20,3 +20,5 @@ tests/fixtures/collector/native_public_captures_20261004.json -text whitespace=c
 # Codex project-doc budget (project_doc_max_bytes) is measured on checkout bytes;
 # pin AGENTS.md to LF so Windows CRLF checkout cannot exceed it. No content change.
 AGENTS.md text eol=lf
+scripts/data_candidates/*.jsonl text eol=lf
+scripts/data_candidates/*.json text eol=lf
