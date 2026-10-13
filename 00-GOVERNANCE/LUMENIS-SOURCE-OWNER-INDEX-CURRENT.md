@@ -60,6 +60,12 @@ Directory navigation is not proof of implementation; resolve exact current
 paths through the capability locator before changing source. Research source,
 limits and decisions are in
 `evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md`.
+Global external data-source research (C1 Collector/Source input, current single
+version v3.1) is `evidence/round-06/GLOBAL-DATA-SOURCE-RESEARCH-20261013.md` with
+its retail/commercial detail `evidence/round-06/GLOBAL-DATA-SOURCE-RESEARCH-20261013-C-RETAIL.md`; it is research
+evidence, not a dispatch source; per-source classifications outside C are
+researcher-reported and NOT VERIFIED in-repo;
+verified registry seed: `scripts/data_candidates/subject_registry_seed_20261013.jsonl`.
 
 Live dispatch follows the current instruction at the top of AGENTS.md; eligibility/ownership in this index does not assert that a local window is currently running. C1–C6 are retained engineering source responsibilities, not product rounds; R01–R15 are retained acceptance/dependency requirements mapped into those outcomes. The numbered table below is historical coverage context, not a second execution schedule and not the R01–R15 identifier list. D01–D49 are audit dispositions; their original audit labels are not product requirements. This index does not activate paused windows or create sequential dispatch. Valid evidence may cover multiple IDs. No mapping turns a missing gate into PASS. M accepts complete outcomes; W6 integrates when authorized.
 
