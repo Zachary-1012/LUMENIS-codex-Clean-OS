@@ -45,6 +45,9 @@ def client_and_gate(tmp_path, monkeypatch):
     permission_gate.set_testing_bypass(False)
     import experience_runtime
     importlib.reload(experience_runtime)
+    # AI-01 executes only under a server-resolved FOCUS scope (BACKEND-GAP-029).
+    monkeypatch.setattr(experience_runtime, "_ai_intent_trusted_domain",
+                        lambda: ("cth", "CTH", "actor:test"))
 
     app = Flask(__name__)
     app.register_blueprint(experience_runtime.experience_bp)

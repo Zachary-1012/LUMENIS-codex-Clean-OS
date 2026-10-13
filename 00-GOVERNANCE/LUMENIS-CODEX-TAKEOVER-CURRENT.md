@@ -28,6 +28,7 @@ This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any o
   6. Akang1: browser migration (WIP in the main working tree), `COLLECTOR_ENDPOINT`, tasks 1-3 (Gateway executor stub, AI-01 submit chain, stop/resume, SH-06 inbox, decision-card receipts).
   6b. Collection follow-ups (2026-10-13, tracked from PR #36 review): XHS search returns EMPTY_NO_API with a valid 9223 session (run 18:27, 3/28 keywords, 0 inserted; diagnose the rednote.com search API interception); BMP typed persistence for XHS (BMP queries currently deferred); default background run per platform; WeChat OA background worker registration (recovery returns RECOVERY_WORKER_NOT_REGISTERED until then); shared-alias disambiguation across subjects; desensitizer refresh on registry change; full registry cycle is 91 plan pages (cadence 720 min) - raise throughput.
   7. After the loop closes: logo r5 (named/unnamed + 16px), 5 role images + stickers, analysis of ~290 PC images + 47 WeChat videos, frontend (frontend todo: AI-01 non-executable response is shown as '响应无效'; it must show the honest not-executable state). 阿康（bot）
+  8. Post-loop (阿康1（bot））: grant the SH-06 `operational_inbox` read permission to the intended accounts (account system is post-loop; until then SH-06 shows "通知与待办暂不显示"); decision-card receipt stays pending for the CTH-09 Decision owner (BACKEND-GAP-016), no App card while the frontend is paused (USER-ADDITIONS:7,63).
 
 ## 2026-10-13 SYS-06 built-in browser live stream (dated readback, PR #35)
 
@@ -40,6 +41,10 @@ AI-01 submit receipt: `POST /api/experience/ai/intent` reports `evidence_recorde
 ## 2026-10-13 SH-06 read-only inbox backend (dated readback)
 
 SH-06 read-only inbox backend: `GET /api/experience/screen/SH-06` now returns items only for a signed-in actor with a verified `operational_inbox` read grant (GLOBAL_ALL needs CTH and BMP global grants; FOCUS needs the exact Subject/BrandFocus). Each TaskEngine task must carry a matching stored row scope and a fully recomputed TaskEngine Evidence hash chain; it is emitted as row projection v2 (read_allowed, scope, evidence.canonical_reference, integrity v2 content-integrity-only, lineage_verified). Unverified tasks are dropped; the legacy global task/DLQ/health shape and all approve/assign/snooze/retry controls are gone. Without a grant the screen shows "通知与待办暂不显示". Notifications/alerts lanes stay empty until an owner emits verified items. Runtime load and user acceptance: NOT_VERIFIED. 阿康1（bot）
+
+## 2026-10-13 AI-01 submit trusted FOCUS identity (dated readback, PR #40)
+
+AI-01 submit identity (PR #40): the request body accepts only `task` and `action_type` (AI-01.md:56-57); other fields return 400. The execution domain/product comes only from the existing server-side scope resolver (`_content_project_scope`, FOCUS) through `domain_isolation.resolve_domain_identity` (CTH->CTH, BMP->ZBMP). GLOBAL_ALL or an unresolved scope returns `not_executable` (`AI_INTENT_FOCUS_SCOPE_REQUIRED`) without executing or writing Evidence. No account/auth configuration was added (BACKEND-GAP-029 remains for the full trusted adapter). Runtime load and user acceptance: NOT_VERIFIED. 阿康1（bot）
 
 ## 2026-10-13 PO agent-role change (dated readback, not dispatch)
 
@@ -58,7 +63,7 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 本次修改范围：移除经全文核对的退役执行正文、嵌套副本与活动引用，包含旧ZBC/OSAI执行基线及双仓库硬门；有效安全、复用、资料采用与验收要求由原AGENTS/Architecture/Experience/Owner承接。原缺口清单及绑定镜像纠正CTH-09已有Decision Owner与Flutter reader却标ABSENT的失真，并纠正已见Widget和Shell入口的屏幕不存在声明；汇总由同一批原记录计算。44份实际屏幕规范中的全局二维/禁3D旧限制已在原段纠正，未以模板更新代替消费者修正。屏幕存在、字段接线、动作、权限和用户验收分开，PENDING不改成通过，其余源码/运行语义不由存在性检查升级。 旧蓝图55章中的有效差异/置信度/配置管理/服务与采集诊断/格式失败边界已回填原Owner职责，旧Provider配方与示例值不恢复；这是要求承接而非11个新项目或实现完成。Shared目录仅按当前架构和真实Python绑定读取。原源码、未完成候选、研究原件、审批、业务数据与失败结果不因清理规则删除。
 
-当前发布（PR SH-06 收件箱，阿康1（bot））：SH-06 只读收件箱后端产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR AI-01 回执，阿康1（bot））：AI-01 提交回执校验产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR #35，阿康1（bot））为 SYS-06 内置浏览器实时画面流产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前规则型发布：AGENTS.md 固定 LF 换行（内容不变），T04 历史禁止项迁入机器合同 red_lines，由阻塞校验器结构化检查；不含产品源码。`RULES_ONLY_PUBLICATION`不代表生产已加载、真实用户任务验收或产品功能完成。下段 PR #25 主体登记源码已按源码口径发布。
+当前发布（PR #40 AI-01 可信范围，阿康1（bot））：AI-01 提交只认服务端 FOCUS 范围的产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR SH-06 收件箱，阿康1（bot））：SH-06 只读收件箱后端产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR AI-01 回执，阿康1（bot））：AI-01 提交回执校验产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR #35，阿康1（bot））为 SYS-06 内置浏览器实时画面流产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前规则型发布：AGENTS.md 固定 LF 换行（内容不变），T04 历史禁止项迁入机器合同 red_lines，由阻塞校验器结构化检查；不含产品源码。`RULES_ONLY_PUBLICATION`不代表生产已加载、真实用户任务验收或产品功能完成。下段 PR #25 主体登记源码已按源码口径发布。
 
 当前发布包含主体登记种子的产品源码：`scripts/import_subject_registry_seed.py`（默认 dry-run；`--apply` 经既有 PermissionGate 的 CONFIG_MODIFY 精确审批（研发阶段由开发代理直接授予并留回执，见 2026-10-13 PO 规则 4），且只经既有 `subject_registry.add_subject` 幂等写入）与已在线核实的种子 `scripts/data_candidates/subject_registry_seed_20261013.jsonl`（610条，清单固定sha256），并登记全球数据源研究现行版；场内 TENANT_OF 关系仍为候选、未写入。`PUBLISHED_SOURCE_VERIFIED`不代表生产已加载、种子已写入生产库、真实用户任务验收或产品功能完成。此前 AGENTS.md 重复叙述精简（PR #26）与 T04 历史禁止项锚点（PR #24）按规则型发布，第7节复用诊断源码已由 PR #23 按源码口径发布；结果以实际Git对象和Actions核实，不在文档中冻结“当前main”的SHA。
 
