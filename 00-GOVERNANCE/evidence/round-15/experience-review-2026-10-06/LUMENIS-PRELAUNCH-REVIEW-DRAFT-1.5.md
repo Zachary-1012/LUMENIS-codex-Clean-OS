@@ -84,7 +84,7 @@
                  同一来源/事实/权限/Artifact owner
 ~~~
 
-- Public Website 使用 Website 现有 Astro owner，负责产品理解、真实操作演示、文档/资源入口和进入工作区的链接；官网可以保留清楚的“进入工作区”入口，账号/登录具体方案按用户要求后置，不将其做成当前业务使用门槛。
+- Public Website 使用 Website 现有 Astro owner，负责产品理解、真实操作演示、文档/资源入口和进入工作区的链接；官网可以保留清楚的“进入工作区”入口，账号/登录与设置在工程闭环内，提供可选入口，不将其做成普通业务使用门槛。
 - Flutter App 承载 Web Workspace、Desktop App、Mobile Companion 的产品页面。三个 App 工作面共享现有 Core/API/ViewModel，端侧交互按用户任务重组。
 - CTH 负责 Subject-first 商业运营；BMP 负责 Brand/Market-first；Shared 提供采集内容阅读、Evidence、研究和创作交付；SYSTEM 负责 Collector/Runtime/DB/Security/Permission/Settings/Recovery/Observability；AI/Agent 作为这些流程中的增强能力。
 - 这份稿不会另造产品、screen owner、Evidence store、AI Gateway、设计系统或媒体引擎。新能力缺口映射回现有 owner。
@@ -162,7 +162,7 @@ ACC-03 · 选择一项工作
 - 连续抽取 24 张图表；审核稿 1.3 的记录称按序检查 sheet 1–24，对应 frames 1–715；本次未重做该阅读。
 - 审核稿1.3既有观察：打开应用→启动标记/载入→第三方登录/Apple 授权→生物识别→等待/完成→可跳过的岗位引导→订阅/paywall。视频不是官网教程，而是移动 App 启动/身份/引导状态流。
 - 适配：启动标识短暂出现；读取状态后明确可用或问题；保留任务/当前页面；首次使用仅提供可跳过的小提示；异常时给重试和回退。
-- 明确排除：登录墙、第三方账号选择、强制角色问卷、付费墙和订阅定价。账号/登录重新规划仍后置；产品正常使用不等用户先建账号。
+- 明确排除：登录墙、强制角色问卷、付费墙和未经授权的收费。免费Google/邮箱验证码、账号恢复和可选设置在工程闭环内，Apple待开发者账号开通；产品正常使用不等用户先建账号。
 
 #### 319b2b867ef23111e43246d4477c8cf3ed4cb2ac8da585ad3d544beed56a69aa.mp4
 
@@ -367,7 +367,7 @@ ACC-03 · 选择一项工作
 | 本演示对应序境在[版本/日期]实际可操作能力。 | This demonstration shows capabilities available in LUMENIS [version/date]. | 이 시연은 LUMENIS [버전/날짜]에서 실제로 사용할 수 있는 기능을 보여줍니다. |
 | 演示暂不可播放；查看文字步骤。 | The demonstration can't play right now. View the written steps. | 지금은 시연을 재생할 수 없습니다. 단계 설명을 확인하세요. |
 
-Public Website 页头不显示“账号入口·后置”、登录、注册或账号占位。视频任何版本/日期和值仅在实录已对应线上真实功能时替换占位；无障碍字幕/静音/播放失败回退是实际控制，不可只画装饰按钮。
+Public Website 页头保留直达工作区的主要入口，并可进入现行ACC-01账号/登录与设置；不显示占位入口，不要求先登录才能使用普通业务。视频任何版本/日期和值仅在实录已对应线上真实功能时替换占位；无障碍字幕/静音/播放失败回退是实际控制，不可只画装饰按钮。
 
 **跨屏按钮/状态词：**
 
@@ -604,7 +604,7 @@ Public Website 页头不显示“账号入口·后置”、登录、注册或账
 
 | 能力 | 官网 | Web Workspace | Desktop App | Mobile Companion |
 |---|---|---|---|---|
-| 了解产品/流程 | 品牌、能力、合法示例、实际操作影片、FAQ；唯一 CTA 为直达工作区，不放账户/登录入口 | 产品入口后的真实任务选择 | 产品入口后的真实任务选择 | 产品入口/任务续接 |
+| 了解产品/流程 | 品牌、能力、合法示例、实际操作影片、FAQ；主要 CTA 直达开放工作区；另有可选账号/登录与设置入口 | 产品入口后的真实任务选择 | 产品入口后的真实任务选择 | 产品入口/任务续接 |
 | 经营与品牌研究 | 解释真实功能；不显示私有实时数据 | 完整筛选、对比、来源阅读和报告 | 多区域研究、持续监控/任务接续 | 读、通知、聚焦详情、轻编辑/确认 |
 | 全域/焦点 | 展示能力边界；不请求用户选择经营实体 | 全局默认，任务可选 narrowing | 全局默认，任务可选 narrowing | 全局默认，任务可选 narrowing |
 | Source/Evidence | 以经许可示例和操作视频展示 | 多窗/阅读与筛选 | 资料组织、阅读、导出、重开 | 原文/媒体和来源时间线阅读 |
@@ -871,7 +871,7 @@ CTH-02主体目录 / BMP-02品牌组合里的“新增” → 不放进ACC-02焦
 
 | 用户能力 | Public Website | Web Workspace | Desktop App | Mobile Companion |
 |---|---|---|---|---|
-| 首页、导航与工作续接 | 产品叙述和直达“进入工作区”；不放账号/登录入口、菜单或占位 | ACC-03默认首页、完整工作导航、任务/最近保存成果 | 与Web相同的产品范围，外加本机工作连续性 | ACC-03任务接续、待确认事项、原任务返回；不复制首页Hero |
+| 首页、导航与工作续接 | 产品叙述和直达“进入工作区”；提供真实可选账号/登录入口，不设账号墙或占位 | ACC-03默认首页、完整工作导航、任务/最近保存成果 | 与Web相同的产品范围，外加本机工作连续性 | ACC-03任务接续、待确认事项、原任务返回；不复制首页Hero |
 | CTH/BMP研究与管理 | 说明正常操作，不访问/显示私有生产数据 | 完整搜索、筛选、对象关系、趋势、Case/Campaign、报告流程 | Web目标范围 + 大屏并列Evidence/Reader/编辑窗 | 来源阅读、范围/信息查看、标记/审批/轻量录入，逐项依权限/接口 |
 | Source/Evidence/采集 | 只演示已实现且许可的操作；不展示私有Production Data | CTH-03明确分“读取已存”和“一次人工只读搜索”；SYS-02终态编辑已批准计划/管理批次与恢复；SH-01接收文件/SH-02读已入库Source | Desktop可并列计划/平台lane/Source Reader；Mobile接收任务状态、可批准操作并回来源；URL输入/计划/pagination字段只经各自现有Owner合同 | 平台筛选→单帖Reader全屏→返回原滤镜；撤权/失败保留Source/Task，不自动重提 |
 | Subject/BrandFocus/市场身份 | 解释对象类型及范围含义 | 新建/选择/去重/关系管理的主操作面；重复候选由用户确认 | 深层实体关系核查、Evidence定位、已有采集方式管理 | 搜索/选择Focus、查看关系与成熟度，不在狭屏批量合并 |
@@ -885,7 +885,7 @@ CTH-02主体目录 / BMP-02品牌组合里的“新增” → 不放进ACC-02焦
 | 设置/壁纸/恢复 | 产品说明链接 | Web本机偏好/任务返回 | Desktop设备本机偏好/本地媒体恢复 | 手机本地偏好/通知/易读性；壁纸原图不跨端同步 |
 | SYSTEM浏览器/权限/Runtime | 解释使用边界；不展示真实私有运行状态 | Controlled Browser、权限提示、工具/采集状态与恢复可见 | 大屏日志、会话选择/媒体文件/状态恢复入口 | 轻量Runtime状态、授权状态/待审批提醒/安全回退 |
 
-当前Public Website不展示登录入口，ACC-01不绘制账号流程；整体产品闭环后是否需要账号/登录由Product Owner重新决定。上表中的 Web/桌面/移动操作不是“只对有数据的一端画个Unavailable页面”；真实正常路径仍属于目标承诺，要由现有服务Owner接通并验收。只有实测缺服务时才可在该条运行结果上标不可用，而不能从产品蓝图删去正常任务。
+Public Website与ACC-01按当前合同提供可选账号入口及真实登录/恢复流程，免费Google/邮箱验证码和设置在工程闭环内；普通工作直接进入，Apple待开发者账号开通。上表中的 Web/桌面/移动操作不是“只对有数据的一端画个Unavailable页面”；真实正常路径仍属于目标承诺，要由现有服务Owner接通并验收。只有实测缺服务时才可在该条运行结果上标不可用，而不能从产品蓝图删去正常任务。
 
 ---
 
@@ -1043,10 +1043,10 @@ CTH-03来源检索路径的闭环为：明确任务与 GLOBAL/可选 Focus → �
 
 | 屏幕 | 完整任务与字段/内容 | 页面形状/优先级 | 操作与转移 | 当前状态/缺口 |
 |---|---|---|---|---|
-| ACC-01 | 当前不呈现产品账户/登录界面；启动后直接到ACC-03，是否重规划留待闭环后由Product Owner另行决定 | 不绘制账户表单、OAuth按钮、角色选择、找回流程或占位入口 | LaunchSurface→开放工作区；真实底层能力异常时在原位置就地恢复 | 旧 Screen Spec 的 `DESIGN_READY` 仅作为既有规范状态；当前用户方向明确暂缓账户UI，不作为当前设计/实现 |
+| ACC-01 | 启动直达ACC-03开放工作区，账号/登录与设置可选且在工程闭环内 | 免费Google、邮箱验证码、账号恢复；Apple待开发者账号开通，错误/取消/重发/删除撤销按现行合同，不画不可用占位 | LaunchSurface→开放工作区；可选账号流程保留原任务，成功、取消和错误均可返回 | 设计记录不代替实现；账号正常操作、权限、恢复及各表面可用性分别验收，普通工作不设账号墙 |
 | ACC-02 | 可选选择现有 Subject 与 BMP BrandFocus，显示合法对象来源/名称 | 搜索→对象列表→一个对象关系细节；Default GLOBAL 保持第一选择 | 选取后确认焦点；取消/清空回 GLOBAL；跨域不改身份 | 源码存在；主体选择不得变成入口限制 |
 | ACC-03 | 真实待处理任务、待确认动作、重要变化、上次工作（需真有记录）、任务起点 | 上方任务入口；中段是有意义的工作路径/真实任务条；不做四个大卡和侧边状态栏 | 开始 AI-01、打开任务，或进入 CTH/BMP 业务、Shared 研究/直接创作；返回保留当前真实任务 | 源码存在但现有首屏内容和 CTH-01 默认与目标冲突，需重组 |
-| ACC-04 | 某项任务/读取失败时说明对象、影响和真实恢复动作 | 原任务中的局部恢复提示；不跳转到登录/通用权限页面 | 仅在owner许可时重试；否则返回/改用现有可用路径；恢复后回原任务 | 服务端真实拒绝仍不可伪造通过；产品账户与通用权限配置UI暂缓 |
+| ACC-04 | 某项任务/读取失败时说明对象、影响和真实恢复动作 | 原任务中的局部恢复提示；不跳转到登录/通用权限页面 | 仅在owner许可时重试；否则返回/改用现有可用路径；恢复后回原任务 | 服务端真实拒绝仍不可伪造通过；账号/权限设置由ACC-01与SYS-04承接，不让错误页成为通用配置页 |
 
 ### 6.2 CTH — 商业运营（10 屏）
 
@@ -1096,7 +1096,7 @@ CTH-03来源检索路径的闭环为：明确任务与 GLOBAL/可选 Focus → �
 | SYS-01 | 查应用、API、数据库、依赖和适配器实时状态 | 有向拓扑+更新时间+当前失败层；不是业务 KPI | 点依赖看 trace/错误→授权恢复→原任务返回 | 源码存在；具体现场健康需运行 |
 | SYS-02 | 终态：查看来源能力、PlatformSession、现有计划/新增获准计划、真实Task结果及精确可恢复位置 | Plans / Runs / Sources三块互相联动：Scope/模式/时间/来源深度；逐平台lane；declared→live-verified能力层级；query/native/receipt进度分开 | manual start / 用户opt-in plan / pause future / cancel pending / RecoverySheet / resume same Task；运行回执定位Source/Evidence | revision 2已承接最终目标；当前实现仍是read-only，Manifest/Session/receipt/动作绑定与runtime E2E待C1/C6完成 |
 | SYS-03 | 看 Schema、数据库健康、证据/Canonical链 | DB层级与字段 lineage/Integrity error列关系 | 检查错误、导出审计/按owner恢复，不直接改业务 truth | 源码存在；本轮不读生产 DB |
-| SYS-04 | 当前不提供产品角色/账户/通用权限配置页；仅呈现已有动作本身的审批/回执 | 不绘制全局角色矩阵；审批细节留在发起动作的业务页面，系统审计仅保留当前真实只读回执 | 用户在业务页确认具体动作；服务端Permission决定允许/拒绝，SYS-04界面不能授予权限 | 通用账号/权限UI按用户指令待整体产品闭环后再决定；Effect Fence继续有效 |
+| SYS-04 | 账号、安全/设备会话、用户与创始人两类开发者模式按现行SYS-04合同在闭环内呈现 | 分区采用既有设置结构、序境原创视觉；每项能力显示真实权限、作用范围、风险、停用及恢复，不以角色图稿授予权限 | 业务动作内确认；服务端Permission与Effect Fence逐次决定允许/拒绝，模式切换有条款、同意和恢复约束 | 设置修改、账号恢复、权限拒绝和两类模式分别真实验收；普通业务不设账号墙，不自动扩大账户/来源/付费权限 |
 | SYS-05 | 外观、壁纸、主题、对比、字体与动效偏好 | 即时预览；壁纸控制在当前工作旁的抽屉/面板，内容按设备重排 | 预览→仅在当前设备应用/取消→回原任务；无服务端/跨设备壁纸同步 | Screen spec `DESIGN_READY`；两张用户照片已捆绑。局部 Web 选择/重载/移除及纯黑/字号检查有 PASS；两张原图全端/极端裁切验收和原生材质实绘仍未完成 |
 | SYS-06 | 在当前任务的已授权边界中访问受控网页；当RecoverySheet当前项需要LOGIN_FORM/VERIFY时提供Browser交互 | 来源/允许域/浏览器状态/当前恢复项并置；Cookie/token/profile/CDP等敏感信息永不显示 | 普通受控阅读→Return；RecoverySheet→受控登录/验证→交回PlatformSession健康复核→恢复原Task | revision 4明确它不是Session owner/平台账号中心；`IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED / BACKEND-GAP-041`，浏览器online/表单完成都不等于Session或Evidence成功 |
 | SYS-07 | 看同一候选发布链的source/config、Product Gate、App Gate、Critical E2E、package/runtime、rollback、PO repeat、RELEASED/OPERATING证据 | 以SHA绑定的纵向证据链为主，不用一组绿灯卡片；不同SHA证据并排标明不合并 | 打开精确证据/回对应Owner；本屏不自己执行Gate或宣告release | revision 2已批准最终release-evidence目标；当前builder仍只返回有限checks/skill light，完整C6/M release contract和real-user E2E待绑定 |
@@ -1849,7 +1849,7 @@ candidate source SHA
 | 能力族 | 当前快照静态观察 | 目标态完整结果 | 尚缺/待验证 |
 |---|---|---|---|
 | 44 个工作区页面 | 44 个 Screen 文件和 44 份当前 Screen-specific 规范存在 | 本稿逐页定义任务、形状、操作/返回，并指向真实规范状态 | 逐页核对当前 Field/API/Permission/Evidence 与完整真实 E2E；spec.status 是设计/合同状态，不是实现验收 |
-| 产品主页/启动 | ACC-03 / LaunchSurface 源码有入口；root 默认 CTH-01；ACC-03 当前有当前视角/启动状态/滚动呈现 | 开放产品后默认全局任务主页→AI-01；登录方案后置 | 修复错误默认；主页重新按本稿设计；各桌面入口回验 |
+| 产品主页/启动 | ACC-03 / LaunchSurface 源码有入口；root 默认 CTH-01；ACC-03 当前有当前视角/启动状态/滚动呈现 | 开放产品默认全局聊天/任务主页；账号登录可选且在闭环内，保留原任务返回 | 修复错误默认；主页重新按本稿设计；各桌面入口回验 |
 | 官网页面 | Astro 页面和 zh/en/ko 页面源码存在 | Cue 基调 + OpenAI 信息层级 + 真实操作影片/FAQ/入口 | 逐条官网声明和现状能力核对；公开视频、控制、降动效和部署 E2E |
 | CTH | 各屏 widget/repository classes 存在；CTH-03 GET 读取最多100 Canonical rows；人工只读 search POST 已存在但 App 当前不调用；GET row 的部分字段在 Dart 丢失 | GLOBAL/可选Focus → 人工只读搜索 → 稳定平台ID过滤 → 打开真实单帖/Evidence → CTH业务流/保存重开 | CTH-03 `BACKEND-GAP-009`；source/captured/projection未进UI；平台lane缺projection与客户端校验不匹配；固定关键词预填Taikoo Hui；原文/媒体/互动字段未由该row提供 |
 | BMP | 各 screen source 存在 | 品牌/市场/内容/创作者/Campaign/Podcast/评估连贯；BMP-03将单帖视为有明确边界的一条来源 | BrandFocus/竞品/Creator/真实评价字段和原生结果；没有兼容的覆盖/样本/时间序列不能由单帖推出趋势或消费者总体 |
@@ -1918,7 +1918,7 @@ F-01—F-12对应 `Frontend_Delivery_Audit.md` 的原12项发现；F-13—F-18�
 | F-17 | 补same-release发布证据链：Product/App/Critical E2E/package/runtime/rollback/PO repeat/RELEASED/OPERATING，证据按SHA分开 | §6.5、§10发布证据 | SYS-07 |
 | F-18 | 清除研发配置泄漏：AI-05只做产品AI服务诊断，不暴露/选择Codex的Astra/Sol/Luna或raw provider/model | §4.2、§6.4 | AI-05 |
 
-审计中的通用权限UI边界按本会话Product Owner直接指令处理：整体账号/登录/通用角色配置留待完整产品闭环后重新规划；本稿继续保留原业务动作内的服务端Permission、明确批准/拒绝、来源授权、Effect回执与审计，不恢复登录墙。审计未复演全部视频帧；本稿只沿用已有的指定视频覆盖记录/观察和对应采用点，不声称本轮重新逐帧观看。
+审计中的账号/权限UI按当前ACC-01/SYS-04合同在工程闭环内实现，包含免费登录、账号恢复与两类开发者模式；本稿保留原业务动作内的服务端Permission、明确批准/拒绝、来源授权、Effect回执与审计，普通工作不设登录墙。审计未复演全部视频帧；本稿只沿用已有的指定视频覆盖记录/观察和对应采用点，不声称本轮重新逐帧观看。
 
 
 ## 2026-10-08 Intelligent UI 任务适配与全屏索引
