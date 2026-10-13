@@ -70,7 +70,7 @@ def test_supported_auto_opt_in_reaches_existing_identity_policy(monkeypatch):
     _runnable_plan(monkeypatch)
     calls = []
     monkeypatch.setenv("REDNOTE_AUTO_RUN", "true")
-    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "GUANGZHOU_TAIKOO_HUI")
+    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "ALL_REGISTERED_SUBJECTS")
     monkeypatch.setenv("REDNOTE_AUTO_SOURCE", "rednote_hk")
     monkeypatch.setenv("REDNOTE_AUTO_CADENCE_MINUTES", "720")
     monkeypatch.setattr(

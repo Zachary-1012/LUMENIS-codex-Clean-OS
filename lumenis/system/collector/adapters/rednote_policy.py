@@ -37,7 +37,7 @@ CN_PAUSED = True
 # Automatic collection is only supported for the existing narrow scheduler
 # contract. These values must be explicitly configured together with
 # REDNOTE_AUTO_RUN; missing, broad, or mismatched configuration stays manual.
-AUTO_COLLECTION_SCOPE = "GUANGZHOU_TAIKOO_HUI"
+AUTO_COLLECTION_SCOPE = "ALL_REGISTERED_SUBJECTS"  # PO 2026-10-13: every active registered Subject/BrandFocus; targets come from acquisition_plan registry
 AUTO_COLLECTION_SOURCE = "rednote_hk"
 AUTO_COLLECTION_CADENCE_MINUTES = 720
 
