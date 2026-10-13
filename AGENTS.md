@@ -383,7 +383,7 @@ compatibility section. The Semantic Calibration Ledger under evidence/round-15
 is a source-backed index, not another authority. Context is routing metadata,
 never Permission: unknown/conflicting domain IDs are rejected, BMP resolves to
 its existing ZBMP storage identifier, and no selection invents a reference Subject.
-Only an explicitly named legacy reference filter may retain that reference scope;
+Only an explicit reference filter retains its scope; no subject-specific default;
 GLOBAL consumers use existing scoped Canonical/Evidence services.
 
 OpenAI Math methods are applied inside existing owners when their assumptions
@@ -1276,9 +1276,9 @@ When touching RedNote (HK/international account; code id xhs) or any new acquisi
   only. They must remain outside every startup, scheduler, collector, browser, recovery,
   E2E and release path unless the Product Owner explicitly changes this rule;
 - resolve other platform capability from existing secret-safe configuration and
-  registered owners before asking the Product Owner for credentials. Never print or
-  commit a secret; report unavailable/blocked honestly when a real integration cannot
-  authenticate;
+  registered owners before requesting credentials; child processes inherit only the
+  registered identity/profile; CDP verifies its session. Never expose secrets; unavailable
+  authentication remains blocked;
 - primary ingestion must not be broken by a non-critical Evidence side-write failure unless the canonical contract explicitly changes;
 - preserve source identity, source URL, capture time, provider, domain/product context and trace metadata where available;
 - do not collapse distinct source provenance merely because normalized content text matches;

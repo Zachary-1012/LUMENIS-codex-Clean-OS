@@ -64,10 +64,10 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-本批修复缺失风险/日报数据的数值语义：缺失返回None，真实观测零值保留；报告、摘要、行动和导出调用方检查未知值，不误报正常或品牌健康50分。保留原评分范围和实际业务权重。编译、静态和隔离回归仅证明有界代码；当前Runtime未加载、真实日报用户验收未进行。规则/逐屏草图/隧道分别PR #61/#63/#62已发布；其他类别仍独立验收。未操作原有工作分支、Production DB、模型或运行服务。 已合入PR #64的Gateway清理及Gibbs回执：已训练、未上线，G163仍OPEN；本批不重复训练或声明模型收益。
+本批移除指定采集脚本的参考主体profile默认值和CDP示例；主体名称不选择账户；Python 原账户 Owner 核验批准身份和精确 Cookie/Profile 后传入子进程，JS 拒绝任意 profile、目录逃逸、错误身份和不安全 Cookie 域/URL；远端 CDP 只由既有 worker 核验其真实会话身份，不要求复制本机 Cookie；独立脚本导航与响应仅认国际 RedNote。隔离验收不读取真实凭据。ACC-02保持GLOBAL默认与既有参考覆盖维度，不把参考主体作为默认值。删除PO指定旧工单，历史证据链接固定到删除前提交，现行KOS要求仍由既有合同承接。关键词零命中只适用退役可执行路径/硬编码默认值，真实资料和历史证据保留。PR #61/#63/#62规则、草图、隧道及PR #64 Gateway/Gibbs、PR #65缺失数据修复已发布；G163仍OPEN。编译、静态和隔离回归不代表当前Runtime或真实用户验收；未操作原工作分支、浏览器、Cookie、DB、模型或运行服务。
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
 

@@ -1,13 +1,12 @@
 // v5.3.2 - Local authenticated RedNote search bridge
-// Cookie is read locally from XHS_COOKIES_JSON / XHS_COOKIE_HEADER or a private file.
-// It is NEVER written to output JSON, logs, or source code.
-import { chromium } from 'playwright';
+// Cookie is read only from the server-registered private file after identity checks.
+// It is never written to output JSON, logs, or source code.
 import fs from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
+import { chromium } from 'playwright';
+import { assertApprovedCookiePayload, registeredXhsCookieFile, registeredXhsProfile } from './xhs_profile_guard.js';
 
-const PROFILE = process.env.XHS_PROFILE_DIR || path.join(os.homedir(), '.skills-router', 'rednote', 'instances', 'taikoo');
-const COOKIE_FILE = process.env.XHS_COOKIE_FILE || path.join(process.cwd(), 'data', 'private', 'xhs_cookie_header.txt');
+const PROFILE = registeredXhsProfile();
+const COOKIE_FILE = registeredXhsCookieFile();
 const COLLECTION_HOST = (process.env.XHS_COLLECTION_HOST || 'www.rednote.com').trim().toLowerCase();
 if (COLLECTION_HOST !== 'www.rednote.com') {
   throw new Error('当前生产采集仅允许香港/国际 RedNote 主机 www.rednote.com');
@@ -26,13 +25,6 @@ function args() {
 }
 
 function cookieHeader() {
-  if (process.env.XHS_COOKIE_HEADER) return process.env.XHS_COOKIE_HEADER.trim();
-  if (process.env.XHS_COOKIES_JSON) {
-    try {
-      const arr=JSON.parse(process.env.XHS_COOKIES_JSON);
-      return arr.map(x=>`${x.name}=${x.value}`).join('; ');
-    } catch { throw new Error('XHS_COOKIES_JSON 不是有效 JSON 数组'); }
-  }
   if (fs.existsSync(COOKIE_FILE)) return fs.readFileSync(COOKIE_FILE,'utf8').trim();
   return '';
 }
@@ -41,9 +33,10 @@ function parseCookieHeader(raw) {
   return raw.split(';').map(x=>x.trim()).filter(Boolean).map(pair=>{
     const i=pair.indexOf('=');
     if (i<=0) return null;
-    return { name:pair.slice(0,i).trim(), value:pair.slice(i+1).trim(), domain:COOKIE_DOMAIN, path:'/' };
+    return { name:pair.slice(0,i).trim(), value:pair.slice(i+1).trim(), domain:COOKIE_DOMAIN, path:'/', secure:true };
   }).filter(Boolean);
 }
+
 
 function normalize(item) {
   const card=item.note_card || {}, user=card.user || {}, interact=card.interact_info || {}, cover=card.cover || {};
@@ -81,6 +74,9 @@ async function main() {
   const {keyword,output,maxScroll}=args();
   if (!keyword) throw new Error('--keyword 必填');
   const raw=cookieHeader();
+  if (!raw) throw new Error('XHS_REGISTERED_COOKIE_UNAVAILABLE');
+  const cookies=parseCookieHeader(raw);
+  assertApprovedCookiePayload(cookies);
   const cdpUrl=process.env.XHS_CDP_URL||'';
   let browser=null, context=null, page=null, isCdp=false;
   if (cdpUrl) {
@@ -99,7 +95,7 @@ async function main() {
   }
   if(!isCdp){
     context=await chromium.launchPersistentContext(PROFILE,{headless:true,args:['--disable-blink-features=AutomationControlled']});
-    if (raw) await context.addCookies(parseCookieHeader(raw));
+    await context.addCookies(cookies);
     page=context.pages()[0] || await context.newPage();
   }
   const notes=new Map(); let apiCalls=0; let apiErrorCode='', apiErrorMsg='';
