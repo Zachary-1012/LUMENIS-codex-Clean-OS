@@ -122,6 +122,8 @@ The mature global foundation exists and refreshes before customer onboarding. A 
 - a `GLOBAL / ALL` entry with real, mature and traceable product content rather than a fixture, empty shell or wait-for-customer placeholder;
 - honest incremental onboarding/acquisition for new, long-tail or source-restricted entities as extension of the mature base, with real state and source limitations rather than an invented complete profile.
 
+Pre-closure data-source rule (PO approval PO-20261013-TKH-DIRECTORY-INGEST): before product loop closure the baseline data source is the PR #25 610 verified Subject seeds plus the PO-provided Guangzhou Taikoo Hui floor directory of 2026-10-13; after closure only new Subjects are added on top of it. A PO-provided file is an accepted Evidence source class `PO_PROVIDED_AUTHORITATIVE` only when its sha256, `po-provided://` URI, provision date and approval reference are pinned in a manifest and it is written through the existing note, Evidence, scope and relation Owners; its relations stay `UNREVIEWED` and it never substitutes for other sources' Evidence.
+
 Commercial customers later apply Workspace/Role/Entitlement/Source Authorization/Compliance visibility and action policy to this same mature product truth. They do not trigger or receive a second customer-specific data truth.
 
 ### Measurable maturity matrix
