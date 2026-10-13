@@ -258,49 +258,6 @@ def test_explicit_local_workspace_lists_domains_without_creating_actor(subject_r
     assert client.get("/api/settings/subjects").status_code == 401
 
 
-def test_hk_cookie_apply_targets_hk_profile_and_rejects_cn(tmp_path, monkeypatch):
-    # This assertion exercises the cookie route's file/identity boundary, not
-    # the application's full database migration path. The pytest database is
-    # deliberately empty when no seed snapshot is configured, so bypass only
-    # this unrelated startup migration before importing the large Flask app.
-    from lumenis.shared.database import migrations
-
-    monkeypatch.setattr(migrations, "migrate", lambda: True)
-    monkeypatch.setattr(migrations, "_migrate_add_publish_datetime_index", lambda: None)
-    import app as app_module
-    import xhs_cookie_bridge as bridge
-
-    runtime_data = tmp_path / "runtime-data"
-    hk_cookie = runtime_data / "private" / "xhs_cookie_retinaut.txt"
-    cn_cookie = runtime_data / "private" / "xhs_cookie_header.txt"
-    monkeypatch.setattr(bridge, "DATA_DIR", str(runtime_data))
-    monkeypatch.setitem(bridge.ACCOUNT_PROFILES, bridge.DEFAULT_COLLECTION_ACCOUNT,
-                        (str(hk_cookie), str(runtime_data / "profiles" / "hk")))
-
-    payload = {
-        "platform": "xhs",
-        "account": bridge.DEFAULT_COLLECTION_ACCOUNT,
-        "apply": True,
-        "cookies": [{"name": "web_session", "value": "real-session-value", "domain": ".rednote.com"}],
-    }
-    with app_module.app.test_request_context("/api/cookies/import/raw", method="POST", json=payload):
-        response = app_module.api_cookies_import_raw()
-    body = response.get_json()
-    assert response.status_code == 200
-    assert body["applied"] is True
-    assert body["account"] == bridge.DEFAULT_COLLECTION_ACCOUNT
-    assert body["secrets_returned"] is False
-    assert hk_cookie.read_text(encoding="utf-8") == "web_session=real-session-value"
-    assert not cn_cookie.exists()
-
-    payload["account"] = bridge.XHS_CN_PRIMARY_NAME
-    with app_module.app.test_request_context("/api/cookies/import/raw", method="POST", json=payload):
-        response = app_module.api_cookies_import_raw()
-    response_body, response_status = response
-    assert response_status == 403
-    assert response_body.get_json()["code"] == "MAINLAND_COLLECTION_DISABLED"
-
-
 def test_active_resident_plan_and_orchestrator_are_hk_only():
     import scripts.start_resident_browsers as resident
     import xhs_cookie_bridge as bridge

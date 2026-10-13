@@ -1,8 +1,8 @@
 # API 路由矩阵（由当前 Flask url_map 自动生成，勿手改）
 
-- Flask url_map rules：**848**（static：**1**；API routes：**847**）
-- 唯一路径：**807**；operation groups：**859**
-- route operation candidates：**871**；重复冲突组：**12**（候选项：**24**）
+- Flask url_map rules：**843**（static：**1**；API routes：**842**）
+- 唯一路径：**802**；operation groups：**854**
+- route operation candidates：**866**；重复冲突组：**12**（候选项：**24**）
 - 认证：public=/healthz；v4Auth=/v4/* 独立 token；其余 httpBasic 或 v4 会话。
 
 | 路径 | 方法 | Endpoint candidate | Flask rule | 认证 | 分组 |
@@ -219,11 +219,9 @@
 | `/api/collector/history` | GET | collection.api_collector_history | `/api/collector/history` | basic/v4 | api/collector |
 | `/api/collector/quality` | GET | api_collector_quality | `/api/collector/quality` | basic/v4 | api/collector |
 | `/api/collector/start` | POST | collection.api_collector_start | `/api/collector/start` | basic/v4 | api/collector |
-| `/api/collector/start-cdp` | POST | system_features.collector_start_cdp | `/api/collector/start-cdp` | basic/v4 | api/collector |
 | `/api/collector/status` | GET | collection.api_collector_status | `/api/collector/status` | basic/v4 | api/collector |
 | `/api/collector/status` | GET | collector_status.collector_status | `/api/collector/status` | basic/v4 | api/collector |
 | `/api/collector/stop` | POST | collection.api_collector_stop | `/api/collector/stop` | basic/v4 | api/collector |
-| `/api/collector/stop-cdp` | POST | system_features.collector_stop_cdp | `/api/collector/stop-cdp` | basic/v4 | api/collector |
 | `/api/comments` | GET | data_query.api_comments | `/api/comments` | basic/v4 | api/comments |
 | `/api/config/brand-directory` | GET | api_brand_directory | `/api/config/brand-directory` | basic/v4 | api/config |
 | `/api/config/company-domain` | GET | api_company_domain | `/api/config/company-domain` | basic/v4 | api/config |
@@ -249,9 +247,6 @@
 | `/api/content/topic-snapshot` | POST | content_generation.api_topic_snapshot | `/api/content/topic-snapshot` | basic/v4 | api/content |
 | `/api/content/types` | GET | content_generation.api_content_types | `/api/content/types` | basic/v4 | api/content |
 | `/api/content/video-analyze` | POST | content_generation.api_video_analyze | `/api/content/video-analyze` | basic/v4 | api/content |
-| `/api/cookies/import` | POST | api_cookies_import | `/api/cookies/import` | basic/v4 | api/cookies |
-| `/api/cookies/import/raw` | POST | api_cookies_import_raw | `/api/cookies/import/raw` | basic/v4 | api/cookies |
-| `/api/cookies/import/status` | GET | api_cookies_import_status | `/api/cookies/import/status` | basic/v4 | api/cookies |
 | `/api/creative/ideas` | POST | creative_ideas | `/api/creative/ideas` | basic/v4 | api/creative |
 | `/api/creative/pitch-analyze` | POST | creative_pitch_analyze | `/api/creative/pitch-analyze` | basic/v4 | api/creative |
 | `/api/creative/pitch-export` | POST | creative_pitch_export | `/api/creative/pitch-export` | basic/v4 | api/creative |

@@ -2,7 +2,7 @@
 # Registers a Task Scheduler job that runs the idempotent start_production.ps1:
 #   trigger = at user logon, then repeat every 5 minutes indefinitely;
 #   hosted by Task Scheduler service (parent = svchost), so it survives the end of
-#   any interactive / agent shell session and re-launches 8201 watchdog or 9222 if dead.
+#   any interactive / agent shell session and re-launches 8201 watchdog or built-in headless collectors if dead.
 # Runs as the current interactive user (Limited), which is required so Edge CDP has a desktop.
 # Safe to run repeatedly (-Force overwrites). No admin required.
 $ErrorActionPreference = 'Stop'

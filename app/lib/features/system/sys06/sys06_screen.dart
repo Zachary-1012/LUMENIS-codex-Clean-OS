@@ -1,15 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
+import '../../../platform/lumenis_external_view.dart';
 import 'sys06_browser_repository.dart';
 
 /// SYSTEM's single-page controlled reader.
 ///
 /// It displays a server-owned, permission-checked page frame.  It is not a
-/// WebView and never opens the user's installed browser, profile or session.
+/// WebView; the user's installed browser opens only for an explicit view-original jump.
 /// Human operation is limited to server-advertised lease actions. The captured
 /// image itself is never treated as a coordinate input surface.
 class Sys06Screen extends StatefulWidget {
@@ -38,6 +40,8 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
   StreamSubscription<Sys06BrowserFrame>? _frameStream;
   String? _frameStreamSessionId;
   bool _viewVisible = true;
+  final List<Sys06BrowserSession> _tabs = <Sys06BrowserSession>[];
+  bool _collapsed = false;
 
   @override
   void initState() {
@@ -795,6 +799,14 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
   void _adoptSession(Sys06BrowserSession session, {required bool clearFrame}) {
     setState(() {
       _session = session;
+      final tabIndex = _tabs.indexWhere(
+        (tab) => tab.sessionId == session.sessionId,
+      );
+      if (tabIndex < 0) {
+        _tabs.add(session);
+      } else {
+        _tabs[tabIndex] = session;
+      }
       if (clearFrame) _frame = null;
       _notice = session.targetId == null
           ? _Sys06Notice.enterAddress
@@ -805,6 +817,38 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
         _addressController.text = session.currentUrl;
       }
     });
+  }
+
+  // Tabs behave like a normal browser: each tab is one built-in session.
+  Future<void> _switchTab(Sys06BrowserSession tab) {
+    if (_humanLease != null || tab.sessionId == _session?.sessionId) {
+      return Future<void>.value();
+    }
+    _cancelFrameStream();
+    return _run((generation, repository) async {
+      _adoptSession(tab, clearFrame: true);
+      await _readFrame(tab, generation, repository);
+    });
+  }
+
+  void _closeTab(Sys06BrowserSession tab) {
+    if (_humanLease != null && tab.sessionId == _session?.sessionId) return;
+    setState(
+      () => _tabs.removeWhere((item) => item.sessionId == tab.sessionId),
+    );
+    if (tab.sessionId == _session?.sessionId && _tabs.isNotEmpty) {
+      unawaited(_switchTab(_tabs.last));
+    }
+  }
+
+  // Optional user-chosen jump; collection and login stay in the built-in browser.
+  Future<void> _viewOriginalExternally() async {
+    final url = Uri.tryParse(_session?.currentUrl ?? '');
+    if (url == null) return;
+    final opened = await openLumenisExternalView(url);
+    if (!opened) {
+      await Clipboard.setData(ClipboardData(text: url.toString()));
+    }
   }
 
   _Sys06Notice _noticeForError(Object error) {
@@ -883,6 +927,28 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
               onRefresh: _refreshFrame,
             );
             final content = _ReaderBoundary(copy: copy);
+            final tabs = _ReaderTabs(
+              copy: copy,
+              tabs: _tabs,
+              activeSessionId: _session?.sessionId,
+              collapsed: _collapsed,
+              busy: _busy || _stopping,
+              canViewExternally: _session?.currentUrl.isNotEmpty == true,
+              onSelect: _switchTab,
+              onClose: _closeTab,
+              onNewTab: _open,
+              onToggleCollapsed: () => setState(() => _collapsed = !_collapsed),
+              onViewExternally: _viewOriginalExternally,
+            );
+            if (_collapsed) {
+              return Padding(
+                padding: padding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [header, const SizedBox(height: 12), tabs],
+                ),
+              );
+            }
             if (constrainedHeight) {
               return SingleChildScrollView(
                 padding: padding,
@@ -893,7 +959,9 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         header,
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 12),
+                        tabs,
+                        const SizedBox(height: 10),
                         controls,
                         const SizedBox(height: 14),
                         SizedBox(height: 440, child: preview),
@@ -914,7 +982,9 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       header,
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 12),
+                      tabs,
+                      const SizedBox(height: 10),
                       controls,
                       const SizedBox(height: 14),
                       Expanded(child: preview),
@@ -928,6 +998,104 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
           },
         ),
       ),
+    );
+  }
+}
+
+class _ReaderTabs extends StatelessWidget {
+  const _ReaderTabs({
+    required this.copy,
+    required this.tabs,
+    required this.activeSessionId,
+    required this.collapsed,
+    required this.busy,
+    required this.canViewExternally,
+    required this.onSelect,
+    required this.onClose,
+    required this.onNewTab,
+    required this.onToggleCollapsed,
+    required this.onViewExternally,
+  });
+
+  final _Sys06Copy copy;
+  final List<Sys06BrowserSession> tabs;
+  final String? activeSessionId;
+  final bool collapsed;
+  final bool busy;
+  final bool canViewExternally;
+  final ValueChanged<Sys06BrowserSession> onSelect;
+  final ValueChanged<Sys06BrowserSession> onClose;
+  final VoidCallback onNewTab;
+  final VoidCallback onToggleCollapsed;
+  final VoidCallback onViewExternally;
+
+  String _label(Sys06BrowserSession tab) {
+    if (tab.currentTitle.isNotEmpty) return tab.currentTitle;
+    final host = Uri.tryParse(tab.currentUrl)?.host ?? '';
+    return host.isNotEmpty ? host : copy.text('tab.new');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = LumenisTheme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            key: const ValueKey('sys06-tabs'),
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final tab in tabs)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: InputChip(
+                      key: ValueKey('sys06-tab-${tab.sessionId}'),
+                      selected: tab.sessionId == activeSessionId,
+                      label: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 180),
+                        child: Text(
+                          _label(tab),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      onPressed: busy ? null : () => onSelect(tab),
+                      onDeleted: busy ? null : () => onClose(tab),
+                      deleteButtonTooltipMessage: copy.text('tab.close'),
+                    ),
+                  ),
+                Tooltip(
+                  message: copy.text('tab.add'),
+                  child: IconButton(
+                    key: const ValueKey('sys06-tab-new'),
+                    onPressed: busy ? null : onNewTab,
+                    icon: const Icon(Icons.add_rounded),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Tooltip(
+          message: copy.text('viewExternal'),
+          child: IconButton(
+            key: const ValueKey('sys06-view-external'),
+            onPressed: canViewExternally ? onViewExternally : null,
+            icon: Icon(Icons.open_in_new_rounded, color: theme.muted),
+          ),
+        ),
+        Tooltip(
+          message: copy.text(collapsed ? 'expand' : 'collapse'),
+          child: IconButton(
+            key: const ValueKey('sys06-collapse'),
+            onPressed: onToggleCollapsed,
+            icon: Icon(
+              collapsed ? Icons.unfold_more_rounded : Icons.unfold_less_rounded,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2358,6 +2526,12 @@ class _Sys06Copy {
       'return': '返回任务',
       'takeControl': '接管浏览',
       'releaseControl': '释放控制',
+      'tab.new': '新标签页',
+      'tab.add': '新建标签页',
+      'tab.close': '关闭标签页',
+      'viewExternal': '在外部浏览器查看原文（仅查看，不采集）',
+      'collapse': '收起浏览器',
+      'expand': '展开浏览器',
       'back': '返回上一页',
       'forward': '前进',
       'scrollUp': '向上滚动',
@@ -2481,6 +2655,13 @@ class _Sys06Copy {
       'return': 'Return to task',
       'takeControl': 'Take control',
       'releaseControl': 'Release control',
+      'tab.new': 'New tab',
+      'tab.add': 'New tab',
+      'tab.close': 'Close tab',
+      'viewExternal':
+          'View original in external browser (view only, no collection)',
+      'collapse': 'Collapse browser',
+      'expand': 'Expand browser',
       'back': 'Back',
       'forward': 'Forward',
       'scrollUp': 'Scroll up',
@@ -2633,6 +2814,12 @@ class _Sys06Copy {
       'return': '작업으로 돌아가기',
       'takeControl': '브라우저 제어',
       'releaseControl': '제어 해제',
+      'tab.new': '새 탭',
+      'tab.add': '새 탭',
+      'tab.close': '탭 닫기',
+      'viewExternal': '외부 브라우저에서 원문 보기(보기 전용, 수집 안 함)',
+      'collapse': '브라우저 접기',
+      'expand': '브라우저 펼치기',
       'back': '뒤로',
       'forward': '앞으로',
       'scrollUp': '위로 스크롤',

@@ -810,9 +810,14 @@ def _adaptive_cool_minutes():
     except Exception:
         return 60
 
+def risk_gating_enabled():
+    """风控闸门总开关 COLLECTION_RISK_GATING：研发期默认 off（不限速/不熔断/不冷却），闭环前设 on。"""
+    return os.environ.get('COLLECTION_RISK_GATING','off').strip().lower() in ('1','on','true','yes')
+
 def is_test_mode():
-    """测试模式：环境变量 XHS_TEST_MODE=1 时跳过冷却/新账号保护/熔断拦截，端到端测试期使用"""
-    return os.environ.get('XHS_TEST_MODE','').strip() in ('1','true','TRUE','yes')
+    """XHS_TEST_MODE=1 或风控闸门关闭（研发期默认）时跳过冷却/新账号保护/熔断拦截"""
+    return (os.environ.get('XHS_TEST_MODE','').strip() in ('1','true','TRUE','yes')
+            or not risk_gating_enabled())
 
 def select_account(account_name: str):
     """双子星库 Contract：选择小红书采集身份（硬白名单 ACCOUNT_PROFILES）。

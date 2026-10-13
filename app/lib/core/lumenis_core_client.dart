@@ -845,6 +845,18 @@ class LumenisCoreClient {
   /// loopback workspace transport and refuses forged identity headers, cookies
   /// and remote origins.  A client credential must never become a substitute
   /// for a Browser actor/session boundary.
+  /// Optional manual collection for the selected scope. Automatic
+  /// collection of every registered subject stays the default; this only
+  /// queues one human-confirmed read-only run in the system background.
+  Future<Map<String, dynamic>> startManualCollection() => _request(
+    'POST',
+    '/api/collect',
+    payload: const <String, Object?>{
+      'operator': 'human_ui',
+      'confirm_read_only': true,
+    },
+  );
+
   Future<Map<String, dynamic>> openBrowserSession() {
     _requireLocalBrowserEndpoint();
     return _request(

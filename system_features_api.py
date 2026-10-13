@@ -13,7 +13,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 导入模块
 from security_scanner import security_scanner
-from collector_auto_start import collector_starter
 
 system_features_bp = Blueprint('system_features', __name__)
 
@@ -193,25 +192,5 @@ def local_ai_chat():
 # ============================================
 
 # 注意：/api/collector/status 已在 app.py 中实现，此处不再重复注册
-
-@system_features_bp.route('/api/collector/start-cdp', methods=['POST'])
-def collector_start_cdp():
-    """启动CDP浏览器"""
-    try:
-        result = collector_starter.start_edge_with_cdp()
-        return jsonify({'ok': True, **result})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-
-@system_features_bp.route('/api/collector/stop-cdp', methods=['POST'])
-def collector_stop_cdp():
-    """停止CDP浏览器"""
-    try:
-        result = collector_starter.stop_edge()
-        return jsonify({'ok': True, **result})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
 
 print("[SystemFeaturesAPI] 系统功能API路由已加载", flush=True)

@@ -19,12 +19,12 @@
       }
     }
   },
-  "x-url-map-rule-count": 848,
+  "x-url-map-rule-count": 843,
   "x-static-route-count": 1,
-  "x-route-count": 847,
-  "x-path-count": 807,
-  "x-operation-count": 871,
-  "x-operation-group-count": 859,
+  "x-route-count": 842,
+  "x-path-count": 802,
+  "x-operation-count": 866,
+  "x-operation-group-count": 854,
   "x-duplicate-operation-group-count": 12,
   "x-duplicate-operation-candidate-count": 24,
   "x-duplicate-operation-candidates": [
@@ -4562,25 +4562,6 @@
         "summary": "启动采集任务"
       }
     },
-    "/api/collector/start-cdp": {
-      "post": {
-        "tags": [
-          "api/collector"
-        ],
-        "parameters": [],
-        "security": [
-          {
-            "httpBasic": []
-          },
-          {
-            "v4Auth": []
-          }
-        ],
-        "operationId": "system_features.collector_start_cdp",
-        "x-flask-rule": "/api/collector/start-cdp",
-        "summary": "启动CDP浏览器"
-      }
-    },
     "/api/collector/status": {
       "get": {
         "tags": [
@@ -4624,25 +4605,6 @@
         "operationId": "collection.api_collector_stop",
         "x-flask-rule": "/api/collector/stop",
         "summary": "停止采集任务"
-      }
-    },
-    "/api/collector/stop-cdp": {
-      "post": {
-        "tags": [
-          "api/collector"
-        ],
-        "parameters": [],
-        "security": [
-          {
-            "httpBasic": []
-          },
-          {
-            "v4Auth": []
-          }
-        ],
-        "operationId": "system_features.collector_stop_cdp",
-        "x-flask-rule": "/api/collector/stop-cdp",
-        "summary": "停止CDP浏览器"
       }
     },
     "/api/comments": {
@@ -5114,63 +5076,6 @@
         "operationId": "content_generation.api_video_analyze",
         "x-flask-rule": "/api/content/video-analyze",
         "summary": "视频智能分析（接入智谱视觉理解）。"
-      }
-    },
-    "/api/cookies/import": {
-      "post": {
-        "tags": [
-          "api/cookies"
-        ],
-        "parameters": [],
-        "security": [
-          {
-            "httpBasic": []
-          },
-          {
-            "v4Auth": []
-          }
-        ],
-        "operationId": "api_cookies_import",
-        "x-flask-rule": "/api/cookies/import",
-        "summary": "触发从本地 data/ 源文件重新导入平台 Cookie（微博/B站/小红书）。"
-      }
-    },
-    "/api/cookies/import/raw": {
-      "post": {
-        "tags": [
-          "api/cookies"
-        ],
-        "parameters": [],
-        "security": [
-          {
-            "httpBasic": []
-          },
-          {
-            "v4Auth": []
-          }
-        ],
-        "operationId": "api_cookies_import_raw",
-        "x-flask-rule": "/api/cookies/import/raw",
-        "summary": "接收用户粘贴的平台 Cookie JSON，保存到本地 data/ 源文件并触发导入。"
-      }
-    },
-    "/api/cookies/import/status": {
-      "get": {
-        "tags": [
-          "api/cookies"
-        ],
-        "parameters": [],
-        "security": [
-          {
-            "httpBasic": []
-          },
-          {
-            "v4Auth": []
-          }
-        ],
-        "operationId": "api_cookies_import_status",
-        "x-flask-rule": "/api/cookies/import/status",
-        "summary": "查看各平台 Cookie 导入状态（仅元信息，不返回 Cookie 值）。"
       }
     },
     "/api/creative/ideas": {

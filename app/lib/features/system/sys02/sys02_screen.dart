@@ -19,6 +19,31 @@ class Sys02Screen extends StatefulWidget {
 
 class _Sys02ScreenState extends State<Sys02Screen> {
   late final Sys02ViewModel _viewModel;
+  bool _collecting = false;
+  String? _collectMessageKey;
+
+  Future<void> _manualCollect() async {
+    if (_collecting) return;
+    setState(() {
+      _collecting = true;
+      _collectMessageKey = null;
+    });
+    String key;
+    try {
+      final result = await widget.client.startManualCollection();
+      key = result['ok'] == true
+          ? 'sys02.manual.queued'
+          : 'sys02.manual.failed';
+    } on Object {
+      key = 'sys02.manual.failed';
+    }
+    if (!mounted) return;
+    setState(() {
+      _collecting = false;
+      _collectMessageKey = key;
+    });
+    _viewModel.refresh();
+  }
 
   @override
   void initState() {
@@ -53,6 +78,9 @@ class _Sys02ScreenState extends State<Sys02Screen> {
             SysLoadPhase.ready => _CollectorContent(
               snapshot: _viewModel.snapshot!,
               onRefresh: _viewModel.refresh,
+              collecting: _collecting,
+              collectMessageKey: _collectMessageKey,
+              onManualCollect: _manualCollect,
             ),
           },
         ),
@@ -62,10 +90,19 @@ class _Sys02ScreenState extends State<Sys02Screen> {
 }
 
 class _CollectorContent extends StatelessWidget {
-  const _CollectorContent({required this.snapshot, required this.onRefresh});
+  const _CollectorContent({
+    required this.snapshot,
+    required this.onRefresh,
+    required this.collecting,
+    required this.collectMessageKey,
+    required this.onManualCollect,
+  });
 
   final Sys02Snapshot snapshot;
   final VoidCallback onRefresh;
+  final bool collecting;
+  final String? collectMessageKey;
+  final VoidCallback onManualCollect;
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +123,23 @@ class _CollectorContent extends StatelessWidget {
           title: copy('sys02.title'),
           subtitle: copy('sys02.subtitle'),
           onRefresh: onRefresh,
+        );
+        final manual = Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            FilledButton.tonalIcon(
+              key: const ValueKey('sys02-manual-collect'),
+              onPressed: collecting ? null : onManualCollect,
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: Text(copy('sys02.manual.action')),
+            ),
+            Text(
+              copy(collectMessageKey ?? 'sys02.manual.hint'),
+              style: TextStyle(color: LumenisTheme.of(context).muted),
+            ),
+          ],
         );
         final summary = _SummaryStrip(metrics: snapshot.metrics);
         final lanes = SysPanel(
@@ -169,7 +223,9 @@ class _CollectorContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   header,
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  manual,
+                  const SizedBox(height: 20),
                   if (!mobile) summary,
                   if (!mobile) const SizedBox(height: 18),
                   if (desktop)

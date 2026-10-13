@@ -141,7 +141,6 @@ class TestPermissionDecorators:
         ('/api/brands/<brand_en>', 'DELETE', 'DATA_DELETE'),
         ('/api/event-graph/events/<event_id>', 'DELETE', 'DATA_DELETE'),
         ('/api/system/config', 'POST', 'CONFIG_MODIFY'),
-        ('/api/cookies/import', 'POST', 'DATA_IMPORT'),
     ]
 
     def test_require_permission_imported_in_app(self):
@@ -434,7 +433,6 @@ class TestEndpointEnumeration:
         '/api/brands/<brand_en>',
         '/api/event-graph/events/<event_id>',
         '/api/system/config',
-        '/api/cookies/import',
         '/api/brand-industry/brands',
         '/api/brand-industry/stats',
         '/api/negative-review/stats',

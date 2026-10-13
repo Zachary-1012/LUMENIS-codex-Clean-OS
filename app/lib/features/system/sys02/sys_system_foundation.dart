@@ -69,6 +69,10 @@ abstract final class SysSystemCopy {
       'sys.failure.response.detail': '系统没有提供有效结果，请稍后重试。',
       'sys02.eyebrow': '系统 · 采集',
       'sys02.title': '采集器状态',
+      'sys02.manual.action': '手动采集',
+      'sys02.manual.hint': '可选；默认对全部已登记主体自动采集，在系统后台运行。',
+      'sys02.manual.queued': '已提交手动采集，在系统后台运行。',
+      'sys02.manual.failed': '手动采集未能提交，请稍后重试。',
       'sys02.subtitle': '查看调度、限流、重试与入链状态；未验证的采集不会被标为已运行。',
       'sys02.summary.active': '已确认连通',
       'sys02.summary.partial': '受限连通',
@@ -240,6 +244,13 @@ abstract final class SysSystemCopy {
           'The system did not return a valid result. Try again later.',
       'sys02.eyebrow': 'SYSTEM · COLLECTION',
       'sys02.title': 'Collector status',
+      'sys02.manual.action': 'Collect now',
+      'sys02.manual.hint':
+          'Optional; all registered subjects are collected automatically in the system background by default.',
+      'sys02.manual.queued':
+          'Manual collection queued in the system background.',
+      'sys02.manual.failed':
+          'Manual collection could not be queued. Try again later.',
       'sys02.subtitle':
           'Inspect scheduling, rate limits, retries and ingestion without treating registration as health.',
       'sys02.summary.active': 'Confirmed connected',
@@ -439,6 +450,10 @@ abstract final class SysSystemCopy {
       'sys.failure.response.detail': '시스템이 유효한 결과를 반환하지 않았습니다. 나중에 다시 시도하세요.',
       'sys02.eyebrow': 'SYSTEM · 수집',
       'sys02.title': '수집기 상태',
+      'sys02.manual.action': '수동 수집',
+      'sys02.manual.hint': '선택 사항이며 기본적으로 등록된 모든 주체를 시스템 백그라운드에서 자동 수집합니다.',
+      'sys02.manual.queued': '수동 수집이 시스템 백그라운드에 등록되었습니다.',
+      'sys02.manual.failed': '수동 수집을 등록하지 못했습니다. 잠시 후 다시 시도하세요.',
       'sys02.subtitle': '스케줄, 제한, 재시도와 체인 유입을 확인하며 등록 상태를 정상으로 표시하지 않습니다.',
       'sys02.summary.active': '연결 확인',
       'sys02.summary.partial': '부분 연결',

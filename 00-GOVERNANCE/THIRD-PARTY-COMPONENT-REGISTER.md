@@ -206,7 +206,7 @@ These are not third-party packages in the manifests but materially affect operat
 | --- | --- | --- | --- |
 | SQLite (`sqlite3`) | PYTHON STDLIB / DATA | Local persistence | DB isolation and migration contracts remain release-critical |
 | Windows PowerShell 5.1 | PLATFORM | Current canonical production launcher | Current production launch path is Windows-specific |
-| Microsoft Edge | EXTERNAL PLATFORM | Resident browser/CDP path in current launcher | Installation path/browser availability must be detected rather than assumed long-term |
+| Microsoft Edge | EXTERNAL PLATFORM | Headless engine of built-in background collectors 9223–9228 only; never a visible/resident collection browser | Installation path/browser availability must be detected rather than assumed long-term |
 
 ## 7. Evaluated future OSS adapters — not installed by this register
 

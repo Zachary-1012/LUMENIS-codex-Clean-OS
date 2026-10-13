@@ -57,7 +57,7 @@ Final actions may include explicit manual run, an already-authorized schedule, p
 - Authorized context: SYSTEM operator permitted to read the current screen envelope.
 - Real task: determine which collection lanes are verified, partial, missing or blocked, and whether a record may cross into Evidence/Canonical Data.
 - Completion signal: the returned platform states and counts are visible with their source state; missing values stay unavailable.
-- Current read-only slice out of scope: cookie/session inspection, collection control, retry/stop/compensation actions, and business truth. The approved final target in §0.1 may expose only those controls whose existing owners later provide real callables, Permission and durable receipts.
+- Current slice binds one optional manual-collect button (`POST /api/collect`, human-confirmed; default stays AUTO for all registered subjects in the system background); cookie/session inspection, retry/stop/compensation actions and business truth stay out of scope. The approved final target in §0.1 may expose only those controls whose existing owners later provide real callables, Permission and durable receipts.
 
 ## 2. Route, entry, exit and return
 
