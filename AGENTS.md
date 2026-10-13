@@ -58,7 +58,6 @@ Codex and Akang (GrokBot) are equal C1-C6/F/M developers. Only PO assigns and se
 
 **PO precedence: 2026-10-12:** Branches/PRs and unit/integration tests are restored. Use branch -> tests/review -> PR -> required checks on current main -> merge -> remote readback. No direct push, bypass, force-push or main deletion. Preserve dirty work and existing rights; developer access is unchanged. No collection/model/training/spending/deployment effects are granted. Approval: `00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`; protection: CURRENT.
 
-
 ### 最新 PO：五轮架构交付与窗口/模型事实化 — 2026-10-09
 
 Published governance records ownership and product scope. Actual window dispatch
@@ -236,8 +235,6 @@ historical conditions never automatically restart work. Record `NOT_VERIFIED` fo
 an unverified observation; this is an evidence qualifier, not an invented machine
 dispatch state. Do not equate application `notLoaded`/idle with a verified PO pause.
 
-
-
 The C1-C6 map, all R01-R15/J1-J8/U requirements and existing owner contracts
 remain the complete scope and are eligible delivery responsibilities, not competing
 architectures or permission to bypass entry dependencies. Before starting any
@@ -312,8 +309,6 @@ GPU, new rental, recharge or retired model providers.
    M continues authorized unfinished controller work, then waits; no automatic
    model fallback, new background work or OpenCode execution is authorized.
 
-
-
 M is the root controller and final engineering acceptance/integration authority.
 F is the eligible owner for the approved four-surface Experience/frontend implementation.
 C1-C6 are retained engineering source roles under the map below; eligibility is not live execution state. W6 owns
@@ -325,7 +320,6 @@ write the same owner/path without an explicit M/W6 dependency handoff. Paid
 resources, destructive Production DB operations, deployment/release and
 external business effects still require their exact existing authorization
 boundaries.
-
 
 Current explicit Product Owner requirements define the required outcome and
 scope. Source/runtime truth describes what exists and what is proven; missing
@@ -782,8 +776,6 @@ design-review evidence without a DESIGN_READY coding prerequisite, and accepts o
 returns complete outcomes. When no authorized unfinished work remains, M waits.
 Product Owner human decisions remain distinct.
 
-
-
 W6 is the sole writer for accepted shared composition and mainline integration
 paths, including app.py, lumenis_app_api.py, experience_runtime.py and
 experience_screens.py when assigned by the current Source Owner Index. Cloud
@@ -810,20 +802,15 @@ W6 applies that exact patch in isolation and performs local runtime/E2E validati
 
 #### C3/C5 retained continuation ownership and historical Cloud handoff
 
-> Current 2026-10-08 identity correction: the Product Owner explicitly assigned the former combined local window to C3 and requested a new, separate C5 window. The combined responsibility is historical; its original materials remain preserved.
-
-The Product Owner moved C3 and C5 responsibility to local thread
-`01a10117-03c7-7503-8a9b-670e80a474a7` on 2026-10-03, originally titled
-`序境｜C3+C5 与未完成研究资料接续`, now `序境 C3/W3｜CTH与BMP业务闭环`.
-On 2026-10-08 the Product Owner assigned
-this same thread to **C3 only**, preserving the complete CTH/BMP scope and its
-research obligations. New local **C5** thread `01a1186a-7c8b-7ef1-90b1-75afebb01bca`
-is `序境 C5/W5｜研究资料与共享成果闭环`; it inherits the complete Importer/Research/
-shared-deliverable scope and unfinished C5 materials from the original handoff.
-Both retain their mapped R/J/U requirements and existing source owners. C3 and
-C5 read common provenance without duplicating the research queue or writing each
-other's owners. Actual admission/execution is recorded in the local live ledger;
-this binding does not claim either user outcome is accepted.
+Local thread `01a10117-03c7-7503-8a9b-670e80a474a7` (`序境 C3/W3｜CTH与BMP业务闭环`)
+is **C3 only** (PO, 2026-10-08), with the complete CTH/BMP scope and its research
+obligations. Local **C5** thread `01a1186a-7c8b-7ef1-90b1-75afebb01bca`
+(`序境 C5/W5｜研究资料与共享成果闭环`) holds the complete Importer/Research/
+shared-deliverable scope and unfinished C5 materials; original combined-window
+materials remain preserved. Both retain their mapped R/J/U requirements and
+existing source owners, read common provenance without duplicating the research
+queue or writing each other's owners. Actual admission/execution is recorded in
+the local live ledger; this binding does not claim either user outcome is accepted.
 C2/W2 remains the sole owned-AI training window and may execute only the verified
 zero-cost path under its current Permission/recipe/checkpoint/evaluation contracts.
 Paid GPU or billing operations still require a new explicit cost authorization.
@@ -916,8 +903,6 @@ acceptance/dependency coverage. Neither planning decision accepts an
 implementation, screen, provider, migration or release claim. M accepts each
 complete C-window outcome against current source/local/remote evidence and the
 applicable mapped R gates.
-
-
 
 Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE remain Experience-principle references only. Codex/Codex CLI and Akang (GrokBot) are the current peer engineering runtimes, dispatched only by the PO; OpenCode is shelved and not part of the current execution route. Legacy Ollama/local-model-provider, Zhipu and Jev routes are retired: retain compatibility interfaces and historical artifacts, but do not call, auto-discover, probe, fall back to or reactivate them. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Product account and password redesign is deferred until the current engineering/product closure is complete; before then, do not block product access behind a new account wall, and keep server Permission and effect fences enforced.
 
@@ -1665,7 +1650,6 @@ affected-only revisions with explicit new-version adoption, old work/reasons
 and rollback. Missing allowed nonempty Brief/Evidence binding or a NOT_RUN model
 is an unfinished normal path; refusal-only behavior is never its acceptance.
 
-
 ### User-reviewed foundation vocabulary seed
 
 C1/C5/C6 admit the user-reviewed100-topic/41-source XLSX/CSV/JSON foundation
@@ -1760,7 +1744,6 @@ Publishable snapshots and staged paths must exclude local work artifacts and
 private runtime material; run the unchanged substantive gates on the exact
 main baseline plus the accepted source/rule changes in isolation.
 
-
 ### One implementation and approved material adoption
 
 Keep one current implementation per capability on main and one existing complete
@@ -1775,7 +1758,6 @@ record is under evidence/round-15; it records actions, not a new authority.
 Research is adopted through an existing capability's real inputs, processing,
 quality/credibility requirements and user outcome. Reading or training alone
 does not replace product integration; unread/missing assets remain explicit.
-
 
 ### 2026-10-08 前端审计与工具维护增补
 
