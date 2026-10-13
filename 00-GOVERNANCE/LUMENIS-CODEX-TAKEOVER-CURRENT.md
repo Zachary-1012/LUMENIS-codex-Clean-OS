@@ -2,6 +2,16 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-13 PO rules (binding; supersede conflicting text)
+
+1. All collection platforms (RedNote, Douyin, X, Instagram, Facebook, WeChat OA, and any added later) collect in the product's built-in browser in the background by default. When a session is invalid, the product shows an in-product login popup inside the built-in browser. After login plus a session health check, the original task resumes automatically.
+2. Never auto-open an external or visible browser window for collection. Headless background workers only. A visible window is only the HUMAN_INTERACTIVE login popup above.
+3. The automatic collection scope is all active registered subjects (Subject/BrandFocus). `GUANGZHOU_TAIKOO_HUI` is one registered subject, not the scope or a default. No code may hardcode one subject as the filter, context or brand list; use `subject_registry.registered_subject_names()` and the acquisition plan.
+4. R&D stage: agents change configs, keep-alive sessions and approvals directly, including subject registration and official-name writes via `subject_registry` / `import_subject_registry_seed.py --apply`. The agent grants the exact CONFIG_MODIFY approval in-process, takes a DB backup first and records the receipt; the PO is not asked. This supersedes "needs exact PO manual approval" wording below.
+5. A PR whose required checks (Product Gate + App Gate) are all green, with review threads addressed, may be merged without waiting for PO approval.
+6. For every newly added subject, developers run the end-to-end flow themselves: add_subject -> DB -> official name with source -> acquisition plan -> verified collection -> visible in product. The flow is kept in CI (`tests/test_e2e_new_subject_flow.py`).
+7. Brand and subject names use the brand's own official-site spelling, with the source URL recorded (`record_official_name`). LUMENIS never renames a brand.
+
 ## 2026-10-13 Single product closed-loop entry (dated readback; start here)
 
 This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any other handoff/todo/progress note dated before 2026-10-13 is superseded where it conflicts and is kept only as history.
@@ -12,7 +22,7 @@ This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any o
 - Next steps (nothing dropped; in order):
   1. Rule updates: §23 hand-drawn colour mark, §33 adapter-bounded open source, and flutter_quill register entry are applied (2026-10-13). Still open: the 3 Codex doc fixes (items not yet identified in the repo; owner Codex).
   2. Core collection: `ZBrand-HealthGuard` reinstalled 2026-10-13 17:16 and 8201 healthy; first manual RedNote run `collect_20261013_172257` started 17:22 with `http_state=BLOCKED` and 0 inserted (RedNote identity scope unbound), so the RedNote login/identity must be bound before runs insert. Notes by source on 2026-10-13: x 763, public_http 225, douyin 66, web_atom 30, xhs 3 (last 2026-09-30), instagram 1, po_provided 1. `COLLECTOR_ENDPOINT` unset (Akang1). Auto-collection scope (PR #36, PO 2026-10-13): all registered subjects; `GUANGZHOU_TAIKOO_HUI` is one subject, not the scope. Collection workers run headless in the background (BACKGROUND mode); a visible window opens only as the HUMAN_INTERACTIVE login popup when a session is invalid.
-  3. Subject registry: `subject_registry.record_official_name` (official-site source URL required; no renaming; stable subject_id) and `import_subject_registry_seed.py --official-names FILE` (dry-run default; `--apply` needs exact CONFIG_MODIFY approval) are published (2026-10-13); then the 8 held Taikoo Hui subjects; reconcile the 78 held rows; ingest the 133 relation candidates (GLOBAL-DATA-SOURCE-RESEARCH-20261013.md §20.4) per rules.
+  3. Subject registry: `subject_registry.record_official_name` (official-site source URL required; no renaming; stable subject_id) and `import_subject_registry_seed.py --official-names FILE` (dry-run default; `--apply` uses the exact CONFIG_MODIFY approval granted by the agent in R&D stage, see PO rule 4) are published (2026-10-13); then the 8 held Taikoo Hui subjects; reconcile the 78 held rows; ingest the 133 relation candidates (GLOBAL-DATA-SOURCE-RESEARCH-20261013.md §20.4) per rules.
   4. Draft PR #31 (business-decision WIP): owner to finish and pass both gates.
   5. Cleanup: stale worktrees (`D:/LUMENIS_AUDIT/20261012_rules_publish/*`, `序境-runtime-03dc8d93`, leftover `rea-merge-wt` folder), temp files, stale branches/docs, stash `akang-pre-dd0-merge`.
   6. Akang1: browser migration (WIP in the main working tree), `COLLECTOR_ENDPOINT`, tasks 1-3 (Gateway executor stub, AI-01 submit chain, stop/resume, SH-06 inbox, decision-card receipts).
@@ -37,7 +47,7 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 当前发布为规则型发布：AGENTS.md 固定 LF 换行（内容不变），T04 历史禁止项迁入机器合同 red_lines，由阻塞校验器结构化检查；不含产品源码。`RULES_ONLY_PUBLICATION`不代表生产已加载、真实用户任务验收或产品功能完成。下段 PR #25 主体登记源码已按源码口径发布。
 
-当前发布包含主体登记种子的产品源码：`scripts/import_subject_registry_seed.py`（默认 dry-run；`--apply` 须经既有 PermissionGate 的 CONFIG_MODIFY 高风险精确人工审批，且只经既有 `subject_registry.add_subject` 幂等写入）与已在线核实的种子 `scripts/data_candidates/subject_registry_seed_20261013.jsonl`（610条，清单固定sha256），并登记全球数据源研究现行版；场内 TENANT_OF 关系仍为候选、未写入。`PUBLISHED_SOURCE_VERIFIED`不代表生产已加载、种子已写入生产库、真实用户任务验收或产品功能完成。此前 AGENTS.md 重复叙述精简（PR #26）与 T04 历史禁止项锚点（PR #24）按规则型发布，第7节复用诊断源码已由 PR #23 按源码口径发布；结果以实际Git对象和Actions核实，不在文档中冻结“当前main”的SHA。
+当前发布包含主体登记种子的产品源码：`scripts/import_subject_registry_seed.py`（默认 dry-run；`--apply` 经既有 PermissionGate 的 CONFIG_MODIFY 精确审批（研发阶段由开发代理直接授予并留回执，见 2026-10-13 PO 规则 4），且只经既有 `subject_registry.add_subject` 幂等写入）与已在线核实的种子 `scripts/data_candidates/subject_registry_seed_20261013.jsonl`（610条，清单固定sha256），并登记全球数据源研究现行版；场内 TENANT_OF 关系仍为候选、未写入。`PUBLISHED_SOURCE_VERIFIED`不代表生产已加载、种子已写入生产库、真实用户任务验收或产品功能完成。此前 AGENTS.md 重复叙述精简（PR #26）与 T04 历史禁止项锚点（PR #24）按规则型发布，第7节复用诊断源码已由 PR #23 按源码口径发布；结果以实际Git对象和Actions核实，不在文档中冻结“当前main”的SHA。
 
 本轮在现有规则型提交的精确文件白名单内，原位降级四份存活旧执行语义：历史 ADR、两份内容制作母指令与 AI 编程旧基线，均只保留归档研究身份；有效 J6/C4 的 Daily/Weekly/Monthly 播客选题与可编辑成品要求已在现有 Owner 保留。此项来源清理不等于开发、运行或产品验收完成。
 

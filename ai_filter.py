@@ -139,8 +139,13 @@ def detect_noise_type(title, content):
 
     # 3. 虽然通过主体过滤但主题偏离
     # （主体过滤只看关键词，AI二次判断看语义）
-    taikoo_context_words = ['太古汇', '广州太古汇', '天河太古汇', '石牌桥', '天河路383']
-    has_taikoo_direct = any(w in text for w in taikoo_context_words)
+    # Context = any active registered subject (Taikoo Hui is one of them), not a hardcoded venue.
+    try:
+        from subject_registry import registered_subject_names
+        subject_context_words = list(registered_subject_names())
+    except Exception:
+        subject_context_words = []
+    has_taikoo_direct = any(w and w.lower() in text.lower() for w in subject_context_words)
     if not has_taikoo_direct and char_count < 100:
         # 只有品牌名没有太古汇上下文，且内容短，可能偏离
         return 'irrelevant', '缺少广州太古汇上下文语境'

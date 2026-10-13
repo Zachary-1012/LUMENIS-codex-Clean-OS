@@ -74,6 +74,13 @@ class AIDesensitizer:
         """预编译所有敏感实体正则。"""
         self.patterns = {}
         for entity_type, keywords in SENSITIVE_PATTERNS.items():
+            if entity_type == "BRAND":
+                try:
+                    from subject_registry import registered_subject_names
+                    registered = list(registered_subject_names())
+                except Exception:
+                    registered = []
+                keywords = list(dict.fromkeys([*registered, *keywords]))
             self.patterns[entity_type] = [re.compile(re.escape(kw)) for kw in keywords]
 
     def desensitize(self, text: str) -> Tuple[str, Dict[str, str]]:

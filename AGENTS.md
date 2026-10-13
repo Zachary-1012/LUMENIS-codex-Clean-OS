@@ -54,6 +54,8 @@ execution instructions.
 
 Codex and Akang (GrokBot) are equal C1-C6/F/M developers. Only PO assigns and separates their work; neither commands the other. Brio (Muse) provides one verified Markdown global-source and collection-target survey, then takes new work only from PO. Brio has no code or live-collection grant; GPT/Codex/Akang cannot dispatch Brio. This is not a task start, merge or deployment authorization.
 
+PO 2026-10-13 rules (collection/browser/subjects/R&D approvals/merge) are binding: see CURRENT "2026-10-13 PO rules".
+
 ## 1. Authority
 
 **PO precedence: 2026-10-12:** Branches/PRs and unit/integration tests are restored. Use branch -> tests/review -> PR -> required checks on current main -> merge -> remote readback. No direct push, bypass, force-push or main deletion. Preserve dirty work and existing rights; developer access is unchanged. No collection/model/training/spending/deployment effects are granted. Approval: `00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`; protection: CURRENT.
