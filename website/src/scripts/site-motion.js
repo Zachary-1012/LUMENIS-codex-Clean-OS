@@ -1,52 +1,48 @@
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
 
-// Native links retain the complete content without JS. Enhancement keeps one
-// creative task in view and restores it on browser back/forward or a deep link.
-const creation = document.querySelector("[data-creation-root]");
-if (creation instanceof HTMLElement) {
-  const choices = [...creation.querySelectorAll("[data-creation-choice]")];
-  const panels = [...creation.querySelectorAll("[data-creation-panel]")];
-  const select = (id) => {
-    if (!panels.some(panel => panel.dataset.creationPanel === id)) return;
-    choices.forEach(choice => {
-      const selected = choice.dataset.creationChoice === id;
-      if (selected) choice.setAttribute("aria-current", "true");
-      else choice.removeAttribute("aria-current");
-    });
-    panels.forEach(panel => { panel.hidden = panel.dataset.creationPanel !== id; });
-  };
-  const restore = () => {
-    const target = panels.find(panel => `#${panel.id}` === location.hash);
-    if (target) select(target.dataset.creationPanel);
-    else if (location.hash === "#creation" || !location.hash) select(panels[0]?.dataset.creationPanel);
-  };
-  choices.forEach(choice => {
-    const panel = panels.find(item => item.dataset.creationPanel === choice.dataset.creationChoice);
-    if (!panel) return;
-    choice.setAttribute("aria-controls", panel.id);
-    choice.addEventListener("click", event => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      event.preventDefault();
-      select(choice.dataset.creationChoice);
-      if (location.hash !== `#${panel.id}`) history.pushState(null, "", `#${panel.id}`);
-    });
-  });
-  select(panels[0]?.dataset.creationPanel);
-  restore();
-  window.addEventListener("hashchange", restore);
-  window.addEventListener("popstate", restore);
-}
-
 reduceMotion.addEventListener("change", (event) => {
   if (!event.matches) return;
 
+  document.querySelectorAll("[data-optical-field]").forEach((field) => {
+    if (!(field instanceof HTMLElement)) return;
+    field.style.removeProperty("--pointer-x");
+    field.style.removeProperty("--pointer-y");
+    field.style.removeProperty("--tilt-x");
+    field.style.removeProperty("--tilt-y");
+    field.classList.remove("has-pointer");
+  });
   document.querySelectorAll("[data-magnetic]").forEach((target) => {
     if (!(target instanceof HTMLElement)) return;
     target.style.removeProperty("--magnet-x");
     target.style.removeProperty("--magnet-y");
   });
 });
+
+const opticalField = document.querySelector("[data-optical-field]");
+if (opticalField instanceof HTMLElement && finePointer.matches) {
+  opticalField.addEventListener("pointermove", (event) => {
+    if (event.pointerType !== "mouse" || reduceMotion.matches) return;
+
+    const bounds = opticalField.getBoundingClientRect();
+    const x = event.clientX - bounds.left;
+    const y = event.clientY - bounds.top;
+    const horizontal = (x / bounds.width) * 2 - 1;
+    const vertical = (y / bounds.height) * 2 - 1;
+
+    opticalField.style.setProperty("--pointer-x", `${x}px`);
+    opticalField.style.setProperty("--pointer-y", `${y}px`);
+    opticalField.style.setProperty("--tilt-x", `${horizontal * 3}deg`);
+    opticalField.style.setProperty("--tilt-y", `${vertical * -3}deg`);
+    opticalField.classList.add("has-pointer");
+  });
+
+  opticalField.addEventListener("pointerleave", () => {
+    opticalField.style.removeProperty("--tilt-x");
+    opticalField.style.removeProperty("--tilt-y");
+    opticalField.classList.remove("has-pointer");
+  });
+}
 
 if (finePointer.matches) {
   document.querySelectorAll("[data-magnetic]").forEach((target) => {

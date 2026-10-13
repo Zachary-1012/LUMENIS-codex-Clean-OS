@@ -24,22 +24,6 @@ enum Ai01SubmitPhase {
   outcomeUnknown,
 }
 
-/// One submitted intent and the response or failure actually observed for it.
-/// The task is the trimmed text sent by this client; this record is kept only
-/// for the lifetime of its ViewModel and is not persisted.
-class Ai01Submission {
-  const Ai01Submission({required this.task, required this.phase, this.result});
-
-  final String task;
-  final Ai01SubmitPhase phase;
-  final Ai01IntentResult? result;
-
-  Ai01Submission copyWith({
-    required Ai01SubmitPhase phase,
-    required Ai01IntentResult? result,
-  }) => Ai01Submission(task: task, phase: phase, result: result);
-}
-
 /// Why the submit control is unavailable. [none] means submission is allowed.
 enum Ai01SubmitBlock {
   none,
@@ -63,9 +47,9 @@ class Ai01ViewModel extends ChangeNotifier {
   String? _failureMessage;
   String _draft = '';
   String? _submittedDraft;
-  final List<Ai01Submission> _submissions = [];
+  Ai01SubmitPhase _submitPhase = Ai01SubmitPhase.idle;
+  Ai01IntentResult? _intentResult;
   int _requestGeneration = 0;
-  int _submissionGeneration = 0;
   bool _disposed = false;
 
   Ai01LoadPhase get phase => _phase;
@@ -74,24 +58,14 @@ class Ai01ViewModel extends ChangeNotifier {
   String? get failureMessage => _failureMessage;
   String get draft => _draft;
 
-  /// Read-only snapshot of the tasks submitted by this ViewModel instance.
-  /// It is session-local and intentionally has no persistence or server-history
-  /// claim.
-  List<Ai01Submission> get submissions => List.unmodifiable(_submissions);
-
-  Ai01Submission? get latestSubmission =>
-      _submissions.isEmpty ? null : _submissions.last;
-
-  /// Compatibility accessors for callers presenting the latest submission.
-  Ai01SubmitPhase get submitPhase =>
-      latestSubmission?.phase ?? Ai01SubmitPhase.idle;
-  Ai01IntentResult? get intentResult => latestSubmission?.result;
+  Ai01SubmitPhase get submitPhase => _submitPhase;
+  Ai01IntentResult? get intentResult => _intentResult;
 
   /// Submission needs a successfully read service state, a non-empty draft
   /// within the server limit, no request in flight and a draft that differs
   /// from the one already sent (no accidental duplicate execution).
   Ai01SubmitBlock get submitBlock {
-    if (submitPhase == Ai01SubmitPhase.submitting) {
+    if (_submitPhase == Ai01SubmitPhase.submitting) {
       return Ai01SubmitBlock.submitting;
     }
     if (_phase != Ai01LoadPhase.ready || _snapshot == null) {
@@ -115,11 +89,8 @@ class Ai01ViewModel extends ChangeNotifier {
 
     final task = _draft.trim();
     _submittedDraft = _draft;
-    final submissionIndex = _submissions.length;
-    final submissionGeneration = ++_submissionGeneration;
-    _submissions.add(
-      Ai01Submission(task: task, phase: Ai01SubmitPhase.submitting),
-    );
+    _submitPhase = Ai01SubmitPhase.submitting;
+    _intentResult = null;
     _notifyIfAlive();
 
     Ai01SubmitPhase next;
@@ -135,12 +106,10 @@ class Ai01ViewModel extends ChangeNotifier {
       result = null;
       next = _classifySubmitFailure(error);
     }
-    if (_disposed || submissionGeneration != _submissionGeneration) return;
+    if (_disposed) return;
 
-    _submissions[submissionIndex] = _submissions[submissionIndex].copyWith(
-      phase: next,
-      result: result,
-    );
+    _intentResult = result;
+    _submitPhase = next;
     _notifyIfAlive();
   }
 
@@ -193,15 +162,8 @@ class Ai01ViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    if (latestSubmission?.phase == Ai01SubmitPhase.submitting) {
-      _submissions[_submissions.length - 1] = latestSubmission!.copyWith(
-        phase: Ai01SubmitPhase.outcomeUnknown,
-        result: null,
-      );
-    }
     _disposed = true;
     _requestGeneration++;
-    _submissionGeneration++;
     super.dispose();
   }
 

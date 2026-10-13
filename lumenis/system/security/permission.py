@@ -31,7 +31,7 @@ import threading
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, field, asdict, replace
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple
 from urllib.parse import urlsplit
@@ -486,54 +486,6 @@ _RESOURCE_SCOPE_DOMAINS = {
 }
 _RESOURCE_SCOPE_ACTIONS = frozenset({"read", "write"})
 
-# An independent Shared workspace is an account-owned resource class, not a
-# synthetic CTH/BMP GLOBAL scope or a new domain identity. Its request wire is
-# deliberately only a discriminator; the actor and owner context are minted
-# from the current server request/account state below.
-_SHARED_WORKSPACE_SCOPE_KIND = "shared_workspace"
-_SHARED_WORKSPACE_VERSION = 1
-_SHARED_WORKSPACE_MODULES = frozenset({"content", "reports"})
-_SHARED_WORKSPACE_OPERATIONS = frozenset({
-    OperationType.DB_WRITE, OperationType.DATA_IMPORT, OperationType.DATA_EXPORT,
-})
-_SHARED_WORKSPACE_ADMISSION_SEAL = object()
-
-
-@dataclass(frozen=True, init=False)
-class _SharedWorkspaceGateAdmission:
-    """Non-serializable, one-process proof for the private Gate workspace arm."""
-
-    gate: Any = field(repr=False, compare=False)
-    module: str
-    action: str
-    actor_id: Optional[int]
-    principal: Optional[LocalWorkspacePrincipal] = field(repr=False, compare=False)
-    connection: Any = field(repr=False, compare=False)
-    _issuer: object = field(repr=False, compare=False)
-
-    def __init__(
-        self, *, gate: "PermissionGate", module: str, action: str,
-        actor_id: Optional[int], principal: Optional[LocalWorkspacePrincipal],
-        connection: Any, _issuer: object,
-    ):
-        if (_issuer is not _SHARED_WORKSPACE_ADMISSION_SEAL
-                or type(gate) is not PermissionGate
-                or module not in _SHARED_WORKSPACE_MODULES
-                or action not in _RESOURCE_SCOPE_ACTIONS
-                or not (
-                    (type(actor_id) is int and actor_id > 0 and principal is None)
-                    or (actor_id is None and principal is not None
-                        and _is_server_local_workspace_principal(principal))
-                )):
-            raise TypeError("Shared workspace Gate admission is server-issued")
-        object.__setattr__(self, "gate", gate)
-        object.__setattr__(self, "module", module)
-        object.__setattr__(self, "action", action)
-        object.__setattr__(self, "actor_id", actor_id)
-        object.__setattr__(self, "principal", principal)
-        object.__setattr__(self, "connection", connection)
-        object.__setattr__(self, "_issuer", _issuer)
-
 
 def _canonical_business_domain_id(domain_id: Any) -> str:
     """Resolve an accepted domain alias to its persisted identity for comparisons.
@@ -632,307 +584,6 @@ def _require_canonical_scope_connection(connection):
     except (OSError, sqlite3.Error) as exc:
         raise ValueError("RESOURCE_SCOPE_CONNECTION_INVALID") from exc
     return connection
-
-
-class SourceUseApprovalError(ValueError):
-    """Stable failures for a narrow, receipt-bound internal source use."""
-
-    def __init__(self, code: str):
-        self.code = code if re.fullmatch(r"SOURCE_USE_[A-Z0-9_]{1,90}", str(code)) else "SOURCE_USE_APPROVAL_INVALID"
-        super().__init__(self.code)
-
-
-def _source_use_receipt_path():
-    from pathlib import Path
-
-    return Path(__file__).resolve().parents[3] / "00-GOVERNANCE" / "evidence" / "approvals" / "PO-20261011-APPROVED-INTERNAL-SOURCE-USE.json"
-
-
-def _source_use_unique_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError("duplicate JSON key")
-        result[key] = value
-    return result
-
-
-def _load_source_use_receipt(receipt_id: str) -> dict:
-    """Read one immutable, exact-source approval; malformed/duplicate JSON fails closed."""
-    try:
-        raw = _source_use_receipt_path().read_bytes()
-        if not 0 < len(raw) <= 65536:
-            raise ValueError("size")
-        receipt = json.loads(
-            raw.decode("utf-8"), object_pairs_hook=_source_use_unique_object,
-            parse_constant=lambda _value: (_ for _ in ()).throw(ValueError("constant")),
-        )
-    except (OSError, UnicodeError, ValueError, TypeError) as exc:
-        raise SourceUseApprovalError("SOURCE_USE_APPROVAL_RECEIPT_INVALID") from exc
-    if (not isinstance(receipt, dict)
-            or receipt.get("schema") != "lumenis.po-approval-receipt/v1"
-            or receipt.get("source_use_schema") != "lumenis.approved-internal-source-use/v1"
-            or receipt.get("approval_id") != receipt_id
-            or receipt.get("approval_source_type") != "direct_product_owner_instruction"
-            or receipt.get("approved_by") != "Product Owner"
-            or receipt.get("approved_at") != "2026-10-11"
-            or receipt.get("status") != "APPROVED"
-            or receipt.get("receipt_id") != receipt_id
-            or not isinstance(receipt.get("constraints"), list) or not receipt["constraints"]
-            or not isinstance(receipt.get("scope_manifest"), dict) or not receipt["scope_manifest"]
-            or not isinstance(receipt.get("sources"), list)):
-        raise SourceUseApprovalError("SOURCE_USE_APPROVAL_RECEIPT_INVALID")
-    return receipt
-
-
-def _source_use_current_evidence(con, ref: str) -> dict:
-    match = re.fullmatch(r"app_evidence_records:([1-9][0-9]*)", ref if type(ref) is str else "")
-    if match is None:
-        raise SourceUseApprovalError("SOURCE_USE_SOURCE_EVIDENCE_INVALID")
-    from lumenis.shared.evidence.store import classify_evidence_integrity
-
-    cursor = con.execute("SELECT * FROM app_evidence_records WHERE id=?", (int(match.group(1)),))
-    row = cursor.fetchone()
-    if row is None:
-        raise SourceUseApprovalError("SOURCE_USE_SOURCE_EVIDENCE_MISSING")
-    evidence = dict(zip((column[0] for column in cursor.description), row))
-    integrity = classify_evidence_integrity(evidence)
-    if (integrity.get("verified") is not True or integrity.get("assurance") != "writer-authenticated"
-            or evidence.get("status") != "verified" or evidence.get("result") != "PASS"):
-        raise SourceUseApprovalError("SOURCE_USE_SOURCE_EVIDENCE_INVALID")
-    return evidence
-
-
-def _source_use_authenticated_scope_matches(
-    evidence: dict, *, domain_id: str, subject_id: str | None,
-    brand_focus_id: str | None,
-) -> bool:
-    """Match the writer-authenticated reserved scope marker to current Canonical scope."""
-    from lumenis.shared.evidence import store as evidence_store
-
-    if type(evidence) is not dict:
-        return False
-    canonical_domain = _canonical_business_domain_id(domain_id)
-    if canonical_domain not in {"cth", "zbmp"}:
-        return False
-    product = "CTH" if canonical_domain == "cth" else "ZBMP"
-    try:
-        raw_inputs = evidence.get("inputs_json")
-        if type(raw_inputs) is not str:
-            return False
-        inputs = json.loads(
-            raw_inputs, object_pairs_hook=_source_use_unique_object,
-            parse_constant=lambda _value: (_ for _ in ()).throw(ValueError("constant")),
-        )
-        expected_scope = evidence_store._normalize_record_evidence_scope(
-            product=product, domain_id=canonical_domain, subject_id=subject_id,
-            brand_focus_id=brand_focus_id, global_scope=False,
-        )
-    except (TypeError, ValueError, UnicodeError):
-        return False
-    if (not isinstance(inputs, dict) or expected_scope is None
-            or inputs.get("_lumenis_scope") != expected_scope
-            or evidence.get("domain_id") != expected_scope["domain_id"]
-            or evidence.get("product_id") != expected_scope["product_id"]):
-        return False
-    # Some legacy schemas exposed these optional columns. They may be absent,
-    # but a stored contradictory value must not override the signed marker.
-    for scope_field, expected in (("subject_id", subject_id), ("brand_focus_id", brand_focus_id)):
-        if scope_field in evidence and evidence[scope_field] not in (None, "", expected):
-            return False
-    return True
-
-
-def _source_use_rights_state(value: Any) -> str:
-    """Preserve only the two pre-existing unknown states; this never grants rights."""
-    if value is None or value == "":
-        return "UNKNOWN"
-    if isinstance(value, dict):
-        if any(value.get(key) is True for key in ("revoked", "private", "restricted", "confidential", "use_prohibited")):
-            raise SourceUseApprovalError("SOURCE_USE_SOURCE_RESTRICTED")
-        if value.get("use_status") in {"DENIED", "REVOKED", "WITHDRAWN"} or value.get("privacy_status") in {"PRIVATE", "RESTRICTED", "CONFIDENTIAL"}:
-            raise SourceUseApprovalError("SOURCE_USE_SOURCE_RESTRICTED")
-        state = value.get("status", value.get("state"))
-    else:
-        state = value
-    if state is None or state == "":
-        return "UNKNOWN"
-    if type(state) is str and state.upper() in {"UNKNOWN", "UNREVIEWED"}:
-        return state.upper()
-    raise SourceUseApprovalError("SOURCE_USE_RIGHTS_STATE_CHANGED")
-
-
-def validate_current_source_use(
-    connection, *, source_id: str, source_url: str, domain_id: str,
-    subject_id: str | None, brand_focus_id: str | None,
-    scope_evidence_ref: str, content_evidence_ref: str, body_sha256: str,
-    purpose: str, operation: str, receipt_id: str,
-) -> dict:
-    """Recheck one approved source/use against live Canonical and source lineage.
-
-    This is a narrow internal-use receipt check, not a Source-rights upgrade,
-    account Permission, DATA_IMPORT/DATA_EXPORT authorization, or publication grant.
-    Callers must still run their existing actor, scope and Effect Fence checks.
-    """
-    try:
-        con = _require_canonical_scope_connection(connection)
-    except (TypeError, ValueError, RuntimeError) as exc:
-        raise SourceUseApprovalError("SOURCE_USE_SCOPE_CONNECTION_INVALID") from exc
-    if (type(source_id) is not str or not source_id or source_id != source_id.strip()
-            or type(source_url) is not str or not source_url.startswith("https://")
-            or _canonical_business_domain_id(domain_id) not in {"cth", "zbmp"}
-            or (subject_id is not None and not _is_valid_scope_id(subject_id))
-            or (brand_focus_id is not None and not _is_valid_scope_id(brand_focus_id))
-            or (subject_id is not None and brand_focus_id is not None)
-            or type(scope_evidence_ref) is not str or type(content_evidence_ref) is not str
-            or not re.fullmatch(r"[0-9a-f]{64}", body_sha256 if type(body_sha256) is str else "")
-            or type(purpose) is not str or type(operation) is not str):
-        raise SourceUseApprovalError("SOURCE_USE_REQUEST_INVALID")
-    receipt = _load_source_use_receipt(receipt_id)
-    matches = [item for item in receipt["sources"]
-               if isinstance(item, dict) and item.get("source_id") == source_id]
-    if len(matches) != 1:
-        raise SourceUseApprovalError("SOURCE_USE_SOURCE_NOT_APPROVED")
-    approved = matches[0]
-    canonical_domain = _canonical_business_domain_id(domain_id)
-    expected_scope = {
-        "domain_id": canonical_domain,
-        "subject_id": subject_id,
-        "brand_focus_id": brand_focus_id,
-    }
-    approved_scope = {key: approved.get(key) for key in expected_scope}
-    if (approved.get("source_url") != source_url
-            or approved_scope != expected_scope
-            or approved.get("scope_evidence_ref") != scope_evidence_ref
-            or approved.get("content_evidence_ref") != content_evidence_ref
-            or approved.get("body_sha256") != body_sha256
-            or approved.get("rights_state") not in {"UNKNOWN", "UNREVIEWED"}):
-        raise SourceUseApprovalError("SOURCE_USE_SCOPE_OR_CONTENT_MISMATCH")
-    if purpose not in approved.get("allowed_purposes", []) or operation not in approved.get("allowed_operations", []):
-        raise SourceUseApprovalError("SOURCE_USE_PURPOSE_NOT_ALLOWED")
-    if purpose in {"cth_brief", "bmp_brief"} and (
-            (purpose == "cth_brief" and canonical_domain != "cth")
-            or (purpose == "bmp_brief" and canonical_domain != "zbmp")):
-        raise SourceUseApprovalError("SOURCE_USE_PURPOSE_NOT_ALLOWED")
-    if approved.get("commercial_state") != "UNKNOWN" or approved.get("publication_state") != "NOT_APPROVED" or approved.get("training_state") != "NOT_APPROVED":
-        raise SourceUseApprovalError("SOURCE_USE_APPROVAL_RECEIPT_INVALID")
-
-    canonical_id = approved.get("canonical_id")
-    if type(canonical_id) is not str or not canonical_id:
-        raise SourceUseApprovalError("SOURCE_USE_APPROVAL_RECEIPT_INVALID")
-    product_id = "CTH" if canonical_domain == "cth" else "ZBMP"
-    cursor = con.execute(
-        "SELECT * FROM canonical_data WHERE canonical_id=? AND source_id=? AND domain_id=? "
-        "AND product_id=? AND NULLIF(subject_id,'') IS ? AND NULLIF(brand_focus_id,'') IS ? "
-        "AND scope_status='VERIFIED'",
-        (canonical_id, source_id, canonical_domain, product_id, subject_id, brand_focus_id),
-    )
-    rows = cursor.fetchall()
-    if len(rows) != 1:
-        raise SourceUseApprovalError("SOURCE_USE_CANONICAL_SOURCE_UNAVAILABLE")
-    canonical = dict(zip((column[0] for column in cursor.description), rows[0]))
-    body = canonical.get("content")
-    if (canonical.get("url") != source_url or type(body) is not str
-            or hashlib.sha256(body.encode("utf-8")).hexdigest() != body_sha256):
-        raise SourceUseApprovalError("SOURCE_USE_CONTENT_MISMATCH")
-
-    try:
-        raw_ref = json.loads(canonical.get("raw_ref") or "{}", object_pairs_hook=_source_use_unique_object)
-    except (TypeError, ValueError) as exc:
-        raise SourceUseApprovalError("SOURCE_USE_SOURCE_REFERENCE_INVALID") from exc
-    if not isinstance(raw_ref, dict):
-        raise SourceUseApprovalError("SOURCE_USE_SOURCE_REFERENCE_INVALID")
-    mapping = raw_ref.get("approved_internal_source_use")
-    expected_mapping = {
-        "receipt_id": receipt_id,
-        "source_id": source_id,
-        "source_url": source_url,
-        "domain_id": canonical_domain,
-        "subject_id": subject_id,
-        "brand_focus_id": brand_focus_id,
-        "scope_evidence_ref": scope_evidence_ref,
-        "source_content_locator": content_evidence_ref,
-        "derived_content_evidence_ref": (mapping.get("derived_content_evidence_ref")
-                                          if isinstance(mapping, dict) else None),
-        "body_sha256": body_sha256,
-        "snapshot_kind": approved.get("snapshot_kind"),
-    }
-    if mapping is not None and mapping != expected_mapping:
-        raise SourceUseApprovalError("SOURCE_USE_SOURCE_REFERENCE_CHANGED")
-
-    if content_evidence_ref.startswith("notes:"):
-        if (canonical_domain != "cth" or raw_ref.get("table") != "notes"
-                or raw_ref.get("note_id") != source_id
-                or content_evidence_ref != f"notes:{raw_ref.get('id')}"):
-            raise SourceUseApprovalError("SOURCE_USE_SOURCE_REFERENCE_INVALID")
-        note_id = raw_ref.get("id")
-        if type(note_id) is not int or note_id < 1:
-            raise SourceUseApprovalError("SOURCE_USE_SOURCE_REFERENCE_INVALID")
-        note_cursor = con.execute("SELECT * FROM notes WHERE id=?", (note_id,))
-        note_row = note_cursor.fetchone()
-        if note_row is None:
-            raise SourceUseApprovalError("SOURCE_USE_SOURCE_EVIDENCE_MISSING")
-        note = dict(zip((column[0] for column in note_cursor.description), note_row))
-        note_body = note.get("content") or note.get("body")
-        if ((note.get("source_id") or note.get("note_id") or source_id) != source_id
-                or note.get("url") not in {None, "", source_url}
-                or type(note_body) is not str
-                or hashlib.sha256(note_body.encode("utf-8")).hexdigest() != body_sha256):
-            raise SourceUseApprovalError("SOURCE_USE_SOURCE_EVIDENCE_INVALID")
-        rights_value = note.get("rights", note.get("rights_state"))
-        rights_state = _source_use_rights_state(rights_value)
-    else:
-        if not re.fullmatch(r"app_evidence_records:[1-9][0-9]*", content_evidence_ref):
-            raise SourceUseApprovalError("SOURCE_USE_SOURCE_REFERENCE_INVALID")
-        content_evidence = _source_use_current_evidence(con, content_evidence_ref)
-        metadata = json.loads(content_evidence.get("collection_metadata") or "{}")
-        source_provenance = metadata.get("provenance") if isinstance(metadata, dict) else None
-        if (not isinstance(source_provenance, dict)
-                or content_evidence.get("domain_id") != canonical_domain
-                or not _source_use_authenticated_scope_matches(
-                    content_evidence, domain_id=canonical_domain,
-                    subject_id=subject_id, brand_focus_id=brand_focus_id,
-                )
-                or content_evidence.get("asset_id") != source_id
-                or source_provenance.get("source_url") != source_url
-                or metadata.get("parsed_text") != body
-                or hashlib.sha256(metadata["parsed_text"].encode("utf-8")).hexdigest() != body_sha256):
-            raise SourceUseApprovalError("SOURCE_USE_SOURCE_EVIDENCE_INVALID")
-        canonical_scope_eid = canonical.get("scope_evidence_ref")
-        if (type(canonical_scope_eid) is not str
-                or f"app_evidence_records:{canonical_scope_eid}" != approved.get("scope_evidence_ref")
-                or raw_ref.get("content_evidence_ref") != content_evidence_ref):
-            raise SourceUseApprovalError("SOURCE_USE_SOURCE_REFERENCE_INVALID")
-        rights_state = _source_use_rights_state(source_provenance.get("rights"))
-        scope_ref = approved.get("scope_evidence_ref")
-        scope_evidence = _source_use_current_evidence(con, scope_ref)
-        if (scope_evidence.get("domain_id") != canonical_domain
-                or not _source_use_authenticated_scope_matches(
-                    scope_evidence, domain_id=canonical_domain,
-                    subject_id=subject_id, brand_focus_id=brand_focus_id,
-                )):
-            raise SourceUseApprovalError("SOURCE_USE_SCOPE_MISMATCH")
-    if rights_state != approved.get("rights_state"):
-        raise SourceUseApprovalError("SOURCE_USE_RIGHTS_STATE_CHANGED")
-
-    from dataclasses import fields
-
-    import canonical_data
-
-    try:
-        record = canonical_data.CanonicalRecord(**{
-            field.name: canonical[field.name]
-            for field in fields(canonical_data.CanonicalRecord)
-            if field.name in canonical
-        })
-        if canonical_data._validate_canonical_scope(con, record) is None:
-            raise ValueError("scope")
-    except (TypeError, ValueError, RuntimeError) as exc:
-        raise SourceUseApprovalError("SOURCE_USE_CANONICAL_SCOPE_INVALID") from exc
-    return {"rights_state": rights_state, "receipt_id": receipt_id,
-            "source_id": source_id, "canonical_id": canonical_id,
-            "body_sha256": body_sha256, "commercial_state": "UNKNOWN",
-            "publication_state": "NOT_APPROVED", "training_state": "NOT_APPROVED"}
 
 
 def _registered_resource_scope_exists(
@@ -1343,358 +994,6 @@ def check_local_workspace_scope_permission(
         principal_kind=principal_kind,
         principal_ref=principal_ref,
     )
-
-
-class _SharedWorkspacePermissionDenied(PermissionError):
-    """Stable fail-closed result for independent Shared workspace admission."""
-
-
-def validate_shared_workspace_scope(scope: Any) -> Dict[str, Any]:
-    """Validate the exact client discriminator; it carries no actor or grant."""
-    if (type(scope) is not dict or set(scope) != {"scope_kind", "version"}
-            or type(scope.get("scope_kind")) is not str
-            or scope["scope_kind"] != _SHARED_WORKSPACE_SCOPE_KIND
-            or type(scope.get("version")) is not int
-            or scope["version"] != _SHARED_WORKSPACE_VERSION):
-        raise ValueError("SHARED_WORKSPACE_SCOPE_INVALID")
-    return {"scope_kind": _SHARED_WORKSPACE_SCOPE_KIND,
-            "version": _SHARED_WORKSPACE_VERSION}
-
-
-def _shared_workspace_gate(gate: Optional["PermissionGate"]) -> "PermissionGate":
-    selected = get_permission_gate() if gate is None else gate
-    if type(selected) is not PermissionGate:
-        raise _SharedWorkspacePermissionDenied("SHARED_WORKSPACE_PERMISSION_UNAVAILABLE")
-    return selected
-
-
-def _shared_workspace_actor_identity(actor: Any) -> Tuple[Optional[int], Optional[LocalWorkspacePrincipal], str]:
-    """Return only a server-checkable identity; never consume a caller role."""
-    if type(actor) is LocalWorkspacePrincipal and _is_server_local_workspace_principal(actor):
-        return None, actor, "workspace:local"
-    try:
-        actor_id = actor.get("id") if isinstance(actor, Mapping) else None
-    except Exception:
-        actor_id = None
-    if type(actor_id) is int and actor_id > 0:
-        return actor_id, None, f"actor:{actor_id}"
-    return None, None, "anonymous"
-
-
-def _shared_workspace_member_grant_matches(
-    grants: Any, *, module: str, action: str,
-) -> Tuple[bool, bool]:
-    """Use only unscoped Shared module grants; never reinterpret domain grants."""
-    if not isinstance(grants, list):
-        raise RuntimeError("account authorization response is invalid")
-    matching = []
-    for grant in grants:
-        if not isinstance(grant, Mapping):
-            continue
-        if (grant.get("product_id") == "SHARED"
-                and grant.get("module") in {"*", module}
-                and grant.get("action") == action):
-            matching.append(grant)
-    if not matching:
-        return False, False
-    # Shared workspace grants are actor-owned, not CTH/BMP data-scope grants.
-    # Any matching row with a nonempty scope/time declaration is unsupported;
-    # fail closed instead of treating it as a global or workspace permission.
-    if any(grant.get("data_scope") not in (None, "")
-           or grant.get("time_range") not in (None, "") for grant in matching):
-        return False, True
-    return True, False
-
-
-def authorize_shared_workspace(
-    actor: Any,
-    scope: Any,
-    *,
-    module: str,
-    action: str,
-    connection=None,
-    gate: Optional["PermissionGate"] = None,
-) -> Dict[str, Any]:
-    """Authorize an actor-owned Shared workspace via the existing account owner.
-
-    The returned context contains only the exact wire discriminator plus a
-    server-resolved account or sealed local-workspace identity. It is not an
-    approval, source-use receipt, or effect capability.
-    """
-    permission_gate = _shared_workspace_gate(gate)
-    actor_id, principal, caller = _shared_workspace_actor_identity(actor)
-    scope_value: Optional[Dict[str, Any]] = None
-    try:
-        scope_value = validate_shared_workspace_scope(scope)
-    except (TypeError, ValueError):
-        pass
-    module_valid = type(module) is str and module in _SHARED_WORKSPACE_MODULES
-    action_valid = type(action) is str and action in _RESOURCE_SCOPE_ACTIONS
-    allowed = False
-    reason = "requested Shared workspace scope is invalid"
-    error_code = "SHARED_WORKSPACE_SCOPE_INVALID"
-
-    if scope_value is not None and module_valid and action_valid:
-        if principal is not None:
-            current = resolve_local_workspace_principal(module=module, action=action)
-            if (current is not None and _is_server_local_workspace_principal(principal)
-                    and current.principal_kind == principal.principal_kind
-                    and current.principal_ref == principal.principal_ref):
-                allowed = True
-                reason = "server-issued local workspace is currently open"
-            else:
-                reason = "local workspace transport or principal is unavailable"
-                error_code = "SHARED_WORKSPACE_WORKSPACE_UNAVAILABLE"
-        elif actor_id is not None:
-            try:
-                if not _actor_has_scope_action(
-                    actor_id, "SHARED", module, action, connection=connection,
-                ):
-                    reason = "active account lacks Shared module/action permission"
-                    error_code = "SHARED_WORKSPACE_ACCESS_DENIED"
-                else:
-                    role = _load_actor_scope_role(actor_id, connection=connection)
-                    if role in {"owner", "admin"}:
-                        allowed = True
-                        reason = "active account role has account-wide authority"
-                    elif role == "user":
-                        grants = _load_actor_scope_grants(actor_id, connection=connection)
-                        allowed, unsupported = _shared_workspace_member_grant_matches(
-                            grants, module=module, action=action,
-                        )
-                        if allowed:
-                            reason = "member has an unscoped Shared module/action grant"
-                        elif unsupported:
-                            reason = "member Shared grant has an unsupported scope or time range"
-                            error_code = "SHARED_WORKSPACE_ACCESS_DENIED"
-                        else:
-                            reason = "member has no explicit Shared module/action grant"
-                            error_code = "SHARED_WORKSPACE_ACCESS_DENIED"
-                    else:
-                        reason = "active account role is unavailable or unsupported"
-                        error_code = "SHARED_WORKSPACE_PERMISSION_UNAVAILABLE"
-            except Exception:
-                logger.exception("Shared workspace account permission lookup failed")
-                reason = "Shared workspace account permission could not be verified"
-                error_code = "SHARED_WORKSPACE_PERMISSION_UNAVAILABLE"
-        else:
-            reason = "a server-authenticated account or local workspace principal is required"
-            error_code = "SHARED_WORKSPACE_ACCESS_DENIED"
-    elif scope_value is not None:
-        reason = "Shared workspace module or action is invalid"
-        error_code = "SHARED_WORKSPACE_REQUEST_INVALID"
-
-    audit_module = module if module_valid else "invalid"
-    audit_action = action if action_valid else "invalid"
-    try:
-        audit_id = permission_gate._write_audit(
-            operation_type=f"shared_workspace_scope_{audit_action}",
-            resource=f"SHARED:shared_workspace:{audit_module}",
-            risk_level="low" if action == "read" else "medium",
-            permission_required=(f"SHARED/{audit_module}:{audit_action}"
-                                 if module_valid and action_valid else "shared_workspace"),
-            caller=caller,
-            result="allowed" if allowed else "denied",
-            reason=reason,
-            operation_id=None,
-            approval_token=None,
-        )
-        if type(audit_id) is not str or not audit_id:
-            raise RuntimeError("permission audit identifier unavailable")
-    except Exception as exc:
-        logger.exception("Shared workspace permission audit failed")
-        raise _SharedWorkspacePermissionDenied(
-            "SHARED_WORKSPACE_AUDIT_UNAVAILABLE"
-        ) from exc
-
-    if not allowed or scope_value is None:
-        raise _SharedWorkspacePermissionDenied(error_code)
-    if principal is not None:
-        return {
-            **scope_value,
-            "principal_kind": principal.principal_kind,
-            "principal_ref": principal.principal_ref,
-        }
-    return {**scope_value, "actor_id": actor_id}
-
-
-def _issue_shared_workspace_gate_admission(
-    gate: "PermissionGate", actor: Any, scope: Any, *, module: str, action: str,
-    connection=None, authorized_context: Mapping[str, Any],
-) -> _SharedWorkspaceGateAdmission:
-    """Mint the private, Gate-bound proof only after successful authorization."""
-    scope_value = validate_shared_workspace_scope(scope)
-    if type(gate) is not PermissionGate:
-        raise _SharedWorkspacePermissionDenied("SHARED_WORKSPACE_PERMISSION_UNAVAILABLE")
-    actor_id, principal, _caller = _shared_workspace_actor_identity(actor)
-    expected_context = (
-        {**scope_value, "principal_kind": principal.principal_kind,
-         "principal_ref": principal.principal_ref}
-        if principal is not None else {**scope_value, "actor_id": actor_id}
-    )
-    if (not isinstance(authorized_context, Mapping)
-            or dict(authorized_context) != expected_context
-            or module not in _SHARED_WORKSPACE_MODULES
-            or action not in _RESOURCE_SCOPE_ACTIONS):
-        raise _SharedWorkspacePermissionDenied("SHARED_WORKSPACE_ADMISSION_INVALID")
-    return _SharedWorkspaceGateAdmission(
-        gate=gate, module=module, action=action, actor_id=actor_id,
-        principal=principal, connection=connection,
-        _issuer=_SHARED_WORKSPACE_ADMISSION_SEAL,
-    )
-
-
-def _shared_workspace_admission_caller(
-    admission: _SharedWorkspaceGateAdmission,
-) -> str:
-    return f"actor:{admission.actor_id}" if admission.actor_id is not None else "workspace:local"
-
-
-def _shared_workspace_admission_valid(
-    admission: Any,
-    *,
-    gate: "PermissionGate",
-    operation_type: OperationType,
-    domain_id: Optional[str],
-    role: Optional[str],
-    caller: Optional[str],
-) -> bool:
-    try:
-        if (type(admission) is not _SharedWorkspaceGateAdmission
-                or admission._issuer is not _SHARED_WORKSPACE_ADMISSION_SEAL
-                or admission.gate is not gate
-                or type(gate) is not PermissionGate
-                or domain_id is not None or role is not None
-                or type(operation_type) is not OperationType
-                or operation_type not in _SHARED_WORKSPACE_OPERATIONS
-                or admission.module not in _SHARED_WORKSPACE_MODULES
-                or admission.action not in _RESOURCE_SCOPE_ACTIONS):
-            return False
-        expected_action = "read" if operation_type is OperationType.DATA_EXPORT else "write"
-        if admission.action != expected_action:
-            return False
-        if admission.actor_id is not None:
-            if (type(admission.actor_id) is not int or admission.actor_id <= 0
-                    or admission.principal is not None):
-                return False
-        elif (admission.principal is None
-              or not _is_server_local_workspace_principal(admission.principal)):
-            return False
-        expected_caller = _shared_workspace_admission_caller(admission)
-        return caller == expected_caller
-    except Exception:
-        return False
-
-
-def _shared_workspace_unavailable_result(
-    operation_type: Any, resource: Any, caller: str,
-) -> PermissionResult:
-    operation_value = operation_type.value if type(operation_type) is OperationType else "shared_workspace_effect_invalid"
-    spec = _OPERATION_REGISTRY.get(operation_type) if type(operation_type) is OperationType else None
-    return PermissionResult(
-        allowed=False,
-        reason="SHARED_WORKSPACE_PERMISSION_UNAVAILABLE",
-        operation_type=operation_value,
-        resource=resource if type(resource) is str else None,
-        risk_level=(spec.risk.value if spec is not None else RiskLevel.HIGH.value),
-        permission_required=(spec.permission.value if spec is not None else PermissionLevel.VERIFY.value),
-        caller=caller,
-        domain_id=None,
-    )
-
-
-def _shared_workspace_denial(
-    gate: "PermissionGate", operation_type: Any, resource: Any, caller: str, reason: str,
-) -> PermissionResult:
-    gate._current_check_domain = None
-    if type(operation_type) is not OperationType:
-        try:
-            gate._write_audit(
-                operation_type="shared_workspace_effect_invalid",
-                resource="SHARED:shared_workspace",
-                risk_level=RiskLevel.HIGH.value,
-                permission_required=PermissionLevel.VERIFY.value,
-                caller=caller,
-                result="denied",
-                reason=reason,
-                operation_id=None,
-                approval_token=None,
-            )
-        except Exception:
-            logger.exception("Shared workspace invalid-effect audit failed")
-            return _shared_workspace_unavailable_result(operation_type, resource, caller)
-        return PermissionResult(
-            allowed=False, reason=reason,
-            operation_type="shared_workspace_effect_invalid",
-            resource="SHARED:shared_workspace",
-            risk_level=RiskLevel.HIGH.value,
-            permission_required=PermissionLevel.VERIFY.value,
-            caller=caller, domain_id=None,
-        )
-    spec = gate.get_operation_spec(operation_type)
-    try:
-        return gate._deny(
-            operation_type,
-            resource if type(resource) is str else None,
-            spec.risk if spec is not None else RiskLevel.HIGH,
-            spec.permission if spec is not None else PermissionLevel.VERIFY,
-            caller,
-            None,
-            reason=reason,
-        )
-    except Exception:
-        logger.exception("Shared workspace effect denial audit failed")
-        return _shared_workspace_unavailable_result(operation_type, resource, caller)
-
-
-def check_shared_workspace_effect(
-    actor: Any,
-    scope: Any,
-    operation: Any,
-    resource: Any,
-    *,
-    module: str,
-    action: str,
-    connection=None,
-    gate: Optional["PermissionGate"] = None,
-) -> PermissionResult:
-    """Recheck Shared workspace access, then run the ordinary Permission Gate.
-
-    Only document/media internal DB writes, imports, and exports can use this
-    arm. The private proof is not returned or accepted from a request body;
-    Gate.check reauthorizes it before applying its normal risk/approval rules.
-    """
-    try:
-        permission_gate = _shared_workspace_gate(gate)
-    except _SharedWorkspacePermissionDenied:
-        return _shared_workspace_unavailable_result(operation, resource, "anonymous")
-    _actor_id, _principal, caller = _shared_workspace_actor_identity(actor)
-    try:
-        context = authorize_shared_workspace(
-            actor, scope, module=module, action=action,
-            connection=connection, gate=permission_gate,
-        )
-    except _SharedWorkspacePermissionDenied as exc:
-        return _shared_workspace_denial(
-            permission_gate, operation, resource, caller, str(exc),
-        )
-    if type(operation) is not OperationType or type(resource) is not str:
-        return _shared_workspace_denial(
-            permission_gate, operation, resource, caller,
-            "SHARED_WORKSPACE_OPERATION_INVALID",
-        )
-    try:
-        admission = _issue_shared_workspace_gate_admission(
-            permission_gate, actor, scope, module=module, action=action,
-            connection=connection, authorized_context=context,
-        )
-        return permission_gate.check(
-            operation, resource=resource, caller=caller,
-            _shared_workspace_admission=admission,
-        )
-    except Exception:
-        logger.exception("Shared workspace Permission Gate unavailable")
-        return _shared_workspace_unavailable_result(operation, resource, caller)
 
 
 def bind_scope_permission_approval(
@@ -2286,7 +1585,7 @@ def check_skill_metadata_change_permission(
 class ContentSourceImport:
     """Server-derived upload identity, never a client-deserialized permission."""
     actor_id: Optional[int]
-    domain_id: Optional[str]
+    domain_id: str
     subject_id: Optional[str]
     brand_focus_id: Optional[str]
     global_scope: bool
@@ -2295,8 +1594,6 @@ class ContentSourceImport:
     body_sha256: str
     principal_kind: Optional[str] = None
     principal_ref: Optional[str] = None
-    scope_kind: Optional[str] = None
-    scope_version: Optional[int] = None
 
 
 @dataclass
@@ -2327,472 +1624,6 @@ class _ContentSourceImportGrant:
 _CONTENT_SOURCE_CONFIRMATION_TTL = timedelta(minutes=5)
 _CONTENT_SOURCE_IMPORT_GRANT_TTL = timedelta(minutes=1)
 _CONTENT_SOURCE_CONFIRMATION_CAPACITY = 128
-_SHARED_CONTENT_SOURCE_IMPORT_RESOURCE_PREFIX = (
-    "content-source-import:shared-workspace:v1:"
-)
-
-_APPROVED_SOURCE_REFERENCE_RESOURCE_PREFIX = "approved-internal-source-reference:v2:"
-_APPROVED_SOURCE_REFERENCE_CONFIRMATION_TTL = timedelta(minutes=5)
-_APPROVED_SOURCE_REFERENCE_IMPORT_GRANT_TTL = timedelta(minutes=1)
-_APPROVED_SOURCE_REFERENCE_CONFIRMATION_CAPACITY = 128
-_APPROVED_SOURCE_REFERENCE_SCOPE_KEYS = (
-    "domain_id", "subject_id", "brand_focus_id", "global_scope",
-)
-_APPROVED_SOURCE_REFERENCE_REQUEST_KEYS = (
-    "source_id", "canonical_id", "expected_body_sha256", "request_id",
-)
-
-
-@dataclass
-class _ApprovedSourceReferenceConfirmation:
-    """Gate-owned confirmation pins; never retain source body or approval token in a response."""
-    confirmation_id: str
-    request: Dict[str, str]
-    scope: Dict[str, Any]
-    context: Dict[str, Any]
-    caller: str
-    resource: str
-    descriptor_sha256: str
-    body_sha256: str
-    receipt_descriptor_sha256: str
-    expires_at: datetime
-    state: str = "pending"
-    approval_token: Optional[str] = None
-    grant_expires_at: Optional[datetime] = None
-
-
-@dataclass
-class _ApprovedSourceReferenceGrant:
-    """A private DATA_IMPORT grant bound to one confirmed request and server caller."""
-    token: str
-    confirmation_id: str
-    caller: str
-    resource: str
-    descriptor_sha256: str
-    expires_at: datetime
-
-
-def _approved_source_reference_scope(scope: Mapping[str, Any]) -> Dict[str, Any]:
-    if not isinstance(scope, Mapping) or set(scope) != set(_APPROVED_SOURCE_REFERENCE_SCOPE_KEYS):
-        raise ValueError("APPROVED_SOURCE_REFERENCE_SCOPE_INVALID")
-    values = {key: scope[key] for key in _APPROVED_SOURCE_REFERENCE_SCOPE_KEYS}
-    if type(values["global_scope"]) is not bool:
-        raise ValueError("APPROVED_SOURCE_REFERENCE_SCOPE_INVALID")
-    return values
-
-
-def _approved_source_reference_request(request: Mapping[str, Any]) -> Dict[str, str]:
-    if not isinstance(request, Mapping) or set(request) != set(_APPROVED_SOURCE_REFERENCE_REQUEST_KEYS):
-        raise ValueError("APPROVED_SOURCE_REFERENCE_REQUEST_INVALID")
-    values = {key: request[key] for key in _APPROVED_SOURCE_REFERENCE_REQUEST_KEYS}
-    if any(type(value) is not str or not value for value in values.values()):
-        raise ValueError("APPROVED_SOURCE_REFERENCE_REQUEST_INVALID")
-    return values
-
-
-def _approved_source_reference_context_caller(context: Mapping[str, Any]) -> str:
-    if not isinstance(context, Mapping):
-        raise ValueError("APPROVED_SOURCE_REFERENCE_CONTEXT_INVALID")
-    values = dict(context)
-    scope_keys = set(_APPROVED_SOURCE_REFERENCE_SCOPE_KEYS)
-    actor_id = values.get("actor_id")
-    principal_kind = values.get("principal_kind")
-    principal_ref = values.get("principal_ref")
-    if (
-        set(values) == scope_keys | {"actor_id"}
-        and type(actor_id) is int and actor_id > 0
-        and principal_kind is None and principal_ref is None
-    ):
-        return f"actor:{actor_id}"
-    if (
-        set(values) == scope_keys | {"principal_kind", "principal_ref"}
-        and actor_id is None
-        and type(principal_kind) is str and principal_kind
-        and type(principal_ref) is str and principal_ref
-    ):
-        return principal_ref
-    raise ValueError("APPROVED_SOURCE_REFERENCE_CONTEXT_INVALID")
-
-
-def _approved_source_reference_validate_prepared(
-    prepared: Mapping[str, Any], request: Mapping[str, str],
-    context: Mapping[str, Any],
-) -> Dict[str, Any]:
-    if not isinstance(prepared, Mapping):
-        raise ValueError("APPROVED_SOURCE_REFERENCE_PREPARED_INVALID")
-    values = dict(prepared)
-    if (
-        values.get("schema") != "lumenis.approved-source-reference-request/v2"
-        or values.get("ok") is not True or values.get("prepared") is not True
-        or values.get("context") != dict(context)
-        or any(values.get(key) != request[key] for key in _APPROVED_SOURCE_REFERENCE_REQUEST_KEYS)
-        or values.get("body_sha256") != request["expected_body_sha256"]
-        or type(values.get("descriptor_sha256")) is not str
-        or re.fullmatch(r"[0-9a-f]{64}", values["descriptor_sha256"]) is None
-        or values.get("resource") != (
-            _APPROVED_SOURCE_REFERENCE_RESOURCE_PREFIX + values["descriptor_sha256"]
-        )
-        or type(values.get("receipt_descriptor_sha256")) is not str
-        or re.fullmatch(r"[0-9a-f]{64}", values["receipt_descriptor_sha256"]) is None
-        or type(values.get("source_url")) is not str or not values["source_url"]
-        or type(values.get("title")) is not str or not values["title"]
-        or type(values.get("parsed_text")) is not str
-        or type(values.get("body_length")) is not int
-        or values["body_length"] != len(values["parsed_text"])
-    ):
-        raise ValueError("APPROVED_SOURCE_REFERENCE_PREPARED_INVALID")
-    return values
-
-
-def _approved_source_reference_current(
-    *, actor: Any, scope: Mapping[str, Any], request: Mapping[str, str],
-    connection: Any = None,
-) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Ask the existing SavedWork and Importer owners to revalidate current scope and source."""
-    from lumenis.importer import documents
-    from lumenis.shared.reporting import saved_work
-
-    scope_values = _approved_source_reference_scope(scope)
-    request_values = _approved_source_reference_request(request)
-    if connection is None:
-        context = saved_work.authorize(actor, scope_values, action="write")
-        prepared = documents.prepare_approved_source_reference(
-            **request_values, actor=actor, scope=scope_values,
-        )
-    else:
-        prepared, *_ = documents._prepare_approved_source_reference(
-            connection, **request_values, actor=actor, scope=scope_values,
-            action="write", source_use_operation="derive_reference",
-        )
-        context = prepared.get("context") if isinstance(prepared, Mapping) else None
-    if not isinstance(context, Mapping):
-        raise ValueError("APPROVED_SOURCE_REFERENCE_CONTEXT_INVALID")
-    context_values = dict(context)
-    _approved_source_reference_context_caller(context_values)
-    current = _approved_source_reference_validate_prepared(
-        prepared, request_values, context_values,
-    )
-    return current, context_values
-
-
-def _approved_source_reference_failure_code(exc: Exception) -> str:
-    code = getattr(exc, "code", None)
-    if type(code) is str and re.fullmatch(r"[A-Z][A-Z0-9_]{1,95}", code):
-        return code
-    text = str(exc)
-    if re.fullmatch(r"[A-Z][A-Z0-9_]{1,95}", text):
-        return text
-    return "APPROVED_SOURCE_REFERENCE_PERMISSION_UNAVAILABLE"
-
-
-def _approved_source_reference_response(
-    allowed: bool, code: str, *, verification_state: str = "verified",
-    **fields: Any,
-) -> Dict[str, Any]:
-    # Permission approval tokens and source bodies are never public response fields.
-    fields.pop("approval_token", None)
-    fields.pop("parsed_text", None)
-    return {
-        "allowed": allowed, "code": code,
-        "verification_state": verification_state, **fields,
-    }
-
-
-def _approved_source_reference_permission_denial(
-    gate: Optional["PermissionGate"], code: str, *,
-    resource: Optional[str] = None, caller: Optional[str] = None,
-    domain_id: Optional[str] = None,
-) -> PermissionResult:
-    if not isinstance(gate, PermissionGate):
-        return PermissionResult(
-            allowed=False, reason=code, requires_approval=True,
-            operation_type=OperationType.DATA_IMPORT.value,
-            resource=resource, risk_level=RiskLevel.HIGH.value,
-            permission_required=PermissionLevel.COMMIT.value, caller=caller,
-            domain_id=domain_id,
-        )
-    if domain_id:
-        gate._current_check_domain = domain_id
-    return gate._deny(
-        OperationType.DATA_IMPORT, resource, RiskLevel.HIGH,
-        PermissionLevel.COMMIT, caller or gate.default_caller, None,
-        reason=code, requires_approval=True,
-    )
-
-
-def prepare_approved_source_reference_confirmation(
-    *, actor: Any, scope: Mapping[str, Any], request: Mapping[str, Any],
-    gate: Optional["PermissionGate"] = None,
-) -> Dict[str, Any]:
-    """Prepare a five-minute human review without retaining source text or issuing a grant."""
-    permission_gate = gate if gate is not None else get_permission_gate()
-    if not isinstance(permission_gate, PermissionGate):
-        return _approved_source_reference_response(
-            False, "APPROVED_SOURCE_REFERENCE_PERMISSION_UNAVAILABLE",
-            verification_state="unavailable",
-        )
-    if is_testing_bypass_enabled():
-        return _approved_source_reference_response(
-            False, "APPROVED_SOURCE_REFERENCE_TESTING_BYPASS_FORBIDDEN",
-        )
-    try:
-        scope_values = _approved_source_reference_scope(scope)
-        request_values = _approved_source_reference_request(request)
-        current, context = _approved_source_reference_current(
-            actor=actor, scope=scope_values, request=request_values,
-        )
-        caller = _approved_source_reference_context_caller(context)
-    except Exception as exc:
-        return _approved_source_reference_response(
-            False, _approved_source_reference_failure_code(exc),
-            verification_state="unavailable" if not isinstance(exc, ValueError) else "verified",
-        )
-
-    now = datetime.now(timezone.utc)
-    permission_gate._prune_approved_source_reference_state(now)
-    with permission_gate._approved_source_reference_lock:
-        if len(permission_gate._approved_source_reference_confirmations) >= (
-            _APPROVED_SOURCE_REFERENCE_CONFIRMATION_CAPACITY
-        ):
-            return _approved_source_reference_response(
-                False, "APPROVED_SOURCE_REFERENCE_CONFIRMATION_CAPACITY",
-            )
-        confirmation_id = secrets.token_urlsafe(32)
-        expires_at = now + _APPROVED_SOURCE_REFERENCE_CONFIRMATION_TTL
-        permission_gate._approved_source_reference_confirmations[confirmation_id] = (
-            _ApprovedSourceReferenceConfirmation(
-                confirmation_id=confirmation_id, request=dict(request_values),
-                scope=dict(scope_values), context=dict(context), caller=caller,
-                resource=current["resource"],
-                descriptor_sha256=current["descriptor_sha256"],
-                body_sha256=current["body_sha256"],
-                receipt_descriptor_sha256=current["receipt_descriptor_sha256"],
-                expires_at=expires_at,
-            )
-        )
-    return _approved_source_reference_response(
-        True, "APPROVED_SOURCE_REFERENCE_CONFIRMATION_PENDING",
-        confirmation_id=confirmation_id, expires_at=expires_at.isoformat(),
-        title=current["title"], source_url=current["source_url"],
-        body_sha256=current["body_sha256"], scope=dict(scope_values),
-        receipt_descriptor_sha256=current["receipt_descriptor_sha256"],
-        descriptor_sha256=current["descriptor_sha256"], resource=current["resource"],
-    )
-
-
-def confirm_approved_source_reference_confirmation(
-    *, actor: Any, scope: Mapping[str, Any], confirmation_id: str,
-    confirmed: bool, gate: Optional["PermissionGate"] = None,
-) -> Dict[str, Any]:
-    """Confirm or cancel one exact live source reference as the current server principal."""
-    permission_gate = gate if gate is not None else get_permission_gate()
-    if not isinstance(permission_gate, PermissionGate):
-        return _approved_source_reference_response(
-            False, "APPROVED_SOURCE_REFERENCE_PERMISSION_UNAVAILABLE",
-            verification_state="unavailable",
-        )
-    if is_testing_bypass_enabled():
-        return _approved_source_reference_response(
-            False, "APPROVED_SOURCE_REFERENCE_TESTING_BYPASS_FORBIDDEN",
-        )
-    if type(confirmed) is not bool or type(confirmation_id) is not str or not confirmation_id:
-        return _approved_source_reference_response(
-            False, "APPROVED_SOURCE_REFERENCE_CONFIRMATION_INVALID",
-        )
-    try:
-        scope_values = _approved_source_reference_scope(scope)
-    except Exception as exc:
-        return _approved_source_reference_response(
-            False, _approved_source_reference_failure_code(exc),
-        )
-
-    permission_gate._prune_approved_source_reference_state()
-    with permission_gate._approved_source_reference_lock:
-        stored = permission_gate._approved_source_reference_confirmations.get(confirmation_id)
-        if stored is None:
-            return _approved_source_reference_response(
-                False, "APPROVED_SOURCE_REFERENCE_CONFIRMATION_UNKNOWN",
-            )
-        if stored.scope != scope_values:
-            return _approved_source_reference_response(
-                False, "APPROVED_SOURCE_REFERENCE_SCOPE_MISMATCH",
-            )
-        if stored.state not in {"pending", "confirmed"}:
-            return _approved_source_reference_response(
-                False, "APPROVED_SOURCE_REFERENCE_CONFIRMATION_NOT_PENDING",
-            )
-        snapshot = replace(stored)
-
-    if not confirmed:
-        try:
-            from lumenis.shared.reporting import saved_work
-            context = saved_work.authorize(actor, scope_values, action="write")
-            caller = _approved_source_reference_context_caller(context)
-        except Exception as exc:
-            return _approved_source_reference_response(
-                False, _approved_source_reference_failure_code(exc),
-                verification_state="unavailable" if not isinstance(exc, ValueError) else "verified",
-            )
-        if caller != snapshot.caller or dict(context) != snapshot.context:
-            return _approved_source_reference_response(
-                False, "APPROVED_SOURCE_REFERENCE_ACTOR_OR_SCOPE_MISMATCH",
-            )
-        permission_gate._cancel_approved_source_reference_confirmation(
-            confirmation_id, state="cancelled",
-        )
-        return _approved_source_reference_response(
-            False, "APPROVED_SOURCE_REFERENCE_CONFIRMATION_CANCELLED",
-            state="cancelled", confirmation_id=confirmation_id,
-        )
-
-    try:
-        current, context = _approved_source_reference_current(
-            actor=actor, scope=scope_values, request=snapshot.request,
-        )
-        caller = _approved_source_reference_context_caller(context)
-    except Exception as exc:
-        return _approved_source_reference_response(
-            False, _approved_source_reference_failure_code(exc),
-            verification_state="unavailable" if not isinstance(exc, ValueError) else "verified",
-        )
-    if caller != snapshot.caller or dict(context) != snapshot.context:
-        return _approved_source_reference_response(
-            False, "APPROVED_SOURCE_REFERENCE_ACTOR_OR_SCOPE_MISMATCH",
-        )
-    if (
-        current["resource"] != snapshot.resource
-        or current["descriptor_sha256"] != snapshot.descriptor_sha256
-        or current["body_sha256"] != snapshot.body_sha256
-        or current["receipt_descriptor_sha256"] != snapshot.receipt_descriptor_sha256
-    ):
-        permission_gate._cancel_approved_source_reference_confirmation(
-            confirmation_id, state="invalidated",
-        )
-        return _approved_source_reference_response(
-            False, "APPROVED_SOURCE_REFERENCE_SOURCE_OR_RECEIPT_CHANGED",
-        )
-
-    if snapshot.state == "confirmed":
-        token = snapshot.approval_token
-        if not permission_gate._approved_source_reference_grant_is_valid(
-            token, OperationType.DATA_IMPORT, snapshot.resource, snapshot.caller,
-            snapshot.descriptor_sha256,
-        ):
-            return _approved_source_reference_response(
-                False, "APPROVED_SOURCE_REFERENCE_GRANT_EXPIRED_OR_REVOKED",
-            )
-    else:
-        if not permission_gate.has_permission(PermissionLevel.COMMIT):
-            _approved_source_reference_permission_denial(
-                permission_gate,
-                "APPROVED_SOURCE_REFERENCE_COMMIT_PERMISSION_REQUIRED",
-                resource=snapshot.resource, caller=snapshot.caller,
-                domain_id=context["domain_id"],
-            )
-            return _approved_source_reference_response(
-                False, "APPROVED_SOURCE_REFERENCE_COMMIT_PERMISSION_REQUIRED",
-            )
-        with permission_gate._approved_source_reference_lock:
-            stored = permission_gate._approved_source_reference_confirmations.get(confirmation_id)
-            if (
-                stored is None or stored.state != "pending"
-                or stored.resource != snapshot.resource
-                or stored.descriptor_sha256 != snapshot.descriptor_sha256
-            ):
-                return _approved_source_reference_response(
-                    False, "APPROVED_SOURCE_REFERENCE_CONFIRMATION_NOT_PENDING",
-                )
-            token = permission_gate.grant_approval(
-                OperationType.DATA_IMPORT.value, duration_minutes=1,
-                resource=snapshot.resource, granted_by=snapshot.caller,
-            )
-            expires_at = datetime.now(timezone.utc) + _APPROVED_SOURCE_REFERENCE_IMPORT_GRANT_TTL
-            stored.state = "confirmed"
-            stored.approval_token = token
-            stored.grant_expires_at = expires_at
-            permission_gate._approved_source_reference_grants[token] = (
-                _ApprovedSourceReferenceGrant(
-                    token=token, confirmation_id=confirmation_id,
-                    caller=snapshot.caller, resource=snapshot.resource,
-                    descriptor_sha256=snapshot.descriptor_sha256,
-                    expires_at=expires_at,
-                )
-            )
-
-    decision = permission_gate.check(
-        OperationType.DATA_IMPORT, resource=snapshot.resource,
-        caller=snapshot.caller, domain_id=context["domain_id"],
-        exact_approval_required=True, source_reference_grant=token,
-    )
-    if decision.allowed is not True:
-        permission_gate._cancel_approved_source_reference_confirmation(
-            confirmation_id, state="denied",
-        )
-        return _approved_source_reference_response(
-            False, decision.reason or "APPROVED_SOURCE_REFERENCE_PERMISSION_DENIED",
-            verification_state="verified",
-        )
-    grant = permission_gate._approved_source_reference_grants.get(token)
-    return _approved_source_reference_response(
-        True, "APPROVED_SOURCE_REFERENCE_READY_FOR_RETRY",
-        state="ready_for_retry", confirmation_id=confirmation_id,
-        expires_at=(grant.expires_at if grant else datetime.now(timezone.utc)).isoformat(),
-        resource=snapshot.resource, descriptor_sha256=snapshot.descriptor_sha256,
-        body_sha256=snapshot.body_sha256, scope=dict(snapshot.scope),
-    )
-
-
-def check_approved_source_reference_import(
-    *, actor: Any, scope: Mapping[str, Any], prepared: Mapping[str, Any],
-    connection: Any = None, gate: Optional["PermissionGate"] = None,
-) -> PermissionResult:
-    """Recheck current scope, source and the Gate-owned explicit confirmation at every write fence."""
-    permission_gate = gate if gate is not None else get_permission_gate()
-    resource = prepared.get("resource") if isinstance(prepared, Mapping) else None
-    resource = resource if type(resource) is str else None
-    if not isinstance(permission_gate, PermissionGate):
-        return _approved_source_reference_permission_denial(
-            None, "APPROVED_SOURCE_REFERENCE_PERMISSION_UNAVAILABLE", resource=resource,
-        )
-    if is_testing_bypass_enabled():
-        return _approved_source_reference_permission_denial(
-            permission_gate, "APPROVED_SOURCE_REFERENCE_TESTING_BYPASS_FORBIDDEN",
-            resource=resource,
-        )
-    try:
-        if not isinstance(prepared, Mapping):
-            raise ValueError("APPROVED_SOURCE_REFERENCE_PREPARED_INVALID")
-        request_values = _approved_source_reference_request({
-            key: prepared.get(key) for key in _APPROVED_SOURCE_REFERENCE_REQUEST_KEYS
-        })
-        scope_values = _approved_source_reference_scope(scope)
-        current, context = _approved_source_reference_current(
-            actor=actor, scope=scope_values, request=request_values,
-            connection=connection,
-        )
-        caller = _approved_source_reference_context_caller(context)
-        if dict(prepared) != current:
-            raise ValueError("APPROVED_SOURCE_REFERENCE_PREPARED_CHANGED")
-        resource = current["resource"]
-        token = permission_gate._find_approved_source_reference_grant(
-            resource, caller, current["descriptor_sha256"],
-        )
-        if token is None:
-            return _approved_source_reference_permission_denial(
-                permission_gate, "APPROVED_SOURCE_REFERENCE_CONFIRMATION_REQUIRED",
-                resource=resource, caller=caller, domain_id=context["domain_id"],
-            )
-        decision = permission_gate.check(
-            OperationType.DATA_IMPORT, resource=resource, caller=caller,
-            domain_id=context["domain_id"], exact_approval_required=True,
-            source_reference_grant=token,
-        )
-        return replace(decision, approval_token=None)
-    except Exception as exc:
-        return _approved_source_reference_permission_denial(
-            permission_gate, _approved_source_reference_failure_code(exc),
-            resource=resource,
-        )
 
 
 def _content_source_actor_id(actor: Optional[Mapping[str, Any]]) -> Optional[int]:
@@ -2840,57 +1671,6 @@ def _content_source_upload_matches_identity(
     return False
 
 
-def _shared_local_principal_unavailable(
-    actor: Optional[Mapping[str, Any]], upload: ContentSourceImport,
-    identity_kind: Optional[str],
-) -> bool:
-    return (
-        type(upload) is ContentSourceImport
-        and _content_source_descriptor_kind(upload) == "shared_workspace"
-        and upload.principal_kind == "local_workspace"
-        and actor is None and identity_kind is None
-    )
-
-
-def _content_source_descriptor_kind(upload: Any) -> str:
-    """Classify the legacy domain descriptor or the exact independent Shared wire."""
-    if type(upload) is not ContentSourceImport:
-        return "invalid"
-    if upload.scope_kind is None and upload.scope_version is None:
-        return "legacy" if type(upload.domain_id) is str else "invalid"
-    if (
-        upload.domain_id is None
-        and type(upload.scope_kind) is str
-        and upload.scope_kind == _SHARED_WORKSPACE_SCOPE_KIND
-        and type(upload.scope_version) is int
-        and upload.scope_version == _SHARED_WORKSPACE_VERSION
-        and upload.subject_id is None
-        and upload.brand_focus_id is None
-        and type(upload.global_scope) is bool
-        and upload.global_scope is False
-    ):
-        return "shared_workspace"
-    return "invalid"
-
-
-def _content_source_metadata_is_valid(upload: ContentSourceImport) -> bool:
-    return (
-        type(upload.size_bytes) is int
-        and 0 < upload.size_bytes <= 128 * 1024 * 1024
-        and type(upload.body_sha256) is str
-        and re.fullmatch(r"[0-9a-f]{64}", upload.body_sha256) is not None
-        and type(upload.filename) is str
-        and 0 < len(upload.filename) <= 255
-        and upload.filename == upload.filename.strip()
-        and not upload.filename.startswith(".")
-        and not upload.filename.endswith(".")
-        and not any(
-            ord(character) < 32 or character in '/\\\\:*?"<>|'
-            for character in upload.filename
-        )
-    )
-
-
 def _content_source_confirmation_denial(
     gate: "PermissionGate",
     code: str,
@@ -2904,8 +1684,6 @@ def _content_source_confirmation_denial(
     principal_kind: Optional[str] = None,
     principal_ref: Optional[str] = None,
 ) -> ActorScopePermissionResult:
-    if _content_source_descriptor_kind(upload) == "shared_workspace":
-        gate._current_check_domain = None
     caller = scope.caller if scope else caller or (
         f"actor:{actor_id}" if actor_id else "anonymous"
     )
@@ -2928,273 +1706,6 @@ def _content_source_confirmation_denial(
     )
 
 
-def _shared_content_source_current_context(
-    upload: ContentSourceImport, *, gate: "PermissionGate",
-) -> Dict[str, Any]:
-    """Resolve current account/workspace authorization from a Shared descriptor."""
-    if _content_source_descriptor_kind(upload) != "shared_workspace":
-        raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
-    wire = validate_shared_workspace_scope({
-        "scope_kind": upload.scope_kind,
-        "version": upload.scope_version,
-    })
-    if (
-        type(upload.actor_id) is int and upload.actor_id > 0
-        and upload.principal_kind is None and upload.principal_ref is None
-    ):
-        actor: Any = {"id": upload.actor_id}
-    elif (
-        upload.actor_id is None
-        and upload.principal_kind == "local_workspace"
-        and upload.principal_ref == "workspace:local"
-    ):
-        actor = resolve_local_workspace_principal(
-            module="content", action="write",
-        )
-        if actor is None:
-            raise _SharedWorkspacePermissionDenied(
-                "SHARED_WORKSPACE_WORKSPACE_UNAVAILABLE"
-            )
-    else:
-        raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
-    context = authorize_shared_workspace(
-        actor, wire, module="content", action="write", gate=gate,
-    )
-    expected = (
-        {**wire, "actor_id": upload.actor_id}
-        if upload.actor_id is not None
-        else {
-            **wire,
-            "principal_kind": upload.principal_kind,
-            "principal_ref": upload.principal_ref,
-        }
-    )
-    if dict(context) != expected:
-        raise ValueError("CONTENT_SOURCE_ACTOR_MISMATCH")
-    return dict(context)
-
-
-def _shared_content_source_scope_receipt(
-    actor: Optional[Mapping[str, Any]], workspace_scope: Mapping[str, Any], *,
-    principal: Optional[LocalWorkspacePrincipal], gate: "PermissionGate",
-) -> Tuple[ActorScopePermissionResult, Optional[Dict[str, Any]]]:
-    """Return a scope-only receipt tied to the real Shared Permission audit."""
-    gate._current_check_domain = None
-    identity = _content_source_identity(actor, principal)
-    actor_id, caller, principal_kind, principal_ref, identity_kind = identity
-    try:
-        wire = validate_shared_workspace_scope(workspace_scope)
-    except (TypeError, ValueError):
-        return _content_source_confirmation_denial(
-            gate, "CONTENT_SOURCE_RESOURCE_BINDING_INVALID", actor_id=actor_id,
-            caller=caller, principal_kind=principal_kind,
-            principal_ref=principal_ref, verification_state="verified",
-        ), None
-    if identity_kind not in {"account", "local_workspace"}:
-        return _content_source_confirmation_denial(
-            gate, "CONTENT_SOURCE_ACTOR_MISMATCH", actor_id=actor_id,
-            caller=caller, principal_kind=principal_kind,
-            principal_ref=principal_ref, verification_state="verified",
-        ), None
-    actor_value: Any = principal if principal is not None else actor
-    try:
-        context = authorize_shared_workspace(
-            actor_value, wire, module="content", action="write", gate=gate,
-        )
-        caller = (
-            f"actor:{context['actor_id']}"
-            if type(context.get("actor_id")) is int
-            else "workspace:local"
-        )
-        audit = gate.get_audit_log(
-            limit=1, operation_type="shared_workspace_scope_write",
-            result_filter="allowed",
-        )
-        entry = audit[-1] if audit else None
-        if (
-            not isinstance(entry, Mapping)
-            or entry.get("caller") != caller
-            or entry.get("resource") != "SHARED:shared_workspace:content"
-            or entry.get("permission_required") != "SHARED/content:write"
-            or type(entry.get("audit_id")) is not str
-            or not entry["audit_id"]
-        ):
-            raise RuntimeError("Shared workspace scope audit unavailable")
-    except _SharedWorkspacePermissionDenied as exc:
-        return _content_source_confirmation_denial(
-            gate, str(exc), actor_id=actor_id, caller=caller,
-            principal_kind=principal_kind, principal_ref=principal_ref,
-            verification_state="verified",
-        ), None
-    except Exception:
-        logger.exception("Shared content source permission could not be verified")
-        return _content_source_confirmation_denial(
-            gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE", actor_id=actor_id,
-            caller=caller, principal_kind=principal_kind,
-            principal_ref=principal_ref, verification_state="unavailable",
-        ), None
-
-    audit_id = entry["audit_id"]
-    return ActorScopePermissionResult(
-        allowed=True,
-        reason="current Shared workspace content write permission is audited",
-        audit_id=audit_id,
-        operation_type="resource_scope_write",
-        resource="SHARED:shared_workspace:content",
-        risk_level=RiskLevel.MEDIUM.value,
-        permission_required="write",
-        caller=caller,
-        domain_id=None,
-        actor_id=context.get("actor_id"),
-        subject_id=None,
-        brand_focus_id=None,
-        global_scope=False,
-        scope_action="write",
-        scope_audit_id=audit_id,
-        verification_state="verified",
-        principal_kind=context.get("principal_kind"),
-        principal_ref=context.get("principal_ref"),
-    ), dict(context)
-
-
-def make_shared_content_source_import(
-    actor: Optional[Mapping[str, Any]], workspace_scope: Mapping[str, Any], *,
-    filename: str, size_bytes: int, body_sha256: str,
-    principal: Optional[LocalWorkspacePrincipal] = None,
-    gate: Optional["PermissionGate"] = None,
-) -> ContentSourceImport:
-    """Mint an immutable Shared upload descriptor from server-observed byte metadata.
-
-    The caller supplies metadata it already measured from the upload body; this
-    helper does not open a file or grant source rights or an external effect.
-    """
-    permission_gate = gate if gate is not None else get_permission_gate()
-    wire = validate_shared_workspace_scope(workspace_scope)
-    identity = _content_source_identity(actor, principal)
-    actor_id, _caller, principal_kind, principal_ref, identity_kind = identity
-    if identity_kind not in {"account", "local_workspace"}:
-        raise ValueError("CONTENT_SOURCE_ACTOR_MISMATCH")
-    upload = ContentSourceImport(
-        actor_id=actor_id,
-        domain_id=None,
-        subject_id=None,
-        brand_focus_id=None,
-        global_scope=False,
-        filename=filename,
-        size_bytes=size_bytes,
-        body_sha256=body_sha256,
-        principal_kind=principal_kind,
-        principal_ref=principal_ref,
-        scope_kind=wire["scope_kind"],
-        scope_version=wire["version"],
-    )
-    if not _content_source_metadata_is_valid(upload):
-        raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
-    scope, context = _shared_content_source_scope_receipt(
-        actor, wire, principal=principal, gate=permission_gate,
-    )
-    if scope.allowed is not True or context is None:
-        raise PermissionError(scope.code or "SHARED_WORKSPACE_ACCESS_DENIED")
-    content_source_import_resource(scope, upload, gate=permission_gate)
-    return upload
-
-
-def _shared_content_source_import_resource(
-    scope_permission: ActorScopePermissionResult,
-    upload: ContentSourceImport,
-    *,
-    gate: Optional["PermissionGate"] = None,
-) -> str:
-    permission_gate = gate if gate is not None else get_permission_gate()
-    if (
-        type(scope_permission) is not ActorScopePermissionResult
-        or type(upload) is not ContentSourceImport
-    ):
-        raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
-    account_identity = (
-        type(upload.actor_id) is int and upload.actor_id > 0
-        and upload.principal_kind is None and upload.principal_ref is None
-        and scope_permission.actor_id == upload.actor_id
-        and scope_permission.principal_kind is None
-        and scope_permission.principal_ref is None
-        and scope_permission.caller == f"actor:{upload.actor_id}"
-    )
-    workspace_identity = (
-        upload.actor_id is None
-        and upload.principal_kind == "local_workspace"
-        and upload.principal_ref == "workspace:local"
-        and scope_permission.actor_id is None
-        and scope_permission.principal_kind == "local_workspace"
-        and scope_permission.principal_ref == "workspace:local"
-        and scope_permission.caller == "workspace:local"
-    )
-    if (
-        scope_permission.allowed is not True
-        or scope_permission.verification_state != "verified"
-        or scope_permission.scope_action != "write"
-        or scope_permission.operation_type != "resource_scope_write"
-        or not scope_permission.audit_id
-        or scope_permission.scope_audit_id != scope_permission.audit_id
-        or scope_permission.domain_id is not None
-        or scope_permission.subject_id is not None
-        or scope_permission.brand_focus_id is not None
-        or type(scope_permission.global_scope) is not bool
-        or scope_permission.global_scope is not False
-        or scope_permission.resource != "SHARED:shared_workspace:content"
-        or _content_source_descriptor_kind(upload) != "shared_workspace"
-        or not (account_identity or workspace_identity)
-        or not _content_source_metadata_is_valid(upload)
-    ):
-        raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
-
-    audit_entries = permission_gate.get_audit_log(
-        limit=10000, operation_type="shared_workspace_scope_write",
-        result_filter="allowed",
-    )
-    if not any(
-        entry.get("audit_id") == scope_permission.audit_id
-        and entry.get("caller") == scope_permission.caller
-        and entry.get("resource") == "SHARED:shared_workspace:content"
-        and entry.get("permission_required") == "SHARED/content:write"
-        for entry in audit_entries
-    ):
-        raise ValueError("CONTENT_SOURCE_SCOPE_AUDIT_UNVERIFIED")
-
-    try:
-        current_context = _shared_content_source_current_context(
-            upload, gate=permission_gate,
-        )
-    except Exception as exc:
-        permission_gate._revoke_shared_content_source_import(upload)
-        if isinstance(exc, ValueError):
-            raise
-        raise ValueError("CONTENT_SOURCE_SCOPE_AUDIT_UNVERIFIED") from exc
-    if (
-        current_context.get("actor_id") != scope_permission.actor_id
-        or current_context.get("principal_kind") != scope_permission.principal_kind
-        or current_context.get("principal_ref") != scope_permission.principal_ref
-        or scope_permission.caller != (
-            f"actor:{current_context['actor_id']}"
-            if type(current_context.get("actor_id")) is int
-            else "workspace:local"
-        )
-    ):
-        permission_gate._revoke_shared_content_source_import(upload)
-        raise ValueError("CONTENT_SOURCE_SCOPE_AUDIT_UNVERIFIED")
-
-    descriptor = asdict(upload)
-    binding = {
-        "operation": OperationType.DB_WRITE.value,
-        "scope_action": "write",
-        "module": "content",
-        **descriptor,
-    }
-    encoded = json.dumps(
-        binding, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
-    ).encode("utf-8")
-    return _SHARED_CONTENT_SOURCE_IMPORT_RESOURCE_PREFIX + hashlib.sha256(encoded).hexdigest()
-
-
 def content_source_import_resource(
     scope_permission: ActorScopePermissionResult,
     upload: ContentSourceImport,
@@ -3202,13 +1713,6 @@ def content_source_import_resource(
     gate: Optional["PermissionGate"] = None,
 ) -> str:
     """Bind an audited scope to actual upload bytes; grants no rights or effects."""
-    descriptor_kind = _content_source_descriptor_kind(upload)
-    if descriptor_kind == "shared_workspace":
-        return _shared_content_source_import_resource(
-            scope_permission, upload, gate=gate,
-        )
-    if descriptor_kind != "legacy":
-        raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
     account_identity = (
         type(upload) is ContentSourceImport
         and type(upload.actor_id) is int and upload.actor_id > 0
@@ -3290,10 +1794,6 @@ def content_source_import_resource(
     ):
         raise ValueError("CONTENT_SOURCE_SCOPE_AUDIT_UNVERIFIED")
     descriptor = asdict(upload)
-    # These optional fields did not exist in the legacy descriptor. Removing
-    # them keeps all pre-existing account and local-workspace hashes stable.
-    descriptor.pop("scope_kind", None)
-    descriptor.pop("scope_version", None)
     if upload.principal_kind is None and upload.principal_ref is None:
         # Keep the legacy actor resource hash stable for descriptors created
         # before the optional workspace-principal fields existed.
@@ -3329,30 +1829,23 @@ def check_content_source_import_permission(
         # accepting caller-supplied rights/approval fields.
         raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
     if not _content_source_upload_matches_identity(upload, identity):
-        local_principal_unavailable = _shared_local_principal_unavailable(
-            actor, upload, identity_kind,
-        )
         code = (
-            "CONTENT_SOURCE_PERMISSION_UNAVAILABLE"
-            if local_principal_unavailable else (
-                "CONTENT_SOURCE_PRINCIPAL_MISMATCH"
-                if identity_kind == "local_workspace" or upload.principal_kind is not None
-                else "CONTENT_SOURCE_ACTOR_MISMATCH"
-            )
+            "CONTENT_SOURCE_PRINCIPAL_MISMATCH"
+            if identity_kind == "local_workspace" or upload.principal_kind is not None
+            else "CONTENT_SOURCE_ACTOR_MISMATCH"
         )
         return _content_source_confirmation_denial(
             permission_gate, code, actor_id=actor_id, upload=upload,
-            verification_state=("unavailable" if local_principal_unavailable else "not_checked"),
             caller=caller, principal_kind=principal_kind, principal_ref=principal_ref,
         )
     try:
-        scope, shared_context = _content_source_import_scope_receipt(
-            actor, upload, principal=principal, gate=permission_gate,
+        scope = _content_source_scope_receipt(
+            actor, principal=principal, domain_id=upload.domain_id,
+            subject_id=upload.subject_id, brand_focus_id=upload.brand_focus_id,
+            global_scope=upload.global_scope, gate=permission_gate,
         )
     except Exception:
-        if _content_source_descriptor_kind(upload) == "shared_workspace":
-            permission_gate._revoke_shared_content_source_import(upload)
-        elif identity_kind == "local_workspace":
+        if identity_kind == "local_workspace":
             permission_gate._revoke_local_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
@@ -3360,9 +1853,7 @@ def check_content_source_import_permission(
             caller=caller, principal_kind=principal_kind, principal_ref=principal_ref,
         )
     if scope.verification_state != "verified":
-        if _content_source_descriptor_kind(upload) == "shared_workspace":
-            permission_gate._revoke_shared_content_source_import(upload)
-        elif identity_kind == "local_workspace":
+        if identity_kind == "local_workspace":
             permission_gate._revoke_local_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
@@ -3370,9 +1861,7 @@ def check_content_source_import_permission(
             verification_state="unavailable",
         )
     if scope.allowed is not True:
-        if _content_source_descriptor_kind(upload) == "shared_workspace":
-            permission_gate._revoke_shared_content_source_import(upload)
-        elif identity_kind == "local_workspace":
+        if identity_kind == "local_workspace":
             permission_gate._revoke_local_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_SCOPE_DENIED",
@@ -3382,9 +1871,7 @@ def check_content_source_import_permission(
     try:
         resource = content_source_import_resource(scope, upload, gate=permission_gate)
     except ValueError:
-        if _content_source_descriptor_kind(upload) == "shared_workspace":
-            permission_gate._revoke_shared_content_source_import(upload)
-        elif identity_kind == "local_workspace":
+        if identity_kind == "local_workspace":
             permission_gate._revoke_local_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_RESOURCE_BINDING_INVALID",
@@ -3392,9 +1879,7 @@ def check_content_source_import_permission(
             verification_state="verified",
         )
     except Exception:
-        if _content_source_descriptor_kind(upload) == "shared_workspace":
-            permission_gate._revoke_shared_content_source_import(upload)
-        elif identity_kind == "local_workspace":
+        if identity_kind == "local_workspace":
             permission_gate._revoke_local_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
@@ -3402,49 +1887,19 @@ def check_content_source_import_permission(
             verification_state="unavailable",
         )
     if is_testing_bypass_enabled():
-        if _content_source_descriptor_kind(upload) == "shared_workspace":
-            permission_gate._revoke_shared_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_TESTING_BYPASS_FORBIDDEN",
             actor_id=actor_id, upload=upload, scope=scope, resource=resource,
             verification_state="verified",
         )
     grant_token = permission_gate._find_content_import_grant(resource, scope.caller)
-    shared_admission = None
-    descriptor_kind = _content_source_descriptor_kind(upload)
-    if descriptor_kind == "shared_workspace":
-        if shared_context is None:
-            permission_gate._revoke_shared_content_source_import(upload)
-            return _content_source_confirmation_denial(
-                permission_gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
-                actor_id=actor_id, upload=upload, scope=scope, resource=resource,
-                verification_state="unavailable",
-            )
-        try:
-            shared_admission = _issue_shared_workspace_gate_admission(
-                permission_gate,
-                principal if principal is not None else actor,
-                {"scope_kind": upload.scope_kind, "version": upload.scope_version},
-                module="content",
-                action="write",
-                authorized_context=shared_context,
-            )
-        except Exception:
-            permission_gate._revoke_shared_content_source_import(upload)
-            return _content_source_confirmation_denial(
-                permission_gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
-                actor_id=actor_id, upload=upload, scope=scope, resource=resource,
-                verification_state="unavailable",
-            )
     try:
         # No operation_id: each invocation rechecks current account scope,
         # restricted confirmation grant, and the exact live approval token.
         decision = permission_gate.check(
             OperationType.DB_WRITE, resource=resource, risk_level=RiskLevel.HIGH,
-            caller=scope.caller,
-            domain_id=None if descriptor_kind == "shared_workspace" else upload.domain_id,
+            caller=scope.caller, domain_id=upload.domain_id,
             exact_approval_required=True, content_import_grant=grant_token,
-            _shared_workspace_admission=shared_admission,
         )
     except Exception:
         return _content_source_confirmation_denial(
@@ -3458,16 +1913,11 @@ def check_content_source_import_permission(
             actor_id=actor_id, upload=upload, scope=scope, resource=resource,
             verification_state="verified",
         )
-    verified_approval_token = (
-        grant_token if descriptor_kind == "shared_workspace"
-        else decision.approval_token
-    )
     if (
         not decision.requires_approval
-        or (descriptor_kind == "shared_workspace" and decision.approval_token is not None)
-        or not verified_approval_token
+        or not decision.approval_token
         or not permission_gate._approval_token_is_valid(
-            verified_approval_token, OperationType.DB_WRITE.value, resource,
+            decision.approval_token, OperationType.DB_WRITE.value, resource,
         )
     ):
         return _content_source_confirmation_denial(
@@ -3476,13 +1926,7 @@ def check_content_source_import_permission(
             verification_state="unavailable",
         )
     return ActorScopePermissionResult(
-        **{
-            **decision.to_dict(),
-            "approval_token": None
-            if descriptor_kind == "shared_workspace"
-            else decision.approval_token,
-        },
-        actor_id=scope.actor_id,
+        **decision.to_dict(), actor_id=scope.actor_id,
         subject_id=scope.subject_id, brand_focus_id=scope.brand_focus_id,
         global_scope=scope.global_scope, scope_action="write",
         scope_audit_id=scope.audit_id, verification_state="verified",
@@ -3515,27 +1959,6 @@ def _content_source_scope_receipt(
     )
 
 
-def _content_source_import_scope_receipt(
-    actor: Optional[Mapping[str, Any]], upload: ContentSourceImport, *,
-    principal: Optional[LocalWorkspacePrincipal], gate: "PermissionGate",
-) -> Tuple[ActorScopePermissionResult, Optional[Dict[str, Any]]]:
-    descriptor_kind = _content_source_descriptor_kind(upload)
-    if descriptor_kind == "shared_workspace":
-        return _shared_content_source_scope_receipt(
-            actor,
-            {"scope_kind": upload.scope_kind, "version": upload.scope_version},
-            principal=principal,
-            gate=gate,
-        )
-    if descriptor_kind != "legacy":
-        raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
-    return _content_source_scope_receipt(
-        actor, principal=principal, domain_id=upload.domain_id,
-        subject_id=upload.subject_id, brand_focus_id=upload.brand_focus_id,
-        global_scope=upload.global_scope, gate=gate,
-    ), None
-
-
 def prepare_content_source_import_confirmation(
     actor: Optional[Mapping[str, Any]], upload: ContentSourceImport, *,
     principal: Optional[LocalWorkspacePrincipal] = None,
@@ -3553,46 +1976,35 @@ def prepare_content_source_import_confirmation(
         return {"allowed": False, "code": "CONTENT_SOURCE_RESOURCE_BINDING_INVALID",
                 "verification_state": "unavailable"}
     if not _content_source_upload_matches_identity(upload, identity):
-        local_principal_unavailable = _shared_local_principal_unavailable(
-            actor, upload, identity_kind,
-        )
         code = (
-            "CONTENT_SOURCE_PERMISSION_UNAVAILABLE"
-            if local_principal_unavailable else (
-                "CONTENT_SOURCE_PRINCIPAL_MISMATCH"
-                if identity_kind == "local_workspace" or upload.principal_kind is not None
-                else "CONTENT_SOURCE_ACTOR_MISMATCH"
-            )
+            "CONTENT_SOURCE_PRINCIPAL_MISMATCH"
+            if identity_kind == "local_workspace" or upload.principal_kind is not None
+            else "CONTENT_SOURCE_ACTOR_MISMATCH"
         )
         return {"allowed": False, "code": code,
-                "verification_state": "unavailable" if local_principal_unavailable else "verified"}
+                "verification_state": "verified"}
     if is_testing_bypass_enabled():
         return {"allowed": False, "code": "CONTENT_SOURCE_TESTING_BYPASS_FORBIDDEN",
                 "verification_state": "verified"}
     try:
-        scope, _shared_context = _content_source_import_scope_receipt(
-            actor, upload, principal=principal, gate=permission_gate,
+        scope = _content_source_scope_receipt(
+            actor, principal=principal, domain_id=upload.domain_id,
+            subject_id=upload.subject_id,
+            brand_focus_id=upload.brand_focus_id, global_scope=upload.global_scope,
+            gate=permission_gate,
         )
         if scope.verification_state != "verified":
-            if _content_source_descriptor_kind(upload) == "shared_workspace":
-                permission_gate._revoke_shared_content_source_import(upload)
             return {"allowed": False, "code": "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
                     "verification_state": "unavailable"}
         if scope.allowed is not True:
-            if _content_source_descriptor_kind(upload) == "shared_workspace":
-                permission_gate._revoke_shared_content_source_import(upload)
             return {"allowed": False, "code": "CONTENT_SOURCE_SCOPE_DENIED",
                     "verification_state": "verified"}
         resource = content_source_import_resource(scope, upload, gate=permission_gate)
     except ValueError:
-        if _content_source_descriptor_kind(upload) == "shared_workspace":
-            permission_gate._revoke_shared_content_source_import(upload)
         return {"allowed": False, "code": "CONTENT_SOURCE_RESOURCE_BINDING_INVALID",
                 "verification_state": "verified"}
     except Exception:
         logger.exception("Content source import confirmation preparation failed")
-        if _content_source_descriptor_kind(upload) == "shared_workspace":
-            permission_gate._revoke_shared_content_source_import(upload)
         return {"allowed": False, "code": "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
                 "verification_state": "unavailable"}
 
@@ -3621,9 +2033,8 @@ def prepare_content_source_import_confirmation(
 
 def confirm_content_source_import(
     actor: Optional[Mapping[str, Any]], confirmation_id: str, *,
-    domain_id: Optional[str], subject_id: Optional[str] = None,
+    domain_id: str, subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None, global_scope: bool = False,
-    workspace_scope: Optional[Mapping[str, Any]] = None,
     confirmed: bool, principal: Optional[LocalWorkspacePrincipal] = None,
     gate: Optional["PermissionGate"] = None,
 ) -> ActorScopePermissionResult:
@@ -3638,23 +2049,6 @@ def confirm_content_source_import(
             principal_kind=principal_kind, principal_ref=principal_ref,
         )
     if confirmed is not True:
-        # A literal user decline is terminal for this Shared nonce. Keep the
-        # account/legacy confirmation behavior unchanged, and never let a
-        # later retry turn the same declined Shared request into authority.
-        if type(confirmation_id) is str and confirmation_id:
-            with permission_gate._content_import_lock:
-                declined = permission_gate._content_import_confirmations.get(
-                    confirmation_id,
-                )
-                if (
-                    declined is not None
-                    and declined.actor_id == actor_id
-                    and declined.caller == caller
-                    and declined.state == "pending"
-                    and _content_source_descriptor_kind(declined.upload)
-                    == "shared_workspace"
-                ):
-                    declined.state = "declined"
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_CONFIRMATION_DECLINED", actor_id=actor_id,
         )
@@ -3689,55 +2083,29 @@ def confirm_content_source_import(
                 actor_id=actor_id, upload=upload, resource=confirmation.resource,
                 caller=caller, principal_kind=principal_kind, principal_ref=principal_ref,
             )
-        descriptor_kind = _content_source_descriptor_kind(upload)
-        if descriptor_kind == "shared_workspace":
-            try:
-                wire_scope = validate_shared_workspace_scope(workspace_scope)
-            except (TypeError, ValueError):
-                wire_scope = None
-            scope_mismatch = (
-                wire_scope is None or dict(wire_scope) != {
-                    "scope_kind": upload.scope_kind,
-                    "version": upload.scope_version,
-                }
-                or domain_id is not None or subject_id is not None
-                or brand_focus_id is not None or type(global_scope) is not bool
-                or global_scope is not False
-            )
-        elif descriptor_kind == "legacy":
-            wire_scope = None
-            scope_mismatch = (
-                workspace_scope is not None
-                or domain_id != upload.domain_id or subject_id != upload.subject_id
-                or brand_focus_id != upload.brand_focus_id
-                or type(global_scope) is not bool or global_scope is not upload.global_scope
-            )
-        else:
-            return _content_source_confirmation_denial(
-                permission_gate, "CONTENT_SOURCE_RESOURCE_BINDING_INVALID",
-                actor_id=actor_id, upload=upload, resource=confirmation.resource,
-            )
-        if scope_mismatch:
+        if (
+            domain_id != upload.domain_id or subject_id != upload.subject_id
+            or brand_focus_id != upload.brand_focus_id
+            or type(global_scope) is not bool or global_scope is not upload.global_scope
+        ):
             return _content_source_confirmation_denial(
                 permission_gate, "CONTENT_SOURCE_SCOPE_MISMATCH", actor_id=actor_id,
                 upload=upload, resource=confirmation.resource,
             )
         try:
-            scope, _shared_context = _content_source_import_scope_receipt(
-                actor, upload, principal=principal, gate=permission_gate,
+            scope = _content_source_scope_receipt(
+                actor, principal=principal, domain_id=domain_id, subject_id=subject_id,
+                brand_focus_id=brand_focus_id, global_scope=global_scope,
+                gate=permission_gate,
             )
             if scope.verification_state != "verified":
-                if descriptor_kind == "shared_workspace":
-                    permission_gate._revoke_shared_content_source_import(upload)
                 return _content_source_confirmation_denial(
                     permission_gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
                     actor_id=actor_id, upload=upload, scope=scope,
                     resource=confirmation.resource, verification_state="unavailable",
                 )
             if scope.allowed is not True:
-                if descriptor_kind == "shared_workspace":
-                    permission_gate._revoke_shared_content_source_import(upload)
-                elif identity_kind == "local_workspace":
+                if identity_kind == "local_workspace":
                     confirmation.state = "cancelled"
                 return _content_source_confirmation_denial(
                     permission_gate, "CONTENT_SOURCE_SCOPE_DENIED", actor_id=actor_id,
@@ -3746,8 +2114,6 @@ def confirm_content_source_import(
             resource = content_source_import_resource(scope, upload, gate=permission_gate)
         except Exception:
             logger.exception("Content source import confirmation scope check failed")
-            if descriptor_kind == "shared_workspace":
-                permission_gate._revoke_shared_content_source_import(upload)
             return _content_source_confirmation_denial(
                 permission_gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
                 actor_id=actor_id, upload=upload, resource=confirmation.resource,
@@ -3798,6 +2164,12 @@ def cancel_content_source_import_confirmation(
     actor_id, caller, _principal_kind, _principal_ref, identity_kind = identity
     if identity_kind is None or not isinstance(current_scope, Mapping):
         return False
+    domain_id = current_scope.get("domain_id")
+    subject_id = current_scope.get("subject_id")
+    brand_focus_id = current_scope.get("brand_focus_id")
+    global_scope = current_scope.get("global_scope")
+    if type(global_scope) is not bool:
+        return False
     permission_gate._prune_content_source_import_state()
     with permission_gate._content_import_lock:
         confirmation = permission_gate._content_import_confirmations.get(confirmation_id)
@@ -3810,51 +2182,27 @@ def cancel_content_source_import_confirmation(
         upload = confirmation.upload
         if not _content_source_upload_matches_identity(upload, identity):
             return False
-        descriptor_kind = _content_source_descriptor_kind(upload)
-        if descriptor_kind == "shared_workspace":
-            try:
-                wire_scope = validate_shared_workspace_scope(current_scope)
-            except (TypeError, ValueError):
-                return False
-            if wire_scope != {
-                "scope_kind": upload.scope_kind,
-                "version": upload.scope_version,
-            }:
-                return False
-        elif descriptor_kind == "legacy":
-            domain_id = current_scope.get("domain_id")
-            subject_id = current_scope.get("subject_id")
-            brand_focus_id = current_scope.get("brand_focus_id")
-            global_scope = current_scope.get("global_scope")
-            if type(global_scope) is not bool:
-                return False
-            if (domain_id != upload.domain_id or subject_id != upload.subject_id
-                    or brand_focus_id != upload.brand_focus_id
-                    or global_scope is not upload.global_scope):
-                return False
-        else:
+        if (domain_id != upload.domain_id or subject_id != upload.subject_id
+                or brand_focus_id != upload.brand_focus_id
+                or global_scope is not upload.global_scope):
             return False
         try:
-            scope, _shared_context = _content_source_import_scope_receipt(
-                actor, upload, principal=principal, gate=permission_gate,
+            scope = _content_source_scope_receipt(
+                actor, principal=principal, domain_id=domain_id, subject_id=subject_id,
+                brand_focus_id=brand_focus_id, global_scope=global_scope,
+                gate=permission_gate,
             )
             if scope.allowed is not True or scope.verification_state != "verified":
-                if descriptor_kind == "shared_workspace":
-                    permission_gate._revoke_shared_content_source_import(upload)
-                elif identity_kind == "local_workspace":
+                if identity_kind == "local_workspace":
                     confirmation.state = "cancelled"
                     if confirmation.approval_token:
                         permission_gate._content_import_grants.pop(confirmation.approval_token, None)
                         permission_gate.revoke_approval(confirmation.approval_token)
                 return False
             if content_source_import_resource(scope, upload, gate=permission_gate) != confirmation.resource:
-                if descriptor_kind == "shared_workspace":
-                    permission_gate._revoke_shared_content_source_import(upload)
                 return False
         except Exception:
             logger.exception("Content source import confirmation cancellation check failed")
-            if descriptor_kind == "shared_workspace":
-                permission_gate._revoke_shared_content_source_import(upload)
             return False
         confirmation.state = "cancelled"
         if confirmation.approval_token:
@@ -3975,16 +2323,6 @@ class PermissionGate:
         self._content_import_confirmations: Dict[str, _ContentSourceImportConfirmation] = {}
         self._content_import_grants: Dict[str, _ContentSourceImportGrant] = {}
 
-        # Approved internal source references have their own exact, short-lived
-        # confirmation state. The Gate retains request/context/hash pins only.
-        self._approved_source_reference_lock = threading.RLock()
-        self._approved_source_reference_confirmations: Dict[
-            str, _ApprovedSourceReferenceConfirmation
-        ] = {}
-        self._approved_source_reference_grants: Dict[
-            str, _ApprovedSourceReferenceGrant
-        ] = {}
-
         # 幂等性缓存：operation_id → PermissionResult
         self._idempotency_cache: Dict[str, PermissionResult] = {}
         self._idempotency_lock = threading.Lock()
@@ -4057,32 +2395,6 @@ class PermissionGate:
                     self._content_import_grants.pop(token, None)
                     self.revoke_approval(token)
 
-    def _revoke_shared_content_source_import_locked(
-        self, upload: ContentSourceImport,
-    ) -> None:
-        if _content_source_descriptor_kind(upload) != "shared_workspace":
-            return
-        for confirmation in self._content_import_confirmations.values():
-            if (
-                confirmation.upload != upload
-                or confirmation.state not in {"pending", "confirmed"}
-            ):
-                continue
-            confirmation.state = "cancelled"
-            token = confirmation.approval_token
-            if token:
-                self._content_import_grants.pop(token, None)
-                self.revoke_approval(token)
-
-    def _revoke_shared_content_source_import(
-        self, upload: ContentSourceImport,
-    ) -> None:
-        """Invalidate only the matching Shared upload after live access fails."""
-        if _content_source_descriptor_kind(upload) != "shared_workspace":
-            return
-        with self._content_import_lock:
-            self._revoke_shared_content_source_import_locked(upload)
-
     def _content_import_grant_is_valid(
         self,
         token: Optional[str],
@@ -4112,52 +2424,6 @@ class PermissionGate:
             ):
                 return False
             upload = confirmation.upload
-            if _content_source_descriptor_kind(upload) == "shared_workspace":
-                try:
-                    if (
-                        grant.actor_id != upload.actor_id
-                        or grant.caller != (
-                            f"actor:{upload.actor_id}"
-                            if type(upload.actor_id) is int and upload.actor_id > 0
-                            else "workspace:local"
-                        )
-                        or confirmation.caller != grant.caller
-                        or upload.principal_kind not in {None, "local_workspace"}
-                        or upload.principal_ref not in {None, "workspace:local"}
-                    ):
-                        raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
-                    if upload.actor_id is not None:
-                        actor: Optional[Mapping[str, Any]] = {"id": upload.actor_id}
-                        principal = None
-                    else:
-                        actor = None
-                        principal = resolve_local_workspace_principal(
-                            module="content", action="write",
-                        )
-                    scope, context = _shared_content_source_scope_receipt(
-                        actor,
-                        {"scope_kind": upload.scope_kind,
-                         "version": upload.scope_version},
-                        principal=principal,
-                        gate=self,
-                    )
-                    if scope.allowed is not True or context is None:
-                        raise PermissionError(scope.code or "SHARED_WORKSPACE_ACCESS_DENIED")
-                    current_resource = content_source_import_resource(
-                        scope, upload, gate=self,
-                    )
-                    if (
-                        current_resource != resource
-                        or scope.caller != grant.caller
-                        or scope.actor_id != grant.actor_id
-                    ):
-                        raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
-                except Exception:
-                    self._revoke_shared_content_source_import_locked(upload)
-                    return False
-                return self._approval_token_is_valid(
-                    token, OperationType.DB_WRITE.value, resource,
-                )
             if upload.principal_kind == "local_workspace" or upload.principal_ref is not None:
                 principal = resolve_local_workspace_principal(
                     module="content", action="write",
@@ -4202,103 +2468,6 @@ class PermissionGate:
                     return token
         return None
 
-    def _prune_approved_source_reference_state(
-        self, now: Optional[datetime] = None,
-    ) -> None:
-        now = now or datetime.now(timezone.utc)
-        with self._approved_source_reference_lock:
-            for confirmation_id, confirmation in list(
-                self._approved_source_reference_confirmations.items()
-            ):
-                if now >= confirmation.expires_at:
-                    self._cancel_approved_source_reference_confirmation(
-                        confirmation_id, state="expired",
-                    )
-            for token, grant in list(self._approved_source_reference_grants.items()):
-                if now >= grant.expires_at or not self._approval_token_is_valid(
-                    token, OperationType.DATA_IMPORT.value, grant.resource,
-                ):
-                    confirmation = self._approved_source_reference_confirmations.get(
-                        grant.confirmation_id
-                    )
-                    if confirmation is not None and confirmation.approval_token == token:
-                        confirmation.state = "expired_or_revoked"
-                        self._approved_source_reference_confirmations.pop(
-                            grant.confirmation_id, None
-                        )
-                    self._approved_source_reference_grants.pop(token, None)
-                    self.revoke_approval(token)
-
-    def _cancel_approved_source_reference_confirmation(
-        self, confirmation_id: str, *, state: str = "cancelled",
-    ) -> bool:
-        with self._approved_source_reference_lock:
-            confirmation = self._approved_source_reference_confirmations.pop(
-                confirmation_id, None
-            )
-            if confirmation is None:
-                return False
-            confirmation.state = state
-            token = confirmation.approval_token
-            if token:
-                self._approved_source_reference_grants.pop(token, None)
-                self.revoke_approval(token)
-            return True
-
-    def _approved_source_reference_grant_is_valid(
-        self, token: Optional[str], operation_type: OperationType,
-        resource: Optional[str], caller: Optional[str],
-        descriptor_sha256: Optional[str] = None,
-    ) -> bool:
-        if (
-            type(token) is not str
-            or operation_type is not OperationType.DATA_IMPORT
-            or type(resource) is not str
-            or not resource.startswith(_APPROVED_SOURCE_REFERENCE_RESOURCE_PREFIX)
-            or type(descriptor_sha256) is not str
-            or re.fullmatch(r"[0-9a-f]{64}", descriptor_sha256) is None
-            or resource != _APPROVED_SOURCE_REFERENCE_RESOURCE_PREFIX + descriptor_sha256
-        ):
-            return False
-        self._prune_approved_source_reference_state()
-        with self._approved_source_reference_lock:
-            grant = self._approved_source_reference_grants.get(token)
-            if (
-                grant is None or datetime.now(timezone.utc) >= grant.expires_at
-                or grant.token != token or grant.resource != resource
-                or grant.descriptor_sha256 != descriptor_sha256
-                or caller != grant.caller
-            ):
-                return False
-            confirmation = self._approved_source_reference_confirmations.get(
-                grant.confirmation_id
-            )
-            if (
-                confirmation is None or confirmation.state != "confirmed"
-                or confirmation.approval_token != token
-                or confirmation.resource != resource
-                or confirmation.descriptor_sha256 != descriptor_sha256
-                or confirmation.caller != caller
-                or confirmation.confirmation_id != grant.confirmation_id
-            ):
-                return False
-            return self._approval_token_is_valid(
-                token, OperationType.DATA_IMPORT.value, resource,
-            )
-
-    def _find_approved_source_reference_grant(
-        self, resource: str, caller: str, descriptor_sha256: str,
-    ) -> Optional[str]:
-        self._prune_approved_source_reference_state()
-        with self._approved_source_reference_lock:
-            for token in list(self._approved_source_reference_grants):
-                if self._approved_source_reference_grant_is_valid(
-                    token, OperationType.DATA_IMPORT, resource, caller,
-                    descriptor_sha256,
-                ):
-                    return token
-        return None
-
     def _approval_token_is_valid(
         self, token: Optional[str], operation: str, resource: Optional[str],
     ) -> bool:
@@ -4317,22 +2486,15 @@ class PermissionGate:
         self, operation: str, resource: Optional[str], *, exact: bool,
     ) -> Optional[str]:
         with self._content_import_lock:
-            with self._approved_source_reference_lock:
-                restricted_tokens = (
-                    set(self._content_import_grants)
-                    | set(self._approved_source_reference_grants)
-                )
-                with self._approval_lock:
-                    for token, approval in self._approvals.items():
-                        if token in restricted_tokens:
-                            continue
-                        if exact and (
-                            approval.operation != operation
-                            or approval.resource != resource
-                        ):
-                            continue
-                        if approval.is_valid(operation, resource):
-                            return token
+            restricted_tokens = set(self._content_import_grants)
+        with self._approval_lock:
+            for token, approval in self._approvals.items():
+                if token in restricted_tokens:
+                    continue
+                if exact and (approval.operation != operation or approval.resource != resource):
+                    continue
+                if approval.is_valid(operation, resource):
+                    return token
         return None
 
     # ──────────────────────────────────────────────────────────
@@ -4631,8 +2793,6 @@ class PermissionGate:
         role: Optional[str] = None,
         exact_approval_required: bool = False,
         content_import_grant: Optional[str] = None,
-        source_reference_grant: Optional[str] = None,
-        _shared_workspace_admission: Optional[_SharedWorkspaceGateAdmission] = None,
     ) -> PermissionResult:
         """执行权限检查。
 
@@ -4647,159 +2807,45 @@ class PermissionGate:
             exact_approval_required: 仅接受操作和资源均完全匹配的审批令牌；
                 默认 False 以保留现有调用方兼容性
             content_import_grant: Gate 内确认产生的精确 Content Import capability。
-            source_reference_grant: Gate 内确认产生的精确 approved source-reference capability。
-            _shared_workspace_admission: 仅供本模块使用的 Gate 绑定 workspace admission。
 
         Returns:
             PermissionResult
         """
-        shared_content_source_resource = (
-            type(resource) is str
-            and resource.startswith(_SHARED_CONTENT_SOURCE_IMPORT_RESOURCE_PREFIX)
-        )
-        shared_content_source_import = False
-        if shared_content_source_resource:
-            shaped_resource = re.fullmatch(
-                re.escape(_SHARED_CONTENT_SOURCE_IMPORT_RESOURCE_PREFIX) + r"[0-9a-f]{64}",
-                resource,
-            ) is not None
-            if (
-                not shaped_resource
-                or operation_type is not OperationType.DB_WRITE
-                or risk_level is not RiskLevel.HIGH
-                or exact_approval_required is not True
-                or type(content_import_grant) is not str
-                or not content_import_grant
-                or source_reference_grant is not None
-                or domain_id is not None or role is not None
-                or _shared_workspace_admission is None
-            ):
-                return _shared_workspace_denial(
-                    self, operation_type, resource, caller or self.default_caller,
-                    "CONTENT_SOURCE_SHARED_CONFIRMATION_REQUIRED",
-                )
-            shared_content_source_import = True
-        source_reference_import = (
-            operation_type is OperationType.DATA_IMPORT
-            and type(resource) is str
-            and resource.startswith(_APPROVED_SOURCE_REFERENCE_RESOURCE_PREFIX)
-        )
-        shared_workspace = _shared_workspace_admission is not None
-        if shared_workspace:
-            self._current_check_domain = None
-            shared_caller = caller or self.default_caller
-            if not _shared_workspace_admission_valid(
-                _shared_workspace_admission,
-                gate=self,
-                operation_type=operation_type,
-                domain_id=domain_id,
-                role=role,
-                caller=caller,
-            ):
-                return _shared_workspace_denial(
-                    self, operation_type, resource, shared_caller,
-                    "SHARED_WORKSPACE_ADMISSION_INVALID",
-                )
-            if shared_content_source_import and (
-                _shared_workspace_admission.module != "content"
-                or _shared_workspace_admission.action != "write"
-            ):
-                return _shared_workspace_denial(
-                    self, operation_type, resource, shared_caller,
-                    "CONTENT_SOURCE_SHARED_ADMISSION_INVALID",
-                )
-            if (not shared_content_source_import
-                    and (risk_level is not None or content_import_grant is not None
-                         or source_reference_import or source_reference_grant is not None)):
-                return _shared_workspace_denial(
-                    self, operation_type, resource, shared_caller,
-                    "SHARED_WORKSPACE_MIXED_PERMISSION_SCOPE",
-                )
-            admission = _shared_workspace_admission
-            actor = ({"id": admission.actor_id}
-                     if admission.actor_id is not None else admission.principal)
-            try:
-                authorize_shared_workspace(
-                    actor,
-                    {"scope_kind": _SHARED_WORKSPACE_SCOPE_KIND,
-                     "version": _SHARED_WORKSPACE_VERSION},
-                    module=admission.module,
-                    action=admission.action,
-                    connection=admission.connection,
-                    gate=self,
-                )
-            except _SharedWorkspacePermissionDenied as exc:
-                return _shared_workspace_denial(
-                    self, operation_type, resource, shared_caller, str(exc),
-                )
-            except Exception:
-                logger.exception("Shared workspace Permission reauthorization failed")
-                return _shared_workspace_unavailable_result(
-                    operation_type, resource, shared_caller,
-                )
-            # This private arm is actor/workspace scoped, never inherited from
-            # a selected CTH/BMP domain. It also cannot replay an earlier allow.
-            self._current_check_domain = None
-            operation_id = None
-        # This operation must revalidate its live one-minute grant at every fence.
-        # An idempotency hit would let a prior allow survive revocation or expiry.
-        if source_reference_import:
-            operation_id = None
-
         # 0a. TESTING 旁路：必须显式开启（set_testing_bypass(True) 或 PERMISSION_GATE_TESTING=1）。
         # OWASP deny-by-default：不得因检测到 pytest 环境或 Flask TESTING 就自动放行（那会使权限测试失效、生产也存在被绕过风险）。
         _is_testing = bool(_TESTING_BYPASS_ENABLED) or os.environ.get('PERMISSION_GATE_TESTING') == '1' 
         if _is_testing:
-            if source_reference_import:
-                self._current_check_domain = None
-                return self._deny(
-                    operation_type, resource, risk_level or RiskLevel.HIGH,
-                    PermissionLevel.COMMIT, caller or self.default_caller, None,
-                    reason="APPROVED_SOURCE_REFERENCE_TESTING_BYPASS_FORBIDDEN",
-                    requires_approval=True,
-                )
-            if shared_content_source_import:
-                self._current_check_domain = None
-                return self._deny(
-                    OperationType.DB_WRITE, resource, RiskLevel.HIGH,
-                    PermissionLevel.COMMIT, caller or self.default_caller, None,
-                    reason="CONTENT_SOURCE_TESTING_BYPASS_FORBIDDEN",
-                    requires_approval=True,
-                )
-            if not shared_workspace:
-                logger.debug(f"[PermissionGate] TESTING模式放行: op={operation_type.value}, resource={resource}")
-                return PermissionResult(
-                    allowed=True,
-                    operation_type=operation_type,
-                    resource=resource or 'unknown',
-                    risk_level=risk_level or RiskLevel.LOW,
-                    permission_required=PermissionLevel.VERIFY,
-                    reason='TESTING mode - all operations allowed (audit only)',
-                    caller=caller or 'test_runner',
-                )
+            logger.debug(f"[PermissionGate] TESTING模式放行: op={operation_type.value}, resource={resource}")
+            return PermissionResult(
+                allowed=True,
+                operation_type=operation_type,
+                resource=resource or 'unknown',
+                risk_level=risk_level or RiskLevel.LOW,
+                permission_required=PermissionLevel.VERIFY,
+                reason='TESTING mode - all operations allowed (audit only)',
+                caller=caller or 'test_runner',
+            )
 
         # 0. 域身份解析。未知域不得继承上一次检查或静默落入 CTH。
         self._current_check_domain = None
-        if not shared_workspace:
-            try:
-                from domain_isolation import resolve_domain_identity
-                if domain_id is None:
-                    from ai_domain_context import get_current_domain
-                    domain_id = get_current_domain()
-                else:
-                    domain_id, _ = resolve_domain_identity(domain_id=domain_id)
-                if not domain_id:
-                    raise ValueError("DOMAIN_NOT_SELECTED")
-            except (ImportError, TypeError, ValueError) as exc:
-                return self._deny(
-                    operation_type, resource, risk_level or RiskLevel.HIGH,
-                    PermissionLevel.VERIFY, caller or self.default_caller, operation_id,
-                    reason=f"domain_context_unavailable:{exc}",
-                )
+        try:
+            from domain_isolation import resolve_domain_identity
+            if domain_id is None:
+                from ai_domain_context import get_current_domain
+                domain_id = get_current_domain()
+            else:
+                domain_id, _ = resolve_domain_identity(domain_id=domain_id)
+            if not domain_id:
+                raise ValueError("DOMAIN_NOT_SELECTED")
+        except (ImportError, TypeError, ValueError) as exc:
+            return self._deny(
+                operation_type, resource, risk_level or RiskLevel.HIGH,
+                PermissionLevel.VERIFY, caller or self.default_caller, operation_id,
+                reason=f"domain_context_unavailable:{exc}",
+            )
 
         # 0b. 跨域权限检查：ZBMP 角色不天然拥有 CTH Admin 权限
-        if (not shared_workspace and role
-                and not self._check_role_domain_permission(role, domain_id, operation_type)):
+        if role and not self._check_role_domain_permission(role, domain_id, operation_type):
             return self._deny(
                 operation_type, resource, risk_level or RiskLevel.HIGH,
                 PermissionLevel.VERIFY, caller or self.default_caller, operation_id,
@@ -4817,7 +2863,7 @@ class PermissionGate:
                     return cached
 
         # 记录当前检查的域身份（用于结果标记）
-        self._current_check_domain = None if shared_workspace else domain_id
+        self._current_check_domain = domain_id
 
         # 2. 操作注册检查（fail-closed）
         spec = self._registry.get(operation_type)
@@ -4836,69 +2882,21 @@ class PermissionGate:
                 f"未注册操作（fail_open）: {operation_type.value}", auto_allow=True)
 
         # 3. 确定最终风险等级（显式传入优先，否则用注册表默认）
-        final_risk = (
-            RiskLevel.HIGH if source_reference_import or shared_content_source_import
-            else risk_level or spec.risk
-        )
-        permission_required = (
-            PermissionLevel.COMMIT
-            if source_reference_import or shared_content_source_import
-            else spec.permission
-        )
-        restricted_import_grant = (
-            False if source_reference_import else self._content_import_grant_is_valid(
-                content_import_grant, operation_type, resource,
-                caller or self.default_caller,
-            )
+        final_risk = risk_level or spec.risk
+        restricted_import_grant = self._content_import_grant_is_valid(
+            content_import_grant, operation_type, resource,
+            caller or self.default_caller,
         )
 
         # 4. 权限等级检查
-        if not self.has_permission(permission_required) and not restricted_import_grant:
+        if not self.has_permission(spec.permission) and not restricted_import_grant:
             result = self._deny(
-                operation_type, resource, final_risk, permission_required,
+                operation_type, resource, final_risk, spec.permission,
                 caller or self.default_caller, operation_id,
-                reason=f"权限等级不足: 需要 {permission_required.value}，"
+                reason=f"权限等级不足: 需要 {spec.permission.value}，"
                        f"当前启用 {[p.value for p in self._enabled_permissions]}",
             )
             return result
-
-        # Source-reference DATA_IMPORT always requires this Gate-owned exact
-        # confirmation grant, independently of configurable risk/auto-allow.
-        if source_reference_import:
-            descriptor_sha256 = resource[len(
-                _APPROVED_SOURCE_REFERENCE_RESOURCE_PREFIX
-            ):]
-            if not self._approved_source_reference_grant_is_valid(
-                source_reference_grant, operation_type, resource,
-                caller or self.default_caller, descriptor_sha256,
-            ):
-                return self._deny(
-                    operation_type, resource, final_risk, permission_required,
-                    caller or self.default_caller, None,
-                    reason="APPROVED_SOURCE_REFERENCE_CONFIRMATION_REQUIRED",
-                    requires_approval=True,
-                )
-            return self._allow(
-                operation_type, resource, final_risk, permission_required,
-                caller or self.default_caller, None,
-                reason="approved source-reference confirmation is current",
-                requires_approval=True, approval_token=None,
-            )
-
-        if shared_content_source_import:
-            if not restricted_import_grant:
-                return self._deny(
-                    OperationType.DB_WRITE, resource, RiskLevel.HIGH,
-                    PermissionLevel.COMMIT, caller or self.default_caller, None,
-                    reason="CONTENT_SOURCE_CONFIRMATION_REQUIRED",
-                    requires_approval=True,
-                )
-            return self._allow(
-                OperationType.DB_WRITE, resource, RiskLevel.HIGH,
-                PermissionLevel.COMMIT, caller or self.default_caller, None,
-                reason="Shared content import confirmation is current",
-                requires_approval=True, approval_token=None,
-            )
 
         # 5. 高风险操作需人工审批
         if self.require_human_approval(final_risk):
@@ -5449,18 +3447,14 @@ class PermissionGate:
         resource: Optional[str] = None,
         exact: bool = False,
     ) -> bool:
-        with self._approved_source_reference_lock:
-            restricted_tokens = set(self._approved_source_reference_grants)
-            with self._approval_lock:
-                for token, approval in self._approvals.items():
-                    if token in restricted_tokens:
-                        continue
-                    if exact and (
-                        approval.operation != operation or approval.resource != resource
-                    ):
-                        continue
-                    if approval.is_valid(operation, resource):
-                        return True
+        with self._approval_lock:
+            for approval in self._approvals.values():
+                if exact and (
+                    approval.operation != operation or approval.resource != resource
+                ):
+                    continue
+                if approval.is_valid(operation, resource):
+                    return True
         return False
 
     def _get_approval_token(
@@ -5469,18 +3463,14 @@ class PermissionGate:
         resource: Optional[str] = None,
         exact: bool = False,
     ) -> Optional[str]:
-        with self._approved_source_reference_lock:
-            restricted_tokens = set(self._approved_source_reference_grants)
-            with self._approval_lock:
-                for token, approval in self._approvals.items():
-                    if token in restricted_tokens:
-                        continue
-                    if exact and (
-                        approval.operation != operation or approval.resource != resource
-                    ):
-                        continue
-                    if approval.is_valid(operation, resource):
-                        return approval.token
+        with self._approval_lock:
+            for approval in self._approvals.values():
+                if exact and (
+                    approval.operation != operation or approval.resource != resource
+                ):
+                    continue
+                if approval.is_valid(operation, resource):
+                    return approval.token
         return None
 
     def list_approvals(self) -> List[Dict[str, Any]]:
@@ -5893,9 +3883,6 @@ __all__ = [
     "ActorScopePermissionResult",
     "LocalWorkspacePrincipal",
     "owned_training_identity",
-    "validate_shared_workspace_scope",
-    "authorize_shared_workspace",
-    "check_shared_workspace_effect",
     "check_actor_scope_permission",
     "check_local_workspace_scope_permission",
     "resolve_local_workspace_principal",
@@ -5907,7 +3894,6 @@ __all__ = [
     "skill_metadata_approval_resource",
     "check_skill_metadata_change_permission",
     "ContentSourceImport",
-    "make_shared_content_source_import",
     "content_source_import_resource",
     "check_content_source_import_permission",
     "prepare_content_source_import_confirmation",

@@ -186,7 +186,6 @@ def generate_today_summary(date_str=None):
         'effective_count': 23,   # 有效关联（通过AI过滤层）
         'positive_count': 14,    # 正向
         'neutral_count': 6,      # 中性
-        'negative_count': 3,     # 负面情绪，独立于风险等级
         'risk_count': 3,         # 风险（中+高风险）
         'risk_index': 72.5,      # 风险指数
         'brand_health_score': 68.0,  # 品牌健康度
@@ -211,7 +210,6 @@ def generate_today_summary(date_str=None):
     _rce = cm.risk_count(effective_notes)
     positive = _sce['positive']
     neutral = _sce['neutral']
-    negative = _sce['negative']
     risk = _rce['high'] + _rce['medium']   # 风险数=中+高(口径不变;critical独立不计入)
 
     # 今日事件
@@ -228,7 +226,6 @@ def generate_today_summary(date_str=None):
         'effective_count': effective_count,
         'positive_count': positive,
         'neutral_count': neutral,
-        'negative_count': negative,
         'risk_count': risk,
         'risk_index': risk_index,
         'brand_health_score': brand_health,
@@ -624,7 +621,6 @@ def generate_daily_digest(date_str=None):
         'effective_count': summary['effective_count'],
         'positive_count': summary['positive_count'],
         'neutral_count': summary['neutral_count'],
-        'negative_count': summary['negative_count'],
         'risk_count': summary['risk_count'],
         'risk_index': summary['risk_index'],
         'brand_health_score': summary['brand_health_score'],
@@ -819,11 +815,7 @@ def format_daily_report_5sections(digest: dict, date_str: str = None) -> dict:
         summary = digest
 
     effective = summary.get('effective_count', digest.get('effective_count', None))
-    negative = summary.get('negative_count', digest.get('negative_count', None))
-    negative = negative if type(negative) is int and negative >= 0 else None
-    # A calendar-day sentiment count is not a measured rolling 24-hour count.
-    negative_24h = summary.get('negative_count_24h', digest.get('negative_count_24h', None))
-    negative_24h = negative_24h if type(negative_24h) is int and negative_24h >= 0 else None
+    negative = summary.get('negative_count', digest.get('risk_count', None))
     risk_count = summary.get('risk_count', digest.get('risk_count', None))
     risk_index = summary.get('risk_index', digest.get('risk_index', None))
     health = summary.get('brand_health_score', digest.get('brand_health_score', None))
@@ -940,10 +932,10 @@ def format_daily_report_5sections(digest: dict, date_str: str = None) -> dict:
                 max_engage = max(max_engage, n['互动'])
         event = {
             "engagement": max_engage,
-            "sentiment": None if negative is None else ("negative" if negative > 0 else "neutral"),
+            "sentiment": "negative" if negative and negative > 0 else "neutral",
             "title": core_topic,
             "content": " ".join([n.get('笔记摘要', '') for n in negative_top3]),
-            "negative_count_24h": negative_24h,
+            "negative_count_24h": negative if negative else 0,
         }
         triggered, reasons = risk_engine.check_special_report_trigger(event)
         trigger_status = {

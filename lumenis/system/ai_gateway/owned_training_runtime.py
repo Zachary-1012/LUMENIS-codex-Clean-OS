@@ -41,17 +41,6 @@ _MANAGED_SOURCE_PATHS = (
 _CHECKPOINT_METHODS = frozenset({"reserve_save", "commit_save", "read_save", "prepare_resume",
     "complete_load", "read_resume", "require_current_admission"})
 _PIPE_LIMIT = 2 * 1024 * 1024
-_FINAL_CANDIDATE_INTERNAL_FIELD = "_owned_training_internal_final_candidate_v1"
-_FINAL_CANDIDATE_INVENTORY_STATE = "OWNED_FINAL_CANDIDATE_INVENTORY_V1"
-_FINAL_CANDIDATE_BYTES_STATE = "PHYSICAL_FINAL_CANDIDATE_BYTES_VERIFIED"
-_FINAL_CANDIDATE_METADATA_LIMIT = 1024 * 1024
-_FINAL_CANDIDATE_MAX_BYTES = 1024 ** 4
-_FINAL_CANDIDATE_FILES = (
-    ("training_status.json", "training_status"),
-    ("adapter_model.safetensors", "adapter_model"),
-    ("adapter_config.json", "adapter_config"),
-)
-_SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 
 
 def training_worker_source_pins(root: Path):
@@ -123,219 +112,6 @@ def _pipe_decode(value, pin):
     if value is None or type(value) in {str, int, bool} or type(value) is float and math.isfinite(value):
         return value
     raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
-
-
-def _final_candidate_file_pins(output_root, result):
-    """Read the exact final files from an owned trainer output directory."""
-    from .owned_training_checkpoints import _file_snapshot, strict_json
-
-    if (type(result) is not dict or result.get("execution_state") != "TRAINED_NOT_EVALUATED"
-            or result.get("candidate_status") != "NOT_EVALUATED"
-            or type(result.get("adapter_sha256")) is not str
-            or not _SHA256_RE.fullmatch(result["adapter_sha256"])
-            or type(result.get("adapter_config_sha256")) is not str
-            or not _SHA256_RE.fullmatch(result["adapter_config_sha256"])):
-        raise TrainingBlocked("FINAL_CANDIDATE_RESULT_INVALID")
-    root = Path(output_root)
-    try:
-        if not root.is_absolute() or root.resolve(strict=True) != root:
-            raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID")
-        _regular_stat(root, directory=True)
-        files = []
-        total_bytes = 0
-        for name, role in _FINAL_CANDIDATE_FILES:
-            size, digest = _file_snapshot(root / name)
-            if size <= 0 or not _SHA256_RE.fullmatch(digest):
-                raise TrainingBlocked("FINAL_CANDIDATE_INVENTORY_INVALID")
-            if name in {"training_status.json", "adapter_config.json"} and size > _FINAL_CANDIDATE_METADATA_LIMIT:
-                raise TrainingBlocked("FINAL_CANDIDATE_SIZE_LIMIT")
-            total_bytes += size
-            files.append({"path": name, "role": role, "size_bytes": size, "sha256": digest})
-        if total_bytes > _FINAL_CANDIDATE_MAX_BYTES:
-            raise TrainingBlocked("FINAL_CANDIDATE_SIZE_LIMIT")
-        status_file = root / "training_status.json"
-        status_raw = _read_final_candidate_status(status_file, files[0]["size_bytes"], files[0]["sha256"])
-        if canonical_bytes(strict_json(status_raw)) != canonical_bytes(result):
-            raise TrainingBlocked("FINAL_CANDIDATE_STATUS_MISMATCH")
-        if (files[1]["sha256"] != result["adapter_sha256"]
-                or files[2]["sha256"] != result["adapter_config_sha256"]):
-            raise TrainingBlocked("FINAL_CANDIDATE_HASH_MISMATCH")
-        return str(root), files, total_bytes
-    except TrainingBlocked:
-        raise
-    except Exception:
-        raise TrainingBlocked("FINAL_CANDIDATE_INVENTORY_INVALID") from None
-
-
-def _read_final_candidate_status(path, expected_size, expected_digest):
-    """Read at most the admitted metadata ceiling and pin the opened bytes."""
-    from .owned_training_checkpoints import _file_snapshot
-
-    if (type(expected_size) is not int or expected_size <= 0
-            or expected_size > _FINAL_CANDIDATE_METADATA_LIMIT):
-        raise TrainingBlocked("FINAL_CANDIDATE_SIZE_LIMIT")
-    before_size, before_digest = _file_snapshot(path)
-    if (before_size, before_digest) != (expected_size, expected_digest):
-        raise TrainingBlocked("FINAL_CANDIDATE_BYTES_NOT_VERIFIED")
-    try:
-        before = _regular_stat(path, directory=False)
-        with path.open("rb") as stream:
-            opened = os.fstat(stream.fileno())
-            def identity(value):
-                return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns,
-                        value.st_nlink, getattr(value, "st_birthtime_ns", None))
-            if (not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1
-                    or identity(before) != identity(opened)):
-                raise TrainingBlocked("FINAL_CANDIDATE_BYTES_NOT_VERIFIED")
-            raw = stream.read(_FINAL_CANDIDATE_METADATA_LIMIT + 1)
-            after = os.fstat(stream.fileno())
-        after_size, after_digest = _file_snapshot(path)
-        current = _regular_stat(path, directory=False)
-    except Exception:
-        raise TrainingBlocked("FINAL_CANDIDATE_BYTES_NOT_VERIFIED") from None
-    if (len(raw) != expected_size or len(raw) > _FINAL_CANDIDATE_METADATA_LIMIT
-            or hashlib.sha256(raw).hexdigest() != expected_digest
-            or identity(opened) != identity(after) or identity(before) != identity(current)
-            or before.st_ctime_ns != current.st_ctime_ns or opened.st_ctime_ns != after.st_ctime_ns
-            or (after_size, after_digest) != (expected_size, expected_digest)):
-        raise TrainingBlocked("FINAL_CANDIDATE_BYTES_NOT_VERIFIED")
-    return raw
-
-
-def _describe_final_candidate(output_root, result):
-    root, files, total_bytes = _final_candidate_file_pins(output_root, result)
-    return {"schema_version": 1, "state": _FINAL_CANDIDATE_INVENTORY_STATE,
-        "output_root": root, "files": files, "total_bytes": total_bytes}
-
-
-def _validate_final_candidate_inventory(descriptor, result, *, expected_root, max_bytes):
-    if (type(max_bytes) is not int or max_bytes < 1 or max_bytes > _FINAL_CANDIDATE_MAX_BYTES
-            or type(descriptor) is not dict or set(descriptor) != {
-                "schema_version", "state", "output_root", "files", "total_bytes"}
-            or descriptor.get("schema_version") != 1 or type(descriptor.get("schema_version")) is not int
-            or descriptor.get("state") != _FINAL_CANDIDATE_INVENTORY_STATE
-            or type(expected_root) is not str or descriptor.get("output_root") != expected_root
-            or type(descriptor.get("files")) is not list or len(descriptor["files"]) != len(_FINAL_CANDIDATE_FILES)
-            or type(descriptor.get("total_bytes")) is not int):
-        raise TrainingBlocked("FINAL_CANDIDATE_INVENTORY_INVALID")
-    if (type(result) is not dict or result.get("execution_state") != "TRAINED_NOT_EVALUATED"
-            or result.get("candidate_status") != "NOT_EVALUATED"
-            or type(result.get("adapter_sha256")) is not str or not _SHA256_RE.fullmatch(result["adapter_sha256"])
-            or type(result.get("adapter_config_sha256")) is not str
-            or not _SHA256_RE.fullmatch(result["adapter_config_sha256"])):
-        raise TrainingBlocked("FINAL_CANDIDATE_RESULT_INVALID")
-    total_bytes = 0
-    files = []
-    for item, (expected_path, expected_role) in zip(descriptor["files"], _FINAL_CANDIDATE_FILES):
-        if (type(item) is not dict or set(item) != {"path", "role", "size_bytes", "sha256"}
-                or item.get("path") != expected_path or item.get("role") != expected_role
-                or type(item.get("size_bytes")) is not int or item["size_bytes"] <= 0
-                or type(item.get("sha256")) is not str or not _SHA256_RE.fullmatch(item["sha256"])):
-            raise TrainingBlocked("FINAL_CANDIDATE_INVENTORY_INVALID")
-        if (item["size_bytes"] > _FINAL_CANDIDATE_MAX_BYTES
-                or expected_path in {"training_status.json", "adapter_config.json"}
-                    and item["size_bytes"] > _FINAL_CANDIDATE_METADATA_LIMIT):
-            raise TrainingBlocked("FINAL_CANDIDATE_SIZE_LIMIT")
-        if expected_role == "adapter_model" and item["sha256"] != result["adapter_sha256"]:
-            raise TrainingBlocked("FINAL_CANDIDATE_HASH_MISMATCH")
-        if expected_role == "adapter_config" and item["sha256"] != result["adapter_config_sha256"]:
-            raise TrainingBlocked("FINAL_CANDIDATE_HASH_MISMATCH")
-        total_bytes += item["size_bytes"]
-        files.append(dict(item))
-    if (total_bytes != descriptor["total_bytes"] or total_bytes > max_bytes
-            or total_bytes > _FINAL_CANDIDATE_MAX_BYTES):
-        raise TrainingBlocked("FINAL_CANDIDATE_SIZE_LIMIT")
-    return files, total_bytes
-
-
-def _verify_materialized_final_candidate(output_root, result, files, *, max_bytes):
-    from .owned_training_checkpoints import _file_snapshot, strict_json
-
-    root = Path(output_root)
-    try:
-        if (not root.is_absolute() or root.parent.resolve(strict=True) != root.parent
-                or root.resolve(strict=True) != root):
-            raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID")
-        _regular_stat(root, directory=True)
-        actual_total = 0
-        for item in files:
-            size, digest = _file_snapshot(root / item["path"])
-            if size != item["size_bytes"] or digest != item["sha256"]:
-                raise TrainingBlocked("FINAL_CANDIDATE_BYTES_NOT_VERIFIED")
-            actual_total += size
-        if actual_total != sum(item["size_bytes"] for item in files) or actual_total > max_bytes:
-            raise TrainingBlocked("FINAL_CANDIDATE_SIZE_LIMIT")
-        status_file = root / "training_status.json"
-        status_raw = _read_final_candidate_status(status_file,
-            files[0]["size_bytes"], files[0]["sha256"])
-        if canonical_bytes(strict_json(status_raw)) != canonical_bytes(result):
-            raise TrainingBlocked("FINAL_CANDIDATE_STATUS_MISMATCH")
-        if (files[1]["sha256"] != result.get("adapter_sha256")
-                or files[2]["sha256"] != result.get("adapter_config_sha256")):
-            raise TrainingBlocked("FINAL_CANDIDATE_HASH_MISMATCH")
-        return {"state": _FINAL_CANDIDATE_BYTES_STATE, "local_directory": str(root),
-            "files": [dict(item) for item in files], "total_bytes": actual_total,
-            "promotion_state": "NOT_PROMOTED", "evaluation_state": "NOT_EVALUATED"}
-    except TrainingBlocked:
-        raise
-    except Exception:
-        raise TrainingBlocked("FINAL_CANDIDATE_BYTES_NOT_VERIFIED") from None
-
-
-def _training_output_destination(invocation):
-    from . import owned_training
-
-    db_value = os.environ.get("ZBC_DB_PATH", str(owned_training.REPO_ROOT / "data" / "monitor.db"))
-    db_path = Path(db_value) if Path(db_value).is_absolute() else Path.cwd() / db_value
-    protected = [Path(invocation[name]) for name in (
-        "model_snapshot_dir", "train_jsonl_path", "heldout_jsonl_path", "manifest_path")]
-    protected.extend((owned_training.REPO_ROOT, db_path))
-    try:
-        return owned_training._output_path(invocation["output_dir"], protected)
-    except Exception:
-        raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID") from None
-
-
-def _revalidate_existing_training_output(output_root, invocation):
-    from . import owned_training
-
-    root = Path(output_root)
-    db_value = os.environ.get("ZBC_DB_PATH", str(owned_training.REPO_ROOT / "data" / "monitor.db"))
-    db_path = Path(db_value) if Path(db_value).is_absolute() else Path.cwd() / db_value
-    protected = [Path(invocation[name]) for name in (
-        "model_snapshot_dir", "train_jsonl_path", "heldout_jsonl_path", "manifest_path")]
-    protected.extend((owned_training.REPO_ROOT, db_path))
-    try:
-        if root.parent.resolve(strict=True) != root.parent:
-            raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID")
-        if any(owned_training._overlaps(root, path.resolve(strict=False)) for path in protected):
-            raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID")
-        return root
-    except TrainingBlocked:
-        raise
-    except Exception:
-        raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID") from None
-
-
-def _validate_remote_final_output_root(remote_paths, remote_storage_root):
-    if (type(remote_paths) is not dict or type(remote_paths.get("output_dir")) is not str
-            or type(remote_storage_root) is not PurePosixPath or not remote_storage_root.is_absolute()):
-        raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID")
-    value = remote_paths["output_dir"]
-    root = PurePosixPath(value)
-    if (not root.is_absolute() or str(root) != value or value.startswith("//") or "\\" in value
-            or any(ord(char) < 32 for char in value)
-            or any(part in {".", ".."} for part in value.split("/"))
-            or root.parent != remote_storage_root or not root.name.startswith("output-")):
-        raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID")
-    token = root.name[len("output-"):]
-    try:
-        parsed = uuid.UUID(token)
-    except (ValueError, AttributeError):
-        raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID") from None
-    if parsed.version != 4 or str(parsed) != token:
-        raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID")
-    return value
 
 
 def _write_pipe(stream, value):
@@ -422,7 +198,6 @@ class OwnedTrainingPhaseHTTPTransport:
 
     def __call__(self, method, path, body=None):
         import requests
-
         from .owned_training_checkpoints import strict_json
         root = "/api/experience/owned-training/phase-tasks"
         task = r"trainrelay_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
@@ -1099,89 +874,6 @@ class TrainingProcessFence:
                 or self._remote_transport.require_live() != self._remote_peer):
             raise TrainingBlocked("CHECKPOINT_WORKER_FENCE_LOST")
 
-    def _require_final_candidate_storage_admission(self, client):
-        """Recheck the existing Permission, worker, and source pins for each read."""
-        try:
-            client._authorize_storage()
-            self.require_live()
-            if (self._source_root is None or type(self._source_pins) is not dict
-                    or self._source_pins != training_worker_source_pins(self._source_root)):
-                raise TrainingBlocked("TRAINING_WORKER_SOURCE_MISMATCH")
-            if self._remote_transport is not None:
-                self._fresh_remote_observation()
-        except TrainingBlocked:
-            raise
-        except Exception:
-            raise TrainingBlocked("FINAL_CANDIDATE_AUTHORIZATION_UNAVAILABLE") from None
-
-    def _materialize_final_candidate(self, *, client, invocation, result,
-                                     local_output_root, remote_output_root):
-        if (type(result) is not dict
-                or type(result.get("execution_state")) is not str
-                or result.get("execution_state") not in {
-                    "TRAINED_NOT_EVALUATED", "CHECKPOINT_SAVED_TRAINING_INTERRUPTED"}
-                or result.get("candidate_status") != "NOT_EVALUATED"):
-            raise TrainingBlocked("TRAINING_RESULT_INVALID")
-        execution_state = result.get("execution_state")
-        has_descriptor = _FINAL_CANDIDATE_INTERNAL_FIELD in result
-        if execution_state != "TRAINED_NOT_EVALUATED":
-            if has_descriptor or "final_candidate_materialization" in result:
-                raise TrainingBlocked("FINAL_CANDIDATE_INVENTORY_INVALID")
-            return result
-        if (not has_descriptor or "final_candidate_materialization" in result
-                or result.get("candidate_status") != "NOT_EVALUATED"):
-            raise TrainingBlocked("FINAL_CANDIDATE_INVENTORY_INVALID")
-
-        descriptor = result.pop(_FINAL_CANDIDATE_INTERNAL_FIELD)
-        expected_root = (remote_output_root if self._remote_transport is not None
-                         else str(local_output_root))
-        files, total_bytes = _validate_final_candidate_inventory(
-            descriptor, result, expected_root=expected_root, max_bytes=client._max_bytes)
-        self._require_final_candidate_storage_admission(client)
-
-        if self._remote_transport is not None:
-            # Re-run the owner output guard immediately before using the local
-            # destination. The fetch owner itself requires this directory not
-            # to exist and opens every copied file with exclusive creation.
-            current_local_root = _training_output_destination(invocation)
-            if current_local_root != local_output_root:
-                raise TrainingBlocked("FINAL_CANDIDATE_OUTPUT_PATH_INVALID")
-            fetch = getattr(self._remote_transport, "fetch_checkpoint_bytes", None)
-            if not callable(fetch):
-                raise TrainingBlocked("FINAL_CANDIDATE_TRANSFER_UNAVAILABLE")
-            try:
-                copied = fetch(remote_root=remote_output_root, local_root=local_output_root,
-                    files=files, max_bytes=client._max_bytes,
-                    authorize=lambda: self._require_final_candidate_storage_admission(client))
-            except TrainingBlocked:
-                raise
-            except Exception:
-                raise TrainingBlocked("FINAL_CANDIDATE_TRANSFER_FAILED") from None
-            expected_peer = self._remote_peer
-            if (type(copied) is not dict
-                    or set(copied) != {"state", "source_root", "files", "total_bytes", "remote_peer"}
-                    or copied.get("state") != "PHYSICAL_CHECKPOINT_BYTES_VERIFIED"
-                    or copied.get("source_root") != str(local_output_root)
-                    or copied.get("files") != files or copied.get("total_bytes") != total_bytes
-                    or copied.get("remote_peer") != expected_peer):
-                raise TrainingBlocked("FINAL_CANDIDATE_BYTES_NOT_VERIFIED")
-            _revalidate_existing_training_output(local_output_root, invocation)
-            self._require_final_candidate_storage_admission(client)
-            receipt = _verify_materialized_final_candidate(local_output_root, result, files,
-                max_bytes=client._max_bytes)
-            self._require_final_candidate_storage_admission(client)
-        else:
-            _revalidate_existing_training_output(local_output_root, invocation)
-            self._require_final_candidate_storage_admission(client)
-            receipt = _verify_materialized_final_candidate(local_output_root, result, files,
-                max_bytes=client._max_bytes)
-            self._require_final_candidate_storage_admission(client)
-
-        if receipt["total_bytes"] != total_bytes or receipt["files"] != files:
-            raise TrainingBlocked("FINAL_CANDIDATE_BYTES_NOT_VERIFIED")
-        result["final_candidate_materialization"] = receipt
-        return result
-
     def _invoke_training_bound(self, *, client, phase_transport, invocation, timeout_seconds,
                                remote_input_paths=None):
         """Run the existing trainer through canonical, fresh owner callables.
@@ -1214,11 +906,8 @@ class TrainingProcessFence:
             if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
                 raise TrainingBlocked("CHECKPOINT_HASH_MISMATCH")
         remote_paths = None
-        remote_output_root = None
         if self._remote_transport is not None:
             remote_paths = self._verify_remote_training_inputs(client, invocation, remote_input_paths,
-                client._remote_storage_root)
-            remote_output_root = _validate_remote_final_output_root(remote_paths,
                 client._remote_storage_root)
         elif remote_input_paths is not None:
             raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
@@ -1239,7 +928,6 @@ class TrainingProcessFence:
             "prepared_phase_task": None if invocation["resume_request"] is not None else client.initial_phase_context()}
         deadline, sequence = time.monotonic() + timeout_seconds, 1
         try:
-            local_output_root = _training_output_destination(invocation)
             _write_pipe(self._channel[0], body)
             while True:
                 message = self._receive_managed(deadline)
@@ -1251,10 +939,7 @@ class TrainingProcessFence:
                         raise TrainingBlocked("TRAINING_WORKER_CHANNEL_LOST")
                     if message["kind"] == "blocked":
                         raise TrainingBlocked(message["value"] if type(message["value"]) is str else "TRAINING_FAILED")
-                    result = _pipe_decode(message["value"], client._pin)
-                    return self._materialize_final_candidate(client=client, invocation=invocation,
-                        result=result, local_output_root=local_output_root,
-                        remote_output_root=remote_output_root)
+                    return _pipe_decode(message["value"], client._pin)
                 if set(message) != {"kind", "sequence", "method", "arguments", "load_observation"} or message["kind"] != "call":
                     raise TrainingBlocked("TRAINING_WORKER_CHANNEL_LOST")
                 arguments = _pipe_decode(message["arguments"], client._pin)
@@ -1485,13 +1170,6 @@ def _managed_training_worker(*, remote=False):
             checkpoint_adapter=adapter, resume_request=resume,
             recovery_phase_transport=None if resume is None else proxy.phase,
             stop_after_checkpoint_step=invocation["stop_after_checkpoint_step"])
-        if type(result) is not dict:
-            raise TrainingBlocked("TRAINING_RESULT_INVALID")
-        if result.get("execution_state") == "TRAINED_NOT_EVALUATED":
-            if _FINAL_CANDIDATE_INTERNAL_FIELD in result:
-                raise TrainingBlocked("FINAL_CANDIDATE_INVENTORY_INVALID")
-            result = dict(result)
-            result[_FINAL_CANDIDATE_INTERNAL_FIELD] = _describe_final_candidate(invocation["output_dir"], result)
         _write_pipe(outgoing, {"kind": "result", "sequence": proxy._sequence, "value": _pipe_encode(result)})
     except BaseException as exc:
         code = str(exc) if isinstance(exc, TrainingBlocked) else "TRAINING_FAILED"

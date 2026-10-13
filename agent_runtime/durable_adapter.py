@@ -30,7 +30,7 @@ import threading
 import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 _CHECKPOINT_FORMAT = "lumenis.agent_runtime.checkpoint"
 _CHECKPOINT_VERSION = 1
@@ -68,46 +68,6 @@ def _sanitize_checkpoint_value(value: Any, token_usage: bool = False):
     if isinstance(value, str) and _CREDENTIAL_VALUE.search(value):
         return _CREDENTIAL_VALUE.sub("[REDACTED]", value), True
     return value, False
-
-
-def _sanitize_plan_snapshot(value: Any):
-    """Preserve typed inference usage without admitting credentials as metrics.
-
-    This exception applies only to the plan's Gateway receipt. Retained numbers
-    describe usage; they establish no execution, permission or model admission.
-    """
-    if not isinstance(value, dict) or "inference_receipt" not in value:
-        return _sanitize_checkpoint_value(value)
-    remainder = {key: item for key, item in value.items() if key != "inference_receipt"}
-    safe_plan, sensitive = _sanitize_checkpoint_value(remainder)
-    receipt = value["inference_receipt"]
-    if not isinstance(receipt, dict):
-        safe_plan["inference_receipt"] = {}
-        return safe_plan, True
-    metric_keys = frozenset({"prompt_tokens", "completion_tokens", "total_tokens",
-                             "context_window_tokens", "output_token_limit"})
-    metrics = {key: item for key, item in receipt.items() if key in metric_keys}
-    metadata = {key: item for key, item in receipt.items() if key not in metric_keys}
-    safe_receipt, receipt_sensitive = _sanitize_checkpoint_value(metadata)
-    valid = all(type(item) is int and item >= (1 if key in {
-        "context_window_tokens", "output_token_limit"} else 0)
-                for key, item in metrics.items())
-    counts = {"prompt_tokens", "completion_tokens", "total_tokens"}
-    if counts.intersection(metrics):
-        valid = valid and counts.issubset(metrics)
-        if counts.issubset(metrics):
-            valid = valid and metrics["total_tokens"] == (
-                metrics["prompt_tokens"] + metrics["completion_tokens"])
-    if {"output_token_limit", "context_window_tokens"}.issubset(metrics):
-        valid = valid and metrics["output_token_limit"] <= metrics["context_window_tokens"]
-    if {"total_tokens", "context_window_tokens"}.issubset(metrics):
-        valid = valid and metrics["total_tokens"] <= metrics["context_window_tokens"]
-    if {"completion_tokens", "output_token_limit"}.issubset(metrics):
-        valid = valid and metrics["completion_tokens"] <= metrics["output_token_limit"]
-    if valid:
-        safe_receipt.update(metrics)
-    safe_plan["inference_receipt"] = safe_receipt
-    return safe_plan, sensitive or receipt_sensitive or not valid
 
 
 @dataclass
@@ -339,7 +299,7 @@ class DurableExecutionAdapter:
 
         复用 ai_task_engine._db_add_step()。
         """
-        safe_plan, plan_sensitive = _sanitize_plan_snapshot(plan_snapshot or {})
+        safe_plan, plan_sensitive = _sanitize_checkpoint_value(plan_snapshot or {})
         context = {key: value for key, value in (context or {}).items()
                    if key in _CHECKPOINT_CONTEXT_KEYS}
         safe_context, context_sensitive = _sanitize_checkpoint_value(context)

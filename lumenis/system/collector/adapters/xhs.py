@@ -9,172 +9,6 @@ from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .config import PLATFORM_CAPABILITIES
 from .registry import register_adapter
 
-_XHS_UPSTREAM_ERROR_CODES = frozenset({
-    "IP_RISK_OR_300012",
-    "SESSION_EXPIRED",
-    "NEED_VERIFY",
-    "COLLECTOR_ENDPOINT_NOT_CONFIGURED",
-    "COLLECTOR_ENDPOINT_INVALID",
-    "POLICY_BLOCKED",
-    "LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN",
-    "COLLECTOR_ENDPOINT_UNAVAILABLE",
-    "COLLECTOR_SCRIPT_UNAVAILABLE",
-    "CDP_EMPTY_OR_LOAD_FAILED",
-    "CDP_TIMEOUT_PARTIAL",
-    "CDP_TIMEOUT_NO_CHECKPOINT",
-    "COLLECTOR_PROVIDER_FAILURE",
-    "CDP_CHUNK_BUDGET_NO_VERIFIED_DETAIL",
-    "CDP_TIME_BUDGET_PARTIAL",
-    "CDP_PORT_NOT_ALLOWED",
-    "DETAIL_IDENTITY_UNVERIFIED",
-    "DETAIL_IDENTITY_MISMATCH",
-    "DETAIL_SOURCE_UNVERIFIED",
-    "NO_DETAIL",
-    "COVER_ONLY_REQUIRES_HUMAN_MODE",
-    "SEARCH_STATE_UNAVAILABLE",
-    "SOURCE_HOST_MISMATCH",
-    "SEARCH_TRANSITION_UNVERIFIED",
-    "SOURCE_NO_RESULTS",
-    "LOAD_FAILED",
-    "LIST_PARSE_UNAVAILABLE",
-    "SEARCH_LOADING_TIMEOUT",
-    "EMPTY_LIST_UNCLASSIFIED",
-    "INVALID_DETAIL_MEDIA_MODE",
-    "INVALID_WORKER_CHUNK_SECONDS",
-    "INVALID_ACQUISITION_FINGERPRINT",
-    "INVALID_TIME_BUDGET",
-    "XHS_CHECKPOINT_PATH_INVALID",
-})
-
-_XHS_SEARCH_DIAGNOSTIC_VERSION = "xhs-search-state-v1"
-_XHS_SEARCH_DIAGNOSTIC_PHASES = frozenset({
-    "landing",
-    "search_submitted",
-    "search_wait_failed",
-    "search_ready",
-    "before_list_parse",
-    "empty_list",
-    "before_detail_select",
-})
-_XHS_SEARCH_DIAGNOSTIC_QUERY_ENCODINGS = frozenset({"literal", "percent_encoded_once", "unverified"})
-_XHS_SEARCH_DIAGNOSTIC_READY_STATES = frozenset({"loading", "interactive", "complete", "unknown"})
-_XHS_SEARCH_DIAGNOSTIC_SELECTORS = ("section.note-item", "a.cover", ".feeds-container")
-_XHS_SEARCH_DIAGNOSTIC_EMPTY_INDICATORS = frozenset({
-    "暂无搜索结果",
-    "没有找到相关内容",
-    "无搜索结果",
-    "No results found",
-})
-_XHS_SEARCH_DIAGNOSTIC_ERROR_TYPES = frozenset({
-    "Error",
-    "TargetClosedError",
-    "TimeoutError",
-    "TypeError",
-    "ValueError",
-    "RuntimeError",
-    "OSError",
-    "AssertionError",
-})
-_XHS_SEARCH_DIAGNOSTIC_MAX_COUNT = 1_000_000
-_XHS_SEARCH_DIAGNOSTIC_TIMESTAMP = re.compile(
-    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?"
-)
-
-
-def _safe_xhs_search_diagnostics(value: Any) -> dict[str, Any] | None:
-    """Project worker search observations into a bounded, non-secret diagnostic."""
-    if type(value) is not dict:
-        return None
-    version = value.get("version")
-    if type(version) is not str or version != _XHS_SEARCH_DIAGNOSTIC_VERSION:
-        return None
-    observations = value.get("observations")
-    if type(observations) is not list:
-        return None
-
-    def safe_count(item: Any) -> int | None:
-        if type(item) is int and 0 <= item <= _XHS_SEARCH_DIAGNOSTIC_MAX_COUNT:
-            return item
-        return None
-
-    def safe_enum(item: Any, allowed: frozenset[str]) -> str | None:
-        if type(item) is str and len(item) <= 64 and item in allowed:
-            return item
-        return None
-
-    def safe_timestamp(item: Any) -> str | None:
-        if (type(item) is not str or not 19 <= len(item) <= 40
-                or _XHS_SEARCH_DIAGNOSTIC_TIMESTAMP.fullmatch(item) is None):
-            return None
-        try:
-            datetime.datetime.fromisoformat(
-                item[:-1] + "+00:00" if item.endswith("Z") else item
-            )
-        except ValueError:
-            return None
-        return item
-
-    safe_observations: list[dict[str, Any]] = []
-    for observation in observations[-12:]:
-        if type(observation) is not dict:
-            continue
-        safe: dict[str, Any] = {
-            "phase": safe_enum(observation.get("phase"), _XHS_SEARCH_DIAGNOSTIC_PHASES),
-            "observed_at": safe_timestamp(observation.get("observed_at")),
-        }
-        for key in ("host_matches", "route_is_search", "query_matches", "input_matches"):
-            item = observation.get(key)
-            safe[key] = item if type(item) is bool else None
-        safe["query_encoding"] = safe_enum(
-            observation.get("query_encoding"), _XHS_SEARCH_DIAGNOSTIC_QUERY_ENCODINGS
-        )
-        safe["document_ready_state"] = safe_enum(
-            observation.get("document_ready_state"), _XHS_SEARCH_DIAGNOSTIC_READY_STATES
-        )
-
-        selector_counts = observation.get("selector_counts")
-        selector_counts = selector_counts if type(selector_counts) is dict else {}
-        safe["selector_counts"] = {
-            selector: safe_count(selector_counts.get(selector))
-            for selector in _XHS_SEARCH_DIAGNOSTIC_SELECTORS
-        }
-        for key in ("note_link_count", "body_character_count", "loading_element_count"):
-            safe[key] = safe_count(observation.get(key))
-
-        indicators = observation.get("native_empty_indicators")
-        safe_indicators: list[str] = []
-        if type(indicators) is list:
-            for indicator in indicators:
-                if (type(indicator) is str and indicator in _XHS_SEARCH_DIAGNOSTIC_EMPTY_INDICATORS
-                        and indicator not in safe_indicators):
-                    safe_indicators.append(indicator)
-        safe["native_empty_indicators"] = (
-            safe_indicators if safe_indicators or indicators == [] else None
-        )
-
-        for key in ("wait_error_type", "diagnostic_error_type"):
-            if key in observation:
-                error_type = observation.get(key)
-                safe[key] = (
-                    error_type
-                    if type(error_type) is str and len(error_type) <= 64
-                    and error_type in _XHS_SEARCH_DIAGNOSTIC_ERROR_TYPES
-                    else "UNRECOGNIZED_ERROR_TYPE"
-                )
-        safe_observations.append(safe)
-
-    if not safe_observations:
-        return None
-    return {"version": _XHS_SEARCH_DIAGNOSTIC_VERSION, "observations": safe_observations}
-
-
-def _xhs_failure_reason(error_code: str) -> str:
-    if error_code in _XHS_UPSTREAM_ERROR_CODES:
-        return error_code
-    if error_code == "CDP_EXCEPTION" or error_code.startswith("CDP_EXCEPTION:"):
-        return "CDP_EXCEPTION"
-    return "XHS_UPSTREAM_ERROR_UNKNOWN"
-
 
 class XiaohongshuAdapter(BasePlatformAdapter):
     """Adapter around the existing production XHS collector.
@@ -465,15 +299,6 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                 CollectionStatus.SESSION_EXPIRED: "小红书登录会话失效或设备登录受限，请在获准的香港/国际账号上重新登录",
                 CollectionStatus.COLLECT_ERROR: "现有小红书采集链未能完成本次请求",
             }
-            failure_detail = None
-            if status not in {CollectionStatus.SUCCESS, CollectionStatus.NO_NEW_DATA}:
-                failure_detail = {
-                    "state": status.value,
-                    "reason": _xhs_failure_reason(error_code),
-                }
-                search_diagnostics = _safe_xhs_search_diagnostics(raw.get("search_diagnostics"))
-                if search_diagnostics is not None:
-                    failure_detail["search_diagnostics"] = search_diagnostics
             return CollectionResult(
                 status=status,
                 platform=self.platform,
@@ -526,8 +351,7 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                         else (raw.get("checkpoint") or {}).get("run_id")
                     ),
                     "captured_at": captured_at,
-                    **({"error_type": status.value, "detail": failure_detail}
-                       if failure_detail is not None else {}),
+                    **({"error_type": status.value} if status not in {CollectionStatus.SUCCESS, CollectionStatus.NO_NEW_DATA} else {}),
                 },
             )
         except Exception as exc:

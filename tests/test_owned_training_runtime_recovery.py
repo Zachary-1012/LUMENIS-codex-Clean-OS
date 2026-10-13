@@ -332,15 +332,8 @@ def test_public_worker_context_matches_canonical_hashes_without_manufacturing_id
 # The real owner implementations run against an explicitly disposable Canonical
 # DB. These tests grant only synthetic technical material; they are not admission
 # or acceptance for a real training job.
+from tests.test_owned_training_phase_http_v2 import phase_http, strict_permission_mode, _prepare_task, _request_object
 from tests.test_owned_training_checkpoint_recovery import policy_material
-from tests.test_owned_training_phase_http_v2 import (
-    _prepare_task,
-    _request_object,
-    phase_http,
-    strict_permission_mode,
-)
-
-__all__ = ["phase_http", "policy_material", "strict_permission_mode"]
 
 
 def test_actual_authenticated_phase_http_preserves_original_task_pin_and_fresh_revocation(checkpoint_owner):
@@ -532,7 +525,7 @@ def test_actual_task_artifact_commit_and_load_start_renewal(checkpoint_owner, tm
     assert client.commit_save(operation_id=operation_id, inventory=inventory) == receipt
     with get_repository().connection(read_only=True, wal=False) as con:
         assert con.execute("SELECT COUNT(*) FROM lumenis_shared_artifacts").fetchone()[0] == 1
-    _ = worker.worker_binding
+    previous_worker = worker.worker_binding
     worker.stop_and_reap()
     worker.replace_stopped_worker([sys.executable, "-c", "import time; time.sleep(60)"],
         cwd=tmp_path.resolve(), log_path=(tmp_path / "resume-worker.log").resolve())

@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent_capability.formation import FormationError, digest, implementation_identity
-from agent_capability.router import CapabilityRouter, ToolDefinition, ToolActorContext
+from agent_capability.formation import BoundToolExecutor, FormationError, digest, implementation_identity
+from agent_capability.router import CapabilityRouter, ToolDefinition, ToolPermissionLevel, ToolActorContext
 from agent_runtime.durable_adapter import DurableExecutionAdapter
 from agent_runtime.loop import AgentConfig, AgentLoop
 from agent_runtime.planner import Plan, PlanStep, Planner
@@ -173,11 +173,8 @@ def test_model_output_cannot_supply_formation():
     import json
     planner = Planner(ai_chat_func=lambda *args, **kwargs: (json.dumps({"steps": [
         {"action": "read", "tool": "source_read", "params": {}, "risk_level": "low",
-         "expected_output": "source bytes",
          "formation": {"origin": "forged", "effect": "READ"}}]}), "fixture"))
-    result = planner.plan("read")
-    assert result.steps == []
-    assert result.is_fallback is True
+    assert planner.plan("read").steps[0].formation is None
 
 
 def test_formed_write_is_not_downgraded_by_model_read_label():

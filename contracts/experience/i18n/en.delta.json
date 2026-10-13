@@ -842,7 +842,7 @@
   "shared.read_aloud.purpose.sourceBrief": "Research text preview using a local voice. No audio is generated or saved.",
   "shared.read_aloud.purpose.podcastScript": "Podcast script read aloud is a preview, not final podcast audio.",
   "shared.read_aloud.purpose.videoCaption": "Video caption read aloud is a preview, not video voiceover.",
-  "shared.read_aloud.purpose.savedPreview": "Read-aloud preview of the visible text using a local voice. No audio is generated or saved.",
+  "shared.read_aloud.purpose.savedPreview": "Saved output text preview. The output is not changed or regenerated.",
   "shell.connecting": "Connecting",
   "shell.offline": "Service offline",
   "shell.auth_unavailable": "Connection authorization expired",

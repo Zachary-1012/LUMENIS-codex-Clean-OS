@@ -36,7 +36,6 @@ class _Client extends LumenisCoreClient {
   int? confirmationSizeBytes;
   Completer<void>? pendingExport;
   String? lastImportDomain;
-  String? lastExportOutputKind;
   final importedBytes = <List<int>>[];
   Map<String, dynamic>? contextEnvelope;
   List<String>? exportedRefs;
@@ -76,14 +75,10 @@ class _Client extends LumenisCoreClient {
         errorCode: failureCode,
       );
     }
-    final outputKind = savedExport == null
-        ? 'video'
-        : ((savedExport!['result'] as Map)['render'] as Map)['output_kind'];
-    final audio = outputKind == 'audio';
     return ContentProjectFile(
       bytes: Uint8List.fromList([1, 2]),
-      filename: audio ? 'episode.wav' : 'project.mp4',
-      mediaType: audio ? 'audio/wav' : 'video/mp4',
+      filename: 'project.mp4',
+      mediaType: 'video/mp4',
     );
   }
 
@@ -165,7 +160,6 @@ class _Client extends LumenisCoreClient {
     String? previousArtifactId,
   }) async {
     exports++;
-    lastExportOutputKind = outputKind;
     exportedRefs = assetRefs;
     await pendingExport?.future;
     final failureCode = exportFailureCode;
@@ -230,9 +224,7 @@ class _Client extends LumenisCoreClient {
         if (savedExport != null)
           {
             'artifact_id': 'ART-version',
-            'output_kind':
-                ((savedExport!['result'] as Map)['project']
-                    as Map)['output_kind'],
+            'output_kind': 'video',
             'created_at': '2026-10-02 09:00:00',
             'updated_at': '2026-10-02 09:00:00',
             'status': 'staged',
@@ -297,11 +289,6 @@ Widget _app(
   LumenisLeaveGuard? guard,
   VoidCallback? onBack,
   MediaProjectFiles? files,
-  String initialOutputKind = 'video',
-  LumenisLeaveGuard? leaveGuard,
-  bool isActive = true,
-  bool preserveDraftOnBack = false,
-  String? backLabel,
 }) => MaterialApp(
   theme: LumenisTheme.dark,
   locale: locale,
@@ -325,11 +312,6 @@ Widget _app(
           contextAvailable: contextAvailable,
           onBack: onBack,
           files: files ?? _Files(),
-          initialOutputKind: initialOutputKind,
-          leaveGuard: leaveGuard,
-          isActive: isActive,
-          preserveDraftOnBack: preserveDraftOnBack,
-          backLabel: backLabel,
         )
       : LumenisLeaveScope(
           guard: guard,
@@ -340,11 +322,6 @@ Widget _app(
             contextAvailable: contextAvailable,
             onBack: onBack,
             files: files ?? _Files(),
-            initialOutputKind: initialOutputKind,
-            leaveGuard: leaveGuard,
-            isActive: isActive,
-            preserveDraftOnBack: preserveDraftOnBack,
-            backLabel: backLabel,
           ),
         ),
 );
@@ -356,11 +333,6 @@ Widget _workbenchHome(
   required bool contextAvailable,
   VoidCallback? onBack,
   required MediaProjectFiles files,
-  required String initialOutputKind,
-  LumenisLeaveGuard? leaveGuard,
-  required bool isActive,
-  required bool preserveDraftOnBack,
-  String? backLabel,
 }) => Scaffold(
   body: MediaProjectWorkbench(
     client: client,
@@ -368,11 +340,6 @@ Widget _workbenchHome(
     controller: controller,
     contextAvailable: contextAvailable,
     files: files,
-    initialOutputKind: initialOutputKind,
-    leaveGuard: leaveGuard,
-    isActive: isActive,
-    preserveDraftOnBack: preserveDraftOnBack,
-    backLabel: backLabel,
     onBack: onBack ?? () {},
   ),
 );
@@ -390,35 +357,6 @@ Future<void> _prepareEditableProject(
     ),
   );
   controller.selectClip(controller.timeline!.tracks.single.clips.single.clipId);
-}
-
-Future<void> _prepareAudioProject(
-  _Client client,
-  MediaProjectController controller, {
-  bool videoSource = false,
-  bool addClip = true,
-}) async {
-  if (!videoSource) {
-    client.asset
-      ..['filename'] = 'episode.wav'
-      ..['media_kind'] = 'audio'
-      ..['has_video'] = false
-      ..['audio_stream_count'] = 1;
-  }
-  final filename = videoSource ? 'interview.mp4' : 'episode.wav';
-  await controller.importFile(filename, Uint8List.fromList([1]));
-  if (addClip) {
-    controller.edit(
-      (snapshot) => snapshot
-          .addAudioTrack('voiceover', audioRole: 'voiceover')
-          .addClip(
-            snapshot.assets.single.assetId,
-            trackId: 'voiceover',
-            sourceOut: 8,
-            purpose: 'voiceover',
-          ),
-    );
-  }
 }
 
 Future<void> _openActionsForTarget(WidgetTester tester, Finder target) async {
@@ -464,437 +402,6 @@ void main() {
     );
   });
   tearDown(() => controller.dispose());
-
-  testWidgets(
-    'audio output is sent explicitly and a reopened saved version keeps audio mode',
-    (tester) async {
-      await _prepareAudioProject(client, controller);
-      client.successfulExport = true;
-      await tester.pumpWidget(
-        _app(client, controller, initialOutputKind: 'audio'),
-      );
-      await tester.pumpAndSettle();
-
-      final selector = find.byKey(const Key('media-output-kind-selector'));
-      expect(selector, findsOneWidget);
-      expect(tester.widget<SegmentedButton<String>>(selector).selected, {
-        'audio',
-      });
-      await _openActionsForTarget(
-        tester,
-        find.byKey(const Key('media-export')),
-      );
-      expect(find.byKey(const Key('media-rights-unknown')), findsOneWidget);
-      expect(find.byType(CheckboxListTile), findsNothing);
-      await tester.ensureVisible(find.byKey(const Key('media-export')));
-      await tester.tap(find.byKey(const Key('media-export')));
-      await tester.pumpAndSettle();
-
-      expect(client.exports, 1);
-      expect(client.lastExportOutputKind, 'audio');
-      expect(controller.version?.outputKind, 'audio');
-      final rights =
-          (((client.savedExport!['result'] as Map)['project'] as Map)['rights']
-              as Map);
-      expect(rights, {'state': 'unknown', 'label': 'rights unknown'});
-
-      final fresh = MediaProjectController(
-        repository: CoreMediaProjectRepository(client),
-        domain: 'BMP',
-      );
-      addTearDown(fresh.dispose);
-      await fresh.reopen('ART-version');
-      await tester.pumpWidget(_app(client, fresh, initialOutputKind: 'video'));
-      await tester.pumpAndSettle();
-      expect(fresh.version?.outputKind, 'audio');
-      expect(find.byKey(const Key('media-output-kind-selector')), findsNothing);
-      expect(find.text('已保存格式：音频'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets(
-    'audio output copy and mobile layout work in zh en and ko',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(320, 568));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      final cases = [
-        (
-          locale: const Locale('zh', 'CN'),
-          title: '音频编辑',
-          preview: '音频预览',
-          empty: '添加音频片段以开始编辑。',
-        ),
-        (
-          locale: const Locale('en', 'US'),
-          title: 'Audio editor',
-          preview: 'Audio preview',
-          empty: 'Add an audio clip to begin editing.',
-        ),
-        (
-          locale: const Locale('ko', 'KR'),
-          title: '오디오 편집',
-          preview: '오디오 미리 듣기',
-          empty: '오디오 클립을 추가해 편집을 시작하세요.',
-        ),
-      ];
-      for (final item in cases) {
-        await tester.pumpWidget(
-          _app(
-            client,
-            controller,
-            locale: item.locale,
-            scale: 2,
-            initialOutputKind: 'audio',
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(find.text(item.title), findsOneWidget);
-        expect(find.text(item.preview), findsOneWidget);
-        expect(find.text(item.empty), findsOneWidget);
-        expect(find.byKey(const Key('media-editor-back')), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      }
-    },
-  );
-
-  testWidgets(
-    'audio view hides visual controls while retaining video clips and overlays',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1360, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await _prepareEditableProject(client, controller);
-      controller.edit(
-        (snapshot) => snapshot.addOverlay(
-          kind: 'caption',
-          startSec: 0,
-          endSec: 2,
-          text: 'Episode title',
-        ),
-      );
-      final clipId = controller.timeline!.tracks.first.clips.single.clipId;
-      final assetId = controller.timeline!.assets.single.assetId;
-      final overlayId = controller.timeline!.overlays.single.overlayId;
-
-      await tester.pumpWidget(
-        _app(client, controller, initialOutputKind: 'audio'),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.byKey(const Key('media-audio-retained-visual-content')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('media-add-overlay')), findsNothing);
-      expect(find.byKey(Key('media-clip-$clipId')), findsNothing);
-      expect(find.byKey(Key('media-overlay-$overlayId')), findsNothing);
-      expect(
-        tester
-            .widget<IconButton>(find.byKey(Key('media-add-asset-$assetId')))
-            .onPressed,
-        isNull,
-      );
-      expect(controller.timeline!.tracks.first.clips, hasLength(1));
-      expect(controller.timeline!.overlays.single.text, 'Episode title');
-
-      await tester.tap(find.text('视频'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.byKey(const Key('media-audio-retained-visual-content')),
-        findsNothing,
-      );
-      expect(find.byKey(const Key('media-add-overlay')), findsOneWidget);
-      expect(find.byKey(Key('media-clip-$clipId')), findsOneWidget);
-      expect(find.byKey(Key('media-overlay-$overlayId')), findsOneWidget);
-      expect(controller.timeline!.tracks.first.clips, hasLength(1));
-      expect(controller.timeline!.overlays.single.text, 'Episode title');
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets(
-    'inactive editor stops preview widgets and preserves draft and route guard',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1360, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await _prepareEditableProject(client, controller);
-      controller.edit(
-        (snapshot) => snapshot.addOverlay(
-          kind: 'caption',
-          startSec: 0,
-          endSec: 2,
-          text: 'Caption to read',
-        ),
-      );
-      client.successfulExport = true;
-      await controller.export(outputKind: 'video');
-
-      final routeGuard = LumenisLeaveGuard();
-      addTearDown(routeGuard.dispose);
-      var isActive = true;
-      var backCalls = 0;
-      late StateSetter setHostState;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: LumenisTheme.dark,
-          locale: const Locale('zh', 'CN'),
-          supportedLocales: LumenisLocalizations.supportedLocales,
-          localizationsDelegates: const [
-            LumenisLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          home: StatefulBuilder(
-            builder: (context, setState) {
-              setHostState = setState;
-              return Scaffold(
-                body: MediaProjectWorkbench(
-                  client: client,
-                  controller: controller,
-                  files: _Files(),
-                  initialOutputKind: 'video',
-                  isActive: isActive,
-                  leaveGuard: routeGuard,
-                  preserveDraftOnBack: true,
-                  backLabel: '返回播客',
-                  onBack: () => backCalls++,
-                ),
-              );
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('media-load-preview')));
-      await tester.pumpAndSettle();
-      expect(find.byType(MediaPreview), findsOneWidget);
-      final overlayId = controller.timeline!.overlays.single.overlayId;
-      expect(
-        find.byKey(Key('media-caption-readaloud-$overlayId')),
-        findsOneWidget,
-      );
-
-      controller.edit(
-        (snapshot) => snapshot.addAudioTrack('sfx', audioRole: 'sfx'),
-      );
-      await tester.pumpAndSettle();
-      expect(routeGuard.needsProtection, isTrue);
-
-      setHostState(() => isActive = false);
-      await tester.pumpAndSettle();
-      expect(find.byType(MediaPreview), findsNothing);
-      expect(
-        find.byKey(Key('media-caption-readaloud-$overlayId')),
-        findsNothing,
-      );
-      expect(find.byKey(const Key('media-preview-inactive')), findsOneWidget);
-      expect(routeGuard.needsProtection, isTrue);
-
-      await tester.tap(find.byKey(const Key('media-editor-back')));
-      await tester.pumpAndSettle();
-      expect(backCalls, 1);
-      expect(find.byType(AlertDialog), findsNothing);
-      expect(routeGuard.needsProtection, isTrue);
-      expect(controller.timeline!.overlays.single.text, 'Caption to read');
-      expect(controller.timeline!.tracks.last.kind, 'sfx');
-
-      setHostState(() => isActive = true);
-      await tester.pumpAndSettle();
-      expect(find.byType(MediaPreview), findsOneWidget);
-      expect(
-        find.byKey(Key('media-caption-readaloud-$overlayId')),
-        findsOneWidget,
-      );
-      expect(routeGuard.needsProtection, isTrue);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets('scope gate uses the same keyed and localized back action', (
-    tester,
-  ) async {
-    var backCalls = 0;
-    await tester.pumpWidget(
-      _app(
-        client,
-        null,
-        initialOutputKind: 'audio',
-        backLabel: 'Return to podcast',
-        onBack: () => backCalls++,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final back = find.byKey(const Key('media-editor-back'));
-    expect(back, findsOneWidget);
-    expect(find.text('Return to podcast'), findsOneWidget);
-    await tester.tap(back);
-    await tester.pumpAndSettle();
-    expect(backCalls, 1);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets(
-    'audio export blocks populated video tracks and preserves clips',
-    (tester) async {
-      await _prepareEditableProject(client, controller);
-      await tester.pumpWidget(
-        _app(client, controller, initialOutputKind: 'audio'),
-      );
-      await _openActionsForTarget(
-        tester,
-        find.byKey(const Key('media-export')),
-      );
-
-      expect(find.textContaining('音频导出不能包含画面轨'), findsOneWidget);
-      expect(
-        tester
-            .widget<FilledButton>(find.byKey(const Key('media-export')))
-            .onPressed,
-        isNull,
-      );
-      expect(controller.timeline!.tracks.first.clips, hasLength(1));
-      expect(client.exports, 0);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets('audio export blocks overlays and preserves their text', (
-    tester,
-  ) async {
-    await _prepareAudioProject(client, controller);
-    controller.edit(
-      (snapshot) => snapshot.addOverlay(
-        kind: 'caption',
-        startSec: 0,
-        endSec: 2,
-        text: 'Episode title',
-      ),
-    );
-    await tester.pumpWidget(
-      _app(client, controller, initialOutputKind: 'audio'),
-    );
-    await _openActionsForTarget(tester, find.byKey(const Key('media-export')));
-
-    expect(find.textContaining('不能包含字幕或画面叠加'), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(find.byKey(const Key('media-export')))
-          .onPressed,
-      isNull,
-    );
-    expect(controller.timeline!.overlays.single.text, 'Episode title');
-    expect(controller.timeline!.tracks.last.clips, hasLength(1));
-    expect(client.exports, 0);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('audio export does not extract sound from a video source', (
-    tester,
-  ) async {
-    await _prepareAudioProject(client, controller, videoSource: true);
-    await tester.pumpWidget(
-      _app(client, controller, initialOutputKind: 'audio'),
-    );
-    await _openActionsForTarget(tester, find.byKey(const Key('media-export')));
-
-    expect(find.textContaining('不会从视频素材抽取声音'), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(find.byKey(const Key('media-export')))
-          .onPressed,
-      isNull,
-    );
-    expect(controller.timeline!.tracks.last.clips, hasLength(1));
-    expect(client.exports, 0);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('audio export needs an audio clip', (tester) async {
-    await _prepareAudioProject(client, controller, addClip: false);
-    await tester.pumpWidget(
-      _app(client, controller, initialOutputKind: 'audio'),
-    );
-    await _openActionsForTarget(tester, find.byKey(const Key('media-export')));
-
-    expect(find.text('请先添加音频片段，再导出音频。'), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(find.byKey(const Key('media-export')))
-          .onPressed,
-      isNull,
-    );
-    expect(controller.timeline!.tracks.first.clips, isEmpty);
-    expect(client.exports, 0);
-    expect(tester.takeException(), isNull);
-  });
-
-  for (final localeCase in const [
-    (Locale('zh', 'CN'), '音频', '音频导出不能包含画面轨'),
-    (Locale('en'), 'Audio', 'Audio export cannot include video clips.'),
-    (Locale('ko'), '오디오', '오디오 내보내기에는 영상 클립을 포함할 수 없습니다.'),
-  ]) {
-    testWidgets(
-      'audio mode is localized and reachable at narrow large text in ${localeCase.$1}',
-      (tester) async {
-        await _prepareEditableProject(client, controller);
-        await tester.binding.setSurfaceSize(const Size(320, 720));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-        await tester.pumpWidget(
-          _app(
-            client,
-            controller,
-            locale: localeCase.$1,
-            scale: 2,
-            initialOutputKind: 'audio',
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        final selector = find.byKey(const Key('media-output-kind-selector'));
-        await tester.ensureVisible(selector);
-        expect(tester.widget<SegmentedButton<String>>(selector).selected, {
-          'audio',
-        });
-        expect(find.text(localeCase.$2), findsOneWidget);
-        expect(tester.getSize(selector).shortestSide, greaterThanOrEqualTo(48));
-        await _openActionsForTarget(
-          tester,
-          find.byKey(const Key('media-export-blocked-audio')),
-        );
-        expect(find.textContaining(localeCase.$3), findsOneWidget);
-        expect(
-          tester.getSize(find.byKey(const Key('media-export'))).shortestSide,
-          greaterThanOrEqualTo(48),
-        );
-        expect(tester.takeException(), isNull);
-      },
-    );
-  }
-
-  testWidgets('explicit leave guard overrides scope and can be rebound', (
-    tester,
-  ) async {
-    await _prepareEditableProject(client, controller);
-    final routeGuard = LumenisLeaveGuard();
-    final injectedGuard = LumenisLeaveGuard();
-    final replacementGuard = LumenisLeaveGuard();
-    await tester.pumpWidget(
-      _app(client, controller, guard: routeGuard, leaveGuard: injectedGuard),
-    );
-    expect(injectedGuard.needsProtection, isTrue);
-    expect(routeGuard.needsProtection, isFalse);
-
-    await tester.pumpWidget(
-      _app(client, controller, guard: routeGuard, leaveGuard: replacementGuard),
-    );
-    expect(injectedGuard.needsProtection, isFalse);
-    expect(replacementGuard.needsProtection, isTrue);
-    expect(controller.timeline!.tracks.first.clips, hasLength(1));
-    expect(tester.takeException(), isNull);
-  });
 
   testWidgets(
     'open saved-work dialog clears a completed list on available scope change',
@@ -1419,8 +926,6 @@ void main() {
       expect(controller.timeline!.tracks.single.clips.single.sourceOut, 20);
       final exportButton = find.byKey(const Key('media-export'));
       await _openActionsForTarget(tester, exportButton);
-      expect(find.byKey(const Key('media-rights-unknown')), findsOneWidget);
-      expect(find.byType(CheckboxListTile), findsNothing);
       await tester.ensureVisible(exportButton);
       await tester.tap(exportButton);
       await tester.pumpAndSettle();

@@ -30,23 +30,13 @@ _VERSION = "report-business-brief/8"
 _PILOT_VERSIONS = {"report-business-brief/5", "report-business-brief/6", "report-business-brief/7", _VERSION}
 _FIELDS = {"source_observations", "interpretations", "proposed_actions", "unknowns"}
 _PILOT_FIELDS = ("audience", "procedure", "measure", "continue_if", "stop_if")
-_SOURCE_USE_POLICY_V1 = {
+_SOURCE_USE_POLICY = {
     "version": "business-source-use/1", "operation": "business_brief",
     "scope": "canonical reports READ in request and each original source scope",
     "source": "writer-authenticated current verified source-content Evidence and retained Artifact bytes",
     "use": "research_reference or report_quote; declared owner-approved or public-reference-only",
     "payload": "exact current task/material projection, controlled prompt and response schema; request budget equals signed material budget",
     "effect": "canonical AI_CALL ANALYZE; no source rewrite, external action or MODEL_TRAIN",
-}
-_SOURCE_USE_POLICY_V2 = {
-    **_SOURCE_USE_POLICY_V1,
-    "version": "business-source-use/2",
-    "use": "research_reference or report_quote with declared owner-approved or public-reference-only; exact current PO internal_research and domain brief receipt for a derived Source reference, rights unchanged",
-}
-_SOURCE_USE_POLICY = {
-    **_SOURCE_USE_POLICY_V2,
-    "version": "business-source-use/3",
-    "use": _SOURCE_USE_POLICY_V2["use"] + "; exact approved internal SourceUse receipt: at most 160 unique Unicode codepoints per source in selected output; ordinary source limits retained",
 }
 _OWNED_HASH_FIELDS = (
     'request_digest','candidate_identity_sha256','adapter_sha256','adapter_config_sha256',
@@ -70,24 +60,6 @@ def business_source_use_policy():
     """Version the existing source-use checks; this descriptor grants nothing."""
     return {"version": _SOURCE_USE_POLICY['version'], "sha256": _digest(_SOURCE_USE_POLICY),
             "operation": _SOURCE_USE_POLICY['operation']}
-
-
-def _stored_source_use_policy(provenance):
-    """Read exact historical descriptors while rechecking current source use."""
-    version = provenance.get('source_use_policy_version')
-    if version == _SOURCE_USE_POLICY_V1['version']:
-        descriptor = _SOURCE_USE_POLICY_V1
-    elif version == _SOURCE_USE_POLICY_V2['version']:
-        descriptor = _SOURCE_USE_POLICY_V2
-    elif version == _SOURCE_USE_POLICY['version']:
-        descriptor = _SOURCE_USE_POLICY
-    else:
-        raise ValueError('BUSINESS_BRIEF_OWNED_PROVENANCE_INVALID')
-    policy = {'version': descriptor['version'], 'sha256': _digest(descriptor),
-              'operation': descriptor['operation']}
-    if provenance.get('source_use_policy_sha256') != policy['sha256']:
-        raise ValueError('BUSINESS_BRIEF_OWNED_PROVENANCE_INVALID')
-    return policy
 
 
 def _request_scope(scope):
@@ -127,13 +99,13 @@ def _business_prompt(revision=None):
     return system
 
 
-def _business_payload(material, *, quote_limits=None):
+def _business_payload(material):
     """One projection for construction and validation of the actual model input."""
     scope = _request_scope(material['scope'])
     return {"domain": scope['domain_id'], "question": material['question'],
             "material": material,
             **({"revision": material['revision']} if "revision" in material else {}),
-            "sources": [{"source_id": source['source_id'], "excerpts": _excerpts(source, quote_limits=quote_limits),
+            "sources": [{"source_id": source['source_id'], "excerpts": _excerpts(source),
                          "published": source['publish_datetime'],
                          "platform": source['source_platform']} for source in material['sources']]}
 
@@ -141,19 +113,17 @@ def _business_payload(material, *, quote_limits=None):
 def _current_actor(actor_ref, actor=None):
     """Use a server-held actor or current authenticated request, never its ID alone."""
     if actor is None:
-        from flask import has_request_context
-        if has_request_context():
-            from lumenis.auth.service import get_current_user
-            actor = get_current_user(read_only=True)
+        from lumenis.auth.service import get_current_user
+        actor = get_current_user(read_only=True)
         if actor is None:
             from lumenis.system.security import permission
             actor = permission.resolve_local_workspace_principal(module='reports', action='read')
-    if actor is None or _actor_ref(actor) != actor_ref:
+    if _actor_ref(actor) != actor_ref:
         raise PermissionError('BUSINESS_BRIEF_ACTOR_MISMATCH')
     return actor
 
 
-def _source_use_material(material, actor, *, connection, quote_limits=None):
+def _source_use_material(material, actor, *, connection):
     """Resolve original bytes/rights afresh in the caller's current read transaction."""
     from .saved_work import authorize, _verified_evidence
     scope = _request_scope(material['scope'])
@@ -173,20 +143,7 @@ def _source_use_material(material, actor, *, connection, quote_limits=None):
         if match is None or source['source_id'] in seen:
             raise ValueError('BUSINESS_BRIEF_SOURCE_INVALID')
         seen.add(source['source_id'])
-        source_binding = {
-            'source_id': source['source_id'], 'canonical_id': source.get('canonical_id'),
-            'scope_evidence_ref': source.get('evidence_ref'),
-            'content_evidence_ref': f'app_evidence_records:{int(match[1])}',
-            'source_scope_locator': source.get('source_scope_locator'),
-            'source_content_locator': source.get('source_content_locator'),
-            'evidence_id': int(match[1]), 'body_sha256': source.get('body_sha256'),
-        }
-        domain_purpose = 'cth_brief' if context['domain_id'] == 'cth' else 'bmp_brief'
-        evidence = _verified_evidence(
-            connection, int(match[1]), context, actor,
-            source_use_purposes=('internal_research', domain_purpose),
-            source_use_operation='read', source_binding=source_binding,
-        )
+        evidence = _verified_evidence(connection, int(match[1]), context, actor)
         signed = evidence['provenance']
         declared = signed['provenance']
         text = source.get('text')
@@ -205,24 +162,13 @@ def _source_use_material(material, actor, *, connection, quote_limits=None):
             if (type(start) is not int or type(end) is not int
                     or not 0 <= start < end <= len(original) or original[start:end] != text):
                 raise ValueError('BUSINESS_BRIEF_SOURCE_RANGE_INVALID')
-        approved_reference = isinstance(declared.get('approved_internal_source_use'), dict)
-        if approved_reference and quote_limits is not None:
-            # This marker has passed the signed Evidence, original source and
-            # current receipt checks above. A caller's flag cannot set a limit.
-            quote_limits[source['source_id']] = 160
-        intended_use = declared.get('intended_use', 'research_reference')
-        if (evidence['source_id'] != source['source_id']
+        if (evidence['asset_id'] != source['source_id']
                 or source.get('body_sha256') != evidence['content_hash']
-                or (intended_use not in {'research_reference','report_quote'}
-                    and not (approved_reference and intended_use == 'internal_research'))):
+                or declared.get('intended_use', 'research_reference') not in {'research_reference','report_quote'}):
             raise PermissionError('BUSINESS_BRIEF_SOURCE_USE_UNVERIFIED')
         published = declared.get('published_at') or None
         captured = declared.get('captured_at') or None
-        published = None if published == 'UNKNOWN' else published
-        captured = None if captured == 'UNKNOWN' else captured
-        if approved_reference:
-            platform = declared.get('source_platform') or 'UNKNOWN'
-        elif signed.get('source_kind') == 'collected_source':
+        if signed.get('source_kind') == 'collected_source':
             platform = signed['native_source_binding']['platform']
         elif evidence.get('source') == 'document_import':
             platform = ('public_document' if signed.get('content_origin', {}).get('kind') == 'publisher-material'
@@ -279,7 +225,9 @@ def validate_business_source_use(request, *, actor=None):
             or request.max_output_tokens != material['generation_budget']['max_output_tokens']):
         raise ValueError('BUSINESS_BRIEF_MATERIAL_INVALID')
     revision = material.get('revision')
-    if request.system_prompt != _business_prompt(revision):
+    if (payload != _business_payload(material)
+            or request.system_prompt != _business_prompt(revision)
+            or request.response_schema_json != _json(_schema(material['sources'], revision=revision is not None))):
         raise PermissionError('BUSINESS_BRIEF_MODEL_INPUT_BINDING_INVALID')
     scope = _request_scope(material['scope'])
     policy = business_source_use_policy()
@@ -296,12 +244,7 @@ def validate_business_source_use(request, *, actor=None):
         scoped = checker(actor, module='reports', action='read', **scope, connection=con)
         if scoped.allowed is not True or scoped.verification_state != 'verified' or not scoped.scope_audit_id:
             raise PermissionError('BUSINESS_BRIEF_SCOPE_DENIED')
-        quote_limits = {}
-        bindings = _source_use_material(material, actor, connection=con, quote_limits=quote_limits)
-        if (payload != _business_payload(material, quote_limits=quote_limits)
-                or request.response_schema_json != _json(_schema(
-                    material['sources'], revision=revision is not None, quote_limits=quote_limits))):
-            raise PermissionError('BUSINESS_BRIEF_MODEL_INPUT_BINDING_INVALID')
+        bindings = _source_use_material(material, actor, connection=con)
         refs = tuple(dict.fromkeys(item['evidence_ref'] for item in bindings))
         if request.source_binding_sha256 != _digest(bindings) or request.source_evidence_refs != refs:
             raise PermissionError('BUSINESS_BRIEF_SOURCE_BINDING_CHANGED')
@@ -355,11 +298,8 @@ def _owned_result_provenance(result, request):
     return {key:result.get(key) for key in keys}
 
 
-def _excerpts(source, *, quote_limits=None):
+def _excerpts(source):
     text = source["text"]
-    limit = (quote_limits or {}).get(source.get("source_id"))
-    if limit is not None:
-        return [text[index:index + limit] for index in range(0, len(text), limit)]
     if len(text) <= 500:
         return [text]
     chunks = [text[index:index + 400] for index in range(0, len(text), 400)]
@@ -368,7 +308,7 @@ def _excerpts(source, *, quote_limits=None):
     return chunks
 
 
-def _schema(sources, *, revision=False, quote_limits=None):
+def _schema(sources, *, revision=False):
     string = {"type": "string", "minLength": 1, "maxLength": 800}
     source_id = {"type": "string", "enum": [source["source_id"] for source in sources]}
     refs = {"type": "array", "items": source_id, "minItems": 1, "maxItems": 8}
@@ -382,7 +322,7 @@ def _schema(sources, *, revision=False, quote_limits=None):
                            "required": list(_PILOT_FIELDS), "additionalProperties": False}
     analysis = {"type": "object", "properties": {
         "source_observations": items({"source_id": source_id, "excerpt_index": {"type": "integer", "minimum": 0,
-            "maximum": max(len(_excerpts(source, quote_limits=quote_limits)) - 1 for source in sources)}}),
+            "maximum": max(len(_excerpts(source)) - 1 for source in sources)}}),
         "interpretations": items({"text": string, "source_ids": refs}),
         "proposed_actions": items(action),
         "unknowns": {"type": "array", "items": string, "minItems": 1, "maxItems": 16},
@@ -416,8 +356,8 @@ def _validate_revision_changes(changes, analysis, previous):
     return changes
 
 
-def _resolve_excerpts(value, sources, *, quote_limits=None):
-    by_id = {source["source_id"]: _excerpts(source, quote_limits=quote_limits) for source in sources}
+def _resolve_excerpts(value, sources):
+    by_id = {source["source_id"]: _excerpts(source) for source in sources}
     if not isinstance(value, dict) or not isinstance(value.get("source_observations"), list):
         raise ValueError("BUSINESS_BRIEF_RESULT_INVALID")
     rows = []
@@ -431,13 +371,12 @@ def _resolve_excerpts(value, sources, *, quote_limits=None):
     return {**value, "source_observations": rows}
 
 
-def _validate(value, sources, *, version=None, quote_limits=None):
+def _validate(value, sources, *, version=None):
     """Validate shape/citations/excerpts only. Entailment and usefulness need review."""
     if not isinstance(value, dict) or set(value) != _FIELDS:
         raise ValueError("BUSINESS_BRIEF_RESULT_INVALID")
     by_id = {s["source_id"]: s for s in sources}
     requires_pilot = (version or _VERSION) in _PILOT_VERSIONS
-    quoted_by_source = {}
     for key in _FIELDS:
         rows = value[key]
         row_limit = (16 if key == 'unknowns' else 8) if (version or _VERSION) == _VERSION else (5 if key == 'unknowns' else 3)
@@ -463,11 +402,6 @@ def _validate(value, sources, *, version=None, quote_limits=None):
             if key == "source_observations":
                 if row["source_id"] not in by_id or row["excerpt"] not in by_id[row["source_id"]]["text"]:
                     raise ValueError("BUSINESS_BRIEF_EXCERPT_UNGROUNDED")
-                limit = (quote_limits or {}).get(row['source_id'])
-                if limit is not None:
-                    quoted_by_source.setdefault(row['source_id'], set()).add(row['excerpt'])
-                    if sum(map(len, quoted_by_source[row['source_id']])) > limit:
-                        raise ValueError('SOURCE_USE_QUOTE_LIMIT_EXCEEDED')
             elif key != "unknowns":
                 refs = row["source_ids"]
                 if not isinstance(refs, list) or not 1 <= len(refs) <= 8 or any(
@@ -538,13 +472,7 @@ def read_business_brief(evidence_ref, *, job_id, actor_ref, scope, actor=None):
         # Retired provider records remain readable under their historical
         # contract; the current version can only originate from owned Gateway.
         raise ValueError('BUSINESS_BRIEF_RETIRED_PROVIDER_VERSION_INVALID')
-    quote_limits = {}
-    if provider == 'owned':
-        with get_repository().connection(read_only=True, wal=False) as con:
-            _source_use_material(material, _current_actor(actor_ref, actor),
-                                 connection=con, quote_limits=quote_limits)
-    analysis = _validate(outputs["analysis"], material["sources"], version=inputs["version"],
-                         quote_limits=quote_limits)
+    analysis = _validate(outputs["analysis"], material["sources"], version=inputs["version"])
     if inputs["version"] in {"report-business-brief/4", *_PILOT_VERSIONS}:
         _validate_generated_prose(analysis)
     changes = None
@@ -580,8 +508,7 @@ def _request_business_inference(system, user, **kwargs):
         scope = _request_scope(material['scope'])
         policy = business_source_use_policy()
         with get_repository().connection(read_only=True, wal=False) as con:
-            quote_limits = {}
-            bindings = _source_use_material(material, actor, connection=con, quote_limits=quote_limits)
+            bindings = _source_use_material(material, actor, connection=con)
         request = OwnedServiceRequest(operation=policy['operation'],
             request_id='business-brief:' + _digest({'job_id':job_id,'actor_ref':actor_ref,'material':material}),
             job_id=job_id, actor_ref=actor_ref, domain_id='bmp' if scope['domain_id'] == 'zbmp' else 'cth',
@@ -589,9 +516,7 @@ def _request_business_inference(system, user, **kwargs):
             source_use_policy_sha256=policy['sha256'], source_binding_sha256=_digest(bindings),
             source_evidence_refs=tuple(dict.fromkeys(item['evidence_ref'] for item in bindings)),
             input_revision_sha256=_digest(material), system_prompt=system,
-            user_payload=_json(_business_payload(material, quote_limits=quote_limits)),
-            response_schema_json=_json(_schema(material['sources'], revision='revision' in material,
-                                               quote_limits=quote_limits)),
+            user_payload=user, response_schema_json=_json(kwargs['response_schema']),
             max_output_tokens=kwargs['max_tokens'])
         validate_business_source_use(request, actor=actor)
         result = gateway.run_owned_request(request)
@@ -607,8 +532,7 @@ def _request_business_inference(system, user, **kwargs):
         if not isinstance(result.get('analysis'), dict):
             raise ValueError('BUSINESS_BRIEF_OWNED_RESPONSE_INVALID')
         return _json(result['analysis']), 'owned', {'model':result['model_id'], 'owned_provenance':provenance,
-            'request':request, 'actor':actor, 'quote_limits':quote_limits,
-            'reason':'OWNED_INFERENCE_COMPLETED','available':True}
+            'request':request, 'actor':actor, 'reason':'OWNED_INFERENCE_COMPLETED','available':True}
     except (ValueError, TypeError, KeyError, PermissionError) as exc:
         code = str(exc)
         reason = code if re.fullmatch(r'[A-Z][A-Z0-9_]{0,95}', code) else 'OWNED_SOURCE_OR_REQUEST_UNAVAILABLE'
@@ -623,7 +547,7 @@ def _verify_stored_owned_provenance(provenance, material, job_id, actor_ref, sco
             or any(not isinstance(provenance.get(key), str) or not re.fullmatch(r'[0-9a-f]{64}', provenance[key]) for key in _OWNED_HASH_FIELDS)
             or any(not isinstance(provenance.get(key), str) or not provenance[key] for key in _OWNED_TEXT_FIELDS)):
         raise ValueError('BUSINESS_BRIEF_OWNED_PROVENANCE_INVALID')
-    policy = _stored_source_use_policy(provenance)
+    policy = business_source_use_policy()
     audits = provenance.get('source_audit_ids')
     admission = provenance.get('admission_audit_hashes')
     budget = material.get('generation_budget', {}).get('max_output_tokens')
@@ -648,12 +572,7 @@ def _verify_stored_owned_provenance(provenance, material, job_id, actor_ref, sco
         raise ValueError('BUSINESS_BRIEF_OWNED_BUDGET_INVALID')
     actor = _current_actor(actor_ref, actor)
     with get_repository().connection(read_only=True, wal=False) as con:
-        quote_limits = {}
-        bindings = _source_use_material(material, actor, connection=con, quote_limits=quote_limits)
-    if (policy['version'] == _SOURCE_USE_POLICY_V1['version']
-            and any(item.get('rights') not in {'owner-approved', 'public-reference-only'}
-                    for item in bindings)):
-        raise PermissionError('BUSINESS_BRIEF_SOURCE_USE_UNVERIFIED')
+        bindings = _source_use_material(material, actor, connection=con)
     if (provenance['source_binding_sha256'] != _digest(bindings)
             or provenance.get('source_evidence_refs') != list(dict.fromkeys(item['evidence_ref'] for item in bindings))):
         raise PermissionError('BUSINESS_BRIEF_SOURCE_BINDING_CHANGED')
@@ -662,23 +581,11 @@ def _verify_stored_owned_provenance(provenance, material, job_id, actor_ref, sco
         scope=_service_scope(scope), source_use_policy_version=policy['version'], source_use_policy_sha256=policy['sha256'],
         source_binding_sha256=provenance['source_binding_sha256'], source_evidence_refs=tuple(provenance['source_evidence_refs']),
         input_revision_sha256=_digest(material), system_prompt=_business_prompt(material.get('revision')),
-        user_payload=_json(_business_payload(material, quote_limits=(
-            quote_limits if policy['version'] == _SOURCE_USE_POLICY['version'] else None))),
-        response_schema_json=_json(_schema(material['sources'], revision='revision' in material,
-            quote_limits=quote_limits if policy['version'] == _SOURCE_USE_POLICY['version'] else None)),
+        user_payload=_json(_business_payload(material)),
+        response_schema_json=_json(_schema(material['sources'], revision='revision' in material)),
         max_output_tokens=budget)
     if provenance['request_digest'] != owned_service_request_digest(request):
         raise ValueError('BUSINESS_BRIEF_OWNED_REQUEST_DIGEST_INVALID')
-
-
-def _recheck_analysis_sources(con, material, meta, *, analysis=None):
-    """Keep source withdrawal/body/scope checks in the derivative write transaction."""
-    quote_limits = {}
-    bindings = _source_use_material(material, meta['actor'], connection=con, quote_limits=quote_limits)
-    if _digest(bindings) != meta['request'].source_binding_sha256:
-        raise PermissionError('BUSINESS_BRIEF_SOURCE_BINDING_CHANGED')
-    if analysis is not None:
-        _validate(analysis, material['sources'], quote_limits=quote_limits)
 
 
 def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_ref,
@@ -709,9 +616,7 @@ def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_re
             if not isinstance(generated, dict) or set(generated) != {"changes", "analysis"}:
                 raise ValueError("BUSINESS_BRIEF_REVISION_CHANGES_INVALID")
             changes, generated = generated["changes"], generated["analysis"]
-        quote_limits = meta['quote_limits']
-        analysis = _validate(_resolve_excerpts(generated, sources, quote_limits=quote_limits),
-                             sources, quote_limits=quote_limits)
+        analysis = _validate(_resolve_excerpts(generated, sources), sources)
         _validate_generated_prose(analysis)
         if revision is not None and analysis == revision["previous_analysis"]:
             raise ValueError("BUSINESS_BRIEF_REVISION_UNCHANGED")
@@ -724,8 +629,6 @@ def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_re
             before_evidence()
         validate_business_source_use(meta['request'], actor=meta['actor'])
         with get_repository().transaction(timeout=10) as con:
-            con.execute('BEGIN IMMEDIATE')
-            _recheck_analysis_sources(con, material, meta)
             rejected_id = evidence_store.record_evidence(
                 connection=con, source="shared_reporting", project="LUMENIS", product=normalized["product_id"],
                 feature_id=_FEATURE + "_REJECTED", test_name=job_id, result="FAIL", status="derived",
@@ -736,7 +639,6 @@ def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_re
                 brand_focus_id=normalized["brand_focus_id"], global_scope=normalized["global_scope"],
                 notes="Rejected model candidate; not a report analysis or business result.",
             )
-            _recheck_analysis_sources(con, material, meta)
         return {**base, "reason": reason,
                 "rejected_candidate_evidence_ref": f"app_evidence_records:{rejected_id}"}
     outputs = {"analysis": analysis, "analysis_sha256": _digest(analysis),
@@ -748,8 +650,6 @@ def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_re
         before_evidence()
     validate_business_source_use(meta['request'], actor=meta['actor'])
     with get_repository().transaction(timeout=10) as con:
-        con.execute('BEGIN IMMEDIATE')
-        _recheck_analysis_sources(con, material, meta, analysis=analysis)
         record_id = evidence_store.record_evidence(
             connection=con, source="shared_reporting", project="LUMENIS", product=normalized["product_id"],
             feature_id=_FEATURE, test_name=job_id, result="PASS", status="derived",
@@ -759,5 +659,4 @@ def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_re
             brand_focus_id=normalized["brand_focus_id"], global_scope=normalized["global_scope"],
             notes="AI derivative: citations validated; truth, usefulness and business outcome not accepted.",
         )
-        _recheck_analysis_sources(con, material, meta, analysis=analysis)
     return read_business_brief(f"app_evidence_records:{record_id}", job_id=job_id, actor_ref=actor_ref, scope=scope, actor=meta['actor'])

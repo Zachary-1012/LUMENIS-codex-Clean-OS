@@ -842,7 +842,7 @@
   "shared.read_aloud.purpose.sourceBrief": "로컬 음성을 사용하는 조사 자료 미리 듣기입니다. 오디오를 만들거나 저장하지 않습니다.",
   "shared.read_aloud.purpose.podcastScript": "팟캐스트 대본 미리 듣기이며 최종 팟캐스트 오디오가 아닙니다.",
   "shared.read_aloud.purpose.videoCaption": "영상 자막 미리 듣기이며 영상 음성 더빙이 아닙니다.",
-  "shared.read_aloud.purpose.savedPreview": "현재 화면에 보이는 텍스트를 로컬 음성으로 미리 듣습니다. 오디오를 생성하거나 저장하지 않습니다.",
+  "shared.read_aloud.purpose.savedPreview": "저장된 결과 텍스트 미리 듣기입니다. 결과를 수정하거나 다시 생성하지 않습니다.",
   "shell.connecting": "연결 중",
   "shell.offline": "서비스 연결 끊김",
   "shell.auth_unavailable": "연결 승인 만료",

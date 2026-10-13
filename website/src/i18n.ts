@@ -7,31 +7,30 @@ export const copy = {
     languageName: "简体中文",
     productName: "序境 LUMENIS",
     metadata: {
-      title: "序境 LUMENIS｜研究市场，创作内容",
+      title: "序境 LUMENIS｜让每条线索都能回到来处",
       description:
         "认识序境 LUMENIS：面向商业运营与品牌市场工作，连接有来源的资料、业务判断、内容计划与复盘。",
     },
     navigation: [
       { href: "#structure", label: "产品结构" },
       { href: "#scenarios", label: "使用情境" },
-      { href: "#creation", label: "创作" },
       { href: "#demo", label: "示意体验" },
       { href: "#access", label: "访问方式" },
     ],
     languageNavigationLabel: "选择语言",
     primaryNavigationLabel: "产品介绍导航",
-    headerNote: "产品预览",
+    headerNote: "产品探索",
     skipLabel: "跳到主要内容",
     hero: {
-      eyebrow: "商业运营 · 品牌市场",
-      title: "研究市场，创作内容。",
+      eyebrow: "一条线索，不止一个终点",
+      title: "沿着变化，看见来处与去向。",
       description:
-        "为商业运营和品牌团队连接资料、判断与作品。也可以带上自己的想法，直接开始创作。",
+        "面向商业运营与品牌市场团队，把有来源的资料、待核实的问题、业务判断和交付物放在同一条工作脉络里。",
       primary: "进入工作空间",
-      primaryUnavailable: "工作空间暂未开放",
+      primaryUnavailable: "工作空间入口尚未配置",
       secondary: "选择一个业务问题",
-      workspaceConfiguredNote: "继续前往工作空间。",
-      workspaceUnavailableNote: "当前可浏览产品介绍、创作流程与操作演示。",
+      workspaceConfiguredNote: "工作空间地址已配置。",
+      workspaceUnavailableNote: "工作空间地址尚未配置。你可以先从下方选择一个业务问题。",
       diagramLabel: "从资料整理到业务交付，再根据反馈复盘下一步。",
       flowLabels: { material: "资料", delivery: "交付", feedback: "反馈" },
     },
@@ -57,7 +56,7 @@ export const copy = {
         title: "从主体与时间开始",
         description:
           "围绕项目、门店、活动与顾客反馈，核对真实资源和变化，形成有依据的运营判断与待办事项。",
-        lens: "主体 → 时间 → 相关事项",
+        lens: "主体 → 时间 → 因果线索",
       },
       brand: {
         ordinal: "02 / 品牌与市场",
@@ -68,15 +67,15 @@ export const copy = {
       },
       shared: {
         ordinal: "03 / 共享能力",
-        title: "让想法成为作品",
+        title: "创作、研究与评估，共同生长",
         description:
-          "从自己的文字或获准使用的素材开始，制作提案、文档、视频或播客；也可以延续已有研究。",
+          "让研究发现进入 Brief、内容、报告与评估，保留来源、待确认事项和实际反馈。",
       },
       system: {
         ordinal: "04 / 系统基础",
-        title: "工作可以继续，结果能够找回",
+        title: "让底层职责各归其位",
         description:
-          "让资料、任务与结果稳定衔接；遇到中断时，保留清楚的状态和继续处理的路径。",
+          "采集、运行、调度、安全与恢复构成基础；它们支撑产品，不替代业务本身。",
       },
     },
     scenarios: {
@@ -205,36 +204,36 @@ export const copy = {
     },
     surfaces: {
       eyebrow: "四种表面，不是四个产品",
-      title: "在适合的设备上，继续手头的工作。",
-      intro: "从浏览器到桌面与手机，按使用场景安排研究、创作与查看。",
+      title: "同一产品核心，各有清楚边界。",
+      intro: "这些是各表面的职责说明，不代表服务已部署或每项能力都已开放。",
       public: {
         title: "Public Website",
         label: "当前页面",
-        description: "了解产品、浏览工作示例与实际操作视频。",
+        description: "介绍产品、展示虚构示意，并提供已配置的联系与入口。",
       },
       web: {
         title: "Web Workspace",
         label: "浏览器工作空间",
-        description: "在浏览器中研究资料、处理业务与创作内容。入口开放后可访问。",
+        description: "产品工作空间与本介绍网站分开；是否可进入取决于对应部署。",
       },
       desktop: {
         title: "Desktop App",
         label: "桌面应用",
-        description: "面向 Windows 与 macOS，供集中编辑与本地素材处理使用。安装版另行开放。",
+        description: "浏览器自动化与本机文件任务需要桌面环境支持。",
       },
       mobile: {
         title: "Mobile Companion",
         label: "移动伴侣",
-        description: "面向 iOS，方便查看结果与补充资料。安装版另行开放。",
+        description: "独立的移动端表面，不是把本网站缩小，也不在此宣称已提供安装。",
       },
-      note: "功能会因设备和已开放的服务而不同，以当前版本提供的功能为准。",
+      note: "各表面可提供的能力取决于运行环境与部署配置。",
     },
     access: {
       eyebrow: "继续了解或联系",
-      title: "开始使用序境",
-      intro: "选择试用、联系或帮助，也可以前往已开放的工作空间。",
-      configured: "前往对应页面",
-      unconfigured: "暂未开放",
+      title: "入口应当真实可达。",
+      intro: "试用、联系、帮助与工作空间地址由部署方分别配置；未配置时会明确显示状态。",
+      configured: "此构建已配置公开目的地址；是否可访问取决于该目的站点。",
+      unconfigured: "此构建尚未连接此入口。",
       trial: { title: "试用", action: "查看试用入口" },
       contact: { title: "联系", action: "前往联系页面" },
       help: { title: "帮助", action: "打开帮助中心" },
@@ -246,7 +245,7 @@ export const copy = {
     },
     footer: {
       product: "序境 LUMENIS",
-      note: "业务示例为虚构；操作录屏展示的功能范围见对应说明。",
+      note: "公开介绍页面。示意内容为虚构；本页面不持有或改变产品事实。",
       navigationLabel: "页脚导航",
     },
     status: {
@@ -258,31 +257,30 @@ export const copy = {
     languageName: "English",
     productName: "LUMENIS",
     metadata: {
-      title: "LUMENIS — Research markets. Create content.",
+      title: "LUMENIS — Follow a trace, return to its source",
       description:
         "Meet LUMENIS: a product for commercial operations and brand-market work, connecting sourced material, decisions, content plans, and review.",
     },
     navigation: [
       { href: "#structure", label: "Product structure" },
       { href: "#scenarios", label: "Use cases" },
-      { href: "#creation", label: "Create" },
       { href: "#demo", label: "Illustrative demo" },
       { href: "#access", label: "Ways to access" },
     ],
     languageNavigationLabel: "Choose a language",
     primaryNavigationLabel: "Product introduction navigation",
-    headerNote: "PRODUCT PREVIEW",
+    headerNote: "PRODUCT EXPLORATION",
     skipLabel: "Skip to main content",
     hero: {
-      eyebrow: "Commercial operations · Brand markets",
-      title: "Research markets. Create content.",
+      eyebrow: "One trace, more than one destination",
+      title: "Follow change. See where it came from and where it leads.",
       description:
-        "Connect material, judgment, and creative work for commercial operations and brand teams. Bring your own idea and start creating directly.",
+        "For commercial operations and brand-market teams: keep sourced material, open questions, business decisions, and deliverables in one continuous line of work.",
       primary: "Open the workspace",
-      primaryUnavailable: "Workspace not yet open",
+      primaryUnavailable: "Workspace destination not configured",
       secondary: "Choose a business question",
-      workspaceConfiguredNote: "Continue to the workspace.",
-      workspaceUnavailableNote: "Explore the product, creative workflows, and operation recording below.",
+      workspaceConfiguredNote: "A workspace destination is configured.",
+      workspaceUnavailableNote: "No workspace destination is configured. Choose a business question below.",
       diagramLabel: "From sourced material to business delivery, then use feedback to improve the next plan.",
       flowLabels: { material: "Material", delivery: "Delivery", feedback: "Feedback" },
     },
@@ -308,7 +306,7 @@ export const copy = {
         title: "Start with a subject and time",
         description:
           "Check real resources and changes across projects, stores, events, and customer feedback; carry the evidence into operational decisions and next tasks.",
-        lens: "Entity → time → related items",
+        lens: "Subject → time → causal trace",
       },
       brand: {
         ordinal: "02 / Brand and market",
@@ -319,15 +317,15 @@ export const copy = {
       },
       shared: {
         ordinal: "03 / Shared capabilities",
-        title: "Turn an idea into a finished piece",
+        title: "Creation, research, and evaluation—together",
         description:
-          "Start with your own writing or permitted assets to make a proposal, document, video, or podcast. You can also continue from existing research.",
+          "Carry research into briefs, content, reports, and evaluation while retaining sources, open questions, and actual feedback.",
       },
       system: {
         ordinal: "04 / System foundations",
-        title: "Keep work moving and results retrievable",
+        title: "Keep foundational responsibilities in their place",
         description:
-          "Keep materials, tasks, and results connected, with clear status and a way to continue after an interruption.",
+          "Collection, runtime, scheduling, security, and recovery support the product without replacing its business domains.",
       },
     },
     scenarios: {
@@ -456,37 +454,37 @@ export const copy = {
     },
     surfaces: {
       eyebrow: "Four surfaces, not four products",
-      title: "Continue your work on the right device.",
-      intro: "Research, create, or catch up with your work in the browser, at your desk, or on your phone.",
+      title: "One product core, clear boundaries.",
+      intro: "These describe the role of each surface, not a claim that a service is deployed or every capability is available.",
       public: {
         title: "Public Website",
         label: "This page",
-        description: "Explore the product, workflow examples, and actual operation recordings.",
+        description: "Explains the product, shows fictional examples, and offers configured public destinations.",
       },
       web: {
         title: "Web Workspace",
         label: "Browser workspace",
-        description: "Research material, work through business tasks, and create in a browser. Access opens separately.",
+        description: "The product workspace is separate from this introduction; access depends on its deployment.",
       },
       desktop: {
         title: "Desktop App",
         label: "Desktop application",
         description:
-          "For focused editing and local media work on Windows and macOS. Installable versions open separately.",
+          "Browser automation and local-file work require a desktop environment.",
       },
       mobile: {
         title: "Mobile Companion",
         label: "Mobile companion",
-        description: "For reviewing results and adding material on iOS. The installable version opens separately.",
+        description: "A distinct mobile surface—not this website shrunk down, and no installation is claimed here.",
       },
-      note: "Available features depend on your device and enabled services. Check what your current version provides.",
+      note: "Available capabilities vary by surface, runtime, and deployment.",
     },
     access: {
       eyebrow: "Continue or get in touch",
-      title: "Start with LUMENIS",
-      intro: "Try LUMENIS, get in touch, find help, or open an available workspace.",
-      configured: "Continue to the linked page",
-      unconfigured: "Not yet open",
+      title: "An entry point should lead somewhere real.",
+      intro: "Trial, contact, help, and workspace destinations are configured separately by deployment. Unconfigured routes are labeled clearly.",
+      configured: "A public destination is configured for this build; its availability depends on that destination.",
+      unconfigured: "No destination is connected for this build.",
       trial: { title: "Trial", action: "View trial destination" },
       contact: { title: "Contact", action: "Go to contact" },
       help: { title: "Help", action: "Open help center" },
@@ -498,7 +496,7 @@ export const copy = {
     },
     footer: {
       product: "LUMENIS",
-      note: "Business examples are fictional. Each operation recording describes the features it demonstrates.",
+      note: "Public product introduction. The example is fictional; this page does not own or change product truth.",
       navigationLabel: "Footer navigation",
     },
     status: {
@@ -510,31 +508,30 @@ export const copy = {
     languageName: "한국어",
     productName: "서경 LUMENIS",
     metadata: {
-      title: "서경 LUMENIS | 시장 리서치와 콘텐츠 창작",
+      title: "서경 LUMENIS | 흔적을 따라가고, 출발점으로 돌아오다",
       description:
         "서경 LUMENIS를 소개합니다. 상업 운영과 브랜드·시장 업무에서 출처가 있는 자료, 판단, 콘텐츠 계획과 회고를 연결합니다.",
     },
     navigation: [
       { href: "#structure", label: "제품 구조" },
       { href: "#scenarios", label: "사용 맥락" },
-      { href: "#creation", label: "창작" },
       { href: "#demo", label: "예시 보기" },
       { href: "#access", label: "이용 방법" },
     ],
     languageNavigationLabel: "언어 선택",
     primaryNavigationLabel: "제품 소개 탐색",
-    headerNote: "제품 미리보기",
+    headerNote: "제품 탐색",
     skipLabel: "본문으로 건너뛰기",
     hero: {
-      eyebrow: "상업 운영 · 브랜드 시장",
-      title: "시장을 연구하고, 콘텐츠를 만듭니다.",
+      eyebrow: "하나의 흔적, 여러 갈래의 맥락",
+      title: "변화를 따라가며, 시작과 다음을 봅니다.",
       description:
-        "상업 운영과 브랜드 팀을 위해 자료, 판단과 창작물을 연결합니다. 자신의 아이디어를 가져와 바로 창작을 시작할 수도 있습니다.",
+        "상업 운영과 브랜드·시장 팀을 위해 출처가 있는 자료, 확인할 질문, 업무 판단과 결과물을 하나의 작업 흐름으로 연결합니다.",
       primary: "작업 공간 열기",
-      primaryUnavailable: "작업 공간은 아직 열리지 않았습니다",
+      primaryUnavailable: "작업 공간 주소가 설정되지 않았습니다",
       secondary: "업무 질문 선택하기",
-      workspaceConfiguredNote: "작업 공간으로 이동합니다.",
-      workspaceUnavailableNote: "아래에서 제품 소개, 창작 흐름과 조작 영상을 살펴보세요.",
+      workspaceConfiguredNote: "작업 공간 주소가 설정되어 있습니다.",
+      workspaceUnavailableNote: "작업 공간 주소가 설정되지 않았습니다. 아래에서 업무 질문을 선택하세요.",
       diagramLabel: "자료를 정리해 업무 결과로 전달하고, 피드백을 바탕으로 다음 계획을 다듬습니다.",
       flowLabels: { material: "자료", delivery: "전달", feedback: "피드백" },
     },
@@ -560,7 +557,7 @@ export const copy = {
         title: "대상과 시간에서 시작합니다",
         description:
           "프로젝트, 매장, 행사와 고객 피드백의 실제 자원과 변화를 확인하고 근거 있는 운영 판단과 다음 할 일로 이어갑니다.",
-        lens: "대상 → 시점 → 관련 사안",
+        lens: "대상 → 시간 → 인과의 흔적",
       },
       brand: {
         ordinal: "02 / 브랜드와 시장",
@@ -571,15 +568,15 @@ export const copy = {
       },
       shared: {
         ordinal: "03 / 공동 역량",
-        title: "생각을 결과물로 만듭니다",
+        title: "창작, 연구, 평가가 함께 자랍니다",
         description:
-          "자신의 글이나 사용이 허가된 자료로 제안서, 문서, 영상 또는 팟캐스트를 만듭니다. 기존 연구를 이어서 활용할 수도 있습니다.",
+          "연구 결과를 브리프, 콘텐츠, 보고서와 평가로 이어가며 출처, 미확인 사항과 실제 피드백을 남깁니다.",
       },
       system: {
         ordinal: "04 / 시스템 기반",
-        title: "작업을 이어가고 결과를 다시 찾습니다",
+        title: "기반 역할은 제자리에 둡니다",
         description:
-          "자료, 작업과 결과를 연결하고 중단 시에도 현재 상태와 다시 이어갈 경로를 확인할 수 있습니다.",
+          "수집, 실행, 일정 관리, 보안과 복구는 기반을 이루며 업무 영역을 대신하지 않습니다.",
       },
     },
     scenarios: {
@@ -708,37 +705,37 @@ export const copy = {
     },
     surfaces: {
       eyebrow: "네 가지 표면, 네 개의 제품이 아닙니다",
-      title: "알맞은 기기에서 하던 일을 이어가세요.",
-      intro: "브라우저, 데스크톱과 휴대폰에서 상황에 맞게 조사하고 만들고 확인합니다.",
+      title: "하나의 제품 코어, 분명한 경계.",
+      intro: "각 표면의 역할을 설명하며, 서비스 배포나 모든 기능의 제공을 뜻하지 않습니다.",
       public: {
         title: "Public Website",
         label: "현재 페이지",
-        description: "제품, 업무 예시와 실제 조작 영상을 살펴봅니다.",
+        description: "제품을 소개하고 허구의 예시를 보여주며 설정된 공개 경로를 제공합니다.",
       },
       web: {
         title: "Web Workspace",
         label: "브라우저 작업 공간",
-        description: "브라우저에서 자료 조사, 업무 처리와 창작을 진행합니다. 이용 경로는 별도로 열립니다.",
+        description: "제품 작업 공간은 소개 사이트와 분리되며, 접근 가능 여부는 배포 상태에 따라 다릅니다.",
       },
       desktop: {
         title: "Desktop App",
         label: "데스크톱 앱",
         description:
-          "Windows와 macOS에서 집중 편집과 로컬 소재 작업을 위한 앱입니다. 설치 버전은 별도로 제공될 예정입니다.",
+          "브라우저 자동화와 로컬 파일 작업에는 데스크톱 환경이 필요합니다.",
       },
       mobile: {
         title: "Mobile Companion",
         label: "모바일 동반 앱",
-        description: "iOS에서 결과를 확인하고 자료를 보충하기 위한 앱입니다. 설치 버전은 별도로 제공될 예정입니다.",
+        description: "별도의 모바일 표면입니다. 웹사이트의 축소판이 아니며 여기서 설치 가능하다고 말하지 않습니다.",
       },
-      note: "사용할 수 있는 기능은 기기와 활성화된 서비스에 따라 다릅니다. 현재 버전에서 제공하는 기능을 확인하세요.",
+      note: "각 표면에서 제공하는 기능은 실행 환경과 배포 설정에 따라 다릅니다.",
     },
     access: {
       eyebrow: "더 알아보거나 문의하기",
-      title: "LUMENIS 시작하기",
-      intro: "체험, 문의, 도움말을 선택하거나 열린 작업 공간으로 이동하세요.",
-      configured: "연결된 페이지로 이동",
-      unconfigured: "아직 열리지 않음",
+      title: "실제 목적지로 이어지는 입구.",
+      intro: "체험, 문의, 도움말, 작업 공간 주소는 배포별로 설정됩니다. 설정되지 않은 경로는 그대로 표시합니다.",
+      configured: "이 빌드에 공개 목적지가 설정되어 있습니다. 실제 이용 가능 여부는 해당 사이트에 따라 다릅니다.",
+      unconfigured: "이 빌드에는 연결된 목적지가 없습니다.",
       trial: { title: "체험", action: "체험 경로 보기" },
       contact: { title: "문의", action: "문의 페이지로 이동" },
       help: { title: "도움말", action: "도움말 열기" },
@@ -750,7 +747,7 @@ export const copy = {
     },
     footer: {
       product: "서경 LUMENIS",
-      note: "업무 예시는 허구입니다. 조작 영상이 보여 주는 기능 범위는 각 안내에서 확인하세요.",
+      note: "공개 제품 소개 페이지입니다. 예시는 허구이며, 이 페이지는 제품의 사실을 소유하거나 변경하지 않습니다.",
       navigationLabel: "바닥글 탐색",
     },
     status: {

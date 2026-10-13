@@ -49,12 +49,7 @@ class Sh04Scope {
         permission['can_read'] == true ||
         permission['view'] == true;
     if (!canRead ||
-        !const {
-          'ALLOW',
-          'ALLOWED',
-          'GRANTED',
-          'PERMITTED',
-        }.contains(decision)) {
+        !const {'ALLOW', 'ALLOWED', 'GRANTED', 'PERMITTED'}.contains(decision)) {
       throw const Sh04ScopeError(Sh04ScopeErrorKind.denied);
     }
     final mode = _string(
@@ -115,7 +110,6 @@ class Sh04Export {
     required this.evidenceCount,
     required this.generatedAt,
     required this.failureReason,
-    this.savedWork,
   });
 
   final String internalId;
@@ -128,7 +122,6 @@ class Sh04Export {
   final int? evidenceCount;
   final String generatedAt;
   final String failureReason;
-  final Sh04SavedWork? savedWork;
 
   String get stateLabel => switch (state) {
     Sh04ExportState.draft => '草稿',
@@ -193,92 +186,11 @@ class Sh04Export {
   }
 }
 
-/// A validated immutable SavedWork record. List rows have [committed] false
-/// until a fresh reopen response carries a matching committed-work receipt.
-class Sh04SavedWork {
-  Sh04SavedWork({
-    required this.artifactId,
-    required this.domainId,
-    required this.hash,
-    required this.sizeBytes,
-    required this.workId,
-    required this.version,
-    required this.title,
-    required this.markdown,
-    required this.kind,
-    required this.createdAt,
-    required this.parentArtifactId,
-    required this.parentSha256,
-    required this.draftDigest,
-    required this.taskId,
-    required this.contractId,
-    required this.contractVersion,
-    required List<Map<String, dynamic>> citations,
-    required List<Map<String, dynamic>> sources,
-    required Map<String, dynamic> document,
-    required Map<String, dynamic> returnScope,
-    required this.committed,
-  }) : citations = List<Map<String, dynamic>>.unmodifiable(
-         citations.map(_freezeMap),
-       ),
-       sources = List<Map<String, dynamic>>.unmodifiable(
-         sources.map(_freezeMap),
-       ),
-       document = _freezeMap(document),
-       returnScope = _freezeMap(returnScope);
-
-  final String artifactId;
-
-  /// Public API domain (`CTH` or `BMP`), retained for Core export calls.
-  final String domainId;
-  final String hash;
-  final int sizeBytes;
-  final String workId;
-  final int version;
-  final String title;
-  final String markdown;
-  final String kind;
-  final String createdAt;
-  final String? parentArtifactId;
-  final String? parentSha256;
-  final String draftDigest;
-  final String? taskId;
-  final String contractId;
-  final String contractVersion;
-  final List<Map<String, dynamic>> citations;
-
-  /// Receipt sources are shown only after a successful fresh reopen.
-  final List<Map<String, dynamic>> sources;
-  final Map<String, dynamic> document;
-  final Map<String, dynamic> returnScope;
-  final bool committed;
-}
-
 class Sh04Snapshot {
-  Sh04Snapshot({
-    required this.scope,
-    required List<Sh04Export> exports,
-    List<String> failedDomains = const <String>[],
-    this.incomplete = false,
-    this.hasMore = false,
-    Map<String, String?> cursors = const <String, String?>{},
-    Map<String, bool> hasMoreByDomain = const <String, bool>{},
-    this.query = '',
-    this.contextSignature,
-  }) : exports = List<Sh04Export>.unmodifiable(exports),
-       failedDomains = List<String>.unmodifiable(failedDomains),
-       cursors = Map<String, String?>.unmodifiable(cursors),
-       hasMoreByDomain = Map<String, bool>.unmodifiable(hasMoreByDomain);
+  const Sh04Snapshot({required this.scope, required this.exports});
 
   final Sh04Scope scope;
   final List<Sh04Export> exports;
-  final List<String> failedDomains;
-  final bool incomplete;
-  final bool hasMore;
-  final Map<String, String?> cursors;
-  final Map<String, bool> hasMoreByDomain;
-  final String query;
-  final String? contextSignature;
 
   factory Sh04Snapshot.fromResponse(Map<String, dynamic> response) {
     if (response['ok'] != true || response['screen'] != 'SH-04') {
@@ -344,7 +256,8 @@ class _SharedProjection {
   }) {
     final projection = _asMap(value);
     if (projection == null ||
-        projection['contract'] != 'lumenis.shared.experience-row-projection' ||
+        projection['contract'] !=
+            'lumenis.shared.experience-row-projection' ||
         projection['version'] != 2 ||
         projection['read_allowed'] != true) {
       return null;
@@ -368,10 +281,8 @@ class _SharedProjection {
     }
     final assurance = _string(integrity['assurance']);
     if (assurance == null ||
-        !const {
-          'writer-authenticated',
-          'content-integrity-only',
-        }.contains(assurance)) {
+        !const {'writer-authenticated', 'content-integrity-only'}
+            .contains(assurance)) {
       return null;
     }
     final algorithm = _string(integrity['algorithm'])?.toLowerCase();
@@ -410,8 +321,7 @@ bool _projectionScopeMatches(Map<String, dynamic> raw, Sh04Scope scope) {
     _string(raw['focus_id']),
   ].whereType<String>().toList(growable: false);
   if (ids.length != 1) return false;
-  return (domain == scope.domain ||
-          (domain == 'ZBMP' && scope.domain == 'BMP')) &&
+  return (domain == scope.domain || (domain == 'ZBMP' && scope.domain == 'BMP')) &&
       ids.single == scope.focusId;
 }
 
@@ -426,40 +336,14 @@ String? _safeProjectionReference(Object? value) {
 String? _safeProjectionDigest(Object? value) {
   final digest = _string(value);
   if (digest == null || digest.length > 200) return null;
-  return RegExp(r'^[a-f0-9]{64}$').hasMatch(digest) ? digest : null;
+  return RegExp(r'^[a-f0-9]{64}$').hasMatch(digest)
+      ? digest
+      : null;
 }
 
 Map<String, dynamic>? _asMap(Object? value) {
   if (value is! Map) return null;
   return value.map((key, value) => MapEntry('$key', value));
-}
-
-Map<String, dynamic> _freezeMap(Map<String, dynamic> value) =>
-    Map<String, dynamic>.unmodifiable(
-      value.map((key, value) => MapEntry(key, _freezeJson(value))),
-    );
-
-Object? _freezeJson(Object? value) {
-  if (value is Map) {
-    final result = <String, dynamic>{};
-    for (final entry in value.entries) {
-      if (entry.key is! String) {
-        throw const FormatException('SavedWork JSON has a non-string key.');
-      }
-      result[entry.key as String] = _freezeJson(entry.value);
-    }
-    return Map<String, dynamic>.unmodifiable(result);
-  }
-  if (value is List) {
-    return List<Object?>.unmodifiable(value.map(_freezeJson));
-  }
-  if (value is num && !value.isFinite) {
-    throw const FormatException('SavedWork JSON has a non-finite number.');
-  }
-  if (value == null || value is String || value is bool || value is num) {
-    return value;
-  }
-  throw const FormatException('SavedWork JSON has an unsupported value.');
 }
 
 String? _string(Object? value) =>

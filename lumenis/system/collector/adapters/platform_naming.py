@@ -360,21 +360,17 @@ def _instagram_media_observations(raw_record: Dict[str, Any]) -> Optional[List[D
 
 
 def _wechat_media_observations(raw_record: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
-    """Map native article images and embed cues without inferring media content."""
-    observations = []
-    lists_observed = False
-    nonempty_seen = False
-    for key in ("images", "media_hints"):
-        values = raw_record.get(key)
-        if not isinstance(values, list):
-            continue
-        lists_observed = True
-        nonempty_seen = nonempty_seen or bool(values)
-        observations.extend(observation for value in values
-                            if (observation := _native_media_url_observation(value)) is not None)
+    """Map public article image URL/alt observations to the existing media_list."""
+    images = raw_record.get("images")
+    if not isinstance(images, list):
+        return None
+    observations = [
+        observation for image in images
+        if (observation := _native_media_url_observation(image)) is not None
+    ]
     if observations:
         return observations
-    return [] if lists_observed and not nonempty_seen else None
+    return [] if not images else None
 
 
 def _normalize_author_identity(value: Any) -> Optional[str]:
@@ -713,7 +709,7 @@ PLATFORM_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
         "author_id": "author_id", "author_name": "author_username",
         "title": "text", "content": "text",
         "published_at": "created_at", "url": "url",
-        "like_count": "favorite_count", "comment_count": "reply_count",
+        "like_count": "like_count", "comment_count": "reply_count",
         "share_count": "retweet_count", "view_count": "impression_count",
         "hashtag_list": "hashtag_list", "mention_list": "mention_list",
     },
@@ -778,11 +774,6 @@ def map_raw_to_normalized(raw_record: Dict[str, Any], platform: Optional[str] = 
         for norm_key, raw_key in mapping.items():
             if raw_key in raw_record:
                 normalized[norm_key] = raw_record[raw_key]
-            elif plat == "x" and norm_key == "like_count" and "like_count" in raw_record:
-                # Older normalized X records used this non-native key. Only
-                # use it when the native favorite_count key is absent; an
-                # explicit None or genuine zero from the native field wins.
-                normalized[norm_key] = raw_record["like_count"]
     elif plat and plat in CANONICAL_FROM_NATIVE:
         canonical = to_canonical_record(raw_record, plat)
         for normalized_key, canonical_key in (

@@ -6,11 +6,12 @@ Unit tests for agent_runtime.planner
 import sys
 import os
 import json
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from agent_runtime.planner import (
-    Planner, Plan, PlanStep, PlanMode,
+    Planner, Plan, PlanStep, PlanMode, RiskLevel,
 )
 
 
@@ -41,23 +42,23 @@ def _mock_ai_chat(system, user, model=None, temperature=0.1, max_tokens=1200, ti
             },
         ]
     }
-    return json.dumps(plan, ensure_ascii=False), "test-fixture-provider"
+    return json.dumps(plan, ensure_ascii=False), "zhipu"
 
 
 def _mock_ai_chat_empty(system, user, model=None, **kwargs):
     """Mock AI 返回空。"""
-    return None, "test-fixture-provider"
+    return None, "rule"
 
 
 def _mock_ai_chat_invalid_json(system, user, model=None, **kwargs):
     """Mock AI 返回无效 JSON。"""
-    return "这不是JSON", "test-fixture-provider"
+    return "这不是JSON", "zhipu"
 
 
 def _mock_ai_chat_with_wrapper(system, user, model=None, **kwargs):
     """Mock AI 返回带 markdown 包装的 JSON。"""
     plan = {"steps": [{"action": "test", "tool": "t", "params": {}, "expected_output": "o", "risk_level": "low"}]}
-    return f"```json\n{json.dumps(plan)}\n```", "test-fixture-provider"
+    return f"```json\n{json.dumps(plan)}\n```", "zhipu"
 
 
 class TestPlannerInit:
@@ -76,19 +77,17 @@ class TestPlanGeneration:
         plan = planner.plan("分析今日舆情", mode=PlanMode.ROUTINE)
         assert plan.goal == "分析今日舆情"
         assert plan.mode == "routine"
-        assert plan.model == ""
+        assert plan.model == "glm-4.5-air"
         assert len(plan.steps) == 3
         assert plan.steps[0].action == "查询今日笔记数据"
         assert plan.steps[0].tool == "db_query"
         assert plan.is_fallback is False
-        assert plan.token_usage == {}
-        assert plan.inference_receipt == {}
 
     def test_deep_plan(self):
         planner = Planner(ai_chat_func=_mock_ai_chat)
         plan = planner.plan("深度分析", mode=PlanMode.DEEP)
         assert plan.mode == "deep"
-        assert plan.model == ""
+        assert plan.model == "glm-5.3"
 
     def test_plan_step_structure(self):
         planner = Planner(ai_chat_func=_mock_ai_chat)
@@ -104,8 +103,7 @@ class TestPlanGeneration:
     def test_plan_max_steps(self):
         planner = Planner(ai_chat_func=_mock_ai_chat)
         plan = planner.plan("test", max_steps=2)
-        assert plan.steps == []
-        assert plan.is_fallback is True
+        assert len(plan.steps) <= 2
 
     def test_plan_id_unique(self):
         planner = Planner(ai_chat_func=_mock_ai_chat)
@@ -120,14 +118,14 @@ class TestFallbackPlanning:
         plan = planner.plan("test")
         assert plan.is_fallback is True
         assert "empty" in plan.fallback_reason.lower()
-        assert plan.steps == []
+        assert len(plan.steps) == 1
+        assert plan.steps[0].tool == "direct_execution"
 
     def test_invalid_json_fallback(self):
         planner = Planner(ai_chat_func=_mock_ai_chat_invalid_json)
         plan = planner.plan("test")
         assert plan.is_fallback is True
         assert "parse" in plan.fallback_reason.lower()
-        assert plan.steps == []
 
     def test_ai_exception_fallback(self):
         def raising_chat(system, user, **kwargs):
@@ -136,7 +134,6 @@ class TestFallbackPlanning:
         plan = planner.plan("test")
         assert plan.is_fallback is True
         assert "failed" in plan.fallback_reason.lower()
-        assert plan.steps == []
 
     def test_rule_based_mode(self):
         planner = Planner(ai_chat_func=_mock_ai_chat)

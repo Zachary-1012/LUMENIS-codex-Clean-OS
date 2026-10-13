@@ -32,28 +32,6 @@ logger = logging.getLogger(__name__)
 
 _X_READONLY_CDP_URL = "http://127.0.0.1:9226"
 
-_SAFE_X_WORKER_FAILURES = {
-    "READONLY_WORKER_NOT_REGISTERED": "X not_configured: read-only worker is not registered",
-    "READONLY_WORKER_NOT_CONFIGURED": "X not_configured: read-only worker is not configured",
-    "BROWSER_PROFILE_OWNER_UNAVAILABLE": "X not_configured: browser worker profile owner is unavailable",
-    "READONLY_WORKER_BOUNDARY_INVALID": "X blocked: read-only worker boundary is invalid",
-    "BROWSER_WORKER_KERNEL_OR_IDENTITY_UNVERIFIED": "X blocked: browser worker identity or kernel is unverified",
-    "PROTECTED_PROFILE_FORBIDDEN": "X blocked: protected browser profile is forbidden",
-    "READONLY_WORKER_PROFILE_UNAVAILABLE": "X provider_unavailable: read-only worker profile is unavailable",
-    "READONLY_WORKER_PROFILE_OR_MODE_UNAVAILABLE": "X provider_unavailable: read-only worker profile or mode is unavailable",
-    "READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE": "X provider_unavailable: read-only worker profile, mode, or kernel is unavailable",
-    "BROWSER_WORKER_PROFILE_OR_MODE_UNAVAILABLE": "X provider_unavailable: browser worker profile or mode is unavailable",
-}
-
-_SAFE_X_CONFIGURATION_FAILURES = {
-    "X_READONLY_CDP_URL must be the fixed loopback worker endpoint":
-        "X not_configured: read-only worker endpoint is not configured",
-    "X_READONLY worker requires explicit account opt-in":
-        "X not_configured: read-only worker requires explicit account opt-in",
-    "X_READONLY worker profile is not bound to the configured loopback port":
-        "X provider_unavailable: read-only worker profile is unavailable",
-}
-
 
 def _configured_browser_worker_url() -> str:
     """Require the explicitly opted-in, process-bound X read-only worker."""
@@ -103,55 +81,6 @@ def _x_page_failure(url: str, _body: str = "", error: str = "", *, title: str = 
     if any(value in browser_error for value in ("net::err_", "timed out", "timeout", "connection", "dns", "network", "无法访问此网站")):
         return "X network error"
     return ""
-
-
-def _safe_x_exception_class(exc: Exception) -> str:
-    name = type(exc).__name__
-    return name if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", name) else "Exception"
-
-
-def _safe_x_worker_failure(exc: Exception) -> str:
-    """Map only known worker codes and fixed local configuration errors."""
-    if not isinstance(exc, RuntimeError):
-        return ""
-    args = getattr(exc, "args", ())
-    message = args[0] if len(args) == 1 and isinstance(args[0], str) else ""
-    match = re.match(r"^([A-Z][A-Z0-9_]*)(?::|\s|$)", message)
-    if match:
-        failure = _SAFE_X_WORKER_FAILURES.get(match.group(1))
-        if failure:
-            return failure
-    return _SAFE_X_CONFIGURATION_FAILURES.get(message, "")
-
-
-def _safe_x_browser_failure(exc: Exception, *, url: str = "", title: str = "",
-                            classify_navigation_error: bool = False) -> str:
-    """Return a classified X failure without exposing arbitrary exception text."""
-    worker_failure = _safe_x_worker_failure(exc)
-    if worker_failure:
-        return worker_failure
-
-    page_failure = _x_page_failure(url, title=title)
-    if page_failure:
-        return page_failure
-
-    browser_error = ""
-    if classify_navigation_error:
-        exception_type = type(exc)
-        exception_module = getattr(exception_type, "__module__", "")
-        if isinstance(exception_module, str) and exception_module.startswith("playwright."):
-            browser_error = str(exc)
-        elif isinstance(exc, RuntimeError):
-            args = getattr(exc, "args", ())
-            message = args[0] if len(args) == 1 and isinstance(args[0], str) else ""
-            if re.search(r"\bnet::ERR_[A-Z0-9_]+\b", message, flags=re.IGNORECASE):
-                browser_error = message
-    if browser_error:
-        page_failure = _x_page_failure(url, error=browser_error, title=title)
-        if page_failure:
-            return page_failure
-
-    return f"X collection_error: {_safe_x_exception_class(exc)}"
 
 
 class XAdapter(BaseAdapter):
@@ -265,10 +194,7 @@ class XAdapter(BaseAdapter):
             try:
                 page.goto(url, wait_until="domcontentloaded", timeout=30000)
             except Exception as exc:
-                message = _safe_x_browser_failure(
-                    exc, url=str(getattr(page, "url", "") or ""),
-                    classify_navigation_error=True,
-                )
+                message = _x_page_failure("", "", str(exc)) or f"X network error: {exc}"
                 return attach_continuation_metadata(
                     AdapterResult(success=False, error=message),
                 )
@@ -349,18 +275,11 @@ class XAdapter(BaseAdapter):
             )
 
         except Exception as e:
-            exception_class = _safe_x_exception_class(e)
-            safe_display_exception = RuntimeError(
-                f"REDACTED_ORIGINAL_EXCEPTION:{exception_class}"
-            )
-            logger.error(
-                "X 浏览器采集异常 error_type=%s",
-                exception_class,
-                exc_info=(RuntimeError, safe_display_exception, e.__traceback__),
-            )
-            failure = _safe_x_browser_failure(e, url=str(getattr(page, "url", "") or ""))
+            logger.exception("X 浏览器采集异常")
+            failure = _x_page_failure("", "", str(e))
             return attach_continuation_metadata(
-                AdapterResult(success=False, notes=notes, error=failure,
+                AdapterResult(success=False, notes=notes,
+                              error=failure or f"X collection error: {e}",
                               raw_count=len(visited_tweet_ids)),
             )
         finally:
@@ -683,32 +602,23 @@ class XAdapter(BaseAdapter):
             except Exception:
                 pass
 
-    def _open_readonly_page(self, url: str, wait_seconds: float, *, safe_error_classification: bool = False):
+    def _open_readonly_page(self, url: str, wait_seconds: float):
         worker = None
         page = None
-        failure_stage = "worker_setup"
         try:
             worker = _new_browser_worker()
             worker.connect()
             inject_into_context(worker._context, "x")
             page = worker.new_page(stealth=False)
-            failure_stage = "navigation"
             page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            failure_stage = "post_navigation"
             worker.pause(wait_seconds, wait_seconds)
             page_title = page.title()
             failure = _x_page_failure(str(getattr(page, "url", "") or ""), title=page_title)
             return worker, page, failure
         except Exception as exc:
-            page_url = str(getattr(page, "url", "") or "")
             self._close_worker_page(worker, page)
-            if safe_error_classification:
-                failure = _safe_x_browser_failure(
-                    exc, url=page_url, classify_navigation_error=(failure_stage == "navigation"),
-                )
-            else:
-                failure = _x_page_failure(page_url, "", str(exc)) or "X network error"
-            return None, None, failure
+            failure = _x_page_failure(str(getattr(page, "url", "") or ""), "", str(exc))
+            return None, None, failure or "X network error"
 
     def detail(self, tweet_id: str) -> AdapterResult:
         """Read a post through the explicitly configured X read-only worker."""
@@ -718,7 +628,7 @@ class XAdapter(BaseAdapter):
         requested_tweet_id = self._status_id_from_url(url)
         if not requested_tweet_id:
             return AdapterResult(success=False, error="X detail requires the exact observed numeric post ID")
-        worker, page, failure = self._open_readonly_page(url, 4.0, safe_error_classification=True)
+        worker, page, failure = self._open_readonly_page(url, 4.0)
         if failure:
             self._close_worker_page(worker, page)
             return AdapterResult(success=False, error=failure)
@@ -752,8 +662,8 @@ class XAdapter(BaseAdapter):
                 return AdapterResult(success=True, notes=matching_notes, raw_count=1)
             return AdapterResult(success=False, error="X detail identity mismatch: target article was not unique by timestamp permalink ID")
         except Exception as exc:
-            failure = _safe_x_browser_failure(exc, url=str(getattr(page, "url", "") or ""))
-            return AdapterResult(success=False, error=failure)
+            failure = _x_page_failure(str(getattr(page, "url", "") or ""), "", str(exc))
+            return AdapterResult(success=False, error=failure or "X detail collection failed")
         finally:
             self._close_worker_page(worker, page)
 

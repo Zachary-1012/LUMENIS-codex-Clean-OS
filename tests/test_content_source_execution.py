@@ -4,10 +4,10 @@ Account scope reads below are explicitly labeled fixtures. Permission audit,
 exact approval, Action Firewall, and Effect Fence remain the real in-memory
 owners; these tests are not account or user-work acceptance.
 """
+from dataclasses import replace
+from datetime import datetime, timedelta
 import hashlib
 import json
-from dataclasses import replace
-from datetime import timedelta
 
 import pytest
 
@@ -45,22 +45,19 @@ def source_import_boundary(monkeypatch):
         "calls": [],
     }
 
-    def actor_has_scope(actor_id, product_id, module, action, *, connection=None):
+    def actor_has_scope(actor_id, product_id, module, action):
         reads["calls"].append((actor_id, product_id, module, action))
         return reads["active"] and actor_id == 1 and module == "content" and action == "write"
 
     monkeypatch.setattr(permission_module, "_actor_has_scope_action", actor_has_scope)
-    monkeypatch.setattr(
-        permission_module, "_load_actor_scope_role",
-        lambda _actor, *, connection=None: "user",
-    )
+    monkeypatch.setattr(permission_module, "_load_actor_scope_role", lambda _actor: "user")
     monkeypatch.setattr(
         permission_module, "_registered_resource_scope_exists", lambda *_a, **_k: True,
     )
     monkeypatch.setattr(
         permission_module,
         "_load_actor_scope_grants",
-        lambda _actor, *, connection=None: [
+        lambda _actor: [
             {
                 "product_id": product,
                 "module": "content",
@@ -149,173 +146,6 @@ def _track_persistent_bridges(monkeypatch):
         lambda ctx: calls["evidence"].append(ctx) or {"ok": True},
     )
     return calls
-
-
-@pytest.fixture
-def shared_source_boundary(source_import_boundary, monkeypatch):
-    _legacy_gate, fence, skill, _legacy_upload, reads = source_import_boundary
-    gate = permission_module.PermissionGate(
-        enabled_permissions={permission_module.PermissionLevel.READ},
-    )
-    monkeypatch.setattr(permission_module, "get_permission_gate", lambda: gate)
-    monkeypatch.setattr(security, "get_permission_gate", lambda: gate)
-    monkeypatch.setattr(permission_module, "_load_actor_scope_grants", lambda _actor, *, connection=None: [{
-        "product_id": "SHARED", "module": "content", "action": "write",
-        "data_scope": None, "time_range": None,
-    }])
-    upload = permission_module.make_shared_content_source_import(
-        {"id": 1}, {"scope_kind": "shared_workspace", "version": 1},
-        filename="draft.txt", size_bytes=3,
-        body_sha256=hashlib.sha256(b"abc").hexdigest(), gate=gate,
-    )
-    return gate, fence, skill, upload, reads
-
-
-def _confirm_shared(gate, upload, *, principal=None):
-    actor = {"id": upload.actor_id} if upload.actor_id is not None else None
-    pending = permission_module.prepare_content_source_import_confirmation(
-        actor, upload, principal=principal, gate=gate,
-    )
-    assert pending["allowed"] is True
-    approved = permission_module.confirm_content_source_import(
-        actor, pending["confirmation_id"], domain_id=None,
-        workspace_scope={"scope_kind": "shared_workspace", "version": 1},
-        confirmed=True, principal=principal, gate=gate,
-    )
-    assert approved.allowed is True
-    assert approved.approval_token is None
-
-
-def test_confirmed_shared_import_runs_without_domain_role_or_general_write(
-    shared_source_boundary, monkeypatch,
-):
-    gate, _fence, skill, upload, reads = shared_source_boundary
-    _confirm_shared(gate, upload)
-    persistence = _track_persistent_bridges(monkeypatch)
-    result = _run(gate, skill, upload, lambda ctx: {
-        "ok": True, "artifact_id": "isolated-shared-staged-result",
-    }, domain=None, product="SHARED", permission_role=None)
-
-    assert result.status is execution.ExecutionStatus.COMPLETED
-    assert result.domain is None and result.product == "SHARED"
-    assert result.permission_result["verification_state"] == "verified"
-    assert result.permission_result["approval_token"] is None
-    assert result.effect_fence_result["target"].startswith("content-source-import:shared-workspace:v1:")
-    assert not gate.has_permission(permission_module.PermissionLevel.COMMIT)
-    assert all(call[1:4] == ("SHARED", "content", "write") for call in reads["calls"])
-    assert persistence == {"trace": [result], "evidence": [result]}
-
-
-@pytest.mark.parametrize("changes", [
-    {"domain": "shared"}, {"domain": "cth"}, {"product": "SYSTEM"},
-    {"permission_role": "system_writer"}, {"user_id": 2},
-    {"action_type": execution.ActionType.COMMIT},
-])
-def test_shared_import_context_changes_cannot_use_the_private_grant(
-    shared_source_boundary, monkeypatch, changes,
-):
-    gate, _fence, skill, upload, _reads = shared_source_boundary
-    _confirm_shared(gate, upload)
-    persistence = _track_persistent_bridges(monkeypatch)
-    calls = []
-    result = _run(gate, skill, upload, lambda ctx: calls.append(ctx), **{
-        "domain": None, "product": "SHARED", "permission_role": None, **changes,
-    })
-
-    assert result.status is execution.ExecutionStatus.REJECTED
-    assert calls == []
-    assert persistence == {"trace": [], "evidence": []}
-
-
-def test_shared_scope_revocation_after_fence_prevents_handler(
-    shared_source_boundary, monkeypatch,
-):
-    gate, _fence, skill, upload, reads = shared_source_boundary
-    _confirm_shared(gate, upload)
-    persistence = _track_persistent_bridges(monkeypatch)
-    original = execution.effect_fence
-
-    def revoke_scope(ctx):
-        receipt = original(ctx)
-        reads["active"] = False
-        return receipt
-
-    monkeypatch.setattr(execution, "effect_fence", revoke_scope)
-    calls = []
-    result = _run(gate, skill, upload, lambda ctx: calls.append(ctx),
-                  domain=None, product="SHARED", permission_role=None)
-
-    assert result.status is execution.ExecutionStatus.REJECTED
-    assert calls == []
-    assert persistence == {"trace": [], "evidence": []}
-
-
-def test_unconfirmed_shared_descriptor_has_no_generic_write_fallback(
-    shared_source_boundary, monkeypatch,
-):
-    gate, _fence, skill, upload, _reads = shared_source_boundary
-    persistence = _track_persistent_bridges(monkeypatch)
-    calls = []
-    result = _run(gate, skill, upload, lambda ctx: calls.append(ctx),
-                  domain=None, product="SHARED", permission_role=None)
-
-    assert result.status is execution.ExecutionStatus.REJECTED
-    assert calls == []
-    assert persistence == {"trace": [], "evidence": []}
-
-
-def test_unverified_shared_permission_receipt_never_reaches_handler(
-    shared_source_boundary, monkeypatch,
-):
-    gate, _fence, skill, upload, _reads = shared_source_boundary
-    _confirm_shared(gate, upload)
-    persistence = _track_persistent_bridges(monkeypatch)
-    check = security.check_content_source_import_permission
-
-    def unverified_receipt(*args, **kwargs):
-        return replace(check(*args, **kwargs), verification_state="unavailable")
-
-    monkeypatch.setattr(security, "check_content_source_import_permission", unverified_receipt)
-    calls = []
-    result = _run(gate, skill, upload, lambda ctx: calls.append(ctx),
-                  domain=None, product="SHARED", permission_role=None)
-
-    assert result.status is execution.ExecutionStatus.REJECTED
-    assert result.permission_result["allowed"] is False
-    assert result.permission_result["code"] == "PERMISSION_UNAVAILABLE"
-    assert result.permission_result["verification_state"] == "unavailable"
-    assert calls == []
-    assert persistence == {"trace": [], "evidence": []}
-
-
-def test_current_local_shared_principal_uses_the_same_private_confirmation(
-    shared_source_boundary, monkeypatch,
-):
-    from flask import Flask
-
-    gate, _fence, skill, _account_upload, _reads = shared_source_boundary
-    persistence = _track_persistent_bridges(monkeypatch)
-    app = Flask(__name__)
-    app.config["LUMENIS_OPEN_WORKSPACE"] = True
-    with app.test_request_context("/", environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
-        principal = permission_module.resolve_local_workspace_principal(action="write")
-        upload = permission_module.make_shared_content_source_import(
-            None, {"scope_kind": "shared_workspace", "version": 1},
-            filename="draft.txt", size_bytes=3,
-            body_sha256=hashlib.sha256(b"abc").hexdigest(),
-            principal=principal, gate=gate,
-        )
-        _confirm_shared(gate, upload, principal=principal)
-        result = _run(gate, skill, upload, lambda _ctx: {
-            "ok": True, "artifact_id": "isolated-local-shared-staged-result",
-        }, domain=None, product="SHARED", permission_role=None,
-            user_id=None, workspace_principal=principal)
-
-    assert result.status is execution.ExecutionStatus.COMPLETED
-    assert result.permission_result["caller"] == "workspace:local"
-    assert result.permission_result["approval_token"] is None
-    assert "workspace_principal" not in result.to_dict()
-    assert persistence == {"trace": [result], "evidence": [result]}
 
 
 def test_unapproved_import_rejects_without_handler_evidence_or_trace(
@@ -437,7 +267,7 @@ def test_descriptor_replacement_after_fence_never_reaches_handler(
 def test_success_consumes_approval_in_handler_without_post_handler_recheck(
     source_import_boundary, monkeypatch,
 ):
-    gate, _fence, skill, upload, _reads = source_import_boundary
+    gate, fence, skill, upload, _reads = source_import_boundary
     resource, token = _approve(gate, upload)
     persistence = _track_persistent_bridges(monkeypatch)
     permission_calls = []
@@ -530,8 +360,7 @@ def test_expired_exact_approval_never_invokes_handler_or_writes_trace(
 ):
     gate, _fence, skill, upload, _reads = source_import_boundary
     _resource, token = _approve(gate, upload)
-    approval = gate._approvals[token]
-    approval.expires_at -= timedelta(days=1)
+    gate._approvals[token].expires_at = datetime.now() - timedelta(seconds=1)
     persistence = _track_persistent_bridges(monkeypatch)
     handler_calls = []
 
@@ -540,62 +369,3 @@ def test_expired_exact_approval_never_invokes_handler_or_writes_trace(
     assert result.status is execution.ExecutionStatus.REJECTED
     assert handler_calls == []
     assert persistence == {"trace": [], "evidence": []}
-
-
-def test_effect_finalization_failure_retains_result_without_claiming_completion(
-    source_import_boundary, monkeypatch, caplog,
-):
-    gate, fence, skill, upload, _reads = source_import_boundary
-    _approve(gate, upload)
-    persistence = _track_persistent_bridges(monkeypatch)
-    payload = {"status": "completed", "artifact": {"id": "isolated-staged-result"}}
-
-    def failed_completion(*_args, **_kwargs):
-        raise RuntimeError("synthetic-private-effect-error")
-
-    monkeypatch.setattr(fence, "complete", failed_completion)
-    result = _run(gate, skill, upload, lambda _ctx: payload)
-
-    assert result.status is execution.ExecutionStatus.FAILED
-    assert result.error == "EFFECT_FENCE_FINALIZATION_FAILED"
-    assert result.execute_result["result"] is payload
-    assert result.effect_fence_result["retry_safe"] is False
-    assert result.evaluation["success"] is False
-    assert result.evaluation["validation_status"] == "failed_effect_fence"
-    assert persistence == {"trace": [], "evidence": []}
-    assert "synthetic-private-effect-error" not in caplog.text
-
-
-@pytest.mark.parametrize("user_role", ["user", "owner"])
-@pytest.mark.parametrize("domain,product", [
-    ("missing", "MISSING"),
-    ("system", "SYSTEM"),
-    (None, "MISSING"),
-    ("missing", "SHARED"),
-])
-def test_unrecognized_context_cannot_match_a_null_descriptor_domain(
-    monkeypatch, user_role, domain, product,
-):
-    """Context validation only; no Scope, approval, runtime or Artifact claim."""
-    upload = permission_module.ContentSourceImport(
-        actor_id=1, domain_id=None, subject_id=None, brand_focus_id=None,
-        global_scope=False, filename="source.mp4", size_bytes=3,
-        body_sha256=hashlib.sha256(b"abc").hexdigest(),
-    )
-    skill = execution.SkillRuntimeInfo(
-        skill_id="shared.content_project", product="SHARED", enabled=True,
-    )
-    context = execution.SkillExecutionContext(
-        skill_id=skill.skill_id, user_id=1, action_type=execution.ActionType.WRITE,
-        domain=domain, product=product, content_source_import=upload,
-    )
-
-    def unexpected_permission_call(*_args, **_kwargs):
-        pytest.fail("unrecognized context reached the canonical import checker")
-
-    monkeypatch.setattr(
-        security, "check_content_source_import_permission", unexpected_permission_call,
-    )
-    result = execution.check_permission(context, user_role=user_role, skill_info=skill)
-    assert result["allowed"] is False
-    assert result["code"] in {"CONTENT_SOURCE_CONTEXT_MISMATCH", "INSUFFICIENT_ROLE"}

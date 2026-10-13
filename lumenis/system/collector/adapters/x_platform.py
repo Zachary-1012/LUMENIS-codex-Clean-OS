@@ -10,12 +10,6 @@ from .registry import register_adapter
 
 logger = logging.getLogger(__name__)
 
-
-def _safe_x_exception_class(exc: Exception) -> str:
-    name = type(exc).__name__
-    return name if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", name) else "Exception"
-
-
 _TERMINAL_X_DETAIL_STATES = frozenset({
     "SESSION_EXPIRED", "RISK_WARNING", "BLOCKED", "PROVIDER_UNAVAILABLE",
     "NOT_CONFIGURED", "NOT_SUPPORTED",
@@ -44,23 +38,13 @@ class XAdapter(BasePlatformAdapter):
             from lumenis.adapters.x_platform import XAdapter as V4XAdapter
             return V4XAdapter()
         except Exception as exc:
-            raise RuntimeError(
-                f"X backend unavailable: {_safe_x_exception_class(exc)}"
-            ) from None
+            raise RuntimeError(f"无法加载 v4 X 采集引擎: {exc}") from exc
 
     @staticmethod
     def _v4_status_to_main(success: bool, notes: list, error: str) -> CollectionStatus:
         if success:
             return CollectionStatus.SUCCESS if notes else CollectionStatus.NO_NEW_DATA
         err_lower = (error or "").lower()
-        if err_lower.startswith("x not_configured:"):
-            return CollectionStatus.NOT_CONFIGURED
-        if err_lower.startswith("x blocked:"):
-            return CollectionStatus.BLOCKED
-        if err_lower.startswith("x provider_unavailable:"):
-            return CollectionStatus.PROVIDER_UNAVAILABLE
-        if err_lower.startswith("x collection_error:"):
-            return CollectionStatus.COLLECT_ERROR
         if any(k in err_lower for k in ("not supported", "unsupported", "review required")):
             return CollectionStatus.NOT_SUPPORTED
         if any(k in err_lower for k in ("not configured", "not_configured", "未配置")):
@@ -149,14 +133,6 @@ class XAdapter(BasePlatformAdapter):
     @staticmethod
     def _detail_failure_state(error: Any) -> str:
         text = str(error or "").casefold()
-        if text.startswith("x not_configured:"):
-            return "NOT_CONFIGURED"
-        if text.startswith("x blocked:"):
-            return "BLOCKED"
-        if text.startswith("x provider_unavailable:"):
-            return "PROVIDER_UNAVAILABLE"
-        if text.startswith("x collection_error:"):
-            return "DETAIL_FAILED"
         if "identity mismatch" in text or "identity_mismatch" in text:
             return "IDENTITY_MISMATCH"
         if any(marker in text for marker in ("login", "session", "cookie", "登录", "未登录", "失效")):
@@ -465,14 +441,6 @@ class XAdapter(BasePlatformAdapter):
             if result.success and items and detail_stop_reason is None and verified_detail_bodies == 0:
                 overall_status = CollectionStatus.COLLECT_ERROR
                 overall_message = "X search results contained no identity-verified native post text"
-            if not result.success:
-                body_completeness = "NOT_OBSERVED"
-            elif not items:
-                body_completeness = "NO_RESULTS"
-            elif detail_incomplete or body_incomplete:
-                body_completeness = "PARTIAL"
-            else:
-                body_completeness = "DOM_COMPLETENESS_UNKNOWN"
             return CollectionResult(
                 status=overall_status,
                 platform=self.platform,
@@ -487,25 +455,20 @@ class XAdapter(BasePlatformAdapter):
                         **detail_metadata,
                         **detail_counts,
                         "stop_reason": detail_stop_reason,
-                        "body_completeness": body_completeness,
+                        "body_completeness": "NO_RESULTS" if not items else (
+                            "PARTIAL" if detail_incomplete or body_incomplete
+                            else "DOM_COMPLETENESS_UNKNOWN"
+                        ),
                         "media_semantics": "URL_HINTS_ONLY_NO_BYTES_OR_ARTIFACT",
                     },
                 },
             )
         except Exception as exc:
-            exception_class = _safe_x_exception_class(exc)
-            safe_display_exception = RuntimeError(
-                f"REDACTED_ORIGINAL_EXCEPTION:{exception_class}"
-            )
-            logger.error(
-                "X 主链路采集失败 error_type=%s",
-                exception_class,
-                exc_info=(RuntimeError, safe_display_exception, exc.__traceback__),
-            )
+            logger.exception("X 主链路采集失败")
             return CollectionResult(
                 status=CollectionStatus.COLLECT_ERROR,
                 platform=self.platform,
-                message=f"X collection_error: {exception_class}",
+                message=str(exc),
                 metadata={"continuation": self._continuation_metadata(
                     checkpoint_used, checkpoint_key, checkpoint_id_count,
                 )},
@@ -528,20 +491,7 @@ class XAdapter(BasePlatformAdapter):
             items = self._v4_notes_to_items(result.notes)
             return CollectionResult(status=status, platform=self.platform, items=items, raw_count=result.raw_count, message=result.error or "")
         except Exception as exc:
-            exception_class = _safe_x_exception_class(exc)
-            safe_display_exception = RuntimeError(
-                f"REDACTED_ORIGINAL_EXCEPTION:{exception_class}"
-            )
-            logger.error(
-                "X delegated operation failed error_type=%s",
-                exception_class,
-                exc_info=(RuntimeError, safe_display_exception, exc.__traceback__),
-            )
-            return CollectionResult(
-                status=CollectionStatus.COLLECT_ERROR,
-                platform=self.platform,
-                message=f"X collection_error: {exception_class}",
-            )
+            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, platform=self.platform, message=str(exc))
 
     def health_check(self) -> CollectionResult:
         """Check the existing vault's non-secret X authentication metadata."""

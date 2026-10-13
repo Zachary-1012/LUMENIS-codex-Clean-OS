@@ -45,45 +45,6 @@ def test_fresh_adapter_reopens_task_plan_context_and_cancel(durable):
     assert fresh.list_tasks(status="cancelled")[0]["task_id"] == task
 
 
-def test_fresh_adapter_reopens_gateway_inference_receipt_metrics_and_provenance(durable):
-    _engine, gate, adapter = durable
-    task = adapter.create_task("resume owned analysis", agent_id="agent-analysis")
-    receipt = {
-        "provider": "owned",
-        "model_id": "lumenis-owned-model",
-        "model_revision": "revision-7",
-        "run_id": "run-7",
-        "request_digest": "a" * 64,
-        "source_binding_sha256": "b" * 64,
-        "admission_audit_hashes": {"permission": "c" * 64},
-        "source_evidence_refs": ["evidence-1", "evidence-2"],
-        "prompt_tokens": 31,
-        "completion_tokens": 17,
-        "total_tokens": 48,
-        "context_window_tokens": 4096,
-        "output_token_limit": 64,
-    }
-    adapter.checkpoint(
-        task,
-        0,
-        "executing",
-        plan_snapshot={
-            "plan_id": "plan-owned-7",
-            "steps": [{"step_id": "step-0", "description": "analyze"}],
-            "inference_receipt": receipt,
-        },
-        agent_id="agent-analysis",
-    )
-
-    fresh = DurableExecutionAdapter(task_engine=TaskEngine(), permission_gate=gate)
-    reopened = fresh.recover(task)
-    checkpoint = reopened["last_checkpoint"]
-
-    assert reopened["source"] == "db"
-    assert checkpoint["metadata"]["resumable"] is True
-    assert checkpoint["plan_snapshot"]["inference_receipt"] == receipt
-
-
 def test_permission_denial_is_not_memory_success(durable):
     engine, gate, adapter = durable
     gate.allowed = False

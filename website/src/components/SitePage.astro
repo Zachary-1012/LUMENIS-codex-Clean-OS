@@ -1,9 +1,6 @@
 ---
 import { copy, locales, type Locale } from "../i18n";
 import { publicDestinations } from "../site-config.mjs";
-import PaintedIcon from "./PaintedIcon.astro";
-import CreativePaths from "./CreativePaths.astro";
-import OperationVideo from "./OperationVideo.astro";
 import "../styles/site.css";
 
 interface Props {
@@ -106,12 +103,12 @@ const workflows = [
     <header class="site-header">
       <div class="site-header__top wrap">
         <a class="wordmark" href={localePath[locale]} aria-label={c.productName}>
-          <svg class="wordmark__mark" viewBox="0 0 30 30" aria-hidden="true" focusable="false">
-            <g stroke-width="1.35">
-              <path d="M24.3777697427 20.7495595182 A11 11 0 1 1 24.1818406332 8.9424590314" />
-              <path d="M19.0717816262 20.6939085335 A7 7 0 1 1 21.3534329537 12.0616518751" />
-            </g>
-            <circle cx="15" cy="15" r="1.5" />
+          <svg class="wordmark__mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+            <path d="M20 4v13m0 0 11 7M20 17 9 25m11-8v19" />
+            <circle cx="20" cy="5" r="2.5" />
+            <circle cx="9" cy="25" r="2.5" />
+            <circle cx="31" cy="24" r="2.5" />
+            <circle cx="20" cy="35" r="2.5" />
           </svg>
           <span>{c.productName}</span>
         </a>
@@ -162,24 +159,32 @@ const workflows = [
             </p>
           </div>
 
-          <figure class="hero-field" aria-labelledby="hero-visual-caption">
-            <div class="hero-paper" aria-hidden="true">
-              <div class="hero-paper__research"><PaintedIcon kind="research" /></div>
-              <svg class="hero-paper__path" viewBox="0 0 460 300" fill="none"><path d="M91 81C226 2 388 52 360 177S170 320 101 213"/><path d="m91 220 11-10 10 11"/></svg>
-              <div class="hero-paper__document"><PaintedIcon kind="document" /></div>
-              <div class="hero-paper__video"><PaintedIcon kind="video" /></div>
-              <div class="hero-paper__audio"><PaintedIcon kind="audio" /></div>
-              <span class="hero-field__label hero-field__label--source">{c.hero.flowLabels.material}</span>
-              <span class="hero-field__label hero-field__label--trace">{c.hero.flowLabels.delivery}</span>
-              <span class="hero-field__label hero-field__label--return">{c.hero.flowLabels.feedback}</span>
+          <figure class="hero-field" data-optical-field aria-labelledby="hero-visual-caption">
+            <div class="hero-field__stage" aria-hidden="true">
+              <div class="hero-field__contour hero-field__contour--one"></div>
+              <div class="hero-field__contour hero-field__contour--two"></div>
+              <div class="hero-field__glass">
+                <span class="hero-field__lens"></span>
+                <svg class="hero-field__trace" viewBox="0 0 440 360" fill="none">
+                  <path d="M57 252C105 252 102 102 177 102S235 252 299 252 337 118 391 118" />
+                  <path d="M58 269C127 269 126 122 178 122S235 269 298 269 345 138 391 138" />
+                  <circle cx="58" cy="260" r="11" />
+                  <circle cx="177" cy="112" r="15" />
+                  <circle cx="299" cy="260" r="11" />
+                  <circle cx="391" cy="128" r="8" />
+                </svg>
+                <span class="hero-field__label hero-field__label--source">{c.hero.flowLabels.material}</span>
+                <span class="hero-field__label hero-field__label--trace">{c.hero.flowLabels.delivery}</span>
+                <span class="hero-field__label hero-field__label--return">{c.hero.flowLabels.feedback}</span>
+              </div>
+              <span class="hero-field__trail hero-field__trail--one"></span>
+              <span class="hero-field__trail hero-field__trail--two"></span>
+              <span class="hero-field__glint"></span>
             </div>
             <figcaption id="hero-visual-caption">{c.hero.diagramLabel}</figcaption>
           </figure>
         </div>
       </section>
-
-      <CreativePaths locale={locale} />
-      <OperationVideo locale={locale} />
 
       <section class="sequence-section" aria-labelledby="sequence-title">
         <div class="section-heading wrap">
@@ -493,12 +498,10 @@ const workflows = [
       <div class="wrap site-footer__inner">
         <div>
           <a class="wordmark wordmark--footer" href={localePath[locale]}>
-            <svg class="wordmark__mark" viewBox="0 0 30 30" aria-hidden="true" focusable="false">
-              <g stroke-width="1.35">
-                <path d="M24.3777697427 20.7495595182 A11 11 0 1 1 24.1818406332 8.9424590314" />
-                <path d="M19.0717816262 20.6939085335 A7 7 0 1 1 21.3534329537 12.0616518751" />
-              </g>
-              <circle cx="15" cy="15" r="1.5" />
+            <svg class="wordmark__mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+              <path d="M20 4v13m0 0 11 7M20 17 9 25m11-8v19" />
+              <circle cx="20" cy="5" r="2.5" /><circle cx="9" cy="25" r="2.5" />
+              <circle cx="31" cy="24" r="2.5" /><circle cx="20" cy="35" r="2.5" />
             </svg>
             <span>{c.footer.product}</span>
           </a>

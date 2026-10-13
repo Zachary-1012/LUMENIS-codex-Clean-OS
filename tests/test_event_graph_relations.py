@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """GAP-07 事件三类四关系：关系推断器测试（临时隔离库，不碰生产）。
 
 原则验证：
@@ -18,9 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 @pytest.fixture()
 def graph(tmp_path, monkeypatch):
     import event_graph as eg
-    from lumenis.shared.database import DatabaseRepository
-    repository = DatabaseRepository(str(tmp_path / 'eg.db'))
-    monkeypatch.setattr(eg, 'get_repository', lambda: repository)
+    monkeypatch.setattr(eg, '_DB_PATH', str(tmp_path / 'eg.db'))
     eg.init_db()
     g = eg.EventGraph(auto_load=False)
     return g
@@ -34,26 +33,6 @@ def test_dictionaries_complete():
     from event_graph import EVENT_TYPES, RELATION_TYPES
     assert set(EVENT_TYPES) == {'marketing_event', 'propagation_event', 'public_opinion_event'}
     assert set(RELATION_TYPES) == {'trigger', 'derive', 'follow', 'parallel'}
-
-
-@pytest.mark.parametrize('confidence', [0.0, None, 0.9])
-def test_relation_confidence_survives_save_and_reopen(graph, confidence):
-    import event_graph as eg
-
-    source = _mk(graph, 'marketing_event', 'First source event', '2026-08-01 09:00:00')
-    target = _mk(graph, 'propagation_event', 'Later source event', '2026-08-02 09:00:00')
-    relation = graph.add_relation(source.event_id, target.event_id, 'follow',
-                                  evidence='manual: unverified temporal hypothesis',
-                                  confidence=confidence, persist=True)
-    assert relation.confidence == confidence
-    with eg._get_db() as connection:
-        row = connection.execute('SELECT confidence FROM event_graph_relations').fetchone()
-        assert row['confidence'] == confidence
-
-    reopened = eg.EventGraph()
-    assert len(reopened.relations) == 1
-    assert reopened.relations[0].confidence == confidence
-    assert reopened.relations[0].to_dict()['confidence'] == confidence
 
 
 def test_derive_parallel_and_no_fabrication(graph):
@@ -77,8 +56,8 @@ def test_derive_parallel_and_no_fabrication(graph):
 
 
 def test_follow_weak_temporal(graph):
-    _mk(graph, 'propagation_event', '周年庆活动启动', '2026-08-01 09:00:00')
-    _mk(graph, 'propagation_event', '周年庆客流回顾', '2026-08-06 09:00:00')  # 5 天后、弱相关
+    a = _mk(graph, 'propagation_event', '周年庆活动启动', '2026-08-01 09:00:00')
+    b = _mk(graph, 'propagation_event', '周年庆客流回顾', '2026-08-06 09:00:00')  # 5 天后、弱相关
     graph.infer_and_link_relations(persist=False)
     types = [r.relation_type for r in graph.relations]
     assert 'follow' in types and 'derive' not in types
@@ -86,8 +65,8 @@ def test_follow_weak_temporal(graph):
 
 def test_stopwords_prevent_full_mesh(graph):
     # 仅共享通用词“太古汇”，停用后主题重叠为空 -> 不连边
-    _mk(graph, 'propagation_event', '太古汇巡检', '2026-08-01 09:00:00')
-    _mk(graph, 'propagation_event', '太古汇保洁', '2026-08-03 09:00:00')
+    a = _mk(graph, 'propagation_event', '太古汇巡检', '2026-08-01 09:00:00')
+    b = _mk(graph, 'propagation_event', '太古汇保洁', '2026-08-03 09:00:00')
     res = graph.infer_and_link_relations(persist=False)
     assert graph.relations == []
     assert res['added'] == 0

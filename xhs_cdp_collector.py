@@ -341,15 +341,31 @@ def human_click_note_coords(page, note_id):
 
 
 def human_search_keyword(page, keyword):
-    """定位可操作的搜索框，精确填入并读回原词条后才提交。"""
+    """真人搜索：聚焦搜索框 → 逐字符键盘输入（偶发误触回删+思考停顿）→ 停顿 → 回车。"""
     box = _find_first(page, _SEARCH_INPUT_SEL, timeout_ms=6000)
     if box is None:
         raise RuntimeError('SEARCH_INPUT_NOT_FOUND')
-    box.fill(keyword, timeout=6000)
-    if box.input_value(timeout=6000) != keyword:
-        raise RuntimeError('SEARCH_INPUT_VALUE_MISMATCH')
-    box.press('Enter', timeout=6000)
-    log('搜索框精确词条已读回并提交')
+    move_to_locator_and_click(page, box)
+    human_sleep(0.2, 0.5)
+    # 清空已有内容（真实键盘全选删除，而非 .fill）
+    page.keyboard.press('Control+A')
+    human_sleep(0.1, 0.25)
+    page.keyboard.press('Delete')
+    human_sleep(0.15, 0.35)
+    for ch in keyword:
+        # 3% 概率误触 → 停顿 → 退格 → 重打
+        if random.random() < 0.03:
+            wrong = 'z' if ch != 'z' else 'x'
+            page.keyboard.type(wrong, delay=random.randint(60, 160))
+            gauss_sleep(0.28, 0.1, 0.12)
+            page.keyboard.press('Backspace')
+            gauss_sleep(0.18, 0.08, 0.08)
+        page.keyboard.type(ch, delay=random.randint(70, 240))
+        if random.random() < 0.05:
+            gauss_sleep(0.55, 0.2, 0.2)   # 思考式短暂停顿
+    gauss_sleep(0.6, 0.2, 0.3)
+    page.keyboard.press('Enter')
+    log(f'真人键盘输入关键词并回车: {keyword}')
 
 
 def human_swipe_gallery(page, depth=0.5):
@@ -969,19 +985,7 @@ def robust_goto(page, url, commit_to=30000, dom_to=45000):
 _SEARCH_STATE_JS = r"""(keyword) => {
   const body = document.body ? (document.body.innerText || '') : '';
   const query = new URL(location.href).searchParams.get('keyword');
-  const inputSelectors = __SEARCH_INPUT_SELECTORS__;
-  let input = null;
-  for (const selector of inputSelectors) {
-    const candidate = document.querySelector(selector);
-    if (!candidate) continue;
-    const style = getComputedStyle(candidate);
-    const rect = candidate.getBoundingClientRect();
-    if (style.visibility !== 'hidden' && style.visibility !== 'collapse'
-        && rect.width > 0 && rect.height > 0) {
-      input = candidate;
-      break;
-    }
-  }
+  const input = document.querySelector('#search-input,.search-input input,input[type=search]');
   const selectors = ['section.note-item','a.cover','.feeds-container'];
   const counts = Object.fromEntries(selectors.map(s => [s,document.querySelectorAll(s).length]));
   const links = Array.from(document.querySelectorAll('section.note-item a')).map(a => a.getAttribute('href') || '');
@@ -1001,7 +1005,7 @@ _SEARCH_STATE_JS = r"""(keyword) => {
       ? ['暂无搜索结果','没有找到相关内容','无搜索结果','No results found'].filter(x => bodyLines.includes(x)) : [],
     loading_element_count: document.querySelectorAll('[aria-busy=true],.loading,.load-more').length
   };
-}""".replace('__SEARCH_INPUT_SELECTORS__', json.dumps(_SEARCH_INPUT_SEL))
+}"""
 
 
 def _snapshot_search_state(page, keyword, result, phase, progress=None, *, error_type=None):

@@ -11,7 +11,6 @@ import hashlib
 import json
 import math
 import os
-import re
 import shutil
 import subprocess
 import uuid
@@ -31,33 +30,6 @@ ALLOWED_OPERATIONS = frozenset({"trim", "split", "reorder", "delete", "transitio
 MAX_EDIT_TIME_SEC = 24 * 60 * 60
 MAX_TRANSITION_DURATION_SEC = 30.0
 MAX_SERIALIZED_INTEGER = 1_000_000_000
-MAX_STREAM_METADATA_COUNT = 256
-MAX_STREAM_INDEX = 65_535
-MAX_STREAM_TIMESTAMP = 1_000_000_000_000_000
-MAX_STREAM_TIME_BASE_COMPONENT = 1_000_000_000
-_EDIT_BATCH_COMMAND_FIELDS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
-    "trim": (frozenset({"op", "clip_id", "source_in", "source_out"}), frozenset()),
-    "split": (frozenset({"op", "clip_id", "at_sec"}), frozenset()),
-    "delete": (frozenset({"op", "clip_id"}), frozenset({"ripple"})),
-    "reorder": (frozenset({"op", "clip_id", "new_index"}), frozenset()),
-    "audio_mix": (frozenset({"op", "clip_id", "mix"}), frozenset()),
-    "move_audio_clip": (frozenset({"op", "clip_id", "timeline_start"}), frozenset()),
-    "add_caption": (
-        frozenset({"op", "start_sec", "end_sec", "text"}),
-        frozenset({"layout_profile"}),
-    ),
-    "update_caption": (
-        frozenset({"op", "overlay_id", "start_sec", "end_sec", "text"}),
-        frozenset({"layout_profile"}),
-    ),
-    "remove_overlay": (frozenset({"op", "overlay_id"}), frozenset()),
-    "set_format": (frozenset({"op", "format_ratio"}), frozenset()),
-    "undo": (frozenset({"op"}), frozenset()),
-}
-_EDIT_BATCH_AUDIO_MIX_FIELDS = frozenset(
-    {"volume", "fade_in_sec", "fade_out_sec", "ducking"}
-)
-_MAX_EDIT_BATCH_COMMANDS = 128
 # File-only protocols still allow playlist demuxers to open other local files.
 # User sources are self-contained media; generated concat lists belong only to
 # the renderer's private working directory, never to this input boundary.
@@ -70,76 +42,6 @@ class _MediaProbe:
     duration_sec: float
     has_video: bool
     audio_stream_count: int
-    stream_metadata: tuple[MediaStreamMetadata, ...] = field(default_factory=tuple)
-
-
-@dataclass(frozen=True)
-class MediaStreamMetadata:
-    """A bounded FFprobe stream record; timestamps stay in the reported time base."""
-
-    kind: str
-    type_relative_ordinal: int
-    global_index: int | None
-    time_base: str | None
-    start_pts: int | None
-    duration_ts: int | None
-    sample_rate: int | None = None
-    channels: int | None = None
-
-    def validate(self) -> None:
-        if not isinstance(self.kind, str) or self.kind not in ("audio", "video"):
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        if (type(self.type_relative_ordinal) is not int
-                or not 0 <= self.type_relative_ordinal < MAX_STREAM_METADATA_COUNT):
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        if self.global_index is not None and (
-            type(self.global_index) is not int or not 0 <= self.global_index <= MAX_STREAM_INDEX
-        ):
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        if self.time_base is not None:
-            if not isinstance(self.time_base, str):
-                raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-            match = re.fullmatch(r"([0-9]+)/([0-9]+)", self.time_base)
-            if not match:
-                raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-            numerator, denominator = (int(part) for part in match.groups())
-            if (numerator < 1 or denominator < 1
-                    or numerator > MAX_STREAM_TIME_BASE_COMPONENT
-                    or denominator > MAX_STREAM_TIME_BASE_COMPONENT):
-                raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        for timestamp in (self.start_pts, self.duration_ts):
-            if timestamp is not None and (
-                type(timestamp) is not int or abs(timestamp) > MAX_STREAM_TIMESTAMP
-            ):
-                raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        if self.duration_ts is not None and self.duration_ts < 0:
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        if self.kind == "audio":
-            if self.sample_rate is not None and (
-                type(self.sample_rate) is not int or not 1 <= self.sample_rate <= 768_000
-            ):
-                raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-            if self.channels is not None and (
-                type(self.channels) is not int or not 1 <= self.channels <= 256
-            ):
-                raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        elif self.sample_rate is not None or self.channels is not None:
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-
-    def to_dict(self) -> dict[str, Any]:
-        self.validate()
-        result: dict[str, Any] = {
-            "kind": self.kind,
-            "type_relative_ordinal": self.type_relative_ordinal,
-            "global_index": self.global_index,
-            "time_base": self.time_base,
-            "start_pts": self.start_pts,
-            "duration_ts": self.duration_ts,
-        }
-        if self.kind == "audio":
-            result["sample_rate"] = self.sample_rate
-            result["channels"] = self.channels
-        return result
 
 
 def _id(prefix: str) -> str:
@@ -207,7 +109,6 @@ class MediaAsset:
     rights_status: str = "unknown"
     has_video: bool = True
     audio_stream_count: int = 0
-    stream_metadata: tuple[MediaStreamMetadata, ...] = field(default_factory=tuple)
     _factory_token: object = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -239,26 +140,6 @@ class MediaAsset:
             or (not self.has_video and self.audio_stream_count == 0)
         ):
             raise VideoEditingError("MEDIA_ASSET_STREAM_INVENTORY_INVALID")
-        if not isinstance(self.stream_metadata, tuple):
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        ordinals = {"audio": 0, "video": 0}
-        global_indices = set()
-        for stream in self.stream_metadata:
-            if not isinstance(stream, MediaStreamMetadata):
-                raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-            stream.validate()
-            if stream.type_relative_ordinal != ordinals[stream.kind]:
-                raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-            ordinals[stream.kind] += 1
-            if stream.global_index is not None:
-                if stream.global_index in global_indices:
-                    raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-                global_indices.add(stream.global_index)
-        if self.stream_metadata and (
-            ordinals["audio"] != self.audio_stream_count
-            or bool(ordinals["video"]) is not self.has_video
-        ):
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
         if self.evidence_refs:
             raise VideoEditingError("CANONICAL_EVIDENCE_BINDING_UNAVAILABLE")
         if self.rights_status != "unknown":
@@ -281,7 +162,6 @@ class MediaAsset:
             "media_kind": self.media_kind,
             "has_video": self.has_video,
             "audio_stream_count": self.audio_stream_count,
-            "stream_metadata": [item.to_dict() for item in self.stream_metadata],
             "evidence_refs": list(self.evidence_refs),
             "rights_status": self.rights_status,
         }
@@ -355,7 +235,6 @@ def fingerprint_local_media(
         rights_status="unknown",
         has_video=probe.has_video,
         audio_stream_count=probe.audio_stream_count,
-        stream_metadata=probe.stream_metadata,
         _factory_token=_MEDIA_ASSET_FACTORY_TOKEN,
     )
 
@@ -398,8 +277,7 @@ def _probe_media_info(path: Path) -> _MediaProbe:
                 "-v", "error",
                 "-protocol_whitelist", "file",
                 "-format_whitelist", MEDIA_INPUT_DEMUXERS,
-                "-show_entries",
-                "stream=index,codec_type,duration,sample_rate,channels,time_base,start_pts,duration_ts:format=duration",
+                "-show_entries", "stream=codec_type,duration:format=duration",
                 "-of", "json",
                 "-i", str(path),
             ],
@@ -415,14 +293,16 @@ def _probe_media_info(path: Path) -> _MediaProbe:
     streams = payload.get("streams") if isinstance(payload, dict) else None
     if not isinstance(streams, list):
         raise VideoEditingError("MEDIA_DURATION_PROBE_FAILED")
-    if any(not isinstance(stream, dict) for stream in streams):
-        raise VideoEditingError("MEDIA_DURATION_PROBE_FAILED")
-    video_streams = [stream for stream in streams if stream.get("codec_type") == "video"]
-    audio_streams = [stream for stream in streams if stream.get("codec_type") == "audio"]
+    video_streams = [
+        stream for stream in streams
+        if isinstance(stream, dict) and stream.get("codec_type") == "video"
+    ]
+    audio_streams = [
+        stream for stream in streams
+        if isinstance(stream, dict) and stream.get("codec_type") == "audio"
+    ]
     if not video_streams and not audio_streams:
         raise VideoEditingError("LOCAL_MEDIA_HAS_NO_AUDIO_OR_VIDEO_STREAM")
-    if len(video_streams) > MAX_STREAM_METADATA_COUNT or len(audio_streams) > MAX_STREAM_METADATA_COUNT:
-        raise VideoEditingError("MEDIA_DURATION_PROBE_FAILED")
     duration_stream = video_streams[0] if video_streams else audio_streams[0]
     raw_duration = duration_stream.get("duration")
     if raw_duration in (None, "", "N/A"):
@@ -434,73 +314,10 @@ def _probe_media_info(path: Path) -> _MediaProbe:
         raise VideoEditingError("MEDIA_DURATION_PROBE_FAILED") from exc
     if not math.isfinite(duration) or duration <= 0 or duration > MAX_EDIT_TIME_SEC:
         raise VideoEditingError("MEDIA_DURATION_PROBE_FAILED")
-
-    def optional_integer(stream: Mapping[str, Any], key: str, *, minimum: int, maximum: int) -> int | None:
-        if key not in stream or stream[key] is None:
-            return None
-        value = stream[key]
-        if type(value) is int:
-            parsed = value
-        elif isinstance(value, str) and re.fullmatch(r"-?[0-9]+", value):
-            parsed = int(value)
-        else:
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        if parsed < minimum or parsed > maximum:
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        return parsed
-
-    def optional_time_base(stream: Mapping[str, Any]) -> str | None:
-        if "time_base" not in stream or stream["time_base"] is None:
-            return None
-        value = stream["time_base"]
-        if not isinstance(value, str):
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        match = re.fullmatch(r"([0-9]+)/([0-9]+)", value)
-        if not match:
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        numerator, denominator = (int(part) for part in match.groups())
-        if (numerator < 1 or denominator < 1
-                or numerator > MAX_STREAM_TIME_BASE_COMPONENT
-                or denominator > MAX_STREAM_TIME_BASE_COMPONENT):
-            raise VideoEditingError("MEDIA_STREAM_METADATA_INVALID")
-        return value
-
-    type_ordinals = {"video": 0, "audio": 0}
-    stream_metadata: list[MediaStreamMetadata] = []
-    for stream in streams:
-        kind = stream.get("codec_type")
-        if kind not in ("video", "audio"):
-            continue
-        ordinal = type_ordinals[kind]
-        type_ordinals[kind] += 1
-        stream_index = optional_integer(stream, "index", minimum=0, maximum=MAX_STREAM_INDEX)
-        start_pts = optional_integer(
-            stream, "start_pts", minimum=-MAX_STREAM_TIMESTAMP, maximum=MAX_STREAM_TIMESTAMP
-        )
-        duration_ts = optional_integer(
-            stream, "duration_ts", minimum=0, maximum=MAX_STREAM_TIMESTAMP
-        )
-        sample_rate = channels = None
-        if kind == "audio":
-            sample_rate = optional_integer(stream, "sample_rate", minimum=1, maximum=768_000)
-            channels = optional_integer(stream, "channels", minimum=1, maximum=256)
-        stream_metadata.append(MediaStreamMetadata(
-            kind=kind,
-            type_relative_ordinal=ordinal,
-            global_index=stream_index,
-            time_base=optional_time_base(stream),
-            start_pts=start_pts,
-            duration_ts=duration_ts,
-            sample_rate=sample_rate,
-            channels=channels,
-        ))
-    if len(stream_metadata) > MAX_STREAM_METADATA_COUNT * 2:
-        raise VideoEditingError("MEDIA_DURATION_PROBE_FAILED")
     return _MediaProbe(
         duration_sec=duration,
         has_video=bool(video_streams),
         audio_stream_count=len(audio_streams),
-        stream_metadata=tuple(stream_metadata),
     )
 
 
@@ -905,24 +722,12 @@ class Timeline:
         stored_assets = document_list(root["assets"])
         ordered_assets: List[MediaAsset] = []
         stored_asset_ids = set()
-        legacy_asset_fields = (
+        asset_fields = (
             "asset_id", "filename", "sha256", "duration_sec", "media_kind",
             "has_video", "audio_stream_count", "evidence_refs", "rights_status",
         )
-        asset_fields_with_stream_metadata = legacy_asset_fields + ("stream_metadata",)
         for stored in stored_assets:
-            if type(stored) is not dict or set(stored) not in (
-                set(legacy_asset_fields), set(asset_fields_with_stream_metadata),
-            ):
-                raise VideoEditingError("TIMELINE_DOCUMENT_FIELDS_INVALID")
-            item = stored
-            if "stream_metadata" in item:
-                for stream in document_list(item["stream_metadata"]):
-                    fields = ("kind", "type_relative_ordinal", "global_index", "time_base", "start_pts", "duration_ts")
-                    if type(stream) is dict and stream.get("kind") == "audio":
-                        fields += ("sample_rate", "channels")
-                    record = document_object(stream, fields)
-                    MediaStreamMetadata(**record).validate()
+            item = document_object(stored, asset_fields)
             asset_id = document_string(item["asset_id"])
             if asset_id in stored_asset_ids:
                 raise VideoEditingError("TIMELINE_DUPLICATE_MEDIA_ASSET")
@@ -945,10 +750,6 @@ class Timeline:
                 or item["audio_stream_count"] != asset.audio_stream_count
                 or item["evidence_refs"] != []
                 or item["rights_status"] != "unknown"
-                or (
-                    "stream_metadata" in item
-                    and item["stream_metadata"] != asset.to_dict()["stream_metadata"]
-                )
             ):
                 raise VideoEditingError("TIMELINE_REOPEN_ASSET_MISMATCH")
             ordered_assets.append(asset)
@@ -1558,103 +1359,6 @@ class Timeline:
             raise VideoEditingError("FORMAT_RATIO_NOT_SUPPORTED")
         return self._commit(format_ratio=format_ratio)
 
-    def apply_edit_batch(self, commands: Any, *, expected_version: int) -> Timeline:
-        """Apply a bounded sequence of existing immutable Timeline operations.
-
-        Each command uses its normal owner method and per-operation history.
-        If a later command fails, this value remains unchanged and no partial
-        Timeline is returned. Undo retains its existing single-operation
-        semantics; a batch does not create a separate undo transaction.
-        """
-        self.validate()
-        if type(expected_version) is not int or expected_version != self.version:
-            raise VideoEditingError("TIMELINE_VERSION_MISMATCH")
-        if not isinstance(commands, (tuple, list)):
-            raise VideoEditingError("EDIT_COMMANDS_INVALID")
-        if len(commands) > _MAX_EDIT_BATCH_COMMANDS:
-            raise VideoEditingError("EDIT_COMMAND_COUNT_EXCEEDED")
-
-        updated = self
-        for raw_command in commands:
-            if not isinstance(raw_command, Mapping):
-                raise VideoEditingError("EDIT_COMMAND_INVALID")
-            command = dict(raw_command)
-            op = command.get("op")
-            if not isinstance(op, str) or op not in _EDIT_BATCH_COMMAND_FIELDS:
-                raise VideoEditingError("EDIT_OPERATION_NOT_SUPPORTED")
-            required, optional = _EDIT_BATCH_COMMAND_FIELDS[op]
-            fields = set(command)
-            if not required <= fields or fields - required - optional:
-                raise VideoEditingError("EDIT_COMMAND_FIELDS_INVALID")
-
-            if op == "trim":
-                updated = updated.trim(
-                    command["clip_id"],
-                    source_in=command["source_in"],
-                    source_out=command["source_out"],
-                )
-            elif op == "split":
-                updated = updated.split(command["clip_id"], at_sec=command["at_sec"])
-            elif op == "delete":
-                updated = updated.delete(
-                    command["clip_id"], ripple=command.get("ripple", True)
-                )
-            elif op == "reorder":
-                updated = updated.reorder(
-                    command["clip_id"], new_index=command["new_index"]
-                )
-            elif op == "audio_mix":
-                value = command["mix"]
-                if not isinstance(value, AudioMix):
-                    if (
-                        not isinstance(value, Mapping)
-                        or set(value) - _EDIT_BATCH_AUDIO_MIX_FIELDS
-                    ):
-                        raise VideoEditingError("INVALID_AUDIO_MIX")
-                    try:
-                        value = AudioMix(**dict(value))
-                    except (TypeError, ValueError) as exc:
-                        raise VideoEditingError("INVALID_AUDIO_MIX") from exc
-                updated = updated.set_audio_mix(command["clip_id"], value)
-            elif op == "move_audio_clip":
-                updated = updated.move_audio_clip(
-                    command["clip_id"], timeline_start=command["timeline_start"]
-                )
-            elif op == "add_caption":
-                updated = updated.add_caption(
-                    command["start_sec"],
-                    command["end_sec"],
-                    command["text"],
-                    layout_profile=command.get("layout_profile"),
-                )
-            elif op == "update_caption":
-                profile = command.get("layout_profile")
-                if "layout_profile" not in command:
-                    profile = next(
-                        (
-                            overlay.layout_profile
-                            for overlay in updated.overlays
-                            if overlay.overlay_id == command["overlay_id"]
-                        ),
-                        None,
-                    )
-                updated = updated.update_caption(
-                    command["overlay_id"],
-                    command["start_sec"],
-                    command["end_sec"],
-                    command["text"],
-                    layout_profile=profile,
-                )
-            elif op == "remove_overlay":
-                updated = updated.remove_overlay(command["overlay_id"])
-            elif op == "set_format":
-                updated = updated.set_format(command["format_ratio"])
-            else:  # "undo"; the allowlist rejects every additional field.
-                updated = updated.undo()
-
-        updated.validate()
-        return updated
-
     def undo(self) -> "Timeline":
         if not self._history:
             raise VideoEditingError("TIMELINE_NO_UNDO")
@@ -1706,8 +1410,6 @@ class Timeline:
         assets = {asset.asset_id: asset for asset in self.assets}
         active = []
         tracks = []
-        source_time_mappings: list[dict[str, Any]] = []
-        visible_source_assets: dict[str, MediaAsset] = {}
         visible_clip_ids = set()
         for track in self.tracks:
             visible = []
@@ -1727,25 +1429,14 @@ class Timeline:
                 if visible_start >= visible_end:
                     continue
                 visible_clip_ids.add(clip.clip_id)
-                visible_source_assets[asset.asset_id] = asset
-                visible_source_in = clip.source_in + (visible_start - clip_start)
-                visible_source_out = clip.source_in + (visible_end - clip_start)
-                source_time_mappings.append({
-                    "clip_id": clip.clip_id,
-                    "media_asset_id": asset.asset_id,
-                    "source_sha256": asset.sha256,
-                    "timeline_range_sec": [clip_start, clip_end],
-                    "source_range_sec": [clip.source_in, clip.source_out],
-                    "visible_timeline_range_sec": [visible_start, visible_end],
-                    "visible_source_range_sec": [visible_source_in, visible_source_out],
-                    "rate": "1/1",
-                    "mapping_method": "existing_clip_unit_rate_timeline_seconds",
-                })
                 visible.append({
                     "clip": clip.to_dict(), "source_sha256": asset.sha256,
                     "media_kind": asset.media_kind,
                     "visible_timeline_range_sec": [visible_start, visible_end],
-                    "visible_source_range_sec": [visible_source_in, visible_source_out],
+                    "visible_source_range_sec": [
+                        clip.source_in + (visible_start - clip_start),
+                        clip.source_in + (visible_end - clip_start),
+                    ],
                     "start_fraction": (visible_start - start) / span,
                     "width_fraction": (visible_end - visible_start) / span,
                     "clipped_at_left": clip_start < start, "clipped_at_right": clip_end > end,
@@ -1781,17 +1472,7 @@ class Timeline:
             },
             "tracks": tracks, "overlays": overlays, "related_transition_plans": transitions,
             "range_convention": "half_open_clip_and_overlay_ranges",
-            "source_stream_metadata": [
-                {
-                    "media_asset_id": asset.asset_id,
-                    "source_sha256": asset.sha256,
-                    "streams": [item.to_dict() for item in asset.stream_metadata],
-                }
-                for asset in visible_source_assets.values()
-            ],
-            "source_time_mappings": source_time_mappings,
             "source_pts_mapping": "NOT_RETAINED_BY_CURRENT_TIMELINE_MODEL",
-            "frame_sample_pts_lookup": "NOT_PERFORMED",
             "waveform": None, "waveform_state": "NOT_COMPUTED",
             "render_and_playback_acceptance": "REQUIRES_ACTUAL_ARTIFACT_AND_PLAYER_REVIEW",
         }
@@ -2022,7 +1703,6 @@ __all__ = [
     "EditDecision",
     "EditDecisionList",
     "MediaAsset",
-    "MediaStreamMetadata",
     "Timeline",
     "TimelineClip",
     "TimelineTrack",

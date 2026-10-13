@@ -7,33 +7,21 @@ import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
 import '../../navigation/lumenis_leave_guard.dart';
 import '../shared/read_aloud_action.dart';
-import '../shared/sh01/media_project_workbench.dart';
 import 'bmp08_repository.dart';
 import 'bmp08_snapshot.dart';
 import 'bmp08_view_model.dart';
 
 class Bmp08Screen extends StatefulWidget {
-  const Bmp08Screen({
-    required this.client,
-    this.repository,
-    this.contextAvailable = true,
-    super.key,
-  });
+  const Bmp08Screen({required this.client, this.repository, super.key});
 
   final LumenisCoreClient client;
   final Bmp08Repository? repository;
-  final bool contextAvailable;
 
   @override
   State<Bmp08Screen> createState() => _Bmp08ScreenState();
 }
 
 class _Bmp08ScreenState extends State<Bmp08Screen> {
-  bool _editingAudio = false;
-  bool _hasOpenedAudio = false;
-  final _scriptGuard = LumenisLeaveGuard();
-  final _audioGuard = LumenisLeaveGuard();
-  LumenisLeaveGuard? _routeGuard;
   late final Bmp08ViewModel _viewModel = Bmp08ViewModel(
     repository: widget.repository ?? CoreBmp08Repository(client: widget.client),
   );
@@ -41,41 +29,11 @@ class _Bmp08ScreenState extends State<Bmp08Screen> {
   @override
   void initState() {
     super.initState();
-    _scriptGuard.addListener(_refreshProtection);
-    _audioGuard.addListener(_refreshProtection);
     _viewModel.refresh();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final guard = LumenisLeaveScope.maybeOf(context);
-    if (identical(guard, _routeGuard)) return;
-    _routeGuard?.unregister(this);
-    _routeGuard = guard;
-    guard?.register(
-      this,
-      needsProtection: () =>
-          _scriptGuard.needsProtection || _audioGuard.needsProtection,
-      requestLeave: () async {
-        if (!await _audioGuard.requestLeave() || !mounted) return false;
-        return _scriptGuard.requestLeave();
-      },
-    );
-  }
-
-  void _refreshProtection() => _routeGuard?.refresh();
-
-  @override
   void dispose() {
-    _routeGuard?.unregister(this);
-    _scriptGuard.removeListener(_refreshProtection);
-    _audioGuard.removeListener(_refreshProtection);
-    // Child editors unregister during subtree teardown, after this State.
-    Future.microtask(() {
-      _scriptGuard.dispose();
-      _audioGuard.dispose();
-    });
     _viewModel.dispose();
     super.dispose();
   }
@@ -85,72 +43,22 @@ class _Bmp08ScreenState extends State<Bmp08Screen> {
     return ColoredBox(
       color: LumenisTheme.of(context).canvas,
       child: SafeArea(
-        child: IndexedStack(
-          index: _editingAudio ? 1 : 0,
-          children: [
-            Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: OutlinedButton.icon(
-                      key: const Key('bmp08-open-audio-editor'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(48, 48),
-                      ),
-                      onPressed: () => setState(() {
-                        _hasOpenedAudio = true;
-                        _editingAudio = true;
-                      }),
-                      icon: const LumenisIcon(Icons.multitrack_audio_rounded),
-                      label: Text(_Bmp08Copy.of(context).editAudio),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: AnimatedBuilder(
-                    animation: _viewModel,
-                    builder: (context, _) => switch (_viewModel.phase) {
-                      Bmp08LoadPhase.loading => const _Loading(),
-                      Bmp08LoadPhase.failed => _Failure(
-                        kind: _viewModel.failureKind!,
-                        onRetry: _viewModel.refresh,
-                      ),
-                      Bmp08LoadPhase.ready => _PodcastStudio(
-                        snapshot: _viewModel.snapshot!,
-                        actionState: _viewModel.actionState,
-                        actionId: _viewModel.actionId,
-                        onRefresh: _viewModel.refresh,
-                        onAction: _viewModel.stageAction,
-                        leaveGuard: _scriptGuard,
-                      ),
-                    },
-                  ),
-                ),
-              ],
+        child: AnimatedBuilder(
+          animation: _viewModel,
+          builder: (context, _) => switch (_viewModel.phase) {
+            Bmp08LoadPhase.loading => const _Loading(),
+            Bmp08LoadPhase.failed => _Failure(
+              kind: _viewModel.failureKind!,
+              onRetry: _viewModel.refresh,
             ),
-            if (_hasOpenedAudio)
-              MediaProjectWorkbench(
-                client: widget.client,
-                invokingDomain: 'BMP',
-                initialOutputKind: 'audio',
-                contextAvailable: widget.contextAvailable,
-                leaveGuard: _audioGuard,
-                isActive: _editingAudio,
-                preserveDraftOnBack: true,
-                backLabel: switch (Localizations.localeOf(
-                  context,
-                ).languageCode) {
-                  'zh' => '返回播客',
-                  'ko' => '팟캐스트로 돌아가기',
-                  _ => 'Back to podcast',
-                },
-                onBack: () => setState(() => _editingAudio = false),
-              )
-            else
-              const SizedBox.shrink(),
-          ],
+            Bmp08LoadPhase.ready => _PodcastStudio(
+              snapshot: _viewModel.snapshot!,
+              actionState: _viewModel.actionState,
+              actionId: _viewModel.actionId,
+              onRefresh: _viewModel.refresh,
+              onAction: _viewModel.stageAction,
+            ),
+          },
         ),
       ),
     );
@@ -164,7 +72,6 @@ class _PodcastStudio extends StatefulWidget {
     required this.actionId,
     required this.onRefresh,
     required this.onAction,
-    required this.leaveGuard,
   });
 
   final Bmp08Snapshot snapshot;
@@ -172,7 +79,6 @@ class _PodcastStudio extends StatefulWidget {
   final String? actionId;
   final VoidCallback onRefresh;
   final void Function(String actionId, String permission) onAction;
-  final LumenisLeaveGuard leaveGuard;
 
   @override
   State<_PodcastStudio> createState() => _PodcastStudioState();
@@ -197,11 +103,11 @@ class _PodcastStudioState extends State<_PodcastStudio> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final guard = widget.leaveGuard;
+    final guard = LumenisLeaveScope.maybeOf(context);
     if (identical(guard, _leaveGuard)) return;
     _leaveGuard?.unregister(this);
     _leaveGuard = guard;
-    guard.register(
+    guard?.register(
       this,
       needsProtection: () => _hasLocalDraft,
       requestLeave: () => _confirmDiscard(leaving: true),
@@ -1649,12 +1555,6 @@ class _Bmp08Copy {
   _Bmp08Copy(this.languageCode);
 
   final String languageCode;
-
-  String get editAudio => switch (languageCode) {
-    'en' => 'Edit audio',
-    'ko' => '오디오 편집',
-    _ => '编辑音频',
-  };
 
   static _Bmp08Copy of(BuildContext context) {
     final languageCode = Localizations.localeOf(context).languageCode;

@@ -15,7 +15,7 @@ from lumenis.system.security import permission
 
 
 @pytest.fixture
-def workspace(tmp_path, monkeypatch, request):
+def workspace(tmp_path, monkeypatch):
     path = tmp_path / "internal-pitch.sqlite3"
     monkeypatch.setenv("ZBC_DB_PATH", str(path))
     monkeypatch.setenv("ZBC_ARTIFACT_DIR", str(tmp_path / "artifacts"))
@@ -43,11 +43,6 @@ def workspace(tmp_path, monkeypatch, request):
                                   environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
         actor = permission.resolve_local_workspace_principal(module="reports", action="write")
         scope = {"domain_id": "cth", "subject_id": "SUBJ-PITCH", "brand_focus_id": None, "global_scope": False}
-        if getattr(request, "param", "domain") == "shared":
-            with repository.connection() as con:
-                con.execute("DELETE FROM lumenis_subject_registry")
-                con.commit()
-            scope = {"scope_kind": "shared_workspace", "version": 1}
         yield {"repo": repository, "actor": actor, "scope": scope, "app": app, "gate": gate, "root": tmp_path}
     pitch.engine.cache_clear()
 
@@ -75,175 +70,6 @@ def count(ws):
     return ws["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0]
 
 
-def audiovisual_arguments(ws, request="av-plan-0001"):
-    values = arguments(ws, request)
-    declared = {"kind": "USER_EXPLICIT", "locator": "current_user_brief"}
-    unknown = {"kind": "UNKNOWN", "locator": None}
-    values["profile"] = pitch.AV_PLAN_PROFILE
-    values["shot_plan"] = {
-        "schema": "lumenis.audiovisual-plan/v1", "brief_text": "保留手部三个关键操作，35秒竖屏完全静音。",
-        "method_source": {"reference": "dot-av-v2", "sha256": "a" * 64},
-        "outputs": [{"output_id": "silent-craft", "medium": "video", "purpose": "三个关键操作清晰可读",
-                     "canvas_ratio": "9:16", "duration": {"min_seconds": 35, "max_seconds": 35,
-                                                              "tolerance_seconds": 0},
-                     "sound": {name: "forbidden" for name in ("original", "voice", "music")},
-                     "languages": ["zh"], "constraints": {"must_preserve": ["hands", "tools", "causality"]},
-                     "provenance": {name: dict(declared) for name in
-                                    ("purpose", "canvas_ratio", "duration", "languages", "constraints", "original", "voice", "music")},
-                     "plan": None}],
-        "rule_assessments": [{"rule_ref": "dot-av-v2:R10", "output_ids": ["silent-craft"],
-                              "required_conditions": [{"predicate": "same_action_chain_verified", "value": None,
-                                                       "provenance": unknown}], "exclusions": []}],
-    }
-    return values
-
-
-@pytest.mark.parametrize("workspace", ["domain", "shared"], indirect=True)
-def test_audiovisual_profile_persists_reopens_revises_and_downloads_without_media_claim(workspace):
-    ws = workspace
-    args = audiovisual_arguments(ws)
-    first = run(ws, pitch.prepare_internal_pitch(**args))
-    document = first["work"]["document"]
-    assert document["contract"] == pitch.AV_PLAN_CONTRACT
-    plan = document["payload"]["audiovisual_plan"]
-    assert plan["input"] == args["shot_plan"]
-    assert plan["rule_decisions"][0]["decision"] == "NEEDS_REVIEW"
-    assert plan["execution"] == "NOT_EXECUTED" and plan["rendition_binding"] is None
-    assert set(plan["reviews"].values()) == {"NEEDS_REVIEW"}
-    assert document["citations"] == []
-    downloaded = pitch.download_internal_pitch(first["task_id"], actor=ws["actor"], scope=ws["scope"])
-    assert hashlib.sha256(downloaded["content"]).hexdigest() == first["action_receipt"]["output"]["sha256"]
-    assert Document(io.BytesIO(downloaded["content"])).paragraphs
-    revised = audiovisual_arguments(ws, "av-plan-0002")
-    revised["shot_plan"]["brief_text"] += " 允许按动作调整镜头顺序。"
-    revised["shot_plan"]["outputs"][0]["constraints"]["preserve_order"] = False
-    second = run(ws, pitch.prepare_internal_pitch(**revised, work_id=document["work_id"],
-                previous_artifact_id=first["action_receipt"]["artifact_id"],
-                expected_draft_digest=document["draft_digest"]))
-    assert second["action_receipt"]["version"] == 2
-    assert second["action_receipt"]["parent_sha256"] == first["action_receipt"]["sha256"]
-    new_plan = second["work"]["document"]["payload"]["audiovisual_plan"]
-    assert new_plan["brief_sha256"] != plan["brief_sha256"]
-    reopened = pitch.read_internal_pitch(first["task_id"], actor=ws["actor"], scope=ws["scope"])
-    assert reopened["work"]["document"]["payload"]["audiovisual_plan"] == plan
-    assert run(ws, first)["action_receipt"] == first["action_receipt"]
-    assert count(ws) == 4
-
-
-def test_audiovisual_changed_brief_cannot_reuse_request_or_erase_unknowns(workspace):
-    args = audiovisual_arguments(workspace)
-    task = pitch.prepare_internal_pitch(**args)
-    args["shot_plan"]["brief_text"] += " Changed."
-    with pytest.raises(ValueError, match="INTERNAL_PITCH_REQUEST_REUSE_CONFLICT"):
-        pitch.prepare_internal_pitch(**args)
-    cancelled = pitch.cancel_internal_pitch(task["task_id"], actor=workspace["actor"], scope=workspace["scope"])
-    assert cancelled["state"] == "cancelled" and count(workspace) == 0
-
-
-@pytest.mark.parametrize("reference", ["brief", "plan_evidence", "shot_evidence", "podcast_evidence"])
-def test_audiovisual_unbound_source_references_cannot_create_task(workspace, reference):
-    from lumenis.shared.content_creation.contracts import Shot, ShotPlan
-    args = audiovisual_arguments(workspace)
-    plan = ShotPlan((Shot(shot_purpose="Show the permitted action", duration_sec=35),)).to_dict()
-    if reference == "brief":
-        plan["brief_ref"] = "unbound-brief"
-    elif reference == "plan_evidence":
-        plan["evidence_refs"] = ["unbound-evidence"]
-    elif reference == "shot_evidence":
-        plan["shots"][0]["evidence_refs"] = ["unbound-evidence"]
-    output = args["shot_plan"]["outputs"][0]
-    if reference == "podcast_evidence":
-        from podcast.intelligence.episode_runtime import PodcastPlan, PodcastSegment
-        plan = PodcastPlan("Interview", "Preserve original speech", "zh", (
-            PodcastSegment("segment-1", "UNRESOLVED_MEDIA", 0, 35, "原话", "原话", "Guest",
-                           "Opening", ("unbound-evidence",)),
-        )).to_dict()
-        output.update(medium="podcast", canvas_ratio=None)
-        output["provenance"]["canvas_ratio"] = {"kind": "UNKNOWN", "locator": None}
-        output["sound"]["original"] = "required"
-    output["plan"] = plan
-    with pytest.raises(ValueError, match="INTERNAL_PITCH_SOURCE_BINDING_REQUIRED"):
-        pitch.prepare_internal_pitch(**args)
-    assert workspace["repo"].query_one("SELECT COUNT(*) FROM ai_task")[0] == 0
-    assert count(workspace) == 0
-
-
-def test_shared_pitch_pending_read_cancel_has_no_domain_or_subject_prerequisite(workspace):
-    ws = workspace
-    with ws["repo"].connection() as con:
-        con.execute("DELETE FROM lumenis_subject_registry")
-        con.commit()
-    scope = {"scope_kind": "shared_workspace", "version": 1}
-    args = arguments(ws, "shared-plan-0001")
-    args.update(scope=scope, profile=pitch.AUTHORING_PROFILE)
-    args.pop("shot_plan")
-    prepared = pitch.prepare_internal_pitch(**args)
-    assert prepared["scope"] == scope and prepared["state"] == "pending"
-    assert pitch.read_internal_pitch(prepared["task_id"], actor=ws["actor"], scope=scope)["scope"] == scope
-    cancelled = pitch.cancel_internal_pitch(prepared["task_id"], actor=ws["actor"], scope=scope)
-    assert cancelled["state"] == "cancelled" and count(ws) == 0
-
-
-@pytest.mark.parametrize("extra", [{"actor_id": 1}, {"domain_id": "cth"}, {"version": True}])
-def test_shared_pitch_selector_rejects_identity_domain_and_bool_without_task(workspace, extra):
-    args = arguments(workspace)
-    args["scope"] = {"scope_kind": "shared_workspace", "version": 1, **extra}
-    with pytest.raises((ValueError, PermissionError), match="SHARED_WORKSPACE_SCOPE_INVALID"):
-        pitch.prepare_internal_pitch(**args)
-    assert count(workspace) == 0
-
-
-def test_shared_pitch_does_not_admit_source_bound_scope_without_source_domain(workspace):
-    args = arguments(workspace)
-    args.pop("shot_plan")
-    args.update(scope={"scope_kind": "shared_workspace", "version": 1}, profile=pitch.SOURCE_PROFILE,
-                upstream_ref={"kind": "saved_work", "artifact_id": "not-a-grant"})
-    with pytest.raises(ValueError, match="INTERNAL_PITCH_UPSTREAM_SOURCE_SCOPE_REQUIRED"):
-        pitch.prepare_internal_pitch(**args)
-    assert count(workspace) == 0
-
-
-@pytest.mark.parametrize("workspace", ["shared"], indirect=True)
-def test_shared_pitch_authored_document_revision_download_and_old_version(workspace):
-    ws = workspace
-    args = arguments(ws, "shared-author-0001")
-    args.pop("shot_plan")
-    args["profile"] = pitch.AUTHORING_PROFILE
-    first = run(ws, pitch.prepare_internal_pitch(**args))
-    parent = first["work"]["document"]
-    receipt = first["action_receipt"]
-    assert first["scope"] == ws["scope"]
-    assert parent["contract"] == pitch.AUTHORING_CONTRACT
-    assert parent["payload"]["truth_state"]["owned_model_execution"] == "NOT_RUN"
-    assert ws["repo"].query_one("SELECT COUNT(*) FROM lumenis_subject_registry")[0] == 0
-    rows = ws["repo"].query_all("SELECT product_id,domain_id FROM lumenis_shared_artifacts")
-    assert {tuple(row) for row in rows} == {("SHARED", "content")}
-    downloaded = pitch.download_internal_pitch(first["task_id"], actor=ws["actor"], scope=ws["scope"])
-    assert hashlib.sha256(downloaded["content"]).hexdigest() == receipt["output"]["sha256"]
-    assert "What changed? No change is also a valid answer." in [
-        paragraph.text for paragraph in Document(io.BytesIO(downloaded["content"])).paragraphs
-    ]
-    args["request_id"] = "shared-author-0002"
-    args["manuscript"]["sections"][0]["body"] = "Preserve this manual revision."
-    second = run(ws, pitch.prepare_internal_pitch(**args, work_id=parent["work_id"],
-        previous_artifact_id=receipt["artifact_id"], expected_draft_digest=parent["draft_digest"]))
-    assert second["action_receipt"]["version"] == 2
-    assert second["action_receipt"]["parent_sha256"] == receipt["sha256"]
-    assert second["work"]["document"]["payload"]["manuscript"]["sections"][0]["body"] == "Preserve this manual revision."
-    assert pitch.read_internal_pitch(first["task_id"], actor=ws["actor"], scope=ws["scope"])["action_receipt"] == receipt
-    assert count(ws) == 4
-
-
-@pytest.mark.parametrize("workspace", ["shared"], indirect=True)
-def test_shared_pitch_forged_actor_cannot_read_cancel_or_download(workspace):
-    ws = workspace
-    task = run(ws, prepare(ws))
-    for operation in (pitch.read_internal_pitch, pitch.cancel_internal_pitch, pitch.download_internal_pitch):
-        with pytest.raises(PermissionError, match="SHARED_WORKSPACE_ACCESS_DENIED"):
-            operation(task["task_id"], actor={"id": "workspace:local"}, scope=ws["scope"])
-    assert count(ws) == 2
-
-
 def test_normal_real_word_save_revision_reopen_and_download(workspace):
     ws = workspace
     pending = prepare(ws)
@@ -269,7 +95,6 @@ def test_normal_real_word_save_revision_reopen_and_download(workspace):
     assert count(ws) == 4
 
 
-@pytest.mark.parametrize("workspace", ["domain", "shared"], indirect=True)
 def test_committed_retry_never_calls_word_owner_again(workspace, monkeypatch):
     task = prepare(workspace)
     first = run(workspace, task)
@@ -299,7 +124,6 @@ def test_pending_cancel_is_durable_and_not_executable(workspace):
     assert count(workspace) == 0
 
 
-@pytest.mark.parametrize("workspace", ["domain", "shared"], indirect=True)
 def test_actual_export_stage_cancel_rolls_back_all_outputs(workspace, monkeypatch):
     task = prepare(workspace)
     import scripts.pitch_export
@@ -333,7 +157,6 @@ def test_cancel_after_commit_preserves_exact_artifact(workspace):
     assert count(workspace) == 2
 
 
-@pytest.mark.parametrize("workspace", ["domain", "shared"], indirect=True)
 def test_lost_ack_after_commit_is_reconciled_from_real_owner(workspace, monkeypatch):
     task = prepare(workspace)
     original = pitch.read_internal_pitch
@@ -350,7 +173,6 @@ def test_lost_ack_after_commit_is_reconciled_from_real_owner(workspace, monkeypa
     assert restored["state"] == "succeeded" and count(workspace) == 2
 
 
-@pytest.mark.parametrize("workspace", ["domain", "shared"], indirect=True)
 def test_attachment_corruption_blocks_reopen(workspace):
     task = prepare(workspace)
     saved = run(workspace, task)
@@ -361,7 +183,6 @@ def test_attachment_corruption_blocks_reopen(workspace):
         pitch.read_internal_pitch(task["task_id"], actor=workspace["actor"], scope=workspace["scope"])
 
 
-@pytest.mark.parametrize("workspace", ["domain", "shared"], indirect=True)
 def test_final_reopen_revocation_does_not_return_content(workspace, monkeypatch):
     task = prepare(workspace)
     run(workspace, task)
@@ -376,7 +197,6 @@ def test_final_reopen_revocation_does_not_return_content(workspace, monkeypatch)
     assert count(workspace) == 2
 
 
-@pytest.mark.parametrize("workspace", ["domain", "shared"], indirect=True)
 def test_stale_revision_cannot_replace_committed_result(workspace):
     first = run(workspace, prepare(workspace))
     doc = first["work"]["document"]
@@ -417,8 +237,8 @@ def client(workspace):
     from lumenis_app_api import domain_api_bp
     app = workspace["app"]
     app.register_blueprint(domain_api_bp)
-    names = {"_auth_enabled", "_is_cth_readonly_get", "_owner_authorized_root_request", "_basic_auth",
-             "_pg_resolve_operation_type", "_shared_workspace_owner_http_handoff", "_permission_gate_write_check"}
+    names = {"_auth_enabled", "_is_cth_readonly_get", "_basic_auth",
+             "_pg_resolve_operation_type", "_permission_gate_write_check"}
     constants = {"_PG_WRITE_METHODS", "_PG_BYPASS_PATHS", "_CTH_READONLY_GET_PREFIXES"}
     nodes = [node for node in ast.parse(Path("app.py").read_text(encoding="utf-8-sig")).body if
         isinstance(node, ast.FunctionDef) and node.name in names or
@@ -492,12 +312,7 @@ def test_api_rejects_bad_input_without_creating_task(workspace, client, change):
     if change == "large":
         body = " " * (1024 * 1024 + 1)
     response = client.post(PREFIX, data=body, content_type="application/json")
-    if change == "global":
-        # A focus combined with GLOBAL is denied by the real Permission owner.
-        assert response.status_code == 403
-        assert response.get_json() == {"ok": False, "code": "WORK_PERMISSION_DENIED"}
-    else:
-        assert response.status_code in {400, 401}
+    assert response.status_code in {400, 401}
     assert workspace["repo"].query_one("SELECT COUNT(*) FROM ai_task")[0] == 0
 
 
@@ -516,7 +331,6 @@ def test_api_effect_gate_denial_writes_nothing(workspace, client):
     assert workspace["repo"].query_one("SELECT COUNT(*) FROM ai_task")[0] == 0
 
 
-@pytest.mark.parametrize("workspace", ["domain", "shared"], indirect=True)
 def test_final_export_permission_revocation_rolls_back_task_and_artifact(workspace, monkeypatch):
     task = prepare(workspace)
     original = work._stage_bytes
@@ -528,11 +342,10 @@ def test_final_export_permission_revocation_rolls_back_task_and_artifact(workspa
     with pytest.raises(ValueError, match="WORK_EFFECT_PERMISSION_DENIED"):
         run(workspace, task)
     assert count(workspace) == 0
-    assert pitch.engine().get_pitch_task(task["task_id"], owner_context=work.authorize_saved_work(
+    assert pitch.engine().get_pitch_task(task["task_id"], owner_context=work.authorize(
         workspace["actor"], workspace["scope"], action="read"))["status"] == "failed"
 
 
-@pytest.mark.parametrize("workspace", ["domain", "shared"], indirect=True)
 def test_actual_worker_process_exit_recovers_through_existing_task_owner(workspace):
     import os
     from pathlib import Path
@@ -777,459 +590,3 @@ def test_input_compatibility_public_manifest_unchanged_and_origin_not_mixed(work
     invalid["input_manifest"]["materials"][0]["source_origin"] = {"kind": "approved-file", "ref": "TEST-UPLOAD-0001"}
     with pytest.raises(ValueError, match="INTERNAL_PITCH_INPUT_MANIFEST_INVALID"):
         pitch.prepare_internal_pitch(**invalid)
-
-
-@pytest.mark.parametrize("language,body", [
-    ("zh", "这是用户自己的创作。保留未修改的部分。"),
-    ("en", "This is my own writing. Keep the unchanged section."),
-    ("ko", "사용자가 직접 쓴 글입니다. 수정하지 않은 부분은 유지합니다."),
-])
-def test_independent_authored_manuscript_normal_revision_reopen_export(workspace, client, language, body):
-    values = http_input(workspace)
-    values.pop("shot_plan")
-    values["profile"] = "authored-manuscript/v4"
-    values["scope"] = {"domain_id": "cth", "subject_id": None, "brand_focus_id": None, "global_scope": True}
-    values["manuscript"]["language"] = language
-    values["manuscript"]["sections"] = [{"heading": "Draft", "body": body},
-                                           {"heading": "Retained", "body": "Keep this paragraph."}]
-    response = client.post(PREFIX, json=values)
-    assert response.status_code == 202, response.get_json()
-    task_id = response.get_json()["result"]["task_id"]
-    first = client.post(PREFIX + "/" + task_id + "/run", json={"scope": values["scope"]})
-    assert first.status_code == 200, first.get_json()
-    original = first.get_json()["result"]
-    document = original["work"]["document"]
-    assert document["contract"]["version"] == "4"
-    assert document["payload"]["truth_state"]["source_admission"] == "USER_AUTHORED_CONTENT"
-    assert "input_manifest" not in document["payload"] and "shot_plan" not in document["payload"]
-    export = client.get(PREFIX + "/" + task_id + "/export", query_string={
-        "domain_id": "cth", "subject_id": "", "brand_focus_id": "", "global_scope": "true"})
-    assert export.status_code == 200
-    assert body in [paragraph.text for paragraph in Document(io.BytesIO(export.data)).paragraphs]
-    args = copy.deepcopy(values)
-    args.update(request_id="authored-revision-0002", work_id=document["work_id"],
-                previous_artifact_id=original["action_receipt"]["artifact_id"],
-                expected_draft_digest=document["draft_digest"])
-    args["manuscript"]["sections"][0]["body"] += " Revised."
-    revised = client.post(PREFIX, json=args)
-    assert revised.status_code == 202, revised.get_json()
-    revised_id = revised.get_json()["result"]["task_id"]
-    saved = client.post(PREFIX + "/" + revised_id + "/run", json={"scope": values["scope"]})
-    assert saved.status_code == 200, saved.get_json()
-    child = saved.get_json()["result"]
-    assert child["action_receipt"]["version"] == 2
-    assert child["action_receipt"]["parent_sha256"] == original["action_receipt"]["sha256"]
-    assert child["work"]["document"]["payload"]["manuscript"]["sections"][1] == values["manuscript"]["sections"][1]
-    scope = values["scope"]
-    reopened = pitch.read_internal_pitch(task_id, actor=workspace["actor"], scope=scope)
-    assert reopened["work"]["document"] == document
-    assert pitch.run_internal_pitch(revised_id, actor=workspace["actor"], scope=scope)["action_receipt"] == child["action_receipt"]
-
-
-@pytest.mark.parametrize("extra", ["shot_plan", "input_manifest", "upstream_ref"])
-def test_authored_profile_rejects_mixed_inputs_before_task(workspace, extra):
-    values = arguments(workspace)
-    values.pop("shot_plan")
-    values["profile"] = "authored-manuscript/v4"
-    values[extra] = {} if extra != "upstream_ref" else {"forged": True}
-    with pytest.raises(ValueError, match="INTERNAL_PITCH_PROFILE_INVALID"):
-        pitch.prepare_internal_pitch(**values)
-    assert workspace["repo"].query_one("SELECT COUNT(*) FROM ai_task")[0] == 0
-    assert count(workspace) == 0
-
-
-@pytest.fixture
-def c4_source_use_environment(workspace, monkeypatch):
-    """Bind real disposable Source/Evidence owners to this C4 workspace DB."""
-    import canonical_data
-    from lumenis.importer import documents
-    from lumenis.shared.database.business_schema import apply_business_schema
-    from lumenis.shared.evidence import store
-
-    monkeypatch.setenv(
-        "LUMENIS_EVIDENCE_HMAC_KEY_RING",
-        json.dumps({"c4-test-key": "isolated-source-export-regression-key"}),
-    )
-    monkeypatch.setenv("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID", "c4-test-key")
-    monkeypatch.setattr(documents, "get_repository", lambda: workspace["repo"])
-    monkeypatch.setattr(store, "get_repository", lambda: workspace["repo"])
-    store.init_evidence_store(str(workspace["repo"].db_path))
-    with workspace["repo"].transaction() as con:
-        apply_business_schema(con)
-        store.ensure_evidence_schema(con)
-    with workspace["repo"].connection(read_only=True, wal=False) as con:
-        evidence_columns = {row[1] for row in con.execute("PRAGMA table_info(app_evidence_records)")}
-        assert {"integrity_version", "integrity_algorithm", "integrity_key_id", "integrity_digest"} <= evidence_columns
-    canonical_data.ensure_canonical_table(str(workspace["repo"].db_path))
-    workspace["documents"] = documents
-    workspace["source_store"] = store
-    return workspace
-
-
-def _c4_approved_source_citation(workspace, monkeypatch, *, request_id):
-    from tests.test_collected_source_citations import (
-        _seed_approved_internal_source_canonical,
-    )
-
-    source = _seed_approved_internal_source_canonical(workspace, monkeypatch)
-    assert source["entry"]["allowed_operations"] == [
-        "derive_reference", "read", "save", "revise", "reopen",
-    ]
-    prepared = workspace["documents"].prepare_approved_source_reference(
-        source_id=source["source_id"],
-        canonical_id=source["canonical_id"],
-        expected_body_sha256=source["body_sha256"],
-        request_id=request_id,
-        actor=workspace["actor"],
-        scope=source["scope"],
-    )
-    assert prepared["prepared"] is True
-    assert prepared["resource"].startswith("approved-internal-source-reference:v2:")
-    pending = permission.prepare_approved_source_reference_confirmation(
-        actor=workspace["actor"], scope=source["scope"], gate=workspace["gate"],
-        request={"source_id": source["source_id"], "canonical_id": source["canonical_id"],
-                 "expected_body_sha256": source["body_sha256"], "request_id": request_id},
-    )
-    assert pending["allowed"] is True
-    assert pending["code"] == "APPROVED_SOURCE_REFERENCE_CONFIRMATION_PENDING"
-    assert pending["resource"] == prepared["resource"]
-    confirmed = permission.confirm_approved_source_reference_confirmation(
-        actor=workspace["actor"], scope=source["scope"], gate=workspace["gate"],
-        confirmation_id=pending["confirmation_id"], confirmed=True,
-    )
-    assert confirmed["allowed"] is True
-    assert confirmed["code"] == "APPROVED_SOURCE_REFERENCE_READY_FOR_RETRY"
-    assert confirmed["confirmation_id"] == pending["confirmation_id"]
-    assert confirmed["resource"] == prepared["resource"]
-    assert "approval_token" not in confirmed
-    derived = workspace["documents"].create_approved_source_reference(
-        source_id=source["source_id"],
-        canonical_id=source["canonical_id"],
-        expected_body_sha256=source["body_sha256"],
-        request_id=request_id,
-        actor=workspace["actor"],
-        scope=source["scope"],
-    )
-    quote = "派生引用与 SavedWork"
-    start = source["body"].index(quote)
-    located = workspace["documents"].locate_quote(
-        derived["evidence_id"], actor=workspace["actor"], scope=source["scope"],
-        start=start, end=start + len(quote),
-    )
-    assert located["citation"]["quote"] == quote
-    return source, derived, located["citation"]
-
-
-def _c4_authored_request(workspace, citation, *, request_id, body):
-    values = http_input(workspace)
-    values.pop("shot_plan")
-    values.update(profile=pitch.AUTHORING_PROFILE, citations=[citation], request_id=request_id)
-    values["manuscript"]["sections"] = [{"heading": "Source-backed review", "body": body}]
-    return values
-
-
-def _c4_source_export_state(workspace, source):
-    with workspace["repo"].connection(read_only=True, wal=False) as con:
-        tables = {
-            "tasks": "SELECT * FROM ai_task ORDER BY task_id",
-            "artifacts": "SELECT * FROM lumenis_shared_artifacts ORDER BY artifact_id",
-            "evidence": "SELECT * FROM app_evidence_records ORDER BY id",
-            "canonical": "SELECT * FROM canonical_data WHERE canonical_id=?",
-            "note": "SELECT * FROM notes WHERE note_id=?",
-        }
-        rows = {
-            "tasks": [tuple(row) for row in con.execute(tables["tasks"]).fetchall()],
-            "artifacts": [tuple(row) for row in con.execute(tables["artifacts"]).fetchall()],
-            "evidence": [tuple(row) for row in con.execute(tables["evidence"]).fetchall()],
-            "canonical": [tuple(row) for row in con.execute(
-                tables["canonical"], (source["canonical_id"],)
-            ).fetchall()],
-            "note": [tuple(row) for row in con.execute(
-                tables["note"], (source["source_id"],)
-            ).fetchall()],
-        }
-    artifact_root = workspace["root"] / "artifacts"
-    rows["artifact_files"] = sorted(
-        (path.name, hashlib.sha256(path.read_bytes()).hexdigest())
-        for path in artifact_root.iterdir() if path.is_file()
-    )
-    return rows
-
-
-def test_source_use_export_rejects_internal_view_only(
-    workspace, client, c4_source_use_environment, monkeypatch,
-):
-    from lumenis.system.security.permission import OperationType
-
-    source, _derived, citation = _c4_approved_source_citation(
-        workspace, monkeypatch, request_id="c4-source-use-export-derive-0001",
-    )
-    values = _c4_authored_request(
-        workspace, citation, request_id="c4-source-use-export-pitch-0001",
-        body=f"Review the cited source span: {citation['quote']}.",
-    )
-    created = client.post(PREFIX, json=values)
-    assert created.status_code == 202, created.get_json()
-    task_id = created.get_json()["result"]["task_id"]
-    completed = client.post(PREFIX + "/" + task_id + "/run", json={"scope": source["scope"]})
-    assert completed.status_code == 200, completed.get_json()
-    saved = completed.get_json()["result"]
-    receipt = saved["action_receipt"]
-    assert receipt["task_id"] == task_id
-    saved_citation = saved["work"]["document"]["citations"][0]
-    assert {key: saved_citation[key] for key in ("evidence_id", "start", "end", "quote")} == citation
-    assert saved_citation["source_scope"] == source["scope"]
-    export_resource = "internal-pitch-export:v1:" + work._digest(receipt["output"])
-    workspace["gate"].grant_approval(
-        OperationType.DATA_EXPORT.value,
-        resource=export_resource,
-        granted_by="isolated-c4-source-use-export-test",
-    )
-
-    before = _c4_source_export_state(workspace, source)
-    denied = client.get(PREFIX + "/" + task_id + "/export", query_string=query(workspace))
-    assert denied.status_code == 400
-    assert denied.get_json() == {"ok": False, "code": "SOURCE_USE_PURPOSE_NOT_ALLOWED"}
-    assert denied.mimetype == "application/json"
-    assert "Content-Disposition" not in denied.headers
-    assert "X-Artifact-ID" not in denied.headers
-    assert "X-Artifact-SHA256" not in denied.headers
-    assert not denied.data.startswith(b"PK\x03\x04")
-    assert _c4_source_export_state(workspace, source) == before
-
-    reopened = client.get(PREFIX + "/" + task_id, query_string=query(workspace))
-    assert reopened.status_code == 200, reopened.get_json()
-    reopened_result = reopened.get_json()["result"]
-    assert reopened_result["action_receipt"] == receipt
-    assert reopened_result["work"]["document"] == saved["work"]["document"]
-    with workspace["repo"].connection(read_only=True, wal=False) as con:
-        note = con.execute(
-            "SELECT content FROM notes WHERE note_id=?", (source["source_id"],),
-        ).fetchone()
-        canonical = con.execute(
-            "SELECT content FROM canonical_data WHERE canonical_id=?", (source["canonical_id"],),
-        ).fetchone()
-    assert note[0] == canonical[0] == source["body"]
-    assert _c4_source_export_state(workspace, source) == before
-
-
-def _c4_import_owner_approved_text(workspace, *, filename, source_origin_ref, text):
-    from lumenis.system.security.permission import OperationType
-
-    path = workspace["root"] / filename
-    raw = text.encode("utf-8")
-    path.write_bytes(raw)
-    provenance = {
-        "source_url": None,
-        "published_at": None,
-        "captured_at": "2026-10-11T06:30:00Z",
-        "rights": "owner-approved",
-        "title": "C4 owner-approved text upload regression",
-        "intended_use": "internal_draft",
-        "source_origin": {"kind": "approved-file", "ref": source_origin_ref},
-    }
-    import_args = {"actor": workspace["actor"], "scope": workspace["scope"], "provenance": provenance}
-    import_resource = workspace["documents"].document_import_resource(str(path), **import_args)
-    workspace["gate"].grant_approval(
-        OperationType.DATA_IMPORT.value,
-        resource=import_resource,
-        granted_by="isolated-c4-source-use-export-test",
-    )
-    imported = workspace["documents"].import_document(str(path), **import_args)
-    assert imported["replayed"] is False
-
-    source_resource = "document-source-read:v1:" + hashlib.sha256(raw).hexdigest()
-    workspace["gate"].grant_approval(
-        OperationType.DATA_EXPORT.value,
-        resource=source_resource,
-        granted_by="isolated-c4-source-use-export-test",
-    )
-    retained = workspace["documents"].reopen_imported_source(
-        imported["evidence_id"], actor=workspace["actor"], scope=workspace["scope"],
-    )
-    assert retained["content"] == raw
-    assert retained["source_url"] is None
-    assert retained["source_origin"] == provenance["source_origin"]
-    path.unlink()
-
-    quote = "The owner-approved source is retained exactly as submitted."
-    start = text.index(quote)
-    located = workspace["documents"].locate_quote(
-        imported["evidence_id"], actor=workspace["actor"], scope=workspace["scope"],
-        start=start, end=start + len(quote),
-    )
-    assert located["citation"]["quote"] == quote
-    return imported, located["citation"], raw, retained, source_resource
-
-
-def test_source_use_export_allows_owner_approved_import_with_scoped_grant(
-    workspace, client, c4_source_use_environment,
-):
-    from lumenis.system.security.permission import OperationType
-
-    text = (
-        "Approved input for a directly authored internal proposal. "
-        "The owner-approved source is retained exactly as submitted. "
-        "No public URL or publication time was supplied."
-    )
-    source, citation, original_bytes, retained_source, source_resource = _c4_import_owner_approved_text(
-        workspace, filename="owner-approved-c4-source.txt",
-        source_origin_ref="c4-owner-approved-source-0001", text=text,
-    )
-    with workspace["repo"].connection(read_only=True, wal=False) as con:
-        evidence_row = con.execute(
-            "SELECT collection_metadata FROM app_evidence_records WHERE id=?",
-            (source["evidence_id"],),
-        ).fetchone()
-    provenance = json.loads(evidence_row[0])["provenance"]
-    assert provenance["source_url"] is None and provenance["published_at"] is None
-    assert provenance["captured_at"] == "2026-10-11T06:30:00Z"
-    assert provenance["source_origin"] == {
-        "kind": "approved-file", "ref": "c4-owner-approved-source-0001",
-    }
-    assert provenance["rights"] == "owner-approved"
-    assert provenance["intended_use"] == "internal_draft"
-
-    first_values = _c4_authored_request(
-        workspace, citation, request_id="c4-source-use-export-owned-v1",
-        body=f"Preserve the submitted source's scope: {citation['quote']}.",
-    )
-    first_created = client.post(PREFIX, json=first_values)
-    assert first_created.status_code == 202, first_created.get_json()
-    first_task = first_created.get_json()["result"]["task_id"]
-    first_response = client.post(
-        PREFIX + "/" + first_task + "/run", json={"scope": workspace["scope"]},
-    )
-    assert first_response.status_code == 200, first_response.get_json()
-    first = first_response.get_json()["result"]
-    first_document = first["work"]["document"]
-
-    second_values = _c4_authored_request(
-        workspace, citation, request_id="c4-source-use-export-owned-v2",
-        body=f"Preserve the submitted source's scope: {citation['quote']}. Add a user revision.",
-    )
-    second_values.update(
-        work_id=first_document["work_id"],
-        previous_artifact_id=first["action_receipt"]["artifact_id"],
-        expected_draft_digest=first_document["draft_digest"],
-    )
-    second_created = client.post(PREFIX, json=second_values)
-    assert second_created.status_code == 202, second_created.get_json()
-    second_task = second_created.get_json()["result"]["task_id"]
-    second_response = client.post(
-        PREFIX + "/" + second_task + "/run", json={"scope": workspace["scope"]},
-    )
-    assert second_response.status_code == 200, second_response.get_json()
-    second = second_response.get_json()["result"]
-    second_receipt = second["action_receipt"]
-    second_document = second["work"]["document"]
-    assert second_receipt["version"] == 2
-    assert second_receipt["parent_artifact_id"] == first["action_receipt"]["artifact_id"]
-    assert second_receipt["parent_sha256"] == first["action_receipt"]["sha256"]
-    assert second_document["parent_artifact_id"] == first["action_receipt"]["artifact_id"]
-    assert second_document["parent_sha256"] == first["action_receipt"]["sha256"]
-
-    export_resource = "internal-pitch-export:v1:" + work._digest(second_receipt["output"])
-    workspace["gate"].grant_approval(
-        OperationType.DATA_EXPORT.value,
-        resource=export_resource,
-        granted_by="isolated-c4-source-use-export-test",
-    )
-    exported = client.get(PREFIX + "/" + second_task + "/export", query_string=query(workspace))
-    assert exported.status_code == 200
-    assert exported.headers["X-Artifact-ID"] == second_receipt["output"]["artifact_id"]
-    assert hashlib.sha256(exported.data).hexdigest() == second_receipt["output"]["sha256"]
-    paragraphs = [paragraph.text for paragraph in Document(io.BytesIO(exported.data)).paragraphs]
-    exported_text = "\n".join(paragraphs)
-    assert citation["quote"] in exported_text
-    assert "Add a user revision." in exported_text
-
-    reopened_second = client.get(PREFIX + "/" + second_task, query_string=query(workspace))
-    reopened_first = client.get(PREFIX + "/" + first_task, query_string=query(workspace))
-    assert reopened_second.status_code == reopened_first.status_code == 200
-    assert reopened_second.get_json()["result"]["action_receipt"] == second_receipt
-    assert reopened_second.get_json()["result"]["work"]["document"] == second_document
-    assert reopened_first.get_json()["result"]["action_receipt"] == first["action_receipt"]
-    retained_again = workspace["documents"].reopen_imported_source(
-        source["evidence_id"], actor=workspace["actor"], scope=workspace["scope"],
-    )
-    assert retained_again["content"] == retained_source["content"] == original_bytes
-    assert retained_again["artifact_ref"] == source["source_artifact_ref"]
-    assert retained_again["sha256"] == hashlib.sha256(original_bytes).hexdigest()
-    assert retained_again["source_origin"] == provenance["source_origin"]
-    assert not (workspace["root"] / "owner-approved-c4-source.txt").exists()
-    assert source_resource == "document-source-read:v1:" + retained_again["sha256"]
-
-
-def test_source_use_export_rechecks_revoked_effect_after_attachment_read(
-    workspace, client, c4_source_use_environment, monkeypatch,
-):
-    from lumenis.system.security.permission import OperationType
-
-    text = (
-        "Authorized local source for an export interruption case. "
-        "The owner-approved source is retained exactly as submitted."
-    )
-    source, citation, _raw, _retained, _source_resource = _c4_import_owner_approved_text(
-        workspace, filename="owner-approved-c4-race-source.txt",
-        source_origin_ref="c4-owner-approved-race-0001", text=text,
-    )
-    values = _c4_authored_request(
-        workspace, citation, request_id="c4-source-use-export-race-0001",
-        body=f"Read the exact source before export: {citation['quote']}.",
-    )
-    created = client.post(PREFIX, json=values)
-    assert created.status_code == 202, created.get_json()
-    task_id = created.get_json()["result"]["task_id"]
-    completed = client.post(PREFIX + "/" + task_id + "/run", json={"scope": workspace["scope"]})
-    assert completed.status_code == 200, completed.get_json()
-    saved = completed.get_json()["result"]
-    receipt = saved["action_receipt"]
-    export_resource = "internal-pitch-export:v1:" + work._digest(receipt["output"])
-    token = workspace["gate"].grant_approval(
-        OperationType.DATA_EXPORT.value,
-        resource=export_resource,
-        granted_by="isolated-c4-source-use-export-race-test",
-    )
-
-    before = _c4_source_export_state(workspace, source)
-    original_check = work._check_effect
-    original_read_attachment = work._read_attachment
-    preflight_passed = False
-    revoked = False
-    captured_raw = None
-
-    def checked_effect(actor, scope, operation, resource, **options):
-        nonlocal preflight_passed
-        result = original_check(actor, scope, operation, resource, **options)
-        if (getattr(operation, "value", operation) == OperationType.DATA_EXPORT.value
-                and resource == export_resource):
-            preflight_passed = True
-        return result
-
-    def read_and_revoke_after_preflight(con, binding, context, work_id, *, actor=None):
-        nonlocal revoked, captured_raw
-        raw = original_read_attachment(con, binding, context, work_id, actor=actor)
-        if (preflight_passed and not revoked
-                and binding["artifact_id"] == receipt["output"]["artifact_id"]):
-            captured_raw = raw
-            revoked = workspace["gate"].revoke_approval(token)
-            # DATA_EXPORT is MEDIUM/auto-allowed with VERIFY permission;
-            # revoking a redundant approval token alone does not revoke it.
-            workspace["gate"].revoke_permission(permission.PermissionLevel.VERIFY)
-            assert not workspace["gate"].has_permission(permission.PermissionLevel.VERIFY)
-        return raw
-
-    monkeypatch.setattr(work, "_check_effect", checked_effect)
-    monkeypatch.setattr(work, "_read_attachment", read_and_revoke_after_preflight)
-    denied = client.get(PREFIX + "/" + task_id + "/export", query_string=query(workspace))
-    assert preflight_passed and revoked
-    assert captured_raw is not None
-    assert hashlib.sha256(captured_raw).hexdigest() == receipt["output"]["sha256"]
-    assert denied.status_code == 403
-    assert denied.get_json() == {"ok": False, "code": "WORK_EFFECT_PERMISSION_DENIED"}
-    assert "Content-Disposition" not in denied.headers
-    assert "X-Artifact-ID" not in denied.headers
-    assert "X-Artifact-SHA256" not in denied.headers
-    assert not denied.data.startswith(b"PK\x03\x04")
-    assert _c4_source_export_state(workspace, source) == before

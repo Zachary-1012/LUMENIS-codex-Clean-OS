@@ -45,7 +45,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from lumenis.shared.database import get_repository, main_db_path
 
@@ -220,35 +220,6 @@ _TRAINING_RECEIPT_TASK_ID_RE = re.compile(
     r"^trainrelay_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 )
 _TRAINING_RECEIPT_OWNER = "owned_training_phase_receipts:v1"
-_BROWSER_TASK_PREFIX = "task-browser-"
-_BROWSER_TASK_CREATOR = "system_browser_task"
-_BROWSER_TASK_INTENT = "system_browser_task"
-_BROWSER_TASK_SCHEMA = "lumenis.system.browser-task/v1"
-_BROWSER_TASK_LEASE_SCHEMA = "lumenis.system.browser-task-lease-receipt/v1"
-_BROWSER_TASK_ID_RE = re.compile(
-    r"^task-browser-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-)
-_BROWSER_TASK_SESSION_ID_RE = re.compile(r"^bs_[0-9a-f]{12}$")
-_BROWSER_TASK_CONTEXT_FIELDS = frozenset({
-    "schema", "managed_owner", "created_by", "intent", "owner_key",
-    "browser_session_id", "target_sha256", "target_display", "scope",
-})
-_BROWSER_TASK_SCOPE = {
-    "product_id": "SYSTEM",
-    "module": "browser",
-    "origin": "NOT_BOUND",
-    "model": "NOT_BOUND",
-    "source": "NOT_BOUND",
-}
-_BROWSER_TASK_STATUSES = frozenset({
-    "pending", "running", "cancel_requested", "cancelled", "interrupted",
-    "failed", "finished",
-})
-_BROWSER_TASK_PARAMETER_FIELDS = frozenset({
-    "run_id", "attempt", "worker_pid", "worker_create_time",
-    "lease_expires_at", "heartbeat_at", "lease_seconds",
-})
-_BROWSER_TASK_LEASE_SEAL = object()
 _TRAINING_RECEIPT_USER_INPUT = "Owned training phase receipt state"
 _TRAINING_RECEIPT_FINGERPRINT_FIELDS = (
     "request_sha256", "model_identity_sha256", "manifest_sha256", "train_sha256",
@@ -305,8 +276,6 @@ def _is_managed_report_task_id(task_id: Any) -> bool:
 def _guard_generic_task_access(task_id: Any) -> None:
     if type(task_id) is str and task_id.startswith("task-pitch-"):
         raise PermissionError("internal pitch tasks require their managed owner methods")
-    if type(task_id) is str and task_id.startswith(_BROWSER_TASK_PREFIX):
-        raise PermissionError("browser tasks require their managed owner methods")
     if _is_managed_report_task_id(task_id):
         raise PermissionError(
             "managed report tasks are accessible only through report-task methods"
@@ -377,145 +346,6 @@ def _serialize_strict_json(value: Any, *, field_name: str) -> str:
         raise ValueError(f"{field_name} is not valid JSON data") from exc
     _strict_json_loads(encoded, field_name=field_name)
     return encoded
-
-
-@dataclass(frozen=True, init=False)
-class BrowserTaskLease:
-    """Sealed in-process worker lease; its public receipt grants no authority."""
-
-    task_id: str
-    run_id: str
-    attempt: int
-    worker_pid: int
-    worker_create_time: float
-    lease_expires_at: float
-    heartbeat_at: float
-    lease_seconds: int
-    owner_key: str = field(repr=False)
-    browser_session_id: str = field(repr=False)
-    target_sha256: str = field(repr=False)
-    _issuer: object = field(repr=False, compare=False)
-
-    def __init__(self, *, _issuer: object, **values: Any):
-        if _issuer is not _BROWSER_TASK_LEASE_SEAL:
-            raise TypeError("BrowserTaskLease is issued only by TaskEngine")
-        allowed = {
-            "task_id", "run_id", "attempt", "worker_pid", "worker_create_time",
-            "lease_expires_at", "heartbeat_at", "lease_seconds", "owner_key",
-            "browser_session_id", "target_sha256",
-        }
-        if set(values) != allowed:
-            raise TypeError("BrowserTaskLease fields are invalid")
-        for name, value in values.items():
-            object.__setattr__(self, name, value)
-        object.__setattr__(self, "_issuer", _issuer)
-
-    def to_public_receipt(self) -> dict[str, Any]:
-        """Return a serializable status receipt that carries no permission."""
-        return {
-            "schema": _BROWSER_TASK_LEASE_SCHEMA,
-            "task_id": self.task_id,
-            "run_id": self.run_id,
-            "attempt": self.attempt,
-            "lease_expires_at": self.lease_expires_at,
-            "lease_state": "ACTIVE",
-            "authority": "NONE",
-            "grants": [],
-            "model_analyze": "NOT_GRANTED",
-            "source_use": "NOT_GRANTED",
-            "browser_action": "NOT_GRANTED",
-            "business_outcome": "NOT_OBSERVED",
-            "evaluation": "NOT_EVALUATED",
-            "promotion": "NOT_PROMOTED",
-        }
-
-
-def _require_browser_task_id(task_id: Any) -> str:
-    if type(task_id) is not str or _BROWSER_TASK_ID_RE.fullmatch(task_id) is None:
-        raise ValueError("BROWSER_TASK_ID_INVALID")
-    return task_id
-
-
-def _browser_task_target(value: Any) -> tuple[str, str]:
-    """Validate an exact HTTP(S) target and return only its digest/display."""
-    from urllib.parse import urlsplit
-
-    if (type(value) is not str or not value or len(value) > 8192
-            or value != value.strip()
-            or any(ord(char) < 32 or ord(char) == 127 or char.isspace() for char in value)):
-        raise ValueError("BROWSER_TASK_TARGET_INVALID")
-    try:
-        parsed = urlsplit(value)
-        hostname = parsed.hostname
-        # Accessing .port validates its syntax/range without retaining it.
-        _ = parsed.port
-        if (parsed.scheme.lower() not in {"http", "https"} or not parsed.netloc
-                or not hostname or parsed.username is not None or parsed.password is not None):
-            raise ValueError("BROWSER_TASK_TARGET_INVALID")
-        from lumenis.system.browser.runtime.contract import safe_browser_url
-        display = safe_browser_url(value)
-    except (TypeError, ValueError):
-        raise ValueError("BROWSER_TASK_TARGET_INVALID") from None
-    if type(display) is not str or not display:
-        raise ValueError("BROWSER_TASK_TARGET_INVALID")
-    return hashlib.sha256(value.encode("utf-8")).hexdigest(), display
-
-
-def _browser_task_context(value: Any, *, raw: str | None = None) -> dict[str, Any]:
-    if type(value) is not dict or set(value) != _BROWSER_TASK_CONTEXT_FIELDS:
-        raise ValueError("BROWSER_TASK_CONTEXT_INTEGRITY_INVALID")
-    if (value.get("schema") != _BROWSER_TASK_SCHEMA
-            or value.get("managed_owner") != _BROWSER_TASK_CREATOR
-            or value.get("created_by") != _BROWSER_TASK_CREATOR
-            or value.get("intent") != _BROWSER_TASK_INTENT
-            or type(value.get("owner_key")) is not str
-            or not value["owner_key"]
-            or type(value.get("browser_session_id")) is not str
-            or _BROWSER_TASK_SESSION_ID_RE.fullmatch(value["browser_session_id"]) is None
-            or type(value.get("target_sha256")) is not str
-            or re.fullmatch(r"[0-9a-f]{64}", value["target_sha256"]) is None
-            or type(value.get("target_display")) is not str
-            or not value["target_display"]
-            or value.get("scope") != _BROWSER_TASK_SCOPE):
-        raise ValueError("BROWSER_TASK_CONTEXT_INTEGRITY_INVALID")
-    owner = value["owner_key"]
-    if owner != "workspace:local" and re.fullmatch(r"account:[1-9][0-9]*:[1-9][0-9]*", owner) is None:
-        raise ValueError("BROWSER_TASK_CONTEXT_INTEGRITY_INVALID")
-    digest, display = _browser_task_target(value["target_display"])
-    if display != value["target_display"]:
-        raise ValueError("BROWSER_TASK_CONTEXT_INTEGRITY_INVALID")
-    # A stored display URL has no query or fragment, so its digest is not the
-    # original target hash. Validate only its safe display form above.
-    del digest
-    if raw is not None and _serialize_strict_json(value, field_name="browser task context") != raw:
-        raise ValueError("BROWSER_TASK_CONTEXT_INTEGRITY_INVALID")
-    return value
-
-
-def _browser_task_parameters(value: Any, *, allow_empty: bool = False) -> dict[str, Any]:
-    if allow_empty and value == {}:
-        return {}
-    if type(value) is not dict or set(value) != _BROWSER_TASK_PARAMETER_FIELDS:
-        raise ValueError("BROWSER_TASK_WORKER_INTEGRITY_INVALID")
-    if (type(value.get("run_id")) is not str
-            or re.fullmatch(r"[0-9a-f]{32}", value["run_id"]) is None
-            or type(value.get("attempt")) is not int or value["attempt"] < 1
-            or type(value.get("worker_pid")) is not int or value["worker_pid"] <= 0
-            or type(value.get("worker_create_time")) not in {int, float}
-            or not math.isfinite(value["worker_create_time"])
-            or value["worker_create_time"] <= 0
-            or type(value.get("lease_expires_at")) not in {int, float}
-            or not math.isfinite(value["lease_expires_at"])
-            or value["lease_expires_at"] <= 0
-            or type(value.get("heartbeat_at")) not in {int, float}
-            or not math.isfinite(value["heartbeat_at"])
-            or value["heartbeat_at"] <= 0
-            or type(value.get("lease_seconds")) is not int
-            or not 30 <= value["lease_seconds"] <= 300
-            or value["heartbeat_at"] > value["lease_expires_at"]
-            or value["lease_expires_at"] != value["heartbeat_at"] + value["lease_seconds"]):
-        raise ValueError("BROWSER_TASK_WORKER_INTEGRITY_INVALID")
-    return value
 
 
 def _validate_training_receipt_fingerprints(value: Any) -> Dict[str, str]:
@@ -1415,10 +1245,6 @@ class TaskEngine:
         """
         if created_by == "shared_internal_pitch":
             raise PermissionError("internal pitch tasks require their managed owner methods")
-        if (created_by == _BROWSER_TASK_CREATOR
-                or (type(context) is dict
-                    and context.get("managed_owner") == _BROWSER_TASK_CREATOR)):
-            raise PermissionError("browser tasks require their managed owner methods")
         if (created_by == _TRAINING_RECEIPT_TASK_CREATOR
                 or (type(context) is dict
                     and context.get("managed_owner") == _TRAINING_RECEIPT_OWNER)):
@@ -1449,9 +1275,6 @@ class TaskEngine:
 
     def create_mathematical_task(self, user_input, context, *, created_by):
         """One authenticated mathematical operation survives a lost creation ACK."""
-        if (type(context) is dict
-                and context.get("managed_owner") == _BROWSER_TASK_CREATOR):
-            raise PermissionError("browser tasks require their managed owner methods")
         request_id = context.get("openai_math_request_id")
         if not isinstance(request_id, str) or re.fullmatch(r"[0-9a-f]{32}", request_id) is None:
             raise ValueError("MATHEMATICAL_REQUEST_ID_REQUIRED")
@@ -1626,681 +1449,6 @@ class TaskEngine:
                 con.execute("UPDATE ai_task SET status=?,error=?,finished_at=?,updated_at=? WHERE task_id=?",
                             (state, error, self._now(), self._now(), task_id))
             con.commit()
-
-    @staticmethod
-    def _browser_task_identity(
-        *, action: str, actor_id: int | None, account_session_id: int | None,
-        principal: Any,
-    ) -> str:
-        """Resolve fresh server identity and action permission, independent of session liveness."""
-        from lumenis.system.security import permission as permission_owner
-
-        if action not in {"read", "write"}:
-            raise ValueError("BROWSER_TASK_ACTION_INVALID")
-        if actor_id is not None or account_session_id is not None:
-            if (principal is not None or type(actor_id) is not int or actor_id <= 0
-                    or type(account_session_id) is not int or account_session_id <= 0):
-                raise PermissionError("BROWSER_TASK_IDENTITY_DENIED")
-            from account import authorization, service
-
-            current = service.get_current_user()
-            if (type(current) is not dict or type(current.get("id")) is not int
-                    or type(current.get("session_id")) is not int
-                    or current["id"] <= 0 or current["session_id"] <= 0
-                    or current["id"] != actor_id
-                    or current["session_id"] != account_session_id):
-                raise PermissionError("BROWSER_TASK_IDENTITY_DENIED")
-            try:
-                allowed = authorization.check_dual_domain_permission(
-                    actor_id, "SYSTEM", module="browser", action=action,
-                )
-            except Exception:
-                allowed = False
-            if allowed is not True:
-                raise PermissionError("BROWSER_TASK_PERMISSION_DENIED")
-            owner_key = f"account:{actor_id}:{account_session_id}"
-        else:
-            if (type(principal) is not permission_owner.LocalWorkspacePrincipal
-                    or not permission_owner._is_server_local_workspace_principal(principal)):
-                raise PermissionError("BROWSER_TASK_IDENTITY_DENIED")
-            try:
-                current_principal = permission_owner.resolve_local_workspace_principal(
-                    module="browser", action=action,
-                )
-            except Exception:
-                current_principal = None
-            if (current_principal is None
-                    or not permission_owner._is_server_local_workspace_principal(current_principal)
-                    or current_principal.principal_ref != principal.principal_ref):
-                raise PermissionError("BROWSER_TASK_PERMISSION_DENIED")
-            owner_key = "workspace:local"
-        return owner_key
-
-    @staticmethod
-    def _browser_task_request(
-        *, target_url: str, browser_session_id: str, action: str,
-        actor_id: int | None, account_session_id: int | None, principal: Any,
-        require_live_session: bool = True,
-    ) -> tuple[str, str, str]:
-        """Resolve identity/permission, exact persisted scope and optionally live session owner."""
-        owner_key = TaskEngine._browser_task_identity(
-            action=action, actor_id=actor_id,
-            account_session_id=account_session_id, principal=principal,
-        )
-        if (type(browser_session_id) is not str
-                or _BROWSER_TASK_SESSION_ID_RE.fullmatch(browser_session_id) is None):
-            raise ValueError("BROWSER_TASK_SESSION_INVALID")
-
-        target_sha256, target_display = _browser_task_target(target_url)
-        if require_live_session is not True:
-            return owner_key, target_sha256, target_display
-        # The caller supplies only an identifier. The existing SYSTEM Browser
-        # session owner resolves it and proves its immutable owner tuple here.
-        try:
-            from ai_browser_runtime import get_session_manager
-            session = get_session_manager().get_session(browser_session_id)
-        except Exception:
-            session = None
-        if (session is None or getattr(session, "session_id", None) != browser_session_id):
-            raise PermissionError("BROWSER_TASK_SESSION_UNAVAILABLE")
-        try:
-            session_status = getattr(getattr(session, "status", None), "value", None)
-            session_alive = session.is_alive()
-        except Exception:
-            session_status, session_alive = None, False
-        if session_status not in {"created", "running"} or session_alive is not True:
-            raise PermissionError("BROWSER_TASK_SESSION_UNAVAILABLE")
-        session_actor = getattr(session, "owner_actor_id", None)
-        session_account = getattr(session, "owner_account_session_id", None)
-        session_principal = getattr(session, "owner_principal_ref", None)
-        if owner_key == "workspace:local":
-            session_matches = (
-                session_actor is None and session_account is None
-                and session_principal == "workspace:local"
-            )
-        else:
-            session_matches = (
-                session_actor == actor_id and type(session_actor) is int
-                and session_account == account_session_id and type(session_account) is int
-                and session_principal is None
-            )
-        if not session_matches:
-            raise PermissionError("BROWSER_TASK_SESSION_OWNER_DENIED")
-        return owner_key, target_sha256, target_display
-
-    @staticmethod
-    def _browser_task_context_for_request(
-        context: dict[str, Any], owner_key: str, browser_session_id: str,
-        target_sha256: str, target_display: str,
-    ) -> None:
-        _browser_task_context(context)
-        if (context["owner_key"] != owner_key
-                or context["browser_session_id"] != browser_session_id
-                or context["target_sha256"] != target_sha256
-                or context["target_display"] != target_display):
-            raise PermissionError("BROWSER_TASK_SCOPE_DENIED")
-
-    @staticmethod
-    def _browser_task_read_row(
-        connection: sqlite3.Connection, task_id: str, *, owner_key: str,
-        browser_session_id: str, target_sha256: str, target_display: str,
-    ) -> dict[str, Any]:
-        task_id = _require_browser_task_id(task_id)
-        row = connection.execute(
-            "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
-            (task_id, _BROWSER_TASK_CREATOR),
-        ).fetchone()
-        if row is None:
-            raise LookupError("BROWSER_TASK_NOT_FOUND")
-        task = dict(row)
-        if (task.get("created_by") != _BROWSER_TASK_CREATOR
-                or task.get("intent") != _BROWSER_TASK_INTENT
-                or task.get("status") not in _BROWSER_TASK_STATUSES
-                or task.get("user_input") != "Internal browser task"):
-            raise ValueError("BROWSER_TASK_ROW_INTEGRITY_INVALID")
-        raw_context = task.get("context_json")
-        context = _strict_json_loads(raw_context, field_name="browser task context")
-        context = _browser_task_context(context, raw=raw_context)
-        TaskEngine._browser_task_context_for_request(
-            context, owner_key, browser_session_id, target_sha256, target_display,
-        )
-        raw_parameters = task.get("parameters_json")
-        parameters = _strict_json_loads(raw_parameters, field_name="browser task worker")
-        parameters = _browser_task_parameters(
-            parameters, allow_empty=task["status"] in {"pending", "cancelled"},
-        )
-        if task["status"] in {"running", "cancel_requested", "interrupted", "failed", "finished"} and not parameters:
-            raise ValueError("BROWSER_TASK_WORKER_INTEGRITY_INVALID")
-        if _serialize_strict_json(parameters, field_name="browser task worker") != raw_parameters:
-            raise ValueError("BROWSER_TASK_WORKER_INTEGRITY_INVALID")
-        task["context"] = context
-        task["parameters"] = parameters
-        task["result"] = None
-        if task.get("result_json") is not None:
-            raw_result = task["result_json"]
-            result = _strict_json_loads(raw_result, field_name="browser task result")
-            if (type(result) is not dict
-                    or set(result) != {"payload", "business_outcome", "evaluation", "promotion"}
-                    or result.get("business_outcome") != "NOT_OBSERVED"
-                    or result.get("evaluation") != "NOT_EVALUATED"
-                    or result.get("promotion") != "NOT_PROMOTED"
-                    or _serialize_strict_json(result, field_name="browser task result") != raw_result):
-                raise ValueError("BROWSER_TASK_RESULT_INTEGRITY_INVALID")
-            task["result"] = result
-        if task["status"] == "finished":
-            if task["result"] is None or task.get("error") is not None:
-                raise ValueError("BROWSER_TASK_RESULT_INTEGRITY_INVALID")
-        elif task["result"] is not None:
-            raise ValueError("BROWSER_TASK_RESULT_INTEGRITY_INVALID")
-        error = task.get("error")
-        if error is not None and (type(error) is not str or re.fullmatch(r"[A-Z_0-9]{1,100}", error) is None):
-            raise ValueError("BROWSER_TASK_ERROR_INTEGRITY_INVALID")
-        return task
-
-    @staticmethod
-    def _browser_task_process_identity() -> tuple[int, float]:
-        try:
-            import psutil
-            process = psutil.Process(os.getpid())
-            create_time = process.create_time()
-        except Exception:
-            raise RuntimeError("BROWSER_TASK_WORKER_IDENTITY_UNVERIFIED") from None
-        if type(create_time) not in {int, float} or not math.isfinite(create_time) or create_time <= 0:
-            raise RuntimeError("BROWSER_TASK_WORKER_IDENTITY_UNVERIFIED")
-        return os.getpid(), float(create_time)
-
-    @staticmethod
-    def _browser_task_worker_alive(parameters: dict[str, Any]) -> bool:
-        try:
-            import psutil
-            process = psutil.Process(parameters["worker_pid"])
-            create_time = process.create_time()
-            running = process.is_running()
-        except psutil.NoSuchProcess:
-            return False
-        except psutil.AccessDenied:
-            raise RuntimeError("BROWSER_TASK_WORKER_IDENTITY_UNVERIFIED") from None
-        except Exception:
-            raise RuntimeError("BROWSER_TASK_WORKER_IDENTITY_UNVERIFIED") from None
-        if type(create_time) not in {int, float} or not math.isfinite(create_time):
-            raise RuntimeError("BROWSER_TASK_WORKER_IDENTITY_UNVERIFIED")
-        return bool(running and float(create_time) == float(parameters["worker_create_time"]))
-
-    @staticmethod
-    def _browser_task_make_lease(task: dict[str, Any]) -> BrowserTaskLease:
-        context = task["context"]
-        parameters = task["parameters"]
-        return BrowserTaskLease(
-            _issuer=_BROWSER_TASK_LEASE_SEAL,
-            task_id=task["task_id"],
-            run_id=parameters["run_id"],
-            attempt=parameters["attempt"],
-            worker_pid=parameters["worker_pid"],
-            worker_create_time=float(parameters["worker_create_time"]),
-            lease_expires_at=float(parameters["lease_expires_at"]),
-            heartbeat_at=float(parameters["heartbeat_at"]),
-            lease_seconds=parameters["lease_seconds"],
-            owner_key=context["owner_key"],
-            browser_session_id=context["browser_session_id"],
-            target_sha256=context["target_sha256"],
-        )
-
-    @staticmethod
-    def _browser_task_public_state(task: dict[str, Any]) -> dict[str, Any]:
-        lease_receipt = None
-        if task["status"] == "running":
-            lease_receipt = TaskEngine._browser_task_make_lease(task).to_public_receipt()
-        return {
-            "task_id": task["task_id"],
-            "intent": _BROWSER_TASK_INTENT,
-            "status": task["status"],
-            "scope": dict(_BROWSER_TASK_SCOPE),
-            "target_display": task["context"]["target_display"],
-            "created_at": task.get("created_at"),
-            "updated_at": task.get("updated_at"),
-            "started_at": task.get("started_at"),
-            "finished_at": task.get("finished_at"),
-            "result": task.get("result"),
-            "error": task.get("error"),
-            "lease_receipt": lease_receipt,
-            "authority": "NONE",
-            "grants": [],
-        }
-
-    @staticmethod
-    def _browser_task_require_lease(
-        task: dict[str, Any], lease: Any, *, owner_key: str,
-        browser_session_id: str, target_sha256: str,
-    ) -> dict[str, Any]:
-        if (type(lease) is not BrowserTaskLease
-                or lease._issuer is not _BROWSER_TASK_LEASE_SEAL):
-            raise PermissionError("BROWSER_TASK_LEASE_INVALID")
-        if (task["status"] != "running"
-                or lease.task_id != task["task_id"]
-                or lease.owner_key != owner_key
-                or lease.browser_session_id != browser_session_id
-                or lease.target_sha256 != target_sha256
-                or task["context"]["owner_key"] != owner_key
-                or task["context"]["browser_session_id"] != browser_session_id
-                or task["context"]["target_sha256"] != target_sha256):
-            raise PermissionError("BROWSER_TASK_LEASE_STALE")
-        parameters = task["parameters"]
-        lease_fields = {
-            "run_id": lease.run_id,
-            "attempt": lease.attempt,
-            "worker_pid": lease.worker_pid,
-            "worker_create_time": lease.worker_create_time,
-            "lease_expires_at": lease.lease_expires_at,
-            "heartbeat_at": lease.heartbeat_at,
-            "lease_seconds": lease.lease_seconds,
-        }
-        if (type(lease.run_id) is not str
-                or type(lease.attempt) is not int
-                or type(lease.worker_pid) is not int
-                or type(lease.worker_create_time) not in {int, float}
-                or type(lease.lease_expires_at) not in {int, float}
-                or type(lease.heartbeat_at) not in {int, float}
-                or type(lease.lease_seconds) is not int
-                or lease_fields != {key: parameters[key] for key in _BROWSER_TASK_PARAMETER_FIELDS}):
-            raise PermissionError("BROWSER_TASK_LEASE_STALE")
-        if (not math.isfinite(float(lease.lease_expires_at))
-                or float(lease.lease_expires_at) <= time.time()):
-            raise PermissionError("BROWSER_TASK_LEASE_EXPIRED")
-        pid, create_time = TaskEngine._browser_task_process_identity()
-        if pid != parameters["worker_pid"] or create_time != float(parameters["worker_create_time"]):
-            raise PermissionError("BROWSER_TASK_WORKER_MISMATCH")
-        return task
-
-    def create_browser_task(
-        self, target_url: str, *, browser_session_id: str,
-        actor_id: int | None = None, account_session_id: int | None = None,
-        principal: Any = None,
-    ) -> dict[str, Any]:
-        """Create a SYSTEM/browser task binding without granting any action."""
-        owner_key, target_sha256, target_display = self._browser_task_request(
-            target_url=target_url, browser_session_id=browser_session_id, action="write",
-            actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-        )
-        task_id = f"{_BROWSER_TASK_PREFIX}{uuid.uuid4()}"
-        context = {
-            "schema": _BROWSER_TASK_SCHEMA,
-            "managed_owner": _BROWSER_TASK_CREATOR,
-            "created_by": _BROWSER_TASK_CREATOR,
-            "intent": _BROWSER_TASK_INTENT,
-            "owner_key": owner_key,
-            "browser_session_id": browser_session_id,
-            "target_sha256": target_sha256,
-            "target_display": target_display,
-            "scope": dict(_BROWSER_TASK_SCOPE),
-        }
-        _browser_task_context(context)
-        raw_context = _serialize_strict_json(context, field_name="browser task context")
-        now = self._now()
-        with get_repository().connection() as con:
-            con.execute("BEGIN IMMEDIATE")
-            try:
-                current_owner, current_hash, current_display = self._browser_task_request(
-                    target_url=target_url, browser_session_id=browser_session_id, action="write",
-                    actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-                )
-                if (current_owner, current_hash, current_display) != (owner_key, target_sha256, target_display):
-                    raise PermissionError("BROWSER_TASK_SCOPE_DENIED")
-                con.execute(
-                    """INSERT INTO ai_task
-                       (task_id, user_input, intent, parameters_json, context_json,
-                        status, risk_level, created_at, updated_at, created_by)
-                       VALUES (?, 'Internal browser task', ?, '{}', ?, 'pending', 'L0', ?, ?, ?)""",
-                    (task_id, _BROWSER_TASK_INTENT, raw_context, now, now, _BROWSER_TASK_CREATOR),
-                )
-                con.commit()
-            except Exception:
-                con.rollback()
-                raise
-        return self.get_browser_task(
-            task_id, target_url=target_url, browser_session_id=browser_session_id,
-            actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-        )
-
-    def get_browser_task(
-        self, task_id: str, *, target_url: str, browser_session_id: str,
-        actor_id: int | None = None, account_session_id: int | None = None,
-        principal: Any = None,
-    ) -> dict[str, Any]:
-        """Read a managed browser task only for its current owner/session/target."""
-        task_id = _require_browser_task_id(task_id)
-        owner_key, target_sha256, target_display = self._browser_task_request(
-            target_url=target_url, browser_session_id=browser_session_id, action="read",
-            actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-            require_live_session=False,
-        )
-        with get_repository().connection(read_only=True, wal=False) as con:
-            task = self._browser_task_read_row(
-                con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                target_sha256=target_sha256, target_display=target_display,
-            )
-        return self._browser_task_public_state(task)
-
-    def claim_browser_task(
-        self, task_id: str, *, target_url: str, browser_session_id: str,
-        lease_seconds: int = 60, actor_id: int | None = None,
-        account_session_id: int | None = None, principal: Any = None,
-    ) -> BrowserTaskLease:
-        """Atomically claim one runnable task in this exact live worker process."""
-        task_id = _require_browser_task_id(task_id)
-        if type(lease_seconds) is not int or not 30 <= lease_seconds <= 300:
-            raise ValueError("BROWSER_TASK_LEASE_DURATION_INVALID")
-        owner_key, target_sha256, target_display = self._browser_task_request(
-            target_url=target_url, browser_session_id=browser_session_id, action="write",
-            actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-        )
-        pid, create_time = self._browser_task_process_identity()
-        now_epoch = time.time()
-        now = self._now()
-        with get_repository().connection() as con:
-            con.execute("BEGIN IMMEDIATE")
-            try:
-                task = self._browser_task_read_row(
-                    con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256, target_display=target_display,
-                )
-                if task["status"] not in {"pending", "interrupted", "failed"}:
-                    raise ValueError("BROWSER_TASK_NOT_RUNNABLE")
-                previous = task["parameters"]
-                attempt = previous.get("attempt", 0) + 1
-                parameters = {
-                    "run_id": uuid.uuid4().hex,
-                    "attempt": attempt,
-                    "worker_pid": pid,
-                    "worker_create_time": create_time,
-                    "lease_expires_at": now_epoch + lease_seconds,
-                    "heartbeat_at": now_epoch,
-                    "lease_seconds": lease_seconds,
-                }
-                encoded_parameters = _serialize_strict_json(parameters, field_name="browser task worker")
-                current_owner, current_hash, current_display = self._browser_task_request(
-                    target_url=target_url, browser_session_id=browser_session_id, action="write",
-                    actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-                )
-                if (current_owner, current_hash, current_display) != (owner_key, target_sha256, target_display):
-                    raise PermissionError("BROWSER_TASK_SCOPE_DENIED")
-                cursor = con.execute(
-                    """UPDATE ai_task SET status='running', parameters_json=?, started_at=?,
-                           finished_at=NULL, result_json=NULL, error=NULL, updated_at=?
-                       WHERE task_id=? AND created_by=? AND status=? AND context_json=?
-                         AND parameters_json=?""",
-                    (encoded_parameters, now, now, task_id, _BROWSER_TASK_CREATOR,
-                     task["status"], task["context_json"], task["parameters_json"]),
-                )
-                if cursor.rowcount != 1:
-                    raise RuntimeError("BROWSER_TASK_CLAIM_CONFLICT")
-                updated = self._browser_task_read_row(
-                    con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256, target_display=target_display,
-                )
-                con.commit()
-            except Exception:
-                con.rollback()
-                raise
-        return self._browser_task_make_lease(updated)
-
-    def require_current_browser_task(
-        self, task_id: str, *, lease: Any, target_url: str, browser_session_id: str,
-        actor_id: int | None = None, account_session_id: int | None = None,
-        principal: Any = None,
-    ) -> dict[str, Any]:
-        """Require the exact sealed, unexpired, live worker lease; grants nothing."""
-        task_id = _require_browser_task_id(task_id)
-        owner_key, target_sha256, target_display = self._browser_task_request(
-            target_url=target_url, browser_session_id=browser_session_id, action="write",
-            actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-        )
-        if type(lease) is not BrowserTaskLease or lease.task_id != task_id:
-            raise PermissionError("BROWSER_TASK_LEASE_INVALID")
-        with get_repository().connection(read_only=True, wal=False) as con:
-            task = self._browser_task_read_row(
-                con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                target_sha256=target_sha256, target_display=target_display,
-            )
-        self._browser_task_require_lease(
-            task, lease, owner_key=owner_key, browser_session_id=browser_session_id,
-            target_sha256=target_sha256,
-        )
-        return self._browser_task_public_state(task)
-
-    def heartbeat_browser_task(
-        self, task_id: str, *, lease: Any, target_url: str, browser_session_id: str,
-        lease_seconds: int | None = None, actor_id: int | None = None,
-        account_session_id: int | None = None, principal: Any = None,
-    ) -> BrowserTaskLease:
-        task_id = _require_browser_task_id(task_id)
-        if lease_seconds is not None and (type(lease_seconds) is not int or not 30 <= lease_seconds <= 300):
-            raise ValueError("BROWSER_TASK_LEASE_DURATION_INVALID")
-        owner_key, target_sha256, target_display = self._browser_task_request(
-            target_url=target_url, browser_session_id=browser_session_id, action="write",
-            actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-        )
-        with get_repository().connection() as con:
-            con.execute("BEGIN IMMEDIATE")
-            try:
-                task = self._browser_task_read_row(
-                    con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256, target_display=target_display,
-                )
-                self._browser_task_require_lease(
-                    task, lease, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256,
-                )
-                seconds = lease_seconds if lease_seconds is not None else task["parameters"]["lease_seconds"]
-                current_owner, current_hash, current_display = self._browser_task_request(
-                    target_url=target_url, browser_session_id=browser_session_id, action="write",
-                    actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-                )
-                if (current_owner, current_hash, current_display) != (owner_key, target_sha256, target_display):
-                    raise PermissionError("BROWSER_TASK_SCOPE_DENIED")
-                # Permission/session resolution can consume the rest of the lease.
-                # Recheck the exact persisted tuple after that fresh authorization,
-                # immediately before preparing the CAS write.
-                self._browser_task_require_lease(
-                    task, lease, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256,
-                )
-                now_epoch = time.time()
-                parameters = dict(task["parameters"])
-                parameters["heartbeat_at"] = now_epoch
-                parameters["lease_expires_at"] = now_epoch + seconds
-                parameters["lease_seconds"] = seconds
-                encoded = _serialize_strict_json(parameters, field_name="browser task worker")
-                cursor = con.execute(
-                    """UPDATE ai_task SET parameters_json=?, updated_at=?
-                       WHERE task_id=? AND created_by=? AND status='running'
-                         AND context_json=? AND parameters_json=?
-                         AND CAST(json_extract(parameters_json, '$.lease_expires_at') AS REAL) >
-                             ((julianday('now') - 2440587.5) * 86400.0)""",
-                    (encoded, self._now(), task_id, _BROWSER_TASK_CREATOR,
-                     task["context_json"], task["parameters_json"]),
-                )
-                if cursor.rowcount != 1:
-                    raise RuntimeError("BROWSER_TASK_HEARTBEAT_CONFLICT")
-                updated = self._browser_task_read_row(
-                    con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256, target_display=target_display,
-                )
-                con.commit()
-            except Exception:
-                con.rollback()
-                raise
-        return self._browser_task_make_lease(updated)
-
-    def cancel_browser_task(
-        self, task_id: str, *, target_url: str, browser_session_id: str,
-        actor_id: int | None = None, account_session_id: int | None = None,
-        principal: Any = None,
-    ) -> dict[str, Any]:
-        task_id = _require_browser_task_id(task_id)
-        owner_key, target_sha256, target_display = self._browser_task_request(
-            target_url=target_url, browser_session_id=browser_session_id, action="write",
-            actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-        )
-        with get_repository().connection() as con:
-            con.execute("BEGIN IMMEDIATE")
-            try:
-                task = self._browser_task_read_row(
-                    con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256, target_display=target_display,
-                )
-                state = task["status"]
-                replacement = None
-                if state in {"pending", "interrupted", "failed"}:
-                    replacement = ("cancelled", self._now())
-                elif state == "running":
-                    replacement = ("cancel_requested", None)
-                current_owner, current_hash, current_display = self._browser_task_request(
-                    target_url=target_url, browser_session_id=browser_session_id, action="write",
-                    actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-                )
-                if (current_owner, current_hash, current_display) != (owner_key, target_sha256, target_display):
-                    raise PermissionError("BROWSER_TASK_SCOPE_DENIED")
-                if replacement is not None:
-                    next_state, finished_at = replacement
-                    cursor = con.execute(
-                        """UPDATE ai_task SET status=?, error='CANCELLED', finished_at=?, updated_at=?
-                           WHERE task_id=? AND created_by=? AND status=? AND context_json=?
-                             AND parameters_json=?""",
-                        (next_state, finished_at, self._now(), task_id, _BROWSER_TASK_CREATOR,
-                         state, task["context_json"], task["parameters_json"]),
-                    )
-                    if cursor.rowcount != 1:
-                        raise RuntimeError("BROWSER_TASK_CANCEL_CONFLICT")
-                updated = self._browser_task_read_row(
-                    con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256, target_display=target_display,
-                )
-                con.commit()
-            except Exception:
-                con.rollback()
-                raise
-        return self._browser_task_public_state(updated)
-
-    def reconcile_browser_task(
-        self, task_id: str, *, target_url: str, browser_session_id: str,
-        actor_id: int | None = None, account_session_id: int | None = None,
-        principal: Any = None,
-    ) -> dict[str, Any]:
-        """Interrupt only after the exact recorded PID/create-time is proven gone."""
-        task_id = _require_browser_task_id(task_id)
-        owner_key, target_sha256, target_display = self._browser_task_request(
-            target_url=target_url, browser_session_id=browser_session_id, action="write",
-            actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-        )
-        with get_repository().connection() as con:
-            con.execute("BEGIN IMMEDIATE")
-            try:
-                task = self._browser_task_read_row(
-                    con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256, target_display=target_display,
-                )
-                state = task["status"]
-                if state in {"running", "cancel_requested"}:
-                    if self._browser_task_worker_alive(task["parameters"]):
-                        raise RuntimeError("BROWSER_TASK_WORKER_STILL_ACTIVE")
-                    next_state = "cancelled" if state == "cancel_requested" else "interrupted"
-                    current_owner, current_hash, current_display = self._browser_task_request(
-                        target_url=target_url, browser_session_id=browser_session_id, action="write",
-                        actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-                    )
-                    if (current_owner, current_hash, current_display) != (owner_key, target_sha256, target_display):
-                        raise PermissionError("BROWSER_TASK_SCOPE_DENIED")
-                    finished_at = self._now() if next_state == "cancelled" else None
-                    cursor = con.execute(
-                        """UPDATE ai_task SET status=?, error=?, finished_at=?, updated_at=?
-                           WHERE task_id=? AND created_by=? AND status=? AND context_json=?
-                             AND parameters_json=?""",
-                        (next_state, "CANCELLED" if next_state == "cancelled" else None,
-                         finished_at, self._now(), task_id, _BROWSER_TASK_CREATOR,
-                         state, task["context_json"], task["parameters_json"]),
-                    )
-                    if cursor.rowcount != 1:
-                        raise RuntimeError("BROWSER_TASK_RECONCILE_CONFLICT")
-                updated = self._browser_task_read_row(
-                    con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256, target_display=target_display,
-                )
-                con.commit()
-            except Exception:
-                con.rollback()
-                raise
-        return self._browser_task_public_state(updated)
-
-    def finish_browser_task(
-        self, task_id: str, *, lease: Any, target_url: str, browser_session_id: str,
-        result: dict[str, Any] | None = None, error: str | None = None,
-        actor_id: int | None = None, account_session_id: int | None = None,
-        principal: Any = None,
-    ) -> bool:
-        task_id = _require_browser_task_id(task_id)
-        if (result is None) == (error is None):
-            raise ValueError("BROWSER_TASK_RESULT_OR_ERROR_REQUIRED")
-        if result is not None:
-            if type(result) is not dict:
-                raise ValueError("BROWSER_TASK_RESULT_INVALID")
-            _serialize_strict_json(result, field_name="browser task result input")
-            from lumenis.system.browser.runtime.contract import sanitize_runtime_value
-            safe_result = sanitize_runtime_value(result)
-            result_value = {
-                "payload": safe_result,
-                "business_outcome": "NOT_OBSERVED",
-                "evaluation": "NOT_EVALUATED",
-                "promotion": "NOT_PROMOTED",
-            }
-            result_json = _serialize_strict_json(result_value, field_name="browser task result")
-        else:
-            if type(error) is not str or re.fullmatch(r"[A-Z_0-9]{1,100}", error) is None:
-                raise ValueError("BROWSER_TASK_ERROR_INVALID")
-            result_json = None
-        owner_key, target_sha256, target_display = self._browser_task_request(
-            target_url=target_url, browser_session_id=browser_session_id, action="write",
-            actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-        )
-        with get_repository().connection() as con:
-            con.execute("BEGIN IMMEDIATE")
-            try:
-                task = self._browser_task_read_row(
-                    con, task_id, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256, target_display=target_display,
-                )
-                self._browser_task_require_lease(
-                    task, lease, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256,
-                )
-                current_owner, current_hash, current_display = self._browser_task_request(
-                    target_url=target_url, browser_session_id=browser_session_id, action="write",
-                    actor_id=actor_id, account_session_id=account_session_id, principal=principal,
-                )
-                if (current_owner, current_hash, current_display) != (owner_key, target_sha256, target_display):
-                    raise PermissionError("BROWSER_TASK_SCOPE_DENIED")
-                # Repeat worker/expiry validation after the final fresh auth and
-                # live Browser session check, then fence expiry again in SQL CAS.
-                self._browser_task_require_lease(
-                    task, lease, owner_key=owner_key, browser_session_id=browser_session_id,
-                    target_sha256=target_sha256,
-                )
-                status = "finished" if result is not None else "failed"
-                cursor = con.execute(
-                    """UPDATE ai_task SET status=?, result_json=?, error=?, finished_at=?, updated_at=?
-                       WHERE task_id=? AND created_by=? AND status='running'
-                         AND context_json=? AND parameters_json=?
-                         AND CAST(json_extract(parameters_json, '$.lease_expires_at') AS REAL) >
-                             ((julianday('now') - 2440587.5) * 86400.0)""",
-                    (status, result_json, error, self._now(), self._now(), task_id,
-                     _BROWSER_TASK_CREATOR, task["context_json"], task["parameters_json"]),
-                )
-                if cursor.rowcount != 1:
-                    raise RuntimeError("BROWSER_TASK_FINISH_CONFLICT")
-                con.commit()
-            except Exception:
-                con.rollback()
-                raise
-        return True
 
     def create_report_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Persist one server-authorized Source Brief task in the existing table.
@@ -2545,11 +1693,11 @@ class TaskEngine:
             raise ValueError("CHECKPOINT_SCOPE_MISMATCH")
         self._training_checkpoint_material(detail)
         from lumenis.system.security import training_receipts as receipts
-        for field_name in ("task_digest", "policy_sha256", "run_digest"):
-            receipts._checkpoint_hash(detail[field_name])
+        for field in ("task_digest", "policy_sha256", "run_digest"):
+            receipts._checkpoint_hash(detail[field])
         receipts._checkpoint_uuid(detail["attempt_id"])
-        for field_name in ("worker_epoch", "next_sequence"):
-            receipts._checkpoint_integer(detail[field_name], 1)
+        for field in ("worker_epoch", "next_sequence"):
+            receipts._checkpoint_integer(detail[field], 1)
         if (type(detail["byte_limit"]) is not int or not 1 <= detail["byte_limit"] <= 1024**4
                 or type(detail["worker_binding"]) is not dict
                 or set(detail["worker_binding"]) != {"pid", "created_at", "lock_sha256"}
@@ -3971,7 +3119,7 @@ class TaskEngine:
         # L0/L1/L2：通过 PermissionGate 检查
         if self.permission_gate is not None:
             try:
-                from lumenis.system.security import OperationType
+                from lumenis.system.security import OperationType, RiskLevel as PGRisk
                 # 映射操作类型
                 agent_id = task.get("agent_id", "")
                 if "browser" in agent_id:
@@ -4023,7 +3171,7 @@ class TaskEngine:
             risk = task.get("risk_level", "L3")
             if risk in ("L0", "L1"):
                 self._db_update_step(step_id, status="succeeded",
-                                     detail="PermissionGate unavailable, L0/L1 auto-allow (read-only)")
+                                     detail=f"PermissionGate unavailable, L0/L1 auto-allow (read-only)")
                 self._db_update_task(task_id, permission_result="auto_allow_l0l1",
                                      status=TaskStatus.READY.value)
                 self._db_add_trace(task_id, "task.permission",
@@ -4092,6 +3240,8 @@ class TaskEngine:
         # External GUI tasks have durable attempt identity and may not be replayed
         # by the generic retry loop after an ambiguous worker result.
         max_retries = 0 if is_agent_zero_gui_task(task) else task.get("max_retries", self.default_max_retries)
+        last_error = None
+
         for attempt in range(max_retries + 1):
             if task_id in self._cancelled:
                 self._db_update_task(task_id, status=TaskStatus.CANCELLED.value,
@@ -4103,6 +3253,7 @@ class TaskEngine:
                 self._circuit.record_success()
                 return result
             except Exception as e:
+                last_error = e
                 self._circuit.record_failure()
                 retry_count = attempt + 1
                 self._db_update_task(task_id, retry_count=retry_count)
@@ -4333,8 +3484,8 @@ class TaskEngine:
         所有执行均为只读/分析，不修改生产数据。
         AI 调用通过唯一 SYSTEM AI Gateway；失败时保留显式状态。
         """
-        _ = task.get("user_input", "")
-        _ = task.get("parameters", {})
+        user_input = task.get("user_input", "")
+        parameters = task.get("parameters", {})
 
         # ── 数据查询 Agent ──
         if agent_id == "data_query_agent":
@@ -4515,21 +3666,50 @@ class TaskEngine:
         return result
 
     def _execute_browser(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
-        """Consume the product browser owner; never restart withdrawn OS work."""
-        from agent_runtime.agent_zero_gui_executor import is_agent_zero_gui_task
+        """浏览器 Agent：只读操作。严格遵守官方账号只读保护。"""
+        from agent_runtime.agent_zero_gui_executor import (
+            AGENT_ZERO_TASK_RECORD,
+            get_agent_zero_gui_executor,
+            is_agent_zero_gui_task,
+        )
         if is_agent_zero_gui_task(task):
-            # 2026-10-11 PO withdrew general OS execution. Retained records,
-            # leases and stop/recovery helpers remain historical; this entry
-            # cannot dispatch an old configured worker or mint another attempt.
-            return {
-                "executor": "agent_zero_gui", "execution_status": "UNAVAILABLE",
-                "task_outcome": "UNAVAILABLE", "failure_code": "GENERAL_OS_EXECUTION_WITHDRAWN",
-                "error": "GENERAL_OS_EXECUTION_WITHDRAWN", "external_submission": False,
-            }
+            task_id = task.get("task_id")
+            with self._agent_zero_task_lock(task_id):
+                current = self._db_get_task(task_id) or task
+                if current.get("status") in {TaskStatus.CANCELLED.value, TaskStatus.UNKNOWN.value}:
+                    outcome = (
+                        "CANCELLED" if current.get("status") == TaskStatus.CANCELLED.value
+                        else "OUTCOME_UNKNOWN"
+                    )
+                    return {
+                        "executor": "agent_zero_gui",
+                        "execution_status": outcome,
+                        "task_outcome": outcome,
+                        "failure_code": current.get("error") or "AGENT_ZERO_TASK_STATE_CHANGED",
+                        "external_submission": False,
+                    }
+                record = (current.get("parameters") or {}).get(AGENT_ZERO_TASK_RECORD)
+                permission = self._agent_zero_permission(task_id, "dispatch")
+                executor = get_agent_zero_gui_executor()
+            # Never hold the per-task lock over preflight or worker I/O. The
+            # durable attempt CAS serializes dispatch/cancel transitions while
+            # allowing a cancel request to reach the bounded worker request.
+            return executor.execute(
+                current,
+                permission=permission,
+                existing_record=record if isinstance(record, dict) else None,
+                claim_attempt=lambda attempt: self._claim_agent_zero_attempt(task_id, attempt),
+                transition_attempt=lambda attempt_id, replacement: self._transition_agent_zero_attempt(
+                    task_id, attempt_id, dict(replacement),
+                ),
+                is_cancelled=lambda: self._agent_zero_cancelled(task_id),
+            )
         return {
-            "browser_action": intent, "mode": "read_only", "provider": "system_browser",
-            "status": "unavailable", "task_outcome": "UNAVAILABLE",
-            "error": "INTERNAL_BROWSER_TASK_BINDING_NOT_BOUND", "external_submission": False,
+            "browser_action": intent,
+            "mode": "read_only",
+            "note": "Browser operations are read-only. No login/post/like/follow/comment allowed.",
+            "status": "planned",
+            "requires_manual_browser": True,
         }
 
     def _execute_ai_assist(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
@@ -4761,7 +3941,14 @@ class TaskEngine:
             except (ValueError, PermissionError, LookupError, RuntimeError):
                 return False, "SOURCE_BRIEF_SAMPLE_ANALYSIS"
         if result.get("executor") == "agent_zero_gui":
-            return False, "GENERAL_OS_EXECUTION_WITHDRAWN"
+            from agent_runtime.agent_zero_gui_executor import (
+                get_agent_zero_gui_executor,
+                is_agent_zero_gui_task,
+            )
+            if is_agent_zero_gui_task(task):
+                executor = get_agent_zero_gui_executor()
+                outcome = executor._verify_outcome(task, executor._outcome_contract_hash(task["task_id"]))
+                return outcome.get("verified_goal_achieved") is True, "BOUND_AGENT_OUTCOME"
         return False, "EXECUTION_RETURN"
 
     # ──────────────────────────────────────────────────────────
@@ -4977,8 +4164,7 @@ class TaskEngine:
         query = (
             "SELECT * FROM ai_task WHERE substr(task_id, 1, 7) <> ? "
             "AND substr(task_id, 1, ?) <> ? "
-            "AND task_id NOT LIKE 'task-pitch-%' "
-            "AND task_id NOT LIKE 'task-browser-%'"
+            "AND task_id NOT LIKE 'task-pitch-%'"
         )
         params: List[Any] = [
             _MANAGED_REPORT_TASK_PREFIX, len(_TRAINING_RECEIPT_TASK_PREFIX),
@@ -5023,7 +4209,6 @@ class TaskEngine:
                     """SELECT * FROM ai_task_trace
                        WHERE task_id=? AND substr(task_id, 1, 7) <> ?
                          AND substr(task_id, 1, ?) <> ?
-                         AND task_id NOT LIKE 'task-browser-%'
                        ORDER BY started_at""",
                     (task_id, _MANAGED_REPORT_TASK_PREFIX,
                      len(_TRAINING_RECEIPT_TASK_PREFIX), _TRAINING_RECEIPT_TASK_PREFIX),
@@ -5034,7 +4219,6 @@ class TaskEngine:
                     """SELECT * FROM ai_task_trace
                        WHERE substr(task_id, 1, 7) <> ?
                          AND substr(task_id, 1, ?) <> ?
-                         AND task_id NOT LIKE 'task-browser-%'
                        ORDER BY started_at DESC LIMIT ?""",
                     (_MANAGED_REPORT_TASK_PREFIX, len(_TRAINING_RECEIPT_TASK_PREFIX),
                      _TRAINING_RECEIPT_TASK_PREFIX, limit),

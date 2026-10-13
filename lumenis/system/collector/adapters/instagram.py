@@ -4,7 +4,6 @@ import os
 import re
 import json
 import hashlib
-import logging
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 from pathlib import Path
@@ -17,8 +16,6 @@ from .registry import register_adapter
 from .public_source import fetch_public_url, public_source_provenance
 from .routing import resolve_capability_route
 
-logger = logging.getLogger(__name__)
-
 
 _TERMINAL_IG_DETAIL_STATES = frozenset({
     "VERIFICATION_REQUIRED",
@@ -27,41 +24,9 @@ _TERMINAL_IG_DETAIL_STATES = frozenset({
     "SESSION_OR_RISK_REQUIRED",
     "PLATFORM_RISK",
     "NOT_CONFIGURED",
-    "BLOCKED",
     "PROVIDER_UNAVAILABLE",
-    "COLLECT_ERROR",
     "IDENTITY_MISMATCH",
 })
-
-_SAFE_IG_EXCEPTION_REASONS = frozenset({
-    "READONLY_WORKER_NOT_REGISTERED",
-    "READONLY_WORKER_NOT_CONFIGURED",
-    "READONLY_WORKER_PROFILE_UNAVAILABLE",
-    "READONLY_WORKER_BOUNDARY_INVALID",
-    "READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE",
-    "BROWSER_PROFILE_OWNER_UNAVAILABLE",
-    "BROWSER_WORKER_KERNEL_OR_IDENTITY_UNVERIFIED",
-    "BROWSER_WORKER_PROFILE_OR_MODE_UNAVAILABLE",
-    "PROTECTED_PROFILE_FORBIDDEN",
-    "INSTAGRAM_AUTH_REQUIRED",
-    "INSTAGRAM_CHALLENGE_REQUIRED",
-    "INSTAGRAM_RATE_LIMITED",
-    "INSTAGRAM_NETWORK_UNAVAILABLE",
-    "INSTAGRAM_WORKER_UNAVAILABLE",
-})
-
-
-def _safe_collection_error(exc: Exception) -> str:
-    """Return only a known safe reason code or a non-sensitive exception class."""
-    if isinstance(exc, RuntimeError):
-        args = exc.args
-        if len(args) == 1 and isinstance(args[0], str):
-            reason = args[0]
-            if reason in _SAFE_IG_EXCEPTION_REASONS:
-                return reason
-    name = type(exc).__name__
-    safe_name = name if name.isascii() and name.isidentifier() else "Exception"
-    return f"INSTAGRAM_COLLECT_ERROR:{safe_name}"
 
 
 def parse_public_instagram_document(response, shortcode):
@@ -235,34 +200,8 @@ class InstagramAdapter(BasePlatformAdapter):
         if success:
             return CollectionStatus.SUCCESS if notes else CollectionStatus.NO_NEW_DATA
         err = (error or "").lower()
-        if err in {
-            "readonly_worker_not_registered",
-            "readonly_worker_not_configured",
-            "browser_profile_owner_unavailable",
-        } or "instagram_worker_not_registered" in err:
+        if "instagram_worker_not_registered" in err:
             return CollectionStatus.NOT_CONFIGURED
-        if err in {
-            "readonly_worker_boundary_invalid",
-            "browser_worker_kernel_or_identity_unverified",
-            "protected_profile_forbidden",
-        }:
-            return CollectionStatus.BLOCKED
-        if err in {
-            "readonly_worker_profile_unavailable",
-            "readonly_worker_profile_mode_or_kernel_unavailable",
-            "browser_worker_profile_or_mode_unavailable",
-        }:
-            return CollectionStatus.PROVIDER_UNAVAILABLE
-        if err == "instagram_auth_required":
-            return CollectionStatus.SESSION_EXPIRED
-        if err == "instagram_challenge_required":
-            return CollectionStatus.NEED_VERIFY
-        if err == "instagram_rate_limited":
-            return CollectionStatus.BLOCKED
-        if err == "instagram_network_unavailable" or err == "instagram_worker_unavailable":
-            return CollectionStatus.PROVIDER_UNAVAILABLE
-        if re.fullmatch(r"instagram_collect_error:[a-z_][a-z0-9_]{0,63}", err):
-            return CollectionStatus.COLLECT_ERROR
         if "登录态失效" in error or "session" in err and "expire" in err:
             return CollectionStatus.SESSION_EXPIRED
         if any(k in error for k in ("验证", "captcha", "人机")) or "captcha" in err:
@@ -333,26 +272,6 @@ class InstagramAdapter(BasePlatformAdapter):
     @staticmethod
     def _detail_failure_state(error: Any) -> str:
         text = str(error or "").casefold()
-        if text in {"readonly_worker_not_registered", "readonly_worker_not_configured",
-                    "browser_profile_owner_unavailable"}:
-            return "NOT_CONFIGURED"
-        if text in {"readonly_worker_boundary_invalid",
-                    "browser_worker_kernel_or_identity_unverified",
-                    "protected_profile_forbidden"}:
-            return "BLOCKED"
-        if text in {"readonly_worker_profile_unavailable",
-                    "readonly_worker_profile_mode_or_kernel_unavailable",
-                    "browser_worker_profile_or_mode_unavailable",
-                    "instagram_network_unavailable", "instagram_worker_unavailable"}:
-            return "PROVIDER_UNAVAILABLE"
-        if text == "instagram_auth_required":
-            return "SESSION_UNAVAILABLE"
-        if text == "instagram_challenge_required":
-            return "VERIFICATION_REQUIRED"
-        if text == "instagram_rate_limited":
-            return "RATE_LIMITED"
-        if re.fullmatch(r"instagram_collect_error:[a-z_][a-z0-9_]{0,63}", text):
-            return "COLLECT_ERROR"
         if any(marker in text for marker in ("identity_mismatch", "identity mismatch", "身份不匹配")):
             return "IDENTITY_MISMATCH"
         if any(marker in text for marker in ("captcha", "验证码", "安全验证", "人机", "confirm", "need_verify")):
@@ -538,7 +457,6 @@ class InstagramAdapter(BasePlatformAdapter):
                              "not_attempted_no_native_id": 0, "reused_same_native_id": 0}
             detail_stop_reason = None if result.success else self._detail_failure_state(result.error or "search failed")
             detail_cache = {}
-            detail_exception_reason = None
             for item in items:
                 shortcode, id_locator, identity_conflict = self._observed_shortcode(item)
                 self._begin_detail_observation(item, shortcode, id_locator)
@@ -564,16 +482,10 @@ class InstagramAdapter(BasePlatformAdapter):
                 search_raw = item.get("raw") if isinstance(item.get("raw"), dict) else {}
                 media_type = "reel" if search_raw.get("media_type") == "reel" else "post"
                 detail_counts["attempted"] += 1
-                detail_error = None
                 try:
                     detail_result = engine.detail(shortcode, media_type=media_type)
                 except Exception as exc:
-                    logger.error(
-                        "Instagram per-post detail failed error_type=%s",
-                        type(exc).__name__,
-                    )
-                    detail_error = _safe_collection_error(exc)
-                    detail_exception_reason = detail_error
+                    logger.error("Instagram逐帖详情异常 error_type=%s", type(exc).__name__)
                     detail_result = None
                 detail_candidates = self._notes_to_items(detail_result.notes) if detail_result else []
                 matching_detail = next((candidate for candidate in detail_candidates
@@ -587,9 +499,7 @@ class InstagramAdapter(BasePlatformAdapter):
                 if detail_candidates and matching_detail is None:
                     failure_state = "IDENTITY_MISMATCH"
                 elif detail_result is None:
-                    failure_state = self._detail_failure_state(
-                        detail_error or "PROVIDER_UNAVAILABLE"
-                    )
+                    failure_state = "PROVIDER_UNAVAILABLE"
                 else:
                     failure_state = self._detail_failure_state(
                         detail_result.error or "detail returned no matching native post"
@@ -619,13 +529,9 @@ class InstagramAdapter(BasePlatformAdapter):
             detail_metadata = {
                 **detail_counts,
                 "stop_reason": detail_stop_reason,
-                "exception_reason": detail_exception_reason,
-                "body_completeness": (
-                    ("NO_RESULTS" if result.success else "NOT_OBSERVED")
-                    if not items else (
-                        "PARTIAL" if detail_incomplete or body_observation_incomplete
-                        else "DOM_COMPLETENESS_UNKNOWN"
-                    )
+                "body_completeness": "NO_RESULTS" if not items else (
+                    "PARTIAL" if detail_incomplete or body_observation_incomplete
+                    else "DOM_COMPLETENESS_UNKNOWN"
                 ),
                 "media_semantics": "URL_HINTS_ONLY_NO_BYTES_OR_ARTIFACT",
             }
@@ -636,9 +542,7 @@ class InstagramAdapter(BasePlatformAdapter):
                     "SESSION_UNAVAILABLE": CollectionStatus.SESSION_EXPIRED,
                     "PLATFORM_RISK": CollectionStatus.RISK_WARNING,
                     "NOT_CONFIGURED": CollectionStatus.NOT_CONFIGURED,
-                    "BLOCKED": CollectionStatus.BLOCKED,
                     "PROVIDER_UNAVAILABLE": CollectionStatus.PROVIDER_UNAVAILABLE,
-                    "COLLECT_ERROR": CollectionStatus.COLLECT_ERROR,
                 }.get(detail_stop_reason, CollectionStatus.COLLECT_ERROR)
             return CollectionResult(
                 status=status,
@@ -660,11 +564,10 @@ class InstagramAdapter(BasePlatformAdapter):
                 },
             )
         except Exception as exc:
-            message = _safe_collection_error(exc)
             return CollectionResult(
-                status=self._map_status(False, [], message),
+                status=CollectionStatus.COLLECT_ERROR,
                 platform=self.platform,
-                message=message,
+                message=str(exc),
             )
 
     def _public_detail(self, url):
@@ -723,11 +626,10 @@ class InstagramAdapter(BasePlatformAdapter):
                 },
             )
         except Exception as exc:
-            message = _safe_collection_error(exc)
             return CollectionResult(
-                status=self._map_status(False, [], message),
+                status=CollectionStatus.COLLECT_ERROR,
                 platform=self.platform,
-                message=message,
+                message=str(exc),
             )
 
     def comments(self, content_id: str, *, include_replies: bool = False, **kwargs: Any) -> CollectionResult:
@@ -765,11 +667,10 @@ class InstagramAdapter(BasePlatformAdapter):
                 },
             )
         except Exception as exc:
-            message = _safe_collection_error(exc)
             return CollectionResult(
-                status=self._map_status(False, [], message),
+                status=CollectionStatus.COLLECT_ERROR,
                 platform=self.platform,
-                message=message,
+                message=str(exc),
             )
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
@@ -798,11 +699,10 @@ class InstagramAdapter(BasePlatformAdapter):
                 },
             )
         except Exception as exc:
-            message = _safe_collection_error(exc)
             return CollectionResult(
-                status=self._map_status(False, [], message),
+                status=CollectionStatus.COLLECT_ERROR,
                 platform=self.platform,
-                message=message,
+                message=str(exc),
             )
 
     def health_check(self, **kwargs: Any) -> CollectionResult:

@@ -322,61 +322,6 @@ def test_weibo_missing_user_id_does_not_promote_post_idstr_to_author():
     assert normalized["author_id"] is None
 
 
-def test_x_native_favorite_metrics_match_canonical_and_normalized_aliases():
-    assert PLATFORM_FIELD_MAPPING["x"]["like_count"] == "favorite_count"
-
-    for alias in ("x", "twitter"):
-        for index, (native_metric, expected) in enumerate((
-            ({"favorite_count": 17}, 17),
-            ({"favorite_count": 0}, 0),
-            ({"favorite_count": None}, None),
-            ({}, None),
-        )):
-            raw = {
-                "tweet_id": f"post-{index}",
-                "screen_name": "author",
-                "created_at": "2026-10-10T12:00:00Z",
-                "text": "Source body",
-                "reply_count": 4,
-                "retweet_count": 5,
-                "impression_count": 43,
-                **native_metric,
-            }
-            original = deepcopy(raw)
-
-            canonical = to_canonical_record(raw, alias)
-            normalized = map_raw_to_normalized(raw, alias)
-
-            assert canonical["platform"] == normalized["platform"] == "x"
-            assert canonical["like_count"] == normalized["like_count"] == expected
-            assert canonical["comment_count"] == normalized["comment_count"] == 4
-            assert canonical["share_count"] == normalized["share_count"] == 5
-            assert normalized["collect_count"] is None
-            assert normalized["view_count"] == 43
-            assert normalized["content"] == raw["text"]
-            assert normalized["published_at"] == raw["created_at"]
-            assert canonical["raw"] is raw
-            assert normalized["raw_data"] is raw
-            assert raw == original
-
-
-def test_x_legacy_like_count_fallback_only_applies_when_native_key_is_absent():
-    for native_metric, expected in ((17, 17), (0, 0), (None, None)):
-        raw = {"favorite_count": native_metric, "like_count": 99}
-        normalized = map_raw_to_normalized(raw, "x")
-        assert normalized["like_count"] == expected
-        assert normalized["raw_data"] is raw
-
-    legacy_only = {"like_count": 9}
-    normalized = map_raw_to_normalized(legacy_only, "twitter")
-    canonical = to_canonical_record(legacy_only, "twitter")
-    assert normalized["like_count"] == 9
-    # Canonical continues to read the native favorite_count field only.
-    assert canonical["like_count"] is None
-    assert normalized["raw_data"] is legacy_only
-    assert canonical["raw"] is legacy_only
-
-
 def test_instagram_native_media_urls_project_without_losing_post_or_child_identity():
     repeated_image_url = "https://cdn.example.test/media/carousel-image.jpg"
     raw = {
@@ -530,26 +475,6 @@ def test_wechat_image_urls_keep_alt_and_body_and_distinguish_empty_or_invalid():
     assert map_raw_to_normalized(
         {"platform": "wechat", "article_id": "biz-1|mid-5", "images": [None, 3, {}, {"url": " ", "alt": "  "}]}
     )["media_list"] is None
-
-
-def test_wechat_embedded_media_hints_survive_projection_without_inventing_resources():
-    raw = {"platform": "wechat", "article_id": "native-article", "content": "原文",
-           "images": [], "media_hints": [
-               {"media_type": "audio", "media_id": "voice-1", "url": None,
-                "native_attributes": {"name": "发布者音频标题"},
-                "native_locator": {"container": "#js_content", "media_element_index": 0}},
-               {"media_type": "video", "media_id": "finder-1", "url": None,
-                "observed_data_url": "https://example.test/cover.jpg",
-                "observed_data_url_role": "UNKNOWN"},
-           ]}
-    original = deepcopy(raw)
-    normalized = map_raw_to_normalized(raw, "wechat")
-    assert normalized["media_list"] == raw["media_hints"]
-    assert normalized["raw_data"] is raw and raw == original
-    assert normalized["content"] == "原文"
-    assert all(item["url"] is None for item in normalized["media_list"])
-    assert map_raw_to_normalized({"platform": "wechat", "images": [], "media_hints": []})["media_list"] == []
-    assert map_raw_to_normalized({"platform": "wechat", "images": [], "media_hints": [{}]})["media_list"] is None
 
 
 def test_native_platform_without_full_mapping_uses_known_core_fields():

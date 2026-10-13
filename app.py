@@ -1700,9 +1700,7 @@ def _basic_auth():
             return None
     # A server-opened local workspace uses the existing sealed principal and
     # exact current Registry scope. The route still rechecks scope and effects.
-    if request.path.startswith(('/api/experience/materials/documents',
-                                '/api/experience/materials/source-references',
-                                '/api/experience/saved-work')):
+    if request.path.startswith(('/api/experience/materials/documents', '/api/experience/saved-work')):
         from experience_runtime import _shared_work_local_access_allowed
         if _shared_work_local_access_allowed():
             return None
@@ -1814,17 +1812,6 @@ def _pg_resolve_operation_type(path, method):
         return OperationType.CTH_CASE_CREATE
     if method == 'POST' and p == '/api/experience/materials/documents':
         return OperationType.DATA_IMPORT
-    if method == 'POST' and (p in {
-            '/api/experience/materials/source-references',
-            '/api/experience/materials/source-references/prepare',
-    } or re.fullmatch(
-            r'/api/experience/materials/source-references/confirmations/[a-z0-9_-]{40,64}', p,
-    )):
-        # The route resolves the actual principal and exact focus. The existing
-        # Importer rechecks its private, exact-content DATA_IMPORT confirmation
-        # before and inside its transaction and at commit. A path-only gate
-        # cannot bind that resource or provide the real confirmation entry.
-        return None
     if method == 'POST' and p in {'/api/experience/saved-work', '/api/experience/saved-work/preferences'}:
         return OperationType.DATA_EXPORT
     if method == 'POST' and re.fullmatch(r'/api/experience/saved-work/art-[0-9a-f]{16}/revise', p):
@@ -1900,57 +1887,6 @@ def _pg_resolve_operation_type(path, method):
     return OperationType.DB_WRITE
 
 
-def _shared_workspace_owner_http_handoff():
-    """Transfer only exact Shared result writes to their current service owners."""
-    if (request.method != 'POST' or request.url_rule is None
-            or _pg_resolve_operation_type(request.path, request.method) is not OperationType.DATA_EXPORT):
-        return False
-
-    saved_work_rules = {
-        'experience_runtime.save_shared_work': (
-            '/api/experience/saved-work', r'/api/experience/saved-work'),
-        'experience_runtime.revise_shared_work': (
-            '/api/experience/saved-work/<artifact_id>/revise',
-            r'/api/experience/saved-work/ART-[0-9a-f]{16}/revise'),
-    }
-    expected = saved_work_rules.get(request.endpoint)
-    if expected is not None:
-        if ('X-Lumenis-Workspace-Scope' not in request.headers
-                or request.url_rule.rule != expected[0]
-                or re.fullmatch(expected[1], request.path) is None):
-            return False
-        try:
-            from experience_runtime import _shared_work_actor_scope
-            _actor, scope = _shared_work_actor_scope('write')
-            return scope == {'scope_kind': 'shared_workspace', 'version': 1}
-        except Exception:
-            return False
-
-    pitch_rules = {
-        'domain_api.api_internal_pitch_prepare': (
-            '/api/experience/creation/internal-pitches',
-            r'/api/experience/creation/internal-pitches'),
-        'domain_api.api_internal_pitch_action': (
-            '/api/experience/creation/internal-pitches/<task_id>/<action>',
-            r'/api/experience/creation/internal-pitches/task-pitch-[0-9a-f]{24}/(?:run|cancel)'),
-    }
-    expected = pitch_rules.get(request.endpoint)
-    if (expected is None or request.url_rule.rule != expected[0]
-            or re.fullmatch(expected[1], request.path) is None):
-        return False
-    try:
-        from lumenis_app_api import _internal_pitch_actor, _internal_pitch_body, _internal_pitch_scope
-        scope = _internal_pitch_scope(_internal_pitch_body())
-        if scope != {'scope_kind': 'shared_workspace', 'version': 1}:
-            return False
-        actor = _internal_pitch_actor('write')
-        from lumenis.shared.content_creation.internal_pitch import _context
-        _context(actor, scope, 'write')
-        return True
-    except Exception:
-        return False
-
-
 @app.before_request
 def _permission_gate_write_check():
     """统一 PermissionGate 写操作拦截。
@@ -2021,25 +1957,6 @@ def _permission_gate_write_check():
             )):
         # The registered handlers bind actual bytes and exact scope to the
         # canonical Permission confirmation. A path-level grant cannot do so.
-        return None
-    source_reference_rules = {
-        'experience_runtime.import_approved_source_reference':
-            '/api/experience/materials/source-references',
-        'experience_runtime.prepare_approved_source_reference_request':
-            '/api/experience/materials/source-references/prepare',
-        'experience_runtime.confirm_approved_source_reference_request':
-            '/api/experience/materials/source-references/confirmations/<confirmation_id>',
-    }
-    if (request.method == 'POST' and request.endpoint in source_reference_rules
-            and request.url_rule is not None
-            and request.url_rule.rule == source_reference_rules[request.endpoint]
-            and _pg_resolve_operation_type(request.path, request.method) is None):
-        # Only these resolved owners may bind server principal, exact source
-        # descriptor and private confirmation before and inside the transaction.
-        return None
-    if _shared_workspace_owner_http_handoff():
-        # Shared owner routes revalidate the actor/scope, exact resource and
-        # DATA_EXPORT Effect Fence at commit; legacy Scope4 still uses this gate.
         return None
     # This handler only returns a validated, stateless viewing selection. It
     # neither persists settings nor starts collection; data routes authorize
@@ -7979,7 +7896,7 @@ def api_cookies_import_raw():
                     'cookie_count': len(cleaned), 'applied': apply and platform in ('xhs', 'xiaohongshu'),
                     'secrets_returned': False})
 
-def _start_optional_runtime_services(internal_beta_acceptance, *, no_scheduler=False):
+def _start_optional_runtime_services(internal_beta_acceptance):
     if internal_beta_acceptance or INTERNAL_BETA_SAFE_STARTUP:
         print('[Runtime] safe acceptance profile: preflight, CDP, heartbeat, and guardian startup suppressed')
         return False
@@ -7993,10 +7910,6 @@ def _start_optional_runtime_services(internal_beta_acceptance, *, no_scheduler=F
         raise
     except Exception as _pf_e:
         print(f"[Preflight] 预检异常，不阻断启动: {type(_pf_e).__name__}: {_pf_e}")
-
-    if no_scheduler:
-        print('[Runtime] manual Core: preflight completed; platform probes and automated services not started')
-        return False
 
     # 自动检查并启动CDP浏览器（确保采集功能可用）
     # 注意：暂时禁用自动启动，避免Edge浏览器崩溃导致主进程退出
@@ -8164,7 +8077,7 @@ if __name__ == '__main__':
     print(f"详细日志: {os.path.join(log_dir, 'system.log')}")
     print("=" * 60)
 
-    _start_optional_runtime_services(INTERNAL_BETA_SAFE_STARTUP, no_scheduler=args.no_scheduler)
+    _start_optional_runtime_services(INTERNAL_BETA_SAFE_STARTUP)
 
     try:
         # T-P1-1 waitress 可配置化：ZB_WSGI=waitress 时用生产级多线程 WSGI（waitress.serve），

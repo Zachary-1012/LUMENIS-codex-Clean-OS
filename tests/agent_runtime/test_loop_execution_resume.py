@@ -186,15 +186,7 @@ def test_resume_after_engine_reopen_continues_same_task_and_skips_completed_plan
     resume_env,
 ):
     _grant(resume_env["path"])
-    plan = _plan()
-    plan.model = "unit-owned-model"
-    plan.inference_receipt = {
-        "provider": "owned", "model_id": "unit-owned-model", "model_revision": "unit-revision",
-        "run_id": "unit-inference-run", "source_binding_sha256": "b" * 64,
-        "prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150,
-        "context_window_tokens": 4096, "output_token_limit": 2000,
-    }
-    task_id = _persist_checkpoint(resume_env, plan, replans=1)
+    task_id = _persist_checkpoint(resume_env, _plan(), replans=1)
     calls = []
 
     result = _loop(resume_env, tool_calls=calls).resume(task_id, context=_context())
@@ -202,8 +194,6 @@ def test_resume_after_engine_reopen_continues_same_task_and_skips_completed_plan
     assert result.status == "completed"
     assert result.task_id == task_id
     assert result.plan["plan_id"] == "plan-resume-stable"
-    assert result.plan["model"] == plan.model
-    assert result.plan["inference_receipt"] == plan.inference_receipt
     assert [step["step_id"] for step in result.plan["steps"]] == [
         "step-resume-1", "step-resume-2",
     ]
@@ -472,6 +462,7 @@ def test_resume_rejects_approval_material_in_fresh_context(resume_env):
 
 
 def test_resume_rejects_missing_nonresumable_cancelled_and_corrupt_checkpoints(resume_env):
+    from agent_runtime.durable_adapter import DurableExecutionAdapter
 
     adapter = resume_env["adapter"]
     missing = adapter.create_task("read two reports", "agent-resume-test", {

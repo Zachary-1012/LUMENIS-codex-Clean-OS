@@ -5,13 +5,14 @@ Unit tests for agent_runtime.replanner
 """
 import sys
 import os
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from agent_runtime.replanner import (
     Replanner, ReplanTrigger, ReplanStrategy, ReplanDecision,
 )
-from agent_runtime.planner import Plan, PlanStep, Planner
+from agent_runtime.planner import Plan, PlanStep, Planner, PlanMode
 
 
 def _make_plan(n=3):

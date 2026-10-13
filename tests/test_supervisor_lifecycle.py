@@ -96,7 +96,7 @@ def isolated_runtime_paths(monkeypatch, tmp_path):
 
 def _configure_main(monkeypatch, event, *, health_result=False, fake_clock=None,
                     process_returncodes=1, launch_id=None, health_calls=None,
-                    stop_after_health=False, no_scheduler=False):
+                    stop_after_health=False):
     states = []
     spawned = []
     events = []
@@ -120,13 +120,11 @@ def _configure_main(monkeypatch, event, *, health_result=False, fake_clock=None,
     argv = ["run_supervised.py", "--port", "0"]
     if launch_id is not None:
         argv.extend(["--launch-id", launch_id])
-    if no_scheduler:
-        argv.append("--no-scheduler")
     monkeypatch.setattr(run_supervised.sys, "argv", argv)
     if fake_clock is not None:
         monkeypatch.setattr(run_supervised, "time", SimpleNamespace(time=fake_clock))
 
-    def record_spawn(app, host, port, *, launch_id=None, no_scheduler=False):
+    def record_spawn(app, host, port, *, launch_id=None):
         index = len(spawned)
         if isinstance(process_returncodes, (list, tuple)):
             returncode = process_returncodes[index]
@@ -137,7 +135,7 @@ def _configure_main(monkeypatch, event, *, health_result=False, fake_clock=None,
             returncode=returncode,
             launch_id=launch_id,
         )
-        spawned.append((app, host, port, process, no_scheduler))
+        spawned.append((app, host, port, process))
         events.append(("spawn", process.pid))
         return process
 
@@ -182,18 +180,11 @@ def test_spawn_passes_loaded_entry_identity_and_uses_a_fresh_boot_id(
 
     monkeypatch.setattr(run_supervised.subprocess, "Popen", record_popen)
     launch_id = uuid.uuid4().hex
-    first = run_supervised.spawn(
-        "app.py", "127.0.0.1", "8201", launch_id=launch_id, no_scheduler=True
-    )
+    first = run_supervised.spawn("app.py", "127.0.0.1", "8201", launch_id=launch_id)
     second = run_supervised.spawn(str(entry), "127.0.0.1", "8201", launch_id=launch_id)
     expected_hash = hashlib.sha256(entry_bytes).hexdigest()
-    expected_default_args = [
-        sys.executable, "-X", "utf8", "-u", str(entry.resolve()),
-        "--host", "127.0.0.1", "--port", "8201",
-    ]
 
-    assert calls[0][0] == expected_default_args + ["--no-scheduler"]
-    assert calls[1][0] == expected_default_args
+    assert calls[0][0][4] == str(entry.resolve())
     assert first.launch_id == second.launch_id == launch_id
     assert first.entry_sha256 == second.entry_sha256 == expected_hash
     assert first.boot_id != second.boot_id
@@ -348,62 +339,27 @@ def test_main_exits_cleanly_when_another_supervisor_holds_lock(monkeypatch, tmp_
     assert exc.value.code == 0
 
 
-@pytest.mark.parametrize('failure', [None, 'alive_child', 'permission', 'identity'])
-def test_kill_tree_confirms_owned_tree_and_fails_closed(monkeypatch, isolated_runtime_paths, failure):
+def test_kill_tree_requires_successful_taskkill_and_reaps_child(monkeypatch, isolated_runtime_paths):
     monkeypatch.setattr(run_supervised, "sys", SimpleNamespace(platform="win32"))
-    import psutil
-
-    events = []
+    calls = []
     process = FakeProcess(pid=2468, returncode=None)
 
-    class Member:
-        def __init__(self, pid):
-            self.pid = pid
-            self.alive = True
+    def taskkill(args, **kwargs):
+        calls.append((args, kwargs))
+        process.returncode = 0
+        return SimpleNamespace(returncode=0)
 
-        def create_time(self):
-            return float(self.pid)
+    monkeypatch.setattr(run_supervised.subprocess, "run", taskkill)
+    assert run_supervised.kill_tree(process, timeout=4)
+    assert calls[0][0] == ["taskkill", "/PID", "2468", "/T", "/F"]
+    assert calls[0][1]["timeout"] == 4
+    assert process.wait_calls == [4]
 
-        def is_running(self):
-            return self.alive and not (failure == 'identity' and self.pid == process.pid)
+    still_running = FakeProcess(pid=2469, returncode=None)
+    monkeypatch.setattr(run_supervised.subprocess, "run", lambda *_args, **_kwargs: SimpleNamespace(returncode=1))
+    assert not run_supervised.kill_tree(still_running, timeout=2)
+    assert still_running.wait_calls == [2]
 
-        def suspend(self):
-            if failure == 'permission' and self is child:
-                raise psutil.AccessDenied(self.pid)
-            events.append(('suspend', self.pid))
-
-        def resume(self):
-            events.append(('resume', self.pid))
-
-        def children(self):
-            return [child] if self is root else []
-
-        def kill(self):
-            events.append(('kill', self.pid))
-            if not (failure == 'alive_child' and self is child):
-                self.alive = False
-            if self is root:
-                process.returncode = 1
-
-    root, child = Member(process.pid), Member(2469)
-    monkeypatch.setattr(psutil, 'Process', lambda pid: root if pid == process.pid else pytest.fail('unowned PID'))
-    monkeypatch.setattr(psutil, 'wait_procs', lambda members, timeout: (
-        [p for p in members if not p.alive], [p for p in members if p.alive]))
-    monkeypatch.setattr(run_supervised.subprocess, 'run', lambda *_a, **_kw: pytest.fail('taskkill must not run'))
-    assert run_supervised.kill_tree(process, timeout=4) is (failure is None)
-    if failure is None:
-        assert events == [('suspend', 2468), ('suspend', 2469), ('kill', 2469), ('kill', 2468)]
-        assert len(process.wait_calls) == 1 and 0 <= process.wait_calls[0] <= 4
-        assert process._owned_windows_processes == ()
-    elif failure == 'identity':
-        assert events == [] and process.returncode is None
-    elif failure == 'permission':
-        assert ('kill', 2468) not in events
-        assert ('resume', 2468) in events
-    else:
-        # Root exit alone cannot turn an unconfirmed descendant into success.
-        assert process.returncode == 1 and child.alive
-        assert process._owned_windows_processes
 
 def test_actual_disposable_child_is_terminated_and_reaped(isolated_runtime_paths):
     process = subprocess.Popen(
@@ -421,47 +377,6 @@ def test_actual_disposable_child_is_terminated_and_reaped(isolated_runtime_paths
         if process.poll() is None:
             process.kill()
             process.wait(timeout=5)
-
-
-@pytest.mark.skipif(sys.platform != 'win32', reason='canonical Windows tree cleanup')
-def test_actual_owned_descendants_stop_and_unrelated_child_survives(isolated_runtime_paths, tmp_path):
-    import time
-
-    import psutil
-
-    ready = tmp_path / 'owned-child.json'
-    script = tmp_path / 'owned_parent.py'
-    script.write_text(
-        'import json, pathlib, subprocess, sys, time\n'
-        'child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])\n'
-        'pathlib.Path(sys.argv[1]).write_text(json.dumps({"pid": child.pid}))\n'
-        'time.sleep(60)\n', encoding='utf-8')
-    parent = subprocess.Popen([sys.executable, str(script), str(ready)],
-                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    unrelated = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'],
-                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    descendants = []
-    try:
-        deadline = time.monotonic() + 10
-        while not ready.exists() and time.monotonic() < deadline:
-            time.sleep(0.02)
-        assert ready.exists(), 'test-owned parent did not create its child'
-        descendants = psutil.Process(parent.pid).children(recursive=True)
-        assert any(p.pid == json.loads(ready.read_text())['pid'] for p in descendants)
-        assert run_supervised.kill_tree(parent, timeout=5)
-        assert parent.poll() is not None
-        assert all(not p.is_running() for p in descendants)
-        assert unrelated.poll() is None
-    finally:
-        # Only the Popen objects created by this test and their captured children.
-        for member in descendants:
-            if member.is_running():
-                member.kill()
-        psutil.wait_procs(descendants, timeout=5)
-        for member in (parent, unrelated):
-            if member.poll() is None:
-                member.kill()
-            member.wait(timeout=5)
 
 
 def test_shutdown_interrupts_escalated_crash_backoff_and_releases_after_cleanup(
@@ -483,7 +398,6 @@ def test_shutdown_interrupts_escalated_crash_backoff_and_releases_after_cleanup(
     run_supervised.main()
 
     assert len(spawned) == run_supervised.FAST_CRASH_LIMIT
-    assert [spawn[4] for spawn in spawned] == [False] * run_supervised.FAST_CRASH_LIMIT
     child_processes = [spawn[3] for spawn in spawned]
     launch_ids = {process.launch_id for process in child_processes}
     assert len(launch_ids) == 1
@@ -516,7 +430,6 @@ def test_main_binds_health_and_state_to_restarted_child_identity(
         launch_id=launch_id,
         health_calls=health_calls,
         stop_after_health=True,
-        no_scheduler=True,
     )
     monkeypatch.setattr(run_supervised, "HEALTH_INTERVAL", 1)
     monkeypatch.setattr(run_supervised, "kill_tree", lambda process: events.append(("kill", process.pid)) or True)
@@ -524,7 +437,6 @@ def test_main_binds_health_and_state_to_restarted_child_identity(
     run_supervised.main()
 
     assert len(spawned) == 2
-    assert [spawn[4] for spawn in spawned] == [True, True]
     first_child = spawned[0][3]
     current_child = spawned[1][3]
     assert first_child.launch_id == current_child.launch_id == launch_id
@@ -548,46 +460,6 @@ def test_main_binds_health_and_state_to_restarted_child_identity(
     assert states[-1]["status"] == "stopped"
     assert states[-1]["child_cleanup"] == "confirmed"
     assert events.index(("kill", current_child.pid)) < events.index(("lock_closed", None))
-    assert lock.closed
-
-
-def test_main_preserves_no_scheduler_for_initial_and_zombie_recovery_children(
-    monkeypatch, isolated_runtime_paths
-):
-    clock = [0.0]
-    handler_ref = [None]
-    spawned_ref = [None]
-
-    def advance_and_stop_after_replacement(_call_count, timeout):
-        clock[0] += timeout
-        if spawned_ref[0] is not None and len(spawned_ref[0]) == 2:
-            handler_ref[0][run_supervised.signal.SIGTERM](run_supervised.signal.SIGTERM, None)
-
-    event = FakeEvent(advance_and_stop_after_replacement)
-    states, spawned, events, handlers, lock = _configure_main(
-        monkeypatch,
-        event,
-        health_result=False,
-        fake_clock=lambda: clock[0],
-        process_returncodes=None,
-        no_scheduler=True,
-    )
-    handler_ref[0] = handlers
-    spawned_ref[0] = spawned
-    monkeypatch.setattr(run_supervised, "HEALTH_INTERVAL", 1)
-    monkeypatch.setattr(run_supervised, "POLL_INTERVAL", 2)
-    monkeypatch.setattr(
-        run_supervised,
-        "kill_tree",
-        lambda process: events.append(("kill", process.pid)) or True,
-    )
-
-    run_supervised.main()
-
-    assert len(spawned) == 2
-    assert [spawn[4] for spawn in spawned] == [True, True]
-    assert states[-1]["status"] == "stopped"
-    assert states[-1]["child_cleanup"] == "confirmed"
     assert lock.closed
 
 

@@ -509,21 +509,6 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
                                          ("share_count", "shares")):
             value = item.get(item_field)
             fill_native(native_field, value)
-        if "play_count" not in record:
-            views = item.get("views")
-            if views is not None and views != "":
-                record["play_count"] = views
-    elif platform == "facebook":
-        # The adapter carries these native observations on the normalized item.
-        # Preserve a raw native key as authoritative, including explicit None/0.
-        for native_field, item_field in (("reactions", "likes"),
-                                         ("comments", "comments"),
-                                         ("shares", "shares")):
-            if native_field in record or item_field not in item:
-                continue
-            value = item[item_field]
-            if value is not None and value != "":
-                record[native_field] = value
     elif platform == "weibo":
         # Top-level idstr identifies the post. Author identity comes from
         # user.id in the adapter, never from the post's id/idstr.
@@ -3119,10 +3104,6 @@ def _verified_live_native_observation(platform, observed):
     native_id = native_id or normalize_content_id(platform, observed.get("content_id"))
     if not native_id:
         raise ValueError("COLLECTED_SOURCE_NATIVE_ID_MISSING")
-    if platform == "facebook":
-        detail_native_id = normalize_content_id("facebook", detail.get("native_post_id"))
-        if detail_native_id != native_id:
-            raise ValueError("LIVE_NATIVE_DETAIL_ID_MISMATCH")
     return str(native_id), body
 
 
@@ -3561,13 +3542,10 @@ def _persist_pending_live_observations(connection, *, platform, records,
                 "canonical_ref": None, "scope_status": "UNASSIGNED",
                 "cleanup_status": "COMPLETE" if cleaned else "FAILED"})
     saved = sum(row["status"] == "SAVED" for row in originals)
-    excluded_count = sum(row["status"] == "EXCLUDED" for row in originals)
-    eligible_pending = len(originals) - excluded_count
     summary = {"observed_records": len(records), "formal_saved_records_skipped": len(saved_ids),
                "unassigned_originals_saved": saved,
                "unassigned_originals_unavailable": sum(row["status"] == "UNAVAILABLE" for row in originals),
-               "excluded_observations": excluded_count,
-               "eligible_pending_records": eligible_pending,
+               "excluded_observations": sum(row["status"] == "EXCLUDED" for row in originals),
                "observations_beyond_authorized_batch": max(0, len(records) - max_results),
                "canonical_rows_created": 0, "entity_assignment": "PENDING",
                "keyword_processing_mode": "POST_COMMIT_SOURCE_BACKLOG",
@@ -3582,10 +3560,6 @@ def _persist_pending_live_observations(connection, *, platform, records,
     if originals:
         connection.execute("SAVEPOINT pending_source_outcome")
         try:
-            preserved = saved == eligible_pending
-            actual = ("NO_ELIGIBLE_PENDING_ORIGINALS" if eligible_pending == 0 else
-                      "PENDING_ORIGINALS_PRESERVED" if preserved else
-                      "PARTIAL_PENDING_SOURCE_PRESERVATION")
             outcome_id = store.record_evidence(
                 connection=connection, source="collector", project="LUMENIS",
                 product="CTH" if context["domain_id"] == "cth" else "ZBMP",
@@ -3597,8 +3571,9 @@ def _persist_pending_live_observations(connection, *, platform, records,
                 outputs={"summary": summary, "original_refs": originals},
                 collection_metadata={"kind": "DERIVATIVE_EXECUTION_OUTCOME",
                                      "context_role": "ACQUISITION_PERMISSION_CONTEXT_ONLY"},
-                result="PASS" if preserved else "FAIL",
-                actual=actual,
+                result="PASS" if saved == len(originals) else "FAIL",
+                actual="PENDING_ORIGINALS_PRESERVED" if saved == len(originals)
+                       else "PARTIAL_PENDING_SOURCE_PRESERVATION",
                 provider="collector-source-intake", domain_id=context["domain_id"],
                 subject_id=context["subject_id"], brand_focus_id=context["brand_focus_id"],
                 global_scope=False)

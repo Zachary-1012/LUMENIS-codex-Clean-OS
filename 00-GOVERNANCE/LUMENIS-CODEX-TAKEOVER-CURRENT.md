@@ -2,6 +2,15 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-13 Single product closed-loop entry (dated readback; start here)
+
+This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any other handoff/todo/progress note dated before 2026-10-13 is superseded where it conflicts and is kept only as history.
+
+- Loop path: `AGENTS.md` rules -> this CURRENT -> branch -> tests -> PR -> Product Gate + App Gate green -> normal merge -> local `D:/LUMENIS_REBUILD/序/序境` equals `origin/main`, clean status. One local path only; no extra worktrees.
+- Rule entry points: `AGENTS.md`; this file; governance machine contract (`scripts/audit_tools/verify_governance_machine_contract.py`); PO decisions in `00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/USER-ADDITIONS-20261004.md`; approvals in `00-GOVERNANCE/evidence/approvals/`.
+- Current progress: local work-in-progress (170 files) is preserved unmerged on branch `akang/wip-business-decision` (draft PR #31; it breaks `tests/test_business_decision_workflow.py`; owner to finish) and in `D:/LUMENIS_AUDIT/20261013_akang_governance/pre-sync.patch`. PO role names (Pim/Bram/Ness/Jas/Aris, English only) and the AI watermark are recorded in USER-ADDITIONS.
+- Next steps: (1) finish PR #31 and merge through both gates; (2) core collection: no core process and no `ZBrand-HealthGuard` task since 9/30, so reinstall via `scripts/install_scheduled_tasks.ps1`, start via `scripts/start_production.ps1`, record one real run; `COLLECTOR_ENDPOINT` unset (backend owner); (3) subject_registry function that stores only brand official names with official-site source evidence, then the 8 held Taikoo Hui subjects; (4) remove the stale `D:/LUMENIS_AUDIT/20261013_akang_governance/rea-merge-wt` folder; (5) frontend, roles, logo after the loop is closed. 阿康（bot）
+
 ## 2026-10-13 PO agent-role change (dated readback, not dispatch)
 
 The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-development agents; the PO alone partitions and dispatches their work. Brio (Muse) is the PO-only global-data-source research and verified acquisition-target inventory contributor, delivering one Markdown research handoff and then acting only on direct PO instructions. The operative routing is in `AGENTS.md` and the machine/source-owner contracts; this dated handoff is neither a new agent authority nor permission to run research, collection, code, training, payment, deployment or PR merge automatically.
@@ -9,10 +18,6 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 ## 2026-10-13 AGENTS LF pin and T04 structured red lines (dated readback)
 
 `AGENTS.md` is pinned to LF in `.gitattributes`, so the Codex `project_doc_max_bytes` budget (131072, with 16384 headroom) is measured on the same bytes on Windows and in CI; the text did not change. The six T04 historical PO prohibitions are structured `red_lines` keys in the governance machine contract. The blocking validator `verify_governance_machine_contract.py` rejects dropping or allowing any of them. The PR #24 prose-anchor test has been replaced. AGENTS.md carries a one-line LF note so existing Windows clones rewrite it on update (PR #28 review). PO receipt: `PO-20261013-AGENTS-LF-AND-T04-STRUCTURED-RED-LINES`. 阿康（bot）
-
-## 2026-10-13 Local/main single-path sync and PO role names (dated readback)
-
-The local repo D:/LUMENIS_REBUILD/序/序境 (dd0baf0e plus 170 uncommitted files) was committed and merged with origin/main cef1d237 in one PR, so local and main share one path again. The pre-sync patch is kept at D:/LUMENIS_AUDIT/20261013_akang_governance/pre-sync.patch. USER-ADDITIONS-20261004.md records the PO-decided English-only role names (Pim/Bram/Ness/Jas/Aris) and the AI watermark. 阿康（bot）
 
 ## 1. Online reader's current-state snapshot
 

@@ -377,37 +377,7 @@ def test_revoked_approval_after_insert_rolls_back_evidence(capture_db, monkeypat
 
 
 def test_revocation_at_transaction_commit_boundary_cannot_leave_evidence(capture_db, monkeypatch):
-    """A revoke after the final recheck but before the commit lease denies the write."""
-    packet = _packet()
-    actor, scope, submission, gate, _resource, token = _authorized_capture(capture_db, packet)
-    original_commit_lease = gate.owned_evaluation_capture_commit_lease
-    revocations = []
-
-    @contextmanager
-    def revoke_before_commit_lease(**kwargs):
-        # The producer has completed its final _authorize call but has not yet
-        # entered the lease that rechecks the exact DB_WRITE approval.
-        revocations.append(gate.revoke_approval(token))
-        with original_commit_lease(**kwargs):
-            yield
-
-    monkeypatch.setattr(gate, "owned_evaluation_capture_commit_lease", revoke_before_commit_lease)
-    with pytest.raises(PermissionError, match="OWNED_EVALUATION_EXACT_DB_WRITE_APPROVAL_REQUIRED"):
-        evaluation.record_owned_evaluation_evidence(
-            authenticated_actor=actor, expected_scope=scope, submission_id=submission,
-            evaluation_packet=packet,
-        )
-
-    assert revocations == [True]
-    assert gate.get_valid_approval_token(
-        permission.OperationType.DB_WRITE.value,
-        _resource,
-        exact=True,
-    ) is None
-    assert _evidence_rows(capture_db) == []
-
-
-def test_revocation_after_leased_commit_keeps_evidence_but_denies_readback(capture_db, monkeypatch):
+    """Expose a revoke after the final Permission recheck, before repository commit."""
     packet = _packet()
     actor, scope, submission, gate, _resource, token = _authorized_capture(capture_db, packet)
     repository = get_repository()
@@ -415,39 +385,27 @@ def test_revocation_after_leased_commit_keeps_evidence_but_denies_readback(captu
     revocations = []
 
     @contextmanager
-    def revoke_after_leased_commit(**kwargs):
+    def revoke_before_commit(**kwargs):
         with original_transaction(**kwargs) as connection:
             yield connection
-            # The producer's explicit commit under the lease has completed before
-            # control returns here. Revocation cannot undo that durable commit.
+            # The producer has left its transaction body and completed its final
+            # _authorize call. The underlying repository context commits next.
             revocations.append(gate.revoke_approval(token))
 
-    monkeypatch.setattr(repository, "transaction", revoke_after_leased_commit)
-    with pytest.raises(PermissionError, match="OWNED_EVALUATION_EXACT_DB_WRITE_APPROVAL_REQUIRED"):
-        evaluation.record_owned_evaluation_evidence(
-            authenticated_actor=actor, expected_scope=scope, submission_id=submission,
-            evaluation_packet=packet,
-        )
+    monkeypatch.setattr(repository, "transaction", revoke_before_commit)
+    result = evaluation.record_owned_evaluation_evidence(
+        authenticated_actor=actor, expected_scope=scope, submission_id=submission,
+        evaluation_packet=packet,
+    )
 
     assert revocations == [True]
+    assert result["evaluation_ref"]
     assert gate.get_valid_approval_token(
         permission.OperationType.DB_WRITE.value,
         _resource,
         exact=True,
     ) is None
-    rows = _evidence_rows(capture_db)
-    assert len(rows) == 1
-    assert (rows[0]["result"], rows[0]["status"], rows[0]["domain_id"], rows[0]["product_id"]) == (
-        "RECORDED", "derived", "cth", "CTH",
-    )
-    assert store.verify_evidence_record_integrity(rows[0]) is True
-
-    with pytest.raises(PermissionError, match="EXACT_DB_WRITE_APPROVAL_REQUIRED"):
-        evaluation.record_owned_evaluation_evidence(
-            authenticated_actor=actor, expected_scope=scope, submission_id=submission,
-            evaluation_packet=packet,
-        )
-    assert _evidence_rows(capture_db) == rows
+    assert _evidence_rows(capture_db) == []
 
 
 def test_tampered_hmac_row_after_insert_rolls_back_evidence(capture_db, monkeypatch):

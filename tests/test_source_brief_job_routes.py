@@ -41,7 +41,7 @@ def client(job_db, monkeypatch):
     # Include the actual app operation resolver and gate, without importing startup.
     tree = ast.parse(Path("app.py").read_text(encoding="utf-8-sig"))
     nodes = [node for node in tree.body if isinstance(node, ast.FunctionDef) and
-             node.name in {"_pg_resolve_operation_type", "_shared_workspace_owner_http_handoff", "_permission_gate_write_check"}]
+             node.name in {"_pg_resolve_operation_type", "_permission_gate_write_check"}]
     for node in nodes:
         node.decorator_list = []
     namespace = dict(request=request, jsonify=jsonify, re=re, OperationType=p.OperationType,

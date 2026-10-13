@@ -10,7 +10,6 @@ from lumenis.system.collector.adapters import get_adapter
 from lumenis.system.collector.adapters.base import BasePlatformAdapter, CollectionStatus
 from lumenis.system.collector.adapters.instagram import InstagramAdapter
 from lumenis.adapters.base import AdapterResult, CollectedNote
-from lumenis.adapters.instagram import InstagramAdapter as BrowserInstagramAdapter
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +121,6 @@ def test_status_mapping_no_new_data():
     cr = adapter.search("test")
     assert cr.status == CollectionStatus.NO_NEW_DATA
     assert cr.new_count == 0
-    assert cr.metadata["detail"]["body_completeness"] == "NO_RESULTS"
 
 
 def test_status_mapping_session_expired():
@@ -339,118 +337,4 @@ def test_search_exception_returns_collect_error():
     adapter = InstagramAdapter(engine=engine)
     cr = adapter.search("test")
     assert cr.status == CollectionStatus.COLLECT_ERROR
-    assert cr.message == "INSTAGRAM_COLLECT_ERROR:RuntimeError"
-
-
-@pytest.mark.parametrize(
-    ("worker_error", "expected_status"),
-    [
-        ("READONLY_WORKER_NOT_REGISTERED", CollectionStatus.NOT_CONFIGURED),
-        ("READONLY_WORKER_NOT_CONFIGURED", CollectionStatus.NOT_CONFIGURED),
-        ("BROWSER_PROFILE_OWNER_UNAVAILABLE", CollectionStatus.NOT_CONFIGURED),
-        ("READONLY_WORKER_BOUNDARY_INVALID", CollectionStatus.BLOCKED),
-        ("BROWSER_WORKER_KERNEL_OR_IDENTITY_UNVERIFIED", CollectionStatus.BLOCKED),
-        ("PROTECTED_PROFILE_FORBIDDEN", CollectionStatus.BLOCKED),
-        ("READONLY_WORKER_PROFILE_UNAVAILABLE", CollectionStatus.PROVIDER_UNAVAILABLE),
-        ("READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE", CollectionStatus.PROVIDER_UNAVAILABLE),
-        ("BROWSER_WORKER_PROFILE_OR_MODE_UNAVAILABLE", CollectionStatus.PROVIDER_UNAVAILABLE),
-        ("INSTAGRAM_AUTH_REQUIRED", CollectionStatus.SESSION_EXPIRED),
-        ("INSTAGRAM_CHALLENGE_REQUIRED", CollectionStatus.NEED_VERIFY),
-        ("INSTAGRAM_RATE_LIMITED", CollectionStatus.COOLING_DOWN),
-    ],
-)
-def test_safe_worker_failures_keep_reason_and_status_without_browser(
-    monkeypatch, worker_error, expected_status
-):
-    browser_adapter = object.__new__(BrowserInstagramAdapter)
-
-    def fail_before_browser(*args, **kwargs):
-        raise RuntimeError(worker_error)
-
-    monkeypatch.setattr(browser_adapter, "_search_browser", fail_before_browser)
-    low_result = browser_adapter.search("test")
-    assert low_result.error == worker_error
-
-    wrapper = _adapter_with_engine(low_result)
-    result = wrapper.search("test")
-    assert result.status == expected_status
-    assert result.message == worker_error
-    assert result.metadata["detail"]["body_completeness"] == "NOT_OBSERVED"
-
-
-def test_unexpected_low_adapter_exception_is_classified_without_exception_text(monkeypatch, caplog):
-    browser_adapter = object.__new__(BrowserInstagramAdapter)
-
-    def fail_before_browser(*args, **kwargs):
-        raise ValueError("private cookie path must not escape")
-
-    monkeypatch.setattr(browser_adapter, "_search_browser", fail_before_browser)
-    low_result = browser_adapter.search("test")
-    assert low_result.error == "INSTAGRAM_COLLECT_ERROR:ValueError"
-    assert "private cookie path" not in low_result.error
-
-    result = _adapter_with_engine(low_result).search("test")
-    assert result.status == CollectionStatus.COLLECT_ERROR
-    assert result.message == "INSTAGRAM_COLLECT_ERROR:ValueError"
-    assert result.metadata["detail"]["body_completeness"] == "NOT_OBSERVED"
-
-    secret_message = "private exception message"
-    secret_cause = "private chained cause material"
-
-    def fail_with_chained_cause(*args, **kwargs):
-        try:
-            raise RuntimeError(secret_cause)
-        except RuntimeError as cause:
-            raise ValueError(secret_message) from cause
-
-    caplog.set_level("ERROR", logger="lumenis.adapters.instagram")
-    cases = (
-        ("comments", "_comments_browser", lambda adapter: adapter.comments("ABC123")),
-        ("creator", "_creator_browser", lambda adapter: adapter.creator("testcreator")),
-    )
-    for operation, browser_method, invoke in cases:
-        adapter = object.__new__(BrowserInstagramAdapter)
-        monkeypatch.setattr(adapter, browser_method, fail_with_chained_cause)
-        caplog.clear()
-
-        failed_result = invoke(adapter)
-
-        assert failed_result.error == "INSTAGRAM_COLLECT_ERROR:ValueError"
-        log_text = caplog.text.replace("\\", "/")
-        assert f"Instagram {operation} failed error_type=ValueError" in log_text
-        assert "REDACTED_ORIGINAL_EXCEPTION:ValueError" in log_text
-        assert "Traceback (most recent call last):" in log_text
-        assert "lumenis/adapters/instagram.py" in log_text
-        assert secret_message not in log_text
-        assert secret_cause not in log_text
-        assert "The above exception was the direct cause" not in log_text
-        assert "During handling of the above exception" not in log_text
-
-        record = caplog.records[-1]
-        assert record.exc_info[0] is RuntimeError
-        assert record.exc_info[1].args == ("REDACTED_ORIGINAL_EXCEPTION:ValueError",)
-        assert record.exc_info[1].__cause__ is None
-        assert record.exc_info[1].__context__ is None
-        assert record.exc_info[2] is not None
-
-
-def test_legacy_worker_unavailable_reason_remains_provider_unavailable():
-    adapter = _adapter_with_engine(AdapterResult(
-        success=False,
-        error="INSTAGRAM_WORKER_UNAVAILABLE: registered read-only worker is unavailable",
-    ))
-    result = adapter.search("test")
-    assert result.status == CollectionStatus.PROVIDER_UNAVAILABLE
-    assert result.message == "INSTAGRAM_WORKER_UNAVAILABLE: registered read-only worker is unavailable"
-
-
-def test_per_post_detail_exception_keeps_safe_class_in_diagnostics():
-    engine = MagicMock()
-    engine.search.return_value = AdapterResult(
-        success=True, notes=[_make_note()], raw_count=1
-    )
-    engine.detail.side_effect = ValueError("private cookie path must not escape")
-    result = InstagramAdapter(engine=engine).search("test")
-    assert result.status == CollectionStatus.COLLECT_ERROR
-    assert result.metadata["detail"]["exception_reason"] == "INSTAGRAM_COLLECT_ERROR:ValueError"
-    assert "private cookie path" not in result.message
+    assert "browser crashed" in cr.message

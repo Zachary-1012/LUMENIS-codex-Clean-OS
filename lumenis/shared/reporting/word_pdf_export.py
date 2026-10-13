@@ -11,17 +11,13 @@ from contextlib import contextmanager
 from datetime import datetime
 from html import escape
 from threading import RLock
+from typing import Optional
 
 from .report_generator import ReportGenerator
+from .standard_taxonomy import RiskLevel, Sentiment
 
 
 _PDF_EXPORT_LOCK = RLock()
-_PPTX_MAX_SLIDES = 512
-_PPTX_PARAGRAPHS_PER_SLIDE = 24
-_PPTX_CHARS_PER_PARAGRAPH = 64
-_PPTX_MAX_SOURCE_CHARS = 1_000_000
-_PPTX_LINE_BREAKS = ("\n", "\r", "\v", "\f", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029")
-_PPTX_SECTION_LABELS = ("Title", "Report", "Lineage", "Sources", "Snapshot", "JSON")
 
 
 def _display_value(value):
@@ -65,41 +61,6 @@ def pdf_text_context():
             return "<br/>".join(line_markup(line) for line in str(text).splitlines() or [""])
 
         yield fonts[0].fontName, markup
-
-
-def _saved_pptx_pages(sections: list[tuple[str, str]]) -> list[tuple[str, int, list[str]]]:
-    """Split every section into editable, bounded paragraph chunks without truncation."""
-    total_chars = sum(len(text) for _, text in sections)
-    if total_chars > _PPTX_MAX_SOURCE_CHARS:
-        raise ValueError("WORK_EXPORT_PPTX_TOO_LARGE")
-
-    pages = []
-    for label, text in sections:
-        lines = text.splitlines()
-        if not lines:
-            lines = [""]
-        if text.endswith(_PPTX_LINE_BREAKS):
-            lines.append("")
-
-        paragraphs = []
-        for line in lines:
-            if not line:
-                paragraphs.append("")
-                continue
-            paragraphs.extend(
-                line[start:start + _PPTX_CHARS_PER_PARAGRAPH]
-                for start in range(0, len(line), _PPTX_CHARS_PER_PARAGRAPH)
-            )
-        if not paragraphs:
-            paragraphs = [""]
-
-        for page_number, start in enumerate(
-            range(0, len(paragraphs), _PPTX_PARAGRAPHS_PER_SLIDE), 1,
-        ):
-            pages.append((label, page_number, paragraphs[start:start + _PPTX_PARAGRAPHS_PER_SLIDE]))
-            if len(pages) > _PPTX_MAX_SLIDES:
-                raise ValueError("WORK_EXPORT_PPTX_TOO_LARGE")
-    return pages
 
 
 class ReportExporter:
@@ -156,40 +117,6 @@ class ReportExporter:
                     sheet.append([label, index, section[start:start + 30000]])
                     sheet.cell(sheet.max_row, 3).data_type = "s"
             book.save(output)
-        elif format == "pptx":
-            from pptx import Presentation
-            from pptx.util import Inches, Pt
-
-            pages = _saved_pptx_pages(list(zip(_PPTX_SECTION_LABELS, sections)))
-            presentation = Presentation()
-            presentation.slide_width = Inches(13.333333)
-            presentation.slide_height = Inches(7.5)
-            blank_layout = presentation.slide_layouts[6]
-            for label, page_number, paragraphs in pages:
-                slide = presentation.slides.add_slide(blank_layout)
-                continuation = f" (continued {page_number})" if page_number > 1 else ""
-                heading = slide.shapes.add_textbox(
-                    Inches(0.55), Inches(0.30), Inches(12.2), Inches(0.55),
-                )
-                heading.text_frame.text = f"Saved document | {label}{continuation}"
-                title_paragraph = heading.text_frame.paragraphs[0]
-                title_paragraph.font.size = Pt(16)
-                title_paragraph.font.bold = True
-
-                body = slide.shapes.add_textbox(
-                    Inches(0.62), Inches(1.02), Inches(12.05), Inches(6.0),
-                )
-                body.text_frame.word_wrap = True
-                body.text_frame.margin_left = Inches(0.04)
-                body.text_frame.margin_right = Inches(0.04)
-                body.text_frame.margin_top = Inches(0.02)
-                body.text_frame.margin_bottom = Inches(0.02)
-                for index, value in enumerate(paragraphs):
-                    paragraph = body.text_frame.paragraphs[0] if index == 0 else body.text_frame.add_paragraph()
-                    paragraph.text = value
-                    paragraph.font.size = Pt(11)
-                    paragraph.space_after = Pt(0)
-            presentation.save(output)
         else:
             raise ValueError("unsupported saved document export format")
         return output.getvalue()
@@ -198,7 +125,7 @@ class ReportExporter:
         """导出为Word文档"""
         try:
             from docx import Document
-            from docx.shared import Pt, RGBColor
+            from docx.shared import Pt, Inches, RGBColor
             from docx.enum.text import WD_ALIGN_PARAGRAPH
         except ImportError:
             return ""

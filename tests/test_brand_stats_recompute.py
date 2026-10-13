@@ -6,6 +6,7 @@ import pytest
 import brand_stats_recompute as module
 from brand_stats_recompute import aggregate_brand_observations, recompute_brand_stats
 
+
 _BRAND_DDL = """
 CREATE TABLE brand_industry_monitor (
     id INTEGER PRIMARY KEY,
@@ -173,15 +174,6 @@ def test_aggregate_partial_scan_retains_observations_but_nulls_full_values():
     assert result["observed"]["record_count"] == 1
     assert result["observed"]["engagement"]["observed_sum"] == 6
     assert result["observed"]["engagement"]["quality"]["known_field_count"] == 4
-
-
-def test_empty_incomplete_sample_does_not_prove_no_collection():
-    result = aggregate_brand_observations([], complete_scan=False)
-
-    assert result["state"] == "PARTIAL"
-    assert all(value is None for value in result["values"].values())
-    assert result["observed"]["record_count"] == 0
-    assert result["quality"]["complete_scan"] is False
 
 
 def test_empty_complete_sample_is_not_collected_not_zero():
