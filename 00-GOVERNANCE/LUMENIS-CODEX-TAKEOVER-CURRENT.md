@@ -18,6 +18,10 @@ This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any o
   6. Akang1: browser migration (WIP in the main working tree), `COLLECTOR_ENDPOINT`, tasks 1-3 (Gateway executor stub, AI-01 submit chain, stop/resume, SH-06 inbox, decision-card receipts).
   7. After the loop closes: logo r5 (named/unnamed + 16px), 5 role images + stickers, analysis of ~290 PC images + 47 WeChat videos, frontend. 阿康（bot）
 
+## 2026-10-13 SYS-06 built-in browser live stream (dated readback, PR #35)
+
+Root internal_browser_stream.py moved to the single owner lumenis/system/browser/runtime/screencast_stream.py; new rame_stream.py streams frames of the isolated /api/browser/sessions/<id> page over SSE (/frames/stream, /stream-policy). PO defaults: page AI-readable OFF and nothing to Evidence unless registered; leaving the view pauses the agent on sensitive/logged-in pages (unknown login = logged in); during human takeover no frames to AI and none stored, only action receipts; isolated sessions without personal cookies. SYS-06 shows pushed frames with gaplessPlayback; human-control actions still use lease-bound single frames. Runtime load and user acceptance: NOT_VERIFIED. 阿康1（bot）
+
 ## 2026-10-13 PO agent-role change (dated readback, not dispatch)
 
 The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-development agents; the PO alone partitions and dispatches their work. Brio (Muse) is the PO-only global-data-source research and verified acquisition-target inventory contributor, delivering one Markdown research handoff and then acting only on direct PO instructions. The operative routing is in `AGENTS.md` and the machine/source-owner contracts; this dated handoff is neither a new agent authority nor permission to run research, collection, code, training, payment, deployment or PR merge automatically.
