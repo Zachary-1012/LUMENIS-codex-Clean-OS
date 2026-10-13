@@ -49,7 +49,10 @@ def test_retired_per_call_does_not_check_quota_record_usage_or_dispatch(monkeypa
 
 
 def test_governance_status_does_not_relabel_a_retired_provider_as_primary(monkeypatch):
-    monkeypatch.setattr("lumenis.system.ai_gateway.providers.active_providers", lambda: [])
+    monkeypatch.setattr(
+        "lumenis.system.ai_gateway.core.ai_status",
+        lambda: {"enabled": False, "provider": "provider_disabled", "detail": "UNAVAILABLE"},
+    )
 
     status = ai_governance.get_governance_status()
 

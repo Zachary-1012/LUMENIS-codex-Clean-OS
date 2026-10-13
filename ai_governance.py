@@ -1,20 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-AI Governance — AI 治理模块（Track3 审计修复版）
+"""AI Governance: provider-neutral request safeguards and usage accounting.
 
-【用户方案】废除 Ollama-only 红线，云端 zhipu 内置系统；脱敏回传保障数据安全；
-额度/余额可控；AI 输出标记为增强层，不直接成为 System Truth，用于喂 Zachary 学习。
-
-功能：
-1. 脱敏回传：敏感实体替换为占位符 → 云端 AI → 回传补回原实体，保证词义
-2. 额度控制：每日调用次数/token 限额，超额降级或拒绝
-3. 使用统计：调用次数、token 用量、按日统计、按 Provider 分别统计（zhipu / ark）
-4. 输出标记：所有 AI 输出标记 provider/ai_enhanced，不直接写核心生产字段
-
-Track3 修复（2026-09-06）：
-- get_status() 不再硬编码 provider=zhipu，改为 active_providers + per-provider stats。
-- 新增 get_provider_stats()：成本模型分别记录 zhipu 与 ark 两 provider。
-- 治理层完整链路：额度控制→脱敏→调用→回补→统计→标记。
+This module prepares guarded inputs, applies quota and safety checks, records
+usage, and marks derived output. Model execution belongs to the single SYSTEM
+AI Gateway; this module never selects a model route or performs fallback.
 """
 import logging
 import os
@@ -69,7 +57,7 @@ _lock = threading.Lock()
 
 # ============ 脱敏回传 ============
 class AIDesensitizer:
-    """AI 脱敏回传引擎：敏感实体替换为占位符 → 云端 AI → 回传补回原实体。"""
+    """AI 脱敏回传引擎：替换敏感实体，调用完成后按请求映射恢复。"""
 
     def __init__(self):
         self._build_patterns()
@@ -138,10 +126,7 @@ _desensitizer = AIDesensitizer()
 
 # ============ 额度控制 & 使用统计 ============
 class AIUsageTracker:
-    """AI 使用统计与额度控制。
-
-    Track3：按 Provider 分别统计（zhipu / ark / local），成本模型不合并。
-    """
+    """AI 使用统计与额度控制；provider字段仅作为既有回执的分类维度。"""
 
     def __init__(self, stats_file: str = STATS_FILE):
         self.stats_file = stats_file
@@ -168,8 +153,8 @@ class AIUsageTracker:
         return date.today().isoformat()
 
     def record_call(self, endpoint: str, prompt_tokens: int = 0, completion_tokens: int = 0,
-                    total_tokens: int = 0, provider: str = "zhipu", success: bool = True):
-        """记录一次 AI 调用。provider 参数区分 zhipu / ark / local。"""
+                    total_tokens: int = 0, provider: str = "owned", success: bool = True):
+        """记录经现有 Gateway 完成的调用；既有历史分类原样保留。"""
         with _lock:
             today = self._today_key()
             if today not in self.stats["daily"]:
@@ -184,7 +169,6 @@ class AIUsageTracker:
             day["total_tokens"] += total_tokens
             day["endpoints"][endpoint] = day["endpoints"].get(endpoint, 0) + 1
             day["providers"][provider] = day["providers"].get(provider, 0) + 1
-            # Track3：按 provider 分别记录 token（精确成本核算）
             pt = day.setdefault("provider_tokens", {})
             pstat = pt.setdefault(provider, {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "failures": 0})
             pstat["calls"] += 1
@@ -208,12 +192,7 @@ class AIUsageTracker:
             self._save()
 
     def check_quota(self) -> Tuple[bool, Dict]:
-        """
-        检查今日额度是否超限。
-        V1.0: 超限时不再直接拒绝，而是返回 quota_exceeded=True + fallback_to='ark'，
-        让调用方（ai_channel）触发 L2 ARK 故障转移，不阻塞生产链路。
-        返回: (是否允许调用, 额度状态)
-        """
+        """检查现有 Gateway 调用额度；超限时停止 AI 增强，不触发其他路由。"""
         with _lock:
             today = self._today_key()
             day = self.stats["daily"].get(today, {"calls": 0, "total_tokens": 0})
@@ -225,8 +204,6 @@ class AIUsageTracker:
             token_remaining = max(0, token_limit - token_used)
             allowed = call_used < call_limit and token_used < token_limit
             quota_exceeded = not allowed
-            # V1.0: 超限时建议 fallback 到 L2 ARK（调用方决定是否执行）
-            fallback_suggestion = "ark" if quota_exceeded else None
             return allowed, {
                 "date": today,
                 "call_used": call_used,
@@ -239,15 +216,10 @@ class AIUsageTracker:
                 "token_usage_pct": round(token_used / token_limit * 100, 1) if token_limit > 0 else 0,
                 "allowed": allowed,
                 "quota_exceeded": quota_exceeded,
-                "fallback_suggestion": fallback_suggestion,
             }
 
     def get_provider_stats(self) -> Dict[str, Dict]:
-        """Track3：按 Provider 分别统计今日调用量与 token（zhipu / ark / local 等）。
-
-        成本模型要求分别记录 zhipu 与 ark 两 provider，不得合并。
-        返回 {provider: {calls, prompt_tokens, completion_tokens, total_tokens, failures}}
-        """
+        """Return today's recorded route counters without synthesizing old routes."""
         with _lock:
             today = self._today_key()
             day = self.stats["daily"].get(today, {})
@@ -255,32 +227,26 @@ class AIUsageTracker:
             result = {}
             for prov, pstat in provider_tokens.items():
                 result[prov] = dict(pstat)
-            # 确保 zhipu 和 ark 至少有占位（即使今日未调用）
-            for prov in ("zhipu", "ark"):
-                if prov not in result:
-                    result[prov] = {
-                        "calls": 0, "prompt_tokens": 0,
-                        "completion_tokens": 0, "total_tokens": 0, "failures": 0,
-                    }
             return result
 
     def get_status(self) -> Dict:
-        """获取 AI 治理状态（含额度、使用统计、按 Provider 拆分、配置）。
-
-        Track3 修复：不再硬编码 provider=zhipu，改为展示 active_provider + per-provider stats。
-        """
+        """获取额度、历史用量和现有 Gateway 的只读状态。"""
         allowed, quota = self.check_quota()
         provider_stats = self.get_provider_stats()
-        # 判断当前主力 provider
         try:
-            from lumenis.system.ai_gateway.providers import active_providers
-            active = active_providers()
+            from lumenis.system.ai_gateway.core import ai_status
+
+            route_state = ai_status() or {}
+            route_available = route_state.get("enabled") is True
         except Exception:
-            active = []
+            route_state = {}
+            route_available = False
+        active = ["owned"] if route_available else []
         return {
             "ok": True,
             "active_providers": active,
             "primary_provider": active[0] if active else "provider_disabled",
+            "gateway_status": route_state.get("detail") or "NOT_VERIFIED",
             "desensitization": "enabled",
             "quota": quota,
             "total_usage": self.stats["total"],
@@ -291,7 +257,7 @@ class AIUsageTracker:
                 "balance_alert_threshold": DEFAULT_BALANCE_ALERT_THRESHOLD,
                 "stats_file": self.stats_file,
             },
-            "note": "余额需在智谱控制台查看: https://open.bigmodel.cn/usercenter/finance；ark 成本需在火山引擎控制台查看",
+            "note": "AI enhancement uses the existing SYSTEM AI Gateway route only.",
         }
 
 
@@ -300,7 +266,7 @@ _usage_tracker = AIUsageTracker()
 
 
 # ============ AI 输出标记 ============
-def mark_ai_output(data: Any, provider: str = "zhipu", endpoint: str = "") -> Dict:
+def mark_ai_output(data: Any, provider: str = "owned", endpoint: str = "") -> Dict:
     """
     标记 AI 输出为增强层，不直接成为 System Truth。
     所有 AI 输出必须经过此函数标记，用于喂 Zachary 学习。
@@ -322,7 +288,7 @@ def mark_ai_output(data: Any, provider: str = "zhipu", endpoint: str = "") -> Di
 def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
                               model: str = None, max_tokens: int = 1024,
                               temperature: float = 0.7, desensitize: bool = True,
-                              provider: str = "zhipu",
+                              provider: str = "owned",
                               domain_id: str = None) -> Dict:
     """
     统一 AI 调用治理封装（域校验→OWASP安全门→额度→脱敏→准备调用→回补→统计→标记）。
@@ -331,12 +297,13 @@ def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
     IC-035 OWASP Agentic Top10：调用前执行安全检查（提示注入/敏感信息泄露/过度代理/
     不安全输出处理/模型盗窃）。
 
-    注意：本函数完成治理层的额度检查、脱敏、输出标记和统计记录；
-    实际 HTTP 调用由调用方（intelligence._chat / ai_api 路由）执行，
-    调用方应在拿到 AI 响应后调用 record_ai_call() 记录实际用量。
+    注意：本函数只验证并准备请求，不执行传输或选择路由；实际模型操作必须走现有 SYSTEM Gateway。
 
     返回: {ok, desensitized, mapping_count, quota_remaining, messages_prepared, provider, domain_id}
     """
+    # Compatibility parameter is metadata only; it cannot select a route.
+    gateway_route = "owned"
+
     # 0a. 域身份校验（双域隔离：禁止 CTH prompt 流入 ZBMP 或反之）
     try:
         from ai_domain_context import (
@@ -357,16 +324,16 @@ def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
                 "ok": False,
                 "error": f"Domain isolation violation: prompt domain={prompt_domain} "
                          f"does not match expected domain={expected_domain}",
-                "fallback": "domain_violation_blocked",
+                "execution_state": "BLOCKED",
                 "domain_id": expected_domain,
-            }, endpoint=endpoint, provider=provider)
+            }, endpoint=endpoint, provider=gateway_route)
     except (ImportError, ValueError) as exc:
         return mark_ai_output({
             "ok": False,
             "error": str(exc) or "AI_BUSINESS_DOMAIN_UNAVAILABLE",
-            "fallback": "domain_context_unavailable",
+            "execution_state": "BLOCKED",
             "domain_id": None,
-        }, endpoint=endpoint, provider=provider)
+        }, endpoint=endpoint, provider=gateway_route)
 
     # 0b. OWASP Agentic Top10 安全门（IC-035）
     sec_check = owasp_agentic_security_check(messages, endpoint=endpoint)
@@ -375,24 +342,21 @@ def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
             "ok": False,
             "error": f"OWASP Agentic security check failed: {sec_check['reason']}",
             "security_findings": sec_check["findings"],
-            "fallback": "security_blocked",
+            "execution_state": "BLOCKED",
             "domain_id": expected_domain,
-        }, endpoint=endpoint, provider=provider)
+        }, endpoint=endpoint, provider=gateway_route)
 
-    # 1. 额度检查（V1.0: 超限时触发 fallback 信号，不直接拒绝）
+    # 1. 额度检查：AI 增强额度耗尽时如实停止，不改变业务流程或路由。
     allowed, quota = _usage_tracker.check_quota()
     if not allowed:
-        # V1.0: 额度超限 → 建议切换到 L2 ARK，由 ai_channel 执行故障转移
-        # 不再硬拒绝，确保核心生产链路不阻塞
         return mark_ai_output({
             "ok": False,
-            "error": "AI 每日额度已超限，触发 fallback 到 L2 ARK",
+            "error": "AI 每日额度已超限",
+            "code": "AI_DAILY_QUOTA_EXCEEDED",
+            "execution_state": "BLOCKED",
             "quota": quota,
             "quota_exceeded": True,
-            "fallback": "ark",
-            "fallback_chain": ["zhipu", "ark", "qwen", "ollama", "lmstudio", "rule"],
-            "should_failover": True,
-        }, endpoint=endpoint, provider=provider)
+        }, endpoint=endpoint, provider=gateway_route)
 
     # 2. 脱敏
     mapping = {}
@@ -407,7 +371,7 @@ def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
         "mapping": mapping,
         "quota_remaining": quota["call_remaining"],
         "messages_prepared": messages,
-        "provider": provider,
+        "provider": gateway_route,
         "model": model,
         "max_tokens": max_tokens,
         "temperature": temperature,
@@ -424,8 +388,8 @@ def get_governance_status() -> Dict:
 
 
 def record_ai_call(endpoint: str, prompt_tokens: int = 0, completion_tokens: int = 0,
-                    total_tokens: int = 0, provider: str = "zhipu", success: bool = True):
-    """记录一次 AI 调用（API 用）。provider 区分 zhipu / ark。"""
+                    total_tokens: int = 0, provider: str = "owned", success: bool = True):
+    """记录一次 Gateway AI 调用（API 用）。"""
     _usage_tracker.record_call(endpoint, prompt_tokens, completion_tokens, total_tokens, provider, success)
 
 
