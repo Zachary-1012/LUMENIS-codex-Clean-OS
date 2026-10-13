@@ -358,3 +358,24 @@ The mathematical Python ports are independently authored v2 source with fixed pa
 | Landrun | 0.1.17 Linux official binary SHA `6ada66a06669e8994e174a7271af2db636308e55a0d6ec896cc7d326b46727f6` | [MIT](https://github.com/Zouuup/landrun/blob/v0.1.17/LICENSE); kernel ABI compatibility explicit, systemd AF_UNIX guard retained. |
 
 Tools are installed only under the existing development tool root and WSL user-local `lumenis-math-v2`; no global PATH, account, proxy, production dependency, service/provider, paid resource or elevated installation changed. Rollback is removal of this specifically inventoried portable tool directory after its own proof job ends; caches and original failure/source receipts remain recoverable. Mathematical execution in LUMENIS uses existing Python standard-library dependencies. Model data/weights/training/promotion keep separate Permission approval.
+
+
+### 2026-10-13 bounded JSON-shape / Windows static-import adoption
+
+Direct PO approved `LUMENIS_Reuse_20261013(1).zip`, SHA-256
+`79ea56ad35ae1acb2e2953c2229a6d428a2503d7c7a41f3f6ddbc6867b946329`.
+Existing Collector owner receives value-free response-shape observations through
+AdapterResult and the current Douyin adapter; C6 build tooling receives optional
+single-file static DUMPBIN diagnostics. C5 Evidence persistence is not asserted.
+No platform/browser/model/OS executor or dependency is added, and no live source
+or protected identity is accessed. Same-run live diagnostic recovery remains unverified.
+
+| Component | Fixed original / adoption | License / boundary |
+| --- | --- | --- |
+| Browser.Reverse.Engineering.Toolkit | `ecbe61af5004f6efa493749a623fbd98ab307a37`, SiteSnapshotter/injector.js shapeOf/collectJsonKeys/detectPagination ideas; independently authored Python adaptation | MIT, copyright 2020-2026 Dvurechensky; bounded type-only metadata, not source truth or a fetch hook |
+| BinNexus | `269444ef4433cc582a57f7fa6854c2448ad5ba6b`, app/binnexus/analysis/static/imports.py:16-24; verbatim regex/function extraction | MIT, copyright 2020-2026 Dvurechensky; only static direct-import observation, no DLL or target execution |
+| Delivery helpers | response_shape.py and dll_imports.py from the reviewed archive plus bounded existing-owner binding | MIT delivery notice retained; standard library only; Windows tool installation and runtime acceptance excluded |
+
+Full notices are retained in `vendor/lumenis-reuse-notices/` and indexed by
+`THIRD_PARTY_NOTICES.md`. Rollback removes only this exact hash-matched delta;
+retain older native-field/failure-state/build safeguards and unrelated dirty work.
