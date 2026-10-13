@@ -899,6 +899,11 @@ def sync(keywords=None, max_scroll=6, account=None):
         import dataclasses as _dc
         _cth = tuple(q for q in query_plan.queries if q.domain_id == 'CTH')
         query_plan = _dc.replace(query_plan, queries=_cth)
+        if not _cth and keywords is None:
+            # Page held only deferred BMP targets: collect the CTH registry page instead of idling.
+            from lumenis.system.collector.acquisition_plan import build_acquisition_plan as _bap
+            import subject_registry as _sr
+            query_plan = _bap(None, registry_loader=lambda: _sr.list_subjects('CTH'))
         query_plan_payload = dict(query_plan_payload or {})
         query_plan_payload['deferred_non_cth'] = [
             {'keyword': q.keyword, 'domain_id': q.domain_id,
