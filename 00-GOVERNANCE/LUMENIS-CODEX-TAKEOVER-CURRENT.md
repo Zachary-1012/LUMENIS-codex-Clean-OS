@@ -25,6 +25,8 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 本轮在现有规则型提交的精确文件白名单内，原位降级四份存活旧执行语义：历史 ADR、两份内容制作母指令与 AI 编程旧基线，均只保留归档研究身份；有效 J6/C4 的 Daily/Weekly/Monthly 播客选题与可编辑成品要求已在现有 Owner 保留。此项来源清理不等于开发、运行或产品验收完成。
 
+2026-10-13 REA 媒体/办公接入（PO 授权逐段合并）：把 `D:/REA-Review/2026-10-11/product-patch` 的12个文件补丁在当前 main 上逐段接入原 Owner——C4/C6 `shared_artifacts.py`/`experience_runtime.py` 与 SH-01 正常制作不再要求 demo 勾选（旧参数仅可选兼容，`rights=unknown` 不升级）；C5 `lumenis/shared/reporting/saved_work.py` 增加 DOCX/XLSX/PPTX 精确 OOXML 校验与回读；F `app/lib/features/shared/sh01` 视频/播客共用 Timeline。FFmpeg 继续由 `LUMENIS_FFMPEG_PATH`/`LUMENIS_FFPROBE_PATH` 配置，不硬编码研究目录；REA 适配 wheel 未作为产品依赖。运行加载与真实用户验收仍为 NOT_VERIFIED。
+
 运行与结果：RUNTIME、DATABASE、USER OUTCOME均须独立取证。未取得本轮证据时标记NOT_VERIFIED，不复制旧进程、端口、账号状态、测试数、模型状态或历史PASS。
 
 ## 2. 唯一有效入口 — CURRENT CONFIGURATION / TOOLCHAIN CONVERGENCE

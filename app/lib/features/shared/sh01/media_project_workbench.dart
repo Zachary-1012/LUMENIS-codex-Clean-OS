@@ -20,6 +20,14 @@ import 'saved_media_projects_controller.dart';
 
 String _copy(BuildContext context, String key) =>
     context.lumenisL10n.text('sh01.media.$key');
+
+String _rightsNotice(BuildContext context) =>
+    switch (Localizations.localeOf(context).languageCode) {
+      'zh' => '版权状态尚未核实；导出不代表获准发布。',
+      'ko' => '권리 상태는 확인되지 않았으며, 내보내기는 게시 권한을 부여하지 않습니다.',
+      _ => 'Rights are unverified; export does not authorize publication.',
+    };
+
 String _seconds(double value) => value.toStringAsFixed(2);
 
 String? _safeDisplayName(Object? value, String languageCode) {
@@ -85,7 +93,6 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   String? _notice;
   bool _choosing = false;
   bool _retrieving = false;
-  bool _demo = false;
   bool _sourcesVisible = true;
   bool _propertiesVisible = true;
   double _timelineFraction = .38;
@@ -870,7 +877,6 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     if (code.contains('CONTEXT')) return 'context';
     if (code.contains('AUTH') || code.contains('DENIED')) return 'denied';
     if (code == 'CONTENT_SOURCE_ALREADY_ADDED') return 'duplicate';
-    if (code == 'CONTENT_DEMO_ACKNOWLEDGEMENT_REQUIRED') return 'demo';
     return 'failure';
   }
 
@@ -929,7 +935,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                               minimumSize: const Size(48, 48),
                             ),
                             onPressed: () => _chooseInvokingDomain('BMP'),
-                            icon: const LumenisIcon(Icons.branding_watermark_outlined),
+                            icon: const LumenisIcon(
+                              Icons.branding_watermark_outlined,
+                            ),
                             label: Text(
                               context.lumenisL10n.text('navgroup.bmp'),
                             ),
@@ -1560,9 +1568,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   Future<void> _openActionsSheet() => _showLayerSheet(
     layer: _MediaProjectWorkbenchLayer.actions,
     title: _copy(context, 'versions_export'),
-    content: (setSheetState, sheetContext) => _actions(
+    content: (_, sheetContext) => _actions(
       _canUseCurrentContext ? _controller.timeline : null,
-      setSheetState: setSheetState,
       actionsSheetContext: sheetContext,
     ),
   );
@@ -1620,9 +1627,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                   header: true,
                                   child: Text(
                                     title,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleLarge,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge,
                                   ),
                                 ),
                               ),
@@ -1686,7 +1693,6 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
 
   Widget _actions(
     MediaProjectSnapshot? timeline, {
-    StateSetter? setSheetState,
     BuildContext? actionsSheetContext,
   }) {
     final palette = LumenisTheme.of(context);
@@ -1695,18 +1701,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          _copy(context, 'rights'),
+          _rightsNotice(context),
+          key: const Key('media-rights-unknown'),
           style: TextStyle(color: palette.caution),
-        ),
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          controlAffinity: ListTileControlAffinity.leading,
-          value: _demo,
-          onChanged: (value) {
-            setState(() => _demo = value ?? false);
-            setSheetState?.call(() {});
-          },
-          title: Text(_copy(context, 'demo')),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -1723,10 +1720,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                       _hasUnappliedInspectorDrafts ||
                       _controller.completionUnknown
                   ? null
-                  : () => _controller.export(
-                      outputKind: 'video',
-                      demoAcknowledged: _demo,
-                    ),
+                  : () => _controller.export(outputKind: 'video'),
               icon: const LumenisIcon(Icons.file_download_outlined),
               label: Text(_copy(context, 'export')),
             ),
@@ -1825,9 +1819,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                     ? null
                     : () => _retrieve(
                         download: false,
-                        actionsSheetContext: setSheetState == null
-                            ? null
-                            : actionsSheetContext,
+                        actionsSheetContext: actionsSheetContext,
                       ),
                 child: Text(_copy(context, 'preview')),
               ),
@@ -1848,84 +1840,85 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     );
   }
 
-  Widget _sources(
-    MediaProjectSnapshot? timeline, {
-    VoidCallback? onChoose,
-  }) => _pane(
-    context,
-    'sources',
-    Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        OutlinedButton.icon(
-          key: const Key('media-import'),
-          onPressed:
-              _controller.busy ||
-                  _choosing ||
-                  !_canUseCurrentContext ||
-                  _controller.needsOriginalFiles
-              ? null
-              : (onChoose ?? _choose),
-          icon: const LumenisIcon(Icons.add),
-          label: Text(_copy(context, 'choose')),
-        ),
-        if (timeline == null)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Text(_copy(context, 'empty')),
-          ),
-        for (final asset in timeline?.assets ?? <MediaProjectAsset>[])
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: LumenisTheme.of(context).line),
+  Widget _sources(MediaProjectSnapshot? timeline, {VoidCallback? onChoose}) =>
+      _pane(
+        context,
+        'sources',
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            OutlinedButton.icon(
+              key: const Key('media-import'),
+              onPressed:
+                  _controller.busy ||
+                      _choosing ||
+                      !_canUseCurrentContext ||
+                      _controller.needsOriginalFiles
+                  ? null
+                  : (onChoose ?? _choose),
+              icon: const LumenisIcon(Icons.add),
+              label: Text(_copy(context, 'choose')),
+            ),
+            if (timeline == null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(_copy(context, 'empty')),
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  asset.hasVideo
-                      ? Icons.movie_outlined
-                      : Icons.audio_file_outlined,
-                  size: 20,
-                  color: LumenisTheme.of(context).muted,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        asset.filename,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                      Text(
-                        '${_seconds(asset.durationSec)} s',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
+            for (final asset in timeline?.assets ?? <MediaProjectAsset>[])
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: LumenisTheme.of(context).line),
                   ),
                 ),
-                IconButton(
-                  constraints: const BoxConstraints(
-                    minWidth: 48,
-                    minHeight: 48,
-                  ),
-                  tooltip: '${_copy(context, 'add')} · ${asset.filename}',
-                  onPressed: _isBusy ? null : () => _add(asset),
-                  icon: const LumenisIcon(Icons.add_rounded),
+                child: Row(
+                  children: [
+                    Icon(
+                      asset.hasVideo
+                          ? Icons.movie_outlined
+                          : Icons.audio_file_outlined,
+                      size: 20,
+                      color: LumenisTheme.of(context).muted,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            asset.filename,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          Text(
+                            '${_seconds(asset.durationSec)} s',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
+                      tooltip: '${_copy(context, 'add')} · ${asset.filename}',
+                      onPressed: _isBusy ? null : () => _add(asset),
+                      icon: const LumenisIcon(Icons.add_rounded),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-      ],
-    ),
-  );
+              ),
+          ],
+        ),
+      );
 
   Widget _timeline(MediaProjectSnapshot? timeline, {required bool wide}) {
     final palette = LumenisTheme.of(context);
@@ -2125,9 +2118,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                         _copy(context, track.kind),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.labelMedium,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelMedium,
                                       ),
                                     ),
                                   for (final overlay in overlays)
@@ -2146,9 +2139,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                             ),
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.labelMedium,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelMedium,
                                           ),
                                         ),
                                       ),
@@ -2231,15 +2224,18 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                                           top: 4,
                                                           child: Text(
                                                             '${_seconds(tick * interval)} s',
-                                                            style: Theme.of(context)
-                                                                .textTheme
-                                                                .labelSmall
-                                                                ?.copyWith(
-                                                                  fontFeatures:
-                                                                      const [
-                                                                        FontFeature.tabularFigures(),
-                                                                      ],
-                                                                ),
+                                                            style:
+                                                                Theme.of(
+                                                                      context,
+                                                                    )
+                                                                    .textTheme
+                                                                    .labelSmall
+                                                                    ?.copyWith(
+                                                                      fontFeatures:
+                                                                          const [
+                                                                            FontFeature.tabularFigures(),
+                                                                          ],
+                                                                    ),
                                                           ),
                                                         ),
                                                       if (_timelinePlayheadSec !=

@@ -647,7 +647,7 @@ class LumenisCoreClient {
     List<String>? assetRefs,
     required Map<String, dynamic> timeline,
     required String outputKind,
-    required bool demoAcknowledged,
+    bool? demoAcknowledged,
     String? previousArtifactId,
   }) {
     if (outputKind != 'video' && outputKind != 'audio') {
@@ -667,7 +667,7 @@ class LumenisCoreClient {
           ..._contentAssets(assetPaths, assetRefs),
           'timeline': timeline,
           'output_kind': outputKind,
-          'demo_acknowledged': demoAcknowledged,
+          'demo_acknowledged': ?demoAcknowledged,
           'previous_artifact_id': previousArtifactId,
         },
       },

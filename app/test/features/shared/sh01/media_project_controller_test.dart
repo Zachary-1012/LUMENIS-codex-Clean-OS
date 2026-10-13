@@ -21,6 +21,7 @@ final class _Repository implements MediaProjectRepository {
   MediaProjectSnapshot? exported;
   String? parent;
   Object? failure;
+  bool legacyRightsFormat = false;
   Completer<void>? pending;
   Map<String, dynamic>? savedProject;
   bool approvalRequired = false;
@@ -57,7 +58,6 @@ final class _Repository implements MediaProjectRepository {
     required List<String> paths,
     required MediaProjectSnapshot timeline,
     required String outputKind,
-    required bool demoAcknowledged,
     List<String>? refs,
     String? previousArtifactId,
   }) async {
@@ -71,7 +71,13 @@ final class _Repository implements MediaProjectRepository {
       'schema_version': 1,
       'output_kind': outputKind,
       'timeline': timeline.toJson(),
-      'rights': {'state': 'unknown', 'demo_acknowledged': true},
+      'rights': legacyRightsFormat
+          ? {
+              'state': 'unknown',
+              'demo_acknowledged': true,
+              'label': 'demo-only / rights unknown',
+            }
+          : {'state': 'unknown', 'label': 'rights unknown'},
     };
     return {
       'ok': true,
@@ -188,22 +194,50 @@ void main() {
     },
   );
 
-  test('demo choice is explicit and denial preserves edit intent', () async {
-    await create();
-    final before = controller.timeline;
-    await controller.export(outputKind: 'video', demoAcknowledged: false);
-    expect(repository.calls, 0);
-    expect(controller.timeline, same(before));
-    expect(controller.failureCode, 'CONTENT_DEMO_ACKNOWLEDGEMENT_REQUIRED');
-    repository.failure = const LumenisCoreException(
-      'private-path',
-      statusCode: 403,
-    );
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
-    expect(controller.timeline, same(before));
-    expect(controller.failureCode, 'CONTENT_SCOPE_DENIED');
-    expect(controller.busy, isFalse);
-  });
+  test(
+    'unknown rights do not gate export and permission denial preserves edits',
+    () async {
+      await create();
+      final before = controller.timeline;
+      await controller.export(outputKind: 'video');
+      expect(repository.calls, 1);
+      expect(controller.timeline, same(before));
+      expect(controller.version?.artifactId, 'ART-1');
+      expect(repository.savedProject?['rights'], {
+        'state': 'unknown',
+        'label': 'rights unknown',
+      });
+      controller.edit(
+        (s) => s.setAudioMix(
+          s.tracks.single.clips.single.clipId,
+          const MediaProjectAudioMix(volume: .7),
+        ),
+      );
+      repository.failure = const LumenisCoreException(
+        'private-path',
+        statusCode: 403,
+      );
+      await controller.export(outputKind: 'video');
+      expect(repository.calls, 2);
+      expect(
+        controller.timeline!.tracks.single.clips.single.audioMix.volume,
+        .7,
+      );
+      expect(controller.failureCode, 'CONTENT_SCOPE_DENIED');
+      expect(controller.busy, isFalse);
+    },
+  );
+
+  test(
+    'legacy demo receipt stays readable with rights still unknown',
+    () async {
+      await create();
+      repository.legacyRightsFormat = true;
+      await controller.export(outputKind: 'video');
+      expect(controller.version?.artifactId, 'ART-1');
+      expect(controller.failureCode, isNull);
+    },
+  );
 
   test(
     'export captures a version and preserves concurrent newer edits',
@@ -211,10 +245,7 @@ void main() {
       await create();
       final snapshot = controller.timeline!;
       repository.pending = Completer<void>();
-      final export = controller.export(
-        outputKind: 'video',
-        demoAcknowledged: true,
-      );
+      final export = controller.export(outputKind: 'video');
       controller.edit(
         (s) => s.trimClip(
           s.tracks.single.clips.single.clipId,
@@ -228,7 +259,7 @@ void main() {
       expect(controller.version!.timelineVersion, snapshot.version);
       expect(controller.version!.evidenceRecorded, isFalse);
       expect(controller.hasUnsavedChanges, isTrue);
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       expect(repository.parent, 'ART-1');
       expect(controller.hasUnsavedChanges, isFalse);
     },
@@ -236,7 +267,7 @@ void main() {
 
   test('export failure retains prior registered version', () async {
     await create();
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     final parent = controller.version;
     controller.edit(
       (s) => s.setAudioMix(
@@ -249,7 +280,7 @@ void main() {
       statusCode: 503,
       errorCode: 'CONTENT_RENDER_FAILED',
     );
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     expect(controller.version, same(parent));
     expect(controller.timeline!.tracks.single.clips.single.audioMix.volume, .4);
     expect(controller.completionUnknown, isFalse);
@@ -261,9 +292,9 @@ void main() {
       'timeout',
       errorCode: 'CONTENT_EXPORT_TIMEOUT',
     );
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     expect(controller.completionUnknown, isTrue);
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     expect(repository.calls, 1);
     expect(controller.failureCode, 'CONTENT_EXPORT_COMPLETION_UNKNOWN');
     expect(controller.hasUnsavedChanges, isTrue);
@@ -271,7 +302,7 @@ void main() {
 
   test('reopen is read-only until original media is re-inspected', () async {
     await create();
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     await controller.reopen('ART-1');
     expect(controller.timeline, isNull);
     expect(controller.needsOriginalFiles, isTrue);
@@ -290,7 +321,7 @@ void main() {
         (s) =>
             s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
       );
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       final previousVersion = controller.version!;
       final clipId = controller.timeline!.tracks.single.clips.single.clipId;
       controller.edit((s) => s.trimClip(clipId, sourceIn: 1, sourceOut: 4));
@@ -323,7 +354,7 @@ void main() {
         (s) =>
             s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
       );
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       final previousVersion = controller.version!;
       final clipId = controller.timeline!.tracks.single.clips.single.clipId;
       controller.edit((s) => s.trimClip(clipId, sourceIn: 1, sourceOut: 4));
@@ -350,7 +381,7 @@ void main() {
         (s) =>
             s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
       );
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       final previousVersion = controller.version!;
       final clipId = controller.timeline!.tracks.single.clips.single.clipId;
       controller.edit((s) => s.trimClip(clipId, sourceIn: 1, sourceOut: 4));
@@ -395,10 +426,7 @@ void main() {
     () async {
       await create();
       repository.pending = Completer<void>();
-      final export = controller.export(
-        outputKind: 'video',
-        demoAcknowledged: true,
-      );
+      final export = controller.export(outputKind: 'video');
       repository.contextKey = 'BMP:brand-two';
       repository.pending!.complete();
       await export;
@@ -413,7 +441,7 @@ void main() {
 
   test('malformed response cannot become a saved version', () async {
     await create();
-    await controller.export(outputKind: 'audio', demoAcknowledged: true);
+    await controller.export(outputKind: 'audio');
     expect(controller.version, isNull);
     expect(controller.failureCode, 'CONTENT_RESPONSE_INVALID');
     expect(controller.completionUnknown, isTrue);
@@ -425,7 +453,7 @@ void main() {
       (s) =>
           s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
     );
-    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await controller.export(outputKind: 'video');
     expect(controller.version!.sourceRefs, ['ART-source']);
     await controller.reopen('ART-1');
     expect(controller.needsOriginalFiles, isFalse);
@@ -459,7 +487,7 @@ void main() {
       repository.contextKey = 'BMP:GLOBAL';
       expect(controller.contextMatches, isFalse);
       expect(controller.sourceRefs, isEmpty);
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       expect(repository.calls, 0);
       repository.failure = const LumenisCoreException(
         'denied',
@@ -504,7 +532,7 @@ void main() {
         (s) =>
             s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
       );
-      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await controller.export(outputKind: 'video');
       final draft = controller.timeline;
       final version = controller.version;
       final contextBefore = repository.contextKey;

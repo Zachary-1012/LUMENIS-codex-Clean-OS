@@ -2986,13 +2986,12 @@ def export_content_project():
             normalized = {"timeline": timeline.to_dict(), "scope": scope,
                           "source_artifact_refs": source_refs,
                           "output_kind": payload.get("output_kind", "video"),
-                          "demo_acknowledged": payload.get("demo_acknowledged") is True,
                           "previous_artifact_id": payload.get("previous_artifact_id")}
 
             def render(ctx):
                 return stage_timeline_artifact(
                     timeline, actor=actor, **scope, source_execution_id=ctx.execution_id,
-                    output_kind=normalized["output_kind"], demo_acknowledged=normalized["demo_acknowledged"],
+                    output_kind=normalized["output_kind"],
                     previous_artifact_id=normalized["previous_artifact_id"],
                     source_artifact_refs=source_refs,
                 )
