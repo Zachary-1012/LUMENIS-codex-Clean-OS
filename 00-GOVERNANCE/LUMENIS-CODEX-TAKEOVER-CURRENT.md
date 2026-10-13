@@ -66,8 +66,10 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+
+退役Provider残留继续在原Owner收敛：删除旧HTTP探测和按次计费执行体，兼容入口只返回不可用；历史额度/使用记录保留。标准AI目录采用中性路径，显式配置保持，不移动旧文件、不启动服务。隔离回归/静态通过不等于运行或用户验收。
 
 显式选择 user_api 的已有通用接口保留；状态读取不调用外部模型、不探测端点，配置完成仍为 CONFIGURED_NOT_VERIFIED，不能冒称可用或自动切回 owned。
 

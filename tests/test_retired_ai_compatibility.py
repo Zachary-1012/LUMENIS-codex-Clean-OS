@@ -58,3 +58,13 @@ def test_governance_status_does_not_relabel_a_retired_provider_as_primary(monkey
 
     assert status["active_providers"] == []
     assert status["primary_provider"] == "provider_disabled"
+
+
+def test_retired_pack_cannot_resume_or_dispatch_if_registry_metadata_changes(monkeypatch):
+    calls = []
+    monkeypatch.setattr("lumenis.system.ai_gateway.providers.is_provider_retired", lambda _name: False)
+    monkeypatch.setattr(ai_resource_packs, "_save_stats", lambda *_args: calls.append("write"))
+    monkeypatch.setattr("lumenis.system.ai_gateway.core._chat", lambda *args, **kwargs: calls.append("model"))
+    assert ai_resource_packs.resume_connection()["paused"] is True
+    assert ai_resource_packs.execute_per_call_request("request", model="requested")["resource_consumed"] is False
+    assert calls == []
