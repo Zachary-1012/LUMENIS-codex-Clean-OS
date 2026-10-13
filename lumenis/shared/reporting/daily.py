@@ -18,14 +18,15 @@
 - 不把单一用户指控写成已证实事实
 """
 import json
-import re
+import math
 import os
+import re
 from datetime import datetime, timedelta
 
-import database as db
 import ai_analyzer
-import intelligence
 import canonical_metrics as cm
+import database as db
+import intelligence
 
 
 def _ai_allowed_for_report():
@@ -36,107 +37,96 @@ def _ai_allowed_for_report():
 # ============== 风险指数计算 ==============
 
 def calculate_risk_index(notes, events, period_days=1):
-    """
-    风险指数 0-100
-    综合维度：
-    1. 负面内容占比（30%）
-    2. 高风险内容数量（25%）
-    3. 传播互动规模（20%）
-    4. 事件持续时间（15%）
-    5. 多来源交叉验证（10%）
-    """
-    if not notes:
-        return 0.0
+    """Calculate the composite risk index only when every input dimension is known."""
+    if not notes or events is None or not isinstance(events, (list, tuple)):
+        return None
 
-    total = len(notes)
-    _sc = cm.sentiment_count(notes)
-    _rc = cm.risk_count(notes)
-    negative = _sc['negative']
-    high_risk = _rc['high']      # Canonical FN-RISK-COUNT：high 不含 critical
-    critical_risk = _rc['critical']  # 方案甲：critical 独立更高桶，风险指数中权重高于 high（Phase 6 审计修复）
-    medium_risk = _rc['medium']
-    total_engagement = sum(int(n.get('likes', 0) or 0) + int(n.get('comments', 0) or 0) * 2
-                           for n in notes)
+    sentiment = cm.sentiment_count(notes)
+    risks = cm.risk_count(notes)
+    if sentiment["known"] == 0 or sentiment["known"] != sentiment["total"]:
+        return None
+    if risks["missing"] or risks["other"] or risks["total"] != len(notes):
+        return None
 
-    # 1. 负面占比得分 (0-30)
-    # MET-NEG-RATIO：分母为 known(pos+neu+neg)，不含 unknown；分母为 0 返回 None（不可算）。
-    # 不可算时该维度得 0 分并显式标记，绝不把 unknown 当 negative 或 0 混入比率（Phase 6 审计修复）。
-    _nr = cm.neg_ratio(_sc)
-    neg_ratio = _nr if _nr is not None else 0.0
-    neg_score = min(30, neg_ratio * 60)  # 50%负面即满分
+    engagement = cm.engagement_stats(notes, keys=("likes", "comments"))
+    if engagement["quality"]["state"] != "COMPLETE":
+        return None
 
-    # 2. 高风险数量得分 (0-25)
-    # 单日高风险>=5条即满分；critical 权重为 high 的 2 倍（独立更高桶，不得被弱化）
-    high_score = min(25, high_risk * 5 + critical_risk * 10 + medium_risk * 1.5)
+    duration_score = 0.0
+    duration_samples = 0
+    for event in events:
+        if not isinstance(event, dict) or not isinstance(event.get("status"), str) or not event["status"].strip():
+            return None
+        if cm.engagement_count(event.get("source_count")) is None:
+            return None
+        if event["status"] != "active":
+            continue
+        first, last = event.get("first_seen"), event.get("last_seen")
+        if not isinstance(first, str) or not isinstance(last, str) or not first or not last:
+            return None
+        try:
+            first_day = datetime.strptime(first[:10], "%Y-%m-%d")
+            last_day = datetime.strptime(last[:10], "%Y-%m-%d")
+        except ValueError:
+            return None
+        if last_day < first_day:
+            return None
+        if duration_samples < 3:
+            duration_score += min(5, ((last_day - first_day).days + 1) * 0.5)
+        duration_samples += 1
 
-    # 3. 传播互动得分 (0-20)
-    # 负面内容的互动量权重更高
-    neg_engagement = sum(int(n.get('likes', 0) or 0) + int(n.get('comments', 0) or 0) * 2
-                         for n in notes if n.get('sentiment') == 'negative')
-    eng_score = min(20, neg_engagement / 50)  # 负面互动1000即满分
+    negative_ratio = cm.neg_ratio(sentiment)
+    if negative_ratio is None:
+        return None
 
-    # 4. 事件持续时间得分 (0-15)
-    event_duration_score = 0
-    if events:
-        active_events = [e for e in events if e.get('status') == 'active']
-        for e in active_events[:3]:
-            first = e.get('first_seen', '')
-            last = e.get('last_seen', '')
-            if first and last:
-                try:
-                    d1 = datetime.strptime(first[:10], '%Y-%m-%d')
-                    d2 = datetime.strptime(last[:10], '%Y-%m-%d')
-                    days = (d2 - d1).days + 1
-                    event_duration_score += min(5, days * 0.5)
-                except Exception:
-                    pass
-    event_duration_score = min(15, event_duration_score)
-
-    # 5. 多来源得分 (0-10)
-    multi_source_score = 0
-    if events:
-        multi_source = sum(1 for e in events if (e.get('source_count') or 0) >= 2)
-        multi_source_score = min(10, multi_source * 3)
-
-    risk_index = round(neg_score + high_score + eng_score + event_duration_score + multi_source_score, 1)
-    return min(100.0, max(0.0, risk_index))
-
+    negative_engagement = sum(
+        int(note["likes"]) + int(note["comments"]) * 2
+        for note in notes if note.get("sentiment") == "negative"
+    )
+    negative_score = min(30, negative_ratio * 60)
+    risk_count_score = min(25, risks["high"] * 5 + risks["critical"] * 10 + risks["medium"] * 1.5)
+    engagement_score = min(20, negative_engagement / 50)
+    duration_score = min(15, duration_score)
+    multisource_count = sum(1 for event in events if int(event["source_count"]) >= 2)
+    multisource_score = min(10, multisource_count * 3)
+    score = round(negative_score + risk_count_score + engagement_score + duration_score + multisource_score, 1)
+    return min(100.0, max(0.0, score))
 
 def calculate_brand_health_score(notes, risk_index):
-    """
-    品牌健康度 0-100
-    越高越健康
-    维度：正面占比、风险水平、互动质量、官方声量
-    """
-    if not notes:
-        return 50.0  # 无数据时中性
+    """Calculate the health score only from complete, measured dimensions."""
+    if not notes or type(risk_index) not in (int, float) or not math.isfinite(risk_index):
+        return None
 
-    total = len(notes)
-    _scb = cm.sentiment_count(notes)
-    positive = _scb['positive']
-    negative = _scb['negative']
-    official = sum(1 for n in notes if n.get('is_official') == 1)
+    sentiments = cm.sentiment_count(notes)
+    if sentiments["known"] == 0 or sentiments["known"] != sentiments["total"]:
+        return None
+    positive_ratio = cm.pos_ratio(sentiments)
+    if positive_ratio is None:
+        return None
+    risks = cm.risk_count(notes)
+    if risks['missing'] or risks['other'] or risks['total'] != len(notes):
+        return None
 
-    # 1. 正面占比 (0-40)
-    pos_ratio = positive / total if total > 0 else 0
-    pos_score = pos_ratio * 40
+    engagement = cm.engagement_stats(notes, keys=("likes", "comments"))
+    if engagement["quality"]["state"] != "COMPLETE":
+        return None
+    official_values = [note.get("is_official") for note in notes if isinstance(note, dict)]
+    if len(official_values) != len(notes) or any(value not in (0, 1, False, True) for value in official_values):
+        return None
 
-    # 2. 风险反向得分 (0-30)
-    # risk_index 0 -> 30分, risk_index 100 -> 0分
-    risk_score = max(0, 30 - risk_index * 0.3)
-
-    # 3. 互动质量 (0-20)
-    # 正面内容互动占比
-    pos_engagement = sum(int(n.get('likes', 0) or 0) + int(n.get('comments', 0) or 0)
-                         for n in notes if n.get('sentiment') == 'positive')
-    total_engagement = sum(int(n.get('likes', 0) or 0) + int(n.get('comments', 0) or 0)
-                           for n in notes)
-    eng_quality = (pos_engagement / total_engagement * 20) if total_engagement > 0 else 10
-
-    # 4. 官方声量 (0-10)
-    official_score = min(10, official * 2)
-
-    health = round(pos_score + risk_score + eng_quality + official_score, 1)
+    positive_engagement = sum(
+        int(note["likes"]) + int(note["comments"])
+        for note in notes if note.get("sentiment") == "positive"
+    )
+    total_engagement = sum(int(note["likes"]) + int(note["comments"]) for note in notes)
+    engagement_ratio = cm.safe_ratio(positive_engagement, total_engagement)
+    if engagement_ratio is None:
+        return None
+    engagement_quality = engagement_ratio * 20
+    positive_score = positive_ratio * 40
+    risk_score = max(0.0, 30.0 - float(risk_index) * 0.3)
+    official_score = min(10, sum(1 for value in official_values if value in (1, True)) * 2)
+    health = round(positive_score + risk_score + engagement_quality + official_score, 1)
     return min(100.0, max(0.0, health))
 
 
@@ -208,9 +198,10 @@ def generate_today_summary(date_str=None):
 
     _sce = cm.sentiment_count(effective_notes)
     _rce = cm.risk_count(effective_notes)
-    positive = _sce['positive']
-    neutral = _sce['neutral']
-    risk = _rce['high'] + _rce['medium']   # 风险数=中+高(口径不变;critical独立不计入)
+    positive = _sce['positive'] if _sce['known'] else None
+    neutral = _sce['neutral'] if _sce['known'] else None
+    risk = (_rce['high'] + _rce['medium']
+            if _rce['total'] and not _rce['missing'] and not _rce['other'] else None)
 
     # 今日事件
     events = db.get_events(20)
@@ -226,6 +217,10 @@ def generate_today_summary(date_str=None):
         'effective_count': effective_count,
         'positive_count': positive,
         'neutral_count': neutral,
+        'negative_count': _sce['negative'] if _sce['known'] else None,
+        'sentiment_coverage': {'known': _sce['known'], 'total': _sce['total'], 'unknown': _sce['unknown']},
+        'risk_coverage': {'known': _rce['total'] - _rce['missing'] - _rce['other'],
+                          'total': _rce['total'], 'missing': _rce['missing'], 'other': _rce['other']},
         'risk_count': risk,
         'risk_index': risk_index,
         'brand_health_score': brand_health,
@@ -251,7 +246,7 @@ def generate_event_insight(event, notes):
     }
     """
     event_title = event.get('title', '未命名事件')
-    risk_level = event.get('risk_level', 'low')
+    risk_level = event.get('risk_level') or 'unknown'
     mention_count = event.get('mention_count', 0)
     source_count = event.get('source_count', 1)
 
@@ -310,7 +305,7 @@ def generate_event_insight(event, notes):
 
     # 规则引擎兜底
     if not ai_summary:
-        risk_label = {'high': '高风险', 'medium': '中风险', 'low': '低风险'}.get(risk_level, '低风险')
+        risk_label = {'high': '高风险', 'medium': '中风险', 'low': '低风险'}.get(risk_level, '风险等级未知')
         ai_summary = (f'该事件共涉及{mention_count}条提及，{sentiment_trend}。'
                      f'{propagation}。目前信息主要来自用户分享，事实仍需进一步核实。')
 
@@ -319,14 +314,16 @@ def generate_event_insight(event, notes):
             recommended_action = '建议24小时内核查事实，准备官方回应口径，持续监测传播趋势。'
         elif risk_level == 'medium':
             recommended_action = '建议关注事件发展，收集更多用户反馈，必要时主动沟通改善。'
-        else:
+        elif risk_level == 'low':
             recommended_action = '持续观察即可，暂不需要主动介入。'
+        else:
+            recommended_action = '风险等级尚未核实，请先补充或核验风险数据。'
 
     return {
         'event_id': event.get('id'),
         'event_title': event_title[:50],
         'risk_level': risk_level,
-        'risk_score': event.get('risk_score', 0),
+        'risk_score': event.get('risk_score'),
         'mention_count': mention_count,
         'source_count': source_count,
         'ai_summary': ai_summary[:200],
@@ -384,36 +381,47 @@ def generate_key_insights(notes, events, summary):
     if total == 0:
         return [{'insight': '今日暂无有效舆情数据，建议检查采集任务是否正常运行。', 'type': 'system'}]
 
-    # 洞察1：情感格局
-    pos = sum(1 for n in notes if n.get('sentiment') == 'positive')
-    neg = sum(1 for n in notes if n.get('sentiment') == 'negative')
-    pos_pct = round(pos / total * 100, 1) if total > 0 else 0
-    neg_pct = round(neg / total * 100, 1) if total > 0 else 0
+    # 洞察1：只在样本情感分类完整时计算占比，不能把未知类别当作零。
+    sentiment = cm.sentiment_count(notes)
+    if sentiment['known'] == total and sentiment['known'] > 0:
+        pos = sentiment['positive']
+        neg = sentiment['negative']
+        denominator = sentiment['known']
+        pos_pct = round(pos / denominator * 100, 1)
+        neg_pct = round(neg / denominator * 100, 1)
 
-    if neg_pct > 30:
-        insights.append({
-            'insight': f'今日负面占比{neg_pct}%，高于警戒线（30%），需重点关注负面内容的扩散趋势。',
-            'type': 'risk',
-            'metric': f'负面{neg}条 / 正面{pos}条'
-        })
-    elif pos_pct > 60:
-        insights.append({
-            'insight': f'今日正面占比{pos_pct}%，品牌口碑整体健康，可关注正向内容的传播放大机会。',
-            'type': 'opportunity',
-            'metric': f'正面{pos}条 / 负面{neg}条'
-        })
+        if neg_pct > 30:
+            insights.append({
+                'insight': f'今日负面占比{neg_pct}%，高于警戒线（30%），需重点关注负面内容的扩散趋势。',
+                'type': 'risk',
+                'metric': f'负面{neg}条 / 正面{pos}条（已分类{denominator}/{total}条）'
+            })
+        elif pos_pct > 60:
+            insights.append({
+                'insight': f'今日正面占比{pos_pct}%，品牌口碑整体健康，可关注正向内容的传播放大机会。',
+                'type': 'opportunity',
+                'metric': f'正面{pos}条 / 负面{neg}条（已分类{denominator}/{total}条）'
+            })
+        else:
+            insights.append({
+                'insight': f'今日正面占比{pos_pct}%，负面占比{neg_pct}%；情感分类完整，可据此观察声量结构。',
+                'type': 'neutral',
+                'metric': f'正面{pos}条 / 负面{neg}条（已分类{denominator}/{total}条）'
+            })
     else:
         insights.append({
-            'insight': f'今日正负声量接近（正面{pos_pct}% / 负面{neg_pct}%），舆情处于中性观察状态。',
-            'type': 'neutral',
-            'metric': f'正面{pos}条 / 负面{neg}条'
+            'insight': '情感分类覆盖不足，暂不能计算正负面比例或判断声量结构。',
+            'type': 'data_gap',
+            'metric': f'已分类{sentiment["known"]}/{total}条；未知{sentiment["unknown"]}条'
         })
 
     # 洞察2：风险事件
     high_events = [e for e in events if e.get('risk_level') == 'high']
     if high_events:
+        measured_scores = [e['risk_score'] for e in high_events if e.get('risk_score') is not None]
+        score_summary = f'最高风险分{max(measured_scores)}' if measured_scores else '风险分未取得'
         insights.append({
-            'insight': f'存在{len(high_events)}个高风险事件，最高风险分{max(e.get("risk_score", 0) for e in high_events)}，建议优先处置。',
+            'insight': f'已识别{len(high_events)}个高风险事件，{score_summary}，建议优先处置。',
             'type': 'risk',
             'metric': f'高风险事件{len(high_events)}个'
         })
@@ -430,12 +438,13 @@ def generate_key_insights(notes, events, summary):
         })
 
     # 洞察4：传播力
-    total_eng = sum(int(n.get('likes', 0) or 0) + int(n.get('comments', 0) or 0) for n in notes)
-    if total_eng > 1000:
-        hot_note = max(notes, key=lambda x: int(x.get('likes', 0) or 0) + int(x.get('comments', 0) or 0))
+    engagement = cm.engagement_stats(notes, keys=('likes', 'comments'))
+    total_eng = engagement['sum']
+    if total_eng is not None and total_eng > 1000:
+        hot_note = max(notes, key=lambda x: int(x['likes']) + int(x['comments']))
         insights.append({
             'insight': f'今日总互动量{total_eng}，最热内容「{(hot_note.get("title", "") or "无标题")[:20]}」'
-                      f'互动{int(hot_note.get("likes", 0) or 0) + int(hot_note.get("comments", 0) or 0)}，建议关注其传播走向。',
+                      f'互动{int(hot_note["likes"]) + int(hot_note["comments"])}，建议关注其传播走向。',
             'type': 'trend',
             'metric': f'总互动{total_eng}'
         })
@@ -450,6 +459,48 @@ def generate_key_insights(notes, events, summary):
         })
 
     return insights[:5]
+
+
+def _measured_negative_percentage(summary):
+    """Return a negative percentage only when its classified denominator is complete."""
+    coverage = summary.get('sentiment_coverage') or {}
+    negative = summary.get('negative_count')
+    known = coverage.get('known')
+    total = coverage.get('total')
+    if (type(negative) is not int or type(known) is not int or type(total) is not int
+            or known <= 0 or known != total or negative < 0 or negative > known):
+        return None
+    return round(negative / known * 100, 1)
+
+
+def _rule_executive_insight(summary, events):
+    """Build a deterministic summary without turning unclassified data into zero."""
+    negative_pct = _measured_negative_percentage(summary)
+    high_risk = sum(1 for event in events if event.get('risk_level') == 'high')
+    health = summary.get('brand_health_score')
+    risk_count = summary.get('risk_count')
+    if negative_pct is None:
+        priority = 'high' if high_risk >= 2 else 'medium' if high_risk else 'unknown'
+        executive = ('情感分类覆盖不足，暂不能计算负面占比或判定总体风险；'
+                     f'已识别高风险事件{high_risk}起，品牌健康度为{health if health is not None else "—"}。')
+        key_metric = '负面占比—'
+    elif risk_count is None:
+        priority = 'high' if negative_pct > 30 or high_risk >= 2 else 'medium' if negative_pct > 15 or high_risk else 'unknown'
+        executive = (f'已分类样本负面占比{negative_pct}%；风险等级覆盖不足，暂不能判断总体风险。'
+                     f'已识别高风险事件{high_risk}起，品牌健康度为{health if health is not None else "—"}。')
+        key_metric = f'负面占比{negative_pct}%（完整分类样本）'
+    else:
+        priority = 'high' if negative_pct > 30 or high_risk >= 2 else 'medium' if negative_pct > 15 or high_risk else 'low'
+        executive = (f'今日有效舆情{summary.get("effective_count", 0)}条，负面占比{negative_pct}%，'
+                     f'已识别高风险事件{high_risk}起，品牌健康度为{health if health is not None else "—"}。')
+        key_metric = f'负面占比{negative_pct}%'
+    return {
+        'executive_insight': executive,
+        'priority': priority,
+        'focus_area': '综合舆情' if negative_pct is not None else '数据质量核验',
+        'key_metric': key_metric,
+        'provider': 'rule_fallback',
+    }
 
 
 def generate_action_items(insights, events, summary):
@@ -480,17 +531,26 @@ def generate_action_items(insights, events, summary):
             'deadline': '本周内',
         })
 
-    # 负面占比高 -> 客服行动
-    if summary.get('risk_count', 0) > 5:
+    # 风险和情感缺失时不将 None 与数字比较，也不推断其为零。
+    risk_count = summary.get('risk_count')
+    positive_count = summary.get('positive_count')
+    if risk_count is None:
+        actions.append({
+            'priority': '待核实',
+            'action': '风险等级覆盖不足，暂不能统计风险内容；请先核验缺失风险数据。',
+            'owner': '数据分析团队',
+            'deadline': '本周期内',
+        })
+    elif risk_count > 5:
         actions.append({
             'priority': '高',
-            'action': f'今日有{summary["risk_count"]}条风险内容，建议客服团队逐一查看负面笔记，主动联系用户解决问题。',
+            'action': f'今日有{risk_count}条风险内容，建议客服团队逐一查看负面笔记，主动联系用户解决问题。',
             'owner': '客服团队',
             'deadline': '48小时内',
         })
 
     # 正向机会 -> 营销行动
-    if summary.get('positive_count', 0) > summary.get('risk_count', 0) * 2:
+    if positive_count is not None and risk_count is not None and positive_count > risk_count * 2:
         actions.append({
             'priority': '中',
             'action': '今日正面声量占优，建议营销团队筛选优质UGC内容，考虑转发或二次传播放大正向口碑。',
@@ -509,10 +569,20 @@ def generate_action_items(insights, events, summary):
         })
 
     if not actions:
+        sentiment_coverage = summary.get('sentiment_coverage') or {}
+        risk_coverage = summary.get('risk_coverage') or {}
+        metrics_complete = (
+            summary.get('positive_count') is not None
+            and summary.get('negative_count') is not None
+            and summary.get('risk_count') is not None
+            and sentiment_coverage.get('known') == sentiment_coverage.get('total')
+            and risk_coverage.get('known') == risk_coverage.get('total')
+        )
         actions.append({
-            'priority': '常规',
-            'action': '今日舆情整体平稳，按常规节奏监测即可，无需特殊干预。',
-            'owner': '舆情团队',
+            'priority': '常规' if metrics_complete else '待补数据',
+            'action': ('今日已知指标未触发预警阈值，可按常规节奏监测。'
+                       if metrics_complete else '当前指标覆盖不足，不能判定整体平稳；请补充缺失分类或风险数据。'),
+            'owner': '舆情团队' if metrics_complete else '数据分析团队',
             'deadline': '持续',
         })
 
@@ -522,42 +592,34 @@ def generate_action_items(insights, events, summary):
 # ============== 管理层摘要 ==============
 
 def generate_executive_summary(summary, insights, actions):
-    """
-    生成一句话管理层摘要
-    适合放在日报最顶部，30秒读完
-    """
-    risk_index = summary.get('risk_index', 0)
-    health = summary.get('brand_health_score', 50)
+    """Summarize only measured metrics; unavailable scores stay visibly unknown."""
+    risk_index = summary.get('risk_index')
+    health = summary.get('brand_health_score')
     effective = summary.get('effective_count', 0)
-    risk_count = summary.get('risk_count', 0)
+    risk_count = summary.get('risk_count')
     coll = summary.get('collection_health') or {}
 
-    # 数据完整性保护：采集被拦截/失败时，绝不能据空数据下“无舆情/风险低”结论
     if coll.get('complete') is False and effective == 0:
-        return ('⚠️ 数据采集异常：本周期小红书采集受到平台安全限制或网络异常'
-                f'（{coll.get("state")}），本周期数据不完整，因此不对“无新增舆情/风险较低”作结论；'
+        return ('⚠️ 数据采集异常：本周期数据不完整，因此不对“无新增舆情/风险较低”作结论；'
                 '请恢复采集后再评估。')
 
-    if risk_index >= 60:
-        risk_desc = '风险偏高'
-    elif risk_index >= 30:
-        risk_desc = '风险中等'
+    if risk_index is None:
+        risk_desc, risk_display = '风险数据不足，暂不能计算风险指数', '—'
     else:
-        risk_desc = '风险较低'
+        risk_desc = '风险偏高' if risk_index >= 60 else '风险中等' if risk_index >= 30 else '风险较低'
+        risk_display = risk_index
 
-    if health >= 70:
-        health_desc = '品牌健康度良好'
-    elif health >= 50:
-        health_desc = '品牌健康度一般'
+    if health is None:
+        health_desc, health_display = '品牌健康度数据不足', '—'
     else:
-        health_desc = '品牌健康度需关注'
+        health_desc = '品牌健康度良好' if health >= 70 else '品牌健康度一般' if health >= 50 else '品牌健康度需关注'
+        health_display = health
 
+    risk_count_display = '—' if risk_count is None else risk_count
     top_action = actions[0]['action'][:40] if actions else '按常规节奏监测'
-
-    return (f'今日监测到{effective}条有效舆情，{risk_desc}（风险指数{risk_index}），'
-            f'{health_desc}（{health}分）。{risk_count}条内容需关注。'
+    return (f'今日监测到{effective}条有效舆情，{risk_desc}（风险指数{risk_display}），'
+            f'{health_desc}（{health_display}分）。{risk_count_display}条内容需关注。'
             f'首要行动：{top_action}…')
-
 
 # ============== 完整日报生成 ==============
 
@@ -585,7 +647,7 @@ def generate_daily_digest(date_str=None):
 
     # 4. AI事件总结（取Top 5事件）
     event_insights = []
-    for e in sorted(today_events, key=lambda x: x.get('risk_score', 0), reverse=True)[:5]:
+    for e in sorted(today_events, key=lambda x: (x.get('risk_score') is not None, x.get('risk_score') or 0), reverse=True)[:5]:
         insight = generate_event_insight(e, effective_notes)
         event_insights.append(insight)
         # 保存事件洞察
@@ -674,18 +736,18 @@ def _ai_generate_executive_insight(summary, insights, events):
     """P1-E(2026-09-02): AI生成管理层一句话洞察（高层视角核心结论）。
     智谱驱动，输出严格JSON：executive_insight + priority + focus_area
     """
-    if not _ai_allowed_for_report():
-        neg_pct = round(summary.get('negative_count',0) / max(summary.get('effective_count',1),1) * 100, 1)
-        high_risk = sum(1 for e in events if e.get('risk_level') == 'high')
-        priority = 'high' if (neg_pct > 30 or high_risk >= 2) else ('medium' if (neg_pct > 15 or high_risk >= 1) else 'low')
-        return {
-            'executive_insight': f"今日有效舆情{summary.get('effective_count',0)}条，负面占比{neg_pct}%，高风险事件{high_risk}起，品牌健康分{summary.get('brand_health_score','N/A')}。",
-            'priority': priority,
-            'focus_area': '综合舆情',
-            'key_metric': f"负面占比{neg_pct}%",
-            'provider': 'rule_fallback',
-        }
-    system = '你是广州太古汇品牌公关总监。基于今日舆情数据，给出管理层一句话洞察。\n\n输出严格JSON：\n{\n  "executive_insight": "不超过80字，高层视角的核心结论，要有具体数据支撑",\n  "priority": "high|medium|low",\n  "focus_area": "需要管理层关注的具体领域",\n  "key_metric": "最关键的一个数据指标"\n}\n\n要求：必须有具体数据，不能说"整体平稳"这种空话；priority=high时必须说明为什么紧急；focus_area要具体到业务领域。'
+    rule_result = _rule_executive_insight(summary, events)
+    # Do not ask a model to invent a denominator or fill unavailable values.
+    if (not _ai_allowed_for_report() or _measured_negative_percentage(summary) is None
+            or summary.get('risk_count') is None):
+        return rule_result
+    system = ('基于提供的今日舆情数据，给出管理层一句话洞察。字段为 null 或覆盖不足时必须明确说明未知，'
+              '不得补成0、推断缺失分母或把未知说成平稳。\n\n输出严格JSON：\n{\n'
+              '  "executive_insight": "不超过80字，高层视角的核心结论",\n'
+              '  "priority": "high|medium|low|unknown",\n'
+              '  "focus_area": "需要管理层关注的具体领域",\n'
+              '  "key_metric": "最关键的一个数据指标"\n}\n\n'
+              '依据具体数据；缺少支持时，明确指出待核实的数据。')
     user = json.dumps({
         'summary': {k: summary[k] for k in ['total_found','effective_count','positive_count','neutral_count','negative_count','risk_count','risk_index','brand_health_score'] if k in summary},
         'top_insights': insights[:3],
@@ -697,57 +759,62 @@ def _ai_generate_executive_insight(summary, insights, events):
     if data:
         data['provider'] = provider
         return data
-    # 规则兜底
-    neg_pct = round(summary.get('negative_count',0) / max(summary.get('effective_count',1),1) * 100, 1)
-    high_risk = sum(1 for e in events if e.get('risk_level') == 'high')
-    priority = 'high' if (neg_pct > 30 or high_risk >= 2) else ('medium' if (neg_pct > 15 or high_risk >= 1) else 'low')
-    return {
-        'executive_insight': f"今日有效舆情{summary.get('effective_count',0)}条，负面占比{neg_pct}%，高风险事件{high_risk}起，品牌健康分{summary.get('brand_health_score','N/A')}。",
-        'priority': priority,
-        'focus_area': '综合舆情',
-        'key_metric': f"负面占比{neg_pct}%",
-        'provider': 'rule_fallback'
-    }
+    return rule_result
 
 
 def _generate_trend_alerts(summary):
-    """P1-E(2026-09-02): 规则引擎生成趋势预警（不依赖AI，实时计算）。"""
+    """Generate threshold alerts only for measured values."""
     alerts = []
-    effective = summary.get('effective_count', 0)
-    if effective == 0:
-        return [{'type': 'data_gap', 'severity': 'high', 'message': '今日无有效舆情数据，建议检查采集任务是否正常运行', 'metric': 'effective_count=0'}]
+    effective = summary.get('effective_count')
+    if not effective:
+        return [{'type': 'data_gap', 'severity': 'high',
+                 'message': '今日无有效舆情数据，无法计算风险和健康指标；请检查采集与分类状态',
+                 'metric': 'effective_count=0'}]
 
-    neg = summary.get('negative_count', 0)
-    neg_pct = round(neg / effective * 100, 1)
-    risk = summary.get('risk_count', 0)
-    risk_index = summary.get('risk_index', 0)
-    health = summary.get('brand_health_score', 100)
+    coverage = summary.get('sentiment_coverage') or {}
+    negative = summary.get('negative_count')
+    if negative is not None and coverage.get('known', 0) > 0 and coverage.get('known') == coverage.get('total'):
+        neg_pct = round(negative / coverage['known'] * 100, 1)
+        if neg_pct > 40:
+            alerts.append({'type': 'negative_surge', 'severity': 'high', 'message': f'负面占比{neg_pct}%，超过40%警戒线，需立即关注负面舆情来源', 'metric': f'negative_pct={neg_pct}%'})
+        elif neg_pct > 25:
+            alerts.append({'type': 'negative_elevated', 'severity': 'medium', 'message': f'负面占比{neg_pct}%，处于偏高区间，建议跟踪负面话题演化', 'metric': f'negative_pct={neg_pct}%'})
+    else:
+        alerts.append({'type': 'sentiment_data_gap', 'severity': 'medium',
+                       'message': '情感分类覆盖不足，暂不判断负面比例', 'metric': 'negative_pct=—'})
 
-    if neg_pct > 40:
-        alerts.append({'type': 'negative_surge', 'severity': 'high', 'message': f'负面占比{neg_pct}%，超过40%警戒线，需立即关注负面舆情来源', 'metric': f'negative_pct={neg_pct}%'})
-    elif neg_pct > 25:
-        alerts.append({'type': 'negative_elevated', 'severity': 'medium', 'message': f'负面占比{neg_pct}%，处于偏高区间，建议跟踪负面话题演化', 'metric': f'negative_pct={neg_pct}%'})
-
-    if risk >= 3:
+    risk = summary.get('risk_count')
+    if risk is None:
+        alerts.append({'type': 'risk_data_gap', 'severity': 'medium',
+                       'message': '风险等级存在缺失，暂不判断风险事件数量', 'metric': 'risk_count=—'})
+    elif risk >= 3:
         alerts.append({'type': 'high_risk_cluster', 'severity': 'high', 'message': f'今日高风险事件{risk}起，达到集群预警阈值，建议启动应急响应流程', 'metric': f'risk_count={risk}'})
     elif risk >= 1:
         alerts.append({'type': 'high_risk_present', 'severity': 'medium', 'message': f'今日高风险事件{risk}起，需持续跟踪处置进展', 'metric': f'risk_count={risk}'})
 
-    if risk_index >= 70:
+    risk_index = summary.get('risk_index')
+    health = summary.get('brand_health_score')
+    if risk_index is None:
+        alerts.append({'type': 'risk_index_data_gap', 'severity': 'medium',
+                       'message': '风险指标输入不完整，暂不能计算风险指数', 'metric': 'risk_index=—'})
+    elif risk_index >= 70:
         alerts.append({'type': 'risk_index_critical', 'severity': 'high', 'message': f'风险指数{risk_index}，处于危急区间，建议管理层立即介入', 'metric': f'risk_index={risk_index}'})
     elif risk_index >= 50:
         alerts.append({'type': 'risk_index_elevated', 'severity': 'medium', 'message': f'风险指数{risk_index}，处于偏高区间，建议加强监控频次', 'metric': f'risk_index={risk_index}'})
 
-    if health < 60:
+    if health is None:
+        alerts.append({'type': 'brand_health_data_gap', 'severity': 'medium',
+                       'message': '品牌健康指标输入不完整，暂不能计算品牌健康度', 'metric': 'brand_health=—'})
+    elif health < 60:
         alerts.append({'type': 'brand_health_critical', 'severity': 'high', 'message': f'品牌健康分{health}，低于60分警戒线，品牌声誉面临较大压力', 'metric': f'brand_health={health}'})
     elif health < 75:
         alerts.append({'type': 'brand_health_declining', 'severity': 'medium', 'message': f'品牌健康分{health}，处于下行区间，建议关注品牌声誉修复', 'metric': f'brand_health={health}'})
 
     if effective < 5:
         alerts.append({'type': 'low_volume', 'severity': 'low', 'message': f'今日有效舆情仅{effective}条，数据量偏低，可能影响分析准确性', 'metric': f'effective_count={effective}'})
-
-    return alerts if alerts else [{'type': 'stable', 'severity': 'low', 'message': '今日舆情整体平稳，各项指标处于正常区间', 'metric': 'all_normal'}]
-
+    if not alerts:
+        alerts.append({'type': 'stable', 'severity': 'low', 'message': '已计算指标未触发预警阈值', 'metric': 'measured_metrics_within_thresholds'})
+    return alerts
 
 def _generate_risk_alerts(events):
     """P1-E(2026-09-02): 规则引擎生成风险事件预警（不依赖AI，基于事件风险等级）。"""
@@ -760,7 +827,7 @@ def _generate_risk_alerts(events):
             'event_id': e.get('id'),
             'title': e.get('event_title', '未知事件'),
             'risk_level': 'high',
-            'risk_score': e.get('risk_score', 0),
+            'risk_score': e.get('risk_score'),
             'mention_count': e.get('mention_count', 0),
             'ai_summary': (e.get('ai_summary') or '')[:100],
             'recommended_action': '立即启动应急响应，2小时内完成初步评估并上报管理层',
@@ -772,7 +839,7 @@ def _generate_risk_alerts(events):
             'event_id': e.get('id'),
             'title': e.get('event_title', '未知事件'),
             'risk_level': 'medium',
-            'risk_score': e.get('risk_score', 0),
+            'risk_score': e.get('risk_score'),
             'mention_count': e.get('mention_count', 0),
             'ai_summary': (e.get('ai_summary') or '')[:100],
             'recommended_action': '24小时内完成评估，制定处置方案并跟踪进展',

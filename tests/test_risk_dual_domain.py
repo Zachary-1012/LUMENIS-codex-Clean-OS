@@ -173,6 +173,11 @@ class TestComputeDomainRiskScore:
         result = compute_domain_risk_score(text="", sentiment="unknown", domain_id="cth")
         assert result["risk_level"] == "unknown"
         assert result["data_available"] is False
+        assert result["risk_score"] is None
+
+    def test_measured_zero_score_is_preserved(self):
+        result = compute_domain_risk_score(text="ordinary content", sentiment="neutral", engagement=0, domain_id="cth")
+        assert result["data_available"] is True
         assert result["risk_score"] == 0.0
 
     def test_zero_engagement_safe(self):
@@ -258,6 +263,12 @@ class TestRiskHardConstraints:
     def test_evaluate_risk_unknown_preserved(self):
         result = evaluate_risk(sentiment=None, risk_level=None)
         assert result["final_risk"] == "unknown"
+        assert result["risk_score"] is None
+
+    def test_safe_division_keeps_undefined_ratio_unknown(self):
+        from risk_engine import _safe_div
+        assert _safe_div(0, 0) is None
+        assert _safe_div(0, 5) == 0
 
     def test_evaluate_risk_critical_independent(self):
         result = evaluate_risk(risk_level="critical")

@@ -1230,7 +1230,7 @@ PENDING / SCHEDULED
 Forbidden:
 
 ```text
-missing → 0
+missing → 0 or 50
 UNKNOWN → healthy
 API failure → business success
 excluded test → PASS

@@ -8,7 +8,7 @@ AI 只允许增强（summarize/translate），绝不改写这些统计结果，�
 - calculate_brand_health_score：品牌健康度 0-100（正面占比/风险反向/互动质量/官方声量）
 
 每个用例只喂最小 dict，验证权重与边界：
-- 空输入（notes=[] → risk 0.0 / health 50.0 中性）
+- 空/未分类输入 → risk/health 为 None；完整测得的零值仍保留为 0.0
 - 全负面 → 高风险指数
 - 全正面 → 高健康度、低风险
 - 高互动 → 传播规模加分
@@ -32,10 +32,12 @@ def _note(sentiment='neutral', risk_level='low', likes=0, comments=0, is_officia
 
 
 # ---------- calculate_risk_index ----------
-def test_risk_index_empty_notes_zero():
+def test_risk_index_empty_or_unclassified_data_is_unknown():
     from lumenis.shared.reporting.daily import calculate_risk_index
-    assert calculate_risk_index([], []) == 0.0
-    assert calculate_risk_index([], [{'status': 'active'}]) == 0.0
+    assert calculate_risk_index([], []) is None
+    assert calculate_risk_index([], [{'status': 'active'}]) is None
+    unknown = [_note('unknown', 'unknown')]
+    assert calculate_risk_index(unknown, []) is None
 
 
 def test_risk_index_all_negative_high():
@@ -95,10 +97,10 @@ def test_risk_index_medium_risk_partial():
 
 
 # ---------- calculate_brand_health_score ----------
-def test_health_empty_neutral_50():
+def test_health_empty_or_unavailable_risk_is_unknown():
     from lumenis.shared.reporting.daily import calculate_brand_health_score
-    assert calculate_brand_health_score([], 0) == 50.0
-    assert calculate_brand_health_score([], 100) == 50.0
+    assert calculate_brand_health_score([], 0) is None
+    assert calculate_brand_health_score([_note('positive')], None) is None
 
 
 def test_health_all_positive_high():
@@ -110,9 +112,65 @@ def test_health_all_positive_high():
 
 def test_health_all_negative_low():
     from lumenis.shared.reporting.daily import calculate_brand_health_score
-    notes = [_note('negative', 'high', likes=0, comments=0) for _ in range(10)]
+    notes = [_note('negative', 'high', likes=1, comments=0) for _ in range(10)]
     h = calculate_brand_health_score(notes, 90)
     assert h < 40.0, f'全负面高风险应<40，实际 {h}'
+
+
+def test_measured_zero_scores_remain_zero():
+    from lumenis.shared.reporting.daily import calculate_risk_index, calculate_brand_health_score
+    notes = [_note('positive', 'low', likes=0, comments=0)]
+    risk = calculate_risk_index(notes, [])
+    assert risk == 0.0
+    assert calculate_brand_health_score(notes, risk) is None
+
+
+def test_report_insights_and_actions_do_not_treat_missing_as_zero(monkeypatch):
+    from lumenis.shared.reporting import daily
+
+    monkeypatch.setattr(daily.db, 'get_hot_topics', lambda *_args: [])
+    monkeypatch.setattr(daily.db, 'get_filter_stats', lambda: {'pending': 0})
+    notes = [_note('unknown', 'unknown', likes=None, comments=None)]
+    summary = {
+        'effective_count': 1,
+        'positive_count': None,
+        'negative_count': None,
+        'risk_count': None,
+        'sentiment_coverage': {'known': 0, 'total': 1, 'unknown': 1},
+        'risk_coverage': {'known': 0, 'total': 1, 'missing': 1, 'other': 0},
+    }
+
+    insights = daily.generate_key_insights(notes, [], summary)
+    actions = daily.generate_action_items(insights, [], summary)
+    monkeypatch.setattr(daily, '_ai_allowed_for_report', lambda: False)
+    executive = daily._ai_generate_executive_insight(summary, insights, [])
+
+    assert any(item['type'] == 'data_gap' for item in insights)
+    assert any(item['priority'] == '待核实' for item in actions)
+    assert '整体平稳' not in ' '.join(item['action'] for item in actions)
+    assert executive['priority'] == 'unknown'
+    assert '—' in executive['executive_insight']
+    assert '负面占比0%' not in executive['executive_insight']
+
+
+def test_report_insight_preserves_measured_zero():
+    from lumenis.shared.reporting.daily import _measured_negative_percentage
+
+    assert _measured_negative_percentage({
+        'negative_count': 0,
+        'sentiment_coverage': {'known': 3, 'total': 3, 'unknown': 0},
+    }) == 0.0
+
+
+def test_report_generator_propagation_keeps_invalid_engagement_unknown():
+    from lumenis.shared.reporting.report_generator import ReportGenerator
+
+    report = ReportGenerator()._generate_propagation_analysis(
+        [{'likes': 'unavailable', 'comments': None}], []
+    )
+    assert report['engagement_level'] == 'unknown'
+    assert report['total_engagement'] is None
+    assert report['top_notes'][0]['engagement'] is None
 
 
 def test_health_risk_index_penalizes():
@@ -125,9 +183,9 @@ def test_health_risk_index_penalizes():
 
 def test_health_official_boost():
     from lumenis.shared.reporting.daily import calculate_brand_health_score
-    notes = [_note('positive', 'low', is_official=1) for _ in range(5)]
+    notes = [_note('positive', 'low', likes=1, comments=0, is_official=1) for _ in range(5)]
     h_official = calculate_brand_health_score(notes, 0)
-    notes2 = [_note('positive', 'low', is_official=0) for _ in range(5)]
+    notes2 = [_note('positive', 'low', likes=1, comments=0, is_official=0) for _ in range(5)]
     h_normal = calculate_brand_health_score(notes2, 0)
     assert h_official > h_normal, '官方声量应加分'
 
