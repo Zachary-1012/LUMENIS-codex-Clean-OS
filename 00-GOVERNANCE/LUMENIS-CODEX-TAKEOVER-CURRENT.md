@@ -2,16 +2,6 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
-## 2026-10-13 PO rules (binding; supersede conflicting text)
-
-1. All collection platforms (RedNote, Douyin, X, Instagram, Facebook, WeChat OA, and any added later) collect in the product's built-in browser in the background by default. When a session is invalid, the product shows an in-product login popup inside the built-in browser. After login plus a session health check, the original task resumes automatically.
-2. Never auto-open an external or visible browser window for collection. Headless background workers only. A visible window is only the HUMAN_INTERACTIVE login popup above.
-3. The automatic collection scope is all active registered subjects (Subject/BrandFocus). `GUANGZHOU_TAIKOO_HUI` is one registered subject, not the scope or a default. No code may hardcode one subject as the filter, context or brand list; use `subject_registry.registered_subject_names()` and the acquisition plan.
-4. R&D stage: agents change configs, keep-alive sessions and approvals directly, including subject registration and official-name writes via `subject_registry` / `import_subject_registry_seed.py --apply`. The agent grants the exact CONFIG_MODIFY approval in-process, takes a DB backup first and records the receipt; the PO is not asked. This supersedes "needs exact PO manual approval" wording below.
-5. A PR whose required checks (Product Gate + App Gate) are all green, with review threads addressed, may be merged without waiting for PO approval.
-6. For every newly added subject, developers run the end-to-end flow themselves: add_subject -> DB -> official name with source -> acquisition plan -> verified collection -> visible in product. The flow is kept in CI (`tests/test_e2e_new_subject_flow.py`).
-7. Brand and subject names use the brand's own official-site spelling, with the source URL recorded (`record_official_name`). LUMENIS never renames a brand.
-
 ## 2026-10-13 Single product closed-loop entry (dated readback; start here)
 
 This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any other handoff/todo/progress note dated before 2026-10-13 is superseded where it conflicts and is kept only as history.
@@ -26,7 +16,6 @@ This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any o
   4. Draft PR #31 (business-decision WIP): owner to finish and pass both gates.
   5. Cleanup: stale worktrees (`D:/LUMENIS_AUDIT/20261012_rules_publish/*`, `序境-runtime-03dc8d93`, leftover `rea-merge-wt` folder), temp files, stale branches/docs, stash `akang-pre-dd0-merge`.
   6. Akang1: browser migration (WIP in the main working tree), `COLLECTOR_ENDPOINT`, tasks 1-3 (Gateway executor stub, AI-01 submit chain, stop/resume, SH-06 inbox, decision-card receipts).
-  6b. Collection follow-ups (2026-10-13, tracked from PR #36 review): XHS search returns EMPTY_NO_API with a valid 9223 session (run 18:27, 3/28 keywords, 0 inserted; diagnose the rednote.com search API interception); BMP typed persistence for XHS (BMP queries currently deferred); default background run per platform; WeChat OA background worker registration (recovery returns RECOVERY_WORKER_NOT_REGISTERED until then); shared-alias disambiguation across subjects; desensitizer refresh on registry change; full registry cycle is 91 plan pages (cadence 720 min) - raise throughput.
   7. After the loop closes: logo r5 (named/unnamed + 16px), 5 role images + stickers, analysis of ~290 PC images + 47 WeChat videos, frontend (frontend todo: AI-01 non-executable response is shown as '响应无效'; it must show the honest not-executable state). 阿康（bot）
   8. Post-loop (阿康1（bot））: grant the SH-06 `operational_inbox` read permission to the intended accounts (account system is post-loop; until then SH-06 shows "通知与待办暂不显示"); decision-card receipt stays pending for the CTH-09 Decision owner (BACKEND-GAP-016), no App card while the frontend is paused (USER-ADDITIONS:7,63).
 
