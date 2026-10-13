@@ -213,7 +213,7 @@ class TestRiskCompatibilityRoute:
         assert "total" in data
         assert "by_level" in data
         assert data["source"] == "permission-checked canonical_data.list_scoped_canonical"
-        assert data["risk_policy_version"] == "cth-risk-v2.0"
+        assert data["risk_policy_version"] == "cth-risk-v2.1"
         assert data["dismissal_state"] == "APPLIED_FOR_CANONICAL_NOTE_SOURCE_IDS"
         assert data["total"] == len(data["risks"])
 
