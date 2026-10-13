@@ -144,7 +144,7 @@ Public Website, Web Workspace, Desktop and Mobile keep distinct release roles. O
 
 ### 草图增补：创始人内部开发者模式（G20b）
 
-Web：同桌面。 
+Web：同桌面。
 
 ## 6. Purpose-built mobile composition
 

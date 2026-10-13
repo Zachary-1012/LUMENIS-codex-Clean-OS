@@ -59,7 +59,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-本批仅治理/屏幕合同：21份逐屏草图增补已映射16份既有屏规§5/§5A/§6；Shared独立制作沿用同一媒体合同。账号后置冲突已原位清理，权限、状态、三语、保存/恢复和四端验收保留。规格更新不证明界面或全量翻译已完成。源码类别、Gibbs及资料全文采用按各批证据收口。
+本批仅治理/屏幕合同：21份逐屏草图增补已逐项映射16份既有屏规§5/§5A/§6；Shared独立制作沿用同一媒体合同。账号后置冲突已原位清理，权限、状态、三语、保存/恢复和四端验收保留。规格更新不证明界面或全量翻译已完成。源码类别、Gibbs及资料全文采用按各批证据收口。
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
 
