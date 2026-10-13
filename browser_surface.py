@@ -605,7 +605,7 @@ def capability_report() -> dict:
         "capabilities": [
             "tabs.list", "tabs.new", "tabs.close", "tabs.activate", "tabs.navigate",
             "extract.meta", "extract.text", "extract.dom",
-            "bookmarks", "history", "screencast(internal_browser_stream)",
+            "bookmarks", "history", "screencast(lumenis.system.browser.runtime.screencast_stream)",
             "find_in_page", "download_behavior", "nav_config", "general_browser(9224,on_demand)",
             "hybrid_analyze(dom+vision,ic-053)",
         ],

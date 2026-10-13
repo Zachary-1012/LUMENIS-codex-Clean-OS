@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -117,4 +118,51 @@ Future<LumenisBinaryTransportResponse> _sendBinaryRequest(
     contentType: incoming.headers.value(HttpHeaders.contentTypeHeader),
     headers: headers,
   );
+}
+
+/// Opens a Server-Sent Events stream and yields each event's `data` payload.
+/// Cancelling the subscription closes the connection.
+Stream<String> openLumenisEventStream(
+  LumenisTransportRequest request, {
+  required int maxEventBytes,
+}) async* {
+  request.validateBody();
+  final client = HttpClient()..connectionTimeout = request.connectionTimeout;
+  try {
+    final outgoing = await client.openUrl(request.method, request.uri);
+    outgoing.followRedirects = false;
+    request.headers.forEach(outgoing.headers.set);
+    final incoming = await outgoing.close();
+    if (incoming.statusCode != HttpStatus.ok ||
+        incoming.headers.contentType?.mimeType != 'text/event-stream') {
+      throw LumenisTransportException(
+        'Event stream rejected (${incoming.statusCode}).',
+      );
+    }
+    final data = StringBuffer();
+    await for (final line
+        in incoming
+            .cast<List<int>>()
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())) {
+      if (line.isEmpty) {
+        if (data.isNotEmpty) {
+          yield data.toString();
+          data.clear();
+        }
+        continue;
+      }
+      if (!line.startsWith('data:')) continue;
+      final value = line.substring(5);
+      if (data.isNotEmpty) data.write('\n');
+      data.write(value.startsWith(' ') ? value.substring(1) : value);
+      if (data.length > maxEventBytes) {
+        throw const LumenisTransportException('Event exceeds maxEventBytes.');
+      }
+    }
+  } on IOException catch (error) {
+    throw LumenisTransportException(error.toString());
+  } finally {
+    client.close(force: true);
+  }
 }

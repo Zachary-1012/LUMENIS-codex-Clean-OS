@@ -35,6 +35,8 @@ class _Sys06ScreenState extends State<Sys06Screen> {
   bool _busy = false;
   bool _stopping = false;
   bool _returning = false;
+  StreamSubscription<Sys06BrowserFrame>? _frameStream;
+  String? _frameStreamSessionId;
 
   @override
   void initState() {
@@ -66,6 +68,7 @@ class _Sys06ScreenState extends State<Sys06Screen> {
     _busy = false;
     _stopping = false;
     _returning = false;
+    _cancelFrameStream();
     _addressController.clear();
   }
 
@@ -76,6 +79,7 @@ class _Sys06ScreenState extends State<Sys06Screen> {
     if (session != null && lease != null) {
       unawaited(_releaseWithoutUi(_repository, session, lease));
     }
+    _cancelFrameStream();
     _addressController.dispose();
     super.dispose();
   }
@@ -392,6 +396,7 @@ class _Sys06ScreenState extends State<Sys06Screen> {
     final repository = _repository;
     final generation = ++_generation;
     _activeOperation = null;
+    _cancelFrameStream();
     setState(() {
       _busy = false;
       _stopping = true;
@@ -619,6 +624,7 @@ class _Sys06ScreenState extends State<Sys06Screen> {
         _frame = frame;
         _notice = _Sys06Notice.previewReady;
       });
+      _ensureFrameStream(current, repository);
     } catch (error) {
       if (!_isCurrentSession(generation, repository, expected.sessionId)) {
         return;
@@ -630,6 +636,74 @@ class _Sys06ScreenState extends State<Sys06Screen> {
             : _noticeForError(error);
       });
     }
+  }
+
+  /// Live frames: the server pushes fresh frames of this isolated session over
+  /// SSE; the screen swaps them in place (gapless).  The stream only runs for
+  /// read-only viewing; during human control each lease action reads its own
+  /// bound frame, so frames are never mixed with a lease binding.
+  void _cancelFrameStream() {
+    final subscription = _frameStream;
+    _frameStream = null;
+    _frameStreamSessionId = null;
+    if (subscription != null) unawaited(subscription.cancel());
+  }
+
+  void _ensureFrameStream(
+    Sys06BrowserSession session,
+    Sys06BrowserRepository repository,
+  ) {
+    if (repository is! Sys06BrowserFrameStreamRepository) return;
+    if (_humanLease != null || !session.isRunning || _stopping) {
+      _cancelFrameStream();
+      return;
+    }
+    if (_frameStream != null && _frameStreamSessionId == session.sessionId) {
+      return;
+    }
+    _cancelFrameStream();
+    final streamRepository = repository as Sys06BrowserFrameStreamRepository;
+    final sessionId = session.sessionId;
+    _frameStreamSessionId = sessionId;
+    _frameStream = streamRepository
+        .watchFrames(sessionId)
+        .listen(
+          (frame) {
+            final current = _session;
+            if (!mounted ||
+                !identical(_repository, repository) ||
+                current == null ||
+                current.sessionId != sessionId ||
+                !current.isRunning ||
+                _humanLease != null ||
+                _stopping) {
+              _cancelFrameStream();
+              return;
+            }
+            if (_busy ||
+                frame.frame.targetId != current.targetId ||
+                frame.frame.pageRevision != current.pageRevision) {
+              return;
+            }
+            setState(() {
+              _frame = frame;
+              _notice = _Sys06Notice.previewReady;
+            });
+          },
+          onError: (Object _) {
+            if (_frameStreamSessionId == sessionId) {
+              _frameStream = null;
+              _frameStreamSessionId = null;
+            }
+          },
+          onDone: () {
+            if (_frameStreamSessionId == sessionId) {
+              _frameStream = null;
+              _frameStreamSessionId = null;
+            }
+          },
+          cancelOnError: true,
+        );
   }
 
   Future<void> _run(
@@ -2008,7 +2082,7 @@ class _ReaderPreview extends StatelessWidget {
                             value.frame.bytes,
                             key: const ValueKey('sys06-frame'),
                             fit: BoxFit.contain,
-                            gaplessPlayback: false,
+                            gaplessPlayback: true,
                             filterQuality: FilterQuality.medium,
                           ),
                         ),

@@ -14,3 +14,12 @@ Future<LumenisBinaryTransportResponse> sendLumenisBinaryRequest(
 }) => throw const LumenisTransportException(
   'HTTP transport is unavailable on this platform.',
 );
+
+Stream<String> openLumenisEventStream(
+  LumenisTransportRequest request, {
+  required int maxEventBytes,
+}) => Stream<String>.error(
+  const LumenisTransportException(
+    'Event stream transport is unavailable on this platform.',
+  ),
+);
