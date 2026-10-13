@@ -136,11 +136,10 @@ accessibility coverage remains required, including narrow screens.
 
 Build the full task-based UI with original identity/icons, illustration, genuine
 operation videos, usable UX and applicable AIGC/motion. Preserve original motion.
-The additive result reveal is independently selectable/skippable and runs only
-once for a new persisted result after registered bundled fonts and paragraph
-layout are ready; unregistered dynamic fonts skip it. Follow Experience
-Constitution. Update existing screen specs with sketch additions; coverage remains complete;
-44 is not a page-count/navigation/scope ceiling.
+The optional result reveal is independently selectable/skippable and plays once
+for newly persisted results after registered bundled-font paragraph layout is ready;
+unregistered dynamic fonts skip it. Follow Experience Constitution. Update existing
+specs from sketches; keep full coverage—44 is not a page-count/navigation/scope ceiling.
 Connect available backend contracts immediately. Unavailable ones stay honestly
 OPEN/UNBOUND while independent UI proceeds; no mock backend, fake save or
 decorative progress may count as business success.
@@ -163,25 +162,17 @@ active references, preserving originals, historical approvals/failures and valid
 capabilities. REA may study permitted websites, apps and GitHub implementations
 for current capabilities through the existing Owner Index adoption path.
 
-### Latest direct frontend build and native targets — 2026-10-08
+### Frontend construction and native targets
 
-F proceeds directly with real frontend implementation using the current Experience,
-44 screen specifications and actual owner contracts. A separate design draft,
-Figma deliverable or per-screen M DESIGN_READY approval is no longer a coding
-prerequisite. Reuse existing design assets; update the existing specification with
-necessary decisions alongside code. Keep DESIGN_READY as an honest design-review
-record when such review occurred, not a synthetic promotion or mandatory phase.
-Unknown owner/Permission/lineage still blocks the dependent action, and actual
-usability, visual quality, security and end-to-end acceptance remain mandatory.
+F builds from the current Experience, screen specs and owner contracts; separate drafts,
+Figma delivery and per-screen M DESIGN_READY are not coding prerequisites. Reuse assets,
+update specs alongside code, and record DESIGN_READY only after real review. Actual
+usability, visual quality, security and E2E remain mandatory.
 
-Parallel native Desktop delivery targets **Windows and
-macOS only**; native Mobile delivery targets **iOS only**. Android and Linux native
-clients are removed from the active delivery requirements, not deferred obligations.
-Preserve their original source/history without unsupported deletion. Linux servers,
-CI runners, browser access from any supported OS and narrow-screen Web testing are
-not removed by this native-client decision. All remaining capabilities, 44 screens,
-Website families and applicable R/J/U acceptance continue. Existing historical
-platform lists/design-first instructions are superseded for execution by this rule.
+Desktop targets Windows/macOS; native mobile targets iOS. Android/Linux clients are
+removed from active requirements, not deferred; preserve source/history. Linux servers,
+CI, browser access and narrow-screen Web remain. Website families and all R/J/U coverage
+continue; historical platform lists/design-first instructions do not override this scope.
 
 ### Cost and integration boundaries
 
