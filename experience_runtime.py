@@ -692,9 +692,13 @@ def screen_viewmodel(screen_id: str):
             if error is not None:
                 return error
             return jsonify(builder(binding=binding))
+        if screen_id == "SH-06":
+            # Scope/permission failure renders the honest "not shown" state, never items.
+            binding, _error = _sh06_read_scope()
+            return jsonify(builder(binding=binding))
         return jsonify(builder())
     except Exception as exc:  # noqa: BLE001
-        if screen_id in {"CTH-03", "BMP-01"}:
+        if screen_id in {"CTH-03", "BMP-01", "SH-06"}:
             from flask import current_app
             current_app.logger.warning("%s scoped read unavailable: %s", screen_id, type(exc).__name__)
             return jsonify({"ok": False, "screen": screen_id, "bound": False,
@@ -748,6 +752,70 @@ def _cth03_read_scope():
         "scope_verified": True,
         "actor_scope": "anonymous_read" if local_read else "authenticated",
         "global_all_granted": mode == "GLOBAL_ALL" and not local_read,
+    }, None
+
+
+def _sh06_read_scope():
+    """Authorize the SH-06 inbox range for the signed-in actor (SH-06.md §2).
+
+    GLOBAL_ALL needs a verified global read grant in both CTH and BMP; FOCUS needs
+    the exact registered Subject/BrandFocus grant. Anonymous reads are never
+    granted for the operational inbox.
+    """
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import check_actor_scope_permission
+    from lumenis_app_api import _context_selection_from_scope
+
+    mode = request.headers.get("X-Lumenis-Context-Mode", "GLOBAL_ALL")
+    domain = (request.headers.get("X-Domain-Id") or "").upper() or None
+    subject = request.headers.get("X-Subject-ID")
+    module = "operational_inbox"
+    actor = get_current_user()
+    if not isinstance(actor, dict) or type(actor.get("id")) is not int:
+        return None, "AUTH_REQUIRED"
+    brand_focus = None
+    display_name = None
+    if mode == "GLOBAL_ALL":
+        if domain or subject:
+            return None, "INVALID_CONTEXT"
+        checks = [("CTH", {}), ("BMP", {})]
+    elif mode == "FOCUS" and domain in {"CTH", "BMP"} and subject:
+        selection, error = _context_selection_from_scope(domain, subject)
+        if error is not None or selection is None:
+            return None, "INVALID_CONTEXT"
+        try:
+            from subject_registry import get_subject_by_id
+            record = get_subject_by_id(domain, subject) or {}
+        except Exception:  # noqa: BLE001
+            record = {}
+        display_name = record.get("display_name") or record.get("name")
+        if domain == "BMP":
+            brand_focus = selection.brand_focus_id
+            if not brand_focus:
+                return None, "INVALID_CONTEXT_SCOPE"
+            checks = [("BMP", {"brand_focus_id": brand_focus})]
+        else:
+            checks = [("CTH", {"subject_id": subject})]
+    else:
+        return None, "INVALID_CONTEXT"
+    for check_domain, ids in checks:
+        decision = check_actor_scope_permission(
+            actor, domain_id=check_domain, action="read", module=module,
+            global_scope=mode == "GLOBAL_ALL", **ids,
+        )
+        if decision.verification_state != "verified":
+            return None, "AUTHORIZATION_UNAVAILABLE"
+        if not decision.allowed:
+            return None, "SCOPE_DENIED"
+    return {
+        "contract": "lumenis.scope-read-binding.v1",
+        "module": module, "policy": "actor-exact-scope-v1",
+        "domain_id": domain if mode == "FOCUS" else None,
+        "canonical_scope": mode,
+        "subject_id": subject if mode == "FOCUS" and domain == "CTH" else None,
+        "brand_focus_id": brand_focus, "display_name": display_name,
+        "applied": True, "read_allowed": True, "scope_verified": True,
+        "actor_scope": "authenticated", "global_all_granted": mode == "GLOBAL_ALL",
     }, None
 
 
