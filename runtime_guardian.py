@@ -7,7 +7,7 @@ ZBC Runtime Guardian — 统一运行时生命周期守护
 
 将分散的稳定性模块（system_guardian / stability_monitor / system_watchdog /
 auto_recovery / resident_health / runtime_preflight / monitor_pipeline /
-tunnel_guardian / collector_guard）统一收敛到 Runtime Guardian，建立完整生命周期：
+采集与应用守护）统一收敛到 Runtime Guardian，建立完整生命周期：
 
     Worker → Lease → Heartbeat → Checkpoint → Reaper → Retry → DLQ → Resume
 

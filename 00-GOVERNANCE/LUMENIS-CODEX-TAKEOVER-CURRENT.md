@@ -56,10 +56,10 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-本批仅治理/文档：原位统一账号、两种开发者模式、商业六项、视觉/Logo/角色的闭环要求，明确免费登录例外，修正旧登录禁令与重复规划编号。工程操作、安全、保存与恢复验收仍在闭环内；本批不证明产品实现、运行、训练或发布。各类源码修复、屏幕增补、Gibbs证据与资料全文采用按各自证据单独收口。
+本批为临时公网入口清理：删除隧道守护、启动脚本及实际调用包装；旧 /remote 入口返回三语不可用状态，不读取或跳转历史公网地址。配置守卫检查入口不可复活；编译、静态及隔离回归仅证明该有界源码，不证明当前 Runtime 已加载或产品 E2E。未操作工作站服务、计划任务、DB 或现有用户浏览器。规则补全已由 PR #61 发布；其余源码类别、屏规、Gibbs 和资料采用仍按各自证据收口。
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
 

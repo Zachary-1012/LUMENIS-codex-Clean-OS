@@ -363,7 +363,6 @@
 | F-0304 | 21 Campaign/Topic | Campaign/Topic - topic_monitor_policy.py | topic_monitor_policy.py | 2 | IMPLEMENTED | No | Source scan: 2 functions, 2 real, 0 stubs |
 | F-0305 | 21 Campaign/Topic | Campaign/Topic - topic_note_detail_backfill.py | topic_note_detail_backfill.py | 4 | INTEGRATED | No | Source scan: 4 functions, 4 real, 0 stubs |
 | F-0306 | 21 Campaign/Topic | Campaign/Topic - topic_snapshot.py | topic_snapshot.py | 3 | TESTED | Yes | Source scan: 3 functions, 3 real, 0 stubs |
-| F-0307 | 01 Product/Domain/Subject | Product/Subject - tunnel_guardian.py | tunnel_guardian.py | 9 | INTEGRATED | No | Source scan: 9 functions, 9 real, 0 stubs |
 | F-0308 | 48 Security/Audit | Security - PageRealityStatus | ui_data_audit.py | 1 | INTEGRATED | No | Source scan: 1 functions, 1 real, 0 stubs |
 | F-0309 | 48 Security/Audit | Security - UIRealityAuditor | ui_data_audit.py | 4 | INTEGRATED | No | Source scan: 4 functions, 4 real, 0 stubs |
 | F-0310 | 01 Product/Domain/Subject | Product/Subject - update_reference.py | update_reference.py | 7 | INTEGRATED | No | Source scan: 7 functions, 7 real, 0 stubs |

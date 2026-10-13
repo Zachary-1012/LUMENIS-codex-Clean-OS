@@ -36,7 +36,6 @@
 | CTH-AUTH-002 | 登录/权限/安全问答 | CTH | Y | v4 auth + Basic | Y /v4/auth/* | v4_users/sessions/security_questions | Y | 主链 | **50✓** test_api::TestAuthAPI×2 | **本轮 PASS** | ACTIVE | 三级权限仅 1 owner | 安全 |
 | CTH-SYS-001 | 系统健康/看门狗/自愈 | CTH | Y | system_health_api/guardian | Y /healthz,/api/system/health | - | Y | 主链 | **50✓** test_api::System×2 +脚 auto_recovery | **本轮 PASS** | ACTIVE | — | 低 |
 | CTH-SYS-002 | 版本中心/Git 自动同步 | CTH | Y | version_center/git_manager | 前缀 /v4/api/status|/v4/api/history|/v4/api/save|/v4/api/push|/v4/api/check|/v4/api/pull|/v4/api/rollback | - | Y | 主链 | 脚(version_api) | 缺 | ACTIVE | GAP-15 标题括号 bug | 低(不影响运行) |
-| CTH-SYS-003 | 临时公网隧道 | CTH | Y | tunnel_guardian(cloudflared) | - | - | 无 | 进程 | 无 | 缺 | ACTIVE | GAP-16 域名未固化/无测试 | 公网暴露面 |
 | ZBMP-BRAND-001 | 品牌增删/管理 | ZBMP | Y | brand_knowledge_base | Y /api/brand* | brand_knowledge | Y | 主链 | 脚(brand_library,偏 swire) | 缺 | ACTIVE | 缺直接用例 | 低 |
 | ZBMP-BRAND-002 | 品牌营销案例库 | ZBMP | Y | case_deep_analysis | Y /api/cases* | case_deep_analysis | Y | 主链 | 脚(brand_library) | 缺 | ACTIVE | 更新/下钻待完善 | 低 |
 | ZBMP-BRAND-003 | 太古/怡和专题 | ZBMP | Y | swire_group/swire_brand_mapper | Y /api/swire* | swire_notes(空)/events/projects | Y | 旁路 | 脚(brand_library→swire_group) | 缺 | DEVELOPING | GAP-22 空表 | 在建 |

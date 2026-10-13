@@ -37,15 +37,14 @@
 | `系统守护闭环_优化版.bat` | 含 taskkill |
 | `系统守护闭环.ps1` | 含 Stop-Process/taskkill |
 
-### C. 公网隧道相关·保留（cloudflared 链路，与启动解耦）
-`start_cloudflare_stable.bat`、`start_cloudflare_tunnel.bat`、`start_cloudflare_guardian.bat`、`start_remote_cloudflare.bat`、`start_remote_5g.bat`、`monitor_cloudflare_tunnel.bat`、`install_cloudflared.bat`、`cloudflared_guardian.ps1`、`start_cf.ps1`、`start_cloudflare_hidden.vbs`、`start_cloudflare_hidden_new.vbs`、`start_tunnel.bat`。
-> 固定域名/命名隧道 token 属部署工单 G-STAGE/部署，当前为临时 trycloudflare。
+### C. 公网访问边界
+当前工程无临时公网隧道启动或自动恢复入口。旧书签 `/remote` 只返回不可用状态，不读取历史外部地址；本机工作区及 canonical Core 启动不受影响。任何新公网部署需独立批准。本次仅改仓库源码，未修改工作站计划任务或运行进程。
 
 ### D. CDP / Cookie 相关·保留
 `start_cdp_auto.bat`、`start_xhs_cookie_sync.bat`。
 
 ### E. 历史/重复/多版本守护·DEPRECATED 候选（下线前逐个引用分析）
-`start_all.bat`、`start_lan.bat`、`start_windows.bat`、`start_v4.bat`、`启动系统.bat`、`一键启动系统.bat`、`一键安装依赖.bat`、`一键登录微博.bat`、`启动系统守护闭环.bat`、`start_system_hidden.vbs`、`check_local_ai.bat`，以及 `deployment/` 下重复的 `start_local.bat/start_remote.bat/启动系统.bat/启动远程访问.bat`（其中 `deployment/deployment/` 存在编码损坏的乱码文件名，列 G-CLEAN 后续）。
+`start_all.bat`、`start_lan.bat`、`start_windows.bat`、`start_v4.bat`、`启动系统.bat`、`一键启动系统.bat`、`一键安装依赖.bat`、`一键登录微博.bat`、`启动系统守护闭环.bat`、`start_system_hidden.vbs`、`check_local_ai.bat`，以及 `deployment/` 下重复的 `start_local.bat/启动系统.bat`（其中 `deployment/deployment/` 存在编码损坏的乱码文件名，列 G-CLEAN 后续）。
 
 ## 4. 收敛路线（后续，不在运行期执行）
 1. 停机窗口：把 `\TaikooMonitor` 改派为 `powershell -File run.ps1 prod`，停用 8200 直跑链，统一到 8201 supervised。

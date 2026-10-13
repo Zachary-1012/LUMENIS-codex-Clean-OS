@@ -214,7 +214,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G32 | 内置浏览器动作 | click/input/select/upload/download 未实现；loopback guard；仅 workspace:local；RecoverySheet 未接 | SYS-06:75,91,114-118,435-437 | 阿康1 | 闭环内 |
 | G33 | 共享创作 | 独立新建要求 vs 仅目录实现；safe-run 禁用；单视频轨；无编码取消/续跑；Discover 仍 exploration | SH-01:5-15,109,203,587,644 | 阿康 | 闭环内 |
 | G34 | 注册表失真 | feature_registry 生成于 09-06、9 列全空、31 文件已不存在；function 注册行号/路径过期；schema 快照缺 owner 表；caller 清单基线 c3036aa7 | feature_registry.md:3；function_registry_canonical_t4.csv；schema_registry_t4.csv；CALLER-INVENTORY:9 | 阿康 | 闭环内 |
-| G35 | 安全 | /api/settings/developer/execute 对请求体 exec（空 builtins 可绕过）；professional_accounts.access_token 明文列；podcast_ai_runs.prompt 明文；trycloudflare 隧道 | settings_module.py:287-311；schema_registry_t4.csv:469,505；start_tunnel.py:7-12 | 阿康 | 立即 |
+| G35 | 安全 | /api/settings/developer/execute 对请求体 exec（空 builtins 可绕过）；professional_accounts.access_token 明文列；podcast_ai_runs.prompt 明文；未经批准的临时公网隧道 | settings_module.py:287-311；schema_registry_t4.csv:469,505；临时公网入口删除与调用断开回归 | 阿康 | 立即 |
 | G36 | l10n | ACC-01/04、AI-02~05、ACC-02:75 本地兜底文案；CTH-01:103 仅中文；SYS-01:116、AI-01:159 韩语未验；CTH-04~07 缺 key | 同左 | 阿康 | 闭环内 |
 | G37 | 规则≠代码漂移 | AUTO_COLLECTION_SCOPE 单太古汇（PR #36）；验收出口：登记主体→后台无窗调度→每平台独立失败/登录弹窗恢复→Evidence 可读、缺字段标未知 | rednote_policy.py；审计 I-P0 | 阿康 | 闭环内（并 G-太古汇） |
 | G38 | Shared 独立 | saved_work.authorize 仅 cth/bmp；出口：无 CTH/BMP 前置完成提案/视频/播客 新增/修订/导出/重开/撤权 | saved_work.py | 阿康 | 闭环内（并 G33） |
