@@ -1275,9 +1275,9 @@ Collector replacement requires isolated comparison of fields, time, scope,
 deduplication, failure states and ingestion before switching the production entry;
 do not run duplicate live acquisition without its existing explicit authorization.
 
-When touching XHS/RedNote or any new acquisition path:
+When touching RedNote (HK/international account; code id xhs) or any new acquisition path:
 
-- production XHS/RedNote acquisition may use only the approved Hong Kong / international
+- production RedNote acquisition may use only the approved Hong Kong / international
   allowlisted identity, Cookie/session and browser profile;
 - the locally signed-in Mainland China XHS/RedNote profile is the Product Owner's
   personal work account, not a collection asset: never read, export, import, inject,
@@ -1360,7 +1360,7 @@ The six current primary platforms are an acceptance baseline, not the platform c
 
 Before scaling platform count, C1/C6/F must close these outcomes in order:
 
-1. `COLLECTOR-P0-01`: XHS/RedNote recovery follows only the approved HK/International identity and current production endpoint; the protected Mainland identity/9222 route is never selected by production recovery.
+1. `COLLECTOR-P0-01`: RedNote (HK/intl) recovery follows only the approved HK/International identity and current production endpoint; the protected Mainland identity/9222 route is never selected by production recovery.
 2. `COLLECTOR-P0-02`: Task completion/failure is fenced by the active attempt identity/lease/run, so a stale worker cannot acknowledge or fail a newer run.
 3. `COLLECTOR-P0-03`: query/task continuation has a durable server-authored receipt. Reusing a terminal checkpoint may return the immutable terminal result, but must never re-execute completed queries/effects or act as authorization. Platform-native cursors remain separate.
 4. `COLLECTOR-P0-04`: retained `/api/collect` and every compatibility entry are callers of the one Collector/Permission/Source/Evidence/Canonical transaction; direct notes-only acquisition is not an independent production truth path.
@@ -1603,7 +1603,7 @@ Public Website avoid unnecessary page-level up/down scrolling; preserve necessar
 long-content/accessibility scrolling and actual content/interaction completeness.
 
 C1's retained collection responsibility covers six primary platforms: Instagram, Facebook, WeChat
-Official Accounts, RedNote/XHS, Douyin and X. Existing other platforms remain.
+Official Accounts, RedNote (HK/intl; platform 小红书), Douyin and X. Existing other platforms remain.
 Use current platform aliases/registry/adapters and approved exact identities and
 scopes. Create provenance-bearing platform/brand/commercial-entity topic terms,
 then compile task-semantic purpose queries from actual terms, canonical aliases,
