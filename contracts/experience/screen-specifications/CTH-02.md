@@ -27,8 +27,8 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 ## 2. Route, entry and return
 
 - **Entry:** open from the CTH-01 Shell header action `浏览 CTH 主体登记目录`. CTH-02 is a nested CTH workflow, not a sixth top-level destination. On phone the same five destinations remain visible and CTH stays selected.
-- **Required context:** the App holds a Product Core runtime session plus an account session. Runtime identity uses the existing Basic Auth contract; the account session comes from `POST /v4/auth/login` and supplies a Bearer token for this registry request. The server checks CTH `subject_registry` read permission. Subject-specific business authorization is not present in this list response.
-- **Current call:** `GET /api/settings/subjects?domain_id=CTH` through `LumenisCoreClient.settingsSubjects()` and `CoreCth02Repository.loadDirectory()`, with the account Bearer token. This is a read-only selection-metadata request. There is no pagination/cancellation contract or write effect.
+- **Required context:** the App holds a Product Core runtime session. Runtime identity uses the existing Basic Auth contract. Product account login is post-loop (`ACCOUNT_SYSTEM_ENABLED=off` by default); this registry request does not require a Bearer account session. When account gating is on, the server checks CTH `subject_registry` read permission. Subject-specific business authorization is not present in this list response.
+- **Current call:** `GET /api/settings/subjects?domain_id=CTH` through `LumenisCoreClient.settingsSubjects()` and `CoreCth02Repository.loadDirectory()`. This is a read-only selection-metadata request. There is no pagination/cancellation contract or write effect.
 - **Authorization source:** `subject_registry.get_subjects()` calls `lumenis.auth.service.get_current_user()` and `account.authorization.check_dual_domain_permission(user_id, "CTH", module="subject_registry", action="read")`. A 401, 403 or permission-service 503 exposes no Subject rows in the App.
 - **Exit / Trace / Return:** the Shell back action returns to CTH-01 and preserves the active CTH destination and Product Core context. No Subject selection, context switch, business-data navigation, relationship expansion or Evidence trace is implemented. Refresh rereads only the registry list.
 
@@ -55,7 +55,6 @@ No fixture fields, global aggregates, static directory entries or inferred relat
 | Stale | No freshness policy for relationship data | 关联信息的更新时间暂不可确认 | None | Keep relation state NOT_COLLECTED | CTH02-W-03 |
 | Partial | Registry entries exist but ownership graph does not | 主体基本资料可查看，关联资料暂缺 | Refresh metadata | Keep business edges hidden | CTH02-W-03 |
 | Offline | Core connection failure | 暂时无法连接服务，未能读取 CTH 经营主体名单。 | Retry | Do not use cached or embedded subject rows | CTH02-W-05 |
-| Sign-in required | HTTP 401 | 无法确认当前登录状态，请重新登录后查看 CTH 经营主体名单。 | Sign in, then retry | Keep all subject data hidden | CTH02-W-05 |
 | List access unavailable | HTTP 403 | 当前账号无法查看 CTH 经营主体名单。名单内容未显示。 | Retry; use the account recovery surface when available | Keep all subject data hidden | CTH02-W-05 |
 | Access check unavailable | HTTP 503 | 暂时无法确认您是否可以查看 CTH 经营主体名单，请稍后重试。 | Retry | Keep all subject data hidden | CTH02-W-05 |
 | Error | Other HTTP or invalid contract / cross-domain row | CTH 经营主体名单暂时无法显示，请稍后重试。 (invalid response) / CTH 经营主体名单暂时无法加载，请稍后重试。 (other failure) | Retry | Keep all subject data hidden | CTH02-W-06 |

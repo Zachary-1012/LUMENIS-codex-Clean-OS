@@ -431,12 +431,16 @@ def _country_subject_projection(domain_id, country_iso, relation_type):
 
 @subject_registry_bp.route("/api/settings/subjects", methods=["GET"])
 def get_subjects():
-    # Open local workspace reads are explicitly authorized by the Permission
-    # owner; all other requests retain the account/module boundary.
+    # Account system is post-loop (PO): until ACCOUNT_SYSTEM_ENABLED=on, registry
+    # reads do not require a product account session. Tables/data stay untouched.
     from lumenis.auth.service import get_current_user
     from lumenis.system.security.permission import local_workspace_read_allowed
+    import os
 
-    local_read = local_workspace_read_allowed("subject_registry")
+    account_gate = os.environ.get("ACCOUNT_SYSTEM_ENABLED", "off").strip().lower() in (
+        "1", "on", "true", "yes",
+    )
+    local_read = (not account_gate) or local_workspace_read_allowed("subject_registry")
     user = None if local_read else get_current_user()
     if not local_read and (not user or type(user.get("id")) is not int):
         return jsonify({"ok": False, "code": "AUTH_REQUIRED", "error": "需要有效账号会话"}), 401

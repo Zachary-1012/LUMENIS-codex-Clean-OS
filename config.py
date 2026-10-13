@@ -250,7 +250,7 @@ class Config:
             # AI 配置（Provider-Agnostic）
             'AI_PROVIDER', 'AI_MODEL', 'AI_API_KEY',
             'AI_LOCAL_ENDPOINT', 'AI_LOCAL_ENABLED', 'AI_ASYNC_ENABLED',
-            'AI_TIMEOUT_SECONDS', 'ALLOW_CLOUD_AI', 'LOCAL_AI_PREFERRED',
+            'AI_TIMEOUT_SECONDS', 'ALLOW_CLOUD_AI', 'LOCAL_AI_PREFERRED', 'ACCOUNT_SYSTEM_ENABLED',
             'OPENAI_PROXY',
             'USER_MODEL_API_BASE_URL', 'USER_MODEL_API_KEY', 'USER_MODEL_API_MODEL',
             # 采集配置
