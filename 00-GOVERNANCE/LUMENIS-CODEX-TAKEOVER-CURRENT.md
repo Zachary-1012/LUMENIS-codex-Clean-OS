@@ -2,6 +2,14 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-14 research adoption (documentation, not runtime acceptance)
+
+PO transitions-ui-generation addition is adopted in Experience §19, the existing plan/sketches/AI-01/CTH-10 specs and third-party register. All original motion remains; the new full reveal is optional and bound to newly generated, layout-ready results. No installed/runtime outcome is claimed by this publication.
+
+The remaining 18 brand, 2 KDRAMA, 15 XHS, 3 case-benchmark documents and adoption lines480–742 were read in full at the stated scope; line743 is absent. All26 fixed local mathematics transcripts were read through appendices/references. The existing coverage record lists paths, boundaries and adoption. Original research/history stays intact. Product-plan G78/G81/G99/G102–104/G109/G111/G143/G158/G160–164/G170/G182 now distinguish actual evidence, algorithm hypotheses, finite implementation, proof and model gains; G163 stays OPEN.
+
+The PO's complete person-like-agent argument is mapped claim by claim in the existing plan§16, with official Bot/Muse/Instinct sources, fixed OpenClaw source and community observations. Existing Architecture/Experience and AI-01/SH-06/sketches carry responsive multi-task conversation, scoped memory, bounded delegation, completion readback and selective delivery. This publication adds no Runtime, provider, external IM, computer control or dispatch; async product operation and four-surface E2E remain NOT_VERIFIED until actual owner evidence exists. Paid-source access and model/training/deployment authority are unchanged.
+
 ## 2026-10-13 Single product closed-loop entry (dated readback; start here)
 
 This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any other handoff/todo/progress note dated before 2026-10-13 is superseded where it conflicts and is kept only as history.
@@ -56,7 +64,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 显式选择 user_api 的已有通用接口保留；状态读取不调用外部模型、不探测端点，配置完成仍为 CONFIGURED_NOT_VERIFIED，不能冒称可用或自动切回 owned。
