@@ -666,11 +666,16 @@ character mark, and adaptation from creative industries. Sol presentation review
 complete screen, native surface, product or Round.
 
 Express 芥子纳须弥 through a small point and open, nested contours, alongside the
-plain product name when space permits. The shell mark is monochrome, unboxed,
+plain product name when space permits. Per the PO rule in USER-ADDITIONS-20261004
+(lines 62-66, "colour hand-drawn texture as shown"), the brand mark is a hand-drawn
+colour mark (coloured pencil + watercolour, cream paper #F9EED9, outline #583830):
+a jasmine in its real growth form with a snake, in named and unnamed versions.
+The in-product shell mark and sizes up to 32px use its single-colour silhouette
+(#583830, or the theme foreground in dark mode); it is unboxed,
 static and subordinate to the user's content. It has an accessible product name;
 it does not indicate connection, processing, confidence or data completeness.
 Do not use an oversized sculpture, rotating orb, breathing logo or generic AI
-gradient as the identity. This is the in-product mark; package icons and the
+gradient as the identity; the hand-drawn pigment colour of the brand mark is media, not a UI gradient, and does not spread to the shell. This is the in-product mark; package icons and the
 public website remain separately reviewed surfaces.
 
 At desktop and compact-workspace widths, keep a visible navigation trigger and
@@ -1027,7 +1032,7 @@ The earlier examples are: Apple informs restraint, content priority, one clear p
 
 For Korean product-app craft, study public product-engineering documentation such as the [Toss Design System component guide](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components) for consistency, clear component guidance and task-focused implementation. Its UI Kit terms restrict use of Toss materials to the Apps in Toss service, so LUMENIS does not adopt the UI Kit, components, assets or visual patterns. Extract only general, non-visual principles, then test those against LUMENIS workflows.
 
-Do not copy another product's assets, source code, signature layout, visual identity, interaction sequence or implementation recipe. The supplied [motion-web repository](https://github.com/Zachary-1012/motion-web) is a fork of `feitangyuan/motion-web`; its [LICENSE](https://github.com/Zachary-1012/motion-web/blob/main/LICENSE) identifies CC BY-NC 4.0 and expressly restricts commercial integration of its Skill, prompts, cases and derived workflows. No code, case, asset, parameter set or derivative workflow from it is admitted into this commercial product. Inspiration is not a runtime dependency or a competing design authority.
+Do not copy another product's assets, source code, signature layout, visual identity, interaction sequence or implementation recipe. The supplied [motion-web repository](https://github.com/Zachary-1012/motion-web) is a fork of `feitangyuan/motion-web`; its [LICENSE](https://github.com/Zachary-1012/motion-web/blob/main/LICENSE) identifies CC BY-NC 4.0 and expressly restricts commercial integration of its Skill, prompts, cases and derived workflows. No code, case, asset, parameter set or derivative workflow from it is admitted into this commercial product. Inspiration is not a runtime dependency or a competing design authority. Open-source components registered in THIRD-PARTY-COMPONENT-REGISTER may be used behind a LUMENIS adapter; each screen's operation flow follows LUMENIS specifications and does not copy another product's flow.
 
 ## 34. Ordered cross-surface delivery and acceptance
 

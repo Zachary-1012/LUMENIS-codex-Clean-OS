@@ -379,3 +379,7 @@ or protected identity is accessed. Same-run live diagnostic recovery remains unv
 Full notices are retained in `vendor/lumenis-reuse-notices/` and indexed by
 `THIRD_PARTY_NOTICES.md`. Rollback removes only this exact hash-matched delta;
 retain older native-field/failure-state/build safeguards and unrelated dirty work.
+
+## 2026-10-13 Selected component: rich-text editor
+
+`flutter_quill` (pub.dev) is the selected rich-text editor, used only behind a LUMENIS adapter; its stored format must align with the SavedWork contract (backend owner). Not yet added to `app/pubspec.yaml`. License: VERIFY_BEFORE_RELEASE.
