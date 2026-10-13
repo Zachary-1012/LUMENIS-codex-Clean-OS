@@ -81,13 +81,79 @@ Public Website, Web Workspace, Desktop and Mobile keep distinct release roles. O
 | Blocked | 401/403 | Follow access flow; no promotion action |
 | Ready | checks returned | Still not production acceptance until complete gate evidence exists |
 
-## 5. Purpose-built desktop and web composition
+## 5. Purpose-built desktop composition
+
+已批准目标来源：`SYS-07-ADD-founder-developer-mode.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+
+### 草图增补：创始人内部开发者模式（G20b）
+
+```
+设置 › 开发者 › 内部发布（仅创始人）
+① 上传更新   [选择代码包/拖入]  或  [从 GitHub 分支 ▾]
+             说明 [            ]               [一键上传]
+② 测试       构建 ✓  单元 ✓  集成 ⟳  端到端 ○  安全扫描 ○
+             任一失败 → 停止，不发布，显示失败项与日志
+③ 发布       渠道 (●) 内测 ( ) 正式
+             分批  [10%] → [50%] → [100%]  每批观察 [24h]
+             签名  ✓ 已签名（未签名不允许发布）
+             [发布]（测试全绿才可点）
+④ 发布中     v1.3.0 · 10% · 崩溃率 — · 报错 0
+             [暂停] [扩大到下一批] [回滚]
+             回滚 = 发布更高版本号的上一个稳定版
+历史         版本/时间/批次/结果/[查看说明]
+```
+
+**4. States**
+空闲 / 上传中 / 测试中 / 测试失败（阻止发布）/ 待发布 / 分批中 / 已暂停 / 已回滚 / 指标缺失（显示「数据缺失」，不显示 0，缺失时不自动扩大批次）。
+
+**9. Acceptance**
+- 非创始人账号看不到入口，接口拒绝。
+- 测试未全绿、未签名均无法发布。
+- 用户端自动更新校验签名；可在 设置›通用 选择「自动更新 / 仅提醒」。
+- 回滚后所有批次用户在下次检查时得到稳定版。
+
+复用现有发布 Owner；检查全绿只是必要条件，实际发布仍须当前授权与适用 Gate。示例版本/百分比/报错数不充当遥测。
+
+### Existing contract — Purpose-built desktop and web composition
 
 - Desktop/Web: posture rail makes the acceptance boundary explicit; returned checks and evidence-backed gates occupy separate review panels.
 - Tablet/mobile stack posture → gates → checks; no pass badge is shown from count alone.
 - No score, release button or trend chart is rendered without a canonical callable.
 
+
+
+### 三语状态文案
+
+| Key | zh-CN | en | ko |
+|---|---|---|---|
+| loading | 加载中 | Loading | 불러오는 중 |
+| missing | 数据缺失 | Data unavailable | 데이터 없음 |
+| unavailable | 暂不可用 | Currently unavailable | 현재 사용할 수 없음 |
+| denied | 无权执行此操作 | This action is not permitted | 이 작업 권한이 없습니다 |
+| retry | 重试 | Retry | 다시 시도 |
+| cancel | 取消 | Cancel | 취소 |
+| save | 保存 | Save | 저장 |
+| revise | 修订 | Revise | 수정 |
+| reopen | 重新打开 | Reopen | 다시 열기 |
+| recover | 恢复 | Recover | 복구 |
+| return | 返回原任务 | Return to task | 원래 작업으로 돌아가기 |
+
+全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
+
+## 5A. Web Workspace composition
+
+### 草图增补：创始人内部开发者模式（G20b）
+
+Web：同桌面。
+
 ## 6. Purpose-built mobile composition
+
+### 草图增补：创始人内部开发者模式（G20b）
+
+ Mobile：只看状态，可[暂停][回滚]，不可上传。
+
+
+### Existing contract — Purpose-built mobile composition
 
 - One active question: “what evidence is actually present, and what remains unknown?”
 - Posture stays first; every gate/check shows state and evidence reference or not returned.

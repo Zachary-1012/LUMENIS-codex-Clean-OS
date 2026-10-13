@@ -55,12 +55,82 @@ approval_reference: ROUND-13-BMP-CREATION-UI
 
 ## 5. Purpose-built desktop composition
 
+已批准目标来源：`BMP-06-ADD-video-editing-studio.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+
+### 草图增补：内容生产台 · 视频剪辑（规划 §14 E1–E11、G183/G64/G170/G171）
+
+```
+内容生产台 › 视频 · 《标题》                  画幅 [9:16 ▾ 16:9 1:1 4:5] [导出] [工程交换 ▾]
+Brief ✓  分镜 6 镜  审核：READY / NEEDS_REVISION / BLOCKED / NOT_VERIFIED
+┌ 素材浏览（独立预览，不动播放头）┬ 预览（安全区线）────────┬ 检查器 ───────────┐
+│ clip01 0:42 SHA✓ 30fps 版权未知 │   ┌────────┐            │ 字幕 样式/每行≤14字 │
+│ clip02 1:10 VFR⚠                │   │ 字幕区 │            │ 响度 实测/目标      │
+│ [自动粗剪提议] [镜头检测]       │   └────────┘            │ B-roll 候选(已授权) │
+├ 逐词稿（删词即剪）──────────────┴──────────────────────────┤ 封面 3 候选          │
+│ 今天带你看……~~呃~~……这家店的木门是……                         │ AI 标注 含 AI 内容   │
+├ 时间线：V1 ▇▇▇|▇▇ ｜ 字幕 ▭▭▭ ｜ 人声 ▅▅ ｜ BGM ▁▁(ducking) ▶ 00:00:18 ───────┤
+└──────────────────────────────────────────────────────────────────────────────┘
+工程交换预检：⚠ 2 项损失（ducking 无对应、dissolve 不支持）· 时基 UNKNOWN → [查看] [仍导出为新版本] [取消]
+```
+
+**4. States**
+空 / 探测中 / 转写中 / 模型不可用（手动剪辑可用）/ 提议待确认 / 渲染中（可取消）/ 渲染失败（原因+重试）/ 版权未知 / 数据缺失 / 权限不足。
+
+**9. Acceptance**
+- 素材 100% 有哈希/时长/时基；VFR 标注；序列化无绝对路径。
+- 字幕同步 ≤100ms；多画幅不拉伸、字幕在安全区；16:9 与 9:16 分别重排。
+- 自动粗剪只是提议，确认后才改 Timeline；词内零切。
+- 成片可播放、可重开；工程交换先预检，取消不改项目。
+- 产品演示片必须来自真实操作录屏；封面文案兑现正文；AI 素材标注。
+
+**增补（2026-10-14）**
+- 预览与播放头分离：悬停临时预览不改时间线、不进撤销栈；切点以播放头为准并在界面标明。
+- 参考片学习面板（E12）：全帧数 / 已看帧数 / 峰值时码列表 / 镜头表；未看完显示「部分」。
+- 演示片模式（E10）：镜头表每行写「操作→状态→结果」；短版按动作闭环自动建议切点。
+- 导出前预检条：逐项损失列表，取消即不改项目。
+
+### Existing contract — Purpose-built desktop composition
+
 - Use an editorial production board with six distinct lifecycle swimlanes: brief, draft, review, approved, scheduled and released. A version inspector sits beside the board for the selected asset.
 - The primary question is “what is the next authorized production step for this brand asset?” The page is not a KPI dashboard and does not reuse a generic card grid.
 - A compact action rail exposes “save ... draft” controls with the matching approval state; each control visibly remains local and non-executing.
 - At narrow widths the board becomes a single production queue followed by the selected version detail; it is not a shrunken desktop board.
 
-## 6. Actions, authorization and effects
+
+
+### 三语状态文案
+
+| Key | zh-CN | en | ko |
+|---|---|---|---|
+| loading | 加载中 | Loading | 불러오는 중 |
+| missing | 数据缺失 | Data unavailable | 데이터 없음 |
+| unavailable | 暂不可用 | Currently unavailable | 현재 사용할 수 없음 |
+| denied | 无权执行此操作 | This action is not permitted | 이 작업 권한이 없습니다 |
+| retry | 重试 | Retry | 다시 시도 |
+| cancel | 取消 | Cancel | 취소 |
+| save | 保存 | Save | 저장 |
+| revise | 修订 | Revise | 수정 |
+| reopen | 重新打开 | Reopen | 다시 열기 |
+| recover | 恢复 | Recover | 복구 |
+| return | 返回原任务 | Return to task | 원래 작업으로 돌아가기 |
+
+全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
+
+## 5A. Web Workspace composition
+
+### 草图增补：内容生产台 · 视频剪辑（规划 §14 E1–E11、G183/G64/G170/G171）
+
+Web：同桌面；大文件上传分片续传。
+
+
+## 6. Purpose-built mobile composition
+
+### 草图增补：内容生产台 · 视频剪辑（规划 §14 E1–E11、G183/G64/G170/G171）
+
+Mobile：竖屏优先；逐词稿编辑 + 简化时间线；画幅切换与导出可用；工程交换仅桌面。
+
+
+### Existing contract — Actions, authorization and effects
 
 - `content:draft`: save a local draft of the request; no content is created.
 - `content:submit`: save a local review-request draft; no review is submitted.

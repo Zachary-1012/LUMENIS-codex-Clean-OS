@@ -137,8 +137,8 @@ accessibility coverage remains required, including narrow screens.
 
 Build the complete task-shaped frontend, including original identity/icons,
 illustration, genuine operation videos, usable UI/UX and applicable AIGC/motion,
-under the existing Experience Constitution. Existing screen specifications retain
-capability coverage; 44 is not a page-count, navigation or product-scope ceiling.
+under the existing Experience Constitution. Existing screen specifications incorporate sketch additions in place;
+coverage remains complete; 44 is not a page-count, navigation or product-scope ceiling.
 Available backend contracts are connected immediately. Unavailable contracts keep
 honest OPEN/UNBOUND states while independent editing/layout/interaction proceeds;
 no mock backend, fake save or decorative progress can represent business success.
