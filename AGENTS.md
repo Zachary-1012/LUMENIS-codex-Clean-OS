@@ -1277,7 +1277,7 @@ When touching RedNote (HK/international account; code id xhs) or any new acquisi
   E2E and release path unless the Product Owner explicitly changes this rule;
 - resolve other platform capability from existing secret-safe configuration and
   registered owners before requesting credentials; child processes inherit only the
-  exact registered identity/profile. Never expose secrets; unavailable
+  registered identity/profile; CDP verifies its session. Never expose secrets; unavailable
   authentication remains blocked;
 - primary ingestion must not be broken by a non-critical Evidence side-write failure unless the canonical contract explicitly changes;
 - preserve source identity, source URL, capture time, provider, domain/product context and trace metadata where available;

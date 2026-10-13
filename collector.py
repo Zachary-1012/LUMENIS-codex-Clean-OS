@@ -234,7 +234,7 @@ def _collection_policy_gate(region=None, account=None):
         }
 
 
-def _collection_env(account=None, region='intl', cdp_url=None):
+def _collection_env(account=None, region='intl', cdp_url=None, *, require_local_cookie=True):
     """Inject the server-owned account vault and remote worker URL, never shell-local credentials."""
     env = os.environ.copy()
     env.pop('XHS_COOKIE_FILE', None)
@@ -258,8 +258,19 @@ def _collection_env(account=None, region='intl', cdp_url=None):
     )
     selected = account or DEFAULT_COLLECTION_ACCOUNT
     profile = ACCOUNT_PROFILES.get(selected)
-    if (selected != XHS_RETINAUT_NAME or selected_region != 'intl' or not XHS_RETINAUT
-            or not isinstance(profile, (tuple, list)) or len(profile) != 2
+    if selected != XHS_RETINAUT_NAME or selected_region != 'intl' or not XHS_RETINAUT:
+        raise PermissionError('POLICY_BLOCKED: approved HK identity unavailable')
+    env['XHS_COLLECTION_ACCOUNT'] = selected
+    env['XHS_EXPECTED_COLLECTION_USER_ID'] = XHS_RETINAUT
+    env['PYTHONIOENCODING'] = 'utf-8'
+    env['PYTHONUTF8'] = '1'
+    if not require_local_cookie:
+        if not cdp_url:
+            raise PermissionError('COLLECTOR_ENDPOINT_NOT_CONFIGURED')
+        # The CDP caller already resolved this endpoint; its worker verifies the
+        # attached browser identity. It neither injects nor reads a local cookie.
+        return env
+    if (not isinstance(profile, (tuple, list)) or len(profile) != 2
             or not profile[0] or not profile[1]):
         raise PermissionError('POLICY_BLOCKED: approved HK identity/profile unavailable')
     cookie_file = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(profile[0]))))
@@ -621,7 +632,8 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
         cdp_url, account=account, region=region or 'intl')
     if endpoint_error:
         return {'keyword': keyword, 'total': 0, 'notes': [], 'error': endpoint_error, 'channel': 'cdp'}
-    env = _collection_env(account=account, region=region or 'intl', cdp_url=_cdp)
+    env = _collection_env(account=account, region=region or 'intl', cdp_url=_cdp,
+                          require_local_cookie=False)
     from uuid import uuid4
     run_id = uuid4().hex
     py = sys.executable or 'python'

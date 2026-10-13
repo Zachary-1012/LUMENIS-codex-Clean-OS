@@ -357,6 +357,14 @@ def test_collection_env_none_region_keeps_intl_default(monkeypatch, tmp_path):
     cookie.write_text('x-user-id-pro=wrong-synthetic-identity', encoding='utf-8')
     with pytest.raises(PermissionError, match='XHS_REGISTERED_COOKIE_IDENTITY_MISMATCH'):
         collector._collection_env(account=bridge.XHS_RETINAUT_NAME, region=None)
+    remote_env = collector._collection_env(
+        account=bridge.XHS_RETINAUT_NAME, region='intl',
+        cdp_url='https://worker.example:9443', require_local_cookie=False,
+    )
+    assert remote_env['XHS_EXPECTED_COLLECTION_USER_ID'] == TEST_HK_ID
+    assert remote_env['XHS_CDP_URL'] == 'https://worker.example:9443'
+    assert 'XHS_COOKIE_FILE' not in remote_env
+    assert 'XHS_PROFILE_DIR' not in remote_env
 
 
 def test_existing_context_helper_returns_only_preexisting_context():

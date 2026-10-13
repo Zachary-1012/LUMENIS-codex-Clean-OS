@@ -27,8 +27,8 @@ function normalizeNote(item) {
   const xsecToken = item.xsec_token || '';
   const noteId = item.id || '';
   const url = xsecToken
-    ? `https://www.xiaohongshu.com/explore/${noteId}?xsec_token=${xsecToken}`
-    : `https://www.xiaohongshu.com/explore/${noteId}`;
+    ? `https://www.rednote.com/explore/${noteId}?xsec_token=${encodeURIComponent(xsecToken)}`
+    : `https://www.rednote.com/explore/${noteId}`;
   // 提取发布时间：尝试多个可能的字段
   let publishDate = '';
   const timeStr = noteCard.time || noteCard.display_time || item.time || item.create_time || '';
@@ -96,7 +96,7 @@ async function main() {
 
   console.error(`[search] keyword="${keyword}" maxScroll=${maxScroll}`);
   const encodedKeyword = encodeURIComponent(keyword);
-  const searchUrl = `https://www.xiaohongshu.com/search_result?keyword=${encodedKeyword}&source=web_explore_feed`;
+  const searchUrl = `https://www.rednote.com/search_result?keyword=${encodedKeyword}&source=web_explore_feed`;
 
   const context = await chromium.launchPersistentContext(userDataDir, {
     headless: process.env.XHS_HEADFUL === '1' ? false : true,  // 新版 playwright 只接受布尔；XHS_HEADFUL=1 时有头拟人
@@ -135,7 +135,9 @@ async function main() {
   page.on('response', async (response) => {
     try {
       const url = response.url();
-      if (!url.includes('xiaohongshu.com') && !url.includes('xhscdn.com')) return;
+      const sourceUrl = new URL(url);
+      if (sourceUrl.protocol !== 'https:' || sourceUrl.username || sourceUrl.password
+          || (sourceUrl.hostname !== 'rednote.com' && !sourceUrl.hostname.endsWith('.rednote.com'))) return;
       if (!url.includes('search') && !url.includes('sns/web')) return;
       if (response.status() !== 200) return;
       const ct = response.headers()['content-type'] || '';
@@ -210,7 +212,7 @@ async function main() {
             const authorEl = el.querySelector('.author, .nickname, [class*="nickname"], [class*="author"]');
             results.push({
               note_id: noteId,
-              url: href || `https://www.xiaohongshu.com/explore/${noteId}`,
+              url: href || `https://www.rednote.com/explore/${noteId}`,
               title: titleEl?.textContent?.trim() || '',
               author_nickname: authorEl?.textContent?.trim() || '',
             });
