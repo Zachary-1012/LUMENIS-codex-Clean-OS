@@ -177,8 +177,9 @@ def subject_registry_client(tmp_path, monkeypatch):
     [(1, "CTH", "BMP"), (2, "BMP", "CTH")],
 )
 def test_subject_registry_route_limits_implicit_listing_to_authorized_domain(
-    subject_registry_client, user_id, expected_domain, hidden_domain
+    subject_registry_client, user_id, expected_domain, hidden_domain, monkeypatch
 ):
+    monkeypatch.setenv("ACCOUNT_SYSTEM_ENABLED", "on")
     client, current = subject_registry_client
     current["user"] = {"id": user_id, "role": "user"}
 
@@ -202,8 +203,9 @@ def test_subject_registry_route_limits_implicit_listing_to_authorized_domain(
     [(1, "BMP"), (2, "CTH"), (3, "CTH"), (3, None)],
 )
 def test_subject_registry_route_denies_unapproved_domain(
-    subject_registry_client, user_id, requested_domain
+    subject_registry_client, user_id, requested_domain, monkeypatch
 ):
+    monkeypatch.setenv("ACCOUNT_SYSTEM_ENABLED", "on")
     client, current = subject_registry_client
     current["user"] = {"id": user_id, "role": "user"}
 
@@ -220,8 +222,9 @@ def test_subject_registry_route_denies_unapproved_domain(
 
 @pytest.mark.parametrize("role", ["owner", "admin"])
 def test_subject_registry_route_owner_and_admin_can_read_both_domains(
-    subject_registry_client, role
+    subject_registry_client, role, monkeypatch
 ):
+    monkeypatch.setenv("ACCOUNT_SYSTEM_ENABLED", "on")
     client, current = subject_registry_client
     user_id = 4 if role == "owner" else 5
     current["user"] = {"id": user_id, "role": role}
@@ -234,9 +237,18 @@ def test_subject_registry_route_owner_and_admin_can_read_both_domains(
     assert {subject["domain_id"] for subject in body["subjects"]} == {"CTH", "BMP"}
 
 
+def test_preloop_subject_registry_readable_without_account(subject_registry_client, monkeypatch):
+    monkeypatch.setenv("ACCOUNT_SYSTEM_ENABLED", "off")
+    client, current = subject_registry_client
+    response = client.get("/api/settings/subjects")
+    assert response.status_code == 200
+    assert current["user"] is None
+
+
 def test_subject_registry_route_requires_an_authenticated_account_session(
-    subject_registry_client,
+    subject_registry_client, monkeypatch,
 ):
+    monkeypatch.setenv("ACCOUNT_SYSTEM_ENABLED", "on")
     client, _current = subject_registry_client
 
     response = client.get("/api/settings/subjects")
@@ -245,7 +257,8 @@ def test_subject_registry_route_requires_an_authenticated_account_session(
     assert response.get_json()["code"] == "AUTH_REQUIRED"
 
 
-def test_explicit_local_workspace_lists_domains_without_creating_actor(subject_registry_client):
+def test_explicit_local_workspace_lists_domains_without_creating_actor(subject_registry_client, monkeypatch):
+    monkeypatch.setenv("ACCOUNT_SYSTEM_ENABLED", "on")
     client, current = subject_registry_client
     client.application.config["LUMENIS_OPEN_WORKSPACE"] = True
     response = client.get("/api/settings/subjects?domain_id=BMP")

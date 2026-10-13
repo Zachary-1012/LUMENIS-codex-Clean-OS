@@ -334,10 +334,10 @@ THREE-LANGUAGE SURFACE ACCEPTANCE：
 GLOBAL UNIVERSE / DATA MATURITY IMPACT：
 - GLOBAL CTH maturity impact：本轮责任、已验证、未成熟、后续 owner/round
 - GLOBAL BMP maturity impact：本轮责任、已验证、未成熟、后续 owner/round
-- Guangzhou Taikoo Hui reference-loop impact：本轮责任、已验证、未成熟、后续 owner/round
+- Registered-subject reference-loop impact：本轮责任、已验证、未成熟、后续 owner/round
 - `Global Commercial Coverage = YES / NO / PARTIAL / BLOCKED / LIVE_UNVERIFIED`
 - `Global Brand Coverage = YES / NO / PARTIAL / BLOCKED / LIVE_UNVERIFIED`
-- `Guangzhou Taikoo Hui Reference Coverage = YES / NO / PARTIAL / BLOCKED / LIVE_UNVERIFIED`
+- `Registered Subject Reference Coverage = YES / NO / PARTIAL / BLOCKED / LIVE_UNVERIFIED`
 - `LUMENIS_INTERNAL_FULL_UNIVERSE_READY = YES / NO`
 
 RANDOM ENTITY DATA ACCEPTANCE：
@@ -1171,7 +1171,7 @@ pre-populated fake success
 
 Global Commercial Coverage =
 Global Brand Coverage =
-Guangzhou Taikoo Hui Reference Coverage =
+Registered Subject Reference Coverage =
 LUMENIS_INTERNAL_FULL_UNIVERSE_READY =
 
 ENGINEERING_READY =
@@ -1498,7 +1498,7 @@ external document grants collection or deployment permission.
 
 沿已有J1–J8真实任务核对：第一个有用且有依据结果→后续新增信息→必要更正与全答一致→直接调整→明确保存→重开/断线恢复。分段不能只是状态提示或完整响应后的打字动画。检查旧run晚到、乱序/重复块、权限或输入版本改变、用户已编辑块保护和局部格式失败；不得重复效果或将部分结果升为完成。缺值维度遵守Global §10且不降低必要业务证据。
 
-同时记录首个有用结果、首个可操作块、完整结果与保存耗时，事实/引用错误、总成本和人工补救；在同任务/资料/预算比较，不能以短等待牺牲准确性或完整成果。各Owner只运行其实际影响的检查；App/CI通过不等于真实用户任务或四端逐步交付已验收。
+同时记录首个有用结果、首个可操作块、完整结果与保存耗时，事实/引用错误、总成本和人工补救；在同任务/资料/预算下完成竞品同任务差异化验收（闭环内，不延后），不能以短等待牺牲准确性或完整成果。各Owner只运行其实际影响的检查；App/CI通过不等于真实用户任务或四端逐步交付已验收。
 
 ### 2026-10-11 产品内浏览器与业务结果真实验收
 

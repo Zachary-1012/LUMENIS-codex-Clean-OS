@@ -142,15 +142,15 @@ TAIKOO_DIRECT_KEYWORDS = SUBJECT_WORDS
 EXCLUDE_KEYWORDS = SUBJECT_EXCLUDE_WORDS
 
 def verify_taikoo_location(title, content=''):
-    """严格验证是否属于广州太古汇；排除词一票否决。"""
+    """验证笔记是否命中当前登记主体词（兼容旧名）；排除词一票否决。"""
     ok = subject_hit(title=title, body=content, content=content)
     if ok:
-        return True, '命中广州太古汇主体词'
+        return True, '命中登记主体词'
     text = f'{title} {content}'
     for kw in SUBJECT_EXCLUDE_WORDS:
         if kw.lower() in text.lower():
             return False, f'包含排除词:{kw}'
-    return False, '未匹配广州太古汇主体词'
+    return False, '未匹配登记主体词'
 
 # ============== 分类规则 ==============
 CATEGORY_RULES = [

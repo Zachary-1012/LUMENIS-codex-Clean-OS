@@ -30,9 +30,9 @@ Selection is not authorization and is not a runtime control. Selecting or cleari
 
 ### Collection mode — Product Owner decision, 2026-09-27
 
-> **2026-10-13 PO 直接指令（研发/内测阶段）**：本内部程序自动采集已开启，范围为全部已登记主体（不限太古汇），后台无窗口运行；平台登录失效经产品内统一恢复面板恢复，不自动弹外部浏览器。下述 `MANUAL` 默认继续适用于未来客户部署。
+> **2026-10-13 PO 直接指令（研发/内测阶段）**：自动采集默认开启，范围为全部已登记主体（不限太古汇），后台无窗口运行；手动采集保留为可选（前端有按钮）。平台登录失效经产品内统一恢复面板恢复，不自动弹外部浏览器。
 
-The default collection mode is `MANUAL`: a user explicitly clicks to request a bounded collection for an identified, authorized scope and source. `AUTO` is off by default, including when no prior mode has been saved. It may run only after the user deliberately enables it for a reviewable scope, source set and cadence through the existing SYSTEM Collector, source authorization, actor Permission and effect boundary. The user can turn it off; disabling prevents future scheduled collection without rewriting already captured Evidence. Registration, search, focus selection, clear focus, opening a page and startup never silently opt a user into automatic collection or trigger a manual request.
+The default collection mode is `AUTO` for all registered subjects. Manual collection remains optional: a user may explicitly request a bounded run for an identified, authorized scope and source. `AUTO` may be turned off; disabling prevents future scheduled collection without rewriting already captured Evidence. Registration, search, focus selection, clear focus, opening a page and startup never silently trigger a manual request.
 
 The prelaunch Global baseline still requires real, traceable CTH and BMP data before a customer arrives. Authorized operators may build and refresh it through explicit manual collection; an explicitly enabled automatic schedule may maintain an authorized portion. Show the actual collection mode, last attempt, freshness, source limits and `NOT_COLLECTED`/`STALE`/`BLOCKED` states. Do not claim continuous freshness where no active schedule or verified manual refresh supports it. This mode decision changes the trigger policy, not the one Source → Evidence → Canonical owner chain or the requirement that focus never controls collection.
 

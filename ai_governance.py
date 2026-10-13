@@ -43,11 +43,15 @@ STATS_FILE = os.environ.get(f"{AI_GOVERNANCE_ENV_PREFIX}STATS_FILE",
                              os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "ai_governance_stats.json"))
 
 # 敏感实体类型（用于脱敏）
+def _registered_brand_patterns():
+    try:
+        from subject_registry import registered_subject_names
+        return [re.escape(n) for n in registered_subject_names() if n]
+    except Exception:
+        return []
+
 SENSITIVE_PATTERNS = {
-    "BRAND": [
-        r"广州太古汇", r"太古汇", r"Taikoo Hui", r"方所", r"OLE", r"Ole'",
-        r"lululemon", r"Lululemon", r"苹果", r"Apple", r"华为", r"Huawei",
-    ],
+    "BRAND": _registered_brand_patterns(),
     "PERSON": [
         r"Zachary", r"zachary", r"云智",
     ],

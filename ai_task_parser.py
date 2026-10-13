@@ -149,7 +149,7 @@ _ENTITY_PATTERNS = {
         re.IGNORECASE,
     ),
     "brand": re.compile(
-        r"(太古汇|taikoo|广州太古汇|上海太古汇|北京太古汇|成都太古汇|香港太古汇)",
+        r"(?:品牌|主体|竞品)\s*[:：]?\s*([\w\u4e00-\u9fff·\-]{2,40})",
         re.IGNORECASE,
     ),
     "metric": re.compile(

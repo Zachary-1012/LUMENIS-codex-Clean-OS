@@ -293,7 +293,12 @@ def _call_local_chat(provider, model, base, system, user, temperature, max_token
     return None, "provider_disabled"
 
 def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
-    """Preserved two-tuple interface; use an admitted run_owned_request instead."""
+    """Preserved two-tuple interface; explicit user_api only, otherwise disabled."""
+    from lumenis.system.ai_gateway import user_api_adapter as _user_api
+    if _user_api.is_configured():
+        content, provider, _usage = _user_api.chat(system, user, temperature=temperature, max_tokens=max_tokens, timeout=timeout or 60)
+        _set_call_meta(provider=provider, model=_user_api.config()['model'])
+        return content, provider
     _set_call_meta(provider="provider_disabled", model=model or "")
     return None, "provider_disabled"
 
@@ -635,7 +640,12 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
 
     Generic prompts lack the canonical actor/domain/source-use request and cannot
     be silently promoted to owned execution. Use run_owned_request explicitly.
+    A user-supplied API is used only when explicitly selected (no fallback).
     """
+    from lumenis.system.ai_gateway import user_api_adapter as _user_api
+    if _user_api.is_configured():
+        content, provider, usage = _user_api.chat(system, user, temperature=0.2 if temperature is None else temperature, max_tokens=max_tokens or 1200)
+        return content, provider, {'provider': provider, 'model': _user_api.config()['model'], 'usage': usage}
     return None, 'provider_disabled', _provider_disabled_meta(level, model)
 
 

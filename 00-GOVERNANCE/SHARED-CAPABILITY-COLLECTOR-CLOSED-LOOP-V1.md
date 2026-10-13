@@ -211,8 +211,8 @@ equivalent path through the canonical contract and its acceptance evidence;
 then retire only the duplicated route. Never keep two independent status or
 write authorities to avoid migrating a caller.
 
-MANUAL remains the default. Only explicitly approved public prelaunch-baseline
-sources or user-opted-in scopes may enter AUTO; login does not grant source use.
+AUTO is the default for all registered subjects. Manual collection remains
+optional; login does not by itself grant source use.
 Use current Source/session/Permission/caller bindings and the Source→Evidence→
 Canonical chain. The protected personal Mainland XHS identity and legacy9222
 recovery route remain forbidden. One unavailable identity/source blocks that
