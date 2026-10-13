@@ -136,8 +136,10 @@ all supported targets. Website/Web browser viewport, locale and
 accessibility coverage remains required, including narrow screens.
 
 Build the full task-based UI with original identity/icons, illustration, genuine
-operation videos, usable UX and applicable AIGC/motion. Preserve existing motion;
-the added result reveal is independently selectable/skippable; it runs only for a new persisted result after app-bundled fonts and paragraph layout are ready, and is skipped for unregistered dynamic fonts. Follow Experience
+operation videos, usable UX and applicable AIGC/motion. Preserve original motion.
+The additive result reveal is independently selectable/skippable and runs only
+once for a new persisted result after registered bundled fonts and paragraph
+layout are ready; unregistered dynamic fonts skip it. Follow Experience
 Constitution. Update existing screen specs with sketch additions; coverage remains complete;
 44 is not a page-count/navigation/scope ceiling.
 Connect available backend contracts immediately. Unavailable ones stay honestly

@@ -66,7 +66,7 @@ void main() {
     for (var frame = 0; frame < 18; frame++) {
       await tester.pump(const Duration(milliseconds: 16));
       if (find
-          .byKey(const ValueKey('generated-result-reveal/skip'))
+          .byKey(const ValueKey('generated-result-reveal/paint'))
           .evaluate()
           .isNotEmpty) {
         started = true;
@@ -85,14 +85,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const ValueKey('generated-result-reveal/skip')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const ValueKey('generated-result-reveal/paint')),
-      findsNothing,
-    );
+    _expectSkipUnavailable(tester);
     expect(find.text('已保存并重新核验'), findsOneWidget);
   });
 
@@ -111,14 +104,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('已保存并重新核验'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('generated-result-reveal/skip')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const ValueKey('generated-result-reveal/paint')),
-      findsNothing,
-    );
+    _expectSkipUnavailable(tester);
   });
 
   testWidgets('failed refresh hides saved result and stops checking copy', (
@@ -151,14 +137,7 @@ void main() {
     expect(find.text('暂时无法确认任务状态'), findsNothing);
     expect(client.startCalls, hasLength(1));
     expect(client.jobReads, [_jobId, _jobId]);
-    expect(
-      find.byKey(const ValueKey('generated-result-reveal/skip')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const ValueKey('generated-result-reveal/paint')),
-      findsNothing,
-    );
+    _expectSkipUnavailable(tester);
   });
 
   testWidgets('interrupted task resumes with the same task identifier', (
@@ -205,14 +184,7 @@ void main() {
     expect(client.startCalls, isEmpty);
     expect(client.taskReads, isEmpty);
     expect(find.text('已保存并重新核验'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('generated-result-reveal/skip')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const ValueKey('generated-result-reveal/paint')),
-      findsNothing,
-    );
+    _expectSkipUnavailable(tester);
     expect(find.text('可核验来源标题'), findsOneWidget);
     expect(find.widgetWithText(SelectableText, _jobId), findsOneWidget);
   });
@@ -302,6 +274,49 @@ Widget _panelApp(
     onReturn: () {},
   ),
 );
+
+void _expectSkipUnavailable(WidgetTester tester) {
+  expect(
+    find.byKey(const ValueKey('generated-result-reveal/skip')),
+    findsOneWidget,
+  );
+  expect(
+    tester
+        .widget<Opacity>(
+          find.byKey(const ValueKey('generated-result-reveal/skip-opacity')),
+        )
+        .opacity,
+    0,
+  );
+  expect(
+    tester
+        .widget<ExcludeFocus>(
+          find.byKey(const ValueKey('generated-result-reveal/skip-focus')),
+        )
+        .excluding,
+    isTrue,
+  );
+  expect(
+    tester
+        .widget<ExcludeSemantics>(
+          find.byKey(const ValueKey('generated-result-reveal/skip-semantics')),
+        )
+        .excluding,
+    isTrue,
+  );
+  expect(
+    tester
+        .widget<IgnorePointer>(
+          find.byKey(const ValueKey('generated-result-reveal/skip-pointer')),
+        )
+        .ignoring,
+    isTrue,
+  );
+  expect(
+    find.byKey(const ValueKey('generated-result-reveal/paint')),
+    findsNothing,
+  );
+}
 
 Future<void> _tapCreate(WidgetTester tester) async {
   final create = find.byKey(const ValueKey('source-brief/create'));

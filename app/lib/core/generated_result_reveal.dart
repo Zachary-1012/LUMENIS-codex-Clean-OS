@@ -50,6 +50,13 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
   static const _maxNodes = 1600;
   static const _maxTextLines = 240;
   static const _maxControls = 64;
+  static const _bundledFontFamilies = <String>{
+    'LumenisSansSC',
+    'LumenisSansKR',
+    'LumenisEmoji',
+    'MaterialIcons',
+    'packages/cupertino_icons/CupertinoIcons',
+  };
 
   final GlobalKey _measuredChild = GlobalKey();
   late final AnimationController _controller = AnimationController(
@@ -72,6 +79,7 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    PaintingBinding.instance.systemFonts.addListener(_onSystemFontsChanged);
     final token = widget.arrivalToken;
     if (token != null && token.isNotEmpty) {
       _schedulePreparation(token, widget.resultVersion);
@@ -133,6 +141,8 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
     if (state != AppLifecycleState.resumed) _finishImmediately();
   }
 
+  void _onSystemFontsChanged() => _finishImmediately();
+
   void _schedulePreparation(String token, String version) {
     if (token.isEmpty || version.isEmpty || token == _consumedArrivalToken) {
       return;
@@ -161,8 +171,9 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
   ) async {
     if (!_choiceAllowsMotion()) return;
     _MeasuredResult? previous;
-    // The actual Flutter paragraph/layout tree must be present and unchanged
-    // over consecutive frames before any overlay geometry is used.
+    // Font readiness is established by the running engine's registered,
+    // bundled families plus completed RenderParagraph layout in
+    // _measureResult. Repeated frames below check geometry stability only.
     for (var frame = 0; frame < 3; frame++) {
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted ||
@@ -193,6 +204,12 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
     if (object is! rendering.RenderBox || !object.attached || !object.hasSize) {
       return null;
     }
+    if (!_usesRegisteredBundledFonts(
+      DefaultTextStyle.of(context).style,
+      requireFamily: true,
+    )) {
+      return null;
+    }
     final size = object.size;
     if (!size.width.isFinite ||
         !size.height.isFinite ||
@@ -206,6 +223,7 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
     final controlRects = <Rect>[];
     final visited = <rendering.RenderObject>{};
     var overflow = false;
+    var fontOrLayoutNotReady = false;
 
     Rect? localRect(rendering.RenderBox box, Rect rect) {
       final topLeft = box.localToGlobal(rect.topLeft, ancestor: object);
@@ -243,9 +261,25 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
         overflow = true;
         return;
       }
-      if (node is rendering.RenderParagraph && node.hasSize) {
+      if (node is rendering.RenderParagraph) {
         final text = node.text.toPlainText();
         if (text.isNotEmpty) {
+          if (!node.hasSize || !_spanUsesRegisteredBundledFonts(node.text)) {
+            fontOrLayoutNotReady = true;
+            return;
+          }
+          final strut = node.strutStyle;
+          if (strut != null) {
+            final strutFamilies = <String>[
+              if (strut.fontFamily != null) strut.fontFamily!,
+              ...?strut.fontFamilyFallback,
+            ];
+            if (strutFamilies.isEmpty ||
+                !_fontFamiliesAreRegistered(strutFamilies)) {
+              fontOrLayoutNotReady = true;
+              return;
+            }
+          }
           final boxes = node.getBoxesForSelection(
             TextSelection(baseOffset: 0, extentOffset: text.length),
           );
@@ -275,7 +309,7 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
     }
 
     visit(object);
-    if (overflow || lineRects.isEmpty) return null;
+    if (overflow || fontOrLayoutNotReady || lineRects.isEmpty) return null;
 
     final strokes = <_MeasuredStroke>[];
     final outline = Path()
@@ -320,6 +354,34 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
       if (metric.length > 0) _MeasuredStroke(metric),
   ];
 
+  bool _spanUsesRegisteredBundledFonts(InlineSpan span) {
+    if (!_usesRegisteredBundledFonts(span.style)) return false;
+    if (span is TextSpan) {
+      for (final child in span.children ?? const <InlineSpan>[]) {
+        if (!_spanUsesRegisteredBundledFonts(child)) return false;
+      }
+    }
+    return true;
+  }
+
+  bool _usesRegisteredBundledFonts(
+    TextStyle? style, {
+    bool requireFamily = false,
+  }) {
+    if (style == null) return !requireFamily;
+    final families = <String>[
+      if (style.fontFamily != null) style.fontFamily!,
+      ...?style.fontFamilyFallback,
+    ];
+    if (!_fontFamiliesAreRegistered(families)) return false;
+    if (requireFamily && families.isEmpty) return false;
+    if (!style.inherit && families.isEmpty) return false;
+    return true;
+  }
+
+  bool _fontFamiliesAreRegistered(Iterable<String> families) =>
+      families.every(_bundledFontFamilies.contains);
+
   String _rectSignature(Rect rect) =>
       '${rect.left.toStringAsFixed(2)},${rect.top.toStringAsFixed(2)},'
       '${rect.width.toStringAsFixed(2)},${rect.height.toStringAsFixed(2)}';
@@ -338,9 +400,10 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
   }
 
   void _finishImmediately() {
-    if (!_playing && _geometry == null) return;
+    final hadVisiblePresentation = _playing || _geometry != null;
     _preparationRevision++;
     _controller.stop();
+    if (!hadVisiblePresentation) return;
     if (mounted) {
       setState(() {
         _playing = false;
@@ -357,15 +420,30 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      if (_playing)
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            key: const ValueKey('generated-result-reveal/skip'),
-            onPressed: _finishImmediately,
-            child: Text(widget.skipLabel),
+      Align(
+        alignment: Alignment.centerRight,
+        child: ExcludeFocus(
+          key: const ValueKey('generated-result-reveal/skip-focus'),
+          excluding: !_playing,
+          child: ExcludeSemantics(
+            key: const ValueKey('generated-result-reveal/skip-semantics'),
+            excluding: !_playing,
+            child: IgnorePointer(
+              key: const ValueKey('generated-result-reveal/skip-pointer'),
+              ignoring: !_playing,
+              child: Opacity(
+                key: const ValueKey('generated-result-reveal/skip-opacity'),
+                opacity: _playing ? 1 : 0,
+                child: TextButton(
+                  key: const ValueKey('generated-result-reveal/skip'),
+                  onPressed: _playing ? _finishImmediately : null,
+                  child: Text(widget.skipLabel),
+                ),
+              ),
+            ),
           ),
         ),
+      ),
       LayoutBuilder(
         builder: (context, constraints) {
           final signature = [
@@ -391,9 +469,7 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
             children: [
               Listener(
                 behavior: HitTestBehavior.deferToChild,
-                onPointerDown: (_) {
-                  if (_playing) _finishImmediately();
-                },
+                onPointerDown: (_) => _finishImmediately(),
                 child: KeyedSubtree(key: _measuredChild, child: widget.child),
               ),
               if (_playing && geometry != null && geometryMatchesConstraints)
@@ -426,6 +502,7 @@ class GeneratedResultRevealState extends State<GeneratedResultReveal>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    PaintingBinding.instance.systemFonts.removeListener(_onSystemFontsChanged);
     _controller
       ..removeStatusListener(_onAnimationStatus)
       ..dispose();
