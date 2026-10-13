@@ -111,7 +111,51 @@ RECOVERY_PROFILES = {
         "qr_selectors": ["[class*='qr'] img", "canvas"],
         "display": "B站", "remote_hint": "用哔哩哔哩App扫码登录",
     },
+    "x": {
+        "login_url": "https://x.com/i/flow/login",
+        "auth_cookies": ["auth_token", "ct0"],
+        "qr_selectors": [],
+        "display": "X", "remote_hint": "Log in to X in the in-product browser login window",
+    },
+    "facebook": {
+        "login_url": "https://www.facebook.com/login/",
+        "auth_cookies": ["c_user", "xs"],
+        "qr_selectors": [],
+        "display": "Facebook", "remote_hint": "Log in to Facebook in the in-product browser login window",
+    },
+    "wechat_oa": {
+        "login_url": "https://mp.weixin.qq.com/",
+        "auth_cookies": ["slave_sid", "data_ticket"],
+        "qr_selectors": [".login__type__container__scan__qrcode", "img[class*='qrcode']", "canvas"],
+        "display": "微信公众号", "remote_hint": "Scan the QR code with WeChat in the in-product login window",
+    },
 }
+
+# PO rule 2026-10-13 #1: non-XHS platforms bind to their registered background
+# worker (headless; visible only as the in-product login popup).
+_REGISTERED_WORKER_PLATFORMS = {"douyin", "instagram", "x", "facebook", "wechat_oa"}
+_resume_queue: Dict[str, list] = {}
+
+
+def register_resume(platform: str, resume_fn) -> None:
+    """Queue the interrupted task; it runs once login + health check succeed."""
+    if callable(resume_fn):
+        with _lock:
+            _resume_queue.setdefault(platform, []).append(resume_fn)
+
+
+def _resume_pending(platform: str) -> list:
+    with _lock:
+        pending = _resume_queue.pop(platform, [])
+    results = []
+    for fn in pending:
+        try:
+            results.append({"ok": True, "result": fn()})
+        except Exception as exc:  # resume failure is reported, never hidden
+            results.append({"ok": False, "error": type(exc).__name__})
+    if results:
+        _set(platform, resumed=results)
+    return results
 
 WATCH_INTERVAL = 10       # 登录态探测周期（秒）
 WATCH_TIMEOUT = 60 * 15   # 单个恢复任务最长守候15分钟
@@ -167,6 +211,15 @@ def _resolve_recovery_profile(platform: str):
     if not profile:
         return None, "RECOVERY_PLATFORM_NOT_CONFIGURED"
     resolved = dict(profile)
+    if platform in _REGISTERED_WORKER_PLATFORMS:
+        try:
+            from .human_browser import registered_browser_worker_spec
+            spec = registered_browser_worker_spec(platform)
+            resolved["port"] = int(spec["port"])
+            resolved["profile"] = spec["profile"]
+            resolved["cdp_url"] = f"http://127.0.0.1:{int(spec['port'])}"  # attach to the registered background worker; never launch a visible fallback
+        except Exception:
+            return None, "RECOVERY_WORKER_NOT_REGISTERED"
     if platform != _XHS_RECOVERY_PLATFORM and (
             resolved.get("port") == 9222
             or str(resolved.get("profile") or "").casefold() == "edge-cdp-newaccount"):
@@ -356,6 +409,7 @@ def _open_and_watch(platform: str, kind: str):
                 _set(platform, state=AUTH_VALID, recovered_at=time.time(),
                      message="检测到采集浏览器仍处于登录态，直接恢复，无需扫码",
                      steps={"open": True, "scan": True, "done": True})
+                _resume_pending(platform)
                 return
         except Exception:
             pass
@@ -407,6 +461,7 @@ def _open_and_watch(platform: str, kind: str):
                 _set(platform, state=AUTH_VALID, recovered_at=time.time(),
                       message="登录态已恢复，自动解除暂停并续采",
                       steps={"open": True, "scan": True, "done": True})
+                _resume_pending(platform)
                 return
         elif present and not last_fp:
             _set(platform, state=SCANNED)
@@ -534,6 +589,7 @@ def check_recovery(platform: str) -> dict:
         risk_controller.mark_recovered(platform)
         _set(platform, state=AUTH_VALID, recovered_at=time.time(),
              message="检测到登录态已恢复", steps={"open": True, "scan": True, "done": True})
+        _resume_pending(platform)
     return {"success": True, "recovered": recovered, "status": status,
             "status_cn": STATE_CN.get(status, status)}
 

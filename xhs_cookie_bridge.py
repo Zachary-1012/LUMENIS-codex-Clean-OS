@@ -1000,6 +1000,15 @@ def sync(keywords=None, max_scroll=6, account=None):
         except Exception:
             pass
         results.append({'stage':'blocked','reason':top_block,'detail':blocked_summary})
+        if top_block=='LOGIN_REQUIRED' and not is_test_mode():
+            # PO rule 2026-10-13 #1: in-product login popup, then resume this task.
+            try:
+                from lumenis.adapters import auth_recovery as _ar
+                _ar.register_resume('xiaohongshu', lambda _k=list(keywords), _s=max_scroll, _a=account: sync(keywords=_k, max_scroll=_s, account=_a))
+                _ar.request_recovery('xiaohongshu', 'LOGIN_REQUIRED', blocked_summary)
+                results.append({'stage':'auth_recovery','status':'LOGIN_POPUP_REQUESTED','resume':'queued'})
+            except Exception as _exc:
+                results.append({'stage':'auth_recovery','status':'FAILED','error':type(_exc).__name__})
     inserted=updated=rejected=0
     query_by_keyword = {q.keyword: q for q in query_plan.queries}
     persisted_by_keyword = {}
