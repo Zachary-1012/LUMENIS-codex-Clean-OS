@@ -137,7 +137,7 @@ accessibility coverage remains required, including narrow screens.
 
 Build the full task-based UI with original identity/icons, illustration, genuine
 operation videos, usable UX and applicable AIGC/motion. Preserve existing motion;
-the added result reveal is independently selectable/skippable. Follow Experience
+the added result reveal is independently selectable/skippable; it runs only for a new persisted result after app-bundled fonts and paragraph layout are ready, and is skipped for unregistered dynamic fonts. Follow Experience
 Constitution. Update existing screen specs with sketch additions; coverage remains complete;
 44 is not a page-count/navigation/scope ceiling.
 Connect available backend contracts immediately. Unavailable ones stay honestly
@@ -153,7 +153,7 @@ and external effects retain their own approval boundaries. Exact provenance:
 
 Retain all approved whole-product research and principles in their current owners:
 source/material -> bounded adoption -> existing owner/caller -> real outcome.
-Current asynchronous chat adoption is in LOOP-PLAN-20261014/product-plan-full.md §16. This includes frontend usability/visual references,
+Chat/agent engineering adoption: LOOP-PLAN-20261014/product-plan-full.md §§16–17. This includes frontend usability/visual references,
 industry cases, DeepSeek/ancestor inputs, REA adaptations and Math/AI research.
 The existing material/adoption records distinguish unread, missing, adopted,
 implemented and verified; a directory, six owner labels or a summary cannot prove
