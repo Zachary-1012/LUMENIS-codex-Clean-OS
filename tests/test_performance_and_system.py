@@ -113,7 +113,7 @@ class TestSystemFaultLocalization:
         from app import app
         app.config["TESTING"] = True
         client = app.test_client()
-        auth = base64.b64encode(b"Zachary:Zachary01").decode()
+        auth = base64.b64encode((os.environ.get('LUMENIS_TEST_AUTH_USER','Zachary')+':'+os.environ.get('LUMENIS_TEST_AUTH_PASS','test-only-pass')).encode()).decode()
         client.environ_base["HTTP_AUTHORIZATION"] = f"Basic {auth}"
         resp = client.get("/api/system/runtime-workers")
         assert resp.status_code == 200
@@ -129,7 +129,7 @@ class TestSystemFaultLocalization:
         from app import app
         app.config["TESTING"] = True
         client = app.test_client()
-        auth = base64.b64encode(b"Zachary:Zachary01").decode()
+        auth = base64.b64encode((os.environ.get('LUMENIS_TEST_AUTH_USER','Zachary')+':'+os.environ.get('LUMENIS_TEST_AUTH_PASS','test-only-pass')).encode()).decode()
         client.environ_base["HTTP_AUTHORIZATION"] = f"Basic {auth}"
         resp = client.get("/api/system/domains")
         assert resp.status_code == 200

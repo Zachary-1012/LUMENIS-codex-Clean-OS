@@ -132,6 +132,64 @@ def collection_policy_gate(account=None, region='intl'):
     return rednote_policy.collection_gate(account=requested, region=region)
 
 
+
+_TAIKOO_MARKERS = ('广州太古汇', 'taikoo hui guangzhou', 'guangzhou taikoo hui')
+
+
+def _verify_note_for_query(note, query):
+    """Verify a note against the registered Subject that produced its keyword.
+
+    Taikoo Hui keeps its location verifier; any other registered subject is
+    verified by its own registered alias appearing in the note text.
+    """
+    title = note.get('title', '') or ''
+    content = note.get('content', '') or ''
+    keyword = str(getattr(query, 'keyword', '') or note.get('source_keyword') or '')
+    if any(m in keyword.lower() for m in _TAIKOO_MARKERS):
+        return ai_analyzer.verify_taikoo_location(title, content)
+    if not keyword:
+        return False, 'no registered subject for note'
+    text = f"{title}\n{content}".lower()
+    if keyword.lower() in text:
+        return True, f'registered alias matched: {keyword}'
+    return False, f'registered alias not in note: {keyword}'
+
+_AUTO_PLAN_CURSOR_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'private', 'xhs_auto_plan_cursor.json')
+
+
+def _load_plan_cursor():
+    try:
+        with open(_AUTO_PLAN_CURSOR_FILE, 'r', encoding='utf-8') as f:
+            value = json.load(f)
+        return value if isinstance(value, dict) else None
+    except Exception:
+        return None
+
+
+def _save_plan_cursor(cursor):
+    try:
+        os.makedirs(os.path.dirname(_AUTO_PLAN_CURSOR_FILE), exist_ok=True)
+        if cursor:
+            with open(_AUTO_PLAN_CURSOR_FILE, 'w', encoding='utf-8') as f:
+                json.dump(dict(cursor), f, ensure_ascii=False)
+        elif os.path.exists(_AUTO_PLAN_CURSOR_FILE):
+            os.remove(_AUTO_PLAN_CURSOR_FILE)
+    except Exception:
+        pass
+
+
+def _resolve_registry_page(keywords=None):
+    """Registry-wide plan that advances through every page across runs."""
+    from lumenis.system.collector.acquisition_plan import build_acquisition_plan
+    if keywords is not None:
+        return build_acquisition_plan(keywords)
+    cursor = _load_plan_cursor()
+    try:
+        plan = build_acquisition_plan(None, continuation=cursor) if cursor else build_acquisition_plan(None)
+    except Exception:
+        plan = build_acquisition_plan(None)
+    return plan
+
 def _resolve_acquisition_plan(
     keywords=None, *, context_mode='GLOBAL_ALL', domain_id=None,
     subject_id=None, brand_focus_id=None,
@@ -752,9 +810,14 @@ def _adaptive_cool_minutes():
     except Exception:
         return 60
 
+def risk_gating_enabled():
+    """风控闸门总开关 COLLECTION_RISK_GATING：研发期默认 off（不限速/不熔断/不冷却），闭环前设 on。"""
+    return os.environ.get('COLLECTION_RISK_GATING','off').strip().lower() in ('1','on','true','yes')
+
 def is_test_mode():
-    """测试模式：环境变量 XHS_TEST_MODE=1 时跳过冷却/新账号保护/熔断拦截，端到端测试期使用"""
-    return os.environ.get('XHS_TEST_MODE','').strip() in ('1','true','TRUE','yes')
+    """XHS_TEST_MODE=1 或风控闸门关闭（研发期默认）时跳过冷却/新账号保护/熔断拦截"""
+    return (os.environ.get('XHS_TEST_MODE','').strip() in ('1','true','TRUE','yes')
+            or not risk_gating_enabled())
 
 def select_account(account_name: str):
     """双子星库 Contract：选择小红书采集身份（硬白名单 ACCOUNT_PROFILES）。
@@ -832,8 +895,25 @@ def sync(keywords=None, max_scroll=6, account=None):
             'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
             'finished_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
+    # Typed persistence: the XHS writer persists CTH scope only. Non-CTH (BMP)
+    # queries are deferred (reported, not dropped silently) instead of blocking
+    # every CTH target in the same plan.
+    deferred_queries = [q for q in query_plan.queries if q.domain_id != 'CTH']
+    if deferred_queries:
+        import dataclasses as _dc
+        _cth = tuple(q for q in query_plan.queries if q.domain_id == 'CTH')
+        query_plan = _dc.replace(query_plan, queries=_cth)
+        if not _cth and keywords is None:
+            # Page held only deferred BMP targets: collect the CTH registry page instead of idling.
+            from lumenis.system.collector.acquisition_plan import build_acquisition_plan as _bap
+            import subject_registry as _sr
+            query_plan = _bap(None, registry_loader=lambda: _sr.list_subjects('CTH'))
+        query_plan_payload = dict(query_plan_payload or {})
+        query_plan_payload['deferred_non_cth'] = [
+            {'keyword': q.keyword, 'domain_id': q.domain_id,
+             'reason': 'XHS_TYPED_SCOPE_IMPORT_REQUIRED'} for q in deferred_queries]
     plan_domains = {query.domain_id for query in query_plan.queries}
-    if any(domain != 'CTH' for domain in plan_domains):
+    if not plan_domains or any(domain != 'CTH' for domain in plan_domains):
         return {
             'ok': False, 'task_state': 'BLOCKED', 'state_counts': {},
             'keywords': list(query_plan.keywords), 'raw_unique': 0,
@@ -929,10 +1009,24 @@ def sync(keywords=None, max_scroll=6, account=None):
         except Exception:
             pass
         results.append({'stage':'blocked','reason':top_block,'detail':blocked_summary})
+        if top_block=='LOGIN_REQUIRED' and not is_test_mode():
+            # PO rule 2026-10-13 #1: in-product login popup, then resume this task.
+            try:
+                from lumenis.adapters import auth_recovery as _ar
+                _rec = _ar.request_recovery('xiaohongshu', 'LOGIN_REQUIRED', blocked_summary)
+                if isinstance(_rec, dict) and _rec.get('success'):
+                    # Resume re-enters the guarded task path (admission, rate limit, policy).
+                    _ar.register_resume('xiaohongshu', lambda _k=list(keywords), _s=max_scroll, _a=account: create_task(keywords=_k, max_scroll=_s, run_type='manual', account=_a))
+                    results.append({'stage':'auth_recovery','status':'LOGIN_POPUP_REQUESTED','resume':'queued'})
+                else:
+                    results.append({'stage':'auth_recovery','status':'RECOVERY_UNAVAILABLE','error':(_rec or {}).get('error') if isinstance(_rec, dict) else None})
+            except Exception as _exc:
+                results.append({'stage':'auth_recovery','status':'FAILED','error':type(_exc).__name__})
     inserted=updated=rejected=0
+    query_by_keyword = {q.keyword: q for q in query_plan.queries}
     persisted_by_keyword = {}
     for n in raw.values():
-        ok,reason=ai_analyzer.verify_taikoo_location(n.get('title',''),n.get('content',''))
+        ok,reason=_verify_note_for_query(n, query_by_keyword.get(n.get('source_keyword')))
         n['is_taikoo_verified']=1 if ok else 0; n['verify_reason']=reason; n['source_platform']='xhs'
         if not ok: rejected+=1; continue
         n['captured_at']=str(n.get('captured_at') or n.get('collected_at') or datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -1061,7 +1155,8 @@ def create_task(keywords=None,max_scroll=6,run_type='manual',account=None):
         raise ValueError("run_type must be 'manual' or 'auto'")
 
     # Resolve registry-owned scope before account/profile/rate-limit work.
-    query_plan = _resolve_acquisition_plan(keywords)
+    query_plan = (_resolve_registry_page(keywords) if run_type == 'auto'
+                  else _resolve_acquisition_plan(keywords))
     if not query_plan.is_runnable:
         raise RuntimeError(
             f"采集计划未就绪：{query_plan.reason_code or query_plan.reason or 'ACQUISITION_PLAN_BLOCKED'}"
@@ -1115,6 +1210,8 @@ def create_task(keywords=None,max_scroll=6,run_type='manual',account=None):
         guard_msg = '（测试模式：已旁路冷却/新账号保护）' if is_test_mode() else ''
     type_label = '手动触发' if run_type == 'manual' else '自动采集'
     if not _lock.acquire(blocking=False): raise RuntimeError('已有小红书 Cookie 同步任务运行中')
+    if run_type == 'auto':
+        _save_plan_cursor(getattr(query_plan, 'next_cursor', None))  # advance only after admission
     task_id=f"xhs-{datetime.now():%Y%m%d%H%M%S}-{int(time.time()*1000)%1000:03d}"
     _tasks[task_id]={
         'task_id':task_id,'status':'running','progress':5,'run_type':run_type,

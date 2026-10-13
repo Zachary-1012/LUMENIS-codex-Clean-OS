@@ -8,7 +8,7 @@ except Exception:
 import requests
 B = 'http://127.0.0.1:8201'
 s = requests.Session()
-r = s.post(B + '/v4/auth/login', json={'username': 'Zachary', 'password': 'Zachary01'}, timeout=10)
+r = s.post(B + '/v4/auth/login', json={'username': 'Zachary', 'password': os.environ.get('LUMENIS_TEST_AUTH_PASS', 'test-only-pass')}, timeout=10)
 d = r.json()
 print('登录:', d.get('success'))
 tok = d.get('token', '')

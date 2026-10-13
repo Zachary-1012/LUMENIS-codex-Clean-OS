@@ -81,7 +81,7 @@ r = jpost("/v4/auth/login", {"username":"Zachary","password":"wrong"})
 check("错误密码登录失败", r.status_code == 200 and r.get_json().get("success") is False)
 
 # 8) 主账号登录
-r = jpost("/v4/auth/login", {"username":"Zachary","password":"Zachary01"})
+r = jpost("/v4/auth/login", {"username":"Zachary","password":os.environ.get('LUMENIS_TEST_AUTH_PASS', 'test-only-pass')})
 d = r.get_json(); owner_token = d.get("token","")
 check("主账号 Zachary 登录成功", d.get("success") is True and d["user"]["role"]=="owner", str(d.get("user")))
 

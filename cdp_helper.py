@@ -13,7 +13,7 @@ import ntpath
 logger = logging.getLogger(__name__)
 
 # 默认配置
-DEFAULT_CDP_PORT = 9222
+DEFAULT_CDP_PORT = 9223
 DEFAULT_EDGE_PATHS = [
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
@@ -699,7 +699,7 @@ class CDPBrowserContext:
     CDP浏览器上下文管理器：自动启动→使用→自动关闭
     
     用法：
-        with CDPBrowserContext(port=9222) as browser:
+        with CDPBrowserContext(port=9223) as browser:
             if browser['available']:
                 # 执行采集任务
                 do_collect()
@@ -828,7 +828,7 @@ if __name__ == "__main__":
     
     # 测试上下文管理器
     print("\n测试上下文管理器...")
-    with CDPBrowserContext(port=9222, auto_start=True, auto_close=True) as browser:
+    with CDPBrowserContext(port=9223, auto_start=True, auto_close=True) as browser:
         print(f"浏览器状态: {browser}")
         if browser['available']:
             print("执行采集任务...")

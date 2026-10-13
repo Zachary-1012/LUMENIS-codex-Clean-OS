@@ -228,7 +228,7 @@ def test_automatic_collection_startup_is_manual_without_full_opt_in(monkeypatch)
     monkeypatch.setenv('REDNOTE_AUTO_RUN', 'true')
     assert app._automatic_collection_opted_in() is False
 
-    monkeypatch.setenv('REDNOTE_AUTO_SCOPE', 'GUANGZHOU_TAIKOO_HUI')
+    monkeypatch.setenv('REDNOTE_AUTO_SCOPE', 'ALL_REGISTERED_SUBJECTS')
     monkeypatch.setenv('REDNOTE_AUTO_SOURCE', 'rednote_hk')
     monkeypatch.setenv('REDNOTE_AUTO_CADENCE_MINUTES', '720')
     assert app._automatic_collection_opted_in() is True
@@ -311,7 +311,7 @@ def test_manual_mode_suppresses_rednote_resident_until_explicit_auto_opt_in(monk
     assert events == ['scheduler']
 
     monkeypatch.setenv('REDNOTE_AUTO_RUN', 'true')
-    monkeypatch.setenv('REDNOTE_AUTO_SCOPE', 'GUANGZHOU_TAIKOO_HUI')
+    monkeypatch.setenv('REDNOTE_AUTO_SCOPE', 'ALL_REGISTERED_SUBJECTS')
     monkeypatch.setenv('REDNOTE_AUTO_SOURCE', 'rednote_hk')
     monkeypatch.setenv('REDNOTE_AUTO_CADENCE_MINUTES', '720')
     assert app._start_app_automations(args) is True

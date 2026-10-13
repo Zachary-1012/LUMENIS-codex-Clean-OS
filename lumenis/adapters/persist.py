@@ -523,7 +523,7 @@ SOCIAL_PLATFORMS = {
 }
 WEB_PLATFORMS = {
     "sogou_search", "google", "bing_search", "baidu_search",
-    "sogou_wechat", "doubao_search",
+    "sogou_wechat",
 }
 
 # 六态（与系统采集状态机一致，失败绝不写成“0条成功”）

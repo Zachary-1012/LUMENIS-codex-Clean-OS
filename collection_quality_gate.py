@@ -28,7 +28,7 @@ VALID_PLATFORMS = {
     "xiaohongshu", "xhs", "rednote", "douyin", "weibo", "bilibili",
     "zhihu", "instagram", "facebook", "dianping", "smzdm",
     "sogou_search", "google", "bing_search", "baidu_search",
-    "sogou_wechat", "doubao_search",
+    "sogou_wechat",
 }
 
 # 五步名称

@@ -28,7 +28,7 @@ approval_reference: Product Owner direct internal-browser repair approval
 - Constitution basis: controlled internal browser blueprint, separate personal browsing boundary, provenance and §36.
 - Product contract: SYSTEM browser capability supports controlled acquisition; it is not a user personal browser and does not authorize collection effects.
 - References: `KEEP_AS_EXPLORATION`; no external browser UI is copied.
-- Anti-template check: capability boundary + safe instance state composition, not a browser tab clone or generic dashboard.
+- Anti-template check: normal-browser use (address bar, back/forward/refresh, tabs, collapsible, modeled on OpenAI in-app browser) over server-owned sessions plus an optional view-original external jump; not a generic dashboard.
 - Current source decision: the bounded reader below is implemented; runtime,
   full accessibility and whole-screen real-user acceptance remain open. Revision 7
   has the bounded local-Web manual-note runtime evidence described below.

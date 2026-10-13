@@ -114,9 +114,9 @@ def _run_ai_off_tests():
         )
         check("zhipu status=DISABLED", provider_status("zhipu") == DISABLED, "")
         check("is_provider_available(zhipu)=False", is_provider_available("zhipu") is False, "")
-        check("ark status=LEGACY", provider_status("ark") == "LEGACY", "")
+        check("ark status=DISABLED", provider_status("ark") == "DISABLED", "")
         check("is_provider_available(ark)=False", is_provider_available("ark") is False, "")
-        check("qwen status=NOT_CONFIGURED", provider_status("qwen") == "NOT_CONFIGURED", "")
+        check("qwen status=DISABLED", provider_status("qwen") == "DISABLED", "")
         check("is_provider_available(qwen)=False", is_provider_available("qwen") == False, "")
         active = active_providers()
         check("active_providers excludes zhipu", "zhipu" not in active, f"active={active}")
@@ -188,12 +188,8 @@ def test_env_template_keeps_retired_product_provider_routes_disabled():
         'ARK_BASE_URL',
         'DASHSCOPE_BASE_URL',
     ):
-        assert f'{key}=\n' in template
-    assert 'SUPERSEDED / HISTORICAL ONLY' in open(
-        os.path.join(ROOT, '00-GOVERNANCE', 'AI_PROVIDER_FAILOVER_POLICY_V1.0.md'),
-        encoding='utf-8-sig',
-    ).read()
-
+        assert f'{key}=' not in template
+    assert not os.path.exists(os.path.join(ROOT, '00-GOVERNANCE', 'AI_PROVIDER_FAILOVER_POLICY_V1.0.md'))
 
 if __name__ == "__main__":
     ok = run_ai_off_tests()

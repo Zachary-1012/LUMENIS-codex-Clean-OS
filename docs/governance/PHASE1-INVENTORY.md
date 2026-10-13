@@ -141,7 +141,7 @@
 - **保留**：Flask、SQLite、原生 JS + 统一 CSS 层（不换 FastAPI/Django/React/Vue）。
 - **退出**：Selenium（0 使用）→ Browser 统一 Playwright Adapter。
 - **待定**：Docker/Compose（本机当前未安装 Docker）用于 Staging 隔离；未安装前以「独立端口+独立 venv+独立 DB+XHS_PRODUCTION=false」做轻量 Staging。
-- **AI**：Provider 化，业务只调 analyze/summarize/classify；当前正式 Runtime=Ollama（未运行时规则引擎兜底，已验证可脱 AI 跑）。
+- **AI**：Provider 化，业务只调 analyze/summarize/classify；当前正式 Runtime=序境自有模型（未训练前 AI 结果为 UNAVAILABLE，不调用第三方、不兜底）。
 
 ---
 

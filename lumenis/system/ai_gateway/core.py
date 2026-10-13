@@ -30,7 +30,6 @@ Product-owned inference is the sole AI-task route and stays explicitly
 unavailable until an approved runtime is bound.
 """
 import json, os, re, urllib.request
-from urllib.parse import urlsplit
 
 # ZBC Phase 7: module status markers
 MODULE_STATUS = 'ACTIVE_PRIMARY'
@@ -297,64 +296,6 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
     """Preserved two-tuple interface; use an admitted run_owned_request instead."""
     _set_call_meta(provider="provider_disabled", model=model or "")
     return None, "provider_disabled"
-
-class _LocalOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
-    """Do not let a loopback Ollama endpoint redirect image data elsewhere."""
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
-def _ollama_validate_loopback_base(base):
-    if not isinstance(base, str):
-        raise ValueError('Ollama endpoint must be loopback HTTP')
-    base = base.rstrip('/')
-    try:
-        parsed = urlsplit(base)
-        _ = parsed.port
-    except ValueError as exc:
-        raise ValueError('Ollama endpoint must be loopback HTTP') from exc
-    if (parsed.scheme != 'http' or parsed.hostname not in ('127.0.0.1', 'localhost', '::1')
-            or parsed.username or parsed.password or parsed.path not in ('', '/')
-            or parsed.query or parsed.fragment):
-        raise ValueError('Ollama endpoint must be loopback HTTP')
-    return base
-
-
-def _ollama_has_remote_metadata(data):
-    return any(
-        key in data and data[key] is not None and data[key] != ''
-        for key in ('remote_model', 'remote_host')
-    )
-
-
-def _ollama_model_source(model):
-    prefix, separator, suffix = model.rpartition(':')
-    suffix = suffix.strip().lower()
-    if separator and suffix in ('local', 'cloud'):
-        return prefix, suffix
-    if separator and '/' not in suffix and suffix.endswith('-cloud'):
-        return prefix, 'cloud'
-    return model, None
-
-
-def _ollama_local_transport_model(model):
-    if not isinstance(model, str) or not model.strip():
-        raise ValueError('Ollama local model is required')
-    model = model.strip()
-    model_ref, source = _ollama_model_source(model)
-    if source == 'cloud':
-        raise ValueError('Ollama cloud model refused')
-    if source == 'local':
-        if not model_ref or _ollama_model_source(model_ref)[1] is not None:
-            raise ValueError('Ollama nested model source refused')
-        return model_ref + ':local'
-    return model + ':local'
-
-
-def _ollama_vision_json(base, path, payload, timeout):
-    """Preserved signature; no retired HTTP/image transport is permitted."""
-    raise RuntimeError("RETIRED_PROVIDER_TRANSPORT_DISABLED")
-
 
 def _ollama_local_chat(system, user_text, image_base64, model, temperature, max_tokens,
                        response_schema=None, *, required_capability='vision', timeout_seconds=None):

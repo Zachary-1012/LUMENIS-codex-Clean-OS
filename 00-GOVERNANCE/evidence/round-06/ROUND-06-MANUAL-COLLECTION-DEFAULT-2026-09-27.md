@@ -4,7 +4,7 @@ Status: bounded SYSTEM Collector startup/policy change TESTED; ROUND 06 remains 
 
 ## Source behavior
 
-- REDNOTE_AUTO_RUN defaults false. An explicit opt-in also requires exact currently supported Subject GUANGZHOU_TAIKOO_HUI, source rednote_hk, and 720-minute cadence. Unknown, broad, partial or mismatched settings remain manual. The existing policy owner makes this decision.
+- REDNOTE_AUTO_RUN defaults false. An explicit opt-in also requires (superseded 2026-10-13 PR #36: scope is all registered subjects; GUANGZHOU_TAIKOO_HUI is one subject), source rednote_hk, and 720-minute cadence. Unknown, broad, partial or mismatched settings remain manual. The existing policy owner makes this decision.
 - The scheduler cannot call its collection planner, keepalive/session probe or scheduled task creation while manual. The XHS P0 resident is not started in manual mode or with --no-scheduler; its session probe and scan recovery therefore do not start through this app path. The bridge independently rejects run_type=auto before identity checks unless the same policy approves it. The manual task path remains available behind its existing identity/Permission policy.
 - scripts/start_production.ps1 still ensures the allowlisted HK collector browser and general browser are available. That launcher does not itself start a collection task; this Batch did not run or change it. Browser availability is not evidence of acquisition, authorization or a finished manual-click experience.
 

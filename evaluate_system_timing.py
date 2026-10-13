@@ -12,7 +12,7 @@ from datetime import datetime
 from lumenis.shared.database import get_repository
 
 BASE_URL = "http://127.0.0.1:8200"
-AUTH = base64.b64encode(b'Zachary:Zachary01').decode()
+AUTH = base64.b64encode((os.environ.get('LUMENIS_TEST_AUTH_USER','Zachary')+':'+os.environ.get('LUMENIS_TEST_AUTH_PASS','test-only-pass')).encode()).decode()
 HEADERS = {'Authorization': f'Basic {AUTH}'}
 
 def api_call(path, timeout=10):

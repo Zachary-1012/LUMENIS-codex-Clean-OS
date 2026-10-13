@@ -207,7 +207,7 @@ class TestICAPISmoke:
         # CI has no .env by design; the suite-wide test credentials are injected
         # into os.environ by conftest before app import.
         _u = os.environ.get("TAIKOO_AUTH_USER", env.get("TAIKOO_AUTH_USER", "zachary"))
-        _p = os.environ.get("TAIKOO_AUTH_PASSWORD", env.get("TAIKOO_AUTH_PASSWORD", "Zachary01"))
+        _p = os.environ.get("TAIKOO_AUTH_PASSWORD", env.get("TAIKOO_AUTH_PASSWORD", os.environ.get('LUMENIS_TEST_AUTH_PASS', 'test-only-pass')))
         _tok = base64.b64encode(("%s:%s" % (_u, _p)).encode()).decode()
         c = app_mod.app.test_client()
         c.environ_base["HTTP_AUTHORIZATION"] = "Basic " + _tok

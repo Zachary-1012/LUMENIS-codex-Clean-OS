@@ -19,85 +19,15 @@ DISABLED = "DISABLED"
 REMOVE_CANDIDATE = "REMOVE_CANDIDATE"
 NOT_CONFIGURED = "NOT_CONFIGURED"
 
-# Product-owner retirement gate. Keep adapter interfaces available for
-# compatibility and isolated mocked tests; production callers cannot promote
-# these providers through discovery, probe results or status mutation.
-RETIRED_PROVIDERS = frozenset({"zhipu", "ollama", "lmstudio", "llama_cpp"})
-# ARK/Doubao adapters remain importable for historical compatibility, but
-# runtime status mutation must never promote them back into a product route.
-COMPATIBILITY_ONLY_PROVIDERS = frozenset({"ark"})
+# PO: only owned 序境 models; every third-party provider name is denied.
+RETIRED_PROVIDERS = frozenset({"zhipu", "ollama", "lmstudio", "llama_cpp", "ark", "qwen", "openai", "deepseek"})
+COMPATIBILITY_ONLY_PROVIDERS = frozenset()
 
 # Canonical Provider Registry
 PROVIDER_REGISTRY: Dict[str, Dict] = {
-    "zhipu": {
-        "status": DISABLED,
-        "role": "retired",
-        "models": ["glm-4.5-air", "glm-5.3", "glm-4.6v", "web-search-pro"],
-        "env_key": "ZHIPU_API_KEY",
-        "description": "已停用；兼容适配器保留",
-    },
-    "ollama": {
-        "status": DISABLED,
-        "role": "retired",
-        "models": ["local-model"],
-        "env_key": None,
-        "probe_url_env": "OLLAMA_BASE_URL",
-        "probe_url_default": "http://127.0.0.1:11434",
-        "probe_path": "/api/tags",
-        "description": "已停用；兼容适配器保留",
-    },
-    "lmstudio": {
-        "status": DISABLED,
-        "role": "retired",
-        "models": ["local-model"],
-        "env_key": None,
-        "probe_url_env": "LMSTUDIO_BASE_URL",
-        "probe_url_default": "http://127.0.0.1:1234",
-        "probe_path": "/v1/models",
-        "description": "已停用；兼容适配器保留",
-    },
-    "llama_cpp": {
-        "status": DISABLED,
-        "role": "retired",
-        "models": ["local-model"],
-        "env_key": None,
-        "probe_url_env": "LLAMA_CPP_BASE_URL",
-        "probe_url_default": "http://127.0.0.1:8080",
-        "probe_path": "/v1/models",
-        "description": "已停用；兼容适配器保留",
-    },
-    "ark": {
-        "status": LEGACY,
-        "role": "compatibility_only",
-        "models": ["doubao-seed-evolving-latest-version"],
-        "env_key": "ARK_API_KEY",
-        "description": "Legacy adapter retained for compatibility; not an Owned Gateway fallback",
-    },
-    "doubao": {
-        "status": LEGACY,
-        "role": "compatibility_only",
-        "alias_of": "ark",
-        "env_key": "ARK_API_KEY",
-        "description": "Legacy alias retained for compatibility; not an Owned Gateway route",
-    },
-    "qwen": {
-        "status": NOT_CONFIGURED,
-        "role": "cloud_standby",
-        "env_key": "DASHSCOPE_API_KEY",
-        "description": "qwen L3 standby V1.0 (no key configured)",
-    },
-    "openai": {
-        "status": DISABLED,
-        "role": "deprecated",
-        "env_key": "OPENAI_API_KEY",
-        "description": "已禁用。V2 收敛后不再作为可选 Provider。",
-    },
-    "deepseek": {
-        "status": DISABLED,
-        "role": "deprecated",
-        "env_key": "DEEPSEEK_API_KEY",
-        "description": "已禁用。V2 收敛后不再作为可选 Provider。",
-    },
+    name: {"status": DISABLED, "role": "denied_third_party", "env_key": None,
+           "description": "第三方模型，PO 规定只用自有序境模型，禁止调用与兜底"}
+    for name in sorted(RETIRED_PROVIDERS)
 }
 
 
@@ -114,7 +44,7 @@ def provider_status(name: str) -> str:
 
 def _canonical_name(name: str) -> str:
     key = str(name or "").lower().strip().split(":", 1)[0]
-    return {"glm": "zhipu", "doubao": "ark"}.get(key, key)
+    return {"glm": "zhipu", "doubao": "ark", "dashscope": "qwen"}.get(key, key)
 
 
 def is_provider_retired(name: str) -> bool:

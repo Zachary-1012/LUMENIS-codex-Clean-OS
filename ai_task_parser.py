@@ -160,7 +160,15 @@ _ENTITY_PATTERNS = {
 
 def _extract_entities(text: str) -> Dict[str, List[str]]:
     entities: Dict[str, List[str]] = {}
-    for etype, pattern in _ENTITY_PATTERNS.items():
+    patterns = dict(_ENTITY_PATTERNS)
+    try:
+        from subject_registry import registered_subject_names
+        names = sorted(registered_subject_names(), key=len, reverse=True)
+        if names:
+            patterns["brand"] = re.compile("(" + "|".join(re.escape(n) for n in names) + ")", re.IGNORECASE)
+    except Exception:
+        pass
+    for etype, pattern in patterns.items():
         matches = pattern.findall(text)
         if matches:
             # 去重保序

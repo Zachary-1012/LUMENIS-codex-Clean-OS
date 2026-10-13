@@ -89,7 +89,6 @@ def test_known_runtime_callers_use_shared_database_owner():
         "database_migrations.py",
         "runtime_guardian.py",
         "ai_task_engine.py",
-        "ark_llm.py",
         "intelligence_library_api.py",
         "badge_api.py",
         "data_center_api.py",

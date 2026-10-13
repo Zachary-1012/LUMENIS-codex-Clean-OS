@@ -16,7 +16,6 @@ def isolated_database(tmp_path, monkeypatch):
     monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
 
     import database
-    import ark_llm
     import auth_recovery_center
     import kos_engine
     import kos_ops
@@ -33,7 +32,7 @@ def isolated_database(tmp_path, monkeypatch):
     # These schemas are still initialized by their transitional module owners.
     # Bind each current initializer to the same disposable repository so this
     # test proves coverage without treating a fixture as Production Truth.
-    for module in (ark_llm, auth_recovery_center, kos_engine, kos_ops, kos_paid, podcast_store):
+    for module in (auth_recovery_center, kos_engine, kos_ops, kos_paid, podcast_store):
         monkeypatch.setattr(module, "get_repository", lambda: repository)
 
     monkeypatch.setattr(kos_engine, "_KOS_SCHEMA_ENSURED", False)
@@ -47,7 +46,6 @@ def isolated_database(tmp_path, monkeypatch):
     connection.close()
 
     podcast_store.init_db()
-    assert ark_llm.load_daily_token() == 0
     auth_recovery_center.AuthRecoveryCenter()._ensure_table()
 
     with sqlite3.connect(db_path) as connection:
@@ -84,7 +82,7 @@ class TestDatabase:
         required_tables = [
             'notes', 'note_comments', 'events', 'daily_reports',
             'kos_profiles', 'kos_paid_plans', 'kos_operations',
-            'podcast_entities', 'token_stat', 'auth_recovery_tasks',
+            'podcast_entities', 'auth_recovery_tasks',
         ]
 
         for table in required_tables:

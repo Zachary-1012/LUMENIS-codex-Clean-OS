@@ -1,6 +1,6 @@
 # Z-Brand Core scheduled-task installer (idempotent; uses non-elevated schtasks, safe to re-run).
 # Creates:
-#   ZBrand-HealthGuard   every 5 min  -> idempotently re-raise 8201 supervisor + 9222 Edge CDP
+#   ZBrand-HealthGuard   every 5 min  -> idempotently re-raise 8201 supervisor + 9223-9228 headless collectors
 #   ZBrand-GitSync-0800  daily 08:00  -> safe source save + rebase + push (no secrets ever)
 #   ZBrand-GitSync-1800  daily 18:00
 #   ZBrand-GitSync-0000  daily 00:00

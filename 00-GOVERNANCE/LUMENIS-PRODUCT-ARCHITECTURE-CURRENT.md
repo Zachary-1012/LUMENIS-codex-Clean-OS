@@ -113,7 +113,7 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 #### 8. 内置浏览器：在原工作中查阅和操作网页
 
 - **入口：** 点击原帖/引用的“查看原文”，或从现有浏览器入口打开获准网址。不需要先建立 CTH/BMP 任务，也不会因此启动通用电脑控制。
-- **操作：** 查看真实网页，前进后退、选择链接、按允许范围操作；清楚看到加载、登录/验证、受限、失败或已停止。用户明确选择人工接管时获得独占控制，可停止并返回原工作；外部浏览器是明确可选动作。
+- **操作：** 内置浏览器像普通浏览器一样使用（参照 OpenAI 应用内浏览器）：地址栏、前进后退、刷新、多标签页、可折叠；采集在系统后台运行，登录/查看/点击等页面操作都在内置浏览器内；登录失效时所有平台都弹产品内登录窗口，登录后任务续跑。用户明确选择人工接管时获得独占控制，可停止并返回原工作；外部浏览器只作用户可选的查看原文跳转，不采集。
 - **系统处理：** 复用唯一受控浏览器会话、动作与真实画面通道，保持身份/权限、人工接管租约、取消及恢复。自动采集静默后台运行，不自行弹窗；不读取个人日常浏览器身份，不绕过站点登录或挑战。
 - **成果：** 能核对实际原文并完成获准网页步骤；若用户选择保存网页资料/笔记，则走既有资料与成果合同。浏览页面本身不等于正式采集、来源权益已审定或外部操作成功。
 - **保存与恢复：** 返回时恢复原任务、筛选、选择和阅读位置；获准保存的笔记/引用可重开修订。会话中断时保留任务和已保存成果，重新核实登录/权限后继续，不能假称过期会话已恢复。
@@ -512,7 +512,7 @@ Current provider and engineering roles (2026-10-01/02):
   held-out business evaluation; existing/free resources first. Codex Cloud
   configuration is not proof of production inference or free GPU capacity.
 - Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are stopped in product
-  and development. Retain interfaces/history; no calls, probes, auto-discovery,
+  and development; calling code deleted; no calls, probes, auto-discovery,
   fallback or reactivation. Jev is an inactive historical typed candidate,
   not a prerequisite or default comparison provider.
 - Owned AI must prove understanding, reasoning, original creation, tools,
@@ -736,7 +736,7 @@ Product Owner 直接更正（2026-10-11复核为既有要求，不另建权重�
 
 自动采集继续无头后台运行，人工登录/验证/接管必须由用户明确发起，复用获准的隔离身份。普通浏览不用 AI；AI 可在相同会话与权限内增强网页理解和受控步骤。用户可停止或独占接管，返回恢复原任务、范围、选中来源和草稿。浏览动作与正式 Source/Evidence 接收分别处理，只有获准保存才生成相应资料/成果版本。
 
-保留明确的外部浏览器选项；禁止自动外弹、读取个人浏览器档案、暴露 raw CDP、绕过网页安全限制，不能简单删除 loopback 防护冒称 Web 可用。无需通用桌面/OS executor，不安装 Agent Zero GUI 来满足本链。Website、Web、Windows/macOS Desktop 与 iOS Mobile 并行构建并按端独立核验。模型/远端工作机/部署可用性各自据实，不因类比 ChatGPT 承诺关机后持续运行。
+外部浏览器只作用户可选的查看原文跳转，不用于采集、登录或交互；禁止自动外弹、读取个人浏览器档案、暴露 raw CDP、绕过网页安全限制，不能简单删除 loopback 防护冒称 Web 可用。无需通用桌面/OS executor，不安装 Agent Zero GUI 来满足本链。Website、Web、Windows/macOS Desktop 与 iOS Mobile 并行构建并按端独立核验。模型/远端工作机/部署可用性各自据实，不因类比 ChatGPT 承诺关机后持续运行。
 
 工程参考（2026-10-11 核读）：[OpenAI browser environment integration](https://developers.openai.com/api/docs/guides/tools-computer-use-integration#prepare-an-environment) 提供会话保持、浏览器自动化和画面获取的公开实践；[ChatGPT cloud browser](https://help.openai.com/en/articles/20001280-using-cloud-browser-in-chatgpt) 说明独立会话、人工接管和网站/重要动作授权。这里只采用适用的公开原则，不宣称取得 ChatGPT 私有实现，不将其云电脑/付费资源带入序境。
 

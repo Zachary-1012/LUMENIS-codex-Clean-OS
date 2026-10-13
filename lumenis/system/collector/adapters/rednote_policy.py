@@ -31,13 +31,13 @@ _DEFAULT_KIND_ENABLED = {
 # 当前生产边界由最新运行指令冻结为：仅使用香港/国际账号，内地暂停。
 DEFAULT_PRIMARY_REGION = "intl"
 DEFAULT_COLLECTION_ACCOUNT = "XHS_RETINAUT"
-POLICY_VERSION = "rednote-hk-only-v1"
+POLICY_VERSION = "rednote-hk-only-v2-all-registered"  # v2: auto scope = all active registered subjects (PO 2026-10-13)
 CN_PAUSED = True
 
 # Automatic collection is only supported for the existing narrow scheduler
 # contract. These values must be explicitly configured together with
 # REDNOTE_AUTO_RUN; missing, broad, or mismatched configuration stays manual.
-AUTO_COLLECTION_SCOPE = "GUANGZHOU_TAIKOO_HUI"
+AUTO_COLLECTION_SCOPE = "ALL_REGISTERED_SUBJECTS"  # PO 2026-10-13: every active registered Subject/BrandFocus; targets come from acquisition_plan registry
 AUTO_COLLECTION_SOURCE = "rednote_hk"
 AUTO_COLLECTION_CADENCE_MINUTES = 720
 

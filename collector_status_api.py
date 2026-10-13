@@ -31,7 +31,7 @@ PLATFORMS = [
     "xiaohongshu", "weibo", "bilibili", "zhihu",
     "douyin", "x", "instagram", "jiguang",
     "sogou_wechat", "sogou_search",
-    "baidu_search", "bing_search", "google", "doubao_search",
+    "baidu_search", "bing_search", "google",
     "smzdm", "dianping", "facebook",
 ]
 
@@ -42,7 +42,7 @@ PLATFORM_DISPLAY = {
     "instagram": "Instagram", "jiguang": "极光",
     "sogou_wechat": "搜狗微信", "sogou_search": "搜狗搜索",
     "baidu_search": "百度搜索", "bing_search": "必应搜索",
-    "google": "谷歌搜索", "doubao_search": "豆包搜索",
+    "google": "谷歌搜索",
     "smzdm": "什么值得买", "dianping": "大众点评", "facebook": "Facebook",
 }
 

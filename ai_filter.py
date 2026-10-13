@@ -139,8 +139,13 @@ def detect_noise_type(title, content):
 
     # 3. 虽然通过主体过滤但主题偏离
     # （主体过滤只看关键词，AI二次判断看语义）
-    taikoo_context_words = ['太古汇', '广州太古汇', '天河太古汇', '石牌桥', '天河路383']
-    has_taikoo_direct = any(w in text for w in taikoo_context_words)
+    # Context = any active registered subject (Taikoo Hui is one of them), not a hardcoded venue.
+    try:
+        from subject_registry import registered_subject_names
+        subject_context_words = list(registered_subject_names())
+    except Exception:
+        subject_context_words = []
+    has_taikoo_direct = any(w and w.lower() in text.lower() for w in subject_context_words)
     if not has_taikoo_direct and char_count < 100:
         # 只有品牌名没有太古汇上下文，且内容短，可能偏离
         return 'irrelevant', '缺少广州太古汇上下文语境'
@@ -242,18 +247,18 @@ def _ai_deep_review(note, quality_score):
     title = note.get('title', '') or ''
     content = note.get('content', '') or ''
 
-    system = '''你是广州太古汇舆情监测系统的AI二次审核员。
-你的任务：对已经通过"广州太古汇"关键词主体过滤的笔记，做深度语义相关性判断。
+    system = '''你是该笔记所属的登记主体（见 source_keyword）舆情监测系统的AI二次审核员。
+你的任务：对已经通过"该笔记所属的登记主体（见 source_keyword）"关键词主体过滤的笔记，做深度语义相关性判断。
 
 判断标准：
-1. accepted：内容确实在讨论广州太古汇（体验、活动、店铺、服务、事件等）
-2. rejected：虽然出现了关键词，但实际主题不是广州太古汇（如：只是提到地名、广告引流、无关讨论、重复搬运）
+1. accepted：内容确实在讨论该笔记所属的登记主体（见 source_keyword）（体验、活动、店铺、服务、事件等）
+2. rejected：虽然出现了关键词，但实际主题不是该笔记所属的登记主体（见 source_keyword）（如：只是提到地名、广告引流、无关讨论、重复搬运）
 
 输出严格JSON：
 {"status":"accepted|rejected","reason":"不超过50字","confidence":0-1,"insight":"不超过80字的舆情洞察"}
 
 注意：
-- 单一用户的投诉/体验分享，如果确实发生在广州太古汇，应该accepted
+- 单一用户的投诉/体验分享，如果确实发生在该笔记所属的登记主体（见 source_keyword），应该accepted
 - 营销广告、代购引流、无意义内容，应该rejected
 - 不要因为内容负面就rejected，负面真实体验也是有效舆情
 '''

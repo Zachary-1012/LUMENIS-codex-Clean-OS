@@ -1,0 +1,439 @@
+
+## 1 SUBJECT_WORDS / EXCLUDE 定义与引用
+   14  subject_rules.py
+   13  tests/test_collector_audit.py
+    8  contracts/lumenis_adapter.py
+    8  tests/test_data_quality_subject_rejudge.py
+    8  tests/test_subject_redline.py
+    7  tests/test_platform_catalog_schema.py
+    6  lumenis/shared/reporting/engine.py
+    5  ai_analyzer.py
+    4  historical_data_importer.py
+    4  trend_api.py
+    4  tests/test_ai.py
+    4  tests/test_ai_off_shardB.py
+    4  tests/test_dual_domain_e2e.py
+    4  tests/test_system.py
+    3  tests/audit_probe_4.py
+    3  tests/test_api_audit.py
+    2  agent_boundary.py
+    2  app.py
+    2  risk_engine.py
+    2  stability_monitor.py
+    2  ui_view_model.py
+    2  scripts/migrate_historical_data.py
+    2  tests/test_ai_evaluation.py
+    2  tests/test_redline_units.py
+    2  tests/test_risk_audit.py
+    2  tests/test_skill_agent_boundary.py
+    1  ai_filter.py
+    1  ai_task_engine.py
+    1  ai_task_parser.py
+    1  content_generation.py
+
+## 2 subject_hit() 引用
+   64  tests/test_collector_audit.py
+   22  tests/test_kos_subject_ownership.py
+   18  tests/test_redline_units.py
+   17  tests/test_dual_domain_e2e.py
+   15  tests/test_subject_redline.py
+   14  lumenis/shared/evidence/chain.py
+   14  tests/test_data_quality_subject_rejudge.py
+   13  historical_data_importer.py
+   13  risk_engine.py
+   11  topic_campaign.py
+   11  tests/test_risk_audit.py
+   10  subject_rules.py
+    9  xhs_cdp_collector.py
+    9  tests/test_ai_off_shardB.py
+    8  lumenis/system/collector/guard/metrics.py
+    8  tests/test_subject_context_isolation.py
+    7  contracts/lumenis_adapter.py
+    7  lumenis/system/collector/runtime/run_xhs_live.py
+    7  tests/test_ai_evaluation.py
+    6  app.py
+    5  collector.py
+    5  database.py
+    5  lumenis/system/collector/runtime/run_live_engine.py
+    5  lumenis/system/collector/runtime/pipeline/subject_filter.py
+    5  scripts/migrate_historical_data.py
+    5  tests/test_ai.py
+    4  audit_e2e_final.py
+    4  collection_quality_gate.py
+    4  lumenis/system/collector/runtime/run_profile.py
+    4  tests/test_subject_dual_dimension.py
+
+## 3 _subject_sql_and_values 引用
+   11  tests/test_redline_units.py
+    8  subject_rules.py
+    7  app.py
+    5  risk_engine.py
+    4  trend_api.py
+    4  tests/test_report_audit.py
+    3  database.py
+    3  tests/audit_probe_4.py
+    3  tests/test_risk_authority_wiring.py
+    2  lumenis/shared/reporting/export_api.py
+    2  lumenis/shared/reporting/routes.py
+    2  tests/test_api_audit.py
+    2  tests/test_negative_event_api.py
+    2  tests/test_rectification_truth_chain_20261010.py
+    2  tests/test_risk_audit.py
+    2  tests/test_system.py
+    1  tests/test_context_identity_invariants.py
+    1  tests/test_subject_redline.py
+
+## 4 aggregate_events 引用
+    5  reprocess.py
+    4  tests/test_event_aggregation_authority.py
+    2  tests/audit_probe_4.py
+    1  contracts/lumenis_adapter.py
+
+## 5 publish_datetime / captured_at 代码使用
+   66  lumenis/system/collector/adapters/secondary_collection.py
+   55  tests/test_canonical_data_t4.py
+   48  canonical_data.py
+   47  lumenis/shared/evidence/chain.py
+   40  historical_data_importer.py
+   31  tests/test_cth_temporal_metrics.py
+   30  scripts/migrate_historical_data.py
+   26  lumenis/data_cleanup/fix_publish_date.py
+   25  trend_api.py
+   24  tests/test_historical_data.py
+   21  tests/test_time_normalization.py
+   20  domain_adapter.py
+   19  api_dual_domain.py
+   19  app.py
+   17  kos_engine.py
+   17  topic_campaign.py
+   17  tests/test_native_publication_types.py
+   16  lumenis/importer/documents.py
+   15  lumenis/shared/database/migrations.py
+   14  experience_screens.py
+   14  tests/test_business_brief_typed_owned.py
+   14  tests/test_ui_view_model.py
+   12  tests/test_current_observation_metric_semantics.py
+   11  database.py
+   11  tests/test_collector_dual_time.py
+   11  tests/test_collector_original_source_transaction.py
+   11  tests/test_saved_document_workflow.py
+   10  data_query_api.py
+   10  lumenis/shared/evidence/store.py
+   10  tests/test_prelaunch_douyin_manual_import.py
+
+## 6 event_date 代码使用
+   23  tests/test_event_date.py
+   11  swire_group.py
+    7  lumenis/shared/database/business_schema.py
+    6  topic_snapshot.py
+    5  trend_api.py
+    5  tests/test_shared_database_migrations.py
+    4  database.py
+    3  reprocess.py
+    2  event_graph.py
+    2  lumenis/shared/reporting/export_api.py
+    2  scripts/quality_audit.py
+    2  tests/audit_probe_4.py
+    2  tests/test_platform_catalog_schema.py
+    1  experience_runtime.py
+    1  experience_screens.py
+    1  lumenis/system/collector/adapters/evidence_exporter.py
+    1  scripts/run_core_regression.py
+    1  tests/test_evidence_exporter.py
+    1  tests/test_experience_runtime.py
+    1  tests/test_intelligence_boundary_audit.py
+    1  tests/test_topic_snapshot.py
+    1  tests/test_udip_consistency.py
+
+## 7 三类事件 营销/传播/舆情 event_type
+   43  event_graph.py
+   28  tests/agent_focus/test_notification.py
+   22  wechat_notifier.py
+   19  agent_focus/notification.py
+   18  agent_focus/policy.py
+   15  app.py
+   14  tests/test_wechat_notifier.py
+   13  swire_group.py
+   10  lumenis/shared/reporting/export_api.py
+    8  brand_propagation.py
+    7  populate_empty_tables.py
+    6  public_opinion_cases.py
+    5  tests/audit_probe_4.py
+    4  context_intelligence.py
+    4  lumenis/shared/reporting/brand_report.py
+    3  stability_monitor.py
+    3  lumenis/shared/reporting/standard_taxonomy.py
+    2  experience_screens.py
+    2  models.py
+    2  agent_capability/router.py
+    2  tests/test_data_quality_gate.py
+    1  agent_security.py
+    1  content_generation.py
+    1  database.py
+    1  function_registry.py
+    1  module_registry.py
+    1  weekly_events.py
+    1  lumenis/shared/database/platform_schema.py
+    1  lumenis/shared/reporting/daily.py
+    1  lumenis/shared/reporting/delivery_preferences.py
+
+## 8 传播主体 KOL/KOS/KOC/主体画像
+   39  kos_engine.py
+   32  kos_routes.py
+   28  lumenis/shared/reporting/kos.py
+   22  subject_classifier.py
+   20  kos_metrics.py
+   16  tests/test_kol_analysis.py
+   14  kos_intel.py
+   13  tests/test_kos_attribution.py
+   11  kos_ops.py
+   10  kol_analysis.py
+   10  lumenis/shared/reporting/standard_taxonomy.py
+    8  tests/audit_probe_4.py
+    7  brand_propagation.py
+    7  kos_interest_graph.py
+    6  function_registry.py
+    6  kos_scenarios.py
+    5  app.py
+    5  experience_screens.py
+    5  lumenis/shared/reporting/brand_report.py
+    5  scripts/social_ops.py
+    5  scripts/audit_tools/new_asset_acceptance_check.py
+    4  ic_routes.py
+    4  kos_professional.py
+    4  scripts/idea_generator.py
+    4  tests/test_kos_ops.py
+    3  canonical_data.py
+    3  lumenis_agg_api.py
+    3  module_registry.py
+    3  subject_rules.py
+    3  viz_data_provider.py
+
+## 9 content_type / subject_type
+   41  content_generation.py
+   29  subject_classifier.py
+   26  subject_registry.py
+   20  canonical_data.py
+   20  lumenis/system/collector/adapters/platform_naming.py
+   18  kos_engine.py
+   18  tests/test_subject_dual_dimension.py
+   16  tests/test_canonical_data_t4.py
+   14  database.py
+   14  tests/test_subject_registry.py
+   10  brand_propagation.py
+   10  tests/test_kos_platform_rules.py
+    9  lumenis/system/collector/adapters/secondary_collection.py
+    9  tests/test_data_quality_subject_rejudge.py
+    9  tests/test_round03_b001l_brand_focus_migration.py
+    9  tests/test_saved_document_workflow.py
+    8  scripts/audit_tools/new_asset_acceptance_check.py
+    7  data_center_api.py
+    6  trend_api.py
+    6  lumenis/system/collector/adapters/public_source.py
+    6  lumenis/system/security/permission.py
+    6  tests/test_public_http_article_extraction.py
+    5  app.py
+    5  experience_runtime.py
+    5  topic_campaign.py
+    5  tests/test_prelaunch_exact_scope_import.py
+    4  experience_screens.py
+    4  historical_data_importer.py
+    4  lumenis/adapters/zhihu.py
+    4  lumenis/shared/database/business_schema.py
+
+## 10 event_relation / lifecycle 事件关系/生命周期
+  140  lifecycle_mixin.py
+   58  tests/test_lifecycle_contract.py
+   39  lumenis/shared/evidence/chain.py
+   34  lumenis/shared/learning/memory.py
+   29  runtime_guardian.py
+   29  lumenis/system/security/effect_fence.py
+   25  tests/test_evidence_chain.py
+   23  app.py
+   23  kos_engine.py
+   21  tests/test_manual_evidence_scope_lifecycle.py
+   19  tests/test_risk_lifecycle.py
+   17  lumenis/system/collector/guard/schedule_adapter.py
+   15  ai_task_engine.py
+   15  lumenis/shared/reporting/kos.py
+   14  lumenis/system/collector/guard/resource_guard.py
+   11  ai_browser_runtime.py
+   11  collector_automation.py
+   11  kos_ops.py
+   11  account/skills.py
+   11  lumenis/system/collector/guard/risk_engine.py
+   10  tests/agent_memory/test_learning_memory.py
+    9  lumenis/shared/reporting/engine.py
+    9  tests/test_collector_e2e_sim.py
+    8  tests/audit_probe_4.py
+    8  tests/test_root_owner_auth_composition.py
+    7  collector.py
+    7  lumenis/shared/reporting/brand_report.py
+    7  tests/test_schedule_adapter.py
+    7  tests/agent_memory/test_learning_loop.py
+    6  kos_routes.py
+
+## 11 品牌营销案例库 pr_case
+   13  pr_case_integration.py
+   12  app.py
+    7  system_health_api.py
+    6  swire_group.py
+    5  tests/audit_probe_4.py
+    2  content_generation.py
+    1  module_registry.py
+    1  pr_case_engine.py
+    1  lumenis/ai_hub/service.py
+    1  tests/test_brand_library.py
+
+## 12 话题监测 topic_campaign / 15周年
+   53  topic_campaign.py
+   33  scripts/migrate_historical_data.py
+   12  tests/test_idea_generator.py
+   10  swire_group.py
+    9  tests/test_topic_port.py
+    6  scripts/audit_tools/audit_topic_trend.py
+    6  tests/test_runtime_bin.py
+    5  content_generation.py
+    5  experience_screens.py
+    5  topic_note_detail_backfill.py
+    5  tests/audit_probe_4.py
+    5  tests/test_topic_campaign_identity_fence.py
+    4  function_registry.py
+    4  lumenis/shared/reporting/export_api.py
+    4  scripts/idea_generator.py
+    4  tests/test_pitch_parser.py
+    3  app.py
+    3  xhs_collection_optimizer.py
+    3  tests/test_idea_sit_backing.py
+    3  tests/test_l4_full_chain.py
+    3  tests/test_subject_redline.py
+    3  tests/test_t2_collection_chain.py
+    2  auth_recovery_api.py
+    2  tests/test_brand_insight.py
+    2  tests/test_event_graph_relations.py
+    2  tests/test_video_intelligence.py
+    2  tests/test_xhs_exact_scope_binding.py
+    1  canonical_data.py
+    1  context_intelligence.py
+    1  runtime_bin.py
+
+## 13 报告 daily/weekly/monthly/annual
+   49  app.py
+   31  lumenis/shared/reporting/routes.py
+   28  lumenis/shared/reporting/filtering.py
+   15  lumenis/shared/reporting/engine.py
+   13  ai_analyzer.py
+   12  function_registry.py
+   12  wechat_notifier.py
+   11  evaluate_system_timing.py
+   10  lumenis/shared/reporting/export_api.py
+   10  tests/audit_probe_4.py
+    9  populate_empty_tables.py
+    9  lumenis/shared/reporting/standard_taxonomy.py
+    9  scripts/init_database_data.py
+    8  agent_capability/router.py
+    8  scripts/export_report.py
+    6  scripts/init_db.py
+    5  verify_system_e2e.py
+    5  lumenis/shared/reporting/report_generator.py
+    4  lumenis/shared/reporting/api.py
+    3  ai_task_parser.py
+    3  emv.py
+    3  models.py
+    3  lumenis/shared/reporting/__init__.py
+    3  lumenis/shared/reporting/_init.py
+    3  scripts/marketing_calendar.py
+    3  tests/test_redline_units.py
+    3  tests/test_report_audit.py
+    3  tests/agent_runtime/test_loop_checkpoint_contract.py
+    2  ai_agent_registry.py
+    2  audit_gen_reports.py
+
+## 14 品牌对标 / 消费者需求
+   18  tests/test_business_decision_workflow.py
+   12  experience_screens.py
+   12  ad_intelligence/platforms/x_ads.py
+   11  lumenis_shared_skills.py
+    9  case_templates.py
+    8  api_dual_domain.py
+    7  contracts/lumenis_adapter.py
+    7  tests/audit_probe_4.py
+    6  kos_intel.py
+    5  risk_engine.py
+    4  ai_domain_context.py
+    4  lumenis/shared/reporting/bmp_phrases.py
+    4  lumenis/system/collector/adapters/secondary_collection.py
+    4  tests/test_ad_intelligence_platforms.py
+    3  experience_runtime.py
+    3  kos_routes.py
+    3  tests/test_business_result_continuity.py
+    2  brand_knowledge_base.py
+    2  module_registry.py
+    2  ad_intelligence/platforms/factory.py
+    2  lumenis/shared/reporting/standard_taxonomy.py
+    2  lumenis/system/ai_gateway/owned_training_checkpoints.py
+    2  lumenis/system/collector/acquisition_plan.py
+    2  scripts/idea_generator.py
+    2  scripts/pitch_parser.py
+    2  tests/test_business_acquisition_contract.py
+    2  tests/test_engagement_observation_coverage.py
+    2  tests/test_experience_runtime.py
+    2  tests/test_risk_dual_domain.py
+    1  audit_gen_reports.py
+
+## 15 AI 模块引用分布
+   66  tests/test_llm_gateway.py
+   53  tests/test_ai_channel_flag.py
+   48  tests/test_ai_evaluation.py
+   33  content_generation.py
+   33  tests/test_ad_intelligence_platforms.py
+   33  tests/test_ai_gateway_local_structured.py
+   32  tests/test_ai_gateway_local_embeddings.py
+   29  intelligence_library_api.py
+   28  app.py
+   27  experience_runtime.py
+   26  tests/test_kos_reply_zhipu.py
+   25  tests/test_ai_gateway_result_status.py
+   23  tests/test_ad_strategy_analytics.py
+   21  scripts/audit_tools/verify_experience_authority_exclusive.py
+   21  tests/test_ai_api_routes.py
+   21  tests/test_ai_degrade.py
+   19  scripts/audit_tools/verify_codex_takeover_governance.py
+   18  tests/test_ai_off_shardB.py
+   18  tests/test_p1_gap_closure.py
+   18  tests/test_owned_training_runtime_recovery.py
+   16  scripts/audit_tools/new_asset_acceptance_check.py
+   16  tests/test_ai_task_engine_gateway_bridge.py
+   16  tests/test_product_core_modules.py
+   15  reprocess.py
+   15  lumenis/system/ai_gateway/core.py
+   14  scripts/audit_tools/boundary_check.py
+   14  tests/test_ad_platform_collectors.py
+   14  tests/test_ai.py
+   13  tests/test_ad_intelligence.py
+   13  tests/test_platform_registry.py
+
+## 16 关键业务模块顶部 import AI 情况（判断AI解耦）
+  data_collector.py 不存在
+  risk_engine.py: 顶部无AI导入(解耦)
+  daily_report.py 不存在
+  collector_automation.py: 顶部无AI导入(解耦)
+  xhs_cookie_bridge.py: [(14, 'import ai_analyzer')]
+
+## 17 app.py AI import 上下文(50-60行)
+  45: def _is_internal_beta_loopback(host):
+  46:     return str(host or '').strip().lower() == '127.0.0.1'
+  47: 
+  48: 
+  49: def _cli_option_value(argv, option):
+  50:     matches = []
+  51:     for index, value in enumerate(argv):
+  52:         if value == option:
+  53:             matches.append(argv[index + 1] if index + 1 < len(argv) else None)
+  54:         elif value.startswith(option + '='):
+  55:             matches.append(value.split('=', 1)[1])
+  56:     return matches[0] if len(matches) == 1 else None
+  57: 
+  58: 
+  59: _INTERNAL_BETA_WORKSPACE_CONTEXT_FLAG = '--internal-beta-workspace-context-acceptance'
+  60: _INTERNAL_BETA_BROWSER_OUTCOME_FLAG = '--internal-beta-browser-outcome-acceptance'

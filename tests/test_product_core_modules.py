@@ -26,15 +26,6 @@ class TestProviderRegistry:
         assert provider_status("ollama") == DISABLED
         assert is_provider_available("ollama") is False
 
-    def test_ark_is_compatibility_only(self):
-        from lumenis.system.ai_gateway.providers import provider_status, LEGACY, is_provider_available
-        assert provider_status("ark") == LEGACY
-        assert is_provider_available("ark") is False
-
-    def test_qwen_not_configured(self):
-        from lumenis.system.ai_gateway.providers import provider_status, NOT_CONFIGURED
-        assert provider_status("qwen") == NOT_CONFIGURED
-
     def test_openai_disabled(self):
         from lumenis.system.ai_gateway.providers import provider_status, DISABLED
         assert provider_status("openai") == DISABLED

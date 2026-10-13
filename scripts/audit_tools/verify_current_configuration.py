@@ -75,7 +75,6 @@ def validate() -> None:
         "EMAIL_SMTP_USER": "",
         "EMAIL_SMTP_PASSWORD": "",
         "ALLOW_CLOUD_AI": "false",
-        "ARK_MAX_DAILY_TOKEN": "",
         "DOUYIN_CDP_URL": "",
         "DOUYIN_LOCAL_WORKER_ENABLED": "false",
         "DOUYIN_LOCAL_WORKER_ACCOUNT": "",
@@ -99,11 +98,11 @@ def validate() -> None:
         "LLAMA_CPP_BASE_URL", "LLAMA_CPP_MODEL", "DASHSCOPE_API_KEY", "QWEN_MODEL",
         "OPENAI_API_KEY", "OPENAI_MODEL", "DEEPSEEK_API_KEY", "DEEPSEEK_MODEL",
         "ZHIPU_API_KEY", "ZHIPU_MODEL", "ZHIPU_STRONG_MODEL", "ZHIPU_BASE_URL",
-        "ARK_API_KEY", "ARK_MODEL", "ARK_BASE_URL", "DASHSCOPE_BASE_URL", "OPENAI_PROXY",
+        "ARK_API_KEY", "ARK_MODEL", "ARK_BASE_URL", "ARK_MAX_DAILY_TOKEN", "DASHSCOPE_BASE_URL",
     }
-    nonempty = sorted(key for key in retired if env.get(key, "") != "")
-    if nonempty:
-        fail(f"retired provider keys must stay blank in .env.example: {nonempty}")
+    present = sorted(key for key in retired if key in env)
+    if present:
+        fail(f"third-party provider keys must be deleted from .env.example: {present}")
 
     defaults, load_source = config_defaults()
     required_defaults = {

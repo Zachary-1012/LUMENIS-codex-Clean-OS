@@ -34,7 +34,7 @@ def test_unknown_kind_denied_by_default(monkeypatch):
 
 def test_env_overrides_are_explicit(monkeypatch):
     monkeypatch.setenv("REDNOTE_AUTO_RUN", "true")
-    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "GUANGZHOU_TAIKOO_HUI")
+    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "ALL_REGISTERED_SUBJECTS")
     monkeypatch.setenv("REDNOTE_AUTO_SOURCE", "rednote_hk")
     monkeypatch.setenv("REDNOTE_AUTO_CADENCE_MINUTES", "720")
     monkeypatch.setenv("REDNOTE_DAILY_LOGIN_KEEPALIVE", "true")
@@ -63,7 +63,7 @@ def test_auto_opt_in_rejects_scope_source_or_cadence_outside_current_scheduler(m
     monkeypatch.setenv("REDNOTE_AUTO_CADENCE_MINUTES", "720")
     assert effective_policy().auto_run_enabled is False
 
-    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "GUANGZHOU_TAIKOO_HUI")
+    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "ALL_REGISTERED_SUBJECTS")
     monkeypatch.setenv("REDNOTE_AUTO_SOURCE", "xhs_cn")
     assert effective_policy().auto_run_enabled is False
 
@@ -123,3 +123,16 @@ def test_human_cadence_marked_not_verified(monkeypatch):
     # 真人频率在最新实测前必须显式标 NOT_VERIFIED，不得伪装实测值
     assert effective_policy().human_cadence["status"] == "NOT_VERIFIED"
     assert HUMAN_CADENCE_PLACEHOLDER["daily_login_keepalive"] == "once_per_day"
+
+
+def test_auto_scope_is_all_registered_subjects_not_single_venue(monkeypatch):
+    from lumenis.system.collector.adapters.rednote_policy import effective_policy
+
+    monkeypatch.setenv("REDNOTE_AUTO_RUN", "true")
+    monkeypatch.setenv("REDNOTE_AUTO_SOURCE", "rednote_hk")
+    monkeypatch.setenv("REDNOTE_AUTO_CADENCE_MINUTES", "720")
+    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "ALL_REGISTERED_SUBJECTS")
+    assert effective_policy().auto_run_enabled is True
+    # The single-venue legacy token is no longer the authorized scope.
+    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "GUANGZHOU_TAIKOO_HUI")
+    assert effective_policy().auto_run_enabled is False

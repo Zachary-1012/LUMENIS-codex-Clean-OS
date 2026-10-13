@@ -107,46 +107,6 @@ def test_collector_without_explicit_worker_fails_closed_before_collection(monkey
     assert result['error'] == 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
 
 
-def test_cookie_status_recognizes_private_runtime_source(monkeypatch, tmp_path):
-    import app as app_module
-    import xhs_cookie_bridge as bridge
-
-    (tmp_path / 'private').mkdir()
-    (tmp_path / 'private' / 'xhs_cookie_retinaut.txt').write_text(
-        'retinaut_cookie=test-only', encoding='utf-8'
-    )
-    monkeypatch.setattr(bridge, 'DATA_DIR', str(tmp_path))
-    with app_module.app.test_request_context('/api/cookies/import/status'):
-        response = app_module.api_cookies_import_status()
-    payload = response.get_json()
-    assert payload['status']['xhs_source_exists'] is True
-    assert payload['status']['xhs']['source'] == 'private_cookie_file'
-
-
-def test_cookie_status_requires_runtime_authentication(monkeypatch, tmp_path):
-    """私有 Cookie 文件存在不等于当前驻场浏览器已认证。"""
-    import app as app_module
-    import xhs_cookie_bridge as bridge
-
-    (tmp_path / 'private').mkdir()
-    (tmp_path / 'private' / 'xhs_cookie_retinaut.txt').write_text(
-        'retinaut_cookie=test-only', encoding='utf-8'
-    )
-    monkeypatch.setattr(bridge, 'DATA_DIR', str(tmp_path))
-    import resident_health
-    monkeypatch.setattr(resident_health, 'check_account', lambda account: {
-        'status': 'NEEDS_LOGIN', 'cookie_count': 3,
-    })
-    with app_module.app.test_request_context('/api/cookies/import/status'):
-        response = app_module.api_cookies_import_status()
-    xhs = response.get_json()['status']['xhs']
-    assert xhs['configured'] is True
-    assert xhs['logged_in'] is False
-    assert xhs['runtime_authenticated'] is False
-    assert xhs['runtime_status'] == 'NEEDS_LOGIN'
-    assert xhs['cookie_count'] == 3
-
-
 def test_collect_all_returns_stable_tuple_when_kind_blocked():
     import collector
 

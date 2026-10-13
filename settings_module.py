@@ -284,37 +284,6 @@ def system_info():
 # 开发者工具API
 # ============================================
 
-@settings_bp.route('/api/settings/developer/execute', methods=['POST'])
-def developer_execute():
-    """开发者工具 - 执行代码（需开发者模式）"""
-    try:
-        config = load_config()
-        if not config.get('security', {}).get('developer_mode', False):
-            return jsonify({'ok': False, 'error': '开发者模式未开启'}), 403
-
-        data = request.get_json(silent=True) or {}
-        code = data.get('code', '')
-
-        if not code:
-            return jsonify({'ok': False, 'error': '代码不能为空'})
-
-        # 记录日志
-        os.makedirs(os.path.dirname(DEVELOPER_LOG_FILE), exist_ok=True)
-        with open(DEVELOPER_LOG_FILE, 'a', encoding='utf-8') as f:
-            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 执行代码:\n{code}\n\n")
-
-        # 执行代码（安全限制：只允许特定操作）
-        try:
-            local_vars = {}
-            exec(code, {'__builtins__': {}}, local_vars)
-            return jsonify({'ok': True, 'result': str(local_vars)})
-        except Exception as e:
-            return jsonify({'ok': False, 'error': f'执行错误: {str(e)}'})
-
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-
 @settings_bp.route('/api/settings/developer/logs')
 def developer_logs():
     """获取开发者日志"""

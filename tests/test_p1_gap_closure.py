@@ -138,15 +138,6 @@ class TestTrackBObservability:
         monkeypatch.setattr(channel, '_env', lambda name, _default='': '' if name == 'AI_PROVIDER_CHAIN' else '')
         assert channel.full_fallback_chain() == []
 
-    def test_doubao_fallback_config(self):
-        from lumenis.system.ai_gateway.channel import get_doubao_fallback_config
-        config = get_doubao_fallback_config()
-        assert config["provider"] == "doubao"
-        assert config["role"] == "compatibility_only"
-        assert config["status"] == "NOT_IN_AUTOMATIC_CHAIN"
-        assert config["priority"] is None
-        assert config["model"] is None
-
     def test_track_b_self_check(self, monkeypatch):
         from lumenis.system.ai_gateway import channel, providers
 
@@ -182,7 +173,7 @@ class TestTrackBObservability:
         monkeypatch.setitem(providers.PROVIDER_REGISTRY["ark"], "status", providers.ACTIVE)
         monkeypatch.setenv("AI_PROVIDER", "ark")
         compatibility_only = channel.track_b_self_check()
-        assert compatibility_only["status"] == "UNVERIFIED"
+        assert compatibility_only["status"] == "DISABLED"
         assert compatibility_only["readiness_verified"] is False
         assert compatibility_only["multi_channel"]["primary"] == "ark"
         assert compatibility_only["multi_channel"]["provider_status"] == providers.LEGACY

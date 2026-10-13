@@ -7,10 +7,10 @@
 
 | 命令 | 作用 | 实测 |
 |---|---|---|
-| `.\run.ps1 prod`（默认） | 幂等拉起生产：转发已验证的 `scripts/start_production.ps1`（8201 看门狗 + 9222 CDP，带 mutex/healthz/进程守卫三重幂等） | 语法 OK；转发链路为现网在用 |
+| `.\run.ps1 prod`（默认） | 幂等拉起生产：转发已验证的 `scripts/start_production.ps1`（8201 看门狗 + 9223–9228 内置无头采集浏览器，带 mutex/healthz/进程守卫三重幂等） | 语法 OK；转发链路为现网在用 |
 | `.\run.ps1 dev` | 前台开发直跑 `.venv python app.py 127.0.0.1:8200` | 未实测（不在运行期触发） |
 | `.\run.ps1 staging` | 127.0.0.1:8301 + `XHS_PRODUCTION=false`；**端口/任务开关已隔离，独立 DB/.env/profile 待 G-STAGE**，未完成前不触发真实采集 | 预留，未实测 |
-| `.\run.ps1 status` | 只读探测 8200/8201/9222 | **已实测**：8201 UP、9222 UP、8200 down |
+| `.\run.ps1 status` | 只读探测 8200/8201/9223 | **已实测**：8201 UP、9222 UP、8200 down |
 
 > run.ps1 只用 .venv 解释器、不做全局 taskkill、不写死 D 盘（用 `$PSScriptRoot`）、全 ASCII 兼容 PS5.1/GBK。
 
@@ -18,8 +18,8 @@
 
 | 计划任务 | 实际执行 | 现状 |
 |---|---|---|
-| `\TaikooMonitor` | `cmd /c start /min start_system.bat`（8200 直跑 app.py + 9222 edge-cdp-newaccount，无看门狗） | Enabled；实测 8200 当前 down |
-| `\ZBrand-HealthGuard` | `powershell -File scripts/start_production.ps1`（8201 supervised + 9222 edge-cdp-profile，幂等） | Enabled；**当前实际生产链路** |
+| `\TaikooMonitor` | `cmd /c start /min start_system.bat`（8200 直跑 app.py + 9223 内置无头采集浏览器，无看门狗） | Enabled；实测 8200 当前 down |
+| `\ZBrand-HealthGuard` | `powershell -File scripts/start_production.ps1`（8201 supervised + 9223–9228 内置无头采集浏览器，幂等） | Enabled；**当前实际生产链路** |
 | `\ZBrand-GitSync-0000/0800/1800` | `.venv python scripts/daily_git_sync.py` | Enabled，每日三次版本同步 |
 
 **技术债登记（不在运行期合并）**：8200（直跑无看门狗，profile=newaccount）与 8201（supervised，profile=profile）双实例/双 profile 并存。最终应统一为 8201 supervised 一条链；需停机窗口把 TaikooMonitor 改派 `run.ps1 prod` 后再停 8200 旧链。

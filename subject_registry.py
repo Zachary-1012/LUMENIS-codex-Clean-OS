@@ -566,3 +566,31 @@ __all__ = [
     "normalize_subject_type",
     "subject_registry_bp",
 ]
+
+
+_NAMES_CACHE: Dict[str, Any] = {"at": 0.0, "names": ()}
+
+
+def registered_subject_names(ttl_seconds: int = 300) -> Tuple[str, ...]:
+    """Names/aliases of every active registered Subject/BrandFocus (cached).
+
+    Consumers use this instead of hardcoding one subject (e.g. Taikoo Hui);
+    returns () when the registry is unavailable.
+    """
+    import time as _time
+    now = _time.time()
+    if _NAMES_CACHE["names"] and now - _NAMES_CACHE["at"] < ttl_seconds:
+        return _NAMES_CACHE["names"]
+    names: List[str] = []
+    try:
+        for row in list_subjects():
+            if str(row.get("status") or "").lower() in {"archived", "disabled", "deleted"}:
+                continue
+            for value in [row.get("name_zh"), row.get("name_en"), *(row.get("keywords") or [])]:
+                value = str(value or "").strip()
+                if len(value) >= 2 and value not in names:
+                    names.append(value)
+    except Exception:
+        return _NAMES_CACHE["names"]
+    _NAMES_CACHE.update(at=now, names=tuple(names))
+    return _NAMES_CACHE["names"]

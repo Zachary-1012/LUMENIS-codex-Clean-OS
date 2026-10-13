@@ -14,8 +14,8 @@ _gate.grant_approval("*", duration_minutes=60, granted_by="smoke_test")
 
 import base64
 client = app.test_client()
-# Basic Auth: Zachary / Zachary01
-_auth = base64.b64encode(b'Zachary:Zachary01').decode()
+# Basic Auth: 读取环境变量 LUMENIS_TEST_AUTH_USER / LUMENIS_TEST_AUTH_PASS
+_auth = base64.b64encode((os.environ.get('LUMENIS_TEST_AUTH_USER','Zachary')+':'+os.environ.get('LUMENIS_TEST_AUTH_PASS','test-only-pass')).encode()).decode()
 _headers = {'Authorization': 'Basic ' + _auth}
 results = []
 
