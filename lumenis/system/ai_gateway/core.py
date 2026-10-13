@@ -25,7 +25,7 @@ def _get_call_meta():
 
 """LUMENIS SYSTEM AI Gateway compatibility module.
 
-Retired local and Zhipu routes remain only for compatibility and history.
+Retired identities remain only in denial and historical evidence metadata.
 Product-owned inference is the sole AI-task route and stays explicitly
 unavailable until an approved runtime is bound.
 """
@@ -294,7 +294,7 @@ def select_model_by_capability(capability='daily'):
 
 # ============================================================
 # 外接云端 AI 发送前脱敏（最高原则：敏感信息不出内网）
-# 本地模型(ollama/lmstudio)不出网，不脱敏；仅云端 provider 发送前强制脱敏。
+# 外部调用仅限用户明确选择的已授权接口；本段不授予模型或网络调用权限。
 # 硬脱敏：凭证/令牌/手机号/身份证/邮箱/内网主机/内部端口/本地路径。
 # 品牌/客户名默认保留（品牌分析需要真实业务语义），可用 AI_CLOUD_REDACT_BRAND=true
 # 配合 AI_REDACT_NAMES=名称1,名称2 做软脱敏。
@@ -495,7 +495,6 @@ def translate_text(text,target='en'):
 
 
 # ============================================================
-# 云智(ARK) 已停用 → 智谱(zhipu) 驱动的通用 AI 能力（S1 OpenAI 智能功能补强）
 # Owned Gateway business helpers; unknown/unavailable results remain explicit.
 # 返回结构与旧 ark_llm.sentiment_analyse/generate_summary/extract_keywords 兼容。
 # ============================================================

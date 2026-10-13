@@ -71,6 +71,8 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
+退役Provider残留继续在原Owner收敛：删除旧HTTP探测和按次计费执行体，兼容入口只返回不可用；历史额度/使用记录保留。标准AI目录采用中性路径，显式配置保持，不移动旧文件、不启动服务。隔离回归/静态通过不等于运行或用户验收。
+
 显式选择 user_api 的已有通用接口保留；状态读取不调用外部模型、不探测端点，配置完成仍为 CONFIGURED_NOT_VERIFIED，不能冒称可用或自动切回 owned。
 
 本批修复缺失风险/日报数据的数值语义：缺失返回None，真实观测零值保留；报告、摘要、行动和导出调用方检查未知值，不误报正常或品牌健康50分。保留原评分范围和实际业务权重。编译、静态和隔离回归仅证明有界代码；当前Runtime未加载、真实日报用户验收未进行。规则/逐屏草图/隧道分别PR #61/#63/#62已发布；其他类别仍独立验收。未操作原有工作分支、Production DB、模型或运行服务。已合入PR #64的Gateway清理及Gibbs回执：已训练、未上线，G163仍OPEN；本批不重复训练或声明模型收益。Gateway状态接口和Agent观察读取CTH/BMP实际服务绑定，汇总逐域状态，不把评估候选当运行服务；用户已选API只显示配置未验证，不发请求、不回退。历史退役Provider媒体评价通过原Evaluation读接口、汇总和AI面板统一标为HISTORICAL_NOT_REVERIFIED，保留原记录/快照，历史PASS不计当前通过。运行时加载及真实用户验收仍未验证。
