@@ -610,6 +610,16 @@ No state change usually means no animation.
 
 Reduced-motion is mandatory. Brand launch/re-entry never blocks real readiness.
 
+### Generated-result arrival — additive adoption, 2026-10-14
+
+The PO's transitions-ui-generation addition preserves all previously approved motion, durations, visual direction and interaction. It adds a full one-shot generated-result presentation, never replaces or globally reduces existing motion. Users retain an independent choice for this effect (full / follow reduced-motion preference / off) and immediate skip; changing it must not change other motion preferences. Full presentation remains available. System/user reduced motion changes this effect only as selected.
+
+Data pending uses the existing ordinary loading/skeleton state. Only a newly produced, permitted, version-identified useful result can arm the reveal; a queue acknowledgement, error, empty response, route entry, reopen, refresh or each list row cannot. First mount of old data is not a generation event. After the real result widget, fonts, layout and size-affecting assets are ready, measure its actual outline/text/controls and play the dot-field, construction/wireframe and reveal once for that result event. Result version changes during playback cancel the old effect. No invented layout geometry, Agent log, code-writing, token count, analysis or success appears in the overlay.
+
+The effect is presentation, not computation, permission or persistence. Preserve real content, focus, accessibility tree and actions; skip/interaction can expose the result immediately. Resizing, scrolling, navigation, cancellation, failed readiness or reduced-motion changes must remove stale geometry and leave the real UI usable. Bound measurement and paint work; do not let a decorative failure prevent reading/saving/editing. Four-surface timing/performance and recovery require actual evidence. Website uses it only on a real permitted generated-result demonstration, never every hero/route; Flutter Web/native use actual render geometry, not a DOM overlay over its canvas.
+
+Reference: [fixed source](https://github.com/Jakubantalik/transitions.dev/tree/9398105c07dafe877e43197b71c15a10a3b0e3f6/skills/transitions-ui-generation); the skill's custom Transitions.dev license permits free commercial product integration but bars repackaging the library as a competing animation collection. It is not wholly MIT/OSI-unrestricted. Record any adopted files/port and notices in the existing third-party register. This is an existing Experience rule and registered component adaptation, not a new visual authority or replacement design system.
+
 ## 20. Responsive recomposition
 
 Validation widths:
@@ -1583,6 +1593,12 @@ Manus Cue、xAI Grok Bot（区别于普通 Grok 聊天）。以下公开资料�
 | Meta Muse：[官方说明](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/)描述可审阅执行和撤销授权；[一周体验](https://www.androidauthority.com/meta-muse-one-week-later-hands-on-3718233/)认为引导上手、补充条件有用，初始搜索仍需改进 | 从目标/范围/约束开始，结果可补条件；不能靠隐含记忆扩大访问或虚报连接 | C3/C4/C5 保留独立任务和局部修订；C2 采用有范围可检查上下文，C1/C6 保持原权限/来源/调度；F 呈现所用资料和重要变化 | 新旧结果可比较和重开；撤回来源后不能继续引用；断线不丢编辑，重连先读回而非重复执行 |
 | Cue：[Cue 官网](https://www.cue.im/)（Manus 通用 Agent 文档不单独证明 Cue 专属能力）；[新用户不知如何开始](https://www.reddit.com/r/ManusOfficial/comments/1wx9yy5/i_dont_know_how_to_utilize_cue_what_is_the/)及[早期用户期待](https://www.reddit.com/r/ManusOfficial/comments/1x2txme/cue_agents_by_manus_a_lot_of_potential/) | 内部角色协作有用，但用户应知道输入与成果，不能承担代理配置负担 | F 以 CTH/BMP、研究、提案/视频/播客任务命名入口；C3/C4/C5 独立能力可选联动，C6 保持同一任务/版本身份 | 无内部 ID 或模型选择也可新建/续接；独立制作不强迫建 Case；跨任务不丢编辑。Cue 官网视觉节奏仅用于 Public Website，不套到工作区 |
 | Grok Bot：[官方概览](https://docs.x.ai/grok-bot/overview)、[例行任务](https://docs.x.ai/grok-bot/skills-routines-and-automations)；[单用户报告部分完成却被告知全部成功](https://www.reddit.com/r/GrokBot/comments/1x25119/grok_bot_computer_lagging/) | 查看、停止、续做要有效；执行、提交、读回和目标完成分开，不信任模型口头报成功 | C1 逐来源留结果，C2 消费 Owner 回执，C3/C4/C5 核验真实业务/文件，C6 负责持久化/幂等，F 如实显示部分成功 | 成功分子/分母与真实成果一致；超时先核已提交结果，仅重试安全失败项；可取消/读回/修改；不恢复通用电脑控制 |
+
+同一聊天入口可在任务执行期间继续输入，独立需求归入可辨认的任务，补充/修改/停止明确作用于对应任务，不能因异步顺序改变而串线。默认简明确认真实接收，随后交付有用成果、来源/限制和下一步；长期任务可查看真实状态、停止与续做，不展示私有思维链，也不把“后台工作”画成假进度。已有任务/历史按需展开，不能强制用户为每个需求另建会话，也不能取消项目和独立制作入口。
+
+后台完成消息与内部执行摘要走不同投递语义：复用现有通知/结果Owner，只对有用完成、重要异常或必要决定打扰；去重与断线补送不能重复业务效果。用户主动询问有答复，必要审批有确定控件且不能被静默抑制；记忆可检查/更正/忘记，群体与个人可见范围不能混用。已批准Agent Groups采用同一任务与投递协议，可选@/Reply定位，不要求每个代理都回答。聊天气泡/任务卡仅服务可读性，序境视觉、Logo、角色、四端、三语、智能UI和完整独立能力保留；不得退化成纯文字IM或照搬外部客户端。
+
+2026-10-14逐项核对：Muse设计原文保留主聊、侧聊、活动/目标视图和确定审批；Grok帮助支持并行任务及异步交接，社区个案要求状态可见、避免漏报。采用与源码缺口、商业推断校准、固定GitHub证据及组合验收统一记在 `LOOP-PLAN-20261014/product-plan-full.md` §16；本文负责呈现，规划不替代Experience权威。文档采用不证明运行完成。
 
 表中适配是序境的设计判断，不是照抄或新增产品。复用已正确组件和服务，实际
 缺口进入原 ScreenSpec/成果卡修复。Nielsen与已批准研究、原创Logo、彩绘icons及适合页面的插画/操作视频、
