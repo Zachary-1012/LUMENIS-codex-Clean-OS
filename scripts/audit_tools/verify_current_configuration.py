@@ -16,7 +16,7 @@ APP_WORKFLOW = ROOT / ".github" / "workflows" / "app-verify.yml"
 CURRENT = ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md"
 DEPLOYMENT_README = ROOT / "deployment" / "README.md"
 DEPLOYMENT_LOCAL = ROOT / "deployment" / "start_local.bat"
-DEPLOYMENT_REMOTE = ROOT / "deployment" / "start_remote.bat"
+REMOVED_PUBLIC_LAUNCHERS = ('tunnel_guardian.py', 'deployment/start_remote.bat', 'deployment/启动远程访问.bat', 'start_tunnel.bat', 'start_cloudflare_stable.bat', 'cloudflared_guardian.ps1', 'monitor_cloudflare_tunnel.bat', 'start_cf.ps1', 'start_cloudflare_tunnel.bat', 'start_cloudflare_guardian.bat', 'start_cloudflare_hidden.vbs', 'start_cloudflare_hidden_new.vbs', 'deployment/deployment/σÉ»σè¿Φ┐£τ¿ïΦ«┐Θù«.bat')
 INSTANCE_INSPECTOR = ROOT / "scripts" / "inspect_instances.ps1"
 
 
@@ -177,19 +177,23 @@ def validate() -> None:
 
     deployment_readme = DEPLOYMENT_README.read_text(encoding="utf-8")
     deployment_local = DEPLOYMENT_LOCAL.read_text(encoding="utf-8")
-    deployment_remote = DEPLOYMENT_REMOTE.read_text(encoding="utf-8")
     if "SUPPORTING COMPATIBILITY / NOT CURRENT RUNTIME AUTHORITY" not in deployment_readme:
         fail("deployment/README.md must classify compatibility wrappers")
-    for path, text in (
-        (DEPLOYMENT_LOCAL, deployment_local),
-        (DEPLOYMENT_REMOTE, deployment_remote),
-    ):
-        if "8200" in text:
-            fail(f"{path.relative_to(ROOT)} must not start or tunnel a legacy 8200 Core")
-        if "start_production.ps1" not in text:
-            fail(f"{path.relative_to(ROOT)} must converge through the canonical production launcher")
-    if "http://127.0.0.1:8201" not in deployment_remote:
-        fail("deployment/start_remote.bat must tunnel the canonical 8201 Core")
+    if "8200" in deployment_local or "start_production.ps1" not in deployment_local:
+        fail("local deployment must converge through the canonical production launcher")
+    for relative in REMOVED_PUBLIC_LAUNCHERS:
+        if (ROOT / relative).exists():
+            fail(f"removed public-tunnel launcher must not return: {relative}")
+    tree = ast.parse(app)
+    remote = next(node for node in tree.body
+                  if isinstance(node, ast.FunctionDef) and node.name == "remote_access")
+    remote_source = ast.get_source_segment(app, remote) or ""
+    if "PUBLIC_REMOTE_ACCESS_UNAVAILABLE" not in remote_source or "410" not in remote_source:
+        fail("old remote bookmarks must report unavailable")
+    for node in ast.walk(remote):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id in {"open", "redirect"}):
+            fail("remote compatibility route cannot read or redirect to external tunnel state")
 
     compatibility_launchers = [
         ROOT / "check_local_ai.bat",

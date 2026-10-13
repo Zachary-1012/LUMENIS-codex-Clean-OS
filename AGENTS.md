@@ -183,7 +183,7 @@ platform lists/design-first instructions are superseded for execution by this ru
 
 ### Cost and integration boundaries
 
-No new paid resource, account, subscription, deployment or external effect is
+No temporary public-access launcher. No new paid resource, account, deployment or effect is
 approved by rule publication. Existing Permission, source rights, shared-writer
 reservations and exact source/runtime acceptance remain binding. Product Owner
 alone dispatches work and selects models. Preserve every J1-J8/U01-U25 outcome,

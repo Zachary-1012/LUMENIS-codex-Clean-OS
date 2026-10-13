@@ -22,7 +22,6 @@
 | `run_production.py` | Production | 正式 WSGI 入口，Waitress `serve(app)`，并启动调度/内存/稳定性线程；Waitress 缺失才回退 Flask dev |
 | `run_supervised.py` + `scripts/start_production.ps1` | Production | 8201 幂等守护启动（互斥锁+进程守卫+healthz），并按需拉起 9222 真人 Edge；不触碰 8200 |
 | `app.py` | Production | 单体 Flask 应用（13 蓝图 / 303 路由），现网与 v4 统一承载 |
-| `start_tunnel.py` | Experimental | Cloudflare 临时隧道（trycloudflare→8200），**公网未建立，待授权后启动并做公网 healthz** |
 
 ## 2. 采集体系（四代并存，不替换、不新增第三套 Registry）
 

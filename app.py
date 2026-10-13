@@ -3539,27 +3539,18 @@ def api_notes_library_v571():
 
 @app.route('/remote')
 def remote_access():
-    """本地固定入口：自动跳转到当前Cloudflare隧道公网URL
-    用于解决trycloudflare临时域名每次重启变化的问题。
-    用户访问当前 Product Core 的 /remote 可跳转到最新的公网地址。
-    """
-    import os
-    url_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tunnel_url.txt')
-    try:
-        if os.path.exists(url_file):
-            with open(url_file, 'r', encoding='utf-8') as f:
-                url = f.read().strip()
-            if url and url.startswith('http'):
-                return redirect(url, code=302)
-    except Exception:
-        pass
-    # 隧道未启动时显示提示
+    """Keep old bookmarks safe without opening an unapproved public endpoint."""
     return jsonify({
         'ok': False,
-        'message': '公网隧道未启动，请先运行 tunnel_guardian.py 启动隧道',
+        'error': 'PUBLIC_REMOTE_ACCESS_UNAVAILABLE',
+        'message': '当前产品不提供临时公网访问，请使用本机工作区。',
+        'messages': {
+            'zh': '当前产品不提供临时公网访问，请使用本机工作区。',
+            'en': 'Temporary public access is unavailable. Use the local workspace.',
+            'ko': '임시 공개 접속은 제공되지 않습니다. 로컬 작업 공간을 이용하세요.',
+        },
         'local_url': f'http://127.0.0.1:{APP_PORT}',
-        'tunnel_url_file': url_file,
-    }), 503
+    }), 410
 
 
 @app.route('/healthz')
