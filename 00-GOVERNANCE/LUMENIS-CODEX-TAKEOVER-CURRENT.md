@@ -12,7 +12,7 @@ This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any o
 - Next steps (nothing dropped; in order):
   1. Rule updates: §23 hand-drawn colour mark, §33 adapter-bounded open source, and flutter_quill register entry are applied (2026-10-13). Still open: the 3 Codex doc fixes (items not yet identified in the repo; owner Codex).
   2. Core collection: `ZBrand-HealthGuard` reinstalled 2026-10-13 17:16 and 8201 healthy; first manual RedNote run `collect_20261013_172257` started 17:22 with `http_state=BLOCKED` and 0 inserted (RedNote identity scope unbound), so the RedNote login/identity must be bound before runs insert. Notes by source on 2026-10-13: x 763, public_http 225, douyin 66, web_atom 30, xhs 3 (last 2026-09-30), instagram 1, po_provided 1. `COLLECTOR_ENDPOINT` unset (Akang1).
-  3. Subject registry: `subject_registry.record_official_name` (official-site source URL required; no renaming; stable subject_id) and `import_subject_registry_seed.py --official-names FILE` (dry-run default; `--apply` needs exact CONFIG_MODIFY approval) are published (2026-10-13); then the 8 held Taikoo Hui subjects; reconcile the 78 held rows; ingest the 133 relation candidates (GLOBAL-DATA-SOURCE-RESEARCH-20261013.md §20.4) per rules.
+  3. Subject registry: `subject_registry.record_official_name` (official-site source URL required; no renaming; stable subject_id) and `import_subject_registry_seed.py --official-names FILE` (dry-run default; in R&D the developer runs `--apply` directly after a DB backup, per PO 2026-10-13) are published (2026-10-13); then the 8 held Taikoo Hui subjects; reconcile the 78 held rows; ingest the 133 relation candidates (GLOBAL-DATA-SOURCE-RESEARCH-20261013.md §20.4) per rules.
   4. Draft PR #31 (business-decision WIP): owner to finish and pass both gates.
   5. Cleanup: stale worktrees (`D:/LUMENIS_AUDIT/20261012_rules_publish/*`, `序境-runtime-03dc8d93`, leftover `rea-merge-wt` folder), temp files, stale branches/docs, stash `akang-pre-dd0-merge`.
   6. Akang1: browser migration (WIP in the main working tree), `COLLECTOR_ENDPOINT`, tasks 1-3 (Gateway executor stub, AI-01 submit chain, stop/resume, SH-06 inbox, decision-card receipts).
@@ -43,18 +43,29 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 `AGENTS.md` is pinned to LF in `.gitattributes`, so the Codex `project_doc_max_bytes` budget (131072, with 16384 headroom) is measured on the same bytes on Windows and in CI; the text did not change. The six T04 historical PO prohibitions are structured `red_lines` keys in the governance machine contract. The blocking validator `verify_governance_machine_contract.py` rejects dropping or allowing any of them. The PR #24 prose-anchor test has been replaced. AGENTS.md carries a one-line LF note so existing Windows clones rewrite it on update (PR #28 review). PO receipt: `PO-20261013-AGENTS-LF-AND-T04-STRUCTURED-RED-LINES`. 阿康（bot）
 
+## 2026-10-13 PO direct overrides (supersede older text anywhere)
+
+1. Auto-collection scope = all registered subjects (Taikoo Hui is a depth reference only, never the sole scope).
+2. Collection runs headless in the background; platform login recovery uses the one in-product LumenisPlatformRecoverySheet on every surface; no automatic external browser window.
+3. R&D-stage configuration and registry writes are executed directly by the developer (backup first); no PO approval wait.
+4. Merge a PR once all required checks are green; no PO wait.
+5. Brand names = official-site names with source URL.
+6. The developer runs end-to-end tests for newly added subjects and keeps them in CI.
+7. Retired AI providers (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) stay history only; any document naming them as current is superseded.
+8. Before closed-loop closure: SYSTEM collection, CTH, BMP, Shared, AI. After closure: product account system, frontend visual polish, logo and role artwork.
+
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
 
 本次修改范围：移除经全文核对的退役执行正文、嵌套副本与活动引用，包含旧ZBC/OSAI执行基线及双仓库硬门；有效安全、复用、资料采用与验收要求由原AGENTS/Architecture/Experience/Owner承接。原缺口清单及绑定镜像纠正CTH-09已有Decision Owner与Flutter reader却标ABSENT的失真，并纠正已见Widget和Shell入口的屏幕不存在声明；汇总由同一批原记录计算。44份实际屏幕规范中的全局二维/禁3D旧限制已在原段纠正，未以模板更新代替消费者修正。屏幕存在、字段接线、动作、权限和用户验收分开，PENDING不改成通过，其余源码/运行语义不由存在性检查升级。 旧蓝图55章中的有效差异/置信度/配置管理/服务与采集诊断/格式失败边界已回填原Owner职责，旧Provider配方与示例值不恢复；这是要求承接而非11个新项目或实现完成。Shared目录仅按当前架构和真实Python绑定读取。原源码、未完成候选、研究原件、审批、业务数据与失败结果不因清理规则删除。
 
-当前发布（PR #40 AI-01 可信范围，阿康1（bot））：AI-01 提交只认服务端 FOCUS 范围的产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR SH-06 收件箱，阿康1（bot））：SH-06 只读收件箱后端产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR AI-01 回执，阿康1（bot））：AI-01 提交回执校验产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR #35，阿康1（bot））为 SYS-06 内置浏览器实时画面流产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前规则型发布：AGENTS.md 固定 LF 换行（内容不变），T04 历史禁止项迁入机器合同 red_lines，由阻塞校验器结构化检查；不含产品源码。`RULES_ONLY_PUBLICATION`不代表生产已加载、真实用户任务验收或产品功能完成。下段 PR #25 主体登记源码已按源码口径发布。
+当前发布（PR #41，Codex）为规则型发布：README 定义同步、过时权威文件标注 SUPERSEDED、记录 2026-10-13 PO 直接指令，不含产品源码；`RULES_ONLY_PUBLICATION`不代表生产已加载或用户验收。上一发布（PR #40 AI-01 可信范围，阿康1（bot））：AI-01 提交只认服务端 FOCUS 范围的产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR SH-06 收件箱，阿康1（bot））：SH-06 只读收件箱后端产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR AI-01 回执，阿康1（bot））：AI-01 提交回执校验产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR #35，阿康1（bot））为 SYS-06 内置浏览器实时画面流产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前规则型发布：AGENTS.md 固定 LF 换行（内容不变），T04 历史禁止项迁入机器合同 red_lines，由阻塞校验器结构化检查；不含产品源码。`RULES_ONLY_PUBLICATION`不代表生产已加载、真实用户任务验收或产品功能完成。下段 PR #25 主体登记源码已按源码口径发布。
 
-当前发布包含主体登记种子的产品源码：`scripts/import_subject_registry_seed.py`（默认 dry-run；`--apply` 须经既有 PermissionGate 的 CONFIG_MODIFY 高风险精确人工审批，且只经既有 `subject_registry.add_subject` 幂等写入）与已在线核实的种子 `scripts/data_candidates/subject_registry_seed_20261013.jsonl`（610条，清单固定sha256），并登记全球数据源研究现行版；场内 TENANT_OF 关系仍为候选、未写入。`PUBLISHED_SOURCE_VERIFIED`不代表生产已加载、种子已写入生产库、真实用户任务验收或产品功能完成。此前 AGENTS.md 重复叙述精简（PR #26）与 T04 历史禁止项锚点（PR #24）按规则型发布，第7节复用诊断源码已由 PR #23 按源码口径发布；结果以实际Git对象和Actions核实，不在文档中冻结“当前main”的SHA。
+当前发布包含主体登记种子的产品源码：`scripts/import_subject_registry_seed.py`（默认 dry-run；研发阶段由开发者备份数据库后直接执行 `--apply`（PO 2026-10-13 直接指令），且只经既有 `subject_registry.add_subject` 幂等写入）与已在线核实的种子 `scripts/data_candidates/subject_registry_seed_20261013.jsonl`（610条，清单固定sha256），并登记全球数据源研究现行版；场内 TENANT_OF 关系仍为候选、未写入。`PUBLISHED_SOURCE_VERIFIED`不代表生产已加载、种子已写入生产库、真实用户任务验收或产品功能完成。此前 AGENTS.md 重复叙述精简（PR #26）与 T04 历史禁止项锚点（PR #24）按规则型发布，第7节复用诊断源码已由 PR #23 按源码口径发布；结果以实际Git对象和Actions核实，不在文档中冻结“当前main”的SHA。
 
 本轮在现有规则型提交的精确文件白名单内，原位降级四份存活旧执行语义：历史 ADR、两份内容制作母指令与 AI 编程旧基线，均只保留归档研究身份；有效 J6/C4 的 Daily/Weekly/Monthly 播客选题与可编辑成品要求已在现有 Owner 保留。此项来源清理不等于开发、运行或产品验收完成。
 

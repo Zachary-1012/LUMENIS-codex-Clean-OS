@@ -14,9 +14,17 @@ LUMENIS connects real materials, analysis, business decisions, and editable deli
 CTH 围绕商业主体工作，BMP 围绕品牌与市场工作，Shared Capability 提供独立、可复用的研究与制作能力。
 CTH is Subject-first, BMP is Brand/Market-first, and Shared Capability provides independent, reusable research and production.
 
+产品交付按五轮推进：SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI。这是研发与验收顺序，不是用户必须经过的流程。
+
+Product delivery proceeds in five rounds: SYSTEM → CTH → BMP → Shared → Agent Groups / owned AI. This is the build and acceptance order, not a path users must follow.
+
 AI 贯穿适用的工作环节，辅助理解、分析、建议和创作；正常业务、确定性分析、人工编辑、保存与恢复不以模型、外部 AI API 或 GPU 为前提。原始事实、计算结果、AI 建议与人工决定分别保留出处。
 
 AI assists understanding, analysis, recommendations, and creation across applicable workflows. Ordinary business operations, deterministic analysis, manual editing, saving, and recovery do not require a model, external AI API, or GPU. Source facts, computed results, AI suggestions, and human decisions retain distinct provenance.
+
+产品 AI 只经过唯一的 SYSTEM AI Gateway 调用序境自有模型；已退役的外部或本地模型路线不调用、不探测、不作回退。模型不可用时如实显示不可用，基础功能照常工作。
+
+Product AI runs only through the single SYSTEM AI Gateway to LUMENIS-owned models. Retired external or local model routes are never called, probed, or used as fallback. When no model is available the product says so, and basic functions continue to work.
 
 ## 用户如何工作 / User workflows
 
@@ -40,6 +48,8 @@ Independent research and production do not require a prior CTH/BMP task, commerc
 - **清楚呈现 / Clear presentation：** 资料保留原文、封面、作者、链接、原生时间和真实指标；缺失显示“—”，不填假零值。阅读、结果与操作采用序境自己的视觉语言，不改写原始证据或网页。 / Materials retain source content, covers, authors, links, native timestamps, and observed metrics. Missing values are shown as “—”, never fabricated zeros. Product readers, results, and controls follow LUMENIS’s visual language without altering original evidence or webpages.
 - **结果优先 / Results first：** 用户提出工作问题和业务约束，后台处理适用分析，报告呈现结论、依据、限制及下一步。 / Users provide the question and practical constraints; backend analysis produces conclusions, evidence, limitations, and next actions.
 - **版本连续 / Version continuity：** 成果支持保存、局部修订、重开与恢复；旧版和修改原因保留。 / Work supports saving, local revision, reopening, and recovery, with prior versions and reasons retained.
+- **主体与范围 / Subjects and scope：** 默认范围为 GLOBAL / ALL。用户可以搜索、新增、聚焦和清除商业主体与品牌；聚焦只缩小范围，不授予权限，也不启动采集。品牌名称以品牌官网的正式名称为准，并记录来源。 / The default scope is GLOBAL / ALL. Users can search, add, focus, and clear commercial subjects and brands; focus only narrows scope and neither grants permission nor starts collection. Brand names follow each brand's official website and record the source.
+- **持续采集 / Continuous acquisition：** SYSTEM Collector 按话题和任务语义，为全部已登记主体持续采集。当前主要平台为 Instagram、Facebook、微信公众号、小红书、抖音和 X，不设统一历史起点。采集在后台运行，不弹出窗口。平台登录失效时，在产品内打开统一的恢复面板（扫码、受控登录或验证），恢复后续跑原任务，不自动打开外部浏览器。单个平台不可用不影响其他平台。 / The SYSTEM Collector continuously acquires sources for all registered subjects by topic and task semantics. The primary platforms are Instagram, Facebook, WeChat Official Accounts, RedNote/XHS, Douyin, and X, with no universal start date. Collection runs in the background without pop-up windows. When a platform session expires, one in-product recovery sheet (QR, controlled login, or verification) restores it and resumes the original task; no external browser opens automatically. One unavailable platform does not stop the others.
 - **权限明确 / Explicit permissions：** 浏览、引用、制作、导出、发布及模型训练遵循各自适用的授权。 / Browsing, citation, production, export, publication, and training follow their respective permissions.
 
 ## 产品表面 / Product surfaces
@@ -65,6 +75,9 @@ Build the four surfaces in parallel and accept each independently over one Produ
 | [`contracts/`](contracts/) | 接口、体验与能力合同。 / Interface, experience, and capability contracts. |
 | [`scripts/`](scripts/) | 运行、维护、构建和验证工具。 / Runtime, maintenance, build, and verification tools. |
 | [`tests/`](tests/) | 工程回归与历史验证记录。 / Engineering regressions and retained verification records. |
+| [`config/`](config/) | 运行配置、配额与种子。 / Runtime configuration, quotas, and seeds. |
+| `data/` | 本地运行数据；唯一业务库 `data/monitor.db`，不提交到 Git。 / Local runtime data; the single business database `data/monitor.db` is never committed. |
+| [`intelligence_library/`](intelligence_library/) | 研究与学习资料（出处材料，不作执行规则）。 / Research and learning materials (provenance, not execution rules). |
 | [`00-GOVERNANCE/`](00-GOVERNANCE/) | 产品蓝图、Owner、体验、安全和验收要求。 / Product blueprint, ownership, experience, security, and acceptance requirements. |
 
 CTH/BMP 负责各自业务规则；Shared 提供独立和复用能力；SYSTEM 提供共同运行边界。前端消费真实合同，不另建业务、数据或权限系统。
@@ -77,12 +90,22 @@ CTH/BMP own their business rules, Shared provides independent and reusable capab
 
 ```text
 AGENTS.md
+→ 00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
 → 00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
+→ 00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md
+→ 00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md
 → 对应能力合同与源码 / Relevant capability contracts and source
 ```
+
+`LUMENIS-CODEX-TAKEOVER-CURRENT.md` 是所有开发者唯一的闭环接续入口。流程为：规则 → CURRENT → 工作分支 → 测试 → PR → 必需检查全绿 → 合并 → 本地主路径与 `origin/main` 一致。只使用一个本地主路径，不另建 worktree 或副本。
+
+`LUMENIS-CODEX-TAKEOVER-CURRENT.md` is the single closed-loop entry for every contributor: rules → CURRENT → work branch → tests → PR → all required checks green → merge → local main path aligned with `origin/main`. Use one local main path; do not create extra worktrees or copies.
 
 首先阅读 [`AGENTS.md`](AGENTS.md)、对应源码 Owner 和能力合同；核对已有实现与调用关系，复用正确能力、修复冲突，只为确认的缺口补实现。所需 Python 依赖以仓库的 `requirements*.txt` 为准；Flutter/Dart 版本以 [`app/toolchain.json`](app/toolchain.json) 为准；官网使用 [`website/package.json`](website/package.json) 与锁文件。不要为阅读本说明而自动安装、升级或启动服务。
 
@@ -104,9 +127,9 @@ git status --short
 powershell -ExecutionPolicy Bypass -File scripts/start_production.ps1
 ```
 
-Core 健康检查路径为 `/healthz`，工作区路径为 `/workspace`。客户端与官网的构建配置见各自目录说明。采集、训练、部署及生产数据操作各自需要适用授权。
+该入口幂等启动本机 Core（端口 8201）及其后台采集与浏览器常驻进程。Core 默认地址为 `http://127.0.0.1:8201`，健康检查路径为 `/healthz`，工作区路径为 `/workspace`。客户端与官网的构建配置见各自目录说明。采集、训练、部署及生产数据操作各自需要适用授权。
 
-Core exposes `/healthz` for health checks and `/workspace` for the workspace. Refer to each package's guide for client and website build configuration. Collection, training, deployment, and production-data operations require their applicable authorization.
+The entry point idempotently starts the local Core on port 8201 together with its background collector and browser residents. Core listens on `http://127.0.0.1:8201` and exposes `/healthz` for health checks and `/workspace` for the workspace. Refer to each package's guide for client and website build configuration. Collection, training, deployment, and production-data operations require their applicable authorization.
 
 ## 贡献与验证 / Contributing and verification
 
@@ -115,9 +138,9 @@ Coding agents must read the repository execution rules before making changes.
 
 源仓库 / Source repository: [`Zachary-1012/LUMENIS-codex-Clean-OS`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS).
 
-使用有界工作分支与经过审阅的 PR 合入 `main`。保留其他人的未提交修改，逐项暂存本次文件；不要强推、批量覆盖或删除历史证据。依变更范围进行适用的编译、静态、安全和隔离回归验证，并通过真实用户操作验证成果与恢复。
+使用有界工作分支与 PR 合入 `main`，必需检查全部通过即可正常合并，不绕过检查。保留其他人的未提交修改，逐项暂存本次文件；不要强推、批量覆盖或删除历史证据。依变更范围进行适用的编译、静态、安全和隔离回归验证，并通过真实用户操作验证成果与恢复。
 
-Use scoped branches and reviewed pull requests into `main`. Preserve unrelated uncommitted work, stage exact paths, and avoid force pushes, broad overwrites, or deletion of historical evidence. Run applicable build, static, security, and isolated regression checks, and verify results and recovery through actual user operations.
+Use scoped branches and pull requests into `main`; merge normally once all required checks pass, without bypassing them. Preserve unrelated uncommitted work, stage exact paths, and avoid force pushes, broad overwrites, or deletion of historical evidence. Run applicable build, static, security, and isolated regression checks, and verify results and recovery through actual user operations.
 
 产品定义、实现和验收是不同记录。动态进度、提交与运行取证统一见 [CURRENT 接续记录](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md) 和 [真实交付要求](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)；不把快照复制到 README。
 
