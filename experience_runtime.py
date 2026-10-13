@@ -3639,6 +3639,37 @@ def _verified_execution_evidence(ctx) -> bool:
         return False
 
 
+_AI_INTENT_BODY_FIELDS = frozenset({"task", "action_type"})
+
+
+def _ai_intent_trusted_domain():
+    """Resolve the AI-01 execution identity from server-side scope only.
+
+    Uses the existing canonical resolver (_content_project_scope: local workspace
+    principal or signed-in actor, registry-checked FOCUS, Permission decision).
+    GLOBAL_ALL has no single domain and anything unresolved yields None, so the
+    caller returns not-executable instead of choosing a domain itself.
+    """
+    from domain_isolation import resolve_domain_identity
+
+    try:
+        _actor, scope, decision = _content_project_scope(
+            "read", module="content", include_decision=True)
+    except Exception:  # noqa: BLE001 - no trusted scope means not executable
+        return None
+    if not isinstance(scope, dict) or scope.get("global_scope") is not False:
+        return None
+    try:
+        domain, product = resolve_domain_identity(scope.get("domain_id"), None)
+    except ValueError:
+        return None
+    if domain not in {"cth", "zbmp"} or product not in {"CTH", "ZBMP"}:
+        return None
+    actor_ref = getattr(decision, "principal_ref", None) or (
+        f"actor:{getattr(decision, 'actor_id', None)}")
+    return domain, product, actor_ref
+
+
 @experience_bp.route("/api/experience/ai/intent", methods=["POST"])
 def ai_intent():
     """AI-01 composer 提交：先过标准权限门（P0-WRITEPERM-02），通过后复用既有
@@ -3647,8 +3678,14 @@ def ai_intent():
     四态：granted / pending_approval / denied / permanent_deny。未通过权限门时在进入
     执行链之前返回，保证不写任何证据、不触碰生产写侧，也不回显任何安全内部。
     """
-    body = request.get_json(silent=True) or {}
-    task = (body.get("task") or body.get("intent") or "").strip()
+    body = request.get_json(silent=True)
+    # AI-01.md:56-57 / BACKEND-GAP-029: only task and action_type are accepted;
+    # identity, domain, product, skill and input never come from the body.
+    if not isinstance(body, dict) or set(body) - _AI_INTENT_BODY_FIELDS:
+        return jsonify({"ok": False, "status": "denied",
+                        "reason": "only task and action_type are accepted"}), 400
+    task = body.get("task") if isinstance(body.get("task"), str) else ""
+    task = task.strip()
     if not task:
         return jsonify({"ok": False, "error": "task required"}), 400
     if len(task) > 4000:
@@ -3676,25 +3713,13 @@ def ai_intent():
         return jsonify({"ok": False, "status": "denied",
                         "reason": f"action_type {raw_action} 未注册权限映射（fail-closed）"}), 403
     operation_type, risk_level = gate_spec
-    # Evidence identity must be a coherent domain/product pair (domain_isolation:
-    # CTH<->CTH, BMP/ZBMP<->ZBMP, SYSTEM). Product is derived from the domain, never
-    # a free-form label, so the execution Evidence write is not rejected.
-    from domain_isolation import resolve_domain_identity
-    try:
-        intent_domain, intent_product = resolve_domain_identity(
-            body.get("domain", "CTH"), body.get("product") or None)
-    except ValueError:
-        return jsonify({"ok": False, "status": "denied",
-                        "reason": "domain/product identity is invalid"}), 400
-    if not intent_domain:
-        return jsonify({"ok": False, "status": "denied",
-                        "reason": "domain identity is required"}), 400
+    trusted = _ai_intent_trusted_domain()
     decision = get_permission_gate().check(
         operation_type,
-        resource=body.get("skill_id") or "zbc.generic_analysis",
+        resource="zbc.generic_analysis",
         risk_level=risk_level,
-        caller=body.get("user_id") or "experience_user",
-        domain_id=body.get("domain", "CTH"),
+        caller=trusted[2] if trusted else "experience_user",
+        domain_id=trusted[0].upper() if trusted else "CTH",
     )
     if not decision.allowed:
         # pending_approval 用 200（流程未失败，等待人工）；denied 用 403。两者都不执行。
@@ -3711,13 +3736,21 @@ def ai_intent():
         }), http_code
 
     # ── 第 4 步：仅在 granted 后进入执行链（此前任何分支都不会写证据） ──
+    if trusted is None:
+        # GLOBAL_ALL or no server-resolved FOCUS: honest not-executable, no Evidence.
+        return jsonify({
+            "ok": False, "permission_status": "granted", "status": "not_executable",
+            "code": "AI_INTENT_FOCUS_SCOPE_REQUIRED", "audit_id": decision.audit_id,
+            "evidence_recorded": False, "ai_is_derivative": True,
+        })
+    intent_domain, intent_product, actor_ref = trusted
     try:
         ctx = run_execution_chain(
-            skill_id=body.get("skill_id") or "zbc.generic_analysis",
+            skill_id="zbc.generic_analysis",
             task=task,
-            input_payload=body.get("input", {}),
+            input_payload={},
             action_type=action_type,
-            user_id=body.get("user_id"),
+            user_id=actor_ref,
             product=intent_product,
             domain=intent_domain.upper(),
         )

@@ -26,6 +26,8 @@ def intent_client(tmp_path, monkeypatch):
     permission_gate.set_testing_bypass(False)
     import experience_runtime
     importlib.reload(experience_runtime)
+    trusted = {"value": ("cth", "CTH", "actor:test")}
+    monkeypatch.setattr(experience_runtime, "_ai_intent_trusted_domain", lambda: trusted["value"])
     app = Flask(__name__)
     app.register_blueprint(experience_runtime.experience_bp)
     gate = experience_runtime.get_permission_gate()
@@ -33,9 +35,11 @@ def intent_client(tmp_path, monkeypatch):
         permission_gate.PermissionLevel.READ, permission_gate.PermissionLevel.ANALYZE,
     }
     gate.revoke_all_approvals()
-    state = {"mode": "real"}
+    state = {"mode": "real", "trusted": trusted, "calls": 0}
 
     def _fake_run(*_a, **_k):
+        state["calls"] += 1
+        state["kwargs"] = _k
         from lumenis.shared.evidence import EvidenceStore
         execution_id = "exec-receipt-1"
         bound = execution_id if state["mode"] != "foreign" else "exec-other"
@@ -104,33 +108,54 @@ def test_tampered_evidence_content_is_not_recorded(intent_client, monkeypatch):
 
 
 
-@pytest.mark.parametrize("domain,expected", [("CTH", ("CTH", "CTH")), ("BMP", ("ZBMP", "ZBMP"))])
-def test_submit_derives_coherent_product_accepted_by_evidence_store(intent_client, monkeypatch, domain, expected):
-    cli, _state, _rt = intent_client
-    seen = {}
-
-    def _capture(*_a, **kwargs):
-        seen.update(kwargs)
-        return types.SimpleNamespace(execution_id="exec-p", status=types.SimpleNamespace(value="failed"),
-                                     evidence_record={"ok": False})
-
-    from lumenis.shared.agents.skills import execution as skill_execution
-    monkeypatch.setattr(skill_execution, "run_execution_chain", _capture)
-    body = cli.post("/api/experience/ai/intent",
-                    json={"task": "分析", "action_type": "ANALYZE", "domain": domain}).get_json()
-    assert body["ok"] is True
-    assert (seen["domain"], seen["product"]) == expected
-    from lumenis.shared.evidence import EvidenceStore
-    ev, _ = EvidenceStore().add_evidence(
-        source_type="skill_execution", source_url="skill://x/exec-p", source_id="exec-p",
-        raw_content="{}", subject_scope="GLOBAL / ALL", task_id="exec-p", trace_id="exec-p",
-        provider="lumenis.shared.agents.skills.execution",
-        domain_id=seen["domain"], product_id=seen["product"])
-    assert ev.evidence_id
-
-
-def test_free_form_or_mismatched_product_is_rejected_before_execution(intent_client):
-    cli, _state, _rt = intent_client
-    for extra in ({"product": "LUMENIS"}, {"domain": "CTH", "product": "ZBMP"}, {"domain": "XX"}):
+def test_body_fields_beyond_task_and_action_type_are_rejected(intent_client):
+    cli, state, _rt = intent_client
+    for extra in ({"domain": "BMP"}, {"product": "CTH"}, {"user_id": "x"}, {"skill_id": "s"}, {"input": {}}):
         r = cli.post("/api/experience/ai/intent", json={"task": "分析", "action_type": "ANALYZE", **extra})
         assert r.status_code == 400 and r.get_json()["ok"] is False
+    assert state["calls"] == 0
+
+
+def test_global_or_unresolved_scope_is_not_executable_and_writes_no_evidence(intent_client):
+    cli, state, _rt = intent_client
+    from lumenis.shared.evidence import EvidenceStore
+    before = len(EvidenceStore().list_evidence(source_type="skill_execution"))
+    state["trusted"]["value"] = None
+    body = _submit(cli).get_json()
+    assert body["ok"] is False and body["status"] == "not_executable"
+    assert body["code"] == "AI_INTENT_FOCUS_SCOPE_REQUIRED" and body["evidence_recorded"] is False
+    assert "execution_id" not in body and state["calls"] == 0
+    assert len(EvidenceStore().list_evidence(source_type="skill_execution")) == before
+
+
+def test_bmp_focus_executes_under_zbmp_identity(intent_client):
+    cli, state, _rt = intent_client
+    state["trusted"]["value"] = ("zbmp", "ZBMP", "actor:test")
+    body = _submit(cli).get_json()
+    assert body["ok"] is True
+    assert (state["kwargs"]["domain"], state["kwargs"]["product"]) == ("ZBMP", "ZBMP")
+    assert state["kwargs"]["user_id"] == "actor:test" and state["kwargs"]["input_payload"] == {}
+
+
+def test_trusted_domain_comes_only_from_server_scope_resolver(monkeypatch):
+    import types as _t
+    import experience_runtime as rt
+    importlib.reload(rt)
+    decision = _t.SimpleNamespace(principal_ref="actor:7", actor_id=7)
+
+    def _resolver(scope=None, exc=None):
+        def _call(action, *, module, include_decision):
+            assert (action, module, include_decision) == ("read", "content", True)
+            if exc:
+                raise exc
+            return {"id": 7}, scope, decision
+        return _call
+
+    monkeypatch.setattr(rt, "_content_project_scope", _resolver(exc=RuntimeError("AUTH_REQUIRED")))
+    assert rt._ai_intent_trusted_domain() is None
+    monkeypatch.setattr(rt, "_content_project_scope", _resolver({"domain_id": "cth", "global_scope": True}))
+    assert rt._ai_intent_trusted_domain() is None
+    monkeypatch.setattr(rt, "_content_project_scope", _resolver({"domain_id": "cth", "global_scope": False}))
+    assert rt._ai_intent_trusted_domain() == ("cth", "CTH", "actor:7")
+    monkeypatch.setattr(rt, "_content_project_scope", _resolver({"domain_id": "zbmp", "global_scope": False}))
+    assert rt._ai_intent_trusted_domain() == ("zbmp", "ZBMP", "actor:7")
