@@ -16,3 +16,7 @@ contracts/experience/lumenis_app_binding_registry.json text eol=lf
 # Reviewed source inputs retain their exact original-byte hashes on every OS.
 config/collection-topic-seed-20261004.json -text
 tests/fixtures/collector/native_public_captures_20261004.json -text whitespace=cr-at-eol
+
+# Codex project-doc budget (project_doc_max_bytes) is measured on checkout bytes;
+# pin AGENTS.md to LF so Windows CRLF checkout cannot exceed it. No content change.
+AGENTS.md text eol=lf

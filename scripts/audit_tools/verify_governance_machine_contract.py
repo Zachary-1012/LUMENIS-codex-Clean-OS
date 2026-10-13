@@ -38,6 +38,17 @@ EXPECTED_LADDER = [
 ]
 
 
+# T04: historical PO prohibitions are machine semantics, validated structurally (not prose anchors).
+HISTORICAL_PROHIBITION_RED_LINES = (
+    "direct_push_bypass_force_push_or_main_deletion",
+    "unapproved_collection_model_training_spending_or_deployment_effect",
+    "overwrite_protected_dirty_worktree",
+    "reset_clean_or_overwrite_valid_local_work_for_clean_tree",
+    "mock_backend_fake_save_or_decorative_progress_as_business_success",
+    "general_os_control_in_active_product_requirements",
+)
+
+
 def fail(message: str) -> None:
     raise AssertionError(message)
 
@@ -273,6 +284,9 @@ def validate_contract() -> dict:
     red = c.get("red_lines", {})
     if not red or any(value is not False for value in red.values()):
         fail("all governance red lines must remain false/forbidden")
+    missing_historical = [key for key in HISTORICAL_PROHIBITION_RED_LINES if key not in red]
+    if missing_historical:
+        fail(f"historical PO prohibitions missing from machine red_lines (T04): {missing_historical}")
 
     completion = c.get("completion", {})
     if completion.get("ladder") != EXPECTED_LADDER:
