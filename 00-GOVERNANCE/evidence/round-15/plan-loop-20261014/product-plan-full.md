@@ -60,7 +60,7 @@
 | Shared 提案/视频/播客 C4 | 三类分别验收：可编辑成品、真实渲染和试听（ARCH:82-111、SOI:683-687） | Timeline、渲染、导出有历史成果；不再要求勾 demo | 独立新建→编辑→导出→重开的完整链没有验收 | 阿康1（后端），阿康（界面） | 闭环内 |
 | Shared 检索 | cosine＋BM25＋融合＋cross-encoder 精排（ARCH:153-161） | 没有核实 | 需要真实模型和效果证据 | 阿康1 | 闭环内 |
 | **Agent / 自研 AI** C2 | 取消/恢复、Skills 商店、Memory、受控学习（SOI:224,669-672） | 首页聊天提交以前是 `onPressed:null`（UA:28）；#31 正在补 | AI-01 提交链、SH-06 收件箱、决策卡回执 | 阿康1 | 闭环内 |
-| **四表面** F | 官网 Astro、Web、Win/macOS、iOS 并行建设、各自验收；后三者共用一套 Flutter 实现（README:54、MSD:17）；打开工作区直接进入聊天首页（ARCH:124）；中英韩三语和无障碍（SOI:230） | 有官网基础版、Flutter Web 和 /workspace | 前端功能与后端并行闭环开发 | 阿康 | 前端功能与视觉风格/logo/角色图均闭环内（与后端并行，按 sketches/FRONTEND-BUILD-PLAN.md 分步建设） |
+| **四表面** F | 官网 Astro、Web、Win/macOS、iOS 并行建设、各自验收；后三者共用一套 Flutter 实现（README:54、MSD:17）；打开工作区直接进入聊天首页（ARCH:124）；中英韩三语和无障碍（SOI:230） | 有官网基础版、Flutter Web 和 /workspace | 前端功能与后端并行闭环开发 | 阿康 | 前端功能与视觉风格/logo/角色图均闭环内（与后端并行，按 sketches/UI-BUILD-PLAN-F0-F13.md 分步建设） |
 | 品牌与角色 | Pim/Bram/Ness/Jas/Aris；AI 水印；logo 带名/不带名两版（UA:90-104） | 已登记 | 随前端分步建设（FRONTEND-BUILD-PLAN 第 F12 步） | 阿康 | 闭环内 |
 | 小插件进度 | 只有一个进度入口，即 CURRENT（CUR:7） | 正在改成读 CURRENT | 需要合 PR | 阿康 | 闭环内 |
 
