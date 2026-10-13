@@ -1217,7 +1217,7 @@ source fixture / real public source
 → runtime/E2E
 ```
 
-No API key/OAuth/cloud dependency may be added to this zero-auth program without a separate architecture and legal/commercial decision.
+No API key/OAuth/cloud dependency may be added without a separate architecture and legal/commercial decision, except free account sign-in: Google sign-in and email codes; Apple 登录等开通开发者账号后启用.
 
 ## 9. Data truth and DB safety
 

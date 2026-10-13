@@ -94,7 +94,7 @@ It is not:
 - an Apple clone;
 - a Linear clone;
 - a Notion clone;
-- a ChatGPT clone;
+- a ChatGPT clone (referencing the information architecture of its settings — section grouping, toggle semantics, export/delete flows — is structural reference, not cloning; its visuals, copy, brand and component implementation are not copied);
 - a Korean-brand website clone;
 - a generic AI-gradient interface.
 
