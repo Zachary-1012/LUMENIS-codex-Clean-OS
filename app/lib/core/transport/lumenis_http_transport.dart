@@ -22,5 +22,10 @@ Future<LumenisBinaryTransportResponse> sendLumenisBinaryRequest(
   required int maxBytes,
 }) => platform.sendLumenisBinaryRequest(request, maxBytes: maxBytes);
 
+Stream<String> openLumenisEventStream(
+  LumenisTransportRequest request, {
+  required int maxEventBytes,
+}) => platform.openLumenisEventStream(request, maxEventBytes: maxEventBytes);
+
 bool isLumenisConnectionError(Object error) =>
     error is LumenisTransportException;

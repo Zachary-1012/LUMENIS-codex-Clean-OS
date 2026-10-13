@@ -7,6 +7,8 @@ ZBC AI Browser Runtime API — REST Contract
   POST   /api/browser/sessions                              创建 Session
   GET    /api/browser/sessions/<session_id>                 Session 状态
   GET    /api/browser/sessions/<session_id>/frame           已授权会话当前画面
+  GET    /api/browser/sessions/<session_id>/frames/stream   已授权会话实时画面流（SSE，不存不送AI）
+  GET    /api/browser/sessions/<session_id>/stream-policy   画面流默认策略/离开暂停状态
   POST   /api/browser/sessions/<session_id>/navigate        导航
   POST   /api/browser/sessions/<session_id>/observe         观察页面（脱敏）
   POST   /api/browser/sessions/<session_id>/action          执行 Action（带 Verification）
@@ -600,6 +602,10 @@ def register_ai_browser_api(app):
         session, err = _get_session_or_404(session_id)
         if err:
             return err
+        from lumenis.system.browser.runtime.frame_stream import PRESENCE
+        if PRESENCE.agent_pause_reason(session_id):
+            return jsonify({"ok": False, "status": "PAUSED",
+                            "code": "AGENT_PAUSED_USER_LEFT_VIEW", "output": None}), 409
         try:
             data = _json_object_body()
             if data is None:
@@ -1007,6 +1013,74 @@ def register_ai_browser_api(app):
             return jsonify({"ok": False, "error_code": exc.code}), 409
         except Exception as e:
             return jsonify({"ok": False, "error": sanitize_sensitive(str(e)[:300])}), 500
+
+    # ──────────────────────────────────────────────────────────
+    # 实时画面流（SSE）— owner: lumenis/system/browser/runtime/frame_stream.py
+    # ──────────────────────────────────────────────────────────
+
+    @bp.route("/api/browser/sessions/<session_id>/frames/stream", methods=["GET"])
+    def stream_session_frames(session_id: str):
+        """Push fresh frames of this isolated session to its authorized viewer (SSE).
+
+        Frames are never cached, stored or sent to AI; leaving the view pauses
+        the agent on sensitive / logged-in pages (PO default).
+        """
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        if session.status != SessionStatus.RUNNING:
+            return jsonify({"ok": False, "error_code": "BROWSER_FRAME_UNAVAILABLE"}), 409
+        from flask import stream_with_context
+        from lumenis.system.browser.runtime.frame_stream import iter_frame_events
+
+        bound_actor = (g.browser_actor_id, g.browser_account_session_id, g.browser_principal_ref)
+
+        def _still_authorized() -> bool:
+            # Re-run the blueprint's actor/permission gate inside the stream.
+            if _require_browser_actor() is not None:
+                return False
+            return (g.browser_actor_id, g.browser_account_session_id,
+                    g.browser_principal_ref) == bound_actor
+
+        def _alive(s) -> bool:
+            is_alive = getattr(s, "is_alive", None)
+            if callable(is_alive) and not is_alive():
+                return False
+            return s.status == SessionStatus.RUNNING
+
+        events = iter_frame_events(
+            session,
+            is_running=_alive,
+            human_control_active=lambda s: s.is_human_control_active(),
+            authorize=_still_authorized,
+            document_url=lambda s: getattr(s, "_latest_frame_document_url", None),
+            pending_errors=(BrowserFramePending,),
+            empty_errors=(BrowserFrameEmpty,),
+        )
+        response = Response(stream_with_context(events), mimetype="text/event-stream")
+        response.headers["Cache-Control"] = "no-store, private"
+        response.headers["X-Accel-Buffering"] = "no"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
+
+    @bp.route("/api/browser/sessions/<session_id>/stream-policy", methods=["GET"])
+    def stream_policy(session_id: str):
+        """Read-only PO defaults for this session's frame stream and agent pause."""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        from lumenis.system.browser.runtime.frame_stream import DEFAULT_POLICY, PRESENCE
+
+        response = jsonify({
+            "ok": True,
+            "session_id": session_id,
+            "policy": DEFAULT_POLICY.to_dict(),
+            "viewers": PRESENCE.viewers(session_id),
+            "agent_paused_reason": PRESENCE.agent_pause_reason(session_id),
+        })
+        response.headers["Cache-Control"] = "no-store, private"
+        return response
 
     # 注册蓝图
     app.register_blueprint(bp)

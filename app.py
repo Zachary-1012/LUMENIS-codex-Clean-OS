@@ -518,6 +518,8 @@ def _internal_beta_browser_outcome_request_allowed():
         'ai_browser_runtime.list_sessions': {'GET'},
         'ai_browser_runtime.get_session_status': {'GET'},
         'ai_browser_runtime.read_session_frame': {'GET'},
+        'ai_browser_runtime.stream_session_frames': {'GET'},
+        'ai_browser_runtime.stream_policy': {'GET'},
         'ai_browser_runtime.acquire_human_control': {'POST'},
         'ai_browser_runtime.release_human_control': {'POST'},
         'ai_browser_runtime.human_control_navigate': {'POST'},
@@ -641,7 +643,7 @@ except Exception as _ib_e:
 
 # Zachary OS AI：系统内置浏览器实时画面流（Screencast over SSE，持久连接主动推帧）
 try:
-    import internal_browser_stream
+    from lumenis.system.browser.runtime import screencast_stream as internal_browser_stream
     internal_browser_stream.register_stream(app)
 except Exception as _ibs_e:
     print(f"[internal_browser_stream] blueprint register failed: {_ibs_e}")

@@ -1271,6 +1271,105 @@ class LumenisCoreClient {
     }
   }
 
+  /// Live frames of an authorized local browser session (SSE).  Frames are
+  /// only displayed; the server never stores them or sends them to AI.
+  Stream<LumenisBrowserFrame> browserFrameStream(String sessionId) async* {
+    _validateBrowserSessionId(sessionId);
+    _requireLocalBrowserEndpoint();
+    final uri = _uri(
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/frames/stream',
+    );
+    try {
+      await for (final data in openLumenisEventStream(
+        LumenisTransportRequest(
+          method: 'GET',
+          uri: uri,
+          headers: <String, String>{'Accept': 'text/event-stream'},
+          connectionTimeout: const Duration(seconds: 20),
+          followRedirects: false,
+        ),
+        maxEventBytes: 24 * 1024 * 1024,
+      )) {
+        final frame = parseBrowserStreamEvent(data);
+        if (frame != null) yield frame;
+      }
+    } on LumenisTransportException {
+      throw const LumenisCoreException(
+        'Browser frame stream is unavailable.',
+        errorCode: 'BROWSER_FRAME_STREAM_UNAVAILABLE',
+      );
+    }
+  }
+
+  /// Parses one SSE `data:` payload; returns null for non-frame events.
+  static LumenisBrowserFrame? parseBrowserStreamEvent(String data) {
+    final decoded = jsonDecode(data);
+    if (decoded is! Map || decoded['t'] != 'frame') return null;
+    final frameId = decoded['frame_id'];
+    final targetId = decoded['target_id'];
+    final revision = decoded['page_revision'];
+    final capturedAt = decoded['captured_at'] is String
+        ? DateTime.tryParse(decoded['captured_at'] as String)
+        : null;
+    final width = decoded['width'];
+    final height = decoded['height'];
+    final viewport = decoded['viewport'];
+    final payload = decoded['data'];
+    if (decoded['mime'] != 'image/png' ||
+        frameId is! String ||
+        !_isOpaqueBrowserId(frameId) ||
+        targetId is! String ||
+        !_isOpaqueBrowserId(targetId) ||
+        revision is! int ||
+        revision < 0 ||
+        capturedAt == null ||
+        width is! int ||
+        height is! int ||
+        width < 1 ||
+        height < 1 ||
+        width > 16384 ||
+        height > 16384 ||
+        viewport is! Map ||
+        payload is! String) {
+      throw const FormatException('Browser stream frame metadata is invalid.');
+    }
+    final viewportWidth = viewport['width'];
+    final viewportHeight = viewport['height'];
+    final dpr = viewport['dpr'];
+    if (viewportWidth is! int ||
+        viewportHeight is! int ||
+        viewportWidth < 1 ||
+        viewportHeight < 1 ||
+        viewportWidth > 16384 ||
+        viewportHeight > 16384 ||
+        dpr is! num ||
+        !dpr.isFinite ||
+        dpr <= 0 ||
+        dpr > 16) {
+      throw const FormatException('Browser stream viewport is invalid.');
+    }
+    final bytes = base64Decode(payload);
+    if (bytes.length < 24 ||
+        bytes[0] != 0x89 ||
+        bytes[1] != 0x50 ||
+        bytes[2] != 0x4e ||
+        bytes[3] != 0x47) {
+      throw const FormatException('Browser stream frame is not a PNG image.');
+    }
+    return LumenisBrowserFrame(
+      bytes: bytes,
+      frameId: frameId,
+      targetId: targetId,
+      pageRevision: revision,
+      capturedAt: capturedAt.toUtc(),
+      width: width,
+      height: height,
+      viewportWidth: viewportWidth,
+      viewportHeight: viewportHeight,
+      devicePixelRatio: dpr.toDouble(),
+    );
+  }
+
   static bool _isOpaqueBrowserId(String? value) =>
       value != null && RegExp(r'^[A-Za-z0-9_-]{1,180}$').hasMatch(value);
 
