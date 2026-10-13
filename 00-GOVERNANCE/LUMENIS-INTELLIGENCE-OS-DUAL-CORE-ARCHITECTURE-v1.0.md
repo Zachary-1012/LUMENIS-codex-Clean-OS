@@ -1,5 +1,7 @@
 # LUMENIS Intelligence OS · 序境双核架构 v1.0
 
+> **SUPERSEDED / HISTORICAL ONLY（2026-10-13 标注）**：ZBC+OSAI 双核、Linux 端与通用 OS/电脑控制已移出产品范围；仓库为单一 LUMENIS-codex-Clean-OS。 当前执行规则以 `AGENTS.md`、`LUMENIS-CODEX-TAKEOVER-CURRENT.md` 与 `LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md` 为准；本文件的“最高/权威/CANONICAL”表述不再有效。
+
 > **文档地位**：序境项目最终融合架构权威基线。取代此前"双库揉合""双子库""ZBC+OSAI"等过程叫法。
 > **基准**：以线上两个 main 分支真实源码事实为准，不以旧版本/旧聊天/旧文档覆盖当前源码。
 > **生效**：2026-09-05 · 状态：CANONICAL
