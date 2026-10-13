@@ -74,13 +74,89 @@ This is a bounded DESIGN_READY presentation clarification, without a new episode
 store, persisted preference or audio engine. Implementation, complete podcast
 persistence, actual AI/rights binding and live user acceptance remain open.
 
-## 5. Actions, authorization and effects
+## 5. Purpose-built desktop composition
+
+已批准目标来源：`BMP-08-ADD-podcast-studio.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+
+### 草图增补：播客制作室全链（规划 §14 P1–P12、G184/G79/G107/G128）
+
+```
+播客制作室 · 《节目名》第 N 期                     [保存] [版本 v3 ▾] [导出发布包]
+步骤条：①选题 ②嘉宾 ③提纲 ④脚本 ⑤录音/导入 ⑥转写 ⑦剪辑 ⑧配音(可选) ⑨母带 ⑩发布包 ⑪切片 ⑫复盘
+┌ 左：稿件（逐词，可编辑）──────────────┬ 右：检查器 ─────────────────┐
+│ [S1 主持] 00:00:12 今天我们聊……         │ 章节：01 开场 00:00 [改名]   │
+│ [S2 嘉宾] 00:00:31 我第一次……  ~~嗯~~   │       02 …                    │
+│  删词=剪掉对应音频；划线=待删语气词      │ 说话人：S1 主持 S2 嘉宾 [合并]│
+│ [一键去语气词/长停顿 → 生成提议]         │ 来源：脚本事实句 12/12 有来源 │
+├ 下：多轨时间线 ─────────────────────────┤ 响度：实测 -16.2 LUFS ✓       │
+│ 人声1 ▁▃▅▇▅▃  人声2 ▂▄▆▄▂  BGM ▁▁▁(ducking)│ 真峰：-1.3 dBTP ✓             │
+│ ▶ 播放头 00:12:31   [试听] [循环]         │ AI 标注：脚本「AI 生成」·配音「AI 配音」│
+└─────────────────────────────────────────┴──────────────────────────────┘
+⑩ 发布包：MP3/M4A · show notes · 章节 JSON · 字幕稿 VTT/SRT · 封面 · RSS 校验 ✓  [确认发布]（不自动发）
+⑪ 切片：故事节点候选（时间码+来源）→ 9:16 音频图 / 引语卡 / 各平台包装
+⑫ 复盘：故事节点密度 · 情绪/洞察峰值（AI 派生，非权威）· 产出率 · 留存曲线（无平台数据 = 数据缺失）
+```
+
+**4. States**
+空 / 导入中 / 转写中（进度，可取消）/ 模型不可用（显示原因，可导入已有字幕稿继续）/ 剪辑提议待确认 / 母带不达标（显示实测值与差值，不自动二次施压）/ 版权未知（导出提醒）/ 数据缺失 / 权限不足。
+
+**9. Acceptance**
+- 删词剪点误差 ≤1 帧；词内零切；撤销还原原稿与音频。
+- 母带实测 -16 LUFS ±1、真峰 ≤ -1 dBTP，数值显示在界面。
+- 脚本事实句 100% 有来源或标 UNKNOWN；配音仅用户开启，声音克隆需本人授权。
+- 发布包 RSS 含 podcast:transcript / podcast:chapters 并通过校验；发布需确认。
+- 新建→编辑→试听→导出→重开修订完整可走通（G55）；三语；无主体写死。
+
+**增补（2026-10-14 全文读码）**
+- 播放器全工作区唯一；点逐字稿句子→跳播；点时间轴标记→打开对应故事节点/证据；点故事节点→筛选稿与素材。
+- 手机：迷你播放器 + 底部抽屉；桌面：两栏/三栏。
+- 选题卡：十信号逐项显示；缺项显示「需补输入」并列出缺哪几项，不出分。
+- 嘉宾卡：三标准 Gate 勾选（人工），未过不进入提纲。
+- 稿件：原文/校对双视图切换；改稿提示「改稿不改音频」。
+- 状态：加载/空/部分/错误/重试/恢复中/成功 均有设计；运行不回传显示「无返回」，不静默。
+- 研究阅读器：结论→发现→证据（侧抽屉）→模式与假设→验证状态→可迁移→不可照搬→来源。
+
+### Existing contract — Actions, authorization and effects
 
 - `podcast:draft` saves a local request draft; it does not create a script or call an executor.
 - `podcast:render` saves a local render-request draft. Until the canonical server executor, Permission/effect fence and Evidence-bearing result exist, no audio/cut is generated or claimed ready.
 - Publish and rights changes are outside this slice.
 
-## 6. Accessibility and localization
+
+
+### 三语状态文案
+
+| Key | zh-CN | en | ko |
+|---|---|---|---|
+| loading | 加载中 | Loading | 불러오는 중 |
+| missing | 数据缺失 | Data unavailable | 데이터 없음 |
+| unavailable | 暂不可用 | Currently unavailable | 현재 사용할 수 없음 |
+| denied | 无权执行此操作 | This action is not permitted | 이 작업 권한이 없습니다 |
+| retry | 重试 | Retry | 다시 시도 |
+| cancel | 取消 | Cancel | 취소 |
+| save | 保存 | Save | 저장 |
+| revise | 修订 | Revise | 수정 |
+| reopen | 重新打开 | Reopen | 다시 열기 |
+| recover | 恢复 | Recover | 복구 |
+| return | 返回原任务 | Return to task | 원래 작업으로 돌아가기 |
+
+全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
+
+## 5A. Web Workspace composition
+
+### 草图增补：播客制作室全链（规划 §14 P1–P12、G184/G79/G107/G128）
+
+Web：同桌面；录音需浏览器麦克风授权，未授权时只可导入。
+
+
+## 6. Purpose-built mobile composition
+
+### 草图增补：播客制作室全链（规划 §14 P1–P12、G184/G79/G107/G128）
+
+Mobile：步骤条横滑；稿件全屏编辑；时间线折叠为波形条；母带与发布包只读确认。
+
+
+### Existing contract — Accessibility and localization
 
 - Waveform has a text timeline equivalent with time, section and source labels.
 - Keyboard focus follows material, script, timeline, rights status and staged actions.

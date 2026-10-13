@@ -54,13 +54,68 @@ Trusted CTH-09 fixture IDs are `EV-7710`, `EV-7699` and `EV-7712` (not a single-
 | Offline / Error | Transport or malformed response | 暂时无法读取风险与决策，请稍后重试。 | Retry | CTH09-W-006 |
 | Ready | Bound risk/decision payload | Show matrix/feed, ledger and selected basis | Local selection only | CTH09-W-007 |
 
-## 5. Purpose-built composition
+## 5. Purpose-built desktop composition
+
+已批准目标来源：`CTH-09-ADD-math-result-card.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+
+### 草图增补：数学引擎结果卡（区间/缺失）
+
+```
+指标：风险指数 62（95% 区间 54–70）模型 v1.2 · 证据▸
+样本不足：「数据不足（n=3 < 14）」—不显示 0/50
+[查看回测] [解释（AI，只解释不改数）]
+```
+
+**4. State additions**
+Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
+
+**9. Executable acceptance**
+- 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。
+- OpenAI Math 主引擎，经典库补充；结果可复现。
+
+算法在后端执行；用户看到业务指标、来源、适用区间与局限。图中数值、置信度及样本阈值仅为布局示例，不是默认值或通用阈值；不满足实际假设时不出虚构区间，不要求用户选论文或模型。
+
+### Existing contract — Purpose-built composition
 
 - **Desktop/Web:** a ranked risk register with score tracks and text severity on the left; a separate decision ledger with owner/status/effect readiness on the right; a selected-basis inspector below or beside them. This is not the CTH-08 case board.
 - **Mobile:** a ranked risk feed, selected risk basis, then decision ledger. Each disabled action states why it cannot be executed.
 - **Accessibility:** level, score and status are included in semantics; critical/high/medium/low text is always present; selection uses keyboard and touch; blocking/error states are live regions.
 
-## 6. Actions, authorization and effects
+
+
+### 三语状态文案
+
+| Key | zh-CN | en | ko |
+|---|---|---|---|
+| loading | 加载中 | Loading | 불러오는 중 |
+| missing | 数据缺失 | Data unavailable | 데이터 없음 |
+| unavailable | 暂不可用 | Currently unavailable | 현재 사용할 수 없음 |
+| denied | 无权执行此操作 | This action is not permitted | 이 작업 권한이 없습니다 |
+| retry | 重试 | Retry | 다시 시도 |
+| cancel | 取消 | Cancel | 취소 |
+| save | 保存 | Save | 저장 |
+| revise | 修订 | Revise | 수정 |
+| reopen | 重新打开 | Reopen | 다시 열기 |
+| recover | 恢复 | Recover | 복구 |
+| return | 返回原任务 | Return to task | 원래 작업으로 돌아가기 |
+
+全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
+
+## 5A. Web Workspace composition
+
+### 草图增补：数学引擎结果卡（区间/缺失）
+
+Web Workspace composition
+同桌面布局；无额外差异。
+
+## 6. Purpose-built mobile composition
+
+### 草图增补：数学引擎结果卡（区间/缺失）
+
+Purpose-built mobile composition
+同卡片。
+
+### Existing contract — Actions, authorization and effects
 
 | Action | Required proof | UI behavior |
 | --- | --- | --- |

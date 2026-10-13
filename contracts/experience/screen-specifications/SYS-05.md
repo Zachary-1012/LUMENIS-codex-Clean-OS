@@ -91,7 +91,29 @@ Appearance controls update the in-memory theme immediately and asynchronously wr
 
 Do not turn any local-storage failure into a successful server save. Do not send image bytes to Flask or the Product Core.
 
-## 5. Composition and responsive behavior
+## 5. Purpose-built desktop composition
+
+已批准目标来源：`SYS-05-ADD-visual-brand-roles.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+
+### 草图增补：视觉风格 · Logo · 五位角色（闭环内，PO 2026-10-14）
+
+```
+设置 › 通用 › 外观
+主题  (●) 跟随系统 ( ) 浅色 ( ) 深色      强调色 [茉莉白 ▾]
+字号  [100% ▾]（最高 200%）   减少动态效果 [跟随系统 ▾ / 开 / 关]
+角色  [显示角色形象 ✓]  Pim 商业运营 · Bram 品牌市场 · Ness 共享能力 · Jas 系统 · Aris 自研 AI
+预览  ┌ 当前页缩略 ┐ 改动即时生效，返回原页面、滚动位置和草稿不丢
+```
+
+**4. States：正常 / 加载 / 素材缺失（显示占位名字，不用他人素材）。**
+
+
+**9. Acceptance**
+- 切换主题后路由、滚动、选择、未保存草稿不变（SYS-05 原合同）。
+- Logo/角色图为自有矢量稿，许可清楚；AI 草图生成的素材标注来源。
+- 200% 字号与减少动态效果下全部屏可用。
+
+### Existing contract — Composition and responsive behavior
 
 - Entry is a shell palette button, with a tooltip and semantic label. It opens one purpose-built appearance editor, not a generic settings dashboard.
 - The editor uses a scrollable, maximum-620-px sheet. On narrow screens the six mode choices remain in one horizontally scrollable row; wallpaper/color controls appear only for the selected mode; sliders and switches remain in the same task flow; the bottom sheet accounts for keyboard insets and safe areas. On wider surfaces it stays a focused preference sheet rather than adding a repeated card grid.
@@ -100,7 +122,40 @@ Do not turn any local-storage failure into a successful server save. Do not send
 - A palette choice must preserve the caller's route, unsaved form text, selected entity, scroll position and other draft state. A bounded guarded-Web run preserved the dirty draft across the appearance change. Native desktop and broader route/scroll preservation remain unverified; repeat those checks before overall runtime acceptance. The mobile viewport check below covers the appearance editor layout, not every route's state.
 - Do not create a navigation reset, route replacement, keyed subtree, or account/server write to apply a local theme.
 
-## 6. Keyboard, accessibility, motion and localization
+
+
+### 三语状态文案
+
+| Key | zh-CN | en | ko |
+|---|---|---|---|
+| loading | 加载中 | Loading | 불러오는 중 |
+| missing | 数据缺失 | Data unavailable | 데이터 없음 |
+| unavailable | 暂不可用 | Currently unavailable | 현재 사용할 수 없음 |
+| denied | 无权执行此操作 | This action is not permitted | 이 작업 권한이 없습니다 |
+| retry | 重试 | Retry | 다시 시도 |
+| cancel | 取消 | Cancel | 취소 |
+| save | 保存 | Save | 저장 |
+| revise | 修订 | Revise | 수정 |
+| reopen | 重新打开 | Reopen | 다시 열기 |
+| recover | 恢复 | Recover | 복구 |
+| return | 返回原任务 | Return to task | 원래 작업으로 돌아가기 |
+
+全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
+
+## 5A. Web Workspace composition
+
+### 草图增补：视觉风格 · Logo · 五位角色（闭环内，PO 2026-10-14）
+
+Web 同桌面，保留原任务与状态。
+
+## 6. Purpose-built mobile composition
+
+### 草图增补：视觉风格 · Logo · 五位角色（闭环内，PO 2026-10-14）
+
+Web 同桌面；手机纵排，预览改为整页实时生效。
+
+
+### Existing contract — Keyboard, accessibility, motion and localization
 
 - Mode chips expose selected state. Preset colors have semantic labels. The custom color text field is keyboard-editable and validates exactly six hexadecimal digits before applying. File selection, remove, controls and modal dismissal remain reachable by keyboard and touch.
 - Validation and persistence errors use a live-region semantic; use text alongside color for success, unavailable, saving and failure states.

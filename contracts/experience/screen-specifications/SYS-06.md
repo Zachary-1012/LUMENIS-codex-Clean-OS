@@ -266,14 +266,99 @@ widget or a viewport. Opening a native desktop build does not remove that bounda
 | Blocked | 401/403 or session scope denied | Follow access flow; no browser action |
 | Ready | safe counts/states returned | Read only |
 
-## 5. Purpose-built desktop and web composition
+## 5. Purpose-built desktop composition
+
+已批准目标来源：`SYS-06-ADD-browser-tabs.md`, `SYS-06-ADD-login-recovery-sheet.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+
+### 草图增补：内置浏览器：标签/地址栏/前进后退/折叠/查看原文
+
+```
+[◀][▶][⟳] [地址栏 https://… ][☆][⋯]  [⌄折叠]
+[标签1 ×][标签2 ×][+]
+┌ 真实页面（同一受控会话）┐  右侧：当前任务卡 [返回任务]
+└───────────────────────┘  底部：[在外部浏览器查看原文 ↗]（仅用户点，无采集）
+```
+
+**4. State additions**
+Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
+
+**9. Executable acceptance**
+- 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。
+- 外部打开永不自动触发、永不采集；无 Edge/9222；书签/历史/阅读模式可选。
+
+会话失效先保存任务并在产品内请求人工操作；自动采集不打开桌面窗口。恢复须服务端身份、权限、健康及租约核验，不绕过挑战/冷却。
+
+### 草图增补：产品内登录失效弹窗 LumenisPlatformRecoverySheet
+
+```
+┌ 小红书（RedNote·香港账号来源）登录已失效 ┐
+│ 任务「<主体> 采集」已暂停，进度已保存      │
+│ [扫码登录] [在内置浏览器登录] [稍后]       │
+│ 状态：等待验证 / 冷却中 mm:ss             │
+└──────────────────────────────────────────┘
+```
+
+**4. State additions**
+Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
+
+**9. Executable acceptance**
+- 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。
+- 后台采集本身不弹窗；仅登录失效弹；适用全部平台与全部已登记主体。
+
+会话失效先保存任务并在产品内请求人工操作；自动采集不打开桌面窗口。恢复须服务端身份、权限、健康及租约核验，不绕过挑战/冷却。
+
+### Existing contract — Purpose-built desktop and web composition
 
 - Desktop/Web: capability summary sits beside filtered instance states; a boundary explanation names allowed read scope and unbound operations.
 - Tablet/mobile stack summary and instance states; state text remains beside each instance.
 - No browser viewport, credential inspector, port list or action toolbar is rendered.
 - Any future browser action needs explicit target authorization, Permission, audit and Effect Fence.
 
+
+
+### 三语状态文案
+
+| Key | zh-CN | en | ko |
+|---|---|---|---|
+| loading | 加载中 | Loading | 불러오는 중 |
+| missing | 数据缺失 | Data unavailable | 데이터 없음 |
+| unavailable | 暂不可用 | Currently unavailable | 현재 사용할 수 없음 |
+| denied | 无权执行此操作 | This action is not permitted | 이 작업 권한이 없습니다 |
+| retry | 重试 | Retry | 다시 시도 |
+| cancel | 取消 | Cancel | 취소 |
+| save | 保存 | Save | 저장 |
+| revise | 修订 | Revise | 수정 |
+| reopen | 重新打开 | Reopen | 다시 열기 |
+| recover | 恢复 | Recover | 복구 |
+| return | 返回原任务 | Return to task | 원래 작업으로 돌아가기 |
+
+全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
+
+## 5A. Web Workspace composition
+
+### 草图增补：内置浏览器：标签/地址栏/前进后退/折叠/查看原文
+
+Web Workspace composition
+同桌面布局；折叠后收为顶栏胶囊「浏览器·2 个标签」，任务不中断。
+
+### 草图增补：产品内登录失效弹窗 LumenisPlatformRecoverySheet
+
+Web Workspace composition
+同桌面布局；同一时刻只弹一个；成功后自动回到原任务并续跑。
+
 ## 6. Purpose-built mobile composition
+
+### 草图增补：内置浏览器：标签/地址栏/前进后退/折叠/查看原文
+
+Purpose-built mobile composition
+全屏单标签+底部标签切换；折叠为底部条。
+
+### 草图增补：产品内登录失效弹窗 LumenisPlatformRecoverySheet
+
+Purpose-built mobile composition
+底部 Sheet，同内容。
+
+### Existing contract — Purpose-built mobile composition
 
 - Single active task: inspect controlled capacity.
 - Summary first, instance states second, safety boundary always visible.
