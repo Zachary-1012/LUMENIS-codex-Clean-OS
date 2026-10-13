@@ -160,7 +160,8 @@ def test_retired_local_providers_cannot_be_revived_or_probed(monkeypatch):
     from lumenis.system.ai_gateway import providers
 
     probes = []
-    monkeypatch.setattr(providers, '_probe_endpoint', lambda *a, **k: probes.append(a) or True)
+    assert not hasattr(providers, '_probe_endpoint')
+    monkeypatch.setattr(urllib.request, 'urlopen', lambda *a, **k: probes.append(a) or None)
     for name in ('ollama', 'lmstudio', 'llama_cpp'):
         providers.set_provider_status(name, providers.ACTIVE)
         assert providers.provider_status(name) == providers.DISABLED

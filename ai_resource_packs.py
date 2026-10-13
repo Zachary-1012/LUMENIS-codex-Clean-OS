@@ -1,18 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
-AI Resource Packs — 智谱多资源包额度管理
-【用户规划】
-- glm-4.5-air (1191万 tokens): 本周测试 20万/天
-- search-std (100次): 用在刀刃上的功能（RAG搜索增强）
-- 按次计费 (20次): 2次用于采集ChatGPT/Codex学习，其余按需求执行，给可输入需求接口
-- glm-4.6v (600万): 视觉模型，每次用前问用户
+"""Historical resource-pack accounting; no executable provider or paid-call route.
 
-功能：
-1. 多资源包额度配置与检查
-2. 资源包使用统计
-3. 暂停/恢复 AI 连接
-4. 按次计费需求执行接口（用户输入需求，系统调度执行）
-5. 资源包状态查询 API
+Retain original quota/usage metadata for inspection. Product inference uses the
+current SYSTEM Gateway and its separate permission and selected-model contract.
 """
 import os
 import json
@@ -37,11 +27,6 @@ def _retired_execution_result() -> Dict:
         'resource_consumed': False,
     }
 
-
-def _execution_provider_is_retired() -> bool:
-    from lumenis.system.ai_gateway.providers import is_provider_retired
-
-    return is_provider_retired(RETIRED_EXECUTION_PROVIDER)
 
 # ============ 资源包配置 ============
 RESOURCE_PACKS = {
@@ -212,17 +197,8 @@ def pause_connection(reason: str = "用户手动暂停"):
 
 
 def resume_connection():
-    """恢复 AI 连接。"""
-    if _execution_provider_is_retired():
-        return {**_retired_execution_result(), 'paused': True}
-    global _paused, _pause_reason
-    with _lock:
-        _paused = False
-        _pause_reason = ""
-        stats = _load_stats()
-        stats["pause"] = {"paused": False, "reason": "", "since": None}
-        _save_stats(stats)
-    return {"paused": False, "reason": ""}
+    """Retired accounting cannot resume a model connection or consume quota."""
+    return {**_retired_execution_result(), 'paused': True}
 
 
 def is_paused() -> Dict:
@@ -231,50 +207,9 @@ def is_paused() -> Dict:
 
 
 # ============ 按次计费需求执行 ============
-def execute_per_call_request(user_request: str, model: str = "glm-5.3") -> Dict:
-    """
-    按次计费需求执行接口。
-    用户输入需求，系统调度执行（消耗1次按次计费额度）。
-    默认走智谱当前最强可用模型 glm-5.3（最大算力优先；豆包仅编排不承担推理）。
-    """
-    if _execution_provider_is_retired():
-        return _retired_execution_result()
-
-    # 检查按次计费额度
-    quota = check_quota("per_call", 1)
-    if not quota["allowed"]:
-        return {"ok": False, "error": quota["reason"], "quota": quota}
-
-    # 检查预留学习次数
-    pack_stats = _get_pack_usage("per_call")
-    reserved = RESOURCE_PACKS["per_call"].get("reserved_for_learning", 0)
-    remaining = pack_stats["remaining"]
-    if remaining <= reserved:
-        return {"ok": False, "error": f"剩余{remaining}次为学习采集预留，不可用于需求执行", "quota": quota}
-
-    # 记录使用
-    record_usage("per_call", 1, endpoint="per_call_request", detail=user_request)
-
-    # 调用 AI 执行需求（通过 intelligence 网关；model 真正传下去，默认智谱旗舰 glm-5.3）
-    try:
-        from lumenis.system.ai_gateway import core as intelligence
-        result, provider = intelligence._chat(
-            system="你是Z-Brand Intelligence Platform的AI执行助手。根据用户需求，给出专业、可执行的方案。",
-            user=user_request,
-            temperature=0.3,
-            max_tokens=2000,
-            model=model,
-        )
-        return {
-            "ok": True,
-            "request": user_request,
-            "result": result,
-            "provider": provider,
-            "model": model,
-            "quota_remaining": _get_pack_usage("per_call")["remaining"],
-        }
-    except Exception as e:
-        return {"ok": False, "error": str(e), "quota_remaining": _get_pack_usage("per_call")["remaining"]}
+def execute_per_call_request(user_request: str, model: str | None = None) -> Dict:
+    """Retain the old response contract without model dispatch or quota writes."""
+    return _retired_execution_result()
 
 
 # ============ 状态查询 ============
@@ -285,7 +220,7 @@ def get_all_packs_status() -> Dict:
         "pause_reason": _pause_reason,
         "execution": {
             "provider": RETIRED_EXECUTION_PROVIDER,
-            "status": "provider_disabled" if _execution_provider_is_retired() else "compatibility_test_only",
+            "status": "provider_disabled",
             "resource_consumed": False,
         },
         "packs": {},
