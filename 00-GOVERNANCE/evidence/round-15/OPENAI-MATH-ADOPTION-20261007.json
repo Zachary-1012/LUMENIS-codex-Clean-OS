@@ -8,7 +8,7 @@
   "math_baseline": "adc7f1241b42e322a6451854ab7e4b4c146bf78a",
   "status": "RESEARCH_ADOPTED_WITH_BOUNDED_SOURCE_REPAIR",
   "formal_verification": "NOT_REPLAYED",
-  "training": "NOT_ADMITTED_NOT_RUN",
+  "training": "GIBBS_PARAMETER_TRAINED_NOT_DEPLOYED; OWNED_LLM_NOT_RUN",
   "dispatch": "BOUNDED_REPAIR_AUTHORIZED; GLOBAL_C1_C6_F_J1_J8_DISPATCH_NOT_IMPLIED",
   "implementation_updates": [
     {
@@ -1286,7 +1286,7 @@
       "whole_clean_source_runtime": "NOT_VERIFIED"
     },
     "model_experiment": {
-      "state": "AWAITING_EXACT_APPROVAL",
+      "state": "TRAINED_NOT_DEPLOYED",
       "dataset_sha256": "aa72a7c3982da6fecfc55be3d06cf4c1041b7603ec7e07f5498d3f4f91dcf1f6",
       "train": 24,
       "validation": 6,
@@ -1294,7 +1294,44 @@
       "compute": "LOCAL_CPU_MAX_120_SECONDS_ZERO_FEE",
       "kind": "GIBBS_PARAMETER_POLICY_NOT_GPT_OSS",
       "owned_model_training": "NOT_RUN",
-      "promotion": "NOT_AUTHORIZED"
+      "promotion": "NOT_AUTHORIZED",
+      "display_state": "已训练、未上线",
+      "evidence_readback_date": "2026-10-14",
+      "new_training_executed": false,
+      "steps": 120,
+      "epochs": 5,
+      "checkpoint_payload_sha256": "1f5ff4874fa55c7fbf569d8025f188c98573afe0f3926312269ac0f913cf6f6d",
+      "checkpoint_file_sha256": "53d16736f3d9657444ee59858bc3fc21d0f6319ae5de892718d623aefe37a694",
+      "payload_and_dataset_hash_readback": "MATCH",
+      "source_code_sha256_from_receipt": "adf1cdcbadf8a163bc4f593d5b7a55bcdf79ce6451e99ca52f128c4f411a7711",
+      "current_main_training_entry": "NOT_VERIFIED",
+      "runtime_binding": "NOT_VERIFIED",
+      "business_result": "NOT_EVALUATED",
+      "checkpoint_reload_this_review": "NOT_RUN",
+      "g163": "OPEN",
+      "evidence_directory": "D:/LUMENIS_REBUILD/gibbs-evidence-20261014",
+      "consent_reference_from_receipt": "PO-chat-approval2026-10-14T02:34+08:00",
+      "validation_result": {
+        "count": 6,
+        "gold_match": 5,
+        "constraints_valid": 6,
+        "mean_nll": "0.4578612705730241250367291365",
+        "uniform_baseline_nll": "1.791759469228055000812477358"
+      },
+      "holdout_result": {
+        "count": 8,
+        "gold_match": 6,
+        "constraints_valid": 8,
+        "mean_nll": "0.9830274694911673753747682078",
+        "uniform_baseline_nll": "3.17805383034794561964694160"
+      },
+      "receipt_sha256": {
+        "protocol.json": "391dacb59993d80dc78e5438c32567490bd4b073d6956c5df99aa31133813e2d",
+        "consent.json": "e84e980162ed722bca39a955de2703a34b2c221adc5c6726f6a034ccf656e3eb",
+        "train.log": "cc4953e2ce32b3ca4cc1e9c1f724c5b48eb31d2474ba2e29268820ce8da1db71",
+        "validation.log": "12201a1ed63f2363e89198d67e621d4f3aba56613b020a6db1e3c58687a8ad5c",
+        "holdout.log": "b445b7ee3583bcb7157b90ba1952f93aeafc86f3b9e68a92d1763d2659a1fd9b"
+      }
     },
     "acceptance": "Bounded scenarios only; no full-paper, full-job, product-release or model-gain claim."
   }

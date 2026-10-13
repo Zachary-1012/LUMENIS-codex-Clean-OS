@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
-"""AI Budget Manager（MAX-EFFICIENCY / LOW-Doubao-COST MODE 治理件）。
+"""AI Usage Budget Manager.
 
 自动记录每次 AI 调用（provider/model/task/成功失败/耗时/估算token），
-落盘 staging/ai-budget.jsonl（gitignore）。读取 config/ai-quota.json（智谱额度快照）。
-提供汇总 CLI 供 Observatory 消费。
+落盘 staging/ai-budget.jsonl（gitignore），并提供汇总 CLI 供 Observatory 消费。
 
 用法：
   python scripts/ai_budget.py record <provider> <model> <task> <ok> <elapsed> <tokens> [note]
   python scripts/ai_budget.py summary [--last N]
-  python scripts/ai_budget.py status            # 输出 JSON（Observatory 数据源，含 quota）
+  python scripts/ai_budget.py status            # 输出 JSON（Observatory 数据源）
 """
 import json
 import os
@@ -17,23 +16,10 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG = os.path.join(ROOT, "staging", "ai-budget.jsonl")
-QUOTA = os.path.join(ROOT, "config", "ai-quota.json")
-
-# 豆包预算治理阈值：豆包占比上限，超出自动提示降级
-DOUBAO_MAX_SHARE = 0.15
 
 
 def _ensure():
     os.makedirs(os.path.dirname(LOG), exist_ok=True)
-
-
-def read_quota():
-    if not os.path.exists(QUOTA):
-        return {"provider": "zhipu", "note": "config/ai-quota.json 缺失", "resources": []}
-    try:
-        return json.load(open(QUOTA, encoding="utf-8"))
-    except Exception as e:  # noqa: BLE001
-        return {"provider": "zhipu", "note": f"quota parse error: {e!r}", "resources": []}
 
 
 def record(provider, model, task, ok, elapsed_s, tokens_est, note="",
@@ -97,8 +83,6 @@ def summary(last=None):
         total_tok += r["tokens_est"]
         ok_n += 1 if r["ok"] else 0
     n = len(rows)
-    doubao_calls = by_provider.get("doubao", {}).get("calls", 0)
-    doubao_share = doubao_calls / n if n else 0.0
     # prompt-cache 可观测：cache_hit 占比 + input/output token 分离
     cache_known = [r for r in rows if r.get("cache_hit") is not None]
     cache_hits = sum(1 for r in cache_known if r["cache_hit"])
@@ -108,11 +92,7 @@ def summary(last=None):
         "total_calls": n,
         "success_rate": round(ok_n / n, 3) if n else 0.0,
         "total_tokens_est": total_tok,
-        "doubao_calls": doubao_calls,
-        "doubao_share": round(doubao_share, 3),
-        "doubao_over_threshold": doubao_share > DOUBAO_MAX_SHARE,
         "by_provider": by_provider,
-        "quota": read_quota(),
         "cache": {
             "known": len(cache_known),
             "hit": cache_hits,
