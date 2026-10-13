@@ -1046,7 +1046,7 @@ CTH-03来源检索路径的闭环为：明确任务与 GLOBAL/可选 Focus → �
 | ACC-01 | 启动直达ACC-03开放工作区，账号/登录与设置可选且在工程闭环内 | 免费Google、邮箱验证码、账号恢复；Apple待开发者账号开通，错误/取消/重发/删除撤销按现行合同，不画不可用占位 | LaunchSurface→开放工作区；可选账号流程保留原任务，成功、取消和错误均可返回 | 设计记录不代替实现；账号正常操作、权限、恢复及各表面可用性分别验收，普通工作不设账号墙 |
 | ACC-02 | 可选选择现有 Subject 与 BMP BrandFocus，显示合法对象来源/名称 | 搜索→对象列表→一个对象关系细节；Default GLOBAL 保持第一选择 | 选取后确认焦点；取消/清空回 GLOBAL；跨域不改身份 | 源码存在；主体选择不得变成入口限制 |
 | ACC-03 | 真实待处理任务、待确认动作、重要变化、上次工作（需真有记录）、任务起点 | 上方任务入口；中段是有意义的工作路径/真实任务条；不做四个大卡和侧边状态栏 | 开始 AI-01、打开任务，或进入 CTH/BMP 业务、Shared 研究/直接创作；返回保留当前真实任务 | 源码存在但现有首屏内容和 CTH-01 默认与目标冲突，需重组 |
-| ACC-04 | 某项任务/读取失败时说明对象、影响和真实恢复动作 | 原任务中的局部恢复提示；不跳转到登录/通用权限页面 | 仅在owner许可时重试；否则返回/改用现有可用路径；恢复后回原任务 | 服务端真实拒绝仍不可伪造通过；账号/权限设置由ACC-01与SYS-04承接，不让错误页成为通用配置页 |
+| ACC-04 | 某项任务/读取失败时说明对象、影响和真实恢复动作 | 原任务中的局部恢复提示；不跳转到登录/通用权限页面 | 仅在owner许可时重试；否则返回/改用现有可用路径；恢复后回原任务 | 服务端真实拒绝仍不可伪造通过；账号设置归ACC-01，权限恢复留在原动作，仅使用服务端返回的恢复回调和复核，不在错误页或SYS-04授予权限 |
 
 ### 6.2 CTH — 商业运营（10 屏）
 
@@ -1096,10 +1096,10 @@ CTH-03来源检索路径的闭环为：明确任务与 GLOBAL/可选 Focus → �
 | SYS-01 | 查应用、API、数据库、依赖和适配器实时状态 | 有向拓扑+更新时间+当前失败层；不是业务 KPI | 点依赖看 trace/错误→授权恢复→原任务返回 | 源码存在；具体现场健康需运行 |
 | SYS-02 | 终态：查看来源能力、PlatformSession、现有计划/新增获准计划、真实Task结果及精确可恢复位置 | Plans / Runs / Sources三块互相联动：Scope/模式/时间/来源深度；逐平台lane；declared→live-verified能力层级；query/native/receipt进度分开 | manual start / 用户opt-in plan / pause future / cancel pending / RecoverySheet / resume same Task；运行回执定位Source/Evidence | revision 2已承接最终目标；当前实现仍是read-only，Manifest/Session/receipt/动作绑定与runtime E2E待C1/C6完成 |
 | SYS-03 | 看 Schema、数据库健康、证据/Canonical链 | DB层级与字段 lineage/Integrity error列关系 | 检查错误、导出审计/按owner恢复，不直接改业务 truth | 源码存在；本轮不读生产 DB |
-| SYS-04 | 账号、安全/设备会话、用户与创始人两类开发者模式按现行SYS-04合同在闭环内呈现 | 分区采用既有设置结构、序境原创视觉；每项能力显示真实权限、作用范围、风险、停用及恢复，不以角色图稿授予权限 | 业务动作内确认；服务端Permission与Effect Fence逐次决定允许/拒绝，模式切换有条款、同意和恢复约束 | 设置修改、账号恢复、权限拒绝和两类模式分别真实验收；普通业务不设账号墙，不自动扩大账户/来源/付费权限 |
+| SYS-04 | 安全/设备会话与用户开发者模式按现行SYS-04合同在闭环内呈现；账号设置归ACC-01，创始人内部发布归SYS-07 | 分区采用既有设置结构、序境原创视觉；每项能力显示真实权限、作用范围、风险、停用及恢复，不以角色图稿授予权限 | 业务动作内确认；服务端Permission与Effect Fence逐次决定允许/拒绝，模式切换有条款、同意和恢复约束 | 安全设置与用户模式按现行Owner合同验收；权限只读展示，拒绝/恢复在原动作内处理，不自动扩大账户/来源/付费权限 |
 | SYS-05 | 外观、壁纸、主题、对比、字体与动效偏好 | 即时预览；壁纸控制在当前工作旁的抽屉/面板，内容按设备重排 | 预览→仅在当前设备应用/取消→回原任务；无服务端/跨设备壁纸同步 | Screen spec `DESIGN_READY`；两张用户照片已捆绑。局部 Web 选择/重载/移除及纯黑/字号检查有 PASS；两张原图全端/极端裁切验收和原生材质实绘仍未完成 |
 | SYS-06 | 在当前任务的已授权边界中访问受控网页；当RecoverySheet当前项需要LOGIN_FORM/VERIFY时提供Browser交互 | 来源/允许域/浏览器状态/当前恢复项并置；Cookie/token/profile/CDP等敏感信息永不显示 | 普通受控阅读→Return；RecoverySheet→受控登录/验证→交回PlatformSession健康复核→恢复原Task | revision 4明确它不是Session owner/平台账号中心；`IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED / BACKEND-GAP-041`，浏览器online/表单完成都不等于Session或Evidence成功 |
-| SYS-07 | 看同一候选发布链的source/config、Product Gate、App Gate、Critical E2E、package/runtime、rollback、PO repeat、RELEASED/OPERATING证据 | 以SHA绑定的纵向证据链为主，不用一组绿灯卡片；不同SHA证据并排标明不合并 | 打开精确证据/回对应Owner；本屏不自己执行Gate或宣告release | revision 2已批准最终release-evidence目标；当前builder仍只返回有限checks/skill light，完整C6/M release contract和real-user E2E待绑定 |
+| SYS-07 | 看同一候选发布链的source/config、Product Gate、App Gate、Critical E2E、package/runtime、rollback、PO repeat、RELEASED/OPERATING证据；创始人内部发布模式按SYS-07当前合同执行 | 以SHA绑定的纵向证据链为主，不用一组绿灯卡片；不同SHA证据并排标明不合并 | 打开精确证据/回对应Owner；获准创始人按既有服务完成上传→验证→签名→分批→回滚，界面不能自行授予发布权或宣告release | revision 2已批准最终release-evidence目标；当前builder仍只返回有限checks/skill light，完整C6/M release contract和real-user E2E待绑定 |
 | SYS-08 | 查任务 trace、请求、失败日志及影响 | 真实 Trace waterfall 与 Error Inspector；有频率筛选 | 由任务跳 Trace，返回同一 task/result | 源码存在；事件关联需同一 trace id |
 
 ### 6.6 Shared（6 屏）
@@ -1918,7 +1918,7 @@ F-01—F-12对应 `Frontend_Delivery_Audit.md` 的原12项发现；F-13—F-18�
 | F-17 | 补same-release发布证据链：Product/App/Critical E2E/package/runtime/rollback/PO repeat/RELEASED/OPERATING，证据按SHA分开 | §6.5、§10发布证据 | SYS-07 |
 | F-18 | 清除研发配置泄漏：AI-05只做产品AI服务诊断，不暴露/选择Codex的Astra/Sol/Luna或raw provider/model | §4.2、§6.4 | AI-05 |
 
-审计中的账号/权限UI按当前ACC-01/SYS-04合同在工程闭环内实现，包含免费登录、账号恢复与两类开发者模式；本稿保留原业务动作内的服务端Permission、明确批准/拒绝、来源授权、Effect回执与审计，普通工作不设登录墙。审计未复演全部视频帧；本稿只沿用已有的指定视频覆盖记录/观察和对应采用点，不声称本轮重新逐帧观看。
+审计中的账号/安全与开发者UI按当前ACC-01/SYS-04/SYS-07合同在工程闭环内实现，包含免费登录、账号恢复与两类开发者模式；本稿保留原业务动作内的服务端Permission、明确批准/拒绝、来源授权、Effect回执与审计，普通工作不设登录墙。审计未复演全部视频帧；本稿只沿用已有的指定视频覆盖记录/观察和对应采用点，不声称本轮重新逐帧观看。
 
 
 ## 2026-10-08 Intelligent UI 任务适配与全屏索引

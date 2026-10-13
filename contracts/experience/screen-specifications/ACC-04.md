@@ -20,7 +20,7 @@ approval_reference: ROUND-14A bounded implementation Task Card
 
 - User job: understand why a protected workspace action is unavailable and choose an honest recovery path.
 - ACC-04 never issues credentials, grants access, retries a write, resets a session or invents a successful permission decision.
-- Product-account deferral remains visible and distinct from Core transport auth and business Permission.
+- Optional account access is in engineering closure under ACC-01; it is distinct from Core transport auth and business Permission. This recovery page never grants access.
 
 ## 1. Route and fields
 
@@ -44,13 +44,13 @@ approval_reference: ROUND-14A bounded implementation Task Card
 
 - Desktop: guard explanation is primary, recovery paths are a clear secondary rail.
 - Mobile: explanation first, recovery actions stack in server-returned order with 44px+ targets.
-- Focus order, announcements and text labels distinguish unavailable, blocked and product-account-deferred; reduced motion is immediate.
+- Focus order, announcements and text labels distinguish unavailable, blocked and account-specific recovery; reduced motion is immediate.
 
 ## 4. Localization integration key list
 
 Existing shared key: `screen.ACC-04`, `common.refresh`.
 
-Feature keys: `acc04.guardUnavailable`, `acc04.guardBlocked`, `acc04.productAccountDeferred`, `acc04.recheck`, `acc04.switchContext`, `acc04.requestAccess`, `acc04.returnToWorkspace` for `zh-CN`, `en`, and `ko`. Local fallback copy is used in this bounded slice.
+Feature keys: `acc04.guardUnavailable`, `acc04.guardBlocked`, `acc04.productAccountDeferred`, `acc04.recheck`, `acc04.switchContext`, `acc04.requestAccess`, `acc04.returnToWorkspace` for `zh-CN`, `en`, and `ko`. The legacy localization key `acc04.productAccountDeferred` is compatibility metadata, not permission to show account deferral or invent an access grant; current copy and callbacks must match the actual server-returned recovery state.
 
 ## 5. Executable acceptance
 
