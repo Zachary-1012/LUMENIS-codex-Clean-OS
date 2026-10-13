@@ -166,11 +166,42 @@ def import_seed(rows: Iterable[Dict[str, Any]], *, apply: bool = False) -> Dict[
     return report
 
 
+def import_official_names(rows: Iterable[Dict[str, Any]], *, apply: bool = False) -> Dict[str, Any]:
+    """Record brands' own official names (with official-site URL) via the registry.
+
+    Dry run by default; ``apply`` needs the same exact CONFIG_MODIFY approval.
+    """
+    import subject_registry as registry
+
+    rows = list(rows)
+    for r in rows:
+        if not str(r.get("source_url", "")).lower().startswith(("https://", "http://")):
+            raise SeedIntegrityError(f"official name without official source URL: {r.get('subject_id')}")
+    if not apply:
+        return {"mode": "dry_run", "total": len(rows), "results": []}
+    require_apply_approval()
+    results = [registry.record_official_name(
+        r["domain_id"], r["subject_id"], source_url=r["source_url"], name_zh=r.get("name_zh"),
+        name_en=r.get("name_en"), keywords=r.get("keywords", ())) for r in rows]
+    return {"mode": "apply", "total": len(rows),
+            "changed": sum(1 for x in results if x["changed"]), "results": results}
+
+
 def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--apply", action="store_true", help="write through subject_registry.add_subject")
     parser.add_argument("--seed", choices=sorted(SEEDS), default="20261013")
+    parser.add_argument("--official-names", help="JSON list of official names with source_url")
     args = parser.parse_args(argv)
+    if args.official_names:
+        rows = json.loads(Path(args.official_names).read_text(encoding="utf-8"))
+        try:
+            report = import_official_names(rows, apply=args.apply)
+        except SeedApprovalRequired as exc:
+            print(json.dumps({"ok": False, "code": "PERMISSION_DENIED", "error": str(exc)}, ensure_ascii=False))
+            return 2
+        print(json.dumps(report, ensure_ascii=False, default=str))
+        return 0
     try:
         report = import_seed(load_seed(*SEEDS[args.seed]), apply=args.apply)
     except SeedApprovalRequired as exc:
