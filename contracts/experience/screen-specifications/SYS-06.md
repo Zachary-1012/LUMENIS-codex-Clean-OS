@@ -6,7 +6,7 @@
 
 既有 SYSTEM worker 执行网页；Core 核验 actor/task/scope/session、每次动作和来源用途；SYS-06只呈现真实画面与可用操作。不得用iframe失败、静态截图、raw CDP前端直连或另开桌面应用替代。方法参考公开浏览器会话/动作与画面原理，具体安全传输必须真实实现，不能宣称已复制GPT私有架构。
 
-通用操作系统、任意本机软件/键鼠与远程电脑控制已经撤出产品范围。历史AgentZero/OS代码保留，不再要求GUI worker才能完成本屏。既有浏览器任务绑定、支持的网页动作、受控文件传输、权限、来源保存与重开恢复缺口仍需实际验收；文档更正不能将其记为通过。本规格不声明当前窗口派工状态。
+通用操作系统、任意本机软件/键鼠与远程电脑控制已经撤出产品范围，相关历史要求已删除，不再要求GUI worker才能完成本屏。既有浏览器任务绑定、支持的网页动作、受控文件传输、权限、来源保存与重开恢复缺口仍需实际验收；文档更正不能将其记为通过。本规格不声明当前窗口派工状态。
 
 ```yaml
 screen_id: SYS-06
@@ -85,8 +85,7 @@ IDs alone stay UNBOUND/UNVERIFIED and are not published as task Evidence.
 
 No model is required for these deterministic/manual controls. The optional
 Browser Use route stays UNAVAILABLE until Task/Source-use/Gateway/egress/action
-bridges are bound; it must not disable the manual path. The disabled Agent Zero GUI adapter is retained historical source; general
-computer/OS control was withdrawn on 2026-10-11 and is not a delivery dependency.
+bridges are bound; it must not disable the manual path. General computer/OS control was withdrawn on 2026-10-11 and is not a delivery dependency; Agent Zero GUI is out of product scope.
 
 The loopback guard remains until secure remote actor/session transport exists.
 Remote Web use, session-result SavedWork/Artifact save/reopen/recovery and
