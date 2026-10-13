@@ -64,7 +64,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 本批移除指定采集脚本的参考主体profile默认值和CDP示例；主体名称不选择账户；Python 原账户 Owner 核验批准身份和精确 Cookie/Profile 后传入子进程，JS 拒绝任意 profile、目录逃逸、错误身份和不安全 Cookie 域/URL；不读取真实凭据进行验收。ACC-02保持GLOBAL默认与既有参考覆盖维度，不把参考主体作为默认值。删除PO指定旧工单，历史证据链接固定到删除前提交，现行KOS要求仍由既有合同承接。关键词零命中只适用退役可执行路径/硬编码默认值，真实资料和历史证据保留。PR #61/#63/#62规则、草图、隧道及PR #64 Gateway/Gibbs、PR #65缺失数据修复已发布；G163仍OPEN。编译、静态和隔离回归不代表当前Runtime或真实用户验收；未操作原工作分支、浏览器、Cookie、DB、模型或运行服务。

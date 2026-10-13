@@ -242,6 +242,7 @@ def _collection_env(account=None, region='intl', cdp_url=None):
     env.pop('XHS_PROFILE_DIR', None)
     env.pop('XHS_COOKIE_HEADER', None)
     env.pop('XHS_COOKIES_JSON', None)
+    env.pop('XHS_CDP_URL', None)
     selected_region = region or 'intl'
     env['XHS_COLLECTION_REGION'] = selected_region
     env['XHS_COLLECTION_HOST'] = 'www.rednote.com'

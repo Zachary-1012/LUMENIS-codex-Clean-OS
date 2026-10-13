@@ -325,16 +325,38 @@ def test_adapter_health_blocks_wrong_account_before_endpoint_or_probe():
     assert result.metadata['error_type'] == 'account_paused'
 
 
-def test_collection_env_none_region_keeps_intl_default(monkeypatch):
+def test_collection_env_none_region_keeps_intl_default(monkeypatch, tmp_path):
     import collector
     import xhs_cookie_bridge as bridge
 
+    private = tmp_path / 'private'
+    profile = private / 'profiles' / 'xhs-retinaut'
+    profile.mkdir(parents=True)
+    cookie = private / 'xhs_cookie_retinaut.txt'
+    cookie.write_text(f'x-user-id-pro={TEST_HK_ID}', encoding='utf-8')
+    monkeypatch.setattr(bridge, 'PRIVATE_DATA_DIR', str(private))
+    monkeypatch.setattr(bridge, 'XHS_RETINAUT', TEST_HK_ID)
+    monkeypatch.setattr(bridge, 'ACCOUNT_PROFILES', {
+        bridge.XHS_RETINAUT_NAME: (str(cookie), str(profile)),
+    })
     monkeypatch.setenv('XHS_EXPECTED_COLLECTION_USER_ID', 'untrusted-inherited-value')
+    monkeypatch.setenv('XHS_PROFILE_DIR', str(tmp_path / 'personal-profile'))
+    monkeypatch.setenv('XHS_CDP_URL', 'http://127.0.0.1:9999')
+    monkeypatch.setenv('XHS_COOKIE_HEADER', 'inherited-not-approved')
+    monkeypatch.setenv('XHS_COOKIES_JSON', 'inherited-not-approved')
     env = collector._collection_env(account=bridge.XHS_RETINAUT_NAME, region=None)
 
     assert env['XHS_COLLECTION_REGION'] == 'intl'
     assert env['XHS_COLLECTION_HOST'] == 'www.rednote.com'
     assert env['XHS_EXPECTED_COLLECTION_USER_ID'] == bridge.XHS_RETINAUT
+    assert env['XHS_PROFILE_DIR'] == str(profile.resolve())
+    assert env['XHS_COOKIE_FILE'] == str(cookie.resolve())
+    assert 'XHS_CDP_URL' not in env
+    assert 'XHS_COOKIE_HEADER' not in env
+    assert 'XHS_COOKIES_JSON' not in env
+    cookie.write_text('x-user-id-pro=wrong-synthetic-identity', encoding='utf-8')
+    with pytest.raises(PermissionError, match='XHS_REGISTERED_COOKIE_IDENTITY_MISMATCH'):
+        collector._collection_env(account=bridge.XHS_RETINAUT_NAME, region=None)
 
 
 def test_existing_context_helper_returns_only_preexisting_context():
