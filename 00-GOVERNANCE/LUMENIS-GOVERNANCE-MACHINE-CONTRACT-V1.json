@@ -18,12 +18,31 @@
     "real_delivery": "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
     "global_universe": "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md"
   },
+  "agent_assignment": {
+    "development_peers": [
+      "Codex",
+      "Akang (GrokBot)"
+    ],
+    "equal_product_development_scope": true,
+    "assignment_authority": "Product Owner",
+    "agent_to_agent_dispatch_allowed": false,
+    "automatic_task_partition_allowed": false,
+    "existing_source_owner_roles_unchanged": true,
+    "existing_shared_writer_and_safety_gates_unchanged": true,
+    "brio_role": "global_data_source_research_and_acquisition_target_inventory",
+    "brio_output": "one_time_verified_markdown_inventory",
+    "brio_future_dispatch_authority": "Product Owner",
+    "brio_returns_to_on_demand_after_delivery": true,
+    "brio_product_code_or_live_collection_by_this_policy": false,
+    "gpt_standing_dispatch_authority": false,
+    "publication_starts_no_tasks": true
+  },
   "roles": {
     "M": {
       "kind": "controller_integrator_acceptance",
       "eligible": true,
       "window": null,
-      "environment": "Codex",
+      "environment": "PO-selected engineering environment",
       "responsibilities": [
         "cross_window_truth",
         "conflict_resolution",
@@ -35,7 +54,7 @@
       "kind": "frontend_experience",
       "eligible": true,
       "window": null,
-      "environment": "Codex",
+      "environment": "PO-selected engineering environment",
       "responsibilities": [
         "frontend",
         "experience",
@@ -46,7 +65,7 @@
       "kind": "collection_data",
       "eligible": true,
       "window": "W1",
-      "environment": "Local Codex",
+      "environment": "PO-selected engineering environment",
       "responsibilities": [
         "data",
         "collection"
@@ -56,7 +75,7 @@
       "kind": "owned_ai_agent_learning",
       "eligible": true,
       "window": "W2",
-      "environment": "Local Codex",
+      "environment": "PO-selected engineering environment",
       "responsibilities": [
         "owned_ai",
         "agent",
@@ -67,7 +86,7 @@
       "kind": "cth_bmp_business",
       "eligible": true,
       "window": "W3",
-      "environment": "Local Codex",
+      "environment": "PO-selected engineering environment",
       "responsibilities": [
         "cth",
         "bmp",
@@ -78,7 +97,7 @@
       "kind": "pitch_video_podcast",
       "eligible": true,
       "window": "W4",
-      "environment": "Local Codex",
+      "environment": "PO-selected engineering environment",
       "responsibilities": [
         "original_pitch",
         "video",
@@ -89,7 +108,7 @@
       "kind": "research_import_reporting_artifact",
       "eligible": true,
       "window": "W5",
-      "environment": "Local Codex",
+      "environment": "PO-selected engineering environment",
       "responsibilities": [
         "importer",
         "research",
@@ -102,7 +121,7 @@
       "kind": "integration_runtime_release",
       "eligible": true,
       "window": "W6",
-      "environment": "Local Codex",
+      "environment": "PO-selected engineering environment",
       "responsibilities": [
         "integration",
         "runtime",

@@ -66,8 +66,28 @@ class GovernanceMachineSemanticTests(unittest.TestCase):
             role = f"C{number}"
             row = self.contract["roles"][role]
             self.assertEqual(row["window"], f"W{number}")
-            self.assertEqual(row["environment"], "Local Codex")
+            self.assertEqual(row["environment"], "PO-selected engineering environment")
             self.assertTrue(row["responsibilities"])
+
+    def test_po_equal_developer_agents_and_research_only_brio(self) -> None:
+        assignment = self.contract["agent_assignment"]
+        self.assertEqual(assignment["development_peers"], ["Codex", "Akang (GrokBot)"])
+        self.assertTrue(assignment["equal_product_development_scope"])
+        self.assertEqual(assignment["assignment_authority"], "Product Owner")
+        self.assertFalse(assignment["agent_to_agent_dispatch_allowed"])
+        self.assertFalse(assignment["automatic_task_partition_allowed"])
+        self.assertTrue(assignment["existing_source_owner_roles_unchanged"])
+        self.assertTrue(assignment["existing_shared_writer_and_safety_gates_unchanged"])
+        self.assertEqual(assignment["brio_role"], "global_data_source_research_and_acquisition_target_inventory")
+        self.assertEqual(assignment["brio_output"], "one_time_verified_markdown_inventory")
+        self.assertEqual(assignment["brio_future_dispatch_authority"], "Product Owner")
+        self.assertTrue(assignment["brio_returns_to_on_demand_after_delivery"])
+        self.assertFalse(assignment["brio_product_code_or_live_collection_by_this_policy"])
+        self.assertFalse(assignment["gpt_standing_dispatch_authority"])
+        self.assertTrue(assignment["publication_starts_no_tasks"])
+        for name in ("M", "F"):
+            self.assertEqual(self.contract["roles"][name]["environment"],
+                             "PO-selected engineering environment")
 
     def test_published_state_is_not_live_dispatch(self) -> None:
         dispatch = self.contract["dispatch"]
