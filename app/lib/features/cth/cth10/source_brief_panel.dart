@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/generated_result_reveal.dart';
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../shared/read_aloud_action.dart';
@@ -28,20 +30,77 @@ class SourceBriefPanel extends StatefulWidget {
 
 class _SourceBriefPanelState extends State<SourceBriefPanel>
     with WidgetsBindingObserver {
-  late final _model = SourceBriefViewModel(client: widget.client, domainId: widget.domainId);
+  late final _model = SourceBriefViewModel(
+    client: widget.client,
+    domainId: widget.domainId,
+  );
+  static const _motionPreferenceKey =
+      'lumenis.source_brief.result_reveal.choice.v1';
   final _reference = TextEditingController();
   final _scroll = ScrollController();
+  final _resultRevealKey = GlobalKey<GeneratedResultRevealState>();
+  late final SharedPreferencesAsync _motionStorage = SharedPreferencesAsync();
   Timer? _poll;
   bool _taskReference = false;
   bool _referenceRequired = false;
   bool _foreground = true;
+  bool _motionPreferenceReady = false;
+  bool _motionPreferenceSaveFailed = false;
+  int _motionPreferenceWriteRevision = 0;
+  Future<void> _motionPreferenceWrites = Future<void>.value();
+  GeneratedResultMotionChoice _motionChoice =
+      GeneratedResultMotionChoice.followSystem;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _scroll.addListener(_finishRevealOnScroll);
     _model.addListener(_schedulePoll);
+    unawaited(_loadMotionChoice());
     unawaited(_model.initialize());
+  }
+
+  void _finishRevealOnScroll() =>
+      _resultRevealKey.currentState?.cancelForScrollOrInteraction();
+
+  Future<void> _loadMotionChoice() async {
+    try {
+      final value = await _motionStorage.getString(_motionPreferenceKey);
+      if (!mounted) return;
+      setState(() {
+        _motionChoice = switch (value) {
+          'full' => GeneratedResultMotionChoice.full,
+          'off' => GeneratedResultMotionChoice.off,
+          _ => GeneratedResultMotionChoice.followSystem,
+        };
+        _motionPreferenceReady = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _motionPreferenceReady = true);
+    }
+  }
+
+  void _selectMotionChoice(GeneratedResultMotionChoice choice) {
+    if (!_motionPreferenceReady || choice == _motionChoice) return;
+    final revision = ++_motionPreferenceWriteRevision;
+    setState(() {
+      _motionChoice = choice;
+      _motionPreferenceSaveFailed = false;
+    });
+    _motionPreferenceWrites = _motionPreferenceWrites.then((_) async {
+      try {
+        await _motionStorage.setString(_motionPreferenceKey, choice.name);
+        if (mounted && revision == _motionPreferenceWriteRevision) {
+          setState(() => _motionPreferenceSaveFailed = false);
+        }
+      } catch (_) {
+        if (mounted && revision == _motionPreferenceWriteRevision) {
+          setState(() => _motionPreferenceSaveFailed = true);
+        }
+      }
+    });
   }
 
   bool get _pending =>
@@ -77,6 +136,7 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
     _poll?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _model.removeListener(_schedulePoll);
+    _scroll.removeListener(_finishRevealOnScroll);
     _model.dispose();
     _reference.dispose();
     _scroll.dispose();
@@ -168,6 +228,8 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
                             : _model.scopeLabel!,
                       ),
                       const SizedBox(height: 18),
+                      _motionChoiceControl(copy),
+                      const SizedBox(height: 18),
                       if (_model.busy) ...[
                         Semantics(
                           liveRegion: true,
@@ -201,7 +263,7 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _resultSummary(copy, result),
+                              _animatedResultSummary(copy, result),
                               const SizedBox(height: 28),
                               _sources(copy, result),
                             ],
@@ -212,7 +274,7 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
                             children: [
                               Expanded(
                                 flex: 3,
-                                child: _resultSummary(copy, result),
+                                child: _animatedResultSummary(copy, result),
                               ),
                               const SizedBox(width: 40),
                               Expanded(flex: 4, child: _sources(copy, result)),
@@ -314,6 +376,80 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
       );
     },
   );
+
+  Widget _motionChoiceControl(SourceBriefCopy copy) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(copy.text('motionChoiceTitle')),
+      const SizedBox(height: 6),
+      Text(
+        copy.text('motionChoiceHint'),
+        style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.45),
+      ),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        children: [
+          ChoiceChip(
+            key: const ValueKey('source-brief/reveal/full'),
+            label: Text(copy.text('motionFull')),
+            selected: _motionChoice == GeneratedResultMotionChoice.full,
+            onSelected: _motionPreferenceReady
+                ? (_) => _selectMotionChoice(GeneratedResultMotionChoice.full)
+                : null,
+          ),
+          ChoiceChip(
+            key: const ValueKey('source-brief/reveal/system'),
+            label: Text(copy.text('motionSystem')),
+            selected: _motionChoice == GeneratedResultMotionChoice.followSystem,
+            onSelected: _motionPreferenceReady
+                ? (_) => _selectMotionChoice(
+                    GeneratedResultMotionChoice.followSystem,
+                  )
+                : null,
+          ),
+          ChoiceChip(
+            key: const ValueKey('source-brief/reveal/off'),
+            label: Text(copy.text('motionOff')),
+            selected: _motionChoice == GeneratedResultMotionChoice.off,
+            onSelected: _motionPreferenceReady
+                ? (_) => _selectMotionChoice(GeneratedResultMotionChoice.off)
+                : null,
+          ),
+        ],
+      ),
+      if (_motionPreferenceSaveFailed)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            copy.text('motionPreferenceSaveFailed'),
+            style: TextStyle(
+              color: LumenisTheme.of(context).muted,
+              height: 1.4,
+            ),
+          ),
+        ),
+    ],
+  );
+
+  Widget _animatedResultSummary(
+    SourceBriefCopy copy,
+    SourceBriefResult result,
+  ) {
+    final palette = LumenisTheme.of(context);
+    return GeneratedResultReveal(
+      key: _resultRevealKey,
+      resultVersion:
+          '${result.scope.scopeKey}:${result.jobId}:${result.artifactHash}',
+      arrivalToken: _motionPreferenceReady ? _model.resultArrivalToken : null,
+      choice: _motionChoice,
+      skipLabel: copy.text('motionSkip'),
+      accent: palette.accent,
+      foreground: palette.foreground,
+      child: _resultSummary(copy, result),
+    );
+  }
 
   Widget _task(SourceBriefCopy copy) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,

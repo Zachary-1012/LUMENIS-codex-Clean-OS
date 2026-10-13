@@ -135,13 +135,14 @@ Shared Flutter/Core changes preserve one business and permission contract across
 all supported targets. Website/Web browser viewport, locale and
 accessibility coverage remains required, including narrow screens.
 
-Build the complete task-shaped frontend, including original identity/icons,
-illustration, genuine operation videos, usable UI/UX and applicable AIGC/motion,
-under the existing Experience Constitution. Existing screen specifications incorporate sketch additions in place;
-coverage remains complete; 44 is not a page-count, navigation or product-scope ceiling.
-Available backend contracts are connected immediately. Unavailable contracts keep
-honest OPEN/UNBOUND states while independent editing/layout/interaction proceeds;
-no mock backend, fake save or decorative progress can represent business success.
+Build the full task-based UI with original identity/icons, illustration, genuine
+operation videos, usable UX and applicable AIGC/motion. Preserve existing motion;
+the added result reveal is independently selectable/skippable. Follow Experience
+Constitution. Update existing screen specs with sketch additions; coverage remains complete;
+44 is not a page-count/navigation/scope ceiling.
+Connect available backend contracts immediately. Unavailable ones stay honestly
+OPEN/UNBOUND while independent UI proceeds; no mock backend, fake save or
+decorative progress may count as business success.
 
 Accept each surface using its applicable gate tiers and real operation evidence.
 Unavailable native build/device evidence stays OPEN/NOT_VERIFIED, never PASS;

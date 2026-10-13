@@ -15,7 +15,7 @@ void main() {
 
     await tester.pumpWidget(_panelApp(client));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('source-brief/create')));
+    await _tapCreate(tester);
     await tester.pumpAndSettle();
 
     expect(client.startCalls, [
@@ -40,7 +40,7 @@ void main() {
 
     await tester.pumpWidget(_panelApp(client));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('source-brief/create')));
+    await _tapCreate(tester);
     await tester.pumpAndSettle();
 
     expect(client.jobReads, [_jobId]);
@@ -49,6 +49,76 @@ void main() {
     expect(find.text('暂时无法核验返回的简报，尚未显示为已完成。'), findsOneWidget);
     expect(find.text('已保存并重新核验'), findsNothing);
     expect(find.text('来源记录'), findsNothing);
+  });
+
+  testWidgets('new verified result reveals once and can be skipped', (
+    tester,
+  ) async {
+    final client = _SourceBriefClient()
+      ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+      ..jobResponse = _savedJobEnvelope();
+
+    await tester.pumpWidget(_panelApp(client));
+    await tester.pumpAndSettle();
+    await _tapCreate(tester);
+
+    var started = false;
+    for (var frame = 0; frame < 18; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      if (find
+          .byKey(const ValueKey('generated-result-reveal/skip'))
+          .evaluate()
+          .isNotEmpty) {
+        started = true;
+        break;
+      }
+    }
+    expect(started, isTrue, reason: 'The verified new result should reveal.');
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/paint')),
+      findsOneWidget,
+    );
+    expect(find.text('可核验来源标题'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('generated-result-reveal/skip')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/skip')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/paint')),
+      findsNothing,
+    );
+    expect(find.text('已保存并重新核验'), findsOneWidget);
+  });
+
+  testWidgets('saved result effect can be disabled by the user', (
+    tester,
+  ) async {
+    final client = _SourceBriefClient()
+      ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+      ..jobResponse = _savedJobEnvelope();
+
+    await tester.pumpWidget(_panelApp(client));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('source-brief/reveal/off')));
+    await tester.pumpAndSettle();
+    await _tapCreate(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('已保存并重新核验'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/skip')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/paint')),
+      findsNothing,
+    );
   });
 
   testWidgets('failed refresh hides saved result and stops checking copy', (
@@ -60,7 +130,7 @@ void main() {
       ..taskResponse = {'ok': false, 'code': 'ACCESS_DENIED'};
     await tester.pumpWidget(_panelApp(client));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('source-brief/create')));
+    await _tapCreate(tester);
     await tester.pumpAndSettle();
     expect(find.text('已保存并重新核验'), findsOneWidget);
 
@@ -81,6 +151,14 @@ void main() {
     expect(find.text('暂时无法确认任务状态'), findsNothing);
     expect(client.startCalls, hasLength(1));
     expect(client.jobReads, [_jobId, _jobId]);
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/skip')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/paint')),
+      findsNothing,
+    );
   });
 
   testWidgets('interrupted task resumes with the same task identifier', (
@@ -92,7 +170,7 @@ void main() {
 
     await tester.pumpWidget(_panelApp(client));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('source-brief/create')));
+    await _tapCreate(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('本次整理已中断'), findsOneWidget);
@@ -127,6 +205,14 @@ void main() {
     expect(client.startCalls, isEmpty);
     expect(client.taskReads, isEmpty);
     expect(find.text('已保存并重新核验'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/skip')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/paint')),
+      findsNothing,
+    );
     expect(find.text('可核验来源标题'), findsOneWidget);
     expect(find.widgetWithText(SelectableText, _jobId), findsOneWidget);
   });
@@ -216,6 +302,12 @@ Widget _panelApp(
     onReturn: () {},
   ),
 );
+
+Future<void> _tapCreate(WidgetTester tester) async {
+  final create = find.byKey(const ValueKey('source-brief/create'));
+  await tester.ensureVisible(create);
+  await tester.tap(create);
+}
 
 Widget _cth10App(
   LumenisCoreClient client, {
