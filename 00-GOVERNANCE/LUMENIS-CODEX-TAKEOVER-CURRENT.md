@@ -59,7 +59,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-本批移除指定采集脚本中的参考主体profile默认值、CDP示例及ACC-02专用名称；profile必须显式提供，不能凭主体名称选择账户。删除PO明确指定的旧迭代工单。保留真实参考主体、种子、行业资料、历史审批和失败证据；关键词零命中只适用退役可执行路径/硬编码默认值，不做资料清空。Python/JS静态检查证明有界源码，未操作浏览器、Cookie、DB、Runtime或受保护原工作分支，用户闭环尚未验收。
+本批移除指定采集脚本中的参考主体profile默认值、CDP示例及ACC-02专用名称；profile必须显式提供，不能凭主体名称选择账户。删除PO明确指定的旧迭代工单。保留真实参考主体、种子、行业资料、历史审批和失败证据；关键词零命中只适用退役可执行路径/硬编码默认值，不做资料清空。Python/JS静态检查证明有界源码，未操作浏览器、Cookie、DB、Runtime或受保护原工作分支，用户闭环尚未验收。 PR #64的Gateway收敛与Gibbs证据已在主线；G163仍OPEN。
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
 

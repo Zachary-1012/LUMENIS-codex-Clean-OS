@@ -15,19 +15,6 @@ import re
 OPERATION = "case_evaluate"
 VERSION = "cth-case-evaluation/1"
 _DIMENSIONS = ("impact", "innovation", "replicability", "risk")
-# Historical import compatibility only. These functions never inspect a secret
-# or call the retired provider, even when an old caller invokes them directly.
-_ZHIPU_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-
-
-def _get_zhipu_key():
-    return ""
-
-
-def _chat(prompt, max_tokens=1000):
-    return ""
-
-
 def _json(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True,
                       separators=(",", ":"), allow_nan=False)

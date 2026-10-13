@@ -522,7 +522,7 @@ def _build_ai01() -> Dict[str, Any]:
                decimals=1, state=STATE_NOT_COLLECTED, icon="evaluation",
                note="执行历史查询尚未绑定 actor 与授权产品范围。",
                source="Agent Groups Skill Execution（全局，暂不读取）"),
-        metric("ai.provider_health", "Provider 健康", value=healthy if prov_kpi_state == STATE_READY else None,
+        metric("ai.provider_health", "AI Gateway 状态", value=healthy if prov_kpi_state == STATE_READY else None,
                unit=f"/{len(provider_states)}", state=prov_kpi_state, icon="ops",
                source="ai_governance.get_governance_status", fresh="m5"),
         metric("ai.review_queue", "待人工复核", value=None, state=STATE_NOT_COLLECTED,
@@ -551,7 +551,7 @@ def _build_ai01() -> Dict[str, Any]:
     # section structurally present while withholding its rows at the server.
     timeline_sec = section("timeline", STATE_NOT_COLLECTED,
                            title="最近任务", label="History", items=[])
-    runtime_sec = section("runtime", title="Provider 状态", items=provider_states)
+    runtime_sec = section("runtime", title="AI Gateway 状态", items=provider_states)
     rule_note = section("note", STATE_READY, kind="RULE", code="AI-NOT-TRUTH",
                         text="AI 输出为派生结果，携带 Provider/Model/Prompt/Confidence/Evidence 引用与人工修正状态，"
                              "不覆盖原始 Evidence 或 Canonical Data。")
@@ -622,22 +622,20 @@ def _ai_governance() -> Dict[str, Any]:
 
 
 def _provider_runtime(gov: Dict[str, Any], gov_err: bool) -> List[Dict[str, Any]]:
-    """真实 Provider 状态；configured 不等于 reachable/model-ready。"""
-    items: List[Dict[str, Any]] = []
+    """Expose only the current SYSTEM Gateway route, without provider discovery."""
     try:
-        import intelligence
-        ai_state = intelligence.ai_status() or {}
+        from lumenis.system.ai_gateway import core
+
+        ai_state = core.ai_status() or {}
     except Exception:
         ai_state = {}
-    active_provider = str(ai_state.get("provider") or "")
-    zhipu_configured = isinstance(gov, dict) and not gov_err and bool(gov.get("providers") or gov.get("zhipu") or gov.get("enabled"))
-    zhipu_ok = bool(ai_state.get("enabled")) and active_provider == "zhipu"
-    items.append({"kind": "provider", "name": "智谱 · 可选", "state": "ok" if zhipu_ok else ("idle" if zhipu_configured else "offline"),
-                  "detail": "active · verified by gateway" if zhipu_ok else ("configured · not active" if zhipu_configured else "not verified")})
-    ollama_ok = bool(ai_state.get("enabled")) and active_provider == "ollama"
-    ollama_detail = "active · local model" if ollama_ok else "daemon/model not ready"
-    items.append({"kind": "provider", "name": "本地 Ollama", "state": "ok" if ollama_ok else "idle", "detail": ollama_detail})
-    return items
+    route_available = not gov_err and ai_state.get("enabled") is True
+    detail = "Owned Gateway route is available." if route_available else (
+        str(ai_state.get("detail") or "Gateway route is not verified.")
+        if not gov_err else "Gateway status is unavailable."
+    )
+    return [{"kind": "provider", "name": "Owned AI Gateway",
+             "state": "ok" if route_available else "offline", "detail": detail}]
 
 
 # ===========================================================================
