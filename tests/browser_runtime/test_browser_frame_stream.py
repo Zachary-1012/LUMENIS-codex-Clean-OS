@@ -101,11 +101,46 @@ def test_stream_emits_frames_never_stored_or_ai():
     assert events[-1] == {"t": "state", "state": "STOPPED"}
 
 
-def test_human_takeover_frames_not_to_ai_and_not_stored():
+def test_human_takeover_stops_capture():
     presence = fs.ViewerPresence()
-    frames = [e for e in _events(_FakeSession(human=True, frames=2), presence) if e["t"] == "frame"]
-    assert frames and all(f["human_control_active"] and not f["ai_readable"] and not f["stored"]
-                          for f in frames)
+    session = _FakeSession(human=True, frames=2)
+    events = _events(session, presence)
+    assert session.captures == 0
+    assert not [e for e in events if e["t"] == "frame"]
+    assert events[-1] == {"t": "state", "state": "HUMAN_CONTROL"}
+
+
+def test_lost_authorization_ends_stream():
+    presence = fs.ViewerPresence()
+    ticks = iter(range(100))
+    allowed = iter([True, False])
+    session = _FakeSession(frames=50)
+    events = _events(session, presence, authorize=lambda: next(allowed),
+                     authorize_every_seconds=1.0, clock=lambda: float(next(ticks)))
+    assert events[-1] == {"t": "state", "state": "UNAUTHORIZED"}
+    assert session.captures < 50
+
+
+def test_self_navigation_ends_stream_without_emitting_new_document():
+    presence = fs.ViewerPresence()
+    session = _FakeSession(frames=5)
+    urls = iter(["https://a.example/", "https://a.example/", "https://b.example/"])
+    events = _events(session, presence, document_url=lambda s: next(urls))
+    frames = [e for e in events if e["t"] == "frame"]
+    assert len(frames) == 2
+    assert events[-1] == {"t": "state", "state": "NAVIGATED"}
+
+
+def test_expired_session_ends_stream():
+    presence = fs.ViewerPresence()
+    session = _FakeSession(frames=50)
+    alive = iter([True, True, False])
+    events = _events(session, presence, ) if False else [
+        __import__("json").loads(c[6:]) for c in fs.iter_frame_events(
+            session, is_running=lambda s: next(alive), human_control_active=lambda s: False,
+            presence=presence, sleep=lambda _s: None) if c.startswith("data: ")]
+    assert [e["t"] for e in events].count("frame") == 2
+    assert events[-1] == {"t": "state", "state": "STOPPED"}
 
 
 def test_pending_frame_reports_state_and_continues():
@@ -176,6 +211,7 @@ def test_core_session_stream_routes_registered_and_allowlisted():
     assert '"/api/browser/sessions/<session_id>/frames/stream"' in src
     assert '"/api/browser/sessions/<session_id>/stream-policy"' in src
     assert "AGENT_PAUSED_USER_LEFT_VIEW" in src
+    assert "_still_authorized" in src and "is_alive" in src
     app_src = (ROOT / "app.py").read_text(encoding="utf-8")
     assert "'ai_browser_runtime.stream_session_frames': {'GET'}" in app_src
     assert "'ai_browser_runtime.stream_policy': {'GET'}" in app_src

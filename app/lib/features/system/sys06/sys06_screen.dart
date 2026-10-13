@@ -22,7 +22,7 @@ class Sys06Screen extends StatefulWidget {
   State<Sys06Screen> createState() => _Sys06ScreenState();
 }
 
-class _Sys06ScreenState extends State<Sys06Screen> {
+class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
   late Sys06BrowserRepository _repository;
   late final TextEditingController _addressController;
 
@@ -37,12 +37,48 @@ class _Sys06ScreenState extends State<Sys06Screen> {
   bool _returning = false;
   StreamSubscription<Sys06BrowserFrame>? _frameStream;
   String? _frameStreamSessionId;
+  bool _viewVisible = true;
 
   @override
   void initState() {
     super.initState();
     _repository = _repositoryFor(widget);
     _addressController = TextEditingController();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  // Viewer presence follows real visibility: a covered route (tickers off)
+  // or a backgrounded/hidden app ends the stream so the server records
+  // USER_LEFT_VIEW; returning re-establishes it from a fresh frame.
+  void _setViewVisible(bool visible) {
+    if (_viewVisible == visible) return;
+    _viewVisible = visible;
+    if (!visible) {
+      _cancelFrameStream();
+      return;
+    }
+    final session = _session;
+    if (session != null && _frame != null) {
+      _ensureFrameStream(session, _repository);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _setViewVisible(
+      TickerMode.valuesOf(context).enabled &&
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.paused &&
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.hidden,
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _setViewVisible(
+      state == AppLifecycleState.resumed &&
+          TickerMode.valuesOf(context).enabled,
+    );
   }
 
   @override
@@ -79,6 +115,7 @@ class _Sys06ScreenState extends State<Sys06Screen> {
     if (session != null && lease != null) {
       unawaited(_releaseWithoutUi(_repository, session, lease));
     }
+    WidgetsBinding.instance.removeObserver(this);
     _cancelFrameStream();
     _addressController.dispose();
     super.dispose();
@@ -649,12 +686,29 @@ class _Sys06ScreenState extends State<Sys06Screen> {
     if (subscription != null) unawaited(subscription.cancel());
   }
 
+  /// The server ended the stream (stopped, expired, unauthorized, navigated,
+  /// human control) or the connection failed: never keep showing the last
+  /// frame as the current page.
+  void _frameStreamEnded(String sessionId) {
+    if (_frameStreamSessionId != sessionId) return;
+    _frameStream = null;
+    _frameStreamSessionId = null;
+    if (!mounted || _humanLease != null || _stopping) return;
+    setState(() {
+      _frame = null;
+      _notice = _Sys06Notice.unavailable;
+    });
+  }
+
   void _ensureFrameStream(
     Sys06BrowserSession session,
     Sys06BrowserRepository repository,
   ) {
     if (repository is! Sys06BrowserFrameStreamRepository) return;
-    if (_humanLease != null || !session.isRunning || _stopping) {
+    if (_humanLease != null ||
+        !session.isRunning ||
+        _stopping ||
+        !_viewVisible) {
       _cancelFrameStream();
       return;
     }
@@ -690,18 +744,8 @@ class _Sys06ScreenState extends State<Sys06Screen> {
               _notice = _Sys06Notice.previewReady;
             });
           },
-          onError: (Object _) {
-            if (_frameStreamSessionId == sessionId) {
-              _frameStream = null;
-              _frameStreamSessionId = null;
-            }
-          },
-          onDone: () {
-            if (_frameStreamSessionId == sessionId) {
-              _frameStream = null;
-              _frameStreamSessionId = null;
-            }
-          },
+          onError: (Object _) => _frameStreamEnded(sessionId),
+          onDone: () => _frameStreamEnded(sessionId),
           cancelOnError: true,
         );
   }

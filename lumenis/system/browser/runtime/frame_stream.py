@@ -134,16 +134,27 @@ def iter_frame_events(
     human_control_active: Callable[[Any], bool],
     pending_errors: Tuple[type, ...] = (),
     empty_errors: Tuple[type, ...] = (),
+    authorize: Optional[Callable[[], bool]] = None,
+    document_url: Optional[Callable[[Any], Optional[str]]] = None,
+    authorize_every_seconds: float = 1.0,
+    clock: Callable[[], float] = time.monotonic,
     policy: BrowserStreamPolicy = DEFAULT_POLICY,
     presence: ViewerPresence = PRESENCE,
     interval_seconds: float = 0.2,
     max_frames: Optional[int] = None,
     sleep: Callable[[float], None] = time.sleep,
 ) -> Iterator[str]:
-    """Yield SSE events with fresh frames of ``session`` for its human viewer."""
+    """Yield SSE events with fresh frames of ``session`` for its human viewer.
+
+    The stream ends (never silently continues) when the session stops or
+    expires, authorization is lost, a human-control lease starts (no capture
+    may replace the lease-bound frame), or the document navigates on its own.
+    """
     session_id = str(session.session_id)
     presence.enter(session_id)
     sent = 0
+    first_document: Optional[str] = None
+    last_authorized = clock()
     try:
         yield "retry: 3000\n\n"
         yield _event({"t": "policy", "policy": policy.to_dict()})
@@ -151,7 +162,22 @@ def iter_frame_events(
             if not is_running(session):
                 yield _event({"t": "state", "state": "STOPPED"})
                 return
+            if authorize is not None and clock() - last_authorized >= authorize_every_seconds:
+                try:
+                    allowed = bool(authorize())
+                except Exception:
+                    allowed = False
+                if not allowed:
+                    yield _event({"t": "state", "state": "UNAUTHORIZED"})
+                    return
+                last_authorized = clock()
             human = bool(human_control_active(session))
+            if human:
+                # No capture during a lease: each capture would replace the
+                # binding that authorizes human input, and takeover frames must
+                # not reach AI or storage.
+                yield _event({"t": "state", "state": "HUMAN_CONTROL"})
+                return
             try:
                 frame = session.capture_frame()
             except pending_errors:
@@ -165,6 +191,14 @@ def iter_frame_events(
             except Exception:
                 yield _event({"t": "state", "state": "UNAVAILABLE"})
                 return
+            if document_url is not None:
+                current_document = document_url(session)
+                if first_document is None:
+                    first_document = current_document
+                elif current_document != first_document:
+                    del frame
+                    yield _event({"t": "state", "state": "NAVIGATED"})
+                    return
             viewport = frame.get("viewport") or {}
             yield _event({
                 "t": "frame",

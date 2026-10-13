@@ -54,6 +54,76 @@ void main() {
     expect(repository.frames.hasListener, isFalse);
   });
 
+  testWidgets('SYS-06 clears the preview when the live stream ends', (
+    tester,
+  ) async {
+    final repository = _StreamRepository();
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _host(
+        Sys06Screen(client: LumenisCoreClient(), browserRepository: repository),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('sys06-open')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('sys06-frame')), findsOneWidget);
+    await repository.frames.close();
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('sys06-frame')), findsNothing);
+  });
+
+  testWidgets('SYS-06 stops the stream when the app leaves the view', (
+    tester,
+  ) async {
+    final repository = _StreamRepository();
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _host(
+        Sys06Screen(client: LumenisCoreClient(), browserRepository: repository),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('sys06-open')));
+    await tester.pumpAndSettle();
+    expect(repository.frames.hasListener, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(repository.frames.hasListener, isFalse);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(repository.frames.hasListener, isTrue);
+    expect(repository.watchCalls, 2);
+  });
+
+  testWidgets('SYS-06 stops the stream when another route covers it', (
+    tester,
+  ) async {
+    final repository = _StreamRepository();
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      _host(
+        Sys06Screen(client: LumenisCoreClient(), browserRepository: repository),
+        navigatorKey: navigatorKey,
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('sys06-open')));
+    await tester.pumpAndSettle();
+    expect(repository.frames.hasListener, isTrue);
+    navigatorKey.currentState!.push(
+      MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('x'))),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.frames.hasListener, isFalse);
+  });
+
   test('SSE frame event parses into a bound PNG frame', () {
     final event = jsonEncode({
       't': 'frame',
@@ -105,22 +175,24 @@ Sys06BrowserFrame _frame(Uint8List bytes, String id, {int revision = 0}) =>
       ),
     );
 
-Widget _host(Widget child) => MaterialApp(
-  theme: LumenisTheme.dark,
-  locale: const Locale('zh', 'CN'),
-  supportedLocales: const [Locale('zh', 'CN'), Locale('en'), Locale('ko')],
-  localizationsDelegates: const [
-    LumenisLocalizations.delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-  ],
-  home: Scaffold(body: child),
-);
+Widget _host(Widget child, {GlobalKey<NavigatorState>? navigatorKey}) =>
+    MaterialApp(
+      navigatorKey: navigatorKey,
+      theme: LumenisTheme.dark,
+      locale: const Locale('zh', 'CN'),
+      supportedLocales: const [Locale('zh', 'CN'), Locale('en'), Locale('ko')],
+      localizationsDelegates: const [
+        LumenisLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: Scaffold(body: child),
+    );
 
 class _StreamRepository
     implements Sys06BrowserRepository, Sys06BrowserFrameStreamRepository {
-  final frames = StreamController<Sys06BrowserFrame>.broadcast();
+  final frames = StreamController<Sys06BrowserFrame>.broadcast(sync: true);
   final firstBytes = Uint8List.fromList(_png);
   int watchCalls = 0;
   static const _session = Sys06BrowserSession(

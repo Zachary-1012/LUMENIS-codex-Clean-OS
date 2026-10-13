@@ -348,6 +348,64 @@ def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     return _row_to_dict(row), True
 
 
+def record_official_name(
+    domain_id: str,
+    subject_id: str,
+    *,
+    source_url: str,
+    name_zh: Optional[str] = None,
+    name_en: Optional[str] = None,
+    keywords: Iterable[str] = (),
+) -> Dict[str, Any]:
+    """Record a brand's own official name/aliases, with official-site evidence.
+
+    LUMENIS does not rename brands: callers pass only names shown on the
+    brand's official site, and ``source_url`` (http/https) is required.
+    The stable subject_id is unchanged; aliases are appended to keywords.
+    Returns {"before", "after", "changed", "source_url"}.
+    """
+    normalized = normalize_domain(domain_id)
+    url = _text(source_url, field="source_url", max_len=500)
+    if not url.lower().startswith(("https://", "http://")):
+        raise SubjectValidationError("source_url 必须是品牌官网 http(s) 地址")
+    new_zh = _text(name_zh, field="name_zh") if name_zh else None
+    new_en = _text(name_en, field="name_en") if name_en else None
+    extra = _keywords(list(keywords or ()))
+    if not (new_zh or new_en or extra):
+        raise SubjectValidationError("没有可记录的官方名称")
+    with _db_ready() as conn:
+        _require_registry_schema(conn)
+        cols = ("subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, industry, "
+                "keywords_json, status, created_at, updated_at")
+        row = conn.execute(
+            f"SELECT {cols} FROM {TABLE_NAME} WHERE domain_id=? AND subject_id=?",
+            (normalized, subject_id),
+        ).fetchone()
+        if row is None:
+            raise SubjectValidationError("subject_id 不存在")
+        before = _row_to_dict(row)
+        zh = new_zh or before["name_zh"]
+        en = new_en or before["name_en"]
+        merged = list(before["keywords"])
+        for k in extra:
+            if k not in merged:
+                merged.append(k)
+        changed = (zh, en, merged) != (before["name_zh"], before["name_en"], before["keywords"])
+        if changed:
+            try:
+                conn.execute(
+                    f"UPDATE {TABLE_NAME} SET name_zh=?, name_en=?, name_zh_norm=?, name_en_norm=?, "
+                    "keywords_json=?, updated_at=? WHERE subject_id=?",
+                    (zh, en, _canonical_name(zh), _canonical_name(en),
+                     json.dumps(merged, ensure_ascii=False), _now(), subject_id),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise SubjectValidationError("官方名称与另一已登记主体重复") from exc
+        after = _row_to_dict(conn.execute(
+            f"SELECT {cols} FROM {TABLE_NAME} WHERE subject_id=?", (subject_id,)).fetchone())
+    return {"before": before, "after": after, "changed": changed, "source_url": url}
+
+
 def _country_subject_projection(domain_id, country_iso, relation_type):
     """Read existing relation assertions without selecting focus or collecting."""
     from lumenis.shared.database import get_repository

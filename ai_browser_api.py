@@ -1033,10 +1033,27 @@ def register_ai_browser_api(app):
         from flask import stream_with_context
         from lumenis.system.browser.runtime.frame_stream import iter_frame_events
 
+        bound_actor = (g.browser_actor_id, g.browser_account_session_id, g.browser_principal_ref)
+
+        def _still_authorized() -> bool:
+            # Re-run the blueprint's actor/permission gate inside the stream.
+            if _require_browser_actor() is not None:
+                return False
+            return (g.browser_actor_id, g.browser_account_session_id,
+                    g.browser_principal_ref) == bound_actor
+
+        def _alive(s) -> bool:
+            is_alive = getattr(s, "is_alive", None)
+            if callable(is_alive) and not is_alive():
+                return False
+            return s.status == SessionStatus.RUNNING
+
         events = iter_frame_events(
             session,
-            is_running=lambda s: s.status == SessionStatus.RUNNING,
+            is_running=_alive,
             human_control_active=lambda s: s.is_human_control_active(),
+            authorize=_still_authorized,
+            document_url=lambda s: getattr(s, "_latest_frame_document_url", None),
             pending_errors=(BrowserFramePending,),
             empty_errors=(BrowserFrameEmpty,),
         )

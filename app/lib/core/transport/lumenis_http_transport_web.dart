@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:web/web.dart' as web;
 
 import 'lumenis_http_transport_types.dart';
 
@@ -109,11 +111,46 @@ Future<LumenisBinaryTransportResponse> _sendBinaryRequest(
   );
 }
 
+/// Server-Sent Events on Web through the browser's native EventSource.
+/// Cancelling the subscription closes the connection.
 Stream<String> openLumenisEventStream(
   LumenisTransportRequest request, {
   required int maxEventBytes,
-}) => Stream<String>.error(
-  const LumenisTransportException(
-    'Event stream transport is unavailable on this platform.',
-  ),
-);
+}) {
+  web.EventSource? source;
+  late final StreamController<String> controller;
+  void finish([Object? error]) {
+    source?.close();
+    source = null;
+    if (controller.isClosed) return;
+    if (error != null) controller.addError(error);
+    controller.close();
+  }
+
+  controller = StreamController<String>(
+    onListen: () {
+      final opened = web.EventSource(
+        request.uri.toString(),
+        web.EventSourceInit(withCredentials: true),
+      );
+      source = opened;
+      opened.onmessage = ((web.MessageEvent event) {
+        final data = event.data;
+        if (data == null || !data.typeofEquals('string')) return;
+        final text = (data as JSString).toDart;
+        if (text.length > maxEventBytes) {
+          finish(
+            const LumenisTransportException('Event exceeds maxEventBytes.'),
+          );
+          return;
+        }
+        controller.add(text);
+      }).toJS;
+      // EventSource would silently reconnect; the product ends the stream
+      // instead and lets the screen re-establish it with fresh bindings.
+      opened.onerror = ((web.Event _) => finish()).toJS;
+    },
+    onCancel: () => finish(),
+  );
+  return controller.stream;
+}
