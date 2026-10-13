@@ -247,6 +247,7 @@ def _is_rules_only_publication_path(path: str) -> bool:
         '.github/workflows/platform-verify.yml',
         '.github/workflows/app-verify.yml',
         'tests/CI_TEST_TIERS.md',
+        '.gitattributes',  # Checkout byte normalization (AGENTS.md LF for the Codex doc budget), not runtime behavior.
         '00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json',
         'scripts/audit_tools/verify_governance_machine_contract.py',
         'scripts/audit_tools/verify_ai_native_constitution.py',

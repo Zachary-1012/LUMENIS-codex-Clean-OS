@@ -381,7 +381,13 @@
     "protected_personal_account_access": false,
     "reduce_approved_functionality_to_make_gate_green": false,
     "delete_or_weaken_legitimate_failing_test_to_make_gate_green": false,
-    "force_push_main": false
+    "force_push_main": false,
+    "direct_push_bypass_force_push_or_main_deletion": false,
+    "unapproved_collection_model_training_spending_or_deployment_effect": false,
+    "overwrite_protected_dirty_worktree": false,
+    "reset_clean_or_overwrite_valid_local_work_for_clean_tree": false,
+    "mock_backend_fake_save_or_decorative_progress_as_business_success": false,
+    "general_os_control_in_active_product_requirements": false
   },
   "semantic_change_policy": {
     "machine_contract_is_semantic_source": true,

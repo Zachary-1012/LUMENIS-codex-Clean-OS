@@ -1,0 +1,27 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261013-AGENTS-LF-AND-T04-STRUCTURED-RED-LINES",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-13",
+  "approval_source_type": "direct_product_owner_instruction",
+  "source_quotes": [
+    "都ok，要确保做的codex接手也不会有任何问题对于研发有利的我都授权"
+  ],
+  "scope_manifest": {
+    "approved": [
+      "Pin AGENTS.md checkout to LF via .gitattributes so the Codex project_doc_max_bytes budget (131072) holds on Windows as in CI; no AGENTS.md content change.",
+      "Move the six T04 historical PO prohibitions from prose anchors into structured machine red_lines (all false/forbidden) validated by the blocking governance validator, per the PR #24 review."
+    ],
+    "preservation": [
+      "Existing red lines, contract version 1.4.0, AGENTS.md text, Codex user config and protected local dirty work are unchanged."
+    ],
+    "non_grants": [
+      "No product scope, model routing, branch protection, deployment, collection or spending change."
+    ]
+  },
+  "constraints": [
+    "Red lines may only be added as forbidden (false); removal or relaxation fails validation.",
+    "Merge only through a normal PR with required Product Gate and App Gate green."
+  ]
+}
