@@ -1,11 +1,13 @@
 // Custom robust Xiaohongshu search via Playwright
-// Usage: node xhs_search.js --keyword "广州太古汇" --output ./data/search.json [--max-scroll 5]
+// Usage: XHS_PROFILE_DIR=<registered-profile> node xhs_search.js --keyword "<topic>" --output ./data/search.json [--max-scroll 5]
 import { chromium } from 'playwright';
 import path from 'node:path';
-import os from 'node:os';
 import fs from 'node:fs';
 
-const userDataDir = path.join(os.homedir(), '.skills-router/rednote/instances/taikoo');
+const userDataDir = (process.env.XHS_PROFILE_DIR || '').trim();
+if (!userDataDir) {
+  throw new Error('XHS_PROFILE_DIR_REQUIRED: use the profile registered for the selected account');
+}
 
 function parseArgs() {
   const args = process.argv.slice(2);

@@ -4,9 +4,11 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 
-const PROFILE = process.env.XHS_PROFILE_DIR || path.join(os.homedir(), '.skills-router', 'rednote', 'instances', 'taikoo');
+const PROFILE = (process.env.XHS_PROFILE_DIR || '').trim();
+if (!PROFILE) {
+  throw new Error('XHS_PROFILE_DIR_REQUIRED: use the profile registered for the selected account');
+}
 const COOKIE_FILE = process.env.XHS_COOKIE_FILE || path.join(process.cwd(), 'data', 'private', 'xhs_cookie_header.txt');
 const COLLECTION_HOST = (process.env.XHS_COLLECTION_HOST || 'www.rednote.com').trim().toLowerCase();
 if (COLLECTION_HOST !== 'www.rednote.com') {

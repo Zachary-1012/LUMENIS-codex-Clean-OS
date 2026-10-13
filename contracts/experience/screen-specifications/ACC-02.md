@@ -315,7 +315,7 @@ reduced motion. Public Website acquires no form or new runtime.
 - `ACCEPTANCE ASSERTION`: `BLOCKED_PENDING_EXACT_WRITE_CONTRACT_AND_REAL_E2E`.
 - `GLOBAL UNIVERSE / DATA MATURITY IMPACT`: extends the existing directory while
   retaining GLOBAL by default. No change to Global Commercial Coverage, Global
-  Brand Coverage or Guangzhou Taikoo Hui Reference Coverage is asserted.
+  Brand Coverage or controlled reference-subject coverage is asserted.
 - `RANDOM ENTITY DATA ACCEPTANCE`: no registration sample run in this design
   step; sample count 0. Later tests must include real non-reference CTH and BMP
   objects without treating registration as collected coverage.

@@ -1,10 +1,12 @@
 // 安全版 Cookie 注入：不再把真实登录 Cookie 写进源码。
 // 使用：XHS_COOKIES_JSON='[{"name":"web_session","value":"...","domain":".xiaohongshu.com","path":"/"}]' node inject_cookies.js
 import { chromium } from 'playwright';
-import path from 'node:path';
-import os from 'node:os';
 
-const userDataDir = process.env.XHS_PROFILE_DIR || path.join(os.homedir(), '.skills-router/rednote/instances/taikoo');
+const userDataDir = (process.env.XHS_PROFILE_DIR || '').trim();
+if (!userDataDir) {
+  console.error('[inject] XHS_PROFILE_DIR_REQUIRED: use the profile registered for the selected account.');
+  process.exit(2);
+}
 const raw = process.env.XHS_COOKIES_JSON || '';
 if (!raw) {
   console.error('[inject] 未提供 XHS_COOKIES_JSON。为避免 Cookie 泄露，不再把登录凭据硬编码进脚本。');

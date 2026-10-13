@@ -383,7 +383,7 @@ compatibility section. The Semantic Calibration Ledger under evidence/round-15
 is a source-backed index, not another authority. Context is routing metadata,
 never Permission: unknown/conflicting domain IDs are rejected, BMP resolves to
 its existing ZBMP storage identifier, and no selection invents a reference Subject.
-Only an explicitly named legacy reference filter may retain that reference scope;
+Only an explicit reference filter retains its scope; no subject-specific default;
 GLOBAL consumers use existing scoped Canonical/Evidence services.
 
 OpenAI Math methods are applied inside existing owners when their assumptions
