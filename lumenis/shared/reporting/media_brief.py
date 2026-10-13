@@ -219,8 +219,10 @@ def _verified_result(row: Mapping[str, Any], *, evidence_ref: str, job_id: str,
             or not isinstance(outputs.get("analysis_execution_ref"), str)
             or not outputs["analysis_execution_ref"].strip()):
         raise ValueError("REPORT_MEDIA_EVIDENCE_OUTPUT_INVALID")
-    return {
-        "state": "complete", "real_input_bound": True,
+    current_owned_result = isinstance(provider, str) and provider.strip().lower() == "owned"
+    result = {
+        "state": "complete" if current_owned_result else "historical_not_reverified",
+        "real_input_bound": True,
         "input_content_sha256": inputs["source_content_sha256"],
         "analysis_input_sha256": inputs["analysis_input_sha256"],
         "image_preprocessing": inputs["image_preprocessing"],
@@ -230,6 +232,14 @@ def _verified_result(row: Mapping[str, Any], *, evidence_ref: str, job_id: str,
         "analysis_text": text, "provider": provider, "model": model,
         "review_status": "HUMAN_PENDING",
     }
+    if not current_owned_result:
+        result.update(
+            source_hash_bound=True,
+            inference_status="HISTORICAL_NOT_REVERIFIED",
+            current_inference_verified=False,
+            historical_provider=True,
+        )
+    return result
 
 
 def read_verified_report_media(evidence_ref: str, *, job_id: str, actor_ref: str,

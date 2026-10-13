@@ -79,12 +79,31 @@ class TestDBStatusObserver:
 class TestAIStatusObserver:
     def test_injected_health_func(self):
         observer = AIStatusObserver(health_func=lambda: {
-            "status": "ok", "provider": "zhipu", "circuit_state": "CLOSED"
+            "status": "ok", "provider": "owned", "circuit_state": "not_applicable"
         })
         result = observer.observe()
         assert result["status"] == "ok"
-        assert result["provider"] == "zhipu"
-        assert result["circuit_state"] == "CLOSED"
+        assert result["provider"] == "owned"
+        assert result["circuit_state"] == "not_applicable"
+
+    def test_runtime_status_comes_from_owned_gateway_not_retired_registry(self, monkeypatch):
+        from lumenis.system.ai_gateway import channel, core
+
+        monkeypatch.setattr(channel, "get_provider_status_v1", lambda: pytest.fail("retired registry read"))
+        monkeypatch.setattr(channel, "channel_health", lambda *_a, **_k: pytest.fail("legacy channel read"))
+        monkeypatch.setattr(core, "owned_inference_status", lambda: {
+            "provider": "owned", "available": False, "service_binding": "NOT_BOUND",
+            "state": "UNAVAILABLE", "reason": "OWNED_RUNTIME_NOT_BOUND",
+        })
+
+        result = AIStatusObserver().observe()
+
+        assert result["status"] == "unavailable"
+        assert result["provider"] == "owned"
+        assert result["provider_status"] == "UNAVAILABLE"
+        assert result["service_binding"] == "NOT_BOUND"
+        assert result["circuit_state"] == "not_applicable"
+        assert result["error"] == "OWNED_RUNTIME_NOT_BOUND"
 
 
 class TestToolStatusObserver:

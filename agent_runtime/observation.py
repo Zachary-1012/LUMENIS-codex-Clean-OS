@@ -149,7 +149,7 @@ class DBStatusObserver(BaseObserver):
 
 
 class AIStatusObserver(BaseObserver):
-    """AI/API 健康观察者。复用 ai_channel 的健康检查。"""
+    """Observe the current Owned Gateway binding without consulting retired providers."""
 
     name = "ai_status"
 
@@ -164,26 +164,31 @@ class AIStatusObserver(BaseObserver):
         if self._health_func:
             return self._health_func()
 
-        result = {"status": "unknown", "provider": "", "circuit_state": "unknown", "error": None}
+        result = {
+            "status": "unknown", "provider": "owned", "circuit_state": "not_applicable",
+            "provider_status": "UNKNOWN", "service_binding": "NOT_VERIFIED", "error": None,
+        }
         try:
-            from lumenis.system.ai_gateway.channel import channel_health, get_provider_status_v1
-            try:
-                health = channel_health()
-                result["status"] = health.get("status", "unknown")
-                result["provider"] = health.get("provider", "")
-            except Exception:
-                pass
+            from lumenis.system.ai_gateway.core import owned_inference_status
 
-            try:
-                providers = get_provider_status_v1()
-                zhipu = providers.get("zhipu", {})
-                result["circuit_state"] = zhipu.get("circuit_breaker", "unknown")
-                result["provider_status"] = zhipu.get("status", "unknown")
-            except Exception:
-                pass
-        except Exception as e:
-            result["status"] = "unavailable"
-            result["error"] = str(e)[:200]
+            gateway = owned_inference_status()
+            if not isinstance(gateway, dict):
+                raise TypeError("owned Gateway status is not an object")
+            binding = gateway.get("service_binding")
+            state = gateway.get("state")
+            available = gateway.get("available") is True and binding == "BOUND"
+            result.update(
+                status="ok" if available else "unavailable",
+                provider="owned",
+                provider_status=state if isinstance(state, str) else "UNKNOWN",
+                service_binding=binding if isinstance(binding, str) else "UNKNOWN",
+                error=None if available else gateway.get("reason") or state or "OWNED_RUNTIME_UNAVAILABLE",
+            )
+        except Exception:
+            result.update(
+                status="unavailable", provider="owned", provider_status="UNKNOWN",
+                service_binding="NOT_VERIFIED", error="OWNED_RUNTIME_STATUS_UNAVAILABLE",
+            )
 
         return result
 

@@ -104,37 +104,55 @@ def _git_info(repo_path: Path):
 
 @agg_bp.route("/api/intelligence/models")
 def intelligence_models():
-    """AI Gateway 模型矩阵 —— 只回传 provider/model 名与配置状态，绝不回传 Key。"""
-    providers = []
-    cfg = {
-        "zhipu": ("ZHIPU_MODEL", "ZHIPU_API_KEY", "cloud"),
-        "zhipu_strong": ("ZHIPU_STRONG_MODEL", "ZHIPU_API_KEY", "cloud"),
-        "ark": ("ARK_MODEL", "ARK_API_KEY", "cloud"),
-        "qwen": ("QWEN_MODEL", None, "cloud"),
-        "openai": ("OPENAI_MODEL", "OPENAI_API_KEY", "cloud"),
-        "deepseek": ("DEEPSEEK_MODEL", "DEEPSEEK_API_KEY", "cloud"),
-        "ollama": ("OLLAMA_MODEL", None, "local"),
-        "lmstudio": ("LMSTUDIO_MODEL", None, "local"),
-        "llama_cpp": ("LLAMA_CPP_MODEL", None, "local"),
+    """Report the bound Owned Gateway route; configuration strings are not runtime proof."""
+    try:
+        from lumenis.system.ai_gateway.core import owned_inference_status
+
+        raw_status = owned_inference_status()
+    except Exception:
+        raw_status = None
+    status = raw_status if isinstance(raw_status, dict) else {}
+    binding = status.get("service_binding")
+    if not isinstance(binding, str) or len(binding) > 64:
+        binding = "NOT_VERIFIED"
+    state = status.get("state")
+    if not isinstance(state, str) or len(state) > 64:
+        state = "UNKNOWN"
+    available = status.get("available") is True and binding == "BOUND"
+    model = status.get("model_id")
+    if not available or not isinstance(model, str) or not model.strip() or len(model) > 128:
+        model = None
+    reason = status.get("reason")
+    if (not isinstance(reason, str) or not reason or len(reason) > 128
+            or not reason.isascii() or not reason.replace("_", "").isalnum()):
+        reason = "OWNED_RUNTIME_STATUS_UNAVAILABLE" if not status else None
+    provider = {
+        "provider": "owned",
+        "kind": "owned",
+        "model": model,
+        "configured": binding == "BOUND",
+        "credential_present": None,
+        "active": available,
+        "available": available,
+        "state": state,
+        "service_binding": binding,
+        "fallback_allowed": False,
     }
-    active_provider = os.environ.get("AI_PROVIDER", "").strip()
-    for pid, (model_key, key_name, kind) in cfg.items():
-        model = os.environ.get(model_key, "").strip()
-        has_key = bool(os.environ.get(key_name, "").strip()) if key_name else True
-        providers.append({
-            "provider": pid,
-            "kind": kind,
-            "model": model or "NOT_CONFIGURED",
-            "configured": bool(model) and has_key,
-            "credential_present": has_key,
-            "active": active_provider.lower() == pid.lower(),
-        })
     return jsonify({
         "ok": True,
-        "active_provider": active_provider or "NOT_CONFIGURED",
+        "active_provider": "owned",
         "provider_agnostic": True,
-        "fallback_chain": ["zhipu(cloud)", "ark(cloud)", "ollama(local)", "local_rule"],
-        "providers": providers,
+        "fallback_chain": [],
+        "runtime_available": available,
+        "gateway": {
+            "provider": "owned",
+            "state": state,
+            "service_binding": binding,
+            "available": available,
+            "reason": reason,
+            "fallback_allowed": False,
+        },
+        "providers": [provider],
         "truth_boundary": "AI is enhancement only; ZBC rules remain Production Truth",
     })
 
