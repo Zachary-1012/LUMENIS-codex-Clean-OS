@@ -4,6 +4,8 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 ## 2026-10-14 research adoption (documentation, not runtime acceptance)
 
+The existing prelaunch review now consistently includes optional account/login/settings and both developer modes in engineering closure, including its Website/ACC-01, SYS-04 user mode and SYS-07 founder mode rows. ACC-04 keeps Permission recovery action-local, using only server-returned callbacks; account settings never grant access. Old account deferral/exclusion sentences were replaced in place. Server Permission and ordinary open-workspace access remain. This is documentation convergence, not login implementation or user acceptance.
+
 The complete visible PO engineering image (items1–7/9/10/13–15 and introduction) is mapped into existing plan§17 and G108/G109/G187. Fixed Claude/OpenAI/Grok source, official Muse engineering and MCP/PII/voice/DPO documentation distinguish reusable mechanisms from unsupported ratios, service rights and unimplemented outcomes. Existing Task/Memory/Gateway/Permission owners remain; no second runtime, automatic training, model switch, OS control or public export. Original motion is unchanged. SOURCE here is research/rule adoption; all associated new runtime/outcome claims remain NOT_VERIFIED.
 
 PO transitions-ui-generation addition is adopted in Experience §19, the existing plan/sketches/AI-01/CTH-10 specs and third-party register. All original motion remains; the new full reveal is optional and bound to newly generated, layout-ready results. No installed/runtime outcome is claimed by this publication.
