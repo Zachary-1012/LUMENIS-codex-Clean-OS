@@ -248,11 +248,14 @@ def _days_offset(days):
 
 
 def _fill_zeros(data_by_date, dates, metric='count'):
-    """填充无数据日期为0，按日期排序。"""
+    """按日期对齐序列；缺数保持缺失（None），真实 0 保持 0。"""
     result = []
     for d in dates:
-        val = data_by_date.get(d, 0)
-        result.append({'date': d, 'label': d[5:], metric: val, 'total': val if metric == 'count' else val})
+        if d in data_by_date:
+            val = data_by_date[d]
+            result.append({'date': d, 'label': d[5:], metric: val, 'total': val if metric == 'count' else val, 'available': True})
+        else:
+            result.append({'date': d, 'label': d[5:], metric: None, 'total': None, 'available': False})
     return result
 
 

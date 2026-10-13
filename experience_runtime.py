@@ -101,21 +101,25 @@ def today_str() -> str:
     return _dt.datetime.now().strftime("%Y-%m-%d")
 
 
-def days_labels_series(days: int = 14) -> Tuple[List[str], List[int], List[int]]:
-    """真实近 N 日负面/高风险序列（database.get_stats_by_date_range，按天现算，不造趋势）。"""
+def days_labels_series(days: int = 14) -> Tuple[List[str], List[Any], List[Any]]:
+    """真实近 N 日负面/高风险序列；缺数保持 None，真实 0 保持 0。"""
     import database as db
 
     labels: List[str] = []
-    neg: List[int] = []
-    high: List[int] = []
+    neg: List[Any] = []
+    high: List[Any] = []
     today = _dt.date.today()
     for back in range(days - 1, -1, -1):
         d = today - _dt.timedelta(days=back)
         ds = d.strftime("%Y-%m-%d")
-        st = _safe(db.get_stats_by_date_range, ds, ds, default={})
+        st = _safe(db.get_stats_by_date_range, ds, ds, default=None)
         labels.append(d.strftime("%m-%d"))
-        neg.append(int(st.get("negative", 0)) if isinstance(st, dict) and not _is_err(st) else 0)
-        high.append(int(st.get("high_risk", 0)) if isinstance(st, dict) and not _is_err(st) else 0)
+        if isinstance(st, dict) and not _is_err(st):
+            neg.append(int(st["negative"]) if st.get("negative") is not None else None)
+            high.append(int(st["high_risk"]) if st.get("high_risk") is not None else None)
+        else:
+            neg.append(None)
+            high.append(None)
     return labels, neg, high
 
 
