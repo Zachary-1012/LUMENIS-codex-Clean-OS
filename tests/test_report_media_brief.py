@@ -144,6 +144,51 @@ def test_owned_gateway_image_result_is_persisted_as_reopenable_scoped_evidence(
     assert reopened == result
 
 
+def test_historical_local_provider_result_is_not_promoted_on_readback(media_setup, monkeypatch):
+    _vision(monkeypatch)
+    result = _run(media_setup)
+    record_id = int(result["evidence_ref"].rsplit(":", 1)[1])
+    repository = media_setup["store"]["repository"]
+
+    with repository.connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM app_evidence_records WHERE id=?", (record_id,),
+        ).fetchone()
+        outputs = json.loads(row["outputs_json"])
+        outputs["provider"] = "ollama"
+        outputs["model"] = "historical-local-model"
+        conn.execute(
+            "UPDATE app_evidence_records SET provider=?, outputs_json=? WHERE id=?",
+            ("ollama", json.dumps(outputs), record_id),
+        )
+        evidence_store._sign_evidence_record(conn, record_id)
+        stored_before = tuple(conn.execute(
+            "SELECT provider, inputs_json, outputs_json, integrity_digest FROM app_evidence_records WHERE id=?",
+            (record_id,),
+        ).fetchone())
+
+    reopened = media_brief.read_verified_report_media(
+        result["evidence_ref"], job_id="report-job-001", actor_ref="workspace:local",
+        scope=media_setup["scope"],
+    )
+
+    with repository.connect(read_only=True) as conn:
+        stored_after = tuple(conn.execute(
+            "SELECT provider, inputs_json, outputs_json, integrity_digest FROM app_evidence_records WHERE id=?",
+            (record_id,),
+        ).fetchone())
+    assert reopened["state"] == "historical_not_reverified"
+    assert reopened["inference_status"] == "HISTORICAL_NOT_REVERIFIED"
+    assert reopened["current_inference_verified"] is False
+    assert reopened["historical_provider"] is True
+    assert reopened["real_input_bound"] is True
+    assert reopened["source_hash_bound"] is True
+    assert reopened["provider"] == "ollama"
+    assert reopened["model"] == "historical-local-model"
+    assert reopened["analysis_text"] == result["analysis_text"]
+    assert stored_after == stored_before
+
+
 def test_scope_mismatch_and_missing_artifact_fail_closed_without_model_call(media_setup, monkeypatch):
     calls = _vision(monkeypatch)
     denied = _run(media_setup, scope={"domain_id": "cth", "global_scope": True})

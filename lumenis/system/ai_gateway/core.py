@@ -94,6 +94,47 @@ def owned_inference_status(domain_id=None):
     return owned_inference.owned_inference_status()
 
 
+def owned_service_observation(domain_id=None):
+    """Secret-safe scoped production status; never consult an evaluation candidate."""
+    def code(value, fallback):
+        return value if (isinstance(value, str) and 0 < len(value) <= 128
+                         and value.isascii() and value.replace('_', '').isalnum()) else fallback
+
+    def scoped(domain):
+        try:
+            raw = owned_inference_status(domain)
+            if not isinstance(raw, dict):
+                raise TypeError('status is not an object')
+        except Exception:
+            raw = {'reason': 'OWNED_RUNTIME_STATUS_UNAVAILABLE'}
+        binding = code(raw.get('service_binding'), 'NOT_VERIFIED')
+        available = raw.get('available') is True and binding == 'BOUND'
+        model = raw.get('model_id')
+        if not available or not isinstance(model, str) or len(model) > 128:
+            model = None
+        return {'provider': 'owned', 'available': available, 'service_binding': binding,
+                'state': code(raw.get('state'), 'UNKNOWN'),
+                'reason': code(raw.get('reason'), 'OWNED_RUNTIME_UNAVAILABLE'),
+                'model_id': model, 'fallback_allowed': False}
+
+    if domain_id is not None:
+        if domain_id not in {'cth', 'bmp'}:
+            return {'provider': 'owned', 'available': False, 'service_binding': 'BLOCKED',
+                    'state': 'BLOCKED', 'reason': 'OWNED_SERVICE_DOMAIN_INVALID',
+                    'model_id': None, 'fallback_allowed': False}
+        return scoped(domain_id)
+    domains = {domain: scoped(domain) for domain in ('cth', 'bmp')}
+    cth, bmp = domains.values()
+    if cth == bmp:
+        return {**cth, 'domains': domains}
+    ready = sum(item['available'] for item in domains.values())
+    return {'provider': 'owned', 'available': ready == len(domains),
+            'service_binding': 'BOUND' if ready == len(domains) else 'PARTIALLY_BOUND' if ready else 'NOT_BOUND',
+            'state': 'SERVICE_BOUND' if ready == len(domains) else 'PARTIAL' if ready else 'UNAVAILABLE',
+            'reason': 'OWNED_SERVICE_SCOPED_STATUS', 'model_id': None,
+            'fallback_allowed': False, 'domains': domains}
+
+
 def run_owned_analysis(*, text=None, analysis_type=None, note_id=None, request=None,
                        is_cancelled=None):
     """Route analysis through the owned-runtime boundary without provider fallback.

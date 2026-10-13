@@ -183,7 +183,27 @@ def _verify_report(row: dict[str, Any], *, job_id: str, actor_id: str,
             raise RuntimeError("SOURCE_BRIEF_STORED_CANONICAL_ID_INVALID")
     multimodal = snapshot.get("multimodal")
     if isinstance(multimodal, dict) and multimodal.get("state") == "complete":
-        if _multimodal_snapshot(multimodal, job_id=job_id, actor_id=actor_id, scope=scope) != multimodal:
+        expected_multimodal = _multimodal_snapshot(
+            multimodal, job_id=job_id, actor_id=actor_id, scope=scope,
+        )
+        if expected_multimodal.get("historical_provider") is True:
+            # Preserve the immutable historical snapshot/hash on disk while
+            # returning the verified result with its current assurance state.
+            persisted_view = {
+                **multimodal,
+                "state": expected_multimodal["state"],
+            }
+            expected_persisted_view = {
+                key: value for key, value in expected_multimodal.items()
+                if key not in {
+                    "source_hash_bound", "inference_status", "current_inference_verified",
+                    "historical_provider",
+                }
+            }
+            if expected_persisted_view != persisted_view:
+                raise RuntimeError("SOURCE_BRIEF_MEDIA_EVIDENCE_MISMATCH")
+            snapshot = {**snapshot, "multimodal": expected_multimodal}
+        elif expected_multimodal != multimodal:
             raise RuntimeError("SOURCE_BRIEF_MEDIA_EVIDENCE_MISMATCH")
     business = snapshot.get("business_analysis")
     if snapshot.get("revision") is not None:
@@ -238,6 +258,16 @@ def _record_evaluations(verified: dict[str, Any]) -> list[dict[str, Any]]:
     )
     records = []
     for metric, value, description in specifications:
+        if metric == "multimodal_analysis_integrity" and multi.get("historical_provider") is True:
+            evaluation_id = evaluation_ids[metric]
+            prior = get_evaluation_record(evaluation_id)
+            if prior:
+                expected_ref = f"daily_reports:{row['report_id']}:{row['artifact_hash']}"
+                if (prior.get("dimension") != "report" or prior.get("metric_name") != metric
+                        or prior.get("evidence_ref") != expected_ref):
+                    raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
+                records.append(prior)
+                continue
         record = record_evaluation(
             dimension="report", metric_name=metric, metric_value=value,
             pass_threshold=1.0, warn_threshold=0.8, source="daily_reports:source_brief_job",
@@ -528,6 +558,20 @@ def get_source_brief_job(job_id: str, *, actor_id: str,
     evaluation_ids = verified["snapshot"].get("evaluation_ids")
     evaluations = [get_evaluation_record(evaluation_ids[name]) for name in _evaluation_ids(job_id)]
     present = [record for record in evaluations if record]
+    if verified["snapshot"].get("multimodal", {}).get("historical_provider") is True:
+        media_id = _evaluation_ids(job_id)["multimodal_analysis_integrity"]
+        expected_ref = f"daily_reports:{verified['row']['report_id']}:{verified['row']['artifact_hash']}"
+        projected = []
+        for record in present:
+            if record.get("evaluation_id") != media_id:
+                projected.append(record)
+                continue
+            if (record.get("dimension") != "report"
+                    or record.get("metric_name") != "multimodal_analysis_integrity"
+                    or record.get("evidence_ref") != expected_ref):
+                raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
+            projected.append(record)
+        present = projected
     state = "recorded" if len(present) == len(evaluations) else "pending_recovery"
     result = _response(verified, present)
     result["evaluation"]["state"] = state

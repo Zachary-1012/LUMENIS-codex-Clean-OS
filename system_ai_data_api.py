@@ -175,6 +175,8 @@ def ai_evaluations():
     """AI 评估面板 — 查询 evaluation_records 表。"""
     limit = min(int(request.args.get('limit', 30)), 100)
     try:
+        from lumenis.shared.evaluation.recorder import project_current_assurance
+
         with _get_db() as conn:
             if not _table_exists(conn, 'evaluation_records'):
                 return jsonify({'ok': True, 'evaluations': [], 'records': [], 'count': 0, 'message': 'evaluation_records 表不存在'})
@@ -188,6 +190,7 @@ def ai_evaluations():
 
             evaluations = []
             for r in rows:
+                r = project_current_assurance(conn, dict(r))
                 evaluations.append({
                     'id': r['id'],
                     'evaluation_id': r['evaluation_id'] or '',
@@ -207,15 +210,19 @@ def ai_evaluations():
                     'created_at': r['evaluated_at'] or '',
                     'source': r['source'] or '',
                     'evidence_ref': r['evidence_ref'] or '',
-                    'trace_id': r['evaluation_id'] or ''
+                    'trace_id': r['evaluation_id'] or '',
+                    **{key: r[key] for key in ('historical_record_status', 'historical_metric_value',
+                                               'inference_status', 'current_inference_verified') if key in r},
                 })
 
             total = conn.execute("SELECT COUNT(*) FROM evaluation_records").fetchone()[0]
 
             # 按状态统计
             status_stats = {}
-            for r in conn.execute("SELECT status, COUNT(*) as cnt FROM evaluation_records GROUP BY status").fetchall():
-                status_stats[r['status'] or 'unknown'] = r['cnt']
+            for row in conn.execute("SELECT * FROM evaluation_records"):
+                r = project_current_assurance(conn, dict(row))
+                state = r['status'] or 'unknown'
+                status_stats[state] = status_stats.get(state, 0) + 1
 
             return jsonify({
                 'ok': True,

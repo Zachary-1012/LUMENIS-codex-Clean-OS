@@ -149,7 +149,7 @@ class DBStatusObserver(BaseObserver):
 
 
 class AIStatusObserver(BaseObserver):
-    """AI/API 健康观察者。复用 ai_channel 的健康检查。"""
+    """Observe the current Owned Gateway binding without consulting retired providers."""
 
     name = "ai_status"
 
@@ -164,26 +164,48 @@ class AIStatusObserver(BaseObserver):
         if self._health_func:
             return self._health_func()
 
-        result = {"status": "unknown", "provider": "", "circuit_state": "unknown", "error": None}
+        result = {
+            "status": "unknown", "provider": "owned", "circuit_state": "not_applicable",
+            "provider_status": "UNKNOWN", "service_binding": "NOT_VERIFIED", "error": None,
+        }
         try:
-            from lumenis.system.ai_gateway.channel import channel_health, get_provider_status_v1
-            try:
-                health = channel_health()
-                result["status"] = health.get("status", "unknown")
-                result["provider"] = health.get("provider", "")
-            except Exception:
-                pass
+            from lumenis.system.ai_gateway import user_api_adapter
 
-            try:
-                providers = get_provider_status_v1()
-                zhipu = providers.get("zhipu", {})
-                result["circuit_state"] = zhipu.get("circuit_breaker", "unknown")
-                result["provider_status"] = zhipu.get("status", "unknown")
-            except Exception:
-                pass
-        except Exception as e:
-            result["status"] = "unavailable"
-            result["error"] = str(e)[:200]
+            if user_api_adapter.is_selected():
+                configured = user_api_adapter.is_configured()
+                return {
+                    **result, "provider": "user_api",
+                    "status": "unknown" if configured else "unavailable",
+                    "provider_status": "CONFIGURED_NOT_VERIFIED" if configured else "NOT_CONFIGURED",
+                    "service_binding": "NOT_VERIFIED", "error": "USER_API_NOT_PROBED",
+                }
+            from lumenis.system.ai_gateway.core import owned_service_observation
+
+            gateway = owned_service_observation((context or {}).get("domain_id"))
+            if not isinstance(gateway, dict):
+                raise TypeError("owned Gateway status is not an object")
+            binding = gateway.get("service_binding")
+            state = gateway.get("state")
+            def public_code(value, fallback):
+                return value if (isinstance(value, str) and 0 < len(value) <= 128
+                                 and value.isascii() and value.replace("_", "").isalnum()) else fallback
+
+            binding = public_code(binding, "NOT_VERIFIED")
+            state = public_code(state, "UNKNOWN")
+            available = gateway.get("available") is True and binding == "BOUND"
+            result.update(
+                status="ok" if available else "unavailable",
+                provider="owned",
+                provider_status=state if isinstance(state, str) else "UNKNOWN",
+                service_binding=binding if isinstance(binding, str) else "UNKNOWN",
+                error=None if available else public_code(gateway.get("reason"), "OWNED_RUNTIME_UNAVAILABLE"),
+                domain_statuses=gateway.get("domains", {}),
+            )
+        except Exception:
+            result.update(
+                status="unavailable", provider="owned", provider_status="UNKNOWN",
+                service_binding="NOT_VERIFIED", error="OWNED_RUNTIME_STATUS_UNAVAILABLE",
+            )
 
         return result
 
