@@ -263,6 +263,40 @@ def record_evaluation(
     return record
 
 
+def project_current_assurance(conn, record: Dict[str, Any]) -> Dict[str, Any]:
+    """Project retired report inference in every reader without rewriting history."""
+    if (record.get('source') != 'daily_reports:source_brief_job'
+            or record.get('metric_name') != 'multimodal_analysis_integrity'):
+        return record
+    reason = 'REPORT_INFERENCE_NOT_REVERIFIED'
+    try:
+        metadata = json.loads(record.get('metadata') or '{}')
+        if not isinstance(metadata, dict):
+            raise ValueError('invalid metadata')
+        row = conn.execute(
+            'SELECT source_snapshot FROM daily_reports WHERE report_id=? AND artifact_hash=?',
+            (metadata.get('report_id'), metadata.get('artifact_hash')),
+        ).fetchone()
+        snapshot = json.loads(row[0]) if row else {}
+        media = snapshot.get('multimodal') if isinstance(snapshot, dict) else None
+        if (isinstance(media, dict) and snapshot.get('job_id') == metadata.get('job_id')
+                and snapshot.get('scope') == metadata.get('scope')
+                and snapshot.get('actor_id') == metadata.get('actor_id')):
+            if media.get('provider') not in {'ollama', 'zhipu', 'doubao', 'jev'}:
+                return record
+            reason = 'HISTORICAL_NOT_REVERIFIED'
+    except (ValueError, TypeError):
+        pass
+    except sqlite3.OperationalError as exc:
+        if 'no such table: daily_reports' not in str(exc):
+            raise
+    return {**record, 'metric_value': None,
+            'status': 'unknown' if record.get('status') == 'pass' else record.get('status', 'unknown'),
+            'historical_record_status': record.get('status'),
+            'historical_metric_value': record.get('metric_value'),
+            'inference_status': reason, 'current_inference_verified': False}
+
+
 def get_evaluation_record(evaluation_id: str, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """Read one persisted evaluation by its stable owner-assigned identity."""
     if not isinstance(evaluation_id, str) or not evaluation_id.strip():
@@ -273,9 +307,10 @@ def get_evaluation_record(evaluation_id: str, db_path: Optional[str] = None) -> 
             "SELECT * FROM evaluation_records WHERE evaluation_id=?",
             (evaluation_id,),
         ).fetchone()
+        result = project_current_assurance(conn, dict(row)) if row else None
     finally:
         conn.close()
-    return dict(row) if row else None
+    return result
 
 
 def get_artifact_evaluations(
@@ -301,11 +336,11 @@ def get_artifact_evaluations(
                ORDER BY evaluated_at DESC, id DESC""",
             (job_id, artifact_hash),
         ).fetchall()
+        records = [project_current_assurance(conn, dict(row)) for row in rows]
     finally:
         conn.close()
     matched = []
-    for row in rows:
-        record = dict(row)
+    for record in records:
         metadata = json.loads(record["metadata"])
         if metadata.get("scope") != scope or record["evidence_ref"] not in evidence_refs:
             continue
@@ -377,10 +412,9 @@ def get_evaluation_summary(
             params.append(since)
         query += " ORDER BY evaluated_at DESC"
         rows = conn.execute(query, params).fetchall()
+        records = [project_current_assurance(conn, dict(row)) for row in rows]
     finally:
         conn.close()
-
-    records = [dict(r) for r in rows]
 
     # 按维度统计
     by_dimension: Dict[str, Dict[str, int]] = {}
@@ -466,15 +500,26 @@ def get_evaluation_records(
         if dimension:
             query += " AND dimension = ?"
             params.append(dimension)
-        if status:
-            query += " AND status = ?"
-            params.append(status)
-        query += " ORDER BY evaluated_at DESC LIMIT ?"
-        params.append(limit)
-        rows = conn.execute(query, params).fetchall()
+        if limit <= 0:
+            return []
+        # Filter current projected status, not a retired persisted PASS. Fetch
+        # bounded chunks so pagination fills correctly without a full-table list.
+        query += " ORDER BY evaluated_at DESC, id DESC"
+        cursor = conn.execute(query, params)
+        records = []
+        while len(records) < limit:
+            rows = cursor.fetchmany(min(limit, 256))
+            if not rows:
+                break
+            for row in rows:
+                record = project_current_assurance(conn, dict(row))
+                if status is None or record['status'] == status:
+                    records.append(record)
+                    if len(records) == limit:
+                        break
     finally:
         conn.close()
-    return [dict(r) for r in rows]
+    return records
 
 
 # 模块加载时自动初始化表（幂等）

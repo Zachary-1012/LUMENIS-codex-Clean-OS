@@ -104,37 +104,78 @@ def _git_info(repo_path: Path):
 
 @agg_bp.route("/api/intelligence/models")
 def intelligence_models():
-    """AI Gateway 模型矩阵 —— 只回传 provider/model 名与配置状态，绝不回传 Key。"""
-    providers = []
-    cfg = {
-        "zhipu": ("ZHIPU_MODEL", "ZHIPU_API_KEY", "cloud"),
-        "zhipu_strong": ("ZHIPU_STRONG_MODEL", "ZHIPU_API_KEY", "cloud"),
-        "ark": ("ARK_MODEL", "ARK_API_KEY", "cloud"),
-        "qwen": ("QWEN_MODEL", None, "cloud"),
-        "openai": ("OPENAI_MODEL", "OPENAI_API_KEY", "cloud"),
-        "deepseek": ("DEEPSEEK_MODEL", "DEEPSEEK_API_KEY", "cloud"),
-        "ollama": ("OLLAMA_MODEL", None, "local"),
-        "lmstudio": ("LMSTUDIO_MODEL", None, "local"),
-        "llama_cpp": ("LLAMA_CPP_MODEL", None, "local"),
+    """Report the bound Owned Gateway route; configuration strings are not runtime proof."""
+    try:
+        from lumenis.system.ai_gateway.core import owned_service_observation
+
+        raw_status = owned_service_observation(request.args.get("domain_id"))
+    except Exception:
+        raw_status = None
+    status = raw_status if isinstance(raw_status, dict) else {}
+    binding = status.get("service_binding")
+    if not isinstance(binding, str) or len(binding) > 64:
+        binding = "NOT_VERIFIED"
+    state = status.get("state")
+    if not isinstance(state, str) or len(state) > 64:
+        state = "UNKNOWN"
+    available = status.get("available") is True and binding == "BOUND"
+    model = status.get("model_id")
+    if not available or not isinstance(model, str) or not model.strip() or len(model) > 128:
+        model = None
+    reason = status.get("reason")
+    if (not isinstance(reason, str) or not reason or len(reason) > 128
+            or not reason.isascii() or not reason.replace("_", "").isalnum()):
+        reason = "OWNED_RUNTIME_STATUS_UNAVAILABLE" if not status else None
+    provider = {
+        "provider": "owned",
+        "kind": "owned",
+        "model": model,
+        "configured": binding == "BOUND",
+        "credential_present": None,
+        "active": available,
+        "available": available,
+        "state": state,
+        "service_binding": binding,
+        "fallback_allowed": False,
     }
-    active_provider = os.environ.get("AI_PROVIDER", "").strip()
-    for pid, (model_key, key_name, kind) in cfg.items():
-        model = os.environ.get(model_key, "").strip()
-        has_key = bool(os.environ.get(key_name, "").strip()) if key_name else True
+    providers = [provider]
+    selected_provider = "owned"
+    selected_available = available
+    selected_gateway = {
+        "provider": "owned", "state": state, "service_binding": binding,
+        "available": available, "reason": reason, "fallback_allowed": False,
+    }
+    from lumenis.system.ai_gateway import user_api_adapter
+
+    if user_api_adapter.is_selected():
+        # Explicit selection is retained; configuration never proves a live call.
+        configured = user_api_adapter.is_configured()
+        user_model = user_api_adapter.config().get("model") if configured else None
+        if not isinstance(user_model, str) or len(user_model) > 128:
+            user_model = None
+        user_state = "CONFIGURED_NOT_VERIFIED" if configured else "NOT_CONFIGURED"
+        provider["active"] = False
+        selected_provider = "user_api"
+        selected_available = None
         providers.append({
-            "provider": pid,
-            "kind": kind,
-            "model": model or "NOT_CONFIGURED",
-            "configured": bool(model) and has_key,
-            "credential_present": has_key,
-            "active": active_provider.lower() == pid.lower(),
+            "provider": "user_api", "kind": "user_selected", "model": user_model,
+            "configured": configured, "credential_present": None, "active": True,
+            "available": None, "state": user_state, "service_binding": "NOT_VERIFIED",
+            "fallback_allowed": False,
         })
+        selected_gateway = {
+            "provider": "user_api", "state": user_state, "service_binding": "NOT_VERIFIED",
+            "available": None, "reason": "USER_API_NOT_PROBED", "fallback_allowed": False,
+        }
     return jsonify({
         "ok": True,
-        "active_provider": active_provider or "NOT_CONFIGURED",
+        "active_provider": selected_provider,
         "provider_agnostic": True,
-        "fallback_chain": ["zhipu(cloud)", "ark(cloud)", "ollama(local)", "local_rule"],
+        "fallback_chain": [],
+        "runtime_available": selected_available,
+        "gateway": selected_gateway,
         "providers": providers,
+        "domain_statuses": status.get("domains", {}),
         "truth_boundary": "AI is enhancement only; ZBC rules remain Production Truth",
     })
 
