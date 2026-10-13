@@ -2,6 +2,15 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-13 Single product closed-loop entry (dated readback; start here)
+
+This file is the one entry every agent (Codex, Akang, Akang1) starts from. Any other handoff/todo/progress note dated before 2026-10-13 is superseded where it conflicts and is kept only as history.
+
+- Loop path: `AGENTS.md` rules -> this CURRENT -> branch -> tests -> PR -> Product Gate + App Gate green -> normal merge -> local `D:/LUMENIS_REBUILD/序/序境` equals `origin/main`, clean status. One local path only; no extra worktrees.
+- Rule entry points: `AGENTS.md`; this file; governance machine contract (`scripts/audit_tools/verify_governance_machine_contract.py`); PO decisions in `00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/USER-ADDITIONS-20261004.md`; approvals in `00-GOVERNANCE/evidence/approvals/`.
+- Current progress: local work-in-progress (170 files) is preserved unmerged on branch `akang/wip-business-decision` (draft PR #31; it breaks `tests/test_business_decision_workflow.py`; owner to finish) and in `D:/LUMENIS_AUDIT/20261013_akang_governance/pre-sync.patch`. PO role names (Pim/Bram/Ness/Jas/Aris, English only) and the AI watermark are recorded in USER-ADDITIONS.
+- Next steps: (1) finish PR #31 and merge through both gates; (2) core collection: no core process and no `ZBrand-HealthGuard` task since 9/30, so reinstall via `scripts/install_scheduled_tasks.ps1`, start via `scripts/start_production.ps1`, record one real run; `COLLECTOR_ENDPOINT` unset (backend owner); (3) subject_registry function that stores only brand official names with official-site source evidence, then the 8 held Taikoo Hui subjects; (4) remove the stale `D:/LUMENIS_AUDIT/20261013_akang_governance/rea-merge-wt` folder; (5) frontend, roles, logo after the loop is closed. 阿康（bot）
+
 ## 2026-10-13 PO agent-role change (dated readback, not dispatch)
 
 The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-development agents; the PO alone partitions and dispatches their work. Brio (Muse) is the PO-only global-data-source research and verified acquisition-target inventory contributor, delivering one Markdown research handoff and then acting only on direct PO instructions. The operative routing is in `AGENTS.md` and the machine/source-owner contracts; this dated handoff is neither a new agent authority nor permission to run research, collection, code, training, payment, deployment or PR merge automatically.
@@ -12,7 +21,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
