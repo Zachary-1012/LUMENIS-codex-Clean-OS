@@ -1,5 +1,7 @@
 # LUMENIS Engineering Governance V1.0
 
+> **SUPERSEDED / HISTORICAL ONLY（2026-10-13 标注）**：Z-Brand-Core 双核融合阶段已结束。 当前执行规则以 `AGENTS.md`、`LUMENIS-CODEX-TAKEOVER-CURRENT.md` 与 `LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md` 为准；本文件的“最高/权威/CANONICAL”表述不再有效。
+
 ## 1. Authority
 
 本文件是 Z-Brand-Core 在 LUMENIS 双核融合阶段的工程治理基线。它不替代生产业务规则、数据库事实或测试证据；发生冲突时，以实际源码、运行结果、最新 Contract 与本治理基线共同判断，禁止以历史文档覆盖事实。

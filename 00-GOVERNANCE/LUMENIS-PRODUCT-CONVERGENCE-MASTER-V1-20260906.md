@@ -1,5 +1,7 @@
 # LUMENIS Product Convergence Master V1
 
+> **SUPERSEDED / HISTORICAL ONLY（2026-10-13 标注）**：文中“Zhipu + Local AI 并行”、ARK 等运行面已退役，不得调用、探测或回退；产品 AI 只经唯一 SYSTEM AI Gateway 调用自有模型。 当前执行规则以 `AGENTS.md`、`LUMENIS-CODEX-TAKEOVER-CURRENT.md` 与 `LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md` 为准；本文件的“最高/权威/CANONICAL”表述不再有效。
+
 日期：2026-09-06  
 状态：最高执行基线 / EXECUTION AUTHORITY  
 范围：Z-Brand-Core（序境生产核心）
