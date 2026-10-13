@@ -33,7 +33,7 @@ RESOLVE origin/main → READ CURRENT SOURCE OWNER INDEX
 2. **Backend / Recovery：** 按现有 owner 找回、适配并接通功能；自有 AI 归 SYSTEM AI Gateway；旧本地模型/智谱/OpenCode 模型调用已停止、接口保留；平台沿用获准 Cookie/session/browser 链；Codex/Cloud 仅作研发。
 3. **Closed-loop internal beta：** 用真实授权数据完成 UI Entry → Action → API → Canonical Result → Evidence/Trace → Return/Evaluation → E2E / recovery / release evidence。
 
-LUMENIS 产品账号密码重设计延后至产品工程闭环后；内测前和内测阶段不得以产品账号墙阻断现有产品。平台 Cookie/session 与产品账号是两类身份，后端 Permission 和 effect fence 始终保留。
+LUMENIS 产品账号体系（邮箱验证码、Apple、Google 登录）闭环内实现；任何阶段不得以产品账号墙阻断现有产品。平台 Cookie/session 与产品账号是两类身份，后端 Permission 和 effect fence 始终保留。
 
 ## 1. 产品结构
 
