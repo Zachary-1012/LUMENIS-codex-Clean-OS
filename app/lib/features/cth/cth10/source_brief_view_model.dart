@@ -230,6 +230,9 @@ class SourceBriefViewModel extends ChangeNotifier {
   SourceBriefTaskState _taskState = SourceBriefTaskState.unknown;
   bool _canResume = false;
   SourceBriefResult? _result;
+  String? _newResultTaskId;
+  String? _resultArrivalToken;
+  int _resultArrivalSequence = 0;
   String? statisticsTaskId;
   String? _statisticsJobId;
   Map<String, Object?>? sourceStatistics;
@@ -354,6 +357,7 @@ class SourceBriefViewModel extends ChangeNotifier {
   SourceBriefTaskState get taskState => _taskState;
   bool get canResume => _canResume;
   SourceBriefResult? get result => _result;
+  String? get resultArrivalToken => _resultArrivalToken;
   SourceBriefErrorKind? get errorKind => _errorKind;
   String? get scopeLabel => _scopeLabel;
   bool get globalScope => _selection?.globalScope == true;
@@ -397,7 +401,12 @@ class SourceBriefViewModel extends ChangeNotifier {
       );
       if (!_isCurrent(operation)) return;
       if (!_contextStillCurrent(fresh, operation)) return;
-      await _applyTaskResponse(response, fresh: fresh, operation: operation);
+      await _applyTaskResponse(
+        response,
+        fresh: fresh,
+        operation: operation,
+        newlySubmitted: true,
+      );
     } catch (error) {
       _fail(operation, _errorFor(error), fresh: fresh);
     }
@@ -693,6 +702,7 @@ class SourceBriefViewModel extends ChangeNotifier {
     Map<String, dynamic> response, {
     required _FreshSourceContext fresh,
     required int operation,
+    bool newlySubmitted = false,
     String? expectedTaskId,
     String? expectedJobId,
   }) async {
@@ -728,6 +738,7 @@ class SourceBriefViewModel extends ChangeNotifier {
     final parsedState = _parseTaskState(task['state']);
     _taskId = returnedTaskId;
     _jobId = returnedJobId;
+    if (newlySubmitted) _newResultTaskId = returnedTaskId;
     _taskState = parsedState;
     _canResume =
         task['can_resume'] == true &&
@@ -749,7 +760,14 @@ class SourceBriefViewModel extends ChangeNotifier {
 
     if (parsedState == SourceBriefTaskState.succeeded) {
       notifyListeners();
-      await _readBackJob(returnedJobId, fresh: fresh, operation: operation);
+      await _readBackJob(
+        returnedJobId,
+        fresh: fresh,
+        operation: operation,
+        newlyGeneratedTaskId: _newResultTaskId == returnedTaskId
+            ? returnedTaskId
+            : null,
+      );
       return;
     }
 
@@ -766,6 +784,7 @@ class SourceBriefViewModel extends ChangeNotifier {
     String jobId, {
     required _FreshSourceContext fresh,
     required int operation,
+    String? newlyGeneratedTaskId,
   }) async {
     if (!_contextStillCurrent(fresh, operation)) return;
     try {
@@ -797,6 +816,17 @@ class SourceBriefViewModel extends ChangeNotifier {
       _taskState = SourceBriefTaskState.succeeded;
       _canResume = false;
       _result = parsed;
+      final resultVersion =
+          '${parsed.scope.scopeKey}:${parsed.jobId}:${parsed.artifactHash}';
+      if (newlyGeneratedTaskId != null &&
+          newlyGeneratedTaskId == _newResultTaskId &&
+          parsed.records.isNotEmpty) {
+        _resultArrivalToken =
+            '$newlyGeneratedTaskId:$resultVersion:${++_resultArrivalSequence}';
+      }
+      if (_newResultTaskId == newlyGeneratedTaskId) {
+        _newResultTaskId = null;
+      }
       _finish(operation, phase: SourceBriefPhase.ready);
     } catch (error) {
       _fail(operation, _errorFor(error), fresh: fresh);
@@ -809,6 +839,7 @@ class SourceBriefViewModel extends ChangeNotifier {
     _busy = true;
     _phase = SourceBriefPhase.loading;
     _errorKind = null;
+    _resultArrivalToken = null;
     // Each operation must verify access and the saved artifact again. Keep
     // recovery references, but do not present the previous read as current.
     _result = null;
@@ -860,6 +891,8 @@ class SourceBriefViewModel extends ChangeNotifier {
     _taskState = SourceBriefTaskState.unknown;
     _canResume = false;
     _result = null;
+    _newResultTaskId = null;
+    _resultArrivalToken = null;
     statisticsTaskId = null;
     _statisticsJobId = null;
     sourceStatistics = null;

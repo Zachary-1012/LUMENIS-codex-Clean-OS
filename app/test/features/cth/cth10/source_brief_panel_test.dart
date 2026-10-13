@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:shared_preferences_platform_interface/types.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/cth/cth10/cth10_repository.dart';
@@ -15,7 +21,7 @@ void main() {
 
     await tester.pumpWidget(_panelApp(client));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('source-brief/create')));
+    await _tapCreate(tester);
     await tester.pumpAndSettle();
 
     expect(client.startCalls, [
@@ -40,7 +46,7 @@ void main() {
 
     await tester.pumpWidget(_panelApp(client));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('source-brief/create')));
+    await _tapCreate(tester);
     await tester.pumpAndSettle();
 
     expect(client.jobReads, [_jobId]);
@@ -49,6 +55,169 @@ void main() {
     expect(find.text('暂时无法核验返回的简报，尚未显示为已完成。'), findsOneWidget);
     expect(find.text('已保存并重新核验'), findsNothing);
     expect(find.text('来源记录'), findsNothing);
+  });
+
+  testWidgets('new verified result reveals once and can be skipped', (
+    tester,
+  ) async {
+    final client = _SourceBriefClient()
+      ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+      ..jobResponse = _savedJobEnvelope();
+
+    await tester.pumpWidget(_panelApp(client));
+    await tester.pumpAndSettle();
+    await _tapCreate(tester);
+
+    var started = false;
+    for (var frame = 0; frame < 18; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      if (find
+          .byKey(const ValueKey('generated-result-reveal/paint'))
+          .evaluate()
+          .isNotEmpty) {
+        started = true;
+        break;
+      }
+    }
+    expect(started, isTrue, reason: 'The verified new result should reveal.');
+    expect(
+      find.byKey(const ValueKey('generated-result-reveal/paint')),
+      findsOneWidget,
+    );
+    expect(find.text('可核验来源标题'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('generated-result-reveal/skip')),
+    );
+    await tester.pumpAndSettle();
+
+    _expectSkipUnavailable(tester);
+    expect(find.text('已保存并重新核验'), findsOneWidget);
+  });
+
+  testWidgets('scroll before motion preference loads suppresses late reveal', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    final previousPlatform = SharedPreferencesAsyncPlatform.instance;
+    final preferences = _DelayedMotionPreferences();
+    SharedPreferencesAsyncPlatform.instance = preferences;
+    addTearDown(() {
+      preferences.resolveRead(null);
+      SharedPreferencesAsyncPlatform.instance = previousPlatform;
+    });
+    final client = _SourceBriefClient()
+      ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+      ..jobResponse = _savedJobEnvelope();
+
+    await _showCompletedResult(tester, client);
+    await tester.drag(find.text('来源简报'), const Offset(0, -80));
+    await tester.pumpAndSettle();
+
+    preferences.resolveRead(null);
+    await tester.pumpAndSettle();
+
+    _expectSkipUnavailable(tester);
+  });
+
+  testWidgets(
+    'backgrounding before motion preference loads suppresses reveal',
+    (tester) async {
+      final previousPlatform = SharedPreferencesAsyncPlatform.instance;
+      final preferences = _DelayedMotionPreferences();
+      SharedPreferencesAsyncPlatform.instance = preferences;
+      addTearDown(() {
+        preferences.resolveRead(null);
+        SharedPreferencesAsyncPlatform.instance = previousPlatform;
+      });
+      final client = _SourceBriefClient()
+        ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+        ..jobResponse = _savedJobEnvelope();
+
+      await _showCompletedResult(tester, client);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      preferences.resolveRead(null);
+      await tester.pumpAndSettle();
+
+      _expectSkipUnavailable(tester);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    },
+  );
+
+  testWidgets(
+    'pointer interaction before motion preference loads suppresses reveal',
+    (tester) async {
+      final previousPlatform = SharedPreferencesAsyncPlatform.instance;
+      final preferences = _DelayedMotionPreferences();
+      SharedPreferencesAsyncPlatform.instance = preferences;
+      addTearDown(() {
+        preferences.resolveRead(null);
+        SharedPreferencesAsyncPlatform.instance = previousPlatform;
+      });
+      final client = _SourceBriefClient()
+        ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+        ..jobResponse = _savedJobEnvelope();
+
+      await _showCompletedResult(tester, client);
+      await tester.tap(find.text('已保存并重新核验'));
+      await tester.pump();
+      preferences.resolveRead(null);
+      await tester.pumpAndSettle();
+
+      _expectSkipUnavailable(tester);
+    },
+  );
+
+  testWidgets('semantic copy activation cancels pending result reveal', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 2600));
+    final previousPlatform = SharedPreferencesAsyncPlatform.instance;
+    final preferences = _DelayedMotionPreferences();
+    SharedPreferencesAsyncPlatform.instance = preferences;
+    addTearDown(() {
+      preferences.resolveRead(null);
+      SharedPreferencesAsyncPlatform.instance = previousPlatform;
+    });
+    final client = _SourceBriefClient()
+      ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+      ..jobResponse = _savedJobEnvelope();
+
+    await _showCompletedResult(tester, client);
+    final semantics = tester.ensureSemantics();
+    try {
+      final copyNode = tester.getSemantics(
+        find.byKey(const ValueKey('source-brief/copy-job')),
+      );
+      copyNode.owner!.performAction(copyNode.id, SemanticsAction.tap);
+      await tester.pumpAndSettle();
+      preferences.resolveRead(null);
+      await tester.pumpAndSettle();
+
+      _expectSkipUnavailable(tester);
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets('saved result effect can be disabled by the user', (
+    tester,
+  ) async {
+    final client = _SourceBriefClient()
+      ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+      ..jobResponse = _savedJobEnvelope();
+
+    await tester.pumpWidget(_panelApp(client));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('source-brief/reveal/off')));
+    await tester.pumpAndSettle();
+    await _tapCreate(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('已保存并重新核验'), findsOneWidget);
+    _expectSkipUnavailable(tester);
   });
 
   testWidgets('failed refresh hides saved result and stops checking copy', (
@@ -60,7 +229,7 @@ void main() {
       ..taskResponse = {'ok': false, 'code': 'ACCESS_DENIED'};
     await tester.pumpWidget(_panelApp(client));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('source-brief/create')));
+    await _tapCreate(tester);
     await tester.pumpAndSettle();
     expect(find.text('已保存并重新核验'), findsOneWidget);
 
@@ -81,6 +250,7 @@ void main() {
     expect(find.text('暂时无法确认任务状态'), findsNothing);
     expect(client.startCalls, hasLength(1));
     expect(client.jobReads, [_jobId, _jobId]);
+    _expectSkipUnavailable(tester);
   });
 
   testWidgets('interrupted task resumes with the same task identifier', (
@@ -92,7 +262,7 @@ void main() {
 
     await tester.pumpWidget(_panelApp(client));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('source-brief/create')));
+    await _tapCreate(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('本次整理已中断'), findsOneWidget);
@@ -127,6 +297,7 @@ void main() {
     expect(client.startCalls, isEmpty);
     expect(client.taskReads, isEmpty);
     expect(find.text('已保存并重新核验'), findsOneWidget);
+    _expectSkipUnavailable(tester);
     expect(find.text('可核验来源标题'), findsOneWidget);
     expect(find.widgetWithText(SelectableText, _jobId), findsOneWidget);
   });
@@ -216,6 +387,84 @@ Widget _panelApp(
     onReturn: () {},
   ),
 );
+
+void _expectSkipUnavailable(WidgetTester tester) {
+  expect(
+    find.byKey(const ValueKey('generated-result-reveal/skip')),
+    findsOneWidget,
+  );
+  expect(
+    tester
+        .widget<Opacity>(
+          find.byKey(const ValueKey('generated-result-reveal/skip-opacity')),
+        )
+        .opacity,
+    0,
+  );
+  expect(
+    tester
+        .widget<ExcludeFocus>(
+          find.byKey(const ValueKey('generated-result-reveal/skip-focus')),
+        )
+        .excluding,
+    isTrue,
+  );
+  expect(
+    tester
+        .widget<ExcludeSemantics>(
+          find.byKey(const ValueKey('generated-result-reveal/skip-semantics')),
+        )
+        .excluding,
+    isTrue,
+  );
+  expect(
+    tester
+        .widget<IgnorePointer>(
+          find.byKey(const ValueKey('generated-result-reveal/skip-pointer')),
+        )
+        .ignoring,
+    isTrue,
+  );
+  expect(
+    find.byKey(const ValueKey('generated-result-reveal/paint')),
+    findsNothing,
+  );
+}
+
+Future<void> _tapCreate(WidgetTester tester) async {
+  final create = find.byKey(const ValueKey('source-brief/create'));
+  await tester.ensureVisible(create);
+  await tester.tap(create);
+}
+
+Future<void> _showCompletedResult(
+  WidgetTester tester,
+  _SourceBriefClient client,
+) async {
+  await tester.pumpWidget(_panelApp(client));
+  await tester.pumpAndSettle();
+  await _tapCreate(tester);
+  await tester.pumpAndSettle();
+  expect(find.text('已保存并重新核验'), findsOneWidget);
+}
+
+base class _DelayedMotionPreferences extends InMemorySharedPreferencesAsync {
+  _DelayedMotionPreferences() : super.empty();
+
+  final Completer<String?> _motionPreference = Completer<String?>();
+
+  @override
+  Future<String?> getString(String key, SharedPreferencesOptions options) {
+    if (key == 'lumenis.source_brief.result_reveal.choice.v1') {
+      return _motionPreference.future;
+    }
+    return super.getString(key, options);
+  }
+
+  void resolveRead(String? value) {
+    if (!_motionPreference.isCompleted) _motionPreference.complete(value);
+  }
+}
 
 Widget _cth10App(
   LumenisCoreClient client, {
