@@ -26,6 +26,13 @@ Copying Subject/BrandFocus or campaign configuration must not copy source/histor
 
 沿现有Owner/源码表并行建设四个表面，按各自真实角色、任务、接口、保存恢复与端侧运行要求独立验收。F负责完整前端屏幕/官网内容家族与真实接口绑定；已有后端立即接入，其他能力由既有领域Owner与C6按原合同接续，缺失部分记OPEN/UNBOUND，不因接线未齐缩减前端任务、不用模拟结果。实际窗口调度仍由PO决定，共享集成按M/W6预约。保留全部R/J/U、44份规格基线及更广的产品要求，不新增产品、Owner、队列、设计系统或费用。一端验收不自动成立其余端或完整Release。具体端角色归本Decision与Experience，真实验收归Overlay。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
+
+### 2026-10-13 PO personnel clarification — engineering peers and independent research
+
+Codex and **Akang (GrokBot)** are **equal-level engineering agents**, each eligible for any of the existing C1–C6/F/M product-development and integration assignments **only when directly allocated by the Product Owner**. PO Zachary personally partitions their tasks; neither agent is the other's manager, and this index must not auto-assign or invent a division of their product scope. Existing Owner identifiers are *source responsibilities*, not permanent agent appointments. Shared-file exclusivity, Permission, exact-SHA review, source/data protection and real user acceptance remain unchanged.
+
+**Brio (Muse)** is reassigned to **global data-source research, usable source/field/legal-access inventory and concrete acquisition target lists**, with a one-time verified Markdown handoff to Codex/Akang. Research is not authorized live collection or implementation. Upon delivery Brio is on-call **only for new direct PO instructions**; GPT/Codex/Akang do not control, automatically schedule or requisition its further work. GPT may advise when asked but has no standing dispatch authority.
+
 ## 1. Retained R01–R15 acceptance coverage and historical audit groups
 
 ### 2026-10-08 Intelligent UI research adoption routing

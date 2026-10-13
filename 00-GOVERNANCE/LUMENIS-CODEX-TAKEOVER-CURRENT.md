@@ -2,6 +2,10 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-13 PO agent-role change (dated readback, not dispatch)
+
+The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-development agents; the PO alone partitions and dispatches their work. Brio (Muse) is the PO-only global-data-source research and verified acquisition-target inventory contributor, delivering one Markdown research handoff and then acting only on direct PO instructions. The operative routing is in `AGENTS.md` and the machine/source-owner contracts; this dated handoff is neither a new agent authority nor permission to run research, collection, code, training, payment, deployment or PR merge automatically.
+
 ## 1. Online reader's current-state snapshot
 
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
