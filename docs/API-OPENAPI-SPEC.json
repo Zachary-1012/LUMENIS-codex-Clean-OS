@@ -16067,7 +16067,7 @@
         ],
         "operationId": "remote_access",
         "x-flask-rule": "/remote",
-        "summary": "本地固定入口：自动跳转到当前Cloudflare隧道公网URL"
+        "summary": "Keep old bookmarks safe without opening an unapproved public endpoint."
       }
     },
     "/system/ops": {

@@ -1,7 +1,7 @@
 # 序境 / ZBC Feature Registry
 
 > Generated: 2026-09-06 | Shard D / Team 1 | Source: real code scan
-> Total Features: 334 | Total Functions: 2653
+> Total Features: 333 | Total Functions: 2644
 
 ## Status Distribution
 
@@ -9,7 +9,7 @@
 |---|---|
 | PLANNED | 0 |
 | IMPLEMENTED | 88 |
-| INTEGRATED | 192 |
+| INTEGRATED | 191 |
 | TESTED | 54 |
 | VERIFIED | 0 |
 | RELEASED | 0 |
@@ -19,7 +19,7 @@
 
 | Domain | Count |
 |---|---|
-| 01 Product/Domain/Subject | 74 |
+| 01 Product/Domain/Subject | 73 |
 | 02 Repository/Runtime/Environment | 3 |
 | 03 Data Collection | 9 |
 | 04 Source Library | 6 |
