@@ -19,7 +19,7 @@ approval_reference: source baseline origin/main 5ba1aefc53a1babc293e990c23c62f84
 ## 0. Authority basis and artifact disposition
 
 - The governing experience row is the CTH-05 sentiment calendar: heatfield, scale, availability legend, selected-date detail and keyboard list mode.
-- The current source is `experience_screens._build_cth05()` through `GET /api/experience/screen/CTH-05`. It returns chart arrays, but the current builder does not return a complete trend definition or per-day source/error state and may zero-fill read failures.
+- The current source is `experience_screens._build_cth05()` through `GET /api/experience/screen/CTH-05`. It returns chart arrays; missing days stay missing and real zeros stay zero. A complete trend definition and per-day source/error state are still required before drawing.
 - Static calendar fixtures and the binding registry describe the intended shape only. They cannot promote a chart to real data.
 - This is a date-density task surface with a linked day detail and list alternative, not a generic chart/card page.
 - Sol design decision: `BLOCKED`; the implementation refuses to draw calendar values until the canonical definition and aligned arrays are present.

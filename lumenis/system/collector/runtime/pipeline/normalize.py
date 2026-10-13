@@ -99,10 +99,10 @@ class NoteNormalizer:
 
         return date_str
 
-    def normalize_number(self, value) -> int:
-        """数字标准化：处理"1.2万"、"3.5k"等格式"""
+    def normalize_number(self, value):
+        """数字标准化：处理"1.2万"、"3.5k"等格式；缺数保持缺失（None）。"""
         if value is None:
-            return 0
+            return None
 
         if isinstance(value, (int, float)):
             return int(value)
@@ -110,7 +110,7 @@ class NoteNormalizer:
         value = str(value).strip().lower()
 
         if not value:
-            return 0
+            return None
 
         # 纯数字
         if value.isdigit():
@@ -144,10 +144,10 @@ class NoteNormalizer:
         normalized['publish_date'] = self.normalize_date(note.get('publish_date', ''))
 
         # 数字标准化
-        normalized['likes'] = self.normalize_number(note.get('likes', 0))
-        normalized['comments'] = self.normalize_number(note.get('comments', 0))
-        normalized['collects'] = self.normalize_number(note.get('collects', 0))
-        normalized['shares'] = self.normalize_number(note.get('shares', 0))
+        normalized['likes'] = self.normalize_number(note.get('likes'))
+        normalized['comments'] = self.normalize_number(note.get('comments'))
+        normalized['collects'] = self.normalize_number(note.get('collects'))
+        normalized['shares'] = self.normalize_number(note.get('shares'))
 
         # 计算互动总量
         normalized['total_engagement'] = (
