@@ -40,7 +40,7 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | P1 | Knowledge shelf | CTH/Shared reviewed-learning owner | Requires reviewed item, source Case and trusted evidence reference; not the same list as active Cases | Unknown until owner and lineage exist |
 | DRAFT | New Case | `CTH-08.new-case`, `case:write` | Opens no durable write in this batch | Disabled: no Permission, effect fence or result contract is bound |
 
-Trusted CTH-08 reference IDs are allowlisted as `CASE-221` and `EV-7710` for this bounded renderer. Any other reference is omitted and shown as unavailable, never echoed as raw input.
+Trusted CTH-08 fixture IDs are `CASE-221` and `EV-7710` for this bounded renderer only (not a single-subject scope). Any other reference is omitted and shown as unavailable, never echoed as raw input.
 
 ## 4. State and recovery matrix
 

@@ -149,7 +149,7 @@ Do not turn any local-storage failure into a successful server save. Do not send
 
 ## 8. Cross-cutting impact and decision
 
-- GLOBAL UNIVERSE / DATA MATURITY IMPACT: none. Presentation preferences do not alter commercial, brand or Guangzhou Taikoo Hui coverage.
+- GLOBAL UNIVERSE / DATA MATURITY IMPACT: none. Presentation preferences do not alter commercial, brand or registered-subject coverage.
 - RANDOM ENTITY DATA ACCEPTANCE: not applicable to local appearance; no entity sample is required.
 - Permission/Evidence/effect: no business permission, Evidence, external action or server write is owned by this screen. Wallpaper remains local and is never Evidence.
 - Canonical owner: SYSTEM Settings owns device appearance preferences; `LumenisTheme` remains the shared semantic color-role owner; `SharedPreferencesAsync` is only the persistence adapter.

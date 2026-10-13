@@ -147,8 +147,8 @@ def detect_noise_type(title, content):
         subject_context_words = []
     has_taikoo_direct = any(w and w.lower() in text.lower() for w in subject_context_words)
     if not has_taikoo_direct and char_count < 100:
-        # 只有品牌名没有太古汇上下文，且内容短，可能偏离
-        return 'irrelevant', '缺少广州太古汇上下文语境'
+        # 只有品牌名没有登记主体上下文，且内容短，可能偏离
+        return 'irrelevant', '缺少登记主体上下文语境'
 
     return '', ''
 
@@ -356,7 +356,7 @@ def cleanup_rejected_notes(dry_run=True):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description='广州太古汇舆情监测系统 - AI过滤层')
+    parser = argparse.ArgumentParser(description='序境舆情监测系统 - AI过滤层')
     parser.add_argument('--run', action='store_true', help='运行批量过滤')
     parser.add_argument('--limit', type=int, default=500, help='批量处理数量')
     parser.add_argument('--stats', action='store_true', help='查看过滤统计')

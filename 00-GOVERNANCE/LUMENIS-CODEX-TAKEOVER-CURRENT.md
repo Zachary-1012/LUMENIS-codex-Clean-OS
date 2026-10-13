@@ -52,7 +52,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 5. Brand names = official-site names with source URL.
 6. The developer runs end-to-end tests for newly added subjects and keeps them in CI.
 7. Retired AI providers (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) have their calling code and config deleted; the owned 序境 model is default, one generic OpenAI-compatible adapter serves only a user-selected own API (AI_PROVIDER=user_api), with no automatic fallback.
-8. Before closed-loop closure: SYSTEM collection, CTH, BMP, Shared, AI. After closure: product account system, frontend visual polish, logo and role artwork.
+8. Before closed-loop closure: SYSTEM collection, CTH, BMP, Shared, AI, frontend functions, and competitor same-task differentiation proofs. After closure: product account system, frontend visual polish, logo and role artwork.
 
 ## 1. Online reader's current-state snapshot
 
@@ -63,7 +63,7 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 本次修改范围：移除经全文核对的退役执行正文、嵌套副本与活动引用，包含旧ZBC/OSAI执行基线及双仓库硬门；有效安全、复用、资料采用与验收要求由原AGENTS/Architecture/Experience/Owner承接。原缺口清单及绑定镜像纠正CTH-09已有Decision Owner与Flutter reader却标ABSENT的失真，并纠正已见Widget和Shell入口的屏幕不存在声明；汇总由同一批原记录计算。44份实际屏幕规范中的全局二维/禁3D旧限制已在原段纠正，未以模板更新代替消费者修正。屏幕存在、字段接线、动作、权限和用户验收分开，PENDING不改成通过，其余源码/运行语义不由存在性检查升级。 旧蓝图55章中的有效差异/置信度/配置管理/服务与采集诊断/格式失败边界已回填原Owner职责，旧Provider配方与示例值不恢复；这是要求承接而非11个新项目或实现完成。Shared目录仅按当前架构和真实Python绑定读取。原源码、未完成候选、研究原件、审批、业务数据与失败结果不因清理规则删除。
 
-当前发布（AI-5b，阿康（bot））AI Gateway 保留一个 OpenAI 兼容通用接口，仅在用户显式选择 AI_PROVIDER=user_api 时调用其自购 API，默认自有模型、无自动兜底；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。上一发布（PR #40 AI-01 可信范围，阿康1（bot））：AI-01 提交只认服务端 FOCUS 范围的产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR SH-06 收件箱，阿康1（bot））：SH-06 只读收件箱后端产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR AI-01 回执，阿康1（bot））：AI-01 提交回执校验产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR #35，阿康1（bot））为 SYS-06 内置浏览器实时画面流产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前规则型发布：AGENTS.md 固定 LF 换行（内容不变），T04 历史禁止项迁入机器合同 red_lines，由阻塞校验器结构化检查；不含产品源码。`RULES_ONLY_PUBLICATION`不代表生产已加载、真实用户任务验收或产品功能完成。下段 PR #25 主体登记源码已按源码口径发布。
+当前发布（主体-7，阿康（bot））全部已登记主体默认 AUTO 采集、手动可选；去掉太古汇写死与“默认 MANUAL”措辞；竞品同任务差异化验收列入闭环内；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。上一发布（PR #40 AI-01 可信范围，阿康1（bot））：AI-01 提交只认服务端 FOCUS 范围的产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR SH-06 收件箱，阿康1（bot））：SH-06 只读收件箱后端产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR AI-01 回执，阿康1（bot））：AI-01 提交回执校验产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR #35，阿康1（bot））为 SYS-06 内置浏览器实时画面流产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前规则型发布：AGENTS.md 固定 LF 换行（内容不变），T04 历史禁止项迁入机器合同 red_lines，由阻塞校验器结构化检查；不含产品源码。`RULES_ONLY_PUBLICATION`不代表生产已加载、真实用户任务验收或产品功能完成。下段 PR #25 主体登记源码已按源码口径发布。
 
 当前发布包含主体登记种子的产品源码：`scripts/import_subject_registry_seed.py`（默认 dry-run；研发阶段由开发者备份数据库后直接执行 `--apply`（PO 2026-10-13 直接指令），且只经既有 `subject_registry.add_subject` 幂等写入）与已在线核实的种子 `scripts/data_candidates/subject_registry_seed_20261013.jsonl`（610条，清单固定sha256），并登记全球数据源研究现行版；场内 TENANT_OF 关系仍为候选、未写入。`PUBLISHED_SOURCE_VERIFIED`不代表生产已加载、种子已写入生产库、真实用户任务验收或产品功能完成。此前 AGENTS.md 重复叙述精简（PR #26）与 T04 历史禁止项锚点（PR #24）按规则型发布，第7节复用诊断源码已由 PR #23 按源码口径发布；结果以实际Git对象和Actions核实，不在文档中冻结“当前main”的SHA。
 
