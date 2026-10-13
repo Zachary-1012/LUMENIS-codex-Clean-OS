@@ -1629,9 +1629,9 @@ current official interfaces and maintained permitted implementations. Do not
 make repeated Product Owner troubleshooting the normal path. Reuse permitted
 sessions, official refresh, pacing/Retry-After, bounded backoff and recovery;
 never bypass CAPTCHA/access checks or fabricate completion. An unavoidable human
-identity step stays explicit while other platforms proceed. Collect free ad/
-traffic and creator-center data on every registered platform first; Juguang
-needs an XHS professional account and stays deferred until one exists.
+identity step stays explicit while other platforms proceed. All data is equal;
+collect by purpose and restructure every collected record for product use.
+No paid/licensed sources before loop launch; the PO negotiates those after.
 
 C1 also delivers real collected-result text/image examples for F work with
 source, scope, time, rights and versions in the existing Artifact/evidence path;
