@@ -52,7 +52,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 5. Brand names = official-site names with source URL.
 6. The developer runs end-to-end tests for newly added subjects and keeps them in CI.
 7. Retired AI providers (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) have their calling code and config deleted; the owned 序境 model is default, one generic OpenAI-compatible adapter serves only a user-selected own API (AI_PROVIDER=user_api), with no automatic fallback.
-8. In-loop: SYSTEM collection, CTH, BMP, Shared, AI, full Skill Store, GitHub connector, MCP, frontend functions, competitor same-task proofs. Post-loop: account system, visual polish, logo, role art.
+8. In-loop: collection, CTH, BMP, Shared, AI, no-shell tools in built-in browser, chat UI cards, full Skill Store, GitHub connector, MCP, frontend functions, competitor proofs. Post-loop: accounts, visuals, logo, role art.
 
 ## 1. Online reader's current-state snapshot
 
