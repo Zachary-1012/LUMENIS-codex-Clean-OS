@@ -58,14 +58,117 @@ The actual actor/target/risk Permission decision is unresolved in the current sc
 | Blocked | 401/403 | Follow access flow; do not expose policy internals |
 | Ready | Safe posture fields are returned | No write/effect action |
 
-## 5. Purpose-built desktop and web composition
+## 5. Purpose-built desktop composition
+
+已批准目标来源：`SYS-04-ADD-keys-compliance.md`, `SYS-04-ADD-user-developer-mode.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+
+### 草图增补：密钥与数据合规（G19，闭环内）
+
+```
+安全与权限 › 密钥与合规
+密钥
+  我的 API Key    ••••3f2a  安全存储 ✓  [轮换] [删除]
+  连接器令牌      GitHub ✓  MCP×2 ✓      [逐个撤销]
+  平台登录会话    小红书 ✓  抖音 已过期 → [重新登录]（内置浏览器弹窗）
+数据合规
+  采集来源清单    按用途列出，每条可查看来源与重构记录
+  保留期限        [90 天 ▾]（用户选择）
+  个人信息处理    默认脱敏 ✓    [查看处理日志]
+  [导出合规报告]
+```
+
+**4. State additions**
+Ready / Loading / 数据缺失 / 会话过期（提示重新登录，不切换来源）/ 权限不足。
+
+**9. Executable acceptance**
+- 所有密钥不明文落盘，日志不出现明文；撤销立即生效。
+- 合规报告不依赖账号体系即可生成。
+
+### 草图增补：用户开发者模式（G20a）
+
+```
+设置 › 开发者 › 用户开发者模式           [ 关 ○ ]
+开启前（必须逐项勾选，[我同意并开启] 才可点）：
+┌ 风险与责任协议 v1 ──────────────────────────────┐
+│ □ 自行开发/修改的代码拥有与序境相同的权限，        │
+│   仅在现有授权范围内读写文件、联网与调用获准能力         │
+│ □ 由此造成的数据丢失、账号封禁、违法违规后果       │
+│   由我本人承担，责任边界按经审核适用条款说明，不以勾选框免除法定义务                 │
+│ □ 修改后的版本不享受官方更新保证，问题需先恢复     │
+│ □ 开启前已备份账号数据   [立即备份]               │
+│ [查看完整条款]   [取消]   [我同意并开启]           │
+└──────────────────────────────────────────────────┘
+开启后：
+  顶部常驻条：⚠ 开发者模式 · 已修改 3 处   [关闭并恢复]
+  本地扩展   [加载本地文件夹]  列表：名称/版本/权限/[停用]
+  修改记录   每次修改的文件与时间，可逐条撤销
+  本地 API   http://127.0.0.1:xxxx  令牌 •••• [复制][重置]
+  调用日志   最近 100 次（脱敏）
+  备份/恢复  [备份账号数据] [从备份恢复] 列表：时间/大小
+  协议记录   v1 · 2026-10-14 同意 · [撤回同意=关闭模式]
+```
+
+**4. States**
+关闭 / 协议未完成 / 开启 / 扩展出错（自动停用该扩展并显示原因，不影响主程序）/ 备份中 / 恢复中 / 数据缺失 / 权限不足。
+
+**9. Acceptance**
+- 未逐项同意不能开启；同意记录（版本、时间）随账号保存并可导出。
+- 关闭后所有用户扩展停用但保留在磁盘，可一键恢复官方状态。
+- 备份可在另一台设备恢复；不需要登录也能本地备份。
+- 关闭时不监听端口；令牌不明文落盘。
+
+### Existing contract — Purpose-built desktop and web composition
 
 - Desktop: a two-column matrix shows safe level/scope pairs; an audit panel explains server revalidation and operation count.
 - Web Workspace shares the same safe projection; no effect control is shown.
 - Tablet/mobile stack the matrix and audit explanation, keeping the scope label beside each level.
 - No raw policy drawer, token inspector or operation button exists.
 
+
+
+### 三语状态文案
+
+| Key | zh-CN | en | ko |
+|---|---|---|---|
+| loading | 加载中 | Loading | 불러오는 중 |
+| missing | 数据缺失 | Data unavailable | 데이터 없음 |
+| unavailable | 暂不可用 | Currently unavailable | 현재 사용할 수 없음 |
+| denied | 无权执行此操作 | This action is not permitted | 이 작업 권한이 없습니다 |
+| retry | 重试 | Retry | 다시 시도 |
+| cancel | 取消 | Cancel | 취소 |
+| save | 保存 | Save | 저장 |
+| revise | 修订 | Revise | 수정 |
+| reopen | 重新打开 | Reopen | 다시 열기 |
+| recover | 恢复 | Recover | 복구 |
+| return | 返回原任务 | Return to task | 원래 작업으로 돌아가기 |
+
+全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
+
+## 5A. Web Workspace composition
+
+### 草图增补：密钥与数据合规（G19，闭环内）
+
+Web Workspace composition
+同桌面。
+
+### 草图增补：用户开发者模式（G20a）
+
+Web：同桌面；本地 API 不提供（浏览器无本机端口）。
+
+
 ## 6. Purpose-built mobile composition
+
+### 草图增补：密钥与数据合规（G19，闭环内）
+
+Purpose-built mobile composition
+分组卡片纵排，操作收进「…」菜单。
+
+### 草图增补：用户开发者模式（G20a）
+
+Mobile：只读（状态、修改记录、备份列表）；开启/加载扩展需桌面端。
+
+
+### Existing contract — Purpose-built mobile composition
 
 - One task: read the current access posture and its boundary.
 - Each row pairs a level with controlled/unknown scope; audit availability follows.

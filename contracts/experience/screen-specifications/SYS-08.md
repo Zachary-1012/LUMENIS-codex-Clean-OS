@@ -56,14 +56,70 @@ approval_reference: UNKNOWN
 | Blocked | 401/403 | Follow access flow; no export |
 | Ready | sanitized source fields returned | Read only; no effect claim |
 
-## 5. Purpose-built desktop and web composition
+## 5. Purpose-built desktop composition
+
+已批准目标来源：`SYS-08-ADD-ops-workspace-lifecycle.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+
+### 草图增补：运营与工作区生命周期（G19，闭环内）
+
+```
+可观测性 › 运营
+工作区   默认工作区 · 创建于 2026-10-01 · 主体 N 个
+  [备份] [恢复] [归档] [删除工作区]（二次确认）
+运行      采集成功率 96% · 模型可用 ✓ · 队列 3
+告警      抖音会话过期 1 项 [处理]
+版本      v0.x  [检查更新]   [导出诊断包]
+COMMERCIAL_READY 检查表  合规 ✓ 密钥 ✓ 生命周期 ◐ 运营 ✓ 账号 ◐
+```
+
+**4. State additions**
+Ready / Loading / 数据缺失（指标未采到显示缺失）/ 不可用（显示原因）。
+
+**9. Executable acceptance**
+- 备份可在另一台设备恢复；删除工作区前强制提示导出。
+- 指标缺失不显示 0；检查表每项链接到证据。
+
+### Existing contract — Purpose-built desktop and web composition
 
 - Desktop/Web: inventory is the primary inspection panel; trace correlation and structured records are separate review surfaces.
 - Tablet/mobile stack inventory → trace boundary → records.
 - No throughput, error-rate or waterfall chart is rendered without a time-series/trace callable.
 - Export remains visibly unavailable until actor-scoped Permission and effect Evidence exist.
 
+
+
+### 三语状态文案
+
+| Key | zh-CN | en | ko |
+|---|---|---|---|
+| loading | 加载中 | Loading | 불러오는 중 |
+| missing | 数据缺失 | Data unavailable | 데이터 없음 |
+| unavailable | 暂不可用 | Currently unavailable | 현재 사용할 수 없음 |
+| denied | 无权执行此操作 | This action is not permitted | 이 작업 권한이 없습니다 |
+| retry | 重试 | Retry | 다시 시도 |
+| cancel | 取消 | Cancel | 취소 |
+| save | 保存 | Save | 저장 |
+| revise | 修订 | Revise | 수정 |
+| reopen | 重新打开 | Reopen | 다시 열기 |
+| recover | 恢复 | Recover | 복구 |
+| return | 返回原任务 | Return to task | 원래 작업으로 돌아가기 |
+
+全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
+
+## 5A. Web Workspace composition
+
+### 草图增补：运营与工作区生命周期（G19，闭环内）
+
+Web 同桌面，保留原任务与状态。
+
 ## 6. Purpose-built mobile composition
+
+### 草图增补：运营与工作区生命周期（G19，闭环内）
+
+
+Web 同桌面；手机纵排，检查表折叠。
+
+### Existing contract — Purpose-built mobile composition
 
 - One active task: determine what operational evidence is actually viewable.
 - Keep inventory values and trace-unavailable state above optional records.

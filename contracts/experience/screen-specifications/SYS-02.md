@@ -87,14 +87,67 @@ No pagination, write action, idempotency key, Evidence emission or cancellation 
 | Blocked / permission denied | 401/403 access state | Return to authentication/access flow; no collector operation |
 | Ready | Current returned states are shown | Read only; `ACTIVE` is not inferred from registration |
 
-## 5. Purpose-built desktop and web composition
+## 5. Purpose-built desktop composition
+
+已批准目标来源：`SYS-02-ADD-manual-collect.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+
+### 草图增补：采集：默认 AUTO + 可选手动采集按钮
+
+```
+主体行：<主体名> | 模式 [AUTO ▾] | 上次 hh:mm | [立即采集] [暂停]
+平台矩阵：平台 × 状态（运行/冷却/缺失）
+缺失字段显示「—（数据缺失）」不显示 0
+```
+
+**4. State additions**
+Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
+
+**9. Executable acceptance**
+- 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。
+- 全部已登记主体默认 AUTO；无单主体硬编码；显示已批准研发策略与上线闸门状态；身份、来源权益、Permission及Effect Fence始终执行，界面不自行关闭安全边界。
+
+### Existing contract — Purpose-built desktop and web composition
 
 - Desktop: header and summary strip first; platform lanes occupy the primary inspection plane; ingestion boundary is a separate explanatory panel.
 - Web Workspace: same Core/ViewModel semantics and keyboard navigation; no desktop-only capability is claimed.
 - At tablet width, stack lanes and boundary; at phone width, keep one platform lane per row and preserve state/detail pairing.
 - No charts are rendered because the endpoint supplies no time series.
 
+
+
+### 三语状态文案
+
+| Key | zh-CN | en | ko |
+|---|---|---|---|
+| loading | 加载中 | Loading | 불러오는 중 |
+| missing | 数据缺失 | Data unavailable | 데이터 없음 |
+| unavailable | 暂不可用 | Currently unavailable | 현재 사용할 수 없음 |
+| denied | 无权执行此操作 | This action is not permitted | 이 작업 권한이 없습니다 |
+| retry | 重试 | Retry | 다시 시도 |
+| cancel | 取消 | Cancel | 취소 |
+| save | 保存 | Save | 저장 |
+| revise | 修订 | Revise | 수정 |
+| reopen | 重新打开 | Reopen | 다시 열기 |
+| recover | 恢复 | Recover | 복구 |
+| return | 返回原任务 | Return to task | 원래 작업으로 돌아가기 |
+
+全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
+
+## 5A. Web Workspace composition
+
+### 草图增补：采集：默认 AUTO + 可选手动采集按钮
+
+Web Workspace composition
+同桌面布局；批量：[对所选主体立即采集]
+
 ## 6. Purpose-built mobile composition
+
+### 草图增补：采集：默认 AUTO + 可选手动采集按钮
+
+Purpose-built mobile composition
+主体卡 + 同按钮。
+
+### Existing contract — Purpose-built mobile composition
 
 - One active question: “what is the current collection state, and can it enter the truth chain?”
 - Order: summary → platform lanes → ingestion boundary.

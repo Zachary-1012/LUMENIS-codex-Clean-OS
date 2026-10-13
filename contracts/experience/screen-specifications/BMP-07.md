@@ -44,13 +44,65 @@ approval_reference: ROUND-13-BMP-CREATION-UI
 - The primary question is “what was planned, what actually happened, and what can be measured?” Planned and actual values never share one undifferentiated status.
 - Mobile becomes a guided lifecycle with one milestone at a time, then a separate outcome section and channel details. It is not a dashboard card grid.
 
-## 5. Actions, authorization and effects
+## 5. Purpose-built desktop composition
+
+已批准目标来源：`BMP-07-ADD-marketing-calendar.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+
+### 草图增补：营销日历与热点建议
+
+```
+月视图：日期格内 节点/热点徽标
+右侧：热点建议（依据▸ 置信区间）[加入计划] [忽略]
+```
+
+**4. State additions**
+Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
+
+**9. Executable acceptance**
+- 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。
+- 建议可忽略，用户决定。
+
+### Existing contract — Actions, authorization and effects
 
 - `campaign:write` saves a local request draft for authorized content activity; no campaign write is sent or persisted.
 - `campaign:close` saves a local campaign-close draft. Until the canonical server executor, Permission/effect fence and Evidence-bearing result exist, no close effect is attempted or reported.
 - Quota/cooldown can be shown only as a process notice and cannot be relabeled as ROI, reach or outcome.
 
-## 6. Accessibility and localization
+
+
+### 三语状态文案
+
+| Key | zh-CN | en | ko |
+|---|---|---|---|
+| loading | 加载中 | Loading | 불러오는 중 |
+| missing | 数据缺失 | Data unavailable | 데이터 없음 |
+| unavailable | 暂不可用 | Currently unavailable | 현재 사용할 수 없음 |
+| denied | 无权执行此操作 | This action is not permitted | 이 작업 권한이 없습니다 |
+| retry | 重试 | Retry | 다시 시도 |
+| cancel | 取消 | Cancel | 취소 |
+| save | 保存 | Save | 저장 |
+| revise | 修订 | Revise | 수정 |
+| reopen | 重新打开 | Reopen | 다시 열기 |
+| recover | 恢复 | Recover | 복구 |
+| return | 返回原任务 | Return to task | 원래 작업으로 돌아가기 |
+
+全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
+
+## 5A. Web Workspace composition
+
+### 草图增补：营销日历与热点建议
+
+Web Workspace composition
+同桌面布局；无额外差异。
+
+## 6. Purpose-built mobile composition
+
+### 草图增补：营销日历与热点建议
+
+Purpose-built mobile composition
+周列表。
+
+### Existing contract — Accessibility and localization
 
 - Lifecycle steps are announced in order with planned/actual distinctions in each label.
 - Timeline milestones have a linear list equivalent; color is not the only stage signal.
