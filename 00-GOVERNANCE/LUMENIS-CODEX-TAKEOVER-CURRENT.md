@@ -59,7 +59,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-本批删除指定退役Provider活跃代码及fallback，消费者统一接公开Gateway API；同批更新既有数学采用Markdown/JSON和G163，避免机器/文字证据相互矛盾。隔离回归/静态只证明该源码范围，当前Runtime未加载。已读回合成有限图 Gibbs 参数策略 120 steps、checkpoint 120、6项validation与8项holdout；复算数据和payload hash一致：已训练、未上线。本轮未运行新训练、未重载推理，不是 gpt-oss 训练或业务收益，G163仍OPEN。规则/逐屏草图/隧道源码分别已由PR #61/#63/#62发布，其余源码类别与剩余资料采用继续按各自证据收口。未操作Runtime、DB、浏览器或其他窗口，受保护本地分支及dirty保持。
+本批修复缺失风险/日报数据的数值语义：缺失返回None，真实观测零值保留；报告、摘要、行动和导出调用方检查未知值，不误报正常或品牌健康50分。保留原评分范围和实际业务权重。编译、静态和隔离回归仅证明有界代码；当前Runtime未加载、真实日报用户验收未进行。规则/逐屏草图/隧道分别PR #61/#63/#62已发布；其他类别仍独立验收。未操作原有工作分支、Production DB、模型或运行服务。 已合入PR #64的Gateway清理及Gibbs回执：已训练、未上线，G163仍OPEN；本批不重复训练或声明模型收益。
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
 

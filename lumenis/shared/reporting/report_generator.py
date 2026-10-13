@@ -131,28 +131,32 @@ class ReportGenerator:
         positive, negative, neutral = _sc["positive"], _sc["negative"], _sc["neutral"]
         high_risk = _rc["high"]
         medium_risk = _rc["medium"]
-        total_engagement = sum(
-            int(n.get("likes", 0) or 0) + int(n.get("comments", 0) or 0) * 2
-            for n in notes
+        from canonical_metrics import engagement_stats, neg_ratio, pos_ratio
+        known_sentiment = _sc["known"] == _sc["total"] and _sc["known"] > 0
+        known_risk = _rc["total"] > 0 and not _rc["missing"] and not _rc["other"]
+        engagement = engagement_stats(notes, keys=("likes", "comments"))
+        engagement_complete = engagement["quality"]["state"] == "COMPLETE"
+        total_engagement = (
+            sum(int(n["likes"]) + int(n["comments"]) * 2 for n in notes)
+            if engagement_complete else None
         )
         # 风险指数（复用现有算法）
-        try:
-            from .daily import calculate_risk_index, calculate_brand_health_score
-            risk_index = calculate_risk_index(notes, events)
-            brand_health = calculate_brand_health_score(notes, risk_index)
-        except Exception:
-            risk_index = round(min(100, (negative / total * 60) if total > 0 else 0), 1)
-            brand_health = round(100 - risk_index, 1)
+        from .daily import calculate_risk_index, calculate_brand_health_score
+        risk_index = calculate_risk_index(notes, events)
+        brand_health = calculate_brand_health_score(notes, risk_index)
 
         return {
             "total_notes": total,
             "positive": positive,
             "negative": negative,
             "neutral": neutral,
-            "positive_ratio": round(positive / total * 100, 1) if total > 0 else 0,
-            "negative_ratio": round(negative / total * 100, 1) if total > 0 else 0,
-            "high_risk": high_risk,
-            "medium_risk": medium_risk,
+            "positive_ratio": round(pos_ratio(_sc) * 100, 1) if known_sentiment and pos_ratio(_sc) is not None else None,
+            "negative_ratio": round(neg_ratio(_sc) * 100, 1) if known_sentiment and neg_ratio(_sc) is not None else None,
+            "high_risk": high_risk if known_risk else None,
+            "medium_risk": medium_risk if known_risk else None,
+            "sentiment_coverage": {"known": _sc["known"], "total": _sc["total"], "unknown": _sc["unknown"]},
+            "risk_coverage": {"known": _rc["total"] - _rc["missing"] - _rc["other"], "total": _rc["total"],
+                              "missing": _rc["missing"], "other": _rc["other"]},
             "total_engagement": total_engagement,
             "risk_index": risk_index,
             "brand_health": brand_health,
@@ -169,10 +173,9 @@ class ReportGenerator:
 
     def _generate_executive_summary(self, stats: dict, notes: List[dict], events: List[dict]) -> str:
         """生成执行摘要（一句话）"""
-        risk_index = stats.get("risk_index", 0)
-        health = stats.get("brand_health", 50)
+        risk_index = stats.get("risk_index")
+        health = stats.get("brand_health")
         effective = stats.get("total_notes", 0)
-        risk_count = stats.get("high_risk", 0) + stats.get("medium_risk", 0)
 
         # 数据完整性保护
         if effective == 0:
@@ -180,6 +183,9 @@ class ReportGenerator:
                 return self.phrases.REPORT_PHRASES["executive_summary"]["data_incomplete"]
             else:
                 return f"{self._get_brand_name()}本周期无有效舆情数据，建议检查采集任务是否正常运行。"
+
+        if risk_index is None or health is None or stats.get("positive_ratio") is None:
+            return "当前数据覆盖不足，风险指数、品牌健康度或情感比例暂不可计算；请补齐标记为缺失的维度后再判断。"
 
         if risk_index >= 60:
             mood = "negative" if self.brand_mode == "zbmp" else "negative_rising"
@@ -205,30 +211,31 @@ class ReportGenerator:
         """生成关键指标"""
         return [
             {"name": "有效舆情数", "value": stats.get("total_notes", 0), "unit": "条"},
-            {"name": "正面占比", "value": stats.get("positive_ratio", 0), "unit": "%"},
-            {"name": "负面占比", "value": stats.get("negative_ratio", 0), "unit": "%"},
-            {"name": "风险指数", "value": stats.get("risk_index", 0), "unit": "/100"},
-            {"name": "品牌健康度", "value": stats.get("brand_health", 0), "unit": "/100"},
-            {"name": "总互动量", "value": stats.get("total_engagement", 0), "unit": "次"},
+            {"name": "正面占比", "value": stats.get("positive_ratio"), "unit": "%"},
+            {"name": "负面占比", "value": stats.get("negative_ratio"), "unit": "%"},
+            {"name": "风险指数", "value": stats.get("risk_index"), "unit": "/100"},
+            {"name": "品牌健康度", "value": stats.get("brand_health"), "unit": "/100"},
+            {"name": "总互动量", "value": stats.get("total_engagement"), "unit": "次"},
             {"name": "活跃事件", "value": stats.get("active_events", 0), "unit": "个"},
         ]
 
     def _generate_risk_events(self, events: List[dict], notes: List[dict]) -> List[dict]:
         """生成风险事件列表"""
         risk_events = []
-        for e in sorted(events, key=lambda x: x.get("risk_score", 0), reverse=True)[:5]:
-            risk_level = e.get("risk_level", "low")
+        for e in sorted(events, key=lambda x: (x.get("risk_score") is not None, x.get("risk_score") or 0), reverse=True)[:5]:
+            risk_level = e.get("risk_level") or "unknown"
             title = e.get("title", "未命名事件")[:50]
-            score = e.get("risk_score", 0)
+            score = e.get("risk_score")
+            score_display = "—" if score is None else score
 
             if self.brand_mode == "cth":
-                alert = cth_phrases.get_risk_phrase(risk_level, title, score)
+                alert = cth_phrases.get_risk_phrase(risk_level, title, score_display)
             else:
                 alert = bmp_phrases.generate_zbmp_phrase(
                     "risk_alert", risk_level,
-                    brand=self._get_brand_name(), event=title, score=score,
+                    brand=self._get_brand_name(), event=title, score=score_display,
                     time=RiskLevel(risk_level).response_time if risk_level in [l.value for l in RiskLevel] else "持续观察",
-                    trend="上升" if score > 60 else "平稳",
+                    trend="上升" if score is not None and score > 60 else "平稳" if score is not None else "数据不足",
                 )
 
             risk_events.append({
@@ -253,7 +260,10 @@ class ReportGenerator:
         negative = sum(1 for n in notes if n.get("sentiment") == "negative")
         neutral = sum(1 for n in notes if n.get("sentiment") == "neutral")
 
-        overall = classify_sentiment(positive, negative, neutral)
+        overall = (
+            classify_sentiment(positive, negative, neutral)
+            if total > 0 and positive + negative + neutral == total else None
+        )
 
         # 按平台分布
         platform_dist = {}
@@ -267,21 +277,37 @@ class ReportGenerator:
                 platform_dist[plat]["negative"] += 1
 
         return {
-            "overall": overall.value,
-            "overall_label": overall.label,
+            "overall": overall.value if overall else None,
+            "overall_label": overall.label if overall else "数据不足",
             "distribution": {
                 "positive": positive, "negative": negative, "neutral": neutral,
-                "positive_ratio": round(positive / total * 100, 1) if total > 0 else 0,
-                "negative_ratio": round(negative / total * 100, 1) if total > 0 else 0,
+                "positive_ratio": round(positive / total * 100, 1) if total > 0 and positive + negative + neutral == total else None,
+                "negative_ratio": round(negative / total * 100, 1) if total > 0 and positive + negative + neutral == total else None,
             },
             "platform_distribution": platform_dist,
         }
 
     def _generate_propagation_analysis(self, notes: List[dict], events: List[dict]) -> dict:
         """生成传播分析"""
-        total_eng = sum(int(n.get("likes", 0) or 0) + int(n.get("comments", 0) or 0) for n in notes)
+        from canonical_metrics import engagement_count, engagement_stats
+        engagement = engagement_stats(notes, keys=("likes", "comments"))
+        total_eng = (
+            sum(int(n["likes"]) + int(n["comments"]) for n in notes)
+            if engagement["quality"]["state"] == "COMPLETE" else None
+        )
 
-        if total_eng > 1000:
+        def measured_engagement(note):
+            likes = engagement_count(note.get("likes")) if isinstance(note, dict) else None
+            comments = engagement_count(note.get("comments")) if isinstance(note, dict) else None
+            return likes + comments if likes is not None and comments is not None else None
+
+        def engagement_sort_key(note):
+            value = measured_engagement(note)
+            return value is not None, value if value is not None else 0
+
+        if total_eng is None:
+            level = "unknown"
+        elif total_eng > 1000:
             level = "high"
         elif total_eng > 200:
             level = "medium"
@@ -297,7 +323,7 @@ class ReportGenerator:
         # 热门笔记Top5
         top_notes = sorted(
             notes,
-            key=lambda x: int(x.get("likes", 0) or 0) + int(x.get("comments", 0) or 0),
+            key=engagement_sort_key,
             reverse=True
         )[:5]
 
@@ -309,7 +335,7 @@ class ReportGenerator:
                 {
                     "title": (n.get("title", "") or "无标题")[:40],
                     "author": n.get("author_nickname", n.get("author", "匿名")),
-                    "engagement": int(n.get("likes", 0) or 0) + int(n.get("comments", 0) or 0),
+                    "engagement": measured_engagement(n),
                     "sentiment": n.get("sentiment", "neutral"),
                     "url": n.get("url", ""),
                 }
@@ -326,9 +352,11 @@ class ReportGenerator:
             return [{"insight": "本周期无有效数据，建议检查采集任务。", "type": "system"}]
 
         # 洞察1：情感格局
-        pos_ratio = stats.get("positive_ratio", 0)
-        neg_ratio = stats.get("negative_ratio", 0)
-        if neg_ratio > 30:
+        pos_ratio = stats.get("positive_ratio")
+        neg_ratio = stats.get("negative_ratio")
+        if neg_ratio is None or pos_ratio is None:
+            insights.append({"insight": "情感分类覆盖不足，暂不能判断正负面比例。", "type": "data_gap"})
+        elif neg_ratio > 30:
             insights.append({
                 "insight": f"负面占比{neg_ratio}%，高于警戒线30%，需重点关注负面内容扩散。",
                 "type": "risk", "metric": f"负面{stats['negative']}条"
@@ -353,7 +381,7 @@ class ReportGenerator:
             })
 
         # 洞察3：传播力
-        if stats.get("total_engagement", 0) > 500 and notes:
+        if stats.get("total_engagement") is not None and stats["total_engagement"] > 500 and notes:
             hot = max(notes, key=lambda x: int(x.get("likes", 0) or 0) + int(x.get("comments", 0) or 0))
             insights.append({
                 "insight": f"总互动量{stats['total_engagement']}，最热内容「{(hot.get('title','') or '无标题')[:20]}」，建议关注传播走向。",
@@ -387,7 +415,9 @@ class ReportGenerator:
             })
 
         # 负面多 -> 客服
-        if stats.get("high_risk", 0) + stats.get("medium_risk", 0) > 3:
+        risk_count = stats.get("high_risk")
+        medium_count = stats.get("medium_risk")
+        if risk_count is not None and medium_count is not None and risk_count + medium_count > 3:
             actions.append({
                 "priority": "高",
                 "action": f"有{stats['high_risk'] + stats['medium_risk']}条风险内容，建议客服逐一查看负面笔记主动联系。",
@@ -396,7 +426,7 @@ class ReportGenerator:
             })
 
         # 正面多 -> 营销
-        if stats.get("positive_ratio", 0) > 60:
+        if stats.get("positive_ratio") is not None and stats["positive_ratio"] > 60:
             actions.append({
                 "priority": "中",
                 "action": "正面声量占优，建议筛选优质UGC考虑转发或二次传播。",
@@ -405,9 +435,12 @@ class ReportGenerator:
             })
 
         if not actions:
+            data_complete = (stats.get("risk_index") is not None
+                             and stats.get("positive_ratio") is not None
+                             and stats.get("negative_ratio") is not None)
             actions.append({
-                "priority": "常规",
-                "action": "舆情整体平稳，按常规节奏监测即可。",
+                "priority": "常规" if data_complete else "待补数据",
+                "action": "舆情整体平稳，按常规节奏监测即可。" if data_complete else "数据覆盖不足，请先补齐缺失维度后再判断风险。",
                 "owner": "舆情团队",
                 "deadline": "持续",
             })
