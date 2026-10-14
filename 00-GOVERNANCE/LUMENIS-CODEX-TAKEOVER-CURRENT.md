@@ -4,6 +4,8 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 ## 2026-10-14 research adoption (documentation, not runtime acceptance)
 
+The six PO-supplied OSS repositories were reviewed at fixed commits, including executable implementation/skill material and licenses, rather than star counts. Existing plan G109/G130/G159/G163, media steps E1/E8 and Experience's result-visualization clauses carry the bounded adaptations; the third-party register holds all six source pins, exclusions and acceptance conditions. Artcraft contributes editable-state/readback and stale-result fencing ideas; Anatomy/Diagram Design contribute data-consistent explanatory graphics; Matt Pocock's skills contribute interface/recovery review; Hyperframes is an optional HTML-video adapter candidate; AirLLM is a conditional exact-model resource experiment, not an installed provider or proven low-memory solution. No upstream code/assets, dependency, model weights or service were installed/copied by this research publication. Product bindings and actual outcomes remain OPEN, existing motion remains intact, and no window is dispatched.
+
 The existing prelaunch review now consistently includes optional account/login/settings and both developer modes in engineering closure, including its Website/ACC-01, SYS-04 user mode and SYS-07 founder mode rows. ACC-04 keeps Permission recovery action-local, using only server-returned callbacks; account settings never grant access. Old account deferral/exclusion sentences were replaced in place. Server Permission and ordinary open-workspace access remain. This is documentation convergence, not login implementation or user acceptance.
 
 The complete visible PO engineering image (items1–7/9/10/13–15 and introduction) is mapped into existing plan§17 and G108/G109/G187. Fixed Claude/OpenAI/Grok source, official Muse engineering and MCP/PII/voice/DPO documentation distinguish reusable mechanisms from unsupported ratios, service rights and unimplemented outcomes. Existing Task/Memory/Gateway/Permission owners remain; no second runtime, automatic training, model switch, OS control or public export. Original motion is unchanged. SOURCE here is research/rule adoption; all associated new runtime/outcome claims remain NOT_VERIFIED.
@@ -68,7 +70,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`
 
