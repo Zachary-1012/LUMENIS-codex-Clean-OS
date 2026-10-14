@@ -69,3 +69,16 @@ def test_act_advice_uses_exact_scope_without_provider_or_completed_action():
     assert not any("已成立" in item or "已第一时间" in item for item in result["strategies"])
     with pytest.raises(ValueError):
         generate_act_strategies("description")
+
+
+@pytest.mark.parametrize("payload", [["event"], {"event_info": 7},
+                                   {"event_info": "   "},
+                                   {"event_info": "event", "trigger_reasons": [None]}])
+def test_act_route_rejects_invalid_user_input_before_case_lookup(monkeypatch, payload):
+    from lumenis.shared.reporting import routes
+    monkeypatch.setattr(routes, "_authorized_report_scope", lambda: (None, {}, [], None))
+    app = Flask(__name__)
+    app.register_blueprint(routes.report_bp)
+    response = app.test_client().post('/api/report/special/generate-strategies', json=payload)
+    assert response.status_code == 400
+    assert response.get_json()['ok'] is False

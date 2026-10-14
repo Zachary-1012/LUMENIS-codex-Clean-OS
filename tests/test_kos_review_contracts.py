@@ -153,5 +153,3 @@ def test_reply_review_uses_exact_visible_suggestion_and_never_records_empty(
             "principal_ref": "workspace:local",
         }
         assert response.get_json()["suggested_reply"] == payload["generated_reply"]
-
-

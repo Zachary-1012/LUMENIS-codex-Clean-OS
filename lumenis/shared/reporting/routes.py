@@ -695,12 +695,18 @@ def api_generate_special_strategies():
     except (PermissionError, ValueError) as exc:
         return _report_failure(exc, fallback_status=403)
     data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({'ok': False, 'code': 'REPORT_EVENT_INPUT_INVALID'}), 400
     event_name = data.get('event_name', '')
     event_info = data.get('event_info', '')
     scenario = data.get('scenario', '')
     trigger_reasons = data.get('trigger_reasons', [])
 
-    if not event_info and not event_name:
+    if (not all(isinstance(value, str) for value in (event_name, event_info, scenario))
+            or not isinstance(trigger_reasons, list)
+            or not all(isinstance(value, str) for value in trigger_reasons)):
+        return jsonify({'ok': False, 'code': 'REPORT_EVENT_INPUT_INVALID'}), 400
+    if not event_info.strip() and not event_name.strip():
         return jsonify({'ok': False, 'error': 'event_info 或 event_name 不能为空'}), 400
 
     # Step 1: 匹配同类案例（2-3个）
