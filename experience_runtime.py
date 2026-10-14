@@ -397,9 +397,15 @@ def _build_cth01(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         labels.append(day.strftime("%m-%d"))
         day_rows = [row for row in trend_rows
                     if str(row.get("publish_date") or row.get("publish_datetime") or "")[:10] == day_text]
-        if not trend_complete or not day_rows:
+        if not trend_complete:
             neg_series.append(None)
             high_series.append(None)
+            continue
+        if not day_rows:
+            # Zero means no records in this completely read, authorized sample;
+            # it does not claim that the platform had no business activity.
+            neg_series.append(0)
+            high_series.append(0)
             continue
         day_sentiment = sentiment_count(day_rows)
         day_risk = risk_count(day_rows)
@@ -407,7 +413,7 @@ def _build_cth01(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         high_series.append(day_risk["high"] if not day_risk["missing"] and not day_risk["other"] else None)
     trend = section("chart", STATE_READY if isinstance(trend_read, dict) and not _is_err(trend_read) else STATE_OFFLINE,
                     kind="line", title="近 14 日负面声量 / 高风险",
-                    sub="仅使用当前授权主体且来源已核验的记录；无数据或覆盖不完整显示未知",
+                    sub="仅统计当前授权主体的已核验样本；完整读取且无样本为0，覆盖不完整或分类未知显示未知（—）",
                     series=[
                         {"name": "负面", "data": neg_series, "color": "var(--lum-c-danger,#c0563f)"},
                         {"name": "高风险", "data": high_series, "color": "var(--lum-c-info,#4FC4E8)"},

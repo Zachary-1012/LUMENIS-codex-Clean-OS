@@ -162,6 +162,60 @@ def test_kos_collection_requires_read_only_confirmation_before_collection(monkey
     assert response.get_json()["code"] == "READ_ONLY_CONFIRMATION_REQUIRED"
 
 
+def test_scoped_kos_author_filter_precedes_canonical_note_limit(monkeypatch):
+    """A scoped author beyond the newest 1,000 unrelated notes remains reachable."""
+    import sqlite3
+    from contextlib import contextmanager
+
+    import database
+    import kos_routes
+    import reprocess
+
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    connection.execute(
+        "CREATE TABLE notes (note_id TEXT PRIMARY KEY, author_id TEXT, "
+        "publish_date TEXT, collected_at TEXT)"
+    )
+    source_ids = [f"noise-{index:04d}" for index in range(1001)] + ["target-note"]
+    for index, note_id in enumerate(source_ids[:-1]):
+        stamp = f"2026-10-14 {index // 3600:02d}:{(index // 60) % 60:02d}:{index % 60:02d}"
+        connection.execute(
+            "INSERT INTO notes(note_id, author_id, publish_date, collected_at) VALUES (?, ?, ?, ?)",
+            (note_id, "unrelated-author", stamp, stamp),
+        )
+    connection.execute(
+        "INSERT INTO notes(note_id, author_id, publish_date, collected_at) VALUES (?, ?, ?, ?)",
+        ("target-note", "in-scope-author", "2020-01-01 00:00:00", "2020-01-01 00:00:00"),
+    )
+    connection.execute(
+        "INSERT INTO notes(note_id, author_id, publish_date, collected_at) VALUES (?, ?, ?, ?)",
+        ("out-of-scope-note", "out-of-scope-author", "2026-10-14 23:59:59", "2026-10-14 23:59:59"),
+    )
+    connection.commit()
+
+    @contextmanager
+    def isolated_db():
+        yield connection
+
+    monkeypatch.setattr(database, "get_db", isolated_db)
+    monkeypatch.setattr(
+        reprocess,
+        "_canonical_source_ids",
+        lambda scope, limit: source_ids if scope["id"] == "authorized" else ["noise-0000"],
+    )
+    monkeypatch.setattr(reprocess, "_scoped_note", lambda row, _scope: row)
+
+    profile = kos_routes._kos_scoped_author_profile(
+        "in-scope-author", {"id": "authorized"}
+    )
+    assert profile is not None
+    assert [note["note_id"] for note in profile["notes"]] == ["target-note"]
+    assert kos_routes._kos_scoped_author_profile(
+        "out-of-scope-author", {"id": "authorized"}
+    ) is None
+
+
 class TestSubjectHitNote:
     """subject_hit_note 对 note dict 的主体判断。"""
 

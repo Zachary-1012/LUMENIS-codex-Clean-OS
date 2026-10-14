@@ -111,6 +111,133 @@ def test_preview_rejects_invalid_params(client, auth_headers, qs):
     assert r.status_code == 400 and r.get_json()['ok'] is False
 
 
+def test_report_verify_limits_source_scan_to_requested_period(
+        client, auth_headers, monkeypatch):
+    from datetime import date, timedelta
+
+    import database
+
+    _allow_scoped_preview(
+        monkeypatch, domain='CTH', subject_id='SUBJ-REPORT-CTH',
+        subject_type='company',
+    )
+    anchor = date(2026, 10, 14)
+    start = anchor - timedelta(days=anchor.weekday())
+    end = start + timedelta(days=6)
+    calls = []
+
+    def read_sources(scope, *, source_types, limit, date_start=None, date_end=None):
+        calls.append((date_start, date_end, source_types, limit))
+        if date_start != start.isoformat() or date_end != end.isoformat():
+            # An unbounded historical scan exceeds its limit and must not be used
+            # to reject a small, fully covered requested period.
+            return {"sources": [], "truncated": True, "rejected_count": 0}
+        return {
+            "sources": [{
+                "source_id": "period-note-1", "publish_date": "2026-10-12",
+                "captured_at": "2026-10-13", "sentiment": "negative",
+                "negative_confirmed": 1, "risk_level": "high",
+            }],
+            "truncated": False, "rejected_count": 0,
+        }
+
+    monkeypatch.setattr(database, "get_scoped_event_source_rows", read_sources)
+    response = client.get(
+        "/api/report/verify?type=weekly&date=2026-10-14",
+        headers={**auth_headers, **CTH_FOCUS},
+    )
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["period_start"] == start.isoformat()
+    assert response.get_json()["period_end"] == end.isoformat()
+    assert response.get_json()["published_in_period"] == 1
+    assert calls == [(start.isoformat(), end.isoformat(), ("note",), 5000)]
+
+
 def test_preview_requires_auth(client):
     r = client.get('/api/v2/report-center/preview?period=daily', headers=CTH_FOCUS)
     assert r.status_code == 401
+
+
+def test_reporting_generate_uses_authenticated_scope_and_source_checked_builder(monkeypatch):
+    from flask import Flask
+
+    from lumenis.shared.reporting import export_api, routes
+    from lumenis.shared.reporting.api import reporting_bp
+
+    actor = {"id": 17, "role": "owner"}
+    scope = {"domain_id": "cth", "product_id": "CTH", "subject_id": "SUBJ-REPORT-CTH",
+             "brand_focus_id": None, "global_scope": False}
+    selected = {"subject_id": "SUBJ-REPORT-CTH", "name_zh": "隔离测试主体"}
+    monkeypatch.setenv("LUMENIS_REPORTING", "1")
+    monkeypatch.setattr(routes, "_authorized_report_scope",
+                        lambda **_kwargs: (actor, scope, [], selected))
+    calls = []
+
+    def build_report(kind, start, end, **kwargs):
+        calls.append((kind, start, end, kwargs))
+        return kind, "2026-10-01", "2026-10-02", {"report_id": "R-1"}, 0, [], []
+
+    monkeypatch.setattr(export_api, "_build_report", build_report)
+    app = Flask(__name__)
+    app.register_blueprint(reporting_bp)
+    response = app.test_client().post("/api/reporting/generate", json={
+        "brand_mode": "cth", "period": "daily", "start_date": "2026-10-01",
+        "end_date": "2026-10-02",
+    })
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["report"]["report_id"] == "R-1"
+    assert calls == [("daily", "2026-10-01", "2026-10-02", {
+        "actor": actor, "scope": scope, "scope_entry": selected,
+    })]
+
+
+def test_reporting_export_passes_authenticated_scope_to_exporter(monkeypatch):
+    from flask import Flask
+
+    from lumenis.shared import reporting
+    from lumenis.shared.reporting import routes
+    from lumenis.shared.reporting.api import reporting_bp
+
+    actor = {"id": 17, "role": "owner"}
+    scope = {"domain_id": "cth", "product_id": "CTH", "subject_id": "SUBJ-REPORT-CTH",
+             "brand_focus_id": None, "global_scope": False}
+    selected = {"subject_id": "SUBJ-REPORT-CTH", "name_zh": "隔离测试主体"}
+    monkeypatch.setenv("LUMENIS_REPORTING", "1")
+    monkeypatch.setattr(routes, "_authorized_report_scope",
+                        lambda **_kwargs: (actor, scope, [], selected))
+    calls = []
+
+    class Exporter:
+        def generate_and_export(self, **kwargs):
+            calls.append(kwargs)
+            return {"word_path": "word.docx", "pdf_path": "report.pdf"}
+
+    monkeypatch.setattr(reporting, "ReportExporter", Exporter)
+    app = Flask(__name__)
+    app.register_blueprint(reporting_bp)
+    response = app.test_client().post("/api/reporting/export", json={
+        "brand_mode": "cth", "period": "weekly",
+        "start_date": "2026-10-01", "end_date": "2026-10-07",
+    })
+
+    assert response.status_code == 200, response.get_json()
+    assert calls == [{"brand_mode": "cth", "period": "weekly",
+                      "start_date": "2026-10-01", "end_date": "2026-10-07", "actor": actor,
+                      "scope": scope, "scope_entry": selected}]
+
+
+@pytest.mark.parametrize("path", ["/api/reporting/generate", "/api/reporting/export"])
+def test_reporting_rejects_unsupported_custom_period_before_build(monkeypatch, path):
+    from flask import Flask
+
+    from lumenis.shared.reporting.api import reporting_bp
+
+    monkeypatch.setenv("LUMENIS_REPORTING", "1")
+    app = Flask(__name__)
+    app.register_blueprint(reporting_bp)
+
+    response = app.test_client().post(path, json={"period": "custom"})
+
+    assert response.status_code == 400

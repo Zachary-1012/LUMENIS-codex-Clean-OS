@@ -171,10 +171,14 @@ def _kos_scoped_author_profile(author_id, scope):
     import database as db
     import reprocess
 
+    if not isinstance(author_id, str) or not author_id.strip():
+        return None
+    author_id = author_id.strip()
     ids = reprocess._canonical_source_ids(scope, limit=5000)
     if not ids:
         return None
-    rows = db.get_notes_for_canonical_source_ids(ids, limit=min(len(ids), 5000))
+    rows = db.get_notes_for_canonical_source_ids(
+        ids, filters={"author_id": author_id}, limit=min(len(ids), 1000))
     matched = []
     for row in rows:
         note = reprocess._scoped_note(row, scope)

@@ -468,6 +468,12 @@ def _apply_filters(query, params, filters):
     filters = filters or {}
     if filters.get('note_id') is not None:
         query += ' AND note_id=?'; params.append(filters['note_id'])
+    if 'author_id' in filters:
+        author_id = filters.get('author_id')
+        if not isinstance(author_id, str) or not author_id:
+            query += ' AND 0=1'
+        else:
+            query += ' AND author_id=?'; params.append(author_id)
     if filters.get('sentiment'): query += ' AND sentiment=?'; params.append(filters['sentiment'])
     if filters.get('risk_level'): query += ' AND risk_level=?'; params.append(filters['risk_level'])
     if filters.get('category'): query += ' AND (category=? OR topics LIKE ?)'; params.extend([filters['category'], f"%{filters['category']}%"])

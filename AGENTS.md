@@ -378,10 +378,10 @@ compatibility section. The Semantic Calibration Ledger under evidence/round-15
 is a source-backed index, not another authority. Context is routing metadata,
 never Permission: unknown/conflicting domain IDs are rejected, BMP resolves to
 its existing ZBMP storage identifier, and no selection invents a reference Subject.
-Only explicit reference selection uses a reference Subject; generic routes never
-invent one or apply a subject default. Searches, reports and exports resolve the
-authenticated server scope and verify cited-source Evidence and SourceUse. GLOBAL
-retains each source's focus. Incomplete coverage is UNKNOWN, distinct from real zero.
+Reference Subjects require explicit selection; generic routes never default to one.
+Search/report/export use authenticated scope and cited-source Evidence/SourceUse.
+GLOBAL retains source focus. Reject truncated event replacement; filter dates/authors
+before limits. Unknown coverage differs from a complete sample's zero.
 
 OpenAI Math methods are applied inside existing owners when their assumptions
 match the actual task. Freeze the intended contract independently from the code,

@@ -4521,12 +4521,25 @@ def _event_set_review(event_id, state, scope, by):
     finally:
         conn.close()
 
+def _event_review_actor_ref(actor):
+    """Return the server-authenticated identity used for event review attribution."""
+    from lumenis.system.security import permission as security_permission
+
+    if type(actor) is dict:
+        actor_id = actor.get('id')
+        if type(actor_id) is int and actor_id > 0:
+            return str(actor_id)
+    if security_permission._is_server_local_workspace_principal(actor):
+        return actor.principal_ref
+    raise PermissionError('AUTH_REQUIRED')
+
+
 @app.route('/api/event-review/<event_id>/confirm', methods=['POST'])
 def api_event_review_confirm(event_id):
     """确认事件负面（核准）——人工确认后该事件从待核实/待确认列表移除，并联动确认其关联负面笔记"""
     try:
         actor, scope, _entries, _selected = _resolve_web_scope('write', module='reports')
-        res = _event_set_review(event_id, 1, scope, str(actor.get('id')))
+        res = _event_set_review(event_id, 1, scope, _event_review_actor_ref(actor))
         return jsonify({'ok': True, 'event_id': event_id, 'confirmed': True,
                         'affected': res['events'], 'notes_linked': res['notes']})
     except (PermissionError, ValueError) as e:
@@ -4539,7 +4552,7 @@ def api_event_review_reject(event_id):
     """驳回事件（非负面/误报）——人工处理后不再出现在待确认列表（不联动改笔记，保留分别研判）"""
     try:
         actor, scope, _entries, _selected = _resolve_web_scope('write', module='reports')
-        res = _event_set_review(event_id, 2, scope, str(actor.get('id')))
+        res = _event_set_review(event_id, 2, scope, _event_review_actor_ref(actor))
         return jsonify({'ok': True, 'event_id': event_id, 'rejected': True, 'affected': res['events']})
     except (PermissionError, ValueError) as e:
         return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409

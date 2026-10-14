@@ -316,9 +316,22 @@ def build_cross_platform_events(limit=100, *, scope=None):
         requested, limit=min(5000, max(100, limit * 20)),
         source_types=('note', 'web_mention'),
     )
+    source_rows = source_read['sources']
+    rejected_source_count = source_read['rejected_count']
+    if source_read['truncated']:
+        # Never replace a previously complete event/mention set with a
+        # truncated view of the authorized source population.
+        return {
+            'events': [],
+            'source_count': len(source_rows),
+            'rejected_source_count': rejected_source_count,
+            'truncated': True,
+            'status': 'PARTIAL',
+            'persistence_status': 'NOT_RUN_INCOMPLETE_SOURCE_READ',
+        }
     focus_field = 'subject_id' if requested['domain_id'] == 'cth' else 'brand_focus_id'
     partitions = {}
-    for source in source_read['sources']:
+    for source in source_rows:
         focus_id = source.get(focus_field)
         if not isinstance(focus_id, str) or not focus_id.strip():
             continue
@@ -410,10 +423,10 @@ def build_cross_platform_events(limit=100, *, scope=None):
         } for row in records]
         event_id = db.upsert_event(event, scope=exact, mentions=mentions)
         created.append({'event_id': event_id, **event, 'sources': mentions})
-    return {'events': created, 'source_count': len(source_read['sources']),
-            'rejected_source_count': source_read['rejected_count'],
+    return {'events': created, 'source_count': len(source_rows),
+            'rejected_source_count': rejected_source_count,
             'truncated': source_read['truncated'],
-            'status': 'PARTIAL' if source_read['truncated'] or source_read['rejected_count'] else 'COMPLETED'}
+            'status': 'PARTIAL' if source_read['truncated'] or rejected_source_count else 'COMPLETED'}
 
 
 # === Legacy event entry ======================================================

@@ -216,6 +216,64 @@ def test_scoped_writer_creates_updates_and_separates_global_focuses(signed_scope
     assert signed_scoped_event_sources.query_one("SELECT COUNT(*) FROM event_mentions")[0] == 2
 
 
+def test_truncated_source_read_does_not_replace_persisted_event_mentions(
+        signed_scoped_event_sources, monkeypatch):
+    import database
+
+    global_scope = {
+        "product_id": "CTH", "domain_id": "cth", "subject_id": None,
+        "brand_focus_id": None, "global_scope": True,
+    }
+    complete = reprocess.build_cross_platform_events(scope=global_scope)
+    assert complete["status"] == "COMPLETED"
+
+    with signed_scoped_event_sources.connect() as connection:
+        before_events = connection.execute(
+            "SELECT id,event_key,summary,mention_count,source_count "
+            "FROM events ORDER BY id"
+        ).fetchall()
+        before_mentions = connection.execute(
+            "SELECT event_id,source_type,source_id "
+            "FROM event_mentions ORDER BY event_id,source_type,source_id"
+        ).fetchall()
+    assert before_events and before_mentions
+
+    real_read = database.get_scoped_event_source_rows
+    partial_rows = real_read(
+        global_scope, limit=10, source_types=("note", "web_mention")
+    )["sources"][:1]
+    monkeypatch.setattr(
+        database, "get_scoped_event_source_rows",
+        lambda *_args, **_kwargs: {
+            "sources": partial_rows, "truncated": True, "rejected_count": 0,
+        },
+    )
+    monkeypatch.setattr(
+        database, "upsert_event",
+        lambda *_args, **_kwargs: pytest.fail(
+            "truncated source coverage must not persist partial event mentions"
+        ),
+    )
+
+    result = reprocess.build_cross_platform_events(scope=global_scope)
+
+    assert result["status"] == "PARTIAL"
+    assert result["events"] == []
+    assert result["truncated"] is True
+    assert result["persistence_status"] == "NOT_RUN_INCOMPLETE_SOURCE_READ"
+    with signed_scoped_event_sources.connect() as connection:
+        after_events = connection.execute(
+            "SELECT id,event_key,summary,mention_count,source_count "
+            "FROM events ORDER BY id"
+        ).fetchall()
+        after_mentions = connection.execute(
+            "SELECT event_id,source_type,source_id "
+            "FROM event_mentions ORDER BY event_id,source_type,source_id"
+        ).fetchall()
+    assert after_events == before_events
+    assert after_mentions == before_mentions
+
+
 def test_function_registry_search_uses_verified_note_and_event_sources(signed_scoped_event_sources):
     import database
     import function_registry

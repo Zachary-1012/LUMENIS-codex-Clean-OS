@@ -154,6 +154,132 @@ def _verify_note_for_query(note, query):
         return True, f'registered alias matched: {keyword}'
     return False, f'registered alias not in note: {keyword}'
 
+
+def _canonical_query_scope(query):
+    """Return only the scope admitted by the server-side acquisition plan."""
+    raw_scope = getattr(query, 'scope', None)
+    scope = dict(raw_scope) if isinstance(raw_scope, dict) else {}
+    scope['product_id'] = str(getattr(query, 'product_id', '') or '').strip().upper()
+    return scope
+
+
+def _is_exact_analysis_scope(scope):
+    if not isinstance(scope, dict) or scope.get('global_scope') is not False:
+        return False
+    domain = str(scope.get('domain_id') or '').strip().lower()
+    product = str(scope.get('product_id') or '').strip().upper()
+    subject_id = str(scope.get('subject_id') or '').strip()
+    brand_focus_id = str(scope.get('brand_focus_id') or '').strip()
+    return ((domain == 'cth' and product == 'CTH' and bool(subject_id) and not brand_focus_id)
+            or (domain == 'zbmp' and product == 'ZBMP' and bool(brand_focus_id) and not subject_id))
+
+
+def _scope_key(scope):
+    if not _is_exact_analysis_scope(scope):
+        return None
+    return (str(scope['product_id']).upper(), str(scope['domain_id']).lower(),
+            str(scope.get('subject_id') or ''), str(scope.get('brand_focus_id') or ''))
+
+
+def _scoped_query_groups(queries):
+    """Group admitted queries by exact business focus, never by query text."""
+    groups = {}
+    skipped = 0
+    for query in queries or ():
+        scope = _canonical_query_scope(query)
+        key = _scope_key(scope)
+        keyword = str(getattr(query, 'keyword', '') or '').strip()
+        if key is None or not keyword:
+            skipped += 1
+            continue
+        group = groups.setdefault(key, {'scope': scope, 'keywords': []})
+        if keyword not in group['keywords']:
+            group['keywords'].append(keyword)
+    return groups, skipped
+
+
+def _load_scoped_pending_analysis(query_plan, *, database_module=None, limit=20):
+    """Read a bounded pending-analysis batch separately for each exact scope."""
+    database_module = database_module or db
+    groups, skipped = _scoped_query_groups(getattr(query_plan, 'queries', ()))
+    per_scope_rows = []
+    read_failures = []
+    for key, group in groups.items():
+        scope = group['scope']
+        keywords = group['keywords']
+        placeholders = ','.join('?' for _ in keywords)
+        sql = (
+            "SELECT * FROM notes WHERE is_taikoo_verified=1 AND scope_status='VERIFIED' "
+            "AND product_id=? AND domain_id=? "
+            "AND COALESCE(subject_id,'')=? AND COALESCE(brand_focus_id,'')=? "
+            f"AND source_keyword IN ({placeholders}) "
+            "AND (ai_analyzed_at='' OR ai_analyzed_at IS NULL) "
+            "ORDER BY id DESC LIMIT ?"
+        )
+        params = (
+            scope['product_id'], scope['domain_id'], scope.get('subject_id') or '',
+            scope.get('brand_focus_id') or '', *keywords, max(1, int(limit)),
+        )
+        try:
+            with database_module.get_db() as conn:
+                rows = conn.execute(sql, params).fetchall()
+        except Exception as exc:  # noqa: BLE001 - continue other exact scopes when one read fails.
+            read_failures.append((key, type(exc).__name__))
+            continue
+        per_scope_rows.extend((key, scope, row) for row in rows)
+
+    def _row_id(item):
+        row = item[2]
+        try:
+            return int(row['id'])
+        except (KeyError, TypeError, ValueError, IndexError):
+            return -1
+
+    # Keep the legacy total work bound while letting every scope compete for
+    # the newest records instead of allowing the first scope to consume it all.
+    per_scope_rows.sort(key=lambda item: (_row_id(item), item[0]), reverse=True)
+    selected = per_scope_rows[:max(1, int(limit))]
+    rows_by_scope = {}
+    for key, scope, row in selected:
+        rows_by_scope.setdefault(key, (scope, []))[1].append(row)
+    return groups, rows_by_scope, skipped, read_failures
+
+
+def _run_scoped_postprocess(rows_by_scope, scopes, reprocess_module, results):
+    """Isolate analysis and event aggregation failures to their own scope."""
+    for key, (scope, rows) in rows_by_scope.items():
+        failures = 0
+        for row in rows:
+            try:
+                reprocess_module.analyze_note_row(row, translate=False, scope=scope)
+            except Exception as exc:  # noqa: BLE001 - isolate failures to this scope and continue others.
+                failures += 1
+                results.append({'stage': 'analysis', 'status': 'FAILED',
+                                'scope': key, 'error_type': type(exc).__name__})
+        if rows and not failures:
+            results.append({'stage': 'analysis', 'status': 'COMPLETED',
+                            'scope': key, 'processed': len(rows)})
+
+    for key, scope in scopes.items():
+        try:
+            event_result = reprocess_module.build_cross_platform_events(limit=100, scope=scope)
+            status = str(event_result.get('status') or '').upper() if isinstance(event_result, dict) else ''
+            code = (event_result.get('code') or event_result.get('persistence_status')
+                    or status) if isinstance(event_result, dict) else None
+            if status in {'BLOCKED', 'FAILED'} or code in {
+                    'BLOCKED', 'EVENT_SCOPE_EVIDENCE_REQUIRED', 'NOT_RUN_INCOMPLETE_SOURCE_READ'}:
+                results.append({'stage': 'event_aggregation', 'status': 'BLOCKED',
+                                'scope': key, 'code': code})
+            elif status == 'COMPLETED':
+                results.append({'stage': 'event_aggregation', 'status': 'COMPLETED',
+                                'scope': key})
+            else:
+                results.append({'stage': 'event_aggregation', 'status': status or 'NOT_VERIFIED',
+                                'scope': key, 'code': code})
+        except Exception as exc:  # noqa: BLE001 - isolate failures to this scope and continue others.
+            results.append({'stage': 'event_aggregation', 'status': 'FAILED',
+                            'scope': key, 'error_type': type(exc).__name__})
+
 _AUTO_PLAN_CURSOR_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'private', 'xhs_auto_plan_cursor.json')
 
 
@@ -1052,24 +1178,43 @@ def sync(keywords=None, max_scroll=6, account=None):
             except Exception as _exc:
                 results.append({'stage':'auth_recovery','status':'FAILED','error':type(_exc).__name__})
     inserted=updated=rejected=0
-    query_by_keyword = {q.keyword: q for q in query_plan.queries}
-    persisted_by_keyword = {}
+    queries_by_keyword = {}
+    for query in query_plan.queries:
+        scope = _canonical_query_scope(query)
+        key = _scope_key(scope)
+        if key is not None:
+            queries_by_keyword.setdefault(query.keyword, {})[key] = query
+    persisted_by_keyword_scope = {}
     for n in raw.values():
-        ok,reason=_verify_note_for_query(n, query_by_keyword.get(n.get('source_keyword')))
+        keyword = n.get('source_keyword')
+        matching = queries_by_keyword.get(keyword, {})
+        if len(matching) != 1:
+            ok = False
+            reason = 'SCOPE_AMBIGUOUS' if matching else 'SCOPE_REQUIRED'
+            query = None
+        else:
+            scope_key, query = next(iter(matching.items()))
+            ok,reason=_verify_note_for_query(n, query)
         n['is_taikoo_verified']=1 if ok else 0; n['verify_reason']=reason; n['source_platform']='xhs'
         if not ok: rejected+=1; continue
         n['captured_at']=str(n.get('captured_at') or n.get('collected_at') or datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         _,new=db.insert_note(n); inserted+=int(new); updated+=int(not new)
         _record_note_lineage(n, provider='xhs_cookie_bridge')
-        persisted_by_keyword.setdefault(n.get('source_keyword'), []).append(n['note_id'])
+        persisted_by_keyword_scope.setdefault((keyword, scope_key), []).append(n['note_id'])
     scope_bindings = []
     from lumenis.system.collector.adapters.secondary_collection import bind_collected_social_scope
+    binding_groups = {}
     for query in query_plan.queries:
-        ids = persisted_by_keyword.get(query.keyword, [])
+        scope = _canonical_query_scope(query)
+        key = _scope_key(scope)
+        if key is not None:
+            binding_groups.setdefault((query.keyword, key), (query, scope))
+    for (keyword, key), (query, scope) in binding_groups.items():
+        ids = persisted_by_keyword_scope.get((keyword, key), [])
         if ids:
             try:
                 binding = bind_collected_social_scope(
-                    ids, scope=query.scope, platform='xhs', keyword=query.keyword,
+                    ids, scope=scope, platform='xhs', keyword=query.keyword,
                     provider='xhs_cookie_bridge',
                 )
             except Exception as exc:
@@ -1080,22 +1225,28 @@ def sync(keywords=None, max_scroll=6, account=None):
     events=[]
     try:
         import reprocess
-        # AI分析改为异步后台执行（每条约23秒，避免阻塞主流程）
-        # 每次只分析最新的20条，避免处理积压
-        with db.get_db() as conn:
-            rows=conn.execute("SELECT * FROM notes WHERE is_taikoo_verified=1 AND (ai_analyzed_at='' OR ai_analyzed_at IS NULL) ORDER BY id DESC LIMIT 20").fetchall()
-        analyzed = len(rows)  # 记录待分析数量，实际分析在后台完成
-        
-        def _async_analyze_and_events():
-            try:
-                for row in rows:
-                    reprocess.analyze_note_row(row, translate=False)
-                # AI分析完成后再执行事件聚合
-                reprocess.build_cross_platform_events()
-            except Exception as e:
-                results.append({'stage':'async_analysis_events','error':str(e)})
-        threading.Thread(target=_async_analyze_and_events, daemon=True, name='ai-analysis-events').start()
-        results.append({'stage':'ai_analysis','status':'async_started','message':f'AI分析({analyzed}条)+事件聚合已在后台异步执行，不阻塞主流程'})
+        query_groups, rows_by_scope, skipped_scopes, read_failures = _load_scoped_pending_analysis(query_plan)
+        scopes = {key: group['scope'] for key, group in query_groups.items()}
+        analyzed = sum(len(rows) for _, rows in rows_by_scope.values())
+        if skipped_scopes:
+            results.append({'stage': 'analysis', 'status': 'NOT_RUN',
+                            'code': 'SCOPE_REQUIRED', 'queries': skipped_scopes})
+        for key, error_type in read_failures:
+            results.append({'stage': 'analysis', 'status': 'FAILED',
+                            'scope': key, 'code': 'SCOPED_READ_FAILED',
+                            'error_type': error_type})
+
+        if scopes:
+            def _async_analyze_and_events():
+                _run_scoped_postprocess(rows_by_scope, scopes, reprocess, results)
+
+            threading.Thread(target=_async_analyze_and_events, daemon=True,
+                             name='ai-analysis-events').start()
+            results.append({'stage': 'ai_analysis', 'status': 'async_started',
+                            'analyzed': analyzed, 'scope_count': len(scopes)})
+        else:
+            results.append({'stage': 'ai_analysis', 'status': 'NOT_RUN',
+                            'code': 'SCOPE_REQUIRED'})
     except Exception as e:
         results.append({'stage':'post_process','error':str(e)})
     

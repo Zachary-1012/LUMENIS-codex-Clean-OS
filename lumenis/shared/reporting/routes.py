@@ -541,7 +541,8 @@ def api_report_verify_v571():
     try:
         _actor, scope, _entries, _selected = _authorized_report_scope()
         note_read = db.get_scoped_event_source_rows(
-            scope, source_types=('note',), limit=5000)
+            scope, source_types=('note',), limit=5000,
+            date_start=start, date_end=end)
         event_read = db.get_scoped_events(
             500, scope=scope, date_start=start, date_end=end, include_sources=True)
         if (note_read.get('truncated') or note_read.get('rejected_count')
