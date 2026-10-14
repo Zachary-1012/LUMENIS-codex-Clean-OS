@@ -9,6 +9,13 @@ class SourceBriefCopy {
 
   static const _copy = <String, Map<String, String>>{
     'zh': {
+      'motionChoiceTitle': '新简报的展示效果',
+      'motionChoiceHint': '仅用于本次新生成并核验的简报；打开旧简报、刷新或返回时不会重播。',
+      'motionFull': '完整效果',
+      'motionSystem': '跟随系统',
+      'motionOff': '关闭',
+      'motionSkip': '跳过效果',
+      'motionPreferenceSaveFailed': '当前选择仍可使用，但未能保存到此设备。',
       'sourceStatistics': '来源样本统计',
       'sourceStatisticsHint': '无需 AI。仅统计本次已核验样本，不推断市场需求、情绪、因果或全平台覆盖。',
       'calculateSources': '统计并保存来源样本',
@@ -117,6 +124,15 @@ class SourceBriefCopy {
       'stopIf': '停止或调整条件',
     },
     'en': {
+      'motionChoiceTitle': 'New brief reveal',
+      'motionChoiceHint':
+          'Only for a newly generated and verified brief. Existing briefs never replay on open, refresh, or return.',
+      'motionFull': 'Full effect',
+      'motionSystem': 'Follow system',
+      'motionOff': 'Off',
+      'motionSkip': 'Skip effect',
+      'motionPreferenceSaveFailed':
+          'This choice still applies now, but could not be saved on this device.',
       'sourceStatistics': 'Source sample statistics',
       'sourceStatisticsHint':
           'No AI required. Counts describe this verified sample, not demand, sentiment, causation or platform-wide coverage.',
@@ -248,6 +264,14 @@ class SourceBriefCopy {
       'stopIf': 'Stop or adjust when',
     },
     'ko': {
+      'motionChoiceTitle': '새 브리프 표시 효과',
+      'motionChoiceHint':
+          '새로 생성되어 검증된 브리프에만 적용됩니다. 기존 브리프는 열기, 새로고침 또는 돌아올 때 다시 재생되지 않습니다.',
+      'motionFull': '전체 효과',
+      'motionSystem': '시스템 설정 따르기',
+      'motionOff': '끄기',
+      'motionSkip': '효과 건너뛰기',
+      'motionPreferenceSaveFailed': '현재 선택은 적용되지만 이 기기에 저장하지 못했습니다.',
       'sourceStatistics': '출처 표본 통계',
       'sourceStatisticsHint':
           'AI 없이 확인된 표본을 집계합니다. 시장 수요, 감정, 인과관계 또는 플랫폼 전체 범위를 추론하지 않습니다.',

@@ -32,7 +32,7 @@ class RepositoryRegistry:
         "backup": {"env": "ZBC_BACKUP_DIR", "default": "backups"},
         "export": {"env": "ZBC_EXPORT_DIR", "default": "report_export"},
         "temp": {"env": "ZBC_TEMP_DIR", "default": "staging"},
-        "ai_runtime": {"env": "ZBC_AI_RUNTIME_DIR", "default": ".ollama"},
+        "ai_runtime": {"env": "ZBC_AI_RUNTIME_DIR", "default": "data/runtime/ai"},
         "collector": {"env": "ZBC_COLLECTOR_DIR", "default": "collector_v2"},
         "log": {"env": "ZBC_LOG_DIR", "default": "logs"},
         "config": {"env": "ZBC_CONFIG_DIR", "default": "config"},

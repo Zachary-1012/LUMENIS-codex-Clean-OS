@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """AI Gateway retirement compatibility checks; all provider transports are mocked."""
 import os
+import shutil
 import sys
+import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import intelligence
 from lumenis.system.ai_gateway import channel as ai_channel
@@ -54,7 +56,8 @@ def test_zhipu_wired_and_safe(monkeypatch):
     assert st["provider"] == "provider_disabled"
     assert st["runtime"] == "unavailable"
     assert st["hints"] == []
-    assert intelligence._CACHE["provider"] is None
+    # Status is read-only; retained historical metadata grants no execution.
+    assert intelligence._CACHE["provider"] == "zhipu"
     monkeypatch.setattr(intelligence, "_provider_config", _unexpected_call(calls, "config"))
 
     system, user = "Only JSON", '{"ok":true}'
@@ -141,7 +144,7 @@ def test_explicit_local_failure_falls_back_to_rule_only(monkeypatch):
     calls = []
     monkeypatch.setattr(intelligence, "_provider_config", _unexpected_call(calls, "config"))
     monkeypatch.setattr(intelligence, "_detect_local", _unexpected_call(calls, "local discovery"))
-    monkeypatch.setattr(intelligence.ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
+    monkeypatch.setattr(ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
     monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call(calls, "HTTP"))
     raw, provider = intelligence._chat("只回复结果", "本地测试", 0.0, 8)
     assert (raw, provider) == (None, "provider_disabled")
@@ -155,7 +158,7 @@ def test_cloud_failure_falls_back_to_ollama_with_thinking_disabled(monkeypatch):
     calls = []
     monkeypatch.setattr(intelligence, "_provider_config", _unexpected_call(calls, "config"))
     monkeypatch.setattr(intelligence, "_detect_local", _unexpected_call(calls, "local discovery"))
-    monkeypatch.setattr(intelligence.ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
+    monkeypatch.setattr(ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
     monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call(calls, "HTTP"))
     raw, provider = intelligence._chat("system-local", "user-local", 0.0, 16)
     assert (raw, provider) == (None, "provider_disabled")
@@ -169,7 +172,7 @@ def test_cloud_and_ollama_failure_falls_back_to_rule(monkeypatch):
     calls = []
     monkeypatch.setattr(intelligence, "_provider_config", _unexpected_call(calls, "config"))
     monkeypatch.setattr(intelligence, "_detect_local", _unexpected_call(calls, "local discovery"))
-    monkeypatch.setattr(intelligence.ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
+    monkeypatch.setattr(ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
     monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call(calls, "HTTP"))
     raw, provider = intelligence._chat("system", "user", 0.0, 16)
     assert (raw, provider) == (None, "provider_disabled")
@@ -181,7 +184,7 @@ def test_ollama_hint_reflects_reachable_models(monkeypatch):
     calls = []
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
     monkeypatch.setattr(intelligence, "_get_json", _unexpected_call(calls, "discovery HTTP"))
-    monkeypatch.setattr(intelligence.shutil, "which", _unexpected_call(calls, "PATH probe"))
+    monkeypatch.setattr(shutil, "which", _unexpected_call(calls, "PATH probe"))
     assert intelligence._installed_hints() == []
     assert calls == []
 
@@ -194,3 +197,52 @@ def test_review_note_structure(monkeypatch):
     assert res["verification"] in ("verified", "review", "suspicious_fake", "rejected")
     assert res.get("summary")
     assert res.get("provider") == "rule"
+
+
+def test_review_note_uses_verified_scope_without_reference_subject(monkeypatch):
+    calls = []
+
+    def capture(system, user, **kwargs):
+        calls.append((system, user))
+        return None, "provider_disabled", {}
+
+    monkeypatch.setattr(intelligence, "chat", capture)
+    note = {"title": "测试广场停车", "content": "停车场出口排队"}
+    rule = {"verified": True, "summary": "测试广场停车反馈", "topics": ["停车"],
+            "verified_scope": {"domain_id": "cth", "product_id": "CTH",
+                               "subject_id": "MALL_SCOPE_1", "brand_focus_id": None,
+                               "global_scope": False, "display_name": "测试广场",
+                               "aliases": ["测试商场"]}}
+    result = intelligence.review_note(note, rule)
+    assert len(calls) == 1
+    system, user = calls[0]
+    assert "广州太古汇" not in system
+    assert "当前已核验业务范围" in system
+    assert "不得自行假定或替换主体" in system
+    assert note["title"] in user and rule["summary"] in user
+    assert "MALL_SCOPE_1" in user and "测试商场" in user
+    assert result["summary"] == rule["summary"]
+    assert result["provider"] == "rule"
+    assert result["verification"] == "review"
+    rejected = intelligence.review_note(note, {"verified": False, "verify_reason": "scope rejected"})
+    assert rejected["verification"] == "rejected"
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("scope", [None, {},
+    {"domain_id": "cth", "product_id": "ZBMP", "subject_id": "MALL_SCOPE_1",
+     "brand_focus_id": None, "global_scope": False, "display_name": "测试广场"},
+    {"domain_id": "cth", "product_id": "CTH", "subject_id": "MALL_SCOPE_1",
+     "brand_focus_id": None, "global_scope": False},
+    {"domain_id": "cth", "product_id": "CTH", "subject_id": None,
+     "brand_focus_id": None, "global_scope": True, "display_name": "全部"},
+])
+def test_review_note_missing_or_ambiguous_scope_keeps_rules_without_ai(monkeypatch, scope):
+    monkeypatch.setattr(intelligence, "chat", _unexpected_call([], "unscoped inference"))
+    result = intelligence.review_note({"title": "甲乙两家商场对比"}, {
+        "verified": True, "summary": "已取得文本，主体审阅待核验", "verified_scope": scope,
+    })
+    assert result["provider"] == "rule"
+    assert result["verification"] == "review"
+    assert result["summary"] == "已取得文本，主体审阅待核验"
+    assert result["enhancement_state"] == "VERIFIED_SCOPE_REQUIRED"

@@ -17,6 +17,7 @@ class ReadAloudAction extends StatefulWidget {
     required this.text,
     required this.purpose,
     this.service,
+    this.onUserInteraction,
     super.key,
   });
 
@@ -25,6 +26,7 @@ class ReadAloudAction extends StatefulWidget {
   final String text;
   final ReadAloudPurpose purpose;
   final ReadAloudService? service;
+  final VoidCallback? onUserInteraction;
 
   @override
   State<ReadAloudAction> createState() => _ReadAloudActionState();
@@ -150,6 +152,7 @@ class _ReadAloudActionState extends State<ReadAloudAction>
   }
 
   Future<void> _startOrStop() async {
+    widget.onUserInteraction?.call();
     final state = _service.stateFor(
       sessionId: widget.sessionId,
       scopeVersion: widget.scopeVersion,
@@ -175,6 +178,7 @@ class _ReadAloudActionState extends State<ReadAloudAction>
   }
 
   Future<void> _selectLocale(ReadAloudLocale value) async {
+    widget.onUserInteraction?.call();
     await _service.stopSession(
       sessionId: widget.sessionId,
       scopeVersion: widget.scopeVersion,
@@ -183,6 +187,7 @@ class _ReadAloudActionState extends State<ReadAloudAction>
   }
 
   Future<void> _selectRate(ReadAloudRate value) async {
+    widget.onUserInteraction?.call();
     await _service.stopSession(
       sessionId: widget.sessionId,
       scopeVersion: widget.scopeVersion,

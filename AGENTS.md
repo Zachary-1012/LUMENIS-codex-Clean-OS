@@ -64,8 +64,7 @@ Published governance records ownership and product scope. Actual window dispatch
 and model choices require the latest direct Product Owner instruction and factual
 readback; a historical repair authorization is not a current execution order.
 
-Latest PO data rule: all platforms and public webpages have equal source-category
-weight. After real acquisition/intake/recovery proof, prioritize existing admitted
+Platforms/public webpages share equal source-category weight; names are not risk. Unrecorded versions stay unknown. After acquisition/intake/recovery proof, prioritize admitted
 data through analysis and downstream useful workflows. Incomplete platforms block
 only their own paths/coverage claims, never independent ready workflows. Preserve
 source quality, identity, time, rights, unknowns and full platform scope; see Architecture.
@@ -135,13 +134,17 @@ Shared Flutter/Core changes preserve one business and permission contract across
 all supported targets. Website/Web browser viewport, locale and
 accessibility coverage remains required, including narrow screens.
 
-Build the complete task-shaped frontend, including original identity/icons,
-illustration, genuine operation videos, usable UI/UX and applicable AIGC/motion,
-under the existing Experience Constitution. Existing screen specifications incorporate sketch additions in place;
-coverage remains complete; 44 is not a page-count, navigation or product-scope ceiling.
-Available backend contracts are connected immediately. Unavailable contracts keep
-honest OPEN/UNBOUND states while independent editing/layout/interaction proceeds;
-no mock backend, fake save or decorative progress can represent business success.
+Build the full task-based UI with original identity/icons, illustration, genuine
+operation videos, usable UX and applicable AIGC/motion; preserve all existing motion,
+timing and preferences. The optional result reveal is selectable/skippable and runs
+once for a newly persisted result after readback and stable registered-font layout.
+Full preserves user choice; Follow System honors OS motion reduction. Unregistered
+dynamic fonts skip it. Follow Experience Constitution. Update existing specs from
+sketches; keep full coverage; 44 is not a scope ceiling.
+
+Connect available backend contracts immediately. Unavailable ones stay honestly
+OPEN/UNBOUND while independent UI proceeds; no mock backend, fake save or
+decorative progress may count as business success.
 
 Accept each surface using its applicable gate tiers and real operation evidence.
 Unavailable native build/device evidence stays OPEN/NOT_VERIFIED, never PASS;
@@ -161,25 +164,17 @@ active references, preserving originals, historical approvals/failures and valid
 capabilities. REA may study permitted websites, apps and GitHub implementations
 for current capabilities through the existing Owner Index adoption path.
 
-### Latest direct frontend build and native targets — 2026-10-08
+### Frontend construction and native targets
 
-F proceeds directly with real frontend implementation using the current Experience,
-44 screen specifications and actual owner contracts. A separate design draft,
-Figma deliverable or per-screen M DESIGN_READY approval is no longer a coding
-prerequisite. Reuse existing design assets; update the existing specification with
-necessary decisions alongside code. Keep DESIGN_READY as an honest design-review
-record when such review occurred, not a synthetic promotion or mandatory phase.
-Unknown owner/Permission/lineage still blocks the dependent action, and actual
-usability, visual quality, security and end-to-end acceptance remain mandatory.
+F builds from the current Experience, screen specs and owner contracts; separate drafts,
+Figma delivery and per-screen M DESIGN_READY are not coding prerequisites. Reuse assets,
+update specs alongside code, and record DESIGN_READY only after real review. Actual
+usability, visual quality, security and E2E remain mandatory.
 
-Parallel native Desktop delivery targets **Windows and
-macOS only**; native Mobile delivery targets **iOS only**. Android and Linux native
-clients are removed from the active delivery requirements, not deferred obligations.
-Preserve their original source/history without unsupported deletion. Linux servers,
-CI runners, browser access from any supported OS and narrow-screen Web testing are
-not removed by this native-client decision. All remaining capabilities, 44 screens,
-Website families and applicable R/J/U acceptance continue. Existing historical
-platform lists/design-first instructions are superseded for execution by this rule.
+Desktop targets Windows/macOS; native mobile targets iOS. Android/Linux clients are
+removed from active requirements, not deferred; preserve source/history. Linux servers,
+CI, browser access and narrow-screen Web remain. Website families and all R/J/U coverage
+continue; historical platform lists/design-first instructions do not override this scope.
 
 ### Cost and integration boundaries
 
@@ -894,7 +889,7 @@ implementation, screen, provider, migration or release claim. M accepts each
 complete C-window outcome against current source/local/remote evidence and the
 applicable mapped R gates.
 
-Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE remain Experience-principle references only. Codex/Codex CLI and Akang (GrokBot) are the current peer engineering runtimes, dispatched only by the PO; OpenCode is shelved and not part of the current execution route. Legacy Ollama/local-model-provider, Zhipu and Jev routes are retired: retain compatibility interfaces and historical artifacts, but do not call, auto-discover, probe, fall back to or reactivate them. Gateway status: CURRENT. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Accounts (free Google/email codes; Apple after developer-account activation; settings and 30-day deletion undo), both developer modes, all six commercial-readiness capabilities, visuals, logo and role art are in-loop. User mode requires reviewed terms, informed consent, backup and reversible disablement; founder mode requires restricted access, checks, signed staged updates and rollback. Ordinary work has no account wall; Permission/effect fences remain. Only real-user validation and paid/licensed sources follow launch; engineering operation/security/recovery remain pre-launch. Settings structure may be adapted; LUMENIS visuals remain original. This grants no deployment or spending.
+Preserve product scope, rules, sources and workflows. Apple, ChatGPT and TRAE remain Experience-principle references only. Codex/Codex CLI and Akang (GrokBot) are the current peer engineering runtimes, dispatched only by the PO; OpenCode is shelved and not part of the current execution route. Retired providers retain denial/history metadata and unavailable compatibility responses only; delete their execution/probe bodies and defaults. No discovery, fallback or reactivation. Gateway status: CURRENT. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Accounts (free Google/email codes; Apple after developer-account activation; settings/30-day deletion undo), both developer modes (SYS-04 user/SYS-07 founder), six commercial capabilities, visuals, logo/role art and account sketches are in-loop. User mode requires reviewed terms, informed consent, backup and reversible disablement; founder mode requires restricted access, checks, signed staged updates and rollback. Ordinary work has no account wall; Permission/effect fences remain. Only real-user validation and paid/licensed sources follow launch; engineering operation/security/recovery remain pre-launch. Settings structure may be adapted; LUMENIS visuals remain original. This grants no deployment or spending.
 
 Business work is selected in this order: Product Positioning → Industry Business
 Logic → Real User Jobs → Deliverable Outcomes → Experience → Data/Runtime
@@ -1502,8 +1497,8 @@ Before adding a third party:
 
 1. inspect current manifests/import/runtime usage;
 2. prove a real capability gap;
-3. verify license from authoritative project/package sources;
-4. record attribution/notice obligations;
+3. pin source and verify code, asset and model licenses separately;
+4. record attribution/notice obligations and the existing owner/caller adoption;
 5. keep the dependency behind a bounded adapter where practical;
 6. record replacement direction.
 
