@@ -258,6 +258,49 @@ def _authorize_human_interactive(identity: str, task_id: str,
     return task_platform
 
 
+def _authorize_human_browser_return(identity: str, task_id: str,
+                                    actor_ref: str | None = None) -> str:
+    """Authorize only returning the same actor's already-leased worker.
+
+    The NEED_VERIFY gate remains mandatory for opening HUMAN_INTERACTIVE mode.
+    Return is cleanup of an existing lease, so it is bound by the in-memory
+    task owner, exact platform lease, and the same browser-operation Permission.
+    """
+    task_id = str(task_id or "").strip()
+    actor_ref = str(actor_ref or "").strip()
+    if not task_id:
+        raise PermissionError("HUMAN_INTERACTIVE_TASK_ID_REQUIRED")
+    if not actor_ref:
+        raise PermissionError("HUMAN_INTERACTIVE_AUTHENTICATED_ACTOR_REQUIRED")
+    spec = registered_browser_worker_spec(identity)
+    platform = spec["platform"]
+    from lumenis.adapters import collector_service
+    try:
+        task = collector_service.get_task(task_id)
+        task_owner = collector_service.get_task_owner(task_id)
+    except Exception:  # noqa: BLE001 - fail closed when task ownership cannot be read.
+        task, task_owner = None, None
+    if task_owner != actor_ref:
+        raise PermissionError("HUMAN_INTERACTIVE_TASK_ACTOR_MISMATCH")
+    match = _task_result_for_platform(task, platform) if isinstance(task, dict) else None
+    task_platform = match[0] if match else ""
+    if (not isinstance(task, dict) or task.get("manual") is not True
+            or not task_platform
+            or not collector_service.human_browser_return_lease_owned(
+                task_id, task_platform)):
+        raise PermissionError("HUMAN_INTERACTIVE_BROWSER_LEASE_REQUIRED")
+    from lumenis.system.security import OperationType, get_permission_gate
+    decision = get_permission_gate().check(
+        operation_type=OperationType.BROWSER_OPERATION,
+        resource=f"collector.browser.login:{task_platform}:{task_id}",
+        caller="lumenis.adapters.human_browser.HUMAN_INTERACTIVE_RETURN",
+        domain_id="system",
+    )
+    if not decision.allowed:
+        raise PermissionError("HUMAN_INTERACTIVE_PERMISSION_DENIED")
+    return task_platform
+
+
 def _require_human_browser_lease(task_id: str, platform: str) -> None:
     """Require the existing Collector service to hold this task's browser lane."""
     from lumenis.adapters import collector_service
@@ -414,7 +457,8 @@ def return_registered_worker_to_background(platform: str, *, task_id: str,
                                            actor_ref: Optional[str] = None) -> dict:
     """Restore the same human task's isolated worker to verified headless mode."""
     spec = registered_browser_worker_spec(platform)
-    task_platform = _authorize_human_interactive(spec["account"], task_id, actor_ref)
+    task_platform = _authorize_human_browser_return(
+        spec["account"], task_id, actor_ref)
     from lumenis.adapters import collector_service
     if not collector_service.begin_background_browser_return(task_id, task_platform):
         raise PermissionError("HUMAN_INTERACTIVE_TASK_OR_WORKER_NOT_OWNED")

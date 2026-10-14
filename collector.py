@@ -243,6 +243,7 @@ def _collection_env(account=None, region='intl', cdp_url=None, *, require_local_
     env.pop('XHS_COOKIE_HEADER', None)
     env.pop('XHS_COOKIES_JSON', None)
     env.pop('XHS_CDP_URL', None)
+    env.pop('LUMENIS_SERVICE_PYTHON', None)
     selected_region = region or 'intl'
     env['XHS_COLLECTION_REGION'] = selected_region
     env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
@@ -268,21 +269,27 @@ def _collection_env(account=None, region='intl', cdp_url=None, *, require_local_
     env['XHS_EXPECTED_COLLECTION_USER_ID'] = XHS_RETINAUT
     env['PYTHONIOENCODING'] = 'utf-8'
     env['PYTHONUTF8'] = '1'
-    if not require_local_cookie:
-        if not cdp_url:
-            raise PermissionError('COLLECTOR_ENDPOINT_NOT_CONFIGURED')
-        # The CDP caller already resolved this endpoint; its worker verifies the
-        # attached browser identity. It neither injects nor reads a local cookie.
-        return env
     if (not isinstance(profile, (tuple, list)) or len(profile) != 2
             or not profile[0] or not profile[1]):
         raise PermissionError('POLICY_BLOCKED: approved HK identity/profile unavailable')
-    cookie_file = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(profile[0]))))
     profile_dir = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(profile[1]))))
-    expected_cookie = os.path.realpath(os.path.join(PRIVATE_DATA_DIR, 'xhs_cookie_retinaut.txt'))
     expected_profile = os.path.realpath(os.path.join(PRIVATE_DATA_DIR, 'profiles', 'xhs-retinaut'))
-    if (os.path.normcase(cookie_file) != os.path.normcase(expected_cookie)
-            or os.path.normcase(profile_dir) != os.path.normcase(expected_profile)):
+    if os.path.normcase(profile_dir) != os.path.normcase(expected_profile):
+        raise PermissionError('XHS_REGISTERED_PROFILE_BINDING_MISMATCH')
+    env['XHS_PROFILE_DIR'] = profile_dir
+    service_python = str(sys.executable or '').strip()
+    if not service_python or not os.path.isabs(service_python):
+        raise RuntimeError('COLLECTOR_SERVICE_PYTHON_UNAVAILABLE')
+    env['LUMENIS_SERVICE_PYTHON'] = service_python
+    if not require_local_cookie:
+        if not cdp_url:
+            raise PermissionError('COLLECTOR_ENDPOINT_NOT_CONFIGURED')
+        # Keep the registered Profile as an identity consistency assertion. The
+        # remote worker owns its own session; this branch never reads local Cookie.
+        return env
+    cookie_file = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(profile[0]))))
+    expected_cookie = os.path.realpath(os.path.join(PRIVATE_DATA_DIR, 'xhs_cookie_retinaut.txt'))
+    if os.path.normcase(cookie_file) != os.path.normcase(expected_cookie):
         raise PermissionError('XHS_REGISTERED_PROFILE_BINDING_MISMATCH')
     if not os.path.isfile(cookie_file):
         raise PermissionError('XHS_REGISTERED_COOKIE_UNAVAILABLE')

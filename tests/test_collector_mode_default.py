@@ -20,6 +20,18 @@ def _dispatcher():
     return obj
 
 
+def test_edge_discovery_does_not_require_windows_where(monkeypatch):
+    monkeypatch.setattr(collector_automation.os.path, 'exists', lambda _path: False)
+    monkeypatch.setattr(collector_automation.shutil, 'which', lambda _name: None)
+    monkeypatch.setattr(collector_automation.subprocess, 'run',
+                        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError('no child process')))
+    obj = collector_automation.CollectorAutomation.__new__(collector_automation.CollectorAutomation)
+    assert obj._find_edge_browser() is None
+    monkeypatch.setattr(collector_automation.shutil, 'which',
+                        lambda name: '/usr/bin/microsoft-edge' if name == 'microsoft-edge' else None)
+    assert obj._find_edge_browser() == '/usr/bin/microsoft-edge'
+
+
 def _runnable_plan(monkeypatch):
     # Identity-policy unit tests require an explicit in-scope query, independent
     # of the seed database. Plan resolution itself has separate blocking tests.

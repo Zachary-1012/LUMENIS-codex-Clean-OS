@@ -57,6 +57,13 @@ function normalize(item) {
   };
 }
 
+export async function releaseSearchClient(page, browser) {
+  if (page) { try { await page.close(); } catch {} }
+  // For connectOverCDP clients, Playwright close disconnects the transport;
+  // it does not terminate the separately owned registered browser process.
+  try { await browser.close(); } catch {}
+}
+
 async function main() {
   const {keyword,output,maxScroll}=args();
   if (!keyword) throw new Error('--keyword 必填');
@@ -134,8 +141,7 @@ async function main() {
       blocked_reason:'NETWORK_ERROR',page_hint:'',notes:[]};
   } finally {
     // Release only this task's page and CDP client. The registered worker stays running.
-    if (page) { try { await page.close(); } catch {} }
-    try { await browser.disconnect(); } catch {}
+    await releaseSearchClient(page, browser);
   }
   writeResult(output,result);
   process.stdout.write(JSON.stringify(result));

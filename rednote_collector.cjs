@@ -153,7 +153,12 @@ function detailEngagementFields(searchLikes) {
   return { likes: knownCount(searchLikes), collects: null };
 }
 
-function resolveRegisteredWorkerFromSystemOwner() {
+function resolveRegisteredWorkerFromSystemOwner({
+  execFile = execFileSync,
+  pythonExecutable = process.env.LUMENIS_SERVICE_PYTHON,
+} = {}) {
+  const servicePython = String(pythonExecutable || '').trim();
+  if (!servicePython || !path.isAbsolute(servicePython)) return null;
   const script = [
     'import json, sys',
     'sys.path.insert(0, __import__("os").getcwd())',
@@ -162,7 +167,7 @@ function resolveRegisteredWorkerFromSystemOwner() {
     "print(json.dumps({key: state.get(key) for key in ('available','code','account','profile','browser','port','endpoint','pid','headless','loopback_only')}, separators=(',', ':')))"
   ].join('; ');
   try {
-    const output = execFileSync('python', ['-c', script], {
+    const output = execFile(servicePython, ['-c', script], {
       cwd: __dirname, encoding: 'utf8', windowsHide: true, timeout: 5000,
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
@@ -599,5 +604,6 @@ if (require.main === module) {
 module.exports = {
   collect, parseCount, normalizePublishTime, detailCommentFields,
   detailEngagementFields, normalizeSearchNote, sourceTimeFields,
-  verifyConfiguredWorkerEndpoint, connectRegisteredWorker
+  resolveRegisteredWorkerFromSystemOwner, verifyConfiguredWorkerEndpoint,
+  connectRegisteredWorker
 };

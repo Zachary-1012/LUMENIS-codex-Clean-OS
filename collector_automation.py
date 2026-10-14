@@ -15,6 +15,7 @@ import time
 import json
 import hashlib
 import subprocess
+import shutil
 import threading
 import logging
 from datetime import datetime, timedelta
@@ -155,15 +156,8 @@ class CollectorAutomation:
             if os.path.exists(path):
                 return path
         
-        # 尝试通过where命令查找
-        try:
-            result = subprocess.run(['where', 'msedge'], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip().split('\n')[0].strip()
-        except ImportError:
-            pass
-        
-        return None
+        # Resolve PATH without requiring a Windows-only executable or spawning a process.
+        return shutil.which('msedge') or shutil.which('microsoft-edge')
     
     def _get_cdp_profile_dir(self, account='default'):
         """获取CDP配置目录（双子星库 Contract 对齐：优先 xhs_cookie_bridge.ACCOUNT_PROFILES）。

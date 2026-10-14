@@ -14,13 +14,14 @@ import {
 
 const require = createRequire(import.meta.url);
 const rednoteCollector = require('../rednote_collector.cjs');
-const { connectRegisteredWorker } = rednoteCollector;
+const { connectRegisteredWorker, resolveRegisteredWorkerFromSystemOwner } = rednoteCollector;
 
 const identity = '6a3cef27000000000e03b800';
 const envNames = [
   'ZBC_DATA_DIR', 'ZBC_DB_PATH', 'XHS_COLLECTION_ACCOUNT',
   'XHS_COLLECTION_REGION', 'XHS_EXPECTED_COLLECTION_USER_ID',
   'XHS_PROFILE_DIR', 'XHS_COOKIE_FILE', 'XHS_CDP_URL', 'XHS_COLLECTION_HOST',
+  'LUMENIS_SERVICE_PYTHON',
 ];
 let previousEnv;
 let root;
@@ -219,10 +220,21 @@ test('sync-search releases only its task page and CDP client after navigation fa
   assert.ok(finallyStart >= 0 && resultWrite > finallyStart,
     'page and client cleanup must run from a finally block');
   const cleanup = source.slice(finallyStart, resultWrite);
-  assert.match(cleanup, /if \(page\)[\s\S]*?await page\.close\(\)/);
-  assert.match(cleanup, /await browser\.disconnect\(\)/);
+  assert.match(cleanup, /await releaseSearchClient\(page, browser\)/);
   assert.doesNotMatch(source, /process\.exit\(/);
   assert.match(source, /catch\(error\)\s*\{\s*exitCode=1;[\s\S]*?error_code:'NAV_FAILED'/);
+});
+
+test('sync-search disconnects the Playwright client even when its task page already failed', async () => {
+  const { releaseSearchClient } = await import('../xhs_cookie_search.js');
+  const calls = [];
+  const page = { close: async () => { calls.push('page'); throw new Error('already closed'); } };
+  const browser = { close: async () => { calls.push('client'); } };
+  await releaseSearchClient(page, browser);
+  assert.deepEqual(calls, ['page', 'client']);
+  calls.length = 0;
+  await releaseSearchClient(null, browser);
+  assert.deepEqual(calls, ['client']);
 });
 
 test('CJS collector rejects a remote endpoint before connecting', async () => {
@@ -238,6 +250,30 @@ test('CJS collector rejects a remote endpoint before connecting', async () => {
   assert.equal(result.ok, false);
   assert.equal(result.code, 'COLLECTOR_REMOTE_WORKER_IDENTITY_UNVERIFIED');
   assert.equal(connectCalls, 0);
+});
+
+test('registered worker resolver uses only the service Python executable', () => {
+  const calls = [];
+  delete process.env.LUMENIS_SERVICE_PYTHON;
+  assert.equal(resolveRegisteredWorkerFromSystemOwner({
+    execFile: (...args) => calls.push(args),
+  }), null);
+  assert.equal(calls.length, 0, 'no bare python command may be resolved through PATH');
+
+  const executable = path.resolve(root, 'venv', 'Scripts', 'python.exe');
+  process.env.LUMENIS_SERVICE_PYTHON = executable;
+  const worker = {available: true, account: 'XHS_RETINAUT', port: 9234};
+  const result = resolveRegisteredWorkerFromSystemOwner({
+    execFile: (file, args, options) => {
+      calls.push([file, args, options]);
+      return JSON.stringify(worker);
+    },
+  });
+  assert.deepEqual(result, worker);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], executable);
+  assert.equal(calls[0][1][0], '-c');
+  assert.equal(calls[0][2].windowsHide, true);
 });
 
 test('CJS collector refuses to create or navigate a collection page before actual identity verification', async () => {

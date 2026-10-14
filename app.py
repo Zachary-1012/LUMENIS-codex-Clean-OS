@@ -1820,6 +1820,8 @@ def _pg_resolve_operation_type(path, method):
         return OperationType.DATA_DELETE
     if p in {'/api/collector/browser/start', '/api/collector/browser/stop'}:
         return OperationType.BROWSER_OPERATION
+    if p.startswith('/api/xhs/login/') and method == 'POST':
+        return OperationType.BROWSER_OPERATION
     # 2. 采集启动/停止
     if any(k in p for k in ('/collect', '/rednote/', '/collector/', '/official-info/collect')):
         if any(k in p for k in ('/stop', '/pause', '/cancel')):
@@ -7342,10 +7344,63 @@ def _xhs_login_capture(ep):
                 pass
 
 
-def _require_xhs_human_login_session(session_id):
-    """Bind every visible login action to the server-authenticated actor and manual task."""
+_XHS_HUMAN_LOGIN_SESSION_TTL_SECONDS = 15 * 60
+
+
+class _XhsHumanLoginSessionExpired(LookupError):
+    """The same authorized human login session was safely returned to background."""
+
+
+def _xhs_human_login_session_expired(session, *, now=None):
+    now = time.time() if now is None else float(now)
+    try:
+        created_at = float(session.get('created_at'))
+    except (AttributeError, TypeError, ValueError):
+        return True
+    return (created_at <= 0 or created_at > now + 60
+            or now - created_at >= _XHS_HUMAN_LOGIN_SESSION_TTL_SECONDS)
+
+
+def _xhs_login_unavailable_code(exc, default):
+    if str(exc) == 'HUMAN_LOGIN_BACKGROUND_RETURN_UNVERIFIED':
+        return str(exc)
+    return default
+
+
+def _return_xhs_login_session_background(session_id, session, actor_ref):
+    """Return only the same live task's leased worker; keep state on any failure."""
+    if actor_ref != session.get('actor_ref'):
+        raise PermissionError('HUMAN_LOGIN_SESSION_ACTOR_MISMATCH')
+    task_id = str(session.get('task_id') or '').strip()
+    if not task_id or session.get('account') != 'XHS_RETINAUT':
+        raise PermissionError('HUMAN_LOGIN_SESSION_BINDING_INVALID')
+    from lumenis.adapters.human_browser import return_registered_worker_to_background
+    returned = return_registered_worker_to_background(
+        'XHS_RETINAUT', task_id=task_id, actor_ref=actor_ref)
+    if returned.get('worker_verified') is not True:
+        session['status'] = 'return_blocked'
+        raise RuntimeError('HUMAN_LOGIN_BACKGROUND_RETURN_UNVERIFIED')
     sessions = getattr(app, '_xhs_login_sessions', {})
-    session = sessions.get(str(session_id or '').strip())
+    if sessions.get(session_id) is session:
+        sessions.pop(session_id, None)
+    return returned
+
+
+def _sweep_expired_xhs_login_sessions(actor_ref):
+    """Only the authenticated actor may close its own expired human session."""
+    sessions = getattr(app, '_xhs_login_sessions', {})
+    for session_id, session in list(sessions.items()):
+        if (not isinstance(session, dict) or session.get('actor_ref') != actor_ref
+                or not _xhs_human_login_session_expired(session)):
+            continue
+        _return_xhs_login_session_background(session_id, session, actor_ref)
+
+
+def _validate_xhs_human_login_session(session_id, *, allow_state_changed_return=False):
+    """Bind a login session to the authenticated actor, task and bounded lease."""
+    sessions = getattr(app, '_xhs_login_sessions', {})
+    session_id = str(session_id or '').strip()
+    session = sessions.get(session_id)
     if not isinstance(session, dict):
         raise LookupError('HUMAN_LOGIN_SESSION_NOT_FOUND')  # noqa: TRY004 - this signals a missing keyed session, not a type mismatch.
     actor_ref = _collector_browser_actor_ref()
@@ -7354,8 +7409,23 @@ def _require_xhs_human_login_session(session_id):
     task_id = str(session.get('task_id') or '').strip()
     if not task_id or session.get('account') != 'XHS_RETINAUT':
         raise PermissionError('HUMAN_LOGIN_SESSION_BINDING_INVALID')
-    from lumenis.adapters.human_browser import _authorize_human_interactive
-    _authorize_human_interactive('XHS_RETINAUT', task_id, actor_ref)
+    expired = _xhs_human_login_session_expired(session)
+    from lumenis.adapters.human_browser import (
+        _authorize_human_browser_return,
+        _authorize_human_interactive,
+    )
+    if expired or allow_state_changed_return:
+        _authorize_human_browser_return('XHS_RETINAUT', task_id, actor_ref)
+    else:
+        _authorize_human_interactive('XHS_RETINAUT', task_id, actor_ref)
+    if expired:
+        _return_xhs_login_session_background(session_id, session, actor_ref)
+        raise _XhsHumanLoginSessionExpired('HUMAN_LOGIN_SESSION_EXPIRED')
+    return session, actor_ref, task_id
+
+
+def _require_xhs_human_login_session(session_id):
+    session, actor_ref, task_id = _validate_xhs_human_login_session(session_id)
     import xhs_collection_optimizer as optimizer
     endpoint = optimizer.get_platform_endpoint(
         'rednote_hk', headless=False, task_id=task_id, actor_ref=actor_ref)
@@ -7387,6 +7457,7 @@ def api_xhs_login_start():
         actor_ref = _collector_browser_actor_ref()
         from lumenis.adapters.human_browser import _authorize_human_interactive
         _authorize_human_interactive('XHS_RETINAUT', task_id, actor_ref)
+        _sweep_expired_xhs_login_sessions(actor_ref)
         collector = collector_automation.get_collector_automation()
         collector.start_browser(account='XHS_RETINAUT', headless=False,
                                 mode='HUMAN_INTERACTIVE', task_id=task_id,
@@ -7395,22 +7466,25 @@ def api_xhs_login_start():
             'rednote_hk', headless=False, task_id=task_id, actor_ref=actor_ref)
         session_id = 'xhs_login_' + uuid.uuid4().hex
         sessions = getattr(app, '_xhs_login_sessions', {})
+        created_at = time.time()
         sessions[session_id] = {
-            'status': 'pending', 'created_at': time.time(),
+            'status': 'pending', 'created_at': created_at,
+            'expires_at': created_at + _XHS_HUMAN_LOGIN_SESSION_TTL_SECONDS,
             'platform': 'rednote_hk', 'account': 'XHS_RETINAUT',
             'task_id': task_id, 'actor_ref': actor_ref,
         }
         app._xhs_login_sessions = sessions
         return jsonify({'ok': True, 'session_id': session_id,
                         'platform': 'rednote_hk', 'label': endpoint['label'],
-                        'status': 'pending', 'mode': 'HUMAN_INTERACTIVE'})
+                        'status': 'pending', 'mode': 'HUMAN_INTERACTIVE',
+                        'expires_in_seconds': _XHS_HUMAN_LOGIN_SESSION_TTL_SECONDS})
     except PermissionError as exc:
         return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(exc)}), 403
     except LookupError as exc:
         return jsonify({'ok': False, 'status': 'NOT_FOUND', 'error': str(exc)}), 404
     except Exception as exc:  # noqa: BLE001 - keep unknown browser failures at a safe unavailable boundary.
         return jsonify({'ok': False, 'status': 'UNAVAILABLE',
-                        'code': 'LOGIN_WORKER_UNAVAILABLE',
+                        'code': _xhs_login_unavailable_code(exc, 'LOGIN_WORKER_UNAVAILABLE'),
                         'error_type': type(exc).__name__}), 409
 
 
@@ -7439,14 +7513,42 @@ def api_xhs_login_status():
                         'platform': 'rednote_hk', 'label': endpoint['label'],
                         'stage': stage, 'status': stage,
                         'is_logged_in': stage == 'logged_in', 'qr_image': qr_image,
+                        'expires_in_seconds': max(
+                            0, int(float(session['created_at'])
+                                   + _XHS_HUMAN_LOGIN_SESSION_TTL_SECONDS - now)),
                         'message': '已登录' if stage == 'logged_in' else message})
     except PermissionError as exc:
         return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(exc)}), 403
+    except _XhsHumanLoginSessionExpired as exc:
+        return jsonify({'ok': False, 'status': 'EXPIRED', 'error': str(exc)}), 410
     except LookupError as exc:
         return jsonify({'ok': False, 'status': 'NOT_FOUND', 'error': str(exc)}), 404
     except Exception as exc:  # noqa: BLE001 - keep unknown browser failures at a safe unavailable boundary.
         return jsonify({'ok': False, 'status': 'UNAVAILABLE',
-                        'code': 'LOGIN_WORKER_UNAVAILABLE',
+                        'code': _xhs_login_unavailable_code(exc, 'LOGIN_WORKER_UNAVAILABLE'),
+                        'error_type': type(exc).__name__}), 409
+
+
+@app.route('/api/xhs/login/cancel', methods=['POST'])
+def api_xhs_login_cancel():
+    """Cancel the same actor's pending login and safely return its worker."""
+    try:
+        body = request.get_json(silent=True) or {}
+        session_id = str(body.get('session_id') or '').strip()
+        session, actor_ref, _ = _validate_xhs_human_login_session(
+            session_id, allow_state_changed_return=True)
+        _return_xhs_login_session_background(session_id, session, actor_ref)
+        return jsonify({'ok': True, 'status': 'CANCELLED_RETURNED_BACKGROUND',
+                        'platform': 'rednote_hk'})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(exc)}), 403
+    except _XhsHumanLoginSessionExpired as exc:
+        return jsonify({'ok': False, 'status': 'EXPIRED', 'error': str(exc)}), 410
+    except LookupError as exc:
+        return jsonify({'ok': False, 'status': 'NOT_FOUND', 'error': str(exc)}), 404
+    except Exception as exc:  # noqa: BLE001 - keep the lease when return is unverified.
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'code': 'HUMAN_LOGIN_BACKGROUND_RETURN_UNVERIFIED',
                         'error_type': type(exc).__name__}), 409
 
 
@@ -7512,6 +7614,8 @@ def api_xhs_login_save():
                         'message': '登录态已保存并安全返回后台'})
     except PermissionError as exc:
         return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(exc)}), 403
+    except _XhsHumanLoginSessionExpired as exc:
+        return jsonify({'ok': False, 'status': 'EXPIRED', 'error': str(exc)}), 410
     except LookupError as exc:
         return jsonify({'ok': False, 'status': 'NOT_FOUND', 'error': str(exc)}), 404
     except Exception as exc:  # noqa: BLE001 - do not expose storage or browser details at the API boundary.

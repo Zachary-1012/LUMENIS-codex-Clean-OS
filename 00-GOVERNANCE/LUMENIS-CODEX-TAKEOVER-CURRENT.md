@@ -86,7 +86,7 @@ Real user E2E: `NOT_VERIFIED`
 
 PR #66已发布：采集脚本不再默认参考主体Profile或固定CDP示例；账户Owner核验获准的HK/intl身份及Profile，JS拒绝任意Profile、目录逃逸、错误身份和不安全Cookie域/URL；远端CDP复用已注册worker身份，不复制本机Cookie；独立脚本导航和响应仅认国际RedNote。ACC-02继续GLOBAL默认，参考主体仅作深度覆盖；历史资料与失败证据保留。隔离检查未读真实凭据，Runtime与用户采集验收仍为NOT_VERIFIED。
 
-PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR分支含合入fresh main的组合版本）在既有SYSTEM Browser/Collector会话链补齐动态注册worker端点、进程/内核/Profile与身份核验，人工接管actor/task/lease传递及切换后端点重解析，并为搜索页提供任务级清理；采集后分析仅使用持久化Query Plan的服务端scope，没有可验证Scoped Evidence的旧事件阶段明确阻断。隔离回归114项Python、13项Node通过，变更Python编译、Node语法、constitution校验和CRLF-aware diff检查通过；所选路径Ruff仍有842条存量诊断，新增行无诊断。SOURCE已发布到远端PR分支但尚未合并main；scope调用须待并行domain API入main后普通合并并复验。Runtime、DB、真实浏览器/会话、定时采集和完整保存/重开/恢复用户结果均为`NOT_VERIFIED`。
+PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR分支含合入fresh main的组合版本）在既有SYSTEM Browser/Collector会话链补齐动态注册worker端点、进程/内核/Profile与身份核验，人工接管actor/task/lease传递及切换后端点重解析，并为搜索页提供任务级清理；采集后分析仅使用持久化Query Plan的服务端scope，没有可验证Scoped Evidence的旧事件阶段明确阻断。隔离回归114项Python、13项Node通过，变更Python编译、Node语法、constitution校验和CRLF-aware diff检查通过；所选路径Ruff仍有842条存量诊断，新增行无诊断。本轮审查修复补齐子进程精确service Python与Profile断言、跨平台Edge发现、Playwright受支持的连接释放、品牌重新启用的真实未采集状态；Google/Zhihu使用各自已登记后台worker，身份/挑战/连接失败不通过替代路径绕过。人工登录增加同actor/task取消及15分钟过期检查（状态/保存/取消/下一次显式登录触发），即使原任务核验状态已变化，返回操作仍须同actor/task已持租约及Browser Permission；只有核实返回后台才释放既有租约。新增该生命周期回归9项通过；无法证明重启后会话归属时拒绝猜测，自动孤儿接管恢复仍OPEN。增量15项Python与15项Node通过，编译/JS语法/差异通过，Ruff逐文件与HEAD对照无新增而非全量通过。SOURCE已发布到远端PR分支但尚未合并main；scope调用须待并行domain API入main后普通合并并复验。Runtime、DB、真实浏览器/会话、定时采集和完整保存/重开/恢复用户结果均为`NOT_VERIFIED`。
 
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。

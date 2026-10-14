@@ -91,6 +91,28 @@ def human_browser_lease_owned(task_id: str, platform: str) -> bool:
                 and _verification_task_locked(task_id, platform) is not None)
 
 
+def human_browser_return_lease_owned(task_id: str, platform: str) -> bool:
+    """Verify an existing human lease for safe return after task-state changes.
+
+    This is deliberately return-only: opening a human session still requires the
+    completed NEED_VERIFY task contract in ``_verification_task_locked``.
+    """
+    task_id = str(task_id or "").strip()
+    platform = str(platform or "").strip().casefold()
+    with _TASKS_LOCK:
+        task = _TASKS.get(task_id)
+        state = task.get("human_browser") if isinstance(task, dict) else None
+        return (
+            _HUMAN_BROWSER_LEASE == (task_id, platform)
+            and _browser_lock.locked()
+            and isinstance(task, dict)
+            and task.get("manual") is True
+            and isinstance(state, dict)
+            and state.get("platform") == platform
+            and state.get("status") in {"ACTIVE", "BLOCKED", "RETURNING_BACKGROUND"}
+        )
+
+
 def _verification_task_locked(task_id: str, platform: str) -> dict | None:
     task = _TASKS.get(str(task_id or "").strip())
     result = (task.get("per_platform") or {}).get(platform) if isinstance(task, dict) else None
@@ -142,10 +164,12 @@ def begin_background_browser_return(task_id: str, platform: str) -> bool:
     task_id = str(task_id or "").strip()
     platform = str(platform or "").strip().casefold()
     with _TASKS_LOCK:
-        task = _verification_task_locked(task_id, platform)
+        task = _TASKS.get(task_id)
         state = task.get("human_browser") if isinstance(task, dict) else None
-        if (_HUMAN_BROWSER_LEASE != (task_id, platform) or task is None
+        if (_HUMAN_BROWSER_LEASE != (task_id, platform) or _browser_lock.locked() is not True
+                or task is None or task.get("manual") is not True
                 or not isinstance(state, dict)
+                or state.get("platform") != platform
                 or state.get("status") not in {"ACTIVE", "BLOCKED"}):
             return False
         state["status"] = "RETURNING_BACKGROUND"
@@ -162,11 +186,20 @@ def update_human_browser_state(task_id: str, platform: str, status: str,
     if status not in allowed:
         return False
     with _TASKS_LOCK:
-        task = _verification_task_locked(task_id, platform)
-        if task is None or _HUMAN_BROWSER_LEASE != (task_id, platform):
+        task = (_verification_task_locked(task_id, platform) if status == "ACTIVE"
+                else _TASKS.get(task_id))
+        if (not isinstance(task, dict) or task.get("manual") is not True
+                or _HUMAN_BROWSER_LEASE != (task_id, platform)
+                or not _browser_lock.locked()):
             return False
         state = task.get("human_browser")
         if not isinstance(state, dict) or state.get("platform") != platform:
+            return False
+        if (status == "RETURNED_BACKGROUND"
+                and state.get("status") != "RETURNING_BACKGROUND"):
+            return False
+        if (status == "BLOCKED" and release_lease
+                and state.get("status") not in {"OPENING", "ACTIVE"}):
             return False
         state["status"] = status
         if status == "RETURNED_BACKGROUND":

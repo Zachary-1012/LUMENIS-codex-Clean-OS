@@ -53,3 +53,24 @@ def test_brand_collection_requires_system_task_and_preserves_library_records(tmp
     connection.close()
     assert stored == ('unavailable',)
     assert 'swire_notes' not in tables
+
+
+def test_reactivated_brand_does_not_reuse_previous_collection_success(tmp_path, monkeypatch):
+    database = tmp_path / 'swire-reactivation.sqlite3'
+    _database(database)
+    with sqlite3.connect(database) as connection:
+        connection.execute("INSERT INTO swire_projects(project_key,name,is_active,collect_status) VALUES(?,?,0,'ready')",
+                           ('existing', 'Synthetic brand'))
+    monkeypatch.setattr(sg, '_conn', lambda: sqlite3.connect(database, timeout=30))
+    monkeypatch.setattr(sg, 'init_swire', lambda: None)
+    app = Flask(__name__)
+    sg.register_swire_group(app)
+    payload = app.test_client().post('/api/swire/brand-save', json={
+        'name': 'Synthetic brand', 'keywords': 'changed query',
+    }).get_json()
+    assert payload['action'] == 'reactivated'
+    assert payload['brand']['collect_status'] == 'unavailable'
+    assert payload['collection']['code'] == 'COLLECTION_TASK_CONTEXT_REQUIRED'
+    with sqlite3.connect(database) as connection:
+        assert connection.execute('SELECT project_key,keywords,collect_status FROM swire_projects').fetchall() == [
+            ('existing', 'changed query', 'unavailable')]

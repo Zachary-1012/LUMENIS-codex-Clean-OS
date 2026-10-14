@@ -392,7 +392,7 @@ def register_swire_group(app):
             if row:
                 key = row['project_key']
                 c.execute("""UPDATE swire_projects SET is_active=1,city=?,line=?,intro=?,keywords=?,
-                    kind=?,opened=?,updated_at=? WHERE project_key=?""",
+                    kind=?,opened=?,updated_at=?,collect_status='unavailable' WHERE project_key=?""",
                           (city, line, intro, kws, kind, opened, now, key))
                 action = 'reactivated'
             else:
