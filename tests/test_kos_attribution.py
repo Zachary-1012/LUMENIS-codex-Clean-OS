@@ -94,3 +94,44 @@ def test_multi_touch_rejects_note_outside_selected_brand(scoped_notes_db):
     assert result["ok"] is False
     assert result["status"] == "denied"
     assert result["code"] == "CANONICAL_NOTE_SCOPE_CHANGED"
+
+
+@pytest.mark.parametrize("author_id", [None, "", "   "])
+def test_multi_touch_does_not_group_unknown_author(scoped_notes_db, author_id):
+    with sqlite3.connect(scoped_notes_db) as connection:
+        connection.execute("UPDATE notes SET author_id=? WHERE note_id='n1'", (author_id,))
+
+    result = ka.calculate_multi_touch_attribution(["n1", "n2"], "Test Brand", scope=SCOPE)
+    assert result["ok"] is False
+    assert result["status"] == "incomplete"
+    assert result["code"] == "AUTHOR_ID_UNAVAILABLE"
+    assert result["identified_author_notes"] == 1
+    assert result["unattributed_note_count"] == 1
+    assert result["attribution"] == []
+
+
+def test_multi_touch_zero_engagement_has_no_completed_zero_percent_attribution(scoped_notes_db):
+    with sqlite3.connect(scoped_notes_db) as connection:
+        connection.execute("UPDATE notes SET likes=0, comments=0, collects=0, shares=0")
+
+    result = ka.calculate_multi_touch_attribution(["n1", "n2"], "Test Brand", scope=SCOPE)
+    assert result["ok"] is False
+    assert result["status"] == "unavailable"
+    assert result["code"] == "ZERO_ENGAGEMENT_DENOMINATOR"
+    assert result["total_notes"] == 2
+    assert result["total_kos"] == 2
+    assert result["total_weighted_interactions"] == 0
+    assert result["attribution"] == []
+
+
+def test_multi_touch_missing_engagement_is_incomplete_not_zero(scoped_notes_db):
+    with sqlite3.connect(scoped_notes_db) as connection:
+        connection.execute("UPDATE notes SET comments=NULL WHERE note_id='n1'")
+
+    result = ka.calculate_multi_touch_attribution(["n1", "n2"], "Test Brand", scope=SCOPE)
+    assert result["ok"] is False
+    assert result["status"] == "incomplete"
+    assert result["code"] == "ENGAGEMENT_DATA_INCOMPLETE"
+    assert result["engagement_complete_note_count"] == 1
+    assert result["engagement_incomplete_note_count"] == 1
+    assert result["attribution"] == []

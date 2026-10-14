@@ -87,7 +87,30 @@ def test_full_refresh_takes_shared_snapshot_before_mutating_stages(monkeypatch):
 
     assert steps == ["backup", "notes", "web", "events"]
     assert result["status"] == "COMPLETED"
+    assert result["events"] == {"status": "COMPLETED"}
     assert result["backup"] == backup_path
+
+
+def test_full_refresh_propagates_partial_event_result(monkeypatch):
+    from lumenis.shared.database import migrations
+
+    scope = {"domain_id": "cth", "subject_id": "SUBJECT-REFRESH",
+             "brand_focus_id": None, "global_scope": False}
+    event_result = {
+        "status": "PARTIAL", "truncated": True,
+        "event_group_count": 4, "processed_event_group_count": 1,
+        "remaining_event_group_count": 3,
+    }
+    monkeypatch.setattr(migrations, "backup_database", lambda: "isolated-refresh-backup.db")
+    monkeypatch.setattr(reprocess.intelligence, "ai_enabled", lambda: False)
+    monkeypatch.setattr(reprocess, "reprocess_notes", lambda *args, **kwargs: {"status": "COMPLETED"})
+    monkeypatch.setattr(reprocess, "discover_web", lambda *args, **kwargs: {"status": "COMPLETED"})
+    monkeypatch.setattr(reprocess, "build_cross_platform_events", lambda **_kwargs: event_result)
+
+    result = reprocess.full_refresh(scope=scope)
+
+    assert result["events"] == event_result
+    assert result["status"] == "PARTIAL"
 
 
 def test_full_refresh_blocks_every_write_when_shared_snapshot_fails(monkeypatch):
@@ -260,6 +283,34 @@ def test_scoped_writer_creates_updates_and_separates_global_focuses(signed_scope
     }
     assert signed_scoped_event_sources.query_one("SELECT COUNT(*) FROM events")[0] == 2
     assert signed_scoped_event_sources.query_one("SELECT COUNT(*) FROM event_mentions")[0] == 2
+
+
+def test_event_group_limit_reports_partial_and_preserves_unprocessed_events(signed_scoped_event_sources):
+    import database
+
+    global_scope = {"product_id": "CTH", "domain_id": "cth", "subject_id": None,
+                    "brand_focus_id": None, "global_scope": True}
+    baseline = reprocess.build_cross_platform_events(scope=global_scope)
+    assert baseline["status"] == "COMPLETED"
+    assert baseline["event_group_count"] == 2
+
+    before_read = database.get_scoped_events(10, scope=global_scope, include_sources=True)
+    before_by_key = {event["event_key"]: event for event in before_read["events"]}
+    limited = reprocess.build_cross_platform_events(limit=1, scope=global_scope)
+    after_read = database.get_scoped_events(10, scope=global_scope, include_sources=True)
+    after_by_key = {event["event_key"]: event for event in after_read["events"]}
+
+    assert limited["status"] == "PARTIAL"
+    assert limited["truncated"] is True
+    assert limited["event_group_count"] == 2
+    assert limited["processed_event_group_count"] == 1
+    assert limited["remaining_event_group_count"] == 1
+    processed_keys = {event["event_key"] for event in limited["events"]}
+    untouched_keys = set(before_by_key) - processed_keys
+    assert len(untouched_keys) == 1
+    assert set(after_by_key) == set(before_by_key)
+    untouched_key = next(iter(untouched_keys))
+    assert after_by_key[untouched_key] == before_by_key[untouched_key]
 
 
 def test_truncated_source_read_does_not_replace_persisted_event_mentions(

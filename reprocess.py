@@ -374,8 +374,10 @@ def build_cross_platform_events(limit=100, *, scope=None):
         item[0]['subject_id'] or item[0]['brand_focus_id'] or '', item[1],
     ), reverse=True)
 
+    selected_groups = groups[:limit]
+    group_truncated = len(selected_groups) < len(groups)
     created = []
-    for exact, event_key, records in groups[:limit]:
+    for exact, event_key, records in selected_groups:
         topics = list(dict.fromkeys(topic for row in records for topic in _source_topics(row)))[:8]
         titles = [str(row.get('title') or '').strip() for row in records if str(row.get('title') or '').strip()]
         hints = [str(row.get('event_hint') or '').strip() for row in records if str(row.get('event_hint') or '').strip()]
@@ -423,10 +425,14 @@ def build_cross_platform_events(limit=100, *, scope=None):
         } for row in records]
         event_id = db.upsert_event(event, scope=exact, mentions=mentions)
         created.append({'event_id': event_id, **event, 'sources': mentions})
+    truncated = bool(source_read['truncated'] or group_truncated)
     return {'events': created, 'source_count': len(source_rows),
             'rejected_source_count': rejected_source_count,
-            'truncated': source_read['truncated'],
-            'status': 'PARTIAL' if source_read['truncated'] or rejected_source_count else 'COMPLETED'}
+            'event_group_count': len(groups),
+            'processed_event_group_count': len(created),
+            'remaining_event_group_count': len(groups) - len(created),
+            'truncated': truncated,
+            'status': 'PARTIAL' if truncated or rejected_source_count else 'COMPLETED'}
 
 
 # === Legacy event entry ======================================================
@@ -463,8 +469,9 @@ def full_refresh(limit=5000, web_limit=120, translate=False, *, web_queries=None
     notes = reprocess_notes(limit, translate, scope=exact)
     web = discover_web(web_limit, translate, queries=web_queries, scope=exact, actor=actor)
     try:
-        build_cross_platform_events(scope=exact)
-        events = {'status': 'COMPLETED'}
+        events = build_cross_platform_events(scope=exact)
+        if not isinstance(events, dict) or not events.get('status'):
+            events = {'status': 'NOT_VERIFIED', 'code': 'EVENT_RESULT_INVALID'}
     except ValueError as exc:
         events = {'status': 'BLOCKED', 'code': str(exc)}
     overall = 'COMPLETED' if (notes.get('status') == 'COMPLETED'

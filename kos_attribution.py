@@ -15,8 +15,9 @@ G1 修复（2026-09-06）：
 from __future__ import annotations
 import json
 import logging
+import math
 import sqlite3
-from canonical_metrics import engagement_stats as _canon_es, engagement_of as _canon_eo
+from canonical_metrics import engagement_count
 from typing import Optional
 from pathlib import Path
 from lumenis.shared.database import main_db_path
@@ -138,10 +139,11 @@ def _platform_weighted_interactions(note, platform=""):
     pw = cfg["platform_weights"].get(
         plat, cfg["platform_weights"].get("xiaohongshu",
         {"likes": 1.0, "comments": 1.0, "collects": 1.0, "shares": 1.0}))
-    return (float(note.get("likes") or 0) * pw["likes"]
-            + float(note.get("comments") or 0) * pw["comments"]
-            + float(note.get("collects") or 0) * pw["collects"]
-            + float(note.get("shares") or 0) * pw["shares"])
+    values = {key: engagement_count(note.get(key))
+              for key in ("likes", "comments", "collects", "shares")}
+    if any(value is None for value in values.values()):
+        return None
+    return sum(float(values[key]) * pw[key] for key in values)
 
 
 def _conn():
@@ -213,19 +215,40 @@ def calculate_multi_touch_attribution(note_ids: list, brand_name: str, *, scope=
         if len(notes) != len(normalized_ids):
             return {"ok": False, "status": "denied", "code": "CANONICAL_NOTE_SCOPE_CHANGED"}
 
-        total_interactions = sum(_platform_weighted_interactions(dict(note)) for note in notes)
-        if total_interactions == 0:
-            total_interactions = 1
+        missing_authors = sum(
+            not isinstance(note["author_id"], str) or not note["author_id"].strip()
+            for note in notes
+        )
+        if missing_authors:
+            return {
+                "ok": False, "status": "incomplete", "code": "AUTHOR_ID_UNAVAILABLE",
+                "total_notes": len(notes),
+                "identified_author_notes": len(notes) - missing_authors,
+                "unattributed_note_count": missing_authors,
+                "attribution": [],
+            }
 
+        interactions_by_note = [
+            _platform_weighted_interactions(dict(note)) for note in notes
+        ]
+        incomplete_engagement = sum(value is None for value in interactions_by_note)
+        if incomplete_engagement:
+            return {
+                "ok": False, "status": "incomplete", "code": "ENGAGEMENT_DATA_INCOMPLETE",
+                "total_notes": len(notes),
+                "engagement_complete_note_count": len(notes) - incomplete_engagement,
+                "engagement_incomplete_note_count": incomplete_engagement,
+                "attribution": [],
+            }
         kos_contrib = {}
         for index, note in enumerate(notes):
-            author = note["author_id"]
+            author = note["author_id"].strip()
             if author not in kos_contrib:
                 kos_contrib[author] = {
                     "author_nickname": note["author_nickname"], "notes": 0,
                     "interactions": 0, "weighted_score": 0,
                 }
-            interactions = _platform_weighted_interactions(dict(note))
+            interactions = interactions_by_note[index]
             time_weight = float(aw["time_weight_coeff"]) + (
                 index / max(1, len(notes) - 1)
             ) * float(aw["time_weight_range"])
@@ -233,7 +256,16 @@ def calculate_multi_touch_attribution(note_ids: list, brand_name: str, *, scope=
             kos_contrib[author]["interactions"] += interactions
             kos_contrib[author]["weighted_score"] += interactions * time_weight
 
-        total_weighted = sum(item["weighted_score"] for item in kos_contrib.values()) or 1
+        total_weighted = math.fsum(item["weighted_score"] for item in kos_contrib.values())
+        if not math.isfinite(total_weighted) or total_weighted <= 0:
+            return {
+                "ok": False, "status": "unavailable",
+                "code": "ZERO_ENGAGEMENT_DENOMINATOR" if total_weighted == 0
+                else "ENGAGEMENT_DENOMINATOR_UNAVAILABLE",
+                "total_notes": len(notes), "total_kos": len(kos_contrib),
+                "total_weighted_interactions": total_weighted if math.isfinite(total_weighted) else None,
+                "attribution": [],
+            }
         result = [
             {
                 "author_id": author,
@@ -253,6 +285,7 @@ def calculate_multi_touch_attribution(note_ids: list, brand_name: str, *, scope=
             "brand_focus_id": exact["brand_focus_id"],
             "total_notes": len(notes),
             "total_kos": len(kos_contrib),
+            "total_weighted_interactions": total_weighted,
             "config_status": cfg["config_status"],
             "attribution": result,
             "method": "time_decay_multi_touch (canonical BrandFocus verified; platform weighted)",

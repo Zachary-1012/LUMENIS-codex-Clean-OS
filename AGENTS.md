@@ -381,7 +381,7 @@ its existing ZBMP storage identifier, and no selection invents a reference Subje
 Reference Subjects require explicit selection; generic routes never default to one.
 Views/search/report/export use authenticated scope and cited-source Evidence/SourceUse.
 GLOBAL retains source focus. Reject truncated event replacement; filter dates/authors
-before limits. Unknown coverage differs from a complete sample's zero.
+before limits. Unknown coverage/identity differs from a complete sample's zero.
 
 OpenAI Math methods are applied inside existing owners when their assumptions
 match the actual task. Freeze the intended contract independently from the code,

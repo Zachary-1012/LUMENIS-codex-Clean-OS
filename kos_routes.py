@@ -99,6 +99,7 @@ def _resolve_kos_brand_scope(action):
     """Resolve one registered BMP BrandFocus and its current Permission receipt."""
     from lumenis.auth.service import get_current_user
     from lumenis.system.security.permission import (
+        LocalWorkspacePrincipal,
         check_actor_scope_permission,
         check_local_workspace_scope_permission,
         resolve_local_workspace_principal,
@@ -150,12 +151,31 @@ def _resolve_kos_brand_scope(action):
     checker = check_local_workspace_scope_permission if principal is not None else check_actor_scope_permission
     decision = checker(actor, module="reports", action=action, **scope)
     if (decision.allowed is not True or decision.verification_state != "verified"
-            or not decision.scope_audit_id):
+            or not decision.scope_audit_id or decision.scope_action != action
+            or decision.subject_id is not None
+            or decision.brand_focus_id != scope["brand_focus_id"]
+            or decision.global_scope is not False):
         raise PermissionError("SCOPE_PERMISSION_DENIED")
-    actor_id = decision.actor_id or (actor.get("id") if isinstance(actor, dict) else getattr(actor, "id", None))
-    if type(actor_id) is not int or actor_id <= 0:
-        raise PermissionError("ACTOR_ID_UNAVAILABLE")
-    return actor, str(actor_id), scope, selected, decision
+    if principal is not None:
+        if (type(principal) is not LocalWorkspacePrincipal
+                or actor is not principal or principal.actor_id is not None
+                or principal.principal_ref != "workspace:local"
+                or decision.actor_id is not None
+                or decision.caller != "workspace:local"
+                or decision.principal_kind != principal.principal_kind
+                or decision.principal_ref != principal.principal_ref):
+            raise PermissionError("SCOPE_IDENTITY_MISMATCH")
+    else:
+        actor_id = actor.get("id") if isinstance(actor, dict) else None
+        if (type(actor_id) is not int or actor_id <= 0
+                or decision.actor_id != actor_id
+                or decision.caller != f"actor:{actor_id}"
+                or decision.principal_kind is not None
+                or decision.principal_ref is not None):
+            raise PermissionError("SCOPE_IDENTITY_MISMATCH")
+    if not isinstance(decision.caller, str) or not decision.caller.strip():
+        raise PermissionError("SCOPE_IDENTITY_UNAVAILABLE")
+    return actor, decision.caller, scope, selected, decision
 
 
 def _kos_scope_error(exc):
@@ -631,7 +651,7 @@ def api_comments():
 def api_outreach():
     """Create a scoped, deterministic outreach draft for human review."""
     try:
-        _actor, actor_id, scope, selected, decision = _resolve_kos_brand_scope("write")
+        _actor, actor_ref, scope, selected, decision = _resolve_kos_brand_scope("write")
         data = request.get_json(silent=True) or {}
         author_id = data.get("author_id")
         campaign_name = data.get("campaign_name", "")
@@ -658,8 +678,13 @@ def api_outreach():
                          "generated_draft": result.get("content", ""),
                          "content_source": "deterministic_rule",
                          "brand_focus_id": scope["brand_focus_id"],
-                         "scope_audit_id": decision.scope_audit_id},
-                actor=f"actor:{actor_id}",
+                         "scope_audit_id": decision.scope_audit_id,
+                         "permission_identity": {
+                             "caller": decision.caller,
+                             "principal_kind": decision.principal_kind,
+                             "principal_ref": decision.principal_ref,
+                         }},
+                actor=actor_ref,
             )
         except Exception as exc:  # noqa: BLE001 - convert unknown persistence failures to an explicit partial result.
             return jsonify({"ok": False, "status": "partial", "code": "DRAFT_REVIEW_RECORD_FAILED",
@@ -895,7 +920,7 @@ def api_report_view():
 def api_reply_generate():
     """Create a scoped reply suggestion; never sends it or changes brand identity."""
     try:
-        _actor, actor_id, scope, selected, decision = _resolve_kos_brand_scope("write")
+        _actor, actor_ref, scope, selected, decision = _resolve_kos_brand_scope("write")
         data = request.get_json(silent=True) or {}
         comment_text = data.get("comment_text")
         if not isinstance(comment_text, str) or not comment_text.strip() or len(comment_text) > 8000:
@@ -920,7 +945,11 @@ def api_reply_generate():
         result["scope"] = {"domain_id": scope["domain_id"],
                            "brand_focus_id": scope["brand_focus_id"],
                            "scope_audit_id": decision.scope_audit_id}
-        if result.get("ok") is True and result.get("action") != "NO_REPLY":
+        if result.get("ok") is True and result.get("action") == "SUGGEST_REPLY":
+            suggested_reply = result.get("suggested_reply")
+            if not isinstance(suggested_reply, str) or not suggested_reply.strip():
+                return jsonify({"ok": False, "status": "unavailable",
+                                "code": "SUGGESTED_REPLY_UNAVAILABLE"}), 503
             try:
                 import kos_execution as execution
                 receipt = execution.create_execution(
@@ -929,11 +958,16 @@ def api_reply_generate():
                     payload={"comment_text": comment_text.strip(),
                              "comment_source": "USER_PROVIDED_UNVERIFIED",
                              "reply_style": reply_style,
-                             "generated_reply": result.get("reply") or result.get("draft") or "",
+                             "generated_reply": suggested_reply,
                              "content_source": "deterministic_rule",
                              "brand_focus_id": scope["brand_focus_id"],
-                             "scope_audit_id": decision.scope_audit_id},
-                    actor=f"actor:{actor_id}",
+                             "scope_audit_id": decision.scope_audit_id,
+                             "permission_identity": {
+                                 "caller": decision.caller,
+                                 "principal_kind": decision.principal_kind,
+                                 "principal_ref": decision.principal_ref,
+                             }},
+                    actor=actor_ref,
                 )
             except Exception as exc:  # noqa: BLE001 - preserve the suggestion but report failed review registration.
                 return jsonify({"ok": False, "status": "partial", "code": "REPLY_REVIEW_RECORD_FAILED",
@@ -941,6 +975,9 @@ def api_reply_generate():
             result["hcg"] = {"status": receipt.get("status"),
                              "execution_id": receipt.get("execution_id"),
                              "note": "规则生成建议已登记；未发送，需人工审核。"}
+        elif result.get("ok") is True and result.get("action") != "NO_REPLY":
+            return jsonify({"ok": False, "status": "unavailable",
+                            "code": "REPLY_ACTION_UNAVAILABLE"}), 503
         return jsonify(result)
     except (ValueError, PermissionError) as exc:
         return _kos_scope_error(exc)
