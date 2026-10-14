@@ -1,22 +1,22 @@
 /**
  * rednote_collector.js — rednote 真实数据采集引擎
  * 
- * 基于 CDP 连接已登录的 Edge 浏览器，从 rednote.com 采集真实数据。
+ * SYSTEM Owner registered local read-only browser worker only.
  * 采集链路：搜索 → 笔记列表 → 详情页 → 正文/互动/评论 → 数据质量 → 主体过滤
  * 
  * 用法：
  *   node rednote_collector.js --keyword "广州太古汇" --output data/result.json --max-details 10 --max-scroll 3
  * 
  * 环境变量：
- *   XHS_CDP_URL — 香港/国际 CDP 调试地址，如 http://127.0.0.1:9223（必须）
+ *   XHS_CDP_URL - SYSTEM Owner-resolved dynamic local worker endpoint (required)
  *   XHS_COLLECTION_HOST — 固定为 www.rednote.com
  * 
  * 注意：CDP 模式下不要调用 browser.close()，否则会关闭整个 Edge 浏览器。
  */
 
-const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('node:child_process');
 
 // ========== 工具函数 ==========
 
@@ -153,8 +153,114 @@ function detailEngagementFields(searchLikes) {
   return { likes: knownCount(searchLikes), collects: null };
 }
 
+function resolveRegisteredWorkerFromSystemOwner() {
+  const script = [
+    'import json, sys',
+    'sys.path.insert(0, __import__("os").getcwd())',
+    'import cdp_helper',
+    "state = cdp_helper.resolve_registered_xhs_worker(account='XHS_RETINAUT', headless=True)",
+    "print(json.dumps({key: state.get(key) for key in ('available','code','account','profile','browser','port','endpoint','pid','headless','loopback_only')}, separators=(',', ':')))"
+  ].join('; ');
+  try {
+    const output = execFileSync('python', ['-c', script], {
+      cwd: __dirname, encoding: 'utf8', windowsHide: true, timeout: 5000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    const line = output.split(/\r?\n/).filter(Boolean).at(-1);
+    return line ? JSON.parse(line) : null;
+  } catch {
+    return null;
+  }
+}
+
+function sameRegisteredPath(actual, expected) {
+  try {
+    const actualPath = fs.realpathSync.native(actual);
+    const expectedPath = fs.realpathSync.native(expected);
+    return process.platform === 'win32'
+      ? actualPath.toLocaleLowerCase('en-US') === expectedPath.toLocaleLowerCase('en-US')
+      : actualPath === expectedPath;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyPreconnectedWorker(endpoint, options) {
+  const resolver = options.registeredWorkerResolver || resolveRegisteredWorkerFromSystemOwner;
+  const binding = await resolver();
+  const code = typeof binding?.code === 'string' && /^XHS_[A-Z0-9_]+$/.test(binding.code)
+    ? binding.code : 'COLLECTOR_WORKER_IDENTITY_UNVERIFIED';
+  const port = Number(binding?.port);
+  if (binding?.available !== true || binding.account !== 'XHS_RETINAUT'
+      || binding.browser !== 'edge' || binding.headless !== true
+      || binding.loopback_only !== true || !Number.isSafeInteger(binding.pid) || binding.pid <= 0
+      || !Number.isInteger(port) || port < 1 || port > 65535
+      || new Set([9222, 9223, 9224, 9225, 9226, 9227, 9228]).has(port)
+      || binding.endpoint !== `http://127.0.0.1:${port}`
+      || endpoint.origin !== binding.endpoint) {
+    return { ok: false, code };
+  }
+  const { registeredXhsProfile } = await import('./xhs_profile_guard.js');
+  const expectedProfile = registeredXhsProfile();
+  if (!sameRegisteredPath(binding.profile, expectedProfile)) {
+    return { ok: false, code: 'XHS_REGISTERED_PROFILE_MISMATCH' };
+  }
+  return { ok: true };
+}
+
+async function verifyConfiguredWorkerEndpoint(cdpUrl, options = {}) {
+  if (typeof cdpUrl !== 'string' || !cdpUrl.trim()) {
+    return { ok: false, code: 'COLLECTOR_ENDPOINT_NOT_CONFIGURED' };
+  }
+  let endpoint;
+  try {
+    endpoint = new URL(cdpUrl);
+  } catch {
+    return { ok: false, code: 'COLLECTOR_ENDPOINT_INVALID' };
+  }
+  const port = Number(endpoint.port);
+  if (endpoint.protocol !== 'http:' || endpoint.hostname !== '127.0.0.1'
+      || endpoint.username || endpoint.password || endpoint.pathname !== '/'
+      || endpoint.search || endpoint.hash || !Number.isInteger(port)
+      || port < 1 || port > 65535
+      || new Set([9222, 9223, 9224, 9225, 9226, 9227, 9228]).has(port)) {
+    return { ok: false,
+      code: endpoint.hostname && endpoint.hostname !== '127.0.0.1'
+        ? 'COLLECTOR_REMOTE_WORKER_IDENTITY_UNVERIFIED' : 'COLLECTOR_ENDPOINT_INVALID' };
+  }
+  try {
+    const result = await verifyPreconnectedWorker(endpoint, options);
+    if (!result.ok) return result;
+  } catch {
+    return { ok: false, code: 'COLLECTOR_WORKER_IDENTITY_UNVERIFIED' };
+  }
+  return { ok: true, endpoint: endpoint.origin, port };
+}
+
+async function connectRegisteredWorker(cdpUrl, options = {}) {
+  const preflight = await verifyConfiguredWorkerEndpoint(cdpUrl, options);
+  if (!preflight.ok) return preflight;
+  const browserConnector = options.browserConnector || require('playwright').chromium;
+  let browser;
+  try {
+    browser = await browserConnector.connectOverCDP(preflight.endpoint, { timeout: 12000 });
+    const context = browser.contexts()[0];
+    if (!context) throw new Error('COLLECTOR_IDENTITY_CONTEXT_UNAVAILABLE');
+    const { verifyRegisteredXhsBrowserContext } = await import('./xhs_profile_guard.js');
+    const identityEvidence = await verifyRegisteredXhsBrowserContext(context);
+    return { ok: true, browser, context, identityEvidence, endpoint: preflight.endpoint };
+  } catch (error) {
+    try { if (browser) await browser.disconnect(); } catch {}
+    const message = String(error?.message || '');
+    const code = /^COLLECTOR_IDENTITY_[A-Z_]+$/.test(message)
+      ? message : 'COLLECTOR_WORKER_CONNECTION_FAILED';
+    return { ok: false, code };
+  }
+}
+
 async function collect(options) {
   const { keyword, output, maxDetails, maxScroll } = options;
+  const browserConnector = options.browserConnector || require('playwright').chromium;
   const collectionHost = (process.env.XHS_COLLECTION_HOST || 'www.rednote.com').trim().toLowerCase();
   if (collectionHost !== 'www.rednote.com') {
     return { ok: false, code: 'collection_host_not_allowed',
@@ -162,20 +268,27 @@ async function collect(options) {
   }
   const collectionOrigin = `https://${collectionHost}`;
   const cdpUrl = process.env.XHS_CDP_URL || '';
-  if (!cdpUrl) throw new Error('COLLECTOR_ENDPOINT_NOT_CONFIGURED');
   const allResults = [];
   let verificationRequired = false;
   let ipBlocked = false;
 
   console.log(`[rednote] 关键词: ${keyword}`);
-  console.log(`[rednote] CDP: ${cdpUrl}`);
+  console.log('[rednote] CDP endpoint configured');
   console.log(`[rednote] 最大详情数: ${maxDetails}, 滚动次数: ${maxScroll}`);
 
   // 1. 连接 CDP
-  let browser, context, page;
+  // Connect only after the SYSTEM-owned process/profile binding is verified.
+  const connected = await connectRegisteredWorker(cdpUrl, {
+    ...options, browserConnector,
+  });
+  if (!connected.ok) {
+    console.error('[rednote] 受控会话不可用:', connected.code);
+    return { ok: false, code: connected.code, error: connected.code,
+      identity_verified: false, notes: [], summary: { identity_verified: false } };
+  }
+  const { browser, context, identityEvidence } = connected;
+  let page;
   try {
-    browser = await chromium.connectOverCDP(cdpUrl);
-    context = browser.contexts()[0];
     // v5.9.0 始终新建干净标签页采集，避免复用 MSN/扩展后台页导致 goto 卡死；结束时关闭
     const existing = context.pages().find(p => p.url().includes(`${collectionHost}/search_result`));
     page = existing || await context.newPage();
@@ -445,11 +558,13 @@ async function collect(options) {
 
   const outputData = {
     ok: !verificationRequired && !ipBlocked && allResults.length > 0,
+    identity_verified: true,
+    identity_evidence: identityEvidence,
     summary,
     notes: allResults,
     fetched_at: new Date().toISOString(),
     collector: 'rednote_collector.js v1.0',
-    cdp_url: cdpUrl
+    cdp_endpoint_configured: true
   };
 
   // 保存输出
@@ -483,5 +598,6 @@ if (require.main === module) {
 
 module.exports = {
   collect, parseCount, normalizePublishTime, detailCommentFields,
-  detailEngagementFields, normalizeSearchNote, sourceTimeFields
+  detailEngagementFields, normalizeSearchNote, sourceTimeFields,
+  verifyConfiguredWorkerEndpoint, connectRegisteredWorker
 };

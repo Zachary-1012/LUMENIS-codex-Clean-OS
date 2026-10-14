@@ -66,14 +66,13 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
-Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+源代码/CI以实时main和对应PR精确SHA核验；Runtime、DB与用户成果仅在有同版新证据时更新，否则为`NOT_VERIFIED`。
 
 显式选择 user_api 的已有通用接口保留；状态读取不调用外部模型、不探测端点，配置完成仍为 CONFIGURED_NOT_VERIFIED，不能冒称可用或自动切回 owned。
 
 本批修复缺失风险/日报数据的数值语义：缺失返回None，真实观测零值保留；报告、摘要、行动和导出调用方检查未知值，不误报正常或品牌健康50分。保留原评分范围和实际业务权重。编译、静态和隔离回归仅证明有界代码；当前Runtime未加载、真实日报用户验收未进行。规则/逐屏草图/隧道分别PR #61/#63/#62已发布；其他类别仍独立验收。未操作原有工作分支、Production DB、模型或运行服务。已合入PR #64的Gateway清理及Gibbs回执：已训练、未上线，G163仍OPEN；本批不重复训练或声明模型收益。Gateway状态接口和Agent观察读取CTH/BMP实际服务绑定，汇总逐域状态，不把评估候选当运行服务；用户已选API只显示配置未验证，不发请求、不回退。历史退役Provider媒体评价通过原Evaluation读接口、汇总和AI面板统一标为HISTORICAL_NOT_REVERIFIED，保留原记录/快照，历史PASS不计当前通过。运行时加载及真实用户验收仍未验证。
 
-本批移除指定采集脚本的参考主体profile默认值和CDP示例；主体名称不选择账户；Python 原账户 Owner 核验批准身份和精确 Cookie/Profile 后传入子进程，JS 拒绝任意 profile、目录逃逸、错误身份和不安全 Cookie 域/URL；远端 CDP 只由既有 worker 核验其真实会话身份，不要求复制本机 Cookie；独立脚本导航与响应仅认国际 RedNote。隔离验收不读取真实凭据。ACC-02保持GLOBAL默认与既有参考覆盖维度，不把参考主体作为默认值。删除PO指定旧工单，历史证据链接固定到删除前提交，现行KOS要求仍由既有合同承接。关键词零命中只适用退役可执行路径/硬编码默认值，真实资料和历史证据保留。PR #61/#63/#62规则、草图、隧道及PR #64 Gateway/Gibbs、PR #65缺失数据修复已发布；G163仍OPEN。编译、静态和隔离回归不代表当前Runtime或真实用户验收；未操作原工作分支、浏览器、Cookie、DB、模型或运行服务。
+XHS只通过现有服务端Session/Permission/Actor/Task/Lease解析接入：后台使用已登记HK/intl worker，并核验动态端口、PID、Profile、内核与loopback；9222/9223不再作为XHS固定接入或fallback。人工交互仍需真实任务身份和权限。未匹配的worker、身份、Profile或租约均拒绝，不接管个人浏览器。采集后分析仅接受持久化Query Plan的唯一Canonical scope，禁止按查询文本猜主体；没有可验证Scoped Evidence的旧事件派生阶段明确返回`EVENT_SCOPE_EVIDENCE_REQUIRED`，不伪报事件成果或抹去已成功采集。同步搜索脚本现复用同一注册worker预检并在进程/profile/kernel/loopback未核验前拒绝连接，无独立persistent-context或Cookie注入fallback；bridge在读取授权Cookie和启动子进程前也要求后台worker已验证。已有worker时人工切换核验旧endpoint；无worker时仅在有效actor/task/lease且Owner明确返回未注册状态后，允许沿既有launcher以动态端口启动并核验新身份。相关隔离回归114项通过（Python 114；Node身份/worker回归12）；静态语法与py_compile通过。本地候选尚未发布；未启动浏览器、会话、Runtime或生产DB，也未读取真实Cookie/Profile。账号状态、六平台实际采集、同版Runtime及完整保存/重开/恢复用户验收均未由此证明。ACC-02保持GLOBAL默认与既有参考覆盖维度，不把参考主体作为默认值。删除PO指定旧工单，历史证据链接固定到删除前提交，现行KOS要求仍由既有合同承接。关键词零命中只适用退役可执行路径/硬编码默认值，真实资料和历史证据保留。PR #61/#63/#62规则、草图、隧道及PR #64 Gateway/Gibbs、PR #65缺失数据、PR #66采集身份边界已发布；G163仍OPEN。编译、静态和隔离回归不代表当前Runtime或真实用户验收；未操作原工作分支、浏览器、Cookie、DB、模型或运行服务。
 
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。

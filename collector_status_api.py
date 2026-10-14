@@ -237,11 +237,26 @@ def get_collector_status_payload() -> dict:
     import collector_automation
 
     runtime = collector_automation.get_collector_automation().get_status()
+    # Internal Worker identity (CDP endpoint/port, executable and local Profile)
+    # remains inside the SYSTEM owner and is not part of the product status API.
+    safe_runtime = {
+        key: runtime.get(key)
+        for key in ("is_running", "lifecycle_state", "stop_requested",
+                    "browser_running", "history_count", "today_count")
+    }
+    task = runtime.get("current_task")
+    if isinstance(task, dict):
+        safe_runtime["current_task"] = {
+            key: task.get(key) for key in ("id", "status", "progress", "run_type")
+            if key in task
+        }
+    else:
+        safe_runtime["current_task"] = None
     platform_status = get_all_status()
-    platform_status["collector_runtime"] = runtime
+    platform_status["collector_runtime"] = safe_runtime
     return {
         "ok": True,
-        **runtime,
+        **safe_runtime,
         "success": True,
         "data": platform_status,
         "error": None,

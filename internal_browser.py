@@ -9,7 +9,7 @@ Contract：OSAI 研究侧 → ZBC 生产侧。
     ↓ HTTP API（本模块 Blueprint）
   CDP 命令层（Page.captureScreenshot / Page.navigate / Input.* / Runtime.evaluate）
     ↓ WebSocket
-  驻场浏览器实例（9223 香港生产采集；9222 仅保留诊断兼容）
+  通过 SYSTEM session owner 解析的香港/国际注册浏览器 worker
 
 安全：
   - 导航域名白名单（xiaohongshu.com / rednote.com），防 SSRF
@@ -57,8 +57,10 @@ def _canonical_account(account: Optional[str]) -> str:
 
 def _port_for(account: Optional[str]) -> int:
     if bridge:
-        return bridge.cdp_port_for(account)
-    return 9223
+        port = bridge.cdp_port_for(account, headless=None)
+        if port is not None:
+            return int(port)
+    raise RuntimeError("BROWSER_WORKER_ENDPOINT_UNAVAILABLE")
 
 
 def _home_for(account: Optional[str]) -> str:
@@ -445,8 +447,8 @@ def register_internal_browser(app):
         account = data.get("account", "")
         try:
             port = _port_for(_canonical_account(account))
-        except Exception:
-            port = 9223
+        except Exception as exc:  # noqa: BLE001 - unresolved browser ownership keeps the operation unavailable.
+            return jsonify({"ok": False, "status": "unavailable", "error_type": type(exc).__name__}), 409
         try:
             import internal_browser_adapter as adapter
             result = adapter.navigate(url, port=port, confirmed=confirmed)
@@ -457,11 +459,12 @@ def register_internal_browser(app):
 
     @bp.route("/api/internal-browser/tabs", methods=["GET"])
     def api_tabs():
-        """P1-D: 当前Tab列表（指定端口，默认香港生产端口9223）。"""
-        port = int(request.args.get("port", "9223"))
+        """P1-D: 当前Tab列表（注册的香港/国际浏览器worker）。"""
+        requested_port = request.args.get("port")
         try:
             import internal_browser_adapter as adapter
-            return jsonify(adapter.list_tabs(port=port))
+            return jsonify(adapter.list_tabs(port=int(requested_port) if requested_port else None,
+                                             account="XHS_RETINAUT"))
         except Exception as e:
             return jsonify({"ok": False, "error": str(e), "tabs": []}), 500
 
@@ -469,11 +472,12 @@ def register_internal_browser(app):
     def api_refresh():
         """P1-D: 刷新当前Tab（CDP Page.reload）。"""
         data = request.get_json(force=True, silent=True) or {}
-        port = int(data.get("port", 9223))
+        requested_port = data.get("port")
         target_id = data.get("target_id", "")
         try:
             import internal_browser_adapter as adapter
-            return jsonify(adapter.refresh(port=port, target_id=target_id or None))
+            return jsonify(adapter.refresh(port=int(requested_port) if requested_port else None,
+                                           target_id=target_id or None, account="XHS_RETINAUT"))
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -481,13 +485,14 @@ def register_internal_browser(app):
     def api_switch_tab():
         """P1-D: 切换（激活）指定Tab。"""
         data = request.get_json(force=True, silent=True) or {}
-        port = int(data.get("port", 9223))
+        requested_port = data.get("port")
         target_id = data.get("target_id", "")
         if not target_id:
             return jsonify({"ok": False, "error": "target_id 为空"}), 400
         try:
             import internal_browser_adapter as adapter
-            return jsonify(adapter.switch_tab(port=port, target_id=target_id))
+            return jsonify(adapter.switch_tab(port=int(requested_port) if requested_port else None,
+                                              target_id=target_id, account="XHS_RETINAUT"))
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 

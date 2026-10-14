@@ -16,7 +16,7 @@
     - Phase 1（本文件）：创建适配器层，提供与直连 CDP 兼容的 API
     - Phase 2：collector.py 导航点逐步接入 adapter（标注 MIGRATION_STATUS）
     - Phase 3：xhs_cdp_collector.py / collector_automation.py 接入
-    - 底层 9222/9223/9224 保持不变，登录态物理隔离不破坏
+    - XHS/RedNote 端点由 SYSTEM 注册 worker 解析；通用浏览仍使用独立受控端点
 
 安全：
     - 所有外部 URL 导航必须先过 evaluate_navigation
@@ -29,16 +29,15 @@ from __future__ import annotations
 import json
 import time
 import urllib.request as _ur
-from typing import Optional
 
 import browser_surface as bs
 import internal_browser as ib
 
-# CDP 端口定义（与底层执行器一一对应，不改变）
+# CDP 端点：XHS 由注册会话动态解析；通用浏览保留独立的受控端点。
 CDP_PORTS = {
-    "xhs_primary": 9222,    # 小红书主号（已登录、持久 Edge）
-    "xhs_retinaut": 9223,   # 备用号
-    "general": 9224,         # 通用浏览（按需拉起）
+    "xhs_primary": None,    # 不可作为产品身份路由
+    "xhs_retinaut": None,   # 运行时从 SYSTEM registered worker 解析
+    "general": 9224,
 }
 
 # 迁移进度追踪（MIGRATION_STATUS）
@@ -96,13 +95,24 @@ def is_cdp_online(port: int, timeout: float = 2.0) -> bool:
         return False
 
 
-def navigate(url: str, port: int = 9222, target_id: Optional[str] = None,
-             confirmed: bool = False, wait_ms: int = 600) -> dict:
+def _resolve_port(port: int | None = None, account: str | None = None) -> int:
+    """Accept only an exact owner-resolved platform worker or verified general browser."""
+    if account:
+        return bs._resolve_port(account, port)
+    if port is not None and int(port) == CDP_PORTS["general"]:
+        return bs._resolve_port(None, int(port))
+    # Historical callers without an account use the approved HK identity, never CN.
+    return bs._resolve_port("XHS_RETINAUT", port)
+
+
+def navigate(url: str, port: int | None = None, target_id: str | None = None,
+             confirmed: bool = False, wait_ms: int = 600,
+             account: str | None = None) -> dict:
     """统一导航入口：先过 evaluate_navigation 门禁，再执行 CDP 导航。
 
     Args:
         url: 目标 URL
-        port: CDP 端口（9222/9223/9224）
+        port: Optionality only; any supplied value must equal the verified owner endpoint.
         target_id: 指定标签页，None 取当前第一个 page
         confirmed: 前端是否已确认（need_confirmation 时需带 confirmed=true）
         wait_ms: 导航后等待毫秒数
@@ -111,6 +121,11 @@ def navigate(url: str, port: int = 9222, target_id: Optional[str] = None,
         {ok, status, gate, target_id, error?}
         status ∈ allowed / blocked / need_confirmation / navigated
     """
+    try:
+        port = _resolve_port(port, account)
+    except Exception as exc:  # noqa: BLE001 - registered worker resolution failure blocks navigation.
+        return {"ok": False, "status": "unavailable", "error_type": type(exc).__name__}
+
     # Step 1: 导航门禁
     gate = bs.evaluate_navigation(url)
     status = gate.get("status", "blocked")
@@ -137,27 +152,35 @@ def navigate(url: str, port: int = 9222, target_id: Optional[str] = None,
                 "error": result.get("error", "CDP 导航失败")}
     except Exception as e:
         return {"ok": False, "status": "navigate_failed", "gate": gate,
-                "error": f"CDP 导航异常: {e}"}
+                "error_type": type(e).__name__}
 
 
-def screenshot(port: int = 9222, target_id: Optional[str] = None,
-               quality: int = 60) -> dict:
+def screenshot(port: int | None = None, target_id: str | None = None,
+               quality: int = 60, account: str | None = None) -> dict:
     """对指定 CDP 端口/标签页截图（不经过导航门，只读操作）。"""
     try:
+        port = _resolve_port(port, account)
         result = bs._hybrid_screenshot(target_id=target_id, port=port, quality=quality)
         return result
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        return {"ok": False, "error_type": type(e).__name__}
 
 
-def list_tabs(port: int = 9222) -> dict:
+def list_tabs(port: int | None = None, account: str | None = None) -> dict:
     """列出指定 CDP 端口的标签页（不经过导航门，只读操作）。"""
-    return bs.list_targets(port=port, pages_only=True)
+    try:
+        port = _resolve_port(port, account)
+        return bs.list_targets(port=port, pages_only=True,
+                               account=account or "XHS_RETINAUT")
+    except Exception as exc:  # noqa: BLE001 - keep failed browser inspection unavailable, not a fallback session.
+        return {"ok": False, "error_type": type(exc).__name__, "tabs": [], "count": 0}
 
 
-def refresh(port: int = 9222, target_id: Optional[str] = None) -> dict:
+def refresh(port: int | None = None, target_id: str | None = None,
+            account: str | None = None) -> dict:
     """刷新当前标签页（CDP Page.reload，不经过导航门，因为是同页刷新）。"""
     try:
+        port = _resolve_port(port, account)
         ws, chosen = bs._find_tab_ws(port, target_id, timeout=5.0)
         try:
             resp = ib._cdp(ws, "Page.reload", {"ignoreCache": False}, msg_id=1, timeout=8.0)
@@ -168,22 +191,29 @@ def refresh(port: int = 9222, target_id: Optional[str] = None) -> dict:
             except Exception:
                 pass
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        return {"ok": False, "error_type": type(e).__name__}
 
 
-def switch_tab(port: int = 9222, target_id: str = "") -> dict:
+def switch_tab(port: int | None = None, target_id: str = "",
+               account: str | None = None) -> dict:
     """切换（激活）指定标签页（CDP /json/activate，不经过导航门）。"""
     if not target_id:
         return {"ok": False, "error": "target_id 为空"}
-    return bs.activate_tab(target_id, port=port)
+    try:
+        port = _resolve_port(port, account)
+        return bs.activate_tab(target_id, port=port, account=account or "XHS_RETINAUT")
+    except Exception as exc:  # noqa: BLE001 - a failed activation must not try another worker or endpoint.
+        return {"ok": False, "error": str(exc)}
 
 
-def evaluate_js(port: int = 9222, target_id: Optional[str] = None,
-                expression: str = "", timeout: float = 8.0) -> dict:
+def evaluate_js(port: int | None = None, target_id: str | None = None,
+                expression: str = "", timeout: float = 8.0,
+                account: str | None = None) -> dict:
     """在指定标签页执行 JS（仅用于内置固定表达式，不接受外部任意 JS）。"""
     if not expression:
         return {"ok": False, "error": "expression 为空"}
     try:
+        port = _resolve_port(port, account)
         ws, chosen = bs._find_tab_ws(port, target_id, timeout=5.0)
         try:
             resp = ib._cdp(ws, "Runtime.evaluate",
@@ -197,13 +227,13 @@ def evaluate_js(port: int = 9222, target_id: Optional[str] = None,
             except Exception:
                 pass
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        return {"ok": False, "error_type": type(e).__name__}
 
 
 # ─────────────────────────── 采集器兼容层 ───────────────────────────
 # 以下函数提供与采集器现有 CDP 调用兼容的接口，便于逐步迁移。
 
-def collector_navigate(url: str, port: int = 9222, **kwargs) -> dict:
+def collector_navigate(url: str, port: int | None = None, **kwargs) -> dict:
     """采集器导航兼容接口：与直连 CDP 行为一致，但经过导航门。
 
     采集器迁移时，将直接的 CDP Page.navigate 替换为此函数。
@@ -212,9 +242,9 @@ def collector_navigate(url: str, port: int = 9222, **kwargs) -> dict:
     return navigate(url, port=port, **kwargs)
 
 
-def collector_get_state(port: int = 9222) -> dict:
+def collector_get_state(port: int | None = None, **kwargs) -> dict:
     """采集器状态查询兼容接口：返回当前页面 URL/title/在线状态。"""
-    tabs = list_tabs(port)
+    tabs = list_tabs(port, **kwargs)
     if not tabs.get("ok") or not tabs.get("tabs"):
         return {"ok": False, "online": False, "cdp_port": port, "error": tabs.get("error", "无可用标签页")}
     first = tabs["tabs"][0]

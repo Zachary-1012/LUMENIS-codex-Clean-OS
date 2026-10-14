@@ -13,12 +13,19 @@ if str(REPO) not in sys.path:
 
 
 def test_bridge_defaults_to_hk_collection_identity(monkeypatch):
+    import cdp_helper
     import xhs_cookie_bridge as bridge
 
     monkeypatch.setattr(bridge, '_ACTIVE_ACCOUNT', None)
     monkeypatch.delenv('XHS_COOKIE_FILE_OVERRIDE', raising=False)
+    monkeypatch.setattr(cdp_helper, 'resolve_registered_xhs_worker',
+                        lambda **_kwargs: {'available': False,
+                                           'code': 'XHS_REGISTERED_WORKER_UNAVAILABLE'})
     assert bridge._canonical_account_name() == bridge.XHS_RETINAUT_NAME
-    assert bridge.cdp_port_for() == 9223
+    assert bridge.DEFAULT_CDP_PORT == 0
+    assert bridge.ACCOUNT_CDP_PORTS[bridge.XHS_RETINAUT_NAME] is None
+    assert bridge.cdp_port_for() is None
+    assert bridge.cdp_url_for() == ''
     assert bridge.home_url_for().startswith('https://www.rednote.com')
     assert bridge.collection_policy_gate(account=bridge.XHS_RETINAUT_NAME)['ok'] is True
 
@@ -62,7 +69,7 @@ def test_collector_default_artifact_path_is_protected(monkeypatch):
     import xhs_cookie_bridge as bridge
 
     seen = {}
-    worker = 'https://browser-worker.example:9223'
+    worker = 'https://browser-worker.example:9234'
 
     monkeypatch.setattr(collector, '_resolve_server_cdp_url', lambda cdp_url=None, **kwargs: (worker, ''))
     monkeypatch.setattr(collector, '_cdp_online', lambda **kwargs: True)
@@ -81,7 +88,7 @@ def test_collector_default_artifact_path_is_protected(monkeypatch):
 
     assert Path(seen['output_path']).parent == Path(bridge.PRIVATE_DATA_DIR)
     assert seen['cdp_url'] == worker
-    assert result['channel'] == 'authorized_browser_worker'
+    assert result['channel'] == 'registered_system_browser_worker'
 
 
 def test_collector_without_explicit_worker_fails_closed_before_collection(monkeypatch):
@@ -116,8 +123,8 @@ def test_collect_all_returns_stable_tuple_when_kind_blocked():
 
 
 def test_p0_orchestrator_blocks_cn_before_select():
-    import xhs_p0_orchestrator as orchestrator
     import xhs_cookie_bridge as bridge
+    import xhs_p0_orchestrator as orchestrator
 
     result = orchestrator.trigger_collection(account_name=bridge.XHS_CN_PRIMARY_NAME)
     assert result['ok'] is False
@@ -135,7 +142,7 @@ def test_private_v2_client_never_reaches_network():
 
 
 def test_guardian_recovery_uses_hk_resident_launcher(monkeypatch):
-    """Guardian 恢复必须复用 HK 驻场入口，不能重新拉起历史 9222。"""
+    """Guardian recovery uses the registered worker launcher, not a fixed port."""
     import auto_recovery as recovery
 
     calls = []
@@ -145,6 +152,11 @@ def test_guardian_recovery_uses_hk_resident_launcher(monkeypatch):
         return object()
 
     engine = recovery.AutoRecoveryEngine()
+    monkeypatch.setattr(recovery, '_production_cdp_config', lambda: {
+        'account': 'XHS_RETINAUT', 'port': None, 'endpoint': '', 'home': '',
+        'authorization_ready': True, 'available': False,
+        'code': 'XHS_REGISTERED_WORKER_UNAVAILABLE',
+    })
     monkeypatch.setattr(recovery.subprocess, 'Popen', fake_popen)
     monkeypatch.setattr(recovery.time, 'sleep', lambda _seconds: None)
     monkeypatch.setattr(engine, 'check_cdp', lambda: True)
@@ -152,53 +164,203 @@ def test_guardian_recovery_uses_hk_resident_launcher(monkeypatch):
     ok, message = engine.fix_cdp_crash()
 
     assert ok is True
-    assert 'XHS_RETINAUT:9223' in message
+    assert 'XHS_RETINAUT' in message
+    assert '9222' not in message and '9223' not in message
     assert calls
     args, kwargs = calls[0]
     assert args[-2:] == ['--account', 'XHS_RETINAUT']
     assert Path(args[-3]).parts[-2:] == ('scripts', 'start_resident_browsers.py')
     assert '9222' not in ' '.join(args)
+    assert '9223' not in ' '.join(args)
     assert kwargs['cwd'] == engine.root_dir
 
 
-def test_system_health_uses_active_hk_contract(monkeypatch, tmp_path):
-    """生产健康灯只读取 HK 身份，不把暂停的 9222 算成故障。"""
-    import socket
-    import system_health_api as health
+def test_guardian_does_not_recover_without_current_registered_identity(monkeypatch):
+    import auto_recovery as recovery
+
+    calls = []
+    engine = recovery.AutoRecoveryEngine()
+    monkeypatch.setattr(recovery, '_production_cdp_config', lambda: {
+        'account': None, 'port': None, 'endpoint': '', 'home': '',
+        'authorization_ready': False, 'available': False,
+        'code': 'COLLECTION_ACCOUNT_UNAVAILABLE',
+    })
+    monkeypatch.setattr(recovery.subprocess, 'Popen', lambda *args, **kwargs: calls.append(args))
+
+    ok, message = engine.fix_cdp_crash()
+
+    assert ok is False
+    assert 'COLLECTION_ACCOUNT_UNAVAILABLE' in message
+    assert calls == []
+
+
+def test_guardian_health_uses_registered_worker_state_not_port_probe(monkeypatch):
+    import auto_recovery as recovery
+
+    config = {
+        'account': 'XHS_RETINAUT', 'port': 9234,
+        'endpoint': 'http://127.0.0.1:9234', 'home': '',
+        'authorization_ready': True, 'available': True, 'code': '',
+    }
+    monkeypatch.setattr(recovery, '_production_cdp_config', lambda: config)
+    engine = recovery.AutoRecoveryEngine()
+
+    def forbidden_port_probe(*_args, **_kwargs):
+        raise AssertionError('Guardian must not accept an unowned listening port')
+
+    monkeypatch.setattr(engine, 'check_port', forbidden_port_probe)
+    assert engine.check_cdp() is True
+
+    config['available'] = False
+    config['code'] = 'XHS_WORKER_IDENTITY_UNVERIFIED'
+    assert engine.check_cdp() is False
+
+
+def test_guardian_config_binds_dynamic_endpoint_to_current_allowlist(monkeypatch):
+    import auto_recovery as recovery
+    import cdp_helper
     import xhs_cookie_bridge as bridge
 
-    cookie_file = tmp_path / 'private' / 'xhs_cookie_retinaut.txt'
-    cookie_file.parent.mkdir()
-    cookie_file.write_text('session=test-only', encoding='utf-8')
-    monkeypatch.setitem(
-        bridge.ACCOUNT_PROFILES,
-        bridge.XHS_RETINAUT_NAME,
-        (str(cookie_file), str(tmp_path / 'profile')),
-    )
-    monkeypatch.setattr(health, 'get_data_dir', lambda: str(tmp_path))
+    account = bridge.XHS_RETINAUT_NAME
+    monkeypatch.setattr(bridge, 'DEFAULT_COLLECTION_ACCOUNT', account)
+    monkeypatch.setattr(bridge, 'XHS_RETINAUT', 'approved-synthetic-id')
+    monkeypatch.setattr(bridge, 'ALLOWED_USER_IDS', ('approved-synthetic-id',))
+    monkeypatch.setattr(bridge, 'collection_policy_gate',
+                        lambda **_kwargs: {'ok': True, 'account': account, 'region': 'intl'})
+    monkeypatch.setattr(bridge, 'home_url_for', lambda _account: 'https://www.rednote.com')
+    monkeypatch.setattr(cdp_helper, '_registered_xhs_binding',
+                        lambda _account: {'account': account, 'profile': '<registered-profile>'})
+    monkeypatch.setattr(cdp_helper, 'resolve_registered_xhs_worker', lambda **_kwargs: {
+        'available': True, 'account': account, 'port': 9234,
+        'endpoint': 'http://127.0.0.1:9234', 'headless': True, 'loopback_only': True,
+    })
 
-    seen = {}
+    config = recovery._production_cdp_config()
+
+    assert config['authorization_ready'] is True
+    assert config['available'] is True
+    assert config['endpoint'] == 'http://127.0.0.1:9234'
+    assert config['port'] == 9234
+
+    monkeypatch.setattr(bridge, 'ALLOWED_USER_IDS', ())
+    denied = recovery._production_cdp_config()
+    assert denied['authorization_ready'] is False
+    assert denied['available'] is False
+    assert denied['port'] is None
+
+
+def test_is_cdp_open_requires_an_explicit_owner_resolved_port(monkeypatch):
+    from lumenis.adapters import human_browser
+
+    def forbidden_probe(*_args, **_kwargs):
+        raise AssertionError('Missing port must not probe a historical endpoint')
+
+    monkeypatch.setattr(human_browser.socket, 'socket', forbidden_probe)
+    assert human_browser.is_cdp_open() is False
+    assert human_browser.is_cdp_open(port=None) is False
+    assert human_browser.is_cdp_open(port=0) is False
+    assert human_browser.is_cdp_open(port='not-a-port') is False
+
+
+def test_is_cdp_open_checks_only_the_explicit_port(monkeypatch):
+    from lumenis.adapters import human_browser
+
+    addresses = []
 
     class FakeSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
         def settimeout(self, _timeout):
             pass
 
         def connect_ex(self, address):
-            seen['address'] = address
+            addresses.append(address)
             return 0
 
-        def close(self):
-            pass
+    monkeypatch.setattr(human_browser.socket, 'socket', lambda *_args: FakeSocket())
+    assert human_browser.is_cdp_open(port=9234) is True
+    assert addresses == [('127.0.0.1', 9234)]
 
-    monkeypatch.setattr(socket, 'socket', lambda *_args, **_kwargs: FakeSocket())
+
+def test_bridge_status_projection_omits_worker_binding_and_identity(monkeypatch, tmp_path):
+    """The status authority reports availability without serializing local bindings."""
+    import json
+
+    import cdp_helper
+    import xhs_cookie_bridge as bridge
+
+    account = bridge.XHS_RETINAUT_NAME
+    cookie_file = tmp_path / 'xhs_cookie_retinaut.txt'
+    cookie_file.write_text('synthetic-cookie-marker', encoding='utf-8')
+    profile = tmp_path / 'profiles' / 'xhs-retinaut'
+    profile.mkdir(parents=True)
+
+    monkeypatch.setattr(bridge, 'PRIVATE_DATA_DIR', str(tmp_path))
+    monkeypatch.setattr(bridge, 'DEFAULT_COLLECTION_ACCOUNT', account)
+    monkeypatch.setattr(bridge, '_ACTIVE_ACCOUNT', account)
+    monkeypatch.setattr(bridge, 'XHS_RETINAUT', 'synthetic-approved-user-id')
+    monkeypatch.setattr(bridge, 'ALLOWED_USER_IDS', {'synthetic-approved-user-id'})
+    monkeypatch.setitem(bridge.ACCOUNT_PROFILES, account,
+                        (str(cookie_file), str(profile)))
+    monkeypatch.setattr(
+        bridge, 'collection_policy_gate',
+        lambda account=None, region='intl': {
+            'ok': True, 'account': account, 'region': region,
+            'policy_version': 'synthetic-policy',
+        },
+    )
+    monkeypatch.setattr(
+        cdp_helper, '_registered_xhs_binding',
+        lambda _account: {'profile': str(profile)},
+    )
+    monkeypatch.setattr(
+        cdp_helper, 'resolve_registered_xhs_worker',
+        lambda **_kwargs: {
+            'available': True, 'port': 9234,
+            'endpoint': 'http://127.0.0.1:9234',
+        },
+    )
+
+    status = bridge.get_account_status()
+    serialized = json.dumps(status)
+
+    assert status['worker_available'] is True
+    assert status['cookie_configured'] is True
+    for private_value in (
+        str(cookie_file), str(profile), 'synthetic-cookie-marker',
+        'synthetic-approved-user-id', 'http://127.0.0.1:9234', '9234',
+    ):
+        assert private_value not in serialized
+
+
+def test_system_health_uses_safe_registered_worker_contract(monkeypatch, tmp_path):
+    """Health uses the session owner's dynamic worker state without exposing its endpoint."""
+    import system_health_api as health
+    import xhs_cookie_bridge as bridge
+
+    monkeypatch.setattr(health, 'get_data_dir', lambda: str(tmp_path))
+    monkeypatch.setattr(bridge, 'get_account_status', lambda account=None: {
+        'active_account': bridge.XHS_RETINAUT_NAME,
+        'collection_policy': {'ok': True, 'region': 'intl'},
+        'worker_available': True,
+        'cookie_configured': True,
+        'cdp_port': 9234,
+        'cdp_url': 'http://127.0.0.1:9234',
+        'profile_path': 'private-profile',
+    })
 
     result = health.check_collector()
 
-    assert seen['address'] == ('127.0.0.1', 9223)
     assert result['collection_account'] == 'XHS_RETINAUT'
     assert result['collection_region'] == 'intl'
-    assert result['cdp_port'] == 9223
+    assert result['cdp_running'] is True
+    assert result['browser_worker_state'] == 'REGISTERED_BACKGROUND'
     assert result['cookie_configured'] is True
+    assert not {'cdp_port', 'cdp_url', 'profile_path'} & result.keys()
 
 
 def test_system_health_summary_has_no_mainland_cdp_hint():
@@ -210,6 +372,37 @@ def test_system_health_summary_has_no_mainland_cdp_hint():
     )
     assert "connect_ex(('127.0.0.1', 9222))" not in source
     assert 'Edge CDP 9222' not in source
+
+
+def test_keepalive_status_projection_omits_worker_and_credential_details():
+    """Keepalive APIs expose state without returning session endpoint or private bindings."""
+    import threading
+    from unittest.mock import patch
+
+    # Importing the legacy Flask module starts its production watchdog. The
+    # projection itself is pure; keep this isolated test from leaving a daemon
+    # thread behind or touching runtime state.
+    with patch.object(threading.Thread, 'start', autospec=True, return_value=None):
+        from app import _safe_xhs_keepalive_result
+
+    result = _safe_xhs_keepalive_result({
+        'platform': 'rednote_hk',
+        'status': 'logged_in',
+        'is_logged_in': True,
+        'cdp_url': 'http://127.0.0.1:9234',
+        'cdp_port': 9234,
+        'profile_path': 'private-profile',
+        'cookie_file': 'private-cookie-file',
+        'error': 'private exception detail',
+        'message': 'raw internal message',
+    })
+
+    assert result['status'] == 'logged_in'
+    assert result['is_logged_in'] is True
+    assert result['message'] == '已确认登录状态'
+    assert not {'cdp_url', 'cdp_port', 'profile_path', 'cookie_file',
+                'error'} & result.keys()
+    assert result['message'] != 'raw internal message'
 
 
 def test_cdp_result_updates_canonical_collection_log(monkeypatch):

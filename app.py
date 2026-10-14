@@ -227,13 +227,6 @@ def _ensure_node_on_path():
         os.getenv('NODE_EXE', ''),
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nodejs', 'node.exe'),
     ]
-    # 豆包沙箱常见 node 路径
-    for base in [os.path.expanduser(r'~\AppData\Local\DoubaoWork\User Data\sandbox_runtime\bases')]:
-        if os.path.isdir(base):
-            for d in os.listdir(base):
-                n = os.path.join(base, d, 'node', 'node.exe')
-                if os.path.isfile(n):
-                    candidates.append(n)
     for c in candidates:
         if c and os.path.isfile(c):
             os.environ['PATH'] = os.path.dirname(c) + os.pathsep + os.environ.get('PATH', '')
@@ -2177,28 +2170,52 @@ def _generate_all_reports():
 # ========== rednote CDP 采集 ==========
 REDNOTE_SCRIPT = Path(__file__).parent / 'rednote_collector.cjs'
 
-def run_rednote_collect(keyword='广州太古汇', max_scroll=3, max_details=10, cdp_url=None, account=None):
-    """使用香港/国际 RedNote 账号通过 CDP 采集真实数据；策略拒绝时不启动子进程。"""
+def _rednote_identity_evidence_matches(data, *, account, region, expected_user_id):
+    """Require evidence produced after the attached browser context was checked."""
+    evidence = data.get('identity_evidence') if isinstance(data, dict) else None
+    if (not isinstance(evidence, dict) or data.get('identity_verified') is not True
+            or not expected_user_id or evidence.get('account') != account
+            or evidence.get('region') != region
+            or evidence.get('source_host') != 'www.rednote.com'
+            or evidence.get('verification_method')
+            != 'registered_context_cookie_and_self_profile'):
+        return False
+    expected_fingerprint = hashlib.sha256(
+        str(expected_user_id).encode('utf-8')).hexdigest()
+    return evidence.get('identity_fingerprint_sha256') == expected_fingerprint
+
+
+def run_rednote_collect(keyword=None, max_scroll=3, max_details=10, cdp_url=None, account=None):
+    """Collect through the exact server-registered HK/International background worker."""
+    keyword = str(keyword or '').strip()
+    if not keyword:
+        return {'ok': False, 'code': 'KEYWORD_REQUIRED',
+                'error': 'An explicit collection keyword is required.'}
     resolved_account = account or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT
     policy_gate = xhs_cookie_bridge.collection_policy_gate(account=resolved_account, region='intl')
     if not policy_gate.get('ok'):
         return {'ok': False, 'error': policy_gate.get('reason'),
                 'code': policy_gate.get('code'), 'collection_policy': policy_gate}
-    configured_cdp = cdp_url or os.getenv('XHS_CDP_URL')
-    if configured_cdp and not configured_cdp.rstrip('/').endswith(':9223'):
-        return {'ok': False, 'error': '当前生产采集仅允许香港/国际驻场端口9223',
-                'code': 'cdp_port_not_allowed', 'collection_policy': policy_gate}
-    cdp_url = configured_cdp or xhs_cookie_bridge.cdp_url_for(resolved_account)
+    try:
+        import collector as _collector
+        configured_cdp = cdp_url or os.getenv('XHS_CDP_URL')
+        cdp_url, endpoint_error = _collector._resolve_server_cdp_url(
+            configured_cdp, account=resolved_account, region='intl')
+        if endpoint_error:
+            return {'ok': False, 'error': endpoint_error, 'code': endpoint_error,
+                    'collection_policy': policy_gate}
+        env = _collector._collection_env(
+            account=resolved_account, region='intl', cdp_url=cdp_url,
+            require_local_cookie=False)
+    except (ImportError, OSError, RuntimeError, TypeError, ValueError) as exc:
+        error_code = str(exc) if re.fullmatch(r'[A-Z0-9_]{1,80}', str(exc)) else 'REGISTERED_WORKER_UNAVAILABLE'
+        return {'ok': False, 'error': 'Registered browser worker unavailable.', 'code': error_code,
+                'collection_policy': policy_gate}
     if not REDNOTE_SCRIPT.exists():
         return {'ok': False, 'error': f'rednote_collector.cjs 不存在: {REDNOTE_SCRIPT}'}
-    env = os.environ.copy()
-    env['XHS_CDP_URL'] = cdp_url
-    env['XHS_COLLECTION_REGION'] = 'intl'
-    env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
-    profile = xhs_cookie_bridge.ACCOUNT_PROFILES.get(resolved_account)
-    if profile and profile[0]:
-        env['XHS_COOKIE_FILE'] = str(profile[0])
-    out_file = Path(xhs_cookie_bridge.PRIVATE_DATA_DIR) / f'rednote_{datetime.now():%Y%m%d_%H%M%S}.json'
+    expected_identity = str(env.get('XHS_EXPECTED_COLLECTION_USER_ID') or '').strip()
+    out_file = Path(xhs_cookie_bridge.PRIVATE_DATA_DIR) / (
+        f'rednote_{datetime.now().astimezone():%Y%m%d_%H%M%S}_{uuid.uuid4().hex}.json')
     out_file.parent.mkdir(parents=True, exist_ok=True)
     cmd = [_NODE_BIN, str(REDNOTE_SCRIPT), '--keyword', keyword, '--output', str(out_file),
            '--max-scroll', str(max_scroll), '--max-details', str(max_details)]
@@ -2212,13 +2229,26 @@ def run_rednote_collect(keyword='广州太古汇', max_scroll=3, max_details=10,
             data = json.loads(out_file.read_text(encoding='utf-8'))
         else:
             data = {'ok': False, 'error': (p.stderr or stdout)[-1000:]}
+        if not _rednote_identity_evidence_matches(
+                data, account=resolved_account, region='intl',
+                expected_user_id=expected_identity):
+            return {
+                'ok': False, 'code': 'COLLECTOR_IDENTITY_UNVERIFIED',
+                'error': 'Attached RedNote worker identity was not verified.',
+                'identity_verified': False, 'notes': [],
+                'summary': {'identity_verified': False},
+                'collection_policy': policy_gate,
+            }
         data['_returncode'] = p.returncode
         data.setdefault('collection_policy', policy_gate)
         return data
     except subprocess.TimeoutExpired:
         return {'ok': False, 'error': '采集超时（300秒）'}
-    except Exception as e:
-        return {'ok': False, 'error': str(e)}
+    except (OSError, RuntimeError, subprocess.SubprocessError, TypeError,
+            ValueError, json.JSONDecodeError, UnicodeError) as exc:
+        return {'ok': False, 'code': 'COLLECTOR_EXECUTION_FAILED',
+                'error_type': type(exc).__name__}
+
 
 def _bypass_evidence_canonical(note_data, provider='rednote'):
     """P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write）。
@@ -2245,6 +2275,13 @@ def persist_rednote_data(data, subject_hit_fn=None, *, acquisition_query=None):
     """将 rednote 采集结果入库"""
     if not data or not data.get('ok'):
         return {'ok': False, 'error': data.get('error', '采集失败') if data else '无数据'}
+    import xhs_cookie_bridge as _identity_bridge
+    expected_identity = str(_identity_bridge.XHS_RETINAUT or '').strip()
+    if not _rednote_identity_evidence_matches(
+            data, account=_identity_bridge.XHS_RETINAUT_NAME,
+            region='intl', expected_user_id=expected_identity):
+        return {'ok': False, 'status': 'BLOCKED',
+                'code': 'COLLECTOR_IDENTITY_UNVERIFIED'}
     if data.get('verification_required'):
         return {'ok': False, 'status': 'verification_required', 'reason': '需要人工验证'}
     notes = data.get('notes', [])
@@ -2775,162 +2812,101 @@ def api_xhs_runtime_check():
             data = request.get_json(silent=True) or {}
         account = (request.args.get('account') or data.get('account') or '').strip() or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT
         quick = str(request.args.get('quick', '') or data.get('quick', '')).lower() in ('1', 'true', 'yes', 'on')
-        # 生产预检固定使用香港/国际端口；旧的全局 9222 覆盖不得混入本轮。
+        # Environment endpoint is a consistency hint only; the SYSTEM session owner resolves authority.
         configured_cdp = os.getenv('XHS_CDP_URL')
-        if configured_cdp and not configured_cdp.rstrip('/').endswith(':9223'):
-            return jsonify({'ok': True, 'overall_state': 'cdp_port_not_allowed',
-                            'active_account': account,
-                            'collection_policy': xhs_cookie_bridge.collection_policy_gate(account=account, region='intl'),
-                            'evidence': '检测到非香港/国际 9223 的 XHS_CDP_URL，生产采集预检已拒绝'}), 200
-        cdp_url = configured_cdp or xhs_cookie_bridge.cdp_url_for(account)
-        result = xhs_cookie_bridge.runtime_preflight_check(account=account, cdp_url=cdp_url, quick=quick)
+        result = xhs_cookie_bridge.runtime_preflight_check(
+            account=account, cdp_url=configured_cdp, quick=quick)
         # overall_state 对应 Auth Recovery Center：
         #   no_cookie / need_account / blocked → 需要前端弹扫码 / 验证入口
         #   ready / cooldown / user_paused → 正常态提示
         return jsonify({'ok': True, **result})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e),
+        return jsonify({'ok': False, 'error': type(e).__name__,
                         'overall_state': 'error',
-                        'evidence': f'XHS Runtime 预检异常：{type(e).__name__}: {str(e)[:200]}'}), 500
+                        'evidence': 'XHS_RUNTIME_PREFLIGHT_UNAVAILABLE'}), 500
 
 
 @app.route('/api/xhs/switch-account', methods=['POST'])
 def api_xhs_switch_account():
-    """双子星库 Contract：切换采集身份（硬白名单）。
-
-    body:
-      account: 必填 · XHS_CN_PRIMARY / XHS_RETINAUT 之一
-    成功 → 设置模块级身份 + 环境变量；下次采集/同步自动使用。
-    失败 → 保留原身份不动，返回友好错误（绝不静默切到其他身份）。
-    """
+    """Select only the currently permission-approved registered RedNote identity."""
     try:
         data = request.get_json(silent=True) or {}
         account = (data.get('account') or '').strip()
         if not account:
-            return jsonify({'ok': False, 'error': '缺少 account 参数，必须显式指定双子星库白名单身份'}), 400
-        ok_sel, msg_sel = xhs_cookie_bridge.select_account(account)
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'REGISTERED_ACCOUNT_REQUIRED'}), 400
+        policy = xhs_cookie_bridge.collection_policy_gate(account=account, region='intl')
+        if (policy.get('ok') is not True or policy.get('account') != account
+                or policy.get('region') != 'intl'):
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'COLLECTION_POLICY_BLOCKED'}), 403
+        ok_sel, _ = xhs_cookie_bridge.select_account(account)
         if not ok_sel:
-            return jsonify({'ok': False, 'error': msg_sel,
-                            'allowed_accounts': list(xhs_cookie_bridge.ACCOUNT_PROFILES.keys())}), 400
-        # 切换完成后再跑一次 quick 预检返回
+            return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                            'code': 'REGISTERED_ACCOUNT_UNAVAILABLE'}), 409
         status = xhs_cookie_bridge.get_account_status()
-        return jsonify({'ok': True,
-                        'message': msg_sel,
+        return jsonify({'ok': status.get('collection_enabled') is True,
                         'active_account': status.get('active_account'),
-                        'allowed_accounts': list(xhs_cookie_bridge.ACCOUNT_PROFILES.keys()),
+                        'allowed_accounts': status.get('allowed_accounts', []),
                         'account_status': status})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'error': type(e).__name__}), 500
 
 
 @app.route('/api/xhs/accounts', methods=['GET'])
 def api_xhs_accounts():
-    """双子星库 Contract：双身份白名单列表（前端身份切换 UI 源）。
-
-    返回 allowed_accounts 逻辑名 + 每个身份的配置状态：
-      - cookie_ready：Cookie 文件存在且非空
-      - user_id_match：user_id 是否落在物理白名单里
-      - can_use：是否可实际采集
-      - active: 是否当前激活身份
-    绝不返回真实 user_id 明文或 cookie 内容，仅返回是否命中 + 前 12 位预览。
-    """
+    """Expose only the existing bridge owner's safe account-status projection."""
     try:
-        import os as _os
-        active = getattr(xhs_cookie_bridge, '_ACTIVE_ACCOUNT', None) or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT
-        collection_policy = xhs_cookie_bridge.collection_policy_gate(account=active, region='intl')
-        accounts = []
-        for name, (cookie_path, cdp_profile_dir) in xhs_cookie_bridge.ACCOUNT_PROFILES.items():
-            c_ready = bool(cookie_path and _os.path.isfile(cookie_path) and
-                           open(cookie_path, encoding='utf-8', errors='replace').read().strip())
-            current_uid = None
-            try:
-                # 仅当身份为激活时读生效路径才是该身份的 uid；非激活身份临时切读
-                if name != active:
-                    override_bak = _os.environ.get('XHS_COOKIE_FILE_OVERRIDE', '')
-                    _os.environ['XHS_COOKIE_FILE_OVERRIDE'] = str(cookie_path or '')
-                    current_uid = xhs_cookie_bridge._get_current_user_id()
-                    if override_bak: _os.environ['XHS_COOKIE_FILE_OVERRIDE'] = override_bak
-                    elif 'XHS_COOKIE_FILE_OVERRIDE' in _os.environ: del _os.environ['XHS_COOKIE_FILE_OVERRIDE']
-                else:
-                    current_uid = xhs_cookie_bridge._get_current_user_id()
-            except Exception:
-                current_uid = None
-            id_match = bool(current_uid and current_uid in xhs_cookie_bridge.ALLOWED_USER_IDS)
-            _cdp_port = xhs_cookie_bridge.cdp_port_for(name)
-            account_policy = xhs_cookie_bridge.collection_policy_gate(account=name, region='intl')
-            _cdp_online = False
-            try:
-                import socket as _sock
-                with _sock.create_connection(('127.0.0.1', _cdp_port), timeout=0.4):
-                    _cdp_online = True
-            except Exception:
-                _cdp_online = False
-            accounts.append({
-                'account': name,
-                'active': (name == active),
-                'cookie_ready': c_ready,
-                'user_id_match': id_match,
-                'user_id_preview': (current_uid[:12] + '...') if current_uid else None,
-                'diagnostic_ready': (c_ready and id_match),
-                'can_use': (c_ready and id_match and account_policy.get('ok')),
-                'collection_enabled': bool(account_policy.get('ok')),
-                'collection_policy': account_policy,
-                'cdp_port': _cdp_port,
-                'cdp_online': _cdp_online,
-                'cdp_profile_dir_exist': bool(cdp_profile_dir and _os.path.isdir(cdp_profile_dir)),
-            })
-        return jsonify({
-            'ok': True,
-            'active_account': active,
-            'allowed_accounts': list(xhs_cookie_bridge.ACCOUNT_PROFILES.keys()),
-            'accounts': accounts,
-            'collection_policy': collection_policy,
-            'allowed_user_ids_preview': [x[:12] + '...' for x in xhs_cookie_bridge.ALLOWED_USER_IDS],
-            'contract_version': 'Z-Brand-Core · 双子星库 Contract v1.0（仅 XHS_CN_PRIMARY + XHS_RETINAUT）',
-        })
+        return jsonify(xhs_cookie_bridge.get_account_status())
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'error': type(e).__name__}), 500
 
 # ========== Zachary OS AI · Resident Browser Health Monitor API ==========
 @app.route('/api/resident/health', methods=['GET'])
 def api_resident_health():
-    """双身份驻场浏览器健康状态查询（三层：端口→CDP→登录态）。
-
-    Query:
-      account=XHS_CN_PRIMARY|XHS_RETINAUT  只查指定身份（缺省=全部）
-      cache=1                                 只读上次持久化结果，不实时探测
-    绝不返回 cookie 值，仅返回存在性/数量/状态分级。
-    """
+    """Return the bridge owner's policy-filtered RedNote session status."""
     try:
-        import resident_health as rh
-        account = request.args.get('account') or None
+        account = request.args.get('account') or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT
         use_cache = request.args.get('cache') in ('1', 'true', 'yes')
-        if use_cache:
-            return jsonify({'ok': True, 'cached': True, 'result': rh.status(use_cache=True)})
-        if account:
-            return jsonify({'ok': True, 'account': account, 'result': rh.check_account(account)})
-        return jsonify({'ok': True, 'result': rh.check_all()})
+        result = xhs_cookie_bridge.get_account_status(account=account)
+        return jsonify({'ok': True, 'cached': False if use_cache else None,
+                        'cache_requested': use_cache, 'result': result})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'error': type(e).__name__}), 500
 
 
 @app.route('/api/resident/recover', methods=['POST'])
 def api_resident_recover():
-    """手动触发驻场浏览器自动恢复（DOWN/CDP_DEGRADED 时拉起；NEEDS_LOGIN 不自动恢复，需人工扫码）。
-
-    Body JSON: {account: XHS_CN_PRIMARY|XHS_RETINAUT|null(全部), force: bool}
-    恢复动作委托 scripts/start_resident_browsers.py（幂等），连续恢复超 3 次标记 UNRECOVERABLE。
-    """
+    """Recover only the current policy-approved XHS worker via its SYSTEM owner."""
     try:
-        import resident_health as rh
         data = request.get_json(silent=True) or {}
-        account = data.get('account') or None
-        force = bool(data.get('force', False))
-        if account:
-            return jsonify({'ok': True, 'account': account, 'result': rh.recover_account(account, force=force)})
-        return jsonify({'ok': True, 'result': rh.recover_all(force=force)})
+        account = str(data.get('account') or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT).strip()
+        policy = xhs_cookie_bridge.collection_policy_gate(account=account, region='intl')
+        if (policy.get('ok') is not True or policy.get('account') != account
+                or policy.get('region') != 'intl'):
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'COLLECTION_POLICY_BLOCKED'}), 403
+        if data.get('force'):
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'FORCE_RECOVERY_NOT_SUPPORTED'}), 400
+        collector = collector_automation.get_collector_automation()
+        collector.start_browser(account=account, headless=True, mode='BACKGROUND')
+        result = xhs_cookie_bridge.get_account_status(account=account)
+        worker_ok = result.get('worker_available') is True
+        return jsonify({'ok': worker_ok,
+                        'status': 'RECOVERED' if worker_ok else 'UNAVAILABLE',
+                        'account': result.get('active_account'),
+                        'worker_available': result.get('worker_available'),
+                        'account_status': result})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED',
+                        'error': str(exc)}), 403
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'error': type(e).__name__}), 500
 
 
 # ========== AI学习引擎与全网舆情检索 API ==========
@@ -4116,26 +4092,35 @@ def api_rednote_collect():
                         'code': policy_gate.get('code'),
                         'collection_policy': policy_gate}), 403
     requested_cdp = data.get('cdp_url') or os.getenv('XHS_CDP_URL')
-    if requested_cdp and not requested_cdp.rstrip('/').endswith(':9223'):
-        return jsonify({'ok': False, 'error': '当前生产采集仅允许香港/国际驻场端口9223',
-                        'code': 'cdp_port_not_allowed',
-                        'collection_policy': policy_gate}), 403
-    cdp_url = requested_cdp or xhs_cookie_bridge.cdp_url_for(account)
     persist = bool(data.get('persist', True))
 
-    # BACKGROUND requires the exact registered profile and headless process mode.
+    # A supplied URL may only confirm the currently registered owner endpoint.
+    # It never selects a profile, process, browser or endpoint.
+    try:
+        registered_before = xhs_cookie_bridge.cdp_url_for(account, headless=True)
+        if requested_cdp and (not registered_before
+                or str(requested_cdp).strip().rstrip('/') != registered_before.rstrip('/')):
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'BROWSER_WORKER_ENDPOINT_MISMATCH'}), 403
+    except Exception:  # noqa: BLE001 - an unverified worker hint never grants a caller-selected endpoint.
+        registered_before = ''
+
+    # BACKGROUND may start only the exact registered HK profile; endpoint is resolved again after startup.
     auto_started_browser = False
     try:
+        import collector as _collector
         import collector_automation
         ca = collector_automation.get_collector_automation()
-        _port = xhs_cookie_bridge.cdp_port_for(account)
         ca.start_browser(account=account, headless=True, mode='BACKGROUND')
-        cdp_url = f'http://127.0.0.1:{_port}'
+        cdp_url, endpoint_error = _collector._resolve_server_cdp_url(
+            requested_cdp, account=account, region='intl')
+        if endpoint_error:
+            raise RuntimeError(endpoint_error)
         auto_started_browser = True
     except Exception as e:
         return jsonify({'ok': False, 'status': 'UNAVAILABLE',
                         'code': 'BACKGROUND_BROWSER_WORKER_UNAVAILABLE',
-                        'error': str(e)}), 409
+                        'error_type': type(e).__name__}), 409
 
     def worker():
         try:
@@ -4628,7 +4613,7 @@ def _load_config():
     if CONFIG_FILE.exists():
         try: return json.loads(CONFIG_FILE.read_text(encoding='utf-8'))
         except Exception as e: logger.warning('Failed to load system config, using defaults: %s', e)
-    return {'company_domain': '', 'company_name': '广州太古汇', 'push_emails': [], 'cdp_url': 'http://127.0.0.1:9223', 'auto_interval': 90, 'daily_push_hour': 9}
+    return {'company_domain': '', 'company_name': None, 'push_emails': [], 'cdp_url': None, 'auto_interval': 90, 'daily_push_hour': 9}
 
 def _save_config(config):
     CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -4638,18 +4623,19 @@ def _save_config(config):
 def api_company_domain():
     config = _load_config()
     if request.method == 'GET':
-        return jsonify({'ok': True, 'domain': config.get('company_domain', ''), 'name': config.get('company_name', '广州太古汇'), 'configured': bool(config.get('company_domain', ''))})
+        return jsonify({'ok': True, 'domain': config.get('company_domain', ''), 'name': config.get('company_name'), 'configured': bool(config.get('company_domain', ''))})
     data = request.get_json(silent=True) or {}
     action = data.get('action', 'update')
     if action == 'delete':
         config['company_domain'] = ''
-        config['company_name'] = '广州太古汇'
+        config['company_name'] = None
         _save_config(config)
         return jsonify({'ok': True, 'message': '公司域名已删除'})
     domain = (data.get('domain') or '').strip()
-    name = (data.get('name') or '广州太古汇').strip()
-    if not domain:
-        return jsonify({'ok': False, 'error': '域名不能为空'}), 400
+    name = str(data.get('name') or '').strip()
+    if not domain or not name:
+        return jsonify({'ok': False, 'code': 'COMPANY_CONFIG_REQUIRED',
+                        'error': '域名和公司名称均需明确填写'}), 400
     config['company_domain'] = domain
     config['company_name'] = name
     _save_config(config)
@@ -6067,7 +6053,10 @@ def api_bilibili_search():
         from bilibili_login_manager import get_bilibili_manager
         manager = get_bilibili_manager()
         
-        keyword = request.args.get('keyword', '广州太古汇')
+        keyword = str(request.args.get('keyword') or '').strip()
+        if not keyword:
+            return jsonify({'ok': False, 'code': 'KEYWORD_REQUIRED',
+                            'error': '请明确提供搜索关键词'}), 400
         page = request.args.get('page', 1, type=int)
         page_size = request.args.get('page_size', 20, type=int)
         
@@ -6093,7 +6082,10 @@ def api_web_collect():
     """触发全网话题搜集（微博+B站）"""
     try:
         data = request.get_json(silent=True) or {}
-        keyword = data.get('keyword', '广州太古汇')
+        keyword = str(data.get('keyword') or '').strip()
+        if not keyword:
+            return jsonify({'ok': False, 'code': 'KEYWORD_REQUIRED',
+                            'error': '请明确提供搜索关键词'}), 400
         platforms = data.get('platforms', ['weibo', 'bilibili'])
         
         results = {}
@@ -6987,11 +6979,9 @@ def api_system_account_base():
 
 print("[dual-domain] API 契约断链修复完成：skills/auxiliary/web-sources/zbmp|cth base/system/account")
 
-# AI Governance — 脱敏回传+额度控制+使用统计+输出标记（云端 zhipu 内置系统）
+# AI Governance — privacy-safe reporting, budget controls, usage statistics and output labels through the existing Gateway.
 import ai_governance
 import ai_resource_packs
-
-
 
 # ===== P0 登录流程重构：ZBMP 域身份入口（CTH内TOTP验证） =====
 
@@ -7352,134 +7342,182 @@ def _xhs_login_capture(ep):
                 pass
 
 
+def _require_xhs_human_login_session(session_id):
+    """Bind every visible login action to the server-authenticated actor and manual task."""
+    sessions = getattr(app, '_xhs_login_sessions', {})
+    session = sessions.get(str(session_id or '').strip())
+    if not isinstance(session, dict):
+        raise LookupError('HUMAN_LOGIN_SESSION_NOT_FOUND')  # noqa: TRY004 - this signals a missing keyed session, not a type mismatch.
+    actor_ref = _collector_browser_actor_ref()
+    if actor_ref != session.get('actor_ref'):
+        raise PermissionError('HUMAN_LOGIN_SESSION_ACTOR_MISMATCH')
+    task_id = str(session.get('task_id') or '').strip()
+    if not task_id or session.get('account') != 'XHS_RETINAUT':
+        raise PermissionError('HUMAN_LOGIN_SESSION_BINDING_INVALID')
+    from lumenis.adapters.human_browser import _authorize_human_interactive
+    _authorize_human_interactive('XHS_RETINAUT', task_id, actor_ref)
+    import xhs_collection_optimizer as optimizer
+    endpoint = optimizer.get_platform_endpoint(
+        'rednote_hk', headless=False, task_id=task_id, actor_ref=actor_ref)
+    return session, actor_ref, task_id, endpoint
+
+
 @app.route('/api/xhs/login/start', methods=['POST'])
 def api_xhs_login_start():
-    """启动小红书登录：创建登录会话（大陆9222/香港9223 归一）。
-    打开登录页与截取二维码由 /status 轮询幂等完成，避免一次性线程泄漏/重复 tab。"""
+    """Open only an explicitly requested, task-owned Hong Kong/International login session."""
     try:
         import time
         import uuid
-        import xhs_collection_optimizer as _xco_start
-        _body = request.get_json(silent=True) or {}
-        _ep = _xco_start.get_platform_endpoint(_body.get('platform') or 'xhs_cn')
-        session_id = 'xhs_login_' + uuid.uuid4().hex[:8]
-        login_sessions = getattr(app, '_xhs_login_sessions', {})
-        login_sessions[session_id] = {
-            'status': 'pending',
-            'created_at': time.time(),
-            'platform': _ep['key'],
+
+        import xhs_collection_optimizer as optimizer
+        body = request.get_json(silent=True) or {}
+        try:
+            platform = optimizer.normalize_registered_platform(
+                body.get('platform') or 'rednote_hk')
+        except ValueError as exc:
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': str(exc)}), 400
+        if platform != 'rednote_hk':
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'PROTECTED_PROFILE_FORBIDDEN'}), 403
+        task_id = str(body.get('task_id') or '').strip()
+        if not task_id:
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'HUMAN_INTERACTIVE_TASK_ID_REQUIRED'}), 400
+        actor_ref = _collector_browser_actor_ref()
+        from lumenis.adapters.human_browser import _authorize_human_interactive
+        _authorize_human_interactive('XHS_RETINAUT', task_id, actor_ref)
+        collector = collector_automation.get_collector_automation()
+        collector.start_browser(account='XHS_RETINAUT', headless=False,
+                                mode='HUMAN_INTERACTIVE', task_id=task_id,
+                                actor_ref=actor_ref)
+        endpoint = optimizer.get_platform_endpoint(
+            'rednote_hk', headless=False, task_id=task_id, actor_ref=actor_ref)
+        session_id = 'xhs_login_' + uuid.uuid4().hex
+        sessions = getattr(app, '_xhs_login_sessions', {})
+        sessions[session_id] = {
+            'status': 'pending', 'created_at': time.time(),
+            'platform': 'rednote_hk', 'account': 'XHS_RETINAUT',
+            'task_id': task_id, 'actor_ref': actor_ref,
         }
-        app._xhs_login_sessions = login_sessions
+        app._xhs_login_sessions = sessions
         return jsonify({'ok': True, 'session_id': session_id,
-                        'platform': _ep['key'], 'label': _ep['label'], 'status': 'pending'})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+                        'platform': 'rednote_hk', 'label': endpoint['label'],
+                        'status': 'pending', 'mode': 'HUMAN_INTERACTIVE'})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(exc)}), 403
+    except LookupError as exc:
+        return jsonify({'ok': False, 'status': 'NOT_FOUND', 'error': str(exc)}), 404
+    except Exception as exc:  # noqa: BLE001 - keep unknown browser failures at a safe unavailable boundary.
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'code': 'LOGIN_WORKER_UNAVAILABLE',
+                        'error_type': type(exc).__name__}), 409
+
 
 @app.route('/api/xhs/login/status')
 def api_xhs_login_status():
-    """检查小红书登录状态：在线直接判定；未登录回传系统内二维码截图(qr_image)。"""
+    """Read login state from the same authorized visible worker without starting another browser."""
     try:
-        import time as _time
+        import time as clock
         session_id = request.args.get('session_id', '')
-        login_sessions = getattr(app, '_xhs_login_sessions', {})
-        session = login_sessions.get(session_id, {'status': 'not_found'})
-        # 按本次登录会话的平台选对应 CDP/域名/会话 cookie（大陆9222 / 香港9223 各自独立）
-        import xhs_collection_optimizer as _xco_st
-        _ep = _xco_st.get_platform_endpoint(session.get('platform') or 'xhs_cn')
-        stage, qr_image, msg = 'unknown', None, ''
-        is_logged_in = False
+        session, _, _, endpoint = _require_xhs_human_login_session(session_id)
+        stage, qr_image, message = 'unknown', None, ''
+        now = clock.time()
         try:
-            # 轻节流：二维码 2.5s 内复用，避免 3s 轮询频繁截图；在线判定每次实时查 cookie
-            _now = _time.time()
-            cached = (session.get('qr_image') and _now - session.get('last_cap', 0) < 2.5
+            cached = (session.get('qr_image') and now - session.get('last_cap', 0) < 2.5
                       and session.get('status') in ('qr_ready', 'no_qr'))
             if cached:
-                stage = session.get('status')
+                stage = session['status']
                 qr_image = session.get('qr_image')
-                msg = '请使用小红书 App 扫描二维码' if stage == 'qr_ready' else '二维码加载中…'
+                message = '请使用小红书 App 扫描二维码' if stage == 'qr_ready' else '二维码加载中…'
             else:
-                stage, qr_image, msg = _xhs_login_capture(_ep)
-                session['status'] = stage
-                session['last_cap'] = _now
-                session['qr_image'] = qr_image
-            is_logged_in = (stage == 'logged_in')
-        except Exception as ce:
-            stage, msg = 'error', f'登录页探测失败：{ce}'
-        return jsonify({
-            'ok': True,
-            'session_id': session_id,
-            'platform': _ep['key'],
-            'label': _ep['label'],
-            'stage': stage,
-            'status': stage,
-            'is_logged_in': is_logged_in,
-            'qr_image': qr_image,
-            'message': '已登录' if is_logged_in else msg,
-        })
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+                stage, qr_image, message = _xhs_login_capture(endpoint)
+                session.update(status=stage, last_cap=now, qr_image=qr_image)
+        except Exception as exc:  # noqa: BLE001 - capture failures become an explicit UI error state.
+            stage, message = 'error', f'登录页探测失败：{type(exc).__name__}'
+        return jsonify({'ok': True, 'session_id': session_id,
+                        'platform': 'rednote_hk', 'label': endpoint['label'],
+                        'stage': stage, 'status': stage,
+                        'is_logged_in': stage == 'logged_in', 'qr_image': qr_image,
+                        'message': '已登录' if stage == 'logged_in' else message})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(exc)}), 403
+    except LookupError as exc:
+        return jsonify({'ok': False, 'status': 'NOT_FOUND', 'error': str(exc)}), 404
+    except Exception as exc:  # noqa: BLE001 - keep unknown browser failures at a safe unavailable boundary.
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'code': 'LOGIN_WORKER_UNAVAILABLE',
+                        'error_type': type(exc).__name__}), 409
+
 
 @app.route('/api/xhs/login/save', methods=['POST'])
 def api_xhs_login_save():
-    """保存香港/国际小红书登录态到 canonical protected runtime store。
-
-    Experience V2 的授权恢复不能把会话凭证写回源码仓库 ``data/``，也不能
-    继续生成旧的 ``rednote_cookies.json`` 平行来源。生产身份唯一由
-    ``xhs_cookie_bridge.ACCOUNT_PROFILES[XHS_RETINAUT]`` 所声明的受保护路径
-    持有；这里只保存 header 形式，响应不回显路径或 Cookie 值。
-    """
+    """Save only a verified HK/International login from the same actor/task session."""
     try:
-        # 生产边界：当前只允许香港/国际 RedNote；大陆身份保持暂停，不允许从新 UI 写入。
-        import xhs_collection_optimizer as _xco_sv
-        _b = request.get_json(silent=True) or {}
-        _ep = _xco_sv.get_platform_endpoint(_b.get('platform') or request.args.get('platform') or 'xhs_cn')
-        _pf = _ep['key']
-        if _pf != 'rednote_hk':
-            return jsonify({'ok': False, 'error': '当前生产仅允许香港/国际 RedNote，内地账号登录恢复已暂停'}), 403
-        # 从对应平台 CDP 浏览器获取 cookies 并保存
-        cookies_saved = False
-        cookie_count = 0
-        try:
-            from playwright.sync_api import sync_playwright
-            with sync_playwright() as p:
-                browser = p.chromium.connect_over_cdp(_ep['cdp_url'], timeout=15000)
-                ctx = browser.contexts[0] if browser.contexts else None
-                if ctx:
-                    cookies = ctx.cookies(_ep['home_url'])
-                    cookie_count = len(cookies or [])
-                    # 唯一生产凭证落点：runtime data/private/xhs_cookie_retinaut.txt。
-                    # 该路径由 ZBC_DB_PATH/ZBC_DATA_DIR 解析，不随源码仓库移动。
-                    import xhs_cookie_bridge as _xhs_bridge
-                    _cookie_path = _xhs_bridge.ACCOUNT_PROFILES[_xhs_bridge.XHS_RETINAUT_NAME][0]
-                    _cookie_path = os.path.abspath(_cookie_path)
-                    os.makedirs(os.path.dirname(_cookie_path), exist_ok=True)
-                    _header = '; '.join(
-                        f"{c.get('name')}={c.get('value')}"
-                        for c in (cookies or [])
-                        if c.get('name') and c.get('value') is not None
-                    )
-                    if _header:
-                        with open(_cookie_path, 'w', encoding='utf-8') as f:
-                            f.write(_header)
-                    cookies_saved = bool(_header)
+        body = request.get_json(silent=True) or {}
+        session_id = str(body.get('session_id') or request.args.get('session_id') or '').strip()
+        _, actor_ref, task_id, endpoint = _require_xhs_human_login_session(session_id)
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.connect_over_cdp(endpoint['cdp_url'], timeout=15000)
+            try:
+                context = browser.contexts[0] if browser.contexts else None
+                if context is None:
+                    return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                                    'code': 'BROWSER_CONTEXT_UNAVAILABLE'}), 409
+                cookies = context.cookies(endpoint['home_url']) or []
+            finally:
                 browser.close()
-        except Exception as e:
-            return jsonify({'ok': False, 'error': f'保存cookies失败: {str(e)}'}), 500
-        # 标记auth_recovery任务完成（按平台身份）
+        cookie_header = '; '.join(
+            f"{item.get('name')}={item.get('value')}"
+            for item in cookies
+            if item.get('name') and item.get('value') is not None
+        )
+        import xhs_cookie_bridge as bridge
+        cookie_names = {str(item.get('name') or '') for item in cookies}
+        if not cookie_header or not (cookie_names & set(endpoint['session_cookies'])):
+            return jsonify({'ok': False, 'status': 'NEED_VERIFY',
+                            'code': 'LOGIN_SESSION_NOT_VERIFIED'}), 409
+        observed_uid = bridge._extract_user_id_from_cookie_text(cookie_header)
+        if not bridge.XHS_RETINAUT or observed_uid != bridge.XHS_RETINAUT:
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'REGISTERED_ACCOUNT_IDENTITY_MISMATCH'}), 403
+        cookie_path = bridge.ACCOUNT_PROFILES[bridge.XHS_RETINAUT_NAME][0]
+        cookie_path = os.path.abspath(cookie_path)
+        os.makedirs(os.path.dirname(cookie_path), exist_ok=True)
+        with open(cookie_path, 'w', encoding='utf-8') as handle:
+            handle.write(cookie_header)
+        from lumenis.adapters.human_browser import (
+            return_registered_worker_to_background,
+        )
+        returned = return_registered_worker_to_background(
+            'XHS_RETINAUT', task_id=task_id, actor_ref=actor_ref)
+        if returned.get('worker_verified') is not True:
+            return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                            'code': 'BACKGROUND_RETURN_UNVERIFIED',
+                            'cookies_saved': True}), 409
         try:
             from auth_recovery_center import auth_recovery_center
-            _acct = 'rednote' if _pf == 'rednote_hk' else 'xhs'
-            pending = auth_recovery_center.get_pending_tasks(_acct)
-            for task in pending:
-                auth_recovery_center.mark_completed(task.id, f'{_ep["label"]}系统内扫码登录成功')
+            pending = auth_recovery_center.get_pending_tasks('rednote')
+            for recovery_task in pending:
+                auth_recovery_center.mark_completed(
+                    recovery_task.id, f"{endpoint['label']}系统内登录已保存并返回后台")
         except Exception:
             pass
-        return jsonify({'ok': True, 'platform': _pf, 'label': _ep['label'],
+        getattr(app, '_xhs_login_sessions', {}).pop(session_id, None)
+        return jsonify({'ok': True, 'status': 'RETURNED_BACKGROUND',
+                        'platform': 'rednote_hk', 'label': endpoint['label'],
                         'account': 'XHS_RETINAUT', 'credential_store': 'protected_runtime',
-                        'cookies_saved': cookies_saved, 'cookie_count': cookie_count,
-                        'message': f'{_ep["label"]}登录态已保存'})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+                        'cookies_saved': True, 'cookie_count': len(cookies),
+                        'message': '登录态已保存并安全返回后台'})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(exc)}), 403
+    except LookupError as exc:
+        return jsonify({'ok': False, 'status': 'NOT_FOUND', 'error': str(exc)}), 404
+    except Exception as exc:  # noqa: BLE001 - do not expose storage or browser details at the API boundary.
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'code': 'LOGIN_SAVE_OR_RETURN_FAILED',
+                        'error_type': type(exc).__name__}), 409
 
 
 # ============ Search-STD 搜索增强（案例库/知识库/RAG） ============
@@ -7548,16 +7586,42 @@ def api_xhs_optimizer_classify():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+
+def _safe_xhs_keepalive_result(result):
+    """Serialize user-facing session state without Worker endpoint or exception text."""
+    if not isinstance(result, dict):
+        return {'status': 'unavailable', 'message': '受控会话状态不可用'}
+    allowed = ('platform', 'label', 'status', 'is_logged_in', 'need_relogin',
+               'cdp_online', 'checked_at', 'last_login_at', 'last_check_at',
+               'should_login_today', 'history_count')
+    safe = {key: result[key] for key in allowed if key in result}
+    state = str(result.get('status') or 'unavailable').casefold()
+    messages = {
+        'logged_in': '已确认登录状态',
+        'not_logged_in': '需要在产品内完成登录验证',
+        'logged_out': '需要在产品内完成登录验证',
+        'cdp_down': '受控后台浏览器当前不可用',
+        'worker_unavailable': '受控后台浏览器当前不可用',
+        'check_failed': '会话状态暂时无法核验',
+    }
+    safe['message'] = messages.get(state, '会话状态已读取；登录可用性仍需核验')
+    return safe
+
 @app.route('/api/xhs/rednote/keepalive')
 def api_xhs_rednote_keepalive():
-    """获取香港RedNote登录保活状态（支持 ?platform=rednote_hk|xhs_cn，默认 rednote_hk）"""
+    """Return safe status for the registered Hong Kong/International session."""
     try:
         import xhs_collection_optimizer
-        platform = (request.args.get('platform') or 'rednote_hk').strip() or 'rednote_hk'
-        status = xhs_collection_optimizer.get_keepalive_status(platform)
-        return jsonify({'ok': True, **status})
+        platform = xhs_collection_optimizer.normalize_registered_platform(
+            request.args.get('platform') or 'rednote_hk')
+        if platform != 'rednote_hk':
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'PROTECTED_PROFILE_FORBIDDEN'}), 403
+        status = xhs_collection_optimizer.get_keepalive_status('rednote_hk')
+        return jsonify({'ok': True, **_safe_xhs_keepalive_result(status)})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'error': type(e).__name__}), 503
 
 
 @app.route('/api/xhs/keepalive/mark', methods=['POST'])
@@ -7568,38 +7632,46 @@ def api_xhs_keepalive_mark():
         platform = 'rednote_hk'
         if request.is_json:
             platform = (request.json.get('platform') or 'rednote_hk').strip() or 'rednote_hk'
-        result = xhs_collection_optimizer.mark_keepalive_success(platform)
-        return jsonify({'ok': True, **result})
+        platform = xhs_collection_optimizer.normalize_registered_platform(platform)
+        if platform != 'rednote_hk':
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'PROTECTED_PROFILE_FORBIDDEN'}), 403
+        result = xhs_collection_optimizer.mark_keepalive_success('rednote_hk')
+        return jsonify({'ok': True, **_safe_xhs_keepalive_result(result)})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'error': type(e).__name__}), 503
 
 
 @app.route('/api/xhs/keepalive/recheck', methods=['POST'])
 def api_xhs_keepalive_recheck():
-    """执行保活检查并给出决策（掉线自动再弹核心）。body: {platform, cdp_url?}
+    """Check the current registered worker; endpoint selection is server-owned.
     返回 need_relogin=true 时前端应自动弹出登录弹窗。"""
     try:
         import xhs_collection_optimizer
         platform = 'rednote_hk'
-        cdp_url = None
         if request.is_json:
             platform = (request.json.get('platform') or 'rednote_hk').strip() or 'rednote_hk'
-            cdp_url = request.json.get('cdp_url')
-        result = xhs_collection_optimizer.recheck_keepalive(platform, cdp_url)
-        return jsonify({'ok': True, **result})
+        platform = xhs_collection_optimizer.normalize_registered_platform(platform)
+        if platform != 'rednote_hk':
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'PROTECTED_PROFILE_FORBIDDEN'}), 403
+        result = xhs_collection_optimizer.recheck_keepalive('rednote_hk')
+        return jsonify({'ok': True, **_safe_xhs_keepalive_result(result)})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'error': type(e).__name__}), 503
 
 @app.route('/api/xhs/rednote/check-login', methods=['POST'])
 def api_xhs_rednote_check_login():
-    """检查香港RedNote登录状态（通过CDP 9223）"""
+    """检查已登记的香港/国际 RedNote 浏览器会话。"""
     try:
         import xhs_collection_optimizer
-        cdp_url = request.json.get('cdp_url', 'http://127.0.0.1:9223') if request.is_json else 'http://127.0.0.1:9223'
-        result = xhs_collection_optimizer.check_rednote_login(cdp_url)
-        return jsonify({'ok': True, **result})
+        result = xhs_collection_optimizer.check_rednote_login()
+        return jsonify({'ok': True, **_safe_xhs_keepalive_result(result)})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'error': type(e).__name__}), 503
 
 
 # ============ GAP-21 Cookie 导入 API（受 Basic Auth 保护，不接收/不返回 Cookie 明文）============

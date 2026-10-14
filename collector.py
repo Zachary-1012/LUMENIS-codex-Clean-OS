@@ -202,7 +202,7 @@ def _check_profile_lock(profile_dir):
         raise PermissionError('XHS_REGISTERED_PROFILE_BINDING_MISMATCH')
     return any(os.path.exists(os.path.join(lock_dir, f)) for f in ('SingletonLock', 'SingletonCookie', 'SingletonSocket'))
 
-# CDP 真人通道（9223 香港/国际 RedNote；仅复用已登录的本机驻场实例）
+# SYSTEM Browser Runtime endpoint is resolved from its registered XHS worker.
 CDP_URL = os.getenv('XHS_CDP_URL', '').strip()
 CDP_SCRIPT = os.path.join(SCRIPT_DIR, 'xhs_cdp_collector.py')  # Python Playwright CDP 真人通道
 CDP_NODE_FALLBACK = os.path.join(SCRIPT_DIR, 'rednote_collector.cjs')  # 备用 node 通道
@@ -235,7 +235,7 @@ def _collection_policy_gate(region=None, account=None):
 
 
 def _collection_env(account=None, region='intl', cdp_url=None, *, require_local_cookie=True):
-    """Inject the server-owned account vault and remote worker URL, never shell-local credentials."""
+    """Build a clean child environment only after the SYSTEM worker owner resolves the endpoint."""
     env = os.environ.copy()
     env.pop('XHS_COOKIE_FILE', None)
     env.pop('XHS_EXPECTED_COLLECTION_USER_ID', None)
@@ -246,8 +246,6 @@ def _collection_env(account=None, region='intl', cdp_url=None, *, require_local_
     selected_region = region or 'intl'
     env['XHS_COLLECTION_REGION'] = selected_region
     env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
-    if cdp_url:
-        env['XHS_CDP_URL'] = cdp_url
     from xhs_cookie_bridge import (
         ACCOUNT_PROFILES,
         DEFAULT_COLLECTION_ACCOUNT,
@@ -260,6 +258,12 @@ def _collection_env(account=None, region='intl', cdp_url=None, *, require_local_
     profile = ACCOUNT_PROFILES.get(selected)
     if selected != XHS_RETINAUT_NAME or selected_region != 'intl' or not XHS_RETINAUT:
         raise PermissionError('POLICY_BLOCKED: approved HK identity unavailable')
+    if cdp_url:
+        endpoint, endpoint_error = _resolve_server_cdp_url(
+            cdp_url, account=selected, region=selected_region)
+        if endpoint_error:
+            raise PermissionError(endpoint_error)
+        env['XHS_CDP_URL'] = endpoint
     env['XHS_COLLECTION_ACCOUNT'] = selected
     env['XHS_EXPECTED_COLLECTION_USER_ID'] = XHS_RETINAUT
     env['PYTHONIOENCODING'] = 'utf-8'
@@ -316,17 +320,21 @@ def _approved_local_profile_contract(account=None, region=None):
         return None
     try:
         from xhs_cookie_bridge import (
-            ACCOUNT_CDP_PORTS, ACCOUNT_PROFILES, DEFAULT_COLLECTION_ACCOUNT,
+            ACCOUNT_PROFILES, DEFAULT_COLLECTION_ACCOUNT,
             PRIVATE_DATA_DIR, XHS_RETINAUT,
         )
+        from lumenis.system.collector.adapters.rednote_policy import collection_gate
         profile = ACCOUNT_PROFILES.get(account)
-        expected_profile = os.path.normcase(os.path.abspath(os.path.join(
-            PRIVATE_DATA_DIR, 'profiles', 'xhs-retinaut')))
+        expected_profile = os.path.normcase(os.path.realpath(os.path.abspath(os.path.join(
+            PRIVATE_DATA_DIR, 'profiles', 'xhs-retinaut'))))
+        registered_profile = (os.path.normcase(os.path.realpath(os.path.abspath(os.path.expanduser(
+            os.fspath(profile[1]))))) if isinstance(profile, (tuple, list))
+            and len(profile) == 2 and profile[1] else None)
         if (account != DEFAULT_COLLECTION_ACCOUNT or not XHS_RETINAUT
-                or ACCOUNT_CDP_PORTS.get(account) != 9223
+                or not collection_gate(account=account, region=region).get('ok')
                 or not isinstance(profile, tuple) or len(profile) != 2
                 or not profile[0] or not profile[1]
-                or os.path.normcase(os.path.abspath(profile[1])) != expected_profile):
+                or registered_profile != expected_profile):
             return None
         return XHS_RETINAUT
     except Exception:
@@ -334,50 +342,150 @@ def _approved_local_profile_contract(account=None, region=None):
 
 
 def _resolve_server_cdp_url(cdp_url=None, *, account=None, region=None):
-    """Resolve a configured remote worker or the one approved HK loopback worker."""
-    candidate = str(cdp_url or os.getenv('XHS_CDP_URL') or CDP_URL or '').strip()
-    if not candidate:
-        # The approved local worker may be discovered only through its fixed,
-        # loopback-only endpoint.  This is a read-only health probe; it never
-        # reads cookies or touches the browser profile.
-        if _approved_local_profile_contract(account, region):
-            import urllib.request
-            try:
-                with urllib.request.urlopen(
-                        'http://127.0.0.1:9223/json/version', timeout=1.5) as response:
-                    if getattr(response, 'status', 200) == 200:
-                        return 'http://127.0.0.1:9223', ''
-            except Exception:
-                pass
-        return '', 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
+    """Resolve only the exact SYSTEM-registered local XHS worker.
+
+    Remote URL configuration is retained for compatibility, but a URL alone is
+    not a registered worker/session/Permission binding and is never connected.
+    Local browser URLs are claims only and must match the exact SYSTEM-registered
+    process/profile/CDP owner.
+    """
+    selected_account = str(account or 'XHS_RETINAUT').strip().upper()
+    selected_region = str(region or 'intl').strip().lower()
     try:
-        parsed = urlsplit(candidate)
-        hostname = (parsed.hostname or '').strip('[]').lower()
-        if parsed.scheme not in {'http', 'https'} or not hostname:
-            return '', 'COLLECTOR_ENDPOINT_INVALID'
-        if parsed.username or parsed.password or parsed.fragment:
-            return '', 'COLLECTOR_ENDPOINT_INVALID'
-        if parsed.port == 9222:
+        import xhs_cookie_bridge as bridge
+        gate = bridge.collection_policy_gate(account=selected_account, region=selected_region)
+        if (not isinstance(gate, dict) or gate.get('ok') is not True
+                or gate.get('account') != selected_account
+                or gate.get('region') != selected_region
+                or selected_account != bridge.XHS_RETINAUT_NAME
+                or selected_account != bridge.DEFAULT_COLLECTION_ACCOUNT
+                or selected_region != 'intl'
+                or not str(bridge.XHS_RETINAUT or '').strip()
+                or bridge.XHS_RETINAUT not in bridge.ALLOWED_USER_IDS):
             return '', 'POLICY_BLOCKED'
+    except Exception:  # noqa: BLE001 - policy lookup failure must block collection.
+        return '', 'COLLECTOR_POLICY_UNAVAILABLE'
+
+    server_values = [str(value or '').strip() for value in
+                     (os.getenv('XHS_CDP_URL'), CDP_URL)]
+    configured = [value for value in server_values if value]
+    if len({value.rstrip('/') for value in configured}) > 1:
+        return '', 'COLLECTOR_ENDPOINT_CONFIG_MISMATCH'
+    configured_endpoint = configured[0].rstrip('/') if configured else ''
+    requested = str(cdp_url or '').strip().rstrip('/')
+    if requested and configured_endpoint and requested != configured_endpoint:
+        return '', 'COLLECTOR_ENDPOINT_OWNER_MISMATCH'
+    if requested and not configured_endpoint:
+        # A remote URL is never accepted just because a caller supplied it.
         try:
-            ip = ipaddress.ip_address(hostname)
-        except ValueError:
-            ip = None
-        is_loopback = hostname in {'localhost', 'localhost.localdomain'} or bool(
-            ip and (ip.is_loopback or ip.is_unspecified)
-        )
-        if is_loopback:
-            expected_user_id = _approved_local_profile_contract(account, region)
-            if (hostname != '127.0.0.1' or parsed.scheme != 'http'
-                    or parsed.port != 9223 or parsed.path not in {'', '/'}
-                    or parsed.query or not expected_user_id):
-                return '', 'LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN'
-            return 'http://127.0.0.1:9223', ''
-        if parsed.path not in {'', '/'}:
+            requested_parsed = urlsplit(requested)
+            requested_host = (requested_parsed.hostname or '').strip('[]').lower()
+            try:
+                requested_ip = ipaddress.ip_address(requested_host)
+            except ValueError:
+                requested_ip = None
+            requested_is_loopback = (
+                requested_host in {'127.0.0.1', 'localhost', 'localhost.localdomain'}
+                or bool(requested_ip and requested_ip.is_loopback)
+            )
+        except Exception:  # noqa: BLE001 - malformed endpoint data is rejected before any browser use.
             return '', 'COLLECTOR_ENDPOINT_INVALID'
-        return candidate.rstrip('/'), ''
+        if not requested_is_loopback:
+            return '', 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
+
+    def _validated_remote(value):
+        try:
+            parsed = urlsplit(value)
+            hostname = (parsed.hostname or '').strip('[]').lower()
+            port = parsed.port
+            if (parsed.scheme not in {'http', 'https'} or not hostname
+                    or parsed.username is not None or parsed.password is not None
+                    or parsed.query or parsed.fragment or parsed.path not in {'', '/'}
+                    or port in {9222, 9223}
+                    or (port is not None and not (1 <= port <= 65535))):
+                return None
+            try:
+                ip = ipaddress.ip_address(hostname)
+            except ValueError:
+                ip = None
+            if (hostname in {'localhost', 'localhost.localdomain'}
+                    or (ip and (ip.is_loopback or ip.is_unspecified))):
+                return None
+            netloc = hostname
+            if ':' in hostname and not hostname.startswith('['):
+                netloc = f'[{hostname}]'
+            if port is not None:
+                netloc = f'{netloc}:{port}'
+            return f'{parsed.scheme.lower()}://{netloc}'
+        except (TypeError, ValueError):
+            return None
+
+    # Retain and validate the existing remote endpoint configuration, but do not
+    # connect until an existing SYSTEM owner can provide a trusted remote
+    # worker/session/Permission binding. No such binding is currently exposed;
+    # expected account/UID environment values and a configured URL are not it.
+    if configured_endpoint:
+        try:
+            parsed_config = urlsplit(configured_endpoint)
+            config_host = (parsed_config.hostname or '').strip('[]').lower()
+            # Parse the port now as part of validating the full configured URL.
+            _ = parsed_config.port
+            try:
+                config_ip = ipaddress.ip_address(config_host)
+            except ValueError:
+                config_ip = None
+        except (TypeError, ValueError):
+            return '', 'COLLECTOR_ENDPOINT_INVALID'
+        configured_is_loopback = (
+            config_host in {'127.0.0.1', 'localhost', 'localhost.localdomain'}
+            or bool(config_ip and config_ip.is_loopback)
+        )
+        if not configured_is_loopback:
+            remote_endpoint = _validated_remote(configured_endpoint)
+            if not remote_endpoint:
+                return '', 'COLLECTOR_ENDPOINT_INVALID'
+            if requested and requested != configured_endpoint:
+                return '', 'COLLECTOR_ENDPOINT_OWNER_MISMATCH'
+            return '', 'COLLECTOR_REMOTE_WORKER_IDENTITY_UNVERIFIED'
+        if config_host != '127.0.0.1' or parsed_config.port in {
+                9222, 9223, 9224, 9225, 9226, 9227, 9228}:
+            return '', 'COLLECTOR_ENDPOINT_INVALID'
+
+    # Local routes are always resolved from the registered SYSTEM identity and
+    # current process/CDP listener; neither an env URL nor an arbitrary caller
+    # URL can select a profile or port.
+    if not _approved_local_profile_contract(selected_account, selected_region):
+        return '', 'POLICY_BLOCKED'
+    try:
+        import cdp_helper
+        state = cdp_helper.resolve_registered_xhs_worker(
+            account=selected_account, headless=True)
     except Exception:
+        return '', 'COLLECTOR_WORKER_OWNER_UNAVAILABLE'
+    if not isinstance(state, dict) or not state.get('available'):
+        return '', (str(state.get('code') or 'COLLECTOR_ENDPOINT_NOT_CONFIGURED')
+                    if isinstance(state, dict) else 'COLLECTOR_WORKER_OWNER_UNAVAILABLE')
+    endpoint = str(state.get('endpoint') or '').strip().rstrip('/')
+    try:
+        parsed = urlsplit(endpoint)
+        port = parsed.port
+        if (state.get('account') != selected_account
+                or state.get('headless') is not True
+                or state.get('loopback_only') is not True
+                or parsed.scheme != 'http'
+                or parsed.hostname != '127.0.0.1'
+                or parsed.path or parsed.query or parsed.fragment
+                or port is None or not (1 <= port <= 65535)
+                or port in {9222, 9223, 9224, 9225, 9226, 9227, 9228}
+                or endpoint != f'http://127.0.0.1:{port}'):
+            return '', 'COLLECTOR_ENDPOINT_OWNER_MISMATCH'
+    except (TypeError, ValueError):
         return '', 'COLLECTOR_ENDPOINT_INVALID'
+    if requested and requested != endpoint:
+        return '', 'COLLECTOR_ENDPOINT_OWNER_MISMATCH'
+    if configured_endpoint and configured_endpoint != endpoint:
+        return '', 'COLLECTOR_ENDPOINT_OWNER_MISMATCH'
+    return endpoint, ''
 
 
 def _get_xhs_guard():
@@ -474,7 +582,7 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
 
 
 def _cdp_online(timeout=2.0, cdp_url=None, *, account=None, region=None):
-    """Probe a configured remote browser worker; never assume a local browser."""
+    """Probe only an exact SYSTEM-registered worker; a configured remote URL is insufficient."""
     import urllib.request
     _url, endpoint_error = _resolve_server_cdp_url(
         cdp_url, account=account, region=region)
@@ -561,7 +669,7 @@ def _norm_cdp_note(rec):
         # 显式落采集时刻，不依赖下游 insert_note 的隐式兜底（智谱采集链审查 P0-C 加固）。
         'captured_at': rec.get('collected_at') or rec.get('captured_at') or datetime.now().astimezone().isoformat(),
         'xsec_token': rec.get('xsec_token', ''),
-        'source_channel': 'cdp_edge_9223',
+        'source_channel': 'registered_system_browser_worker',
         'quality_status': rec.get('quality_status', ''),
         'subject_hit_cdp': rec.get('subject_hit'),
         'comment_list': rec.get('comment_list', []),
@@ -764,7 +872,7 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
                         region=None, cdp_port=None, kos_only=False, account=None, resume_path=None,
                         time_budget=None, worker_chunk_seconds=300, acquisition_fingerprint=None,
                         detail_media_mode='legacy'):
-    """多通道搜索 RedNote：仅走香港/国际账号与 9223 入口。
+    """多通道搜索 RedNote：仅走获准的香港/国际身份与注册 SYSTEM 会话。
     返回 dict: {keyword,total,notes,error,channel,region}。风控态显式返回，不当作普通0条。
     region: 当前生产值为 'intl'；'cn' 明确返回策略阻断，不触发任何下游进程。
     """
@@ -780,16 +888,14 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
             'channel': 'policy', 'region': region or 'intl',
             'policy': policy_gate,
         }
-    if cdp_port is not None and int(cdp_port) != 9223:
-        gate = dict(policy_gate)
-        gate.update({'ok': False, 'code': 'cdp_port_not_allowed',
-                     'reason': '当前生产采集仅允许香港/国际驻场端口9223'})
-        return {
-            'keyword': keyword, 'total': 0, 'notes': [],
-            'error': gate['code'], 'blocked_reason': gate['reason'],
-            'channel': 'policy', 'region': 'intl', 'cdp_port': cdp_port,
-            'policy': gate,
-        }
+    requested_port = None
+    if cdp_port is not None:
+        try:
+            requested_port = int(cdp_port)
+        except (TypeError, ValueError, OverflowError):
+            return {'keyword': keyword, 'total': 0, 'notes': [],
+                    'error': 'COLLECTOR_ENDPOINT_OWNER_MISMATCH', 'channel': 'policy',
+                    'region': 'intl'}
     if (acquisition_fingerprint is not None
             and (not isinstance(acquisition_fingerprint, str)
                  or re.fullmatch(r'[0-9a-f]{64}', acquisition_fingerprint) is None)):
@@ -797,7 +903,6 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
                 'error': 'INVALID_ACQUISITION_FINGERPRINT', 'channel': 'policy',
                 'region': 'intl'}
     region = 'intl'
-    cdp_port = 9223  # legacy policy identity only; it is not a host-local endpoint
     selected_account = policy_gate.get('account') or account
     cdp_url, endpoint_error = _resolve_server_cdp_url(
         account=selected_account, region='intl')
@@ -806,6 +911,12 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
             'keyword': keyword, 'total': 0, 'notes': [], 'error': endpoint_error,
             'channel': 'worker', 'region': region, 'policy': policy_gate,
         }
+    resolved_port = urlsplit(cdp_url).port
+    if requested_port not in (None, 0, resolved_port):
+        return {'keyword': keyword, 'total': 0, 'notes': [],
+                'error': 'COLLECTOR_ENDPOINT_OWNER_MISMATCH', 'channel': 'policy',
+                'region': 'intl'}
+    cdp_port = resolved_port
     if output_path is None:
         # 采集原始产物属于运行数据，不得回写唯一源码目录；沿用账号桥的
         # 受保护数据根目录，保证直接调用与 API/调度器使用同一落盘边界。
@@ -840,10 +951,13 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
                     'region': region}
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    # 选择器只返回当前允许的香港/国际入口；不再轮换或回落到大陆。
+    # 选择器只确认获准的香港/国际区域；端点始终来自已注册 SYSTEM Worker。
     if _REDNOTE_POLICY_AVAILABLE:
         sel = _rednote_policy.select_region(kos_only=kos_only, force_region='intl')
-        region = sel['region']; cdp_port = sel['cdp_port']
+        region = sel['region']
+        if region != 'intl':
+            return {'keyword': keyword, 'total': 0, 'notes': [],
+                    'error': 'POLICY_BLOCKED', 'channel': 'policy', 'region': region}
     if not os.path.exists(CDP_SCRIPT):
         return {'keyword': keyword, 'total': 0, 'notes': [], 'error': 'COLLECTOR_SCRIPT_UNAVAILABLE',
                 'channel': 'worker', 'region': region}
@@ -857,7 +971,7 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
                              acquisition_fingerprint=acquisition_fingerprint,
                              detail_media_mode=detail_media_mode)
     result['region'] = region
-    result['channel'] = 'authorized_browser_worker'
+    result['channel'] = 'registered_system_browser_worker'
     return result
 
 
@@ -866,7 +980,7 @@ def _collect_one_keyword(guard, kw, kw_scroll, kw_details, account=None):
     独立函数便于 Runtime Guardian execute_with_retry 包装重试。"""
     gr = guard.run(
         lambda kw=kw, ss=kw_scroll, dd=kw_details, acc=account: search_xiaohongshu(
-            kw, max_scroll=ss, max_details=dd, account=acc, region='intl', cdp_port=9223),
+            kw, max_scroll=ss, max_details=dd, account=acc, region='intl'),
         kw,
     )
     result = gr.raw if isinstance(gr.raw, dict) else {

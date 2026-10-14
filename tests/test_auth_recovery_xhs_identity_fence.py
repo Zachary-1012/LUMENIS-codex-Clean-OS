@@ -81,8 +81,17 @@ def test_other_authorized_profile_paths_remain_configured(platform):
     profile, error = auth_recovery._resolve_recovery_profile(platform)
 
     assert error == ""
-    assert profile["port"] == 9223
-    assert profile["profile"] == "edge-cdp-proxy"
+    if platform == "instagram":
+        from lumenis.adapters.human_browser import readonly_worker_spec
+
+        registered = readonly_worker_spec(platform)
+        assert profile["port"] == registered["port"]
+        assert profile["profile"] == registered["profile"]
+        assert profile["cdp_url"] == f"http://127.0.0.1:{registered['port']}"
+    else:
+        # Google is outside this XHS worker migration and retains its existing route.
+        assert profile["port"] == 9223
+        assert profile["profile"] == "edge-cdp-proxy"
 
 
 @pytest.mark.parametrize(
@@ -124,7 +133,7 @@ def test_request_rejects_wrong_or_unconfigured_xhs_owner(
         error=resolver_error,
     )
     monkeypatch.setattr(auth_recovery, "_bridge_to_recovery_center", lambda *args: None)
-    monkeypatch.setattr(auth_recovery.risk_controller, "snapshot", lambda: [])
+    monkeypatch.setattr(auth_recovery.risk_controller, "snapshot", list)
     thread_starts = []
 
     class FakeThread:
@@ -152,7 +161,7 @@ def test_request_revalidates_owner_before_reusing_pending_session(monkeypatch):
         identity={"ok": False, "account": "APPROVED_IDENTITY", "region": "intl", "host": "www.rednote.com"},
     )
     monkeypatch.setattr(auth_recovery, "_bridge_to_recovery_center", lambda *args: None)
-    monkeypatch.setattr(auth_recovery.risk_controller, "snapshot", lambda: [])
+    monkeypatch.setattr(auth_recovery.risk_controller, "snapshot", list)
     monkeypatch.setitem(
         auth_recovery._sessions,
         "xiaohongshu",
@@ -165,7 +174,7 @@ def test_request_revalidates_owner_before_reusing_pending_session(monkeypatch):
     assert calls == [("policy", "intl", None)]
 
 
-@pytest.mark.parametrize("platform", ["douyin", "weibo", "bilibili"])
+@pytest.mark.parametrize("platform", ["weibo", "bilibili"])
 def test_request_rejects_shared_protected_profile_before_thread(monkeypatch, platform):
     monkeypatch.setattr(auth_recovery, "_bridge_to_recovery_center", lambda *args: None)
     thread_starts = []
@@ -189,13 +198,109 @@ def test_request_rejects_shared_protected_profile_before_thread(monkeypatch, pla
     assert thread_starts == []
 
 
-def test_protected_profile_background_retry_never_connects(monkeypatch):
+def test_registered_douyin_worker_can_queue_recovery_without_starting_browser(monkeypatch):
+    from lumenis.adapters import human_browser
+
+    monkeypatch.setattr(auth_recovery, "_bridge_to_recovery_center", lambda *args: None)
+    monkeypatch.setattr(auth_recovery.risk_controller, "snapshot", list)
+    auth_recovery._sessions.pop("douyin", None)
+    starts = []
+
+    class FakeThread:
+        def __init__(self, *, target, args, daemon, name):
+            self.target = target
+            self.args = args
+            self.daemon = daemon
+            self.name = name
+
+        def start(self):
+            starts.append((self.target, self.args, self.daemon, self.name))
+
+    monkeypatch.setattr(auth_recovery, "threading", type("FakeThreading", (), {"Thread": FakeThread}))
+    spec = human_browser.readonly_worker_spec("douyin")
+    cfg, error = auth_recovery._resolve_recovery_profile("douyin")
+
+    assert error == ""
+    assert cfg["port"] == spec["port"]
+    assert cfg["profile"] == spec["profile"]
+    assert cfg["cdp_url"] == f"http://127.0.0.1:{spec['port']}"
+    assert cfg["port"] not in {9222, 9223, 9224}
+
+    result = auth_recovery.request_recovery("douyin", source_state="AUTH_REQUIRED")
+
+    assert result["success"] is True
+    assert result["kind"] == auth_recovery.KIND_AUTH
+    assert len(starts) == 1
+    target, args, daemon, name = starts[0]
+    assert target is auth_recovery._open_and_watch
+    assert args == ("douyin", auth_recovery.KIND_AUTH)
+    assert daemon is True
+    assert name == "auth-recovery-douyin"
+
+
+@pytest.mark.parametrize("field", ["platform", "account", "port", "profile"])
+def test_recovery_rejects_mismatched_registered_worker_identity(monkeypatch, field, tmp_path):
+    from lumenis.adapters import human_browser
+
+    expected = human_browser.readonly_worker_spec("douyin")
+    returned = {**expected, "platform": "douyin"}
+    if field == "platform":
+        returned[field] = "weibo"
+    elif field == "account":
+        returned[field] = "UNRELATED_ACCOUNT"
+    elif field == "port":
+        returned[field] = expected["port"] + 100
+    else:
+        returned[field] = str(tmp_path / "different-profile")
+    monkeypatch.setattr(human_browser, "registered_browser_worker_spec", lambda _identity: returned)
+
+    cfg, error = auth_recovery._resolve_recovery_profile("douyin")
+
+    assert cfg is None
+    assert error == "RECOVERY_WORKER_NOT_REGISTERED"
+
+
+def test_unregistered_douyin_legacy_profile_fails_closed_before_thread(monkeypatch):
+    from lumenis.adapters import human_browser
+
+    monkeypatch.setattr(
+        human_browser,
+        "registered_browser_worker_spec",
+        lambda _identity: (_ for _ in ()).throw(RuntimeError("READONLY_WORKER_NOT_REGISTERED")),
+    )
+    monkeypatch.setattr(auth_recovery, "_bridge_to_recovery_center", lambda *args: None)
+    starts = []
+
+    class FakeThread:
+        def __init__(self, *, target, args, daemon, name):
+            self.target = target
+            self.args = args
+
+        def start(self):
+            starts.append((self.target, self.args))
+
+    monkeypatch.setattr(auth_recovery, "threading", type("FakeThreading", (), {"Thread": FakeThread}))
+
+    result = auth_recovery.request_recovery("douyin", source_state="AUTH_REQUIRED")
+
+    assert result == {"success": False, "error": "RECOVERY_WORKER_NOT_REGISTERED"}
+    assert starts == []
+
+
+def test_unregistered_douyin_background_retry_never_connects(monkeypatch):
+    from lumenis.adapters import human_browser
+
     states = []
     monkeypatch.setattr(auth_recovery, "_set", lambda platform, **kwargs: states.append((platform, kwargs)))
     monkeypatch.setattr(
+        human_browser,
+        "registered_browser_worker_spec",
+        lambda _identity: (_ for _ in ()).throw(RuntimeError("READONLY_WORKER_NOT_REGISTERED")),
+    )
+    monkeypatch.setattr(
         auth_recovery,
         "_connect_hb",
-        lambda *_args, **_kwargs: pytest.fail("protected profile must never connect"),
+        lambda *_args, **_kwargs: pytest.fail("unregistered legacy profile must never connect"),
     )
 
     auth_recovery._open_and_watch("douyin", auth_recovery.KIND_AUTH)

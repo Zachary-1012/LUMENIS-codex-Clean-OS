@@ -1,18 +1,19 @@
 // v5.3.2 - Local authenticated RedNote search bridge
-// Cookie is read only from the server-registered private file after identity checks.
-// It is never written to output JSON, logs, or source code.
+// Uses the SYSTEM-registered HK/intl worker and verifies its browser identity before page use.
+// This path never reads a Cookie file or launches a replacement browser.
 import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { assertApprovedCookiePayload, registeredXhsCookieFile, registeredXhsProfile } from './xhs_profile_guard.js';
 
-const PROFILE = registeredXhsProfile();
-const COOKIE_FILE = registeredXhsCookieFile();
+const require = createRequire(import.meta.url);
+const { connectRegisteredWorker } = require('./rednote_collector.cjs');
 const COLLECTION_HOST = (process.env.XHS_COLLECTION_HOST || 'www.rednote.com').trim().toLowerCase();
 if (COLLECTION_HOST !== 'www.rednote.com') {
   throw new Error('当前生产采集仅允许香港/国际 RedNote 主机 www.rednote.com');
 }
 const COLLECTION_ORIGIN = `https://${COLLECTION_HOST}`;
-const COOKIE_DOMAIN = '.rednote.com';
 
 function args() {
   const a = process.argv.slice(2), r = { keyword:'', output:'', maxScroll:6 };
@@ -23,20 +24,6 @@ function args() {
   }
   return r;
 }
-
-function cookieHeader() {
-  if (fs.existsSync(COOKIE_FILE)) return fs.readFileSync(COOKIE_FILE,'utf8').trim();
-  return '';
-}
-
-function parseCookieHeader(raw) {
-  return raw.split(';').map(x=>x.trim()).filter(Boolean).map(pair=>{
-    const i=pair.indexOf('=');
-    if (i<=0) return null;
-    return { name:pair.slice(0,i).trim(), value:pair.slice(i+1).trim(), domain:COOKIE_DOMAIN, path:'/', secure:true };
-  }).filter(Boolean);
-}
-
 
 function normalize(item) {
   const card=item.note_card || {}, user=card.user || {}, interact=card.interact_info || {}, cover=card.cover || {};
@@ -73,31 +60,22 @@ function normalize(item) {
 async function main() {
   const {keyword,output,maxScroll}=args();
   if (!keyword) throw new Error('--keyword 必填');
-  const raw=cookieHeader();
-  if (!raw) throw new Error('XHS_REGISTERED_COOKIE_UNAVAILABLE');
-  const cookies=parseCookieHeader(raw);
-  assertApprovedCookiePayload(cookies);
   const cdpUrl=process.env.XHS_CDP_URL||'';
-  let browser=null, context=null, page=null, isCdp=false;
-  if (cdpUrl) {
-    try {
-      browser=await chromium.connectOverCDP(cdpUrl,{timeout:12000});
-      context=browser.contexts()[0] || await browser.newContext();
-      // 自愈：关闭此前异常残留的搜索结果 tab（不触碰 explore 等用户/保活页面）
-      for (const op of context.pages()) { try { if (op.url().includes('search_result')) await op.close(); } catch {} }
-      page=await context.newPage();
-      isCdp=true;
-    } catch(e) {
-      process.stderr.write('[xhs-cookie-search] CDP connect fail, fallback headless: '+String(e&&e.message).slice(0,120)+'\n');
-      try{ if(browser) await browser.close(); }catch{}
-      browser=null; context=null; page=null; isCdp=false;
-    }
+  const connected=await connectRegisteredWorker(cdpUrl,{browserConnector:chromium});
+  if (!connected.ok) {
+    const result={keyword,fetched_at:new Date().toISOString(),state:'BLOCKED',total:0,api_calls:0,
+      error_code:connected.code,error_msg:connected.code,blocked_reason:connected.code,page_hint:'',notes:[]};
+    writeResult(output,result);
+    process.stdout.write(JSON.stringify(result));
+    process.exitCode=1;
+    return;
   }
-  if(!isCdp){
-    context=await chromium.launchPersistentContext(PROFILE,{headless:true,args:['--disable-blink-features=AutomationControlled']});
-    await context.addCookies(cookies);
-    page=context.pages()[0] || await context.newPage();
-  }
+  const {browser,context}=connected;
+  let page=null;
+  let result;
+  let exitCode=0;
+  try {
+  page=await context.newPage();
   const notes=new Map(); let apiCalls=0; let apiErrorCode='', apiErrorMsg='';
   page.on('response', async response=>{
     try {
@@ -116,10 +94,8 @@ async function main() {
     } catch {}
   });
   // 冷导航预热（对齐 Python CDP 采集实践）：直冷导航 search_result 易挂起，先稳落 explore 再进搜索页
-  if (isCdp) {
-    try { await page.goto(`${COLLECTION_ORIGIN}/explore`,{waitUntil:'domcontentloaded',timeout:20000}); await page.waitForTimeout(1500); }
-    catch(e){ process.stderr.write('[xhs-cookie-search] explore warmup fail: '+String(e&&e.message).slice(0,100)+'\n'); }
-  }
+  try { await page.goto(`${COLLECTION_ORIGIN}/explore`,{waitUntil:'domcontentloaded',timeout:20000}); await page.waitForTimeout(1500); }
+  catch(e){ process.stderr.write('[xhs-cookie-search] explore warmup fail: '+String(e&&e.message).slice(0,100)+'\n'); }
   const url=`${COLLECTION_ORIGIN}/search_result?keyword=${encodeURIComponent(keyword)}&source=web_explore_feed`;
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForTimeout(3500);
@@ -146,21 +122,41 @@ async function main() {
     else if (notes.size===0) { state='EMPTY'; blockedReason=''; }  // 接口正常返回，确实 0 条
     else { state='SUCCESS'; }
   } catch {}
-  // CDP 模式只关闭本任务打开的标签页并断开调试连接，绝不关闭常驻浏览器；独立模式才关闭整个 context
-  try { await page.close(); } catch {}
-  if (isCdp) { try { await browser.disconnect(); } catch {} }
-  else { try { await context.close(); } catch {} }
-  const result={keyword,fetched_at:new Date().toISOString(),state,total:notes.size,api_calls:apiCalls,
+  result={keyword,fetched_at:new Date().toISOString(),state,total:notes.size,api_calls:apiCalls,
     error_code:apiErrorCode,error_msg:apiErrorMsg,
     blocked_reason:blockedReason, page_hint:pageHint,
     notes:[...notes.values()]};
-  if (output) { fs.mkdirSync(path.dirname(output),{recursive:true}); fs.writeFileSync(output,JSON.stringify(result,null,2),'utf8'); }
+  } catch(error) {
+    exitCode=1;
+    result={keyword,fetched_at:new Date().toISOString(),state:'NETWORK_ERROR',
+      total:0,api_calls:0,error_code:'NAV_FAILED',
+      error_msg:String(error&&error.message||'').slice(0,160),
+      blocked_reason:'NETWORK_ERROR',page_hint:'',notes:[]};
+  } finally {
+    // Release only this task's page and CDP client. The registered worker stays running.
+    if (page) { try { await page.close(); } catch {} }
+    try { await browser.disconnect(); } catch {}
+  }
+  writeResult(output,result);
   process.stdout.write(JSON.stringify(result));
-  // connectOverCDP 可能残留连接句柄使事件循环不空，写完即干净退出（catch 路径已 process.exit(1)）
-  process.exit(0);
+  process.exitCode=exitCode;
 }
-main().catch(e=>{ // 导航/网络层失败：结构化输出 NETWORK_ERROR，不抛裸异常
-  const result={keyword:'',fetched_at:new Date().toISOString(),state:'NETWORK_ERROR',total:0,api_calls:0,
-    error_code:'NAV_FAILED',error_msg:(e&&e.message||'').slice(0,160),blocked_reason:'NETWORK_ERROR',page_hint:'',notes:[]};
-  if (typeof output==='string'&&output){ try{fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,JSON.stringify(result,null,2),'utf8');}catch{} }
-  console.error('[xhs-cookie-search]',e.message); process.exit(1); });
+
+function writeResult(output,result) {
+  if (!output) return;
+  fs.mkdirSync(path.dirname(output),{recursive:true});
+  fs.writeFileSync(output,JSON.stringify(result,null,2),'utf8');
+}
+
+if (process.argv[1]
+    && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(()=>{
+    const result={keyword:args().keyword,fetched_at:new Date().toISOString(),state:'NETWORK_ERROR',
+      total:0,api_calls:0,error_code:'NAV_FAILED',
+      error_msg:'Search worker failed before page ownership was established.',
+      blocked_reason:'NETWORK_ERROR',page_hint:'',notes:[]};
+    try { writeResult(args().output,result); } catch {}
+    process.stdout.write(JSON.stringify(result));
+    process.exitCode=1;
+  });
+}

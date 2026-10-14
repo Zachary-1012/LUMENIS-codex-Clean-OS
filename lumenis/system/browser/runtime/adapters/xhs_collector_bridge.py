@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Optional
+from typing import Any
 
 # Feature Gate：默认关闭，需显式启用
 FEATURE_GATE_ENV = "ZBC_BROWSER_RUNTIME_XHS"
@@ -33,12 +33,17 @@ def is_enabled() -> bool:
     return os.environ.get(FEATURE_GATE_ENV, "").strip() == "1"
 
 
-def _hk_endpoint_allowed(cdp_url: str) -> bool:
-    """Reject the legacy Mainland debugger before adapter construction or I/O."""
-    return "9222" not in str(cdp_url or "")
+def _resolve_hk_endpoint(cdp_url: str | None = None) -> tuple[str, str]:
+    """Resolve an exact registered HK/International worker; caller URLs are claims only."""
+    try:
+        import collector
+        return collector._resolve_server_cdp_url(
+            cdp_url, account="XHS_RETINAUT", region="intl")
+    except Exception:  # noqa: BLE001 - SYSTEM owner lookup failure must never use a fallback endpoint.
+        return "", "COLLECTOR_WORKER_OWNER_UNAVAILABLE"
 
 
-def probe_xhs_page(cdp_url: str = "http://127.0.0.1:9223",
+def probe_xhs_page(cdp_url: str | None = None,
                     timeout_ms: int = 15000) -> dict[str, Any]:
     """
     旁路探针：使用 browser_runtime.PlaywrightAdapter 连接 CDP，验证小红书页面可访问。
@@ -71,9 +76,10 @@ def probe_xhs_page(cdp_url: str = "http://127.0.0.1:9223",
     if not result["enabled"]:
         result["error"] = f"Feature Gate 关闭，设置 {FEATURE_GATE_ENV}=1 启用"
         return result
-    if not _hk_endpoint_allowed(cdp_url):
-        result["error"] = "POLICY_BLOCKED"
-        result["status"] = "POLICY_BLOCKED"
+    cdp_url, endpoint_error = _resolve_hk_endpoint(cdp_url)
+    if endpoint_error:
+        result["error"] = endpoint_error
+        result["status"] = "UNAVAILABLE"
         return result
 
     start = time.time()
@@ -122,7 +128,7 @@ def probe_xhs_page(cdp_url: str = "http://127.0.0.1:9223",
 
 
 def collect_keyword_bypass(keyword: str,
-                            cdp_url: str = "http://127.0.0.1:9223",
+                            cdp_url: str | None = None,
                             max_scroll: int = 2,
                             max_details: int = 3,
                             timeout_ms: int = 20000) -> dict[str, Any]:
@@ -160,9 +166,10 @@ def collect_keyword_bypass(keyword: str,
     if not result["enabled"]:
         result["error"] = f"Feature Gate 关闭，设置 {FEATURE_GATE_ENV}=1 启用"
         return result
-    if not _hk_endpoint_allowed(cdp_url):
-        result["error"] = "POLICY_BLOCKED"
-        result["status"] = "POLICY_BLOCKED"
+    cdp_url, endpoint_error = _resolve_hk_endpoint(cdp_url)
+    if endpoint_error:
+        result["error"] = endpoint_error
+        result["status"] = "UNAVAILABLE"
         return result
 
     start = time.time()

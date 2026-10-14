@@ -13,6 +13,7 @@ import os
 import sys
 import time
 import json
+import hashlib
 import subprocess
 import threading
 import logging
@@ -106,8 +107,8 @@ class CollectorAutomation:
         self.base_dir = base_dir or os.path.dirname(os.path.abspath(__file__))
         self.data_dir = os.path.join(self.base_dir, 'data')
         self.logs_dir = os.path.join(self.base_dir, 'logs')
-        self.cdp_port = 9223
-        self._task_cdp_port = 9223  # 当前任务实际驻场端口（香港/国际 RedNote）
+        self.cdp_port = 0  # XHS is resolved through its registered worker, never a fixed port.
+        self._task_cdp_port = 0
         self.edge_path = self._find_edge_browser()
         self.is_running = False
         self.current_task = None
@@ -159,7 +160,7 @@ class CollectorAutomation:
             result = subprocess.run(['where', 'msedge'], capture_output=True, text=True, timeout=5)
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip().split('\n')[0].strip()
-        except Exception:
+        except ImportError:
             pass
         
         return None
@@ -200,13 +201,20 @@ class CollectorAutomation:
         return profile_dir
     
     def _port_for(self, account=None):
-        """按逻辑身份解析驻场 CDP 端口（委托 xhs_cookie_bridge 单一事实源；异常回退默认 9223）。"""
+        """Resolve the exact registered worker endpoint; unavailable is never a port fallback."""
         try:
             import xhs_cookie_bridge as _xcb
-            _a = None if account in (None, '', 'default') else account
-            return int(_xcb.cdp_port_for(_a))
-        except Exception:
-            return self.cdp_port
+            if account in (None, '', 'default', _xcb.DEFAULT_COLLECTION_ACCOUNT,
+                           _xcb.XHS_RETINAUT_NAME):
+                port = _xcb.cdp_port_for(_xcb.XHS_RETINAUT_NAME, headless=True)
+                return int(port) if port is not None else None
+            from lumenis.adapters.human_browser import registered_browser_worker_spec
+            worker = registered_browser_worker_spec(str(account))
+            port = worker.get('port')
+            return int(port) if port else None
+        except Exception as exc:  # noqa: BLE001 - worker lookup failure must not fall back to a fixed endpoint.
+            logger.info('Registered XHS browser endpoint unavailable: %s', type(exc).__name__)
+            return None
 
     def start_browser(self, account='default', headless=True, *, mode='BACKGROUND', task_id=None,
                       actor_ref=None):
@@ -221,13 +229,24 @@ class CollectorAutomation:
             registered_browser_worker_spec, return_registered_worker_to_background,
         )
         registered_spec = None
+        selected_account = account
         try:
-            registered_spec = registered_browser_worker_spec(str(account or ''))
-        except RuntimeError:
+            import xhs_cookie_bridge as _xcb
+            if mode == 'BACKGROUND' and account in (None, '', 'default'):
+                selected_account = _xcb.DEFAULT_COLLECTION_ACCOUNT
+        except ImportError as exc:
+            raise RuntimeError("BROWSER_ACCOUNT_OWNER_UNAVAILABLE") from exc
+        try:
+            registered_spec = registered_browser_worker_spec(str(selected_account or ''))
+        except RuntimeError as exc:
             if mode == 'HUMAN_INTERACTIVE':
-                raise PermissionError('HUMAN_INTERACTIVE_PLATFORM_OR_ACCOUNT_UNREGISTERED')
+                raise PermissionError('HUMAN_INTERACTIVE_PLATFORM_OR_ACCOUNT_UNREGISTERED') from exc
+            raise RuntimeError('BROWSER_WORKER_REGISTRY_REQUIRED') from exc
         if registered_spec:
             if mode == 'HUMAN_INTERACTIVE':
+                if (registered_spec['platform'] == 'xiaohongshu'
+                        and str(account or '').strip().upper() != 'XHS_RETINAUT'):
+                    raise PermissionError('HUMAN_INTERACTIVE_XHS_HK_ACCOUNT_REQUIRED')
                 if headless is not False or not str(task_id or '').strip():
                     raise PermissionError('HUMAN_INTERACTIVE_TASK_ID_REQUIRED')
                 if (registered_spec['platform'] == 'xiaohongshu'
@@ -236,16 +255,26 @@ class CollectorAutomation:
                 if registered_spec['platform'] == 'xiaohongshu' and self.is_running:
                     raise RuntimeError('COLLECTOR_BUSY')
                 result = open_readonly_worker_login(
-                    str(account), task_id=task_id, actor_ref=actor_ref)
+                    str(selected_account), task_id=task_id, actor_ref=actor_ref)
             elif task_id is not None:
                 result = return_registered_worker_to_background(
-                    str(account), task_id=task_id, actor_ref=actor_ref)
+                    str(selected_account), task_id=task_id, actor_ref=actor_ref)
             else:
                 result = ensure_registered_browser_worker_background(
-                    str(account))
+                    str(selected_account))
             if result.get('worker_verified') is False:
                 raise RuntimeError(result.get('reason') or result.get('status') or 'BROWSER_WORKER_UNAVAILABLE')
-            self._task_cdp_port = int(registered_spec['port'])
+            actual_port = result.get('port')
+            if not actual_port and registered_spec.get('platform') == 'xiaohongshu':
+                import cdp_helper
+                worker_state = cdp_helper.resolve_registered_xhs_worker(
+                    headless=(mode == 'BACKGROUND'))
+                actual_port = worker_state.get('port') if worker_state.get('available') else None
+            elif not actual_port:
+                actual_port = registered_spec.get('port')
+            if not actual_port:
+                raise RuntimeError('BROWSER_WORKER_ENDPOINT_UNAVAILABLE')
+            self._task_cdp_port = int(actual_port)
             self._cdp_profile_dir = registered_spec['profile']
             self._browser_mode = mode
             self._human_task_id = str(task_id or '') if mode == 'HUMAN_INTERACTIVE' else ''
@@ -253,39 +282,7 @@ class CollectorAutomation:
             self._browser_identity = registered_spec['account']
             self.browser_process = None
             return True
-        if mode == 'HUMAN_INTERACTIVE':
-            if headless is not False or not str(task_id or '').strip():
-                raise PermissionError('HUMAN_INTERACTIVE_TASK_ID_REQUIRED')
-            from lumenis.adapters.human_browser import _authorize_human_interactive
-            _authorize_human_interactive(str(account or ''), task_id, actor_ref)
-
-        port = self._port_for(account)
-        if port == 9222:
-            raise PermissionError('PROTECTED_PROFILE_FORBIDDEN')
-        profile_dir = self._get_cdp_profile_dir(account)
-        self._task_cdp_port = port
-        self._cdp_profile_dir = profile_dir
-        self._browser_mode = mode
-        import cdp_helper
-        exact = cdp_helper.is_cdp_profile_running(
-            port, profile_dir, headless=headless, loopback_only=True, browser='edge')
-        if cdp_helper.is_cdp_port_open(port):
-            if exact:
-                logger.info('Verified %s browser Worker reused (port=%s, profile=%s)',
-                            mode, port, os.path.basename(profile_dir))
-                return True
-            raise RuntimeError('PORT_IN_USE_UNVERIFIED: browser identity, profile or mode mismatch')
-
-        result = cdp_helper.start_cdp_browser(
-            port=port, profile_dir=profile_dir, headless=headless,
-            loopback_only=True, launch_url='about:blank', browser='edge')
-        if result.get('success') is not True or not cdp_helper.is_cdp_profile_running(
-                port, profile_dir, headless=headless, loopback_only=True, browser='edge'):
-            raise RuntimeError(result.get('message') or 'BROWSER_WORKER_START_UNVERIFIED')
-        self.browser_process = None
-        logger.info('Verified %s browser Worker started (port=%s, profile=%s)',
-                    mode, port, os.path.basename(profile_dir))
-        return True
+        raise RuntimeError('BROWSER_WORKER_REGISTRY_REQUIRED')
 
     def _is_browser_running(self, port=None):
         """Return true only for this instance's exact headless profile/port pair."""
@@ -541,15 +538,16 @@ class CollectorAutomation:
                                   'collection_policy': policy_gate}
                     return {'ok': False, 'error': pre_msg, 'preflight': pre_detail}
                 # force=True 预检仍跑（保留真实报告），但只在严重 P0 阻断（身份/白名单/熔断）时才拦截
-                # 生产采集固定使用香港/国际端口；不接受全局环境中的大陆端口覆盖。
+                # A configured URL is only a consistency claim against the registered BACKGROUND worker.
                 _configured_cdp = os.getenv('XHS_CDP_URL')
-                if _configured_cdp and not _configured_cdp.rstrip('/').endswith(':9223'):
+                _registered_cdp = _xcb.cdp_url_for(_account_for_check, headless=True)
+                if _configured_cdp and _configured_cdp.rstrip('/') != _registered_cdp:
                     pre_ok = False
-                    pre_msg = '[采集策略门禁] XHS_CDP_URL 不是香港/国际 9223，拒绝启动采集'
-                    pre_detail = {'overall_state': 'cdp_port_not_allowed',
+                    pre_msg = '[采集策略门禁] XHS_CDP_URL 与已登记后台会话不一致，拒绝启动浏览器采集'
+                    pre_detail = {'overall_state': 'COLLECTOR_ENDPOINT_OWNER_MISMATCH',
                                   'collection_policy': policy_gate}
                     return {'ok': False, 'error': pre_msg, 'preflight': pre_detail}
-                _cdp_url = _configured_cdp or _xcb.cdp_url_for(_account_for_check)
+                _cdp_url = _registered_cdp
                 preflight = _xcb.runtime_preflight_check(account=_account_for_check,
                                                           cdp_url=_cdp_url,
                                                           quick=False)
@@ -562,7 +560,8 @@ class CollectorAutomation:
                     # force=True 允许旁路 cooldown / rate_limit（用于测试 & 紧急）；但 P0 严重项仍然阻断
                     p0_blocker = ov in ('need_account', 'no_cookie', 'not_in_whitelist', 'blocked',
                                         'user_paused', 'account_paused', 'region_paused',
-                                        'policy_unavailable', 'policy_error', 'cdp_port_not_allowed')
+                                        'policy_unavailable', 'policy_error',
+                                        'COLLECTOR_ENDPOINT_OWNER_MISMATCH')
                     if p0_blocker or not force:
                         pre_ok = False
                         pre_msg = f'[采集预检未通过·状态={ov}] {preflight.get("evidence","")}'
@@ -911,13 +910,20 @@ class CollectorAutomation:
         避免从 about:blank 冷启动、在慢网络/热点下 goto 搜索页 45s 超时。"""
         try:
             import xhs_cookie_bridge as _xcb
-            port = self._port_for(account)
+            if account in (None, '', 'default', _xcb.DEFAULT_COLLECTION_ACCOUNT,
+                           _xcb.XHS_RETINAUT_NAME):
+                endpoint = _xcb.cdp_url_for(_xcb.XHS_RETINAUT_NAME, headless=True)
+            else:
+                endpoint = ''
+            if not endpoint:
+                logger.info('[CDP热身] registered background worker unavailable; skipped')
+                return
             home = _xcb.home_url_for(account)
             host_key = 'rednote.com' if 'rednote' in home else 'xiaohongshu.com'
             warm_url = home + ('/explore' if host_key == 'xiaohongshu.com' else '')
             from playwright.sync_api import sync_playwright
             with sync_playwright() as pw:
-                b = pw.chromium.connect_over_cdp(f'http://127.0.0.1:{port}', timeout=15000)
+                b = pw.chromium.connect_over_cdp(endpoint, timeout=15000)
                 ctx = b.contexts[0]
                 pg = next((x for x in ctx.pages if host_key in x.url), None)
                 if pg is None:
@@ -951,13 +957,20 @@ class CollectorAutomation:
             logger.warning('[CDP采集] 生产策略阻断: %s', policy_gate.get('reason'))
             return 0, 'blocked'
         port = self._port_for(account)
+        if port is None:
+            return 0, 'blocked'
         env = os.environ.copy()
-        env['XHS_CDP_URL'] = f'http://127.0.0.1:{port}'
-        env['XHS_COLLECTION_REGION'] = 'intl'
-        env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
-        profile = _xcb.ACCOUNT_PROFILES.get(account or _xcb.DEFAULT_COLLECTION_ACCOUNT)
-        if profile and profile[0]:
-            env['XHS_COOKIE_FILE'] = str(profile[0])
+        import collector as _collector
+        cdp_url, endpoint_error = _collector._resolve_server_cdp_url(
+            account=account or _xcb.DEFAULT_COLLECTION_ACCOUNT, region='intl')
+        if endpoint_error:
+            return 0, 'blocked'
+        try:
+            env = _collector._collection_env(
+                account=account or _xcb.DEFAULT_COLLECTION_ACCOUNT,
+                region='intl', cdp_url=cdp_url, require_local_cookie=False)
+        except Exception:  # noqa: BLE001 - session resolution failure blocks XHS collection.
+            return 0, 'blocked'
         max_details = 6
         total_new = 0; blocked_any = False; loadfail_any = False; attempted = 0
         self._warmup_cdp(account)
@@ -979,6 +992,21 @@ class CollectorAutomation:
                 if not data:
                     loadfail_any = True
                     logger.warning(f'[CDP采集] {kw} 无结果: {(p.stderr or p.stdout or "")[-160:]}')
+                    continue
+                identity_evidence = data.get('identity_evidence')
+                expected_user_id = str(env.get('XHS_EXPECTED_COLLECTION_USER_ID') or '').strip()
+                expected_fingerprint = (hashlib.sha256(
+                    expected_user_id.encode('utf-8')).hexdigest() if expected_user_id else '')
+                if (data.get('identity_verified') is not True
+                        or not isinstance(identity_evidence, dict)
+                        or identity_evidence.get('account') != env.get('XHS_COLLECTION_ACCOUNT')
+                        or identity_evidence.get('region') != 'intl'
+                        or identity_evidence.get('source_host') != 'www.rednote.com'
+                        or identity_evidence.get('verification_method')
+                        != 'registered_context_cookie_and_self_profile'
+                        or identity_evidence.get('identity_fingerprint_sha256') != expected_fingerprint):
+                    blocked_any = True
+                    logger.warning('[CDP采集] %s 受控浏览器身份未核验，拒绝读取结果', kw)
                     continue
                 summ = data.get('summary', {}) or {}
                 if data.get('verification_required') or data.get('ip_blocked') or \

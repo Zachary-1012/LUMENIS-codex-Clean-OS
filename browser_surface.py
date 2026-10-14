@@ -226,22 +226,22 @@ def evaluate_navigation(url: str, mode: Optional[str] = None) -> dict:
 
 def _resolve_port(account=None, port: Optional[int] = None) -> int:
     """Resolve an approved HK/international or general-browser endpoint."""
-    if port is not None:
-        resolved = int(port)
-        if resolved == GENERAL_CDP_PORT and account in (None, ""):
-            if not _verified_general_browser():
-                raise PermissionError("POLICY_BLOCKED: general browser session is not LUMENIS-owned")
-            return resolved
-        if resolved != 9223:
-            raise PermissionError("POLICY_BLOCKED: browser surface endpoint is not approved")
-        # An explicit approved port is still associated with the approved identity.
-        ib._canonical_account(account)
-        return resolved
-    if account in (None, ""):
+    if account in (None, "") and port is not None and int(port) == GENERAL_CDP_PORT:
         if not _verified_general_browser():
             raise PermissionError("POLICY_BLOCKED: general browser session is not LUMENIS-owned")
         return GENERAL_CDP_PORT
-    return ib._port_for(account)
+    if account in (None, ""):
+        if port is not None:
+            raise PermissionError("POLICY_BLOCKED: unregistered browser endpoint")
+        if not _verified_general_browser():
+            raise PermissionError("POLICY_BLOCKED: general browser session is not LUMENIS-owned")
+        return GENERAL_CDP_PORT
+    resolved = ib._port_for(account)
+    if resolved is None:
+        raise RuntimeError("BROWSER_WORKER_ENDPOINT_UNAVAILABLE")
+    if port is not None and int(port) != int(resolved):
+        raise PermissionError("POLICY_BLOCKED: endpoint does not match the registered browser worker")
+    return int(resolved)
 
 
 def _http_json(url: str, method: str = "GET", timeout: float = 3.0):

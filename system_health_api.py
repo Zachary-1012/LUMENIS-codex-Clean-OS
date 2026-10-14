@@ -51,34 +51,27 @@ def get_data_dir():
 
 
 def get_production_collection_contract():
-    """Return the active collection account's runtime health contract.
-
-    The production policy currently allows only the Hong Kong/International
-    RedNote account.  Mainland account ports and credentials remain available
-    to the diagnostic surface, but must never determine the production health
-    light or recovery decision.
-    """
+    """Return the bridge owner's safe status for the currently approved session."""
     try:
         import xhs_cookie_bridge as bridge
-
-        account = bridge.DEFAULT_COLLECTION_ACCOUNT
-        cookie_file = bridge.ACCOUNT_PROFILES[account][0]
+        status = bridge.get_account_status(account=bridge.DEFAULT_COLLECTION_ACCOUNT)
+        worker_available = status.get('worker_available') is True
+        policy = status.get('collection_policy') or {}
         return {
-            'account': account,
-            'region': 'intl',
-            'cdp_port': bridge.cdp_port_for(account),
-            'cookie_file': cookie_file,
-            'home_url': bridge.home_url_for(account),
+            'account': status.get('active_account'),
+            'region': policy.get('region'),
+            'worker_available': worker_available,
+            'cookie_configured': status.get('cookie_configured'),
+            'worker_state': ('REGISTERED_BACKGROUND' if worker_available
+                             else 'UNAVAILABLE_OR_UNVERIFIED'),
         }
     except Exception:
-        # Keep the health module importable in isolated tests/fresh checkouts;
-        # the fallback remains HK-only and does not reintroduce 9222.
         return {
-            'account': 'XHS_RETINAUT',
-            'region': 'intl',
-            'cdp_port': 9223,
-            'cookie_file': os.path.join(get_data_dir(), 'private', 'xhs_cookie_retinaut.txt'),
-            'home_url': 'https://www.rednote.com',
+            'account': None,
+            'region': None,
+            'worker_available': False,
+            'cookie_configured': None,
+            'worker_state': 'UNAVAILABLE_OR_UNVERIFIED',
         }
 
 
@@ -135,21 +128,8 @@ def check_collector():
                 today_runs = stats.get('manual_runs', 0) + stats.get('auto_runs', 0)
             last_run = stats.get('updated_at')
         
-        # 只检查当前生产身份的 CDP；暂停的内地 9222 只留在诊断面。
-        import socket
-        cdp_running = False
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1)
-            result = sock.connect_ex(('127.0.0.1', collection['cdp_port']))
-            cdp_running = (result == 0)
-            sock.close()
-        except:
-            pass
-        
-        # 检查Cookie配置
-        cookie_file = collection['cookie_file']
-        cookie_configured = os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 0
+        cdp_running = collection.get('worker_available') is True
+        cookie_configured = collection.get('cookie_configured') is True
         
         status = 'ok' if (cdp_running and cookie_configured and today_runs > 0) else 'warning'
         if not cdp_running or not cookie_configured:
@@ -162,7 +142,7 @@ def check_collector():
             'cdp_running': cdp_running,
             'collection_account': collection['account'],
             'collection_region': collection['region'],
-            'cdp_port': collection['cdp_port'],
+            'browser_worker_state': collection['worker_state'],
             'cookie_configured': cookie_configured,
             'max_daily_runs': 12,
             'remaining_runs': 12 - today_runs
@@ -193,7 +173,7 @@ def check_login_status():
         return {
             'status': status,
             'recent_7d_collects': recent_7d,
-            'cookie_file_exists': os.path.exists(collection['cookie_file']),
+            'cookie_file_exists': collection.get('cookie_configured'),
             'collection_account': collection['account'],
             'collection_region': collection['region'],
         }
@@ -646,8 +626,8 @@ def system_health_summary():
         if collector_light != 'ok':
             if not collector_status.get('cdp_running'):
                 hints.append(
-                    f"采集：香港/国际 RedNote 浏览器(Edge CDP {collector_status.get('cdp_port', 9223)})未启动 "
-                    "→ 运行 scripts/start_resident_browsers.py --account XHS_RETINAUT"
+                    "采集：香港/国际 RedNote 的受控后台浏览器会话不可用或身份未核验；"
+                    "请通过产品内的授权恢复入口处理"
                 )
             elif not collector_status.get('cookie_configured'):
                 hints.append("采集：Cookie 缺失 → 登录小红书后扫码恢复")
@@ -671,9 +651,10 @@ def system_health_summary():
                                 'writable': db_write.get('writable', False)},
                 'collector':   {'light': collector_light,   'label': '采集器', 'status': collector_light,
                                 'cdp_running': collector_status.get('cdp_running', False),
-                                'cdp_port': collector_status.get('cdp_port', 9223),
-                                'collection_account': collector_status.get('collection_account', 'XHS_RETINAUT'),
-                                'collection_region': collector_status.get('collection_region', 'intl'),
+                                'browser_worker_state': collector_status.get(
+                                    'browser_worker_state', 'UNAVAILABLE_OR_UNVERIFIED'),
+                                'collection_account': collector_status.get('collection_account'),
+                                'collection_region': collector_status.get('collection_region'),
                                 'cookie_ok': collector_status.get('cookie_configured', False),
                                 'today_runs': collector_status.get('today_runs', 0)},
                 'auth':        {'light': auth_light,        'label': '登录态/Auth', 'status': login_status.get('status',''),
@@ -681,8 +662,7 @@ def system_health_summary():
                                 'cookie_file_exists': login_status.get('cookie_file_exists', False)},
                 'xhs_platform':{'light': xhs_light,         'label': 'RedNote 主平台（香港/国际）', 'status': xhs_light,
                                 'recent_24h_new_notes': recent_24h,
-                                'collection_account': collector_status.get('collection_account', 'XHS_RETINAUT'),
-                                'cdp_port': collector_status.get('cdp_port', 9223),
+                                'collection_account': collector_status.get('collection_account'),
                                 'next_auto_collect': get_collection_schedule().get('next_collect','')},
             },
             'need_manual_intervention': alerts_info.get('need_manual_intervention', 0),

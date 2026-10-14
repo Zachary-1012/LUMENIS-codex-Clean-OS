@@ -5,11 +5,10 @@ LUMENIS SYSTEM Resident Browser launcher
 按采集 Contract（xhs_cookie_bridge 单一事实源）幂等拉起香港/国际采集与通用浏览
 香港采集与产品内置浏览器分别使用独立 profile：
 
-  XHS_RETINAUT    端口 9223  profile edge-cdp-retinaut    rednote.com      继承系统/海外代理
+XHS_RETINAUT    SYSTEM 注册的 Edge 内核与 Profile；由 DevToolsActivePort 提供动态端口
   GENERAL_BROWSE  端口 9224  系统默认 Chromium 内核，无头运行，使用 browser_surface 的独立 profile
 
-生产采集链只通过 CDP 附着到 9223 香港/国际身份，采集结束不关闭驻场窗口。
-9222 内地 profile 保留为诊断/历史凭证隔离资产，但不属于生产驻场计划、不自动启动。
+生产采集链只附着到 SYSTEM 注册并核验的香港/国际身份；端点从该 Profile 的 DevToolsActivePort 解析。
 通用浏览实例与采集物理隔离（独立 cookie jar），不混入生产采集身份。
 
 用法（用项目 .venv 的 python 运行）：
@@ -136,49 +135,35 @@ def profile_dir_for(account):
 
 
 def launch_one(account, direct, status_only=False):
-    port = bridge.cdp_port_for(account)
     home = bridge.home_url_for(account)
     prof = profile_dir_for(account)
-    row = {"account": account, "port": port, "profile": prof, "home": home,
+    row = {"account": account, "port": None, "profile": prof, "home": home,
            "online": False, "direct": direct, "action": "", "pages": [],
            "mode": "BACKGROUND"}
-
-    exact_worker = bool(prof and cdp_helper.is_cdp_profile_running(
-        port, prof, headless=True, loopback_only=True, browser="edge"))
-    if port_online(port):
-        if not exact_worker:
-            row["action"] = "port_in_use_unverified"
-            return row
-        row["online"] = True
-        row["action"] = "already_online"
-        if not status_only:
-            row["action"] += ":" + ensure_platform_tab(port, home)
-        row["pages"] = list_page_hosts(port)
-        return row
-
-    if status_only:
-        row["action"] = "offline"
-        return row
     if not prof:
         row["action"] = "profile_unavailable"
         return row
 
-    os.makedirs(prof, exist_ok=True)
-    res = cdp_helper.start_cdp_browser(
-        port=port,
-        profile_dir=prof,
-        headless=True,
-        loopback_only=True,
-        launch_url=home,
-        direct_connection=direct,
-        browser="edge",
-    )
-    row["online"] = (res.get("success") is True
-                      and cdp_helper.is_cdp_profile_running(
-                          port, prof, headless=True, loopback_only=True, browser="edge"))
-    row["action"] = "started" if row["online"] else f"failed: {res.get('message')}"
+    state = cdp_helper.resolve_registered_xhs_worker(
+        account=account, headless=True)
+    if state.get("available"):
+        row.update(port=state["port"], online=True, action="already_online")
+    elif status_only:
+        row["action"] = state.get("code") or "offline_or_unverified"
+        return row
+    else:
+        # Only the existing SYSTEM owner may launch this exact registered
+        # HK/International profile. The OS assigns its debugger endpoint.
+        result = cdp_helper.ensure_registered_xhs_worker(
+            headless=True, launch_url=home, direct_connection=direct)
+        state = cdp_helper.resolve_registered_xhs_worker(
+            account=account, headless=True)
+        row.update(port=state.get("port"),
+                   online=result.get("success") is True and state.get("available") is True,
+                   action=("started" if result.get("success") else
+                           f"failed: {result.get('code') or result.get('message')}"))
     if row["online"]:
-        row["pages"] = list_page_hosts(port)
+        row["pages"] = list_page_hosts(row["port"])
     return row
 def launch_general(status_only=False):
     """Reuse the product browser owner for startup and verified status."""
@@ -255,12 +240,44 @@ def _launch_readonly_worker(worker, *, status_only=False, mode="BACKGROUND",
         direct_connection=worker["direct"],
         browser=browser,
         loopback_only=True,
+        task_id=task_id,
+        actor_ref=actor_ref,
     )
-    row["online"] = (res.get("success") is True
-                     and cdp_helper.is_cdp_profile_running(
-                         worker["port"], worker["profile"], headless=headless,
-                         loopback_only=True, browser=browser))
-    row["action"] = "started" if row["online"] else f"failed: {res.get('message')}"
+    if worker.get("platform") == "xiaohongshu" and int(worker["port"]) == 0:
+        # Port 0 is an allocation request, not a CDP endpoint. Read the
+        # registered worker again and compare every launch identity before
+        # reporting it online or exposing the assigned endpoint.
+        state = cdp_helper.resolve_registered_xhs_worker(
+            account=worker["account"], headless=headless)
+        exact = (state.get("available") is True
+                 and state.get("account") == worker["account"]
+                 and state.get("browser") == browser
+                 and os.path.normcase(os.path.realpath(state.get("profile") or ""))
+                 == os.path.normcase(os.path.realpath(worker["profile"]))
+                 and int(state.get("port") or 0) not in {0, 9222, 9223, 9224,
+                                                         9225, 9226, 9227, 9228}
+                 and str(state.get("endpoint") or "")
+                 == f"http://127.0.0.1:{int(state.get('port') or 0)}"
+                 and int(state.get("pid") or 0) > 0)
+        exact = (exact and int(res.get("port") or 0) == int(state.get("port") or 0)
+                 and int(res.get("pid") or 0) == int(state.get("pid") or 0)
+                 and str(res.get("endpoint") or "") == state.get("endpoint"))
+        row["online"] = res.get("success") is True and exact
+        if row["online"]:
+            row.update(port=state["port"], endpoint=state["endpoint"],
+                       pid=state["pid"], profile=state["profile"],
+                       account=state["account"])
+        else:
+            row["error_code"] = ("XHS_REGISTERED_WORKER_POST_START_MISMATCH"
+                                 if res.get("success") is True else
+                                 res.get("code") or "XHS_WORKER_START_FAILED")
+    else:
+        row["online"] = (res.get("success") is True
+                         and cdp_helper.is_cdp_profile_running(
+                             worker["port"], worker["profile"], headless=headless,
+                             loopback_only=True, browser=browser))
+    row["action"] = ("started" if row["online"] else
+                     f"failed: {row.get('error_code') or res.get('message') or res.get('code') or 'WORKER_START_FAILED'}")
     return row
 
 def launch_x_readonly(status_only=False):

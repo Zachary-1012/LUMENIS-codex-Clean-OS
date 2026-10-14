@@ -18,10 +18,15 @@ def test_every_platform_has_login_recovery_profile(platform):
 @pytest.mark.parametrize("platform", ["douyin", "x", "instagram", "facebook"])
 def test_registered_worker_binding_attaches_background_worker(platform, monkeypatch):
     import lumenis.adapters.human_browser as hb
-    monkeypatch.setattr(hb, "registered_browser_worker_spec",
-                        lambda p, **k: {"port": 9300, "profile": f"/p/{p}"})
+    # Return the exact existing owner registration. A port/profile pair by itself
+    # is not sufficient identity and must not authorize a recovery attachment.
+    spec = {**hb.readonly_worker_spec(platform), "platform": platform}
+    monkeypatch.setattr(hb, "registered_browser_worker_spec", lambda _p, **_k: dict(spec))
     cfg, err = ar._resolve_recovery_profile(platform)
-    assert err == "" and cfg["cdp_url"] == "http://127.0.0.1:9300"
+    assert err == ""
+    assert cfg["port"] == spec["port"]
+    assert cfg["profile"] == spec["profile"]
+    assert cfg["cdp_url"] == f"http://127.0.0.1:{spec['port']}"
 
 
 def test_resume_runs_after_recovery_and_only_once(monkeypatch):
