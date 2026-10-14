@@ -550,7 +550,7 @@ Local-only work is not on GitHub. Preserve it, reconcile fresh `origin/main`, ve
 For every M-accepted implementation Batch, close local work and online truth in
 the same delivery cycle. M must inspect the exact staged files and diff,
 record the Batch's tests, runtime/E2E evidence and unresolved limits, update the
-owning Round evidence **and** this repository's CURRENT online status, then make
+owning Round evidence and CURRENT in one commit. Mark source plus CURRENT PUBLISHED_SOURCE_VERIFIED; reserve RULES_ONLY_PUBLICATION for docs-only PRs, then make
 a coherent branch commit, then merge its PR after required checks. Before calling the Batch delivered or
 starting a dependent acceptance gate, fetch again and verify `HEAD`,
 `origin/main`, live `refs/heads/main`, and the published status/evidence paths
