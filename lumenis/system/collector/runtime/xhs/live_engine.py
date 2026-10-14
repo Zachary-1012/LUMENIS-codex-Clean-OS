@@ -4,7 +4,7 @@
 不实现或绕过平台验证码、签名保护或风控；遇到验证直接报告数据源异常。
 """
 from __future__ import annotations
-import json, os, subprocess
+import json, subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
@@ -49,22 +49,22 @@ def run_live(keyword: str, *, max_scroll=5, max_details=20, max_comment_pages=5,
         }
     keyword = query_plan.queries[0].keyword
 
-    if cdp_url and not cdp_url.rstrip('/').endswith(':9223'):
-        gate = dict(policy_gate)
-        gate.update({'ok': False, 'code': 'cdp_port_not_allowed',
-                     'reason': '当前生产采集仅允许香港/国际驻场端口9223'})
-        return {'ok': False, 'code': gate['code'], 'error': gate['reason'],
-                'notes': [], 'collection_policy': gate}
-    cdp_url = cdp_url or _xcb.cdp_url_for(resolved_account)
+    import collector as _collector
+    cdp_url, endpoint_error = _collector._resolve_server_cdp_url(
+        cdp_url, account=resolved_account, region='intl')
+    if endpoint_error:
+        return {'ok': False, 'code': endpoint_error, 'error': endpoint_error,
+                'notes': [], 'collection_policy': policy_gate}
     out = Path(_xcb.PRIVATE_DATA_DIR) / f'xhs_live_{datetime.now().strftime("%Y%m%d_%H%M%S_%f")}.json'
     out.parent.mkdir(parents=True, exist_ok=True)
-    env = os.environ.copy()
-    env['XHS_CDP_URL'] = cdp_url
-    env['XHS_COLLECTION_REGION'] = 'intl'
-    env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
-    profile = _xcb.ACCOUNT_PROFILES.get(resolved_account)
-    if profile and profile[0]:
-        env['XHS_COOKIE_FILE'] = str(profile[0])
+    try:
+        env = _collector._collection_env(
+            account=resolved_account, region='intl', cdp_url=cdp_url,
+            require_local_cookie=True)
+    except Exception as exc:  # noqa: BLE001 - any session resolution failure blocks acquisition.
+        return {'ok': False, 'code': 'XHS_REGISTERED_SESSION_UNAVAILABLE',
+                'error': type(exc).__name__, 'notes': [],
+                'collection_policy': policy_gate}
     cmd = [_NODE_BIN, str(SCRIPT), '--keyword', keyword, '--output', str(out),
            '--max-scroll', str(max_scroll), '--max-details', str(max_details),
            '--max-comment-pages', str(max_comment_pages), '--wait-ms', str(wait_ms)]

@@ -23,13 +23,13 @@
 
 只读红线：不点赞、不评论、不关注、不私信、不执行任何账号写操作。
 """
-import re
 import logging
+import re
 from datetime import datetime, timezone
 
 import requests
 
-from .base import BaseAdapter, AdapterResult
+from .base import AdapterResult, BaseAdapter
 from .cookie_vault import to_cookie_string
 
 logger = logging.getLogger(__name__)
@@ -72,26 +72,52 @@ class ZhihuAdapter(BaseAdapter):
     def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
-        # 优先浏览器CDP采集（绕过API签名要求），失败则fallback到API
+        # Use the existing API only when no registered browser worker exists.
+        # A registered worker failure, permission denial or challenge is final.
         browser_result = self._search_browser(keyword, max_results)
         if browser_result is not None:
             return browser_result
         return self._search_api(keyword, max_results)
 
     def _search_browser(self, keyword: str, max_results: int) -> AdapterResult | None:
-        """浏览器CDP采集：打开知乎搜索页，解析DOM。失败返回None以触发API fallback。"""
+        """Use only Zhihu's registered background worker; otherwise retain API fallback."""
+        hb = None
+        page = None
+        endpoint = None
         try:
-            from .human_browser import HumanBrowser
-            from .cookie_vault import inject_into_context
             from urllib.parse import quote
 
-            hb = HumanBrowser(port=9222, launch_url="about:blank")
+            from lumenis.system.collector.adapters.config import (
+                get_platform_capabilities,
+            )
+
+            from .cookie_vault import inject_into_context
+            from .human_browser import (
+                HumanBrowser,
+                PageState,
+                configured_readonly_worker_url,
+            )
+
+            capabilities = get_platform_capabilities("zhihu")
+            if not isinstance(capabilities.get("readonly_worker"), dict):
+                logger.info("知乎没有注册的受控浏览器，使用既有搜索 API")
+                return None
+            endpoint = configured_readonly_worker_url("zhihu", mode="BACKGROUND")
+
+            hb = HumanBrowser(cdp_url=endpoint, auto_ensure=False,
+                              launch_url="about:blank")
             hb.connect()
             inject_into_context(hb._context, "zhihu")
             page = hb.new_page()
             url = f"https://www.zhihu.com/search?type=content&q={quote(keyword.strip())}"
             page.goto(url, wait_until="domcontentloaded", timeout=30000)
             hb.pause(4.0, 4.0)
+
+            state = hb.detect_state(page)
+            if state in (PageState.BLOCKED, PageState.CAPTCHA,
+                         PageState.AUTH_FAILED, PageState.NETWORK_ERROR):
+                return AdapterResult(
+                    success=False, error=f"知乎页面状态={state}")
 
             # 解析搜索结果卡片（URL去重 + 标题作者双键去重）
             cards = page.query_selector_all(".SearchResult-Card, .List-item, .Card")
@@ -119,16 +145,25 @@ class ZhihuAdapter(BaseAdapter):
                 except Exception:
                     continue
 
-            page.close()
-            hb.close()
-
             if notes:
                 return AdapterResult(success=True, notes=notes, raw_count=len(notes))
             # 浏览器无结果也返回成功空（不fallback，避免API签名错误）
             return AdapterResult(success=True, notes=[], raw_count=0)
         except Exception as e:
-            logger.warning(f"知乎浏览器采集失败，fallback到API: {e}")
-            return None
+            logger.warning("知乎注册浏览器采集失败，不绕过该失败转用API: %s", e)
+            return AdapterResult(
+                success=False, error=f"知乎受控浏览器采集失败: {e}")
+        finally:
+            if page is not None:
+                try:
+                    page.close()
+                except Exception:
+                    logger.debug("知乎结果页关闭失败", exc_info=True)
+            if hb is not None:
+                try:
+                    hb.close()
+                except Exception:
+                    logger.debug("知乎受控浏览器断开失败", exc_info=True)
 
     def _parse_zhihu_card(self, card) -> "CollectedNote | None":
         """解析单个知乎搜索结果卡片为CollectedNote。"""

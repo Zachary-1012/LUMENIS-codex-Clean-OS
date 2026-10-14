@@ -13,7 +13,9 @@ import ntpath
 logger = logging.getLogger(__name__)
 
 # 默认配置
-DEFAULT_CDP_PORT = 9223
+# No implicit worker is selected by a generic caller. XHS dynamic resolution is
+# explicit (port=0) and remains bound to its existing registered identity.
+DEFAULT_CDP_PORT = None
 DEFAULT_EDGE_PATHS = [
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
@@ -66,6 +68,10 @@ UNSUPPORTED_ON_WINDOWS = {
 def is_cdp_port_open(port=DEFAULT_CDP_PORT):
     """检查CDP端口是否已监听"""
     try:
+        if port is None:
+            return False
+        if int(port) == 0:
+            return bool(resolve_registered_xhs_worker().get("available"))
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(1)
             result = s.connect_ex(("127.0.0.1", port))
@@ -75,38 +81,287 @@ def is_cdp_port_open(port=DEFAULT_CDP_PORT):
 
 
 def _normalized_profile_path(profile_dir):
-    return os.path.normcase(os.path.abspath(os.path.normpath(str(profile_dir or "")))).rstrip("\\/")
+    return os.path.normcase(os.path.realpath(os.path.abspath(
+        os.path.normpath(str(profile_dir or ""))))).rstrip("\\/")
+
+
+def _registered_xhs_binding(account=None):
+    """Return only the existing approved HK/intl account and its exact profile."""
+    try:
+        import xhs_cookie_bridge as bridge
+        account = str(account or bridge.DEFAULT_COLLECTION_ACCOUNT).strip().upper()
+        if (account != bridge.XHS_RETINAUT_NAME
+                or account != bridge.DEFAULT_COLLECTION_ACCOUNT
+                or not bridge.XHS_RETINAUT
+                or not bridge.collection_policy_gate(account=account, region="intl").get("ok")):
+            return None
+        entry = bridge.ACCOUNT_PROFILES.get(account)
+        if not isinstance(entry, (tuple, list)) or len(entry) != 2 or not entry[1]:
+            return None
+        expected = os.path.realpath(os.path.join(
+            bridge.PRIVATE_DATA_DIR, "profiles", "xhs-retinaut"))
+        profile = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(entry[1]))))
+        if _normalized_profile_path(profile) != _normalized_profile_path(expected):
+            return None
+        if _is_default_user_browser_profile(profile):
+            return None
+        return {"account": account, "profile": profile, "browser": "edge"}
+    except Exception:  # noqa: BLE001 - unavailable owner configuration must never select a fallback identity.
+        return None
+
+
+def _registered_edge_executable():
+    """Find the installed Edge binary only from the existing SYSTEM registry."""
+    conf = BROWSER_REGISTRY.get("edge") or {}
+    for candidate in conf.get("exe_candidates", ()):
+        if not candidate or not os.path.isfile(candidate):
+            continue
+        resolved = os.path.realpath(os.path.abspath(candidate))
+        if ntpath.basename(resolved).casefold() == "msedge.exe":
+            return resolved
+    return None
+
+
+def _switch_value(args, name):
+    prefix = name.casefold() + "="
+    lowered = [str(arg).strip().strip('"') for arg in (args or ())]
+    for index, arg in enumerate(lowered):
+        if arg.casefold().startswith(prefix):
+            return arg.split("=", 1)[1]
+        if arg.casefold() == name.casefold() and index + 1 < len(lowered):
+            return lowered[index + 1]
+    return None
+
+
+def _read_devtools_active_port(profile_dir):
+    """Read Chromium's ephemeral-port metadata from the registered profile only."""
+    try:
+        profile = os.path.realpath(profile_dir)
+        active_file = os.path.realpath(os.path.join(profile, "DevToolsActivePort"))
+        if os.path.commonpath([profile, active_file]) != profile:
+            return None
+        with open(active_file, "r", encoding="ascii") as handle:
+            rows = handle.read(512).splitlines()
+        if len(rows) < 2 or not rows[0].isdigit():
+            return None
+        port = int(rows[0])
+        websocket_path = rows[1]
+        if not (1 <= port <= 65535) or not websocket_path.startswith("/devtools/browser/"):
+            return None
+        if ".." in websocket_path or "\\" in websocket_path:
+            return None
+        return port
+    except (OSError, UnicodeError, ValueError):
+        return None
+
+
+def _registered_xhs_profile_processes(binding):
+    """Inspect exact-profile browser owners without reading Cookies or page data."""
+    try:
+        import psutil
+    except ImportError:
+        return [], True
+    owners = []
+    incomplete = False
+    expected_profile = _normalized_profile_path(binding["profile"])
+    expected_edge = _registered_edge_executable()
+    try:
+        processes = psutil.process_iter(["pid", "name", "cmdline"])
+        for process in processes:
+            try:
+                name = str(process.info.get("name") or "").casefold()
+                if name not in {"msedge.exe", "chrome.exe"}:
+                    continue
+                args = [str(arg).strip().strip('"')
+                        for arg in (process.info.get("cmdline") or ())]
+                # Chromium's renderer/utility/GPU children inherit --user-data-dir.
+                # They are not independent browser owners or CDP workers. Keep
+                # exact-profile main processes visible so an ambiguous or
+                # non-CDP owner still fails closed below.
+                if _switch_value(args, "--type"):
+                    continue
+                profile_arg = _switch_value(args, "--user-data-dir")
+                if not profile_arg or _normalized_profile_path(profile_arg) != expected_profile:
+                    continue
+                pid = int(process.info.get("pid") or process.pid)
+                exe = os.path.realpath(os.path.abspath(process.exe()))
+                created = float(process.create_time())
+                raw_port = _switch_value(args, "--remote-debugging-port")
+                port = None
+                if raw_port and raw_port.isdigit():
+                    parsed_port = int(raw_port)
+                    port = (_read_devtools_active_port(binding["profile"])
+                            if parsed_port == 0 else parsed_port)
+                lowered = [arg.casefold() for arg in args]
+                owners.append({
+                    "pid": pid,
+                    "name": name,
+                    "exe": exe,
+                    "created": created,
+                    "port": port,
+                    "headless": any(arg in {"--headless", "--headless=new"}
+                                     for arg in lowered),
+                    "loopback": _switch_value(args, "--remote-debugging-address") == "127.0.0.1",
+                    "trusted_kernel": bool(expected_edge and name == "msedge.exe"
+                                           and _normalized_profile_path(exe)
+                                           == _normalized_profile_path(expected_edge)),
+                })
+            except Exception:  # noqa: BLE001 - an unreadable process makes worker ownership ambiguous.
+                # An inaccessible browser process can be using the registered profile.
+                incomplete = True
+    except Exception:  # noqa: BLE001 - any process-enumeration error leaves ownership unverified.
+        return owners, True
+    return owners, incomplete
+
+
+def resolve_registered_xhs_worker(*, account=None, headless=None, port=None):
+    """Resolve the active XHS worker from its registered HK profile and exact process."""
+    binding = _registered_xhs_binding(account)
+    if not binding:
+        return {"available": False, "code": "XHS_REGISTERED_IDENTITY_UNAVAILABLE"}
+    owners, incomplete = _registered_xhs_profile_processes(binding)
+    if incomplete:
+        return {"available": False, "code": "XHS_WORKER_OWNER_UNVERIFIED",
+                "account": binding["account"]}
+    if not owners:
+        return {"available": False, "code": "XHS_REGISTERED_WORKER_UNAVAILABLE",
+                "account": binding["account"], "profile": binding["profile"]}
+    if len(owners) != 1:
+        return {"available": False, "code": "XHS_WORKER_IDENTITY_AMBIGUOUS",
+                "account": binding["account"]}
+    owner = owners[0]
+    if not owner["trusted_kernel"] or not owner["loopback"] or owner["port"] is None:
+        return {"available": False, "code": "XHS_WORKER_IDENTITY_UNVERIFIED",
+                "account": binding["account"], "pid": owner["pid"]}
+    if owner["port"] in {9222, 9223, 9224, 9225, 9226, 9227, 9228}:
+        return {"available": False, "code": "XHS_WORKER_RESERVED_ENDPOINT",
+                "account": binding["account"], "pid": owner["pid"]}
+    if port is not None and int(port) != owner["port"]:
+        return {"available": False, "code": "XHS_WORKER_ENDPOINT_MISMATCH",
+                "account": binding["account"]}
+    if headless is not None and owner["headless"] is not bool(headless):
+        return {"available": False, "code": "XHS_WORKER_MODE_MISMATCH",
+                "account": binding["account"], "pid": owner["pid"]}
+    listener_pids, listener_verified = _cdp_listener_pids(owner["port"])
+    if not listener_verified or listener_pids != {owner["pid"]}:
+        return {"available": False, "code": "XHS_WORKER_LISTENER_UNVERIFIED",
+                "account": binding["account"], "pid": owner["pid"]}
+    try:
+        import psutil
+        process = psutil.Process(owner["pid"])
+        if float(process.create_time()) != owner["created"]:
+            raise RuntimeError("PROCESS_IDENTITY_CHANGED")
+        current_args = [str(arg).strip().strip('"') for arg in process.cmdline()]
+        current_profile = _switch_value(current_args, "--user-data-dir")
+        current_port = _switch_value(current_args, "--remote-debugging-port")
+        if (not current_profile
+                or _normalized_profile_path(current_profile) != _normalized_profile_path(binding["profile"])
+                or current_port not in {str(owner["port"]), "0"}):
+            raise RuntimeError("PROCESS_BINDING_CHANGED")
+        current_pids, current_listener = _cdp_listener_pids(owner["port"])
+        if not current_listener or current_pids != {owner["pid"]}:
+            raise RuntimeError("LISTENER_BINDING_CHANGED")
+    except Exception:  # noqa: BLE001 - any PID/profile/listener mismatch rejects the registered worker.
+        return {"available": False, "code": "XHS_WORKER_IDENTITY_UNVERIFIED",
+                "account": binding["account"]}
+    return {"available": True, "account": binding["account"],
+            "profile": binding["profile"], "browser": "edge", "port": owner["port"],
+            "endpoint": f"http://127.0.0.1:{owner['port']}", "pid": owner["pid"],
+            "headless": owner["headless"], "loopback_only": True}
+
+
+def ensure_registered_xhs_worker(*, headless=True, launch_url="https://www.rednote.com",
+                                 direct_connection=False, task_id=None, actor_ref=None):
+    """Start/reuse only the exact registered Edge profile on an OS-assigned local port."""
+    if headless is not True:
+        _authorize_registered_xhs_human_worker(task_id=task_id, actor_ref=actor_ref)
+    state = resolve_registered_xhs_worker(headless=headless)
+    if state.get("available"):
+        return {"success": True, "reused": True, **state}
+    if state.get("code") not in {"XHS_REGISTERED_WORKER_UNAVAILABLE"}:
+        return {"success": False, **state}
+    binding = _registered_xhs_binding()
+    if not binding:
+        return {"success": False, "code": "XHS_REGISTERED_IDENTITY_UNAVAILABLE"}
+    return start_cdp_browser(port=0, profile_dir=binding["profile"],
+                             headless=headless, loopback_only=True,
+                             launch_url=launch_url, browser="edge",
+                             direct_connection=direct_connection,
+                             task_id=task_id, actor_ref=actor_ref)
+
+
+def _authorize_registered_xhs_human_worker(*, task_id=None, actor_ref=None):
+    """Visible XHS workers require the current task actor and existing lease."""
+    from lumenis.adapters.human_browser import _authorize_human_interactive
+    task_platform = _authorize_human_interactive(
+        "XHS_RETINAUT", task_id or "", actor_ref)
+    from lumenis.adapters import collector_service
+    if not collector_service.human_browser_lease_owned(task_id or "", task_platform):
+        raise PermissionError("HUMAN_INTERACTIVE_BROWSER_LEASE_REQUIRED")
+    return task_platform
 
 
 def registered_cdp_profile_for_port(port, browser=None):
-    """Resolve the existing SYSTEM owner for a reserved local browser port."""
+    """Resolve a protected/general port or one exact configured local worker."""
     port = int(port)
-    if port == 9222:  # Protected Mainland personal profile: never an automatic worker.
+    if port in {9222, 9223}:  # Protected legacy/personal ports are never workers.
         return None
+    if port == 0:
+        binding = _registered_xhs_binding()
+        return binding["profile"] if binding else None
     try:
-        if port == 9223:
-            import xhs_cookie_bridge as bridge
-            account = getattr(bridge, "XHS_RETINAUT_NAME", "XHS_RETINAUT")
-            binding = bridge.ACCOUNT_PROFILES.get(account)
-            profile = binding.get("profile") if isinstance(binding, dict) else binding[1]
-            if not os.path.isabs(profile):
-                profile = os.path.join(os.path.dirname(os.path.abspath(__file__)), profile)
-            return os.path.abspath(profile)
         if port == 9224:
             import browser_surface
             selected = browser or system_default_cdp_browser()
             return (os.path.abspath(browser_surface._general_profile_dir(selected))
                     if selected in {"chrome", "edge"} else None)
-        if port in {9225, 9226, 9227, 9228}:
-            from pathlib import Path
-            from lumenis.adapters.cookie_vault import _current_data_dir
-            from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
-            profile_root = (Path(_current_data_dir()) / "private" / "profiles").resolve()
-            for config in PLATFORM_CAPABILITIES.values():
-                worker = config.get("readonly_worker") if isinstance(config, dict) else None
-                if isinstance(worker, dict) and int(worker.get("port", -1)) == port:
-                    return str((profile_root / worker["profile"]).resolve())
-            return None
+        from lumenis.adapters.human_browser import readonly_worker_spec
+        from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
+
+        rows = []
+        for platform, config in PLATFORM_CAPABILITIES.items():
+            worker = config.get("readonly_worker") if isinstance(config, dict) else None
+            if not isinstance(worker, dict):
+                continue
+            try:
+                worker_port = int(worker["port"])
+            except (KeyError, TypeError, ValueError):
+                worker_port = None
+            rows.append({
+                "platform": platform,
+                "port": worker_port,
+                "account": str(worker.get("account") or "").strip().casefold(),
+                "profile": str(worker.get("profile") or "").strip(),
+            })
+
+        def profile_key(value):
+            normalized = ntpath.normpath(str(value or "").strip().replace("/", "\\"))
+            return ntpath.normcase(normalized).casefold()
+
+        matches = [row for row in rows if row["port"] == port]
+        if matches:
+            if len(matches) != 1:
+                return None
+            row = matches[0]
+            if (port < 1024 or port > 65535 or port in {9222, 9223, 9224}
+                    or not row["account"] or not row["profile"]
+                    or sum(item["port"] == port for item in rows) != 1
+                    or sum(item["account"] == row["account"] for item in rows) != 1
+                    or sum(profile_key(item["profile"]) == profile_key(row["profile"])
+                           for item in rows) != 1):
+                return None
+            spec = readonly_worker_spec(row["platform"])
+            if (int(spec["port"]) != port
+                    or str(spec["account"]).strip().casefold() != row["account"]
+                    or ntpath.basename(str(spec["profile"]).rstrip("\\/")).casefold()
+                    != row["profile"].casefold()):
+                return None
+            return spec["profile"]
+
+        # XHS is the only dynamic SYSTEM worker; unregistered static ports fail closed.
+        xhs = resolve_registered_xhs_worker(port=port)
+        if xhs.get("available"):
+            return xhs["profile"]
     except Exception:
         return None
     return None
@@ -114,8 +369,25 @@ def registered_cdp_profile_for_port(port, browser=None):
 
 def _profile_binding_allowed(port, profile_dir, browser=None):
     port = int(port)
-    if port not in {9222, 9223, 9224, 9225, 9226, 9227, 9228}:
-        return True
+    xhs_binding = _registered_xhs_binding()
+    if port == 0:
+        return bool(xhs_binding and browser == "edge"
+                    and _normalized_profile_path(xhs_binding["profile"])
+                    == _normalized_profile_path(profile_dir))
+    if xhs_binding and _normalized_profile_path(profile_dir) == _normalized_profile_path(
+            xhs_binding["profile"]):
+        if port in {9222, 9223, 9224, 9225, 9226, 9227, 9228} or browser not in {None, "edge"}:
+            return False
+        from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
+        if any(isinstance(config, dict)
+               and isinstance(config.get("readonly_worker"), dict)
+               and int(config["readonly_worker"].get("port", -1)) == port
+               for config in PLATFORM_CAPABILITIES.values()):
+            return False
+        state = resolve_registered_xhs_worker(port=port)
+        return bool(state.get("available") and state.get("port") == port)
+    if port in {9222, 9223}:
+        return False
     if port == 9224 and browser is None:
         expected_profiles = [registered_cdp_profile_for_port(port, browser=name)
                             for name in ("chrome", "edge")]
@@ -167,8 +439,11 @@ def _profile_processes(profile_dir):
                                for arg in lowered)
                 headless = any(arg in {"--headless", "--headless=new"}
                                for arg in lowered)
+                port = int(debug_port) if debug_port and debug_port.isdigit() else None
+                if port == 0:
+                    port = _read_devtools_active_port(profile_dir)
                 owners.append({"pid": int(proc.info.get("pid") or proc.pid), "name": name,
-                               "port": int(debug_port) if debug_port and debug_port.isdigit() else None,
+                               "port": port,
                                "headless": headless, "loopback": loopback})
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, OSError, ValueError):
                 incomplete = True
@@ -234,14 +509,23 @@ def _cdp_process_matches(pid, port, profile_dir, *, headless=None, browser=None)
     lowered_args = [arg.casefold() for arg in args]
     is_headless = any(arg in {"--headless", "--headless=new"} for arg in lowered_args)
     loopback = "--remote-debugging-address=127.0.0.1" in lowered_args
+    effective_port = debug_port
+    if debug_port == "0":
+        effective_port = str(_read_devtools_active_port(profile_dir) or "")
     return bool(profile and _normalized_profile_path(profile) == _normalized_profile_path(profile_dir)
-                and debug_port == str(int(port)) and loopback
+                and effective_port == str(int(port)) and loopback
                 and (headless is None or is_headless is bool(headless)))
 
 
 def is_cdp_profile_running(port, profile_dir, *, headless=None, loopback_only=True,
                            browser=None):
     """Verify the listening socket is owned by this exact profile/browser/mode worker."""
+    if int(port) == 0:
+        state = resolve_registered_xhs_worker(headless=headless)
+        return bool(state.get("available") and profile_dir
+                    and _normalized_profile_path(state["profile"])
+                    == _normalized_profile_path(profile_dir)
+                    and (browser is None or browser == state["browser"]))
     if not profile_dir or not _profile_binding_allowed(port, profile_dir, browser=browser):
         return False
     listener_pids, verified_listener = _cdp_listener_pids(port)
@@ -258,16 +542,26 @@ def registered_cdp_browser_for_port(port, profile_dir=None, *, headless=None):
     """Resolve the engine only from an exact registered profile and CDP listener."""
     try:
         port = int(port)
-        if port not in {9223, 9224, 9225, 9226, 9227, 9228}:
+        if port == 0:
+            state = resolve_registered_xhs_worker(headless=headless)
+            if (state.get("available") and (profile_dir is None
+                    or _normalized_profile_path(profile_dir)
+                    == _normalized_profile_path(state["profile"]))):
+                return state["browser"]
             return None
-        if profile_dir:
-            profiles = [profile_dir]
-        elif port == 9224:
-            profiles = [registered_cdp_profile_for_port(port, browser=name)
-                        for name in ("chrome", "edge")]
+        if port == 9224:
+            if profile_dir:
+                profiles = [profile_dir]
+            else:
+                profiles = [registered_cdp_profile_for_port(port, browser=name)
+                            for name in ("chrome", "edge")]
         else:
-            profile = registered_cdp_profile_for_port(port)
-            profiles = [profile] if profile else []
+            registered_profile = registered_cdp_profile_for_port(port)
+            if (not registered_profile or (profile_dir and
+                    _normalized_profile_path(profile_dir)
+                    != _normalized_profile_path(registered_profile))):
+                return None
+            profiles = [registered_profile]
         listener_pids, verified_listener = _cdp_listener_pids(port)
         if not verified_listener or len(listener_pids) != 1:
             return None
@@ -381,7 +675,7 @@ def default_profile_for(browser="edge"):
 def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=True,
                       proxy_server=None, launch_url="https://www.xiaohongshu.com",
                       anti_automation=True, browser="edge", direct_connection=False,
-                      loopback_only=True):
+                      loopback_only=True, task_id=None, actor_ref=None):
     """
     启动带 CDP 调试端口的指定 Chromium 浏览器。
     
@@ -394,6 +688,9 @@ def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=True,
         dict: {success: bool, message: str, port: int, pid: int}
     """
     browser = (browser or "edge").lower()
+    if port is None:
+        return {"success": False, "code": "BROWSER_WORKER_ENDPOINT_REQUIRED",
+                "message": "通用浏览器调用必须指定并核验已有注册端点", "port": None, "pid": None}
     port = int(port)
     if port == 9222:
         return {"success": False, "code": "PROTECTED_PROFILE_FORBIDDEN",
@@ -402,6 +699,15 @@ def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=True,
         return {"success": False, "message": UNSUPPORTED_ON_WINDOWS[browser], "port": port, "pid": None}
     if profile_dir is None:
         profile_dir = default_profile_for(browser)
+    if port == 0:
+        binding = _registered_xhs_binding()
+        if (not binding or browser != "edge"
+                or _normalized_profile_path(profile_dir) != _normalized_profile_path(binding["profile"])):
+            return {"success": False, "code": "DYNAMIC_PORT_REQUIRES_REGISTERED_XHS_PROFILE",
+                    "message": "动态 CDP 仅允许绑定已登记的香港/国际 RedNote Profile",
+                    "port": 0, "pid": None}
+        if headless is not True:
+            _authorize_registered_xhs_human_worker(task_id=task_id, actor_ref=actor_ref)
     if not _profile_binding_allowed(port, profile_dir, browser=browser):
         return {"success": False, "code": "PORT_PROFILE_BINDING_MISMATCH",
                 "message": f"CDP端口 {port} 与请求的隔离Profile不匹配", "port": port, "pid": None}
@@ -430,7 +736,7 @@ def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=True,
     if owners:
         return {"success": False, "code": "PROFILE_IN_USE_UNVERIFIED",
                 "message": f"Profile已被不同端口或模式的浏览器使用", "port": port, "pid": owners[0]["pid"]}
-    edge_path = find_browser_path(browser)
+    edge_path = (_registered_edge_executable() if port == 0 else find_browser_path(browser))
     if not edge_path:
         return {"success": False, "message": f"未找到 {browser} 浏览器，请安装或改用其他内核", "port": port, "pid": None}
 
@@ -494,6 +800,13 @@ def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=True,
         # 等待CDP端口就绪
         for i in range(15):
             time.sleep(1)
+            if port == 0:
+                state = resolve_registered_xhs_worker(headless=headless)
+                if state.get("available"):
+                    return {"success": True, "message": "已验证注册的动态 CDP Worker",
+                            "port": state["port"], "pid": state["pid"], "reused": False,
+                            "endpoint": state["endpoint"], "account": state["account"]}
+                continue
             if is_cdp_profile_running(
                     port, profile_dir, headless=headless, loopback_only=True, browser=browser):
                 listener_pids, verified_listener = _cdp_listener_pids(port)
@@ -515,10 +828,39 @@ def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=True,
 
 
 def ensure_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, auto_start=True,
-                       headless=True, loopback_only=True, **launch_kwargs):
+                       headless=True, loopback_only=True, task_id=None,
+                       actor_ref=None, **launch_kwargs):
     """Reuse or start only the exact local profile and browser mode requested."""
     browser = (launch_kwargs.get("browser") or "edge").lower()
     selected_profile = profile_dir or default_profile_for(browser)
+    if port is None:
+        return {"available": False, "code": "BROWSER_WORKER_ENDPOINT_REQUIRED",
+                "port": None, "auto_started": False}
+    if int(port) == 0:
+        binding = _registered_xhs_binding()
+        if (not binding or browser != "edge"
+                or _normalized_profile_path(selected_profile)
+                != _normalized_profile_path(binding["profile"])):
+            return {"available": False, "code": "DYNAMIC_PORT_REQUIRES_REGISTERED_XHS_PROFILE",
+                    "port": None, "auto_started": False}
+        state = resolve_registered_xhs_worker(headless=headless)
+        if state.get("available"):
+            return {"available": True, "code": "WORKER_REUSED", "port": state["port"],
+                    "endpoint": state["endpoint"], "pid": state["pid"],
+                    "auto_started": False, "reused": True}
+        if not auto_start:
+            return {"available": False, "code": state.get("code") or "BROWSER_WORKER_UNAVAILABLE",
+                    "port": None, "auto_started": False}
+        if headless is not True:
+            _authorize_registered_xhs_human_worker(task_id=task_id, actor_ref=actor_ref)
+        result = start_cdp_browser(0, selected_profile, headless=headless,
+                                   loopback_only=loopback_only, task_id=task_id,
+                                   actor_ref=actor_ref, **launch_kwargs)
+        return {"available": result.get("success") is True,
+                "message": result.get("message"), "code": result.get("code"),
+                "port": result.get("port"), "endpoint": result.get("endpoint"),
+                "auto_started": result.get("success") is True,
+                "pid": result.get("pid"), "reused": result.get("reused") is True}
     if int(port) == 9222:
         return {"available": False, "code": "PROTECTED_PROFILE_FORBIDDEN",
                 "message": "受保护的9222身份不能由自动浏览器路径启动或复用",
@@ -570,6 +912,22 @@ def _is_default_user_browser_profile(profile_dir):
 
 def close_cdp_browser(port, profile_dir, *, headless=True, browser=None, timeout=8):
     """Request graceful Browser.close only for an exact, verified LUMENIS worker."""
+    try:
+        requested_port = int(port)
+    except (TypeError, ValueError):
+        return {"success": False, "code": "WORKER_ENDPOINT_INVALID", "port": None}
+    if requested_port == 0:
+        state = resolve_registered_xhs_worker(headless=headless)
+        if (not state.get("available") or not profile_dir
+                or _normalized_profile_path(profile_dir)
+                != _normalized_profile_path(state.get("profile"))
+                or (browser is not None and browser != state.get("browser"))):
+            return {"success": False,
+                    "code": state.get("code") or "WORKER_IDENTITY_UNVERIFIED",
+                    "port": None}
+        port = int(state["port"])
+        profile_dir = state["profile"]
+        browser = state["browser"]
     if browser is None:
         browser = registered_cdp_browser_for_port(port, profile_dir, headless=headless)
     if not browser or not is_cdp_profile_running(
@@ -615,6 +973,17 @@ def reset_cdp_targets(port=DEFAULT_CDP_PORT, timeout=6):
     """
     import urllib.request
     import json as _json
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        return 0
+    if port == 0:
+        state = resolve_registered_xhs_worker(headless=True)
+        if not state.get("available"):
+            return 0
+        port = int(state["port"])
+    elif port in {9222, 9223}:
+        return 0
     base = f"http://127.0.0.1:{port}"
 
     def _http(path, method="GET"):
@@ -664,6 +1033,15 @@ def reset_cdp_targets(port=DEFAULT_CDP_PORT, timeout=6):
 
 def get_cdp_status(port=DEFAULT_CDP_PORT):
     """获取CDP浏览器状态"""
+    if port is None:
+        return {"port": None, "available": False, "endpoint": None,
+                "browser": None, "profile_dir": None,
+                "code": "BROWSER_WORKER_ENDPOINT_REQUIRED"}
+    if int(port) == 0:
+        state = resolve_registered_xhs_worker()
+        return {"port": state.get("port"), "available": state.get("available") is True,
+                "endpoint": state.get("endpoint"), "browser": state.get("browser"),
+                "profile_dir": state.get("profile"), "code": state.get("code")}
     return {
         "port": port,
         "available": is_cdp_port_open(port),
@@ -676,6 +1054,12 @@ def stop_cdp_browser(port=DEFAULT_CDP_PORT):
     """Gracefully close only an exact registered headless worker; never kill by port alone."""
     try:
         port = int(port)
+        if port == 0:
+            state = resolve_registered_xhs_worker(headless=True)
+            if not state.get("available"):
+                return {"success": False, "code": state.get("code") or "WORKER_IDENTITY_UNVERIFIED",
+                        "port": None}
+            port = int(state["port"])
         browser = registered_cdp_browser_for_port(port, headless=True)
         profile = (registered_cdp_profile_for_port(port, browser=browser)
                    if browser else None)
@@ -699,11 +1083,14 @@ class CDPBrowserContext:
     CDP浏览器上下文管理器：自动启动→使用→自动关闭
     
     用法：
-        with CDPBrowserContext(port=9223) as browser:
-            if browser['available']:
-                # 执行采集任务
-                do_collect()
-        # 退出with块后浏览器自动关闭
+        worker = resolve_registered_xhs_worker(headless=True)
+        if worker['available']:
+            with CDPBrowserContext(
+                    port=worker['port'], profile_dir=worker['profile'],
+                    headless=True, browser=worker['browser']) as browser:
+                if browser['available']:
+                    do_collect()
+        # Context exits stop only a verified worker started by this context.
     
     参考GitHub实际应用：
     - albertofwb/douyin-publisher: chrome_utils.py
@@ -711,7 +1098,7 @@ class CDPBrowserContext:
     
     def __init__(self, port=DEFAULT_CDP_PORT, profile_dir=None, auto_start=True,
                  auto_close=True, headless=True, browser=None):
-        self.port = int(port)
+        self.port = int(port) if port is not None else None
         self.profile_dir = profile_dir
         self.auto_start = auto_start
         self.auto_close = auto_close
@@ -723,11 +1110,49 @@ class CDPBrowserContext:
 
     def __enter__(self):
         """Attach or start only the exact registered BACKGROUND worker."""
-        if not self.headless or self.port == 9222:
+        if self.port is None or not self.headless or self.port == 9222:
             self.browser_info = {"available": False, "code": "BACKGROUND_WORKER_CONFIGURATION_INVALID",
-                                 "message": "Automatic CDP is limited to registered headless workers",
+                                 "message": "Automatic CDP requires an explicit registered headless worker",
                                  "port": self.port, "auto_started": False}
             return self.browser_info
+        if self.port == 0:
+            binding = _registered_xhs_binding()
+            if (not binding or (self.profile_dir is not None
+                    and _normalized_profile_path(self.profile_dir)
+                    != _normalized_profile_path(binding["profile"]))
+                    or self.browser not in {None, "edge"}):
+                self.browser_info = {"available": False,
+                                     "code": "DYNAMIC_PORT_REQUIRES_REGISTERED_XHS_PROFILE",
+                                     "port": None, "auto_started": False}
+                return self.browser_info
+            self.browser = "edge"
+            self.profile_dir = binding["profile"]
+            state = resolve_registered_xhs_worker(headless=True)
+            if state.get("available"):
+                self.port = int(state["port"])
+                self.browser_info = {"available": True, "code": "WORKER_REUSED",
+                                     "port": self.port, "endpoint": state["endpoint"],
+                                     "pid": state["pid"], "auto_started": False,
+                                     "was_running": True}
+                self.was_running = True
+                return self.browser_info
+            if not self.auto_start:
+                self.browser_info = {"available": False,
+                                     "code": state.get("code") or "BROWSER_WORKER_UNAVAILABLE",
+                                     "port": None, "auto_started": False}
+                return self.browser_info
+            result = start_cdp_browser(
+                0, self.profile_dir, headless=True, loopback_only=True,
+                browser="edge", launch_url="https://www.rednote.com")
+            if result.get("success") is True and result.get("port"):
+                self.port = int(result["port"])
+                self.started_by_self = True
+                self.browser_info = {**result, "available": True,
+                                     "auto_started": True, "was_running": False}
+                return self.browser_info
+            self.browser_info = {**result, "available": False, "auto_started": False}
+            return self.browser_info
+
         port_open = is_cdp_port_open(self.port)
         if port_open:
             browser = registered_cdp_browser_for_port(
@@ -828,7 +1253,7 @@ if __name__ == "__main__":
     
     # 测试上下文管理器
     print("\n测试上下文管理器...")
-    with CDPBrowserContext(port=9223, auto_start=True, auto_close=True) as browser:
+    with CDPBrowserContext(port=0, auto_start=True, auto_close=True) as browser:
         print(f"浏览器状态: {browser}")
         if browser['available']:
             print("执行采集任务...")

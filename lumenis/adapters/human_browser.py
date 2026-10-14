@@ -21,15 +21,15 @@ nodriver、SeleniumBase 等的共识）：
 线程模型：playwright sync_api 需在工作线程内独立创建实例，HumanBrowser
 作为上下文管理器在单次采集任务内创建与释放。
 """
-import time
-import random
-import socket
 import logging
 import os
-from pathlib import Path
-from urllib.parse import urlsplit
+import random
+import socket
+import time
 from dataclasses import dataclass
-from typing import Optional, List, Tuple
+from pathlib import Path
+from typing import Optional
+from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +83,17 @@ if (originalQuery) {
 """
 
 
-def is_cdp_open(host: str = "127.0.0.1", port: int = 9222, timeout: float = 1.0) -> bool:
-    """探测 CDP 调试端口是否在监听。"""
+def is_cdp_open(host: str = "127.0.0.1", port: int | None = None,
+                timeout: float = 1.0) -> bool:
+    """Check an explicitly owner-resolved CDP port; never assume a legacy port."""
+    if port is None:
+        return False
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        return False
+    if not 1 <= port <= 65535:
+        return False
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(timeout)
@@ -109,6 +118,7 @@ def is_cdp_url_open(cdp_url: str, timeout: float = 1.0) -> bool:
 def readonly_worker_spec(platform: str, private_data_dir=None) -> dict:
     """Resolve isolated worker parameters from the existing platform catalog."""
     from lumenis.system.collector.adapters.config import get_platform_capabilities
+
     from .cookie_vault import _current_data_dir
 
     binding = get_platform_capabilities(platform).get("readonly_worker")
@@ -147,24 +157,31 @@ def registered_browser_worker_spec(identity: str, *, port: int | None = None,
                     and (profile is None or _normalized_profile(profile) == _normalized_profile(spec["profile"])) )):
             matches.append({**spec, "platform": platform})
 
-    # XHS is registered through its existing HK/International account contract,
-    # not PLATFORM_CAPABILITIES.readonly_worker. Mainland identity is excluded.
-    if candidate_folded in {"xhs_retinaut", "xiaohongshu", "xhs"} or port == 9223:
+    # XHS resolves through its existing HK/International SYSTEM session owner;
+    # the identity registry carries no fixed CDP port.
+    if candidate_folded in {"xhs_retinaut", "xiaohongshu", "xhs"}:
         try:
+            import cdp_helper
             import xhs_cookie_bridge as bridge
             account = bridge.XHS_RETINAUT_NAME
             binding = bridge.ACCOUNT_PROFILES[account]
             xhs_profile = binding.get("profile") if isinstance(binding, dict) else binding[1]
             if not os.path.isabs(xhs_profile):
                 xhs_profile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", xhs_profile)
-            xhs_profile = os.path.abspath(xhs_profile)
-            xhs_port = int(bridge.cdp_port_for(account))
+            xhs_profile = os.path.realpath(os.path.abspath(os.path.expanduser(xhs_profile)))
+            registered = cdp_helper._registered_xhs_binding(account)
+            if (not registered or _normalized_profile(xhs_profile)
+                    != _normalized_profile(registered["profile"])):
+                raise RuntimeError("XHS_REGISTERED_PROFILE_UNAVAILABLE")
+            worker = cdp_helper.resolve_registered_xhs_worker(account=account)
+            xhs_port = int(worker["port"]) if worker.get("available") else 0
             identity_matches = candidate_folded in {account.casefold(), "xiaohongshu", "xhs"}
-            owner_matches = (port is not None and int(port) == xhs_port
+            owner_matches = (port is not None and int(port) != 0
+                             and worker.get("available") and int(port) == xhs_port
                              and (profile is None or _normalized_profile(profile) == _normalized_profile(xhs_profile)))
             if ((identity_matches and candidate_folded != "default") or owner_matches):
-                if xhs_port != 9223:
-                    raise RuntimeError("XHS_HK_WORKER_BINDING_UNAVAILABLE")
+                if port is not None and int(port) not in {0, xhs_port}:
+                    raise RuntimeError("BROWSER_WORKER_PORT_MISMATCH")
                 matches.append({"platform": "xiaohongshu", "account": account,
                                 "port": xhs_port, "profile": xhs_profile,
                                 "env_prefix": "XHS", "home": "about:blank",
@@ -177,7 +194,8 @@ def registered_browser_worker_spec(identity: str, *, port: int | None = None,
     if len(unique) != 1:
         raise RuntimeError("BROWSER_PLATFORM_OR_WORKER_BINDING_UNAVAILABLE")
     spec = next(iter(unique.values()))
-    if port is not None and int(port) != int(spec["port"]):
+    if port is not None and int(port) not in ({0, int(spec["port"])}
+            if spec["platform"] == "xiaohongshu" else {int(spec["port"])}):
         raise RuntimeError("BROWSER_WORKER_PORT_MISMATCH")
     if profile is not None and _normalized_profile(profile) != _normalized_profile(spec["profile"]):
         raise RuntimeError("BROWSER_WORKER_PROFILE_MISMATCH")
@@ -240,6 +258,49 @@ def _authorize_human_interactive(identity: str, task_id: str,
     return task_platform
 
 
+def _authorize_human_browser_return(identity: str, task_id: str,
+                                    actor_ref: str | None = None) -> str:
+    """Authorize only returning the same actor's already-leased worker.
+
+    The NEED_VERIFY gate remains mandatory for opening HUMAN_INTERACTIVE mode.
+    Return is cleanup of an existing lease, so it is bound by the in-memory
+    task owner, exact platform lease, and the same browser-operation Permission.
+    """
+    task_id = str(task_id or "").strip()
+    actor_ref = str(actor_ref or "").strip()
+    if not task_id:
+        raise PermissionError("HUMAN_INTERACTIVE_TASK_ID_REQUIRED")
+    if not actor_ref:
+        raise PermissionError("HUMAN_INTERACTIVE_AUTHENTICATED_ACTOR_REQUIRED")
+    spec = registered_browser_worker_spec(identity)
+    platform = spec["platform"]
+    from lumenis.adapters import collector_service
+    try:
+        task = collector_service.get_task(task_id)
+        task_owner = collector_service.get_task_owner(task_id)
+    except Exception:  # noqa: BLE001 - fail closed when task ownership cannot be read.
+        task, task_owner = None, None
+    if task_owner != actor_ref:
+        raise PermissionError("HUMAN_INTERACTIVE_TASK_ACTOR_MISMATCH")
+    match = _task_result_for_platform(task, platform) if isinstance(task, dict) else None
+    task_platform = match[0] if match else ""
+    if (not isinstance(task, dict) or task.get("manual") is not True
+            or not task_platform
+            or not collector_service.human_browser_return_lease_owned(
+                task_id, task_platform)):
+        raise PermissionError("HUMAN_INTERACTIVE_BROWSER_LEASE_REQUIRED")
+    from lumenis.system.security import OperationType, get_permission_gate
+    decision = get_permission_gate().check(
+        operation_type=OperationType.BROWSER_OPERATION,
+        resource=f"collector.browser.login:{task_platform}:{task_id}",
+        caller="lumenis.adapters.human_browser.HUMAN_INTERACTIVE_RETURN",
+        domain_id="system",
+    )
+    if not decision.allowed:
+        raise PermissionError("HUMAN_INTERACTIVE_PERMISSION_DENIED")
+    return task_platform
+
+
 def _require_human_browser_lease(task_id: str, platform: str) -> None:
     """Require the existing Collector service to hold this task's browser lane."""
     from lumenis.adapters import collector_service
@@ -249,6 +310,16 @@ def _require_human_browser_lease(task_id: str, platform: str) -> None:
 
 def _worker_mode_state(spec: dict, *, headless: bool):
     import cdp_helper
+    if spec.get("platform") == "xiaohongshu":
+        state = cdp_helper.resolve_registered_xhs_worker(headless=headless)
+        if (not state.get("available")
+                or _normalized_profile(spec.get("profile"))
+                != _normalized_profile(state.get("profile"))
+                or (int(spec.get("port") or 0) not in {0, int(state.get("port") or 0)})):
+            return None
+        return state["browser"]
+    if not spec.get("port"):
+        return None
     port, profile = int(spec["port"]), spec["profile"]
     browser = cdp_helper.registered_cdp_browser_for_port(
         port, profile, headless=headless)
@@ -262,11 +333,49 @@ def _launch_registered_worker(spec: dict, *, mode: str, browser: str | None = No
                               task_id: str | None = None,
                               actor_ref: str | None = None) -> dict:
     from scripts.start_resident_browsers import _launch_readonly_worker
+    launch_spec = dict(spec)
+    if spec.get("platform") == "xiaohongshu":
+        # XHS endpoints are assigned by Chromium for each process lifetime. A
+        # previously registered port is evidence for the worker being closed,
+        # not a reusable endpoint for its replacement.
+        launch_spec["port"] = 0
     result = _launch_readonly_worker(
-        spec, mode=mode, browser=browser or spec.get("browser"),
+        launch_spec, mode=mode, browser=browser or spec.get("browser"),
         task_id=task_id, platform=spec["account"], actor_ref=actor_ref)
     headless = mode == "BACKGROUND"
     import cdp_helper
+    if spec.get("platform") == "xiaohongshu":
+        state = cdp_helper.resolve_registered_xhs_worker(
+            account=spec["account"], headless=headless)
+        exact = (state.get("available") is True
+                 and _normalized_profile(spec.get("profile"))
+                 == _normalized_profile(state.get("profile"))
+                 and state.get("browser") == (browser or spec.get("browser"))
+                 and state.get("headless") is headless
+                 and state.get("loopback_only") is True
+                 and int(state.get("port") or 0) not in {0, 9222, 9223, 9224, 9225,
+                                                         9226, 9227, 9228}
+                 and str(state.get("endpoint") or "")
+                 == f"http://127.0.0.1:{int(state.get('port') or 0)}"
+                 and int(state.get("pid") or 0) > 0)
+        reported_port = int(result.get("port") or 0)
+        reported_pid = int(result.get("pid") or 0)
+        reported_endpoint = str(result.get("endpoint") or "")
+        launch_matches = (reported_port == int(state.get("port") or 0)
+                          and reported_pid == int(state.get("pid") or 0)
+                          and reported_endpoint == str(state.get("endpoint") or "")
+                          and result.get("account") == state.get("account")
+                          and _normalized_profile(result.get("profile"))
+                          == _normalized_profile(state.get("profile")))
+        online = result.get("online") is True and exact and launch_matches
+        return {"online": online, "browser": state.get("browser") if exact else browser,
+                "action": result.get("action") or "worker_unavailable",
+                "code": result.get("error_code") or result.get("code"),
+                "port": state.get("port") if online else None,
+                "endpoint": state.get("endpoint") if online else None,
+                "pid": state.get("pid") if online else None,
+                "profile": state.get("profile") if online else None,
+                "account": state.get("account") if online else spec.get("account")}
     online = result.get("online") is True and bool(_worker_mode_state(spec, headless=headless))
     return {"online": online, "browser": result.get("browser") or browser,
             "action": result.get("action") or "worker_unavailable"}
@@ -284,8 +393,41 @@ def _switch_registered_worker_mode(spec: dict, *, target_mode: str,
             spec["account"], task_id or "", actor_ref)
         _require_human_browser_lease(task_id or "", task_platform)
     target_headless = target_mode == "BACKGROUND"
-    port, profile = int(spec["port"]), spec["profile"]
     import cdp_helper
+    if spec.get("platform") == "xiaohongshu":
+        current = cdp_helper.resolve_registered_xhs_worker()
+        if current.get("available"):
+            desired = current.get("headless") is target_headless
+            if desired:
+                return {"online": True, "browser": "edge", "action": "already_online",
+                        "port": current["port"]}
+            if current.get("browser") != "edge":
+                raise RuntimeError("READONLY_WORKER_KERNEL_UNVERIFIED")
+            closed = cdp_helper.close_cdp_browser(
+                int(current["port"]), current["profile"],
+                headless=not target_headless, browser="edge")
+            if closed.get("success") is not True:
+                raise RuntimeError("READONLY_WORKER_GRACEFUL_CLOSE_UNCONFIRMED")
+        else:
+            if current.get("code") != "XHS_REGISTERED_WORKER_UNAVAILABLE":
+                raise RuntimeError(str(current.get("code") or "XHS_WORKER_OWNER_UNVERIFIED"))
+        result = _launch_registered_worker(
+            spec, mode=target_mode, browser="edge", task_id=task_id,
+            actor_ref=actor_ref)
+        if not result["online"]:
+            raise RuntimeError(result.get("code") or "READONLY_WORKER_MODE_START_UNVERIFIED")
+        if (not result.get("port") or not result.get("endpoint")
+                or not result.get("pid")
+                or _normalized_profile(spec.get("profile"))
+                != _normalized_profile(result.get("profile"))
+                or result.get("account") != spec.get("account")):
+            raise RuntimeError("READONLY_WORKER_NEW_ENDPOINT_UNVERIFIED")
+        return {"online": True, "browser": "edge", "action": result["action"],
+                "port": result["port"], "endpoint": result["endpoint"],
+                "pid": result["pid"], "profile": result["profile"],
+                "account": result["account"]}
+
+    port, profile = int(spec["port"]), spec["profile"]
     desired = _worker_mode_state(spec, headless=target_headless)
     opposite = _worker_mode_state(spec, headless=not target_headless)
     if cdp_helper.is_cdp_port_open(port):
@@ -315,7 +457,8 @@ def return_registered_worker_to_background(platform: str, *, task_id: str,
                                            actor_ref: Optional[str] = None) -> dict:
     """Restore the same human task's isolated worker to verified headless mode."""
     spec = registered_browser_worker_spec(platform)
-    task_platform = _authorize_human_interactive(spec["account"], task_id, actor_ref)
+    task_platform = _authorize_human_browser_return(
+        spec["account"], task_id, actor_ref)
     from lumenis.adapters import collector_service
     if not collector_service.begin_background_browser_return(task_id, task_platform):
         raise PermissionError("HUMAN_INTERACTIVE_TASK_OR_WORKER_NOT_OWNED")
@@ -341,12 +484,20 @@ def return_registered_worker_to_background(platform: str, *, task_id: str,
 
 
 def _worker_endpoint(spec: dict) -> str:
-    expected = f"http://127.0.0.1:{int(spec['port'])}"
     if spec["platform"] == "xiaohongshu":
+        import cdp_helper
+        state = cdp_helper.resolve_registered_xhs_worker(account=spec["account"])
+        if (not state.get("available")
+                or _normalized_profile(state.get("profile"))
+                != _normalized_profile(spec.get("profile"))
+                or (int(spec.get("port") or 0) not in {0, int(state.get("port") or 0)})):
+            raise RuntimeError("XHS_REGISTERED_BROWSER_SESSION_UNAVAILABLE")
+        expected = str(state.get("endpoint") or "")
         configured = os.getenv("XHS_CDP_URL", "").strip()
-        if configured and configured != expected:
+        if configured and configured.rstrip("/") != expected:
             raise RuntimeError("XHS_INTERACTIVE_WORKER_ENDPOINT_MISMATCH")
         return expected
+    expected = f"http://127.0.0.1:{int(spec['port'])}"
     prefix = spec["env_prefix"]
     configured = os.getenv(prefix + "_CDP_URL", "").strip()
     enabled = os.getenv(prefix + "_LOCAL_WORKER_ENABLED", "").strip().lower()
@@ -360,8 +511,17 @@ def _worker_endpoint(spec: dict) -> str:
 def ensure_registered_browser_worker_background(platform: str) -> dict:
     """Ensure the exact registered worker is headless; never replace a visible/unknown owner."""
     spec = registered_browser_worker_spec(platform)
-    _worker_endpoint(spec)
     import cdp_helper
+    if spec.get("platform") == "xiaohongshu":
+        result = cdp_helper.ensure_registered_xhs_worker(headless=True)
+        state = cdp_helper.resolve_registered_xhs_worker(headless=True)
+        online = result.get("success") is True and state.get("available") is True
+        return {"status": ("ALREADY_RUNNING" if result.get("reused") else "RECOVERED")
+                if online else "UNAVAILABLE", "worker_verified": online,
+                "reason": None if online else result.get("code") or state.get("code"),
+                "platform": spec["platform"], "account": spec["account"],
+                "port": state.get("port") if online else None}
+    _worker_endpoint(spec)
     current = _worker_mode_state(spec, headless=True)
     if current:
         return {"status": "ALREADY_RUNNING", "worker_verified": True,
@@ -394,6 +554,9 @@ def configured_readonly_worker_url(platform: str, *, mode: str = "BACKGROUND",
     if mode == "HUMAN_INTERACTIVE":
         task_platform = _authorize_human_interactive(platform, task_id or "", actor_ref)
         _require_human_browser_lease(task_id or "", task_platform)
+    spec = registered_browser_worker_spec(platform)
+    if spec.get("platform") == "xiaohongshu":
+        return _worker_endpoint(spec)
     spec = readonly_worker_spec(platform)
     prefix = spec["env_prefix"]
     expected_url = f"http://127.0.0.1:{spec['port']}"
@@ -442,14 +605,49 @@ def open_readonly_worker_login(platform: str, *, task_id: str,
             if (cdp_helper.is_cdp_port_open(spec["port"])
                     and not initial_headless_worker):
                 raise RuntimeError("READONLY_WORKER_PORT_IN_USE_UNVERIFIED")
+            if spec.get("platform") == "xiaohongshu":
+                if initial_headless_worker:
+                    _worker_endpoint(spec)
+                else:
+                    current = cdp_helper.resolve_registered_xhs_worker(
+                        account=spec["account"])
+                    if (current.get("available")
+                            or current.get("code") != "XHS_REGISTERED_WORKER_UNAVAILABLE"):
+                        raise RuntimeError(
+                            current.get("code") or "HUMAN_INTERACTIVE_WORKER_OWNER_UNVERIFIED")
+            else:
+                _worker_endpoint(spec)
             transition_started = True
-            endpoint = _worker_endpoint(spec)
             worker = _switch_registered_worker_mode(
                 spec, target_mode="HUMAN_INTERACTIVE", task_id=task_id,
                 actor_ref=actor_ref)
             if not worker["online"]:
                 raise RuntimeError("READONLY_WORKER_HUMAN_MODE_UNAVAILABLE")
+            if spec.get("platform") == "xiaohongshu":
+                human_spec = registered_browser_worker_spec(
+                    spec["account"], profile=spec["profile"])
+                state = cdp_helper.resolve_registered_xhs_worker(
+                    account=spec["account"], headless=False,
+                    port=worker.get("port"))
+                if (not state.get("available")
+                        or int(state.get("pid") or 0) != int(worker.get("pid") or 0)
+                        or int(state.get("port") or 0) != int(worker.get("port") or 0)
+                        or _normalized_profile(state.get("profile"))
+                        != _normalized_profile(spec.get("profile"))
+                        or state.get("endpoint") != worker.get("endpoint")
+                        or human_spec.get("port") != state.get("port")):
+                    raise RuntimeError("HUMAN_INTERACTIVE_NEW_WORKER_IDENTITY_UNVERIFIED")
+                if (_authorize_human_interactive(spec["account"], task_id, actor_ref)
+                        != task_platform):
+                    raise PermissionError("HUMAN_INTERACTIVE_TASK_SCOPE_CHANGED")
+                _require_human_browser_lease(task_id, task_platform)
+                endpoint = _worker_endpoint(human_spec)
+                if endpoint != state.get("endpoint"):
+                    raise RuntimeError("HUMAN_INTERACTIVE_ENDPOINT_CHANGED")
+            else:
+                endpoint = _worker_endpoint(spec)
             from urllib.parse import urlsplit
+
             from playwright.sync_api import sync_playwright
             target_host = (urlsplit(login_urls[platform]).hostname or "").lower()
             opened = False
@@ -563,9 +761,9 @@ class HumanConfig:
     scroll_min_px: int = 120        # 单次滚动最小距离
     scroll_max_px: int = 520        # 单次滚动最大距离
     scroll_back_prob: float = 0.10  # 小幅回滚概率
-    move_duration_s: Tuple[float, float] = (0.4, 0.9)
-    settle_s: Tuple[float, float] = (0.1, 0.4)   # 鼠标到位后、点击前停顿
-    pause_s: Tuple[float, float] = (0.6, 1.6)    # 动作间普通停顿
+    move_duration_s: tuple[float, float] = (0.4, 0.9)
+    settle_s: tuple[float, float] = (0.1, 0.4)   # 鼠标到位后、点击前停顿
+    pause_s: tuple[float, float] = (0.6, 1.6)    # 动作间普通停顿
 
 
 class HumanBrowser:
@@ -574,34 +772,47 @@ class HumanBrowser:
     def __init__(self, cdp_url: Optional[str] = None,
                  config: Optional[HumanConfig] = None,
                  auto_ensure: bool = True, *,
-                 port: int = 9222, profile_dir: Optional[str] = None,
+                 port: int | None = None, profile_dir: str | None = None,
                  proxy_server: Optional[str] = None,
                  launch_url: str = "about:blank",
                  browser: Optional[str] = None, mode: str = "BACKGROUND",
                  task_id: Optional[str] = None,
                  actor_ref: Optional[str] = None):
         self._explicit_cdp_url = bool(cdp_url)
-        self.cdp_url = cdp_url or f"http://127.0.0.1:{port}"
-        self.port = port
+        self.mode = str(mode or "BACKGROUND").upper()
+        if self.mode not in {"BACKGROUND", "HUMAN_INTERACTIVE"}:
+            raise ValueError("BROWSER_MODE_INVALID")
+        if not cdp_url and port is None:
+            raise ValueError("BROWSER_WORKER_ENDPOINT_REQUIRED")
+        self.port = int(port) if port is not None else None
+        self.cdp_url = str(cdp_url or (f"http://127.0.0.1:{self.port}" if self.port else ""))
         self.profile_dir = profile_dir
         self.proxy_server = proxy_server
         self.launch_url = launch_url
         self.browser = str(browser).lower() if browser else (None if cdp_url else "edge")
         self.cfg = config or HumanConfig()
         self.auto_ensure = auto_ensure
-        self.mode = str(mode or "BACKGROUND").upper()
         self.task_id = str(task_id or "").strip()
         self.actor_ref = str(actor_ref or "").strip()
-        if self.mode not in {"BACKGROUND", "HUMAN_INTERACTIVE"}:
-            raise ValueError("BROWSER_MODE_INVALID")
         if self.mode == "HUMAN_INTERACTIVE":
+            if self.port == 0 and not self._explicit_cdp_url:
+                self.platform = "xiaohongshu"
+                self.human_task_platform = _authorize_human_interactive(
+                    "XHS_RETINAUT", self.task_id, self.actor_ref)
+                _require_human_browser_lease(self.task_id, self.human_task_platform)
+                self.browser = "edge"
+                self._pw = None
+                self._browser = None
+                self._context = None
+                self._owned_pages = []
+                return
             parsed = urlsplit(self.cdp_url)
             if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.hostname.lower() not in {
                     "127.0.0.1", "localhost", "::1"}:
                 raise PermissionError("HUMAN_INTERACTIVE_WORKER_IDENTITY_UNAVAILABLE")
             self.port = parsed.port or (443 if parsed.scheme == "https" else 80)
-            if self.port == 9222:
-                raise PermissionError("PROTECTED_PROFILE_FORBIDDEN")
+            if self.port in {9222, 9223}:
+                raise PermissionError("REGISTERED_WORKER_ENDPOINT_REQUIRED")
             import cdp_helper
             profile = self.profile_dir or cdp_helper.registered_cdp_profile_for_port(
                 self.port, browser=self.browser)
@@ -614,13 +825,33 @@ class HumanBrowser:
             self.human_task_platform = _authorize_human_interactive(
                 worker["account"], self.task_id, self.actor_ref)
             _require_human_browser_lease(self.task_id, self.human_task_platform)
+        elif self.port in {9222, 9223}:
+            raise ValueError("REGISTERED_WORKER_ENDPOINT_REQUIRED")
         self._pw = None
         self._browser = None
         self._context = None
-        self._owned_pages: List = []
+        self._owned_pages: list = []
 
     def connect(self):
         """Attach only to the registered profile and exact requested browser mode."""
+        if self.port == 0 and not self.cdp_url:
+            import cdp_helper
+            headless = self.mode == "BACKGROUND"
+            binding = cdp_helper._registered_xhs_binding()
+            if not binding:
+                raise RuntimeError("XHS_REGISTERED_IDENTITY_UNAVAILABLE")
+            if self.profile_dir and _normalized_profile(self.profile_dir) != _normalized_profile(binding["profile"]):
+                raise PermissionError("XHS_REGISTERED_PROFILE_BINDING_MISMATCH")
+            self.profile_dir = binding["profile"]
+            worker = cdp_helper.resolve_registered_xhs_worker(headless=headless)
+            if not worker.get("available") and self.auto_ensure:
+                self._ensure_browser()
+                worker = cdp_helper.resolve_registered_xhs_worker(headless=headless)
+            if not worker.get("available"):
+                raise RuntimeError(str(worker.get("code") or "XHS_REGISTERED_WORKER_UNAVAILABLE"))
+            self.port = int(worker["port"])
+            self.cdp_url = str(worker["endpoint"])
+            self.browser = "edge"
         parsed = urlsplit(self.cdp_url)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             raise RuntimeError("configured browser worker endpoint is invalid")
@@ -629,6 +860,8 @@ class HumanBrowser:
             self.port = parsed.port or (443 if parsed.scheme == "https" else 80)
             if self.port == 9222:
                 raise RuntimeError("PROTECTED_PROFILE_FORBIDDEN")
+            if self.port == 9223:
+                raise RuntimeError("REGISTERED_WORKER_ENDPOINT_REQUIRED")
             import cdp_helper
             expected_headless = self.mode == "BACKGROUND"
             if not self.profile_dir:
@@ -675,7 +908,8 @@ class HumanBrowser:
             kwargs = {"port": self.port, "profile_dir": self.profile_dir,
                       "auto_start": True, "headless": self.mode == "BACKGROUND",
                       "loopback_only": True, "launch_url": self.launch_url,
-                      "browser": self.browser}
+                      "browser": self.browser, "task_id": self.task_id,
+                      "actor_ref": self.actor_ref}
             if self.proxy_server:
                 kwargs["proxy_server"] = self.proxy_server
             info = cdp_helper.ensure_cdp_browser(**kwargs)
@@ -732,8 +966,8 @@ class HumanBrowser:
         time.sleep(max(floor, random.gauss(mean, sigma)))
 
     @staticmethod
-    def _bezier_path(start: Tuple[float, float], end: Tuple[float, float],
-                     steps: int = 24) -> List[Tuple[float, float]]:
+    def _bezier_path(start: tuple[float, float], end: tuple[float, float],
+                     steps: int = 24) -> list[tuple[float, float]]:
         """生成带两个随机控制点的三次贝塞尔鼠标轨迹。"""
         sx, sy = start
         ex, ey = end

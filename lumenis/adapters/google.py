@@ -2,28 +2,21 @@
 """
 Google 全网搜索采集适配器
 -------------------------------------------------
-定位：补足中文搜索引擎之外的国际/英文信源。经实测，纯 requests 即使挂代理
-也会命中 Google 的 knitsail 反机器人 JS 挑战页（0 个 h3），因此本适配器
-走“真实有头 Edge + connectOverCDP + 本地代理 + 拟人操作”通道，与
-抖音 / 小红书同级，不做直连硬刚。
+定位：补足中文搜索引擎之外的国际/英文信源。页面访问只通过 SYSTEM
+Browser Runtime 已注册并核验的 Google BACKGROUND worker；该 worker 负责其
+受控网络配置。此适配器不启动浏览器、不选取个人 Profile，也不自行配置代理。
 
-隔离设计：
-  · 使用独立 CDP 端口 9223 与独立持久 Profile（edge-cdp-proxy），
-    与小红书采集用的 9222（edge-cdp-newaccount）完全隔离，互不串扰；
-  · 代理地址取环境变量 GOOGLE_PROXY，缺省回退 OPENAI_PROXY
-    （形如 http://127.0.0.1:10808，自动去协议头）；
-  · 未配置代理时直接返回 success=False（Google 在境内直连不可达），
-    绝不返回“0 条假成功”。
+worker 未注册、身份无法核验或访问受到挑战时，返回明确失败状态，不改走
+其他浏览器或网络路径，也不把访问失败报告为“0 条成功”。
 
 六态：knitsail 挑战 / 人机验证 / 登录 / 网络异常分别上报，只有真正解析到
 结果块才算 SUCCESS；发布时间从结果摘要中尽力归一，取不到留空、不臆造。
 """
-import os
-import re
 import logging
-from pathlib import Path
-from .base import BaseAdapter, AdapterResult
-from .human_browser import HumanBrowser, PageState
+import re
+
+from .base import AdapterResult, BaseAdapter
+from .human_browser import HumanBrowser, PageState, registered_browser_worker_spec
 
 logger = logging.getLogger(__name__)
 
@@ -34,42 +27,37 @@ _SNIPPET_SEL = ["div.VwiC3b", "span.aCOpRe", "div[data-sncf]"]
 
 
 class GoogleAdapter(BaseAdapter):
-    """Google 搜索适配器（代理 + 真人浏览器通道）"""
+    """Google 搜索适配器（SYSTEM 注册的后台只读浏览器）"""
 
     platform_name = "google"
     platform_display = "Google搜索"
-
-    PROXY_CDP_PORT = 9223
-    PROXY_PROFILE_DIR = str(Path(__file__).resolve().parents[2] / "edge-cdp-proxy")
 
     def search(self, keyword: str, max_results: int = 10) -> AdapterResult:
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
 
-        proxy = self._proxy_addr()
-        if not proxy:
-            return AdapterResult(
-                success=False,
-                error="Google 需经代理访问，未配置 GOOGLE_PROXY / OPENAI_PROXY",
-            )
-
         try:
-            return self._search_via_browser(keyword, max_results, proxy)
+            return self._search_via_browser(keyword, max_results)
         except Exception as e:
             logger.exception("Google 采集异常")
             return AdapterResult(success=False, error=f"Google 浏览器采集异常: {e}")
 
     # ---------- 主流程 ----------
-    def _search_via_browser(self, keyword, max_results, proxy) -> AdapterResult:
-        hb = HumanBrowser(
-            port=self.PROXY_CDP_PORT,
-            profile_dir=self.PROXY_PROFILE_DIR,
-            proxy_server=proxy,
-            launch_url="about:blank",
-        )
-        hb.connect()
+    def _search_via_browser(self, keyword, max_results) -> AdapterResult:
+        worker = registered_browser_worker_spec("google")
+        if worker.get("platform") != "google":
+            raise RuntimeError("GOOGLE_READONLY_WORKER_NOT_REGISTERED")
+        import cdp_helper
+        browser = cdp_helper.registered_cdp_browser_for_port(
+            worker["port"], worker["profile"], headless=True)
+        if browser is None:
+            raise RuntimeError("GOOGLE_BACKGROUND_WORKER_UNAVAILABLE_OR_UNVERIFIED")
+        endpoint = f"http://127.0.0.1:{int(worker['port'])}"
+        hb = HumanBrowser(cdp_url=endpoint, auto_ensure=False,
+                          launch_url="about:blank")
         page = None
         try:
+            hb.connect()
             page = hb.new_page()
             # 先进主页短暂停留并处理合规页，模拟真人进站
             page.goto("https://www.google.com/", wait_until="domcontentloaded", timeout=30000)
@@ -211,14 +199,3 @@ class GoogleAdapter(BaseAdapter):
         if 1 <= mo <= 12 and 1 <= d <= 31:
             return f"{y:04d}-{mo:02d}-{d:02d}"
         return ""
-
-    @staticmethod
-    def _proxy_addr():
-        """读取代理并去掉 http(s):// 前缀；无代理返回空串。"""
-        raw = os.environ.get("GOOGLE_PROXY") or os.environ.get("OPENAI_PROXY") or ""
-        raw = raw.strip()
-        if raw.startswith("http://"):
-            raw = raw[len("http://"):]
-        elif raw.startswith("https://"):
-            raw = raw[len("https://"):]
-        return raw.rstrip("/")

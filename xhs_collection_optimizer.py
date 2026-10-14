@@ -4,7 +4,7 @@ XHS Collection Compliance Optimizer
 小红书采集合规优化模块
 【功能】
 1. 按 note_type 三级分类采集（topic话题/opinion舆情/event事件）
-2. 香港 RedNote + 国内小红书 双平台每天登录保活机制（对等）
+2. 通过现有 SYSTEM Browser Owner 检查已登记 RedNote 会话
 3. 采集结果按分类存储和展示
 【原则】合规采集，不破解不绕风控，失败真实记录，不伪装0条
 
@@ -16,13 +16,14 @@ XHS Collection Compliance Optimizer
 - 登录仅由用户本人在系统内浏览器手动扫码完成；自动流程不得替用户点击任何账号操作。
 - 采集“展开评论/滚动浏览”属只读，允许；“发表评论/点赞”属写操作，永久禁止。
 """
+import json
 import os
 import re
-import json
-import time
 import sqlite3
+import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Any
+
 from lumenis.shared.database import DatabaseRepository, main_db_path
 
 # ============ 配置 ============
@@ -30,12 +31,12 @@ DB_PATH = main_db_path()
 LOGIN_KEEPALIVE_FILE = os.environ.get('XHS_LOGIN_KEEPALIVE_FILE',
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'xhs_login_keepalive.json'))
 
-# ============ 双平台登录保活统一配置（香港 RedNote / 国内小红书）============
+# ============ 历史平台标识兼容；会话端点由现有 SYSTEM Browser Owner 解析 ============
 _DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 KEEPALIVE_PLATFORMS = {
     'rednote_hk': {
         'label': '香港 RedNote',
-        'cdp_url': os.environ.get('XHS_HK_CDP_URL', 'http://127.0.0.1:9223'),
+        'cdp_url': None,
         'domain': 'rednote.com',
         'login_url': 'https://www.rednote.com/login',
         'home_url': 'https://www.rednote.com',
@@ -47,7 +48,7 @@ KEEPALIVE_PLATFORMS = {
     },
     'xhs_cn': {
         'label': '国内小红书',
-        'cdp_url': os.environ.get('XHS_CN_CDP_URL', 'http://127.0.0.1:9222'),
+        'cdp_url': None,
         'domain': 'xiaohongshu.com',
         'login_url': 'https://www.xiaohongshu.com',
         'home_url': 'https://www.xiaohongshu.com',
@@ -57,8 +58,7 @@ KEEPALIVE_PLATFORMS = {
     },
 }
 
-# 平台名归一化：前端/历史调用存在两套命名（登录用 xhs/rednote，保活用 xhs_cn/rednote_hk），
-# 统一收敛到 KEEPALIVE_PLATFORMS 的两个标准 key，杜绝大陆被错标到香港。
+# 平台名归一化仅保留兼容解析；历史 mainland 身份不会获得浏览器会话权限。
 _PLATFORM_ALIASES = {
     'xhs_cn': 'xhs_cn', 'xhs': 'xhs_cn', 'cn': 'xhs_cn', 'china': 'xhs_cn',
     'domestic': 'xhs_cn', 'mainland': 'xhs_cn', '国内': 'xhs_cn', '大陆': 'xhs_cn',
@@ -75,6 +75,39 @@ def normalize_platform(platform: str = 'rednote_hk') -> str:
         return 'rednote_hk'
     key = str(platform).strip().lower().replace(' ', '')
     return _PLATFORM_ALIASES.get(key, 'rednote_hk' if key not in ('xhs_cn',) else 'xhs_cn')
+
+
+def normalize_registered_platform(platform: str = 'rednote_hk') -> str:
+    """Normalize only a declared XHS/RedNote alias; unknown input has no HK authority."""
+    if not isinstance(platform, str) or not platform.strip():
+        raise ValueError('PLATFORM_REQUIRED')
+    key = platform.strip().lower().replace(' ', '')
+    normalized = _PLATFORM_ALIASES.get(key)
+    if normalized is None:
+        raise ValueError('PLATFORM_NOT_REGISTERED')
+    return normalized
+
+
+def _resolve_registered_keepalive_endpoint(platform, requested=None, *, headless=True,
+                                           task_id=None, actor_ref=None):
+    """Resolve the exact registered HK worker; a URL or account alias grants no authority."""
+    if normalize_registered_platform(platform) != 'rednote_hk':
+        raise PermissionError('PROTECTED_PROFILE_FORBIDDEN')
+    import xhs_cookie_bridge as bridge
+    account = bridge.XHS_RETINAUT_NAME
+    if not headless:
+        from lumenis.adapters.human_browser import (
+            _authorize_human_interactive,
+            _require_human_browser_lease,
+        )
+        task_platform = _authorize_human_interactive(account, task_id or '', actor_ref)
+        _require_human_browser_lease(task_id or '', task_platform)
+    endpoint = bridge.cdp_url_for(account, headless=headless)
+    if not endpoint:
+        raise RuntimeError('BROWSER_WORKER_ENDPOINT_UNAVAILABLE')
+    if requested and str(requested).strip().rstrip('/') != endpoint.rstrip('/'):
+        raise PermissionError('BROWSER_WORKER_ENDPOINT_MISMATCH')
+    return endpoint
 
 # note_type 分类规则
 NOTE_TYPE_RULES = {
@@ -109,7 +142,7 @@ class NoteTypeClassifier:
     def __init__(self):
         self.rules = NOTE_TYPE_RULES
 
-    def classify(self, title: str = '', content: str = '', keywords: List[str] = None) -> Tuple[str, Dict[str, int]]:
+    def classify(self, title: str = '', content: str = '', keywords: list[str] | None = None) -> tuple[str, dict[str, int]]:
         """
         分类笔记。
         返回: (note_type, scores)
@@ -139,7 +172,7 @@ class NoteTypeClassifier:
         return DEFAULT_NOTE_TYPE, scores
 
     def classify_and_save(self, note_id: int, title: str = '', content: str = '',
-                          keywords: List[str] = None, db_path: str = DB_PATH) -> str:
+                          keywords: list[str] | None = None, db_path: str = DB_PATH) -> str:
         """分类并保存到数据库。"""
         note_type, scores = self.classify(title, content, keywords)
         try:
@@ -161,26 +194,22 @@ class NoteTypeClassifier:
 _classifier = NoteTypeClassifier()
 
 
-def classify_note(title: str = '', content: str = '', keywords: List[str] = None) -> str:
+def classify_note(title: str = '', content: str = '', keywords: list[str] | None = None) -> str:
     """便捷函数：分类笔记。"""
     return _classifier.classify(title, content, keywords)[0]
 
 
 # ============ 2. 香港 RedNote 登录保活 ============
 class RedNoteLoginKeepalive:
-    """小红书 / 香港 RedNote 每日登录保活机制（双平台统一）。
+    """小红书 / RedNote 会话状态检查（浏览器端点由现有 SYSTEM Owner 解析）。
 
-    platform 支持：
-      - rednote_hk: 香港 RedNote（CDP 9223 / rednote.com）
-      - xhs_cn:     国内小红书（CDP 9222 / xiaohongshu.com）
-    核心能力：
-      - 当日保活标记（last_login_at，每天一次，避免重复弹登录）
-      - 会话掉线自动检测（recheck_and_decide：CDP 掉线/登出 → need_relogin，前端自动再弹）
+    保留历史平台别名以兼容调用；只有通过策略与注册校验的 RedNote Worker
+    才能连接。人工登录必须由同一授权任务显式发起。
     """
 
     def __init__(self, keepalive_file: str = None, platform: str = 'rednote_hk'):
-        # 平台配置：任意别名统一归一化到 rednote_hk / xhs_cn，两个平台完全对等
-        self.platform = normalize_platform(platform)
+        # 兼容旧平台名；只有已登记且通过策略校验的 Worker 可连接
+        self.platform = normalize_registered_platform(platform)
         _cfg = KEEPALIVE_PLATFORMS[self.platform]
         self.cdp_url = _cfg['cdp_url']
         self.domain = _cfg['domain']
@@ -197,7 +226,7 @@ class RedNoteLoginKeepalive:
     def _ensure_dir(self):
         os.makedirs(os.path.dirname(self.keepalive_file), exist_ok=True)
 
-    def _load(self) -> Dict:
+    def _load(self) -> dict:
         if os.path.exists(self.keepalive_file):
             try:
                 with open(self.keepalive_file, 'r', encoding='utf-8') as f:
@@ -212,7 +241,7 @@ class RedNoteLoginKeepalive:
             'history': [],
         }
 
-    def _save(self, data: Dict):
+    def _save(self, data: dict):
         with open(self.keepalive_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -229,19 +258,23 @@ class RedNoteLoginKeepalive:
         except Exception:
             return True
 
-    def check_login_status(self, cdp_url: str = None) -> Dict[str, Any]:
+    def check_login_status(self, cdp_url: str | None = None) -> dict[str, Any]:
         """
-        检查当前平台登录状态（通过对应 CDP 浏览器，大陆 9222 / 香港 9223 各自独立）。
+        检查当前已登记平台会话；不会按平台名或固定端口猜测浏览器身份。
         判定优先级：会话 cookie（web_session 等，跨语言最可靠）→ 页面是否存在登录入口文案。
         返回: {status, is_logged_in, checked_at, error}
         """
-        cdp_url = cdp_url or self.cdp_url
         result = {
             'status': 'unknown',
             'is_logged_in': False,
-            'checked_at': datetime.now().isoformat(),
+            'checked_at': datetime.now().astimezone().isoformat(),
             'error': None,
         }
+        try:
+            cdp_url = _resolve_registered_keepalive_endpoint(self.platform, cdp_url)
+        except Exception as exc:  # noqa: BLE001 - endpoint identity failure keeps the session unavailable.
+            result.update(status='unavailable', error=type(exc).__name__, cdp_url=None)
+            return result
         try:
             from playwright.sync_api import sync_playwright
             with sync_playwright() as p:
@@ -313,7 +346,7 @@ class RedNoteLoginKeepalive:
         data['history'] = data['history'][-50:]
         self._save(data)
 
-    def recheck_and_decide(self, cdp_url: str = None) -> Dict[str, Any]:
+    def recheck_and_decide(self, cdp_url: str | None = None) -> dict[str, Any]:
         """检查 CDP 会话并给出保活决策（掉线自动再弹的核心）。
 
         决策逻辑：
@@ -322,7 +355,16 @@ class RedNoteLoginKeepalive:
           - CDP 可达且已登录 → 若当日未标记则自动标记当日完成；status=logged_in, need_relogin=False
         返回: {status, is_logged_in, need_relogin, cdp_online, checked_at, error, message}
         """
-        cdp_url = cdp_url or self.cdp_url
+        try:
+            cdp_url = _resolve_registered_keepalive_endpoint(self.platform, cdp_url)
+        except Exception as exc:  # noqa: BLE001 - endpoint identity failure cannot be recovered by guessing.
+            return {
+                'platform': self.platform, 'label': self.label, 'domain': self.domain,
+                'cdp_url': None, 'status': 'worker_unavailable',
+                'is_logged_in': False, 'need_relogin': False,
+                'cdp_online': False, 'checked_at': datetime.now().astimezone().isoformat(),
+                'error': type(exc).__name__, 'message': '未找到可核验的授权后台浏览器会话；未启动可见浏览器。',
+            }
         result = {
             'platform': self.platform,
             'label': self.label,
@@ -382,7 +424,7 @@ class RedNoteLoginKeepalive:
             result['message'] = f'[{self.label}] 会话已掉线，请重新扫码登录'
         return result
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """获取保活状态。platform 以实例身份为权威（不读历史文件残留，避免旧数据把大陆错标成香港）。"""
         data = self._load()
         return {
@@ -398,59 +440,61 @@ class RedNoteLoginKeepalive:
         }
 
 
-# 全局保活实例（双平台）
+# 全局兼容实例；mainland 实例的受控端点解析会拒绝访问
 _keepalive = RedNoteLoginKeepalive(platform='rednote_hk')
 _keepalive_cn = RedNoteLoginKeepalive(platform='xhs_cn')
 
 
 def _get_keepalive(platform: str = 'rednote_hk'):
     """按平台取保活实例（任意别名归一化后分派，大陆/香港对等）。"""
-    return _keepalive_cn if normalize_platform(platform) == 'xhs_cn' else _keepalive
+    return _keepalive_cn if normalize_registered_platform(platform) == 'xhs_cn' else _keepalive
 
 
-def check_rednote_login(cdp_url: str = 'http://127.0.0.1:9223') -> Dict:
+def check_rednote_login(cdp_url: str | None = None) -> dict:
     """便捷函数：检查香港 RedNote 登录状态。"""
     return _keepalive.check_login_status(cdp_url)
 
 
-def get_rednote_keepalive_status() -> Dict:
+def get_rednote_keepalive_status() -> dict:
     """便捷函数：获取香港 RedNote 保活状态（兼容旧调用）。"""
     return _keepalive.get_status()
 
 
-def get_keepalive_status(platform: str = 'rednote_hk') -> Dict:
+def get_keepalive_status(platform: str = 'rednote_hk') -> dict:
     """按平台获取保活状态。platform: rednote_hk / xhs_cn。"""
     return _get_keepalive(platform).get_status()
 
 
-def check_keepalive_login(platform: str = 'rednote_hk', cdp_url: str = None) -> Dict:
+def check_keepalive_login(platform: str = 'rednote_hk', cdp_url: str | None = None) -> dict:
     """按平台检查登录状态。"""
     inst = _get_keepalive(platform)
     return inst.check_login_status(cdp_url or inst.cdp_url)
 
 
-def mark_keepalive_success(platform: str = 'rednote_hk') -> Dict:
+def mark_keepalive_success(platform: str = 'rednote_hk') -> dict:
     """按平台标记当日保活完成（用户确认 / 登录成功回调调用）。"""
     inst = _get_keepalive(platform)
     inst.mark_login_success()
     return {'ok': True, 'platform': platform, **inst.get_status()}
 
 
-def recheck_keepalive(platform: str = 'rednote_hk', cdp_url: str = None) -> Dict:
+def recheck_keepalive(platform: str = 'rednote_hk', cdp_url: str | None = None) -> dict:
     """按平台执行保活检查并给出决策（掉线自动再弹核心）。"""
     inst = _get_keepalive(platform)
     return inst.recheck_and_decide(cdp_url or inst.cdp_url)
 
 
-def get_platform_endpoint(platform: str = 'xhs_cn') -> Dict[str, Any]:
-    """供登录路由统一解析平台端点：返回标准 key + cdp_url + domain + 各 URL + 会话 cookie 名 + label。
-    兼容登录侧命名 xhs/rednote 与保活侧命名 xhs_cn/rednote_hk。"""
-    key = normalize_platform(platform)
+def get_platform_endpoint(platform: str = 'rednote_hk', *, headless=True,
+                          task_id=None, actor_ref=None, requested=None) -> dict[str, Any]:
+    """Resolve the registered RedNote worker for the requested authorized mode."""
+    key = normalize_registered_platform(platform)
     cfg = KEEPALIVE_PLATFORMS[key]
+    cdp_url = _resolve_registered_keepalive_endpoint(
+        key, requested, headless=headless, task_id=task_id, actor_ref=actor_ref)
     return {
         'key': key,
         'label': cfg['label'],
-        'cdp_url': cfg['cdp_url'],
+        'cdp_url': cdp_url,
         'domain': cfg['domain'],
         'login_url': cfg.get('login_url', cfg.get('home_url')),
         'home_url': cfg.get('home_url', f'https://{cfg["domain"]}'),
@@ -466,7 +510,7 @@ class XHSCollectionOptimizer:
         self.classifier = NoteTypeClassifier()
         self.keepalive = RedNoteLoginKeepalive()
 
-    def get_collection_config(self, note_type: str = 'all') -> Dict[str, Any]:
+    def get_collection_config(self, note_type: str = 'all') -> dict[str, Any]:
         """
         根据分类获取采集配置。
         topic: 话题端不停止监测和收录
@@ -509,7 +553,7 @@ class XHSCollectionOptimizer:
         }
         return configs.get(note_type, configs['all'])
 
-    def should_collect(self, note_type: str, last_collect_at: str = None) -> Tuple[bool, str]:
+    def should_collect(self, note_type: str, last_collect_at: str | None = None) -> tuple[bool, str]:
         """
         判断是否应该采集（基于分类和间隔）。
         返回: (should_collect, reason)
@@ -529,7 +573,7 @@ class XHSCollectionOptimizer:
 
         return True, '可以采集'
 
-    def get_human_sleep_range(self, human_frequency: str = 'normal') -> Tuple[float, float]:
+    def get_human_sleep_range(self, human_frequency: str = 'normal') -> tuple[float, float]:
         """获取真人睡眠间隔范围（秒）。"""
         ranges = {
             'conservative': (3.0, 6.0),  # 保守：慢一点
@@ -543,7 +587,7 @@ class XHSCollectionOptimizer:
 _optimizer = XHSCollectionOptimizer()
 
 
-def get_collection_config(note_type: str = 'all') -> Dict:
+def get_collection_config(note_type: str = 'all') -> dict:
     """便捷函数：获取采集配置。"""
     return _optimizer.get_collection_config(note_type)
 

@@ -27,12 +27,17 @@ RECOVERY_PROFILES 增一条配置，恢复框架本身不改*。
 由用户本人扫码/验证；浏览器没启动时健康检查返回 UNKNOWN，绝不误判成“登录失效”。
 """
 import os
-import time
 import threading
+import time
 from pathlib import Path
 from typing import Dict, Optional
 from urllib.parse import urlsplit
-from .risk_controller import risk_controller, NEED_VERIFY, IP_RISK, LIGHT, MEDIUM, RECOVERING
+
+from .risk_controller import (
+    IP_RISK,
+    NEED_VERIFY,
+    risk_controller,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 SHOT_DIR = ROOT / "data" / "recovery"
@@ -213,8 +218,18 @@ def _resolve_recovery_profile(platform: str):
     resolved = dict(profile)
     if platform in _REGISTERED_WORKER_PLATFORMS:
         try:
-            from .human_browser import registered_browser_worker_spec
+            from .human_browser import (
+                readonly_worker_spec,
+                registered_browser_worker_spec,
+            )
             spec = registered_browser_worker_spec(platform)
+            expected = readonly_worker_spec(platform)
+            if (not isinstance(spec, dict)
+                    or spec.get("platform") != platform
+                    or spec.get("account") != expected.get("account")
+                    or int(spec.get("port", 0)) != int(expected["port"])
+                    or str(spec.get("profile") or "") != str(expected["profile"])):
+                return None, "RECOVERY_WORKER_NOT_REGISTERED"
             resolved["port"] = int(spec["port"])
             resolved["profile"] = spec["profile"]
             resolved["cdp_url"] = f"http://127.0.0.1:{int(spec['port'])}"  # attach to the registered background worker; never launch a visible fallback
@@ -517,7 +532,7 @@ def _bridge_to_recovery_center(platform: str, source_state: str, detail: str, ki
     任何异常吞掉并 log，绝不阻塞 v4 主恢复链路。
     """
     try:
-        from auth_recovery_center import recovery_center, AuthIssueType
+        from auth_recovery_center import AuthIssueType, recovery_center
         _disp = RECOVERY_PROFILES.get(platform, {}).get("display", platform)
         state_upper = (source_state or "").upper()
         if state_upper in ("AUTH_REQUIRED", "AUTH_FAILED", "SESSION_EXPIRED"):

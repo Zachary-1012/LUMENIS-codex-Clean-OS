@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""P1-2 tenacity 网络层指数退避重试单测（显式远程 worker）。"""
+"""P1-2 bounded retry behavior for an already-resolved registered worker."""
 import os
 import sys
 
@@ -9,14 +9,22 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 pytestmark = pytest.mark.redline
 
-REMOTE_WORKER = "https://browser-worker.example:9223"
+REGISTERED_WORKER = "http://127.0.0.1:9234"
+
+
+def _resolve_registered_worker(monkeypatch, collector):
+    monkeypatch.setattr(
+        collector, '_resolve_server_cdp_url',
+        lambda *_args, **_kwargs: (REGISTERED_WORKER, ''),
+    )
 
 
 def test_cdp_online_retries_on_transient_failure(monkeypatch):
-    """已配置 worker 的 CDP 探测瞬时失败应指数退避重试。"""
+    """已解析注册 worker 的 CDP 探测瞬时失败应指数退避重试。"""
     import urllib.error
     import urllib.request
     import collector
+    _resolve_registered_worker(monkeypatch, collector)
 
     calls = {'n': 0}
 
@@ -34,14 +42,15 @@ def test_cdp_online_retries_on_transient_failure(monkeypatch):
         return _FakeResponse()
 
     monkeypatch.setattr(urllib.request, 'urlopen', flaky_urlopen)
-    assert collector._cdp_online(timeout=1.0, cdp_url=REMOTE_WORKER) is True
+    assert collector._cdp_online(timeout=1.0, cdp_url=REGISTERED_WORKER) is True
     assert calls['n'] == 3, '瞬断应重试到第3次成功'
 
 
 def test_cdp_online_immediate_success(monkeypatch):
-    """已配置 worker 首次探测成功时不应多打请求。"""
+    """已解析注册 worker 首次探测成功时不应多打请求。"""
     import urllib.request
     import collector
+    _resolve_registered_worker(monkeypatch, collector)
 
     calls = {'n': 0}
 
@@ -57,7 +66,7 @@ def test_cdp_online_immediate_success(monkeypatch):
         return _FakeResponse()
 
     monkeypatch.setattr(urllib.request, 'urlopen', ok_urlopen)
-    assert collector._cdp_online(timeout=1.0, cdp_url=REMOTE_WORKER) is True
+    assert collector._cdp_online(timeout=1.0, cdp_url=REGISTERED_WORKER) is True
     assert calls['n'] == 1
 
 

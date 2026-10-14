@@ -8,12 +8,20 @@
 5. Cookie 只从本机读取，不进入源码、日志、JSON 数据快照。
 """
 from __future__ import annotations
-import json, os, subprocess, threading, time, random
-from datetime import datetime
-import database as db
+
+import json
+import os
+import random
+import subprocess
+import sys
+import threading
+import time
+from datetime import datetime, timezone
+
 import ai_analyzer
-import network_adaptive
 import cache_manager
+import database as db
+import network_adaptive
 
 ROOT=os.path.dirname(os.path.abspath(__file__))
 
@@ -90,14 +98,12 @@ ACCOUNT_PROFILES = {
     ),
 }
 
-# ── 双子星库 Contract：逻辑身份 → 独立驻场浏览器（Resident Browser）端口 / 平台首页 ──
-# 双身份物理隔离：大陆主号 9222 直连 xiaohongshu.com；香港 rednote 9223 独立 profile（海外链路）。
-# 两个实例各自长期驻场、人工登录一次后 profile 长期复用；采集时只做 CDP 附着，不关闭驻场窗口。
+# ── 身份到受控浏览器会话解析；身份策略不再编码固定 CDP 端口。 ──
 ACCOUNT_CDP_PORTS = {
-    XHS_CN_PRIMARY_NAME: 9222,
-    XHS_RETINAUT_NAME: 9223,
+    XHS_CN_PRIMARY_NAME: None,
+    XHS_RETINAUT_NAME: None,
 }
-DEFAULT_CDP_PORT = 9223
+DEFAULT_CDP_PORT = 0
 
 ACCOUNT_HOME_URLS = {
     XHS_CN_PRIMARY_NAME: 'https://www.xiaohongshu.com',
@@ -110,13 +116,33 @@ def _canonical_account_name(account=None):
         return _ACTIVE_ACCOUNT or XHS_RETINAUT_NAME
     return account
 
-def cdp_port_for(account=None):
-    """逻辑身份 → 驻场 CDP 端口；未知身份回退香港/国际端口。"""
-    return int(ACCOUNT_CDP_PORTS.get(_canonical_account_name(account), DEFAULT_CDP_PORT))
+def cdp_port_for(account=None, *, headless=True):
+    """Return the registered XHS worker port; collection defaults to BACKGROUND."""
+    selected = _canonical_account_name(account)
+    if selected != XHS_RETINAUT_NAME or not collection_policy_gate(
+            account=selected, region="intl").get("ok"):
+        return None
+    try:
+        import cdp_helper
+        state = cdp_helper.resolve_registered_xhs_worker(
+            account=selected, headless=headless)
+        return int(state["port"]) if state.get("available") else None
+    except Exception:  # noqa: BLE001 - owner lookup failure must not resolve to a legacy port.
+        return None
 
-def cdp_url_for(account=None):
-    """Return the configured server browser-worker endpoint; no loopback default."""
-    return str(os.environ.get('XHS_CDP_URL') or '').strip()
+def cdp_url_for(account=None, *, headless=True):
+    """Resolve a registered endpoint; unattended collection defaults to BACKGROUND."""
+    selected = _canonical_account_name(account)
+    if selected != XHS_RETINAUT_NAME or not collection_policy_gate(
+            account=selected, region="intl").get("ok"):
+        return ""
+    try:
+        import cdp_helper
+        state = cdp_helper.resolve_registered_xhs_worker(
+            account=selected, headless=headless)
+        return str(state.get("endpoint") or "") if state.get("available") else ""
+    except Exception:  # noqa: BLE001 - owner lookup failure must not resolve to a legacy endpoint.
+        return ""
 
 def home_url_for(account=None):
     """逻辑身份 → 平台首页（驻场窗口起始页 / CDP 热身页）。"""
@@ -501,22 +527,39 @@ def _get_current_user_id():
     return None
 
 def verify_account():
-    """验证当前登录账号是否在双子星库 Contract 白名单（PRIMARY / RETINAUT 任一 allow）。"""
-    current_id = _get_current_user_id()
-    if not current_id:
-        cookie_p = _effective_cookie_file()
-        return False, f"无法读取账号ID。请检查Cookie文件配置（当前生效路径={cookie_p!r}）或环境变量 XHS_COOKIE_HEADER。"
-    if current_id not in ALLOWED_USER_IDS:
-        allow_preview = "、".join(f"{x[:8]}..." for x in ALLOWED_USER_IDS)
-        name_map = {XHS_CN_PRIMARY: XHS_CN_PRIMARY_NAME}
-        if XHS_RETINAUT:
-            name_map[XHS_RETINAUT] = XHS_RETINAUT_NAME
-        return False, (
-            f"当前账号({current_id[:8]}...)不在硬白名单内（双子星库 Contract：仅允许 "
-            f"{list(name_map.values())} = {allow_preview}）。其它身份禁止进入采集任务，仅允许轻量检索。"
-        )
-    active = _ACTIVE_ACCOUNT or XHS_RETINAUT_NAME
-    return True, f"账号验证通过（身份={active}, user_id={current_id[:8]}...）"
+    """Verify only the policy-approved registered international account.
+
+    Never fall back to ambient Cookie environment variables: they are not an
+    identity grant and may belong to a protected personal browser session.
+    """
+    active = _canonical_account_name(_ACTIVE_ACCOUNT or DEFAULT_COLLECTION_ACCOUNT)
+    try:
+        policy = collection_policy_gate(account=active, region="intl")
+    except Exception:  # noqa: BLE001 - unavailable policy is a denial, never an identity grant.
+        return False, "POLICY_UNAVAILABLE"
+    if (policy.get("ok") is not True or policy.get("account") != active
+            or policy.get("region") != "intl" or active != DEFAULT_COLLECTION_ACCOUNT
+            or active != XHS_RETINAUT_NAME or not XHS_RETINAUT
+            or XHS_RETINAUT not in ALLOWED_USER_IDS):
+        return False, "POLICY_BLOCKED"
+    binding = ACCOUNT_PROFILES.get(active)
+    if not isinstance(binding, (tuple, list)) or len(binding) != 2 or not binding[0] or not binding[1]:
+        return False, "REGISTERED_IDENTITY_UNAVAILABLE"
+    cookie_path = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(binding[0]))))
+    profile_path = os.path.realpath(os.path.abspath(os.path.expanduser(os.fspath(binding[1]))))
+    expected_cookie = os.path.realpath(os.path.join(PRIVATE_DATA_DIR, "xhs_cookie_retinaut.txt"))
+    expected_profile = os.path.realpath(os.path.join(PRIVATE_DATA_DIR, "profiles", "xhs-retinaut"))
+    if (os.path.normcase(cookie_path) != os.path.normcase(expected_cookie)
+            or os.path.normcase(profile_path) != os.path.normcase(expected_profile)):
+        return False, "REGISTERED_IDENTITY_BINDING_MISMATCH"
+    try:
+        with open(cookie_path, encoding="utf-8", errors="replace") as cookie_stream:
+            current_id = _extract_user_id_from_cookie_text(cookie_stream.read())
+    except OSError:
+        return False, "REGISTERED_SESSION_UNAVAILABLE"
+    if current_id != XHS_RETINAUT:
+        return False, "REGISTERED_IDENTITY_MISMATCH"
+    return True, "REGISTERED_IDENTITY_VERIFIED"
 
 def check_rate_limit(run_type='manual'):
     """检查频率限制，返回(是否允许, 提示信息)
@@ -557,44 +600,112 @@ def record_run(run_type='manual'):
     # 持久化保存
     _save_stats()
 
-def get_account_status():
-    """获取账号健康状态（双子星库 Contract：显示双身份 + 当前激活身份）。"""
-    current_id = _get_current_user_id()
-    today = datetime.now().strftime('%Y-%m-%d')
-    today_runs = len([t for t in _daily_runs if datetime.fromtimestamp(t).strftime('%Y-%m-%d') == today])
-    in_whitelist = (current_id in ALLOWED_USER_IDS) if current_id else False
+def get_account_status(account=None):
+    """Return safe status for the currently policy-approved XHS session.
+
+    Policy is checked before account bindings. The response omits Cookie values,
+    user IDs, local paths, CDP endpoints, and identities outside the current policy.
+    Cookie presence is metadata only; authentication is verified by collection preflight.
+    """
+    active_account = _canonical_account_name(
+        account or _ACTIVE_ACCOUNT or DEFAULT_COLLECTION_ACCOUNT)
+    try:
+        policy = collection_policy_gate(account=active_account, region="intl")
+    except Exception:  # noqa: BLE001 - unavailable policy keeps all account capabilities unavailable.
+        policy = {"ok": False, "code": "policy_unavailable"}
+    policy_ok = (policy.get("ok") is True
+                 and policy.get("account") == active_account
+                 and policy.get("region") == "intl"
+                 and active_account == DEFAULT_COLLECTION_ACCOUNT
+                 and active_account == XHS_RETINAUT_NAME
+                 and bool(XHS_RETINAUT)
+                 and XHS_RETINAUT in ALLOWED_USER_IDS)
+
+    binding_valid = False
+    cookie_ready = False
+    worker_available = False
+    if policy_ok:
+        try:
+            binding = ACCOUNT_PROFILES.get(active_account)
+            if isinstance(binding, (tuple, list)) and len(binding) == 2 and binding[0] and binding[1]:
+                cookie_path = os.path.realpath(os.path.abspath(
+                    os.path.expanduser(os.fspath(binding[0]))))
+                profile_path = os.path.realpath(os.path.abspath(
+                    os.path.expanduser(os.fspath(binding[1]))))
+                expected_cookie = os.path.realpath(os.path.join(
+                    PRIVATE_DATA_DIR, "xhs_cookie_retinaut.txt"))
+                expected_profile = os.path.realpath(os.path.join(
+                    PRIVATE_DATA_DIR, "profiles", "xhs-retinaut"))
+                if (os.path.normcase(cookie_path) == os.path.normcase(expected_cookie)
+                        and os.path.normcase(profile_path) == os.path.normcase(expected_profile)):
+                    try:
+                        cookie_ready = os.path.isfile(cookie_path) and os.path.getsize(cookie_path) > 0
+                    except OSError:
+                        cookie_ready = False
+                    import cdp_helper
+                    registered = cdp_helper._registered_xhs_binding(active_account)
+                    binding_valid = bool(registered and
+                        os.path.normcase(os.path.realpath(registered["profile"]))
+                        == os.path.normcase(expected_profile))
+                    if binding_valid:
+                        worker = cdp_helper.resolve_registered_xhs_worker(
+                            account=active_account, headless=True)
+                        worker_available = worker.get("available") is True
+        except Exception:  # noqa: BLE001 - incomplete profile/worker proof fails closed.
+            binding_valid = False
+            worker_available = False
+
+    today = datetime.now().astimezone().strftime("%Y-%m-%d")
+    today_runs = len([
+        t for t in _daily_runs
+        if datetime.fromtimestamp(t, tz=timezone.utc).astimezone().strftime("%Y-%m-%d") == today
+    ])
     cooldown_remaining = 0
     if _last_run_time:
         elapsed = time.time() - _last_run_time
         if elapsed < COOLDOWN_MINUTES * 60:
             cooldown_remaining = int((COOLDOWN_MINUTES * 60 - elapsed) / 60) + 1
-    active_account = _ACTIVE_ACCOUNT or XHS_RETINAUT_NAME
-    allowed_preview = [x[:12] + '...' for x in ALLOWED_USER_IDS]
-    policy = collection_policy_gate(account=active_account)
-    return {
-        'active_account': active_account,
-        'active_cookie_file': _effective_cookie_file(),
-        'current_user_id': current_id[:12] + '...' if current_id else None,
-        'in_whitelist': in_whitelist,
-        'allowed_user_ids': allowed_preview,
-        'allowed_user_id': allowed_preview[0] if allowed_preview else None,  # LEGACY：向后兼容，= PRIMARY
-        'allowed_accounts': list(ACCOUNT_PROFILES.keys()),  # 逻辑身份名列表
-        'today_runs': today_runs,
-        'today_manual_runs': _daily_manual_runs,
-        'today_auto_runs': _daily_auto_runs,
-        'max_daily_runs': MAX_DAILY_RUNS,
-        'max_manual_runs': MAX_MANUAL_RUNS,
-        'max_auto_runs': MAX_AUTO_RUNS,
-        'auto_collect_hours': AUTO_COLLECT_HOURS,
-        'cooldown_minutes': COOLDOWN_MINUTES,
-        'cooldown_remaining_minutes': cooldown_remaining,
-        'new_account_guard_runs': NEW_ACCOUNT_GUARD_RUNS,
-        'cookie_configured': cookie_configured(),
-        'collection_enabled': bool(policy.get('ok')),
-        'collection_policy': policy,
-        'status': 'ready' if (in_whitelist and cookie_configured() and cooldown_remaining == 0) else 'restricted'
+    visible_account = active_account if policy_ok and binding_valid else None
+    account_row = ({
+        "account": visible_account,
+        "active": True,
+        "cookie_ready": cookie_ready,
+        "user_id_match": None,
+        "diagnostic_ready": None,
+        "can_use": None,
+        "collection_enabled": bool(policy_ok and binding_valid),
+        "session_state": "NOT_VERIFIED",
+        "cdp_online": worker_available,
+    } if visible_account else None)
+    safe_policy = {
+        "ok": bool(policy_ok),
+        "code": "allowed" if policy_ok else str(policy.get("code") or "unavailable"),
+        "region": "intl" if policy_ok else None,
+        "policy_version": policy.get("policy_version") if policy_ok else None,
     }
-
+    return {
+        "ok": True,
+        "active_account": visible_account,
+        "accounts": [account_row] if account_row else [],
+        "allowed_accounts": [visible_account] if visible_account else [],
+        "today_runs": today_runs,
+        "today_manual_runs": _daily_manual_runs,
+        "today_auto_runs": _daily_auto_runs,
+        "max_daily_runs": MAX_DAILY_RUNS,
+        "max_manual_runs": MAX_MANUAL_RUNS,
+        "max_auto_runs": MAX_AUTO_RUNS,
+        "auto_collect_hours": AUTO_COLLECT_HOURS,
+        "cooldown_minutes": COOLDOWN_MINUTES,
+        "cooldown_remaining_minutes": cooldown_remaining,
+        "new_account_guard_runs": NEW_ACCOUNT_GUARD_RUNS,
+        "cookie_configured": cookie_ready if policy_ok and binding_valid else None,
+        "worker_available": worker_available if policy_ok and binding_valid else None,
+        "collection_enabled": bool(policy_ok and binding_valid),
+        "collection_policy": safe_policy,
+        "status": ("configured" if policy_ok and binding_valid and cookie_ready
+                   else "unavailable" if not policy_ok or not binding_valid
+                   else "not_verified"),
+    }
 def cookie_configured():
     """当前身份的 Cookie 是否齐备（支持 select_account override 生效路径）。"""
     if os.getenv('XHS_COOKIE_HEADER') or os.getenv('XHS_COOKIES_JSON'):
@@ -621,160 +732,169 @@ def _check_cdp_online(cdp_url: str, timeout: float = 2.5) -> bool:
 def runtime_preflight_check(account: str | None = None,
                             cdp_url: str | None = None,
                             quick: bool = False) -> dict:
-    """双子星库 Contract：小红书采集七态统一预检。
+    """Check only the currently policy-approved registered XHS session.
 
-    供 app.py 启动时 / 采集前 / 前端轮询使用。
-    顺序：Account Contract → Cookie → User ID 白名单 → Cookie文本包含 → CDP在线 → 熔断 → 用户暂停 → 频率。
-    绝不把任何失败静默降级。
-
-    返回 fields:
-      ok: bool                七项全绿 = True（用于是否允许发起采集）
-      overall_state: str      ready / need_account / no_cookie / not_in_whitelist / session_expired
-                              / need_cdp_verify / blocked / cooldown / user_paused / rate_limit
-      checks: [{id,name,level,status,detail}]
-      account_status: dict    复用 get_account_status
-      circuit: dict           get_circuit_state
-      active_account: str     当前激活身份
-      allowed_accounts: list  双子星库 Contract 白名单
-      cdp_online: bool        9222 探活
-      user_paused: dict       用户手动暂停信息
-      evidence: str           一句话总结（前端 toast/说明）
+    This compatibility response is safe for the product UI: it never returns
+    Cookie values, user IDs, local paths, CDP URLs/ports, or raw process details.
     """
-    from xhs_runtime_state import (  # 延迟导入，防循环
-        AuthState, SessionState, PlatformState, XhsRuntimeState)
+    from xhs_runtime_state import (
+        AuthState,
+        PlatformState,
+        SessionState,
+        XhsRuntimeState,
+    )
 
     state = XhsRuntimeState()
     checks: list = []
     def _add(cid, name, level, st, detail, **kw):
-        checks.append({'id':cid,'name':name,'level':level,'status':st,'detail':detail, **kw})
+        checks.append({"id": cid, "name": name, "level": level, "status": st, "detail": detail, **kw})
+    def _safe_policy(policy):
+        return {"ok": policy.get("ok") is True,
+                "code": str(policy.get("code") or "unavailable"),
+                "region": "intl" if policy.get("ok") is True else None,
+                "policy_version": policy.get("policy_version") if policy.get("ok") is True else None}
+    def _safe_circuit(circuit):
+        return {"open": bool(circuit.get("open")),
+                "state": str(circuit.get("state") or "UNKNOWN"),
+                "resume_at": circuit.get("resume_at")}
+    def _safe_pause(pause):
+        return {"paused": bool(pause), "at": pause.get("at") if isinstance(pause, dict) else None}
 
-    # ── 1) Account：生产采集只允许香港/国际身份；内地身份仍可诊断但不得放行 ──
-    account_used = (account or DEFAULT_COLLECTION_ACCOUNT).strip().upper()
-    policy_gate = collection_policy_gate(account=account_used, region='intl')
-    if not policy_gate.get('ok'):
-        _add('A0_POLICY','RedNote生产边界','P0','fail',policy_gate.get('reason', '采集策略拒绝'))
-        return {'ok':False,'overall_state':policy_gate.get('code','account_paused'),
-                'checks':checks,'account_status':get_account_status(),
-                'circuit':get_circuit_state(),'active_account':account_used,
-                'allowed_accounts':list(ACCOUNT_PROFILES.keys()),'cdp_online':False,
-                'user_paused':is_user_paused(),'collection_policy':policy_gate,
-                'evidence':'生产采集被策略门禁阻断：' + policy_gate.get('reason','')}
-    ok_sel, msg_sel = select_account(account_used)
+    account_used = str(account or DEFAULT_COLLECTION_ACCOUNT).strip().upper()
+    try:
+        policy_gate = collection_policy_gate(account=account_used, region="intl")
+    except Exception:  # noqa: BLE001 - unavailable policy prevents collection-result use.
+        policy_gate = {"ok": False, "code": "policy_unavailable"}
+    safe_policy = _safe_policy(policy_gate)
+    account_status = get_account_status(account=account_used)
+    circ = _safe_circuit(get_circuit_state())
+    paused = _safe_pause(is_user_paused())
+    public_account = (account_used if policy_gate.get("ok") is True
+                      and policy_gate.get("account") == account_used
+                      and policy_gate.get("region") == "intl"
+                      and account_status.get("collection_enabled") else None)
+
+    if not public_account:
+        _add("A0_POLICY", "RedNote collection policy", "P0", "fail", "Collection is unavailable under the current account policy.")
+        state.auth = AuthState.REQUIRED
+        return {"ok": False, "overall_state": safe_policy["code"], "checks": checks,
+                "account_status": account_status, "circuit": circ, "active_account": None,
+                "allowed_accounts": [], "cdp_online": False, "user_paused": paused,
+                "collection_policy": safe_policy, "evidence": "POLICY_BLOCKED"}
+
+    try:
+        import cdp_helper
+        registered = cdp_helper._registered_xhs_binding(public_account)
+    except Exception:  # noqa: BLE001 - no verified registered binding means unavailable.
+        registered = None
+    if not registered:
+        _add("A1_ACCOUNT", "Registered collection identity", "P0", "fail", "The approved registered identity or browser profile is unavailable.")
+        return {"ok": False, "overall_state": "identity_unavailable", "checks": checks,
+                "account_status": account_status, "circuit": circ, "active_account": public_account,
+                "allowed_accounts": [public_account], "cdp_online": False, "user_paused": paused,
+                "collection_policy": safe_policy, "evidence": "REGISTERED_IDENTITY_UNAVAILABLE"}
+
+    ok_sel, _ = select_account(public_account)
     if not ok_sel:
-        _add('A1_ACCOUNT','双子星库身份门控','P0','fail',msg_sel)
-        return {'ok':False,'overall_state':'need_account','checks':checks,
-                'account_status':get_account_status(),'circuit':get_circuit_state(),
-                'active_account':account_used,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                'cdp_online':False,'user_paused':is_user_paused(),
-                'collection_policy':policy_gate,'evidence':'身份无效：' + msg_sel}
-    _add('A1_ACCOUNT','双子星库生产身份门控','P0','pass',f'身份={account_used}，已激活香港/国际采集身份')
-    cdp_probe_url = cdp_url or os.getenv('XHS_CDP_URL') or cdp_url_for(account_used)
+        _add("A1_ACCOUNT", "Registered collection identity", "P0", "fail", "The approved collection identity is not configured.")
+        return {"ok": False, "overall_state": "need_account", "checks": checks,
+                "account_status": account_status, "circuit": circ, "active_account": public_account,
+                "allowed_accounts": [public_account], "cdp_online": False, "user_paused": paused,
+                "collection_policy": safe_policy, "evidence": "REGISTERED_IDENTITY_UNAVAILABLE"}
+    _add("A1_ACCOUNT", "Registered collection identity", "P0", "pass", "The policy-approved registered collection identity is selected.")
 
-    # ── 2) Cookie 文件存在且非空 ──
-    ccfg = cookie_configured()
-    if not ccfg:
-        cp = _effective_cookie_file()
+    registered_cdp_url = cdp_url_for(public_account, headless=True)
+    configured_endpoints = [str(value or "").strip().rstrip("/")
+                            for value in (cdp_url, os.getenv("XHS_CDP_URL"))]
+    endpoint_mismatch = any(value and value != registered_cdp_url
+                            for value in configured_endpoints)
+    cdp_probe_url = "" if endpoint_mismatch else registered_cdp_url
+
+    if not cookie_configured():
         state.auth = AuthState.REQUIRED
         state.session = SessionState.NO_COOKIE
-        _add('A2_COOKIE','Cookie文件检查','P0','fail',f'Cookie 缺失，请在 {cp} 导入有效Cookie或完成扫码登录')
-        return {'ok':False,'overall_state':'no_cookie','checks':checks,
-                'account_status':get_account_status(),'circuit':get_circuit_state(),
-                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                'cdp_online':_check_cdp_online(cdp_probe_url),
-                'user_paused':is_user_paused(),'evidence':'无Cookie/登录态：请在系统内完成小红书扫码登录'}
-    _add('A2_COOKIE','Cookie文件检查','P0','pass',f'已加载：{os.path.basename(_effective_cookie_file())}')
+        _add("A2_COOKIE", "Registered session configuration", "P0", "fail", "The approved session is not configured.")
+        return {"ok": False, "overall_state": "no_cookie", "checks": checks,
+                "account_status": account_status, "circuit": circ, "active_account": public_account,
+                "allowed_accounts": [public_account], "cdp_online": False, "user_paused": paused,
+                "collection_policy": safe_policy, "evidence": "REGISTERED_SESSION_UNAVAILABLE"}
+    _add("A2_COOKIE", "Registered session configuration", "P0", "pass", "The approved session configuration is present.")
     state.session = SessionState.COOKIE_PRESENT
 
-    # ── 3) User ID ∈ 双子星库 Contract 白名单（verify_account 重用） ──
-    ok_uid, msg_uid = verify_account()
+    ok_uid, _ = verify_account()
     if not ok_uid:
         state.auth = AuthState.EXPIRED
-        _add('A3_WHITELIST','双子星库白名单','P0','fail',msg_uid)
-        return {'ok':False,'overall_state':'not_in_whitelist','checks':checks,
-                'account_status':get_account_status(),'circuit':get_circuit_state(),
-                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                'cdp_online':_check_cdp_online(cdp_probe_url),
-                'user_paused':is_user_paused(),'evidence':'账号不在双子星库白名单：' + msg_uid}
-    _add('A3_WHITELIST','双子星库白名单','P0','pass',msg_uid)
+        _add("A3_IDENTITY", "Registered identity verification", "P0", "fail", "The registered session identity could not be verified.")
+        return {"ok": False, "overall_state": "identity_unverified", "checks": checks,
+                "account_status": account_status, "circuit": circ, "active_account": public_account,
+                "allowed_accounts": [public_account], "cdp_online": False, "user_paused": paused,
+                "collection_policy": safe_policy, "evidence": "REGISTERED_IDENTITY_UNVERIFIED"}
+    _add("A3_IDENTITY", "Registered identity verification", "P0", "pass", "The registered session identity matches its approved binding.")
     state.auth = AuthState.VALID
 
-    # ── 4) CDP 浏览器驻场检测（quick=False 才检查；quick 模式用于高频轮询省开销） ──
     cdp_online = False
     if not quick:
         cdp_online = _check_cdp_online(cdp_probe_url)
         if cdp_online:
             state.session = SessionState.BROWSER_CONNECTED
-            _add('A4_CDP','驻场浏览器(CDP)','P1','pass',f'CDP端口已在线：{cdp_probe_url}')
+            _add("A4_BROWSER", "Registered background browser", "P1", "pass", "The registered background browser is reachable.")
         else:
-            # CDP 不在线不是致命（cookie_bridge 纯HTTP可能够用），但 Session 仍未达到驻场级
-            _add('A4_CDP','驻场浏览器(CDP)','P1','warn','未检测到香港/国际9223常驻浏览器；纯HTTP通道可采集，遇风控时建议打开CDP驻场。')
+            _add("A4_BROWSER", "Registered background browser", "P1", "warn",
+                 "The registered background browser is unavailable or its endpoint hint does not match.")
             state.platform = PlatformState.UNREACHABLE
     else:
-        _add('A4_CDP','驻场浏览器(CDP)','P1','skip','quick模式跳过端口探活（节省开销）')
+        _add("A4_BROWSER", "Registered background browser", "P1", "skip", "Quick status skipped the browser reachability check.")
 
-    # ── 5) 熔断检查 ──
-    circ = get_circuit_state()
-    if circ.get('open'):
-        state.circuit = 'OPEN'
-        cst = circ.get('state','')
-        if cst == 'IP_RISK':
-            state.platform = PlatformState.IP_RISK
-        elif cst in ('BLOCKED','NEED_VERIFY','CAPTCHA','AUTH_FAILED'):
-            state.platform = PlatformState.VERIFY
-        _add('A5_CIRCUIT','熔断状态','P0','fail',
-             f'{circ.get("state","BLOCKED")} 至 {circ.get("resume_at","")}：{circ.get("detail","")}')
-        return {'ok':False,'overall_state':'blocked','checks':checks,
-                'account_status':get_account_status(),'circuit':circ,
-                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                'cdp_online':cdp_online,'user_paused':is_user_paused(),
-                'evidence':'处于风控/登录态熔断，需冷却或在系统内完成人工验证'}
-    _add('A5_CIRCUIT','熔断状态','P0','pass','未熔断，可正常发起采集')
+    circ = _safe_circuit(get_circuit_state())
+    if circ.get("open"):
+        state.circuit = "OPEN"
+        _add("A5_CIRCUIT", "Collection circuit", "P0", "fail", "Collection is paused by the current circuit state.")
+        return {"ok": False, "overall_state": "blocked", "checks": checks,
+                "account_status": account_status, "circuit": circ, "active_account": public_account,
+                "allowed_accounts": [public_account], "cdp_online": cdp_online, "user_paused": paused,
+                "collection_policy": safe_policy, "evidence": "COLLECTION_CIRCUIT_OPEN"}
+    _add("A5_CIRCUIT", "Collection circuit", "P0", "pass", "The collection circuit is closed.")
     state.platform = PlatformState.REACHABLE
 
-    # ── 6) 用户手动暂停 ──
-    up = is_user_paused()
-    if up:
-        _add('A6_PAUSE','手动暂停开关','P0','fail',f'用户主动暂停：{up.get("reason","")}（{up.get("at","")}）')
-        return {'ok':False,'overall_state':'user_paused','checks':checks,
-                'account_status':get_account_status(),'circuit':circ,
-                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                'cdp_online':cdp_online,'user_paused':up,
-                'evidence':'用户主动暂停采集：请在系统设置或顶部操作恢复'}
-    _add('A6_PAUSE','手动暂停开关','P0','pass','未手动暂停')
+    pause_state = is_user_paused()
+    paused = _safe_pause(pause_state)
+    if paused["paused"]:
+        _add("A6_PAUSE", "User pause", "P0", "fail", "Collection is paused by the user.")
+        return {"ok": False, "overall_state": "user_paused", "checks": checks,
+                "account_status": account_status, "circuit": circ, "active_account": public_account,
+                "allowed_accounts": [public_account], "cdp_online": cdp_online, "user_paused": paused,
+                "collection_policy": safe_policy, "evidence": "USER_PAUSED"}
+    _add("A6_PAUSE", "User pause", "P0", "pass", "Collection is not paused by the user.")
 
-    # ── 7) 冷却/频率 ──
-    acc_status = get_account_status()
-    cooldown = acc_status.get('cooldown_remaining_minutes', 0)
+    acc_status = get_account_status(account=public_account)
+    cooldown = acc_status.get("cooldown_remaining_minutes", 0)
     if cooldown and cooldown > 0:
-        _add('A7_RATE','频率/冷却','P1','warn',f'冷却中：约剩 {cooldown} 分钟')
-        return {'ok':False,'overall_state':'cooldown','checks':checks,
-                'account_status':acc_status,'circuit':circ,
-                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                'cdp_online':cdp_online,'user_paused':up,
-                'evidence':f'处于采集冷却期，约 {cooldown} 分钟后可再发起（保护账号安全）'}
-    t_limit = acc_status.get('today_runs',0) >= acc_status.get('max_daily_runs',12)
-    if t_limit:
-        _add('A7_RATE','频率/冷却','P1','fail','今日已达到每日上限次数')
-        return {'ok':False,'overall_state':'rate_limit','checks':checks,
-                'account_status':acc_status,'circuit':circ,
-                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                'cdp_online':cdp_online,'user_paused':up,
-                'evidence':'今日采集次数已达上限，请明天再试'}
-    _add('A7_RATE','频率/冷却','P0','pass',
-         f'今日 {acc_status.get("today_runs",0)}/{acc_status.get("max_daily_runs",12)} 次；手动剩余 {acc_status.get("max_manual_runs",3)-acc_status.get("today_manual_runs",0)}，自动剩余 {acc_status.get("max_auto_runs",9)-acc_status.get("today_auto_runs",0)}')
+        _add("A7_RATE", "Collection pacing", "P1", "warn", f"Collection is cooling down for about {cooldown} more minutes.")
+        return {"ok": False, "overall_state": "cooldown", "checks": checks,
+                "account_status": acc_status, "circuit": circ, "active_account": public_account,
+                "allowed_accounts": [public_account], "cdp_online": cdp_online, "user_paused": paused,
+                "collection_policy": safe_policy, "evidence": "COLLECTION_COOLDOWN"}
+    if acc_status.get("today_runs", 0) >= acc_status.get("max_daily_runs", 12):
+        _add("A7_RATE", "Collection pacing", "P1", "fail", "The daily collection limit has been reached.")
+        return {"ok": False, "overall_state": "rate_limit", "checks": checks,
+                "account_status": acc_status, "circuit": circ, "active_account": public_account,
+                "allowed_accounts": [public_account], "cdp_online": cdp_online, "user_paused": paused,
+                "collection_policy": safe_policy, "evidence": "DAILY_COLLECTION_LIMIT_REACHED"}
+    _add("A7_RATE", "Collection pacing", "P0", "pass", "Collection pacing limits permit a new attempt.")
     state.session = SessionState.REAL_SESSION_VALID if cdp_online else SessionState.COOKIE_PRESENT
-
-    return {'ok':True,'overall_state':'ready','checks':checks,
-            'account_status':acc_status,'circuit':circ,
-             'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-             'collection_policy':policy_gate,
-            'cdp_online':cdp_online,'user_paused':up,
-            'state_machine':{
-                'auth':state.auth.value,'session':state.session.value,
-                'platform':state.platform.value,'circuit':(state.circuit.value if hasattr(state.circuit,'value') else str(state.circuit)),
-            },'evidence':'全部预检通过：身份合法、Cookie齐备、白名单通过、无熔断，可正常发起采集与入库。'}
+    return {"ok": True, "overall_state": "ready", "checks": checks,
+            "account_status": acc_status, "circuit": circ, "active_account": public_account,
+            "allowed_accounts": [public_account], "collection_policy": safe_policy,
+            "cdp_online": cdp_online, "user_paused": paused,
+            "state_machine": {"auth": state.auth.value, "session": state.session.value,
+                             "platform": state.platform.value,
+                             "circuit": (state.circuit.value if hasattr(state.circuit, "value") else str(state.circuit))},
+            "evidence": "PRECHECK_READY"}
 
 def _run_search(keyword,max_scroll=6):
+    service_python = sys.executable
+    if not isinstance(service_python, str) or not service_python or not os.path.isabs(service_python):
+        raise RuntimeError('LUMENIS_SERVICE_PYTHON_INVALID')
     # 网络自适应：使用当前自适应设置
     adaptive = network_adaptive.get_adaptive_settings()
     effective_scroll = min(max_scroll, adaptive.get('current_scroll_limit', 6))
@@ -783,6 +903,7 @@ def _run_search(keyword,max_scroll=6):
     os.makedirs(PRIVATE_DATA_DIR, exist_ok=True)
     out=os.path.join(PRIVATE_DATA_DIR,f'xhs_{int(time.time()*1000)}.json')
     env=os.environ.copy()
+    env['LUMENIS_SERVICE_PYTHON'] = service_python
     # Resolve the approved identity and profile through the existing Python owners.
     # The child environment carries consistency data; it is not an authorization grant.
     selected = _ACTIVE_ACCOUNT or DEFAULT_COLLECTION_ACCOUNT
@@ -799,6 +920,12 @@ def _run_search(keyword,max_scroll=6):
     if (os.path.normcase(cookie_file) != os.path.normcase(expected_cookie_file)
             or os.path.normcase(profile_dir) != os.path.normcase(expected_profile_dir)):
         raise PermissionError('XHS_REGISTERED_PROFILE_BINDING_MISMATCH')
+    # A registered SYSTEM worker is a required caller precondition. Resolve it
+    # before reading the approved cookie file or starting the legacy JS bridge;
+    # the child repeats PID/profile/kernel/endpoint verification before connect.
+    cdp_endpoint = cdp_url_for(account=selected, headless=True)
+    if not cdp_endpoint:
+        raise RuntimeError('XHS_REGISTERED_BROWSER_SESSION_UNAVAILABLE')
     # Check the exact registered Cookie file; a fallback environment header must
     # not authorize a child process whose registered Cookie has another identity.
     try:
@@ -816,8 +943,9 @@ def _run_search(keyword,max_scroll=6):
     env['XHS_COLLECTION_REGION'] = 'intl'
     env.pop('XHS_COOKIE_HEADER', None)
     env.pop('XHS_COOKIES_JSON', None)
-    # 搜索只复用香港/国际身份的常驻 CDP；JS 侧 CDP 不可达会按既有适配器策略处理
-    env['XHS_CDP_URL'] = cdp_url_for()
+    # Search reuses the server-resolved HK/intl worker. The child validates the
+    # same registered identity again and never starts a replacement browser.
+    env['XHS_CDP_URL'] = cdp_endpoint
     cmd=[_NODE_BIN,SEARCH_JS,'--keyword',keyword,'--output',out,'--max-scroll',str(effective_scroll)]
     try:
         # 使用Popen+轮询，避免Flask线程中subprocess阻塞
@@ -1047,7 +1175,7 @@ def sync(keywords=None, max_scroll=6, account=None):
             'cache_status': cache_manager.get_cache_status(),
             'blocked': query_plan.reason or query_plan.reason_code,
             'active_account': None, 'active_user_id': None,
-            'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
+            'allowed_accounts': [],
             'finished_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
     # Typed persistence: the XHS writer persists CTH scope only. Non-CTH (BMP)
@@ -1060,8 +1188,10 @@ def sync(keywords=None, max_scroll=6, account=None):
         query_plan = _dc.replace(query_plan, queries=_cth)
         if not _cth and keywords is None:
             # Page held only deferred BMP targets: collect the CTH registry page instead of idling.
-            from lumenis.system.collector.acquisition_plan import build_acquisition_plan as _bap
             import subject_registry as _sr
+            from lumenis.system.collector.acquisition_plan import (
+                build_acquisition_plan as _bap,
+            )
             query_plan = _bap(None, registry_loader=lambda: _sr.list_subjects('CTH'))
         query_plan_payload = dict(query_plan_payload or {})
         query_plan_payload['deferred_non_cth'] = [
@@ -1082,7 +1212,7 @@ def sync(keywords=None, max_scroll=6, account=None):
             'cache_status': cache_manager.get_cache_status(),
             'blocked': 'XHS_TYPED_SCOPE_IMPORT_REQUIRED',
             'active_account': None, 'active_user_id': None,
-            'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
+            'allowed_accounts': [],
             'finished_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
     resolved_account = account or DEFAULT_COLLECTION_ACCOUNT
@@ -1099,7 +1229,7 @@ def sync(keywords=None, max_scroll=6, account=None):
             'cache_status': cache_manager.get_cache_status(),
             'blocked': policy_gate.get('reason'), 'collection_policy': policy_gate,
             'active_account': resolved_account, 'active_user_id': None,
-            'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
+            'allowed_accounts': [],
             'finished_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
     ok_sel, msg_sel = select_account(resolved_account)
@@ -1118,7 +1248,7 @@ def sync(keywords=None, max_scroll=6, account=None):
                     'network_status':network_adaptive.get_network_status(),
                     'cache_status':cache_manager.get_cache_status(),'blocked':_msg,
                     'active_account':resolved_account,'active_user_id':None,
-                    'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                    'allowed_accounts': [resolved_account] if policy_gate.get('ok') is True else [],
                     'collection_policy':policy_gate,
                     'finished_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
@@ -1303,8 +1433,8 @@ def sync(keywords=None, max_scroll=6, account=None):
         'blocked': blocked_summary,
         # ── 双子星库 Contract 身份证据链（写入所有 sync 返回，方便追溯哪条数据由哪个身份采集）──
         'active_account': resolved_account,
-        'active_user_id': ((_cid[:12] + '...') if (_cid := _get_current_user_id()) else None),
-        'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
+        'active_user_id': None,
+        'allowed_accounts': [],
         'collection_policy': policy_gate,
         'query_plan': query_plan_payload,
         'scope_bindings': scope_bindings,

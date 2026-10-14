@@ -98,7 +98,7 @@ def register_collection_api(app):
                             'auto_enabled': auto_enabled,
                             'cooldown_remaining_minutes': cooldown,
                             'circuit': {'open': circ.get('open', False), 'state': circ.get('state', ''),
-                                        'detail': circ.get('detail', ''), 'resume_at': circ.get('resume_at', '')},
+                                        'resume_at': circ.get('resume_at', '')},
                             'running': running,
                             'server_time': now.strftime('%Y-%m-%d %H:%M:%S')})
         except Exception as e:

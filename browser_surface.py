@@ -226,22 +226,22 @@ def evaluate_navigation(url: str, mode: Optional[str] = None) -> dict:
 
 def _resolve_port(account=None, port: Optional[int] = None) -> int:
     """Resolve an approved HK/international or general-browser endpoint."""
-    if port is not None:
-        resolved = int(port)
-        if resolved == GENERAL_CDP_PORT and account in (None, ""):
-            if not _verified_general_browser():
-                raise PermissionError("POLICY_BLOCKED: general browser session is not LUMENIS-owned")
-            return resolved
-        if resolved != 9223:
-            raise PermissionError("POLICY_BLOCKED: browser surface endpoint is not approved")
-        # An explicit approved port is still associated with the approved identity.
-        ib._canonical_account(account)
-        return resolved
-    if account in (None, ""):
+    if account in (None, "") and port is not None and int(port) == GENERAL_CDP_PORT:
         if not _verified_general_browser():
             raise PermissionError("POLICY_BLOCKED: general browser session is not LUMENIS-owned")
         return GENERAL_CDP_PORT
-    return ib._port_for(account)
+    if account in (None, ""):
+        if port is not None:
+            raise PermissionError("POLICY_BLOCKED: unregistered browser endpoint")
+        if not _verified_general_browser():
+            raise PermissionError("POLICY_BLOCKED: general browser session is not LUMENIS-owned")
+        return GENERAL_CDP_PORT
+    resolved = ib._port_for(account)
+    if resolved is None:
+        raise RuntimeError("BROWSER_WORKER_ENDPOINT_UNAVAILABLE")
+    if port is not None and int(port) != int(resolved):
+        raise PermissionError("POLICY_BLOCKED: endpoint does not match the registered browser worker")
+    return int(resolved)
 
 
 def _http_json(url: str, method: str = "GET", timeout: float = 3.0):
@@ -278,11 +278,15 @@ def list_tabs(account=None, port: Optional[int] = None) -> dict:
     return list_targets(account, port, pages_only=True)
 
 
-def _find_tab_ws(port: int, target_id: Optional[str] = None, timeout: float = 3.0):
-    """按 target_id 取指定标签页 WebSocket；target_id 为空时取当前第一个 page。"""
+def _find_tab_ws(port: int, target_id: Optional[str] = None, timeout: float = 3.0,
+                 account=None):
+    """按 target_id 取标签页 WebSocket，并在读取时重新核验原注册账号端点。
+
+    target_id 为空时取当前第一个 page；保留入口已核验的账号身份。
+    """
     if websocket is None:
         raise RuntimeError("websocket-client 未安装")
-    tabs = list_targets(port=port)
+    tabs = list_targets(account=account, port=port)
     if not tabs.get("ok"):
         raise RuntimeError(tabs.get("error", "无法获取标签页"))
     candidates = tabs["tabs"]
@@ -368,7 +372,7 @@ def navigate_tab(url: str, target_id: Optional[str] = None, account=None,
     if not gate["allowed"] and not (gate.get("status") == "need_confirmation" and confirmed):
         return {"ok": False, "error": gate["reason"], "gate": gate}
     p = _resolve_port(account, port)
-    ws, chosen = _find_tab_ws(p, target_id)
+    ws, chosen = _find_tab_ws(p, target_id, account=account)
     try:
         resp = ib._cdp(ws, "Page.navigate", {"url": url}, msg_id=1, timeout=10.0)
         err = resp.get("result", {}).get("errorText")
@@ -395,7 +399,7 @@ def history_tab(action: str = "reload", target_id: Optional[str] = None,
         return {"ok": False, "error": f"未知历史动作: {action}"}
     p = _resolve_port(account, port)
     try:
-        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0)
+        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0, account=account)
     except Exception as e:
         return {"ok": False, "cdp_port": p, "error": str(e)}
     try:
@@ -435,20 +439,24 @@ def history_tab(action: str = "reload", target_id: Optional[str] = None,
 
 _JS_META = r"""
 (()=>{const m={};m.url=location.href;m.title=document.title;m.lang=document.documentElement.lang||'';
+m.ready_state=document.readyState||'';m.element_count=document.querySelectorAll('*').length;
 const q=s=>{const e=document.querySelector(s);return e?e.content||e.getAttribute('href')||'':'';};
 m.description=q('meta[name="description"]');m.keywords=q('meta[name="keywords"]');
 m.canonical=q('link[rel="canonical"]');m.charset=document.characterSet||'';
 const og={};document.querySelectorAll('meta[property^="og:"],meta[name^="og:"]').forEach(e=>{
 const k=(e.getAttribute('property')||e.getAttribute('name')||'').slice(3);if(k&&!og[k])og[k]=e.content||'';});
 m.og=og;m.h1=Array.from(document.querySelectorAll('h1')).slice(0,5).map(e=>e.innerText.trim()).filter(Boolean);
-m.links=document.querySelectorAll('a[href]').length;m.images=document.querySelectorAll('img').length;
+m.links=document.querySelectorAll('a[href]').length;m.forms=document.forms.length;
+m.buttons=document.querySelectorAll('button,[role="button"]').length;
+m.images=document.querySelectorAll('img').length;
 return JSON.stringify(m);})()
 """
 
 _JS_TEXT = r"""
 (()=>{const pick=document.querySelector('article,main,[role=main],.article,.content,#content');
 let t=(pick&&pick.innerText)||document.body.innerText||'';t=t.replace(/\n{3,}/g,'\n\n').trim();
-return JSON.stringify({url:location.href,title:document.title,text:t,length:t.length,
+const limit=%d;return JSON.stringify({url:location.href,title:document.title,
+text:t.slice(0,limit),length:t.length,truncated:t.length>limit,
 container:pick?(pick.tagName||'').toLowerCase():'body'});})()
 """
 
@@ -468,9 +476,9 @@ return JSON.stringify({url:location.href,title:document.title,total:nodes.length
 """
 
 
-def _eval_fixed(target_id, expression: str, port: int, timeout: float = 8.0):
+def _eval_fixed(target_id, expression: str, port: int, timeout: float = 8.0, account=None):
     """连接指定 tab 执行固定只读表达式并解析 returnByValue 的 JSON 字符串。"""
-    ws, chosen = _find_tab_ws(port, target_id, timeout=5.0)
+    ws, chosen = _find_tab_ws(port, target_id, timeout=5.0, account=account)
     try:
         resp = ib._cdp(ws, "Runtime.evaluate",
                        {"expression": expression, "returnByValue": True, "timeout": 6000},
@@ -495,20 +503,25 @@ def extract(kind: str = "meta", target_id: Optional[str] = None, account=None,
     try:
         result: dict = {"ok": True, "cdp_port": p, "kind": kind}
         if kind in ("meta", "all"):
-            chosen, val = _eval_fixed(target_id, _JS_META, p)
+            chosen, val = _eval_fixed(target_id, _JS_META, p, account=account)
             result["target_id"] = chosen["target_id"]
             result["meta"] = json.loads(val) if isinstance(val, str) else {}
         if kind in ("text", "all"):
-            chosen, val = _eval_fixed(target_id, _JS_TEXT, p)
+            cap = max(500, min(int(max_chars), MAX_TEXT_CHARS))
+            chosen, val = _eval_fixed(target_id, _JS_TEXT % cap, p, account=account)
             result["target_id"] = chosen["target_id"]
             text_obj = json.loads(val) if isinstance(val, str) else {}
-            cap = max(500, min(int(max_chars), MAX_TEXT_CHARS))
             if isinstance(text_obj.get("text"), str):
-                text_obj["truncated"] = len(text_obj["text"]) > cap
+                reported_length = text_obj.get("length")
+                text_obj["truncated"] = bool(
+                    text_obj.get("truncated")
+                    or len(text_obj["text"]) > cap
+                    or (type(reported_length) is int and reported_length > cap)
+                )
                 text_obj["text"] = text_obj["text"][:cap]
             result["text"] = text_obj
         if kind in ("dom", "all"):
-            chosen, val = _eval_fixed(target_id, _JS_DOM % MAX_DOM_NODES, p)
+            chosen, val = _eval_fixed(target_id, _JS_DOM % MAX_DOM_NODES, p, account=account)
             result["target_id"] = chosen["target_id"]
             result["dom"] = json.loads(val) if isinstance(val, str) else {}
         result["elapsed_ms"] = int((time.time() - started) * 1000)
@@ -845,7 +858,7 @@ def find_in_page(query, target_id=None, account=None, port=None, case_sensitive:
         return {"ok": False, "error": "查询词为空"}
     p = _resolve_port(account, port)
     try:
-        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0)
+        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0, account=account)
     except Exception as e:
         return {"ok": False, "cdp_port": p, "error": str(e)}
     try:
@@ -872,7 +885,7 @@ def stop_find_in_page(target_id=None, account=None, port=None) -> dict:
     """清除页内查找高亮。CDP Page.stopFinding。"""
     p = _resolve_port(account, port)
     try:
-        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0)
+        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0, account=account)
     except Exception as e:
         return {"ok": False, "cdp_port": p, "error": str(e)}
     try:
@@ -899,7 +912,7 @@ def set_download_behavior(enabled: bool = True, download_path=None,
     if enabled:
         os.makedirs(path, exist_ok=True)
     try:
-        ws, chosen = _find_tab_ws(p, None, timeout=5.0)
+        ws, chosen = _find_tab_ws(p, None, timeout=5.0, account=account)
     except Exception as e:
         return {"ok": False, "cdp_port": p, "error": str(e)}
     try:
@@ -954,7 +967,7 @@ def _hybrid_screenshot(target_id=None, account=None, port=None, quality=60):
     """对指定标签页截图（支持 target_id），返回 base64 JPEG。用 _find_tab_ws 附着指定 tab。"""
     p = _resolve_port(account, port)
     try:
-        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0)
+        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0, account=account)
     except Exception as e:
         return {"ok": False, "error": str(e)}
     try:
@@ -1285,15 +1298,51 @@ def observe(target_id: Optional[str] = None, account=None, port: Optional[int] =
     供 Observe→Reason→Plan→Act→Verify→Recover 循环使用。
     对标 Safari 只读观察，不执行任何写操作。
     """
-    p = _resolve_port(account, port)
+    p = None
     try:
-        chosen, val = _eval_fixed(target_id, _JS_OBSERVE, p, timeout=8.0)
-        data = json.loads(val) if isinstance(val, str) else {}
+        p = _resolve_port(account, port)
+        extracted = extract(
+            "all", target_id=target_id, account=account, port=p,
+            max_chars=2000,
+        )
+        if not extracted.get("ok"):
+            return {"ok": False, "error": extracted.get("error", "BROWSER_OBSERVATION_UNAVAILABLE"),
+                    "cdp_port": p}
+        meta = extracted.get("meta")
+        text = extracted.get("text")
+        dom = extracted.get("dom")
+        if (not isinstance(meta, dict) or not isinstance(text, dict)
+                or not isinstance(dom, dict) or not isinstance(text.get("text"), str)
+                or not isinstance(dom.get("elements"), list)):
+            return {"ok": False, "error": "BROWSER_OBSERVATION_INCOMPLETE", "cdp_port": p}
+        truncated_fields = []
+        if text.get("truncated") is True:
+            truncated_fields.append("body_text")
+        if (type(dom.get("total")) is int and type(dom.get("returned")) is int
+                and dom["total"] > dom["returned"]):
+            truncated_fields.append("dom_summary")
+        observation = {
+            "url": meta.get("url", ""),
+            "title": meta.get("title", ""),
+            "ready_state": meta.get("ready_state"),
+            "body_text": text["text"],
+            "body_text_length": text.get("length"),
+            "element_count": meta.get("element_count"),
+            "counts": {
+                "links": meta.get("links"),
+                "forms": meta.get("forms"),
+                "buttons": meta.get("buttons"),
+                "images": meta.get("images"),
+            },
+            "dom_summary": dom["elements"],
+            "dom_total": dom.get("total"),
+            "truncated_fields": truncated_fields,
+        }
         return {
             "ok": True,
             "cdp_port": p,
-            "target_id": chosen.get("target_id"),
-            "observation": data,
+            "target_id": extracted.get("target_id"),
+            "observation": observation,
             "schema_version": "browser-observe-v1.0",
         }
     except Exception as e:
@@ -1347,7 +1396,7 @@ def verify_action(expected: dict, target_id: Optional[str] = None, account=None,
         return {"ok": False, "error": "no valid expected conditions provided"}
     js_expr = f'JSON.stringify({{url: location.href, title: document.title, {", ".join(js_parts)}}})'
     try:
-        chosen, val = _eval_fixed(target_id, js_expr, p, timeout=6.0)
+        chosen, val = _eval_fixed(target_id, js_expr, p, timeout=6.0, account=account)
         result = json.loads(val) if isinstance(val, str) else {}
         all_passed = all(result.get(k, False) for k, _ in checks)
         return {

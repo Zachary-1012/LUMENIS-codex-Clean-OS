@@ -47,10 +47,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 logger = logging.getLogger(__name__)
 
-# 生产采集的 CDP 身份必须与 xhs_cookie_bridge / resident launcher 共用同一
-# 个事实源。旧实现把 Guardian 的健康检查和自动修复固定在 9222，导致内地
-# profile 在 HK-only 生产策略下被后台线程重新拉起。
-PRODUCTION_COLLECTION_ACCOUNT = "XHS_RETINAUT"
+# 生产采集的 CDP 身份必须由当前策略、账号登记和 SYSTEM Browser Worker
+# 共同解析。账号别名本身不构成授权，Worker 端口也不由 Guardian 固定。
 
 
 def _production_cdp_config():
@@ -61,11 +59,74 @@ def _production_cdp_config():
     """
     import xhs_cookie_bridge as bridge
 
-    account = bridge.DEFAULT_COLLECTION_ACCOUNT or PRODUCTION_COLLECTION_ACCOUNT
+    account = str(getattr(bridge, "DEFAULT_COLLECTION_ACCOUNT", "") or "").strip().upper()
+    gate = (bridge.collection_policy_gate(account=account, region="intl")
+            if account else {"ok": False, "code": "COLLECTION_ACCOUNT_UNAVAILABLE"})
+    allowlisted = bool(
+        account
+        and account == getattr(bridge, "XHS_RETINAUT_NAME", None)
+        and getattr(bridge, "XHS_RETINAUT", None)
+        and getattr(bridge, "XHS_RETINAUT", None) in getattr(bridge, "ALLOWED_USER_IDS", ())
+        and gate.get("ok") is True
+        and gate.get("account") == account
+        and gate.get("region") == "intl"
+    )
+    if not allowlisted:
+        return {
+            "account": account or None,
+            "port": None,
+            "endpoint": "",
+            "home": "",
+            "authorization_ready": False,
+            "available": False,
+            "code": str(gate.get("code") or "COLLECTION_IDENTITY_UNAVAILABLE"),
+        }
+
+    import cdp_helper
+    binding = cdp_helper._registered_xhs_binding(account)
+    if not binding or binding.get("account") != account:
+        return {
+            "account": account,
+            "port": None,
+            "endpoint": "",
+            "home": bridge.home_url_for(account),
+            "authorization_ready": False,
+            "available": False,
+            "code": "XHS_REGISTERED_IDENTITY_UNAVAILABLE",
+        }
+    worker = cdp_helper.resolve_registered_xhs_worker(account=account, headless=True)
+    raw_port = worker.get("port")
+    try:
+        port = int(raw_port)
+    except (TypeError, ValueError):
+        port = None
+    endpoint = str(worker.get("endpoint") or "")
+    worker_verified = bool(
+        worker.get("available") is True
+        and worker.get("account") == account
+        and worker.get("headless") is True
+        and worker.get("loopback_only") is True
+        and port is not None
+        and 1 <= port <= 65535
+        and port not in {9222, 9223, 9224, 9225, 9226, 9227, 9228}
+        and endpoint == f"http://127.0.0.1:{port}"
+    )
+    if not worker_verified:
+        endpoint = ""
+        port = None
+        code = (str(worker.get("code") or "XHS_WORKER_IDENTITY_UNVERIFIED")
+                if worker.get("available") is not True
+                else "XHS_WORKER_IDENTITY_UNVERIFIED")
+    else:
+        code = ""
     return {
         "account": account,
-        "port": bridge.cdp_port_for(account),
+        "port": port if worker_verified else None,
+        "endpoint": endpoint,
         "home": bridge.home_url_for(account),
+        "authorization_ready": True,
+        "available": worker_verified,
+        "code": code,
     }
 
 class FixStatus(Enum):
@@ -207,8 +268,12 @@ class AutoRecoveryEngine:
             return False, f'数据库连接失败: {str(e)}'
 
     def check_cdp(self):
-        """检查生产采集 CDP；当前生产身份固定为香港/国际 RedNote。"""
-        return self.check_port(port=_production_cdp_config()["port"])
+        """Check the exact registered BACKGROUND worker, not a listening port alone."""
+        try:
+            config = _production_cdp_config()
+            return bool(config.get("authorization_ready") and config.get("available"))
+        except Exception:  # noqa: BLE001 - uncertain worker identity must block automatic recovery.
+            return False
 
     def backup_database(self):
         """备份数据库（自动修复前）"""
@@ -310,14 +375,23 @@ class AutoRecoveryEngine:
     def fix_cdp_crash(self, module='cdp'):
         """通过官方驻场启动器恢复香港/国际采集浏览器。
 
-        Guardian 不再自行拼接 Edge 命令或启动历史 9222 profile。这样
+        Guardian 不再自行拼接 Edge 命令或选择历史固定端口。这样
         Resident Browser 的账号隔离、profile、网络和页面预热仍由唯一
         启动入口负责，故障恢复也不会绕过 HK-only 采集门禁。
         """
-        config = _production_cdp_config()
+        try:
+            config = _production_cdp_config()
+        except Exception as exc:  # noqa: BLE001 - unknown authorization/runtime failures keep recovery unavailable.
+            return False, f'生产采集浏览器状态无法核验（{type(exc).__name__}）'
+        if not config.get("authorization_ready"):
+            return False, f'生产采集浏览器身份不可用（{config.get("code") or "IDENTITY_UNAVAILABLE"}）'
+        if config.get("available"):
+            return True, f'生产采集已使用已登记后台浏览器（{config["account"]}）'
+        if config.get("code") != "XHS_REGISTERED_WORKER_UNAVAILABLE":
+            return False, f'已登记后台浏览器无法安全恢复（{config.get("code") or "WORKER_UNVERIFIED"}）'
         self.log(
             'info',
-            f'检测到生产 CDP 浏览器崩溃，尝试恢复 {config["account"]}:{config["port"]}...',
+            f'检测到生产后台浏览器不可用，尝试通过已登记启动器恢复 {config["account"]}...',
             module=module,
         )
 
@@ -344,12 +418,12 @@ class AutoRecoveryEngine:
                 if self.check_cdp():
                     self.log(
                         'info',
-                        f'生产 CDP 浏览器恢复成功（{config["account"]}:{config["port"]}）',
+                        f'生产后台浏览器恢复成功（{config["account"]}）',
                         module=module,
                     )
-                    return True, f'生产 CDP 浏览器恢复成功（{config["account"]}:{config["port"]}）'
+                    return True, f'生产后台浏览器恢复成功（{config["account"]}）'
 
-            return False, f'生产 CDP 浏览器恢复超时（{config["account"]}:{config["port"]}）'
+            return False, f'生产后台浏览器恢复超时（{config["account"]}）'
         except Exception as e:
             return False, f'生产 CDP 浏览器恢复失败: {str(e)}'
 

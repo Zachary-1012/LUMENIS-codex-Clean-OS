@@ -144,13 +144,10 @@ def effective_policy() -> RedNotePolicy:
 
 
 # ============================================================
-# 区域选择（当前生产主链固定 RedNote 港版 intl；大陆仅保留诊断映射）
+# 区域选择（当前生产主链仅允许 RedNote intl；会话端点由 SYSTEM Browser Owner 解析）
 # ============================================================
-# CDP 端口映射（与 start_production.ps1 三浏览器对齐）：
-#   9222 = XHS_CN_PRIMARY  大陆 xiaohongshu.com
-#   9223 = XHS_RETINAUT    港版/国际 RedNote
-#   9224 = GENERAL_BROWSE  通用浏览（不用于采集主链路）
-REGION_CDP_PORT = {"cn": 9222, "intl": 9223}
+# Region policy has no browser-port authority. None means endpoint unresolved here.
+REGION_CDP_PORT = {"cn": None, "intl": None}
 # 区域对应的站点 host（用于导航与日志，不做硬编码假设之外的用途）
 REGION_HOST = {
     "cn": "www.xiaohongshu.com",
@@ -162,7 +159,7 @@ _last_region_state = {"region": None, "count": 0}
 
 
 def get_cdp_port(region: str):
-    """区域 → CDP 端口。未知区域回落到 primary_region 对应端口。"""
+    """Return no endpoint here; the existing SYSTEM browser owner resolves sessions."""
     region = (region or "").strip().lower()
     if region in REGION_CDP_PORT:
         return REGION_CDP_PORT[region]
@@ -200,7 +197,7 @@ def collection_gate(*, account: str = None, region: str = None) -> dict:
         "code": "allowed",
         "account": requested_account,
         "region": "intl",
-        "cdp_port": REGION_CDP_PORT["intl"],
+        "cdp_port": None,
         "host": REGION_HOST["intl"],
         "policy_version": POLICY_VERSION,
     }
@@ -216,7 +213,7 @@ def select_region(*, kos_only: bool = False, last_region: str = None,
     3. 普通生产采集固定使用 intl，保留 last_region 参数仅用于兼容历史调用；
     4. 只有未来显式恢复内地总闸后，才允许旧的 intl/cn 轮番逻辑重新启用。
 
-    返回 dict: {region, cdp_port, host, rotated(bool), reason}
+    返回 dict: {region, cdp_port=None, host, rotated(bool), reason}
     """
     pol = effective_policy()
     # KOS 强制 intl

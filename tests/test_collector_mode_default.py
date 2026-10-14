@@ -20,6 +20,18 @@ def _dispatcher():
     return obj
 
 
+def test_edge_discovery_does_not_require_windows_where(monkeypatch):
+    monkeypatch.setattr(collector_automation.os.path, 'exists', lambda _path: False)
+    monkeypatch.setattr(collector_automation.shutil, 'which', lambda _name: None)
+    monkeypatch.setattr(collector_automation.subprocess, 'run',
+                        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError('no child process')))
+    obj = collector_automation.CollectorAutomation.__new__(collector_automation.CollectorAutomation)
+    assert obj._find_edge_browser() is None
+    monkeypatch.setattr(collector_automation.shutil, 'which',
+                        lambda name: '/usr/bin/microsoft-edge' if name == 'microsoft-edge' else None)
+    assert obj._find_edge_browser() == '/usr/bin/microsoft-edge'
+
+
 def _runnable_plan(monkeypatch):
     # Identity-policy unit tests require an explicit in-scope query, independent
     # of the seed database. Plan resolution itself has separate blocking tests.
@@ -135,11 +147,27 @@ def test_collector_status_routes_share_one_payload_in_either_registration_order(
         "is_running": False,
         "lifecycle_state": "STOPPED",
         "stop_requested": False,
-        "current_task": None,
+        "current_task": {
+            "id": "task-1", "status": "running", "progress": 0,
+            "run_type": "manual", "cdp_url": "http://127.0.0.1:9234",
+            "profile_path": "private-profile",
+        },
         "browser_running": False,
-        "cdp_port": None,
-        "active_cdp_port": None,
-        "edge_path": "",
+        "cdp_port": 9234,
+        "active_cdp_port": 9234,
+        "edge_path": "private-edge-path",
+        "history_count": 0,
+        "today_count": 0,
+    }
+    expected_runtime = {
+        "is_running": False,
+        "lifecycle_state": "STOPPED",
+        "stop_requested": False,
+        "current_task": {
+            "id": "task-1", "status": "running", "progress": 0,
+            "run_type": "manual",
+        },
+        "browser_running": False,
         "history_count": 0,
         "today_count": 0,
     }
@@ -184,7 +212,10 @@ def test_collector_status_routes_share_one_payload_in_either_registration_order(
         assert body["success"] is True
         assert body["is_running"] is False  # legacy collection_api fields
         assert body["data"]["platforms"][0]["last_verified_status"] == "NEED_VERIFY"
-        assert body["data"]["collector_runtime"] == runtime_status
+        assert body["data"]["collector_runtime"] == expected_runtime
+        assert not {"cdp_port", "active_cdp_port", "edge_path"} & body.keys()
+        assert "cdp_url" not in body["data"]["collector_runtime"]["current_task"]
+        assert "profile_path" not in body["data"]["collector_runtime"]["current_task"]
         bodies.append(body)
 
     assert bodies[0] == bodies[1]

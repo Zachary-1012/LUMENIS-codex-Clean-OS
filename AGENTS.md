@@ -1269,12 +1269,12 @@ When touching RedNote (HK/international account; code id xhs) or any new acquisi
 - the locally signed-in Mainland China XHS/RedNote profile is the Product Owner's
   personal work account, not a collection asset: never read, export, import, inject,
   refresh, probe, automate, test, recover, rotate to, or otherwise touch that identity;
-- legacy Mainland-cookie helpers, ports, profiles and tests may be inspected as source
-  only. They must remain outside every startup, scheduler, collector, browser, recovery,
-  E2E and release path unless the Product Owner explicitly changes this rule;
+- Mainland-cookie helpers and personal profiles are source-only; never use them in
+  startup, collection, browser, recovery, E2E or release. XHS resolves its registered
+  HK/intl session; no fixed-port fallback (9222/9223).
 - resolve other platform capability from existing secret-safe configuration and
   registered owners before requesting credentials; child processes inherit only the
-  registered identity/profile; CDP verifies its session. Never expose secrets; unavailable
+  registered identity/profile and service Python; CDP verifies its session. Unavailable
   authentication remains blocked;
 - primary ingestion must not be broken by a non-critical Evidence side-write failure unless the canonical contract explicitly changes;
 - preserve source identity, source URL, capture time, provider, domain/product context and trace metadata where available;

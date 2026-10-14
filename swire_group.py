@@ -180,37 +180,21 @@ def _set_brand_status(key, status):
 
 
 def _brand_collect_job(key, brand_name, keywords):
-    """后台采集补齐：CDP 真实浏览器采集品牌关键词写入 swire_notes；失败优雅降级，绝不抛出。"""
-    import os, subprocess, json
-    try:
-        _set_brand_status(key, 'collecting')
-        root = os.path.dirname(os.path.abspath(__file__))
-        cjs = os.path.join(root, 'rednote_collector.cjs')
-        try:
-            node = _resolve_node()
-        except Exception:
-            node = 'node'
-        kw = (keywords or brand_name or '').replace('；', ';').split(';')[0].strip() or brand_name
-        if not (node and os.path.exists(cjs)):
-            _set_brand_status(key, 'pending'); return
-        env = dict(os.environ); env['XHS_CDP_URL'] = 'http://127.0.0.1:9222'
-        out = os.path.join(root, 'data', f'brand_{key}.json')
-        subprocess.run([node, cjs, '--keyword', kw, '--output', out, '--max-scroll', '3', '--max-details', '10'],
-                       capture_output=True, text=True, timeout=180, env=env)
-        notes = []
-        if os.path.exists(out):
-            with open(out, 'r', encoding='utf-8') as f:
-                notes = (json.load(f) or {}).get('notes', [])
-        ins, upd = _upsert_brand_notes(key, brand_name, notes)
-        _set_brand_status(key, 'ready' if notes else 'empty')
-        print(f'[BrandLibrary] 品牌[{brand_name}]采集补齐：新增{ins} 更新{upd}')
-    except Exception as e:
-        _set_brand_status(key, 'pending')
-        print(f'[BrandLibrary] 品牌[{brand_name}]采集降级为待补齐：{e}')
+    """Return a truthful block until a real SYSTEM task/actor/scope is bound.
+
+    This legacy library has no authorized task context and is not an independent
+    Collector. Do not spawn a browser, write collection state, or mutate notes.
+    """
+    return {
+        'ok': False,
+        'status': 'UNAVAILABLE',
+        'code': 'COLLECTION_TASK_CONTEXT_REQUIRED',
+        'message': '请从已授权的序境采集任务提交此来源；当前品牌库没有绑定任务身份。',
+    }
 
 
 def _kickoff_brand_collect(key, brand_name, keywords):
-    threading.Thread(target=_brand_collect_job, args=(key, brand_name, keywords), daemon=True).start()
+    return _brand_collect_job(key, brand_name, keywords)
 
 
 def register_swire_group(app):
@@ -392,7 +376,7 @@ def register_swire_group(app):
 
     @app.route('/api/swire/brand-save', methods=['POST'])
     def swire_brand_save():
-        """添加品牌；同名（含曾软删）品牌则重新激活并更新资料，随后异步采集补齐。"""
+        """Save a brand; collection requires an authorized SYSTEM task context."""
         import hashlib, re
         d = request.get_json(silent=True) or {}
         name = (d.get('name') or '').strip()
@@ -408,7 +392,7 @@ def register_swire_group(app):
             if row:
                 key = row['project_key']
                 c.execute("""UPDATE swire_projects SET is_active=1,city=?,line=?,intro=?,keywords=?,
-                    kind=?,opened=?,collect_status='queued',updated_at=? WHERE project_key=?""",
+                    kind=?,opened=?,updated_at=?,collect_status='unavailable' WHERE project_key=?""",
                           (city, line, intro, kws, kind, opened, now, key))
                 action = 'reactivated'
             else:
@@ -419,15 +403,16 @@ def register_swire_group(app):
                     i += 1; key = f'{base}_{i}'
                 mx = c.execute('SELECT COALESCE(MAX(sort),0) m FROM swire_projects').fetchone()['m']
                 c.execute("""INSERT INTO swire_projects(project_key,name,city,line,opened,intro,sort,kind,keywords,
-                    is_active,collect_status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,1,'queued',?,?)""",
+                    is_active,collect_status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,1,'unavailable',?,?)""",
                           (key, name, city, line, opened, intro, (mx or 0) + 10, kind, kws, now, now))
                 action = 'created'
             c.commit()
             brand = dict(c.execute('SELECT * FROM swire_projects WHERE project_key=?', (key,)).fetchone())
         finally:
             c.close()
-        _kickoff_brand_collect(key, name, kws)
-        return {'ok': True, 'action': action, 'brand': brand}
+        collection = _kickoff_brand_collect(key, name, kws)
+        return {'ok': True, 'action': action, 'brand': brand,
+                'collection': collection}
 
     @app.route('/api/swire/brand-collect', methods=['POST'])
     def swire_brand_collect():
@@ -444,7 +429,7 @@ def register_swire_group(app):
             b = dict(b)
         finally:
             c.close()
-        _kickoff_brand_collect(key, b['name'], b.get('keywords') or '')
-        return {'ok': True, 'status': 'collecting'}
+        collection = _kickoff_brand_collect(key, b['name'], b.get('keywords') or '')
+        return jsonify(collection), 409
 
     print('[SwireGroup] 品牌营销案例库模块已注册')

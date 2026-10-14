@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const APPROVED_ACCOUNT = 'XHS_RETINAUT';
@@ -145,4 +146,91 @@ export function assertApprovedCookiePayload(cookies) {
     validateCookieLocation(cookie);
   }
   return true;
+}
+
+export async function verifyRegisteredXhsBrowserContext(context) {
+  assertApprovedIdentity();
+  if (!context || typeof context.cookies !== 'function'
+      || typeof context.pages !== 'function') {
+    throw new Error('COLLECTOR_IDENTITY_CONTEXT_UNAVAILABLE');
+  }
+
+  let cookies;
+  try {
+    cookies = await context.cookies(['https://www.rednote.com']);
+  } catch {
+    throw new Error('COLLECTOR_IDENTITY_UNAVAILABLE');
+  }
+  if (!Array.isArray(cookies) || !cookies.some(cookie =>
+    String(cookie?.name || '').toLowerCase() === 'web_session'
+      && String(cookie?.value || '').trim())) {
+    throw new Error('COLLECTOR_IDENTITY_NOT_VERIFIED');
+  }
+  const userIds = new Set(cookies
+    .filter(cookie => String(cookie?.name || '').toLowerCase() === 'x-user-id-pro'
+      && String(cookie?.value || '').trim())
+    .map(cookie => String(cookie.value).trim().toLowerCase()));
+  if (userIds.size !== 1 || !userIds.has(APPROVED_USER_ID)) {
+    throw new Error('COLLECTOR_IDENTITY_MISMATCH');
+  }
+  const holderCountries = new Set(cookies
+    .filter(cookie => String(cookie?.name || '').toLowerCase() === 'x-rednote-holderctry'
+      && String(cookie?.value || '').trim())
+    .map(cookie => String(cookie.value).trim().toUpperCase()));
+  if (holderCountries.size > 0
+      && (holderCountries.size !== 1 || !holderCountries.has('HK'))) {
+    throw new Error('COLLECTOR_IDENTITY_MISMATCH');
+  }
+
+  let rednotePages;
+  try {
+    rednotePages = context.pages().filter(page => {
+      const url = new URL(String(page.url() || ''));
+      return url.protocol === 'https:' && url.hostname === 'www.rednote.com';
+    });
+  } catch {
+    throw new Error('COLLECTOR_IDENTITY_NOT_VERIFIED');
+  }
+  if (rednotePages.length === 0) {
+    throw new Error('COLLECTOR_IDENTITY_NOT_VERIFIED');
+  }
+
+  const selfIds = new Set();
+  try {
+    for (const page of rednotePages) {
+      const candidates = await page.locator('a.link-wrapper, a.bottom-channel').evaluateAll(els =>
+        els.map(el => ({
+          classes: Array.from(el.classList || []),
+          text: (el.innerText || el.textContent || '').trim(),
+          href: el.getAttribute('href') || '',
+        })));
+      for (const item of candidates || []) {
+        const classes = new Set(item.classes || []);
+        if (String(item.text || '').replace(/\s+/g, '') !== '我'
+            || (!classes.has('link-wrapper') && !classes.has('bottom-channel'))) continue;
+        const href = new URL(String(item.href || ''), 'https://www.rednote.com');
+        if (href.protocol !== 'https:' || href.hostname !== 'www.rednote.com'
+            || href.username || href.password || href.port || href.search || href.hash) {
+          throw new Error('COLLECTOR_IDENTITY_MISMATCH');
+        }
+        const match = href.pathname.match(/^\/user\/profile\/([0-9a-f]{24})\/?$/i);
+        if (!match) throw new Error('COLLECTOR_IDENTITY_MISMATCH');
+        selfIds.add(match[1].toLowerCase());
+      }
+    }
+  } catch (error) {
+    if (/^COLLECTOR_IDENTITY_/.test(String(error?.message || ''))) throw error;
+    throw new Error('COLLECTOR_IDENTITY_NOT_VERIFIED');
+  }
+  if (selfIds.size !== 1 || !selfIds.has(APPROVED_USER_ID)) {
+    throw new Error(selfIds.size ? 'COLLECTOR_IDENTITY_MISMATCH' : 'COLLECTOR_IDENTITY_NOT_VERIFIED');
+  }
+
+  return {
+    account: APPROVED_ACCOUNT,
+    region: APPROVED_REGION,
+    source_host: 'www.rednote.com',
+    verification_method: 'registered_context_cookie_and_self_profile',
+    identity_fingerprint_sha256: crypto.createHash('sha256').update(APPROVED_USER_ID).digest('hex'),
+  };
 }

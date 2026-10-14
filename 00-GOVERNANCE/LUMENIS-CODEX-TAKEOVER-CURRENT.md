@@ -72,7 +72,9 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+Database state: `NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`
+Real user E2E: `NOT_VERIFIED`
 
 通用CTH风险策略v2.1不再因参考主体名称命中而加分；商业风险词、升级规则、阈值及未知值语义保留。Gateway兼容审阅缺精确主体投影时保留规则结果并明确增强未就绪，不猜主体；有投影时显式传递名称/别名，形状校验不替代上游权限与来源证明。历史风险评分不回写，其未记录的策略版本返回未知，当前计算策略另列。77项隔离回归通过，正常产品运行、数据库与用户结果尚未验证。
 
@@ -82,7 +84,9 @@ User outcome: `NOT_VERIFIED`
 
 本批修复缺失风险/日报数据的数值语义：缺失返回None，真实观测零值保留；报告、摘要、行动和导出调用方检查未知值，不误报正常或品牌健康50分。保留原评分范围和实际业务权重。编译、静态和隔离回归仅证明有界代码；当前Runtime未加载、真实日报用户验收未进行。规则/逐屏草图/隧道分别PR #61/#63/#62已发布；其他类别仍独立验收。未操作原有工作分支、Production DB、模型或运行服务。已合入PR #64的Gateway清理及Gibbs回执：已训练、未上线，G163仍OPEN；本批不重复训练或声明模型收益。Gateway状态接口和Agent观察读取CTH/BMP实际服务绑定，汇总逐域状态，不把评估候选当运行服务；用户已选API只显示配置未验证，不发请求、不回退。历史退役Provider媒体评价通过原Evaluation读接口、汇总和AI面板统一标为HISTORICAL_NOT_REVERIFIED，保留原记录/快照，历史PASS不计当前通过。运行时加载及真实用户验收仍未验证。
 
-本批移除指定采集脚本的参考主体profile默认值和CDP示例；主体名称不选择账户；Python 原账户 Owner 核验批准身份和精确 Cookie/Profile 后传入子进程，JS 拒绝任意 profile、目录逃逸、错误身份和不安全 Cookie 域/URL；远端 CDP 只由既有 worker 核验其真实会话身份，不要求复制本机 Cookie；独立脚本导航与响应仅认国际 RedNote。隔离验收不读取真实凭据。ACC-02保持GLOBAL默认与既有参考覆盖维度，不把参考主体作为默认值。删除PO指定旧工单，历史证据链接固定到删除前提交，现行KOS要求仍由既有合同承接。关键词零命中只适用退役可执行路径/硬编码默认值，真实资料和历史证据保留。PR #61/#63/#62规则、草图、隧道及PR #64 Gateway/Gibbs、PR #65缺失数据修复已发布；G163仍OPEN。编译、静态和隔离回归不代表当前Runtime或真实用户验收；未操作原工作分支、浏览器、Cookie、DB、模型或运行服务。
+PR #66已发布：采集脚本不再默认参考主体Profile或固定CDP示例；账户Owner核验获准的HK/intl身份及Profile，JS拒绝任意Profile、目录逃逸、错误身份和不安全Cookie域/URL；远端CDP复用已注册worker身份，不复制本机Cookie；独立脚本导航和响应仅认国际RedNote。ACC-02继续GLOBAL默认，参考主体仅作深度覆盖；历史资料与失败证据保留。隔离检查未读真实凭据，Runtime与用户采集验收仍为NOT_VERIFIED。
+
+PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR分支含合入fresh main的组合版本）在既有SYSTEM Browser/Collector会话链补齐动态注册worker端点、进程/内核/Profile与身份核验，人工接管actor/task/lease传递及切换后端点重解析，并为搜索页提供任务级清理；采集后分析仅使用持久化Query Plan的服务端scope，没有可验证Scoped Evidence的旧事件阶段明确阻断。隔离回归114项Python、13项Node通过，变更Python编译、Node语法、constitution校验和CRLF-aware diff检查通过；所选路径Ruff仍有842条存量诊断，新增行无诊断。本轮审查修复补齐子进程精确service Python与Profile断言、跨平台Edge发现、Playwright受支持的连接释放、品牌重新启用的真实未采集状态；Google/Zhihu使用各自已登记后台worker，身份/挑战/连接失败不通过替代路径绕过。人工登录增加同actor/task取消及15分钟过期检查（状态/保存/取消/下一次显式登录触发），即使原任务核验状态已变化，返回操作仍须同actor/task已持租约及Browser Permission；只有核实返回后台才释放既有租约。新增该生命周期回归9项通过；无法证明重启后会话归属时拒绝猜测，自动孤儿接管恢复仍OPEN。增量15项Python与15项Node通过，编译/JS语法/差异通过，Ruff逐文件与HEAD对照无新增而非全量通过。PR #76 已合并至main（451d70eac6fdf510d6f9851eff8ea8415a50fcc7），本批普通合并该版本后复核Query Plan → 精确Scope → 分析/事件API组合，未复用不匹配版本的验收。同步搜索子进程也强制继承当前服务的绝对Python解释器并覆盖外部继承值；动态端点操作保留已验证账号，通用浏览器控制仅消费BACKGROUND，人工登录仍经专用actor/task/lease路径。Google使用既有注册机制的独立Profile，不连接个人端口。新增身份回归拒绝缺失或不匹配指纹，不弱化持久化身份保护。页面观察复用既有只读提取器，正文在页面侧限制2000字符、DOM保留400节点上限与真实截断状态，修复未定义表达式。该最终组合15份相关回归共243项通过、0失败/错误/跳过；15项Node身份回归通过，40个改动Python文件编译及JS语法通过，13个最终路径所选E9/F63/F7/F82检查通过（不是全量Ruff通过），架构/治理/constitution门禁及差异检查通过。旧夹具失败回执保留；修正只对齐真实注册Owner、身份、参数和来源页面，未删除正向/拒绝/UNKNOWN断言。SOURCE经本PR及精确CI发布；源码发布不升级运行结论。Runtime、DB、真实浏览器/会话、定时采集和完整保存/重开/恢复用户结果均为`NOT_VERIFIED`。
 
 本批通用业务搜索、分析、报告与导出不再隐式选择Subject/BrandFocus；业务读取沿服务端认证Scope，并逐条核验Canonical/Evidence/SourceUse。摘要截断、来源拒绝和覆盖不完整保留UNKNOWN/不完整，真实零值不变；`web_mention`与note进入同一统计链，不按来源类别改变权重。`/api/export/generate`保留JSON响应合同并复用SavedWork生成、读回；已保存报告下载在释放文件前重新核验保存时的来源绑定与当前SourceUse，并保留DATA_EXPORT；无归属旧平面文件不开放任意下载。AIHub与仍注册的`/api/ai/chat`兼容入口均只把静态功能元数据用于路由提示，普通聊天仍经现有Owned Gateway，未绑定逐来源SourceUse时不读取品牌目录、案例、业务统计或Canonical日报。日报缺失的负面数量和情感保持UNKNOWN，不回退到风险事件数或合成中性。焦点报告保留daily/weekly/monthly/yearly。GLOBAL目前仅有精确日报支持；旧ReportGenerator与engine没有可复用的已授权GLOBAL多周期路径，周/月/年仍为NOT_VERIFIED并明确不可用，不以默认主体代替。此前31条代码与回归路径的Git blob清单SHA-256为`e84e2d2e674374cda4d46372e543cc6192d88e0c3a1d98791e31c12555422935`；该指纹只覆盖此前有界子批，不包含本次最终Permission/Reporting路由修复。
 
