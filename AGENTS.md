@@ -1497,8 +1497,8 @@ Before adding a third party:
 
 1. inspect current manifests/import/runtime usage;
 2. prove a real capability gap;
-3. verify license from authoritative project/package sources;
-4. record attribution/notice obligations;
+3. pin source and verify code, asset and model licenses separately;
+4. record attribution/notice obligations and the existing owner/caller adoption;
 5. keep the dependency behind a bounded adapter where practical;
 6. record replacement direction.
 
