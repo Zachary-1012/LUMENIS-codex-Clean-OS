@@ -56,8 +56,12 @@ def _canonical_account(account: Optional[str]) -> str:
 
 
 def _port_for(account: Optional[str]) -> int:
+    """Resolve only the registered BACKGROUND worker for generic browser operations.
+
+    HUMAN_INTERACTIVE workers are reachable only through the dedicated, leased login path.
+    """
     if bridge:
-        port = bridge.cdp_port_for(account, headless=None)
+        port = bridge.cdp_port_for(account, headless=True)
         if port is not None:
             return int(port)
     raise RuntimeError("BROWSER_WORKER_ENDPOINT_UNAVAILABLE")
@@ -104,11 +108,10 @@ def _cdp(ws, method: str, params: dict = None, msg_id: int = 1, timeout: float =
 def get_state(account: Optional[str] = None) -> dict:
     """获取账号对应驻场浏览器的页面状态（URL/title/端口/在线）。"""
     acct = _canonical_account(account)
-    port = _port_for(acct)
     state = {
         "account": acct,
         "label": ACCOUNT_LABELS.get(acct, acct),
-        "cdp_port": port,
+        "cdp_port": None,
         "home_url": _home_for(acct),
         "online": False,
         "url": "",
@@ -116,6 +119,8 @@ def get_state(account: Optional[str] = None) -> dict:
         "page_count": 0,
     }
     try:
+        port = _port_for(acct)
+        state["cdp_port"] = port
         pages = _get_page_targets(port)
         state["online"] = len(pages) > 0
         state["page_count"] = len(pages)
@@ -123,7 +128,10 @@ def get_state(account: Optional[str] = None) -> dict:
             state["url"] = pages[0].get("url", "")
             state["title"] = pages[0].get("title", "")
     except Exception as e:
-        state["error"] = str(e)
+        state["status"] = "unavailable"
+        state["error_type"] = type(e).__name__
+    else:
+        state["status"] = "online" if state["online"] else "offline"
     return state
 
 
@@ -444,14 +452,14 @@ def register_internal_browser(app):
         data = request.get_json(force=True, silent=True) or {}
         url = data.get("url", "")
         confirmed = bool(data.get("confirmed", False))
-        account = data.get("account", "")
+        account = _canonical_account(data.get("account"))
         try:
-            port = _port_for(_canonical_account(account))
+            port = _port_for(account)
         except Exception as exc:  # noqa: BLE001 - unresolved browser ownership keeps the operation unavailable.
             return jsonify({"ok": False, "status": "unavailable", "error_type": type(exc).__name__}), 409
         try:
             import internal_browser_adapter as adapter
-            result = adapter.navigate(url, port=port, confirmed=confirmed)
+            result = adapter.navigate(url, port=port, confirmed=confirmed, account=account)
             status_code = 403 if result.get("status") == "blocked" else 200
             return jsonify(result), status_code
         except Exception as e:
@@ -461,10 +469,11 @@ def register_internal_browser(app):
     def api_tabs():
         """P1-D: 当前Tab列表（注册的香港/国际浏览器worker）。"""
         requested_port = request.args.get("port")
+        account = request.args.get("account") or None
         try:
             import internal_browser_adapter as adapter
             return jsonify(adapter.list_tabs(port=int(requested_port) if requested_port else None,
-                                             account="XHS_RETINAUT"))
+                                             account=account))
         except Exception as e:
             return jsonify({"ok": False, "error": str(e), "tabs": []}), 500
 
@@ -474,10 +483,11 @@ def register_internal_browser(app):
         data = request.get_json(force=True, silent=True) or {}
         requested_port = data.get("port")
         target_id = data.get("target_id", "")
+        account = data.get("account") or None
         try:
             import internal_browser_adapter as adapter
             return jsonify(adapter.refresh(port=int(requested_port) if requested_port else None,
-                                           target_id=target_id or None, account="XHS_RETINAUT"))
+                                           target_id=target_id or None, account=account))
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -487,12 +497,13 @@ def register_internal_browser(app):
         data = request.get_json(force=True, silent=True) or {}
         requested_port = data.get("port")
         target_id = data.get("target_id", "")
+        account = data.get("account") or None
         if not target_id:
             return jsonify({"ok": False, "error": "target_id 为空"}), 400
         try:
             import internal_browser_adapter as adapter
             return jsonify(adapter.switch_tab(port=int(requested_port) if requested_port else None,
-                                              target_id=target_id, account="XHS_RETINAUT"))
+                                              target_id=target_id, account=account))
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 

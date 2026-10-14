@@ -302,32 +302,66 @@ def _authorize_registered_xhs_human_worker(*, task_id=None, actor_ref=None):
 
 
 def registered_cdp_profile_for_port(port, browser=None):
-    """Resolve the existing SYSTEM owner for a reserved local browser port."""
+    """Resolve a protected/general port or one exact configured local worker."""
     port = int(port)
-    if port == 9222:  # Protected Mainland personal profile: never an automatic worker.
+    if port in {9222, 9223}:  # Protected legacy/personal ports are never workers.
         return None
     if port == 0:
         binding = _registered_xhs_binding()
         return binding["profile"] if binding else None
     try:
-        xhs = resolve_registered_xhs_worker(port=port)
-        if xhs.get("available"):
-            return xhs["profile"]
         if port == 9224:
             import browser_surface
             selected = browser or system_default_cdp_browser()
             return (os.path.abspath(browser_surface._general_profile_dir(selected))
                     if selected in {"chrome", "edge"} else None)
-        if port in {9225, 9226, 9227, 9228}:
-            from pathlib import Path
-            from lumenis.adapters.cookie_vault import _current_data_dir
-            from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
-            profile_root = (Path(_current_data_dir()) / "private" / "profiles").resolve()
-            for config in PLATFORM_CAPABILITIES.values():
-                worker = config.get("readonly_worker") if isinstance(config, dict) else None
-                if isinstance(worker, dict) and int(worker.get("port", -1)) == port:
-                    return str((profile_root / worker["profile"]).resolve())
-            return None
+        from lumenis.adapters.human_browser import readonly_worker_spec
+        from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
+
+        rows = []
+        for platform, config in PLATFORM_CAPABILITIES.items():
+            worker = config.get("readonly_worker") if isinstance(config, dict) else None
+            if not isinstance(worker, dict):
+                continue
+            try:
+                worker_port = int(worker["port"])
+            except (KeyError, TypeError, ValueError):
+                worker_port = None
+            rows.append({
+                "platform": platform,
+                "port": worker_port,
+                "account": str(worker.get("account") or "").strip().casefold(),
+                "profile": str(worker.get("profile") or "").strip(),
+            })
+
+        def profile_key(value):
+            normalized = ntpath.normpath(str(value or "").strip().replace("/", "\\"))
+            return ntpath.normcase(normalized).casefold()
+
+        matches = [row for row in rows if row["port"] == port]
+        if matches:
+            if len(matches) != 1:
+                return None
+            row = matches[0]
+            if (port < 1024 or port > 65535 or port in {9222, 9223, 9224}
+                    or not row["account"] or not row["profile"]
+                    or sum(item["port"] == port for item in rows) != 1
+                    or sum(item["account"] == row["account"] for item in rows) != 1
+                    or sum(profile_key(item["profile"]) == profile_key(row["profile"])
+                           for item in rows) != 1):
+                return None
+            spec = readonly_worker_spec(row["platform"])
+            if (int(spec["port"]) != port
+                    or str(spec["account"]).strip().casefold() != row["account"]
+                    or ntpath.basename(str(spec["profile"]).rstrip("\\/")).casefold()
+                    != row["profile"].casefold()):
+                return None
+            return spec["profile"]
+
+        # XHS is the only dynamic SYSTEM worker; unregistered static ports fail closed.
+        xhs = resolve_registered_xhs_worker(port=port)
+        if xhs.get("available"):
+            return xhs["profile"]
     except Exception:
         return None
     return None
@@ -344,19 +378,16 @@ def _profile_binding_allowed(port, profile_dir, browser=None):
             xhs_binding["profile"]):
         if port in {9222, 9223, 9224, 9225, 9226, 9227, 9228} or browser not in {None, "edge"}:
             return False
+        from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
+        if any(isinstance(config, dict)
+               and isinstance(config.get("readonly_worker"), dict)
+               and int(config["readonly_worker"].get("port", -1)) == port
+               for config in PLATFORM_CAPABILITIES.values()):
+            return False
         state = resolve_registered_xhs_worker(port=port)
         return bool(state.get("available") and state.get("port") == port)
-    if port == 9222:
+    if port in {9222, 9223}:
         return False
-    if port == 9223:
-        return False
-    if port not in {9224, 9225, 9226, 9227, 9228}:
-        return True
-    xhs = resolve_registered_xhs_worker(port=port)
-    if xhs.get("available"):
-        return bool(browser in {None, "edge"}
-                    and _normalized_profile_path(xhs["profile"])
-                    == _normalized_profile_path(profile_dir))
     if port == 9224 and browser is None:
         expected_profiles = [registered_cdp_profile_for_port(port, browser=name)
                             for name in ("chrome", "edge")]
@@ -518,21 +549,19 @@ def registered_cdp_browser_for_port(port, profile_dir=None, *, headless=None):
                     == _normalized_profile_path(state["profile"]))):
                 return state["browser"]
             return None
-        xhs = resolve_registered_xhs_worker(port=port, headless=headless)
-        if (xhs.get("available") and (profile_dir is None
-                or _normalized_profile_path(profile_dir)
-                == _normalized_profile_path(xhs["profile"]))):
-            return xhs["browser"]
-        if port not in {9224, 9225, 9226, 9227, 9228}:
-            return None
-        if profile_dir:
-            profiles = [profile_dir]
-        elif port == 9224:
-            profiles = [registered_cdp_profile_for_port(port, browser=name)
-                        for name in ("chrome", "edge")]
+        if port == 9224:
+            if profile_dir:
+                profiles = [profile_dir]
+            else:
+                profiles = [registered_cdp_profile_for_port(port, browser=name)
+                            for name in ("chrome", "edge")]
         else:
-            profile = registered_cdp_profile_for_port(port)
-            profiles = [profile] if profile else []
+            registered_profile = registered_cdp_profile_for_port(port)
+            if (not registered_profile or (profile_dir and
+                    _normalized_profile_path(profile_dir)
+                    != _normalized_profile_path(registered_profile))):
+                return None
+            profiles = [registered_profile]
         listener_pids, verified_listener = _cdp_listener_pids(port)
         if not verified_listener or len(listener_pids) != 1:
             return None

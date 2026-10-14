@@ -2637,7 +2637,11 @@ def api_metrics_canonical():
     except Exception:
         date_str = datetime.now().strftime('%Y-%m-%d')
     try:
-        summary = daily.generate_today_summary(date_str=date_str)
+        _actor, scope, _entries, _selected = _resolve_web_scope('read', module='reports')
+        summary = daily.generate_today_summary(date_str=date_str, scope=scope)
+    except (PermissionError, ValueError) as e:
+        status = 403 if isinstance(e, PermissionError) else 409
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), status
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
     return jsonify({
@@ -2649,6 +2653,7 @@ def api_metrics_canonical():
             'MET-RISK-02': {'name': 'brand_health_score', 'value': summary.get('brand_health_score'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-02'},
         },
         'context': {
+            'scope': summary.get('scope'),
             'total_found': summary.get('total_found'),
             'effective_count': summary.get('effective_count'),
             'positive_count': summary.get('positive_count'),
@@ -2658,24 +2663,78 @@ def api_metrics_canonical():
             'collection_health': summary.get('collection_health'),
         },
         'lineage': {
-            'source': 'notes + events (data/monitor.db)',
+            'source': 'scope-verified notes + events (data/monitor.db)',
             'function': 'lumenis.shared.reporting.daily.generate_today_summary',
             'registry': 'FUNCTION_REGISTRY.md FUNC-RISK-01/02 / METRIC_REGISTRY.md MET-RISK-01/02',
         },
     })
 
+def _resolve_web_scope(action, *, module='reports'):
+    """Compatibility wrapper for the shared Permission request-scope owner."""
+    from lumenis.system.security.permission import resolve_web_request_scope
+
+    return resolve_web_request_scope(action, module=module)
+
+
+def _web_scope_terms(entries):
+    terms = []
+    for entry in entries:
+        keywords = entry.get('keywords') if isinstance(entry.get('keywords'), list) else []
+        for value in (entry.get('name_zh'), entry.get('name_en'), *keywords):
+            if isinstance(value, str) and value.strip() and value.strip() not in terms:
+                terms.append(value.strip())
+    return terms
+
+
+def _web_scope_brands(entries, selected):
+    """Use the curated directory only for the exact registered Taikoo reference focus."""
+    import web_discovery
+    if (isinstance(selected, dict)
+            and selected.get('domain_id') == 'CTH'
+            and selected.get('name_zh') == '广州太古汇'):
+        directory = web_discovery.get_brand_directory()
+        if directory.get('status') != 'AVAILABLE':
+            raise RuntimeError(directory.get('reason') or 'REFERENCE_DIRECTORY_UNAVAILABLE')
+        brands = [row for row in directory.get('brands', []) if isinstance(row, dict)]
+        categories = sorted({str(row.get('category')).strip() for row in brands
+                             if isinstance(row.get('category'), str) and row.get('category').strip()})
+        return [name for row in brands for name in (row.get('brand_cn'), row.get('brand_en'))
+                if isinstance(name, str) and name.strip()], categories
+    brands = _web_scope_terms(entries)
+    categories = sorted({str(entry.get('industry')).strip() for entry in entries
+                         if isinstance(entry.get('industry'), str) and entry.get('industry').strip()})
+    return brands, categories
+
+
 @app.route('/api/intelligence/refresh',methods=['POST'])
 def api_intelligence_refresh():
-    if not _collect_lock.acquire(blocking=False): return jsonify({'ok':False,'error':'已有任务运行中'}),409
+    try:
+        actor, scope, entries, _selected = _resolve_web_scope('write', module='reports')
+    except (PermissionError, ValueError) as exc:
+        status = 403 if isinstance(exc, PermissionError) else 409
+        return jsonify({'ok':False,'status':'BLOCKED','code':str(exc)}),status
     body=request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return jsonify({'ok':False,'status':'INVALID_REQUEST','code':'INVALID_JSON_OBJECT'}),400
+    terms = _web_scope_terms(entries)
+    if not terms:
+        return jsonify({'ok':False,'status':'BLOCKED','code':'REGISTERED_SCOPE_TERMS_UNAVAILABLE'}),409
+    queries = web_discovery.brand_queries(terms)
+    if not queries:
+        return jsonify({'ok':False,'status':'BLOCKED','code':'SCOPED_QUERY_PLAN_UNAVAILABLE'}),409
+    if not _collect_lock.acquire(blocking=False): return jsonify({'ok':False,'error':'已有任务运行中'}),409
     try: limit=max(1,min(10000,int(body.get('limit',5000))))
     except (TypeError,ValueError): limit=5000
     task_id=f"intel-{datetime.now():%Y%m%d%H%M%S}"
     with _task_lock: collect_tasks[task_id]={'task_id':task_id,'status':'pending','message':'智能刷新任务已创建','progress':0,'created_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     def worker():
         try:
-            result=reprocess.full_refresh(limit=limit,web_limit=120,translate=False)
-            with _task_lock: collect_tasks[task_id].update(status='done',progress=100,message='历史数据库AI复核、全网发现、跨平台事件聚合完成',result=result)
+            result=reprocess.full_refresh(limit=limit,web_limit=120,translate=False,
+                web_queries=queries,scope=scope,actor=actor)
+            completed = result.get('status') == 'COMPLETED'
+            with _task_lock: collect_tasks[task_id].update(
+                status='done' if completed else 'partial', progress=100,
+                message='刷新流程已结束' if completed else '刷新流程部分完成，详见各阶段状态', result=result)
         except Exception as e:
             with _task_lock: collect_tasks[task_id].update(status='error',message=str(e),error=str(e))
         finally: _collect_lock.release()
@@ -3123,7 +3182,18 @@ def api_unified_search():
     q = request.args.get('q','') if request.method=='GET' else str((request.get_json(silent=True) or {}).get('q',''))
     try: limit=max(1,min(30,int(request.args.get('limit',12))))
     except Exception: limit=12
-    return jsonify(function_registry.search_targets(q, db=db, limit=limit))
+    scope = None
+    scope_state = 'SOURCE_SCOPE_UNAVAILABLE'
+    try:
+        _actor, scope, _entries, _selected = _resolve_web_scope('read', module='reports')
+        scope_state = 'VERIFIED'
+    except PermissionError:
+        scope_state = 'SOURCE_SCOPE_PERMISSION_DENIED'
+    except ValueError:
+        scope_state = 'SOURCE_SCOPE_UNAVAILABLE'
+    result = function_registry.search_targets(q, db=db, limit=limit, scope=scope)
+    result.setdefault('meta', {})['source_scope_state'] = scope_state
+    return jsonify(result)
 
 @app.route('/api/function-map')
 def api_function_map():
@@ -3348,16 +3418,33 @@ def api_collect_tasks():
 
 @app.route('/api/analyze',methods=['POST'])
 def api_analyze():
-    try: limit=max(1,min(5000,int((request.get_json(silent=True) or {}).get('limit',500))))
-    except (TypeError,ValueError): return jsonify({'ok':False,'error':'limit 必须为整数'}),400
-    clause,sp=_subject_sql_and_values(); with_db = db.get_db();
-    with with_db as conn: rows=conn.execute(f"SELECT * FROM notes WHERE is_taikoo_verified=1 AND {clause} ORDER BY id ASC LIMIT ?",tuple(sp)+(limit,)).fetchall()
-    counts={'accepted':0,'rejected':0,'errors':0}
-    for row in rows:
-        try: counts[reprocess.analyze_note_row(row,translate=False)] += 1
-        except Exception as e: counts['errors'] += 1; print('[Analyze]',e)
-    events=reprocess.build_cross_platform_events()
-    return jsonify({'ok':True,'counts':counts,'events':len(events),'ai_enabled':intelligence.ai_enabled()})
+    body = request.get_json(silent=True)
+    if body is None:
+        body = {}
+    if not isinstance(body, dict):
+        return jsonify({'ok': False, 'status': 'INVALID_REQUEST', 'code': 'INVALID_JSON_OBJECT'}), 400
+    try:
+        limit = max(1, min(5000, int(body.get('limit', 500))))
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'status': 'INVALID_REQUEST', 'code': 'INVALID_LIMIT'}), 400
+    try:
+        _actor, scope, _entries, _selected = _resolve_web_scope('write', module='reports')
+    except (PermissionError, ValueError) as exc:
+        status = 403 if isinstance(exc, PermissionError) else 409
+        return jsonify({'ok':False,'status':'BLOCKED','code':str(exc)}),status
+    counts=reprocess.reprocess_notes(limit, translate=False, scope=scope)
+    try:
+        aggregation=reprocess.build_cross_platform_events(scope=scope)
+        event_count=len(aggregation.get('events', []))
+        events={'status':aggregation.get('status', 'COMPLETED'),'count':event_count,
+                'rejected_source_count':aggregation.get('rejected_source_count', 0),
+                'truncated':aggregation.get('truncated', False)}
+    except ValueError as exc:
+        events={'status':'BLOCKED','code':str(exc)}
+    completed = counts.get('status') == 'COMPLETED' and events.get('status') == 'COMPLETED'
+    status = 'COMPLETED' if completed else 'PARTIAL'
+    return jsonify({'ok':completed,'status':status,'scope':scope,'counts':counts,
+                    'events':events,'ai_enabled':intelligence.ai_enabled()})
 
 def subject_hit_note_safe(note):
     return subject_hit(
@@ -3405,31 +3492,87 @@ def api_weekly_events_v570():
 @app.route('/api/web/browser-discovery',methods=['POST'])
 def api_browser_discovery_v570():
     data=request.get_json(silent=True) or {}
-    queries=data.get('queries') or ['广州太古汇 舆情','广州太古汇 投诉','广州太古汇 品牌','广州太古汇 餐饮','广州太古汇 活动']
-    limit=max(10,min(200,int(data.get('limit') or os.getenv('WEB_BROWSER_DISCOVERY_LIMIT','80'))))
+    if not isinstance(data, dict):
+        return jsonify({'ok':False,'status':'INVALID_REQUEST','code':'INVALID_JSON_OBJECT'}),400
+    try:
+        _actor, scope, entries, selected = _resolve_web_scope('read')
+    except (PermissionError, ValueError) as exc:
+        status = 403 if isinstance(exc, PermissionError) else 409
+        return jsonify({'ok':False,'status':'BLOCKED','code':str(exc)}),status
+    if scope['global_scope'] or not isinstance(selected, dict):
+        return jsonify({'ok':False,'status':'BLOCKED','code':'FOCUS_SCOPE_REQUIRED'}),409
+    raw_queries=data.get('queries')
+    if isinstance(raw_queries, str):
+        raw_queries=[raw_queries]
+    if not isinstance(raw_queries, list) or not raw_queries or any(
+            not isinstance(query, str) or not query.strip() for query in raw_queries):
+        return jsonify({'ok':False,'status':'INVALID_REQUEST','code':'QUERY_REQUIRED'}),400
+    terms = _web_scope_terms(entries)
+    if not terms:
+        return jsonify({'ok':False,'status':'BLOCKED','code':'REGISTERED_SCOPE_TERMS_UNAVAILABLE'}),409
+    anchor = terms[0]
+    queries = [query.strip() if anchor.casefold() in query.casefold()
+               else f'{anchor} {query.strip()}' for query in raw_queries[:20]]
+    try:
+        limit=max(1,min(200,int(data.get('limit') or os.getenv('WEB_BROWSER_DISCOVERY_LIMIT','80'))))
+    except (TypeError,ValueError):
+        return jsonify({'ok':False,'status':'INVALID_REQUEST','code':'INVALID_LIMIT'}),400
     items=browser_discovery.discover(queries,limit)
-    return jsonify({'ok':True,'count':len(items),'items':items,'budget':'independent_browser_search'})
+    return jsonify({'ok':True,'count':len(items),'items':items,'scope':scope,
+                    'queries':queries,'budget':'independent_browser_search'})
 
 @app.route('/api/web/brand-industry/plan')
 def api_brand_industry_plan_v570():
-    brands=_load_brands()
-    cats=sorted({b.get('category','') for b in brands if b.get('category')})
-    qs=web_discovery.brand_queries(brands,cats)
-    return jsonify({'ok':True,'total_targets':len(qs),'brands':len(brands),'categories':cats,'batch_size':int(request.args.get('batch','12'))})
+    try:
+        _actor, scope, entries, selected = _resolve_web_scope('read')
+        brands,cats=_web_scope_brands(entries,selected)
+        qs=web_discovery.brand_queries(brands,cats)
+    except (PermissionError, ValueError) as exc:
+        status = 403 if isinstance(exc, PermissionError) else 409
+        return jsonify({'ok':False,'status':'BLOCKED','code':str(exc)}),status
+    except RuntimeError as exc:
+        return jsonify({'ok':False,'status':'UNAVAILABLE','code':str(exc)}),503
+    try:
+        batch=max(1,min(30,int(request.args.get('batch','12'))))
+    except (TypeError,ValueError):
+        return jsonify({'ok':False,'status':'INVALID_REQUEST','code':'INVALID_BATCH'}),400
+    return jsonify({'ok':True,'scope':scope,'total_targets':len(qs),
+                    'brands':len(brands),'categories':cats,'batch_size':batch})
 
 @app.route('/api/web/brand-industry/run',methods=['POST'])
 def api_brand_industry_run_v570():
     data=request.get_json(silent=True) or {}
-    brands=_load_brands()
-    cats=sorted({b.get('category','') for b in brands if b.get('category')})
-    batch=max(1,min(30,int(data.get('batch',12))))
-    offset=max(0,int(data.get('offset',0)))
-    items,total=web_discovery.discover_brand_industry(brands,cats,batch,offset)
-    saved=0
-    for item in items:
-        try: db.insert_web_mention(item); saved+=1
-        except Exception as e: logger.warning('Failed to insert web mention: %s', e)
-    return jsonify({'ok':True,'fetched':len(items),'saved':saved,'total_targets':total,'next_offset':offset+batch if offset+batch<total else 0,'independent_budget':True})
+    if not isinstance(data, dict):
+        return jsonify({'ok':False,'status':'INVALID_REQUEST','code':'INVALID_JSON_OBJECT'}),400
+    try:
+        batch=max(1,min(30,int(data.get('batch',12))))
+        offset=max(0,int(data.get('offset',0)))
+    except (TypeError,ValueError):
+        return jsonify({'ok':False,'status':'INVALID_REQUEST','code':'INVALID_BATCH_OR_OFFSET'}),400
+    try:
+        actor, scope, entries, selected = _resolve_web_scope('write', module='collector')
+        brands,cats=_web_scope_brands(entries,selected)
+        queries=web_discovery.brand_queries(brands,cats)
+    except (PermissionError, ValueError) as exc:
+        status = 403 if isinstance(exc, PermissionError) else 409
+        return jsonify({'ok':False,'status':'BLOCKED','code':str(exc)}),status
+    except RuntimeError as exc:
+        return jsonify({'ok':False,'status':'UNAVAILABLE','code':str(exc)}),503
+    if not queries:
+        return jsonify({'ok':False,'status':'BLOCKED','code':'SCOPED_QUERY_PLAN_UNAVAILABLE'}),409
+    from lumenis.system.collector.adapters.secondary_collection import collect_search
+    results=[]
+    for query in queries[offset:offset+batch]:
+        results.append(collect_search('web_rss', query, max_results=20,
+            operator='human_ui', scope=scope, actor=actor))
+    success_count=sum(1 for item in results if item.get('ok') is True)
+    status='COMPLETED' if results and success_count == len(results) else ('PARTIAL' if success_count else 'BLOCKED')
+    return jsonify({'ok':status == 'COMPLETED','status':status,'scope':scope,
+                    'results':results,'fetched':sum(int(item.get('raw_count') or 0) for item in results),
+                    'saved':sum(int(item.get('imported') or 0) for item in results),
+                    'total_targets':len(queries),
+                    'next_offset':offset+batch if offset+batch<len(queries) else 0,
+                    'independent_budget':True}), (200 if success_count else 409)
 
 @app.route('/api/notes/publish-buckets')
 def api_publish_buckets_v570():
@@ -4316,58 +4459,78 @@ def api_negative_review_reject(note_id):
     return jsonify(resp), status
 
 # ================= v5.8.2 事件负面二次确认（与笔记同口径，事件中心联动）=================
-def _event_set_review(event_id, state, by='admin'):
-    """事件二次确认。state=1确认负面时，联动确认其关联负面笔记（事件由笔记聚合，
-    确认事件即确认其下笔记）；关联走 event_mentions，缺失时用事件关键词兜底匹配。
-    返回 {'events':事件更新行数, 'notes':联动笔记数}"""
-    conn = get_repository().connect(); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+def _event_set_review(event_id, state, scope, by):
+    """Confirm one currently Evidence-verified event and its exact linked notes atomically."""
+    import database as db
+    requested = db._normalize_event_scope(scope, allow_global=True)
+    conn = get_repository().connect()
+    conn.row_factory = sqlite3.Row
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    # 兼容主键 id 或 event_key，先定位到事件真实行
     try:
-        row = cur.execute("SELECT * FROM events WHERE id=?", (int(event_id),)).fetchone()
-    except (TypeError, ValueError):
-        row = cur.execute("SELECT * FROM events WHERE event_key=?", (event_id,)).fetchone()
-    if not row:
-        conn.close(); return {'events': 0, 'notes': 0}
-    ev = dict(row); real_id = ev['id']
-    cur.execute("UPDATE events SET negative_confirmed=?, negative_confirmed_at=?, negative_confirmed_by=? WHERE id=?",
-                (state, now, by, real_id))
-    affected = cur.rowcount
-    notes_affected = 0
-    if state == 1:  # 仅“确认负面”联动笔记；驳回不强制改笔记，保留人工分别研判
-        linked = [r[0] for r in cur.execute(
-            "SELECT DISTINCT source_id FROM event_mentions WHERE event_id=?", (real_id,)).fetchall() if r[0]]
-        if linked:
-            qm = ','.join('?' * len(linked))
-            cur.execute(f"UPDATE notes SET negative_confirmed=1, negative_confirmed_at=?, negative_confirmed_by=? "
-                        f"WHERE note_id IN ({qm}) AND sentiment='negative' AND COALESCE(negative_confirmed,0)!=1",
-                        [now, by] + linked)
+        conn.execute('BEGIN IMMEDIATE')
+        event = db.get_scoped_event(event_id, requested, connection=conn, include_sources=True)
+        if event is None:
+            raise ValueError('EVENT_NOT_FOUND_IN_SCOPE')
+        event_scope = {
+            'domain_id': event.get('domain_id') or requested['domain_id'],
+            'product_id': event.get('product_id') or requested['product_id'],
+            'subject_id': event.get('subject_id') or None,
+            'brand_focus_id': event.get('brand_focus_id') or None,
+            'global_scope': False,
+        }
+        event_scope = db._normalize_event_scope(event_scope)
+        source_ids = sorted({str(source['source_id']) for source in event.get('sources', [])
+                             if source.get('source_type') == 'note' and source.get('source_id')})
+        focus_column = 'subject_id' if event_scope['product_id'] == 'CTH' else 'brand_focus_id'
+        cur = conn.cursor()
+        cur.execute(
+            f"UPDATE events SET negative_confirmed=?, negative_confirmed_at=?, negative_confirmed_by=? "
+            f"WHERE id=? AND scope_status='VERIFIED' AND {focus_column}=?",
+            (state, now, by, event['id'], event_scope[focus_column]),
+        )
+        affected = cur.rowcount
+        notes_affected = 0
+        if state == 1 and source_ids:
+            placeholders = ','.join('?' for _ in source_ids)
+            cur.execute(
+                f"UPDATE notes SET negative_confirmed=1, negative_confirmed_at=?, negative_confirmed_by=? "
+                f"WHERE note_id IN ({placeholders}) AND sentiment='negative' "
+                f"AND scope_status='VERIFIED' AND {focus_column}=? "
+                "AND COALESCE(negative_confirmed,0)!=1",
+                [now, by] + source_ids + [event_scope[focus_column]],
+            )
             notes_affected = cur.rowcount
-        if notes_affected == 0:  # 兜底：event_mentions 缺失时用事件关键词匹配负面笔记
-            kws = []
-            try:
-                kws = [k for k in json.loads(ev.get('keywords') or '[]') if k]
-            except Exception:
-                kws = []
-            if kws:
-                cond = " OR ".join(["(title LIKE ? OR summary LIKE ? OR event_hint LIKE ?)"] * len(kws))
-                params = []
-                for k in kws:
-                    params += [f"%{k}%"] * 3
-                cur.execute(f"UPDATE notes SET negative_confirmed=1, negative_confirmed_at=?, negative_confirmed_by=? "
-                            f"WHERE sentiment='negative' AND COALESCE(negative_confirmed,0)!=1 AND ({cond})",
-                            [now, by] + params)
-                notes_affected = cur.rowcount
-    conn.commit(); conn.close()
-    return {'events': affected, 'notes': notes_affected}
+        conn.commit()
+        return {'events': affected, 'notes': notes_affected}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+def _event_review_actor_ref(actor):
+    """Return the server-authenticated identity used for event review attribution."""
+    from lumenis.system.security import permission as security_permission
+
+    if type(actor) is dict:
+        actor_id = actor.get('id')
+        if type(actor_id) is int and actor_id > 0:
+            return str(actor_id)
+    if security_permission._is_server_local_workspace_principal(actor):
+        return actor.principal_ref
+    raise PermissionError('AUTH_REQUIRED')
+
 
 @app.route('/api/event-review/<event_id>/confirm', methods=['POST'])
 def api_event_review_confirm(event_id):
     """确认事件负面（核准）——人工确认后该事件从待核实/待确认列表移除，并联动确认其关联负面笔记"""
     try:
-        res = _event_set_review(event_id, 1)
+        actor, scope, _entries, _selected = _resolve_web_scope('write', module='reports')
+        res = _event_set_review(event_id, 1, scope, _event_review_actor_ref(actor))
         return jsonify({'ok': True, 'event_id': event_id, 'confirmed': True,
                         'affected': res['events'], 'notes_linked': res['notes']})
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -4375,8 +4538,11 @@ def api_event_review_confirm(event_id):
 def api_event_review_reject(event_id):
     """驳回事件（非负面/误报）——人工处理后不再出现在待确认列表（不联动改笔记，保留分别研判）"""
     try:
-        res = _event_set_review(event_id, 2)
+        actor, scope, _entries, _selected = _resolve_web_scope('write', module='reports')
+        res = _event_set_review(event_id, 2, scope, _event_review_actor_ref(actor))
         return jsonify({'ok': True, 'event_id': event_id, 'rejected': True, 'affected': res['events']})
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -4384,14 +4550,22 @@ def api_event_review_reject(event_id):
 def api_event_review_pending():
     """待人工确认的事件：风险事件且未二次确认（negative_confirmed=0），按风险/时间倒序"""
     try:
+        _actor, scope, _entries, _selected = _resolve_web_scope('read', module='reports')
         limit = request.args.get('limit', 50, type=int)
-        conn = get_repository().connect(); conn.row_factory = sqlite3.Row
-        rows = conn.execute("""SELECT * FROM events
-                               WHERE (negative_confirmed=0 OR negative_confirmed IS NULL)
-                                 AND (risk_level IN ('high','medium') OR fact_status IN ('unconfirmed','partially_confirmed'))
-                               ORDER BY risk_score DESC, last_seen DESC LIMIT ?""", (limit,)).fetchall()
-        conn.close()
-        return jsonify({'ok': True, 'total': len(rows), 'events': [dict(r) for r in rows]})
+        limit = max(1, min(200, limit))
+        result = db.get_scoped_events(limit=5000, scope=scope)
+        events = [event for event in result['events']
+                  if event.get('negative_confirmed') in (None, 0)
+                  and (event.get('risk_level') in ('high', 'medium', 'critical')
+                       or event.get('fact_status') in ('unconfirmed', 'partially_confirmed'))]
+        events.sort(key=lambda event: (event.get('risk_score') is not None,
+                                       event.get('risk_score') or 0,
+                                       event.get('last_seen') or ''), reverse=True)
+        return jsonify({'ok': True, 'total': len(events[:limit]), 'events': events[:limit],
+                        'scope': scope, 'truncated': result.get('truncated', False),
+                        'rejected_count': result.get('rejected_count', 0)})
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -4399,12 +4573,22 @@ def api_event_review_pending():
 def api_event_review_stats():
     """事件负面确认统计：待确认/已确认/已驳回"""
     try:
-        conn = get_repository().connect(); cur = conn.cursor()
-        pending = cur.execute("SELECT COUNT(*) FROM events WHERE (negative_confirmed=0 OR negative_confirmed IS NULL) AND risk_level IN('high','medium')").fetchone()[0]
-        confirmed = cur.execute("SELECT COUNT(*) FROM events WHERE negative_confirmed=1").fetchone()[0]
-        rejected = cur.execute("SELECT COUNT(*) FROM events WHERE negative_confirmed=2").fetchone()[0]
-        conn.close()
-        return jsonify({'ok': True, 'pending': pending, 'confirmed': confirmed, 'rejected': rejected})
+        _actor, scope, _entries, _selected = _resolve_web_scope('read', module='reports')
+        result = db.get_scoped_events(limit=5000, scope=scope)
+        if result.get('truncated') or result.get('rejected_count'):
+            return jsonify({'ok': True, 'status': 'INCOMPLETE', 'pending': None,
+                            'confirmed': None, 'rejected': None,
+                            'candidate_count': result.get('candidate_count'),
+                            'rejected_count': result.get('rejected_count'), 'scope': scope})
+        events = result['events']
+        pending = sum(1 for event in events if event.get('negative_confirmed') in (None, 0)
+                      and event.get('risk_level') in ('high', 'medium', 'critical'))
+        confirmed = sum(1 for event in events if event.get('negative_confirmed') == 1)
+        rejected = sum(1 for event in events if event.get('negative_confirmed') == 2)
+        return jsonify({'ok': True, 'status': 'COMPLETE', 'pending': pending,
+                        'confirmed': confirmed, 'rejected': rejected, 'scope': scope})
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -4413,38 +4597,33 @@ def api_event_notes(event_id):
     """事件关联的真实笔记：优先 event_mentions 关联表（event_id→note_id），
     关联缺失时用事件关键词兜底匹配。负面/高风险在前，供事件详情“查看相关笔记案例”。"""
     try:
-        conn = get_repository().connect(); conn.row_factory = sqlite3.Row; cur = conn.cursor()
-        try:
-            row = cur.execute("SELECT * FROM events WHERE id=?", (int(event_id),)).fetchone()
-        except (TypeError, ValueError):
-            row = cur.execute("SELECT * FROM events WHERE event_key=?", (event_id,)).fetchone()
-        if not row:
-            conn.close(); return jsonify({'ok': True, 'notes': [], 'total': 0, 'matched_by': 'none'})
-        ev = dict(row); real_id = ev['id']
-        order = ("CASE n.sentiment WHEN 'negative' THEN 0 WHEN 'neutral' THEN 1 ELSE 2 END, "
-                 "CASE n.risk_level WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, "
-                 "COALESCE(n.risk_score,0) DESC")
-        notes = [dict(r) for r in cur.execute(f"""
-            SELECT n.* FROM event_mentions m JOIN notes n ON n.note_id=m.source_id
-            WHERE m.event_id=? ORDER BY {order} LIMIT 100""", (real_id,)).fetchall()]
-        matched_by = 'event_mentions'
-        if not notes:  # 兜底：事件关键词匹配标题/摘要/event_hint
-            kws = []
+        _actor, scope, _entries, _selected = _resolve_web_scope('read', module='reports')
+        event = db.get_scoped_event(event_id, scope, include_sources=True)
+        if event is None:
+            return jsonify({'ok': False, 'error': 'Not found in authorized scope'}), 404
+        notes = [source for source in event.get('sources', []) if source.get('source_type') == 'note']
+
+        def _linked_note_risk_key(note):
+            score = note.get('risk_score')
+            score_known = type(score) in (int, float) and not isinstance(score, bool)
             try:
-                kws = [k for k in json.loads(ev.get('keywords') or '[]') if k]
-            except Exception:
-                kws = []
-            if kws:
-                cond = " OR ".join(["(n.title LIKE ? OR n.summary LIKE ? OR n.event_hint LIKE ?)"] * len(kws))
-                params = []
-                for k in kws:
-                    params += [f"%{k}%"] * 3
-                notes = [dict(r) for r in cur.execute(f"""
-                    SELECT n.* FROM notes n WHERE COALESCE(n.is_duplicate,0)=0
-                    AND ({cond}) ORDER BY {order} LIMIT 100""", params).fetchall()]
-                matched_by = 'keywords'
-        conn.close()
-        return jsonify({'ok': True, 'notes': notes, 'total': len(notes), 'matched_by': matched_by})
+                score_value = float(score) if score_known else 0.0
+            except (TypeError, ValueError, OverflowError):
+                score_known = False
+                score_value = 0.0
+            return (
+                0 if note.get('sentiment') == 'negative' else 1,
+                0 if note.get('risk_level') in ('critical', 'high', 'medium') else 1,
+                0 if score_known else 1,
+                -score_value if score_known else 0.0,
+            )
+
+        notes.sort(key=_linked_note_risk_key)
+        notes = notes[:100]
+        return jsonify({'ok': True, 'notes': notes, 'total': len(notes),
+                        'matched_by': 'verified_event_mentions', 'scope': scope})
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -4487,33 +4666,45 @@ def api_reports_export_v532():
     if fmt not in ("docx", "csv", "xlsx"):
         return jsonify({"ok": False, "error": "format 必须为 docx/csv/xlsx"}), 400
     try:
-        result = export_api.export_artifacts(kind, request.args.get("start"), request.args.get("end"), (fmt,))
-        file_path = result["files"][fmt]
-        # 读取文件内容，使用英文文件名避免latin-1编码问题
-        with open(file_path, 'rb') as f:
-            file_data = f.read()
-        from urllib.parse import quote
-        safe_name = f"Taikoo_{kind}_{result['payload']['period_start']}_{result['payload']['period_end']}.{fmt}"
-        resp = Response(file_data, mimetype={
-            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'csv': 'text/csv; charset=utf-8-sig',
-            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        }[fmt])
-        resp.headers['Content-Disposition'] = f'attachment; filename="{safe_name}"'
-        resp.headers['Content-Length'] = str(len(file_data))
+        from lumenis.shared.reporting.routes import _authorized_report_scope
+        actor, scope, _entries, selected = _authorized_report_scope('read')
+        result = export_api.export_artifacts(
+            kind, request.args.get("start"), request.args.get("end"), (fmt,),
+            actor=actor, scope=scope, scope_entry=selected)
+        artifact = result['files'][fmt]
+        resp = Response(artifact['content'], mimetype=artifact['media_type'])
+        resp.headers['Content-Disposition'] = f"attachment; filename=\"{artifact['filename']}\""
+        resp.headers['Content-Length'] = str(len(artifact['content']))
+        resp.headers['X-Lumenis-Saved'] = 'false'
+        resp.headers['X-Lumenis-Persistence-State'] = 'DOWNLOAD_ONLY_NOT_SAVED'
+        resp.headers['X-Lumenis-Content-SHA256'] = artifact['sha256']
         return resp
-    except Exception as e:
-        import traceback
-        return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+    except Exception as exc:
+        return export_api._report_error(exc)
 
 @app.get("/api/reports/export-all")
 def api_reports_export_all_v532():
     try:
-        result = export_api.export_artifacts(request.args.get("type", "daily"), request.args.get("start"), request.args.get("end"), ("docx", "csv", "xlsx"))
-        return jsonify({"ok": True, "files": result["files"], "payload": result["payload"]})
-    except Exception as e:
-        import traceback
-        return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+        from io import BytesIO
+        from zipfile import ZIP_DEFLATED, ZipFile
+        from lumenis.shared.reporting.routes import _authorized_report_scope
+        actor, scope, _entries, selected = _authorized_report_scope('read')
+        result = export_api.export_artifacts(
+            request.args.get("type", "daily"), request.args.get("start"), request.args.get("end"),
+            ("docx", "csv", "xlsx"), actor=actor, scope=scope, scope_entry=selected)
+        archive = BytesIO()
+        with ZipFile(archive, 'w', compression=ZIP_DEFLATED) as bundle:
+            for artifact in result['files'].values():
+                bundle.writestr(artifact['filename'], artifact['content'])
+        archive.seek(0)
+        response = send_file(archive, as_attachment=True,
+                             download_name=f"lumenis_reports_{result['payload']['period_start']}_{result['payload']['period_end']}.zip",
+                             mimetype='application/zip', max_age=0)
+        response.headers['X-Lumenis-Saved'] = 'false'
+        response.headers['X-Lumenis-Persistence-State'] = 'DOWNLOAD_ONLY_NOT_SAVED'
+        return response
+    except Exception as exc:
+        return export_api._report_error(exc)
 
 # ===== 工程度量 API（P0-E 落地，engineering_metrics.py）=====
 @app.get("/api/engineering-metrics")
@@ -5188,112 +5379,15 @@ def api_email_settings():
     return jsonify({'ok':True,'message':'SMTP非敏感配置已保存；密码请写入SMTP_PASSWORD环境变量。'})
 
 def _send_daily_email():
-    st=_smtp_settings()
-    cfg_path=Path(__file__).parent/'data'/'email_smtp.json'
-    if cfg_path.exists():
-        try: st.update(json.loads(cfg_path.read_text(encoding='utf-8')))
-        except Exception as e: logger.warning('Failed to load SMTP config: %s', e)
-    recipients=[x for x in _load_config().get('push_emails',[]) if '@' in x]
-    if not recipients or not (st.get('host') and st.get('user') and st.get('password')):
-        return {'sent':0,'skipped':'SMTP未配置或未设置收件邮箱'}
-    date_str=(datetime.now()-timedelta(days=1)).strftime('%Y-%m-%d')
-    try: digest=daily.generate_daily_digest(date_str)
-    except Exception: digest={}
-    body=('广州太古汇小红书舆情日报｜'+date_str+'\n\n'
-          '总监测：'+str(digest.get('total_found','—'))+'\n'
-          '有效舆情：'+str(digest.get('effective_count','—'))+'\n'
-          '负面：'+str(digest.get('negative_count','—'))+'\n'
-          '高风险：'+str(digest.get('risk_count','—'))+'\n\n'
-          '管理层摘要：\n'+str(digest.get('executive_summary') or digest.get('ai_summary') or '请登录系统查看完整日报。'))
-    msg=EmailMessage(); msg['Subject']='【广州太古汇舆情日报】'+date_str; msg['From']=st.get('from') or st['user']; msg['To']=', '.join(recipients); msg.set_content(body)
-    try:
-        if st.get('ssl'):
-            with smtplib.SMTP_SSL(st['host'],int(st.get('port',465)),timeout=20) as server:
-                server.login(st['user'],st['password']); server.send_message(msg)
-        else:
-            with smtplib.SMTP(st['host'],int(st.get('port',587)),timeout=20) as server:
-                server.starttls(); server.login(st['user'],st['password']); server.send_message(msg)
-        return {'sent':len(recipients),'recipients':recipients}
-    except Exception as exc:
-        print('[Email] send failed:',exc); return {'sent':0,'error':str(exc)}
+    # Background delivery has no authenticated Subject/BrandFocus selection.
+    # Do not send a cached date-only report under a historic default identity.
+    return {'sent': 0, 'skipped': 'REPORT_SCOPE_REQUIRED'}
 
 # ===== v5.7.0 周报邮件功能 =====
 def _send_weekly_email():
-    st=_smtp_settings()
-    cfg_path=Path(__file__).parent/'data'/'email_smtp.json'
-    if cfg_path.exists():
-        try: st.update(json.loads(cfg_path.read_text(encoding='utf-8')))
-        except Exception as e: logger.warning('Failed to load SMTP config: %s', e)
-    recipients=[x for x in _load_config().get('push_emails',[]) if '@' in x]
-    if not recipients or not (st.get('host') and st.get('user') and st.get('password')):
-        return {'sent':0,'skipped':'SMTP未配置或未设置收件邮箱'}
-    
-    # 计算自然周（周一到周日）
-    today=datetime.now().date()
-    monday=today - timedelta(days=today.weekday())
-    sunday=monday + timedelta(days=6)
-    week_str=f'{monday.strftime("%Y-%m-%d")} 至 {sunday.strftime("%Y-%m-%d")}'
-    
-    # 获取周报数据
-    try:
-        with db.get_db() as conn:
-            weekly_data=weekly_events.weekly_payload(conn, str(monday), str(sunday))
-    except Exception as e:
-        print('[Weekly] 获取周报数据失败:', e)
-        weekly_data={}
-    
-    # 统计
-    total_notes=weekly_data.get('total_notes', 0)
-    negative_count=weekly_data.get('negative_count', 0)
-    high_risk_count=weekly_data.get('high_risk_count', 0)
-    events=weekly_data.get('events', [])
-    urgent_events=[e for e in events if e.get('urgency')=='紧急' or e.get('priority')=='high']
-    normal_events=[e for e in events if e not in urgent_events]
-    
-    # 构建邮件正文
-    body_lines=[
-        f'广州太古汇舆情周报｜{week_str}',
-        '',
-        '【数据概览】',
-        f'总监测笔记：{total_notes}条',
-        f'负面笔记：{negative_count}条',
-        f'高风险笔记：{high_risk_count}条',
-        f'舆情事件：{len(events)}个（紧急{len(urgent_events)}个，一般{len(normal_events)}个）',
-        '',
-    ]
-    
-    if urgent_events:
-        body_lines.append('【紧急事件】')
-        for i, ev in enumerate(urgent_events[:5], 1):
-            body_lines.append(f'{i}. {ev.get("title","未知事件")}（风险：{ev.get("risk_level","-")}，关联笔记：{ev.get("note_count",0)}条）')
-        body_lines.append('')
-    
-    if normal_events:
-        body_lines.append('【一般事件】')
-        for i, ev in enumerate(normal_events[:5], 1):
-            body_lines.append(f'{i}. {ev.get("title","未知事件")}（风险：{ev.get("risk_level","-")}，关联笔记：{ev.get("note_count",0)}条）')
-        body_lines.append('')
-    
-    body_lines.append('请登录系统查看完整周报及事件详情。')
-    body='\n'.join(body_lines)
-    
-    msg=EmailMessage()
-    msg['Subject']=f'【广州太古汇舆情周报】{week_str}'
-    msg['From']=st.get('from') or st['user']
-    msg['To']=', '.join(recipients)
-    msg.set_content(body)
-    
-    try:
-        if st.get('ssl'):
-            with smtplib.SMTP_SSL(st['host'],int(st.get('port',465)),timeout=20) as server:
-                server.login(st['user'],st['password']); server.send_message(msg)
-        else:
-            with smtplib.SMTP(st['host'],int(st.get('port',587)),timeout=20) as server:
-                server.starttls(); server.login(st['user'],st['password']); server.send_message(msg)
-        print(f'[Weekly] 周报邮件已发送给 {len(recipients)} 人')
-        return {'sent':len(recipients),'recipients':recipients,'week':week_str}
-    except Exception as exc:
-        print('[Weekly] send failed:',exc); return {'sent':0,'error':str(exc)}
+    # Scheduled delivery has no authenticated Subject/BrandFocus selection.
+    # Do not send date-only data under a historic default identity.
+    return {'sent': 0, 'skipped': 'REPORT_SCOPE_REQUIRED'}
 
 @app.route('/api/weekly/send-email', methods=['POST'])
 def api_send_weekly_email():
@@ -5755,132 +5849,233 @@ def api_dashboard_all():
     conn = None
     try:
         import sqlite3
-        from datetime import datetime, timedelta
-        
-        DB_PATH = db.DB_PATH
-        # 使用WAL模式和超时配置，提高多线程稳定性
-        conn = get_repository().connect(timeout=30, check_same_thread=False)
-        conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA busy_timeout=30000')
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        result = {'ok': True, 'server_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-        total_notes = 0
-        
-        # 1. 概览统计
-        try:
-            cursor.execute("SELECT COUNT(*) as total FROM notes")
-            total_notes = cursor.fetchone()['total']
-            cursor.execute("SELECT COUNT(*) as verified FROM notes WHERE is_taikoo_verified=1")
-            verified_notes = cursor.fetchone()['verified']
-            cursor.execute("SELECT COUNT(*) as negative FROM notes WHERE sentiment='negative'")
-            negative_notes = cursor.fetchone()['negative']
-            cursor.execute("SELECT COUNT(*) as today FROM notes WHERE DATE(collected_at)=DATE('now')")
-            today_notes = cursor.fetchone()['today']
-            # 近14天趋势（与 /api/overview 同口径），补齐主轮询 renderTrend 所需，避免“暂无趋势数据”
-            _now = datetime.now(); _start = (_now - timedelta(days=13)).strftime('%Y-%m-%d'); _end = _now.strftime('%Y-%m-%d')
-            _cl, _sp = _subject_sql_and_values()
-            _trows = cursor.execute(
-                f"SELECT publish_date, COUNT(*) total, SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) negative, "
-                f"SUM(CASE WHEN risk_level='high' THEN 1 ELSE 0 END) high FROM notes "
-                f"WHERE is_taikoo_verified=1 AND {_cl} AND publish_date BETWEEN ? AND ? GROUP BY publish_date",
-                tuple(_sp) + (_start, _end)).fetchall()
-            _by = {r['publish_date']: {'total': r['total'] or 0, 'negative': r['negative'] or 0, 'high': r['high'] or 0} for r in _trows}
-            _trend = []
-            for _i in range(14):
-                _dd = (_now - timedelta(days=13 - _i)).strftime('%Y-%m-%d')
-                _xx = _by.get(_dd, {'total': 0, 'negative': 0, 'high': 0})
-                _trend.append({'date': _dd, 'label': _dd[5:], 'total': _xx['total'], 'negative': _xx['negative'], 'high': _xx['high']})
+        from datetime import date, datetime, timedelta
+        _actor, dashboard_scope, _entries, _selected = _resolve_web_scope('read', module='reports')
 
-            result['overview'] = {
-                'total_notes': total_notes,
-                'verified_notes': verified_notes,
-                'negative_notes': negative_notes,
-                'today_notes': today_notes,
-                'unanalyzed': total_notes - verified_notes,
-                'trend': _trend
+        result = {'ok': True, 'server_time': datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')}
+
+        # Resolve the complete note set through the existing source-level
+        # Canonical/Evidence reader. Its result is a bounded sample, so every
+        # aggregate carries explicit coverage and becomes unknown when the
+        # read was truncated or rejected stale sources.
+        note_read = db.get_scoped_event_source_rows(
+            dashboard_scope, source_types=('note',), limit=5000,
+        )
+        note_rows = [row for row in note_read.get('sources', []) if isinstance(row, dict)]
+        notes_complete = (not note_read.get('truncated') and not note_read.get('rejected_count'))
+        notes_coverage = {
+            'state': 'COMPLETE' if notes_complete else 'INCOMPLETE',
+            'candidate_count': note_read.get('candidate_count'),
+            'verified_count': len(note_rows),
+            'rejected_count': note_read.get('rejected_count', 0),
+            'truncated': bool(note_read.get('truncated')),
+            'basis': 'current scoped Canonical rows with matching signed source Evidence',
+        }
+        result['notes_coverage'] = notes_coverage
+
+        import canonical_metrics as _cm
+        _sentiment = _cm.sentiment_count(note_rows)
+        _risk = _cm.risk_count(note_rows)
+        _engagement = _cm.engagement_stats(note_rows)
+        _category_counts = {}
+        for note in note_rows:
+            category = note.get('category')
+            if isinstance(category, str) and category.strip():
+                category = category.strip()
+                _category_counts[category] = _category_counts.get(category, 0) + 1
+        _categories = [
+            {'category': category, 'count': count}
+            for category, count in sorted(_category_counts.items(), key=lambda item: (-item[1], item[0]))
+        ]
+
+        if notes_complete:
+            _scope_total = len(note_rows)
+            _stats = {
+                'total': _scope_total,
+                'positive': _sentiment['positive'],
+                'neutral': _sentiment['neutral'],
+                'negative': _sentiment['negative'],
+                'unknown_sentiment': _sentiment['unknown'],
+                'critical_risk': _risk['critical'],
+                'high_risk': _risk['high'],
+                'medium_risk': _risk['medium'],
+                'low_risk': _risk['low'],
+                'unknown_risk': _risk['missing'] + _risk['other'],
+                'total_likes': _engagement['per_field']['likes'],
+                'total_comments': _engagement['per_field']['comments'],
+                'total_engagements': _engagement['sum'],
+                'official_count': sum(note.get('is_official') == 1 for note in note_rows),
+                'verified_count': _scope_total,
+                'coverage_state': 'COMPLETE',
             }
-        except Exception as e:
-            result['overview'] = {'error': str(e), 'total_notes': 0}
-        
-        # 2. 统计数据（补全前端需要的所有字段）
-        try:
-            # [Canonical P0] 情感/风险/互动统一走 canonical_metrics 唯一实现(FN-SENTIMENT/RISK/ENGAGEMENT)
-            # 一次取数替代原6趟全表聚合;输出字段与口径不变(已验证四字段无NULL/情感仅三值,数字零变化)
-            import canonical_metrics as _cm
-            _note_rows = [dict(r) for r in cursor.execute(
-                "SELECT sentiment, risk_level, likes, comments, collects, shares FROM notes").fetchall()]
-            _sc = _cm.sentiment_count(_note_rows)
-            _rc = _cm.risk_count(_note_rows)
-            _es = _cm.engagement_stats(_note_rows)
-            sentiment_stats = {'positive': _sc['positive'], 'neutral': _sc['neutral'], 'negative': _sc['negative']}
-            result['stats'] = {
-                'sentiment': sentiment_stats,
-                'total': total_notes,
-                'positive': _sc['positive'],
-                'neutral': _sc['neutral'],
-                'negative': _sc['negative'],
-                'high_risk': _rc['high'],
-                'medium_risk': _rc['medium'],
-                'low_risk': _rc['low'],
-                'total_engagements': _es['sum'],
-                'total_comments': _es['per_field']['comments'],
-                'categories': db.get_category_distribution()
+            _sentiment_stats = {
+                'positive': _sentiment['positive'],
+                'neutral': _sentiment['neutral'],
+                'negative': _sentiment['negative'],
             }
-        except Exception as e:
-            result['stats'] = {'error': str(e), 'total': total_notes}
+            _stats_categories = _categories
+        else:
+            _scope_total = None
+            _stats = {
+                key: None for key in (
+                    'total', 'positive', 'neutral', 'negative', 'unknown_sentiment',
+                    'critical_risk', 'high_risk', 'medium_risk', 'low_risk',
+                    'unknown_risk', 'total_likes', 'total_comments',
+                    'total_engagements', 'official_count', 'verified_count',
+                )
+            }
+            _stats['coverage_state'] = 'INCOMPLETE'
+            _sentiment_stats = {'positive': None, 'neutral': None, 'negative': None}
+            _stats_categories = None
+
+        _today = datetime.now().astimezone().date().isoformat()
+        _collection_days = [str(note.get('collected_at') or '')[:10] for note in note_rows]
+        _today_complete = notes_complete
+        for _day_value in _collection_days:
+            try:
+                date.fromisoformat(_day_value)
+            except (TypeError, ValueError):
+                _today_complete = False
+                break
+        _today_count = sum(day == _today for day in _collection_days)
+
+        # The old field compared a reference-specific verification flag with
+        # an all-notes count. Current verification is the scoped Canonical and
+        # signed-Evidence read above; analysis state has no reliable note field.
+        result['overview'] = {
+            'state': 'COMPLETE' if notes_complete else 'INCOMPLETE',
+            'total_notes': _scope_total,
+            'verified_notes': _scope_total,
+            'verified_basis': 'current scoped Canonical and signed source Evidence',
+            'negative_notes': _sentiment['negative'] if notes_complete else None,
+            'today_notes': _today_count if _today_complete else None,
+            'today_notes_state': 'COMPLETE' if _today_complete else 'UNKNOWN_COLLECTION_TIME',
+            'unanalyzed': None,
+            'unanalyzed_state': 'ANALYSIS_STATUS_UNAVAILABLE',
+            'coverage': notes_coverage,
+        }
+
+        # Derive the trend from the same full scoped Canonical read. If any
+        # source lacks a usable publication date, or the scope read is partial,
+        # day totals remain unknown rather than turning unplaceable records
+        # into apparent zeroes.
+        _now = datetime.now().astimezone()
+        _trend_dates = [str(row.get('publish_date') or row.get('publish_datetime') or '')[:10]
+                        for row in note_rows]
+        _publication_dates_complete = True
+        for _day_value in _trend_dates:
+            try:
+                date.fromisoformat(_day_value)
+            except (TypeError, ValueError):
+                _publication_dates_complete = False
+                break
+        _trend_complete = notes_complete and _publication_dates_complete
+        _trend = []
+        for _i in range(14):
+            _dd = (_now - timedelta(days=13 - _i)).strftime('%Y-%m-%d')
+            _day_rows = [row for row, published_day in zip(note_rows, _trend_dates)
+                         if published_day == _dd]
+            if _trend_complete:
+                _day_sentiment = _cm.sentiment_count(_day_rows)
+                _day_risk = _cm.risk_count(_day_rows)
+                _day = {
+                    'total': len(_day_rows),
+                    'negative': _day_sentiment['negative'],
+                    'high': _day_risk['high'],
+                }
+            else:
+                _day = {'total': None, 'negative': None, 'high': None}
+            _trend.append({'date': _dd, 'label': _dd[5:], **_day})
+        result['overview']['trend'] = _trend
+        result['overview']['trend_state'] = (
+            'COMPLETE' if _trend_complete else
+            'INCOMPLETE_SCOPE' if not notes_complete else 'UNKNOWN_PUBLICATION_TIME'
+        )
+
+        result['stats'] = {
+            'state': 'COMPLETE' if notes_complete else 'INCOMPLETE',
+            'sentiment': _sentiment_stats,
+            'total': _scope_total,
+            'positive': _stats['positive'],
+            'neutral': _stats['neutral'],
+            'negative': _stats['negative'],
+            'high_risk': _stats['high_risk'],
+            'medium_risk': _stats['medium_risk'],
+            'low_risk': _stats['low_risk'],
+            'total_engagements': _stats['total_engagements'],
+            'total_comments': _stats['total_comments'],
+            'categories': _stats_categories,
+            'categories_state': 'COMPLETE' if notes_complete else 'INCOMPLETE',
+            'coverage': notes_coverage,
+        }
         
-        # 3. 未读告警
+        # 3. SYSTEM/运营告警（不与业务 notes 聚合混用）
         try:
+            conn = get_repository().connect(timeout=30, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='alerts'")
             if cursor.fetchone():
                 cursor.execute("SELECT * FROM alerts WHERE is_read=0 ORDER BY rowid DESC LIMIT 20")
                 result['alerts'] = [dict(row) for row in cursor.fetchall()]
+                result['alerts_state'] = 'AVAILABLE'
             else:
                 result['alerts'] = []
+                result['alerts_state'] = 'NOT_AVAILABLE'
         except Exception as e:
             result['alerts'] = []
+            result['alerts_state'] = 'UNAVAILABLE'
         
         # 4. 事件列表（质量分级：重点事件优先，泛化“相关讨论”折叠、占位备注隐藏，与事件中心同口径）
         try:
-            _cur = db.get_events_curated(12)
+            _cur = db.get_events_curated(12, scope=dashboard_scope)
             result['events'] = _cur['featured']
-            result['events_meta'] = {'generic_count': _cur['generic_count'], 'noise_count': _cur['noise_count']}
+            result['events_meta'] = {'generic_count': _cur['generic_count'], 'noise_count': _cur['noise_count'],
+                                     'rejected_count': _cur.get('rejected_count'), 'scope': dashboard_scope}
         except Exception as e:
             result['events'] = []
         
-        # 5. 风险告警（从notes表查询高/中风险笔记，risk_alerts表不存在）
-        try:
-            cursor.execute("""
-                SELECT id, note_id, title, author_nickname, sentiment, risk_level, risk_score,
-                       likes, comments, shares, collects, collected_at, publish_date, url,
-                       category, summary, event_hint
-                FROM notes 
-                WHERE risk_level IN ('critical','high','medium') 
-                ORDER BY risk_score DESC, collected_at DESC 
-                LIMIT 20
-            """)
-            result['risk_alerts'] = [dict(row) for row in cursor.fetchall()]
-        except Exception as e:
-            result['risk_alerts'] = []
+        # 5. 风险告警，来自已核验的当前范围样本。
+        def _risk_sort_key(note):
+            score = note.get('risk_score')
+            score_known = type(score) in (int, float) and not isinstance(score, bool)
+            try:
+                score_value = float(score) if score_known else 0.0
+            except (TypeError, ValueError, OverflowError):
+                score_known = False
+                score_value = 0.0
+            return (
+                0 if note.get('sentiment') == 'negative' else 1,
+                0 if note.get('risk_level') in ('critical', 'high', 'medium') else 1,
+                0 if score_known else 1,
+                -score_value if score_known else 0.0,
+                str(note.get('collected_at') or ''),
+            )
+
+        _risk_alert_rows = [note for note in note_rows
+                            if note.get('risk_level') in ('critical', 'high', 'medium')]
+        _risk_alert_rows.sort(key=_risk_sort_key)
+        result['risk_alerts'] = _risk_alert_rows[:20]
+        result['risk_alerts_state'] = 'COMPLETE' if notes_complete else 'INCOMPLETE'
         
-        # 6. 热门话题（使用category字段分组）
-        try:
-            cursor.execute("""
-                SELECT category as topic, COUNT(*) as count,
-                       SUM(CASE WHEN sentiment='positive' THEN 1 ELSE 0 END) as positive,
-                       SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) as negative,
-                       SUM(CASE WHEN sentiment='neutral' THEN 1 ELSE 0 END) as neutral
-                FROM notes 
-                WHERE category IS NOT NULL AND category != ''
-                GROUP BY category 
-                ORDER BY count DESC 
-                LIMIT 14
-            """)
-            result['hot_topics'] = [dict(row) for row in cursor.fetchall()]
-        except Exception as e:
-            result['hot_topics'] = []
+        # 6. 热门话题按当前范围 Canonical 样本中的 category 派生。
+        _topic_groups = {}
+        for note in note_rows:
+            topic = note.get('category')
+            if not isinstance(topic, str) or not topic.strip():
+                continue
+            topic = topic.strip()
+            bucket = _topic_groups.setdefault(topic, {
+                'topic': topic, 'count': 0, 'positive': 0, 'negative': 0,
+                'neutral': 0, 'unknown': 0,
+            })
+            bucket['count'] += 1
+            sentiment = note.get('sentiment')
+            bucket[sentiment if sentiment in ('positive', 'negative', 'neutral') else 'unknown'] += 1
+        result['hot_topics'] = sorted(
+            _topic_groups.values(), key=lambda item: (-item['count'], item['topic']),
+        )[:14]
+        result['hot_topics_state'] = 'COMPLETE' if notes_complete else 'INCOMPLETE'
         
         # 7. AI状态：只读唯一 owned Gateway，不探测或回退旧 Provider。
         try:
@@ -5906,27 +6101,41 @@ def api_dashboard_all():
 
         # 9. v5.9.0 合并字段：供前端统一轮询，避免多个独立30s请求
         try:
-            cur2 = conn.cursor()
-            # 待审核负面数（口径与 /api/negative/pending 一致）
-            cur2.execute("SELECT COUNT(*) AS c FROM notes WHERE sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)")
-            result['pending_negative'] = cur2.fetchone()['c']
+            # Incomplete Canonical coverage cannot produce an authoritative total.
+            result['pending_negative'] = (
+                sum(note.get('sentiment') == 'negative'
+                    and note.get('negative_confirmed') in (None, 0) for note in note_rows)
+                if notes_complete else None
+            )
+            result['pending_negative_state'] = 'COMPLETE' if notes_complete else 'INCOMPLETE'
             # 未读预警数（口径与 /api/alerts?unread=1 一致；无 is_read 列时回退为 alerts 长度）
             try:
-                cur2.execute("SELECT COUNT(*) AS c FROM alerts WHERE is_read=0")
-                result['unread_alerts'] = cur2.fetchone()['c']
+                if conn is None:
+                    result['unread_alerts'] = len(result.get('alerts', []))
+                else:
+                    cur2 = conn.cursor()
+                    cur2.execute("SELECT COUNT(*) AS c FROM alerts WHERE is_read=0")
+                    result['unread_alerts'] = cur2.fetchone()['c']
             except Exception:
                 result['unread_alerts'] = len(result.get('alerts', []))
             # 数据变更摘要（口径与 /api/dashboard/changes 一致）
             result['changes'] = {
-                'server_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'server_time': datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S'),
                 'version': APP_VERSION,
-                'stats': db.get_stats()
+                'stats': _stats,
+                'stats_state': 'COMPLETE' if notes_complete else 'INCOMPLETE',
+                'scope': dashboard_scope,
             }
         except Exception as e:
             result['poll_extras_error'] = str(e)
 
         return jsonify(result)
     
+    except (PermissionError, ValueError) as e:
+        if conn:
+            try: conn.close()
+            except Exception: pass
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
     finally:
@@ -6475,91 +6684,9 @@ def api_collection_logs():
 
 
 
-# ===== v5.6.6 全网话题事件搜集（普通浏览器搜索，不占用小红书检索次数） =====
-import urllib.request
-import urllib.parse
-import re
-from html import unescape
-
-def search_web_topics(keyword, max_results=10):
-    """通过普通网页搜索获取话题事件，不占用小红书检索次数"""
-    try:
-        # 使用必应搜索（无需登录，普通浏览器可访问）
-        query = urllib.parse.quote(f"{keyword} 舆情 话题 事件 2026")
-        url = f"https://www.bing.com/search?q={query}&count={max_results}"
-        req = urllib.request.Request(url, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        })
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            html = resp.read().decode('utf-8', errors='ignore')
-        # 解析搜索结果
-        results = []
-        # 提取标题和摘要
-        pattern = r'<li class="b_algo".*?<h2><a[^>]*href="([^"]*)"[^>]*>(.*?)</a></h2>.*?<p[^>]*>(.*?)</p>'
-        matches = re.findall(pattern, html, re.DOTALL)
-        for url, title, snippet in matches[:max_results]:
-            clean_title = re.sub(r'<[^>]+>', '', unescape(title)).strip()
-            clean_snippet = re.sub(r'<[^>]+>', '', unescape(snippet)).strip()
-            if clean_title and len(clean_title) > 5:
-                results.append({
-                    'title': clean_title,
-                    'url': url,
-                    'snippet': clean_snippet[:200],
-                    'source': 'web_search',
-                    'collected_at': datetime.now().isoformat()
-                })
-        return results
-    except Exception as e:
-        print(f'[WebSearch] 搜索失败: {e}')
-        return []
-
-def get_trending_topics():
-    """获取当前热门话题（从多个来源）"""
-    topics = []
-    # 1. 搜索广州太古汇相关话题
-    topics.extend(search_web_topics('广州太古汇', 5))
-    # 2. 搜索高端商场舆情话题
-    topics.extend(search_web_topics('高端商场 舆情 投诉', 5))
-    # 3. 搜索奢侈品服务话题
-    topics.extend(search_web_topics('奢侈品专柜 服务 投诉', 5))
-    # 去重
-    seen = set()
-    unique = []
-    for t in topics:
-        if t['title'] not in seen:
-            seen.add(t['title'])
-            unique.append(t)
-    return unique[:15]
-
-# 全网话题数据缓存
-_web_topics_cache = {'data': [], 'updated_at': None}
-
-def update_web_topics():
-    """更新全网话题缓存（每6小时自动更新）"""
-    global _web_topics_cache
-    try:
-        topics = get_trending_topics()
-        _web_topics_cache = {'data': topics, 'updated_at': datetime.now().isoformat()}
-        print(f'[WebTopics] 更新完成，共{len(topics)}条话题')
-        return topics
-    except Exception as e:
-        print(f'[WebTopics] 更新失败: {e}')
-        return []
-
-def get_web_topics():
-    """获取全网话题（优先缓存）"""
-    global _web_topics_cache
-    if _web_topics_cache['data'] and _web_topics_cache['updated_at']:
-        updated = datetime.fromisoformat(_web_topics_cache['updated_at'])
-        if (datetime.now() - updated).total_seconds() < 21600:  # 6小时缓存
-            return _web_topics_cache['data']
-    # 缓存过期，异步更新
-    threading.Thread(target=update_web_topics, daemon=True).start()
-    return _web_topics_cache['data']
-
 @app.route('/api/web-topics')
 def api_web_topics():
-    """v5.9.0 优先读 web_topics 表真实数据并映射前端字段，为空回退内存缓存"""
+    """Read previously admitted topic rows; never start an unscoped background search."""
     topics=[];updated_at=None
     try:
         _c=get_repository().connect(timeout=30);_c.row_factory=sqlite3.Row
@@ -6572,15 +6699,36 @@ def api_web_topics():
             topics.append(d)
         updated_at=rows[0]['created_at'] if rows else None
     except Exception as e:
-        print(f'[WebTopics] 读库失败，回退缓存: {e}')
-    if not topics:
-        topics=get_web_topics();updated_at=_web_topics_cache.get('updated_at')
-    return jsonify({'ok':True,'topics':topics,'count':len(topics),'updated_at':updated_at})
+        import logging
+        logging.getLogger(__name__).warning('web topic read failed (%s)', type(e).__name__)
+        return jsonify({'ok':False,'status':'UNAVAILABLE','code':'WEB_TOPIC_READ_UNAVAILABLE',
+                        'topics':[],'count':None,'updated_at':None}),503
+    return jsonify({'ok':True,'status':'AVAILABLE' if topics else 'EMPTY',
+                    'topics':topics,'count':len(topics),'updated_at':updated_at})
 @app.route('/api/web-topics/refresh', methods=['POST'])
 def api_web_topics_refresh():
-    """手动刷新全网话题"""
-    topics = update_web_topics()
-    return jsonify({'ok': True, 'topics': topics, 'count': len(topics)})
+    """Collect registered-scope public-web sources through the existing Collector."""
+    try:
+        actor, scope, entries, _selected = _resolve_web_scope('write', module='collector')
+    except (PermissionError, ValueError) as exc:
+        status = 403 if isinstance(exc, PermissionError) else 409
+        return jsonify({'ok':False,'status':'BLOCKED','code':str(exc)}),status
+    queries = _web_scope_terms(entries)
+    if not queries:
+        return jsonify({'ok':False,'status':'BLOCKED','code':'REGISTERED_SCOPE_TERMS_UNAVAILABLE'}),409
+    try:
+        import reprocess
+        result = reprocess.discover_web(limit=120, queries=queries[:20], scope=scope, actor=actor)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception('scoped web topic collection failed')
+        return jsonify({'ok':False,'status':'ERROR','code':'WEB_TOPIC_COLLECTION_FAILED'}),500
+    accepted = result.get('accepted')
+    return jsonify({'ok':result.get('status') == 'COMPLETED',
+                    'status':result.get('status'),'scope':scope,
+                    'topics':result.get('results',[]),
+                    'count':accepted if type(accepted) is int else None,
+                    'collection':result}), 200 if result.get('status') in {'COMPLETED','PARTIAL'} else 409
 
 # ===== ZBIP Workspace 只读面板（文件树 / 只读终端）——Staging 旁路，纯只读、过滤敏感、防路径穿越 =====
 import subprocess as _ws_sp

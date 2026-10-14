@@ -7,10 +7,10 @@ from unittest.mock import Mock
 import pytest
 
 from lumenis.adapters import x_platform
+from lumenis.adapters.base import CollectedNote
 from lumenis.system.collector.adapters import x_platform as main_x
 from lumenis.system.collector.adapters.base import CollectionStatus
 from scripts import start_resident_browsers as resident
-from lumenis.adapters.base import CollectedNote
 
 
 def test_x_worker_requires_exact_opt_in_and_profile_binding(monkeypatch, tmp_path):
@@ -38,6 +38,7 @@ def test_worker_plan_isolated_and_never_in_default_startup(monkeypatch, tmp_path
         "account": "X_READONLY",
         "port": 9226,
         "profile": str(tmp_path / "profiles" / "x-readonly"),
+        "env_prefix": "X_READONLY",
         "home": "about:blank",
         "direct": False,
     }
@@ -63,8 +64,11 @@ def test_worker_plan_isolated_and_never_in_default_startup(monkeypatch, tmp_path
 
 
 def test_explicit_launcher_refuses_unknown_port_owner(monkeypatch):
-    monkeypatch.setattr(resident.cdp_helper, "system_default_cdp_browser", lambda: "edge")
     monkeypatch.setattr(resident, "port_online", lambda port: port == 9226)
+    # A listening port whose PID/profile binding cannot be proved is rejected
+    # by the registered-owner resolver before the compatibility verifier runs.
+    owner = Mock(return_value=None)
+    monkeypatch.setattr(resident.cdp_helper, "registered_cdp_browser_for_port", owner)
     bound = Mock(return_value=False)
     monkeypatch.setattr(resident.cdp_helper, "is_cdp_profile_running", bound)
     start = Mock(side_effect=AssertionError("unknown port owner must not be reused"))
@@ -73,28 +77,36 @@ def test_explicit_launcher_refuses_unknown_port_owner(monkeypatch):
     row = resident.launch_x_readonly()
     assert row["action"] == "port_in_use_unverified"
     assert not row["online"]
-    bound.assert_called_once_with(9226, row["profile"])
+    assert row["port_open"]
+    owner.assert_called_once_with(9226, row["profile"], headless=True)
+    bound.assert_not_called()
     start.assert_not_called()
 
 
 def test_explicit_launcher_binds_exact_loopback_profile(monkeypatch, tmp_path):
     monkeypatch.setattr(resident, "bridge", SimpleNamespace(PRIVATE_DATA_DIR=str(tmp_path)))
     monkeypatch.setattr(resident.cdp_helper, "system_default_cdp_browser", lambda: "edge")
-    monkeypatch.setattr(resident, "port_online", lambda port: port == 9226)
-    monkeypatch.setattr(resident.cdp_helper, "is_cdp_profile_running", lambda *_: False)
     monkeypatch.setattr(resident, "port_online", lambda port: False)
     started = Mock(return_value={"success": True, "pid": 123})
     monkeypatch.setattr(resident.cdp_helper, "start_cdp_browser", started)
+    binding = Mock(return_value=True)
+    monkeypatch.setattr(resident.cdp_helper, "is_cdp_profile_running", binding)
 
     row = resident.launch_x_readonly()
     assert row["profile"] == str(tmp_path / "profiles" / "x-readonly")
+    assert row["online"] is True
+    binding.assert_called_once_with(
+        9226, row["profile"], headless=True, loopback_only=True, browser="edge")
     started.assert_called_once_with(
         port=9226,
         profile_dir=row["profile"],
         launch_url="about:blank",
         direct_connection=False,
         browser="edge",
+        headless=True,
         loopback_only=True,
+        task_id=None,
+        actor_ref=None,
     )
 
 
@@ -195,11 +207,13 @@ def _note(platform="x"):
 
 def test_detail_uses_opted_in_worker_and_closes_only_its_page(monkeypatch):
     article = object()
-    page = _FakePage(articles=[article], elements={"article": article})
+    page = _FakePage(url="https://x.com/i/web/status/123", articles=[article],
+                     elements={"article": article})
     worker = _FakeWorker(page)
     monkeypatch.setattr(x_platform, "_new_browser_worker", lambda: worker)
     monkeypatch.setattr(x_platform, "inject_into_context", lambda *_: 0)
-    monkeypatch.setattr(x_platform.XAdapter, "_parse_x_tweet", lambda *_: _note())
+    monkeypatch.setattr(x_platform.XAdapter, "_parse_x_tweet",
+                        lambda *_args, **_kwargs: _note())
     result = x_platform.XAdapter(cookie_string="test-only").detail("123")
     assert result.success and result.raw_count == 1
     assert worker.stealth is False
@@ -296,20 +310,24 @@ def test_generic_transition_counter_is_not_persisted_as_views():
         def inner_text(self):
             return "1.2K"
 
-    class Tweet:
-        def query_selector(self, selector):
-            if "app-text-transition-container" in selector:
-                return Counter()
-            return None
+        def evaluate(self, _expression):
+            return False
 
-        def query_selector_all(self, _selector):
+    class Tweet:
+        def query_selector_all(self, selector):
+            if selector == '[data-testid="app-text-transition-container"]':
+                return [Counter()]
             return []
 
     note = x_platform.XAdapter(cookie_string="test-only")._parse_x_tweet(Tweet())
     assert note.likes is None
     assert note.raw_data["views"] is None
     assert note.raw_data["metric_display"]["views"] is None
-    assert note.raw_data["unclassified_counter_display"] == {"aria_label": "1.2K", "text": "1.2K"}
+    assert note.raw_data["unclassified_counter_display"] == {
+        "aria_label": "1.2K",
+        "text": "1.2K",
+        "locator": '[data-testid="app-text-transition-container"]',
+    }
 
 
 

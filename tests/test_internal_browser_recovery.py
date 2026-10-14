@@ -1,15 +1,239 @@
 # -*- coding: utf-8 -*-
 """内置浏览器恢复回路测试（mock CDP，不依赖驻场浏览器）。"""
 import json
+from types import SimpleNamespace
+
+import pytest
+
 import internal_browser as ib
 
 
-def test_internal_browser_defaults_to_hk_production(monkeypatch):
-    """无账号/无显式端口的生产浏览请求不得静默落到大陆诊断端口。"""
+def test_internal_browser_defaults_to_hk_identity_but_requires_registered_worker(monkeypatch):
+    """默认逻辑身份保留；没有注册的后台 Worker 时不得猜测端口。"""
     monkeypatch.setattr(ib, "bridge", None)
     assert ib._canonical_account(None) == "XHS_RETINAUT"
-    assert ib._port_for(None) == 9223
+    with pytest.raises(RuntimeError, match="BROWSER_WORKER_ENDPOINT_UNAVAILABLE"):
+        ib._port_for(None)
     assert ib._home_for(None) == "https://www.rednote.com"
+
+
+def test_generic_internal_browser_operations_resolve_background_worker_only(monkeypatch):
+    """通用操作只解析 headless Worker，不得接管 HUMAN_INTERACTIVE 租约。"""
+    calls = []
+
+    def cdp_port_for(account, *, headless=True):
+        calls.append((account, headless))
+        if headless is True:
+            return 9477
+        return None
+
+    monkeypatch.setattr(
+        ib,
+        "bridge",
+        SimpleNamespace(
+            _canonical_account_name=lambda account: account or "XHS_RETINAUT",
+            cdp_port_for=cdp_port_for,
+            home_url_for=lambda _account: "https://www.rednote.com",
+        ),
+    )
+    assert ib._port_for("XHS_RETINAUT") == 9477
+    assert calls == [("XHS_RETINAUT", True)]
+
+
+def test_generic_internal_browser_does_not_fall_back_to_human_worker(monkeypatch):
+    """只有 HUMAN_INTERACTIVE Worker 在线时，通用内部操作仍应不可用。"""
+    calls = []
+
+    def cdp_port_for(account, *, headless=True):
+        calls.append((account, headless))
+        return 9444 if headless is False else None
+
+    monkeypatch.setattr(
+        ib,
+        "bridge",
+        SimpleNamespace(cdp_port_for=cdp_port_for),
+    )
+    with pytest.raises(RuntimeError, match="BROWSER_WORKER_ENDPOINT_UNAVAILABLE"):
+        ib._port_for("XHS_RETINAUT")
+    assert calls == [("XHS_RETINAUT", True)]
+
+
+def test_internal_browser_state_reports_missing_worker_without_raising(monkeypatch):
+    """Capability/state callers get an honest unavailable record, not HTTP 500."""
+    monkeypatch.setattr(
+        ib,
+        "bridge",
+        SimpleNamespace(
+            _canonical_account_name=lambda account: account or "XHS_RETINAUT",
+            cdp_port_for=lambda _account, *, headless=True: None,
+            home_url_for=lambda _account: "https://www.rednote.com",
+        ),
+    )
+
+    state = ib.get_state("XHS_RETINAUT")
+
+    assert state["status"] == "unavailable"
+    assert state["online"] is False
+    assert state["cdp_port"] is None
+    assert state["error_type"] == "RuntimeError"
+
+
+def test_internal_browser_adapter_preserves_account_through_nested_cdp_calls(monkeypatch):
+    import browser_surface as bs
+    import internal_browser_adapter as adapter
+
+    port = 9477
+    account = "XHS_RETINAUT"
+    resolved = []
+    nested = []
+
+    def resolve_endpoint(requested_account, requested_port=None):
+        resolved.append((requested_account, requested_port))
+        return port
+
+    class FakeWebSocket:
+        def close(self):
+            pass
+
+    ws = FakeWebSocket()
+    chosen = {"target_id": "registered-tab"}
+    monkeypatch.setattr(bs, "_resolve_port", resolve_endpoint)
+    monkeypatch.setattr(bs, "evaluate_navigation", lambda _url: {"status": "allowed"})
+    monkeypatch.setattr(
+        bs,
+        "navigate_tab",
+        lambda *_args, **kwargs: nested.append(("navigate", kwargs.get("account")))
+        or {"ok": True, "target_id": "registered-tab"},
+    )
+    monkeypatch.setattr(
+        bs,
+        "_hybrid_screenshot",
+        lambda **kwargs: nested.append(("screenshot", kwargs.get("account")))
+        or {"ok": True},
+    )
+    monkeypatch.setattr(
+        bs,
+        "list_targets",
+        lambda **kwargs: nested.append(("list", kwargs.get("account")))
+        or {"ok": True, "tabs": [], "count": 0},
+    )
+    monkeypatch.setattr(
+        bs,
+        "_find_tab_ws",
+        lambda *_args, **kwargs: nested.append(("find", kwargs.get("account")))
+        or (ws, chosen),
+    )
+    monkeypatch.setattr(
+        bs,
+        "activate_tab",
+        lambda *_args, **kwargs: nested.append(("activate", kwargs.get("account")))
+        or {"ok": True},
+    )
+    monkeypatch.setattr(ib, "_cdp", lambda *_args, **_kwargs: {"result": {"result": {"value": "ok"}}})
+
+    assert adapter.navigate("https://www.xiaohongshu.com", port=port)["ok"] is True
+    assert adapter.screenshot(port=port)["ok"] is True
+    assert adapter.list_tabs(port=port)["ok"] is True
+    assert adapter.refresh(port=port)["ok"] is True
+    assert adapter.switch_tab(port=port, target_id="registered-tab")["ok"] is True
+    assert adapter.evaluate_js(port=port, target_id="registered-tab", expression="document.title")["ok"] is True
+
+    assert resolved == [(account, port)] * 6
+    assert nested == [
+        ("navigate", account),
+        ("screenshot", account),
+        ("list", account),
+        ("find", account),
+        ("activate", account),
+        ("find", account),
+    ]
+
+
+def test_internal_browser_adapter_general_port_keeps_no_platform_identity(monkeypatch):
+    import browser_surface as bs
+    import internal_browser_adapter as adapter
+
+    resolved = []
+    listed = []
+    activated = []
+
+    def resolve_endpoint(account, port=None):
+        resolved.append((account, port))
+        if account is not None:
+            raise PermissionError("platform identity cannot use general browser")
+        assert port == adapter.CDP_PORTS["general"]
+        return port
+
+    monkeypatch.setattr(bs, "_resolve_port", resolve_endpoint)
+    monkeypatch.setattr(
+        bs,
+        "list_targets",
+        lambda **kwargs: listed.append(kwargs) or {"ok": True, "tabs": [], "count": 0},
+    )
+    monkeypatch.setattr(
+        bs,
+        "activate_tab",
+        lambda *_args, **kwargs: activated.append(kwargs) or {"ok": True},
+    )
+
+    result = adapter.list_tabs(port=adapter.CDP_PORTS["general"])
+    switched = adapter.switch_tab(port=adapter.CDP_PORTS["general"], target_id="general-tab")
+    rejected = adapter.list_tabs(port=adapter.CDP_PORTS["general"], account="XHS_RETINAUT")
+
+    assert result["ok"] is True
+    assert listed == [{"port": adapter.CDP_PORTS["general"], "pages_only": True, "account": None}]
+    assert switched["ok"] is True
+    assert activated == [{"port": adapter.CDP_PORTS["general"], "account": None}]
+    assert rejected["ok"] is False
+    assert resolved == [(None, adapter.CDP_PORTS["general"]),
+                        (None, adapter.CDP_PORTS["general"]),
+                        ("XHS_RETINAUT", adapter.CDP_PORTS["general"])]
+
+
+def test_internal_browser_tabs_route_does_not_inject_xhs_for_explicit_general_port(monkeypatch):
+    from flask import Flask
+    import internal_browser_adapter as adapter
+
+    observed = []
+    monkeypatch.setattr(
+        adapter,
+        "list_tabs",
+        lambda **kwargs: observed.append(kwargs) or {"ok": True, "tabs": [], "count": 0},
+    )
+    app = Flask(__name__)
+    ib.register_internal_browser(app)
+
+    response = app.test_client().get(f"/api/internal-browser/tabs?port={adapter.CDP_PORTS['general']}")
+
+    assert response.status_code == 200
+    assert observed == [{"port": adapter.CDP_PORTS["general"], "account": None}]
+
+
+def test_internal_browser_navigate_route_passes_resolved_account_to_adapter(monkeypatch):
+    from flask import Flask
+    import internal_browser_adapter as adapter
+
+    observed = []
+    monkeypatch.setattr(ib, "_port_for", lambda account: 9477 if account == "XHS_RETINAUT" else None)
+    monkeypatch.setattr(
+        adapter,
+        "navigate",
+        lambda url, **kwargs: observed.append((url, kwargs)) or {"ok": True, "status": "navigated"},
+    )
+    app = Flask(__name__)
+    ib.register_internal_browser(app)
+
+    response = app.test_client().post(
+        "/api/internal-browser/navigate",
+        json={"url": "https://www.xiaohongshu.com/explore", "account": "XHS_RETINAUT"},
+    )
+
+    assert response.status_code == 200
+    assert observed == [("https://www.xiaohongshu.com/explore", {
+        "port": 9477,
+        "confirmed": False,
+        "account": "XHS_RETINAUT",
+    })]
 
 
 def _patch(monkeypatch, **kwargs):

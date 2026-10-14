@@ -105,6 +105,25 @@ def _resolve_port(port: int | None = None, account: str | None = None) -> int:
     return bs._resolve_port("XHS_RETINAUT", port)
 
 
+def _resolved_account(port: int | None, account: str | None) -> str | None:
+    """Keep the verified identity through nested CDP calls.
+
+    An explicit account always remains authoritative. A caller that explicitly
+    selected the independently verified general browser uses no platform
+    identity. Historical account-less platform calls retain the HK identity.
+    """
+    if account:
+        return ib._canonical_account(account)
+    if port is not None and int(port) == CDP_PORTS["general"]:
+        return None
+    return "XHS_RETINAUT"
+
+
+def _resolve_endpoint(port: int | None = None, account: str | None = None) -> tuple[int, str | None]:
+    identity = _resolved_account(port, account)
+    return _resolve_port(port, identity), identity
+
+
 def navigate(url: str, port: int | None = None, target_id: str | None = None,
              confirmed: bool = False, wait_ms: int = 600,
              account: str | None = None) -> dict:
@@ -122,7 +141,7 @@ def navigate(url: str, port: int | None = None, target_id: str | None = None,
         status ∈ allowed / blocked / need_confirmation / navigated
     """
     try:
-        port = _resolve_port(port, account)
+        port, identity = _resolve_endpoint(port, account)
     except Exception as exc:  # noqa: BLE001 - registered worker resolution failure blocks navigation.
         return {"ok": False, "status": "unavailable", "error_type": type(exc).__name__}
 
@@ -143,8 +162,8 @@ def navigate(url: str, port: int | None = None, target_id: str | None = None,
 
     # Step 2: 执行 CDP 导航（复用 browser_surface 的底层 CDP 能力）
     try:
-        result = bs.navigate_tab(url, target_id=target_id, port=port, wait_ms=wait_ms,
-                                 confirmed=confirmed)
+        result = bs.navigate_tab(url, target_id=target_id, account=identity, port=port,
+                                 wait_ms=wait_ms, confirmed=confirmed)
         if result.get("ok"):
             return {"ok": True, "status": "navigated", "gate": gate,
                     "target_id": result.get("target_id"), "cdp_port": port}
@@ -159,8 +178,9 @@ def screenshot(port: int | None = None, target_id: str | None = None,
                quality: int = 60, account: str | None = None) -> dict:
     """对指定 CDP 端口/标签页截图（不经过导航门，只读操作）。"""
     try:
-        port = _resolve_port(port, account)
-        result = bs._hybrid_screenshot(target_id=target_id, port=port, quality=quality)
+        port, identity = _resolve_endpoint(port, account)
+        result = bs._hybrid_screenshot(target_id=target_id, account=identity,
+                                       port=port, quality=quality)
         return result
     except Exception as e:
         return {"ok": False, "error_type": type(e).__name__}
@@ -169,9 +189,8 @@ def screenshot(port: int | None = None, target_id: str | None = None,
 def list_tabs(port: int | None = None, account: str | None = None) -> dict:
     """列出指定 CDP 端口的标签页（不经过导航门，只读操作）。"""
     try:
-        port = _resolve_port(port, account)
-        return bs.list_targets(port=port, pages_only=True,
-                               account=account or "XHS_RETINAUT")
+        port, identity = _resolve_endpoint(port, account)
+        return bs.list_targets(port=port, pages_only=True, account=identity)
     except Exception as exc:  # noqa: BLE001 - keep failed browser inspection unavailable, not a fallback session.
         return {"ok": False, "error_type": type(exc).__name__, "tabs": [], "count": 0}
 
@@ -180,8 +199,8 @@ def refresh(port: int | None = None, target_id: str | None = None,
             account: str | None = None) -> dict:
     """刷新当前标签页（CDP Page.reload，不经过导航门，因为是同页刷新）。"""
     try:
-        port = _resolve_port(port, account)
-        ws, chosen = bs._find_tab_ws(port, target_id, timeout=5.0)
+        port, identity = _resolve_endpoint(port, account)
+        ws, chosen = bs._find_tab_ws(port, target_id, timeout=5.0, account=identity)
         try:
             resp = ib._cdp(ws, "Page.reload", {"ignoreCache": False}, msg_id=1, timeout=8.0)
             return {"ok": True, "target_id": chosen["target_id"], "cdp_port": port}
@@ -200,8 +219,8 @@ def switch_tab(port: int | None = None, target_id: str = "",
     if not target_id:
         return {"ok": False, "error": "target_id 为空"}
     try:
-        port = _resolve_port(port, account)
-        return bs.activate_tab(target_id, port=port, account=account or "XHS_RETINAUT")
+        port, identity = _resolve_endpoint(port, account)
+        return bs.activate_tab(target_id, port=port, account=identity)
     except Exception as exc:  # noqa: BLE001 - a failed activation must not try another worker or endpoint.
         return {"ok": False, "error": str(exc)}
 
@@ -213,8 +232,8 @@ def evaluate_js(port: int | None = None, target_id: str | None = None,
     if not expression:
         return {"ok": False, "error": "expression 为空"}
     try:
-        port = _resolve_port(port, account)
-        ws, chosen = bs._find_tab_ws(port, target_id, timeout=5.0)
+        port, identity = _resolve_endpoint(port, account)
+        ws, chosen = bs._find_tab_ws(port, target_id, timeout=5.0, account=identity)
         try:
             resp = ib._cdp(ws, "Runtime.evaluate",
                            {"expression": expression, "returnByValue": True, "timeout": 6000},

@@ -344,23 +344,22 @@ class TestTime口径:
         assert "collected_at BETWEEN" not in source
 
     def test_export_filter_uses_publish_date(self):
-        """Shared Reporting export_api.filter_notes_by_period 必须使用 publish_date。"""
+        """The compatibility filter delegates to the scoped source reader and use check."""
         import inspect
         from lumenis.shared.reporting import export_api as er
         source = inspect.getsource(er.filter_notes_by_period)
-        assert "publish_date" in source
-        # 日报逻辑用 publish_date >= day_before，周期用 publish_date BETWEEN
-        assert "publish_date >= ?" in source or "publish_date >= ? AND publish_date <= ?" in source
+        assert "get_scoped_event_source_rows" in source
+        assert "date_start=start" in source and "date_end=end" in source
+        assert "_verify_report_source_use" in source
 
     def test_canonical_export_facade_uses_shared_period_filter(self):
-        """唯一导出 facade 必须复用 export_api 的统一周期/发布日期口径。"""
+        """The export facade must share scoped report construction and source-use checks."""
         import inspect
         from lumenis.shared.reporting import export_api as er
         source = inspect.getsource(er.export_artifacts)
-        assert "_export_excel" in source
-        assert "_export_word" in source
-        assert "export_report_to_csv" in source
-        assert "verify_artifact_file" in source
+        assert "_build_report" in source
+        assert "_verify_report_source_use" in source
+        assert "_render_report" in source
 
     def test_report_filter_fallback_collected_at_is_flagged(self):
         """Shared Reporting filtering 在无 publish_date 时回退 collected_at，这是已知行为。
@@ -389,20 +388,20 @@ class TestSubjectFiltering:
         assert "subject" in source.lower() or "_subject_clause" in source
 
     def test_export_report_has_subject_filter(self):
-        """Shared Reporting export_api.filter_notes_by_period 必须包含主体过滤（Phase 9 修复）。"""
+        """Report compatibility reads must use the caller's resolved subject scope."""
         import inspect
         from lumenis.shared.reporting import export_api as er
         source = inspect.getsource(er.filter_notes_by_period)
-        assert "is_taikoo_verified=1" in source
-        assert "subject_sql_and_values" in source or "subject" in source.lower()
+        assert "_authorized_legacy_report_context" in source
+        assert "get_scoped_event_source_rows" in source
 
     def test_canonical_export_facade_depends_on_subject_filtered_data(self):
-        """唯一导出 facade 的数据入口必须保持 Subject 生产过滤。"""
+        """The export facade must pass the exact authenticated scope into report reads."""
         import inspect
         from lumenis.shared.reporting import export_api as er
         source = inspect.getsource(er.filter_notes_by_period)
-        assert "is_taikoo_verified=1" in source
-        assert "subject_sql_and_values" in source
+        assert "_authorized_legacy_report_context" in source
+        assert "scope, source_types=('note',)" in source
 
     def test_api_report_daily_has_subject_filter(self):
         """Shared Reporting routes.api_report_daily 必须包含 subject_sql_and_values。"""

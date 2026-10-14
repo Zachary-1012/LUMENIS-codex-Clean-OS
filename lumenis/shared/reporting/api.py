@@ -59,13 +59,15 @@ def generate():
 
     if brand_mode not in ("cth", "zbmp"):
         return jsonify({"ok": False, "error": f"不支持的 brand_mode: {brand_mode}"}), 400
-    if period not in ("daily", "weekly", "monthly", "yearly", "custom"):
+    if period not in ("daily", "weekly", "monthly", "yearly"):
         return jsonify({"ok": False, "error": f"不支持的 period: {period}"}), 400
 
     try:
-        from lumenis.shared.reporting import ReportGenerator
-        gen = ReportGenerator(brand_mode=brand_mode)
-        report = gen.generate(period=period, start_date=start_date, end_date=end_date)
+        from lumenis.shared.reporting.export_api import _build_report
+        from lumenis.shared.reporting.routes import _authorized_report_scope
+        actor, scope, _entries, selected = _authorized_report_scope(brand_mode=brand_mode)
+        _kind, _start, _end, report, _source_count, _notes, _events = _build_report(
+            period, start_date, end_date, actor=actor, scope=scope, scope_entry=selected)
         return jsonify({
             "ok": True,
             "brand_mode": brand_mode,
@@ -75,6 +77,9 @@ def generate():
             "report_keys": list(report.keys()) if isinstance(report, dict) else ["non-dict"],
             "report": report if isinstance(report, dict) else str(report)[:2000],
         }), 200
+    except (PermissionError, ValueError) as e:
+        from lumenis.shared.reporting.export_api import _report_error
+        return _report_error(e)
     except Exception as e:
         return jsonify({"ok": False, "error": f"报告生成失败: {str(e)[:300]}"}), 500
 
@@ -88,14 +93,22 @@ def export():
     data = request.get_json(silent=True) or {}
     brand_mode = data.get("brand_mode", "cth")
     period = data.get("period", "daily")
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
 
     if brand_mode not in ("cth", "zbmp"):
         return jsonify({"ok": False, "error": f"不支持的 brand_mode: {brand_mode}"}), 400
+    if period not in ("daily", "weekly", "monthly", "yearly"):
+        return jsonify({"ok": False, "error": f"不支持的 period: {period}"}), 400
 
     try:
         from lumenis.shared.reporting import ReportExporter
+        from lumenis.shared.reporting.routes import _authorized_report_scope
+        actor, scope, _entries, selected = _authorized_report_scope(brand_mode=brand_mode)
         exporter = ReportExporter()
-        result = exporter.generate_and_export(brand_mode=brand_mode, period=period)
+        result = exporter.generate_and_export(
+            brand_mode=brand_mode, period=period, start_date=start_date, end_date=end_date, actor=actor,
+            scope=scope, scope_entry=selected)
         missing_formats = [format for format in ("word", "pdf") if not result.get(format + "_path")]
         if missing_formats:
             return jsonify({
@@ -110,5 +123,8 @@ def export():
             "word_path": result.get("word_path"),
             "pdf_path": result.get("pdf_path"),
         }), 200
+    except (PermissionError, ValueError) as e:
+        from lumenis.shared.reporting.export_api import _report_error
+        return _report_error(e)
     except Exception as e:
         return jsonify({"ok": False, "error": f"导出失败: {str(e)[:300]}"}), 500

@@ -2,6 +2,7 @@
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -16,8 +17,8 @@ def test_remote_worker_configuration_remains_unchanged(monkeypatch):
 
 
 def test_exact_local_douyin_worker_requires_opt_in_and_profile_owner(monkeypatch, tmp_path):
-    from lumenis.adapters import douyin
     import cdp_helper
+    from lumenis.adapters import douyin
 
     monkeypatch.setenv('DOUYIN_CDP_URL', 'http://127.0.0.1:9225')
     monkeypatch.setenv('DOUYIN_LOCAL_WORKER_ENABLED', 'true')
@@ -25,15 +26,15 @@ def test_exact_local_douyin_worker_requires_opt_in_and_profile_owner(monkeypatch
     monkeypatch.setenv('ZBC_DATA_DIR', str(tmp_path))
     seen = {}
 
-    def owns_profile(port, profile_dir):
-        seen['port'] = port
-        seen['profile'] = profile_dir
-        return True
+    def registered_owner(port, profile_dir, *, headless):
+        seen.update(port=port, profile=profile_dir, headless=headless)
+        return 'edge' if port == 9225 and headless is True else None
 
-    monkeypatch.setattr(cdp_helper, 'is_cdp_profile_running', owns_profile)
+    monkeypatch.setattr(cdp_helper, 'registered_cdp_browser_for_port', registered_owner)
     assert douyin._configured_browser_worker_url() == 'http://127.0.0.1:9225'
     assert seen['port'] == 9225
     assert Path(seen['profile']).parts[-3:] == ('private', 'profiles', 'douyin-readonly')
+    assert seen['headless'] is True
 
 
 @pytest.mark.parametrize('url', [
@@ -77,49 +78,58 @@ def test_local_worker_requires_explicit_identity_opt_in(monkeypatch, enabled, ac
 
 
 def test_local_endpoint_rejected_when_process_profile_does_not_match(monkeypatch):
-    from lumenis.adapters import douyin
     import cdp_helper
+    from lumenis.adapters import douyin
 
     monkeypatch.setenv('DOUYIN_CDP_URL', 'http://127.0.0.1:9225')
     monkeypatch.setenv('DOUYIN_LOCAL_WORKER_ENABLED', '1')
     monkeypatch.setenv('DOUYIN_LOCAL_WORKER_ACCOUNT', 'DOUYIN_READONLY')
-    monkeypatch.setattr(cdp_helper, 'is_cdp_profile_running', lambda *_args: False)
-    with pytest.raises(RuntimeError, match='profile is not bound'):
+    monkeypatch.setattr(cdp_helper, 'registered_cdp_browser_for_port',
+                        lambda port, _profile, *, headless: None
+                        if port == 9225 and headless is True else 'edge')
+    with pytest.raises(RuntimeError, match='READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE'):
         douyin._configured_browser_worker_url()
 
 
 def test_douyin_process_helper_matches_port_and_exact_profile(monkeypatch, tmp_path):
     import cdp_helper
 
+    # The registered worker profile is rooted in the current protected data
+    # directory; bind that existing runtime contract to this test's isolated root.
+    monkeypatch.setenv('ZBC_DATA_DIR', str(tmp_path))
     profile = str(tmp_path / 'private' / 'profiles' / 'douyin-readonly')
-    good = SimpleNamespace(info={
-        'name': 'msedge.exe',
-        'cmdline': ['msedge.exe', '--remote-debugging-port=9225',
-                    '--remote-debugging-address=127.0.0.1', f'--user-data-dir={profile}'],
-    })
-    bad_port = SimpleNamespace(info={
-        'name': 'msedge.exe',
-        'cmdline': ['msedge.exe', '--remote-debugging-port=9223',
-                    '--remote-debugging-address=127.0.0.1', f'--user-data-dir={profile}'],
-    })
-    bad_profile = SimpleNamespace(info={
-        'name': 'msedge.exe',
-        'cmdline': ['msedge.exe', '--remote-debugging-port=9225',
-                    '--remote-debugging-address=127.0.0.1', f'--user-data-dir={tmp_path / "other"}'],
-    })
-    process_module = SimpleNamespace(process_iter=lambda _attrs: [bad_port, bad_profile, good])
+    def fake_process(process_profile, port, address='127.0.0.1'):
+        name = 'msedge.exe'
+        args = [name, f'--remote-debugging-port={port}',
+                f'--remote-debugging-address={address}',
+                f'--user-data-dir={process_profile}']
+        return SimpleNamespace(
+            info={'name': name, 'cmdline': args},
+            name=lambda: name,
+            cmdline=lambda: list(args),
+        )
+
+    processes = {
+        11: fake_process(profile, 9223),
+        12: fake_process(str(tmp_path / 'other'), 9225),
+        13: fake_process(profile, 9225),
+        14: fake_process(profile, 9225, address='0.0.0.0'),
+    }
+    active_pid = {'value': 13}
+    process_module = SimpleNamespace(
+        process_iter=lambda _attrs: list(processes.values()),
+        Process=lambda pid: processes[int(pid)],
+    )
     monkeypatch.setitem(sys.modules, 'psutil', process_module)
+    monkeypatch.setattr(cdp_helper, '_cdp_listener_pids',
+                        lambda _port: ({active_pid['value']}, True))
 
     assert cdp_helper.is_cdp_profile_running(9225, profile) is True
-    process_module.process_iter = lambda _attrs: [bad_port, bad_profile]
+    active_pid['value'] = 11
     assert cdp_helper.is_cdp_profile_running(9225, profile) is False
-
-    public_bind = SimpleNamespace(info={
-        'name': 'msedge.exe',
-        'cmdline': ['msedge.exe', '--remote-debugging-port=9225',
-                    '--remote-debugging-address=0.0.0.0', f'--user-data-dir={profile}'],
-    })
-    process_module.process_iter = lambda _attrs: [public_bind]
+    active_pid['value'] = 12
+    assert cdp_helper.is_cdp_profile_running(9225, profile) is False
+    active_pid['value'] = 14
     assert cdp_helper.is_cdp_profile_running(9225, profile) is False
 
 
@@ -131,6 +141,7 @@ def test_douyin_resident_profile_plan_is_exact_and_isolated(tmp_path):
         'account': 'DOUYIN_READONLY',
         'port': 9225,
         'profile': str(tmp_path / 'profiles' / 'douyin-readonly'),
+        'env_prefix': 'DOUYIN',
         'home': 'about:blank',
         'direct': False,
     }
@@ -141,6 +152,7 @@ def test_douyin_launch_uses_system_default_and_loopback_only(monkeypatch, tmp_pa
 
     plan = {'account': 'DOUYIN_READONLY', 'port': 9225,
             'profile': str(tmp_path / 'profiles' / 'douyin-readonly'),
+            'env_prefix': 'DOUYIN',
             'home': 'about:blank', 'direct': False}
     monkeypatch.setattr(launcher, 'douyin_worker_spec', lambda: plan)
     monkeypatch.setattr(launcher, 'port_online', lambda _port: False)
@@ -153,15 +165,18 @@ def test_douyin_launch_uses_system_default_and_loopback_only(monkeypatch, tmp_pa
         return {'success': True, 'pid': 123, 'message': 'started'}
 
     monkeypatch.setattr(launcher.cdp_helper, 'start_cdp_browser', fake_start)
-    online = iter([False, True])
-    monkeypatch.setattr(launcher, 'port_online', lambda _port: next(online))
+    owner_check = Mock(return_value=True)
+    monkeypatch.setattr(launcher.cdp_helper, 'is_cdp_profile_running', owner_check)
 
     row = launcher.launch_douyin_readonly()
 
     assert row['online'] is True
+    owner_check.assert_called_once_with(
+        9225, plan['profile'], headless=True, loopback_only=True, browser='chrome')
     assert seen == {
         'port': 9225, 'profile_dir': plan['profile'], 'launch_url': plan['home'],
-        'direct_connection': False, 'browser': 'chrome', 'loopback_only': True,
+        'direct_connection': False, 'browser': 'chrome', 'headless': True,
+        'loopback_only': True, 'task_id': None, 'actor_ref': None,
     }
 
 
@@ -185,6 +200,7 @@ def test_douyin_launcher_reuses_only_exact_existing_profile(monkeypatch, tmp_pat
 
     plan = {'account': 'DOUYIN_READONLY', 'port': 9225,
             'profile': str(tmp_path / 'profiles' / 'douyin-readonly'),
+            'env_prefix': 'DOUYIN',
             'home': 'about:blank', 'direct': False}
     monkeypatch.setattr(launcher, 'douyin_worker_spec', lambda: plan)
     monkeypatch.setattr(launcher, 'port_online', lambda _port: True)
@@ -192,11 +208,21 @@ def test_douyin_launcher_reuses_only_exact_existing_profile(monkeypatch, tmp_pat
     monkeypatch.setattr(launcher.cdp_helper, 'start_cdp_browser',
                         lambda **_kwargs: pytest.fail('occupied port must not launch/reuse'))
 
+    def registered_owner(port, profile, *, headless):
+        if port == 9225 and profile == plan['profile'] and headless is True:
+            return 'edge'
+        return None
+
+    monkeypatch.setattr(launcher.cdp_helper, 'registered_cdp_browser_for_port', registered_owner)
     monkeypatch.setattr(launcher.cdp_helper, 'is_cdp_profile_running',
-                        lambda port, profile: port == 9225 and profile == plan['profile'])
+                        lambda port, profile, **kwargs:
+                        port == 9225 and profile == plan['profile']
+                        and kwargs == {'headless': True, 'loopback_only': True,
+                                       'browser': 'edge'})
     assert launcher.launch_douyin_readonly()['action'] == 'already_online'
 
-    monkeypatch.setattr(launcher.cdp_helper, 'is_cdp_profile_running', lambda *_args: False)
+    monkeypatch.setattr(launcher.cdp_helper, 'registered_cdp_browser_for_port',
+                        lambda *_args, **_kwargs: None)
     assert launcher.launch_douyin_readonly()['action'] == 'port_in_use_unverified'
 
 

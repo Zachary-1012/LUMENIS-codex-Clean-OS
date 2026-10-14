@@ -5,11 +5,12 @@
 不改变原有主体过滤口径；该模块只负责查询与路由，不负责放宽采集范围。
 """
 from __future__ import annotations
-import json, re
+import json, logging, re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 BASE = Path(__file__).resolve().parent
+logger = logging.getLogger(__name__)
 BRAND_FILE = BASE / "data" / "brand_directory.json"
 WEBSITE_FILE = BASE / "data" / "brand_websites.json"
 CASE_FILE = BASE / "data" / "case_library.json"
@@ -56,7 +57,20 @@ def load_cases() -> List[dict]:
     d = _load_json(CASE_FILE, {})
     return d.get("cases", []) if isinstance(d, dict) else []
 
-def search_targets(q: str, db=None, limit: int = 12) -> Dict[str, Any]:
+def search_function_metadata(q: str, limit: int = 5) -> list[dict[str, Any]]:
+    """Match static route metadata without reading product or case records."""
+    query = (q or "").strip().lower()
+    scored = []
+    for function in FUNCTION_MAP:
+        score = sum(3 for keyword in function["keywords"] if keyword.lower() in query)
+        if function["page"].lower() in query or function["id"].lower() in query:
+            score += 4
+        if score:
+            scored.append((score, function))
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return [function for _, function in scored[:max(0, min(int(limit), 20))]]
+
+def search_targets(q: str, db=None, limit: int = 12, *, scope=None) -> dict[str, Any]:
     q = (q or "").strip()
     ql = q.lower()
     tokens = [t for t in re.split(r"[\s,，。！？、/|:：;；]+", ql) if len(t) >= 2]
@@ -87,29 +101,58 @@ def search_targets(q: str, db=None, limit: int = 12) -> Dict[str, Any]:
         hay = " ".join(str(c.get(k,"")) for k in ("id","category","title","event","taikoo_insight","reply_formula")).lower()
         if any(t in hay for t in tokens) or (ql and ql in hay):
             cases.append(c)
-    # DB检索：严格沿用 database.get_notes 的既有过滤体系
+    # Business-source reads require the caller's server-resolved, authorized scope.
     notes = []
     events = []
+    notes_state = "SOURCE_SCOPE_UNAVAILABLE"
+    events_state = "SOURCE_SCOPE_UNAVAILABLE"
+    notes_truncated = None
+    events_truncated = None
     if db:
-        try:
-            if q:
-                notes = db.get_notes({"keyword": q}, limit, 0)
-        except Exception:
-            try: notes = db.get_notes({"keyword": tokens[0]} if tokens else {}, limit, 0)
-            except Exception: notes = []
-        try:
-            events = [e for e in db.get_events(30) if ql in (str(e.get("title",""))+" "+str(e.get("summary",""))).lower()][:limit]
-        except Exception:
-            events = []
+        if isinstance(scope, dict):
+            try:
+                note_read = db.get_scoped_event_source_rows(
+                    scope, limit=max(200, min(5000, limit * 20)), source_types=["note"]
+                )
+                notes_state = note_read.get("state", "UNKNOWN")
+                notes_truncated = note_read.get("truncated")
+                if q:
+                    notes = [
+                        row for row in note_read.get("sources", [])
+                        if ql in " ".join(str(row.get(key) or "") for key in ("title", "summary", "content")).lower()
+                    ][:limit]
+            except Exception as exc:  # noqa: BLE001 - fail closed while preserving static search
+                logger.warning("scoped note lookup unavailable (%s)", type(exc).__name__)
+                notes_state = "SOURCE_DATA_UNAVAILABLE"
+            try:
+                event_read = db.get_scoped_events(limit=max(30, min(500, limit * 20)), scope=scope)
+                events_state = event_read.get("state", "UNKNOWN")
+                events_truncated = event_read.get("truncated")
+                events = [
+                    event for event in event_read.get("events", [])
+                    if ql in (str(event.get("title", "")) + " " + str(event.get("summary", ""))).lower()
+                ][:limit]
+            except Exception as exc:  # noqa: BLE001 - fail closed while preserving static search
+                logger.warning("scoped event lookup unavailable (%s)", type(exc).__name__)
+                events_state = "SOURCE_DATA_UNAVAILABLE"
+        else:
+            notes_state = "SOURCE_SCOPE_UNAVAILABLE"
+            events_state = "SOURCE_SCOPE_UNAVAILABLE"
+    elif isinstance(scope, dict):
+        notes_state = "SOURCE_DATA_UNAVAILABLE"
+        events_state = "SOURCE_DATA_UNAVAILABLE"
     return {
         "ok": True, "query": q, "functions": functions,
         "brands": brands[:limit], "websites": websites[:limit],
         "cases": cases[:limit], "notes": notes[:limit], "events": events[:limit],
-        "meta": {"brand_total": len(load_brands()), "website_total": len(wm), "case_total": len(load_cases())}
+        "meta": {"brand_total": len(load_brands()), "website_total": len(wm), "case_total": len(load_cases()),
+                 "source_scope_state": "SCOPE_PROVIDED" if isinstance(scope, dict) else "SOURCE_SCOPE_UNAVAILABLE",
+                 "notes_state": notes_state, "notes_truncated": notes_truncated,
+                 "events_state": events_state, "events_truncated": events_truncated}
     }
 
-def build_context(q: str, db=None) -> str:
-    r = search_targets(q, db, 8)
+def build_context(q: str, db=None, *, scope=None) -> str:
+    r = search_targets(q, db, 8, scope=scope)
     chunks = []
     if r["functions"]:
         chunks.append("功能目标："+", ".join(f["label"] for f in r["functions"]))

@@ -22,23 +22,27 @@ sys.path.insert(0, str(ROOT))
 import subject_rules as sr  # noqa: E402
 
 
-class TestGlobalDefaultLock:
-    """生产红线：全局默认必须锁定广州太古汇。"""
+class TestNoImplicitSubjectScope:
+    """The controlled Taikoo reference remains explicit, never the global default."""
 
-    def test_active_brand_constant_is_guangzhou(self):
-        """ACTIVE_BRAND 常量必须是广州太古汇（红线，不得改成其他品牌）。"""
-        assert sr.ACTIVE_BRAND == "guangzhou_taikoo_hui"
+    def test_no_thread_scope_does_not_select_a_reference(self, monkeypatch):
+        monkeypatch.setattr("subject_context.get_thread_context", lambda: None)
+        monkeypatch.setenv("ZBC_ACTIVE_BRAND", "guangzhou_taikoo_hui")
+        assert sr.get_active_brand() == ""
+        assert sr.get_brand_config()["collect_keywords"] == []
+        assert sr.subject_hit(title="广州太古汇探店") is False
 
-    def test_default_active_brand_without_env(self, monkeypatch):
-        """无环境变量时，get_active_brand 返回广州太古汇。"""
-        monkeypatch.delenv("ZBC_ACTIVE_BRAND", raising=False)
-        assert sr.get_active_brand() == "guangzhou_taikoo_hui"
+    def test_controlled_reference_requires_explicit_profile(self):
+        assert sr.subject_hit_for_brand(
+            title="广州太古汇探店", brand_key="guangzhou_taikoo_hui",
+        ) is True
+        assert sr.subject_hit_for_brand(title="广州太古汇探店") is False
 
-    def test_default_subject_hit_uses_guangzhou(self, monkeypatch):
-        """默认 subject_hit 使用广州太古汇口径（含"太古汇"命中，不含则不命中）。"""
-        monkeypatch.delenv("ZBC_ACTIVE_BRAND", raising=False)
-        assert sr.subject_hit(title="广州太古汇探店") is True
-        assert sr.subject_hit(title="随便一篇笔记") is False
+    def test_environment_variable_does_not_supply_subject_scope(self, monkeypatch):
+        monkeypatch.setattr("subject_context.get_thread_context", lambda: None)
+        monkeypatch.setenv("ZBC_ACTIVE_BRAND", "hainan_cdf")
+        assert sr.get_active_brand() == ""
+        assert sr.subject_hit(title="海南中免CDF攻略") is False
 
 
 class TestHainanCdfSubjectHit:
@@ -86,26 +90,10 @@ class TestMultiBrandIsolation:
         assert sr.subject_hit_for_brand(title=title, brand_key="macau_dfs") is False
 
 
-class TestEnvVarActivation:
-    """环境变量 ZBC_ACTIVE_BRAND 切换激活品牌（KOS 多品牌并行的合法方式）。"""
-
-    def test_env_var_switches_active_brand(self, monkeypatch):
-        """设置 ZBC_ACTIVE_BRAND=hainan_cdf 后，get_active_brand 返回海南中免。"""
-        monkeypatch.setenv("ZBC_ACTIVE_BRAND", "hainan_cdf")
-        assert sr.get_active_brand() == "hainan_cdf"
-
-    def test_env_var_changes_subject_hit(self, monkeypatch):
-        """环境变量切换后，默认 subject_hit 使用新品牌口径。"""
-        monkeypatch.setenv("ZBC_ACTIVE_BRAND", "hainan_cdf")
-        assert sr.subject_hit(title="海南中免CDF攻略") is True
-        assert sr.subject_hit(title="广州太古汇探店") is False
-
-    def test_invalid_env_brand_is_rejected(self, monkeypatch):
-        """无效品牌名不能污染广州太古汇口径。"""
-        monkeypatch.setenv("ZBC_ACTIVE_BRAND", "nonexistent_brand")
-        import pytest
+class TestExplicitProfileValidation:
+    def test_unknown_explicit_profile_is_rejected(self):
         with pytest.raises(ValueError, match="UNKNOWN_SUBJECT_PROFILE"):
-            sr.get_brand_config()
+            sr.get_brand_config("nonexistent_brand")
 
 
 def test_kos_collection_uses_canonical_scoped_secondary_writer(monkeypatch):
@@ -172,6 +160,60 @@ def test_kos_collection_requires_read_only_confirmation_before_collection(monkey
 
     assert response.status_code == 400
     assert response.get_json()["code"] == "READ_ONLY_CONFIRMATION_REQUIRED"
+
+
+def test_scoped_kos_author_filter_precedes_canonical_note_limit(monkeypatch):
+    """A scoped author beyond the newest 1,000 unrelated notes remains reachable."""
+    import sqlite3
+    from contextlib import contextmanager
+
+    import database
+    import kos_routes
+    import reprocess
+
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    connection.execute(
+        "CREATE TABLE notes (note_id TEXT PRIMARY KEY, author_id TEXT, "
+        "publish_date TEXT, collected_at TEXT)"
+    )
+    source_ids = [f"noise-{index:04d}" for index in range(1001)] + ["target-note"]
+    for index, note_id in enumerate(source_ids[:-1]):
+        stamp = f"2026-10-14 {index // 3600:02d}:{(index // 60) % 60:02d}:{index % 60:02d}"
+        connection.execute(
+            "INSERT INTO notes(note_id, author_id, publish_date, collected_at) VALUES (?, ?, ?, ?)",
+            (note_id, "unrelated-author", stamp, stamp),
+        )
+    connection.execute(
+        "INSERT INTO notes(note_id, author_id, publish_date, collected_at) VALUES (?, ?, ?, ?)",
+        ("target-note", "in-scope-author", "2020-01-01 00:00:00", "2020-01-01 00:00:00"),
+    )
+    connection.execute(
+        "INSERT INTO notes(note_id, author_id, publish_date, collected_at) VALUES (?, ?, ?, ?)",
+        ("out-of-scope-note", "out-of-scope-author", "2026-10-14 23:59:59", "2026-10-14 23:59:59"),
+    )
+    connection.commit()
+
+    @contextmanager
+    def isolated_db():
+        yield connection
+
+    monkeypatch.setattr(database, "get_db", isolated_db)
+    monkeypatch.setattr(
+        reprocess,
+        "_canonical_source_ids",
+        lambda scope, limit: source_ids if scope["id"] == "authorized" else ["noise-0000"],
+    )
+    monkeypatch.setattr(reprocess, "_scoped_note", lambda row, _scope: row)
+
+    profile = kos_routes._kos_scoped_author_profile(
+        "in-scope-author", {"id": "authorized"}
+    )
+    assert profile is not None
+    assert [note["note_id"] for note in profile["notes"]] == ["target-note"]
+    assert kos_routes._kos_scoped_author_profile(
+        "out-of-scope-author", {"id": "authorized"}
+    ) is None
 
 
 class TestSubjectHitNote:

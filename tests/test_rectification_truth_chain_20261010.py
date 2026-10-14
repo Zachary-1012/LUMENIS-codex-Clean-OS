@@ -94,32 +94,40 @@ def test_document_identity_conflicts_are_not_hidden(job_db, conflict):
 
 def test_export_scope_failure_never_opens_database(monkeypatch):
     from lumenis.shared.reporting import export_api
-    import subject_rules
     calls = []
-    def unavailable():
-        raise PermissionError('SCOPE_UNAVAILABLE')
-    monkeypatch.setattr(subject_rules, 'subject_sql_and_values', unavailable)
+    def unavailable(_action='read'):
+        raise RuntimeError('REPORT_SCOPE_REQUIRED')
+    monkeypatch.setattr(export_api, '_request_report_scope', unavailable)
     monkeypatch.setattr(export_api, 'get_db', lambda: calls.append('opened') or sqlite3.connect(':memory:'))
     with pytest.raises(PermissionError):
         export_api.filter_notes_by_period('daily', '2026-10-02')
     assert calls == []
 
 
-def test_export_keeps_authorized_scope_with_real_sqlite(tmp_path, monkeypatch):
+def test_export_uses_resolved_scope_and_rechecks_source_use(monkeypatch):
     from lumenis.shared.reporting import export_api
-    import subject_rules
-    db = tmp_path / 'export.sqlite3'
-    with sqlite3.connect(db) as conn:
-        conn.execute('CREATE TABLE notes (note_id TEXT, subject_id TEXT, is_taikoo_verified INTEGER, relevance_status TEXT, publish_date TEXT, collected_at TEXT)')
-        conn.executemany('INSERT INTO notes VALUES (?,?,?,?,?,?)', [('a', 'A', 1, 'relevant', '2026-10-02', '2026-10-02'), ('b', 'B', 1, 'relevant', '2026-10-02', '2026-10-02')])
-    def connect():
-        conn = sqlite3.connect(db)
-        conn.row_factory = sqlite3.Row
-        return conn
-    monkeypatch.setattr(export_api, 'get_db', connect)
-    monkeypatch.setattr(subject_rules, 'subject_sql_and_values', lambda: ('subject_id=?', ['A']))
-    rows, _, _ = export_api.filter_notes_by_period('daily', '2026-10-02')
-    assert [row['note_id'] for row in rows] == ['a']
+    actor = object()
+    scope = {'domain_id': 'cth', 'product_id': 'CTH', 'subject_id': 'SUBJECT-A',
+             'brand_focus_id': None, 'global_scope': False}
+    rows = [{'source_type': 'note', 'source_id': 'a', 'subject_id': 'SUBJECT-A'}]
+    reads, verified = [], []
+    monkeypatch.setattr(export_api, '_request_report_scope',
+                        lambda action='read': (actor, scope, [], None))
+    def scoped_read(actual_scope, **kwargs):
+        reads.append((actual_scope, kwargs))
+        return {'sources': rows, 'truncated': False, 'rejected_count': 0, 'state': 'AVAILABLE'}
+    monkeypatch.setattr(export_api.db, 'get_scoped_event_source_rows', scoped_read)
+    monkeypatch.setattr(export_api, '_verify_report_source_use',
+                        lambda actual_actor, actual_scope, notes, events:
+                        verified.append((actual_actor, actual_scope, notes, events)) or 1)
+
+    selected, start, end = export_api.filter_notes_by_period('daily', '2026-10-02')
+
+    assert selected == rows
+    assert start.strftime('%Y-%m-%d') == end.strftime('%Y-%m-%d') == '2026-10-02'
+    assert reads[0][0]['subject_id'] == 'SUBJECT-A'
+    assert reads[0][1]['date_start'] == reads[0][1]['date_end'] == '2026-10-02'
+    assert verified == [(actor, scope, rows, [])]
 
 
 @pytest.mark.parametrize('output', [None, {}, [], ''])

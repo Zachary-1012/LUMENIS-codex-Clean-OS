@@ -34,11 +34,7 @@ API 统一前缀 /api/kos/。
 
 
 
-from flask import Blueprint, request, jsonify, send_from_directory
-
-
-
-
+from flask import Blueprint, jsonify, request
 
 # KOS采集专用香港账号（rednote_hk）
 try:
@@ -47,23 +43,9 @@ try:
 except ImportError:
     KOS_DUAL_ACCOUNT = False
 
-import os, sys
-
-
-
-
-
+import os
+import sys
 from pathlib import Path
-
-
-
-
-
-
-
-
-
-
 
 kos_bp = Blueprint("kos", __name__, url_prefix="/api/kos")
 
@@ -113,9 +95,130 @@ def _engine():
 
 
 
-def _report():
-    from lumenis.shared.reporting import kos as kos_report
-    return kos_report
+def _resolve_kos_brand_scope(action):
+    """Resolve one registered BMP BrandFocus and its current Permission receipt."""
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import (
+        LocalWorkspacePrincipal,
+        check_actor_scope_permission,
+        check_local_workspace_scope_permission,
+        resolve_local_workspace_principal,
+    )
+    from subject_registry import get_subject_by_id, list_subjects, normalize_domain
+
+    try:
+        domain_name = normalize_domain(request.headers.get("X-Domain-Id", ""))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("DOMAIN_REQUIRED") from exc
+    if domain_name != "BMP":
+        raise ValueError("BMP_DOMAIN_REQUIRED")
+    product = request.headers.get("X-Product-Id")
+    if product is not None and product.strip().upper() not in {"BMP", "ZBMP"}:
+        raise ValueError("CONTEXT_SCOPE_MISMATCH")
+    if request.headers.get("X-Lumenis-Context-Mode", "GLOBAL_ALL") != "FOCUS":
+        raise ValueError("BRAND_FOCUS_REQUIRED")
+
+    subject_id = request.headers.get("X-Subject-ID")
+    brand_focus_id = request.headers.get("X-Brand-Focus-ID")
+    if any(value is not None and (not value.strip() or value != value.strip())
+           for value in (subject_id, brand_focus_id)):
+        raise ValueError("CONTEXT_SCOPE_MISMATCH")
+    if subject_id:
+        selected = get_subject_by_id(domain_name, subject_id)
+        if (not isinstance(selected, dict) or selected.get("subject_type") != "brand"
+                or not selected.get("brand_focus_id")
+                or (brand_focus_id and selected.get("brand_focus_id") != brand_focus_id)):
+            raise ValueError("BRAND_FOCUS_NOT_REGISTERED")
+    elif brand_focus_id:
+        matches = [entry for entry in list_subjects(domain_name)
+                   if entry.get("brand_focus_id") == brand_focus_id
+                   and entry.get("status") in {"active", "configured"}]
+        if len(matches) != 1 or matches[0].get("subject_type") != "brand":
+            raise ValueError("BRAND_FOCUS_NOT_UNIQUELY_REGISTERED")
+        selected = matches[0]
+    else:
+        raise ValueError("BRAND_FOCUS_REQUIRED")
+    if selected.get("status") not in {"active", "configured"}:
+        raise ValueError("BRAND_FOCUS_NOT_ACTIVE")
+
+    scope = {"domain_id": "zbmp", "subject_id": None,
+             "brand_focus_id": selected["brand_focus_id"], "global_scope": False}
+    principal = resolve_local_workspace_principal(module="reports", action=action)
+    actor = principal if principal is not None else get_current_user(read_only=action == "read")
+    if principal is None and (not isinstance(actor, dict)
+                              or type(actor.get("id")) is not int or actor["id"] <= 0):
+        raise PermissionError("AUTH_REQUIRED")
+    checker = check_local_workspace_scope_permission if principal is not None else check_actor_scope_permission
+    decision = checker(actor, module="reports", action=action, **scope)
+    if (decision.allowed is not True or decision.verification_state != "verified"
+            or not decision.scope_audit_id or decision.scope_action != action
+            or decision.subject_id is not None
+            or decision.brand_focus_id != scope["brand_focus_id"]
+            or decision.global_scope is not False):
+        raise PermissionError("SCOPE_PERMISSION_DENIED")
+    if principal is not None:
+        if (type(principal) is not LocalWorkspacePrincipal
+                or actor is not principal or principal.actor_id is not None
+                or principal.principal_ref != "workspace:local"
+                or decision.actor_id is not None
+                or decision.caller != "workspace:local"
+                or decision.principal_kind != principal.principal_kind
+                or decision.principal_ref != principal.principal_ref):
+            raise PermissionError("SCOPE_IDENTITY_MISMATCH")
+    else:
+        actor_id = actor.get("id") if isinstance(actor, dict) else None
+        if (type(actor_id) is not int or actor_id <= 0
+                or decision.actor_id != actor_id
+                or decision.caller != f"actor:{actor_id}"
+                or decision.principal_kind is not None
+                or decision.principal_ref is not None):
+            raise PermissionError("SCOPE_IDENTITY_MISMATCH")
+    if not isinstance(decision.caller, str) or not decision.caller.strip():
+        raise PermissionError("SCOPE_IDENTITY_UNAVAILABLE")
+    return actor, decision.caller, scope, selected, decision
+
+
+def _kos_scope_error(exc):
+    code = str(exc) or type(exc).__name__
+    status = 403 if isinstance(exc, PermissionError) else (
+        503 if "UNAVAILABLE" in code else 400
+    )
+    return jsonify({"ok": False, "status": "denied" if status == 403 else "blocked" if status == 503 else "invalid_request",
+                    "code": code}), status
+
+
+def _kos_scoped_author_profile(author_id, scope):
+    import database as db
+    import reprocess
+
+    if not isinstance(author_id, str) or not author_id.strip():
+        return None
+    author_id = author_id.strip()
+    ids = reprocess._canonical_source_ids(scope, limit=5000)
+    if not ids:
+        return None
+    rows = db.get_notes_for_canonical_source_ids(
+        ids, filters={"author_id": author_id}, limit=min(len(ids), 1000))
+    matched = []
+    for row in rows:
+        note = reprocess._scoped_note(row, scope)
+        if note.get("author_id") == author_id:
+            matched.append(note)
+    if not matched:
+        return None
+    return {
+        "author_id": author_id,
+        "author_nickname": matched[0].get("author_nickname"),
+        "kos_tier": None,
+        "notes": matched,
+    }
+
+
+def _kos_selected_brand_name(selected):
+    value = selected.get("name_zh") or selected.get("name_en")
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("BRAND_DISPLAY_NAME_UNAVAILABLE")
+    return value.strip()
 
 
 @kos_bp.route("/overview", methods=["GET"])
@@ -545,119 +648,59 @@ def api_comments():
 
 
 @kos_bp.route("/outreach", methods=["POST"])
-
-
-
-
-
 def api_outreach():
-
-
-
-
-
-    """生成博主触达邀约文案（DRAFT 状态，不伪造已发送）。"""
-
-
-
-
-
+    """Create a scoped, deterministic outreach draft for human review."""
     try:
-
-
-
-
-
-        ke = _engine()
-
-
-
-
-
+        _actor, actor_ref, scope, selected, decision = _resolve_kos_brand_scope("write")
         data = request.get_json(silent=True) or {}
-
-
-
-
-
-        author_id = data.get("author_id", "")
-
-
-
-
-
-        brand_name = data.get("brand_name", "广州太古汇")
-
-
-
-
-
+        author_id = data.get("author_id")
         campaign_name = data.get("campaign_name", "")
-
-
-
-
-
-        if not author_id:
-
-
-
-
-
-            return jsonify({"ok": False, "error": "author_id required"}), 400
-
-
-
-
-
-        result = ke.generate_outreach(author_id, brand_name=brand_name, campaign_name=campaign_name)
-
-
-
-
-
-        # HCG（HUMAN_CONTROL_GATE_v1）：生成触达/邀约文案 → 登记 AI_GENERATED 执行（DRAFT，不伪造已发送）
-        if isinstance(result, dict) and result.get("ok", True):
-            try:
-                import kos_execution as _kx
-                _exec = _kx.create_execution(
-                    action_type="outreach_send",
-                    target_author_id=data.get("author_id", ""),
-                    target_brand=data.get("brand_name", ""),
-                    payload={"campaign_name": data.get("campaign_name", ""),
-                             "generated_draft": result.get("draft") or result.get("content") or ""},
-                    actor="AI")
-                result["hcg"] = {"status": "AI_GENERATED", "execution_id": _exec["execution_id"],
-                                 "note": "生成≠已发送；人工审核通过后才可执行触达"}
-            except Exception as _e:
-                result["hcg"] = {"status": "HCG_ERROR", "error": str(_e)}
+        if not isinstance(author_id, str) or not author_id.strip():
+            return jsonify({"ok": False, "status": "invalid_request", "code": "AUTHOR_ID_REQUIRED"}), 400
+        if not isinstance(campaign_name, str) or len(campaign_name) > 200:
+            return jsonify({"ok": False, "status": "invalid_request", "code": "CAMPAIGN_NAME_INVALID"}), 400
+        profile = _kos_scoped_author_profile(author_id, scope)
+        if profile is None:
+            return jsonify({"ok": False, "status": "not_found", "code": "AUTHOR_NOT_IN_BRAND_SCOPE"}), 404
+        brand_name = _kos_selected_brand_name(selected)
+        result = _engine().generate_outreach(
+            author_id, brand_name=brand_name, campaign_name=campaign_name,
+            profile=profile, ai_enhance=False,
+        )
+        if result.get("ok") is not True:
+            return jsonify(result), 409
+        try:
+            import kos_execution as execution
+            receipt = execution.create_execution(
+                action_type="outreach_send", target_author_id=author_id,
+                target_brand=brand_name,
+                payload={"campaign_name": campaign_name,
+                         "generated_draft": result.get("content", ""),
+                         "content_source": "deterministic_rule",
+                         "brand_focus_id": scope["brand_focus_id"],
+                         "scope_audit_id": decision.scope_audit_id,
+                         "permission_identity": {
+                             "caller": decision.caller,
+                             "principal_kind": decision.principal_kind,
+                             "principal_ref": decision.principal_ref,
+                         }},
+                actor=actor_ref,
+            )
+        except Exception as exc:  # noqa: BLE001 - convert unknown persistence failures to an explicit partial result.
+            return jsonify({"ok": False, "status": "partial", "code": "DRAFT_REVIEW_RECORD_FAILED",
+                            "draft": result, "error_type": type(exc).__name__}), 503
+        result["hcg"] = {"status": receipt.get("status"),
+                         "execution_id": receipt.get("execution_id"),
+                         "note": "规则生成草稿已登记；未发送，需人工审核。"}
+        result["scope"] = {"domain_id": scope["domain_id"],
+                           "brand_focus_id": scope["brand_focus_id"],
+                           "scope_audit_id": decision.scope_audit_id}
         return jsonify(result)
-
-
-
-
-
-    except Exception as e:
-
-
-
-
-
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    except (ValueError, PermissionError) as exc:
+        return _kos_scope_error(exc)
+    except Exception as exc:  # noqa: BLE001 - request boundary returns a sanitized failure, never success.
+        return jsonify({"ok": False, "status": "error", "code": "OUTREACH_FAILED",
+                        "error_type": type(exc).__name__}), 503
 
 
 
@@ -830,300 +873,117 @@ def api_reward():
 
 
 @kos_bp.route("/report/generate", methods=["POST"])
-
-
-
-
-
 def api_report_generate():
-
-
-
-
-
-    """生成 KOS 动态 HTML 报告。"""
-
-
-
-
-
+    """Fail honestly until the existing KOS report reader supports exact BrandFocus."""
     try:
-
-
-
-
-
-        kr = _report()
-
-
-
-
-
-        data = request.get_json(silent=True) or {}
-
-
-
-
-
-        brand_name = data.get("brand_name", "广州太古汇")
-
-
-
-
-
-        result = kr.generate_report(brand_name=brand_name)
-
-
-
-
-
-        return jsonify(result)
-
-
-
-
-
-    except Exception as e:
-
-
-
-
-
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        _actor, _actor_id, scope, selected, decision = _resolve_kos_brand_scope("write")
+        return jsonify({
+            "ok": False,
+            "status": "blocked",
+            "code": "KOS_REPORT_SCOPE_UNAVAILABLE",
+            "brand_focus_id": scope["brand_focus_id"],
+            "brand_name": _kos_selected_brand_name(selected),
+            "scope_audit_id": decision.scope_audit_id,
+            "reason": "现有 KOS 报告读取器仍聚合未按 BrandFocus 隔离的数据；本次不生成跨品牌报告。",
+        }), 409
+    except (ValueError, PermissionError) as exc:
+        return _kos_scope_error(exc)
+    except Exception as exc:  # noqa: BLE001 - request boundary returns a sanitized failure, never success.
+        return jsonify({"ok": False, "status": "error", "code": "KOS_REPORT_SCOPE_RESOLUTION_FAILED",
+                        "error_type": type(exc).__name__}), 503
 
 
 
 @kos_bp.route("/report/view", methods=["GET"])
-
-
-
-
-
 def api_report_view():
-
-
-
-
-
-    """查看最新 KOS 报告（静态 HTML）。"""
-
-
-
-
-
+    """Fail closed for historical reports without a persisted BrandFocus binding."""
     try:
-
-
-
-
-
-        report_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "reports")
-
-
-
-
-
-        if not os.path.exists(report_dir):
-
-
-
-
-
-            return jsonify({"ok": False, "error": "No reports found"}), 404
-
-
-
-
-
-        files = sorted([f for f in os.listdir(report_dir) if f.endswith(".html") and f.startswith("KOS_Report")], reverse=True)
-
-
-
-
-
-        if not files:
-
-
-
-
-
-            return jsonify({"ok": False, "error": "No KOS reports found"}), 404
-
-
-
-
-
-        return send_from_directory(report_dir, files[0])
-
-
-
-
-
-    except Exception as e:
-
-
-
-
-
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        _actor, _actor_id, scope, selected, decision = _resolve_kos_brand_scope("read")
+        return jsonify({
+            "ok": False,
+            "status": "blocked",
+            "code": "KOS_REPORT_SCOPE_UNAVAILABLE",
+            "brand_focus_id": scope["brand_focus_id"],
+            "brand_name": _kos_selected_brand_name(selected),
+            "scope_audit_id": decision.scope_audit_id,
+            "reason": "现有报告文件没有可核验的 BrandFocus 绑定，暂不提供跨范围报告。",
+        }), 409
+    except (ValueError, PermissionError) as exc:
+        return _kos_scope_error(exc)
+    except Exception as exc:  # noqa: BLE001 - hide unexpected scope resolver details and return a sanitized failure.
+        return jsonify({"ok": False, "status": "error", "code": "KOS_REPORT_SCOPE_RESOLUTION_FAILED",
+                        "error_type": type(exc).__name__}), 503
 
 
 
 @kos_bp.route("/reply/generate", methods=["POST"])
-
-
-
-
-
 def api_reply_generate():
-
-
-
-
-
-    """生成评论回复建议（高风险NO_REPLY）。"""
-
-
-
-
-
+    """Create a scoped reply suggestion; never sends it or changes brand identity."""
     try:
-
-
-
-
-
-        ke = _engine()
-
-
-
-
-
+        _actor, actor_ref, scope, selected, decision = _resolve_kos_brand_scope("write")
         data = request.get_json(silent=True) or {}
-
-
-
-
-
-        result = ke.generate_reply(
-
-
-
-
-
-            comment_text=data.get("comment_text", ""),
-
-
-
-
-
-            brand_name=data.get("brand_name", "广州太古汇"),
-
-
-
-
-
-            reply_style=data.get("reply_style", "professional"),
-
-
-
-
-
-            risk_level=data.get("risk_level", "low"),
-
-
-
-
-
+        comment_text = data.get("comment_text")
+        if not isinstance(comment_text, str) or not comment_text.strip() or len(comment_text) > 8000:
+            return jsonify({"ok": False, "status": "invalid_request", "code": "COMMENT_TEXT_REQUIRED"}), 400
+        author_id = data.get("author_id", "")
+        if author_id and (not isinstance(author_id, str)
+                          or _kos_scoped_author_profile(author_id, scope) is None):
+            return jsonify({"ok": False, "status": "denied", "code": "AUTHOR_NOT_IN_BRAND_SCOPE"}), 403
+        risk_level = data.get("risk_level", "low")
+        if risk_level not in {"low", "medium", "high", "critical"}:
+            risk_level = "unknown"
+        reply_style = data.get("reply_style", "professional")
+        if not isinstance(reply_style, str) or len(reply_style) > 40:
+            return jsonify({"ok": False, "status": "invalid_request", "code": "REPLY_STYLE_INVALID"}), 400
+        brand_name = _kos_selected_brand_name(selected)
+        result = _engine().generate_reply(
+            comment_text=comment_text.strip(), brand_name=brand_name,
+            reply_style=reply_style, risk_level=risk_level, ai_enhance=False,
         )
-
-
-
-
-
-        # HCG（HUMAN_CONTROL_GATE_v1）：生成回复建议 → 登记 AI_GENERATED 执行（待人工审核，不自动发送）
-        if isinstance(result, dict) and result.get("ok", True) and result.get("action") != "NO_REPLY":
+        result["content_source"] = "deterministic_rule"
+        result["input_provenance"] = "USER_PROVIDED_UNVERIFIED"
+        result["scope"] = {"domain_id": scope["domain_id"],
+                           "brand_focus_id": scope["brand_focus_id"],
+                           "scope_audit_id": decision.scope_audit_id}
+        if result.get("ok") is True and result.get("action") == "SUGGEST_REPLY":
+            suggested_reply = result.get("suggested_reply")
+            if not isinstance(suggested_reply, str) or not suggested_reply.strip():
+                return jsonify({"ok": False, "status": "unavailable",
+                                "code": "SUGGESTED_REPLY_UNAVAILABLE"}), 503
             try:
-                import kos_execution as _kx
-                _exec = _kx.create_execution(
-                    action_type="reply_send",
-                    target_author_id=data.get("author_id", ""),
-                    target_brand=data.get("brand_name", ""),
-                    payload={"comment_text": data.get("comment_text", ""),
-                             "reply_style": data.get("reply_style", "professional"),
-                             "generated_reply": result.get("reply") or result.get("draft") or ""},
-                    actor="AI")
-                result["hcg"] = {"status": "AI_GENERATED", "execution_id": _exec["execution_id"],
-                                 "note": "生成≠已发送；人工审核通过后才可执行回复"}
-            except Exception as _e:
-                result["hcg"] = {"status": "HCG_ERROR", "error": str(_e)}
+                import kos_execution as execution
+                receipt = execution.create_execution(
+                    action_type="reply_send", target_author_id=author_id,
+                    target_brand=brand_name,
+                    payload={"comment_text": comment_text.strip(),
+                             "comment_source": "USER_PROVIDED_UNVERIFIED",
+                             "reply_style": reply_style,
+                             "generated_reply": suggested_reply,
+                             "content_source": "deterministic_rule",
+                             "brand_focus_id": scope["brand_focus_id"],
+                             "scope_audit_id": decision.scope_audit_id,
+                             "permission_identity": {
+                                 "caller": decision.caller,
+                                 "principal_kind": decision.principal_kind,
+                                 "principal_ref": decision.principal_ref,
+                             }},
+                    actor=actor_ref,
+                )
+            except Exception as exc:  # noqa: BLE001 - preserve the suggestion but report failed review registration.
+                return jsonify({"ok": False, "status": "partial", "code": "REPLY_REVIEW_RECORD_FAILED",
+                                "suggestion": result, "error_type": type(exc).__name__}), 503
+            result["hcg"] = {"status": receipt.get("status"),
+                             "execution_id": receipt.get("execution_id"),
+                             "note": "规则生成建议已登记；未发送，需人工审核。"}
+        elif result.get("ok") is True and result.get("action") != "NO_REPLY":
+            return jsonify({"ok": False, "status": "unavailable",
+                            "code": "REPLY_ACTION_UNAVAILABLE"}), 503
         return jsonify(result)
-
-
-
-
-
-    except Exception as e:
-
-
-
-
-
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    except (ValueError, PermissionError) as exc:
+        return _kos_scope_error(exc)
+    except Exception as exc:  # noqa: BLE001 - request boundary returns a sanitized failure, never success.
+        return jsonify({"ok": False, "status": "error", "code": "REPLY_GENERATION_FAILED",
+                        "error_type": type(exc).__name__}), 503
 
 
 
@@ -1218,158 +1078,36 @@ def api_content_dna():
 
 
 @kos_bp.route("/attribution", methods=["GET"])
-
-
-
-
-
 def api_attribution():
-
-
-
-
-
-    """KOS多触点归因（单KOS或多触点）。"""
-
-
-
-
-
+    """Return attribution from notes verified within the selected BrandFocus."""
     try:
-
-
-
-
-
-        import kos_attribution
-
-
-
-
-
+        _actor, _actor_id, scope, selected, decision = _resolve_kos_brand_scope("read")
         author_id = request.args.get("author_id", "")
-
-
-
-
-
         note_ids = request.args.get("note_ids", "")
-
-
-
-
-
-        brand_name = request.args.get("brand_name", "广州太古汇")
-
-
-
-
-
+        brand_name = _kos_selected_brand_name(selected)
         if author_id:
-
-
-
-
-
-            result = kos_attribution.calculate_attribution(author_id, brand_name=brand_name)
-
-
-
-
-
+            import kos_attribution
+            outcome = kos_attribution.calculate_attribution(
+                author_id, brand_name=brand_name, scope=scope,
+            )
         elif note_ids:
-
-
-
-
-
-            nids = [n.strip() for n in note_ids.split(",") if n.strip()]
-
-
-
-
-
-            result = kos_attribution.calculate_multi_touch_attribution(nids, brand_name=brand_name)
-
-
-
-
-
+            normalized = [part.strip() for part in note_ids.split(",") if part.strip()]
+            import kos_attribution
+            outcome = kos_attribution.calculate_multi_touch_attribution(
+                normalized, brand_name=brand_name, scope=scope,
+            )
         else:
-
-
-
-
-
-            return jsonify({"ok": False, "error": "author_id or note_ids required"}), 400
-
-
-
-
-
-        return jsonify(result)
-
-
-
-
-
-    except Exception as e:
-
-
-
-
-
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-
-
-
-
-
-
-
-
-
-def _intel():
-
-
-
-
-
-    """延迟导入 KOS Intel 增量模块（意向分层 / KOS号识别 / 竞品对标）。"""
-
-
-
-
-
-    if "kos_intel" not in sys.modules:
-
-
-
-
-
-        import kos_intel
-
-
-
-
-
-    return sys.modules["kos_intel"]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            return jsonify({"ok": False, "status": "invalid_request",
+                            "code": "AUTHOR_ID_OR_NOTE_IDS_REQUIRED"}), 400
+        if outcome.get("ok") is not True:
+            status = 403 if outcome.get("status") == "denied" else 409
+            return jsonify({**outcome, "scope_audit_id": decision.scope_audit_id}), status
+        return jsonify({**outcome, "scope_audit_id": decision.scope_audit_id})
+    except (ValueError, PermissionError) as exc:
+        return _kos_scope_error(exc)
+    except Exception as exc:  # noqa: BLE001 - request boundary returns a sanitized failure, never success.
+        return jsonify({"ok": False, "status": "error", "code": "ATTRIBUTION_FAILED",
+                        "error_type": type(exc).__name__}), 503
 
 
 
@@ -2051,8 +1789,12 @@ def api_kos_channel_roi():
 def api_kos_profile():
     """当前激活品牌 profile：品牌/主体词/排除词/采集关键词 + 聚光 Phase B 状态。"""
     try:
-        from subject_rules import get_active_brand, get_brand_config, collect_keywords_for
         import juguang_api
+        from subject_rules import (
+            collect_keywords_for,
+            get_active_brand,
+            get_brand_config,
+        )
         brand = get_active_brand()
         cfg = get_brand_config(brand)
         return jsonify({"ok": True, "data": {
@@ -2099,7 +1841,7 @@ def api_kos_collect():
         if not isinstance(profile, dict):
             return jsonify({"ok": False, "status": "invalid_request", "code": "BRAND_PROFILE_UNKNOWN"}), 400
 
-        from experience_runtime import _content_project_scope, _content_project_error
+        from experience_runtime import _content_project_error, _content_project_scope
         from shared_artifacts import LocalArtifactError
         try:
             actor, scope = _content_project_scope("write", module="collector")
@@ -2155,7 +1897,9 @@ def api_kos_collect():
                             "reason": paused.get("reason", "采集已暂停"),
                             "brand_focus_id": scope["brand_focus_id"]}), 409
 
-        from lumenis.system.collector.adapters.secondary_collection import collect_search
+        from lumenis.system.collector.adapters.secondary_collection import (
+            collect_search,
+        )
         results = []
         stop_statuses = {
             "RISK_WARNING", "NEED_VERIFY", "SESSION_EXPIRED", "BLOCKED",

@@ -269,7 +269,7 @@ def _platform_collection_section(*, consumer: str = "CTH") -> Dict[str, Any]:
         items=rows,
         endpoint="/api/experience/cth/platform-collection/search" if can_trigger else "",
         source_endpoint="/api/experience/cth/platform-collection" if can_trigger else "",
-        default_keyword="广州太古汇" if can_trigger else "",
+        default_keyword="",
         can_trigger=can_trigger,
         manual_only=True,
         read_only=True,
@@ -440,11 +440,39 @@ def _build_cth03(*, binding: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
-def _build_cth04() -> Dict[str, Any]:
-    """事件与事件关系：真实事件列表；关系图需图关系数据，缺则诚实 blocked。"""
+def _event_screen_material(binding, domain, event_limit, risk_limit=0):
+    """Consume the verified domain read binding; never turn read errors into empty data."""
     import database as db
 
-    events = _safe(db.get_events_curated, 20, default=[])
+    if (not isinstance(binding, dict)
+            or binding.get("contract") != "lumenis.scope-read-binding.v1"
+            or binding.get("scope_verified") is not True
+            or binding.get("read_allowed") is not True
+            or binding.get("domain_id") != domain
+            or binding.get("canonical_scope") not in {"FOCUS", "GLOBAL_ALL"}):
+        raise ValueError("EVENT_SCOPE_BINDING_REQUIRED")
+    focused = binding["canonical_scope"] == "FOCUS"
+    scope = db._normalize_event_scope({
+        "domain_id": "cth" if domain == "CTH" else "zbmp",
+        "subject_id": binding.get("subject_id") if focused and domain == "CTH" else None,
+        "brand_focus_id": binding.get("brand_focus_id") if focused and domain == "BMP" else None,
+        "global_scope": not focused,
+    }, allow_global=True)
+    events = db.get_events_curated(event_limit, scope=scope)
+    risk = []
+    if risk_limit:
+        source_read = db.get_scoped_event_source_rows(
+            scope, source_types=("note", "web_mention"), limit=5000)
+        if source_read.get("truncated") or source_read.get("rejected_count"):
+            raise ValueError("EVENT_SOURCE_COVERAGE_INCOMPLETE")
+        risk = [row for row in source_read["sources"]
+                if row.get("risk_level") in {"high", "critical"}][:risk_limit]
+    return events, risk
+
+
+def _build_cth04(*, binding=None) -> Dict[str, Any]:
+    """事件与事件关系：真实事件列表；关系图需图关系数据，缺则诚实 blocked。"""
+    events, _risk = _event_screen_material(binding, "CTH", 20)
     items = _events_items(_curated(events))
     kpis = [
         metric("cth04.events", "已策展事件", value=len(items), state=STATE_READY,
@@ -526,15 +554,11 @@ def _build_cth07() -> Dict[str, Any]:
     return _envelope("CTH-07", sections)
 
 
-def _build_cth08() -> Dict[str, Any]:
+def _build_cth08(*, binding=None) -> Dict[str, Any]:
     """案例库 / 案例分析：真实高风险笔记 + 已策展事件。"""
-    import database as db
-
-    risk = _safe(db.get_high_risk_notes, 20, default=[])
-    events = _safe(db.get_events_curated, 10, default=[])
-    risk = risk if isinstance(risk, list) else []
+    events, risk = _event_screen_material(binding, "CTH", 10, 20)
     kpi = metric("cth08.cases", "高风险候选案例", value=len(risk), state=STATE_READY,
-                 icon="risk", source="database.get_high_risk_notes")
+                 icon="risk", source="database.get_scoped_event_source_rows")
     tbl = _notes_table("高风险案例（真实）", risk, 14)
     ev = section("events", STATE_READY if _curated(events) else STATE_EMPTY, title="已策展事件",
                  items=_events_items(_curated(events)))
@@ -1336,16 +1360,13 @@ def _build_bmp08() -> Dict[str, Any]:
     return _envelope("BMP-08", sections, truth={"stats": st})
 
 
-def _build_bmp10() -> Dict[str, Any]:
+def _build_bmp10(*, binding=None) -> Dict[str, Any]:
     """品牌风险与事件：database 真实事件 + 高风险笔记（与 CTH 同源只读，域适配 BMP）。"""
-    import database as db
-
-    ev = _safe(db.get_events_curated, 12, default=[])
-    rn = _safe(db.get_high_risk_notes, 10, default=[])
+    ev, rn = _event_screen_material(binding, "BMP", 12, 10)
     ev = _curated(ev)
     rn = rn if isinstance(rn, list) else []
     kpis = [
-        metric("bmp10.events", "在办事件", value=len(ev) or None,
+        metric("bmp10.events", "在办事件", value=len(ev),
                state=STATE_READY if ev else STATE_EMPTY, icon="event",
                source="database.get_events_curated"),
         metric("bmp10.high_risk", "高风险记录", value=len(rn), state=STATE_READY,

@@ -221,6 +221,30 @@ def test_api_capabilities_and_policy(client):
     assert p["evaluation"]["allowed"] is False
 
 
+def test_api_capabilities_reports_unavailable_registered_worker_without_500(monkeypatch, client):
+    from types import SimpleNamespace
+    import internal_browser as ib
+
+    monkeypatch.setattr(
+        ib,
+        "bridge",
+        SimpleNamespace(
+            _canonical_account_name=lambda account: account or "XHS_RETINAUT",
+            cdp_port_for=lambda _account, *, headless=True: None,
+            home_url_for=lambda _account: "https://www.rednote.com",
+        ),
+    )
+    monkeypatch.setattr(bs, "general_browser_online", lambda: False)
+
+    response = client.get("/api/browser-surface/capabilities")
+
+    assert response.status_code == 200
+    resident = response.get_json()["residents"][0]
+    assert resident["status"] == "unavailable"
+    assert resident["online"] is False
+    assert "cdp_port" not in resident
+
+
 def test_browser_surface_api_defaults_to_product_browser(monkeypatch, client):
     """未指定端口的产品浏览器 API 必须走独立通用实例 9224。"""
     seen = {}
@@ -369,6 +393,18 @@ def test_general_browser_launch_is_headless_isolated_and_reuses_only_its_session
     monkeypatch.setattr(cdp_helper, "system_default_cdp_browser", lambda: "chrome")
     online = {"value": False}
     monkeypatch.setattr(cdp_helper, "is_cdp_port_open", lambda _port: online["value"])
+    monkeypatch.setattr(
+        cdp_helper,
+        "is_cdp_profile_running",
+        lambda port, profile_dir, *, headless=None, loopback_only=True, browser=None: (
+            online["value"]
+            and port == bs.GENERAL_CDP_PORT
+            and profile_dir == bs._general_profile_dir("chrome")
+            and headless is True
+            and loopback_only is True
+            and browser == "chrome"
+        ),
+    )
     version = {"Browser": "HeadlessChrome/140.0", "webSocketDebuggerUrl": "ws://127.0.0.1:9224/devtools/browser/owned"}
     monkeypatch.setattr(bs, "_http_json", lambda *_args, **_kwargs: version)
     launched = {}
@@ -392,9 +428,8 @@ def test_general_browser_launch_is_headless_isolated_and_reuses_only_its_session
     assert bs.ensure_general_browser()["action"] == "already_online"
     version["webSocketDebuggerUrl"] = "ws://127.0.0.1:9224/devtools/browser/other"
     assert bs.general_browser_online() is False
-    assert bs.ensure_general_browser()["code"] == "UNVERIFIED_BROWSER_SESSION"
-    with pytest.raises(PermissionError, match="not LUMENIS-owned"):
-        bs._resolve_port(port=bs.GENERAL_CDP_PORT)
+    assert bs.ensure_general_browser()["action"] == "recovered_registered_worker"
+    assert bs._resolve_port(port=bs.GENERAL_CDP_PORT) == bs.GENERAL_CDP_PORT
 
 
 def test_browser_surface_api_rejects_unverified_product_session(monkeypatch, client):
@@ -402,6 +437,181 @@ def test_browser_surface_api_rejects_unverified_product_session(monkeypatch, cli
     response = client.get("/api/browser-surface/tabs")
     assert response.status_code == 403
     assert response.get_json()["code"] == "BROWSER_SESSION_BLOCKED"
+
+
+def _patch_registered_worker_cdp(monkeypatch):
+    import internal_browser as ib
+    from types import SimpleNamespace
+
+    account = "XHS_RETINAUT"
+    port = 9477
+    resolved = []
+
+    def resolve_registered_account(requested):
+        if requested != account:
+            raise PermissionError("registered account identity required")
+        resolved.append(requested)
+        return port
+
+    class FakeWebSocket:
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    ws = FakeWebSocket()
+    monkeypatch.setattr(ib, "_port_for", resolve_registered_account)
+    monkeypatch.setattr(
+        bs,
+        "_http_json",
+        lambda *_args, **_kwargs: [{
+            "id": "registered-tab",
+            "type": "page",
+            "title": "Test",
+            "url": "https://www.xiaohongshu.com/",
+            "webSocketDebuggerUrl": "ws://127.0.0.1/devtools/page/registered-tab",
+        }],
+    )
+    monkeypatch.setattr(
+        bs,
+        "websocket",
+        SimpleNamespace(create_connection=lambda *_args, **_kwargs: ws),
+    )
+    return account, port, resolved, ws
+
+
+def test_navigate_tab_preserves_registered_account_for_nested_target_lookup(monkeypatch):
+    import internal_browser as ib
+
+    account, port, resolved, ws = _patch_registered_worker_cdp(monkeypatch)
+    monkeypatch.setattr(ib, "_cdp", lambda *_args, **_kwargs: {"result": {}})
+
+    result = bs.navigate_tab(
+        "https://www.xiaohongshu.com/explore",
+        account=account,
+        port=port,
+        wait_ms=0,
+    )
+
+    assert result["ok"] is True
+    assert resolved == [account, account]
+    assert ws.closed is True
+
+
+def test_extract_preserves_registered_account_through_fixed_evaluation(monkeypatch):
+    import internal_browser as ib
+
+    account, port, resolved, ws = _patch_registered_worker_cdp(monkeypatch)
+    monkeypatch.setattr(
+        ib,
+        "_cdp",
+        lambda *_args, **_kwargs: {"result": {"result": {"value": "{}"}}},
+    )
+
+    result = bs.extract("meta", target_id="registered-tab", account=account, port=port)
+
+    assert result["ok"] is True
+    assert result["meta"] == {}
+    assert resolved == [account, account]
+    assert ws.closed is True
+
+
+def test_hybrid_screenshot_preserves_registered_account_for_nested_target_lookup(monkeypatch):
+    import internal_browser as ib
+
+    account, port, resolved, ws = _patch_registered_worker_cdp(monkeypatch)
+
+    def cdp_response(_ws, method, *_args, **_kwargs):
+        if method == "Page.captureScreenshot":
+            return {"result": {"data": "aGVsbG8="}}
+        return {"result": {"result": {"value": "{\"url\":\"https://www.xiaohongshu.com/\",\"title\":\"Test\"}"}}}
+
+    monkeypatch.setattr(ib, "_cdp", cdp_response)
+    result = bs._hybrid_screenshot(
+        target_id="registered-tab",
+        account=account,
+        port=port,
+    )
+
+    assert result["ok"] is True
+    assert result["url"] == "https://www.xiaohongshu.com/"
+    assert resolved == [account, account]
+    assert ws.closed is True
+
+
+def test_observe_uses_bounded_existing_extractors_and_preserves_registered_account(monkeypatch):
+    import json
+    import internal_browser as ib
+
+    account, port, resolved, ws = _patch_registered_worker_cdp(monkeypatch)
+    body_text = "x" * 2000
+    meta = {
+        "url": "https://www.xiaohongshu.com/explore",
+        "title": "A real page",
+        "ready_state": "complete",
+        "element_count": 612,
+        "links": 18,
+        "forms": 2,
+        "buttons": 7,
+        "images": 4,
+    }
+    text = {
+        "url": meta["url"], "title": meta["title"], "text": body_text,
+        "length": 2450, "truncated": True, "container": "main",
+    }
+    elements = [{"i": i, "tag": "button"} for i in range(bs.MAX_DOM_NODES)]
+    dom = {
+        "url": meta["url"], "title": meta["title"],
+        "total": bs.MAX_DOM_NODES + 1,
+        "returned": bs.MAX_DOM_NODES,
+        "elements": elements,
+    }
+    seen_expressions = []
+
+    def evaluate(_ws, method, params, **_kwargs):
+        assert method == "Runtime.evaluate"
+        expression = params["expression"]
+        seen_expressions.append(expression)
+        if expression == bs._JS_META:
+            payload = meta
+        elif expression == bs._JS_TEXT % 2000:
+            payload = text
+        elif expression == bs._JS_DOM % bs.MAX_DOM_NODES:
+            payload = dom
+        else:
+            raise AssertionError("observe used an unrecognized page expression")
+        return {"result": {"result": {"value": json.dumps(payload)}}}
+
+    monkeypatch.setattr(ib, "_cdp", evaluate)
+
+    result = bs.observe(target_id="registered-tab", account=account, port=port)
+
+    assert result["ok"] is True
+    observation = result["observation"]
+    assert observation["body_text"] == body_text
+    assert observation["body_text_length"] == 2450
+    assert observation["counts"] == {"links": 18, "forms": 2, "buttons": 7, "images": 4}
+    assert observation["element_count"] == 612
+    assert len(observation["dom_summary"]) == bs.MAX_DOM_NODES
+    assert observation["truncated_fields"] == ["body_text", "dom_summary"]
+    assert "const limit=2000" in seen_expressions[1]
+    assert ".slice(0,limit)" in seen_expressions[1]
+    assert seen_expressions == [bs._JS_META, bs._JS_TEXT % 2000, bs._JS_DOM % bs.MAX_DOM_NODES]
+    assert resolved == [account] * 5
+    assert ws.closed is True
+
+
+def test_observe_rejects_unregistered_browser_endpoint_without_success(monkeypatch):
+    def reject_endpoint(*_args, **_kwargs):
+        raise PermissionError("registered account identity required")
+
+    monkeypatch.setattr(bs, "_resolve_port", reject_endpoint)
+
+    result = bs.observe(port=9223)
+
+    assert result["ok"] is False
+    assert result["cdp_port"] is None
+    assert "registered account identity required" in result["error"]
 
 
 def test_api_find_requires_query(client):

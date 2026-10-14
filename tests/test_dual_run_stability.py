@@ -33,36 +33,26 @@ def env():
             _load('lumenis.system.ai_gateway.channel'))
 
 
-def _is_valid_yuqing(n):
-    """复现 Shared export_api 内部有效舆情过滤（剔除重复/噪音）"""
-    try:
-        if int(n.get('is_duplicate') or 0) == 1:
-            return False
-    except (TypeError, ValueError):
-        pass
-    if (n.get('noise_type') or '').strip():
-        return False
-    return True
-
-
-def test_export_sentiment_matches_canonical(env):
-    """阶段八 a) Shared export_api 情感分桶 == canonical 直算（同一有效舆情集合）"""
+def test_legacy_report_facade_uses_the_current_authorized_scope(env, monkeypatch):
+    """The compatibility entry must delegate to the current scoped report builder."""
     er, _ = env
-    cm = _load('canonical_metrics')
-    d = er.generate_report_data('daily')
-    summ = d.get('summary', {}) if isinstance(d, dict) else {}
-    # 复现 export 的 notes 集合（filter_notes_by_period 第一元素 + 有效舆情过滤）
-    raw = er.filter_notes_by_period('daily')
-    if isinstance(raw, tuple):
-        raw = raw[0]
-    notes = [n for n in raw if _is_valid_yuqing(n)]
-    canon = cm.sentiment_count(notes)
-    assert summ.get('positive') == canon.get('positive'), \
-        f'pos: export={summ.get("positive")} canon={canon.get("positive")}'
-    assert summ.get('negative') == canon.get('negative'), \
-        f'neg: export={summ.get("negative")} canon={canon.get("negative")}'
-    assert summ.get('neutral') == canon.get('neutral'), \
-        f'neu: export={summ.get("neutral")} canon={canon.get("neutral")}'
+    actor = object()
+    scope = {'domain_id': 'cth', 'product_id': 'CTH', 'subject_id': 'SUBJECT-A',
+             'brand_focus_id': None, 'global_scope': False}
+    report = {'summary': {'total': 1}, 'scope': scope}
+    calls = []
+    monkeypatch.setattr(er, '_request_report_scope',
+                        lambda action='read': (actor, scope, [], None))
+    monkeypatch.setattr(er, '_build_report',
+                        lambda kind, start, end, **kwargs:
+                        (calls.append((kind, start, end, kwargs['actor'], kwargs['scope']))
+                         or (kind, start, end, report, 1, [], [])))
+    monkeypatch.setattr(er, '_verify_report_source_use', lambda *_args: 1)
+
+    result = er.generate_report_data('daily', '2026-10-02')
+
+    assert result == report
+    assert calls == [('daily', '2026-10-02', '2026-10-02', actor, scope)]
 
 
 def test_breaker_open_halfopen_recover():

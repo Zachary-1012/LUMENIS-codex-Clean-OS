@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Shared Reporting routes — 报告/摘要/品牌报告 canonical API 蓝图。
 原则：Shared Reporting 为报告能力唯一 Owner；路由只依赖 Shared/canonical 能力。
 注册点：app.register_blueprint(lumenis.shared.reporting.routes.report_bp)"""
@@ -32,6 +32,17 @@ def _report_failure(exc, *, fallback_status=500):
     status = 400 if isinstance(exc, ValueError) else fallback_status
     return jsonify({'ok': False, 'error': code}), status
 
+
+def _authorized_report_scope(action='read', brand_mode=None):
+    """Resolve report scope through the shared SYSTEM Permission owner."""
+    from lumenis.system.security.permission import resolve_web_request_scope
+    actor, scope, entries, selected = resolve_web_request_scope(action, module='reports')
+    expected = 'CTH' if brand_mode == 'cth' else 'ZBMP' if brand_mode == 'zbmp' else None
+    resolved_product = 'CTH' if scope.get('domain_id') == 'cth' else 'ZBMP'
+    if expected and resolved_product != expected:
+        raise ValueError('REPORT_SCOPE_PRODUCT_MISMATCH')
+    return actor, scope, entries, selected
+
 # ===== 报告 API（从 app.py 拆分，函数体零改动）=====
 
 @report_bp.route('/api/v2/report-center/preview')
@@ -52,12 +63,14 @@ def shared_reporting_preview():
         return jsonify({'ok': False, 'error': 'end_date 需 YYYY-MM-DD'}), 400
     try:
         from lumenis.shared.reporting import ReportGenerator
+        _actor, scope, _entries, selected = _authorized_report_scope(brand_mode=brand_mode)
         rep = ReportGenerator(brand_mode=brand_mode).generate(
-            period, start_date=sd or None, end_date=ed or None)
+            period, start_date=sd or None, end_date=ed or None,
+            scope=scope, scope_entry=selected)
         return jsonify({'ok': True, 'report': rep,
                         'note': 'Shared Reporting canonical preview；只读预览，不替代既有报告 Owner，不产生导出副作用'})
-    except ValueError as ve:
-        return jsonify({'ok': False, 'error': str(ve)}), 400
+    except (PermissionError, ValueError) as ve:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(ve)}), 403 if isinstance(ve, PermissionError) else 409
     except Exception:
         LOGGER.exception('shared reporting preview failed')
         return jsonify({'ok': False, 'error': '报告生成失败，请查看服务端日志'}), 500
@@ -329,7 +342,7 @@ def api_generate_report():
 # ===== 优化版报告API（v2）：按发布日期筛选，周期报告负面必须二次确认 =====
 
 
-def _canonical_report_metrics(report_type, date_str):
+def _canonical_report_metrics(report_type, date_str, scope):
     """UDIP V1.0: 报告统一消费 Canonical Metric（MET-RISK-01/02）。
     不重复计算业务 Truth：风险指数/品牌健康度仅由 daily.generate_today_summary 权威计算。
     报告展示层从此消费该字段；如与 stats 的原始计数并存，两者语义不同（聚合风险 vs 计数）。"""
@@ -343,21 +356,24 @@ def _canonical_report_metrics(report_type, date_str):
             _dt.strptime(d, '%Y-%m-%d')
         except Exception:
             d = _dt.now().strftime('%Y-%m-%d')
-        summary = _dr.generate_today_summary(date_str=d)
+        summary = _dr.generate_today_summary(date_str=d, scope=scope)
         return {
             'metric_version': 'UDIP-V1.0',
             'date': d,
             'MET-RISK-01': {'name': 'risk_index', 'value': summary.get('risk_index'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-01'},
             'MET-RISK-02': {'name': 'brand_health_score', 'value': summary.get('brand_health_score'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-02'},
             'context': {
+                'scope': summary.get('scope'),
                 'total_found': summary.get('total_found'),
                 'effective_count': summary.get('effective_count'),
                 'risk_count': summary.get('risk_count'),
                 'events_count': summary.get('events_count'),
             },
         }
-    except Exception as e:
-        return {'metric_version': 'UDIP-V1.0', 'error': str(e)}
+    except Exception:
+        LOGGER.exception('scoped canonical report metrics failed')
+        return {'metric_version': 'UDIP-V1.0', 'state': 'UNAVAILABLE',
+                'error_code': 'REPORT_METRICS_UNAVAILABLE'}
 
 
 @report_bp.route('/api/report/v2/<report_type>')
@@ -377,8 +393,16 @@ def api_report_v2(report_type):
         date_str = request.args.get('date')
         start, end = get_report_period(report_type)
         
-        # 获取该时间段内的所有笔记（按采集时间）
-        all_notes = db.get_notes_by_date_range(start, end)
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+        note_read = db.get_scoped_event_source_rows(
+            scope, source_types=('note',), date_start=start, date_end=end, limit=5000)
+        if note_read.get('truncated') or note_read.get('rejected_count'):
+            raise ValueError('REPORT_SOURCE_COVERAGE_INCOMPLETE')
+        all_notes = []
+        for source in note_read['sources']:
+            note = dict(source)
+            note.setdefault('note_id', note.get('source_id'))
+            all_notes.append(note)
         
         if report_type == 'daily':
             # 日报：按发布日期筛选，只包含当日或前一日发布的笔记
@@ -423,14 +447,16 @@ def api_report_v2(report_type):
                 'negative_confirmed_required': report_type != 'daily',
                 'high_risk': high_risk
             },
-            'canonical': _canonical_report_metrics(report_type, date_str),
+            'canonical': _canonical_report_metrics(report_type, date_str, scope),
             'notes': filtered_notes[:100],  # 最多返回100条
             'negative_notes': negative_notes[:50],  # 二次确认的负面笔记
             'historical_notes': age_classification['historical'][:50]  # 历史案例笔记
         })
-    except Exception as e:
-        import traceback
-        return jsonify({'ok': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+    except (PermissionError, ValueError) as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(exc)}), 403 if isinstance(exc, PermissionError) else 409
+    except Exception:
+        LOGGER.exception('scoped report v2 failed')
+        return jsonify({'ok': False, 'code': 'REPORT_GENERATION_FAILED'}), 500
 
 
 @report_bp.route('/api/report/v2/stats')
@@ -443,7 +469,13 @@ def api_report_v2_stats():
         from datetime import datetime, timedelta
         end = datetime.now().strftime('%Y-%m-%d')
         start = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
-        all_notes = db.get_notes_by_date_range(start, end)
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+        note_read = db.get_scoped_event_source_rows(
+            scope, source_types=('note',), date_start=start, date_end=end, limit=5000)
+        if note_read.get('truncated') or note_read.get('rejected_count'):
+            raise ValueError('REPORT_SOURCE_COVERAGE_INCOMPLETE')
+        all_notes = [dict(source, note_id=source.get('note_id') or source.get('source_id'))
+                     for source in note_read['sources']]
         
         daily_stats = get_daily_report_filter_stats(all_notes)
         age_classification = classify_notes_by_age(all_notes)
@@ -466,7 +498,8 @@ def api_report_v2_stats():
                 'total': negative_total,
                 'confirmed': negative_confirmed,
                 'pending': negative_pending,
-                'confirmation_rate': round(negative_confirmed / negative_total * 100, 1) if negative_total > 0 else 0
+                'confirmation_rate': round(negative_confirmed / negative_total * 100, 1) if negative_total > 0 else None,
+                'state': 'AVAILABLE' if all_notes else 'EMPTY'
             },
             'logic_explanation': {
                 'daily_report': '只包含当日或前一日发布的笔记，过期笔记放入历史案例库',
@@ -474,8 +507,11 @@ def api_report_v2_stats():
                 'historical_notes': '发布时间超过7天的笔记标记为历史案例，不进入日报，但可在笔记库查看'
             }
         })
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    except (PermissionError, ValueError) as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(exc)}), 403 if isinstance(exc, PermissionError) else 409
+    except Exception:
+        LOGGER.exception('scoped report v2 stats failed')
+        return jsonify({'ok': False, 'code': 'REPORT_GENERATION_FAILED'}), 500
 
 
 @report_bp.route('/api/report/verify')
@@ -502,22 +538,36 @@ def api_report_verify_v571():
     else:
         return jsonify({'ok':False,'error':'type仅支持daily/weekly/monthly'}),400
     
-    with db.get_db() as conn:
-        # 按发布日期统计
-        published=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ?",(start,end)).fetchone()[0]
-        # 按采集日期统计
-        collected=conn.execute("SELECT COUNT(*) FROM notes WHERE date(collected_at) BETWEEN ? AND ?",(start,end)).fetchone()[0]
-        # 负面笔记（已二次确认）
-        confirmed_negative=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ? AND sentiment='negative' AND negative_confirmed=1",(start,end)).fetchone()[0]
-        # 待确认负面
-        pending_negative=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ? AND sentiment='negative' AND negative_confirmed=0",(start,end)).fetchone()[0]
-        # 高风险
-        high_risk=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ? AND risk_level='high'",(start,end)).fetchone()[0]
-        # 事件数
-        try:
-            events=conn.execute("SELECT COUNT(*) FROM events WHERE date(first_seen) BETWEEN ? AND ?",(start,end)).fetchone()[0]
-        except Exception as _e:
-            import logging as _log; _log.getLogger(__name__).warning('events count query failed: %s', _e); events=0
+    try:
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+        note_read = db.get_scoped_event_source_rows(
+            scope, source_types=('note',), limit=5000,
+            date_start=start, date_end=end)
+        event_read = db.get_scoped_events(
+            500, scope=scope, date_start=start, date_end=end, include_sources=True)
+        if (note_read.get('truncated') or note_read.get('rejected_count')
+                or event_read.get('truncated') or event_read.get('rejected_count')):
+            raise ValueError('REPORT_SOURCE_COVERAGE_INCOMPLETE')
+        notes = note_read['sources']
+        published = sum(1 for item in notes
+                        if start <= str(item.get('publish_date') or item.get('publish_datetime') or '')[:10] <= end)
+        collected = sum(1 for item in notes
+                        if start <= str(item.get('captured_at') or item.get('collected_at') or '')[:10] <= end)
+        confirmed_negative = sum(1 for item in notes
+                                 if start <= str(item.get('publish_date') or item.get('publish_datetime') or '')[:10] <= end
+                                 and item.get('sentiment') == 'negative' and item.get('negative_confirmed') == 1)
+        pending_negative = sum(1 for item in notes
+                               if start <= str(item.get('publish_date') or item.get('publish_datetime') or '')[:10] <= end
+                               and item.get('sentiment') == 'negative' and item.get('negative_confirmed') == 0)
+        high_risk = sum(1 for item in notes
+                        if start <= str(item.get('publish_date') or item.get('publish_datetime') or '')[:10] <= end
+                        and item.get('risk_level') == 'high')
+        events = len(event_read['events'])
+    except (PermissionError, ValueError) as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(exc)}), 403 if isinstance(exc, PermissionError) else 409
+    except Exception:
+        LOGGER.exception('scoped report verification failed')
+        return jsonify({'ok': False, 'code': 'REPORT_VERIFICATION_FAILED'}), 500
     
     return jsonify({
         'ok':True,
@@ -537,13 +587,13 @@ def api_report_verify_v571():
 @report_bp.route('/api/digest/today')
 def api_digest_today():
     date_str = request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
-    digest = db.get_latest_digest(date_str)
-    if not digest:
-        # 尝试自动生成
-        try:
-            digest = daily.generate_daily_digest(date_str)
-        except Exception as e:
-            return jsonify({'ok':False,'error':str(e)}),500
+    try:
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+        digest = daily.generate_daily_digest(date_str, scope=scope)
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
     # ZBC Phase 9: 验证 digest 非空且有日期
     if not digest or not digest.get('digest_date'):
         return jsonify({'ok':False,'error':'日报摘要生成失败或为空'}),500
@@ -555,8 +605,11 @@ def api_digest_generate():
     data = request.get_json(silent=True) or {}
     date_str = data.get('date') or datetime.now().strftime('%Y-%m-%d')
     try:
-        digest = daily.generate_daily_digest(date_str)
+        _actor, scope, _entries, _selected = _authorized_report_scope('write')
+        digest = daily.generate_daily_digest(date_str, scope=scope)
         return jsonify({'ok':True,'digest':digest,'message':'日报生成完成'})
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
     except Exception as e:
         return jsonify({'ok':False,'error':str(e)}),500
 
@@ -575,23 +628,25 @@ def api_report_export():
     if fmt not in ('xlsx', 'docx', 'csv'):
         return jsonify({'ok': False, 'error': 'format 仅支持 xlsx/docx/csv'}), 400
     try:
+        actor, scope, _entries, selected = _authorized_report_scope('read')
         start_dt, end_dt = canonical_export.get_date_range(report_type, date_str)
         result = canonical_export.export_artifacts(
             report_type,
             start_dt.strftime('%Y-%m-%d'),
             end_dt.strftime('%Y-%m-%d'),
             (fmt,),
+            actor=actor, scope=scope, scope_entry=selected,
         )
-        file_path = result['files'][fmt]
-        safe_name = f"Taikoo_{report_type}_{result['payload']['period_start']}.{fmt}"
-        mimetype = {
-            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'csv': 'text/csv; charset=utf-8-sig',
-            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        }[fmt]
-        return send_file(file_path, as_attachment=True, download_name=safe_name, mimetype=mimetype)
+        artifact = result['files'][fmt]
+        response = send_file(io.BytesIO(artifact['content']), as_attachment=True,
+                             download_name=artifact['filename'], mimetype=artifact['media_type'], max_age=0)
+        response.headers['X-Lumenis-Saved'] = 'false'
+        response.headers['X-Lumenis-Persistence-State'] = 'DOWNLOAD_ONLY_NOT_SAVED'
+        response.headers['X-Lumenis-Content-SHA256'] = artifact['sha256']
+        return response
     except Exception as exc:
-        return jsonify({'ok': False, 'error': str(exc)}), 500
+        from lumenis.shared.reporting.export_api import _report_error
+        return _report_error(exc)
 
 
 # ===== v5.4 系统配置 API =====
@@ -602,108 +657,30 @@ def api_report_export():
 # P1-D: ACT法则应对策略生成 + 案例匹配 + 专报触发记录
 # ============================================================
 # ACT = Acknowledge承认 → Communicate沟通 → Transform转化
-# 不改变专报8板块现有结构，只在"应对策略"板块的AI prompt中加ACT约束
+# 保留专报结构；ACT建议遵循认证范围，实际行动与AI增强另行核验。
 
-ACT_STRATEGY_PROMPT = """你是广州太古汇品牌公关总监。基于事件信息生成应对策略。
-
-## 输出结构约束（ACT法则）
-所有应对策略必须严格按照 ACT 三段式结构组织：
-
-### A - Acknowledge（承认）
-- 不回避问题，先共情致歉
-- 明确承认事实，不辩解不甩锅
-- 表达对受影响方的关切
-
-### C - Communicate（沟通）
-- 说明已采取的动作和核查进度
-- 明确沟通渠道和时间节点
-- 保持信息透明，不敷衍
-
-### T - Transform（转化）
-- 给出可检验的整改方案
-- 将危机转为改进契机
-- 明确责任方和完成时限
-
-## 要求
-1. 每个策略项必须标注属于 A/C/T 哪个阶段
-2. 策略必须具体可执行，包含责任方和时限
-3. 参考匹配案例的处置方式和恢复周期
-4. 禁忌：不说"个人行为与商场无关"；不甩锅顾客；不隐瞒事实
-5. 直接输出策略列表，不要JSON，不要多余解释
-
-## 匹配案例参考
-{matched_cases_text}
-
-## 事件信息
-{event_info}
-"""
-
-
-def generate_act_strategies(event_info: str, matched_cases: list = None) -> dict:
-    """P1-D: 基于ACT法则生成应对策略。
-
-    Args:
-        event_info: 事件信息文本
-        matched_cases: 匹配的同类案例列表（来自案例库）
-
-    Returns:
-        {ok, strategies, act_structure, provider}
-    """
-    matched_cases_text = ""
-    if matched_cases:
-        lines = []
-        for c in matched_cases:
-            lines.append(f"- {c.get('case_id', '')} {c.get('title', '')}: "
-                         f"处置方式: {c.get('response_summary', '')[:80]}; "
-                         f"太古汇启示: {c.get('taikoo_insight', '')[:100]}")
-        matched_cases_text = "\n".join(lines)
-    else:
-        matched_cases_text = "（无匹配案例，基于通用公关原则生成）"
-
-    prompt = ACT_STRATEGY_PROMPT.format(
-        matched_cases_text=matched_cases_text,
-        event_info=event_info
-    )
-
-    try:
-        import intelligence
-        raw, provider, _ = intelligence.chat(
-            system="你是广州太古汇品牌公关总监，擅长危机公关应对策略制定。",
-            user=prompt,
-            level="high",
-            temperature=0.3,
-            max_tokens=1500,
-            pack_id="glm_4_5_air"
-        )
-        if raw:
-            # 解析ACT结构
-            strategies = [s.strip() for s in raw.strip().split("\n") if s.strip()]
-            return {
-                "ok": True,
-                "strategies": strategies,
-                "act_structure": "Acknowledge→Communicate→Transform",
-                "provider": provider,
-                "raw": raw[:2000],
-            }
-    except Exception as e:
-        # AI不可用时返回规则兜底策略
-        pass
-
-    # 规则兜底：基于场景生成ACT结构策略
-    fallback = [
-        "[A-承认] 对事件造成的影响深表歉意，承认我们在管理/服务中存在不足，不回避不辩解。",
-        "[A-承认] 已第一时间联系受影响方，表达关切并了解具体情况，承担应尽责任。",
-        "[C-沟通] 已成立专项小组核查事件全貌，将在24小时内公布初步调查结果，保持信息透明。",
-        "[C-沟通] 设立专门沟通渠道（客服热线/私信），接受公众咨询和监督，及时回应关切。",
-        "[T-转化] 立即启动整改：对涉事环节进行全面排查，完善管理制度，防止类似事件再次发生。",
-        "[T-转化] 将于7个工作日内公布完整整改报告，接受公众监督，将此次危机转化为服务提升的契机。",
+def generate_act_strategies(event_info: str, matched_cases: list = None, *, scope=None) -> dict:
+    """Provide editable ACT advice, without claiming actions or unbound AI execution."""
+    exact_scope = db._normalize_event_scope(scope, allow_global=True)
+    if not isinstance(event_info, str) or not event_info.strip():
+        raise ValueError("REPORT_EVENT_INPUT_REQUIRED")
+    # No typed, source-authorized Owned request is issued by this legacy caller.
+    # Keep the deterministic planning operation usable without calling a retired
+    # provider, inventing completed actions, or treating research as source facts.
+    strategies = [
+        "[A-承认] 先核实事件与影响范围；区分已确认事实、用户陈述和待核查信息。",
+        "[A-承认] 拟定对受影响方的关切与沟通内容，由负责人审核后采用，不预设责任已经确认。",
+        "[C-沟通] 明确核查负责人、沟通渠道与下一次更新时间；由用户填写并确认可执行时限。",
+        "[C-沟通] 将已完成动作与计划动作分开记录；仅对有证据的进展作事实陈述。",
+        "[T-转化] 根据核实结果制定整改选项、资源需求和验收标准，保留人工选择与修订。",
+        "[T-转化] 记录实施后的实际结果并复核；案例仅供方法参考，不直接推断本次效果。",
     ]
     return {
-        "ok": True,
-        "strategies": fallback,
+        "ok": True, "strategies": strategies, "scope": exact_scope,
         "act_structure": "Acknowledge→Communicate→Transform",
-        "provider": "rule_fallback",
-        "note": "AI不可用，返回规则兜底策略",
+        "provider": "deterministic", "claim_type": "ADVISORY",
+        "ai_status": "UNAVAILABLE", "ai_code": "OWNED_REQUEST_REQUIRED",
+        "note": "规则建议可编辑；未执行行动，未生成AI结论，引用案例仍需核验来源和用途。",
     }
 
 
@@ -713,13 +690,23 @@ def api_generate_special_strategies():
     Body: {event_name, event_info, scenario, trigger_reasons}
     返回: {ok, strategies, matched_cases, act_structure, trigger_reasons}
     """
+    try:
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+    except (PermissionError, ValueError) as exc:
+        return _report_failure(exc, fallback_status=403)
     data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({'ok': False, 'code': 'REPORT_EVENT_INPUT_INVALID'}), 400
     event_name = data.get('event_name', '')
     event_info = data.get('event_info', '')
     scenario = data.get('scenario', '')
     trigger_reasons = data.get('trigger_reasons', [])
 
-    if not event_info and not event_name:
+    if (not all(isinstance(value, str) for value in (event_name, event_info, scenario))
+            or not isinstance(trigger_reasons, list)
+            or not all(isinstance(value, str) for value in trigger_reasons)):
+        return jsonify({'ok': False, 'code': 'REPORT_EVENT_INPUT_INVALID'}), 400
+    if not event_info.strip() and not event_name.strip():
         return jsonify({'ok': False, 'error': 'event_info 或 event_name 不能为空'}), 400
 
     # Step 1: 匹配同类案例（2-3个）
@@ -732,7 +719,7 @@ def api_generate_special_strategies():
 
     # Step 2: 生成ACT策略
     full_event_info = f"事件名称: {event_name}\n场景: {scenario}\n触发原因: {', '.join(trigger_reasons) if trigger_reasons else '无'}\n详情: {event_info}"
-    result = generate_act_strategies(full_event_info, matched_cases)
+    result = generate_act_strategies(full_event_info, matched_cases, scope=scope)
 
     return jsonify({
         'ok': result.get('ok', False),
@@ -740,6 +727,9 @@ def api_generate_special_strategies():
         'matched_cases': matched_cases,
         'act_structure': result.get('act_structure', ''),
         'provider': result.get('provider', ''),
+        'scope': result['scope'], 'claim_type': result['claim_type'],
+        'ai_status': result['ai_status'], 'ai_code': result['ai_code'],
+        'matched_cases_state': 'REFERENCE_MATERIAL_NOT_VERIFIED',
         'trigger_reasons': trigger_reasons,
     })
 
@@ -785,9 +775,12 @@ def api_daily_report_5sections():
     from datetime import datetime
     date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
     try:
-        digest = generate_daily_digest(date_str)
-        formatted = format_daily_report_5sections(digest, date_str)
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+        digest = generate_daily_digest(date_str, scope=scope)
+        formatted = format_daily_report_5sections(digest, date_str, scope=scope)
         return jsonify({'ok': True, 'report': formatted})
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 

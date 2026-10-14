@@ -6,7 +6,6 @@ Learning. The historical ungrounded "AI web search" route is kept only as an
 explicit retired compatibility surface and cannot create canonical events.
 """
 from __future__ import annotations
-import json
 import re
 import threading
 from flask import Blueprint, jsonify, request
@@ -21,7 +20,6 @@ from lumenis.system.ai_gateway import channel as ai_channel
 from lumenis.shared.learning import operations as learning_operations
 import function_registry
 import database as db
-from lumenis.shared.reporting.routes import _canonical_report_metrics
 
 
 def _owned_runtime_status():
@@ -405,15 +403,12 @@ def api_ai_chat():
         return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'MESSAGE_REQUIRED'}), 400
     if len(text) > 4000:
         return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'MESSAGE_TOO_LARGE'}), 413
-    context = function_registry.build_context(text, db)
-    try:
-        stats = db.get_stats()
-    except Exception:
-        stats = {}
-    try:
-        canonical_metrics = _canonical_report_metrics('daily', None)
-    except Exception:
-        canonical_metrics = None
+    functions = function_registry.search_function_metadata(text, 5)
+    context = (
+        '可用功能入口（仅路由信息，不代表当前业务数据）：'
+        + '、'.join(item.get('label', '') for item in functions)
+        if functions else '未匹配到功能入口；本次对话未读取业务记录或案例资料。'
+    )
     history = data.get('history') or []
     if not isinstance(history, list):
         history = []
@@ -425,11 +420,10 @@ def api_ai_chat():
             if content:
                 history_text.append(f'{role}：{content}')
     prompt = (
-        '你是 LUMENIS 的业务助手。回答必须优先依据检索结果和 Canonical 指标，'
-        '区分已核验事实、用户描述和待核验信息，不得编造缺失数据。\n\n'
-        f'用户问题：{text.strip()}\n检索结果：{context}\n'
-        f'当前统计：{json.dumps(stats, ensure_ascii=False, default=str)[:5000]}\n'
-        f'Canonical 指标：{json.dumps(canonical_metrics, ensure_ascii=False, default=str)[:1200]}'
+        '你是 LUMENIS 的业务助手。当前聊天没有绑定逐来源核验的 SourceUse 操作；'
+        '功能目录仅用于导航，不是业务数据。区分用户描述与已核验事实；'
+        '不要声称读取、核验或引用当前品牌、案例、笔记或事件数据，也不得编造业务数字。\n\n'
+        f'用户问题：{text.strip()}\n功能路由提示（非业务数据）：{context}'
     )
     if history_text:
         prompt += '\n最近对话：\n' + '\n'.join(history_text)

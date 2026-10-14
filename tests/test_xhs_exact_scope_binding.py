@@ -9,8 +9,10 @@ import pytest
 @pytest.fixture
 def scope_db(tmp_path, monkeypatch):
     import database
+    from tests.test_rednote_persistence_unknown_comments import _use_test_rednote_identity
     import subject_registry
 
+    _use_test_rednote_identity(monkeypatch)
     path = tmp_path / 'scope.db'
     with sqlite3.connect(os.environ['LUMENIS_TEST_SEED_DB']) as seed:
         with sqlite3.connect(path) as con:
@@ -85,15 +87,18 @@ def test_evidence_failure_never_promotes_raw(scope_db, monkeypatch):
 
 def test_rednote_real_persistence_binds_accepted_plan(scope_db):
     import database
-    from tests.test_rednote_persistence_unknown_comments import _persist_function
+    from tests.test_rednote_persistence_unknown_comments import (
+        _identity_verified_payload,
+        _persist_function,
+    )
     from lumenis.system.collector.acquisition_plan import build_acquisition_plan
 
     path, scope = scope_db
     query = build_acquisition_plan(['广州太古汇']).queries[0]
-    result = _persist_function(database)({
-        'ok': True, 'notes': [{'note_id': 'cdp-note', 'title': '广州太古汇周年活动',
-                             'content': '真实采集路径的合成测试输入', 'comments': None}],
-    }, acquisition_query=query)
+    result = _persist_function(database)(_identity_verified_payload([{
+        'note_id': 'cdp-note', 'title': '广州太古汇周年活动',
+        'content': '真实采集路径的合成测试输入', 'comments': None,
+    }]), acquisition_query=query)
     assert result['ok'] and result['scope_binding']['verified'] == 1
     with sqlite3.connect(path) as con:
         row = con.execute("SELECT subject_id,source_keyword,comments,likes,collects,shares FROM notes WHERE note_id='cdp-note'").fetchone()

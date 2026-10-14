@@ -16,7 +16,7 @@ import logging
 import re
 
 from .base import AdapterResult, BaseAdapter
-from .human_browser import HumanBrowser, PageState, configured_readonly_worker_url
+from .human_browser import HumanBrowser, PageState, registered_browser_worker_spec
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,15 @@ class GoogleAdapter(BaseAdapter):
 
     # ---------- 主流程 ----------
     def _search_via_browser(self, keyword, max_results) -> AdapterResult:
-        endpoint = configured_readonly_worker_url("google", mode="BACKGROUND")
+        worker = registered_browser_worker_spec("google")
+        if worker.get("platform") != "google":
+            raise RuntimeError("GOOGLE_READONLY_WORKER_NOT_REGISTERED")
+        import cdp_helper
+        browser = cdp_helper.registered_cdp_browser_for_port(
+            worker["port"], worker["profile"], headless=True)
+        if browser is None:
+            raise RuntimeError("GOOGLE_BACKGROUND_WORKER_UNAVAILABLE_OR_UNVERIFIED")
+        endpoint = f"http://127.0.0.1:{int(worker['port'])}"
         hb = HumanBrowser(cdp_url=endpoint, auto_ensure=False,
                           launch_url="about:blank")
         page = None
