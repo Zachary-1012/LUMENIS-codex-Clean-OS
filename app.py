@@ -2631,81 +2631,10 @@ def api_metrics_canonical():
     })
 
 def _resolve_web_scope(action, *, module='reports'):
-    """Resolve the selected canonical Subject/BrandFocus and Permission for legacy web routes."""
-    from lumenis.auth.service import get_current_user
-    from lumenis.system.security.permission import (
-        check_actor_scope_permission,
-        check_local_workspace_scope_permission,
-        resolve_local_workspace_principal,
-    )
-    from subject_registry import get_subject_by_id, list_subjects, normalize_domain
+    """Compatibility wrapper for the shared Permission request-scope owner."""
+    from lumenis.system.security.permission import resolve_web_request_scope
 
-    raw_domain = request.headers.get('X-Domain-Id')
-    try:
-        domain_name = normalize_domain(raw_domain)
-    except Exception as exc:
-        raise ValueError('DOMAIN_REQUIRED') from exc
-    product = request.headers.get('X-Product-Id')
-    if product is not None and product.strip().upper() not in ({'CTH'} if domain_name == 'CTH' else {'BMP', 'ZBMP'}):
-        raise ValueError('CONTEXT_SCOPE_MISMATCH')
-    domain = 'cth' if domain_name == 'CTH' else 'zbmp'
-    mode = request.headers.get('X-Lumenis-Context-Mode', 'GLOBAL_ALL')
-    subject_id = request.headers.get('X-Subject-ID')
-    brand_focus_id = request.headers.get('X-Brand-Focus-ID')
-    for value in (subject_id, brand_focus_id):
-        if value is not None and (not value.strip() or value != value.strip()):
-            raise ValueError('CONTEXT_SCOPE_MISMATCH')
-
-    if mode == 'GLOBAL_ALL':
-        if subject_id or brand_focus_id:
-            raise ValueError('CONTEXT_SCOPE_MISMATCH')
-        scope = {'domain_id': domain, 'subject_id': None,
-                 'brand_focus_id': None, 'global_scope': True}
-        entries = [entry for entry in list_subjects(domain_name)
-                   if entry.get('status') in {'active', 'configured'}]
-        selected = None
-    elif mode == 'FOCUS':
-        if domain == 'cth':
-            if not subject_id or brand_focus_id:
-                raise ValueError('CONTEXT_SCOPE_MISMATCH')
-            selected = get_subject_by_id(domain_name, subject_id)
-            if not isinstance(selected, dict) or selected.get('subject_type') != 'company':
-                raise ValueError('SUBJECT_SCOPE_NOT_FOUND')
-            scope = {'domain_id': domain, 'subject_id': subject_id,
-                     'brand_focus_id': None, 'global_scope': False}
-        else:
-            if subject_id:
-                selected = get_subject_by_id(domain_name, subject_id)
-                if (not isinstance(selected, dict) or selected.get('subject_type') != 'brand'
-                        or not selected.get('brand_focus_id')
-                        or (brand_focus_id and selected.get('brand_focus_id') != brand_focus_id)):
-                    raise ValueError('SUBJECT_SCOPE_NOT_FOUND')
-            elif brand_focus_id:
-                matches = [entry for entry in list_subjects(domain_name)
-                           if entry.get('brand_focus_id') == brand_focus_id
-                           and entry.get('status') in {'active', 'configured'}]
-                if len(matches) != 1 or matches[0].get('subject_type') != 'brand':
-                    raise ValueError('SUBJECT_SCOPE_NOT_FOUND')
-                selected = matches[0]
-            else:
-                raise ValueError('CONTEXT_SCOPE_MISMATCH')
-            scope = {'domain_id': domain, 'subject_id': None,
-                     'brand_focus_id': selected['brand_focus_id'], 'global_scope': False}
-        if selected.get('status') not in {'active', 'configured'}:
-            raise ValueError('SUBJECT_SCOPE_NOT_ACTIVE')
-        entries = [selected]
-    else:
-        raise ValueError('CONTEXT_SCOPE_MISMATCH')
-
-    principal = resolve_local_workspace_principal(module=module, action=action)
-    actor = principal if principal is not None else get_current_user(read_only=action == 'read')
-    if principal is None and (not isinstance(actor, dict) or type(actor.get('id')) is not int or actor['id'] <= 0):
-        raise PermissionError('AUTH_REQUIRED')
-    checker = check_local_workspace_scope_permission if principal is not None else check_actor_scope_permission
-    decision = checker(actor, module=module, action=action, **scope)
-    if decision.allowed is not True or decision.verification_state != 'verified' or not decision.scope_audit_id:
-        raise PermissionError('SCOPE_PERMISSION_DENIED')
-    return actor, scope, entries, selected
+    return resolve_web_request_scope(action, module=module)
 
 
 def _web_scope_terms(entries):

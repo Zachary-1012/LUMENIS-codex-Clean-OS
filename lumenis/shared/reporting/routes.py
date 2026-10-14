@@ -34,9 +34,9 @@ def _report_failure(exc, *, fallback_status=500):
 
 
 def _authorized_report_scope(action='read', brand_mode=None):
-    """Reuse the existing app Subject/BrandFocus and Permission resolver."""
-    from app import _resolve_web_scope
-    actor, scope, entries, selected = _resolve_web_scope(action, module='reports')
+    """Resolve report scope through the shared SYSTEM Permission owner."""
+    from lumenis.system.security.permission import resolve_web_request_scope
+    actor, scope, entries, selected = resolve_web_request_scope(action, module='reports')
     expected = 'CTH' if brand_mode == 'cth' else 'ZBMP' if brand_mode == 'zbmp' else None
     resolved_product = 'CTH' if scope.get('domain_id') == 'cth' else 'ZBMP'
     if expected and resolved_product != expected:
