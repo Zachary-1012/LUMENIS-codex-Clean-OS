@@ -22,23 +22,27 @@ sys.path.insert(0, str(ROOT))
 import subject_rules as sr  # noqa: E402
 
 
-class TestGlobalDefaultLock:
-    """生产红线：全局默认必须锁定广州太古汇。"""
+class TestNoImplicitSubjectScope:
+    """The controlled Taikoo reference remains explicit, never the global default."""
 
-    def test_active_brand_constant_is_guangzhou(self):
-        """ACTIVE_BRAND 常量必须是广州太古汇（红线，不得改成其他品牌）。"""
-        assert sr.ACTIVE_BRAND == "guangzhou_taikoo_hui"
+    def test_no_thread_scope_does_not_select_a_reference(self, monkeypatch):
+        monkeypatch.setattr("subject_context.get_thread_context", lambda: None)
+        monkeypatch.setenv("ZBC_ACTIVE_BRAND", "guangzhou_taikoo_hui")
+        assert sr.get_active_brand() == ""
+        assert sr.get_brand_config()["collect_keywords"] == []
+        assert sr.subject_hit(title="广州太古汇探店") is False
 
-    def test_default_active_brand_without_env(self, monkeypatch):
-        """无环境变量时，get_active_brand 返回广州太古汇。"""
-        monkeypatch.delenv("ZBC_ACTIVE_BRAND", raising=False)
-        assert sr.get_active_brand() == "guangzhou_taikoo_hui"
+    def test_controlled_reference_requires_explicit_profile(self):
+        assert sr.subject_hit_for_brand(
+            title="广州太古汇探店", brand_key="guangzhou_taikoo_hui",
+        ) is True
+        assert sr.subject_hit_for_brand(title="广州太古汇探店") is False
 
-    def test_default_subject_hit_uses_guangzhou(self, monkeypatch):
-        """默认 subject_hit 使用广州太古汇口径（含"太古汇"命中，不含则不命中）。"""
-        monkeypatch.delenv("ZBC_ACTIVE_BRAND", raising=False)
-        assert sr.subject_hit(title="广州太古汇探店") is True
-        assert sr.subject_hit(title="随便一篇笔记") is False
+    def test_environment_variable_does_not_supply_subject_scope(self, monkeypatch):
+        monkeypatch.setattr("subject_context.get_thread_context", lambda: None)
+        monkeypatch.setenv("ZBC_ACTIVE_BRAND", "hainan_cdf")
+        assert sr.get_active_brand() == ""
+        assert sr.subject_hit(title="海南中免CDF攻略") is False
 
 
 class TestHainanCdfSubjectHit:
@@ -86,26 +90,10 @@ class TestMultiBrandIsolation:
         assert sr.subject_hit_for_brand(title=title, brand_key="macau_dfs") is False
 
 
-class TestEnvVarActivation:
-    """环境变量 ZBC_ACTIVE_BRAND 切换激活品牌（KOS 多品牌并行的合法方式）。"""
-
-    def test_env_var_switches_active_brand(self, monkeypatch):
-        """设置 ZBC_ACTIVE_BRAND=hainan_cdf 后，get_active_brand 返回海南中免。"""
-        monkeypatch.setenv("ZBC_ACTIVE_BRAND", "hainan_cdf")
-        assert sr.get_active_brand() == "hainan_cdf"
-
-    def test_env_var_changes_subject_hit(self, monkeypatch):
-        """环境变量切换后，默认 subject_hit 使用新品牌口径。"""
-        monkeypatch.setenv("ZBC_ACTIVE_BRAND", "hainan_cdf")
-        assert sr.subject_hit(title="海南中免CDF攻略") is True
-        assert sr.subject_hit(title="广州太古汇探店") is False
-
-    def test_invalid_env_brand_is_rejected(self, monkeypatch):
-        """无效品牌名不能污染广州太古汇口径。"""
-        monkeypatch.setenv("ZBC_ACTIVE_BRAND", "nonexistent_brand")
-        import pytest
+class TestExplicitProfileValidation:
+    def test_unknown_explicit_profile_is_rejected(self):
         with pytest.raises(ValueError, match="UNKNOWN_SUBJECT_PROFILE"):
-            sr.get_brand_config()
+            sr.get_brand_config("nonexistent_brand")
 
 
 def test_kos_collection_uses_canonical_scoped_secondary_writer(monkeypatch):

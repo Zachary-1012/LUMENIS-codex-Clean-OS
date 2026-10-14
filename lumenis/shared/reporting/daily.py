@@ -1,5 +1,5 @@
 """
-广州太古汇舆情监测系统 v5.3.2 - 智能日报模块
+LUMENIS scoped daily reporting module
 ================================================
 从"看到数据"升级为"输出决策信息"
 
@@ -21,7 +21,7 @@ import json
 import math
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import ai_analyzer
 import canonical_metrics as cm
@@ -166,7 +166,7 @@ def _collection_health(date_str=None):
         return {'complete': None, 'state': 'UNKNOWN', 'detail': str(e)[:80]}
 
 
-def generate_today_summary(date_str=None):
+def generate_today_summary(date_str=None, *, scope=None):
     """
     生成今日舆情摘要
     返回结构化数据：
@@ -183,49 +183,92 @@ def generate_today_summary(date_str=None):
     """
     if date_str is None:
         date_str = datetime.now().strftime('%Y-%m-%d')
+    try:
+        parsed_date = date.fromisoformat(str(date_str))
+        if parsed_date.isoformat() != str(date_str):
+            raise ValueError('REPORT_DATE_INVALID')
+        exact = db._normalize_event_scope(scope, allow_global=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('REPORT_SCOPE_OR_DATE_INVALID') from exc
 
-    # 今日所有通过主体过滤的笔记
-    today_notes = db.get_notes_by_date_range(date_str, date_str)
-
-    # 今日有效舆情（通过AI过滤层accepted的）
-    effective_notes = [n for n in today_notes if n.get('ai_filter_status') == 'accepted']
-    # 如果还没有跑过AI过滤，全部视为待处理
-    if not effective_notes and today_notes:
-        effective_notes = today_notes
-
-    total_found = len(today_notes)
-    effective_count = len(effective_notes)
+    # Consume only source rows whose current scope Evidence and Canonical
+    # projection agree. Classification and arithmetic remain useful without AI.
+    source_read = db.get_scoped_event_source_rows(
+        exact, source_types=('note', 'web_mention'), date_start=date_str, date_end=date_str, limit=5000,
+    )
+    today_notes = source_read['sources']
+    source_complete = not source_read['truncated'] and not source_read['rejected_count']
+    effective_notes = today_notes
+    relevance_values = [str(note.get('relevance_status') or '').strip().lower()
+                        for note in today_notes]
+    known_relevance = sum(value in {'relevant', 'accepted', 'irrelevant', 'rejected'}
+                          for value in relevance_values)
+    if source_complete and today_notes and known_relevance == len(today_notes):
+        effective_count = sum(value in {'relevant', 'accepted'} for value in relevance_values)
+    elif source_complete and not today_notes:
+        # A complete, scope-verified empty result is a real zero. Incomplete
+        # reads remain unknown rather than being presented as an empty day.
+        effective_count = 0
+    else:
+        effective_count = None
+    total_found = len(today_notes) if source_complete else None
 
     _sce = cm.sentiment_count(effective_notes)
     _rce = cm.risk_count(effective_notes)
-    positive = _sce['positive'] if _sce['known'] else None
-    neutral = _sce['neutral'] if _sce['known'] else None
+    positive = _sce['positive'] if source_complete and _sce['known'] else None
+    neutral = _sce['neutral'] if source_complete and _sce['known'] else None
     risk = (_rce['high'] + _rce['medium']
-            if _rce['total'] and not _rce['missing'] and not _rce['other'] else None)
+            if source_complete and _rce['total'] and not _rce['missing'] and not _rce['other'] else None)
 
     # 今日事件
-    events = db.get_events(20)
-    today_events = [e for e in events if (e.get('last_seen') or '')[:10] >= date_str
-                    or (e.get('first_seen') or '')[:10] <= date_str <= (e.get('last_seen') or '')[:10]]
+    events_read = db.get_scoped_events(500, scope=exact, date_start=date_str, date_end=date_str)
+    today_events = events_read['events']
+    events_complete = not events_read['truncated'] and not events_read['rejected_count']
 
-    risk_index = calculate_risk_index(effective_notes, today_events)
-    brand_health = calculate_brand_health_score(effective_notes, risk_index)
+    risk_index = calculate_risk_index(effective_notes, today_events) if source_complete and events_complete else None
+    brand_health = calculate_brand_health_score(effective_notes, risk_index) if source_complete and events_complete else None
 
     return {
         'date': date_str,
         'total_found': total_found,
         'effective_count': effective_count,
+        'relevance_coverage': {'known': known_relevance if source_complete else None,
+                               'total': len(today_notes) if source_complete else None,
+                               'unknown': len(today_notes) - known_relevance if source_complete else None,
+                               'observed': len(today_notes)},
         'positive_count': positive,
         'neutral_count': neutral,
-        'negative_count': _sce['negative'] if _sce['known'] else None,
-        'sentiment_coverage': {'known': _sce['known'], 'total': _sce['total'], 'unknown': _sce['unknown']},
-        'risk_coverage': {'known': _rce['total'] - _rce['missing'] - _rce['other'],
-                          'total': _rce['total'], 'missing': _rce['missing'], 'other': _rce['other']},
+        'negative_count': _sce['negative'] if source_complete and _sce['known'] else None,
+        'sentiment_coverage': {'known': _sce['known'] if source_complete else None,
+                              'total': len(today_notes) if source_complete else None,
+                              'unknown': _sce['unknown'] if source_complete else None},
+        'risk_coverage': {'known': _rce['total'] - _rce['missing'] - _rce['other'] if source_complete else None,
+                          'total': _rce['total'] if source_complete else None,
+                          'missing': _rce['missing'] if source_complete else None,
+                          'other': _rce['other'] if source_complete else None,
+                          'observed': _rce['total']},
         'risk_count': risk,
         'risk_index': risk_index,
         'brand_health_score': brand_health,
-        'events_count': len(today_events),
-        'collection_health': _collection_health(date_str),
+        'events_count': len(today_events) if events_complete else None,
+        'collection_health': {**_collection_health(date_str), 'scope': 'system-global'},
+        'scope': exact,
+        'source_state': source_read['state'],
+        'source_coverage': {'complete': source_complete,
+                            'observed': len(today_notes),
+                            'candidates': source_read['candidate_count'],
+                            'rejected': source_read['rejected_count'],
+                            'truncated': source_read['truncated'],
+                            'source_types': ['note', 'web_mention']},
+        'event_coverage': {'complete': events_complete,
+                           'observed': len(today_events),
+                           'candidates': events_read['candidate_count'],
+                           'rejected': events_read['rejected_count'],
+                           'truncated': events_read['truncated']},
+        'source_rejected_count': source_read['rejected_count'],
+        'source_truncated': source_read['truncated'],
+        'event_rejected_count': events_read['rejected_count'],
+        'event_truncated': events_read['truncated'],
     }
 
 
@@ -343,7 +386,7 @@ def _ai_summarize_event(event, notes):
                'sentiment': n.get('sentiment', 'neutral'), 'engagement': int(n.get('likes', 0) or 0) + int(n.get('comments', 0) or 0)}
               for n in notes[:10]]
 
-    system = '''你是广州太古汇舆情事件分析专家。把同一事件的多条用户提及凝练成管理层可执行的摘要。
+    system = '''你是当前已授权业务范围的舆情事件分析助手。把同一事件的多条用户提及凝练成管理层可执行的摘要，不得猜测主体身份。
 
 输出严格JSON：
 {
@@ -426,13 +469,41 @@ def generate_key_insights(notes, events, summary):
             'metric': f'高风险事件{len(high_events)}个'
         })
 
-    # 洞察3：热门话题
-    topics = db.get_hot_topics(5)
+    # Derive topics only from the already scope-verified report input. The old
+    # homepage helper silently read its legacy reference Subject and cannot be
+    # used for a generic CTH/BMP/GLOBAL report.
+    topic_counts = {}
+    for note in notes:
+        raw_topics = note.get('topics')
+        if isinstance(raw_topics, str):
+            try:
+                parsed_topics = json.loads(raw_topics)
+            except (TypeError, ValueError):
+                parsed_topics = [item.strip() for item in raw_topics.split(',')]
+        else:
+            parsed_topics = raw_topics
+        if not isinstance(parsed_topics, (list, tuple)):
+            continue
+        for topic in {item.strip() for item in parsed_topics
+                      if isinstance(item, str) and item.strip()}:
+            bucket = topic_counts.setdefault(topic, {'topic': topic, 'count': 0,
+                                                      'positive': 0, 'neutral': 0,
+                                                      'negative': 0, 'unknown': 0})
+            bucket['count'] += 1
+            sentiment_value = str(note.get('sentiment') or 'unknown').strip().lower()
+            bucket[sentiment_value if sentiment_value in {'positive', 'neutral', 'negative'} else 'unknown'] += 1
+    topics = []
+    for bucket in topic_counts.values():
+        known = {key: bucket[key] for key in ('positive', 'neutral', 'negative')}
+        bucket['sentiment'] = max(known, key=known.get) if sum(known.values()) else 'unknown'
+        topics.append(bucket)
+    topics.sort(key=lambda item: (item['count'], item[item['sentiment']]), reverse=True)
+    topics = topics[:5]
     if topics:
         top_topic = topics[0]
         insights.append({
-            'insight': f'今日最热话题为「{top_topic["topic"]}」（{top_topic["count"]}条），'
-                      f'情感倾向{top_topic.get("sentiment", "neutral")}，是当前用户讨论焦点。',
+            'insight': f'当前已核验记录中提及较多的话题为「{top_topic["topic"]}」（{top_topic["count"]}条），'
+                      f'已分类样本情感倾向{top_topic.get("sentiment", "unknown")}。',
             'type': 'trend',
             'metric': f'{top_topic["count"]}条提及'
         })
@@ -449,13 +520,16 @@ def generate_key_insights(notes, events, summary):
             'metric': f'总互动{total_eng}'
         })
 
-    # 洞察5：AI过滤效果
-    filter_stats = db.get_filter_stats()
-    if filter_stats.get('pending', 0) > 100:
+    # Pending counts are limited to the same verified rows as the report.
+    pending_filter_count = sum(
+        1 for note in notes
+        if str(note.get('ai_filter_status') or '').strip().lower() == 'pending'
+    )
+    if pending_filter_count > 100:
         insights.append({
-            'insight': f'有{filter_stats["pending"]}条笔记待AI二次过滤，建议运行过滤任务以提升数据质量。',
+            'insight': f'当前范围有{pending_filter_count}条记录待筛选复核。',
             'type': 'system',
-            'metric': f'待过滤{filter_stats["pending"]}条'
+            'metric': f'待复核{pending_filter_count}条'
         })
 
     return insights[:5]
@@ -503,7 +577,7 @@ def _rule_executive_insight(summary, events):
     }
 
 
-def generate_action_items(insights, events, summary):
+def generate_action_items(insights, events, summary, notes=None):
     """
     基于洞察生成行动建议清单
     每条：优先级 + 具体动作 + 负责方向 + 时限
@@ -558,13 +632,16 @@ def generate_action_items(insights, events, summary):
             'deadline': '本周内',
         })
 
-    # 数据质量 -> 系统行动
-    filter_stats = db.get_filter_stats()
-    if filter_stats.get('pending', 0) > 50:
+    # Data quality actions use the exact scope-verified rows used by the report.
+    pending_filter_count = sum(
+        1 for note in (notes or [])
+        if str(note.get('ai_filter_status') or '').strip().lower() == 'pending'
+    )
+    if pending_filter_count > 50:
         actions.append({
             'priority': '中',
-            'action': f'运行AI二次过滤任务，清理{filter_stats["pending"]}条待处理笔记中的重复和垃圾内容。',
-            'owner': '系统运维',
+            'action': f'复核当前范围内{pending_filter_count}条待筛选记录，保留未知状态并按现有规则处理。',
+            'owner': '数据分析团队',
             'deadline': '今日内',
         })
 
@@ -623,62 +700,75 @@ def generate_executive_summary(summary, insights, actions):
 
 # ============== 完整日报生成 ==============
 
-def generate_daily_digest(date_str=None):
+def generate_daily_digest(date_str=None, *, scope=None):
     """
-    生成完整的每日摘要（v5.3.2增强版日报）
-    保存到 daily_digest 表，并返回完整数据
+    Generate a complete deterministic daily digest for an authorized scope.
+
+    The legacy date-only digest table cannot preserve focus and version lineage;
+    this function returns an unsaved result for the existing SavedWork flow.
     """
     if date_str is None:
         date_str = datetime.now().strftime('%Y-%m-%d')
 
-    # 1. 今日摘要
-    summary = generate_today_summary(date_str)
+    exact = db._normalize_event_scope(scope, allow_global=True)
+    # 1. 今日摘要。No implicit Subject and no AI gate for deterministic results.
+    summary = generate_today_summary(date_str, scope=exact)
 
-    # 2. 今日有效笔记
-    notes = db.get_notes_by_date_range(date_str, date_str)
-    effective_notes = [n for n in notes if n.get('ai_filter_status') == 'accepted']
-    if not effective_notes and notes:
-        effective_notes = notes
+    # 2. Only current scope-verified source records.
+    note_read = db.get_scoped_event_source_rows(
+        exact, source_types=('note', 'web_mention'), date_start=date_str, date_end=date_str, limit=5000,
+    )
+    effective_notes = note_read['sources']
 
-    # 3. 今日事件
-    events = db.get_events(20)
-    today_events = [e for e in events if (e.get('last_seen') or '')[:10] >= date_str
-                    or (e.get('first_seen') or '')[:10] <= date_str <= (e.get('last_seen') or '')[:10]]
+    # 3. Events are read only after each event/source Evidence and Canonical
+    # reference has been rechecked by the existing database owner.
+    event_read = db.get_scoped_events(
+        500, scope=exact, date_start=date_str, date_end=date_str, include_sources=True,
+    )
+    today_events = event_read['events']
 
-    # 4. AI事件总结（取Top 5事件）
-    event_insights = []
-    for e in sorted(today_events, key=lambda x: (x.get('risk_score') is not None, x.get('risk_score') or 0), reverse=True)[:5]:
-        insight = generate_event_insight(e, effective_notes)
-        event_insights.append(insight)
-        # 保存事件洞察
-        if e.get('id'):
-            db.save_event_insight(e['id'], insight)
+    source_complete = not note_read['truncated'] and not note_read['rejected_count']
+    event_complete = not event_read['truncated'] and not event_read['rejected_count']
+    coverage_complete = source_complete and event_complete
 
-    # 5. 关键洞察
-    insights = generate_key_insights(effective_notes, today_events, summary)
-
-    # 6. 行动建议
-    actions = generate_action_items(insights, today_events, summary)
-
-    # 7. 管理层摘要
-    executive = generate_executive_summary(summary, insights, actions)
-
-    # 8. AI总结（如果AI可用）
-    ai_summary = ''
-    if _ai_allowed_for_report() and intelligence.ai_enabled() and effective_notes:
-        ai_summary = _ai_generate_daily_summary(summary, insights, event_insights)
-
-    if not ai_summary:
+    # Incomplete capped reads remain useful as an explicitly observed sample,
+    # but cannot drive whole-scope insight, alert, or AI claims.
+    if coverage_complete:
+        event_insights = []
+        for e in sorted(today_events, key=lambda x: (x.get('risk_score') is not None, x.get('risk_score') or 0), reverse=True)[:5]:
+            linked_ids = {(str(source.get('source_type')), str(source.get('source_id')))
+                          for source in e.get('sources', [])}
+            linked_notes = [note for note in effective_notes
+                            if (str(note.get('source_type') or 'note'),
+                                str(note.get('source_id') or note.get('note_id'))) in linked_ids]
+            event_insights.append(generate_event_insight(e, linked_notes))
+        insights = generate_key_insights(effective_notes, today_events, summary)
+        actions = generate_action_items(insights, today_events, summary, effective_notes)
+        executive = generate_executive_summary(summary, insights, actions)
+        ai_summary = ''
+        if _ai_allowed_for_report() and intelligence.ai_enabled() and effective_notes:
+            ai_summary = _ai_generate_daily_summary(summary, insights, event_insights)
+        if not ai_summary:
+            ai_summary = executive
+        executive_insight = _ai_generate_executive_insight(summary, insights, event_insights)
+        trend_alerts = _generate_trend_alerts(summary)
+        risk_alerts = _generate_risk_alerts(event_insights)
+    else:
+        event_insights = []
+        insights = []
+        actions = [{'priority': '待核验', 'action': '当前来源或事件读取未覆盖完整范围，样本仅供查看，暂不生成全范围分析与行动建议。',
+                    'owner': '数据分析团队', 'deadline': '本周期内'}]
+        executive = '当前来源或事件覆盖不完整；已隐藏全范围指标与结论，请先完成剩余范围核验。'
         ai_summary = executive
-
-    # 9. P1-E 智谱增强：管理层洞察 + 趋势预警 + 风险预警
-    executive_insight = _ai_generate_executive_insight(summary, insights, event_insights)
-    trend_alerts = _generate_trend_alerts(summary)
-    risk_alerts = _generate_risk_alerts(event_insights)
+        executive_insight = {'executive_insight': executive, 'priority': 'unknown',
+                             'focus_area': '数据覆盖核验', 'provider': 'rule_fallback'}
+        trend_alerts = []
+        risk_alerts = []
 
     # 组装完整数据
     digest = {
         'digest_date': date_str,
+        'scope': exact,
         'total_found': summary['total_found'],
         'effective_count': summary['effective_count'],
         'positive_count': summary['positive_count'],
@@ -694,10 +784,13 @@ def generate_daily_digest(date_str=None):
         'key_insights': insights,
         'action_items': actions,
         'top_events': event_insights,
+        'coverage': {'complete': coverage_complete,
+                     'sources': summary.get('source_coverage'),
+                     'events': summary.get('event_coverage')},
+        'saved': False,
+        'persistence_state': 'NOT_SAVED_USE_SAVEDWORK',
+        'persistence_reason': '请通过现有 SavedWork 工作流保存、修订和重开本报告。',
     }
-
-    # 保存到数据库
-    db.save_daily_digest(digest)
 
     return digest
 
@@ -709,7 +802,7 @@ def _ai_generate_daily_summary(summary, insights, events):
     # 继续沿用现有 AI 增强路径，失败后由调用方使用规则结果。
     if os.environ.get('ZBC_TEST_OFFLINE', '').strip() == '1':
         return ''
-    system = '''你是广州太古汇舆情日报撰写专家。基于数据生成一段150字以内的日报总结。
+    system = '''你是当前已授权业务范围的舆情日报撰写助手。基于数据生成一段150字以内的日报总结，不得猜测主体身份。
 
 要求：
 1. 客观陈述数据，不夸大不缩小
@@ -862,7 +955,7 @@ def _generate_risk_alerts(events):
 #   5. 专报触发条件标注（满足任一即升级）
 # 数据缺失显式 null/—，不用0填充
 
-def format_daily_report_5sections(digest: dict, date_str: str = None) -> dict:
+def format_daily_report_5sections(digest: dict, date_str: str = None, *, scope=None) -> dict:
     """P1-D: 将日报数据格式化为5板块标准结构。
 
     Args:
@@ -873,6 +966,7 @@ def format_daily_report_5sections(digest: dict, date_str: str = None) -> dict:
         {section1_overview, section2_data, section3_negative_top3,
          section4_actions, section5_special_trigger, report_date}
     """
+    exact_scope = db._normalize_event_scope(scope, allow_global=True)
     if date_str is None:
         date_str = datetime.now().strftime('%Y-%m-%d')
 
@@ -882,7 +976,7 @@ def format_daily_report_5sections(digest: dict, date_str: str = None) -> dict:
         summary = digest
 
     effective = summary.get('effective_count', digest.get('effective_count', None))
-    negative = summary.get('negative_count', digest.get('risk_count', None))
+    negative = summary.get('negative_count', digest.get('negative_count'))
     risk_count = summary.get('risk_count', digest.get('risk_count', None))
     risk_index = summary.get('risk_index', digest.get('risk_index', None))
     health = summary.get('brand_health_score', digest.get('brand_health_score', None))
@@ -922,9 +1016,9 @@ def format_daily_report_5sections(digest: dict, date_str: str = None) -> dict:
     chain_change = "—"
     try:
         yesterday = (datetime.strptime(date_str, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
-        y_summary = generate_today_summary(yesterday)
-        y_eff = y_summary.get('effective_count', 0)
-        if y_eff > 0 and effective is not None:
+        y_summary = generate_today_summary(yesterday, scope=exact_scope)
+        y_eff = y_summary.get('effective_count')
+        if y_eff is not None and y_eff > 0 and effective is not None:
             pct = round((effective - y_eff) / y_eff * 100, 1)
             chain_change = f"{'+' if pct >= 0 else ''}{pct}%"
     except Exception:
@@ -940,26 +1034,42 @@ def format_daily_report_5sections(digest: dict, date_str: str = None) -> dict:
 
     # ===== 板块3: 负面TOP3 =====
     negative_top3 = []
+    source_state = 'UNAVAILABLE'
     try:
-        notes = db.get_notes_by_date_range(date_str, date_str)
+        note_read = db.get_scoped_event_source_rows(
+            exact_scope, source_types=('note', 'web_mention'), date_start=date_str, date_end=date_str, limit=5000)
+        notes = note_read['sources']
+        source_state = note_read.get('state')
+        if note_read.get('truncated') or note_read.get('rejected_count'):
+            source_state = 'INCOMPLETE'
+            notes = []
         neg_notes = [n for n in notes if (n.get('sentiment') or '').lower() in ('negative', 'risk')]
-        # 按互动量排序
+        # Missing interaction values stay unknown; only complete measured pairs
+        # participate in the ranking.
         for n in neg_notes:
-            engage = int(n.get('likes', 0) or 0) + int(n.get('comments', 0) or 0) * 3
-            n['_engage'] = engage
-        neg_notes.sort(key=lambda x: x.get('_engage', 0), reverse=True)
+            likes, comments = n.get('likes'), n.get('comments')
+            try:
+                n['_engage'] = int(likes) + int(comments) * 3 if likes is not None and comments is not None else None
+            except (TypeError, ValueError):
+                n['_engage'] = None
+        neg_notes.sort(key=lambda x: (x.get('_engage') is not None, x.get('_engage') or 0), reverse=True)
         for n in neg_notes[:3]:
             negative_top3.append({
                 "业态": n.get('category', n.get('industry', '—')),
                 "笔记摘要": (n.get('title') or n.get('content', '—'))[:50],
-                "互动": n.get('_engage', 0),
+                "互动": n.get('_engage') if n.get('_engage') is not None else '—',
                 "状态": n.get('ai_filter_status', n.get('status', '—')),
             })
+    except (PermissionError, ValueError):
+        raise
     except Exception:
-        pass
+        raise ValueError('REPORT_SOURCE_READ_UNAVAILABLE') from None
 
     if not negative_top3:
-        negative_top3 = [{"业态": "—", "笔记摘要": "今日无负面内容", "互动": "—", "状态": "—"}]
+        message = ('当前范围暂无已核验来源' if source_state == 'EMPTY'
+                   else '当前范围未发现已核验负面内容' if source_state == 'AVAILABLE'
+                   else '来源状态不可用')
+        negative_top3 = [{"业态": "—", "笔记摘要": message, "互动": "—", "状态": source_state}]
 
     section3 = negative_top3
 
@@ -999,10 +1109,11 @@ def format_daily_report_5sections(digest: dict, date_str: str = None) -> dict:
                 max_engage = max(max_engage, n['互动'])
         event = {
             "engagement": max_engage,
-            "sentiment": "negative" if negative and negative > 0 else "neutral",
+            "sentiment": (None if negative is None
+                          else "negative" if negative > 0 else "neutral"),
             "title": core_topic,
             "content": " ".join([n.get('笔记摘要', '') for n in negative_top3]),
-            "negative_count_24h": negative if negative else 0,
+            "negative_count_24h": negative,
         }
         triggered, reasons = risk_engine.check_special_report_trigger(event)
         trigger_status = {
@@ -1032,17 +1143,34 @@ def format_daily_report_5sections(digest: dict, date_str: str = None) -> dict:
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description='广州太古汇舆情监测系统 - 智能日报')
+    parser = argparse.ArgumentParser(description='LUMENIS scoped daily reporting')
     parser.add_argument('--date', type=str, help='指定日期 YYYY-MM-DD，默认今天')
     parser.add_argument('--summary', action='store_true', help='仅生成今日摘要')
     parser.add_argument('--full', action='store_true', help='生成完整日报')
+    parser.add_argument('--domain', choices=('cth', 'zbmp'), help='显式业务域')
+    parser.add_argument('--subject-id', help='CTH 已登记主体 ID；与 --brand-focus-id 互斥')
+    parser.add_argument('--brand-focus-id', help='BMP 已登记品牌焦点 ID；与 --subject-id 互斥')
+    parser.add_argument('--global-all', action='store_true', help='显式选择该业务域的 GLOBAL / ALL 范围')
     args = parser.parse_args()
 
+    if not args.domain:
+        parser.error('--domain is required; no report Subject is selected implicitly')
+    if args.subject_id and args.brand_focus_id:
+        parser.error('--subject-id and --brand-focus-id are mutually exclusive')
+    expected_focus = args.subject_id if args.domain == 'cth' else args.brand_focus_id
+    unexpected_focus = args.brand_focus_id if args.domain == 'cth' else args.subject_id
+    if unexpected_focus or (not args.global_all and not expected_focus):
+        parser.error('provide the matching registered focus ID, or select --global-all')
+    scope = {'domain_id': args.domain,
+             'subject_id': args.subject_id,
+             'brand_focus_id': args.brand_focus_id,
+             'global_scope': args.global_all}
+
     if args.summary:
-        result = generate_today_summary(args.date)
+        result = generate_today_summary(args.date, scope=scope)
         print(json.dumps(result, ensure_ascii=False, indent=2))
     elif args.full:
-        result = generate_daily_digest(args.date)
+        result = generate_daily_digest(args.date, scope=scope)
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
         parser.print_help()

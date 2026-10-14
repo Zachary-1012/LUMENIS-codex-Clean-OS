@@ -1002,6 +1002,267 @@ def test_saved_work_roundtrips_docx_xlsx_and_pptx_with_exact_staging_types(works
     )[0] == 3
 
 
+def test_saved_report_artifact_download_reopens_the_existing_saved_work(workspace, monkeypatch):
+    from lumenis.shared.reporting import export_api
+
+    app = workspace["app"]
+    app.register_blueprint(export_api.export_bp)
+    monkeypatch.setattr(
+        export_api, "_request_report_scope",
+        lambda action="read": (workspace["actor"], workspace["scope"], [], None),
+    )
+    saved = _save(workspace, kind="report", title="Scoped business report",
+                  payload={"report": {"summary": "Saved report content", "metrics": {"records": 2},
+                                      "source_use_bindings": []}})
+
+    with app.test_client() as client:
+        response = client.get(f"/api/export/file/{saved['artifact']['artifact_id']}.json")
+
+    assert response.status_code == 200
+    assert response.headers["X-Lumenis-Saved"] == "true"
+    assert response.headers["X-Lumenis-Content-SHA256"] == saved["artifact"]["sha256"]
+    assert json.loads(response.data)["payload"]["report"]["summary"] == "Saved report content"
+    reopened = workspace["work"].reopen_work(
+        saved["artifact"]["artifact_id"], actor=workspace["actor"], scope=workspace["scope"])
+    assert reopened["document"]["version"] == 1
+
+
+def test_saved_report_download_stops_when_current_source_use_is_revoked(workspace, monkeypatch):
+    from lumenis.shared.reporting import export_api
+
+    app = workspace["app"]
+    app.register_blueprint(export_api.export_bp)
+    monkeypatch.setattr(
+        export_api, "_request_report_scope",
+        lambda action="read": (workspace["actor"], workspace["scope"], [], None),
+    )
+    saved = _save(workspace, kind="report", title="Scoped business report",
+                  payload={"report": {"summary": "Saved report content", "metrics": {"records": 2},
+                                      "source_use_bindings": []}})
+    checks = []
+
+    def reject_current_source_use(_actor, _scope, _item):
+        checks.append("revalidated")
+        raise PermissionError("REPORT_SOURCE_USE_UNVERIFIED")
+
+    monkeypatch.setattr(export_api, "_verify_saved_report_source_use", reject_current_source_use)
+
+    with app.test_client() as client:
+        response = client.get(f"/api/export/file/{saved['artifact']['artifact_id']}.json")
+
+    assert checks == ["revalidated"]
+    assert response.status_code == 403
+    assert response.get_json()["code"] == "REPORT_SOURCE_USE_UNVERIFIED"
+
+
+def test_saved_report_source_use_rechecks_current_canonical_and_declared_rights(monkeypatch):
+    from contextlib import nullcontext
+
+    import database
+    from lumenis.shared import database as shared_database
+    from lumenis.shared.reporting import business_brief, operational_brief, saved_work
+    from lumenis.shared.reporting.export_api import _verify_saved_report_source_use
+
+    scope = {"domain_id": "cth", "subject_id": "SUBJECT-A",
+             "brand_focus_id": None, "global_scope": False}
+    binding = {"source_type": "note", "source_id": "NOTE-A", "scope": scope,
+               "scope_evidence_ref": "scope-evidence-v1", "content_evidence_id": 2,
+               "content_evidence_ref": "app_evidence_records:2"}
+    item = {"document": {"kind": "report", "citations": [], "payload": {"report": {
+        "source_use_bindings": [binding],
+        "source_details": [{"source_type": "note", "source_id": "NOTE-A", **scope,
+                            "scope_evidence_ref": "scope-evidence-v1"}],
+        "event_details": [],
+    }}}}
+    source_row = {"source_id": "NOTE-A", "source_type": "note",
+                  "scope_evidence_ref": "scope-evidence-v1", "source_platform": "x",
+                  "publish_date": None, "captured_at": "2026-10-14T00:00:00Z"}
+
+    class Query:
+        def fetchall(self):
+            return [("canonical-raw-ref", "2026-10-14T00:00:00Z")]
+
+    class Connection:
+        def execute(self, _sql, _params):
+            return Query()
+
+    class Repository:
+        def connection(self, **_kwargs):
+            return nullcontext(Connection())
+
+    monkeypatch.setattr(shared_database, "get_repository", lambda: Repository())
+    monkeypatch.setattr(database, "_verified_event_source_refs", lambda *_args: (
+        [], {("notes", "note", "NOTE-A"): dict(source_row)}
+    ))
+    monkeypatch.setattr(operational_brief, "_content_evidence_ref", lambda *_args: "app_evidence_records:2")
+    monkeypatch.setattr(saved_work, "authorize", lambda *_args, **_kwargs: {"scope": scope})
+    monkeypatch.setattr(saved_work, "_verified_evidence", lambda *_args: {
+        "raw_content": "Exact source body", "asset_id": "NOTE-A",
+    })
+    uses = []
+
+    def allow_source_use(material, actor, *, connection):
+        uses.append((material, actor, connection))
+        return [{"evidence_ref": "app_evidence_records:2"}]
+
+    monkeypatch.setattr(business_brief, "_source_use_material", allow_source_use)
+    assert _verify_saved_report_source_use(object(), scope, item) == 1
+    assert uses and uses[-1][0]["scope"] == scope
+    assert uses[-1][0]["sources"][0]["text"] == "Exact source body"
+
+    def reject_revoked_source(_material, _actor, *, connection):
+        raise PermissionError("REPORT_SOURCE_USE_UNVERIFIED")
+
+    monkeypatch.setattr(business_brief, "_source_use_material", reject_revoked_source)
+    with pytest.raises(PermissionError, match="REPORT_SOURCE_USE_UNVERIFIED"):
+        _verify_saved_report_source_use(object(), scope, item)
+
+
+def test_export_generate_saves_exact_rendition_and_returns_legacy_download_contract(workspace, monkeypatch):
+    from lumenis.shared.reporting import export_api
+
+    app = workspace["app"]
+    app.register_blueprint(export_api.export_bp)
+    monkeypatch.setattr(
+        export_api, "_request_report_scope",
+        lambda action="read": (workspace["actor"], workspace["scope"], [], None),
+    )
+    report = {
+        "brand_name": "Scoped business",
+        "period_label": "日报",
+        "start_date": "2026-10-02",
+        "end_date": "2026-10-02",
+        "executive_summary": "A saved scoped report.",
+        "key_metrics": [{"name": "Records", "value": 2, "unit": "items"}],
+        "source_use_bindings": [],
+    }
+    monkeypatch.setattr(
+        export_api, "_build_report",
+        lambda kind, start, end, **_kwargs: (kind, start, end, report, 0, [], []),
+    )
+    monkeypatch.setattr(export_api, "_report_citations", lambda *_args: [])
+    monkeypatch.setattr(export_api, "_verify_report_source_use", lambda *_args: 0)
+    rendition = _office_attachment("xlsx")
+    monkeypatch.setattr(export_api, "_render_report", lambda _report, fmt: (
+        rendition["content"], rendition["media_type"]
+    ) if fmt == "xlsx" else pytest.fail("unexpected report format"))
+
+    with app.test_client() as client:
+        generated = client.post("/api/export/generate?type=daily&date=2026-10-02&format=xlsx")
+        body = generated.get_json()
+        assert generated.status_code == 200, body
+        assert body["ok"] is True and body["saved"] is True
+        assert body["download_url"].endswith(f"{body['artifact_id']}.xlsx")
+        assert body["size"] == len(rendition["content"])
+        assert body["artifact_hash"] == hashlib.sha256(rendition["content"]).hexdigest()
+        assert body["persistence_state"] == "SAVEDWORK_COMMITTED_AND_REOPENED"
+
+        downloaded = client.get(body["download_url"])
+        listed = client.get("/api/export/list")
+
+    assert downloaded.status_code == 200
+    assert downloaded.data == rendition["content"]
+    assert downloaded.headers["X-Lumenis-Saved"] == "true"
+    assert listed.status_code == 200
+    assert any(item["artifact"]["artifact_id"] == body["artifact_id"]
+               for item in listed.get_json()["items"])
+    reopened = workspace["work"].reopen_work(
+        body["artifact_id"], actor=workspace["actor"], scope=workspace["scope"])
+    assert reopened["document"]["payload"]["report"] == report
+    assert reopened["document"]["attachments"][0]["sha256"] == body["artifact_hash"]
+
+
+def test_report_spreadsheets_preserve_all_fields_and_render_formulas_as_text():
+    import csv
+
+    from openpyxl import load_workbook
+
+    from lumenis.shared.reporting.export_api import _render_report
+
+    report = {
+        "report_id": "REPORT-SAFE-1",
+        "scope": {"domain_id": "cth", "subject_id": "SUBJECT-A"},
+        "sources": [{"title": "=1+1", "content": "+SUM(A1:A3)",
+                     "url": "https://example.invalid/source"}],
+        "risk_events": [{"summary": "@user text", "note": "-cmd"}],
+        "appendix": {"unknown_dimension": None, "collected_zero": 0,
+                     "negative_integer": -1, "negative_fraction": -0.5},
+    }
+
+    raw_csv, _ = _render_report(report, "csv")
+    rows = list(csv.reader(io.StringIO(raw_csv.decode("utf-8-sig"))))
+    csv_cells = {row[1]: row[2] for row in rows[1:] if len(row) == 3}
+    assert csv_cells["sources[0].title"] == "'=1+1"
+    assert csv_cells["sources[0].content"] == "'+SUM(A1:A3)"
+    assert csv_cells["sources[0].url"] == "https://example.invalid/source"
+    assert csv_cells["unknown_dimension"] == "null"
+    assert csv_cells["collected_zero"] == "0"
+    assert csv_cells["negative_integer"] == "-1"
+    assert csv_cells["negative_fraction"] == "-0.5"
+
+    raw_xlsx, _ = _render_report(report, "xlsx")
+    sheet = load_workbook(io.BytesIO(raw_xlsx), data_only=False).active
+    xlsx_cells = {sheet.cell(row, 2).value: sheet.cell(row, 3)
+                  for row in range(2, sheet.max_row + 1)}
+    assert xlsx_cells["sources[0].title"].data_type == "s"
+    assert xlsx_cells["sources[0].title"].value == "'=1+1"
+    assert xlsx_cells["sources[0].content"].data_type == "s"
+    assert xlsx_cells["sources[0].content"].value == "'+SUM(A1:A3)"
+    assert xlsx_cells["sources[0].url"].value == "https://example.invalid/source"
+    assert xlsx_cells["appendix.unknown_dimension"].value == "null"
+    assert xlsx_cells["appendix.collected_zero"].value == 0
+    assert xlsx_cells["appendix.negative_integer"].value == -1
+    assert xlsx_cells["appendix.negative_fraction"].value == -0.5
+
+
+def test_report_xlsx_retains_verified_source_and_event_detail_sheets():
+    from openpyxl import load_workbook
+
+    from lumenis.shared.reporting.export_api import (
+        _attach_report_details,
+        _render_report,
+    )
+
+    report = _attach_report_details(
+        {"key_metrics": [{"name": "Records", "value": 1}]},
+        [{"source_type": "note", "source_id": "N-1", "title": "Observed source",
+          "publish_date": "2026-10-01", "views": None, "likes": 3,
+          "comments": 2, "collects": 3, "shares": 4}],
+        [{"id": "E-1", "title": "Observed event", "risk_level": "medium",
+          "mention_count": 1, "summary": "Verified event summary",
+          "sources": [{"source_type": "note", "source_id": "N-1", "title": "Observed source"}]}],
+    )
+    raw, _ = _render_report(report, "xlsx")
+    book = load_workbook(io.BytesIO(raw), data_only=False)
+    assert {"完整报告", "指标", "来源明细", "事件明细"}.issubset(book.sheetnames)
+
+    source_sheet = book["来源明细"]
+    source_values = [cell.value for row in source_sheet.iter_rows() for cell in row]
+    assert "N-1" in source_values and "Observed source" in source_values
+    assert "1.views" in source_values and "1.likes" in source_values
+    assert "1.engagement" in source_values and 12 in source_values
+
+    event_sheet = book["事件明细"]
+    event_values = [cell.value for row in event_sheet.iter_rows() for cell in row]
+    assert "E-1" in event_values and "Observed event" in event_values
+    assert "Verified event summary" in event_values and "1.mention_count" in event_values
+
+
+def test_report_error_exposes_only_known_codes_and_never_unknown_exception_text():
+    from lumenis.shared.reporting.export_api import _report_error
+
+    secret_path = "D:/private/customer-production.db"
+    with Flask(__name__).app_context():
+        safe_response, safe_status = _report_error(ValueError("SOURCE_SCOPE_EVIDENCE_REQUIRED"))
+        assert safe_status == 409
+        assert safe_response.get_json()["code"] == "SOURCE_SCOPE_EVIDENCE_REQUIRED"
+
+        unsafe_response, unsafe_status = _report_error(RuntimeError(f"failed while reading {secret_path}"))
+        assert unsafe_status == 500
+        assert unsafe_response.get_json()["code"] == "REPORT_EXPORT_FAILED"
+        assert secret_path not in unsafe_response.get_data(as_text=True)
+
+
 def test_saved_work_rejects_mislabeled_malformed_and_unsafe_office_attachments(workspace):
     valid_docx = _office_attachment("docx")
     wrong_mime = {**valid_docx, "media_type": _TEST_OFFICE_FORMATS["xlsx"][0]}

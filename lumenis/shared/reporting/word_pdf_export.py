@@ -247,8 +247,8 @@ class ReportExporter:
                 doc.add_paragraph(f"⚠️ {w}", style="List Bullet")
 
         # 9. CTH专属（如果有）
-        if "cth_specific" in report:
-            doc.add_heading("九、太古汇专属分析", level=1)
+        if (report.get("cth_specific", {}).get("reference_scope") is True):
+            doc.add_heading("九、参考主体专项分析", level=1)
             cth = report["cth_specific"]
             tone = cth.get("tone_evaluation", {})
             doc.add_paragraph(
@@ -386,8 +386,8 @@ class ReportExporter:
                     if warning:
                         story.append(Paragraph(markup(f"警告：{warning}"), styles["Normal"]))
 
-                if "cth_specific" in report:
-                    story.append(Paragraph(markup("太古汇专属分析"), styles["Heading2"]))
+                if report.get("cth_specific", {}).get("reference_scope") is True:
+                    story.append(Paragraph(markup("参考主体专项分析"), styles["Heading2"]))
                     cth = report["cth_specific"]
                     tone = cth.get("tone_evaluation", {})
                     story.append(Paragraph(markup(

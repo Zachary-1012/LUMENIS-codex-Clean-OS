@@ -128,8 +128,8 @@ def test_measured_zero_scores_remain_zero():
 def test_report_insights_and_actions_do_not_treat_missing_as_zero(monkeypatch):
     from lumenis.shared.reporting import daily
 
-    monkeypatch.setattr(daily.db, 'get_hot_topics', lambda *_args: [])
-    monkeypatch.setattr(daily.db, 'get_filter_stats', lambda: {'pending': 0})
+    monkeypatch.setattr(daily.db, 'get_hot_topics', lambda *_args: pytest.fail('unscoped reference topic query'))
+    monkeypatch.setattr(daily.db, 'get_filter_stats', lambda: pytest.fail('unscoped reference status query'))
     notes = [_note('unknown', 'unknown', likes=None, comments=None)]
     summary = {
         'effective_count': 1,
@@ -151,6 +151,54 @@ def test_report_insights_and_actions_do_not_treat_missing_as_zero(monkeypatch):
     assert executive['priority'] == 'unknown'
     assert '—' in executive['executive_insight']
     assert '负面占比0%' not in executive['executive_insight']
+
+
+def test_report_topics_and_pending_counts_come_only_from_scoped_rows(monkeypatch):
+    from lumenis.shared.reporting import daily
+
+    monkeypatch.setattr(daily.db, 'get_hot_topics', lambda *_args: pytest.fail('unscoped reference topic query'))
+    monkeypatch.setattr(daily.db, 'get_filter_stats', lambda: pytest.fail('unscoped reference status query'))
+    notes = [
+        {'source_type': 'note', 'topics': '["topic-a", "topic-a"]',
+         'sentiment': 'unknown', 'ai_filter_status': 'pending', 'likes': 0, 'comments': 0}
+        for _ in range(101)
+    ]
+    notes.append({'source_type': 'note', 'topics': [], 'sentiment': 'unknown',
+                  'ai_filter_status': None, 'likes': None, 'comments': None})
+    summary = {'effective_count': 101, 'positive_count': None, 'negative_count': None,
+               'risk_count': None,
+               'sentiment_coverage': {'known': 0, 'total': 101, 'unknown': 101},
+               'risk_coverage': {'known': 0, 'total': 101, 'missing': 101, 'other': 0}}
+
+    insights = daily.generate_key_insights(notes, [], summary)
+    actions = daily.generate_action_items(insights, [], summary, notes)
+
+    assert any('topic-a' in item['insight'] and '101条' in item['insight'] for item in insights)
+    assert any('101条记录待筛选复核' in item['insight'] for item in insights)
+    assert any('101条待筛选记录' in item['action'] for item in actions)
+
+
+def test_special_report_trigger_preserves_unknown_negative_count(monkeypatch):
+    import risk_engine
+    from lumenis.shared.reporting import daily
+
+    scope = {'domain_id': 'cth', 'subject_id': None, 'brand_focus_id': None, 'global_scope': True}
+    captured = []
+    monkeypatch.setattr(daily, 'generate_today_summary', lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(daily.db, 'get_scoped_event_source_rows', lambda *_args, **_kwargs: {
+        'sources': [], 'state': 'EMPTY', 'truncated': False, 'rejected_count': 0,
+    })
+    monkeypatch.setattr(risk_engine, 'check_special_report_trigger',
+                        lambda event: (captured.append(event) or (False, [])))
+
+    daily.format_daily_report_5sections(
+        {'summary': {'effective_count': 0, 'negative_count': None, 'risk_count': 3},
+         'top_events': [], 'action_items': []},
+        date_str='2026-10-14', scope=scope,
+    )
+
+    assert captured and captured[0]['negative_count_24h'] is None
+    assert captured[0]['sentiment'] is None
 
 
 def test_report_insight_preserves_measured_zero():

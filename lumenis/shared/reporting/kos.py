@@ -37,7 +37,6 @@ from datetime import datetime
 from pathlib import Path
 
 
-from typing import Optional
 
 
 
@@ -77,7 +76,7 @@ def _get_conn() -> sqlite3.Connection:
 
 
 
-def _collect_data(brand_name: str = "广州太古汇") -> dict:
+def _collect_data(brand_name: str) -> dict:
 
 
     """从真实数据库收集报告数据。"""
@@ -1314,7 +1313,7 @@ def _render_channel_roi(ch: dict) -> str:
             '<tbody>' + rows + '</tbody></table></section>')
 
 
-def generate_report(brand_name: str = "广州太古汇", output_path: Optional[str] = None) -> dict:
+def generate_report(brand_name: str, output_path: str | None = None) -> dict:
 
 
     """生成 KOS 动态 HTML 报告。"""

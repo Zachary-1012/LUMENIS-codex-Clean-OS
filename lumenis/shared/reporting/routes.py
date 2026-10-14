@@ -32,6 +32,17 @@ def _report_failure(exc, *, fallback_status=500):
     status = 400 if isinstance(exc, ValueError) else fallback_status
     return jsonify({'ok': False, 'error': code}), status
 
+
+def _authorized_report_scope(action='read', brand_mode=None):
+    """Reuse the existing app Subject/BrandFocus and Permission resolver."""
+    from app import _resolve_web_scope
+    actor, scope, entries, selected = _resolve_web_scope(action, module='reports')
+    expected = 'CTH' if brand_mode == 'cth' else 'ZBMP' if brand_mode == 'zbmp' else None
+    resolved_product = 'CTH' if scope.get('domain_id') == 'cth' else 'ZBMP'
+    if expected and resolved_product != expected:
+        raise ValueError('REPORT_SCOPE_PRODUCT_MISMATCH')
+    return actor, scope, entries, selected
+
 # ===== 报告 API（从 app.py 拆分，函数体零改动）=====
 
 @report_bp.route('/api/v2/report-center/preview')
@@ -52,12 +63,14 @@ def shared_reporting_preview():
         return jsonify({'ok': False, 'error': 'end_date 需 YYYY-MM-DD'}), 400
     try:
         from lumenis.shared.reporting import ReportGenerator
+        _actor, scope, _entries, selected = _authorized_report_scope(brand_mode=brand_mode)
         rep = ReportGenerator(brand_mode=brand_mode).generate(
-            period, start_date=sd or None, end_date=ed or None)
+            period, start_date=sd or None, end_date=ed or None,
+            scope=scope, scope_entry=selected)
         return jsonify({'ok': True, 'report': rep,
                         'note': 'Shared Reporting canonical preview；只读预览，不替代既有报告 Owner，不产生导出副作用'})
-    except ValueError as ve:
-        return jsonify({'ok': False, 'error': str(ve)}), 400
+    except (PermissionError, ValueError) as ve:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(ve)}), 403 if isinstance(ve, PermissionError) else 409
     except Exception:
         LOGGER.exception('shared reporting preview failed')
         return jsonify({'ok': False, 'error': '报告生成失败，请查看服务端日志'}), 500
@@ -329,7 +342,7 @@ def api_generate_report():
 # ===== 优化版报告API（v2）：按发布日期筛选，周期报告负面必须二次确认 =====
 
 
-def _canonical_report_metrics(report_type, date_str):
+def _canonical_report_metrics(report_type, date_str, scope):
     """UDIP V1.0: 报告统一消费 Canonical Metric（MET-RISK-01/02）。
     不重复计算业务 Truth：风险指数/品牌健康度仅由 daily.generate_today_summary 权威计算。
     报告展示层从此消费该字段；如与 stats 的原始计数并存，两者语义不同（聚合风险 vs 计数）。"""
@@ -343,21 +356,24 @@ def _canonical_report_metrics(report_type, date_str):
             _dt.strptime(d, '%Y-%m-%d')
         except Exception:
             d = _dt.now().strftime('%Y-%m-%d')
-        summary = _dr.generate_today_summary(date_str=d)
+        summary = _dr.generate_today_summary(date_str=d, scope=scope)
         return {
             'metric_version': 'UDIP-V1.0',
             'date': d,
             'MET-RISK-01': {'name': 'risk_index', 'value': summary.get('risk_index'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-01'},
             'MET-RISK-02': {'name': 'brand_health_score', 'value': summary.get('brand_health_score'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-02'},
             'context': {
+                'scope': summary.get('scope'),
                 'total_found': summary.get('total_found'),
                 'effective_count': summary.get('effective_count'),
                 'risk_count': summary.get('risk_count'),
                 'events_count': summary.get('events_count'),
             },
         }
-    except Exception as e:
-        return {'metric_version': 'UDIP-V1.0', 'error': str(e)}
+    except Exception:
+        LOGGER.exception('scoped canonical report metrics failed')
+        return {'metric_version': 'UDIP-V1.0', 'state': 'UNAVAILABLE',
+                'error_code': 'REPORT_METRICS_UNAVAILABLE'}
 
 
 @report_bp.route('/api/report/v2/<report_type>')
@@ -377,8 +393,16 @@ def api_report_v2(report_type):
         date_str = request.args.get('date')
         start, end = get_report_period(report_type)
         
-        # 获取该时间段内的所有笔记（按采集时间）
-        all_notes = db.get_notes_by_date_range(start, end)
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+        note_read = db.get_scoped_event_source_rows(
+            scope, source_types=('note',), date_start=start, date_end=end, limit=5000)
+        if note_read.get('truncated') or note_read.get('rejected_count'):
+            raise ValueError('REPORT_SOURCE_COVERAGE_INCOMPLETE')
+        all_notes = []
+        for source in note_read['sources']:
+            note = dict(source)
+            note.setdefault('note_id', note.get('source_id'))
+            all_notes.append(note)
         
         if report_type == 'daily':
             # 日报：按发布日期筛选，只包含当日或前一日发布的笔记
@@ -423,14 +447,16 @@ def api_report_v2(report_type):
                 'negative_confirmed_required': report_type != 'daily',
                 'high_risk': high_risk
             },
-            'canonical': _canonical_report_metrics(report_type, date_str),
+            'canonical': _canonical_report_metrics(report_type, date_str, scope),
             'notes': filtered_notes[:100],  # 最多返回100条
             'negative_notes': negative_notes[:50],  # 二次确认的负面笔记
             'historical_notes': age_classification['historical'][:50]  # 历史案例笔记
         })
-    except Exception as e:
-        import traceback
-        return jsonify({'ok': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+    except (PermissionError, ValueError) as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(exc)}), 403 if isinstance(exc, PermissionError) else 409
+    except Exception:
+        LOGGER.exception('scoped report v2 failed')
+        return jsonify({'ok': False, 'code': 'REPORT_GENERATION_FAILED'}), 500
 
 
 @report_bp.route('/api/report/v2/stats')
@@ -443,7 +469,13 @@ def api_report_v2_stats():
         from datetime import datetime, timedelta
         end = datetime.now().strftime('%Y-%m-%d')
         start = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
-        all_notes = db.get_notes_by_date_range(start, end)
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+        note_read = db.get_scoped_event_source_rows(
+            scope, source_types=('note',), date_start=start, date_end=end, limit=5000)
+        if note_read.get('truncated') or note_read.get('rejected_count'):
+            raise ValueError('REPORT_SOURCE_COVERAGE_INCOMPLETE')
+        all_notes = [dict(source, note_id=source.get('note_id') or source.get('source_id'))
+                     for source in note_read['sources']]
         
         daily_stats = get_daily_report_filter_stats(all_notes)
         age_classification = classify_notes_by_age(all_notes)
@@ -466,7 +498,8 @@ def api_report_v2_stats():
                 'total': negative_total,
                 'confirmed': negative_confirmed,
                 'pending': negative_pending,
-                'confirmation_rate': round(negative_confirmed / negative_total * 100, 1) if negative_total > 0 else 0
+                'confirmation_rate': round(negative_confirmed / negative_total * 100, 1) if negative_total > 0 else None,
+                'state': 'AVAILABLE' if all_notes else 'EMPTY'
             },
             'logic_explanation': {
                 'daily_report': '只包含当日或前一日发布的笔记，过期笔记放入历史案例库',
@@ -474,8 +507,11 @@ def api_report_v2_stats():
                 'historical_notes': '发布时间超过7天的笔记标记为历史案例，不进入日报，但可在笔记库查看'
             }
         })
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    except (PermissionError, ValueError) as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(exc)}), 403 if isinstance(exc, PermissionError) else 409
+    except Exception:
+        LOGGER.exception('scoped report v2 stats failed')
+        return jsonify({'ok': False, 'code': 'REPORT_GENERATION_FAILED'}), 500
 
 
 @report_bp.route('/api/report/verify')
@@ -502,22 +538,35 @@ def api_report_verify_v571():
     else:
         return jsonify({'ok':False,'error':'type仅支持daily/weekly/monthly'}),400
     
-    with db.get_db() as conn:
-        # 按发布日期统计
-        published=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ?",(start,end)).fetchone()[0]
-        # 按采集日期统计
-        collected=conn.execute("SELECT COUNT(*) FROM notes WHERE date(collected_at) BETWEEN ? AND ?",(start,end)).fetchone()[0]
-        # 负面笔记（已二次确认）
-        confirmed_negative=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ? AND sentiment='negative' AND negative_confirmed=1",(start,end)).fetchone()[0]
-        # 待确认负面
-        pending_negative=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ? AND sentiment='negative' AND negative_confirmed=0",(start,end)).fetchone()[0]
-        # 高风险
-        high_risk=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ? AND risk_level='high'",(start,end)).fetchone()[0]
-        # 事件数
-        try:
-            events=conn.execute("SELECT COUNT(*) FROM events WHERE date(first_seen) BETWEEN ? AND ?",(start,end)).fetchone()[0]
-        except Exception as _e:
-            import logging as _log; _log.getLogger(__name__).warning('events count query failed: %s', _e); events=0
+    try:
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+        note_read = db.get_scoped_event_source_rows(
+            scope, source_types=('note',), limit=5000)
+        event_read = db.get_scoped_events(
+            500, scope=scope, date_start=start, date_end=end, include_sources=True)
+        if (note_read.get('truncated') or note_read.get('rejected_count')
+                or event_read.get('truncated') or event_read.get('rejected_count')):
+            raise ValueError('REPORT_SOURCE_COVERAGE_INCOMPLETE')
+        notes = note_read['sources']
+        published = sum(1 for item in notes
+                        if start <= str(item.get('publish_date') or item.get('publish_datetime') or '')[:10] <= end)
+        collected = sum(1 for item in notes
+                        if start <= str(item.get('captured_at') or item.get('collected_at') or '')[:10] <= end)
+        confirmed_negative = sum(1 for item in notes
+                                 if start <= str(item.get('publish_date') or item.get('publish_datetime') or '')[:10] <= end
+                                 and item.get('sentiment') == 'negative' and item.get('negative_confirmed') == 1)
+        pending_negative = sum(1 for item in notes
+                               if start <= str(item.get('publish_date') or item.get('publish_datetime') or '')[:10] <= end
+                               and item.get('sentiment') == 'negative' and item.get('negative_confirmed') == 0)
+        high_risk = sum(1 for item in notes
+                        if start <= str(item.get('publish_date') or item.get('publish_datetime') or '')[:10] <= end
+                        and item.get('risk_level') == 'high')
+        events = len(event_read['events'])
+    except (PermissionError, ValueError) as exc:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(exc)}), 403 if isinstance(exc, PermissionError) else 409
+    except Exception:
+        LOGGER.exception('scoped report verification failed')
+        return jsonify({'ok': False, 'code': 'REPORT_VERIFICATION_FAILED'}), 500
     
     return jsonify({
         'ok':True,
@@ -537,13 +586,13 @@ def api_report_verify_v571():
 @report_bp.route('/api/digest/today')
 def api_digest_today():
     date_str = request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
-    digest = db.get_latest_digest(date_str)
-    if not digest:
-        # 尝试自动生成
-        try:
-            digest = daily.generate_daily_digest(date_str)
-        except Exception as e:
-            return jsonify({'ok':False,'error':str(e)}),500
+    try:
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+        digest = daily.generate_daily_digest(date_str, scope=scope)
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
     # ZBC Phase 9: 验证 digest 非空且有日期
     if not digest or not digest.get('digest_date'):
         return jsonify({'ok':False,'error':'日报摘要生成失败或为空'}),500
@@ -555,8 +604,11 @@ def api_digest_generate():
     data = request.get_json(silent=True) or {}
     date_str = data.get('date') or datetime.now().strftime('%Y-%m-%d')
     try:
-        digest = daily.generate_daily_digest(date_str)
+        _actor, scope, _entries, _selected = _authorized_report_scope('write')
+        digest = daily.generate_daily_digest(date_str, scope=scope)
         return jsonify({'ok':True,'digest':digest,'message':'日报生成完成'})
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
     except Exception as e:
         return jsonify({'ok':False,'error':str(e)}),500
 
@@ -575,23 +627,25 @@ def api_report_export():
     if fmt not in ('xlsx', 'docx', 'csv'):
         return jsonify({'ok': False, 'error': 'format 仅支持 xlsx/docx/csv'}), 400
     try:
+        actor, scope, _entries, selected = _authorized_report_scope('read')
         start_dt, end_dt = canonical_export.get_date_range(report_type, date_str)
         result = canonical_export.export_artifacts(
             report_type,
             start_dt.strftime('%Y-%m-%d'),
             end_dt.strftime('%Y-%m-%d'),
             (fmt,),
+            actor=actor, scope=scope, scope_entry=selected,
         )
-        file_path = result['files'][fmt]
-        safe_name = f"Taikoo_{report_type}_{result['payload']['period_start']}.{fmt}"
-        mimetype = {
-            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'csv': 'text/csv; charset=utf-8-sig',
-            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        }[fmt]
-        return send_file(file_path, as_attachment=True, download_name=safe_name, mimetype=mimetype)
+        artifact = result['files'][fmt]
+        response = send_file(io.BytesIO(artifact['content']), as_attachment=True,
+                             download_name=artifact['filename'], mimetype=artifact['media_type'], max_age=0)
+        response.headers['X-Lumenis-Saved'] = 'false'
+        response.headers['X-Lumenis-Persistence-State'] = 'DOWNLOAD_ONLY_NOT_SAVED'
+        response.headers['X-Lumenis-Content-SHA256'] = artifact['sha256']
+        return response
     except Exception as exc:
-        return jsonify({'ok': False, 'error': str(exc)}), 500
+        from lumenis.shared.reporting.export_api import _report_error
+        return _report_error(exc)
 
 
 # ===== v5.4 系统配置 API =====
@@ -785,9 +839,12 @@ def api_daily_report_5sections():
     from datetime import datetime
     date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
     try:
-        digest = generate_daily_digest(date_str)
-        formatted = format_daily_report_5sections(digest, date_str)
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+        digest = generate_daily_digest(date_str, scope=scope)
+        formatted = format_daily_report_5sections(digest, date_str, scope=scope)
         return jsonify({'ok': True, 'report': formatted})
+    except (PermissionError, ValueError) as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': str(e)}), 403 if isinstance(e, PermissionError) else 409
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 

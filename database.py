@@ -1023,16 +1023,606 @@ def get_feedback_keywords(limit=10):
         return [dict(r) for r in conn.execute('SELECT * FROM feedback_keywords WHERE enabled=1 ORDER BY score DESC,last_seen DESC LIMIT ?',(limit,)).fetchall()]
 
 
-def upsert_event(event):
-    with get_db() as conn:
-        existing=conn.execute('SELECT id FROM events WHERE event_key=?',(event['event_key'],)).fetchone()
-        vals=(event['event_key'],event.get('title',''),event.get('summary',''),event.get('fact_status','unconfirmed'),event.get('impact','neutral'),event.get('risk_reason',''),event.get('recommended_action',''),event.get('first_seen',''),event.get('last_seen',''),event.get('mention_count',0),event.get('source_count',0),event.get('risk_level','low'),event.get('risk_score',0),event.get('status','active'),json.dumps(event.get('keywords',[]),ensure_ascii=False),json.dumps(event.get('translations',{}),ensure_ascii=False),event.get('ai_provider','rule'))
-        if existing:
-            conn.execute('UPDATE events SET title=?,summary=?,fact_status=?,impact=?,risk_reason=?,recommended_action=?,first_seen=?,last_seen=?,mention_count=?,source_count=?,risk_level=?,risk_score=?,status=?,keywords=?,translations=?,ai_provider=? WHERE event_key=?',vals[1:]+(vals[0],))
-            return existing['id']
-        cur=conn.execute('INSERT INTO events(event_key,title,summary,fact_status,impact,risk_reason,recommended_action,first_seen,last_seen,mention_count,source_count,risk_level,risk_score,status,keywords,translations,ai_provider) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',vals)
-        conn.execute('UPDATE events SET event_date=? WHERE id=?',(event.get('event_date') or event.get('first_seen',''), cur.lastrowid))
-        return cur.lastrowid
+_EVENT_SOURCE_TABLES = {"note": "notes", "web_mention": "web_mentions"}
+_EVENT_CONTENT_FIELDS = (
+    "event_key", "title", "summary", "fact_status", "impact", "risk_reason",
+    "recommended_action", "first_seen", "last_seen", "mention_count", "source_count",
+    "risk_level", "risk_score", "status", "keywords", "translations", "ai_provider",
+    "event_date",
+)
+
+
+def _normalize_event_scope(scope, *, allow_global=False):
+    if not isinstance(scope, dict):
+        raise ValueError("SCOPE_REQUIRED")
+    domain = str(scope.get("domain_id") or "").strip().lower()
+    product = "CTH" if domain == "cth" else "ZBMP" if domain in {"bmp", "zbmp"} else None
+    domain = "cth" if product == "CTH" else "zbmp" if product else domain
+    if product is None:
+        raise ValueError("SCOPE_DOMAIN_INVALID")
+    supplied_product = scope.get("product_id")
+    if supplied_product is not None and str(supplied_product).strip().upper() not in ({"CTH"} if product == "CTH" else {"BMP", "ZBMP"}):
+        raise ValueError("SCOPE_MISMATCH")
+    subject_id = scope.get("subject_id")
+    brand_focus_id = scope.get("brand_focus_id")
+    global_scope = scope.get("global_scope") is True
+    for value in (subject_id, brand_focus_id):
+        if value is not None and (not isinstance(value, str) or not value or value != value.strip()):
+            raise ValueError("SCOPE_MISMATCH")
+    if global_scope:
+        if not allow_global or subject_id or brand_focus_id:
+            raise ValueError("FOCUS_SCOPE_REQUIRED")
+    elif product == "CTH":
+        if not subject_id or brand_focus_id:
+            raise ValueError("SCOPE_MISMATCH")
+    elif not brand_focus_id or subject_id:
+        raise ValueError("SCOPE_MISMATCH")
+    return {"domain_id": domain, "product_id": product, "subject_id": subject_id,
+            "brand_focus_id": brand_focus_id, "global_scope": global_scope}
+
+
+def _event_focus_scope_from_row(event):
+    subject_id = event.get("subject_id") or None
+    brand_focus_id = event.get("brand_focus_id") or None
+    if bool(subject_id) == bool(brand_focus_id):
+        raise ValueError("EVENT_SCOPE_FOCUS_INVALID")
+    domain = "cth" if subject_id else "zbmp"
+    product = "CTH" if subject_id else "ZBMP"
+    return _normalize_event_scope({
+        "domain_id": domain, "product_id": product, "subject_id": subject_id,
+        "brand_focus_id": brand_focus_id, "global_scope": False,
+    })
+
+
+def _event_scope_token(scope):
+    import hashlib
+    identity = {key: scope[key] for key in ("product_id", "domain_id", "subject_id", "brand_focus_id")}
+    raw = json.dumps(identity, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def _event_json_value(value, default):
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (TypeError, ValueError):
+            return default
+    return value
+
+
+def _normalized_event_payload(event, *, scope, source_refs=None):
+    import hashlib
+    if not isinstance(event, dict):
+        raise ValueError("EVENT_INVALID")
+    event_key = event.get("event_key")
+    if not isinstance(event_key, str) or not event_key or event_key != event_key.strip():
+        raise ValueError("EVENT_KEY_REQUIRED")
+    if not event_key.startswith(_event_scope_token(scope) + "."):
+        raise ValueError("EVENT_KEY_SCOPE_MISMATCH")
+    keywords = _event_json_value(event.get("keywords", []), [])
+    translations = _event_json_value(event.get("translations", {}), {})
+    if not isinstance(keywords, list) or not all(isinstance(item, str) for item in keywords):
+        raise ValueError("EVENT_KEYWORDS_INVALID")
+    if not isinstance(translations, dict) or not all(
+        isinstance(key, str) and isinstance(value, str) for key, value in translations.items()
+    ):
+        raise ValueError("EVENT_TRANSLATIONS_INVALID")
+    try:
+        risk_score = _nullable_analysis_score(event.get("risk_score"), integer=True)
+    except ValueError as exc:
+        raise ValueError("EVENT_RISK_SCORE_INVALID") from exc
+    payload = {
+        "event_key": event_key,
+        "title": str(event.get("title") or "").strip(),
+        "summary": str(event.get("summary") or "").strip(),
+        "fact_status": str(event.get("fact_status") or "unconfirmed").strip(),
+        "impact": str(event.get("impact") or "unknown").strip(),
+        "risk_reason": str(event.get("risk_reason") or "").strip(),
+        "recommended_action": str(event.get("recommended_action") or "").strip(),
+        "first_seen": str(event.get("first_seen") or "").strip(),
+        "last_seen": str(event.get("last_seen") or "").strip(),
+        "mention_count": 0,
+        "source_count": 0,
+        "risk_level": str(event.get("risk_level") or "unknown").strip().lower(),
+        "risk_score": risk_score,
+        "status": str(event.get("status") or "active").strip().lower(),
+        "keywords": list(dict.fromkeys(item.strip() for item in keywords if item.strip())),
+        "translations": dict(sorted(translations.items())),
+        "ai_provider": "rule",
+        "event_date": str(event.get("event_date") or "").strip(),
+    }
+    refs = source_refs or []
+    payload["mention_count"] = len(refs)
+    payload["source_count"] = len({str(item.get("source_platform") or item.get("source_type") or "unknown") for item in refs})
+    hashed = {"scope": {key: scope[key] for key in ("product_id", "domain_id", "subject_id", "brand_focus_id")},
+              "event": payload,
+              "sources": [
+                  {key: item[key] for key in ("source_table", "source_type", "source_id", "scope_evidence_ref")}
+                  for item in refs
+              ]}
+    digest = hashlib.sha256(json.dumps(hashed, sort_keys=True, ensure_ascii=False,
+                                       separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+    return payload, digest
+
+
+def _signed_scope_evidence(conn, evidence_ref, scope, source_id):
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    try:
+        normalized_ref = int(str(evidence_ref))
+    except (TypeError, ValueError):
+        raise ValueError("SOURCE_SCOPE_EVIDENCE_REQUIRED") from None
+    cursor = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (normalized_ref,))
+    row = cursor.fetchone()
+    if row is None:
+        raise ValueError("SOURCE_SCOPE_EVIDENCE_MISSING")
+    evidence = dict(row)
+    assurance = classify_evidence_integrity(evidence)
+    if (assurance.get("verified") is not True
+            or assurance.get("assurance") != "writer-authenticated"
+            or str(evidence.get("result") or "").upper() != "PASS"
+            or str(evidence.get("status") or "").lower() != "verified"
+            or evidence.get("product_id") != scope["product_id"]
+            or evidence.get("domain_id") != scope["domain_id"]):
+        raise ValueError("SOURCE_SCOPE_EVIDENCE_INVALID")
+    try:
+        inputs = json.loads(evidence.get("inputs_json") or "")
+    except (TypeError, ValueError):
+        raise ValueError("SOURCE_SCOPE_EVIDENCE_INVALID") from None
+    focus_key = "subject_id" if scope["product_id"] == "CTH" else "brand_focus_id"
+    expected = {"domain_id": scope["domain_id"], "product_id": scope["product_id"],
+                "global": False, focus_key: scope[focus_key]}
+    source_ids = inputs.get("source_ids") if isinstance(inputs, dict) else None
+    if (not isinstance(inputs, dict) or inputs.get("_lumenis_scope") != expected
+            or not isinstance(source_ids, list) or source_id not in source_ids):
+        raise ValueError("SOURCE_SCOPE_EVIDENCE_MISMATCH")
+    return normalized_ref
+
+
+def _verified_event_source_refs(conn, scope, mentions):
+    from canonical_data import list_scoped_canonical
+    if not isinstance(mentions, (list, tuple)) or not mentions or len(mentions) > 500:
+        raise ValueError("EVENT_SOURCES_REQUIRED")
+    normalized = []
+    seen = set()
+    for mention in mentions:
+        if not isinstance(mention, dict):
+            raise ValueError("EVENT_SOURCE_INVALID")
+        source_type = str(mention.get("source_type") or "").strip()
+        source_table = _EVENT_SOURCE_TABLES.get(source_type)
+        source_id = mention.get("source_id") or mention.get("note_id")
+        if (source_table is None or not isinstance(source_id, str) or not source_id
+                or source_id != source_id.strip() or len(source_id) > 512):
+            raise ValueError("EVENT_SOURCE_INVALID")
+        key = (source_table, source_type, source_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append({"source_table": source_table, "source_type": source_type,
+                           "source_id": source_id})
+    if not normalized:
+        raise ValueError("EVENT_SOURCES_REQUIRED")
+    focus_column = "subject_id" if scope["product_id"] == "CTH" else "brand_focus_id"
+    other_column = "brand_focus_id" if focus_column == "subject_id" else "subject_id"
+    raw_rows = {}
+    for item in normalized:
+        table = item["source_table"]
+        id_column = "note_id" if table == "notes" else "source_id"
+        row = conn.execute(f"SELECT * FROM {table} WHERE {id_column}=?", (item["source_id"],)).fetchone()
+        if row is None:
+            raise ValueError("EVENT_SOURCE_NOT_FOUND")
+        raw = dict(row)
+        if (str(raw.get("scope_status") or "").upper() != "VERIFIED"
+                or raw.get(focus_column) != scope[focus_column]
+                or raw.get(other_column) not in (None, "")
+                or (raw.get("product_id") not in (None, "", scope["product_id"]))
+                or (raw.get("domain_id") not in (None, "", scope["domain_id"]))):
+            raise ValueError("EVENT_SOURCE_SCOPE_MISMATCH")
+        evidence_ref = raw.get("scope_evidence_ref")
+        _signed_scope_evidence(conn, evidence_ref, scope, item["source_id"])
+        item["scope_evidence_ref"] = str(evidence_ref)
+        item["source_platform"] = str(raw.get("source_platform") or raw.get("source_adapter") or item["source_type"])
+        raw_rows[(item["source_table"], item["source_type"], item["source_id"])] = raw
+    ids_by_type = {}
+    for item in normalized:
+        ids_by_type.setdefault((item["source_table"], item["source_type"]), []).append(item["source_id"])
+    canonical_rows = {}
+    for (table, source_type), source_ids in ids_by_type.items():
+        for offset in range(0, len(source_ids), 100):
+            batch = source_ids[offset:offset + 100]
+            result = list_scoped_canonical(
+                conn, product_id=scope["product_id"], subject_id=scope["subject_id"],
+                brand_focus_id=scope["brand_focus_id"], source_ids=batch,
+                limit=len(batch), source_level=True,
+            )
+            for record in result["records"]:
+                if (record.get("source_table") == table and record.get("source_type") == source_type
+                        and record.get("scope_status") == "VERIFIED"):
+                    canonical_rows.setdefault(record.get("source_id"), []).append(record)
+    for item in normalized:
+        matches = [record for record in canonical_rows.get(item["source_id"], [])
+                   if record.get("source_table") == item["source_table"]
+                   and record.get("source_type") == item["source_type"]]
+        if len(matches) != 1:
+            raise ValueError("EVENT_CANONICAL_SOURCE_UNVERIFIED")
+        if str(matches[0].get("scope_evidence_ref") or "") != item["scope_evidence_ref"]:
+            raise ValueError("EVENT_CANONICAL_EVIDENCE_MISMATCH")
+    normalized.sort(key=lambda item: (item["source_table"], item["source_type"], item["source_id"]))
+    return normalized, raw_rows
+
+
+def get_scoped_event_source_rows(scope, *, limit=2000, source_types=None,
+                                date_start=None, date_end=None):
+    """Read only source rows whose current Canonical and source Evidence agree.
+
+    Scope authorization is resolved by the calling request/service owner. This
+    function verifies that every returned row still belongs to that exact
+    stored scope and that its source-level Canonical projection points to the
+    same signed Evidence. It is a read projection, not an authorization grant.
+    """
+    requested = _normalize_event_scope(scope, allow_global=True)
+    limit = max(1, min(int(limit), 5000))
+    selected_types = tuple(source_types or _EVENT_SOURCE_TABLES)
+    if not selected_types or any(item not in _EVENT_SOURCE_TABLES for item in selected_types):
+        raise ValueError("EVENT_SOURCE_TYPES_INVALID")
+    for date_value in (date_start, date_end):
+        if date_value is not None:
+            try:
+                datetime.strptime(str(date_value), "%Y-%m-%d")
+            except (TypeError, ValueError):
+                raise ValueError("EVENT_SOURCE_DATE_INVALID") from None
+    if date_start and date_end and date_start > date_end:
+        raise ValueError("EVENT_SOURCE_DATE_RANGE_INVALID")
+
+    focus_column = "subject_id" if requested["product_id"] == "CTH" else "brand_focus_id"
+    other_column = "brand_focus_id" if focus_column == "subject_id" else "subject_id"
+    sources = []
+    candidate_count = 0
+    fetched_candidate_count = 0
+    rejected_count = 0
+    conn = get_repository().connect()
+    try:
+        if not conn.in_transaction:
+            conn.execute("BEGIN")
+        for source_type in selected_types:
+            table = _EVENT_SOURCE_TABLES[source_type]
+            id_column = "note_id" if table == "notes" else "source_id"
+            date_column = (
+                "substr(COALESCE(s.publish_date,s.publish_datetime,''),1,10)"
+                if table == "notes" else "substr(COALESCE(s.published_at,''),1,10)"
+            )
+            where = [
+                "c.product_id=?", "c.domain_id=?", "c.scope_status='VERIFIED'",
+                "c.source_table=?", "c.source_type=?",
+                f"NULLIF(TRIM(c.{focus_column}),'') IS NOT NULL",
+                f"COALESCE(c.{other_column},'')=''",
+            ]
+            params = [requested["product_id"], requested["domain_id"], table, source_type]
+            if not requested["global_scope"]:
+                where.append(f"c.{focus_column}=?")
+                params.append(requested[focus_column])
+            if date_start:
+                where.append(f"{date_column}>=?")
+                params.append(str(date_start))
+            if date_end:
+                where.append(f"{date_column}<=?")
+                params.append(str(date_end))
+            from_clause = f"canonical_data c JOIN {table} s ON s.{id_column}=c.source_id"
+            where_sql = " AND ".join(where)
+            candidate_count += int(conn.execute(
+                f"SELECT COUNT(*) FROM (SELECT DISTINCT c.source_id,c.{focus_column} "
+                f"FROM {from_clause} WHERE {where_sql})",
+                tuple(params),
+            ).fetchone()[0])
+            order_column = (
+                "COALESCE(s.publish_date,s.publish_datetime,'')"
+                if table == "notes" else "COALESCE(s.published_at,'')"
+            )
+            rows = conn.execute(
+                f"SELECT DISTINCT c.source_id,c.{focus_column} AS focus_id FROM {from_clause} WHERE {where_sql} "
+                f"ORDER BY {order_column} DESC, c.captured_at DESC, c.canonical_id ASC LIMIT ?",
+                tuple(params + [limit]),
+            ).fetchall()
+            fetched_candidate_count += len(rows)
+            grouped_refs = {}
+            for row in rows:
+                if not row["source_id"] or not row["focus_id"]:
+                    rejected_count += 1
+                    continue
+                source_scope = requested
+                if requested["global_scope"]:
+                    source_scope = {
+                        "domain_id": requested["domain_id"],
+                        "product_id": requested["product_id"],
+                        "subject_id": row["focus_id"] if focus_column == "subject_id" else None,
+                        "brand_focus_id": row["focus_id"] if focus_column == "brand_focus_id" else None,
+                        "global_scope": False,
+                    }
+                grouped_refs.setdefault(source_scope[focus_column], (source_scope, []))[1].append(
+                    {"source_type": source_type, "source_id": str(row["source_id"])}
+                )
+            for source_scope, refs in grouped_refs.values():
+                verified = []
+                for offset in range(0, len(refs), 100):
+                    batch = refs[offset:offset + 100]
+                    try:
+                        normalized, raw_rows = _verified_event_source_refs(conn, source_scope, batch)
+                        verified.extend(
+                            {**raw_rows[(item["source_table"], item["source_type"], item["source_id"])],
+                             "source_table": item["source_table"],
+                             "source_type": item["source_type"],
+                             "source_id": item["source_id"]}
+                            for item in normalized
+                        )
+                    except ValueError:
+                        # Isolate a stale source so it cannot hide other
+                        # currently verified records from the same scope.
+                        for item in batch:
+                            try:
+                                normalized, raw_rows = _verified_event_source_refs(conn, source_scope, [item])
+                                ref = normalized[0]
+                                verified.append({
+                                    **raw_rows[(ref["source_table"], ref["source_type"], ref["source_id"])],
+                                    "source_table": ref["source_table"],
+                                    "source_type": ref["source_type"],
+                                    "source_id": ref["source_id"],
+                                })
+                            except ValueError:
+                                rejected_count += 1
+                sources.extend(verified)
+    finally:
+        conn.close()
+    truncated = candidate_count > fetched_candidate_count
+    return {"sources": sources, "candidate_count": candidate_count,
+            "rejected_count": rejected_count, "truncated": truncated,
+            "state": "TRUNCATED" if truncated else "AVAILABLE" if sources else "EMPTY"}
+
+
+def _event_evidence_matches(conn, evidence_ref, scope, payload, content_hash, source_refs):
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    try:
+        evidence_id = int(str(evidence_ref))
+    except (TypeError, ValueError):
+        return False
+    cursor = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,))
+    row = cursor.fetchone()
+    if row is None:
+        return False
+    evidence = dict(row)
+    assurance = classify_evidence_integrity(evidence)
+    if (assurance.get("verified") is not True
+            or assurance.get("assurance") != "writer-authenticated"
+            or str(evidence.get("result") or "").upper() != "PASS"
+            or str(evidence.get("status") or "").lower() != "verified"
+            or evidence.get("product_id") != scope["product_id"]
+            or evidence.get("domain_id") != scope["domain_id"]):
+        return False
+    try:
+        inputs = json.loads(evidence.get("inputs_json") or "")
+        outputs = json.loads(evidence.get("outputs_json") or "")
+    except (TypeError, ValueError):
+        return False
+    focus_key = "subject_id" if scope["product_id"] == "CTH" else "brand_focus_id"
+    expected_scope = {"domain_id": scope["domain_id"], "product_id": scope["product_id"],
+                      "global": False, focus_key: scope[focus_key]}
+    expected_refs = [{key: item[key] for key in ("source_table", "source_type", "source_id", "scope_evidence_ref")}
+                     for item in source_refs]
+    return (isinstance(inputs, dict) and inputs.get("_lumenis_scope") == expected_scope
+            and inputs.get("source_ids") == sorted(item["source_id"] for item in source_refs)
+            and inputs.get("source_refs") == expected_refs
+            and isinstance(outputs, dict) and outputs.get("event_key") == payload["event_key"]
+            and outputs.get("event_content_sha256") == content_hash)
+
+
+def _event_row_payload(event):
+    row = dict(event)
+    for key, default in (("keywords", []), ("translations", {})):
+        row[key] = _event_json_value(row.get(key), default)
+    return row
+
+
+def _verified_scoped_event(conn, row, requested_scope, *, include_sources=False):
+    event = dict(row)
+    if str(event.get("scope_status") or "").upper() != "VERIFIED":
+        raise ValueError("EVENT_NOT_IN_VERIFIED_SCOPE")
+    stored_scope = _event_focus_scope_from_row(event)
+    requested = _normalize_event_scope(requested_scope, allow_global=True)
+    if (requested["domain_id"] != stored_scope["domain_id"]
+            or requested["product_id"] != stored_scope["product_id"]
+            or (not requested["global_scope"] and any(
+                requested[key] != stored_scope[key] for key in ("subject_id", "brand_focus_id")
+            ))):
+        raise ValueError("EVENT_SCOPE_MISMATCH")
+    mentions = [dict(item) for item in conn.execute(
+        "SELECT source_type,source_id FROM event_mentions WHERE event_id=? ORDER BY source_type,source_id",
+        (event["id"],),
+    ).fetchall()]
+    refs, raw_rows = _verified_event_source_refs(conn, stored_scope, mentions)
+    payload, content_hash = _normalized_event_payload(event, scope=stored_scope, source_refs=refs)
+    if (payload["mention_count"] != int(event.get("mention_count") or 0)
+            or payload["source_count"] != int(event.get("source_count") or 0)
+            or not _event_evidence_matches(conn, event.get("scope_evidence_ref"), stored_scope,
+                                           payload, content_hash, refs)):
+        raise ValueError("EVENT_SCOPE_EVIDENCE_MISMATCH")
+    result = _event_row_payload(event)
+    if include_sources:
+        result["sources"] = [
+            {**raw_rows[(item["source_table"], item["source_type"], item["source_id"])],
+             "source_table": item["source_table"], "source_type": item["source_type"]}
+            for item in refs
+        ]
+    return result
+
+
+def get_scoped_event(event_id, scope, *, connection=None, include_sources=False):
+    normalized = _normalize_event_scope(scope, allow_global=True)
+    owns_connection = connection is None
+    conn = connection or get_repository().connect()
+    try:
+        if not conn.in_transaction:
+            conn.execute("BEGIN")
+        try:
+            row = conn.execute("SELECT * FROM events WHERE id=?", (int(event_id),)).fetchone()
+        except (TypeError, ValueError):
+            row = conn.execute("SELECT * FROM events WHERE event_key=?", (str(event_id),)).fetchone()
+        if row is None:
+            return None
+        try:
+            return _verified_scoped_event(conn, row, normalized, include_sources=include_sources)
+        except ValueError as exc:
+            if str(exc) == "EVENT_SCOPE_MISMATCH":
+                return None
+            raise
+    finally:
+        if owns_connection:
+            conn.close()
+
+
+def get_scoped_events(limit=50, *, scope=None, date_start=None, date_end=None,
+                      include_sources=False, status=None):
+    """Return events whose stored scope and all linked source Evidence verify."""
+    requested = _normalize_event_scope(scope, allow_global=True)
+    limit = max(1, min(int(limit), 500))
+    for date_value in (date_start, date_end):
+        if date_value is not None:
+            try:
+                datetime.strptime(str(date_value), "%Y-%m-%d")
+            except (TypeError, ValueError):
+                raise ValueError("EVENT_DATE_INVALID") from None
+    if date_start and date_end and date_start > date_end:
+        raise ValueError("EVENT_DATE_RANGE_INVALID")
+    focus_column = "subject_id" if requested["product_id"] == "CTH" else "brand_focus_id"
+    other_column = "brand_focus_id" if focus_column == "subject_id" else "subject_id"
+    where = ["scope_status='VERIFIED'", f"NULLIF(TRIM({focus_column}),'') IS NOT NULL",
+             f"COALESCE({other_column},'')=''"]
+    params = []
+    if status is not None:
+        if not isinstance(status, str) or not status.strip():
+            raise ValueError("EVENT_STATUS_INVALID")
+        where.append("LOWER(COALESCE(status,''))=?")
+        params.append(status.strip().lower())
+    if not requested["global_scope"]:
+        where.append(f"{focus_column}=?")
+        params.append(requested[focus_column])
+    event_start = "COALESCE(NULLIF(substr(event_date,1,10),''), NULLIF(substr(first_seen,1,10),''), NULLIF(substr(last_seen,1,10),''))"
+    event_end = "COALESCE(NULLIF(substr(last_seen,1,10),''), NULLIF(substr(first_seen,1,10),''), NULLIF(substr(event_date,1,10),''))"
+    if date_start:
+        where.append(f"{event_end}>=?")
+        params.append(str(date_start))
+    if date_end:
+        where.append(f"{event_start}<=?")
+        params.append(str(date_end))
+    rows = []
+    processed_count = 0
+    rejected_count = 0
+    conn = get_repository().connect()
+    try:
+        if not conn.in_transaction:
+            conn.execute("BEGIN")
+        candidate_count = int(conn.execute(
+            "SELECT COUNT(*) FROM events WHERE " + " AND ".join(where), tuple(params)
+        ).fetchone()[0])
+        candidate_limit = min(5000, max(limit * 20, 200))
+        candidates = conn.execute(
+            "SELECT * FROM events WHERE " + " AND ".join(where) +
+            " ORDER BY CASE WHEN status='active' THEN 0 ELSE 1 END, "
+            "CASE risk_level WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, "
+            "COALESCE(event_date,first_seen,last_seen,'') DESC, mention_count DESC LIMIT ?",
+            tuple(params + [candidate_limit]),
+        ).fetchall()
+        for row in candidates:
+            processed_count += 1
+            try:
+                event = _verified_scoped_event(conn, row, requested, include_sources=include_sources)
+            except ValueError:
+                rejected_count += 1
+                continue
+            event_start = str(event.get("event_date") or event.get("first_seen") or event.get("last_seen") or "")[:10]
+            event_end = str(event.get("last_seen") or event.get("first_seen") or event.get("event_date") or "")[:10]
+            if date_start and (not event_end or event_end < str(date_start)):
+                continue
+            if date_end and (not event_start or event_start > str(date_end)):
+                continue
+            rows.append(event)
+            if len(rows) >= limit:
+                break
+    finally:
+        conn.close()
+    truncated = candidate_count > processed_count
+    return {"events": rows, "candidate_count": candidate_count,
+            "truncated": truncated,
+            "rejected_count": rejected_count,
+            "state": "INCOMPLETE" if truncated or rejected_count else "AVAILABLE" if rows else "EMPTY"}
+
+
+def upsert_event(event, *, scope=None, mentions=None):
+    normalized = _normalize_event_scope(scope, allow_global=False)
+    conn = get_repository().connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        source_refs, _raw_rows = _verified_event_source_refs(conn, normalized, mentions)
+        payload, content_hash = _normalized_event_payload(event, scope=normalized, source_refs=source_refs)
+        source_refs_for_evidence = [
+            {key: item[key] for key in ("source_table", "source_type", "source_id", "scope_evidence_ref")}
+            for item in source_refs
+        ]
+        existing = conn.execute("SELECT * FROM events WHERE event_key=?", (payload["event_key"],)).fetchone()
+        if existing is not None:
+            existing_dict = dict(existing)
+            if (str(existing_dict.get("scope_status") or "").upper() != "VERIFIED"
+                    or (existing_dict.get("subject_id") or None) != normalized["subject_id"]
+                    or (existing_dict.get("brand_focus_id") or None) != normalized["brand_focus_id"]):
+                raise ValueError("EVENT_HISTORICAL_SCOPE_CONFLICT")
+        evidence_ref = existing["scope_evidence_ref"] if existing is not None else None
+        if not _event_evidence_matches(conn, evidence_ref, normalized, payload, content_hash, source_refs):
+            from lumenis.shared.evidence.store import record_evidence
+            evidence_id = record_evidence(
+                connection=conn, source="lumenis_event_aggregation", project="LUMENIS",
+                product=normalized["product_id"], feature_id="SCOPED_EVENT_AGGREGATION",
+                test_name="event_source_scope", result="PASS", status="verified",
+                inputs={"source_ids": sorted(item["source_id"] for item in source_refs),
+                        "source_refs": source_refs_for_evidence},
+                outputs={"event_key": payload["event_key"], "event_content_sha256": content_hash},
+                domain_id=normalized["domain_id"], subject_id=normalized["subject_id"],
+                brand_focus_id=normalized["brand_focus_id"], global_scope=False,
+                notes="Event derived from currently signed, exact-scope Canonical sources.",
+            )
+            if type(evidence_id) is not int or evidence_id < 1:
+                raise ValueError("EVENT_SCOPE_EVIDENCE_WRITE_FAILED")
+            evidence_ref = str(evidence_id)
+        values = [payload[field] if field not in {"keywords", "translations"}
+                  else json.dumps(payload[field], ensure_ascii=False, sort_keys=True)
+                  for field in _EVENT_CONTENT_FIELDS]
+        if existing is None:
+            columns = ",".join(_EVENT_CONTENT_FIELDS) + ",subject_id,brand_focus_id,scope_status,scope_evidence_ref"
+            placeholders = ",".join("?" for _ in range(len(_EVENT_CONTENT_FIELDS) + 4))
+            cursor = conn.execute(
+                f"INSERT INTO events({columns}) VALUES ({placeholders})",
+                tuple(values + [normalized["subject_id"], normalized["brand_focus_id"],
+                                "VERIFIED", evidence_ref]),
+            )
+            event_id = cursor.lastrowid
+        else:
+            assignments = ",".join(f"{field}=?" for field in _EVENT_CONTENT_FIELDS if field != "event_key")
+            update_values = [payload[field] if field not in {"keywords", "translations"}
+                             else json.dumps(payload[field], ensure_ascii=False, sort_keys=True)
+                             for field in _EVENT_CONTENT_FIELDS if field != "event_key"]
+            conn.execute(
+                f"UPDATE events SET {assignments},scope_evidence_ref=? WHERE id=? AND scope_status='VERIFIED'",
+                tuple(update_values + [evidence_ref, existing["id"]]),
+            )
+            event_id = existing["id"]
+        conn.execute("DELETE FROM event_mentions WHERE event_id=?", (event_id,))
+        conn.executemany(
+            "INSERT INTO event_mentions(event_id,source_type,source_id,match_score) VALUES (?,?,?,?)",
+            [(event_id, item["source_type"], item["source_id"], 1.0) for item in source_refs],
+        )
+        conn.commit()
+        return event_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def get_events(limit=50):
@@ -1086,43 +1676,47 @@ def classify_event_quality(e):
         return 'generic'
     return 'featured'
 
-def get_events_curated(limit=50):
-    """事件中心专用：在主体过滤基础上做质量分级。
-    返回 {'featured':[...], 'generic_count':N, 'noise_count':N, 'total':N}。
-    重点事件优先；泛化“相关讨论”只回传数量（前端折叠后按需展开），噪音备注默认隐藏。"""
-    from subject_rules import subject_hit
-    featured, generic_cnt, noise_cnt = [], 0, 0
+def get_events_curated(limit=50, *, scope=None):
+    """Return only events whose current signed source and scope Evidence verifies."""
+    requested = _normalize_event_scope(scope, allow_global=True)
+    limit = max(1, min(int(limit), 200))
+    focus_column = "subject_id" if requested["product_id"] == "CTH" else "brand_focus_id"
+    other_column = "brand_focus_id" if focus_column == "subject_id" else "subject_id"
+    where = ["scope_status='VERIFIED'", f"NULLIF(TRIM({focus_column}),'') IS NOT NULL",
+             f"COALESCE({other_column},'')=''"]
+    params = []
+    if not requested["global_scope"]:
+        where.append(f"{focus_column}=?")
+        params.append(requested[focus_column])
+    featured, generic_count, noise_count, rejected_count = [], 0, 0, 0
     with get_db() as conn:
-        # 多取再过滤/分级，排序口径与 get_events 一致（活跃→风险→多来源→时间）
         rows = conn.execute(
-            "SELECT * FROM events ORDER BY CASE WHEN status='active' THEN 0 ELSE 1 END, "
-            "CASE risk_level WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, "
-            "CASE WHEN COALESCE(source_count,0)>=2 THEN 0 ELSE 1 END, "
+            "SELECT * FROM events WHERE " + " AND ".join(where) +
+            " ORDER BY CASE WHEN status='active' THEN 0 ELSE 1 END, "
+            "CASE risk_level WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, "
             "COALESCE(event_date,first_seen,last_seen,'') DESC, risk_score DESC, mention_count DESC LIMIT ?",
-            (max(limit * 8, 200),)).fetchall()
-        for r in rows:
-            d = dict(r)
-            for k in ('keywords', 'translations'):
-                try:
-                    d[k] = json.loads(d.get(k) or ('[]' if k == 'keywords' else '{}'))
-                except Exception:
-                    d[k] = [] if k == 'keywords' else {}
-            if not subject_hit(d.get('title', ''), d.get('summary', ''), d.get('summary', ''), '', d.get('keywords', [])):
+            tuple(params + [max(limit * 8, 200)]),
+        ).fetchall()
+        for row in rows:
+            try:
+                event = _verified_scoped_event(conn, row, requested)
+            except ValueError:
+                rejected_count += 1
                 continue
-            q = classify_event_quality(d)
-            if q == 'noise':
-                noise_cnt += 1
-            elif q == 'generic':
-                generic_cnt += 1
-                if len(featured) < limit:  # 泛化事件不进主列表，仅计数
-                    pass
+            quality = classify_event_quality(event)
+            if quality == "noise":
+                noise_count += 1
+            elif quality == "generic":
+                generic_count += 1
             else:
-                d['quality'] = 'featured'
-                featured.append(d)
+                event["quality"] = "featured"
+                featured.append(event)
             if len(featured) >= limit:
                 break
-    return {'featured': featured, 'generic_count': generic_cnt,
-            'noise_count': noise_cnt, 'total': len(featured) + generic_cnt + noise_cnt}
+    return {"featured": featured, "generic_count": generic_count,
+            "noise_count": noise_count, "rejected_count": rejected_count,
+            "total": len(featured) + generic_count + noise_count,
+            "state": "AVAILABLE" if featured or generic_count or noise_count else "EMPTY"}
 
 
 
@@ -1133,12 +1727,8 @@ def update_note_intelligence(note_id, data):
 
 
 def link_event_mentions(event_id, mentions):
-    with get_db() as conn:
-        for m in mentions:
-            sid=m.get('source_id') or m.get('note_id') or m.get('url') or ''
-            if not sid: continue
-            st=m.get('source_platform','xhs')
-            conn.execute('INSERT OR REPLACE INTO event_mentions(event_id,source_type,source_id,match_score) VALUES (?,?,?,?)',(event_id,st,sid,float(m.get('_match_score',1.0) or 1.0)))
+    raise ValueError("SCOPED_EVENT_LINK_REQUIRES_UPSERT")
+
 
 # ===================== v5.3.2 AI过滤层 & 日报增强 数据操作 =====================
 

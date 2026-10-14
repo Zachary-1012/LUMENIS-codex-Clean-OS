@@ -148,182 +148,114 @@ def _conn():
     return DatabaseRepository(str(DB_PATH)).connect()
 
 
-def calculate_attribution(author_id: str, brand_name: str = "广州太古汇") -> dict:
-    """计算单个KOS的多触点归因贡献。
+def calculate_attribution(author_id: str, brand_name: str, *, scope=None) -> dict:
+    """Return a truthful blocker while the event owner has no exact-scope evidence."""
+    from reprocess import _normalize_scope
 
-    返回各维度贡献分（0-100），基于真实数据计算。
-    G1: demand_threshold/time_weight_coeff/interactions 均从配置读取。
-    """
+    try:
+        _normalize_scope(scope, allow_global=False)
+    except ValueError as exc:
+        return {"ok": False, "status": "blocked", "code": str(exc)}
+    if not isinstance(author_id, str) or not author_id.strip():
+        return {"ok": False, "status": "invalid_request", "code": "AUTHOR_ID_REQUIRED"}
+    if not isinstance(brand_name, str) or not brand_name.strip():
+        return {"ok": False, "status": "invalid_request", "code": "BRAND_SCOPE_REQUIRED"}
+    return {
+        "ok": False,
+        "status": "blocked",
+        "code": "EVENT_SCOPE_EVIDENCE_REQUIRED",
+        "reason": "单作者归因需要与所选品牌范围一致的事件证据；当前事件读取合同未提供该范围。",
+        "author_id": author_id,
+        "brand_name": brand_name,
+    }
+
+
+def calculate_multi_touch_attribution(note_ids: list, brand_name: str, *, scope=None) -> dict:
+    """Calculate attribution only from notes verified in the exact selected BrandFocus."""
+    from reprocess import _canonical_source_ids, _normalize_scope
+
+    try:
+        exact = _normalize_scope(scope, allow_global=False)
+    except ValueError as exc:
+        return {"ok": False, "status": "blocked", "code": str(exc)}
+    if exact["domain_id"] != "zbmp":
+        return {"ok": False, "status": "invalid_request", "code": "BMP_SCOPE_REQUIRED"}
+    if not isinstance(brand_name, str) or not brand_name.strip():
+        return {"ok": False, "status": "invalid_request", "code": "BRAND_SCOPE_REQUIRED"}
+    if not isinstance(note_ids, list) or not note_ids or len(note_ids) > 100:
+        return {"ok": False, "status": "invalid_request", "code": "NOTE_IDS_REQUIRED"}
+    normalized_ids = []
+    for note_id in note_ids:
+        if not isinstance(note_id, str) or not note_id or note_id != note_id.strip():
+            return {"ok": False, "status": "invalid_request", "code": "NOTE_IDS_INVALID"}
+        if note_id not in normalized_ids:
+            normalized_ids.append(note_id)
+
     cfg = load_attribution_config()
     aw = cfg["attribution_weights"]
     conn = _conn()
     try:
-        # 该KOS的笔记（G1: 增加 source_platform 用于平台权重计算）
-        notes = conn.execute(
-            "SELECT note_id, title, likes, comments, collects, shares, sentiment, risk_level, content_quality_score, publish_datetime, source_platform FROM notes WHERE author_id=? ORDER BY publish_datetime DESC",
-            (author_id,)
-        ).fetchall()
-
-        if not notes:
-            return {"ok": False, "error": "KOS has no notes", "author_id": author_id}
-
-        note_count = len(notes)
-        # [Canonical WRAP-09] 等权四字段互动统一走 engagement_stats；per_field 供 reach_score 复用
-        _es = _canon_es([dict(n) for n in notes])
-        total_likes, total_comments = _es["per_field"]["likes"], _es["per_field"]["comments"]
-        total_collects, total_shares = _es["per_field"]["collects"], _es["per_field"]["shares"]
-        # G1: 总互动量按平台权重计算（不再用等权 sum）
-        total_interactions = sum(_platform_weighted_interactions(dict(n)) for n in notes)
-
-        # 内容贡献：笔记数 + 平均质量
-        avg_quality = sum(n["content_quality_score"] or 0 for n in notes) / note_count
-        content_score = min(100, (note_count / 10.0) * 40 + avg_quality * 60)
-
-        # 互动贡献：总互动量归一化（G1: 阈值从配置读取）
-        interaction_score = min(100, (total_interactions / float(aw["interaction_threshold"])) * 100)
-
-        # 传播贡献：收藏+分享占比（G1: 阈值从配置读取）
-        reach_score = min(100, ((total_collects + total_shares) / float(aw["reach_threshold"])) * 100) if (total_collects + total_shares) > 0 else 0
-
-        # 事件贡献：该KOS笔记标题命中events关键词的数量（简化匹配）
-        event_rows = conn.execute("SELECT keywords FROM events WHERE keywords IS NOT NULL AND keywords != ''").fetchall()
-        event_keywords = set()
-        for er in event_rows:
-            for kw in (er["keywords"] or "").split(","):
-                kw = kw.strip()
-                if len(kw) >= 2:
-                    event_keywords.add(kw.lower())
-        event_count = 0
-        for n in notes:
-            title = (n["title"] or "").lower()
-            if any(kw in title for kw in event_keywords):
-                event_count += 1
-        event_score = min(100, event_count * 20)
-
-        # 品牌贡献：品牌相关笔记占比（通过 subject_hit 逻辑，简化为标题含品牌词）
-        brand_keywords = [brand_name, "太古汇", "中免", "CDF", "海南"]
-        brand_notes = sum(1 for n in notes if any(kw.lower() in (n["title"] or "").lower() for kw in brand_keywords))
-        brand_score = min(100, (brand_notes / note_count) * 100)
-
-        # 用户需求贡献：评论数（高评论=用户需求活跃）
-        # G1: demand_threshold 从配置读取，不再硬编码 500
-        demand_score = min(100, (total_comments / float(aw["demand_threshold"])) * 100)
-
-        # 商业贡献：收藏数（高收藏=购买意向）
-        # G1: commercial_threshold 从配置读取
-        commercial_score = min(100, (total_collects / float(aw["commercial_threshold"])) * 100)
-
-        # 风险贡献：负面/风险笔记占比（反向，越低越好）
-        risk_notes = sum(1 for n in notes if (n["risk_level"] or "") in ("high", "medium") or (n["sentiment"] or "") == "negative")
-        risk_score = min(100, (risk_notes / note_count) * 100)
-
-        # 综合归因分（加权）
-        total_score = (
-            content_score * 0.20 +
-            interaction_score * 0.25 +
-            reach_score * 0.15 +
-            event_score * 0.10 +
-            brand_score * 0.10 +
-            demand_score * 0.10 +
-            commercial_score * 0.05 +
-            (100 - risk_score) * 0.05
+        admitted_ids = _canonical_source_ids(
+            exact, source_ids=normalized_ids, limit=len(normalized_ids), connection=conn,
         )
+        if set(admitted_ids) != set(normalized_ids):
+            return {"ok": False, "status": "denied", "code": "CANONICAL_NOTE_SCOPE_MISMATCH"}
 
-        return {
-            "ok": True,
-            "author_id": author_id,
-            "brand_name": brand_name,
-            "note_count": note_count,
-            "total_interactions": round(total_interactions, 1),
-            "config_status": cfg["config_status"],
-            "attribution": {
-                "content": round(content_score, 1),
-                "interaction": round(interaction_score, 1),
-                "reach": round(reach_score, 1),
-                "event": round(event_score, 1),
-                "brand": round(brand_score, 1),
-                "demand": round(demand_score, 1),
-                "commercial": round(commercial_score, 1),
-                "risk": round(risk_score, 1),
-            },
-            "total_attribution_score": round(total_score, 1),
-            "breakdown": {
-                "content_pct": round(content_score / total_score * 100, 1) if total_score > 0 else 0,
-                "interaction_pct": round(interaction_score / total_score * 100, 1) if total_score > 0 else 0,
-                "reach_pct": round(reach_score / total_score * 100, 1) if total_score > 0 else 0,
-                "event_pct": round(event_score / total_score * 100, 1) if total_score > 0 else 0,
-                "brand_pct": round(brand_score / total_score * 100, 1) if total_score > 0 else 0,
-                "demand_pct": round(demand_score / total_score * 100, 1) if total_score > 0 else 0,
-                "commercial_pct": round(commercial_score / total_score * 100, 1) if total_score > 0 else 0,
-            }
-        }
-    finally:
-        conn.close()
-
-
-def calculate_multi_touch_attribution(note_ids: list, brand_name: str = "广州太古汇") -> dict:
-    """多触点归因：一组笔记涉及的所有KOS的贡献分解。
-
-    不把最终结果简单全部归因给最后一个KOS，按时间衰减+互动权重分配。
-    G1: time_weight 系数从配置读取；interactions 按平台权重计算。
-    """
-    if not note_ids:
-        return {"ok": False, "error": "no note_ids"}
-
-    cfg = load_attribution_config()
-    aw = cfg["attribution_weights"]
-    conn = _conn()
-    try:
-        placeholders = ",".join("?" * len(note_ids))
-        # G1: 增加 source_platform 用于平台权重计算
+        placeholders = ",".join("?" for _ in normalized_ids)
         notes = conn.execute(
-            f"SELECT note_id, author_id, author_nickname, likes, comments, collects, shares, publish_datetime, source_platform FROM notes WHERE note_id IN ({placeholders}) ORDER BY publish_datetime ASC",
-            note_ids
+            "SELECT note_id, author_id, author_nickname, likes, comments, collects, shares, "
+            "publish_datetime, source_platform FROM notes WHERE note_id IN (" + placeholders + ") "
+            "AND product_id=? AND domain_id=? AND scope_status='VERIFIED' AND brand_focus_id=? "
+            "AND COALESCE(subject_id,'')='' AND NULLIF(TRIM(scope_evidence_ref),'') IS NOT NULL "
+            "ORDER BY publish_datetime ASC",
+            tuple(normalized_ids) + (exact["product_id"], exact["domain_id"], exact["brand_focus_id"]),
         ).fetchall()
+        if len(notes) != len(normalized_ids):
+            return {"ok": False, "status": "denied", "code": "CANONICAL_NOTE_SCOPE_CHANGED"}
 
-        if not notes:
-            return {"ok": False, "error": "notes not found"}
-
-        # G1: 总互动量按平台权重计算（不再用等权 canonical sum）
-        total_interactions = sum(_platform_weighted_interactions(dict(n)) for n in notes)
+        total_interactions = sum(_platform_weighted_interactions(dict(note)) for note in notes)
         if total_interactions == 0:
             total_interactions = 1
 
-        # 聚合到KOS
         kos_contrib = {}
-        for i, n in enumerate(notes):
-            aid = n["author_id"]
-            if aid not in kos_contrib:
-                kos_contrib[aid] = {"author_nickname": n["author_nickname"], "notes": 0, "interactions": 0, "weighted_score": 0}
-            # G1: 单条互动按平台权重计算（不再用 canonical 等权）
-            interactions = _platform_weighted_interactions(dict(n))
-            # G1: 时间衰减系数从配置读取（time_weight_coeff + time_weight_range）
-            # 原公式: 0.5 + (i / (len-1)) * 1.0 → coeff + (i / (len-1)) * range
-            time_weight = float(aw["time_weight_coeff"]) + (i / max(1, len(notes) - 1)) * float(aw["time_weight_range"])
-            kos_contrib[aid]["notes"] += 1
-            kos_contrib[aid]["interactions"] += interactions
-            kos_contrib[aid]["weighted_score"] += interactions * time_weight
+        for index, note in enumerate(notes):
+            author = note["author_id"]
+            if author not in kos_contrib:
+                kos_contrib[author] = {
+                    "author_nickname": note["author_nickname"], "notes": 0,
+                    "interactions": 0, "weighted_score": 0,
+                }
+            interactions = _platform_weighted_interactions(dict(note))
+            time_weight = float(aw["time_weight_coeff"]) + (
+                index / max(1, len(notes) - 1)
+            ) * float(aw["time_weight_range"])
+            kos_contrib[author]["notes"] += 1
+            kos_contrib[author]["interactions"] += interactions
+            kos_contrib[author]["weighted_score"] += interactions * time_weight
 
-        total_weighted = sum(v["weighted_score"] for v in kos_contrib.values()) or 1
-
-        result = []
-        for aid, v in sorted(kos_contrib.items(), key=lambda x: x[1]["weighted_score"], reverse=True):
-            result.append({
-                "author_id": aid,
-                "author_nickname": v["author_nickname"],
-                "note_count": v["notes"],
-                "interactions": round(v["interactions"], 1),
-                "attribution_pct": round(v["weighted_score"] / total_weighted * 100, 1),
-            })
-
+        total_weighted = sum(item["weighted_score"] for item in kos_contrib.values()) or 1
+        result = [
+            {
+                "author_id": author,
+                "author_nickname": values["author_nickname"],
+                "note_count": values["notes"],
+                "interactions": round(values["interactions"], 1),
+                "attribution_pct": round(values["weighted_score"] / total_weighted * 100, 1),
+            }
+            for author, values in sorted(
+                kos_contrib.items(), key=lambda item: item[1]["weighted_score"], reverse=True,
+            )
+        ]
         return {
             "ok": True,
+            "status": "COMPLETED",
             "brand_name": brand_name,
+            "brand_focus_id": exact["brand_focus_id"],
             "total_notes": len(notes),
             "total_kos": len(kos_contrib),
             "config_status": cfg["config_status"],
             "attribution": result,
-            "method": "time_decay_multi_touch (not last-touch, platform-weighted)",
+            "method": "time_decay_multi_touch (canonical BrandFocus verified; platform weighted)",
         }
     finally:
         conn.close()

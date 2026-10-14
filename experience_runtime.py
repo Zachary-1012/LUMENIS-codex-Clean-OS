@@ -277,26 +277,73 @@ def runtime_subjects():
 # ===========================================================================
 # CTH-01 商业运营总览 —— 真实绑定
 # ===========================================================================
-def _build_cth01() -> Dict[str, Any]:
+def _build_cth01(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     import database as db
     from lumenis.shared.reporting import daily as daily_reporting
+    from canonical_metrics import sentiment_count, risk_count
+
+    if (not isinstance(binding, dict)
+            or binding.get("contract") != "lumenis.scope-read-binding.v1"
+            or binding.get("scope_verified") is not True
+            or binding.get("read_allowed") is not True):
+        raise ValueError("CTH_SCOPE_BINDING_REQUIRED")
+    mode = binding.get("canonical_scope")
+    if mode not in {"GLOBAL_ALL", "FOCUS"}:
+        raise ValueError("CTH_SCOPE_BINDING_INVALID")
+    scope = db._normalize_event_scope({
+        "domain_id": "cth", "product_id": "CTH",
+        "subject_id": binding.get("subject_id") if mode == "FOCUS" else None,
+        "brand_focus_id": None, "global_scope": mode == "GLOBAL_ALL",
+    }, allow_global=True)
 
     blocked: List[Dict[str, str]] = []
     truth: Dict[str, Any] = {}
     # 前端风险枚举：后端 medium -> 前端 med
     _LV = {"high": "high", "medium": "med", "low": "low", "critical": "critical"}
 
-    stats = _safe(db.get_stats, default={})
-    stats_err = _is_err(stats)
-    canonical = _safe(daily_reporting.generate_today_summary, today_str(), default={})
+    source_read = _safe(db.get_scoped_event_source_rows, scope, source_types=("note",),
+                        limit=5000, default=None)
+    stats_err = _is_err(source_read) or not isinstance(source_read, dict)
+    scoped_notes = [] if stats_err else source_read.get("sources", [])
+    source_complete = (not stats_err and not source_read.get("truncated")
+                       and not source_read.get("rejected_count"))
+    if source_complete:
+        sentiment = sentiment_count(scoped_notes)
+        risks = risk_count(scoped_notes)
+        stats = {
+            "total": len(scoped_notes),
+            "positive": sentiment["positive"] if sentiment["known"] == sentiment["total"] else None,
+            "neutral": sentiment["neutral"] if sentiment["known"] == sentiment["total"] else None,
+            "negative": sentiment["negative"] if sentiment["known"] == sentiment["total"] else None,
+            "high_risk": risks["high"] if not risks["missing"] and not risks["other"] else None,
+            "medium_risk": risks["medium"] if not risks["missing"] and not risks["other"] else None,
+            "low_risk": risks["low"] if not risks["missing"] and not risks["other"] else None,
+        }
+    else:
+        stats = {key: None for key in ("total", "positive", "neutral", "negative",
+                                       "high_risk", "medium_risk", "low_risk")}
+    canonical = _safe(daily_reporting.generate_today_summary, today_str(), scope=scope, default={})
     canon_err = _is_err(canonical)
-    risk_notes = _safe(db.get_high_risk_notes, 6, default=[])
-    events = _safe(db.get_events, 6, default=[])
-    evid = _safe(_evidence_recent, 2, default=[])
+    events_read = _safe(db.get_scoped_events, 6, scope=scope, include_sources=True, default=None)
+    events_err = _is_err(events_read) or not isinstance(events_read, dict)
+    events = [] if events_err else events_read.get("events", [])
+    active_events_read = _safe(
+        db.get_scoped_events, 500, scope=scope, status="active", default=None,
+    )
+    active_events_err = _is_err(active_events_read) or not isinstance(active_events_read, dict)
+    risk_notes = sorted(
+        (note for note in scoped_notes if str(note.get("risk_level") or "").lower() in {"high", "critical"}),
+        key=lambda note: (note.get("risk_score") is not None, note.get("risk_score") or 0),
+        reverse=True,
+    )
 
     # ---- KPI：真实可绑 vs 外部缺失（绝不填 0） ----
     neg = stats.get("negative") if isinstance(stats, dict) else None
-    open_events = len(events) if isinstance(events, list) and not _is_err(events) else None
+    open_events = (
+        len(active_events_read.get("events", []))
+        if (not active_events_err and not active_events_read.get("truncated")
+            and not active_events_read.get("rejected_count")) else None
+    )
     kpis = [
         metric("cth.footfall", "今日到店客流", value=None, state=STATE_NOT_COLLECTED,
                icon="trend",
@@ -309,12 +356,14 @@ def _build_cth01() -> Dict[str, Any]:
         metric("cth.negative_voice", "在线负面声量",
                value=None if stats_err or neg is None else neg,
                state=STATE_READY if not stats_err and neg is not None else STATE_OFFLINE,
-               icon="risk", source="database.get_stats().negative（主体口径）",
+               icon="risk", source="已核验来源记录的主体范围汇总",
                evidence_id="FUNC-SENTIMENT", fresh="live"),
         metric("cth.open_events", "在办事件",
                value=open_events,
-               state=STATE_READY if open_events is not None else STATE_OFFLINE,
-               icon="event", source="database.get_events()（主体口径，active 优先）",
+                state=STATE_READY if open_events is not None else STATE_OFFLINE,
+                icon="event", source=("已核验来源 Evidence 的在办事件完整计数"
+                                      if open_events is not None else
+                                      "在办事件总数不完整或不可用，当前仅展示预览"),
                evidence_id="EVENT-GRAPH", fresh="live"),
     ]
     for m in kpis:
@@ -333,9 +382,32 @@ def _build_cth01() -> Dict[str, Any]:
     }
 
     # ---- 主区：真实 14 日负面/高风险趋势（替换无数据源的客流销售趋势） ----
-    labels, neg_series, high_series = days_labels_series(14)
-    trend = section("chart", STATE_READY, kind="line", title="近 14 日负面声量 / 高风险",
-                    sub="database.get_stats_by_date_range 按天现算",
+    end_day = _dt.date.today()
+    start_day = end_day - _dt.timedelta(days=13)
+    trend_read = _safe(db.get_scoped_event_source_rows, scope, source_types=("note",),
+                       date_start=start_day.isoformat(), date_end=end_day.isoformat(),
+                       limit=5000, default=None)
+    trend_rows = [] if _is_err(trend_read) or not isinstance(trend_read, dict) else trend_read.get("sources", [])
+    trend_complete = (isinstance(trend_read, dict) and not trend_read.get("truncated")
+                      and not trend_read.get("rejected_count"))
+    labels, neg_series, high_series = [], [], []
+    for back in range(13, -1, -1):
+        day = end_day - _dt.timedelta(days=back)
+        day_text = day.isoformat()
+        labels.append(day.strftime("%m-%d"))
+        day_rows = [row for row in trend_rows
+                    if str(row.get("publish_date") or row.get("publish_datetime") or "")[:10] == day_text]
+        if not trend_complete or not day_rows:
+            neg_series.append(None)
+            high_series.append(None)
+            continue
+        day_sentiment = sentiment_count(day_rows)
+        day_risk = risk_count(day_rows)
+        neg_series.append(day_sentiment["negative"] if day_sentiment["known"] == day_sentiment["total"] else None)
+        high_series.append(day_risk["high"] if not day_risk["missing"] and not day_risk["other"] else None)
+    trend = section("chart", STATE_READY if isinstance(trend_read, dict) and not _is_err(trend_read) else STATE_OFFLINE,
+                    kind="line", title="近 14 日负面声量 / 高风险",
+                    sub="仅使用当前授权主体且来源已核验的记录；无数据或覆盖不完整显示未知",
                     series=[
                         {"name": "负面", "data": neg_series, "color": "var(--lum-c-danger,#c0563f)"},
                         {"name": "高风险", "data": high_series, "color": "var(--lum-c-info,#4FC4E8)"},
@@ -345,7 +417,7 @@ def _build_cth01() -> Dict[str, Any]:
 
     # ---- 事件：真实高风险/事件 ----
     ev_items = []
-    if isinstance(events, list):
+    if not events_err:
         for e in events[:3]:
             ev_items.append({
                 "time": (e.get("event_date") or e.get("last_seen") or "")[5:16] or "—",
@@ -353,24 +425,25 @@ def _build_cth01() -> Dict[str, Any]:
                 "title": e.get("title", "未命名事件"),
                 "desc": (e.get("summary") or "")[:120],
                 "level": _LV.get((e.get("risk_level") or "low"), "low"),
-                "tags": [f"提及 {e.get('mention_count', 0)}", f"来源 {e.get('source_count', 1)}"],
+                "tags": [f"提及 {e.get('mention_count', 0)}", f"来源平台 {e.get('source_count', 1)}"],
                 "evidence": f"EV:{e.get('event_id') or e.get('id') or 'UNKNOWN'}",
             })
     events_sec = section("events", STATE_READY if ev_items else STATE_EMPTY,
                          title="重点事件", more=True, items=ev_items)
 
-    # ---- 证据链：Shared Evidence 的真实存储 ----
+    # ---- 证据链：只呈现已通过 scoped event/source 核验的引用 ----
     ev_rail = []
-    for r in (evid if isinstance(evid, list) else [])[:2]:
-        ev_rail.append({
-            "kind": r.get("level") or "evidence",
-            "id": f"EV:{r.get('id', 'UNKNOWN')}",
-            "chain": ["Source", "Canonical", "Metric", "View"],
-            "quote": str(r.get("actual") or r.get("feature_id") or "生产证据记录")[:140],
-            "time": str(r.get("created_at") or "")[:16],
-            "source": r.get("source") or "app_evidence_records",
-            "conf": None,
-        })
+    for event in events[:2] if not events_err else []:
+        for source in event.get("sources", [])[:1]:
+            ev_rail.append({
+                "kind": "source",
+                "id": f"SRC:{source.get('source_id') or 'UNKNOWN'}",
+                "chain": ["Source", "Evidence", "Canonical", "Event"],
+                "quote": str(event.get("title") or "已核验来源")[:140],
+                "time": str(source.get("published_at") or source.get("publish_date") or "")[:16],
+                "source": str(source.get("source_platform") or source.get("source_type") or "source"),
+                "conf": None,
+            })
     evidence_sec = section("evidence", STATE_READY if ev_rail else STATE_EMPTY,
                            title="证据链", items=ev_rail)
 
@@ -433,12 +506,13 @@ def _build_cth01() -> Dict[str, Any]:
             return "；".join(parts) if parts else "无状态"
         return _scalar(h)
     runtime_items = [
-        {"name": "舆情数据库", "state": "ok" if not stats_err else "offline",
-         "detail": f"共 {stats.get('total') if isinstance(stats, dict) else 'NA'} 条"},
+        {"name": "主体范围数据", "state": "ok" if not stats_err else "offline",
+         "detail": (f"来源 {stats.get('total')} 条" if stats.get('total') is not None
+                    else "来源覆盖未知或不完整")},
         {"name": "Canonical 指标", "state": "ok" if not canon_err else "offline",
          "detail": ("采集健康：" + _health_text(canonical.get("collection_health"))) if not canon_err else "unavailable"},
-        {"name": "证据存储", "state": "ok" if isinstance(evid, list) else "offline",
-         "detail": f"近 {len(evid) if isinstance(evid, list) else 'NA'} 条样本"},
+        {"name": "来源核验", "state": "ok" if not events_err else "offline",
+         "detail": "事件关联来源与主体范围已核验" if not events_err else "来源核验不可用"},
     ]
     runtime_sec = section("runtime", title="数据新鲜度", items=runtime_items)
 
@@ -684,7 +758,7 @@ def screen_viewmodel(screen_id: str):
                         "classification": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
                         "note": _unbound_reason(screen_id)}), 200
     try:
-        if screen_id == "CTH-03":
+        if screen_id in {"CTH-01", "CTH-03"}:
             binding, error = _cth03_read_scope()
             if error is not None:
                 return error
@@ -700,7 +774,7 @@ def screen_viewmodel(screen_id: str):
             return jsonify(builder(binding=binding))
         return jsonify(builder())
     except Exception as exc:  # noqa: BLE001
-        if screen_id in {"CTH-03", "BMP-01", "SH-06"}:
+        if screen_id in {"CTH-01", "CTH-03", "BMP-01", "SH-06"}:
             from flask import current_app
             current_app.logger.warning("%s scoped read unavailable: %s", screen_id, type(exc).__name__)
             return jsonify({"ok": False, "screen": screen_id, "bound": False,

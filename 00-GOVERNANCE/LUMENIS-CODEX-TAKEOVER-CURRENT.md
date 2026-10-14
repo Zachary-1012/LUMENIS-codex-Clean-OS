@@ -84,6 +84,10 @@ User outcome: `NOT_VERIFIED`
 
 本批移除指定采集脚本的参考主体profile默认值和CDP示例；主体名称不选择账户；Python 原账户 Owner 核验批准身份和精确 Cookie/Profile 后传入子进程，JS 拒绝任意 profile、目录逃逸、错误身份和不安全 Cookie 域/URL；远端 CDP 只由既有 worker 核验其真实会话身份，不要求复制本机 Cookie；独立脚本导航与响应仅认国际 RedNote。隔离验收不读取真实凭据。ACC-02保持GLOBAL默认与既有参考覆盖维度，不把参考主体作为默认值。删除PO指定旧工单，历史证据链接固定到删除前提交，现行KOS要求仍由既有合同承接。关键词零命中只适用退役可执行路径/硬编码默认值，真实资料和历史证据保留。PR #61/#63/#62规则、草图、隧道及PR #64 Gateway/Gibbs、PR #65缺失数据修复已发布；G163仍OPEN。编译、静态和隔离回归不代表当前Runtime或真实用户验收；未操作原工作分支、浏览器、Cookie、DB、模型或运行服务。
 
+本批通用业务搜索、分析、报告与导出不再隐式选择Subject/BrandFocus；业务读取沿服务端认证Scope，并逐条核验Canonical/Evidence/SourceUse。摘要截断、来源拒绝和覆盖不完整保留UNKNOWN/不完整，真实零值不变；`web_mention`与note进入同一统计链，不按来源类别改变权重。`/api/export/generate`保留JSON响应合同并复用SavedWork生成、读回；已保存报告下载在释放文件前重新核验保存时的来源绑定与当前SourceUse，并保留DATA_EXPORT；无归属旧平面文件不开放任意下载。AIHub与仍注册的`/api/ai/chat`兼容入口均只把静态功能元数据用于路由提示，普通聊天仍经现有Owned Gateway，未绑定逐来源SourceUse时不读取品牌目录、案例、业务统计或Canonical日报。日报缺失的负面数量和情感保持UNKNOWN，不回退到风险事件数或合成中性。焦点报告保留daily/weekly/monthly/yearly。GLOBAL目前仅有精确日报支持；旧ReportGenerator与engine没有可复用的已授权GLOBAL多周期路径，周/月/年仍为NOT_VERIFIED并明确不可用，不以默认主体代替。 本批31条代码与回归路径的Git blob清单SHA-256为`e84e2d2e674374cda4d46372e543cc6192d88e0c3a1d98791e31c12555422935`，作为本批源码固定版本指纹。
+
+定向回归196项通过、2项跳过；跳过的是既有导入器覆盖：`:920` 的XLS二进制解析要求可选 `xlrd` 与本机 `soffice`，`:951` 的旧DOC解析需要本机LibreOffice/`soffice`，与本批报告导出格式改动无关。31个改动Python文件编译通过。七个直接相关路径的所选Ruff规则为111项既有诊断，与同口径origin基线133项相比无新增；这是增量对照，不是全仓Ruff通过。`git diff --check`通过。Gateway源码复核通过；Runtime加载、生产DB和真实用户E2E仍NOT_VERIFIED，本批未操作它们。
+
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
 
