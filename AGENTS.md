@@ -379,7 +379,7 @@ is a source-backed index, not another authority. Context is routing metadata,
 never Permission: unknown/conflicting domain IDs are rejected, BMP resolves to
 its existing ZBMP storage identifier, and no selection invents a reference Subject.
 Reference Subjects require explicit selection; generic routes never default to one.
-Search/report/export use authenticated scope and cited-source Evidence/SourceUse.
+Views/search/report/export use authenticated scope and cited-source Evidence/SourceUse.
 GLOBAL retains source focus. Reject truncated event replacement; filter dates/authors
 before limits. Unknown coverage differs from a complete sample's zero.
 

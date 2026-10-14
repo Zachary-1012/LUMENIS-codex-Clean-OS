@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Shared Reporting routes — 报告/摘要/品牌报告 canonical API 蓝图。
 原则：Shared Reporting 为报告能力唯一 Owner；路由只依赖 Shared/canonical 能力。
 注册点：app.register_blueprint(lumenis.shared.reporting.routes.report_bp)"""
@@ -657,108 +657,30 @@ def api_report_export():
 # P1-D: ACT法则应对策略生成 + 案例匹配 + 专报触发记录
 # ============================================================
 # ACT = Acknowledge承认 → Communicate沟通 → Transform转化
-# 不改变专报8板块现有结构，只在"应对策略"板块的AI prompt中加ACT约束
+# 保留专报结构；ACT建议遵循认证范围，实际行动与AI增强另行核验。
 
-ACT_STRATEGY_PROMPT = """你是广州太古汇品牌公关总监。基于事件信息生成应对策略。
-
-## 输出结构约束（ACT法则）
-所有应对策略必须严格按照 ACT 三段式结构组织：
-
-### A - Acknowledge（承认）
-- 不回避问题，先共情致歉
-- 明确承认事实，不辩解不甩锅
-- 表达对受影响方的关切
-
-### C - Communicate（沟通）
-- 说明已采取的动作和核查进度
-- 明确沟通渠道和时间节点
-- 保持信息透明，不敷衍
-
-### T - Transform（转化）
-- 给出可检验的整改方案
-- 将危机转为改进契机
-- 明确责任方和完成时限
-
-## 要求
-1. 每个策略项必须标注属于 A/C/T 哪个阶段
-2. 策略必须具体可执行，包含责任方和时限
-3. 参考匹配案例的处置方式和恢复周期
-4. 禁忌：不说"个人行为与商场无关"；不甩锅顾客；不隐瞒事实
-5. 直接输出策略列表，不要JSON，不要多余解释
-
-## 匹配案例参考
-{matched_cases_text}
-
-## 事件信息
-{event_info}
-"""
-
-
-def generate_act_strategies(event_info: str, matched_cases: list = None) -> dict:
-    """P1-D: 基于ACT法则生成应对策略。
-
-    Args:
-        event_info: 事件信息文本
-        matched_cases: 匹配的同类案例列表（来自案例库）
-
-    Returns:
-        {ok, strategies, act_structure, provider}
-    """
-    matched_cases_text = ""
-    if matched_cases:
-        lines = []
-        for c in matched_cases:
-            lines.append(f"- {c.get('case_id', '')} {c.get('title', '')}: "
-                         f"处置方式: {c.get('response_summary', '')[:80]}; "
-                         f"太古汇启示: {c.get('taikoo_insight', '')[:100]}")
-        matched_cases_text = "\n".join(lines)
-    else:
-        matched_cases_text = "（无匹配案例，基于通用公关原则生成）"
-
-    prompt = ACT_STRATEGY_PROMPT.format(
-        matched_cases_text=matched_cases_text,
-        event_info=event_info
-    )
-
-    try:
-        import intelligence
-        raw, provider, _ = intelligence.chat(
-            system="你是广州太古汇品牌公关总监，擅长危机公关应对策略制定。",
-            user=prompt,
-            level="high",
-            temperature=0.3,
-            max_tokens=1500,
-            pack_id="glm_4_5_air"
-        )
-        if raw:
-            # 解析ACT结构
-            strategies = [s.strip() for s in raw.strip().split("\n") if s.strip()]
-            return {
-                "ok": True,
-                "strategies": strategies,
-                "act_structure": "Acknowledge→Communicate→Transform",
-                "provider": provider,
-                "raw": raw[:2000],
-            }
-    except Exception as e:
-        # AI不可用时返回规则兜底策略
-        pass
-
-    # 规则兜底：基于场景生成ACT结构策略
-    fallback = [
-        "[A-承认] 对事件造成的影响深表歉意，承认我们在管理/服务中存在不足，不回避不辩解。",
-        "[A-承认] 已第一时间联系受影响方，表达关切并了解具体情况，承担应尽责任。",
-        "[C-沟通] 已成立专项小组核查事件全貌，将在24小时内公布初步调查结果，保持信息透明。",
-        "[C-沟通] 设立专门沟通渠道（客服热线/私信），接受公众咨询和监督，及时回应关切。",
-        "[T-转化] 立即启动整改：对涉事环节进行全面排查，完善管理制度，防止类似事件再次发生。",
-        "[T-转化] 将于7个工作日内公布完整整改报告，接受公众监督，将此次危机转化为服务提升的契机。",
+def generate_act_strategies(event_info: str, matched_cases: list = None, *, scope=None) -> dict:
+    """Provide editable ACT advice, without claiming actions or unbound AI execution."""
+    exact_scope = db._normalize_event_scope(scope, allow_global=True)
+    if not isinstance(event_info, str) or not event_info.strip():
+        raise ValueError("REPORT_EVENT_INPUT_REQUIRED")
+    # No typed, source-authorized Owned request is issued by this legacy caller.
+    # Keep the deterministic planning operation usable without calling a retired
+    # provider, inventing completed actions, or treating research as source facts.
+    strategies = [
+        "[A-承认] 先核实事件与影响范围；区分已确认事实、用户陈述和待核查信息。",
+        "[A-承认] 拟定对受影响方的关切与沟通内容，由负责人审核后采用，不预设责任已经确认。",
+        "[C-沟通] 明确核查负责人、沟通渠道与下一次更新时间；由用户填写并确认可执行时限。",
+        "[C-沟通] 将已完成动作与计划动作分开记录；仅对有证据的进展作事实陈述。",
+        "[T-转化] 根据核实结果制定整改选项、资源需求和验收标准，保留人工选择与修订。",
+        "[T-转化] 记录实施后的实际结果并复核；案例仅供方法参考，不直接推断本次效果。",
     ]
     return {
-        "ok": True,
-        "strategies": fallback,
+        "ok": True, "strategies": strategies, "scope": exact_scope,
         "act_structure": "Acknowledge→Communicate→Transform",
-        "provider": "rule_fallback",
-        "note": "AI不可用，返回规则兜底策略",
+        "provider": "deterministic", "claim_type": "ADVISORY",
+        "ai_status": "UNAVAILABLE", "ai_code": "OWNED_REQUEST_REQUIRED",
+        "note": "规则建议可编辑；未执行行动，未生成AI结论，引用案例仍需核验来源和用途。",
     }
 
 
@@ -768,6 +690,10 @@ def api_generate_special_strategies():
     Body: {event_name, event_info, scenario, trigger_reasons}
     返回: {ok, strategies, matched_cases, act_structure, trigger_reasons}
     """
+    try:
+        _actor, scope, _entries, _selected = _authorized_report_scope()
+    except (PermissionError, ValueError) as exc:
+        return _report_failure(exc, fallback_status=403)
     data = request.get_json(silent=True) or {}
     event_name = data.get('event_name', '')
     event_info = data.get('event_info', '')
@@ -787,7 +713,7 @@ def api_generate_special_strategies():
 
     # Step 2: 生成ACT策略
     full_event_info = f"事件名称: {event_name}\n场景: {scenario}\n触发原因: {', '.join(trigger_reasons) if trigger_reasons else '无'}\n详情: {event_info}"
-    result = generate_act_strategies(full_event_info, matched_cases)
+    result = generate_act_strategies(full_event_info, matched_cases, scope=scope)
 
     return jsonify({
         'ok': result.get('ok', False),
@@ -795,6 +721,9 @@ def api_generate_special_strategies():
         'matched_cases': matched_cases,
         'act_structure': result.get('act_structure', ''),
         'provider': result.get('provider', ''),
+        'scope': result['scope'], 'claim_type': result['claim_type'],
+        'ai_status': result['ai_status'], 'ai_code': result['ai_code'],
+        'matched_cases_state': 'REFERENCE_MATERIAL_NOT_VERIFIED',
         'trigger_reasons': trigger_reasons,
     })
 

@@ -764,12 +764,12 @@ def screen_viewmodel(screen_id: str):
                         "classification": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
                         "note": _unbound_reason(screen_id)}), 200
     try:
-        if screen_id in {"CTH-01", "CTH-03"}:
+        if screen_id in {"CTH-01", "CTH-03", "CTH-04", "CTH-08"}:
             binding, error = _cth03_read_scope()
             if error is not None:
                 return error
             return jsonify(builder(binding=binding))
-        if screen_id == "BMP-01":
+        if screen_id in {"BMP-01", "BMP-10"}:
             binding, error = _bmp01_read_scope()
             if error is not None:
                 return error
@@ -780,7 +780,7 @@ def screen_viewmodel(screen_id: str):
             return jsonify(builder(binding=binding))
         return jsonify(builder())
     except Exception as exc:  # noqa: BLE001
-        if screen_id in {"CTH-01", "CTH-03", "BMP-01", "SH-06"}:
+        if screen_id in {"CTH-01", "CTH-03", "CTH-04", "CTH-08", "BMP-01", "BMP-10", "SH-06"}:
             from flask import current_app
             current_app.logger.warning("%s scoped read unavailable: %s", screen_id, type(exc).__name__)
             return jsonify({"ok": False, "screen": screen_id, "bound": False,

@@ -444,6 +444,22 @@ def full_refresh(limit=5000, web_limit=120, translate=False, *, web_queries=None
         return {'status': str(exc), 'notes': {'processed': 0, 'errors': 0, 'status': str(exc)},
                 'web': {'fetched': 0, 'accepted': 0, 'status': str(exc)},
                 'events': {'status': 'NOT_RUN'}, 'ai_enabled': intelligence.ai_enabled()}
+    try:
+        from lumenis.shared.database import migrations as database_migrations
+
+        backup = database_migrations.backup_database()
+        if not isinstance(backup, str) or not backup.strip():
+            raise RuntimeError('DATABASE_BACKUP_RESULT_INVALID')
+    except Exception as exc:
+        logger.error('Full refresh stopped before writes because the Shared DB snapshot failed (%s)',
+                     type(exc).__name__)
+        return {
+            'status': 'BLOCKED_BACKUP_FAILED', 'backup': None,
+            'backup_error': 'DATABASE_BACKUP_FAILED',
+            'notes': {'processed': 0, 'errors': 0, 'status': 'NOT_RUN'},
+            'web': {'fetched': 0, 'accepted': 0, 'status': 'NOT_RUN'},
+            'events': {'status': 'NOT_RUN'}, 'ai_enabled': intelligence.ai_enabled(),
+        }
     notes = reprocess_notes(limit, translate, scope=exact)
     web = discover_web(web_limit, translate, queries=web_queries, scope=exact, actor=actor)
     try:
@@ -455,7 +471,7 @@ def full_refresh(limit=5000, web_limit=120, translate=False, *, web_queries=None
                                and web.get('status') == 'COMPLETED'
                                and events.get('status') == 'COMPLETED') else 'PARTIAL'
     return {'status': overall,
-            'backup': None, 'notes': notes, 'web': web, 'events': events,
+            'backup': backup, 'notes': notes, 'web': web, 'events': events,
             'ai_enabled': intelligence.ai_enabled()}
 
 

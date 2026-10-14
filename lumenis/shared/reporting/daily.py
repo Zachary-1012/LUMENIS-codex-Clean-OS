@@ -34,6 +34,18 @@ def _ai_allowed_for_report():
     return os.environ.get('ZBC_TEST_OFFLINE', '').strip() != '1'
 
 
+def _effective_relevance_notes(notes, *, source_complete):
+    """Return only admitted relevant rows when every observed row is classified."""
+    recognized = {'relevant', 'accepted', 'irrelevant', 'rejected'}
+    values = [str(note.get('relevance_status') or '').strip().lower()
+              if isinstance(note, dict) else '' for note in notes]
+    known = sum(value in recognized for value in values)
+    complete = source_complete and known == len(notes)
+    effective = ([note for note, value in zip(notes, values)
+                  if value in {'relevant', 'accepted'}] if complete else [])
+    return effective, known, complete
+
+
 # ============== 风险指数计算 ==============
 
 def calculate_risk_index(notes, events, period_days=1):
@@ -198,35 +210,25 @@ def generate_today_summary(date_str=None, *, scope=None):
     )
     today_notes = source_read['sources']
     source_complete = not source_read['truncated'] and not source_read['rejected_count']
-    effective_notes = today_notes
-    relevance_values = [str(note.get('relevance_status') or '').strip().lower()
-                        for note in today_notes]
-    known_relevance = sum(value in {'relevant', 'accepted', 'irrelevant', 'rejected'}
-                          for value in relevance_values)
-    if source_complete and today_notes and known_relevance == len(today_notes):
-        effective_count = sum(value in {'relevant', 'accepted'} for value in relevance_values)
-    elif source_complete and not today_notes:
-        # A complete, scope-verified empty result is a real zero. Incomplete
-        # reads remain unknown rather than being presented as an empty day.
-        effective_count = 0
-    else:
-        effective_count = None
+    effective_notes, known_relevance, relevance_complete = _effective_relevance_notes(
+        today_notes, source_complete=source_complete)
+    effective_count = len(effective_notes) if relevance_complete else None
     total_found = len(today_notes) if source_complete else None
 
     _sce = cm.sentiment_count(effective_notes)
     _rce = cm.risk_count(effective_notes)
-    positive = _sce['positive'] if source_complete and _sce['known'] else None
-    neutral = _sce['neutral'] if source_complete and _sce['known'] else None
+    positive = _sce['positive'] if relevance_complete and _sce['known'] else None
+    neutral = _sce['neutral'] if relevance_complete and _sce['known'] else None
     risk = (_rce['high'] + _rce['medium']
-            if source_complete and _rce['total'] and not _rce['missing'] and not _rce['other'] else None)
+            if relevance_complete and _rce['total'] and not _rce['missing'] and not _rce['other'] else None)
 
     # 今日事件
     events_read = db.get_scoped_events(500, scope=exact, date_start=date_str, date_end=date_str)
     today_events = events_read['events']
     events_complete = not events_read['truncated'] and not events_read['rejected_count']
 
-    risk_index = calculate_risk_index(effective_notes, today_events) if source_complete and events_complete else None
-    brand_health = calculate_brand_health_score(effective_notes, risk_index) if source_complete and events_complete else None
+    risk_index = calculate_risk_index(effective_notes, today_events) if relevance_complete and events_complete else None
+    brand_health = calculate_brand_health_score(effective_notes, risk_index) if relevance_complete and events_complete else None
 
     return {
         'date': date_str,
@@ -238,15 +240,15 @@ def generate_today_summary(date_str=None, *, scope=None):
                                'observed': len(today_notes)},
         'positive_count': positive,
         'neutral_count': neutral,
-        'negative_count': _sce['negative'] if source_complete and _sce['known'] else None,
-        'sentiment_coverage': {'known': _sce['known'] if source_complete else None,
-                              'total': len(today_notes) if source_complete else None,
-                              'unknown': _sce['unknown'] if source_complete else None},
-        'risk_coverage': {'known': _rce['total'] - _rce['missing'] - _rce['other'] if source_complete else None,
-                          'total': _rce['total'] if source_complete else None,
-                          'missing': _rce['missing'] if source_complete else None,
-                          'other': _rce['other'] if source_complete else None,
-                          'observed': _rce['total']},
+        'negative_count': _sce['negative'] if relevance_complete and _sce['known'] else None,
+        'sentiment_coverage': {'known': _sce['known'] if relevance_complete else None,
+                              'total': len(effective_notes) if relevance_complete else None,
+                              'unknown': _sce['unknown'] if relevance_complete else None},
+        'risk_coverage': {'known': _rce['total'] - _rce['missing'] - _rce['other'] if relevance_complete else None,
+                          'total': _rce['total'] if relevance_complete else None,
+                          'missing': _rce['missing'] if relevance_complete else None,
+                          'other': _rce['other'] if relevance_complete else None,
+                          'observed': _rce['total'] if relevance_complete else None},
         'risk_count': risk,
         'risk_index': risk_index,
         'brand_health_score': brand_health,
@@ -718,7 +720,9 @@ def generate_daily_digest(date_str=None, *, scope=None):
     note_read = db.get_scoped_event_source_rows(
         exact, source_types=('note', 'web_mention'), date_start=date_str, date_end=date_str, limit=5000,
     )
-    effective_notes = note_read['sources']
+    source_complete = not note_read['truncated'] and not note_read['rejected_count']
+    effective_notes, _known_relevance, relevance_complete = _effective_relevance_notes(
+        note_read['sources'], source_complete=source_complete)
 
     # 3. Events are read only after each event/source Evidence and Canonical
     # reference has been rechecked by the existing database owner.
@@ -727,9 +731,8 @@ def generate_daily_digest(date_str=None, *, scope=None):
     )
     today_events = event_read['events']
 
-    source_complete = not note_read['truncated'] and not note_read['rejected_count']
     event_complete = not event_read['truncated'] and not event_read['rejected_count']
-    coverage_complete = source_complete and event_complete
+    coverage_complete = source_complete and relevance_complete and event_complete
 
     # Incomplete capped reads remain useful as an explicitly observed sample,
     # but cannot drive whole-scope insight, alert, or AI claims.
@@ -756,9 +759,9 @@ def generate_daily_digest(date_str=None, *, scope=None):
     else:
         event_insights = []
         insights = []
-        actions = [{'priority': '待核验', 'action': '当前来源或事件读取未覆盖完整范围，样本仅供查看，暂不生成全范围分析与行动建议。',
+        actions = [{'priority': '待核验', 'action': '当前来源、相关性或事件覆盖未达到完整条件，样本仅供查看，暂不生成全范围分析与行动建议。',
                     'owner': '数据分析团队', 'deadline': '本周期内'}]
-        executive = '当前来源或事件覆盖不完整；已隐藏全范围指标与结论，请先完成剩余范围核验。'
+        executive = '当前来源、相关性或事件覆盖不完整；已隐藏全范围指标与结论，请先完成范围核验。'
         ai_summary = executive
         executive_insight = {'executive_insight': executive, 'priority': 'unknown',
                              'focus_area': '数据覆盖核验', 'provider': 'rule_fallback'}
@@ -771,6 +774,7 @@ def generate_daily_digest(date_str=None, *, scope=None):
         'scope': exact,
         'total_found': summary['total_found'],
         'effective_count': summary['effective_count'],
+        'relevance_coverage': summary.get('relevance_coverage'),
         'positive_count': summary['positive_count'],
         'neutral_count': summary['neutral_count'],
         'risk_count': summary['risk_count'],

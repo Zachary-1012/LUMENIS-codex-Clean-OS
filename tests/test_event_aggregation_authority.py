@@ -66,6 +66,52 @@ def test_event_writer_refuses_missing_scope_only():
         reprocess.build_cross_platform_events()
 
 
+def test_full_refresh_takes_shared_snapshot_before_mutating_stages(monkeypatch):
+    from lumenis.shared.database import migrations
+
+    scope = {"domain_id": "cth", "subject_id": "SUBJECT-REFRESH",
+             "brand_focus_id": None, "global_scope": False}
+    steps = []
+    backup_path = "isolated-refresh-backup.db"
+    monkeypatch.setattr(migrations, "backup_database",
+                        lambda: (steps.append("backup") or backup_path))
+    monkeypatch.setattr(reprocess.intelligence, "ai_enabled", lambda: False)
+    monkeypatch.setattr(reprocess, "reprocess_notes",
+                        lambda *args, **kwargs: (steps.append("notes") or {"status": "COMPLETED"}))
+    monkeypatch.setattr(reprocess, "discover_web",
+                        lambda *args, **kwargs: (steps.append("web") or {"status": "COMPLETED"}))
+    monkeypatch.setattr(reprocess, "build_cross_platform_events",
+                        lambda *args, **kwargs: (steps.append("events") or {"status": "COMPLETED"}))
+
+    result = reprocess.full_refresh(scope=scope)
+
+    assert steps == ["backup", "notes", "web", "events"]
+    assert result["status"] == "COMPLETED"
+    assert result["backup"] == backup_path
+
+
+def test_full_refresh_blocks_every_write_when_shared_snapshot_fails(monkeypatch):
+    from lumenis.shared.database import migrations
+
+    scope = {"domain_id": "cth", "subject_id": "SUBJECT-REFRESH",
+             "brand_focus_id": None, "global_scope": False}
+    monkeypatch.setattr(migrations, "backup_database",
+                        lambda: (_ for _ in ()).throw(OSError("snapshot unavailable")))
+    monkeypatch.setattr(reprocess.intelligence, "ai_enabled", lambda: False)
+    for name in ("reprocess_notes", "discover_web", "build_cross_platform_events"):
+        monkeypatch.setattr(reprocess, name,
+                            lambda *args, _name=name, **kwargs:
+                            pytest.fail(f"{_name} must not run before backup"))
+
+    result = reprocess.full_refresh(scope=scope)
+
+    assert result["status"] == "BLOCKED_BACKUP_FAILED"
+    assert result["backup"] is None
+    assert result["backup_error"] == "DATABASE_BACKUP_FAILED"
+    assert result["notes"]["status"] == result["web"]["status"] == "NOT_RUN"
+    assert result["events"]["status"] == "NOT_RUN"
+
+
 def test_function_registry_reads_only_verified_scope_sources():
     import function_registry
 

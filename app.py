@@ -4615,10 +4615,23 @@ def api_event_notes(event_id):
         if event is None:
             return jsonify({'ok': False, 'error': 'Not found in authorized scope'}), 404
         notes = [source for source in event.get('sources', []) if source.get('source_type') == 'note']
-        notes.sort(key=lambda note: (note.get('sentiment') != 'negative',
-                                     note.get('risk_level') not in ('high', 'critical', 'medium'),
-                                     note.get('risk_score') is not None,
-                                     note.get('risk_score') or 0), reverse=False)
+
+        def _linked_note_risk_key(note):
+            score = note.get('risk_score')
+            score_known = type(score) in (int, float) and not isinstance(score, bool)
+            try:
+                score_value = float(score) if score_known else 0.0
+            except (TypeError, ValueError, OverflowError):
+                score_known = False
+                score_value = 0.0
+            return (
+                0 if note.get('sentiment') == 'negative' else 1,
+                0 if note.get('risk_level') in ('critical', 'high', 'medium') else 1,
+                0 if score_known else 1,
+                -score_value if score_known else 0.0,
+            )
+
+        notes.sort(key=_linked_note_risk_key)
         notes = notes[:100]
         return jsonify({'ok': True, 'notes': notes, 'total': len(notes),
                         'matched_by': 'verified_event_mentions', 'scope': scope})
@@ -5848,93 +5861,182 @@ def api_dashboard_all():
     conn = None
     try:
         import sqlite3
-        from datetime import datetime, timedelta
+        from datetime import date, datetime, timedelta
         _actor, dashboard_scope, _entries, _selected = _resolve_web_scope('read', module='reports')
-        
-        DB_PATH = db.DB_PATH
-        # 使用WAL模式和超时配置，提高多线程稳定性
-        conn = get_repository().connect(timeout=30, check_same_thread=False)
-        conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA busy_timeout=30000')
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        result = {'ok': True, 'server_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-        total_notes = 0
-        
-        # 1. 概览统计
-        try:
-            cursor.execute("SELECT COUNT(*) as total FROM notes")
-            total_notes = cursor.fetchone()['total']
-            cursor.execute("SELECT COUNT(*) as verified FROM notes WHERE is_taikoo_verified=1")
-            verified_notes = cursor.fetchone()['verified']
-            cursor.execute("SELECT COUNT(*) as negative FROM notes WHERE sentiment='negative'")
-            negative_notes = cursor.fetchone()['negative']
-            cursor.execute("SELECT COUNT(*) as today FROM notes WHERE DATE(collected_at)=DATE('now')")
-            today_notes = cursor.fetchone()['today']
-            # 近14天趋势（与 /api/overview 同口径），补齐主轮询 renderTrend 所需，避免“暂无趋势数据”
-            _now = datetime.now(); _start = (_now - timedelta(days=13)).strftime('%Y-%m-%d'); _end = _now.strftime('%Y-%m-%d')
-            _cl, _sp = _subject_sql_and_values()
-            _trows = cursor.execute(
-                f"SELECT publish_date, COUNT(*) total, SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) negative, "
-                f"SUM(CASE WHEN risk_level='high' THEN 1 ELSE 0 END) high FROM notes "
-                f"WHERE is_taikoo_verified=1 AND {_cl} AND publish_date BETWEEN ? AND ? GROUP BY publish_date",
-                tuple(_sp) + (_start, _end)).fetchall()
-            _by = {r['publish_date']: {'total': r['total'] or 0, 'negative': r['negative'] or 0, 'high': r['high'] or 0} for r in _trows}
-            _trend = []
-            for _i in range(14):
-                _dd = (_now - timedelta(days=13 - _i)).strftime('%Y-%m-%d')
-                _xx = _by.get(_dd, {'total': 0, 'negative': 0, 'high': 0})
-                _trend.append({'date': _dd, 'label': _dd[5:], 'total': _xx['total'], 'negative': _xx['negative'], 'high': _xx['high']})
 
-            result['overview'] = {
-                'total_notes': total_notes,
-                'verified_notes': verified_notes,
-                'negative_notes': negative_notes,
-                'today_notes': today_notes,
-                'unanalyzed': total_notes - verified_notes,
-                'trend': _trend
+        result = {'ok': True, 'server_time': datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')}
+
+        # Resolve the complete note set through the existing source-level
+        # Canonical/Evidence reader. Its result is a bounded sample, so every
+        # aggregate carries explicit coverage and becomes unknown when the
+        # read was truncated or rejected stale sources.
+        note_read = db.get_scoped_event_source_rows(
+            dashboard_scope, source_types=('note',), limit=5000,
+        )
+        note_rows = [row for row in note_read.get('sources', []) if isinstance(row, dict)]
+        notes_complete = (not note_read.get('truncated') and not note_read.get('rejected_count'))
+        notes_coverage = {
+            'state': 'COMPLETE' if notes_complete else 'INCOMPLETE',
+            'candidate_count': note_read.get('candidate_count'),
+            'verified_count': len(note_rows),
+            'rejected_count': note_read.get('rejected_count', 0),
+            'truncated': bool(note_read.get('truncated')),
+            'basis': 'current scoped Canonical rows with matching signed source Evidence',
+        }
+        result['notes_coverage'] = notes_coverage
+
+        import canonical_metrics as _cm
+        _sentiment = _cm.sentiment_count(note_rows)
+        _risk = _cm.risk_count(note_rows)
+        _engagement = _cm.engagement_stats(note_rows)
+        _category_counts = {}
+        for note in note_rows:
+            category = note.get('category')
+            if isinstance(category, str) and category.strip():
+                category = category.strip()
+                _category_counts[category] = _category_counts.get(category, 0) + 1
+        _categories = [
+            {'category': category, 'count': count}
+            for category, count in sorted(_category_counts.items(), key=lambda item: (-item[1], item[0]))
+        ]
+
+        if notes_complete:
+            _scope_total = len(note_rows)
+            _stats = {
+                'total': _scope_total,
+                'positive': _sentiment['positive'],
+                'neutral': _sentiment['neutral'],
+                'negative': _sentiment['negative'],
+                'unknown_sentiment': _sentiment['unknown'],
+                'critical_risk': _risk['critical'],
+                'high_risk': _risk['high'],
+                'medium_risk': _risk['medium'],
+                'low_risk': _risk['low'],
+                'unknown_risk': _risk['missing'] + _risk['other'],
+                'total_likes': _engagement['per_field']['likes'],
+                'total_comments': _engagement['per_field']['comments'],
+                'total_engagements': _engagement['sum'],
+                'official_count': sum(note.get('is_official') == 1 for note in note_rows),
+                'verified_count': _scope_total,
+                'coverage_state': 'COMPLETE',
             }
-        except Exception as e:
-            result['overview'] = {'error': str(e), 'total_notes': 0}
-        
-        # 2. 统计数据（补全前端需要的所有字段）
-        try:
-            # [Canonical P0] 情感/风险/互动统一走 canonical_metrics 唯一实现(FN-SENTIMENT/RISK/ENGAGEMENT)
-            # 一次取数替代原6趟全表聚合;输出字段与口径不变(已验证四字段无NULL/情感仅三值,数字零变化)
-            import canonical_metrics as _cm
-            _note_rows = [dict(r) for r in cursor.execute(
-                "SELECT sentiment, risk_level, likes, comments, collects, shares FROM notes").fetchall()]
-            _sc = _cm.sentiment_count(_note_rows)
-            _rc = _cm.risk_count(_note_rows)
-            _es = _cm.engagement_stats(_note_rows)
-            sentiment_stats = {'positive': _sc['positive'], 'neutral': _sc['neutral'], 'negative': _sc['negative']}
-            result['stats'] = {
-                'sentiment': sentiment_stats,
-                'total': total_notes,
-                'positive': _sc['positive'],
-                'neutral': _sc['neutral'],
-                'negative': _sc['negative'],
-                'high_risk': _rc['high'],
-                'medium_risk': _rc['medium'],
-                'low_risk': _rc['low'],
-                'total_engagements': _es['sum'],
-                'total_comments': _es['per_field']['comments'],
-                'categories': db.get_category_distribution()
+            _sentiment_stats = {
+                'positive': _sentiment['positive'],
+                'neutral': _sentiment['neutral'],
+                'negative': _sentiment['negative'],
             }
-        except Exception as e:
-            result['stats'] = {'error': str(e), 'total': total_notes}
+            _stats_categories = _categories
+        else:
+            _scope_total = None
+            _stats = {
+                key: None for key in (
+                    'total', 'positive', 'neutral', 'negative', 'unknown_sentiment',
+                    'critical_risk', 'high_risk', 'medium_risk', 'low_risk',
+                    'unknown_risk', 'total_likes', 'total_comments',
+                    'total_engagements', 'official_count', 'verified_count',
+                )
+            }
+            _stats['coverage_state'] = 'INCOMPLETE'
+            _sentiment_stats = {'positive': None, 'neutral': None, 'negative': None}
+            _stats_categories = None
+
+        _today = datetime.now().astimezone().date().isoformat()
+        _collection_days = [str(note.get('collected_at') or '')[:10] for note in note_rows]
+        _today_complete = notes_complete
+        for _day_value in _collection_days:
+            try:
+                date.fromisoformat(_day_value)
+            except (TypeError, ValueError):
+                _today_complete = False
+                break
+        _today_count = sum(day == _today for day in _collection_days)
+
+        # The old field compared a reference-specific verification flag with
+        # an all-notes count. Current verification is the scoped Canonical and
+        # signed-Evidence read above; analysis state has no reliable note field.
+        result['overview'] = {
+            'state': 'COMPLETE' if notes_complete else 'INCOMPLETE',
+            'total_notes': _scope_total,
+            'verified_notes': _scope_total,
+            'verified_basis': 'current scoped Canonical and signed source Evidence',
+            'negative_notes': _sentiment['negative'] if notes_complete else None,
+            'today_notes': _today_count if _today_complete else None,
+            'today_notes_state': 'COMPLETE' if _today_complete else 'UNKNOWN_COLLECTION_TIME',
+            'unanalyzed': None,
+            'unanalyzed_state': 'ANALYSIS_STATUS_UNAVAILABLE',
+            'coverage': notes_coverage,
+        }
+
+        # Derive the trend from the same full scoped Canonical read. If any
+        # source lacks a usable publication date, or the scope read is partial,
+        # day totals remain unknown rather than turning unplaceable records
+        # into apparent zeroes.
+        _now = datetime.now().astimezone()
+        _trend_dates = [str(row.get('publish_date') or row.get('publish_datetime') or '')[:10]
+                        for row in note_rows]
+        _publication_dates_complete = True
+        for _day_value in _trend_dates:
+            try:
+                date.fromisoformat(_day_value)
+            except (TypeError, ValueError):
+                _publication_dates_complete = False
+                break
+        _trend_complete = notes_complete and _publication_dates_complete
+        _trend = []
+        for _i in range(14):
+            _dd = (_now - timedelta(days=13 - _i)).strftime('%Y-%m-%d')
+            _day_rows = [row for row, published_day in zip(note_rows, _trend_dates)
+                         if published_day == _dd]
+            if _trend_complete:
+                _day_sentiment = _cm.sentiment_count(_day_rows)
+                _day_risk = _cm.risk_count(_day_rows)
+                _day = {
+                    'total': len(_day_rows),
+                    'negative': _day_sentiment['negative'],
+                    'high': _day_risk['high'],
+                }
+            else:
+                _day = {'total': None, 'negative': None, 'high': None}
+            _trend.append({'date': _dd, 'label': _dd[5:], **_day})
+        result['overview']['trend'] = _trend
+        result['overview']['trend_state'] = (
+            'COMPLETE' if _trend_complete else
+            'INCOMPLETE_SCOPE' if not notes_complete else 'UNKNOWN_PUBLICATION_TIME'
+        )
+
+        result['stats'] = {
+            'state': 'COMPLETE' if notes_complete else 'INCOMPLETE',
+            'sentiment': _sentiment_stats,
+            'total': _scope_total,
+            'positive': _stats['positive'],
+            'neutral': _stats['neutral'],
+            'negative': _stats['negative'],
+            'high_risk': _stats['high_risk'],
+            'medium_risk': _stats['medium_risk'],
+            'low_risk': _stats['low_risk'],
+            'total_engagements': _stats['total_engagements'],
+            'total_comments': _stats['total_comments'],
+            'categories': _stats_categories,
+            'categories_state': 'COMPLETE' if notes_complete else 'INCOMPLETE',
+            'coverage': notes_coverage,
+        }
         
-        # 3. 未读告警
+        # 3. SYSTEM/运营告警（不与业务 notes 聚合混用）
         try:
+            conn = get_repository().connect(timeout=30, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='alerts'")
             if cursor.fetchone():
                 cursor.execute("SELECT * FROM alerts WHERE is_read=0 ORDER BY rowid DESC LIMIT 20")
                 result['alerts'] = [dict(row) for row in cursor.fetchall()]
+                result['alerts_state'] = 'AVAILABLE'
             else:
                 result['alerts'] = []
+                result['alerts_state'] = 'NOT_AVAILABLE'
         except Exception as e:
             result['alerts'] = []
+            result['alerts_state'] = 'UNAVAILABLE'
         
         # 4. 事件列表（质量分级：重点事件优先，泛化“相关讨论”折叠、占位备注隐藏，与事件中心同口径）
         try:
@@ -5945,37 +6047,47 @@ def api_dashboard_all():
         except Exception as e:
             result['events'] = []
         
-        # 5. 风险告警（从notes表查询高/中风险笔记，risk_alerts表不存在）
-        try:
-            cursor.execute("""
-                SELECT id, note_id, title, author_nickname, sentiment, risk_level, risk_score,
-                       likes, comments, shares, collects, collected_at, publish_date, url,
-                       category, summary, event_hint
-                FROM notes 
-                WHERE risk_level IN ('critical','high','medium') 
-                ORDER BY risk_score DESC, collected_at DESC 
-                LIMIT 20
-            """)
-            result['risk_alerts'] = [dict(row) for row in cursor.fetchall()]
-        except Exception as e:
-            result['risk_alerts'] = []
+        # 5. 风险告警，来自已核验的当前范围样本。
+        def _risk_sort_key(note):
+            score = note.get('risk_score')
+            score_known = type(score) in (int, float) and not isinstance(score, bool)
+            try:
+                score_value = float(score) if score_known else 0.0
+            except (TypeError, ValueError, OverflowError):
+                score_known = False
+                score_value = 0.0
+            return (
+                0 if note.get('sentiment') == 'negative' else 1,
+                0 if note.get('risk_level') in ('critical', 'high', 'medium') else 1,
+                0 if score_known else 1,
+                -score_value if score_known else 0.0,
+                str(note.get('collected_at') or ''),
+            )
+
+        _risk_alert_rows = [note for note in note_rows
+                            if note.get('risk_level') in ('critical', 'high', 'medium')]
+        _risk_alert_rows.sort(key=_risk_sort_key)
+        result['risk_alerts'] = _risk_alert_rows[:20]
+        result['risk_alerts_state'] = 'COMPLETE' if notes_complete else 'INCOMPLETE'
         
-        # 6. 热门话题（使用category字段分组）
-        try:
-            cursor.execute("""
-                SELECT category as topic, COUNT(*) as count,
-                       SUM(CASE WHEN sentiment='positive' THEN 1 ELSE 0 END) as positive,
-                       SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) as negative,
-                       SUM(CASE WHEN sentiment='neutral' THEN 1 ELSE 0 END) as neutral
-                FROM notes 
-                WHERE category IS NOT NULL AND category != ''
-                GROUP BY category 
-                ORDER BY count DESC 
-                LIMIT 14
-            """)
-            result['hot_topics'] = [dict(row) for row in cursor.fetchall()]
-        except Exception as e:
-            result['hot_topics'] = []
+        # 6. 热门话题按当前范围 Canonical 样本中的 category 派生。
+        _topic_groups = {}
+        for note in note_rows:
+            topic = note.get('category')
+            if not isinstance(topic, str) or not topic.strip():
+                continue
+            topic = topic.strip()
+            bucket = _topic_groups.setdefault(topic, {
+                'topic': topic, 'count': 0, 'positive': 0, 'negative': 0,
+                'neutral': 0, 'unknown': 0,
+            })
+            bucket['count'] += 1
+            sentiment = note.get('sentiment')
+            bucket[sentiment if sentiment in ('positive', 'negative', 'neutral') else 'unknown'] += 1
+        result['hot_topics'] = sorted(
+            _topic_groups.values(), key=lambda item: (-item['count'], item['topic']),
+        )[:14]
+        result['hot_topics_state'] = 'COMPLETE' if notes_complete else 'INCOMPLETE'
         
         # 7. AI状态：只读唯一 owned Gateway，不探测或回退旧 Provider。
         try:
@@ -6001,21 +6113,30 @@ def api_dashboard_all():
 
         # 9. v5.9.0 合并字段：供前端统一轮询，避免多个独立30s请求
         try:
-            cur2 = conn.cursor()
-            # 待审核负面数（口径与 /api/negative/pending 一致）
-            cur2.execute("SELECT COUNT(*) AS c FROM notes WHERE sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)")
-            result['pending_negative'] = cur2.fetchone()['c']
+            # Incomplete Canonical coverage cannot produce an authoritative total.
+            result['pending_negative'] = (
+                sum(note.get('sentiment') == 'negative'
+                    and note.get('negative_confirmed') in (None, 0) for note in note_rows)
+                if notes_complete else None
+            )
+            result['pending_negative_state'] = 'COMPLETE' if notes_complete else 'INCOMPLETE'
             # 未读预警数（口径与 /api/alerts?unread=1 一致；无 is_read 列时回退为 alerts 长度）
             try:
-                cur2.execute("SELECT COUNT(*) AS c FROM alerts WHERE is_read=0")
-                result['unread_alerts'] = cur2.fetchone()['c']
+                if conn is None:
+                    result['unread_alerts'] = len(result.get('alerts', []))
+                else:
+                    cur2 = conn.cursor()
+                    cur2.execute("SELECT COUNT(*) AS c FROM alerts WHERE is_read=0")
+                    result['unread_alerts'] = cur2.fetchone()['c']
             except Exception:
                 result['unread_alerts'] = len(result.get('alerts', []))
             # 数据变更摘要（口径与 /api/dashboard/changes 一致）
             result['changes'] = {
-                'server_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'server_time': datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S'),
                 'version': APP_VERSION,
-                'stats': db.get_stats()
+                'stats': _stats,
+                'stats_state': 'COMPLETE' if notes_complete else 'INCOMPLETE',
+                'scope': dashboard_scope,
             }
         except Exception as e:
             result['poll_extras_error'] = str(e)
