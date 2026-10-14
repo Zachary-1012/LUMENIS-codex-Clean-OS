@@ -70,9 +70,11 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+Database state: `NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`
+Real user E2E: `NOT_VERIFIED`
 
 通用CTH风险策略v2.1不再因参考主体名称命中而加分；商业风险词、升级规则、阈值及未知值语义保留。Gateway兼容审阅缺精确主体投影时保留规则结果并明确增强未就绪，不猜主体；有投影时显式传递名称/别名，形状校验不替代上游权限与来源证明。历史风险评分不回写，其未记录的策略版本返回未知，当前计算策略另列。77项隔离回归通过，正常产品运行、数据库与用户结果尚未验证。
 
@@ -84,7 +86,7 @@ User outcome: `NOT_VERIFIED`
 
 PR #66已发布：采集脚本不再默认参考主体Profile或固定CDP示例；账户Owner核验获准的HK/intl身份及Profile，JS拒绝任意Profile、目录逃逸、错误身份和不安全Cookie域/URL；远端CDP复用已注册worker身份，不复制本机Cookie；独立脚本导航和响应仅认国际RedNote。ACC-02继续GLOBAL默认，参考主体仅作深度覆盖；历史资料与失败证据保留。隔离检查未读真实凭据，Runtime与用户采集验收仍为NOT_VERIFIED。
 
-PR #75（`586776b3b1a94d143cc88cc12bcd825f248b8ee5`）在既有SYSTEM Browser/Collector会话链补齐动态注册worker端点、进程/内核/Profile与身份核验，人工接管actor/task/lease传递及切换后端点重解析，并为搜索页提供任务级清理；采集后分析仅使用持久化Query Plan的服务端scope，没有可验证Scoped Evidence的旧事件阶段明确阻断。隔离回归114项Python、13项Node通过，变更Python编译、Node语法、constitution校验和CRLF-aware diff检查通过；所选路径Ruff仍有842条存量诊断，新增行无诊断。PR尚未合并，scope调用须待并行domain API入main后普通合并并复验；Runtime、DB、真实浏览器/会话、定时采集和完整保存/重开/恢复用户结果均为`NOT_VERIFIED`。
+PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR分支含合入fresh main的组合版本）在既有SYSTEM Browser/Collector会话链补齐动态注册worker端点、进程/内核/Profile与身份核验，人工接管actor/task/lease传递及切换后端点重解析，并为搜索页提供任务级清理；采集后分析仅使用持久化Query Plan的服务端scope，没有可验证Scoped Evidence的旧事件阶段明确阻断。隔离回归114项Python、13项Node通过，变更Python编译、Node语法、constitution校验和CRLF-aware diff检查通过；所选路径Ruff仍有842条存量诊断，新增行无诊断。SOURCE已发布到远端PR分支但尚未合并main；scope调用须待并行domain API入main后普通合并并复验。Runtime、DB、真实浏览器/会话、定时采集和完整保存/重开/恢复用户结果均为`NOT_VERIFIED`。
 
 
 本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。

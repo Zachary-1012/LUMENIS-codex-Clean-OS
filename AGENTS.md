@@ -548,14 +548,16 @@ Local-only work is not on GitHub. Preserve it, reconcile fresh `origin/main`, ve
 For every M-accepted implementation Batch, close local work and online truth in
 the same delivery cycle. M must inspect the exact staged files and diff,
 record the Batch's tests, runtime/E2E evidence and unresolved limits, update the
-owning Round evidence **and** this repository's CURRENT online status, then make
-a coherent branch commit, then merge its PR after required checks. Before calling the Batch delivered or
-starting a dependent acceptance gate, fetch again and verify `HEAD`,
-`origin/main`, live `refs/heads/main`, and the published status/evidence paths
-refer to that accepted source. A progress-only commit never substitutes for
-unpublished implementation. Conversely, a source commit without its online
-status update is an incomplete handoff. The blocking governance validator
-checks this co-publication on the current commit.
+owning Round evidence **and** this repository's CURRENT online status; `PUBLISHED_SOURCE_VERIFIED`
+identifies source-level publication only, while runtime, database and user outcome
+remain separately stated. Then make a coherent branch commit and merge its PR
+after required checks. Before calling the Batch delivered or starting a dependent
+acceptance gate, fetch again and verify `HEAD`, `origin/main`, live `refs/heads/main`,
+and the published status/evidence paths refer to that accepted source. A
+progress-only commit never substitutes for unpublished implementation.
+Conversely, a source commit without its online status update is an incomplete
+handoff. The blocking governance validator checks this co-publication on the
+current commit.
 
 If a push or remote read fails, preserve the work and report its exact local
 commit, `LOCAL_ONLY / NOT_PUBLISHED` state and blocker. Continue independent
