@@ -164,9 +164,15 @@ def test_reportlab_fallback_preserves_complete_report(monkeypatch, tmp_path):
 
 @pytest.mark.parametrize("missing", ["word", "pdf"])
 def test_reporting_api_does_not_claim_an_incomplete_export(monkeypatch, missing):
-    import lumenis.shared.reporting as reporting
+    from lumenis.shared import reporting
+    from lumenis.shared.reporting import routes
     from lumenis.shared.reporting.api import reporting_bp
     monkeypatch.setenv("LUMENIS_REPORTING", "1")
+    actor = {"id": 17}
+    scope = {"domain_id": "cth", "product_id": "CTH", "subject_id": "SUBJ-REPORT",
+             "brand_focus_id": None, "global_scope": False}
+    monkeypatch.setattr(routes, "_authorized_report_scope",
+                        lambda **_kwargs: (actor, scope, [], {"subject_id": "SUBJ-REPORT"}))
     paths = {"word_path": "word.docx", "pdf_path": "report.pdf"}
     paths[missing + "_path"] = ""
     monkeypatch.setattr(reporting, "ReportExporter", lambda: SimpleNamespace(generate_and_export=lambda **kwargs: paths))
@@ -176,6 +182,114 @@ def test_reporting_api_does_not_claim_an_incomplete_export(monkeypatch, missing)
     assert result.status_code == 503
     assert result.json["ok"] is False and result.json["code"] == "REPORT_EXPORT_INCOMPLETE"
     assert result.json["unavailable_formats"] == [missing]
+
+
+def test_report_exporter_checks_data_export_and_revalidates_source_use(monkeypatch, tmp_path):
+    from lumenis.shared.reporting import export_api, saved_work
+
+    actor = {"id": 17, "role": "owner"}
+    scope = {"domain_id": "cth", "product_id": "CTH", "subject_id": "SUBJ-REPORT",
+             "brand_focus_id": None, "global_scope": False}
+    selected = {"subject_id": "SUBJ-REPORT", "name_zh": "隔离测试主体"}
+    notes = [{"source_id": "SRC-1"}]
+    events = []
+    built = []
+    effects = []
+    source_checks = []
+
+    def build_report(kind, start, end, **kwargs):
+        built.append((kind, start, end, kwargs))
+        return kind, "2026-10-01", "2026-10-02", {"report_id": "R-1"}, 1, notes, events
+
+    monkeypatch.setattr(export_api, "_build_report", build_report)
+    monkeypatch.setattr(export_api, "_verify_report_source_use",
+                        lambda *args, **kwargs: source_checks.append((args, kwargs)))
+    monkeypatch.setattr(saved_work, "_check_effect",
+                        lambda *args, **kwargs: effects.append((args, kwargs)))
+
+    exporter = ReportExporter(str(tmp_path))
+
+    def write_word(report, filename):
+        path = tmp_path / filename
+        path.write_bytes(b"scoped report")
+        return str(path)
+
+    monkeypatch.setattr(exporter, "export_word", write_word)
+    result = exporter.generate_and_export(
+        brand_mode="cth", period="daily", export_formats=["word"], actor=actor,
+        scope=scope, scope_entry=selected,
+    )
+
+    assert result["word_path"].endswith(".docx")
+    assert built == [("daily", None, None, {
+        "actor": actor, "scope": {**scope, "global_scope": False}, "scope_entry": selected,
+    })]
+    assert len(effects) == 2
+    assert all(call[0][0] is actor for call in effects)
+    assert len(source_checks) == 1
+    assert source_checks[0][0] == (actor, {**scope, "global_scope": False}, notes, events)
+
+
+def test_report_exporter_removes_partial_pdf_and_preserves_word_output(monkeypatch, tmp_path):
+    from pathlib import Path
+
+    from lumenis.shared.reporting import export_api, saved_work
+
+    actor = {"id": 17, "role": "owner"}
+    scope = {"domain_id": "cth", "product_id": "CTH", "subject_id": "SUBJ-REPORT",
+             "brand_focus_id": None, "global_scope": False}
+    monkeypatch.setattr(export_api, "_build_report",
+                        lambda *args, **kwargs: ("daily", "2026-10-01", "2026-10-01",
+                                                 {"report_id": "R-2"}, 0, [], []))
+    monkeypatch.setattr(export_api, "_verify_report_source_use", lambda *args, **kwargs: None)
+    monkeypatch.setattr(saved_work, "_check_effect", lambda *args, **kwargs: None)
+    exporter = ReportExporter(str(tmp_path))
+
+    def write_word(_report, filename):
+        path = tmp_path / filename
+        path.write_bytes(b"complete word report")
+        return str(path)
+
+    def partial_pdf(_report, filename):
+        (tmp_path / filename).write_bytes(b"%PDF-partial")
+        (tmp_path / Path(filename).with_suffix(".docx")).write_bytes(b"partial intermediate word")
+        return ""
+
+    monkeypatch.setattr(exporter, "export_word", write_word)
+    monkeypatch.setattr(exporter, "export_pdf", partial_pdf)
+
+    result = exporter.generate_and_export(
+        export_formats=["word", "pdf"], actor=actor, scope=scope,
+    )
+
+    assert Path(result["word_path"]).read_bytes() == b"complete word report"
+    assert result["pdf_path"] == ""
+    assert {path.name for path in tmp_path.iterdir()} == {Path(result["word_path"]).name}
+
+
+def test_report_exporter_removes_word_file_after_partial_write_error(monkeypatch, tmp_path):
+    from lumenis.shared.reporting import export_api, saved_work
+
+    actor = {"id": 17, "role": "owner"}
+    scope = {"domain_id": "cth", "product_id": "CTH", "subject_id": "SUBJ-REPORT",
+             "brand_focus_id": None, "global_scope": False}
+    monkeypatch.setattr(export_api, "_build_report",
+                        lambda *args, **kwargs: ("daily", "2026-10-01", "2026-10-01",
+                                                 {"report_id": "R-3"}, 0, [], []))
+    monkeypatch.setattr(export_api, "_verify_report_source_use", lambda *args, **kwargs: None)
+    monkeypatch.setattr(saved_work, "_check_effect", lambda *args, **kwargs: None)
+    exporter = ReportExporter(str(tmp_path))
+
+    def partial_word(_report, filename):
+        (tmp_path / filename).write_bytes(b"partial word")
+        raise OSError("simulated interrupted file write")
+
+    monkeypatch.setattr(exporter, "export_word", partial_word)
+
+    with pytest.raises(OSError, match="simulated interrupted file write"):
+        exporter.generate_and_export(export_formats=["word"], actor=actor, scope=scope)
+
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_special_report_pdf_preserves_multilingual_literal_text():

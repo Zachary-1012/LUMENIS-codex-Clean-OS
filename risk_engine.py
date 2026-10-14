@@ -292,8 +292,10 @@ def _subject_sql_and_values(alias=''):
     return subject_sql_and_values(alias)
 
 
-def build_daily_report(date_str=None):
-    return daily_report.generate_daily_digest(date_str)
+def build_daily_report(date_str=None, *, scope=None):
+    if scope is None:
+        return daily_report.generate_daily_digest(date_str)
+    return daily_report.generate_daily_digest(date_str, scope=scope)
 
 
 # ============================================================

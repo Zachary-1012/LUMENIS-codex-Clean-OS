@@ -112,23 +112,13 @@ BRAND_PROFILES = {
     },
 }
 
-ACTIVE_BRAND = "guangzhou_taikoo_hui"  # 生产安全默认=广州太古汇（CTH-POMS 生产主体，红线口径不得被弱化/切换）；
-# 其他品牌（海南中免/DFS 等 KOS 多品牌）必须通过环境变量 ZBC_ACTIVE_BRAND 或 subject_hit_for_brand(brand_key=)
-# 显式激活，禁止把全局默认改成非广州品牌，以免并行品牌线改变广州生产主体口径。
-
-
 def get_active_brand() -> str:
-    """Legacy reference filter with explicit request isolation.
-
-    Outside a bound request this module retains its named reference filter.
-    A bound GLOBAL/domain-only request never acquires that legacy focus.
-    """
+    """Return only an explicitly bound request focus; environment is not scope."""
     from subject_context import get_thread_context
     ctx = get_thread_context()
     if ctx is not None:
         return ctx.brand_key
-    import os
-    return os.environ.get("ZBC_ACTIVE_BRAND", ACTIVE_BRAND)
+    return ""
 
 
 def get_brand_config(brand_key: str = "") -> dict:
@@ -143,7 +133,7 @@ def get_brand_config(brand_key: str = "") -> dict:
 
 
 def subject_hit_for_brand(title="", body="", content="", source_keyword="", matched_keywords="", brand_key="") -> bool:
-    """指定品牌的主体判断（不修改默认 subject_hit，保持广州太古汇硬过滤不变）。"""
+    """按显式主体档案判断；未聚焦时不命中任何主体。"""
     cfg = get_brand_config(brand_key)
     fields = [str(x or "") for x in (title, body, content, source_keyword, matched_keywords)]
     joined = " ".join(fields).lower()

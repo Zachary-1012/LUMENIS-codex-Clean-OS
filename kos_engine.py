@@ -411,7 +411,7 @@ def analyze_comments(author_id: str = "", note_id: str = "", limit: int = 50) ->
         d["cooperation_signal"] = _cooperation_signal(content)
         d["needs_review"] = risk_level == "high"
         # 真实回复模板（复用 generate_reply 单一事实源；高风险→NO_REPLY 空建议）
-        _r = generate_reply(content, risk_level=risk_level, ai_enhance=False)
+        _r = generate_reply(content, brand_name="", risk_level=risk_level, ai_enhance=False)
         d["reply_suggestion"] = _r.get("suggested_reply", "") if _r.get("action") == "SUGGEST_REPLY" else ""
         comments.append(d)
     cat_stats = {}
@@ -420,17 +420,23 @@ def analyze_comments(author_id: str = "", note_id: str = "", limit: int = 50) ->
     return {"total": total, "returned": len(comments), "by_category": cat_stats, "comments": comments}
 
 
-def generate_outreach(author_id: str, brand_name: str = "广州太古汇", campaign_name: str = "") -> dict:
+def generate_outreach(author_id: str, brand_name: str, campaign_name: str = "", *,
+                      profile: dict, ai_enhance: bool = False) -> dict:
     """生成博主触达邀约文案（DRAFT 状态，不伪造已发送）。"""
-    profile = get_profile(author_id)
-    if not profile:
+    if not isinstance(brand_name, str) or not brand_name.strip():
+        return {"ok": False, "error": "BRAND_SCOPE_REQUIRED"}
+    if not isinstance(profile, dict) or profile.get("author_id") != author_id:
         return {"ok": False, "error": "KOS 不存在"}
     name = profile.get("author_nickname") or "博主"
-    tier = profile.get("kos_tier") or "C"
+    tier = profile.get("kos_tier")
     notes = profile.get("notes", [])
     top_topic = notes[0].get("title", "品牌相关内容") if notes else "优质内容"
-    content_direction = "探店体验 / 活动报道 / 品牌故事" if tier in ["S", "A"] else "单品测评 / 场景种草"
-    benefits = "专属活动邀请 + 品牌合作权益 + 内容流量支持" if tier == "S" else "活动体验机会 + 内容激励"
+    content_direction = "围绕已核验内容主题进一步沟通合作方向"
+    if tier in ["S", "A"]:
+        content_direction = "探店体验 / 活动报道 / 品牌故事"
+    elif tier:
+        content_direction = "单品测评 / 场景种草"
+    benefits = "合作范围、权益与费用需双方另行确认"
     template = f"""您好，{name}：
 
 我们是{brand_name}品牌团队。基于您此前发布的「{top_topic[:30]}」内容以及与{brand_name}的匹配度，希望邀请您参与我们的内容合作。
@@ -444,12 +450,14 @@ def generate_outreach(author_id: str, brand_name: str = "广州太古汇", campa
 如您感兴趣，欢迎回复与我们沟通具体合作方式。期待与您合作。
 
 {brand_name}品牌团队"""
-    # 智谱 AI 个性化邀约（DRAFT 不发送；失败回退模板）
-    _ai_text = _ai_generate_outreach(name, tier, top_topic, brand_name, campaign_name)
+    # AI is optional; scoped callers default to the deterministic draft.
+    _ai_text = (_ai_generate_outreach(name, tier or "", top_topic, brand_name, campaign_name)
+                if ai_enhance else "")
     _content = _ai_text or template
     return {"ok": True, "status": "DRAFT", "author_id": author_id, "author_name": name,
             "tier": tier, "brand_name": brand_name, "campaign_name": campaign_name,
             "content": _content, "ai_source": bool(_ai_text),
+            "content_source": "ai_enhancement" if _ai_text else "deterministic_rule",
             "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -550,9 +558,9 @@ __all__ = ["refresh_profiles", "get_stats", "list_profiles", "get_profile",
 
 # ============== P1: 评论回复AI生成 + 内容基因提取 ==============
 
-def generate_reply(comment_text: str, brand_name: str = "广州太古汇",
+def generate_reply(comment_text: str, brand_name: str,
                    reply_style: str = "professional", risk_level: str = "low",
-                   ai_enhance: bool = True) -> dict:
+                   ai_enhance: bool = False) -> dict:
     """生成评论回复建议（AI辅助，高风险NO_REPLY不自动回复）。
 
     原则：

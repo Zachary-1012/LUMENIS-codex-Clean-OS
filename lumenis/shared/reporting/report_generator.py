@@ -38,7 +38,8 @@ class ReportGenerator:
 
     def generate(self, period: str, start_date: str = None, end_date: str = None,
                  notes: List[dict] = None, events: List[dict] = None,
-                 stats: dict = None) -> dict:
+                 stats: dict = None, *, scope: dict = None,
+                 scope_entry: dict = None) -> dict:
         """
         生成标准化报告
 
@@ -52,6 +53,32 @@ class ReportGenerator:
         Returns:
             结构化报告字典
         """
+        import database as db
+        exact_scope = db._normalize_event_scope(scope, allow_global=True)
+        self._current_brand_name = None
+        self._current_subject_id = None
+        if exact_scope['global_scope']:
+            raise ValueError('FOCUS_SCOPE_REQUIRED_FOR_SINGLE_REPORT')
+        expected_product = 'CTH' if self.brand_mode == 'cth' else 'ZBMP'
+        if exact_scope['product_id'] != expected_product:
+            raise ValueError('REPORT_SCOPE_PRODUCT_MISMATCH')
+        focus_key = 'subject_id' if exact_scope['product_id'] == 'CTH' else 'brand_focus_id'
+        self._current_subject_id = exact_scope.get('subject_id')
+        if scope_entry is not None:
+            expected_id = exact_scope[focus_key]
+            entry_id = scope_entry.get('subject_id') if focus_key == 'subject_id' else scope_entry.get('brand_focus_id')
+            if entry_id != expected_id:
+                raise ValueError('REPORT_SCOPE_ENTRY_MISMATCH')
+            self._current_brand_name = str(scope_entry.get('name_zh') or scope_entry.get('name_en') or '').strip()
+        if not getattr(self, '_current_brand_name', None):
+            from subject_registry import get_subject_by_id
+            entry = get_subject_by_id(exact_scope['domain_id'], exact_scope[focus_key])
+            if not isinstance(entry, dict):
+                raise ValueError('REPORT_SCOPE_REGISTRY_ENTRY_REQUIRED')
+            self._current_brand_name = str(entry.get('name_zh') or entry.get('name_en') or '').strip()
+        if not self._current_brand_name:
+            raise ValueError('REPORT_SCOPE_NAME_REQUIRED')
+
         period_enum = ReportPeriod(period)
         if not end_date:
             end_date = datetime.now().strftime("%Y-%m-%d")
@@ -61,9 +88,9 @@ class ReportGenerator:
 
         # 获取数据（优先用传入的，否则从数据库获取）
         if notes is None:
-            notes = self._get_notes_from_db(start_date, end_date)
+            notes = self._get_notes_from_db(start_date, end_date, exact_scope)
         if events is None:
-            events = self._get_events_from_db(start_date, end_date)
+            events = self._get_events_from_db(start_date, end_date, exact_scope)
         if stats is None:
             stats = self._calculate_stats(notes, events)
 
@@ -72,6 +99,7 @@ class ReportGenerator:
             "report_id": f"{period.upper()}-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
             "brand_mode": self.brand_mode,
             "brand_name": self._get_brand_name(),
+            "scope": exact_scope,
             "period": period,
             "period_label": period_enum.label,
             "start_date": start_date,
@@ -97,34 +125,31 @@ class ReportGenerator:
 
     # ============ 数据获取 ============
 
-    def _get_notes_from_db(self, start_date: str, end_date: str) -> List[dict]:
-        """从数据库获取笔记（兼容现有database模块）"""
-        try:
-            import database as db
-            notes = db.get_notes_by_date_range(start_date, end_date)
-            return notes or []
-        except Exception:
-            return []
+    def _get_notes_from_db(self, start_date: str, end_date: str, scope: dict) -> List[dict]:
+        """Read current scope verified source rows; incomplete reads are not empty reports."""
+        import database as db
+        result = db.get_scoped_event_source_rows(
+            scope, source_types=("note", "web_mention"), date_start=start_date, date_end=end_date, limit=5000,
+        )
+        if result.get('truncated') or result.get('rejected_count'):
+            raise ValueError('REPORT_SOURCE_COVERAGE_INCOMPLETE')
+        return result['sources']
 
-    def _get_events_from_db(self, start_date: str, end_date: str) -> List[dict]:
-        """从数据库获取事件"""
-        try:
-            import database as db
-            events = db.get_events(50)
-            # 过滤日期范围内的事件
-            result = []
-            for e in events:
-                first = (e.get("first_seen") or "")[:10]
-                last = (e.get("last_seen") or "")[:10]
-                if first <= end_date and (not last or last >= start_date):
-                    result.append(e)
-            return result
-        except Exception:
-            return []
+    def _get_events_from_db(self, start_date: str, end_date: str, scope: dict) -> List[dict]:
+        """Read exact-scope events after SQL date filtering and Evidence verification."""
+        import database as db
+        result = db.get_scoped_events(
+            5000, scope=scope, date_start=start_date, date_end=end_date, include_sources=True,
+        )
+        if result.get('truncated') or result.get('rejected_count'):
+            raise ValueError('REPORT_EVENT_COVERAGE_INCOMPLETE')
+        return result['events']
 
     def _calculate_stats(self, notes: List[dict], events: List[dict]) -> dict:
         """计算统计数据"""
         total = len(notes)
+        note_count = sum(1 for note in notes if note.get("source_type", "note") == "note")
+        web_mention_count = sum(1 for note in notes if note.get("source_type") == "web_mention")
         # [Canonical P0] 情感/风险分桶统一走 canonical_metrics；方案甲 high 不含 critical(critical 独立)
         from canonical_metrics import sentiment_count as _sc_fn, risk_count as _rc_fn
         _sc = _sc_fn(notes); _rc = _rc_fn(notes)
@@ -147,6 +172,9 @@ class ReportGenerator:
 
         return {
             "total_notes": total,
+            "total_sources": total,
+            "note_count": note_count,
+            "web_mention_count": web_mention_count,
             "positive": positive,
             "negative": negative,
             "neutral": neutral,
@@ -167,9 +195,9 @@ class ReportGenerator:
     # ============ 报告各部分生成 ============
 
     def _get_brand_name(self) -> str:
-        if self.brand_mode == "cth":
-            return cth_phrases.BRAND_INFO["full_name"]
-        return self.brand_config.get("brand_name", "LUMENIS")
+        return getattr(self, "_current_brand_name", None) or (
+            "商业运营主体" if self.brand_mode == "cth" else "品牌市场主体"
+        )
 
     def _generate_executive_summary(self, stats: dict, notes: List[dict], events: List[dict]) -> str:
         """生成执行摘要（一句话）"""
@@ -180,7 +208,7 @@ class ReportGenerator:
         # 数据完整性保护
         if effective == 0:
             if self.brand_mode == "cth":
-                return self.phrases.REPORT_PHRASES["executive_summary"]["data_incomplete"]
+                return f"{self._get_brand_name()}本周期没有通过来源与主体核验的有效记录。"
             else:
                 return f"{self._get_brand_name()}本周期无有效舆情数据，建议检查采集任务是否正常运行。"
 
@@ -194,18 +222,24 @@ class ReportGenerator:
         else:
             mood = "neutral" if self.brand_mode == "zbmp" else "stable"
 
-        if self.brand_mode == "cth":
+        if self.brand_mode == "cth" and self._is_reference_scope():
             base = self.phrases.REPORT_PHRASES["executive_summary"].get(mood, "")
             if mood == "positive_dominant":
                 return base.format(活动或节点="本周期", 增长比例=f"{stats.get('positive_ratio',0)}%")
             return base
         else:
+            if self.brand_mode == "cth":
+                return (f"{self._get_brand_name()}本周期有效记录 {effective} 条；风险指数 {risk_index}，"
+                        f"正面比例 {stats.get('positive_ratio')}%。结论仅代表本范围已核验数据。")
             return self.phrases.generate_zbmp_phrase(
                 "executive_summary", mood,
                 brand=self._get_brand_name(),
                 metric="声量", direction="增长", value=f"{stats.get('positive_ratio',0)}%",
                 issue_type="用户反馈", action="持续监测",
             )
+
+    def _is_reference_scope(self) -> bool:
+        return self.brand_mode == "cth" and getattr(self, "_current_subject_id", None) == "GUANGZHOU_TAIKOO_HUI"
 
     def _generate_key_metrics(self, stats: dict) -> List[dict]:
         """生成关键指标"""
@@ -228,8 +262,10 @@ class ReportGenerator:
             score = e.get("risk_score")
             score_display = "—" if score is None else score
 
-            if self.brand_mode == "cth":
+            if self.brand_mode == "cth" and self._is_reference_scope():
                 alert = cth_phrases.get_risk_phrase(risk_level, title, score_display)
+            elif self.brand_mode == "cth":
+                alert = f"{self._get_brand_name()}相关事件：{title}；风险等级 {risk_level}，评分 {score_display}。"
             else:
                 alert = bmp_phrases.generate_zbmp_phrase(
                     "risk_alert", risk_level,
@@ -246,6 +282,7 @@ class ReportGenerator:
                 "risk_score": score,
                 "mention_count": e.get("mention_count", 0),
                 "source_count": e.get("source_count", 1),
+                "source_count_semantics": "distinct_platforms",
                 "fact_status": e.get("fact_status", "unconfirmed"),
                 "alert_message": alert,
                 "first_seen": e.get("first_seen", ""),
@@ -470,9 +507,15 @@ class ReportGenerator:
     def _generate_appendix(self, notes: List[dict], events: List[dict]) -> dict:
         """生成附录（原始数据索引）"""
         return {
-            "note_count": len(notes),
+            "note_count": sum(1 for note in notes if note.get("source_type", "note") == "note"),
+            "web_mention_count": sum(1 for note in notes if note.get("source_type") == "web_mention"),
+            "source_count": len(notes),
             "event_count": len(events),
-            "note_ids": [n.get("note_id", n.get("id", "")) for n in notes[:50]],
+            "note_ids": [n.get("source_id") or n.get("note_id") or n.get("id", "")
+                         for n in notes if n.get("source_type", "note") == "note"][:50],
+            "web_mention_ids": [n.get("source_id") or n.get("id", "")
+                                for n in notes if n.get("source_type") == "web_mention"][:50],
+            "source_types": sorted({n.get("source_type", "note") for n in notes}),
             "event_ids": [e.get("id", "") for e in events],
             "data_source": "monitor.db notes/events表",
             "generated_by": "lumenis.shared.reporting.ReportGenerator",
@@ -481,7 +524,17 @@ class ReportGenerator:
     # ============ CTH专属 ============
 
     def _generate_cth_specific(self, notes: List[dict], events: List[dict], stats: dict) -> dict:
-        """太古汇专属内容"""
+        """Use reference-only CTH material only for its explicit registered reference scope."""
+        if not self._is_reference_scope():
+            return {
+                "brand_info": {"full_name": self._get_brand_name()},
+                "active_activity_nodes": [],
+                "tone_evaluation": None,
+                "column_structure": [],
+                "competitors": [],
+                "report_header": f"{self._get_brand_name()} 舆情监测报告",
+                "report_footer": "本报告仅基于当前授权主体范围内已核验的数据生成。",
+            }
         # 活动节点匹配
         current_month = datetime.now().month
         active_nodes = []
@@ -493,6 +546,7 @@ class ReportGenerator:
         tone_score = self._evaluate_tone(notes)
 
         return {
+            "reference_scope": True,
             "brand_info": cth_phrases.BRAND_INFO,
             "active_activity_nodes": active_nodes,
             "tone_evaluation": tone_score,

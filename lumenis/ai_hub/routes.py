@@ -18,7 +18,12 @@ def ai_status():
 def ai_chat():
     data = request.get_json() or {}
     q = data.get("message") or data.get("question") or ""
-    result = service.chat(q, history=data.get("history"), scope=data.get("scope", "all"))
+    # Ordinary chat must not depend on selecting a business report scope.
+    # A reports:read scope alone is not a SourceUse grant for sending business
+    # records to a model. Until a typed Gateway operation supplies and validates
+    # that SourceUse contract, the service receives no business retrieval scope.
+    result = service.chat(q, history=data.get("history"), scope=data.get("scope", "all"),
+                          source_scope=None)
     success = result.pop("ok", False)
     status = result.get("status")
     http_status = 200 if success else (400 if status == "INVALID_INPUT" else 503 if status == "UNAVAILABLE" else 502)

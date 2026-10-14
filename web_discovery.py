@@ -11,17 +11,6 @@ from datetime import datetime, timedelta
 from urllib.parse import quote, urlparse
 
 
-DEFAULT_DISCOVERY_QUERIES = [
-    '广州太古汇',
-    '广州太古汇 投诉',
-    '广州太古汇 避雷',
-    '广州太古汇 安全',
-    '广州太古汇 活动',
-    '广州太古汇 品牌',
-    '广州太古汇 餐饮',
-    '广州太古汇 服务',
-]
-
 FEEDBACK_SIGNALS = (
     '投诉', '差评', '避雷', '问题', '失望', '安全', '事故', '消防',
     '服务', '停车', '售后', '骚扰',
@@ -58,7 +47,13 @@ def discover(limit=20, queries=None):
         wanted = max(1, min(int(limit), 200))
     except (TypeError, ValueError):
         wanted = 20
-    query_list = [str(q).strip() for q in (queries or DEFAULT_DISCOVERY_QUERIES) if str(q).strip()]
+    if isinstance(queries, str):
+        queries = [queries]
+    if queries is None or not isinstance(queries, (list, tuple)):
+        return []
+    query_list = [str(q).strip() for q in queries if isinstance(q, str) and q.strip()]
+    if not query_list:
+        return []
     seen = set()
     items = []
     per_query = max(3, min(20, (wanted + max(len(query_list), 1) - 1) // max(len(query_list), 1)))
@@ -109,9 +104,10 @@ def brand_queries(brands=None, categories=None):
     """
     queries = []
     
-    # 默认品牌（广州太古汇核心品牌）
-    if not brands:
-        brands = ['广州太古汇', '太古汇', 'Taikoo Hui']
+    if isinstance(brands, str):
+        brands = [brands]
+    if not isinstance(brands, (list, tuple)) or not brands:
+        return []
     
     # 默认分类
     if not categories:
@@ -119,6 +115,9 @@ def brand_queries(brands=None, categories=None):
     
     # 生成查询组合
     for brand in brands:
+        if not isinstance(brand, str) or not brand.strip():
+            continue
+        brand = brand.strip()
         queries.append(brand)
         for cat in categories:
             queries.append(f"{brand} {cat}")
@@ -128,7 +127,7 @@ def brand_queries(brands=None, categories=None):
                 queries.append(f"{brand} {cat} {neg}")
     
     # 去重
-    queries = list(set(queries))
+    queries = list(dict.fromkeys(queries))
     return queries[:50]  # 限制最多50个查询
 
 def discover_brand_industry(brands=None, categories=None, batch=20, offset=0):
@@ -238,22 +237,29 @@ def get_brand_directory():
     """
     获取品牌目录（从brand_directory.json）
     """
+    dir_path = os.path.join(os.path.dirname(__file__), 'data', 'brand_directory.json')
     try:
-        dir_path = os.path.join(os.path.dirname(__file__), 'data', 'brand_directory.json')
-        if os.path.exists(dir_path):
-            with open(dir_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except Exception:
-        pass
-    
-    # 默认品牌目录
-    return {
-        'brands': [
-            {'name': '广州太古汇', 'category': '商场', 'floor': '全馆'},
-        ],
-        'categories': list(BRAND_CATEGORIES.keys()),
-        'last_updated': datetime.now().strftime('%Y-%m-%d')
-    }
+        with open(dir_path, 'r', encoding='utf-8') as f:
+            directory = json.load(f)
+    except FileNotFoundError:
+        return {
+            'brands': [], 'categories': {}, 'total_brands': None,
+            'updated_at': None, 'source': None, 'status': 'NOT_AVAILABLE',
+            'reason': 'DIRECTORY_FILE_MISSING',
+        }
+    except (OSError, ValueError):
+        return {
+            'brands': [], 'categories': {}, 'total_brands': None,
+            'updated_at': None, 'source': None, 'status': 'ERROR',
+            'reason': 'DIRECTORY_FILE_UNREADABLE',
+        }
+    if not isinstance(directory, dict) or not isinstance(directory.get('brands'), list):
+        return {
+            'brands': [], 'categories': {}, 'total_brands': None,
+            'updated_at': None, 'source': None, 'status': 'ERROR',
+            'reason': 'DIRECTORY_SCHEMA_INVALID',
+        }
+    return {**directory, 'status': 'AVAILABLE'}
 
 def get_industry_stats():
     """
@@ -278,12 +284,15 @@ def get_industry_stats():
     
     return stats
 
-def search_trending_topics(days=7):
+def search_trending_topics(days=7, queries=None):
     """
     搜索热门话题（全网，不占用小红书次数）
     """
     topics = []
-    queries = ['广州太古汇 热门', '广州商场 热点', '广州 舆情 热门']
+    if isinstance(queries, str):
+        queries = [queries]
+    if not isinstance(queries, (list, tuple)) or not queries:
+        return topics
     
     for query in queries:
         try:

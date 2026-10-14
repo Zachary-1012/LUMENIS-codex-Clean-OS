@@ -128,8 +128,8 @@ def test_measured_zero_scores_remain_zero():
 def test_report_insights_and_actions_do_not_treat_missing_as_zero(monkeypatch):
     from lumenis.shared.reporting import daily
 
-    monkeypatch.setattr(daily.db, 'get_hot_topics', lambda *_args: [])
-    monkeypatch.setattr(daily.db, 'get_filter_stats', lambda: {'pending': 0})
+    monkeypatch.setattr(daily.db, 'get_hot_topics', lambda *_args: pytest.fail('unscoped reference topic query'))
+    monkeypatch.setattr(daily.db, 'get_filter_stats', lambda: pytest.fail('unscoped reference status query'))
     notes = [_note('unknown', 'unknown', likes=None, comments=None)]
     summary = {
         'effective_count': 1,
@@ -153,6 +153,54 @@ def test_report_insights_and_actions_do_not_treat_missing_as_zero(monkeypatch):
     assert '负面占比0%' not in executive['executive_insight']
 
 
+def test_report_topics_and_pending_counts_come_only_from_scoped_rows(monkeypatch):
+    from lumenis.shared.reporting import daily
+
+    monkeypatch.setattr(daily.db, 'get_hot_topics', lambda *_args: pytest.fail('unscoped reference topic query'))
+    monkeypatch.setattr(daily.db, 'get_filter_stats', lambda: pytest.fail('unscoped reference status query'))
+    notes = [
+        {'source_type': 'note', 'topics': '["topic-a", "topic-a"]',
+         'sentiment': 'unknown', 'ai_filter_status': 'pending', 'likes': 0, 'comments': 0}
+        for _ in range(101)
+    ]
+    notes.append({'source_type': 'note', 'topics': [], 'sentiment': 'unknown',
+                  'ai_filter_status': None, 'likes': None, 'comments': None})
+    summary = {'effective_count': 101, 'positive_count': None, 'negative_count': None,
+               'risk_count': None,
+               'sentiment_coverage': {'known': 0, 'total': 101, 'unknown': 101},
+               'risk_coverage': {'known': 0, 'total': 101, 'missing': 101, 'other': 0}}
+
+    insights = daily.generate_key_insights(notes, [], summary)
+    actions = daily.generate_action_items(insights, [], summary, notes)
+
+    assert any('topic-a' in item['insight'] and '101条' in item['insight'] for item in insights)
+    assert any('101条记录待筛选复核' in item['insight'] for item in insights)
+    assert any('101条待筛选记录' in item['action'] for item in actions)
+
+
+def test_special_report_trigger_preserves_unknown_negative_count(monkeypatch):
+    import risk_engine
+    from lumenis.shared.reporting import daily
+
+    scope = {'domain_id': 'cth', 'subject_id': None, 'brand_focus_id': None, 'global_scope': True}
+    captured = []
+    monkeypatch.setattr(daily, 'generate_today_summary', lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(daily.db, 'get_scoped_event_source_rows', lambda *_args, **_kwargs: {
+        'sources': [], 'state': 'EMPTY', 'truncated': False, 'rejected_count': 0,
+    })
+    monkeypatch.setattr(risk_engine, 'check_special_report_trigger',
+                        lambda event: (captured.append(event) or (False, [])))
+
+    daily.format_daily_report_5sections(
+        {'summary': {'effective_count': 0, 'negative_count': None, 'risk_count': 3},
+         'top_events': [], 'action_items': []},
+        date_str='2026-10-14', scope=scope,
+    )
+
+    assert captured and captured[0]['negative_count_24h'] is None
+    assert captured[0]['sentiment'] is None
+
+
 def test_report_insight_preserves_measured_zero():
     from lumenis.shared.reporting.daily import _measured_negative_percentage
 
@@ -171,6 +219,136 @@ def test_report_generator_propagation_keeps_invalid_engagement_unknown():
     assert report['engagement_level'] == 'unknown'
     assert report['total_engagement'] is None
     assert report['top_notes'][0]['engagement'] is None
+
+
+@pytest.mark.parametrize(
+    ("statuses", "expected_effective", "expected_known", "expected_unknown"),
+    [
+        (["relevant", "irrelevant", "rejected"], 1, 3, 0),
+        (["relevant", None], None, 1, 1),
+    ],
+)
+def test_daily_summary_uses_relevant_rows_only_and_keeps_incomplete_unknown(
+        monkeypatch, statuses, expected_effective, expected_known, expected_unknown):
+    from lumenis.shared.reporting import daily
+
+    scope = {"domain_id": "cth", "product_id": "CTH", "subject_id": "SUBJECT-DAY",
+             "brand_focus_id": None, "global_scope": False}
+    notes = []
+    for index, status in enumerate(statuses):
+        notes.append({
+            "source_type": "note", "source_id": f"note-{index}",
+            "relevance_status": status,
+            "sentiment": "positive" if index == 0 else "negative",
+            "risk_level": "low" if index == 0 else "high",
+            "likes": 0, "comments": 0,
+        })
+    monkeypatch.setattr(daily.db, "get_scoped_event_source_rows", lambda *args, **kwargs: {
+        "sources": notes, "state": "AVAILABLE", "candidate_count": len(notes),
+        "rejected_count": 0, "truncated": False,
+    })
+    monkeypatch.setattr(daily.db, "get_scoped_events", lambda *args, **kwargs: {
+        "events": [], "candidate_count": 0, "rejected_count": 0, "truncated": False,
+        "state": "EMPTY",
+    })
+    monkeypatch.setattr(daily, "_collection_health", lambda *_args: {"complete": None, "state": "NOT_RUN"})
+
+    summary = daily.generate_today_summary("2026-10-14", scope=scope)
+
+    assert summary["effective_count"] == expected_effective
+    assert summary["relevance_coverage"] == {
+        "known": expected_known, "total": len(notes), "unknown": expected_unknown, "observed": len(notes),
+    }
+    if expected_effective is None:
+        assert summary["positive_count"] is None
+        assert summary["negative_count"] is None
+        assert summary["risk_count"] is None
+        assert summary["risk_index"] is None
+        assert summary["brand_health_score"] is None
+        assert summary["sentiment_coverage"]["total"] is None
+        assert summary["risk_coverage"]["total"] is None
+    else:
+        assert summary["positive_count"] == 1
+        assert summary["negative_count"] == 0
+        assert summary["risk_count"] == 0
+        assert summary["risk_index"] == daily.calculate_risk_index([notes[0]], [])
+        assert summary["sentiment_coverage"]["total"] == 1
+        assert summary["risk_coverage"]["total"] == 1
+
+
+def test_daily_digest_passes_only_effective_sources_to_analysis(monkeypatch):
+    from lumenis.shared.reporting import daily
+
+    scope = {"domain_id": "cth", "product_id": "CTH", "subject_id": "SUBJECT-DIGEST",
+             "brand_focus_id": None, "global_scope": False}
+    relevant = {"source_type": "note", "source_id": "effective-note", "relevance_status": "relevant",
+                "sentiment": "positive", "risk_level": "low", "title": "Relevant"}
+    irrelevant = {"source_type": "note", "source_id": "irrelevant-note", "relevance_status": "irrelevant",
+                  "sentiment": "negative", "risk_level": "high", "title": "Irrelevant"}
+    summary = {
+        "total_found": 2, "effective_count": 1, "positive_count": 1, "neutral_count": 0,
+        "negative_count": 0, "risk_count": 0, "risk_index": 0, "brand_health_score": 80,
+        "relevance_coverage": {"known": 2, "total": 2, "unknown": 0, "observed": 2},
+    }
+    monkeypatch.setattr(daily, "generate_today_summary", lambda *_args, **_kwargs: summary)
+    monkeypatch.setattr(daily.db, "get_scoped_event_source_rows", lambda *args, **kwargs: {
+        "sources": [relevant, irrelevant], "candidate_count": 2, "rejected_count": 0,
+        "truncated": False, "state": "AVAILABLE",
+    })
+    monkeypatch.setattr(daily.db, "get_scoped_events", lambda *args, **kwargs: {
+        "events": [], "candidate_count": 0, "rejected_count": 0, "truncated": False,
+        "state": "EMPTY",
+    })
+    analyzed = []
+    monkeypatch.setattr(daily, "generate_key_insights",
+                        lambda notes, *_args: (analyzed.extend(notes) or []))
+    monkeypatch.setattr(daily, "generate_action_items", lambda *_args: [])
+    monkeypatch.setattr(daily, "generate_executive_summary", lambda *_args: "measured summary")
+    monkeypatch.setattr(daily, "_ai_allowed_for_report", lambda: False)
+    monkeypatch.setattr(daily, "_ai_generate_executive_insight",
+                        lambda *_args: {"executive_insight": "measured", "priority": "low"})
+    monkeypatch.setattr(daily, "_generate_trend_alerts", lambda *_args: [])
+    monkeypatch.setattr(daily, "_generate_risk_alerts", lambda *_args: [])
+
+    digest = daily.generate_daily_digest("2026-10-14", scope=scope)
+
+    assert digest["coverage"]["complete"] is True
+    assert digest["effective_count"] == 1
+    assert digest["relevance_coverage"] == summary["relevance_coverage"]
+    assert analyzed == [relevant]
+
+
+def test_daily_digest_hides_full_scope_analysis_when_relevance_is_unknown(monkeypatch):
+    from lumenis.shared.reporting import daily
+
+    scope = {"domain_id": "cth", "product_id": "CTH", "subject_id": "SUBJECT-DIGEST",
+             "brand_focus_id": None, "global_scope": False}
+    summary = {
+        "total_found": 2, "effective_count": None, "positive_count": None, "neutral_count": None,
+        "negative_count": None, "risk_count": None, "risk_index": None, "brand_health_score": None,
+        "relevance_coverage": {"known": 1, "total": 2, "unknown": 1, "observed": 2},
+    }
+    monkeypatch.setattr(daily, "generate_today_summary", lambda *_args, **_kwargs: summary)
+    monkeypatch.setattr(daily.db, "get_scoped_event_source_rows", lambda *args, **kwargs: {
+        "sources": [
+            {"source_type": "note", "source_id": "effective-note", "relevance_status": "relevant"},
+            {"source_type": "note", "source_id": "unclassified-note", "relevance_status": None},
+        ],
+        "candidate_count": 2, "rejected_count": 0, "truncated": False, "state": "AVAILABLE",
+    })
+    monkeypatch.setattr(daily.db, "get_scoped_events", lambda *args, **kwargs: {
+        "events": [], "candidate_count": 0, "rejected_count": 0, "truncated": False,
+        "state": "EMPTY",
+    })
+    monkeypatch.setattr(daily, "generate_key_insights",
+                        lambda *_args: pytest.fail("unknown relevance must suppress full-scope insights"))
+
+    digest = daily.generate_daily_digest("2026-10-14", scope=scope)
+
+    assert digest["coverage"]["complete"] is False
+    assert digest["effective_count"] is None
+    assert digest["relevance_coverage"]["unknown"] == 1
+    assert "相关性" in digest["executive_summary"]
 
 
 def test_health_risk_index_penalizes():

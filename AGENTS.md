@@ -378,8 +378,10 @@ compatibility section. The Semantic Calibration Ledger under evidence/round-15
 is a source-backed index, not another authority. Context is routing metadata,
 never Permission: unknown/conflicting domain IDs are rejected, BMP resolves to
 its existing ZBMP storage identifier, and no selection invents a reference Subject.
-Only an explicit reference filter retains its scope; no subject-specific default;
-GLOBAL consumers use existing scoped Canonical/Evidence services.
+Reference Subjects require explicit selection; generic routes never default to one.
+Views/search/report/export use authenticated scope and cited-source Evidence/SourceUse.
+GLOBAL retains source focus. Reject truncated event replacement; filter dates/authors
+before limits. Unknown coverage and identity differ from a complete sample's zero.
 
 OpenAI Math methods are applied inside existing owners when their assumptions
 match the actual task. Freeze the intended contract independently from the code,
@@ -548,7 +550,7 @@ Local-only work is not on GitHub. Preserve it, reconcile fresh `origin/main`, ve
 For every M-accepted implementation Batch, close local work and online truth in
 the same delivery cycle. M must inspect the exact staged files and diff,
 record the Batch's tests, runtime/E2E evidence and unresolved limits, update the
-owning Round evidence **and** this repository's CURRENT online status, then make
+owning Round evidence and CURRENT in one commit. Mark source plus CURRENT PUBLISHED_SOURCE_VERIFIED; reserve RULES_ONLY_PUBLICATION for docs-only PRs, then make
 a coherent branch commit, then merge its PR after required checks. Before calling the Batch delivered or
 starting a dependent acceptance gate, fetch again and verify `HEAD`,
 `origin/main`, live `refs/heads/main`, and the published status/evidence paths
@@ -994,7 +996,7 @@ Learning is derivative. It may recommend, evaluate and promote a tested version 
 
 LUMENIS is one product with four approved surfaces: Public Website, Web Workspace, Desktop App and Mobile Companion. `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md` records their approved roles and delivery route; it is subordinate to the sole Product Architecture and Experience Constitution.
 
-The Flutter application under `app/` is the shared implementation for Web Workspace, Windows/macOS Desktop and iOS Mobile. The committed `website/` foundation is restricted to the Public Website; its presence is not proof of configured commercial entry or release acceptance. Flask routes remain the one Product Core/API/ViewModel boundary; neither surface may create parallel business logic, data, Permission, Evidence or runtime truth. Historical `templates/`, `static/` and `experience_v2/` must not be restored. Before removing any remaining user-visible capability, trace its business purpose, ViewModel, permission, state, Evidence and acceptance evidence into the canonical Product Core and approved surfaces.
+The Flutter application under `app/` is the shared implementation for Web Workspace, Windows/macOS Desktop and iOS Mobile. The committed `website/` foundation is restricted to the Public Website; its presence is not proof of configured commercial entry or release acceptance. Flask routes remain the one Product Core/API/ViewModel boundary; Shared Reporting resolves scope through SYSTEM Permission, never by depending on `app.py`. Neither surface may create parallel business logic, data, Permission, Evidence or runtime truth. Historical `templates/`, `static/` and `experience_v2/` must not be restored. Before removing any remaining user-visible capability, trace its business purpose, ViewModel, permission, state, Evidence and acceptance evidence into the canonical Product Core and approved surfaces.
 
 All UI/UX/visual/presentation decisions remain subordinate to the sole authority:
 

@@ -76,26 +76,26 @@ def status():
     }
 
 
-def retrieve(question: str, limit: int = 8) -> dict:
-    """用问题检索系统内真实数据（功能/品牌/官网/案例/笔记/事件）。"""
+def retrieve(question: str, limit: int = 8, *, source_scope=None) -> dict:
+    """Search public reference material and only scope-authorized business sources."""
     try:
-        return freg.search_targets(question or "", _get_db(), limit)
+        return freg.search_targets(question or "", _get_db(), limit, scope=source_scope)
     except Exception as e:
         logger.warning("retrieve with db failed: %s", e)
         try:
-            return freg.search_targets(question or "", None, limit)
+            return freg.search_targets(question or "", None, limit, scope=source_scope)
         except Exception as e2:
             logger.warning("retrieve fallback failed: %s", e2)
             return {"functions": [], "brands": [], "websites": [], "cases": [],
                     "notes": [], "events": [], "meta": {}}
 
 
-def _context_text(question: str) -> str:
+def _context_text(question: str, *, source_scope=None) -> str:
     try:
-        return freg.build_context(question, _get_db())
+        return freg.build_context(question, _get_db(), scope=source_scope)
     except Exception:
         try:
-            return freg.build_context(question, None)
+            return freg.build_context(question, None, scope=source_scope)
         except Exception:
             return "未检索到与问题直接对应的结构化记录。"
 
@@ -136,27 +136,31 @@ def _completed(result):
     )
 
 
-def chat(question: str, history=None, scope: str = "all") -> dict:
+def chat(question: str, history=None, scope: str = "all", *, source_scope=None) -> dict:
     """Retrieve product context and return a result only from the owned runtime."""
     t0 = time.time()
     question = (question or "").strip()
     if not question:
         return {"ok": False, "status": "INVALID_INPUT", "code": "MESSAGE_REQUIRED"}
-    hits = retrieve(question)
-    context = _context_text(question)
+    # This compatibility chat operation has no typed SourceUse request. Do
+    # not call retrieve/build_context here: those helpers may load business
+    # directories and case material. Route hints come only from static
+    # FUNCTION_MAP metadata; a caller scope is not a source-use grant.
+    functions = freg.search_function_metadata(question, 5)
+    hits = {"functions": functions, "brands": [], "websites": [], "cases": [],
+            "notes": [], "events": []}
+    context = ("可用功能入口（仅路由信息，不代表当前业务数据）："
+               + "、".join(function.get("label", "") for function in functions)
+               if functions else "未匹配到功能入口；本次对话未读取业务记录或案例资料。")
     hint = MODULE_HINTS.get(scope, "")
-    has_real_data = any(hits.get(k) for k in ("notes", "events", "cases", "brands", "websites"))
     sys_prompt = SYSTEM_ROLE
     if hint:
         sys_prompt += "\n当前聚焦模块：" + hint
-    sys_prompt += "\n\n== 系统内可核对的真实数据（仅可据此回答） ==\n" + context
-    if not has_real_data:
-        sys_prompt += (
-            "\n\n【硬性约束】本次检索未命中任何笔记/事件/案例/品牌等真实业务数据。"
-            "禁止给出任何具体数字、百分比、环比、排名或‘下降/增长多少’之类无来源结论；"
-            "请如实说明系统内当前没有对应数据，并指出应到哪个模块采集或查看，不要替系统编造现状。")
-    else:
-        sys_prompt += "\n\n【约束】只引用上面给出的真实数据，未提供的数字一律不要编造。"
+    sys_prompt += "\n\n== 功能路由提示（不是业务数据） ==\n" + context
+    sys_prompt += (
+        "\n\n【数据边界】本次聊天没有绑定按会话逐来源核验的SourceUse操作。"
+        "功能目录和用户问题不能当作当前业务数据；不要声称读取、核验或引用了品牌、案例、笔记或事件记录，"
+        "也不要编造任何当前业务数字。普通对话仍可继续。")
 
     targets = [{"id": f.get("id"), "label": f.get("label"), "page": f.get("page")}
                for f in hits.get("functions", [])[:5]]
@@ -179,8 +183,14 @@ def chat(question: str, history=None, scope: str = "all") -> dict:
         "provider": provider, "model": st.get("model_id"), "runtime": st.get("state"),
         "used_rule_fallback": False, "fallback_allowed": False, "targets": targets,
         "context": context,
+        "source_context": {
+            "scope_state": "SOURCE_USE_NOT_BOUND_FOR_CONVERSATION",
+            "business_retrieval_state": "UNAVAILABLE_TYPED_SOURCE_USE_OPERATION_REQUIRED",
+            "notes_state": "NOT_READ",
+            "events_state": "NOT_READ",
+        },
         "matched": {"brands": len(hits.get("brands", [])), "cases": len(hits.get("cases", [])),
-                    "notes": len(hits.get("notes", [])), "events": len(hits.get("events", []))},
+                    "notes": 0, "events": 0},
         "elapsed_seconds": round(time.time() - t0, 2),
     }
 

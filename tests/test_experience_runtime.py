@@ -671,3 +671,71 @@ def test_screen_meta_covers_44_screens():
     assert len(meta) == 44
     for sid in ["AI-01", "CTH-01", "SH-01"]:
         assert meta[sid]["title"]
+
+
+def _cth01_trend_section(payload):
+    split = next(section for section in payload["sections"]
+                 if section.get("type") == "split")
+    chart = next(section for section in split.get("main", [])
+                 if section.get("type") == "chart")
+    assert chart.get("title") == "近 14 日负面声量 / 高风险"
+    return chart
+
+
+def test_cth01_complete_empty_sample_days_are_zero(isolated_client, monkeypatch):
+    import database
+
+    monkeypatch.setattr(
+        database, "get_scoped_event_source_rows",
+        lambda *_args, **_kwargs: {
+            "sources": [], "truncated": False, "rejected_count": 0,
+        },
+    )
+    cli, _ = isolated_client
+    payload = cli.get("/api/experience/screen/CTH-01").get_json()
+    chart = _cth01_trend_section(payload)
+
+    assert chart["series"][0]["data"] == [0] * 14
+    assert chart["series"][1]["data"] == [0] * 14
+    assert "已核验样本" in chart["sub"] and "完整读取且无样本为0" in chart["sub"]
+
+
+def test_cth01_unknown_classification_stays_unknown(isolated_client, monkeypatch):
+    import database
+
+    unknown_row = {
+        "source_id": "unknown-classification", "source_type": "note",
+        "publish_date": (dt.datetime.now(dt.timezone.utc).astimezone().date() - dt.timedelta(days=1)).isoformat(),
+        "sentiment": None, "risk_level": None,
+    }
+    monkeypatch.setattr(
+        database, "get_scoped_event_source_rows",
+        lambda *_args, **_kwargs: {
+            "sources": [unknown_row], "truncated": False, "rejected_count": 0,
+        },
+    )
+    cli, _ = isolated_client
+    payload = cli.get("/api/experience/screen/CTH-01").get_json()
+    chart = _cth01_trend_section(payload)
+
+    assert chart["series"][0]["data"][-2] is None
+    assert chart["series"][1]["data"][-2] is None
+    assert chart["series"][0]["data"][-1] == 0
+    assert chart["series"][1]["data"][-1] == 0
+
+
+def test_cth01_incomplete_trend_coverage_stays_unknown(isolated_client, monkeypatch):
+    import database
+
+    monkeypatch.setattr(
+        database, "get_scoped_event_source_rows",
+        lambda *_args, **_kwargs: {
+            "sources": [], "truncated": True, "rejected_count": 0,
+        },
+    )
+    cli, _ = isolated_client
+    payload = cli.get("/api/experience/screen/CTH-01").get_json()
+    chart = _cth01_trend_section(payload)
+
+    assert chart["series"][0]["data"] == [None] * 14
+    assert chart["series"][1]["data"] == [None] * 14

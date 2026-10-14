@@ -6,14 +6,15 @@ Word / PDF 报告导出模块
 
 依赖：python-docx（Word）、reportlab与已有嵌入字体（PDF）
 """
+import hashlib
+import json
 import os
+import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from html import escape
 from threading import RLock
-from typing import Optional
 
-from .report_generator import ReportGenerator
 from .standard_taxonomy import RiskLevel, Sentiment
 
 
@@ -247,8 +248,8 @@ class ReportExporter:
                 doc.add_paragraph(f"⚠️ {w}", style="List Bullet")
 
         # 9. CTH专属（如果有）
-        if "cth_specific" in report:
-            doc.add_heading("九、太古汇专属分析", level=1)
+        if (report.get("cth_specific", {}).get("reference_scope") is True):
+            doc.add_heading("九、参考主体专项分析", level=1)
             cth = report["cth_specific"]
             tone = cth.get("tone_evaluation", {})
             doc.add_paragraph(
@@ -386,8 +387,8 @@ class ReportExporter:
                     if warning:
                         story.append(Paragraph(markup(f"警告：{warning}"), styles["Normal"]))
 
-                if "cth_specific" in report:
-                    story.append(Paragraph(markup("太古汇专属分析"), styles["Heading2"]))
+                if report.get("cth_specific", {}).get("reference_scope") is True:
+                    story.append(Paragraph(markup("参考主体专项分析"), styles["Heading2"]))
                     cth = report["cth_specific"]
                     tone = cth.get("tone_evaluation", {})
                     story.append(Paragraph(markup(
@@ -404,14 +405,16 @@ class ReportExporter:
             return ""
 
     def generate_and_export(self, brand_mode: str = "cth", period: str = "daily",
-                            start_date: str = None, end_date: str = None,
-                            export_formats: list = None, brand_config: dict = None) -> dict:
+                            start_date: str | None = None, end_date: str | None = None,
+                            export_formats: list | None = None, brand_config: dict | None = None,
+                            *, actor: dict | None = None, scope: dict | None = None,
+                            scope_entry: dict | None = None) -> dict:
         """
         一键生成并导出报告
 
         Args:
             brand_mode: cth/zbmp
-            period: daily/weekly/monthly/yearly/event
+            period: daily/weekly/monthly/yearly
             export_formats: ["word", "pdf"]，默认两者都导出
             brand_config: BMP 模式品牌配置
 
@@ -420,15 +423,85 @@ class ReportExporter:
         """
         if export_formats is None:
             export_formats = ["word", "pdf"]
+        export_formats = tuple(dict.fromkeys(str(fmt).lower() for fmt in export_formats))
+        if not export_formats or any(fmt not in {"word", "pdf"} for fmt in export_formats):
+            raise ValueError("REPORT_EXPORT_FORMAT_INVALID")
+        if actor is None or scope is None:
+            raise PermissionError("REPORT_SCOPE_REQUIRED")
 
-        generator = ReportGenerator(brand_mode=brand_mode, brand_config=brand_config)
-        report = generator.generate(period, start_date, end_date)
+        import database
+        from lumenis.shared.reporting.export_api import (
+            _build_report,
+            _verify_report_source_use,
+        )
+        from lumenis.shared.reporting.saved_work import _check_effect
+        from lumenis.system.security.permission import OperationType
 
+        exact_scope = database._normalize_event_scope(scope, allow_global=True)
+        request_binding = {
+            "scope": exact_scope, "period": period, "start": start_date,
+            "end": end_date, "formats": list(export_formats),
+        }
+        request_resource = "report-export-request:v1:" + hashlib.sha256(
+            json.dumps(request_binding, ensure_ascii=False, sort_keys=True,
+                       separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        _check_effect(actor, exact_scope, OperationType.DATA_EXPORT, request_resource)
+
+        kind, start, end, report, _source_count, notes, events = _build_report(
+            period, start_date, end_date, actor=actor, scope=exact_scope,
+            scope_entry=scope_entry)
         result = {"report": report, "word_path": "", "pdf_path": ""}
-
+        export_id = uuid.uuid4().hex
+        word_target = os.path.join(self.output_dir, f"lumenis_{export_id}.docx")
+        pdf_target = os.path.join(self.output_dir, f"lumenis_{export_id}_pdf.pdf")
+        pdf_word_target = os.path.splitext(pdf_target)[0] + ".docx"
+        invocation_paths = []
         if "word" in export_formats:
-            result["word_path"] = self.export_word(report)
+            invocation_paths.append(word_target)
         if "pdf" in export_formats:
-            result["pdf_path"] = self.export_pdf(report)
+            invocation_paths.extend((pdf_target, pdf_word_target))
+        invocation_paths = list(dict.fromkeys(os.path.abspath(path) for path in invocation_paths))
 
-        return result
+        def remove_invocation_files(paths):
+            for path in paths:
+                try:
+                    if os.path.isfile(path):
+                        os.remove(path)
+                except OSError:
+                    pass
+
+        try:
+            if "word" in export_formats:
+                word_path = self.export_word(report, os.path.basename(word_target))
+                result["word_path"] = word_path
+                if not word_path:
+                    remove_invocation_files((word_target,))
+            if "pdf" in export_formats:
+                pdf_path = self.export_pdf(report, os.path.basename(pdf_target))
+                result["pdf_path"] = pdf_path
+                if not pdf_path:
+                    remove_invocation_files((pdf_target,))
+                if (os.path.isfile(pdf_word_target)
+                        and os.path.abspath(pdf_word_target) != os.path.abspath(result["word_path"] or "")):
+                    remove_invocation_files((pdf_word_target,))
+
+            for fmt in export_formats:
+                path = result.get(fmt + "_path")
+                if not path:
+                    continue
+                with open(path, "rb") as exported:
+                    digest = hashlib.sha256(exported.read()).hexdigest()
+                resource = "report-export:v1:" + hashlib.sha256(
+                    json.dumps({"report_id": report.get("report_id"), "scope": exact_scope,
+                                "period": kind, "start": start, "end": end,
+                                "sha256": digest, "format": fmt},
+                               ensure_ascii=False, sort_keys=True,
+                               separators=(",", ":")).encode("utf-8")
+                ).hexdigest()
+                _verify_report_source_use(actor, exact_scope, notes, events)
+                _check_effect(actor, exact_scope, OperationType.DATA_EXPORT, resource)
+            return result
+        except BaseException:
+            remove_invocation_files(invocation_paths)
+            raise

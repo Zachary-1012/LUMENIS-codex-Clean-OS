@@ -92,6 +92,19 @@ def _resolve_legacy_report_scope(domain_id: str | None = None) -> tuple[str, str
     return domain_id, product_id
 
 
+def _legacy_digest_scope(domain_id: str | None = None) -> dict:
+    """Return the already-validated exact legacy reference scope for a digest."""
+    resolved_domain, _product_id = _resolve_legacy_report_scope(domain_id)
+    from domain_isolation import get_domain_context
+    from subject_context import get_thread_context
+
+    context = get_domain_context() or get_thread_context()
+    if context is None or not context.subject_id:
+        raise ValueError("REPORT_REFERENCE_SUBJECT_REQUIRED")
+    return {"domain_id": resolved_domain, "subject_id": context.subject_id,
+            "brand_focus_id": None, "global_scope": False}
+
+
 # ZBC Lifecycle Contract V1.0 (bypass-mode)
 try:
     from lifecycle_mixin import lifecycle_task as _lifecycle_task
@@ -239,7 +252,7 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
 
     digest = None
     if report_type == 'daily':
-        digest = daily.generate_daily_digest(end)
+        digest = daily.generate_daily_digest(end, scope=_legacy_digest_scope(domain_id))
     report['started_at'] = started_at
     report['finished_at'] = datetime.now().isoformat()
     report['status'] = 'success'
