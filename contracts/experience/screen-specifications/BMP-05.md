@@ -120,7 +120,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ### 草图增补：KOS 三阶漏斗与合规留资
 
 Web Workspace composition
-同桌面布局；无额外差异。
+Web：创作者比较表与漏斗按宽度切换摘要/详情；保留过滤、选择、来源钻取和原任务返回，表格提供键盘等价操作。
 
 ## 6. Purpose-built mobile composition
 

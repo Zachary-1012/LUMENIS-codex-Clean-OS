@@ -125,7 +125,7 @@ AUTHORIZATION_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS v4_member_authorizations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    product_id TEXT NOT NULL,            -- ZBMP / CTH / SYSTEM
+    product_id TEXT NOT NULL,            -- ZBMP / CTH / SHARED / SYSTEM
     module TEXT NOT NULL DEFAULT '*',    -- 模块标识，*=全部
     action TEXT NOT NULL DEFAULT 'read', -- read / write
     data_scope TEXT,                     -- 数据范围描述（可选）

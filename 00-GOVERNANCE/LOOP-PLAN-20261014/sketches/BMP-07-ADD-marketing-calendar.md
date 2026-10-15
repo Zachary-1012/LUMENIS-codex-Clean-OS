@@ -1,6 +1,6 @@
 # BMP-07 — 草图增补：营销日历与热点建议
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G120。
+> 已入库参考草图；实施与验收归现有ScreenSpec，按§5/§5A/§6原位维护，不自称已实现或已验收。规划依据：G120。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -9,7 +9,7 @@
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+Web：日/周/月与列表视图按任务切换；拖拽排期有键盘编辑等价路径，刷新读回计划版本并提示未保存改动，计划与执行回执分开。
 
 ## 6. Purpose-built mobile composition
 周列表。

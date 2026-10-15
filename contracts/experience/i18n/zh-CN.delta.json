@@ -746,6 +746,7 @@
   "sh01.media.focus_scope": "所选主体范围",
   "sh01.media.gain": "音量",
   "sh01.media.global_all": "全局视图",
+  "sh01.media.import": "导入素材",
   "sh01.media.importing": "正在导入所选文件…",
   "sh01.media.invalid": "请检查片段范围、音轨和淡入淡出时长。",
   "sh01.media.invoking_domain_required": "当前全局视图没有指定本次调用的业务域。入口需明确传入 CTH 或 BMP；这不会设置品牌焦点或授予权限。",

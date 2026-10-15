@@ -77,13 +77,21 @@ def _engine():
 
 
 
-        import kos_engine
+        __import__("kos_engine")
 
 
 
 
 
     return sys.modules["kos_engine"]
+
+
+def _intel():
+    """Resolve the existing KOS intelligence owner lazily."""
+    if "kos_intel" not in sys.modules:
+        __import__("kos_intel")
+
+    return sys.modules["kos_intel"]
 
 
 

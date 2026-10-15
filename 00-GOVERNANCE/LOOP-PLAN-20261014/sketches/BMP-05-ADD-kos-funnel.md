@@ -1,6 +1,6 @@
 # BMP-05 — 草图增补：KOS 三阶漏斗与合规留资
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G118,G119。
+> 已入库参考草图；实施与验收归现有ScreenSpec，按§5/§5A/§6原位维护，不自称已实现或已验收。规划依据：G118,G119。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -10,7 +10,7 @@ CPL / 成本：—（缺失）或数值
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+Web：创作者比较表与漏斗按宽度切换摘要/详情；保留过滤、选择、来源钻取和原任务返回，表格提供键盘等价操作。
 
 ## 6. Purpose-built mobile composition
 纵排。

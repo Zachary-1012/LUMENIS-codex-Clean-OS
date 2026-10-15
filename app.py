@@ -1936,6 +1936,40 @@ def _permission_gate_write_check():
         # These two resolved owners enforce current server identity/scope and
         # exact manual review or DATA_EXPORT. A path grant cannot bind inputs.
         return None
+    if request.headers.getlist('X-Lumenis-Workspace-Scope'):
+        shared_saved_work_actions = {
+            'experience_runtime.save_shared_work': 'write',
+            'experience_runtime.revise_shared_work': 'write',
+        }
+        shared_content_actions = {
+            'experience_runtime.inspect_content_project_media': 'read',
+            'experience_runtime.import_content_source': 'write',
+            'experience_runtime.confirm_content_source_import_request': 'write',
+            'experience_runtime.export_content_project': 'write',
+        }
+        try:
+            if request.endpoint in shared_saved_work_actions:
+                from experience_runtime import _shared_work_actor_scope
+                _shared_work_actor_scope(shared_saved_work_actions[request.endpoint])
+                return None
+            if request.endpoint in shared_content_actions:
+                from experience_runtime import _content_project_scope
+                _content_project_scope(shared_content_actions[request.endpoint])
+                return None
+        except ValueError as exc:
+            code = str(exc)
+            status = 400 if code in {
+                'SHARED_WORKSPACE_SCOPE_INVALID', 'SHARED_WORKSPACE_SCOPE_MIXED_CONTEXT',
+                'SHARED_WORKSPACE_SCOPE_NOT_SUPPORTED',
+            } else 403
+            return jsonify({'ok': False, 'code': code,
+                            'publish_status': 'not_performed'}), status
+        except PermissionError as exc:
+            return jsonify({'ok': False, 'code': str(exc),
+                            'publish_status': 'not_performed'}), 403
+        except Exception:  # noqa: BLE001 -- fail closed when Shared scope authorization is unavailable.
+            return jsonify({'ok': False, 'code': 'SHARED_WORKSPACE_PERMISSION_UNAVAILABLE',
+                            'publish_status': 'not_performed'}), 503
     if (request.method == 'POST' and (
             (request.path == '/api/experience/content-sources'
              and request.endpoint == 'experience_runtime.import_content_source')

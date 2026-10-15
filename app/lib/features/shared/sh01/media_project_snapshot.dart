@@ -412,7 +412,7 @@ final class MediaProjectTrack {
 }
 
 /// A read-only transition record. Unknown transition types are retained exactly
-/// so Core can reject them explicitly; video edits are disabled while any exist.
+/// so Core can reject them explicitly.
 final class MediaProjectTransition {
   const MediaProjectTransition({
     required this.fromClip,
@@ -927,7 +927,6 @@ final class MediaProjectSnapshot {
     final (track, clip) = _clip(clipId);
     final asset = _asset(mediaAssetId);
     final video = track.kind == 'video';
-    if (video) _guardVideoEdits();
     _number(sourceIn, 'source_in');
     final sourceOut = sourceIn + clip.durationSec;
     _number(sourceOut, 'source_out');
@@ -971,22 +970,22 @@ final class MediaProjectSnapshot {
       audioStreamIndex: audioStreamIndex,
     );
     // A fixed-window replacement must not reflow neighboring clips.
-    return _commit(
-      tracks: [
-        for (final item in tracks)
-          if (item.trackId == track.trackId)
-            MediaProjectTrack(
-              trackId: item.trackId,
-              kind: item.kind,
-              clips: [
-                for (final original in item.clips)
-                  original.clipId == clipId ? replaced : original,
-              ],
-            )
-          else
-            item,
-      ],
-    );
+    final changedTracks = [
+      for (final item in tracks)
+        if (item.trackId == track.trackId)
+          MediaProjectTrack(
+            trackId: item.trackId,
+            kind: item.kind,
+            clips: [
+              for (final original in item.clips)
+                original.clipId == clipId ? replaced : original,
+            ],
+          )
+        else
+          item,
+    ];
+    if (video) _validateVideoTransitionEdits(changedTracks, transitions);
+    return _commit(tracks: changedTracks);
   }
 
   MediaProjectSnapshot trimClip(
@@ -995,7 +994,6 @@ final class MediaProjectSnapshot {
     required double sourceOut,
   }) {
     final (track, clip) = _clip(clipId);
-    if (track.kind == 'video') _guardVideoEdits();
     final asset = _asset(clip.mediaAssetId);
     _number(sourceIn, 'source_in');
     _number(sourceOut, 'source_out');
@@ -1006,12 +1004,12 @@ final class MediaProjectSnapshot {
     return _replaceClip(
       track,
       clip.copyWith(sourceIn: sourceIn, sourceOut: sourceOut),
+      validateVideoTransitions: track.kind == 'video',
     );
   }
 
   MediaProjectSnapshot splitClip(String clipId, {required double atSec}) {
     final (track, clip) = _clip(clipId);
-    if (track.kind == 'video') _guardVideoEdits();
     _number(atSec, 'split time');
     _require(
       atSec > clip.sourceIn && atSec < clip.sourceOut,
@@ -1059,18 +1057,28 @@ final class MediaProjectSnapshot {
             kind: track.kind,
             clips: split,
           );
-    return _commit(
-      tracks: tracks
-          .map((item) => item.trackId == track.trackId ? changed : item)
-          .toList(),
-    );
+    final changedTracks = tracks
+        .map((item) => item.trackId == track.trackId ? changed : item)
+        .toList();
+    final changedTransitions = track.kind == 'video'
+        ? transitions
+              .where(
+                (transition) =>
+                    transition.fromClip != clipId &&
+                    transition.toClip != clipId,
+              )
+              .toList()
+        : transitions;
+    if (track.kind == 'video') {
+      _validateVideoTransitionEdits(changedTracks, changedTransitions);
+    }
+    return _commit(tracks: changedTracks, transitions: changedTransitions);
   }
 
   MediaProjectSnapshot reorderVideoClip(
     String clipId, {
     required int newIndex,
   }) {
-    _guardVideoEdits();
     final (track, clip) = _clip(clipId);
     _require(track.kind == 'video', 'only video clips can be reordered');
     final remaining = track.clips
@@ -1082,26 +1090,31 @@ final class MediaProjectSnapshot {
     );
     remaining.insert(newIndex, clip);
     final changed = _reflow(track, remaining);
-    return _commit(
-      tracks: tracks
-          .map((item) => item.trackId == track.trackId ? changed : item)
-          .toList(),
-    );
+    final changedTracks = tracks
+        .map((item) => item.trackId == track.trackId ? changed : item)
+        .toList();
+    _validateVideoTransitionEdits(changedTracks, transitions);
+    return _commit(tracks: changedTracks);
   }
 
   MediaProjectSnapshot deleteVideoClip(String clipId) {
-    _guardVideoEdits();
     final (track, _) = _clip(clipId);
     _require(track.kind == 'video', 'only video clips can be deleted');
     final changed = _reflow(
       track,
       track.clips.where((clip) => clip.clipId != clipId).toList(),
     );
-    return _commit(
-      tracks: tracks
-          .map((item) => item.trackId == track.trackId ? changed : item)
-          .toList(),
-    );
+    final changedTracks = tracks
+        .map((item) => item.trackId == track.trackId ? changed : item)
+        .toList();
+    final changedTransitions = transitions
+        .where(
+          (transition) =>
+              transition.fromClip != clipId && transition.toClip != clipId,
+        )
+        .toList();
+    _validateVideoTransitionEdits(changedTracks, changedTransitions);
+    return _commit(tracks: changedTracks, transitions: changedTransitions);
   }
 
   MediaProjectSnapshot deleteAudioClip(String clipId) {
@@ -1150,10 +1163,11 @@ final class MediaProjectSnapshot {
     required int? audioStreamIndex,
   }) {
     final (track, clip) = _clip(clipId);
-    if (track.kind == 'video' &&
-        (clip.sourceIn != sourceIn || clip.sourceOut != sourceOut)) {
-      _guardVideoEdits();
-    }
+    // A video source-range edit can change transition handles. Validate the
+    // whole candidate against Core's frame and media-handle rules.
+    final validateVideoTransitions =
+        track.kind == 'video' &&
+        (clip.sourceIn != sourceIn || clip.sourceOut != sourceOut);
     return _replaceClip(
       track,
       clip.copyWith(
@@ -1166,6 +1180,7 @@ final class MediaProjectSnapshot {
         audioRole: audioRole,
         audioStreamIndex: audioStreamIndex,
       ),
+      validateVideoTransitions: validateVideoTransitions,
     );
   }
 
@@ -1314,8 +1329,9 @@ final class MediaProjectSnapshot {
 
   MediaProjectSnapshot _replaceClip(
     MediaProjectTrack track,
-    MediaProjectClip clip,
-  ) {
+    MediaProjectClip clip, {
+    bool validateVideoTransitions = false,
+  }) {
     final clips = track.clips
         .map((item) => item.clipId == clip.clipId ? clip : item)
         .toList();
@@ -1326,11 +1342,13 @@ final class MediaProjectSnapshot {
             kind: track.kind,
             clips: clips,
           );
-    return _commit(
-      tracks: tracks
-          .map((item) => item.trackId == track.trackId ? changed : item)
-          .toList(),
-    );
+    final changedTracks = tracks
+        .map((item) => item.trackId == track.trackId ? changed : item)
+        .toList();
+    if (validateVideoTransitions) {
+      _validateVideoTransitionEdits(changedTracks, transitions);
+    }
+    return _commit(tracks: changedTracks);
   }
 
   static MediaProjectTrack _reflow(
@@ -1354,12 +1372,94 @@ final class MediaProjectSnapshot {
     );
   }
 
-  void _guardVideoEdits() {
-    _require(
-      transitions.isEmpty,
-      'video edits are disabled while transitions need Core review',
-    );
+  /// Keep video edits aligned with Core's 30fps transition render preflight.
+  /// Split/delete remove transitions that name the changed clip, matching
+  /// Timeline.split/delete. Other edits retain their authored transition data
+  /// and fail atomically if they would break adjacency, duration, or handles.
+  /// Opaque future transition types are retained for Core to report explicitly.
+  void _validateVideoTransitionEdits(
+    List<MediaProjectTrack> candidateTracks,
+    List<MediaProjectTransition> candidateTransitions,
+  ) {
+    if (candidateTransitions.isEmpty) return;
+    final videoTracks = candidateTracks
+        .where((track) => track.kind == 'video')
+        .toList();
+    if (videoTracks.isEmpty) {
+      throw _invalid('TRANSITION_REQUIRES_ADJACENT_VIDEO_CLIPS');
+    }
+
+    // Core's renderer currently plans transitions against the first video
+    // track. A transition outside that sequence cannot be exported safely.
+    final clips = videoTracks.first.clips;
+    final indexes = <String, int>{
+      for (var index = 0; index < clips.length; index++)
+        clips[index].clipId: index,
+    };
+    final assetsById = <String, MediaProjectAsset>{
+      for (final asset in assets) asset.assetId: asset,
+    };
+    final seenBoundaries = <int>{};
+    final windows = <(int, int)>[];
+
+    for (final transition in candidateTransitions) {
+      final fromIndex = indexes[transition.fromClip];
+      final toIndex = indexes[transition.toClip];
+      if (fromIndex == null ||
+          toIndex == null ||
+          toIndex != fromIndex + 1) {
+        throw _invalid('TRANSITION_REQUIRES_ADJACENT_VIDEO_CLIPS');
+      }
+      if (!seenBoundaries.add(toIndex)) {
+        throw _invalid('TRANSITION_BOUNDARY_CONFLICT');
+      }
+
+      final from = clips[fromIndex];
+      final to = clips[toIndex];
+      if (transition.durationSec > from.durationSec ||
+          transition.durationSec > to.durationSec) {
+        throw _invalid('TRANSITION_DURATION_EXCEEDS_CLIP');
+      }
+      if (transition.transitionType == 'cut') continue;
+      if (transition.transitionType != 'dissolve') continue;
+      if (transition.durationSec < 1 / 30) {
+        throw _invalid('TRANSITION_SHORTER_THAN_OUTPUT_FRAME');
+      }
+
+      final frameCount = _frameAt(transition.durationSec);
+      final beforeCut = frameCount ~/ 2;
+      final afterCut = frameCount - beforeCut;
+      final cutFrame = _frameAt(to.timelineStart);
+      final startFrame = cutFrame - beforeCut;
+      final endFrame = cutFrame + afterCut;
+      if (startFrame < _frameAt(from.timelineStart) ||
+          endFrame > _frameAt(to.timelineStart + to.durationSec)) {
+        throw _invalid('TRANSITION_WINDOW_EXCEEDS_CLIP');
+      }
+
+      final leftFrames = cutFrame - _frameAt(from.timelineStart);
+      final fromAsset = assetsById[from.mediaAssetId];
+      if (fromAsset == null ||
+          from.sourceIn + (leftFrames + afterCut) / 30 >
+              fromAsset.durationSec ||
+          to.sourceIn < beforeCut / 30) {
+        throw _invalid('TRANSITION_MEDIA_HANDLES_UNAVAILABLE');
+      }
+      windows.add((startFrame, endFrame));
+    }
+
+    windows.sort((left, right) => left.$1.compareTo(right.$1));
+    var previousEnd = -1;
+    for (final window in windows) {
+      if (window.$1 < previousEnd) {
+        throw _invalid('TRANSITION_WINDOWS_OVERLAP');
+      }
+      previousEnd = window.$2;
+    }
   }
+
+  static int _frameAt(double seconds) =>
+      double.parse((seconds * 30).toStringAsFixed(6)).round();
 
   String _localId(String prefix) {
     final used = <String>{

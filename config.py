@@ -330,15 +330,28 @@ class Config:
             result['missing'].append('TAIKOO_AUTH_USER/TAIKOO_AUTH_PASSWORD pair')
         result['details']['compatibility_basic_auth_configured'] = bool(basic_user and basic_password)
 
-        # Product inference has one owned Gateway. Retired provider selectors are invalid current configuration.
+        # One Gateway: owned by default, or the user's explicitly configured API.
         provider = str(self.get('AI_PROVIDER') or '').strip().lower()
-        if provider not in ('', 'owned'):
+        if provider not in ('', 'owned', 'user_api'):
             result['valid'] = False
-            result['warnings'].append('AI_PROVIDER must be blank/owned; retired provider routing is disabled')
+            result['warnings'].append('AI_PROVIDER must be blank/owned/user_api; retired provider routing is disabled')
+        if provider == 'user_api':
+            from lumenis.system.ai_gateway.user_api_adapter import (
+                configuration_is_complete,
+            )
+
+            complete = configuration_is_complete({
+                'base_url': str(self.get('USER_MODEL_API_BASE_URL') or '').strip().rstrip('/'),
+                'api_key': str(self.get('USER_MODEL_API_KEY') or '').strip(),
+                'model': str(self.get('USER_MODEL_API_MODEL') or '').strip(),
+            })
+            if not complete:
+                result['valid'] = False
+                result['warnings'].append('Explicit user_api requires a valid HTTPS destination, key and model')
         if self.get('ALLOW_CLOUD_AI') is True:
             result['valid'] = False
             result['warnings'].append('ALLOW_CLOUD_AI must remain false for the current owned-runtime contract')
-        result['details']['product_ai_provider'] = 'owned'
+        result['details']['product_ai_provider'] = provider or 'owned'
         result['details']['external_ai_fallback_allowed'] = False
         result['details']['email_required_by_current_product'] = False
         

@@ -1088,6 +1088,24 @@ def _content_project_scope(action: str, *, module="content", include_decision=Fa
         not isinstance(actor, dict) or type(actor.get("id")) is not int or actor["id"] <= 0
     ):
         raise LocalArtifactError("AUTH_REQUIRED")
+    if request.headers.get(_SHARED_WORKSPACE_SCOPE_HEADER) is not None:
+        if module != "content" or not _shared_content_project_route_allowed():
+            raise LocalArtifactError("SHARED_WORKSPACE_SCOPE_NOT_SUPPORTED")
+        try:
+            from lumenis.system.security.permission import (
+                authorize_shared_workspace,
+                validate_shared_workspace_scope,
+            )
+
+            shared_scope = validate_shared_workspace_scope(_parse_shared_workspace_scope_header())
+            authorize_shared_workspace(actor, shared_scope, module="content", action=action)
+        except PermissionError as exc:
+            raise LocalArtifactError(str(exc)) from exc
+        except ValueError as exc:
+            raise LocalArtifactError(str(exc)) from exc
+        if include_decision:
+            raise LocalArtifactError("SHARED_WORKSPACE_SCOPE_NOT_SUPPORTED")
+        return actor, {"shared_workspace_scope": shared_scope}
     try:
         selected_domain = normalize_domain(request.headers.get("X-Domain-Id", ""))
     except ValueError as exc:
@@ -2141,6 +2159,7 @@ def _content_project_error(exc):
         "CONTENT_SCOPE_DENIED", "ACTOR_SCOPE_PERMISSION_DENIED", "DOMAIN_REQUIRED", "CONTEXT_SCOPE_MISMATCH",
         "CONTENT_PROJECT_CONTEXT_MISMATCH", "CONTENT_PROJECT_PARENT_SCOPE_MISMATCH",
         "CONTENT_SOURCE_CONTEXT_MISMATCH", "CONTENT_SOURCE_SCOPE_DENIED",
+        "CONTENT_SOURCE_USE_PERMISSION_REQUIRED",
         "CONTENT_SOURCE_ORIGIN_DENIED",
         "CONTENT_SOURCE_APPROVAL_REQUIRED", "CONTENT_EXPORT_PERMISSION_DENIED",
         "OWNED_TRAINING_PREVIEW_DENIED",
@@ -2194,9 +2213,131 @@ def _source_brief_job_error(exc):
 
 
 
+_SHARED_WORKSPACE_SCOPE_HEADER = "X-Lumenis-Workspace-Scope"
+_SHARED_WORKSPACE_LEGACY_SCOPE_HEADERS = frozenset({
+    "x-domain-id", "x-product-id", "x-lumenis-context-mode",
+    "x-subject-id", "x-brand-focus-id",
+    "x-actor-id", "x-user-id", "x-lumenis-actor-id", "x-lumenis-user-id",
+    "x-principal-id", "x-principal-ref", "x-project-id", "x-workspace-id",
+    "x-lumenis-project-id", "x-lumenis-workspace-id",
+})
+_SHARED_WORKSPACE_CLIENT_IDENTITY_ARGS = frozenset({
+    "actor_id", "user_id", "principal_kind", "principal_ref",
+    "workspace_id", "project_id", "domain_id", "product_id",
+    "context_mode", "subject_id", "brand_focus_id", "global_scope",
+})
+
+
+def _shared_saved_work_route_allowed():
+    routes = {
+        "experience_runtime.save_shared_work": (
+            "/api/experience/saved-work", "POST", r"/api/experience/saved-work"),
+        "experience_runtime.revise_shared_work": (
+            "/api/experience/saved-work/<artifact_id>/revise", "POST",
+            r"/api/experience/saved-work/ART-[0-9a-f]{16}/revise"),
+        "experience_runtime.search_shared_work": (
+            "/api/experience/saved-work", "GET", r"/api/experience/saved-work"),
+        "experience_runtime.read_shared_work": (
+            "/api/experience/saved-work/<artifact_id>", "GET",
+            r"/api/experience/saved-work/ART-[0-9a-f]{16}"),
+        "experience_runtime.export_shared_work": (
+            "/api/experience/saved-work/<artifact_id>/export", "GET",
+            r"/api/experience/saved-work/ART-[0-9a-f]{16}/export"),
+    }
+    expected = routes.get(request.endpoint)
+    return (expected is not None and request.url_rule is not None
+            and request.url_rule.rule == expected[0] and request.method == expected[1]
+            and re.fullmatch(expected[2], request.path) is not None)
+
+
+def _shared_content_project_route_allowed():
+    """Limit Shared scope headers to existing Content owner routes."""
+    routes = {
+        "experience_runtime.inspect_content_project_media": (
+            "/api/experience/shared-skills/shared.content_project/inspect", "POST",
+            r"/api/experience/shared-skills/shared\.content_project/inspect"),
+        "experience_runtime.import_content_source": (
+            "/api/experience/content-sources", "POST", r"/api/experience/content-sources"),
+        "experience_runtime.confirm_content_source_import_request": (
+            "/api/experience/content-source-confirmations/<confirmation_id>", "POST",
+            r"/api/experience/content-source-confirmations/[A-Za-z0-9_-]{32,128}"),
+        "experience_runtime.content_source_detail": (
+            "/api/experience/content-sources/<artifact_id>", "GET",
+            r"/api/experience/content-sources/ART-(?:[0-9a-f]{16}|[0-9a-f]{32})"),
+        "experience_runtime.export_content_project": (
+            "/api/experience/content-projects/export", "POST",
+            r"/api/experience/content-projects/export"),
+        "experience_runtime.content_project_list": (
+            "/api/experience/content-projects", "GET", r"/api/experience/content-projects"),
+        "experience_runtime.content_project_detail": (
+            "/api/experience/content-projects/<artifact_id>", "GET",
+            r"/api/experience/content-projects/ART-[0-9a-f]{16}"),
+        "experience_runtime.content_project_package": (
+            "/api/experience/content-projects/<artifact_id>/package", "GET",
+            r"/api/experience/content-projects/ART-[0-9a-f]{16}/package"),
+        "experience_runtime.content_project_media": (
+            "/api/experience/content-projects/<artifact_id>/media", "GET",
+            r"/api/experience/content-projects/ART-[0-9a-f]{16}/media"),
+    }
+    expected = routes.get(request.endpoint)
+    return (expected is not None and request.url_rule is not None
+            and request.url_rule.rule == expected[0] and request.method == expected[1]
+            and re.fullmatch(expected[2], request.path) is not None)
+
+
+def _parse_shared_workspace_scope_header():
+    """Parse the exact actor-free Shared workspace wire scope."""
+    values = request.headers.getlist(_SHARED_WORKSPACE_SCOPE_HEADER)
+    if (len(values) != 1 or not isinstance(values[0], str)
+            or len(values[0].encode("utf-8")) > 256):
+        raise ValueError("SHARED_WORKSPACE_SCOPE_INVALID")
+
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("SHARED_WORKSPACE_SCOPE_INVALID")
+            result[key] = value
+        return result
+
+    try:
+        scope = json.loads(
+            values[0], object_pairs_hook=unique_pairs,
+            parse_constant=lambda _value: (_ for _ in ()).throw(
+                ValueError("SHARED_WORKSPACE_SCOPE_INVALID")),
+        )
+        from lumenis.system.security.permission import validate_shared_workspace_scope
+
+        scope = validate_shared_workspace_scope(scope)
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise ValueError("SHARED_WORKSPACE_SCOPE_INVALID") from exc
+    header_names = {name.casefold() for name in request.headers.keys()}  # noqa: SIM118 - Werkzeug Headers iterates pairs.
+    if header_names.intersection(_SHARED_WORKSPACE_LEGACY_SCOPE_HEADERS):
+        raise ValueError("SHARED_WORKSPACE_SCOPE_MIXED_CONTEXT")
+    if _SHARED_WORKSPACE_CLIENT_IDENTITY_ARGS.intersection(request.args):
+        raise ValueError("SHARED_WORKSPACE_SCOPE_MIXED_CONTEXT")
+    return scope
+
+
 def _shared_work_actor_scope(action):
+    if _SHARED_WORKSPACE_SCOPE_HEADER in request.headers:
+        if not _shared_saved_work_route_allowed():
+            raise ValueError("SHARED_WORKSPACE_SCOPE_NOT_SUPPORTED")
+        from lumenis.auth.service import get_current_user
+        from lumenis.shared.reporting.saved_work import authorize_saved_work
+        from lumenis.system.security.permission import resolve_local_workspace_principal
+
+        scope = _parse_shared_workspace_scope_header()
+        actor = resolve_local_workspace_principal(module="reports", action=action)
+        if actor is None:
+            actor = get_current_user(read_only=True)
+        if actor is None:
+            raise PermissionError("AUTH_REQUIRED")
+        authorize_saved_work(actor, scope, action=action)
+        return actor, scope
+
     from lumenis.shared.reporting.saved_work import authorize
-    actor_ref, _audit, material, actor = _source_brief_context(action, include_actor=True)
+    _actor_ref, _audit, material, actor = _source_brief_context(action, include_actor=True)
     scope = {"domain_id": "cth" if material["product_id"] == "CTH" else "zbmp",
              "subject_id": material["subject_id"], "brand_focus_id": material["brand_focus_id"],
              "global_scope": material["global_scope"]}
@@ -2879,6 +3020,8 @@ def inspect_content_project_media():
 
 def _content_project_execution_context(scope):
     """Adapt the server-authorized content scope to the existing Skill context contract."""
+    if "shared_workspace_scope" in scope:
+        return {"shared_workspace_scope": dict(scope["shared_workspace_scope"])}
     domain = "bmp" if scope["domain_id"] == "zbmp" else "cth"
     return {
         "domain_context": {"domain_id": domain},
@@ -2977,13 +3120,18 @@ def import_content_source():
             resource_binding = {"actor_id": actor_id, "scope": scope,
                                 "filename": filename, "size_bytes": observed,
                                 "body_sha256": body_sha256}
+            shared_workspace_scope = scope.get("shared_workspace_scope")
             upload = ContentSourceImport(
-                actor_id=actor_id, domain_id="bmp" if scope["domain_id"] == "zbmp" else "cth",
-                subject_id=scope["subject_id"], brand_focus_id=scope["brand_focus_id"],
-                global_scope=scope["global_scope"], filename=filename,
+                actor_id=actor_id,
+                domain_id=(None if shared_workspace_scope is not None else
+                           "bmp" if scope["domain_id"] == "zbmp" else "cth"),
+                subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
+                global_scope=scope.get("global_scope", False), filename=filename,
                 size_bytes=observed, body_sha256=body_sha256,
                 principal_kind=local_principal.principal_kind if local_principal else None,
                 principal_ref=local_principal.principal_ref if local_principal else None,
+                scope_kind=shared_workspace_scope.get("scope_kind") if shared_workspace_scope else None,
+                scope_version=shared_workspace_scope.get("version") if shared_workspace_scope else None,
             )
 
             def import_asset(ctx):
@@ -3006,9 +3154,11 @@ def import_content_source():
                 user_id=actor_id,
                 user_role=account_actor.get("role", "user") if account_actor else "user",
                 workspace_principal=local_principal,
-                permission_role="cth_operator" if scope["domain_id"] == "cth" else "zbmp_operator",
-                product="CTH" if scope["domain_id"] == "cth" else "ZBMP",
-                domain=scope["domain_id"],
+                permission_role=(None if "shared_workspace_scope" in scope else
+                                 "cth_operator" if scope["domain_id"] == "cth" else "zbmp_operator"),
+                product=("SHARED" if "shared_workspace_scope" in scope else
+                         "CTH" if scope["domain_id"] == "cth" else "ZBMP"),
+                domain=None if "shared_workspace_scope" in scope else scope["domain_id"],
                 skill_info=runtime_info,
                 handler=import_asset,
             )
@@ -3066,7 +3216,9 @@ def confirm_content_source_import_request(confirmation_id: str):
         body = request.get_json(silent=True)
         if not isinstance(body, dict) or set(body) != {"confirmed"} or type(body["confirmed"]) is not bool:
             raise LocalArtifactError("CONTENT_SOURCE_CONFIRMATION_REQUIRED")
-        normalized_scope = {**scope, "domain_id": "bmp" if scope["domain_id"] == "zbmp" else "cth"}
+        normalized_scope = ({"shared_workspace_scope": scope["shared_workspace_scope"]}
+                            if "shared_workspace_scope" in scope else
+                            {**scope, "domain_id": "bmp" if scope["domain_id"] == "zbmp" else "cth"})
         if not body["confirmed"]:
             cancelled = cancel_content_source_import_confirmation(
                 account_actor, confirmation_id, current_scope=normalized_scope,
@@ -3116,6 +3268,9 @@ def export_content_project():
 
     try:
         actor, scope = _content_project_scope("write")
+        local_principal = (
+            actor if "shared_workspace_scope" in scope and not isinstance(actor, dict) else None
+        )
         account_actor = actor if isinstance(actor, dict) else None
         if not _content_source_same_origin():
             raise LocalArtifactError("CONTENT_SOURCE_ORIGIN_DENIED")
@@ -3137,6 +3292,13 @@ def export_content_project():
                           "source_artifact_refs": source_refs,
                           "output_kind": payload.get("output_kind", "video"),
                           "previous_artifact_id": payload.get("previous_artifact_id")}
+            from shared_artifacts import content_project_export_resource
+
+            normalized["target"] = content_project_export_resource(
+                timeline, actor=actor, source_artifact_refs=source_refs,
+                output_kind=normalized["output_kind"],
+                previous_artifact_id=normalized["previous_artifact_id"], **scope,
+            )
 
             def render(ctx):
                 return stage_timeline_artifact(
@@ -3151,8 +3313,11 @@ def export_content_project():
                 action_type=ActionType.EXPORT,
                 user_id=account_actor["id"] if account_actor else None,
                 user_role=account_actor.get("role", "user") if account_actor else "user",
-                product="CTH" if scope["domain_id"] == "cth" else "ZBMP", domain=scope["domain_id"],
+                product=("SHARED" if "shared_workspace_scope" in scope else
+                         "CTH" if scope["domain_id"] == "cth" else "ZBMP"),
+                domain=None if "shared_workspace_scope" in scope else scope["domain_id"],
                 skill_info=info, handler=render, request_context=_content_project_execution_context(scope),
+                workspace_principal=local_principal,
             )
             execution = ctx.execute_result or {}
             result = execution.get("result") if isinstance(execution, dict) else None

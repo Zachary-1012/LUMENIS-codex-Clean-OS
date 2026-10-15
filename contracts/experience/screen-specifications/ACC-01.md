@@ -169,7 +169,7 @@ Web：同桌面，会话含浏览器会话。
 
 ### 草图增补：登录/注册（邮箱 · Apple · Google）rev3
 
-Web：同桌面；Apple/Google 授权后回原页，工作不丢。
+Web：设置分区按宽度切换侧栏/二级页；保留浏览器会话状态、前进返回和未保存偏好；授权取消/成功均返回原任务。 Apple/Google 授权后回原页，工作不丢。
 
 
 ## 6. Purpose-built mobile composition

@@ -803,20 +803,20 @@
       "binding_id": "BACKEND-GAP-045",
       "screen": "SH-01",
       "field": "pattern_retrieval",
-      "current_api": "No dedicated selected-context pattern retrieval corpus/query was verified; catalog metadata is not scoped retrieval.",
+      "current_api": "lumenis/shared/learning/content_assets.py::ContentPatternRegistry.retrieve_candidates calls retrieve_pattern_candidates with platform/format/audience/objective filters and persisted assets; no SH-01/Brief product caller or actor/domain/source-use authorization is bound.",
       "permission": "GET screen route: optional global Basic Auth only; no actor/domain/product scope or per-screen READ Permission is enforced.",
       "evidence": "No retrieval Permission or actor/domain query contract exists for this field.",
       "frontend_viewmodel": "BLOCKED_NOT_EXPOSED",
-      "status": "ABSENT",
+      "status": "EXISTS_BUT_UNSCOPED",
       "owner": "Shared Capability / Research",
-      "note": "Source review against origin/main 76fbe1afcbec656fbd06c0527d011ffecf17ca75: ABSENT. Callable/source discovery is not permission, scope, Evidence, or end-to-end acceptance.",
-      "classification": "ABSENT",
-      "reason": "当前生产源码无对应只读后端源（采集器/写入侧/外部平台契约缺口），无法在不造假前提下绑定",
-      "required_input": "Use the existing Research/learning owner if it provides scoped retrieval; otherwise mark retrieval unavailable without injecting whole files.",
+      "note": "Targeted source review at b58f2d7288ba69f3c47800072f0577faf0863be5: existing retrieval is not a scoped product binding or runtime acceptance.",
+      "classification": "EXISTS_BUT_UNSCOPED",
+      "reason": "The existing persisted pattern retrieval algorithm is present; the product caller and actor/scope/source-use binding remain unverified.",
+      "required_input": "Reuse ContentPatternRegistry through the existing Shared Learning owner; bind the SH-01/Brief caller, exact actor/scope, source-use rights and claim lineage before exposing results. Do not return an unscoped whole corpus.",
       "affected_screen": "SH-01",
       "fallback_behavior": "Show an explicit unavailable/blocked state; do not create a parallel API, fabricate values, or enable an action.",
       "product_owner": "Shared Capability / Research",
-      "source_status": "ABSENT"
+      "source_status": "EXISTS_BUT_UNSCOPED"
     },
     {
       "binding_id": "BACKEND-GAP-046",
@@ -987,7 +987,7 @@
   ],
   "ledger_summary": {
     "total": 54,
-    "bound": 49,
+    "bound": 50,
     "blocked_by_external_dependency": 0,
     "bound_screens": [
       "ACC-01",
@@ -1037,13 +1037,13 @@
     "rule": "Mapped source/callable != authorized or accepted feature; actor scope, Permission, Evidence lineage, App behavior and executable acceptance remain separate gates.",
     "status_counts": {
       "PARTIAL": 34,
-      "EXISTS_BUT_UNSCOPED": 15,
-      "ABSENT": 4,
+      "EXISTS_BUT_UNSCOPED": 16,
+      "ABSENT": 3,
       "LOCAL_ONLY": 1
     },
     "last_updated": "2026-10-13: summary recalculated from current binding rows; Flutter source/shell presence checked at dded08273de58ddc5a010b55375ec437764881f7. Callable, permission, evidence and user-outcome claims are not thereby reverified.",
     "intentionally_not_applicable": 0,
-    "absent": 4,
+    "absent": 3,
     "local_only": 1
   }
 }

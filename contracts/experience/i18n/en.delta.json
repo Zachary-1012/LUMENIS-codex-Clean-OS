@@ -746,6 +746,7 @@
   "sh01.media.focus_scope": "Selected subject scope",
   "sh01.media.gain": "Volume",
   "sh01.media.global_all": "Global view",
+  "sh01.media.import": "Import media",
   "sh01.media.importing": "Importing the selected file…",
   "sh01.media.invalid": "Check clip range, stream and fade durations.",
   "sh01.media.invoking_domain_required": "Global view does not specify this invocation's business domain. The entry point must explicitly provide CTH or BMP; this does not set a brand focus or grant permission.",

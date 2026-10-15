@@ -356,10 +356,10 @@
     {
       "screen": "SH-01",
       "field": "pattern_retrieval",
-      "current_source": "No dedicated selected-context pattern retrieval corpus/query was verified; catalog metadata is not scoped retrieval.",
+      "current_source": "lumenis/shared/learning/content_assets.py::ContentPatternRegistry.retrieve_candidates calls retrieve_pattern_candidates with platform/format/audience/objective filters and persisted assets; no SH-01/Brief product caller or actor/domain/source-use authorization is bound.",
       "frontend_viewmodel": "BLOCKED_NOT_EXPOSED",
       "owner": "Shared Capability / Research",
-      "status": "ABSENT"
+      "status": "EXISTS_BUT_UNSCOPED"
     },
     {
       "screen": "SH-01",

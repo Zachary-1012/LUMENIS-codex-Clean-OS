@@ -16,7 +16,7 @@
   [导出合规报告]
 ```
 ## 5A. Web Workspace composition
-同桌面。
+Web：权限/协议/备份按步骤展示，敏感确认可取消并回原任务；刷新复核服务端许可，浏览器能力不足明确提示，不虚构本机端口控制。
 ## 6. Purpose-built mobile composition
 分组卡片纵排，操作收进「…」菜单。
 ## 4. State additions

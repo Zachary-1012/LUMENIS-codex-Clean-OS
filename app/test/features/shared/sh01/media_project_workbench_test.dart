@@ -12,6 +12,7 @@ import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_controller.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_files.dart';
 import 'package:lumenis_app/features/shared/sh01/media_preview.dart';
+import 'package:lumenis_app/features/shared/sh01/media_project_snapshot.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_workbench.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/navigation/lumenis_leave_guard.dart';
@@ -48,6 +49,17 @@ class _Client extends LumenisCoreClient {
     'asset_id': 'MEDIA-aaaaaaaaaaaaaaaa',
     'filename': 'interview.mp4',
     'sha256': 'a' * 64,
+    'duration_sec': 20.0,
+    'media_kind': 'video_audio',
+    'has_video': true,
+    'audio_stream_count': 1,
+    'evidence_refs': [],
+    'rights_status': 'unknown',
+  };
+  final alternateAsset = <String, Object?>{
+    'asset_id': 'MEDIA-bbbbbbbbbbbbbbbb',
+    'filename': 'alternate.mp4',
+    'sha256': 'b' * 64,
     'duration_sec': 20.0,
     'media_kind': 'video_audio',
     'has_video': true,
@@ -125,8 +137,12 @@ class _Client extends LumenisCoreClient {
       'ok': true,
       'publish_status': 'not_performed',
       'result': {
-        'artifact': {'artifact_id': 'ART-source'},
-        'asset': asset,
+        'artifact': {
+          'artifact_id': filename == 'alternate.mp4'
+              ? 'ART-source-alternate'
+              : 'ART-source',
+        },
+        'asset': filename == 'alternate.mp4' ? alternateAsset : asset,
       },
     };
   }
@@ -402,6 +418,102 @@ void main() {
     );
   });
   tearDown(() => controller.dispose());
+
+  testWidgets(
+    'source replacement can open on a timeline with a valid dissolve',
+    (tester) async {
+      await _prepareEditableProject(client, controller);
+      await controller.importFile('alternate.mp4', Uint8List.fromList([2]));
+      controller.edit((snapshot) {
+        final assetId = snapshot.assets.first.assetId;
+        return snapshot.addClip(
+          assetId,
+          trackId: 'video',
+          sourceIn: 8,
+          sourceOut: 16,
+          audioRole: 'muted',
+        );
+      });
+      final current = controller.timeline!;
+      final clips = current.tracks.single.clips;
+      final payload = current.toJson();
+      payload['transitions'] = [
+        {
+          'from_clip': clips[0].clipId,
+          'to_clip': clips[1].clipId,
+          'transition_type': 'dissolve',
+          'duration_sec': 0.5,
+          'reason': 'soft scene change',
+        },
+      ];
+      controller.edit(
+        (_) => MediaProjectSnapshot.fromJson(
+          payload,
+          inspectedAssets: current.assets,
+        ),
+      );
+
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_app(client, controller));
+      final replaceButton = find.byKey(const Key('media-replace-source'));
+      await _openPropertiesForField(tester, replaceButton);
+      expect(tester.widget<OutlinedButton>(replaceButton).onPressed, isNotNull);
+      await tester.ensureVisible(replaceButton);
+      await tester.tap(replaceButton);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-replacement-apply')), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is DropdownButtonFormField<String> &&
+              widget.key is ValueKey<String> &&
+              (widget.key as ValueKey<String>).value.startsWith(
+                'media-replacement-source-',
+              ),
+        ),
+        findsOneWidget,
+      );
+      expect(controller.timeline!.transitions, hasLength(1));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'empty source replacement offers a localized import action',
+    (tester) async {
+      await _prepareEditableProject(client, controller);
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      const locales = <(Locale, String)>[
+        (Locale('zh', 'CN'), '导入素材'),
+        (Locale('en'), 'Import media'),
+        (Locale('ko'), '미디어 가져오기'),
+      ];
+      for (final (locale, expectedLabel) in locales) {
+        await tester.pumpWidget(_app(client, controller, locale: locale));
+        final replaceButton = find.byKey(const Key('media-replace-source'));
+        await _openPropertiesForField(tester, replaceButton);
+        await tester.ensureVisible(replaceButton);
+        await tester.tap(replaceButton);
+        await tester.pumpAndSettle();
+
+        final importButton = find.byKey(
+          const Key('media-replacement-import'),
+        );
+        expect(importButton, findsOneWidget);
+        expect(find.text(expectedLabel), findsOneWidget);
+        expect(find.text('sh01.media.import'), findsNothing);
+        expect(tester.takeException(), isNull);
+
+        await tester.tap(
+          find.byKey(const Key('media-replacement-cancel')),
+        );
+        await tester.pumpAndSettle();
+      }
+    },
+  );
 
   testWidgets(
     'open saved-work dialog clears a completed list on available scope change',

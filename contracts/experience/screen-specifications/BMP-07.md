@@ -93,7 +93,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ### 草图增补：营销日历与热点建议
 
 Web Workspace composition
-同桌面布局；无额外差异。
+Web：日/周/月与列表视图按任务切换；拖拽排期有键盘编辑等价路径，刷新读回计划版本并提示未保存改动，计划与执行回执分开。
 
 ## 6. Purpose-built mobile composition
 

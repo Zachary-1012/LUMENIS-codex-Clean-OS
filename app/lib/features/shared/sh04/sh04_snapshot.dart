@@ -1,5 +1,3 @@
-enum Sh04ScopeMode { globalAll, focus }
-
 enum Sh04ScopeErrorKind { unavailable, denied, malformed }
 
 class Sh04ScopeError implements Exception {
@@ -9,337 +7,236 @@ class Sh04ScopeError implements Exception {
 }
 
 class Sh04Scope {
-  const Sh04Scope({
-    required this.mode,
-    required this.domain,
-    required this.focusId,
-    required this.displayName,
-  });
+  const Sh04Scope._();
 
-  final Sh04ScopeMode mode;
-  final String? domain;
-  final String? focusId;
-  final String displayName;
-
-  bool get isGlobal => mode == Sh04ScopeMode.globalAll;
-
-  String get businessDomain => switch (domain) {
-    'CTH' => '商业运营',
-    'BMP' => '品牌市场',
-    _ => '全部范围',
-  };
-
-  static Sh04Scope fromResponse(Map<String, dynamic> response) {
-    final rawScope = _asMap(response['scope'] ?? response['context']);
-    final permission = _asMap(
-      response['permission'] ?? response['authorization'],
-    );
-    if (rawScope == null || permission == null) {
-      throw const Sh04ScopeError(Sh04ScopeErrorKind.unavailable);
-    }
-    if (response['selection_only'] == true ||
-        rawScope['selection_only'] == true) {
-      throw const Sh04ScopeError(Sh04ScopeErrorKind.unavailable);
-    }
-    final decision = _string(
-      permission['decision'] ?? permission['result'] ?? permission['state'],
-    )?.toUpperCase();
-    final canRead =
-        permission['read'] == true ||
-        permission['can_read'] == true ||
-        permission['view'] == true;
-    if (!canRead ||
-        !const {'ALLOW', 'ALLOWED', 'GRANTED', 'PERMITTED'}.contains(decision)) {
-      throw const Sh04ScopeError(Sh04ScopeErrorKind.denied);
-    }
-    final mode = _string(
-      rawScope['mode'] ?? rawScope['scope_mode'],
-    )?.toUpperCase();
-    if (mode == 'GLOBAL_ALL') {
-      if (_present(rawScope['subject_id']) ||
-          _present(rawScope['brand_focus_id']) ||
-          rawScope['global'] == false) {
-        throw const Sh04ScopeError(Sh04ScopeErrorKind.malformed);
-      }
-      return const Sh04Scope(
-        mode: Sh04ScopeMode.globalAll,
-        domain: null,
-        focusId: null,
-        displayName: '全部范围',
-      );
-    }
-    if (mode != 'FOCUS') {
-      throw const Sh04ScopeError(Sh04ScopeErrorKind.malformed);
-    }
-    final domain = _string(
-      rawScope['domain_id'] ?? rawScope['domain'],
-    )?.toUpperCase();
-    final focusId = _string(
-      rawScope['subject_id'] ??
-          rawScope['brand_focus_id'] ??
-          rawScope['focus_id'],
-    );
-    final displayName = _safeText(rawScope['display_name']);
-    if ((domain != 'CTH' && domain != 'BMP' && domain != 'ZBMP') ||
-        focusId == null ||
-        displayName == null) {
-      throw const Sh04ScopeError(Sh04ScopeErrorKind.malformed);
-    }
-    return Sh04Scope(
-      mode: Sh04ScopeMode.focus,
-      domain: domain == 'ZBMP' ? 'BMP' : domain,
-      focusId: focusId,
-      displayName: displayName,
-    );
-  }
+  static const sharedWorkspace = Sh04Scope._();
+  String get wireScopeKind => 'shared_workspace';
 }
 
-enum Sh04ExportState { draft, generating, ready, failed, unavailable }
+enum Sh04ExportState { ready, unavailable }
 
-enum Sh04Format { markdown, csv, pdf, excel, powerpoint, unknown }
+enum Sh04Format { markdown }
 
 class Sh04Export {
   const Sh04Export({
     required this.internalId,
     required this.title,
-    required this.format,
     required this.state,
-    required this.scopeVerified,
-    required this.reopenable,
-    required this.preview,
-    required this.evidenceCount,
+    required this.markdown,
+    required this.sha256,
+    required this.workId,
+    required this.version,
+    required this.parentArtifactId,
+    required this.citations,
     required this.generatedAt,
-    required this.failureReason,
   });
 
+  /// Used for API calls only. The screen must not render internal identifiers.
   final String internalId;
   final String title;
-  final Sh04Format format;
   final Sh04ExportState state;
-  final bool scopeVerified;
-  final bool reopenable;
-  final String preview;
-  final int? evidenceCount;
+  final String markdown;
+  final String sha256;
+  final String workId;
+  final int version;
+  final String? parentArtifactId;
+
+  /// Kept intact so a local revision never silently drops original source
+  /// scopes or rights. The revision endpoint omits citations and preserves
+  /// them from its immutable parent after server-side reauthorization.
+  final List<Map<String, dynamic>> citations;
   final String generatedAt;
-  final String failureReason;
 
-  String get stateLabel => switch (state) {
-    Sh04ExportState.draft => '草稿',
-    Sh04ExportState.generating => '生成中',
-    Sh04ExportState.ready => '已生成',
-    Sh04ExportState.failed => '生成失败',
-    Sh04ExportState.unavailable => '暂不可用',
-  };
+  Sh04Format get format => Sh04Format.markdown;
+  bool get scopeVerified => true;
+  bool get reopenable => state == Sh04ExportState.ready;
+  String get preview => markdown;
+  int get evidenceCount => citations.length;
+  String get failureReason => '';
 
-  String get formatLabel => switch (format) {
-    Sh04Format.markdown => 'Markdown',
-    Sh04Format.csv => 'CSV',
-    Sh04Format.pdf => 'PDF',
-    Sh04Format.excel => 'Excel',
-    Sh04Format.powerpoint => 'PPT',
-    Sh04Format.unknown => '格式未确认',
-  };
+  String get formatLabel => 'Markdown';
 
-  static Sh04Export? tryParse(Object? value, {required Sh04Scope scope}) {
-    final record = _asMap(value);
-    if (record == null) return null;
-    final internalId = _string(
-      record['id'] ?? record['report_id'] ?? record['export_id'],
+  static Sh04Export fromResponse(Map<String, dynamic> response) {
+    if (response['ok'] != true) {
+      throw const FormatException(
+        'Shared SavedWork operation was not accepted.',
+      );
+    }
+    return Sh04Export.fromSavedWorkItem(response['result']);
+  }
+
+  static Sh04Export fromSavedWorkItem(Object? value) {
+    final item = _asMap(value);
+    final artifact = _asMap(item?['artifact']);
+    final document = _asMap(item?['document']);
+    final returnRef = _asMap(item?['return_ref']);
+    final artifactId = _string(artifact?['artifact_id']);
+    final digest = _string(artifact?['sha256']);
+    final title = _userText(document?['title'], maxLength: 300);
+    final markdown = _userText(
+      document?['markdown'],
+      maxLength: 8 * 1024 * 1024,
     );
-    final title = _safeText(
-      record['title'] ?? record['report'] ?? record['name'],
-    );
-    if (internalId == null || title == null) return null;
-    final artifact = _asMap(record['artifact'] ?? record['persistence']);
-    final projection = _SharedProjection.tryParse(
-      record['projection'],
-      scope: scope,
-    );
-    if (projection == null) return null;
-    final state = _state(record['state'] ?? record['status']);
-    final reopenable =
-        state == Sh04ExportState.ready && artifact?['reopenable'] == true;
-    final preview = reopenable
-        ? _safeText(
-                record['preview'] ?? artifact?['preview'] ?? record['content'],
-              ) ??
-              ''
-        : '';
+    final workId = _string(document?['work_id']);
+    final rawVersion = document?['version'];
+    final version = rawVersion is int ? rawVersion : null;
+    final context = _asMap(document?['context']);
+    final scope = _asMap(returnRef?['scope']);
+    final citations = document?['citations'];
+    final contract = _asMap(document?['contract']);
+    final parentArtifactId = document?['parent_artifact_id'];
+    final parentSha256 = document?['parent_sha256'];
+    final createdAt = _string(artifact?['created_at']) ?? '';
+
+    if (artifactId == null ||
+        !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(artifactId) ||
+        digest == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(digest) ||
+        title == null ||
+        markdown == null ||
+        markdown.trim().isEmpty ||
+        workId == null ||
+        version == null ||
+        version < 1 ||
+        document?['schema'] != 'lumenis.saved-work/v1' ||
+        document?['kind'] != 'report' ||
+        !RegExp(r'^WORK-[0-9a-f]{24}$').hasMatch(workId) ||
+        returnRef?['artifact_id'] != artifactId ||
+        returnRef?['work_id'] != workId ||
+        returnRef?['version'] != version ||
+        !_isServerSharedContext(context) ||
+        !_isSharedScope(scope) ||
+        !_isGenericReportContract(contract) ||
+        citations is! List ||
+        citations.any((item) => item is! Map) ||
+        (version == 1 && (parentArtifactId != null || parentSha256 != null)) ||
+        (version > 1 &&
+            (parentArtifactId is! String ||
+                !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(parentArtifactId) ||
+                parentSha256 is! String ||
+                !RegExp(r'^[0-9a-f]{64}$').hasMatch(parentSha256)))) {
+      throw const FormatException(
+        'The SavedWork version is not a verified Shared report.',
+      );
+    }
     return Sh04Export(
-      internalId: internalId,
+      internalId: artifactId,
       title: title,
-      format: _format(record['format'] ?? record['file_format']),
-      state: state == Sh04ExportState.ready && !reopenable
-          ? Sh04ExportState.unavailable
-          : state,
-      scopeVerified: true,
-      reopenable: reopenable,
-      preview: preview,
-      evidenceCount: _nonNegativeInt(
-        record['evidence_count'] ?? record['source_trace_count'],
-      ),
-      generatedAt:
-          _safeText(record['generated_at'] ?? record['created_at']) ?? '',
-      failureReason:
-          _safeText(record['failure_reason'] ?? record['error_message']) ?? '',
+      state: Sh04ExportState.ready,
+      markdown: markdown,
+      sha256: digest,
+      workId: workId,
+      version: version,
+      parentArtifactId: parentArtifactId as String?,
+      citations: citations
+          .map((citation) => _asMap(citation)!)
+          .map((citation) => Map<String, dynamic>.unmodifiable(citation))
+          .toList(growable: false),
+      generatedAt: createdAt,
     );
   }
 }
 
 class Sh04Snapshot {
-  const Sh04Snapshot({required this.scope, required this.exports});
+  const Sh04Snapshot({
+    required this.scope,
+    required this.exports,
+    required this.verificationComplete,
+    required this.unverifiedCandidates,
+    required this.hasMore,
+    required this.nextCursor,
+  });
 
   final Sh04Scope scope;
   final List<Sh04Export> exports;
+  final bool verificationComplete;
+  final int unverifiedCandidates;
+  final bool hasMore;
+  final String? nextCursor;
 
   factory Sh04Snapshot.fromResponse(Map<String, dynamic> response) {
-    if (response['ok'] != true || response['screen'] != 'SH-04') {
-      throw const FormatException('SH-04 response identity is invalid.');
+    final result = _asMap(response['result']);
+    final rawItems = result?['items'];
+    final complete = result?['verification_complete'];
+    final unverified = result?['unverified_candidates'];
+    final hasMore = result?['has_more'];
+    final cursor = result?['next_cursor'];
+    if (response['ok'] != true ||
+        result == null ||
+        rawItems is! List ||
+        complete is! bool ||
+        unverified is! int ||
+        unverified < 0 ||
+        hasMore is! bool ||
+        (cursor != null && cursor is! String) ||
+        (hasMore && (cursor is! String || cursor.isEmpty))) {
+      throw const FormatException('Shared SavedWork search is incomplete.');
     }
-    if (response['bound'] != true || response['source'] != 'runtime') {
-      throw const FormatException('SH-04 runtime binding is unavailable.');
-    }
-    final scope = Sh04Scope.fromResponse(response);
-    final data = _asMap(response['data']);
-    if (data == null) {
-      throw const FormatException('SH-04 data envelope is incomplete.');
-    }
-    final rawExports = data['exports'] ?? data['artifacts'];
-    if (rawExports is! List) {
-      throw const FormatException('SH-04 export list is unavailable.');
+    final exports = <Sh04Export>[];
+    for (final item in rawItems) {
+      exports.add(Sh04Export.fromSavedWorkItem(item));
     }
     return Sh04Snapshot(
-      scope: scope,
-      exports: rawExports
-          .map((item) => Sh04Export.tryParse(item, scope: scope))
-          .whereType<Sh04Export>()
-          .toList(growable: false),
+      scope: Sh04Scope.sharedWorkspace,
+      exports: List.unmodifiable(exports),
+      verificationComplete: complete,
+      unverifiedCandidates: unverified,
+      hasMore: hasMore,
+      nextCursor: cursor as String?,
     );
   }
 }
 
-Sh04ExportState _state(Object? value) =>
-    switch (_string(value)?.toUpperCase()) {
-      'DRAFT' || 'PENDING' => Sh04ExportState.draft,
-      'GENERATING' || 'RUNNING' => Sh04ExportState.generating,
-      'READY' || 'AVAILABLE' || 'COMPLETED' => Sh04ExportState.ready,
-      'FAILED' || 'ERROR' => Sh04ExportState.failed,
-      _ => Sh04ExportState.unavailable,
-    };
+bool _isSharedScope(Map<String, dynamic>? value) =>
+    value != null &&
+    value.length == 2 &&
+    value['scope_kind'] == 'shared_workspace' &&
+    value['version'] == 1;
 
-Sh04Format _format(Object? value) => switch (_string(value)?.toLowerCase()) {
-  'markdown' || 'md' => Sh04Format.markdown,
-  'csv' => Sh04Format.csv,
-  'pdf' => Sh04Format.pdf,
-  'excel' || 'xlsx' || 'xls' => Sh04Format.excel,
-  'ppt' || 'pptx' || 'powerpoint' => Sh04Format.powerpoint,
-  _ => Sh04Format.unknown,
-};
-
-class _SharedProjection {
-  const _SharedProjection({
-    required this.canonicalEvidenceReference,
-    required this.integrityDigest,
-    required this.assurance,
-    required this.originVerified,
-  });
-
-  final String canonicalEvidenceReference;
-  final String integrityDigest;
-  final String assurance;
-  final bool originVerified;
-
-  static _SharedProjection? tryParse(
-    Object? value, {
-    required Sh04Scope scope,
-    bool requireOrigin = false,
-  }) {
-    final projection = _asMap(value);
-    if (projection == null ||
-        projection['contract'] !=
-            'lumenis.shared.experience-row-projection' ||
-        projection['version'] != 2 ||
-        projection['read_allowed'] != true) {
-      return null;
-    }
-    final projectionScope = _asMap(projection['scope']);
-    if (projectionScope == null ||
-        !_projectionScopeMatches(projectionScope, scope)) {
-      return null;
-    }
-    final evidence = _asMap(projection['evidence']);
-    final canonicalReference = _safeProjectionReference(
-      evidence?['canonical_reference'],
-    );
-    if (canonicalReference == null) return null;
-    final integrity = _asMap(projection['integrity']);
-    if (integrity == null ||
-        integrity['integrity_version'] != 2 ||
-        integrity['verified'] != true ||
-        integrity['lineage_verified'] != true) {
-      return null;
-    }
-    final assurance = _string(integrity['assurance']);
-    if (assurance == null ||
-        !const {'writer-authenticated', 'content-integrity-only'}
-            .contains(assurance)) {
-      return null;
-    }
-    final algorithm = _string(integrity['algorithm'])?.toLowerCase();
-    final digest = _safeProjectionDigest(integrity['digest']);
-    final consistentAssurance =
-        (assurance == 'writer-authenticated' && algorithm == 'hmac-sha256') ||
-        (assurance == 'content-integrity-only' && algorithm == 'sha256');
-    if (digest == null || !consistentAssurance) {
-      return null;
-    }
-    final originVerified = projection['origin_verified'] == true;
-    if (requireOrigin && !originVerified) return null;
-    return _SharedProjection(
-      canonicalEvidenceReference: canonicalReference,
-      integrityDigest: digest,
-      assurance: assurance,
-      originVerified: originVerified,
-    );
+bool _isServerSharedContext(Map<String, dynamic>? value) {
+  if (value == null ||
+      value['scope_kind'] != 'shared_workspace' ||
+      value['version'] != 1 ||
+      value.keys.any(
+        (key) => const {
+          'domain_id',
+          'product_id',
+          'subject_id',
+          'brand_focus_id',
+          'global_scope',
+        }.contains(key),
+      )) {
+    return false;
   }
+  final actorContext =
+      value.keys.toSet().difference(const {
+        'scope_kind',
+        'version',
+        'actor_id',
+      }).isEmpty &&
+      value['actor_id'] is int &&
+      value['actor_id'] > 0;
+  final localPrincipalContext =
+      value.keys.toSet().difference(const {
+        'scope_kind',
+        'version',
+        'principal_kind',
+        'principal_ref',
+      }).isEmpty &&
+      value['principal_kind'] is String &&
+      (value['principal_kind'] as String).isNotEmpty &&
+      value['principal_ref'] is String &&
+      (value['principal_ref'] as String).isNotEmpty;
+  return actorContext || localPrincipalContext;
 }
 
-bool _projectionScopeMatches(Map<String, dynamic> raw, Sh04Scope scope) {
-  final mode = _string(raw['mode'] ?? raw['scope_mode'])?.toUpperCase();
-  if (scope.isGlobal) {
-    return mode == 'GLOBAL_ALL' &&
-        raw['global_all_granted'] == true &&
-        !_present(raw['subject_id']) &&
-        !_present(raw['brand_focus_id']) &&
-        !_present(raw['focus_id']);
-  }
-  if (mode != 'FOCUS' || raw['global_all_granted'] == true) return false;
-  final domain = _string(raw['domain_id'] ?? raw['domain'])?.toUpperCase();
-  final ids = <String?>[
-    _string(raw['subject_id']),
-    _string(raw['brand_focus_id']),
-    _string(raw['focus_id']),
-  ].whereType<String>().toList(growable: false);
-  if (ids.length != 1) return false;
-  return (domain == scope.domain || (domain == 'ZBMP' && scope.domain == 'BMP')) &&
-      ids.single == scope.focusId;
-}
-
-String? _safeProjectionReference(Object? value) {
-  final reference = _string(value);
-  if (reference == null || reference.length > 200) return null;
-  return RegExp(r'^evidence:canonical:[A-Za-z0-9._:-]+$').hasMatch(reference)
-      ? reference
-      : null;
-}
-
-String? _safeProjectionDigest(Object? value) {
-  final digest = _string(value);
-  if (digest == null || digest.length > 200) return null;
-  return RegExp(r'^[a-f0-9]{64}$').hasMatch(digest)
-      ? digest
-      : null;
-}
+bool _isGenericReportContract(Map<String, dynamic>? value) =>
+    value != null &&
+    value.length == 3 &&
+    value['id'] == 'lumenis.saved-work' &&
+    value['version'] == '1' &&
+    value['required_payload_paths'] is List &&
+    (value['required_payload_paths'] as List).isEmpty;
 
 Map<String, dynamic>? _asMap(Object? value) {
   if (value is! Map) return null;
@@ -349,20 +246,12 @@ Map<String, dynamic>? _asMap(Object? value) {
 String? _string(Object? value) =>
     value is String && value.trim().isNotEmpty ? value.trim() : null;
 
-bool _present(Object? value) => _string(value) != null;
-
-int? _nonNegativeInt(Object? value) =>
-    value is int && value >= 0 ? value : null;
-
-String? _safeText(Object? value) {
-  final text = _string(value);
-  if (text == null || text.length > 220 || RegExp(r'[<>]').hasMatch(text)) {
-    return null;
-  }
-  if (RegExp(
-    r'(api|database|sqlite|\bdb\b|provider|permission|owner|runtime|contract|viewmodel|canonical|subject|brandfocus|\bcth\b|\bbmp\b|\bzbmp\b|token|cookie|secret|internal|private|path|https?)',
-    caseSensitive: false,
-  ).hasMatch(text)) {
+String? _userText(Object? value, {required int maxLength}) {
+  final text = value is String ? value : null;
+  if (text == null ||
+      text.trim().isEmpty ||
+      text.length > maxLength ||
+      RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]').hasMatch(text)) {
     return null;
   }
   return text;

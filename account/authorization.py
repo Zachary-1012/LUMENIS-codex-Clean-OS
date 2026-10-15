@@ -1,13 +1,13 @@
 """
 account/authorization.py — 双域授权矩阵
 
-成员授权必须带 product_id(ZBMP/CTH/SYSTEM) + module + action(read/write)。
+成员授权必须带 product_id(ZBMP/CTH/SHARED/SYSTEM) + module + action(read/write)。
 与 permission_gate 打通：ZBMP Analyst 不天然拥有 CTH 权限。
 AI 不参与授权判定，完全由规则+DB状态决定。
 """
 from .models import get_db
 
-VALID_PRODUCTS = ("ZBMP", "CTH", "SYSTEM")
+VALID_PRODUCTS = ("ZBMP", "CTH", "SYSTEM", "SHARED")
 VALID_ACTIONS = ("read", "write")
 
 
@@ -84,7 +84,7 @@ def check_dual_domain_permission(user_id: int, product_id: str, module: str = "*
     """
     双域权限校验。
     owner/admin 拥有全部权限；member(user) 按授权矩阵校验。
-    ZBMP 权限 ≠ CTH 权限。
+    ZBMP 权限 ≠ CTH 权限；SHARED 工作区授权按自身模块执行，不映射到业务域。
     """
     product_id = (product_id or "").upper()
     action = (action or "read").lower()

@@ -63,6 +63,17 @@ void main() {
         'Available business subjects · 12',
       );
       expect(english.text('context.mode.global_all'), 'All accessible scope');
+      expect(
+        LumenisLocalizations(
+          const Locale('zh', 'CN'),
+        ).text('sh01.media.import'),
+        '导入素材',
+      );
+      expect(english.text('sh01.media.import'), 'Import media');
+      expect(
+        LumenisLocalizations(const Locale('ko')).text('sh01.media.import'),
+        '미디어 가져오기',
+      );
     },
   );
 }

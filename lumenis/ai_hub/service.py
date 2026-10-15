@@ -55,7 +55,11 @@ def _get_db():
 
 
 def status():
-    """Report the owned runtime without probing legacy local or cloud providers."""
+    """Report the selected Gateway route without discovery or inference calls."""
+    from lumenis.system.ai_gateway import user_api_adapter
+    if user_api_adapter.is_selected():
+        return {**user_api_adapter.status(), "enabled": user_api_adapter.is_configured(),
+                "rule_fallback": False, "ok": True}
     try:
         runtime = intelligence.owned_inference_status()
     except Exception:
@@ -137,7 +141,7 @@ def _completed(result):
 
 
 def chat(question: str, history=None, scope: str = "all", *, source_scope=None) -> dict:
-    """Retrieve product context and return a result only from the owned runtime."""
+    """Chat through the explicitly selected Gateway, without business data export."""
     t0 = time.time()
     question = (question or "").strip()
     if not question:
@@ -165,13 +169,48 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None) 
     targets = [{"id": f.get("id"), "label": f.get("label"), "page": f.get("page")}
                for f in hits.get("functions", [])[:5]]
     st = status()
+    conversation = question
+    if isinstance(history, list):
+        turns = []
+        for item in history[-6:]:
+            if not isinstance(item, dict) or item.get("role") not in {"user", "human", "assistant"}:
+                continue
+            content = item.get("content")
+            if isinstance(content, str) and content.strip():
+                role = "用户" if item["role"] in {"user", "human"} else "LUMENIS"
+                turns.append(f"{role}：{content[:800]}")
+        if turns:
+            conversation = "最近对话（用户提供，非核验事实）：\n" + "\n".join(turns) + "\n当前问题：" + question
     prompt = sys_prompt + "\n\n用户问题：" + question
-    result = _run_owned(prompt, "conversation")
-    completed = _completed(result)
-    provider = "owned"
+    from lumenis.system.ai_gateway import user_api_adapter
+    usage = None
+    if user_api_adapter.is_selected():
+        # Only user-entered conversation and static routing metadata go out.
+        # Configuring an API does not grant export of stored business sources.
+        content, transport, _meta = intelligence.chat(
+            sys_prompt, conversation, external_user_input=True,
+        )
+        provider_usage = _meta.get("usage") if isinstance(_meta, dict) else None
+        if isinstance(provider_usage, dict):
+            usage = {
+                key: value for key in ("prompt_tokens", "completion_tokens", "total_tokens")
+                if type(value := provider_usage.get(key)) is int and value >= 0
+            } or None
+        completed = transport == "user_api" and isinstance(content, str) and bool(content.strip())
+        provider = "user_api"
+        result = {"ok": completed, "provider": provider, "analysis": content if completed else None,
+                  "status": "COMPLETED" if completed else "UNAVAILABLE",
+                  "code": None if completed else transport.upper()}
+    else:
+        result = _run_owned(prompt, "conversation")
+        completed = _completed(result)
+        provider = "owned"
     record_learning("chat", {
-        "q": question[:120], "provider": provider, "scope": scope,
+        # An inference request grants neither corpus admission nor retention
+        # of raw conversation. Keep operational counts, never input/output.
+        "provider": provider, "scope": scope if scope in MODULE_HINTS else "all",
         "status": result.get("status"), "code": result.get("code"),
+        "usage": usage,
     })
     return {
         "ok": completed,
@@ -181,6 +220,7 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None) 
         "code": None if completed else (result.get("code") or "OWNED_ANALYSIS_NOT_COMPLETED"),
         "reply": _owned_result_text(result) if completed else None,
         "provider": provider, "model": st.get("model_id"), "runtime": st.get("state"),
+        "usage": usage,
         "used_rule_fallback": False, "fallback_allowed": False, "targets": targets,
         "context": context,
         "source_context": {
@@ -211,7 +251,7 @@ def analyze_module(module: str, text: str, meta=None) -> dict:
         "单一来源指控保持待证实，不要夸大。"
     )
     user = f"模块附加信息：{json.dumps(meta, ensure_ascii=False)[:800]}\n待分析内容：\n{text[:6000]}"
-    result = _run_owned(user, "module_analysis")
+    result = _run_owned(sys_prompt + "\n\n" + user, "module_analysis")
     analysis = result.get("analysis") if isinstance(result, dict) else None
     completed = _completed(result) and isinstance(analysis, dict)
     if completed:

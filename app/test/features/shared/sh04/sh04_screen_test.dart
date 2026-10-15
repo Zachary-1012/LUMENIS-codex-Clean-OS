@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
@@ -8,6 +11,72 @@ import 'package:lumenis_app/features/shared/sh04/sh04_snapshot.dart';
 import '../shared_test_support.dart';
 
 void main() {
+  testWidgets('writes, reopens and revises a Shared report version', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _FakeSh04Repository();
+    await tester.pumpWidget(_app(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.text('共享工作区'), findsOneWidget);
+    expect(find.text('共享工作区中还没有保存的报告。'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('sh04-create-report')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('sh04-report-title')), '季度复盘');
+    await tester.enterText(
+      find.byKey(const Key('sh04-report-markdown')),
+      '# 复盘\n\n这是用户撰写的报告。',
+    );
+    await tester.tap(find.byKey(const Key('sh04-save-report')));
+    await tester.pumpAndSettle();
+
+    expect(repository.saveCount, 1);
+    expect(repository.items.single.version, 1);
+    expect(find.text('季度复盘'), findsWidgets);
+    expect(find.textContaining('这是用户撰写的报告。'), findsOneWidget);
+
+    await tester.tap(find.text('季度复盘').first);
+    await tester.pumpAndSettle();
+    expect(repository.reopenCount, 1);
+
+    await tester.tap(find.byKey(const Key('sh04-revise-report')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('sh04-report-title')),
+      '季度复盘（修订）',
+    );
+    await tester.enterText(
+      find.byKey(const Key('sh04-report-markdown')),
+      '# 复盘\n\n补充了用户确认的结论。',
+    );
+    await tester.enterText(
+      find.byKey(const Key('sh04-revision-reason')),
+      '补充已确认的结论',
+    );
+    await tester.tap(find.byKey(const Key('sh04-save-report')));
+    await tester.pumpAndSettle();
+
+    expect(repository.revisionCount, 1);
+    expect(repository.items, hasLength(2));
+    expect(repository.items.first.version, 1);
+    expect(repository.items.last.version, 2);
+    expect(
+      repository.items.last.parentArtifactId,
+      repository.items.first.internalId,
+    );
+    expect(find.text('季度复盘'), findsOneWidget);
+    expect(find.text('季度复盘（修订）'), findsWidgets);
+    expect(find.textContaining('补充了用户确认的结论。'), findsOneWidget);
+
+    await tester.tap(find.text('季度复盘').first);
+    await tester.pumpAndSettle();
+    expect(repository.reopenCount, 2);
+    expect(find.text('季度复盘'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'authentication and access failures remain distinct and retryable in all locales',
     (tester) async {
@@ -59,7 +128,6 @@ void main() {
           expect(find.text(copy.retry), findsOneWidget);
           expect(find.textContaining('private access failure'), findsNothing);
 
-          await tester.ensureVisible(find.text(copy.retry));
           await tester.tap(find.text(copy.retry));
           await tester.pumpAndSettle();
 
@@ -70,51 +138,17 @@ void main() {
       }
     },
   );
-  testWidgets('output center shows only reopenable exact-scope artifacts', (
+
+  testWidgets('legacy unscoped response fails closed without output', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 1000));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    await tester.pumpWidget(_app(_FakeSh04Repository(_readyResponse)));
+    final repository = _FakeSh04Repository()
+      ..loadError = const FormatException('unscoped legacy response');
+    await tester.pumpWidget(_app(repository));
     await tester.pumpAndSettle();
 
-    expect(find.text('报告导出中心'), findsOneWidget);
-    expect(find.text('成果队列'), findsOneWidget);
-    expect(find.text('成果预览'), findsOneWidget);
-    expect(find.text('周报预览'), findsWidgets);
-    expect(find.text('公开资料摘要'), findsOneWidget);
-    expect(find.text('export-private-id'), findsNothing);
-    expect(find.text('wrong-scope'), findsNothing);
-    expectNoSharedRawMarkers(tester);
-    expect(tester.takeException(), isNull);
-
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    await tester.pumpAndSettle();
-    expect(find.text('成果预览'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('legacy unscoped reports are blocked without a fake download', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    final unscoped = <String, dynamic>{
-      'ok': true,
-      'screen': 'SH-04',
-      'source': 'runtime',
-      'bound': true,
-      'reports': [
-        {'report': 'not-scoped', 'state': 'READY'},
-      ],
-    };
-    await tester.pumpWidget(_app(_FakeSh04Repository(unscoped)));
-    await tester.pumpAndSettle();
-
-    expect(find.text('成果中心暂不显示'), findsOneWidget);
-    expect(find.text('not-scoped'), findsNothing);
+    expect(find.text('成果中心暂不可用'), findsOneWidget);
+    expect(find.text('unscoped legacy response'), findsNothing);
     expect(find.text('下载'), findsNothing);
     expectNoSharedRawMarkers(tester);
     expect(tester.takeException(), isNull);
@@ -123,11 +157,8 @@ void main() {
   testWidgets('Korean title uses the shared localization integration key', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1024, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
     await tester.pumpWidget(
-      _app(_FakeSh04Repository(_readyResponse), locale: const Locale('ko')),
+      _app(_FakeSh04Repository(), locale: const Locale('ko')),
     );
     await tester.pumpAndSettle();
 
@@ -136,119 +167,113 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('export parser requires exact scope and a reopenable artifact', () {
-    final focusResponse = <String, dynamic>{
-      ..._readyResponse,
-      'scope': {
-        'mode': 'FOCUS',
-        'domain_id': 'CTH',
-        'subject_id': 'subject-private-2',
-        'display_name': '广州太古汇',
-      },
-      'data': {
-        'exports': [
-          {
-            'id': 'focus-export',
-            'title': '焦点周报',
-            'format': 'markdown',
-            'state': 'READY',
-            'projection': sharedProjection(
-              scope: {
-                'mode': 'FOCUS',
-                'domain_id': 'CTH',
-                'subject_id': 'subject-private-2',
-              },
-            ),
-            'scope_verified': true,
-            'evidence_backed': true,
-            'permission': {'read': true, 'decision': 'ALLOW'},
-            'lineage_verified': true,
-            'integrity_verified': true,
-            'scope': {
-              'mode': 'FOCUS',
-              'domain_id': 'CTH',
-              'subject_id': 'subject-private-2',
-            },
-            'artifact': {'reopenable': true, 'preview': '焦点摘要'},
-          },
-          {
-            'id': 'not-exact',
-            'title': '不应显示',
-            'format': 'markdown',
-            'state': 'READY',
-            'projection': sharedProjection(
-              scope: {
-                'mode': 'FOCUS',
-                'domain_id': 'CTH',
-                'subject_id': 'other-subject',
-              },
-            ),
-            'scope_verified': true,
-            'evidence_backed': true,
-            'permission': {'read': true, 'decision': 'ALLOW'},
-            'lineage_verified': true,
-            'integrity_verified': true,
-            'scope': {
-              'mode': 'FOCUS',
-              'domain_id': 'CTH',
-              'subject_id': 'other-subject',
-            },
-            'artifact': {'reopenable': true, 'preview': 'wrong-scope'},
-          },
-        ],
-      },
-    };
-    final snapshot = Sh04Snapshot.fromResponse(focusResponse);
-    expect(snapshot.scope.focusId, 'subject-private-2');
-    expect(snapshot.exports.single.internalId, 'focus-export');
-    expect(snapshot.exports.single.reopenable, isTrue);
-    expect(snapshot.exports.single.preview, '焦点摘要');
+  testWidgets('Shared scope and saved states use the selected locale', (
+    tester,
+  ) async {
+    const locales = [
+      (
+        locale: Locale('zh', 'CN'),
+        scope: '共享工作区',
+        saved: '已保存',
+        unavailable: '暂不可用',
+      ),
+      (
+        locale: Locale('en'),
+        scope: 'Shared workspace',
+        saved: 'Saved',
+        unavailable: 'Unavailable',
+      ),
+      (
+        locale: Locale('ko'),
+        scope: '공유 작업 공간',
+        saved: '저장됨',
+        unavailable: '사용할 수 없음',
+      ),
+    ];
 
-    final missingScope = Map<String, dynamic>.from(_readyResponse);
-    final missingScopeData = Map<String, dynamic>.from(
-      _readyResponse['data'] as Map,
-    );
-    final missingScopeRow = Map<String, dynamic>.from(
-      (missingScopeData['exports'] as List).first as Map,
-    )..remove('projection');
-    missingScopeData['exports'] = [missingScopeRow];
-    missingScope['data'] = missingScopeData;
-    expect(Sh04Snapshot.fromResponse(missingScope).exports, isEmpty);
+    for (final copy in locales) {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      final repository = _FakeSh04Repository()
+        ..items.addAll([
+          _makeExport(
+            index: 1,
+            title: 'Saved report',
+            markdown: '# Saved report',
+            version: 1,
+          ),
+          _makeExport(
+            index: 2,
+            title: 'Unavailable report',
+            markdown: '# Unavailable report',
+            version: 1,
+            state: Sh04ExportState.unavailable,
+          ),
+        ]);
+      await tester.pumpWidget(_app(repository, locale: copy.locale));
+      await tester.pumpAndSettle();
 
-    final missingPermission = Map<String, dynamic>.from(_readyResponse);
-    final missingPermissionData = Map<String, dynamic>.from(
-      _readyResponse['data'] as Map,
-    );
-    final missingPermissionRow = Map<String, dynamic>.from(
-      (missingPermissionData['exports'] as List).first as Map,
-    );
-    final missingPermissionProjection = Map<String, dynamic>.from(
-      missingPermissionRow['projection'] as Map,
-    )..['read_allowed'] = false;
-    missingPermissionRow['projection'] = missingPermissionProjection;
-    missingPermissionData['exports'] = [missingPermissionRow];
-    missingPermission['data'] = missingPermissionData;
-    expect(Sh04Snapshot.fromResponse(missingPermission).exports, isEmpty);
-
-    final missingIntegrity = Map<String, dynamic>.from(_readyResponse);
-    final missingIntegrityData = Map<String, dynamic>.from(
-      _readyResponse['data'] as Map,
-    );
-    final missingIntegrityRow = Map<String, dynamic>.from(
-      (missingIntegrityData['exports'] as List).first as Map,
-    );
-    final missingIntegrityProjection = Map<String, dynamic>.from(
-      missingIntegrityRow['projection'] as Map,
-    );
-    missingIntegrityProjection['integrity'] = <String, dynamic>{
-      ...(missingIntegrityProjection['integrity'] as Map),
-      'integrity_version': 1,
-    };
-    missingIntegrityRow['projection'] = missingIntegrityProjection;
-    missingIntegrityData['exports'] = [missingIntegrityRow];
-    missingIntegrity['data'] = missingIntegrityData;
-    expect(Sh04Snapshot.fromResponse(missingIntegrity).exports, isEmpty);
+      expect(find.text(copy.scope), findsOneWidget);
+      expect(find.text(copy.saved), findsOneWidget);
+      expect(find.text(copy.unavailable), findsOneWidget);
+      if (copy.locale.languageCode != 'zh') {
+        expect(find.text('共享工作区'), findsNothing);
+        expect(find.text('已保存'), findsNothing);
+        expect(find.text('暂不可用'), findsNothing);
+      }
+      expect(tester.takeException(), isNull);
+    }
   });
+
+  test(
+    'SavedWork parser requires exact Shared scope and preserves citations',
+    () {
+      final citation = <String, dynamic>{
+        'source_id': 'SRC-100',
+        'source_scope': {'domain_id': 'CTH', 'subject_id': 'subject-1'},
+      };
+      final item = _savedWorkItem(citations: [citation]);
+      final parsed = Sh04Export.fromSavedWorkItem(item);
+      expect(parsed.title, 'Shared report');
+      expect(parsed.workId, 'WORK-000000000000000000000001');
+      expect(parsed.citations.single, citation);
+      expect(parsed.citations.single['source_scope'], citation['source_scope']);
+
+      final mixedContext = _savedWorkItem()
+        ..['document']['context']['domain_id'] = 'CTH';
+      expect(
+        () => Sh04Export.fromSavedWorkItem(mixedContext),
+        throwsFormatException,
+      );
+
+      final mixedReturnScope = _savedWorkItem()
+        ..['return_ref']['scope']['product_id'] = 'ZBMP';
+      expect(
+        () => Sh04Export.fromSavedWorkItem(mixedReturnScope),
+        throwsFormatException,
+      );
+
+      final missingParent = _savedWorkItem(version: 2);
+      expect(
+        () => Sh04Export.fromSavedWorkItem(missingParent),
+        throwsFormatException,
+      );
+
+      final response = <String, dynamic>{
+        'ok': true,
+        'result': {
+          'items': [item],
+          'verification_complete': true,
+          'unverified_candidates': 0,
+          'has_more': false,
+          'next_cursor': null,
+        },
+      };
+      final snapshot = Sh04Snapshot.fromResponse(response);
+      expect(snapshot.scope, Sh04Scope.sharedWorkspace);
+      expect(snapshot.exports.single.citations.single, citation);
+    },
+  );
 }
 
 Widget _app(
@@ -260,23 +285,88 @@ Widget _app(
 );
 
 class _FakeSh04Repository implements Sh04Repository {
-  _FakeSh04Repository(this.response);
-
-  final Map<String, dynamic> response;
+  final List<Sh04Export> items = [];
+  Object? loadError;
+  int saveCount = 0;
+  int reopenCount = 0;
+  int revisionCount = 0;
 
   @override
-  Future<Sh04Snapshot> loadExports() async =>
-      Sh04Snapshot.fromResponse(response);
+  Future<Sh04Snapshot> loadExports({String? cursor}) async {
+    if (loadError != null) throw loadError!;
+    return Sh04Snapshot(
+      scope: Sh04Scope.sharedWorkspace,
+      exports: List.unmodifiable(items),
+      verificationComplete: true,
+      unverifiedCandidates: 0,
+      hasMore: false,
+      nextCursor: null,
+    );
+  }
+
+  @override
+  Future<Sh04Export> saveReport({
+    required String title,
+    required String markdown,
+    required String requestId,
+  }) async {
+    saveCount++;
+    final item = _makeExport(
+      index: 1,
+      title: title,
+      markdown: markdown,
+      version: 1,
+    );
+    items.add(item);
+    return item;
+  }
+
+  @override
+  Future<Sh04Export> reopen(String artifactId) async {
+    reopenCount++;
+    return items.singleWhere((item) => item.internalId == artifactId);
+  }
+
+  @override
+  Future<Sh04Export> reviseReport({
+    required Sh04Export parent,
+    required String title,
+    required String markdown,
+    required String reason,
+    required String requestId,
+  }) async {
+    revisionCount++;
+    final revised = _makeExport(
+      index: 2,
+      title: title,
+      markdown: markdown,
+      version: parent.version + 1,
+      workId: parent.workId,
+      parentArtifactId: parent.internalId,
+    );
+    items.add(revised);
+    return revised;
+  }
+
+  @override
+  Future<SavedWorkExportFile> export({
+    required String artifactId,
+    required String format,
+  }) async => SavedWorkExportFile(
+    bytes: Uint8List.fromList(utf8.encode('exported $format')),
+    filename: 'report.$format',
+    mediaType: 'text/markdown; charset=utf-8',
+  );
 }
 
-class _RecoveringSh04Repository implements Sh04Repository {
+class _RecoveringSh04Repository extends _FakeSh04Repository {
   _RecoveringSh04Repository(this.statusCode);
 
   final int statusCode;
   int calls = 0;
 
   @override
-  Future<Sh04Snapshot> loadExports() async {
+  Future<Sh04Snapshot> loadExports({String? cursor}) async {
     calls++;
     if (calls == 1) {
       throw LumenisCoreException(
@@ -284,75 +374,74 @@ class _RecoveringSh04Repository implements Sh04Repository {
         statusCode: statusCode,
       );
     }
-    return Sh04Snapshot.fromResponse(_readyResponse);
+    return super.loadExports(cursor: cursor);
   }
 }
+
+Sh04Export _makeExport({
+  required int index,
+  required String title,
+  required String markdown,
+  required int version,
+  Sh04ExportState state = Sh04ExportState.ready,
+  String workId = 'WORK-000000000000000000000001',
+  String? parentArtifactId,
+}) => Sh04Export(
+  internalId: 'ART-${index.toString().padLeft(16, '0')}',
+  title: title,
+  state: state,
+  markdown: markdown,
+  sha256: index.toString().padLeft(64, '0'),
+  workId: workId,
+  version: version,
+  parentArtifactId: parentArtifactId,
+  citations: const [],
+  generatedAt: '2026-10-16T00:00:00Z',
+);
+
+Map<String, dynamic> _savedWorkItem({
+  int version = 1,
+  String? parentArtifactId,
+  String? parentSha256,
+  List<Map<String, dynamic>> citations = const [],
+}) => {
+  'artifact': {
+    'artifact_id': 'ART-0000000000000001',
+    'sha256':
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    'created_at': '2026-10-16T00:00:00Z',
+  },
+  'document': {
+    'schema': 'lumenis.saved-work/v1',
+    'kind': 'report',
+    'work_id': 'WORK-000000000000000000000001',
+    'version': version,
+    'title': 'Shared report',
+    'markdown': '# Shared report\n\nSaved content.',
+    'context': {'scope_kind': 'shared_workspace', 'version': 1, 'actor_id': 19},
+    'contract': {
+      'id': 'lumenis.saved-work',
+      'version': '1',
+      'required_payload_paths': <String>[],
+    },
+    'citations': citations,
+    'parent_artifact_id': parentArtifactId,
+    'parent_sha256': parentSha256,
+  },
+  'return_ref': {
+    'artifact_id': 'ART-0000000000000001',
+    'work_id': 'WORK-000000000000000000000001',
+    'version': version,
+    'scope': {'scope_kind': 'shared_workspace', 'version': 1},
+  },
+};
 
 void _expectNoAuthOrNetworkAdvice(
   WidgetTester tester,
   List<String> forbiddenTerms,
 ) {
-  final visibleText = tester
-      .widgetList<Text>(find.byType(Text))
-      .map((text) => text.data ?? text.textSpan?.toPlainText() ?? '')
-      .join('\n')
-      .toLowerCase();
+  final visibleText = visibleSharedCopy(tester).toLowerCase();
   for (final term in forbiddenTerms) {
     expect(visibleText, isNot(contains(term.toLowerCase())));
   }
 }
-
-final _readyResponse = sharedRuntimeResponse('SH-04', {
-  'exports': [
-    {
-      'id': 'export-private-id',
-      'title': '周报预览',
-      'format': 'markdown',
-      'state': 'READY',
-      'projection': sharedProjection(scope: {'mode': 'GLOBAL_ALL'}),
-      'scope_verified': true,
-      'evidence_backed': true,
-      'permission': {'read': true, 'decision': 'ALLOW'},
-      'lineage_verified': true,
-      'integrity_verified': true,
-      'scope': {'mode': 'GLOBAL_ALL', 'global': true},
-      'artifact': {
-        'reopenable': true,
-        'preview': '公开资料摘要',
-        'private_path': r'C:\private\path',
-      },
-      'evidence_count': 2,
-      'generated_at': '2026-09-22',
-    },
-    {
-      'id': 'not-reopenable',
-      'title': '暂不可重新打开',
-      'format': 'csv',
-      'state': 'READY',
-      'projection': sharedProjection(scope: {'mode': 'GLOBAL_ALL'}),
-      'scope_verified': true,
-      'evidence_backed': true,
-      'permission': {'read': true, 'decision': 'ALLOW'},
-      'lineage_verified': true,
-      'integrity_verified': true,
-      'scope': {'mode': 'GLOBAL_ALL', 'global': true},
-      'artifact': {'reopenable': false, 'preview': 'raw-secret-marker'},
-    },
-    {
-      'id': 'wrong-scope',
-      'title': '不应显示',
-      'format': 'pdf',
-      'state': 'READY',
-      'projection': sharedProjection(
-        scope: {'mode': 'FOCUS', 'domain_id': 'CTH', 'subject_id': 'x'},
-      ),
-      'scope_verified': true,
-      'evidence_backed': true,
-      'permission': {'read': true, 'decision': 'ALLOW'},
-      'lineage_verified': true,
-      'integrity_verified': true,
-      'scope': {'mode': 'FOCUS', 'domain_id': 'CTH', 'subject_id': 'x'},
-      'artifact': {'reopenable': true, 'preview': 'wrong-scope'},
-    },
-  ],
-});
