@@ -1,0 +1,471 @@
+"""Isolated regressions for truthful Runtime and security diagnostics.
+
+These tests compile only the target Flask handlers from source. Importing
+``app.py`` would run application database migrations and startup setup, so this
+file deliberately does not import the application entrypoint.
+"""
+
+from __future__ import annotations
+
+import ast
+import base64
+import json
+import secrets
+import sys
+import types
+from datetime import datetime
+from pathlib import Path
+
+import pytest
+from flask import Flask, jsonify, request
+
+_ROOT = Path(__file__).resolve().parents[1]
+_APP_SOURCE = _ROOT / "app.py"
+_AGG_SOURCE = _ROOT / "lumenis_agg_api.py"
+
+
+def _load_function(source_path: Path, function_name: str, **extra_globals):
+    """Compile one function without importing its module or running decorators."""
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    function_node = next(
+        node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == function_name
+    )
+    function_node.decorator_list = []
+    module = ast.Module(body=[function_node], type_ignores=[])
+    ast.fix_missing_locations(module)
+    namespace = {
+        "datetime": datetime,
+        "json": json,
+        "jsonify": jsonify,
+        "request": request,
+        "Path": Path,
+        **extra_globals,
+    }
+    exec(compile(module, str(source_path), "exec"), namespace)  # noqa: S102 - importing app.py runs DB startup
+    return namespace[function_name], namespace
+
+
+def _client_for(source_path: Path, function_name: str, route: str, **extra_globals):
+    flask_app = Flask(f"isolated_{function_name}")
+    function, _ = _load_function(
+        source_path, function_name, app=flask_app, **extra_globals
+    )
+    flask_app.add_url_rule(route, view_func=function)
+    return flask_app.test_client(), flask_app
+
+
+@pytest.mark.parametrize(
+    ("function_name", "route"),
+    [
+        ("api_viz_overview_stats", "/api/viz/overview.stats"),
+        ("api_viz_risk_active", "/api/viz/risk.active"),
+        ("api_viz_overview_trend", "/api/viz/overview.trend"),
+    ],
+)
+def test_visualization_database_errors_keep_500_and_use_flask_logger(
+    function_name: str, route: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    def unavailable_db():
+        raise RuntimeError("isolated database unavailable")
+
+    client, flask_app = _client_for(
+        _APP_SOURCE, function_name, route, get_db=unavailable_db
+    )
+
+    with caplog.at_level("WARNING", logger=flask_app.logger.name):
+        response = client.get(route)
+
+    assert response.status_code == 500
+    assert response.get_json()["success"] is False
+    assert any("error" in record.getMessage() for record in caplog.records)
+
+
+def test_malformed_system_config_uses_flask_logger_and_keeps_defaults(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    config_path = tmp_path / "system_config.json"
+    config_path.write_text("{malformed", encoding="utf-8")
+    flask_app = Flask("isolated_config")
+    load_config, _ = _load_function(
+        _APP_SOURCE,
+        "_load_config",
+        app=flask_app,
+        CONFIG_FILE=config_path,
+    )
+
+    with caplog.at_level("WARNING", logger=flask_app.logger.name):
+        result = load_config()
+
+    assert result == {
+        "company_domain": "",
+        "company_name": None,
+        "push_emails": [],
+        "cdp_url": None,
+        "auto_interval": 90,
+        "daily_push_hour": 9,
+    }
+    assert any("Failed to load system config" in record.getMessage() for record in caplog.records)
+
+
+def test_security_scan_without_quick_callable_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scanner = types.ModuleType("security_scanner")
+    monkeypatch.setitem(sys.modules, "security_scanner", scanner)
+    client, _ = _client_for(
+        _APP_SOURCE, "api_security_scan", "/api/security/scan"
+    )
+
+    response = client.get("/api/security/scan")
+
+    assert response.status_code == 503
+    payload = response.get_json()
+    assert payload["ok"] is False
+    assert payload["status"] == "UNAVAILABLE"
+    assert payload["code"] == "QUICK_SECURITY_SCAN_UNAVAILABLE"
+    assert "data" not in payload
+    assert "users" not in payload
+    assert "roles" not in payload
+    assert "audit_today" not in payload
+
+
+def test_security_scan_preserves_existing_quick_scan_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scanner = types.ModuleType("security_scanner")
+    scanner.quick_scan = lambda: {"status": "complete", "findings": 2}
+    monkeypatch.setitem(sys.modules, "security_scanner", scanner)
+    client, _ = _client_for(
+        _APP_SOURCE, "api_security_scan", "/api/security/scan"
+    )
+
+    response = client.get("/api/security/scan")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "ok": True,
+        "data": {"status": "complete", "findings": 2},
+        "source": "security_scanner",
+    }
+
+
+def test_security_scan_exception_is_an_error_without_synthetic_counts(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    scanner = types.ModuleType("security_scanner")
+
+    def fail_scan(*, quick_mode: bool):
+        assert quick_mode is True
+        raise RuntimeError("isolated scanner failure")
+
+    scanner.run_scan = fail_scan
+    monkeypatch.setitem(sys.modules, "security_scanner", scanner)
+    client, flask_app = _client_for(
+        _APP_SOURCE, "api_security_scan", "/api/security/scan"
+    )
+
+    with caplog.at_level("ERROR", logger=flask_app.logger.name):
+        response = client.get("/api/security/scan")
+
+    assert response.status_code == 500
+    payload = response.get_json()
+    assert payload["ok"] is False
+    assert payload["status"] == "ERROR"
+    assert payload["code"] == "QUICK_SECURITY_SCAN_FAILED"
+    assert not {"users", "roles", "audit_today", "domain_isolation"} & payload.keys()
+    assert any("security scan failed" in record.getMessage() for record in caplog.records)
+
+
+class _FakeDLQ:
+    def stats(self):
+        return {"total": 2, "pending": 2}
+
+
+class _FakeGuardian:
+    def __init__(self, workers: list[dict], health: dict):
+        self._workers = workers
+        self._health = health
+        self.dlq = _FakeDLQ()
+
+    def list_lifecycle_workers(self):
+        return self._workers
+
+    def health_check(self):
+        return self._health
+
+
+def _runtime_client(
+    monkeypatch: pytest.MonkeyPatch,
+    guardian: _FakeGuardian,
+    *,
+    default_guardian: _FakeGuardian | None = None,
+    requested_names: list[str] | None = None,
+):
+    runtime_guardian = types.ModuleType("runtime_guardian")
+    guardians = {"app_main": guardian}
+    if default_guardian is not None:
+        guardians["default"] = default_guardian
+
+    def get_guardian(name: str):
+        if requested_names is not None:
+            requested_names.append(name)
+        return guardians[name]
+
+    runtime_guardian.get_guardian = get_guardian
+    monkeypatch.setitem(sys.modules, "runtime_guardian", runtime_guardian)
+    return _client_for(
+        _AGG_SOURCE,
+        "system_runtime",
+        "/api/system/runtime",
+        platform=types.SimpleNamespace(
+            python_version=lambda: "test-python",
+            system=lambda: "test-os",
+            machine=lambda: "test-machine",
+        ),
+        _ZBC_ROOT=_ROOT,
+        _osai_root=lambda: None,
+        _db_path=lambda: None,
+        _db_readonly=lambda: None,
+    )[0]
+
+
+def test_system_runtime_uses_worker_observations_across_all_domains(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    guardian = _FakeGuardian(
+        workers=[
+            {
+                "worker_id": "cth-1",
+                "worker_name": "collector",
+                "domain_id": "cth",
+                "status": "running",
+                "lease_owner": "worker-a",
+                "last_heartbeat_at": "2026-10-16 10:00:00",
+                "last_checkpoint_at": "2026-10-16 10:00:01",
+                "failure_count": 3,
+                "retry_count": 4,
+                "recovery_reason": "internal-only detail",
+                "created_at": "2026-10-15 10:00:00",
+            },
+            {
+                "worker_id": "system-1",
+                "domain_id": "system",
+                "status": "paused",
+                "lease_owner": "",
+                "last_heartbeat_at": "",
+                "last_checkpoint_at": "",
+            },
+            {
+                "worker_id": "zbmp-1",
+                "domain_id": "zbmp",
+                "status": "dead",
+                "lease_owner": "",
+                "last_heartbeat_at": "",
+                "last_checkpoint_at": "",
+            },
+        ],
+        health={"overall": "degraded", "reaper_running": False},
+    )
+    client = _runtime_client(monkeypatch, guardian)
+
+    response = client.get("/api/system/runtime")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["ok"] is True
+    assert payload["state"] == "READY"
+    assert payload["guardian_health"] == "degraded"
+    assert payload["guardian_status"] == {
+        "lease_manager": "OBSERVED",
+        "heartbeat_monitor": "OBSERVED",
+        "reaper": "STOPPED",
+        "checkpoint": "OBSERVED",
+    }
+    assert payload["runtime_by_domain"]["cth"]["running"] == 1
+    assert payload["runtime_by_domain"]["cth"]["failed"] == 0
+    cth_worker = payload["runtime_by_domain"]["cth"]["workers"][0]
+    assert set(cth_worker) == {
+        "worker_id", "worker_name", "status", "last_heartbeat_at"
+    }
+    assert cth_worker["worker_id"] == "cth-1"
+    assert cth_worker["worker_name"] == "collector"
+    assert cth_worker["status"] == "running"
+    assert cth_worker["last_heartbeat_at"] == "2026-10-16 10:00:00"
+    assert payload["runtime_by_domain"]["system"]["running"] == 0
+    assert payload["runtime_by_domain"]["system"]["paused"] == 1
+    assert payload["runtime_by_domain"]["zbmp"]["failed"] == 1
+    assert all(
+        payload["runtime_by_domain"][domain_id]["dlq_count"] is None
+        for domain_id in ("cth", "zbmp", "system")
+    )
+    assert payload["dlq"] == {"total": 2, "pending": 2}
+    assert payload["guardian"]["reaper"]["last_run"] is None
+
+
+def test_system_runtime_reads_app_main_guardian_not_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app_main_guardian = _FakeGuardian(
+        workers=[
+            {
+                "worker_id": "app-main-worker",
+                "domain_id": "system",
+                "status": "running",
+            }
+        ],
+        health={"overall": "app-main-health", "reaper_running": True},
+    )
+    default_guardian = _FakeGuardian(
+        workers=[
+            {
+                "worker_id": "default-only-worker",
+                "domain_id": "system",
+                "status": "failed",
+            }
+        ],
+        health={"overall": "default-health", "reaper_running": False},
+    )
+    requested_names: list[str] = []
+    client = _runtime_client(
+        monkeypatch,
+        app_main_guardian,
+        default_guardian=default_guardian,
+        requested_names=requested_names,
+    )
+
+    response = client.get("/api/system/runtime")
+
+    assert response.status_code == 200
+    assert requested_names == ["app_main"]
+    payload = response.get_json()
+    assert payload["guardian_health"] == "app-main-health"
+    assert payload["guardian_status"]["reaper"] == "ACTIVE"
+    workers = payload["runtime_by_domain"]["system"]["workers"]
+    assert [worker["worker_id"] for worker in workers] == ["app-main-worker"]
+    assert all(
+        "default-only-worker" != worker["worker_id"] for worker in workers
+    )
+
+
+def test_system_runtime_keeps_unobserved_component_states_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    guardian = _FakeGuardian(workers=[], health={"overall": "healthy"})
+    client = _runtime_client(monkeypatch, guardian)
+
+    response = client.get("/api/system/runtime")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["runtime_by_domain"]["cth"]["total_workers"] == 0
+    assert payload["guardian_status"] == {
+        "lease_manager": "UNKNOWN",
+        "heartbeat_monitor": "UNKNOWN",
+        "reaper": "UNKNOWN",
+        "checkpoint": "UNKNOWN",
+    }
+    assert payload["guardian"]["heartbeat"]["status"] == "UNKNOWN"
+    assert payload["guardian"]["checkpoint"]["status"] == "UNKNOWN"
+    assert payload["guardian"]["reaper"]["last_run"] is None
+
+
+def test_system_runtime_reports_unavailable_owner_without_zero_counts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class UnavailableGuardian(_FakeGuardian):
+        def list_lifecycle_workers(self):
+            raise RuntimeError("isolated guardian failure")
+
+    client = _runtime_client(
+        monkeypatch, UnavailableGuardian(workers=[], health={},)
+    )
+
+    response = client.get("/api/system/runtime")
+
+    assert response.status_code == 503
+    payload = response.get_json()
+    assert payload["ok"] is False
+    assert payload["state"] == "UNAVAILABLE"
+    assert payload["guardian_health"] == "UNKNOWN"
+    for domain in payload["runtime_by_domain"].values():
+        assert domain["total_workers"] is None
+        assert domain["running"] is None
+        assert domain["failed"] is None
+        assert domain["paused"] is None
+        assert domain["workers"] is None
+        assert domain["dlq_count"] is None
+
+
+def test_app_system_runtime_compatibility_handler_delegates_to_agg_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    expected = {"ok": True, "state": "READY", "runtime_by_domain": {}}
+    agg_api = types.ModuleType("lumenis_agg_api")
+    agg_api.system_runtime = lambda: jsonify(expected)
+    monkeypatch.setitem(sys.modules, "lumenis_agg_api", agg_api)
+    client, _ = _client_for(
+        _APP_SOURCE, "api_system_runtime", "/api/system/runtime"
+    )
+
+    response = client.get("/api/system/runtime")
+
+    assert response.status_code == 200
+    assert response.get_json() == expected
+
+
+def _auth_client():
+    flask_app = Flask("isolated_runtime_basic_auth")
+    basic_auth, _ = _load_function(
+        _APP_SOURCE,
+        "_basic_auth",
+        app=flask_app,
+        _owner_authorized_root_request=lambda: False,
+        _is_cth_readonly_get=lambda path, method: False,
+        _auth_enabled=lambda: True,
+        secrets=secrets,
+        AUTH_USER="isolated-runtime-user",
+        AUTH_PASSWORD="isolated-runtime-password",
+    )
+    flask_app.before_request(basic_auth)
+
+    @flask_app.get("/api/system/runtime")
+    def runtime_route():
+        return jsonify({"ok": True, "source": "isolated-runtime-handler"})
+
+    @flask_app.get("/api/system/status")
+    def public_status_route():
+        return jsonify({"ok": True, "source": "existing-public-status"})
+
+    return flask_app.test_client()
+
+
+def test_system_runtime_requires_basic_auth_and_keeps_other_public_route() -> None:
+    client = _auth_client()
+
+    denied = client.get("/api/system/runtime")
+
+    assert denied.status_code == 401
+    assert denied.get_json()["auth_required"] is True
+
+    credential = base64.b64encode(
+        b"isolated-runtime-user:isolated-runtime-password"
+    ).decode("ascii")
+    allowed = client.get(
+        "/api/system/runtime",
+        headers={"Authorization": f"Basic {credential}"},
+    )
+    assert allowed.status_code == 200
+    assert allowed.get_json() == {
+        "ok": True,
+        "source": "isolated-runtime-handler",
+    }
+
+    existing_public_route = client.get("/api/system/status")
+    assert existing_public_route.status_code == 200
+    assert existing_public_route.get_json() == {
+        "ok": True,
+        "source": "existing-public-status",
+    }
