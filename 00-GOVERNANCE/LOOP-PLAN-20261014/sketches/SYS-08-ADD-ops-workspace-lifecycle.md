@@ -13,7 +13,7 @@
 COMMERCIAL_READY 检查表  合规 ✓ 密钥 ✓ 生命周期 ◐ 运营 ✓ 账号 ◐
 ```
 ## 5A / 6
-Web 同桌面；手机纵排，检查表折叠。
+Web：运行/工作区检查按任务分区，折叠细节保留关键错误与恢复入口；刷新读取真实状态，破坏性操作需现有Permission及明确确认。 手机纵排，检查表折叠。
 ## 4. State additions
 Ready / Loading / 数据缺失（指标未采到显示缺失）/ 不可用（显示原因）。
 ## 9. Executable acceptance

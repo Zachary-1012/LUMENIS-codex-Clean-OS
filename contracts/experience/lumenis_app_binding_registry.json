@@ -18,8 +18,8 @@
   "binding_count": 54,
   "source_status_distribution": {
     "PARTIAL": 34,
-    "EXISTS_BUT_UNSCOPED": 15,
-    "ABSENT": 4,
+    "EXISTS_BUT_UNSCOPED": 16,
+    "ABSENT": 3,
     "LOCAL_ONLY": 1
   },
   "truth_status_distribution": {
@@ -43,15 +43,15 @@
     },
     {
       "file": "contracts/experience/unknown-bindings.json",
-      "sha256": "6b9fbf19bd8a541bc37bb56a2444ab1780a6aaaf1b9b6162eb87a539dfc4d752"
+      "sha256": "70954a948fb24edb83431a8f4cdb9acceb26e8ed41a4d46d2c21f630bd79be03"
     },
     {
       "file": "contracts/experience/BINDING_MATRIX.json",
-      "sha256": "148bb862751bbdc0deb3cb8fc9bec44bf02ec349e8d953d44f6b0388abba1cf4"
+      "sha256": "c17c682095eeb55fa85bffef79907fd329a66817bb3ae7428bc321fc8bb48356"
     },
     {
       "file": "contracts/experience/BACKEND_GAP.json",
-      "sha256": "2834c8112e8f76426a9d02d7634e974825a494673a75066c8e3105b145621a2e"
+      "sha256": "cd51e601fa69193851e9cbcca9bdeacee8a3cd36b25bb34761bfe21563c2ca7b"
     }
   ],
   "screens": [
@@ -5603,11 +5603,11 @@
           ]
         }
       ],
-      "api_callable": "No dedicated selected-context pattern retrieval corpus/query was verified; catalog metadata is not scoped retrieval.",
+      "api_callable": "lumenis/shared/learning/content_assets.py::ContentPatternRegistry.retrieve_candidates calls retrieve_pattern_candidates with platform/format/audience/objective filters and persisted assets; no SH-01/Brief product caller or actor/domain/source-use authorization is bound.",
       "api_claims_requiring_code_verification": {
-        "unknown_bindings_has_non_unknown_api_claim": false,
-        "backend_gap_api": "No dedicated selected-context pattern retrieval corpus/query was verified; catalog metadata is not scoped retrieval.",
-        "binding_matrix_api_status": "ABSENT",
+        "unknown_bindings_has_non_unknown_api_claim": true,
+        "backend_gap_api": "lumenis/shared/learning/content_assets.py::ContentPatternRegistry.retrieve_candidates calls retrieve_pattern_candidates with platform/format/audience/objective filters and persisted assets; no SH-01/Brief product caller or actor/domain/source-use authorization is bound.",
+        "binding_matrix_api_status": "EXISTS_BUT_UNSCOPED",
         "viewmodel_binding_declaration": "BLOCKED_NOT_EXPOSED"
       },
       "actor_scope": {
@@ -5644,17 +5644,17 @@
       "read_write_effect": "Read-only current source/ViewModel; no write or external effect is accepted by this binding.",
       "truth_status": "UNVERIFIED_ACCEPTANCE_PENDING",
       "source_claims": {
-        "unknown_bindings_claimed_status": "ABSENT",
-        "binding_matrix_status": "ABSENT",
+        "unknown_bindings_claimed_status": "EXISTS_BUT_UNSCOPED",
+        "binding_matrix_status": "EXISTS_BUT_UNSCOPED",
         "binding_matrix_owner_claim": "Shared Capability / Research",
-        "backend_gap_api_status": "ABSENT",
+        "backend_gap_api_status": "EXISTS_BUT_UNSCOPED",
         "backend_gap_permission_status": "GET screen route: optional global Basic Auth only; no actor/domain/product scope or per-screen READ Permission is enforced.",
         "backend_gap_evidence_status": "No retrieval Permission or actor/domain query contract exists for this field.",
         "viewmodel_has_unknown_binding_key": true
       },
       "source_conflicts": [],
       "acceptance_reference": "PENDING: current source mapping exists, but actor scope, Permission, Evidence, App behavior, and executable acceptance are not all verified.",
-      "next_action": "Use the existing Research/learning owner if it provides scoped retrieval; otherwise mark retrieval unavailable without injecting whole files.",
+      "next_action": "Reuse ContentPatternRegistry through the existing Shared Learning owner; bind the SH-01/Brief caller, exact actor/scope, source-use rights and claim lineage before exposing results. Do not return an unscoped whole corpus.",
       "source_snapshot_head": "c7bb3301a7aec8f011cdebabb9a5e02ee3b95cf7"
     },
     {
@@ -6698,6 +6698,15 @@
         "BACKEND-GAP-054"
       ],
       "verified_dimension": "Widget source and shell registration only; not field contract, action integration, permission, runtime or user acceptance."
+    },
+    "pattern_retrieval_review": {
+      "source_baseline": "b58f2d7288ba69f3c47800072f0577faf0863be5",
+      "bindings": [
+        "BACKEND-GAP-045"
+      ],
+      "verified_dimension": "Persisted algorithm and filter source only; SH-01/Brief consumer, actor/scope/source-use and runtime/user acceptance remain unverified.",
+      "source_file": "lumenis/shared/learning/content_assets.py",
+      "source_sha256": "60ea825073ffce6b12fd38b10cb740d33116b337f81610f2590aee58be868d41"
     }
   }
 }

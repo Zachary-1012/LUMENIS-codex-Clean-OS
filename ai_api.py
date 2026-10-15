@@ -87,6 +87,14 @@ def _owned_failure_response(result, **fields):
 
 @bp.route('/api/ai/status')
 def api_ai_status():
+    from lumenis.system.ai_gateway import user_api_adapter
+    if user_api_adapter.is_selected():
+        runtime = user_api_adapter.status()
+        return jsonify({'ok': True, 'enabled': runtime['configured'],
+                        'status': runtime['state'], 'provider': 'user_api',
+                        'interface': 'system-ai-gateway', 'runtime': runtime,
+                        'service_binding': runtime['service_binding'],
+                        'fallback_allowed': False, 'providers': ['user_api']})
     status = _owned_runtime_status()
     return jsonify({
         'ok': True, 'enabled': status.get('available') is True,
@@ -403,6 +411,11 @@ def api_ai_chat():
         return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'MESSAGE_REQUIRED'}), 400
     if len(text) > 4000:
         return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'MESSAGE_TOO_LARGE'}), 413
+    from lumenis.system.ai_gateway import user_api_adapter
+    if user_api_adapter.is_selected():
+        from lumenis.ai_hub import service
+        result = service.chat(text, history=data.get('history'))
+        return jsonify(result), 200 if result['ok'] else 503
     functions = function_registry.search_function_metadata(text, 5)
     context = (
         '可用功能入口（仅路由信息，不代表当前业务数据）：'
@@ -449,6 +462,11 @@ def api_ai_chat():
 
 @bp.route('/api/ai/providers')
 def api_ai_providers_v570():
+    from lumenis.system.ai_gateway import user_api_adapter
+    if user_api_adapter.is_selected():
+        return jsonify({'ok': True, 'provider': 'user_api',
+                        'external': user_api_adapter.status(),
+                        'owned': _owned_runtime_status(), 'fallback_allowed': False})
     status = _owned_runtime_status()
     return jsonify({
         'ok': True, 'provider': 'owned', 'owned': status,
@@ -935,7 +953,7 @@ def api_ai_tasks_list():
             'task_engine_tasks': task_engine_page,
             'skill_executions': execution_page,
         })
-    except Exception as e:
+    except Exception:
         return jsonify({'ok': False, 'code': 'AI_TASK_LIST_UNAVAILABLE'}), 503
 
 

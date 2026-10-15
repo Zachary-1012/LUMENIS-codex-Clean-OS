@@ -746,6 +746,7 @@
   "sh01.media.focus_scope": "선택한 주체 범위",
   "sh01.media.gain": "음량",
   "sh01.media.global_all": "전체 보기",
+  "sh01.media.import": "미디어 가져오기",
   "sh01.media.importing": "선택한 파일을 가져오는 중…",
   "sh01.media.invalid": "클립 범위, 스트림 및 페이드 시간을 확인하세요.",
   "sh01.media.invoking_domain_required": "전체 보기에는 이번 호출의 업무 도메인이 지정되지 않았습니다. 진입점에서 CTH 또는 BMP를 명시해야 하며, 이는 브랜드 포커스나 권한을 부여하지 않습니다.",

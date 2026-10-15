@@ -107,6 +107,22 @@ class ContentProjectFile {
   final String mediaType;
 }
 
+class SavedWorkExportFile {
+  const SavedWorkExportFile({
+    required this.bytes,
+    required this.filename,
+    required this.mediaType,
+  });
+
+  final Uint8List bytes;
+  final String filename;
+  final String mediaType;
+}
+
+const _sharedWorkspaceScopeHeaders = <String, String>{
+  'X-Lumenis-Workspace-Scope': '{"scope_kind":"shared_workspace","version":1}',
+};
+
 class LumenisBrowserFrame {
   const LumenisBrowserFrame({
     required this.bytes,
@@ -979,6 +995,198 @@ class LumenisCoreClient {
         ],
       },
     );
+  }
+
+  /// Reads user-authored reports from the independent Shared workspace.
+  /// This deliberately never inherits the selected CTH/BMP business context;
+  /// the server resolves the actor and checks Shared Permission on every call.
+  Future<Map<String, dynamic>> listSharedSavedWork({
+    int limit = 100,
+    String? cursor,
+    String kind = 'report',
+  }) {
+    if (limit < 1 || limit > 100) {
+      throw ArgumentError.value(limit, 'limit');
+    }
+    if (!const {'report', 'research'}.contains(kind)) {
+      throw ArgumentError.value(kind, 'kind');
+    }
+    if (cursor != null &&
+        (cursor.isEmpty ||
+            cursor.length > 4096 ||
+            RegExp(r'[\x00-\x1f\x7f]').hasMatch(cursor))) {
+      throw const FormatException('Invalid SavedWork cursor.');
+    }
+    final query = Uri(
+      queryParameters: {
+        'kind': kind,
+        'limit': '$limit',
+        'cursor': ?cursor,
+      },
+    ).query;
+    return _request(
+      'GET',
+      '/api/experience/saved-work?$query',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  /// Saves a user-authored report as a versioned Shared SavedWork artifact.
+  /// Source citations are empty for this user-authored draft; revisions of an
+  /// existing cited artifact retain the server's original citation scopes.
+  Future<Map<String, dynamic>> saveSharedReport({
+    required String title,
+    required String markdown,
+    required String requestId,
+  }) {
+    _validateSavedWorkRequestId(requestId);
+    return _request(
+      'POST',
+      '/api/experience/saved-work',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'title': title,
+        'markdown': markdown,
+        'kind': 'report',
+        'payload': const <String, Object?>{},
+        'citations': const <Object?>[],
+        'request_id': requestId,
+      },
+    );
+  }
+
+  /// Reopens one committed SavedWork version through the Shared Permission
+  /// boundary. The artifact identifier is never sent as actor or scope data.
+  Future<Map<String, dynamic>> reopenSharedSavedWork(String artifactId) {
+    _validateSavedWorkArtifactId(artifactId);
+    return _request(
+      'GET',
+      '/api/experience/saved-work/$artifactId',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  /// Creates an immutable report revision. Omitting citations and source
+  /// adoptions asks the server to preserve and freshly reauthorize the exact
+  /// parent version's original source uses.
+  Future<Map<String, dynamic>> reviseSharedReport({
+    required String artifactId,
+    required String requestId,
+    required String expectedSha256,
+    required String reason,
+    required String expectedTitle,
+    required String title,
+    required String expectedMarkdown,
+    required String markdown,
+  }) {
+    _validateSavedWorkArtifactId(artifactId);
+    _validateSavedWorkRequestId(requestId);
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(expectedSha256)) {
+      throw const FormatException('Invalid SavedWork version digest.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/saved-work/$artifactId/revise',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'request_id': requestId,
+        'expected_sha256': expectedSha256,
+        'reason': reason,
+        'edits': [
+          {'pointer': '/title', 'expected': expectedTitle, 'value': title},
+          {
+            'pointer': '/markdown',
+            'expected': expectedMarkdown,
+            'value': markdown,
+          },
+        ],
+      },
+    );
+  }
+
+  /// Requests an explicitly selected export. The server performs DATA_EXPORT
+  /// Permission and rechecks every retained source scope before returning bytes.
+  Future<SavedWorkExportFile> exportSharedSavedWork({
+    required String artifactId,
+    required String format,
+  }) async {
+    _validateSavedWorkArtifactId(artifactId);
+    if (!const {'md', 'txt', 'docx', 'pdf', 'xlsx'}.contains(format)) {
+      throw ArgumentError.value(format, 'format');
+    }
+    final expectedMediaType = switch (format) {
+      'md' => 'text/markdown',
+      'txt' => 'text/plain',
+      'docx' =>
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'pdf' => 'application/pdf',
+      'xlsx' =>
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      _ => throw ArgumentError.value(format, 'format'),
+    };
+    final uri = _uri(
+      '/api/experience/saved-work/$artifactId/export?'
+      '${Uri(queryParameters: {'format': format}).query}',
+    );
+    try {
+      final response = await sendLumenisBinaryRequest(
+        LumenisTransportRequest(
+          method: 'GET',
+          uri: uri,
+          headers: {
+            ..._sharedWorkspaceScopeHeaders,
+            'Accept': expectedMediaType,
+            'Cache-Control': 'no-store',
+          },
+          connectionTimeout: const Duration(seconds: 45),
+          followRedirects: false,
+        ),
+        maxBytes: 32 * 1024 * 1024,
+      );
+      if (response.statusCode != 200) {
+        String? errorCode;
+        try {
+          final body = jsonDecode(utf8.decode(response.bytes));
+          if (body is Map && body['code'] is String) {
+            final candidate = body['code'] as String;
+            if (RegExp(r'^[A-Z][A-Z_0-9]{0,99}$').hasMatch(candidate)) {
+              errorCode = candidate;
+            }
+          }
+        } on FormatException {
+          // Keep the status when Core returns a non-JSON error body.
+        }
+        throw LumenisCoreException(
+          'SavedWork export was not returned.',
+          statusCode: response.statusCode,
+          errorCode: errorCode,
+        );
+      }
+      final mediaType = response.contentType
+          ?.split(';')
+          .first
+          .trim()
+          .toLowerCase();
+      if (mediaType != expectedMediaType || response.bytes.isEmpty) {
+        throw const FormatException(
+          'SavedWork export type does not match the requested format.',
+        );
+      }
+      return SavedWorkExportFile(
+        bytes: response.bytes,
+        filename: '$artifactId.$format',
+        mediaType: mediaType!,
+      );
+    } on LumenisTransportException {
+      throw const LumenisCoreException(
+        'SavedWork export is unavailable.',
+        errorCode: 'SAVED_WORK_EXPORT_UNAVAILABLE',
+      );
+    }
   }
 
   static void _validateSavedWorkArtifactId(String value) {

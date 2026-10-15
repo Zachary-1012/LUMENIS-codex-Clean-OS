@@ -1,6 +1,6 @@
 # BMP-09 — 草图增补：公开数据营销组合与归因
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G166-G169。
+> 已入库参考草图；实施与验收归现有ScreenSpec，按§5/§5A/§6原位维护，不自称已实现或已验收。规划依据：G166-G169。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -11,7 +11,7 @@
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+Web：同口径比较、结果及依据按宽度重排；图形有可访问数据表，筛选/版本保留在返回路径，刷新读回成果而不重新执行分析。
 
 ## 6. Purpose-built mobile composition
 纵排。

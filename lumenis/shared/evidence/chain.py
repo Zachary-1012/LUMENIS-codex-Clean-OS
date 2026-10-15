@@ -562,6 +562,182 @@ class EvidenceStore:
         domain_id, product_id, subject_scope = _resolve_evidence_identity(
             domain_id, product_id, subject_scope
         )
+        return self._add_evidence_with_identity(
+            source_type=source_type, source_url=source_url, raw_content=raw_content,
+            source_id=source_id, captured_at=captured_at,
+            publish_datetime=publish_datetime, subject_scope=subject_scope,
+            task_id=task_id, trace_id=trace_id,
+            collection_metadata=collection_metadata, provider=provider,
+            dedupe_by_source=dedupe_by_source, authenticity_score=authenticity_score,
+            domain_id=domain_id, product_id=product_id, evaluation_id=evaluation_id,
+            final_decision=final_decision, rule_id=rule_id, ai_call_id=ai_call_id,
+        )
+
+    def add_shared_skill_execution_evidence(
+        self,
+        *,
+        actor: Any,
+        shared_workspace_scope: Any,
+        source_url: str,
+        raw_content: str,
+        source_id: str,
+        task_id: str,
+        trace_id: str,
+        collection_metadata: dict[str, Any],
+        provider: str = "lumenis.shared.agents.skills.execution",
+    ) -> tuple[Evidence, bool]:
+        """Store one Permission-checked Shared Skill trace in the existing Evidence table.
+
+        This is an execution trace for user-authored Shared work, not source
+        Evidence or a Canonical business fact. Its storage identity is scoped to
+        the server-authenticated Shared workspace actor and does not enter the
+        CTH/BMP/SYSTEM domain resolver.
+        """
+        from lumenis.system.security.permission import (
+            LocalWorkspacePrincipal,
+            authorize_shared_workspace,
+            validate_shared_workspace_scope,
+        )
+
+        if (
+            type(source_id) is not str or not source_id
+            or source_url != f"skill://shared.content_project/{source_id}"
+            or task_id != source_id or trace_id != source_id
+            or provider != "lumenis.shared.agents.skills.execution"
+            or not isinstance(collection_metadata, dict)
+            or type(raw_content) is not str
+        ):
+            raise ValueError("SHARED_SKILL_EVIDENCE_BINDING_INVALID")
+        try:
+            scope = validate_shared_workspace_scope(shared_workspace_scope)
+            context = authorize_shared_workspace(
+                actor, scope, module="content", action="write",
+            )
+        except Exception as exc:
+            raise PermissionError("SHARED_SKILL_EVIDENCE_PERMISSION_DENIED") from exc
+
+        if type(actor) is LocalWorkspacePrincipal:
+            actor_binding = {
+                "principal_kind": actor.principal_kind,
+                "principal_ref": actor.principal_ref,
+            }
+            scope_actor = "workspace:local"
+            if context != {**scope, **actor_binding}:
+                raise PermissionError("SHARED_SKILL_EVIDENCE_PERMISSION_DENIED")
+        else:
+            actor_id = actor.get("id") if isinstance(actor, dict) else None
+            if type(actor_id) is not int or actor_id <= 0 or context != {
+                **scope, "actor_id": actor_id,
+            }:
+                raise PermissionError("SHARED_SKILL_EVIDENCE_PERMISSION_DENIED")
+            actor_binding = {"actor_id": actor_id}
+            scope_actor = f"actor:{actor_id}"
+
+        try:
+            payload = json.loads(raw_content)
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise ValueError("SHARED_SKILL_EVIDENCE_BINDING_INVALID") from exc
+        if (
+            not isinstance(payload, dict)
+            or payload.get("execution_id") != source_id
+            or payload.get("skill_id") != "shared.content_project"
+        ):
+            raise ValueError("SHARED_SKILL_EVIDENCE_BINDING_INVALID")
+
+        metadata = dict(collection_metadata)
+        metadata["shared_workspace_execution"] = {
+            "kind": "skill_execution_trace",
+            "canonical_fact": False,
+            "scope": scope,
+            "actor": actor_binding,
+        }
+        return self._add_evidence_with_identity(
+            source_type="skill_execution", source_url=source_url,
+            raw_content=raw_content, source_id=source_id,
+            subject_scope=f"shared_workspace:{scope_actor}",
+            task_id=task_id, trace_id=trace_id,
+            collection_metadata=metadata, provider=provider,
+            dedupe_by_source=False, authenticity_score=1.0,
+            domain_id="content", product_id="SHARED",
+            captured_at="", publish_datetime=None, evaluation_id="",
+            final_decision="", rule_id="", ai_call_id="",
+        )
+
+    def get_shared_skill_execution_evidence(
+        self,
+        evidence_id: str,
+        *,
+        actor: Any,
+        shared_workspace_scope: Any,
+    ) -> Evidence | None:
+        """Read a Shared Skill trace only inside its current actor workspace."""
+        from lumenis.system.security.permission import (
+            LocalWorkspacePrincipal,
+            authorize_shared_workspace,
+            validate_shared_workspace_scope,
+        )
+
+        try:
+            scope = validate_shared_workspace_scope(shared_workspace_scope)
+            context = authorize_shared_workspace(
+                actor, scope, module="content", action="read",
+            )
+        except Exception as exc:
+            raise PermissionError("SHARED_SKILL_EVIDENCE_PERMISSION_DENIED") from exc
+        if type(actor) is LocalWorkspacePrincipal:
+            scope_actor = "workspace:local"
+            actor_binding = {
+                "principal_kind": actor.principal_kind,
+                "principal_ref": actor.principal_ref,
+            }
+            if context != {**scope, **actor_binding}:
+                raise PermissionError("SHARED_SKILL_EVIDENCE_PERMISSION_DENIED")
+        else:
+            actor_id = actor.get("id") if isinstance(actor, dict) else None
+            if type(actor_id) is not int or actor_id <= 0 or context != {
+                **scope, "actor_id": actor_id,
+            }:
+                raise PermissionError("SHARED_SKILL_EVIDENCE_PERMISSION_DENIED")
+            scope_actor = f"actor:{actor_id}"
+            actor_binding = {"actor_id": actor_id}
+        evidence = self.get_evidence(evidence_id)
+        if evidence is None or (
+            evidence.source_type != "skill_execution"
+            or evidence.domain_id != "content" or evidence.product_id != "SHARED"
+            or evidence.subject_scope != f"shared_workspace:{scope_actor}"
+        ):
+            return None
+        binding = evidence.collection_metadata.get("shared_workspace_execution")
+        if binding != {
+            "kind": "skill_execution_trace", "canonical_fact": False,
+            "scope": scope, "actor": actor_binding,
+        }:
+            return None
+        return evidence
+
+    def _add_evidence_with_identity(
+        self,
+        *,
+        source_type: str,
+        source_url: str,
+        raw_content: str,
+        source_id: str = "",
+        captured_at: str = "",
+        publish_datetime: str | None = None,
+        subject_scope: str | None = None,
+        task_id: str = "",
+        trace_id: str = "",
+        collection_metadata: dict[str, Any] | None = None,
+        provider: str = "rule",
+        dedupe_by_source: bool = False,
+        authenticity_score: float = 1.0,
+        domain_id: str | None = None,
+        product_id: str | None = None,
+        evaluation_id: str = "",
+        final_decision: str = "",
+        rule_id: str = "",
+        ai_call_id: str = "",
+    ) -> tuple[Evidence, bool]:
         content_hash = compute_content_hash(raw_content)
         captured_at = captured_at or _now()
 

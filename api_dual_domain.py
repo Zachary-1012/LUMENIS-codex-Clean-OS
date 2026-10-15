@@ -2157,12 +2157,38 @@ def system_status():
         except Exception as e:
             status["collector"] = {"status": "unknown", "error": str(e)}
 
-        # AI 状态（检查 ai_analyzer 是否可导入）
+        # AI 状态来自唯一 Gateway 的服务观测。ai_analyzer 只代表确定性分析
+        # 模块可导入，不能代表任何模型服务已绑定。
         try:
-            import ai_analyzer
-            status["ai"] = {"status": "available", "module": "ai_analyzer"}
-        except Exception as e:
-            status["ai"] = {"status": "unavailable", "error": str(e)}
+            from lumenis.system.ai_gateway import core, user_api_adapter
+
+            gateway = (user_api_adapter.status() if user_api_adapter.is_selected()
+                       else core.owned_service_observation())
+            if not isinstance(gateway, dict) or type(gateway.get("available")) is not bool:
+                raise RuntimeError("AI_GATEWAY_STATUS_INVALID")
+            status["ai"] = {
+                **gateway,
+                "status": "available" if gateway["available"] else "unavailable",
+            }
+        except Exception:  # noqa: BLE001 - Gateway status failures must remain unavailable.
+            status["ai"] = {
+                "provider": "gateway",
+                "available": False,
+                "status": "unavailable",
+                "reason": "AI_GATEWAY_STATUS_UNAVAILABLE",
+            }
+
+        try:
+            from importlib import import_module
+
+            deterministic_module = import_module("ai_analyzer")
+            status["deterministic_analysis"] = {
+                "status": "available", "module": deterministic_module.__name__,
+            }
+        except Exception:  # noqa: BLE001 - deterministic importability is also fail-closed.
+            status["deterministic_analysis"] = {
+                "status": "unavailable", "module": "ai_analyzer",
+            }
 
         return _api_response(data=status, domain_id=DOMAIN_SYSTEM, product_id=PRODUCT_SYSTEM)
     except Exception as e:

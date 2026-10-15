@@ -152,7 +152,7 @@ Web 同桌面，保留原任务与状态。
 
 ### 草图增补：视觉风格 · Logo · 五位角色（闭环内，PO 2026-10-14）
 
-Web 同桌面；手机纵排，预览改为整页实时生效。
+Web：偏好控件与真实预览按宽度重组；键盘/200%字号可操作，减少动态和用户原选择即时可见并持久读回，不改业务数据。 手机纵排，预览改为整页实时生效。
 
 
 ### Existing contract — Keyboard, accessibility, motion and localization

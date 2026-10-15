@@ -373,7 +373,7 @@ SYSTEM may be dense and technical. It exposes machine relationships rather than 
 
 ## 9. Account, authentication and global context
 
-The LUMENIS product account is a post-internal-beta capability. During the current C1–C6 delivery, the App opens without a global product-account wall; a protected operation may still show a local, truthful Permission boundary enforced by Product Core. Media-platform Cookie/session/browser authorization is a separate SYSTEM connector state and must not become a LUMENIS login flow.
+The optional LUMENIS product account, login, recovery and settings are in the current engineering closure. The App opens without a global product-account wall; a protected operation may still show a local, truthful Permission boundary enforced by Product Core. Media-platform Cookie/session/browser authorization is a separate SYSTEM connector state and must not become a LUMENIS login flow.
 
 When post-beta authentication/access surfaces are implemented, they are calm, direct and explicit about identity, permission, blocked state and recovery. They are not marketing landing pages.
 
@@ -477,7 +477,7 @@ Acquisition converges toward Evidence/Canonical truth, not a parallel browser-da
 
 ### 11.1 Platform connector recovery
 
-Media-platform authentication recovery is a SYSTEM connector operation, not the future LUMENIS product-account login.
+Media-platform authentication recovery is a SYSTEM connector operation, separate from the optional LUMENIS product-account login.
 
 During approved R&D/internal-beta work, a Product-Owner-authorized owned platform identity may back a managed read-only connector. When its session expires or requires legitimate human interaction, the operational surfaces use one `LumenisPlatformRecoverySheet` contract rather than platform-specific app pages or raw browser windows:
 
@@ -946,7 +946,7 @@ The product is delivered through an SEO-capable Public Website plus one Flutter 
 ```text
 Flutter composition root
 ├─ core        transport, typed contract decoding, auth/session, errors, cancellation
-├─ account     post-beta product identity/sign-in/recovery; absent as a pre-beta global gate
+├─ account     optional product identity/sign-in/recovery/settings; never a global account wall
 ├─ cth         SubjectContext, commercial operations, events, cases, decisions/actions
 ├─ bmp         BrandFocus, market signals, creators, campaigns, propagation/evaluation
 ├─ shared      Evidence, research, creation, evaluation, learning, reports/export
@@ -984,7 +984,7 @@ Responsive acceptance uses the widths in §20 and verifies a semantic recomposit
 
 | Form factor | Composition contract |
 | --- | --- |
-| Public Website | SEO-readable product narrative, capability proof, truthful demo/case material, trial/contact/help and a clear workspace entry. The current pre-closure surface exposes no product-login entry or account wall. It cannot resemble or execute the operational workspace. |
+| Public Website | SEO-readable product narrative, capability proof, truthful demo/case material, trial/contact/help and a clear workspace entry. Optional sign-in and account recovery have clear entries alongside direct workspace access; no account wall is imposed. It cannot resemble or execute the operational workspace. |
 | Web Workspace | Browser-first primary operating surface with URL/deep-link semantics, keyboard/pointer access and responsive evidence/workflow composition. Desktop-only capability exposes a truthful handoff/state, never simulated success. |
 | Wide desktop (≥1280 logical px) | Persistent product/domain navigation, a compact active-context bar, workflow-specific work surface, and an optional Evidence/inspector region. The inspector may resize but cannot obscure the primary task. |
 | Compact desktop/tablet (768–1279 px) | Collapsible navigation rail, one primary work surface, and Evidence/inspector as a reversible panel. Keep keyboard navigation and selected context visible. |
@@ -1051,7 +1051,7 @@ This section retains the approved fifteen-checkpoint dependency coverage in `LUM
 Do not build all screens from a generic template. Work in this order, with a capability-parity gate between phases:
 
 1. **Bind truth:** classify each Experience screen/action by owner, endpoint, ViewModel fields, permission, Evidence, read/write effect and known gaps. Resolve unknown owners from source before creating a new API.
-2. **Make the shell real:** implement Product Core connectivity, current context, routing, error/offline/retry states, keyboard/focus behavior and restorable navigation. The LUMENIS product account is deferred until product engineering closure and subsequent Product Owner redesign and must not block pre-beta browsing or existing product use. Keep server Permission/effect fences intact, and keep media Cookie/session authorization entirely inside the SYSTEM collector/browser chain. Keep CTH SubjectContext separate from BMP BrandFocus.
+2. **Make the shell real:** implement Product Core connectivity, current context, routing, error/offline/retry states, keyboard/focus behavior and restorable navigation. The optional LUMENIS account is part of current engineering closure and must not block ordinary browsing or existing product use. Keep server Permission/effect fences intact, and keep media Cookie/session authorization entirely inside the SYSTEM collector/browser chain. Keep CTH SubjectContext separate from BMP BrandFocus.
 3. **Prove the five Golden Pages:** AI-01, CTH-01, BMP-01, SH-01 and SYS-01 each use their semantic signature in §25 and bind to live owners. Do not mark a fixture-backed page complete.
 4. **Migrate by workflow family:** bind remaining contract screens only after their source/API/Permission/Evidence owner is verified. Preserve established behavior before removing any migrated surface.
 5. **Reach surface parity with independent evidence:** build and verify Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile in parallel under their approved roles. Each receives its applicable interaction, accessibility, viewport/device, error/recovery and visual checks at §20 widths; do not make one surface's closure a prerequisite for another. Verify Public Website acquisition/workspace-entry separately; do not require identical layouts.
@@ -1067,7 +1067,7 @@ The 44 screen IDs and 54 binding records (`BACKEND-GAP-001..054`) are the existi
 
 | Capability family | Product owner and scope | Required product outcome | Truth boundary |
 | --- | --- | --- | --- |
-| Runtime and work context | SYSTEM runtime/permission; future product account after engineering closure and Product Owner redesign | Open the pre-beta product without an account wall, restore safe local work context, and expose a truthful local restriction only where a protected operation requires it | UI context is not proof of authorization; every protected server operation still enforces Permission/effect boundaries; media platform Cookie/session state is separate |
+| Runtime and work context | SYSTEM runtime/permission and the optional product account under the existing account owner | Open the pre-beta product without an account wall, restore safe local work context, and expose a truthful local restriction only where a protected operation requires it | UI context is not proof of authorization; every protected server operation still enforces Permission/effect boundaries; media platform Cookie/session state is separate |
 | Commercial operations and subject intelligence | CTH | Start in authorized GLOBAL_ALL commercial intelligence, optionally narrow to a Subject; read commercial signals, event stream, cases, risk, decisions, actions, schedules and reports; resolve the exact target when an operation needs it and trace each decision to source and follow-up outcome | Subject ownership, CTH metrics and confirmed outcomes remain CTH-owned |
 | Brand and market intelligence | BMP | Start in authorized GLOBAL_ALL brand/market intelligence, optionally narrow to BrandFocus/Market; connect category movement, competitors, audience, creators, content, channels, campaigns, brand risk and evaluation | Brand focus and BMP metrics remain BMP-owned; competitor and creator data are relationships, not interchangeable subjects |
 | Analytics and decision support | Shared analytical capability with CTH/BMP-owned metric definitions | Cohort, compare, segment, trend, attribute, detect anomaly, explain change and export an auditable view | Shared computation keeps source domain, definition/version, scope, window, freshness, confidence and lineage; it cannot relabel a metric or combine incompatible scopes silently |

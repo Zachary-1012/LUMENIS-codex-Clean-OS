@@ -1,6 +1,6 @@
 # AI-05 — 草图增补：模型设置：自有模型默认 + 一个通用 OpenAI 兼容自带 API
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G50。
+> 已入库参考草图；实施与验收归现有ScreenSpec，按§5/§5A/§6原位维护，不自称已实现或已验收。规划依据：G50。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -10,7 +10,7 @@
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+Web：模型状态、配置与连接结果分区显示；密钥不回显，失败保留非敏感表单值；刷新重新读真实绑定，不把配置成功当推理可用。
 
 ## 6. Purpose-built mobile composition
 同内容纵排。

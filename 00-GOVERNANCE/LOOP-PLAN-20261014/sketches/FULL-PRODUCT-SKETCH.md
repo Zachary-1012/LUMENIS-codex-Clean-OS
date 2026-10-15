@@ -1,57 +1,68 @@
 # 序境 LUMENIS — 全产品文字草图汇总（草稿 2026-10-14，待 PO 审核）
 
-> 44 屏现有规格按屏汇总 + 全部新增能力草图（原文附后）。屏位已按屏幕索引校正。全部闭环内；上线后仅真实用户验证与付费/授权来源。前端建设顺序见 UI-STEP-PLAN.md；剪辑与播客工程能力见 product-plan-full.md §14。
+> 既有44屏作为能力覆盖索引，不能限定完整产品规模；保留独立研究/提案/视频/播客及所有已批准联动、官网内容与各表面差异。屏位已按屏幕索引校正。全部闭环内；上线后仅真实用户验证与付费/授权来源。前端建设顺序见 UI-STEP-PLAN.md；剪辑与播客工程能力见 product-plan-full.md §14。
 
 生成结果的新增视觉时序：原有动效不变。等待数据→普通骨架；真实新成果、字体与布局就绪→测量实际组件点阵/线框→一次揭示。保留完整效果与独立用户选择/跳过；导航、重开、刷新和列表行不触发。来源/权限/成果状态不由动画决定，按Experience §19实施。
 
-## A. 44 屏总表
+## A. 既有44屏能力索引（非页面数、导航或产品范围上限）
 
-| 屏 | 名称 | 任务（摘自规格 §1） | 新增草图 | 前端步骤 |
+| 屏 | 名称 | 完整用户任务（细节与验收归链接合同） | 新增草图 | 前端步骤 |
 |---|---|---|---|---|
-| ACC-01 | Workspace entry and account boundary | - User job: confirm that the internal-beta workspace entry is available and continue through the host-provided route. - Read route: `GET /api/experience/runtime | account-settings、sign-in | F1/F2 |
-| ACC-02 | Subject and view-lens selection | - Read current view: `GET /api/settings/context` via `settingsContext()`. - Read CTH directory: `GET /api/settings/subjects?domain_id=CTH` via `settingsSubjects | — | F3 |
-| ACC-03 | Product home | Open the product and begin real work: write or open a task draft, continue an actually visited page, or open an existing business/creation workflow. This is an  | — | F1 |
-| ACC-04 | Guard and recovery | - Read route: `GET /api/experience/screen/ACC-04` via `CoreAcc04Repository`. - Current runtime reports this target as unbound; the page must show unavailable ra | — | F1 |
-| AI-01 | AI intent entry | - Role and scope: no selected Subject or BrandFocus means GLOBAL_ALL. FOCUS is optional and only narrows the existing scope. Opening the product, reading global | intelligent-cards、tool-permission-confirm | F4 |
-| AI-02 | Governed task stages and artifacts | - Read route: `GET /api/experience/screen/AI-02` via `LumenisCoreClient.screen('AI-02')`. - Current response contract: `ok`, `screen`, `source`, `bound`, `bindi | — | F4 |
-| AI-03 | Source-first analysis thread | - Read route: `GET /api/experience/screen/AI-03` via `CoreAi03Repository`. - Current response can expose `thread` / `messages`, `binding`, `generated_at`, `sour | — | F4 |
-| AI-04 | Registered Product Skill Store | - Read route: `GET /api/experience/shared-skills` via `LumenisCoreClient.sharedSkillsCatalog()`. - A row is shown only when: `ok=true`; safe `skill_id`, semver  | github-mcp-connectors、skills-store | F5 |
-| AI-05 | AI service topology diagnostic | - Primary read: `GET /api/experience/screen/AI-05`. - Explicit fallback only when the primary response is valid `AI-05` with `bound=false`: `GET /api/experience | byo-api | F5 |
-| BMP-01 | 品牌市场总览 | - Role and authorized context: A brand or market operator working in BMP. A trusted actor and an authorized BrandFocus are required before showing brand-level t | — | F8 |
-| BMP-02 | 品牌组合与竞品谱系 | - **Role / context:** A BMP operator compares one authorized BrandFocus with its owned brands, sub-brands and competitor entities. - **User task / completion:** | — | F8 |
-| BMP-03 | 市场情报与机会雷达 | - **Role / context:** A BMP operator needs to identify market opportunities for one authorized BrandFocus and understand why each opportunity is present. - **Us | — | F8 |
-| BMP-04 | 品牌传播路径 | - **Role / context:** A BMP operator traces how a selected BrandFocus moves through channels toward response or conversion. - **User task / completion:** compar | — | F8 |
-| BMP-05 | 创作者生态 | - **Role / context:** A BMP operator evaluates creators relevant to one authorized BrandFocus across KOS, KOL, KOC and UGC tiers. - **User task / completion:**  | kos-funnel | F8 |
-| BMP-06 | 内容生产台 | - A brand operator needs to move an approved content idea through drafting, review and authorized release while retaining version and source context. - BMP owns | video-editing-studio | F8 |
-| BMP-07 | 活动工作台 | - A brand operator needs to connect an activity objective to audience, channel milestones and observed outcomes without confusing a plan with a result. - BMP ow | marketing-calendar | F8 |
-| BMP-08 | 播客制作室 | - A brand operator needs to turn approved source material into a reviewable spoken episode while keeping script, source, audio version, publication and rights d | podcast-studio | F8 |
-| BMP-09 | 品牌评估 | - A brand operator needs to understand movement by evaluation dimension, confidence and source coverage using actual observed results. - Evaluation is derivativ | public-mmm | F8 |
-| BMP-10 | 品牌风险响应 | - A brand operator needs to see which brand-risk incidents need attention, how severity/spread/recency affect triage, and what response step is next. - BMP Bran | — | F8 |
-| BMP-11 | 品牌基准 | - A brand operator needs normalized comparisons with metric definitions visible beside values, while incomparable items remain explicitly withheld. - The curren | — | F8 |
-| CTH-01 | Commercial Operations Overview | - **Role / authorized context:** CTH commercial operator. The screen reads only the Product Core's current Subject context from `GET /api/experience/runtime/ide | — | F7 |
-| CTH-02 | 经营主体与关联信息 | - **Role / authorized context:** CTH operator. The CTH Subject Registry returns rows only after an authenticated account and `subject_registry` / `read` permiss | — | F7 |
-| CTH-03 | 实时监测 | - **User task:** a CTH operator needs to see what has recently changed, which returned source lanes are available, and inspect one returned signal without losin | — | F7 |
-| CTH-04 | 事件关系 | - **User task:** understand the order of returned CTH events and inspect one event without mistaking chronology for causality. - **Context:** use the same `sett | — | F7 |
-| CTH-05 | 舆情日历 | - **User task:** find days with returned sentiment or event density, inspect one selected day, and switch to a precise list for keyboard use. - **Context:** `GL | — | F7 |
-| CTH-06 | 负面监测与反馈 | - **User task:** triage returned negative feedback, understand whether it is public opinion, customer feedback, a confirmed incident or not yet classified, and  | — | F7 |
-| CTH-07 | 趋势分析 | - **User task:** understand how a returned CTH metric changed over one stated window, what its numerator/denominator mean, and which returned series is selected | — | F7 |
-| CTH-08 | 案例工作台与可复用知识 | - **Role / context:** CTH operator in either `GLOBAL / ALL` or an authorized CTH Subject focus. Selection changes working context only; it never grants access o | — | F7 |
-| CTH-09 | 风险与决策工作台 | - **Role / context:** CTH operator working in `GLOBAL / ALL` or an authorized focused CTH Subject. - **User task:** inspect the basis of a risk, review a separa | math-result-card | F7 |
-| CTH-10 | 报告与运营简报工作台 | - **Role / context:** CTH operator in `GLOBAL / ALL` or an authorized focused CTH Subject. - **User task:** choose a verified period, inspect a report/brief as  | — | F7 |
-| SH-01 | Shared Capability Catalog | SH-01 is the existing Shared entry for independently usable research and creation capabilities, also consumed by CTH and BMP. It is not a third product, and cat | video-editing-studio、podcast-studio（同编辑器，无前置入口） | F9（剪辑/播客入口同 F8） |
-| SH-02 | Evidence Library | SH-02 is a read-only material library for provenance-bearing items used by Shared Capability workflows. Its space and list are alternate ways to browse the same | — | F9 |
-| SH-03 | Canonical Data and Metric Explorer | SH-03 is a read-only explorer for verified Canonical data metrics. It explains a metric’s business definition, state, cadence, lineage and sampled values; it do | — | F9 |
-| SH-04 | Reopenable Report Export Center | SH-04 is an output queue and artifact inspector. It does not create a fake export, download a path that was never persisted, or treat a report listing as proof  | — | F9 |
-| SH-05 | Versioned Learning and Evaluation Assets | SH-05 presents versioned learning assets and their evaluation/promotion history. An asset is derivative input, not Canonical Truth, Permission truth or Evidence | — | F9 |
-| SH-06 | Notification and Task Center | SH-06 is a read-only operational inbox with distinct lanes for tasks, notifications and alerts. It reports the state of verified work items; it does not create  | — | F9 |
-| SYS-01 | Runtime health / RuntimeGuardian slice | - Role and authorized context: SYSTEM operator, after the App's current authentication boundary permits the GET request. This page reports infrastructure state  | — | F10 |
-| SYS-02 | Collector status | - Authorized context: SYSTEM operator permitted to read the current screen envelope. - Real task: determine which collection lanes are verified, partial, missin | manual-collect | F6 |
-| SYS-03 | Database and truth chain | - Authorized context: SYSTEM reader with permitted access to a read-only system screen. - Real task: understand which schema/check/chain facts are returned and  | — | F10 |
-| SYS-04 | Security and permission | - Authorized context: operator permitted to inspect a safe security posture. - Real task: understand the visible permission level and whether an audit decision  | keys-compliance、user-developer-mode | F10/F11 |
-| SYS-05 | Device appearance | The user changes how the current LUMENIS workspace is presented, then returns to the same work with the same route, scroll position, selection, and unsaved draf | visual-brand-roles | F0/F12 |
-| SYS-06 | Internal browser capability | - Authorized context: SYSTEM operator allowed to read a filtered capability report. - Real task: know whether controlled browser capacity is available and what  | browser-tabs、login-recovery-sheet | F6 |
-| SYS-07 | Evaluation and acceptance | - Authorized context: SYSTEM/security operator reading returned evaluation checks. - Real task: see which checks actually returned and whether evidence-backed p | founder-developer-mode | F10/F11 |
-| SYS-08 | Observability and logs | - Authorized context: SYSTEM operator permitted to read a sanitized observability summary. - Real task: understand whether logs/trace records are available with | ops-workspace-lifecycle | F10 |
+| ACC-01 | Workspace entry and account boundary | 直接进入可用工作区；自愿登录/注册、账号恢复与设置，取消授权仍回原任务，不设账号墙。 [完整合同](../../../contracts/experience/screen-specifications/ACC-01.md) | account-settings、sign-in | F1/F2 |
+| ACC-02 | Subject and view-lens selection | 从GLOBAL/ALL查看获准范围；搜索或建立获准主体/品牌焦点，切换只收窄视角，不扩大权限。 [完整合同](../../../contracts/experience/screen-specifications/ACC-02.md) | — | F3 |
+| ACC-03 | Product home | 打开即进入聊天和真实任务入口；新建/继续工作，导航CTH、BMP、Shared、SYSTEM，返回时保留草稿和对象。 [完整合同](../../../contracts/experience/screen-specifications/ACC-03.md) | — | F1 |
+| ACC-04 | Guard and recovery | 辨认当前动作被拒或不可用的原因；按服务端恢复入口处理并返回原任务，不以登录代替Permission。 [完整合同](../../../contracts/experience/screen-specifications/ACC-04.md) | — | F1 |
+| AI-01 | AI intent entry | 一个对话入口接收多项需求；继续输入、查看真实工具卡/必要确认、停止及接收后台成果，普通工作可无AI继续。 [完整合同](../../../contracts/experience/screen-specifications/AI-01.md) | intelligent-cards、tool-permission-confirm | F4 |
+| AI-02 | Governed task stages and artifacts | 查看归属清楚的并行任务、进度和真实产物；取消、恢复或返回原对话，不把步骤完成当用户成果。 [完整合同](../../../contracts/experience/screen-specifications/AI-02.md) | — | F4 |
+| AI-03 | Source-first analysis thread | 围绕获准来源开展可持续的研究对话；检查引用、修改问题并保存/重开分析成果，知识与推断明确区分。 [完整合同](../../../contracts/experience/screen-specifications/AI-03.md) | — | F4 |
+| AI-04 | Registered Product Skill Store | 查找并审查已有Skill/连接器权限；安装、启停、更新回滚和撤销，调用仍受原任务/来源/效果边界约束。 [完整合同](../../../contracts/experience/screen-specifications/AI-04.md) | github-mcp-connectors、skills-store | F5 |
+| AI-05 | AI service topology diagnostic | 查看自有模型与用户明确选择的API实际状态；配置/核验/撤销，不自动换provider，不把配置存在算推理可用。 [完整合同](../../../contracts/experience/screen-specifications/AI-05.md) | byo-api | F5 |
+| BMP-01 | 品牌市场总览 | 查看获准品牌/市场的真实概况与重点，进入研究、竞品、创作者或Campaign，区分未采集与读取失败。 [完整合同](../../../contracts/experience/screen-specifications/BMP-01.md) | — | F8 |
+| BMP-02 | 品牌组合与竞品谱系 | 比较品牌、子品牌与竞品关系和同口径指标，核查证据、选择对象并保留比较版本。 [完整合同](../../../contracts/experience/screen-specifications/BMP-02.md) | — | F8 |
+| BMP-03 | 市场情报与机会雷达 | 研究市场机会和条件、查看来源与反证，记录机会判断并进入计划或独立研究成果。 [完整合同](../../../contracts/experience/screen-specifications/BMP-03.md) | — | F8 |
+| BMP-04 | 品牌传播路径 | 检查真实传播路径和渠道表现，分别说明原生指标、样本关系和推断，修订分析而不虚构转化。 [完整合同](../../../contracts/experience/screen-specifications/BMP-04.md) | — | F8 |
+| BMP-05 | 创作者生态 | 研究创作者及KOS/KOL/KOC/UGC，比较适配与漏斗证据，记录选择和合法联系用途。 [完整合同](../../../contracts/experience/screen-specifications/BMP-05.md) | kos-funnel | F8 |
+| BMP-06 | 内容生产台 | 从品牌Brief或已采纳材料继续同一Shared内容/视频制作能力；编辑预览、保存版本及经授权导出。 [完整合同](../../../contracts/experience/screen-specifications/BMP-06.md) | video-editing-studio | F8 |
+| BMP-07 | 活动工作台 | 设置Campaign目标/资源/受众，排期、记录执行与真实结果，再评价；计划、建议和已执行分开。 [完整合同](../../../contracts/experience/screen-specifications/BMP-07.md) | marketing-calendar | F8 |
+| BMP-08 | 播客制作室 | 由品牌任务可选联动同一Shared播客制作室；编辑稿件与音轨、试听渲染、保存修订/重开导出。 [完整合同](../../../contracts/experience/screen-specifications/BMP-08.md) | podcast-studio | F8 |
+| BMP-09 | 品牌评估 | 评估品牌与活动效果，核查归因/公开数据模型的假设和覆盖；生成可修订成果，不把相关性当因果。 [完整合同](../../../contracts/experience/screen-specifications/BMP-09.md) | public-mmm | F8 |
+| BMP-10 | 品牌风险响应 | 识别品牌风险线索、核查来源、形成Case和人工处置，追踪结果、纠正与恢复。 [完整合同](../../../contracts/experience/screen-specifications/BMP-10.md) | — | F8 |
+| BMP-11 | 品牌基准 | 进行同口径品牌/市场基准比较，明确不可比项及缺失原因，保存比较依据与版本。 [完整合同](../../../contracts/experience/screen-specifications/BMP-11.md) | — | F8 |
+| CTH-01 | Commercial Operations Overview | 查看商业经营重点、变化和待办，选择真实信号继续监测/Case/决策工作，保存当前工作上下文。 [完整合同](../../../contracts/experience/screen-specifications/CTH-01.md) | — | F7 |
+| CTH-02 | 经营主体与关联信息 | 查看经营主体、门店/租户与已核验关系；检查来源，修订合法记录，未知关系不冒认经营事实。 [完整合同](../../../contracts/experience/screen-specifications/CTH-02.md) | — | F7 |
+| CTH-03 | 实时监测 | 按范围和时间观察真实来源信号；查看封面/正文/原帖与时间，进入事件或研究并返回原位置。 [完整合同](../../../contracts/experience/screen-specifications/CTH-03.md) | — | F7 |
+| CTH-04 | 事件关系 | 查看事件时间、对象、地点及证据关系；纠错、关联Case并继续处理，不把先后顺序当因果。 [完整合同](../../../contracts/experience/screen-specifications/CTH-04.md) | — | F7 |
+| CTH-05 | 舆情日历 | 按日期查看事件与反馈，切换日/周和可访问列表，进入具体事件后返回选中日期。 [完整合同](../../../contracts/experience/screen-specifications/CTH-05.md) | — | F7 |
+| CTH-06 | 负面监测与反馈 | 区分公众意见、客户反馈、已核验事故与待核线索；处理负面事项、记录判断及后续行动。 [完整合同](../../../contracts/experience/screen-specifications/CTH-06.md) | — | F7 |
+| CTH-07 | 趋势分析 | 读取后端完成的统计/比较，核对窗口、分母、缺失和不确定性；调整业务约束并进入报告。 [完整合同](../../../contracts/experience/screen-specifications/CTH-07.md) | — | F7 |
+| CTH-08 | 案例工作台与可复用知识 | 建立或继续Case，关联真实资料、记录选项及适用条件；检索既有案例并审慎复用。 [完整合同](../../../contracts/experience/screen-specifications/CTH-08.md) | — | F7 |
+| CTH-09 | 风险与决策工作台 | 比较经营方案与风险、记录人工决策、执行行动和实际结果，变更条件产生新版本并保留理由。 [完整合同](../../../contracts/experience/screen-specifications/CTH-09.md) | business-decision-result | F7 |
+| CTH-10 | 报告与运营简报工作台 | 获取已分析的经营报告；检查引用/限制、编辑结论、保存修订、导出、关闭重开与恢复。 [完整合同](../../../contracts/experience/screen-specifications/CTH-10.md) | — | F7 |
+| SH-01 | Shared Capability Catalog | 独立开始研究、提案/文稿、视频或播客；从自有Brief/手稿/获准素材编辑、预览、保存修订重开恢复及导出。 [完整合同](../../../contracts/experience/screen-specifications/SH-01.md) | video-editing-studio、podcast-studio（同编辑器，无前置入口） | F9（剪辑/播客入口同 F8） |
+| SH-02 | Evidence Library | 检索和查看来源证据、权利、双时间与版本；引用或返回原帖，来源撤回/纠正时提示受影响成果。 [完整合同](../../../contracts/experience/screen-specifications/SH-02.md) | — | F9 |
+| SH-03 | Canonical Data and Metric Explorer | 查看规范数据、指标定义、分母和来源；筛选、比较与追溯，读界面不成为新的数据真相。 [完整合同](../../../contracts/experience/screen-specifications/SH-03.md) | — | F9 |
+| SH-04 | Reopenable Report Export Center | 定位已有成果及可导出格式，核对版本/权限，实际导出并能重开、修订及恢复旧版。 [完整合同](../../../contracts/experience/screen-specifications/SH-04.md) | — | F9 |
+| SH-05 | Versioned Learning and Evaluation Assets | 检索带来源与评价的学习资产；检查采纳、训练资格及版本，资产存在不等于模型已训练。 [完整合同](../../../contracts/experience/screen-specifications/SH-05.md) | — | F9 |
+| SH-06 | Notification and Task Center | 接收属于当前用户/工作区的真实通知及任务成果，继续/取消/恢复并返回原任务，错误和空列表分开。 [完整合同](../../../contracts/experience/screen-specifications/SH-06.md) | — | F9 |
+| SYS-01 | Runtime health / RuntimeGuardian slice | 查看当前运行服务、已加载版本、依赖健康和受影响任务，沿真实授权动作恢复，不把健康灯当产品闭环。 [完整合同](../../../contracts/experience/screen-specifications/SYS-01.md) | — | F10 |
+| SYS-02 | Collector status | 查看采集范围、平台、真实进度与已取得/待核验/接收/失败状态；刷新、取消及断点恢复互不伪报。 [完整合同](../../../contracts/experience/screen-specifications/SYS-02.md) | manual-collect | F6 |
+| SYS-03 | Database and truth chain | 追溯Source/Evidence/Canonical/Artifact的一致性与版本，按原权限备份/恢复，拒绝危险或越权变更。 [完整合同](../../../contracts/experience/screen-specifications/SYS-03.md) | — | F10 |
+| SYS-04 | Security and permission | 管理授权、数据控制与用户开发者模式；查看动作边界、撤销与恢复，不暴露密钥或让设置绕过权限。 [完整合同](../../../contracts/experience/screen-specifications/SYS-04.md) | keys-compliance、user-developer-mode | F10/F11 |
+| SYS-05 | Device appearance | 选择主题/语言/字体/动效偏好，预览原创Logo/icon/局部插画/角色；不丢任务状态。 [完整合同](../../../contracts/experience/screen-specifications/SYS-05.md) | visual-brand-roles | F0/F12 |
+| SYS-06 | Internal browser capability | 在产品内浏览真实页面、导航/停止/人工接管、保存笔记及成果并返回原任务；不包含通用OS控制。 [完整合同](../../../contracts/experience/screen-specifications/SYS-06.md) | browser-tabs、login-recovery-sheet | F6 |
+| SYS-07 | Evaluation and acceptance | 核验当前组合版本及创始人发布准备，处理真实失败、回滚和未闭条件，保留独立人工决策边界。 [完整合同](../../../contracts/experience/screen-specifications/SYS-07.md) | founder-developer-mode | F10/F11 |
+| SYS-08 | Observability and logs | 观察受控日志、任务与工作区生命周期，诊断/备份/归档/恢复及导出脱敏回执，不暴露私人运行材料。 [完整合同](../../../contracts/experience/screen-specifications/SYS-08.md) | ops-workspace-lifecycle | F10 |
+
+### 完整工作方式与四表面交付
+
+- **首页与返回**：ACC-03复用AI-01对话入口，导航到CTH/BMP/Shared/SYSTEM；新建/继续、任务归属、未保存草稿确认、来源查看和Return必须保留同一任务/版本/过滤/定位。无AI时可直接进入正常业务或独立制作。
+- **CTH / BMP完整链**：CTH监测→来源/事件→Case→选项→人工决策→行动→实际Outcome→报告；BMP研究/竞品/创作者→Campaign资源与排期→执行→评价，漏斗、营销日历、视频、播客和适用归因保留。来源不足产出有边界的有用成果，不能虚造完成。
+- **独立Shared**：研究→检索/导入/引用/人工比较→成果；提案/文稿从空白Brief或手稿直接编辑；视频/播客从获准素材直接制作。每条均要求保存、修订、版本比较、重开、恢复和真实导出；CTH/BMP联动是可选入口。独立创作不要求虚构Subject/BrandFocus或Canonical来源。
+- **采集内容与可信结果**：展示真实可得封面、标题、正文、作者、原帖、平台原生发布时间及采集时间、指标和准确缺失原因。原生事实、用户修订、分析与AI派生分开；来源撤回/纠正须指向受影响成果。记忆可查看/更正，异步任务可继续输入、取消和恢复；空数据、未采集、错误、拒绝、离线、部分结果不可混为一种状态。
+- **Public Website**：产品理解、CTH/BMP/独立Shared能力、真实操作视频与案例证明、帮助/联系、工作区及自愿账号入口，中英韩与移动浏览完整。官网不执行工作区业务，不把演示资产冒充实时数据。
+- **Web Workspace**：浏览器刷新/重开保留任务、草稿和版本；窄屏重排、文件选择/下载、断网恢复、键盘与读屏分别验证，不能只截桌面图。
+- **Windows/macOS**：同一Flutter/Core合同；验原生窗口、菜单/快捷键、文件选择/导出、媒体播放、打包及退出重开。**iOS Companion**：按批准角色验触控、安全区/键盘、前后台、恢复和跨表面续接，不能以“同桌面”代替；原生设备缺失只保留该端验收OPEN。
+- **逐动作接线**：沿原ScreenSpec记录动作→现有Owner/API→actor/workspace/来源用途→任务与幂等/版本→可见结果→失败恢复→既有验收条目。复用组件不复制整屏模板；Logo r4是待定稿候选，资产、三语、无障碍、完整UI/UX/AIGC和原有用户可选动效均需实际呈现。组合版本重新核验，单个Owner回执不能自动相加为产品PASS。
 
 ## B. 新增能力草图全文
 
@@ -120,7 +131,7 @@
 └──────────────────────────────────────┘（无预选项）
 ```
 ## 4B. Apple 按钮启用条件：取得 Apple Developer 账号（$99/年）前不显示 Apple 按钮，仅显示 Google 与邮箱验证码；两者均为免费方式。启用后布局如上图。
-## 5A. Web：同桌面；Apple/Google 授权后回原页，工作不丢。
+## 5A. Web：按浏览器宽度重排，支持键盘、前进返回与刷新续接；Apple/Google 授权后回原页，工作不丢。
 ## 6. Mobile：Logo → Apple（iOS 置顶）→ Google → 邮箱 → 继续 → 底部「先不登录」。
 ## 4. States
 正常 / 加载（可取消）/ 验证码错或过期（行内提示+重发）/ 第三方取消授权（回本页不弹错）/ 登录服务不可用（「登录暂不可用，可先不登录继续使用」，不自动换方式）/ 同邮箱已有账号（归同一账号，询问是否关联新方式）/ Apple 隐藏邮箱（提示继续用 Apple 或在设置关联真实邮箱）/ 删除待生效账号登录（「账号将于 N 天后删除」[恢复账号] [继续删除]）。
@@ -136,7 +147,7 @@
 
 同一聊天输入可继续交办A/B、修改A或停止B；已有任务按需展开，成果卡返回原工作并可保存/修订/重开。异步结果标明归属，通知低打扰但实际进度可查；Web重连和iOS返回保持草稿、读回已提交结果。以AI-01当前§5/§5A/§6为实施合同，规划§16逐项研究为来源；本草图不证明运行。
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G14,G116。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G14,G116。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -147,7 +158,7 @@
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+复用同一业务/权限合同；按可用宽度重排主操作与侧栏，支持键盘/焦点、浏览器前进返回和刷新恢复，保留未保存修改；不以桌面截图代替Web操作验收。
 
 ## 6. Purpose-built mobile composition
 卡片全宽堆叠。
@@ -163,7 +174,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ### AI-01 — 草图增补：免命令行工具调用与高风险确认
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G115。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G115。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -174,7 +185,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+复用同一业务/权限合同；按可用宽度重排主操作与侧栏，支持键盘/焦点、浏览器前进返回和刷新恢复，保留未保存修改；不以桌面截图代替Web操作验收。
 
 ## 6. Purpose-built mobile composition
 底部 Sheet。
@@ -190,7 +201,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ### AI-04 — 草图增补：连接器：GitHub（只读、仓库白名单）与 MCP（审查→白名单→人工批准）
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G186,G187。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G186,G187。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -200,7 +211,7 @@ Token：仅会话内，不落盘
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+复用同一业务/权限合同；按可用宽度重排主操作与侧栏，支持键盘/焦点、浏览器前进返回和刷新恢复，保留未保存修改；不以桌面截图代替Web操作验收。
 
 ## 6. Purpose-built mobile composition
 同内容。
@@ -216,7 +227,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ### AI-04 — 草图增补：Skills 商店
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G21,G185,G130。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G21,G185,G130。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -226,7 +237,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；受限后台插件不在商店上架。
+复用同一业务合同并按Web宽度重排，保留键盘/焦点、刷新恢复和原任务返回；受限后台插件不在商店上架。
 
 ## 6. Purpose-built mobile composition
 列表 + 详情页。
@@ -242,7 +253,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ### AI-05 — 草图增补：模型设置：自有模型默认 + 一个通用 OpenAI 兼容自带 API
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G50。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G50。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -252,7 +263,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+复用同一业务/权限合同；按可用宽度重排主操作与侧栏，支持键盘/焦点、浏览器前进返回和刷新恢复，保留未保存修改；不以桌面截图代替Web操作验收。
 
 ## 6. Purpose-built mobile composition
 同内容纵排。
@@ -268,7 +279,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ### BMP-05 — 草图增补：KOS 三阶漏斗与合规留资
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G118,G119。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G118,G119。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -278,7 +289,7 @@ CPL / 成本：—（缺失）或数值
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+复用同一业务/权限合同；按可用宽度重排主操作与侧栏，支持键盘/焦点、浏览器前进返回和刷新恢复，保留未保存修改；不以桌面截图代替Web操作验收。
 
 ## 6. Purpose-built mobile composition
 纵排。
@@ -310,7 +321,7 @@ Brief ✓  分镜 6 镜  审核：READY / NEEDS_REVISION / BLOCKED / NOT_VERIFIE
 └──────────────────────────────────────────────────────────────────────────────┘
 工程交换预检：⚠ 2 项损失（ducking 无对应、dissolve 不支持）· 时基 UNKNOWN → [查看] [仍导出为新版本] [取消]
 ```
-## 5A. Web：同桌面；大文件上传分片续传。
+## 5A. Web：按浏览器宽度重排，支持键盘、前进返回与刷新续接；大文件上传分片续传。
 ## 6. Mobile：竖屏优先；逐词稿编辑 + 简化时间线；画幅切换与导出可用；工程交换仅桌面。
 ## 4. States
 空 / 探测中 / 转写中 / 模型不可用（手动剪辑可用）/ 提议待确认 / 渲染中（可取消）/ 渲染失败（原因+重试）/ 版权未知 / 数据缺失 / 权限不足。
@@ -332,7 +343,7 @@ Brief ✓  分镜 6 镜  审核：READY / NEEDS_REVISION / BLOCKED / NOT_VERIFIE
 
 ### BMP-07 — 草图增补：营销日历与热点建议
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G120。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G120。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -341,7 +352,7 @@ Brief ✓  分镜 6 镜  审核：READY / NEEDS_REVISION / BLOCKED / NOT_VERIFIE
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+复用同一业务/权限合同；按可用宽度重排主操作与侧栏，支持键盘/焦点、浏览器前进返回和刷新恢复，保留未保存修改；不以桌面截图代替Web操作验收。
 
 ## 6. Purpose-built mobile composition
 周列表。
@@ -376,7 +387,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ⑪ 切片：故事节点候选（时间码+来源）→ 9:16 音频图 / 引语卡 / 各平台包装
 ⑫ 复盘：故事节点密度 · 情绪/洞察峰值（AI 派生，非权威）· 产出率 · 留存曲线（无平台数据 = 数据缺失）
 ```
-## 5A. Web：同桌面；录音需浏览器麦克风授权，未授权时只可导入。
+## 5A. Web：按浏览器宽度重排，支持键盘、前进返回与刷新续接；录音需浏览器麦克风授权，未授权时只可导入。
 ## 6. Mobile：步骤条横滑；稿件全屏编辑；时间线折叠为波形条；母带与发布包只读确认。
 ## 4. States
 空 / 导入中 / 转写中（进度，可取消）/ 模型不可用（显示原因，可导入已有字幕稿继续）/ 剪辑提议待确认 / 母带不达标（显示实测值与差值，不自动二次施压）/ 版权未知（导出提醒）/ 数据缺失 / 权限不足。
@@ -401,7 +412,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ### BMP-09 — 草图增补：公开数据营销组合与归因
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G166-G169。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G166-G169。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -412,7 +423,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+复用同一业务/权限合同；按可用宽度重排主操作与侧栏，支持键盘/焦点、浏览器前进返回和刷新恢复，保留未保存修改；不以桌面截图代替Web操作验收。
 
 ## 6. Purpose-built mobile composition
 纵排。
@@ -426,35 +437,35 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ---
 
-### CTH-09 — 草图增补：数学引擎结果卡（区间/缺失）
+### CTH-09 — 草图增补：经营决策结果与依据（区间/缺失）
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G143-G169。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G143-G169。
 
 ## 5. Purpose-built desktop composition
 ```
-指标：风险指数 62（95% 区间 54–70）模型 v1.2 · 证据▸
-样本不足：「数据不足（n=3 < 14）」—不显示 0/50
-[查看回测] [解释（AI，只解释不改数）]
+经营问题 → 已分析结果 / 关键发现 / 可选行动 · 来源▸
+仅在真实输入满足算法假设时显示实测指标、区间、分母与版本；否则说明数据不足
+[修订业务约束] [比较方案] [保存决策] [查看方法与回测] [AI辅助解释（可选）]
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+复用同一业务/权限合同；按可用宽度重排主操作与侧栏，支持键盘/焦点、浏览器前进返回和刷新恢复，保留未保存修改；不以桌面截图代替Web操作验收。
 
 ## 6. Purpose-built mobile composition
-同卡片。
+以业务结果为首屏，依据分层展开；触控可操作，字号放大不截断，保留返回原任务与版本恢复。
 
 ## 4. State additions
 Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
 
 ## 9. Executable acceptance
 - 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。
-- OpenAI Math 主引擎，经典库补充；结果可复现。
+- 数学方法在后端按真实假设和来源计算，保留适用范围、反例与可复现版本；前端验收有用的经营决策成果、保存修订和恢复，不展示论文选择器或虚构分数。
 
 ---
 
 ### SYS-02 — 草图增补：采集：默认 AUTO + 可选手动采集按钮
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：O1,G2。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：O1,G2。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -464,7 +475,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；批量：[对所选主体立即采集]
+复用同一业务合同并按Web宽度重排，保留键盘/焦点、刷新恢复和原任务返回；批量：[对所选主体立即采集]
 
 ## 6. Purpose-built mobile composition
 主体卡 + 同按钮。
@@ -496,7 +507,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
   [导出合规报告]
 ```
 ## 5A. Web Workspace composition
-同桌面。
+按Web宽度组织主操作与可展开依据，保留浏览器导航、刷新恢复和原任务返回。
 ## 6. Purpose-built mobile composition
 分组卡片纵排，操作收进「…」菜单。
 ## 4. State additions
@@ -533,7 +544,7 @@ Ready / Loading / 数据缺失 / 会话过期（提示重新登录，不切换�
   备份/恢复  [备份账号数据] [从备份恢复] 列表：时间/大小
   协议记录   v1 · 2026-10-14 同意 · [撤回同意=关闭模式]
 ```
-## 5A. Web：同桌面；本地 API 不提供（浏览器无本机端口）。
+## 5A. Web：按浏览器宽度重排，支持键盘、前进返回与刷新续接；本地 API 不提供（浏览器无本机端口）。
 ## 6. Mobile：只读（状态、修改记录、备份列表）；开启/加载扩展需桌面端。
 ## 4. States
 关闭 / 协议未完成 / 开启 / 扩展出错（自动停用该扩展并显示原因，不影响主程序）/ 备份中 / 恢复中 / 数据缺失 / 权限不足。
@@ -557,7 +568,7 @@ Ready / Loading / 数据缺失 / 会话过期（提示重新登录，不切换�
 角色  [显示角色形象 ✓]  Pim 商业运营 · Bram 品牌市场 · Ness 共享能力 · Jas 系统 · Aris 自研 AI
 预览  ┌ 当前页缩略 ┐ 改动即时生效，返回原页面、滚动位置和草稿不丢
 ```
-## 5A/6：Web 同桌面；手机纵排，预览改为整页实时生效。
+## 5A/6：Web按浏览器宽度重排并保留刷新续接；手机纵排，预览改为整页实时生效。
 ## 4. States：正常 / 加载 / 素材缺失（显示占位名字，不用他人素材）。
 ## 9. Acceptance
 - 切换主题后路由、滚动、选择、未保存草稿不变（SYS-05 原合同）。
@@ -568,7 +579,7 @@ Ready / Loading / 数据缺失 / 会话过期（提示重新登录，不切换�
 
 ### SYS-06 — 草图增补：内置浏览器：标签/地址栏/前进后退/折叠/查看原文
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G1,G188。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G1,G188。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -579,7 +590,7 @@ Ready / Loading / 数据缺失 / 会话过期（提示重新登录，不切换�
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；折叠后收为顶栏胶囊「浏览器·2 个标签」，任务不中断。
+复用同一业务合同并按Web宽度重排，保留键盘/焦点、刷新恢复和原任务返回；折叠后收为顶栏胶囊「浏览器·2 个标签」，任务不中断。
 
 ## 6. Purpose-built mobile composition
 全屏单标签+底部标签切换；折叠为底部条。
@@ -595,7 +606,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ### SYS-06 — 草图增补：产品内登录失效弹窗 LumenisPlatformRecoverySheet
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G51,G133。
+> 已入库的参考草图，实施与验收归现有 ScreenSpec；按其 §5/§5A/§6 原位保持完整要求。规划依据：G51,G133。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -607,7 +618,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；同一时刻只弹一个；成功后自动回到原任务并续跑。
+复用同一业务合同并按Web宽度重排，保留键盘/焦点、刷新恢复和原任务返回；同一时刻只弹一个；成功后自动回到原任务并续跑。
 
 ## 6. Purpose-built mobile composition
 底部 Sheet，同内容。
@@ -641,7 +652,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
              回滚 = 发布更高版本号的上一个稳定版
 历史         版本/时间/批次/结果/[查看说明]
 ```
-## 5A. Web：同桌面。 ## 6. Mobile：只看状态，可[暂停][回滚]，不可上传。
+## 5A. Web：按浏览器宽度重排，保留刷新续接、权限核验和原任务返回。 ## 6. Mobile：只看状态，可[暂停][回滚]，不可上传。
 ## 4. States
 空闲 / 上传中 / 测试中 / 测试失败（阻止发布）/ 待发布 / 分批中 / 已暂停 / 已回滚 / 指标缺失（显示「数据缺失」，不显示 0，缺失时不自动扩大批次）。
 ## 9. Acceptance
@@ -667,7 +678,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 COMMERCIAL_READY 检查表  合规 ✓ 密钥 ✓ 生命周期 ◐ 运营 ✓ 账号 ◐
 ```
 ## 5A / 6
-Web 同桌面；手机纵排，检查表折叠。
+Web按浏览器宽度重排并保留刷新续接；手机纵排，检查表折叠。
 ## 4. State additions
 Ready / Loading / 数据缺失（指标未采到显示缺失）/ 不可用（显示原因）。
 ## 9. Executable acceptance

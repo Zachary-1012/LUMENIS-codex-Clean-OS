@@ -152,8 +152,8 @@ enlarged text. Retry never grants permission or confirms a locally selected row.
 This review does not widen the CTH-only directory API, add entity registration,
 invent country/relationship fields or alter GLOBAL/FOCUS/Permission. Those
 approved product requirements remain with their canonical contracts and future
-bindings. Account/password design stays deferred until product closure reaches
-100%; there is no new account wall. The public product default remains GLOBAL.
+bindings. Optional product account/login/settings are in the approved engineering
+closure; there is no account wall. The public product default remains GLOBAL.
 
 Research accessed 2026-09-28: official Flutter
 [ListView](https://api.flutter.dev/flutter/widgets/ListView-class.html) and

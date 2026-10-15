@@ -29,6 +29,59 @@ MediaProjectAsset audioAsset() {
   );
 }
 
+MediaProjectAsset replacementVideoAsset() {
+  const sha =
+      'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+  return MediaProjectAsset(
+    assetId: 'MEDIA-${sha.substring(0, 16)}',
+    filename: 'replacement.mp4',
+    sha256: sha,
+    durationSec: 20,
+    mediaKind: 'video_audio',
+    hasVideo: true,
+    audioStreamCount: 2,
+  );
+}
+
+MediaProjectSnapshot _videoProject({int clipCount = 3}) {
+  final asset = videoAsset();
+  var snapshot = MediaProjectSnapshot.empty(inspectedAssets: [asset]);
+  for (var index = 0; index < clipCount; index++) {
+    snapshot = snapshot.addClip(
+      asset.assetId,
+      trackId: 'video',
+      sourceIn: 1,
+      sourceOut: 6,
+      audioRole: 'muted',
+      clipId: 'video-$index',
+    );
+  }
+  return snapshot;
+}
+
+MediaProjectTransition _dissolve(String from, String to) =>
+    MediaProjectTransition(
+      fromClip: from,
+      toClip: to,
+      transitionType: 'dissolve',
+      durationSec: 0.5,
+      reason: 'soft scene change',
+    );
+
+MediaProjectSnapshot _withTransitions(
+  MediaProjectSnapshot snapshot,
+  List<MediaProjectTransition> transitions,
+) {
+  final payload = snapshot.toJson();
+  payload['transitions'] = transitions
+      .map((transition) => transition.toJson())
+      .toList();
+  return MediaProjectSnapshot.fromJson(
+    payload,
+    inspectedAssets: snapshot.assets,
+  );
+}
+
 Map<String, Object?> pythonTimelinePayload() => <String, Object?>{
   'version': 7,
   'format_ratio': '16:9',
@@ -230,10 +283,12 @@ void main() {
         isTrue,
       );
       expect(snapshot.toJson().toString(), isNot(contains(r'C:\')));
-      expect(
-        () => snapshot.deleteVideoClip('clip-server-01'),
-        throwsFormatException,
-      );
+      final deleted = snapshot.deleteVideoClip('clip-server-01');
+      expect(deleted.tracks.first.clips.map((clip) => clip.clipId), [
+        'clip-server-02',
+      ]);
+      expect(deleted.transitions, isEmpty);
+      expect(deleted.undo().transitions.single.transitionType, 'future_wipe');
     },
   );
 
@@ -299,6 +354,131 @@ void main() {
         text: 'Manual caption',
       );
       expect(snapshot.overlays.single.text, 'Manual caption');
+    },
+  );
+
+  test(
+    'video edits preserve valid transitions and reject broken handles or adjacency atomically',
+    () {
+    final initial = _videoProject();
+    final clips = initial.tracks.first.clips;
+    final before = _withTransitions(initial, [
+      _dissolve(clips[0].clipId, clips[1].clipId),
+    ]);
+
+    final trimmed = before.trimClip(
+      clips[1].clipId,
+      sourceIn: 0.5,
+      sourceOut: 5.5,
+    );
+    expect(trimmed.transitions, before.transitions);
+    expect(trimmed.tracks.first.clips[1].sourceIn, 0.5);
+
+    expect(
+      () => before.trimClip(clips[1].clipId, sourceIn: 0.1, sourceOut: 5.1),
+      throwsFormatException,
+    );
+    expect(
+      before.toJson(),
+      equals(
+        _withTransitions(initial, [
+          _dissolve(clips[0].clipId, clips[1].clipId),
+        ]).toJson(),
+      ),
+    );
+
+    final shiftedPair = before.reorderVideoClip(clips[2].clipId, newIndex: 0);
+    expect(shiftedPair.transitions, before.transitions);
+    expect(
+      () => before.reorderVideoClip(clips[1].clipId, newIndex: 2),
+      throwsFormatException,
+    );
+    expect(before.tracks.first.clips.map((clip) => clip.clipId), [
+      'video-0',
+      'video-1',
+      'video-2',
+    ]);
+  });
+
+  test('split, delete, and undo keep transition references coherent', () {
+    final initial = _videoProject(clipCount: 4);
+    final clips = initial.tracks.first.clips;
+    final before = _withTransitions(initial, [
+      _dissolve(clips[0].clipId, clips[1].clipId),
+      _dissolve(clips[2].clipId, clips[3].clipId),
+    ]);
+
+    final split = before.splitClip(clips[1].clipId, atSec: 3);
+    expect(split.transitions, [before.transitions[1]]);
+    expect(split.tracks.first.clips.map((clip) => clip.clipId), [
+      'video-0',
+      'video-1-a',
+      'video-1-b',
+      'video-2',
+      'video-3',
+    ]);
+    final undone = split.undo();
+    expect(undone.tracks.first.toJson(), before.tracks.first.toJson());
+    expect(undone.transitions, before.transitions);
+
+    final deleted = before.deleteVideoClip(clips[1].clipId);
+    expect(deleted.transitions, [before.transitions[1]]);
+    expect(
+      deleted.transitions.every(
+        (transition) =>
+            transition.fromClip != clips[1].clipId &&
+            transition.toClip != clips[1].clipId,
+      ),
+      isTrue,
+    );
+  });
+
+  test(
+    'source replacement preserves valid transition handles and undo state',
+    () {
+      final initial = _videoProject();
+      final clips = initial.tracks.first.clips;
+      final before = _withTransitions(initial, [
+        _dissolve(clips[0].clipId, clips[1].clipId),
+        _dissolve(clips[1].clipId, clips[2].clipId),
+      ]).addInspectedAsset(replacementVideoAsset());
+      final targetBefore = before.tracks.first.clips[1];
+
+      final replaced = before.replaceClipSource(
+        targetBefore.clipId,
+        mediaAssetId: 'MEDIA-cccccccccccccccc',
+        sourceIn: 0.5,
+        audioRole: 'muted',
+        audioStreamIndex: null,
+      );
+      final targetAfter = replaced.tracks.first.clips[1];
+      expect(targetAfter.mediaAssetId, 'MEDIA-cccccccccccccccc');
+      expect(targetAfter.durationSec, targetBefore.durationSec);
+      expect(targetAfter.timelineStart, targetBefore.timelineStart);
+      expect(replaced.transitions, before.transitions);
+      expect(
+        replaced.undo().tracks.first.toJson(),
+        before.tracks.first.toJson(),
+      );
+      expect(replaced.undo().transitions, before.transitions);
+
+      expect(
+        () => before.replaceClipSource(
+          targetBefore.clipId,
+          mediaAssetId: 'MEDIA-cccccccccccccccc',
+          sourceIn: 0.1,
+          audioRole: 'muted',
+          audioStreamIndex: null,
+        ),
+        throwsFormatException,
+      );
+      expect(
+        before.tracks.first.toJson(),
+        _withTransitions(initial, [
+          _dissolve(clips[0].clipId, clips[1].clipId),
+          _dissolve(clips[1].clipId, clips[2].clipId),
+        ]).tracks.first.toJson(),
+      );
     },
   );
 

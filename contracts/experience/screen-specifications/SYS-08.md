@@ -117,7 +117,7 @@ Web 同桌面，保留原任务与状态。
 ### 草图增补：运营与工作区生命周期（G19，闭环内）
 
 
-Web 同桌面；手机纵排，检查表折叠。
+Web：运行/工作区检查按任务分区，折叠细节保留关键错误与恢复入口；刷新读取真实状态，破坏性操作需现有Permission及明确确认。 手机纵排，检查表折叠。
 
 ### Existing contract — Purpose-built mobile composition
 

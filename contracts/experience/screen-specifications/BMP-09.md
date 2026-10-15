@@ -93,7 +93,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ### 草图增补：公开数据营销组合与归因
 
 Web Workspace composition
-同桌面布局；无额外差异。
+Web：同口径比较、结果及依据按宽度重排；图形有可访问数据表，筛选/版本保留在返回路径，刷新读回成果而不重新执行分析。
 
 ## 6. Purpose-built mobile composition
 

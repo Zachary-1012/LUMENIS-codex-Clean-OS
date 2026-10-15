@@ -146,7 +146,7 @@ persistence, actual AI/rights binding and live user acceptance remain open.
 
 ### 草图增补：播客制作室全链（规划 §14 P1–P12、G184/G79/G107/G128）
 
-Web：同桌面；录音需浏览器麦克风授权，未授权时只可导入。
+Web：稿件、音轨和检查器可分栏或逐项展开；录音先获浏览器授权，拒绝不阻塞导入/手动编辑；试听与后台渲染状态分开，刷新恢复已保存工程。 录音需浏览器麦克风授权，未授权时只可导入。
 
 
 ## 6. Purpose-built mobile composition

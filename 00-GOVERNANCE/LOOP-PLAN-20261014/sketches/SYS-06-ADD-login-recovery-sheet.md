@@ -1,6 +1,6 @@
 # SYS-06 — 草图增补：产品内登录失效弹窗 LumenisPlatformRecoverySheet
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G51,G133。
+> 已入库参考草图；实施与验收归现有ScreenSpec，按§5/§5A/§6原位维护，不自称已实现或已验收。规划依据：G51,G133。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -12,7 +12,7 @@
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；同一时刻只弹一个；成功后自动回到原任务并续跑。
+Web：受控标签、地址、任务返回和停止始终可达；窄屏将辅助栏展开为独立面板，独占接管与刷新后的会话读回由服务端核验，不能复用个人浏览器。 同一时刻只弹一个；成功后自动回到原任务并续跑。
 
 ## 6. Purpose-built mobile composition
 底部 Sheet，同内容。

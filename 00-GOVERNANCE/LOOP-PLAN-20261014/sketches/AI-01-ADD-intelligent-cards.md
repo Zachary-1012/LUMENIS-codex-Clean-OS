@@ -1,6 +1,6 @@
 # AI-01 — 草图增补：聊天智能 UI 卡片
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G14,G116。
+> 已入库参考草图；实施与验收归现有ScreenSpec，按§5/§5A/§6原位维护，不自称已实现或已验收。规划依据：G14,G116。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -11,7 +11,7 @@
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+Web：输入区与正在完成的任务独立，流式更新不抢输入焦点；卡片按宽度重排，刷新后由服务端读回任务与成果，未保存输入明确保留。
 
 ## 6. Purpose-built mobile composition
 卡片全宽堆叠。

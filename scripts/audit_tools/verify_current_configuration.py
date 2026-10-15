@@ -16,7 +16,7 @@ APP_WORKFLOW = ROOT / ".github" / "workflows" / "app-verify.yml"
 CURRENT = ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md"
 DEPLOYMENT_README = ROOT / "deployment" / "README.md"
 DEPLOYMENT_LOCAL = ROOT / "deployment" / "start_local.bat"
-REMOVED_PUBLIC_LAUNCHERS = ('tunnel_guardian.py', 'deployment/start_remote.bat', 'deployment/启动远程访问.bat', 'start_tunnel.bat', 'start_cloudflare_stable.bat', 'cloudflared_guardian.ps1', 'monitor_cloudflare_tunnel.bat', 'start_cf.ps1', 'start_cloudflare_tunnel.bat', 'start_cloudflare_guardian.bat', 'start_cloudflare_hidden.vbs', 'start_cloudflare_hidden_new.vbs', 'deployment/deployment/σÉ»σè¿Φ┐£τ¿ïΦ«┐Θù«.bat')
+REMOVED_PUBLIC_LAUNCHERS = ('tunnel_guardian.py', 'deployment/start_remote.bat', 'deployment/启动远程访问.bat', 'start_tunnel.bat', 'start_cloudflare_stable.bat', 'cloudflared_guardian.ps1', 'monitor_cloudflare_tunnel.bat', 'start_cf.ps1', 'start_cloudflare_tunnel.bat', 'start_cloudflare_guardian.bat', 'start_cloudflare_hidden.vbs', 'start_cloudflare_hidden_new.vbs', 'deployment/deployment/启动远程访问.bat')
 INSTANCE_INSPECTOR = ROOT / "scripts" / "inspect_instances.ps1"
 
 

@@ -1,6 +1,6 @@
 # AI-04 — 草图增补：连接器：GitHub（只读、仓库白名单）与 MCP（审查→白名单→人工批准）
 
-> 草稿，未入仓库。格式按 SCREEN_SPEC_TEMPLATE §5/§5A/§6；只升级，不改原有内容。规划依据：G186,G187。
+> 已入库参考草图；实施与验收归现有ScreenSpec，按§5/§5A/§6原位维护，不自称已实现或已验收。规划依据：G186,G187。
 
 ## 5. Purpose-built desktop composition
 ```
@@ -10,7 +10,7 @@ Token：仅会话内，不落盘
 ```
 
 ## 5A. Web Workspace composition
-同桌面布局；无额外差异。
+Web：目录筛选与详情分栏在窄屏转为连续详情；权限确认可键盘操作，安装/停用结果按服务端读回，返回保留筛选和选中项。
 
 ## 6. Purpose-built mobile composition
 同内容。

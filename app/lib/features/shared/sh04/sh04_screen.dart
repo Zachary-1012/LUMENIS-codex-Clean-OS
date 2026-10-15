@@ -1,4 +1,8 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/lumenis_icon.dart';
 
@@ -7,6 +11,7 @@ import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
 import '../read_aloud_action.dart';
 import 'sh04_repository.dart';
+import 'sh04_export_files.dart';
 import 'sh04_snapshot.dart';
 import 'sh04_view_model.dart';
 
@@ -21,6 +26,7 @@ class Sh04Screen extends StatefulWidget {
 }
 
 class _Sh04ScreenState extends State<Sh04Screen> {
+  final _exportFiles = Sh04ExportFiles();
   late final Sh04ViewModel _viewModel = Sh04ViewModel(
     repository: widget.repository ?? CoreSh04Repository(client: widget.client),
   );
@@ -53,27 +59,199 @@ class _Sh04ScreenState extends State<Sh04Screen> {
             kind: _viewModel.failureKind!,
             onRetry: _viewModel.refresh,
           ),
-          Sh04LoadPhase.ready => _Workspace(viewModel: _viewModel),
+          Sh04LoadPhase.ready => _Workspace(
+            viewModel: _viewModel,
+            onCreate: _createReport,
+            onReopen: _reopen,
+            onRevise: _revise,
+            onExport: _export,
+          ),
         },
       ),
     ),
   );
+
+  Future<void> _createReport() async {
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => _Sh04EditorDialog(
+        onSubmit: (title, markdown, _) async {
+          try {
+            await _viewModel.saveReport(title: title, markdown: markdown);
+            return true;
+          } catch (_) {
+            return false;
+          }
+        },
+      ),
+    );
+    if (saved == true && mounted) {
+      _showNotice(
+        _copy(
+          context,
+          '报告已保存，可重新打开。',
+          'Report saved and ready to reopen.',
+          '보고서를 저장했습니다. 다시 열 수 있습니다.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _revise(Sh04Export item) async {
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => _Sh04EditorDialog(
+        source: item,
+        onSubmit: (title, markdown, reason) async {
+          try {
+            await _viewModel.reviseReport(
+              parent: item,
+              title: title,
+              markdown: markdown,
+              reason: reason,
+            );
+            return true;
+          } catch (_) {
+            return false;
+          }
+        },
+      ),
+    );
+    if (saved == true && mounted) {
+      _showNotice(
+        _copy(
+          context,
+          '新版本已保存，原版本仍可重新打开。',
+          'A new version was saved. The earlier version remains available.',
+          '새 버전을 저장했습니다. 이전 버전도 다시 열 수 있습니다.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _reopen(Sh04Export item) async {
+    try {
+      await _viewModel.reopen(item);
+      if (mounted) {
+        _showNotice(
+          _copy(
+            context,
+            '已从保存的版本重新打开。',
+            'Reopened the saved version.',
+            '저장된 버전을 다시 열었습니다.',
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        _showNotice(
+          _copy(
+            context,
+            '此版本暂时无法重新打开。请重新读取后再试。',
+            'This version could not be reopened. Read the list again and retry.',
+            '이 버전을 다시 열 수 없습니다. 목록을 새로 읽고 다시 시도하세요.',
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _export(Sh04Export item) async {
+    final formats = _exportFiles.canSaveFile
+        ? const ['md', 'txt', 'docx', 'pdf', 'xlsx']
+        : const ['md', 'txt'];
+    final format = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => _Sh04FormatDialog(formats: formats),
+    );
+    if (format == null || !mounted) return;
+    try {
+      final file = await _viewModel.export(item, format);
+      if (_exportFiles.canSaveFile) {
+        final saved = await _exportFiles.save(
+          file,
+          suggestedName: 'lumenis-report-v${item.version}.$format',
+        );
+        if (saved && mounted) {
+          _showNotice(
+            _copy(
+              context,
+              kIsWeb ? '文件已交给浏览器下载，请检查下载记录。' : '文件已保存到所选位置。',
+              kIsWeb
+                  ? 'The file was handed to the browser. Check Downloads.'
+                  : 'The file was saved to the selected location.',
+              kIsWeb
+                  ? '브라우저에 파일을 전달했습니다. 다운로드 목록을 확인하세요.'
+                  : '선택한 위치에 파일을 저장했습니다.',
+            ),
+          );
+        }
+      } else {
+        final text = utf8.decode(file.bytes);
+        await Clipboard.setData(ClipboardData(text: text));
+        if (mounted) {
+          _showNotice(
+            _copy(
+              context,
+              '导出文本已复制，可粘贴到文件或其他应用。',
+              'Exported text copied. Paste it into a file or another app.',
+              '내보낸 텍스트를 복사했습니다. 파일이나 다른 앱에 붙여넣을 수 있습니다.',
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        _showNotice(
+          _copy(
+            context,
+            '导出未完成。请检查权限后重试。',
+            'Export did not complete. Check access and retry.',
+            '내보내기를 완료하지 못했습니다. 권한을 확인하고 다시 시도하세요.',
+          ),
+        );
+      }
+    }
+  }
+
+  void _showNotice(String text) {
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(text)));
+  }
 }
 
 class _Workspace extends StatelessWidget {
-  const _Workspace({required this.viewModel});
+  const _Workspace({
+    required this.viewModel,
+    required this.onCreate,
+    required this.onReopen,
+    required this.onRevise,
+    required this.onExport,
+  });
 
   final Sh04ViewModel viewModel;
+  final VoidCallback onCreate;
+  final ValueChanged<Sh04Export> onReopen;
+  final ValueChanged<Sh04Export> onRevise;
+  final ValueChanged<Sh04Export> onExport;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final wide = constraints.maxWidth >= 1120;
       final snapshot = viewModel.snapshot!;
-      final queue = _ExportQueue(viewModel: viewModel);
+      final queue = _ExportQueue(viewModel: viewModel, onReopen: onReopen);
       final inspector = _ArtifactInspector(
         exportItem: viewModel.selected,
         scope: snapshot.scope,
+        busy: viewModel.operationBusy,
+        onRevise: viewModel.selected == null
+            ? null
+            : () => onRevise(viewModel.selected!),
+        onExport: viewModel.selected == null
+            ? null
+            : () => onExport(viewModel.selected!),
       );
       return Align(
         alignment: Alignment.topCenter,
@@ -92,6 +270,30 @@ class _Workspace extends StatelessWidget {
                 _Header(),
                 const SizedBox(height: 18),
                 _ScopeBanner(scope: snapshot.scope),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.icon(
+                    key: const Key('sh04-create-report'),
+                    onPressed: viewModel.operationBusy ? null : onCreate,
+                    icon: const LumenisIcon(Icons.edit_note_rounded),
+                    label: Text(
+                      _copy(context, '撰写报告', 'Write a report', '보고서 작성'),
+                    ),
+                  ),
+                ),
+                if (!snapshot.verificationComplete ||
+                    snapshot.unverifiedCandidates > 0) ...[
+                  const SizedBox(height: 12),
+                  _InfoMessage(
+                    _copy(
+                      context,
+                      '部分保存成果未能完成核验，已暂时隐藏。重新读取后可再次检查。',
+                      'Some saved reports could not be verified and are hidden for now. Read again to check later.',
+                      '일부 저장된 보고서를 확인하지 못해 임시로 숨겼습니다. 목록을 다시 읽어 확인하세요.',
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 if (wide)
                   Row(
@@ -107,8 +309,34 @@ class _Workspace extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [queue, const SizedBox(height: 14), inspector],
                   ),
-                const SizedBox(height: 14),
-                _ReadOnlyExportNote(),
+                if (snapshot.hasMore) ...[
+                  const SizedBox(height: 14),
+                  if (viewModel.loadMoreFailureKind != null) ...[
+                    _InfoMessage(
+                      _copy(
+                        context,
+                        '更多报告暂未读取，已显示的版本仍可用。可重试读取。',
+                        'More reports could not be read. The versions already shown remain available; you can retry.',
+                        '추가 보고서를 읽지 못했습니다. 이미 표시된 버전은 계속 사용할 수 있으며 다시 시도할 수 있습니다.',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton(
+                      key: const Key('sh04-load-more'),
+                      onPressed: viewModel.operationBusy
+                          ? null
+                          : viewModel.loadMore,
+                      child: Text(
+                        viewModel.loadMoreFailureKind == null
+                            ? _copy(context, '加载更多', 'Load more', '더 보기')
+                            : _copy(context, '重试读取', 'Retry reading', '다시 읽기'),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 Align(
                   alignment: Alignment.centerLeft,
@@ -148,9 +376,9 @@ class _Header extends StatelessWidget {
       Text(
         _copy(
           context,
-          '先确认精确范围，再查看已生成并可重新打开的成果；没有真实成果时不提供假下载。',
-          'Confirm the exact range first, then inspect generated and reopenable outputs. No fake download is offered.',
-          '먼저 정확한 범위를 확인한 뒤 생성되어 다시 열 수 있는 결과물을 확인합니다. 실제 결과물이 없으면 다운로드를 가장하지 않습니다.',
+          '在共享工作区撰写和修订报告，重新打开保存版本，并通过权限检查后导出。',
+          'Write and revise reports in the Shared workspace, reopen saved versions, and export after access checks.',
+          '공유 작업공간에서 보고서를 작성하고 수정한 뒤 저장 버전을 다시 열고 권한 확인 후 내보냅니다.',
         ),
         style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.45),
       ),
@@ -165,9 +393,7 @@ class _ScopeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final range = scope.isGlobal
-        ? _copy(context, '全部范围', 'All scopes', '전체 범위')
-        : '${scope.businessDomain} · ${scope.displayName}';
+    final range = _copy(context, '共享工作区', 'Shared workspace', '공유 작업 공간');
     return Semantics(
       liveRegion: true,
       label: _copy(
@@ -203,7 +429,12 @@ class _ScopeBanner extends StatelessWidget {
               ),
             ),
             Text(
-              _copy(context, '精确范围已确认', 'Exact range confirmed', '정확한 범위 확인됨'),
+              _copy(
+                context,
+                '每次操作均检查工作区权限',
+                'Workspace access is checked for each action',
+                '각 작업에서 작업공간 권한을 확인합니다',
+              ),
               style: TextStyle(
                 color: LumenisTheme.of(context).muted,
                 fontSize: 12,
@@ -216,10 +447,193 @@ class _ScopeBanner extends StatelessWidget {
   }
 }
 
+typedef _Sh04Submit =
+    Future<bool> Function(String title, String markdown, String reason);
+
+class _Sh04EditorDialog extends StatefulWidget {
+  const _Sh04EditorDialog({this.source, required this.onSubmit});
+
+  final Sh04Export? source;
+  final _Sh04Submit onSubmit;
+
+  @override
+  State<_Sh04EditorDialog> createState() => _Sh04EditorDialogState();
+}
+
+class _Sh04EditorDialogState extends State<_Sh04EditorDialog> {
+  late final _title = TextEditingController(text: widget.source?.title ?? '');
+  late final _markdown = TextEditingController(
+    text: widget.source?.markdown ?? '',
+  );
+  final _reason = TextEditingController();
+  bool _busy = false;
+  bool _failed = false;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _markdown.dispose();
+    _reason.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_title.text.trim().isEmpty ||
+        _markdown.text.trim().isEmpty ||
+        (widget.source != null && _reason.text.trim().isEmpty)) {
+      setState(() => _failed = true);
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _failed = false;
+    });
+    final saved = await widget.onSubmit(
+      _title.text.trim(),
+      _markdown.text,
+      _reason.text.trim(),
+    );
+    if (!mounted) return;
+    if (saved) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() {
+        _busy = false;
+        _failed = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isRevision = widget.source != null;
+    return AlertDialog(
+      title: Text(
+        isRevision
+            ? _copy(context, '修订报告', 'Revise report', '보고서 수정')
+            : _copy(context, '撰写报告', 'Write a report', '보고서 작성'),
+      ),
+      content: SizedBox(
+        width: 600,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                key: const Key('sh04-report-title'),
+                controller: _title,
+                maxLength: 300,
+                decoration: InputDecoration(
+                  labelText: _copy(context, '标题', 'Title', '제목'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                key: const Key('sh04-report-markdown'),
+                controller: _markdown,
+                minLines: 10,
+                maxLines: 18,
+                keyboardType: TextInputType.multiline,
+                decoration: InputDecoration(
+                  alignLabelWithHint: true,
+                  labelText: _copy(context, '报告内容', 'Report text', '보고서 내용'),
+                ),
+              ),
+              if (isRevision) ...[
+                const SizedBox(height: 10),
+                TextField(
+                  key: const Key('sh04-revision-reason'),
+                  controller: _reason,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    alignLabelWithHint: true,
+                    labelText: _copy(
+                      context,
+                      '本次修订说明',
+                      'Reason for this revision',
+                      '이번 수정 사유',
+                    ),
+                  ),
+                ),
+              ],
+              if (_failed) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _copy(
+                    context,
+                    '保存未完成，内容仍保留。若上次结果不确定，请用相同内容重试。',
+                    'The save did not complete and your text is still here. If the previous result is uncertain, retry with the same text.',
+                    '저장을 완료하지 못했지만 내용은 남아 있습니다. 이전 결과가 불확실하면 같은 내용으로 다시 시도하세요.',
+                  ),
+                  style: TextStyle(color: LumenisTheme.of(context).danger),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+          child: Text(_copy(context, '取消', 'Cancel', '취소')),
+        ),
+        FilledButton(
+          key: const Key('sh04-save-report'),
+          onPressed: _busy ? null : _save,
+          child: _busy
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  isRevision
+                      ? _copy(context, '保存新版本', 'Save new version', '새 버전 저장')
+                      : _copy(context, '保存报告', 'Save report', '보고서 저장'),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Sh04FormatDialog extends StatelessWidget {
+  const _Sh04FormatDialog({required this.formats});
+
+  final List<String> formats;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(
+      _copy(context, '选择导出格式', 'Choose an export format', '내보내기 형식 선택'),
+    ),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final format in formats)
+          ListTile(
+            key: Key('sh04-export-$format'),
+            leading: const LumenisIcon(Icons.article_outlined),
+            title: Text(format.toUpperCase()),
+            onTap: () => Navigator.of(context).pop(format),
+          ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(_copy(context, '取消', 'Cancel', '취소')),
+      ),
+    ],
+  );
+}
+
 class _ExportQueue extends StatelessWidget {
-  const _ExportQueue({required this.viewModel});
+  const _ExportQueue({required this.viewModel, required this.onReopen});
 
   final Sh04ViewModel viewModel;
+  final ValueChanged<Sh04Export> onReopen;
 
   @override
   Widget build(BuildContext context) {
@@ -228,17 +642,17 @@ class _ExportQueue extends StatelessWidget {
       title: _copy(context, '成果队列', 'Output queue', '결과물 대기열'),
       detail: _copy(
         context,
-        '区分草稿、生成中、已完成和失败。',
-        'Separate drafts, running, completed and failed outputs.',
-        '초안·생성 중·완료·실패 결과를 구분합니다.',
+        '每个条目都是已保存的报告版本；选择条目会向服务器重新打开该版本。',
+        'Each entry is a saved report version. Selecting one reopens that version on the server.',
+        '각 항목은 저장된 보고서 버전입니다. 선택하면 서버에서 해당 버전을 다시 엽니다.',
       ),
       child: items.isEmpty
           ? _InfoMessage(
               _copy(
                 context,
-                '当前范围没有可查看的成果。',
-                'There are no outputs to inspect for this range.',
-                '현재 범위에 확인할 결과물이 없습니다.',
+                '共享工作区中还没有保存的报告。',
+                'There are no saved reports in the Shared workspace yet.',
+                '공유 작업공간에 저장된 보고서가 아직 없습니다.',
               ),
             )
           : Column(
@@ -247,7 +661,9 @@ class _ExportQueue extends StatelessWidget {
                   _ExportRow(
                     item: item,
                     selected: viewModel.selected?.internalId == item.internalId,
-                    onTap: () => viewModel.select(item),
+                    onTap: viewModel.operationBusy
+                        ? null
+                        : () => onReopen(item),
                   ),
               ],
             ),
@@ -264,7 +680,7 @@ class _ExportRow extends StatelessWidget {
 
   final Sh04Export item;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -323,8 +739,20 @@ class _ExportRow extends StatelessWidget {
                             fontSize: 11,
                           ),
                         ),
+                        Text(
+                          _copy(
+                            context,
+                            '版本 ${item.version}',
+                            'Version ${item.version}',
+                            '버전 ${item.version}',
+                          ),
+                          style: TextStyle(
+                            color: LumenisTheme.of(context).muted,
+                            fontSize: 11,
+                          ),
+                        ),
                         _StateTag(
-                          item.stateLabel,
+                          _exportStateLabel(context, item.state),
                           color: _stateColor(context, item.state),
                         ),
                       ],
@@ -349,10 +777,19 @@ class _ExportRow extends StatelessWidget {
 }
 
 class _ArtifactInspector extends StatelessWidget {
-  const _ArtifactInspector({required this.exportItem, required this.scope});
+  const _ArtifactInspector({
+    required this.exportItem,
+    required this.scope,
+    required this.busy,
+    required this.onRevise,
+    required this.onExport,
+  });
 
   final Sh04Export? exportItem;
   final Sh04Scope scope;
+  final bool busy;
+  final VoidCallback? onRevise;
+  final VoidCallback? onExport;
 
   @override
   Widget build(BuildContext context) {
@@ -361,9 +798,9 @@ class _ArtifactInspector extends StatelessWidget {
       title: _copy(context, '成果预览', 'Output preview', '결과물 미리보기'),
       detail: _copy(
         context,
-        '只有范围相符且可重新打开的成果才会显示内容。',
-        'Only outputs matching the exact range and marked reopenable show content.',
-        '정확한 범위와 다시 열기 상태가 확인된 결과만 내용을 표시합니다.',
+        '只显示由 Shared SavedWork 返回、版本链和原始引用已由服务器核验的报告。',
+        'Only reports returned by Shared SavedWork with server-verified version and source references are shown.',
+        'Shared SavedWork가 반환하고 서버가 버전 및 원본 참조를 확인한 보고서만 표시합니다.',
       ),
       child: item == null
           ? _InfoMessage(
@@ -391,45 +828,38 @@ class _ArtifactInspector extends StatelessWidget {
                 ),
                 _DetailLine(
                   label: _copy(context, '状态', 'State', '상태'),
-                  value: item.stateLabel,
+                  value: _exportStateLabel(context, item.state),
                 ),
-                if (item.evidenceCount != null)
+                _DetailLine(
+                  label: _copy(context, '引用数', 'Citations', '인용 수'),
+                  value: '${item.evidenceCount}',
+                ),
+                _DetailLine(
+                  label: _copy(context, '版本', 'Version', '버전'),
+                  value: '${item.version}',
+                ),
+                if (item.parentArtifactId != null)
                   _DetailLine(
-                    label: _copy(context, '来源条数', 'Source count', '출처 수'),
-                    value: '${item.evidenceCount}',
+                    label: _copy(context, '版本关系', 'Version history', '버전 기록'),
+                    value: _copy(
+                      context,
+                      '基于上一保存版本修订',
+                      'Revised from an earlier saved version',
+                      '이전 저장 버전에서 수정됨',
+                    ),
                   ),
                 if (item.generatedAt.isNotEmpty)
                   _DetailLine(
-                    label: _copy(context, '生成时间', 'Generated', '생성 시간'),
+                    label: _copy(context, '保存时间', 'Saved', '저장'),
                     value: item.generatedAt,
                   ),
                 if (item.state == Sh04ExportState.ready && item.reopenable)
                   _VerifiedNotice(
                     _copy(
                       context,
-                      '范围已核对，成果可重新打开。',
-                      'The exact range is verified and this output can be reopened.',
-                      '정확한 범위가 확인되어 결과물을 다시 열 수 있습니다.',
-                    ),
-                  )
-                else if (item.state == Sh04ExportState.failed)
-                  _InfoMessage(
-                    item.failureReason.isEmpty
-                        ? _copy(
-                            context,
-                            '成果生成失败，当前没有可打开的文件。',
-                            'Generation failed; there is no file to reopen.',
-                            '생성에 실패하여 다시 열 수 있는 파일이 없습니다.',
-                          )
-                        : item.failureReason,
-                  )
-                else if (item.state == Sh04ExportState.generating)
-                  _InfoMessage(
-                    _copy(
-                      context,
-                      '成果仍在生成中，完成前不会显示下载入口。',
-                      'The output is still being generated; no download entry is shown yet.',
-                      '결과물을 생성 중이므로 아직 다운로드 입구를 표시하지 않습니다.',
+                      '这是一个已保存的版本，可重新读取或修订。',
+                      'This saved version can be reopened or revised.',
+                      '저장된 버전을 다시 열거나 수정할 수 있습니다.',
                     ),
                   )
                 else
@@ -444,7 +874,7 @@ class _ArtifactInspector extends StatelessWidget {
                 if (item.preview.isNotEmpty) ...[
                   const SizedBox(height: 15),
                   Text(
-                    _copy(context, '已生成内容', 'Generated content', '생성된 내용'),
+                    _copy(context, '已保存内容', 'Saved content', '저장된 내용'),
                     style: TextStyle(
                       color: LumenisTheme.of(context).quiet,
                       fontSize: 11,
@@ -472,68 +902,35 @@ class _ArtifactInspector extends StatelessWidget {
                   ReadAloudAction(
                     sessionId: 'sh04:${item.internalId}',
                     scopeVersion:
-                        '${scope.mode.name}:${scope.domain ?? 'GLOBAL'}:${scope.focusId ?? ''}:${item.internalId}:${item.generatedAt}',
+                        '${scope.wireScopeKind}:${item.internalId}:${item.sha256}',
                     text: item.preview,
                     purpose: ReadAloudPurpose.savedPreview,
                   ),
                 const SizedBox(height: 13),
-                Text(
-                  _copy(
-                    context,
-                    '创建、导出和外部分享需要受控入口；此页不会用本地按钮模拟成功。',
-                    'Creation, export and external sharing require a governed entry; this page does not simulate success with a local button.',
-                    '생성·내보내기·외부 공유는 통제된 입구가 필요하며 이 화면은 로컬 버튼으로 성공을 가장하지 않습니다.',
-                  ),
-                  style: TextStyle(
-                    color: LumenisTheme.of(context).quiet,
-                    fontSize: 11,
-                    height: 1.45,
-                  ),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      key: const Key('sh04-revise-report'),
+                      onPressed: busy ? null : onRevise,
+                      icon: const LumenisIcon(Icons.edit_outlined),
+                      label: Text(
+                        _copy(context, '修订版本', 'Revise version', '버전 수정'),
+                      ),
+                    ),
+                    FilledButton.tonalIcon(
+                      key: const Key('sh04-export-report'),
+                      onPressed: busy ? null : onExport,
+                      icon: const LumenisIcon(Icons.file_download_outlined),
+                      label: Text(_copy(context, '导出', 'Export', '내보내기')),
+                    ),
+                  ],
                 ),
               ],
             ),
     );
   }
-}
-
-class _ReadOnlyExportNote extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
-    decoration: BoxDecoration(
-      color: LumenisTheme.of(context).caution.withValues(alpha: 0.08),
-      border: Border.all(
-        color: LumenisTheme.of(context).caution.withValues(alpha: 0.35),
-      ),
-      borderRadius: BorderRadius.circular(11),
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          Icons.info_outline_rounded,
-          color: LumenisTheme.of(context).caution,
-          size: 19,
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            _copy(
-              context,
-              '导出动作尚未绑定可验证的受控入口。这里仅查看真实目录和可重新打开的成果，不会生成假文件。',
-              'The export action has no verified governed entry yet. This page only inspects real catalog entries and reopenable outputs; it does not create fake files.',
-              '내보내기 작업에는 아직 확인 가능한 통제 입구가 없습니다. 이 화면은 실제 목록과 다시 열 수 있는 결과만 확인하며 가짜 파일을 만들지 않습니다.',
-            ),
-            style: TextStyle(
-              color: LumenisTheme.of(context).muted,
-              height: 1.45,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 class _VerifiedNotice extends StatelessWidget {
@@ -844,20 +1241,24 @@ class _Eyebrow extends StatelessWidget {
 }
 
 IconData _formatIcon(Sh04Format format) => switch (format) {
-  Sh04Format.pdf => Icons.picture_as_pdf_outlined,
-  Sh04Format.excel || Sh04Format.csv => Icons.table_chart_outlined,
-  Sh04Format.powerpoint => Icons.slideshow_outlined,
   Sh04Format.markdown => Icons.article_outlined,
-  Sh04Format.unknown => Icons.insert_drive_file_outlined,
 };
 
 Color _stateColor(BuildContext context, Sh04ExportState state) =>
     switch (state) {
       Sh04ExportState.ready => LumenisTheme.of(context).positive,
-      Sh04ExportState.generating => LumenisTheme.of(context).system,
-      Sh04ExportState.failed => LumenisTheme.of(context).danger,
-      Sh04ExportState.draft => LumenisTheme.of(context).caution,
       Sh04ExportState.unavailable => LumenisTheme.of(context).muted,
+    };
+
+String _exportStateLabel(BuildContext context, Sh04ExportState state) =>
+    switch (state) {
+      Sh04ExportState.ready => _copy(context, '已保存', 'Saved', '저장됨'),
+      Sh04ExportState.unavailable => _copy(
+        context,
+        '暂不可用',
+        'Unavailable',
+        '사용할 수 없음',
+      ),
     };
 
 String _copy(BuildContext context, String zh, String en, String ko) =>

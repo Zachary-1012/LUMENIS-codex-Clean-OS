@@ -59,6 +59,9 @@ _OFFICE_FORMATS = {
 }
 _KINDS = {"research", "report", "podcast_episode", "delivery_preferences"}
 _SCOPE_KEYS = ("domain_id", "subject_id", "brand_focus_id", "global_scope")
+_SHARED_SCOPE_KEYS = ("scope_kind", "version")
+_SHARED_SCOPE_KIND = "shared_workspace"
+_SHARED_SCOPE_VERSION = 1
 
 
 class SavedWorkError(ValueError):
@@ -198,11 +201,97 @@ def authorize(actor: Any, scope: Mapping[str, Any], *, action: str, connection=N
     return {**normalized, **identity}
 
 
+def _shared_scope_requested(scope: Any) -> bool:
+    return type(scope) is dict and bool(set(scope).intersection(_SHARED_SCOPE_KEYS))
+
+
+def authorize_saved_work(actor: Any, scope: Mapping[str, Any], *, action: str, connection=None) -> dict:
+    """Authorize a SavedWork container in its explicit legacy or Shared scope."""
+    if not _shared_scope_requested(scope):
+        return authorize(actor, scope, action=action, connection=connection)
+    try:
+        return permission.authorize_shared_workspace(
+            actor, scope, module="reports", action=action, connection=connection,
+        )
+    except ValueError as exc:
+        raise SavedWorkError("WORK_SCOPE_INVALID") from exc
+    except PermissionError as exc:
+        raise SavedWorkError("WORK_PERMISSION_DENIED") from exc
+
+
+def _shared_context(context: Any) -> bool:
+    """Accept only a server context containing discriminator plus server identity."""
+    if not isinstance(context, dict) or not set(context).intersection(_SHARED_SCOPE_KEYS):
+        return False
+    if (context.get("scope_kind") != _SHARED_SCOPE_KIND
+            or type(context.get("version")) is not int
+            or context["version"] != _SHARED_SCOPE_VERSION):
+        raise SavedWorkError("WORK_CONTEXT_MISMATCH")
+    keys = set(context)
+    if (keys == set(_SHARED_SCOPE_KEYS) | {"actor_id"}
+            and type(context["actor_id"]) is int and context["actor_id"] > 0):
+        return True
+    if (keys == set(_SHARED_SCOPE_KEYS) | {"principal_kind", "principal_ref"}
+            and isinstance(context["principal_kind"], str) and context["principal_kind"]
+            and isinstance(context["principal_ref"], str) and context["principal_ref"]):
+        return True
+    raise SavedWorkError("WORK_CONTEXT_MISMATCH")
+
+
+def _client_scope(context: dict) -> dict:
+    if _shared_context(context):
+        return {"scope_kind": _SHARED_SCOPE_KIND, "version": _SHARED_SCOPE_VERSION}
+    if not all(key in context for key in _SCOPE_KEYS):
+        raise SavedWorkError("WORK_CONTEXT_MISMATCH")
+    return {key: context[key] for key in _SCOPE_KEYS}
+
+
+def _context_owner(context: dict) -> dict:
+    scope_keys = _SHARED_SCOPE_KEYS if _shared_context(context) else _SCOPE_KEYS
+    return {key: value for key, value in context.items() if key not in scope_keys}
+
+
+def _shared_context_matches_actor(context: dict, actor: Any) -> bool:
+    if not _shared_context(context) or actor is None:
+        return False
+    if "actor_id" in context:
+        actor_id = actor.get("id") if isinstance(actor, Mapping) else None
+        return type(actor_id) is int and actor_id == context["actor_id"]
+    return (type(actor) is permission.LocalWorkspacePrincipal
+            and actor.principal_kind == context["principal_kind"]
+            and actor.principal_ref == context["principal_ref"])
+
+
+def _artifact_product_domain(context: dict, *, kind: str) -> tuple[str, str]:
+    if _shared_context(context):
+        if kind not in {_KIND, "saved_document_attachment"}:
+            raise SavedWorkError("WORK_SCOPE_INVALID")
+        return "SHARED", "content"
+    domain = context.get("domain_id")
+    if domain not in {"cth", "zbmp"}:
+        raise SavedWorkError("WORK_CONTEXT_MISMATCH")
+    return ("CTH" if domain == "cth" else "ZBMP"), domain
+
+
+def _validate_contract_scope(context: dict, contract: dict) -> None:
+    if (_shared_context(context)
+            and contract.get("id") == "lumenis.cth-bmp-business-result"):
+        raise SavedWorkError("WORK_SCOPE_INVALID")
+
+
 def _check_effect(actor: Any, scope: Mapping, operation: Any, resource: str, *, connection=None) -> dict:
-    context = authorize(actor, scope, action="write" if operation != permission.OperationType.DATA_EXPORT else "read",
-                        connection=connection)
+    action = "write" if operation != permission.OperationType.DATA_EXPORT else "read"
+    context = authorize_saved_work(actor, scope, action=action, connection=connection)
     if permission.is_testing_bypass_enabled():
         raise SavedWorkError("WORK_PERMISSION_UNVERIFIED")
+    if _shared_context(context):
+        result = permission.check_shared_workspace_effect(
+            actor, scope, operation, resource, module="reports", action=action,
+            connection=connection,
+        )
+        if getattr(result, "allowed", False) is not True:
+            raise SavedWorkError("WORK_EFFECT_PERMISSION_DENIED")
+        return context
     caller = context.get("principal_ref") or f"actor:{context['actor_id']}"
     result = permission.get_permission_gate().check(
         operation, resource=resource, caller=caller,
@@ -275,9 +364,10 @@ def _stage_bytes(con, *, raw: bytes, context: dict, kind: str,
             finally:
                 os.close(directory_fd)
         now = datetime.now(timezone.utc).isoformat()
+        product_id, domain_id = _artifact_product_domain(context, kind=kind)
         record = dict(artifact_id=artifact_id, kind=kind,
-                      product_id="CTH" if context["domain_id"] == "cth" else "ZBMP",
-                      domain_id=context["domain_id"], source_execution_id=source_execution_id,
+                      product_id=product_id, domain_id=domain_id,
+                      source_execution_id=source_execution_id,
                       evidence_id=str(evidence_id), note_id="", filename=path.name,
                       media_type=media_type, relative_path=path.name,
                       size_bytes=len(raw), sha256=hashlib.sha256(raw).hexdigest(),
@@ -366,18 +456,22 @@ def _verified_evidence(con, evidence_id: int, context: dict, actor: Any = None,
             raise SavedWorkError("WORK_METHOD_REFERENCE_INVALID")
     elif purpose != "quote_reference":
         raise SavedWorkError("WORK_CITATION_PURPOSE_INVALID")
-    owner = {k: v for k, v in context.items() if k not in _SCOPE_KEYS}
-    if (source_context.get("domain_id") != context["domain_id"]
-            or {k: v for k, v in source_context.items() if k not in _SCOPE_KEYS} != owner
-            or (not context["global_scope"] and source_context != context
-                and not (method_reference and source_context["global_scope"] is True))):
+    shared_container = _shared_context(context)
+    owner = _context_owner(context)
+    if shared_container:
+        if {k: v for k, v in source_context.items() if k not in _SCOPE_KEYS} != owner:
+            raise SavedWorkError("WORK_EVIDENCE_CONTEXT_MISMATCH")
+    elif (source_context.get("domain_id") != context["domain_id"]
+          or {k: v for k, v in source_context.items() if k not in _SCOPE_KEYS} != owner
+          or (not context["global_scope"] and source_context != context
+              and not (method_reference and source_context["global_scope"] is True))):
         raise SavedWorkError("WORK_EVIDENCE_CONTEXT_MISMATCH")
     # GLOBAL never authorizes a focused source. Resolve its own scope afresh
     # through the canonical Permission owner for every use/read/export.
     if actor is not None:
         if authorize(actor, source_scope, action="read", connection=con) != source_context:
             raise SavedWorkError("WORK_EVIDENCE_CONTEXT_MISMATCH")
-    elif source_context != context:
+    elif shared_container or source_context != context:
         raise SavedWorkError("WORK_SOURCE_AUTHORIZATION_REQUIRED")
     product = "CTH" if source_context["domain_id"] == "cth" else "ZBMP"
     expected = {"product_id": product, "domain_id": source_context["domain_id"],
@@ -453,11 +547,12 @@ def _read(con, artifact_id: str, context: dict, actor: Any = None, *, verify_sou
         document = json.loads(raw)
     except (ValueError, UnicodeError) as exc:
         raise SavedWorkError("WORK_INTEGRITY_FAILED") from exc
+    product_id, domain_id = _artifact_product_domain(context, kind=_KIND)
     if (not isinstance(document, dict) or document.get("schema") != SCHEMA
             or document.get("context") != context or document.get("work_id") != record["source_execution_id"]
             or document.get("kind") not in _KINDS or type(document.get("version")) is not int
-            or document["version"] < 1 or record["domain_id"] != context["domain_id"]
-            or record["product_id"] != ("CTH" if context["domain_id"] == "cth" else "ZBMP")):
+            or document["version"] < 1 or record["domain_id"] != domain_id
+            or record["product_id"] != product_id):
         raise SavedWorkError("WORK_CONTEXT_MISMATCH")
     if (not all(isinstance(document.get(k), str) for k in ("title", "markdown", "request_id", "input_hash"))
             or not isinstance(document.get("contract"), dict) or _json(document) != raw):
@@ -465,24 +560,25 @@ def _read(con, artifact_id: str, context: dict, actor: Any = None, *, verify_sou
     if (not isinstance(document.get("payload"), dict)
             or document.get("draft_digest") != _digest(document["payload"])):
         raise SavedWorkError("WORK_INTEGRITY_FAILED")
-    _validate_contract(document.get("contract"), document["payload"])
+    _validate_contract_scope(context, _validate_contract(document.get("contract"), document["payload"]))
     if not isinstance(document.get("citations"), list):
         raise SavedWorkError("WORK_INTEGRITY_FAILED")
     attachments = document.get("attachments", [])
     if not isinstance(attachments, list) or len(attachments) > 8:
         raise SavedWorkError("WORK_ATTACHMENT_INVALID")
     for binding in attachments:
-        _read_attachment(con, binding, context, document["work_id"])
+        _read_attachment(con, binding, context, document["work_id"], actor=actor)
     if verify_sources:
         document["citations"] = _validate_citations(con, document["citations"], context, actor)
     return {"artifact": record, "document": document, "_content_bytes": raw,
             "return_ref": {"artifact_id": artifact_id, "work_id": document["work_id"],
-                           "version": document["version"], "scope": {k: context[k] for k in
-                           ("domain_id", "subject_id", "brand_focus_id", "global_scope")}}}
+                           "version": document["version"], "scope": _client_scope(context)}}
 
 
-def _read_attachment(con, binding, context, work_id):
+def _read_attachment(con, binding, context, work_id, *, actor=None):
     import shared_artifacts
+    if _shared_context(context) and not _shared_context_matches_actor(context, actor):
+        raise SavedWorkError("WORK_CONTEXT_MISMATCH")
     if (not isinstance(binding, dict) or set(binding) != {"name", "artifact_id", "sha256", "size_bytes", "media_type"}
             or not isinstance(binding["artifact_id"], str) or not _ID.fullmatch(binding["artifact_id"])):
         raise SavedWorkError("WORK_ATTACHMENT_INVALID")
@@ -493,8 +589,9 @@ def _read_attachment(con, binding, context, work_id):
     if row is None:
         raise SavedWorkError("WORK_ATTACHMENT_MISSING")
     record = dict(row)
-    if (record["kind"] != "saved_document_attachment" or record["domain_id"] != context["domain_id"]
-            or record["product_id"] != ("CTH" if context["domain_id"] == "cth" else "ZBMP")
+    product_id, domain_id = _artifact_product_domain(context, kind="saved_document_attachment")
+    if (record["kind"] != "saved_document_attachment" or record["domain_id"] != domain_id
+            or record["product_id"] != product_id
             or record["source_execution_id"] != work_id
             or record["relative_path"] != binding["artifact_id"] + spec["extension"]
             or any(record[k] != binding[k] for k in ("sha256", "size_bytes", "media_type"))):
@@ -535,7 +632,8 @@ def work_write_resource(*, title: str, markdown: str, kind: str, payload: dict,
                         previous_artifact_id: str | None, actor: Any, scope: Mapping,
                         expected_draft_digest: str | None = None, contract: dict | None = None,
                         task_id: str | None = None, assertion_id: str | None = None) -> str:
-    context = authorize(actor, scope, action="write")
+    context = authorize_saved_work(actor, scope, action="write")
+    _validate_contract_scope(context, _validate_contract(contract, payload))
     return "saved-work:v1:" + _digest({"context": context, "title": title, "markdown": markdown,
                                      "kind": kind, "payload": payload, "citations": citations,
                                      "request_id": request_id, "work_id": work_id,
@@ -610,7 +708,7 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
     resource = work_write_resource(**args)
     context = _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource)
     # Export admission does not replace the write scope check.
-    authorize(actor, scope, action="write")
+    authorize_saved_work(actor, scope, action="write")
     assigned_work = work_id or "WORK-" + _digest({"context": context, "request_id": request_id})[:24]
     input_hash = _digest({k: v for k, v in args.items() if k not in {"actor", "scope"}})
     if attachment_bytes:
@@ -667,19 +765,19 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
                                                     "media_type": attached["media_type"]})
             raw = _json(document)
             _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource)
-            authorize(actor, scope, action="write")
+            authorize_saved_work(actor, scope, action="write")
             record, path = _stage_bytes(con, raw=raw, context=context, kind=_KIND,
                                         source_execution_id=assigned_work,
                                         evidence_id=str(citations[0]["evidence_id"]) if citations else "")
             artifact_id = record["artifact_id"]
             _read(con, artifact_id, context, actor)
             _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource)
-            authorize(actor, scope, action="write")
+            authorize_saved_work(actor, scope, action="write")
             _validate_citations(con, checked_citations, context, actor)
             if before_commit is not None:
                 before_commit(con, record, document)
             _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource, connection=con)
-            authorize(actor, scope, action="write", connection=con)
+            authorize_saved_work(actor, scope, action="write", connection=con)
             _validate_citations(con, checked_citations, context, actor)
             con.commit()
             committed = True
@@ -702,7 +800,7 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connect
     from contextlib import nullcontext
     if connection is not None:
         permission._require_canonical_scope_connection(connection)
-    context = authorize(actor, scope, action="read", connection=connection)
+    context = authorize_saved_work(actor, scope, action="read", connection=connection)
     committed_refs = []
     reader = get_repository().connection(read_only=True, wal=False) if connection is None else nullcontext(connection)
     with reader as con:
@@ -758,7 +856,7 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connect
                 if (row is None or row[0] != artifact["sha256"] or row[1] != artifact["size_bytes"]
                         or row[2] != artifact["source_execution_id"] or row[3] != _KIND):
                     raise SavedWorkError("WORK_NOT_COMMITTED")
-    authorize(actor, scope, action="read", connection=connection)
+    authorize_saved_work(actor, scope, action="read", connection=connection)
     for source in sources:
         authorize(actor, source["scope"], action="read", connection=connection)
     doc, record = result["document"], result["artifact"]
@@ -780,11 +878,11 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connect
                "commit_state": "registry_committed_artifact_staged"}
     raw = result.pop("_content_bytes")
     # The final response boundary retains the exact target actor/scope.
-    authorize(actor, scope, action="read", connection=connection)
+    authorize_saved_work(actor, scope, action="read", connection=connection)
     reader = get_repository().connection(read_only=True, wal=False) if connection is None else nullcontext(connection)
     with reader as con:
         _validate_citations(con, result["document"]["citations"], context, actor)
-    authorize(actor, scope, action="read", connection=connection)
+    authorize_saved_work(actor, scope, action="read", connection=connection)
     return {**result, "content": raw, "receipt": receipt}
 
 
@@ -923,7 +1021,7 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
                 cursor: str | None = None, kind: str | None = None,
                 evidence_id: int | None = None) -> dict:
     """Bounded, newest-first search; return a continuation even across hidden rows."""
-    context = authorize(actor, scope, action="read")
+    context = authorize_saved_work(actor, scope, action="read")
     if not isinstance(query, str) or len(query) > 200 or type(limit) is not int or not 1 <= limit <= 100:
         raise SavedWorkError("WORK_SEARCH_INVALID")
     if kind is not None and (not isinstance(kind, str) or kind not in _KINDS):
@@ -939,13 +1037,14 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
         boundary_value = shared_artifacts._content_project_list_boundary(cursor, identity)
     except shared_artifacts.LocalArtifactError as exc:
         raise SavedWorkError("WORK_CURSOR_INVALID") from exc
+    product_id, domain_id = _artifact_product_domain(context, kind=_KIND)
     with get_repository().connection(read_only=True, wal=False) as con:
-        params = [_KIND, context["domain_id"]]
+        params = [_KIND, product_id, domain_id]
         boundary = ""
         if boundary_value is not None:
             boundary = " AND (created_at<? OR (created_at=? AND artifact_id<?))"
             params.extend([boundary_value[0], boundary_value[0], boundary_value[1]])
-        rows = con.execute(f"SELECT artifact_id,created_at FROM {_TABLE} WHERE kind=? AND domain_id=?" + boundary +
+        rows = con.execute(f"SELECT artifact_id,created_at FROM {_TABLE} WHERE kind=? AND product_id=? AND domain_id=?" + boundary +
                            " ORDER BY created_at DESC,artifact_id DESC LIMIT 201", params).fetchall()
         results, unavailable_count = [], 0
         last_scanned = None
@@ -976,11 +1075,11 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
                 results.append(item)
             if len(results) == limit:
                 break
-    authorize(actor, scope, action="read")
+    authorize_saved_work(actor, scope, action="read")
     with get_repository().connection(read_only=True, wal=False) as con:
         for item in results:
             _validate_citations(con, item["document"]["citations"], context, actor)
-        authorize(actor, scope, action="read", connection=con)
+        authorize_saved_work(actor, scope, action="read", connection=con)
     has_more = len(rows) > consumed
     return {"items": results, "unverified_candidates": unavailable_count, "has_more": has_more,
             "next_cursor": shared_artifacts._content_project_list_cursor(identity, last_scanned)

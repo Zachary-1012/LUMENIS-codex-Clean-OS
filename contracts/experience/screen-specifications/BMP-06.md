@@ -120,7 +120,7 @@ Brief ✓  分镜 6 镜  审核：READY / NEEDS_REVISION / BLOCKED / NOT_VERIFIE
 
 ### 草图增补：内容生产台 · 视频剪辑（规划 §14 E1–E11、G183/G64/G170/G171）
 
-Web：同桌面；大文件上传分片续传。
+Web：稿件、预览、时间线按宽度重组；浏览器文件选择/上传与草稿分别呈现进度，支持刷新后恢复已保存工程，不虚报未上传素材可用。 大文件上传分片续传。
 
 
 ## 6. Purpose-built mobile composition

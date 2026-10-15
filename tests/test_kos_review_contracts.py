@@ -100,6 +100,44 @@ def test_kos_scope_rejects_local_permission_receipt_with_invented_actor(monkeypa
 
 
 @pytest.mark.parametrize(
+    ("path", "method", "owner_method", "expected"),
+    [
+        ("/api/kos/intent-analysis?note_id=N1&author_id=A1", "get",
+         "analyze_comments_intent", {"intent": "warm"}),
+        ("/api/kos/kos-identity?author_id=A1", "get",
+         "recognize_kos_identity", {"is_kos": True}),
+        ("/api/kos/kos-identity?limit=10", "post",
+         "refresh_kos_identity", {"refreshed": 10}),
+        ("/api/kos/competitor-benchmark", "get",
+         "competitor_benchmark", {"sample_count": 3}),
+    ],
+)
+def test_kos_intelligence_routes_resolve_existing_intel_owner(
+    monkeypatch, path, method, owner_method, expected,
+):
+    from flask import Flask
+
+    import kos_routes
+
+    calls = []
+
+    def record(*args, **kwargs):
+        calls.append((args, kwargs))
+        return expected
+
+    owner = SimpleNamespace(**{owner_method: record})
+    monkeypatch.setitem(sys.modules, "kos_intel", owner)
+    app = Flask("kos-intel-owner-binding")
+    app.register_blueprint(kos_routes.kos_bp)
+
+    response = app.test_client().open(path, method=method.upper())
+
+    assert response.status_code == 200
+    assert response.get_json() == {"ok": True, "data": expected}
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
     ("engine_result", "expected_status", "expected_code"),
     [
         ({"ok": True, "action": "SUGGEST_REPLY", "suggested_reply": "  展示给用户的原文  "}, 200, None),

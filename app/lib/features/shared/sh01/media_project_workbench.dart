@@ -3210,14 +3210,10 @@ class _ClipInspectorState extends State<_ClipInspector> {
               _copy(context, 'apply_before_replace'),
               key: const Key('media-apply-before-replace'),
             ),
-          if (video && timeline.transitions.isNotEmpty)
-            Text(_copy(context, 'replacement_transition_blocked')),
           OutlinedButton(
             key: const Key('media-replace-source'),
             style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
-            onPressed:
-                _hasReplacementBlockingChanges ||
-                    (video && timeline.transitions.isNotEmpty)
+            onPressed: _hasReplacementBlockingChanges
                 ? null
                 : () {
                     setState(() {

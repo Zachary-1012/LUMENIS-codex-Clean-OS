@@ -139,6 +139,16 @@ def load_config():
         'status': owned.get('state') or ('AVAILABLE' if ai_available else 'UNAVAILABLE'),
         'reason': owned.get('reason'),
     }
+    from lumenis.system.ai_gateway import user_api_adapter
+    if user_api_adapter.is_selected():
+        external = user_api_adapter.status()
+        default_config['analysis']['ai_enabled'] = external['configured']
+        default_config['ai'] = {
+            'provider': 'user_api', 'local_enabled': False,
+            'model': external['model_id'], 'service_binding': external['service_binding'],
+            'status': external['state'], 'reason': external['reason'],
+            'available': external['available'], 'fallback_allowed': False,
+        }
     default_config['security']['http_auth'] = bool(
         os.getenv('TAIKOO_AUTH_USER', '').strip()
         and os.getenv('TAIKOO_AUTH_PASSWORD', '')

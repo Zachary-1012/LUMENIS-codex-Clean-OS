@@ -141,6 +141,7 @@ def check_permission(ctx, user_role="user", skill_info=None):
             return {"allowed": False, "reason": f"role '{user_role}' cannot execute {ctx.action_type.value}",
                     "code": "INSUFFICIENT_ROLE"}
 
+    request_context = ctx.request_context if isinstance(ctx.request_context, dict) else {}
     if ctx.content_source_import is not None:
         from lumenis.system.security import (
             ContentSourceImport, LocalWorkspacePrincipal, check_content_source_import_permission,
@@ -161,13 +162,30 @@ def check_permission(ctx, user_role="user", skill_info=None):
         )
         domain_aliases = {"cth": "cth", "bmp": "bmp", "zbmp": "bmp"}
         product_aliases = {"cth": "cth", "bmp": "bmp", "zbmp": "bmp"}
+        shared_scope = request_context.get("shared_workspace_scope")
+        shared_content_import = (
+            type(upload) is ContentSourceImport
+            and upload.domain_id is None and upload.subject_id is None
+            and upload.brand_focus_id is None and upload.global_scope is False
+            and upload.scope_kind == "shared_workspace"
+            and type(upload.scope_version) is int and upload.scope_version == 1
+            and type(shared_scope) is dict
+            and set(shared_scope) == {"scope_kind", "version"}
+            and shared_scope == {"scope_kind": "shared_workspace", "version": 1}
+            and str(ctx.product or "").strip().upper() == "SHARED"
+            and ctx.domain is None
+        )
+        legacy_content_import = (
+            type(upload) is ContentSourceImport
+            and domain_aliases.get(str(ctx.domain or "").strip().lower()) == upload.domain_id
+            and product_aliases.get(str(ctx.product or "").strip().lower()) == upload.domain_id
+        )
         context_matches = (
             type(upload) is ContentSourceImport
             and ctx.skill_id == "shared.content_project"
             and ctx.action_type is ActionType.WRITE
             and identity_matches
-            and domain_aliases.get(str(ctx.domain or "").strip().lower()) == upload.domain_id
-            and product_aliases.get(str(ctx.product or "").strip().lower()) == upload.domain_id
+            and (legacy_content_import or shared_content_import)
             and skill_info is not None
             and skill_info.skill_id == "shared.content_project"
             and skill_info.enabled is True
@@ -191,12 +209,45 @@ def check_permission(ctx, user_role="user", skill_info=None):
         )
         return payload
 
+    target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
     if ctx.workspace_principal is not None:
-        return {"allowed": False, "reason": "local principal requires an exact Content import",
-                "code": "LOCAL_PRINCIPAL_ACTION_UNSUPPORTED"}
+        shared_scope = request_context.get("shared_workspace_scope") if isinstance(request_context, dict) else None
+        if not (
+            ctx.skill_id == "shared.content_project"
+            and ctx.action_type is ActionType.EXPORT
+            and str(ctx.product or "").strip().upper() == "SHARED"
+            and ctx.domain is None
+            and type(shared_scope) is dict
+            and set(shared_scope) == {"scope_kind", "version"}
+            and shared_scope == {"scope_kind": "shared_workspace", "version": 1}
+        ):
+            return {"allowed": False, "reason": "local principal requires an exact Content import or project export",
+                    "code": "LOCAL_PRINCIPAL_ACTION_UNSUPPORTED"}
+
+    shared_scope = request_context.get("shared_workspace_scope") if isinstance(request_context, dict) else None
+    if (
+        ctx.skill_id == "shared.content_project"
+        and ctx.action_type is ActionType.EXPORT
+        and str(ctx.product or "").strip().upper() == "SHARED"
+        and ctx.domain is None
+        and type(shared_scope) is dict
+        and set(shared_scope) == {"scope_kind", "version"}
+        and shared_scope == {"scope_kind": "shared_workspace", "version": 1}
+    ):
+        from lumenis.system.security import check_shared_workspace_effect
+
+        actor = ctx.workspace_principal if ctx.workspace_principal is not None else {"id": ctx.user_id}
+        result = check_shared_workspace_effect(
+            actor, shared_scope, _canonical_operation(ctx.action_type), target,
+            module="content", action="write",
+        )
+        payload = result.to_dict()
+        payload["code"] = "PERMISSION_GRANTED" if result.allowed else (
+            "APPROVAL_REQUIRED" if result.requires_approval else "PERMISSION_DENIED"
+        )
+        return payload
 
     from lumenis.system.security import get_permission_gate
-    target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
     result = get_permission_gate().check(
         operation_type=_canonical_operation(ctx.action_type),
         resource=target,
@@ -668,27 +719,59 @@ def record_execution_evidence(ctx):
             "status": ctx.status.value,
             "error": ctx.error,
         }, ensure_ascii=False, default=str)
-        ev, is_new = store.add_evidence(
-            source_type="skill_execution",
-            source_url=f"skill://{ctx.skill_id}/{ctx.execution_id}",
-            source_id=ctx.execution_id,
-            raw_content=raw_content,
-            subject_scope="GLOBAL / ALL",
-            task_id=ctx.execution_id,
-            trace_id=ctx.execution_id,
-            collection_metadata={
-                "skill_id": ctx.skill_id,
-                "action_type": ctx.action_type.value,
-                "status": ctx.status.value,
-                "permission": ctx.permission_result,
-                "firewall": ctx.firewall_result,
-                "effect_fence": ctx.effect_fence_result,
-                "evaluation": ctx.evaluation,
-            },
-            provider="lumenis.shared.agents.skills.execution",
-            domain_id=ctx.domain or None,
-            product_id=ctx.product or None,
-        )
+        metadata = {
+            "skill_id": ctx.skill_id,
+            "action_type": ctx.action_type.value,
+            "status": ctx.status.value,
+            "permission": ctx.permission_result,
+            "firewall": ctx.firewall_result,
+            "effect_fence": ctx.effect_fence_result,
+            "evaluation": ctx.evaluation,
+        }
+        shared_context = ctx.request_context if isinstance(ctx.request_context, dict) else {}
+        shared_scope = shared_context.get("shared_workspace_scope")
+        if shared_scope is not None:
+            if (
+                ctx.skill_id != "shared.content_project"
+                or str(ctx.product or "").strip().upper() != "SHARED"
+                or ctx.domain is not None
+                or set(shared_context) != {"shared_workspace_scope"}
+            ):
+                raise ValueError("SHARED_SKILL_EVIDENCE_CONTEXT_INVALID")
+            from lumenis.system.security.permission import LocalWorkspacePrincipal
+
+            actor = (
+                ctx.workspace_principal if type(ctx.workspace_principal) is LocalWorkspacePrincipal
+                else {"id": ctx.user_id}
+            )
+            ev, is_new = store.add_shared_skill_execution_evidence(
+                actor=actor, shared_workspace_scope=shared_scope,
+                source_url=f"skill://{ctx.skill_id}/{ctx.execution_id}",
+                raw_content=raw_content, source_id=ctx.execution_id,
+                task_id=ctx.execution_id, trace_id=ctx.execution_id,
+                collection_metadata=metadata,
+            )
+            persisted = store.get_evidence(ev.evidence_id)
+            if (
+                persisted is None or persisted.content_hash != ev.content_hash
+                or persisted.domain_id != "content" or persisted.product_id != "SHARED"
+                or persisted.subject_scope != ev.subject_scope
+            ):
+                raise ValueError("SHARED_SKILL_EVIDENCE_READBACK_FAILED")
+        else:
+            ev, is_new = store.add_evidence(
+                source_type="skill_execution",
+                source_url=f"skill://{ctx.skill_id}/{ctx.execution_id}",
+                source_id=ctx.execution_id,
+                raw_content=raw_content,
+                subject_scope="GLOBAL / ALL",
+                task_id=ctx.execution_id,
+                trace_id=ctx.execution_id,
+                collection_metadata=metadata,
+                provider="lumenis.shared.agents.skills.execution",
+                domain_id=ctx.domain or None,
+                product_id=ctx.product or None,
+            )
         return {"ok": True, "evidence_id": ev.evidence_id, "is_new": is_new}
     except Exception as e:
         return {"ok": False, "error": str(e), "note": "evidence bridge failed, main chain unaffected"}

@@ -138,7 +138,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ### 草图增补：采集：默认 AUTO + 可选手动采集按钮
 
 Web Workspace composition
-同桌面布局；批量：[对所选主体立即采集]
+Web：范围、实际进度与失败恢复逐项可见；后台状态刷新不抢焦点，返回保留选择，手动采集须显式确认且不得因浏览器刷新重复启动。 批量：[对所选主体立即采集]
 
 ## 6. Purpose-built mobile composition
 
