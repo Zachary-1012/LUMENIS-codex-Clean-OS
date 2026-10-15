@@ -3079,5 +3079,74 @@
       },
       "scope": "Same-candidate hashes compared against the existing late-session baseline; not a claim of every initial task-start byte. Production service was read only, not restarted."
     }
+  },
+  "runtime_diagnostics_followup": {
+    "recorded_at": "2026-10-15T22:59:55.409261+00:00",
+    "base_sha": "9556024461fd29bad30c2d7cf856a788c3478a7b",
+    "scope": "Existing app and aggregation runtime/security diagnostics only; no change to product scope, Hook policy or production services.",
+    "source_sha256_working_bytes": {
+      "app.py": "7fe28073ff7c891d89c1604a33569ae1d24f950480ad3a7959731be8a12aaf16",
+      "lumenis_agg_api.py": "ef3524c44f5295f8b2d4ea9a0846b908903548b5daa7660dd2bf9b3237aa1495",
+      "tests/test_runtime_api_diagnostics.py": "508279ab699985019b140a699c82dd082a2c783baacbf66cd0fbe5eb8f5c6c61"
+    },
+    "repairs": [
+      "Use the existing Flask logger at five undefined-name error handlers; preserve actual failures.",
+      "Delegate the duplicate app runtime handler to the canonical aggregation route and read the app_main Guardian used by normal startup.",
+      "Expose observed worker counts, preserve unknown per-domain DLQ as null, keep historical lease/heartbeat/checkpoint observations distinct from current service liveness.",
+      "Use actual Guardian reaper_running; do not synthesize an ACTIVE state or a last-run timestamp.",
+      "Remove only runtime diagnostics from the Basic public exemption and keep worker output to the four original aggregate fields.",
+      "Missing quick security scanner returns UNAVAILABLE/503; exceptions return ERROR/500 without synthetic security results.",
+      "Add the exact new isolated handler regressions to the existing blocking Product Gate; no gate is weakened."
+    ],
+    "checks": {
+      "python_compile_changed_three_files": "PASS",
+      "ruff_F821_F822_F823_changed_three_files": "PASS",
+      "ruff_full_new_regression_file": "PASS",
+      "isolated_handler_regressions": {
+        "passed": 13,
+        "exit_code": 0,
+        "scope": "AST-isolated handlers and middleware; not full Core E2E"
+      },
+      "independent_source_review": "PASS_AFTER_CORRECTING_APP_MAIN_OWNER_AND_RUNTIME_AUTH_EXEMPTION",
+      "real_http_sqlite_component": {
+        "status": "PASS_AT_COMPONENT_SCOPE",
+        "actual_owner": "app_main",
+        "actual_route": "lumenis_agg.system_runtime",
+        "reaper_transition": {
+          "before": "STOPPED",
+          "during": "ACTIVE",
+          "after": "STOPPED"
+        },
+        "empty_worker_counts": "ACTUAL_ZERO_FROM_SUCCESSFUL_EMPTY_SNAPSHOT",
+        "unavailable_domain_dlq": null,
+        "temporary_server_stopped": true
+      },
+      "full_existing_files_ruff": "NOT_PASS_EXISTING_DIAGNOSTICS_NOT_REPAIRED_BY_THIS_BOUNDED_CHANGE",
+      "complete_core_user_operation": "LIVE_NOT_VERIFIED"
+    },
+    "preserved_failed_attempts": [
+      "Initial pytest 11 checks passed but shared temporary cleanup returned WinError5/exit1; preserved. Unique basetemp rerun succeeded; final revised snapshot has13 passing checks.",
+      "First safe Core launch rejected a build outside OS temp; copied existing build to a fresh temp directory without changing the guard.",
+      "Safe Core then returned403 INTERNAL_BETA_WORKSPACE_CONTEXT_ONLY for this diagnostic endpoint; the allowlist was not broadened or bypassed. That pre-final-source process was stopped.",
+      "First component readback completed3 actual HTTP operations but its evidence helper failed to handle an already-deleted protected path; null/deleted state handling corrected. Final complete receipt succeeded."
+    ],
+    "artifact_sha256": {
+      "runtime-diagnostics-static-regression.json": "26add144cdca555f064d8e0c66c5d63db8394189b68d13f642cbcb05b34939b0",
+      "runtime-diagnostics-component-readback.json": "db02a3ea8c39d09ad16d3af9ffbadcffc88de202526d3246c86f1794d9b4fbdd",
+      "runtime-diagnostics-core-denied.json": "7caa27c2bfc642acade573ab3f62566f2450b996f5d433b815a11a08dd885248"
+    },
+    "protection": {
+      "primary_candidates_unchanged": 28,
+      "production_core_boot_unchanged": true,
+      "production_database": "NOT_ACCESSED",
+      "model_collection_scheduler": "NOT_STARTED",
+      "temporary_guardian_reaper": "STARTED_AND_STOPPED_ON_DISPOSABLE_DB_ONLY",
+      "private_hook_settings": "UNCHANGED"
+    },
+    "limits": [
+      "The original protected checkout remains at7792040e; new source/CI receipts cannot verify its old snapshot.",
+      "Production8201 was not upgraded or restarted. Component HTTP/SQLite proof is not authentication, complete product Core, user E2E or whole-product closure.",
+      "Earlier full Ruff findings and all original open product outcomes remain open; no historical failure is rewritten."
+    ]
   }
 }

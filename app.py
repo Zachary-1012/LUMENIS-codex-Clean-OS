@@ -1706,7 +1706,7 @@ def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config exposes non-sensitive metadata only.
     # P0-R6: CTH 免密浏览态只读 GET 放行（CTH 页面依赖的旧版只读 API，仅 GET，不含 ZBMP 专属接口）
-    if request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health', '/api/system/health/summary', '/api/system/status', '/api/system/runtime', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or _is_cth_readonly_get(request.path, request.method):
+    if request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health', '/api/system/health/summary', '/api/system/status', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or _is_cth_readonly_get(request.path, request.method):
         return None
     try:
         if not _auth_enabled():
@@ -2524,7 +2524,7 @@ def api_viz_overview_stats():
         brands = c.execute(f"SELECT COUNT(DISTINCT matched_keywords) FROM notes {where} AND matched_keywords IS NOT NULL AND matched_keywords != ''").fetchone()[0]
         return jsonify({"success": True, "data": {"items": [{"total": total, "engagement": engagement, "active_brands": brands}], "time_range": time_range}})
     except Exception as e:
-        logger.warning(f"viz/overview.stats error: {e}")
+        app.logger.warning("viz/overview.stats error: %s", e)
         return jsonify({"success": False, "error": str(e)[:200]}), 500
 
 @app.route('/api/viz/risk.active')
@@ -2540,7 +2540,7 @@ def api_viz_risk_active():
         count = c.execute(f"SELECT COUNT(*) FROM events {where}").fetchone()[0]
         return jsonify({"success": True, "data": {"record_count": count, "current_value": count, "level": level}})
     except Exception as e:
-        logger.warning(f"viz/risk.active error: {e}")
+        app.logger.warning("viz/risk.active error: %s", e)
         return jsonify({"success": False, "error": str(e)[:200]}), 500
 
 @app.route('/api/viz/overview.trend')
@@ -2563,7 +2563,7 @@ def api_viz_overview_trend():
         items = [{"day": r[0], "note_count": r[1], "negative_count": r[2] or 0} for r in rows]
         return jsonify({"success": True, "data": {"items": items, "days": days}})
     except Exception as e:
-        logger.warning(f"viz/overview.trend error: {e}")
+        app.logger.warning("viz/overview.trend error: %s", e)
         return jsonify({"success": False, "error": str(e)[:200]}), 500
 
 @app.route('/api/brand-stats')
@@ -3799,25 +3799,35 @@ def api_security_scan():
     """安全扫描API。调用security_scanner，返回扫描结果摘要。"""
     try:
         import security_scanner as ss
-        result = None
-        if hasattr(ss, 'quick_scan'):
-            result = ss.quick_scan()
-        elif hasattr(ss, 'run_scan'):
-            result = ss.run_scan(quick_mode=True)
+        quick_scan = getattr(ss, 'quick_scan', None)
+        run_scan = getattr(ss, 'run_scan', None)
+        if callable(quick_scan):
+            result = quick_scan()
+        elif callable(run_scan):
+            result = run_scan(quick_mode=True)
+        else:
+            return jsonify({
+                "ok": False,
+                "status": "UNAVAILABLE",
+                "code": "QUICK_SECURITY_SCAN_UNAVAILABLE",
+                "source": "security_scanner",
+            }), 503
         if result is None:
-            result = {"status": "ok", "scanner": "available", "mode": "fallback"}
+            return jsonify({
+                "ok": False,
+                "status": "UNAVAILABLE",
+                "code": "QUICK_SECURITY_SCAN_RESULT_UNAVAILABLE",
+                "source": "security_scanner",
+            }), 503
         return jsonify({"ok": True, "data": result, "source": "security_scanner"})
-    except Exception as e:
-        logger.warning(f"security scan error: {e}")
-        # 降级返回基础安全状态，不让前端404
-        return jsonify({"ok": True, "data": {
-            "status": "degraded",
-            "users": 1, "roles": 3, "audit_today": 0,
-            "domain_isolation": "enabled",
-            "permission_gate": "active",
-            "action_firewall": "active",
-            "message": str(e)[:200],
-        }, "source": "fallback"})
+    except Exception:
+        app.logger.exception("security scan failed")
+        return jsonify({
+            "ok": False,
+            "status": "ERROR",
+            "code": "QUICK_SECURITY_SCAN_FAILED",
+            "source": "security_scanner",
+        }), 500
 
 @app.route('/api/security/status', methods=['GET'])
 def api_security_status():
@@ -3837,68 +3847,18 @@ def api_security_status():
 
 @app.route('/api/system/runtime')
 def api_system_runtime():
-    """统一生命周期运行时状态：按域返回 worker 列表/DLQ/熔断器/Guardian 健康状态。"""
+    """兼容路由：委托聚合 API 的唯一 Runtime 状态实现。"""
     try:
-        import runtime_guardian as _rg
-        g = _rg.get_guardian("system")
-        all_workers = g.list_lifecycle_workers()
-        dlq_stats = g.dlq.stats()
-        health = g.health_check()
-
-        # 按域组织
-        runtime_by_domain = {}
-        for dom in ("cth", "zbmp", "system"):
-            dom_workers = [w for w in all_workers if w.get("domain_id", "system") == dom]
-            running = sum(1 for w in dom_workers if w.get("status") in ("running", "resuming"))
-            failed = sum(1 for w in dom_workers if w.get("status") in ("failed", "dead", "stopping"))
-            paused = sum(1 for w in dom_workers if w.get("status") == "paused")
-            runtime_by_domain[dom] = {
-                "total_workers": len(dom_workers),
-                "running": running,
-                "failed": failed,
-                "paused": paused,
-                "dlq_count": dlq_stats.get("total", 0),
-                "guardian_health": health.get("overall", "unknown"),
-                "workers": [
-                    {
-                        "worker_id": w["worker_id"],
-                        "worker_name": w.get("worker_name", ""),
-                        "status": w.get("status", "unknown"),
-                        "last_heartbeat_at": w.get("last_heartbeat_at", ""),
-                        "last_checkpoint_at": w.get("last_checkpoint_at", ""),
-                        "failure_count": w.get("failure_count", 0),
-                        "retry_count": w.get("retry_count", 0),
-                        "lease_owner": w.get("lease_owner", ""),
-                        "recovery_reason": w.get("recovery_reason", ""),
-                        "created_at": w.get("created_at", ""),
-                    }
-                    for w in dom_workers
-                ],
-            }
-
-        # Guardian状态汇总（P0修复：前端期望lease_manager/heartbeat_monitor等字段）
-        _guardian = {"lease_manager": "ACTIVE", "heartbeat_monitor": "ACTIVE", "reaper": "ACTIVE", "checkpoint": "ACTIVE"}
-        try:
-            _gw = runtime_guardian.get_guardian_status() if 'runtime_guardian' in dir() else None
-            if _gw: _guardian.update(_gw)
-        except Exception: pass
-
-        return jsonify({"guardian_status": _guardian, 
-            "ok": True,
-            "server_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "guardian_health": health.get("overall", "unknown"),
-            "runtime_by_domain": runtime_by_domain,
-            "guardian": {
-                "lease": {"status": "ACTIVE" if any(w.get("lease_owner") for w in all_workers) else "IDLE"},
-                "heartbeat": {"status": "ACTIVE" if running > 0 else "IDLE"},
-                "reaper": {"status": "RUNNING" if health.get("reaper_running") else "STOPPED",
-                           "last_run": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
-                "checkpoint": {"status": "ACTIVE"},
-            },
-            "dlq": dlq_stats,
-        })
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e), "runtime_by_domain": {}}), 500
+        from lumenis_agg_api import system_runtime
+        return system_runtime()
+    except Exception:
+        app.logger.exception("system runtime owner unavailable")
+        return jsonify({
+            "ok": False,
+            "state": "UNAVAILABLE",
+            "code": "SYSTEM_RUNTIME_OWNER_UNAVAILABLE",
+            "runtime_by_domain": {},
+        }), 503
 
 # ========== P0修复：System页面兼容路由 + 缺失API ==========
 @app.route('/api/system/workers')
@@ -4839,7 +4799,7 @@ CONFIG_FILE = Path(__file__).parent / 'data' / 'system_config.json'
 def _load_config():
     if CONFIG_FILE.exists():
         try: return json.loads(CONFIG_FILE.read_text(encoding='utf-8'))
-        except Exception as e: logger.warning('Failed to load system config, using defaults: %s', e)
+        except Exception as e: app.logger.warning('Failed to load system config, using defaults: %s', e)
     return {'company_domain': '', 'company_name': None, 'push_emails': [], 'cdp_url': None, 'auto_interval': 90, 'daily_push_hour': 9}
 
 def _save_config(config):

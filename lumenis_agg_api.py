@@ -387,48 +387,134 @@ def system_runtime():
             db_info = {"exists": True, "table_count": len(tables), "row_counts": counts}
         finally:
             conn.close()
-    # 双域核心扩展：Runtime worker/task 列表，按域分组（Compatibility Layer）
-    # 现有字段保持不变，新增 runtime_by_domain 字段，不破坏现有前端
-    runtime_by_domain = {}
+    domains = ("cth", "zbmp", "system")
+    runtime_by_domain = {
+        domain_id: {
+            "total_workers": None,
+            "running": None,
+            "failed": None,
+            "paused": None,
+            "dlq_count": None,
+            "workers": None,
+        }
+        for domain_id in domains
+    }
+    guardian_status = {
+        "lease_manager": "UNKNOWN",
+        "heartbeat_monitor": "UNKNOWN",
+        "reaper": "UNKNOWN",
+        "checkpoint": "UNKNOWN",
+    }
+    guardian_health = "UNKNOWN"
+    all_workers = None
+    health = None
+    dlq_stats = None
+    workers_available = False
+    health_available = False
+    dlq_available = False
+
+    # The application launcher starts the app_main singleton. Read that same
+    # owner rather than the independent default singleton. Worker rows provide
+    # domain counts; get_tasks_by_domain swallows SQL errors as empty lists.
     try:
         from runtime_guardian import get_guardian
-        _g = get_guardian("default")
-        for _did in ("cth", "zbmp", "system"):
-            try:
-                _tasks = _g.get_tasks_by_domain(_did)
-                runtime_by_domain[_did] = {
-                    "total_workers": _tasks.get("total_workers", 0),
-                    "running": _tasks.get("running", 0),
-                    "failed": _tasks.get("failed", 0),
-                    "dlq_count": _tasks.get("dlq_count", 0),
-                    "workers": [
-                        {"worker_id": w.get("worker_id", ""),
-                         "worker_name": w.get("worker_name", ""),
-                         "status": w.get("status", ""),
-                         "last_heartbeat_at": w.get("last_heartbeat_at", "")}
-                        for w in _tasks.get("workers", [])[:20]
-                    ],
-                }
-            except Exception:
-                runtime_by_domain[_did] = {"total_workers": 0, "running": 0, "failed": 0, "dlq_count": 0, "workers": []}
-    except Exception as _rg_err:
-        runtime_by_domain = {"error": str(_rg_err)}
+        guardian = get_guardian("app_main")
+        workers_result = guardian.list_lifecycle_workers()
+        if not isinstance(workers_result, list):
+            raise TypeError("RuntimeGuardian returned a non-list worker snapshot")
+        all_workers = workers_result
+        workers_available = True
 
-    # Guardian状态汇总（P0修复：前端期望lease_manager/heartbeat_monitor等字段）
-    _guardian = {"lease_manager": "ACTIVE", "heartbeat_monitor": "ACTIVE", "reaper": "ACTIVE", "checkpoint": "ACTIVE"}
-    try:
-        from runtime_guardian import get_guardian
-        _g2 = get_guardian("default")
-        _h = _g2.health_check() if hasattr(_g2, 'health_check') else {}
-        if _h:
-            _guardian["overall"] = _h.get("overall", "ACTIVE")
-            _guardian["reaper_running"] = _h.get("reaper_running", False)
-    except Exception:
-        pass
+        for domain_id in domains:
+            domain_workers = [
+                worker for worker in all_workers
+                if isinstance(worker, dict) and worker.get("domain_id") == domain_id
+            ]
+            runtime_by_domain[domain_id] = {
+                "total_workers": len(domain_workers),
+                "running": sum(
+                    1 for worker in domain_workers
+                    if worker.get("status") in ("running", "resuming")
+                ),
+                "failed": sum(
+                    1 for worker in domain_workers
+                    if worker.get("status") in ("failed", "dead", "stopping")
+                ),
+                "paused": sum(
+                    1 for worker in domain_workers
+                    if worker.get("status") == "paused"
+                ),
+                # The current public DLQ API only provides global stats. The
+                # domain helper swallows query failures as empty lists, so it
+                # cannot support a trustworthy per-domain zero.
+                "dlq_count": None,
+                "workers": [
+                    {
+                        "worker_id": worker.get("worker_id"),
+                        "worker_name": worker.get("worker_name"),
+                        "status": worker.get("status", "UNKNOWN"),
+                        "last_heartbeat_at": worker.get("last_heartbeat_at"),
+                    }
+                    for worker in domain_workers[:20]
+                ],
+            }
 
-    return jsonify({
-        "guardian_status": _guardian,
-        "ok": True,
+        try:
+            health_result = guardian.health_check()
+            if isinstance(health_result, dict):
+                health = health_result
+                health_available = True
+        except Exception:  # noqa: BLE001 - preserve partial owner observations
+            health = None
+
+        try:
+            dlq_result = guardian.dlq.stats()
+            if isinstance(dlq_result, dict):
+                dlq_stats = dlq_result
+                dlq_available = True
+        except Exception:  # noqa: BLE001 - preserve partial owner observations
+            dlq_stats = None
+    except Exception:  # noqa: BLE001 - unknown worker snapshot must not become zero
+        all_workers = None
+
+    if isinstance(health, dict):
+        observed_health = health.get("overall")
+        if isinstance(observed_health, str) and observed_health.strip():
+            guardian_health = observed_health
+
+    lease_workers = [
+        worker for worker in (all_workers or [])
+        if isinstance(worker, dict) and str(worker.get("lease_owner") or "").strip()
+    ]
+    heartbeat_workers = [
+        worker for worker in (all_workers or [])
+        if isinstance(worker, dict) and worker.get("last_heartbeat_at")
+    ]
+    checkpoint_workers = [
+        worker for worker in (all_workers or [])
+        if isinstance(worker, dict) and worker.get("last_checkpoint_at")
+    ]
+    if workers_available:
+        if lease_workers:
+            guardian_status["lease_manager"] = "OBSERVED"
+        if heartbeat_workers:
+            guardian_status["heartbeat_monitor"] = "OBSERVED"
+        if checkpoint_workers:
+            guardian_status["checkpoint"] = "OBSERVED"
+
+    reaper_running = health.get("reaper_running") if isinstance(health, dict) else None
+    if isinstance(reaper_running, bool):
+        guardian_status["reaper"] = "ACTIVE" if reaper_running else "STOPPED"
+
+    runtime_ready = workers_available and health_available and dlq_available
+    runtime_state = "READY" if runtime_ready else (
+        "PARTIAL" if workers_available else "UNAVAILABLE"
+    )
+    response = {
+        "guardian_status": guardian_status,
+        "ok": runtime_ready,
+        "state": runtime_state,
+        "guardian_health": guardian_health,
         "python": platform.python_version(),
         "platform": platform.system(),
         "machine": platform.machine(),
@@ -439,7 +525,30 @@ def system_runtime():
         "runtime_by_domain": runtime_by_domain,
         "domain_id": "system",
         "product_id": "SYSTEM",
-    })
+        "guardian": {
+            "lease": {
+                "status": guardian_status["lease_manager"],
+                "observed_workers": len(lease_workers) if workers_available else None,
+            },
+            "heartbeat": {
+                "status": guardian_status["heartbeat_monitor"],
+                "observed_workers": len(heartbeat_workers) if workers_available else None,
+            },
+            "reaper": {
+                "status": (
+                    "RUNNING" if reaper_running is True else
+                    "STOPPED" if reaper_running is False else "UNKNOWN"
+                ),
+                "last_run": None,
+            },
+            "checkpoint": {
+                "status": guardian_status["checkpoint"],
+                "observed_workers": len(checkpoint_workers) if workers_available else None,
+            },
+        },
+        "dlq": dlq_stats,
+    }
+    return jsonify(response), 200 if runtime_ready else 503
 
 
 # =====================================================================
