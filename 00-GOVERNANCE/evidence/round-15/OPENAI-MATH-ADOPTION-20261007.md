@@ -116,7 +116,7 @@ Web 正常入口产生 `task_b1f7a984c05219ee` / `ART-b1ecdc9c91394d29`，暴露
 
 既有独立评价日志：validation 6 项中 gold-match 5、约束有效 6，平均 NLL 0.4578612705730241250367291365（均匀基线 1.791759469228055000812477358）；holdout 8 项中 gold-match 6、约束有效 8，平均 NLL 0.9830274694911673753747682078（均匀基线 3.17805383034794561964694160）。这是合成有限图上的参数策略/精确枚举评价，不是行业数据收益、一般大图算法、形式证明或自研 LLM 增益；各行 business_result=NOT_EVALUATED。本轮仅读回并核对数据/产物完整性，未重新训练或重载模型执行。
 
-回执目录 `D:/LUMENIS_REBUILD/gibbs-evidence-20261014`；同名 JSON 保留协议、同意记录、训练/评价日志 hash 及 checkpoint 文件 hash。consent.json 引用 PO-chat-approval2026-10-14T02:34+08:00；协议更早的待审批字段保留为历史，不重写历史材料，也不以回执产生新授权。实验代码 hash `adf1cdcbadf8a163bc4f593d5b7a55bcdf79ce6451e99ca52f128c4f411a7711` 由产物记录，当前主线训练入口与运行绑定未核实。不得修改或晋升 gpt-oss-20b；部署、业务结果和模型晋升未验收，G163 保持 OPEN。
+回执目录 `D:/LUMENIS_REBUILD/gibbs-evidence-20261014`；同名 JSON 保留协议、同意记录、训练/评价日志 hash 及 checkpoint 文件 hash。PR #60 原始日志同步保存在 [训练](openai-math-gibbs-20261014/train.log.md)、[validation](openai-math-gibbs-20261014/eval-validation.log.md)、[holdout](openai-math-gibbs-20261014/eval-holdout.log.md)，不代表重新运行。consent.json 引用 PO-chat-approval2026-10-14T02:34+08:00；协议更早的待审批字段保留为历史，不重写历史材料，也不以回执产生新授权。实验代码 hash `adf1cdcbadf8a163bc4f593d5b7a55bcdf79ce6451e99ca52f128c4f411a7711` 由产物记录，当前主线训练入口与运行绑定未核实。不得修改或晋升 gpt-oss-20b；部署、业务结果和模型晋升未验收，G163 保持 OPEN。
 
 九项一般主算法、全产品闭环、LLM 训练/新任务增益仍 OPEN。原批次未执行模块测试的事实保留；当前定向单元/集成回归按 2026-10-10 PO 恢复授权执行，同时保留编译、静态、安全、数学结果核验与实际产品操作。独立基础任务继续，不掩盖完整升级缺口；缺口沿原 Owner 继续解决。
 
