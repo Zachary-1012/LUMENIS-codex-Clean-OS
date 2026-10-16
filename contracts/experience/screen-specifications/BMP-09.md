@@ -39,22 +39,19 @@ approval_reference: ROUND-13-BMP-CREATION-UI
 
 ## 4. Purpose-built composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-09)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Desktop uses a score matrix beside a report shelf, preceded by a BrandFocus line and an actual-result qualifier.
-- Mobile uses a vertical dimension list followed by report history; each dimension keeps movement, confidence and coverage next to its score.
 - This is a scorecard/evidence-coverage workflow, not a generic trend dashboard or repeated metric-card renderer.
 
 ## 5. Purpose-built desktop composition
 
-已批准目标来源：`BMP-09-ADD-public-mmm.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-09)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
+集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-09)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
 ### 草图增补：公开数据营销组合与归因
 
-```
-主体：<任一已登记主体>  数据来源：年报/中报▸ 统计局▸ 刊例价▸ 采集▸
-花费估算：区间 ¥a–b（出处逐项）
-渠道贡献：条形+区间；样本不足 → 数据不足
-[可选：导入我的数据]
-```
 
 **4. State additions**
 Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
@@ -90,17 +87,17 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ## 5A. Web Workspace composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-09)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 ### 草图增补：公开数据营销组合与归因
 
-Web Workspace composition
-Web：同口径比较、结果及依据按宽度重排；图形有可访问数据表，筛选/版本保留在返回路径，刷新读回成果而不重新执行分析。
 
 ## 6. Purpose-built mobile composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-09)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 ### 草图增补：公开数据营销组合与归因
 
-Purpose-built mobile composition
-纵排。
 
 ### Existing contract — Accessibility and localization
 

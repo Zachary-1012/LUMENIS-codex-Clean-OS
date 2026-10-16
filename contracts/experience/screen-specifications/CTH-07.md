@@ -65,11 +65,11 @@ approval_reference: source baseline origin/main 5ba1aefc53a1babc293e990c23c62f84
 
 ## 5. Purpose-built desktop composition
 
+集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-07)。
+
 - **Primary question:** what changed over the stated window, and what exactly does the metric measure?
 - **Hierarchy:** scope/window → metric-definition rail → aligned chart and table → change/decomposition panel. Units/window remain adjacent to axes and values.
-- **Wide desktop:** `cth07/desktop-layout` gives the definition a stable rail, the time-series canvas the main width and the decomposition panel a separate explanation region.
 - **Keyboard:** series chips are focusable; Enter/Space selects; chart has an accessible label and synchronized data table; no chart-only meaning.
-- **Screen identity:** definition-first trend analysis and explicit non-causal decomposition differentiate this from a generic line chart.
 
 ## 5A. Web Workspace composition and desktop-only capability boundary
 
@@ -83,7 +83,6 @@ approval_reference: source baseline origin/main 5ba1aefc53a1babc293e990c23c62f84
 - **Layout:** chart/table first, metric switcher second, definition rail third, change explanation fourth; the selected metric remains visible.
 - **Touch:** metric chips and retry meet 48 logical pixels; chart has a spoken label and the data table remains available.
 - **Interruption:** no cached trend or pending metric change is represented. Retry repeats the read.
-- **Screen identity:** one primary trend plus definition and delta explanation remains the organizing task, not a shrunken desktop grid.
 
 ## 7. Actions, authorization and effects
 

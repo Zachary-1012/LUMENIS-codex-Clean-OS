@@ -1,142 +1,117 @@
-# 序境 / LUMENIS 全产品规划对照表（替代 plan-map.md）
-原规划采样：origin/main `72c96d94`（#35，2026-10-13 18:04 Asia/Shanghai）；当时主路径 `25a08341` 及20处他人在途修改仅为历史基线。当前发布版本和受保护工作树分别见 CURRENT；本文是完整要求，阅读/采用不等于实现或验收。
+# 序境 / LUMENIS 完整产品规划与唯一前端建设规划
 
-## 0. 已读文件（证明覆盖范围）
-| 文件 | 行数 | 读法 |
-|---|---|---|
-| README.md | 134 | 全文 |
-| AGENTS.md | 1807 | 全文 |
-| LUMENIS-CODEX-TAKEOVER-CURRENT.md | 120 | 全文 |
-| AI-NATIVE-PRODUCT-CONSTITUTION.md | 92 | 全文 |
-| LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md | 749 | 全文 |
-| LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md | 1024 | 全文 |
-| LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md | 205 | 全文 |
-| SECURITY-BOUNDARY-CURRENT.md | 31 | 全文 |
-| LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md | 480 | 全文 |
-| AI_PROVIDER_FAILOVER_POLICY_V1.0.md | 360 | 全文（文件自己标注为 SUPERSEDED，仅作历史） |
-| USER-ADDITIONS-20261004.md | 103 | 全文 |
-| config/ai-quota.json | 26 | 全文 |
-| LUMENIS-EXPERIENCE-CONSTITUTION.md | 1648 | 全文逐句（a8ffdc2b，10-13 23:xx 补读 1-407、510-1648） |
-| LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md | 1515 | 全文逐句（补读 61-1471） |
-| SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md | 771 | 全文逐句（补读 1-222、351-771） |
-| 44 份屏幕规格＋README＋TEMPLATE（8146 行/781KB） | 8146 | 全文逐句（S1–S16，逐份一批，notes/batch-notes.md） |
-| 其余 00-GOVERNANCE 文件（≈7000 行） | ≈7000 | 全文逐句（B1–B9） |
-| feature_registry.md/.csv、schema_registry_t4.csv、function_registry_canonical_t4.csv、ROOT-PYTHON-CALLER-INVENTORY-ROUND-02.md | 393/335/737/32/289 | 全文逐行（R1–R5；CSV 全列统计＋逐行，含源码抽查） |
+本规划与[唯一视觉文字草图](sketches/FULL-PRODUCT-SKETCH.md)是当前两份集中评审和建设载体。产品范围归 Product Architecture；呈现原则归 Experience Constitution；各 ScreenSpec 保留真实 Owner、字段、调用、Permission、来源用途、状态、动作与验收合同。本文件不另立产品、设计系统、Owner 或执行调度。原有非前端能力与全部 G/R/J/U 要求保留，不能用前端收敛删除后端、研究或验收工作。
 
-覆盖说明：全部文件已分批逐句/逐行读完，进度见 notes/batch-notes.md。
+**持续更新，非冻结。** 2026-10-16直接PO明确：这里的“唯一”只指当前集中维护的两份载体，不限制总控正在进行的升级或今后的升级，也不把本次布局、能力、实现或版本定为上限。后续获准改进、真实来源/运行结果和验收反馈继续由现有Owner原位更新这两份主稿及受影响合同；保持版本、来源与有效历史。本文本任务“先发布规划、后开展REA”的顺序只约束本窗口，不要求总控或其他已获派工的窗口等待、不增加其设计审批或升级前置。
 
-全文已读合计 5131 行。
-| 补读 B5–B9 | CODEX-ZERO-AUTH、R03-CHARTER、GOV-MACHINE.json、LAUNCH、BRAND-ECO、DUAL-CORE、R02-CHARTER、ENG-EVOL、PROD-ACCEPT、THIRD-PARTY | 是（逐行） |
-| 44 屏 spec | S1–S16 逐句 | 是 |
-| 注册表＋caller 清单 | R1–R5 逐行 | 是 |
+**REA先研究后使用。** 同次直接PO要求使用前认真研究其官方[GitHub仓库](https://github.com/morluto/rea)。本窗口先读适用版本的README、相关指南、实际源码/测试、许可证与发布差异，再据本机实际工具schema选择调用，保留commit、阅读范围、能力/限制和可复用方法；仅看工具名、安装Skill或旧报告不算完成研究。完成此项与本窗口规划发布门后继续完整获准目标的验证及适配包，不以研究缩减原任务。
 
-## 1. 优先于旧文档的 PO 新指令（与旧文冲突时以新指令为准）
-| # | PO 新指令 | 被覆盖的旧文 | 依据 |
-|---|---|---|---|
-| O1 | 自动采集范围＝全部已登记主体 | GLB:61「太古汇是参考主体」原本没错，但 `.env` 只配了 TKH；ai_filter.py:142-146,245-354、ai_governance.py:48、ai_task_parser.py:152 把太古汇写死了 | PR #36（open） |
-| O2 | 所有平台登录统一走产品内弹窗（序境 UI），采集在后台无窗口运行；失效才弹出 | 与 EXP §11.1:478-508（LumenisPlatformRecoverySheet）和 ARCH:117,737 **一致**。现有实现仍会弹外部浏览器，这是实现缺陷，不是规则问题 | A:1799、EXP:441-444 |
-| O3 | 研发阶段配置直接改，不问 PO | A:442「新的敏感来源、新权利……须 PO 批准」仍有效；CUR:15「`--apply` 需要 CONFIG_MODIFY 精确审批」→ 研发阶段由开发自己执行（需写回 CURRENT） | PO 直接指令 |
-| O4 | CI 全绿即可合并，不等 PO | A:59 原文要求 required checks → merge，与新指令不冲突，只是去掉了等待 PO 这一步 | 已存入 memory |
-| O5 | 品牌名只用官网名，并记录来源 URL | 旧种子里的翻译名 | #34 record_official_name |
-| O6 | 新增主体由开发自己做端到端测试，并加进 CI | GLB:79-81 原本就要求有真实用户新增路径 | PO 直接指令 |
-| O7 | 账号、两类开发者模式、商业六项、视觉、Logo、角色与前端均闭环内，普通工作无账号墙；仅真实用户验证与付费/授权来源上线后 | AGENTS / CURRENT / MASTER-CHECKLIST | PO 2026-10-14直接指令 |
+本稿所有REA后续描述仅追溯上述当前窗口直接PO已指派的任务；发布或远端读回不产生授权，也不恢复旧窗口。任何新窗口/不同任务仍须各自当前直接PO派工与新鲜准入。
 
-## 2. 全产品模块对照表
-负责人：阿康＝前端/采集/主体（F、C1）；阿康1＝后端（C2/C3/C5/C6 的 API 部分）；Codex＝与两人同级，由 PO 分工（A:55）。
+本稿与总草图集中保存完整目标和可修订视觉规划输入；Experience仍是唯一设计权威。现行ScreenSpec的实际Owner/API/Permission/SourceUse、字段/状态/动作、响应式行为、无障碍及真实验收合同继续原位有效，不能被规划链接替换或降为参考。纯重复构图可集中引用；出现差异时先核最新直接PO、Experience与实际合同，由既有Owner原位协调，既不复制另一套活跃规划，也不拿当前只读实现缩减最终要求。
 
-| 模块 | 规划要求（出处） | 现状（已核实） | 差距 | 负责 | 阶段 |
-|---|---|---|---|---|---|
-| **SYSTEM 采集** C1 | 六个主平台都要持续采集：IG/FB/公众号/小红书/抖音/X（GLB:252、A:1605）；不设统一起始日期（GLB:278）；每帖只取一张封面（GLB:419）；采后再做关键词分析（GLB:418）；平台之间同权（ARCH:705）；一个平台故障只影响它自己（A:301）；由调度器持续运行，不靠 Codex 手动触发（GLB:290-297） | 已入库：x 763、public_http 225、douyin 66、xhs 3（停在 9/30）、ig 1；FB 和公众号为 0。`collect_20261013_172257` 状态 BLOCKED，入库 0 条 | 小红书没有绑定香港/国际身份；FB、IG、公众号没有采集；COLLECTOR-P0-01..05、FND-01..03 都没有闭合（SOI:400-411） | 阿康 | 闭环内 |
-| SYSTEM 采集身份 | 小红书只能用香港/国际白名单身份，禁止碰大陆个人号和 9222 端口（A:1278-1287）；会话失效时在产品内给出重新登录入口和恢复（A:1272） | 9223 受管浏览器里没有可用登录 | 需要在 9223 的隔离 profile 上完成一次 HK/国际号登录（这一步需要人扫码，属于规则允许的“明确的人工步骤”，A:1634） | 阿康（发起），PO（只扫码） | 闭环内 |
-| SYSTEM 平台恢复弹窗 | 统一一个 LumenisPlatformRecoverySheet，支持扫码、受控浏览器登录、验证和冷却状态；只弹一个、按队列排；恢复后由服务端读回健康状态再续跑（EXP:478-508、A:1373） | 没有实现；小红书现在弹外部浏览器 | FND-03 要整体实现：停掉外部弹窗，改成后台 headless 运行，失效时弹 sheet | 阿康（F+C1），阿康1 提供 session API | 闭环内 |
-| SYSTEM 内置浏览器 SYS-06 | 产品内显示真实页面，可人工独占接管、停止、返回原任务；外部打开只能由用户主动选；不做通用 OS 控制（A:1794-1805、ARCH:113-120,733-741、EXP:408-467） | #35 已合并实时画面流 | 运行加载和用户验收为 NOT_VERIFIED；任意点击/输入、来源 Artifact、远程安全访问仍未闭合（SOI:981） | 阿康1 | 闭环内 |
-| SYSTEM 主体登记 | 用户可以新增、搜索、聚焦、清除主体，默认 GLOBAL/ALL（GLB:27,67-81）；14 个国家分类（GLB:110）；闭环前的数据源＝610 条种子＋太古汇场内分布（GLB:125） | 共 903 个主体；216 条 TENANT_OF 关系待审；#34 官网名功能已合并 | 4 个官网名还没写入，小米待核实；133 条关系候选、78 个暂缓主体、8 个同名暂缓待处理；新增主体还没有端到端测试和 CI | 阿康 | 闭环内 |
-| SYSTEM AI Gateway | 唯一 Gateway，只用自有模型；智谱、Ollama、Jev 等已退役，不调用、不探测、不回退（A:907,1074-1086、ARCH:510-517）；基础业务不依赖 AI（ARCH:327） | 返回 UNAVAILABLE 是正确行为；自有模型 NOT_BOUND（SOI:984） | 训练需要 MODEL_TRAIN 权限、确认空闲 GPU，以及配方和数据哈希（A:293-298），目前没有已批准的模型 | 阿康1 | 闭环内（训练需授权） |
-| SYSTEM 运行与安全 | 8201 端口、/healthz、监督进程；五层安全护栏（SEC:7-11）；F-01..F-12 审计修复（SOI:956-967） | 8201 健康；ZBrand-HealthGuard 守护任务已装，但 18:00 那次报错 | 查守护报错原因；F-01/02/03/05/06/10 的 P0 未核实 | 阿康1 | 闭环内 |
-| **CTH** C3 | 主体→监测、事件、风险→Case→判断→行动→结果→报告→保存/修订/恢复（ARCH:55-62、SOI:676） | 有 SourceBrief 统计；#31 合并的是 WIP（标题标明未完成） | 完整的业务分析、报告和恢复都没有验收 | 阿康1 | 闭环内 |
-| **BMP** C3 | 品牌、竞品、创作者、传播、Campaign、评价（ARCH:64-71、SOI:677） | 部分完成 | 同上 | 阿康1 | 闭环内 |
-| **Shared 研究** C5 | 不要求先建 CTH/BMP 就能独立研究；引用可定位；SavedWork 有版本（ARCH:73-80） | 有导入、引用、SavedWork；有 DOCX/XLSX/PPTX 校验 | 独立入口、引用撤回、同一版本的真实操作都没有验证 | 阿康1 | 闭环内 |
-| Shared 提案/视频/播客 C4 | 三类分别验收：可编辑成品、真实渲染和试听（ARCH:82-111、SOI:683-687） | Timeline、渲染、导出有历史成果；不再要求勾 demo | 独立新建→编辑→导出→重开的完整链没有验收 | 阿康1（后端），阿康（界面） | 闭环内 |
-| Shared 检索 | cosine＋BM25＋融合＋cross-encoder 精排（ARCH:153-161） | 没有核实 | 需要真实模型和效果证据 | 阿康1 | 闭环内 |
-| **Agent / 自研 AI** C2 | 取消/恢复、Skills 商店、Memory、受控学习（SOI:224,669-672） | 首页聊天提交以前是 `onPressed:null`（UA:28）；#31 正在补 | AI-01 提交链、SH-06 收件箱、决策卡回执 | 阿康1 | 闭环内 |
-| **四表面** F | 官网 Astro、Web、Win/macOS、iOS 并行建设、各自验收；后三者共用一套 Flutter 实现（README:54、MSD:17）；打开工作区直接进入聊天首页（ARCH:124）；中英韩三语和无障碍（SOI:230） | 有官网基础版、Flutter Web 和 /workspace | 前端功能与后端并行闭环开发 | 阿康 | 前端功能与视觉风格/logo/角色图均闭环内（与后端并行，按 sketches/UI-STEP-PLAN.md 分步建设） |
-| 品牌与角色 | Pim/Bram/Ness/Jas/Aris；AI 水印；logo 带名/不带名两版（UA:90-104） | 已登记 | 随前端分步建设（UI-STEP-PLAN 第 F12 步） | 阿康 | 闭环内 |
-| 小插件进度 | 只有一个进度入口，即 CURRENT（CUR:7） | 正在改成读 CURRENT | 需要合 PR | 阿康 | 闭环内 |
+## 0. 要求、实现与证据如何阅读
 
-## 3. 常见决策的规则答案（直接照做，不要问 PO）
-| 遇到的情况 | 规则答案 | 出处 |
-|---|---|---|
-| Gateway 绑哪个模型？ | 只绑自有模型；没有模型就返回 UNAVAILABLE；禁止回退到第三方 | A:907,1074 |
-| 要不要调智谱/豆包？ | 不要，已退役 | ai-quota.json:4、AIPOL:10-16 |
-| 平台登录失效怎么办？ | 产品内 RecoverySheet；扫码/登录后服务端读回健康状态再续跑；不弹外部浏览器 | EXP:478-508 |
-| 小红书用哪个号？ | 只用香港/国际白名单号；大陆个人号绝对不碰 | A:1280-1287 |
-| 遇到验证码/风控？ | 研究合法的恢复方式；不绕过；只停这一个平台，其他继续 | A:1627-1634 |
-| 采集范围？ | 全部已登记主体（O1）；按话题和任务语义；不设起始日期 | GLB:278、PR#36 |
-| 缺失值？ | 显示“—”加原因；真实的 0 才显示 0 | A:1224-1246 |
-| 品牌名？ | 用官网名并记录来源 URL；同名暂缓；不改别人的品牌名 | O5、CUR:15,50 |
-| 配置或写库审批？ | 研发阶段开发自己执行，写回 CURRENT（O3）；写前必须先备份 | O3、A:1252 |
-| 合并 PR？ | CI 全绿就合并（O4） | A:59 |
-| 保护活动分支？ | 不切换或修改 akang/auto-scope-all-subjects；本次在origin/main新分支的临时隔离工作区处理，保留其全部dirty | PO 2026-10-14 |
-| 遇到外部 API/框架的 bug？ | 查官方文档和 GitHub，然后自己修 | A:651-674 |
-| 要不要新加第三方组件？ | 放在 adapter 后面，许可证查清楚并登记 | A:1503-1526 |
-| 训练、花钱、部署？ | 需要 PO 单独授权（真实阻塞） | A:186,1581 |
+| 阅读对象 | 本次处理及事实边界 |
+| --- | --- |
+| 最终要求 | 最新直接 PO 指令、当前 Architecture/Experience/Owner/Real Delivery 与本文件完整要求；功能缺失不是删需求的理由。44 屏是兼容能力索引，允许同一用户工作合并布局、分层进入，不能限制功能、导航、页面或范围。 |
+| 当前实现 | 本次规划来源基线是 fresh `origin/main` 与独立远端 main 核对的 `2932b725039ad606d9f335f8e900d989fd876182`。此值只是阅读基线，不冒充后续最新 main。实现事实必须回到相应版本源码/真实调用；规划中的方法、草图及按钮均不是已实现证明。 |
+| 运行与验收 | 当前生产服务、数据库、模型和四表面用户结果没有在本规划任务中执行或升级。缺失项保持 OPEN / LIVE_NOT_VERIFIED；已有独立 Shared 报告隔离 Web 成果仅按 PR #77 原回执复用，不能扩为媒体、CTH/BMP、崩溃恢复或四端 PASS。 |
+| 在研保护 | 主路径 `akang/auto-scope-all-subjects` 的 28 项候选、其他窗口 SourceBrief/CTH07/聊天/Fact Wall 与原研究均受保护。本任务只在预约的文档路径规划和研究，不构建前端、不修改数据库、不启动采集/模型/训练/部署。 |
+| 原始来源 | Issue #17 正文、全部相关评论与附件、Slack #lumenis-dev 频道和原线程须按实际正文阅读覆盖记录；消息可见/ID清单不算全文读完，附件已取到/已读/可采用/已实现分别记录。历史四本教材的已读页范围保留，不能被“全量消息”覆盖声明改写。 |
+| 设计证据 | 本稿及文字草图是可审核的完整设计输入。没有真实设计评审不写 DESIGN_READY，没有实际产品操作不写 ACCEPTED；F 依已授权任务可以直接构建，不新增 Figma 或逐屏审批前置。 |
 
-## 4. README 缺口与替换文案（定义性内容，不写日期进度）
-| # | README 现状 | 问题 | 建议替换文案 |
-|---|---|---|---|
-| R1 | 76-85 阅读顺序缺少机器合同、Multi-Surface、Real Delivery、Global、Positioning、Security | 和 A:450-466 不一致 | 「开发阅读顺序：AGENTS.md → 00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json → LUMENIS-CODEX-TAKEOVER-CURRENT.md（唯一接续入口）→ AI-NATIVE-PRODUCT-CONSTITUTION.md → LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md → LUMENIS-EXPERIENCE-CONSTITUTION.md → LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md → LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md → LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md → LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md → SECURITY-BOUNDARY-CURRENT.md → 对应合同与源码」 |
-| R2 | 没有写明“唯一闭环入口” | 缺少 PO 要求的唯一化说明 | 「所有开发者（Codex、阿康、阿康1）都从 CURRENT 开工：规则 → CURRENT → 分支 → 测试 → PR → Product Gate + App Gate 全绿 → 合并 → 本地主路径与 origin/main 一致。只用一个本地路径，不建额外 worktree。」 |
-| R3 | 118 行“经过审阅的 PR” | 缺少全绿即合并 | 「必需检查全绿即可正常合并；禁止强推和绕过检查。」 |
-| R4 | 缺五轮交付顺序 | ARCH:244 有 | 「产品交付按五轮：SYSTEM → CTH → BMP → Shared → Agent Groups/自研 AI；这是研发与验收顺序，不是用户必须走的流程。」 |
-| R5 | 缺 AI 路线 | A:907 | 「产品 AI 只经过唯一 SYSTEM AI Gateway 调用序境自有模型；Ollama、智谱、Jev 等已退役，不调用也不回退；模型不可用时如实显示不可用。」 |
-| R6 | 缺采集定义 | GLB §10、O1、O2 | 「SYSTEM Collector 对全部已登记主体按话题和任务语义持续采集，六个主平台为 Instagram、Facebook、微信公众号、小红书、抖音、X；采集在后台无窗口运行；平台登录失效时在产品内弹出统一恢复面板，不自动打开外部浏览器；小红书只使用香港/国际授权身份。」 |
-| R7 | 107 行只写了 /healthz | 缺端口 | 「Core 默认在本机 8201 端口，健康检查为 http://127.0.0.1:8201/healthz。」 |
-| R8 | 结构表缺 `config/`、`data/`（不入库）和 `intelligence_library/` | 结构不全 | 补三行：`config/` 运行配置与种子；`data/monitor.db` 唯一业务库（不入 Git）；`intelligence_library/` 研究资料（历史出处，不作执行规则）。 |
-| R9 | 缺主体登记定义 | GLB:27,79 | 「默认范围为 GLOBAL/ALL；用户可以搜索、新增、聚焦、清除商业主体和品牌；选中某个主体不等于获得权限，也不会自动启动采集；品牌名只记录官网名称。」 |
+当前来源链依根AGENTS的完整路由：[AGENTS](../../AGENTS.md) → [机器语义](../LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json) → [CURRENT](../LUMENIS-CODEX-TAKEOVER-CURRENT.md) → [AI-native 原则](../AI-NATIVE-PRODUCT-CONSTITUTION.md) → [Architecture](../LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) → [Experience](../LUMENIS-EXPERIENCE-CONSTITUTION.md) → [四表面](../LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md) → [Owner](../LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md) → [Real Delivery](../LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md) → [Global数据合同](../LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md) → [Product Positioning](../PRODUCT-POSITIONING-CURRENT.md) → [README](../../README.md) → [跨仓注册表](../CROSS-REPO-CANONICAL-REGISTRY-V1.md) → [GGI机器合同](../LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json) → [Security](../SECURITY-BOUNDARY-CURRENT.md) → 原字段/动作/权限合同和源码。跨仓被列出不授予跨仓写入；历史检查、原件、审批、失败及材料采用记录保留原位置和Git历史，不复活退休规则正文。
 
-## 5. 44 屏现状（按 frontmatter 状态，2026-10-13 a8ffdc2b 复核）
-合计 44：BLOCKED 20｜REVIEWED_FOR_SCOPE_BLOCKED_SLICE 1（BMP-01）｜OWNER_REVIEW 6（BMP-06～11）｜DESIGN_READY 4（ACC-01/03/04、SYS-05）｜APPROVED 1（SYS-01）｜DESIGN_EXPLORATION 5（SYS-02/03/04/07/08）｜IMPLEMENTED_* 7（SH-01～06、SYS-06）｜ACCEPTED 0
+## 1. 完整前端的产品边界
 
-| 组 | 屏幕 | 状态 | 主要阻塞 |
-|---|---|---|---|
-| ACC（4） | 01、03、04 | DESIGN_READY | BLOCKED_PENDING_LIVE_RUNTIME_E2E |
-| | 02 | BLOCKED | 缺新增主体写入合同与真实 E2E（ACC-02:224,315） |
-| AI（5） | 01～05 | BLOCKED | GAP-029/030；AI-05 以 AI-01 诊断作"显式 fallback"（AI-05:23-40） |
-| BMP（11） | 01 | REVIEWED_FOR_SCOPE_BLOCKED_SLICE | GAP-018 |
-| | 02～05 | BLOCKED | GAP-019..022 |
-| | 06～11（含 08 播客） | OWNER_REVIEW | GAP-023..028 actor→BrandFocus 读取合同；08 正文另记 Shared/C4 播客范围阻塞 |
-| CTH（10） | 01～10 | BLOCKED | GAP-005..016 |
-| SH（6） | 01 | IMPLEMENTED_CATALOG_ONLY_EVIDENCE_SCOPE_BLOCKED | Evidence 范围 |
-| | 02～06 | IMPLEMENTED_SCOPE_GUARDED_*（后端范围/效果/只读未验证） | SH-02 打开原文走 SYS-06 |
-| SYS（8） | 01 | APPROVED | latency 无实现（SYS-01:139） |
-| | 02、03、04、07、08 | DESIGN_EXPLORATION | 03/04/08 PO 批准 PENDING |
-| | 05 | DESIGN_READY | Sys05Screen 仍留旧 no-scope fallback（SYS-05:55） |
-| | 06 | IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED | §0.3 交互目标 OPEN |
+- 打开工作区即进入聊天工作入口。用户可以直接说问题、附资料、开始或继续工作；架构导航始终可到 CTH、BMP、独立研究、提案/文稿、视频、播客、资料与成果、内置浏览器、任务与通知、设置及适用 SYSTEM 能力。主聊不是唯一操作方式，卡片和完整编辑工作区互通，返回不丢草稿或工作对象。
+- CTH/BMP 是业务域。Shared 研究和三类制作可由空白、自有 Brief、手稿或获准素材直接开始，独立工作区/项目 Permission 仍有效；引用外部来源另查 SourceUse 与原范围。无需虚构 Subject/BrandFocus、业务任务、Campaign、Case 或 SourceBrief。领域分析→创作是用户可选联动。
+- AI 贯穿适用理解、检索、分析解释、建议、草拟和多模态辅助。普通业务、确定性分析、人工研究与编辑、保存导出重开恢复在无模型/API/GPU时仍能完成；AI专属步骤不可用时解释该步原因及可继续动作。自有模型默认，用户可明确选择现有单一 user_api 接口；没有自动换模型/Provider或隐形外发。
+- 用户提供问题、范围、时间、预算和约束，收到分析后的结论、来源、局限及下一步。数学/统计在现有后端 Owner 内按真实条件执行，前端可检查方法和假设、修改业务约束；不要求论文选择、内部 ID、随意权重或诊断参数拼装。
+- 通用电脑/OS控制已撤出，不能列成待补功能或已完成。产品内受控浏览器继续有真实网页、手动导航/操作、同任务独占接管、停止、任务返回及保存恢复。外部打开是用户明确动作；内置路径未完成不自动弹外部窗口替代。
+- 平台和公开网页来源类别同权；来源可靠性、身份、市场/时间、用途、权利、原生指标及未知值分别判断。缺失不能变0，派生/AI/人工判断不能覆盖原始 Evidence 或充当行动批准。
 
-注：SCREEN_SPEC_TEMPLATE 自身 status=DESIGN_EXPLORATION、README 无状态，不计入 44。
+## 2. 四表面角色与完整建设范围
 
-## 6. 本轮新发现的差距和文档冲突
-| # | 发现 | 出处 | 建议 | 负责 |
-|---|---|---|---|---|
-| N1 | 旧收敛文件仍写“当前运行面：Zhipu + Local AI 并行” | PRODUCT-CONVERGENCE-MASTER-V1-20260906 | 与 AGENTS:907（退役）冲突。文件头加 SUPERSEDED 标注 | Codex |
-| N2 | 双核架构文件写有 Linux 平台、OSAI `git_commit_push` 红线、Windows 硬编码 | INTELLIGENCE-OS-DUAL-CORE-v1.0 | Linux 已移出范围、通用 OS 控制已撤回。标注为历史 | Codex |
-| N3 | 主体权限审计显示 IMPLEMENTATION NOT STARTED | SUBJECT-PERMISSION-AUDIT-ROUND-05 | 与 ACC-02 写入合同一起闭合 | 阿康1 |
-| N4 | 数据库权威审计显示 LEGACY SMOKE BLOCKED / NOT LIVE VERIFIED | DATABASE-AUTHORITY-AUDIT-ROUND-03 | 对 monitor.db 做一次 live 复核 | 阿康1 |
-| N5 | 身份边界审计显示 PACKAGED UI UNVERIFIED | IDENTITY-BOUNDARY-AUDIT-ROUND-04 | 各端打包后验证 | 阿康 |
-| N6 | 只有 SHARED-COLLECTOR:229 明确“目前不假设有官方 API”，采集必须靠合法的已授权 R&D 账号、会话、公开页等证明真实数据 | COLLECTOR:229-239 | 写进采集验收口径 | 阿康 |
-| N7 | 平台扩展退出合同共 8 条，包括 Manifest、可调用、会话状态、NULL 语义、事务、防重复、如实覆盖、结果到达消费方 | COLLECTOR:336-349 | 六平台逐条对照 | 阿康 |
-| N8 | BMP 06-11 的共同根因是没有 actor→BrandFocus 读取合同 | BMP-06:84 等 | 由一份后端合同解锁 6 屏 | 阿康1 |
-| N9 | 播客和视频的普通操作验收有逐步清单（波形、混音、导出、重开） | REAL-DELIVERY:1486-1487 | 作为 C4 退出清单 | 阿康1 / 阿康 |
-| N10 | 多数屏幕的 Figma 资产状态为 NOT_VERIFIED | 各屏规格 | 与 logo/视觉风格一起闭环内处理（O7） | 阿康 |
+| 表面 | 完整用户工作和布局职责 | 必须独立证明的结果 |
+| --- | --- | --- |
+| Public Website · Astro `website/` | 首页、产品与能力、CTH/BMP/独立研究及三类制作方案、可核案例、真实操作视频、信任与数据权利、帮助、更新、下载、联系/试用及工作区入口；中英韩和窄屏可读。产品故事、原创身份和富交互服务具体理解，不把工作区做成官网卡片墙。 | 内容真实、演示标记/来源/版本、全部导航/语言/键盘/读屏/窄屏、视频字幕/可控播放、联系提交真实回执；部署另遵原批准，网页存在不证明产品功能完成。 |
+| Web Workspace · Flutter `app/` | 完整业务、研究、资料、聊天/异步、提案/视频/播客编辑与成果恢复；按宽度重组轨/工作面/依据抽屉，保留浏览器前进后退和深链接。来源、编辑器和真实浏览器视口各有任务型空间。 | 真实 Core/Permission/Source/Evidence/Artifact 接线、文件选择与下载、重载/断网/重连恢复、输入法、键盘和读屏；窄屏 Web 单独验，不冒充 iOS。 |
+| Windows / macOS Desktop · 同一 Flutter | 同一任务和合同的原生工作区；多窗格、大文件、稿件/时间轴/预览、原生文件和本机朗读、后台任务与原窗口恢复。系统材质只在实际支持时使用，不新增本地业务真相。 | 两个系统各自打包/安装/启动、窗口伸缩/缩放、⌘/Ctrl快捷键、文件读写/导出、音视频/本地语音、退出重开/任务恢复。缺mac设备不阻塞独立Web/Windows工作，也不伪报mac通过。 |
+| iOS Companion · 同一 Flutter | 触控优先的一项当前工作：聊天交办/查看异步成果、研究阅读与引用、业务审阅/审批、稿件轻编辑、媒体试听/审阅/允许的轻操作、来源和内置浏览器、通知返回、状态及跨端续接。复杂编辑按已批准能力真实执行或明确交接。 | 安全区/旋转/键盘/输入法/字号、VoiceOver/触控等价、前后台/休眠/离线/恢复、当前版本与原任务返回；没有设备保持本端 OPEN，不能用“同桌面”或竖排截图验收。 |
 
-## 7. 文档更新（PR #41，取代 #37）
-README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/后划分），并删除 `--apply` 需 CONFIG_MODIFY 审批的表述；GLOBAL 的 MANUAL 默认上方加研发 AUTO 覆盖说明；3 份旧权威文件标注 SUPERSEDED（N1/N2，以及 ENGINEERING-GOVERNANCE V1.0）。2026-10-14 起产品账号体系闭环内。
+四表面并行建设、各自验收。F0–F13 是建设依赖和结果分组，不是必须串行的新阶段；后端缺失只阻塞其依赖动作。完整交互设计与独立本地编辑照常推进，写入、执行、发布和恢复只显示真实能力。原生 Android/Linux不在当前交付要求；Linux服务/CI及各OS浏览器和窄屏Web仍在范围。
 
+## 3. 用户工作、入口与成果合同
 
-## 8. 2026-10-13 补读新增差距（origin/main a8ffdc2b）
+每行同时采用[总草图](sketches/FULL-PRODUCT-SKETCH.md)对应任务布局及原 ScreenSpec 的独立接口/权限/验收。每项均需正常路径、空/部分/拒绝/错误/取消、保存修订重开和适用恢复；不能只验不可用提示。
+
+| 用户工作与入口 | 输入、后台实际 Owner/合同、可见成果 | 保存、修订、重开、恢复与验收出口 |
+| --- | --- | --- |
+| 首页与持续聊天：ACC-03 / AI-01，主导航返回 | 问题/自有文字/获准附件，现有 Intent→Task/Agent→注册工具与领域/Shared Owner；显示真实接收、归属明确的并行任务、有用部分结果、引用/局限及下一步，输入不等待长任务。 | 每个任务独立 actor/scope/attempt/版本；继续A、另开B、修订A、停止B；重连后读回已提交成果，旧回调不覆盖新版本或复活取消任务。AI-01/02/03、SH-06共同验，通知回执不等于业务完成。 |
+| CTH经营：总览→主体→监测/日历/负面→事件/Case→比较→Decision/Action→报告（CTH-01～10） | 用户经营问题、合法范围/双时间/预算；C1来源→Canonical→C3业务分析/决策与实际Outcome→C5报告。分别呈现观测、推断、计划、人工决定、执行回执和实际结果。 | 来源钻取/比较/修改约束、保存Case/报告版本、只重做受影响部分；返回选定对象/时间窗/筛选/滚动。无AI完成一项经营成果；撤权、缺数据、变更上游及中断恢复不假成功。 |
+| BMP品牌市场：总览→品牌/竞品→机会/传播/创作者→Campaign→制作/执行→评价/风险/基准（BMP-01～11） | 品牌问题、市场/竞品/创作者与来源、资源；C3拥有比较/漏斗/归因/排期和评价；公开数据模型显示口径、分母、区间与假设，计划不等实际发布或转化。 | 保存候选比较/Brief/计划/执行/评价版本；来源撤回、预算或范围变化只修相关部分。内容/视频/播客调用原Shared同一项目；返回品牌工作上下文，品牌全国与场内门店事实不混用。 |
+| 独立研究：Shared新建或导航研究，AI-03/SH-01/02/05 | 自有资料/问题/时间/资源，Importer→Source/Evidence→Research检索/阅读/比较/引用→SavedWork；显示关键发现、矛盾、未知、原文定位和可编辑研究笔记。 | 空白笔记不依赖模型；逐条采纳/排除来源、修订、更正/撤回影响、精确版本重开/导出。Hybrid候选和已实际检索分开，引用不是模型编的脚注。 |
+| 独立提案/文稿：Shared新建→类型/空白/手稿；SH-01/04 | 自有Brief、用户稿或获准素材；C4内容编排+C5 SavedWork/Artifact，章节/页面编辑、事实墙、备注与审阅，提案/报告方法按对象采用。 | 人工输入→编辑预览→真实保存→修订→版本比较→关闭重开→Word/PDF/其他已接格式导出；未接格式清晰不可用。引用/人工改稿/AI草案分开，不强制先研究/建业务任务。 |
+| 独立视频：Shared视频或BMP-06可选入口 | 自有视频/音频/图/稿，C4 MediaAsset/Timeline/FFmpeg/Artifact；素材预览、逐词稿、真实播放器、多轨/字幕/声音/安全区/画幅、分镜、提议与损失预检。 | 手动剪辑始终可用；提议确认才改Timeline，seek/pan/悬停分离、撤销完整；可编辑工程+实际成片分别读回，导出取消/失败保留原工程，素材变更/失链可恢复。详见§14 E项。 |
+| 独立播客：Shared播客或BMP-08可选入口 | 自有稿/录音/音频，C4同一Timeline/Artifact及podcast Owner；选题/前采/稿、录音导入、转写说话人/章节、逐词剪辑、混音实测/试听、发布包与切片/复盘。 | 稿件修改不暗改音频；词剪同工程、原文/校对双版本、多音频流明确选择；可选配音/声纹另按许可，发布包导出不等平台发布。保存修订重开/恢复及试听各自验，详见§14 P项。 |
+| 资料、来源和采集：SH-02/03、SYS-02/06 | 单个或批量自有/获准文件（XLSX/PDF/DOCX等）、精确URL/主题与任务语义→SYSTEM Collector或既有Importer→同一Source/Evidence/Canonical；导入先核对字段、重复与缺项，逐项保留原件/页码/表格位置、来源、双时间和使用范围。报告中的结论/推断与其原始来源分层，未经独立核验不升为Canonical事实；可在同一CTH/BMP经营/品牌问题或独立Shared研究中采用。 | 保留原件、核对选择、排除理由及导入版本；字段/缺项补全只追加有来源的新版本，重复项按原Owner规则处理，不覆盖不同来源。分析成果依原SavedWork/Artifact保存、修订、重开、返回原材料/问题并恢复中断；解析失败、部分可用、权限不足与已导入分开显示，不新设导入系统或分析面板。采集仍明确手动动作和已批准自动范围；未来用户默认MANUAL/显式opt-in，研发已准入AUTO不外推给新用户。单平台登录/挑战只停该路径，受控恢复/服务端健康读回后续接；来源纠正不覆盖历史。 |
+| 内置网页工作：SYS-06、Open Original、任务内浏览器胶囊 | 同actor/task受控会话，地址/标签/导航/真实页面与可访问操作、停止/人工独占/原任务返回；C6 Browser Runtime/Permission，AI是可选增强。 | 接管期间停止Agent并隔离AI页面读取；保存笔记/来源仅按真实获准动作，纯打开不采集/写Evidence。挑战/过期/断流/离开/重启各明确，外部打开显式；禁止个人大陆XHS或默认浏览器档案探测。 |
+| 成果与版本：SH-04，全部工作内“保存/版本/导出” | C5 SavedWork/Artifact/SourceUse，显示当前编辑、已提交版本、来源版本及导出格式，比较增删和修改原因。 | 保存确认来自持久化读回；冲突时保留本地编辑/旧版并明确重试基线。旧版只读与采用为新版本分开；撤权后不能靠缓存或旧下载链接继续；输出文件实际内容校对。 |
+| 任务/通知：AI-02、SH-06与顶栏任务入口 | Task Engine真实状态、成果feed/NotificationRouter，按权限显示完成、重要失败和必要人审；任务详情可查询普通进度。 | 返回同一工作/版本，取消/恢复受attempt/lease及效果回执约束；关闭客户端/宿主休眠分别说明。通知已发送/待发/失败与任务完成分开；去重、重连补送、静默偏好不吞必要审批。 |
+| 账号/角色/设置：ACC-01/02/04、SYS-04/05，AI-04/05 | 普通工作直接进入；可选免费邮箱验证码/Google，Apple未具备开发者账号或该端接入尚未实际启用时隐藏。账号设置、工作区成员角色、会话、数据控制、模型API/连接器/Skill生命周期沿原Owner，设置不授权。 | 取消登录回原任务，同邮箱关联须原身份核验；模型学习同意无预选；权限拒绝给真实动作级恢复。退出/删除/撤销/备份恢复与工作草稿边界可理解；不凭设置页面创建账户服务或外部调用。 |
+| SYSTEM与商业运行：SYS-01/03/04/07/08 | 实际运行/加载版本、Source到Artifact一致性、权限与密钥合规、指标/告警、工作区备份/恢复/归档/删除、多成员/租户；六商业项和两开发者模式保持闭环内。 | 只展示真实测量；未知不健康化。用户开发者模式需已审核协议/显式同意及可关闭恢复；创始人内部发布沿原测试/签名/分批/观察/回滚，按钮不绕过外部效果授权。无发布权限时保留完整设计且动作不可执行。 |
+
+## 4. 统一交互、视觉、语言和可访问性
+
+视觉采用原有原创 Logo、线性功能glyph、彩绘身份/功能icon、Pim/Bram/Ness/Jas/Aris及适合页面的插画、原资产/版本和真实操作视频。沿用Experience §23/§38已批准原创标志并统一各端；旧r4/r5候选保留研究证据，不在本任务设计替代Logo。彩绘不代表整个产品手绘/2D，也不把产品改成全3D、模板仪表盘或静态图墙。暖浅工作面、细分隔、任务主内容与上下文工具按Experience既有方向组织；Opaque真相面、Structure工具层、可选Optical局部强调各有职责。用户壁纸只本机，Web不冒充桌面透视。
+
+约90ms是动作收到后首个可感知反馈的预算，需实际测量p50/p95及环境；不插固定90ms等待，不靠动画伪造后端接收、保存、运行或成功。局部可逆选中/展开即时反馈，待提交编辑明确标“未保存”；事实/写入/审批/导出成功必须有服务端或文件读回。完整原有ENTER/EXIT/TRACE/OPEN/SELECT/SHIFT/MORPH/EXPAND/COLLAPSE/DRILL/RETURN/PROGRESS/COMPLETE/WARNING/ERROR/RECOVER动效及用户选择保留，可打断、可跳过且不挡工作。
+
+新增transitions.dev生成揭示仅由真实、获准、版本识别的新成果触发，普通等待骨架继续使用；真实内容、字体和影响尺寸的资源/布局就绪后测量一次点阵/线框→UI揭示。重开、刷新、路由或每行列表不冒充新生成；独立完整/跟随系统减少动态/关闭与立即跳过控制，不改其他动效。失效几何、滚动/缩放/导航/取消/版本变化及时清理，语义和动作一直属于真实UI。Flutter消费实际RenderBox/文字布局，不叠DOM假页面；Astro只在真实演示成果适用。许可/来源/实现/运行分别验。
+
+Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺序；停止/撤销/返回；同概念同词；危险动作预防；可见选项而非记内部ID；快捷键/触控等价；任务主次清晰；可恢复错误文案；就地帮助。它们不删功能、动效或原创视觉。所有页面：zh-CN/en/ko的导航/正文/状态/错误/权限/读屏文案齐全，名称和原文数据不乱翻译；韩文长度及CJK/emoji字体变化实测，语言切换不丢草稿/对象/版本。
+
+键盘可达、可见焦点、语义分组/标题/表格、读屏替代图、颜色之外的状态符号、44–48逻辑像素触控区与200%字体后重排贯穿全部工作。图表有同数据表格/摘要，拖拽有按钮/键盘等价，媒体有字幕/转写和唯一可控播放器，动效无需观看才能理解。检验1920/1440/1280/1024/768/430/390/360等既有宽度；滚动只服务必要长文/表格/时间线/可访问放大，不截断内容，也不堆不必要嵌套滚动。像素/代码技术的具体研究和采用见本规划专节，按PO明确要求不采用像素画风。
+
+### 4.1 交互物理：沉重弹性、磁吸、流畅与抛出
+
+2026-10-16本窗口直接PO补充：“交互动效要有沉重弹性，磁吸，流畅，抛出以及各种适配产品的物理实现，物理参数要起作用”。本节与总草图§1.3记录同一要求；唯一动效权威仍为Experience现行动效段，具体动作、参数版本和验收沿实际ScreenSpec及既有F源码Owner维护，不能另设物理引擎/规则权威或把本规划当作已实现证明。
+
+| 交互质感与适用操作 | 必须真正参与计算的状态/参数 | 可观察的效果及边界 |
+| --- | --- | --- |
+| 沉重弹性：可逆抽屉、面板、选中对象及原已允许的拖拽回位 | 相对质量`m`、刚度`k`、阻尼`c`、初始位置/速度、目标；弹簧可按`m·x″ + c·x′ + k·(x−target)=0`或等价稳定解计算。参数须说明归一化单位/合法范围，不能把相对质量冒称真实千克。 | 明确有分量、起动跟手、有限回弹且收敛；单独改变`m/k/c`会相应改变响应速度、超调或稳定时间。拖住时服从用户，松开沿实际速度续接；中途改目标/反向/再次抓取保持当前位置与速度，不从零重播。大工作面与精细控件按任务调质感，不给正文/持续输入附加抖动。 |
+| 磁吸：现有选择落点、可吸附边界、编辑器已有对齐/时间点 | 吸附半径、距离衰减/吸引强度、进入/脱离阈值或迟滞、释放速度阈值、合法目标优先级和强度上限；由真实几何、状态及坐标单位计算。 | 进入有效范围有可见落点/预览，接近与离开产生连续拉力，边缘不反复跳吸；用力移开可脱离，用户可取消/按原支持方式关闭吸附。吸附只选当前允许目标，不改业务范围、越过权限或把视觉对齐写成已保存。指针装饰偏移不能让真实按钮命中区逃离指针。 |
+| 抛出/惯性/边界反馈：已有可拖对象、局部浏览与媒体编辑操作 | 松手采样速度、速度上限、惯性/摩擦或减速度、边界/限位、碰撞恢复系数、停止位置/速度阈值；位置更新使用真实经过时间或稳定解析解，不用每帧固定增量。 | 释放更快时运动距离/持续时间按模型变化，摩擦增大时衰减更快；边界处有限回弹后稳定，可中途抓取/停止/撤销。精确媒体位置、选择和拖拽预览仍以现有Timeline/业务合同为准，不因装饰惯性改剪辑时基或播放头；抛出手势不触发删除、发布、付款等后果。 |
+| 流畅衔接与端差异：Website、Web Workspace、Windows/macOS、iOS | 同一语义参数与版本，Web CSS px/Flutter logical px和每秒速度明确换算；DPR只影响栅格密度。计算/绘制按实际帧时间、可见性和生命周期运行，限制长帧步长/子步并处理暂停恢复。 | 状态/速度连续，快速往返不堆动画队列；布局、字体、缩放/旋转变化重算合法目标，旧回调失效。30/60/120Hz及掉帧下不出现不同最终状态、越界、NaN或无限振荡；不按“每帧”调摩擦导致刷新率改变手感。保留原有时间型动效和用户选择；物理交互由参数/初态决定运动，不强行套同一固定easing/duration使调参失效。 |
+
+参数必须从当前动作的真实输入接到实际仿真/渲染消费点，参数控件、配置字段或文档数值存在本身不算接线。沿既有主题/组件/偏好与动作Owner保存适用配置版本，不新增第二状态源；基础控件不可因缺少GPU/模型而失效，不新增付费插件。只有本就获准的动作使用物理反馈，不凭本节扩张拖拽、业务写入或OS控制。
+
+验收要同时有真实操作与可回放的参数/时间/位置/速度/目标采样：同一初态单独改质量/刚度/阻尼、磁吸范围/强度、释放速度/摩擦/恢复系数，轨迹、超调、吸附/脱离与稳定时间须出现符合模型的可测变化；不可只换标签、色彩或预制曲线。补验反向与重抓、pointer cancel/失焦、取消/导航/销毁、后台返回、边界、帧率/掉帧、三语/200%字体和各表面实际手势。键盘/触控/读屏等价动作与减少动态/关闭路径保持可用，减少动态时去除空间抛移/反复回弹，立即呈现同一真实状态；首反馈约90ms仍是起动预算，动画不延迟内容就绪、保存、许可或操作。当前为完整规划要求，实际参数接线、性能和四表面物理操作均待同版本证据，不标PASS。
+
+## 5. 当前实现与未完状态的读回
+
+本次固定基线的44份规范和实际App路径均存在，54条绑定台账仍是逐字段验收记录；不能把它变为产品总完成率。台账本身的旧source_commit或状态只指向其采样，不代替当前调用和运行。PR #77/#78已有的有界Shared报告/诊断证据、先前媒体/浏览器源码和研究成果继续复用；M正在做的SourceBrief、CTH07、032/048持久聊天、045调用授权、046 Fact Wall不在此处提前写成已合入或已验收。
+
+按每项真实任务记录：REQUIREMENT / SOURCE_IMPLEMENTATION / CORE_BINDING / RUNTIME / USER_OUTCOME / SURFACE / EVIDENCE_VERSION。未接合同设计完整、依赖动作标OPEN/UNBOUND；当前只读slice不能缩减最终保存/修订/执行等要求，当前slice也不能因为规划有按钮而声称可执行。普通错误沿原Owner修复，权限/成本/法务/设备等实际外部阻塞只停其依赖路径。
+
+## 6. 建设与验收依赖
+
+继续沿F0–F13现有建设分组，完整表收在本规划后部；它们不派工、不串行锁四表面。先固定同一语义数据/动作接口与组件状态，同时完成任务布局/本地编辑；可用Core立即接入；缺合同由既有Owner补齐。每一结果的实际出口是：真实入口→合法输入→正常操作→有用成果与来源/限制→持久保存→修订→关闭重开→中断恢复→Evaluation；无AI基础路径与AI增强分别验。所有原R01–R15/J1–J8/U01–U25、Global三覆盖维度、随机实体与商业门保留。
+
+文档收敛本身验证：有效要求与独特设计全迁入、旧活跃副本移除、引用可达且锚点唯一、原接口/权限/状态/动作/验收未丢、非前端要求未减、精确diff独立审查和既有阻塞门通过。之后branch→PR必需CI→审阅合并→main远端原文读回才称规划已发布；这仍不接受前端或产品运行。REA实际验证按本次PO次序在这一步之后继续，产出交原Owner/M实施。
+
+## 7. 原需求与研究采用目录的保留方式
+
+以下原G编号、数学/媒体/Agent/学习/工程要求继续是本规划的完整覆盖目录；编号排列不是产品顺序或派工。其原发现时间/源码行号只作历史来源；具体旧缺陷是否仍在必须以当前Owner/源码/运行重新核实，不复述旧Provider/OS指令为现行规则。已被后续修复覆盖的观察原位改成最终要求与对应证据，历史失败留原证据和Git历史。
+
+## 8. 原完整要求目录（保留G编号与来源，逐项验收）
+
+本目录的“未建/未做/现有问题”等措辞保留原记录的缺口线索，不能不查当前源码/运行/原Owner收据就当作今日缺陷、重复实施或当前派工。195个不同G标识的完整要求保留；来源定位与原责任不被本次文档迁移改写。
 | # | 模块 | 差距 | 出处 | 负责 | 阶段 |
 |---|---|---|---|---|---|
-| G1 | 内置浏览器/Open Original | SourceTarget v1 仍只绑旧外部适配器，未满足“默认 SYS-06 内置打开” | EXP:773 | 阿康(F)/阿康1(C6) | 闭环内 |
+| G1 | 内置浏览器/Open Original | SourceTarget/Open Original默认在SYS-06显示真实获准页面，Trace/Return保留原范围/筛选/选择/定位；外部打开单独明确选择。当前实现和端侧运行按原合同逐项核实。 | EXP:773 | 阿康(F)/阿康1(C6) | 闭环内 |
 | G2 | 采集平台矩阵 | 需逐平台 PLATFORM LIVE CAPABILITY MATRIX（17 类来源×19 字段），未建 | RD:648-714 | 阿康 | 闭环内 |
 | G3 | 失败演练 | 9 类故障演练＋RUNTIME FAILURE MATRIX 未做 | RD:598-639 | 阿康1 | 闭环内 |
 | G4 | 权限场景 | 用户A/B 跨 Subject 读、缺 actor 等 8 项验证，随账号体系同步完成 | RD:540-589 | 阿康1 | 闭环内 |
@@ -153,11 +128,11 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G15 | 三语 | zh-CN/en/ko 任一缺失该屏不得验收 | EXP:643-651 | 阿康 | 闭环内（前端功能，与后端并行） |
 | G16 | 性能/无障碍 | 60fps、p95≤16.7ms、WCAG 2.2 AA、200% 字号 | EXP:1083-1089 | 阿康 | 闭环内（含视觉微调） |
 | G17 | 训练 | 真实 optimizer step/loss/checkpoint/reload/held-out 才算训练；付费算力需 PO 授权 | RD:1360-1366,1384 | 阿康1 | 闭环内（PO 授权） |
-| G18 | 账号/ACC-01/04 | 账号体系：通用邮箱验证码注册、Google 登录（现在启用）、Apple 登录（取得 Apple Developer 账号 $99/年后启用，此前按钮不显示）；登录 OAuth 只用免费方式，属 AGENTS 零授权条款的明文例外；同邮箱不同方式归同一账号；参照 ChatGPT 设置的信息结构（参照结构不是克隆，宪法条款已原位改写；通用/账号/安全-设备与会话-退出所有设备/模型与API/连接器/用量/数据控制/关于）；“改进模型”首次使用时询问，无预设；导出限时链接；删除账号 30 天内可撤销；无通行密钥、无二次验证；不设账号墙，未登录全部功能可用；账号开发与其他研发并行、不阻塞 | EXP:376,1044；PO 2026-10-14 | 阿康1(C)/阿康(F) | 闭环内 |
+| G18 | 账号/ACC-01/04 | 账号体系：通用邮箱验证码注册、Google登录（PO已批准启用）、Apple登录（已有Developer账号且该端接入实际启用后展示，此前隐藏；原PO费用记录$99/年是历史条件，现价另核且不授权本任务采购）；登录OAuth只用免费方式，属AGENTS零授权条款的明文例外；同邮箱不同方式经服务端核实关联同一账号；参照ChatGPT设置的信息结构（参照结构不是克隆，宪法条款已原位改写；通用/账号/安全-设备与会话-退出所有设备/模型与API/连接器/用量/数据控制/关于）；“改进模型”首次使用时询问，无预设；导出限时链接；删除账号30天内可撤销；无通行密钥、无二次验证；不设账号墙，未登录全部功能可用且仍执行各自Permission；账号开发与其他研发并行、不阻塞 | EXP:376,1044；PO 2026-10-14 | 阿康1(C)/阿康(F) | 闭环内 |
 | G19 | 商业六项 | 数据合规（来源清单、保留期限、脱敏、合规报告）、密钥（安全存储、轮换、撤销）、工作区/租户生命周期（备份、恢复、归档、删除、多成员）、运营（指标、告警、诊断包）→ COMMERCIAL_READY；屏 SYS-04/SYS-08 | RD:1265-1291 | 阿康/阿康1 | 闭环内 |
 | G20 | 开发者模式 | 两类：(a) 用户开发者模式——用户可自行开发/修改产品，开启前须接受风险与法律责任自担的协议（协议文本上线前须法务审核，未审核不得启用）；可关闭恢复受限状态；账号数据备份与恢复；(b) 创始人内部开发者模式——一键上传代码更新、跑测试、测试全绿才发布、签名分批自动更新、可回滚 | EXP:1248；PO 2026-10-14 | 阿康1(C)/阿康(F) | 闭环内 |
 | G21 | AI 六项 | Chat Memory/Context/Tool Calling/Skill Registry/Evaluation/Model Routing 全 VERIFIED 才算 AI Chat 完成 | AICL:1-60、PA:134 | 阿康1 | 闭环内 |
-| G22 | 屏幕状态 | 44 屏：BLOCKED 20＋BMP-01 范围阻塞 1、OWNER_REVIEW 6、DESIGN_READY 4、APPROVED 1、DESIGN_EXPLORATION 5、IMPLEMENTED_* 7；无 ACCEPTED | 各 spec frontmatter | 阿康 | 闭环内 |
+| G22 | 屏幕状态 | 44份历史ScreenSpec保留独立设计/实现/验收状态；本基线静态存在不等于ACCEPTED。完整前端不以44为上限；最新逐屏状态回到原合同/证据。 | 各 spec frontmatter | 阿康 | 闭环内 |
 | G50 | BYO-API 接口 | AI Gateway 保留一个通用 OpenAI 兼容外部模型接口，用户可选填自购 API key；默认自有模型、产品不主动调第三方、无自动回退；出口：未配置=不调用，配置后仅用户显式选择时调用并留回执 | Gateway | 阿康1 | 闭环内 |
 | G51 | A-SYS 采集/浏览器 | 合法登录→后台任务→人工验证→同任务恢复→Evidence/Canonical→前端结果；多平台无窗口重启恢复同版实证 | 审计补录 | 阿康/阿康1 | 闭环内 |
 | G52 | A-CTH | 商业问题+时间/预算→有用分析→Decision/Action/实际结果→报告保存重开；数据不足不冒充因果 | 审计补录 | 阿康/阿康1 | 闭环内 |
@@ -167,7 +142,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G56 | A-AI-01/Agent | 首页同一对话可持续追加独立任务、补充或停止指定任务，及时确认真实接收，不等待长任务结束；后台沿既有Task/Agent调度，短问答可直接返回。每个子任务保留原actor/scope/来源版本、取消/恢复和可读回成果；AI不阻断无AI业务。界面交付结果/依据/可选动作，不展示私有推理链；对应完整采用与验收见§16 | 审计补录 | 阿康/阿康1 | 闭环内 |
 | G57 | A-SH-06 | 现有SH-06承接同一对话后台任务的成果、必要失败与人审，授权见应见、不见越权；点开返回原任务和已提交版本，支持断线后读回。普通进度可查询但不逐步刷消息，结果通知去重；已发/待发/失败与业务完成分别记录，不把通知成功当任务成功 | 审计补录 | 阿康/阿康1 | 闭环内（授权账号随账号体系同步） |
 | G58 | A-四表面 | 官网/Web/Win/macOS/iOS 安装启动、工作流、保存恢复、权限、语言分端实测（前端功能与后端并行） | 审计补录 | 阿康/阿康1 | 闭环内 |
-| G59 | A-GAP54 | 34 PARTIAL/15 UNSCOPED/4 ABSENT（AI-03 持久对话、SH-01 Pattern 检索、Fact Wall 逐 Claim 验证、SH-01 持久 AI 对话）/1 LOCAL_ONLY | 审计补录 | 阿康/阿康1 | 闭环内 |
+| G59 | A-GAP54 | 保持54项字段原编号/职责和全部未闭项；本基线台账为34 PARTIAL/16 EXISTS_BUT_UNSCOPED/3 ABSENT/1 LOCAL_ONLY、54 PENDING，状态仅属台账，不是逐行运行验收。032/048持久线程、045真实授权调用、046逐Claim Fact Wall与其完整用户结果仍须Owner证据。 | 审计补录 | 阿康/阿康1 | 闭环内 |
 | G60 | B 效率 | 记录工时/token/修复次数/任务时长，未测前不宣称提效 | 审计补录 | 阿康/阿康1 | 闭环内起测 |
 | G61 | D 组合价值 | 不重复上传/解释品牌时间预算；来源随成品版本传递；上游变更只重做受影响部分；媒体保留可编辑时间轴 | 审计补录 | 阿康/阿康1 | 闭环内 |
 | G62 | E2 商业体运营 | 多门店多品牌归属错位、周月报重复 → 可追溯关系、异常/活动可解释、复用来源 | 审计补录 | 阿康/阿康1 | 闭环内首例（CTH） |
@@ -195,37 +170,37 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G85 | 数据真相链 | External→Evidence→Canonical→确定性函数→Metric→Truth→ViewModel→Report；Metric/Report 单一生产入口；报告事实与 AI 摘要分区并记 snapshot/evidence 引用；人工修正可追溯可撤销 | R0914-E02 | 阿康/阿康1 | 闭环内 |
 | G86 | 数据红线 | NO_DATA/UNKNOWN≠0（并 X33）；publish_datetime 与 captured_at 分离；同平台 content_hash+platform_id 去重、跨平台转载 REVIEW；详情失败保留主记录 | R0914-E02 | 阿康/阿康1 | 闭环内 |
 | G87 | DB/Runtime 验收 | 运行进程实际 DB 路径一致；clean bootstrap/migration/upgrade/rollback；FK+业务约束；Worker Lease/Heartbeat/Checkpoint/Reaper/Retry/DLQ/Resume 有状态；端口可达≠健康 | R0914-E02/E03 | 阿康/阿康1 | 闭环内（并 G41/G42） |
-| G88 | 采集状态机与风控可观测 | STARTING…RECOVERING 合法转换；IP_RISK/CAPTCHA/AUTH_REQUIRED/NETWORK_ERROR/BLOCKED/COOLDOWN 分开、0 条≠成功；验证码不破解→产品内登录弹窗人工恢复；低并发/退避/熔断（研发关、闭环前开）；只留任务需要字段；旧文“持久 Edge/CDP”按现行规则改为内置浏览器同会话后台采集 | R0914-E03 vs PO | 阿康/阿康1 | 闭环内 |
+| G88 | 采集状态机与风控可观测 | STARTING…RECOVERING合法状态、IP_RISK/CAPTCHA/AUTH_REQUIRED/NETWORK_ERROR/BLOCKED/COOLDOWN和真实0分开；原批准研发策略不撤销身份/Permission/法律/挑战/限速边界，产品内人工恢复后服务端读回，同一任务合法续接。 沿当前SYSTEM会话/限流Owner保持低并发、保守pacing、bounded retry/backoff/熔断与Retry-After、任务字段最小化；状态和预算真实读回，不恢复旧研发开关事实。 | R0914-E03 vs PO | 阿康/阿康1 | 闭环内 |
 | G89 | API 契约与异常 | 统一 success/error/code/data/status；Auth≠Permission，高危端点（代码执行、配置、删除）强制权限（并 G35）；禁止 except→ok=true+[]/0；写操作 operation_id 幂等 | R0914-E04 | 阿康/阿康1 | 闭环内 |
 | G90 | Release Gate 阻断性 | CI 关键检查无 continue-on-error；Gate 覆盖编译/测试/安全/边界/DB 迁移/运行谱系；依赖锁定可复现；测试不改写受控审计产物；安全扫描分级不以误报忽略 | R0914-E04 | 阿康/阿康1 | 闭环内（并 G41/G47） |
 | G91 | 研究资产准入 | E0 Candidate→E1→E2→E3 Tested→E4 Validated→Production admitted；研究结论分 事实/推断/建议/已验证/已采用，附“不知道什么”；来源记 URL/commit/日期 | R0914-E05 | 阿康/阿康1 | 闭环内 |
 | G92 | Evaluation 五维 | Data/AI/Collector/Report/Runtime 指标（完整度、人工修正率、恢复率、Evidence 覆盖、heartbeat）；unknown≠pass；Badcase/Golden/Regression 闭环，规则/模型升级同集回归 | R0914-E05 | 阿康/阿康1 | 闭环内（训练评估随 G23） |
 | G93 | 历史审计引用失效 | eng 包引用的 audit/*、LUMENIS_*_AUDIT_V1.md 等已不在 main；结论按上表吸收，旧状态不外推；不恢复旧文件 | R0914-E06 | 阿康/阿康1 | — |
 | G23 | 自有多模态 | gpt-oss-20b 仅文本；视觉/转录/媒体生成无自有模型 | TPCR:91,120,336 | 阿康1 | 闭环内 |
-| G24 | Web Workspace | 静态资源 404、回不到 GLOBAL/ALL；v14–v17 仅本地 | R03-CHARTER:65 | 阿康 | 闭环内 |
-| G25 | 依赖许可 | 多数依赖 VERIFY_BEFORE_RELEASE（发布阻断）；FFmpeg GPL；flutter_quill 未入 pubspec | TPCR:44-74,225,258,385 | 阿康 | 闭环内 |
-| G26 | 状态词表 | 三套并存：PA:465 / GOV-MACHINE.json:177-185 / spec frontmatter | 同左 | 阿康 | 闭环内 |
-| G27 | 本地草稿冒充写入 | 播客 draft/render、内容发布、活动收尾、达人 hold、SH-04 导出均仅本地草稿，无执行器/effect fence/Evidence 回执 | BMP-06/07/08:45,80/09/10；SH-04 | 阿康 | 闭环内 |
-| G28 | 播客独立制作 | P0-A 播放/B 真实波形/C 录音/D 混音、P1-E/F 未实现；store 不过滤、丢 source ref | BMP-08:5-9,36,193-232 | 阿康1 | 闭环内 |
-| G29 | BMP 目录/BrandFocus | _build_bmp02 为策划目录无 lineage；目录 API 仅 CTH；组合/竞品无写 owner；新增主体写合同未定 | BMP-02:48,96,123；ACC-02:31,232-236 | 阿康 | 闭环内 |
-| G30 | 实时监测 | SourceTarget 被 Flutter DTO 丢弃；realtime_series/collector 健康无 endpoint；验收仅 3 个主体 | CTH-03:40,51-52,115,122 | 阿康 | 闭环内 |
-| G31 | AI 意图执行 | 自有 runtime NOT_BOUND → ANALYZE status=failed；无 execution/Evidence trace GET；历史无 actor 范围 | AI-01:39,47,91 | 阿康1 | 闭环内 |
-| G32 | 内置浏览器动作 | click/input/select/upload/download 未实现；loopback guard；仅 workspace:local；RecoverySheet 未接 | SYS-06:75,91,114-118,435-437 | 阿康1 | 闭环内 |
-| G33 | 共享创作 | 独立新建要求 vs 仅目录实现；safe-run 禁用；单视频轨；无编码取消/续跑；Discover 仍 exploration | SH-01:5-15,109,203,587,644 | 阿康 | 闭环内 |
-| G34 | 注册表失真 | feature_registry 生成于 09-06、9 列全空、31 文件已不存在；function 注册行号/路径过期；schema 快照缺 owner 表；caller 清单基线 c3036aa7 | feature_registry.md:3；function_registry_canonical_t4.csv；schema_registry_t4.csv；CALLER-INVENTORY:9 | 阿康 | 闭环内 |
-| G35 | 安全 | /api/settings/developer/execute 对请求体 exec（空 builtins 可绕过）；professional_accounts.access_token 明文列；podcast_ai_runs.prompt 明文；未经批准的临时公网隧道 | settings_module.py:287-311；schema_registry_t4.csv:469,505；临时公网入口删除与调用断开回归 | 阿康 | 立即 |
-| G36 | l10n | ACC-01/04、AI-02~05、ACC-02:75 本地兜底文案；CTH-01:103 仅中文；SYS-01:116、AI-01:159 韩语未验；CTH-04~07 缺 key | 同左 | 阿康 | 闭环内 |
-| G37 | 规则≠代码漂移 | AUTO_COLLECTION_SCOPE 单太古汇（PR #36）；验收出口：登记主体→后台无窗调度→每平台独立失败/登录弹窗恢复→Evidence 可读、缺字段标未知 | rednote_policy.py；审计 I-P0 | 阿康 | 闭环内（并 G-太古汇） |
-| G38 | Shared 独立 | saved_work.authorize 仅 cth/bmp；出口：无 CTH/BMP 前置完成提案/视频/播客 新增/修订/导出/重开/撤权 | saved_work.py | 阿康 | 闭环内（并 G33） |
-| G39 | AI-01 状态错位 | 后端 not_executable → Flutter fromResponse FormatException（"响应无效"）；出口：不可执行/待审批/拒绝/失败/完成 五态分别呈现；约束解码兜底格式 | ai_intent；Ai01IntentResult | 阿康1 | 闭环内（并 G31） |
-| G40 | 身份绑定 | screen_viewmodel builders（_build_sh02 query_evidence）未绑定 actor；出口：越权样本拒绝回归 | screen_viewmodel.py | 阿康1 | 闭环内 |
-| G41 | CI 覆盖 | 必需 CI 缺 ai01 receipt、sh06 inbox、browser frame stream、新主体 E2E，无 flutter test；出口：Product/App Gate 含之 | .github/workflows | 阿康 | 闭环内 |
-| G42 | 入库读回 | importer/种子已发布无 DB apply 读回（610/137/185）；Brio 227/244/150 未逐源抽检；出口：apply+计数读回+抽样 hash | import_subject_registry_seed.py | 阿康 | 闭环内 |
-| G43 | 闭环判定 | BACKEND_GAP 54/54 PENDING；阶梯 DEFINED→…→JOB_CLOSED(真实产物读回)→RELEASED→OPERATING；CI 绿≠闭环 | BACKEND_GAP.json；machine contract | 阿康 | 闭环内 |
+| G24 | Web Workspace | Web Workspace真实资源、GLOBAL/ALL切换、深链接、刷新/离线/返回及全部正常任务接通；旧v14–v17本地记录只作历史证据，不冻结当前404结论。 | R03-CHARTER:65 | 阿康 | 闭环内 |
+| G25 | 依赖许可 | 实际采用的每项依赖核验当前manifest/lock、源码调用、运行/分发构建与许可/Notice；未知许可阻断对应发布，不把旧清单当现装依赖事实。 | TPCR:44-74,225,258,385 | 阿康 | 闭环内 |
+| G26 | 状态词表 | 设计证据、实现阶梯、工程测试、用户验收和运行状态分别按现有机器/Owner合同解释，不用同名字段自动互换。 | 同左 | 阿康 | 闭环内 |
+| G27 | 本地草稿冒充写入 | 本地草稿、已提交业务对象、Effect Fence执行、Evidence回执与实际外部结果清晰分开；有真执行器才启用依赖动作，保存请求草稿不报发布/关闭成功。 | BMP-06/07/08:45,80/09/10；SH-04 | 阿康 | 闭环内 |
+| G28 | 播客独立制作 | 独立播客真实播放/波形/录音/混音、转写章节与修订重开全部保留；scope/source引用、音频流选择和错误恢复按原Owner逐项接通，不以历史store状态取消能力。 实际播客store/查询Owner必须按actor/workspace/domain与获准scope筛选并保留source ref；跨范围拒绝需实证，界面过滤不能代替服务端过滤。 | BMP-08:5-9,36,193-232 | 阿康1 | 闭环内 |
+| G29 | BMP 目录/BrandFocus | 品牌目录/组合/竞品与新增主体由现有Canonical/CTH/BMP/Permission Owner提供真实接口，BrandFocus可选，保存/消歧/关系与lineage可读回，不造客户端业务真相。 | BMP-02:48,96,123；ACC-02:31,232-236 | 阿康 | 闭环内 |
+| G30 | 实时监测 | 实时监测完整保留SourceTarget、范围/平台/原生时间、真实series和新鲜度/覆盖/连接状态；实际采集动作与只读数据分开验，代表样本不等全范围覆盖。 | CTH-03:40,51-52,115,122 | 阿康 | 闭环内 |
+| G31 | AI 意图执行 | AI意图接收→原Task/Skill/Gateway→执行/取消/恢复→真实成果/Evidence独立读回；owned未就绪如实显示，不能把回执或配置当任务闭合。 | AI-01:39,47,91 | 阿康1 | 闭环内 |
+| G32 | 内置浏览器动作 | 内置浏览器click/input/select/获准upload/download、导航/标签/接管/停止、受控恢复与保存返回按原Owner完整实现；当前未接部分OPEN，不能外部弹窗或OS执行替代。 | SYS-06:75,91,114-118,435-437 | 阿康1 | 闭环内 |
+| G33 | 共享创作 | Shared独立研究/文稿/视频/播客新建→编辑→预览/试听→真实保存/修订/导出/重开/取消恢复；完整Timeline/媒体轨道与Discover需求保留，当前目录/只读slice不缩减终态。 | SH-01:5-15,109,203,587,644 | 阿康 | 闭环内 |
+| G34 | 注册表失真 | 特性/函数/schema/caller登记与当前源码、Owner、接口和消费方一致；原旧文件/行号失效需沿实际Owner修正，注册数量不是产品实现证明。 | feature_registry.md:3；function_registry_canonical_t4.csv；schema_registry_t4.csv；CALLER-INVENTORY:9 | 阿康 | 闭环内 |
+| G35 | 安全 | 开发者执行/配置/删除等高危动作强制原权限与隔离；凭据、会话、prompt和敏感数据不明文暴露；网络入口/临时隧道按精确批准与安全合同，不把旧漏洞观察冒充当前复现。 | settings_module.py:287-311；schema_registry_t4.csv:469,505；临时公网入口删除与调用断开回归 | 阿康 | 立即 |
+| G36 | l10n | 全部适用44屏及扩展工作、官网家族的zh-CN/en/ko键、错误/权限/空态/读屏文案与切换保持逐端验；旧缺key列表只作回归线索。 | 同左 | 阿康 | 闭环内 |
+| G37 | 规则≠代码漂移 | 所有登记主体按批准的任务/时间/来源与自动范围工作；后台无窗调度、每平台独立失败和产品内恢复→Evidence可读，缺字段未知；参考主体不成为隐藏默认。 | rednote_policy.py；审计 I-P0 | 阿康 | 闭环内（并 G-太古汇） |
+| G38 | Shared 独立 | 独立shared_workspace/project授权不继承CTH/BMP；用户原稿可独立保存修订导出，引用外部资产另保留原scope/SourceUse。PR77已有有界报告证据保留，视频/播客和正向跨域采用仍逐项验。 | saved_work.py | 阿康 | 闭环内（并 G33） |
+| G39 | AI-01 状态错位 | 意图不可执行/待审批/拒绝/失败/取消/完成分别呈现；约束解码只保格式，错误响应不冒充完成或笼统响应无效。 | ai_intent；Ai01IntentResult | 阿康1 | 闭环内（并 G31） |
+| G40 | 身份绑定 | 每个ViewModel消费方、Evidence/Canonical行和成果请求绑定服务端真实actor及相应Scope，跨Subject/BrandFocus读取拒绝，前端字段不自证权限。 | screen_viewmodel.py | 阿康1 | 闭环内 |
+| G41 | CI 覆盖 | 针对变更保留真实所需unit/integration/widget、安全/数据和实际用户验收；required CI必须真执行关键回归，新主体/媒体/任务/浏览器各保原出口，Web CI不冒充原生实机。 选择受影响回归依tests/CI_TEST_TIERS.md当前策略，旧suite inventories仅历史证据，不凭旧名单重复无关测试或省去必要真实E2E。 | .github/workflows | 阿康 | 闭环内 |
+| G42 | 入库读回 | 种子/关系/来源登记的发布、准入、实际写入、计数/hash读回及真实业务使用分别取证；原610/137/185与Brio候选保留版本，不从旧数量推断本次DB写入。 Brio原227/244/150候选按精确来源逐项抽样核身份/URL/原文/权利/关系与hash并记录采样范围；缺源保持UNKNOWN，不把历史总数等于准入或全量验证。 | import_subject_registry_seed.py | 阿康 | 闭环内 |
+| G43 | 闭环判定 | 54字段台账PENDING不等零产品进度或总完成率；DEFINED→IMPLEMENTED→INTEGRATED→VERIFIED→JOB_CLOSED→RELEASED→OPERATING保持分层与真实成果读回。 | BACKEND_GAP.json；machine contract | 阿康 | 闭环内 |
 | G44 | 首条正向验收 | CTH、BMP、独立 Shared 各一例：输入→确定性报告/来源/局限→保存修改重开→决策/回执 | Real Delivery | 阿康+阿康1 | 闭环内 |
 | G45 | 四端分验 | Web/Win/macOS/iOS 各自启动、浏览器离开返回/停机重开 | Experience | 阿康1 | 闭环内（含视觉风格） |
-| G46 | 状态链陈旧 | Slack 17:22 / Issue #17 回执落后 main；出口：Issue #17 单点用最新 SHA 更新，不新建管理系统 | Issue #17 | 阿康 | 闭环内（发帖需 PO 批准） |
-| G47 | 公开仓库 | repo public：明文凭据（并 G35）、依赖许可证未核（阻断发布） | security_verification_shardC.md；licenses | 阿康 | 立即/闭环内 |
+| G46 | 状态链陈旧 | Issue17/Slack同步原授权的完整结果、版本与未闭项，主频道顶层和线程回复按本次任务要求区别；本轮PO已明确授权阶段成果同步，发送成功须读回，不派工。 | Issue #17 | 阿康 | 闭环内（发帖需 PO 批准） |
+| G47 | 公开仓库 | 任何对外发布前排除密钥/会话/生产库/私人prompt并完成实际依赖许可审查；仓库可访问不代表研究/素材/凭据可任意公开或训练。 | security_verification_shardC.md；licenses | 阿康 | 立即/闭环内 |
 | G48 | 单位经济 | 每主体采集/存储/推理成本、人工接管率等变量测量 | — | 阿康 | 闭环内 |
 | G49.1 | 竞品 Simon Willison LLM | 对方优势：模型调用 CLI/Python、SQLite 日志、嵌入、工具调用、结构化输出；序境差异化：品牌实体+有出处成果+无 AI 连续工作流；验收：固定任务/数据/权利/成本/质量同题实测，只证细分优势不报排名 | 审计 F | 阿康 | 闭环内 |
 | G49.2 | 竞品 Khoj/Pipali | 对方优势：小团队知识/桌面 AI 研究；序境差异化：小团队做复合产品；不重启通用 OS 控制；验收：固定任务/数据/权利/成本/质量同题实测，只证细分优势不报排名 | 审计 F | 阿康 | 闭环内 |
@@ -237,7 +212,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G49.0 | 定位 | 合法来源+正确实体关系+可审计事实+无 AI 可完成+可编辑提案/媒体+保存恢复 = 监测→交付垂直整合 | 审计 F | 阿康 | 闭环内 |
 | — | 审计口径覆盖 | 冲突以 PO 现行规则为准：默认自有模型，另留一个通用 OpenAI 兼容 BYO-API 接口供用户可选接入自购密钥（产品默认不调第三方、无自动回退）；前端功能与后端并行闭环内；后台采集+内置浏览器(像正常浏览器、可折叠、参照 OpenAI)+全平台产品内登录弹窗；手动采集可选+前端按钮；风控研发关/闭环前开；账号体系、开发者模式、商业六项、视觉风格/logo/角色图均闭环内；上线后仅真实用户验证与付费/授权来源；CI 绿即合并 | CURRENT:11,14,18,49-55（akang/loop-plan-audit） | — | — |
 
-| G94 | 采集优先级（免费数据先行） | 先采全部已登记平台的免费广告/流量与创作者中心数据：小红书、抖音、视频号、快手、B站、微博、微信公众号、Instagram、Facebook、TikTok、YouTube、X 等（registry 现有 adapter）；验收：每平台 PlatformManifest 标注可得字段/取得方式/缺失原因，内置浏览器同会话后台采集，入 Evidence→Canonical，0 条≠成功，失效弹登录 | PO 10-14 | 阿康/阿康1 | 闭环内 |
+| G94 | 采集优先级（免费数据先行） | 先采全部已登记平台的免费广告/流量与创作者中心数据：小红书、抖音、视频号、快手、B站、微博、微信公众号、Instagram、Facebook、TikTok、YouTube、X 等（registry 现有 adapter）；验收：每平台 PlatformManifest 标注可得字段/取得方式/缺失原因，内置浏览器同会话后台采集，入 Evidence→Canonical，0 条≠成功，失效弹登录 不假设已取得官方/partner API授权；只以实际准许公开路径/获准自有会话或真实已授API取得输入，平台/字段/用途/身份分别记录，无法取得不冒称免费可用。 | PO 10-14 | 阿康/阿康1 | 闭环内 |
 | G95 | 聚光（小红书付费投放数据） | 需小红书专业号，PO 暂无 → 延后；juguang_api.py 保持未配置=UNAVAILABLE，不伪造；KFS 中的 F（24h 互动>20 再投）仅作方法论 | PO 10-14；BMP-06 | 阿康 | 有专业号后 |
 | G96 | 删除临时隧道 | start_tunnel.py 已删（b13），登记/基线/清单引用同删；CHANGELOG 历史不改 | PO 10-14 | 阿康 | 闭环内（已备） |
 | G97 | 内容生产链（KOS 规范） | Brief 未完成不生成；Campaign→Series→Post(Title/Hook/Body/CTA/Hashtags/Visual Brief)；版本存 prompt/model/template/输入/校验/人工修改/终稿；模板选择= weighted performance+context fit−risk，权重配置化有版本；一个超级 Prompt 包办禁止 | 02_BMP/KOS_CONTENT_TEMPLATE_EXECUTION_SPEC；FINAL_DATA_PIPELINE | 阿康/阿康1 | 闭环内（并 G76/G77/G80） |
@@ -252,66 +227,71 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G106 | 平台算法信号 | 停留/完播/重看/私发转发/评论/收藏 > 点赞；创作者内容按 ROI 不按点赞；同创意按平台原生改写 | BMP 07/08 | 阿康/阿康1 | 闭环内（并 G78/G81） |
 | G107 | 播客合作评估 | 影响/内容/人群/矩阵/变现五力；6 种合作模式；选题挂营销日历 | BMP 25 | 阿康/阿康1 | 闭环内（并 G79） |
 
-## 9. 与 PO 现行规则冲突的旧文（仍在 main）
-| # | 文件:行 | 旧文 | 冲突的 PO 规则 |
-|---|---|---|---|
-| X1 | ai_provider_matrix_shardB.csv:2-5 | zhipu ACTIVE cloud_primary；ollama ACTIVE local_primary；ark/doubao cloud_fallback | 默认自有模型；删专用 provider，仅留通用 BYO-API 适配器（用户可选），无回退 |
-| X2 | AI_PROVIDER_FAILOVER_POLICY_V1.0.md:34,48-110,237-240 | 智谱 L1→豆包 L2→千问→Ollama 回退链 | 同上；文件仅头部 SUPERSEDED，PO 要求整删 |
-| X3 | LUMENIS-PRODUCT-CONVERGENCE-MASTER-V1-20260906.md:58 | “当前目标运行面：Zhipu + Local AI 并行” | 同上（头部 SUPERSEDED 标注违反“直接删除”） |
-| X4 | LUMENIS-INTELLIGENCE-OS-DUAL-CORE-ARCHITECTURE-v1.0.md:193-202 | Ollama/Zhipu/OpenAI-compatible Provider；“智谱不删除” | 同上；另含 Linux、通用 OS 控制 |
-| X5 | api_matrix_shardC.csv:7,24 | /api/ai-governance/status “local fallback”；/api/ai/chat provider | 无回退 |
-| X6 | LUMENIS-EXPERIENCE-CONSTITUTION.md:1192 | AI-05 “Provider topology… fallback path” | 无第三方/回退 |
-| X7 | contracts/.../AI-05.md:29,39,60,66,79,92 | AI-05→AI-01 “fallback diagnostic” | 仅为诊断读回退，非模型回退；措辞易误导 |
-| X8 | SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md:214 | “MANUAL remains the default” | 研发阶段全部已登记主体 AUTO（GLB:33 已覆盖，但此处未改） |
-| X9 | LUMENIS-GLOBAL-…-CURRENT.md:35 | “default collection mode is MANUAL” | 同上（与本文件 33 行并存） |
-| X10 | LUMENIS-EXPERIENCE-CONSTITUTION.md:1067 | 媒体连接器“No new platform account/login flow is inferred；用 import/replacement 恢复” | 全平台产品内登录弹窗（§11.1 RecoverySheet） |
-| X11 | LUMENIS-EXPERIENCE-CONSTITUTION.md:1198 | SYS-06 只写“受控取证”，未写后台无窗口采集＋恢复 | 采集后台内置浏览器 |
-| X12 | LUMENIS-AI-PRODUCT-CLOSURE-CHECKLIST-V1.md:§3 | Tool Calling 含“本地程序、外部API” | 通用 OS 控制已撤回（EXP:15）；无第三方 AI |
-| X13 | LUMENIS-ENGINEERING-GOVERNANCE-V1.0.md:53 | “AI Gateway 必须保持 Provider-Agnostic” | 限定为：自有模型默认＋单一通用 BYO-API 可选 |
-| X14 | RD:337,340,1174；SYS-05.md:152；CTH-05/07.md W-010 | 太古汇作为固定参考覆盖维度/测试主体 | 范围＝全部已登记主体（作为“参考”本身不冲突，测试用例硬编码属差距） |
-| X15 | EXP:754、1585 | 文中把参考产品写作“Grok Bot” | 品牌名只用官网名，需按官网核实 |
-| X16 | 多份头部 SUPERSEDED/HISTORICAL 标注（AIPOL:4、PCM:3、DUAL:3） | 标注而非删除 | PO：旧规则直接删除，不加作废标注（但已推送内容不改→需 PO 定夺新 PR） |
-| X17 | GOV-MACHINE.json:22-28 | peers 仅 Codex/Akang，agent_to_agent_dispatch=false | 阿康→阿康1 派工现行 |
-| X18 | GOV-MACHINE.json:311；LAUNCH:150-151 | 合并需当前 head 评审；LAUNCH 禁新分支/常规 PR | CI 全绿即合并；现行分支+PR |
-| X19 | LAUNCH:228；TPCR:209 | launcher 保活 9222/9223、Edge 常驻 CDP | 禁 9222；内置浏览器后台采集 |
-| X20 | DUAL:109-110,168,193-202；PA:406；ENG-EVOL:199 | 智谱/OpenAI-compatible/云模型、AI Fallback | 只自有模型、无 fallback |
-| X21 | CODEX-ZERO-AUTH:136；TPCR:85 | Runway/Higgsfield/OpenArt 媒体 provider；Browser Use 带 posthog+Ollama SDK | 无第三方 AI |
-| X22 | BRAND-ECO:20,39 | 引用已不存在的 EXPERIENCE-DESIGN-AUTHORITY-V2 | EXP 为唯一设计权威 |
-| X23 | BRAND-ECO:413 | 新生产资产须全部自研 | EXP:1035 允许登记开源组件 |
-| X24 | GOV-MACHINE.json:349 | subagents=gpt-6-luna | 仅 Codex 侧；Cursor 规则另定 |
-| X25 | SH-02:31,126；CTH-10:9 | 打开原文可显式选外部浏览器 | 内置浏览器（采集已合规；打开原文需 PO 定） |
-| X26 | TEMPLATE:17 vs AI-02/03/04、SYS-03/04/08 | spec 仍以 Sol 设计评审为门 | 直接实现，无 DESIGN_READY 前置 |
-| X27 | CTH-08:43；CTH-09:43 | 硬编码可信 ID 白名单（CASE-221、EV-7710/7699/7712） | 全部已登记主体、真实 lineage |
-| X28 | CTH-02:30-32,58 | 要求 /v4/auth/login Bearer、"请重新登录" | 账号体系闭环内，仍不设账号墙（ACC-02:155、AI-01:57） |
-| X29 | BMP-01:18-22 | 先选 BrandFocus 才可用 | GLOBAL_ALL 默认 |
-| X30 | BMP-04:7；BMP-08:187；CTH-10:9；SYS-05:28；SYS-06:100-103,217-312；spec README:112 | "superseded/historical provenance"保留旧规则段 | 旧规则直接删除 |
-| X31 | CTH-06:135 vs :25,33 | 派生类别"可编辑" vs 屏幕只读 | 自相矛盾，需择一 |
-| X32 | AI-05:30 | provider kind=local/optional/generic | 仅自有模型、无 fallback |
-| X33 | CTH-01:48；CTH-05:22；trend_api.py:250-255；normalize.py:105,113 | 失败/缺失补 0 | missing≠0 |
-| X34 | CTH-01:49 | 无范围 Evidence 查询 + 硬编码 lineage | scope 化 |
-| X35 | SYS-02:166；CTH-03:246 | 旧固定起始日期字面量 | 主题驱动、无统一起始日 |
-| X36 | CTH-10:87；SH-02:156 | 自有推理未绑定；要求不存在的六平台原生 reader | 默认自有模型 / owner 落地 |
-| X37 | AI-01:93；canonical_data.py:870 | 服务端默认 actor=experience_user、domain/product=CTH | GLOBAL_ALL 默认、真实 actor |
-| X38 | spec README:32,92,102；SYS-05 全文 | 44 屏全量视觉升级、手绘图标、壁纸/材质迭代现在做 | 前端视觉/logo/角色图闭环内，按 UI-STEP-PLAN 分步做 |
-| X39 | SYS-06:9,88,195 | AgentZero/通用 OS 代码"保留为历史" | 已撤回范围应删除 |
-| X40 | CTH-03:40,115；swire_group.py:32；ai_analyzer.py:144；schema swire_* 三表 | 太古系/单主体硬编码与验收 | 全部已登记主体 |
-| X41 | ark_llm.py:23；ai_api.py api_ark_*；local_ai_client.py:21,29；case_ai_evaluate.py:20；config.py:258 | 豆包/智谱/Ollama 代码与配置键保留 | 删豆包/智谱/Ollama 专用代码，替换为单一通用 BYO-API 适配器；旧通道直接删除 |
-| X42 | import_cookies/import_xhs_cookies/xhs_cookie_bridge；dual_pool CookiePool/ProxyPool；dual_account_rotation；xhs_cdp_collector 仿人轨迹；resident_health._cdp_get_cookies | cookie 导入/账号轮换/反检测 | 产品内登录弹窗、内置浏览器后台合规采集、不读 cookie |
-| X43 | schema v4_users/sessions/workspace_keys/security_questions | 账号表已建且有数据 | 账号体系闭环内；明文字段清除 |
-| X44 | populate_empty_tables.py:63-66 | 写死 relevance_score=0.8 填充 | 不伪造派生值 |
-| X45 | feature_registry F-0327~0334 | xhs/RedNote 混用 | 官方品牌名 |
-| X46 | brand_logo_auto.py | 自动抓 favicon 作 logo | logo 闭环内由设计产出，不自动抓 favicon；不发远程追踪请求（SH-01:678） |
+## 9. 原差异索引的现行处置（旧指令正文已收敛）
+
+原X编号仅保留追溯，下面是当前适用要求，不是重启旧修复或宣称每项已验证。旧原文/曾经失败通过Git和原证据定位，不在本规划复制第二套退休规则。
+
+| 原差异ID | 现行要求与处理边界 |
+| --- | --- |
+| X1 | 退休专用Provider不再激活；唯一Gateway使用自有模型默认和用户显式选择的通用user_api，无自动回退。 |
+| X2 | 移除退休回退规则的活跃正文及引用；原审批、研究、失败和Git历史保留。 |
+| X3 | 旧收敛母指令不再定义运行面；沿当前Architecture与Owner实施。 |
+| X4 | 旧双核/OS执行方案不再支配产品；保留有效原生Windows/macOS/iOS与服务器/浏览器职责。 |
+| X5 | API状态/聊天准确区分配置与真实模型运行，不能称local fallback或模块导入即AI可用。 |
+| X6 | AI-05诊断显式选择的服务状态、错误和恢复；不存在自动第三方回退路径。 |
+| X7 | 诊断返回与模型切换是不同动作；AI-01返回只能是明确导航，不授权模型调用。 |
+| X8 | 采集沿现有手动/自动合同，研发已批准自动范围与未来用户MANUAL默认分别显示。 |
+| X9 | 选择焦点不启动采集；AUTO需要适用的显式opt-in及Scope/Permission，不把研发批准外推给未来用户。 |
+| X10 | 平台会话失效经产品内统一恢复面板；替换/导入资料是可选独立路径，不能掩盖原连接故障。 |
+| X11 | 产品内真实网页、后台采集、手动接管、停止和原任务返回分别保留，不缩成静态取证。 |
+| X12 | 无Shell注册工具/受控HTTP/文件与网页操作沿现有任务权限；通用OS控制不在产品范围。 |
+| X13 | 接口兼容与实际Provider路由分开；不能从provider-agnostic字样恢复退休专用执行路线。 |
+| X14 | 太古汇只作深度参考和既有历史测试，默认GLOBAL/ALL、全登记主体与随机实体覆盖保留。 |
+| X15 | 品牌名/来源身份按第一方正式名称与URL核实；历史称谓不建立新的产品身份。 |
+| X16 | 被替换的规则正文及活跃入口删除；不新增作废横幅副本，独特有效要求先迁入原Owner。 |
+| X17 | 开发者平级、只有最新直接PO分工；任务内只读辅助与向M交付按本次明确授权，不指挥既有窗口。 |
+| X18 | 分支→针对性验证/独立审查→当前组合版本必需CI→正常合并→远端读回；不绕过门禁。 |
+| X19 | SYSTEM会话Owner核实获准worker/Profile/身份；不选择保护的大陆个人XHS/9222路径。 |
+| X20 | 旧云模型和AI fallback执行语义不进入新产品；正常业务无AI可用。 |
+| X21 | 媒体生成或Browser工具候选必须逐项许可/权利/权限/实际能力核验，不能从工具安装推断可调用。 |
+| X22 | 视觉原则唯一归当前Experience；旧设计权威断链移除，细化前端集中在本规划/总草图。 |
+| X23 | 自有身份/资产与许可相容的第三方组件分别登记，不无端要求全部依赖自行重写。 |
+| X24 | 窗口与子任务模型保留当前PO手选；历史表或SDK例子不选择当前模型。 |
+| X25 | Open Original默认在SYS-06真实打开，明确外部选择保留；不需要另造产品决策或静默跳外部。 |
+| X26 | 直接构建不以DESIGN_READY/Figma为前置；设计评审、实现与用户验收分别留真状态。 |
+| X27 | 真实Case/Evidence通过现有Scope/Permission解析；历史样例ID不是运行白名单。 |
+| X28 | 普通工作没有新账号墙；服务端身份/Permission、账号身份、媒体会话身份仍分离核验。 |
+| X29 | BMP默认GLOBAL_ALL；BrandFocus是可选收窄视角，不成为全部功能或Shared的通用前置。 |
+| X30 | 旧视觉规则不借历史横幅继续执行；当前独特字段/权限/验收合同与历史失败保留。 |
+| X31 | 派生类别、人工判断和已提交事实区分；当前只读slice与最终编辑要求不混称。 |
+| X32 | 服务种类按真实Owner/用户选择命名，不用local/optional/generic枚举暗含回退。 |
+| X33 | 所有消费方保留缺失/未知、真实0、错误和不同分母；报告/导出不能恢复0/50兜底。 |
+| X34 | Evidence/Candidate/Metric逐对象有actor、范围、来源/版本和完整性读回，不硬编码lineage。 |
+| X35 | 无统一历史开始日；原生发布时间、事件时间、捕获时间及用户任务时间窗独立。 |
+| X36 | 模型未绑定、缺原生reader或合法来源时明确该路径不足；不能把声明或六平台数量当接通。 |
+| X37 | 不以默认experience_user/CTH替代真实actor/domain/scope；独立Shared使用其原工作区授权。 |
+| X38 | 完整功能、原创视觉、Logo/角色、三语/动效/无障碍与四表面均在闭环内，不由UI步骤缩减。 |
+| X39 | 撤回通用OS控制的交付义务；已有源码、研究、回执与Git历史受保护，不据此擅删。 |
+| X40 | 集团/场所/门店/品牌/经营市场映射复用Canonical关系Owner；单主体历史命名不替代全范围。 |
+| X41 | 退休Provider的活动执行和配置在原Owner收敛，兼容接口/历史使用记录不得伪装活跃服务。 |
+| X42 | 批准的受管会话与个人档案严格分开；不导出/打印Cookie、不绕挑战/限流，不复制私人Profile。 |
+| X43 | 账号/角色/设备/数据控制在闭环内；现有数据迁移、加密与回读按原身份/DB Owner保全。 |
+| X44 | 不以固定relevance_score或其它合成常量填空，派生参数有版本与真实输入。 |
+| X45 | 平台别名通过现有Manifest归一，UI使用经核实官方品牌名且保留原来源身份。 |
+| X46 | LUMENIS Logo保持原创资产；来源favicon与产品身份分开，不为加载列表自动发追踪请求。 |
 
 ## 10. 约束解码（结构化输出强制）的落点
+
 | 位置 | 依据 | 落点 |
 |---|---|---|
 | SYSTEM AI Gateway 推理层（config/ai-owned-foundation.json，gpt-oss-20b APPROVED_FOUNDATION_NOT_TRAINED） | A:907、PA:130 “Structured Output” 为必验项 | Gateway 调用自有模型时按 JSON Schema/语法约束生成（xgrammar/outlines/vLLM guided decoding） |
 | Gateway→Core 合同：contracts/experience/viewmodels/VIEWMODEL_REGISTRY.json、actions/ACTION_REGISTRY.json、AI-01..05 viewmodel/actions | EXP:1297-1301,1349 “编译/解码只校验有类型的组件与数据提案” | 用这些注册表生成约束 schema；未完成片段不可点击 |
 | 智能UI 分段协议 | EXP:1350 块身份/顺序/修订号 | 每段输出受 schema 约束，修 AI-01“响应无效” |
 | 验收 | EXP:1335、RD:223 “schema-valid 响应/AI 产出答案不算完成” | 约束解码只保证格式，不替代真实业务结果验收 |
-阶段：闭环内（C2/阿康1）；真正生效需自有模型训练（PO 授权＋GPU）。
+阶段：闭环内；结构化协议、前端解码与确定性任务先按真实合同运行。自有模型增强的实际生成/训练仍需其精确模型、Permission、数据与资源证据，不把所有结构化功能绑到训练前置。
 
 ## 11. 仓库研究资料升级（2026-10-14，第二轮含 X 帖与 SwiftChat/Intelligent UI，main 96697530；只升级不降级，旧文与现行决策冲突时按现行决策改写）
+
 | # | 能力 | 闭环内验收标准 | 来源 | 归属 |
 |---|---|---|---|---|
 | G185 | **Skills 商店（完整）** | Discover→Inspect→信任/许可→权限审批→隔离安装/自测→启用→真实执行→Evidence→历史→版本更新/回滚→停用→卸载 全链；支持 LUMENIS `skill.json` 与 Agent Skills `SKILL.md`、本地目录/ZIP/GitHub 精确 revision 来源；未验证项只能 disabled+not_installed；至少 1 个 Skill 真实完成 CTH/BMP 业务任务；前端有安装/启用/停用/更新/卸载按钮（用户可选） | SOI §2-12、RD:717-760、AI-04、docs/architecture/LUMENIS-GITHUB-SKILL-MCP-CONTRACT-V1.md §3、FULL-UPGRADE U19、IC-004/IC-009 | 阿康1 后端 / 阿康 前端并行 |
@@ -353,7 +333,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G130 | **Skills 商店上架内容** | 商店首批：现有 9 项（shared.union_search/video_shotcraft/cangjie/huashu/social_card/last30days + 3 项 SYSTEM 只读审计）逐项评估从 PARTIAL→VERIFIED；旧规划 S01–S72 按业务/研究/AI/数据/运营组逐项登记为候选，含 S36 竞品研究、S61–S66 主体/品牌/舆情/事件/KOS/Campaign 情报；S31 “AI Fallback”按现行规则改为“失败可观察、无自动回退”；AE Method 与 8 个插件包（ai-agents/business/data/engineering-qa/governance/operations/research/source-engineering）按 Agent Skills 标准可安装；S23–S32/S53–S60/S67–S72 只作后台或受限管理插件，安装不直接授予权限；每个 Skill 结论列输入/观察时间/验证状态/剩余未知，实时结论无端点时报 UNVERIFIED；本轮anatomy、diagram-design及mattpocock/skills先作已有能力的许可核验参考；上架仍走G185，不因MIT或星数自动安装。 | 本地 序/序境skill/SKILL-LIST.md、ae-method/README.md、plugins/*、lumenis-team | 阿康1/阿康 |
 | G131 | 研究→能力落地表 | 广告法/行业规范→广告识别与主张风险提示；传播/新闻理论→事实核验/替代解释/代表性；SNU 课程→研究设计与评价尺度；推理工程→加载/延迟/缓存/成本计量；Cue/逐帧视听→镜头节奏与可逆交互；每项进入现有能力并在真实任务验证 | 本地 序/审阅交付/规则引用审计与产品蓝图-20261004/01-产品闭环蓝图-待审核.txt §五 | 阿康1/阿康 |
 | G132 | J1–J8 闭环出口 | 新增主体可用、关系有 Evidence、六主平台真实单帖接收、刷新独立运行；时间轴滚动/缩放/seek 同步与缺媒体处理；播客试听与音量质量；权重训练/重载/晋升/回滚证据；离开开发工具持续运行 | 同上 §四 | 阿康1/阿康 |
-| G133 | 统一平台恢复闭环 | PlatformManifest/PlatformSession/RecoverySheet/SourceTarget 从规范 Future 落到源码与实测 | 本地 序境-audit-reports/20261007-current-status（P1） | 阿康1/阿康 |
+| G133 | 统一平台恢复闭环 | PlatformManifest/PlatformSession/RecoverySheet/SourceTarget 从规范 Future 落到源码与实测 按AGENTS §12与SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1现行退出：Manifest、实际callable、会话/恢复、NULL/未知、统一事务、幂等防重复、如实覆盖、消费方真实有用结果及保存/重开/恢复逐项验证；注册/规范不算实现。 | 本地 序境-audit-reports/20261007-current-status（P1） | 阿康1/阿康 |
 | G134 | 语义一致性校验 | Permission/Evidence/终态/lease/同 SHA 发布/等待恢复七项不变量用 property/state-machine 测试；代表性来自抽样框；记忆保持与回溯检索按固定预算对照 | 本地 序境-audit-reports/20261007-semantic-math/REPORT.md §D | 阿康1 |
 | G135 | 韩语官方词典与词表 | 韩语分析可选接入国立国语院基础词典官方免费 API（密钥仅服务端）与 4,704 CC BY 4.0 词头作为韩文词表，来源分开标注 | 本地 korean_skill_publish/Korea-Media-Korean-Skill/README.md | 阿康1 |
 | G136 | 主张核验门 | 方案/文案中涉及安全、隐私、合规、独家、现货、认证等主张逐条记录“主张/证据来源/适用范围/确认人/审批状态”；未证实主张标“待核实”不作已验证事实；审批记录真实批准者、实际动作、外部结果（不只客户端身份串） | 本地 ae-method/eval/runs/*、probe-local-claim；evidence/round-15/RECTIFICATION-20261010-HISTORY-ADDENDUM | 阿康1 |
@@ -365,6 +345,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | G142 | 少滚动交互 | 除官网外非必要不上下滑动（工作区一屏内完成主要操作） | USER-ADDITIONS-20261004 | 阿康 |
 
 ## 12. 找回的遗失能力（研究资料中设计过、规划里缺失或被弱化）
+
 | 能力 | 原状态 | 找回为 | 来源 |
 |---|---|---|---|
 | Skills 商店 | 仅第62行与 G21 提及；AI-04 被写成只读目录 | G185 全生命周期 | SOI §2-12、RD:751 |
@@ -406,6 +387,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | 公开数据 MMM/归因（财报/统计/刊例） | 初版依赖用户输入 | G166–G169、G151/G149 改写 | 太古地产中报、SEC/DART API |
 
 ## 13. 数学模型驱动的智能（现有 OpenAI Math owner；研究采用与运行验收分开）
+
 **主引擎：** 固定上游 `openai/math@fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb`（v2 ZIP SHA-256 92e0d179…07aa，Apache-2.0），九 family 102/103/104/107/113/114/115/139/140 已在 `lumenis/shared/evaluation/openai_math_papers/`（16 个类型化 operation，`dispatch.py` 无 eval/exec/shell/网络/模型调用）经 `agent_runtime/openai_math_paper_handler.py`→Task/API→SourceBrief→Permission→SavedWork/Artifact 接入；C2 `lumenis/system/ai_gateway/research/openai_math_papers/`（Gibbs 113 小型策略 train/evaluate，数据24/6/8冻结，既有120-step训练和独立评价回执已核：已训练、未上线）；Lean/Mathlib/Comparator 仅作为版本固定的本地证明工具；当前正式重放状态按采用记录及精确回执核对，不能从本规划推定完成。现状：九项一般主算法、全产品闭环、LLM 训练/新任务增益 **OPEN**。规则：**只有数学条件实际匹配的代码才采用对应算法或证明**；不匹配时用已有确定性方法或下列经典统计补充并记录理由。来源：00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md、THIRD-PARTY-COMPONENT-REGISTER.md §2026-10-10 OpenAI Math v2、ARCH:88-92/398、SOI:9-14/231/322。
 **补充层：** 经典统计/计量开源库（BSD/MIT/Apache）只在 OpenAI Math 无匹配数学条件处使用，与主引擎同一 Math Engine 注册表、Evidence、版本、弃答规则。
 通用原则：数学确定性计算，AI 只解释；每个输出带 模型ID@版本、输入 Evidence 引用、样本量、区间/置信度、数据状态（COMPLETE/PARTIAL/INSUFFICIENT/NO_DATA）；样本不足返回 INSUFFICIENT 并弃答，不补 0、不给中性默认；全部本地开源可商用许可；广告花费等经营数据只来自用户自填或已采集，不接付费源；用户编辑业务目标、时间、预算与约束；后端选择适用方法，方法/假设可检查，不能要求用户逐个选择论文、模型或内部参数才能完成任务。
@@ -442,7 +424,7 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 
 ### 全文审阅裁决：26 份固定数学稿，不把理论承诺搬成业务事实
 
-2026-10-14已连续读完本地26份PDF对应全文提取文本（正文、附录及参考文献；逐份路径/行数见既有 `sketches/CREATION-COVERAGE-20261014.md`）。这是全文研究，未声称逐页公式图像校对、独立证明或新训练。上游复核到 [1581d4c](https://github.com/openai/math/commit/1581d4cbdd69a0faf34b2089614fe2a814316a6a)：相对固定fd4aeeb仅两笔工作流提交，所审论文没有新字节变化；[官方历史](https://github.com/openai/math/blob/1581d4cbdd69a0faf34b2089614fe2a814316a6a/history.md)所记撤回/修订仍须逐稿适用。官网声明与模型生成稿不是独立有效性证明。九family完整要求不缩减，已提供有限实现继续复用；不能为普通业务硬套不匹配定理。
+2026-10-14已连续读完本地26份PDF对应全文提取文本（正文、附录及参考文献；逐份路径/行数见既有 `本规划材料阅读与采用记录`）。这是全文研究，未声称逐页公式图像校对、独立证明或新训练。上游复核到 [1581d4c](https://github.com/openai/math/commit/1581d4cbdd69a0faf34b2089614fe2a814316a6a)：相对固定fd4aeeb仅两笔工作流提交，所审论文没有新字节变化；[官方历史](https://github.com/openai/math/blob/1581d4cbdd69a0faf34b2089614fe2a814316a6a/history.md)所记撤回/修订仍须逐稿适用。官网声明与模型生成稿不是独立有效性证明。九family完整要求不缩减，已提供有限实现继续复用；不能为普通业务硬套不匹配定理。
 
 | 既有 family / 原文性质 | 必须满足的实际条件与输出 | 序境适配及不能冒称的内容 |
 |---|---|---|
@@ -459,8 +441,11 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 数学采用、有限运行、正式证明和自研模型增益分账。普通CTH/BMP分析不等待九稿全部重放；无匹配数学条件仍完成原有确定性业务。G163保留已训练未上线的Gibbs有限实验及未闭的checkpoint重载/真实新任务对照，不据此升级模型或发布状态。
 
 ## 14. 剪辑与播客工程能力（2026-10-14 创作研究全读后升级；自有模型默认，BYO API 仅用户选择，不可用即显示「不可用」不切换；手动路径始终可用）
+
 来源缩写：VWI=IL/01/VIDEO-WORKFLOW-INTERCHANGE-RESEARCH；PMR=docs/research/PODCAST_MODULE_RESEARCH_V1；PAL=docs/research/2026-podcast-ai-landscape；BMK25=品牌营销知识-25；LZ=liangzi-interview-record-v1；KOS=KOS_CONTENT_TEMPLATE_EXECUTION_SPEC；CUE=本地 Cue 逐帧审计；R07=ROUND-07-LOCAL-VIDEO-TIMELINE-CORE；PSW=PODCAST-PLAN-SAVED-WORK。
 本轮六项开源来源、精确版本、代码/资源许可及源码位置统一见 `THIRD-PARTY-COMPONENT-REGISTER.md` 的“2026-10-14 六项开源采用”。Artcraft用于既有编辑/保存恢复质量，Hyperframes用于可选图文视频素材；独立创作继续接受用户自己的稿件与获准素材，CTH/BMP联动可选。外来方法使用序境视觉，原有动效不减；研究采用、源码接入和用户成果分别验收。
+
+本节“现renderer/优先修复”等代码观察沿2026-10-14原记录日期；当前是否仍有该缺陷须回实际Owner/源码复核，不能从原记录重复派工。完整目标与工程质量要求仍保留。
 | # | 能力 | 工程管线与组件 | 输入→输出 | 质量门与验收（可测） | 屏 | 依据 |
 |---|---|---|---|---|---|---|
 | E1 | 素材入库探测 | ffprobe → SHA-256 → 源 fps/时基/CFR·VFR/音频流表 → rights=unknown；重开工程时重新指纹，字节/时长/流表变化即拒绝（Timeline.from_dict 现有能力）；借鉴Artcraft可编辑场景/时间线快照与过期异步结果隔离：已有Timeline/Artifact同一父版本保存，成功后独立读回；失败保留待保存修改，重开不丢素材/选区，AI生成不作为人工制作前提。 | 本地媒体→MediaAsset | 100% 资产有哈希/时长/时基；VFR 标注；序列化无绝对路径 | SH-01、BMP-06 | R07、VWI §5 |
@@ -488,12 +473,24 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 | P11 | 切片与跨平台 | 先出 2–3 分钟卡段（小故事闭环+金句）→ 故事节点→切片候选→9:16 音频图/引语卡→各平台重包装 | 节目→切片组 | 每切片挂时间码与来源；平台包装各不同 | BMP-08、BMP-06 | 内容研究 05、LZ E 层 |
 | P12 | 分析与学习 | story_node_density/emotion_peak_density/insight_density/question_quality/interview_yield/asset_reuse/retention 曲线（有平台数据时）；每次运行记 run_id/pipeline/model/prompt/input_hash | 节目+观测→指标 | AI 派生指标标注非权威；跨平台不互推；缺数据=缺失 | BMP-08、SH-05 | PMR §5-6 |
 | P13 | 研究阅读器与学习晋升 | 研究分级（事实/观察/模式/假设/验证/可迁移/不可照搬）；证据侧抽屉不打断阅读位置；学习候选需证据，≥2 次验证才晋升，出现反例即否决；指标不混用不同平台分母 | 案例→可复用规则 | 无证据结论标「未核实」；AI 建议不自动成为事实 | BMP-08、SH-05 | podcast/research、learning.py、research_pipeline.py |
+
+## 15. 创作学习、原读码问题与分层验收
+
+### 15.1 完整创作学习要求
+
+| # | 能力 | 处理/合同 | 输入→输出 | 质量与验收 | 屏 | 原始来源 |
+| --- | --- | --- | --- | --- | --- | --- |
 | G170 | 内容学习源合同落地 | Narrative/Copy/Visual/Motion/Campaign/Evaluation 六个模式注册表 + ContentLearningAsset；按 Brief 范围检索不全文注入；事实墙（事实→Evidence，创意→模式，未知→UNKNOWN）；13 段生产链 Brief→…→Learning保留父引用、版本、上下文指纹及变更依赖；中韩英按语义意图重写不直译 | Brief→原创产物 | 合同 §14 十项验收全过 | BMP-06、SH-05 | LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1 |
 | G171 | 内容审核与客户解释 | ContentReview 9 维（平台/节点/品牌/情绪一致/视觉叙事/话题/搜索/商业/风险）→ READY/NEEDS_REVISION/BLOCKED/NOT_VERIFIED；视觉叙事 7 角色；话题 5 层；每次 2–4 个候选附取舍；专业理由+客户版解释 | 候选→审核结论 | 推荐与已验证表现分开显示；不承诺流量池 | BMP-06 | CONTENT-INTELLIGENCE-SPEC-v1 |
 | G172 | 创作者→AI 发现观测 | Creator→Content→AI 引用/推荐观测，链接类型 direct/source/thematic/unknown；指标不合并成单分 | 观测→分层指标 | 共现不作因果；Unknown 不转 Missing | BMP-05 | GLOBAL_BIL_CREATOR_AI_DISCOVERY_V1 |
 | G173 | 出海视频矩阵 | TikTok/IG Reels/YT Shorts/KOC 金字塔/店铺闭环 + 7 区域营销节点自动带入视频脚本 | 区域+节点→脚本与矩阵 | 节点来自营销日历数据；各平台重写包装 | BMP-06、BMP-07 | 品牌营销知识-24 |
-| G174 | 播客现有代码违反「缺失≠0」的待修项 | ① podcast/intelligence/topic_score.py 旧版信号默认 0.0 并夹取，应并入 topic_scoring.py（缺失=需补输入）后删除旧版；② breakout.py 基线≤0 返回 normal，应返回「基线缺失」；③ podcast_routes /content-yield 引用不存在的 content_yield 模块，应补实现或下线该路由并显式报不可用；④ podcast_store.upsert_entity 缺 observed_at 时填当前时间，应拒绝或标未知；⑤ test_podcast_smoke 授予全局审批 '*'，应改为最小范围；⑥ 实体路由在有域/焦点/操作者列的迁移前保持 503 | 读码 2026-10-14 | 阿康1(C) | 闭环内 |
-| G175 | 能力分层验收 | 凡学习/创作能力按 SOURCE→RUNTIME→DATABASE→TEST→USER OUTCOME 分层报告；自动化 PASS 不得表述为用户已达成效果；外部数据集按许可证署名（如 CC BY 4.0）并标改动；第三方密钥只放服务端私有变量；文化内容不把刻板印象当规则 | KMS AUDIT-52、EDUCATION-OUTCOME-GATE、NONCOMMERCIAL-SOURCES | 阿康1(C) | 闭环内（USER OUTCOME 属真实用户验证，闭环后） |
+
+### 15.2 原问题线索与验收责任
+
+| # | 模块 | 完整要求/原日期观察 | 出处 | 负责 | 阶段 |
+| --- | --- | --- | --- | --- | --- |
+| G174 | 2026-10-14播客读码问题记录（保留原证据，当前逐项复核） | 原2026-10-14读码记载：① podcast/intelligence/topic_score.py 旧版信号默认 0.0 并夹取，应并入 topic_scoring.py（缺失=需补输入）后删除旧版；② breakout.py 基线≤0 返回 normal，应返回「基线缺失」；③ podcast_routes /content-yield 引用不存在的 content_yield 模块，应补实现或下线该路由并显式报不可用；④ podcast_store.upsert_entity 缺 observed_at 时填当前时间，应拒绝或标未知；⑤ test_podcast_smoke 授予全局审批 '*'，应改为最小范围；⑥ 实体路由在有域/焦点/操作者列的迁移前保持 503 | 读码 2026-10-14 | 阿康1(C) | 闭环内 |
+| G175 | 能力分层验收 | 按SOURCE→RUNTIME→DATABASE→TEST→USER OUTCOME分层，工程真实任务验收在开发闭环内完成；PO重复核心任务和上线后的真实用户商业验证独立记录。训练资格/素材许可/署名/服务端密钥和多语文化内容沿原边界，不用自动化PASS替用户成果。 | KMS AUDIT-52、EDUCATION-OUTCOME-GATE、NONCOMMERCIAL-SOURCES | 阿康1(C) | 工程真实成果/恢复验收在闭环内；PO重复操作与运营验证单独记录 |
 
 ## 16. 同一对话承接长期工作：逐项核实与现有能力采用
 
@@ -567,8 +564,468 @@ README R1-R9；CURRENT 新增 2026-10-13 PO 直接指令 8 条（含闭环内/�
 - [Muse官方安全工程](https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse)：采用代理与权限/凭据隔离、显式接管/审批思想；对应既有Permission/Effect Fence/受控浏览器，不复制VM/OS能力。此次官方页面与关联GitHub检索未核得Muse agent完整官方开源实现；同名词向量MUSE、音乐bot和第三方复刻不是它。未核得源码保持NOT_VERIFIED，但已核官方工程原则继续落地，不虚构代码血缘。
 - [Presidio@2523c7b](https://github.com/microsoft/presidio/tree/2523c7b74a469270c5c78bb253f140eafca21e31)，MIT；已读`docs/samples/python/pseudonymization.ipynb`说明与映射设计。借鉴占位符/反向映射及并发风险；未安装模型或替换现有安全Owner。
 
-### 当前代码与验收缺口（本次固定基线ed212ce3）
+### 2026-10-14固定源读取及当时验收缺口（ed212ce3，当前状态逐项复核）
 
 `agent_runtime/loop.py`/`durable_adapter.py`已有恢复scope校验、累积预算和checkpoint；`agent_memory/working.py`已有短期记录和显式持久失败计数，episodic/semantic已有检索但词项匹配不能冒称向量检索。`mcp_skill_runtime.py`已有受控安装、注册调用及人工审批检查。`lumenis/shared/evaluation/trajectory.py`已有确定性操作评分和独立OutcomeAssertion，不能把操作分数当用户成果通过。`owned_speech.py`是固定离线Whisper评估适配，Read Aloud是用户发起本地朗读；完整双向实时语音尚不能从这两者推出。`training_review.py`已有精确MODEL_TRAIN人审资源，不能用新图覆盖它。checkpoint当前识别凭据的遮盖不是通用多语PII识别证明。
 
 以上缺口落在本表对应原G项和现有Owner；要求仍全部保留。闭环验收分别取得基础无AI结果、增强效果、恢复/撤权、运行组合版本、模型训练/晋升证据；此研究提交不把任何未运行能力改成ACCEPTED。
+
+## 18. 前端完整建设分组与动效实施约定
+
+本节原位吸收2026-10-14分步稿的全部有效F0–F13范围、交互、AIGC、动效与参考。F是建设分组，不是新Owner/窗口、不要求串行或逐组等待PO；SYSTEM/CTH/BMP/Shared/Agent Groups五轮架构和当前PO派工保持。后端依赖在当前真实任务内关闭，独立可用前端工作并行；不以等待某组为由缩减已批准范围。
+
+以下时长是原动效令牌和任务适配起点，不能冒充跨端性能测量、固定成功延迟或所有控件强制动画。保留原有全部效果；新增结果揭示是独立一次性效果，完整/跟随减少动态/关闭/跳过逐端可选。官方原则、第三方整理和不同技术栈实现分开，参考不授予资产复制或服务接入权。
+
+### 18.1 共同建设约定
+
+| 项 | 约定 |
+|---|---|
+| 技术栈 | Flutter（Web/Win/macOS/iOS 一套代码）+ go_router + http；官网 Astro；新依赖须走第三方登记（许可不明=阻断） |
+| 单项依赖与结果 | 实际合同/数据适配、任务布局、交互、动效、三语和无障碍共同满足该项验收；可并行建设，未知接线不阻独立布局，适用四端最终独立验收。不是F0–F13串行阶段。 |
+| UX 原则 | 任务决定呈现；先给有用内容；流入内容不抢焦点；键盘可达 + ⌘/Ctrl+K 命令面板 + 右键上下文菜单（参 Linear [L1]）；常用操作约90ms内给可理解反馈；乐观更新只适用于可撤销本地编辑，保存/采集/授权/发布等待真实回执；失败保留编辑并说明原因，不固定sleep或制造成功 |
+| AIGC | 按已批准任务采用，覆盖例如：AI-01 对话与卡片、AI-02 产物、AI-03 分析、BMP-06/08 内容与播客、CTH-10 报告草稿、角色/适用插画草图（Logo只复用既有批准源）。按实际AI参与及当前来源/平台合同披露：整份AI生成=「AI生成」，部分=「含AI内容」（参考C2PA [C1]的可理解披露原则；文字水印不等于C2PA签名或Content Credentials合规）；已批准水印文案「据实生成 · 来源可溯 · AI生成信息请辛苦核对」仅在实际AI参与且适用的平台/导出场景显示，不给纯手作内容假贴AI标签；每段可展开来源；发布/导出前需人工确认；可一键撤销/重生成；模型不可用显示「不可用」，不切换 |
+| 新增结果生成动效 | 保留原有全部动效令牌与效果；只给新生成结果增加一次完整点阵线框→真实UI揭示。结果、字体、布局/图片尺寸就绪才测量；等待期普通骨架，非切页或逐行播放。独立用户选择完整/随减少动态偏好/关闭及立即跳过；不改全局动效，不展示虚构Agent日志/CSS/token。适用F4/F7/F8/F9真实成果与F12真实演示，逐端验收 |
+| 动效令牌 | 进入 250ms 标准减速；退出 200ms 标准加速；面内变化 300ms 标准；大面板/页面切换 400ms 强调减速（参 Material 3 [M1]）；状态小反馈 ~200ms 不阻塞（[L2]）；动效可被打断，不等待动画完成（Apple HIG [A1]） |
+| 减少动态 | 读取系统设置（Flutter MediaQuery.disableAnimationsOf [F1]）+ 设置里可手动开关；开启后：位移/缩放/视差/旋转 → 淡入淡出或颜色变化，持续动画（加载转圈除外）停止（[A2]） |
+| 缺失与规则 | 缺失显示「数据缺失」不补 0/50；无账号墙；无主体写死；无自动回退；用户选择保留 |
+| 验收 | 每步保留适用编译、静态/回归检查；实际任务还必须经过真实入口→正常操作→有用成果→保存/修订→关闭重开→中断恢复/返回。记录当前组合源码、Core、DB/权限、Artifact/上游版本及对应 ScreenSpec 验收条目。截图、缺失态、组件测试和其他 Owner 的旧回执不能替代当前组合版本的正常成功；中英韩、键盘/触控/读屏、200% 字号和各端恢复分别验收 |
+
+### 18.2 F0–F13完整建设分组
+
+| 步 | 范围（屏/能力） | 搭建方式与组件 | UX 模式 | AIGC | 交互 | 动效（时长/缓动；减少动态时） |
+|---|---|---|---|---|---|---|
+| F0 | 设计令牌与外壳：颜色/字号/间距/动效令牌、导航壳、命令面板、SYS-05 外观、视觉风格、Logo、五角色 | ThemeExtension 令牌；shell/ 导航；Logo/角色自有矢量 SVG | 设置即时预览；角色只作身份提示 | 角色草图可用 AI 出方向，定稿人工矢量，标来源 | ⌘K、右键菜单、主题切换不丢状态 | 主题切换 300ms 颜色过渡；减少动态→直接切换 |
+| F1 | ACC-01 登录/注册、首次「改进模型」询问；ACC-03 首页；ACC-04 守卫恢复 | 免费邮箱验证码 + Google OAuth；Apple具备开发者账号且该端接入实际启用后才展示；打开即聊天，CTH/BMP/Shared/SYSTEM导航、最近工作与原任务返回 | 无账号墙，「先不登录」始终可见；首次询问无预选 | 无 | 验证码自动跳格、粘贴整码；OAuth 回原页 | 页面进入 250ms 淡入+8px 上移；减少动态→仅淡入 |
+| F2 | 账号设置（通用/账号/安全/模型与API/连接器/用量/数据控制/开发者/关于） | 左导航+右内容，手机二级页；唯一文字草图ACC-01设置细部 | 分区设置、危险操作二次确认 | 无 | 删除输入邮箱确认；30 天撤销条；退出所有设备确认 | 分区切换 200ms 交叉淡化；面板 400ms 强调减速滑入；减少动态→淡化 |
+| F3 | ACC-02 主体/视角选择 | 主体注册表读取；通用主体，无写死 | 选择只改工作上下文 | 无 | 搜索、键盘选择、最近使用 | 列表项进入 150ms 依次（最多 6 项）；减少动态→同时出现 |
+| F4 | AI-01/首页同一对话多任务、智能卡片与工具确认；AI-02真实任务状态；AI-03来源优先成果 | 流式渲染、类型化卡片（不执行生成的 HTML/JS） | 输入不中断；长任务后台交付、结果归属清楚；草稿与已保存成果分开，刷新后可续接；仅必要通知，高风险确定确认 | 全部回答标「AI 生成」，引用可点开来源；可停止/重生成 | 流式不抢焦点；卡片内操作；停止按钮 | 流式文字无逐字动画抖动，新块 200ms 淡入；卡片展开 300ms；减少动态→无位移 |
+| F5 | AI-04 Skills 商店 + GitHub/MCP 连接器；AI-05 模型拓扑 + 自带 API | 目录列表、权限说明、白名单 | 安装前看权限；连接前审查 | Skill 产出按 F4 规则标注 | 安装/停用/撤销；测试连接 | 有实际阶段/比例才显示进度；真实完成后200ms勾选反馈，未知进度用状态文字 |
+| F6 | SYS-06 内置浏览器（标签/地址栏/折叠）+ 产品内登录恢复；SYS-02 采集进度、范围与手动采集 | 复用受控浏览器与 PlatformSession；原文优先在产品内打开，外部打开只由用户明确选择 | 失效显示任务内恢复提示；用户明确进入验证/独占接管，完成后同 actor/task 返回；自动采集不弹外部窗口 | AI 增强独立；手动浏览不依赖模型 | 标签、导航、停止、独占接管、保存笔记/来源、返回原任务；保留草稿与定位 | 折叠/展开 300ms 强调；恢复面板 250ms 进入/200ms 退出；减少动态→淡化 |
+| F7 | CTH-01~10：监测→来源/事件→Case→方案比较→人工决策→行动及真实结果→报告→版本恢复；总览/主体/日历/负面/趋势均保留 | 各屏按真实任务构图，时间轴/日历/关系/比较/报告采用适用交互；后台数学给出业务结果、方法与不确定性说明 | 先结论后证据；时序≠因果；计划≠完成；用户填写问题、范围、约束，不选择论文或拼内部参数 | AI 报告/建议明确派生；无模型时确定性分析、人工判断与报告编辑仍可用 | 查看来源、关联Case、修改约束、比较/采纳、记录行动/结果、保存修订/重开/导出；钻取/返回保留任务及草稿 | 图表数据切换 300ms 标准插值；缺失段显示空白+「数据缺失」不插值；减少动态→直接替换 |
+| F8 | BMP-01~11（总览、竞品谱系、机会雷达、传播路径、创作者+KOS 漏斗+AI 发现观测、内容台+视频剪辑、活动台+营销日历+出海矩阵、播客制作室全链、评估+公开数据 MMM、风险、基准） | 品牌研究→竞品/创作者→Campaign计划→执行回执→效果评价，分别维护来源、版本和恢复；仅复用通用可访问行为，不套用CTH布局。剪辑/播客按规划 §14 E1–E11/P1–P12：逐词稿编辑器（删词即剪）、多轨时间线（真实波形、播放头与素材预览分离）、检查器（字幕/响度实测/章节/说话人/封面）、步骤条；FFmpeg 渲染与 OTIO 预检走后端；MMM 由后端对获准公开数据/财报应用适用数学方法；前端呈现业务结果、假设和区间，不要求用户选择算法 | 文本优先剪辑（参 Descript）、提议需确认、计划与结果分开 | 脚本「AI 生成」、配音「AI 配音」、素材「含 AI 内容」+水印；平台披露自动带（可改不可删）；发布前人工确认 | 删词即剪、拖拽排期与轨道、空格播放/J K L 穿梭、试听循环、版本对比、画幅切换 | 播放头跟随无缓动；删词后稿件 150ms 淡出并合拢；漏斗/路径 400ms 强调；波形不做装饰动画；减少动态→直接合拢 |
+| F9 | SH-01~06：独立研究、提案/文稿、视频、播客；资料/证据、指标、成果导出、学习资产、通知待办全部保留 | 研究工作台、可编辑文稿/提案、同一视频/播客编辑器、版本比较与来源检查器；仅 Evidence/Canonical 浏览本身只读 | 可从空白Brief/手稿/获准素材独立开工，不强制CTH/BMP或Subject/BrandFocus；领域成果导入是可选联动 | AI辅助检索/摘要/创作按来源与版本标识；模型不可用仍可人工研究、编辑、渲染与导出 | 导入/检索/引用/排除、编辑、保存/修订/关闭重开/恢复、版本比较、真实导出、返回；任务可取消并显示准确恢复条件 | 列表筛选 200ms；已有编辑/媒体动效与用户选择不变；真实新成果可用独立生成揭示；减少动态按已有偏好 |
+| F10 | SYS-01/03/04/07/08（运行健康、数据库真相链、安全与密钥合规、评测验收、可观测与运营/工作区生命周期） | 状态查看与合同已授权的安全操作；现有只读切片不是最终能力上限 | 不暴露内部策略与凭据 | 无 | 轮换/撤销密钥、备份/恢复、诊断包 | 状态变化 200ms 颜色过渡 |
+| F11 | 开发者模式：SYS-04 用户开发者模式（协议+备份恢复）；SYS-07 创始人内部发布（上传→测试→签名→分批→回滚） | 协议勾选表单；发布流水线状态；签名更新（参考Tauri/Sparkle/electron-updater签名/分批原则[U1-U3]，不改变Flutter产品栈、不安装另一Updater） | 逐项同意才可开；全部适用受检门禁、签名/审批/资源/回滚条件通过才可发布，测试绿色不单独授权发布 | 无 | 暂停/扩大批次/回滚 | 流水线步骤推进 300ms；减少动态→仅颜色 |
+| F12 | 全产品视觉：沿用已批准原创Logo及各端资产一致性、彩绘icon及适合局部插画、五角色、材质、真实操作视频、完整官网Astro内容家族 | 原创可编辑资产及许可/版本清单；按Experience §23/§38复用现有批准标志，历史候选不成为新替代方向；彩绘不是整产品固定2D方向 | 官网产品说明/CTH/BMP/独立Shared/能力证明/案例与演示/帮助/联系及工作区入口齐全；已准入内容才展示真实事实 | 草图可AI辅助并标注；真实视频必须来自可操作版本，不能用模拟成功充数 | 各官网入口、语言切换、任务演示、帮助/联系、工作区续接；前端装饰不能替代任务操作 | 保留原有全部动效与用户可选效果；按真实视图、字体/尺寸就绪应用新增生成揭示 |
+| F13 | 四表面独立验收与跨端连续性（G45），性能/无障碍（G16：60fps、p95≤16.7ms、WCAG 2.2 AA、200% 字号） | Website验内容/入口；Web验真实Core操作、刷新/断网恢复；Windows/macOS验原生文件/窗口/键盘/打包恢复；iOS验触控/安全区/键盘/后台恢复与已批准Companion角色 | 后台计算及同一权限/数据合同一致；布局按任务重组，不用“同桌面”替代窄屏和原生交互；设备/绑定缺失保持OPEN | 逐项核对事实/AI派生/人工修改标识 | 正常成功+权限撤回/错误+保存修订重开恢复+跨端返回；每项绑定原ScreenSpec及J/R/U，缺一不宣布整体闭环 | 原有完整/减少动态/关闭偏好逐端实测；视觉与动作验收须为同一组合版本 |
+
+### 18.3 原研究引用与采用边界
+
+- [M1] Material 3 easing & duration：https://m3.material.io/styles/motion/easing-and-duration/applying-easing-and-duration
+- [A1] Apple HIG Motion：https://developer.apple.com/design/human-interface-guidelines/motion
+- [A2] Apple Reduced Motion 评估标准：https://developer.apple.com/help/app-store-connect/manage-app-accessibility/reduced-motion-evaluation-criteria/
+- [F1] Flutter MediaQuery.disableAnimationsOf：https://api.flutter.dev/flutter/widgets/MediaQuery/disableAnimationsOf.html
+- [L1] Linear 上下文菜单与快捷键：https://linear.app/now/invisible-details
+- [L2] Linear 设计模式整理（第三方，非官方）：https://github.com/marcus/marcus-skills/blob/main/skills/linear-design-patterns/references/linear-design-system.md
+- [C1] C2PA UX 标注建议：https://spec.c2pa.org/specifications/specifications/2.0/ux/UX_Recommendations.html
+- [U1] electron-builder 自动更新/分批：https://www.electron.build/docs/features/auto-update
+- [U2] Tauri updater（签名必需、可回滚）：https://v2.tauri.app/plugin/updater/
+- [U3] Sparkle 分阶段推送：https://sparkle-project.org/documentation/publishing/
+- [D1] Descript 文本剪辑：https://www.descript.com/video-editing
+- 未专门检索：ChatGPT/Grok/Arc 的动效细节（无可靠官方文档，未引用）。
+
+## 19. 原创作研究的逐份采用与阅读证据
+
+本节完整迁入原创作覆盖记录的30份采用表、18份品牌/2份KDRAMA/15份XHS/3份案例/26份数学文本的行数与SHA-256、原限制和外部来源。**“已读”“本轮”“新增”在下列迁入记录中均指2026-10-14原执行团队的收据；2026-10-16本次收敛重读这些记录及原文入口，未凭该表宣称重新逐页读完全部PDF/原视频，更未自动完成源码采用、授权、训练或运行验收。** 记录里的“已覆盖/已补”只表示当时规划条目纳入；当前实现/实际成果独立验收。非前端研究、原件和失败历史保留在原Owner，不在本次删除范围。
+
+### 19.1 原30份采用表与范围限制
+
+已全文逐字读：30 份（下表）。pack-online.zip 在盒子上不存在；“线上包”按 research-0914/content（内容研究结论包 6 份）处理。仓库内搜索不到名为「通用创作标准」的文件，按内容学习源合同 + KOS 执行规范 + 内容研究 04 质检清单作为通用创作标准。
+
+| 来源 | 标准/能力 | 规划 | 草图 | 结论/修补 |
+|---|---|---|---|---|
+| research-0914/content/01 小红书 | 种草/情绪/知识/活动结构、8 角度标题、短视频节奏、人设稳定 | G76/G77 | BMP-06 剪辑草图 E9 | 已覆盖 |
+| content/02 KOS·KOL·KOC | 人设先行、Brief、评论 4 类、复盘 5 维+负样本 | G77/G78/G97 | BMP-05 | 已覆盖 |
+| content/03 播客凉子 | 资产链、24 维、制作 8 步、五力、传播漏斗 | G79/G107/§14 P1-P12 | BMP-08 新草图 | 原缺草图→已补 |
+| content/04 文案叙事 | 反模板、8 机制、高奢 6 法则、质检清单 | G80/G100/G101 | — | 已覆盖 |
+| content/05 爆款/跨平台 | 对照普通/失败样本、平台重包装、长短图文分工 | G78/G106(平台信号)/§14 P11 | BMP-08 切片 | 已覆盖 |
+| content/06 索引 | 研究边界、不冒充平台规则 | 规则层 | — | 已覆盖 |
+| 内容学习源合同 V1 | 六模式注册表、ContentLearningAsset、范围检索、事实墙、13 段链、多语语义 | 缺 | 缺 | **新增 G170** |
+| CONTENT-INTELLIGENCE-SPEC-v1 | ContentReview 9 维 4 结论、视觉叙事 7 角色、话题 5 层、2–4 候选、客户解释 | 缺 | 缺 | **新增 G171**；BMP-06 草图显示审核结论 |
+| KOS 执行规范 | 总链路、模板、Persona、评论链、版本、反馈、选择打分 | G97/G98 | BMP-05 | 已覆盖 |
+| KOS-RULES 2026 | AI 披露、相似度>50%、绝对化用语、行为路径、留资、响应时效 | G119 部分 | BMP-05 | **G119 原句升级**（披露/用语/错峰） |
+| CREATIVE_METHODS_2026 | 9 案例→7 规律 | G121 来源 | — | 已覆盖 |
+| 品牌营销知识-04 4A | 实时文化连接、UGC 飞轮、世界观、病毒三要素 | 部分 | — | **G121 原句升级** |
+| 品牌营销知识-11 反模板 | 多维组合、去重、seed、名句 remix、4–8 词、提案结构 | G101/G104/G121 | — | **G121 补 4–8 词与重叠度校验** |
+| 品牌营销知识-13 情感共鸣 | 韩剧 8 手法+文学手法、手法×主题适配 | G80/G101/G182(韩剧) | — | 已覆盖 |
+| 品牌营销知识-15 高奢克制 | 6 法则、LUX 专属手法 | G100 | — | 已覆盖（原文中的智谱联网研究属已退役路线，不采用） |
+| 品牌营销知识-24 出海视频 | 7 区域节点、TikTok/IG/YT/KOC/小店矩阵 | 节点在 G105(营销日历)；矩阵缺 | 缺 | **新增 G173** |
+| 品牌营销知识-25 播客营销 | 媒介价值、三横一纵、两种运营模式、五力、6 合作模式、合规 | G107 | BMP-08 | 已覆盖 |
+| podcast-intelligence 0903 | 资产链、OSS、ADOPT/ADAPT/BUILD | G79/G184 | BMP-08 | 已覆盖 |
+| liangzi 案例 | A–F 六层、24 维、反抄袭 | G79 | BMP-08 P3 | 已覆盖 |
+| PODCAST_MODULE_RESEARCH_V1 | 能力表、9 指标、运行元数据、内容图谱、AI 不可用主链照常 | 指标/元数据缺 | 缺 | **§14 P12 补** |
+| 2026-podcast-ai-landscape | Whisper/WhisperX、文本→双人播客、分析管线、选题挖掘、嘉宾匹配 | 嘉宾/双人缺 | 缺 | **§14 P2/P4 补**（原文“本地 Qwen 离线兜底”与无回退规则冲突，不采用） |
+| PODCAST-PLAN-SAVED-WORK | 结构化计划、WebVTT、章节、版本 | G184 | BMP-08 | 已覆盖 |
+| VIDEO-WORKFLOW-INTERCHANGE | 格式边界、磁性/预览分离、OTIO 风险、9 类损失、预检 | G183/G12 | BMP-06 预检条 | **G183 补 FCPXML/有理时基** |
+| ROUND-07 视频时间线 | 哈希/探测、rights unknown、导出 blocked、FFmpeg 许可 | G64/G55 | BMP-06 | **§14 E1/E8 补** |
+| VIDEO-OWNER-HANDOFF | 参考视频逐帧研究分工 | G12 | — | 研究本身未完成（见未读） |
+| INTERNAL-CREATION-SOURCE | 内部创作源 DOCX 链路证据 | G33/G38 | — | 已覆盖 |
+| SYSTEM_CREATOR_OPS | 成本未接入显示未接入不显示 $0 | G19/SYS-08 | SYS-08 | 已覆盖 |
+| GLOBAL_BIL_CREATOR_AI_DISCOVERY | 创作者→AI 发现图谱、指标不合并、证据规则 | 缺 | 缺 | **新增 G172** |
+| korean-nlp-resources | 分词/敬语/空格/情感/主题 | G181/G135 | — | 已覆盖（原文“离线兜底”不采用） |
+| 本地 Cue 逐帧审计 | 真实交互、0.5–2s 节奏、横竖分别重排、镜头表 | 缺 | 缺 | **§14 E5/E10 补** |
+| 本地 小红书发布文案 V1/V2 | 合规边界：不冒充原生 App/自动评测/保分 | G80 | — | 已覆盖（并入 E10 验收） |
+
+合计 30 份：已覆盖 19；本次补齐 11（新增 G170–G173 + §14 E1–E11/P1–P12 + G183/G184/G119/G121 原句升级 + BMP-06/BMP-08 草图）。
+
+### 19.2 原2026-10-14逐份全文阅读收据
+
+范围：以下18份品牌、2份KDRAMA、15份XHS、3份案例及26份论文全文提取文本均已由本轮执行团队连续读完，含附录和参考文献；下列指纹固定读取对象。此前30份记录保留其原采样范围，不将本表或目录存在解释为全仓资料100%审读、源码已采用或真实业务验收。论文未逐页校对公式图片，也未因此证明定理或完成Lean重放。
+
+#### 品牌营销剩余18份
+
+采用落点：G78/G81/G99/G102–G104；原有营销/制作能力，不恢复旧Provider。
+| 仓库内来源 | 全文行数 | SHA-256 |
+|---|---:|---|
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-02-cannes-launch-expo-20260903.md` | 61 | `c17a3b9d450c4d44e62c8abc2cd16b35d1b7c79ff3fe6f766c52256c00bc6320` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-03-crosscategory-pitch-20260903.md` | 54 | `6af318298f48ba5168799b9d3e78f2237d3ba8d5702d0205c73a802734473de3` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-05-luxury-pitch-20260903.md` | 59 | `e0d9aac0093ba10d47a05aad0c67b10977e496f31af51bfcdd33dc3c12d45d5e` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-06-real-cases-taikoo-20260903.md` | 94 | `3456e1d7978acb19f4d094ce74e63a6fdceba24a47feb0310517d8341595be69` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-07-global-2026-trends-20260903.md` | 70 | `7da3a75a09d08030c30d3ff4595d2b8172eb2a06ebeae7446295a78950c6c64f` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-08-meta-framework-seed-to-world-20260903.md` | 171 | `2d7499d0693e104d5b1970e9596f20592c1fdbbfc91450bfc4f47aa073318361` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-09-zhipu-glm47-second-opinion-20260903.md` | 77 | `af849ed2f852ae041ba9de6170aae5f4c1f6f57ecae24084dd49193fcd6a2f6a` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-10-real-pitch-l3l0-and-topic-contamination-fix-20260903.md` | 73 | `1994ced74cb85583ca9d5dfa2c6c6b1c92302dd55091da3156231e33c80d4455` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-12-three-party-perspective-adaptation-20260903.md` | 73 | `07037f7ab106a74d97e022a98aea31c3408ad3895d28365e836ccc310f496e9c` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-14-emo-role-adaptation-and-intelligence-loop-20260903.md` | 68 | `b4e15b1009cea0b918858ce790515b99ce5e20198a6ce6c58731a4e77c75ca19` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-16-rules-eng-round-pitch-export-category-20260903.md` | 49 | `c1d698f5032e71ed88791eb3f8f746e251ac4850ea58f41336c064b6d7061368` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-17-marketing-calendar-kotler-cook-20260903.md` | 51 | `7f6509cd174c0190719303c865e32f1a0eb8f41ff59f3db75d706ab1a3e194b2` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-18-marketing-loop-edit-ready-20260903.md` | 46 | `7dad50fa603e13552271768431a7155bdef042314e84e7b05c2c8ede540eab2c` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-19-marketing-loop-experience-20260903.md` | 38 | `cdd5592ec793a4b1a9f85a82adb3e5ca1570405d9390261e7c125ce7254feabf` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-20-edit-closed-loop-overseas-nodes-20260903.md` | 37 | `ba03c312331e9943a0312c09984a251abca2b15d2448a9573f0dc1e58d3a6224` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-20260903.md` | 57 | `d2e015a74b2369a2b54d5490652c957faa33d5fd98b7937cf44edf2475147505` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-21-overseas-cross-csv-20260903.md` | 37 | `aaca28f453db5bbce89630d04d84613d8ab51452afdc308478d01d15069a7d3e` |
+| `intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-22-region-overseas-matrix-20260903.md` | 33 | `088725e50dc13f08b500b09255f271e7d92591007713fe46c8a7a3e6a78459ae` |
+
+#### KDRAMA两份
+
+采用落点：G182；独立Shared对白/字幕审校，原研究阈值仅编辑启发。
+| 仓库内来源 | 全文行数 | SHA-256 |
+|---|---:|---|
+| `docs/content-learning/KDRAMA_DIALOGUE_RESEARCH_2023_2026.md` | 159 | `eaad5ea643d4ab55f3791f64bb8d01e5660b8a7a82698018a43cd86cf56c89b3` |
+| `docs/content-learning/KDRAMA_FANSUB_TRANSLATION_STUDY_2023_2026.md` | 92 | `65146d9e472bd89d1d966e3b2a51f406f0648f4683347b49051410e1751f7d6e` |
+
+#### 小红书15份
+
+采用落点：G2/G8/G9及现有Collector/Permission；旧账号、固定频率、安装建议不自动采用。
+| 仓库内来源 | 全文行数 | SHA-256 |
+|---|---:|---|
+| `intelligence_library/09_Research-Hub/平台内容研究/XHS-TOPIC-MONITOR-TEMPORARY-STRATEGY-V1-2026-08-31.md` | 34 | `4446b877db04ce95456404434eb815299978cf958f1eba5fca3e7840302a01f1` |
+| `intelligence_library/09_Research-Hub/平台内容研究/XHS-TOPIC-MONITOR-GLOBAL-ADAPTATION-RESEARCH-2026-08-31.md` | 45 | `d84784c692bcc7be827c96cdc48f1f7ecfc3b488636d14929235361973637f75` |
+| `intelligence_library/09_Research-Hub/平台内容研究/XHS-RESEARCH-SYNTHESIS-2026-08-31.md` | 26 | `a12eabbc723cdd37dfeb30452511eae2acb7c80dd1291b6f9c1b5cd1074316e0` |
+| `intelligence_library/09_Research-Hub/平台内容研究/XHS-REDNOTE-SAFE-ARCHITECTURE-2026-08-31.md` | 44 | `0892923d1676df71dd493ec536d5b69d30e9f1bd490e08070e93dc89a82c4b93` |
+| `intelligence_library/09_Research-Hub/平台内容研究/XHS-REDNOTE-RESEARCH-DECISION-2026-08-31.md` | 27 | `05689a0b63b9355831f9174f75b1604ddf319d149ad76fc6c2f2c598aebd0f67` |
+| `intelligence_library/09_Research-Hub/平台内容研究/XHS-QUICK-SEARCH-EXTENSION-ASSESSMENT-2026-09-28.md` | 55 | `3b5dd25af1b24e322e5941348a4a8a869bc380a8142358115dc9ece42a305159` |
+| `intelligence_library/09_Research-Hub/平台内容研究/XHS-ACCOUNT-SAFETY-INCIDENT-2026-08-31.md` | 27 | `b99dd89f321a8ee1b1dea5970cc7c67923c33c56f08d7aee440cf4a32e60c9c6` |
+| `intelligence_library/09_Research-Hub/工程研究/R-2026-0003-safe-xhs-collection.md` | 82 | `324211f40d66e8b5092609906758e2d2e7a635d129fbf0d8bf30fd0cdffc51d9` |
+| `intelligence_library/09_Research-Hub/engineering研究/XHS-TOPIC-MONITOR-TEMPORARY-GATE-V1-2026-08-31.md` | 35 | `41e4733e5e60f1638f192881bf3c0ef200f47ef86045525438b93268939a6f1d` |
+| `intelligence_library/09_Research-Hub/engineering研究/XHS-TOPIC-MONITOR-GLOBAL-ADAPTATION-GATE-2026-08-31.md` | 32 | `3612ba0b05d01ba9cf44c23982227141a6f398f37c5f988ec0c0f1912c0166c6` |
+| `intelligence_library/09_Research-Hub/engineering研究/XHS-RESEARCH-GATE-2026-08-31.md` | 33 | `af7975c45dcb61bcbc1f4bff1f517783aab41b4843fbb439bb320fc552406dc8` |
+| `intelligence_library/09_Research-Hub/engineering研究/XHS-REDNOTE-SAFE-ARCHITECTURE-2026-08-31.md` | 43 | `6e259c0535ee2098a914728266e7011372b442945ae0bf1265c595ee56a05842` |
+| `intelligence_library/09_Research-Hub/engineering研究/XHS-REDNOTE-BROWSER-GATE-2026-08-31.md` | 35 | `f11db3e49acbb06acef12b3e8f211b4ad4d89d19bbec47b29b1c5d1519725175` |
+| `intelligence_library/09_Research-Hub/engineering研究/XHS-ACCOUNT-SAFETY-INCIDENT-2026-08-31.md` | 43 | `6ca61bedc1f6030b6a9df83f2c8dbd93c0929a907e7d822960efb8f8c85c99db` |
+| `intelligence_library/09_Research-Hub/engineering研究/PRODUCTION-GATE-XHS-APP.md` | 140 | `752a5e6f80c826eb935b2e1fb07dea9f7b348a6bde556eb464bb3a0c442fb7e6` |
+
+#### 案例基准3份
+
+采用落点：G78/G81；分证据等级，普通/失败样本和机制覆盖，不编造效果或品牌排名。
+| 仓库内来源 | 全文行数 | SHA-256 |
+|---|---:|---|
+| `intelligence_library/07_Data-Evidence-Evaluation/工程案例/content-intelligence/CASE-2026-CONTENT-BENCHMARK-001.md` | 68 | `dbc0ed0fd5a48e1bf3f19b6c461cd285e04ae295fca67b8ac063fb1075a7f0bb` |
+| `intelligence_library/09_Research-Hub/研究收件箱/KOS-BENCHMARK-CASES-20260903.md` | 89 | `e902cb66ab5516fc1598976878e118277af3db158e3a4ed22ff4906a65e06051` |
+| `docs/GLOBAL_BIL_BENCHMARK_SELECTION_V1.md` | 62 | `b3e26eaae3726de01a3877fe6d94b89e24440abf7c15f560eb23c40c61480e81` |
+
+#### 26份数学稿
+
+本机受保护原件根为 `D:/LUMENIS_REBUILD/序/序境-audit-reports/20261007-semantic-math/`。仅登记下列相对路径与摘要，不复制原论文至产品执行入口。上游对应固定 `openai/math@1581d4cbdd69a0faf34b2089614fe2a814316a6a`；论文版本/历史与九family采用边界见规划§13“全文审阅裁决”。
+| 本地原件相对路径 | 全文行数 | SHA-256 |
+|---|---:|---|
+| `math-source/preprints/A-Direct-Proof-of-Optimal-Max-Cut-Hardness-September-23-2026/paper.txt` | 2159 | `926c2337b3cf73a85464cfbaab2266d4ab82b9d06ebb288f3844418cc2b1c982` |
+| `math-source/preprints/Complex-Matrix-Multiplication-Below-2.258-and-Rectangular-Bounds-September-24-2026/Complex-Matrix-Multiplication-Below-2.258-and-Rectangular-Bounds-September-24-2026.txt` | 4810 | `645054ccd01747bfb24b96a186c12d936be4b4d3d92399a2ca4e17d9cd32fc4d` |
+| `math-source/preprints/Constant-factor-hardness-of-directed-feedback-vertex-set-September-23-2026/paper.txt` | 1710 | `9d5c11923f4640a49ed604692cb449d2cabe548654d38a764513ec869a6accad` |
+| `math-source/preprints/Constant-factor-hardness-of-Min-UnCut-September-23-2026/paper.txt` | 2338 | `402a630d542a9003905fd88b87e9697ddf2b4147f94b253555638001fafd5812` |
+| `math-source/preprints/Deterministic-quasipolynomial-time-mean-payoff-games-September-25-2026/paper.txt` | 1391 | `c08f0d6a36af346d7b249fd1dca0149bd35f30c3fcffd6e7f424bd1b420b4cc3` |
+| `math-source/preprints/Exact-Derandomization-of-Logarithmic-Space-L-equals-RL-equals-BPL-September-23-2026/paper.txt` | 6054 | `2f9261f5ac96f5c6902b6d967eb8c3b2654337ac8f890466644034355115cbb9` |
+| `math-source/preprints/Localization-costs-and-information-growth-for-exact-Gaussian-observations-September-27-2026/paper.txt` | 5417 | `5901a4d9d2c99addb1106a1f3b5e50917a22251020aed65a5c466823ce2c0654` |
+| `math-source/preprints/Matrix-Multiplication-Nine-Fourths-October-2-2026/paper.txt` | 691 | `8c1101e38f99a156b3cc29f7fe463122f7184a622b32f9db27972e3ccc41ee4e` |
+| `math-source/preprints/Mean-payoff-parity-games-in-quasipolynomial-time-October-5-2026/mean-payoff-parity.txt` | 679 | `f0a96a02673f6f44ce3ae262ff06e6b21d89ceda1974a3119029e3e5fea5d20d` |
+| `math-source/preprints/Memory-and-precision-in-noiseless-Gaussian-regression-September-27-2026/paper.txt` | 2365 | `5f29e6bbb46c5cfcdca4d3377dca47bf96b9b6d7df51747b8395cf82e12a06c4` |
+| `math-source/preprints/Posterior-replicas-and-conditional-information-in-Gaussian-regression-September-27-2026/paper.txt` | 3592 | `888ef65f84bfcd71c5f246095aa421bf3f03c4b21a14fb7a140eb43d7713bec0` |
+| `math-source/preprints/Projection-moments-positive-cap-domination-and-Riesz-estimates-on-the-sphere-September-27-2026/paper.txt` | 1583 | `c00cb3ca1ed38d17c8787a6460912a539756a6471c3b6798ebc53c261baf6ccc` |
+| `math-source/preprints/Randomized-quasipolynomial-time-mean-payoff-games-September-25-2026/paper.txt` | 2013 | `e580eee1ad130d9b878d779880bd18ea8e1e201271aa9884c38819aa2c7f78e6` |
+| `math-source/preprints/Replacing-Gaussian-observations-in-memory-constrained-inference-September-27-2026/paper.txt` | 2882 | `fb102e2334f3c3344e4fbf8e3111df162cd1ff8d4eaa406245207308b2397ca8` |
+| `math-source/preprints/Staggered-extraction-for-exact-matrix-multiplication-over-every-field-September-24-2026/Staggered-extraction-for-exact-matrix-multiplication-over-every-field-September-24-2026.txt` | 2020 | `83236ee57b490ea52f62412c0452af0187311955777029c019daaa4cb26c6c08` |
+| `math-source/preprints/Subpolynomial-query-complexity-for-well-conditioned-log-concave-sampling-September-26-2026/article.txt` | 3324 | `5a2970d0e1b549907c3e302f062fb4209c756502dae345c8cc5e7625be18a3e3` |
+| `math-source/preprints/Subsphere-methods-for-memory-sample-lower-bounds-in-noiseless-Gaussian-regression-September-27-2026/paper.txt` | 1340 | `68f717e08ea5ccddcb5402766c9dd737bb14890f0a9aeeacc469757eb2c8c210` |
+| `math-source/preprints/The-Factor-Two-Hardness-Threshold-for-Vertex-Cover-September-23-2026/paper.txt` | 1473 | `559f8640e278c8d03b01e26c5f638555bf1d7f36059925789ad86a7af150b446` |
+| `math-source/preprints/The-Unique-Games-Theorem-September-23-2026/paper.txt` | 3404 | `cf512e3e0e4d5fb14fb38a6cfa49ea9183c0cbc3456ed9915ef03bb6040043ad` |
+| `math-source/preprints/Turn-Based-Stochastic-Mean-Payoff-Games-in-Deterministic-Quasipolynomial-Time-October-5-2026/stochastic-mean-payoff-games.txt` | 1129 | `81df9171b92864ac30495f98d19370ecfe0f97b01505a6aa247aabfb920ec820` |
+| `source-pdfs-113-115/family-113__A-Fully-Polynomial-Randomized-Approximation-Scheme-for-Perfect-Matchings-in-General-Graphs-September-23-2026__main.txt` | 2538 | `b59a8396dcc30da7f15d793658e19695524fb37961be8489617b4dfa6e385734` |
+| `source-pdfs-113-115/family-113__Entropy-and-Face-Dimension-of-the-Perfect-Matching-Polytope-September-23-2026__main.txt` | 2523 | `8464f6166971e530c86ae8180ff204219e2c44be93e3ffd2dad4b78a1448dd82` |
+| `source-pdfs-113-115/family-114__An-FPRAS-for-Common-Integer-Polymatroid-Bases-with-Binary-Capacities-October-5-2026__polymatroid-fpras.txt` | 2492 | `14a0b4e5de417880e4a5f1085019b5b3e20e0a4e3e463ef9e86964c358db696e` |
+| `source-pdfs-113-115/family-114__Approximate-counting-of-common-bases-of-two-matroids-September-23-2026__main.txt` | 1466 | `77d75ce64a42030ee6544b65a05960fbd5d1789b8ac742b4da04f85714ed6735` |
+| `source-pdfs-113-115/family-115__An-FPRAS-for-Cell-Bounded-Contingency-Tables-September-24-2026__main.txt` | 2892 | `609e7c0692962f6cc7c77ecfe856bc72258a322eedca0dc227308dcb9d3ce9e6` |
+| `source-pdfs-113-115/family-115__Exact-Uniform-Sampling-of-Contingency-Tables-with-Arbitrary-Margins-September-24-2026__main.txt` | 1847 | `a7911e3aaf1450409853da3639fe9cd5fe2611421a6865c01da5f6e38957d539` |
+
+数学采用文档 `00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md` 的交接指定480–743行已按读取时版本续读到实际文件末尾742行；743行当时不存在。后续Gibbs证据发布使文件变长，不能把新行号冒充当时读取范围。九family的算法/复杂度/证明与产品场景分别审查：困难性证明不冒充优化器，oracle/精度/资源假设不转成平台覆盖保证，有限求解器不代表自研模型能力。G163继续OPEN，既有Gibbs有限策略实验为“已训练、未上线”。
+
+#### 外部补充研究的采用边界
+
+本轮新增Grok Bot、Muse、Instinct及OpenClaw官方/源码/社区研究逐项映射在规划§16；品牌定位、商业模式和内部实现未被可靠证实的主张已明确纠正，不照抄为产品事实。用户问题和完整成果要求全部保留；上述研究不授权新的账号、训练、外部调用、OS控制或运行窗口。
+
+## 20. PixiJS：参考网站/产品提取、重建校准与现有栈采用
+
+### 20.1 最新PO明确指代与原始溯源
+
+2026-10-16，本任务窗口的直接PO明确：“那个像素代码那个还要用于过往参考网站及产品的扒取，用以校准我们的前端构建，pixijs这个，不要像素画风”。因此现在准确指代为 **PixiJS，CONFIRMED**；完整用途包括既有参考网站和产品的可见结构/样式/布局/视觉/交互状态提取、可复现重建和前端校准，不采用像素画风。
+
+此前对[Issue #17](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17)正文35评论、Slack43频道消息/7线程53回复及最新PR77/78的溯源没有找到该库名，这是历史检索范围的事实，已被本次直接澄清补齐，不再把用户意思写UNKNOWN。附件广告Pixel/Pixel Film Studios/Pixelmator Pro/Pixel Sorter、Slack旧dot和视频guard转场仍各归原上下文，不用它们另推风格或引入追踪脚本。
+
+PixiJS是绘制/场景重建库，不会单独爬取DOM、CSS或产品交互。提取走已安装浏览器/REA的真实可见页面与合法静态源码；PixiJS读取同一版本的测量结果作几何重建、状态叠加和差异校准。开发研究工具使用与产品运行依赖分开：本任务采用隔离PixiJS校准方法，`app/website`不因此换renderer或加依赖；后续真实提取/校准仍依已授权任务顺序，在规划PR受检发布并远端读回后连续完成。
+
+| 含义 | 实际来源与判定 | 采用边界 |
+| --- | --- | --- |
+| CSS/Flutter逻辑像素与物理像素 | [W3C CSS Values 4](https://www.w3.org/TR/css-values-4/#absolute-lengths)、Flutter logical pixel/DPR；本次DPR探针有实际读数 | ADOPT坐标与栅格质量模型。布局/字体/触控用logical/CSS px；硬件density、缩放和backing store分开，不能跨设备固定物理像素逐点同构。 |
+| pixel-perfect / design-to-code | PO已明确以参考网站/产品提取校准前端；不是要求所有表面物理像素逐点相同 | 按已批准任务布局/组件/状态/字体与真实屏幕比对比例/层次/对齐；保持200%字号、三语和响应式，不从截图自动生成业务/权限。 |
+| pixel art / nearest-neighbor | [CSS image-rendering](https://www.w3.org/TR/css-images-3/#the-image-rendering)、[Flutter FilterQuality](https://api.flutter.dev/flutter/dart-ui/FilterQuality.html)；PO明确不采用像素画风 | 这些仅是栅格缩放API资料，不引出新风格或全局最近邻设置；普通图标/文字/插画继续原资产，缩放边缘按实际素材质量检查。 |
+| Canvas / 自绘矢量与点阵 | Flutter现有CustomPainter/Canvas与原生Widgets；Astro现有DOM/SVG；Canvas仅为出现实际缺口时的候选 | ADAPT到原Owner的实际图标几何/波形/图解/生成揭示，重要语义与操作留Widget/DOM；不建立像素页面生成器或通用自绘UI框架。 |
+| PixiJS | 官方[v8.22.0](https://github.com/pixijs/pixijs/releases/tag/v8.22.0)、[tagged renderer](https://github.com/pixijs/pixijs/blob/v8.22.0/src/rendering/renderers/autoDetectRenderer.ts)、[MIT](https://github.com/pixijs/pixijs/blob/v8.22.0/LICENSE)；PO已明确指定用于参考提取/校准，隔离WebGL探针已运行 | **ADAPT为隔离前端研究/校准工具**，按真实参考测量重建与比较。产品运行新增依赖仍DEFER，只有原F/C6证明具体缺口后再核目标/许可/性能；不是Flutter native共享renderer方案。 |
+
+### 20.2 实际技术调用及可重复验证
+
+隔离研究页固定导入`pixi.js@8.22.0`，不装进产品manifest，不改`app/`或`website/`。下面是实际成功执行的最小调用；颜色/矩形只为探针，不是品牌设计。画布旁保留等价DOM文字与真正Destroy按钮，画布设`aria-hidden`；没有用画布替代业务控件。
+
+```javascript
+const { Application, Graphics } = await import(
+  'https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/pixi.min.mjs'
+);
+const app = new Application();
+await app.init({ width: 640, height: 240, autoStart: false,
+  backgroundAlpha: 0, autoDensity: true, resolution: window.devicePixelRatio });
+const scene = new Graphics().rect(64, 48, 280, 144).fill({ color: 0x2463eb })
+  .circle(344, 120, 64).fill({ color: 0xf28c28 });
+app.stage.addChild(scene);
+app.renderer.render(app.stage);
+app.destroy({ removeView: true }, { children: true });
+```
+
+| 实测项 | 观察结果 | 不可外推的内容 |
+| --- | --- | --- |
+| init / render | 独立IAB中真实成功；renderer有`gl`、无`gpu/device`，此路径判为WebGL | 没有跑WebGPU/Canvas2D或Flutter/native，不声称后端等价。 |
+| DPR / 尺寸 | DPR=1.25；CSS 640×240，backing 800×300；不设density的前次观察是1倍backing | 只证本次密度换算，不证所有屏幕清晰度/缩放或性能。 |
+| 销毁与语义 | 点击按钮实际destroy后canvas数量0，DOM说明和按钮仍在可访问树；无返回的warning/error日志项 | 不证复杂场景的长期泄漏/无障碍覆盖，更不证产品工作完成。 |
+| 性能与四端 | FPS/首帧/p95帧时/显存/电量/低端设备/长跑均NOT_VERIFIED | 不以小场景、库宣传、WebGL存在或一次截图宣称60fps/跨端完成。 |
+
+当时实际运行的[完整探针HTML源码](../evidence/round-15/pixi-probe-evidence-20261016.md#probe-source)和[结构化观察/日志/限制JSON原文](../evidence/round-15/pixi-probe-evidence-20261016.md#observation-receipt)以UTF-8/LF规范化（HTML同时去除末尾多余空行）的原内容在同一研究证据文档的代码围栏中完整发布；依现行RULES_ONLY_PUBLICATION门，不发布可执行HTML/任意JSON路径，不改validator。提取代码围栏正文并保留一个末尾LF可逐字复原；未改JS或观察值，原混合换行读取指纹与围栏正文指纹如下。JSON记录2026-10-16隔离IAB、固定库版本、来源、一次运行与销毁读数，不是自动测试证明。复现可用已有Python静态server仅绑定127.0.0.1，并显式打开该HTML；其CDN请求只取公开固定PixiJS模块，不进入产品导航。原截图未持久化，JSON保留此限制；本次发布证据没有重跑或扩大运行范围。临时静态server在读取后已停止。官方8.x渲染指南仍标CanvasRenderer coming-soon，8.16公告称experimental，而固定8.22源码已有Canvas分支；此差异按精确版本源码和实际API范围处理，不能保证Canvas全功能替代。
+
+| 探针证据 | 当时本机原始读取SHA-256 | 已发布围栏正文UTF-8/LF字节SHA-256 |
+| --- | --- | --- |
+| `pixi-8.22.0-probe.html` | `150ee2fd2bbbbf4968a61d82a0014eac28f4218e32f07aff24883793a8ff54ce` | `7b7368f93cb2cc3df2539d26fb22172cd394d4c08bb87a0e5e63d5b94897ace8` |
+| `pixi-probe-result-20261016.json` | `93f39cf941ed2215515dc798b04ed90f49e049a963b63cdd0117a08fdcf9c87c` | `91354c52287d3ea3b22f40c02b37329e32ac16eb4580cc1c206f7ea2a14596bc` |
+
+### 20.3 Flutter / Astro的可执行采用设计
+
+当前仓库工具链读回为Flutter3.47.5、Dart3.13.4（`app/toolchain.json`），官网Astro7.3.3（`website/package.json`）；具体包以现有lock为准，本任务不升级依赖。以下落点复用已有实现，不新增Renderer、主题或业务状态Owner。
+
+| 已有源码/Owner | 具体采用和代码组织 | 质量/恢复出口 |
+| --- | --- | --- |
+| `app/lib/core/lumenis_theme.dart`、`lumenis_icon.dart`、`lumenis_icon_geometry.dart` | 继续Theme语义角色与已有原图形几何；logical尺寸控制glyph，交互目标与图形分离。分隔线可按实际DPR处理栅格边缘，文字/布局不强制物理像素取整。保留带名/不带名Logo、平台包图标与功能glyph的各自资产用途。 | 1/1.25/1.5/2/3等实际DPR、浏览器缩放和系统200%字号检查；CJK/韩文/emoji字体就绪后重新测量，不靠拉伸位图修布局。 |
+| `app/lib/core/generated_result_reveal.dart`与真实结果调用方 | 已有`RenderBox`/GlobalKey/LayoutBuilder/CustomPainter测量及绘制路径继续使用；接收同一真实结果事件/版本和现有独立动效偏好。装饰层不接输入/语义，所有按钮/正文/焦点保留真实Widget；布局/字体/DPR变化使旧几何失效并显露可用终态。 | 新成果一次播放/旧版重开不播放；中途滚动/导航/尺寸变化/停止/读屏/跳过均可用。新增场景只在对应任务接真实合同后逐端验，不全局扫描Widget。 |
+| 原图表/媒体/Timeline组件与ViewModel | 小型自绘图形可用`Canvas/CustomPainter`，按真实数据/版本重绘；有语义的自绘对象提供[semanticsBuilder](https://api.flutter.dev/flutter/rendering/CustomPainter/semanticsBuilder.html)或相邻原生列表/数据表。真实波形由音频采样，播放头不缓动，pan/seek/预览分离；不把所有控件画进canvas。 | [shouldRepaint](https://api.flutter.dev/flutter/rendering/CustomPainter/shouldRepaint.html)与重绘边界按实际变化；语义、键盘/触控等价和数据一致性先成立，再在真实负载测帧预算。 |
+| `website/src/components/SitePage.astro`、`website/src/styles/site.css`、`website/src/scripts/site-motion.js` | 常规布局与操作继续HTML/CSS/SVG。局部装饰Canvas不占语义/交互，真实数据图必须保留同源DOM描述/表格。当前复用既有DOM事件/路由监听生命周期；若未来有证据采用局部Canvas，则须另行实现并验证ResizeObserver/RAF/纹理等所用资源的初始化/销毁，不能把这些尚无的资源路径写成现状。字体和尺寸资源就绪后测真实几何。 | 无脚本/Canvas失败/减少动态时保留完整文本和动作；生成揭示不每次路由触发。Astro[组件脚本](https://docs.astro.build/en/guides/client-side-scripts/)与[路由转场](https://docs.astro.build/en/guides/view-transitions/)是不同能力，不能为特效自动引入ClientRouter或SPA真相。 |
+| 后端Owner与前端边界 | 传递真实业务结果/来源/状态/版本，前端只组织布局与语义/视觉，不从像素或截图猜Canonical、分母、权限或保存。原稿/素材/字体/导出图使用同一版本及许可，栅格导出由既有Artifact/媒体Owner处理。 | 严格核屏幕→动作→实际Owner/API→actor/scope/SourceUse→持久/效果回执→可见成果。字体/纹理/绘图失败回到真实可操作UI，不改结果或吞错误。 |
+
+Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/concepts/performance-tips)：批量简单图形、静态几何不每帧重建、纹理正确销毁、文字/mask/filter成本要测。[可访问性插件](https://pixijs.com/8.x/guides/components/accessibility)需要额外语义配置，不能自动覆盖普通表单/按钮。本任务按PO指令将其用于开发校准；当前不把它加入产品运行依赖，也不把浏览器库当Windows/macOS/iOS原生共享renderer。
+
+验收按每个真实使用点开展：目标负载/设备/语种/缩放固定；原数据与视觉标签/可访问等价/导出一致；90ms反馈与既有60fps/p95≤16.7ms目标实际计量；失败/取消/资源销毁/重开不丢版本；完整/减少/关闭/跳过偏好分别验证。当前这部分是研究采用设计，除上述小探针之外全部产品性能与四端运行仍OPEN。
+
+### 20.4 过往参考网站/产品提取与 PixiJS 校准（ADAPT；当前草稿 NOT_RUN）
+
+依§20.1本任务窗口的直接PO澄清，PixiJS用于真实参考界面的提取后重建/对照校准，不采用像素画风。
+
+**方法。** 在既有 REA/浏览器读取获准的公开目标、记录来源与权限、保存当时真实页面截图和可取得的 DOM/可访问性/几何证据；PixiJS 只把本地参考图、真实候选构建截图和测得的边界框叠加成校准视图。它不是爬虫、DOM/样式采集器、原站复刻器或产品渲染器。当前没有探测任何真实目标。被动取证与导航/交互分别记录；只用现有工具实际支持且获准的页面操作，先保存原状态再观察状态变化。任何工具清单或单一截图都不保证完整computed-style、全页图、精确几何或字体就绪。缺少的值记 UNKNOWN。将来如需精确盒模型或字体信息，只能在阶段二获准的隔离只读目标上通过现有获准工具所暴露的Chromium DevTools Protocol补采（按实际浏览器/协议版本，不能为此新开私人CDP/profile）：DOM.getDocument、DOM.querySelectorAll、DOM.getBoxModel；CSS.getComputedStyleForNode、CSS.getPlatformFontsForNode；Page.getLayoutMetrics。保留原始 quads 与 viewport/scroll 转换，明确坐标原点，不把协议坐标直接当 CSS viewport 坐标。交互状态分别编号并采集，不能用初始截图代表 hover、keyboard focus、active、disabled、loading、error、empty、长内容、语言、窄屏或 reduced-motion 状态。
+
+**可比较输入。** 每张图及 manifest 记录 SHA-256、来源 URL/origin、采集时间、权限处置、屏幕/任务合同、候选版本、浏览器引擎与完整版本、CSS viewport 或 Flutter logical viewport、坐标单位、DPR、截图栅格宽高、缩放/方向/locale/色彩模式/reduced-motion/滚动位置、字体就绪与实际平台字体、stateId、元素角色/名称/逻辑边界框及必要样式。CSS/logical px 与截图物理像素分开。只有候选和参考的状态及声明环境匹配，才做严格像素对照；不同 DPR、视口、字体、状态、运行时或单位时可展示归一化叠图作定性审查，并标 NOT_COMPARABLE。截图差异、DOM/可访问性差异和人工 screen-contract 审查分开记录；不设跨屏通用像素阈值。
+
+**固定渲染实现。** 隔离草稿固定 PixiJS 8.22.0：new Application() 后 await app.init({width,height,resolution,autoDensity,autoStart,preference:['webgl']})；从用户选取的本地 PNG File 经 createImageBitmap(file) 构造 ImageSource({resource: bitmap})、Texture({source})、Sprite(texture)；用 Graphics.rect(x,y,width,height).stroke({color,width}) 绘制几何框；比较控件、状态、表格和无障碍文字留在原生 HTML。销毁用 app.destroy({removeView:true},{children:true,texture:true,textureSource:true,context:true}) 并显式 bitmap.close()。这是局部叠图，不计算像素分数、不提取网页内容、不上传所选文件、不改产品文件。截图输入须来自获准的真实采集；未获权素材不复制代码或资源。
+
+**产品适配及验收。** Astro/Public Website 继续用语义 HTML、CSS、SVG 与真实 DOM 交互；Flutter Web/Desktop/iOS 继续用现有 Widgets/Canvas/CustomPainter/ViewModel/semanticsBuilder。校准器只读消费各自真实运行产出的截图和几何，不替换任一产品渲染器，也不新增产品依赖。候选需是实际产品构建/运行的输出，并映射既有屏幕合同；报告包含来源与权利状态、完整性/截断、同状态环境清单、输入哈希、几何差值、独立视觉和语义证据、人工合同审查及未决差异。缺关键输入即 UNKNOWN/NOT_COMPARABLE；RELEASE/产品接受仍走既有真实用户操作与恢复门槛。无权源、环境不匹配、候选不是实际构建、语义/键盘退化或只以一项像素分数宣称相同，均不得判校准通过。
+
+**版本、许可、性能与当前状态。** 官方 8.22.0 tagged package.json 声明 MIT；分发需保留 [tagged LICENSE](https://github.com/pixijs/pixijs/blob/v8.22.0/LICENSE) 的版权/许可文本。已核 [v8.22.0 release](https://github.com/pixijs/pixijs/releases/tag/v8.22.0)、[package.json](https://github.com/pixijs/pixijs/blob/v8.22.0/package.json)、[Application](https://pixijs.download/v8.22.0/docs/app.Application.html)、[ApplicationOptions](https://pixijs.download/v8.22.0/docs/app.ApplicationOptions.html)、[Graphics](https://pixijs.download/v8.22.0/docs/scene.Graphics.html)、[ImageSource](https://pixijs.download/v8.22.0/docs/rendering.ImageSource.html)、[Texture](https://pixijs.download/v8.22.0/docs/rendering.Texture.html)、[tagged ImageSource.ts](https://github.com/pixijs/pixijs/blob/v8.22.0/src/rendering/renderers/shared/texture/sources/ImageSource.ts) 与 [TextureSource.ts](https://github.com/pixijs/pixijs/blob/v8.22.0/src/rendering/renderers/shared/texture/sources/TextureSource.ts)。Context7 已先查当前文档，但可用语料解析到 current/dev，故版本敏感调用再以 v8.22.0 API/源码核对。坐标/DPR 与字体就绪依据 [W3C CSSOM View](https://www.w3.org/TR/cssom-view/) 和 [CSS Font Loading](https://www.w3.org/TR/css-font-loading-3/)；几何/样式采集接口见 [CDP DOM](https://chromedevtools.github.io/devtools-protocol/tot/DOM/)、[CDP CSS](https://chromedevtools.github.io/devtools-protocol/tot/CSS/) 和 [CDP Page](https://chromedevtools.github.io/devtools-protocol/tot/Page/)。官方 [performance tips](https://pixijs.com/8.x/guides/concepts/performance-tips) 只是优化建议；没有本草稿或 LUMENIS 设备的 FPS、帧时、内存、功耗、低端机、泄漏或 Flutter 对比测量，不推断性能通过。当前只作隔离研究候选；ADAPT 本地校准方法，DEFER 产品依赖/生产 renderer，任何产品依赖仍需现有第三方登记和所有者决策。
+
+**验证状态与阶段边界。** 隔离校准器`pixi-reference-calibration.html`是仅读本地PNG/manifest的代码草稿，目前NOT_RUN；没有据它生成真实参考/产品图像对或产品验收。原静态检查未执行：包装脚本解析错误后，检查命令又被自动策略拒绝，唯一返回理由为“blocked by policy”；原失败保留在研究包，不能写成语法通过或HTML本身语法失败。规划PR受检发布及远端读回后，再沿现有获准工具对完整目标开展真实采集/运行/比较，按实际结果升级证据；不通过更换工具绕过已拒绝策略。
+
+## 21. 原材料、协作原文与采用范围
+
+本次收敛读取当前两主稿、21份增补、原分步稿和创作覆盖全文；专项团队逐行读取44份屏规及Owner/字段/动作/状态/来源合同，其他原研究按下列实际范围使用。目录存在、摘要、行数/帧数与收据不代替原文阅读；保留未读/缺源/未验证项，不以选择样本完成整个研究库。
+
+| 输入与原始出处 | 实际取得/阅读范围 | 本规划与唯一草图的采用及限制 |
+| --- | --- | --- |
+| [Issue #17](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17)与Slack #lumenis-dev | 正文4354字符、35条完整评论；43条原频道消息、7线程原文含53回复，Welcome线程25+22=47完整回复正文；另读PR77/78最新两帖。2026-10-16增量API读回Issue仍35评论/updatedAt=2026-10-15T23:07:47Z，Slack在1792105672.545669之后无新频道消息。 | 是带来源的研究/协作输入，不是新派工或验收。完整快照SHA-256 `28beb5927603fefb943190a8b1e675c07872e0fdb49f64826a6a63ee954f5b6d`；[七项缺口原文](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17#issuecomment-6193248138)按下表闭合设计覆盖，产品运行仍独立OPEN。 |
+| Brio两个REA归档及10份原研究 | 逐行读完pack1-0…8、pack2-0共2481行；原始ZIP与可读副本指纹区分。报告来源与推断逐项辨认，不复制/调用其中认证样例。 | 完整对象含剪映PC、FCP、Claude Desktop、Grok/GrokBot、15平台、13SaaS、千瓜/新榜/新红；12结论按既有Owner判ADAPT/DEFER/REJECT。读取研究不等已验证私有协议/登录后Schema。原档来源见[归档评论](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17#issuecomment-6187523067)。2026-10-16本次直接PO在当前任务窗口（01a142d1-74c0-7940-b8b9-a66414eb5f8c）已指派规划及完整REA两项工作；这是限定窗口/任务的来源事实。规划发布只是该任务的质量次序，不生成派工；其他或后续窗口不能从本文、合并或历史授权自行启动提取。 |
+| Nielsen操作研究 | 重读既有NIELSEN-OPERATION-MAPPING全文与Experience §38的逐操作映射，非重新穷尽NN/g网站。 | 十项落到真实动作/语言/状态/退出撤销/防错/键盘/帮助；用于每个任务检查，不把同一卡片网格当统一设计。原研究路径与正文随原Owner保留。 |
+| 用户视频、Cue/Manus及Website319b | 重读原视频清单/已读区间/逐帧记录与Experience限定范围；本次未重放全部历史原片。历史13项记录8存/5缺；已提取帧、实际视觉阅读、小字/语义未解区间分开。 | 最新7份参考和319b按现行范围采用；Cue/319b仅Website，Manus启动/授权/引导/任务返回方法可适配操作端。保留所有原片与已有分析，不重建已撤销的穷尽历史视频前置门。真实产品演示片须来自同版本真实操作，不用模拟成功。 |
+| Logo/icon/五角色与已有实现 | 重读原资产研究和当前`lumenis_icon.dart`/geometry、Theme及Website motion调用；source只说明存在，不能证明包图标/官网/原生同版交付。 | 原创带名/不带名Logo、功能glyph、彩绘身份icon及适合局部插画分工；Pim/Bram/Ness/Jas/Aris保留。沿用当前批准标志，r4等仅保留为历史候选证据，不在此另作替换，第三方平台logo各自权利不改。 |
+| transitions.dev固定上游 | 复用Experience §19及第三方登记中已读commit `9398105c07dafe877e43197b71c15a10a3b0e3f6`、模式/JS/CSS/LICENSE及哈希，不把本次收敛说成重新通读全仓。 | 自定义商业许可有竞争动画集合限制，不误记全MIT；ADAPT到既有Flutter/DOM效果，不新增动画服务/全局扫描。真实新结果一次揭示、原有动效/用户选择/减少动态/跳过完整保留，四端实际仍需验。 |
+| 创作/数学/品牌/韩语原研究 | §19完整保留原团队逐份文本行数/指纹/采用范围；26份数学是提取文本阅读，非图片公式逐页核对或Lean重放。四本制作教材原读取13/10/10/7页，非977/659/773/223页全读。 | 原有E1–E12/P1–P12、事实墙、九维内容审校、KOS/营销节点/语义改写/跨平台/剪辑/播客要求仍全部在闭环内；缺失文本/音频/原片由原Owner记录，不能用表格把未读升为已采用/已训练。 |
+| Brio全球Source调查 | 重读227 Source/244 Target主文及可读C-retail22源；其他10类原明细尚未入库，分类汇总109/41/46/17/10/4与104/41/48/18/12/4冲突保留。 | 不宣称全全球逐源核实。身份/市场/时间/用途/权利/质量/未采状态仍来自Source Owner；同类别权不抹掉可靠性差异。18个活跃零售目标不包括暂排联商/CCFA和付费供应商，页面可见不授予生产采集。 |
+
+### 21.1 Issue七项设计覆盖与真实验收出口
+
+| 原缺口 | 唯一规划落点 | 唯一草图/原合同落点 | 实际验收须取得 |
+| --- | --- | --- | --- |
+| 首页/导航/新建继续/未保存与Return | §§2–4、16、F0/F1/F4 | 草图§1.1、ACC-03/AI-01/AI-02/SH-06 | 同对话提交A/B并继续输入，停止/修订互不串；返回保留文字、附件、选择、范围、定位。 |
+| CTH完整经营工作 | §3、G143–169、F7 | CTH-01…10，各自来源流/关系/日历/Case/比较/报告 | 真实来源→Case→比较/人工决策→Action/Outcome→有用报告，保存修订/重开/恢复与Evaluation。 |
+| BMP完整品牌市场工作 | §3、G97–107/G118–128/G166–173、F8 | BMP-01…11，各自竞品/机会/传播/创作者/计划/评估/风险/基准 | 真实口径与来源、可修订研究/Campaign及实际执行回执；计划不是结果，数据不足不假归因。 |
+| 独立Shared编辑制作 | §§3、14、F9 | 草图§3、SH-01…06及BMP06/08同一制作器 | 无领域前置从Brief/手稿/获准素材开始，编辑→有用成果→保存/修订/版本比较/重开/恢复/实际导出。 |
+| Source/Evidence/AI连续性与完整状态 | §§3–5、16–17、F4/F6/F9 | SH-02/03/04/05/06、AI-01…05、SYS-02/06；草图状态矩阵 | 原帖/双时间/权利与版本读回，来源纠正撤回影响定位，记忆更正/忘记、旧attempt回调失效、真实取消与恢复；无模型业务仍完成。 |
+| 四表面差异 | §2、G45、F13 | Website§2、每屏Web/Win/macOS/iOS及草图跨端矩阵 | 各端真实输入/文件/触控键盘/后台/窄屏/离线恢复与权限移交，同一后端合同；设备缺证只阻该端验收，不写PASS。 |
+| 原创视觉及逐动作追溯 | §§4、18、20、22 | 原创壳/全部44锚点与原ScreenSpec | 需求→具体构图/组件/动作→现有Owner/实际绑定→actor/SourceUse/Permission/Effect/幂等版本/恢复→原验收ID；三语/a11y/原动效逐端有证。 |
+
+### 21.2 CortechChat完整非Muse账号能力的前端承接
+
+本任务另已全文读PO提供的《Chat Cortech/TKH研究报告整合摘要》和现有《CortechChat→序境完整能力吸收报告》的19类意图，并读取前端审计的17入口/保存恢复/许可表。原材料入口为`D:/cortechchat/聊天记录/研究报告/`及原round-15证据`cortech_adoption`，源审计固定`657883e69b13a04f28f9f6176aa0699f33fe3add`；该SHA/98条dirty/源码缺失等是原审计观察，不冒充本任务重新跑Cortech或核当日全部代码。22份报告的PO整合摘要不是22份原报告逐字复读，目录当前另有后增报告，保留版本与未重读范围，阶段二沿原完整材料补足真正未证部分。
+
+最新直接PO已要求全部有效非Muse账号能力在现有Owner内复用、补齐或升级；不能仅因当前没有调用/模块而长期DEFER。只排除Muse产品账号实现，序境自身账号/Permission和平台授权保留。Cortech缺陷/许可问题替换方法，用户工作不被删。其旧暖色/零阴影/零圆角/Element Plus/路由/公式/默认主体/批次等是研究输入，不成为序境第二视觉/架构权威；传播相似边、NRI或反查分数不自动当因果、官方指数或法律结论。
+
+| 原完整能力意图 | 现有Owner与目标工作面 | 须保留的真实操作/成果 |
+| --- | --- | --- |
+| 总览、搜索与任务导航 | F/CTH/BMP ViewModel；ACC-03、CTH-01、BMP-01 | 主聊与领域入口、范围/时间、原帖钻取、最近工作及返回，不拿示例指标充首页。 |
+| 话题/关键词/别名/定时范围 | C1 Registry/QueryPlan/Collector、C6 Scheduler；ACC-02/SYS-02 | 可理解地设置词/范围/时间/预算/评论与计划，查看真实模式/效果；不另建topic真相，不把聚焦当采集。 |
+| 原帖/媒体/评论/作者 | C1 Source/Evidence/Canonical；CTH-03/06、SH-02 | 全文/实际图片与视频、作者/原帖/双时间/指标定义，过滤、详情/评论分页、引用和Return；缺评论总数不是0。 |
+| 采集任务/日志/取消恢复 | C1/C6 durable task/attempt/lease/cursor；SYS-02/06、AI-02/SH-06 | 真实阶段/缺失原因、已得结果、暂停/取消/合法恢复、断点重开；日志不替成果，旧回调不写新任务。 |
+| RSS/公开资讯/多源研究 | C1公共适配器→C5 Importer/Research；SH-01/02、SYS-02 | 源设置/获准导入/可读资讯时间线及跨源比较，SSRF/权利/来源完整，原文/转载不混为同一出处。 |
+| 趋势/情感/热词/品牌共现 | C3 Metrics、C5 Research/Evaluation；CTH-07、BMP-03/09 | 总量/增量与可编辑时间窗、真实词/品牌/作者关系、线性/对数与口径可查，比较/保存/修订；中性0.5/缺失0不作默认。 |
+| 事件聚类 | C3 Event/Case/Insight；CTH-04/08、BMP-10 | 发起/查看版本化事件，校核成员/代表原文、人工拆分/合并/排除与理由；重算保留旧版，派生不覆盖事实。 |
+| 传播路径/源头放大器桥梁 | C3 BMP传播、C5来源；BMP-04、CTH-04 | 时间路径→时点详情→关系/原帖，样本/边依据/推断可查可纠正，时间/相似不能报因果或真实转发。 |
+| 创作者库/合作/相似推荐 | C3 Creator/KOS/KOL/KOC/UGC；BMP-05/07 | 作者档案/标签/合作方式/报价来源与适用期、合作笔记/状态/待办、相似候选理由；联系人按用途保护，不自动私信。 |
+| 竞品/SOV/基准 | C3 BMP BrandFocus/Metric；BMP-02/09/11 | 用户所选对象/词/窗口的同口径比较、份额分母/覆盖/不可比，来源钻取、版本与真实报告；不继承太古汇/SKP等固定默认。 |
+| 告警/通知 | C3风险→Shared Notifications；CTH-06/BMP-10/SH-06 | 突增/负面率/敏感词等真实规则、已读/处理/归属/范围、具体任务返回；站外推送另有合法连接/Permission/Effect批准才发。 |
+| 伪冒线索/权利材料/投诉包 | 既有BMP风险/Case、C5 Evidence/Artifact；BMP-10/CTH-06、SH-02/04 | 名单/权利材料导入，嫌疑核验/标记/排除/关联网络，批次与材料导出、人工处置及后续跟踪；QCC stub不是可用API，缺外部授权可人工核验，不自动投诉/法律定性。 |
+| 独立文案/脚本/制作 | C4/C5 Shared Creation/SavedWork/Artifact；SH-01、BMP-06/08 | 用户直接写/引入获准素材，按Brief创作/审校/敏感词提示、保存版本/搜索/修订/导出；无AI占位文字不叫成果，视频播客仍需真正制作。 |
+| 方案导入/比稿/评分 | C5 Importer/Research/Reporting；SH-01/04、CTH-09 | 文件/粘贴→可编辑拆解/业务维度比较→依据/不确定性→选择/报告→保存修订重开；权重/方法由后端解释，上传预算/SourceUse先核。 |
+| 持久聊天/工具卡/异步工作 | 唯一Gateway/Agent、C6 Task、F；AI-01/02/03、SH-06 | 新建/搜索/重命名/归档或删除按实际策略，持续交办、真流式/取消、服务端任务与成果、草稿/记忆更正及恢复；不复制本地假成功缓存。 |
+| 报告/多格式导出 | C5 Reporting/Artifact、C4媒体；SH-04/CTH-10 | CSV/JSON/MD/HTML/PDF等实际Owner支持格式与媒体包、内容/哈希/来源/版本读回；HTML/CSV/ZIP安全输出，导出不是保存/发表。 |
+| 模型/API设置 | 唯一SYSTEM Gateway/user_api；AI-05/SYS-04 | 当前显式选择/安全配置/测试/撤销、实际可用与用量；原M获准Groq调用只是其有界回执，不改变本窗口模型或一般产品用户选择，不自动切Gemini/其他provider。 |
+| 平台Session/登录恢复 | C1/C6 PlatformSession/RecoverySheet；SYS-06 | 用户明确登录/扫码/VERIFY/冷却、身份健康/范围读回、合法回原任务；目录非空不算登录，作者查询核真目标，不读个人Cookie/Profile。 |
+| 域名/HTTPS/部署辅助 | C6 Runtime/Website发布；SYS-01/07/08 | 真实配置校验/预览、明确差异与错误/恢复；生成命令不是已部署，当前规划/研究不授部署/新费用或自动更新发布效果。 |
+
+反查细项的门店信息冒用、经营范围/认证主体/KOS身份、引流规避、同运营者网络、空壳占名和平台处罚，均作带真实来源与人工复核的风险线索类型；导出保留证据、时间、范围、人工理由与不确定性，不照搬原8项权重当法律认定。现有弱能力须在相应Owner升级，缺源码/未知API/付费/权利阻塞只阻该路径，不能删除以上工作或用映射表宣称已集成。
+
+
+## 22. 逐屏合同索引与动作接线要求
+
+下表固定2932b725基线的实际ScreenSpec Owner与Binding标识，仅是可追溯索引；`CODEX-*`、`UNKNOWN`或旧注册表`VERIFIED_AVAILABLE`文字不证明运行可调用。最终动作集合见本规划和草图完整目标；当前每个可执行动作必须在原屏规保持实际callable、输入/输出、actor/workspace/SourceUse、Permission/Effect Fence、任务/幂等/版本、失败/取消/恢复和原验收编号。缺少任一真实合同，保留该动作OPEN/UNBOUND，独立布局/编辑照常，不发明API、不缩小产品。
+
+同一分析继续Shared时，用户按“采用此分析/保存为成果”，由服务端依原工作重新验证SourceBrief、Scope与原文引文；前端不要求用户填写job_id或自证事实。SavedWork保存/修订/重开仍核原claims与citations的对应；M已提供新header与隔离回归增量不代表此完整UI已验收。源撤回/权限变化标明受影响引用与版本，原文/用户创作/AI派生各自身份保留。
+
+| 屏/实际Owner合同 | 基线Binding标识（不等运行证据） | 唯一目标布局 | 建设分组 |
+| --- | --- | --- | --- |
+| [ACC-01](../../contracts/experience/screen-specifications/ACC-01.md) · SYSTEM / Experience entry | `CODEX-ACC01-RUNTIME-IDENTITY` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#acc-01) | F1/F2 |
+| [ACC-02](../../contracts/experience/screen-specifications/ACC-02.md) · SYSTEM settings / CTH Subject Registry / BMP BrandFocus | `CODEX-ACC02-CONTEXT`、`CODEX-ACC02-SUBJECT-REGISTRY` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#acc-02) | F3 |
+| [ACC-03](../../contracts/experience/screen-specifications/ACC-03.md) · SYSTEM / Shared Capability presentation | UNBOUND：原合同待核 | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#acc-03) | F1/F4 |
+| [ACC-04](../../contracts/experience/screen-specifications/ACC-04.md) · SYSTEM Permission / recovery boundary | `CODEX-ACC04-GUARD`（本屏slice别名；registry `BACKEND-GAP-004`） | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#acc-04) | F1 |
+| [AI-01](../../contracts/experience/screen-specifications/AI-01.md) · Shared Capability / AI Agent Groups | `BACKEND-GAP-029`、`BACKEND-GAP-030` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#ai-01) | F4 |
+| [AI-02](../../contracts/experience/screen-specifications/AI-02.md) · Shared Capability / AI Agent Groups | `CODEX-AI02-TASK-STAGES` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#ai-02) | F4 |
+| [AI-03](../../contracts/experience/screen-specifications/AI-03.md) · Shared Capability / Evidence-linked AI analysis | `CODEX-AI03-THREAD-TRACE` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#ai-03) | F4 |
+| [AI-04](../../contracts/experience/screen-specifications/AI-04.md) · Shared Capability / Agent Skills registry | `CODEX-AI04-SHARED-SKILLS` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#ai-04) | F5 |
+| [AI-05](../../contracts/experience/screen-specifications/AI-05.md) · SYSTEM AI Gateway / runtime diagnostics | `CODEX-AI05-DIAGNOSTIC` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#ai-05) | F5 |
+| [BMP-01](../../contracts/experience/screen-specifications/BMP-01.md) · BMP | `BACKEND-GAP-018` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-01) | F8 |
+| [BMP-02](../../contracts/experience/screen-specifications/BMP-02.md) · BMP | `BACKEND-GAP-019` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-02) | F8 |
+| [BMP-03](../../contracts/experience/screen-specifications/BMP-03.md) · BMP | `BACKEND-GAP-020` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-03) | F8 |
+| [BMP-04](../../contracts/experience/screen-specifications/BMP-04.md) · BMP | `BACKEND-GAP-021` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-04) | F8 |
+| [BMP-05](../../contracts/experience/screen-specifications/BMP-05.md) · BMP | `BACKEND-GAP-022` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-05) | F8 |
+| [BMP-06](../../contracts/experience/screen-specifications/BMP-06.md) · BMP | `BACKEND-GAP-023` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-06) | F8 |
+| [BMP-07](../../contracts/experience/screen-specifications/BMP-07.md) · BMP | `BACKEND-GAP-024` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-07) | F8 |
+| [BMP-08](../../contracts/experience/screen-specifications/BMP-08.md) · BMP兼容入口；制作Owner为既有Shared Capability / C4-W4 | `BACKEND-GAP-025` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-08) | F8/F9 |
+| [BMP-09](../../contracts/experience/screen-specifications/BMP-09.md) · BMP | `BACKEND-GAP-026` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-09) | F8 |
+| [BMP-10](../../contracts/experience/screen-specifications/BMP-10.md) · BMP | `BACKEND-GAP-027` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-10) | F8 |
+| [BMP-11](../../contracts/experience/screen-specifications/BMP-11.md) · BMP | `BACKEND-GAP-028` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-11) | F8 |
+| [CTH-01](../../contracts/experience/screen-specifications/CTH-01.md) · CTH | `BACKEND-GAP-005`、`BACKEND-GAP-006`、`BACKEND-GAP-007` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#cth-01) | F7 |
+| [CTH-02](../../contracts/experience/screen-specifications/CTH-02.md) · CTH | `BACKEND-GAP-008` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#cth-02) | F7 |
+| [CTH-03](../../contracts/experience/screen-specifications/CTH-03.md) · CTH | `BACKEND-GAP-009` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#cth-03) | F7 |
+| [CTH-04](../../contracts/experience/screen-specifications/CTH-04.md) · CTH | `BACKEND-GAP-010` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#cth-04) | F7 |
+| [CTH-05](../../contracts/experience/screen-specifications/CTH-05.md) · CTH | `BACKEND-GAP-011` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#cth-05) | F7 |
+| [CTH-06](../../contracts/experience/screen-specifications/CTH-06.md) · CTH | `BACKEND-GAP-012` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#cth-06) | F7 |
+| [CTH-07](../../contracts/experience/screen-specifications/CTH-07.md) · CTH | `BACKEND-GAP-013` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#cth-07) | F7 |
+| [CTH-08](../../contracts/experience/screen-specifications/CTH-08.md) · CTH | `BACKEND-GAP-014` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#cth-08) | F7 |
+| [CTH-09](../../contracts/experience/screen-specifications/CTH-09.md) · CTH | `BACKEND-GAP-015`、`BACKEND-GAP-016` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#cth-09) | F7 |
+| [CTH-10](../../contracts/experience/screen-specifications/CTH-10.md) · CTH / Shared Capability Reporting | `BACKEND-GAP-017` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#cth-10) | F7 |
+| [SH-01](../../contracts/experience/screen-specifications/SH-01.md) · Shared Capability | `BACKEND-GAP-044`、`BACKEND-GAP-045`、`BACKEND-GAP-046`、`BACKEND-GAP-047`、`BACKEND-GAP-048`、`BACKEND-GAP-049` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sh-01) | F9 |
+| [SH-02](../../contracts/experience/screen-specifications/SH-02.md) · Shared Capability | UNBOUND：原合同待核 | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sh-02) | F9 |
+| [SH-03](../../contracts/experience/screen-specifications/SH-03.md) · Shared Capability | UNBOUND：原合同待核 | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sh-03) | F9 |
+| [SH-04](../../contracts/experience/screen-specifications/SH-04.md) · Shared Capability | UNBOUND：原合同待核 | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sh-04) | F9 |
+| [SH-05](../../contracts/experience/screen-specifications/SH-05.md) · Shared Capability | UNBOUND：原合同待核 | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sh-05) | F9 |
+| [SH-06](../../contracts/experience/screen-specifications/SH-06.md) · Shared Capability | UNBOUND：原合同待核 | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sh-06) | F9 |
+| [SYS-01](../../contracts/experience/screen-specifications/SYS-01.md) · SYSTEM / RuntimeGuardian | `BACKEND-GAP-036` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-01) | F10 |
+| [SYS-02](../../contracts/experience/screen-specifications/SYS-02.md) · SYSTEM Collector | `BACKEND-GAP-037` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-02) | F6 |
+| [SYS-03](../../contracts/experience/screen-specifications/SYS-03.md) · SYSTEM / Canonical Data | `BACKEND-GAP-038` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-03) | F10 |
+| [SYS-04](../../contracts/experience/screen-specifications/SYS-04.md) · SYSTEM Permission | `BACKEND-GAP-039` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-04) | F10/F11 |
+| [SYS-05](../../contracts/experience/screen-specifications/SYS-05.md) · SYSTEM Settings | `BACKEND-GAP-040`（既有只读snapshot；设置写入及各端运行依原合同独立验收） | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-05) | F0/F12 |
+| [SYS-06](../../contracts/experience/screen-specifications/SYS-06.md) · SYSTEM Browser / CDP | `BACKEND-GAP-041` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-06) | F6 |
+| [SYS-07](../../contracts/experience/screen-specifications/SYS-07.md) · SYSTEM Security / AI Gateway | `BACKEND-GAP-042` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-07) | F10/F11 |
+| [SYS-08](../../contracts/experience/screen-specifications/SYS-08.md) · SYSTEM Observability | `BACKEND-GAP-043` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-08) | F10 |
+
+### 22.1 重复规划的迁移与唯一入口
+
+原分步稿全部有效F0–F13/动效/来源已并入§18，原创作覆盖原文/指纹已并入§19；21份增补的有效布局、三端差异、状态/操作已并入对应草图锚点。旧独立文件在覆盖和引用检查后删除；Git固定父版本保留原始字节，既有研究/审批/失败/资产不删除。ScreenSpec仅保留其独特Owner/API/Permission/SourceUse/字段/状态/动作/验收合同及完整草图链接，混合句不能安全拆分时保留合同语义，不为“去重”损坏行为。
+
+下表同时保留当时Windows本机读取的CRLF字节指纹与固定父版本`2932b725039ad606d9f335f8e900d989fd876182`的Git blob原始字节SHA-256。跨平台用`git show <父版本>:00-GOVERNANCE/LOOP-PLAN-20261014/sketches/<文件名>`的stdout原始字节计算后一列，不能把checkout后的换行当原blob；前一列只追溯本机阅读/精确删除收据，不声称跨平台相同。
+
+| 原文件标识（仅不可变迁移溯源） | 原本机CRLF读取SHA-256 | 父版本Git blob字节SHA-256（跨平台复核） | 当前落点 |
+| --- | --- | --- | --- |
+| `ACC-01-ADD-account-settings.md` | `3d9970e6b81b674e07286b19e28916666c58457498e973362b7b8de756a92e1f` | `05492d291418e147770a2ac9639f6ed5b0d0dc632f045d708abd2f420d4891b2` | [草图ACC-01](sketches/FULL-PRODUCT-SKETCH.md#acc-01) |
+| `ACC-01-ADD-sign-in.md` | `1d5a19b6b75f1a5b621e251ab10d9a3d97a4c9a5ab4920e7c6bf2bba7244b0c3` | `b0d33f8e6efe0ec2a68939a86a2c3e0c5fa4077241c639f95045e9e14ebb508d` | [草图ACC-01](sketches/FULL-PRODUCT-SKETCH.md#acc-01) |
+| `CTH-09-ADD-math-result-card.md` | `e697e52ed39154ac7c0c1d30cfcfe5ba1ec82b8e859ab305fcbe414f4df68709` | `6bee0cea90c0a754e46599944b2f379c5aed6406eea3769e773cd46281a7ec70` | [草图CTH-09](sketches/FULL-PRODUCT-SKETCH.md#cth-09) |
+| `BMP-05-ADD-kos-funnel.md` | `aa6d730711d83ec04e169e5da4b47b7840a66822da7dca096e2ad7d5da7d216c` | `4f4efe3736787e32d9f1f306624984e546613c9adf1df9933082953c2cb860e6` | [草图BMP-05](sketches/FULL-PRODUCT-SKETCH.md#bmp-05) |
+| `BMP-06-ADD-video-editing-studio.md` | `fa1f2bb9a34313c55262877789d75a2d56059df4fafe03b7b53c70d6a27f3153` | `fe46a80cdf4610ce3ebf562d88d4c5cacade62a62e6de5aaf32296398c16c1b2` | [草图BMP-06](sketches/FULL-PRODUCT-SKETCH.md#bmp-06) |
+| `BMP-07-ADD-marketing-calendar.md` | `3da7b9cc329cbc4708b43e91130c1964f167cc71e0e58880ee5a83ffaeebe80f` | `371bedea215e75fefaaadc06502d180fb658438651370c79aeee172608642c38` | [草图BMP-07](sketches/FULL-PRODUCT-SKETCH.md#bmp-07) |
+| `BMP-08-ADD-podcast-studio.md` | `7e8afcd4458382d7e18624ae13a82155502cdfb9328679b44458c37e71644985` | `67958c69aba7d5fe6f7d6adff7270aee7d59c8ecb91bd3908362d3fd90da2573` | [草图BMP-08](sketches/FULL-PRODUCT-SKETCH.md#bmp-08) |
+| `BMP-09-ADD-public-mmm.md` | `b5f44c8652faab859c9364cac764c5c483a68b3b84e811b042aa003d52969885` | `4f96bf91a39abca667dee26367be814629e006d536dd86031f859f4034f7a007` | [草图BMP-09](sketches/FULL-PRODUCT-SKETCH.md#bmp-09) |
+| `AI-01-ADD-intelligent-cards.md` | `fa84ac7cad90843107182cf00e0893ae3ed6d5c6c8626d7a870328e90e272a2a` | `b5848d37081de2c626036b344a2e47b6c43a2eb95c6fd9eae2487081829dea76` | [草图AI-01](sketches/FULL-PRODUCT-SKETCH.md#ai-01) |
+| `AI-01-ADD-tool-permission-confirm.md` | `b6286e0b396261c82199ba62d16ccb8dabf3804f2135c55c396889a35205a1b4` | `9b0677696eb557fef2e833c493cd7ab560f3bd373f74744a33332c3ecc0cae5d` | [草图AI-01](sketches/FULL-PRODUCT-SKETCH.md#ai-01) |
+| `AI-04-ADD-github-mcp-connectors.md` | `00b2195d6799298fff87c18b7ba253f2e9f7529489b90149cb8156a31a4f495c` | `92734a381c1a193272616b0936be03edf03e8849ef3cd55bfb83e5b982678911` | [草图AI-04](sketches/FULL-PRODUCT-SKETCH.md#ai-04) |
+| `AI-04-ADD-skills-store.md` | `b4a35b4a4a3c847dea48df622d236d18f29bd2e7be67db990ee878e3ed471161` | `5610e986f28322b093ae404defc3305881f6bd93d09a2b42a77abd6ad28e4648` | [草图AI-04](sketches/FULL-PRODUCT-SKETCH.md#ai-04) |
+| `AI-05-ADD-byo-api.md` | `71cc2c4de65ea3a3169b187941903dd5fb201ee421274335b995fa59ee22c869` | `62aa30b61407e058d6801692a0cc9873e6c152b40e839f35b668527301094198` | [草图AI-05](sketches/FULL-PRODUCT-SKETCH.md#ai-05) |
+| `SYS-02-ADD-manual-collect.md` | `97f36484564039fa07507ded43d5f8faecb95ba24580928fe5852767e4d68d59` | `0e22671b294a64013368283811b004371da25b587ec213bc664e52d42b483086` | [草图SYS-02](sketches/FULL-PRODUCT-SKETCH.md#sys-02) |
+| `SYS-04-ADD-keys-compliance.md` | `bf2b75325ce7257eb849beb2b5c644afe6ffd6d7b6341631b6969519a9d2d530` | `001f10c0d9afb1181e74060981fc66a736f82740a3d995558a13185c69e9b783` | [草图SYS-04](sketches/FULL-PRODUCT-SKETCH.md#sys-04) |
+| `SYS-04-ADD-user-developer-mode.md` | `d80727134b0a246f3e413d415ec64a20b503da9c8f647aa51bfe4b96735523b9` | `0efae0ee43fcd981a48a6a0a0d70f4a5ddf7457a6015055b337b7f8ec48f657f` | [草图SYS-04](sketches/FULL-PRODUCT-SKETCH.md#sys-04) |
+| `SYS-05-ADD-visual-brand-roles.md` | `6fd087ddefc0fa717678fbf65dd85ebf5b3df179c1553a513915de620806da30` | `a3ee238d34e95688eabfc5325f987e0afc80bf78c913ed1456291c43f8692947` | [草图SYS-05](sketches/FULL-PRODUCT-SKETCH.md#sys-05) |
+| `SYS-06-ADD-browser-tabs.md` | `d980740213b253a49bb6e60255c470340f5b1a5b91f091ee3e85aeca7ce435c3` | `792cab26191d2d31140bc0bd979b0259dc188cbd61baf2bfd3ee6774737de4fd` | [草图SYS-06](sketches/FULL-PRODUCT-SKETCH.md#sys-06) |
+| `SYS-06-ADD-login-recovery-sheet.md` | `81f6cf4156d63b5edf93552dc79bcaca18b051dcdae746dda983a19464f4ea0b` | `4b551d748fd13013ad61c3d6913ce96d9f83182e7a544314819999b072d376a1` | [草图SYS-06](sketches/FULL-PRODUCT-SKETCH.md#sys-06) |
+| `SYS-07-ADD-founder-developer-mode.md` | `67beffed1cdeefba2d8397d70bf1e6ef4fb71abe36a72099f60138c98f02d5b0` | `a6c69ca91ff9a64c715043f1efc8eba46912b220fd73742bef9563601160dcda` | [草图SYS-07](sketches/FULL-PRODUCT-SKETCH.md#sys-07) |
+| `SYS-08-ADD-ops-workspace-lifecycle.md` | `48ff5bd5f558bdc11193a44b13a135ab62455eb614b48c2dcfedce71661057c6` | `381c93fb0d74482ed7ffd8116a7d4a14655855c61110e733436b04ebcabe5b08` | [草图SYS-08](sketches/FULL-PRODUCT-SKETCH.md#sys-08) |
+| `UI-STEP-PLAN.md` | `e9e77960a6440ad898858fafc272d6ae2a1c97803fc28634139f2879b061bc2e` | `e31927623841129a545debf2fc35de91bc443c1d8c97e5387e1e2f6704b5e126` | 规划§18（F0–F13与动效） |
+| `CREATION-COVERAGE-20261014.md` | `cee4d115550cd120b5b20184ab93902d5da1cf7a335e77b25f2884a0a394465f` | `f20c8195153de981ff297e9d3e25497ab045dc3fb4b66402ebbc8041d6cf7727` | 规划§19（完整原文与指纹） |
+
+### 22.2 原R/N/O有效要求的迁移索引
+
+保留原26项标识和有效含义，过期状态回原日期证据，不抄成今日事实或竞争指令。以下路由不减非前端范围；实际执行仍由根AGENTS、CURRENT最新直接PO与各Owner控制。
+
+| 原标识 | 有效内容与当前落点 |
+| --- | --- |
+| R1 | 完整源码/原则/架构/体验/Owner/安全阅读链见§0与根AGENTS Mandatory bootstrap。 |
+| R2 | fresh origin/main、保护dirty、准确范围分支→检查/审查→PR→main→远端读回；见§§0/5/6与AGENTS §§1–2。验证worktree不是第二开发权威。 |
+| R3 | required检查实际执行且通过，不force-push/bypass；按既有M工程审查/受检合并权限执行，不新加逐项PO等候。 |
+| R4 | SYSTEM→CTH→BMP→Shared→Agent Groups/自研AI五轮保持，非用户每任务必经步骤、非窗口上限；Architecture/§6仍完整。 |
+| R5 | 唯一SYSTEM Gateway、owned默认/用户显式BYO、无退休provider或自动回退；§1/G84/G50，普通业务无AI可用。 |
+| R6 | 六主平台是基线非上限，全部获准范围/后台持续采集/统一产品内恢复/身份权利/真实来源；§3/G94/G133/F6及Collector Owner。 |
+| R7 | Core启动/端口/health入口回[README](../../README.md)、[AGENTS §16](../../AGENTS.md)与SYSTEM Runtime/U25 Owner；不把可达当界面闭环。 |
+| R8 | 配置、sole业务DB、研究原件各归原Owner；README结构、AGENTS §§9–10/Source Owner Index及§§19/21。研究目录不是执行规则，库文件不成第二真相。 |
+| R9 | GLOBAL/ALL默认、可搜索新增/聚焦/清除Subject/BrandFocus；选择不授权/不自动采集，官方名保留来源；§3/ACC-02与Global合同。 |
+| N1 | 退休provider旧运行观察只存历史，现行唯一Gateway/无回退约束仍在R5/G84，不复活旧文指令。 |
+| N2 | 通用OS控制及Linux/Android原生客户端不在当前scope；Website/Web/Windows/macOS/iOS、Linux服务器/CI与浏览器覆盖保持§§1–2。 |
+| N3 | 新增主体/读写由服务器解析actor、identity、Scope/Permission；G4/G29/G40与ACC-02，旧“未开工”不当当前状态。 |
+| N4 | sole业务DB、真实运行路径/schema/迁移Owner、隔离验证与备份/恢复；G42/G87、AGENTS §9和Shared Database/U25合同，不沿用旧smoke状态。 |
+| N5 | 实际包装/每端身份、Permission与操作分别验；§2/F13与SYS-04/06，旧UI观察无新证不升PASS。 |
+| N6 | 不假设官方/partner API授权已取得，只用真实允许公开/当前获准会话/API；G94与AGENTS §§8/10/12，不取消应实现能力。 |
+| N7 | Manifest/实际callable/会话与恢复/NULL/统一事务/幂等/真实覆盖/下游有用成果八项全保留；G133及Collector闭环退出合同。 |
+| N8 | BMP服务端actor/BrandFocus/Scope绑定、跨范围拒绝，选焦点不授权；G29/G40/BMP各屏与Global/Permission Owner。 |
+| N9 | 视频与播客各有真波形/播放/编辑混音/导出/保存修订重开恢复；§14/G28/G33和草图§3，两个成果独立验。 |
+| N10 | 原Logo/五角色/功能glyph/参考与真实设计状态；§4/F12/Experience §§23/38，不用Figma或DESIGN_READY作新编码前置。 |
+| O1 | 已批准内部AUTO程序的范围为全部登记主体，太古汇仅深度参考；§3/G94/X14与Global，登记/焦点不授采集Permission。 |
+| O2 | 后台headless采集与用户主动产品内浏览分开，过期仅统一RecoverySheet/合法验证/服务端健康读回；SYS-02/06/F6。 |
+| O3 | CURRENT最新直接PO已批准的R&D配置/注册写入，在原已派工Owner/范围内备份后由开发者直接执行，不逐行等待PO。此有界批准不扩张本规划任务，也不授新费用/凭据个人会话/破坏生产数据/模型采集部署等其他效果；依当前各自批准边界。 |
+| O4 | CURRENT最新直接PO允许既有M工程审查与全部required检查通过后合并PR，无需再等PO；仍保留保护主线、精确SHA/范围、无bypass、远端读回，不把单一绿灯当产品验收。 |
+| O5 | 官方站名称＋原URL、稳定ID/别名保留；G69/X15、CURRENT/subject_registry及C1/Global，不用AI改名。 |
+| O6 | 用户真新增主体路径的E2E与受影响回归/CI；G4/G40–42、ACC-02/Global §8与J1/U01/U25，CI不是实时数据准入证据。 |
+| O7 | 账号/免费邮箱Google/条件Apple、两开发者模式、六商业项、完整前端/原创视觉角色均在工程闭环内；G18–20/F11–13。PO重复任务/运营用户验证与付费/新授权源另按原边界，不把工程真实成果拖到闭环后。 |

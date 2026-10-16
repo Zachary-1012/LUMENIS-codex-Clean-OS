@@ -38,6 +38,8 @@ approval_reference: ROUND-13-BMP-CREATION-UI
 
 ## 4. Purpose-built composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-11)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Desktop is a horizontally scrollable normalized comparison grid with columns for dimension, current brand and competitors, followed by a metric-definition rail and source requirement strip.
 - Mobile becomes a metric-by-metric comparison list: definition first, then current brand and competitors, with an explicit withheld state for incomparable rows.
 - This is a definition-led comparison workflow, not a generic KPI dashboard or card grid.

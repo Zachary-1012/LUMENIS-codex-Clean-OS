@@ -62,12 +62,16 @@ No fixture fields, global aggregates, static directory entries or inferred relat
 
 ## 5. Purpose-built desktop composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-02)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - **Primary hierarchy:** read-only CTH business-subject list on the left; a separate association-availability panel on the right.
 - **Layout:** at 1020 logical px and wider, a 370 px registry rail and flexible ownership pane. Registry list is independently scrollable; refresh remains in the page heading.
 - **Primary interaction:** none. Rows are read-only metadata, not selectors. The backend's `selection_only` contract must not be mistaken for a permissioned context-switch command.
 - **Specific composition:** the list can show basic details while both association items display `资料暂缺`. Do not invent links or brand metrics.
 
 ## 6. Purpose-built mobile composition
+
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-02)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - **Single task:** review the CTH business-subject list, then check the two missing association details.
 - **Layout:** below 1020 logical px, the directory occupies the first full-width panel and the ownership state follows as separate relationship cards; list height is bounded and touch-scrollable.

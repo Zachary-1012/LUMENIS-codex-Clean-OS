@@ -55,6 +55,8 @@ approval_reference: ROUND-13-BMP-CREATION-UI
 
 ## 4. Purpose-built composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Desktop keeps three distinct work zones: the material and section rail, the time-coded script area, and the properties/rights rail. The audio preview area remains separate below them. This composition stays visible as a structural preview while scope is blocked; it does not imply that script, source or audio data was read.
 - Mobile remains task-first, with one selected work area at a time. The same single scope boundary appears above the active pane.
 - When the read scope is unverified, show one screen-level boundary notice. Keep the zone headings and short semantic prompts, render scope-dependent counts and values as unknown (`—`), and omit per-zone copies of the scope warning. Do not show `0`, “no sources”, or “no script sections” for data that was withheld.
@@ -76,26 +78,12 @@ persistence, actual AI/rights binding and live user acceptance remain open.
 
 ## 5. Purpose-built desktop composition
 
-已批准目标来源：`BMP-08-ADD-podcast-studio.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
+集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-08)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
 ### 草图增补：播客制作室全链（规划 §14 P1–P12、G184/G79/G107/G128）
 
-```
-播客制作室 · 《节目名》第 N 期                     [保存] [版本 v3 ▾] [导出发布包]
-步骤条：①选题 ②嘉宾 ③提纲 ④脚本 ⑤录音/导入 ⑥转写 ⑦剪辑 ⑧配音(可选) ⑨母带 ⑩发布包 ⑪切片 ⑫复盘
-┌ 左：稿件（逐词，可编辑）──────────────┬ 右：检查器 ─────────────────┐
-│ [S1 主持] 00:00:12 今天我们聊……         │ 章节：01 开场 00:00 [改名]   │
-│ [S2 嘉宾] 00:00:31 我第一次……  ~~嗯~~   │       02 …                    │
-│  删词=剪掉对应音频；划线=待删语气词      │ 说话人：S1 主持 S2 嘉宾 [合并]│
-│ [一键去语气词/长停顿 → 生成提议]         │ 来源：脚本事实句 12/12 有来源 │
-├ 下：多轨时间线 ─────────────────────────┤ 响度：实测 -16.2 LUFS ✓       │
-│ 人声1 ▁▃▅▇▅▃  人声2 ▂▄▆▄▂  BGM ▁▁▁(ducking)│ 真峰：-1.3 dBTP ✓             │
-│ ▶ 播放头 00:12:31   [试听] [循环]         │ AI 标注：脚本「AI 生成」·配音「AI 配音」│
-└─────────────────────────────────────────┴──────────────────────────────┘
-⑩ 发布包：MP3/M4A · show notes · 章节 JSON · 字幕稿 VTT/SRT · 封面 · RSS 校验 ✓  [确认发布]（不自动发）
-⑪ 切片：故事节点候选（时间码+来源）→ 9:16 音频图 / 引语卡 / 各平台包装
-⑫ 复盘：故事节点密度 · 情绪/洞察峰值（AI 派生，非权威）· 产出率 · 留存曲线（无平台数据 = 数据缺失）
-```
 
 **4. States**
 空 / 导入中 / 转写中（进度，可取消）/ 模型不可用（显示原因，可导入已有字幕稿继续）/ 剪辑提议待确认 / 母带不达标（显示实测值与差值，不自动二次施压）/ 版权未知（导出提醒）/ 数据缺失 / 权限不足。
@@ -109,7 +97,6 @@ persistence, actual AI/rights binding and live user acceptance remain open.
 
 **增补（2026-10-14 全文读码）**
 - 播放器全工作区唯一；点逐字稿句子→跳播；点时间轴标记→打开对应故事节点/证据；点故事节点→筛选稿与素材。
-- 手机：迷你播放器 + 底部抽屉；桌面：两栏/三栏。
 - 选题卡：十信号逐项显示；缺项显示「需补输入」并列出缺哪几项，不出分。
 - 嘉宾卡：三标准 Gate 勾选（人工），未过不进入提纲。
 - 稿件：原文/校对双视图切换；改稿提示「改稿不改音频」。
@@ -144,6 +131,8 @@ persistence, actual AI/rights binding and live user acceptance remain open.
 
 ## 5A. Web Workspace composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 ### 草图增补：播客制作室全链（规划 §14 P1–P12、G184/G79/G107/G128）
 
 Web：稿件、音轨和检查器可分栏或逐项展开；录音先获浏览器授权，拒绝不阻塞导入/手动编辑；试听与后台渲染状态分开，刷新恢复已保存工程。 录音需浏览器麦克风授权，未授权时只可导入。
@@ -151,9 +140,10 @@ Web：稿件、音轨和检查器可分栏或逐项展开；录音先获浏览�
 
 ## 6. Purpose-built mobile composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 ### 草图增补：播客制作室全链（规划 §14 P1–P12、G184/G79/G107/G128）
 
-Mobile：步骤条横滑；稿件全屏编辑；时间线折叠为波形条；母带与发布包只读确认。
 
 
 ### Existing contract — Accessibility and localization

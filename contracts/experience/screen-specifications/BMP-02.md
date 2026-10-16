@@ -70,10 +70,11 @@ The current backend builder is intentionally treated as unscoped. A successful H
 
 ## 5. Purpose-built desktop composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-02)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - **Primary question:** Which entities belong to this BrandFocus, and how does the selected entity relate to the portfolio?
 - **Composition:** a compact focus/context rail, a broad constellation field with owned/sub-brand/competitor grouping, and a selected entity dossier with source/time window. The constellation is a relationship view, not a repeated metric-card surface.
 - **Interaction:** clicking or keyboard-selecting one entity updates only the dossier. Search and role chips filter the local list; they never change BrandFocus authorization.
-- **Resize:** at wide desktop, constellation and dossier sit side by side; at tablet widths the dossier follows the selected list; no horizontal overflow or desktop shrink-to-mobile.
 
 ### 5A. Web Workspace composition and desktop-only boundary
 
@@ -81,6 +82,8 @@ The current backend builder is intentionally treated as unscoped. A successful H
 - No desktop-only effect or export exists. Unavailable actions remain absent rather than appearing as disabled fake affordances.
 
 ## 6. Purpose-built mobile composition
+
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-02)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - Keep the selected BrandFocus visible, followed by a searchable portfolio list. The selected profile expands below the list and competitor entities are represented as explicit chips/rows, not a miniature desktop constellation.
 - Touch targets are at least 48 logical pixels. Back returns to the host shell; it does not switch Subject or BrandFocus.

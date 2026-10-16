@@ -62,6 +62,8 @@ entry-state fetch is not a prerequisite for the editor or host navigation.
 
 ## 4. Desktop composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#acc-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 Use the existing wallpaper-aware Shell with its restrained brand and controls.
 The content area has one reading/editing width around 820 logical pixels. A
 small functional New task heading is optional at about 18–20 px. The reusable
@@ -74,6 +76,8 @@ not four descriptive cards. Show the actual last-opened page only when present.
 No permanent right-hand business inspector or duplicate AI panel.
 
 ## 5. Web and mobile composition
+
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#acc-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 The same owner contracts apply in Web Workspace, Desktop and Mobile Companion.
 On phone, prioritize the editor and wrap the compact destination controls while

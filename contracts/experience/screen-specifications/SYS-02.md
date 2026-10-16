@@ -89,22 +89,19 @@ No pagination, write action, idempotency key, Evidence emission or cancellation 
 
 ## 5. Purpose-built desktop composition
 
-已批准目标来源：`SYS-02-ADD-manual-collect.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-02)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
-### 草图增补：采集：默认 AUTO + 可选手动采集按钮
+集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-02)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
-```
-主体行：<主体名> | 模式 [AUTO ▾] | 上次 hh:mm | [立即采集] [暂停]
-平台矩阵：平台 × 状态（运行/冷却/缺失）
-缺失字段显示「—（数据缺失）」不显示 0
-```
+### 采集模式与动作边界（目标布局见唯一草图）
+
 
 **4. State additions**
 Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
 
 **9. Executable acceptance**
 - 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。
-- 全部已登记主体默认 AUTO；无单主体硬编码；显示已批准研发策略与上线闸门状态；身份、来源权益、Permission及Effect Fence始终执行，界面不自行关闭安全边界。
+- 只显示Collector/Scheduler Owner读回的真实模式与范围：未来用户MANUAL默认、AUTO需显式opt-in；PO已批准内部连续程序的AUTO范围覆盖全部已登记主体，无单主体硬编码。当前只读切片不执行模式写入、手动采集或取消；依赖动作在真实callable/Permission/幂等恢复合同接通前保持OPEN。身份、来源权益、Permission及Effect Fence始终执行，界面不自行关闭安全边界。
 
 ### Existing contract — Purpose-built desktop and web composition
 
@@ -135,17 +132,19 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ## 5A. Web Workspace composition
 
-### 草图增补：采集：默认 AUTO + 可选手动采集按钮
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-02)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
+### 采集模式与动作边界（目标布局见唯一草图）
 
 Web Workspace composition
-Web：范围、实际进度与失败恢复逐项可见；后台状态刷新不抢焦点，返回保留选择，手动采集须显式确认且不得因浏览器刷新重复启动。 批量：[对所选主体立即采集]
+Web：范围、实际进度与失败恢复逐项可见；后台状态刷新不抢焦点，返回保留筛选与选择。完整手动/批量操作目标在唯一草图保留，接通真实Owner动作后须显式请求、Permission与幂等/恢复核验，不得因浏览器刷新重复启动；当前只读切片不发起该效果。
 
 ## 6. Purpose-built mobile composition
 
-### 草图增补：采集：默认 AUTO + 可选手动采集按钮
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-02)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
-Purpose-built mobile composition
-主体卡 + 同按钮。
+### 采集模式与动作边界（目标布局见唯一草图）
+
 
 ### Existing contract — Purpose-built mobile composition
 

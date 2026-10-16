@@ -66,15 +66,12 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 
 ## 5. Purpose-built desktop composition
 
-已批准目标来源：`BMP-05-ADD-kos-funnel.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-05)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
+集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-05)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
 ### 草图增补：KOS 三阶漏斗与合规留资
 
-```
-曝光 → 互动 → 留资  （每阶：值｜区间｜缺失标注）
-CPL / 成本：—（缺失）或数值
-[生成评论回复草稿]（不自动发送）
-```
 
 **4. State additions**
 Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
@@ -112,6 +109,8 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ## 5A. Web Workspace composition and desktop-only boundary
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-05)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Web uses the same Product Core response, parser and ViewModel. Browser deep-link restoration remains host-owned.
 - No browser-only creator contact, export or campaign effect is exposed.
 
@@ -124,10 +123,10 @@ Web：创作者比较表与漏斗按宽度切换摘要/详情；保留过滤、�
 
 ## 6. Purpose-built mobile composition
 
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-05)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 ### 草图增补：KOS 三阶漏斗与合规留资
 
-Purpose-built mobile composition
-纵排。
 
 ### Existing contract — Purpose-built mobile composition
 
@@ -204,3 +203,13 @@ The real creator API/Permission/Evidence and runtime/E2E gate remains blocked un
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+## Current projection and approved complete target (OPEN)
+
+本节区分当前创作者资料读取与已批准的完整创作者工作目标；原§1所列联系、发布、campaign、付款和外部效果排除项继续有效，此次补入的回复草稿仅供用户检查/改写；既有完整创作者目标仍保留，不把草稿当作自动联系或自动推荐。不更改 frontmatter、BMP/SYSTEM Owner、现有只读绑定或当前状态。集中视觉规划输入（不替代本屏现行合同）：[BMP-05完整草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-05)。
+
+- **当前投影（保持）：** 当前读取仍为 GET /api/experience/screen/BMP-05，经 LumenisCoreClient.screen('BMP-05')；沿 BACKEND-GAP-022、现有 focus_context/focus_binding 和 Permission 约束展示真实资料。未知 scope、未验证 lineage、缺少后端资料不生成创作者、指标或候选动作。
+- **完整目标与既有 Owner（OPEN）：** BMP/C3 继续拥有创作者业务语义、筛选、比较和用户决策；SYSTEM Context/Permission 继续拥有焦点范围与授权。完整目标包括按 KOS/KOL/KOC/UGC tier 筛选，比较受众证据、作品内容、合作历史与成本，以及有来源和时间窗的真实性/贡献/风险线索；风险线索不作定论，查看创作者来源/作品及曝光→互动→留资三阶漏斗和同源分母；CPL/成本只显示真实值/区间/缺失，分母缺失或来源/市场混用不得计算转化率。AI发现/内容共现与观测事实分层，粉丝/点赞不等于 ROI。用户保存 shortlist 与合作 Brief 时保留选择理由；创作者档案标签、合作方式、报价来源/适用期、合作笔记/状态/待办及相似候选理由仍由 BMP-05/BMP-07 对应既有 Owner 承接，Campaign 生命周期留 BMP-07，不因本屏只读 slice 或回复草稿而从完整目标消失；按主稿适配 Web 比较、iOS 选中档案/比较。批准草图还允许生成待审评论回复草稿；创作/保存沿现有 BMP/Shared SavedWork/Artifact Owner，不新设回复服务或调用方。
+- **输入、结果与权限：** 输入是当前允许的 Subject/BrandFocus 或明确授权 GLOBAL / ALL 上下文，以及具有真实 source/trace/lineage、同一市场范围、时间窗、单位和分母的创作者、作品、受众、合作历史、费用与评论资料。输出为可筛选/可比较的创作者档案和真实三阶漏斗/CPL状态；用户可保存 shortlist/合作 Brief 与选择理由，并按批准目标生成注明来源与版本的可编辑回复草稿。不把AI发现写成 Canonical 事实，不伪造评论、受众或创作者关系。读取需当前 screen-specific Permission，引用/派生使用另满足 SourceUse。
+- **效果、保存、返回与恢复：** 草稿永不自动发送；评论/私信在专业号或企业授权未具备时明确不可用。不联系创作者、不发布、不执行 campaign、不付款、不匹配身份，也不触发任何外部效果。用户可按现有 BMP/Shared SavedWork Owner 保存、修订、重开 shortlist、合作 Brief、选择理由与回复草稿，并返回同一创作者与 BrandFocus/Subject 上下文；若无精确保存 callable，保存保持 OPEN/UNBOUND。来源失效或撤权时阻止继续使用该来源，已写入的用户草稿依既有版本合同保留并标示引用失效。
+- **未绑定与验收：** 当前读取与 BG-022 尚未提供评论回复生成或保存 callable；对应操作保持 OPEN/UNBOUND，不能以只读资料、按钮或 mock 结果宣称完成。真实验收须以允许使用且可追溯的真实输入完成筛选/比较、查看作品、核对同源分母、风险线索来源/时间窗及缺失状态、保存/重开 shortlist 与合作 Brief 并保留选择理由、起草/编辑/保存/重开回复、撤权/源失效提示与返回；确认未授权时评论/私信不可用、浏览器/网络侧没有自动发送或其他写入，并在对应 Web/Desktop/Mobile 实际路径验收。
