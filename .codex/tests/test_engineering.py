@@ -2673,6 +2673,57 @@ with hook.locked(Path(sys.argv[2])):
         self.assertFalse(self.state["delivery_exit"]["closed"])
         self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1", "TOOL-2"])
 
+    def test_pause_records_post_prompt_source_changes_and_stops_without_rollback(self):
+        self.delivery_fixture()
+        for index, (prompt, mode) in enumerate((
+            ("Pause.", "PO_PAUSED"),
+            ("Wait for my approval before continuing.", "APPROVAL_WAIT"),
+        )):
+            with self.subTest(mode=mode):
+                self.handle(
+                    "UserPromptSubmit", **self.delivery_event,
+                    prompt=prompt, turn_id=f"pause-after-write-{index}",
+                )
+                self.edit(42 + index)
+                output = self.delivery_stop()
+                self.assertFalse(output["continue"])
+                self.assertIn("UNAUTHORIZED/RECONCILIATION_REQUIRED", output["stopReason"])
+                self.assertIn("sample.py", output["stopReason"])
+                self.assertEqual((self.root / "sample.py").read_text("utf-8"), f"value = {42 + index}\n")
+                self.assertEqual(self.state["pause_turn_changed_paths"], ["sample.py"])
+                self.assertTrue(self.state["pause_turn_mutation_observed"])
+                self.assertEqual(
+                    self.state["verification_status"],
+                    "PAUSE_WITH_POST_PAUSE_MUTATION_REQUIRES_RECONCILIATION",
+                )
+                self.assertEqual(self.state["delivery_exit"]["mode"], mode)
+                self.assertEqual(
+                    self.state["delivery_exit"]["post_pause_changes_state"],
+                    "UNVERIFIED_RETAINED",
+                )
+                self.assertFalse(self.state["delivery_exit"]["post_pause_changes_rolled_back"])
+                self.assertEqual(self.state["delivery_exit"]["post_pause_changed_paths"], ["sample.py"])
+
+    def test_frozen_scope_source_paths_are_canonicalized_before_rebind(self):
+        record, payload = self.delivery_fixture()
+        source = self.root / "work/scope-source.md"
+        source.parent.mkdir(exist_ok=True)
+        source.write_text("Current source scope input.\n", "utf-8")
+        payload["continuity"]["delivery"]["scope_sources"].append({
+            "path": "./work\\scope-source.md",
+            "sha256": h.hashlib.sha256(source.read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+        self.assertIn("work/scope-source.md", self.state["delivery_guard"]["scope_sources"])
+        self.assertNotIn("./work\\scope-source.md", self.state["delivery_guard"]["scope_sources"])
+
+        payload["continuity"]["delivery"]["scope_sources"][1]["path"] = "work/scope-source.md"
+        self.save_delivery_fixture(record, payload)
+        self.assertIn("work/scope-source.md", self.state["delivery_guard"]["scope_sources"])
+        self.assertEqual(self.state["delivery_guard"]["scope_sources"]["work/scope-source.md"], [
+            h.hashlib.sha256(source.read_bytes()).hexdigest()
+        ])
+
     def test_delivery_pending_effect_prevents_closure(self):
         effect = "operation-cth-publish-17 remains unresolved pending durable readback"
         record, payload = self.delivery_fixture([effect])
@@ -2772,6 +2823,78 @@ with hook.locked(Path(sys.argv[2])):
             item["delivery"]["effect_ledger"].pop()
             self.close_delivery_fixture(record, payload)
             self.assertEqual(self.delivery_stop(), {})
+
+    def test_reopened_requirement_reserves_fresh_receipts_despite_historical_kinds(self):
+        record, payload = self.delivery_fixture()
+        self.reopen_delivery_requirement_without_refresh(record, payload)
+        item = payload["continuity"]
+        target_count = h.MAX_EVIDENCE_PATHS - 2
+        for index in range(target_count - len(item["evidence_paths"])):
+            name = f"work/capacity-reservation-{index:03}.json"
+            (self.root / name).write_text("{}\n", "utf-8")
+            item["evidence_paths"].append(name)
+        self.save_delivery_fixture(record, payload)
+
+        effect = "A new effect must leave room for two fresh reopened-outcome receipts"
+        item["pending_effects"].append(effect)
+        item["delivery"]["effect_ledger"].append({
+            "pending_effect_sha256": h._pending_effect_id(effect), "status": "PENDING",
+        })
+        with self.assertRaisesRegex(ValueError, "Evidence capacity"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_rejects_duplicate_receipt_references_before_reopening_files(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        evidence = payload["continuity"]["delivery"]["requirements"][0]["evidence"]
+        evidence.append(dict(evidence[0]))
+        receipt_path = (self.root / evidence[0]["path"]).resolve()
+        reads = 0
+        original_read_bytes = Path.read_bytes
+
+        def counted_read_bytes(path):
+            nonlocal reads
+            if path.resolve() == receipt_path:
+                reads += 1
+            return original_read_bytes(path)
+
+        with mock.patch.object(Path, "read_bytes", new=counted_read_bytes), self.assertRaisesRegex(
+                ValueError, "referenced only once"):
+            self.save_delivery_fixture(record, payload)
+        self.assertEqual(reads, 0)
+
+    def test_delivery_evidence_verification_caches_receipt_and_source_reads(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        for requirement in item["delivery"]["requirements"]:
+            self.add_delivery_receipts(item, requirement)
+            requirement["status"] = "OPEN"
+        item["delivery"]["status"] = "RUNNING"
+        item["remaining"] = ["The current evidence is retained while verification remains open."]
+        self.save_delivery_fixture(record, payload)
+
+        receipt_path = (self.root / item["delivery"]["requirements"][0]["evidence"][0]["path"]).resolve()
+        source_path = (self.root / "sample.py").resolve()
+        targets = {receipt_path, source_path}
+        reads = {path: 0 for path in targets}
+        original_read_bytes = Path.read_bytes
+
+        def counted_read_bytes(path):
+            resolved = path.resolve()
+            if resolved in reads:
+                reads[resolved] += 1
+            return original_read_bytes(path)
+
+        evidence = item["delivery"]["requirements"][0]["evidence"][0]
+        verification_cache = {"receipts": {}, "sources": {}}
+        with mock.patch.object(Path, "read_bytes", new=counted_read_bytes):
+            for _ in range(2):
+                self.assertTrue(h._delivery_evidence_is_current(
+                    self.root, item, item["delivery"]["requirements"][0]["id"],
+                    evidence, "ACCEPTED", verification_cache=verification_cache,
+                ))
+        self.assertEqual(reads[receipt_path], 1)
+        self.assertEqual(reads[source_path], 1)
 
     def test_new_effect_cannot_enter_the_ledger_already_resolved(self):
         first = "operation-cth-publish-21 remains unresolved pending durable readback"

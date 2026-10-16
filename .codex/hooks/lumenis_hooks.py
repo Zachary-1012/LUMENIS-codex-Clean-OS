@@ -349,7 +349,8 @@ def _delivery_source_manifest(root: Path, delivery: dict) -> dict[str, str]:
 def _delivery_evidence_is_current(root: Path, item: dict, requirement_id: str,
                                   evidence: dict, expected_result: str,
                                   allowed_source_paths: set[str] | None = None,
-                                  verify_source_content: bool = True) -> bool:
+                                  verify_source_content: bool = True,
+                                  verification_cache: dict | None = None) -> bool:
     """Check immutable receipt provenance and, when requested, current source bytes."""
     required = {"path", "sha256", "kind", "result", "head", "source_pins"}
     if not isinstance(evidence, dict) or set(evidence) != required:
@@ -368,17 +369,23 @@ def _delivery_evidence_is_current(root: Path, item: dict, requirement_id: str,
     raw_path = root / Path(evidence["path"])
     if not path.is_file() or raw_path.is_symlink() or path.stat().st_size > 2_000_000:
         return False
-    body = path.read_bytes()
-    if hashlib.sha256(body).hexdigest() != evidence["sha256"]:
-        return False
-    try:
-        receipt = json.loads(body.decode("utf-8-sig"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return False
-    if not isinstance(receipt, dict):
-        return False
-    encoded = json.dumps(receipt, ensure_ascii=False)
-    if re.search(r"\b(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9]{15,}|Bearer\s+[A-Za-z0-9._~+/=-]{12,})", encoded, re.IGNORECASE):
+    cache = verification_cache if isinstance(verification_cache, dict) else {}
+    receipt_cache = cache.setdefault("receipts", {})
+    relative = path.relative_to(root.resolve()).as_posix()
+    if relative not in receipt_cache:
+        body = path.read_bytes()
+        body_hash = hashlib.sha256(body).hexdigest()
+        try:
+            receipt = json.loads(body.decode("utf-8-sig"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            receipt = None
+        if not isinstance(receipt, dict) or re.search(
+                r"\b(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9]{15,}|Bearer\s+[A-Za-z0-9._~+/=-]{12,})",
+                json.dumps(receipt, ensure_ascii=False), re.IGNORECASE):
+            receipt = None
+        receipt_cache[relative] = (body_hash, receipt)
+    body_hash, receipt = receipt_cache[relative]
+    if body_hash != evidence["sha256"] or not isinstance(receipt, dict):
         return False
     if (receipt.get("schema_version") != 1
             or receipt.get("requirement_id") != requirement_id
@@ -405,13 +412,20 @@ def _delivery_evidence_is_current(root: Path, item: dict, requirement_id: str,
         allowed_sources = allowed_source_paths
     if set(source_pins) != allowed_sources:
         return False
+    source_cache = cache.setdefault("sources", {})
     for value, digest in source_pins.items():
         if not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
             return False
         source = continuity_path(root, value)
-        if verify_source_content and (not source.is_file() or source.is_symlink()
-                or hashlib.sha256(source.read_bytes()).hexdigest() != digest):
-            return False
+        if verify_source_content:
+            source_key = source.relative_to(root.resolve()).as_posix()
+            if source_key not in source_cache:
+                source_cache[source_key] = (
+                    hashlib.sha256(source.read_bytes()).hexdigest()
+                    if source.is_file() and not source.is_symlink() else None
+                )
+            if source_cache[source_key] != digest:
+                return False
     return True
 
 
@@ -429,7 +443,8 @@ def _delivery_source_pins_match_current(root: Path, source_pins: dict) -> bool:
 
 
 def _delivery_effect_ledger(root: Path, item: dict, delivery: dict,
-                            scope: dict[str, str]) -> dict[str, dict]:
+                            scope: dict[str, str],
+                            available_evidence_kinds: dict[str, set[str]] | None = None) -> dict[str, dict]:
     entries = delivery.get("effect_ledger", [])
     if not isinstance(entries, list) or len(entries) > MAX_EVIDENCE_PATHS:
         raise ValueError("Invalid bounded external-effect ledger")
@@ -509,7 +524,7 @@ def _delivery_effect_ledger(root: Path, item: dict, delivery: dict,
     reserved_outcomes = 0
     for requirement in delivery["requirements"]:
         outcome_kind = "REAL_USER_E2E" if requirement["outcome_class"] == "PRODUCT" else "TOOL_WORKFLOW"
-        existing_kinds = {value.get("kind") for value in requirement.get("evidence", [])}
+        existing_kinds = (available_evidence_kinds or {}).get(requirement["id"], set())
         reserved_outcomes += len({outcome_kind, "RECOVERY"} - existing_kinds)
     if len(item.get("evidence_paths", [])) + len(ledger_pending) + reserved_outcomes > MAX_EVIDENCE_PATHS:
         raise ValueError("Evidence capacity must reserve outcome, recovery and pending-effect resolution receipts")
@@ -537,6 +552,9 @@ def validate_delivery(root: Path, item: dict, frozen_guard: dict | None = None,
     if not isinstance(requirements, list) or not requirements or len(requirements) > 100:
         raise ValueError("Delivery requirements must enumerate the complete admitted outcome")
     seen = set()
+    seen_evidence_paths = set()
+    verification_cache = {"receipts": {}, "sources": {}}
+    available_evidence_kinds = {}
     for requirement in requirements:
         if not isinstance(requirement, dict):
             raise TypeError("Invalid delivery requirement")
@@ -594,6 +612,16 @@ def validate_delivery(root: Path, item: dict, frozen_guard: dict | None = None,
         evidence_values = requirement.get("evidence")
         if not isinstance(evidence_values, list) or len(evidence_values) > 40:
             raise ValueError("Invalid delivery evidence list")
+        normalized_evidence_paths = []
+        for evidence in evidence_values:
+            if isinstance(evidence, dict) and isinstance(evidence.get("path"), str):
+                normalized_evidence_paths.append(
+                    continuity_path(root, evidence["path"]).relative_to(root.resolve()).as_posix()
+                )
+        if (len(set(normalized_evidence_paths)) != len(normalized_evidence_paths)
+                or seen_evidence_paths.intersection(normalized_evidence_paths)):
+            raise ValueError("A delivery evidence receipt may be referenced only once and by one requirement")
+        seen_evidence_paths.update(normalized_evidence_paths)
         if frozen_evidence is not None and any(value not in evidence_values for value in frozen_evidence):
             raise ValueError("A frozen closed-requirement receipt cannot be removed or replaced")
         if is_frozen_requirement and frozen_evidence is None and not isinstance(prior_pins, dict):
@@ -649,11 +677,13 @@ def validate_delivery(root: Path, item: dict, frozen_guard: dict | None = None,
                 if not _delivery_evidence_is_current(
                         root, item, requirement["id"], evidence, evidence["result"],
                         allowed_source_paths=historical_source_paths,
-                        verify_source_content=False):
+                        verify_source_content=False,
+                        verification_cache=verification_cache):
                     raise ValueError("Frozen delivery receipt or one of its original source pins changed")
             elif (evidence["result"] == "ACCEPTED"
                   and _delivery_evidence_is_current(
-                      root, item, requirement["id"], evidence, "ACCEPTED")):
+                      root, item, requirement["id"], evidence, "ACCEPTED",
+                      verification_cache=verification_cache)):
                 valid_accepted_evidence.append(evidence)
                 current_accepted_kinds.add(evidence["kind"])
         if requirement["status"] == "JOB_CLOSED":
@@ -687,12 +717,22 @@ def validate_delivery(root: Path, item: dict, frozen_guard: dict | None = None,
             if needs_current and (required_outcome_kind not in current_accepted_kinds
                                   or "RECOVERY" not in current_accepted_kinds):
                 raise ValueError("A reopened closed requirement needs fresh receipts for the complete current source scope")
+        fresh_requirement = (
+            bool(frozen_requirement.get("needs_current_evidence"))
+            if isinstance(frozen_requirement, dict) else False
+        )
+        available_evidence_kinds[requirement["id"]] = (
+            current_accepted_kinds if fresh_requirement
+            else current_accepted_kinds | historical_accepted_kinds
+        )
     if delivery["status"] == "JOB_CLOSED":
         if item.get("remaining"):
             raise ValueError("JOB_CLOSED requires the continuity record's remaining list to be empty")
         if any(value["status"] != "JOB_CLOSED" for value in requirements):
             raise ValueError("Delivery cannot close while any required outcome remains open, deferred, or blocked")
-    effect_ledger = _delivery_effect_ledger(root, item, delivery, scope)
+    effect_ledger = _delivery_effect_ledger(
+        root, item, delivery, scope, available_evidence_kinds,
+    )
     exit_record = delivery.get("exit")
     if exit_record is not None:
         if (not isinstance(exit_record, dict)
@@ -713,7 +753,10 @@ def validate_delivery(root: Path, item: dict, frozen_guard: dict | None = None,
             valid_paths = {
                 evidence.get("path") for evidence in value["evidence"]
                 if evidence.get("kind") == "EXTERNAL_BLOCKER"
-                and _delivery_evidence_is_current(root, item, value["id"], evidence, "BLOCKED")
+                and _delivery_evidence_is_current(
+                    root, item, value["id"], evidence, "BLOCKED",
+                    verification_cache=verification_cache,
+                )
             }
             if not valid_paths:
                 raise ValueError("Every remaining blocked outcome requires its own current, source-pinned blocker evidence")
@@ -1049,6 +1092,7 @@ def _delivery_current_source_pins(root: Path, item: dict, delivery: dict) -> dic
 
 def _delivery_guard_snapshot(root: Path, item: dict, delivery: dict) -> dict:
     closure_source_pins = _delivery_current_source_pins(root, item, delivery)
+    scope_sources = _delivery_source_manifest(root, delivery)
     requirements = {
         value["id"]: {
             "outcome_class": value["outcome_class"],
@@ -1068,7 +1112,7 @@ def _delivery_guard_snapshot(root: Path, item: dict, delivery: dict) -> dict:
         "requirements": requirements,
         "closed_ids": [value["id"] for value in delivery["requirements"]
                        if value["status"] == "JOB_CLOSED"],
-        "scope_sources": {value["path"]: [value["sha256"]] for value in delivery["scope_sources"]},
+        "scope_sources": {path: [digest] for path, digest in scope_sources.items()},
         "nonclosure_exits": {},
     }
 
@@ -1194,7 +1238,7 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
                 raise ValueError("Rebinding must preserve the prior Product Owner deferral source")
         if guard.get("record_po_source") not in delivery["po_source"]:
             raise ValueError("Rebinding must retain the original Product Owner task source")
-        scope = {value["path"]: value["sha256"] for value in delivery["scope_sources"]}
+        scope = _delivery_source_manifest(root, delivery)
         prior_scope = guard.get("scope_sources", {})
         if not isinstance(prior_scope, dict) or not set(prior_scope).issubset(scope):
             raise ValueError("Rebinding cannot remove a frozen scope source reference")
@@ -2012,10 +2056,22 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
         }
         return True, None
     if mode in {"PO_PAUSED", "APPROVAL_WAIT"}:
-        # A direct current-turn pause/approval wait is a non-closure exit. Keep
-        # the required IDs and all unverified evidence intact for resumption.
-        if state.get("mutation_observed"):
-            state["verification_status"] = f"{mode}_UNVERIFIED_RETAINED"
+        # Stop promptly on the direct instruction, while preserving a factual
+        # record of any scoped source changes made after that instruction.
+        pause_paths = set(state.get("pause_turn_paths", []))
+        before = state.get("pause_turn_snapshot")
+        now = snapshot(root, pause_paths) if pause_paths else snapshot(root)
+        if isinstance(before, dict) and isinstance(before.get("files"), dict):
+            changed = changed_paths_since(root, before, now, pause_paths)
+            state["pause_turn_snapshot_missing"] = False
+        else:
+            changed = changed_scope_paths(root, state, now)
+            state["pause_turn_snapshot_missing"] = True
+        changed_paths = sorted(changed)
+        state["pause_turn_changed_paths"] = changed_paths
+        state["pause_turn_mutation_observed"] = bool(changed_paths)
+        if changed_paths:
+            state["verification_status"] = f"{mode}_POST_PAUSE_CHANGES_UNVERIFIED_RETAINED"
         guard = state.get("delivery_guard")
         if isinstance(guard, dict) and isinstance(guard.get("requirements"), dict):
             remaining = _current_delivery_remaining_ids(root, state)
@@ -2029,6 +2085,9 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
             "closed": False,
             "remaining_ids": remaining,
             "scope_state": scope_state,
+            "post_pause_changed_paths": changed_paths,
+            "post_pause_changes_state": "UNVERIFIED_RETAINED" if changed_paths else "NONE_OBSERVED",
+            "post_pause_changes_rolled_back": False,
             "resume_condition": "A new direct Product Owner execution instruction; no requirement is closed by this exit.",
             "prompt_hash": state.get("turn_prompt_hash"),
         }
@@ -2179,6 +2238,18 @@ def handle(event: dict, root: Path, state: dict) -> dict:
                 state.pop("report_turn_snapshot_missing", None)
                 state.pop("report_turn_requires_verification", None)
                 state.pop("report_turn_changed_paths", None)
+            if state["turn_exit_mode"] in {"PO_PAUSED", "APPROVAL_WAIT"}:
+                state["pause_turn_paths"] = sorted(report_scope_paths(root, state))
+                state["pause_turn_snapshot"] = snapshot(root, set(state["pause_turn_paths"]))
+                state["pause_turn_snapshot_missing"] = False
+                state["pause_turn_changed_paths"] = []
+                state["pause_turn_mutation_observed"] = False
+            else:
+                state.pop("pause_turn_paths", None)
+                state.pop("pause_turn_snapshot", None)
+                state.pop("pause_turn_snapshot_missing", None)
+                state.pop("pause_turn_changed_paths", None)
+                state.pop("pause_turn_mutation_observed", None)
         authorized_deferred_ids = _direct_po_defer_ids(root, state, prompt)
         if authorized_deferred_ids:
             state["po_defer_authorization"] = {
@@ -2258,6 +2329,20 @@ def handle(event: dict, root: Path, state: dict) -> dict:
         if not allowed:
             return stop_block(state, event, delivery_reason or "Structured delivery remains open.", "BLOCKED_DELIVERY_OUTCOME_OPEN")
         if state.get("turn_exit_mode") in {"PO_PAUSED", "APPROVAL_WAIT"}:
+            changed = state.get("pause_turn_changed_paths", [])
+            if changed:
+                paths = ", ".join(changed[:40])
+                reason = (
+                    "UNAUTHORIZED/RECONCILIATION_REQUIRED: Scoped source changed after the pause instruction: "
+                    f"{paths}. Preserve these files as-is; no rollback, verification, or further work was performed. "
+                    "Stop and wait for a new explicit authorization."
+                )
+                state["verification_status"] = "PAUSE_WITH_POST_PAUSE_MUTATION_REQUIRES_RECONCILIATION"
+                return {
+                    "continue": False,
+                    "stopReason": reason,
+                    "systemMessage": reason,
+                }
             return {}
         report_only = state.get("turn_exit_mode") == "REPORT_ONLY"
         if not report_only and not state.get("mutation_observed"):

@@ -28,37 +28,20 @@ window/model state. See `.codex/README.md` for its schema, bounded Stop behavior
 native activation and rollback. Neither a hook PASS nor a source publication
 establishes product acceptance.
 
-Local verification of this hook repair: the frozen implementation passed 138
-engineering-helper regressions; the final type-validation and mixed-language
-prompt correction then passed five affected regressions, full Ruff on both
-changed Python files and compilation. These are development-tool checks, not
-product E2E or proof that a running workstation has loaded the published handler.
-The subsequent Linux CI exposed Windows-separator continuity lookup failure;
-Portable normalization retains drive/root/traversal, private-path and ADS rejection.
-That failed run remains historical evidence; only the repaired exact-head CI
-can establish this change's cross-platform verification.
-Further reviewed closure cases preserve an empty frozen effect ledger, require
-the whole prompt to be report-only, and reconcile changed authority pins before
-closure while retaining evidence across unrelated HEAD changes.
-Six affected checks also verify that a new execution prompt cannot escape through
-a different legacy/previously closed record, and that PO deferral names complete
-requirement IDs rather than matching prefixes. New work can bind a new record
-with a newly admitted outcome; unchanged closed work can still switch normally.
-Eight subsequent affected checks cover frozen implementation scope after context
-clear, reserved receipt capacity, first-effect PENDING admission, immutable
-historical resolution and Chinese direct-PO deferral provenance. Full Ruff and
-compilation pass for the changed hook files; these remain tool-bound checks.
-The final receipt-scope repair preserves exact closed-outcome receipt references
-and original bytes across a later scope addition. Changed implementation requires
-explicit reopening and new complete-current-scope outcome/recovery evidence; it
-can then close without erasing history. The changed-source recovery case and nine
-affected preservation/rejection cases passed, with compilation and full Ruff on
-the two modified Python files. This verifies the development guard, not Collector
-autonomy, workstation activation or a product user outcome.
-The subsequent required CI caught an older deferral fixture deleting closed
-receipts before renewed PO deferral. It now retains and asserts their original
-references; no acceptance condition or rejection assertion is removed. The failed
-CI remains recorded; renewed deferral is still a non-completion exit.
+The current hook candidate preserves the complete admitted outcome through context
+changes, explicit PO deferral and pause. It verifies large owner records with the
+same bounded budget on save/read/Stop; deferral requires the current real PO
+prompt and exact requirement IDs. Pausing stops execution without rollback and
+records any post-pause scoped changes for reconciliation. Reopened outcomes
+reserve fresh outcome/recovery receipts, path aliases normalize consistently,
+and duplicate receipt references are rejected before cached validation.
+
+The prior complete engineering-helper run passed 166 tests plus 69 subtests.
+Subsequent focused checks covered the record/deferral changes and fourteen
+pause/capacity/path/cache cases; compilation and full Ruff passed for the changed
+Python files. Prior failed CI and fixture failures remain historical failures;
+only the exact updated commit's required checks qualify its publication. These
+are development-tool results, not workstation activation, product E2E or release.
 
 The direct PO instructions dated 2026-10-16 covered three reported upgrades:
 all relevant issue #17/Slack updates and research adoption; all approved Cortech
