@@ -38,7 +38,7 @@ CONTINUITY_FIELDS = {
     "next_action", "pending_effects", "source_paths", "evidence_paths", "native_goal",
 }
 DELIVERY_FIELDS = {"schema_version", "status", "po_source", "scope_sources", "requirements"}
-DELIVERY_OPTIONAL_FIELDS = {"exit"}
+DELIVERY_OPTIONAL_FIELDS = {"exit", "effect_ledger"}
 DELIVERY_STATUSES = {
     "RUNNING", "REPORT_ONLY", "PO_PAUSED", "APPROVAL_WAIT",
     "EXTERNAL_BLOCKED", "PO_DEFERRED", "JOB_CLOSED",
@@ -51,6 +51,16 @@ DELIVERY_EVIDENCE_KINDS = {"REAL_USER_E2E", "TOOL_WORKFLOW", "RECOVERY", "EXTERN
 DELIVERY_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,119}\Z")
 SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 MAX_EVIDENCE_PATHS = 220
+MAX_CONTINUITY_NARRATIVE_CHARS = 24_000
+MAX_DELIVERY_BYTES = 8_000_000
+MAX_CONTINUITY_RECORD_BYTES = (MAX_CONTINUITY_NARRATIVE_CHARS * 4
+                               + MAX_DELIVERY_BYTES * 2 + 8192)
+MAX_NON_CLOSURE_EXITS = 256
+EFFECT_RESOLUTION_STATUSES = {"APPLIED", "NOT_APPLIED", "FAILED", "CANCELLED", "RECONCILED"}
+
+
+def _pending_effect_id(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def load_verification_policy(root: Path) -> dict | None:
@@ -293,6 +303,14 @@ def continuity_path(root: Path, value: str) -> Path:
     return path
 
 
+def continuity_record_key(root: Path, value: str) -> tuple[str, Path]:
+    path = continuity_path(root, value)
+    key = path.relative_to(root.resolve()).as_posix()
+    if path.suffix.lower() != ".json" or not key.startswith("work/"):
+        raise ValueError("Use an existing JSON section under the local Owner work directory")
+    return key, path
+
+
 def _delivery_source_manifest(root: Path, delivery: dict) -> dict[str, str]:
     values = delivery.get("scope_sources")
     if not isinstance(values, list) or not values or len(values) > 40:
@@ -376,6 +394,87 @@ def _delivery_evidence_is_current(root: Path, item: dict, requirement_id: str,
                 or hashlib.sha256(source.read_bytes()).hexdigest() != digest):
             return False
     return True
+
+
+def _delivery_effect_ledger(root: Path, item: dict, delivery: dict,
+                            scope: dict[str, str]) -> dict[str, dict]:
+    entries = delivery.get("effect_ledger", [])
+    if not isinstance(entries, list) or len(entries) > MAX_EVIDENCE_PATHS:
+        raise ValueError("Invalid bounded external-effect ledger")
+    required_pins = {
+        continuity_path(root, value).relative_to(root.resolve()).as_posix()
+        for value in item.get("source_paths", [])
+    } | set(scope)
+    result = {}
+    used_paths = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise TypeError("Invalid external-effect ledger entry")
+        effect_id = entry.get("pending_effect_sha256")
+        status = entry.get("status")
+        expected_fields = {"pending_effect_sha256", "status"}
+        if status == "RESOLVED":
+            expected_fields |= {"path", "sha256"}
+        if (set(entry) != expected_fields
+                or not isinstance(effect_id, str)
+                or not SHA256_RE.fullmatch(effect_id)
+                or status not in {"PENDING", "RESOLVED"}):
+            raise ValueError("Invalid external-effect ledger identity or state")
+        if effect_id in result:
+            raise ValueError("An external effect may appear only once in the ledger")
+        if status == "PENDING":
+            result[effect_id] = {"status": "PENDING"}
+            continue
+        if (not isinstance(entry.get("path"), str)
+                or entry["path"] not in item.get("evidence_paths", [])
+                or entry["path"] in used_paths
+                or not isinstance(entry.get("sha256"), str)
+                or not SHA256_RE.fullmatch(entry["sha256"])):
+            raise ValueError("Invalid external-effect resolution reference")
+        reference = entry
+        path = continuity_path(root, reference["path"])
+        raw_path = root / Path(reference["path"])
+        if (path.suffix != ".json" or not path.is_file() or raw_path.is_symlink()
+                or path.stat().st_size > 2_000_000):
+            raise ValueError("External-effect resolution must be a readable local JSON receipt")
+        body = path.read_bytes()
+        if hashlib.sha256(body).hexdigest() != reference["sha256"]:
+            raise ValueError("External-effect resolution receipt hash is stale")
+        try:
+            receipt = json.loads(body.decode("utf-8-sig"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise ValueError("External-effect resolution receipt is unreadable") from error
+        if not isinstance(receipt, dict):
+            raise TypeError("External-effect resolution receipt must be a JSON object")
+        encoded = json.dumps(receipt, ensure_ascii=False)
+        if re.search(r"\b(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9]{15,}|Bearer\s+[A-Za-z0-9._~+/=-]{12,})", encoded, re.IGNORECASE):
+            raise ValueError("External-effect resolution receipt contains a credential-like value")
+        if (set(receipt) != {"schema_version", "pending_effect_sha256", "resolution", "head", "source_pins", "observation"}
+                or receipt.get("schema_version") != 1
+                or receipt.get("pending_effect_sha256") != effect_id
+                or receipt.get("resolution") not in EFFECT_RESOLUTION_STATUSES
+                or not isinstance(receipt.get("head"), str)
+                or not re.fullmatch(r"[0-9a-f]{40,64}", receipt["head"])
+                or not isinstance(receipt.get("observation"), str)
+                or len(receipt["observation"].strip()) < 10):
+            raise ValueError("External-effect resolution receipt does not identify a terminal readback")
+        pins = receipt.get("source_pins")
+        if (not isinstance(pins, dict) or not pins or len(pins) > 80
+                or not set(pins).issubset(required_pins)):
+            raise ValueError("External-effect resolution must retain its declared historical source scope")
+        for source_name, digest in pins.items():
+            continuity_path(root, source_name)
+            if not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
+                raise ValueError("External-effect resolution contains an invalid historical source pin")
+        result[effect_id] = {"status": "RESOLVED",
+                             "receipt": {"path": reference["path"], "sha256": reference["sha256"],
+                                         "source_pins": pins, "head": receipt["head"]}}
+        used_paths.add(reference["path"])
+    expected_pending = {_pending_effect_id(value) for value in item.get("pending_effects", [])}
+    ledger_pending = {identifier for identifier, value in result.items() if value["status"] == "PENDING"}
+    if expected_pending != ledger_pending:
+        raise ValueError("pending_effects must exactly match the append-only effect ledger's PENDING entries")
+    return result
 
 
 def validate_delivery(root: Path, item: dict) -> dict | None:
@@ -468,6 +567,7 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
             raise ValueError("JOB_CLOSED requires the continuity record's remaining list to be empty")
         if any(value["status"] != "JOB_CLOSED" for value in requirements):
             raise ValueError("Delivery cannot close while any required outcome remains open, deferred, or blocked")
+    effect_ledger = _delivery_effect_ledger(root, item, delivery, scope)
     exit_record = delivery.get("exit")
     if exit_record is not None:
         if (not isinstance(exit_record, dict)
@@ -523,13 +623,14 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
             if (requirement["id"] not in source_text
                     or normalized_requirement_source not in normalized_source):
                 raise ValueError("PO_DEFERRED source receipt must name each deferred requirement and its PO source")
-    return {"scope_sources": scope, "requirements": requirements}
+    return {"scope_sources": scope, "requirements": requirements,
+            "effect_ledger": effect_ledger}
 
 
 def continuity_record(root: Path, record: str, section: str) -> dict:
-    path = continuity_path(root, record)
-    if path.suffix != ".json" or Path(record).parts[0] != "work":
-        raise ValueError("Use a section in the existing local work JSON record")
+    _, path = continuity_record_key(root, record)
+    if not path.is_file() or path.is_symlink() or path.stat().st_size > MAX_CONTINUITY_RECORD_BYTES:
+        raise ValueError("Continuity record is missing, unsafe, or exceeds its structured evidence budget")
     if not isinstance(section, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", section):
         raise ValueError("Exact top-level section required")
     item = json.loads(path.read_text("utf-8-sig"))[section]
@@ -548,14 +649,22 @@ def continuity_record(root: Path, record: str, section: str) -> dict:
             not isinstance(value, str) or not value.strip() or len(value) > 1800 for value in values
         ):
             raise ValueError("Invalid bounded task context list")
+        if key == "pending_effects" and len({_pending_effect_id(value) for value in values}) != len(values):
+            raise ValueError("Pending external-effect identities must be unique")
     item["source_paths"] = sorted({
         continuity_path(root, value).relative_to(root.resolve()).as_posix()
         for value in item["source_paths"]
     })
     validate_delivery(root, item)
     encoded = json.dumps(item, ensure_ascii=False)
-    if len(encoded) > 24000 or re.search(r"\b(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9]{15,}|Bearer\s+[A-Za-z0-9._~+/=-]{12,})", encoded, re.IGNORECASE):
-        raise ValueError("Oversized or potentially sensitive context; keep pointers instead")
+    narrative = dict(item)
+    delivery = narrative.pop("delivery", None)
+    narrative_chars = len(json.dumps(narrative, ensure_ascii=False))
+    delivery_bytes = len(json.dumps(delivery, ensure_ascii=False).encode("utf-8")) if delivery is not None else 0
+    if (narrative_chars > MAX_CONTINUITY_NARRATIVE_CHARS
+            or delivery_bytes > MAX_DELIVERY_BYTES
+            or re.search(r"\b(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9]{15,}|Bearer\s+[A-Za-z0-9._~+/=-]{12,})", encoded, re.IGNORECASE)):
+        raise ValueError("Oversized narrative/structured evidence or potentially sensitive context")
     return item
 
 
@@ -566,6 +675,152 @@ def continuity_pins(root: Path, paths: list[str]) -> dict:
         pins[path.relative_to(root.resolve()).as_posix()] = (
             hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "ABSENT")
     return pins
+
+
+def _prompt_binding(state: dict) -> dict:
+    prompt_hash = state.get("last_prompt_hash")
+    if not isinstance(prompt_hash, str) or not SHA256_RE.fullmatch(prompt_hash):
+        prompt_hash = None
+    turn_id = state.get("turn_id")
+    if isinstance(turn_id, str) and turn_id.strip():
+        return {"prompt_hash": prompt_hash, "turn_id": turn_id}
+    submitted_at = state.get("last_prompt_at")
+    return {"prompt_hash": prompt_hash,
+            "submitted_at": submitted_at if isinstance(submitted_at, (int, float)) else None}
+
+
+def _delivery_nonclosure_exit_signature(root: Path, item: dict) -> tuple[str, str] | None:
+    delivery = item.get("delivery")
+    if not isinstance(delivery, dict) or delivery.get("status") not in {"EXTERNAL_BLOCKED", "PO_DEFERRED"}:
+        return None
+    exit_record = delivery.get("exit")
+    proofs = []
+    if delivery["status"] == "EXTERNAL_BLOCKED":
+        for requirement in delivery.get("requirements", []):
+            if requirement.get("status") == "JOB_CLOSED":
+                continue
+            for evidence in requirement.get("evidence", []):
+                if evidence.get("kind") == "EXTERNAL_BLOCKER":
+                    proofs.append({"requirement_id": requirement.get("id"),
+                                   "path": evidence.get("path"), "sha256": evidence.get("sha256")})
+    elif isinstance(exit_record, dict) and isinstance(exit_record.get("evidence_path"), str):
+        try:
+            receipt = continuity_path(root, exit_record["evidence_path"])
+            receipt_hash = hashlib.sha256(receipt.read_bytes()).hexdigest()
+            for requirement in delivery.get("requirements", []):
+                if requirement.get("status") == "PO_DEFERRED":
+                    proofs.append({
+                        "requirement_id": requirement.get("id"),
+                        "po_source": requirement.get("po_source"),
+                        "path": exit_record["evidence_path"],
+                        "sha256": receipt_hash,
+                    })
+        except (OSError, ValueError):
+            return None
+    payload = {
+        "status": delivery["status"],
+        "unfinished": sorted(
+            (value.get("id"), value.get("status"))
+            for value in delivery.get("requirements", [])
+            if value.get("status") != "JOB_CLOSED"
+        ),
+        "proofs": sorted(proofs, key=lambda value: (str(value.get("requirement_id", "")), str(value.get("path", "")))),
+    }
+    digest = hashlib.sha256(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return delivery["status"], digest
+
+
+def _freeze_nonclosure_exit(root: Path, state: dict, item: dict, guard: dict) -> None:
+    signature = _delivery_nonclosure_exit_signature(root, item)
+    if signature is None:
+        return
+    status, digest = signature
+    history = guard.setdefault("nonclosure_exits", {})
+    if not isinstance(history, dict):
+        raise TypeError("Frozen non-closure exit history is invalid")
+    if digest in history:
+        return
+    if len(history) >= MAX_NON_CLOSURE_EXITS:
+        raise ValueError("Frozen non-closure exit history reached its bounded limit")
+    history[digest] = {"status": status, **_prompt_binding(state)}
+
+
+def _nonclosure_exit_matches_current_prompt(root: Path, state: dict, item: dict) -> bool:
+    signature = _delivery_nonclosure_exit_signature(root, item)
+    guard = state.get("delivery_guard")
+    if signature is None or not isinstance(guard, dict):
+        return False
+    status, digest = signature
+    frozen = guard.get("nonclosure_exits", {}).get(digest)
+    current = _prompt_binding(state)
+    return (
+        isinstance(frozen, dict)
+        and frozen.get("status") == status
+        and current.get("prompt_hash") is not None
+        and frozen == {"status": status, **current}
+    )
+
+
+def _reconcile_pending_effects(root: Path, item: dict, guard: dict) -> None:
+    prior = guard.get("pending_effects")
+    validation = validate_delivery(root, item)
+    ledger = validation["effect_ledger"]
+    if not isinstance(prior, dict) or not prior:
+        prior = {
+            identifier: ({"status": "PENDING"} if value["status"] == "PENDING" else {
+                "status": "RESOLVED", "receipt": {
+                    "path": value["receipt"]["path"],
+                    "sha256": value["receipt"]["sha256"],
+                }
+            })
+            for identifier, value in ledger.items()
+        }
+        guard["pending_effects"] = prior
+    if not set(prior).issubset(ledger):
+        raise ValueError("The append-only external-effect ledger cannot remove an admitted effect identity")
+    for identifier in set(ledger) - set(prior):
+        if ledger[identifier].get("status") != "PENDING":
+            raise ValueError("A newly admitted external effect must first be frozen as PENDING")
+        prior[identifier] = {"status": "PENDING"}
+    for identifier, frozen in prior.items():
+        if not SHA256_RE.fullmatch(identifier) or not isinstance(frozen, dict):
+            raise ValueError("Frozen pending-effect history is invalid")
+        current = ledger[identifier]
+        status = frozen.get("status")
+        if status == "PENDING":
+            if current.get("status") == "RESOLVED":
+                expected_pins = dict(validation["scope_sources"])
+                for value in item.get("source_paths", []):
+                    source = continuity_path(root, value)
+                    if not source.is_file() or source.is_symlink():
+                        raise ValueError("External-effect resolution requires every admitted implementation source")
+                    expected_pins[source.relative_to(root.resolve()).as_posix()] = (
+                        hashlib.sha256(source.read_bytes()).hexdigest()
+                    )
+                receipt = current.get("receipt", {})
+                if receipt.get("source_pins") != expected_pins:
+                    raise ValueError("First effect resolution must pin the complete source version actually admitted")
+                frozen.clear()
+                frozen.update({"status": "RESOLVED", "receipt": {
+                    "path": receipt["path"], "sha256": receipt["sha256"],
+                }})
+            elif current.get("status") != "PENDING":
+                raise ValueError("A pending effect needs its exact resolution receipt before removal")
+        elif status == "RESOLVED":
+            normalized = None
+            if current.get("status") == "PENDING":
+                normalized = {"status": "PENDING"}
+            elif current.get("status") == "RESOLVED":
+                normalized = {"status": "RESOLVED", "receipt": {
+                    "path": current.get("receipt", {}).get("path"),
+                    "sha256": current.get("receipt", {}).get("sha256"),
+                }}
+            if normalized != frozen:
+                raise ValueError("A frozen external-effect resolution receipt cannot be removed or replaced")
+        else:
+            raise ValueError("Frozen pending-effect status is invalid")
 
 
 def _delivery_guard_snapshot(delivery: dict) -> dict:
@@ -584,12 +839,19 @@ def _delivery_guard_snapshot(delivery: dict) -> dict:
         "record_po_source": delivery["po_source"],
         "requirements": requirements,
         "scope_sources": {value["path"]: [value["sha256"]] for value in delivery["scope_sources"]},
+        "pending_effects": {},
+        "nonclosure_exits": {},
     }
 
 
 def _check_delivery_rebind(root: Path, state: dict, identity: dict,
                            record: str, section: str, item: dict) -> dict | None:
     guard = state.get("delivery_guard")
+    bound = state.get("continuity")
+    if isinstance(bound, dict) and isinstance(bound.get("record"), str):
+        bound["record"] = continuity_record_key(root, bound["record"])[0]
+    if isinstance(guard, dict) and isinstance(guard.get("record"), str):
+        guard["record"] = continuity_record_key(root, guard["record"])[0]
     if isinstance(guard, dict):
         if guard.get("identity") != identity:
             raise ValueError("Delivery guard belongs to another session identity")
@@ -664,20 +926,24 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
             }
             for identifier, value in current.items()
         }
-        return guard
-    delivery_state = _delivery_guard_snapshot(delivery)
-    delivery_state.update({
-        "identity": identity, "record": record, "section": section,
-        "scope_sources": {value["path"]: [value["sha256"]] for value in delivery["scope_sources"]},
-        "closed_ids": [],
-        "source_paths": list(item["source_paths"]),
-    })
-    state["delivery_guard"] = delivery_state
-    return delivery_state
+    else:
+        delivery_state = _delivery_guard_snapshot(delivery)
+        delivery_state.update({
+            "identity": identity, "record": record, "section": section,
+            "scope_sources": {value["path"]: [value["sha256"]] for value in delivery["scope_sources"]},
+            "closed_ids": [],
+            "source_paths": list(item["source_paths"]),
+        })
+        state["delivery_guard"] = delivery_state
+        guard = delivery_state
+    _reconcile_pending_effects(root, item, guard)
+    _freeze_nonclosure_exit(root, state, item, guard)
+    return guard
 
 
 def continuity_save(root: Path, state: dict, event: dict, record: str, section: str) -> dict:
     """Bind an existing owner record, never create a task or grant authorization."""
+    record = continuity_record_key(root, record)[0]
     item = continuity_record(root, record, section)
     identity = continuity_identity(event, root)
     guard = _check_delivery_rebind(root, state, identity, record, section, item)
@@ -720,6 +986,14 @@ def continuity_read(root: Path, state: dict, event: dict) -> dict:
         return result
     if bound.get("schema_version") != 1 or bound.get("identity") != identity:
         result["reasons"] = ["IDENTITY_OR_SCHEMA_MISMATCH"]
+        return result
+    try:
+        bound["record"] = continuity_record_key(root, bound.get("record"))[0]
+        guard = state.get("delivery_guard")
+        if isinstance(guard, dict) and isinstance(guard.get("record"), str):
+            guard["record"] = continuity_record_key(root, guard["record"])[0]
+    except (OSError, ValueError, TypeError):
+        result["reasons"] = ["OWNER_RECORD_UNREADABLE_OR_INVALID"]
         return result
     result.update({"record": bound["record"], "section": bound["section"],
                    "saved_head": bound["head"], "saved_at": bound["saved_at"]})
@@ -826,6 +1100,29 @@ def delivery_guard_reasons(state: dict, bound: dict, item: dict) -> list[str]:
         reasons.append("FROZEN_SCOPE_REFERENCE_REMOVED")
     if guard.get("record_po_source") not in delivery.get("po_source", ""):
         reasons.append("ORIGINAL_PO_TASK_SOURCE_REMOVED")
+    frozen_effects = guard.get("pending_effects")
+    if not isinstance(frozen_effects, dict):
+        reasons.append("PENDING_EFFECT_HISTORY_NOT_FROZEN")
+    else:
+        current_pending = {_pending_effect_id(value) for value in item.get("pending_effects", [])}
+        entries = delivery.get("effect_ledger", [])
+        ledger = {value.get("pending_effect_sha256"): value for value in entries if isinstance(value, dict)}
+        ledger_pending = {identifier for identifier, value in ledger.items() if value.get("status") == "PENDING"}
+        if (current_pending != ledger_pending
+                or set(ledger) != set(frozen_effects)):
+            reasons.append("FROZEN_EXTERNAL_EFFECT_LEDGER_CHANGED")
+        for identifier, frozen_effect in frozen_effects.items():
+            current = ledger.get(identifier)
+            normalized = None
+            if isinstance(current, dict) and current.get("status") == "PENDING":
+                normalized = {"status": "PENDING"}
+            elif isinstance(current, dict) and current.get("status") == "RESOLVED":
+                normalized = {
+                    "status": "RESOLVED",
+                    "receipt": {"path": current.get("path"), "sha256": current.get("sha256")},
+                }
+            if not isinstance(frozen_effect, dict) or normalized != frozen_effect:
+                reasons.append("PENDING_EFFECT_HISTORY_INVALID")
     return reasons
 
 
@@ -1102,11 +1399,15 @@ def classify_turn_exit(prompt: str) -> str:
     """Recognize brief, direct exits; quoted, long, or mixed instructions keep running."""
     text = str(prompt or "").strip()
     if (not text or len(text) > 240 or text.count("\n") > 1
-            or "<hook_prompt" in text.lower()
             or "```" in text
             or re.search(r"[>『』「」“”‘’]", text)):
         return "RUNNING"
-    if re.match(r"^(?:等我|等待我|待我)(?:的)?(?:批准|授权|确认|审批)(?:后|前)?(?:再执行|再继续|之前先停)?[。.!！]?$|^(?:批准|授权|审批)(?:前|之前)(?:先)?(?:等待|不要执行|先停)[。.!！]?", text, re.IGNORECASE):
+    if re.fullmatch(
+        r"(?:等我|等待我|待我)(?:的)?(?:批准|授权|确认|审批)(?:后|前)?(?:再执行|再继续|之前先停)?[。.!！]?|"
+        r"(?:批准|授权|审批)(?:前|之前)(?:先)?(?:等待|不要执行|先停)[。.!！]?",
+        text,
+        re.IGNORECASE,
+    ):
         return "APPROVAL_WAIT"
     if re.fullmatch(
         r"(?:please\s+)?(?:wait for (?:my|the product owner(?:'s)?) "
@@ -1130,7 +1431,9 @@ def classify_turn_exit(prompt: str) -> str:
         return "PO_PAUSED"
     negative_action = re.compile(
         r"(?:不要|先不|别)(?:再)?(?:修改|执行|继续|实现|更新|开工|推进)"
-        r"(?:\s*(?:或|和|并|以及)\s*(?:修改|执行|继续|实现|更新|开工|推进))*",
+        r"(?:\s*(?:或|和|并|以及)\s*(?:修改|执行|继续|实现|更新|开工|推进))*|"
+        r"(?:please\s+)?(?:do\s+not|don't)\s+"
+        r"(?:modify|change|edit|write|run|execute|implement|update|fix|continue|proceed|resume)\b",
         re.IGNORECASE,
     )
     report_request = re.match(
@@ -1140,15 +1443,23 @@ def classify_turn_exit(prompt: str) -> str:
         r"(?:即可|就行)?(?:[，,。.!！?？].*)?$|"
         r"^(?:当前|最新|各窗口|整体)(?:的)?(?:进度|状态)(?:是什么|如何|怎样)?[。.!！?？]?$|"
         r"^(?:我想|我要|请让我)(?:看|了解|知道)?(?:当前|最新|各窗口|整体)?(?:进度|状态)(?:如何|怎么样|是什么)?[。.!！?？]?$|"
+        r"^what\s+is\s+(?:the\s+)?(?:current|latest)\s+status\b.*$|"
+        r"^please\s+(?:tell|show|give)\s+me\b.*\b(?:current|latest)\s+status\b.*$|"
         r"^summary(?:\s+only)?[.!?]?$|^status report[.!?]?$",
         text,
         re.IGNORECASE,
     )
     if report_request and not re.search(
-        r"继续|修复|实现|更新|开工|推进|同步落实|接着做", negative_action.sub("", text), re.IGNORECASE
+        r"继续|修复|实现|更新|开工|推进|同步落实|接着做|"
+        r"\b(?:continue|execute|repair|fix|implement|update|start|proceed|change|modify|edit|write|run|resume)\b",
+        negative_action.sub("", text), re.IGNORECASE
     ):
         return "REPORT_ONLY"
-    if re.search(r"继续|执行|修复|实现|更新|开工|推进|同步落实|继续做|接着做", negative_action.sub("", text), re.IGNORECASE):
+    if re.search(
+        r"继续|执行|修复|实现|更新|开工|推进|同步落实|继续做|接着做|"
+        r"\b(?:continue|execute|repair|fix|implement|update|start|proceed|change|modify|edit|write|run|resume)\b",
+        negative_action.sub("", text), re.IGNORECASE,
+    ):
         return "RUNNING"
     # Only a direct report request exits this turn; clarifications and task
     # prompts that merely mention status continue through the full outcome.
@@ -1222,6 +1533,10 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
             return False, "The frozen delivery survived context clear; rebind its existing owner record before stopping."
         return True, None  # A genuinely unbound legacy session remains compatible.
     try:
+        bound["record"] = continuity_record_key(root, bound.get("record"))[0]
+        guard = state.get("delivery_guard")
+        if isinstance(guard, dict) and isinstance(guard.get("record"), str):
+            guard["record"] = continuity_record_key(root, guard["record"])[0]
         record_path = continuity_path(root, bound.get("record"))
         current_record_hash = hashlib.sha256(record_path.read_bytes()).hexdigest()
         if bound.get("pins", {}).get(bound.get("record")) != current_record_hash:
@@ -1250,8 +1565,12 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
         # current source-pinned evidence and includes a concrete resume condition.
         if not unfinished:
             return False, "EXTERNAL_BLOCKED has no remaining blocked requirement; reconcile the outcome status."
+        if not _nonclosure_exit_matches_current_prompt(root, state, item):
+            return False, "EXTERNAL_BLOCKED evidence belongs to an earlier prompt or changed exit; record a fresh current blocker receipt before stopping."
         return True, None
     if status == "PO_DEFERRED":
+        if not _nonclosure_exit_matches_current_prompt(root, state, item):
+            return False, "PO_DEFERRED belongs to an earlier prompt; bind a fresh direct PO source receipt and resume condition before stopping."
         exit_record = delivery["exit"]
         remaining_ids = sorted(value["id"] for value in unfinished)
         state["delivery_exit"] = {
@@ -1310,11 +1629,11 @@ def handle(event: dict, root: Path, state: dict) -> dict:
     if name == "UserPromptSubmit":
         # Never persist the raw user prompt, credentials or agent-relayed instructions.
         prompt = str(event.get("prompt", ""))
-        synthetic_hook_prompt = "<hook_prompt" in prompt.lower()
         incoming_turn_id = event.get("turn_id")
         same_turn = (isinstance(incoming_turn_id, str)
                      and incoming_turn_id == state.get("turn_id"))
-        if not synthetic_hook_prompt and not same_turn:
+        # User text is not trusted metadata. Only the active turn ID can identify a duplicate event.
+        if not same_turn:
             state["last_prompt_hash"] = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
             state["last_prompt_at"] = time.time()
             state["turn_exit_mode"] = classify_turn_exit(prompt)

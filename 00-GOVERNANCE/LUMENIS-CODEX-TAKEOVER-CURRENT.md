@@ -14,24 +14,41 @@ retains unchanged-scope receipts across unrelated commits. Explicit source-pinne
 PO deferral is a non-closure exit. Frozen IDs and implementation paths survive
 context clear; record switching revalidates current prior closure, and any new
 direct instruction requires reconciliation before a terminal exit.
+Non-closure exits retain their authorizing prompt and immutable proof identity;
+rewriting their description does not renew an old blocker or deferral. Pending
+external effects remain in the same append-only continuity ledger until a
+hash-pinned terminal readback resolves them. Structured outcome evidence has a
+separate bounded budget so a complete task can retain all 100 supported outcomes.
 English and Chinese pause/approval instructions preserve unfinished outcomes. Hook
 configuration follows the current task and actual evidence, never historical
 window/model state. See `.codex/README.md` for its schema, bounded Stop behavior,
 native activation and rollback. Neither a hook PASS nor a source publication
 establishes product acceptance.
 
-The PO has now authorized completion of all three previously reported upgrades:
+Local verification of this hook repair: the frozen implementation passed 138
+engineering-helper regressions; the final type-validation and mixed-language
+prompt correction then passed five affected regressions, full Ruff on both
+changed Python files and compilation. These are development-tool checks, not
+product E2E or proof that a running workstation has loaded the published handler.
+
+The direct PO instructions dated 2026-10-16 covered three reported upgrades:
 all relevant issue #17/Slack updates and research adoption; all approved Cortech
 capabilities except its Muse account implementation; and full REA reinspection
 and usable adoption of the original applications/sites. REA must serve both
 platform-specific acquisition improvements and missing product operations and
 capabilities. Preserve every original object and requirement, source/permission
 boundaries, independent Shared creation, AI-independent basic work and the four
-approved surfaces. Previously recorded report-and-wait conditions do not override
-this direct instruction. The hooks are completed first, then the existing
-issue #17/Slack and Cortech upgrades; only then does new REA investigation proceed
-into underlying capability logic, page layouts/elements and more complete,
-accurate acquisition, followed by its actual product improvements. Subsequent outcomes need
+approved surfaces. The task history also records a later direct PO assignment
+for frontend-plan/text-sketch consolidation, pixel/code research and subsequent
+REA investigation, without frontend construction in that assignment. Its intended
+outputs are the existing unique complete plan and sketch documents plus validated
+capability handoffs for product implementation and integration.
+REA covers underlying capability logic, page layouts/elements and more complete,
+accurate acquisition, followed by actual product improvements. These dated scope
+records prescribe no current start, pause, dependency order, window or model.
+Each task follows its newest applicable direct PO instruction and local readback;
+publication cannot suspend independently authorized work or resume historical work.
+Subsequent outcomes need
 actual input, useful output, save/revise/reopen/recovery and loaded-version
 evidence through existing owners. PR #77/#78 remain bounded integrated repairs,
 not completion of these three upgrades. Current implementation, runtime and

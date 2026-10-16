@@ -355,6 +355,34 @@ class EngineeringTests(unittest.TestCase):
         self.assertFalse(result["dispatch_authorized"])
         self.assertFalse(result["product_accepted"])
 
+    def test_continuity_narrative_retains_24000_unicode_character_budget(self):
+        record = self.make_continuity_record()
+        payload = json.loads(record.read_text("utf-8"))
+        payload["continuity"]["objective"] = "任务" * 3000
+        payload["continuity"]["native_goal"] = "结果" * 3000
+        record.write_text(json.dumps(payload, ensure_ascii=False), "utf-8")
+        item = h.continuity_record(self.root, "work/checkpoint.json", "continuity")
+        self.assertGreater(len(json.dumps(item, ensure_ascii=False).encode("utf-8")), 24_000)
+
+    def test_continuity_save_and_lookup_normalize_record_path_spellings(self):
+        record, payload = self.delivery_fixture()
+        event = self.delivery_event
+        fresh_state = {
+            "last_prompt_hash": self.state["last_prompt_hash"],
+            "turn_id": self.state["turn_id"],
+        }
+        h.continuity_save(self.root, fresh_state, event, "./work/checkpoint.json", "continuity")
+        self.assertEqual(fresh_state["continuity"]["record"], "work/checkpoint.json")
+        fresh_state["continuity"]["record"] = r".\work\checkpoint.json"
+        fresh_state["delivery_guard"]["record"] = r".\work\checkpoint.json"
+        h.continuity_read(self.root, fresh_state, event)
+        self.assertEqual(fresh_state["continuity"]["record"], "work/checkpoint.json")
+
+        self.close_delivery_fixture(record, payload)
+        self.state["continuity"]["record"] = r".\work\checkpoint.json"
+        self.state["delivery_guard"]["record"] = r".\work\checkpoint.json"
+        self.assertEqual(self.delivery_stop(), {})
+
     def test_continuity_authority_change_requires_rebind_before_runner(self):
         self.bind_verification_scope(["sample.py"])
         architecture = self.root / "00-GOVERNANCE" / "LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
@@ -1386,15 +1414,19 @@ with hook.locked(Path(sys.argv[2])):
             self.fail("An empty legacy lock must not be taken over")
         self.assertEqual(lock_path.read_bytes(), b"", "Legacy marker must remain untouched")
 
-    def delivery_fixture(self):
+    def delivery_fixture(self, pending_effects=None):
         """An isolated tool outcome; never a product acceptance receipt."""
-        record = self.make_continuity_record()
+        record = self.make_continuity_record(pending_effects)
         payload = json.loads(record.read_text("utf-8"))
         payload["continuity"]["delivery"] = {
             "schema_version": 1,
             "status": "RUNNING",
             "po_source": "Direct PO: finish both admitted tooling outcomes",
             "scope_sources": [{"path": "AGENTS.md", "sha256": h.hashlib.sha256((self.root / "AGENTS.md").read_bytes()).hexdigest()}],
+            "effect_ledger": [
+                {"pending_effect_sha256": h._pending_effect_id(value), "status": "PENDING"}
+                for value in (pending_effects or [])
+            ],
             "requirements": [
                 {"id": "TOOL-1", "outcome_class": "DEVELOPMENT_TOOL", "acceptance": "Actual tool workflow completes and can recover", "coverage_refs": ["tool-input", "tool-output", "tool-recovery"], "status": "OPEN", "evidence": []},
                 {"id": "TOOL-2", "outcome_class": "DEVELOPMENT_TOOL", "acceptance": "Published source and activated tool match", "coverage_refs": ["source", "loaded-version"], "status": "OPEN", "evidence": []},
@@ -1402,6 +1434,8 @@ with hook.locked(Path(sys.argv[2])):
         }
         record.write_text(json.dumps(payload), "utf-8")
         self.delivery_event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Complete the admitted tooling outcomes", turn_id="tooling-initial")
         h.continuity_save(self.root, self.state, self.delivery_event, "work/checkpoint.json", "continuity")
         return record, payload
 
@@ -1510,9 +1544,88 @@ with hook.locked(Path(sys.argv[2])):
                 })
         self.save_delivery_fixture(record, payload)
 
+    def block_delivery_fixture(self, record, payload):
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        delivery["status"] = "EXTERNAL_BLOCKED"
+        receipt_paths = []
+        head = self.git("rev-parse", "HEAD").strip()
+        pins = {name: h.hashlib.sha256((self.root / name).read_bytes()).hexdigest()
+                for name in [*item["source_paths"], *(source["path"] for source in delivery["scope_sources"])]}
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "BLOCKED"
+            name = f"work/{requirement['id']}-EXTERNAL-BLOCKER.json"
+            receipt = {
+                "schema_version": 1, "requirement_id": requirement["id"],
+                "kind": "EXTERNAL_BLOCKER", "result": "BLOCKED", "head": head,
+                "source_pins": pins,
+                "observation": "Isolated fixture records a concrete external dependency blocker",
+            }
+            (self.root / name).write_text(json.dumps(receipt), "utf-8")
+            item["evidence_paths"].append(name)
+            requirement["evidence"].append({
+                "path": name, "sha256": h.hashlib.sha256((self.root / name).read_bytes()).hexdigest(),
+                "kind": "EXTERNAL_BLOCKER", "result": "BLOCKED", "head": head, "source_pins": pins,
+            })
+            receipt_paths.append(name)
+        item["remaining"] = ["The two admitted tool outcomes remain blocked by the documented external dependency."]
+        delivery["exit"] = {
+            "reason": "EXTERNAL_BLOCKED: both outcomes need the named external dependency.",
+            "evidence_path": receipt_paths[0],
+            "resume_condition": "Resume after the external dependency is available and read back.",
+        }
+        self.save_delivery_fixture(record, payload)
+
+    def resolve_effect_fixture(self, payload, effect):
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        effect_id = h._pending_effect_id(effect)
+        head = self.git("rev-parse", "HEAD").strip()
+        sources = [*item["source_paths"], *(value["path"] for value in delivery["scope_sources"])]
+        pins = {name: h.hashlib.sha256((self.root / name).read_bytes()).hexdigest() for name in sources}
+        receipt = {
+            "schema_version": 1,
+            "pending_effect_sha256": effect_id,
+            "resolution": "RECONCILED",
+            "head": head,
+            "source_pins": pins,
+            "observation": "Isolated fixture has an exact terminal readback for this operation",
+        }
+        name = f"work/effect-resolution-{effect_id[:16]}.json"
+        receipt_path = self.root / name
+        receipt_path.write_text(json.dumps(receipt), "utf-8")
+        item["evidence_paths"].append(name)
+        ledger_entry = next(value for value in delivery["effect_ledger"]
+                            if value["pending_effect_sha256"] == effect_id)
+        ledger_entry.update({
+            "status": "RESOLVED",
+            "path": name,
+            "sha256": h.hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+        })
+        item["pending_effects"].remove(effect)
+        return receipt_path
+
     def test_delivery_complete_current_outcomes_and_recovery_allow_stop(self):
         record, payload = self.delivery_fixture()
         self.close_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_delivery_supports_100_complete_outcomes_with_real_and_recovery_receipts(self):
+        record, payload = self.delivery_fixture()
+        requirements = payload["continuity"]["delivery"]["requirements"]
+        for index in range(3, 101):
+            requirements.append({
+                "id": f"TOOL-{index}",
+                "outcome_class": "DEVELOPMENT_TOOL",
+                "acceptance": f"Complete the admitted tool operation {index} with a useful readback and recoverable saved result. "
+                              + "Confirm the actual workflow outcome and restored state. " * 18,
+                "coverage_refs": [f"tool-{index}-operation", f"tool-{index}-recovery"],
+                "status": "OPEN",
+                "evidence": [],
+            })
+        self.save_delivery_fixture(record, payload)
+        self.close_delivery_fixture(record, payload)
+        self.assertEqual(len(payload["continuity"]["delivery"]["requirements"]), 100)
         self.assertEqual(self.delivery_stop(), {})
 
     def test_delivery_switch_rechecks_prior_record_and_new_requirement(self):
@@ -1579,6 +1692,111 @@ with hook.locked(Path(sys.argv[2])):
         })
         self.save_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_external_blocker_exit_cannot_be_rebound_to_a_new_prompt(self):
+        record, payload = self.delivery_fixture()
+        self.block_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Continue the full outcome after the new instruction", turn_id="blocker-new-prompt")
+        payload["continuity"]["delivery"]["exit"]["reason"] += "."
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+        delivery = payload["continuity"]["delivery"]
+        old_receipt = self.root / delivery["exit"]["evidence_path"]
+        receipt = json.loads(old_receipt.read_text("utf-8"))
+        receipt["observation"] = "Fresh isolated readback still proves the same external dependency is unavailable"
+        old_receipt.write_text(json.dumps(receipt), "utf-8")
+        for requirement in delivery["requirements"]:
+            evidence = requirement["evidence"][0]
+            evidence_path = self.root / evidence["path"]
+            evidence_body = json.loads(evidence_path.read_text("utf-8"))
+            evidence_body["observation"] = (
+                "Fresh isolated readback still proves the named external dependency is unavailable for "
+                + requirement["id"]
+            )
+            evidence_path.write_text(json.dumps(evidence_body), "utf-8")
+            evidence["sha256"] = h.hashlib.sha256(evidence_path.read_bytes()).hexdigest()
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_po_deferred_cannot_be_laundered_through_running_or_clear(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        deferred = delivery["requirements"][1]
+        deferred["po_source"] = "Direct PO instruction: defer TOOL-2 pending its named approval."
+        source_path = "work/po-deferred.md"
+        source_text = (
+            "Product Owner direct instruction receipt\n"
+            "PO_DEFERRED TOOL-2\n"
+            f"{deferred['po_source']}\n"
+        )
+        (self.root / source_path).write_text(source_text, "utf-8")
+        item["evidence_paths"].append(source_path)
+        delivery["scope_sources"].append({
+            "path": source_path,
+            "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+        self.close_delivery_fixture(record, payload)
+        deferred["status"] = "PO_DEFERRED"
+        delivery["status"] = "PO_DEFERRED"
+        item["remaining"] = ["TOOL-2 remains deferred until the named approval is received."]
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED: TOOL-2 remains open under the direct PO instruction.",
+            "evidence_path": source_path,
+            "resume_condition": "Resume TOOL-2 only when its named Product Owner approval is received.",
+        }
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Resume TOOL-2 and continue the authorized work", turn_id="deferred-resume")
+        delivery["status"] = "RUNNING"
+        deferred["status"] = "OPEN"
+        self.save_delivery_fixture(record, payload)
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        delivery["status"] = "PO_DEFERRED"
+        deferred["status"] = "PO_DEFERRED"
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        delivery["exit"]["reason"] += "."
+        self.save_delivery_fixture(record, payload)
+        result = self.delivery_stop()
+        self.assertTrue(result.get("decision") == "block" or result.get("continue") is False, result)
+
+        current_prompt = "PO_DEFERRED TOOL-2 again under the newly issued direct instruction"
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt=current_prompt, turn_id="deferred-new-authorization")
+        new_po_source = deferred["po_source"] + " Direct PO instruction: defer TOOL-2 again per the current message."
+        deferred["po_source"] = new_po_source
+        renewed_source_path = "work/po-deferred-renewed.md"
+        refreshed_text = (
+            "Product Owner direct instruction receipt\nPO_DEFERRED TOOL-2\n"
+            f"{new_po_source}\n"
+            f"Current direct instruction: {current_prompt}\n"
+        )
+        (self.root / renewed_source_path).write_text(refreshed_text, "utf-8")
+        item["evidence_paths"].append(renewed_source_path)
+        delivery["scope_sources"].append({
+            "path": renewed_source_path,
+            "sha256": h.hashlib.sha256((self.root / renewed_source_path).read_bytes()).hexdigest(),
+        })
+        for requirement in delivery["requirements"]:
+            requirement["evidence"] = []
+        self.close_delivery_fixture(record, payload)
+        deferred["status"] = "PO_DEFERRED"
+        delivery["status"] = "PO_DEFERRED"
+        item["remaining"] = ["TOOL-2 remains deferred under the renewed direct PO instruction."]
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED: TOOL-2 remains open under the renewed direct PO instruction.",
+            "evidence_path": renewed_source_path,
+            "resume_condition": "Resume TOOL-2 only after the renewed named approval is received.",
+        }
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
 
     def test_delivery_clear_preserves_unverified_mutations(self):
         self.delivery_fixture()
@@ -1754,6 +1972,51 @@ with hook.locked(Path(sys.argv[2])):
             "RUNNING",
         )
 
+    def test_chinese_approval_wait_requires_the_entire_prompt_to_match(self):
+        self.assertEqual(h.classify_turn_exit("批准前先等待"), "APPROVAL_WAIT")
+        self.assertEqual(
+            h.classify_turn_exit("批准前先等待这句话是错误的，请继续修复"),
+            "RUNNING",
+        )
+
+    def test_english_status_only_request_is_report_but_mixed_work_continues(self):
+        self.assertEqual(h.classify_turn_exit("What is the current status?"), "REPORT_ONLY")
+        self.assertEqual(
+            h.classify_turn_exit("Please tell me the current status only; do not modify anything"),
+            "REPORT_ONLY",
+        )
+        self.assertEqual(
+            h.classify_turn_exit("What is the current status? Please continue fixing the issue."),
+            "RUNNING",
+        )
+
+    def test_english_negation_does_not_swallow_a_later_positive_action(self):
+        self.assertEqual(
+            h.classify_turn_exit(
+                "What is the current status? Please do not modify files and then implement the fix."
+            ),
+            "RUNNING",
+        )
+        self.assertEqual(
+            h.classify_turn_exit(
+                "请告诉我当前状态；do not modify files and then implement the fix."
+            ),
+            "RUNNING",
+        )
+
+    def test_user_prompt_text_cannot_suppress_real_turn_as_synthetic(self):
+        self.delivery_fixture()
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="所有任务暂停，等我审核完", turn_id="real-pause-before-marker")
+        self.assertEqual(self.state["turn_exit_mode"], "PO_PAUSED")
+        prior_hash = self.state["last_prompt_hash"]
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="The <hook_prompt> handling is wrong; continue fixing it",
+                    turn_id="real-user-marker-text")
+        self.assertNotEqual(self.state["last_prompt_hash"], prior_hash)
+        self.assertEqual(self.state["turn_id"], "real-user-marker-text")
+        self.assertEqual(self.state["turn_exit_mode"], "RUNNING")
+
     def test_po_deferred_is_a_source_pinned_non_closure_exit(self):
         record, payload = self.delivery_fixture()
         item = payload["continuity"]
@@ -1824,14 +2087,108 @@ with hook.locked(Path(sys.argv[2])):
         self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1", "TOOL-2"])
 
     def test_delivery_pending_effect_prevents_closure(self):
-        record, payload = self.delivery_fixture()
-        self.close_delivery_fixture(record, payload)
-        payload["continuity"]["pending_effects"] = ["Previously issued operation still awaits its durable receipt"]
-        try:
+        effect = "operation-cth-publish-17 remains unresolved pending durable readback"
+        record, payload = self.delivery_fixture([effect])
+        payload["continuity"]["pending_effects"] = []
+        with self.assertRaisesRegex(ValueError, "ledger"):
+            self.close_delivery_fixture(record, payload)
+
+    def test_effect_ledger_rejects_non_object_entries_with_type_error(self):
+        effect = "operation-cth-publish-24 rejects malformed ledger entries"
+        record, payload = self.delivery_fixture([effect])
+        payload["continuity"]["delivery"]["effect_ledger"][0] = "not-an-object"
+        with self.assertRaisesRegex(TypeError, "Invalid external-effect ledger entry"):
             self.save_delivery_fixture(record, payload)
-        except ValueError:
-            return
+
+    def test_effect_receipt_rejects_non_object_json_with_type_error(self):
+        effect = "operation-cth-publish-25 rejects non-object terminal receipts"
+        record, payload = self.delivery_fixture([effect])
+        receipt_path = self.resolve_effect_fixture(payload, effect)
+        receipt_path.write_text(json.dumps(["not-an-object"]), "utf-8")
+        payload["continuity"]["delivery"]["effect_ledger"][0]["sha256"] = (
+            h.hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+        )
+        with self.assertRaisesRegex(TypeError, "receipt must be a JSON object"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_nonclosure_history_rejects_non_object_with_type_error(self):
+        record, payload = self.delivery_fixture()
+        self.block_delivery_fixture(record, payload)
+        self.state["delivery_guard"]["nonclosure_exits"] = []
+        with self.assertRaisesRegex(TypeError, "non-closure exit history is invalid"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_pending_effect_can_close_only_with_its_frozen_resolution_receipt(self):
+        effect = "operation-cth-publish-18 remains unresolved pending durable readback"
+        record, payload = self.delivery_fixture([effect])
+        receipt_path = self.resolve_effect_fixture(payload, effect)
+        self.close_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        reopened_state = {}
+        reopened_event = {"session_id": "engineering-reopen-thread", "agent_id": "bounded-test-agent"}
+        reopened = h.continuity_save(
+            self.root, reopened_state, reopened_event, "work/checkpoint.json", "continuity"
+        )
+        self.assertEqual(reopened["status"], "PINNED_CONTEXT")
+        self.assertEqual(
+            reopened_state["delivery_guard"]["pending_effects"][h._pending_effect_id(effect)]["status"],
+            "RESOLVED",
+        )
+        receipt_path.write_text(receipt_path.read_text("utf-8") + "\n", "utf-8")
         self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_long_running_delivery_can_append_and_freeze_a_new_pending_effect(self):
+        first = "operation-cth-publish-19 remains unresolved pending durable readback"
+        second = "operation-cth-publish-20 is newly pending in the same task"
+        record, payload = self.delivery_fixture([first])
+        item = payload["continuity"]
+        ledger = item["delivery"]["effect_ledger"]
+        item["pending_effects"].append(second)
+        ledger.append({"pending_effect_sha256": h._pending_effect_id(second), "status": "PENDING"})
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(
+            self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(second)],
+            {"status": "PENDING"},
+        )
+
+        item["pending_effects"].remove(second)
+        ledger.pop()
+        with self.assertRaisesRegex(ValueError, "cannot remove"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_new_effect_cannot_enter_the_ledger_already_resolved(self):
+        first = "operation-cth-publish-21 remains unresolved pending durable readback"
+        second = "operation-cth-publish-22 may not bypass initial pending admission"
+        record, payload = self.delivery_fixture([first])
+        item = payload["continuity"]
+        item["pending_effects"].append(second)
+        item["delivery"]["effect_ledger"].append({
+            "pending_effect_sha256": h._pending_effect_id(second), "status": "PENDING",
+        })
+        self.resolve_effect_fixture(payload, second)
+        with self.assertRaisesRegex(ValueError, "first be frozen as PENDING"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_resolved_effect_receipt_survives_a_later_source_edit(self):
+        effect = "operation-cth-publish-23 terminal readback must not be replayed"
+        record, payload = self.delivery_fixture([effect])
+        receipt_path = self.resolve_effect_fixture(payload, effect)
+        self.save_delivery_fixture(record, payload)
+        original_receipt = receipt_path.read_bytes()
+
+        source = self.root / "sample.py"
+        source.write_text(source.read_text("utf-8") + "\n# later authorized source revision\n", "utf-8")
+        self.save_delivery_fixture(record, payload)
+
+        validation = h.validate_delivery(self.root, payload["continuity"])
+        self.assertEqual(
+            validation["effect_ledger"][h._pending_effect_id(effect)]["status"], "RESOLVED"
+        )
+        self.assertEqual(
+            self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(effect)]["status"],
+            "RESOLVED",
+        )
+        self.assertEqual(receipt_path.read_bytes(), original_receipt)
 
     def test_delivery_receipt_cannot_omit_other_in_scope_source(self):
         record, payload = self.delivery_fixture()

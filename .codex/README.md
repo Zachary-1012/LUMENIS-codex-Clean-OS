@@ -4,6 +4,7 @@ This directory implements development tooling, not product architecture or produ
 Root AGENTS.md and the current source/owner/contracts govern product work.
 
 - Lifecycle source: hooks/lumenis_hooks.py; register it once per workstation in ~/.codex/hooks.json after native /hooks trust. Do not duplicate the same handler in both user and project hook registrations. hooks.example.json is a portable-reference template that requires local Python/path review.
+- UserPromptSubmit is treated as user input; duplicate-event detection uses its turn ID, never marker text in the prompt body.
 - Native Hook trust is required before lifecycle execution. Workstation trust is stored by Codex against the current hook hash; when a hook definition changes, re-review its current hash instead of bypassing trust. Hook trust never grants model-selection authority.
 - Authorized isolated engineering-helper regression command: python -X utf8 -m unittest discover -s .codex/tests -v. The helper reads verification_policy.run_unit_integration_allowed from the machine contract and refuses execution while it is false.
 - Local MCP: lumenis_engineering. Its server and bounded source/routing helpers are versioned in this repository under .codex/mcp/server.mjs and .codex/engineering.py. It exposes bounded source, routing, Git, health and verification operations; selected regressions follow current explicit machine policy and Owner admission. No arbitrary shell or broad product-suite execution is exposed over MCP.
@@ -53,6 +54,21 @@ pointers; an empty list asserts none known, not a universal safety proof. Record
 no credentials, Cookies, raw private prompts or production data. References are
 explicit repository text files; `work/` records are local protected evidence and
 are never automatically committed or sent to a service.
+
+When a pending effect is admitted, `delivery.effect_ledger` retains its exact-text
+SHA-256 identity with `status: PENDING`; those IDs must match the top-level
+`pending_effects` list. Resolve it by changing that entry to `RESOLVED` and
+including a declared local JSON receipt path plus the receipt SHA-256. The receipt
+identifies the same effect, records a terminal readback (`APPLIED`,
+`NOT_APPLIED`, `FAILED`, `CANCELLED` or `RECONCILED`), an observation and current
+pins for the complete admitted source scope. The ledger keeps the resolved entry
+across sessions; its exact receipt reference is frozen. Its source pins and head
+describe the implementation version at the time of the operation. They are checked
+when the effect first resolves; a later source edit does not invalidate that
+historical readback or authorize replay. Current implementation acceptance still
+uses its own current-source receipts. New effects may be appended as `PENDING`,
+then become immutable after their receipt is admitted. Removing the pending item
+or leaving the list empty alone cannot resolve an effect.
 
 ```powershell
 # Refresh at admission, meaningful outcome/PO correction, or planned handoff.
@@ -121,15 +137,23 @@ describes a real event.
 
 For a running task, Stop rejects remaining unclosed work and unaudited completion
 claims even when no source changed. Complete status requires current receipt
-readback for every requirement and an empty top-level `remaining` list. Up to 220
-evidence paths are allowed within the existing bounded record size. Paths are
+readback for every requirement and an empty top-level `remaining` list. The concise
+continuity narrative is limited to 24,000 serialized Unicode characters; the structured `delivery`
+evidence budget is separately limited to 8,000,000 bytes, supporting up to 100
+outcomes with full operation and recovery receipts. Up to 220 evidence paths are
+allowed. These bounds do not establish that a receipt is truthful. Paths are
 normalized before change comparison, including `./` spellings. A report-only reply, direct PO pause, required
 approval or evidenced external blocker is a non-completion exit: preserve the
 remaining work, exact reason and next/resume condition. `PO_DEFERRED` is a
 non-closure exit only when every unfinished requirement is explicitly deferred,
 its exact PO source and ID appear in a current hash-pinned local source receipt,
 and the exit names those IDs and their resume condition. A new PO message requires
-reconciling that deferral; it does not silently inherit a historical stop. Direct
+reconciling that deferral; it does not silently inherit a historical stop. Blocker/deferral
+proof identities and hashes, unfinished requirement IDs, and the authorizing
+prompt-turn binding are retained across rebinding, `RUNNING` and context clear.
+Editing display reason or resume wording cannot refresh the authorization. Reusing
+an old blocker or deferral cannot become current by refreshing only the prompt hash;
+a fresh blocker readback or renewed direct PO receipt is required. Direct
 standalone Chinese and English pause/approval instructions are recognized.
 A generic blocker cannot
 stop independent authorized work. Hooks never dispatch another window, start a
