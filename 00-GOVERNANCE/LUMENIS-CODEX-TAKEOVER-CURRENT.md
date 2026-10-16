@@ -52,6 +52,10 @@ can then close without erasing history. The changed-source recovery case and nin
 affected preservation/rejection cases passed, with compilation and full Ruff on
 the two modified Python files. This verifies the development guard, not Collector
 autonomy, workstation activation or a product user outcome.
+The subsequent required CI caught an older deferral fixture deleting closed
+receipts before renewed PO deferral. It now retains and asserts their original
+references; no acceptance condition or rejection assertion is removed. The failed
+CI remains recorded; renewed deferral is still a non-completion exit.
 
 The direct PO instructions dated 2026-10-16 covered three reported upgrades:
 all relevant issue #17/Slack updates and research adoption; all approved Cortech

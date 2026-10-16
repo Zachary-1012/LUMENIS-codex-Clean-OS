@@ -1840,9 +1840,10 @@ with hook.locked(Path(sys.argv[2])):
             "path": renewed_source_path,
             "sha256": h.hashlib.sha256((self.root / renewed_source_path).read_bytes()).hexdigest(),
         })
-        for requirement in delivery["requirements"]:
-            requirement["evidence"] = []
-        self.close_delivery_fixture(record, payload)
+        original_receipts = {
+            requirement["id"]: json.loads(json.dumps(requirement["evidence"]))
+            for requirement in delivery["requirements"]
+        }
         deferred["status"] = "PO_DEFERRED"
         delivery["status"] = "PO_DEFERRED"
         item["remaining"] = ["TOOL-2 remains deferred under the renewed direct PO instruction."]
@@ -1853,6 +1854,9 @@ with hook.locked(Path(sys.argv[2])):
         }
         self.save_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop(), {})
+        for requirement in delivery["requirements"]:
+            self.assertEqual(requirement["evidence"], original_receipts[requirement["id"]])
+        self.assertEqual(delivery["status"], "PO_DEFERRED")
 
     def test_delivery_clear_preserves_unverified_mutations(self):
         self.delivery_fixture()
