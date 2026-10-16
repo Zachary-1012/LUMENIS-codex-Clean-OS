@@ -147,6 +147,10 @@ requirements and source documents remain the coverage authority: a hook cannot
 prove that an initial checklist omitted nothing or that a self-authored receipt
 describes a real event.
 
+A fresh execution binding first admits a RUNNING outcome with unfinished work;
+pre-existing terminal records cannot be stamped as the new instruction. Report-only
+turns freeze the bound record, sources, authority and evidence paths, including
+ignored files and context-clear recovery, so modifying those inputs remains visible.
 For a running task, Stop rejects remaining unclosed work and unaudited completion
 claims even when no source changed. Complete status requires current receipt
 readback for every requirement and an empty top-level `remaining` list. The concise

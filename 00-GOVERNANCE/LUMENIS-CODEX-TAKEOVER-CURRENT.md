@@ -13,7 +13,10 @@ closure with remaining work, compares normalized complete scoped inputs, and
 retains unchanged-scope receipts across unrelated commits. Explicit source-pinned
 PO deferral is a non-closure exit. Frozen IDs and implementation paths survive
 context clear; record switching revalidates current prior closure, and any new
-direct instruction requires reconciliation before a terminal exit.
+direct instruction requires reconciliation before a terminal exit. Fresh execution
+bindings require RUNNING unfinished work, rather than renewing historical terminal
+records. Report-only snapshots include the bound record and pinned evidence, even
+when ignored by Git or retained after context clear.
 Non-closure exits retain their authorizing prompt and immutable proof identity;
 rewriting their description does not renew an old blocker or deferral. Pending
 external effects remain in the same append-only continuity ledger until a

@@ -1119,6 +1119,11 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
             }
         )
     else:
+        if (state.get("turn_exit_mode", "RUNNING") == "RUNNING"
+                and (delivery.get("status") != "RUNNING"
+                     or all(value["status"] == "JOB_CLOSED"
+                            for value in delivery["requirements"]))):
+            raise ValueError("A fresh execution binding must first admit RUNNING outcomes; historical terminal records cannot close a new prompt")
         delivery_state = _delivery_guard_snapshot(root, item, delivery)
         delivery_state.update({
             "identity": identity, "record": record, "section": section,
@@ -1157,6 +1162,7 @@ def continuity_save(root: Path, state: dict, event: dict, record: str, section: 
         "missing_authorities": missing,
     }
     if guard is not None:
+        guard["context_paths"] = sorted(set(guard.get("context_paths", [])) | set(pins))
         guard["prompt_hash"] = state.get("last_prompt_hash")
         guard["delivery_status"] = item["delivery"]["status"]
         guard["closed_ids"] = sorted(set(guard.get("closed_ids", [])) | {
@@ -1578,6 +1584,24 @@ def delivery_scope_paths(root: Path, state: dict) -> set[str]:
     }
 
 
+def report_scope_paths(root: Path, state: dict) -> set[str]:
+    values = delivery_scope_paths(root, state) | set(state.get("report_turn_paths", []))
+    bound = state.get("continuity")
+    if isinstance(bound, dict):
+        values.update(bound.get("pins", {}))
+        if isinstance(bound.get("record"), str):
+            values.add(bound["record"])
+    guard = state.get("delivery_guard")
+    if isinstance(guard, dict):
+        values.update(guard.get("context_paths", []))
+        if isinstance(guard.get("record"), str):
+            values.add(guard["record"])
+    return {
+        continuity_path(root, value).relative_to(root.resolve()).as_posix()
+        for value in values
+    }
+
+
 def changed_paths_since(root: Path, before: dict, after: dict, scope: set[str]) -> set[str]:
     """Find only this turn's changes, including committed changes absent from status."""
     normalized_scope = {
@@ -1664,10 +1688,10 @@ def classify_turn_exit(prompt: str) -> str:
 def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str | None]:
     mode = state.get("turn_exit_mode", "RUNNING")
     if mode == "REPORT_ONLY":
-        now = snapshot(root, delivery_scope_paths(root, state))
+        now = snapshot(root, report_scope_paths(root, state))
         before = state.get("report_turn_snapshot")
         if isinstance(before, dict) and isinstance(before.get("files"), dict):
-            changed = changed_paths_since(root, before, now, delivery_scope_paths(root, state))
+            changed = changed_paths_since(root, before, now, report_scope_paths(root, state))
             state["report_turn_snapshot_missing"] = False
         else:
             # Older state files have no prompt-time snapshot. Preserve historical
@@ -1846,12 +1870,15 @@ def handle(event: dict, root: Path, state: dict) -> dict:
             if state["turn_exit_mode"] == "REPORT_ONLY":
                 # This snapshot is a turn-local comparison point only. Keep the
                 # original session baseline and historical verification debt.
-                state["report_turn_snapshot"] = snapshot(root, delivery_scope_paths(root, state))
+                state.pop("report_turn_paths", None)
+                state["report_turn_paths"] = sorted(report_scope_paths(root, state))
+                state["report_turn_snapshot"] = snapshot(root, set(state["report_turn_paths"]))
                 state["report_turn_snapshot_missing"] = False
                 state["report_turn_requires_verification"] = False
                 state["report_turn_changed_paths"] = []
             else:
                 state.pop("report_turn_snapshot", None)
+                state.pop("report_turn_paths", None)
                 state.pop("report_turn_snapshot_missing", None)
                 state.pop("report_turn_requires_verification", None)
                 state.pop("report_turn_changed_paths", None)
@@ -1924,10 +1951,10 @@ def handle(event: dict, root: Path, state: dict) -> dict:
         report_only = state.get("turn_exit_mode") == "REPORT_ONLY"
         if not report_only and not state.get("mutation_observed"):
             return {}
-        now = snapshot(root, delivery_scope_paths(root, state) if report_only else None)
+        now = snapshot(root, report_scope_paths(root, state) if report_only else None)
         if report_only and isinstance(state.get("report_turn_snapshot"), dict):
             scoped_changes = changed_paths_since(
-                root, state["report_turn_snapshot"], now, delivery_scope_paths(root, state)
+                root, state["report_turn_snapshot"], now, report_scope_paths(root, state)
             )
             state["report_turn_snapshot_missing"] = False
         else:

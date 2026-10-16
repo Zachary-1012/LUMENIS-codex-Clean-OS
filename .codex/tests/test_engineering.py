@@ -2093,6 +2093,60 @@ with hook.locked(Path(sys.argv[2])):
         self.handle("UserPromptSubmit", **self.delivery_event, prompt="继续完成全部任务", turn_id="continue")
         self.assertEqual(self.delivery_stop().get("decision"), "block")
 
+    def test_fresh_execution_cannot_bind_historical_terminal_delivery(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        for terminal in ("JOB_CLOSED", "EXTERNAL_BLOCKED"):
+            with self.subTest(terminal=terminal):
+                if terminal == "EXTERNAL_BLOCKED":
+                    self.block_delivery_fixture(record, payload)
+                self.state.pop("delivery_guard", None)
+                self.state.pop("continuity", None)
+                self.handle("UserPromptSubmit", **self.delivery_event,
+                            prompt="Complete the newly requested full outcome", turn_id=terminal)
+                with self.assertRaisesRegex(ValueError, "fresh execution binding"):
+                    self.save_delivery_fixture(record, payload)
+                self.assertNotIn("delivery_guard", self.state)
+                payload["continuity"]["delivery"]["status"] = "RUNNING"
+                if terminal == "JOB_CLOSED":
+                    with self.assertRaisesRegex(ValueError, "fresh execution binding"):
+                        self.save_delivery_fixture(record, payload)
+                    payload["continuity"]["delivery"]["requirements"].append({
+                        "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+                        "acceptance": "New task produces current operation and recovery evidence",
+                        "coverage_refs": ["new-task"], "status": "OPEN", "evidence": [],
+                    })
+                    payload["continuity"]["remaining"] = ["Complete TOOL-3."]
+                self.save_delivery_fixture(record, payload)
+                self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_readonly_turn_detects_bound_record_and_receipt_mutations(self):
+        record, payload = self.delivery_fixture()
+        (self.root / ".gitignore").write_text("work/\n", "utf-8")
+        evidence = self.root / payload["continuity"]["evidence_paths"][0]
+        for path in (record, evidence):
+            with self.subTest(path=path.name):
+                self.handle("UserPromptSubmit", **self.delivery_event,
+                            prompt="只回答当前进度，不要修改或执行任务。", turn_id=path.name)
+                original = path.read_bytes()
+                path.write_bytes(original + b"\n")
+                self.assertEqual(self.delivery_stop().get("decision"), "block")
+                self.assertIn(path.relative_to(self.root).as_posix(),
+                              self.state["report_turn_changed_paths"])
+                path.write_bytes(original)
+
+    def test_readonly_turn_keeps_frozen_evidence_scope_after_clear(self):
+        _record, payload = self.delivery_fixture()
+        evidence = self.root / payload["continuity"]["evidence_paths"][0]
+        (self.root / ".gitignore").write_text("work/\n", "utf-8")
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="只回答当前进度，不要修改或执行任务。", turn_id="cleared-record-report")
+        evidence.write_bytes(evidence.read_bytes() + b"\n")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertIn(evidence.relative_to(self.root).as_posix(),
+                      self.state["report_turn_changed_paths"])
+
     def test_readonly_turn_can_answer_without_revalidating_historical_edits(self):
         self.edit()
         self.handle("UserPromptSubmit", prompt="只回答当前进度，不要修改或执行任务。", turn_id="report-only")
