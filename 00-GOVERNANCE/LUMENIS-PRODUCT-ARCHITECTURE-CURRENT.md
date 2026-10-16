@@ -72,12 +72,14 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 
 #### 4. 独立研究：从资料得到有依据的认识
 
-- **入口：** 直接进入 Shared 研究/资料工作，打开已有资料或新建研究主题；不要求先建立 CTH/BMP 项目。可从网页、文件、图片、音视频、已获准采集结果或个人笔记开始。
-- **操作：** 导入、搜索、筛选、阅读、批注、整理引用和比较案例；提出研究问题，选取需要采用的材料，补充判断，编辑笔记、简报或报告。Discover 提供与当前工作有关且有出处的内容与案例，用户决定是否采用。
-- **系统处理：** 保留原件和解析版本，索引可得内容；引用能回到页码、段落、图片位置或媒体时间码。分析先使用可用的确定性检索/比较；AI 可辅助语义检索、摘要与关联，理解覆盖和遗漏明确呈现。行业案例保留行业、地区、时间、方法、实际结果、局限和反例。
-- **成果：** 有用的研究笔记、案例比较、简报、报告与可复用引用；用户可以只完成研究，不必进入制作、商业决策或模型训练。
-- **保存与恢复：** 保存研究问题、材料选择、笔记和引用版本；重开定位原阅读位置/选中资料，修订保留父版本；来源更正或撤回时提示影响，保留历史说明而不继续违规引用。合法导出保留可追溯引用。
-- **可选联动：** 被用户选中的研究材料可供 CTH/BMP、提案、视频、播客使用；传递现有材料与目标，不要求重新上传。资料入库和蒸馏不自动授予模型训练权。
+- **入口：** 直接进入 Shared 研究/资料工作，打开资料库、已有材料或新建研究主题；不要求先建立 CTH/BMP 项目、Subject 或 BrandFocus。普通网页、文件、图片、音视频、获准采集结果与个人笔记可从现有资料入口直接导入，不要求用户填写“来源使用”或“本次用途”表单。
+- **操作：** 搜索、筛选、阅读、批注、整理引用和比较案例；提出研究问题、选取材料、补充判断并编辑笔记、简报或报告。资料入库后可在资料时间线逐项查看；打开单份资料卡可切换阅读原文、解析内容和分析结果。Discover 提供有出处的相关材料与案例，由用户决定是否采用。
+- **权限与权益：** 无表单不等于无权限。服务端仍按当前 actor、workspace、数据范围和来源合同执行现有 Permission/SourceUse 检查；未经核实的作者、来源权益、许可和原生发布时间保留 UNKNOWN/NULL，不推断为本人创作、公开网页或可商用来源。允许内部导入/研究不自动授予转载、对外发布、跨域事实采用或模型训练权利。
+- **后台解析与分析：** 每份材料保留原件字节、hash、来源元数据、导入回执及解析版本；后台按文件类型解析为可定位文本/表格/页码/段落/单元格/媒体时间码。每份材料先产生不依赖 AI 的确定性基础分析；AI 仅在适用、可用且经过既有选择与权限时追加，并作为带来源与版本的派生结果，与原始 Source/Evidence 和人工判断分开。解析、基础分析和 AI 增强分别保留状态、错误与可恢复重试；失败不能伪装完成或丢弃原件。
+- **资料卡与时间：** 资料库按真实入库/导入时间排序，每份材料是一张可独立打开的实体卡片，默认显示可识别标题/封面、资料类型、实际时间、必要进度和有用摘要；打开后可读原文与分析。原生发布时间、权益、解析覆盖和引用定位在详情按需查看，真正影响当前操作的限制才就地提示，不将后台字段和算法铺满卡片。不得用导入、采集或修改时间替代原生发布时间；未知值保持 UNKNOWN/NULL，不填零或虚构。
+- **成果：** 可用的研究笔记、案例比较、简报、报告及逐份材料分析；原文片段和每项结论均可回到具体来源定位。上传文件中的自述或报告结论仍是来源陈述，不能仅因解析或分析而升级成外部已观察事实、CTH/BMP Canonical 或因果结论。
+- **保存与恢复：** 原始材料和每份分析结果独立持久化并可重开；研究问题、材料选择、引用、用户修订及派生结果按版本保存，保留父版本。中断后从原件、定位点和最近有效版本恢复；来源更正/撤回时提示受影响成果，停止不再获准的引用但保留历史审计说明。合法导出继续保留可追溯引用。
+- **可选联动：** 用户可将研究成果交给 CTH/BMP、提案、视频或播客；联动沿现有 SourceUse、Canonical、Permission、目标域及真实 Subject/BrandFocus 合同办理，不要求重复上传，也不把未绑定材料自动提升为业务事实。研究本身可独立完成；资料入库和蒸馏不自动授予模型训练权。
 
 #### 5. 提案与文稿：可以从空白独立开始
 
@@ -356,7 +358,7 @@ Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Eval
 | GLOBAL / ALL | 默认未聚焦的获准全域工作范围 | 不等于隐式广州太古汇，不等于无限权限或全球数据已齐全；Clear 保留历史成果的原范围 |
 | Source / Evidence / Canonical | 来源、可定位且带出处的证据、经当前合同接收的规范事实 | 研究笔记、AI 输出、缓存、文件存在、mock、旧报告不能自行升级为 Production Truth |
 | Metric / Truth Table / ViewModel | 按明确单位/分母/时间口径计算及表达事实 | `0` 是已知数值，`UNKNOWN`/缺测不是零；ViewModel 不创建另一份业务真相 |
-| Product AI | 单一 SYSTEM Owned AI Gateway 及获准绑定的执行版本 | Codex/Astra/Sol/Luna 是工程资源；兼容 Provider 注册和状态枚举不证明产品推理可用或允许 fallback |
+| Product AI | 单一 SYSTEM AI Gateway；序境自有模型与唯一获准的 Groq 外部接口均经此调用 | Groq 外部调用须用户明确选择并通过现有权限；兼容 Provider 注册和状态枚举不证明实际可用或允许自动 fallback |
 | 四 Surface | Public Website / Web Workspace / Desktop / Mobile Companion | Desktop App 是 Desktop 的描述性名称；Flutter 是实现技术；四表面按各自角色并行建设、独立验收 |
 
 状态必须随其已有 Owner/字段解释：例如 `query_plan.status=READY` 只说明查询计划可提交，
@@ -505,16 +507,11 @@ P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 
 
 ## 6. AI / Skill / Agent
 
-Current provider and engineering roles (2026-10-01/02):
+AI provider and owned-model responsibilities:
 
-- lumenis/system/ai_gateway/ remains the sole SYSTEM owner. C2 supplies approved
-  commercially usable open foundation weights, owned training/inference and
-  held-out business evaluation; existing/free resources first. Codex Cloud
-  configuration is not proof of production inference or free GPU capacity.
-- Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are stopped in product
-  and development; calling code deleted; no calls, probes, auto-discovery,
-  fallback or reactivation. Jev is an inactive historical typed candidate,
-  not a prerequisite or default comparison provider.
+- lumenis/system/ai_gateway/ is the sole SYSTEM owner; every product model call passes through this Gateway. C2 owns approved commercially usable open foundation weights, owned training/inference and held-out business evaluation; use existing/free resources first. Codex Cloud configuration is not proof of production inference or free GPU capacity.
+- Groq is the only currently approved external model interface. It is available only through the same Gateway after explicit user selection and applicable Permission; it is not a hidden default, automatic provider switch or fallback. Provider configuration/readiness is a runtime fact and must not be inferred from documentation.
+- Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are retired from product execution; Jev is an inactive historical typed candidate. None may be called, probed, auto-discovered, used as fallback or reactivated. Retained compatibility interfaces and historical artifacts are not permission to use them.
 - Owned AI must prove understanding, reasoning, original creation, tools,
   continuity/recovery and controlled learning on real CTH/BMP/creation work.
   Source Brief, multimodal inputs, uncertainty, latency/cost, feedback,
@@ -529,7 +526,7 @@ Current provider and engineering roles (2026-10-01/02):
 - Realtime conversational voice is deferred; file audio/video/image
   understanding and podcast/media production remain C2/C4 requirements.
 
-The platform identity boundary is also explicit: media Cookie/session/browser authorization belongs to the SYSTEM collector/browser chain and stays separate from the future LUMENIS product account. Product account and password design is deferred until product closure reaches 100%, followed by a Product Owner redesign; this timing does not weaken server-side Permission, approval or effect-fence enforcement.
+The platform identity boundary is also explicit: media Cookie/session/browser authorization belongs to the SYSTEM collector/browser chain and stays separate from the future LUMENIS product account. Approved account/login/settings and the user/Founder developer modes are part of engineering closure, without a universal account wall. Free Google/email login uses existing identity contracts; Apple requires its account/authorization prerequisites. Server-side Permission, approval and effect-fence enforcement remain mandatory.
 
 ### Platform acquisition decision — Product Owner, 2026-10-07
 
