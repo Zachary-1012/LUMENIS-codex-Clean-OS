@@ -383,6 +383,17 @@ class EngineeringTests(unittest.TestCase):
         self.state["delivery_guard"]["record"] = r".\work\checkpoint.json"
         self.assertEqual(self.delivery_stop(), {})
 
+    def test_continuity_paths_reject_windows_escapes_and_private_segments(self):
+        for value in (
+            r"C:\work\checkpoint.json", r"C:work\checkpoint.json",
+            r"\\server\share\checkpoint.json", r"\work\checkpoint.json",
+            r"work\..\checkpoint.json", r"work\data\checkpoint.json",
+            r"work\profiles\checkpoint.json", r"work\.env\checkpoint.json",
+            r"work\secret.json", r"work\report.txt:stream.txt",
+        ):
+            with self.subTest(path=value), self.assertRaises(ValueError):
+                h.continuity_path(self.root, value)
+
     def test_continuity_authority_change_requires_rebind_before_runner(self):
         self.bind_verification_scope(["sample.py"])
         architecture = self.root / "00-GOVERNANCE" / "LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"

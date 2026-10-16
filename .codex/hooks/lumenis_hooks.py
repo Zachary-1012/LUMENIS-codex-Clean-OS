@@ -9,7 +9,7 @@ import re
 import subprocess
 import sys
 import time
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import tomllib
 
@@ -287,8 +287,10 @@ def continuity_identity(event: dict, root: Path) -> dict:
 def continuity_path(root: Path, value: str) -> Path:
     if not isinstance(value, str) or not value or len(value) > 600:
         raise ValueError("Bounded relative evidence/source path required")
-    rel = Path(value)
-    if rel.is_absolute() or rel.drive or ".." in rel.parts:
+    windows_path = PureWindowsPath(value)
+    rel = Path(value.replace("\\", "/"))
+    if (windows_path.drive or windows_path.root or rel.is_absolute()
+            or ".." in rel.parts or any(":" in part for part in rel.parts)):
         raise ValueError("Path escape rejected")
     if any(part.lower() in {".git", "data", "node_modules", "sessions", "profiles"}
            or part.lower().startswith(".env") for part in rel.parts):
