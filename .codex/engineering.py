@@ -966,7 +966,12 @@ def _verification_continuity_binding(state, event, scope_paths, additional_immut
     if not isinstance(bound.get("pins"), dict):
         raise ValueError("Owner continuity pins are unavailable; reread and rebind before verification")
 
-    item = HOOKS.continuity_record(ROOT, bound.get("record"), bound.get("section"))
+    frozen_guard, prior_pins = HOOKS._frozen_delivery_context(
+        state, bound.get("record"), bound.get("section"), identity
+    )
+    item = HOOKS.continuity_record(
+        ROOT, bound.get("record"), bound.get("section"), frozen_guard, prior_pins
+    )
     normalized_scope = [HOOKS.continuity_path(ROOT, value).relative_to(ROOT.resolve()).as_posix()
                         for value in item["source_paths"]]
     bound_scope = [HOOKS.continuity_path(ROOT, value).relative_to(ROOT.resolve()).as_posix()
@@ -1173,7 +1178,12 @@ def run_selected_verification(params):
             raise ValueError("Verification requires explicit bound Owner source paths")
         normalized_scope = [HOOKS.continuity_path(ROOT, value).relative_to(ROOT.resolve()).as_posix()
                             for value in source_paths]
-        owner_item = HOOKS.continuity_record(ROOT, bound.get("record"), bound.get("section"))
+        frozen_guard, prior_pins = HOOKS._frozen_delivery_context(
+            state, bound.get("record"), bound.get("section"), identity
+        )
+        owner_item = HOOKS.continuity_record(
+            ROOT, bound.get("record"), bound.get("section"), frozen_guard, prior_pins
+        )
         command_spec = _allowlisted_verification(
             kind, params["argv"], normalized_scope, owner=owner_item["owner"]
         )

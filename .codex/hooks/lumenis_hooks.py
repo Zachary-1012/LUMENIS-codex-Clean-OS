@@ -297,8 +297,19 @@ def continuity_path(root: Path, value: str) -> Path:
         raise ValueError("Private/runtime data paths are not continuity inputs")
     if re.search(r"cookie|credential|secret|auth\.json", rel.name, re.IGNORECASE):
         raise ValueError("Sensitive continuity input rejected")
-    path = (root / rel).resolve()
-    if not path.is_relative_to(root.resolve()) or path.suffix.lower() not in TEXT:
+    repository_root = root.resolve()
+    unresolved_path = repository_root / rel
+    component = repository_root
+    for part in rel.parts:
+        component = component / part
+        try:
+            is_junction = getattr(component, "is_junction", None)
+            if component.is_symlink() or (callable(is_junction) and is_junction()):
+                raise ValueError("Symlinked repository path components are not continuity inputs")
+        except OSError as error:
+            raise ValueError("Repository path components could not be inspected safely") from error
+    path = unresolved_path.resolve()
+    if not path.is_relative_to(repository_root) or path.suffix.lower() not in TEXT:
         raise ValueError("Only repository text references are supported")
     if path.is_file() and path.stat().st_size > 2_000_000:
         raise ValueError("Reference exceeds bounded read limit")
@@ -1048,14 +1059,40 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
             raise ValueError("Rebinding cannot remove a frozen implementation source path")
         guard["source_paths"] = sorted(prior_sources | set(item["source_paths"]))
         prior = guard.get("requirements")
+        if not isinstance(prior, dict):
+            raise TypeError("Frozen delivery requirement evidence is invalid")
         current = {value["id"]: value for value in delivery["requirements"]}
         prior_prompt = guard.get("prompt_hash", state.get("continuity", {}).get("prompt_hash"))
+        current_prompt = state.get("last_prompt_hash")
+        prompt_changed = (
+            isinstance(current_prompt, str)
+            and SHA256_RE.fullmatch(current_prompt)
+            and prior_prompt != current_prompt
+            and state.get("turn_exit_mode", "RUNNING") == "RUNNING"
+        )
         if (guard.get("delivery_status") == "JOB_CLOSED"
-                and prior_prompt != state.get("last_prompt_hash")
+                and prompt_changed
                 and delivery.get("status") == "JOB_CLOSED"
-                and isinstance(prior, dict) and not set(current) - set(prior)):
+                and isinstance(prior, dict)
+                and not set(current) - set(prior)):
             raise ValueError("A new execution prompt cannot reuse closed outcomes unchanged; admit its required outcome before rebinding")
-        if not isinstance(prior, dict) or not set(prior).issubset(current):
+        prompt_reconciliation = _current_prompt_reconciliation_mode(state)
+        if prompt_changed:
+            new_ids = set(current) - set(prior)
+            if prompt_reconciliation == "CONTINUE_CURRENT":
+                if (delivery.get("status") != "RUNNING"
+                        or any(current[identifier]["status"] != "OPEN" for identifier in new_ids)
+                        or not any(value["status"] != "JOB_CLOSED" for value in current.values())):
+                    raise ValueError("A continuation prompt must reopen an existing requirement before resuming")
+            elif prompt_reconciliation == "RECONCILE_EXISTING":
+                if (new_ids or delivery.get("status") not in {"PO_DEFERRED", "EXTERNAL_BLOCKED"}):
+                    raise ValueError("A non-closure reconciliation must retain existing IDs and its verified exit state")
+            elif not new_ids:
+                raise ValueError("A new execution prompt must admit its required outcome before rebinding")
+            elif (delivery.get("status") != "RUNNING"
+                  or any(current[identifier]["status"] != "OPEN" for identifier in new_ids)):
+                raise ValueError("New prompt outcomes must be admitted as OPEN before verification or closure")
+        if not set(prior).issubset(current):
             raise ValueError("Rebinding cannot remove any frozen required outcome ID")
         for identifier, frozen in prior.items():
             value = current[identifier]
@@ -1165,6 +1202,18 @@ def continuity_save(root: Path, state: dict, event: dict, record: str, section: 
         guard["context_paths"] = sorted(set(guard.get("context_paths", [])) | set(pins))
         guard["prompt_hash"] = state.get("last_prompt_hash")
         guard["delivery_status"] = item["delivery"]["status"]
+        prompt_reconciliation = state.get("turn_prompt_reconciliation")
+        prompt_mode = (
+            prompt_reconciliation.get("mode")
+            if isinstance(prompt_reconciliation, dict)
+            and prompt_reconciliation.get("prompt_hash") == state.get("last_prompt_hash")
+            else "UNCLASSIFIED_REQUIRES_RECONCILIATION"
+        )
+        guard["prompt_reconciliation"] = {
+            "prompt_hash": state.get("last_prompt_hash"),
+            "mode": prompt_mode,
+            "requirement_ids": sorted(value["id"] for value in item["delivery"]["requirements"]),
+        }
         guard["closed_ids"] = sorted(set(guard.get("closed_ids", [])) | {
             value["id"] for value in item["delivery"]["requirements"]
             if value["status"] == "JOB_CLOSED"
@@ -1602,6 +1651,39 @@ def report_scope_paths(root: Path, state: dict) -> set[str]:
     }
 
 
+def _current_delivery_remaining_ids(root: Path, state: dict) -> list[str] | None:
+    bound = state.get("continuity")
+    guard = state.get("delivery_guard")
+    record = bound.get("record") if isinstance(bound, dict) else None
+    section = bound.get("section") if isinstance(bound, dict) else None
+    if isinstance(guard, dict):
+        record = guard.get("record", record)
+        section = guard.get("section", section)
+    if not isinstance(record, str) or not isinstance(section, str):
+        return None
+    try:
+        _, path = continuity_record_key(root, record)
+        payload = json.loads(path.read_text("utf-8-sig"))
+        item = payload.get(section) if isinstance(payload, dict) else None
+        delivery = item.get("delivery") if isinstance(item, dict) else None
+        requirements = delivery.get("requirements") if isinstance(delivery, dict) else None
+        if not isinstance(requirements, list) or not requirements or len(requirements) > 100:
+            return None
+        identifiers = []
+        for value in requirements:
+            if (not isinstance(value, dict)
+                    or not isinstance(value.get("id"), str)
+                    or not DELIVERY_ID_RE.fullmatch(value["id"])
+                    or value.get("status") not in DELIVERY_REQUIREMENT_STATUSES):
+                return None
+            identifiers.append(value["id"])
+        if len(set(identifiers)) != len(identifiers):
+            return None
+        return sorted(value["id"] for value in requirements if value["status"] != "JOB_CLOSED")
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError):
+        return None
+
+
 def changed_paths_since(root: Path, before: dict, after: dict, scope: set[str]) -> set[str]:
     """Find only this turn's changes, including committed changes absent from status."""
     normalized_scope = {
@@ -1653,9 +1735,9 @@ def classify_turn_exit(prompt: str) -> str:
     if re.match(r"^(?:(?:所有|全部|当前)?(?:任务|工作|研发|窗口)?\s*(?:先)?(?:暂停|停工|停止执行)|先别(?:继续|推进|开工)|等我(?:的)?(?:指令|审核|确认)|等我审核完)(?:吧|一下)?(?:[，,]\s*等我(?:的)?(?:审核完|指令|审核|确认))?[。.!！]?\s*$", text, re.IGNORECASE):
         return "PO_PAUSED"
     if re.fullmatch(
-        r"(?:please\s+)?(?:pause|stop)\s+(?:(?:all|the current|current)\s+)?"
+        r"(?:please\s+)?(?:pause|stop)(?:\s+(?:(?:all|the current|current)\s+)?"
         r"(?:tasks?|work|windows?)(?:\s+and\s+wait for "
-        r"(?:my|the product owner(?:'s)?) (?:review|approval|authorization|confirmation))?\s*[.!]?",
+        r"(?:my|the product owner(?:'s)?) (?:review|approval|authorization|confirmation))?)?\s*[.!]?",
         text,
         re.IGNORECASE,
     ):
@@ -1685,6 +1767,80 @@ def classify_turn_exit(prompt: str) -> str:
     return "REPORT_ONLY" if report_request else "RUNNING"
 
 
+def classify_delivery_prompt_reconciliation(prompt: str, exit_mode: str) -> str:
+    """Separate a pure continuation from a prompt that may add required outcomes."""
+    if exit_mode != "RUNNING":
+        return "NON_EXECUTING"
+    text = str(prompt or "").strip()
+    if (not text or len(text) > 240 or text.count("\n") > 1
+            or "```" in text or re.search(r"[>『』「」“”‘’]", text)):
+        return "NEW_OUTCOME_REQUIRED"
+    if re.fullmatch(
+            r"PO_DEFERRED\s+[A-Za-z0-9_.:/-]{1,120}\s+(?:again\s+)?under\s+"
+            r"(?:the\s+)?(?:newly\s+issued\s+)?direct\s+instruction\s*[.!]?",
+            text, re.IGNORECASE):
+        return "RECONCILE_EXISTING"
+    continuation_patterns = (
+        (
+            r"(?:please\s+)?(?:continue|keep\s+going|carry\s+on|resume|proceed)"
+            r"(?:\s+(?:with|on))?(?:\s+the)?"
+            r"(?:\s+(?:same|current|existing|approved|original))?"
+            r"(?:\s+(?:tasks?|work|scope|delivery|implementation|repair|fix|outcomes?))?"
+            r"(?:\s+as\s+planned)?(?:\s+without\s+changing\s+(?:the\s+)?scope)?\s*[.!?]?"
+        ),
+        (
+            r"(?:please\s+)?(?:accelerate|speed\s+up)"
+            r"(?:\s+(?:the\s+)?(?:same|current|existing|approved|original))?"
+            r"(?:\s+(?:tasks?|work|scope|delivery|implementation|repair|fix|outcomes?))?"
+            r"(?:\s+without\s+changing\s+(?:the\s+)?scope)?\s*[.!?]?"
+        ),
+        (
+            r"(?:please\s+)?resume\s+[A-Za-z0-9_.:/-]{1,120}\s+and\s+continue\s+"
+            r"(?:the\s+)?(?:authorized|approved|existing|current)\s+work\s*[.!]?"
+        ),
+        (
+            r"(?:please\s+)?reopen\s+(?:the\s+)?(?:same|current|existing|approved|original)\s+"
+            r"(?:task|work|delivery|implementation|repair|fix|outcome)"
+            r"(?:\s+after\s+(?:its|the)\s+(?:implementation\s+)?source\s+"
+            r"(?:changed|was\s+updated))?\s*[.!?]?"
+        ),
+        (
+            r"(?:\u8bf7)?(?:\u7ee7\u7eed|\u63a5\u7740|\u6062\u590d)"
+            r"(?:(?:\u5b8c\u6210|\u63a8\u8fdb|\u5904\u7406)(?:\u5168\u90e8|\u5f53\u524d|"
+            r"\u73b0\u6709|\u539f\u6709|\u65e2\u6709|\u5269\u4f59)?|"
+            r"(?:\u5f53\u524d|\u73b0\u6709|\u539f\u6709|\u65e2\u6709|\u540c\u4e00|"
+            r"\u5df2\u6279\u51c6)(?:\u7684)?)?"
+            r"(?:\u4efb\u52a1|\u5de5\u4f5c|\u8303\u56f4|\u4ea4\u4ed8|\u5b9e\u73b0|"
+            r"\u4fee\u590d|\u8fdb\u5ea6|\u6267\u884c|\u4e8b\u9879|\u8981\u6c42)?"
+            r"(?:\u6309\u539f\u8ba1\u5212|\u4fdd\u6301(?:\u5f53\u524d|\u73b0\u6709|"
+            r"\u539f\u6709)?\u8303\u56f4|\u4e0d\u6539(?:\u53d8)?\u8303\u56f4)?[\u3002.!?\uff01]?"
+        ),
+        (
+            r"(?:\u8bf7)?(?:\u52a0\u5feb|\u52a0\u901f)"
+            r"(?:(?:\u5f53\u524d|\u73b0\u6709|\u539f\u6709|\u65e2\u6709|\u540c\u4e00|"
+            r"\u5df2\u6279\u51c6)(?:\u7684)?)?"
+            r"(?:\u4efb\u52a1|\u5de5\u4f5c|\u8303\u56f4|\u4ea4\u4ed8|\u5b9e\u73b0|"
+            r"\u4fee\u590d|\u8fdb\u5ea6|\u6267\u884c)?"
+            r"(?:[\uff0c,]\s*)?(?:\u4fdd\u6301(?:\u5f53\u524d|\u73b0\u6709|\u539f\u6709)?"
+            r"\u8303\u56f4|\u4e0d\u6539(?:\u53d8)?\u8303\u56f4)?[\u3002.!?\uff01]?"
+        ),
+    )
+    if any(re.fullmatch(pattern, text, re.IGNORECASE) for pattern in continuation_patterns):
+        return "CONTINUE_CURRENT"
+    return "NEW_OUTCOME_REQUIRED"
+
+
+def _current_prompt_reconciliation_mode(state: dict) -> str:
+    binding = state.get("turn_prompt_reconciliation")
+    if (isinstance(binding, dict)
+            and binding.get("prompt_hash") == state.get("last_prompt_hash")
+            and binding.get("mode") in {
+                "CONTINUE_CURRENT", "NEW_OUTCOME_REQUIRED", "NON_EXECUTING", "RECONCILE_EXISTING"
+            }):
+        return binding["mode"]
+    return "NEW_OUTCOME_REQUIRED"
+
+
 def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str | None]:
     mode = state.get("turn_exit_mode", "RUNNING")
     if mode == "REPORT_ONLY":
@@ -1707,8 +1863,7 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
             state["verification_status"] = "REPORT_ONLY_UNVERIFIED_RETAINED"
         guard = state.get("delivery_guard")
         if isinstance(guard, dict) and isinstance(guard.get("requirements"), dict):
-            closed = set(guard.get("closed_ids", []))
-            remaining = sorted(set(guard["requirements"]) - closed)
+            remaining = _current_delivery_remaining_ids(root, state)
             scope_state = "FROZEN"
         else:
             remaining = None
@@ -1730,8 +1885,7 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
             state["verification_status"] = f"{mode}_UNVERIFIED_RETAINED"
         guard = state.get("delivery_guard")
         if isinstance(guard, dict) and isinstance(guard.get("requirements"), dict):
-            closed = set(guard.get("closed_ids", []))
-            remaining = sorted(set(guard["requirements"]) - closed)
+            remaining = _current_delivery_remaining_ids(root, state)
             scope_state = "FROZEN"
         else:
             remaining = None
@@ -1865,6 +2019,10 @@ def handle(event: dict, root: Path, state: dict) -> dict:
             state["last_prompt_at"] = time.time()
             state["turn_exit_mode"] = classify_turn_exit(prompt)
             state["turn_prompt_hash"] = state["last_prompt_hash"]
+            state["turn_prompt_reconciliation"] = {
+                "prompt_hash": state["last_prompt_hash"],
+                "mode": classify_delivery_prompt_reconciliation(prompt, state["turn_exit_mode"]),
+            }
             state["turn_id"] = incoming_turn_id
             state["stop_continuation_used"] = False
             if state["turn_exit_mode"] == "REPORT_ONLY":

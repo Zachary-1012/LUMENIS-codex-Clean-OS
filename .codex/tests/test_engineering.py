@@ -102,6 +102,31 @@ class EngineeringTests(unittest.TestCase):
         self.assertEqual(h.find_root(str(self.root)), self.root)
         self.assertEqual(h.find_root(str(self.root / "subfolder")), self.root)
 
+    def test_continuity_path_rejects_symlinked_file_before_resolution(self):
+        work = self.root / "work"
+        work.mkdir()
+        target = work / "source-v1.md"
+        link = work / "scope-source.md"
+        target.write_text("source v1\n", "utf-8")
+        try:
+            link.symlink_to(target)
+        except (OSError, NotImplementedError) as error:
+            self.skipTest(f"Symlink creation is unavailable in this environment: {error}")
+        with self.assertRaisesRegex(ValueError, "Symlinked repository path components"):
+            h.continuity_path(self.root, "work/scope-source.md")
+
+    def test_continuity_path_rejects_symlinked_parent_before_resolution(self):
+        target_dir = self.root / "actual-sources"
+        target_dir.mkdir()
+        (target_dir / "scope-source.md").write_text("source v1\n", "utf-8")
+        linked_dir = self.root / "scope"
+        try:
+            linked_dir.symlink_to(target_dir, target_is_directory=True)
+        except (OSError, NotImplementedError) as error:
+            self.skipTest(f"Directory symlink creation is unavailable in this environment: {error}")
+        with self.assertRaisesRegex(ValueError, "Symlinked repository path components"):
+            h.continuity_path(self.root, "scope/scope-source.md")
+
     def test_safe_read_is_not_blocked(self):
         self.assertIsNone(h.policy_reason({"tool_name": "Bash", "tool_input": {"command": "git status --short"}}))
 
@@ -1555,6 +1580,16 @@ with hook.locked(Path(sys.argv[2])):
                 })
         self.save_delivery_fixture(record, payload)
 
+    def reopen_delivery_requirement_without_refresh(self, record, payload, identifier="TOOL-1"):
+        self.close_delivery_fixture(record, payload)
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        delivery["status"] = "RUNNING"
+        requirement = next(value for value in delivery["requirements"] if value["id"] == identifier)
+        requirement["status"] = "OPEN"
+        item["remaining"] = [f"{identifier} was reopened and remains unverified."]
+        record.write_text(json.dumps(payload), "utf-8")
+
     def add_delivery_receipts(self, item, requirement):
         head = self.git("rev-parse", "HEAD").strip()
         required_sources = [*item["source_paths"],
@@ -1749,6 +1784,61 @@ with hook.locked(Path(sys.argv[2])):
         self.save_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop().get("decision"), "block")
 
+    def test_changed_running_prompt_requires_new_outcome_admission(self):
+        record, payload = self.delivery_fixture()
+        prior_prompt_hash = self.state["delivery_guard"]["prompt_hash"]
+        self.handle(
+            "UserPromptSubmit", **self.delivery_event,
+            prompt="Add a new saved export and recovery outcome",
+            turn_id="new-export-recovery",
+        )
+        with self.assertRaisesRegex(ValueError, "must admit its required outcome"):
+            self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.state["delivery_guard"]["prompt_hash"], prior_prompt_hash)
+
+        payload["continuity"]["delivery"]["requirements"].append({
+            "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+            "acceptance": "The new export saves and reopens its real result",
+            "coverage_refs": ["export", "save", "reopen"],
+            "status": "OPEN", "evidence": [],
+        })
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(
+            self.state["delivery_guard"]["prompt_reconciliation"],
+            {
+                "prompt_hash": self.state["last_prompt_hash"],
+                "mode": "NEW_OUTCOME_REQUIRED",
+                "requirement_ids": ["TOOL-1", "TOOL-2", "TOOL-3"],
+            },
+        )
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_pure_continue_and_accelerate_reconcile_existing_open_outcomes(self):
+        record, payload = self.delivery_fixture()
+        for prompt, turn_id in (
+            ("Please continue the current work.", "continue-current-work"),
+            ("加快当前任务，不改范围", "accelerate-current-scope"),
+        ):
+            with self.subTest(prompt=prompt):
+                self.handle(
+                    "UserPromptSubmit", **self.delivery_event, prompt=prompt, turn_id=turn_id
+                )
+                self.save_delivery_fixture(record, payload)
+                self.assertEqual(
+                    self.state["delivery_guard"]["prompt_reconciliation"]["mode"],
+                    "CONTINUE_CURRENT",
+                )
+                self.assertEqual(
+                    self.state["delivery_guard"]["prompt_reconciliation"]["requirement_ids"],
+                    ["TOOL-1", "TOOL-2"],
+                )
+        self.assertEqual(
+            h.classify_delivery_prompt_reconciliation(
+                "Continue the current work and add a new export outcome", "RUNNING"
+            ),
+            "NEW_OUTCOME_REQUIRED",
+        )
+
     def test_external_blocker_exit_cannot_be_rebound_to_a_new_prompt(self):
         record, payload = self.delivery_fixture()
         self.block_delivery_fixture(record, payload)
@@ -1936,6 +2026,31 @@ with hook.locked(Path(sys.argv[2])):
         delivery["status"] = "JOB_CLOSED"
         self.save_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop(), {})
+
+    def test_verification_runner_reuses_frozen_guard_after_scope_addition(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        first, _ = delivery["requirements"]
+        item["remaining"] = ["TOOL-2 remains open under its existing acceptance."]
+        self.add_delivery_receipts(item, first)
+        self.save_delivery_fixture(record, payload)
+
+        added_source = "work/verification-scope.md"
+        (self.root / added_source).write_text("Current approved implementation scope.\n", "utf-8")
+        delivery["scope_sources"].append({
+            "path": added_source,
+            "sha256": h.hashlib.sha256((self.root / added_source).read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+        state_path = eng.HOOKS.state_file(self.delivery_event, self.root)
+        eng.HOOKS.save(state_path, self.state)
+
+        result = self.run_verification(
+            "compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"]
+        )
+        self.assertEqual(result["status"], "SUCCEEDED", result)
+        self.assertEqual(result["process_exit_code"], 0)
 
     def test_delivery_scope_addition_rejects_replaced_historical_receipt(self):
         record, payload = self.delivery_fixture()
@@ -2271,6 +2386,34 @@ with hook.locked(Path(sys.argv[2])):
             h.classify_turn_exit("Pause all tasks and wait for my review, then continue the code fix"),
             "RUNNING",
         )
+
+    def test_bare_english_pause_imperatives_are_full_matches_only(self):
+        for prompt in ("Pause.", "Please pause.", "Stop."):
+            with self.subTest(prompt=prompt):
+                self.assertEqual(h.classify_turn_exit(prompt), "PO_PAUSED")
+        self.assertEqual(h.classify_turn_exit("Please pause, then continue the fix"), "RUNNING")
+
+    def test_pause_remaining_ids_use_current_reopened_requirement_status(self):
+        record, payload = self.delivery_fixture()
+        self.reopen_delivery_requirement_without_refresh(record, payload)
+        self.assertIn("TOOL-1", self.state["delivery_guard"]["closed_ids"])
+        self.handle(
+            "UserPromptSubmit", **self.delivery_event, prompt="Pause.", turn_id="pause-reopened"
+        )
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1"])
+
+    def test_report_remaining_ids_use_current_reopened_requirement_status(self):
+        record, payload = self.delivery_fixture()
+        self.reopen_delivery_requirement_without_refresh(record, payload)
+        self.assertIn("TOOL-1", self.state["delivery_guard"]["closed_ids"])
+        self.handle(
+            "UserPromptSubmit", **self.delivery_event,
+            prompt="What is the current status? Do not modify anything.",
+            turn_id="report-reopened",
+        )
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1"])
 
     def test_chinese_approval_wait_requires_the_entire_prompt_to_match(self):
         self.assertEqual(h.classify_turn_exit("批准前先等待"), "APPROVAL_WAIT")
