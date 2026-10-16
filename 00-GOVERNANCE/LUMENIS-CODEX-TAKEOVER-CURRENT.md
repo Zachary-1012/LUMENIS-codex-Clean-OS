@@ -70,6 +70,8 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 2026-10-16 unique frontend plan and visual sketch (planning-only)
 
+最新直接PO补充：两份主稿是持续演进、集中维护的工作基线，不冻结UI/前端或限制M当前及未来升级；后续获准改进在原Owner/合同内继续原位更新。本窗口的规划发布→REA次序不派工或暂停其他窗口。REA使用前须认真研究官方GitHub适用版本的文档、实际源码/测试、许可与发布差异，保留commit和阅读/验证边界。
+
 前端规划现仅使用[完整产品/前端规划](LOOP-PLAN-20261014/product-plan-full.md)和[唯一视觉文字草图](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)。本次收敛保留全部195个G标识、原26个R/N/O有效要求、F0–F13完整建设分组与原研究指纹；覆盖Public Website、Web Workspace、Windows/macOS和iOS、44屏基线以外的完整用户工作、独立Shared研究/提案文稿/视频/播客、三语/无障碍/原动效/保存修订重开恢复。原21份ADD、分步稿和创作覆盖共23个重复活跃文件的有效内容已迁入，精确原文仍可在父版本Git历史查证，研究原件/资产/审批/失败记录未删。ScreenSpec保留独特Owner/API/Permission/SourceUse/字段/状态/动作/幂等/恢复/验收合同，布局指向唯一草图，不升级原设计或实现状态。
 
 本任务窗口最新直接PO明确PixiJS用于过往参考网站/产品的提取、重建与前端校准，不采用像素画风。浏览器/REA负责真实可见结构/样式/状态取证，隔离PixiJS校准器负责几何重建/对照；不是新增产品renderer/采集真相或引入像素艺术。已完成8.22.0小型WebGL绘制/DPR/销毁探针；完整参考目标提取、对照校准、产品性能和四端运行仍未因此验证。规划PR受检合并及远端main读回后，原PO已授权完整REA任务连续执行，形成既有Owner可采用代码/方法包交M。
