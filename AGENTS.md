@@ -1204,7 +1204,7 @@ source fixture / real public source
 → runtime/E2E
 ```
 
-Anonymous acquisition retains its no-account/no-key boundary. Product account login is a separate explicit exception: free Google OAuth and email verification codes are permitted; Apple sign-in is enabled only after developer-account activation. These login methods do not authorize collection sessions, paid resources or model providers. Other acquisition API key/OAuth/cloud dependencies still require their applicable architecture and source-rights approval.
+Anonymous acquisition retains its no-account/no-key boundary. Optional product account login is in engineering closure and is a separate explicit exception: free Google OAuth and email verification codes are permitted; Apple sign-in is enabled only after developer-account activation. These login methods do not authorize collection sessions, paid resources or model providers. Other acquisition API key/OAuth/cloud dependencies still require their applicable architecture and source-rights approval.
 
 ## 9. Data truth and DB safety
 
