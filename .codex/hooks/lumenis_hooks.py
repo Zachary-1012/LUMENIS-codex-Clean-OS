@@ -604,8 +604,11 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
         if exit_record is None:
             raise ValueError("PO_DEFERRED requires a preserved source receipt and resume condition")
         deferred_ids = {value["id"] for value in unfinished}
+        id_patterns = {identifier: re.compile(
+            rf"(?<![A-Za-z0-9_.:/-]){re.escape(identifier)}(?![A-Za-z0-9_.:/-])"
+        ) for identifier in deferred_ids}
         if ("PO_DEFERRED" not in exit_record["reason"].upper()
-                or any(identifier not in exit_record["reason"] for identifier in deferred_ids)):
+                or any(not pattern.search(exit_record["reason"]) for pattern in id_patterns.values())):
             raise ValueError("PO_DEFERRED exit reason must name the non-closed requirements")
         source_path = continuity_path(root, exit_record["evidence_path"])
         raw_source_path = root / Path(exit_record["evidence_path"])
@@ -622,7 +625,7 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
         normalized_source = " ".join(source_text.split())
         for requirement in unfinished:
             normalized_requirement_source = " ".join(requirement["po_source"].split())
-            if (requirement["id"] not in source_text
+            if (not id_patterns[requirement["id"]].search(source_text)
                     or normalized_requirement_source not in normalized_source):
                 raise ValueError("PO_DEFERRED source receipt must name each deferred requirement and its PO source")
     return {"scope_sources": scope, "requirements": requirements,
@@ -869,6 +872,12 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
                     or any(value.get("status") != "JOB_CLOSED"
                            for value in previous_delivery.get("requirements", []))):
                 raise ValueError("Cannot rebind away from an unfinished delivery; preserve its remaining IDs")
+            prior_prompt = guard.get("prompt_hash", (bound or {}).get("prompt_hash"))
+            if prior_prompt != state.get("last_prompt_hash"):
+                new_delivery = item.get("delivery")
+                new_ids = {value["id"] for value in new_delivery["requirements"]} if new_delivery else set()
+                if not new_ids - set(guard.get("requirements", {})):
+                    raise ValueError("A new execution prompt must admit its required outcome before switching records")
             state.pop("delivery_guard", None)
             guard = None
     delivery = item.get("delivery")

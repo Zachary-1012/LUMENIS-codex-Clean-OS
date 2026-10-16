@@ -1673,6 +1673,28 @@ with hook.locked(Path(sys.argv[2])):
         self.assertEqual(self.state["continuity"]["record"], "work/next.json")
         self.assertNotIn("delivery_guard", self.state)
 
+    def test_new_execution_prompt_cannot_switch_to_legacy_or_old_closed_record(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Implement the new reporting outcome", turn_id="new-reporting-outcome")
+        for next_item in (self.continuity_item(), payload["continuity"]):
+            (self.root / "work/next.json").write_text(json.dumps({"continuity": next_item}), "utf-8")
+            with self.assertRaisesRegex(ValueError, "admit its required outcome"):
+                h.continuity_save(self.root, self.state, self.delivery_event, "work/next.json", "continuity")
+            self.assertEqual(self.state["delivery_guard"]["record"], "work/checkpoint.json")
+        payload["continuity"]["delivery"]["status"] = "RUNNING"
+        payload["continuity"]["delivery"]["requirements"].append({
+            "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+            "acceptance": "New reporting operation saves and reopens its real result",
+            "coverage_refs": ["reporting", "save", "reopen"], "status": "OPEN", "evidence": [],
+        })
+        payload["continuity"]["remaining"] = ["TOOL-3 reporting outcome remains open"]
+        (self.root / "work/next.json").write_text(json.dumps(payload), "utf-8")
+        h.continuity_save(self.root, self.state, self.delivery_event, "work/next.json", "continuity")
+        self.assertEqual(self.state["delivery_guard"]["record"], "work/next.json")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
     def test_delivery_clear_keeps_scope_and_requires_rebind(self):
         record, payload = self.delivery_fixture()
         self.handle("SessionStart", source="clear", **self.delivery_event)
@@ -2091,6 +2113,43 @@ with hook.locked(Path(sys.argv[2])):
         repeated_failure = self.delivery_stop()
         self.assertIs(repeated_failure.get("continue"), False)
         self.assertIn("Structured delivery could not be verified", repeated_failure["stopReason"])
+
+    def test_po_deferred_requires_complete_ids_in_reason_and_source(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        delivery["requirements"] = [delivery["requirements"][0]]
+        requirement = delivery["requirements"][0]
+        requirement["status"] = "PO_DEFERRED"
+        requirement["po_source"] = "Direct PO instruction: defer the named work until approval."
+        delivery["status"] = "PO_DEFERRED"
+        source_path = "work/po-deferred.md"
+        item["evidence_paths"].append(source_path)
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED: (TOOL-1)", "evidence_path": source_path,
+            "resume_condition": "Wait for the named Product Owner approval.",
+        }
+        for reason_id, source_id, accepted in (
+            ("TOOL-10", "TOOL-1", False),
+            ("TOOL-1", "TOOL-10", False),
+            ("TOOL-1", "TOOL-1.child", False),
+            ("TOOL-1", "TOOL-1:other", False),
+            ("TOOL-1", "TOOL-1/other", False),
+            ("TOOL-1", "TOOL-1", True),
+        ):
+            with self.subTest(reason_id=reason_id, source_id=source_id):
+                delivery["exit"]["reason"] = f"PO_DEFERRED: ({reason_id})"
+                source = self.root / source_path
+                source.write_text(f"Product Owner receipt: `{source_id}`\n{requirement['po_source']}\n", "utf-8")
+                delivery["scope_sources"] = [
+                    value for value in delivery["scope_sources"] if value["path"] != source_path
+                ] + [{"path": source_path, "sha256": h.hashlib.sha256(source.read_bytes()).hexdigest()}]
+                record.write_text(json.dumps(payload), "utf-8")
+                if accepted:
+                    h.continuity_record(self.root, "work/checkpoint.json", "continuity")
+                else:
+                    with self.assertRaisesRegex(ValueError, "must name"):
+                        h.continuity_record(self.root, "work/checkpoint.json", "continuity")
 
     def test_po_deferred_cannot_hide_open_independent_work(self):
         record, payload = self.delivery_fixture()

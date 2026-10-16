@@ -37,6 +37,10 @@ can establish this change's cross-platform verification.
 Further reviewed closure cases preserve an empty frozen effect ledger, require
 the whole prompt to be report-only, and reconcile changed authority pins before
 closure while retaining evidence across unrelated HEAD changes.
+Six affected checks also verify that a new execution prompt cannot escape through
+a different legacy/previously closed record, and that PO deferral names complete
+requirement IDs rather than matching prefixes. New work can bind a new record
+with a newly admitted outcome; unchanged closed work can still switch normally.
 
 The direct PO instructions dated 2026-10-16 covered three reported upgrades:
 all relevant issue #17/Slack updates and research adoption; all approved Cortech
