@@ -25,7 +25,8 @@ Keep one `continuity` section in that record, not a new Task Card or scheduler.
 必须保留完整目标、最新 PO 来源与更正、约束、已有证据、全部未完项和下一步；
 摘要不是新的调度授权。原生 Goal 的旧暂停标记不能覆盖更新的直接 PO 指令。
 
-The JSON section has exactly these fields:
+The JSON section retains these fields; the optional `delivery` object below binds
+the current task's complete outcome constraints without creating another queue:
 
 ```json
 {
@@ -90,6 +91,55 @@ Missing/truncated/disabled hooks require this same manual command, not a new loo
 [fixed Codex compact prompt](https://github.com/openai/codex/blob/a07c8ebd57feedc4cf5dfe854c8e9101de54186b/codex-rs/prompts/templates/compact/prompt.md),
 [fixed SessionStart after compaction](https://github.com/openai/codex/blob/a07c8ebd57feedc4cf5dfe854c8e9101de54186b/codex-rs/core/src/session/mod.rs).
 These describe recovery mechanics, not a guarantee of error-free model execution.
+
+### Complete-outcome guards / 完整成果约束
+
+The same Owner continuity record can include `delivery` (schema version 1).
+Record the complete direct-PO outcome before implementation, with stable existing
+requirement IDs, observable acceptance conditions, all coverage references and
+hash-pinned source documents. A rebind may add requirements; it cannot silently
+remove their IDs, weaken acceptance or drop coverage. Keep prior requirements
+when the PO changes scope and record the exact new instruction. `DEFER`, source
+presence, a PR or CI success never closes an approved requirement.
+
+`delivery.status` describes this task: `RUNNING`, `REPORT_ONLY`, `PO_PAUSED`,
+`APPROVAL_WAIT`, `EXTERNAL_BLOCKED` or `JOB_CLOSED`. Each requirement records
+`id`, `outcome_class`, `acceptance`, `coverage_refs`, its actual `status`, and
+`evidence`. Freeze `PRODUCT` versus `DEVELOPMENT_TOOL` at admission: a product
+outcome requires real user E2E and recovery; a tool workflow cannot replace it.
+`scope_sources` records each original scope document's `path` and `sha256`.
+Evidence points to bounded existing JSON receipts with the recorded outcome,
+actual source HEAD and the complete admitted source/scope-file hashes; receipts must distinguish real user
+work, tool workflow and recovery from isolated automated checks. Original
+requirements and source documents remain the coverage authority: a hook cannot
+prove that an initial checklist omitted nothing or that a self-authored receipt
+describes a real event.
+
+For a running task, Stop rejects remaining unclosed work and unaudited completion
+claims even when no source changed. Complete status requires current receipt
+readback for every requirement. A report-only reply, direct PO pause, required
+approval or evidenced external blocker is a non-completion exit: preserve the
+remaining work, exact reason and next/resume condition. A generic blocker cannot
+stop independent authorized work. Hooks never dispatch another window, start a
+suite, call a model or change account/model/effort/tier. One corrective continuation
+is permitted; repeated Stop failure terminates with an explicit incomplete state,
+preventing an unbounded retry loop. Legacy records remain readable but do not
+claim these additional machine constraints until explicitly bound.
+
+Dynamic maintenance means reconciling this existing record after a new direct PO
+instruction, meaningful outcome, changed source/runtime version or invalidated
+evidence. Reuse unaffected receipts; recheck affected boundaries. Do not weaken
+verification policy or automatically install/upgrade plugins to obtain a PASS.
+Current read-only questions must not inherit a demand to rerun checks for older
+session edits; those unfinished checks remain required before delivery. Source,
+runtime, database, user outcome and publication are separate acceptance facts.
+
+After publishing a hook update, verify the actually registered handler and native
+`hooks/list` trust/readback. A source change alone is not active enforcement.
+Keep one registration, preserve other handlers and settings, and never edit the
+native trust store. If native reapproval is required, report that precise condition
+instead of calling the hook active. Rollback uses the reviewed previous published
+handler/configuration, not a reset or overwrite of product candidates.
 
 ### Actual verification receipts / 真实退出码回执
 

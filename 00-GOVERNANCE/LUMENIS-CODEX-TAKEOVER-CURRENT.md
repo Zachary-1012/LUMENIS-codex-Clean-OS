@@ -2,6 +2,35 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-16 M completion guards and current authorized scope
+
+The direct PO instruction requires the existing development hooks to constrain
+silent scope reduction, deferral of authorized missing capabilities and premature
+completion. The existing Owner continuity record carries the complete outcome,
+stable requirement IDs, coverage and versioned real-operation/recovery receipts;
+the single `.codex/hooks/lumenis_hooks.py` handler checks those records. Hook
+configuration follows the current task and actual evidence, never historical
+window/model state. See `.codex/README.md` for its schema, bounded Stop behavior,
+native activation and rollback. Neither a hook PASS nor a source publication
+establishes product acceptance.
+
+The PO has now authorized completion of all three previously reported upgrades:
+all relevant issue #17/Slack updates and research adoption; all approved Cortech
+capabilities except its Muse account implementation; and full REA reinspection
+and usable adoption of the original applications/sites. REA must serve both
+platform-specific acquisition improvements and missing product operations and
+capabilities. Preserve every original object and requirement, source/permission
+boundaries, independent Shared creation, AI-independent basic work and the four
+approved surfaces. Previously recorded report-and-wait conditions do not override
+this direct instruction. The hooks are completed first, then the existing
+issue #17/Slack and Cortech upgrades; only then does new REA investigation proceed
+into underlying capability logic, page layouts/elements and more complete,
+accurate acquisition, followed by its actual product improvements. Subsequent outcomes need
+actual input, useful output, save/revise/reopen/recovery and loaded-version
+evidence through existing owners. PR #77/#78 remain bounded integrated repairs,
+not completion of these three upgrades. Current implementation, runtime and
+acceptance observations stay separately traceable in the existing Owner records.
+
 ## 2026-10-14 research adoption (documentation, not runtime acceptance)
 
 The six PO-supplied OSS repositories were reviewed at fixed commits, including executable implementation/skill material and licenses, rather than star counts. Existing plan G109/G130/G159/G163, media steps E1/E8 and Experience's result-visualization clauses carry the bounded adaptations; the third-party register holds all six source pins, exclusions and acceptance conditions. Artcraft contributes editable-state/readback and stale-result fencing ideas; Anatomy/Diagram Design contribute data-consistent explanatory graphics; Matt Pocock's skills contribute interface/recovery review; Hyperframes is an optional HTML-video adapter candidate; AirLLM is a conditional exact-model resource experiment, not an installed provider or proven low-memory solution. No upstream code/assets, dependency, model weights or service were installed/copied by this research publication. Product bindings and actual outcomes remain OPEN, existing motion remains intact, and no window is dispatched.
