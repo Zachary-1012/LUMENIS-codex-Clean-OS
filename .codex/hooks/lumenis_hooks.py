@@ -548,6 +548,10 @@ def continuity_record(root: Path, record: str, section: str) -> dict:
             not isinstance(value, str) or not value.strip() or len(value) > 1800 for value in values
         ):
             raise ValueError("Invalid bounded task context list")
+    item["source_paths"] = sorted({
+        continuity_path(root, value).relative_to(root.resolve()).as_posix()
+        for value in item["source_paths"]
+    })
     validate_delivery(root, item)
     encoded = json.dumps(item, ensure_ascii=False)
     if len(encoded) > 24000 or re.search(r"\b(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9]{15,}|Bearer\s+[A-Za-z0-9._~+/=-]{12,})", encoded, re.IGNORECASE):
@@ -592,9 +596,13 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
         prior_record = guard.get("record")
         prior_section = guard.get("section")
         if prior_record != record or prior_section != section:
-            old_requirements = guard.get("requirements", {})
-            if (guard.get("delivery_status") != "JOB_CLOSED" or not old_requirements
-                    or set(guard.get("closed_ids", [])) != set(old_requirements)):
+            previous = continuity_record(root, prior_record, prior_section)
+            prior_bound = {"identity": identity, "record": prior_record, "section": prior_section}
+            previous_delivery = previous.get("delivery", {})
+            if (delivery_guard_reasons(state, prior_bound, previous)
+                    or previous_delivery.get("status") != "JOB_CLOSED"
+                    or any(value.get("status") != "JOB_CLOSED"
+                           for value in previous_delivery.get("requirements", []))):
                 raise ValueError("Cannot rebind away from an unfinished delivery; preserve its remaining IDs")
             state.pop("delivery_guard", None)
             guard = None
@@ -604,8 +612,21 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
             raise ValueError("A bound delivery cannot be removed while rebinding continuity")
         return None
     if isinstance(guard, dict) and guard.get("record") == record and guard.get("section") == section:
+        prior_sources = guard.get("source_paths", state.get("continuity", {}).get("source_paths", []))
+        prior_sources = {
+            continuity_path(root, value).relative_to(root.resolve()).as_posix()
+            for value in prior_sources
+        }
+        if not prior_sources.issubset(item["source_paths"]):
+            raise ValueError("Rebinding cannot remove a frozen implementation source path")
+        guard["source_paths"] = sorted(prior_sources | set(item["source_paths"]))
         prior = guard.get("requirements")
         current = {value["id"]: value for value in delivery["requirements"]}
+        prior_prompt = guard.get("prompt_hash", state.get("continuity", {}).get("prompt_hash"))
+        if (guard.get("delivery_status") == "JOB_CLOSED"
+                and prior_prompt != state.get("last_prompt_hash")
+                and isinstance(prior, dict) and not set(current) - set(prior)):
+            raise ValueError("A new execution prompt cannot reuse closed outcomes unchanged; admit its required outcome before rebinding")
         if not isinstance(prior, dict) or not set(prior).issubset(current):
             raise ValueError("Rebinding cannot remove any frozen required outcome ID")
         for identifier, frozen in prior.items():
@@ -649,6 +670,7 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
         "identity": identity, "record": record, "section": section,
         "scope_sources": {value["path"]: [value["sha256"]] for value in delivery["scope_sources"]},
         "closed_ids": [],
+        "source_paths": list(item["source_paths"]),
     })
     state["delivery_guard"] = delivery_state
     return delivery_state
@@ -675,6 +697,7 @@ def continuity_save(root: Path, state: dict, event: dict, record: str, section: 
         "missing_authorities": missing,
     }
     if guard is not None:
+        guard["prompt_hash"] = state.get("last_prompt_hash")
         guard["delivery_status"] = item["delivery"]["status"]
         guard["closed_ids"] = [value["id"] for value in item["delivery"]["requirements"]
                                 if value["status"] == "JOB_CLOSED"]
@@ -780,6 +803,8 @@ def delivery_guard_reasons(state: dict, bound: dict, item: dict) -> list[str]:
     current = {value.get("id"): value for value in delivery.get("requirements", [])
                if isinstance(value, dict)}
     reasons = []
+    if not set(guard.get("source_paths", bound.get("source_paths", []))).issubset(item.get("source_paths", [])):
+        reasons.append("FROZEN_IMPLEMENTATION_SOURCE_REMOVED")
     if not isinstance(frozen, dict) or not set(frozen).issubset(current):
         reasons.append("FROZEN_REQUIRED_OUTCOME_REMOVED")
     else:
@@ -1193,7 +1218,9 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
         return True, None
     bound = state.get("continuity")
     if not isinstance(bound, dict):
-        return True, None  # Legacy/unbound continuity remains compatible; prompt context warns.
+        if isinstance(state.get("delivery_guard"), dict):
+            return False, "The frozen delivery survived context clear; rebind its existing owner record before stopping."
+        return True, None  # A genuinely unbound legacy session remains compatible.
     try:
         record_path = continuity_path(root, bound.get("record"))
         current_record_hash = hashlib.sha256(record_path.read_bytes()).hexdigest()
@@ -1213,6 +1240,9 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
     status = delivery.get("status")
     requirements = delivery.get("requirements", [])
     unfinished = [value for value in requirements if value.get("status") != "JOB_CLOSED"]
+    if (status in {"JOB_CLOSED", "EXTERNAL_BLOCKED", "PO_DEFERRED"}
+            and bound.get("prompt_hash") != state.get("last_prompt_hash")):
+        return False, "A new Product Owner message requires reconciliation; a prior closure, blocker or deferral cannot close the current task."
     if status == "JOB_CLOSED" and not unfinished:
         return True, None
     if status == "EXTERNAL_BLOCKED":
@@ -1222,8 +1252,6 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
             return False, "EXTERNAL_BLOCKED has no remaining blocked requirement; reconcile the outcome status."
         return True, None
     if status == "PO_DEFERRED":
-        if bound.get("prompt_hash") != state.get("last_prompt_hash"):
-            return False, "A new Product Owner message requires reconciling the prior deferral; historical deferral cannot stop newly authorized work."
         exit_record = delivery["exit"]
         remaining_ids = sorted(value["id"] for value in unfinished)
         state["delivery_exit"] = {
@@ -1318,7 +1346,7 @@ def handle(event: dict, root: Path, state: dict) -> dict:
         return context(name, message)
     if name == "SessionStart":
         now = snapshot(root)
-        if "baseline" not in state or event.get("source") == "clear":
+        if "baseline" not in state:
             state["baseline"] = now; state["receipts"] = []; state["mutation_observed"] = False
         if event.get("source") == "clear":
             state.pop("continuity", None)

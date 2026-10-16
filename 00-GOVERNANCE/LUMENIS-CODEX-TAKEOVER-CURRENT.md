@@ -11,7 +11,9 @@ stable requirement IDs, coverage and versioned real-operation/recovery receipts;
 the single `.codex/hooks/lumenis_hooks.py` handler checks those records, rejects
 closure with remaining work, compares normalized complete scoped inputs, and
 retains unchanged-scope receipts across unrelated commits. Explicit source-pinned
-PO deferral is a non-closure exit; new direct instructions require reconciliation.
+PO deferral is a non-closure exit. Frozen IDs and implementation paths survive
+context clear; record switching revalidates current prior closure, and any new
+direct instruction requires reconciliation before a terminal exit.
 English and Chinese pause/approval instructions preserve unfinished outcomes. Hook
 configuration follows the current task and actual evidence, never historical
 window/model state. See `.codex/README.md` for its schema, bounded Stop behavior,

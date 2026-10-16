@@ -22,6 +22,10 @@ Root AGENTS.md and the current source/owner/contracts govern product work.
 
 Use durable context in the existing Owner record; a model summary is lossy.
 Keep one `continuity` section in that record, not a new Task Card or scheduler.
+Frozen outcome IDs and normalized implementation source paths survive context clear.
+Rebinding to a different record requires rereading the prior record and validating
+its current closure receipts; cached closure alone is insufficient. A new direct
+PO message must be reconciled before reusing a closure, blocker or deferral exit.
 必须保留完整目标、最新 PO 来源与更正、约束、已有证据、全部未完项和下一步；
 摘要不是新的调度授权。原生 Goal 的旧暂停标记不能覆盖更新的直接 PO 指令。
 

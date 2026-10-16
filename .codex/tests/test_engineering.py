@@ -1515,6 +1515,92 @@ with hook.locked(Path(sys.argv[2])):
         self.close_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop(), {})
 
+    def test_delivery_switch_rechecks_prior_record_and_new_requirement(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        next_record = self.root / "work/next.json"
+        next_record.write_text(json.dumps(payload), "utf-8")
+        payload["continuity"]["delivery"]["status"] = "RUNNING"
+        payload["continuity"]["delivery"]["requirements"].append({
+            "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+            "acceptance": "Newly admitted full recovery outcome",
+            "coverage_refs": ["recovery"], "status": "OPEN", "evidence": [],
+        })
+        record.write_text(json.dumps(payload), "utf-8")
+        with self.assertRaisesRegex(ValueError, "unfinished delivery"):
+            h.continuity_save(self.root, self.state, self.delivery_event, "work/next.json", "continuity")
+        self.assertEqual(self.state["delivery_guard"]["record"], "work/checkpoint.json")
+
+    def test_delivery_switch_rechecks_current_source_receipts(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        next_payload = {"continuity": self.continuity_item()}
+        (self.root / "work/next.json").write_text(json.dumps(next_payload), "utf-8")
+        self.edit(99)
+        with self.assertRaises(ValueError):
+            h.continuity_save(self.root, self.state, self.delivery_event, "work/next.json", "continuity")
+        self.assertEqual(self.state["delivery_guard"]["record"], "work/checkpoint.json")
+
+    def test_delivery_current_closed_record_can_switch(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        (self.root / "work/next.json").write_text(json.dumps({"continuity": self.continuity_item()}), "utf-8")
+        h.continuity_save(self.root, self.state, self.delivery_event, "work/next.json", "continuity")
+        self.assertEqual(self.state["continuity"]["record"], "work/next.json")
+        self.assertNotIn("delivery_guard", self.state)
+
+    def test_delivery_clear_keeps_scope_and_requires_rebind(self):
+        record, payload = self.delivery_fixture()
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        self.assertNotIn("continuity", self.state)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertEqual(set(self.state["delivery_guard"]["requirements"]), {"TOOL-1", "TOOL-2"})
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.state["continuity"]["record"], "work/checkpoint.json")
+
+    def test_delivery_old_closure_requires_current_prompt_reconciliation(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="继续实现新增的产品要求", turn_id="new-outcome")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertIn("new Product Owner message", self.state["last_delivery_reason"] if "last_delivery_reason" in self.state else h.delivery_stop_check(self.root, self.state, self.delivery_event)[1])
+
+    def test_delivery_old_closure_cannot_refresh_only_prompt_hash(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="继续实现新产品能力", turn_id="new-required-outcome")
+        with self.assertRaisesRegex(ValueError, "closed outcomes unchanged"):
+            self.save_delivery_fixture(record, payload)
+        payload["continuity"]["delivery"]["status"] = "RUNNING"
+        payload["continuity"]["delivery"]["requirements"].append({
+            "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+            "acceptance": "New direct PO outcome with actual recovery",
+            "coverage_refs": ["new-task"], "status": "OPEN", "evidence": [],
+        })
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_clear_preserves_unverified_mutations(self):
+        self.delivery_fixture()
+        before = self.state["baseline"]["fingerprint"]
+        self.edit()
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        self.assertEqual(self.state["baseline"]["fingerprint"], before)
+        self.assertTrue(self.state["mutation_observed"])
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="只汇报，不要修改", turn_id="status-after-clear")
+        self.delivery_stop()
+        self.assertTrue(self.state["mutation_observed"])
+
+    def test_delivery_implementation_paths_are_append_only_and_normalized(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["source_paths"] = ["./sample.py"]
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.state["delivery_guard"]["source_paths"], ["sample.py"])
+        payload["continuity"]["source_paths"] = []
+        with self.assertRaisesRegex(ValueError, "implementation source path"):
+            self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.state["delivery_guard"]["source_paths"], ["sample.py"])
+
     def test_delivery_closure_rejects_remaining_continuity_work(self):
         record, payload = self.delivery_fixture()
         self.close_delivery_fixture(record, payload)
