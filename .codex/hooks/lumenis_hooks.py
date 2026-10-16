@@ -39,7 +39,10 @@ CONTINUITY_FIELDS = {
 }
 DELIVERY_FIELDS = {"schema_version", "status", "po_source", "scope_sources", "requirements"}
 DELIVERY_OPTIONAL_FIELDS = {"exit"}
-DELIVERY_STATUSES = {"RUNNING", "REPORT_ONLY", "PO_PAUSED", "APPROVAL_WAIT", "EXTERNAL_BLOCKED", "JOB_CLOSED"}
+DELIVERY_STATUSES = {
+    "RUNNING", "REPORT_ONLY", "PO_PAUSED", "APPROVAL_WAIT",
+    "EXTERNAL_BLOCKED", "PO_DEFERRED", "JOB_CLOSED",
+}
 DELIVERY_REQUIREMENT_STATUSES = {
     "OPEN", "IMPLEMENTED", "INTEGRATED", "VERIFIED", "JOB_CLOSED", "DEFER", "PO_DEFERRED", "BLOCKED",
 }
@@ -47,6 +50,7 @@ DELIVERY_OUTCOME_CLASSES = {"PRODUCT", "DEVELOPMENT_TOOL"}
 DELIVERY_EVIDENCE_KINDS = {"REAL_USER_E2E", "TOOL_WORKFLOW", "RECOVERY", "EXTERNAL_BLOCKER"}
 DELIVERY_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,119}\Z")
 SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
+MAX_EVIDENCE_PATHS = 220
 
 
 def load_verification_policy(root: Path) -> dict | None:
@@ -311,14 +315,15 @@ def _delivery_source_manifest(root: Path, delivery: dict) -> dict[str, str]:
 
 
 def _delivery_evidence_is_current(root: Path, item: dict, requirement_id: str,
-                                  evidence: dict, expected_result: str,
-                                  current_head: str) -> bool:
+                                  evidence: dict, expected_result: str) -> bool:
+    """Check immutable receipt provenance and current source pins; HEAD is historical context."""
     required = {"path", "sha256", "kind", "result", "head", "source_pins"}
     if not isinstance(evidence, dict) or set(evidence) != required:
         return False
     if (evidence.get("kind") not in DELIVERY_EVIDENCE_KINDS
             or evidence.get("result") != expected_result
-            or evidence.get("head") != current_head
+            or not isinstance(evidence.get("head"), str)
+            or not re.fullmatch(r"[0-9a-f]{40,64}", evidence["head"])
             or not isinstance(evidence.get("sha256"), str)
             or not SHA256_RE.fullmatch(evidence["sha256"])):
         return False
@@ -345,7 +350,7 @@ def _delivery_evidence_is_current(root: Path, item: dict, requirement_id: str,
             or receipt.get("requirement_id") != requirement_id
             or receipt.get("kind") != evidence["kind"]
             or receipt.get("result") != expected_result
-            or receipt.get("head") != current_head
+            or receipt.get("head") != evidence["head"]
             or receipt.get("source_pins") != evidence["source_pins"]
             or not isinstance(receipt.get("observation"), str)
             or len(receipt["observation"].strip()) < 10):
@@ -393,7 +398,6 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
     if not isinstance(requirements, list) or not requirements or len(requirements) > 100:
         raise ValueError("Delivery requirements must enumerate the complete admitted outcome")
     seen = set()
-    current_head = git(root, "rev-parse", "HEAD").strip()
     for requirement in requirements:
         if not isinstance(requirement, dict):
             raise TypeError("Invalid delivery requirement")
@@ -416,7 +420,9 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
                 or len(set(refs)) != len(refs)):
             raise ValueError("Every outcome must retain its full existing coverage references")
         if requirement["status"] == "PO_DEFERRED" and (
-                not isinstance(requirement.get("po_source"), str) or not requirement["po_source"].strip()):
+                not isinstance(requirement.get("po_source"), str)
+                or not requirement["po_source"].strip()
+                or len(requirement["po_source"]) > 6000):
             raise ValueError("PO_DEFERRED must preserve its direct Product Owner source")
         required_source_pins = {
             continuity_path(root, value).relative_to(root.resolve()).as_posix()
@@ -449,7 +455,7 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
                 raise ValueError("Outcome evidence must be an accepted real operation or recovery")
         if requirement["status"] == "JOB_CLOSED":
             kinds = {value.get("kind") for value in evidence_values
-                     if _delivery_evidence_is_current(root, item, requirement["id"], value, "ACCEPTED", current_head)}
+                     if _delivery_evidence_is_current(root, item, requirement["id"], value, "ACCEPTED")}
             required_outcome_kind = (
                 "REAL_USER_E2E" if requirement["outcome_class"] == "PRODUCT" else "TOOL_WORKFLOW"
             )
@@ -457,8 +463,11 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
                 raise ValueError(
                     f"JOB_CLOSED requires current-version {required_outcome_kind} and recovery receipts"
                 )
-    if delivery["status"] == "JOB_CLOSED" and any(value["status"] != "JOB_CLOSED" for value in requirements):
-        raise ValueError("Delivery cannot close while any required outcome remains open, deferred, or blocked")
+    if delivery["status"] == "JOB_CLOSED":
+        if item.get("remaining"):
+            raise ValueError("JOB_CLOSED requires the continuity record's remaining list to be empty")
+        if any(value["status"] != "JOB_CLOSED" for value in requirements):
+            raise ValueError("Delivery cannot close while any required outcome remains open, deferred, or blocked")
     exit_record = delivery.get("exit")
     if exit_record is not None:
         if (not isinstance(exit_record, dict)
@@ -479,13 +488,41 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
             valid_paths = {
                 evidence.get("path") for evidence in value["evidence"]
                 if evidence.get("kind") == "EXTERNAL_BLOCKER"
-                and _delivery_evidence_is_current(root, item, value["id"], evidence, "BLOCKED", current_head)
+                and _delivery_evidence_is_current(root, item, value["id"], evidence, "BLOCKED")
             }
             if not valid_paths:
                 raise ValueError("Every remaining blocked outcome requires its own current, source-pinned blocker evidence")
             blocker_paths.update(valid_paths)
         if exit_record["evidence_path"] not in blocker_paths:
             raise ValueError("EXTERNAL_BLOCKED exit must point to one of its verified blocker receipts")
+    if delivery["status"] == "PO_DEFERRED":
+        unfinished = [value for value in requirements if value["status"] != "JOB_CLOSED"]
+        if not unfinished or any(value["status"] != "PO_DEFERRED" for value in unfinished):
+            raise ValueError("PO_DEFERRED may exit only when every remaining requirement is explicitly deferred")
+        if exit_record is None:
+            raise ValueError("PO_DEFERRED requires a preserved source receipt and resume condition")
+        deferred_ids = {value["id"] for value in unfinished}
+        if ("PO_DEFERRED" not in exit_record["reason"].upper()
+                or any(identifier not in exit_record["reason"] for identifier in deferred_ids)):
+            raise ValueError("PO_DEFERRED exit reason must name the non-closed requirements")
+        source_path = continuity_path(root, exit_record["evidence_path"])
+        raw_source_path = root / Path(exit_record["evidence_path"])
+        if (not source_path.is_file() or raw_source_path.is_symlink()
+                or source_path.stat().st_size > 2_000_000):
+            raise ValueError("PO_DEFERRED requires a readable, repository-local Product Owner source receipt")
+        source_key = source_path.relative_to(root.resolve()).as_posix()
+        if source_key not in scope:
+            raise ValueError("PO_DEFERRED source receipt must be included in the frozen source manifest")
+        source_text = source_path.read_text("utf-8-sig")
+        if not re.search(r"\b(?:product owner|direct\s+po|po\s+(?:instruction|approval|decision))\b",
+                         source_text, re.IGNORECASE):
+            raise ValueError("PO_DEFERRED source receipt must identify a direct Product Owner instruction")
+        normalized_source = " ".join(source_text.split())
+        for requirement in unfinished:
+            normalized_requirement_source = " ".join(requirement["po_source"].split())
+            if (requirement["id"] not in source_text
+                    or normalized_requirement_source not in normalized_source):
+                raise ValueError("PO_DEFERRED source receipt must name each deferred requirement and its PO source")
     return {"scope_sources": scope, "requirements": requirements}
 
 
@@ -506,7 +543,7 @@ def continuity_record(root: Path, record: str, section: str) -> dict:
             raise ValueError("Required bounded task context missing")
     for key in ("constraints", "completed", "remaining", "pending_effects", "source_paths", "evidence_paths"):
         values = item[key]
-        maximum = 30 if key == "source_paths" else 20
+        maximum = {"source_paths": 30, "evidence_paths": MAX_EVIDENCE_PATHS}.get(key, 20)
         if not isinstance(values, list) or len(values) > maximum or any(
             not isinstance(value, str) or not value.strip() or len(value) > 1800 for value in values
         ):
@@ -985,7 +1022,7 @@ def changed_scope_paths(root: Path, state: dict, now: dict) -> set[str]:
     before, after = baseline.get("files", {}), now["files"]
     changed = {path for path in before.keys() | after.keys()
                if before.get(path) != after.get(path)}
-    paths = delivery_scope_paths(state)
+    paths = delivery_scope_paths(root, state)
     if paths:
         scope = {continuity_path(root, path).relative_to(root.resolve()).as_posix()
                  for path in paths}
@@ -998,33 +1035,40 @@ def changed_scope_paths(root: Path, state: dict, now: dict) -> set[str]:
     return changed
 
 
-def delivery_scope_paths(state: dict) -> set[str]:
+def delivery_scope_paths(root: Path, state: dict) -> set[str]:
     """Return the frozen owner's source scope without changing its session baseline."""
     bound = state.get("continuity")
     paths = bound.get("source_paths", []) if isinstance(bound, dict) else []
-    scope = {value for value in paths if isinstance(value, str)}
+    values = {value for value in paths if isinstance(value, str)}
     guard = state.get("delivery_guard")
     if isinstance(guard, dict) and isinstance(guard.get("scope_sources"), dict):
-        scope.update(value for value in guard["scope_sources"] if isinstance(value, str))
-    return scope
+        values.update(value for value in guard["scope_sources"] if isinstance(value, str))
+    return {
+        continuity_path(root, value).relative_to(root.resolve()).as_posix()
+        for value in values
+    }
 
 
 def changed_paths_since(root: Path, before: dict, after: dict, scope: set[str]) -> set[str]:
     """Find only this turn's changes, including committed changes absent from status."""
+    normalized_scope = {
+        continuity_path(root, value).relative_to(root.resolve()).as_posix()
+        for value in scope
+    }
     before_files = before.get("files", {})
     after_files = after.get("files", {})
     changed = {path for path in before_files.keys() | after_files.keys()
                if before_files.get(path) != after_files.get(path)}
-    if scope:
-        changed.intersection_update(scope)
+    if normalized_scope:
+        changed.intersection_update(normalized_scope)
     if before.get("head") and before.get("head") != after.get("head"):
         args = ["diff", "--name-only", "-z", before["head"], after["head"]]
-        if scope:
-            args.extend(["--", *sorted(scope)])
+        if normalized_scope:
+            args.extend(["--", *sorted(normalized_scope)])
         committed = git(root, *args)
         committed_paths = {path for path in committed.split("\0") if path}
-        if scope:
-            committed_paths.intersection_update(scope)
+        if normalized_scope:
+            committed_paths.intersection_update(normalized_scope)
         changed.update(committed_paths)
     return changed
 
@@ -1039,7 +1083,25 @@ def classify_turn_exit(prompt: str) -> str:
         return "RUNNING"
     if re.match(r"^(?:等我|等待我|待我)(?:的)?(?:批准|授权|确认|审批)(?:后|前)?(?:再执行|再继续|之前先停)?[。.!！]?$|^(?:批准|授权|审批)(?:前|之前)(?:先)?(?:等待|不要执行|先停)[。.!！]?", text, re.IGNORECASE):
         return "APPROVAL_WAIT"
+    if re.fullmatch(
+        r"(?:please\s+)?(?:wait for (?:my|the product owner(?:'s)?) "
+        r"(?:approval|review|authorization|confirmation) before "
+        r"(?:continuing|proceeding|resuming)|"
+        r"(?:do not|don't) (?:continue|proceed|resume) until "
+        r"(?:i|the product owner) (?:approve|review|authorize|confirm))\s*[.!]?",
+        text,
+        re.IGNORECASE,
+    ):
+        return "APPROVAL_WAIT"
     if re.match(r"^(?:(?:所有|全部|当前)?(?:任务|工作|研发|窗口)?\s*(?:先)?(?:暂停|停工|停止执行)|先别(?:继续|推进|开工)|等我(?:的)?(?:指令|审核|确认)|等我审核完)(?:吧|一下)?(?:[，,]\s*等我(?:的)?(?:审核完|指令|审核|确认))?[。.!！]?\s*$", text, re.IGNORECASE):
+        return "PO_PAUSED"
+    if re.fullmatch(
+        r"(?:please\s+)?(?:pause|stop)\s+(?:(?:all|the current|current)\s+)?"
+        r"(?:tasks?|work|windows?)(?:\s+and\s+wait for "
+        r"(?:my|the product owner(?:'s)?) (?:review|approval|authorization|confirmation))?\s*[.!]?",
+        text,
+        re.IGNORECASE,
+    ):
         return "PO_PAUSED"
     negative_action = re.compile(
         r"(?:不要|先不|别)(?:再)?(?:修改|执行|继续|实现|更新|开工|推进)"
@@ -1071,10 +1133,10 @@ def classify_turn_exit(prompt: str) -> str:
 def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str | None]:
     mode = state.get("turn_exit_mode", "RUNNING")
     if mode == "REPORT_ONLY":
-        now = snapshot(root, delivery_scope_paths(state))
+        now = snapshot(root, delivery_scope_paths(root, state))
         before = state.get("report_turn_snapshot")
         if isinstance(before, dict) and isinstance(before.get("files"), dict):
-            changed = changed_paths_since(root, before, now, delivery_scope_paths(state))
+            changed = changed_paths_since(root, before, now, delivery_scope_paths(root, state))
             state["report_turn_snapshot_missing"] = False
         else:
             # Older state files have no prompt-time snapshot. Preserve historical
@@ -1159,6 +1221,22 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
         if not unfinished:
             return False, "EXTERNAL_BLOCKED has no remaining blocked requirement; reconcile the outcome status."
         return True, None
+    if status == "PO_DEFERRED":
+        if bound.get("prompt_hash") != state.get("last_prompt_hash"):
+            return False, "A new Product Owner message requires reconciling the prior deferral; historical deferral cannot stop newly authorized work."
+        exit_record = delivery["exit"]
+        remaining_ids = sorted(value["id"] for value in unfinished)
+        state["delivery_exit"] = {
+            "mode": "PO_DEFERRED",
+            "at": time.time(),
+            "closed": False,
+            "remaining_ids": remaining_ids,
+            "scope_state": "FROZEN",
+            "reason": exit_record["reason"],
+            "evidence_path": exit_record["evidence_path"],
+            "resume_condition": exit_record["resume_condition"],
+        }
+        return True, None
     if status in {"REPORT_ONLY", "PO_PAUSED", "APPROVAL_WAIT"}:
         return False, f"Stored status {status} is not current Product Owner authorization to stop; continue unless the current direct instruction explicitly pauses or requests a report-only reply."
     if not unfinished:
@@ -1218,7 +1296,7 @@ def handle(event: dict, root: Path, state: dict) -> dict:
             if state["turn_exit_mode"] == "REPORT_ONLY":
                 # This snapshot is a turn-local comparison point only. Keep the
                 # original session baseline and historical verification debt.
-                state["report_turn_snapshot"] = snapshot(root, delivery_scope_paths(state))
+                state["report_turn_snapshot"] = snapshot(root, delivery_scope_paths(root, state))
                 state["report_turn_snapshot_missing"] = False
                 state["report_turn_requires_verification"] = False
                 state["report_turn_changed_paths"] = []
@@ -1296,10 +1374,10 @@ def handle(event: dict, root: Path, state: dict) -> dict:
         report_only = state.get("turn_exit_mode") == "REPORT_ONLY"
         if not report_only and not state.get("mutation_observed"):
             return {}
-        now = snapshot(root, delivery_scope_paths(state) if report_only else None)
+        now = snapshot(root, delivery_scope_paths(root, state) if report_only else None)
         if report_only and isinstance(state.get("report_turn_snapshot"), dict):
             scoped_changes = changed_paths_since(
-                root, state["report_turn_snapshot"], now, delivery_scope_paths(state)
+                root, state["report_turn_snapshot"], now, delivery_scope_paths(root, state)
             )
             state["report_turn_snapshot_missing"] = False
         else:
@@ -1314,7 +1392,7 @@ def handle(event: dict, root: Path, state: dict) -> dict:
             )
             if not state["report_turn_requires_verification"]:
                 return {}
-        if delivery_scope_paths(state) and not scoped_changes:
+        if delivery_scope_paths(root, state) and not scoped_changes:
             return {}  # Another Owner's edits cannot impose this task's checks.
         code_changed = any(Path(path).suffix.lower() in CODE for path in scoped_changes)
         policy = load_verification_policy(root)

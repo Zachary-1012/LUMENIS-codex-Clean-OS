@@ -1515,6 +1515,23 @@ with hook.locked(Path(sys.argv[2])):
         self.close_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop(), {})
 
+    def test_delivery_closure_rejects_remaining_continuity_work(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        payload["continuity"]["remaining"].append("A required user outcome remains open")
+        with self.assertRaisesRegex(ValueError, "remaining list to be empty"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_receipts_survive_unrelated_head_advance(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        (self.root / "unrelated.md").write_text("An unrelated commit.\n", "utf-8")
+        self.git("add", "unrelated.md")
+        self.git("commit", "-qm", "unrelated source change")
+        self.assertEqual(self.delivery_stop(), {})
+        evidence = payload["continuity"]["delivery"]["requirements"][0]["evidence"][0]
+        self.assertNotEqual(evidence["head"], self.git("rev-parse", "HEAD").strip())
+
     def test_delivery_changed_source_invalidates_previous_closure(self):
         record, payload = self.delivery_fixture()
         self.close_delivery_fixture(record, payload)
@@ -1606,6 +1623,112 @@ with hook.locked(Path(sys.argv[2])):
                     prompt="只回答当前进度，不要修改或执行任务。", turn_id="report-only")
         source.write_text("value = 2\n", "utf-8")
         self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_report_only_scope_normalizes_dot_paths_before_intersection(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["source_paths"] = ["./sample.py"]
+        self.save_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="只回答当前进度，不要修改或执行任务。", turn_id="dot-path-report")
+        self.edit()
+        output = self.delivery_stop()
+        self.assertEqual(output.get("decision"), "block")
+        self.assertEqual(self.state["report_turn_changed_paths"], ["sample.py"])
+
+    def test_continuity_supports_more_than_twenty_evidence_paths(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        for index in range(21):
+            name = f"work/evidence-{index:02}.json"
+            (self.root / name).write_text("{}\n", "utf-8")
+            item["evidence_paths"].append(name)
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(len(item["evidence_paths"]), 22)
+
+    def test_direct_english_pause_and_approval_wait_are_recognized(self):
+        self.assertEqual(h.classify_turn_exit("Pause all tasks and wait for my review"), "PO_PAUSED")
+        self.assertEqual(h.classify_turn_exit("Wait for my approval before continuing."), "APPROVAL_WAIT")
+        self.delivery_fixture()
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Pause all tasks and wait for my review", turn_id="english-pause")
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertFalse(self.state["delivery_exit"]["closed"])
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1", "TOOL-2"])
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Wait for my approval before continuing.", turn_id="english-approval")
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertEqual(self.state["delivery_exit"]["mode"], "APPROVAL_WAIT")
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1", "TOOL-2"])
+        self.assertEqual(
+            h.classify_turn_exit("The note says ‘Pause all tasks and wait for my review’; continue with the fix"),
+            "RUNNING",
+        )
+        self.assertEqual(
+            h.classify_turn_exit("Pause all tasks and wait for my review, then continue the code fix"),
+            "RUNNING",
+        )
+
+    def test_po_deferred_is_a_source_pinned_non_closure_exit(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        deferred = delivery["requirements"][1]
+        deferred["po_source"] = "Direct PO instruction: defer TOOL-2 pending its named approval."
+        source_path = "work/po-deferred.md"
+        source_text = (
+            "Product Owner direct instruction receipt\n"
+            "PO_DEFERRED TOOL-2\n"
+            f"{deferred['po_source']}\n"
+        )
+        (self.root / source_path).write_text(source_text, "utf-8")
+        item["evidence_paths"].append(source_path)
+        delivery["scope_sources"].append({
+            "path": source_path,
+            "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+        self.close_delivery_fixture(record, payload)
+        deferred["status"] = "PO_DEFERRED"
+        delivery["status"] = "PO_DEFERRED"
+        item["remaining"] = ["TOOL-2 remains deferred until the named approval is received."]
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED: TOOL-2 remains open under the direct PO instruction.",
+            "evidence_path": source_path,
+            "resume_condition": "Resume TOOL-2 only when its named Product Owner approval is received.",
+        }
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertFalse(self.state["delivery_exit"]["closed"])
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-2"])
+        self.assertEqual(self.state["delivery_exit"]["mode"], "PO_DEFERRED")
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Resume TOOL-2 and continue the approved work", turn_id="resume-deferred")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.save_delivery_fixture(record, payload)
+        (self.root / source_path).write_text(source_text + "changed after admission\n", "utf-8")
+        repeated_failure = self.delivery_stop()
+        self.assertIs(repeated_failure.get("continue"), False)
+        self.assertIn("Structured delivery could not be verified", repeated_failure["stopReason"])
+
+    def test_po_deferred_cannot_hide_open_independent_work(self):
+        record, payload = self.delivery_fixture()
+        delivery = payload["continuity"]["delivery"]
+        delivery["status"] = "PO_DEFERRED"
+        delivery["requirements"][0]["status"] = "PO_DEFERRED"
+        delivery["requirements"][0]["po_source"] = "Direct PO instruction: defer TOOL-1."
+        source_path = "work/po-deferred.md"
+        (self.root / source_path).write_text(
+            "Product Owner direct instruction\nPO_DEFERRED TOOL-1\n"
+            "Direct PO instruction: defer TOOL-1.\n", "utf-8"
+        )
+        payload["continuity"]["evidence_paths"].append(source_path)
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED: TOOL-1 remains open.",
+            "evidence_path": source_path,
+            "resume_condition": "Resume after the named approval.",
+        }
+        with self.assertRaisesRegex(ValueError, "every remaining requirement"):
+            self.save_delivery_fixture(record, payload)
 
     def test_direct_pause_preserves_remaining_without_closure(self):
         self.delivery_fixture()

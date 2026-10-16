@@ -8,7 +8,11 @@ The direct PO instruction requires the existing development hooks to constrain
 silent scope reduction, deferral of authorized missing capabilities and premature
 completion. The existing Owner continuity record carries the complete outcome,
 stable requirement IDs, coverage and versioned real-operation/recovery receipts;
-the single `.codex/hooks/lumenis_hooks.py` handler checks those records. Hook
+the single `.codex/hooks/lumenis_hooks.py` handler checks those records, rejects
+closure with remaining work, compares normalized complete scoped inputs, and
+retains unchanged-scope receipts across unrelated commits. Explicit source-pinned
+PO deferral is a non-closure exit; new direct instructions require reconciliation.
+English and Chinese pause/approval instructions preserve unfinished outcomes. Hook
 configuration follows the current task and actual evidence, never historical
 window/model state. See `.codex/README.md` for its schema, bounded Stop behavior,
 native activation and rollback. Neither a hook PASS nor a source publication

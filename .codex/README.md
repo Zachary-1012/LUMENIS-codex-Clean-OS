@@ -103,13 +103,13 @@ when the PO changes scope and record the exact new instruction. `DEFER`, source
 presence, a PR or CI success never closes an approved requirement.
 
 `delivery.status` describes this task: `RUNNING`, `REPORT_ONLY`, `PO_PAUSED`,
-`APPROVAL_WAIT`, `EXTERNAL_BLOCKED` or `JOB_CLOSED`. Each requirement records
+`APPROVAL_WAIT`, `EXTERNAL_BLOCKED`, `PO_DEFERRED` or `JOB_CLOSED`. Each requirement records
 `id`, `outcome_class`, `acceptance`, `coverage_refs`, its actual `status`, and
 `evidence`. Freeze `PRODUCT` versus `DEVELOPMENT_TOOL` at admission: a product
 outcome requires real user E2E and recovery; a tool workflow cannot replace it.
 `scope_sources` records each original scope document's `path` and `sha256`.
 Evidence points to bounded existing JSON receipts with the recorded outcome,
-actual source HEAD and the complete admitted source/scope-file hashes; receipts must distinguish real user
+historical source HEAD and the complete admitted source/scope-file hashes; an unrelated commit does not invalidate unchanged scoped inputs. Receipts must distinguish real user
 work, tool workflow and recovery from isolated automated checks. Original
 requirements and source documents remain the coverage authority: a hook cannot
 prove that an initial checklist omitted nothing or that a self-authored receipt
@@ -117,9 +117,17 @@ describes a real event.
 
 For a running task, Stop rejects remaining unclosed work and unaudited completion
 claims even when no source changed. Complete status requires current receipt
-readback for every requirement. A report-only reply, direct PO pause, required
+readback for every requirement and an empty top-level `remaining` list. Up to 220
+evidence paths are allowed within the existing bounded record size. Paths are
+normalized before change comparison, including `./` spellings. A report-only reply, direct PO pause, required
 approval or evidenced external blocker is a non-completion exit: preserve the
-remaining work, exact reason and next/resume condition. A generic blocker cannot
+remaining work, exact reason and next/resume condition. `PO_DEFERRED` is a
+non-closure exit only when every unfinished requirement is explicitly deferred,
+its exact PO source and ID appear in a current hash-pinned local source receipt,
+and the exit names those IDs and their resume condition. A new PO message requires
+reconciling that deferral; it does not silently inherit a historical stop. Direct
+standalone Chinese and English pause/approval instructions are recognized.
+A generic blocker cannot
 stop independent authorized work. Hooks never dispatch another window, start a
 suite, call a model or change account/model/effort/tier. One corrective continuation
 is permitted; repeated Stop failure terminates with an explicit incomplete state,
