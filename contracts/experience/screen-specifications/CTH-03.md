@@ -69,6 +69,8 @@ The current App adapter uses only the shared `LumenisCoreClient`; it adds no API
 
 ## 5. Purpose-built desktop composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - **Primary question:** what has changed in the current CTH scope, and which returned lane needs attention?
 - **Hierarchy:** scope and read time → pulse band → source lanes → prioritized stream. The stream remains the dominant surface; lanes explain availability rather than becoming a control dashboard.
 - **Wide desktop:** `cth03/desktop-layout` places a pulse band above independent channel lanes and the stream. A local lane selection filters only the visible list and has a visible selected state.
@@ -77,17 +79,20 @@ The current App adapter uses only the shared `LumenisCoreClient`; it adds no API
 
 ## 5A. Web Workspace composition and desktop-only capability boundary
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Web Workspace and desktop use the same Core client, ViewModel states and read-only scope semantics. No browser-only collector action is introduced.
 - Pointer and keyboard filtering must leave the current scope visible. The approved source destination/lineage contract is `contracts/experience/source-target-contract-v1.json`; until the typed DTO, public-HTTPS validator, platform launcher and Return state are bound, the control remains disabled and the lane/stream remains readable.
 - There is no desktop-only completion claim. Runtime/browser E2E is required before accepting the page.
 
 ## 6. Purpose-built mobile composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - **Active task:** keep the scope label, pulse state and one filtered stream readable on a single vertical surface.
 - **Layout:** at narrow widths, pulse → lane selector → stream. The selected lane can be cleared without navigation and the stream's empty state remains adjacent to the filter.
 - **Touch:** lane chips and retry controls are at least 48 logical pixels high; risk and sentiment use text, not color alone.
 - **Interruption:** no local business cache or pending action is represented. Retry re-reads context and the screen.
-- **Screen identity:** the mobile surface preserves the lane-to-stream monitoring rhythm instead of collapsing into repeated cards.
 
 ## 7. Actions, authorization and effects
 
@@ -130,6 +135,8 @@ The current App adapter uses only the shared `LumenisCoreClient`; it adds no API
 - **Required before full acceptance:** a real new event through Source → Event → Evidence → monitoring UI; live/freshness semantics; negative/offline/not-collected separation; and applicable Web/Desktop/Mobile E2E. Preserve the historical acceptance rows above as the original gate record; §11 records the newer narrow review and evidence scope.
 
 ## 11. Bounded read-presentation review — 2026-09-30
+
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 ### 11.1 Current task and boundary
 

@@ -83,25 +83,12 @@ Public Website, Web Workspace, Desktop and Mobile keep distinct release roles. O
 
 ## 5. Purpose-built desktop composition
 
-已批准目标来源：`SYS-07-ADD-founder-developer-mode.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
+完整目标布局与交互见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
 ### 草图增补：创始人内部开发者模式（G20b）
 
-```
-设置 › 开发者 › 内部发布（仅创始人）
-① 上传更新   [选择代码包/拖入]  或  [从 GitHub 分支 ▾]
-             说明 [            ]               [一键上传]
-② 测试       构建 ✓  单元 ✓  集成 ⟳  端到端 ○  安全扫描 ○
-             任一失败 → 停止，不发布，显示失败项与日志
-③ 发布       渠道 (●) 内测 ( ) 正式
-             分批  [10%] → [50%] → [100%]  每批观察 [24h]
-             签名  ✓ 已签名（未签名不允许发布）
-             [发布]（测试全绿才可点）
-④ 发布中     v1.3.0 · 10% · 崩溃率 — · 报错 0
-             [暂停] [扩大到下一批] [回滚]
-             回滚 = 发布更高版本号的上一个稳定版
-历史         版本/时间/批次/结果/[查看说明]
-```
 
 **4. States**
 空闲 / 上传中 / 测试中 / 测试失败（阻止发布）/ 待发布 / 分批中 / 已暂停 / 已回滚 / 指标缺失（显示「数据缺失」，不显示 0，缺失时不自动扩大批次）。
@@ -142,11 +129,14 @@ Public Website, Web Workspace, Desktop and Mobile keep distinct release roles. O
 
 ## 5A. Web Workspace composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 ### 草图增补：创始人内部开发者模式（G20b）
 
-Web：同桌面。
 
 ## 6. Purpose-built mobile composition
+
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 ### 草图增补：创始人内部开发者模式（G20b）
 

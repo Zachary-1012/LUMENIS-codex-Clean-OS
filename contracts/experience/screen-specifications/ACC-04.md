@@ -42,6 +42,8 @@ approval_reference: ROUND-14A bounded implementation Task Card
 
 ## 3. Desktop/mobile and accessibility
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#acc-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Desktop: guard explanation is primary, recovery paths are a clear secondary rail.
 - Mobile: explanation first, recovery actions stack in server-returned order with 44px+ targets.
 - Focus order, announcements and text labels distinguish unavailable, blocked and account-specific recovery; reduced motion is immediate.

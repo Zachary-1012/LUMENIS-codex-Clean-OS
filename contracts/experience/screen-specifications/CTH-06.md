@@ -66,6 +66,8 @@ The adapter does not rename notes into Cases, does not call a negative-comments 
 
 ## 5. Purpose-built desktop composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-06)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - **Primary question:** which returned negative voices need reading, and what is known versus still unclassified?
 - **Hierarchy:** scope → triage filters → dense queue → source-first reading pane. Category chips explain returned classification state; they do not submit classification.
 - **Wide desktop:** `cth06/desktop-layout` keeps the queue mounted beside the reading pane. Selecting a row opens its returned date, channel, sentiment, risk and summary without showing internal IDs.
@@ -74,17 +76,20 @@ The adapter does not rename notes into Cases, does not call a negative-comments 
 
 ## 5A. Web Workspace composition and desktop-only capability boundary
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-06)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Web and desktop share the same read-only queue model and local selection. No browser-only source automation is introduced.
 - Source opening, classification, Case linking and export remain unavailable until their canonical owners provide scope, Permission, effect and Trace contracts.
 - Runtime acceptance must verify a real row and keyboard reading flow; widget fixtures alone are insufficient.
 
 ## 6. Purpose-built mobile composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-06)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - **Active task:** filter the returned feedback, open one item, read its wording and return to the queue.
 - **Layout:** filters → stacked queue items → full-width reading pane. The category state remains visible when the reading pane is open.
 - **Touch:** filter chips, rows and Return have at least 48 logical pixels. Risk and sentiment are not color-only.
 - **Interruption:** retry restarts the context and table read; no local mutation or offline cache is represented.
-- **Screen identity:** the mobile page keeps queue-to-reading flow instead of turning each item into a generic dashboard card.
 
 ## 7. Actions, authorization and effects
 

@@ -56,15 +56,12 @@ Trusted CTH-09 fixture IDs are `EV-7710`, `EV-7699` and `EV-7712` (not a single-
 
 ## 5. Purpose-built desktop composition
 
-已批准目标来源：`CTH-09-ADD-math-result-card.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-09)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
+完整目标布局与交互见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-09)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
 ### 草图增补：经营决策结果与依据（区间/缺失）
 
-```
-经营问题 → 已分析结果 / 关键发现 / 可选行动 · 来源▸
-真实输入满足算法假设才显示实测指标、区间、分母与版本；不足则说明缺口
-[修订业务约束] [比较方案] [保存决策] [查看方法与回测] [AI辅助解释（可选）]
-```
 
 **4. State additions**
 Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
@@ -103,12 +100,16 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ## 5A. Web Workspace composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-09)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 ### 草图增补：经营决策结果与依据（区间/缺失）
 
 Web Workspace composition
 Web：以经营结论和下一步为主，来源/方法分层展开；键盘可比较方案与修订业务约束，保存后刷新读回同一决策版本，不自动执行行动。
 
 ## 6. Purpose-built mobile composition
+
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-09)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 ### 草图增补：经营决策结果与依据（区间/缺失）
 

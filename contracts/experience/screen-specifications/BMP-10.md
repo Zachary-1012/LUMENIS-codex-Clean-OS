@@ -40,6 +40,8 @@ approval_reference: ROUND-13-BMP-CREATION-UI
 
 ## 4. Purpose-built composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-10)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Desktop uses an incident field: severity queue on the left, spread/recency detail in the center, and a response timeline on the right.
 - Mobile uses a triage queue first, then the selected incident timeline and response controls. It is not a generic dashboard or alert-card grid.
 - The primary question is “what needs a brand response now, and what has already happened?”

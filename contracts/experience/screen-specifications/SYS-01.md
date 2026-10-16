@@ -87,6 +87,8 @@ This specification approves the **read-only RuntimeGuardian health slice**. It d
 
 ## 5. Purpose-built desktop composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-01)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Primary question: is the system operating normally, and which counts or protections explain its current state?
 - At ≥1100 logical px of feature content after Shell navigation, use a vertical operational spine: overall state and source sample at the top; Worker/DLQ counts in the central inspection plane; reaper and circuit-breaker entry count in a narrow guardrail rail. Keep timestamp and guardian identity in the source rail.
 - At 768–1099 logical px of feature content, keep the overall state pinned above the count surface; move guardrail details into a reversible inspector so the primary status remains visible.
@@ -94,6 +96,8 @@ This specification approves the **read-only RuntimeGuardian health slice**. It d
 - This composition follows operational dependency and failure inspection. It does not use the product KPI dashboard or prototype line chart.
 
 ## 6. Purpose-built mobile composition
+
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-01)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - At ≤767 px, use a single fault-priority column: overall health first, then failed background processes and failed-queue records, then total background processes, then reaper/protection details and sample time.
 - Unknown/offline indicators remain beside each metric, not collapsed into a generic empty page.

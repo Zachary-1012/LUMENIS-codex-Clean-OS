@@ -58,19 +58,12 @@ approval_reference: UNKNOWN
 
 ## 5. Purpose-built desktop composition
 
-已批准目标来源：`SYS-08-ADD-ops-workspace-lifecycle.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
+完整目标布局与交互见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
 ### 草图增补：运营与工作区生命周期（G19，闭环内）
 
-```
-可观测性 › 运营
-工作区   默认工作区 · 创建于 2026-10-01 · 主体 N 个
-  [备份] [恢复] [归档] [删除工作区]（二次确认）
-运行      采集成功率 96% · 模型可用 ✓ · 队列 3
-告警      抖音会话过期 1 项 [处理]
-版本      v0.x  [检查更新]   [导出诊断包]
-COMMERCIAL_READY 检查表  合规 ✓ 密钥 ✓ 生命周期 ◐ 运营 ✓ 账号 ◐
-```
 
 **4. State additions**
 Ready / Loading / 数据缺失（指标未采到显示缺失）/ 不可用（显示原因）。
@@ -108,11 +101,15 @@ Ready / Loading / 数据缺失（指标未采到显示缺失）/ 不可用（显
 
 ## 5A. Web Workspace composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 ### 草图增补：运营与工作区生命周期（G19，闭环内）
 
 Web 同桌面，保留原任务与状态。
 
 ## 6. Purpose-built mobile composition
+
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 ### 草图增补：运营与工作区生命周期（G19，闭环内）
 

@@ -70,10 +70,11 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 
 ## 5. Purpose-built desktop composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - **Primary question:** Which market signal deserves attention, and what source-backed evidence explains its confidence and momentum?
 - **Composition:** a focus header, a compact radial opportunity field using confidence/momentum axes, a ranked signal feed and a right-side source brief. The radar has a list/table equivalent and is not a decorative chart.
 - **Interaction:** selecting a signal updates the source brief; kind filters affect the local feed only. No signal is promoted into a decision or action.
-- **Resize:** desktop uses radar + ranked feed + brief; tablet stacks the brief under the selected feed; the page never reduces to a generic three-column card grid.
 
 ### 5A. Web Workspace composition and desktop-only boundary
 
@@ -83,7 +84,6 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 ### 5B. Approved bounded signal reading and return
 
 - **Task hierarchy:** scan an already authorized signal's title, kind and source; select it; read the supplied source brief; return to the same filtered signal set and selected item. The first view stays concise while the selected reading area gives supplied material enough space.
-- **Desktop:** retain the signal field/list relationship and a stable adjacent brief. Keep the current selection visually and semantically identifiable. Long brief text scrolls inside its reading area where the available height allows; it must not push the selected signal and return action far down the whole page.
 - **Compact/mobile:** show the signal feed first; explicit selection enters one focused brief with an always-reachable return action. Return restores the kind filter, invoking row, browse position and keyboard focus. With large text or a short window, allow local scrolling without clipping controls or trapping focus.
 - **Material semantics:** `Bmp03Signal.summary` is optional returned material. Do not label it as AI-generated, a full original article or an independently verified conclusion when method/full-body metadata is absent. Show the existing source, capture time and time window only under their actual meanings. No derived topic clustering, new source request or media preview is authorized here.
 - **Metric integrity:** confidence and momentum remain distinct supplied measures. Missing or malformed momentum must not fall back to confidence, zero or an invented chart coordinate. Current `Bmp03Signal.fromJson` parses both measures independently as nullable values; unknown values remain unknown in the text and are omitted from chart coordinates. This source correction is not full-screen runtime acceptance. Keep authorized text material readable where its contract permits it.
@@ -91,6 +91,8 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 - **Brand and usability:** preserve a restrained content-first composition. Use movement only to explain entry/return; honor reduced motion. Explicit selection, status, source labels, reachable back and focus recovery carry the Nielsen requirements in this slice.
 
 ## 6. Purpose-built mobile composition
+
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - Recompose to a ranked signal feed first, with supplied momentum/confidence labels in each row and the focused source-brief drill-in defined in §5B.
 - Keep BrandFocus and time window visible. Back returns from the source brief to the feed; it never changes context.

@@ -58,7 +58,8 @@ Paths, tokens, provider/model strings, raw errors and arbitrary domains are neve
 
 ## 4. Desktop and mobile composition
 
-- Desktop at ≥1000px: bounded list and confirmation detail side by side, with the context banner above both.
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#acc-02)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Narrow layouts: the searchable list is the browsing stage. Selecting a returned Subject opens a focused confirmation layer; the list, search and scroll position remain underneath for Return. Detail is not appended beneath a long list.
 - Keyboard order is context banner → search → returned rows → selected Subject → confirm → continue. Rows are reachable by keyboard and have visible selected state.
 

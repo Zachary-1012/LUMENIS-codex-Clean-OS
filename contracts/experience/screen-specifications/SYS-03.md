@@ -61,12 +61,15 @@ No migration, write, repair, pagination or Evidence emission contract is verifie
 
 ## 5. Purpose-built desktop and web composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Desktop: a validation spine anchors schema, integrity and readability; a separate horizontal truth-chain panel shows only returned stages; checks and identity boundary sit beside it.
 - Web Workspace shares the same ViewModel and state semantics; no desktop-only database capability is claimed.
-- Tablet stacks spine, chain and checks; mobile turns each stage into a readable vertical step.
 - No schema/health chart is rendered because no time series is bound.
 
 ## 6. Purpose-built mobile composition
+
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - Keep the validation spine visible first, then chain, then checks.
 - Each unavailable stage retains its label and unknown state.

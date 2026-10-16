@@ -268,16 +268,12 @@ widget or a viewport. Opening a native desktop build does not remove that bounda
 
 ## 5. Purpose-built desktop composition
 
-已批准目标来源：`SYS-06-ADD-browser-tabs.md`, `SYS-06-ADD-login-recovery-sheet.md`。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-06)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
+完整目标布局与交互见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-06)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
 ### 草图增补：内置浏览器：标签/地址栏/前进后退/折叠/查看原文
 
-```
-[◀][▶][⟳] [地址栏 https://… ][☆][⋯]  [⌄折叠]
-[标签1 ×][标签2 ×][+]
-┌ 真实页面（同一受控会话）┐  右侧：当前任务卡 [返回任务]
-└───────────────────────┘  底部：[在外部浏览器查看原文 ↗]（仅用户点，无采集）
-```
 
 **4. State additions**
 Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
@@ -290,20 +286,12 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ### 草图增补：产品内登录失效弹窗 LumenisPlatformRecoverySheet
 
-```
-┌ 小红书（RedNote·香港账号来源）登录已失效 ┐
-│ 任务「<主体> 采集」已暂停，进度已保存      │
-│ [扫码登录] [在内置浏览器登录] [稍后]       │
-│ 状态：等待验证 / 冷却中 mm:ss             │
-└──────────────────────────────────────────┘
-```
 
 **4. State additions**
 Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。
 
 **9. Executable acceptance**
 - 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。
-- 后台采集本身不弹窗；仅登录失效弹；适用全部平台与全部已登记主体。
 
 会话失效先保存任务并在产品内请求人工操作；自动采集不打开桌面窗口。恢复须服务端身份、权限、健康及租约核验，不绕过挑战/冷却。
 
@@ -336,27 +324,23 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ## 5A. Web Workspace composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-06)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 ### 草图增补：内置浏览器：标签/地址栏/前进后退/折叠/查看原文
 
-Web Workspace composition
-Web：受控标签、地址、任务返回和停止始终可达；窄屏将辅助栏展开为独立面板，独占接管与刷新后的会话读回由服务端核验，不能复用个人浏览器。 折叠后收为顶栏胶囊「浏览器·2 个标签」，任务不中断。
 
 ### 草图增补：产品内登录失效弹窗 LumenisPlatformRecoverySheet
 
-Web Workspace composition
-Web：受控标签、地址、任务返回和停止始终可达；窄屏将辅助栏展开为独立面板，独占接管与刷新后的会话读回由服务端核验，不能复用个人浏览器。 同一时刻只弹一个；成功后自动回到原任务并续跑。
 
 ## 6. Purpose-built mobile composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-06)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 ### 草图增补：内置浏览器：标签/地址栏/前进后退/折叠/查看原文
 
-Purpose-built mobile composition
-全屏单标签+底部标签切换；折叠为底部条。
 
 ### 草图增补：产品内登录失效弹窗 LumenisPlatformRecoverySheet
 
-Purpose-built mobile composition
-底部 Sheet，同内容。
 
 ### Existing contract — Purpose-built mobile composition
 

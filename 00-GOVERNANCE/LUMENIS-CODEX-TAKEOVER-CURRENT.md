@@ -68,6 +68,14 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 7. Retired AI providers (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) have their calling code and config deleted; the owned 序境 model is default, one generic OpenAI-compatible adapter serves only a user-selected own API (AI_PROVIDER=user_api), with no automatic fallback.
 8. In-loop: collection, CTH, BMP, Shared, AI, no-shell tools in built-in browser, chat UI cards, full Skill Store, GitHub connector, MCP, frontend functions, competitor proofs, accounts (free email codes/Google; Apple after developer-account activation; original settings presentation), user and founder developer modes, commercial-readiness items, visuals, logo, role art. Post-launch: real-user validation, paid/licensed sources.
 
+## 2026-10-16 unique frontend plan and visual sketch (planning-only)
+
+前端规划现仅使用[完整产品/前端规划](LOOP-PLAN-20261014/product-plan-full.md)和[唯一视觉文字草图](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)。本次收敛保留全部195个G标识、原26个R/N/O有效要求、F0–F13完整建设分组与原研究指纹；覆盖Public Website、Web Workspace、Windows/macOS和iOS、44屏基线以外的完整用户工作、独立Shared研究/提案文稿/视频/播客、三语/无障碍/原动效/保存修订重开恢复。原21份ADD、分步稿和创作覆盖共23个重复活跃文件的有效内容已迁入，精确原文仍可在父版本Git历史查证，研究原件/资产/审批/失败记录未删。ScreenSpec保留独特Owner/API/Permission/SourceUse/字段/状态/动作/幂等/恢复/验收合同，布局指向唯一草图，不升级原设计或实现状态。
+
+本任务窗口最新直接PO明确PixiJS用于过往参考网站/产品的提取、重建与前端校准，不采用像素画风。浏览器/REA负责真实可见结构/样式/状态取证，隔离PixiJS校准器负责几何重建/对照；不是新增产品renderer/采集真相或引入像素艺术。已完成8.22.0小型WebGL绘制/DPR/销毁探针；完整参考目标提取、对照校准、产品性能和四端运行仍未因此验证。规划PR受检合并及远端main读回后，原PO已授权完整REA任务连续执行，形成既有Owner可采用代码/方法包交M。
+
+本提交只收敛规划与合同视觉引用，不构建或发布前端；生产Core/DB/模型/采集/训练/部署未在本任务执行，原主工作区dirty候选与其他窗口工作受保护。文档/Authority/Blueprint/Constitution及迁移检查只证明其记录范围，不能代替用户成果、真实运行、M产品接受或PO重复操作；完整产品仍OPEN。
+
 ## 1. Online reader's current-state snapshot
 
 Implementation publication state: `RULES_ONLY_PUBLICATION`
@@ -76,7 +84,7 @@ Database state: `NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`
 Real user E2E: `NOT_VERIFIED`
 
-本次 PR #60 冲突收敛保留当前账号/免费登录、独立工作区、视觉和来源同权规则。规划继续只使用 `00-GOVERNANCE/LOOP-PLAN-20261014/` 的现行版本及 `UI-STEP-PLAN.md`；不恢复旧目录下的重复规划。补入既有 Gibbs 训练/validation/holdout 三份原始日志并链接当前数学采用记录，状态仍为“已训练、未上线”，G163 仍 OPEN。这是规则与历史证据同步，不含新训练、产品运行或验收升级；下述 PR #77/#78 回执保留其原有范围。
+本次 PR #60 冲突收敛保留当前账号/免费登录、独立工作区、视觉和来源同权规则。规划继续只使用 `00-GOVERNANCE/LOOP-PLAN-20261014/` 的现行版本及 [唯一完整前端规划](LOOP-PLAN-20261014/product-plan-full.md)与[唯一视觉文字草图](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)；不恢复旧目录下的重复规划。补入既有 Gibbs 训练/validation/holdout 三份原始日志并链接当前数学采用记录，状态仍为“已训练、未上线”，G163 仍 OPEN。这是规则与历史证据同步，不含新训练、产品运行或验收升级；下述 PR #77/#78 回执保留其原有范围。
 
 本批承接 Issue #17 正文及 33 条评论、#lumenis-dev 43 条频道消息及 7 个回复串的 53 条回复，共 136 条来源记录、122 条去重消息；逐条读取、映射并保留全部未闭项。Brio 两个新附件包的 10 份文档已读并映射；历史四份长 PDF 的既有部分阅读边界保留，消息全覆盖不等于全部研究材料读完。本批修复 KOS 三处未定义服务调用、AI 状态把分析模块导入误报为模型可用、Shared SavedWork 的独立工作区 Scope，以及视频工程因任意转场而全面禁用编辑的问题。独立 Shared 容器不继承 CTH/BMP 权限；所引用来源仍逐条保留原 Scope、SourceUse 与权益核验。媒体编辑按实际 Core 转场约束原子拒绝无效修改，保留撤销和版本，不用删除转场换取表面成功。当前前端规划和逐屏参考原位补齐完整任务、独立制作、返回/保存/恢复和四表面差异；44 个历史屏号不是范围上限，文档更新不证明实际界面已通过。
 

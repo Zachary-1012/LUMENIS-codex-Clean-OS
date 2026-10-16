@@ -72,10 +72,11 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 
 ## 5. Purpose-built desktop composition
 
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - **Primary question:** Where does the selected brand's propagation path strengthen or stop, and what is actually observed?
 - **Composition:** a focus/window header, a left-to-right propagation river for channel → content → exposure → response/conversion, and a channel matrix with definitions/windows. A selected channel detail panel explains unavailable stages rather than collapsing them to zero.
 - **Interaction:** selecting a channel highlights its path and matrix row; no channel edit or attribution action is enabled.
-- **Resize:** desktop shows river plus matrix; tablet stacks matrix below the selected flow; layout recomposes rather than shrinking the river into unreadable cards.
 
 ### 5A. Web Workspace composition and desktop-only boundary
 
@@ -84,7 +85,8 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 
 ## 6. Purpose-built mobile composition
 
-- Recompose into a vertical funnel/river with a channel selector. The selected channel shows stage-by-stage rows with unit, definition and window before any summary.
+> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+
 - Keep BrandFocus and comparison window in view. Back returns to the channel selector.
 - Each stage row is touch-safe and announces when a stage is observed, unavailable, stale or not collected. No cached unscoped metrics survive an interruption.
 
