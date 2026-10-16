@@ -5,7 +5,7 @@ This folder holds the reviewed implementation specification for each canonical A
 ## Rules
 
 - This index and the screen specifications define Experience requirements; they do not assign work or record current window state. Current dispatch/pause/resume is established by the latest direct Product Owner instruction and the local live ledger/tool receipts, not by published rules or historical notes.
-- Reuse the existing `<SCREEN-ID>.md` and update it alongside implementation. Direct implementation does not require a separate design draft/Figma or M DESIGN_READY prerequisite. A specification file or design status alone never proves acceptance.
+- Reuse the existing `<SCREEN-ID>.md` and update it alongside implementation. The complete frontend/backend plan is [product-plan-full.md](../../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md), and its full-product visual/operation sketch is [FULL-PRODUCT-SKETCH.md](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md); update them in place under Architecture/Experience and the actual screen contracts, never create duplicate current versions. Direct implementation does not require a separate design draft/Figma or M DESIGN_READY prerequisite. A specification file or design status alone never proves acceptance.
 - Use `contracts/experience/lumenis_app_binding_registry.json` as the binding inventory. Update it only from current source/runtime evidence; never treat historical `BOUND`, task assignee or ViewModel labels as proof.
 - Keep CTH Subject-first, BMP Brand/Market-first, Shared lineage and SYSTEM infrastructure boundaries intact.
 - Do not copy screen layouts into a shared renderer. Shared tokens and semantic interaction primitives may be referenced, while each specification must define its own information hierarchy, composition and task choreography.
@@ -43,9 +43,9 @@ Reuse the current Architecture and Experience corrections for the shared product
 |---|---|---|
 | [ACC-01](ACC-01.md) | 确认内部工作区入口可用并继续宿主指定目标；显示入口状态与宿主提供的继续动作；无 callback 不伪造路由或账户流程 | 传递宿主实际 route 与原任务位置，失败时保留入口；Web接浏览器route；Desktop回原窗口；Mobile恢复原任务；官网只说明公开入口 |
 | [ACC-02](ACC-02.md) | 查看当前GLOBAL_ALL或明确选择一个可访问Subject视角；列表、当前视角和确认预览并置；说明选择不授予业务读取权限 | 只有服务端确认的scope envelope传递给下游，切换后回原工作；Web/Desktop提供目录与预览；Mobile逐项选择；官网不展示私有目录 |
-| [ACC-03](ACC-03.md) | 从首页开始真实工作或继续原任务；以任务、草稿、已访问页面和既有工作流组织，不做KPI营销模板 | 恢复Task/Brief/scope/Artifact版本，建议只开草稿不触发效果；Web多区并读；Desktop快捷续接；Mobile突出一个待续任务；官网只作公开介绍 |
+| [ACC-03](ACC-03.md) | 从首页开始真实工作或继续原任务；打开即聊天/任务入口，导航进入各业务和独立能力；保留任务、草稿、已访问页面与工作接续，不做KPI营销模板 | 恢复Task/Brief/scope/Artifact版本，建议只开草稿不触发效果；Web多区并读；Desktop快捷续接；Mobile突出一个待续任务；官网只作公开介绍 |
 | [ACC-04](ACC-04.md) | 理解一项真实阻断并沿已有恢复路径返回；展示发生了什么、影响哪个任务、已绑定的恢复路径 | 关联原Task、请求scope、operation与恢复receipt，保留未提交内容；Web/Desktop并列工作与受控说明；Mobile按阻断→影响→恢复；官网不显示内部诊断 |
-| [AI-01](AI-01.md) | 把用户目标、当前资料与约束组成可检查的执行意图；自然语言目标与现有Brief/Evidence/scope/Budget/缺项并列；建议可编辑拒绝 | 沿用同一Task/Brief/引用/Actor/scope；真实结果返回execution ID及Evidence状态；Web/Desktop并看输入与资料；Mobile逐项确认；官网仅公开且标注示例 |
+| [AI-01](AI-01.md) | 把用户目标、当前资料与约束组成可检查的执行意图；自然语言问题、选中资料与必要业务约束可编辑；建议可接受、修改或拒绝，内部合同/算法字段不铺满操作页 | 沿用同一Task/Brief/引用/Actor/scope；真实结果可读、可保存并能查看来源与必要状态；execution ID及合同字段只由后台保留，不要求用户输入；Web/Desktop并看输入与资料；Mobile逐项确认；官网仅公开且标注示例 |
 | [AI-02](AI-02.md) | 跟踪真实任务阶段与持久化产物；按服务端实际状态组合阶段轴、当前输出和Evidence/Artifact检视 | 同一run/model/recipe/input scope版本贯穿恢复与保存；Web/Desktop阶段轴加检视；Mobile聚焦当前阶段；官网不呈现内部运行 |
 | [AI-03](AI-03.md) | 逐条核验分析结论的来源并继续修订；Claim—Citation—不确定性阅读，围绕一个结论局部修订 | 保留Evidence ID、source locator、scope和父版本；下游复用同Brief；Web/Desktop消息与引用并读；Mobile先结论后引用；官网不显示私有讨论 |
 | [AI-04](AI-04.md) | 查找适合当前任务的已验证能力，并按现有 Owner 合同完成已批准的使用与生命周期操作；呈现能力输入/输出、版本、许可、风险与评估；当前目录只读，已批准的启用/运行/更新/停用等操作按现有 Skills owner 补齐，缺口保持 OPEN | 保留既有 skill ID/version、输入和原 Task；每个生命周期/运行操作单独经过既有 Permission，不因选择而授权；Web/Desktop目录与详情；Mobile显示当前Task可用能力；官网只列已验证能力 |

@@ -673,6 +673,28 @@ context, missing-key behavior and tested responsive layouts. If one promised
 locale is absent or unusable, that screen/surface is not accepted; it is not
 silently deferred or replaced by untranslated implementation text.
 
+### Task and action language — direct PO correction, 2026-10-16
+
+Across the whole product and every approved surface, operational UI shows the user's current task, content, result and available actions, plus necessary status, error, risk and permission confirmation. Titles name the work; buttons name the action; state copy identifies the real affected object or what needs attention. Do not display development self-praise, architecture slogans, internal process/algorithm narration or long explanations of how the product works. Ordinary work never requires choosing a mathematical paper, internal ID, tool or diagnostic parameter. Preserve the existing optional connector, Skill and model settings when the user intentionally manages them.
+
+Keep business questions, scope, period, budget, resources and constraints editable. Material coverage gaps, uncertainty/error bounds, estimates, stale or incomparable data, required units/currencies/denominators and consequential risks remain visible where they affect a decision. Detailed methods, algorithms, definitions, assumptions, source locations and versions open on demand through keyboard/touch/screen-reader accessible controls, with return to the same object or selection. Folding detail must not conceal a limitation, permission requirement or actual state.
+
+Use task-specific product copy such as “导入资料”, “查看结果”, “修改要求”, “查看引用”, “保存”, “导出”, and state-supported “停止” or “继续任务”. Actual receipts govern “已收到”, “已导入” and “已保存”; partial completion retains real completed/pending scope. A run ending is not the user's outcome passing. Error copy identifies the affected object, actionable cause and an existing recovery action. Preserve real cancellation, safe retry, saved versions and recovery; concise wording never deletes a function, combines distinct states or claims a saved/recoverable draft that does not exist.
+
+Owner/API/Permission/SourceUse contracts, implementation notes, algorithms and wireframe timing arrows remain internal design/engineering material, not literal page text. Public Website and help retain concise, factual task/outcome and necessary operation instructions without unsupported capability claims or development slogans. Chinese, English, Korean and accessible names retain the same meaning. All approved UI/UX, AIGC, original identity/icons/illustrations, operation videos, user choices, motion/physics parameters, approximately 90ms initial feedback and full four-surface scope remain in force. This is a language correction, not implementation or acceptance.
+
+Reference study accessed 2026-10-16: [ChatGPT Work getting started](https://learn.chatgpt.com/docs/get-started-with-work) and [long-running work](https://learn.chatgpt.com/docs/long-running-work) frame work by outcomes, constraints, review and revision; [Grok Bot files/results](https://docs.x.ai/grok-bot/files-and-results) and [approvals](https://docs.x.ai/grok-bot/approvals-security-and-privacy) keep reviewable results, unresolved issues and action boundaries legible. ADAPT only those task/action language principles in existing LUMENIS owners. Vendor branding, layouts, computer-control features, rollout/account claims and their internal activity displays are not adopted as product scope or authority.
+
+### Direct material intake and purposeful physical interaction — PO addition, 2026-10-16
+
+Ordinary permitted research material goes directly through the existing upload/import owner into automatic parsing and useful basic analysis that remains available without AI. Do not insert a generic “来源使用” or “本次用途” form before normal intake. The server retains the actual source, actor/workspace, scope, Permission, rights and UNKNOWN/review states; genuinely sensitive or additional uses still require their existing specific checks and confirmation. Optional available-model enhancement has a distinct action and real state. Upload, parsing, import, basic analysis, model enhancement and saved results remain separate states; no progress message or model text proves a saved analysis or verified external fact.
+
+The existing material library is ordered by actual server-recorded ingestion time. Each material and each analysis result has an identifiable card linked to its original, source and saved versions; a batch groups individual items rather than replacing them. Preserve original publication/event time separately and leave unknown time unknown. Opening an item does not reset its ingestion time. Users can read the original and analysis, revise and save, reopen the committed version and recover interrupted work through the existing Source/Evidence, Research and SavedWork/Artifact owners. A derived result never silently changes source Evidence or becomes Canonical fact.
+
+Treat the pointer as a hand where this helps the actual task: immediate press/depth feedback, pickup with a stable grab anchor, slight tilt, damped dragging, release with measured velocity and a meaningful rebound. On appropriate existing material or analysis cards, flipping may reveal the same object's source/method detail and return to its content; provide a direct detail action as well. Update the existing screen contract alongside implementation. Press depth, lift/depth, tilt, damping, mass/stiffness and release parameters must control real geometry or trajectories, with observable differences when changed; an ordinary mouse supplies no pressure measurement. Do not hide critical coverage, errors, risks, permission or available actions on a card back. Preserve keyboard, touch and screen-reader equivalents, reduced-motion/disabled choices, approximately 90ms first feedback, user edits and exact media/Timeline semantics. No VR/XR, new engine or whole-product 3D style is required. All original visual, motion and user choices remain. Actual parameter binding, performance, recovery and separate surface acceptance are still required.
+
+These additions apply across the complete approved product and four surfaces through their existing owners. The current overall frontend is NOT_ACCEPTED. This round consolidates documents and preserves all unfinished work; implementation, binding, real operation/recovery and full acceptance continue under the next direct PO dispatch, without starting or pausing other windows.
+
 ## 23. Brand identity
 
 Product assets may live in implementation directories, but there is no independent logo/design specification outside this Constitution.
@@ -1268,11 +1290,7 @@ Long projects can reach both ends without clipping; dense tracks may scroll
 vertically within their own necessary region. Panning alone never changes
 project duration, clip positions, audio mix, source refs or saved versions.
 
-Developer mode remains a retained historical SYSTEM capability. The Product
-Owner explicitly deferred it after raising the missing entry: DEFERRED_BY_USER,
-not a current implementation task or closure blocker. C6 retains the backend/
-security record and F the eventual UI ownership; do not enable legacy execution
-or erase its history. Resume it only under a later authorized priority change.
+The approved user and Founder developer modes are inside engineering closure, with C6 retaining SYSTEM/security ownership and F owning their interfaces. User mode preserves explicit terms/consent, backup and reversible disablement; Founder mode preserves actual role authorization, validated signed staged updates and rollback. Neither mode revives a retired executor, bypasses server Permission or proves implementation merely by being planned. Their existing screen contracts and complete product plan define the actions and independent acceptance.
 
 These requirements apply to the appropriate operational surfaces with deliberate
 desktop/touch recomposition. Website explains actual available abilities; it

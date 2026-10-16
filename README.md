@@ -3,7 +3,7 @@
 商业运营、品牌市场、独立研究与内容制作的一体化工作平台。
 An integrated workspace for commerce operations, brand and market work, independent research, and content production.
 
-[产品蓝图 / Product blueprint](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) · [体验规范 / Experience](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md) · [开发规则 / Contributing rules](AGENTS.md)
+[产品蓝图 / Product blueprint](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) · [完整产品规划 / Full product plan](00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md) · [全产品草图 / Full-product sketches](00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md) · [体验规范 / Experience](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md) · [开发规则 / Contributing rules](AGENTS.md)
 
 ## 产品定位 / Product purpose
 
@@ -22,17 +22,18 @@ AI 贯穿适用的工作环节，辅助理解、分析、建议和创作；正�
 
 AI assists understanding, analysis, recommendations, and creation across applicable workflows. Ordinary business operations, deterministic analysis, manual editing, saving, and recovery do not require a model, external AI API, or GPU. Source facts, computed results, AI suggestions, and human decisions retain distinct provenance.
 
-产品 AI 只经过唯一的 SYSTEM AI Gateway 调用序境自有模型；已退役的外部或本地模型路线不调用、不探测、不作回退。模型不可用时如实显示不可用，基础功能照常工作。
+产品 AI 经唯一的 SYSTEM AI Gateway 调用。序境自有模型是产品自有能力目标；当前唯一获准的外部模型接口为 Groq，且只能经该 Gateway、由用户明确选择并通过适用权限调用。其他退役路线不调用、不探测、不自动回退。AI 不可用时，只有依赖 AI 的增强动作不可用；正常业务、确定性分析、人工编辑、保存与恢复继续工作。
 
-Product AI runs only through the single SYSTEM AI Gateway to LUMENIS-owned models. Retired external or local model routes are never called, probed, or used as fallback. When no model is available the product says so, and basic functions continue to work.
+Product AI uses the single SYSTEM AI Gateway. LUMENIS-owned models remain a product capability goal; Groq is the only currently approved external model interface and may be called only through that Gateway after explicit user selection and applicable permission. Other retired routes are not called, probed, or used as automatic fallbacks. If AI is unavailable, only AI-dependent enhancements are unavailable; ordinary business work, deterministic analysis, manual editing, saving, and recovery continue.
 
 ## 用户如何工作 / User workflows
 
 | 工作 / Work | 操作与成果 / Actions and outcomes |
 | --- | --- |
+| 工作区首页与聊天 / Workspace home and chat | 打开工作区即进入聊天/任务入口；可在同一入口提交多个彼此隔离的任务，长任务异步执行并把结果送回对应任务，不展示内部推理过程。侧边导航可进入 CTH、BMP、Shared 独立研究、提案/视频/播客、内置浏览器和 SYSTEM。 / Open the workspace directly to its chat/task entry. Submit multiple isolated tasks through one entry; long tasks run asynchronously and return results to their task without exposing internal reasoning. Navigation opens CTH, BMP, independent Shared research, proposals/video/podcasts, the in-product browser, and SYSTEM. |
 | CTH · 商业运营 / Commerce operations | 围绕商业主体查看监测、事件、消费者反馈与风险，形成有依据的判断、行动和结果报告。 / Monitor a commercial subject, inspect events, consumer feedback and risks, and develop supported decisions, actions, and outcome reports. |
 | BMP · 品牌市场 / Brand and market | 研究品牌、市场、竞品、创作者和传播，制定及评价 Campaign。 / Research brands, markets, competitors, creators, and communications; plan and evaluate campaigns. |
-| 独立研究 / Independent research | 导入、查找、阅读、比较和引用资料，保存研究笔记、简报与报告。 / Import, find, read, compare, and cite materials; save research notes, briefs, and reports. |
+| 独立研究 / Independent research | 普通资料可直接上传，无需填写来源使用或本次用途表单；后台解析并提供不依赖 AI 的确定性基础分析，可用且获准的 AI 增强单独标明为派生结果。资料库按真实入库时间展示逐项资料卡，原生发布时间单独保留且可为空；后台仍执行现有权限检查，未核实的作者/权益保持 UNKNOWN，不隐含对外发布或训练许可。打开资料卡可阅读原文、可定位引用与分析，并保存、修订、重开和恢复。 / Upload ordinary materials directly without a source-use or per-task-purpose form. The backend parses each item and provides deterministic baseline analysis without AI; available and authorized AI enhancement is labeled separately as derived output. A materials timeline shows one card per item ordered by its actual ingest time, while native publication time remains a separate nullable value. Existing permission checks remain; unverified authorship and rights stay UNKNOWN, with no implied publication or training license. Open a card to read the original, locatable citations, and analysis, then save, revise, reopen, and recover the work. |
 | 提案与文稿 / Proposals and documents | 从空白、创作要求或已有资料开始，编写、编辑、审阅和导出。 / Start from a blank document, creative brief, or existing material; write, edit, review, and export. |
 | 视频 / Video | 导入素材、编排与剪辑、调整声音和字幕、预览及渲染，保存成片与可编辑工程。 / Import and arrange media, edit clips, sound and captions, preview and render, and retain both the output and editable project. |
 | 播客 / Podcasts | 编写脚本、导入或录制音频、剪辑混音、管理章节与转写、试听及导出。 / Write scripts, import or record audio, edit and mix, manage chapters and transcripts, listen, and export. |
@@ -49,7 +50,7 @@ Independent research and production do not require a prior CTH/BMP task, commerc
 - **结果优先 / Results first：** 用户提出工作问题和业务约束，后台处理适用分析，报告呈现结论、依据、限制及下一步。 / Users provide the question and practical constraints; backend analysis produces conclusions, evidence, limitations, and next actions.
 - **版本连续 / Version continuity：** 成果支持保存、局部修订、重开与恢复；旧版和修改原因保留。 / Work supports saving, local revision, reopening, and recovery, with prior versions and reasons retained.
 - **主体与范围 / Subjects and scope：** 默认范围为 GLOBAL / ALL。用户可以搜索、新增、聚焦和清除商业主体与品牌；聚焦只缩小范围，不授予权限，也不启动采集。品牌名称以品牌官网的正式名称为准，并记录来源。 / The default scope is GLOBAL / ALL. Users can search, add, focus, and clear commercial subjects and brands; focus only narrows scope and neither grants permission nor starts collection. Brand names follow each brand's official website and record the source.
-- **持续采集 / Continuous acquisition：** SYSTEM Collector 按话题和任务语义，为全部已登记主体持续采集。当前主要平台为 Instagram、Facebook、微信公众号、小红书、抖音和 X，不设统一历史起点。采集在后台运行，不弹出窗口。平台登录失效时，在产品内打开统一的恢复面板（扫码、受控登录或验证），恢复后续跑原任务，不自动打开外部浏览器。单个平台不可用不影响其他平台。 / The SYSTEM Collector continuously acquires sources for all registered subjects by topic and task semantics. The primary platforms are Instagram, Facebook, WeChat Official Accounts, RedNote/XHS, Douyin, and X, with no universal start date. Collection runs in the background without pop-up windows. When a platform session expires, one in-product recovery sheet (QR, controlled login, or verification) restores it and resumes the original task; no external browser opens automatically. One unavailable platform does not stop the others.
+- **持续采集 / Continuous acquisition：** SYSTEM Collector 按话题和任务语义，在现有采集启用状态、权限、身份与来源边界内对主体执行采集；仅登记主体不授予采集权限，也不自动启动采集。当前主要平台为 Instagram、Facebook、微信公众号、小红书、抖音和 X，不设统一历史起点。采集在后台运行，不弹出窗口。平台登录失效时，在产品内打开统一的恢复面板（扫码、受控登录或验证），恢复后续跑原任务，不自动打开外部浏览器。单个平台不可用不影响其他平台。 / The SYSTEM Collector acquires sources by topic and task semantics only within the existing enabled collection state and applicable permission, identity, and source boundaries. Registration alone grants no collection permission and does not start acquisition. The primary platforms are Instagram, Facebook, WeChat Official Accounts, RedNote/XHS, Douyin, and X, with no universal start date. Collection runs in the background without pop-up windows. When a platform session expires, one in-product recovery sheet (QR, controlled login, or verification) restores it and resumes the original task; no external browser opens automatically. One unavailable platform does not stop the others.
 - **权限明确 / Explicit permissions：** 浏览、引用、制作、导出、发布及模型训练遵循各自适用的授权。 / Browsing, citation, production, export, publication, and training follow their respective permissions.
 
 ## 产品表面 / Product surfaces
@@ -103,9 +104,9 @@ AGENTS.md
 → 对应能力合同与源码 / Relevant capability contracts and source
 ```
 
-`LUMENIS-CODEX-TAKEOVER-CURRENT.md` 是所有开发者唯一的闭环接续入口。流程为：规则 → CURRENT → 工作分支 → 测试 → PR → 必需检查全绿 → 合并 → 本地主路径与 `origin/main` 一致。只使用一个本地主路径，不另建 worktree 或副本。
+`LUMENIS-CODEX-TAKEOVER-CURRENT.md` 是所有开发者唯一的闭环接续入口。流程为：规则 → CURRENT → 有界工作分支 → 适用验证 → PR → 必需检查全绿 → 合并 → 核对 `origin/main`。`main` 是唯一集成主线；为保护已有未提交成果或进行精确隔离验证，可使用临时 worktree。隔离工作区不构成第二套长期实现；不得 reset、clean、批量覆盖或丢弃他人的未提交成果。
 
-`LUMENIS-CODEX-TAKEOVER-CURRENT.md` is the single closed-loop entry for every contributor: rules → CURRENT → work branch → tests → PR → all required checks green → merge → local main path aligned with `origin/main`. Use one local main path; do not create extra worktrees or copies.
+`LUMENIS-CODEX-TAKEOVER-CURRENT.md` is the single closed-loop entry for every contributor: rules → CURRENT → scoped branch → applicable verification → PR → all required checks green → merge → verify `origin/main`. `main` is the sole integration line. A temporary worktree may be used to protect existing uncommitted work or perform exact isolated validation; it is not a second long-term implementation. Never reset, clean, broadly overwrite, or discard another contributor's uncommitted work.
 
 首先阅读 [`AGENTS.md`](AGENTS.md)、对应源码 Owner 和能力合同；核对已有实现与调用关系，复用正确能力、修复冲突，只为确认的缺口补实现。所需 Python 依赖以仓库的 `requirements*.txt` 为准；Flutter/Dart 版本以 [`app/toolchain.json`](app/toolchain.json) 为准；官网使用 [`website/package.json`](website/package.json) 与锁文件。不要为阅读本说明而自动安装、升级或启动服务。
 

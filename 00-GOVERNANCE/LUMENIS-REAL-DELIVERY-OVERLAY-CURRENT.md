@@ -23,7 +23,7 @@ PO已确认Architecture用户工作方式；窗口成果卡/建议执行顺序�
 | 原验收范围 | 必须证明的用户结果 | 不足以替代的证据 |
 | --- | --- | --- |
 | CTH、BMP | 两领域各用真实获准输入产出有用分析/判断、适用行动及真实结果记录、报告；保存/修订/关闭重开/恢复/来源返回 | 样本计数、拼接摘要、计划等于执行、用户自己配置论文算法、只验拒绝路径 |
-| 独立研究 | 用户问题或自有材料直接进入研究，行业案例/方法实际被采用，结论/依据/局限和引用可用，成果可检索/版本化/导出/恢复 | 文件数、已读目录、模型回答或只跑业务附属研究 |
+| 独立研究 | 普通资料直接上传，不填通用来源使用/本次用途表单；逐材料原件、定位、确定性分析及独立可用AI增强真实落地。按实际导入时间进入资料库，每份资料/分析有可打开卡片，原生日期与未知保持；原文、分析、行业案例、结论/依据/局限和引用可检索、保存、修订、重开及中断恢复；后台权限/权益与可选CTH/BMP采用各自核验 | 文件数、已读目录、模型回答、导入当事实确认、只跑业务附属研究、假进度/假保存 |
 | 独立提案、视频、播客 | 三项各自直接新建、实际编辑、适用预览/试听、真实可编辑工程与可使用成品、导出和版本恢复；另验用户选择的业务/研究联动 | 强制CTH/BMP或SourceBrief前置、截图/静态计划、脚本当音频、文件存在、仅有限单轨示例 |
 | 产品内浏览器 | 同actor/task/session真实网页和获准操作、独占接管、停止、返回原工作、成果保存重开与失败恢复；自动采集后台运行 | raw CDP暴露、自动外部弹窗、HTTP200、只读画面、以OS执行器补齐网页功能 |
 | 数据与分析共性 | 已有获准数据可持续消费；真实字段、来源、身份、范围、时间、单位/分母、权利和未知状态正确，无AI正常链可独立成功 | 某平台未齐就停止全部业务、补零/假图/假热度、把模型输出或用户创作当Canonical事实 |
@@ -37,7 +37,7 @@ PO已确认Architecture用户工作方式；窗口成果卡/建议执行顺序�
 
 **Website/Web工程就绪**使用原门禁：全部适用用户链和屏幕可操作，前后端/Core/数据库/Artifact版本对应，权限拒绝与来源撤回正确，断网/取消/中断/重启/ACK丢失与备份恢复有实际证据，必要静态/安全/数据一致性、定向回归、实际构建及精确SHA CI成立。真实用户不看源码也能找到入口、读懂结果、编辑并恢复；开发者直接API操作只能支持后端证据，不能代替整条Web用户链。
 
-**上线裁决**仍归原Release/商业就绪规则：M/C6收齐适用R/J/U、真实关键E2E、发布包/配置/依赖许可、安全、可观测与回滚证据后，交PO重复操作；实际域名/托管/生产部署、对外效果或新费用须各自有效授权。任一表面通过都不代表其他表面已通过，也不自动宣称全产品RELEASED或OPERATING。新账户/密码重设计等原已后置事项保持原边界，不能借上线准备重新加账户墙。
+**上线裁决**仍归原Release/商业就绪规则：M/C6收齐适用R/J/U、真实关键E2E、发布包/配置/依赖许可、安全、可观测与回滚证据后，交PO重复操作；实际域名/托管/生产部署、对外效果或新费用须各自有效授权。任一表面通过都不代表其他表面已通过，也不自动宣称全产品RELEASED或OPERATING。既已批准的账号体系、免费登录、两种开发者模式及商业六项仍在工程闭环内；只有真实用户重复验证和付费/授权来源按现行发布边界办理，不设新的通用账号墙。
 
 规划与验收表述不证明上述业务已经通过；在线验收要求不拥有当前窗口调度权。
 
@@ -243,7 +243,7 @@ These are acceptance inputs to existing C/R/J/U cards, not another round or queu
 - Offline audio understanding is part of existing C2/C4/C5 and video/podcast/material work. Validate Chinese, English, Korean and their requested mixtures separately. Retain original-language text, defined word/token units, anonymous within-asset speaker turns when requested, and unresolved/overlapping speech. ASR, technical DSP, speech meaning, direct-audio music/event/vocal-expression understanding and audiovisual relationships have independent coverage and quality. Text sentiment or loudness/beat/pitch alone cannot pass actual listening; untested languages/capabilities cannot disappear from the requested set. No identity, health, personality or actual-inner-state inference.
 - Resolve actual authorized audio/video bytes and streams through existing owners. Preserve original channels, source hash/PTS/time base and reversible source-to-analysis-to-timeline mappings; account for downmix cancellation, edits, speed and resampling. Music/event branches retain non-speech audio. Preserve raw zero-duration/uncertain ASR units for review without deleting words or inventing timing precision; accepted aligned intervals must be valid positive ranges. Audiovisual claims require actual corresponding visual evidence. Empty output, raw language scores and small smoke samples are not semantic or whole-project acceptance.
 - Persist audio analysis as a versioned derivative with actual input/model/runtime/run and locatable source-range references. Keep source Evidence, rights, current-use authorization, analysis interpretation and review distinct. Existing Evidence/Artifact/Task/Permission owners must admit and recheck the result; no fabricated refs, second store, TaskStatus rewrite or removal of an unavailable-binding guard. A changed source/transcript/channel/edit/model/visual version marks dependent analysis for review while preserving old versions and unaffected work. A subtitle correction alone does not update recorded or rendered audio.
-- Prove an actual video and podcast consumption path from inherited task/material/constraints through reviewable listening-based suggestions, a chosen edit, playable export, listening review, saved project, reopen and cancellation/failure recovery. Preserve all earlier visual/storyboard and original-pitch acceptance. Tests include real per-language references, mixtures, noise/overlap, music/singing, different delivery of identical words, silence/no-track/corruption and honest missing capability. Model/software/weight rights, resource limits and network egress remain explicit; a research document's install command or historical remote run grants no new download, paid compute, audio upload or training use. Realtime/microphone work remains deferred.
+- Prove an actual video and podcast consumption path from inherited task/material/constraints through reviewable listening-based suggestions, a chosen edit, playable export, listening review, saved project, reopen and cancellation/failure recovery. Preserve all earlier visual/storyboard and original-pitch acceptance. Tests include real per-language references, mixtures, noise/overlap, music/singing, different delivery of identical words, silence/no-track/corruption and honest missing capability. Model/software/weight rights, resource limits and network egress remain explicit; a research document's install command or historical remote run grants no new download, paid compute, audio upload or training use. Realtime voice/interruption is a separate approved OPEN target under the existing C2/C4/C5/C6/F owners: prove explicit user initiation and microphone Permission, authorized transport/model, actual interruption/stop, reconnect and task return. Do not substitute local Read Aloud or file ASR for realtime acceptance, automatically record, or activate an unapproved external voice API or paid service.
 
 The existing responsible windows are C2 owned understanding/reasoning, C3 domain decisions/campaigns, C4 original pitch/video/podcast, C5 source/research/versioned Artifact, C1 source facts, F operation/layout and C6 binding/publication. No second budget store, inference service, Evidence owner or permission plane is introduced.
 
@@ -1353,9 +1353,11 @@ reuse valid same-content evidence and do not rerun unrelated tests just to count
 
 Video AND podcast acceptance includes actual horizontal timeline interaction,
 pan/seek separation, ruler/track synchronization and unchanged project truth under
-view-only panning. Developer mode is DEFERRED_BY_USER and is not a gate for this closeout; retain
-its source/Owner and revisit only when later authorized. Its deferral does not
-defer timeline interaction, research ownership or the other agreed capabilities.
+view-only panning. Both approved developer modes retain their existing SYSTEM/C6/F
+source owners and full consent, backup, validation, signing, rollout and recovery
+acceptance inside engineering closure. Account/login work adds no universal account
+wall or automatic deployment authority. Timeline interaction, research and every
+other agreed capability retain their own complete outcome and acceptance.
 
 AI training acceptance requires the approved actual model/data/resource route,
 optimizer steps/loss, durable checkpoint, reload/resume and independent held-out
