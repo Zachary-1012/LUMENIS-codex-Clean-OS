@@ -673,6 +673,18 @@ context, missing-key behavior and tested responsive layouts. If one promised
 locale is absent or unusable, that screen/surface is not accepted; it is not
 silently deferred or replaced by untranslated implementation text.
 
+### Task and action language — direct PO correction, 2026-10-16
+
+Across the whole product and every approved surface, operational UI shows the user's current task, content, result and available actions, plus necessary status, error, risk and permission confirmation. Titles name the work; buttons name the action; state copy identifies the real affected object or what needs attention. Do not display development self-praise, architecture slogans, internal process/algorithm narration or long explanations of how the product works. Ordinary work never requires choosing a mathematical paper, internal ID, tool or diagnostic parameter. Preserve the existing optional connector, Skill and model settings when the user intentionally manages them.
+
+Keep business questions, scope, period, budget, resources and constraints editable. Material coverage gaps, uncertainty/error bounds, estimates, stale or incomparable data, required units/currencies/denominators and consequential risks remain visible where they affect a decision. Detailed methods, algorithms, definitions, assumptions, source locations and versions open on demand through keyboard/touch/screen-reader accessible controls, with return to the same object or selection. Folding detail must not conceal a limitation, permission requirement or actual state.
+
+Use task-specific product copy such as “导入资料”, “查看结果”, “修改要求”, “查看引用”, “保存”, “导出”, and state-supported “停止” or “继续任务”. Actual receipts govern “已收到”, “已导入” and “已保存”; partial completion retains real completed/pending scope. A run ending is not the user's outcome passing. Error copy identifies the affected object, actionable cause and an existing recovery action. Preserve real cancellation, safe retry, saved versions and recovery; concise wording never deletes a function, combines distinct states or claims a saved/recoverable draft that does not exist.
+
+Owner/API/Permission/SourceUse contracts, implementation notes, algorithms and wireframe timing arrows remain internal design/engineering material, not literal page text. Public Website and help retain concise, factual task/outcome and necessary operation instructions without unsupported capability claims or development slogans. Chinese, English, Korean and accessible names retain the same meaning. All approved UI/UX, AIGC, original identity/icons/illustrations, operation videos, user choices, motion/physics parameters, approximately 90ms initial feedback and full four-surface scope remain in force. This is a language correction, not implementation or acceptance.
+
+Reference study accessed 2026-10-16: [ChatGPT Work getting started](https://learn.chatgpt.com/docs/get-started-with-work) and [long-running work](https://learn.chatgpt.com/docs/long-running-work) frame work by outcomes, constraints, review and revision; [Grok Bot files/results](https://docs.x.ai/grok-bot/files-and-results) and [approvals](https://docs.x.ai/grok-bot/approvals-security-and-privacy) keep reviewable results, unresolved issues and action boundaries legible. ADAPT only those task/action language principles in existing LUMENIS owners. Vendor branding, layouts, computer-control features, rollout/account claims and their internal activity displays are not adopted as product scope or authority.
+
 ## 23. Brand identity
 
 Product assets may live in implementation directories, but there is no independent logo/design specification outside this Constitution.
