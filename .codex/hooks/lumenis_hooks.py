@@ -52,6 +52,7 @@ DELIVERY_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,119}\Z")
 SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 MAX_EVIDENCE_PATHS = 220
 MAX_CONTINUITY_NARRATIVE_CHARS = 24_000
+MAX_CONTINUITY_REFERENCE_BYTES = 2_000_000
 MAX_DELIVERY_BYTES = 8_000_000
 MAX_CONTINUITY_RECORD_BYTES = (MAX_CONTINUITY_NARRATIVE_CHARS * 4
                                + MAX_DELIVERY_BYTES * 2 + 8192)
@@ -284,7 +285,7 @@ def continuity_identity(event: dict, root: Path) -> dict:
             "agent_id": str(event.get("agent_id") or "")}
 
 
-def continuity_path(root: Path, value: str) -> Path:
+def continuity_path(root: Path, value: str, *, max_bytes: int = MAX_CONTINUITY_REFERENCE_BYTES) -> Path:
     if not isinstance(value, str) or not value or len(value) > 600:
         raise ValueError("Bounded relative evidence/source path required")
     windows_path = PureWindowsPath(value)
@@ -311,13 +312,13 @@ def continuity_path(root: Path, value: str) -> Path:
     path = unresolved_path.resolve()
     if not path.is_relative_to(repository_root) or path.suffix.lower() not in TEXT:
         raise ValueError("Only repository text references are supported")
-    if path.is_file() and path.stat().st_size > 2_000_000:
+    if path.is_file() and path.stat().st_size > max_bytes:
         raise ValueError("Reference exceeds bounded read limit")
     return path
 
 
 def continuity_record_key(root: Path, value: str) -> tuple[str, Path]:
-    path = continuity_path(root, value)
+    path = continuity_path(root, value, max_bytes=MAX_CONTINUITY_RECORD_BYTES)
     key = path.relative_to(root.resolve()).as_posix()
     if path.suffix.lower() != ".json" or not key.startswith("work/"):
         raise ValueError("Use an existing JSON section under the local Owner work directory")
@@ -821,10 +822,13 @@ def continuity_record(root: Path, record: str, section: str,
     return item
 
 
-def continuity_pins(root: Path, paths: list[str]) -> dict:
+def continuity_pins(root: Path, paths: list[str], *, record_path: str | None = None) -> dict:
     pins = {}
+    normalized_record = continuity_record_key(root, record_path)[0] if record_path else None
     for value in sorted(set(paths)):
-        path = continuity_path(root, value)
+        path = (continuity_record_key(root, value)[1]
+                if normalized_record and value == normalized_record
+                else continuity_path(root, value))
         pins[path.relative_to(root.resolve()).as_posix()] = (
             hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "ABSENT")
     return pins
@@ -840,6 +844,32 @@ def _prompt_binding(state: dict) -> dict:
     submitted_at = state.get("last_prompt_at")
     return {"prompt_hash": prompt_hash,
             "submitted_at": submitted_at if isinstance(submitted_at, (int, float)) else None}
+
+
+def _current_po_defer_authorization(state: dict) -> dict | None:
+    authorization = state.get("po_defer_authorization")
+    binding = _prompt_binding(state)
+    if (not isinstance(authorization, dict)
+            or authorization.get("source_event") != "UserPromptSubmit"
+            or not binding.get("prompt_hash")
+            or any(authorization.get(key) != value for key, value in binding.items())):
+        return None
+    requirement_ids = authorization.get("requirement_ids")
+    if (not isinstance(requirement_ids, list) or not requirement_ids
+            or requirement_ids != sorted(set(requirement_ids))
+            or any(not isinstance(value, str) or not DELIVERY_ID_RE.fullmatch(value)
+                   for value in requirement_ids)):
+        return None
+    return authorization
+
+
+def _po_defer_authorization_matches(state: dict, requirement_ids: set[str]) -> bool:
+    authorization = _current_po_defer_authorization(state)
+    return bool(
+        authorization
+        and requirement_ids
+        and set(authorization["requirement_ids"]) == requirement_ids
+    )
 
 
 def _delivery_nonclosure_exit_signature(root: Path, item: dict) -> tuple[str, str] | None:
@@ -914,6 +944,40 @@ def _nonclosure_exit_matches_current_prompt(root: Path, state: dict, item: dict)
         and current.get("prompt_hash") is not None
         and frozen == {"status": status, **current}
     )
+
+
+def _po_defer_receipt_matches_current_prompt(root: Path, state: dict, item: dict) -> bool:
+    delivery = item.get("delivery")
+    exit_record = delivery.get("exit") if isinstance(delivery, dict) else None
+    if not isinstance(exit_record, dict) or not isinstance(exit_record.get("evidence_path"), str):
+        return False
+    deferred_ids = {
+        value.get("id") for value in delivery.get("requirements", [])
+        if isinstance(value, dict) and value.get("status") == "PO_DEFERRED"
+    }
+    if (not deferred_ids
+            or deferred_ids != {
+                value.get("id") for value in delivery.get("requirements", [])
+                if isinstance(value, dict) and value.get("status") != "JOB_CLOSED"
+            }
+            or not _po_defer_authorization_matches(state, deferred_ids)):
+        return False
+    authorization = _current_po_defer_authorization(state)
+    try:
+        receipt = continuity_path(root, exit_record["evidence_path"])
+        if not receipt.is_file() or receipt.is_symlink():
+            return False
+        lines = {line.strip() for line in receipt.read_text("utf-8-sig").splitlines()}
+    except (OSError, ValueError):
+        return False
+    requirement_ids = sorted(deferred_ids)
+    expected = {
+        f"UserPromptSubmit prompt SHA-256: {authorization['prompt_hash']}",
+        f"Deferred requirement IDs: {', '.join(requirement_ids)}",
+    }
+    turn_id = authorization.get("turn_id")
+    expected.add(f"UserPromptSubmit turn ID: {turn_id if isinstance(turn_id, str) else 'unavailable'}")
+    return expected.issubset(lines)
 
 
 def _reconcile_pending_effects(root: Path, item: dict, guard: dict,
@@ -1079,7 +1143,21 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
         prompt_reconciliation = _current_prompt_reconciliation_mode(state)
         if prompt_changed:
             new_ids = set(current) - set(prior)
-            if prompt_reconciliation == "CONTINUE_CURRENT":
+            if prompt_reconciliation == "PO_DEFER":
+                unfinished_ids = {
+                    identifier for identifier, value in current.items()
+                    if value["status"] != "JOB_CLOSED"
+                }
+                deferred_ids = {
+                    identifier for identifier, value in current.items()
+                    if value["status"] == "PO_DEFERRED"
+                }
+                if (delivery.get("status") != "PO_DEFERRED"
+                        or not deferred_ids
+                        or deferred_ids != unfinished_ids
+                        or not _po_defer_authorization_matches(state, deferred_ids)):
+                    raise ValueError("A direct deferral prompt must authorize every remaining requirement without changing the admitted IDs")
+            elif prompt_reconciliation == "CONTINUE_CURRENT":
                 if delivery.get("status") in {"EXTERNAL_BLOCKED", "PO_DEFERRED"}:
                     if delivery.get("status") != guard.get("delivery_status") or new_ids:
                         raise ValueError("A continuation cannot change a frozen non-closure exit or its required IDs")
@@ -1191,14 +1269,19 @@ def continuity_save(root: Path, state: dict, event: dict, record: str, section: 
     identity = continuity_identity(event, root)
     frozen_guard, prior_pins = _frozen_delivery_context(state, record, section, identity)
     item = continuity_record(root, record, section, frozen_guard, prior_pins)
+    if (item.get("delivery", {}).get("status") == "PO_DEFERRED"
+            and not _po_defer_receipt_matches_current_prompt(root, state, item)):
+        raise ValueError("PO_DEFERRED requires an explicit current UserPromptSubmit instruction for every remaining requirement")
     guard = _check_delivery_rebind(root, state, identity, record, section, item)
     scope_paths = [value["path"] for value in item.get("delivery", {}).get("scope_sources", [])]
     paths = [*CONTINUITY_RULES, record, *item["source_paths"], *item["evidence_paths"], *scope_paths]
-    pins = continuity_pins(root, paths)
+    pins = continuity_pins(root, paths, record_path=record)
     missing = [path for path, value in pins.items() if value == "ABSENT"]
     # Optional authority files in a portable checkout may be absent; claimed evidence may not.
     for value in [record, *item["source_paths"], *item["evidence_paths"]]:
-        if pins[continuity_path(root, value).relative_to(root.resolve()).as_posix()] == "ABSENT":
+        check_path = (continuity_record_key(root, value)[1] if value == record
+                      else continuity_path(root, value))
+        if pins[check_path.relative_to(root.resolve()).as_posix()] == "ABSENT":
             raise ValueError("Declared current source/evidence is missing")
     state["continuity"] = {
         "schema_version": 1, "identity": identity, "record": record, "section": section,
@@ -1259,7 +1342,7 @@ def continuity_read(root: Path, state: dict, event: dict) -> dict:
                    "saved_head": bound["head"], "saved_at": bound["saved_at"]})
     reasons = []
     try:
-        pins = continuity_pins(root, list(bound["pins"]))
+        pins = continuity_pins(root, list(bound["pins"]), record_path=bound.get("record"))
         changed = [path for path, value in pins.items() if value != bound["pins"][path]]
         result["changed_paths"] = changed
         current_head = git(root, "rev-parse", "HEAD").strip()
@@ -1417,7 +1500,8 @@ def continuity_context_fingerprint(
                 root, bound.get("record"), bound.get("section"), frozen_guard, prior_pins,
             )
             immutable_paths = {
-                continuity_path(root, value).relative_to(root.resolve()).as_posix()
+                (continuity_record_key(root, value)[1] if value == bound.get("record")
+                 else continuity_path(root, value)).relative_to(root.resolve()).as_posix()
                 for value in [
                     *CONTINUITY_RULES,
                     bound.get("record"),
@@ -1428,7 +1512,7 @@ def continuity_context_fingerprint(
             }
             mutable_source_paths = set(source_paths) - immutable_paths
             context_paths = sorted(set(saved_pins) - mutable_source_paths)
-            current_pins = continuity_pins(root, context_paths)
+            current_pins = continuity_pins(root, context_paths, record_path=bound.get("record"))
             if current_head is None:
                 current_head = git(root, "rev-parse", "HEAD").strip()
             try:
@@ -1693,6 +1777,45 @@ def _current_delivery_remaining_ids(root: Path, state: dict) -> list[str] | None
         return None
 
 
+def _direct_po_defer_ids(root: Path, state: dict, prompt: str) -> list[str]:
+    remaining_ids = _current_delivery_remaining_ids(root, state)
+    if not remaining_ids:
+        return []
+    text = " ".join(str(prompt or "").split())
+    if not text or len(text) > 600:
+        return []
+    english = re.fullmatch(
+        r"(?:please\s+)?(?:defer|postpone)\s+(.+?)\s+"
+        r"(?:until|pending|after|when|once)\s+([^.!?;；。！？]+)[.!?。！？]?",
+        text, re.IGNORECASE,
+    )
+    chinese = re.fullmatch(
+        r"(?:请)?(?:将|把)?(.+?)(?:延期|推迟|暂缓|搁置)[，,;；]?"
+        r"(?:直到|待|等待|等到)([^.!?;；。！？]+)[.!?。！？]?",
+        text,
+    )
+    match = english or chinese
+    if match is None:
+        return []
+    id_text, condition = match.groups()
+    if (not condition.strip()
+            or re.search(
+                r"\b(?:and|also|plus)\s+(?:add|include|implement|create|build|expand|change|"
+                r"continue|start|resume|open|deliver|support)\b|"
+                r"(?:同时|另外|此外|还要|还需|新增|增加|实现新|并(?:新增|增加|实现|继续))",
+                condition, re.IGNORECASE,
+            )):
+        return []
+    separators = r"\s*(?:,|and|&)\s*" if english else r"\s*(?:,|、|，|and|&|和|及|与)\s*"
+    identifiers = [value.strip() for value in re.split(separators, id_text, flags=re.IGNORECASE)]
+    if (not identifiers
+            or any(not DELIVERY_ID_RE.fullmatch(value) for value in identifiers)
+            or len(set(identifiers)) != len(identifiers)
+            or sorted(identifiers) != remaining_ids):
+        return []
+    return sorted(identifiers)
+
+
 def changed_paths_since(root: Path, before: dict, after: dict, scope: set[str]) -> set[str]:
     """Find only this turn's changes, including committed changes absent from status."""
     normalized_scope = {
@@ -1845,7 +1968,7 @@ def _current_prompt_reconciliation_mode(state: dict) -> str:
     if (isinstance(binding, dict)
             and binding.get("prompt_hash") == state.get("last_prompt_hash")
             and binding.get("mode") in {
-                "CONTINUE_CURRENT", "NEW_OUTCOME_REQUIRED", "NON_EXECUTING", "RECONCILE_EXISTING"
+                "CONTINUE_CURRENT", "NEW_OUTCOME_REQUIRED", "NON_EXECUTING", "RECONCILE_EXISTING", "PO_DEFER"
             }):
         return binding["mode"]
     return "NEW_OUTCOME_REQUIRED"
@@ -1920,7 +2043,7 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
         guard = state.get("delivery_guard")
         if isinstance(guard, dict) and isinstance(guard.get("record"), str):
             guard["record"] = continuity_record_key(root, guard["record"])[0]
-        record_path = continuity_path(root, bound.get("record"))
+        record_path = continuity_record_key(root, bound.get("record"))[1]
         current_record_hash = hashlib.sha256(record_path.read_bytes()).hexdigest()
         if bound.get("pins", {}).get(bound.get("record")) != current_record_hash:
             return False, "The bound continuity record changed after readback; reconcile and rebind it before any completion claim."
@@ -1931,7 +2054,9 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
             root, bound.get("record"), bound.get("section"), frozen_guard, prior_pins,
         )
         reasons = delivery_guard_reasons(state, bound, item)
-        current_pins = continuity_pins(root, list(bound.get("pins", {})))
+        current_pins = continuity_pins(
+            root, list(bound.get("pins", {})), record_path=bound.get("record"),
+        )
     except (OSError, ValueError, KeyError, TypeError, RuntimeError) as error:
         return False, f"Structured delivery could not be verified ({type(error).__name__}); preserve every remaining requirement and reconcile its current evidence."
     delivery = item.get("delivery")
@@ -1962,6 +2087,8 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
     if status == "PO_DEFERRED":
         if not _nonclosure_exit_matches_current_prompt(root, state, item):
             return False, "PO_DEFERRED belongs to an earlier prompt; bind a fresh direct PO source receipt and resume condition before stopping."
+        if not _po_defer_receipt_matches_current_prompt(root, state, item):
+            return False, "PO_DEFERRED requires an explicit current UserPromptSubmit instruction naming every remaining requirement; a local marker receipt is not authorization."
         exit_record = delivery["exit"]
         remaining_ids = sorted(value["id"] for value in unfinished)
         state["delivery_exit"] = {
@@ -2020,12 +2147,14 @@ def handle(event: dict, root: Path, state: dict) -> dict:
     if name == "UserPromptSubmit":
         # Never persist the raw user prompt, credentials or agent-relayed instructions.
         prompt = str(event.get("prompt", ""))
+        prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         incoming_turn_id = event.get("turn_id")
         same_turn = (isinstance(incoming_turn_id, str)
-                     and incoming_turn_id == state.get("turn_id"))
+                     and incoming_turn_id == state.get("turn_id")
+                     and prompt_hash == state.get("last_prompt_hash"))
         # User text is not trusted metadata. Only the active turn ID can identify a duplicate event.
         if not same_turn:
-            state["last_prompt_hash"] = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+            state["last_prompt_hash"] = prompt_hash
             state["last_prompt_at"] = time.time()
             state["turn_exit_mode"] = classify_turn_exit(prompt)
             state["turn_prompt_hash"] = state["last_prompt_hash"]
@@ -2050,6 +2179,20 @@ def handle(event: dict, root: Path, state: dict) -> dict:
                 state.pop("report_turn_snapshot_missing", None)
                 state.pop("report_turn_requires_verification", None)
                 state.pop("report_turn_changed_paths", None)
+        authorized_deferred_ids = _direct_po_defer_ids(root, state, prompt)
+        if authorized_deferred_ids:
+            state["po_defer_authorization"] = {
+                "source_event": "UserPromptSubmit",
+                **_prompt_binding(state),
+                "requirement_ids": authorized_deferred_ids,
+            }
+            if state.get("turn_exit_mode") == "RUNNING":
+                state["turn_prompt_reconciliation"] = {
+                    "prompt_hash": state.get("last_prompt_hash"),
+                    "mode": "PO_DEFER",
+                }
+        else:
+            state.pop("po_defer_authorization", None)
         state["routes"] = route_prompt(prompt)
         routed = "\n".join(state["routes"])
         message = model_policy_context(event)

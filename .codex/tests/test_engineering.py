@@ -465,6 +465,50 @@ class EngineeringTests(unittest.TestCase):
         self.assertEqual(result["status"], "PINNED_CONTEXT")
         self.assertEqual(result["context"]["owner"], "C4")
 
+    def test_large_structured_continuity_record_uses_record_budget_only(self):
+        record, payload = self.delivery_fixture()
+        delivery = payload["continuity"]["delivery"]
+        existing = list(delivery["requirements"])
+        for index in range(98):
+            delivery["requirements"].append({
+                "id": f"LARGE-{index:03d}",
+                "outcome_class": "DEVELOPMENT_TOOL",
+                "acceptance": "A" * 3900,
+                "coverage_refs": [
+                    f"REQ-{index:03d}-{part:03d}-" + "x" * 160
+                    for part in range(100)
+                ],
+                "status": "OPEN",
+                "evidence": [],
+            })
+        self.assertEqual(len(existing), 2)
+        result = self.save_delivery_fixture(record, payload)
+        self.assertEqual(result["status"], "PINNED_CONTEXT")
+        self.assertGreater(record.stat().st_size, h.MAX_CONTINUITY_REFERENCE_BYTES)
+        self.assertLessEqual(record.stat().st_size, h.MAX_CONTINUITY_RECORD_BYTES)
+        self.assertEqual(
+            h.continuity_record(self.root, "work/checkpoint.json", "continuity")["delivery"]["requirements"],
+            delivery["requirements"],
+        )
+        self.assertEqual(
+            h.continuity_read(self.root, self.state, self.delivery_event)["status"],
+            "PINNED_CONTEXT",
+        )
+        self.assertRegex(
+            h.continuity_context_fingerprint(self.root, self.state), r"^[0-9a-f]{64}$",
+        )
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        reference = self.root / "work" / "large-reference.md"
+        reference.write_bytes(b"x" * (h.MAX_CONTINUITY_REFERENCE_BYTES + 1))
+        with self.assertRaisesRegex(ValueError, "bounded read limit"):
+            h.continuity_path(self.root, "work/large-reference.md")
+        json_reference = self.root / "work" / "large-reference.json"
+        json_reference.write_bytes(b"x" * (h.MAX_CONTINUITY_REFERENCE_BYTES + 1))
+        with self.assertRaisesRegex(ValueError, "bounded read limit"):
+            h.continuity_pins(
+                self.root, ["work/large-reference.json"], record_path="work/checkpoint.json",
+            )
+
     def test_continuity_mode_only_read_does_not_rewrite_engineering_state(self):
         self.make_continuity_record()
         self.continuity_dispatch("save")
@@ -1479,6 +1523,33 @@ with hook.locked(Path(sys.argv[2])):
         record.write_text(json.dumps(payload), "utf-8")
         return h.continuity_save(self.root, self.state, self.delivery_event, "work/checkpoint.json", "continuity")
 
+    def direct_po_defer_receipt(self, prompt, turn_id, requirement_ids, source_path, requirements):
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt=prompt, turn_id=turn_id)
+        authorization = self.state.get("po_defer_authorization")
+        expected_ids = sorted(requirement_ids)
+        self.assertIsInstance(authorization, dict)
+        self.assertEqual(authorization["requirement_ids"], expected_ids)
+        self.assertEqual(authorization["prompt_hash"], self.state["last_prompt_hash"])
+        direct_source = "Direct PO instruction: " + prompt
+        source_lines = []
+        for requirement in requirements:
+            if requirement["id"] in expected_ids:
+                old_source = requirement.get("po_source", "")
+                requirement["po_source"] = " ".join(value for value in (old_source, direct_source) if value)
+                source_lines.append(requirement["po_source"])
+        source_text = "\n".join([
+            "Product Owner direct instruction receipt",
+            "PO_DEFERRED " + ", ".join(expected_ids),
+            *source_lines,
+            f"UserPromptSubmit prompt SHA-256: {authorization['prompt_hash']}",
+            f"UserPromptSubmit turn ID: {turn_id}",
+            "Deferred requirement IDs: " + ", ".join(expected_ids),
+            "",
+        ])
+        target = self.root / source_path
+        target.write_text(source_text, "utf-8")
+        return source_text
+
     def delivery_stop(self, **extra):
         return self.handle("Stop", **self.delivery_event, **extra)
 
@@ -1878,20 +1949,7 @@ with hook.locked(Path(sys.argv[2])):
         item = payload["continuity"]
         delivery = item["delivery"]
         deferred = delivery["requirements"][1]
-        deferred["po_source"] = "Direct PO instruction: defer TOOL-2 pending its named approval."
         source_path = "work/po-deferred.md"
-        source_text = (
-            "Product Owner direct instruction receipt\n"
-            "PO_DEFERRED TOOL-2\n"
-            f"{deferred['po_source']}\n"
-        )
-        (self.root / source_path).write_text(source_text, "utf-8")
-        item["evidence_paths"].append(source_path)
-        delivery["scope_sources"].append({
-            "path": source_path,
-            "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
-        })
-        self.save_delivery_fixture(record, payload)
         self.close_delivery_fixture(record, payload)
         deferred["status"] = "PO_DEFERRED"
         delivery["status"] = "PO_DEFERRED"
@@ -1901,59 +1959,65 @@ with hook.locked(Path(sys.argv[2])):
             "evidence_path": source_path,
             "resume_condition": "Resume TOOL-2 only when its named Product Owner approval is received.",
         }
+        record.write_text(json.dumps(payload), "utf-8")
+        self.direct_po_defer_receipt(
+            "Please defer TOOL-2 until its named approval is received.",
+            "deferred-current-turn", {"TOOL-2"}, source_path, delivery["requirements"],
+        )
+        item["evidence_paths"].append(source_path)
+        delivery["scope_sources"].append({
+            "path": source_path, "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
+        })
         self.save_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop(), {})
+        self.assertFalse(self.state["delivery_exit"]["closed"])
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-2"])
 
         self.handle("UserPromptSubmit", **self.delivery_event,
-                    prompt="Resume TOOL-2 and continue the authorized work", turn_id="deferred-resume")
+                    prompt="Resume TOOL-2 and continue the approved work", turn_id="deferred-resume")
         delivery["status"] = "RUNNING"
         deferred["status"] = "OPEN"
-        self.save_delivery_fixture(record, payload)
-        self.handle("SessionStart", source="clear", **self.delivery_event)
-        delivery["status"] = "PO_DEFERRED"
-        deferred["status"] = "PO_DEFERRED"
+        item["remaining"] = ["TOOL-2 was reopened and remains unverified."]
         self.save_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop().get("decision"), "block")
-        delivery["exit"]["reason"] += "."
-        self.save_delivery_fixture(record, payload)
-        result = self.delivery_stop()
-        self.assertTrue(result.get("decision") == "block" or result.get("continue") is False, result)
+        original_source = (self.root / source_path).read_bytes()
+        (self.root / source_path).write_bytes(original_source + b"changed after admission\n")
+        stale_receipt = self.delivery_stop()
+        self.assertIs(stale_receipt.get("continue"), False, stale_receipt)
+        self.assertIn("Structured delivery could not be verified", stale_receipt["stopReason"])
+        (self.root / source_path).write_bytes(original_source)
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        cleared_stop = self.delivery_stop()
+        self.assertTrue(cleared_stop.get("decision") == "block" or cleared_stop.get("continue") is False,
+                        cleared_stop)
 
-        current_prompt = "PO_DEFERRED TOOL-2 again under the newly issued direct instruction"
-        self.handle("UserPromptSubmit", **self.delivery_event,
-                    prompt=current_prompt, turn_id="deferred-new-authorization")
-        new_po_source = deferred["po_source"] + " Direct PO instruction: defer TOOL-2 again per the current message."
-        deferred["po_source"] = new_po_source
-        renewed_source_path = "work/po-deferred-renewed.md"
-        refreshed_text = (
-            "Product Owner direct instruction receipt\nPO_DEFERRED TOOL-2\n"
-            f"{new_po_source}\n"
-            f"Current direct instruction: {current_prompt}\n"
-        )
-        (self.root / renewed_source_path).write_text(refreshed_text, "utf-8")
-        item["evidence_paths"].append(renewed_source_path)
-        delivery["scope_sources"].append({
-            "path": renewed_source_path,
-            "sha256": h.hashlib.sha256((self.root / renewed_source_path).read_bytes()).hexdigest(),
-        })
-        original_receipts = {
-            requirement["id"]: json.loads(json.dumps(requirement["evidence"]))
-            for requirement in delivery["requirements"]
-        }
-        deferred["status"] = "PO_DEFERRED"
         delivery["status"] = "PO_DEFERRED"
-        item["remaining"] = ["TOOL-2 remains deferred under the renewed direct PO instruction."]
+        deferred["status"] = "PO_DEFERRED"
+        item["remaining"] = ["TOOL-2 remains deferred under a direct current instruction."]
+        record.write_text(json.dumps(payload), "utf-8")
+        with self.assertRaisesRegex(ValueError, "explicit current UserPromptSubmit"):
+            self.save_delivery_fixture(record, payload)
+        stopped = self.delivery_stop()
+        self.assertTrue(stopped.get("decision") == "block" or stopped.get("continue") is False, stopped)
+
+        renewed_path = "work/po-deferred-renewed.md"
+        renewed_prompt = "Please defer TOOL-2 until its renewed named approval is received."
+        self.direct_po_defer_receipt(
+            renewed_prompt, "deferred-renewal-turn", {"TOOL-2"}, renewed_path,
+            delivery["requirements"],
+        )
+        item["evidence_paths"].append(renewed_path)
+        delivery["scope_sources"].append({
+            "path": renewed_path, "sha256": h.hashlib.sha256((self.root / renewed_path).read_bytes()).hexdigest(),
+        })
         delivery["exit"] = {
             "reason": "PO_DEFERRED: TOOL-2 remains open under the renewed direct PO instruction.",
-            "evidence_path": renewed_source_path,
-            "resume_condition": "Resume TOOL-2 only after the renewed named approval is received.",
+            "evidence_path": renewed_path,
+            "resume_condition": "Resume TOOL-2 only after its renewed named approval is received.",
         }
         self.save_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop(), {})
-        for requirement in delivery["requirements"]:
-            self.assertEqual(requirement["evidence"], original_receipts[requirement["id"]])
         self.assertEqual(delivery["status"], "PO_DEFERRED")
-
     def test_delivery_clear_preserves_unverified_mutations(self):
         self.delivery_fixture()
         before = self.state["baseline"]["fingerprint"]
@@ -2483,47 +2547,40 @@ with hook.locked(Path(sys.argv[2])):
         record, payload = self.delivery_fixture()
         item = payload["continuity"]
         delivery = item["delivery"]
-        deferred = delivery["requirements"][1]
-        deferred["po_source"] = "Direct PO instruction: defer TOOL-2 pending its named approval."
-        source_path = "work/po-deferred.md"
+        source_path = "work/agent-authored-po-marker.md"
         source_text = (
             "Product Owner direct instruction receipt\n"
-            "PO_DEFERRED TOOL-2\n"
-            f"{deferred['po_source']}\n"
+            "PO_DEFERRED TOOL-1, TOOL-2\n"
+            "Direct PO instruction: defer TOOL-1 and TOOL-2 until approval.\n"
         )
         (self.root / source_path).write_text(source_text, "utf-8")
         item["evidence_paths"].append(source_path)
         delivery["scope_sources"].append({
-            "path": source_path,
-            "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
+            "path": source_path, "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
         })
-        self.save_delivery_fixture(record, payload)
-        self.close_delivery_fixture(record, payload)
-        deferred["status"] = "PO_DEFERRED"
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "PO_DEFERRED"
+            requirement["po_source"] = "Direct PO instruction: defer TOOL-1 and TOOL-2 until approval."
         delivery["status"] = "PO_DEFERRED"
-        item["remaining"] = ["TOOL-2 remains deferred until the named approval is received."]
+        item["remaining"] = ["TOOL-1 and TOOL-2 remain deferred under the direct instruction."]
         delivery["exit"] = {
-            "reason": "PO_DEFERRED: TOOL-2 remains open under the direct PO instruction.",
+            "reason": "PO_DEFERRED: TOOL-1 and TOOL-2 remain open.",
             "evidence_path": source_path,
-            "resume_condition": "Resume TOOL-2 only when its named Product Owner approval is received.",
+            "resume_condition": "Resume only after the named approval is received.",
         }
-        self.save_delivery_fixture(record, payload)
-        self.assertEqual(self.delivery_stop(), {})
-        self.assertFalse(self.state["delivery_exit"]["closed"])
-        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-2"])
-        self.assertEqual(self.state["delivery_exit"]["mode"], "PO_DEFERRED")
-        self.handle("UserPromptSubmit", **self.delivery_event,
-                    prompt="Resume TOOL-2 and continue the approved work", turn_id="resume-deferred")
-        self.assertEqual(self.delivery_stop().get("decision"), "block")
-        self.save_delivery_fixture(record, payload)
-        preserved_exit = self.delivery_stop()
-        self.assertIs(preserved_exit.get("continue"), False, preserved_exit)
-        self.assertIn("PO_DEFERRED belongs to an earlier prompt", preserved_exit["stopReason"])
-        (self.root / source_path).write_text(source_text + "changed after admission\n", "utf-8")
-        repeated_failure = self.delivery_stop()
-        self.assertIs(repeated_failure.get("continue"), False)
-        self.assertIn("Structured delivery could not be verified", repeated_failure["stopReason"])
-
+        record.write_text(json.dumps(payload), "utf-8")
+        for prompt, turn_id in (
+            ("Do not defer TOOL-1 or TOOL-2 until approval; continue the existing work.",
+             "no-deferral-current-turn"),
+            ("Please defer TOOL-1 and TOOL-2 until approval, and add a new outcome TOOL-3.",
+             "mixed-deferral-and-new-outcome"),
+        ):
+            self.handle("UserPromptSubmit", **self.delivery_event, prompt=prompt, turn_id=turn_id)
+            self.assertNotIn("po_defer_authorization", self.state)
+        with self.assertRaisesRegex(ValueError, "explicit current UserPromptSubmit"):
+            self.save_delivery_fixture(record, payload)
+        self.assertNotEqual(self.delivery_stop(), {})
+        self.assertIsNot(self.state.get("delivery_exit", {}).get("closed"), True)
     def test_po_deferred_requires_complete_ids_in_reason_and_source(self):
         record, payload = self.delivery_fixture()
         item = payload["continuity"]
@@ -2586,21 +2643,29 @@ with hook.locked(Path(sys.argv[2])):
         item = payload["continuity"]
         delivery = item["delivery"]
         source_path = "work/po-chinese.md"
-        source_text = "产品负责人直接指示延期 TOOL-1、TOOL-2，等待审核。"
-        (self.root / source_path).write_text(source_text, "utf-8")
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "PO_DEFERRED"
+        delivery["status"] = "PO_DEFERRED"
+        item["remaining"] = ["TOOL-1 and TOOL-2 await the named approval."]
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED：TOOL-1、TOOL-2",
+            "evidence_path": source_path,
+            "resume_condition": "收到产品负责人明确恢复指令后继续。",
+        }
+        record.write_text(json.dumps(payload), "utf-8")
+        self.direct_po_defer_receipt(
+            "请将 TOOL-1、TOOL-2 暂缓，等待审核通过后恢复。",
+            "po-chinese-defer-turn", {"TOOL-1", "TOOL-2"}, source_path,
+            delivery["requirements"],
+        )
         item["evidence_paths"].append(source_path)
         delivery["scope_sources"].append({
             "path": source_path, "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
         })
-        for requirement in delivery["requirements"]:
-            requirement.update(status="PO_DEFERRED", po_source=source_text)
-        delivery["status"] = "PO_DEFERRED"
-        delivery["exit"] = {"reason": "PO_DEFERRED：TOOL-1、TOOL-2", "evidence_path": source_path,
-                            "resume_condition": "收到产品负责人明确恢复指令后继续。"}
         self.save_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop(), {})
         self.assertFalse(self.state["delivery_exit"]["closed"])
-
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1", "TOOL-2"])
     def test_direct_pause_preserves_remaining_without_closure(self):
         self.delivery_fixture()
         self.handle("UserPromptSubmit", **self.delivery_event, prompt="所有任务暂停，等我审核完", turn_id="pause")
