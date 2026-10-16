@@ -2497,10 +2497,21 @@ with hook.locked(Path(sys.argv[2])):
         reopened_state = {}
         reopened_event = {"session_id": "engineering-reopen-thread", "agent_id": "bounded-test-agent"}
         original_receipt = receipt_path.read_bytes()
+        original_record = record.read_bytes()
+        resumed_payload = json.loads(original_record)
+        resumed_payload["continuity"]["delivery"]["status"] = "RUNNING"
+        resumed_payload["continuity"]["remaining"] = ["Complete the newly admitted tool outcome."]
+        resumed_payload["continuity"]["delivery"]["requirements"].append({
+            "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+            "acceptance": "New execution retains exact external-effect ownership",
+            "coverage_refs": ["effect-recovery"], "status": "OPEN", "evidence": [],
+        })
+        record.write_text(json.dumps(resumed_payload), "utf-8")
         with self.assertRaisesRegex(ValueError, "first be frozen as PENDING"):
             h.continuity_save(
                 self.root, reopened_state, reopened_event, "work/checkpoint.json", "continuity"
             )
+        record.write_bytes(original_record)
         self.assertEqual(receipt_path.read_bytes(), original_receipt)
         receipt_path.write_text(receipt_path.read_text("utf-8") + "\n", "utf-8")
         self.assertEqual(self.delivery_stop().get("decision"), "block")
