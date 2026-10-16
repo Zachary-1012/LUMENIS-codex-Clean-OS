@@ -1838,6 +1838,12 @@ with hook.locked(Path(sys.argv[2])):
             ),
             "NEW_OUTCOME_REQUIRED",
         )
+        self.assertEqual(
+            h.classify_delivery_prompt_reconciliation(
+                "Continue the full outcome after the new instruction", "RUNNING"
+            ),
+            "CONTINUE_CURRENT",
+        )
 
     def test_external_blocker_exit_cannot_be_rebound_to_a_new_prompt(self):
         record, payload = self.delivery_fixture()
@@ -2510,6 +2516,9 @@ with hook.locked(Path(sys.argv[2])):
                     prompt="Resume TOOL-2 and continue the approved work", turn_id="resume-deferred")
         self.assertEqual(self.delivery_stop().get("decision"), "block")
         self.save_delivery_fixture(record, payload)
+        preserved_exit = self.delivery_stop()
+        self.assertIs(preserved_exit.get("continue"), False, preserved_exit)
+        self.assertIn("PO_DEFERRED belongs to an earlier prompt", preserved_exit["stopReason"])
         (self.root / source_path).write_text(source_text + "changed after admission\n", "utf-8")
         repeated_failure = self.delivery_stop()
         self.assertIs(repeated_failure.get("continue"), False)

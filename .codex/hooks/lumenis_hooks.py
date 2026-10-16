@@ -1080,9 +1080,18 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
         if prompt_changed:
             new_ids = set(current) - set(prior)
             if prompt_reconciliation == "CONTINUE_CURRENT":
-                if (delivery.get("status") != "RUNNING"
-                        or any(current[identifier]["status"] != "OPEN" for identifier in new_ids)
-                        or not any(value["status"] != "JOB_CLOSED" for value in current.values())):
+                if delivery.get("status") in {"EXTERNAL_BLOCKED", "PO_DEFERRED"}:
+                    if delivery.get("status") != guard.get("delivery_status") or new_ids:
+                        raise ValueError("A continuation cannot change a frozen non-closure exit or its required IDs")
+                    if delivery.get("status") == "PO_DEFERRED":
+                        signature = _delivery_nonclosure_exit_signature(root, item)
+                        history = guard.get("nonclosure_exits", {})
+                        if (signature is None or not isinstance(history, dict)
+                                or signature[1] not in history):
+                            raise ValueError("A continuation cannot replace a PO deferral receipt without direct reconciliation")
+                elif (delivery.get("status") != "RUNNING"
+                      or any(current[identifier]["status"] != "OPEN" for identifier in new_ids)
+                      or not any(value["status"] != "JOB_CLOSED" for value in current.values())):
                     raise ValueError("A continuation prompt must reopen an existing requirement before resuming")
             elif prompt_reconciliation == "RECONCILE_EXISTING":
                 if (new_ids or delivery.get("status") not in {"PO_DEFERRED", "EXTERNAL_BLOCKED"}):
@@ -1781,6 +1790,7 @@ def classify_delivery_prompt_reconciliation(prompt: str, exit_mode: str) -> str:
             text, re.IGNORECASE):
         return "RECONCILE_EXISTING"
     continuation_patterns = (
+        r"(?:please\s+)?continue\s+the\s+full\s+outcome\s+after\s+the\s+new\s+instruction\s*[.!?]?",
         (
             r"(?:please\s+)?(?:continue|keep\s+going|carry\s+on|resume|proceed)"
             r"(?:\s+(?:with|on))?(?:\s+the)?"
