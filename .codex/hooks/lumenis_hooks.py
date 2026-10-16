@@ -335,8 +335,10 @@ def _delivery_source_manifest(root: Path, delivery: dict) -> dict[str, str]:
 
 
 def _delivery_evidence_is_current(root: Path, item: dict, requirement_id: str,
-                                  evidence: dict, expected_result: str) -> bool:
-    """Check immutable receipt provenance and current source pins; HEAD is historical context."""
+                                  evidence: dict, expected_result: str,
+                                  allowed_source_paths: set[str] | None = None,
+                                  verify_source_content: bool = True) -> bool:
+    """Check immutable receipt provenance and, when requested, current source bytes."""
     required = {"path", "sha256", "kind", "result", "head", "source_pins"}
     if not isinstance(evidence, dict) or set(evidence) != required:
         return False
@@ -378,18 +380,34 @@ def _delivery_evidence_is_current(root: Path, item: dict, requirement_id: str,
     source_pins = evidence.get("source_pins")
     if not isinstance(source_pins, dict) or not source_pins or len(source_pins) > 80:
         return False
-    allowed_sources = {
-        continuity_path(root, value).relative_to(root.resolve()).as_posix()
-        for value in item.get("source_paths", [])
-    }
-    allowed_sources.update(
-        continuity_path(root, entry["path"]).relative_to(root.resolve()).as_posix()
-        for entry in item.get("delivery", {}).get("scope_sources", [])
-    )
+    if allowed_source_paths is None:
+        allowed_sources = {
+            continuity_path(root, value).relative_to(root.resolve()).as_posix()
+            for value in item.get("source_paths", [])
+        }
+        allowed_sources.update(
+            continuity_path(root, entry["path"]).relative_to(root.resolve()).as_posix()
+            for entry in item.get("delivery", {}).get("scope_sources", [])
+        )
+    else:
+        allowed_sources = allowed_source_paths
     if set(source_pins) != allowed_sources:
         return False
     for value, digest in source_pins.items():
         if not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
+            return False
+        source = continuity_path(root, value)
+        if verify_source_content and (not source.is_file() or source.is_symlink()
+                or hashlib.sha256(source.read_bytes()).hexdigest() != digest):
+            return False
+    return True
+
+
+def _delivery_source_pins_match_current(root: Path, source_pins: dict) -> bool:
+    if not isinstance(source_pins, dict) or not source_pins:
+        return False
+    for value, digest in source_pins.items():
+        if not isinstance(value, str) or not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
             return False
         source = continuity_path(root, value)
         if (not source.is_file() or source.is_symlink()
@@ -486,7 +504,8 @@ def _delivery_effect_ledger(root: Path, item: dict, delivery: dict,
     return result
 
 
-def validate_delivery(root: Path, item: dict) -> dict | None:
+def validate_delivery(root: Path, item: dict, frozen_guard: dict | None = None,
+                      prior_pins: dict | None = None) -> dict | None:
     delivery = item.get("delivery")
     if delivery is None:
         return None
@@ -537,9 +556,40 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
             for value in item.get("source_paths", [])
         }
         required_source_pins.update(scope)
+        guard_requirements = frozen_guard.get("requirements", {}) if isinstance(frozen_guard, dict) else {}
+        guard_closed_ids = frozen_guard.get("closed_ids", []) if isinstance(frozen_guard, dict) else []
+        if not isinstance(guard_requirements, dict) or not isinstance(guard_closed_ids, list):
+            raise TypeError("Frozen delivery requirement evidence is invalid")
+        is_frozen_requirement = requirement["id"] in guard_closed_ids
+        frozen_requirement = guard_requirements.get(requirement["id"]) if is_frozen_requirement else None
+        frozen_evidence = frozen_requirement.get("closed_evidence") if isinstance(frozen_requirement, dict) else None
+        legacy_frozen_paths = None
+        if is_frozen_requirement and frozen_evidence is None:
+            frozen_scope = frozen_guard.get("scope_sources", {})
+            frozen_source_paths = frozen_guard.get("source_paths", [])
+            if not isinstance(frozen_scope, dict) or not isinstance(frozen_source_paths, list):
+                raise ValueError("Frozen delivery source scope is invalid")
+            legacy_frozen_paths = {
+                continuity_path(root, value).relative_to(root.resolve()).as_posix()
+                for value in frozen_source_paths
+            } | {
+                continuity_path(root, value).relative_to(root.resolve()).as_posix()
+                for value in frozen_scope
+            }
+        if frozen_evidence is not None and (
+                not isinstance(frozen_evidence, list) or not frozen_evidence):
+            raise ValueError("Frozen closed-requirement receipts are invalid")
         evidence_values = requirement.get("evidence")
         if not isinstance(evidence_values, list) or len(evidence_values) > 40:
             raise ValueError("Invalid delivery evidence list")
+        if frozen_evidence is not None and any(value not in evidence_values for value in frozen_evidence):
+            raise ValueError("A frozen closed-requirement receipt cannot be removed or replaced")
+        if is_frozen_requirement and frozen_evidence is None and not isinstance(prior_pins, dict):
+            raise ValueError("Legacy frozen delivery receipts require their original session pins")
+        historical_receipts = set()
+        historical_accepted_kinds = set()
+        valid_accepted_evidence = []
+        current_accepted_kinds = set()
         for evidence in evidence_values:
             if (not isinstance(evidence, dict)
                     or set(evidence) != {"path", "sha256", "kind", "result", "head", "source_pins"}
@@ -553,17 +603,68 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
                     or not isinstance(evidence.get("source_pins"), dict)
                     or not evidence["source_pins"]
                     or len(evidence["source_pins"]) > 80
-                    or set(evidence["source_pins"]) != required_source_pins
                     or any(not isinstance(value, str) or not SHA256_RE.fullmatch(value)
                            for value in evidence["source_pins"].values())):
                 raise ValueError("Invalid delivery evidence reference")
+            frozen_match = (
+                frozen_evidence is not None and evidence in frozen_evidence
+            )
+            if (is_frozen_requirement and frozen_evidence is None
+                    and legacy_frozen_paths is not None
+                    and set(evidence["source_pins"]) == legacy_frozen_paths
+                    and isinstance(prior_pins, dict)
+                    and prior_pins.get(evidence["path"]) == evidence["sha256"]):
+                frozen_match = True
+            if not frozen_match and set(evidence["source_pins"]) != required_source_pins:
+                raise ValueError("New delivery evidence must pin the complete current source scope")
             if evidence["kind"] == "EXTERNAL_BLOCKER" and evidence["result"] != "BLOCKED":
                 raise ValueError("External blocker evidence cannot claim acceptance")
             if evidence["kind"] != "EXTERNAL_BLOCKER" and evidence["result"] != "ACCEPTED":
                 raise ValueError("Outcome evidence must be an accepted real operation or recovery")
+            if frozen_match:
+                historical_receipts.add((evidence["path"], evidence["sha256"]))
+                if evidence["result"] == "ACCEPTED":
+                    historical_accepted_kinds.add(evidence["kind"])
+                if (frozen_evidence is None
+                        and (legacy_frozen_paths is None
+                             or set(evidence["source_pins"]) != legacy_frozen_paths
+                             or prior_pins.get(evidence["path"]) != evidence["sha256"])):
+                    raise ValueError("Legacy frozen delivery receipt changed after its original session binding")
+                historical_source_paths = (
+                    set(evidence["source_pins"]) if frozen_evidence is not None
+                    else legacy_frozen_paths
+                )
+                if not _delivery_evidence_is_current(
+                        root, item, requirement["id"], evidence, evidence["result"],
+                        allowed_source_paths=historical_source_paths,
+                        verify_source_content=False):
+                    raise ValueError("Frozen delivery receipt or one of its original source pins changed")
+            elif (evidence["result"] == "ACCEPTED"
+                  and _delivery_evidence_is_current(
+                      root, item, requirement["id"], evidence, "ACCEPTED")):
+                valid_accepted_evidence.append(evidence)
+                current_accepted_kinds.add(evidence["kind"])
         if requirement["status"] == "JOB_CLOSED":
-            kinds = {value.get("kind") for value in evidence_values
-                     if _delivery_evidence_is_current(root, item, requirement["id"], value, "ACCEPTED")}
+            needs_current = bool(
+                isinstance(frozen_requirement, dict)
+                and frozen_requirement.get("needs_current_evidence")
+            )
+            closure_source_pins = (
+                frozen_requirement.get("closure_source_pins")
+                if isinstance(frozen_requirement, dict) else None
+            )
+            if not isinstance(closure_source_pins, dict) or not closure_source_pins:
+                closure_source_pins = next((value["source_pins"] for value in evidence_values
+                    if (value["path"], value["sha256"]) in historical_receipts
+                    and value["result"] == "ACCEPTED"), None)
+            if (is_frozen_requirement and not needs_current
+                    and isinstance(closure_source_pins, dict)
+                    and not _delivery_source_pins_match_current(root, closure_source_pins)):
+                raise ValueError(
+                    "Frozen delivery source pins are stale; reopen the closed requirement and submit current outcome and recovery receipts"
+                )
+            kinds = ({value.get("kind") for value in valid_accepted_evidence}
+                     | historical_accepted_kinds)
             required_outcome_kind = (
                 "REAL_USER_E2E" if requirement["outcome_class"] == "PRODUCT" else "TOOL_WORKFLOW"
             )
@@ -571,6 +672,9 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
                 raise ValueError(
                     f"JOB_CLOSED requires current-version {required_outcome_kind} and recovery receipts"
                 )
+            if needs_current and (required_outcome_kind not in current_accepted_kinds
+                                  or "RECOVERY" not in current_accepted_kinds):
+                raise ValueError("A reopened closed requirement needs fresh receipts for the complete current source scope")
     if delivery["status"] == "JOB_CLOSED":
         if item.get("remaining"):
             raise ValueError("JOB_CLOSED requires the continuity record's remaining list to be empty")
@@ -639,7 +743,28 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
             "effect_ledger": effect_ledger}
 
 
-def continuity_record(root: Path, record: str, section: str) -> dict:
+def _frozen_delivery_context(state: dict, record: str, section: str,
+                             identity: dict) -> tuple[dict | None, dict | None]:
+    guard = state.get("delivery_guard")
+    bound = state.get("continuity")
+    if (not isinstance(guard, dict)
+            or guard.get("identity") != identity
+            or guard.get("record") != record
+            or guard.get("section") != section):
+        return None, None
+    pins = None
+    if (isinstance(bound, dict)
+            and bound.get("identity") == identity
+            and bound.get("record") == record
+            and bound.get("section") == section
+            and isinstance(bound.get("pins"), dict)):
+        pins = bound["pins"]
+    return guard, pins
+
+
+def continuity_record(root: Path, record: str, section: str,
+                      frozen_guard: dict | None = None,
+                      prior_pins: dict | None = None) -> dict:
     _, path = continuity_record_key(root, record)
     if not path.is_file() or path.is_symlink() or path.stat().st_size > MAX_CONTINUITY_RECORD_BYTES:
         raise ValueError("Continuity record is missing, unsafe, or exceeds its structured evidence budget")
@@ -667,7 +792,12 @@ def continuity_record(root: Path, record: str, section: str) -> dict:
         continuity_path(root, value).relative_to(root.resolve()).as_posix()
         for value in item["source_paths"]
     })
-    validate_delivery(root, item)
+    if (isinstance(frozen_guard, dict)
+            and (frozen_guard.get("record") != continuity_record_key(root, record)[0]
+                 or frozen_guard.get("section") != section)):
+        frozen_guard = None
+        prior_pins = None
+    validate_delivery(root, item, frozen_guard, prior_pins)
     encoded = json.dumps(item, ensure_ascii=False)
     narrative = dict(item)
     delivery = narrative.pop("delivery", None)
@@ -775,9 +905,10 @@ def _nonclosure_exit_matches_current_prompt(root: Path, state: dict, item: dict)
     )
 
 
-def _reconcile_pending_effects(root: Path, item: dict, guard: dict) -> None:
+def _reconcile_pending_effects(root: Path, item: dict, guard: dict,
+                               prior_pins: dict | None = None) -> None:
     prior = guard.get("pending_effects")
-    validation = validate_delivery(root, item)
+    validation = validate_delivery(root, item, guard, prior_pins)
     ledger = validation["effect_ledger"]
     if "pending_effects" not in guard:
         prior = {}
@@ -829,13 +960,29 @@ def _reconcile_pending_effects(root: Path, item: dict, guard: dict) -> None:
             raise ValueError("Frozen pending-effect status is invalid")
 
 
-def _delivery_guard_snapshot(delivery: dict) -> dict:
+def _delivery_current_source_pins(root: Path, item: dict, delivery: dict) -> dict[str, str]:
+    source_paths = {
+        continuity_path(root, value).relative_to(root.resolve()).as_posix()
+        for value in item.get("source_paths", [])
+    }
+    source_paths.update(
+        continuity_path(root, value["path"]).relative_to(root.resolve()).as_posix()
+        for value in delivery.get("scope_sources", [])
+    )
+    return continuity_pins(root, sorted(source_paths))
+
+
+def _delivery_guard_snapshot(root: Path, item: dict, delivery: dict) -> dict:
+    closure_source_pins = _delivery_current_source_pins(root, item, delivery)
     requirements = {
         value["id"]: {
             "outcome_class": value["outcome_class"],
             "acceptance": value["acceptance"],
             "coverage_refs": list(value["coverage_refs"]),
             "po_source": value.get("po_source"),
+            "closed_evidence": list(value["evidence"]) if value["status"] == "JOB_CLOSED" else [],
+            "needs_current_evidence": False,
+            "closure_source_pins": closure_source_pins if value["status"] == "JOB_CLOSED" else {},
         }
         for value in delivery["requirements"]
     }
@@ -844,6 +991,8 @@ def _delivery_guard_snapshot(delivery: dict) -> dict:
         "delivery_status": delivery["status"],
         "record_po_source": delivery["po_source"],
         "requirements": requirements,
+        "closed_ids": [value["id"] for value in delivery["requirements"]
+                       if value["status"] == "JOB_CLOSED"],
         "scope_sources": {value["path"]: [value["sha256"]] for value in delivery["scope_sources"]},
         "nonclosure_exits": {},
     }
@@ -863,7 +1012,12 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
         prior_record = guard.get("record")
         prior_section = guard.get("section")
         if prior_record != record or prior_section != section:
-            previous = continuity_record(root, prior_record, prior_section)
+            previous_guard, previous_pins = _frozen_delivery_context(
+                state, prior_record, prior_section, identity,
+            )
+            previous = continuity_record(
+                root, prior_record, prior_section, previous_guard, previous_pins,
+            )
             prior_bound = {"identity": identity, "record": prior_record, "section": prior_section}
             previous_delivery = previous.get("delivery", {})
             if (delivery_guard_reasons(state, prior_bound, previous)
@@ -898,6 +1052,7 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
         prior_prompt = guard.get("prompt_hash", state.get("continuity", {}).get("prompt_hash"))
         if (guard.get("delivery_status") == "JOB_CLOSED"
                 and prior_prompt != state.get("last_prompt_hash")
+                and delivery.get("status") == "JOB_CLOSED"
                 and isinstance(prior, dict) and not set(current) - set(prior)):
             raise ValueError("A new execution prompt cannot reuse closed outcomes unchanged; admit its required outcome before rebinding")
         if not isinstance(prior, dict) or not set(prior).issubset(current):
@@ -925,29 +1080,56 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
                 raise TypeError("Delivery source-version history is invalid")
             if digest not in history:
                 history.append(digest)
-        guard["requirements"] = {
-            identifier: {
+        prior_closed_ids = set(guard.get("closed_ids", []))
+        closure_source_pins = _delivery_current_source_pins(root, item, delivery)
+        frozen_requirements = {}
+        for identifier, value in current.items():
+            old = prior.get(identifier, {})
+            was_closed = identifier in prior_closed_ids
+            needs_current = bool(old.get("needs_current_evidence"))
+            requires_fresh_before_reclose = needs_current
+            frozen_evidence = old.get("closed_evidence")
+            if was_closed and not isinstance(frozen_evidence, list):
+                frozen_evidence = list(value["evidence"])
+            if was_closed and value["status"] != "JOB_CLOSED":
+                needs_current = True
+            elif value["status"] == "JOB_CLOSED":
+                frozen_evidence = list(value["evidence"])
+                needs_current = False
+            elif not was_closed:
+                frozen_evidence = []
+            if value["status"] == "JOB_CLOSED" and (not was_closed or requires_fresh_before_reclose):
+                source_pins_at_closure = closure_source_pins
+            else:
+                source_pins_at_closure = old.get("closure_source_pins", {})
+            frozen_requirements[identifier] = {
                 "outcome_class": value["outcome_class"],
                 "acceptance": value["acceptance"],
                 "coverage_refs": list(value["coverage_refs"]),
-                "po_source": (
-                    prior.get(identifier, {}).get("po_source")
-                    or value.get("po_source")
-                ),
+                "po_source": old.get("po_source") or value.get("po_source"),
+                "closed_evidence": frozen_evidence,
+                "needs_current_evidence": needs_current,
+                "closure_source_pins": source_pins_at_closure,
             }
-            for identifier, value in current.items()
-        }
+        guard["requirements"] = frozen_requirements
+        guard["closed_ids"] = sorted(
+            prior_closed_ids | {
+                identifier for identifier, value in current.items()
+                if value["status"] == "JOB_CLOSED"
+            }
+        )
     else:
-        delivery_state = _delivery_guard_snapshot(delivery)
+        delivery_state = _delivery_guard_snapshot(root, item, delivery)
         delivery_state.update({
             "identity": identity, "record": record, "section": section,
-            "scope_sources": {value["path"]: [value["sha256"]] for value in delivery["scope_sources"]},
-            "closed_ids": [],
+            "closed_ids": [value["id"] for value in delivery["requirements"]
+                           if value["status"] == "JOB_CLOSED"],
             "source_paths": list(item["source_paths"]),
         })
         state["delivery_guard"] = delivery_state
         guard = delivery_state
-    _reconcile_pending_effects(root, item, guard)
+    _reconcile_pending_effects(root, item, guard,
+                               state.get("continuity", {}).get("pins"))
     _freeze_nonclosure_exit(root, state, item, guard)
     return guard
 
@@ -955,8 +1137,9 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
 def continuity_save(root: Path, state: dict, event: dict, record: str, section: str) -> dict:
     """Bind an existing owner record, never create a task or grant authorization."""
     record = continuity_record_key(root, record)[0]
-    item = continuity_record(root, record, section)
     identity = continuity_identity(event, root)
+    frozen_guard, prior_pins = _frozen_delivery_context(state, record, section, identity)
+    item = continuity_record(root, record, section, frozen_guard, prior_pins)
     guard = _check_delivery_rebind(root, state, identity, record, section, item)
     scope_paths = [value["path"] for value in item.get("delivery", {}).get("scope_sources", [])]
     paths = [*CONTINUITY_RULES, record, *item["source_paths"], *item["evidence_paths"], *scope_paths]
@@ -976,8 +1159,10 @@ def continuity_save(root: Path, state: dict, event: dict, record: str, section: 
     if guard is not None:
         guard["prompt_hash"] = state.get("last_prompt_hash")
         guard["delivery_status"] = item["delivery"]["status"]
-        guard["closed_ids"] = [value["id"] for value in item["delivery"]["requirements"]
-                                if value["status"] == "JOB_CLOSED"]
+        guard["closed_ids"] = sorted(set(guard.get("closed_ids", [])) | {
+            value["id"] for value in item["delivery"]["requirements"]
+            if value["status"] == "JOB_CLOSED"
+        })
         state["delivery_guard"] = guard
     try:
         state["continuity"]["cached_origin_main"] = git(root, "rev-parse", "origin/main").strip()
@@ -1031,7 +1216,12 @@ def continuity_read(root: Path, state: dict, event: dict) -> dict:
             reasons.append("NEW_MESSAGE_SINCE_CHECKPOINT")
         if bound.get("missing_authorities"):
             reasons.append("AUTHORITY_UNAVAILABLE")
-        result["context"] = continuity_record(root, bound["record"], bound["section"])
+        frozen_guard, prior_pins = _frozen_delivery_context(
+            state, bound["record"], bound["section"], identity,
+        )
+        result["context"] = continuity_record(
+            root, bound["record"], bound["section"], frozen_guard, prior_pins,
+        )
         guard_reasons = delivery_guard_reasons(state, bound, result["context"])
         reasons.extend(guard_reasons)
         if result["context"]["pending_effects"]:
@@ -1156,7 +1346,12 @@ def continuity_context_fingerprint(
             saved_pins = bound.get("pins")
             if not isinstance(saved_pins, dict):
                 raise TypeError("continuity pins unavailable")
-            item = continuity_record(root, bound.get("record"), bound.get("section"))
+            frozen_guard, prior_pins = _frozen_delivery_context(
+                state, bound.get("record"), bound.get("section"), bound.get("identity"),
+            )
+            item = continuity_record(
+                root, bound.get("record"), bound.get("section"), frozen_guard, prior_pins,
+            )
             immutable_paths = {
                 continuity_path(root, value).relative_to(root.resolve()).as_posix()
                 for value in [
@@ -1541,7 +1736,12 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
         current_record_hash = hashlib.sha256(record_path.read_bytes()).hexdigest()
         if bound.get("pins", {}).get(bound.get("record")) != current_record_hash:
             return False, "The bound continuity record changed after readback; reconcile and rebind it before any completion claim."
-        item = continuity_record(root, bound.get("record"), bound.get("section"))
+        frozen_guard, prior_pins = _frozen_delivery_context(
+            state, bound.get("record"), bound.get("section"), bound.get("identity"),
+        )
+        item = continuity_record(
+            root, bound.get("record"), bound.get("section"), frozen_guard, prior_pins,
+        )
         reasons = delivery_guard_reasons(state, bound, item)
         current_pins = continuity_pins(root, list(bound.get("pins", {})))
     except (OSError, ValueError, KeyError, TypeError, RuntimeError) as error:

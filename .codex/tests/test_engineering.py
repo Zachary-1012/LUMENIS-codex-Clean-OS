@@ -1555,6 +1555,29 @@ with hook.locked(Path(sys.argv[2])):
                 })
         self.save_delivery_fixture(record, payload)
 
+    def add_delivery_receipts(self, item, requirement):
+        head = self.git("rev-parse", "HEAD").strip()
+        required_sources = [*item["source_paths"],
+                            *(source["path"] for source in item["delivery"]["scope_sources"])]
+        pins = {name: h.hashlib.sha256((self.root / name).read_bytes()).hexdigest()
+                for name in required_sources}
+        for kind in ("TOOL_WORKFLOW", "RECOVERY"):
+            name = f"work/{requirement['id']}-{kind}-current.json"
+            receipt = {
+                "schema_version": 1, "requirement_id": requirement["id"],
+                "kind": kind, "result": "ACCEPTED", "head": head,
+                "source_pins": pins,
+                "observation": "Isolated receipt pins the complete declared source scope",
+            }
+            (self.root / name).write_text(json.dumps(receipt), "utf-8")
+            item["evidence_paths"].append(name)
+            requirement["evidence"].append({
+                "path": name, "sha256": h.hashlib.sha256((self.root / name).read_bytes()).hexdigest(),
+                "kind": kind, "result": "ACCEPTED", "head": head, "source_pins": pins,
+            })
+        requirement["status"] = "JOB_CLOSED"
+        return pins
+
     def block_delivery_fixture(self, record, payload):
         item = payload["continuity"]
         delivery = item["delivery"]
@@ -1869,11 +1892,178 @@ with hook.locked(Path(sys.argv[2])):
         evidence = payload["continuity"]["delivery"]["requirements"][0]["evidence"][0]
         self.assertNotEqual(evidence["head"], self.git("rev-parse", "HEAD").strip())
 
+    def test_delivery_scope_addition_preserves_closed_receipt_and_pins_open_work(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        first, second = delivery["requirements"]
+        item["remaining"] = ["TOOL-2 remains open under its existing acceptance."]
+        self.add_delivery_receipts(item, first)
+        self.save_delivery_fixture(record, payload)
+        frozen_first_evidence = list(first["evidence"])
+        legacy_requirement_guard = self.state["delivery_guard"]["requirements"]["TOOL-1"]
+        legacy_requirement_guard.pop("closed_evidence")
+        legacy_requirement_guard.pop("needs_current_evidence")
+        legacy_requirement_guard.pop("closure_source_pins")
+
+        added_source = "work/scope-for-tool-2.md"
+        (self.root / added_source).write_text("Approved scope source for the remaining TOOL-2 outcome.\n", "utf-8")
+        added_hash = h.hashlib.sha256((self.root / added_source).read_bytes()).hexdigest()
+        delivery["scope_sources"].append({"path": added_source, "sha256": added_hash})
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(first["evidence"], frozen_first_evidence)
+        self.assertTrue(all(added_source not in evidence["source_pins"] for evidence in first["evidence"]))
+        self.assertNotIn(
+            added_source,
+            self.state["delivery_guard"]["requirements"]["TOOL-1"]["closure_source_pins"],
+        )
+        self.assertIn(added_source, self.state["delivery_guard"]["scope_sources"])
+
+        added_ref = next(value for value in delivery["scope_sources"] if value["path"] == added_source)
+        delivery["scope_sources"].remove(added_ref)
+        with self.assertRaisesRegex(ValueError, "remove a frozen scope source"):
+            self.save_delivery_fixture(record, payload)
+        delivery["scope_sources"].append(added_ref)
+        self.save_delivery_fixture(record, payload)
+
+        current_pins = self.add_delivery_receipts(item, second)
+        self.assertIn(added_source, current_pins)
+        item["remaining"] = []
+        delivery["status"] = "JOB_CLOSED"
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_delivery_scope_addition_rejects_replaced_historical_receipt(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        first = delivery["requirements"][0]
+        item["remaining"] = ["TOOL-2 remains open under its existing acceptance."]
+        self.add_delivery_receipts(item, first)
+        self.save_delivery_fixture(record, payload)
+
+        added_source = "work/scope-for-tool-2.md"
+        (self.root / added_source).write_text("Approved scope source for the remaining TOOL-2 outcome.\n", "utf-8")
+        delivery["scope_sources"].append({
+            "path": added_source,
+            "sha256": h.hashlib.sha256((self.root / added_source).read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+
+        frozen_ref = first["evidence"][0]
+        receipt_path = self.root / frozen_ref["path"]
+        receipt = json.loads(receipt_path.read_text("utf-8"))
+        receipt["observation"] = "A replacement observation attempts to reuse the historical scope pins"
+        receipt_path.write_text(json.dumps(receipt), "utf-8")
+        frozen_ref["sha256"] = h.hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(ValueError, "cannot be removed or replaced"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_old_scope_receipt_cannot_be_claimed_without_original_session_guard(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        first = delivery["requirements"][0]
+        item["remaining"] = ["TOOL-2 remains open under its existing acceptance."]
+        self.add_delivery_receipts(item, first)
+        self.save_delivery_fixture(record, payload)
+
+        added_source = "work/scope-for-tool-2.md"
+        (self.root / added_source).write_text("Approved scope source for the remaining TOOL-2 outcome.\n", "utf-8")
+        delivery["scope_sources"].append({
+            "path": added_source,
+            "sha256": h.hashlib.sha256((self.root / added_source).read_bytes()).hexdigest(),
+        })
+        record.write_text(json.dumps(payload), "utf-8")
+        new_event = {"session_id": "different-engineering-session", "agent_id": "bounded-test-agent"}
+        with self.assertRaisesRegex(ValueError, "complete current source scope"):
+            h.continuity_save(self.root, self.state, new_event,
+                              "work/checkpoint.json", "continuity")
+
+    def test_delivery_scope_addition_still_rejects_changed_old_pinned_source(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        first = delivery["requirements"][0]
+        item["remaining"] = ["TOOL-2 remains open under its existing acceptance."]
+        self.add_delivery_receipts(item, first)
+        self.save_delivery_fixture(record, payload)
+
+        added_source = "work/scope-for-tool-2.md"
+        (self.root / added_source).write_text("Approved scope source for the remaining TOOL-2 outcome.\n", "utf-8")
+        delivery["scope_sources"].append({
+            "path": added_source,
+            "sha256": h.hashlib.sha256((self.root / added_source).read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+
+        (self.root / "AGENTS.md").write_text("Changed original frozen source.\n", "utf-8")
+        with self.assertRaisesRegex(ValueError, "stale"):
+            self.save_delivery_fixture(record, payload)
+
     def test_delivery_changed_source_invalidates_previous_closure(self):
         record, payload = self.delivery_fixture()
         self.close_delivery_fixture(record, payload)
         (self.root / "sample.py").write_text("value = 43\n", "utf-8")
+        with self.assertRaisesRegex(ValueError, "source pins are stale"):
+            self.save_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_reopen_changed_source_requires_current_receipts_and_preserves_history(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        historical_refs = {
+            requirement["id"]: json.loads(json.dumps(requirement["evidence"]))
+            for requirement in delivery["requirements"]
+        }
+        historical_bytes = {
+            evidence["path"]: (self.root / evidence["path"]).read_bytes()
+            for requirement in delivery["requirements"]
+            for evidence in requirement["evidence"]
+        }
+
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Reopen the existing outcome after its implementation source changed",
+                    turn_id="reopen-changed-source")
+        delivery["status"] = "RUNNING"
+        item["remaining"] = ["Revalidate the changed implementation source and recover the outcome."]
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "OPEN"
+        self.save_delivery_fixture(record, payload)
+
+        (self.root / "sample.py").write_text("value = 43\n", "utf-8")
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+        delivery["status"] = "JOB_CLOSED"
+        item["remaining"] = []
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "JOB_CLOSED"
+        with self.assertRaisesRegex(ValueError, "fresh receipts for the complete current source scope"):
+            self.save_delivery_fixture(record, payload)
+
+        delivery["status"] = "RUNNING"
+        item["remaining"] = ["Revalidate the changed implementation source and recover the outcome."]
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "OPEN"
+        self.save_delivery_fixture(record, payload)
+        for requirement in delivery["requirements"]:
+            self.add_delivery_receipts(item, requirement)
+        delivery["status"] = "JOB_CLOSED"
+        item["remaining"] = []
+        self.save_delivery_fixture(record, payload)
+
+        self.assertEqual(self.delivery_stop(), {})
+        for requirement in delivery["requirements"]:
+            self.assertEqual(requirement["evidence"][:2], historical_refs[requirement["id"]])
+            self.assertNotEqual(
+                requirement["evidence"][-1]["source_pins"]["sample.py"],
+                historical_refs[requirement["id"]][0]["source_pins"]["sample.py"],
+            )
+        for path, body in historical_bytes.items():
+            self.assertEqual((self.root / path).read_bytes(), body)
 
     def test_delivery_changed_authority_outside_source_scope_blocks_closure(self):
         record, payload = self.delivery_fixture()

@@ -134,8 +134,15 @@ presence, a PR or CI success never closes an approved requirement.
 outcome requires real user E2E and recovery; a tool workflow cannot replace it.
 `scope_sources` records each original scope document's `path` and `sha256`.
 Evidence points to bounded existing JSON receipts with the recorded outcome,
-historical source HEAD and the complete admitted source/scope-file hashes; an unrelated commit does not invalidate unchanged scoped inputs. Receipts must distinguish real user
-work, tool workflow and recovery from isolated automated checks. Original
+historical source HEAD and the complete admitted source/scope-file hashes. An
+unrelated commit or later scope addition does not invalidate a closed outcome
+whose original source pins are unchanged. Its exact receipt references and bytes
+remain frozen under the same record/session binding. New or reopened outcomes
+require current complete-scope outcome and recovery receipts. A changed original
+source invalidates current closure: explicitly reopen, preserve historical
+receipts, verify the new version, then close again. Historical receipts alone
+cannot accept changed source. Receipts distinguish real user work, tool workflow
+and recovery from isolated automated checks. Original
 requirements and source documents remain the coverage authority: a hook cannot
 prove that an initial checklist omitted nothing or that a self-authored receipt
 describes a real event.

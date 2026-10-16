@@ -45,6 +45,13 @@ Eight subsequent affected checks cover frozen implementation scope after context
 clear, reserved receipt capacity, first-effect PENDING admission, immutable
 historical resolution and Chinese direct-PO deferral provenance. Full Ruff and
 compilation pass for the changed hook files; these remain tool-bound checks.
+The final receipt-scope repair preserves exact closed-outcome receipt references
+and original bytes across a later scope addition. Changed implementation requires
+explicit reopening and new complete-current-scope outcome/recovery evidence; it
+can then close without erasing history. The changed-source recovery case and nine
+affected preservation/rejection cases passed, with compilation and full Ruff on
+the two modified Python files. This verifies the development guard, not Collector
+autonomy, workstation activation or a product user outcome.
 
 The direct PO instructions dated 2026-10-16 covered three reported upgrades:
 all relevant issue #17/Slack updates and research adoption; all approved Cortech
