@@ -41,6 +41,10 @@ Six affected checks also verify that a new execution prompt cannot escape throug
 a different legacy/previously closed record, and that PO deferral names complete
 requirement IDs rather than matching prefixes. New work can bind a new record
 with a newly admitted outcome; unchanged closed work can still switch normally.
+Eight subsequent affected checks cover frozen implementation scope after context
+clear, reserved receipt capacity, first-effect PENDING admission, immutable
+historical resolution and Chinese direct-PO deferral provenance. Full Ruff and
+compilation pass for the changed hook files; these remain tool-bound checks.
 
 The direct PO instructions dated 2026-10-16 covered three reported upgrades:
 all relevant issue #17/Slack updates and research adoption; all approved Cortech

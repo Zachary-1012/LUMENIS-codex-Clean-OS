@@ -1970,6 +1970,16 @@ with hook.locked(Path(sys.argv[2])):
         source.write_text("value = 2\n", "utf-8")
         self.assertEqual(self.delivery_stop().get("decision"), "block")
 
+    def test_clear_then_readonly_turn_retains_frozen_implementation_scope(self):
+        self.delivery_fixture()
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        self.assertNotIn("continuity", self.state)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="只回答当前进度，不要修改或执行任务。", turn_id="cleared-report")
+        self.edit()
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertIn("sample.py", self.state["report_turn_changed_paths"])
+
     def test_report_only_scope_normalizes_dot_paths_before_intersection(self):
         record, payload = self.delivery_fixture()
         payload["continuity"]["source_paths"] = ["./sample.py"]
@@ -2171,6 +2181,26 @@ with hook.locked(Path(sys.argv[2])):
         with self.assertRaisesRegex(ValueError, "every remaining requirement"):
             self.save_delivery_fixture(record, payload)
 
+    def test_chinese_direct_po_receipt_can_authorize_exact_deferred_ids(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        source_path = "work/po-chinese.md"
+        source_text = "产品负责人直接指示延期 TOOL-1、TOOL-2，等待审核。"
+        (self.root / source_path).write_text(source_text, "utf-8")
+        item["evidence_paths"].append(source_path)
+        delivery["scope_sources"].append({
+            "path": source_path, "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
+        })
+        for requirement in delivery["requirements"]:
+            requirement.update(status="PO_DEFERRED", po_source=source_text)
+        delivery["status"] = "PO_DEFERRED"
+        delivery["exit"] = {"reason": "PO_DEFERRED：TOOL-1、TOOL-2", "evidence_path": source_path,
+                            "resume_condition": "收到产品负责人明确恢复指令后继续。"}
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertFalse(self.state["delivery_exit"]["closed"])
+
     def test_direct_pause_preserves_remaining_without_closure(self):
         self.delivery_fixture()
         self.handle("UserPromptSubmit", **self.delivery_event, prompt="所有任务暂停，等我审核完", turn_id="pause")
@@ -2218,14 +2248,12 @@ with hook.locked(Path(sys.argv[2])):
         self.assertEqual(self.delivery_stop(), {})
         reopened_state = {}
         reopened_event = {"session_id": "engineering-reopen-thread", "agent_id": "bounded-test-agent"}
-        reopened = h.continuity_save(
-            self.root, reopened_state, reopened_event, "work/checkpoint.json", "continuity"
-        )
-        self.assertEqual(reopened["status"], "PINNED_CONTEXT")
-        self.assertEqual(
-            reopened_state["delivery_guard"]["pending_effects"][h._pending_effect_id(effect)]["status"],
-            "RESOLVED",
-        )
+        original_receipt = receipt_path.read_bytes()
+        with self.assertRaisesRegex(ValueError, "first be frozen as PENDING"):
+            h.continuity_save(
+                self.root, reopened_state, reopened_event, "work/checkpoint.json", "continuity"
+            )
+        self.assertEqual(receipt_path.read_bytes(), original_receipt)
         receipt_path.write_text(receipt_path.read_text("utf-8") + "\n", "utf-8")
         self.assertEqual(self.delivery_stop().get("decision"), "block")
 
@@ -2247,6 +2275,27 @@ with hook.locked(Path(sys.argv[2])):
         ledger.pop()
         with self.assertRaisesRegex(ValueError, "cannot remove"):
             self.save_delivery_fixture(record, payload)
+
+    def test_effect_admission_reserves_capacity_for_resolution_and_outcomes(self):
+        effect = "First bounded publication pending readback"
+        record, payload = self.delivery_fixture([effect])
+        self.resolve_effect_fixture(payload, effect)
+        self.save_delivery_fixture(record, payload)
+        item = payload["continuity"]
+        required_capacity = len(item["evidence_paths"]) + 2 * len(item["delivery"]["requirements"])
+        with mock.patch.object(h, "MAX_EVIDENCE_PATHS", required_capacity):
+            self.save_delivery_fixture(record, payload)
+            second = "Another publication must reserve a future receipt slot"
+            item["pending_effects"].append(second)
+            item["delivery"]["effect_ledger"].append({
+                "pending_effect_sha256": h._pending_effect_id(second), "status": "PENDING",
+            })
+            with self.assertRaisesRegex(ValueError, "Evidence capacity"):
+                self.save_delivery_fixture(record, payload)
+            item["pending_effects"].pop()
+            item["delivery"]["effect_ledger"].pop()
+            self.close_delivery_fixture(record, payload)
+            self.assertEqual(self.delivery_stop(), {})
 
     def test_new_effect_cannot_enter_the_ledger_already_resolved(self):
         first = "operation-cth-publish-21 remains unresolved pending durable readback"

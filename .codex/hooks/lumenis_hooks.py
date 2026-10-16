@@ -476,6 +476,13 @@ def _delivery_effect_ledger(root: Path, item: dict, delivery: dict,
     ledger_pending = {identifier for identifier, value in result.items() if value["status"] == "PENDING"}
     if expected_pending != ledger_pending:
         raise ValueError("pending_effects must exactly match the append-only effect ledger's PENDING entries")
+    reserved_outcomes = 0
+    for requirement in delivery["requirements"]:
+        outcome_kind = "REAL_USER_E2E" if requirement["outcome_class"] == "PRODUCT" else "TOOL_WORKFLOW"
+        existing_kinds = {value.get("kind") for value in requirement.get("evidence", [])}
+        reserved_outcomes += len({outcome_kind, "RECOVERY"} - existing_kinds)
+    if len(item.get("evidence_paths", [])) + len(ledger_pending) + reserved_outcomes > MAX_EVIDENCE_PATHS:
+        raise ValueError("Evidence capacity must reserve outcome, recovery and pending-effect resolution receipts")
     return result
 
 
@@ -619,7 +626,7 @@ def validate_delivery(root: Path, item: dict) -> dict | None:
         if source_key not in scope:
             raise ValueError("PO_DEFERRED source receipt must be included in the frozen source manifest")
         source_text = source_path.read_text("utf-8-sig")
-        if not re.search(r"\b(?:product owner|direct\s+po|po\s+(?:instruction|approval|decision))\b",
+        if not re.search(r"\b(?:product owner|direct\s+po|po\s+(?:instruction|approval|decision))\b|产品(?:负责人|所有者|Owner)\s*直接(?:指示|指令|授权|批准|决定)|PO\s*直接(?:指示|指令|授权|批准|决定)",
                          source_text, re.IGNORECASE):
             raise ValueError("PO_DEFERRED source receipt must identify a direct Product Owner instruction")
         normalized_source = " ".join(source_text.split())
@@ -773,15 +780,7 @@ def _reconcile_pending_effects(root: Path, item: dict, guard: dict) -> None:
     validation = validate_delivery(root, item)
     ledger = validation["effect_ledger"]
     if "pending_effects" not in guard:
-        prior = {
-            identifier: ({"status": "PENDING"} if value["status"] == "PENDING" else {
-                "status": "RESOLVED", "receipt": {
-                    "path": value["receipt"]["path"],
-                    "sha256": value["receipt"]["sha256"],
-                }
-            })
-            for identifier, value in ledger.items()
-        }
+        prior = {}
         guard["pending_effects"] = prior
     if not isinstance(prior, dict):
         raise TypeError("Frozen pending-effect history is invalid")
@@ -1377,6 +1376,7 @@ def delivery_scope_paths(root: Path, state: dict) -> set[str]:
     guard = state.get("delivery_guard")
     if isinstance(guard, dict) and isinstance(guard.get("scope_sources"), dict):
         values.update(value for value in guard["scope_sources"] if isinstance(value, str))
+        values.update(value for value in guard.get("source_paths", []) if isinstance(value, str))
     return {
         continuity_path(root, value).relative_to(root.resolve()).as_posix()
         for value in values

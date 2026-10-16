@@ -69,6 +69,11 @@ historical readback or authorize replay. Current implementation acceptance still
 uses its own current-source receipts. New effects may be appended as `PENDING`,
 then become immutable after their receipt is admitted. Removing the pending item
 or leaving the list empty alone cannot resolve an effect.
+The frozen admission must also survive context clearing. A fresh guard cannot
+import already-resolved effects without that prior admission; preserve the old
+record, receipt and guard for reconciliation, never replay the external effect.
+Admission reserves evidence-list space for pending resolutions and each outcome's
+operation/recovery receipts before another effect is added.
 
 ```powershell
 # Refresh at admission, meaningful outcome/PO correction, or planned handoff.
