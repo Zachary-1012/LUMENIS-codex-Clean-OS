@@ -1290,11 +1290,7 @@ Long projects can reach both ends without clipping; dense tracks may scroll
 vertically within their own necessary region. Panning alone never changes
 project duration, clip positions, audio mix, source refs or saved versions.
 
-Developer mode remains a retained historical SYSTEM capability. The Product
-Owner explicitly deferred it after raising the missing entry: DEFERRED_BY_USER,
-not a current implementation task or closure blocker. C6 retains the backend/
-security record and F the eventual UI ownership; do not enable legacy execution
-or erase its history. Resume it only under a later authorized priority change.
+The approved user and Founder developer modes are inside engineering closure, with C6 retaining SYSTEM/security ownership and F owning their interfaces. User mode preserves explicit terms/consent, backup and reversible disablement; Founder mode preserves actual role authorization, validated signed staged updates and rollback. Neither mode revives a retired executor, bypasses server Permission or proves implementation merely by being planned. Their existing screen contracts and complete product plan define the actions and independent acceptance.
 
 These requirements apply to the appropriate operational surfaces with deliberate
 desktop/touch recomposition. Website explains actual available abilities; it

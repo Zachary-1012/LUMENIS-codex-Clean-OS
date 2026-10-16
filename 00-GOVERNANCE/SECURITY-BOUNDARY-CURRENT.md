@@ -26,6 +26,6 @@ Platform acquisition and interaction must respect the platform authorization con
 Credential classes remain separate:
 
 - media-platform Cookie/session/browser material belongs to the existing SYSTEM collector/browser runtime and never becomes a LUMENIS product-account credential;
-- the LUMENIS product account is deferred until after internal beta and must not gate pre-beta product access;
+- approved LUMENIS account/login/settings and user/Founder developer modes are inside engineering closure without a universal account wall; free Google/email login follows existing identity contracts, and Apple login requires its developer-account and authorization prerequisites. This scope does not claim implementation or grant privileges;
 - server-side Permission, approval and effect fences still apply to protected actions even when no product account wall is shown;
 - Cookie, token, API key and browser profile secrets stay out of Git, logs, App copy and Evidence payloads.

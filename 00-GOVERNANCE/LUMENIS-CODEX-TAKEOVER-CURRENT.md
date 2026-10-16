@@ -52,7 +52,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 4. Merge a PR once all required checks are green; no PO wait.
 5. Brand names = official-site names with source URL.
 6. The developer runs end-to-end tests for newly added subjects and keeps them in CI.
-7. Retired AI providers (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) have their calling code and config deleted; the owned 序境 model is default, one generic OpenAI-compatible adapter serves only a user-selected own API (AI_PROVIDER=user_api), with no automatic fallback.
+7. Retired AI providers (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) have their calling code and config deleted; the owned 序境 model is default, the existing user_api adapter is required to serve only explicitly selected Groq through the sole Gateway/Permission, with no arbitrary endpoint or automatic fallback. Current endpoint enforcement remains an implementation gap until verified; this rule does not claim it repaired.
 8. In-loop: collection, CTH, BMP, Shared, AI, no-shell tools in built-in browser, chat UI cards, full Skill Store, GitHub connector, MCP, frontend functions, competitor proofs, accounts (free email codes/Google; Apple after developer-account activation; original settings presentation), user and founder developer modes, commercial-readiness items, visuals, logo, role art. Post-launch: real-user validation, paid/licensed sources.
 
 ## 2026-10-16 unique frontend plan and visual sketch (planning-only)
@@ -75,11 +75,13 @@ Database state: `NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`
 Real user E2E: `NOT_VERIFIED`
 
+本次审查原位清理 Security/Experience 的账号与两种开发者模式旧延期句，并将已批准实时语音目标对齐 Architecture/Overlay；未启用麦克风、模型或服务。AI-05和草图限于Groq固定端点，原任意HTTPS执行限制仍是未修实现缺口，完成前不得据该接口发送数据。首个文档提交的Product Gate因三项Architecture精确措辞不匹配失败，失败记录保留；本次恢复等价的唯一Gateway/退役路径安全表述，未删减校验。
+
 本次只执行文档与状态收敛、成果保护和既有 PR 发布；直接 PO 明确将实际产品闭环留到下次。该延期不删除功能、未完实现、研究采用或验收，不暂停或派工其他窗口。下一阶段仍是同一个完整产品闭环，未完能力是其内部责任项，不另造产品/规划/队列。唯一完整前后端规划为 [product-plan-full.md](LOOP-PLAN-20261014/product-plan-full.md)，唯一完整视觉文字草图为 [FULL-PRODUCT-SKETCH.md](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)，二者覆盖今天更新及全部既有 SYSTEM/CTH/BMP/Shared/Agent–自研 AI、四表面、195 个 G 和原 J/R/U；44 屏只是追溯基线。Architecture、Experience、Owner、验收规范、逐屏合同各保留唯一内容责任，README只作稳定中英产品指南，不复制状态。
 
 | 当前证据层 | 2026-10-16 本次收尾的事实与未完边界 |
 | --- | --- |
-| 已发布源码与文档 | PR60/77/78/80 的既有回执按原版本保留；本次开始读回 main 为 `0907fd67f71500bd3065485d873a3324d0efbda5`。本 PR 只发布11条现有文档路径和原治理检查器的一处过时账号句匹配，发布结果以本PR合并提交和远端读回为准，不复制未来SHA。 |
+| 已发布源码与文档 | PR60/77/78/80 的既有回执按原版本保留；本次开始读回 main 为 `0907fd67f71500bd3065485d873a3324d0efbda5`。本 PR 只发布13条现有文档路径和原治理检查器的一处过时账号句匹配，发布结果以本PR合并提交和远端读回为准，不复制未来SHA。 |
 | 完整规划与前端 | 完整前后端计划、全产品视觉/操作草图、研究直传和逐材料分析时间线/物理卡片、产品语言、四端、账号/两开发者模式等已纳入本次文档；**整体前端 NOT_ACCEPTED**，这些仍须真实实现与验收，不能以局部文案/编译/规划当通过。 |
 | 受保护主工作区 | `akang/auto-scope-all-subjects` HEAD `7792040e1251b8bf765aefb8465e1d437f65a812`，原22 tracked dirty＋6 untracked候选保留；已核19项与main一致、5项语义采用、4项无效生成物删除未采用，原文件未清理。它不是当前main或已升级Runtime。 |
 | 本轮产品候选 | `codex/20261016-sourcebrief-analysis` 基于 `2932b725039ad606d9f335f8e900d989fd876182`，68条有实际差异/新源码路径冻结为 LOCAL_CANDIDATE_NOT_ACCEPTED。完整原字节/patch归档 `product-candidates-freeze-20261016.zip` SHA256 `84db066dc2034839b8923dc32414e5a823e2e629d28991f807fcaf151283d3ca`；归档是恢复证据，不是第二实现。没有将未验收代码混入本次文档PR。 |

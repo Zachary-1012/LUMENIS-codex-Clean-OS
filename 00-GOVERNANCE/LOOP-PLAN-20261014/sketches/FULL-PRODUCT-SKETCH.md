@@ -1027,13 +1027,14 @@ Web输入校验/取消保留原配置，敏感测试是显式动作不是状态�
 
 [原动作/字段/状态/Owner/Permission/验收合同](../../../contracts/experience/screen-specifications/AI-05.md)。以下为完整目标设计，当前接线与可用性以该合同及同版本运行证据为准。
 
-#### 模型设置：自有模型默认 + 一个通用 OpenAI 兼容自带 API
+#### 模型设置：自有模型默认 + 可选 Groq 连接
 
 ##### Desktop细部
 
 ```
-模型来源 (●) 序境自有模型（默认）  ( ) 我的 API（OpenAI 兼容）
-  API 基础地址（Base URL）[        ] 模型 [      ] API 密钥 [••••] [测试连接]
+模型来源 (●) 序境自有模型（默认）  ( ) Groq
+  API 基础地址（Base URL）https://api.groq.com/openai/v1（固定）
+  获准模型 [      ] API 密钥 [••••] [测试连接]
 说明：不可用时显示「不可用」，不会自动切换
 ```
 

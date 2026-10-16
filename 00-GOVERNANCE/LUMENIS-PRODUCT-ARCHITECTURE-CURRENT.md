@@ -509,9 +509,9 @@ P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 
 
 AI provider and owned-model responsibilities:
 
-- lumenis/system/ai_gateway/ is the sole SYSTEM owner; every product model call passes through this Gateway. C2 owns approved commercially usable open foundation weights, owned training/inference and held-out business evaluation; use existing/free resources first. Codex Cloud configuration is not proof of production inference or free GPU capacity.
+- lumenis/system/ai_gateway/ remains the sole SYSTEM owner; every product model call passes through this Gateway. C2 owns approved commercially usable open foundation weights, owned training/inference and held-out business evaluation; use existing/free resources first. Codex Cloud configuration is not proof of production inference or free GPU capacity.
 - Groq is the only currently approved external model interface. It is available only through the same Gateway after explicit user selection and applicable Permission; it is not a hidden default, automatic provider switch or fallback. Provider configuration/readiness is a runtime fact and must not be inferred from documentation.
-- Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are retired from product execution; Jev is an inactive historical typed candidate. None may be called, probed, auto-discovered, used as fallback or reactivated. Retained compatibility interfaces and historical artifacts are not permission to use them.
+- Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are retired from product execution; Jev is an inactive historical typed candidate. For these retired routes: no calls, probes, auto-discovery, fallback or reactivation are permitted. Retained compatibility interfaces and historical artifacts are not permission to use them.
 - Owned AI must prove understanding, reasoning, original creation, tools,
   continuity/recovery and controlled learning on real CTH/BMP/creation work.
   Source Brief, multimodal inputs, uncertainty, latency/cost, feedback,
@@ -523,8 +523,7 @@ AI provider and owned-model responsibilities:
   compatibility/history, not permission to revive stopped providers.
 - Codex/Cloud are development resources, not product inference, Evidence,
   Permission or Truth owners. Surfaces consume the one Core/Gateway result.
-- Realtime conversational voice is deferred; file audio/video/image
-  understanding and podcast/media production remain C2/C4 requirements.
+- The approved realtime voice/interruption capability remains an OPEN complete-product target in the existing C2/C4/C5/C6/F owners. User initiation, microphone Permission, authorized available model/transport, measured interruption latency, stop/reconnect and task return require actual acceptance. No automatic recording, new external voice API or paid service is authorized by this plan. Local Read Aloud and file audio/video/image understanding or podcast production retain their separate requirements; neither proves realtime conversation, and unavailable enhancement never blocks normal text/editing work.
 
 The platform identity boundary is also explicit: media Cookie/session/browser authorization belongs to the SYSTEM collector/browser chain and stays separate from the future LUMENIS product account. Approved account/login/settings and the user/Founder developer modes are part of engineering closure, without a universal account wall. Free Google/email login uses existing identity contracts; Apple requires its account/authorization prerequisites. Server-side Permission, approval and effect-fence enforcement remain mandatory.
 
