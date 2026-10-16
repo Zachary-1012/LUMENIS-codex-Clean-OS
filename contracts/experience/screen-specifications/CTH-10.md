@@ -127,8 +127,9 @@ analysis successful. No period or export is supplied by this increment, and
 
 ## 5. Purpose-built composition
 
-- **Desktop/Web:** report storyboard outline on the left, one paged artifact preview in the center, and a source/methodology rail on the right. The primary object is the report artifact, not a KPI wall.
-- **Mobile:** report list first, then one-page preview and a bottom source trail. Period/window and scope remain visible in the header.
+集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-10)。
+
+- Keep the period/window and scope visible in the header.
 - **Accessibility:** page/section/source order is explicit; source references include title and observed fact; loading and blocked states are live regions; keyboard can move from outline to preview to source rail.
 
 ## 6. Actions, authorization and effects
