@@ -1853,6 +1853,15 @@ with hook.locked(Path(sys.argv[2])):
         (self.root / "sample.py").write_text("value = 43\n", "utf-8")
         self.assertEqual(self.delivery_stop().get("decision"), "block")
 
+    def test_delivery_changed_authority_outside_source_scope_blocks_closure(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        authority = self.root / h.VERIFICATION_POLICY_PATH
+        authority.write_text(authority.read_text("utf-8") + "\n", "utf-8")
+        self.assertIn("PINNED_INPUT_CHANGED", h.continuity_read(
+            self.root, self.state, self.delivery_event)["reasons"])
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
     def test_delivery_changed_receipt_cannot_reuse_previous_closure(self):
         record, payload = self.delivery_fixture()
         self.close_delivery_fixture(record, payload)
@@ -2000,6 +2009,19 @@ with hook.locked(Path(sys.argv[2])):
             h.classify_turn_exit("What is the current status? Please continue fixing the issue."),
             "RUNNING",
         )
+        for action in ("add CSV export", "create the report", "remove the old rule",
+                       "delete obsolete code", "ship the accepted repair"):
+            with self.subTest(action=action):
+                self.assertEqual(h.classify_turn_exit(
+                    f"What is the current status? Please {action}."), "RUNNING")
+        self.assertEqual(h.classify_turn_exit("报告当前进度，再新增导出入口"), "RUNNING")
+        for prompt in ("What is the current status? Please do not modify anything.",
+                       "报告当前进度。不要修改文件。"):
+            with self.subTest(prompt=prompt):
+                self.assertEqual(h.classify_turn_exit(prompt), "REPORT_ONLY")
+        self.assertEqual(h.classify_turn_exit(
+            "What is the current status? Please do not modify anything. Then add CSV export."),
+            "RUNNING")
 
     def test_english_negation_does_not_swallow_a_later_positive_action(self):
         self.assertEqual(
@@ -2177,6 +2199,19 @@ with hook.locked(Path(sys.argv[2])):
             "pending_effect_sha256": h._pending_effect_id(second), "status": "PENDING",
         })
         self.resolve_effect_fixture(payload, second)
+        with self.assertRaisesRegex(ValueError, "first be frozen as PENDING"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_empty_frozen_effect_ledger_cannot_admit_already_resolved_effect(self):
+        record, payload = self.delivery_fixture()
+        self.assertEqual(self.state["delivery_guard"]["pending_effects"], {})
+        effect = "A new remote publication needs pending admission before its resolution"
+        item = payload["continuity"]
+        item["pending_effects"].append(effect)
+        item["delivery"]["effect_ledger"].append({
+            "pending_effect_sha256": h._pending_effect_id(effect), "status": "PENDING",
+        })
+        self.resolve_effect_fixture(payload, effect)
         with self.assertRaisesRegex(ValueError, "first be frozen as PENDING"):
             self.save_delivery_fixture(record, payload)
 

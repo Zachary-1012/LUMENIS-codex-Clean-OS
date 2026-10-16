@@ -31,9 +31,12 @@ prompt correction then passed five affected regressions, full Ruff on both
 changed Python files and compilation. These are development-tool checks, not
 product E2E or proof that a running workstation has loaded the published handler.
 The subsequent Linux CI exposed Windows-separator continuity lookup failure;
-portable normalization retains drive/root/traversal and private-path rejection.
+Portable normalization retains drive/root/traversal, private-path and ADS rejection.
 That failed run remains historical evidence; only the repaired exact-head CI
 can establish this change's cross-platform verification.
+Further reviewed closure cases preserve an empty frozen effect ledger, require
+the whole prompt to be report-only, and reconcile changed authority pins before
+closure while retaining evidence across unrelated HEAD changes.
 
 The direct PO instructions dated 2026-10-16 covered three reported upgrades:
 all relevant issue #17/Slack updates and research adoption; all approved Cortech

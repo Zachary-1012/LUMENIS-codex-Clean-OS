@@ -769,7 +769,7 @@ def _reconcile_pending_effects(root: Path, item: dict, guard: dict) -> None:
     prior = guard.get("pending_effects")
     validation = validate_delivery(root, item)
     ledger = validation["effect_ledger"]
-    if not isinstance(prior, dict) or not prior:
+    if "pending_effects" not in guard:
         prior = {
             identifier: ({"status": "PENDING"} if value["status"] == "PENDING" else {
                 "status": "RESOLVED", "receipt": {
@@ -780,6 +780,8 @@ def _reconcile_pending_effects(root: Path, item: dict, guard: dict) -> None:
             for identifier, value in ledger.items()
         }
         guard["pending_effects"] = prior
+    if not isinstance(prior, dict):
+        raise TypeError("Frozen pending-effect history is invalid")
     if not set(prior).issubset(ledger):
         raise ValueError("The append-only external-effect ledger cannot remove an admitted effect identity")
     for identifier in set(ledger) - set(prior):
@@ -841,7 +843,6 @@ def _delivery_guard_snapshot(delivery: dict) -> dict:
         "record_po_source": delivery["po_source"],
         "requirements": requirements,
         "scope_sources": {value["path"]: [value["sha256"]] for value in delivery["scope_sources"]},
-        "pending_effects": {},
         "nonclosure_exits": {},
     }
 
@@ -1431,40 +1432,28 @@ def classify_turn_exit(prompt: str) -> str:
         re.IGNORECASE,
     ):
         return "PO_PAUSED"
-    negative_action = re.compile(
-        r"(?:不要|先不|别)(?:再)?(?:修改|执行|继续|实现|更新|开工|推进)"
-        r"(?:\s*(?:或|和|并|以及)\s*(?:修改|执行|继续|实现|更新|开工|推进))*|"
-        r"(?:please\s+)?(?:do\s+not|don't)\s+"
-        r"(?:modify|change|edit|write|run|execute|implement|update|fix|continue|proceed|resume)\b",
-        re.IGNORECASE,
-    )
-    report_request = re.match(
-        r"^(?:(?:请|给我|向我|先)\s*){0,2}(?:只)?(?:直接)?"
+    report_head = (
+        r"(?:(?:请|给我|向我|先)\s*){0,2}(?:只)?(?:直接)?"
         r"(?:回答|报告|汇报|告诉我)(?:一下)?(?:当前|最新|全部|整体|各窗口|产品)?"
         r"(?:进度|状态|待完成项|完成情况|已经完成什么|还差什么)?"
-        r"(?:即可|就行)?(?:[，,。.!！?？].*)?$|"
-        r"^(?:当前|最新|各窗口|整体)(?:的)?(?:进度|状态)(?:是什么|如何|怎样)?[。.!！?？]?$|"
-        r"^(?:我想|我要|请让我)(?:看|了解|知道)?(?:当前|最新|各窗口|整体)?(?:进度|状态)(?:如何|怎么样|是什么)?[。.!！?？]?$|"
-        r"^what\s+is\s+(?:the\s+)?(?:current|latest)\s+status\b.*$|"
-        r"^please\s+(?:tell|show|give)\s+me\b.*\b(?:current|latest)\s+status\b.*$|"
-        r"^summary(?:\s+only)?[.!?]?$|^status report[.!?]?$",
-        text,
-        re.IGNORECASE,
+        r"(?:即可|就行)?|"
+        r"(?:当前|最新|各窗口|整体)(?:的)?(?:进度|状态)(?:是什么|如何|怎样)?|"
+        r"(?:我想|我要|请让我)(?:看|了解|知道)?(?:当前|最新|各窗口|整体)?(?:进度|状态)(?:如何|怎么样|是什么)?|"
+        r"what\s+is\s+(?:the\s+)?(?:current|latest)\s+status(?:\s+only)?|"
+        r"please\s+(?:tell|show|give)\s+me\s+(?:the\s+)?(?:current|latest)\s+status(?:\s+only)?|"
+        r"summary(?:\s+only)?|status report"
     )
-    if report_request and not re.search(
-        r"继续|修复|实现|更新|开工|推进|同步落实|接着做|"
-        r"\b(?:continue|execute|repair|fix|implement|update|start|proceed|change|modify|edit|write|run|resume)\b",
-        negative_action.sub("", text), re.IGNORECASE
-    ):
-        return "REPORT_ONLY"
-    if re.search(
-        r"继续|执行|修复|实现|更新|开工|推进|同步落实|继续做|接着做|"
-        r"\b(?:continue|execute|repair|fix|implement|update|start|proceed|change|modify|edit|write|run|resume)\b",
-        negative_action.sub("", text), re.IGNORECASE,
-    ):
-        return "RUNNING"
-    # Only a direct report request exits this turn; clarifications and task
-    # prompts that merely mention status continue through the full outcome.
+    readonly_tail = (
+        r"(?:不要|先不|别)(?:再)?(?:修改|执行|继续|实现|更新|开工|推进)"
+        r"(?:(?:或|和|并|以及)(?:修改|执行|继续|实现|更新|开工|推进))*(?:任务|文件|代码)?|"
+        r"(?:please\s+)?(?:do\s+not|don't)\s+"
+        r"(?:modify|change|edit|write|run|execute|implement|update|fix|continue|proceed|resume)"
+        r"(?:\s+(?:anything|files|code|tasks?))?"
+    )
+    report_request = re.fullmatch(
+        rf"(?:{report_head})(?:\s*[,，;；。.!！?？]\s*(?:{readonly_tail}))?\s*[。.!！?？]?",
+        text, re.IGNORECASE,
+    )
     return "REPORT_ONLY" if report_request else "RUNNING"
 
 
@@ -1545,6 +1534,7 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
             return False, "The bound continuity record changed after readback; reconcile and rebind it before any completion claim."
         item = continuity_record(root, bound.get("record"), bound.get("section"))
         reasons = delivery_guard_reasons(state, bound, item)
+        current_pins = continuity_pins(root, list(bound.get("pins", {})))
     except (OSError, ValueError, KeyError, TypeError, RuntimeError) as error:
         return False, f"Structured delivery could not be verified ({type(error).__name__}); preserve every remaining requirement and reconcile its current evidence."
     delivery = item.get("delivery")
@@ -1561,6 +1551,8 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
             and bound.get("prompt_hash") != state.get("last_prompt_hash")):
         return False, "A new Product Owner message requires reconciliation; a prior closure, blocker or deferral cannot close the current task."
     if status == "JOB_CLOSED" and not unfinished:
+        if current_pins != bound.get("pins"):
+            return False, "Pinned authority or inputs changed; reconcile current rules and evidence before claiming closure."
         return True, None
     if status == "EXTERNAL_BLOCKED":
         # validate_delivery already proves every unfinished item is blocked by
