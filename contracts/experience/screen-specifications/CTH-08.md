@@ -56,7 +56,7 @@ Trusted CTH-08 fixture IDs are `CASE-221` and `EV-7710` for this bounded rendere
 
 ## 5. Purpose-built composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - **Desktop/Web:** lifecycle board/list on the left, selected Case timeline and source trail inspector on the right, with a separate verified-knowledge shelf below. The board is not a generic table or renamed dashboard card set.
 - **Mobile:** ranked Case inbox first, then the selected step-by-step timeline, source trail and knowledge shelf. Board columns collapse into explicit state labels.

@@ -60,9 +60,9 @@ The actual actor/target/risk Permission decision is unresolved in the current sc
 
 ## 5. Purpose-built desktop composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
-完整目标布局与交互见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-04)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-04)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
 ### 草图增补：密钥与数据合规（G19，闭环内）
 
@@ -115,7 +115,7 @@ Ready / Loading / 数据缺失 / 会话过期（提示重新登录，不切换�
 
 ## 5A. Web Workspace composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 ### 草图增补：密钥与数据合规（G19，闭环内）
 
@@ -129,7 +129,7 @@ Web：权限/协议/备份按步骤展示，敏感确认可取消并回原任务
 
 ## 6. Purpose-built mobile composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 ### 草图增补：密钥与数据合规（G19，闭环内）
 
@@ -201,3 +201,13 @@ Mobile：只读（状态、修改记录、备份列表）；开启/加载扩展�
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+## Current projection and approved complete target (OPEN)
+
+本节补充已批准的安全、商业操作与用户开发模式目标，保留当前 SYS-04 只读 posture；不改 frontmatter、Permission Owner、现有 route 或实现状态。集中视觉规划输入（不替代本屏现行合同）：[SYS-04完整草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-04)。
+
+- **当前投影（保持）：** 当前读取仍为 GET /api/experience/screen/SYS-04 → experience_screens._build_sys04()；只列 PermissionLevel/OperationType 元数据，不返回 actor-specific 决策。不得显示 token/cookie/key/session、原始 policy，亦不得把元数据或 Subject 上下文当作授权。
+- **完整目标与既有 Owner（OPEN）：** SYSTEM Permission/effects 与既有安全凭据、配置及开发工具 Owner 继续持有实际授权和副作用。产品计划 G19/G20 与 SYS-04 草图要求完整呈现并允许受控管理商业合规/来源保留/脱敏报告、凭据安全存储/轮换/撤销，以及用户显式开启的产品内开发者模式。用户可在已审核的风险与法律责任协议约束下开发/修改产品；协议上线前须经法务审核，未审核不得启用。依G20a还要保留账号数据备份/恢复、关闭开发者模式后恢复受限状态；SYS-04草图中的数据导出/删除/恢复必须遵循原账户、Permission与Effect Fence Owner。不得扩展为OS控制，不新增secret vault、Permission引擎或第二运行时。
+- **输入、结果与权限：** 输入为当前请求的实际 actor/身份状态（可未登录；逐项由既有 Owner 判定是否需认证）、精确产品/工作区/目标、操作、凭据或扩展版本、用途、已审核协议版本与明确同意；数据控制操作仅限原 Owner 返回的账号数据范围。账号登录不是产品入口前提，本地备份仍可不登录；需账号身份的动作仅按其现有 Owner 合同认证。用户逐项同意并只授权所见范围；服务端在每项 consequential action 前重新核对 Permission、Approval 与 Effect Fence。输出是脱敏的授权/运行/合规状态、来源保留和脱敏配置版本、密钥轮换/撤销、账号数据导出/删除/恢复、备份结果或扩展版本状态，不返回秘密明文。扩展读取/分析外部材料时另遵循既有 SourceUse。
+- **版本、保存、返回与恢复：** 合规设置和获准开发者配置按既有 owner/version 保存、修订、重开并可追踪 actor 与批准；关闭开发者模式应停止该模式可调用能力、保留扩展/用户资料，并提供既有 owner 的官方状态恢复路径。凭据撤销后旧凭据不可继续使用；失败/中断状态须可辨识，返回原任务不产生新的授权或副作用。具体恢复只采用既有 owner 已支持的操作。
+- **未绑定与验收：** 当前 builder 不含 actor-specific Permission，也没有上述写操作绑定。每个实际 key/retention/masking/developer-mode callable、Permission decision、审批与结果回读若未由现有 owner 提供，均保持 OPEN/UNBOUND，相关操作禁用，不臆造 API。完整验收须覆盖用户同意与拒绝、协议法务审核、作用域不扩张、凭据不回显/日志泄露、轮换/撤销生效、账号数据备份/导出/删除/恢复、扩展失败隔离、关闭后不可调用、受限官方状态恢复、保存重开和真实目标表面 E2E。

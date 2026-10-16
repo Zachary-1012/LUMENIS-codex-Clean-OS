@@ -6,6 +6,10 @@
 
 **REA先研究后使用。** 同次直接PO要求使用前认真研究其官方[GitHub仓库](https://github.com/morluto/rea)。本窗口先读适用版本的README、相关指南、实际源码/测试、许可证与发布差异，再据本机实际工具schema选择调用，保留commit、阅读范围、能力/限制和可复用方法；仅看工具名、安装Skill或旧报告不算完成研究。完成此项与本窗口规划发布门后继续完整获准目标的验证及适配包，不以研究缩减原任务。
 
+本稿所有REA后续描述仅追溯上述当前窗口直接PO已指派的任务；发布或远端读回不产生授权，也不恢复旧窗口。任何新窗口/不同任务仍须各自当前直接PO派工与新鲜准入。
+
+本稿与总草图集中保存完整目标和可修订视觉规划输入；Experience仍是唯一设计权威。现行ScreenSpec的实际Owner/API/Permission/SourceUse、字段/状态/动作、响应式行为、无障碍及真实验收合同继续原位有效，不能被规划链接替换或降为参考。纯重复构图可集中引用；出现差异时先核最新直接PO、Experience与实际合同，由既有Owner原位协调，既不复制另一套活跃规划，也不拿当前只读实现缩减最终要求。
+
 ## 0. 要求、实现与证据如何阅读
 
 | 阅读对象 | 本次处理及事实边界 |
@@ -52,7 +56,7 @@
 | 独立提案/文稿：Shared新建→类型/空白/手稿；SH-01/04 | 自有Brief、用户稿或获准素材；C4内容编排+C5 SavedWork/Artifact，章节/页面编辑、事实墙、备注与审阅，提案/报告方法按对象采用。 | 人工输入→编辑预览→真实保存→修订→版本比较→关闭重开→Word/PDF/其他已接格式导出；未接格式清晰不可用。引用/人工改稿/AI草案分开，不强制先研究/建业务任务。 |
 | 独立视频：Shared视频或BMP-06可选入口 | 自有视频/音频/图/稿，C4 MediaAsset/Timeline/FFmpeg/Artifact；素材预览、逐词稿、真实播放器、多轨/字幕/声音/安全区/画幅、分镜、提议与损失预检。 | 手动剪辑始终可用；提议确认才改Timeline，seek/pan/悬停分离、撤销完整；可编辑工程+实际成片分别读回，导出取消/失败保留原工程，素材变更/失链可恢复。详见§14 E项。 |
 | 独立播客：Shared播客或BMP-08可选入口 | 自有稿/录音/音频，C4同一Timeline/Artifact及podcast Owner；选题/前采/稿、录音导入、转写说话人/章节、逐词剪辑、混音实测/试听、发布包与切片/复盘。 | 稿件修改不暗改音频；词剪同工程、原文/校对双版本、多音频流明确选择；可选配音/声纹另按许可，发布包导出不等平台发布。保存修订重开/恢复及试听各自验，详见§14 P项。 |
-| 资料、来源和采集：SH-02/03、SYS-02/06 | 文件/精确URL/主题与任务语义→SYSTEM Collector或Importer→同一Evidence/Canonical；平台封面/正文/作者/原帖/原生时间与捕获时间、真实指标/缺失原因和用途分别可查。 | 明确手动动作和已批准自动范围；未来用户默认MANUAL/显式opt-in，研发已准入AUTO不外推给新用户。单平台登录/挑战只停该路径，受控恢复/服务端健康读回后续接；来源纠正不覆盖历史。 |
+| 资料、来源和采集：SH-02/03、SYS-02/06 | 单个或批量自有/获准文件（XLSX/PDF/DOCX等）、精确URL/主题与任务语义→SYSTEM Collector或既有Importer→同一Source/Evidence/Canonical；导入先核对字段、重复与缺项，逐项保留原件/页码/表格位置、来源、双时间和使用范围。报告中的结论/推断与其原始来源分层，未经独立核验不升为Canonical事实；可在同一CTH/BMP经营/品牌问题或独立Shared研究中采用。 | 保留原件、核对选择、排除理由及导入版本；字段/缺项补全只追加有来源的新版本，重复项按原Owner规则处理，不覆盖不同来源。分析成果依原SavedWork/Artifact保存、修订、重开、返回原材料/问题并恢复中断；解析失败、部分可用、权限不足与已导入分开显示，不新设导入系统或分析面板。采集仍明确手动动作和已批准自动范围；未来用户默认MANUAL/显式opt-in，研发已准入AUTO不外推给新用户。单平台登录/挑战只停该路径，受控恢复/服务端健康读回后续接；来源纠正不覆盖历史。 |
 | 内置网页工作：SYS-06、Open Original、任务内浏览器胶囊 | 同actor/task受控会话，地址/标签/导航/真实页面与可访问操作、停止/人工独占/原任务返回；C6 Browser Runtime/Permission，AI是可选增强。 | 接管期间停止Agent并隔离AI页面读取；保存笔记/来源仅按真实获准动作，纯打开不采集/写Evidence。挑战/过期/断流/离开/重启各明确，外部打开显式；禁止个人大陆XHS或默认浏览器档案探测。 |
 | 成果与版本：SH-04，全部工作内“保存/版本/导出” | C5 SavedWork/Artifact/SourceUse，显示当前编辑、已提交版本、来源版本及导出格式，比较增删和修改原因。 | 保存确认来自持久化读回；冲突时保留本地编辑/旧版并明确重试基线。旧版只读与采用为新版本分开；撤权后不能靠缓存或旧下载链接继续；输出文件实际内容校对。 |
 | 任务/通知：AI-02、SH-06与顶栏任务入口 | Task Engine真实状态、成果feed/NotificationRouter，按权限显示完成、重要失败和必要人审；任务详情可查询普通进度。 | 返回同一工作/版本，取消/恢复受attempt/lease及效果回执约束；关闭客户端/宿主休眠分别说明。通知已发送/待发/失败与任务完成分开；去重、重连补送、静默偏好不吞必要审批。 |
@@ -70,6 +74,21 @@
 Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺序；停止/撤销/返回；同概念同词；危险动作预防；可见选项而非记内部ID；快捷键/触控等价；任务主次清晰；可恢复错误文案；就地帮助。它们不删功能、动效或原创视觉。所有页面：zh-CN/en/ko的导航/正文/状态/错误/权限/读屏文案齐全，名称和原文数据不乱翻译；韩文长度及CJK/emoji字体变化实测，语言切换不丢草稿/对象/版本。
 
 键盘可达、可见焦点、语义分组/标题/表格、读屏替代图、颜色之外的状态符号、44–48逻辑像素触控区与200%字体后重排贯穿全部工作。图表有同数据表格/摘要，拖拽有按钮/键盘等价，媒体有字幕/转写和唯一可控播放器，动效无需观看才能理解。检验1920/1440/1280/1024/768/430/390/360等既有宽度；滚动只服务必要长文/表格/时间线/可访问放大，不截断内容，也不堆不必要嵌套滚动。像素/代码技术的具体研究和采用见本规划专节，按PO明确要求不采用像素画风。
+
+### 4.1 交互物理：沉重弹性、磁吸、流畅与抛出
+
+2026-10-16本窗口直接PO补充：“交互动效要有沉重弹性，磁吸，流畅，抛出以及各种适配产品的物理实现，物理参数要起作用”。本节与总草图§1.3记录同一要求；唯一动效权威仍为Experience现行动效段，具体动作、参数版本和验收沿实际ScreenSpec及既有F源码Owner维护，不能另设物理引擎/规则权威或把本规划当作已实现证明。
+
+| 交互质感与适用操作 | 必须真正参与计算的状态/参数 | 可观察的效果及边界 |
+| --- | --- | --- |
+| 沉重弹性：可逆抽屉、面板、选中对象及原已允许的拖拽回位 | 相对质量`m`、刚度`k`、阻尼`c`、初始位置/速度、目标；弹簧可按`m·x″ + c·x′ + k·(x−target)=0`或等价稳定解计算。参数须说明归一化单位/合法范围，不能把相对质量冒称真实千克。 | 明确有分量、起动跟手、有限回弹且收敛；单独改变`m/k/c`会相应改变响应速度、超调或稳定时间。拖住时服从用户，松开沿实际速度续接；中途改目标/反向/再次抓取保持当前位置与速度，不从零重播。大工作面与精细控件按任务调质感，不给正文/持续输入附加抖动。 |
+| 磁吸：现有选择落点、可吸附边界、编辑器已有对齐/时间点 | 吸附半径、距离衰减/吸引强度、进入/脱离阈值或迟滞、释放速度阈值、合法目标优先级和强度上限；由真实几何、状态及坐标单位计算。 | 进入有效范围有可见落点/预览，接近与离开产生连续拉力，边缘不反复跳吸；用力移开可脱离，用户可取消/按原支持方式关闭吸附。吸附只选当前允许目标，不改业务范围、越过权限或把视觉对齐写成已保存。指针装饰偏移不能让真实按钮命中区逃离指针。 |
+| 抛出/惯性/边界反馈：已有可拖对象、局部浏览与媒体编辑操作 | 松手采样速度、速度上限、惯性/摩擦或减速度、边界/限位、碰撞恢复系数、停止位置/速度阈值；位置更新使用真实经过时间或稳定解析解，不用每帧固定增量。 | 释放更快时运动距离/持续时间按模型变化，摩擦增大时衰减更快；边界处有限回弹后稳定，可中途抓取/停止/撤销。精确媒体位置、选择和拖拽预览仍以现有Timeline/业务合同为准，不因装饰惯性改剪辑时基或播放头；抛出手势不触发删除、发布、付款等后果。 |
+| 流畅衔接与端差异：Website、Web Workspace、Windows/macOS、iOS | 同一语义参数与版本，Web CSS px/Flutter logical px和每秒速度明确换算；DPR只影响栅格密度。计算/绘制按实际帧时间、可见性和生命周期运行，限制长帧步长/子步并处理暂停恢复。 | 状态/速度连续，快速往返不堆动画队列；布局、字体、缩放/旋转变化重算合法目标，旧回调失效。30/60/120Hz及掉帧下不出现不同最终状态、越界、NaN或无限振荡；不按“每帧”调摩擦导致刷新率改变手感。保留原有时间型动效和用户选择；物理交互由参数/初态决定运动，不强行套同一固定easing/duration使调参失效。 |
+
+参数必须从当前动作的真实输入接到实际仿真/渲染消费点，参数控件、配置字段或文档数值存在本身不算接线。沿既有主题/组件/偏好与动作Owner保存适用配置版本，不新增第二状态源；基础控件不可因缺少GPU/模型而失效，不新增付费插件。只有本就获准的动作使用物理反馈，不凭本节扩张拖拽、业务写入或OS控制。
+
+验收要同时有真实操作与可回放的参数/时间/位置/速度/目标采样：同一初态单独改质量/刚度/阻尼、磁吸范围/强度、释放速度/摩擦/恢复系数，轨迹、超调、吸附/脱离与稳定时间须出现符合模型的可测变化；不可只换标签、色彩或预制曲线。补验反向与重抓、pointer cancel/失焦、取消/导航/销毁、后台返回、边界、帧率/掉帧、三语/200%字体和各表面实际手势。键盘/触控/读屏等价动作与减少动态/关闭路径保持可用，减少动态时去除空间抛移/反复回弹，立即呈现同一真实状态；首反馈约90ms仍是起动预算，动画不延迟内容就绪、保存、许可或操作。当前为完整规划要求，实际参数接线、性能和四表面物理操作均待同版本证据，不标PASS。
 
 ## 5. 当前实现与未完状态的读回
 
@@ -796,7 +815,12 @@ app.destroy({ removeView: true }, { children: true });
 | 销毁与语义 | 点击按钮实际destroy后canvas数量0，DOM说明和按钮仍在可访问树；无返回的warning/error日志项 | 不证复杂场景的长期泄漏/无障碍覆盖，更不证产品工作完成。 |
 | 性能与四端 | FPS/首帧/p95帧时/显存/电量/低端设备/长跑均NOT_VERIFIED | 不以小场景、库宣传、WebGL存在或一次截图宣称60fps/跨端完成。 |
 
-输入HTML、结构化结果及可重复本机静态server命令已保留在本任务隔离研究包`issue-pixel/pixi-8.22.0-probe.html`与`pixi-probe-result.json`，交M归档，不进入产品执行导航。临时静态server在读取后已停止。官方8.x渲染指南仍标CanvasRenderer coming-soon，8.16公告称experimental，而固定8.22源码已有Canvas分支；此差异按精确版本源码和实际API范围处理，不能保证Canvas全功能替代。
+当时实际运行的[完整探针HTML源码](../evidence/round-15/pixi-probe-evidence-20261016.md#probe-source)和[结构化观察/日志/限制JSON原文](../evidence/round-15/pixi-probe-evidence-20261016.md#observation-receipt)以UTF-8/LF规范化（HTML同时去除末尾多余空行）的原内容在同一研究证据文档的代码围栏中完整发布；依现行RULES_ONLY_PUBLICATION门，不发布可执行HTML/任意JSON路径，不改validator。提取代码围栏正文并保留一个末尾LF可逐字复原；未改JS或观察值，原混合换行读取指纹与围栏正文指纹如下。JSON记录2026-10-16隔离IAB、固定库版本、来源、一次运行与销毁读数，不是自动测试证明。复现可用已有Python静态server仅绑定127.0.0.1，并显式打开该HTML；其CDN请求只取公开固定PixiJS模块，不进入产品导航。原截图未持久化，JSON保留此限制；本次发布证据没有重跑或扩大运行范围。临时静态server在读取后已停止。官方8.x渲染指南仍标CanvasRenderer coming-soon，8.16公告称experimental，而固定8.22源码已有Canvas分支；此差异按精确版本源码和实际API范围处理，不能保证Canvas全功能替代。
+
+| 探针证据 | 当时本机原始读取SHA-256 | 已发布围栏正文UTF-8/LF字节SHA-256 |
+| --- | --- | --- |
+| `pixi-8.22.0-probe.html` | `150ee2fd2bbbbf4968a61d82a0014eac28f4218e32f07aff24883793a8ff54ce` | `7b7368f93cb2cc3df2539d26fb22172cd394d4c08bb87a0e5e63d5b94897ace8` |
+| `pixi-probe-result-20261016.json` | `93f39cf941ed2215515dc798b04ed90f49e049a963b63cdd0117a08fdcf9c87c` | `91354c52287d3ea3b22f40c02b37329e32ac16eb4580cc1c206f7ea2a14596bc` |
 
 ### 20.3 Flutter / Astro的可执行采用设计
 
@@ -837,7 +861,7 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 | 输入与原始出处 | 实际取得/阅读范围 | 本规划与唯一草图的采用及限制 |
 | --- | --- | --- |
 | [Issue #17](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17)与Slack #lumenis-dev | 正文4354字符、35条完整评论；43条原频道消息、7线程原文含53回复，Welcome线程25+22=47完整回复正文；另读PR77/78最新两帖。2026-10-16增量API读回Issue仍35评论/updatedAt=2026-10-15T23:07:47Z，Slack在1792105672.545669之后无新频道消息。 | 是带来源的研究/协作输入，不是新派工或验收。完整快照SHA-256 `28beb5927603fefb943190a8b1e675c07872e0fdb49f64826a6a63ee954f5b6d`；[七项缺口原文](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17#issuecomment-6193248138)按下表闭合设计覆盖，产品运行仍独立OPEN。 |
-| Brio两个REA归档及10份原研究 | 逐行读完pack1-0…8、pack2-0共2481行；原始ZIP与可读副本指纹区分。报告来源与推断逐项辨认，不复制/调用其中认证样例。 | 完整对象含剪映PC、FCP、Claude Desktop、Grok/GrokBot、15平台、13SaaS、千瓜/新榜/新红；12结论按既有Owner判ADAPT/DEFER/REJECT。读取研究不等已验证私有协议/登录后Schema。原档来源见[归档评论](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17#issuecomment-6187523067)。规划发布受检并远端读回后继续PO已授权完整REA任务，不需新派工。 |
+| Brio两个REA归档及10份原研究 | 逐行读完pack1-0…8、pack2-0共2481行；原始ZIP与可读副本指纹区分。报告来源与推断逐项辨认，不复制/调用其中认证样例。 | 完整对象含剪映PC、FCP、Claude Desktop、Grok/GrokBot、15平台、13SaaS、千瓜/新榜/新红；12结论按既有Owner判ADAPT/DEFER/REJECT。读取研究不等已验证私有协议/登录后Schema。原档来源见[归档评论](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17#issuecomment-6187523067)。2026-10-16本次直接PO在当前任务窗口（01a142d1-74c0-7940-b8b9-a66414eb5f8c）已指派规划及完整REA两项工作；这是限定窗口/任务的来源事实。规划发布只是该任务的质量次序，不生成派工；其他或后续窗口不能从本文、合并或历史授权自行启动提取。 |
 | Nielsen操作研究 | 重读既有NIELSEN-OPERATION-MAPPING全文与Experience §38的逐操作映射，非重新穷尽NN/g网站。 | 十项落到真实动作/语言/状态/退出撤销/防错/键盘/帮助；用于每个任务检查，不把同一卡片网格当统一设计。原研究路径与正文随原Owner保留。 |
 | 用户视频、Cue/Manus及Website319b | 重读原视频清单/已读区间/逐帧记录与Experience限定范围；本次未重放全部历史原片。历史13项记录8存/5缺；已提取帧、实际视觉阅读、小字/语义未解区间分开。 | 最新7份参考和319b按现行范围采用；Cue/319b仅Website，Manus启动/授权/引导/任务返回方法可适配操作端。保留所有原片与已有分析，不重建已撤销的穷尽历史视频前置门。真实产品演示片须来自同版本真实操作，不用模拟成功。 |
 | Logo/icon/五角色与已有实现 | 重读原资产研究和当前`lumenis_icon.dart`/geometry、Theme及Website motion调用；source只说明存在，不能证明包图标/官网/原生同版交付。 | 原创带名/不带名Logo、功能glyph、彩绘身份icon及适合局部插画分工；Pim/Bram/Ness/Jas/Aris保留。沿用当前批准标志，r4等仅保留为历史候选证据，不在此另作替换，第三方平台logo各自权利不改。 |
@@ -899,7 +923,7 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 | [ACC-01](../../contracts/experience/screen-specifications/ACC-01.md) · SYSTEM / Experience entry | `CODEX-ACC01-RUNTIME-IDENTITY` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#acc-01) | F1/F2 |
 | [ACC-02](../../contracts/experience/screen-specifications/ACC-02.md) · SYSTEM settings / CTH Subject Registry / BMP BrandFocus | `CODEX-ACC02-CONTEXT`、`CODEX-ACC02-SUBJECT-REGISTRY` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#acc-02) | F3 |
 | [ACC-03](../../contracts/experience/screen-specifications/ACC-03.md) · SYSTEM / Shared Capability presentation | UNBOUND：原合同待核 | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#acc-03) | F1/F4 |
-| [ACC-04](../../contracts/experience/screen-specifications/ACC-04.md) · SYSTEM Permission / recovery boundary | `CODEX-ACC04-GUARD` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#acc-04) | F1 |
+| [ACC-04](../../contracts/experience/screen-specifications/ACC-04.md) · SYSTEM Permission / recovery boundary | `CODEX-ACC04-GUARD`（本屏slice别名；registry `BACKEND-GAP-004`） | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#acc-04) | F1 |
 | [AI-01](../../contracts/experience/screen-specifications/AI-01.md) · Shared Capability / AI Agent Groups | `BACKEND-GAP-029`、`BACKEND-GAP-030` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#ai-01) | F4 |
 | [AI-02](../../contracts/experience/screen-specifications/AI-02.md) · Shared Capability / AI Agent Groups | `CODEX-AI02-TASK-STAGES` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#ai-02) | F4 |
 | [AI-03](../../contracts/experience/screen-specifications/AI-03.md) · Shared Capability / Evidence-linked AI analysis | `CODEX-AI03-THREAD-TRACE` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#ai-03) | F4 |
@@ -912,7 +936,7 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 | [BMP-05](../../contracts/experience/screen-specifications/BMP-05.md) · BMP | `BACKEND-GAP-022` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-05) | F8 |
 | [BMP-06](../../contracts/experience/screen-specifications/BMP-06.md) · BMP | `BACKEND-GAP-023` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-06) | F8 |
 | [BMP-07](../../contracts/experience/screen-specifications/BMP-07.md) · BMP | `BACKEND-GAP-024` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-07) | F8 |
-| [BMP-08](../../contracts/experience/screen-specifications/BMP-08.md) · BMP | `BACKEND-GAP-025` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-08) | F8 |
+| [BMP-08](../../contracts/experience/screen-specifications/BMP-08.md) · BMP兼容入口；制作Owner为既有Shared Capability / C4-W4 | `BACKEND-GAP-025` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-08) | F8/F9 |
 | [BMP-09](../../contracts/experience/screen-specifications/BMP-09.md) · BMP | `BACKEND-GAP-026` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-09) | F8 |
 | [BMP-10](../../contracts/experience/screen-specifications/BMP-10.md) · BMP | `BACKEND-GAP-027` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-10) | F8 |
 | [BMP-11](../../contracts/experience/screen-specifications/BMP-11.md) · BMP | `BACKEND-GAP-028` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#bmp-11) | F8 |
@@ -936,7 +960,7 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 | [SYS-02](../../contracts/experience/screen-specifications/SYS-02.md) · SYSTEM Collector | `BACKEND-GAP-037` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-02) | F6 |
 | [SYS-03](../../contracts/experience/screen-specifications/SYS-03.md) · SYSTEM / Canonical Data | `BACKEND-GAP-038` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-03) | F10 |
 | [SYS-04](../../contracts/experience/screen-specifications/SYS-04.md) · SYSTEM Permission | `BACKEND-GAP-039` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-04) | F10/F11 |
-| [SYS-05](../../contracts/experience/screen-specifications/SYS-05.md) · SYSTEM Settings | UNBOUND：原合同待核 | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-05) | F0/F12 |
+| [SYS-05](../../contracts/experience/screen-specifications/SYS-05.md) · SYSTEM Settings | `BACKEND-GAP-040`（既有只读snapshot；设置写入及各端运行依原合同独立验收） | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-05) | F0/F12 |
 | [SYS-06](../../contracts/experience/screen-specifications/SYS-06.md) · SYSTEM Browser / CDP | `BACKEND-GAP-041` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-06) | F6 |
 | [SYS-07](../../contracts/experience/screen-specifications/SYS-07.md) · SYSTEM Security / AI Gateway | `BACKEND-GAP-042` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-07) | F10/F11 |
 | [SYS-08](../../contracts/experience/screen-specifications/SYS-08.md) · SYSTEM Observability | `BACKEND-GAP-043` | [完整目标构图](sketches/FULL-PRODUCT-SKETCH.md#sys-08) | F10 |
@@ -945,29 +969,33 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 
 原分步稿全部有效F0–F13/动效/来源已并入§18，原创作覆盖原文/指纹已并入§19；21份增补的有效布局、三端差异、状态/操作已并入对应草图锚点。旧独立文件在覆盖和引用检查后删除；Git固定父版本保留原始字节，既有研究/审批/失败/资产不删除。ScreenSpec仅保留其独特Owner/API/Permission/SourceUse/字段/状态/动作/验收合同及完整草图链接，混合句不能安全拆分时保留合同语义，不为“去重”损坏行为。
 
-| 原文件标识（仅不可变迁移溯源） | 原SHA-256 | 当前落点 |
-| --- | --- | --- |
-| `ACC-01-ADD-account-settings.md` | `3d9970e6b81b674e07286b19e28916666c58457498e973362b7b8de756a92e1f` | [草图ACC-01](sketches/FULL-PRODUCT-SKETCH.md#acc-01) |
-| `ACC-01-ADD-sign-in.md` | `1d5a19b6b75f1a5b621e251ab10d9a3d97a4c9a5ab4920e7c6bf2bba7244b0c3` | [草图ACC-01](sketches/FULL-PRODUCT-SKETCH.md#acc-01) |
-| `CTH-09-ADD-math-result-card.md` | `e697e52ed39154ac7c0c1d30cfcfe5ba1ec82b8e859ab305fcbe414f4df68709` | [草图CTH-09](sketches/FULL-PRODUCT-SKETCH.md#cth-09) |
-| `BMP-05-ADD-kos-funnel.md` | `aa6d730711d83ec04e169e5da4b47b7840a66822da7dca096e2ad7d5da7d216c` | [草图BMP-05](sketches/FULL-PRODUCT-SKETCH.md#bmp-05) |
-| `BMP-06-ADD-video-editing-studio.md` | `fa1f2bb9a34313c55262877789d75a2d56059df4fafe03b7b53c70d6a27f3153` | [草图BMP-06](sketches/FULL-PRODUCT-SKETCH.md#bmp-06) |
-| `BMP-07-ADD-marketing-calendar.md` | `3da7b9cc329cbc4708b43e91130c1964f167cc71e0e58880ee5a83ffaeebe80f` | [草图BMP-07](sketches/FULL-PRODUCT-SKETCH.md#bmp-07) |
-| `BMP-08-ADD-podcast-studio.md` | `7e8afcd4458382d7e18624ae13a82155502cdfb9328679b44458c37e71644985` | [草图BMP-08](sketches/FULL-PRODUCT-SKETCH.md#bmp-08) |
-| `BMP-09-ADD-public-mmm.md` | `b5f44c8652faab859c9364cac764c5c483a68b3b84e811b042aa003d52969885` | [草图BMP-09](sketches/FULL-PRODUCT-SKETCH.md#bmp-09) |
-| `AI-01-ADD-intelligent-cards.md` | `fa84ac7cad90843107182cf00e0893ae3ed6d5c6c8626d7a870328e90e272a2a` | [草图AI-01](sketches/FULL-PRODUCT-SKETCH.md#ai-01) |
-| `AI-01-ADD-tool-permission-confirm.md` | `b6286e0b396261c82199ba62d16ccb8dabf3804f2135c55c396889a35205a1b4` | [草图AI-01](sketches/FULL-PRODUCT-SKETCH.md#ai-01) |
-| `AI-04-ADD-github-mcp-connectors.md` | `00b2195d6799298fff87c18b7ba253f2e9f7529489b90149cb8156a31a4f495c` | [草图AI-04](sketches/FULL-PRODUCT-SKETCH.md#ai-04) |
-| `AI-04-ADD-skills-store.md` | `b4a35b4a4a3c847dea48df622d236d18f29bd2e7be67db990ee878e3ed471161` | [草图AI-04](sketches/FULL-PRODUCT-SKETCH.md#ai-04) |
-| `AI-05-ADD-byo-api.md` | `71cc2c4de65ea3a3169b187941903dd5fb201ee421274335b995fa59ee22c869` | [草图AI-05](sketches/FULL-PRODUCT-SKETCH.md#ai-05) |
-| `SYS-02-ADD-manual-collect.md` | `97f36484564039fa07507ded43d5f8faecb95ba24580928fe5852767e4d68d59` | [草图SYS-02](sketches/FULL-PRODUCT-SKETCH.md#sys-02) |
-| `SYS-04-ADD-keys-compliance.md` | `bf2b75325ce7257eb849beb2b5c644afe6ffd6d7b6341631b6969519a9d2d530` | [草图SYS-04](sketches/FULL-PRODUCT-SKETCH.md#sys-04) |
-| `SYS-04-ADD-user-developer-mode.md` | `d80727134b0a246f3e413d415ec64a20b503da9c8f647aa51bfe4b96735523b9` | [草图SYS-04](sketches/FULL-PRODUCT-SKETCH.md#sys-04) |
-| `SYS-05-ADD-visual-brand-roles.md` | `6fd087ddefc0fa717678fbf65dd85ebf5b3df179c1553a513915de620806da30` | [草图SYS-05](sketches/FULL-PRODUCT-SKETCH.md#sys-05) |
-| `SYS-06-ADD-browser-tabs.md` | `d980740213b253a49bb6e60255c470340f5b1a5b91f091ee3e85aeca7ce435c3` | [草图SYS-06](sketches/FULL-PRODUCT-SKETCH.md#sys-06) |
-| `SYS-06-ADD-login-recovery-sheet.md` | `81f6cf4156d63b5edf93552dc79bcaca18b051dcdae746dda983a19464f4ea0b` | [草图SYS-06](sketches/FULL-PRODUCT-SKETCH.md#sys-06) |
-| `SYS-07-ADD-founder-developer-mode.md` | `67beffed1cdeefba2d8397d70bf1e6ef4fb71abe36a72099f60138c98f02d5b0` | [草图SYS-07](sketches/FULL-PRODUCT-SKETCH.md#sys-07) |
-| `SYS-08-ADD-ops-workspace-lifecycle.md` | `48ff5bd5f558bdc11193a44b13a135ab62455eb614b48c2dcfedce71661057c6` | [草图SYS-08](sketches/FULL-PRODUCT-SKETCH.md#sys-08) |
+下表同时保留当时Windows本机读取的CRLF字节指纹与固定父版本`2932b725039ad606d9f335f8e900d989fd876182`的Git blob原始字节SHA-256。跨平台用`git show <父版本>:00-GOVERNANCE/LOOP-PLAN-20261014/sketches/<文件名>`的stdout原始字节计算后一列，不能把checkout后的换行当原blob；前一列只追溯本机阅读/精确删除收据，不声称跨平台相同。
+
+| 原文件标识（仅不可变迁移溯源） | 原本机CRLF读取SHA-256 | 父版本Git blob字节SHA-256（跨平台复核） | 当前落点 |
+| --- | --- | --- | --- |
+| `ACC-01-ADD-account-settings.md` | `3d9970e6b81b674e07286b19e28916666c58457498e973362b7b8de756a92e1f` | `05492d291418e147770a2ac9639f6ed5b0d0dc632f045d708abd2f420d4891b2` | [草图ACC-01](sketches/FULL-PRODUCT-SKETCH.md#acc-01) |
+| `ACC-01-ADD-sign-in.md` | `1d5a19b6b75f1a5b621e251ab10d9a3d97a4c9a5ab4920e7c6bf2bba7244b0c3` | `b0d33f8e6efe0ec2a68939a86a2c3e0c5fa4077241c639f95045e9e14ebb508d` | [草图ACC-01](sketches/FULL-PRODUCT-SKETCH.md#acc-01) |
+| `CTH-09-ADD-math-result-card.md` | `e697e52ed39154ac7c0c1d30cfcfe5ba1ec82b8e859ab305fcbe414f4df68709` | `6bee0cea90c0a754e46599944b2f379c5aed6406eea3769e773cd46281a7ec70` | [草图CTH-09](sketches/FULL-PRODUCT-SKETCH.md#cth-09) |
+| `BMP-05-ADD-kos-funnel.md` | `aa6d730711d83ec04e169e5da4b47b7840a66822da7dca096e2ad7d5da7d216c` | `4f4efe3736787e32d9f1f306624984e546613c9adf1df9933082953c2cb860e6` | [草图BMP-05](sketches/FULL-PRODUCT-SKETCH.md#bmp-05) |
+| `BMP-06-ADD-video-editing-studio.md` | `fa1f2bb9a34313c55262877789d75a2d56059df4fafe03b7b53c70d6a27f3153` | `fe46a80cdf4610ce3ebf562d88d4c5cacade62a62e6de5aaf32296398c16c1b2` | [草图BMP-06](sketches/FULL-PRODUCT-SKETCH.md#bmp-06) |
+| `BMP-07-ADD-marketing-calendar.md` | `3da7b9cc329cbc4708b43e91130c1964f167cc71e0e58880ee5a83ffaeebe80f` | `371bedea215e75fefaaadc06502d180fb658438651370c79aeee172608642c38` | [草图BMP-07](sketches/FULL-PRODUCT-SKETCH.md#bmp-07) |
+| `BMP-08-ADD-podcast-studio.md` | `7e8afcd4458382d7e18624ae13a82155502cdfb9328679b44458c37e71644985` | `67958c69aba7d5fe6f7d6adff7270aee7d59c8ecb91bd3908362d3fd90da2573` | [草图BMP-08](sketches/FULL-PRODUCT-SKETCH.md#bmp-08) |
+| `BMP-09-ADD-public-mmm.md` | `b5f44c8652faab859c9364cac764c5c483a68b3b84e811b042aa003d52969885` | `4f96bf91a39abca667dee26367be814629e006d536dd86031f859f4034f7a007` | [草图BMP-09](sketches/FULL-PRODUCT-SKETCH.md#bmp-09) |
+| `AI-01-ADD-intelligent-cards.md` | `fa84ac7cad90843107182cf00e0893ae3ed6d5c6c8626d7a870328e90e272a2a` | `b5848d37081de2c626036b344a2e47b6c43a2eb95c6fd9eae2487081829dea76` | [草图AI-01](sketches/FULL-PRODUCT-SKETCH.md#ai-01) |
+| `AI-01-ADD-tool-permission-confirm.md` | `b6286e0b396261c82199ba62d16ccb8dabf3804f2135c55c396889a35205a1b4` | `9b0677696eb557fef2e833c493cd7ab560f3bd373f74744a33332c3ecc0cae5d` | [草图AI-01](sketches/FULL-PRODUCT-SKETCH.md#ai-01) |
+| `AI-04-ADD-github-mcp-connectors.md` | `00b2195d6799298fff87c18b7ba253f2e9f7529489b90149cb8156a31a4f495c` | `92734a381c1a193272616b0936be03edf03e8849ef3cd55bfb83e5b982678911` | [草图AI-04](sketches/FULL-PRODUCT-SKETCH.md#ai-04) |
+| `AI-04-ADD-skills-store.md` | `b4a35b4a4a3c847dea48df622d236d18f29bd2e7be67db990ee878e3ed471161` | `5610e986f28322b093ae404defc3305881f6bd93d09a2b42a77abd6ad28e4648` | [草图AI-04](sketches/FULL-PRODUCT-SKETCH.md#ai-04) |
+| `AI-05-ADD-byo-api.md` | `71cc2c4de65ea3a3169b187941903dd5fb201ee421274335b995fa59ee22c869` | `62aa30b61407e058d6801692a0cc9873e6c152b40e839f35b668527301094198` | [草图AI-05](sketches/FULL-PRODUCT-SKETCH.md#ai-05) |
+| `SYS-02-ADD-manual-collect.md` | `97f36484564039fa07507ded43d5f8faecb95ba24580928fe5852767e4d68d59` | `0e22671b294a64013368283811b004371da25b587ec213bc664e52d42b483086` | [草图SYS-02](sketches/FULL-PRODUCT-SKETCH.md#sys-02) |
+| `SYS-04-ADD-keys-compliance.md` | `bf2b75325ce7257eb849beb2b5c644afe6ffd6d7b6341631b6969519a9d2d530` | `001f10c0d9afb1181e74060981fc66a736f82740a3d995558a13185c69e9b783` | [草图SYS-04](sketches/FULL-PRODUCT-SKETCH.md#sys-04) |
+| `SYS-04-ADD-user-developer-mode.md` | `d80727134b0a246f3e413d415ec64a20b503da9c8f647aa51bfe4b96735523b9` | `0efae0ee43fcd981a48a6a0a0d70f4a5ddf7457a6015055b337b7f8ec48f657f` | [草图SYS-04](sketches/FULL-PRODUCT-SKETCH.md#sys-04) |
+| `SYS-05-ADD-visual-brand-roles.md` | `6fd087ddefc0fa717678fbf65dd85ebf5b3df179c1553a513915de620806da30` | `a3ee238d34e95688eabfc5325f987e0afc80bf78c913ed1456291c43f8692947` | [草图SYS-05](sketches/FULL-PRODUCT-SKETCH.md#sys-05) |
+| `SYS-06-ADD-browser-tabs.md` | `d980740213b253a49bb6e60255c470340f5b1a5b91f091ee3e85aeca7ce435c3` | `792cab26191d2d31140bc0bd979b0259dc188cbd61baf2bfd3ee6774737de4fd` | [草图SYS-06](sketches/FULL-PRODUCT-SKETCH.md#sys-06) |
+| `SYS-06-ADD-login-recovery-sheet.md` | `81f6cf4156d63b5edf93552dc79bcaca18b051dcdae746dda983a19464f4ea0b` | `4b551d748fd13013ad61c3d6913ce96d9f83182e7a544314819999b072d376a1` | [草图SYS-06](sketches/FULL-PRODUCT-SKETCH.md#sys-06) |
+| `SYS-07-ADD-founder-developer-mode.md` | `67beffed1cdeefba2d8397d70bf1e6ef4fb71abe36a72099f60138c98f02d5b0` | `a6c69ca91ff9a64c715043f1efc8eba46912b220fd73742bef9563601160dcda` | [草图SYS-07](sketches/FULL-PRODUCT-SKETCH.md#sys-07) |
+| `SYS-08-ADD-ops-workspace-lifecycle.md` | `48ff5bd5f558bdc11193a44b13a135ab62455eb614b48c2dcfedce71661057c6` | `381c93fb0d74482ed7ffd8116a7d4a14655855c61110e733436b04ebcabe5b08` | [草图SYS-08](sketches/FULL-PRODUCT-SKETCH.md#sys-08) |
+| `UI-STEP-PLAN.md` | `e9e77960a6440ad898858fafc272d6ae2a1c97803fc28634139f2879b061bc2e` | `e31927623841129a545debf2fc35de91bc443c1d8c97e5387e1e2f6704b5e126` | 规划§18（F0–F13与动效） |
+| `CREATION-COVERAGE-20261014.md` | `cee4d115550cd120b5b20184ab93902d5da1cf7a335e77b25f2884a0a394465f` | `f20c8195153de981ff297e9d3e25497ab045dc3fb4b66402ebbc8041d6cf7727` | 规划§19（完整原文与指纹） |
 
 ### 22.2 原R/N/O有效要求的迁移索引
 

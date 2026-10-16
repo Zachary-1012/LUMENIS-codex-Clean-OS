@@ -83,9 +83,9 @@ Public Website, Web Workspace, Desktop and Mobile keep distinct release roles. O
 
 ## 5. Purpose-built desktop composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
-完整目标布局与交互见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
 ### 草图增补：创始人内部开发者模式（G20b）
 
@@ -129,14 +129,14 @@ Public Website, Web Workspace, Desktop and Mobile keep distinct release roles. O
 
 ## 5A. Web Workspace composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 ### 草图增补：创始人内部开发者模式（G20b）
 
 
 ## 6. Purpose-built mobile composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 ### 草图增补：创始人内部开发者模式（G20b）
 
@@ -209,3 +209,13 @@ Public Website, Web Workspace, Desktop and Mobile keep distinct release roles. O
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+## Current projection and approved complete target (OPEN)
+
+本节区分当前评估/安全状态读模型与已批准的内部开发者发布工作流；不更改 frontmatter、Evaluation 或 C6/M release Owner、当前读取或验收状态。集中视觉规划输入（不替代本屏现行合同）：[SYS-07完整草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-07)。
+
+- **当前投影（保持）：** 当前读取仍为 GET /api/experience/screen/SYS-07 → experience_screens._build_sys07() → 既有 OWASP 与 Skills posture 查询。它不运行测试、不批准、不晋升版本、不发布，也不证明 RELEASED/OPERATING；各状态必须依本规范已有证据合同显示。
+- **完整目标与既有 Owner（OPEN）：** SYSTEM Evaluation 继续拥有评估证据；C6/M 与既有发布/部署、签名、审批及回滚 Owner 拥有 G20b 开发者内部发布流程。已批准目标为创始人专用内部发布：上传同一版本的代码更新，运行约定的构建/单元/集成/真实端到端/安全检查，任一失败即停止；测试全绿并满足签名/批准/资源/回滚条件后发布，签名后按已批准策略分批自动更新。缺少指标时不得扩大批次；可以按既有 Owner 授权暂停或回滚至验证过的稳定包/数据恢复方案。所有步骤仍经既有 Permission/Approval/effect owner；它不能扩大为未经批准的公网部署。
+- **输入、结果与权限：** 输入是确切 artifact/package hash、源版本、测试与签名证据、批准者和目标发布阶段。输出逐项展示 PASS/FAIL/NOT_RUN/UNKNOWN/STALE 及其证据版本、当前审批与真实发布阶段；unit test green 不构成发布许可。非创始人不得看到内部上传入口且服务端须拒绝。每个上传、测试运行、签名、stage/advance、pause、rollback 动作均需既有 Owner 的精确 Permission、Approval、Effect Fence 和目标环境授权；iOS只呈现审阅状态及原权限允许的暂停/回滚，不上传。评价/模型结果仍是派生数据，原始 Evidence 不被覆盖。
+- **版本、保存、返回与恢复：** 所有检查与状态绑定同一 source/artifact/package SHA 和 release stage，保留通过、失败与缺失 Evidence；用户返回原任务可继续检查同一候选版本。中断、拒绝或失败显示准确阶段和恢复依据；只可经既有 owner 的批准/回滚机制回到已知稳定版本，不能自动重试发布或把旧 PASS 复用到新 SHA。
+- **未绑定与验收：** 当前 SYS-07 screen binding 仅供读取，产品计划中的 G20b 动作没有由本屏证明 callable。上传/签名/发布/回滚均保持 OPEN/UNBOUND，直至既有 C6/M release owner 提供真实 route、角色/Permission、Approval 和 readback；不得新增接口、自动批准或将测试状态升级为发布状态。验收须在被授权的内部目标环境完成同版审查、非创始人拒绝、测试未全绿或未签名阻断发布、签名校验、真实分批状态、指标缺失不扩批、暂停/回滚与重开读回，并分别证明 RELEASED 与 OPERATING 的适用门槛；本补丁本身不启动任何发布。

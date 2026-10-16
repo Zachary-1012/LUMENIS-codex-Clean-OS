@@ -65,7 +65,7 @@ approval_reference: source baseline origin/main 5ba1aefc53a1babc293e990c23c62f84
 
 ## 5. Purpose-built desktop composition
 
-完整目标布局与交互见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-07)。
+集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-07)。
 
 - **Primary question:** what changed over the stated window, and what exactly does the metric measure?
 - **Hierarchy:** scope/window → metric-definition rail → aligned chart and table → change/decomposition panel. Units/window remain adjacent to axes and values.

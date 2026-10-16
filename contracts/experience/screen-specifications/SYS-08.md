@@ -58,9 +58,9 @@ approval_reference: UNKNOWN
 
 ## 5. Purpose-built desktop composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
-完整目标布局与交互见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
+集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本次入库不提升原实现/设计/验收状态；未接通项为 OPEN。图中数值、日期、版本及状态是布局例子，运行取真实结果。动作复用既有 Owner/权限/版本，保存、修订、重开和中断恢复逐项验收。
 
 ### 草图增补：运营与工作区生命周期（G19，闭环内）
 
@@ -101,7 +101,7 @@ Ready / Loading / 数据缺失（指标未采到显示缺失）/ 不可用（显
 
 ## 5A. Web Workspace composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 ### 草图增补：运营与工作区生命周期（G19，闭环内）
 
@@ -109,7 +109,7 @@ Web 同桌面，保留原任务与状态。
 
 ## 6. Purpose-built mobile composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 ### 草图增补：运营与工作区生命周期（G19，闭环内）
 
@@ -178,3 +178,13 @@ Web：运行/工作区检查按任务分区，折叠细节保留关键错误与�
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+## Current projection and approved complete target (OPEN)
+
+本节把只读日志/可观测性投影与已批准的工作区/租户生命周期分开；不改 frontmatter、当前 GET、SYSTEM Observability Owner 或当前能力状态。集中视觉规划输入（不替代本屏现行合同）：[SYS-08完整草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-08)。
+
+- **当前投影（保持）：** 当前读取仍为 GET /api/experience/screen/SYS-08 → experience_screens._build_sys08() → logger.get_log_summary()，仅安全摘要；trace、结构化记录和 actor-scoped Permission 尚未绑定。保留现有禁止任意日志下载/清理、credential inspection、绝对路径与虚构指标的合同。
+- **完整目标与既有 Owner（OPEN）：** G19 工作区/tenant 生命周期、运营指标/告警/诊断包沿既有 SYSTEM workspace/account、运行监控与 Shared Database/backup/Permission Owner；诊断包必须脱敏且有范围，不能包含任意原始日志或凭据。Observability 仍只拥有日志与运行可观测性，不能借 SYS-08 变成工作区业务 Owner。现有 Source Owner Index 未给出这些生命周期操作的本屏 callable，因此 exact workspace owner/callable 需沿既有 Owner Index 确认；未确认前保持 OPEN/UNBOUND，不设新 Owner。
+- **输入、结果与权限：** 对工作区功能，输入为当前请求的实际 actor/身份状态（可未登录，具体动作是否需认证由既有 Owner 判定）、精确 tenant/workspace、成员操作或 backup/version 及用户确认；输出为真实成员/生命周期状态、所选备份版本、恢复结果和审计回执。每项读取/成员调整/备份/恢复/归档/删除均由既有 workspace 与 Permission Owner 核对 actor、scope、Approval 和 Effect Fence。来源资料或派生内容若被工作区内任务使用，另遵循既有 SourceUse。安全日志摘要继续使用当前 redaction，绝不以 workspace backup 授权读取原始日志或凭据。
+- **保存、返回与恢复：** 用户可按既有业务要求创建/保留备份、恢复到获准设备、归档或管理成员；删除工作区前须提供明确后果和所需的可恢复备份/导出选择。每次成功操作保存 owner-defined version/receipt，返回原 workspace/task 并可重开核对；失败/中断维持准确状态并按现有 backup/restore rollback 语义恢复，不将缺失视为健康或删除成功。
+- **未绑定与验收：** 当前 SYS-08 GET 不实现也不授权上述生命周期动作；无精确既有 owner callable、Permission、确认和恢复读回时，相关控件保持 OPEN/UNBOUND 并禁用。原始日志 Export/Clear 仍 unavailable，不能被生命周期目标误解为可用；G19的诊断包是另一项受控、可预览、经脱敏/范围裁剪的导出，须等既有 owner callable、Permission、Effect Fence 与目标路径确认后才可用。完整验收须在隔离且经授权的真实 workspace 中验证成员权限、备份内容/版本、跨设备恢复、归档/删除前导出提示、取消、操作回执与失败恢复；另验证真实指标/告警和诊断包不含路径/秘密/私人材料且证据范围明确。各端仅展示其真实可用状态。

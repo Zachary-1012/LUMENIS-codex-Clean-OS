@@ -70,13 +70,15 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 2026-10-16 unique frontend plan and visual sketch (planning-only)
 
-最新直接PO补充：两份主稿是持续演进、集中维护的工作基线，不冻结UI/前端或限制M当前及未来升级；后续获准改进在原Owner/合同内继续原位更新。本窗口的规划发布→REA次序不派工或暂停其他窗口。REA使用前须认真研究官方GitHub适用版本的文档、实际源码/测试、许可与发布差异，保留commit和阅读/验证边界。
+最新直接PO补充：两份主稿是持续演进、集中维护的工作基线，不冻结UI/前端或限制M当前及未来升级；后续获准改进在原Owner/合同内继续原位更新。本窗口的规划发布→REA次序不派工或暂停其他窗口。REA使用前须认真研究官方GitHub适用版本的文档、实际源码/测试、许可与发布差异，保留commit和阅读/验证边界。本窗口2026-10-16直接PO新增沉重弹性、磁吸、流畅、抛出及产品适配物理交互，要求质量/刚度/阻尼、吸附范围/力/阈值、释放速度/摩擦/边界恢复等参数真正参与计算并可测影响；已原位纳入Experience §19及两份主稿。保留原动效/用户选择/减少动态，逐表面实际参数接线、轨迹/性能/中断恢复仍OPEN，本次不实现物理交互或新增引擎。
 
 前端规划现仅使用[完整产品/前端规划](LOOP-PLAN-20261014/product-plan-full.md)和[唯一视觉文字草图](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)。本次收敛保留全部195个G标识、原26个R/N/O有效要求、F0–F13完整建设分组与原研究指纹；覆盖Public Website、Web Workspace、Windows/macOS和iOS、44屏基线以外的完整用户工作、独立Shared研究/提案文稿/视频/播客、三语/无障碍/原动效/保存修订重开恢复。原21份ADD、分步稿和创作覆盖共23个重复活跃文件的有效内容已迁入，精确原文仍可在父版本Git历史查证，研究原件/资产/审批/失败记录未删。ScreenSpec保留独特Owner/API/Permission/SourceUse/字段/状态/动作/幂等/恢复/验收合同，布局指向唯一草图，不升级原设计或实现状态。
 
-本任务窗口最新直接PO明确PixiJS用于过往参考网站/产品的提取、重建与前端校准，不采用像素画风。浏览器/REA负责真实可见结构/样式/状态取证，隔离PixiJS校准器负责几何重建/对照；不是新增产品renderer/采集真相或引入像素艺术。已完成8.22.0小型WebGL绘制/DPR/销毁探针；完整参考目标提取、对照校准、产品性能和四端运行仍未因此验证。规划PR受检合并及远端main读回后，原PO已授权完整REA任务连续执行，形成既有Owner可采用代码/方法包交M。
+本任务窗口最新直接PO明确PixiJS用于过往参考网站/产品的提取、重建与前端校准，不采用像素画风。浏览器/REA负责真实可见结构/样式/状态取证，隔离PixiJS校准器负责几何重建/对照；不是新增产品renderer/采集真相或引入像素艺术。已完成8.22.0小型WebGL绘制/DPR/销毁探针；完整参考目标提取、对照校准、产品性能和四端运行仍未因此验证。2026-10-16直接PO给当前规划/REA窗口（01a142d1-74c0-7940-b8b9-a66414eb5f8c）的两项任务以该质量次序执行；这是限定窗口的授权来源事实，发布/读回不派工、不恢复旧窗口，其他或后续窗口不可据此自行启动REA。
 
 本提交只收敛规划与合同视觉引用，不构建或发布前端；生产Core/DB/模型/采集/训练/部署未在本任务执行，原主工作区dirty候选与其他窗口工作受保护。文档/Authority/Blueprint/Constitution及迁移检查只证明其记录范围，不能代替用户成果、真实运行、M产品接受或PO重复操作；完整产品仍OPEN。
+
+本次规划审查同步补正：23个迁移来源记录Git blob原始字节SHA-256与明确标注的本机CRLF读取指纹；SYS-05保留BACKEND-GAP-040只读snapshot，ACC-04注明既有registry别名，BMP-08注明Shared/C4-W4制作Owner。既有隔离PixiJS小探针完整HTML源码/观察JSON原文以UTF-8/LF及HTML末尾空行规范化后，在round15研究文档代码围栏中发布，可按围栏正文哈希提取复原；原hash/围栏正文hash与未保留截图等限制明确，未重跑。现行RULES_ONLY_PUBLICATION门保持，未发布可执行HTML或任意JSON路径。草图链接仅为视觉规划输入，不替代Experience或本屏实际合同；触控、营销budgeted/单项结果、学习资产筛选、移动返回与目录responsive/reduced-motion等原合同约束原位保留。不是前端或REA目标采用接受。
 
 ## 1. Online reader's current-state snapshot
 

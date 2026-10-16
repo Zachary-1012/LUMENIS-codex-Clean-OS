@@ -66,7 +66,7 @@ No new data owner is created. The App renders only the shared Core response, and
 
 ## 5. Purpose-built desktop composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - **Primary question:** what events were returned, in what order, and what relationship information is actually available?
 - **Hierarchy:** scope → relationship availability → constellation area → synchronized event timeline. The relationship area is not allowed to visually imply edges when none are returned.
@@ -76,7 +76,7 @@ No new data owner is created. The App renders only the shared Core response, and
 
 ## 5A. Web Workspace composition and desktop-only capability boundary
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - Web and desktop share the same read contract, local selection state and blocked relationship semantics. No browser-only graph library or second data source is introduced.
 - Case navigation, Evidence opening and graph zoom are unavailable until canonical destination and lineage contracts are bound.
@@ -84,7 +84,7 @@ No new data owner is created. The App renders only the shared Core response, and
 
 ## 6. Purpose-built mobile composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-04)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - **Active task:** scan the vertical event path, open one returned event, then return to the path.
 - **Touch:** event rows and Return are at least 48 logical pixels; event severity and tags are textual.

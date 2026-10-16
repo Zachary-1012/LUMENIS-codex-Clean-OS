@@ -62,7 +62,7 @@ The canonical query filters canonical_data by both product_id = ZBMP and domain_
 
 ## 5. Purpose-built desktop composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-01)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-01)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - Primary question: Which authorized brand's market signals am I viewing, and can each signal be traced?
 - Hierarchy: A compact brand panel occupies the left side and names the current viewing context in business language. A broad right-side market field is reserved for brand performance, competitor movement and market change. Until an authorized brand and scoped records exist, it presents a clear empty state without exposing implementation or permission diagnostics and without drawing fabricated signals.
@@ -73,7 +73,7 @@ The canonical query filters canonical_data by both product_id = ZBMP and domain_
 
 ## 6. Purpose-built mobile composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-01)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#bmp-01)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - Single active task: Explain that brand-market information is not available yet and let the user refresh it.
 - Navigation/back: Shell owns route/back behavior; page does not invent alternate brand destinations. Keep a compact BMP · 品牌市场 identity in view.

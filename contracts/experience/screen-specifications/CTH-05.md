@@ -66,7 +66,7 @@ The page does not call `weekly_events`, `calendar`, a new trend API or a new dat
 
 ## 5. Purpose-built desktop composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-05)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-05)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - **Primary question:** which dates have returned sentiment density, and what can be said about one selected date without overstating its source?
 - **Hierarchy:** scope and definition → calendar heatfield with explicit scale/legend → selected-day detail. List mode is a first-class keyboard alternative, not a hidden fallback.
@@ -76,7 +76,7 @@ The page does not call `weekly_events`, `calendar`, a new trend API or a new dat
 
 ## 5A. Web Workspace composition and desktop-only capability boundary
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-05)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-05)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - Web and desktop share the same aligned-day model and do not add client-side calendar calculations beyond rendering returned values.
 - Evidence strip, event list, source opening and range writes remain unavailable until their owners/callables are bound.
@@ -84,7 +84,7 @@ The page does not call `weekly_events`, `calendar`, a new trend API or a new dat
 
 ## 6. Purpose-built mobile composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-05)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-05)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - **Active task:** choose a day from a compact calendar/list, then read its returned counts and availability state.
 - **Layout:** calendar/list selector first, compact day density marks second, selected-day detail third. The detail never claims source records when none are returned.

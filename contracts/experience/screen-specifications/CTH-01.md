@@ -68,7 +68,7 @@ All calls above are through the existing `LumenisCoreClient.runtimeIdentity()` a
 
 ## 5. Purpose-built desktop composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-01)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-01)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - **Primary question:** what operating changes and risks need attention for this business subject?
 - **Hierarchy:** current business context → key operating measures and their honest availability → operating activity → daily key indicators and risk records → source-availability state.
@@ -78,7 +78,7 @@ All calls above are through the existing `LumenisCoreClient.runtimeIdentity()` a
 
 ## 6. Purpose-built mobile composition
 
-> 本屏完整布局、层级、控件位置、视觉交互与多表面重组见唯一前端规划：[视觉规划](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-01)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
+> 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#cth-01)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 - **Active task:** inspect one business activity item and return to the same activity list.
 - **Layout:** ≤767 logical px uses a single vertical task surface. Available metrics are concise rows; NOT_COLLECTED measures are grouped under source availability. Events form a chronological list with one inline focused detail; the risk/summary and blocked Evidence lineage follow the signal task.
