@@ -170,28 +170,34 @@ class EngineeringTests(unittest.TestCase):
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_failed_test_blocks(self):
-        self.edit(); self.verify(1)
+        self.edit()
+        self.verify(1)
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_unknown_exit_blocks(self):
-        self.edit(); self.verify(None)
+        self.edit()
+        self.verify(None)
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_successful_current_test_is_recorded(self):
-        self.edit(); self.verify(0)
+        self.edit()
+        self.verify(0)
         self.assertEqual(self.handle("Stop"), {})
         self.assertEqual(self.state["verification_status"], "SCOPED_CHECK_OBSERVED")
 
     def test_static_check_is_not_code_test(self):
-        self.edit(); self.verify(0, "git diff --check")
+        self.edit()
+        self.verify(0, "git diff --check")
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_echo_is_not_test(self):
-        self.edit(); self.verify(0, "echo pytest")
+        self.edit()
+        self.verify(0, "echo pytest")
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_same_status_new_content_invalidates_result(self):
-        self.edit(); self.verify(0)
+        self.edit()
+        self.verify(0)
         (self.root / "sample.py").write_text("value = 3\n", "utf-8")
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
@@ -1351,7 +1357,9 @@ class EngineeringTests(unittest.TestCase):
         self.assertIn("Escalate only genuine", context)
 
     def test_failed_latest_test_wins(self):
-        self.edit(); self.verify(0); self.verify(1)
+        self.edit()
+        self.verify(0)
+        self.verify(1)
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_repeat_stop_terminates_without_success(self):
@@ -1923,7 +1931,8 @@ with hook.locked(Path(sys.argv[2])):
         self.handle("UserPromptSubmit", **self.delivery_event,
                     prompt="Continue the full outcome after the new instruction", turn_id="blocker-new-prompt")
         payload["continuity"]["delivery"]["exit"]["reason"] += "."
-        self.save_delivery_fixture(record, payload)
+        with self.assertRaisesRegex(ValueError, "reason and resume condition"):
+            self.save_delivery_fixture(record, payload)
         self.assertEqual(self.delivery_stop().get("decision"), "block")
 
         delivery = payload["continuity"]["delivery"]
@@ -2244,6 +2253,7 @@ with hook.locked(Path(sys.argv[2])):
         item["remaining"] = []
         self.save_delivery_fixture(record, payload)
 
+        self.verify()
         self.assertEqual(self.delivery_stop(), {})
         for requirement in delivery["requirements"]:
             self.assertEqual(requirement["evidence"][:2], historical_refs[requirement["id"]])
@@ -2794,8 +2804,8 @@ with hook.locked(Path(sys.argv[2])):
         ledger.append({"pending_effect_sha256": h._pending_effect_id(second), "status": "PENDING"})
         self.save_delivery_fixture(record, payload)
         self.assertEqual(
-            self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(second)],
-            {"status": "PENDING"},
+            self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(second)]["status"],
+            "PENDING",
         )
 
         item["pending_effects"].remove(second)
@@ -2955,6 +2965,202 @@ with hook.locked(Path(sys.argv[2])):
                 path.write_text(json.dumps(receipt), "utf-8")
                 evidence["sha256"] = h.hashlib.sha256(path.read_bytes()).hexdigest()
         with self.assertRaises(ValueError):
+            self.save_delivery_fixture(record, payload)
+
+    def test_review_same_text_new_turn_requires_reconciliation(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Complete the admitted tooling outcomes", turn_id="second-identical-request")
+        readback = h.continuity_read(self.root, self.state, self.delivery_event)
+        self.assertIn("NEW_MESSAGE_SINCE_CHECKPOINT", readback["reasons"])
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        with self.assertRaisesRegex(ValueError, "new execution prompt"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_review_scope_source_alias_remains_pinned(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["delivery"]["scope_sources"][0]["path"] = "./AGENTS.md"
+        self.assertEqual(self.save_delivery_fixture(record, payload)["status"], "PINNED_CONTEXT")
+
+    def test_review_ignored_owned_source_requires_static_and_regressions(self):
+        record, payload = self.delivery_fixture()
+        (self.root / ".gitignore").write_text("ignored-owned.py\n", "utf-8")
+        source = self.root / "ignored-owned.py"
+        source.write_text("value = 1\n", "utf-8")
+        payload["continuity"]["source_paths"].append("ignored-owned.py")
+        self.save_delivery_fixture(record, payload)
+        source.write_text("value = 2\n", "utf-8")
+        self.handle("PostToolUse", tool_name="Bash", tool_input={"command": "write source"},
+                    tool_response={"exit_code": 0})
+        self.close_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertEqual(self.state["verification_status"], "BLOCKED_MISSING_SUCCESSFUL_CHECK")
+
+    def test_review_effect_resolution_retains_admission_version_after_edit(self):
+        effect = "Exact pending operation with durable admission identity"
+        record, payload = self.delivery_fixture([effect])
+        receipt = self.resolve_effect_fixture(payload, effect)
+        self.edit(2)
+        self.save_delivery_fixture(record, payload)
+        frozen = self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(effect)]
+        self.assertEqual(frozen["status"], "RESOLVED")
+        self.assertEqual(frozen["admission"]["source_pins"], json.loads(receipt.read_text())["source_pins"])
+
+    def test_review_effect_resolution_cannot_substitute_later_source_version(self):
+        effect = "Pending operation must not acquire later source provenance"
+        record, payload = self.delivery_fixture([effect])
+        self.edit(2)
+        self.resolve_effect_fixture(payload, effect)
+        with self.assertRaisesRegex(ValueError, "admission"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_review_native_same_turn_stop_continuation_preserves_po(self):
+        record, payload = self.delivery_fixture()
+        prior_binding = h._prompt_binding(self.state)
+        output = self.delivery_stop(turn_id="tooling-initial")
+        self.assertEqual(output.get("decision"), "block")
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt=output["reason"], turn_id="tooling-initial")
+        self.assertEqual(h._prompt_binding(self.state), prior_binding)
+        self.assertTrue(self.state["stop_continuation_used"])
+        self.close_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(turn_id="tooling-initial", stop_hook_active=True), {})
+
+    def test_review_stop_continuation_cannot_reset_retry_budget(self):
+        self.delivery_fixture()
+        output = self.delivery_stop(turn_id="tooling-initial")
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt=output["reason"], turn_id="tooling-initial")
+        self.assertFalse(self.delivery_stop(turn_id="tooling-initial").get("continue", True))
+
+    def test_review_same_reason_new_turn_is_user_instruction(self):
+        self.delivery_fixture()
+        output = self.delivery_stop(turn_id="tooling-initial")
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt=output["reason"], turn_id="genuine-new-turn")
+        self.assertEqual(self.state["turn_id"], "genuine-new-turn")
+        self.assertFalse(self.state["stop_continuation_used"])
+
+    def test_review_blocked_exit_rechecks_authority(self):
+        record, payload = self.delivery_fixture()
+        self.block_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        authority = self.root / h.VERIFICATION_POLICY_PATH
+        authority.write_text(authority.read_text() + "\n", "utf-8")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_review_frozen_exit_conditions_cannot_be_rewritten(self):
+        record, payload = self.delivery_fixture()
+        self.block_delivery_fixture(record, payload)
+        payload["continuity"]["delivery"]["exit"]["resume_condition"] = "Resume immediately."
+        with self.assertRaisesRegex(ValueError, "resume condition"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_review_large_record_report_pause_and_clear(self):
+        self.test_large_structured_continuity_record_uses_record_budget_only()
+        for index, prompt in enumerate(("Current status", "Pause.", "只汇报，不要修改")):
+            if index == 2:
+                self.handle("SessionStart", source="clear", **self.delivery_event)
+            self.handle("UserPromptSubmit", **self.delivery_event,
+                        prompt=prompt if index else "What is the current status?", turn_id=f"large-exit-{index}")
+            self.assertEqual(self.delivery_stop(), {})
+
+    def test_review_dependency_waits_keep_work_open(self):
+        self.delivery_fixture()
+        for index, prompt in enumerate(("Wait for C1 to finish.", "Please wait until the dependency is available.",
+                                       "等待C1完成后再继续。", "请等依赖就绪。")):
+            self.handle("UserPromptSubmit", **self.delivery_event, prompt=prompt, turn_id=f"wait-{index}")
+            self.assertEqual(self.state["turn_exit_mode"], "PO_PAUSED")
+            self.assertEqual(self.delivery_stop(), {})
+            self.assertFalse(self.state["delivery_exit"]["closed"])
+        for prompt in ("Wait for C1 to finish and implement export.", "等待C1完成，同时实现导出。",
+                       "The file says 'Wait for C1 to finish.'"):
+            self.assertEqual(h.classify_turn_exit(prompt), "RUNNING")
+
+    def test_review_deferral_ids_preserve_embedded_and(self):
+        self.delivery_fixture()
+        for ids, text in ((["BRAND-1"], "Defer BRAND-1 until approval."),
+                          (["BRAND-1", "CANDIDATE-2"], "Defer BRAND-1 and CANDIDATE-2 until approval."),
+                          (["BRAND-1"], "请将BRAND-1暂缓，等待批准。")):
+            with mock.patch.object(h, "_current_delivery_remaining_ids", return_value=ids):
+                self.assertEqual(h._direct_po_defer_ids(self.root, self.state, text), ids)
+
+    def test_review_same_turn_user_pause_is_not_stop_continuation(self):
+        self.delivery_fixture()
+        self.delivery_stop(turn_id="tooling-initial")
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="Pause.", turn_id="tooling-initial")
+        self.assertEqual(self.state["turn_exit_mode"], "PO_PAUSED")
+        self.assertFalse(self.state["stop_continuation_used"])
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_review_missing_stop_turn_metadata_cannot_claim_po_continuation(self):
+        self.delivery_fixture()
+        original = h._prompt_binding(self.state)
+        output = self.delivery_stop()
+        result = self.handle("UserPromptSubmit", **self.delivery_event,
+                             prompt=output["reason"], turn_id="tooling-initial")
+        self.assertFalse(result["continue"])
+        self.assertEqual(h._prompt_binding(self.state), original)
+        self.assertTrue(self.state["stop_continuation_used"])
+
+    def test_review_same_text_without_turn_id_requires_reconciliation(self):
+        record, payload = self.delivery_fixture()
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="Continue")
+        self.save_delivery_fixture(record, payload)
+        prior = self.state["last_prompt_at"]
+        with mock.patch.object(h.time, "time", return_value=prior + 1):
+            self.handle("UserPromptSubmit", **self.delivery_event, prompt="Continue")
+        self.assertIn("NEW_MESSAGE_SINCE_CHECKPOINT", h.continuity_read(self.root, self.state, self.delivery_event)["reasons"])
+
+    def test_review_pending_admission_survives_scope_growth_and_clear(self):
+        effect = "Existing operation must preserve its exact initial source scope"
+        record, payload = self.delivery_fixture([effect])
+        self.resolve_effect_fixture(payload, effect)
+        source = self.root / "work/extra-scope.md"
+        source.write_text("Additional source scope", "utf-8")
+        payload["continuity"]["delivery"]["scope_sources"].append({
+            "path": "work/extra-scope.md", "sha256": h.hashlib.sha256(source.read_bytes()).hexdigest(),
+        })
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        self.save_delivery_fixture(record, payload)
+        frozen = self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(effect)]
+        self.assertEqual(frozen["status"], "RESOLVED")
+        self.assertNotIn("work/extra-scope.md", frozen["admission"]["source_pins"])
+
+    def test_review_deferred_exit_rechecks_authority(self):
+        self.test_chinese_direct_po_receipt_can_authorize_exact_deferred_ids()
+        authority = self.root / h.VERIFICATION_POLICY_PATH
+        authority.write_text(authority.read_text() + "\n", "utf-8")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_review_scope_alias_can_close_without_false_removed_reference(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        payload["continuity"]["delivery"]["scope_sources"][0]["path"] = "./AGENTS.md"
+        self.assertEqual(self.save_delivery_fixture(record, payload)["status"], "PINNED_CONTEXT")
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_review_ignored_source_without_posttool_event_still_needs_checks(self):
+        record, payload = self.delivery_fixture()
+        (self.root / ".gitignore").write_text("ignored-owned.py\n", "utf-8")
+        source = self.root / "ignored-owned.py"
+        source.write_text("value = 1\n", "utf-8")
+        payload["continuity"]["source_paths"].append("ignored-owned.py")
+        self.save_delivery_fixture(record, payload)
+        source.write_text("value = 2\n", "utf-8")
+        self.close_delivery_fixture(record, payload)
+        self.assertFalse(self.state["mutation_observed"])
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.verify()
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_review_legacy_pending_without_admission_does_not_invent_version(self):
+        effect = "Legacy effect requires original operation version reconciliation"
+        record, payload = self.delivery_fixture([effect])
+        self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(effect)].pop("admission")
+        self.resolve_effect_fixture(payload, effect)
+        with self.assertRaisesRegex(ValueError, "missing legacy admission"):
             self.save_delivery_fixture(record, payload)
 
 if __name__ == "__main__":
