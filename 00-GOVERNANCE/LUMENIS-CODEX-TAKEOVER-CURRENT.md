@@ -2,6 +2,17 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-17 README engineering-guide navigation
+
+The Product Owner approved one bilingual navigation note in the root README:
+link the existing `.codex/README.md` and state that workstation hook registration
+and trust remain separate from pulling or merging source. This co-published
+record satisfies the existing documentation-publication contract; it changes no
+product requirement, task dispatch, model selection or runtime state. The first
+README-only check failed because CURRENT was not co-published; that failure is
+retained, and the validator is unchanged. Required checks and exact main readback
+remain necessary before treating this documentation update as published.
+
 ## 2026-10-17 PR79 cloud repair verification
 
 The Product Owner explicitly requested repair of PR79 in the cloud, followed by
