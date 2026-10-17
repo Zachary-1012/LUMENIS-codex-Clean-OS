@@ -1687,7 +1687,7 @@ its existing specification. Preserve full scope; paint icons and suitable page
 elements. Overall visuals follow approved research and task needs, without a
 fixed 2D/3D style. AI-independent deterministic work remains operable when
 inference is unavailable. The sole blueprint, Experience, surface decision,
-Owner index, screen specs, existing text wireframes and README are co-published.
+Owner index, screen specs, the unique full-product plan/sketch and README are co-published.
 Historical sketches remain evidence; amendments do not self-promote to
 DESIGN_READY/IMPLEMENTED/ACCEPTED. At publication this update did not itself
 dispatch C1-C6/F. Current window/model choices belong to the Product Owner;

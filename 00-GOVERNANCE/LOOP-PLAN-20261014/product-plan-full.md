@@ -1,12 +1,16 @@
-# 序境 / LUMENIS 完整产品规划与唯一前端建设规划
+# 序境 / LUMENIS 唯一完整产品执行规划（前后端统一）
 
 本规划与[唯一视觉文字草图](sketches/FULL-PRODUCT-SKETCH.md)是当前两份集中评审和建设载体。产品范围归 Product Architecture；呈现原则归 Experience Constitution；各 ScreenSpec 保留真实 Owner、字段、调用、Permission、来源用途、状态、动作与验收合同。本文件不另立产品、设计系统、Owner 或执行调度。原有非前端能力与全部 G/R/J/U 要求保留，不能用前端收敛删除后端、研究或验收工作。
 
+**完整前后端同一计划。** 最新直接PO明确：本文件统一覆盖完整前端、后端及产品执行要求，配套草图覆盖全部四表面的任务、视觉与操作；每类只保留一份现行载体。SYSTEM、CTH、BMP、独立Shared、AI/Agent、Math、媒体、采集、资料研究、账户/权限及恢复继续沿原195个G条目、章节、Owner和任务合同推进，不另拆后端规划、SH-02专项计划或散落队列。真实接口/数据/权限/恢复合同继续原位维护，不因集中规划被删除；未读、未实现、未接线、未运行、未验收分别保留事实和恢复点，不能以文档存在称完成。
+
 **持续更新，非冻结。** 2026-10-16直接PO明确：这里的“唯一”只指当前集中维护的两份载体，不限制总控正在进行的升级或今后的升级，也不把本次布局、能力、实现或版本定为上限。后续获准改进、真实来源/运行结果和验收反馈继续由现有Owner原位更新这两份主稿及受影响合同；保持版本、来源与有效历史。本文本任务“先发布规划、后开展REA”的顺序只约束本窗口，不要求总控或其他已获派工的窗口等待、不增加其设计审批或升级前置。
 
-**REA先研究后使用。** 同次直接PO要求使用前认真研究其官方[GitHub仓库](https://github.com/morluto/rea)。本窗口先读适用版本的README、相关指南、实际源码/测试、许可证与发布差异，再据本机实际工具schema选择调用，保留commit、阅读范围、能力/限制和可复用方法；仅看工具名、安装Skill或旧报告不算完成研究。完成此项与本窗口规划发布门后继续完整获准目标的验证及适配包，不以研究缩减原任务。
+**REA先研究后使用。** 同次直接PO要求使用前认真研究其官方[GitHub仓库](https://github.com/morluto/rea)。本窗口先读适用版本的README、相关指南、实际源码/测试、许可证与发布差异，再据本机实际工具schema选择调用，保留commit、阅读范围、能力/限制和可复用方法；仅看工具名、安装Skill或旧报告不算完成研究。原任务要求在此研究与规划发布门后验证完整获准目标并形成适配包；已发生的阶段二局部结果与未完范围现记录于§20.4。最新本轮收尾只归档和统一文档，不继续REA运行，未完完整目标保留待下次直接PO派工。
 
 本稿所有REA后续描述仅追溯上述当前窗口直接PO已指派的任务；发布或远端读回不产生授权，也不恢复旧窗口。任何新窗口/不同任务仍须各自当前直接PO派工与新鲜准入。
+
+**本轮收尾边界。** 2026-10-16最新直接PO将完整闭环实现留待下次，本轮只整合、更新并统一发布需要的现有文档；已有REA成果及未完项按§20.4归档，不再继续REA或产品运行。全部原任务保留，下次按新的明确派工从同一完整产品计划和已有恢复点继续；这条本轮状态记录不自动暂停、派工或恢复其他窗口，也不把当前整体前端升级为已接受。
 
 本稿与总草图集中保存完整目标和可修订视觉规划输入；Experience仍是唯一设计权威。现行ScreenSpec的实际Owner/API/Permission/SourceUse、字段/状态/动作、响应式行为、无障碍及真实验收合同继续原位有效，不能被规划链接替换或降为参考。纯重复构图可集中引用；出现差异时先核最新直接PO、Experience与实际合同，由既有Owner原位协调，既不复制另一套活跃规划，也不拿当前只读实现缩减最终要求。
 
@@ -27,7 +31,7 @@
 
 - 打开工作区即进入聊天工作入口。用户可以直接说问题、附资料、开始或继续工作；架构导航始终可到 CTH、BMP、独立研究、提案/文稿、视频、播客、资料与成果、内置浏览器、任务与通知、设置及适用 SYSTEM 能力。主聊不是唯一操作方式，卡片和完整编辑工作区互通，返回不丢草稿或工作对象。
 - CTH/BMP 是业务域。Shared 研究和三类制作可由空白、自有 Brief、手稿或获准素材直接开始，独立工作区/项目 Permission 仍有效；引用外部来源另查 SourceUse 与原范围。无需虚构 Subject/BrandFocus、业务任务、Campaign、Case 或 SourceBrief。领域分析→创作是用户可选联动。
-- AI 贯穿适用理解、检索、分析解释、建议、草拟和多模态辅助。普通业务、确定性分析、人工研究与编辑、保存导出重开恢复在无模型/API/GPU时仍能完成；AI专属步骤不可用时解释该步原因及可继续动作。自有模型默认，用户可明确选择现有单一 user_api 接口；没有自动换模型/Provider或隐形外发。
+- AI 贯穿适用理解、检索、分析解释、建议、草拟和多模态辅助。普通业务、确定性分析、人工研究与编辑、保存导出重开恢复在无模型/API/GPU时仍能完成；AI专属步骤不可用时解释该步原因及可继续动作。完整自研/自有模型仍是默认路线与建设目标；当前唯一获准外部选项为Groq，通过既有SYSTEM user_api，仅在用户显式选择且适用Permission允许时调用，没有自动换模型/Provider、回退或隐形外发。配置不等于授权、推理可用或自研目标完成；Groq不能替代自研模型完整目标。
 - 用户提供问题、范围、时间、预算和约束，收到分析后的结论、来源、局限及下一步。数学/统计在现有后端 Owner 内按真实条件执行，前端可检查方法和假设、修改业务约束；不要求论文选择、内部 ID、随意权重或诊断参数拼装。
 - 通用电脑/OS控制已撤出，不能列成待补功能或已完成。产品内受控浏览器继续有真实网页、手动导航/操作、同任务独占接管、停止、任务返回及保存恢复。外部打开是用户明确动作；内置路径未完成不自动弹外部窗口替代。
 - 平台和公开网页来源类别同权；来源可靠性、身份、市场/时间、用途、权利、原生指标及未知值分别判断。缺失不能变0，派生/AI/人工判断不能覆盖原始 Evidence 或充当行动批准。
@@ -52,15 +56,15 @@
 | 首页与持续聊天：ACC-03 / AI-01，主导航返回 | 问题/自有文字/获准附件，现有 Intent→Task/Agent→注册工具与领域/Shared Owner；显示真实接收、归属明确的并行任务、有用部分结果、引用/局限及下一步，输入不等待长任务。 | 每个任务独立 actor/scope/attempt/版本；继续A、另开B、修订A、停止B；重连后读回已提交成果，旧回调不覆盖新版本或复活取消任务。AI-01/02/03、SH-06共同验，通知回执不等于业务完成。 |
 | CTH经营：总览→主体→监测/日历/负面→事件/Case→比较→Decision/Action→报告（CTH-01～10） | 用户经营问题、合法范围/双时间/预算；C1来源→Canonical→C3业务分析/决策与实际Outcome→C5报告。分别呈现观测、推断、计划、人工决定、执行回执和实际结果。 | 来源钻取/比较/修改约束、保存Case/报告版本、只重做受影响部分；返回选定对象/时间窗/筛选/滚动。无AI完成一项经营成果；撤权、缺数据、变更上游及中断恢复不假成功。 |
 | BMP品牌市场：总览→品牌/竞品→机会/传播/创作者→Campaign→制作/执行→评价/风险/基准（BMP-01～11） | 品牌问题、市场/竞品/创作者与来源、资源；C3拥有比较/漏斗/归因/排期和评价；公开数据模型显示口径、分母、区间与假设，计划不等实际发布或转化。 | 保存候选比较/Brief/计划/执行/评价版本；来源撤回、预算或范围变化只修相关部分。内容/视频/播客调用原Shared同一项目；返回品牌工作上下文，品牌全国与场内门店事实不混用。 |
-| 独立研究：Shared新建或导航研究，AI-03/SH-01/02/05 | 自有资料/问题/时间/资源，Importer→Source/Evidence→Research检索/阅读/比较/引用→SavedWork；显示关键发现、矛盾、未知、原文定位和可编辑研究笔记。 | 空白笔记不依赖模型；逐条采纳/排除来源、修订、更正/撤回影响、精确版本重开/导出。Hybrid候选和已实际检索分开，引用不是模型编的脚注。 |
+| 独立研究：Shared新建或导航研究，AI-03/SH-01/02/05 | 自有资料/问题/时间/资源，Importer→Source/Evidence→Research检索/阅读/比较/引用→SavedWork；普通资料直接上传导入、自动解析并给无AI可用的基础分析，显示关键发现、矛盾、未知、原文定位和可编辑研究笔记；可用模型的增强独立可选。 | 空白笔记不依赖模型；可逐条采纳/排除来源、修订、更正/撤回影响、精确版本重开/导出；这些编辑动作不是普通研究开始的逐份用途确认门槛。Hybrid候选和已实际检索分开，引用不是模型编的脚注。 |
 | 独立提案/文稿：Shared新建→类型/空白/手稿；SH-01/04 | 自有Brief、用户稿或获准素材；C4内容编排+C5 SavedWork/Artifact，章节/页面编辑、事实墙、备注与审阅，提案/报告方法按对象采用。 | 人工输入→编辑预览→真实保存→修订→版本比较→关闭重开→Word/PDF/其他已接格式导出；未接格式清晰不可用。引用/人工改稿/AI草案分开，不强制先研究/建业务任务。 |
 | 独立视频：Shared视频或BMP-06可选入口 | 自有视频/音频/图/稿，C4 MediaAsset/Timeline/FFmpeg/Artifact；素材预览、逐词稿、真实播放器、多轨/字幕/声音/安全区/画幅、分镜、提议与损失预检。 | 手动剪辑始终可用；提议确认才改Timeline，seek/pan/悬停分离、撤销完整；可编辑工程+实际成片分别读回，导出取消/失败保留原工程，素材变更/失链可恢复。详见§14 E项。 |
 | 独立播客：Shared播客或BMP-08可选入口 | 自有稿/录音/音频，C4同一Timeline/Artifact及podcast Owner；选题/前采/稿、录音导入、转写说话人/章节、逐词剪辑、混音实测/试听、发布包与切片/复盘。 | 稿件修改不暗改音频；词剪同工程、原文/校对双版本、多音频流明确选择；可选配音/声纹另按许可，发布包导出不等平台发布。保存修订重开/恢复及试听各自验，详见§14 P项。 |
-| 资料、来源和采集：SH-02/03、SYS-02/06 | 单个或批量自有/获准文件（XLSX/PDF/DOCX等）、精确URL/主题与任务语义→SYSTEM Collector或既有Importer→同一Source/Evidence/Canonical；导入先核对字段、重复与缺项，逐项保留原件/页码/表格位置、来源、双时间和使用范围。报告中的结论/推断与其原始来源分层，未经独立核验不升为Canonical事实；可在同一CTH/BMP经营/品牌问题或独立Shared研究中采用。 | 保留原件、核对选择、排除理由及导入版本；字段/缺项补全只追加有来源的新版本，重复项按原Owner规则处理，不覆盖不同来源。分析成果依原SavedWork/Artifact保存、修订、重开、返回原材料/问题并恢复中断；解析失败、部分可用、权限不足与已导入分开显示，不新设导入系统或分析面板。采集仍明确手动动作和已批准自动范围；未来用户默认MANUAL/显式opt-in，研发已准入AUTO不外推给新用户。单平台登录/挑战只停该路径，受控恢复/服务端健康读回后续接；来源纠正不覆盖历史。 |
+| 资料、来源和采集：SH-02/03、SYS-02/06 | 单个或批量自有/获准文件（XLSX/PDF/DOCX等）直接上传导入→既有Importer自动解析字段/重复/缺项并提供无AI可用的基础分析；精确URL/主题与任务语义仍走SYSTEM Collector，均进入同一Source/Evidence及受控Canonical准入链。后台保留原件/页码/表格位置、来源、权限/权益与UNKNOWN、原发布时间、真实入库时间和使用范围并按具体动作审查；普通研究资料不显示“来源使用/本次用途”表单，仅真正敏感或超出普通基础处理的额外用途按原Permission/SourceUse确认。报告结论/推断与原始来源分层，未经独立核验不升为Canonical事实；可续接同一CTH/BMP或独立Shared研究，可用模型增强独立可选。 | 原资料库按服务端实际入库时间组织时间线，每份资料及每项分析成果各有可识别卡片，关联原件/派生版本；原发布时间未知就保持UNKNOWN，不能用入库时间补写或拿当前打开时间伪装入库。用户可阅原文/分析、修改/保存版本、重开/恢复，批次只作分组不吞逐份结果。核对、排除及理由在用户选择时保留；补全只追加有来源的新版本，重复项按原Owner处理，不覆盖不同来源。分析沿原SavedWork/Artifact保存并返回材料/问题；上传、解析、导入、基础分析、模型增强和保存状态分开，未知或权限不足不假成功，不新设导入/数据/分析系统。采集仍明确手动与已批准自动范围；未来用户MANUAL/显式opt-in，研发AUTO不外推。单平台挑战只停本路径；来源纠正不覆盖历史。 |
 | 内置网页工作：SYS-06、Open Original、任务内浏览器胶囊 | 同actor/task受控会话，地址/标签/导航/真实页面与可访问操作、停止/人工独占/原任务返回；C6 Browser Runtime/Permission，AI是可选增强。 | 接管期间停止Agent并隔离AI页面读取；保存笔记/来源仅按真实获准动作，纯打开不采集/写Evidence。挑战/过期/断流/离开/重启各明确，外部打开显式；禁止个人大陆XHS或默认浏览器档案探测。 |
 | 成果与版本：SH-04，全部工作内“保存/版本/导出” | C5 SavedWork/Artifact/SourceUse，显示当前编辑、已提交版本、来源版本及导出格式，比较增删和修改原因。 | 保存确认来自持久化读回；冲突时保留本地编辑/旧版并明确重试基线。旧版只读与采用为新版本分开；撤权后不能靠缓存或旧下载链接继续；输出文件实际内容校对。 |
 | 任务/通知：AI-02、SH-06与顶栏任务入口 | Task Engine真实状态、成果feed/NotificationRouter，按权限显示完成、重要失败和必要人审；任务详情可查询普通进度。 | 返回同一工作/版本，取消/恢复受attempt/lease及效果回执约束；关闭客户端/宿主休眠分别说明。通知已发送/待发/失败与任务完成分开；去重、重连补送、静默偏好不吞必要审批。 |
-| 账号/角色/设置：ACC-01/02/04、SYS-04/05，AI-04/05 | 普通工作直接进入；可选免费邮箱验证码/Google，Apple未具备开发者账号或该端接入尚未实际启用时隐藏。账号设置、工作区成员角色、会话、数据控制、模型API/连接器/Skill生命周期沿原Owner，设置不授权。 | 取消登录回原任务，同邮箱关联须原身份核验；模型学习同意无预选；权限拒绝给真实动作级恢复。退出/删除/撤销/备份恢复与工作草稿边界可理解；不凭设置页面创建账户服务或外部调用。 |
+| 账号/角色/设置：ACC-01/02/04、SYS-04/05，AI-04/05 | 普通工作直接进入；可选免费邮箱验证码/Google，Apple未具备开发者账号或该端接入尚未实际启用时隐藏。账号设置、工作区成员角色、会话、数据控制、模型API/连接器/Skill生命周期沿原Owner；模型外部选项当前仅Groq经既有user_api，由用户显式选择并过适用Permission，设置不授权、不证明推理可用，不自动回退。 | 取消登录回原任务，同邮箱关联须原身份核验；模型学习同意无预选；权限拒绝给真实动作级恢复。退出/删除/撤销/备份恢复与工作草稿边界可理解；不凭设置页面创建账户服务或外部调用。 |
 | SYSTEM与商业运行：SYS-01/03/04/07/08 | 实际运行/加载版本、Source到Artifact一致性、权限与密钥合规、指标/告警、工作区备份/恢复/归档/删除、多成员/租户；六商业项和两开发者模式保持闭环内。 | 只展示真实测量；未知不健康化。用户开发者模式需已审核协议/显式同意及可关闭恢复；创始人内部发布沿原测试/签名/分批/观察/回滚，按钮不绕过外部效果授权。无发布权限时保留完整设计且动作不可执行。 |
 
 ## 4. 统一交互、视觉、语言和可访问性
@@ -88,19 +92,43 @@ Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺�
 
 参数必须从当前动作的真实输入接到实际仿真/渲染消费点，参数控件、配置字段或文档数值存在本身不算接线。沿既有主题/组件/偏好与动作Owner保存适用配置版本，不新增第二状态源；基础控件不可因缺少GPU/模型而失效，不新增付费插件。只有本就获准的动作使用物理反馈，不凭本节扩张拖拽、业务写入或OS控制。
 
+最新直接PO补充“鼠标如手”的现实操作映射：按下有轻压，拿起有前景层次与抓点连续，小幅轻倾服务抓取/定位，拖动保持跟手并有可调阻尼，释放按真实速度在合法落点回位/有限回弹。压入深度、抬升/阴影层次、倾斜上限、跟随阻尼、回位刚度和释放摩擦等必须接到真实组件，分别调参可测改变位移、角度、层次或轨迹；普通鼠标不冒称真实压力/重量传感。资料/分析卡片等已有内容对象可用显式翻面查看同一对象的正文与来源/方法详情，并能翻回原位置；正反内容、动作和返回在原ScreenSpec随实现补齐，不能把关键覆盖、误差、风险、权限或错误藏在背面。翻面是已有详情的可选呈现，保留直接打开详情/原文、编辑与键盘/触屏/读屏等价路径。它不把产品改成VR/XR、不另建引擎或全局3D风格，不替换整体视觉、原动效或用户选项；减少动态/关闭时移除倾斜、空间翻转/抛移与反复回弹，即时到达同一信息和动作。约90ms起动反馈、精确Timeline时基、业务值与保存/权限状态不受装饰物理改变。当前上述按压/拿起/轻倾/拖动/释放/翻面仍待原Owner实现接线、同版运行、取消/恢复与逐表面验收，不以规划记载关闭。
+
 验收要同时有真实操作与可回放的参数/时间/位置/速度/目标采样：同一初态单独改质量/刚度/阻尼、磁吸范围/强度、释放速度/摩擦/恢复系数，轨迹、超调、吸附/脱离与稳定时间须出现符合模型的可测变化；不可只换标签、色彩或预制曲线。补验反向与重抓、pointer cancel/失焦、取消/导航/销毁、后台返回、边界、帧率/掉帧、三语/200%字体和各表面实际手势。键盘/触控/读屏等价动作与减少动态/关闭路径保持可用，减少动态时去除空间抛移/反复回弹，立即呈现同一真实状态；首反馈约90ms仍是起动预算，动画不延迟内容就绪、保存、许可或操作。当前为完整规划要求，实际参数接线、性能和四表面物理操作均待同版本证据，不标PASS。
 
+### 4.2 全产品操作文案：任务、内容、结果与行动
+
+2026-10-16最新直接PO纠偏适用于整个产品及四表面：操作界面使用用户的业务语言，只呈现当前任务、内容、结果、可用行动及必要状态、错误、风险和权限确认。标题说明“正在做什么”，按钮说明“点击做什么”，状态说明“实际到哪一步/哪项需要处理”。不在页面摆研发自夸、架构口号、算法名、内部流程图或长段产品运作说明；不要求普通用户选择数学论文、内部ID、工具或拼装诊断参数。用户主动管理连接器、Skill或模型时，仍保留原设置入口和真实可选项，不能把此纠偏用作取消选择权。
+
+本规划的Owner/API/Permission/SourceUse、数学方法、状态机及验收文字是内部建设合同，继续原位保留；它们不是待上屏的文案。草图框外说明、流程箭头、时序和`<…>`占位注明评审用途，不能直接渲染为操作页说明。每个具体页面按任务写自己的短文案，不换标题套同一段“智能/证据驱动/闭环”宣传。官网用简短、可核的任务与成果说明；帮助保留完成实际操作所需的步骤，不把研发原理塞进工作区或删除原有帮助家族。
+
+| 文案位置 | 序境适配示例（由真实对象和状态填入） | 显示条件与交互合同 |
+| --- | --- | --- |
+| 标题、输入与动作 | “研究资料”“导入资料”“视频剪辑”；“你想了解什么？”；“添加资料”“保存”“查看引用”“导出” | 任务条件按需填写范围、期间、预算、资源和限制；原独立研究/三类制作入口及全部业务动作保留，不加论文、内部ID或工具选择前置。 |
+| 处理中与部分结果 | “正在读取资料…”；“已导入〈成功数〉项，〈需处理数〉项需处理”；“查看结果”“停止” | 阶段及数量来自当前任务真实回执，未知数值可显示“—”，并就近说明实际原因；未采集、没有匹配、读取失败、暂不可用和真实0分别表达。必要时标明已完成/待处理范围。不展示内部调用日志，不用一句“完成”遮住部分失败。 |
+| 保存与恢复 | “未保存”“正在保存…”“已保存”；“继续任务”“打开上一版本”“重试失败项” | “已保存”须持久化读回；可恢复草稿须真实存在。停止、取消外部动作、恢复与重新执行沿原合同分别处理，不因文案变短合并状态、丢编辑或重复效果。 |
+| 错误与权限 | “无法读取〈文件名〉。〈可操作的具体原因〉”；“没有此资料的访问权限”；“返回”“重新选择资料” | 就近显示受影响对象、原因及现有可行恢复动作；授权/发布/删除等确认保留对象、范围、去向、后果及必要风险，不能藏进“更多”。不凭文案例子新增权限入口。 |
+| 覆盖、误差与依据 | “范围：〈地区/对象/期间〉”；“部分资料未取得”；“来源与口径”“查看原文”“方法与假设” | 影响结论的缺口、误差/估计、过期、不可比或访问受限就近可见；图表必要单位/币种/分母保留。详细方法、算法、假设、定义、引用位置及版本按需展开；不能借折叠隐藏会改变判断的信息。 |
+
+同一动作在zh-CN/en/ko及可访问名称中保留一致含义；触屏、键盘与读屏均能打开细节并返回原对象/选区。更短的文字不减少UI/UX、AIGC、原创Logo/icon/插画、真实操作视频、用户可选、约90ms首反馈、完整生成揭示、沉重弹性/磁吸/抛出及实际物理调参、四表面完整范围。这里只纠正呈现语言，不能据此删除功能或虚报真实状态；界面实现与逐端正常/失败/取消/恢复验收仍由原Owner完成。
+
+官方操作说明对照（2026-10-16读取）：[ChatGPT Work入门](https://learn.chatgpt.com/docs/get-started-with-work)及[持续任务](https://learn.chatgpt.com/docs/long-running-work)以结果、约束、可审阅成果和继续修改组织工作；[Grok Bot文件与结果](https://docs.x.ai/grok-bot/files-and-results)及[审批](https://docs.x.ai/grok-bot/approvals-security-and-privacy)区分来源事实、推断、已做/待批动作与未解决问题。采用结论为ADAPT：借鉴任务/结果/动作的可理解语言与必要边界，表内词句是序境自己的适配示例，不是供应商原样UI或已实现证明。不复制品牌、布局、通用电脑控制、内部活动展示、账号/套餐或功能开放承诺；产品范围、唯一Experience及原Owner合同不变。
+
 ## 5. 当前实现与未完状态的读回
+
+最新直接PO对当前整体前端的判断是“不合格、尚未接受（NOT_ACCEPTED）”；本轮仅文档整合。规划、语言、构建、局部操作或一个表面通过均不能升级整体验收，完整视觉/UI/UX/AIGC/原动效及真实物理参数、视频/icon、全部四表面仍需继续建设和验收。下次继续的是同一个完整前后端产品闭环，不是只完成资料导入页。
 
 本次固定基线的44份规范和实际App路径均存在，54条绑定台账仍是逐字段验收记录；不能把它变为产品总完成率。台账本身的旧source_commit或状态只指向其采样，不代替当前调用和运行。PR #77/#78已有的有界Shared报告/诊断证据、先前媒体/浏览器源码和研究成果继续复用；M正在做的SourceBrief、CTH07、032/048持久聊天、045调用授权、046 Fact Wall不在此处提前写成已合入或已验收。
 
 按每项真实任务记录：REQUIREMENT / SOURCE_IMPLEMENTATION / CORE_BINDING / RUNTIME / USER_OUTCOME / SURFACE / EVIDENCE_VERSION。未接合同设计完整、依赖动作标OPEN/UNBOUND；当前只读slice不能缩减最终保存/修订/执行等要求，当前slice也不能因为规划有按钮而声称可执行。普通错误沿原Owner修复，权限/成本/法务/设备等实际外部阻塞只停其依赖路径。
 
+原195个G条目和原章节继续承接完整功能、资料/研究、Math/AI、媒体、采集、账户/权限和恢复；“闭环内”表示范围要求，不是实现或验收通过。G189/§3的直传解析、基础分析、资料与分析卡片、真实入库时间及修订恢复，和§4.1的鼠标现实物理，当前只在本轮落实完整要求；对应实现/调用接线、同版运行、保存重开恢复及四表面验收逐项保持OPEN/NOT_VERIFIED，已有局部回执只复用原精确范围。未读材料仍未读，未实现和未绑定仍未完成；不能用这段记录替代逐项证据或生成另一份专项队列。
+
 ## 6. 建设与验收依赖
 
 继续沿F0–F13现有建设分组，完整表收在本规划后部；它们不派工、不串行锁四表面。先固定同一语义数据/动作接口与组件状态，同时完成任务布局/本地编辑；可用Core立即接入；缺合同由既有Owner补齐。每一结果的实际出口是：真实入口→合法输入→正常操作→有用成果与来源/限制→持久保存→修订→关闭重开→中断恢复→Evaluation；无AI基础路径与AI增强分别验。所有原R01–R15/J1–J8/U01–U25、Global三覆盖维度、随机实体与商业门保留。
 
-文档收敛本身验证：有效要求与独特设计全迁入、旧活跃副本移除、引用可达且锚点唯一、原接口/权限/状态/动作/验收未丢、非前端要求未减、精确diff独立审查和既有阻塞门通过。之后branch→PR必需CI→审阅合并→main远端原文读回才称规划已发布；这仍不接受前端或产品运行。REA实际验证按本次PO次序在这一步之后继续，产出交原Owner/M实施。
+文档收敛本身验证：有效要求与独特设计全迁入、旧活跃副本移除、引用可达且锚点唯一、原接口/权限/状态/动作/验收未丢、非前端要求未减、精确diff独立审查和既有阻塞门通过。之后branch→PR必需CI→审阅合并→main远端原文读回才称规划已发布；这仍不接受前端或产品运行。本轮REA已有交接包与未完恢复点统一归档，按最新直接PO不继续运行；后续有新派工再从原完整任务续接，不自动重放历史效果或取消未完项。
 
 ## 7. 原需求与研究采用目录的保留方式
 
@@ -133,7 +161,7 @@ Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺�
 | G20 | 开发者模式 | 两类：(a) 用户开发者模式——用户可自行开发/修改产品，开启前须接受风险与法律责任自担的协议（协议文本上线前须法务审核，未审核不得启用）；可关闭恢复受限状态；账号数据备份与恢复；(b) 创始人内部开发者模式——一键上传代码更新、跑测试、测试全绿才发布、签名分批自动更新、可回滚 | EXP:1248；PO 2026-10-14 | 阿康1(C)/阿康(F) | 闭环内 |
 | G21 | AI 六项 | Chat Memory/Context/Tool Calling/Skill Registry/Evaluation/Model Routing 全 VERIFIED 才算 AI Chat 完成 | AICL:1-60、PA:134 | 阿康1 | 闭环内 |
 | G22 | 屏幕状态 | 44份历史ScreenSpec保留独立设计/实现/验收状态；本基线静态存在不等于ACCEPTED。完整前端不以44为上限；最新逐屏状态回到原合同/证据。 | 各 spec frontmatter | 阿康 | 闭环内 |
-| G50 | BYO-API 接口 | AI Gateway 保留一个通用 OpenAI 兼容外部模型接口，用户可选填自购 API key；默认自有模型、产品不主动调第三方、无自动回退；出口：未配置=不调用，配置后仅用户显式选择时调用并留回执 | Gateway | 阿康1 | 闭环内 |
+| G50 | BYO-API 接口 | 唯一AI Gateway保留既有user_api；当前仅Groq为获准外部选项，用户可选配置并显式选择，经适用Permission才调用且留实际回执。自研/自有模型默认路线和完整目标保留，产品不主动调用第三方、无自动回退；未配置=不调用，配置不等于可用、SourceUse或权限许可。其它OpenAI-compatible端点未获准；现源码Groq-only限制与Permission接线/实际推理仍待闭环验证，Groq不代替自研目标 | Gateway | 阿康1 | 闭环内 |
 | G51 | A-SYS 采集/浏览器 | 合法登录→后台任务→人工验证→同任务恢复→Evidence/Canonical→前端结果；多平台无窗口重启恢复同版实证 | 审计补录 | 阿康/阿康1 | 闭环内 |
 | G52 | A-CTH | 商业问题+时间/预算→有用分析→Decision/Action/实际结果→报告保存重开；数据不足不冒充因果 | 审计补录 | 阿康/阿康1 | 闭环内 |
 | G53 | A-BMP | 610/137/185 生产注册、跨品牌权限、品牌-门店-作者归属、真指标报告、关系证据回读 | 审计补录 | 阿康/阿康1 | 闭环内 |
@@ -166,7 +194,7 @@ Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺�
 | G81 | 爆款对照与跨平台 | 爆款研究须含普通/失败样本，相关≠因果；按当前ContentContext重建素材用途/事实，不能复制案例文案、标签、时间或指标。BIL按机制覆盖选择案例，区分品牌健康、社媒热度、UGC、触达质量、文化/购买意图、品牌DNA、本地执行、门店体验、增长、创作者归因及AI发现/传统曝光，不做品牌排名。长内容→章节/短切/金句/人物卡/图文，按平台重做包装，复用故事节点而非成片 | R0914-C05 | 阿康/阿康1 | 闭环内 |
 | G82 | 浏览器 Agent 循环 | 内置浏览器动作 Observe→Plan→Act→Verify：observe(URL/readyState/DOM+A11y/必要截图)、verify_action(expected vs actual，失败不报成功)、stall_detect；AI 定位+确定性执行，提取受 schema（约束解码）；离线 benchmark 含 UNACHIEVABLE | R0914-E01/E03；参照 OpenAI | 阿康/阿康1 | 闭环内（并 G32） |
 | G83 | Agent 生产控制链 | Intent→既有Orchestrator→有界注册Tool/子任务（schema/actor/scope/风险/Evidence/幂等/版本/预算/单写者）→成果Owner读回→必要人审→受控Effect→Evaluation/Trace；长工作异步回到父任务，短工作不强制委派；Agent无任意COMMIT/DELETE/生产写，派生输出与原始/人工/决定分存，不新增Runtime或队列 | R0914-E01 | 阿康/阿康1 | 闭环内（并 G31） |
-| G84 | Provider 失败（按现行规则覆盖） | 自有模型不可用→UNAVAILABLE 可观察状态，无自动回退；BYO-API 仅用户显式选择；确定性采集/统计/报告主链照常 | R0914-E01 vs PO | 阿康/阿康1 | 闭环内（并 G50） |
+| G84 | Provider 失败（按现行规则覆盖） | 自有模型不可用→UNAVAILABLE可观察状态，无自动回退或暗切Groq；当前外部仅Groq经原user_api，须用户显式选择且适用Permission允许，未满足仍报告不可用。确定性采集/统计/报告主链照常，自研完整目标不被外部接口替代 | R0914-E01 vs PO | 阿康/阿康1 | 闭环内（并 G50） |
 | G85 | 数据真相链 | External→Evidence→Canonical→确定性函数→Metric→Truth→ViewModel→Report；Metric/Report 单一生产入口；报告事实与 AI 摘要分区并记 snapshot/evidence 引用；人工修正可追溯可撤销 | R0914-E02 | 阿康/阿康1 | 闭环内 |
 | G86 | 数据红线 | NO_DATA/UNKNOWN≠0（并 X33）；publish_datetime 与 captured_at 分离；同平台 content_hash+platform_id 去重、跨平台转载 REVIEW；详情失败保留主记录 | R0914-E02 | 阿康/阿康1 | 闭环内 |
 | G87 | DB/Runtime 验收 | 运行进程实际 DB 路径一致；clean bootstrap/migration/upgrade/rollback；FK+业务约束；Worker Lease/Heartbeat/Checkpoint/Reaper/Retry/DLQ/Resume 有状态；端口可达≠健康 | R0914-E02/E03 | 阿康/阿康1 | 闭环内（并 G41/G42） |
@@ -210,7 +238,7 @@ Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺�
 | G49.6 | 竞品 Meltwater MCP | 对方优势：已购情报接 AI 助手、引用、问答简报、多轮上下文；序境差异化：确定性无 AI 路径+已授权本地资料+可修订制作；验收：固定任务/数据/权利/成本/质量同题实测，只证细分优势不报排名 | 审计 F | 阿康 | 闭环内 |
 | G49.7 | 竞品 Adobe GenStudio/Content Supply Chain | 对方优势：品牌模板、已批素材、变体、审批、渠道效果；序境差异化：轻量细分专业团队的可编辑提案/视频/播客；验收：固定任务/数据/权利/成本/质量同题实测，只证细分优势不报排名 | 审计 F | 阿康 | 闭环内 |
 | G49.0 | 定位 | 合法来源+正确实体关系+可审计事实+无 AI 可完成+可编辑提案/媒体+保存恢复 = 监测→交付垂直整合 | 审计 F | 阿康 | 闭环内 |
-| — | 审计口径覆盖 | 冲突以 PO 现行规则为准：默认自有模型，另留一个通用 OpenAI 兼容 BYO-API 接口供用户可选接入自购密钥（产品默认不调第三方、无自动回退）；前端功能与后端并行闭环内；后台采集+内置浏览器(像正常浏览器、可折叠、参照 OpenAI)+全平台产品内登录弹窗；手动采集可选+前端按钮；风控研发关/闭环前开；账号体系、开发者模式、商业六项、视觉风格/logo/角色图均闭环内；上线后仅真实用户验证与付费/授权来源；CI 绿即合并 | CURRENT:11,14,18,49-55（akang/loop-plan-audit） | — | — |
+| — | 审计口径覆盖 | 冲突以 PO 现行规则为准：默认自有模型，另留既有SYSTEM user_api的当前Groq可选接口（仅用户显式选择且适用Permission允许；配置不等于可用；产品默认不调第三方、无自动回退，自研完整目标保留）；前端功能与后端并行闭环内；后台采集+内置浏览器(像正常浏览器、可折叠、参照 OpenAI)+全平台产品内登录弹窗；手动采集可选+前端按钮；风控研发关/闭环前开；账号体系、开发者模式、商业六项、视觉风格/logo/角色图均闭环内；上线后仅真实用户验证与付费/授权来源；CI 绿即合并 | CURRENT:11,14,18,49-55（akang/loop-plan-audit） | — | — |
 
 | G94 | 采集优先级（免费数据先行） | 先采全部已登记平台的免费广告/流量与创作者中心数据：小红书、抖音、视频号、快手、B站、微博、微信公众号、Instagram、Facebook、TikTok、YouTube、X 等（registry 现有 adapter）；验收：每平台 PlatformManifest 标注可得字段/取得方式/缺失原因，内置浏览器同会话后台采集，入 Evidence→Canonical，0 条≠成功，失效弹登录 不假设已取得官方/partner API授权；只以实际准许公开路径/获准自有会话或真实已授API取得输入，平台/字段/用途/身份分别记录，无法取得不冒称免费可用。 | PO 10-14 | 阿康/阿康1 | 闭环内 |
 | G95 | 聚光（小红书付费投放数据） | 需小红书专业号，PO 暂无 → 延后；juguang_api.py 保持未配置=UNAVAILABLE，不伪造；KFS 中的 F（24h 互动>20 再投）仅作方法论 | PO 10-14；BMP-06 | 阿康 | 有专业号后 |
@@ -233,7 +261,7 @@ Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺�
 
 | 原差异ID | 现行要求与处理边界 |
 | --- | --- |
-| X1 | 退休专用Provider不再激活；唯一Gateway使用自有模型默认和用户显式选择的通用user_api，无自动回退。 |
+| X1 | 退休专用Provider不再激活；唯一Gateway保留自有模型默认与完整自研目标；当前外部仅Groq通过既有user_api，经用户显式选择/适用Permission，无自动回退。 |
 | X2 | 移除退休回退规则的活跃正文及引用；原审批、研究、失败和Git历史保留。 |
 | X3 | 旧收敛母指令不再定义运行面；沿当前Architecture与Owner实施。 |
 | X4 | 旧双核/OS执行方案不再支配产品；保留有效原生Windows/macOS/iOS与服务器/浏览器职责。 |
@@ -303,11 +331,11 @@ Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺�
 | G178 | 自动维护与 freshness | 只处理到期项；幂等/退避/断点/重启恢复；真实定时周期不依赖开发工具，记录失败与恢复 | U04、COLLECTOR-CONTINUITY-RESEARCH | 阿康1 |
 | G179 | 正文质量与来源分工 | 官方/媒体证身份事实、社媒证传播/消费者表达；正文抽取小样评测（Trafilatura 对照现有）；会话/无会话逐平台逐字段对比 | U02/U03、COLLECTOR-CONTINUITY | 阿康1 |
 | G180 | 平台扩展（同权按用途） | B站公开原生、微博官方 weibo-cli（免费，可作 Skill/MCP 工具）、抖音/视频号/Instagram/TikTok/YouTube 等走统一 PlatformManifest/Session/恢复；不使用付费授权源 | docs/research/2026-platform-crawling-rules.md、IL/07/BILIBILI-PUBLIC-NATIVE、ARCH:536-538 | 阿康1 |
-| G181 | 韩语能力 | 语言字段 zh/ko/en；韩文分词(Kiwi/Okt)、空格校正、情感/主题/NER、韩文风险规则；Naver Blog/Cafe、Daum 适配；韩文 UI 预留 30-50% 长度与本地化格式；模型只用自有/BYO（旧文 HyperClova 云端按现行规则不接） | docs/research/korean-nlp-resources.md、research/intelligence/03_*/Korean_Content_Intelligence_Collection | 阿康1/阿康 |
+| G181 | 韩语能力 | 语言字段 zh/ko/en；韩文分词(Kiwi/Okt)、空格校正、情感/主题/NER、韩文风险规则；Naver Blog/Cafe、Daum 适配；韩文 UI 预留 30-50% 长度与本地化格式；模型保留自研/自有默认和完整目标；外部当前仅Groq经原user_api、用户显式选择/适用Permission、无自动回退（旧文HyperClova云端按现行规则不接） | docs/research/korean-nlp-resources.md、research/intelligence/03_*/Korean_Content_Intelligence_Collection | 阿康1/阿康 |
 | G182 | 韩剧对白/字幕本地化创作 | 场景先行/潜台词/人物声音/克制/留白；自然度、具体性、潜台词、角色归属、节奏、情绪转折、记忆点、画面适配、余味、原创性十维可编辑审校。敬语及直译/意译/增省译经过语义、人物声音、自然表达、情绪等值、文化、节奏、校对七阶段与原创检查；35/42分是原研究编辑启发，非验证阈值或全创作硬门。作为Shared可选风格，不复刻受限整段字幕；缺失音频参考保留待核，不以文字已读顶替 | docs/content-learning/KDRAMA_*、IL/02/品牌营销知识-13 | 阿康1 |
 | G183 | 视频工程交换 | Timeline 交换损失预检（volume/fade/ducking/muted/多音轨/overlay/dissolve/间隙/多轨）→OTIO/FCPXML/EDL 导出（有理时基，30000/1001 等往返测试）；缺时基/重链报 UNKNOWN 不判可交付；字幕/音轨/叠层；剪辑全链见 §14 E1–E11 | IL/01/VIDEO-WORKFLOW-INTERCHANGE-RESEARCH、U14 | 阿康1/阿康 |
 | G184 | 播客制作全链 | 选题→嘉宾→提纲→脚本→录音/导入→转写/说话人/章节→文本剪辑→可选配音→混音母带（-16 LUFS±1、真峰≤-1 dBTP）→发布包（音频+show notes+章节+字幕稿+RSS）→切片→复盘；工程细则见 §14 P1–P12 | U15、IC-030、docs/research/PODCAST_MODULE_RESEARCH_V1.md、podcast/research | 阿康1/阿康 |
-| G189 | 研究库别名/版本/范围 | 文档/表格/网页/媒体导入；来源定位、引文、别名、版本；检索结果保留范围 | U16 | 阿康1 |
+| G189 | 研究库别名/版本/范围 | 文档/表格/网页/媒体导入；来源定位、引文、别名、版本；检索结果保留范围。普通研究资料直接上传导入，不设通用“来源使用/本次用途”表单，后台保留源/权限/权益UNKNOWN及按动作审查，仅敏感/额外用途确认；自动解析与无AI基础分析，可用模型增强独立。原资料库按真实入库时间timeline，每份资料/每项分析一张可识别关联卡片，可阅原文/分析、修订保存重开恢复，原发布时间UNKNOWN不由入库时间代替。具体布局/状态/权限沿SH-02/原Importer/Research/SavedWork，当前完整接线、同版运行和四表面用户验收仍OPEN/NOT_VERIFIED | U16；最新PO 2026-10-16 | 阿康1 |
 | G108 | AI 弃答与确定性优先 | 确定性计算先行，生成/分类分路，结构化校验；Hybrid+Reranker后核对来源/时间/范围，低支撑有界改写检索，仍不足时交付有依据部分并说明缺口。保留无AI普通检索与业务；§17细化上下文预算和路由验收 | U18 | 阿康1 |
 | G109 | Agent 记忆与可靠性 | 复用Experience/Skill/Project记忆与现有Task checkpoint：稳定偏好、任务事实、检索证据和授权状态分开；附来源/时间/范围/版本/更正与失效，用户可查改/忘记，持久化与实际检索分别验收。压缩后重读最新指令/任务/版本/未完项，记忆不扩权限、不恢复旧命令；保持多用户隔离、Critic及失败案例回归。子任务有界上下文与回调，崩溃先核已提交效果再续跑；工作/情节/语义记忆、检索驱逐、纠正/删除传播及压缩保真按§17验证，不删除审计事实；现有接口审查采用mattpocock/skills的实际不变式、调用顺序、错误/取消、配置及性能边界方法；优先修真实调用缝隙，不因技能建议另开设计/代理流程。 | IL/11/AgentOrg/04-IMPROVEMENT-QUEUE IC-001..012、IC-037/043 | 阿康1 |
 | G110 | 受控学习晋升 | shadow→promotion，保留集+真实任务均优于旧版才晋升，可回滚 | U20、IL/05/LEARNING-PROMOTION-ENGINE | 阿康1 |
@@ -319,7 +347,7 @@ Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺�
 | G116 | **聊天智能 UI（交互卡片）**（另见 evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008） | 首页聊天按任务渲染已注册文字/决策/表格/表单/图表/证据/比较组件，流式交付已成立的有用内容；长任务期间输入仍可用，多任务结果明确归属，旧回调不覆盖新修订。schema校验，不执行生成HTML/JS，局部操作不强制再调模型，数值由后端提供；保留简洁模式、检查依据、停止/恢复/保存/修订/重开，卡片动作经Permission+Evidence | X @llqoli 2109977435597103363、OpenAI《GPT-6 and Intelligent UI》与 Help 20001598、MCP Apps(SEP-1865)、EXP:1297-1350、evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008 | 阿康（前端）/阿康1 |
 | G117 | 舆情事件聚类 | 语义嵌入+增量/密度聚类（HDBSCAN 类）替代纯规则；簇内代表句+摘要；事件可回溯原帖 | docs/reference/CTR-EVENT-CLUSTER-P1-01.md | 阿康1 |
 | G118 | 观点/立场绑定 | Stance 绑定 Target/Claim，局部活动态度不外推品牌整体；“用户说了什么/系统推测/证据”三分 | IL/09/research/…OPINION_INTELLIGENCE_UPGRADE_BASELINE_V1、LEARNING-UNITS-REGISTRY | 阿康1 |
-| G119 | KOS 漏斗与合规留资 | 三阶漏斗+CPL/成本指标进 KOS 报告；免税等场景标签与分层建议；矩阵号相似度>50% 判搬运预警；AI 参与内容按平台规则自动带披露（“AI辅助生成”说明/#AI创作 话题，用户可见可改不可删）；强监管类目绝对化用语替换提示；矩阵号错峰与行为差异提示；评论回复/私信只生成草稿（不自动发）；私信通为合规留资路径（企业号授权时启用，用户可选） | CTR-KOS-METRICS、CTR-XHS-LEADS、CONTRACT_IC047、KOS-RULES-CONTENT-ENGAGEMENT、KOS-ZHIPU-REPLY（模型改走自有/BYO） | 阿康1 |
+| G119 | KOS 漏斗与合规留资 | 三阶漏斗+CPL/成本指标进 KOS 报告；免税等场景标签与分层建议；矩阵号相似度>50% 判搬运预警；AI 参与内容按平台规则自动带披露（“AI辅助生成”说明/#AI创作 话题，用户可见可改不可删）；强监管类目绝对化用语替换提示；矩阵号错峰与行为差异提示；评论回复/私信只生成草稿（不自动发）；私信通为合规留资路径（企业号授权时启用，用户可选） | CTR-KOS-METRICS、CTR-XHS-LEADS、CONTRACT_IC047、KOS-RULES-CONTENT-ENGAGEMENT、KOS-ZHIPU-REPLY（模型沿自研/自有默认完整目标；外部当前仅Groq经原user_api/显式选择/适用Permission，无自动回退） | 阿康1 |
 | G120 | 营销日历与热点建议 | 国内节气/节日×海外节点×行业×区域矩阵；suggest_hotspot(日期,品类)→节点+情绪主题+调性；排期导出；方案自动带“节点适配” | IL/02/品牌营销知识-17..22 | 阿康1/阿康 |
 | G121 | 创意方法引擎 | 约束即创意、SIT 六模板、甲乙丙三方分级适配、手法×主题词适配（功能性主题→写实手法）、反模板 slogan（4–8 词优先、新颖×熟悉的名句重构并做与原句重叠度校验）、实时文化连接/UGC→产品飞轮/世界观营销等 4A 机制、比稿“为什么是我”；L0→L1 公式需 N>10 且显著才晋升；生成文案过合规打标 | IL/02/品牌营销知识-03/08/09/11-14、RESEARCH_2026-09-C-CONSTRAINT、CREATIVE_METHODS_2026 | 阿康1 |
 | G122 | 品牌命名与跨市场音义 | 命名流水线；中英韩等跨市场音义/谐音排查（Nova/Bing 反例）作为验收用例 | IL/09/03-RESEARCH/LANGUAGE-BRAND-LIFE/04-05、IC-036 | 阿康1 |
@@ -440,7 +468,7 @@ Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺�
 
 数学采用、有限运行、正式证明和自研模型增益分账。普通CTH/BMP分析不等待九稿全部重放；无匹配数学条件仍完成原有确定性业务。G163保留已训练未上线的Gibbs有限实验及未闭的checkpoint重载/真实新任务对照，不据此升级模型或发布状态。
 
-## 14. 剪辑与播客工程能力（2026-10-14 创作研究全读后升级；自有模型默认，BYO API 仅用户选择，不可用即显示「不可用」不切换；手动路径始终可用）
+## 14. 剪辑与播客工程能力（2026-10-14 创作研究全读后升级；自研/自有模型默认且完整目标保留，外部当前仅Groq经原user_api/用户显式选择/适用Permission，不可用即显示「不可用」无自动回退；手动路径始终可用）
 
 来源缩写：VWI=IL/01/VIDEO-WORKFLOW-INTERCHANGE-RESEARCH；PMR=docs/research/PODCAST_MODULE_RESEARCH_V1；PAL=docs/research/2026-podcast-ai-landscape；BMK25=品牌营销知识-25；LZ=liangzi-interview-record-v1；KOS=KOS_CONTENT_TEMPLATE_EXECUTION_SPEC；CUE=本地 Cue 逐帧审计；R07=ROUND-07-LOCAL-VIDEO-TIMELINE-CORE；PSW=PODCAST-PLAN-SAVED-WORK。
 本轮六项开源来源、精确版本、代码/资源许可及源码位置统一见 `THIRD-PARTY-COMPONENT-REGISTER.md` 的“2026-10-14 六项开源采用”。Artcraft用于既有编辑/保存恢复质量，Hyperframes用于可选图文视频素材；独立创作继续接受用户自己的稿件与获准素材，CTH/BMP联动可选。外来方法使用序境视觉，原有动效不减；研究采用、源码接入和用户成果分别验收。
@@ -778,9 +806,9 @@ Nielsen十项落实到具体动作：真实状态可见；业务词与自然顺�
 
 2026-10-16，本任务窗口的直接PO明确：“那个像素代码那个还要用于过往参考网站及产品的扒取，用以校准我们的前端构建，pixijs这个，不要像素画风”。因此现在准确指代为 **PixiJS，CONFIRMED**；完整用途包括既有参考网站和产品的可见结构/样式/布局/视觉/交互状态提取、可复现重建和前端校准，不采用像素画风。
 
-此前对[Issue #17](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17)正文35评论、Slack43频道消息/7线程53回复及最新PR77/78的溯源没有找到该库名，这是历史检索范围的事实，已被本次直接澄清补齐，不再把用户意思写UNKNOWN。附件广告Pixel/Pixel Film Studios/Pixelmator Pro/Pixel Sorter、Slack旧dot和视频guard转场仍各归原上下文，不用它们另推风格或引入追踪脚本。
+此前对[Issue #17](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17)正文与33条评论、Slack43频道消息/7线程53回复及当时PR77/78的溯源没有找到该库名，这是历史检索范围的事实，已被本次直接澄清补齐，不再把用户意思写UNKNOWN。136条来源行经父帖/回复去重为122条独立消息，逐来源处置见[原对账回执](../evidence/round-15/ISSUE17-SLACK-PRODUCT-REPAIRS-20261016.json)的history_coverage/source_index；消息正文已读不代表附件或原报告已全文读完。附件广告Pixel/Pixel Film Studios/Pixelmator Pro/Pixel Sorter、Slack旧dot和视频guard转场仍各归原上下文，不用它们另推风格或引入追踪脚本。
 
-PixiJS是绘制/场景重建库，不会单独爬取DOM、CSS或产品交互。提取走已安装浏览器/REA的真实可见页面与合法静态源码；PixiJS读取同一版本的测量结果作几何重建、状态叠加和差异校准。开发研究工具使用与产品运行依赖分开：本任务采用隔离PixiJS校准方法，`app/website`不因此换renderer或加依赖；后续真实提取/校准仍依已授权任务顺序，在规划PR受检发布并远端读回后连续完成。
+PixiJS是绘制/场景重建库，不会单独爬取DOM、CSS或产品交互。提取走已安装浏览器/REA的真实可见页面与合法静态源码；PixiJS读取同一版本的测量结果作几何重建、状态叠加和差异校准。开发研究工具使用与产品运行依赖分开：本任务采用隔离PixiJS校准方法，`app/website`不因此换renderer或加依赖；阶段一规划PR80已受检合并并远端读回。阶段二的局部真实采集/校准和完整未决项见§20.4；依最新直接PO，本轮仅作文档归档，停止REA/Node/浏览器/产品运行。原完整目标保留，未完成、未取消；后续须新直接PO派工后从同一恢复点继续。
 
 | 含义 | 实际来源与判定 | 采用边界 |
 | --- | --- | --- |
@@ -838,11 +866,22 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 
 验收按每个真实使用点开展：目标负载/设备/语种/缩放固定；原数据与视觉标签/可访问等价/导出一致；90ms反馈与既有60fps/p95≤16.7ms目标实际计量；失败/取消/资源销毁/重开不丢版本；完整/减少/关闭/跳过偏好分别验证。当前这部分是研究采用设计，除上述小探针之外全部产品性能与四端运行仍OPEN。
 
-### 20.4 过往参考网站/产品提取与 PixiJS 校准（ADAPT；当前草稿 NOT_RUN）
+### 20.4 过往参考网站/产品提取与 PixiJS 校准（ADAPT；阶段二已有局部证据，完整目标 OPEN）
 
 依§20.1本任务窗口的直接PO澄清，PixiJS用于真实参考界面的提取后重建/对照校准，不采用像素画风。
 
-**方法。** 在既有 REA/浏览器读取获准的公开目标、记录来源与权限、保存当时真实页面截图和可取得的 DOM/可访问性/几何证据；PixiJS 只把本地参考图、真实候选构建截图和测得的边界框叠加成校准视图。它不是爬虫、DOM/样式采集器、原站复刻器或产品渲染器。当前没有探测任何真实目标。被动取证与导航/交互分别记录；只用现有工具实际支持且获准的页面操作，先保存原状态再观察状态变化。任何工具清单或单一截图都不保证完整computed-style、全页图、精确几何或字体就绪。缺少的值记 UNKNOWN。将来如需精确盒模型或字体信息，只能在阶段二获准的隔离只读目标上通过现有获准工具所暴露的Chromium DevTools Protocol补采（按实际浏览器/协议版本，不能为此新开私人CDP/profile）：DOM.getDocument、DOM.querySelectorAll、DOM.getBoxModel；CSS.getComputedStyleForNode、CSS.getPlatformFontsForNode；Page.getLayoutMetrics。保留原始 quads 与 viewport/scroll 转换，明确坐标原点，不把协议坐标直接当 CSS viewport 坐标。交互状态分别编号并采集，不能用初始截图代表 hover、keyboard focus、active、disabled、loading、error、empty、长内容、语言、窄屏或 reduced-motion 状态。
+**阶段一与阶段二。** 阶段一规划已通过 PR80 合并并经远端读回（main `0907fd67f71500bd3065485d873a3324d0efbda5`）；阶段一当时的“草稿 NOT_RUN / 尚无真实目标探测”是历史观察，不能继续代表当前。阶段二后来在既有授权内完成公开参考页的部分被动采集、局部 REA/前端研究及一次有界 Pixi 校准；它们仅更新各自精确范围，不代表所有网站/产品、44屏状态、四表面或完整前端目标已完成。
+
+当前唯一 REA 方法交接为本机 ignored 包 `work/frontend-plan-rea-20261016/rea65-method-handoff-20261016-v2.zip`，SHA-256 `57b5ba8cea790e53dd6d061541f87c550d9273491d302c3e332c922e012a4d4e`（2,344,337 bytes）；V2 manifest SHA-256 `e9e94f3d8274dacc731f7263044613baabd7d414e7d4073e71453810cf6abf7d`。V1 归档原样保留，SHA-256 `5103ae317fd039f1b86abbddef570e0b32ed59be574c42041edd513d266095d5`，仅为历史输入。V2 当前收据明确 `whole_package_quality_passed=false`、`product_accepted=false`、`native_stop_all_gates_passed=false`；本机原始大 Evidence 的位置/哈希由 V2 `LOCAL-RAW-EVIDENCE-INDEX.json` 指回，不把 ignored 原件变为发布内容。
+
+阶段二的实际证据与范围：
+- 隔离 PixiJS 8.22.0 校准运行真实使用 WebGL2；运行收据记录五张视口图（当前网站宽屏、390px 的 en/zh/ko 窄屏、Cue 窄屏），并在 1280×900、DPR 1 下生成一份 Cue/当前网站比较报告。报告只有一个明确声明的 `purpose-heading` 配对、14项 `UNMAPPED`；几何只到 border-box，`fontMetrics=NOT_MEASURED`，`pixelDiff=NOT_COMPUTED`。这只是单标题位置/边界的局部比较与校准器运行证据，不证明字体glyph、语义等价、视觉整体、性能或设计验收；详见包内 `pixi-actual-calibration-20261016/runtime-receipt.json`、`actual-cue-current-website-report.json` 与 `capture.json`。
+- 已对一组实际公开网页/参考页面作被动读取与视口采集，相关记录在 `reference-capture-20261016/`、`openai-canonical-reference-20261016/`、`pixi-actual-calibration-20261016/`；每份记录仅覆盖其具体 URL/状态/视口。不能外推到登录态、其他页面/语言/状态、全站交互、44个屏或其他产品。
+- Cortech 分析只读了 21 个选定 bundle 的局部 JS/语义图证据；它不是完整产品源码、完整依赖/调用图、完整19项工作意图复原或私有运行验收。详见 `screen-coverage/cortechchat-owner-integration-package.md` 与所选 bundle 的分析/恢复收据。
+- Grok Bot 仅对一个本机 EXE 作 PE 资源树静态检查；未启动应用、提取/运行程序代码、检查私有profile/session或验证实际应用功能。剪映/CapCut与Claude缺精确本地安装登记不能证明未安装，FCP缺Mac宿主；其他供应商私有API/账号/权利仍未验证。15平台与13 SaaS是第一方公开文档研究，不等于账户/API/schema实测、采集或商业准入。
+
+
+**方法。** 在既有 REA/浏览器读取获准的公开目标、记录来源与权限、保存当时真实页面截图和可取得的 DOM/可访问性/几何证据；PixiJS 只把本地参考图、真实候选构建截图和测得的边界框叠加成校准视图。它不是爬虫、DOM/样式采集器、原站复刻器或产品渲染器。阶段一时尚未探测真实目标；阶段二仅取得上述局部真实证据，完整状态集和其他目标仍未验证。被动取证与导航/交互分别记录；只用现有工具实际支持且获准的页面操作，先保存原状态再观察状态变化。任何工具清单或单一截图都不保证完整computed-style、全页图、精确几何或字体就绪。缺少的值记 UNKNOWN。将来如需精确盒模型或字体信息，只能在新直接PO派工后，针对获准的隔离只读目标，通过现有获准工具所暴露的Chromium DevTools Protocol补采（按实际浏览器/协议版本，不能为此新开私人CDP/profile）：DOM.getDocument、DOM.querySelectorAll、DOM.getBoxModel；CSS.getComputedStyleForNode、CSS.getPlatformFontsForNode；Page.getLayoutMetrics。保留原始 quads 与 viewport/scroll 转换，明确坐标原点，不把协议坐标直接当 CSS viewport 坐标。交互状态分别编号并采集，不能用初始截图代表 hover、keyboard focus、active、disabled、loading、error、empty、长内容、语言、窄屏或 reduced-motion 状态。
 
 **可比较输入。** 每张图及 manifest 记录 SHA-256、来源 URL/origin、采集时间、权限处置、屏幕/任务合同、候选版本、浏览器引擎与完整版本、CSS viewport 或 Flutter logical viewport、坐标单位、DPR、截图栅格宽高、缩放/方向/locale/色彩模式/reduced-motion/滚动位置、字体就绪与实际平台字体、stateId、元素角色/名称/逻辑边界框及必要样式。CSS/logical px 与截图物理像素分开。只有候选和参考的状态及声明环境匹配，才做严格像素对照；不同 DPR、视口、字体、状态、运行时或单位时可展示归一化叠图作定性审查，并标 NOT_COMPARABLE。截图差异、DOM/可访问性差异和人工 screen-contract 审查分开记录；不设跨屏通用像素阈值。
 
@@ -852,7 +891,11 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 
 **版本、许可、性能与当前状态。** 官方 8.22.0 tagged package.json 声明 MIT；分发需保留 [tagged LICENSE](https://github.com/pixijs/pixijs/blob/v8.22.0/LICENSE) 的版权/许可文本。已核 [v8.22.0 release](https://github.com/pixijs/pixijs/releases/tag/v8.22.0)、[package.json](https://github.com/pixijs/pixijs/blob/v8.22.0/package.json)、[Application](https://pixijs.download/v8.22.0/docs/app.Application.html)、[ApplicationOptions](https://pixijs.download/v8.22.0/docs/app.ApplicationOptions.html)、[Graphics](https://pixijs.download/v8.22.0/docs/scene.Graphics.html)、[ImageSource](https://pixijs.download/v8.22.0/docs/rendering.ImageSource.html)、[Texture](https://pixijs.download/v8.22.0/docs/rendering.Texture.html)、[tagged ImageSource.ts](https://github.com/pixijs/pixijs/blob/v8.22.0/src/rendering/renderers/shared/texture/sources/ImageSource.ts) 与 [TextureSource.ts](https://github.com/pixijs/pixijs/blob/v8.22.0/src/rendering/renderers/shared/texture/sources/TextureSource.ts)。Context7 已先查当前文档，但可用语料解析到 current/dev，故版本敏感调用再以 v8.22.0 API/源码核对。坐标/DPR 与字体就绪依据 [W3C CSSOM View](https://www.w3.org/TR/cssom-view/) 和 [CSS Font Loading](https://www.w3.org/TR/css-font-loading-3/)；几何/样式采集接口见 [CDP DOM](https://chromedevtools.github.io/devtools-protocol/tot/DOM/)、[CDP CSS](https://chromedevtools.github.io/devtools-protocol/tot/CSS/) 和 [CDP Page](https://chromedevtools.github.io/devtools-protocol/tot/Page/)。官方 [performance tips](https://pixijs.com/8.x/guides/concepts/performance-tips) 只是优化建议；没有本草稿或 LUMENIS 设备的 FPS、帧时、内存、功耗、低端机、泄漏或 Flutter 对比测量，不推断性能通过。当前只作隔离研究候选；ADAPT 本地校准方法，DEFER 产品依赖/生产 renderer，任何产品依赖仍需现有第三方登记和所有者决策。
 
-**验证状态与阶段边界。** 隔离校准器`pixi-reference-calibration.html`是仅读本地PNG/manifest的代码草稿，目前NOT_RUN；没有据它生成真实参考/产品图像对或产品验收。原静态检查未执行：包装脚本解析错误后，检查命令又被自动策略拒绝，唯一返回理由为“blocked by policy”；原失败保留在研究包，不能写成语法通过或HTML本身语法失败。规划PR受检发布及远端读回后，再沿现有获准工具对完整目标开展真实采集/运行/比较，按实际结果升级证据；不通过更换工具绕过已拒绝策略。
+**未闭合项与当前停点。** `pixi-reference-calibration.html`已在阶段二按上述有限输入真实运行；这不构成完整目标校准。原Node静态/语法检查被策略拒绝的失败保持原状，自动JS/HTML静态检查仍 `NOT_RUN`，未重试或绕过。V2人工静态审读仍OPEN：helper输出目录/异步日志落盘边界、逐调用错误/导出失败汇总、分析 Evidence 与源 hash 的绑定、HTML 输入/显存资源上限、Pixi部分初始化失败及下载URL清理等问题均未关闭；见包内 `current-snapshot-verification-20261016/js-html-manual-static-review.md`。V2 Python当前质量和本地回归通过不代表整包质量通过。
+
+REA→Importer 的离线结构预检保留 19 + 12 = 31 条记录，全部 `importer_ready=false`；现有Importer不支持该JSON envelope，没有当前REA→Importer适配，当前导入 callable没有SourceUse admission参数，权利仍 UNKNOWN/未准入。REA Evidence不能代替来源权利或SourceUse，产品导入/写入仍BLOCKED。原失败、覆盖事件与未知均依原 receipts 保留，不能改写成成功或删去。完整静态研究、产品适配、原屏合同、物理交互实际参数接线、Website/Web/Desktop/iOS真实操作、native与产品验收均仍 OPEN。 REA完整职责不限于截图/Pixi视觉校准：原V2及Brio材料中的公开采集、查询/分页/详情、平台原生字段、已授权session与rate-limit/恢复、资料结构、真实交互、媒体及办公能力方法，均须逐source/caller映射到既有SYSTEM Collector/Importer、Shared、Agent和媒体/成果Owner，合法复用或适配并验真实用户成果、保存修订重开/恢复及Evaluation。31条离线importer_ready=false是当前缺口证据，不取消待接入职责；SourceUse入口缺失应由原Owner按既有Permission/Evidence合同修复与接线，不能因缺实现永久DEFER。真正缺宿主、权利、账号或不允许自动化的路径仍按各自限制保持BLOCKED，不能据此缩减独立可推进的完整能力。
+
+依2026-10-16最新直接PO，本轮只完成文档整合和归档，不再执行REA、Node、浏览器或产品操作。完整目标既未完成也未取消；下次仅按新的直接PO派工从本节与上述唯一V2交接/原始收据继续，不能从历史授权、计划发布或本记录自动恢复执行。
 
 ## 21. 原材料、协作原文与采用范围
 
@@ -860,8 +903,9 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 
 | 输入与原始出处 | 实际取得/阅读范围 | 本规划与唯一草图的采用及限制 |
 | --- | --- | --- |
-| [Issue #17](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17)与Slack #lumenis-dev | 正文4354字符、35条完整评论；43条原频道消息、7线程原文含53回复，Welcome线程25+22=47完整回复正文；另读PR77/78最新两帖。2026-10-16增量API读回Issue仍35评论/updatedAt=2026-10-15T23:07:47Z，Slack在1792105672.545669之后无新频道消息。 | 是带来源的研究/协作输入，不是新派工或验收。完整快照SHA-256 `28beb5927603fefb943190a8b1e675c07872e0fdb49f64826a6a63ee954f5b6d`；[七项缺口原文](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17#issuecomment-6193248138)按下表闭合设计覆盖，产品运行仍独立OPEN。 |
-| Brio两个REA归档及10份原研究 | 逐行读完pack1-0…8、pack2-0共2481行；原始ZIP与可读副本指纹区分。报告来源与推断逐项辨认，不复制/调用其中认证样例。 | 完整对象含剪映PC、FCP、Claude Desktop、Grok/GrokBot、15平台、13SaaS、千瓜/新榜/新红；12结论按既有Owner判ADAPT/DEFER/REJECT。读取研究不等已验证私有协议/登录后Schema。原档来源见[归档评论](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17#issuecomment-6187523067)。2026-10-16本次直接PO在当前任务窗口（01a142d1-74c0-7940-b8b9-a66414eb5f8c）已指派规划及完整REA两项工作；这是限定窗口/任务的来源事实。规划发布只是该任务的质量次序，不生成派工；其他或后续窗口不能从本文、合并或历史授权自行启动提取。 |
+| [Issue #17](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17)与Slack #lumenis-dev | 历史对账范围为Issue正文、33条完整评论、43条频道消息、7线程含53回复；136条source rows（33+43+7个父帖+53回复）去重为122条独立消息。Welcome线程原分页25+22=47条回复的读取收据保留，另有当时PR77/78两帖。原35条评论说法纠正为该历史快照33条，不冒称当前实时总数；逐来源READ/duplicate/disposition沿原回执history_coverage/source_index/original_evidence_dispositions保留，消息全文不等于附件、pack原文或逐caller均已读/采用。 | 是带来源的研究/协作输入，不是新派工或验收。原快照SHA-256 `28beb5927603fefb943190a8b1e675c07872e0fdb49f64826a6a63ee954f5b6d`与[逐来源处置回执](../evidence/round-15/ISSUE17-SLACK-PRODUCT-REPAIRS-20261016.json)保留；[七项缺口原文](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17#issuecomment-6193248138)按下表闭合设计覆盖，产品运行仍独立OPEN。 |
+| Brio两个REA归档及10份原研究 | 逐行读完pack1-0…8、pack2-0共2481行；原始ZIP与可读副本指纹区分。报告来源与推断逐项辨认，不复制/调用其中认证样例。 | 完整对象含剪映PC、FCP、Claude Desktop、Grok/GrokBot、15平台、13SaaS、千瓜/新榜/新红；12结论按既有Owner判ADAPT/DEFER/REJECT。10份可读正文2481行的读取不等原ZIP每个二进制/图片、所有引用报告、逐条caller和SourceUse均已核实或全文采用；pack原文/逐caller未核项继续OPEN。每个source disposition保留在[原能力覆盖表](../evidence/round-15/ISSUE17-SLACK-PRODUCT-REPAIRS-20261016.json)的source_index/original_evidence_dispositions/brio_research，并沿本表原能力Owner接续，不以12条摘要替代逐源覆盖。读取研究不等已验证私有协议/登录后Schema。原档来源见[归档评论](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/issues/17#issuecomment-6187523067)。2026-10-16本次直接PO在当前任务窗口（01a142d1-74c0-7940-b8b9-a66414eb5f8c）已指派规划及完整REA两项工作；这是限定窗口/任务的来源事实。规划发布只是该任务的质量次序，不生成派工；其他或后续窗口不能从本文、合并或历史授权自行启动提取。 |
+| 本次五份太古汇十五周年材料 | `1广州太古汇十五周年采集数据.xlsx`、`2广州太古汇十五周年-102篇帖子清单.xlsx`、`3广州太古汇十五周年舆情专题报告.pdf`、`4报告.docx`、`5广州太古汇十五周年最终交付数据-完整版.xlsx`全部保留为本次真实输入；这里列名不冒充逐格/逐页全文核验、完成导入或有用分析。 | 原文件/行/页/表格及URL、原生ID定位必须可读回；各文件只作源方观察/主张，统一任务时间窗并分列原生发布/事件时间、采集时间和真实入库时间，未知不互相代填。逐链接/原生ID去重且保留不同来源，校准跨文件交集/冲突、评论父帖、实体、维度定义与分母；数学按真实样本/资源/假设使用，不把样本当代表性或推断因果。沿既有Importer→Source/Evidence→Canonical或Pending→逐材料基础/可选增强分析→用户可选纳入CTH/BMP/独立Shared→成果保存/修订/重开/恢复。普通研究不强制主体绑定、用途表单；手动导入不证明自主采集。具体校准数据与实际状态由M在CURRENT/原证据发布，本轮不执行实际产品闭环，全部待完要求进入同一完整产品任务。 |
 | Nielsen操作研究 | 重读既有NIELSEN-OPERATION-MAPPING全文与Experience §38的逐操作映射，非重新穷尽NN/g网站。 | 十项落到真实动作/语言/状态/退出撤销/防错/键盘/帮助；用于每个任务检查，不把同一卡片网格当统一设计。原研究路径与正文随原Owner保留。 |
 | 用户视频、Cue/Manus及Website319b | 重读原视频清单/已读区间/逐帧记录与Experience限定范围；本次未重放全部历史原片。历史13项记录8存/5缺；已提取帧、实际视觉阅读、小字/语义未解区间分开。 | 最新7份参考和319b按现行范围采用；Cue/319b仅Website，Manus启动/授权/引导/任务返回方法可适配操作端。保留所有原片与已有分析，不重建已撤销的穷尽历史视频前置门。真实产品演示片须来自同版本真实操作，不用模拟成功。 |
 | Logo/icon/五角色与已有实现 | 重读原资产研究和当前`lumenis_icon.dart`/geometry、Theme及Website motion调用；source只说明存在，不能证明包图标/官网/原生同版交付。 | 原创带名/不带名Logo、功能glyph、彩绘身份icon及适合局部插画分工；Pim/Bram/Ness/Jas/Aris保留。沿用当前批准标志，r4等仅保留为历史候选证据，不在此另作替换，第三方平台logo各自权利不改。 |
@@ -883,7 +927,7 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 
 ### 21.2 CortechChat完整非Muse账号能力的前端承接
 
-本任务另已全文读PO提供的《Chat Cortech/TKH研究报告整合摘要》和现有《CortechChat→序境完整能力吸收报告》的19类意图，并读取前端审计的17入口/保存恢复/许可表。原材料入口为`D:/cortechchat/聊天记录/研究报告/`及原round-15证据`cortech_adoption`，源审计固定`657883e69b13a04f28f9f6176aa0699f33fe3add`；该SHA/98条dirty/源码缺失等是原审计观察，不冒充本任务重新跑Cortech或核当日全部代码。22份报告的PO整合摘要不是22份原报告逐字复读，目录当前另有后增报告，保留版本与未重读范围，阶段二沿原完整材料补足真正未证部分。
+本任务另已全文读PO提供的《Chat Cortech/TKH研究报告整合摘要》和现有《CortechChat→序境完整能力吸收报告》的19类意图，并读取前端审计的17入口/保存恢复/许可表。原材料入口为`D:/cortechchat/聊天记录/研究报告/`及原round-15证据`cortech_adoption`，源审计固定`657883e69b13a04f28f9f6176aa0699f33fe3add`；该SHA/98条dirty/源码缺失等是原审计观察，不冒充本任务重新跑Cortech或核当日全部代码。22份报告的PO整合摘要不是22份原报告逐字复读，目录当前另有后增报告，保留版本与未重读范围，下次完整产品闭环沿原完整材料补足真正未证部分，本轮不继续REA/产品运行。
 
 最新直接PO已要求全部有效非Muse账号能力在现有Owner内复用、补齐或升级；不能仅因当前没有调用/模块而长期DEFER。只排除Muse产品账号实现，序境自身账号/Permission和平台授权保留。Cortech缺陷/许可问题替换方法，用户工作不被删。其旧暖色/零阴影/零圆角/Element Plus/路由/公式/默认主体/批次等是研究输入，不成为序境第二视觉/架构权威；传播相似边、NRI或反查分数不自动当因果、官方指数或法律结论。
 
@@ -905,7 +949,7 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 | 方案导入/比稿/评分 | C5 Importer/Research/Reporting；SH-01/04、CTH-09 | 文件/粘贴→可编辑拆解/业务维度比较→依据/不确定性→选择/报告→保存修订重开；权重/方法由后端解释，上传预算/SourceUse先核。 |
 | 持久聊天/工具卡/异步工作 | 唯一Gateway/Agent、C6 Task、F；AI-01/02/03、SH-06 | 新建/搜索/重命名/归档或删除按实际策略，持续交办、真流式/取消、服务端任务与成果、草稿/记忆更正及恢复；不复制本地假成功缓存。 |
 | 报告/多格式导出 | C5 Reporting/Artifact、C4媒体；SH-04/CTH-10 | CSV/JSON/MD/HTML/PDF等实际Owner支持格式与媒体包、内容/哈希/来源/版本读回；HTML/CSV/ZIP安全输出，导出不是保存/发表。 |
-| 模型/API设置 | 唯一SYSTEM Gateway/user_api；AI-05/SYS-04 | 当前显式选择/安全配置/测试/撤销、实际可用与用量；原M获准Groq调用只是其有界回执，不改变本窗口模型或一般产品用户选择，不自动切Gemini/其他provider。 |
+| 模型/API设置 | 唯一SYSTEM Gateway/user_api；AI-05/SYS-04 | 当前唯一获准外部选项为Groq，经原user_api的用户显式选择/适用Permission、安全配置/测试/撤销、实际可用与用量；原M获准Groq调用只是其有界回执，不改变本窗口模型，不证明通用可用或SourceUse许可。源码Groq-only执行限制/Permission接线和推理结果仍需验证；不自动切Groq、Gemini或其他provider，自研完整目标保留。 |
 | 平台Session/登录恢复 | C1/C6 PlatformSession/RecoverySheet；SYS-06 | 用户明确登录/扫码/VERIFY/冷却、身份健康/范围读回、合法回原任务；目录非空不算登录，作者查询核真目标，不读个人Cookie/Profile。 |
 | 域名/HTTPS/部署辅助 | C6 Runtime/Website发布；SYS-01/07/08 | 真实配置校验/预览、明确差异与错误/恢复；生成命令不是已部署，当前规划/研究不授部署/新费用或自动更新发布效果。 |
 
@@ -1007,7 +1051,7 @@ Pixi性能采用仅可参考其[官方建议](https://pixijs.com/8.x/guides/conc
 | R2 | fresh origin/main、保护dirty、准确范围分支→检查/审查→PR→main→远端读回；见§§0/5/6与AGENTS §§1–2。验证worktree不是第二开发权威。 |
 | R3 | required检查实际执行且通过，不force-push/bypass；按既有M工程审查/受检合并权限执行，不新加逐项PO等候。 |
 | R4 | SYSTEM→CTH→BMP→Shared→Agent Groups/自研AI五轮保持，非用户每任务必经步骤、非窗口上限；Architecture/§6仍完整。 |
-| R5 | 唯一SYSTEM Gateway、owned默认/用户显式BYO、无退休provider或自动回退；§1/G84/G50，普通业务无AI可用。 |
+| R5 | 唯一SYSTEM Gateway；自研/自有默认路线和完整目标保留；当前外部仅Groq经既有user_api、用户显式选择且适用Permission允许，无退休provider或自动回退；§1/G84/G50，配置不等于授权或可用，普通业务无AI可用。 |
 | R6 | 六主平台是基线非上限，全部获准范围/后台持续采集/统一产品内恢复/身份权利/真实来源；§3/G94/G133/F6及Collector Owner。 |
 | R7 | Core启动/端口/health入口回[README](../../README.md)、[AGENTS §16](../../AGENTS.md)与SYSTEM Runtime/U25 Owner；不把可达当界面闭环。 |
 | R8 | 配置、sole业务DB、研究原件各归原Owner；README结构、AGENTS §§9–10/Source Owner Index及§§19/21。研究目录不是执行规则，库文件不成第二真相。 |
