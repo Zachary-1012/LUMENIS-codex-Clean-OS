@@ -4,6 +4,7 @@ This directory implements development tooling, not product architecture or produ
 Root AGENTS.md and the current source/owner/contracts govern product work.
 
 - Lifecycle source: hooks/lumenis_hooks.py; register it once per workstation in ~/.codex/hooks.json after native /hooks trust. Do not duplicate the same handler in both user and project hook registrations. hooks.example.json is a portable-reference template that requires local Python/path review.
+- UserPromptSubmit is treated as user input; duplicate-event detection uses its turn ID, never marker text in the prompt body.
 - Native Hook trust is required before lifecycle execution. Workstation trust is stored by Codex against the current hook hash; when a hook definition changes, re-review its current hash instead of bypassing trust. Hook trust never grants model-selection authority.
 - Authorized isolated engineering-helper regression command: python -X utf8 -m unittest discover -s .codex/tests -v. The helper reads verification_policy.run_unit_integration_allowed from the machine contract and refuses execution while it is false.
 - Local MCP: lumenis_engineering. Its server and bounded source/routing helpers are versioned in this repository under .codex/mcp/server.mjs and .codex/engineering.py. It exposes bounded source, routing, Git, health and verification operations; selected regressions follow current explicit machine policy and Owner admission. No arbitrary shell or broad product-suite execution is exposed over MCP.
@@ -22,10 +23,20 @@ Root AGENTS.md and the current source/owner/contracts govern product work.
 
 Use durable context in the existing Owner record; a model summary is lossy.
 Keep one `continuity` section in that record, not a new Task Card or scheduler.
+Frozen outcome IDs and normalized implementation source paths survive context clear.
+Rebinding to a different record requires rereading the prior record and validating
+its current closure receipts; cached closure alone is insufficient. A new direct
+PO turn must be reconciled before reusing a closure, blocker or deferral exit,
+even when its text matches an earlier turn. A locally recorded Stop continuation
+is not a new PO authorization: preserve the original binding only when its native
+turn metadata and exact generated reason match the pending continuation. Missing
+or conflicting metadata requires reconciliation; ordinary user text never grants
+a bypass, and a new pause instruction remains authoritative.
 必须保留完整目标、最新 PO 来源与更正、约束、已有证据、全部未完项和下一步；
 摘要不是新的调度授权。原生 Goal 的旧暂停标记不能覆盖更新的直接 PO 指令。
 
-The JSON section has exactly these fields:
+The JSON section retains these fields; the optional `delivery` object below binds
+the current task's complete outcome constraints without creating another queue:
 
 ```json
 {
@@ -49,6 +60,27 @@ no credentials, Cookies, raw private prompts or production data. References are
 explicit repository text files; `work/` records are local protected evidence and
 are never automatically committed or sent to a service.
 
+When a pending effect is admitted, `delivery.effect_ledger` retains its exact-text
+SHA-256 identity with `status: PENDING`; those IDs must match the top-level
+`pending_effects` list. Resolve it by changing that entry to `RESOLVED` and
+including a declared local JSON receipt path plus the receipt SHA-256. The receipt
+identifies the same effect, records a terminal readback (`APPLIED`,
+`NOT_APPLIED`, `FAILED`, `CANCELLED` or `RECONCILED`), an observation and the
+complete source pins frozen when that operation was admitted as pending. The ledger keeps the resolved entry
+across sessions; its exact receipt reference is frozen. Its source pins and head
+describe the implementation version at the time of the operation. They are checked
+when the effect first resolves; a later source edit does not invalidate that
+historical readback or authorize replay. Missing legacy admission pins require
+explicit reconciliation rather than substituting today's source version. Current implementation acceptance still
+uses its own current-source receipts. New effects may be appended as `PENDING`,
+then become immutable after their receipt is admitted. Removing the pending item
+or leaving the list empty alone cannot resolve an effect.
+The frozen admission must also survive context clearing. A fresh guard cannot
+import already-resolved effects without that prior admission; preserve the old
+record, receipt and guard for reconciliation, never replay the external effect.
+Admission reserves evidence-list space for pending resolutions and each outcome's
+operation/recovery receipts before another effect is added.
+
 ```powershell
 # Refresh at admission, meaningful outcome/PO correction, or planned handoff.
 python .codex/engineering.py continuity --params '{"mode":"save","record":"work/<existing-owner-record>.json","section":"continuity"}'
@@ -68,7 +100,9 @@ force repeat validation. Changed in-scope bytes still invalidate that evidence.
 Stop compares actual scoped changes with the original baseline, including committed
 changes; a clean tracked scoped file is not a change. Other Owners' mutations do
 not impose this task's checks. Frontend `.astro`/`.css` and bounded `.log` evidence
-are supported text pins; private/session/data exclusions remain enforced.
+are supported text pins; private/session/data exclusions remain enforced. Normal execution hashes the frozen owned paths against their original admission
+baseline, including ignored sources; report/pause snapshots also retain their
+scoped paths. Git ignore status cannot suppress verification requirements.
 
 - `PINNED_CONTEXT`: referenced bytes and recorded local version match; read the
   record and latest direct PO instruction. This is not authorization/acceptance.
@@ -90,6 +124,82 @@ Missing/truncated/disabled hooks require this same manual command, not a new loo
 [fixed Codex compact prompt](https://github.com/openai/codex/blob/a07c8ebd57feedc4cf5dfe854c8e9101de54186b/codex-rs/prompts/templates/compact/prompt.md),
 [fixed SessionStart after compaction](https://github.com/openai/codex/blob/a07c8ebd57feedc4cf5dfe854c8e9101de54186b/codex-rs/core/src/session/mod.rs).
 These describe recovery mechanics, not a guarantee of error-free model execution.
+
+### Complete-outcome guards / 完整成果约束
+
+The same Owner continuity record can include `delivery` (schema version 1).
+Record the complete direct-PO outcome before implementation, with stable existing
+requirement IDs, observable acceptance conditions, all coverage references and
+hash-pinned source documents. A rebind may add requirements; it cannot silently
+remove their IDs, weaken acceptance or drop coverage. Keep prior requirements
+when the PO changes scope and record the exact new instruction. `DEFER`, source
+presence, a PR or CI success never closes an approved requirement.
+
+`delivery.status` describes this task: `RUNNING`, `REPORT_ONLY`, `PO_PAUSED`,
+`APPROVAL_WAIT`, `EXTERNAL_BLOCKED`, `PO_DEFERRED` or `JOB_CLOSED`. Each requirement records
+`id`, `outcome_class`, `acceptance`, `coverage_refs`, its actual `status`, and
+`evidence`. Freeze `PRODUCT` versus `DEVELOPMENT_TOOL` at admission: a product
+outcome requires real user E2E and recovery; a tool workflow cannot replace it.
+`scope_sources` records each original scope document's `path` and `sha256`.
+Evidence points to bounded existing JSON receipts with the recorded outcome,
+historical source HEAD and the complete admitted source/scope-file hashes. An
+unrelated commit or later scope addition does not invalidate a closed outcome
+whose original source pins are unchanged. Its exact receipt references and bytes
+remain frozen under the same record/session binding. New or reopened outcomes
+require current complete-scope outcome and recovery receipts. A changed original
+source invalidates current closure: explicitly reopen, preserve historical
+receipts, verify the new version, then close again. Historical receipts alone
+cannot accept changed source. Receipts distinguish real user work, tool workflow
+and recovery from isolated automated checks. Original
+requirements and source documents remain the coverage authority: a hook cannot
+prove that an initial checklist omitted nothing or that a self-authored receipt
+describes a real event.
+
+A fresh execution binding first admits a RUNNING outcome with unfinished work;
+pre-existing terminal records cannot be stamped as the new instruction. Report-only
+turns freeze the bound record, sources, authority and evidence paths, including
+ignored files and context-clear recovery, so modifying those inputs remains visible.
+For a running task, Stop rejects remaining unclosed work and unaudited completion
+claims even when no source changed. Complete status requires current receipt
+readback for every requirement and an empty top-level `remaining` list. The concise
+continuity narrative is limited to 24,000 serialized Unicode characters; the structured `delivery`
+evidence budget is separately limited to 8,000,000 bytes, supporting up to 100
+outcomes with full operation and recovery receipts. Up to 220 evidence paths are
+allowed. These bounds do not establish that a receipt is truthful. Paths are
+normalized before change comparison, including `./` spellings. A report-only reply, direct PO pause, required
+approval or evidenced external blocker is a non-completion exit: preserve the
+remaining work, exact reason and next/resume condition. `PO_DEFERRED` is a
+non-closure exit only when every unfinished requirement is explicitly deferred,
+its exact PO source and ID appear in a current hash-pinned local source receipt,
+and the exit names those IDs and their resume condition. A new PO message requires
+reconciling that deferral; it does not silently inherit a historical stop. Blocker/deferral
+proof identities and hashes, unfinished requirement IDs, and the authorizing
+prompt-turn binding are retained across rebinding, `RUNNING` and context clear.
+Editing display reason or resume wording cannot refresh the authorization. Reusing
+an old blocker or deferral cannot become current by refreshing only the prompt hash;
+a fresh blocker readback or renewed direct PO receipt is required. Direct
+standalone Chinese and English pause/approval instructions are recognized.
+A generic blocker cannot
+stop independent authorized work. Hooks never dispatch another window, start a
+suite, call a model or change account/model/effort/tier. One corrective continuation
+is permitted; repeated Stop failure terminates with an explicit incomplete state,
+preventing an unbounded retry loop. Legacy records remain readable but do not
+claim these additional machine constraints until explicitly bound.
+
+Dynamic maintenance means reconciling this existing record after a new direct PO
+instruction, meaningful outcome, changed source/runtime version or invalidated
+evidence. Reuse unaffected receipts; recheck affected boundaries. Do not weaken
+verification policy or automatically install/upgrade plugins to obtain a PASS.
+Current read-only questions must not inherit a demand to rerun checks for older
+session edits; those unfinished checks remain required before delivery. Source,
+runtime, database, user outcome and publication are separate acceptance facts.
+
+After publishing a hook update, verify the actually registered handler and native
+`hooks/list` trust/readback. A source change alone is not active enforcement.
+Keep one registration, preserve other handlers and settings, and never edit the
+native trust store. If native reapproval is required, report that precise condition
+instead of calling the hook active. Rollback uses the reviewed previous published
+handler/configuration, not a reset or overwrite of product candidates.
 
 ### Actual verification receipts / 真实退出码回执
 

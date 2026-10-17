@@ -2,6 +2,95 @@
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-17 PR79 cloud repair verification
+
+The Product Owner explicitly requested repair of PR79 in the cloud, followed by
+integration with current main and merge only after the required checks pass.
+The repair preserves the complete product plan and all existing main status and
+protected-candidate records. It changes engineering continuity tooling only;
+no production runtime, database, workstation hook registration or product-release
+acceptance is implied.
+
+The nine latest review findings and one source-path normalization defect now have
+focused regressions: fresh PO turn identity even for identical text; bounded Stop
+continuation provenance; ignored owned-source changes; immutable pending-effect
+admission versions; changed authority at non-closure exits; structured-record size
+budgets; explicit dependency waits; intact deferral IDs; immutable blocker/resume
+conditions; and equivalent scope path aliases. The original candidate fails the
+new regression cases; those failures remain evidence, not erased test history.
+
+The merged-source candidate passed all 193 engineering-helper tests in the cloud
+with pytest available, with no skipped tests. The three changed Python files pass
+compilation and full Ruff. These are isolated tooling checks, not native Windows
+runtime activation or whole-product E2E. Missing trusted Stop metadata fails closed;
+legacy pending effects lacking their admission pins require reconciliation and
+must never be replayed or assigned fabricated source history. Required remote
+checks and exact merged-main readback remain separate publication conditions.
+
+## 2026-10-16 M completion guards and current authorized scope
+
+The direct PO instruction requires the existing development hooks to constrain
+silent scope reduction, deferral of authorized missing capabilities and premature
+completion. The existing Owner continuity record carries the complete outcome,
+stable requirement IDs, coverage and versioned real-operation/recovery receipts;
+the single `.codex/hooks/lumenis_hooks.py` handler checks those records, rejects
+closure with remaining work, compares normalized complete scoped inputs, and
+retains unchanged-scope receipts across unrelated commits. Explicit source-pinned
+PO deferral is a non-closure exit. Frozen IDs and implementation paths survive
+context clear; record switching revalidates current prior closure, and any new
+direct instruction requires reconciliation before a terminal exit. Fresh execution
+bindings require RUNNING unfinished work, rather than renewing historical terminal
+records. Report-only snapshots include the bound record and pinned evidence, even
+when ignored by Git or retained after context clear.
+Non-closure exits retain their authorizing prompt and immutable proof identity;
+rewriting their description does not renew an old blocker or deferral. Pending
+external effects remain in the same append-only continuity ledger until a
+hash-pinned terminal readback resolves them. Structured outcome evidence has a
+separate bounded budget so a complete task can retain all 100 supported outcomes.
+English and Chinese pause/approval instructions preserve unfinished outcomes. Hook
+configuration follows the current task and actual evidence, never historical
+window/model state. See `.codex/README.md` for its schema, bounded Stop behavior,
+native activation and rollback. Neither a hook PASS nor a source publication
+establishes product acceptance.
+
+The current hook candidate preserves the complete admitted outcome through context
+changes, explicit PO deferral and pause. It verifies large owner records with the
+same bounded budget on save/read/Stop; deferral requires the current real PO
+prompt and exact requirement IDs. Pausing stops execution without rollback and
+records any post-pause scoped changes for reconciliation. Reopened outcomes
+reserve fresh outcome/recovery receipts, path aliases normalize consistently,
+and duplicate receipt references are rejected before cached validation.
+
+The prior complete engineering-helper run passed 166 tests plus 69 subtests.
+Subsequent focused checks covered the record/deferral changes and fourteen
+pause/capacity/path/cache cases; compilation and full Ruff passed for the changed
+Python files. Prior failed CI and fixture failures remain historical failures;
+only the exact updated commit's required checks qualify its publication. These
+are development-tool results, not workstation activation, product E2E or release.
+
+The direct PO instructions dated 2026-10-16 covered three reported upgrades:
+all relevant issue #17/Slack updates and research adoption; all approved Cortech
+capabilities except its Muse account implementation; and full REA reinspection
+and usable adoption of the original applications/sites. REA must serve both
+platform-specific acquisition improvements and missing product operations and
+capabilities. Preserve every original object and requirement, source/permission
+boundaries, independent Shared creation, AI-independent basic work and the four
+approved surfaces. The task history also records a later direct PO assignment
+for frontend-plan/text-sketch consolidation, pixel/code research and subsequent
+REA investigation, without frontend construction in that assignment. Its intended
+outputs are the existing unique complete plan and sketch documents plus validated
+capability handoffs for product implementation and integration.
+REA covers underlying capability logic, page layouts/elements and more complete,
+accurate acquisition, followed by actual product improvements. These dated scope
+records prescribe no current start, pause, dependency order, window or model.
+Each task follows its newest applicable direct PO instruction and local readback;
+publication cannot suspend independently authorized work or resume historical work.
+Subsequent outcomes need
+actual input, useful output, save/revise/reopen/recovery and loaded-version
+evidence through existing owners. PR #77/#78 remain bounded integrated repairs,
+not completion of these three upgrades. Current implementation, runtime and
+acceptance observations stay separately traceable in the existing Owner records.
+
 ## 2026-10-14 research adoption (documentation, not runtime acceptance)
 
 The six PO-supplied OSS repositories were reviewed at fixed commits, including executable implementation/skill material and licenses, rather than star counts. Existing plan G109/G130/G159/G163, media steps E1/E8 and Experience's result-visualization clauses carry the bounded adaptations; the third-party register holds all six source pins, exclusions and acceptance conditions. Artcraft contributes editable-state/readback and stale-result fencing ideas; Anatomy/Diagram Design contribute data-consistent explanatory graphics; Matt Pocock's skills contribute interface/recovery review; Hyperframes is an optional HTML-video adapter candidate; AirLLM is a conditional exact-model resource experiment, not an installed provider or proven low-memory solution. No upstream code/assets, dependency, model weights or service were installed/copied by this research publication. Product bindings and actual outcomes remain OPEN, existing motion remains intact, and no window is dispatched.
@@ -100,6 +189,11 @@ Real user E2E: `NOT_VERIFIED`
 本次规则校验先发现根指令字节预算超限及检查器仍强求旧账号后置句；已压缩重复路由说明、保留唯一规划链接，并让原检查器明确核验已批准的账号/免费登录/双开发者模式在工程闭环内、Apple准入和无通用账号墙/Permission，不删检查、不改机器合同或放宽门禁。首轮失败保留，最终结果以当前版本检查为准。
 
 以下保留既有各批次原始范围和失败/未完结论；不把其旧回执自动迁移到本次组合版本。
+
+当前发布仅包含 M 的既有工程钩子、受影响回归和规则说明；不包含产品行为源码，不升级下述已发布产品回执的验收范围。原生注册与受保护主树中的实际钩子装载须在合并后独立读回。
+
+
+本次 PR #60 冲突收敛保留当前账号/免费登录、独立工作区、视觉和来源同权规则。规划继续只使用 `00-GOVERNANCE/LOOP-PLAN-20261014/` 的现行版本及 [唯一完整前端规划](LOOP-PLAN-20261014/product-plan-full.md)与[唯一视觉文字草图](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)；不恢复旧目录下的重复规划。补入既有 Gibbs 训练/validation/holdout 三份原始日志并链接当前数学采用记录，状态仍为“已训练、未上线”，G163 仍 OPEN。这是规则与历史证据同步，不含新训练、产品运行或验收升级；下述 PR #77/#78 回执保留其原有范围。
 
 本批承接 Issue #17 正文及 33 条评论、#lumenis-dev 43 条频道消息及 7 个回复串的 53 条回复，共 136 条来源记录、122 条去重消息；逐条读取、映射并保留全部未闭项。Brio 两个新附件包的 10 份文档已读并映射；历史四份长 PDF 的既有部分阅读边界保留，消息全覆盖不等于全部研究材料读完。本批修复 KOS 三处未定义服务调用、AI 状态把分析模块导入误报为模型可用、Shared SavedWork 的独立工作区 Scope，以及视频工程因任意转场而全面禁用编辑的问题。独立 Shared 容器不继承 CTH/BMP 权限；所引用来源仍逐条保留原 Scope、SourceUse 与权益核验。媒体编辑按实际 Core 转场约束原子拒绝无效修改，保留撤销和版本，不用删除转场换取表面成功。当前前端规划和逐屏参考原位补齐完整任务、独立制作、返回/保存/恢复和四表面差异；44 个历史屏号不是范围上限，文档更新不证明实际界面已通过。
 

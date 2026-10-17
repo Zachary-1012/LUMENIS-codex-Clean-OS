@@ -1,8 +1,8 @@
 import importlib.util
 import io
 import json
+import logging
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
@@ -10,6 +10,7 @@ import tempfile
 import threading
 import time
 import unittest
+from pathlib import Path
 from unittest import mock
 
 HOOK = Path(__file__).resolve().parents[1] / "hooks" / "lumenis_hooks.py"
@@ -20,6 +21,7 @@ spec.loader.exec_module(h)
 eng_spec = importlib.util.spec_from_file_location("lumenis_engineering", ENGINEERING)
 eng = importlib.util.module_from_spec(eng_spec)
 eng_spec.loader.exec_module(eng)
+logger = logging.getLogger(__name__)
 
 class EngineeringTests(unittest.TestCase):
     def setUp(self):
@@ -79,7 +81,7 @@ class EngineeringTests(unittest.TestCase):
         self.temp.cleanup()
 
     def git(self, *args):
-        p = subprocess.run(["git", "-c", "core.fsmonitor=false", "-c", "gc.auto=0", "-c", "maintenance.auto=false", "-C", str(self.root), *args], capture_output=True, encoding="utf-8", timeout=20)
+        p = subprocess.run(["git", "-c", "core.fsmonitor=false", "-c", "gc.auto=0", "-c", "maintenance.auto=false", "-C", str(self.root), *args], capture_output=True, encoding="utf-8", timeout=20, check=False)
         self.assertEqual(p.returncode, 0, p.stderr)
         return p.stdout
 
@@ -99,6 +101,31 @@ class EngineeringTests(unittest.TestCase):
     def test_unicode_root(self):
         self.assertEqual(h.find_root(str(self.root)), self.root)
         self.assertEqual(h.find_root(str(self.root / "subfolder")), self.root)
+
+    def test_continuity_path_rejects_symlinked_file_before_resolution(self):
+        work = self.root / "work"
+        work.mkdir()
+        target = work / "source-v1.md"
+        link = work / "scope-source.md"
+        target.write_text("source v1\n", "utf-8")
+        try:
+            link.symlink_to(target)
+        except (OSError, NotImplementedError) as error:
+            self.skipTest(f"Symlink creation is unavailable in this environment: {error}")
+        with self.assertRaisesRegex(ValueError, "Symlinked repository path components"):
+            h.continuity_path(self.root, "work/scope-source.md")
+
+    def test_continuity_path_rejects_symlinked_parent_before_resolution(self):
+        target_dir = self.root / "actual-sources"
+        target_dir.mkdir()
+        (target_dir / "scope-source.md").write_text("source v1\n", "utf-8")
+        linked_dir = self.root / "scope"
+        try:
+            linked_dir.symlink_to(target_dir, target_is_directory=True)
+        except (OSError, NotImplementedError) as error:
+            self.skipTest(f"Directory symlink creation is unavailable in this environment: {error}")
+        with self.assertRaisesRegex(ValueError, "Symlinked repository path components"):
+            h.continuity_path(self.root, "scope/scope-source.md")
 
     def test_safe_read_is_not_blocked(self):
         self.assertIsNone(h.policy_reason({"tool_name": "Bash", "tool_input": {"command": "git status --short"}}))
@@ -143,28 +170,34 @@ class EngineeringTests(unittest.TestCase):
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_failed_test_blocks(self):
-        self.edit(); self.verify(1)
+        self.edit()
+        self.verify(1)
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_unknown_exit_blocks(self):
-        self.edit(); self.verify(None)
+        self.edit()
+        self.verify(None)
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_successful_current_test_is_recorded(self):
-        self.edit(); self.verify(0)
+        self.edit()
+        self.verify(0)
         self.assertEqual(self.handle("Stop"), {})
         self.assertEqual(self.state["verification_status"], "SCOPED_CHECK_OBSERVED")
 
     def test_static_check_is_not_code_test(self):
-        self.edit(); self.verify(0, "git diff --check")
+        self.edit()
+        self.verify(0, "git diff --check")
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_echo_is_not_test(self):
-        self.edit(); self.verify(0, "echo pytest")
+        self.edit()
+        self.verify(0, "echo pytest")
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_same_status_new_content_invalidates_result(self):
-        self.edit(); self.verify(0)
+        self.edit()
+        self.verify(0)
         (self.root / "sample.py").write_text("value = 3\n", "utf-8")
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
@@ -198,15 +231,13 @@ class EngineeringTests(unittest.TestCase):
     def test_continuity_rejects_missing_session_identity(self):
         with self.assertRaises(ValueError):
             h.state_file({}, self.root)
-        with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "", "CODEX_SESSION_ID": "", "CODEX_AGENT_ID": ""}):
-            with self.assertRaises(ValueError):
-                eng.dispatch("continuity", {"mode": "read", "record": "work/checkpoint.json", "section": "continuity"})
+        with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "", "CODEX_SESSION_ID": "", "CODEX_AGENT_ID": ""}), self.assertRaises(ValueError):
+            eng.dispatch("continuity", {"mode": "read", "record": "work/checkpoint.json", "section": "continuity"})
 
     def test_continuity_rejects_conflicting_thread_and_session_identity(self):
         self.make_continuity_record()
-        with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-a", "CODEX_SESSION_ID": "session-b"}):
-            with self.assertRaises(ValueError):
-                eng.dispatch("continuity", {"mode": "save", "record": "work/checkpoint.json", "section": "continuity"})
+        with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-a", "CODEX_SESSION_ID": "session-b"}), self.assertRaises(ValueError):
+            eng.dispatch("continuity", {"mode": "save", "record": "work/checkpoint.json", "section": "continuity"})
 
     def test_continuity_state_isolated_by_session(self):
         first = h.state_file({"session_id": "session-a"}, self.root)
@@ -302,7 +333,7 @@ class EngineeringTests(unittest.TestCase):
             )
         except (OSError, ValueError, KeyError, TypeError, RuntimeError):
             return False
-        paths = sorted(set([*scope, *accepted["additional_paths"]]))
+        paths = sorted({*scope, *accepted["additional_paths"]})
         current = h.snapshot(self.root)
         policy_path = str(h.VERIFICATION_POLICY_PATH)
         receipt = {
@@ -355,13 +386,51 @@ class EngineeringTests(unittest.TestCase):
         self.assertFalse(result["dispatch_authorized"])
         self.assertFalse(result["product_accepted"])
 
+    def test_continuity_narrative_retains_24000_unicode_character_budget(self):
+        record = self.make_continuity_record()
+        payload = json.loads(record.read_text("utf-8"))
+        payload["continuity"]["objective"] = "任务" * 3000
+        payload["continuity"]["native_goal"] = "结果" * 3000
+        record.write_text(json.dumps(payload, ensure_ascii=False), "utf-8")
+        item = h.continuity_record(self.root, "work/checkpoint.json", "continuity")
+        self.assertGreater(len(json.dumps(item, ensure_ascii=False).encode("utf-8")), 24_000)
+
+    def test_continuity_save_and_lookup_normalize_record_path_spellings(self):
+        record, payload = self.delivery_fixture()
+        event = self.delivery_event
+        fresh_state = {
+            "last_prompt_hash": self.state["last_prompt_hash"],
+            "turn_id": self.state["turn_id"],
+        }
+        h.continuity_save(self.root, fresh_state, event, "./work/checkpoint.json", "continuity")
+        self.assertEqual(fresh_state["continuity"]["record"], "work/checkpoint.json")
+        fresh_state["continuity"]["record"] = r".\work\checkpoint.json"
+        fresh_state["delivery_guard"]["record"] = r".\work\checkpoint.json"
+        h.continuity_read(self.root, fresh_state, event)
+        self.assertEqual(fresh_state["continuity"]["record"], "work/checkpoint.json")
+
+        self.close_delivery_fixture(record, payload)
+        self.state["continuity"]["record"] = r".\work\checkpoint.json"
+        self.state["delivery_guard"]["record"] = r".\work\checkpoint.json"
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_continuity_paths_reject_windows_escapes_and_private_segments(self):
+        for value in (
+            r"C:\work\checkpoint.json", r"C:work\checkpoint.json",
+            r"\\server\share\checkpoint.json", r"\work\checkpoint.json",
+            r"work\..\checkpoint.json", r"work\data\checkpoint.json",
+            r"work\profiles\checkpoint.json", r"work\.env\checkpoint.json",
+            r"work\secret.json", r"work\report.txt:stream.txt",
+        ):
+            with self.subTest(path=value), self.assertRaises(ValueError):
+                h.continuity_path(self.root, value)
+
     def test_continuity_authority_change_requires_rebind_before_runner(self):
         self.bind_verification_scope(["sample.py"])
         architecture = self.root / "00-GOVERNANCE" / "LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
         architecture.write_text("# Changed current architecture\n", "utf-8")
-        with mock.patch.object(eng, "_execute_verification_process") as execute:
-            with self.assertRaisesRegex(ValueError, "authority"):
-                self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
+        with mock.patch.object(eng, "_execute_verification_process") as execute, self.assertRaisesRegex(ValueError, "authority"):
+            self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
         execute.assert_not_called()
 
     def test_continuity_save_pins_astro_css_and_log_then_reconciles_changes(self):
@@ -401,6 +470,50 @@ class EngineeringTests(unittest.TestCase):
         result = self.continuity_cli("read", include_record=False)
         self.assertEqual(result["status"], "PINNED_CONTEXT")
         self.assertEqual(result["context"]["owner"], "C4")
+
+    def test_large_structured_continuity_record_uses_record_budget_only(self):
+        record, payload = self.delivery_fixture()
+        delivery = payload["continuity"]["delivery"]
+        existing = list(delivery["requirements"])
+        for index in range(98):
+            delivery["requirements"].append({
+                "id": f"LARGE-{index:03d}",
+                "outcome_class": "DEVELOPMENT_TOOL",
+                "acceptance": "A" * 3900,
+                "coverage_refs": [
+                    f"REQ-{index:03d}-{part:03d}-" + "x" * 160
+                    for part in range(100)
+                ],
+                "status": "OPEN",
+                "evidence": [],
+            })
+        self.assertEqual(len(existing), 2)
+        result = self.save_delivery_fixture(record, payload)
+        self.assertEqual(result["status"], "PINNED_CONTEXT")
+        self.assertGreater(record.stat().st_size, h.MAX_CONTINUITY_REFERENCE_BYTES)
+        self.assertLessEqual(record.stat().st_size, h.MAX_CONTINUITY_RECORD_BYTES)
+        self.assertEqual(
+            h.continuity_record(self.root, "work/checkpoint.json", "continuity")["delivery"]["requirements"],
+            delivery["requirements"],
+        )
+        self.assertEqual(
+            h.continuity_read(self.root, self.state, self.delivery_event)["status"],
+            "PINNED_CONTEXT",
+        )
+        self.assertRegex(
+            h.continuity_context_fingerprint(self.root, self.state), r"^[0-9a-f]{64}$",
+        )
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        reference = self.root / "work" / "large-reference.md"
+        reference.write_bytes(b"x" * (h.MAX_CONTINUITY_REFERENCE_BYTES + 1))
+        with self.assertRaisesRegex(ValueError, "bounded read limit"):
+            h.continuity_path(self.root, "work/large-reference.md")
+        json_reference = self.root / "work" / "large-reference.json"
+        json_reference.write_bytes(b"x" * (h.MAX_CONTINUITY_REFERENCE_BYTES + 1))
+        with self.assertRaisesRegex(ValueError, "bounded read limit"):
+            h.continuity_pins(
+                self.root, ["work/large-reference.json"], record_path="work/checkpoint.json",
+            )
 
     def test_continuity_mode_only_read_does_not_rewrite_engineering_state(self):
         self.make_continuity_record()
@@ -638,9 +751,8 @@ class EngineeringTests(unittest.TestCase):
         payload["continuity"]["remaining"] = ["New unreviewed work item."]
         payload["continuity"]["pending_effects"] = ["C6 publication receipt remains unresolved."]
         record.write_text(json.dumps(payload), "utf-8")
-        with mock.patch.object(eng, "_execute_verification_process") as execute:
-            with self.assertRaisesRegex(ValueError, "reread and rebind"):
-                self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
+        with mock.patch.object(eng, "_execute_verification_process") as execute, self.assertRaisesRegex(ValueError, "reread and rebind"):
+            self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
         execute.assert_not_called()
 
     def test_verification_runner_rejects_new_prompt_before_execution(self):
@@ -648,9 +760,8 @@ class EngineeringTests(unittest.TestCase):
         state_path, state = self.engineering_state()
         state["last_prompt_hash"] = "new-unreviewed-prompt-hash"
         h.save(state_path, state)
-        with mock.patch.object(eng, "_execute_verification_process") as execute:
-            with self.assertRaisesRegex(ValueError, "new prompt"):
-                self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
+        with mock.patch.object(eng, "_execute_verification_process") as execute, self.assertRaisesRegex(ValueError, "new prompt"):
+            self.run_verification("compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"])
         execute.assert_not_called()
 
     def test_verification_runner_retains_pending_effect_without_replay(self):
@@ -702,6 +813,7 @@ class EngineeringTests(unittest.TestCase):
             try:
                 results.append(self.run_verification("test", command, timeout_seconds=10))
             except Exception as error:
+                logger.exception("Isolated verification thread failed")
                 errors.append(error)
 
         with mock.patch.object(eng, "_execute_verification_process", side_effect=tracked_execute):
@@ -819,7 +931,7 @@ class EngineeringTests(unittest.TestCase):
         self.assertEqual(result["test_count"], 1)
         self.assertEqual(result["tests_passed"], 1)
         self.assertEqual(result["status"], "SUCCEEDED")
-        state_path, state = self.engineering_state()
+        _state_path, state = self.engineering_state()
         receipt = state["receipts"][-1]
         self.assertIn("pytest.ini", receipt["verification_paths"])
         self.assertEqual(receipt["pytest_selected_config"], "pytest.ini")
@@ -862,9 +974,8 @@ class EngineeringTests(unittest.TestCase):
             with self.subTest(contents=contents):
                 (self.root / "pytest.ini").write_text(contents, "utf-8")
                 self.bind_verification_scope(scope)
-                with mock.patch.object(eng, "_execute_verification_process") as execute:
-                    with self.assertRaisesRegex(ValueError, "explicit plugin control"):
-                        self.run_verification("test", self.pytest_argv(probe))
+                with mock.patch.object(eng, "_execute_verification_process") as execute, self.assertRaisesRegex(ValueError, "explicit plugin control"):
+                    self.run_verification("test", self.pytest_argv(probe))
                 execute.assert_not_called()
 
     def test_pyproject_pytest_addopts_plugin_load_is_rejected(self):
@@ -878,9 +989,8 @@ class EngineeringTests(unittest.TestCase):
         )
         scope = ["sample.py", "pyproject.toml", probe_rel]
         self.bind_verification_scope(scope)
-        with mock.patch.object(eng, "_execute_verification_process") as execute:
-            with self.assertRaisesRegex(ValueError, "explicit plugin control"):
-                self.run_verification("test", self.pytest_argv(probe))
+        with mock.patch.object(eng, "_execute_verification_process") as execute, self.assertRaisesRegex(ValueError, "explicit plugin control"):
+            self.run_verification("test", self.pytest_argv(probe))
         execute.assert_not_called()
 
     def test_pytest_native_toml_addopts_plugin_load_is_rejected(self):
@@ -894,10 +1004,8 @@ class EngineeringTests(unittest.TestCase):
         )
         scope = ["sample.py", "pyproject.toml", probe_rel]
         self.bind_verification_scope(scope)
-        with mock.patch.object(eng, "_pytest_version_tuple", return_value=(9, 0)):
-            with mock.patch.object(eng, "_execute_verification_process") as execute:
-                with self.assertRaisesRegex(ValueError, "explicit plugin control"):
-                    self.run_verification("test", self.pytest_argv(probe))
+        with mock.patch.object(eng, "_pytest_version_tuple", return_value=(9, 0)), mock.patch.object(eng, "_execute_verification_process") as execute, self.assertRaisesRegex(ValueError, "explicit plugin control"):
+            self.run_verification("test", self.pytest_argv(probe))
         execute.assert_not_called()
 
     def test_pytest_native_toml_config_addopts_parser(self):
@@ -982,9 +1090,8 @@ class EngineeringTests(unittest.TestCase):
                 probe = self.make_pytest_probe(contents)
                 probe_rel = probe.relative_to(self.root).as_posix()
                 self.bind_verification_scope(["sample.py", "pytest.ini", probe_rel])
-                with mock.patch.object(eng, "_execute_verification_process") as execute:
-                    with self.assertRaisesRegex(ValueError, "owner review required"):
-                        self.run_verification("test", self.pytest_argv(probe))
+                with mock.patch.object(eng, "_execute_verification_process") as execute, self.assertRaisesRegex(ValueError, "owner review required"):
+                    self.run_verification("test", self.pytest_argv(probe))
                 execute.assert_not_called()
 
     def test_pytest_target_allowlist_requires_exact_source_scope(self):
@@ -1041,9 +1148,8 @@ class EngineeringTests(unittest.TestCase):
                     path.write_text(json.dumps(payload), "utf-8")
                 else:
                     path.write_bytes(path.read_bytes() + b"\nchanged after Owner checkpoint\n")
-                with mock.patch.object(eng, "_execute_verification_process") as execute:
-                    with self.assertRaisesRegex(ValueError, "Owner task, authority, evidence"):
-                        self.run_verification("test", self.pytest_argv(probe))
+                with mock.patch.object(eng, "_execute_verification_process") as execute, self.assertRaisesRegex(ValueError, "Owner task, authority, evidence"):
+                    self.run_verification("test", self.pytest_argv(probe))
                 execute.assert_not_called()
 
     def test_c5_reviewed_admission_fixture_is_owner_and_hash_bound(self):
@@ -1218,13 +1324,11 @@ class EngineeringTests(unittest.TestCase):
                              [str(dart_exe.resolve()), "--version"])
 
         flutter_tools.unlink()
-        with mock.patch.object(eng.shutil, "which", side_effect=which):
-            with self.assertRaisesRegex(ValueError, "Flutter executable is UNAVAILABLE"):
-                eng._resolve_tool_argv("flutter", ["build", "web"])
+        with mock.patch.object(eng.shutil, "which", side_effect=which), self.assertRaisesRegex(ValueError, "Flutter executable is UNAVAILABLE"):
+            eng._resolve_tool_argv("flutter", ["build", "web"])
 
-        with mock.patch.object(eng.shutil, "which", return_value=None):
-            with self.assertRaisesRegex(ValueError, "Dart executable is UNAVAILABLE"):
-                eng._resolve_tool_argv("dart", ["analyze", "lib/main.dart"])
+        with mock.patch.object(eng.shutil, "which", return_value=None), self.assertRaisesRegex(ValueError, "Dart executable is UNAVAILABLE"):
+            eng._resolve_tool_argv("dart", ["analyze", "lib/main.dart"])
         ruff = eng._allowlisted_verification(
             "static", ["ruff.cmd", "check", "--select", "F", "--no-cache", "sample.py"], ["sample.py"]
         )
@@ -1253,7 +1357,9 @@ class EngineeringTests(unittest.TestCase):
         self.assertIn("Escalate only genuine", context)
 
     def test_failed_latest_test_wins(self):
-        self.edit(); self.verify(0); self.verify(1)
+        self.edit()
+        self.verify(0)
+        self.verify(1)
         self.assertEqual(self.handle("Stop").get("decision"), "block")
 
     def test_repeat_stop_terminates_without_success(self):
@@ -1308,7 +1414,7 @@ class EngineeringTests(unittest.TestCase):
         import re
         for name, pattern, _ in eng.ROUTES:
             with self.subTest(route=name):
-                re.compile(pattern, re.I)
+                re.compile(pattern, re.IGNORECASE)
         routes = eng.route_task("Flutter 页面 bug 阻塞，需要研究依赖和修复", ["app/lib/main.dart"])["routes"]
         self.assertTrue(any(item["skill"] == "lumenis-flutter-runtime" for item in routes))
         self.assertTrue(any(item["skill"] == "lumenis-testing" for item in routes))
@@ -1333,7 +1439,7 @@ class EngineeringTests(unittest.TestCase):
         environment = os.environ.copy()
         environment["USERPROFILE"] = str(isolated_home)
         environment["HOME"] = str(isolated_home)
-        proc = subprocess.run([sys.executable, "-X", "utf8", str(HOOK)], input=json.dumps(event, ensure_ascii=False).encode(), capture_output=True, env=environment)
+        proc = subprocess.run([sys.executable, "-X", "utf8", str(HOOK)], input=json.dumps(event, ensure_ascii=False).encode(), capture_output=True, env=environment, check=False)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
         state = h.state_file(event, self.root)
@@ -1354,7 +1460,7 @@ spec.loader.exec_module(hook)
 with hook.locked(Path(sys.argv[2])):
     os._exit(7)
 """
-        child = subprocess.run(self.lock_child(code, state_path), capture_output=True, text=True, timeout=15)
+        child = subprocess.run(self.lock_child(code, state_path), capture_output=True, text=True, timeout=15, check=False)
         self.assertEqual(child.returncode, 7, child.stderr)
         self.assertTrue(lock_path.exists(), "Kernel lock marker should survive process exit")
         with h.locked(state_path):
@@ -1380,9 +1486,8 @@ with hook.locked(Path(sys.argv[2])):
             while not ready_path.exists() and child.poll() is None and time.monotonic() < deadline:
                 time.sleep(0.025)
             self.assertTrue(ready_path.exists(), "Lock holder subprocess did not report acquisition")
-            with self.assertRaisesRegex(RuntimeError, "Concurrent state write"):
-                with h.locked(state_path):
-                    self.fail("An active process lock was bypassed")
+            with self.assertRaisesRegex(RuntimeError, "Concurrent state write"), h.locked(state_path):
+                self.fail("An active process lock was bypassed")
             self.assertIsNone(child.poll(), "The competing process must still hold its lock")
         finally:
             if child.poll() is None:
@@ -1393,10 +1498,1670 @@ with hook.locked(Path(sys.argv[2])):
         state_path = Path(self.temp.name) / "legacy-state.json"
         lock_path = state_path.with_suffix(".lock")
         lock_path.write_bytes(b"")
-        with self.assertRaisesRegex(RuntimeError, r"(?i)(legacy|verify|verification|核实)"):
-            with h.locked(state_path):
-                self.fail("An empty legacy lock must not be taken over")
+        with self.assertRaisesRegex(RuntimeError, r"(?i)(legacy|verify|verification|核实)"), h.locked(state_path):
+            self.fail("An empty legacy lock must not be taken over")
         self.assertEqual(lock_path.read_bytes(), b"", "Legacy marker must remain untouched")
+
+    def delivery_fixture(self, pending_effects=None):
+        """An isolated tool outcome; never a product acceptance receipt."""
+        record = self.make_continuity_record(pending_effects)
+        payload = json.loads(record.read_text("utf-8"))
+        payload["continuity"]["delivery"] = {
+            "schema_version": 1,
+            "status": "RUNNING",
+            "po_source": "Direct PO: finish both admitted tooling outcomes",
+            "scope_sources": [{"path": "AGENTS.md", "sha256": h.hashlib.sha256((self.root / "AGENTS.md").read_bytes()).hexdigest()}],
+            "effect_ledger": [
+                {"pending_effect_sha256": h._pending_effect_id(value), "status": "PENDING"}
+                for value in (pending_effects or [])
+            ],
+            "requirements": [
+                {"id": "TOOL-1", "outcome_class": "DEVELOPMENT_TOOL", "acceptance": "Actual tool workflow completes and can recover", "coverage_refs": ["tool-input", "tool-output", "tool-recovery"], "status": "OPEN", "evidence": []},
+                {"id": "TOOL-2", "outcome_class": "DEVELOPMENT_TOOL", "acceptance": "Published source and activated tool match", "coverage_refs": ["source", "loaded-version"], "status": "OPEN", "evidence": []},
+            ],
+        }
+        record.write_text(json.dumps(payload), "utf-8")
+        self.delivery_event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Complete the admitted tooling outcomes", turn_id="tooling-initial")
+        h.continuity_save(self.root, self.state, self.delivery_event, "work/checkpoint.json", "continuity")
+        return record, payload
+
+    def save_delivery_fixture(self, record, payload):
+        record.write_text(json.dumps(payload), "utf-8")
+        return h.continuity_save(self.root, self.state, self.delivery_event, "work/checkpoint.json", "continuity")
+
+    def direct_po_defer_receipt(self, prompt, turn_id, requirement_ids, source_path, requirements):
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt=prompt, turn_id=turn_id)
+        authorization = self.state.get("po_defer_authorization")
+        expected_ids = sorted(requirement_ids)
+        self.assertIsInstance(authorization, dict)
+        self.assertEqual(authorization["requirement_ids"], expected_ids)
+        self.assertEqual(authorization["prompt_hash"], self.state["last_prompt_hash"])
+        direct_source = "Direct PO instruction: " + prompt
+        source_lines = []
+        for requirement in requirements:
+            if requirement["id"] in expected_ids:
+                old_source = requirement.get("po_source", "")
+                requirement["po_source"] = " ".join(value for value in (old_source, direct_source) if value)
+                source_lines.append(requirement["po_source"])
+        source_text = "\n".join([
+            "Product Owner direct instruction receipt",
+            "PO_DEFERRED " + ", ".join(expected_ids),
+            *source_lines,
+            f"UserPromptSubmit prompt SHA-256: {authorization['prompt_hash']}",
+            f"UserPromptSubmit turn ID: {turn_id}",
+            "Deferred requirement IDs: " + ", ".join(expected_ids),
+            "",
+        ])
+        target = self.root / source_path
+        target.write_text(source_text, "utf-8")
+        return source_text
+
+    def delivery_stop(self, **extra):
+        return self.handle("Stop", **self.delivery_event, **extra)
+
+    def test_delivery_open_outcomes_block_even_without_source_changes(self):
+        self.delivery_fixture()
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_cannot_remove_required_item_by_rebinding(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["delivery"]["requirements"].pop()
+        with self.assertRaises(ValueError):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_cannot_narrow_acceptance_by_rebinding(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["delivery"]["requirements"][0]["acceptance"] = "Code exists"
+        with self.assertRaises(ValueError):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_cannot_drop_coverage_by_rebinding(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["delivery"]["requirements"][0]["coverage_refs"].pop()
+        with self.assertRaises(ValueError):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_rebinding_legacy_record_cannot_remove_guard(self):
+        record, payload = self.delivery_fixture()
+        del payload["continuity"]["delivery"]
+        with self.assertRaises(ValueError):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_defer_is_not_completion(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["delivery"]["requirements"][0]["status"] = "DEFER"
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_ci_and_implementation_cannot_close_outcomes(self):
+        record, payload = self.delivery_fixture()
+        for requirement in payload["continuity"]["delivery"]["requirements"]:
+            requirement["status"] = "INTEGRATED"
+        self.save_delivery_fixture(record, payload)
+        self.verify()
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_unverified_claimed_evidence_never_closes_task(self):
+        record, payload = self.delivery_fixture()
+        delivery = payload["continuity"]["delivery"]
+        delivery["status"] = "JOB_CLOSED"
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "JOB_CLOSED"
+        try:
+            self.save_delivery_fixture(record, payload)
+        except ValueError:
+            return
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_stop_retry_is_bounded(self):
+        self.delivery_fixture()
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertFalse(self.delivery_stop(stop_hook_active=True).get("continue", True))
+
+    def test_delivery_clarification_keeps_full_outcome_open(self):
+        self.delivery_fixture()
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="#17和Slack也全部包括，对的", turn_id="clarification")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_blocked_without_reason_and_evidence_is_not_an_exit(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["delivery"]["status"] = "EXTERNAL_BLOCKED"
+        try:
+            self.save_delivery_fixture(record, payload)
+        except ValueError:
+            return
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def close_delivery_fixture(self, record, payload):
+        item = payload["continuity"]
+        item["remaining"] = []
+        item["delivery"]["status"] = "JOB_CLOSED"
+        head = self.git("rev-parse", "HEAD").strip()
+        required_sources = [*item["source_paths"], *(source["path"] for source in item["delivery"]["scope_sources"])]
+        pins = {name: h.hashlib.sha256((self.root / name).read_bytes()).hexdigest() for name in required_sources}
+        for requirement in item["delivery"]["requirements"]:
+            requirement["status"] = "JOB_CLOSED"
+            for kind in ("TOOL_WORKFLOW", "RECOVERY"):
+                name = f"work/{requirement['id']}-{kind}.json"
+                receipt = {
+                    "schema_version": 1, "requirement_id": requirement["id"],
+                    "kind": kind, "result": "ACCEPTED", "head": head,
+                    "source_pins": pins,
+                    "observation": "Isolated hook fixture, not real product acceptance",
+                }
+                (self.root / name).write_text(json.dumps(receipt), "utf-8")
+                item["evidence_paths"].append(name)
+                requirement["evidence"].append({
+                    "path": name, "sha256": h.hashlib.sha256((self.root / name).read_bytes()).hexdigest(),
+                    "kind": kind, "result": "ACCEPTED", "head": head, "source_pins": pins,
+                })
+        self.save_delivery_fixture(record, payload)
+
+    def reopen_delivery_requirement_without_refresh(self, record, payload, identifier="TOOL-1"):
+        self.close_delivery_fixture(record, payload)
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        delivery["status"] = "RUNNING"
+        requirement = next(value for value in delivery["requirements"] if value["id"] == identifier)
+        requirement["status"] = "OPEN"
+        item["remaining"] = [f"{identifier} was reopened and remains unverified."]
+        record.write_text(json.dumps(payload), "utf-8")
+
+    def add_delivery_receipts(self, item, requirement):
+        head = self.git("rev-parse", "HEAD").strip()
+        required_sources = [*item["source_paths"],
+                            *(source["path"] for source in item["delivery"]["scope_sources"])]
+        pins = {name: h.hashlib.sha256((self.root / name).read_bytes()).hexdigest()
+                for name in required_sources}
+        for kind in ("TOOL_WORKFLOW", "RECOVERY"):
+            name = f"work/{requirement['id']}-{kind}-current.json"
+            receipt = {
+                "schema_version": 1, "requirement_id": requirement["id"],
+                "kind": kind, "result": "ACCEPTED", "head": head,
+                "source_pins": pins,
+                "observation": "Isolated receipt pins the complete declared source scope",
+            }
+            (self.root / name).write_text(json.dumps(receipt), "utf-8")
+            item["evidence_paths"].append(name)
+            requirement["evidence"].append({
+                "path": name, "sha256": h.hashlib.sha256((self.root / name).read_bytes()).hexdigest(),
+                "kind": kind, "result": "ACCEPTED", "head": head, "source_pins": pins,
+            })
+        requirement["status"] = "JOB_CLOSED"
+        return pins
+
+    def block_delivery_fixture(self, record, payload):
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        delivery["status"] = "EXTERNAL_BLOCKED"
+        receipt_paths = []
+        head = self.git("rev-parse", "HEAD").strip()
+        pins = {name: h.hashlib.sha256((self.root / name).read_bytes()).hexdigest()
+                for name in [*item["source_paths"], *(source["path"] for source in delivery["scope_sources"])]}
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "BLOCKED"
+            name = f"work/{requirement['id']}-EXTERNAL-BLOCKER.json"
+            receipt = {
+                "schema_version": 1, "requirement_id": requirement["id"],
+                "kind": "EXTERNAL_BLOCKER", "result": "BLOCKED", "head": head,
+                "source_pins": pins,
+                "observation": "Isolated fixture records a concrete external dependency blocker",
+            }
+            (self.root / name).write_text(json.dumps(receipt), "utf-8")
+            item["evidence_paths"].append(name)
+            requirement["evidence"].append({
+                "path": name, "sha256": h.hashlib.sha256((self.root / name).read_bytes()).hexdigest(),
+                "kind": "EXTERNAL_BLOCKER", "result": "BLOCKED", "head": head, "source_pins": pins,
+            })
+            receipt_paths.append(name)
+        item["remaining"] = ["The two admitted tool outcomes remain blocked by the documented external dependency."]
+        delivery["exit"] = {
+            "reason": "EXTERNAL_BLOCKED: both outcomes need the named external dependency.",
+            "evidence_path": receipt_paths[0],
+            "resume_condition": "Resume after the external dependency is available and read back.",
+        }
+        self.save_delivery_fixture(record, payload)
+
+    def resolve_effect_fixture(self, payload, effect):
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        effect_id = h._pending_effect_id(effect)
+        head = self.git("rev-parse", "HEAD").strip()
+        sources = [*item["source_paths"], *(value["path"] for value in delivery["scope_sources"])]
+        pins = {name: h.hashlib.sha256((self.root / name).read_bytes()).hexdigest() for name in sources}
+        receipt = {
+            "schema_version": 1,
+            "pending_effect_sha256": effect_id,
+            "resolution": "RECONCILED",
+            "head": head,
+            "source_pins": pins,
+            "observation": "Isolated fixture has an exact terminal readback for this operation",
+        }
+        name = f"work/effect-resolution-{effect_id[:16]}.json"
+        receipt_path = self.root / name
+        receipt_path.write_text(json.dumps(receipt), "utf-8")
+        item["evidence_paths"].append(name)
+        ledger_entry = next(value for value in delivery["effect_ledger"]
+                            if value["pending_effect_sha256"] == effect_id)
+        ledger_entry.update({
+            "status": "RESOLVED",
+            "path": name,
+            "sha256": h.hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+        })
+        item["pending_effects"].remove(effect)
+        return receipt_path
+
+    def test_delivery_complete_current_outcomes_and_recovery_allow_stop(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_delivery_supports_100_complete_outcomes_with_real_and_recovery_receipts(self):
+        record, payload = self.delivery_fixture()
+        requirements = payload["continuity"]["delivery"]["requirements"]
+        for index in range(3, 101):
+            requirements.append({
+                "id": f"TOOL-{index}",
+                "outcome_class": "DEVELOPMENT_TOOL",
+                "acceptance": f"Complete the admitted tool operation {index} with a useful readback and recoverable saved result. "
+                              + "Confirm the actual workflow outcome and restored state. " * 18,
+                "coverage_refs": [f"tool-{index}-operation", f"tool-{index}-recovery"],
+                "status": "OPEN",
+                "evidence": [],
+            })
+        self.save_delivery_fixture(record, payload)
+        self.close_delivery_fixture(record, payload)
+        self.assertEqual(len(payload["continuity"]["delivery"]["requirements"]), 100)
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_delivery_switch_rechecks_prior_record_and_new_requirement(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        next_record = self.root / "work/next.json"
+        next_record.write_text(json.dumps(payload), "utf-8")
+        payload["continuity"]["delivery"]["status"] = "RUNNING"
+        payload["continuity"]["delivery"]["requirements"].append({
+            "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+            "acceptance": "Newly admitted full recovery outcome",
+            "coverage_refs": ["recovery"], "status": "OPEN", "evidence": [],
+        })
+        record.write_text(json.dumps(payload), "utf-8")
+        with self.assertRaisesRegex(ValueError, "unfinished delivery"):
+            h.continuity_save(self.root, self.state, self.delivery_event, "work/next.json", "continuity")
+        self.assertEqual(self.state["delivery_guard"]["record"], "work/checkpoint.json")
+
+    def test_delivery_switch_rechecks_current_source_receipts(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        next_payload = {"continuity": self.continuity_item()}
+        (self.root / "work/next.json").write_text(json.dumps(next_payload), "utf-8")
+        self.edit(99)
+        with self.assertRaises(ValueError):
+            h.continuity_save(self.root, self.state, self.delivery_event, "work/next.json", "continuity")
+        self.assertEqual(self.state["delivery_guard"]["record"], "work/checkpoint.json")
+
+    def test_delivery_current_closed_record_can_switch(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        (self.root / "work/next.json").write_text(json.dumps({"continuity": self.continuity_item()}), "utf-8")
+        h.continuity_save(self.root, self.state, self.delivery_event, "work/next.json", "continuity")
+        self.assertEqual(self.state["continuity"]["record"], "work/next.json")
+        self.assertNotIn("delivery_guard", self.state)
+
+    def test_new_execution_prompt_cannot_switch_to_legacy_or_old_closed_record(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Implement the new reporting outcome", turn_id="new-reporting-outcome")
+        for next_item in (self.continuity_item(), payload["continuity"]):
+            (self.root / "work/next.json").write_text(json.dumps({"continuity": next_item}), "utf-8")
+            with self.assertRaisesRegex(ValueError, "admit its required outcome"):
+                h.continuity_save(self.root, self.state, self.delivery_event, "work/next.json", "continuity")
+            self.assertEqual(self.state["delivery_guard"]["record"], "work/checkpoint.json")
+        payload["continuity"]["delivery"]["status"] = "RUNNING"
+        payload["continuity"]["delivery"]["requirements"].append({
+            "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+            "acceptance": "New reporting operation saves and reopens its real result",
+            "coverage_refs": ["reporting", "save", "reopen"], "status": "OPEN", "evidence": [],
+        })
+        payload["continuity"]["remaining"] = ["TOOL-3 reporting outcome remains open"]
+        (self.root / "work/next.json").write_text(json.dumps(payload), "utf-8")
+        h.continuity_save(self.root, self.state, self.delivery_event, "work/next.json", "continuity")
+        self.assertEqual(self.state["delivery_guard"]["record"], "work/next.json")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_clear_keeps_scope_and_requires_rebind(self):
+        record, payload = self.delivery_fixture()
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        self.assertNotIn("continuity", self.state)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertEqual(set(self.state["delivery_guard"]["requirements"]), {"TOOL-1", "TOOL-2"})
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.state["continuity"]["record"], "work/checkpoint.json")
+
+    def test_delivery_old_closure_requires_current_prompt_reconciliation(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="继续实现新增的产品要求", turn_id="new-outcome")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertIn("new Product Owner message", self.state["last_delivery_reason"] if "last_delivery_reason" in self.state else h.delivery_stop_check(self.root, self.state, self.delivery_event)[1])
+
+    def test_delivery_old_closure_cannot_refresh_only_prompt_hash(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="继续实现新产品能力", turn_id="new-required-outcome")
+        with self.assertRaisesRegex(ValueError, "closed outcomes unchanged"):
+            self.save_delivery_fixture(record, payload)
+        payload["continuity"]["delivery"]["status"] = "RUNNING"
+        payload["continuity"]["delivery"]["requirements"].append({
+            "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+            "acceptance": "New direct PO outcome with actual recovery",
+            "coverage_refs": ["new-task"], "status": "OPEN", "evidence": [],
+        })
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_changed_running_prompt_requires_new_outcome_admission(self):
+        record, payload = self.delivery_fixture()
+        prior_prompt_hash = self.state["delivery_guard"]["prompt_hash"]
+        self.handle(
+            "UserPromptSubmit", **self.delivery_event,
+            prompt="Add a new saved export and recovery outcome",
+            turn_id="new-export-recovery",
+        )
+        with self.assertRaisesRegex(ValueError, "must admit its required outcome"):
+            self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.state["delivery_guard"]["prompt_hash"], prior_prompt_hash)
+
+        payload["continuity"]["delivery"]["requirements"].append({
+            "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+            "acceptance": "The new export saves and reopens its real result",
+            "coverage_refs": ["export", "save", "reopen"],
+            "status": "OPEN", "evidence": [],
+        })
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(
+            self.state["delivery_guard"]["prompt_reconciliation"],
+            {
+                "prompt_hash": self.state["last_prompt_hash"],
+                "mode": "NEW_OUTCOME_REQUIRED",
+                "requirement_ids": ["TOOL-1", "TOOL-2", "TOOL-3"],
+            },
+        )
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_pure_continue_and_accelerate_reconcile_existing_open_outcomes(self):
+        record, payload = self.delivery_fixture()
+        for prompt, turn_id in (
+            ("Please continue the current work.", "continue-current-work"),
+            ("加快当前任务，不改范围", "accelerate-current-scope"),
+        ):
+            with self.subTest(prompt=prompt):
+                self.handle(
+                    "UserPromptSubmit", **self.delivery_event, prompt=prompt, turn_id=turn_id
+                )
+                self.save_delivery_fixture(record, payload)
+                self.assertEqual(
+                    self.state["delivery_guard"]["prompt_reconciliation"]["mode"],
+                    "CONTINUE_CURRENT",
+                )
+                self.assertEqual(
+                    self.state["delivery_guard"]["prompt_reconciliation"]["requirement_ids"],
+                    ["TOOL-1", "TOOL-2"],
+                )
+        self.assertEqual(
+            h.classify_delivery_prompt_reconciliation(
+                "Continue the current work and add a new export outcome", "RUNNING"
+            ),
+            "NEW_OUTCOME_REQUIRED",
+        )
+        self.assertEqual(
+            h.classify_delivery_prompt_reconciliation(
+                "Continue the full outcome after the new instruction", "RUNNING"
+            ),
+            "CONTINUE_CURRENT",
+        )
+
+    def test_external_blocker_exit_cannot_be_rebound_to_a_new_prompt(self):
+        record, payload = self.delivery_fixture()
+        self.block_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Continue the full outcome after the new instruction", turn_id="blocker-new-prompt")
+        payload["continuity"]["delivery"]["exit"]["reason"] += "."
+        with self.assertRaisesRegex(ValueError, "reason and resume condition"):
+            self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+        delivery = payload["continuity"]["delivery"]
+        old_receipt = self.root / delivery["exit"]["evidence_path"]
+        receipt = json.loads(old_receipt.read_text("utf-8"))
+        receipt["observation"] = "Fresh isolated readback still proves the same external dependency is unavailable"
+        old_receipt.write_text(json.dumps(receipt), "utf-8")
+        for requirement in delivery["requirements"]:
+            evidence = requirement["evidence"][0]
+            evidence_path = self.root / evidence["path"]
+            evidence_body = json.loads(evidence_path.read_text("utf-8"))
+            evidence_body["observation"] = (
+                "Fresh isolated readback still proves the named external dependency is unavailable for "
+                + requirement["id"]
+            )
+            evidence_path.write_text(json.dumps(evidence_body), "utf-8")
+            evidence["sha256"] = h.hashlib.sha256(evidence_path.read_bytes()).hexdigest()
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_po_deferred_cannot_be_laundered_through_running_or_clear(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        deferred = delivery["requirements"][1]
+        source_path = "work/po-deferred.md"
+        self.close_delivery_fixture(record, payload)
+        deferred["status"] = "PO_DEFERRED"
+        delivery["status"] = "PO_DEFERRED"
+        item["remaining"] = ["TOOL-2 remains deferred until the named approval is received."]
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED: TOOL-2 remains open under the direct PO instruction.",
+            "evidence_path": source_path,
+            "resume_condition": "Resume TOOL-2 only when its named Product Owner approval is received.",
+        }
+        record.write_text(json.dumps(payload), "utf-8")
+        self.direct_po_defer_receipt(
+            "Please defer TOOL-2 until its named approval is received.",
+            "deferred-current-turn", {"TOOL-2"}, source_path, delivery["requirements"],
+        )
+        item["evidence_paths"].append(source_path)
+        delivery["scope_sources"].append({
+            "path": source_path, "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertFalse(self.state["delivery_exit"]["closed"])
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-2"])
+
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Resume TOOL-2 and continue the approved work", turn_id="deferred-resume")
+        delivery["status"] = "RUNNING"
+        deferred["status"] = "OPEN"
+        item["remaining"] = ["TOOL-2 was reopened and remains unverified."]
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        original_source = (self.root / source_path).read_bytes()
+        (self.root / source_path).write_bytes(original_source + b"changed after admission\n")
+        stale_receipt = self.delivery_stop()
+        self.assertIs(stale_receipt.get("continue"), False, stale_receipt)
+        self.assertIn("Structured delivery could not be verified", stale_receipt["stopReason"])
+        (self.root / source_path).write_bytes(original_source)
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        cleared_stop = self.delivery_stop()
+        self.assertTrue(cleared_stop.get("decision") == "block" or cleared_stop.get("continue") is False,
+                        cleared_stop)
+
+        delivery["status"] = "PO_DEFERRED"
+        deferred["status"] = "PO_DEFERRED"
+        item["remaining"] = ["TOOL-2 remains deferred under a direct current instruction."]
+        record.write_text(json.dumps(payload), "utf-8")
+        with self.assertRaisesRegex(ValueError, "explicit current UserPromptSubmit"):
+            self.save_delivery_fixture(record, payload)
+        stopped = self.delivery_stop()
+        self.assertTrue(stopped.get("decision") == "block" or stopped.get("continue") is False, stopped)
+
+        renewed_path = "work/po-deferred-renewed.md"
+        renewed_prompt = "Please defer TOOL-2 until its renewed named approval is received."
+        self.direct_po_defer_receipt(
+            renewed_prompt, "deferred-renewal-turn", {"TOOL-2"}, renewed_path,
+            delivery["requirements"],
+        )
+        item["evidence_paths"].append(renewed_path)
+        delivery["scope_sources"].append({
+            "path": renewed_path, "sha256": h.hashlib.sha256((self.root / renewed_path).read_bytes()).hexdigest(),
+        })
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED: TOOL-2 remains open under the renewed direct PO instruction.",
+            "evidence_path": renewed_path,
+            "resume_condition": "Resume TOOL-2 only after its renewed named approval is received.",
+        }
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertEqual(delivery["status"], "PO_DEFERRED")
+    def test_delivery_clear_preserves_unverified_mutations(self):
+        self.delivery_fixture()
+        before = self.state["baseline"]["fingerprint"]
+        self.edit()
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        self.assertEqual(self.state["baseline"]["fingerprint"], before)
+        self.assertTrue(self.state["mutation_observed"])
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="只汇报，不要修改", turn_id="status-after-clear")
+        self.delivery_stop()
+        self.assertTrue(self.state["mutation_observed"])
+
+    def test_delivery_implementation_paths_are_append_only_and_normalized(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["source_paths"] = ["./sample.py"]
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.state["delivery_guard"]["source_paths"], ["sample.py"])
+        payload["continuity"]["source_paths"] = []
+        with self.assertRaisesRegex(ValueError, "implementation source path"):
+            self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.state["delivery_guard"]["source_paths"], ["sample.py"])
+
+    def test_delivery_closure_rejects_remaining_continuity_work(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        payload["continuity"]["remaining"].append("A required user outcome remains open")
+        with self.assertRaisesRegex(ValueError, "remaining list to be empty"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_receipts_survive_unrelated_head_advance(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        (self.root / "unrelated.md").write_text("An unrelated commit.\n", "utf-8")
+        self.git("add", "unrelated.md")
+        self.git("commit", "-qm", "unrelated source change")
+        self.assertEqual(self.delivery_stop(), {})
+        evidence = payload["continuity"]["delivery"]["requirements"][0]["evidence"][0]
+        self.assertNotEqual(evidence["head"], self.git("rev-parse", "HEAD").strip())
+
+    def test_delivery_scope_addition_preserves_closed_receipt_and_pins_open_work(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        first, second = delivery["requirements"]
+        item["remaining"] = ["TOOL-2 remains open under its existing acceptance."]
+        self.add_delivery_receipts(item, first)
+        self.save_delivery_fixture(record, payload)
+        frozen_first_evidence = list(first["evidence"])
+        legacy_requirement_guard = self.state["delivery_guard"]["requirements"]["TOOL-1"]
+        legacy_requirement_guard.pop("closed_evidence")
+        legacy_requirement_guard.pop("needs_current_evidence")
+        legacy_requirement_guard.pop("closure_source_pins")
+
+        added_source = "work/scope-for-tool-2.md"
+        (self.root / added_source).write_text("Approved scope source for the remaining TOOL-2 outcome.\n", "utf-8")
+        added_hash = h.hashlib.sha256((self.root / added_source).read_bytes()).hexdigest()
+        delivery["scope_sources"].append({"path": added_source, "sha256": added_hash})
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(first["evidence"], frozen_first_evidence)
+        self.assertTrue(all(added_source not in evidence["source_pins"] for evidence in first["evidence"]))
+        self.assertNotIn(
+            added_source,
+            self.state["delivery_guard"]["requirements"]["TOOL-1"]["closure_source_pins"],
+        )
+        self.assertIn(added_source, self.state["delivery_guard"]["scope_sources"])
+
+        added_ref = next(value for value in delivery["scope_sources"] if value["path"] == added_source)
+        delivery["scope_sources"].remove(added_ref)
+        with self.assertRaisesRegex(ValueError, "remove a frozen scope source"):
+            self.save_delivery_fixture(record, payload)
+        delivery["scope_sources"].append(added_ref)
+        self.save_delivery_fixture(record, payload)
+
+        current_pins = self.add_delivery_receipts(item, second)
+        self.assertIn(added_source, current_pins)
+        item["remaining"] = []
+        delivery["status"] = "JOB_CLOSED"
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_verification_runner_reuses_frozen_guard_after_scope_addition(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        first, _ = delivery["requirements"]
+        item["remaining"] = ["TOOL-2 remains open under its existing acceptance."]
+        self.add_delivery_receipts(item, first)
+        self.save_delivery_fixture(record, payload)
+
+        added_source = "work/verification-scope.md"
+        (self.root / added_source).write_text("Current approved implementation scope.\n", "utf-8")
+        delivery["scope_sources"].append({
+            "path": added_source,
+            "sha256": h.hashlib.sha256((self.root / added_source).read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+        state_path = eng.HOOKS.state_file(self.delivery_event, self.root)
+        eng.HOOKS.save(state_path, self.state)
+
+        result = self.run_verification(
+            "compile", ["python", "-X", "utf8", "-m", "py_compile", "sample.py"]
+        )
+        self.assertEqual(result["status"], "SUCCEEDED", result)
+        self.assertEqual(result["process_exit_code"], 0)
+
+    def test_delivery_scope_addition_rejects_replaced_historical_receipt(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        first = delivery["requirements"][0]
+        item["remaining"] = ["TOOL-2 remains open under its existing acceptance."]
+        self.add_delivery_receipts(item, first)
+        self.save_delivery_fixture(record, payload)
+
+        added_source = "work/scope-for-tool-2.md"
+        (self.root / added_source).write_text("Approved scope source for the remaining TOOL-2 outcome.\n", "utf-8")
+        delivery["scope_sources"].append({
+            "path": added_source,
+            "sha256": h.hashlib.sha256((self.root / added_source).read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+
+        frozen_ref = first["evidence"][0]
+        receipt_path = self.root / frozen_ref["path"]
+        receipt = json.loads(receipt_path.read_text("utf-8"))
+        receipt["observation"] = "A replacement observation attempts to reuse the historical scope pins"
+        receipt_path.write_text(json.dumps(receipt), "utf-8")
+        frozen_ref["sha256"] = h.hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(ValueError, "cannot be removed or replaced"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_old_scope_receipt_cannot_be_claimed_without_original_session_guard(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        first = delivery["requirements"][0]
+        item["remaining"] = ["TOOL-2 remains open under its existing acceptance."]
+        self.add_delivery_receipts(item, first)
+        self.save_delivery_fixture(record, payload)
+
+        added_source = "work/scope-for-tool-2.md"
+        (self.root / added_source).write_text("Approved scope source for the remaining TOOL-2 outcome.\n", "utf-8")
+        delivery["scope_sources"].append({
+            "path": added_source,
+            "sha256": h.hashlib.sha256((self.root / added_source).read_bytes()).hexdigest(),
+        })
+        record.write_text(json.dumps(payload), "utf-8")
+        new_event = {"session_id": "different-engineering-session", "agent_id": "bounded-test-agent"}
+        with self.assertRaisesRegex(ValueError, "complete current source scope"):
+            h.continuity_save(self.root, self.state, new_event,
+                              "work/checkpoint.json", "continuity")
+
+    def test_delivery_scope_addition_still_rejects_changed_old_pinned_source(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        first = delivery["requirements"][0]
+        item["remaining"] = ["TOOL-2 remains open under its existing acceptance."]
+        self.add_delivery_receipts(item, first)
+        self.save_delivery_fixture(record, payload)
+
+        added_source = "work/scope-for-tool-2.md"
+        (self.root / added_source).write_text("Approved scope source for the remaining TOOL-2 outcome.\n", "utf-8")
+        delivery["scope_sources"].append({
+            "path": added_source,
+            "sha256": h.hashlib.sha256((self.root / added_source).read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+
+        (self.root / "AGENTS.md").write_text("Changed original frozen source.\n", "utf-8")
+        with self.assertRaisesRegex(ValueError, "stale"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_changed_source_invalidates_previous_closure(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        (self.root / "sample.py").write_text("value = 43\n", "utf-8")
+        with self.assertRaisesRegex(ValueError, "source pins are stale"):
+            self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_reopen_changed_source_requires_current_receipts_and_preserves_history(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        historical_refs = {
+            requirement["id"]: json.loads(json.dumps(requirement["evidence"]))
+            for requirement in delivery["requirements"]
+        }
+        historical_bytes = {
+            evidence["path"]: (self.root / evidence["path"]).read_bytes()
+            for requirement in delivery["requirements"]
+            for evidence in requirement["evidence"]
+        }
+
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Reopen the existing outcome after its implementation source changed",
+                    turn_id="reopen-changed-source")
+        delivery["status"] = "RUNNING"
+        item["remaining"] = ["Revalidate the changed implementation source and recover the outcome."]
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "OPEN"
+        self.save_delivery_fixture(record, payload)
+
+        (self.root / "sample.py").write_text("value = 43\n", "utf-8")
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+        delivery["status"] = "JOB_CLOSED"
+        item["remaining"] = []
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "JOB_CLOSED"
+        with self.assertRaisesRegex(ValueError, "fresh receipts for the complete current source scope"):
+            self.save_delivery_fixture(record, payload)
+
+        delivery["status"] = "RUNNING"
+        item["remaining"] = ["Revalidate the changed implementation source and recover the outcome."]
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "OPEN"
+        self.save_delivery_fixture(record, payload)
+        for requirement in delivery["requirements"]:
+            self.add_delivery_receipts(item, requirement)
+        delivery["status"] = "JOB_CLOSED"
+        item["remaining"] = []
+        self.save_delivery_fixture(record, payload)
+
+        self.verify()
+        self.assertEqual(self.delivery_stop(), {})
+        for requirement in delivery["requirements"]:
+            self.assertEqual(requirement["evidence"][:2], historical_refs[requirement["id"]])
+            self.assertNotEqual(
+                requirement["evidence"][-1]["source_pins"]["sample.py"],
+                historical_refs[requirement["id"]][0]["source_pins"]["sample.py"],
+            )
+        for path, body in historical_bytes.items():
+            self.assertEqual((self.root / path).read_bytes(), body)
+
+    def test_delivery_changed_authority_outside_source_scope_blocks_closure(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        authority = self.root / h.VERIFICATION_POLICY_PATH
+        authority.write_text(authority.read_text("utf-8") + "\n", "utf-8")
+        self.assertIn("PINNED_INPUT_CHANGED", h.continuity_read(
+            self.root, self.state, self.delivery_event)["reasons"])
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_changed_receipt_cannot_reuse_previous_closure(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        receipt = self.root / payload["continuity"]["delivery"]["requirements"][0]["evidence"][0]["path"]
+        body = json.loads(receipt.read_text("utf-8"))
+        body["result"] = "NOT_VERIFIED"
+        receipt.write_text(json.dumps(body), "utf-8")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_delivery_new_prompt_does_not_erase_unverified_source_edits(self):
+        self.delivery_fixture()
+        self.edit()
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="继续完成全部任务", turn_id="continue")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_fresh_execution_cannot_bind_historical_terminal_delivery(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        for terminal in ("JOB_CLOSED", "EXTERNAL_BLOCKED"):
+            with self.subTest(terminal=terminal):
+                if terminal == "EXTERNAL_BLOCKED":
+                    self.block_delivery_fixture(record, payload)
+                self.state.pop("delivery_guard", None)
+                self.state.pop("continuity", None)
+                self.handle("UserPromptSubmit", **self.delivery_event,
+                            prompt="Complete the newly requested full outcome", turn_id=terminal)
+                with self.assertRaisesRegex(ValueError, "fresh execution binding"):
+                    self.save_delivery_fixture(record, payload)
+                self.assertNotIn("delivery_guard", self.state)
+                payload["continuity"]["delivery"]["status"] = "RUNNING"
+                if terminal == "JOB_CLOSED":
+                    with self.assertRaisesRegex(ValueError, "fresh execution binding"):
+                        self.save_delivery_fixture(record, payload)
+                    payload["continuity"]["delivery"]["requirements"].append({
+                        "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+                        "acceptance": "New task produces current operation and recovery evidence",
+                        "coverage_refs": ["new-task"], "status": "OPEN", "evidence": [],
+                    })
+                    payload["continuity"]["remaining"] = ["Complete TOOL-3."]
+                self.save_delivery_fixture(record, payload)
+                self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_readonly_turn_detects_bound_record_and_receipt_mutations(self):
+        record, payload = self.delivery_fixture()
+        (self.root / ".gitignore").write_text("work/\n", "utf-8")
+        evidence = self.root / payload["continuity"]["evidence_paths"][0]
+        for path in (record, evidence):
+            with self.subTest(path=path.name):
+                self.handle("UserPromptSubmit", **self.delivery_event,
+                            prompt="只回答当前进度，不要修改或执行任务。", turn_id=path.name)
+                original = path.read_bytes()
+                path.write_bytes(original + b"\n")
+                self.assertEqual(self.delivery_stop().get("decision"), "block")
+                self.assertIn(path.relative_to(self.root).as_posix(),
+                              self.state["report_turn_changed_paths"])
+                path.write_bytes(original)
+
+    def test_readonly_turn_keeps_frozen_evidence_scope_after_clear(self):
+        _record, payload = self.delivery_fixture()
+        evidence = self.root / payload["continuity"]["evidence_paths"][0]
+        (self.root / ".gitignore").write_text("work/\n", "utf-8")
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="只回答当前进度，不要修改或执行任务。", turn_id="cleared-record-report")
+        evidence.write_bytes(evidence.read_bytes() + b"\n")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertIn(evidence.relative_to(self.root).as_posix(),
+                      self.state["report_turn_changed_paths"])
+
+    def test_readonly_turn_can_answer_without_revalidating_historical_edits(self):
+        self.edit()
+        self.handle("UserPromptSubmit", prompt="只回答当前进度，不要修改或执行任务。", turn_id="report-only")
+        self.assertEqual(self.handle("Stop"), {})
+        self.assertTrue(self.state["mutation_observed"], "Historical verification debt must remain")
+
+    def test_legacy_continuity_can_reconcile_without_new_delivery_opt_in(self):
+        self.bind_continuity_scope()
+        path = self.root / "work/checkpoint.json"
+        payload = json.loads(path.read_text("utf-8"))
+        payload["continuity"]["next_action"] = "Continue the unchanged full outcome after a new PO clarification"
+        path.write_text(json.dumps(payload), "utf-8")
+        event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
+        result = h.continuity_save(self.root, self.state, event, "work/checkpoint.json", "continuity")
+        self.assertEqual(result["status"], "PINNED_CONTEXT")
+
+    def test_delivery_newly_added_requirement_is_also_frozen(self):
+        record, payload = self.delivery_fixture()
+        requirements = payload["continuity"]["delivery"]["requirements"]
+        extra = dict(requirements[0], id="TOOL-3", acceptance="Newly authorized complete tool operation")
+        requirements.append(extra)
+        self.save_delivery_fixture(record, payload)
+        requirements.pop()
+        with self.assertRaises(ValueError):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_outcome_class_cannot_be_changed_to_evade_e2e(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["delivery"]["requirements"][0]["outcome_class"] = "PRODUCT"
+        with self.assertRaises(ValueError):
+            self.save_delivery_fixture(record, payload)
+
+    def test_product_delivery_rejects_tool_workflow_receipts(self):
+        record, payload = self.delivery_fixture()
+        # Fresh isolated task admission as a product requirement, no earlier guard.
+        self.state.pop("delivery_guard")
+        for requirement in payload["continuity"]["delivery"]["requirements"]:
+            requirement["outcome_class"] = "PRODUCT"
+        self.save_delivery_fixture(record, payload)
+        with self.assertRaises(ValueError):
+            self.close_delivery_fixture(record, payload)
+
+    def test_readonly_instruction_does_not_exempt_new_source_mutation(self):
+        self.handle("UserPromptSubmit", prompt="只回答当前进度，不要修改或执行任务。", turn_id="report-only")
+        self.edit()
+        self.assertEqual(self.handle("Stop").get("decision"), "block")
+
+    def test_quoted_pause_policy_is_not_current_pause(self):
+        prompts = [
+            "请修复规则中‘暂停所有窗口’的错误描述并继续完成任务",
+            "文档示例：等我审核完。请把它作为历史引用保留并继续实现",
+            "先给我报告，然后继续完成全部修复",
+            "#17和Slack全部包括，对的",
+        ]
+        for prompt in prompts:
+            with self.subTest(prompt=prompt):
+                self.assertEqual(h.classify_turn_exit(prompt), "RUNNING")
+
+    def test_readonly_turn_detects_explicit_ignored_source_change(self):
+        record, payload = self.delivery_fixture()
+        (self.root / ".gitignore").write_text("local-source/\n", "utf-8")
+        source = self.root / "local-source/owned.py"
+        source.parent.mkdir()
+        source.write_text("value = 1\n", "utf-8")
+        payload["continuity"]["source_paths"].append("local-source/owned.py")
+        self.save_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="只回答当前进度，不要修改或执行任务。", turn_id="report-only")
+        source.write_text("value = 2\n", "utf-8")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_clear_then_readonly_turn_retains_frozen_implementation_scope(self):
+        self.delivery_fixture()
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        self.assertNotIn("continuity", self.state)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="只回答当前进度，不要修改或执行任务。", turn_id="cleared-report")
+        self.edit()
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertIn("sample.py", self.state["report_turn_changed_paths"])
+
+    def test_report_only_scope_normalizes_dot_paths_before_intersection(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["source_paths"] = ["./sample.py"]
+        self.save_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="只回答当前进度，不要修改或执行任务。", turn_id="dot-path-report")
+        self.edit()
+        output = self.delivery_stop()
+        self.assertEqual(output.get("decision"), "block")
+        self.assertEqual(self.state["report_turn_changed_paths"], ["sample.py"])
+
+    def test_continuity_supports_more_than_twenty_evidence_paths(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        for index in range(21):
+            name = f"work/evidence-{index:02}.json"
+            (self.root / name).write_text("{}\n", "utf-8")
+            item["evidence_paths"].append(name)
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(len(item["evidence_paths"]), 22)
+
+    def test_direct_english_pause_and_approval_wait_are_recognized(self):
+        self.assertEqual(h.classify_turn_exit("Pause all tasks and wait for my review"), "PO_PAUSED")
+        self.assertEqual(h.classify_turn_exit("Wait for my approval before continuing."), "APPROVAL_WAIT")
+        self.delivery_fixture()
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Pause all tasks and wait for my review", turn_id="english-pause")
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertFalse(self.state["delivery_exit"]["closed"])
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1", "TOOL-2"])
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Wait for my approval before continuing.", turn_id="english-approval")
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertEqual(self.state["delivery_exit"]["mode"], "APPROVAL_WAIT")
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1", "TOOL-2"])
+        self.assertEqual(
+            h.classify_turn_exit("The note says ‘Pause all tasks and wait for my review’; continue with the fix"),
+            "RUNNING",
+        )
+        self.assertEqual(
+            h.classify_turn_exit("Pause all tasks and wait for my review, then continue the code fix"),
+            "RUNNING",
+        )
+
+    def test_bare_english_pause_imperatives_are_full_matches_only(self):
+        for prompt in ("Pause.", "Please pause.", "Stop."):
+            with self.subTest(prompt=prompt):
+                self.assertEqual(h.classify_turn_exit(prompt), "PO_PAUSED")
+        self.assertEqual(h.classify_turn_exit("Please pause, then continue the fix"), "RUNNING")
+
+    def test_pause_remaining_ids_use_current_reopened_requirement_status(self):
+        record, payload = self.delivery_fixture()
+        self.reopen_delivery_requirement_without_refresh(record, payload)
+        self.assertIn("TOOL-1", self.state["delivery_guard"]["closed_ids"])
+        self.handle(
+            "UserPromptSubmit", **self.delivery_event, prompt="Pause.", turn_id="pause-reopened"
+        )
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1"])
+
+    def test_report_remaining_ids_use_current_reopened_requirement_status(self):
+        record, payload = self.delivery_fixture()
+        self.reopen_delivery_requirement_without_refresh(record, payload)
+        self.assertIn("TOOL-1", self.state["delivery_guard"]["closed_ids"])
+        self.handle(
+            "UserPromptSubmit", **self.delivery_event,
+            prompt="What is the current status? Do not modify anything.",
+            turn_id="report-reopened",
+        )
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1"])
+
+    def test_chinese_approval_wait_requires_the_entire_prompt_to_match(self):
+        self.assertEqual(h.classify_turn_exit("批准前先等待"), "APPROVAL_WAIT")
+        self.assertEqual(
+            h.classify_turn_exit("批准前先等待这句话是错误的，请继续修复"),
+            "RUNNING",
+        )
+
+    def test_english_status_only_request_is_report_but_mixed_work_continues(self):
+        self.assertEqual(h.classify_turn_exit("What is the current status?"), "REPORT_ONLY")
+        self.assertEqual(
+            h.classify_turn_exit("Please tell me the current status only; do not modify anything"),
+            "REPORT_ONLY",
+        )
+        self.assertEqual(
+            h.classify_turn_exit("What is the current status? Please continue fixing the issue."),
+            "RUNNING",
+        )
+        for action in ("add CSV export", "create the report", "remove the old rule",
+                       "delete obsolete code", "ship the accepted repair"):
+            with self.subTest(action=action):
+                self.assertEqual(h.classify_turn_exit(
+                    f"What is the current status? Please {action}."), "RUNNING")
+        self.assertEqual(h.classify_turn_exit("报告当前进度，再新增导出入口"), "RUNNING")
+        for prompt in ("What is the current status? Please do not modify anything.",
+                       "报告当前进度。不要修改文件。"):
+            with self.subTest(prompt=prompt):
+                self.assertEqual(h.classify_turn_exit(prompt), "REPORT_ONLY")
+        self.assertEqual(h.classify_turn_exit(
+            "What is the current status? Please do not modify anything. Then add CSV export."),
+            "RUNNING")
+
+    def test_english_negation_does_not_swallow_a_later_positive_action(self):
+        self.assertEqual(
+            h.classify_turn_exit(
+                "What is the current status? Please do not modify files and then implement the fix."
+            ),
+            "RUNNING",
+        )
+        self.assertEqual(
+            h.classify_turn_exit(
+                "请告诉我当前状态；do not modify files and then implement the fix."
+            ),
+            "RUNNING",
+        )
+
+    def test_user_prompt_text_cannot_suppress_real_turn_as_synthetic(self):
+        self.delivery_fixture()
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="所有任务暂停，等我审核完", turn_id="real-pause-before-marker")
+        self.assertEqual(self.state["turn_exit_mode"], "PO_PAUSED")
+        prior_hash = self.state["last_prompt_hash"]
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="The <hook_prompt> handling is wrong; continue fixing it",
+                    turn_id="real-user-marker-text")
+        self.assertNotEqual(self.state["last_prompt_hash"], prior_hash)
+        self.assertEqual(self.state["turn_id"], "real-user-marker-text")
+        self.assertEqual(self.state["turn_exit_mode"], "RUNNING")
+
+    def test_po_deferred_is_a_source_pinned_non_closure_exit(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        source_path = "work/agent-authored-po-marker.md"
+        source_text = (
+            "Product Owner direct instruction receipt\n"
+            "PO_DEFERRED TOOL-1, TOOL-2\n"
+            "Direct PO instruction: defer TOOL-1 and TOOL-2 until approval.\n"
+        )
+        (self.root / source_path).write_text(source_text, "utf-8")
+        item["evidence_paths"].append(source_path)
+        delivery["scope_sources"].append({
+            "path": source_path, "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
+        })
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "PO_DEFERRED"
+            requirement["po_source"] = "Direct PO instruction: defer TOOL-1 and TOOL-2 until approval."
+        delivery["status"] = "PO_DEFERRED"
+        item["remaining"] = ["TOOL-1 and TOOL-2 remain deferred under the direct instruction."]
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED: TOOL-1 and TOOL-2 remain open.",
+            "evidence_path": source_path,
+            "resume_condition": "Resume only after the named approval is received.",
+        }
+        record.write_text(json.dumps(payload), "utf-8")
+        for prompt, turn_id in (
+            ("Do not defer TOOL-1 or TOOL-2 until approval; continue the existing work.",
+             "no-deferral-current-turn"),
+            ("Please defer TOOL-1 and TOOL-2 until approval, and add a new outcome TOOL-3.",
+             "mixed-deferral-and-new-outcome"),
+        ):
+            self.handle("UserPromptSubmit", **self.delivery_event, prompt=prompt, turn_id=turn_id)
+            self.assertNotIn("po_defer_authorization", self.state)
+        with self.assertRaisesRegex(ValueError, "explicit current UserPromptSubmit"):
+            self.save_delivery_fixture(record, payload)
+        self.assertNotEqual(self.delivery_stop(), {})
+        self.assertIsNot(self.state.get("delivery_exit", {}).get("closed"), True)
+    def test_po_deferred_requires_complete_ids_in_reason_and_source(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        delivery["requirements"] = [delivery["requirements"][0]]
+        requirement = delivery["requirements"][0]
+        requirement["status"] = "PO_DEFERRED"
+        requirement["po_source"] = "Direct PO instruction: defer the named work until approval."
+        delivery["status"] = "PO_DEFERRED"
+        source_path = "work/po-deferred.md"
+        item["evidence_paths"].append(source_path)
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED: (TOOL-1)", "evidence_path": source_path,
+            "resume_condition": "Wait for the named Product Owner approval.",
+        }
+        for reason_id, source_id, accepted in (
+            ("TOOL-10", "TOOL-1", False),
+            ("TOOL-1", "TOOL-10", False),
+            ("TOOL-1", "TOOL-1.child", False),
+            ("TOOL-1", "TOOL-1:other", False),
+            ("TOOL-1", "TOOL-1/other", False),
+            ("TOOL-1", "TOOL-1", True),
+        ):
+            with self.subTest(reason_id=reason_id, source_id=source_id):
+                delivery["exit"]["reason"] = f"PO_DEFERRED: ({reason_id})"
+                source = self.root / source_path
+                source.write_text(f"Product Owner receipt: `{source_id}`\n{requirement['po_source']}\n", "utf-8")
+                delivery["scope_sources"] = [
+                    value for value in delivery["scope_sources"] if value["path"] != source_path
+                ] + [{"path": source_path, "sha256": h.hashlib.sha256(source.read_bytes()).hexdigest()}]
+                record.write_text(json.dumps(payload), "utf-8")
+                if accepted:
+                    h.continuity_record(self.root, "work/checkpoint.json", "continuity")
+                else:
+                    with self.assertRaisesRegex(ValueError, "must name"):
+                        h.continuity_record(self.root, "work/checkpoint.json", "continuity")
+
+    def test_po_deferred_cannot_hide_open_independent_work(self):
+        record, payload = self.delivery_fixture()
+        delivery = payload["continuity"]["delivery"]
+        delivery["status"] = "PO_DEFERRED"
+        delivery["requirements"][0]["status"] = "PO_DEFERRED"
+        delivery["requirements"][0]["po_source"] = "Direct PO instruction: defer TOOL-1."
+        source_path = "work/po-deferred.md"
+        (self.root / source_path).write_text(
+            "Product Owner direct instruction\nPO_DEFERRED TOOL-1\n"
+            "Direct PO instruction: defer TOOL-1.\n", "utf-8"
+        )
+        payload["continuity"]["evidence_paths"].append(source_path)
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED: TOOL-1 remains open.",
+            "evidence_path": source_path,
+            "resume_condition": "Resume after the named approval.",
+        }
+        with self.assertRaisesRegex(ValueError, "every remaining requirement"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_chinese_direct_po_receipt_can_authorize_exact_deferred_ids(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        delivery = item["delivery"]
+        source_path = "work/po-chinese.md"
+        for requirement in delivery["requirements"]:
+            requirement["status"] = "PO_DEFERRED"
+        delivery["status"] = "PO_DEFERRED"
+        item["remaining"] = ["TOOL-1 and TOOL-2 await the named approval."]
+        delivery["exit"] = {
+            "reason": "PO_DEFERRED：TOOL-1、TOOL-2",
+            "evidence_path": source_path,
+            "resume_condition": "收到产品负责人明确恢复指令后继续。",
+        }
+        record.write_text(json.dumps(payload), "utf-8")
+        self.direct_po_defer_receipt(
+            "请将 TOOL-1、TOOL-2 暂缓，等待审核通过后恢复。",
+            "po-chinese-defer-turn", {"TOOL-1", "TOOL-2"}, source_path,
+            delivery["requirements"],
+        )
+        item["evidence_paths"].append(source_path)
+        delivery["scope_sources"].append({
+            "path": source_path, "sha256": h.hashlib.sha256((self.root / source_path).read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertFalse(self.state["delivery_exit"]["closed"])
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1", "TOOL-2"])
+    def test_direct_pause_preserves_remaining_without_closure(self):
+        self.delivery_fixture()
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="所有任务暂停，等我审核完", turn_id="pause")
+        self.assertEqual(self.delivery_stop(), {})
+        self.assertFalse(self.state["delivery_exit"]["closed"])
+        self.assertEqual(self.state["delivery_exit"]["remaining_ids"], ["TOOL-1", "TOOL-2"])
+
+    def test_pause_records_post_prompt_source_changes_and_stops_without_rollback(self):
+        self.delivery_fixture()
+        for index, (prompt, mode) in enumerate((
+            ("Pause.", "PO_PAUSED"),
+            ("Wait for my approval before continuing.", "APPROVAL_WAIT"),
+        )):
+            with self.subTest(mode=mode):
+                self.handle(
+                    "UserPromptSubmit", **self.delivery_event,
+                    prompt=prompt, turn_id=f"pause-after-write-{index}",
+                )
+                self.edit(42 + index)
+                output = self.delivery_stop()
+                self.assertFalse(output["continue"])
+                self.assertIn("UNAUTHORIZED/RECONCILIATION_REQUIRED", output["stopReason"])
+                self.assertIn("sample.py", output["stopReason"])
+                self.assertEqual((self.root / "sample.py").read_text("utf-8"), f"value = {42 + index}\n")
+                self.assertEqual(self.state["pause_turn_changed_paths"], ["sample.py"])
+                self.assertTrue(self.state["pause_turn_mutation_observed"])
+                self.assertEqual(
+                    self.state["verification_status"],
+                    "PAUSE_WITH_POST_PAUSE_MUTATION_REQUIRES_RECONCILIATION",
+                )
+                self.assertEqual(self.state["delivery_exit"]["mode"], mode)
+                self.assertEqual(
+                    self.state["delivery_exit"]["post_pause_changes_state"],
+                    "UNVERIFIED_RETAINED",
+                )
+                self.assertFalse(self.state["delivery_exit"]["post_pause_changes_rolled_back"])
+                self.assertEqual(self.state["delivery_exit"]["post_pause_changed_paths"], ["sample.py"])
+
+    def test_frozen_scope_source_paths_are_canonicalized_before_rebind(self):
+        record, payload = self.delivery_fixture()
+        source = self.root / "work/scope-source.md"
+        source.parent.mkdir(exist_ok=True)
+        source.write_text("Current source scope input.\n", "utf-8")
+        payload["continuity"]["delivery"]["scope_sources"].append({
+            "path": "./work\\scope-source.md",
+            "sha256": h.hashlib.sha256(source.read_bytes()).hexdigest(),
+        })
+        self.save_delivery_fixture(record, payload)
+        self.assertIn("work/scope-source.md", self.state["delivery_guard"]["scope_sources"])
+        self.assertNotIn("./work\\scope-source.md", self.state["delivery_guard"]["scope_sources"])
+
+        payload["continuity"]["delivery"]["scope_sources"][1]["path"] = "work/scope-source.md"
+        self.save_delivery_fixture(record, payload)
+        self.assertIn("work/scope-source.md", self.state["delivery_guard"]["scope_sources"])
+        self.assertEqual(self.state["delivery_guard"]["scope_sources"]["work/scope-source.md"], [
+            h.hashlib.sha256(source.read_bytes()).hexdigest()
+        ])
+
+    def test_delivery_pending_effect_prevents_closure(self):
+        effect = "operation-cth-publish-17 remains unresolved pending durable readback"
+        record, payload = self.delivery_fixture([effect])
+        payload["continuity"]["pending_effects"] = []
+        with self.assertRaisesRegex(ValueError, "ledger"):
+            self.close_delivery_fixture(record, payload)
+
+    def test_effect_ledger_rejects_non_object_entries_with_type_error(self):
+        effect = "operation-cth-publish-24 rejects malformed ledger entries"
+        record, payload = self.delivery_fixture([effect])
+        payload["continuity"]["delivery"]["effect_ledger"][0] = "not-an-object"
+        with self.assertRaisesRegex(TypeError, "Invalid external-effect ledger entry"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_effect_receipt_rejects_non_object_json_with_type_error(self):
+        effect = "operation-cth-publish-25 rejects non-object terminal receipts"
+        record, payload = self.delivery_fixture([effect])
+        receipt_path = self.resolve_effect_fixture(payload, effect)
+        receipt_path.write_text(json.dumps(["not-an-object"]), "utf-8")
+        payload["continuity"]["delivery"]["effect_ledger"][0]["sha256"] = (
+            h.hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+        )
+        with self.assertRaisesRegex(TypeError, "receipt must be a JSON object"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_nonclosure_history_rejects_non_object_with_type_error(self):
+        record, payload = self.delivery_fixture()
+        self.block_delivery_fixture(record, payload)
+        self.state["delivery_guard"]["nonclosure_exits"] = []
+        with self.assertRaisesRegex(TypeError, "non-closure exit history is invalid"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_pending_effect_can_close_only_with_its_frozen_resolution_receipt(self):
+        effect = "operation-cth-publish-18 remains unresolved pending durable readback"
+        record, payload = self.delivery_fixture([effect])
+        receipt_path = self.resolve_effect_fixture(payload, effect)
+        self.close_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        reopened_state = {}
+        reopened_event = {"session_id": "engineering-reopen-thread", "agent_id": "bounded-test-agent"}
+        original_receipt = receipt_path.read_bytes()
+        original_record = record.read_bytes()
+        resumed_payload = json.loads(original_record)
+        resumed_payload["continuity"]["delivery"]["status"] = "RUNNING"
+        resumed_payload["continuity"]["remaining"] = ["Complete the newly admitted tool outcome."]
+        resumed_payload["continuity"]["delivery"]["requirements"].append({
+            "id": "TOOL-3", "outcome_class": "DEVELOPMENT_TOOL",
+            "acceptance": "New execution retains exact external-effect ownership",
+            "coverage_refs": ["effect-recovery"], "status": "OPEN", "evidence": [],
+        })
+        record.write_text(json.dumps(resumed_payload), "utf-8")
+        with self.assertRaisesRegex(ValueError, "first be frozen as PENDING"):
+            h.continuity_save(
+                self.root, reopened_state, reopened_event, "work/checkpoint.json", "continuity"
+            )
+        record.write_bytes(original_record)
+        self.assertEqual(receipt_path.read_bytes(), original_receipt)
+        receipt_path.write_text(receipt_path.read_text("utf-8") + "\n", "utf-8")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_long_running_delivery_can_append_and_freeze_a_new_pending_effect(self):
+        first = "operation-cth-publish-19 remains unresolved pending durable readback"
+        second = "operation-cth-publish-20 is newly pending in the same task"
+        record, payload = self.delivery_fixture([first])
+        item = payload["continuity"]
+        ledger = item["delivery"]["effect_ledger"]
+        item["pending_effects"].append(second)
+        ledger.append({"pending_effect_sha256": h._pending_effect_id(second), "status": "PENDING"})
+        self.save_delivery_fixture(record, payload)
+        self.assertEqual(
+            self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(second)]["status"],
+            "PENDING",
+        )
+
+        item["pending_effects"].remove(second)
+        ledger.pop()
+        with self.assertRaisesRegex(ValueError, "cannot remove"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_effect_admission_reserves_capacity_for_resolution_and_outcomes(self):
+        effect = "First bounded publication pending readback"
+        record, payload = self.delivery_fixture([effect])
+        self.resolve_effect_fixture(payload, effect)
+        self.save_delivery_fixture(record, payload)
+        item = payload["continuity"]
+        required_capacity = len(item["evidence_paths"]) + 2 * len(item["delivery"]["requirements"])
+        with mock.patch.object(h, "MAX_EVIDENCE_PATHS", required_capacity):
+            self.save_delivery_fixture(record, payload)
+            second = "Another publication must reserve a future receipt slot"
+            item["pending_effects"].append(second)
+            item["delivery"]["effect_ledger"].append({
+                "pending_effect_sha256": h._pending_effect_id(second), "status": "PENDING",
+            })
+            with self.assertRaisesRegex(ValueError, "Evidence capacity"):
+                self.save_delivery_fixture(record, payload)
+            item["pending_effects"].pop()
+            item["delivery"]["effect_ledger"].pop()
+            self.close_delivery_fixture(record, payload)
+            self.assertEqual(self.delivery_stop(), {})
+
+    def test_reopened_requirement_reserves_fresh_receipts_despite_historical_kinds(self):
+        record, payload = self.delivery_fixture()
+        self.reopen_delivery_requirement_without_refresh(record, payload)
+        item = payload["continuity"]
+        target_count = h.MAX_EVIDENCE_PATHS - 2
+        for index in range(target_count - len(item["evidence_paths"])):
+            name = f"work/capacity-reservation-{index:03}.json"
+            (self.root / name).write_text("{}\n", "utf-8")
+            item["evidence_paths"].append(name)
+        self.save_delivery_fixture(record, payload)
+
+        effect = "A new effect must leave room for two fresh reopened-outcome receipts"
+        item["pending_effects"].append(effect)
+        item["delivery"]["effect_ledger"].append({
+            "pending_effect_sha256": h._pending_effect_id(effect), "status": "PENDING",
+        })
+        with self.assertRaisesRegex(ValueError, "Evidence capacity"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_delivery_rejects_duplicate_receipt_references_before_reopening_files(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        evidence = payload["continuity"]["delivery"]["requirements"][0]["evidence"]
+        evidence.append(dict(evidence[0]))
+        receipt_path = (self.root / evidence[0]["path"]).resolve()
+        reads = 0
+        original_read_bytes = Path.read_bytes
+
+        def counted_read_bytes(path):
+            nonlocal reads
+            if path.resolve() == receipt_path:
+                reads += 1
+            return original_read_bytes(path)
+
+        with mock.patch.object(Path, "read_bytes", new=counted_read_bytes), self.assertRaisesRegex(
+                ValueError, "referenced only once"):
+            self.save_delivery_fixture(record, payload)
+        self.assertEqual(reads, 0)
+
+    def test_delivery_evidence_verification_caches_receipt_and_source_reads(self):
+        record, payload = self.delivery_fixture()
+        item = payload["continuity"]
+        for requirement in item["delivery"]["requirements"]:
+            self.add_delivery_receipts(item, requirement)
+            requirement["status"] = "OPEN"
+        item["delivery"]["status"] = "RUNNING"
+        item["remaining"] = ["The current evidence is retained while verification remains open."]
+        self.save_delivery_fixture(record, payload)
+
+        receipt_path = (self.root / item["delivery"]["requirements"][0]["evidence"][0]["path"]).resolve()
+        source_path = (self.root / "sample.py").resolve()
+        targets = {receipt_path, source_path}
+        reads = {path: 0 for path in targets}
+        original_read_bytes = Path.read_bytes
+
+        def counted_read_bytes(path):
+            resolved = path.resolve()
+            if resolved in reads:
+                reads[resolved] += 1
+            return original_read_bytes(path)
+
+        evidence = item["delivery"]["requirements"][0]["evidence"][0]
+        verification_cache = {"receipts": {}, "sources": {}}
+        with mock.patch.object(Path, "read_bytes", new=counted_read_bytes):
+            for _ in range(2):
+                self.assertTrue(h._delivery_evidence_is_current(
+                    self.root, item, item["delivery"]["requirements"][0]["id"],
+                    evidence, "ACCEPTED", verification_cache=verification_cache,
+                ))
+        self.assertEqual(reads[receipt_path], 1)
+        self.assertEqual(reads[source_path], 1)
+
+    def test_new_effect_cannot_enter_the_ledger_already_resolved(self):
+        first = "operation-cth-publish-21 remains unresolved pending durable readback"
+        second = "operation-cth-publish-22 may not bypass initial pending admission"
+        record, payload = self.delivery_fixture([first])
+        item = payload["continuity"]
+        item["pending_effects"].append(second)
+        item["delivery"]["effect_ledger"].append({
+            "pending_effect_sha256": h._pending_effect_id(second), "status": "PENDING",
+        })
+        self.resolve_effect_fixture(payload, second)
+        with self.assertRaisesRegex(ValueError, "first be frozen as PENDING"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_empty_frozen_effect_ledger_cannot_admit_already_resolved_effect(self):
+        record, payload = self.delivery_fixture()
+        self.assertEqual(self.state["delivery_guard"]["pending_effects"], {})
+        effect = "A new remote publication needs pending admission before its resolution"
+        item = payload["continuity"]
+        item["pending_effects"].append(effect)
+        item["delivery"]["effect_ledger"].append({
+            "pending_effect_sha256": h._pending_effect_id(effect), "status": "PENDING",
+        })
+        self.resolve_effect_fixture(payload, effect)
+        with self.assertRaisesRegex(ValueError, "first be frozen as PENDING"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_resolved_effect_receipt_survives_a_later_source_edit(self):
+        effect = "operation-cth-publish-23 terminal readback must not be replayed"
+        record, payload = self.delivery_fixture([effect])
+        receipt_path = self.resolve_effect_fixture(payload, effect)
+        self.save_delivery_fixture(record, payload)
+        original_receipt = receipt_path.read_bytes()
+
+        source = self.root / "sample.py"
+        source.write_text(source.read_text("utf-8") + "\n# later authorized source revision\n", "utf-8")
+        self.save_delivery_fixture(record, payload)
+
+        validation = h.validate_delivery(self.root, payload["continuity"])
+        self.assertEqual(
+            validation["effect_ledger"][h._pending_effect_id(effect)]["status"], "RESOLVED"
+        )
+        self.assertEqual(
+            self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(effect)]["status"],
+            "RESOLVED",
+        )
+        self.assertEqual(receipt_path.read_bytes(), original_receipt)
+
+    def test_delivery_receipt_cannot_omit_other_in_scope_source(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        for requirement in payload["continuity"]["delivery"]["requirements"]:
+            for evidence in requirement["evidence"]:
+                evidence["source_pins"].pop("AGENTS.md", None)
+                path = self.root / evidence["path"]
+                receipt = json.loads(path.read_text("utf-8"))
+                receipt["source_pins"] = evidence["source_pins"]
+                path.write_text(json.dumps(receipt), "utf-8")
+                evidence["sha256"] = h.hashlib.sha256(path.read_bytes()).hexdigest()
+        with self.assertRaises(ValueError):
+            self.save_delivery_fixture(record, payload)
+
+    def test_review_same_text_new_turn_requires_reconciliation(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt="Complete the admitted tooling outcomes", turn_id="second-identical-request")
+        readback = h.continuity_read(self.root, self.state, self.delivery_event)
+        self.assertIn("NEW_MESSAGE_SINCE_CHECKPOINT", readback["reasons"])
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        with self.assertRaisesRegex(ValueError, "new execution prompt"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_review_scope_source_alias_remains_pinned(self):
+        record, payload = self.delivery_fixture()
+        payload["continuity"]["delivery"]["scope_sources"][0]["path"] = "./AGENTS.md"
+        self.assertEqual(self.save_delivery_fixture(record, payload)["status"], "PINNED_CONTEXT")
+
+    def test_review_ignored_owned_source_requires_static_and_regressions(self):
+        record, payload = self.delivery_fixture()
+        (self.root / ".gitignore").write_text("ignored-owned.py\n", "utf-8")
+        source = self.root / "ignored-owned.py"
+        source.write_text("value = 1\n", "utf-8")
+        payload["continuity"]["source_paths"].append("ignored-owned.py")
+        self.save_delivery_fixture(record, payload)
+        source.write_text("value = 2\n", "utf-8")
+        self.handle("PostToolUse", tool_name="Bash", tool_input={"command": "write source"},
+                    tool_response={"exit_code": 0})
+        self.close_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.assertEqual(self.state["verification_status"], "BLOCKED_MISSING_SUCCESSFUL_CHECK")
+
+    def test_review_effect_resolution_retains_admission_version_after_edit(self):
+        effect = "Exact pending operation with durable admission identity"
+        record, payload = self.delivery_fixture([effect])
+        receipt = self.resolve_effect_fixture(payload, effect)
+        self.edit(2)
+        self.save_delivery_fixture(record, payload)
+        frozen = self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(effect)]
+        self.assertEqual(frozen["status"], "RESOLVED")
+        self.assertEqual(frozen["admission"]["source_pins"], json.loads(receipt.read_text())["source_pins"])
+
+    def test_review_effect_resolution_cannot_substitute_later_source_version(self):
+        effect = "Pending operation must not acquire later source provenance"
+        record, payload = self.delivery_fixture([effect])
+        self.edit(2)
+        self.resolve_effect_fixture(payload, effect)
+        with self.assertRaisesRegex(ValueError, "admission"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_review_native_same_turn_stop_continuation_preserves_po(self):
+        record, payload = self.delivery_fixture()
+        prior_binding = h._prompt_binding(self.state)
+        output = self.delivery_stop(turn_id="tooling-initial")
+        self.assertEqual(output.get("decision"), "block")
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt=output["reason"], turn_id="tooling-initial")
+        self.assertEqual(h._prompt_binding(self.state), prior_binding)
+        self.assertTrue(self.state["stop_continuation_used"])
+        self.close_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(turn_id="tooling-initial", stop_hook_active=True), {})
+
+    def test_review_stop_continuation_cannot_reset_retry_budget(self):
+        self.delivery_fixture()
+        output = self.delivery_stop(turn_id="tooling-initial")
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt=output["reason"], turn_id="tooling-initial")
+        self.assertFalse(self.delivery_stop(turn_id="tooling-initial").get("continue", True))
+
+    def test_review_same_reason_new_turn_is_user_instruction(self):
+        self.delivery_fixture()
+        output = self.delivery_stop(turn_id="tooling-initial")
+        self.handle("UserPromptSubmit", **self.delivery_event,
+                    prompt=output["reason"], turn_id="genuine-new-turn")
+        self.assertEqual(self.state["turn_id"], "genuine-new-turn")
+        self.assertFalse(self.state["stop_continuation_used"])
+
+    def test_review_blocked_exit_rechecks_authority(self):
+        record, payload = self.delivery_fixture()
+        self.block_delivery_fixture(record, payload)
+        self.assertEqual(self.delivery_stop(), {})
+        authority = self.root / h.VERIFICATION_POLICY_PATH
+        authority.write_text(authority.read_text() + "\n", "utf-8")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_review_frozen_exit_conditions_cannot_be_rewritten(self):
+        record, payload = self.delivery_fixture()
+        self.block_delivery_fixture(record, payload)
+        payload["continuity"]["delivery"]["exit"]["resume_condition"] = "Resume immediately."
+        with self.assertRaisesRegex(ValueError, "resume condition"):
+            self.save_delivery_fixture(record, payload)
+
+    def test_review_large_record_report_pause_and_clear(self):
+        self.test_large_structured_continuity_record_uses_record_budget_only()
+        for index, prompt in enumerate(("Current status", "Pause.", "只汇报，不要修改")):
+            if index == 2:
+                self.handle("SessionStart", source="clear", **self.delivery_event)
+            self.handle("UserPromptSubmit", **self.delivery_event,
+                        prompt=prompt if index else "What is the current status?", turn_id=f"large-exit-{index}")
+            self.assertEqual(self.delivery_stop(), {})
+
+    def test_review_dependency_waits_keep_work_open(self):
+        self.delivery_fixture()
+        for index, prompt in enumerate(("Wait for C1 to finish.", "Please wait until the dependency is available.",
+                                       "等待C1完成后再继续。", "请等依赖就绪。")):
+            self.handle("UserPromptSubmit", **self.delivery_event, prompt=prompt, turn_id=f"wait-{index}")
+            self.assertEqual(self.state["turn_exit_mode"], "PO_PAUSED")
+            self.assertEqual(self.delivery_stop(), {})
+            self.assertFalse(self.state["delivery_exit"]["closed"])
+        for prompt in ("Wait for C1 to finish and implement export.", "等待C1完成，同时实现导出。",
+                       "The file says 'Wait for C1 to finish.'"):
+            self.assertEqual(h.classify_turn_exit(prompt), "RUNNING")
+
+    def test_review_deferral_ids_preserve_embedded_and(self):
+        self.delivery_fixture()
+        for ids, text in ((["BRAND-1"], "Defer BRAND-1 until approval."),
+                          (["BRAND-1", "CANDIDATE-2"], "Defer BRAND-1 and CANDIDATE-2 until approval."),
+                          (["BRAND-1"], "请将BRAND-1暂缓，等待批准。")):
+            with mock.patch.object(h, "_current_delivery_remaining_ids", return_value=ids):
+                self.assertEqual(h._direct_po_defer_ids(self.root, self.state, text), ids)
+
+    def test_review_same_turn_user_pause_is_not_stop_continuation(self):
+        self.delivery_fixture()
+        self.delivery_stop(turn_id="tooling-initial")
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="Pause.", turn_id="tooling-initial")
+        self.assertEqual(self.state["turn_exit_mode"], "PO_PAUSED")
+        self.assertFalse(self.state["stop_continuation_used"])
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_review_missing_stop_turn_metadata_cannot_claim_po_continuation(self):
+        self.delivery_fixture()
+        original = h._prompt_binding(self.state)
+        output = self.delivery_stop()
+        result = self.handle("UserPromptSubmit", **self.delivery_event,
+                             prompt=output["reason"], turn_id="tooling-initial")
+        self.assertFalse(result["continue"])
+        self.assertEqual(h._prompt_binding(self.state), original)
+        self.assertTrue(self.state["stop_continuation_used"])
+
+    def test_review_same_text_without_turn_id_requires_reconciliation(self):
+        record, payload = self.delivery_fixture()
+        self.handle("UserPromptSubmit", **self.delivery_event, prompt="Continue")
+        self.save_delivery_fixture(record, payload)
+        prior = self.state["last_prompt_at"]
+        with mock.patch.object(h.time, "time", return_value=prior + 1):
+            self.handle("UserPromptSubmit", **self.delivery_event, prompt="Continue")
+        self.assertIn("NEW_MESSAGE_SINCE_CHECKPOINT", h.continuity_read(self.root, self.state, self.delivery_event)["reasons"])
+
+    def test_review_pending_admission_survives_scope_growth_and_clear(self):
+        effect = "Existing operation must preserve its exact initial source scope"
+        record, payload = self.delivery_fixture([effect])
+        self.resolve_effect_fixture(payload, effect)
+        source = self.root / "work/extra-scope.md"
+        source.write_text("Additional source scope", "utf-8")
+        payload["continuity"]["delivery"]["scope_sources"].append({
+            "path": "work/extra-scope.md", "sha256": h.hashlib.sha256(source.read_bytes()).hexdigest(),
+        })
+        self.handle("SessionStart", source="clear", **self.delivery_event)
+        self.save_delivery_fixture(record, payload)
+        frozen = self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(effect)]
+        self.assertEqual(frozen["status"], "RESOLVED")
+        self.assertNotIn("work/extra-scope.md", frozen["admission"]["source_pins"])
+
+    def test_review_deferred_exit_rechecks_authority(self):
+        self.test_chinese_direct_po_receipt_can_authorize_exact_deferred_ids()
+        authority = self.root / h.VERIFICATION_POLICY_PATH
+        authority.write_text(authority.read_text() + "\n", "utf-8")
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+
+    def test_review_scope_alias_can_close_without_false_removed_reference(self):
+        record, payload = self.delivery_fixture()
+        self.close_delivery_fixture(record, payload)
+        payload["continuity"]["delivery"]["scope_sources"][0]["path"] = "./AGENTS.md"
+        self.assertEqual(self.save_delivery_fixture(record, payload)["status"], "PINNED_CONTEXT")
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_review_ignored_source_without_posttool_event_still_needs_checks(self):
+        record, payload = self.delivery_fixture()
+        (self.root / ".gitignore").write_text("ignored-owned.py\n", "utf-8")
+        source = self.root / "ignored-owned.py"
+        source.write_text("value = 1\n", "utf-8")
+        payload["continuity"]["source_paths"].append("ignored-owned.py")
+        self.save_delivery_fixture(record, payload)
+        source.write_text("value = 2\n", "utf-8")
+        self.close_delivery_fixture(record, payload)
+        self.assertFalse(self.state["mutation_observed"])
+        self.assertEqual(self.delivery_stop().get("decision"), "block")
+        self.verify()
+        self.assertEqual(self.delivery_stop(), {})
+
+    def test_review_legacy_pending_without_admission_does_not_invent_version(self):
+        effect = "Legacy effect requires original operation version reconciliation"
+        record, payload = self.delivery_fixture([effect])
+        self.state["delivery_guard"]["pending_effects"][h._pending_effect_id(effect)].pop("admission")
+        self.resolve_effect_fixture(payload, effect)
+        with self.assertRaisesRegex(ValueError, "missing legacy admission"):
+            self.save_delivery_fixture(record, payload)
 
 if __name__ == "__main__":
     unittest.main()
