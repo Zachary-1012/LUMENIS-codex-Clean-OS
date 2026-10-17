@@ -26,7 +26,12 @@ Keep one `continuity` section in that record, not a new Task Card or scheduler.
 Frozen outcome IDs and normalized implementation source paths survive context clear.
 Rebinding to a different record requires rereading the prior record and validating
 its current closure receipts; cached closure alone is insufficient. A new direct
-PO message must be reconciled before reusing a closure, blocker or deferral exit.
+PO turn must be reconciled before reusing a closure, blocker or deferral exit,
+even when its text matches an earlier turn. A locally recorded Stop continuation
+is not a new PO authorization: preserve the original binding only when its native
+turn metadata and exact generated reason match the pending continuation. Missing
+or conflicting metadata requires reconciliation; ordinary user text never grants
+a bypass, and a new pause instruction remains authoritative.
 必须保留完整目标、最新 PO 来源与更正、约束、已有证据、全部未完项和下一步；
 摘要不是新的调度授权。原生 Goal 的旧暂停标记不能覆盖更新的直接 PO 指令。
 
@@ -60,12 +65,13 @@ SHA-256 identity with `status: PENDING`; those IDs must match the top-level
 `pending_effects` list. Resolve it by changing that entry to `RESOLVED` and
 including a declared local JSON receipt path plus the receipt SHA-256. The receipt
 identifies the same effect, records a terminal readback (`APPLIED`,
-`NOT_APPLIED`, `FAILED`, `CANCELLED` or `RECONCILED`), an observation and current
-pins for the complete admitted source scope. The ledger keeps the resolved entry
+`NOT_APPLIED`, `FAILED`, `CANCELLED` or `RECONCILED`), an observation and the
+complete source pins frozen when that operation was admitted as pending. The ledger keeps the resolved entry
 across sessions; its exact receipt reference is frozen. Its source pins and head
 describe the implementation version at the time of the operation. They are checked
 when the effect first resolves; a later source edit does not invalidate that
-historical readback or authorize replay. Current implementation acceptance still
+historical readback or authorize replay. Missing legacy admission pins require
+explicit reconciliation rather than substituting today's source version. Current implementation acceptance still
 uses its own current-source receipts. New effects may be appended as `PENDING`,
 then become immutable after their receipt is admitted. Removing the pending item
 or leaving the list empty alone cannot resolve an effect.
@@ -94,7 +100,9 @@ force repeat validation. Changed in-scope bytes still invalidate that evidence.
 Stop compares actual scoped changes with the original baseline, including committed
 changes; a clean tracked scoped file is not a change. Other Owners' mutations do
 not impose this task's checks. Frontend `.astro`/`.css` and bounded `.log` evidence
-are supported text pins; private/session/data exclusions remain enforced.
+are supported text pins; private/session/data exclusions remain enforced. Normal execution hashes the frozen owned paths against their original admission
+baseline, including ignored sources; report/pause snapshots also retain their
+scoped paths. Git ignore status cannot suppress verification requirements.
 
 - `PINNED_CONTEXT`: referenced bytes and recorded local version match; read the
   record and latest direct PO instruction. This is not authorization/acceptance.

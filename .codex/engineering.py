@@ -236,7 +236,8 @@ def validation_plan(paths):
 
 def git(*args):
     p = subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, encoding="utf-8", errors="strict", timeout=15)
-    if p.returncode: raise RuntimeError("Git read failed")
+    if p.returncode:
+        raise RuntimeError("Git read failed")
     return p.stdout.strip()
 
 def checked_path(value):
@@ -337,9 +338,11 @@ def repo_truth():
             "note": "Read-only inventory. Fetch origin before making remote-current claims; preserve existing local work."}
 
 def verification_plan(paths):
-    if not isinstance(paths, list) or len(paths) > 100: raise ValueError("At most 100 paths")
+    if not isinstance(paths, list) or len(paths) > 100:
+        raise ValueError("At most 100 paths")
     for value in paths:
-        if not isinstance(value, str): raise ValueError("Expected path strings")
+        if not isinstance(value, str):
+            raise ValueError("Expected path strings")
         checked_path(value)
     policy = current_verification_policy()
     if policy is None:
@@ -352,12 +355,15 @@ def verification_plan(paths):
             "executed": False}
 
 def source_owner(query):
-    if not isinstance(query, str) or len(query) > 80: raise ValueError("Query exceeds limit")
+    if not isinstance(query, str) or len(query) > 80:
+        raise ValueError("Query exceeds limit")
     lines = OWNER.read_text("utf-8-sig").splitlines()
     selected = set()
     for i, line in enumerate(lines):
-        if query.casefold() in line.casefold(): selected.update(range(max(0, i-1), min(len(lines), i+3)))
-        if len(selected) >= 60: break
+        if query.casefold() in line.casefold():
+            selected.update(range(max(0, i-1), min(len(lines), i+3)))
+        if len(selected) >= 60:
+            break
     return {"source": str(OWNER.relative_to(ROOT)), "query": query,
             "matches": [{"line": i+1, "text": lines[i]} for i in sorted(selected)[:60]],
             "note": "Current local owner document is routing evidence, not proof of implementation."}
@@ -1019,7 +1025,7 @@ def _verification_continuity_binding(state, event, scope_paths, additional_immut
     current_head = HOOKS.git(ROOT, "rev-parse", "HEAD").strip()
     if bound.get("head") != current_head:
         raise ValueError("Owner checkpoint HEAD changed; reread and rebind before verification")
-    if bound.get("prompt_hash") != state.get("last_prompt_hash"):
+    if not HOOKS._bound_prompt_matches(state, bound):
         raise ValueError("A new prompt is not covered by this Owner checkpoint; reread and rebind before verification")
     if bound.get("missing_authorities"):
         raise ValueError("Owner checkpoint authority pins are incomplete; reread and rebind before verification")
@@ -1038,6 +1044,7 @@ def _verification_continuity_binding(state, event, scope_paths, additional_immut
         "owner": item["owner"], "head": current_head,
         "prompt_hash": bound.get("prompt_hash"),
         "current_prompt_hash": state.get("last_prompt_hash"),
+        "prompt_binding": HOOKS._prompt_binding(state),
         "pending_effects": list(item["pending_effects"]),
         "pending_effects_retained_only": True,
         "pending_effects_replayed": False,
@@ -1424,14 +1431,21 @@ def shared_source_tool(action, params):
     return allowed[action](**params)
 
 def dispatch(action, params):
-    if action in {"source_read", "route_task", "static_check", "validation_plan"}: return shared_source_tool(action, params)
-    if action == "continuity": return continuity(params)
-    if action == "verification_run": return run_selected_verification(params)
-    if action == "capabilities": return config_inventory()
+    if action in {"source_read", "route_task", "static_check", "validation_plan"}:
+        return shared_source_tool(action, params)
+    if action == "continuity":
+        return continuity(params)
+    if action == "verification_run":
+        return run_selected_verification(params)
+    if action == "capabilities":
+        return config_inventory()
     functions = {"repo_truth": repo_truth, "runtime_health": runtime_health, "run_engineering_checks": run_engineering_checks, "config_inventory": config_inventory}
-    if action in functions: return functions[action]()
-    if action == "verification_plan": return verification_plan(params.get("paths", []))
-    if action == "source_owner": return source_owner(params.get("query", ""))
+    if action in functions:
+        return functions[action]()
+    if action == "verification_plan":
+        return verification_plan(params.get("paths", []))
+    if action == "source_owner":
+        return source_owner(params.get("query", ""))
     raise ValueError("Unknown engineering action")
 
 def main(argv=None):
