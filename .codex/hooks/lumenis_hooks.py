@@ -129,30 +129,53 @@ def eligible(relative: str) -> bool:
             and not any(p.lower() in {"data", ".git", "node_modules", ".playwright-cli"} for p in path.parts)
             and not any(word in path.name.lower() for word in ("cookie", "credential", "secret")))
 
-def snapshot(root: Path, pinned_paths: set[str] | None = None) -> dict:
+def _snapshot_input_path(root: Path, value: str, record_paths: set[str] | None = None) -> Path:
+    key = Path(value.replace("\\", "/")).as_posix()
+    return (continuity_record_key(root, value)[1] if key in (record_paths or set())
+            else continuity_path(root, value))
+
+
+def _record_scope_paths(state: dict) -> set[str]:
+    values = set(state.get("report_turn_record_paths", [])) | set(state.get("pause_turn_record_paths", []))
+    for key in ("continuity", "delivery_guard"):
+        binding = state.get(key)
+        if isinstance(binding, dict) and isinstance(binding.get("record"), str):
+            values.add(binding["record"])
+    return values
+
+
+def snapshot(root: Path, pinned_paths: set[str] | None = None,
+             record_paths: set[str] | None = None) -> dict:
     raw = git(root, "status", "--porcelain=v1", "-z", "--untracked-files=normal")
     records, files, i = raw.split("\0"), {}, 0
     while i < len(records):
-        entry = records[i]; i += 1
-        if not entry: continue
+        entry = records[i]
+        i += 1
+        if not entry:
+            continue
         status, relative = entry[:2], entry[3:]
-        if "R" in status or "C" in status: i += 1
-        if not eligible(relative): continue
+        if "R" in status or "C" in status:
+            i += 1
+        if not eligible(relative):
+            continue
         path = root / relative
-        if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()): continue
+        if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+            continue
         if path.is_file():
             stat = path.stat()
             value = hashlib.sha256(path.read_bytes()).hexdigest() if stat.st_size < 2000000 else f"large:{stat.st_size}:{stat.st_mtime_ns}"
-        else: value = "deleted"
+        else:
+            value = "deleted"
         files[relative] = value
     for value in pinned_paths or set():
-        path = continuity_path(root, value)
+        path = _snapshot_input_path(root, value, record_paths)
         relative = path.relative_to(root.resolve()).as_posix()
         if path.is_file():
             stat = path.stat()
             pinned_value = (
                 hashlib.sha256(path.read_bytes()).hexdigest()
-                if stat.st_size < 2000000 else f"large:{stat.st_size}:{stat.st_mtime_ns}"
+                if stat.st_size < 2000000 or relative in (record_paths or set())
+                else f"large:{stat.st_size}:{stat.st_mtime_ns}"
             )
         else:
             pinned_value = "deleted"
@@ -172,23 +195,27 @@ def command(event: dict) -> str:
     value = event.get("tool_input", {})
     if isinstance(value, dict):
         for key in ("command", "cmd", "script"):
-            if key in value: return str(value[key])
+            if key in value:
+                return str(value[key])
         return ""
     return str(value or "")
 
 def policy_reason(event: dict) -> str | None:
     name = str(event.get("tool_name", ""))
     execution = name in SHELL or bool(re.search(r"(?:start_process|execute_command|run_command)$", name))
-    if not execution: return None
+    if not execution:
+        return None
     for pattern, reason in PATTERNS:
-        if re.search(pattern, command(event), re.IGNORECASE): return reason
+        if re.search(pattern, command(event), re.IGNORECASE):
+            return reason
     return None
 
 def exit_status(response) -> int | None:
     if isinstance(response, dict):
         for key in ("exit_code", "exitCode", "returncode"):
             value = response.get(key)
-            if isinstance(value, int) and not isinstance(value, bool): return value
+            if isinstance(value, int) and not isinstance(value, bool):
+                return value
     # Tool output is user/process text and can contain arbitrary claims about
     # an exit status. Only a structured integer field is execution evidence.
     return None
@@ -196,10 +223,14 @@ def exit_status(response) -> int | None:
 def verification_kind(text: str) -> str | None:
     start = r"(?:^|[;\n]|&&)\s*(?:&\s*)?"
     py = r"(?:(?:[A-Za-z]:)?[^\s;&|\"']*[\\/])?(?:python(?:3|\.exe)?|py(?:\s+-3)?)(?:\s+-X\s+utf8)?"
-    if re.search(start + r"(?:flutter(?:\.bat)?\s+build\b|dart\s+compile\b|" + py + r"\s+-m\s+(?:compileall|py_compile)\b)", text, re.IGNORECASE): return "compile"
-    if re.search(start + r"git\s+diff\s+--check\b", text, re.IGNORECASE): return "diff"
-    if re.search(start + r"(?:pytest(?:\.exe)?\b|" + py + r"\s+-m\s+(?:pytest|unittest)\b|flutter(?:\.bat)?\s+test\b)", text, re.IGNORECASE): return "test"
-    if re.search(start + r"(?:(?:flutter|dart)(?:\.bat)?\s+analyze\b|ruff(?:\.exe|\.cmd)?\s+check\b|codex\s+doctor\b)", text, re.IGNORECASE): return "static"
+    if re.search(start + r"(?:flutter(?:\.bat)?\s+build\b|dart\s+compile\b|" + py + r"\s+-m\s+(?:compileall|py_compile)\b)", text, re.IGNORECASE):
+        return "compile"
+    if re.search(start + r"git\s+diff\s+--check\b", text, re.IGNORECASE):
+        return "diff"
+    if re.search(start + r"(?:pytest(?:\.exe)?\b|" + py + r"\s+-m\s+(?:pytest|unittest)\b|flutter(?:\.bat)?\s+test\b)", text, re.IGNORECASE):
+        return "test"
+    if re.search(start + r"(?:(?:flutter|dart)(?:\.bat)?\s+analyze\b|ruff(?:\.exe|\.cmd)?\s+check\b|codex\s+doctor\b)", text, re.IGNORECASE):
+        return "static"
     return None
 
 def route_prompt(prompt: str) -> list[str]:
@@ -853,6 +884,9 @@ def continuity_record(root: Path, record: str, section: str,
         frozen_guard = None
         prior_pins = None
     validate_delivery(root, item, frozen_guard, prior_pins)
+    if isinstance(item.get("delivery"), dict):
+        for entry in item["delivery"]["scope_sources"]:
+            entry["path"] = continuity_path(root, entry["path"]).relative_to(root.resolve()).as_posix()
     encoded = json.dumps(item, ensure_ascii=False)
     narrative = dict(item)
     delivery = narrative.pop("delivery", None)
@@ -887,6 +921,18 @@ def _prompt_binding(state: dict) -> dict:
     submitted_at = state.get("last_prompt_at")
     return {"prompt_hash": prompt_hash,
             "submitted_at": submitted_at if isinstance(submitted_at, (int, float)) else None}
+
+
+def _bound_prompt_matches(state: dict, bound: dict) -> bool:
+    if bound.get("prompt_hash") != state.get("last_prompt_hash"):
+        return False
+    current = _prompt_binding(state)
+    saved = bound.get("prompt_binding")
+    if isinstance(saved, dict):
+        return saved == current
+    # A legacy binding has no trusted turn identity. Only a session with no
+    # submitted prompt can use it without explicit checkpoint reconciliation.
+    return current == {"prompt_hash": None, "submitted_at": None} and bound.get("prompt_hash") is None
 
 
 def _current_po_defer_authorization(state: dict) -> dict | None:
@@ -967,10 +1013,14 @@ def _freeze_nonclosure_exit(root: Path, state: dict, item: dict, guard: dict) ->
     if not isinstance(history, dict):
         raise TypeError("Frozen non-closure exit history is invalid")
     if digest in history:
+        frozen_exit = history[digest].get("exit")
+        if frozen_exit != item["delivery"].get("exit"):
+            raise ValueError("Frozen non-closure reason and resume condition changed; obtain fresh proof and reconcile before replacing the exit")
         return
     if len(history) >= MAX_NON_CLOSURE_EXITS:
         raise ValueError("Frozen non-closure exit history reached its bounded limit")
-    history[digest] = {"status": status, **_prompt_binding(state)}
+    history[digest] = {"status": status, **_prompt_binding(state),
+                       "exit": dict(item["delivery"]["exit"])}
 
 
 def _nonclosure_exit_matches_current_prompt(root: Path, state: dict, item: dict) -> bool:
@@ -985,7 +1035,7 @@ def _nonclosure_exit_matches_current_prompt(root: Path, state: dict, item: dict)
         isinstance(frozen, dict)
         and frozen.get("status") == status
         and current.get("prompt_hash") is not None
-        and frozen == {"status": status, **current}
+        and frozen == {"status": status, **current, "exit": item["delivery"].get("exit")}
     )
 
 
@@ -1038,7 +1088,10 @@ def _reconcile_pending_effects(root: Path, item: dict, guard: dict,
     for identifier in set(ledger) - set(prior):
         if ledger[identifier].get("status") != "PENDING":
             raise ValueError("A newly admitted external effect must first be frozen as PENDING")
-        prior[identifier] = {"status": "PENDING"}
+        prior[identifier] = {"status": "PENDING", "admission": {
+            "head": git(root, "rev-parse", "HEAD").strip(),
+            "source_pins": _delivery_current_source_pins(root, item, item["delivery"]),
+        }}
     for identifier, frozen in prior.items():
         if not SHA256_RE.fullmatch(identifier) or not isinstance(frozen, dict):
             raise ValueError("Frozen pending-effect history is invalid")
@@ -1046,19 +1099,15 @@ def _reconcile_pending_effects(root: Path, item: dict, guard: dict,
         status = frozen.get("status")
         if status == "PENDING":
             if current.get("status") == "RESOLVED":
-                expected_pins = dict(validation["scope_sources"])
-                for value in item.get("source_paths", []):
-                    source = continuity_path(root, value)
-                    if not source.is_file() or source.is_symlink():
-                        raise ValueError("External-effect resolution requires every admitted implementation source")
-                    expected_pins[source.relative_to(root.resolve()).as_posix()] = (
-                        hashlib.sha256(source.read_bytes()).hexdigest()
-                    )
+                admission = frozen.get("admission")
                 receipt = current.get("receipt", {})
-                if receipt.get("source_pins") != expected_pins:
-                    raise ValueError("First effect resolution must pin the complete source version actually admitted")
+                if (not isinstance(admission, dict)
+                        or not isinstance(admission.get("source_pins"), dict)
+                        or receipt.get("source_pins") != admission["source_pins"]
+                        or receipt.get("head") != admission.get("head")):
+                    raise ValueError("First effect resolution must match immutable pending admission head and source pins; missing legacy admission requires reconciliation, never replay")
                 frozen.clear()
-                frozen.update({"status": "RESOLVED", "receipt": {
+                frozen.update({"status": "RESOLVED", "admission": admission, "receipt": {
                     "path": receipt["path"], "sha256": receipt["sha256"],
                 }})
             elif current.get("status") != "PENDING":
@@ -1072,7 +1121,7 @@ def _reconcile_pending_effects(root: Path, item: dict, guard: dict,
                     "path": current.get("receipt", {}).get("path"),
                     "sha256": current.get("receipt", {}).get("sha256"),
                 }}
-            if normalized != frozen:
+            if normalized != {key: value for key, value in frozen.items() if key != "admission"}:
                 raise ValueError("A frozen external-effect resolution receipt cannot be removed or replaced")
         else:
             raise ValueError("Frozen pending-effect status is invalid")
@@ -1144,8 +1193,7 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
                     or any(value.get("status") != "JOB_CLOSED"
                            for value in previous_delivery.get("requirements", []))):
                 raise ValueError("Cannot rebind away from an unfinished delivery; preserve its remaining IDs")
-            prior_prompt = guard.get("prompt_hash", (bound or {}).get("prompt_hash"))
-            if prior_prompt != state.get("last_prompt_hash"):
+            if not _bound_prompt_matches(state, guard):
                 new_delivery = item.get("delivery")
                 new_ids = {value["id"] for value in new_delivery["requirements"]} if new_delivery else set()
                 if not new_ids - set(guard.get("requirements", {})):
@@ -1170,12 +1218,11 @@ def _check_delivery_rebind(root: Path, state: dict, identity: dict,
         if not isinstance(prior, dict):
             raise TypeError("Frozen delivery requirement evidence is invalid")
         current = {value["id"]: value for value in delivery["requirements"]}
-        prior_prompt = guard.get("prompt_hash", state.get("continuity", {}).get("prompt_hash"))
         current_prompt = state.get("last_prompt_hash")
         prompt_changed = (
             isinstance(current_prompt, str)
             and SHA256_RE.fullmatch(current_prompt)
-            and prior_prompt != current_prompt
+            and not _bound_prompt_matches(state, guard)
             and state.get("turn_exit_mode", "RUNNING") == "RUNNING"
         )
         if (guard.get("delivery_status") == "JOB_CLOSED"
@@ -1327,16 +1374,21 @@ def continuity_save(root: Path, state: dict, event: dict, record: str, section: 
                       else continuity_path(root, value))
         if pins[check_path.relative_to(root.resolve()).as_posix()] == "ABSENT":
             raise ValueError("Declared current source/evidence is missing")
+    owned_baseline = state.setdefault("owned_source_baseline", {})
+    for value in item["source_paths"]:
+        owned_baseline.setdefault(value, pins[value])
     state["continuity"] = {
         "schema_version": 1, "identity": identity, "record": record, "section": section,
         "head": git(root, "rev-parse", "HEAD").strip(), "pins": pins,
         "source_paths": item["source_paths"],
-        "prompt_hash": state.get("last_prompt_hash"), "saved_at": time.time(),
+        "prompt_hash": state.get("last_prompt_hash"), "prompt_binding": _prompt_binding(state),
+        "saved_at": time.time(),
         "missing_authorities": missing,
     }
     if guard is not None:
         guard["context_paths"] = sorted(set(guard.get("context_paths", [])) | set(pins))
         guard["prompt_hash"] = state.get("last_prompt_hash")
+        guard["prompt_binding"] = _prompt_binding(state)
         guard["delivery_status"] = item["delivery"]["status"]
         prompt_reconciliation = state.get("turn_prompt_reconciliation")
         prompt_mode = (
@@ -1403,7 +1455,7 @@ def continuity_read(root: Path, state: dict, event: dict) -> dict:
             reasons.append("CACHED_ORIGIN_CHANGED")
         if changed:
             reasons.append("PINNED_INPUT_CHANGED")
-        if state.get("last_prompt_hash") != bound.get("prompt_hash"):
+        if not _bound_prompt_matches(state, bound):
             reasons.append("NEW_MESSAGE_SINCE_CHECKPOINT")
         if bound.get("missing_authorities"):
             reasons.append("AUTHORITY_UNAVAILABLE")
@@ -1513,7 +1565,7 @@ def delivery_guard_reasons(state: dict, bound: dict, item: dict) -> list[str]:
                     "status": "RESOLVED",
                     "receipt": {"path": current.get("path"), "sha256": current.get("sha256")},
                 }
-            if not isinstance(frozen_effect, dict) or normalized != frozen_effect:
+            if not isinstance(frozen_effect, dict) or normalized != {key: value for key, value in frozen_effect.items() if key != "admission"}:
                 reasons.append("PENDING_EFFECT_HISTORY_INVALID")
     return reasons
 
@@ -1578,6 +1630,8 @@ def continuity_context_fingerprint(
                 "current_head": current_head,
                 "saved_prompt_hash": bound.get("prompt_hash"),
                 "current_prompt_hash": state.get("last_prompt_hash"),
+                "saved_prompt_binding": bound.get("prompt_binding"),
+                "current_prompt_binding": _prompt_binding(state),
                 "saved_cached_origin_main": bound.get("cached_origin_main"),
                 "current_cached_origin_main": current_origin,
                 "missing_authorities": sorted(bound.get("missing_authorities", [])),
@@ -1593,6 +1647,8 @@ def continuity_context_fingerprint(
                 "saved_head": bound.get("head"),
                 "saved_prompt_hash": bound.get("prompt_hash"),
                 "current_prompt_hash": state.get("last_prompt_hash"),
+                "saved_prompt_binding": bound.get("prompt_binding"),
+                "current_prompt_binding": _prompt_binding(state),
             }
     return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
 
@@ -1743,6 +1799,11 @@ def changed_scope_paths(root: Path, state: dict, now: dict) -> set[str]:
     changed = {path for path in before.keys() | after.keys()
                if before.get(path) != after.get(path)}
     paths = delivery_scope_paths(root, state)
+    owned_baseline = state.get("owned_source_baseline", {})
+    if isinstance(owned_baseline, dict):
+        current_owned = continuity_pins(root, sorted(paths))
+        changed.update(path for path in paths if path in owned_baseline
+                       and current_owned.get(path) != owned_baseline[path])
     if paths:
         scope = {continuity_path(root, path).relative_to(root.resolve()).as_posix()
                  for path in paths}
@@ -1783,7 +1844,7 @@ def report_scope_paths(root: Path, state: dict) -> set[str]:
         if isinstance(guard.get("record"), str):
             values.add(guard["record"])
     return {
-        continuity_path(root, value).relative_to(root.resolve()).as_posix()
+        _snapshot_input_path(root, value, _record_scope_paths(state)).relative_to(root.resolve()).as_posix()
         for value in values
     }
 
@@ -1850,7 +1911,7 @@ def _direct_po_defer_ids(root: Path, state: dict, prompt: str) -> list[str]:
                 condition, re.IGNORECASE,
             )):
         return []
-    separators = r"\s*(?:,|and|&)\s*" if english else r"\s*(?:,|、|，|and|&|和|及|与)\s*"
+    separators = r"(?:\s*[,&]\s*|\s+and\s+)" if english else r"(?:\s*[,、，&和及与]\s*|\s+and\s+)"
     identifiers = [value.strip() for value in re.split(separators, id_text, flags=re.IGNORECASE)]
     if (not identifiers
             or any(not DELIVERY_ID_RE.fullmatch(value) for value in identifiers)
@@ -1860,10 +1921,11 @@ def _direct_po_defer_ids(root: Path, state: dict, prompt: str) -> list[str]:
     return sorted(identifiers)
 
 
-def changed_paths_since(root: Path, before: dict, after: dict, scope: set[str]) -> set[str]:
+def changed_paths_since(root: Path, before: dict, after: dict, scope: set[str],
+                        record_paths: set[str] | None = None) -> set[str]:
     """Find only this turn's changes, including committed changes absent from status."""
     normalized_scope = {
-        continuity_path(root, value).relative_to(root.resolve()).as_posix()
+        _snapshot_input_path(root, value, record_paths).relative_to(root.resolve()).as_posix()
         for value in scope
     }
     before_files = before.get("files", {})
@@ -1917,6 +1979,15 @@ def classify_turn_exit(prompt: str) -> str:
         text,
         re.IGNORECASE,
     ):
+        return "PO_PAUSED"
+    dependency_wait = re.fullmatch(
+        r"(?:please\s+)?wait\s+(?:for\s+(?:C[1-6]|M|F|the\s+(?:named\s+)?dependency)\s+to\s+(?:finish|complete|become\s+available)|"
+        r"until\s+(?:the\s+)?dependency\s+is\s+(?:available|ready))\s*[.!]?|"
+        r"(?:请)?(?:等待|等到|等)(?:C[1-6]|M|F)(?:完成|结束)(?:后再继续)?[。.!！]?|"
+        r"(?:请)?(?:等待|等到|等)(?:该|当前)?依赖(?:就绪|可用|完成)(?:后再继续)?[。.!！]?",
+        text, re.IGNORECASE,
+    )
+    if dependency_wait:
         return "PO_PAUSED"
     report_head = (
         r"(?:(?:请|给我|向我|先)\s*){0,2}(?:只)?(?:直接)?"
@@ -2021,10 +2092,10 @@ def _current_prompt_reconciliation_mode(state: dict) -> str:
 def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str | None]:
     mode = state.get("turn_exit_mode", "RUNNING")
     if mode == "REPORT_ONLY":
-        now = snapshot(root, report_scope_paths(root, state))
+        now = snapshot(root, report_scope_paths(root, state), _record_scope_paths(state))
         before = state.get("report_turn_snapshot")
         if isinstance(before, dict) and isinstance(before.get("files"), dict):
-            changed = changed_paths_since(root, before, now, report_scope_paths(root, state))
+            changed = changed_paths_since(root, before, now, report_scope_paths(root, state), _record_scope_paths(state))
             state["report_turn_snapshot_missing"] = False
         else:
             # Older state files have no prompt-time snapshot. Preserve historical
@@ -2060,9 +2131,9 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
         # record of any scoped source changes made after that instruction.
         pause_paths = set(state.get("pause_turn_paths", []))
         before = state.get("pause_turn_snapshot")
-        now = snapshot(root, pause_paths) if pause_paths else snapshot(root)
+        now = snapshot(root, pause_paths, _record_scope_paths(state)) if pause_paths else snapshot(root)
         if isinstance(before, dict) and isinstance(before.get("files"), dict):
-            changed = changed_paths_since(root, before, now, pause_paths)
+            changed = changed_paths_since(root, before, now, pause_paths, _record_scope_paths(state))
             state["pause_turn_snapshot_missing"] = False
         else:
             changed = changed_scope_paths(root, state, now)
@@ -2129,11 +2200,11 @@ def delivery_stop_check(root: Path, state: dict, event: dict) -> tuple[bool, str
     requirements = delivery.get("requirements", [])
     unfinished = [value for value in requirements if value.get("status") != "JOB_CLOSED"]
     if (status in {"JOB_CLOSED", "EXTERNAL_BLOCKED", "PO_DEFERRED"}
-            and bound.get("prompt_hash") != state.get("last_prompt_hash")):
+            and not _bound_prompt_matches(state, bound)):
         return False, "A new Product Owner message requires reconciliation; a prior closure, blocker or deferral cannot close the current task."
+    if status in {"JOB_CLOSED", "EXTERNAL_BLOCKED", "PO_DEFERRED"} and current_pins != bound.get("pins"):
+        return False, "Pinned authority or inputs changed; reconcile current rules and evidence before claiming closure or a non-closure exit."
     if status == "JOB_CLOSED" and not unfinished:
-        if current_pins != bound.get("pins"):
-            return False, "Pinned authority or inputs changed; reconcile current rules and evidence before claiming closure."
         return True, None
     if status == "EXTERNAL_BLOCKED":
         # validate_delivery already proves every unfinished item is blocked by
@@ -2175,6 +2246,12 @@ def stop_block(state: dict, event: dict, reason: str, status: str) -> dict:
         return {"continue": False, "stopReason": reason,
                 "systemMessage": f"LUMENIS completion guard BLOCKED ({status}) after its single bounded continuation; no tests, models, or tasks were started."}
     state["stop_continuation_used"] = True
+    turn_id = event.get("turn_id")
+    trusted_turn_id = turn_id if isinstance(turn_id, str) and turn_id and turn_id == state.get("turn_id") else None
+    state["stop_continuation_binding"] = {
+        "turn_id": trusted_turn_id, "prompt_binding": _prompt_binding(state),
+        "reason_sha256": hashlib.sha256(reason.encode("utf-8")).hexdigest(),
+    }
     return {"decision": "block", "reason": reason}
 
 
@@ -2182,7 +2259,8 @@ def handle(event: dict, root: Path, state: dict) -> dict:
     name = str(event.get("hook_event_name", ""))
     state["updated_at"] = time.time()
     if name in {"SessionEnd", "Interrupt"}:
-        state["last_event"] = name; return {}
+        state["last_event"] = name
+        return {}
     if name == "PreToolUse":
         reason = policy_reason(event)
         return {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}} if reason else {}
@@ -2208,6 +2286,21 @@ def handle(event: dict, root: Path, state: dict) -> dict:
         prompt = str(event.get("prompt", ""))
         prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         incoming_turn_id = event.get("turn_id")
+        pending_stop = state.get("stop_continuation_binding")
+        if (isinstance(pending_stop, dict)
+                and isinstance(incoming_turn_id, str) and incoming_turn_id
+                and incoming_turn_id == pending_stop.get("turn_id")
+                and pending_stop.get("prompt_binding") == _prompt_binding(state)
+                and pending_stop.get("reason_sha256") == prompt_hash
+                and state.get("stop_continuation_used") is True):
+            return context(name, "Continue the admitted Product Owner outcome under its unchanged scope and authorization; this same-turn Stop continuation grants no new work.")
+        if (isinstance(pending_stop, dict)
+                and pending_stop.get("reason_sha256") == prompt_hash
+                and state.get("stop_continuation_used") is True
+                and (not isinstance(incoming_turn_id, str) or not incoming_turn_id
+                     or not pending_stop.get("turn_id"))):
+            return {"continue": False,
+                    "stopReason": "Stop continuation provenance is unavailable: preserve the admitted PO instruction and remaining work; obtain a fresh explicit instruction with verified turn metadata before continuing."}
         same_turn = (isinstance(incoming_turn_id, str)
                      and incoming_turn_id == state.get("turn_id")
                      and prompt_hash == state.get("last_prompt_hash"))
@@ -2223,28 +2316,33 @@ def handle(event: dict, root: Path, state: dict) -> dict:
             }
             state["turn_id"] = incoming_turn_id
             state["stop_continuation_used"] = False
+            state.pop("stop_continuation_binding", None)
             if state["turn_exit_mode"] == "REPORT_ONLY":
                 # This snapshot is a turn-local comparison point only. Keep the
                 # original session baseline and historical verification debt.
                 state.pop("report_turn_paths", None)
+                state["report_turn_record_paths"] = sorted(_record_scope_paths(state))
                 state["report_turn_paths"] = sorted(report_scope_paths(root, state))
-                state["report_turn_snapshot"] = snapshot(root, set(state["report_turn_paths"]))
+                state["report_turn_snapshot"] = snapshot(root, set(state["report_turn_paths"]), _record_scope_paths(state))
                 state["report_turn_snapshot_missing"] = False
                 state["report_turn_requires_verification"] = False
                 state["report_turn_changed_paths"] = []
             else:
+                state.pop("report_turn_record_paths", None)
                 state.pop("report_turn_snapshot", None)
                 state.pop("report_turn_paths", None)
                 state.pop("report_turn_snapshot_missing", None)
                 state.pop("report_turn_requires_verification", None)
                 state.pop("report_turn_changed_paths", None)
             if state["turn_exit_mode"] in {"PO_PAUSED", "APPROVAL_WAIT"}:
+                state["pause_turn_record_paths"] = sorted(_record_scope_paths(state))
                 state["pause_turn_paths"] = sorted(report_scope_paths(root, state))
-                state["pause_turn_snapshot"] = snapshot(root, set(state["pause_turn_paths"]))
+                state["pause_turn_snapshot"] = snapshot(root, set(state["pause_turn_paths"]), _record_scope_paths(state))
                 state["pause_turn_snapshot_missing"] = False
                 state["pause_turn_changed_paths"] = []
                 state["pause_turn_mutation_observed"] = False
             else:
+                state.pop("pause_turn_record_paths", None)
                 state.pop("pause_turn_paths", None)
                 state.pop("pause_turn_snapshot", None)
                 state.pop("pause_turn_snapshot_missing", None)
@@ -2278,11 +2376,15 @@ def handle(event: dict, root: Path, state: dict) -> dict:
     if name == "SessionStart":
         now = snapshot(root)
         if "baseline" not in state:
-            state["baseline"] = now; state["receipts"] = []; state["mutation_observed"] = False
+            state["baseline"] = now
+            state["receipts"] = []
+            state["mutation_observed"] = False
         if event.get("source") == "clear":
             state.pop("continuity", None)
-        try: origin = git(root, "rev-parse", "origin/main").strip()
-        except RuntimeError: origin = "UNAVAILABLE"
+        try:
+            origin = git(root, "rev-parse", "origin/main").strip()
+        except RuntimeError:
+            origin = "UNAVAILABLE"
         current_rel = "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"
         current_note = ""
         if current_rel in now.get("files", {}):
@@ -2299,7 +2401,9 @@ def handle(event: dict, root: Path, state: dict) -> dict:
         now = snapshot(root)
         state.setdefault("baseline", now)
         previous = state.get("last_snapshot", state["baseline"])
-        if now["fingerprint"] != previous["fingerprint"]: state["mutation_observed"] = True
+        if (now["fingerprint"] != previous["fingerprint"]
+                or changed_scope_paths(root, state, now)):
+            state["mutation_observed"] = True
         tool = str(event.get("tool_name", ""))
         if tool in SHELL or tool == "write_stdin":
             response = event.get("tool_response")
@@ -2345,12 +2449,13 @@ def handle(event: dict, root: Path, state: dict) -> dict:
                 }
             return {}
         report_only = state.get("turn_exit_mode") == "REPORT_ONLY"
-        if not report_only and not state.get("mutation_observed"):
+        if (not report_only and not state.get("mutation_observed")
+                and not changed_scope_paths(root, state, snapshot(root))):
             return {}
-        now = snapshot(root, report_scope_paths(root, state) if report_only else None)
+        now = snapshot(root, report_scope_paths(root, state) if report_only else None, _record_scope_paths(state))
         if report_only and isinstance(state.get("report_turn_snapshot"), dict):
             scoped_changes = changed_paths_since(
-                root, state["report_turn_snapshot"], now, report_scope_paths(root, state)
+                root, state["report_turn_snapshot"], now, report_scope_paths(root, state), _record_scope_paths(state)
             )
             state["report_turn_snapshot_missing"] = False
         else:
@@ -2403,6 +2508,7 @@ def handle(event: dict, root: Path, state: dict) -> dict:
         state["verification_status"] = "SCOPED_CHECK_OBSERVED" if good else "BLOCKED_MISSING_SUCCESSFUL_CHECK"
         if good:
             state["stop_continuation_used"] = False
+            state.pop("stop_continuation_binding", None)
             return {}
         reason = "Current-snapshot compilation/static quality and applicable authorized regression evidence are missing or failed. A diff check alone cannot verify code. Hooks never start suites. Security, source rights, data consistency, recovery and real user E2E remain separate acceptance requirements."
         return stop_block(state, event, reason, "BLOCKED_MISSING_SUCCESSFUL_CHECK")
@@ -2411,17 +2517,22 @@ def handle(event: dict, root: Path, state: dict) -> dict:
 def main() -> int:
     try:
         raw = sys.stdin.buffer.read(1000001)
-        if len(raw) > 1000000: raise ValueError("Hook input too large")
+        if len(raw) > 1000000:
+            raise ValueError("Hook input too large")
         event = json.loads(raw.decode("utf-8-sig"))
-        if not isinstance(event, dict): raise TypeError("Hook input is not an object")
+        if not isinstance(event, dict):
+            raise TypeError("Hook input is not an object")
         root = find_root(event.get("cwd"))
-        if root is None: emit({}); return 0
+        if root is None:
+            emit({})
+            return 0
         path = state_file(event, root)
         with locked(path):
             state = json.loads(path.read_text("utf-8")) if path.exists() else {}
             output = handle(event, root, state)
             save(path, state)
-        emit(output); return 0
+        emit(output)
+        return 0
     # Deliberate outer fail-closed boundary: hook failures must report unavailable.
     except Exception as error:  # noqa: BLE001
         emit({"systemMessage": "LUMENIS hook error: " + type(error).__name__ + ". Verification is unavailable, not PASS."})
