@@ -108,6 +108,10 @@ AGENTS.md
 
 `LUMENIS-CODEX-TAKEOVER-CURRENT.md` is the single closed-loop entry for every contributor: rules → CURRENT → scoped branch → applicable verification → PR → all required checks green → merge → verify `origin/main`. `main` is the sole integration line. A temporary worktree may be used to protect existing uncommitted work or perform exact isolated validation; it is not a second long-term implementation. Never reset, clean, broadly overwrite, or discard another contributor's uncommitted work.
 
+开发工具与接续机制见 [开发工具说明](.codex/README.md)。Hooks 的本机注册与信任需按该说明单独完成；拉取或合并仓库代码不会自动完成这些步骤。
+
+See the [engineering tools guide](.codex/README.md) for development tooling and continuity. Workstation hook registration and trust must be completed separately as documented; pulling or merging repository code does not perform these steps automatically.
+
 首先阅读 [`AGENTS.md`](AGENTS.md)、对应源码 Owner 和能力合同；核对已有实现与调用关系，复用正确能力、修复冲突，只为确认的缺口补实现。所需 Python 依赖以仓库的 `requirements*.txt` 为准；Flutter/Dart 版本以 [`app/toolchain.json`](app/toolchain.json) 为准；官网使用 [`website/package.json`](website/package.json) 与锁文件。不要为阅读本说明而自动安装、升级或启动服务。
 
 Read [`AGENTS.md`](AGENTS.md), the relevant source owner, and capability contracts. Inspect existing implementations and callers, reuse correct behavior, resolve conflicts, and add implementation only for verified gaps. Use the repository's `requirements*.txt` for Python dependencies, [`app/toolchain.json`](app/toolchain.json) for Flutter/Dart, and [`website/package.json`](website/package.json) with its lockfile for the website. Reading this guide does not trigger installation, upgrades, or service startup.
