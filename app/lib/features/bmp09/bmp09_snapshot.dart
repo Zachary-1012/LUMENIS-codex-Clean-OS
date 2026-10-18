@@ -621,15 +621,17 @@ Bmp09ArtifactRead? _sourceBriefRead(Object? value, Object? raw) {
       scanned > limit ||
       scanned != returned! + rejected ||
       complete is! bool ||
-      !meta.containsKey('has_more'))
+      !meta.containsKey('has_more')) {
     return null;
+  }
   if (state == 'UNAVAILABLE') {
     if (returned != 0 ||
         scanned != 0 ||
         complete ||
         more != null ||
-        _reportText(meta['reason']) == null)
+        _reportText(meta['reason']) == null) {
       return null;
+    }
   } else {
     if (more is! bool ||
         complete != (!more && rejected == 0) ||
@@ -638,8 +640,9 @@ Bmp09ArtifactRead? _sourceBriefRead(Object? value, Object? raw) {
                 ? 'PARTIAL'
                 : returned > 0
                 ? 'READY'
-                : 'EMPTY'))
+                : 'EMPTY')) {
       return null;
+    }
   }
   return Bmp09ArtifactRead(
     state: state as String,
@@ -674,8 +677,9 @@ Bmp09SavedArtifact? _savedArtifact(Object? value) {
       version < 1 ||
       hash == null ||
       count == null ||
-      row['assessment'] != 'NOT_ESTABLISHED_BY_STORAGE')
+      row['assessment'] != 'NOT_ESTABLISHED_BY_STORAGE') {
     return null;
+  }
   return Bmp09SavedArtifact(
     id: id,
     title: title,
@@ -703,8 +707,9 @@ Bmp09SourceBriefArtifact? _sourceBriefArtifact(Object? value) {
       (row['revision'] != null && revision == null) ||
       (revision != null && revision.parentJobId == job) ||
       !const {'recorded', 'partial'}.contains(row['evaluation_state']) ||
-      rawEvaluations is! List)
+      rawEvaluations is! List) {
     return null;
+  }
   final evaluations = <Bmp09ReportEvaluation>[];
   final ids = <String, int>{};
   final metrics = <String, int>{};
@@ -761,8 +766,9 @@ Bmp09ReportEvaluation? _reportEvaluation(
       row['evidence_ref'] != expected ||
       (row.containsKey('resource_type') &&
           row['resource_type'] != 'source_brief_job') ||
-      !const {'pass', 'warn', 'fail', 'unknown'}.contains(status))
+      !const {'pass', 'warn', 'fail', 'unknown'}.contains(status)) {
     return null;
+  }
   return Bmp09ReportEvaluation(
     id: id,
     metricName: metric,
@@ -784,8 +790,9 @@ Bmp09SourceBriefRevision? _reportRevision(Object? value) {
       review == null ||
       evidence is! String ||
       evidence != evidence.trim() ||
-      !RegExp(r'^app_evidence_records:[1-9][0-9]*$').hasMatch(evidence))
+      !RegExp(r'^app_evidence_records:[1-9][0-9]*$').hasMatch(evidence)) {
     return null;
+  }
   return Bmp09SourceBriefRevision(
     parentJobId: parent,
     parentArtifactHash: hash,

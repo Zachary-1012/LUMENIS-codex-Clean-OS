@@ -169,13 +169,13 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `LOCAL_CANDIDATE_NOT_PUBLISHED`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Database state: `NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`
 Real user E2E: `NOT_VERIFIED`
 
-This cloud integration is the current protected local candidate only: it is not yet part of GitHub main and is not published Product Source. Here “local candidate” means the protected temporary candidate in the authorized cloud task, not the user’s workstation state. Promotion requires one coherent delivery with exact source identity, same-version review/tests, required remote checks and merged-version readback; no publication, runtime load or user acceptance is inferred from this document.
+Candidate source publication is verified at [PR #83](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/83), head `4c95faaaaa5fb52b676d2f63166968f097e7359f`: all 3,947 remote blob identities and modes match the frozen source. This verifies published candidate bytes, not merged-main delivery, passing CI, runtime load or user acceptance. Main remained `4dab98ed6357133da9307de846180ed4f7bba5f5` at readback. The first Product/App checks failed on the instruction-byte budget and 11 missing Dart braces; their failures remain recorded. This follow-up only compresses equivalent AGENTS wording, adds those braces and updates evidence. Required checks on the resulting new head and normal merge/readback remain mandatory; no failed check is bypassed.
 
 2026-10-16文档审查原位清理 Security/Experience 的账号与两种开发者模式旧延期句，并将已批准实时语音目标对齐 Architecture/Overlay；该批未启用麦克风、模型或服务。当时AI-05和草图限于Groq固定端点，任意HTTPS执行限制尚有实现缺口；这项历史观察不代替当前源码、精确批准与执行边界核验。首个文档提交的Product Gate因三项Architecture精确措辞不匹配失败，失败记录保留；本次恢复等价的唯一Gateway/退役路径安全表述，未删减校验。
 

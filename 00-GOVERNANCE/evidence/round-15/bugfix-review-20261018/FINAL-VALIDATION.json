@@ -35,11 +35,17 @@
     "exit": 0
   },
   "publication": {
-    "status": "NOT_PUBLISHED",
+    "status": "CANDIDATE_PR_PUBLISHED_REQUIRED_CHECKS_FAILED_FIX_PENDING",
     "candidate_branch": "zack/20261018-complete-candidate",
-    "candidate_head": "4dab98ed6357133da9307de846180ed4f7bba5f5",
-    "reason": "Tree creation returned cancelled; no tree SHA or new commit/PR established. Resume confirmation requested.",
-    "required_next": "Resume authorized publication, exact remote required gates, merge and readback"
+    "candidate_head": "4c95faaaaa5fb52b676d2f63166968f097e7359f",
+    "pr_url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/83",
+    "verified_source_files": 3947,
+    "remote_tree_sha": "ada1ed64a823cfc0a2e0b5f40de4eaf6aced612f",
+    "remote_blob_and_mode_match": true,
+    "main_readback": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "merged": false,
+    "prior_tool_cancellation": "Historical tool result did not establish user cancellation; user explicitly requested continued completion; approved retry succeeded.",
+    "required_next": "Publish bounded CI repair; pass mandatory checks on the new head; normal protected merge and exact main readback"
   },
   "post_test_document_updates": "This dated receipt and later handoff/evidence-only edits are outside the frozen test source. No later production/test code change may inherit this pass without revalidation.",
   "remaining_acceptance": [
@@ -47,5 +53,28 @@
     "Real platform and owned model quality/coverage",
     "All approved capabilities and research adoption",
     "Remote repository gates and merge readback"
-  ]
+  ],
+  "ci_first_failures": [
+    {
+      "job": "production source integrity + runtime prerequisites",
+      "reason": "AGENTS bytes 114892 + unchanged required headroom 16384 = 131276, exceeding unchanged budget 131072 by 204 bytes",
+      "url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39119188657/job/117651095012"
+    },
+    {
+      "job": "Flutter application foundation",
+      "reason": "11 curly_braces_in_flow_control_structures lint findings in four existing BMP snapshot readers",
+      "url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39119188653/job/117651094859"
+    }
+  ],
+  "ci_repair_scope": {
+    "AGENTS_bytes_after": 114686,
+    "headroom_unchanged": 16384,
+    "budget_unchanged": 131072,
+    "needed_after": 131070,
+    "Dart_changes": "11 brace-only changes; all non-brace, non-whitespace tokens identical",
+    "Python_product_and_tests": "Unchanged from 2900-pass source",
+    "gate_scripts_config_workflows": "Unchanged",
+    "new_head_ci": "PENDING_NOT_CLAIMED_PASS",
+    "frontend_design_or_feature_changes": false
+  }
 }

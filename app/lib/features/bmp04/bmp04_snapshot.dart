@@ -578,7 +578,9 @@ class Bmp04SourceObservation {
 
 String? _observationText(Object? value) {
   if(value is! String || value.isEmpty || value!=value.trim() || value.length>240 ||
-      RegExp(r'[\x00-\x1F<>]').hasMatch(value)) return null;
+      RegExp(r'[\x00-\x1F<>]').hasMatch(value)) {
+    return null;
+  }
   return value;
 }
 

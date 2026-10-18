@@ -267,7 +267,9 @@ class Bmp10Observation {
 
 String? _observedText(Object? value) {
   if (value is! String || value.trim().isEmpty || value.length > 240 ||
-      RegExp(r'[\x00-\x1F<>]').hasMatch(value)) return null;
+      RegExp(r'[\x00-\x1F<>]').hasMatch(value)) {
+    return null;
+  }
   return value.trim();
 }
 
@@ -285,7 +287,9 @@ String? _observedDate(Object? value) {
   // DateTime normalizes impossible calendar days; reject those rather than invent a date.
   final day=DateTime.tryParse(text.substring(0,10));
   if(day==null || day.year!=int.parse(text.substring(0,4)) ||
-      day.month!=int.parse(text.substring(5,7)) || day.day!=int.parse(text.substring(8,10))) return null;
+      day.month!=int.parse(text.substring(5,7)) || day.day!=int.parse(text.substring(8,10))) {
+    return null;
+  }
   return text;
 }
 

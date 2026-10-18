@@ -158,7 +158,9 @@ String? _observationText(Object? value) {
   if (value is! String) return null;
   final text = value.trim();
   if (text.isEmpty || text.length > 180 ||
-      RegExp(r'[\x00-\x1F<>]').hasMatch(text)) return null;
+      RegExp(r'[\x00-\x1F<>]').hasMatch(text)) {
+    return null;
+  }
   return text;
 }
 
