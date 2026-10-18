@@ -379,7 +379,7 @@ def global_nodes(month=None):
     return [dict(n, month=int(month)) for n in _GLOBAL_NODES.get(int(month), [])]
 
 
-def cross_industry_season(industry, date_str=""):
+def cross_industry_season(industry, date_str="", *, market="CN"):
     """垂直行业 × 当月节气 交叉建议（触类旁通：行业节点与通用节点叠加）。
     返回 {"industry", "industry_nodes":[...], "month":m, "season_nodes":[...], "advice":[...]}
     """
@@ -389,20 +389,31 @@ def cross_industry_season(industry, date_str=""):
             m = int(date_str[:2])
         else:
             m = int((date_str or _dt.date.today().strftime("%Y-%m-%d"))[5:7])
-    except Exception:
-        m = _dt.date.today().month
+    except (ValueError, TypeError):
+        m = 0
+    if not isinstance(date_str, str):
+        return {"month": None, "industry_nodes": [], "global_nodes": [],
+                "season_nodes": [], "advice": [],
+                "calendar_reference": calendar_context(date_str, market=market)}
+    calendar_date = date_str + "-01" if len(date_str) == 7 else date_str
+    context = calendar_context(calendar_date if calendar_date else f"2026-{m:02d}-01", market=market)
+    if not calendar_date:
+        context["date_origin"] = "legacy_month_reference_not_brief_date"
+    if context["state"] != "reference_only_not_live_verified":
+        return {"month": m, "industry_nodes": [], "global_nodes": [],
+                "season_nodes": [], "advice": [], "calendar_reference": context}
     inds = industry_nodes(industry, m) or industry_nodes(industry)
     if not inds:
         # 未知行业（如"商业地产"）：回退到当月全行业节点，保证有交叉建议
         inds = industry_nodes("", m)
     # 当月节气（通用节点中 kind==节气）
-    season = [n for n in nodes_for_month(m) if n["kind"] == K_SOLAR]
+    season = [n for n in nodes_for_month(m, year=context["year"]) if n["kind"] == K_SOLAR]
     advice = []
     for n in inds[:2]:
         for s in season[:1]:
             advice.append("%s遇%s：%s × %s" % (n["name"], s["name"], n["theme"], s["theme"]))
     return {"industry": industry, "month": m, "industry_nodes": inds,
-            "season_nodes": season, "advice": advice}
+            "season_nodes": season, "advice": advice, "calendar_reference": context}
 
 
 def marketing_matrix(month=None):
@@ -423,25 +434,38 @@ def marketing_matrix(month=None):
     return out
 
 
-def cross_global(month=None, date_str=""):
+def cross_global(month=None, date_str="", *, market="CN"):
     """三维交叉：海外节点 x 当月节气（面向出海/高端商业体，补充国际叙事时机）。
     返回 {"month", "global_nodes":[...], "season_nodes":[...], "advice":[...]}
     """
     import datetime as _dt
     try:
-        if len(date_str) == 5:
+        if not date_str and month is not None:
+            m = int(month)
+        elif len(date_str) == 5:
             m = int(date_str[:2])
         else:
             m = int((date_str or _dt.date.today().strftime("%Y-%m-%d"))[5:7])
-    except Exception:
-        m = _dt.date.today().month
+    except (ValueError, TypeError):
+        m = 0
+    if not isinstance(date_str, str):
+        return {"month": None, "industry_nodes": [], "global_nodes": [],
+                "season_nodes": [], "advice": [],
+                "calendar_reference": calendar_context(date_str, market=market)}
+    calendar_date = date_str + "-01" if len(date_str) == 7 else date_str
+    context = calendar_context(calendar_date if calendar_date else f"2026-{m:02d}-01", market=market)
+    if not calendar_date:
+        context["date_origin"] = "legacy_month_reference_not_brief_date"
+    if context["state"] != "reference_only_not_live_verified":
+        return {"month": m, "industry_nodes": [], "global_nodes": [],
+                "season_nodes": [], "advice": [], "calendar_reference": context}
     gns = global_nodes(m)
-    season = [n for n in nodes_for_month(m) if n["kind"] == K_SOLAR]
+    season = [n for n in nodes_for_month(m, year=context["year"]) if n["kind"] == K_SOLAR]
     advice = []
     for g in gns[:2]:
         for s in season[:1]:
             advice.append("%s遇%s：%s x %s" % (g["name"], s["name"], g["theme"], s["theme"]))
-    return {"month": m, "global_nodes": gns, "season_nodes": season, "advice": advice}
+    return {"month": m, "global_nodes": gns, "season_nodes": season, "advice": advice, "calendar_reference": context}
 
 # 情感主题 → 调性偏好（须弥层：节点主题映射创意气质）
 _THEME_TO_TONALITY = {
@@ -456,66 +480,107 @@ def _norm(cat):
     return _CAT_ALIAS.get(cat, [])
 
 
-def nodes_for_month(month):
-    """返回某月（1-12）全部节点（IC-028 注入 priority/lead_days/burst）。"""
-    return [_enrich(n) for n in _NODES.get(int(month), [])]
+# Existing table is a 2026 editorial reference, not admitted external facts.
+# Preserve disputed historical rows in source, but never recommend their dates.
+_DISPUTED_DATES = {"冬至"}
 
 
-def node_on(date_str):
-    """给定 'YYYY-MM-DD' 或 'MM-DD'，返回当天命中节点（无则 []）。"""
+def calendar_context(date_str="", *, year=None, market="CN"):
+    """Date-only context; never coerce instants, unknown years or markets."""
+    import hashlib
+    from pathlib import Path
+    result = {"state": "reference_only_not_live_verified", "year": 2026,
+              "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              "source_admission": "NOT_ADMITTED",
+              "market": market, "date_type": "calendar-date", "timezone": None,
+              "canonical": False, "holiday_status": "NOT_ESTABLISHED",
+              "source_owner": "scripts.marketing_calendar", "source_year": 2026,
+              "source_kind": "editorial_reference", "date": date_str,
+              "excluded_disputed_nodes": sorted(_DISPUTED_DATES)}
     try:
+        if not isinstance(date_str, str):
+            raise ValueError()
+        if year is not None and (type(year) is not int or not 1 <= year <= 9999):
+            raise ValueError()
         if len(date_str) == 5:
-            d = date_str
+            parsed = datetime.date.fromisoformat(f"{year or 2026:04d}-{date_str}")
+            result["year_explicit"] = year is not None
+        elif len(date_str) == 10:
+            parsed = datetime.date.fromisoformat(date_str)
+            if parsed.isoformat() != date_str or (year is not None and parsed.year != year):
+                raise ValueError()
+            result["year_explicit"] = True
+        elif not date_str:
+            if year is None:
+                result.update(state="date_required", year=None)
+                return result
+            parsed = datetime.date(year, 1, 1)
+            result["year_explicit"] = True
         else:
-            d = datetime.datetime.strptime(date_str, "%Y-%m-%d").strftime("%m-%d")
-        hits = []
-        for nodes in _NODES.values():
-            for n in nodes:
-                if n["date"] == d:
-                    hits.append(_enrich(n))
-        return hits
-    except Exception:
+            raise ValueError()
+        result.update(year=parsed.year, month=parsed.month)
+    except (ValueError, TypeError):
+        result.update(state="invalid_input", year=None)
+        return result
+    if not isinstance(market, str) or market not in {"CN", "中国", "中国内地"}:
+        result["state"] = "market_not_covered"
+    elif parsed.year != 2026:
+        result["state"] = "year_not_covered"
+    return result
+
+
+def nodes_for_month(month, *, year=2026, market="CN"):
+    """Legacy calls retain a labelled 2026 reference; explicit scope is bounded."""
+    try:
+        m = int(month)
+        if str(month).strip() not in {str(m), f"{m:02d}"}:
+            return []
+        context = calendar_context(f"{year:04d}-{m:02d}-01", year=year, market=market)
+    except (ValueError, TypeError):
         return []
+    if context["state"] != "reference_only_not_live_verified":
+        return []
+    return [dict(_enrich(n), year=year, market=market,
+                 fact_state="editorial_reference_not_verified", canonical=False,
+                 holiday_status="NOT_ESTABLISHED", date_type="calendar-date")
+            for n in _NODES.get(m, []) if n["name"] not in _DISPUTED_DATES]
 
 
-def suggest_hotspot(date_str, category=""):
-    """核心能力：给定日期+品类 → 命中节点 + 情感主题 + 建议调性（芥子→须弥）。
-    返回 {"date", "nodes":[{name,date,kind,theme}], "themes":[...], "tonality_advice":...}
-    """
-    try:
-        if len(date_str) == 5:
-            m = int(date_str[:2])
-            d = date_str
-        else:
-            m = int(date_str[5:7])
-            d = date_str[5:]  # 'MM-DD'
-    except Exception:
-        m = datetime.date.today().month
-        d = ""
-    nodes = nodes_for_month(m)
+def node_on(date_str, *, year=None, market="CN"):
+    context = calendar_context(date_str, year=year, market=market)
+    if context["state"] != "reference_only_not_live_verified":
+        return []
+    return [n for n in nodes_for_month(context["month"], year=context["year"], market=market)
+            if n["date"] == date_str[-5:]]
+
+
+def suggest_hotspot(date_str, category="", *, year=None, market="CN"):
+    """Editorial suggestions remain separate from date facts and holidays."""
+    context = calendar_context(date_str, year=year, market=market)
+    result = {"date": date_str, "month": context.get("month"), "nodes": [],
+              "themes": [], "tonality_advice": "", "calendar_reference": context,
+              "state": context["state"]}
+    if context["state"] != "reference_only_not_live_verified":
+        return result
+    nodes = nodes_for_month(context["month"], year=context["year"], market=market)
     alias = _norm(category)
-    matched, themes = [], []
+    matched = []
     for n in nodes:
-        if d and n["date"] == d:
-            matched.append(_enrich(n))
-        elif alias and any(a in n["cats"] for a in alias):
-            matched.append(_enrich(n))
-        if n["name"] in ("中秋节", "春节", "跨年", "双11", "618 大促"):
-            themes.append(n["theme"])
-    if not matched:
-        matched = [_enrich(n) for n in nodes[:2]]
-    themes += [n["theme"] for n in matched[:3]]
-    themes = list(dict.fromkeys(themes))[:4]
-    to = [_THEME_TO_TONALITY[t] for t in themes if t in _THEME_TO_TONALITY]
-    advice = "建议调性：%s" % (to[0] if to else "premium")
-    return {"date": date_str, "month": m, "nodes": matched, "themes": themes,
-            "tonality_advice": advice}
+        exact = n["date"] == date_str[-5:]
+        if exact or (alias and any(a in n["cats"] for a in alias)):
+            matched.append(dict(n, match_reason="date" if exact else "category_month_suggestion"))
+    # A category fallback is an optional idea, never an event on the requested day.
+    themes = list(dict.fromkeys(n["theme"] for n in matched))[:4]
+    tones = [_THEME_TO_TONALITY[t] for t in themes if t in _THEME_TO_TONALITY]
+    result.update(nodes=matched, themes=themes,
+                  tonality_advice=("建议调性：%s" % (tones[0] if tones else "premium")) if themes else "")
+    return result
 
 
 def yearly_summary():
     """全年营销节点概览（芥子→须弥聚合）：节点总数/每月分布/垂直行业数。"""
-    total = sum(len(v) for v in _NODES.values())
-    monthly = {m: len(v) for m, v in _NODES.items()}
+    total = sum(len(nodes_for_month(m)) for m in _NODES)
+    monthly = {m: len(nodes_for_month(m)) for m in _NODES}
     return {"total_nodes": total, "monthly": monthly, "industries": len(_V_NODES)}
 
 

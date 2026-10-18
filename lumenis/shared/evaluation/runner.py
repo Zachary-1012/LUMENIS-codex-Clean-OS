@@ -263,3 +263,56 @@ if __name__ == "__main__":
         print(f"  {dim}: {res['summary']['overall_status']} "
               f"(pass={res['summary']['pass']}, warn={res['summary']['warn']}, "
               f"fail={res['summary']['fail']}, unknown={res['summary']['unknown']})")
+
+
+# Content-pattern measurements remain derived, not evidence of independent lift.
+# Only the existing SavedWork owner supplies artifact bytes and current source rights.
+def measure_content_pattern(*, candidate_hash, baseline_artifact_id, candidate_artifact_id,
+                            criteria, actor, scope, connection=None):
+    import hashlib
+    import math
+    from lumenis.shared.reporting.saved_work import read_committed_work
+    if (not isinstance(candidate_hash, str) or len(candidate_hash) != 64
+            or not isinstance(criteria, dict) or set(criteria) != {"required_phrases", "max_characters"}
+            or not isinstance(criteria["required_phrases"], list)
+            or not 1 <= len(criteria["required_phrases"]) <= 32
+            or any(type(v) is not str or not v.strip() or len(v) > 500 for v in criteria["required_phrases"])
+            or len(set(criteria["required_phrases"])) != len(criteria["required_phrases"])
+            or type(criteria["max_characters"]) is not int or not 1 <= criteria["max_characters"] <= 50000):
+        raise ValueError("PATTERN_EVALUATION_CRITERIA_INVALID")
+    if baseline_artifact_id == candidate_artifact_id:
+        raise ValueError("PATTERN_EVALUATION_DISTINCT_OUTPUTS_REQUIRED")
+    outputs = {}
+    for label, artifact_id in (("baseline", baseline_artifact_id), ("candidate", candidate_artifact_id)):
+        saved = read_committed_work(artifact_id, actor=actor, scope=scope, connection=connection)
+        text = saved["document"]["markdown"]
+        matches = [phrase in text for phrase in criteria["required_phrases"]]
+        outputs[label] = {"artifact_id": artifact_id, "artifact_sha256": saved["artifact"]["sha256"],
+                          "artifact_version": saved["document"]["version"],
+                          "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                          "matched_phrases": matches, "numerator": sum(matches), "denominator": len(matches),
+                          "required_phrase_coverage": sum(matches) / len(matches),
+                          "character_count": len(text), "budget_exceeded": len(text) > criteria["max_characters"]}
+    gain = outputs["candidate"]["required_phrase_coverage"] - outputs["baseline"]["required_phrase_coverage"]
+    if not math.isfinite(gain):
+        raise ValueError("PATTERN_EVALUATION_NONFINITE")
+    return {"contract_version": "content-pattern-measurement:v1", "candidate_hash": candidate_hash,
+            "method": "exact-required-phrase-coverage:v1", "criteria": criteria, "outputs": outputs,
+            "gain": gain, "state": "NOT_ELIGIBLE", "promotion_eligible": False,
+            "reasons": (["NO_MEASURED_GAIN"] if gain <= 0 else []) +
+                       ["INDEPENDENT_HELDOUT_NOT_VERIFIED", "REAL_TASK_OUTCOME_NOT_VERIFIED"],
+            "limitations": "Exact phrase coverage is not semantic quality or business lift.",
+            "training_performed": False, "model_used": False}
+
+
+def verify_content_pattern_measurement(record, *, actor, scope, connection=None):
+    """Recompute from current authorized immutable artifacts; never trust stored PASS."""
+    if not isinstance(record, dict) or record.get("contract_version") != "content-pattern-measurement:v1":
+        raise ValueError("PATTERN_EVALUATION_CONTRACT_INVALID")
+    current = measure_content_pattern(candidate_hash=record["candidate_hash"],
+        baseline_artifact_id=record["outputs"]["baseline"]["artifact_id"],
+        candidate_artifact_id=record["outputs"]["candidate"]["artifact_id"],
+        criteria=record["criteria"], actor=actor, scope=scope, connection=connection)
+    if current != record:
+        raise PermissionError("PATTERN_EVALUATION_READBACK_CHANGED")
+    return current

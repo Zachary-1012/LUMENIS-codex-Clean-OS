@@ -1,0 +1,50 @@
+{
+  "baseline_manifest_sha256": "6eadb7d8217016205966c418bf52b42473009b45cc5b3daf74ad53814dc05b41",
+  "source_manifest_sha256": "5dec07f048bfa3c4569838e82413f4f48c8dcdb7e918572cc8d648d756b20789",
+  "parent_current_main_reference": "4dab98ed; recorded baseline reference, not independently reconciled by this receipt",
+  "integration_status": "BLOCKED_PENDING_FULL_DELTA_REVIEW_AND_CURRENT_MAIN_RECONCILIATION",
+  "changed_source_paths": [
+    "experience_runtime.py",
+    "tests/test_bmp_local_read_transport.py"
+  ],
+  "frontend_changes_included": false,
+  "main_publication": false,
+  "production_database_touched": false,
+  "external_models_or_training": false,
+  "paid_resources": false,
+  "permission_owner_modified": false,
+  "source_branch": "isolated snapshot; not a Git checkout",
+  "original_scope_retained": "19 open items,195 G,R01-R15,J1-J8,U01-U25; this is a bounded backend projection check only",
+  "failures_preserved": {
+    "transport-first": "11 fixture/lookup/header-transport failures;44 same assertions pass after harness corrections",
+    "descriptor-baseline": "8 failures on unchanged2248 demonstrate descriptor absent",
+    "full-first": "1933 pass,1 manifest-env KeyError;source unchanged,exact pin supplied for complete rerun"
+  },
+  "static": {
+    "two_python_files_ast": "PASS",
+    "constitution": "PASS",
+    "ruff": "UNAVAILABLE: no installed executable/module; no installation authorized",
+    "two_python_files_compile": "PASS"
+  },
+  "frontend_pause": "Original baseline Dart remains in this snapshot. Local parser/UI acceptance remains open; paused cloud edits are excluded.",
+  "verified_at_utc": "2026-10-18T05:47:01.708442+00:00",
+  "pytest": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "1934",
+    "time": "159.583",
+    "timestamp": "2026-10-17T22:43:36.990998-07:00",
+    "hostname": "b9755d75b371"
+  },
+  "actual_isolated_http": {
+    "sourcebrief_prepare": 11,
+    "sourcebrief_cold": 17,
+    "four_screen_warm": 64,
+    "four_screen_cold": 64,
+    "total": 156
+  },
+  "source_manifest_exact_after_checks": true,
+  "mainline_evidence": "MAINLINE_LINEAGE.json"
+}

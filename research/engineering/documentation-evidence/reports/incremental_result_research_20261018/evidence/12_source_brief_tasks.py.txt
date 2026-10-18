@@ -1,0 +1,86 @@
+# lumenis/shared/reporting/source_brief_tasks.py:1-85
+1: """Request-authorized report execution using the existing SYSTEM TaskEngine.
+2: 
+3: Only operational intent/status lives in ai_task. Reporting still owns the
+4: immutable daily_reports artifact. A crashed run requires a new authorized
+5: request; persisted task JSON is never a credential or an approval.
+6: """
+7: from __future__ import annotations
+8: 
+9: import logging
+10: import os
+11: import threading
+12: import uuid
+13: from functools import lru_cache
+14: 
+15: import psutil
+16: 
+17: from ai_task_engine import TaskEngine
+18: from lumenis.shared.database import get_repository
+19: from .source_brief_job import _scope_material, create_source_brief_job, get_source_brief_job
+20: 
+21: _log = logging.getLogger(__name__)
+22: _workers: dict[str, threading.Thread] = {}
+23: _lock = threading.RLock()
+24: 
+25: 
+26: @lru_cache(maxsize=1)
+27: def engine():
+28:     # Startup/schema migrations retain ownership of table creation.
+29:     return TaskEngine(auto_init_db=False)
+30: 
+31: 
+32: def create_task(*, actor_ref, scope, permission_audit_ref, limit=30,
+33:                 image_source_ref=None, business_question=None, source_ids=None, revision=None):
+34:     context = {
+35:         "actor_ref": actor_ref, "scope": scope,
+36:         "job_id": "brief-" + uuid.uuid4().hex,
+37:         "permission_audit_ref": permission_audit_ref,
+38:         "limit": limit, "image_source_ref": image_source_ref,
+39:         "business_question": business_question,
+40:         "source_ids": source_ids,
+41:         "revision": revision,
+42:     }
+43:     return engine().create_report_task(context)
+44: 
+45: 
+46: def scoped_task(task_id, *, actor_ref, scope):
+47:     task = engine().get_report_task(task_id)
+48:     if task is None:
+49:         raise LookupError("SOURCE_BRIEF_TASK_NOT_FOUND")
+50:     context = task["context"]
+51:     if context.get("actor_ref") != actor_ref or context.get("scope") != scope:
+52:         raise PermissionError("SOURCE_BRIEF_TASK_SCOPE_DENIED")
+53:     return task
+54: 
+55: 
+56: def _worker_alive(task):
+57:     """False only when the exact claimed OS process is proven gone."""
+58:     identity = task.get("parameters") or {}
+59:     pid, started = identity.get("worker_pid"), identity.get("worker_started_at")
+60:     if type(pid) is not int or pid <= 0 or type(started) not in {int, float}:
+61:         raise RuntimeError("SOURCE_BRIEF_WORKER_IDENTITY_UNAVAILABLE")
+62:     try:
+63:         process = psutil.Process(pid)
+64:         alive = process.is_running() and process.create_time() == started
+65:         if alive and pid == os.getpid():
+66:             with _lock:
+67:                 worker = _workers.get(task["task_id"])
+68:                 return worker is not None and worker.is_alive()
+69:         return alive
+70:     except psutil.NoSuchProcess:
+71:         return False
+72:     except psutil.AccessDenied as exc:
+73:         raise RuntimeError("SOURCE_BRIEF_WORKER_IDENTITY_UNAVAILABLE") from exc
+74: 
+75: 
+76: def status(task):
+77:     context = task["context"]
+78:     state = task["status"]
+79:     if state == "running" and not _worker_alive(task):
+80:         state = "interrupted"
+81:     result = {
+82:         "task_id": task["task_id"], "job_id": context["job_id"], "state": state,
+83:         "can_resume": state in {"pending", "interrupted", "failed"},
+84:         "error": task.get("error"), "result": None,
+85:         "review_status": "HUMAN_PENDING", "publish_status": "not_performed",

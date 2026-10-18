@@ -1,0 +1,104 @@
+{
+  "observed_at_utc": "2026-10-18T09:09:00Z",
+  "scope": "Unchanged static governance scripts from platform-verify.yml and app-verify.yml, run in separate copies of clean baseline and the then-current integration snapshot.",
+  "gate_and_workflow_files_compared": 12,
+  "gate_and_workflow_differences": [],
+  "results": [
+    {
+      "gate": "constitution",
+      "candidate_exit_code": 0,
+      "baseline_exit_code": 0,
+      "status": "PASS",
+      "candidate_raw_log_sha256": "ebc22c326a6d37efe2927a0cea24a7380a9c68012a22e70eef99b6641ccf6843",
+      "baseline_raw_log_sha256": "ebc22c326a6d37efe2927a0cea24a7380a9c68012a22e70eef99b6641ccf6843"
+    },
+    {
+      "gate": "ggi",
+      "candidate_exit_code": 0,
+      "baseline_exit_code": 0,
+      "status": "PASS",
+      "candidate_raw_log_sha256": "fae68dbe25ec0c875a064f2b713cf137d5296cd0a8011a572cc02e4fd4c37b8a",
+      "baseline_raw_log_sha256": "fae68dbe25ec0c875a064f2b713cf137d5296cd0a8011a572cc02e4fd4c37b8a"
+    },
+    {
+      "gate": "machine",
+      "candidate_exit_code": 1,
+      "baseline_exit_code": 1,
+      "status": "BLOCKED_GIT_METADATA_UNAVAILABLE",
+      "candidate_raw_log_sha256": "2829b1aee79c1b53b36919804bcbe3ef856a9463b2b9958cfae60a0ffadaa63f",
+      "baseline_raw_log_sha256": "cd172d3ce0de6c58f7d6db15d5f579c8267ca994292e82d1e8dc5c30292a5734"
+    },
+    {
+      "gate": "takeover",
+      "candidate_exit_code": 1,
+      "baseline_exit_code": 1,
+      "status": "BLOCKED_GIT_METADATA_UNAVAILABLE",
+      "candidate_raw_log_sha256": "f21338fe37ff98a28ed28b0dd5e9d70857a7d8ea194729f2eda1c66dc7be561f",
+      "baseline_raw_log_sha256": "f44e4559241fbff5d24e862c4ad3c24518238181764a071d95dd83565f2bdad1"
+    },
+    {
+      "gate": "configuration",
+      "candidate_exit_code": 0,
+      "baseline_exit_code": 0,
+      "status": "PASS",
+      "candidate_raw_log_sha256": "c8239dc064affd359050308588bc818cc02f4d4c0ab6c7d912f51a3d2cb08195",
+      "baseline_raw_log_sha256": "c8239dc064affd359050308588bc818cc02f4d4c0ab6c7d912f51a3d2cb08195"
+    },
+    {
+      "gate": "single_product",
+      "candidate_exit_code": 1,
+      "baseline_exit_code": 1,
+      "status": "BLOCKED_GIT_METADATA_UNAVAILABLE",
+      "candidate_raw_log_sha256": "0f150343e2b314f03234d6a10ea24c95d8017185b04ffa0ce5652d2cf8d132e6",
+      "baseline_raw_log_sha256": "012085dc25cdfac5b323442e04d48c9adf1a476c06113c3d6e32f5ec29d0446c"
+    },
+    {
+      "gate": "database",
+      "candidate_exit_code": 0,
+      "baseline_exit_code": 0,
+      "status": "PASS",
+      "candidate_raw_log_sha256": "5769c1c64ca8c304e4bd94279020a689c02e78f3f92834ff5b3f48c3201cc111",
+      "baseline_raw_log_sha256": "5769c1c64ca8c304e4bd94279020a689c02e78f3f92834ff5b3f48c3201cc111"
+    },
+    {
+      "gate": "experience_authority",
+      "candidate_exit_code": 1,
+      "baseline_exit_code": 1,
+      "status": "BLOCKED_GIT_METADATA_UNAVAILABLE",
+      "candidate_raw_log_sha256": "2d625ea95c1681f515023da694bf40870f63e78703037167d6e7db6105b59384",
+      "baseline_raw_log_sha256": "d1200b91376ec11d1bbc9b5443738983049ef8b7ab8a09644393535b5120839d"
+    },
+    {
+      "gate": "anti_template_baseline",
+      "candidate_exit_code": 0,
+      "baseline_exit_code": 0,
+      "status": "PASS",
+      "candidate_raw_log_sha256": "c39a656f9b481a02d7be6ea5514740c7233e4897c730be60e5ceceb3395243b3",
+      "baseline_raw_log_sha256": "c39a656f9b481a02d7be6ea5514740c7233e4897c730be60e5ceceb3395243b3"
+    },
+    {
+      "gate": "anti_template_strict",
+      "candidate_exit_code": 0,
+      "baseline_exit_code": 0,
+      "status": "PASS",
+      "candidate_raw_log_sha256": "7aac4afca5560b9f60393323c31ca3e687ac066ffac10ddb2fcd2a457596563e",
+      "baseline_raw_log_sha256": "7aac4afca5560b9f60393323c31ca3e687ac066ffac10ddb2fcd2a457596563e"
+    },
+    {
+      "gate": "blueprints",
+      "candidate_exit_code": 0,
+      "baseline_exit_code": 0,
+      "status": "PASS",
+      "candidate_raw_log_sha256": "2cd9024ef1a0b8e1a299cc2458118e1a3e0111fcb520591efdc1b89484fe6f40",
+      "baseline_raw_log_sha256": "2cd9024ef1a0b8e1a299cc2458118e1a3e0111fcb520591efdc1b89484fe6f40"
+    }
+  ],
+  "interpretation": "Seven invocations passed in each copy. Four invocations require Git HEAD or tracked-file metadata absent from both copies; no new candidate failure was observed. These four are not recorded as passed, and no replacement Git history was synthesized.",
+  "later_source_changes": "Later integrated changes and final publication still require same-version gates in a real checkout.",
+  "not_run": [
+    "Dependency installation",
+    "Product runtime migrations",
+    "Frontend installation or build",
+    "Remote CI"
+  ]
+}

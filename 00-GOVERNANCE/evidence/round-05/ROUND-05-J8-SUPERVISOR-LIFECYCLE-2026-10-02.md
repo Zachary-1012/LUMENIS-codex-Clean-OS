@@ -20,7 +20,7 @@ commit; remote publication must be verified after push, never inferred here.
 
 The 39-test stable regression and actual disposable-Core recovery/stop evidence
 below remain valid at their frozen hashes. No repeat was needed after M review.
-Codex Security diff scan `6516b89c-5e47-44ef-b029-f190827537ee` sealed successfully:
+Codex Security diff scan `private-source-id-sha256-9bf4d2699c0e4418b4d8273fa9a6d3597022b9ab6f172c150c08da2c8cceb004` sealed successfully:
 both changed production files and all four supporting files were reviewed; no
 vulnerability candidate or confirmed finding was recorded. The frozen snapshot
 digest is `codex-security-snapshot/v1:sha256:7fcb3c760d2787e1084b6fab57af6c5f695250dbee6889d57c7a85983d401eae`.

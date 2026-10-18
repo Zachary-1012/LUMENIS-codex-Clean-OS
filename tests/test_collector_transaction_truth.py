@@ -919,9 +919,19 @@ def test_note_ingestion_keeps_missing_analysis_unknown_and_preserves_existing_re
         connection.execute("UPDATE notes SET topics=? WHERE note_id=?",
                            (json.dumps(["registered topic"], ensure_ascii=False), note["note_id"]))
     assert read_analysis(note["note_id"]) == ("unknown", None, "unknown", None, None)
-    stats = db.get_stats()
+    from subject_context import (get_thread_context, set_thread_context,
+                                 get_subject_context, clear_thread_context)
+    previous_context = get_thread_context()
+    try:
+        set_thread_context(get_subject_context('guangzhou_taikoo_hui', 'CTH'))
+        stats = db.get_stats()
+        topic = next(item for item in db.get_hot_topics() if item["topic"] == "registered topic")
+    finally:
+        if previous_context is None:
+            clear_thread_context()
+        else:
+            set_thread_context(previous_context)
     assert stats["unknown_sentiment"] == 1 and stats["unknown_risk"] == 1
-    topic = next(item for item in db.get_hot_topics() if item["topic"] == "registered topic")
     assert topic["sentiment"] == "unknown"
     assert topic["unknown"] == 1 and topic["neutral"] == 0
 

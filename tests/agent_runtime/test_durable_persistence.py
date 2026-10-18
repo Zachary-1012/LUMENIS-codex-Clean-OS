@@ -39,7 +39,7 @@ def test_fresh_adapter_reopens_task_plan_context_and_cancel(durable):
     assert fresh.get_checkpoints(task)[0] == first
     fresh.complete_step(task, 0, result={"observation": "long text " * 100})
     assert len(fresh.recover(task)["last_checkpoint"]["metadata"]["result"]["observation"]) > 500
-    assert fresh.get_task(task)["status"] == "pending"  # A finished step is not a finished task.
+    assert fresh.get_task(task)["status"] == "running"  # A finished step is not a finished task.
     assert fresh.cancel(task)
     assert adapter.get_task(task)["status"] == "cancelled"  # Do not trust an old memory snapshot.
     assert fresh.list_tasks(status="cancelled")[0]["task_id"] == task
@@ -67,7 +67,7 @@ def test_enabled_database_failure_never_uses_cached_checkpoint(durable, monkeypa
     adapter.checkpoint(task, 0, "executing")
     def failed(*args, **kwargs):
         raise OSError("isolated disk unavailable")
-    monkeypatch.setattr(engine, "_db_add_step", failed)
+    monkeypatch.setattr(adapter, "_commit_terminal_checkpoint", failed)
     with pytest.raises(RuntimeError, match="could not persist"):
         adapter.checkpoint(task, 1, "executing")
     assert len(adapter._memory_checkpoints[task]) == 1

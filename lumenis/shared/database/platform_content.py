@@ -79,6 +79,11 @@ def _persist_native_records(
     columns = ", ".join(_CONTENT_FIELDS)
     placeholders = ", ".join("?" for _ in _CONTENT_FIELDS)
     updates = ", ".join(f"{field}=excluded.{field}" for field in _CONTENT_FIELDS)
+    # Reusing the exact observation must not manufacture a fresh collection time.
+    changed_fields = " OR ".join(
+        f"platform_contents.{field} IS NOT excluded.{field}"
+        for field in (*_CONTENT_FIELDS, "raw_data")
+    )
     for record, content in zip(records, normalized):
         content_id = str(content["platform_content_id"])
         values = []
@@ -102,7 +107,8 @@ def _persist_native_records(
             f"ON CONFLICT(platform, platform_content_id) DO UPDATE SET "
             f"{updates}, raw_data=excluded.raw_data, "
             f"last_collected_at=excluded.last_collected_at, "
-            f"collected_at=excluded.collected_at",
+            f"collected_at=excluded.collected_at "
+            f"WHERE {changed_fields}",
             (platform, content_id, *values, raw_json, now, now, now),
         )
         metrics = {name: content.get(name) for name in (

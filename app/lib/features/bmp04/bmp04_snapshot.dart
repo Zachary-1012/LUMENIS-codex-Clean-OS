@@ -22,6 +22,7 @@ class Bmp04Snapshot {
     required this.channels,
     required this.rejectedCrossFocusCount,
     required this.rejectedUnscopedCount,
+    this.sourceObservations = const [],
   });
 
   final bool contractBound;
@@ -34,6 +35,7 @@ class Bmp04Snapshot {
   final List<Bmp04Channel> channels;
   final int rejectedCrossFocusCount;
   final int rejectedUnscopedCount;
+  final List<Bmp04SourceObservation> sourceObservations;
 
   bool get scopeReady => focus.isGlobal
       ? contractBound && isBmpOwner && globalScopeReady
@@ -73,6 +75,9 @@ class Bmp04Snapshot {
   factory Bmp04Snapshot.fromResponse(Map<String, dynamic> response) {
     if (response['ok'] != true || response['screen'] != 'BMP-04') {
       throw const FormatException('BMP-04 runtime response is not valid.');
+    }
+    if (response['observation_contract'] == 'lumenis.bmp04-source-observations.v1') {
+      return _sourceObservationSnapshot(response);
     }
     final truth = _asMap(response['truth']);
     final binding = _asMap(response['focus_binding']);
@@ -560,3 +565,71 @@ String? _safeText(Object? value) {
 
 String? _asString(Object? value) =>
     value is String && value.isNotEmpty ? value : null;
+
+
+class Bmp04SourceObservation {
+  const Bmp04SourceObservation({required this.id, required this.evidenceReference,
+    this.title, this.platform});
+  final String id;
+  final String evidenceReference;
+  final String? title;
+  final String? platform;
+}
+
+String? _observationText(Object? value) {
+  if(value is! String || value.isEmpty || value!=value.trim() || value.length>240 ||
+      RegExp(r'[\x00-\x1F<>]').hasMatch(value)) return null;
+  return value;
+}
+
+Bmp04Snapshot _sourceObservationSnapshot(Map<String,dynamic> response) {
+  final truth=_asMap(response['truth']) ?? {};
+  final binding=_asMap(response['observation_read_binding']) ?? {};
+  final context=_asMap(response['observation_context']) ?? {};
+  final raw=response['source_observations'];
+  final subject=_observationText(context['subject_id']);
+  final brand=_observationText(context['brand_focus_id']);
+  final mode=context['canonical_scope'];
+  final focus=Bmp04FocusContext(mode:mode is String?mode:'UNKNOWN',domainId:context['domain_id'] is String?context['domain_id'] as String:null,
+    productId:context['product_id'] is String?context['product_id'] as String:null,subjectId:subject,brandFocusId:brand,displayName:const {});
+  final sourceComplete=truth['source_read_complete'];final eventComplete=truth['event_read_complete'];
+  final rejected=truth['rejected_source_count'];final truncated=truth['source_truncated'];
+  bool count(Object? v)=>v is int && v>=0;
+  final metaValid=raw is List && count(truth['observed_source_count']) && truth['observed_source_count']==raw.length &&
+      count(rejected) && truncated is bool && sourceComplete is bool && eventComplete is bool &&
+      sourceComplete==(truncated==false && rejected==0) &&
+      (sourceComplete==true?truth['source_count']==raw.length:truth['source_count']==null) &&
+      (eventComplete!=true || count(truth['event_returned_count']));
+  final incomplete=sourceComplete!=true || eventComplete!=true;
+  final expected=incomplete?'PARTIAL':raw is List && (raw.isNotEmpty || (truth['event_returned_count'] is int && (truth['event_returned_count'] as int)>0))?'READY':'EMPTY';
+  final owner=truth['domain_id']=='zbmp' && truth['product_id']=='ZBMP';
+  final bound=response['bound']==true && response['source']=='runtime';
+  final actor=binding['actor_id'];
+  final allowed=bound && owner && metaValid && truth['data_state']==expected && truth['analysis_state']=='NOT_COMPUTED' &&
+      binding['contract']=='lumenis.scope-read-binding.v1' && binding['module']=='brand_market_overview' &&
+      binding['policy']=='actor-exact-scope-v1' && binding['actor_scope']=='authenticated' &&
+      actor is int && actor>0 && actor==context['actor_id'] && binding['applied']==true && binding['read_allowed']==true && binding['scope_verified']==true &&
+      binding['domain_id']==context['domain_id'] && binding['product_id']==context['product_id'] &&
+      binding['canonical_scope']==mode && binding['subject_id']==context['subject_id'] && binding['brand_focus_id']==context['brand_focus_id'] &&
+      ((focus.isFocused && binding['global_all_granted']==false) ||
+       (focus.isGlobal && context['subject_id']==null && context['brand_focus_id']==null && binding['global_all_granted']==true));
+  final observations=<Bmp04SourceObservation>[];var rejectedRows=0;
+  if(allowed) {
+    for(final value in raw) {
+      final row=_asMap(value) ?? {};final proof=_asMap(row['scope_evidence']) ?? {};
+      final integrity=_asMap(proof['integrity']) ?? {};final scope=_asMap(proof['stored_scope']) ?? {};
+      final id=_observationText(row['id']);final eid=proof['id'];final digest=integrity['digest'];
+      final valid=id!=null && eid is int && eid>0 && integrity['verified']==true && integrity['lineage_verified']==true &&
+          integrity['assurance']=='writer-authenticated' && integrity['algorithm']=='hmac-sha256' &&
+          digest is String && RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(digest) &&
+          scope['domain_id']=='zbmp' && scope['product_id']=='ZBMP' && scope['scope_status']=='VERIFIED' &&
+          (scope['subject_id']==null || scope['subject_id']=='') && _observationText(scope['brand_focus_id'])!=null &&
+          (focus.isGlobal || scope['brand_focus_id']==brand);
+      if(!valid){rejectedRows++;continue;}
+      observations.add(Bmp04SourceObservation(id:id,evidenceReference:'EV-$eid',title:_observationText(row['title']),platform:_observationText(row['platform'])));
+    }
+  }
+  return Bmp04Snapshot(contractBound:bound,isBmpOwner:owner,dataState:!allowed?'UNKNOWN':incomplete || rejectedRows>0?'PARTIAL':expected=='READY'?'OBSERVATIONS_ONLY':'EMPTY',
+      focus:focus,focusBindingApplied:allowed,readAllowed:allowed,globalScopeReady:allowed && focus.isGlobal,
+      channels:const [],rejectedCrossFocusCount:0,rejectedUnscopedCount:rejectedRows,sourceObservations:List.unmodifiable(observations));
+}

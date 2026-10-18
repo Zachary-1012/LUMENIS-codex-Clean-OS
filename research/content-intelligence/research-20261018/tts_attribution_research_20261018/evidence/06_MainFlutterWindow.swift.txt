@@ -1,0 +1,57 @@
+# app/macos/Runner/MainFlutterWindow.swift:35-90
+35:     let channel = FlutterMethodChannel(name: "lumenis/read_aloud", binaryMessenger: messenger)
+36:     channel.setMethodCallHandler { [weak self] call, result in
+37:       guard let self else { result(FlutterError(code: "UNAVAILABLE", message: "Speech bridge unavailable.", details: nil)); return }
+38:       switch call.method {
+39:       case "availableLocales":
+40:         result(["supported": true, "localLocales": self.localLocales()])
+41:       case "speak":
+42:         self.speak(call.arguments as? [String: Any], result: result)
+43:       case "stop":
+44:         self.currentUtterance = nil
+45:         self.synthesizer.stopSpeaking(at: .immediate)
+46:         self.status = "STOPPED"
+47:         result(nil)
+48:       case "observe":
+49:         result(["status": self.status])
+50:       default:
+51:         result(FlutterMethodNotImplemented)
+52:       }
+53:     }
+54:   }
+55: 
+56:   private func localLocales() -> [String] {
+57:     let tags = Set(localVoices().compactMap { canonicalTag($0.language) })
+58:     return ["zh-CN", "en-US", "ko-KR"].filter { tags.contains($0) }
+59:   }
+60: 
+61:   private func localVoices() -> [AVSpeechSynthesisVoice] {
+62:     AVSpeechSynthesisVoice.speechVoices().filter { $0.identifier.hasPrefix("com.apple.") }
+63:   }
+64: 
+65:   private func canonicalTag(_ raw: String) -> String? {
+66:     switch raw.replacingOccurrences(of: "_", with: "-").lowercased() {
+67:     case "zh-cn": return "zh-CN"
+68:     case "en-us": return "en-US"
+69:     case "ko-kr": return "ko-KR"
+70:     default: return nil
+71:     }
+72:   }
+73: 
+74:   private func speak(_ arguments: [String: Any]?, result: @escaping FlutterResult) {
+75:     guard let text = arguments?["text"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+76:           let locale = arguments?["locale"] as? String, let rate = arguments?["rate"] as? NSNumber,
+77:           [0.75, 1.0, 1.25].contains(rate.doubleValue),
+78:           let voice = localVoices().first(where: { canonicalTag($0.language) == locale }) else {
+79:       result(["status": "UNAVAILABLE"])
+80:       return
+81:     }
+82:     currentUtterance = nil
+83:     synthesizer.stopSpeaking(at: .immediate)
+84:     let utterance = AVSpeechUtterance(string: text)
+85:     utterance.voice = voice
+86:     utterance.rate = Float(min(max(Double(AVSpeechUtteranceDefaultSpeechRate) * rate.doubleValue, Double(AVSpeechUtteranceMinimumSpeechRate)), Double(AVSpeechUtteranceMaximumSpeechRate)))
+87:     status = "STARTING"
+88:     currentUtterance = utterance
+89:     synthesizer.speak(utterance)
+90:     result(["status": "STARTING"])

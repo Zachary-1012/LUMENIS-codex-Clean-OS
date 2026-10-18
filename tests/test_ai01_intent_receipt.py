@@ -26,7 +26,7 @@ def intent_client(tmp_path, monkeypatch):
     permission_gate.set_testing_bypass(False)
     import experience_runtime
     importlib.reload(experience_runtime)
-    trusted = {"value": ("cth", "CTH", "actor:test")}
+    trusted = {"value": ("cth", "CTH", "actor:7")}
     monkeypatch.setattr(experience_runtime, "_ai_intent_trusted_domain", lambda: trusted["value"])
     app = Flask(__name__)
     app.register_blueprint(experience_runtime.experience_bp)
@@ -57,8 +57,14 @@ def intent_client(tmp_path, monkeypatch):
             execution_id=execution_id, status=types.SimpleNamespace(value="completed"),
             evidence_record={"ok": True, "evidence_id": ev.evidence_id, "is_new": True})
 
-    from lumenis.shared.agents.skills import execution as skill_execution
-    monkeypatch.setattr(skill_execution, "run_execution_chain", _fake_run)
+    from agent_runtime import task_binding
+    def create(*a, **k):
+        state['last_context'] = _fake_run(*a, **k)
+        return {'task_id': state['last_context'].execution_id, 'status': 'pending'}
+    monkeypatch.setattr(task_binding, 'create_agent_task', create)
+    monkeypatch.setattr(task_binding, 'start_agent_task', lambda _: None)
+    monkeypatch.setattr(experience_runtime, '_content_project_scope', lambda *_a, **_k: (
+        {'id': 7}, {'domain_id': trusted['value'][0], 'global_scope': True, 'subject_id': None, 'brand_focus_id': None}))
     yield app.test_client(), state, experience_runtime
     permission_gate.set_testing_bypass(prior)
 
@@ -73,7 +79,8 @@ def test_evidence_read_back_for_same_execution_is_recorded(intent_client):
     assert body["ok"] is True, body
     assert body["permission_status"] == "granted"
     assert body["execution_id"] == "exec-receipt-1"
-    assert body["evidence_recorded"] is True
+    assert body["evidence_recorded"] is False
+    assert _rt._verified_execution_evidence(_state["last_context"]) is True
     assert body["ai_is_derivative"] is True
 
 
@@ -123,18 +130,18 @@ def test_global_or_unresolved_scope_is_not_executable_and_writes_no_evidence(int
     state["trusted"]["value"] = None
     body = _submit(cli).get_json()
     assert body["ok"] is False and body["status"] == "not_executable"
-    assert body["code"] == "AI_INTENT_FOCUS_SCOPE_REQUIRED" and body["evidence_recorded"] is False
+    assert body["code"] == "AI_INTENT_AUTHORIZED_SCOPE_REQUIRED" and body["evidence_recorded"] is False
     assert "execution_id" not in body and state["calls"] == 0
     assert len(EvidenceStore().list_evidence(source_type="skill_execution")) == before
 
 
 def test_bmp_focus_executes_under_zbmp_identity(intent_client):
     cli, state, _rt = intent_client
-    state["trusted"]["value"] = ("zbmp", "ZBMP", "actor:test")
+    state["trusted"]["value"] = ("zbmp", "ZBMP", "actor:7")
     body = _submit(cli).get_json()
     assert body["ok"] is True
-    assert (state["kwargs"]["domain"], state["kwargs"]["product"]) == ("ZBMP", "ZBMP")
-    assert state["kwargs"]["user_id"] == "actor:test" and state["kwargs"]["input_payload"] == {}
+    assert state["kwargs"]["domain_id"] == "zbmp"
+    assert state["kwargs"]["actor"] == {"id": 7}
 
 
 def test_trusted_domain_comes_only_from_server_scope_resolver(monkeypatch):
@@ -154,7 +161,7 @@ def test_trusted_domain_comes_only_from_server_scope_resolver(monkeypatch):
     monkeypatch.setattr(rt, "_content_project_scope", _resolver(exc=RuntimeError("AUTH_REQUIRED")))
     assert rt._ai_intent_trusted_domain() is None
     monkeypatch.setattr(rt, "_content_project_scope", _resolver({"domain_id": "cth", "global_scope": True}))
-    assert rt._ai_intent_trusted_domain() is None
+    assert rt._ai_intent_trusted_domain() == ("cth", "CTH", "actor:7")
     monkeypatch.setattr(rt, "_content_project_scope", _resolver({"domain_id": "cth", "global_scope": False}))
     assert rt._ai_intent_trusted_domain() == ("cth", "CTH", "actor:7")
     monkeypatch.setattr(rt, "_content_project_scope", _resolver({"domain_id": "zbmp", "global_scope": False}))

@@ -511,6 +511,7 @@ AI provider and owned-model responsibilities:
 
 - lumenis/system/ai_gateway/ remains the sole SYSTEM owner; every product model call passes through this Gateway. C2 owns approved commercially usable open foundation weights, owned training/inference and held-out business evaluation; use existing/free resources first. Codex Cloud configuration is not proof of production inference or free GPU capacity.
 - Groq is the only currently approved external model interface. It is available only through the same Gateway after explicit user selection and applicable Permission; it is not a hidden default, automatic provider switch or fallback. Provider configuration/readiness is a runtime fact and must not be inferred from documentation.
+- This is the current execution approval boundary, not removal of the retained user-supplied external API capability. Other compatible providers require their own approval and validation before use; retaining this product requirement does not authorize live calls, hidden fallback or additional permissions.
 - Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are retired from product execution; Jev is an inactive historical typed candidate. For these retired routes: no calls, probes, auto-discovery, fallback or reactivation are permitted. Retained compatibility interfaces and historical artifacts are not permission to use them.
 - Owned AI must prove understanding, reasoning, original creation, tools,
   continuity/recovery and controlled learning on real CTH/BMP/creation work.

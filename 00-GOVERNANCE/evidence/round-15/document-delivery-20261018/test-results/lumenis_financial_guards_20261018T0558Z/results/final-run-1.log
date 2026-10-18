@@ -1,0 +1,59 @@
+....................................................F................... [ 88%]
+.........                                                                [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+=================================== FAILURES ===================================
+_______ test_registered_entity_scope_never_matches_nulls_or_wrong_domain _______
+
+workspace = {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_financial_guards_20261018T0558Z/tmp/pytest-of-agent/pytest-1/test_regist...actor': LocalWorkspacePrincipal(principal_kind='local_workspace', principal_ref='workspace:local', actor_id=None), ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9a24da2690>
+
+    def test_registered_entity_scope_never_matches_nulls_or_wrong_domain(workspace,monkeypatch):
+        import subject_registry
+        w=workspace;monkeypatch.setattr(financial,'get_repository',lambda:w['repo'])
+        row={'subject_id':'other','brand_focus_id':None,'domain_id':'CTH',
+             'name_en':'Example issuer','name_zh':'示例'}
+        monkeypatch.setattr(subject_registry,'list_subjects',lambda *a,**k:[row])
+        entity={'name':'Example issuer'}
+        scoped=dict(w['scope'],subject_id='selected',global_scope=False)
+>       assert financial.match_registered_entity(entity,actor=w['actor'],scope=scoped)['status']=='MISSING'
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_regional_financial_intake.py:312: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+lumenis/importer/financial.py:360: in match_registered_entity
+    context = saved_work.authorize(actor, scope, action='read')
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+actor = LocalWorkspacePrincipal(principal_kind='local_workspace', principal_ref='workspace:local', actor_id=None)
+scope = {'domain_id': 'cth', 'subject_id': 'selected', 'brand_focus_id': None, 'global_scope': False}
+action = 'read', connection = None
+
+    def authorize(actor: Any, scope: Mapping[str, Any], *, action: str, connection=None) -> dict:
+        """Revalidate the existing server-issued principal and exact report scope."""
+        keys = {"domain_id", "subject_id", "brand_focus_id", "global_scope"}
+        if not isinstance(scope, Mapping) or set(scope) != keys:
+            raise SavedWorkError("WORK_SCOPE_INVALID")
+        domain = scope["domain_id"]
+        if not isinstance(domain, str) or domain not in {"cth", "bmp", "zbmp"}:
+            raise SavedWorkError("WORK_SCOPE_INVALID")
+        normalized = {**scope, "domain_id": "zbmp" if domain in {"bmp", "zbmp"} else "cth"}
+        checker = (permission.check_local_workspace_scope_permission
+                   if type(actor) is permission.LocalWorkspacePrincipal
+                   else permission.check_actor_scope_permission)
+        connection_options = {} if connection is None else {"connection": connection}
+        decision = checker(actor, module="reports", action=action, **normalized, **connection_options)
+        if decision.allowed is not True or decision.verification_state != "verified":
+>           raise SavedWorkError("WORK_PERMISSION_DENIED")
+E           lumenis.shared.reporting.saved_work.SavedWorkError: WORK_PERMISSION_DENIED
+
+lumenis/shared/reporting/saved_work.py:220: SavedWorkError
+=========================== short test summary info ============================
+FAILED tests/test_regional_financial_intake.py::test_registered_entity_scope_never_matches_nulls_or_wrong_domain

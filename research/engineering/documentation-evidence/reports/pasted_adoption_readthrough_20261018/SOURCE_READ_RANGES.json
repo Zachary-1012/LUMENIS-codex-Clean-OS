@@ -1,0 +1,29 @@
+[
+  {
+    "path": "00-GOVERNANCE/evidence/round-06/PUBLIC-ACQUISITION-RESEARCH-20261008.md",
+    "commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "sha256": "c6ef46653baee5849cd424f82b926339f8ffcf39245ff6e4de1cf66d88a2410c",
+    "lines": 58,
+    "read_scope": "entire report",
+    "original_pasted_bytes_obtained": false,
+    "delivered_sha256": "c6ef46653baee5849cd424f82b926339f8ffcf39245ff6e4de1cf66d88a2410c"
+  },
+  {
+    "path": "00-GOVERNANCE/evidence/round-15/READ-ALOUD-SYSTEM-20261008.md",
+    "commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "sha256": "c76d886968deed14c9c8f5417ae4c33f3a2e63c7fe9e23f11b21e96c57741dc1",
+    "lines": 60,
+    "read_scope": "entire report",
+    "original_pasted_bytes_obtained": false,
+    "delivered_sha256": "1d17d4f4472f15bcfaff7ca24c0f162362e0ceb2c76bfea3f711a9df58646d77"
+  },
+  {
+    "path": "00-GOVERNANCE/evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md",
+    "commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "sha256": "beda46c59e3eac0306e20cfd01a17a5a5f21110369da20f2375ffcdc12aa55b9",
+    "lines": 103,
+    "read_scope": "entire report",
+    "original_pasted_bytes_obtained": false,
+    "delivered_sha256": "beda46c59e3eac0306e20cfd01a17a5a5f21110369da20f2375ffcdc12aa55b9"
+  }
+]

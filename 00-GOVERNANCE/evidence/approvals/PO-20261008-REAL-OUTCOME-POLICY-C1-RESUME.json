@@ -6,7 +6,7 @@
   "approved_at": "2026-10-08",
   "approval_source_type": "superseding_product_owner_instruction",
   "scope_manifest": {
-    "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+    "source_thread_id": "private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186",
     "direct_policy_quote": "从本指令生效起，序境研发不再以单元测试、集成测试作为开发、合并、验收或发布的强制条件。",
     "direct_resume_quote": "我要C1-真实数据和采集能力闭环，这个窗口一次性闭环，按照对应的规划执行闭环！！！给他开6astra ultra",
     "policy_change": "remove unit/integration execution and creation, including renamed module suites; retain build/static/security/data/real E2E/recovery/release",
@@ -55,8 +55,8 @@
     },
     "C1_subject_batch_postanalysis_single_cover": {
       "source": "Direct PO C1 message read through current Codex thread plus direct M follow-up",
-      "source_thread_id": "01a0f86f-6435-78d0-8e48-522e2ca09ca2",
-      "source_message_id": "01a11bb2-b90c-7c53-b3b8-1327cc8b54b0",
+      "source_thread_id": "private-source-id-sha256-d7943be9654d2683a21734dae8392ffeab749d42bdf96fb5a9f6f0aa7ebab1e1",
+      "source_message_id": "private-source-id-sha256-3691a5b0b8a33c327c810dc460c3375276a947c36fcf0b6361fb31e70be777be",
       "direct_quote": "现在采集太慢了，升维，根据主体，大量采集相关发帖，回来以后直接跑通整个数据处理，关键词那些采集回来后分析，图片只取封面一张，最小化图片处理，",
       "M_sync_quote": "我给c1下了新需求，你需要优化一下，同步线上线下，并在给c1同步一下",
       "executor": "C1",
@@ -98,7 +98,7 @@
     },
     "C1_full_product_data_business_upgrade_20261009": {
       "source": "Direct current M thread Product Owner instruction",
-      "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+      "source_thread_id": "private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186",
       "title": "序境 / LUMENIS｜C1 数据能力重构与全产品业务闭环升级执行令",
       "status": "APPROVED",
       "recorded_at": "2026-10-08T17:05:43.301490+00:00",

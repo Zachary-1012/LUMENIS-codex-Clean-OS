@@ -1,0 +1,85 @@
+[
+  {
+    "file": "retail_source.html",
+    "url": "https://archive.ics.uci.edu/dataset/352/online+retail",
+    "final_url": "https://archive.ics.uci.edu/dataset/352/online+retail",
+    "sha256": "8e36ee60489a549d5e3ea3b7b6320dd8951297ee6282fa3da9013006ecb923a7",
+    "bytes": 174303,
+    "headers": {
+      "Server": "nginx/1.31.4",
+      "Date": "Sun, 18 Oct 2026 05:02:13 GMT",
+      "Content-Type": "text/html",
+      "Content-Length": "174303",
+      "Connection": "close",
+      "etag": "\"aktvgd\"",
+      "x-sveltekit-page": "true"
+    },
+    "access_time_system_utc": "2026-10-18T05:02:13.824648+00:00"
+  },
+  {
+    "file": "shoppers_source.html",
+    "url": "https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset",
+    "final_url": "https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset",
+    "sha256": "8a476914ca3260668d0693433018e46fcbc2d5b832f38dae34e43f28d6986f09",
+    "bytes": 128863,
+    "headers": {
+      "Server": "nginx/1.31.4",
+      "Date": "Sun, 18 Oct 2026 05:02:16 GMT",
+      "Content-Type": "text/html",
+      "Content-Length": "128863",
+      "Connection": "close",
+      "etag": "\"1kkqhfq\"",
+      "x-sveltekit-page": "true"
+    },
+    "access_time_system_utc": "2026-10-18T05:02:17.103285+00:00"
+  },
+  {
+    "file": "facebook_source.html",
+    "url": "https://archive.ics.uci.edu/dataset/368/facebook+metrics",
+    "final_url": "https://archive.ics.uci.edu/dataset/368/facebook+metrics",
+    "sha256": "b91ca7b975c0ffc715503402b1ab6bf6a5c79f5ac3dd6a506d8aced20a31bf71",
+    "bytes": 151836,
+    "headers": {
+      "Server": "nginx/1.31.4",
+      "Date": "Sun, 18 Oct 2026 05:02:20 GMT",
+      "Content-Type": "text/html",
+      "Content-Length": "151836",
+      "Connection": "close",
+      "etag": "\"79lahj\"",
+      "x-sveltekit-page": "true"
+    },
+    "access_time_system_utc": "2026-10-18T05:02:20.442677+00:00"
+  },
+  {
+    "file": "cc_by_4.html",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "file": "criteo_source.html",
+    "url": "https://ailab.criteo.com/criteo-uplift-prediction-dataset/",
+    "final_url": "https://ailab.criteo.com/criteo-uplift-prediction-dataset/",
+    "sha256": "ecfe39e81776f5dc835d359343b67ae985a7c669425c8d8f69f68834e3c1bdc5",
+    "bytes": 71123,
+    "headers": {
+      "Connection": "close",
+      "x-powered-by": "PHP/8.3.35",
+      "Content-Type": "text/html; charset=UTF-8",
+      "link": "<https://ailab.criteo.com/wp-json/>; rel=\"https://api.w.org/\"",
+      "cache-control": "no-cache",
+      "last-modified": "Mon, 12 Oct 2026 16:10:00 GMT",
+      "wpo-cache-status": "saving to cache",
+      "vary": "Accept-Encoding",
+      "etag": "\"41373-1791821400;;;\"",
+      "X-LiteSpeed-Cache": "hit",
+      "Transfer-Encoding": "chunked",
+      "Date": "Sun, 18 Oct 2026 05:02:26 GMT",
+      "Server": "LiteSpeed",
+      "platform": "hostinger",
+      "panel": "hpanel",
+      "Content-Security-Policy": "upgrade-insecure-requests",
+      "alt-svc": "h3=\":443\"; ma=2592000, h3-29=\":443\"; ma=2592000"
+    },
+    "access_time_system_utc": "2026-10-18T05:02:26.302897+00:00"
+  }
+]

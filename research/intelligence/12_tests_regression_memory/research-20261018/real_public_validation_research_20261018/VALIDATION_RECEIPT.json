@@ -1,0 +1,19 @@
+{
+  "verification": "Independent recomputation from exported per-row forecasts and hash readback, not independent external review",
+  "checks": {
+    "sha_Online Retail.xlsx": true,
+    "sha_dataset_Facebook.csv": true,
+    "sha_facebook_metrics.zip": true,
+    "sha_online_retail.zip": true,
+    "sha_online_shoppers.zip": true,
+    "sha_online_shoppers_intention.csv": true,
+    "retail_daily_forecast.csv:weekly_naive_MAE_GBP": true,
+    "retail_daily_forecast.csv:four_prior_same_weekdays_mean_MAE_GBP": true,
+    "facebook_holdout_predictions.csv:global_median_MAE": true,
+    "facebook_holdout_predictions.csv:type_median_MAE": true,
+    "negative_months_retained": true,
+    "complete_months_retained": true,
+    "no_training_claim": true
+  },
+  "all_pass": true
+}

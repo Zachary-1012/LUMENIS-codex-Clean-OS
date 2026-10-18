@@ -1,0 +1,168 @@
+{
+  "schema": "lumenis-local-forensic-handoff/1",
+  "generated_at": "2026-10-18T05:46:16.236068+00:00",
+  "project_root": "[LOCAL_SOURCE_PATH]",
+  "output_directory": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524",
+  "mode": "READ_ONLY_HANDOFF_NO_PRODUCT_MODIFICATION",
+  "remote_main": "LOCAL_CACHED_ONLY",
+  "files": [
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\build_handoff.py",
+      "bytes": 16192,
+      "sha256": "e3a8b349c39c6d486686106cd59fc1a9dfa259cd8a1adce0c48356b7000df563",
+      "modified_utc": "2026-10-18T05:46:16.073266+00:00",
+      "relative_path": "build_handoff.py"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\candidates.json",
+      "bytes": 373310,
+      "sha256": "5a690cc36e18db3cee9098ea97fa823c55b04552f222ea8421d91a31035d3081",
+      "modified_utc": "2026-10-18T05:45:44.998115+00:00",
+      "relative_path": "evidence/candidates.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\candidates.md",
+      "bytes": 26710,
+      "sha256": "22ca572b0c68879b1a6a095959df86f458e85d49982db358fda6be2cbd5cec36",
+      "modified_utc": "2026-10-18T05:45:44.998672+00:00",
+      "relative_path": "evidence/candidates.md"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\closing-preservation.json",
+      "bytes": 50479,
+      "sha256": "a1543b6b997183455763af4ad265ef36de27f56b70d0909471a86781012a1fe6",
+      "modified_utc": "2026-10-18T05:35:41.228730+00:00",
+      "relative_path": "evidence/closing-preservation.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\core-db-binding.json",
+      "bytes": 1434,
+      "sha256": "2253cdf599b8480f36b5c6eba3e2ea69289136de0532fe92bf39e3ee74c29298",
+      "modified_utc": "2026-10-18T05:28:18.958438+00:00",
+      "relative_path": "evidence/core-db-binding.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\core-existing-errors.json",
+      "bytes": 12081,
+      "sha256": "3516ea352190b25c97c0bec4f41a3de1aae748ebfae674a87350b038c1480543",
+      "modified_utc": "2026-10-18T05:31:02.511650+00:00",
+      "relative_path": "evidence/core-existing-errors.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\core-existing-logs.json",
+      "bytes": 13505,
+      "sha256": "36f5a8e59e06a88c51cf88f1d246301c9b5a52ba2113b849bbe0f0b70c876493",
+      "modified_utc": "2026-10-18T05:27:47.591817+00:00",
+      "relative_path": "evidence/core-existing-logs.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\core-health-readback.json",
+      "bytes": 836,
+      "sha256": "4a4e07a37da3dcb7b0083fc2d857999574bcd0c50d104f46d1d48694cfe7afca",
+      "modified_utc": "2026-10-18T05:27:47.418694+00:00",
+      "relative_path": "evidence/core-health-readback.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\core-processes.json",
+      "bytes": 3003,
+      "sha256": "128cb633536ae34d69e4928770cdb1884fb4bc10d11cbdc77aa2518713ddd645",
+      "modified_utc": "2026-10-18T05:27:47.317660+00:00",
+      "relative_path": "evidence/core-processes.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\existing-frontend-screenshots.json",
+      "bytes": 1539,
+      "sha256": "9f51c0eff77ac882a63f324a0b7395da356ee88d4a6514327d56e8655515dc87",
+      "modified_utc": "2026-10-18T05:35:41.230736+00:00",
+      "relative_path": "evidence/existing-frontend-screenshots.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\final-handoff-integrity.json",
+      "bytes": 884,
+      "sha256": "74a91317a66e2a782ec15f6806613be7a16f8269ba7d04161d3f2544ac51cedc",
+      "modified_utc": "2026-10-18T05:46:16.072263+00:00",
+      "relative_path": "evidence/final-handoff-integrity.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\frontend-local-evidence.json",
+      "bytes": 15423,
+      "sha256": "1f38d64230cbc09117a4b5704981697e3b4a6bd63b5eda741d31ae90078f4bc2",
+      "modified_utc": "2026-10-18T05:30:31.172150+00:00",
+      "relative_path": "evidence/frontend-local-evidence.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\local-git-baseline.json",
+      "bytes": 50530,
+      "sha256": "ebcaf4bd83c426f923857a2e2e88214e300f7e601796a5aaedf22eba7bb96b79",
+      "modified_utc": "2026-10-18T05:27:43.717394+00:00",
+      "relative_path": "evidence/local-git-baseline.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\model-provenance.json",
+      "bytes": 12227,
+      "sha256": "0f4786469f41b2031f8da01f930a786eafa6be2e1cfc1f1e87292ecd7ad58438",
+      "modified_utc": "2026-10-18T05:38:26.212929+00:00",
+      "relative_path": "evidence/model-provenance.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\model-provenance.md",
+      "bytes": 4789,
+      "sha256": "850e8e413dcefb7b5337b31850c0c49f4a53a148e68f59f9bf1be46322933882",
+      "modified_utc": "2026-10-18T05:38:10.995279+00:00",
+      "relative_path": "evidence/model-provenance.md"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\originals.json",
+      "bytes": 15366,
+      "sha256": "2c8d914e65ca8c1b96f6a7f4b4046b27084f7f73bf9eb583581a8d2993724cef",
+      "modified_utc": "2026-10-18T05:29:52.514167+00:00",
+      "relative_path": "evidence/originals.json"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\originals.md",
+      "bytes": 5868,
+      "sha256": "4b7a0da4f57c53652b2456c3f9bf2376c2496d8cd5b3f81ca1539c7ddd16c4cc",
+      "modified_utc": "2026-10-18T05:29:52.526269+00:00",
+      "relative_path": "evidence/originals.md"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\read_frontend.py",
+      "bytes": 4316,
+      "sha256": "505c276496c3854bb660c87f610a8f36ca38cbf184982187778a86b7ee1fb47f",
+      "modified_utc": "2026-10-18T05:30:22.032350+00:00",
+      "relative_path": "evidence/read_frontend.py"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\read_local_state.py",
+      "bytes": 7202,
+      "sha256": "ac0bb73b8559023a7966e4e6113ac96fb9235f2ac2317eafde41c25dad79fb31",
+      "modified_utc": "2026-10-18T05:27:40.392719+00:00",
+      "relative_path": "evidence/read_local_state.py"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\evidence\\verify_candidate_comparisons.py",
+      "bytes": 4360,
+      "sha256": "7f92b84983a08e6453eb0e2ce25b980867c2da00c237813f72afa13fff20a153",
+      "modified_utc": "2026-10-18T05:43:30.130641+00:00",
+      "relative_path": "evidence/verify_candidate_comparisons.py"
+    },
+    {
+      "path": "[REDACTED_HOME]\\Documents\\Codex\\2026-10-18\\local-handoff-to-zack-132524\\LOCAL_HANDOFF_TO_ZACK.md",
+      "bytes": 50950,
+      "sha256": "f74e72cca65a218b55b53b0b7aec9958c8317923b94e92388298648600c43b40",
+      "modified_utc": "2026-10-18T05:46:16.210308+00:00",
+      "relative_path": "LOCAL_HANDOFF_TO_ZACK.md"
+    }
+  ],
+  "self_hash": "EXCLUDED_TO_AVOID_RECURSIVE_HASH",
+  "original_sources": "evidence/originals.json",
+  "candidate_sources": "evidence/candidates.json",
+  "model_sources": "evidence/model-provenance.json",
+  "source_and_runtime_evidence": "evidence/local-git-baseline.json and evidence/core-*.json",
+  "preservation": "evidence/closing-preservation.json",
+  "copied_originals": false,
+  "copied_secret_material": false,
+  "copied_database": false,
+  "copied_model_weights": false,
+  "acceptance": "HANDOFF_DOCUMENTS_ONLY; product not repaired or accepted"
+}

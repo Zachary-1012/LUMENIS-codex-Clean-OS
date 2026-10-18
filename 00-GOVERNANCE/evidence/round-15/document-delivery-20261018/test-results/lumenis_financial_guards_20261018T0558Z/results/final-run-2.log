@@ -1,0 +1,143 @@
+....................................................F................... [ 88%]
+.........                                                                [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+=================================== FAILURES ===================================
+_______ test_registered_entity_scope_never_matches_nulls_or_wrong_domain _______
+
+workspace = {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_financial_guards_20261018T0558Z/tmp/pytest-of-agent/pytest-2/test_regist...actor': LocalWorkspacePrincipal(principal_kind='local_workspace', principal_ref='workspace:local', actor_id=None), ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3439c40ec0>
+
+    def test_registered_entity_scope_never_matches_nulls_or_wrong_domain(workspace,monkeypatch):
+        import subject_registry
+        w=workspace;monkeypatch.setattr(financial,'get_repository',lambda:w['repo'])
+        with w['repo'].transaction() as con:
+            subject_registry.ensure_schema(con)
+            con.execute("INSERT INTO lumenis_subject_registry (subject_id,domain_id,subject_type,name_en,name_zh,name_en_norm,name_zh_norm,created_at,updated_at) VALUES ('selected','CTH','company','Selected issuer','主体','selected issuer','主体','2026-01-01','2026-01-01')")
+        row={'subject_id':'other','brand_focus_id':None,'domain_id':'CTH',
+             'name_en':'Example issuer','name_zh':'示例'}
+        monkeypatch.setattr(subject_registry,'list_subjects',lambda *a,**k:[row])
+        entity={'name':'Example issuer'}
+        scoped=dict(w['scope'],subject_id='selected',global_scope=False)
+>       assert financial.match_registered_entity(entity,actor=w['actor'],scope=scoped)['status']=='MISSING'
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_regional_financial_intake.py:315: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+lumenis/importer/financial.py:360: in match_registered_entity
+    context = saved_work.authorize(actor, scope, action='read')
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+actor = LocalWorkspacePrincipal(principal_kind='local_workspace', principal_ref='workspace:local', actor_id=None)
+scope = {'domain_id': 'cth', 'subject_id': 'selected', 'brand_focus_id': None, 'global_scope': False}
+action = 'read', connection = None
+
+    def authorize(actor: Any, scope: Mapping[str, Any], *, action: str, connection=None) -> dict:
+        """Revalidate the existing server-issued principal and exact report scope."""
+        keys = {"domain_id", "subject_id", "brand_focus_id", "global_scope"}
+        if not isinstance(scope, Mapping) or set(scope) != keys:
+            raise SavedWorkError("WORK_SCOPE_INVALID")
+        domain = scope["domain_id"]
+        if not isinstance(domain, str) or domain not in {"cth", "bmp", "zbmp"}:
+            raise SavedWorkError("WORK_SCOPE_INVALID")
+        normalized = {**scope, "domain_id": "zbmp" if domain in {"bmp", "zbmp"} else "cth"}
+        checker = (permission.check_local_workspace_scope_permission
+                   if type(actor) is permission.LocalWorkspacePrincipal
+                   else permission.check_actor_scope_permission)
+        connection_options = {} if connection is None else {"connection": connection}
+        decision = checker(actor, module="reports", action=action, **normalized, **connection_options)
+        if decision.allowed is not True or decision.verification_state != "verified":
+>           raise SavedWorkError("WORK_PERMISSION_DENIED")
+E           lumenis.shared.reporting.saved_work.SavedWorkError: WORK_PERMISSION_DENIED
+
+lumenis/shared/reporting/saved_work.py:220: SavedWorkError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/test_mmm_diagnostic_guards.py::test_complete_raw_diagnostics_pass
+PASSED tests/test_mmm_diagnostic_guards.py::test_one_bad_parameter_cannot_hide_in_aggregate[r_hat-nan]
+PASSED tests/test_mmm_diagnostic_guards.py::test_one_bad_parameter_cannot_hide_in_aggregate[ess_bulk-nan]
+PASSED tests/test_mmm_diagnostic_guards.py::test_one_bad_parameter_cannot_hide_in_aggregate[r_hat-inf]
+PASSED tests/test_mmm_diagnostic_guards.py::test_one_bad_parameter_cannot_hide_in_aggregate[ess_bulk--inf]
+PASSED tests/test_mmm_diagnostic_guards.py::test_one_bad_parameter_cannot_hide_in_aggregate[r_hat-1.05001]
+PASSED tests/test_mmm_diagnostic_guards.py::test_one_bad_parameter_cannot_hide_in_aggregate[ess_bulk-199.999]
+PASSED tests/test_mmm_diagnostic_guards.py::test_one_bad_parameter_cannot_hide_in_aggregate[r_hat-0]
+PASSED tests/test_mmm_diagnostic_guards.py::test_required_diagnostics_complete_and_unique[row]
+PASSED tests/test_mmm_diagnostic_guards.py::test_required_diagnostics_complete_and_unique[column]
+PASSED tests/test_mmm_diagnostic_guards.py::test_required_diagnostics_complete_and_unique[duplicate]
+PASSED tests/test_mmm_diagnostic_guards.py::test_required_diagnostics_complete_and_unique[unexpected]
+PASSED tests/test_mmm_diagnostic_guards.py::test_thresholds_include_exact_boundary
+PASSED tests/test_mmm_diagnostic_guards.py::test_summary_requests_unrounded_values_and_guard_precedes_ready
+PASSED tests/test_regional_financial_intake.py::test_automatic_statement_has_period_currency_scale_page_and_no_sga_relabel
+PASSED tests/test_regional_financial_intake.py::test_ambiguity_is_candidate_not_invented_value[For the year ended 31st December 2024-Report 2024-PERIOD_HEADER_AMBIGUOUS]
+PASSED tests/test_regional_financial_intake.py::test_ambiguity_is_candidate_not_invented_value[HK$M HK$M-USD HKD-CURRENCY_SCALE_AMBIGUOUS]
+PASSED tests/test_regional_financial_intake.py::test_ambiguity_is_candidate_not_invented_value[(Stock Code: 01234)-(Unknown identity)-FILING_ENTITY_UNRESOLVED]
+PASSED tests/test_regional_financial_intake.py::test_ambiguity_is_candidate_not_invented_value[2024 2023-2024 2023 2022-PERIOD_HEADER_AMBIGUOUS]
+PASSED tests/test_regional_financial_intake.py::test_extra_column_not_mistaken_for_note_or_growth
+PASSED tests/test_regional_financial_intake.py::test_half_year_never_becomes_quarter
+PASSED tests/test_regional_financial_intake.py::test_chinese_statement_explicit_year_currency_and_scale
+PASSED tests/test_regional_financial_intake.py::test_opendart_current_amount_uses_current_dates_cumulative_stays_unbound
+PASSED tests/test_regional_financial_intake.py::test_opendart_errors_and_secret_free_config[010-INVALID_CREDENTIAL]
+PASSED tests/test_regional_financial_intake.py::test_opendart_errors_and_secret_free_config[013-NO_DATA]
+PASSED tests/test_regional_financial_intake.py::test_opendart_errors_and_secret_free_config[020-RATE_LIMITED]
+PASSED tests/test_regional_financial_intake.py::test_opendart_errors_and_secret_free_config[800-MAINTENANCE]
+PASSED tests/test_regional_financial_intake.py::test_existing_importer_savedwork_revisions_replay_and_source_integrity
+PASSED tests/test_regional_financial_intake.py::test_mixed_currency_columns_and_malformed_grouping_are_not_normalized
+PASSED tests/test_regional_financial_intake.py::test_regional_capture_uses_original_owner_and_exact_approval
+PASSED tests/test_regional_financial_intake.py::test_identity_review_is_scoped_literal_latest_and_revocable
+PASSED tests/test_regional_financial_intake.py::test_later_table_context_never_inherits_primary_metadata[Notes to the financial statements\nParent company only\n2022 2021\nUSD thousand USD thousand]
+PASSED tests/test_regional_financial_intake.py::test_later_table_context_never_inherits_primary_metadata[2022 2021\nHK$M HK$M]
+PASSED tests/test_regional_financial_intake.py::test_later_table_context_never_inherits_primary_metadata[USD thousand USD thousand]
+PASSED tests/test_regional_financial_intake.py::test_later_table_context_never_inherits_primary_metadata[\u6bcd\u516c\u53f8\u5229\u6da6\u8868\n\u5355\u4f4d\uff1a\u4e07\u5143 \u5e01\u79cd\uff1a\u4eba\u6c11\u5e01]
+PASSED tests/test_regional_financial_intake.py::test_independently_headed_primary_tables_keep_their_own_periods_and_pages
+PASSED tests/test_regional_financial_intake.py::test_unheaded_continuation_rows_are_locatable_review_candidates
+PASSED tests/test_regional_financial_intake.py::test_parent_scope_in_primary_header_is_not_consolidated_fact
+PASSED tests/test_regional_financial_intake.py::test_context_before_first_supported_metric_cannot_skip_unknown_table_rows[Segment information]
+PASSED tests/test_regional_financial_intake.py::test_context_before_first_supported_metric_cannot_skip_unknown_table_rows[Notes on the financial statements]
+PASSED tests/test_regional_financial_intake.py::test_context_before_first_supported_metric_cannot_skip_unknown_table_rows[Parent entity only]
+PASSED tests/test_regional_financial_intake.py::test_context_before_first_supported_metric_cannot_skip_unknown_table_rows[USD thousand USD thousand]
+PASSED tests/test_regional_financial_intake.py::test_context_before_first_supported_metric_cannot_skip_unknown_table_rows[CHF million CHF million]
+PASSED tests/test_regional_financial_intake.py::test_context_before_first_supported_metric_cannot_skip_unknown_table_rows[\u5355\u4f4d\uff1a\u4e07\u5143]
+PASSED tests/test_regional_financial_intake.py::test_context_before_first_supported_metric_cannot_skip_unknown_table_rows[HK$M HK$M]
+PASSED tests/test_regional_financial_intake.py::test_context_before_first_supported_metric_cannot_skip_unknown_table_rows[2022 2021]
+PASSED tests/test_regional_financial_intake.py::test_unknown_numeric_row_without_changed_context_preserves_valid_primary_metadata
+PASSED tests/test_regional_financial_intake.py::test_chinese_initial_currency_scale_order_is_not_a_context_change[\u5355\u4f4d\uff1a\u4e07\u5143 \u5e01\u79cd\uff1a\u4eba\u6c11\u5e01]
+PASSED tests/test_regional_financial_intake.py::test_chinese_initial_currency_scale_order_is_not_a_context_change[\u5e01\u79cd\uff1a\u4eba\u6c11\u5e01 \u5355\u4f4d\uff1a\u4e07\u5143]
+PASSED tests/test_regional_financial_intake.py::test_chinese_initial_currency_scale_order_is_not_a_context_change[\u5355\u4f4d\uff1a\u4e07\u5143\n\u5e01\u79cd\uff1a\u4eba\u6c11\u5e01]
+PASSED tests/test_regional_financial_intake.py::test_chinese_initial_currency_scale_order_is_not_a_context_change[\u5e01\u79cd\uff1a\u4eba\u6c11\u5e01\n\u5355\u4f4d\uff1a\u4e07\u5143]
+PASSED tests/test_regional_financial_intake.py::test_opendart_quarter_and_accumulated_amounts_are_not_conflated
+PASSED tests/test_public_financial_pipeline.py::test_sec_units_cumulative_revisions_and_sga_are_not_collapsed
+PASSED tests/test_public_financial_pipeline.py::test_invalid_sec[<lambda>0]
+PASSED tests/test_public_financial_pipeline.py::test_invalid_sec[<lambda>1]
+PASSED tests/test_public_financial_pipeline.py::test_invalid_sec[<lambda>2]
+PASSED tests/test_public_financial_pipeline.py::test_invalid_sec[<lambda>3]
+PASSED tests/test_public_financial_pipeline.py::test_duplicate_json_keys_fail_closed
+PASSED tests/test_public_financial_pipeline.py::test_xbrl_dimensions_nil_and_entity_safety
+PASSED tests/test_public_financial_pipeline.py::test_disclosure_requires_retained_numeric_literal_and_scale
+PASSED tests/test_public_financial_pipeline.py::test_spend_proxy_range_and_missing
+PASSED tests/test_public_financial_pipeline.py::test_existing_owner_save_replay_revise_search_and_restart
+PASSED tests/test_public_financial_pipeline.py::test_xbrl_utf16_entity_bypass_rejected
+PASSED tests/test_public_financial_pipeline.py::test_qualitative_footfall_not_numeric
+PASSED tests/test_public_financial_pipeline.py::test_registry_exact_name_candidate_never_substring_or_child
+PASSED tests/test_public_financial_pipeline.py::test_noncontiguous_quarters_not_ready
+PASSED tests/test_public_financial_pipeline.py::test_xml_original_retained_in_same_document_owner
+PASSED tests/test_public_financial_pipeline.py::test_xbrl_qnames_currency_prefix_rebinding_and_ratios
+PASSED tests/test_public_financial_pipeline.py::test_decimal_exponent_and_nonfinite_denial_of_service[0e-999999999]
+PASSED tests/test_public_financial_pipeline.py::test_decimal_exponent_and_nonfinite_denial_of_service[1e-999999999]
+PASSED tests/test_public_financial_pipeline.py::test_decimal_exponent_and_nonfinite_denial_of_service[1e999999999]
+PASSED tests/test_public_financial_pipeline.py::test_decimal_exponent_and_nonfinite_denial_of_service[NaN]
+PASSED tests/test_public_financial_pipeline.py::test_decimal_exponent_and_nonfinite_denial_of_service[Infinity]
+PASSED tests/test_public_financial_pipeline.py::test_registered_target_http_fixture_capture_update_replay_and_import
+PASSED tests/test_public_financial_pipeline.py::test_production_public_transport_does_not_allow_local_fixture
+PASSED tests/test_public_financial_pipeline.py::test_acquisition_rechecks_revocation_after_network_and_failure_creates_no_success
+PASSED tests/test_public_financial_pipeline.py::test_public_document_method_rejects_bad_transport_envelopes[text/html-4-200]
+PASSED tests/test_public_financial_pipeline.py::test_public_document_method_rejects_bad_transport_envelopes[application/json-2097153-200]
+PASSED tests/test_public_financial_pipeline.py::test_public_document_method_rejects_bad_transport_envelopes[application/json-4-403]
+PASSED tests/test_public_financial_pipeline.py::test_document_limiter_cooldown_and_wait_reauthorization
+FAILED tests/test_regional_financial_intake.py::test_registered_entity_scope_never_matches_nulls_or_wrong_domain

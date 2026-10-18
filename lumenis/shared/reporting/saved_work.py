@@ -36,7 +36,7 @@ _MAX_OOXML_ENTRIES = 4096
 _MAX_OOXML_MEMBER_BYTES = 8 * 1024 * 1024
 _MAX_OOXML_TOTAL_BYTES = 64 * 1024 * 1024
 _MAX_OOXML_METADATA_BYTES = 2 * 1024 * 1024
-_ATTACHMENT_NAME = re.compile(r"[A-Za-z0-9_-]{1,80}\.(docx|xlsx|pptx)\Z")
+_ATTACHMENT_NAME = re.compile(r"[A-Za-z0-9_-]{1,80}\.(docx|xlsx|pptx|pdf|txt|csv|doc|xls|html|htm|json|xml|xbrl)\Z")
 _OFFICE_FORMATS = {
     "docx": {
         "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -57,6 +57,18 @@ _OFFICE_FORMATS = {
         "main_root": "{http://schemas.openxmlformats.org/presentationml/2006/main}presentation",
     },
 }
+_CUSTODY_FORMATS = {
+    "pdf": {"media_type": "application/pdf", "custody": "pdf"},
+    "txt": {"media_type": "text/plain", "custody": "text"},
+    "csv": {"media_type": "text/csv", "custody": "text"},
+    "json": {"media_type": "application/json", "custody": "text"},
+    "xml": {"media_type": "application/octet-stream", "custody": "text"},
+    "xbrl": {"media_type": "application/octet-stream", "custody": "text"},
+    "html": {"media_type": "application/octet-stream", "custody": "text"},
+    "htm": {"media_type": "application/octet-stream", "custody": "text"},
+    "doc": {"media_type": "application/msword", "custody": "ole"},
+    "xls": {"media_type": "application/vnd.ms-excel", "custody": "ole"},
+}
 _KINDS = {"research", "report", "podcast_episode", "delivery_preferences"}
 _SCOPE_KEYS = ("domain_id", "subject_id", "brand_focus_id", "global_scope")
 _SHARED_SCOPE_KEYS = ("scope_kind", "version")
@@ -76,7 +88,7 @@ def _attachment_spec(name: Any, media_type: Any) -> dict | None:
     if match is None:
         return None
     extension = match.group(1)
-    spec = _OFFICE_FORMATS[extension]
+    spec = {**_OFFICE_FORMATS, **_CUSTODY_FORMATS}[extension]
     if media_type != spec["media_type"]:
         return None
     return {"extension": "." + extension, **spec}
@@ -103,6 +115,17 @@ def _valid_ooxml_attachment(raw: bytes, spec: Mapping[str, Any]) -> bool:
     """Validate a bounded, exact-format OOXML ZIP package without extracting it."""
     if not isinstance(raw, bytes) or not 0 < len(raw) <= _LIMIT:
         return False
+    if spec.get("custody") == "pdf":
+        return raw.startswith(b"%PDF-") and b"%%EOF" in raw[-2048:]
+    if spec.get("custody") == "ole":
+        return raw.startswith(bytes.fromhex("d0cf11e0a1b11ae1"))
+    if spec.get("custody") == "text":
+        from lumenis.importer.parser import decode_local_text
+        try:
+            decode_local_text(raw)
+            return True
+        except ValueError:
+            return False
     try:
         with zipfile.ZipFile(io.BytesIO(raw), "r") as archive:
             infos = archive.infolist()
@@ -495,9 +518,27 @@ def _verified_evidence(con, evidence_id: int, context: dict, actor: Any = None,
         raise SavedWorkError("WORK_SOURCE_RIGHTS_UNVERIFIED")
     # The original approved input is retained by the same Artifact registry,
     # not just a claimed hash. Every citation/read/export verifies its bytes.
-    from lumenis.importer.documents import _source_bytes, source_boundaries
+    from lumenis.importer.documents import (
+        _source_bytes, _verify_imported_document_producer, source_boundaries,
+    )
     source_boundaries(source_provenance)
-    _source_bytes(con, {**item, "provenance": provenance})
+    source_evidence = {**item, "provenance": provenance}
+    _, source_artifact = _source_bytes(con, source_evidence)
+    if source_artifact["kind"] == "imported_document_source":
+        # A valid generic writer signature is not an Importer receipt. Select
+        # this contract by the original Artifact owner, never a payload claim.
+        _verify_imported_document_producer(source_evidence)
+    if item.get('version') == 'collected-browser-snapshot:v1':
+        if actor is None:
+            raise SavedWorkError('BROWSER_SOURCE_CURRENT_ACTOR_REQUIRED')
+        binding = provenance.get('browser_snapshot_binding') or {}
+        decision = permission.get_permission_gate().check_browser_snapshot_use(actor,
+            scope=source_scope, source_evidence_ref='app_evidence_records:' + str(evidence_id),
+            source_fingerprint=provenance.get('source_fingerprint'),
+            body_sha256=binding.get('body_sha256'), source_version=item['version'],
+            purpose=purpose, connection=con)
+        if decision.allowed is not True:
+            raise SavedWorkError('BROWSER_SOURCE_USE_APPROVAL_REQUIRED')
     return {**item, "raw_content": text, "provenance": provenance}
 
 
@@ -753,6 +794,12 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
                         "payload": payload, "citations": checked_citations,
                         "created_at": datetime.now(timezone.utc).isoformat(),
                         "authorship": "user-supplied; source facts require citations"}
+            if (not attachment_bytes and versions and
+                    versions[-1]["document"].get("payload", {}).get("source_material", {}).get("allowed_use")
+                    == "private_custody_and_analysis"):
+                # A private source's original remains downloadable after analysis edits.
+                # Bindings were verified from the immutable same-work parent above.
+                document["attachments"] = json.loads(_json(versions[-1]["document"].get("attachments", [])))
             if attachment_bytes:
                 document["attachments"] = []
                 for item in attachment_bytes:
@@ -965,7 +1012,7 @@ def _apply_work_edits(document: dict, edits: list) -> list:
     return edits
 
 
-def revise_work(artifact_id: str, *, actor: Any, scope: Mapping, request_id: str,
+def _prepare_work_revision(artifact_id: str, *, actor: Any, scope: Mapping, request_id: str,
                 expected_sha256: str, reason: str, edits: list, citations: list | None = None,
                 source_adoptions: list | None = None) -> dict:
     """Apply explicit local user edits to a current generic research/report owner.
@@ -1011,8 +1058,19 @@ def revise_work(artifact_id: str, *, actor: Any, scope: Mapping, request_id: str
         "edits": applied, "source_adoptions": adoptions, "offset_unit": "unicode_codepoint",
         "source_relation": "explicit user selection; not an independent correction of source Evidence"}
     _safe_payload(document["payload"])
+    document["citations"] = chosen_citations
+    return item, document
+
+
+def revise_work(artifact_id: str, *, actor: Any, scope: Mapping, request_id: str,
+                expected_sha256: str, reason: str, edits: list, citations: list | None = None,
+                source_adoptions: list | None = None) -> dict:
+    """Generic revision never grants another owner's signed dependency semantics."""
+    item, document = _prepare_work_revision(artifact_id, actor=actor, scope=scope,
+        request_id=request_id, expected_sha256=expected_sha256, reason=reason, edits=edits,
+        citations=citations, source_adoptions=source_adoptions)
     return save_work(title=document["title"], markdown=document["markdown"], kind=document["kind"],
-                     payload=document["payload"], citations=chosen_citations, request_id=request_id,
+                     payload=document["payload"], citations=document["citations"], request_id=request_id,
                      actor=actor, scope=scope, work_id=document["work_id"], previous_artifact_id=artifact_id,
                      expected_draft_digest=item["document"]["draft_digest"], contract=document["contract"])
 
@@ -1114,3 +1172,18 @@ def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "
     return {"content": raw, "filename": artifact_id + "." + format,
             "media_type": types[format],
             "sha256": hashlib.sha256(raw).hexdigest(), "return_ref": item["return_ref"]}
+
+
+def download_attachment(artifact_id: str, *, name: str, actor: Any, scope: Mapping) -> dict:
+    """Return an exact committed original only to its current authorized owner."""
+    item = read_committed_work(artifact_id, actor=actor, scope=scope)
+    matches = [binding for binding in item["document"].get("attachments", [])
+               if binding["name"] == name]
+    if len(matches) != 1:
+        raise SavedWorkError("WORK_ATTACHMENT_NOT_FOUND")
+    context = authorize_saved_work(actor, scope, action="read")
+    with get_repository().connection(read_only=True, wal=False) as con:
+        raw = _read_attachment(con, matches[0], context, item["document"]["work_id"], actor=actor)
+    authorize_saved_work(actor, scope, action="read")
+    return {"content": raw, "filename": name, "sha256": matches[0]["sha256"],
+            "media_type": "application/octet-stream", "rights_grant": "none"}

@@ -41,7 +41,7 @@
       "approved_by": "Product Owner",
       "approved_at": "2026-10-12",
       "approval_source_type": "direct_product_owner_instruction",
-      "source_thread": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+      "source_thread": "private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186",
       "source_quotes": [
         "ok就这样，分发下去，前端必须严格遵守规则，不可以自己瞎搞，搞出来那种模板，我要的ui，ux，aigc特效必须要真实体现，太慢了，前端完全可以一次性把整体产品搭建出来，后端完成再逐项对接，调整，pc和移动端也一起推进",
         "还有其他窗口的你同步了吗，目标也同步更新，然后你该删除的删除",
@@ -82,7 +82,7 @@
         "Original Android/Linux native source is preserved, but those native clients are not reinstated as delivery targets"
       ],
       "direct_po_addendum_20261012": {
-        "source_thread": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+        "source_thread": "private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186",
         "source_type": "direct_product_owner_instruction",
         "source_quotes": [
           "所有东西都要符合用户操作和用户期待，应用到真实世界的，你看看gpt，muse，cue，grokbot，是怎么做的，还有openai的数学不仅支持我们产品，也是我们自研ai的推理驱动，用数学智能驱动训练以及ai智能能力",

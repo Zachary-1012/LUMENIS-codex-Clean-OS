@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "all_immutable_source_hashes_match": true,
+    "all_2617_rows_in_original_order": true,
+    "all_body_hashes_and_groups_match": true,
+    "195_unique_g": true,
+    "no_invented_G49_G74": true,
+    "all_19_groups": true,
+    "no_requirement_marked_accepted": true,
+    "v21_all_rows_preserved": true
+  },
+  "passed": true,
+  "record_types": {
+    "SOURCE_STRUCTURE": 365,
+    "RETAINED_SOURCE_CLAUSE": 1992,
+    "ORIGINAL_G_REQUIREMENT": 195,
+    "RETAINED_RJU_ROW": 56,
+    "ADDITIVE_USER_REQUIREMENT": 9
+  },
+  "rju_rows": 56,
+  "rju_row_ids_unique": 56,
+  "scope": "只读文档指针及原文字节身份检查；没有导入/运行产品，不是产品测试"
+}

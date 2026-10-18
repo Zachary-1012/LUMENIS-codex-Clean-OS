@@ -1,0 +1,16 @@
+{
+  "original_rows": 2617,
+  "constitution_nonempty_rows": 1265,
+  "unique_g": 195,
+  "unique_r": 15,
+  "unique_j": 8,
+  "unique_u": 25,
+  "local_reference_occurrences": 190,
+  "resolved": 190,
+  "unresolved": 0,
+  "saved_reports": 20,
+  "original_g_all_not_verified": true,
+  "no_product_execution": true,
+  "backtick_source_occurrences": 148,
+  "backtick_resolved": 95
+}

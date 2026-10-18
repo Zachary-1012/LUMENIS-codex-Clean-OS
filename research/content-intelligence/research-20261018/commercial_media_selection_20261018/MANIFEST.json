@@ -1,0 +1,32 @@
+[
+  {
+    "path": "NEW_SOURCES.json",
+    "bytes": 1508,
+    "sha256": "8a2ea88e635901f0b45a1157226bc2854f3317f56998795c5c0cc5bcbdbfc3bf"
+  },
+  {
+    "path": "REPORT.md",
+    "bytes": 16160,
+    "sha256": "e965847db27e43085501f45014870867225a68f21348acb895bad3f383ce547b"
+  },
+  {
+    "path": "sources/apache2.txt",
+    "bytes": 11358,
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  },
+  {
+    "path": "sources/kenney_support.html",
+    "bytes": 11950,
+    "sha256": "465a18b35773066fba50bde9af9a91286dec265fde6c0d8d682ac13a56867230"
+  },
+  {
+    "path": "sources/qwen_paper_v1.html",
+    "bytes": 43444,
+    "sha256": "f049d52726b6cdc926e52ef654064d29487a180afc9d08334a336f7ac5687f32"
+  },
+  {
+    "path": "sources/youtube_policies.html",
+    "bytes": 151823,
+    "sha256": "8328e54fd7feadc96420e05b591d324ae0ee9590c92863cdb052b19286ec4d9c"
+  }
+]

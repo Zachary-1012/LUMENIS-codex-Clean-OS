@@ -435,9 +435,9 @@ def test_mcp_stdio_discovery_lists_capabilities_but_never_calls_tools(tmp_path):
         "for line in sys.stdin:\n"
         " m=json.loads(line); i=m.get('id'); method=m.get('method')\n"
         " r={'jsonrpc':'2.0','id':i,'result':{}}\n"
-        " if method=='initialize': r['result']={'protocolVersion':'2025-11-25','capabilities':{},'serverInfo':{'name':'fixture','version':'1'}}\n"
+        " if method=='initialize': r['result']={'protocolVersion':'2025-11-25','capabilities':{'tools':{},'resources':{},'prompts':{}},'serverInfo':{'name':'fixture','version':'1'}}\n"
         " elif method=='tools/list': r['result']={'tools':[{'name':'read_signal','description':'read only','inputSchema':{'type':'object'}}]}\n"
-        " elif method=='resources/list': r['result']={'resources':[{'name':'evidence://fixture'}]}\n"
+        " elif method=='resources/list': r['result']={'resources':[{'name':'evidence://fixture','uri':'evidence://fixture'}]}\n"
         " elif method=='prompts/list': r['result']={'prompts':[{'name':'brief'}]}\n"
         " if 'id' in m: print(json.dumps(r),flush=True)\n",
         encoding="utf-8",
@@ -480,7 +480,7 @@ def test_mcp_tool_call_requires_reviewed_read_only_annotation(tmp_path):
         "for line in sys.stdin:\n"
         " m=json.loads(line); i=m.get('id'); method=m.get('method')\n"
         " r={'jsonrpc':'2.0','id':i,'result':{}}\n"
-        " if method=='initialize': r['result']={'protocolVersion':'2025-11-25','serverInfo':{'name':'fixture','version':'1'}}\n"
+        " if method=='initialize': r['result']={'protocolVersion':'2025-11-25','capabilities':{'tools':{}},'serverInfo':{'name':'fixture','version':'1'}}\n"
         " elif method=='tools/list': r['result']={'tools':[{'name':'write_signal','inputSchema':{'type':'object'}}]}\n"
         " elif method=='tools/call': r['result']={'content':[{'type':'text','text':'should not run'}]}\n"
         " if 'id' in m: print(json.dumps(r),flush=True)\n",
@@ -490,7 +490,7 @@ def test_mcp_tool_call_requires_reviewed_read_only_annotation(tmp_path):
         [sys.executable], [str(script)],
         tool_name="write_signal", arguments={},
         allow_process=True, allow_tool_call=True, human_approved=True,
-        permissions_granted=("mcp:tools/call",), allowed_tools=("write_signal",),
+        permissions_granted=("mcp:tools/call", "read_only"), allowed_tools=("write_signal",),
     )
 
     assert result["ok"] is False
@@ -509,7 +509,7 @@ def test_mcp_tool_call_returns_redacted_staging_result_without_production_write(
         "for line in sys.stdin:\n"
         " m=json.loads(line); i=m.get('id'); method=m.get('method')\n"
         " r={'jsonrpc':'2.0','id':i,'result':{}}\n"
-        " if method=='initialize': r['result']={'protocolVersion':'2025-11-25','serverInfo':{'name':'fixture','version':'1'}}\n"
+        " if method=='initialize': r['result']={'protocolVersion':'2025-11-25','capabilities':{'tools':{}},'serverInfo':{'name':'fixture','version':'1'}}\n"
         " elif method=='tools/list': r['result']={'tools':[{'name':'read_signal','description':'read only','annotations':{'readOnlyHint':True,'destructiveHint':False},'inputSchema':{'type':'object'}}]}\n"
         " elif method=='tools/call': r['result']={'content':[{'type':'text','text':'signal ok'}],'structuredContent':{'value':42,'token':'do-not-leak'}}\n"
         " if 'id' in m: print(json.dumps(r),flush=True)\n",
@@ -518,8 +518,9 @@ def test_mcp_tool_call_returns_redacted_staging_result_without_production_write(
     result = call_mcp_stdio(
         [sys.executable], [str(script)],
         tool_name="read_signal", arguments={"query":"lumenis"},
+        reviewed_tool_contracts={"read_signal": __import__("mcp_discovery").tool_contract_hash({"name":"read_signal","annotations":{"readOnlyHint":True,"destructiveHint":False},"inputSchema":{"type":"object"}})},
         allow_process=True, allow_tool_call=True, human_approved=True,
-        permissions_granted=("mcp:tools/call",), allowed_tools=("read_signal",),
+        permissions_granted=("mcp:tools/call", "read_only"), allowed_tools=("read_signal",),
     )
 
     assert result["ok"] is True

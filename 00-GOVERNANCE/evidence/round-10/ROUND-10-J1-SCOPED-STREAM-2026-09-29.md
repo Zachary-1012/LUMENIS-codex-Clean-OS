@@ -79,7 +79,7 @@ console warnings/errors were empty. The shared backend was not stopped.
 Root reviewed the exact four-file diff, acceptance snapshot and actual mobile
 and recovered-page screenshots. Snapshot file hashes were checked against the
 working files before staging. Evidence is in local
-`C:/Users/28049/AppData/Local/Temp/lumenis-cth03-20260929/`:
+`C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-cth03-20260929/`:
 `acceptance-snapshot.json`, `api-scope-results.json`, screenshots and accessibility
 trees for global/focus/luohu/mobile/offline/recovered/cleared states.
 

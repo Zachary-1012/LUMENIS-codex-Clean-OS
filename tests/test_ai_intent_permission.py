@@ -47,7 +47,7 @@ def client_and_gate(tmp_path, monkeypatch):
     importlib.reload(experience_runtime)
     # AI-01 executes only under a server-resolved FOCUS scope (BACKEND-GAP-029).
     monkeypatch.setattr(experience_runtime, "_ai_intent_trusted_domain",
-                        lambda: ("cth", "CTH", "actor:test"))
+                        lambda: ("cth", "CTH", "actor:7"))
 
     app = Flask(__name__)
     app.register_blueprint(experience_runtime.experience_bp)
@@ -78,9 +78,13 @@ def client_and_gate(tmp_path, monkeypatch):
             evidence_record={"ok": False},
         )
 
-    # ai_intent 在调用时从 canonical Skills owner 导入执行链。
-    from lumenis.shared.agents.skills import execution as skill_execution
-    monkeypatch.setattr(skill_execution, "run_execution_chain", _fake_run)
+    from agent_runtime import task_binding
+    monkeypatch.setattr(experience_runtime, "_content_project_scope", lambda *_a, **_k: ({"id": 7}, {"domain_id": "cth", "global_scope": True, "subject_id": None, "brand_focus_id": None}))
+    def create(*a, **k):
+        result = _fake_run(*a, **k)
+        return {"task_id": result.execution_id, "status": "pending"}
+    monkeypatch.setattr(task_binding, "create_agent_task", create)
+    monkeypatch.setattr(task_binding, "start_agent_task", lambda _: None)
 
     yield cli, gate, permission_gate, calls
     permission_gate.set_testing_bypass(prior_testing_bypass)
@@ -100,7 +104,7 @@ FORBIDDEN_IN_BODY = ["system_prompt", "developer_prompt", "cookie", "cdp",
 def test_analyze_default_is_granted_and_executes(client_and_gate):
     cli, _gate, _pg, calls = client_and_gate
     r = _post(cli, "ANALYZE")
-    assert r.status_code == 200
+    assert r.status_code == 202
     j = r.get_json()
     assert j["ok"] is True
     assert j["permission_status"] == "granted"
@@ -136,7 +140,7 @@ def test_write_granted_after_human_approval(client_and_gate):
     gate.grant_permission(pg.PermissionLevel.COMMIT)
     gate.grant_approval(pg.OperationType.DB_WRITE.value, duration_minutes=15)
     r = _post(cli, "WRITE")
-    assert r.status_code == 200
+    assert r.status_code == 202
     j = r.get_json()
     assert j["ok"] is True and j["permission_status"] == "granted"
     assert calls["n"] == 1  # 人工审批后允许执行

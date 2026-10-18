@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import uuid
@@ -25,7 +26,7 @@ class VideoEditingError(ValueError):
     """Raised for invalid local media or timeline operations."""
 
 
-ALLOWED_FORMAT_RATIOS = ("9:16", "4:5", "3:4", "16:9")
+ALLOWED_FORMAT_RATIOS = ("9:16", "4:5", "3:4", "16:9", "1:1")
 ALLOWED_OPERATIONS = frozenset({"trim", "split", "reorder", "delete", "transition", "hold"})
 MAX_EDIT_TIME_SEC = 24 * 60 * 60
 MAX_TRANSITION_DURATION_SEC = 30.0
@@ -375,6 +376,32 @@ class AudioMix:
 
 
 @dataclass(frozen=True)
+class FrameCrop:
+    """User-selected normalized region in the display-oriented source frame."""
+    x: float
+    y: float
+    width: float
+    height: float
+
+    def __post_init__(self):
+        for value in (self.x,self.y):
+            _bounded_number(value,error_code="FRAME_CROP_INVALID",minimum=0,maximum=1)
+        for value in (self.width,self.height):
+            _bounded_number(value,error_code="FRAME_CROP_INVALID",minimum=.05,maximum=1)
+        if self.x+self.width>1+1e-9 or self.y+self.height>1+1e-9:
+            raise VideoEditingError("FRAME_CROP_OUTSIDE_SOURCE")
+
+    def to_dict(self):
+        self.__post_init__();return dict(self.__dict__)
+
+    @classmethod
+    def from_dict(cls,value):
+        if type(value) is not dict or set(value)!={"x","y","width","height"}:
+            raise VideoEditingError("FRAME_CROP_INVALID")
+        return cls(**value)
+
+
+@dataclass(frozen=True)
 class TimelineClip:
     clip_id: str
     media_asset_id: str
@@ -387,6 +414,7 @@ class TimelineClip:
     audio_mix: AudioMix = field(default_factory=AudioMix)
     evidence_refs: Tuple[str, ...] = field(default_factory=tuple)
     audio_stream_index: Optional[int] = None
+    frame_crop: Optional[FrameCrop] = None
 
     def __post_init__(self) -> None:
         self.validate()
@@ -430,6 +458,9 @@ class TimelineClip:
             type(self.audio_stream_index) is not int or self.audio_stream_index < 0
         ):
             raise VideoEditingError("AUDIO_STREAM_INDEX_OUT_OF_RANGE")
+        if self.frame_crop is not None:
+            if not isinstance(self.frame_crop,FrameCrop):raise VideoEditingError("FRAME_CROP_INVALID")
+            self.frame_crop.to_dict()
         if self.evidence_refs:
             raise VideoEditingError("CANONICAL_EVIDENCE_BINDING_UNAVAILABLE")
         if not isinstance(self.audio_mix, AudioMix):
@@ -450,6 +481,7 @@ class TimelineClip:
             "audio_mix": self.audio_mix.to_dict(),
             "evidence_refs": list(self.evidence_refs),
             "audio_stream_index": self.audio_stream_index,
+            **({"frame_crop":self.frame_crop.to_dict()} if self.frame_crop is not None else {}),
         }
 
 
@@ -473,6 +505,8 @@ class TimelineTrack:
             if not isinstance(clip, TimelineClip):
                 raise VideoEditingError("TIMELINE_TRACK_CLIPS_INVALID")
             clip.validate()
+            if clip.frame_crop is not None and self.kind != "video":
+                raise VideoEditingError("FRAME_CROP_VIDEO_ONLY")
 
     def to_dict(self) -> Dict[str, Any]:
         self.validate()
@@ -519,6 +553,43 @@ class Transition:
 
 
 @dataclass(frozen=True)
+class CaptionStyle:
+    """Bounded literal subtitle styling; no arbitrary FFmpeg/ASS expressions."""
+    font_size: int = 36
+    color: str = "#FFFFFF"
+    background_color: str = "#000000"
+    background_opacity: float = 0.6
+    max_chars_per_line: int = 14
+    max_lines: int = 2
+    position: str = "bottom"
+    safe_margin_ratio: float = 0.06
+
+    def __post_init__(self):
+        if type(self.font_size) is not int or not 16 <= self.font_size <= 96:
+            raise VideoEditingError("CAPTION_STYLE_FONT_SIZE_INVALID")
+        if any(not isinstance(value,str) or re.fullmatch(r"#[0-9A-Fa-f]{6}",value) is None
+               for value in (self.color,self.background_color)):
+            raise VideoEditingError("CAPTION_STYLE_COLOR_INVALID")
+        _bounded_number(self.background_opacity,error_code="CAPTION_STYLE_OPACITY_INVALID",minimum=0,maximum=1)
+        _bounded_number(self.safe_margin_ratio,error_code="CAPTION_STYLE_MARGIN_INVALID",minimum=.04,maximum=.15)
+        if type(self.max_chars_per_line) is not int or not 1 <= self.max_chars_per_line <= 14:
+            raise VideoEditingError("CAPTION_STYLE_LINE_LIMIT_INVALID")
+        if type(self.max_lines) is not int or not 1 <= self.max_lines <= 4 or self.position not in {"top","bottom"}:
+            raise VideoEditingError("CAPTION_STYLE_LAYOUT_INVALID")
+
+    def to_dict(self):
+        self.__post_init__()
+        return dict(self.__dict__)
+
+    @classmethod
+    def from_dict(cls,value):
+        if type(value) is not dict or set(value)-set(cls.__dataclass_fields__):
+            raise VideoEditingError("CAPTION_STYLE_INVALID")
+        try:return cls(**value)
+        except TypeError as exc:raise VideoEditingError("CAPTION_STYLE_INVALID") from exc
+
+
+@dataclass(frozen=True)
 class TimedOverlay:
     overlay_id: str
     kind: str
@@ -526,11 +597,16 @@ class TimedOverlay:
     end_sec: float
     text: str
     layout_profile: Optional[str] = None
+    style: Optional[CaptionStyle] = None
 
     def __post_init__(self) -> None:
         self.validate()
 
     def validate(self) -> None:
+        if self.style is not None:
+            if not isinstance(self.style,CaptionStyle) or self.kind != "caption" or self.layout_profile is not None:
+                raise VideoEditingError("CAPTION_STYLE_INVALID")
+            self.style.to_dict()
         if self.layout_profile is not None and (
             not isinstance(self.layout_profile, str)
             or self.layout_profile != "literal-wide-720p-v2"
@@ -560,6 +636,7 @@ class TimedOverlay:
             "end_sec": self.end_sec,
             "text": self.text,
             **({"layout_profile": self.layout_profile} if self.layout_profile is not None else {}),
+            **({"style": self.style.to_dict()} if self.style is not None else {}),
         }
 
 
@@ -770,7 +847,8 @@ class Timeline:
             kind = document_string(track_data["kind"])
             clips: List[TimelineClip] = []
             for stored_clip in document_list(track_data["clips"]):
-                clip_data = document_object(stored_clip, clip_fields)
+                has_crop = type(stored_clip) is dict and "frame_crop" in stored_clip
+                clip_data = document_object(stored_clip, clip_fields + (("frame_crop",) if has_crop else ()))
                 mix_data = document_object(clip_data["audio_mix"], mix_fields)
                 if type(clip_data["evidence_refs"]) is not list or clip_data["evidence_refs"]:
                     raise VideoEditingError("CANONICAL_EVIDENCE_BINDING_UNAVAILABLE")
@@ -798,6 +876,7 @@ class Timeline:
                         audio_mix=mix,
                         evidence_refs=(),
                         audio_stream_index=audio_index,
+                        frame_crop=FrameCrop.from_dict(clip_data["frame_crop"]) if has_crop else None,
                     ))
                 except (TypeError, ValueError) as exc:
                     if isinstance(exc, VideoEditingError):
@@ -821,8 +900,9 @@ class Timeline:
         overlay_fields = ("overlay_id", "kind", "start_sec", "end_sec", "text")
         for stored_overlay in document_list(root["overlays"]):
             has_profile = type(stored_overlay) is dict and "layout_profile" in stored_overlay
+            has_style = type(stored_overlay) is dict and "style" in stored_overlay
             item = document_object(stored_overlay,
-                                   overlay_fields + (("layout_profile",) if has_profile else ()))
+                                   overlay_fields + (("layout_profile",) if has_profile else ()) + (("style",) if has_style else ()))
             overlays.append(TimedOverlay(
                 overlay_id=document_string(item["overlay_id"]),
                 kind=document_string(item["kind"]),
@@ -830,6 +910,7 @@ class Timeline:
                 end_sec=item["end_sec"],
                 text=document_string(item["text"]),
                 layout_profile=document_string(item["layout_profile"]) if has_profile else None,
+                style=CaptionStyle.from_dict(item["style"]) if has_style else None,
             ))
 
         return cls(
@@ -1244,8 +1325,14 @@ class Timeline:
         self.validate()
         if type(ripple) is not bool:
             raise VideoEditingError("DELETE_RIPPLE_FLAG_INVALID")
-        track, _ = self._find_clip(clip_id)
+        track, removed = self._find_clip(clip_id)
         clips = tuple(item for item in track.clips if item.clip_id != clip_id)
+        if ripple and track.kind != "video":
+            end=removed.timeline_start+removed.duration_sec
+            if any(item.timeline_start<end-1e-6 and item.timeline_start+item.duration_sec>removed.timeline_start+1e-6 for item in clips):
+                raise VideoEditingError("AUDIO_RIPPLE_OVERLAP_NOT_SUPPORTED")
+            clips=tuple(replace(item,timeline_start=round(item.timeline_start-removed.duration_sec,6))
+                        if item.timeline_start>=end-1e-6 else item for item in clips)
         updated = self._reflow(track, clips) if ripple and track.kind == "video" else replace(track, clips=clips)
         tracks = tuple(updated if item.track_id == track.track_id else item for item in self.tracks)
         transitions = tuple(item for item in self.transitions if clip_id not in {item.from_clip, item.to_clip})
@@ -1306,14 +1393,14 @@ class Timeline:
         return self._replace_clip(track, replace(clip, timeline_start=start))
 
     def add_caption(self, start_sec: float, end_sec: float, text: str, *,
-                    layout_profile: Optional[str] = None) -> "Timeline":
-        return self._add_overlay("caption", start_sec, end_sec, text, layout_profile=layout_profile)
+                    layout_profile: Optional[str] = None, style: Optional[CaptionStyle] = None) -> "Timeline":
+        return self._add_overlay("caption", start_sec, end_sec, text, layout_profile=layout_profile,style=style)
 
     def add_text_overlay(self, start_sec: float, end_sec: float, text: str) -> "Timeline":
         return self._add_overlay("text", start_sec, end_sec, text)
 
     def _add_overlay(self, kind: str, start_sec: float, end_sec: float, text: str, *,
-                     layout_profile: Optional[str] = None) -> "Timeline":
+                     layout_profile: Optional[str] = None, style: Optional[CaptionStyle] = None) -> "Timeline":
         self.validate()
         start = _bounded_number(
             start_sec, error_code="INVALID_TIMED_OVERLAY", minimum=0, maximum=MAX_EDIT_TIME_SEC
@@ -1323,11 +1410,11 @@ class Timeline:
         )
         if end <= start or not str(text).strip():
             raise VideoEditingError("INVALID_TIMED_OVERLAY")
-        overlay = TimedOverlay(_id("OVERLAY"), kind, start, end, str(text).strip(), layout_profile)
+        overlay = TimedOverlay(_id("OVERLAY"), kind, start, end, str(text).strip(), layout_profile,style)
         return self._commit(overlays=(*self.overlays, overlay))
 
     def update_caption(self, overlay_id: str, start_sec: float, end_sec: float,
-                       text: str, *, layout_profile: Optional[str] = None) -> "Timeline":
+                       text: str, *, layout_profile: Optional[str] = None, style: Optional[CaptionStyle] = None) -> "Timeline":
         """Replace one caption through the normal version/undo operation."""
         self.validate()
         matches = [item for item in self.overlays if item.overlay_id == overlay_id]
@@ -1340,7 +1427,7 @@ class Timeline:
         if not isinstance(text, str):
             raise VideoEditingError("INVALID_TIMED_OVERLAY")
         updated = replace(matches[0], start_sec=start_sec, end_sec=end_sec,
-                          text=text, layout_profile=layout_profile)
+                          text=text, layout_profile=layout_profile,style=style)
         return self._commit(overlays=tuple(updated if item.overlay_id == overlay_id else item
                                            for item in self.overlays))
 
@@ -1353,6 +1440,15 @@ class Timeline:
         if len(matches) != 1:
             raise VideoEditingError("OVERLAY_ID_AMBIGUOUS")
         return self._commit(overlays=tuple(item for item in self.overlays if item.overlay_id != overlay_id))
+
+    def set_frame_crop(self, clip_id: str, crop: Optional[FrameCrop]) -> "Timeline":
+        self.validate()
+        track,clip=self._find_clip(clip_id)
+        if track.kind != "video":raise VideoEditingError("FRAME_CROP_VIDEO_ONLY")
+        if crop is not None:
+            if not isinstance(crop,FrameCrop):raise VideoEditingError("FRAME_CROP_INVALID")
+            crop.to_dict()
+        return self._replace_clip(track,replace(clip,frame_crop=crop))
 
     def set_format(self, format_ratio: str) -> "Timeline":
         if format_ratio not in ALLOWED_FORMAT_RATIOS:
@@ -1690,16 +1786,44 @@ def propose_edl(source_evidence_refs: Iterable[str], decisions: Iterable[EditDec
     return candidate
 
 
-def apply_edl_suggestion(timeline: Timeline, edl: EditDecisionList) -> Timeline:
-    """Fail closed until canonical Evidence and Permission approve EDL application."""
+def _apply_edl_operations(timeline: Timeline, edl: EditDecisionList) -> Timeline:
+    """Pure immutable preview; authorization is owned by the Artifact operation."""
     timeline.validate()
-    edl.validate()
-    raise VideoEditingError("CANONICAL_EDL_PERMISSION_APPROVAL_NOT_CONNECTED")
+    edl.to_dict()  # Reject client-forged approved/reviewer fields.
+    result = timeline
+    for decision in edl.decisions:
+        if decision.operation == "trim":
+            result = result.trim(decision.source_clip_ref, source_in=decision.in_sec, source_out=decision.out_sec)
+        elif decision.operation == "split":
+            result = result.split(decision.source_clip_ref, at_sec=decision.in_sec)
+        elif decision.operation == "delete":
+            result = result.delete(decision.source_clip_ref, ripple=decision.metadata.get("ripple", True))
+        elif decision.operation == "reorder":
+            result = result.reorder(decision.source_clip_ref, new_index=decision.metadata["new_index"])
+        elif decision.operation == "transition":
+            result = result.add_transition(decision.source_clip_ref, decision.metadata["to_clip"],
+                duration_sec=decision.metadata.get("duration_sec", .3), reason=decision.reason)
+        else:
+            raise VideoEditingError("EDL_OPERATION_NOT_IMPLEMENTED")
+    return result
+
+
+def apply_edl_suggestion(timeline: Timeline, edl: EditDecisionList, *, actor=None, scope=None,
+                         project_id=None, request_id=None, expected_resource=None) -> Timeline:
+    """Apply only an exact live approval bound to this saved parent and actor."""
+    if actor is None or scope is None or project_id is None:
+        raise VideoEditingError("CANONICAL_EDL_PERMISSION_APPROVAL_NOT_CONNECTED")
+    from shared_artifacts import _authorize_content_edl_application
+    _authorize_content_edl_application(timeline, edl, actor=actor, scope=scope,
+        project_id=project_id, request_id=request_id, expected_resource=expected_resource)
+    return _apply_edl_operations(timeline, edl)
 
 
 __all__ = [
     "ALLOWED_FORMAT_RATIOS",
     "AudioMix",
+    "CaptionStyle",
+    "FrameCrop",
     "EditDecision",
     "EditDecisionList",
     "MediaAsset",

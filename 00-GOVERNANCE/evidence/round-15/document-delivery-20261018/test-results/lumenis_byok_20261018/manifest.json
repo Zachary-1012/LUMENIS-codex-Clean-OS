@@ -1,0 +1,22 @@
+{
+  "status": "INCOMPLETE_PRODUCT_CONFIRMATION_PATH",
+  "baseline": "[LOCAL_WORKSPACE]/lumenis_bmp09_parser_20261017T2248Z/source",
+  "files": [
+    {
+      "path": "lumenis/system/ai_gateway/user_api_adapter.py",
+      "before_sha256": "63058e51509d2da54ba5cbe68df52e8008b9c9826e5492537cf95f0bec22d64e",
+      "after_sha256": "9e7696001262a686248b91559564ace06e83afb00fe1f47ad7d0ee342b497e7f"
+    },
+    {
+      "path": "tests/test_user_api_compatible_adapter.py",
+      "before_sha256": null,
+      "after_sha256": "414bac7a9246841be21195a3a7197c3688e64bd1614b6aa39461476be032867a"
+    }
+  ],
+  "tests": "128 passed; tests-final.log",
+  "source_unchanged_after_tests": true,
+  "external_network": "NOT_RUN",
+  "provider_model_quality": "NOT_RUN",
+  "normal_user_confirmation_api": "OPEN; no endpoint added",
+  "approved_scope": "adapter and dedicated test only"
+}

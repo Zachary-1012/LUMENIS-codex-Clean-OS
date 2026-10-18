@@ -43,7 +43,7 @@ with adjacent ffprobe.exe. Both executables reported version 9.0.2-essentials_bu
 
 Crash recovery was exercised separately under:
 
-C:\Users\28049\AppData\Local\Temp\lumenis-r5-crash-proof-731e88b44d954c14b86910409759ece2
+C:\Users\private-user-121dcc385158\AppData\Local\Temp\lumenis-r5-crash-proof-731e88b44d954c14b86910409759ece2
 
 The isolated app used a fresh disposable database in that temp tree, loopback port 8202, and the current supervisor/app code. After the supervisor reached running state, only its isolated app child (PID 26216) was terminated. The supervisor relaunched the child (PID 25652); state advanced to restarts=1, and health returned with the disposable DB dependency ok. The isolated listener was 127.0.0.1:8202 (PID 5228).
 
@@ -63,7 +63,7 @@ Commands used the intact repository pytest configuration and explicit disposable
 
 Reusable disposable seed for intact-conftest scoped tests:
 
-C:\Users\28049\AppData\Local\Temp\lumenis-r5-v18-seed-741640e2ade54732a8d11da24035256d\monitor-test-seed-v18.db
+C:\Users\private-user-121dcc385158\AppData\Local\Temp\lumenis-r5-v18-seed-741640e2ade54732a8d11da24035256d\monitor-test-seed-v18.db
 
 It was created from an empty disposable location using the canonical migration owner. It contains no copied production data.
 

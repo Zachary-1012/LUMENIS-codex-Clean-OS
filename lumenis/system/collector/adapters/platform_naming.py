@@ -822,55 +822,15 @@ class PlatformConnectionStatus:
 
 PLATFORM_CATALOG_NOTE = "Static capability metadata only; runtime health and observed data are not asserted."
 
+from .config import PLATFORM_CAPABILITIES as _CAPABILITY_MANIFEST
 PLATFORM_CONNECTION: Dict[str, PlatformConnectionStatus] = {
-    "xiaohongshu": PlatformConnectionStatus(
-        status="ACTIVE", ui_visible=True, has_collector=True, has_api_routes=True,
-        has_real_data=None, raw_tables=["xhs_notes", "xhs_note_comments", "xhs_users"],
-        adapter_module="lumenis.system.collector.adapters.xhs", notes=PLATFORM_CATALOG_NOTE),
-    "douyin": PlatformConnectionStatus(
-        status="PARTIAL", ui_visible=True, has_collector=False, has_api_routes=False,
-        has_real_data=None, raw_tables=["douyin_videos", "douyin_comments", "douyin_users"],
-        adapter_module="lumenis.system.collector.adapters.douyin", notes=PLATFORM_CATALOG_NOTE),
-    "bilibili": PlatformConnectionStatus(
-        status="PARTIAL", ui_visible=True, has_collector=False, has_api_routes=True,
-        has_real_data=None, raw_tables=["bilibili_videos", "bilibili_comments", "bilibili_users"],
-        adapter_module="lumenis.system.collector.adapters.bilibili", notes=PLATFORM_CATALOG_NOTE),
-    "channels": PlatformConnectionStatus(
-        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
-        has_real_data=None, raw_tables=["channels_videos", "channels_comments"],
-        adapter_module="lumenis.system.collector.adapters.channels", notes=PLATFORM_CATALOG_NOTE),
-    "youtube": PlatformConnectionStatus(
-        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
-        has_real_data=None, raw_tables=["youtube_videos", "youtube_comments", "youtube_channels"],
-        adapter_module="lumenis.system.collector.adapters.youtube", notes=PLATFORM_CATALOG_NOTE),
-    "tiktok": PlatformConnectionStatus(
-        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
-        has_real_data=None, raw_tables=["tiktok_videos", "tiktok_comments", "tiktok_users"],
-        adapter_module="lumenis.system.collector.adapters.tiktok", notes=PLATFORM_CATALOG_NOTE),
-    "instagram": PlatformConnectionStatus(
-        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
-        has_real_data=None, raw_tables=["instagram_media", "instagram_comments", "instagram_users"],
-        adapter_module="lumenis.system.collector.adapters.instagram", notes=PLATFORM_CATALOG_NOTE),
-    "x": PlatformConnectionStatus(
-        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
-        has_real_data=None, raw_tables=["x_posts", "x_users"],
-        adapter_module="lumenis.system.collector.adapters.x_platform", notes=PLATFORM_CATALOG_NOTE),
-    "reddit": PlatformConnectionStatus(
-        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
-        has_real_data=None, raw_tables=["reddit_posts", "reddit_comments", "reddit_subreddits"],
-        adapter_module="lumenis.system.collector.adapters.reddit", notes=PLATFORM_CATALOG_NOTE),
-    "linkedin": PlatformConnectionStatus(
-        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
-        has_real_data=None, raw_tables=["linkedin_posts", "linkedin_users"],
-        adapter_module="lumenis.system.collector.adapters.linkedin", notes=PLATFORM_CATALOG_NOTE),
-    "github": PlatformConnectionStatus(
-        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
-        has_real_data=None, raw_tables=["github_repositories", "github_issues", "github_pull_requests", "github_releases"],
-        adapter_module="lumenis.system.collector.adapters.github", notes=PLATFORM_CATALOG_NOTE),
-    "zhihu": PlatformConnectionStatus(
-        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
-        has_real_data=None, raw_tables=["zhihu_answers", "zhihu_questions", "zhihu_articles", "zhihu_comments"],
-        adapter_module="lumenis.system.collector.adapters.zhihu", notes=PLATFORM_CATALOG_NOTE),
+    cap["canonical_id"]: PlatformConnectionStatus(
+        status=cap["catalog_status"], ui_visible=cap["collection_surface_visible"],
+        has_collector=bool(cap["adapter_module"]) and cap["implementation_state"] != "PLANNED",
+        has_api_routes=cap["collection_entry_enabled"], has_real_data=None,
+        raw_tables=list(cap["raw_tables"]), adapter_module=cap["adapter_module"],
+        notes=PLATFORM_CATALOG_NOTE)
+    for cap in _CAPABILITY_MANIFEST.values()
 }
 
 def get_connection_status(platform: Optional[str]) -> Optional[PlatformConnectionStatus]:
@@ -889,7 +849,7 @@ def get_ui_visible_platforms() -> List[str]:
 def get_all_platforms_with_status() -> List[Dict[str, Any]]:
     """获取所有平台及其接入状态（用于系统设置/运营管理页）。"""
     result = []
-    for p in V1_PLATFORMS:
+    for p in PLATFORM_CONNECTION:
         s = PLATFORM_CONNECTION.get(p)
         if s:
             result.append({
@@ -914,8 +874,7 @@ def get_platform_registry_catalog() -> List[Dict[str, Any]]:
     owned by the registry/runtime and are not overwritten by schema migration.
     """
     catalog = []
-    for platform in V1_PLATFORMS:
-        connection = PLATFORM_CONNECTION[platform]
+    for platform, connection in PLATFORM_CONNECTION.items():
         catalog.append({
             "platform_id": platform,
             "platform_name": platform,

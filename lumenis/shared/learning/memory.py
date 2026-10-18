@@ -51,6 +51,84 @@ class LearningMemory(BaseMemoryLayer):
     def __init__(self, db_path: Optional[str] = None, enabled: bool = False):
         super().__init__(db_path=db_path, enabled=enabled)
 
+    def bind_source_task(self, task_id, actor_id):
+        # The existing Base Memory helper supplies current original-task scope;
+        # Learning retains its own existing rows/lifecycle, never a second store.
+        from agent_memory.base import BaseMemoryLayer
+        self._scope_owner = BaseMemoryLayer(self.db_path, enabled=True).bind_task(task_id, actor_id)
+        self._in_memory.clear()  # Cached content belongs to the previous binding.
+        return self
+
+    def _store(self, record):
+        self._scoped_check(write=True)
+        result = super()._store(record)
+        try:
+            self._scoped_check(write=True)
+        except Exception:
+            self._in_memory.pop(record.key, None)
+            raise
+        return result
+
+    def _retrieve(self, key):
+        self._scoped_check()
+        result = super()._retrieve(key)
+        self._scoped_check()
+        return result
+
+    def _query(self, filters, limit):
+        self._scoped_check()
+        result = super()._query(filters, limit)
+        self._scoped_check()
+        return result
+
+    def _forget(self, key):
+        self._scoped_check(write=True)
+        return super()._forget(key)
+
+    def _scoped_check(self, *, connection=None, write=False, review=False, after_write=False):
+        owner = getattr(self, "_scope_owner", None)
+        if owner is None:
+            return None
+        binding = owner._binding_context(connection, write=write)
+        if review:
+            if binding["actor_id"] is None:
+                from lumenis.system.security.permission import (_validate_learning_candidate_admission,
+                    get_permission_gate, OperationType)
+                admission = getattr(self, "_review_admission", None)
+                if admission is None or admission.task_id != binding["task_id"]:
+                    raise PermissionError("LEARNING_REVIEW_QUALIFICATION_REQUIRED")
+                _validate_learning_candidate_admission(admission, connection=connection, after_write=after_write)
+                gate = get_permission_gate()
+                if not gate._approval_token_is_valid(admission.token, OperationType.CONFIG_MODIFY.value, admission.resource):
+                    raise PermissionError("LEARNING_EXACT_APPROVAL_REVOKED")
+                return binding
+            from agent_runtime.task_binding import authorized_context
+            from lumenis.system.security.permission import check_actor_scope_permission
+            conn = connection or get_db_connection(self.db_path)
+            try:
+                row = conn.execute("SELECT * FROM ai_task WHERE task_id=?", (binding["task_id"],)).fetchone()
+                task = dict(row); task["context"] = json.loads(task["context_json"])
+                context = authorized_context(task, {"id": binding["actor_id"]}, connection=conn)
+                decision = check_actor_scope_permission(context["actor"], domain_id=binding["domain_id"],
+                    module="learning_review", action="write", connection=conn, **binding["scope"])
+                if not decision.allowed:
+                    raise PermissionError("LEARNING_REVIEW_QUALIFICATION_REQUIRED")
+            finally:
+                if connection is None:
+                    conn.close()
+        return binding
+
+    def _row_visible(self, row, connection=None):
+        binding = self._scoped_check(connection=connection)
+        if binding is None:
+            return True  # Legacy internal owner; never used by bound HTTP/planner.
+        try:
+            metadata = json.loads(row["metadata_json"] or "{}")
+            return (metadata.get("schema_version") == 1 and metadata.get("binding") == binding
+                    and row["related_task_id"] == binding["task_id"])
+        except (ValueError, TypeError, KeyError, IndexError):
+            return False
+
     # ── 反馈关键词（基于 feedback_keywords） ─────────────────────
 
     def list_feedback_keywords(self, enabled_only: bool = True) -> List[Dict[str, Any]]:
@@ -101,6 +179,12 @@ class LearningMemory(BaseMemoryLayer):
         学习结果不直接成为 Production Truth，lifecycle_stage 初始为 raw，
         需经过 reviewed → validated → promoted 才能影响生产。
         """
+        binding = self._scoped_check(write=True)
+        if binding is not None:
+            related_task_id = binding["task_id"]
+        serialized = json.dumps(content, ensure_ascii=False, allow_nan=False)
+        if len(serialized.encode("utf-8")) > 8 * 1024 * 1024:
+            raise ValueError("LEARNING_CONTENT_TOO_LARGE: maximum 8 MiB; retain original in its Artifact owner")
         record_data = {
             "learning_type": learning_type.value,
             "content": content,
@@ -121,7 +205,9 @@ class LearningMemory(BaseMemoryLayer):
         )
         # 持久化到 agent_learning_records 表（如果表已存在）
         if rec and self.db_path is not None:
-            self._persist_learning_record(rec, record_data)
+            if not self._persist_learning_record(rec, record_data):
+                self._in_memory.pop(rec.key, None)
+                return None
         return rec
 
     def record_feedback(self, feedback_text: str,
@@ -207,13 +293,15 @@ class LearningMemory(BaseMemoryLayer):
                 conn = get_db_connection(self.db_path)
                 try:
                     rows = conn.execute(
-                        """SELECT record_id, content_json, lifecycle_stage, created_at
+                        """SELECT *
                            FROM agent_learning_records
                            WHERE learning_type=? AND lifecycle_stage=?
                            ORDER BY created_at DESC""",
                         (LearningType.CORRECTION.value, LifecycleStage.PROMOTED.value),
                     )
                     for row in rows:
+                        if not self._row_visible(row, conn):
+                            continue
                         try:
                             content = json.loads(row["content_json"] or "{}")
                         except (TypeError, json.JSONDecodeError):
@@ -310,11 +398,13 @@ class LearningMemory(BaseMemoryLayer):
             conn = None
             try:
                 conn = get_db_connection(self.db_path)
+                conn.execute("BEGIN IMMEDIATE")
+                self._scoped_check(connection=conn, write=True, review=True)
                 row = conn.execute(
-                    "SELECT lifecycle_stage FROM agent_learning_records WHERE record_id=?",
+                    "SELECT * FROM agent_learning_records WHERE record_id=?",
                     (record_id,),
                 ).fetchone()
-                if not row:
+                if not row or not self._row_visible(row, conn):
                     return False
                 current_stage = row["lifecycle_stage"]
                 if current_stage == new_stage.value:
@@ -331,6 +421,7 @@ class LearningMemory(BaseMemoryLayer):
                 )
                 if updated.rowcount != 1:
                     return False
+                self._scoped_check(connection=conn, write=True, review=True)
                 conn.commit()
             except Exception:
                 if conn:
@@ -373,21 +464,40 @@ class LearningMemory(BaseMemoryLayer):
                 conn = get_db_connection(self.db_path)
                 try:
                     rows = conn.execute(
-                        """SELECT record_id, learning_type, source, content_json,
-                                  confidence, lifecycle_stage, related_task_id, created_at
-                           FROM agent_learning_records
+                        """SELECT * FROM agent_learning_records
                            WHERE learning_type=? AND lifecycle_stage=?
-                           ORDER BY created_at DESC LIMIT 100""",
+                           ORDER BY created_at DESC""",
                         (LearningType.RULE_SUGGESTION.value, LifecycleStage.PROMOTED.value),
                     )
                     persisted = []
                     for row in rows:
+                        if not self._row_visible(row, conn):
+                            continue
                         try:
                             content = json.loads(row["content_json"] or "{}")
                         except (TypeError, json.JSONDecodeError):
                             continue
                         if not isinstance(content, dict):
                             continue
+                        if getattr(self, "_scope_owner", None) is not None:
+                            # Reviewed/promoted learning is not policy activation.
+                            version = content.get("applied_version")
+                            active = conn.execute(
+                                "SELECT is_active,changelog FROM rule_version_registry WHERE version=?",
+                                (version,)).fetchone() if version else None
+                            if not active or active["is_active"] != 1:
+                                continue
+                            try:
+                                provenance = json.loads(active["changelog"] or "{}")
+                            except (TypeError, json.JSONDecodeError):
+                                continue
+                            from .loop import LearningLoop
+                            suggestion = LearningLoop._decode_suggestion(row)
+                            if (provenance.get("suggestion_id") != content.get("suggestion_id")
+                                    or suggestion is None
+                                    or content.get("approved_content_sha256") != LearningLoop._suggestion_hash(suggestion)
+                                    or provenance.get("approved_content_sha256") != content.get("approved_content_sha256")):
+                                continue
                         persisted.append({
                             "record_id": row["record_id"],
                             "learning_type": row["learning_type"],
@@ -415,32 +525,38 @@ class LearningMemory(BaseMemoryLayer):
     # ── 持久化（agent_learning_records 表，迁移脚本定义） ────────
 
     def _persist_learning_record(self, rec: MemoryRecord,
-                                 data: Dict[str, Any]) -> None:
-        """尝试写入 agent_learning_records 表（表不存在时静默跳过）。"""
+                                 data: Dict[str, Any]) -> bool:
+        """Commit full JSON to the existing Learning owner; failure is not success."""
         try:
             conn = get_db_connection(self.db_path)
             try:
+                conn.execute("BEGIN IMMEDIATE")
+                binding = self._scoped_check(connection=conn, write=True)
+                metadata = {"schema_version": 1, "revision": 1, "binding": binding} if binding is not None else {}
                 conn.execute(
-                    """INSERT OR IGNORE INTO agent_learning_records
+                    """INSERT INTO agent_learning_records
                        (record_id, learning_type, source, content_json, confidence,
-                        lifecycle_stage, related_task_id, created_at)
-                       VALUES (?,?,?,?,?,?,?,?)""",
+                        lifecycle_stage, related_task_id, created_at, metadata_json)
+                       VALUES (?,?,?,?,?,?,?,?,?)""",
                     (
                         rec.record_id,
                         data["learning_type"],
                         data["source"],
-                        json.dumps(data["content"], ensure_ascii=False, default=str)[:4000],
+                        json.dumps(data["content"], ensure_ascii=False, allow_nan=False),
                         data["confidence"],
                         data["lifecycle_stage"],
                         data.get("related_task_id"),
                         data["recorded_at"],
+                        json.dumps(metadata, ensure_ascii=False, allow_nan=False),
                     ),
                 )
+                self._scoped_check(connection=conn, write=True)
                 conn.commit()
+                return True
             finally:
                 conn.close()
         except Exception:
-            pass  # 表不存在时静默跳过（迁移脚本未执行）
+            return False
 
     def stats(self) -> Dict[str, Any]:
         s = super().stats()

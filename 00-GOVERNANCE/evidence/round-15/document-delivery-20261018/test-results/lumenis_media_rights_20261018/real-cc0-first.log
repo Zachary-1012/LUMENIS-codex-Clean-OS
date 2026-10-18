@@ -1,0 +1,12 @@
+127.0.0.1 - - [17/Oct/2026 22:48:50] "POST /api/experience/content-sources?filename=jingles_NES00.ogg HTTP/1.1" 403 -
+127.0.0.1 - - [17/Oct/2026 22:48:50] "POST /api/experience/content-source-confirmations/qYdRte_ZlkGeA8s5drXbw0ndXjqa_GKB3TnDe-mTtQw HTTP/1.1" 200 -
+127.0.0.1 - - [17/Oct/2026 22:48:50] "POST /api/experience/content-sources?filename=jingles_NES00.ogg HTTP/1.1" 201 -
+127.0.0.1 - - [17/Oct/2026 22:48:50] "POST /api/experience/content-projects/export HTTP/1.1" 503 -
+Traceback (most recent call last):
+  File "[LOCAL_WORKSPACE]/lumenis_media_rights_20261018/real_cc0_probe.py", line 47, in <module>
+    aid,timeline,files,packed,url=project(c,store,imported)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "[LOCAL_WORKSPACE]/lumenis_media_rights_20261018/source/tests/test_content_media_license.py", line 61, in project
+    assert response.status_code == 200, response.get_json()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'code': 'NEW_PRIVATE_TEMP_OUTPUT_REQUIRED', 'execution_id': 'cb9267b0e5a6405d', 'ok': False, 'publish_status': 'not_performed', 'status': 'failed'}

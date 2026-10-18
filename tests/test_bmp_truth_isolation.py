@@ -94,6 +94,7 @@ def test_zbmp_api_and_experience_use_same_snapshot(tmp_path, monkeypatch):
 
 
 def test_zbmp_missing_canonical_table_is_not_collected(tmp_path, monkeypatch):
+    """Historical node retained; missing storage is ERROR, not a verified empty read."""
     db_path = tmp_path / "bmp-empty.db"
     sqlite3.connect(str(db_path)).close()
     monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
@@ -101,9 +102,15 @@ def test_zbmp_missing_canonical_table_is_not_collected(tmp_path, monkeypatch):
     from api_dual_domain import get_zbmp_product_snapshot
 
     snapshot = get_zbmp_product_snapshot()
-    assert snapshot["data_state"] == "NOT_COLLECTED"
-    assert snapshot["total_records"] == 0
-    assert snapshot["brands"] == []
+    assert snapshot["data_state"] == "ERROR"
+    assert snapshot["total_records"] is None
+    assert snapshot["rejected_count"] is None
+    assert all(value is None for value in snapshot["metrics"].values())
+    assert snapshot["brands"] == snapshot["records"] == snapshot["canonical_records"] == []
+    assert snapshot["page"]["truncated"] is None
+    assert snapshot["brand_page"]["total_count"] is None
+    assert snapshot["errors"] == ["BMP_CANONICAL_READ_FAILED:OperationalError"]
+    assert str(db_path) not in json.dumps(snapshot)
     con = sqlite3.connect(str(db_path))
     try:
         assert con.execute(
@@ -111,3 +118,20 @@ def test_zbmp_missing_canonical_table_is_not_collected(tmp_path, monkeypatch):
         ).fetchone() is None
     finally:
         con.close()
+
+
+def test_zbmp_initialized_empty_canonical_table_is_not_collected(tmp_path, monkeypatch):
+    db_path = tmp_path / "bmp-initialized-empty.db"
+    ensure_canonical_table(str(db_path))
+    monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+    from api_dual_domain import get_zbmp_product_snapshot
+    snapshot = get_zbmp_product_snapshot()
+    assert snapshot["data_state"] == "NOT_COLLECTED"
+    assert snapshot["total_records"] == snapshot["rejected_count"] == 0
+    assert snapshot["errors"] == []
+    assert snapshot["brands"] == snapshot["records"] == snapshot["canonical_records"] == []
+    assert snapshot["page"] == {"limit": 200, "returned_count": 0, "truncated": False}
+    assert snapshot["metrics"]["total_canonical_zbmp"] == 0
+    assert all(value is None for value in snapshot["metrics"]["total_engagement"].values())
+    with sqlite3.connect(str(db_path)) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM canonical_data").fetchone()[0] == 0

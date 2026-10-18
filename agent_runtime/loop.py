@@ -56,6 +56,25 @@ from .durable_adapter import DurableExecutionAdapter, _sanitize_checkpoint_value
 from agent_capability.formation import FormationError
 
 
+class StepExecutionControl:
+    """Server-only cooperative cancellation/deadline for registered handlers."""
+    def __init__(self, cancelled, timeout_seconds):
+        self._cancelled = cancelled
+        self.deadline = time.monotonic() + max(0.0, float(timeout_seconds))
+
+    def is_cancelled(self):
+        return self._cancelled()
+
+    def time_remaining(self):
+        return max(0.0, self.deadline - time.monotonic())
+
+    def check(self):
+        if self.is_cancelled():
+            raise InterruptedError("TOOL_EXECUTION_CANCELLED")
+        if self.time_remaining() <= 0:
+            raise TimeoutError("TOOL_STEP_TIMEOUT")
+
+
 @dataclass
 class AgentConfig:
     """Agent 运行配置（预算控制）。"""
@@ -154,6 +173,7 @@ class AgentLoop:
 
         # 运行时状态
         self._cancelled = False
+        self._active_task_id = None
         self._cancel_lock = threading.Lock()
         self._start_time: float = 0.0
         self._current_cost: float = 0.0
@@ -211,8 +231,13 @@ class AgentLoop:
         actor_id = context.get("actor_id") if isinstance(context, dict) else None
         domain_id = context.get("domain_id") if isinstance(context, dict) else None
         scope = context.get("scope") if isinstance(context, dict) else None
-        if (type(actor_id) is not int or actor_id < 1 or not isinstance(actor, dict)
-                or type(actor.get("id")) is not int or actor.get("id") != actor_id
+        from lumenis.system.security.permission import _is_server_local_workspace_principal
+        local_actor = (_is_server_local_workspace_principal(actor) and actor_id is None
+                       and (saved_context.get("agent_runtime") or {}).get("principal_kind") == "local_workspace"
+                       and context.get("agent_runtime") == saved_context.get("agent_runtime"))
+        account_actor = (type(actor_id) is int and actor_id > 0 and isinstance(actor, dict)
+                         and type(actor.get("id")) is int and actor.get("id") == actor_id)
+        if (not (local_actor or account_actor)
                 or actor_id != saved_context.get("actor_id")
                 or domain_id != saved_context.get("domain_id")
                 or not self._valid_typed_scope(domain_id, scope)
@@ -221,6 +246,8 @@ class AgentLoop:
         fresh_context, sensitive = _sanitize_checkpoint_value(context)
         if sensitive or not isinstance(fresh_context, dict):
             return self._resume_result(task, plan, "blocked", "Fresh resume context contains credential or approval material")
+        if local_actor:
+            fresh_context["actor"] = actor
         module = fresh_context.get("module")
         if not isinstance(module, str) or not module.strip():
             return self._resume_result(task, plan, "blocked", "Fresh resume context must identify the authorized module")
@@ -245,7 +272,17 @@ class AgentLoop:
             )
             if not security.get("allowed"):
                 return self._resume_result(task, plan, "blocked", security.get("reason", "Fresh read permission denied"))
-            return self._read_completed_result(task, plan)
+            recovered_result = self._read_completed_result(task, plan)
+            if recovered_result.status == "already_completed":
+                # A crash after the last step but before whole-task commit needs
+                # only the outcome commit, never another execution of the tool.
+                self._durable.finalize_task(
+                    task_id, "completed", result=recovered_result.result,
+                    step_index=len(plan.steps), plan_snapshot=plan.to_dict(),
+                    context=saved_context, agent_id=task["agent_id"],
+                    step_status="completed", metadata=metadata,
+                )
+            return recovered_result
         if checkpoint_state == "executing":
             if (checkpoint_index == len(plan.steps)
                     or plan.steps[checkpoint_index].status != "running"):
@@ -434,6 +471,7 @@ class AgentLoop:
         context: Optional[Dict[str, Any]] = None,
         agent_id: Optional[str] = None,
         _resume_state: Optional[Dict[str, Any]] = None,
+        _existing_task_id: Optional[str] = None,
     ) -> AgentResult:
         """执行 Agent Loop。
 
@@ -476,9 +514,19 @@ class AgentLoop:
         )
 
         # 创建 Durable Task
-        task_id = (_resume_state["task_id"] if resuming
-                   else self._durable.create_task(goal, agent_id=agent_id, context=context))
+        task_id = (_resume_state["task_id"] if resuming else _existing_task_id
+                   or self._durable.create_task(goal, agent_id=agent_id, context=context))
+        if _existing_task_id and not resuming:
+            existing = self._durable.get_task(task_id)
+            if (not existing or existing.get("created_by") != "agent_runtime"
+                    or existing.get("goal") != goal or existing.get("context") != {
+                        key: context.get(key) for key in ("actor_id", "domain_id", "scope", "agent_runtime")}
+                    or existing.get("status") not in {"pending", "ready"}):
+                raise PermissionError("AGENT_EXISTING_TASK_BINDING_INVALID")
+            agent_id = existing.get("agent_id") or agent_id
+            result.agent_id = agent_id
         result.task_id = task_id
+        self._active_task_id = task_id
 
         try:
             sm.transition_to(AgentState.PLANNING, reason="resume checkpoint" if resuming else "start planning")
@@ -506,7 +554,7 @@ class AgentLoop:
             if not plan.steps:
                 sm.fail("planner returned empty plan")
                 result.status = "failed"
-                result.error = "Planner returned empty plan"
+                result.error = plan.fallback_reason or "Planner returned empty plan"
                 return self._finalize(result, sm)
 
             # 2. 执行循环
@@ -598,6 +646,11 @@ class AgentLoop:
                 if self._is_cancelled() or exec_result.get("cancelled"):
                     sm.cancel(reason="cancelled before tool dispatch")
                     result.status = "cancelled"
+                    return self._finalize(result, sm)
+
+                if exec_result.get("timeout"):
+                    sm.fail("TOOL_STEP_TIMEOUT")
+                    result.status, result.error = "timeout", "TOOL_STEP_TIMEOUT"
                     return self._finalize(result, sm)
 
                 # 5. OBSERVE
@@ -694,7 +747,16 @@ class AgentLoop:
 
     def _is_cancelled(self) -> bool:
         with self._cancel_lock:
-            return self._cancelled
+            cancelled = self._cancelled
+        if cancelled:
+            return True
+        if self._active_task_id is not None:
+            try:
+                row = self._durable.get_task(self._active_task_id)
+                return bool(row and row.get("status") == "cancelled")
+            except Exception:
+                return True  # Lost owner visibility cannot authorize more work.
+        return False
 
     def _check_budget(self, current_step: int) -> str:
         """检查预算，返回 'ok' 或超限类型。"""
@@ -831,15 +893,17 @@ class AgentLoop:
             if gate is None:
                 raise RuntimeError("canonical SYSTEM Permission unavailable")
             if fresh_authorization:
-                from lumenis.system.security import check_actor_scope_permission
-
+                from lumenis.system.security.permission import (check_actor_scope_permission,
+                    check_local_workspace_scope_permission, _is_server_local_workspace_principal)
+                local_actor = _is_server_local_workspace_principal(context.get("actor"))
+                checker = check_local_workspace_scope_permission if local_actor else check_actor_scope_permission
                 binding = context.get("scope")
-                actor_scope = check_actor_scope_permission(
+                actor_scope = checker(
                     context.get("actor"),
                     domain_id=str(context.get("domain_id") or ""),
                     action=("write" if action.value in {"WRITE", "COMMIT", "PUSH", "DEPLOY"}
                             else "read"),
-                    module=str(context.get("module") or ""),
+                    module="skills" if local_actor else str(context.get("module") or ""),
                     subject_id=binding.get("subject_id") if isinstance(binding, dict) else None,
                     brand_focus_id=binding.get("brand_focus_id") if isinstance(binding, dict) else None,
                     global_scope=binding.get("global_scope", False) if isinstance(binding, dict) else False,
@@ -1009,9 +1073,15 @@ class AgentLoop:
             )
             self._steps_started += 1
 
-            # 执行工具
-            result = (selected_call.invoke(step, context) if selected_call is not None
-                      else self._tool_executor(step, context))
+            # The control object never enters a model prompt/checkpoint. Bound
+            # handlers can poll/check it during local work or interruptible I/O.
+            control = StepExecutionControl(self._is_cancelled,
+                self._active_limits.get("step_timeout_seconds", self.config.step_timeout_seconds))
+            execution_context = {**context, "execution_control": control}
+            control.check()
+            result = (selected_call.invoke(step, execution_context) if selected_call is not None
+                      else self._tool_executor(step, execution_context))
+            control.check()  # A late return is never reported as timely success.
             if not isinstance(result, dict) or type(result.get("success")) is not bool:
                 raise RuntimeError("TOOL_RESULT_CONTRACT_INVALID")
 
@@ -1065,6 +1135,8 @@ class AgentLoop:
                 "error": str(e)[:500],
                 "duration_ms": duration_ms,
                 "reconciliation_required": isinstance(e, FormationError),
+                "cancelled": isinstance(e, InterruptedError),
+                "timeout": isinstance(e, TimeoutError),
             }
 
     def _do_replan(
@@ -1239,11 +1311,14 @@ class AgentLoop:
                     result.result = None
 
         # Durable 完成
-        if result.status in ("completed", "failed", "cancelled"):
-            self._durable.checkpoint(
+        if result.status in ("completed", "failed", "cancelled", "timeout", "budget_exceeded", "blocked", "reconciliation_required", "max_steps", "max_time", "max_cost"):
+            terminal_state = result.status if result.status in ("completed", "cancelled") else "failed"
+            self._durable.finalize_task(
                 task_id=result.task_id,
                 step_index=len(steps),
-                state=result.status,
+                state=terminal_state,
+                result=result.result,
+                error=result.error,
                 plan_snapshot=self._checkpoint_plan_snapshot(),
                 context=self._active_context,
                 step_detail=f"agent {result.status}",

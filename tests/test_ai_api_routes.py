@@ -146,9 +146,9 @@ def test_legacy_ai_routes_do_not_fake_success_or_call_provider_fallback(
 def test_ai_chat_uses_owned_gateway_and_exposes_retrieval_separately_when_unavailable(
     ai_client, monkeypatch,
 ):
-    monkeypatch.setattr(ai_api.function_registry, "build_context", lambda *_a: "retrieved product facts")
-    monkeypatch.setattr(ai_api.db, "get_stats", lambda: {})
-    monkeypatch.setattr(ai_api, "_canonical_report_metrics", lambda *_a: {})
+    monkeypatch.setattr(ai_api.function_registry, "build_context", lambda *_a: pytest.fail("unscoped business retrieval"))
+    monkeypatch.setattr(ai_api.db, "get_stats", lambda: pytest.fail("unscoped business statistics"))
+    monkeypatch.setattr(ai_api.function_registry, "search_function_metadata", lambda *_a: [{"label": "报告入口"}])
     seen = []
 
     def unavailable(**kwargs):
@@ -171,7 +171,8 @@ def test_ai_chat_uses_owned_gateway_and_exposes_retrieval_separately_when_unavai
     assert response.status_code == 503
     assert response.get_json()["ok"] is False
     assert response.get_json()["reply"] is None
-    assert response.get_json()["context"] == "retrieved product facts"
+    assert "报告入口" in response.get_json()["context"]
+    assert "不代表当前业务数据" in response.get_json()["context"]
     assert seen and seen[0]["analysis_type"] == "conversation"
 
 
@@ -253,16 +254,16 @@ def test_ai_tasks_shared_route_preserves_task_engine_and_skill_execution(ai_clie
             return {"task_id": "task-1", "input": user_input, "context": context, "created_by": created_by}
 
     monkeypatch.setattr(ai_api, "_get_engine", lambda: FakeEngine())
+    import lumenis.auth.service
+    import account.skills
+    monkeypatch.setattr(lumenis.auth.service, "get_current_user", lambda **_: {"id": 7})
     seen = []
 
     def run_execution_chain(**kwargs):
         seen.append(kwargs)
-        return SimpleNamespace(
-            execution_id="exec-1", status=SimpleNamespace(value="completed"),
-            evidence_record={"ok": True},
-        )
+        return {"success": True, "execution_id": "exec-1", "status": "completed"}
 
-    monkeypatch.setattr(skill_execution, "run_execution_chain", run_execution_chain)
+    monkeypatch.setattr(account.skills, "execute_skill_api", run_execution_chain)
 
     task_response = ai_client.post("/api/ai/tasks", json={
         "input": "Create a task", "context": {"domain": "cth"}, "created_by": "user-1",
@@ -275,17 +276,25 @@ def test_ai_tasks_shared_route_preserves_task_engine_and_skill_execution(ai_clie
     assert task_response.get_json()["task"]["task_id"] == "task-1"
     assert skill_response.status_code == 200
     assert skill_response.get_json() == {
-        "ok": True, "execution_id": "exec-1", "status": "completed", "evidence_recorded": True,
+        "ok": True, "success": True, "execution_id": "exec-1", "status": "completed",
     }
     assert seen[0]["skill_id"] == "shared.content_project"
     assert seen[0]["input_payload"] == {"brief": "b1"}
 
+    assert task_response.get_json()["task"]["created_by"] == "actor:7"
+    assert task_response.get_json()["task"]["context"]["actor_id"] == 7
+    assert seen[0]["user_id"] == 7
 
 def test_ai_tasks_list_combines_owners_and_surfaces_storage_failures(ai_client, monkeypatch):
     class FakeEngine:
         def list_tasks(self, *, status, limit, offset):
             return [{"task_id": "task-1", "status": status or "ready", "created_at": "2026-10-06T01:00:00Z"}]
 
+        def get_task(self, task_id):
+            return self.list_tasks(status=None, limit=1, offset=0)[0]
+
+    # Route composition only; authorization itself has SQLite/live-scope tests.
+    monkeypatch.setattr(ai_api, "_task_row_read_allowed", lambda *a, **k: True)
     monkeypatch.setattr(ai_api, "_get_engine", lambda: FakeEngine())
     monkeypatch.setattr(
         skill_execution, "query_executions",

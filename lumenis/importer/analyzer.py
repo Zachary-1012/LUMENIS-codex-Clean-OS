@@ -11,7 +11,7 @@ class AnalyzedNote:
     def __init__(self):
         self.title: str = ""
         self.content: str = ""
-        self.author: str = "外部导入"
+        self.author: str = ""
         self.publish_date: str = ""
         self.source_platform: str = "import"
         self.sentiment: str = "unknown"
@@ -31,7 +31,7 @@ class AnalyzedNote:
         self.source_row_sha256: Optional[str] = None
 
 
-def analyze_text(text: str, context_keywords: List[str] = None) -> List[AnalyzedNote]:
+def analyze_text(text: str, context_keywords: List[str] = None, *, ai_enhancement: bool = False) -> List[AnalyzedNote]:
     """
     分析文本，返回结构化笔记列表
     Text parsing continues without a model; absent owned inference remains
@@ -40,19 +40,20 @@ def analyze_text(text: str, context_keywords: List[str] = None) -> List[Analyzed
     chunks = split_into_chunks(text, max_chunk_size=800)
     results = []
     for chunk in chunks:
-        note = _analyze_chunk(chunk, context_keywords)
+        note = _analyze_chunk(chunk, context_keywords, ai_enhancement=ai_enhancement)
         if note.title or note.content:
             results.append(note)
     return results
 
 
-def _analyze_chunk(chunk: str, context_keywords: List[str] = None) -> AnalyzedNote:
+def _analyze_chunk(chunk: str, context_keywords: List[str] = None, *, ai_enhancement: bool = False) -> AnalyzedNote:
     """分析单个文本块"""
     note = AnalyzedNote()
     note.raw_chunk = chunk
     note.content = chunk[:500] if len(chunk) > 500 else chunk
 
-    result = _ai_analyze(chunk, context_keywords)
+    result = (_ai_analyze(chunk, context_keywords) if ai_enhancement is True else
+              {"status": "NOT_RUN", "code": "DETERMINISTIC_SOURCE_ANALYSIS", "analysis": None})
     analysis = result.get("analysis") if result.get("status") == "COMPLETED" else None
     if isinstance(analysis, dict):
         note.title = str(analysis.get("title") or _extract_title(chunk))
@@ -411,3 +412,38 @@ def source_rows_fingerprint(parsed, rows: List[AnalyzedNote], *, count: int) -> 
     return hashlib.sha256(json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
     ).encode("utf-8")).hexdigest()
+
+
+def analyze_source_basics(parsed, context_keywords=None) -> dict:
+    """A reproducible private source analysis, with no model or fact admission.
+
+    Excerpts are verbatim, counts describe this upload only, and missing author,
+    sentiment, risk and rights remain unknown. The retained parsed text permits
+    every range and count to be independently checked.
+    """
+    text = str(parsed.text or "")
+    lines = [line for line in text.splitlines() if line.strip()]
+    terms = extract_source_keyword_candidates(text, context_keywords)
+    excerpts = []
+    start = 0
+    for line in lines[:8]:
+        position = text.find(line, start)
+        if position >= 0:
+            excerpt = line[:500]
+            excerpts.append({"text": excerpt, "start": position,
+                             "end": position + len(excerpt), "unit": "unicode-codepoint"})
+            start = position + len(line)
+    return {
+        "schema": "lumenis.private-source-analysis/v1",
+        "method": "deterministic-source-basics:v1", "state": "COMPLETED",
+        "ai_state": "NOT_RUN", "source_text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "character_count": len(text), "nonempty_line_count": len(lines),
+        "table_count": len(parsed.tables),
+        "table_row_counts": [len(table) for table in parsed.tables],
+        "keyword_candidates": terms, "source_excerpts": excerpts,
+        "sentiment": None, "risk": None, "author": None,
+        "factual_verification": "NOT_ESTABLISHED", "training_eligible": False,
+        "limitations": ["Counts describe this uploaded document only.",
+                         "Excerpts are source text, not verified facts or model summaries.",
+                         "Authorship, rights and external redistribution are not established."],
+    }

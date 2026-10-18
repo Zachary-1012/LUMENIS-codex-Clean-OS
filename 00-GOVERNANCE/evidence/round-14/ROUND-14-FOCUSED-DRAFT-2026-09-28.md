@@ -120,7 +120,7 @@ loading/offline coverage gap; it does not establish offline glyph readiness. No
 font configuration or dependency was changed to disguise that limitation.
 
 Local evidence directory:
-`C:/Users/28049/AppData/Local/Temp/lumenis-focused-draft-20260928`.
+`C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-focused-draft-20260928`.
 Owned preview: `http://127.0.0.1:55826/workspace/AI-01`.
 The backend stayed on isolated base `15a994bbf172a783b9b8dd2bf8a8d43359829fec`;
 this is not full-current-backend acceptance. Formal runtime 53764, production DB,

@@ -257,27 +257,62 @@ def create_v4_blueprint() -> Blueprint:
     @require_auth
     def api_adapter_collect():
         """启动一次后台采集任务（立即返回 task_id，前端轮询进度，结果直接入库）。"""
-        data = request.get_json() or {}
-        keyword = (data.get("keyword") or "").strip()
-        if not keyword:
-            return jsonify({"success": False, "error": "关键词不能为空"}), 400
-        platforms = data.get("platforms") or None
-        max_results = min(int(data.get("max_results", 20) or 20), 50)
-        actor = getattr(g, "current_user", None)
-        actor_ref = f"actor:{actor['id']}" if isinstance(actor, dict) and type(actor.get("id")) is int else None
-        task_id = collector_service.start_collect(
-            keyword, platforms, max_results, actor_ref=actor_ref)
-        log_audit("adapter_collect", "collection", None,
-                  f"后台采集启动 {task_id} 关键词={keyword} 平台={platforms or '全部'}")
+        data = request.get_json(silent=True)
+        if (not isinstance(data, dict) or set(data) - {"keyword", "platforms", "max_results", "confirm_read_only"}
+                or data.get("confirm_read_only") is not True):
+            return jsonify({"success": False, "error": "EXPLICIT_READ_ONLY_REQUEST_REQUIRED"}), 400
+        try:
+            from lumenis.system.security.permission import resolve_web_request_scope
+            actor, scope, _, _ = resolve_web_request_scope("write", module="collector")
+            # This authenticated compatibility route never serializes a local
+            # principal or trusts an actor identifier supplied in request JSON.
+            if not isinstance(actor, dict) or actor.get("id") != g.current_user.get("id"):
+                raise PermissionError("AUTH_REQUIRED")
+            task_id = collector_service.start_collect(
+                data.get("keyword"), data.get("platforms"), data.get("max_results", 20),
+                actor=actor, scope=scope)
+        except collector_service.CollectorAdmissionError as exc:
+            return jsonify({"success": False, **exc.result}), 403
+        except PermissionError as exc:
+            return jsonify({"success": False, "error": str(exc)}), 403
+        except (TypeError, ValueError) as exc:
+            return jsonify({"success": False, "error": str(exc)}), 400
         return jsonify({"success": True, "task_id": task_id})
+
+    def _authorized_collector_task(task_id, action):
+        from lumenis.system.security.permission import resolve_web_request_scope
+        actor, scope, _, _ = resolve_web_request_scope(action, module="collector")
+        if (not isinstance(actor, dict) or actor.get("id") != g.current_user.get("id")
+                or collector_service.get_task_owner(task_id) != "actor:" + str(actor["id"])):
+            raise PermissionError("TASK_NOT_FOUND")
+        task = collector_service.get_task(task_id)
+        if not task or task.get("scope") != scope:
+            raise PermissionError("TASK_NOT_FOUND")
+        return actor, scope, task
 
     @v4_bp.route("/adapters/task/<task_id>", methods=["GET"])
     @require_auth
     def api_adapter_task(task_id):
-        """查询后台采集任务进度与每平台六态。"""
-        task = collector_service.get_task(task_id)
-        if not task:
-            return jsonify({"success": False, "error": "任务不存在或已过期"}), 404
+        """Read only the current actor's exact scoped durable task."""
+        try:
+            _, _, task = _authorized_collector_task(task_id, "read")
+        except (PermissionError, ValueError):
+            return jsonify({"success": False, "error": "TASK_NOT_FOUND"}), 404
+        return jsonify({"success": True, "task": task})
+
+    @v4_bp.route("/adapters/task/<task_id>/resume", methods=["POST"])
+    @require_auth
+    def api_adapter_task_resume(task_id):
+        data = request.get_json(silent=True)
+        if type(data) is not dict or set(data) != {"confirm_read_only"} or data.get("confirm_read_only") is not True:
+            return jsonify({"success": False, "error": "EXPLICIT_READ_ONLY_REQUEST_REQUIRED"}), 400
+        try:
+            actor, scope, _ = _authorized_collector_task(task_id, "write")
+            task = collector_service.resume_collect(task_id, actor=actor, scope=scope)
+        except collector_service.CollectorAdmissionError as exc:
+            return jsonify({"success": False, **exc.result}), 403
+        except (PermissionError, ValueError):
+            return jsonify({"success": False, "error": "TASK_NOT_FOUND"}), 404
         return jsonify({"success": True, "task": task})
 
     @v4_bp.route("/adapters/health", methods=["GET"])

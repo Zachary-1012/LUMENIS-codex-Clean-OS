@@ -341,7 +341,7 @@ class TestEvaluationIntegration:
 
 class TestEdgeCases:
     def test_empty_plan_falls_back(self):
-        """AI 返回空 steps 时应降级为单步计划并执行成功。"""
+        """Empty planner output must not create a fabricated executable fallback."""
         def empty_plan_chat(system, user, **kwargs):
             return json.dumps({"steps": []}), "zhipu"
 
@@ -351,13 +351,12 @@ class TestEdgeCases:
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
-        # 空 steps 触发 fallback → 单步 direct_execution → 执行成功
-        assert result.status == "completed"
-        assert result.metrics["steps"] == 1
+        assert result.status == "failed"
+        assert result.metrics["steps"] == 0
         assert result.plan["is_fallback"] is True
 
     def test_ai_exception_fallback(self):
-        """AI 异常时应降级为单步计划并执行。"""
+        """Unavailable planning must not execute a fabricated generic tool."""
         def raising_chat(system, user, **kwargs):
             raise RuntimeError("AI down")
 
@@ -367,9 +366,8 @@ class TestEdgeCases:
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
-        # 降级为单步 direct_execution，应能完成
-        assert result.status == "completed"
-        assert result.metrics["steps"] == 1
+        assert result.status == "failed"
+        assert result.metrics["steps"] == 0
 
     def test_tool_exception_handled(self):
         """工具执行异常应被捕获，不崩溃。"""
@@ -389,3 +387,49 @@ class TestEdgeCases:
         assert result.metrics["failed_steps"] == 3
         assert result.metrics["completed_steps"] == 0
         assert result.error is None or "exception" not in (result.error or "").lower()
+
+
+def test_cooperative_registered_tool_stops_on_cancel():
+    entered = threading.Event()
+    def slow_tool(step, context):
+        control = context['execution_control']
+        entered.set()
+        while True:
+            control.check()
+            time.sleep(0.002)
+    loop = AgentLoop(planner=Planner(ai_chat_func=_mock_ai_chat),
+        tool_binding=trusted_test_executor(slow_tool),
+        durable_adapter=DurableExecutionAdapter(enabled=False))
+    result = []
+    worker = threading.Thread(target=lambda: result.append(loop.run('cancel local work')))
+    worker.start()
+    assert entered.wait(timeout=2), [r.error for r in result]
+    loop.cancel()
+    worker.join(timeout=2)
+    assert not worker.is_alive()
+    assert result[0].status == 'cancelled'
+    assert loop._durable.get_task(result[0].task_id)['status'] == 'cancelled'
+
+
+def test_cooperative_timeout_is_persisted_as_failure_not_success():
+    def slow_tool(step, context):
+        while True:
+            context['execution_control'].check()
+            time.sleep(0.002)
+    loop = AgentLoop(config=AgentConfig(step_timeout_seconds=0.01),
+        planner=Planner(ai_chat_func=_mock_ai_chat), tool_binding=trusted_test_executor(slow_tool),
+        durable_adapter=DurableExecutionAdapter(enabled=False))
+    result = loop.run('bounded local work')
+    assert result.status == 'timeout' and result.error == 'TOOL_STEP_TIMEOUT', result.error
+    assert loop._durable.get_task(result.task_id)['status'] == 'failed'
+
+
+def test_late_noncooperative_return_is_not_success():
+    def late_tool(step, context):
+        time.sleep(0.02)
+        return {'success': True, 'result': 'too late'}
+    loop = AgentLoop(config=AgentConfig(step_timeout_seconds=0.001),
+        planner=Planner(ai_chat_func=_mock_ai_chat), tool_binding=trusted_test_executor(late_tool),
+        durable_adapter=DurableExecutionAdapter(enabled=False))
+    result = loop.run('bounded local work')
+    assert result.status == 'timeout'

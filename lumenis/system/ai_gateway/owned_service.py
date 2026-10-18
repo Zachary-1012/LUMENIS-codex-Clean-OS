@@ -469,7 +469,7 @@ def _runtime_identity(binding: OwnedServiceBinding, admission_request: object) -
 
 def _bound_runtime_method(runtime: object, runtime_type: type, name: str):
     """Resolve an admitted method from the exact runtime class, never its instance dict."""
-    if type(runtime) is not runtime_type or name not in {"identity", "generate"}:
+    if type(runtime) is not runtime_type or name not in {"identity", "generate", "measure_request"}:
         raise OwnedServiceBlocked("OWNED_RUNTIME_METHOD_INVALID", status="BLOCKED")
     try:
         instance_namespace = object.__getattribute__(runtime, "__dict__")
@@ -682,10 +682,60 @@ def _validate_raw_result(raw: object, request: OwnedServiceRequest, digest: str,
     return "", value, token_counts
 
 
-def run_owned_request(request: object, *, is_cancelled: Callable[[], bool] | None = None) -> dict:
+def measure_owned_request(request: object) -> dict:
+    """Count with the bound runtime; a measurement never grants generation."""
+    digest = ""
+    try:
+        validate_owned_service_request(request)
+        digest = owned_service_request_digest(request)
+        with _SLOTS_LOCK:
+            slot = _SLOTS.get(request.domain_id)
+        if slot is None:
+            raise OwnedServiceBlocked("OWNED_SERVICE_EXECUTOR_NOT_BOUND", status="UNAVAILABLE")
+        before = _validate_binding(slot.binding, actions=frozenset({"admit", "rollback"}))
+        if before["binding_sha256"] != slot.binding_sha256:
+            raise OwnedServiceBlocked("OWNED_SERVICE_BINDING_CHANGED")
+        _request_matches_admission(request, before["admission_request"], before["admission_result"]["public_identity"])
+        source_before = _source_call(slot.binding, request, before["admission_request"])
+        measured = _bound_runtime_method(slot.binding.runtime, _runtime_type(), "measure_request")(request)
+        after = _validate_binding(slot.binding, actions=frozenset({"admit", "rollback"}))
+        source_after = _source_call(slot.binding, request, after["admission_request"])
+        with _SLOTS_LOCK:
+            current = _SLOTS.get(request.domain_id) is slot
+        if (not current or after["binding_sha256"] != before["binding_sha256"]
+                or after["runtime_identity"] != before["runtime_identity"]
+                or any(getattr(source_before, field) != getattr(source_after, field) for field in (
+                    "allowed", "code", "actor_ref", "domain_id", "scope", "source_use_policy_version",
+                    "source_use_policy_sha256", "source_binding_sha256", "source_evidence_refs"))):
+            raise OwnedServiceBlocked("OWNED_SERVICE_BINDING_CHANGED")
+        identity = after["runtime_identity"]
+        if (type(measured) is not dict or measured.get("request_sha256") != digest
+                or type(measured.get("prompt_tokens")) is not int or measured["prompt_tokens"] < 0
+                or measured.get("context_window_tokens") != identity["context_window_tokens"]
+                or measured.get("output_token_limit") != identity["output_token_limit"]
+                or measured.get("output_tokens_reserved") != request.max_output_tokens
+                or measured.get("runtime_sha256") != identity["runtime_sha256"]
+                or measured.get("tokenizer_identity") != identity["runtime_sha256"]
+                or not _HASH.fullmatch(str(measured.get("formatter_sha256", "")))
+                or measured.get("generation_performed") is not False
+                or measured.get("count_method") != "loaded_runtime_tokenizer"):
+            raise OwnedServiceBlocked("OWNED_TOKEN_MEASUREMENT_INVALID")
+        return {"ok": True, **measured, "binding_sha256": slot.binding_sha256,
+            "fits": measured["prompt_tokens"] + request.max_output_tokens <= identity["context_window_tokens"]}
+    except OwnedServiceBlocked as exc:
+        return _failure(request, code=exc.code, status=exc.status, digest=digest)
+    except Exception:
+        return _failure(request, code="OWNED_TOKEN_MEASUREMENT_UNAVAILABLE", status="UNAVAILABLE", digest=digest)
+
+
+def run_owned_request(request: object, *, is_cancelled: Callable[[], bool] | None = None,
+                      expected_binding_sha256: str | None = None) -> dict:
     """Execute one source-authorized typed request; never accepts caller booleans."""
     digest = ""
     try:
+        if expected_binding_sha256 is not None and (type(expected_binding_sha256) is not str
+                or not _HASH.fullmatch(expected_binding_sha256)):
+            raise OwnedServiceBlocked("OWNED_EXPECTED_BINDING_INVALID", status="INVALID_INPUT")
         schema = validate_owned_service_request(request)
         digest = owned_service_request_digest(request)
         cancelled = is_cancelled if is_cancelled is not None else (lambda: False)
@@ -700,6 +750,8 @@ def run_owned_request(request: object, *, is_cancelled: Callable[[], bool] | Non
 
         before = _validate_binding(slot.binding, actions=frozenset({"admit", "rollback"}))
         if before["binding_sha256"] != slot.binding_sha256:
+            raise OwnedServiceBlocked("OWNED_SERVICE_BINDING_CHANGED", status="BLOCKED")
+        if expected_binding_sha256 is not None and expected_binding_sha256 != before["binding_sha256"]:
             raise OwnedServiceBlocked("OWNED_SERVICE_BINDING_CHANGED", status="BLOCKED")
         admission_request = before["admission_request"]
         _request_matches_admission(
@@ -902,6 +954,8 @@ def owned_service_status(domain_id: str | None = None) -> dict:
             "model_id": checked["runtime_identity"]["model_id"],
             "model_revision": checked["runtime_identity"]["model_revision"],
             "recipe": checked["runtime_identity"]["recipe"],
+            "context_window_tokens": checked["runtime_identity"]["context_window_tokens"],
+            "output_token_limit": checked["runtime_identity"]["output_token_limit"],
             "candidate_identity_sha256": checked["runtime_identity"]["candidate_identity_sha256"],
             "binding_sha256": slot.binding_sha256,
             "admission_request_sha256": checked["admission_result"]["request_sha256"],

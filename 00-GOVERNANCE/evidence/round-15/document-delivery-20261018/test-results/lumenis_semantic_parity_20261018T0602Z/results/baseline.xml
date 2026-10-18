@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="1.245" timestamp="2026-10-17T23:03:08.896943-07:00" hostname="REDACTED_HOST"><testcase classname="tests.test_semantic_asset_parity" name="test_real_admission_preserves_library_and_original_asset_id" time="0.681"><failure message="AssertionError: None&#10;assert 404 == 200&#10; +  where 404 = &lt;WrapperTestResponse streamed [404 NOT FOUND]&gt;.status_code">catalog = {'api': &lt;FlaskClient &lt;Flask 'tests.test_skill_http_durable_identity'&gt;&gt;, 'app': &lt;Flask 'tests.test_skill_http_durable_i...n-one', 'X-Domain-Id': 'CTH', 'X-Lumenis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-f7461f4b2fa361b4548b01ce'}, ...}
+
+    def test_real_admission_preserves_library_and_original_asset_id(catalog):
+        ws=catalog
+&gt;       admitted=admit(ws)
+                 ^^^^^^^^^
+
+tests/test_semantic_asset_parity.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+ws = {'api': &lt;FlaskClient &lt;Flask 'tests.test_skill_http_durable_identity'&gt;&gt;, 'app': &lt;Flask 'tests.test_skill_http_durable_i...n-one', 'X-Domain-Id': 'CTH', 'X-Lumenis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-f7461f4b2fa361b4548b01ce'}, ...}
+asset_id = 'AST-LEGAL', rid = 'semantic-admit-001'
+
+    def admit(ws,asset_id='AST-LEGAL',rid='semantic-admit-001'):
+        path='/api/intelligence/library/'+asset_id+'/scope-binding'
+        body={'request_id':rid}
+        preview=ws['api'].post(path,json=body,headers=ws['headers'])
+&gt;       assert preview.status_code==200,preview.get_json()
+E       AssertionError: None
+E       assert 404 == 200
+E        +  where 404 = &lt;WrapperTestResponse streamed [404 NOT FOUND]&gt;.status_code
+
+tests/test_semantic_asset_parity.py:36: AssertionError</failure></testcase><testcase classname="tests.test_semantic_asset_parity" name="test_active_rule_older_than_twenty_history_rows" time="0.274"><failure message="TypeError: 'NoneType' object is not subscriptable">catalog = {'api': &lt;FlaskClient &lt;Flask 'tests.test_skill_http_durable_identity'&gt;&gt;, 'app': &lt;Flask 'tests.test_skill_http_durable_i...n-one', 'X-Domain-Id': 'CTH', 'X-Lumenis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-f7461f4b2fa361b4548b01ce'}, ...}
+
+    def test_active_rule_older_than_twenty_history_rows(catalog):
+        ws=catalog
+        with sqlite3.connect(ws['path']) as con:
+            con.execute('CREATE TABLE IF NOT EXISTS rule_version_registry(version TEXT,description TEXT,is_active INTEGER,applied_at TEXT)')
+            con.execute("INSERT INTO rule_version_registry(version,description,is_active,applied_at) VALUES('old-active','active',1,'2025-01-01')")
+            con.executemany('INSERT INTO rule_version_registry(version,description,is_active,applied_at) VALUES(?,?,0,?)',[(f'inactive-{i}','inactive',f'2026-01-{i+1:02}') for i in range(25)])
+        sm=memory(ws)
+        assert len(sm.get_rule_history())==20
+&gt;       assert sm.get_active_rule_version()['version']=='old-active'
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+tests/test_semantic_asset_parity.py:67: TypeError</failure></testcase></testsuite></testsuites>

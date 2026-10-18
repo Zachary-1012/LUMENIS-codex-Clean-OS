@@ -1,0 +1,34 @@
+# kos_routes.py:1088-1120
+1088: @kos_bp.route("/attribution", methods=["GET"])
+1089: def api_attribution():
+1090:     """Return attribution from notes verified within the selected BrandFocus."""
+1091:     try:
+1092:         _actor, _actor_id, scope, selected, decision = _resolve_kos_brand_scope("read")
+1093:         author_id = request.args.get("author_id", "")
+1094:         note_ids = request.args.get("note_ids", "")
+1095:         brand_name = _kos_selected_brand_name(selected)
+1096:         if author_id:
+1097:             import kos_attribution
+1098:             outcome = kos_attribution.calculate_attribution(
+1099:                 author_id, brand_name=brand_name, scope=scope,
+1100:             )
+1101:         elif note_ids:
+1102:             normalized = [part.strip() for part in note_ids.split(",") if part.strip()]
+1103:             import kos_attribution
+1104:             outcome = kos_attribution.calculate_multi_touch_attribution(
+1105:                 normalized, brand_name=brand_name, scope=scope,
+1106:             )
+1107:         else:
+1108:             return jsonify({"ok": False, "status": "invalid_request",
+1109:                             "code": "AUTHOR_ID_OR_NOTE_IDS_REQUIRED"}), 400
+1110:         if outcome.get("ok") is not True:
+1111:             status = 403 if outcome.get("status") == "denied" else 409
+1112:             return jsonify({**outcome, "scope_audit_id": decision.scope_audit_id}), status
+1113:         return jsonify({**outcome, "scope_audit_id": decision.scope_audit_id})
+1114:     except (ValueError, PermissionError) as exc:
+1115:         return _kos_scope_error(exc)
+1116:     except Exception as exc:  # noqa: BLE001 - request boundary returns a sanitized failure, never success.
+1117:         return jsonify({"ok": False, "status": "error", "code": "ATTRIBUTION_FAILED",
+1118:                         "error_type": type(exc).__name__}), 503
+1119: 
+1120: 

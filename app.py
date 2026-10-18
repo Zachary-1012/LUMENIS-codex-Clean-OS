@@ -208,7 +208,7 @@ def _activate_internal_beta_environment(
 
 
 def _prepare_node_runtime(internal_beta_acceptance):
-    if internal_beta_acceptance:
+    if internal_beta_acceptance or MANUAL_WORKSPACE:
         return False
     return _ensure_node_on_path()
 
@@ -232,6 +232,48 @@ def _ensure_node_on_path():
             os.environ['PATH'] = os.path.dirname(c) + os.pathsep + os.environ.get('PATH', '')
             return True
     return False
+
+
+def _activate_manual_workspace(argv, environ=None):
+    """Explicit cross-platform manual startup, retaining normal API permissions."""
+    env = os.environ if environ is None else environ
+    if argv.count('--manual-workspace') != 1:
+        raise ValueError('--manual-workspace must appear exactly once')
+    if any(value.startswith('--internal-beta-') for value in argv):
+        raise ValueError('manual Workspace and acceptance profiles cannot be combined')
+    # Reuse the existing exact loopback/port/flag validator, not its temporary
+    # acceptance-storage or request allowlist policy.
+    normalized = [_INTERNAL_BETA_WORKSPACE_CONTEXT_FLAG if value == '--manual-workspace' else value for value in argv]
+    _validate_internal_beta_workspace_context_arguments(normalized, env)
+    data = str(env.get('ZBC_DATA_DIR') or '').strip()
+    database = str(env.get('ZBC_DB_PATH') or '').strip()
+    if not data or not database or not os.path.isabs(data) or not os.path.isabs(database):
+        raise ValueError('manual Workspace requires explicit absolute ZBC_DATA_DIR and ZBC_DB_PATH')
+    data = os.path.realpath(data)
+    database = os.path.realpath(database)
+    repository = os.path.dirname(os.path.abspath(__file__))
+    if (data == os.path.dirname(data) or _is_path_within(data, repository)
+            or database == data or not _is_path_within(database, data)):
+        raise ValueError('manual Workspace requires a dedicated data directory outside the source checkout and its DB inside that directory')
+    if os.path.isdir(database):
+        raise ValueError('manual Workspace ZBC_DB_PATH must name a file')
+    env['ZBC_DATA_DIR'] = data
+    env['ZBC_DB_PATH'] = database
+    env['LOG_DIR'] = os.path.join(data, 'logs')
+    env['ZBC_ARTIFACT_DIR'] = os.path.join(data, 'artifacts')
+    env['ZBC_AI_GOV_STATS_FILE'] = os.path.join(data, 'ai_governance_stats.json')
+    env['LUMENIS_OPEN_WORKSPACE'] = '1'
+    return database, data
+
+
+MANUAL_WORKSPACE = '--manual-workspace' in sys.argv
+if any(value.startswith('--manual-workspace=') for value in sys.argv):
+    raise SystemExit('--manual-workspace is a standalone flag')
+if MANUAL_WORKSPACE:
+    try:
+        _activate_manual_workspace(sys.argv[1:])
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 # Select bounded acceptance profiles before any Product Core/application imports.
@@ -271,7 +313,8 @@ if INTERNAL_BETA_ACCEPTANCE:
 
 def _load_dotenv(path='.env'):
     if (
-        INTERNAL_BETA_SAFE_STARTUP
+        MANUAL_WORKSPACE
+        or INTERNAL_BETA_SAFE_STARTUP
         or INTERNAL_BETA_ACCEPTANCE
         or INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE
     ):
@@ -318,11 +361,13 @@ threading.excepthook = _thread_excepthook
 # completes for 90s, dump the current thread stacks once per minute. This
 # captures I/O/DB/child-process blocks that do not trip faulthandler's crash path.
 _HANG_WATCHDOG = {'last_request_ok': time.time(), 'last_dump': 0.0}
+_HANG_WATCHDOG_STOP = threading.Event()
+_HANG_WATCHDOG_LOCK = threading.RLock()
+_HANG_WATCHDOG_THREAD = None
 
 
 def _hang_watchdog_loop():
-    while True:
-        time.sleep(15)
+    while not _HANG_WATCHDOG_STOP.wait(15):
         try:
             silence = time.time() - _HANG_WATCHDOG['last_request_ok']
             if silence > 90 and time.time() - _HANG_WATCHDOG['last_dump'] > 60:
@@ -337,7 +382,28 @@ def _hang_watchdog_loop():
             pass
 
 
-threading.Thread(target=_hang_watchdog_loop, daemon=True, name='hang_watchdog').start()
+def _start_hang_watchdog():
+    global _HANG_WATCHDOG_THREAD
+    with _HANG_WATCHDOG_LOCK:
+        if _HANG_WATCHDOG_THREAD is not None and _HANG_WATCHDOG_THREAD.is_alive():
+            return _HANG_WATCHDOG_THREAD
+        _HANG_WATCHDOG_STOP.clear()
+        _HANG_WATCHDOG['last_request_ok'] = time.time()
+        _HANG_WATCHDOG['last_dump'] = 0.0
+        _HANG_WATCHDOG_THREAD = threading.Thread(
+            target=_hang_watchdog_loop, daemon=True, name='hang_watchdog')
+        _HANG_WATCHDOG_THREAD.start()
+        return _HANG_WATCHDOG_THREAD
+
+
+def _stop_hang_watchdog(timeout=2.0):
+    with _HANG_WATCHDOG_LOCK:
+        _HANG_WATCHDOG_STOP.set()
+        thread = _HANG_WATCHDOG_THREAD
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=timeout)
+        return thread is None or not thread.is_alive()
+
 
 from datetime import datetime, timedelta
 # 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
@@ -972,47 +1038,23 @@ def subject_types():
 # V3.0 事件关系图谱API
 @app.route('/api/event-graph/stats')
 def event_graph_stats():
-    """事件图谱统计"""
-    try:
-        from event_graph import get_event_graph
-        graph = get_event_graph()
-        return jsonify({'ok': True, 'data': graph.get_stats()})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    from event_graph import graph_http
+    return graph_http('stats')
 
 @app.route('/api/event-graph/events')
 def event_graph_events():
-    """获取所有事件"""
-    try:
-        from event_graph import get_event_graph
-        graph = get_event_graph()
-        event_type = request.args.get('type', '')
-        if event_type:
-            events = graph.get_events_by_type(event_type)
-        else:
-            events = list(graph.events.values())
-        evs = [e.to_dict() for e in events]
-        # Topic 标签增强（c-TF-IDF 只读，内存增强不改 DB）：为每事件生成 topic_label 供前端/报告
-        try:
-            from scripts.topic_cluster import enrich_events_with_labels
-            evs = enrich_events_with_labels(evs, top_k=4)
-        except Exception:
-            pass
-        return jsonify({'ok': True, 'events': evs, 'count': len(evs)})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    from event_graph import graph_http
+    return graph_http('list')
 
 @app.route('/api/event-graph/chain/<event_id>')
 def event_graph_chain(event_id):
-    """获取事件链"""
-    try:
-        from event_graph import get_event_graph
-        graph = get_event_graph()
-        max_depth = int(request.args.get('max_depth', 5))
-        chain = graph.get_event_chain(event_id, max_depth)
-        return jsonify({'ok': True, 'chain': [e.to_dict() for e in chain], 'count': len(chain)})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    from event_graph import graph_http
+    return graph_http('chain', event_id=event_id)
+
+@app.route('/api/event-graph/approval/revoke', methods=['POST'])
+def event_graph_revoke_approval():
+    from event_graph import graph_http
+    return graph_http('revoke')
 
 @app.route('/api/event-graph/types')
 def event_graph_types():
@@ -1030,51 +1072,13 @@ def event_graph_types():
 # V3.0 事件关系图谱写入API（v5.9.9 新增数据库持久化）
 @app.route('/api/event-graph/events', methods=['POST'])
 def event_graph_create_event():
-    """创建新事件"""
-    try:
-        from event_graph import get_event_graph
-        data = request.get_json() or {}
-        event_type = data.get('event_type', '')
-        title = data.get('title', '')
-        if not event_type or not title:
-            return jsonify({'ok': False, 'error': 'event_type 和 title 不能为空'}), 400
-        graph = get_event_graph()
-        event = graph.create_event(
-            event_type=event_type, title=title,
-            description=data.get('description', ''),
-            event_time=data.get('event_time'),
-            source=data.get('source', 'manual'),
-            status=data.get('status', 'ongoing'),
-            metadata=data.get('metadata'),
-            source_event_id=data.get('source_event_id'),
-        )
-        return jsonify({'ok': True, 'data': event.to_dict(), 'message': '事件创建成功'})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    from event_graph import graph_http
+    return graph_http('create')
 
 @app.route('/api/event-graph/relations', methods=['POST'])
 def event_graph_add_relation():
-    """添加事件关系"""
-    try:
-        from event_graph import get_event_graph
-        data = request.get_json() or {}
-        source_id = data.get('source_event_id', '')
-        target_id = data.get('target_event_id', '')
-        relation_type = data.get('relation_type', '')
-        if not source_id or not target_id or not relation_type:
-            return jsonify({'ok': False, 'error': '参数不能为空'}), 400
-        graph = get_event_graph()
-        relation = graph.add_relation(
-            source_id=source_id, target_id=target_id,
-            relation_type=relation_type,
-            evidence=data.get('evidence', ''),
-            confidence=data.get('confidence', 0.5),
-        )
-        if not relation:
-            return jsonify({'ok': False, 'error': '源事件或目标事件不存在'}), 404
-        return jsonify({'ok': True, 'data': relation.to_dict(), 'message': '关系添加成功'})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    from event_graph import graph_http
+    return graph_http('relation')
 
 @app.route('/api/creative/ideas', methods=['POST'])
 def creative_ideas():
@@ -1168,7 +1172,7 @@ def _creative_pitch_request(*, export=False):
     import re
     from werkzeug.exceptions import BadRequest, RequestEntityTooLarge
 
-    allowed = {'text', 'brand', 'hotspot', 'n'} | ({'manuscript'} if export else set())
+    allowed = {'text', 'brand', 'hotspot', 'n', 'target_date', 'market'} | ({'manuscript'} if export else set())
 
     def unique_object(pairs):
         result = {}
@@ -1212,10 +1216,14 @@ def _creative_pitch_request(*, export=False):
         raise ValueError('需要 JSON 或 multipart 输入')
     if not isinstance(data, dict) or set(data) - allowed:
         raise ValueError('未知的输入字段')
-    for key, limit in (('text', 200000), ('brand', 1000), ('hotspot', 1000)):
+    for key, limit in (('text', 200000), ('brand', 1000), ('hotspot', 1000), ('target_date', 10), ('market', 80)):
         value = data.get(key, '')
         if not isinstance(value, str) or len(value) > limit:
             raise ValueError('%s 必须为大小受限的文本' % key)
+    if data.get('target_date'):
+        from scripts.marketing_calendar import calendar_context
+        if len(data['target_date']) != 10 or calendar_context(data['target_date'], market=data.get('market', 'CN'))['state'] == 'invalid_input':
+            raise ValueError('target_date 必须为真实公历日期')
     n = data.get('n', 3)
     if isinstance(n, bool) or not isinstance(n, int) or n < 1:
         raise ValueError('n 必须为正整数')
@@ -1249,6 +1257,7 @@ def _creative_pitch_analysis(data, upload):
     from scripts.pitch_parser import analyze_pitch, analyze_pitch_file
 
     brand, hotspot, n = data.get('brand', ''), data.get('hotspot', ''), data['n']
+    calendar_args = {key: data[key] for key in ('target_date', 'market') if key in data}
     if upload is not None and upload.filename:
         filename = upload.filename.replace('\\', '/').rsplit('/', 1)[-1]
         if len(filename) > 255 or any(ord(char) < 32 for char in filename):
@@ -1262,7 +1271,7 @@ def _creative_pitch_analysis(data, upload):
         with tempfile.TemporaryDirectory(prefix='lumenis-pitch-input-') as directory:
             source = Path(directory) / ('source' + suffix)
             source.write_bytes(content)
-            result = analyze_pitch_file(str(source), brand, n, hotspot)
+            result = analyze_pitch_file(str(source), brand, n, hotspot, **calendar_args)
         # Input provenance retains the original basename and byte hash, never a
         # deleted server path. This is input provenance, not signed Evidence.
         result['source_file'] = filename
@@ -1271,7 +1280,7 @@ def _creative_pitch_analysis(data, upload):
     text = data.get('text', '')
     if not text.strip():
         raise ValueError('需要 text 或上传文件')
-    return analyze_pitch(text, brand, n, hotspot)
+    return analyze_pitch(text, brand, n, hotspot, **calendar_args)
 
 
 def _creative_pitch_check_export():
@@ -1349,36 +1358,13 @@ def creative_pitch_export():
 
 @app.route('/api/event-graph/import', methods=['POST'])
 def event_graph_import_existing():
-    """从现有events表导入事件"""
-    try:
-        from event_graph import get_event_graph, reset_event_graph
-        data = request.get_json() or {}
-        limit = int(data.get('limit', 20))
-        reset_event_graph()
-        graph = get_event_graph()
-        imported = graph.import_from_existing_events(limit=limit)
-        stats = graph.get_stats()
-        return jsonify({'ok': True, 'imported': imported, 'stats': stats, 'message': f'成功导入 {imported} 条事件'})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    from event_graph import graph_http
+    return graph_http('import')
 
 @app.route('/api/event-graph/rebuild-relations', methods=['POST'])
 def event_graph_rebuild_relations():
-    """GAP-07：基于时间+主题词双证据保守重算 follow/derive/parallel；
-    不自动生成 trigger（强因果保留人工），只清理并重算 [auto] 关系，幂等可重复。"""
-    try:
-        from event_graph import get_event_graph
-        data = request.get_json(silent=True) or {}
-        graph = get_event_graph()
-        result = graph.infer_and_link_relations(
-            days_window=int(data.get('days_window', 21)),
-            parallel_hours=float(data.get('parallel_hours', 36)),
-            persist=True, drop_auto_first=True)
-        return jsonify({'ok': True, 'result': result, 'stats': graph.get_stats()})
-    except (TypeError, ValueError):
-        return jsonify({'ok': False, 'error': 'days_window/parallel_hours 必须为数值'}), 400
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    from event_graph import graph_http
+    return graph_http('infer')
 
 # ===== Shared Reporting 标准化报告：只读旁路预览（不改既有 daily/brand 报告路由、不抢 RPT Owner、不写库/不导出/不自动发送）=====
 @app.route('/api/v2/marketing/overview')
@@ -1388,47 +1374,56 @@ def marketing_overview():
     try:
         from scripts.marketing_calendar import (suggest_hotspot, nodes_for_month,
                                                 cross_industry_season, cross_global, global_nodes,
-                                                region_nodes, marketing_matrix)
+                                                region_nodes, marketing_matrix, calendar_context)
         import datetime as _dt
         import io, csv as _csv
         industry = (request.args.get('industry') or '').strip()
-        month = (request.args.get('month') or '').strip()
-        if len(month) != 2:
-            month = _dt.date.today().strftime("%m")
-        today = _dt.date.today().strftime("%Y-%m-%d")
+        explicit_date = request.args.get('date')
+        year_raw = request.args.get('year')
+        year = int(year_raw) if year_raw is not None else int((explicit_date or _dt.date.today().isoformat())[:4])
+        month = str(int(request.args.get('month', (explicit_date or _dt.date.today().isoformat())[5:7]))).zfill(2)
+        today = explicit_date if explicit_date is not None else f"{year:04d}-{month}-01"
+        market = request.args.get('market', 'CN')
+        context = calendar_context(today, year=year, market=market)
+        if context['state'] == 'invalid_input' or not 1 <= int(month) <= 12:
+            return jsonify({'ok': False, 'code': 'CALENDAR_INPUT_INVALID', 'calendar_reference': context}), 400
+        available = context['state'] == 'reference_only_not_live_verified'
         gflag = (request.args.get('global') or '0') == '1'
         export = (request.args.get('export') or '')
         mxflag = (request.args.get('matrix') or '0') == '1'
         region = (request.args.get('region') or '').strip()
-        mc = suggest_hotspot(today, "商业地产")
-        nodes = nodes_for_month(int(month))
-        cross = cross_industry_season(industry, month) if industry else None
-        gcross = cross_global(int(month), month) if gflag else None
-        gns = global_nodes() if gflag else None
+        mc = suggest_hotspot(today, "商业地产", year=year, market=market)
+        nodes = nodes_for_month(int(month), year=year, market=market)
+        cross = cross_industry_season(industry, f"{year:04d}-{int(month):02d}-01") if industry and available else None
+        gcross = cross_global(int(month), f"{year:04d}-{int(month):02d}-01") if gflag and available else None
+        gns = global_nodes() if gflag and available else None
         if export == 'csv':
             # 全年+海外节点 CSV 排期导出（排期工作流）
             buf = io.StringIO()
             w = _csv.writer(buf)
-            w.writerow(["月", "名称", "日期", "类型", "主题", "品类", "来源"])
-            for m in range(1, 13):
-                for n in nodes_for_month(m):
+            w.writerow(["月", "名称", "日期", "类型", "主题", "品类", "来源", "年", "市场", "事实状态", "法定休假状态"])
+            w.writerow(["", "日历状态", "", "元数据", "", "", context["source_owner"], year, market, context["state"], "NOT_ESTABLISHED"])
+            for m in (range(1, 13) if available else []):
+                for n in nodes_for_month(m, year=year, market=market):
                     w.writerow([m, n["name"], n.get("date", ""), n.get("kind", ""),
-                                n.get("theme", ""), "、".join(n.get("cats", [])), "国内"])
+                                n.get("theme", ""), "、".join(n.get("cats", [])), "scripts.marketing_calendar", year, market, "editorial_reference_not_verified", "NOT_ESTABLISHED"])
                 for n in global_nodes(m):
                     w.writerow([m, n["name"], n.get("date", ""), n.get("kind", ""),
-                                n.get("theme", ""), "、".join(n.get("cats", [])), "海外"])
+                                n.get("theme", ""), "、".join(n.get("cats", [])), "海外编辑建议", year, "global_reference", "editorial_reference_not_verified", "NOT_ESTABLISHED"])
                 for r in ["东南亚", "欧洲", "中东", "拉美", "北美", "东亚", "澳新"]:
                     for n in region_nodes(r, m):
                         w.writerow([m, n["name"], "区域节点", "区域", n.get("theme", ""),
-                                    "、".join(n.get("cats", [])), "区域-" + r])
+                                    "、".join(n.get("cats", [])), "区域-" + r, year, r, "editorial_reference_not_verified", "NOT_ESTABLISHED"])
             return Response(buf.getvalue(), mimetype="text/csv; charset=utf-8",
                             headers={"Content-Disposition":
-                                     "attachment; filename=marketing_calendar_%s.csv" % month})
-        return jsonify({'ok': True, 'month_nodes': nodes, 'hotspot': mc,
+                                     "attachment; filename=marketing_calendar_%s_%s.csv" % (year, month)})
+        return jsonify({'ok': True, 'calendar_reference': context, 'month_nodes': nodes, 'hotspot': mc,
                         'cross': cross, 'global_cross': gcross, 'global_nodes': gns,
-                        'region_nodes': region_nodes(region) if region else None,
-                        'matrix': marketing_matrix() if mxflag else None,
+                        'region_nodes': region_nodes(region) if region and available else None,
+                        'matrix': marketing_matrix() if mxflag and available else None,
                         'advice': "本月先借节气/节日天然情绪，再叠加垂直行业节点做专属心智；出海场景另叠海外节点时机。"})
+    except (ValueError, TypeError):
+        return jsonify({'ok': False, 'code': 'CALENDAR_INPUT_INVALID'}), 400
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -1492,7 +1487,7 @@ def _proxy_health_loop(interval=300):
         except Exception:
             time.sleep(60)
 
-if PROXY_POOL_AVAILABLE and not INTERNAL_BETA_SAFE_STARTUP:
+if PROXY_POOL_AVAILABLE and not INTERNAL_BETA_SAFE_STARTUP and not MANUAL_WORKSPACE:
     try:
         _load_proxy_nodes()
         if _proxy_mgr.nodes and os.environ.get('ZBC_TEST_OFFLINE') != '1':
@@ -1577,6 +1572,20 @@ def _owner_authorized_root_request():
     This transfers authentication to the named handler, not authorization to a
     logged-in user. The owner still verifies actor, module, scope and effects.
     """
+    if request.blueprint == 'ai_api':
+        from ai_api import authorize_local_agent_root_request
+        if authorize_local_agent_root_request():
+            return True
+    if request.blueprint == 'content_generation':
+        from content_generation import authorize_content_root_request
+        try:
+            return bool(authorize_content_root_request())
+        except (ValueError, PermissionError):
+            return False
+    if request.blueprint == 'v4.v4_ai':
+        from lumenis.ai_hub.routes import authorize_conversation_root_request
+        if authorize_conversation_root_request():
+            return True
     if request.blueprint == 'ai_browser_runtime':
         from flask import current_app
         # This blueprint's before_request enforces SYSTEM/browser permission
@@ -1609,6 +1618,22 @@ def _owner_authorized_root_request():
         'domain_api.api_internal_pitch_read': ('/api/experience/creation/internal-pitches/<task_id>', {'GET'}),
         'domain_api.api_internal_pitch_action': ('/api/experience/creation/internal-pitches/<task_id>/<action>', {'POST'}),
         'domain_api.api_internal_pitch_export': ('/api/experience/creation/internal-pitches/<task_id>/export', {'GET'}),
+        'experience_runtime.ai_intent': ('/api/experience/ai/intent', {'POST'}),
+        'experience_runtime.analyze_financial_material': ('/api/experience/reports/financial/analyze', {'POST'}),
+        'experience_runtime.save_financial_material': ('/api/experience/reports/financial/save', {'POST'}),
+        'experience_runtime.save_financial_identity_association': ('/api/experience/reports/financial/identity-review', {'POST'}),
+        'experience_runtime.entity_candidate_review_workflow': ('/api/experience/reports/entity-candidates', {'POST'}),
+        'experience_runtime.work_dependency_workflow': ('/api/experience/work-dependencies', {'POST'}),
+        'experience_runtime.artifact_experiment_workflow': ('/api/experience/reports/artifact-experiments', {'GET', 'POST'}),
+        'experience_runtime.staffing_options_workflow': ('/api/experience/reports/staffing-options', {'GET', 'POST'}),
+        'experience_runtime.analyze_macro_material': ('/api/experience/reports/macro/analyze', {'POST'}),
+        'experience_runtime.save_macro_material': ('/api/experience/reports/macro/save', {'POST'}),
+        'experience_runtime.save_macro_collection_target': ('/api/experience/reports/macro/target', {'POST'}),
+        'experience_runtime.collect_macro_material': ('/api/experience/reports/macro/collect', {'POST'}),
+        'experience_runtime.import_macro_material_capture': ('/api/experience/reports/macro/capture', {'POST'}),
+        'experience_runtime.save_financial_collection_target': ('/api/experience/reports/financial/target', {'POST'}),
+        'experience_runtime.collect_financial_material': ('/api/experience/reports/financial/collect', {'POST'}),
+        'experience_runtime.import_financial_material_capture': ('/api/experience/reports/financial/capture', {'POST'}),
         'experience_runtime.import_shared_document': ('/api/experience/materials/documents', {'POST'}),
         'experience_runtime.read_shared_document': ('/api/experience/materials/documents/<int:evidence_id>', {'GET'}),
         'experience_runtime.download_shared_document': ('/api/experience/materials/documents/<int:evidence_id>/file', {'GET'}),
@@ -1631,6 +1656,9 @@ def _owner_authorized_root_request():
         'experience_runtime.read_cth_case_list': ('/api/experience/cth/cases', {'GET'}),
         'experience_runtime.reopen_cth_work_case': ('/api/experience/cth/cases/<case_id>', {'GET'}),
         'experience_runtime.inspect_content_project_media': ('/api/experience/shared-skills/shared.content_project/inspect', {'POST'}),
+        'experience_runtime.preview_content_speech': ('/api/experience/content-sources/tts/preview', {'POST'}),
+        'experience_runtime.preview_podcast_editorial': ('/api/experience/podcast/editorial/preview', {'POST'}),
+        'experience_runtime.preview_podcast_topics': ('/api/experience/podcast/topics/preview', {'POST'}),
         'experience_runtime.import_content_source': ('/api/experience/content-sources', {'POST'}),
         'experience_runtime.confirm_content_source_import_request': ('/api/experience/content-source-confirmations/<confirmation_id>', {'POST'}),
         'experience_runtime.content_source_detail': ('/api/experience/content-sources/<artifact_id>', {'GET'}),
@@ -1698,6 +1726,26 @@ def _basic_auth():
     if request.path.startswith('/api/experience/creation/internal-pitches'):
         from lumenis_app_api import _internal_pitch_local_access_allowed
         if _internal_pitch_local_access_allowed():
+            return None
+    if request.path == '/api/settings/subjects/batch':
+        from subject_registry import subject_batch_local_access_allowed
+        if subject_batch_local_access_allowed():
+            return None
+    if request.path == '/api/experience/reports/statistics':
+        from experience_runtime import _statistics_local_access_allowed
+        if _statistics_local_access_allowed():
+            return None
+    if request.path == '/api/experience/entity-profiles':
+        from experience_runtime import _entity_profile_local_access_allowed
+        if _entity_profile_local_access_allowed():
+            return None
+    if request.path.startswith('/api/event-graph/'):
+        from event_graph import scoped_graph_local_access_allowed
+        if scoped_graph_local_access_allowed():
+            return None
+    if request.path.startswith('/api/kos/'):
+        from kos_routes import private_kos_local_access_allowed
+        if private_kos_local_access_allowed():
             return None
     if request.path.startswith('/api/ai/tasks'):
         from ai_api import _source_brief_task_local_access_allowed
@@ -1895,6 +1943,62 @@ def _permission_gate_write_check():
         pass
     if request.method not in _PG_WRITE_METHODS:
         return None
+    if request.blueprint == 'ai_api':
+        from ai_api import authorize_local_agent_root_request
+        if authorize_local_agent_root_request():
+            return None
+    if request.blueprint == 'content_generation':
+        from content_generation import authorize_content_root_request
+        try:
+            if authorize_content_root_request():
+                return None  # Exact Content owner performs canonical write and source checks.
+        except (ValueError, PermissionError) as exc:
+            from experience_runtime import _content_project_error
+            return _content_project_error(exc)
+    if request.blueprint == 'v4.v4_ai':
+        from lumenis.ai_hub.routes import authorize_conversation_root_request
+        if authorize_conversation_root_request():
+            return None
+    from experience_runtime import _staffing_route_matches
+    if _staffing_route_matches():
+        return None  # Original source-bound mathematical Task owns identity/scope/admission.
+    from experience_runtime import _artifact_experiment_route_matches
+    if _artifact_experiment_route_matches():
+        return None  # Original Source/SavedWork owner validates each variant and observation.
+    from experience_runtime import _work_dependency_route_matches
+    if _work_dependency_route_matches():
+        return None  # Existing SavedWork owner checks the explicit dependency operation.
+    from experience_runtime import _entity_candidate_review_route_matches
+    if _entity_candidate_review_route_matches():
+        return None  # Exact Owner repeats identity/scope/source checks; SavedWork gates review writes.
+    from subject_registry import subject_batch_route_matches
+    if subject_batch_route_matches():
+        # This exact owner verifies actor/domain and the human-confirmed full
+        # identity package before its CONFIG_MODIFY approval or any row write.
+        return None
+    from experience_runtime import _entity_profile_route_matches
+    if _entity_profile_route_matches():
+        try:
+            from experience_runtime import _shared_work_actor_scope
+            _shared_work_actor_scope('write')
+            return None
+        except (ValueError, PermissionError) as exc:
+            return jsonify({'ok': False, 'code': str(exc)}), 403
+    from event_graph import scoped_graph_route_matches
+    if scoped_graph_route_matches():
+        try:
+            from experience_runtime import _shared_work_actor_scope
+            _shared_work_actor_scope('write')
+            return None
+        except (ValueError, PermissionError) as exc:
+            return jsonify({'ok': False, 'code': str(exc)}), 403
+    from kos_routes import private_kos_route_matches, private_kos_route_action, _resolve_kos_brand_scope
+    if private_kos_route_matches(write_only=True):
+        try:
+            _resolve_kos_brand_scope(private_kos_route_action())
+            return None
+        except (ValueError, PermissionError) as exc:
+            return jsonify({'ok': False, 'code': str(exc)}), 403
     manual_evidence_rules = {
         'api_evidence_upload': ('/api/app_evidence/upload', 'POST'),
         'api_evidence_confirm': ('/api/app_evidence/<int:record_id>/confirm', 'POST'),
@@ -1936,8 +2040,48 @@ def _permission_gate_write_check():
         # These two resolved owners enforce current server identity/scope and
         # exact manual review or DATA_EXPORT. A path grant cannot bind inputs.
         return None
+    if (request.method == 'POST' and request.endpoint == 'experience_runtime.ai_intent'
+            and request.url_rule is not None
+            and request.url_rule.rule == '/api/experience/ai/intent'):
+        # The exact composer checks its action gate and fresh server scope.
+        return None
+    if (request.method == 'POST' and request.endpoint == 'experience_runtime.import_shared_document'
+            and request.url_rule is not None
+            and request.url_rule.rule == '/api/experience/materials/documents'):
+        # Private Shared custody or exact Canonical import is checked by its owner.
+        return None
+    from experience_runtime import _macro_route_matches
+    if _macro_route_matches():
+        return None  # Typed macro Owner repeats current source/scope; SavedWork checks writes.
+    from experience_runtime import _financial_route_matches
+    if _financial_route_matches():
+        # Typed handler delegates to live Source/Evidence and SavedWork owners.
+        return None
+    from experience_runtime import _statistics_route_matches
+    if _statistics_route_matches():
+        try:
+            from experience_runtime import _shared_work_actor_scope
+            _shared_work_actor_scope('read')
+            return None
+        except (ValueError, PermissionError) as exc:
+            return jsonify({'ok': False, 'code': str(exc)}), 403
+    media_preview_rules = {
+        'experience_runtime.preview_content_speech': '/api/experience/content-sources/tts/preview',
+        'experience_runtime.preview_podcast_editorial': '/api/experience/podcast/editorial/preview',
+        'experience_runtime.preview_podcast_topics': '/api/experience/podcast/topics/preview',
+    }
+    if (request.method == 'POST' and request.endpoint in media_preview_rules
+            and request.url_rule is not None
+            and request.url_rule.rule == media_preview_rules[request.endpoint]):
+        try:
+            from experience_runtime import _content_project_scope
+            _content_project_scope('read', read_only_auth=True)
+            return None
+        except (ValueError, PermissionError) as exc:
+            return jsonify({'ok': False, 'code': str(exc)}), 403
     if request.headers.getlist('X-Lumenis-Workspace-Scope'):
         shared_saved_work_actions = {
+            'experience_runtime.import_shared_document': 'write',
             'experience_runtime.save_shared_work': 'write',
             'experience_runtime.revise_shared_work': 'write',
         }
@@ -1988,7 +2132,7 @@ def _permission_gate_write_check():
             and request.endpoint == 'domain_api.api_settings_context'
             and request.method in {'PUT', 'DELETE'}):
         return None
-    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/') or request.path.startswith('/api/system/account/') or request.path.startswith('/v4/auth/') or request.path.startswith('/api/auth/zbmp-entry/') or request.path.startswith('/api/content/') or request.path.startswith('/api/podcast/') or request.path.startswith('/api/ic/'):
+    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/') or request.path.startswith('/api/system/account/') or request.path.startswith('/v4/auth/') or request.path.startswith('/api/auth/zbmp-entry/') or request.path.startswith('/api/podcast/') or request.path.startswith('/api/ic/'):
         return None
     try:
         if _pg is None:
@@ -2046,6 +2190,10 @@ try:
     print("[db_migrations] migration completed (canonical Shared Database migrations)")
 except Exception as _e:
     raise RuntimeError(f"canonical Shared Database migration failed; application startup stopped: {_e}") from _e
+
+# Session statistics depend on the canonical notes schema, never import order.
+# This restores local counters only; no session, browser or collection is started.
+xhs_cookie_bridge._load_stats()
 
 # P0-2: 独立确保 publish_datetime 索引存在（双保险，幂等，不依赖版本迁移成功）
 try:
@@ -5506,6 +5654,37 @@ def _automatic_collection_opted_in():
         return False
 
 
+_SCHEDULER_STOP = threading.Event()
+_SCHEDULER_LOCK = threading.RLock()
+_SCHEDULER_THREAD = None
+
+
+def _start_scheduler():
+    global _SCHEDULER_THREAD
+    with _SCHEDULER_LOCK:
+        if _SCHEDULER_THREAD is not None and _SCHEDULER_THREAD.is_alive():
+            return _SCHEDULER_THREAD
+        _SCHEDULER_STOP.clear()
+        _SCHEDULER_THREAD = threading.Thread(target=scheduler_loop, daemon=True, name='scheduler')
+        _SCHEDULER_THREAD.start()
+        return _SCHEDULER_THREAD
+
+
+def _stop_scheduler(timeout=2.0):
+    # Stop future admission; do not kill an in-flight task or fabricate completion.
+    with _SCHEDULER_LOCK:
+        _SCHEDULER_STOP.set()
+        thread = _SCHEDULER_THREAD
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=timeout)
+        return thread is None or not thread.is_alive()
+
+
+import atexit as _runtime_atexit
+_runtime_atexit.register(_stop_scheduler)
+_runtime_atexit.register(_stop_hang_watchdog)
+
+
 def scheduler_loop():
     """自动采集调度器：固定时间点作为唤醒检查点，叠加账号频率保护；
     v5.8.6 起由统一动态决策器做影子对照(动态间隔/状态驱动/next_run_at)，门控后续灰度。"""
@@ -5526,7 +5705,7 @@ def scheduler_loop():
     _os.environ.setdefault('ZBC_SCHED_GATE_MODE', 'enforce')
     print(f'[Scheduler] 自适应调度器启动，gate_mode={_os.environ.get("ZBC_SCHED_GATE_MODE")}（固定时间点仅作历史参考，实际由 ShadowPlanner 门控）')
     
-    while True:
+    while not _SCHEDULER_STOP.is_set():
         try:
             now = datetime.now()
             today_str = now.strftime('%Y-%m-%d')
@@ -5672,20 +5851,21 @@ def scheduler_loop():
                     
         except Exception as e:
             print('[Scheduler]', e)
-        time.sleep(20)
+        _SCHEDULER_STOP.wait(20)
 
 def _start_app_automations(args):
     if (
-        INTERNAL_BETA_SAFE_STARTUP
+        MANUAL_WORKSPACE
+        or INTERNAL_BETA_SAFE_STARTUP
         or getattr(args, 'internal_beta_acceptance', False)
         or getattr(args, 'internal_beta_workspace_context_acceptance', False)
     ):
-        print('[Runtime] safe acceptance profile: automatic collectors, residents, schedulers, and monitors suppressed')
+        print('[Runtime] manual/acceptance startup: automatic collectors, residents, schedulers, and monitors suppressed')
         return False
 
     if not args.no_scheduler:
         # v5.8.6 恢复主采集调度器：固定时钟唤醒 + 动态决策影子对照（周报线程另行评估后启用）
-        threading.Thread(target=scheduler_loop, daemon=True, name='scheduler').start()
+        _start_scheduler()
     # The RedNote resident probes a session and can request scan recovery.
     # Manual mode must not start it before an explicit automatic opt-in.
     if not args.no_scheduler and _automatic_collection_opted_in():
@@ -5722,6 +5902,7 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=f'{PRODUCT_NAME} Product Core')
     parser.add_argument('--host',default=APP_HOST,help='监听地址，默认0.0.0.0（支持本地/局域网/5G热点访问）')
     parser.add_argument('--port',type=int,default=APP_PORT)
+    parser.add_argument('--manual-workspace',action='store_true',help='explicit loopback manual Workspace with dedicated data; normal API permissions, no automatic services or session probes')
     parser.add_argument('--no-scheduler',action='store_true',help='仅启动 Web，不启动自动采集调度器')
     parser.add_argument('--internal-beta-acceptance',action='store_true',help='loopback health-only safe probe; only GET /healthz, not Product E2E')
     parser.add_argument('--internal-beta-workspace-context-acceptance',action='store_true',help='loopback Workspace/context and scoped Evidence GET acceptance; no automatic runtime services')
@@ -5744,6 +5925,7 @@ if __name__=='__main__':
     auto_collection = (
         not args.no_scheduler
         and not INTERNAL_BETA_SAFE_STARTUP
+        and not MANUAL_WORKSPACE
         and _automatic_collection_opted_in()
     )
     print(f'{PRODUCT_NAME} Product Core v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{auto_collection} | HTTP认证：{auth_state}')
@@ -7923,8 +8105,8 @@ def api_xhs_rednote_check_login():
 # ============ GAP-21 Cookie 导入 API（受 Basic Auth 保护，不接收/不返回 Cookie 明文）============
 
 def _start_optional_runtime_services(internal_beta_acceptance):
-    if internal_beta_acceptance or INTERNAL_BETA_SAFE_STARTUP:
-        print('[Runtime] safe acceptance profile: preflight, CDP, heartbeat, and guardian startup suppressed')
+    if MANUAL_WORKSPACE or internal_beta_acceptance or INTERNAL_BETA_SAFE_STARTUP:
+        print('[Runtime] manual/acceptance startup: CDP, heartbeat, and guardian startup suppressed')
         return False
 
     # ===== ZBIP Runtime Integrity Preflight（统一启动闸门）=====
@@ -8103,9 +8285,11 @@ if __name__ == '__main__':
     print(f"详细日志: {os.path.join(log_dir, 'system.log')}")
     print("=" * 60)
 
-    _start_optional_runtime_services(INTERNAL_BETA_SAFE_STARTUP)
-
+    if MANUAL_WORKSPACE:
+        print(runtime_preflight.format_summary(runtime_preflight.run_preflight(enforce=True)))
     try:
+        _start_hang_watchdog()
+        _start_optional_runtime_services(INTERNAL_BETA_SAFE_STARTUP)
         # T-P1-1 waitress 可配置化：ZB_WSGI=waitress 时用生产级多线程 WSGI（waitress.serve），
         # 默认仍 Flask dev server（零影响）。先 Staging 验证再切生产；缺 waitress 自动回落 Flask。
         _wsgi = os.environ.get('ZB_WSGI', '').strip().lower()
@@ -8125,5 +8309,9 @@ if __name__ == '__main__':
         logging.critical(f"[System] 系统启动失败: {e}", exc_info=True)
         print(f"系统启动失败: {e}")
     finally:
+        if not _stop_scheduler():
+            logging.warning("[System] scheduler task still running at shutdown deadline; no completion assumed")
+        if not _stop_hang_watchdog():
+            logging.warning("[System] hang watchdog did not stop within deadline")
         logging.info("[System] 系统已停止")
         print("系统已停止")

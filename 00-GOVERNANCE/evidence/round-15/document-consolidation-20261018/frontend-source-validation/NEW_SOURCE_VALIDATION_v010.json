@@ -1,0 +1,24 @@
+{
+  "checks": [
+    {
+      "source": "V21",
+      "sha256": "3079d74f76b09ceec02cbda8f505f155ea2c3457f1e8d9ac9c75bf0242e8252c",
+      "frames": 128,
+      "boards": 6,
+      "contiguous_unique_frames": true,
+      "strict_pts": true,
+      "actual_view_ledger_checked": true
+    },
+    {
+      "source": "V23",
+      "sha256": "3569f22c51595f3ef483efc36c6f8548eca4fb27b709aeac5e20dd6c261dbd7d",
+      "frames": 2594,
+      "boards": 109,
+      "contiguous_unique_frames": true,
+      "strict_pts": true,
+      "actual_view_ledger_checked": true
+    }
+  ],
+  "report_sha256": "bd0a2c859fd79dd3f08826a22ea952e11497b33c850b05cc95e598865cfaf902",
+  "scope": "Independent ledger/source-hash validation, not integrator personally viewing all reference frames"
+}

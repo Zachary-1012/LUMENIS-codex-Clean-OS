@@ -115,6 +115,14 @@ def test_playwright_calls_use_creation_thread_across_request_threads(isolated_ru
     assert session._browser_worker is None
 
 
+def _valid_png(width=640, height=360):
+    import zlib
+    def chunk(kind, payload):
+        return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", zlib.crc32(kind + payload))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress((b"\0" + b"\x80" * width * 3) * height)) + chunk(b"IEND", b""))
+
+
 def test_frame_capture_has_fresh_id_and_real_png_dimensions(isolated_runtime):
     session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
     session.status = runtime.SessionStatus.RUNNING
@@ -122,21 +130,22 @@ def test_frame_capture_has_fresh_id_and_real_png_dimensions(isolated_runtime):
     png = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + struct.pack(">II", 640, 360)
     session._page = MagicMock()
     session._page.url = "https://example.org/"
-    session._page.evaluate.return_value = 30
+    text_length = [30]
+    session._page.evaluate.side_effect = lambda script: ({"width": 640, "height": 360, "dpr": 1} if "window.innerWidth" in script else text_length[0])
     session._page.screenshot.return_value = png
     first = session.capture_frame()
     second = session.capture_frame()
     assert first["image"] == png
     assert (first["width"], first["height"]) == (640, 360)
     assert first["frame_id"] != second["frame_id"]
-    session._page.evaluate.return_value = 0
+    text_length[0] = 0
     session._last_navigation_at = runtime.time.monotonic()
     with pytest.raises(runtime.BrowserFramePending):
         session.capture_frame()
     session._last_navigation_at = runtime.time.monotonic() - 4
     with pytest.raises(runtime.BrowserFrameEmpty):
         session.capture_frame()
-    session._page.evaluate.return_value = 30
+    text_length[0] = 30
     session._page.screenshot.return_value = b"invalid"
     with pytest.raises(RuntimeError, match="valid PNG"):
         session.capture_frame()
@@ -263,16 +272,18 @@ def test_frame_api_returns_only_owned_uncached_image(monkeypatch, isolated_runti
     client, actor = _authorized_client(monkeypatch, isolated_runtime)
     session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
     session.status = runtime.SessionStatus.RUNNING
+    png = _valid_png()
     session.capture_frame = lambda: {
         "frame_id": "bf_test", "captured_at": "2026-09-27T00:00:00+00:00",
         "target_id": "bt_test", "page_revision": 3,
-        "width": 640, "height": 360, "image": b"png-bytes",
+        "width": 640, "height": 360, "image": png,
+        "viewport": {"width": 640, "height": 360, "dpr": 1},
     }
     path = f"/api/browser/sessions/{session.session_id}/frame"
     response = client.get(path)
     assert response.status_code == 200
     assert response.mimetype == "image/png"
-    assert response.data == b"png-bytes"
+    assert response.data == png
     assert response.headers["X-LUMENIS-Frame-Id"] == "bf_test"
     assert response.headers["X-LUMENIS-Target-Id"] == "bt_test"
     assert response.headers["X-LUMENIS-Page-Revision"] == "3"
@@ -313,3 +324,15 @@ def test_api_reports_unverified_start_as_unavailable(monkeypatch, isolated_runti
     assert response.get_json()["ok"] is False
     assert response.get_json()["error_code"] == "BROWSER_START_UNAVAILABLE"
     assert isolated_runtime.list_sessions() == []
+
+
+@pytest.mark.parametrize("bad_viewport", [None, 30, {}, {"width": 0, "height": 360, "dpr": 1}])
+def test_frame_capture_rejects_invalid_viewport_fixture(isolated_runtime, bad_viewport):
+    session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
+    session.status = runtime.SessionStatus.RUNNING
+    session._target_id = "bt_negative_fixture"
+    session._page = MagicMock(); session._page.url = "https://example.org/"
+    session._page.screenshot.return_value = _valid_png()
+    session._page.evaluate.side_effect = lambda script: bad_viewport if "window.innerWidth" in script else 30
+    with pytest.raises(runtime.BrowserFrameStaleError): session.capture_frame()
+    isolated_runtime.close_session(session.session_id)

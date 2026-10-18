@@ -1,0 +1,31 @@
+{
+  "fixed_main": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+  "patterns": [
+    "otio_fcpx_xml_adapter",
+    "to_rational_time(",
+    "import opentimelineio",
+    "from opentimelineio",
+    "fcpx_xml"
+  ],
+  "files": [
+    "*.py",
+    "*requirements*.txt",
+    "pyproject.toml",
+    "package.json"
+  ],
+  "matches": 0,
+  "status": "REFERENCE_CANDIDATE_DEFER; NO_CURRENT_CALLER_EVIDENCE",
+  "limitations": "Static snapshot patterns only; dynamic registration/external environment/other roots not established",
+  "reference_commit": "c61839e105fb035589d3ec704b1266a22089b425",
+  "reference_file": "src/otio_fcpx_xml_adapter/fcpx_xml.py",
+  "reference_functions": {
+    "to_rational_time": [
+      79,
+      102
+    ],
+    "_framerate_to_frame_duration": [
+      675,
+      679
+    ]
+  }
+}

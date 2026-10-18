@@ -1,0 +1,25 @@
+{
+  "moves": {
+    "research/engineering/documentation-evidence/reports/brand_comparability_research_20261018": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018",
+    "research/engineering/documentation-evidence/reports/financial_source_research_20261018": "research/intelligence/06_evidence_truth_contracts/research-20261018/financial_source_research_20261018",
+    "research/engineering/documentation-evidence/reports/domain_analysis_research_20261018": "research/intelligence/05_domain_methodologies/research-20261018/domain_analysis_research_20261018",
+    "research/engineering/documentation-evidence/reports/real_public_validation_research_20261018": "research/intelligence/12_tests_regression_memory/research-20261018/real_public_validation_research_20261018",
+    "research/engineering/documentation-evidence/reports/platform_capability_research_20261018": "research/intelligence/02_platform_intelligence/research-20261018/platform_capability_research_20261018",
+    "research/engineering/documentation-evidence/reports/platform_evidence_gap_research_20261018": "research/intelligence/02_platform_intelligence/research-20261018/platform_evidence_gap_research_20261018",
+    "research/engineering/documentation-evidence/reports/creative_quality_research_20261018": "research/content-intelligence/research-20261018/creative_quality_research_20261018",
+    "research/engineering/documentation-evidence/reports/media_pipeline_research_20261018": "research/content-intelligence/research-20261018/media_pipeline_research_20261018",
+    "research/engineering/documentation-evidence/reports/tts_attribution_research_20261018": "research/content-intelligence/research-20261018/tts_attribution_research_20261018",
+    "research/engineering/documentation-evidence/reports/commercial_media_selection_20261018": "research/content-intelligence/research-20261018/commercial_media_selection_20261018",
+    "research/engineering/documentation-evidence/reports/owned_ai_research_20261018": "research/ai-runtime/research-20261018/owned_ai_research_20261018",
+    "research/engineering/documentation-evidence/reports/model_dependency_gap_research_20261018": "research/ai-runtime/research-20261018/model_dependency_gap_research_20261018",
+    "research/engineering/documentation-evidence/reports/math_research_completion_20261018": "research/ai-runtime/research-20261018/math_research_completion_20261018",
+    "research/engineering/documentation-evidence/reports/math_revision_status_research_20261018": "research/ai-runtime/research-20261018/math_revision_status_research_20261018"
+  },
+  "pointer_files_updated": [
+    "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/RESEARCH_REPRODUCTION_ADDITIONS.json",
+    "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/KEYWORD_SCAN_ADJUDICATION.json",
+    "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/RESEARCH_SOURCE_MANIFEST.json",
+    "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/RESEARCH_OVERLAY_FILE_HASHES.json"
+  ],
+  "reason": "Existing repository subject-area directories; one copy of each report"
+}

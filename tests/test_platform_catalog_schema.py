@@ -260,7 +260,7 @@ class TestAdapters:
         from lumenis.system.collector.adapters.base import CollectionStatus
         adapter = ChannelsAdapter()
         result = adapter.search("test")
-        assert result.status == CollectionStatus.COLLECT_ERROR
+        assert result.status == CollectionStatus.NOT_SUPPORTED
         assert "not implemented" in result.message.lower() or "待接入" in result.message
 
     def test_adapter_normalize_method_exists(self):
@@ -343,9 +343,9 @@ class TestDatabaseTables:
 
 
 class TestPlatformRegistry:
-    def test_registry_has_12_platforms(self, platform_db):
+    def test_registry_has_full_current_catalog(self, platform_db):
         count = platform_db.execute("SELECT COUNT(*) FROM platform_registry").fetchone()[0]
-        assert count == 12
+        assert count == len(get_platform_registry_catalog())
 
     def test_ui_visibility_and_catalog_status_match_system_owner(self, platform_db):
         rows = platform_db.execute(
@@ -362,12 +362,13 @@ class TestPlatformRegistry:
         assert row[0] == PLATFORM_CONNECTION["xiaohongshu"].status == "ACTIVE"
         assert row[1] is None
 
-    def test_planned_platforms_not_ui_visible(self, platform_db):
+    def test_planned_platforms_visible_without_collector(self, platform_db):
         rows = platform_db.execute(
             "SELECT platform_id, ui_visible FROM platform_registry WHERE status='PLANNED'"
         ).fetchall()
         for platform_id, visible in rows:
-            assert visible == int(PLATFORM_CONNECTION[platform_id].ui_visible) == 0
+            assert visible == int(PLATFORM_CONNECTION[platform_id].ui_visible)
+            assert PLATFORM_CONNECTION[platform_id].has_collector is False
 
     def test_registry_has_required_columns(self, platform_db):
         cols = {row[1] for row in platform_db.execute("PRAGMA table_info(platform_registry)").fetchall()}
@@ -384,7 +385,7 @@ class TestPlatformRegistry:
         for platform_id, module, raw_tables, normalized_mapping, notes in rows:
             catalog = next(item for item in get_platform_registry_catalog() if item["platform_id"] == platform_id)
             assert module == catalog["adapter_module"]
-            assert module.startswith("lumenis.system.collector.adapters.")
+            assert module is None or module.startswith("lumenis.system.collector.adapters.")
             assert json.loads(raw_tables) == catalog["raw_tables"]
             assert json.loads(normalized_mapping) == catalog["normalized_mapping"]
             assert notes == catalog["notes"]
@@ -484,7 +485,7 @@ class TestDataCenterAPI:
         all_response = client.get("/api/data-center/platforms?all=1")
         assert all_response.status_code == 200
         all_payload = all_response.get_json()
-        assert all_payload["count"] == 12
+        assert all_payload["count"] == len(get_platform_registry_catalog())
         visible_response = client.get("/api/data-center/platforms")
         assert visible_response.status_code == 200
         assert {item["platform_id"] for item in visible_response.get_json()["platforms"]} == set(get_ui_visible_platforms())
@@ -539,7 +540,7 @@ class TestDataCenterAPI:
         response = client.get("/api/data-center/stats/overview")
         assert response.status_code == 200
         payload = response.get_json()
-        assert payload["total_platforms"] == 12
+        assert payload["total_platforms"] == len(get_platform_registry_catalog())
         assert payload["ui_visible_count"] == len(get_ui_visible_platforms())
 
 
@@ -624,3 +625,54 @@ class TestProductionRedLines:
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+class TestCurrentManifestDiscovery:
+    def test_fresh_process_discovers_adapters_without_network_or_db(self):
+        import subprocess
+        code = """
+import socket, sqlite3
+from unittest.mock import patch
+with patch.object(socket.socket, 'connect', side_effect=AssertionError('network at startup')), patch.object(sqlite3, 'connect', side_effect=AssertionError('database at startup')):
+    from lumenis.system.collector.adapters.registry import get_adapter, list_adapters
+    from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
+    assert {k for k,c in PLATFORM_CAPABILITIES.items() if c['adapter_module']} <= set(list_adapters())
+    for key in ('channels','youtube','tiktok','reddit','linkedin'):
+        adapter = get_adapter(key)
+        assert adapter.enabled is False
+        assert adapter.healthcheck().status.value == 'NOT_CONFIGURED'
+        assert adapter.healthcheck().ok is False
+        for method in ('search','detail','comments','author','author_posts'):
+            result = getattr(adapter, method)('isolated')
+            assert result.status.value == 'NOT_SUPPORTED', (key, method, result)
+            assert result.ok is False and not result.items
+            assert adapter.capability_map()[method] == 'not_supported'
+    assert get_adapter('yt').platform == 'youtube'
+    assert get_adapter('wechat_channels').platform == 'channels'
+    assert get_adapter('微信公众号').platform == 'wechat'
+"""
+        result = subprocess.run([sys.executable, '-B', '-c', code],
+                                cwd=Path(__file__).resolve().parents[1],
+                                text=True, capture_output=True, timeout=30)
+        assert result.returncode == 0, result.stdout + result.stderr
+
+    def test_full_catalog_projects_manifest_and_aliases(self):
+        from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES, get_platform_capabilities
+        from lumenis.system.collector.adapters.registry import capability_matrix
+        catalog = {item['platform_id']: item for item in get_platform_registry_catalog()}
+        assert set(catalog) == {c['canonical_id'] for c in PLATFORM_CAPABILITIES.values()}
+        planned = {'channels','youtube','tiktok','reddit','linkedin'}
+        for key, cap in PLATFORM_CAPABILITIES.items():
+            row = catalog[cap['canonical_id']]
+            assert row['adapter_module'] == cap['adapter_module']
+            assert row['status'] == cap['catalog_status']
+            assert row['has_real_data'] is None
+            if key in planned:
+                assert row['status'] == 'PLANNED'
+                assert row['has_collector'] == row['has_api_routes'] == 0
+                assert cap['enabled'] is cap['manual_collection_enabled'] is False
+        assert get_platform_capabilities('yt')['canonical_id'] == 'youtube'
+        original = list(PLATFORM_CAPABILITIES['youtube']['raw_tables'])
+        capability_matrix()['youtube']['raw_tables'].append('not-real')
+        get_platform_capabilities('yt')['raw_tables'].append('not-real-either')
+        assert PLATFORM_CAPABILITIES['youtube']['raw_tables'] == original

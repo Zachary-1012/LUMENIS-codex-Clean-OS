@@ -58,7 +58,7 @@ REGISTRY = {
         "additional_blob": "14f70966c1e972cfd314f1c610ebc6ed8d6c3f7e",
         "additional_symbols": ["intro:H", "intro:FB", "intro:main-bound"],
         "implemented": "matching Gibbs law/marginals/covariance/entropy and stated pointwise bound; exact finite support, numerical exp/log",
-        "not_implemented": "general matching FPRAS, complete face geometry proof, rigorous real intervals",
+        "not_implemented": "general matching FPRAS, complete face geometry proof; original rational expression enclosures are implemented but do not prove the general theorem or numerical Gibbs equivalence",
     },
     "114": {
         "relation": "DIRECT_PARTITION_MATROID_SPECIALIZATION",
@@ -114,3 +114,160 @@ def source_card(family):
     )
     c["production_acceptance"] = "NOT_VERIFIED"
     return c
+
+# Exact identities, not keyword or brand matching. These three titles are the
+# complete withdrawn set in the reviewed immutable official history. They have
+# no mapped operation in the bounded registry above.
+HISTORY_COMMIT = "1581d4cbdd69a0faf34b2089614fe2a814316a6a"
+HISTORY_URL = f"https://github.com/{UPSTREAM_REPO}/blob/{HISTORY_COMMIT}/history.md"
+WITHDRAWN_TITLES = (
+    "Algebraicity of Weil classes on split abelian eightfolds",
+    "Algebraicity of Kuga–Satake Correspondences for K3 Surfaces",
+    "The rational Hodge conjecture for products of K3 surfaces",
+)
+REVIEW_SOURCE = "openai_math_papers:source_review"
+REVIEW_SCHEMA = "lumenis.math-source-review/v1"
+
+
+def source_identity(path, blob):
+    return f"{UPSTREAM_REPO}:{path}@{blob}"
+
+
+for _family, _entry in REGISTRY.items():
+    _entry["manuscript_identity"] = source_identity(_entry["path"], _entry["blob"])
+    _entry["dependency_identities"] = (
+        [source_identity(_entry["additional_path"], _entry["additional_blob"])]
+        if "additional_path" in _entry else []
+    )
+    _entry["dependency_scope"] = "implemented bounded source fragments; not full-paper theorem dependencies"
+
+
+def review_snapshot(family, *, connection=None):
+    """Read local immutable review evidence only; never fetch on dispatch.
+
+    Missing Evidence storage is a blocker, not permission to forget a persisted
+    withdrawal. Empty initialized storage uses the explicit source-code review.
+    """
+    import json
+    from .core import digest, MathInputError
+    from lumenis.shared.database import get_repository
+
+    if connection is None:
+        import sqlite3
+        try:
+            with get_repository().connection(read_only=True, wal=False) as con:
+                return review_snapshot(family, connection=con)
+        except sqlite3.Error as exc:
+            raise MathInputError("PAPER_REVIEW_UNAVAILABLE") from exc
+    entry = REGISTRY[family]
+    identities = [entry["manuscript_identity"], *entry["dependency_identities"]]
+    material = {"family": family, "identities": identities, "pin": UPSTREAM_COMMIT,
+                "reviewed_history": HISTORY_COMMIT, "status": "REVIEWED_PINNED",
+                "freshness": "LOCAL_REVIEW_ONLY_NO_LIVE_FETCH", "reviews": []}
+    # The built-in exact title list also applies if a future reviewed mapping
+    # explicitly declares a title dependency; no inferred family IDs.
+    if any(identity in WITHDRAWN_TITLES for identity in identities):
+        material["status"] = "REVOKED"
+    rows = connection.execute(
+        "SELECT * FROM app_evidence_records WHERE source=? ORDER BY id", (REVIEW_SOURCE,)
+    ).fetchall()
+    states = {}
+    if rows:
+        from lumenis.shared.evidence.store import verify_evidence_record_integrity
+    for row in rows:
+        row = dict(row)
+        if not verify_evidence_record_integrity(row):
+            raise MathInputError("PAPER_REVIEW_EVIDENCE_INTEGRITY")
+        review = json.loads(row["outputs_json"])
+        if review.get("schema") != REVIEW_SCHEMA:
+            raise MathInputError("PAPER_REVIEW_EVIDENCE_SCHEMA")
+        identity = review["identity"]
+        if identity not in identities:
+            continue
+        material["reviews"].append({"id": row["id"], "revision": digest(review)})
+        # A failed fetch/new workflow cannot rehabilitate a withdrawn source.
+        if states.get(identity) not in {"REVOKED", "REVIEW_REQUIRED"} or review["state"] == "REVOKED":
+            states[identity] = review["state"]
+    for state in ("UNKNOWN", "REVIEW_REQUIRED", "REVOKED"):
+        if state in states.values() and material["status"] != "REVOKED":
+            material["status"] = state
+    material["review_revision"] = digest(material)
+    return material
+
+
+def assert_review(family, expected=None, *, connection=None):
+    from .core import MathInputError
+    current = review_snapshot(family, connection=connection)
+    if current["status"] != "REVIEWED_PINNED":
+        raise MathInputError("PAPER_" + current["status"])
+    if expected is not None and expected.get("status") != "REVIEWED_PINNED":
+        raise MathInputError("PAPER_OFFLINE_REVIEW_NOT_PUBLISHABLE")
+    if expected is not None and current["review_revision"] != expected["review_revision"]:
+        raise MathInputError("PAPER_REVIEW_CHANGED")
+    return current
+
+
+def record_source_review(*, identity, state, evidence_url, evidence_sha256,
+                         upstream_commit, change_kind, actor, scope, evidence_content):
+    """Existing authorized review owner appends signed Evidence, no new store/job.
+
+    The caller supplies already acquired/reviewed upstream evidence. This is not
+    a collector and does not interpret an unsuccessful fetch as withdrawal.
+    Changes never replace the implementation pin or rewrite historical artifacts.
+    """
+    import re
+    from .core import MathInputError, digest
+    import hashlib
+    from lumenis.shared.reporting.saved_work import authorize
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.evidence.store import record_evidence
+    from lumenis.system.security import OperationType, get_permission_gate
+
+    known = set(WITHDRAWN_TITLES)
+    for entry in REGISTRY.values():
+        known.update([entry["manuscript_identity"], *entry["dependency_identities"]])
+    if identity not in known or state not in {"REVIEWED_PINNED", "REVIEW_REQUIRED", "UNKNOWN", "REVOKED"}:
+        raise MathInputError("PAPER_REVIEW_IDENTITY_OR_STATE")
+    if (not re.fullmatch(r"[0-9a-f]{40}", upstream_commit or "")
+            or not re.fullmatch(r"[0-9a-f]{64}", evidence_sha256 or "")
+            or not evidence_url.startswith(f"https://github.com/{UPSTREAM_REPO}/blob/{upstream_commit}/")
+            or change_kind not in {"withdrawal", "source_change", "workflow_only", "fetch_unknown"}):
+        raise MathInputError("PAPER_REVIEW_EVIDENCE_REQUIRED")
+    if ((change_kind == "withdrawal" and state != "REVOKED")
+            or (change_kind == "source_change" and state != "REVIEW_REQUIRED")
+            or (change_kind == "fetch_unknown" and state != "UNKNOWN")
+            or (change_kind == "workflow_only" and state != "REVIEWED_PINNED")):
+        raise MathInputError("PAPER_REVIEW_STATE_MISMATCH")
+    if (not isinstance(evidence_content, str) or not 1 <= len(evidence_content.encode()) <= 500_000
+            or hashlib.sha256(evidence_content.encode()).hexdigest() != evidence_sha256):
+        raise MathInputError("PAPER_REVIEW_CONTENT_HASH")
+    evidence = {"schema": REVIEW_SCHEMA, "identity": identity, "state": state,
+                "evidence_url": evidence_url, "evidence_sha256": evidence_sha256,
+                "upstream_commit": upstream_commit, "change_kind": change_kind,
+                "implementation_pin": UPSTREAM_COMMIT}
+    with get_repository().connection() as con:
+        con.execute("BEGIN IMMEDIATE")
+        principal = authorize(actor, scope, action="write", connection=con)
+        reviewer = principal.get("principal_ref") or f"actor:{principal['actor_id']}"
+        # Bind approval to the existing authenticated identity and normalized
+        # scope; another valid actor cannot reuse this review approval.
+        evidence.update(reviewer=reviewer, review_scope=principal)
+        resource = "math-source-review:" + digest(evidence)
+        gate = get_permission_gate()
+        if gate.get_valid_approval_token(OperationType.CONFIG_MODIFY.value, resource, exact=True) is None:
+            raise PermissionError("PAPER_REVIEW_EXACT_APPROVAL_REQUIRED")
+        decision = get_permission_gate().check(
+            OperationType.CONFIG_MODIFY, resource=resource,
+            caller=reviewer, exact_approval_required=True, domain_id="bmp" if principal["domain_id"] == "zbmp" else "cth")
+        if not decision.allowed:
+            raise PermissionError("PAPER_REVIEW_PERMISSION_DENIED")
+        evidence_id = record_evidence(
+            connection=con, source=REVIEW_SOURCE, project="LUMENIS", product="Shared",
+            feature_id="G165", outputs=evidence, inputs={"permission": decision.to_dict(), "reviewer": reviewer},
+            raw_content=evidence_content, actual=evidence_content,
+            result="FAIL" if state == "REVOKED" else "GAP" if state != "REVIEWED_PINNED" else "PASS",
+            status="verified" if state != "UNKNOWN" else "pending",
+            metric_name="paper_source_review", metric_value=state,
+        )
+        con.commit()
+    return evidence_id

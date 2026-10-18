@@ -31,7 +31,7 @@ import threading
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, field, asdict, replace
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple
 from urllib.parse import urlsplit
@@ -197,7 +197,7 @@ def resolve_local_workspace_principal(
     """Resolve the fixed workspace principal from the current server request."""
     if (
         type(module) is not str
-        or module not in {"content", "reports", "cases", "collector", "owned_training", "owned_model_admission", "skills", "browser", "evidence"}
+        or module not in {"content", "reports", "cases", "collector", "owned_training", "owned_model_admission", "skills", "browser", "evidence", "conversation", "learning_review"}
         or type(action) is not str
         or action not in _RESOURCE_SCOPE_ACTIONS
     ):
@@ -606,8 +606,8 @@ _RESOURCE_SCOPE_ACTIONS = frozenset({"read", "write"})
 # discriminator; identity and grants are always resolved on the server.
 _SHARED_WORKSPACE_SCOPE_KIND = "shared_workspace"
 _SHARED_WORKSPACE_VERSION = 1
-_SHARED_WORKSPACE_MODULES = frozenset({"content", "reports"})
-_SHARED_WORKSPACE_OPERATIONS = frozenset({OperationType.DATA_EXPORT, OperationType.DB_WRITE})
+_SHARED_WORKSPACE_MODULES = frozenset({"content", "reports", "conversation"})
+_SHARED_WORKSPACE_OPERATIONS = frozenset({OperationType.DATA_EXPORT, OperationType.DB_WRITE, OperationType.AI_CALL})
 _SHARED_WORKSPACE_ADMISSION_SEAL = object()
 
 
@@ -1056,7 +1056,7 @@ def check_local_workspace_scope_permission(
 
     valid_request = (
         domain_config is not None
-        and module_value in {"content", "reports", "cases", "collector", "owned_training", "owned_model_admission", "skills", "evidence"}
+        and module_value in {"content", "reports", "cases", "collector", "owned_training", "owned_model_admission", "skills", "evidence", "learning_review"}
         and (module_value != "cases" or normalized_domain == "cth")
         and action_value in _RESOURCE_SCOPE_ACTIONS
         and type(global_scope) is bool
@@ -1357,15 +1357,26 @@ def _shared_workspace_admission_valid(
                 or admission.module not in _SHARED_WORKSPACE_MODULES
                 or admission.action not in _RESOURCE_SCOPE_ACTIONS):
             return False
-        if operation_type is OperationType.DATA_EXPORT:
+        if operation_type is OperationType.AI_CALL:
+            # Source-free user conversation only. The Gateway hashes the exact
+            # destination, model and redacted request body, then rechecks here.
+            if (admission.module != "conversation" or admission.action != "write"
+                    or type(resource) is not str
+                    or re.fullmatch(r"user-api-conversation:v1:[0-9a-f]{64}", resource) is None):
+                return False
+        elif operation_type is OperationType.DATA_EXPORT:
             if admission.module == "reports":
                 if (admission.action != "read" or type(resource) is not str
                         or re.fullmatch(r"saved-work(?:-export)?:v1:[0-9a-f]{64}", resource) is None):
                     return False
             elif (admission.module != "content" or admission.action != "write"
                   or type(resource) is not str
-                  or re.fullmatch(r"content-project-export:v1:[0-9a-f]{64}", resource) is None):
+                  or re.fullmatch(r"(?:content-project-export|content-derived):v1:[0-9a-f]{64}", resource) is None):
                 return False
+            elif resource.startswith("content-derived:"):
+                from content_generation import validate_content_derived_resource
+                if not validate_content_derived_resource(resource):
+                    return False
         elif (operation_type is not OperationType.DB_WRITE or admission.module != "content"
               or admission.action != "write" or type(resource) is not str
               or re.fullmatch(r"content-source-import:shared-workspace:v1:[0-9a-f]{64}", resource) is None):
@@ -1451,10 +1462,19 @@ def check_shared_workspace_effect(
         module == "content" and action == "write"
         and operation is OperationType.DATA_EXPORT
         and type(resource) is str
-        and re.fullmatch(r"content-project-export:v1:[0-9a-f]{64}", resource) is not None
+        and re.fullmatch(r"(?:content-project-export|content-derived):v1:[0-9a-f]{64}", resource) is not None
     )
-    if (type(operation) is not OperationType or operation is not OperationType.DATA_EXPORT
-            or not resource_valid):
+    if resource_valid and resource.startswith("content-derived:"):
+        from content_generation import validate_content_derived_resource
+        resource_valid = validate_content_derived_resource(resource, actor=actor, scope=scope)
+    conversation_valid = (
+        module == "conversation" and action == "write"
+        and operation is OperationType.AI_CALL and type(resource) is str
+        and re.fullmatch(r"user-api-conversation:v1:[0-9a-f]{64}", resource) is not None
+    )
+    if (type(operation) is not OperationType or not (
+            (operation is OperationType.DATA_EXPORT and resource_valid)
+            or conversation_valid)):
         return _shared_workspace_denial(
             permission_gate, operation, resource, caller, "SHARED_WORKSPACE_OPERATION_INVALID",
         )
@@ -2072,6 +2092,7 @@ class ContentSourceImport:
     principal_ref: str | None = None
     scope_kind: str | None = None
     scope_version: int | None = None
+    license_metadata_sha256: str | None = None
 
 
 @dataclass
@@ -2267,6 +2288,9 @@ def content_source_import_resource(
         or not 0 < upload.size_bytes <= 128 * 1024 * 1024
         or not isinstance(upload.body_sha256, str) or len(upload.body_sha256) != 64
         or any(character not in "0123456789abcdef" for character in upload.body_sha256)
+        or (upload.license_metadata_sha256 is not None and (
+            not isinstance(upload.license_metadata_sha256, str)
+            or re.fullmatch(r"[0-9a-f]{64}", upload.license_metadata_sha256) is None))
         or not isinstance(upload.filename, str) or not 0 < len(upload.filename) <= 255
         or upload.filename.startswith(".") or upload.filename != upload.filename.strip()
         or upload.filename.endswith(".")
@@ -2351,6 +2375,8 @@ def content_source_import_resource(
     ):
         raise ValueError("CONTENT_SOURCE_SCOPE_AUDIT_UNVERIFIED")
     descriptor = asdict(upload)
+    if upload.license_metadata_sha256 is None:
+        descriptor.pop("license_metadata_sha256", None)
     if upload.principal_kind is None and upload.principal_ref is None:
         # Keep the legacy actor resource hash stable for descriptors created
         # before the optional workspace-principal fields existed.
@@ -2683,6 +2709,9 @@ def prepare_content_source_import_confirmation(
         "resource": resource, "expires_at": expires_at.isoformat(),
         "filename": upload.filename, "size_bytes": upload.size_bytes,
         "body_sha256": upload.body_sha256,
+        **({"license_metadata_sha256": upload.license_metadata_sha256,
+            "license_verification_state": "declared_not_independently_verified"}
+           if upload.license_metadata_sha256 else {}),
     }
 
 
@@ -3005,6 +3034,8 @@ class PermissionGate:
         self._content_import_lock = threading.RLock()
         self._content_import_confirmations: Dict[str, _ContentSourceImportConfirmation] = {}
         self._content_import_grants: Dict[str, _ContentSourceImportGrant] = {}
+        self._content_review_confirmations: Dict[str, dict] = {}
+        self._user_api_confirmations: Dict[str, dict] = {}
 
         # 幂等性缓存：operation_id → PermissionResult
         self._idempotency_cache: Dict[str, PermissionResult] = {}
@@ -3028,7 +3059,13 @@ class PermissionGate:
 
     def revoke_permission(self, level: PermissionLevel) -> None:
         """撤销权限等级。"""
-        self._enabled_permissions.discard(level)
+        if level in {PermissionLevel.COMMIT, PermissionLevel.HUMAN_APPROVAL}:
+            # Candidate/review commits and their capability withdrawal serialize.
+            # No database access while holding this lock (no reverse lock order).
+            with self._approval_lock:
+                self._enabled_permissions.discard(level)
+        else:
+            self._enabled_permissions.discard(level)
         logger.info(f"[PermissionGate] 权限已撤销: {level.value}")
 
     def get_enabled_permissions(self) -> List[str]:
@@ -3311,6 +3348,183 @@ class PermissionGate:
     # ──────────────────────────────────────────────────────────
     # 核心：权限检查
     # ──────────────────────────────────────────────────────────
+
+    def prepare_browser_snapshot_use(
+        self, actor, *, scope, source_evidence_ref, source_fingerprint,
+        body_sha256, source_version, purpose, connection,
+    ) -> PermissionResult:
+        """Prepare an exact approval resource; this never authorizes Source use."""
+        return self._browser_snapshot_use(
+            actor, scope=scope, source_evidence_ref=source_evidence_ref,
+            source_fingerprint=source_fingerprint, body_sha256=body_sha256,
+            source_version=source_version, purpose=purpose, connection=connection,
+            prepare_only=True,
+        )
+
+    def check_browser_snapshot_use(
+        self, actor, *, scope, source_evidence_ref, source_fingerprint,
+        body_sha256, source_version, purpose, connection,
+    ) -> PermissionResult:
+        """Revalidate physical Source, current scope and a revocable exact grant."""
+        return self._browser_snapshot_use(
+            actor, scope=scope, source_evidence_ref=source_evidence_ref,
+            source_fingerprint=source_fingerprint, body_sha256=body_sha256,
+            source_version=source_version, purpose=purpose, connection=connection,
+            prepare_only=False,
+        )
+
+    def _browser_snapshot_use(
+        self, actor, *, scope, source_evidence_ref, source_fingerprint,
+        body_sha256, source_version, purpose, connection, prepare_only,
+    ) -> PermissionResult:
+        operation = OperationType.COLLECTOR_SOURCE_READ.value
+        allowed = False
+        reason = "BROWSER_SNAPSHOT_USE_DENIED"
+        resource = "browser-snapshot-use:invalid"
+        caller = "anonymous"
+        domain = None
+        requires_approval = False
+        try:
+            from lumenis.importer.documents import _source_bytes
+            from lumenis.shared.evidence import store
+            from domain_isolation import resolve_domain_identity
+
+            if (type(self) is not PermissionGate or is_testing_bypass_enabled()
+                    or self is not get_permission_gate()
+                    or not self.fail_closed or type(scope) is not dict
+                    or set(scope) - {"domain_id", "subject_id", "brand_focus_id", "global_scope"}
+                    or not {"domain_id", "subject_id", "brand_focus_id"}.issubset(scope)
+                    or type(scope.get("global_scope", False)) is not bool
+                    or purpose != "quote_reference"
+                    or source_version != "collected-browser-snapshot:v1"
+                    or type(source_evidence_ref) is not str
+                    or not re.fullmatch(r"app_evidence_records:[1-9][0-9]*", source_evidence_ref)
+                    or type(source_fingerprint) is not str
+                    or not re.fullmatch(r"[0-9a-f]{64}", source_fingerprint)
+                    or type(body_sha256) is not str
+                    or not re.fullmatch(r"[0-9a-f]{64}", body_sha256)):
+                raise ValueError("BROWSER_SNAPSHOT_REQUEST_INVALID")
+            con = _require_canonical_scope_connection(connection)
+            domain, _ = resolve_domain_identity(domain_id=scope["domain_id"])
+            exact_scope = {**scope, "domain_id": domain,
+                           "global_scope": scope.get("global_scope", False)}
+            actor_id, principal, caller = _shared_workspace_actor_identity(actor)
+            checker = check_local_workspace_scope_permission if principal else check_actor_scope_permission
+            admitted = checker(actor, **exact_scope, module="reports", action="read",
+                               gate=self, connection=con)
+            if not admitted.allowed:
+                raise ValueError("BROWSER_SNAPSHOT_SCOPE_DENIED")
+            identity = ({"actor_id": actor_id} if principal is None else {
+                "actor_id": None, "principal_kind": principal.principal_kind,
+                "principal_ref": principal.principal_ref})
+            row = con.execute("SELECT * FROM app_evidence_records WHERE id=?",
+                              (int(source_evidence_ref.split(":")[1]),)).fetchone()
+            if row is None:
+                raise ValueError("BROWSER_SNAPSHOT_SOURCE_UNAVAILABLE")
+            evidence = dict(row)
+            metadata = json.loads(evidence.get("collection_metadata") or "{}")
+            context = metadata.get("context") or {}
+            binding = metadata.get("browser_snapshot_binding") or {}
+            integrity = store.classify_evidence_integrity(evidence)
+            if (evidence.get("source") != "collector"
+                    or evidence.get("feature_id") != "COLLECTED_SOURCE"
+                    or evidence.get("provider") != "collector-browser-snapshot"
+                    or evidence.get("status") != "verified" or evidence.get("result") != "PASS"
+                    or integrity.get("verified") is not True
+                    or integrity.get("assurance") != "writer-authenticated"
+                    or evidence.get("version") != source_version
+                    or metadata.get("source_fingerprint") != source_fingerprint
+                    or binding.get("body_sha256") != body_sha256
+                    or binding.get("snapshot_sha256") != source_fingerprint
+                    or binding.get("schema") != "lumenis.browser-snapshot/v1"
+                    or any(context.get(key) != value for key, value in exact_scope.items())
+                    or any(context.get(key) != value for key, value in identity.items())):
+                raise ValueError("BROWSER_SNAPSHOT_SOURCE_BINDING_INVALID")
+            raw, _artifact = _source_bytes(con, {**evidence, "provenance": metadata})
+            original = json.loads(raw)
+            body = original.get("body")
+            if (hashlib.sha256(raw).hexdigest() != source_fingerprint
+                    or type(body) is not str or not body.strip()
+                    or hashlib.sha256(body.encode("utf-8")).hexdigest() != body_sha256):
+                raise ValueError("BROWSER_SNAPSHOT_PHYSICAL_SOURCE_INVALID")
+            # Honor explicit restrictions without treating this purpose grant
+            # as a publisher license or elevating unknown rights declarations.
+            provenance = metadata.get("provenance") or {}
+            original_metadata = original.get("metadata") or {}
+            restrictions = [metadata, provenance, original, original_metadata]
+            for material in list(restrictions):
+                if isinstance(material, dict):
+                    restrictions.append(material.get("rights"))
+            for material in restrictions:
+                if not isinstance(material, dict):
+                    continue
+                if (any(material.get(key) is True for key in (
+                        "revoked", "private", "restricted", "confidential", "use_prohibited"))
+                        or material.get("privacy_status") in {"PRIVATE", "RESTRICTED", "CONFIDENTIAL"}
+                        or material.get("use_status") in {"DENIED", "REVOKED", "WITHDRAWN"}):
+                    raise ValueError("BROWSER_SNAPSHOT_SOURCE_RESTRICTED")
+            payload = {"identity": identity, "scope": exact_scope,
+                       "source_evidence_ref": source_evidence_ref,
+                       "source_fingerprint": source_fingerprint,
+                       "body_sha256": body_sha256, "source_version": source_version,
+                       "purpose": purpose}
+            resource = "browser-snapshot-use:" + hashlib.sha256(
+                json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=False).encode("utf-8")).hexdigest()
+            if prepare_only:
+                allowed = True
+                reason = "BROWSER_SNAPSHOT_PREPARED_NOT_AUTHORIZED"
+                requires_approval = True
+            else:
+                token = self._standard_approval_token(operation, resource, exact=True)
+                allowed = bool(token and self._approval_token_is_valid(token, operation, resource))
+                reason = ("BROWSER_SNAPSHOT_EXACT_USE_APPROVED" if allowed
+                          else "BROWSER_SNAPSHOT_EXACT_APPROVAL_REQUIRED")
+                requires_approval = not allowed
+        except Exception:
+            allowed = False
+        try:
+            audit_id = self._write_audit(
+                operation_type=operation, resource=resource, risk_level=RiskLevel.LOW.value,
+                permission_required="browser_snapshot_exact_quote_use",
+                caller=caller, result="prepared" if prepare_only and allowed else (
+                    "allowed" if allowed else "denied"), reason=reason,
+                operation_id=None, approval_token=None,
+            )
+        except Exception:
+            allowed = False
+            audit_id = None
+            reason = "BROWSER_SNAPSHOT_AUDIT_UNAVAILABLE"
+        # The last current-scope and exact-token check is the admission
+        # linearization point. Auditing must not turn a revoked in-call grant
+        # into an allow. A later revocation cannot recall an admitted response.
+        if allowed:
+            try:
+                current = checker(actor, **exact_scope, module="reports", action="read",
+                                  gate=self, connection=con)
+                if (not current.allowed or self is not get_permission_gate()
+                        or is_testing_bypass_enabled()
+                        or (not prepare_only and not self._approval_token_is_valid(token, operation, resource))):
+                    allowed = False
+                    reason = "BROWSER_SNAPSHOT_APPROVAL_OR_SCOPE_CHANGED"
+            except Exception:
+                allowed = False
+                reason = "BROWSER_SNAPSHOT_APPROVAL_OR_SCOPE_CHANGED"
+            if not allowed:
+                requires_approval = True
+                try:
+                    audit_id = self._write_audit(operation_type=operation, resource=resource,
+                        risk_level=RiskLevel.LOW.value, permission_required="browser_snapshot_exact_quote_use",
+                        caller=caller, result="denied", reason=reason, operation_id=None, approval_token=None)
+                except Exception:
+                    audit_id = None
+        return PermissionResult(
+            allowed=allowed, reason=reason, requires_approval=requires_approval,
+            audit_id=audit_id, operation_type=operation, resource=resource,
+            risk_level=RiskLevel.LOW.value,
+            permission_required="browser_snapshot_exact_quote_use",
+            caller=caller, domain_id=domain,
+        )
 
     def check_prelaunch_maintenance(self, authorization, *, source_url: str,
                                    platform: str, scope: Dict[str, Any],
@@ -3702,6 +3916,12 @@ class PermissionGate:
 
         # 3. 确定最终风险等级（显式传入优先，否则用注册表默认）
         final_risk = risk_level or spec.risk
+        # External conversation export is a different effect from owned analysis.
+        # Its exact actor/request/destination approval cannot inherit LOW AI_CALL.
+        if shared_workspace and operation_type is OperationType.AI_CALL:
+            final_risk = RiskLevel.HIGH
+            exact_approval_required = True
+
         restricted_import_grant = self._content_import_grant_is_valid(
             content_import_grant, operation_type, resource,
             caller or self.default_caller,
@@ -3815,6 +4035,301 @@ class PermissionGate:
         with self._approval_lock:
             approval.issuance_audit_id = issuance_audit_id
         return token
+
+    def audit_user_api_denial(self, code):
+        """Record a minimal external-AI refusal through the canonical audit.
+
+        No caller-supplied identity, prompt, URL, credential or request digest is
+        accepted. Identity is resolved afresh from the actual server request;
+        unavailable/invalid identity is explicitly unverified.
+        """
+        allowed_codes = {
+            "USER_API_PERMISSION_DENIED", "USER_API_PERMISSION_CONTEXT_REQUIRED",
+            "USER_API_PERMISSION_UNAVAILABLE", "USER_API_CANONICAL_GATE_REQUIRED",
+            "USER_API_ANALYZE_PERMISSION_REQUIRED", "USER_API_STRICT_GATE_REQUIRED",
+            "USER_API_SETTINGS_ORIGIN_DENIED", "USER_API_SECURE_SETTINGS_REQUIRED",
+            "USER_API_SETTINGS_INVALID", "USER_API_SETTINGS_UNAVAILABLE",
+            "USER_API_CONFIGURATION_REQUIRED", "USER_API_CONFIGURATION_CHANGED",
+            "USER_API_BASE_URL_REQUIRED", "USER_API_DESTINATION_NOT_ALLOWED",
+            "USER_API_KEY_REQUIRED", "USER_API_KEY_INVALID", "USER_API_MODEL_REQUIRED",
+            "USER_API_MODEL_INVALID", "USER_API_INVALID_REQUEST", "USER_API_NOT_SELECTED",
+            "USER_API_EXTERNAL_INPUT_REQUIRED", "USER_API_REQUEST_BINDING_INVALID",
+            "USER_API_CONFIRMATION_INVALID", "USER_API_APPROVAL_REVOKED",
+        }
+        reason = code if type(code) is str and code in allowed_codes else "USER_API_PERMISSION_UNAVAILABLE"
+        gate = get_permission_gate()
+        caller = "unverified"
+        try:
+            from flask import has_request_context
+            from lumenis.auth.service import get_current_user
+            if has_request_context():
+                actor = get_current_user(read_only=True)
+                if actor is None:
+                    actor = resolve_local_workspace_principal(module="conversation", action="write")
+                identity = _shared_workspace_actor_identity(actor)[2]
+                if identity != "anonymous":
+                    caller = identity
+        except Exception:
+            pass
+        try:
+            audit_id = gate._write_audit(
+                operation_type=OperationType.AI_CALL.value,
+                resource="user-api-conversation:denied", risk_level=RiskLevel.HIGH.value,
+                permission_required="exact_user_confirmation", caller=caller,
+                result="denied", reason=reason,
+                operation_id="user_api_denial_" + uuid.uuid4().hex, approval_token=None,
+                require_persistence=True,
+            )
+            if type(audit_id) is not str or not audit_id:
+                raise RuntimeError("audit identifier unavailable")
+        except Exception:
+            raise PermissionError("USER_API_AUDIT_UNAVAILABLE") from None
+        return audit_id
+
+    def authorize_user_api_action(self, actor):
+        """Current source-free conversation authority, never a provider grant."""
+        reason = None
+        if self is not get_permission_gate():
+            reason = "USER_API_CANONICAL_GATE_REQUIRED"
+        elif not self.fail_closed or is_testing_bypass_enabled():
+            reason = "USER_API_STRICT_GATE_REQUIRED"
+        elif not self.has_permission(PermissionLevel.ANALYZE):
+            reason = "USER_API_ANALYZE_PERMISSION_REQUIRED"
+        if reason is None:
+            try:
+                authorize_shared_workspace(
+                    actor, {"scope_kind": "shared_workspace", "version": 1},
+                    module="conversation", action="write", gate=self,
+                )
+            except Exception:
+                reason = "USER_API_PERMISSION_DENIED"
+        if reason is not None:
+            denied = PermissionError("USER_API_PERMISSION_DENIED")
+            denied.audit_id = self.audit_user_api_denial(reason)
+            raise denied from None
+        return _shared_workspace_actor_identity(actor)[2]
+
+    def _user_api_request_resource(self, actor, binding):
+        caller = self.authorize_user_api_action(actor)
+        if (type(binding) is not dict or set(binding) != {
+                "caller", "destination", "model", "body_sha256", "configuration_revision"}
+                or binding.get("caller") != caller
+                or type(binding.get("destination")) is not str
+                or not binding["destination"].startswith("https://")
+                or type(binding.get("model")) is not str or not binding["model"]
+                or len(binding["model"]) > 200
+                or any(type(binding.get(key)) is not str
+                       or re.fullmatch(r"[0-9a-f]{64}", binding[key]) is None
+                       for key in ("body_sha256", "configuration_revision"))):
+            raise PermissionError("USER_API_REQUEST_BINDING_INVALID")
+        encoded = json.dumps(binding, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return caller, encoded, "user-api-conversation:v1:" + hashlib.sha256(encoded.encode()).hexdigest()
+
+    def prepare_user_api_request(self, actor, binding):
+        """Prepare an inert five-minute preview; hashes only are retained."""
+        caller, encoded, resource = self._user_api_request_resource(actor, binding)
+        nonce = self._generate_token()
+        with self._content_import_lock:
+            now = datetime.now()
+            self._user_api_confirmations = {
+                key: value for key, value in self._user_api_confirmations.items()
+                if value["expires"] > now
+            }
+            # Bound abandoned previews; pruning can only remove authority.
+            while len(self._user_api_confirmations) >= 256:
+                self._user_api_confirmations.pop(next(iter(self._user_api_confirmations)))
+            self._user_api_confirmations[nonce] = {
+                "caller": caller, "binding": encoded, "resource": resource,
+                "expires": now + timedelta(minutes=5),
+            }
+        self._write_audit(
+            operation_type=OperationType.AI_CALL.value, resource=resource,
+            risk_level=RiskLevel.HIGH.value, permission_required="exact_user_confirmation",
+            caller=caller, result="pending", reason="USER_API_EXACT_CONFIRMATION_REQUIRED",
+            operation_id=None, approval_token=None, require_persistence=True,
+        )
+        return {"confirmation_id": nonce, "resource": resource, "expires_in_seconds": 300}
+
+    def confirm_user_api_request(self, actor, binding, confirmation):
+        """Confirm only a server-issued exact preview for this live actor."""
+        caller, encoded, resource = self._user_api_request_resource(actor, binding)
+        if (type(confirmation) is not dict or set(confirmation) != {
+                "confirmed", "confirmation_id", "resource"}
+                or confirmation.get("confirmed") is not True
+                or type(confirmation.get("confirmation_id")) is not str
+                or confirmation.get("resource") != resource):
+            raise PermissionError("USER_API_CONFIRMATION_INVALID")
+        with self._content_import_lock:
+            pending = self._user_api_confirmations.get(confirmation["confirmation_id"])
+            if (not pending or pending["caller"] != caller or pending["binding"] != encoded
+                    or pending["resource"] != resource or pending["expires"] <= datetime.now()):
+                raise PermissionError("USER_API_CONFIRMATION_INVALID")
+            del self._user_api_confirmations[confirmation["confirmation_id"]]
+        return self.grant_approval(OperationType.AI_CALL.value, resource=resource,
+                                   duration_minutes=1, granted_by=caller)
+
+    def consume_user_api_approval(self, actor, binding, token):
+        """Recheck and consume one exact grant before any transport begins."""
+        caller, _encoded, resource = self._user_api_request_resource(actor, binding)
+        decision = check_shared_workspace_effect(
+            actor, {"scope_kind": "shared_workspace", "version": 1},
+            OperationType.AI_CALL, resource, module="conversation", action="write", gate=self,
+        )
+        if (decision.allowed is not True or decision.requires_approval is not True
+                or decision.approval_token != token or not decision.audit_id):
+            raise PermissionError("USER_API_PERMISSION_DENIED")
+        with self._approval_lock:
+            approval = self._approvals.get(token)
+            if (not approval or approval.operation != OperationType.AI_CALL.value
+                    or approval.resource != resource or approval.granted_by != caller
+                    or not approval.is_valid(OperationType.AI_CALL.value, resource)
+                    or not self.has_permission(PermissionLevel.ANALYZE)):
+                raise PermissionError("USER_API_APPROVAL_REVOKED")
+            approval.revoked = True
+        audit_id = self._write_audit(
+            operation_type=OperationType.AI_CALL.value, resource=resource,
+            risk_level=RiskLevel.HIGH.value, permission_required="exact_user_confirmation",
+            caller=caller, result="allowed", reason="USER_API_TRANSPORT_AUTHORIZED",
+            operation_id=None, approval_token=None, require_persistence=True,
+        )
+        if type(audit_id) is not str or not audit_id:
+            raise PermissionError("USER_API_AUDIT_UNAVAILABLE")
+        return decision
+
+    def revoke_user_api_requests(self, actor):
+        """Withdraw this actor's pending previews and external conversation grants."""
+        caller = _shared_workspace_actor_identity(actor)[2]
+        if caller == "anonymous" or self is not get_permission_gate():
+            raise PermissionError("USER_API_PERMISSION_DENIED")
+        # Removing a user's own authority must remain possible after ANALYZE
+        # is revoked; this grants no capability and touches no other actor.
+        with self._content_import_lock:
+            self._user_api_confirmations = {key: value for key, value in self._user_api_confirmations.items()
+                                            if value["caller"] != caller}
+        with self._approval_lock:
+            for approval in self._approvals.values():
+                if (approval.granted_by == caller and approval.operation == OperationType.AI_CALL.value
+                        and (approval.resource or "").startswith("user-api-conversation:v1:")):
+                    approval.revoked = True
+
+    def prepare_content_review(self, binding, *, caller, purpose="content-review"):
+        """A short-lived, inert preview in the existing Permission owner."""
+        if purpose not in {"content-review", "content-pattern-recovery"}:
+            raise PermissionError("CONTENT_CONFIRMATION_PURPOSE_INVALID")
+        encoded = json.dumps(binding, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        resource = purpose + ":v1:" + hashlib.sha256(encoded.encode()).hexdigest()
+        nonce = self._generate_token()
+        with self._content_import_lock:
+            now = datetime.now()
+            self._content_review_confirmations = {k:v for k,v in self._content_review_confirmations.items()
+                                                   if v["expires"] > now}
+            self._content_review_confirmations[nonce] = {"binding": encoded, "caller": caller,
+                "resource": resource, "purpose": purpose, "expires": now + timedelta(minutes=5)}
+        return {"confirmation_id": nonce, "resource": resource, "expires_in_seconds": 300}
+
+    def confirm_content_review(self, confirmation_id, binding, *, caller, resource, purpose="content-review"):
+        encoded = json.dumps(binding, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        with self._content_import_lock:
+            pending = self._content_review_confirmations.get(confirmation_id)
+            if (not pending or pending["expires"] <= datetime.now() or pending["caller"] != caller
+                    or pending["resource"] != resource or pending["binding"] != encoded or pending["purpose"] != purpose
+                    or not self.has_permission(PermissionLevel.HUMAN_APPROVAL)):
+                raise PermissionError("CONTENT_REVIEW_CONFIRMATION_INVALID")
+            del self._content_review_confirmations[confirmation_id]
+        operation = OperationType.REPORT_REVIEW if purpose == "content-review" else OperationType.DATA_EXPORT
+        return self.grant_approval(operation.value, resource=resource,
+                                   duration_minutes=1, granted_by=caller)
+
+    @contextmanager
+    def content_review_commit_lease(self, token, *, resource, caller, purpose="content-review"):
+        """Serialize only the final commit with exact-token withdrawal."""
+        if purpose not in {"content-review", "content-pattern-recovery"} or not resource.startswith(purpose + ":v1:"):
+            raise PermissionError("CONTENT_CONFIRMATION_PURPOSE_INVALID")
+        operation = OperationType.REPORT_REVIEW if purpose == "content-review" else OperationType.DATA_EXPORT
+        with self._approval_lock:
+            approval = self._approvals.get(token)
+            if (self is not get_permission_gate() or not self.fail_closed or is_testing_bypass_enabled()
+                    or not self.has_permission(PermissionLevel.HUMAN_APPROVAL)
+                    or not approval or approval.operation != operation.value
+                    or approval.resource != resource or approval.granted_by != caller
+                    or not approval.is_valid(operation.value, resource)):
+                raise PermissionError("CONTENT_REVIEW_APPROVAL_REVOKED")
+            yield
+
+    @contextmanager
+    def intelligence_catalog_binding_commit_lease(self, token, *, resource, caller):
+        """Serialize one exact catalog-binding commit with permission withdrawal.
+
+        The caller holds its canonical BEGIN IMMEDIATE transaction, revalidates
+        actor/scope/source/catalog material against this resource, then calls
+        the yielded check immediately before commit. Do not call Gate.check or
+        token lookup while holding this non-reentrant lease. This lease grants
+        no scope, source-use rights or authority for another operation/purpose.
+        """
+        if (type(resource) is not str
+                or re.fullmatch(r"intelligence-asset-bind:v1:[0-9a-f]{64}", resource) is None
+                or type(token) is not str or not token
+                or type(caller) is not str or not caller or len(caller) > 4096):
+            raise PermissionError("INTELLIGENCE_BINDING_LEASE_BINDING_INVALID")
+        if type(self) is not PermissionGate or self is not get_permission_gate():
+            raise PermissionError("INTELLIGENCE_BINDING_LEASE_GATE_INVALID")
+        if not self._approval_lock.acquire(timeout=2.0):
+            raise PermissionError("INTELLIGENCE_BINDING_LEASE_LOCK_UNAVAILABLE")
+        active = True
+
+        def require_current():
+            if (not active or self is not get_permission_gate() or not self.fail_closed
+                    or is_testing_bypass_enabled()
+                    or not self.has_permission(PermissionLevel.COMMIT)
+                    or not self.has_permission(PermissionLevel.HUMAN_APPROVAL)):
+                raise PermissionError("INTELLIGENCE_BINDING_LEASE_PERMISSION_REVOKED")
+            approval = self._approvals.get(token)
+            if (not approval or approval.operation != OperationType.DATA_IMPORT.value
+                    or approval.resource != resource or approval.granted_by != caller
+                    or not approval.issuance_audit_id
+                    or not approval.is_valid(OperationType.DATA_IMPORT.value, resource)):
+                raise PermissionError("INTELLIGENCE_BINDING_LEASE_APPROVAL_REVOKED")
+
+        try:
+            require_current()
+            yield require_current
+        finally:
+            active = False
+            self._approval_lock.release()
+
+    @contextmanager
+    def learning_candidate_commit_lease(self, admission, *, connection):
+        """Only serialize the existing Learning candidate commit with revocation.
+
+        This does not grant DB_WRITE and cannot authorize business/Source writes.
+        """
+        from .effect_fence import EffectFence
+        if not EffectFence._skill_metadata_connection_is_canonical(connection):
+            raise PermissionError("LEARNING_CANONICAL_TRANSACTION_REQUIRED")
+        _validate_learning_candidate_admission(admission, connection=connection, after_write=True)
+        if (type(self) is not PermissionGate or self is not get_permission_gate()
+                or not self.fail_closed or is_testing_bypass_enabled()
+                or not self.has_permission(PermissionLevel.COMMIT)
+                or not self.has_permission(PermissionLevel.HUMAN_APPROVAL)):
+            raise PermissionError("LEARNING_COMMIT_PERMISSION_REQUIRED")
+        if not self._approval_lock.acquire(timeout=2.0):
+            raise PermissionError("LEARNING_APPROVAL_LOCK_UNAVAILABLE")
+        try:
+            # Do not call Gate.check while holding its approval lock.
+            if (self is not get_permission_gate() or not self.has_permission(PermissionLevel.COMMIT)
+                    or not self.has_permission(PermissionLevel.HUMAN_APPROVAL)):
+                raise PermissionError("LEARNING_COMMIT_PERMISSION_REVOKED")
+            principal = resolve_local_workspace_principal(module="learning_review", action="write")
+            if principal is None:
+                raise PermissionError("LEARNING_LOCAL_IDENTITY_REVOKED")
+            approval = self._approvals.get(admission.token)
+            if (not approval or approval.operation != OperationType.CONFIG_MODIFY.value
+                    or approval.resource != admission.resource
+                    or not approval.is_valid(OperationType.CONFIG_MODIFY.value, admission.resource)):
+                raise PermissionError("LEARNING_EXACT_APPROVAL_REVOKED")
+            yield
+        finally:
+            self._approval_lock.release()
 
     @contextmanager
     def skill_metadata_commit_lease(
@@ -4395,6 +4910,7 @@ class PermissionGate:
         reason: str,
         operation_id: Optional[str],
         approval_token: Optional[str],
+        require_persistence: bool = False,
     ) -> str:
         """写入审计日志（内存 + 可选文件持久化）。"""
         audit_id = "aud_" + hashlib.sha256(
@@ -4427,6 +4943,8 @@ class PermissionGate:
                 with open(self.audit_log_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(asdict(entry), ensure_ascii=False) + "\n")
             except Exception as e:
+                if require_persistence:
+                    raise RuntimeError("PERMISSION_AUDIT_PERSISTENCE_UNAVAILABLE") from None
                 logger.warning(f"[PermissionGate] 审计日志持久化失败: {e}")
 
         return audit_id
@@ -4732,3 +5250,433 @@ __all__ = [
     "set_testing_bypass",
     "is_testing_bypass_enabled",
 ]
+
+
+# Narrow operational metadata capability. It grants no business DB writes,
+# source Evidence edits, tool authority, model call or external effect.
+_TASK_OPERATIONAL_SEAL = object()
+_TASK_OPERATIONAL_GUARDS = threading.local()
+_TASK_OPERATIONAL_FIELDS = {
+    'ai_task': frozenset({'status', 'result_json', 'error', 'finished_at', 'updated_at'}),
+    'ai_task_step': frozenset({'step_id', 'task_id', 'phase', 'status', 'detail', 'agent_id',
+                              'started_at', 'finished_at', 'duration_ms'}),
+    'ai_task_evidence': frozenset({'evidence_id', 'task_id', 'step_id', 'evidence_type', 'content',
+                                  'source', 'authenticity_score', 'created_at', 'previous_hash', 'current_hash'}),
+}
+
+
+@dataclass(frozen=True)
+class TaskOperationalWriteAdmission:
+    task_id: str
+    actor_id: int
+    context_json: str
+    queue: Any = field(repr=False, compare=False)
+    queue_task_id: int
+    run_id: str
+    worker_id: str
+    lease_owner: str
+    _seal: Any = field(repr=False, compare=False)
+
+    def check(self, resource, *, fields, connection=None):
+        return check_task_operational_write(self, resource=resource, fields=fields, connection=connection)
+
+    @contextmanager
+    def guard(self):
+        if self._seal is not _TASK_OPERATIONAL_SEAL:
+            raise PermissionError('TASK_OPERATIONAL_CAPABILITY_INVALID')
+        with self.queue.attempt_guard(self.queue_task_id, run_id=self.run_id,
+                worker_id=self.worker_id, lease_owner=self.lease_owner) as current:
+            if not current:
+                raise PermissionError('TASK_OPERATIONAL_ATTEMPT_STALE')
+            previous = getattr(_TASK_OPERATIONAL_GUARDS, 'admission', None)
+            _TASK_OPERATIONAL_GUARDS.admission = self
+            try:
+                yield
+            finally:
+                _TASK_OPERATIONAL_GUARDS.admission = previous
+
+
+def check_task_operational_write(admission, *, resource, fields, connection=None):
+    """Fresh canonical task/actor/scope/attempt admission at each metadata commit."""
+    denied = lambda reason: PermissionResult(False, reason, resource=resource,
+        caller='agent_runtime.durable_adapter', operation_type='task_metadata_write')
+    if (type(admission) is not TaskOperationalWriteAdmission or admission._seal is not _TASK_OPERATIONAL_SEAL
+            or resource not in _TASK_OPERATIONAL_FIELDS or not fields
+            or not set(fields) <= _TASK_OPERATIONAL_FIELDS[resource]):
+        return denied('TASK_OPERATIONAL_CAPABILITY_INVALID')
+    from lumenis.system.collector.guard.task_queue import TaskQueue
+    if type(admission.queue) is not TaskQueue:
+        return denied('TASK_OPERATIONAL_QUEUE_INVALID')
+    own_connection = connection is None
+    try:
+        from lumenis.shared.database import get_repository
+        conn = connection or get_repository().connect()
+        row = conn.execute('SELECT created_by,context_json,status FROM ai_task WHERE task_id=?',
+                           (admission.task_id,)).fetchone()
+        if (not row or row['created_by'] != 'agent_runtime'
+                or row['context_json'] != admission.context_json
+                or row['status'] not in {'pending', 'ready', 'running', 'failed', 'succeeded', 'cancelled'}):
+            return denied('TASK_OPERATIONAL_OWNER_CHANGED')
+        context = json.loads(row['context_json'])
+        contract = context.get('agent_runtime')
+        if (context.get('actor_id') != admission.actor_id or not isinstance(contract, dict)
+                or contract.get('schema_version') != 1 or contract.get('module') != 'agent_runtime'):
+            return denied('TASK_OPERATIONAL_ACTOR_CHANGED')
+        scope = context.get('scope') or {}
+        from agent_runtime.task_binding import authorized_context
+        try:
+            authorized_context({'created_by': row['created_by'], 'context': context}, connection=conn)
+        except PermissionError:
+            return denied('TASK_OPERATIONAL_SCOPE_DENIED')
+        # TaskQueue's guard holds its non-reentrant lock and exact lease.
+        # Do not reacquire that lock while checking the inner business commit.
+        guarded = getattr(_TASK_OPERATIONAL_GUARDS, 'admission', None) is admission
+        attempt = None if guarded else admission.queue.get(admission.queue_task_id)
+        if not guarded and (not attempt or attempt['task_type'] != 'agent_runtime' or attempt['status'] != 'running'
+                or attempt['run_id'] != admission.run_id or attempt['worker_id'] != admission.worker_id
+                or attempt['lease_owner'] != admission.lease_owner
+                or attempt['payload'].get('task_id') != admission.task_id
+                or attempt['payload'].get('actor_id') != admission.actor_id):
+            return denied('TASK_OPERATIONAL_ATTEMPT_STALE')
+        return PermissionResult(True, 'TASK_OPERATIONAL_WRITE_ALLOWED', resource=resource,
+            caller='agent_runtime.durable_adapter', operation_type='task_metadata_write')
+    except Exception:
+        return denied('TASK_OPERATIONAL_OWNER_UNAVAILABLE')
+    finally:
+        if own_connection and 'conn' in locals():
+            conn.close()
+
+
+def admit_task_operational_write(*, task_id, actor_id, queue, attempt):
+    """Called only by the existing server queue handler after its receipt claim."""
+    from lumenis.shared.database import get_repository
+    with get_repository().connection(read_only=True) as conn:
+        row = conn.execute('SELECT context_json FROM ai_task WHERE task_id=?', (task_id,)).fetchone()
+    if not row:
+        raise PermissionError('TASK_OPERATIONAL_TASK_NOT_FOUND')
+    admission = TaskOperationalWriteAdmission(task_id, actor_id, row['context_json'], queue,
+        attempt['id'], attempt['run_id'], attempt['worker_id'], attempt['lease_owner'], _TASK_OPERATIONAL_SEAL)
+    decision = admission.check('ai_task', fields={'status'})
+    if not decision.allowed:
+        raise PermissionError(decision.reason)
+    return admission
+
+
+_LEARNING_CANDIDATE_SEAL = object()
+
+
+@dataclass(frozen=True)
+class LearningCandidateAdmission:
+    task_id: str
+    suggestion_id: str
+    revision: int
+    action: str
+    approved: Any
+    candidate_sha256: str
+    context_sha256: str
+    resource: str
+    token: str = field(repr=False, compare=False)
+    _seal: Any = field(repr=False, compare=False)
+
+
+def prepare_learning_candidate(learning, *, suggestion_id, revision, action, approved=None):
+    """Prepare only a scoped existing inactive Learning candidate, no approval."""
+    from lumenis.shared.learning.loop import LearningLoop
+    from agent_runtime.task_binding import authorized_context, _digest
+    from ai_task_engine import get_task_engine
+    if type(learning) is not LearningLoop or action not in {"review", "apply"} or type(revision) is not int:
+        raise ValueError("LEARNING_CANDIDATE_INPUT_INVALID")
+    binding = learning.learning_memory._scoped_check(write=True)
+    if not binding or binding['actor_id'] is not None:
+        raise PermissionError("LEARNING_LOCAL_APPROVAL_ROUTE_REQUIRED")
+    principal = resolve_local_workspace_principal(module='learning_review', action='write')
+    task = get_task_engine().get_task(binding['task_id'])
+    context = authorized_context(task, principal)
+    scoped = check_local_workspace_scope_permission(principal, domain_id=binding['domain_id'],
+        module='learning_review', action='write', **binding['scope'])
+    if not scoped.allowed or (action == 'review' and type(approved) is not bool) or (action == 'apply' and approved is not None):
+        raise PermissionError("LEARNING_CANDIDATE_SCOPE_INVALID")
+    item = next((item for item in learning._read_suggestions() if item.suggestion_id == suggestion_id), None)
+    if item is None or item.revision != revision:
+        raise ValueError("LEARNING_CANDIDATE_REVISION_CHANGED")
+    candidate_hash = learning._suggestion_hash(item)
+    context_hash = _digest(task['context'])
+    material = {'purpose': 'inactive_learning_candidate', 'task_id': binding['task_id'],
+        'suggestion_id': suggestion_id, 'revision': revision, 'action': action, 'approved': approved,
+        'candidate_sha256': candidate_hash, 'context_sha256': context_hash}
+    resource = 'learning_candidate:v1:' + _digest(material)
+    return LearningCandidateAdmission(binding['task_id'], suggestion_id, revision, action, approved,
+        candidate_hash, context_hash, resource, '', _LEARNING_CANDIDATE_SEAL)
+
+
+def confirm_learning_candidate(admission, *, candidate_ref, revision, action):
+    from dataclasses import replace
+    from flask import request
+    _validate_learning_candidate_admission(admission)
+    if (request.method != 'POST' or request.path != '/api/ai/tasks/' + admission.task_id + '/learning'
+            or candidate_ref != admission.resource or revision != admission.revision or action != admission.action):
+        raise PermissionError('LEARNING_EXACT_CONFIRMATION_REQUIRED')
+    gate = get_permission_gate()
+    if (not gate.fail_closed or is_testing_bypass_enabled() or not gate.has_permission(PermissionLevel.COMMIT)
+            or not gate.has_permission(PermissionLevel.HUMAN_APPROVAL)):
+        raise PermissionError('LEARNING_COMMIT_PERMISSION_REQUIRED')
+    token = gate._standard_approval_token(OperationType.CONFIG_MODIFY.value, admission.resource, exact=True)
+    if token is None:
+        token = gate.grant_approval(OperationType.CONFIG_MODIFY.value, duration_minutes=5,
+            resource=admission.resource, granted_by='workspace:local')
+    return replace(admission, token=token)
+
+
+def _validate_learning_candidate_admission(admission, *, connection=None, after_write=False):
+    from agent_runtime.task_binding import authorized_context, _digest
+    from lumenis.shared.learning.loop import LearningLoop
+    from lumenis.shared.database import get_repository
+    if type(admission) is not LearningCandidateAdmission or admission._seal is not _LEARNING_CANDIDATE_SEAL:
+        raise PermissionError('LEARNING_CANDIDATE_CAPABILITY_INVALID')
+    conn = connection or get_repository().connect()
+    try:
+        principal = resolve_local_workspace_principal(module='learning_review', action='write')
+        row = conn.execute('SELECT * FROM ai_task WHERE task_id=?', (admission.task_id,)).fetchone()
+        task = dict(row) if row else {}; task['context'] = json.loads(task.get('context_json') or '{}')
+        context = authorized_context(task, principal, connection=conn)
+        if principal is None or context['actor_id'] is not None or _digest(task['context']) != admission.context_sha256:
+            raise PermissionError('LEARNING_CANDIDATE_CONTEXT_CHANGED')
+        decision = check_local_workspace_scope_permission(principal, domain_id=context['domain_id'],
+            module='learning_review', action='write', connection=conn, **context['scope'])
+        row = conn.execute("SELECT * FROM agent_learning_records WHERE related_task_id=? AND learning_type='rule_suggestion' AND json_extract(content_json,'$.suggestion_id')=?",
+            (admission.task_id, admission.suggestion_id)).fetchone()
+        item = LearningLoop._decode_suggestion(row) if row else None
+        revision_ok = item and item.revision == admission.revision + (1 if after_write else 0)
+        if (not decision.allowed or not revision_ok or LearningLoop._suggestion_hash(item) != admission.candidate_sha256):
+            raise PermissionError('LEARNING_CANDIDATE_CHANGED')
+        if after_write:
+            expected_status = 'approved' if admission.action == 'review' and admission.approved else 'rejected' if admission.action == 'review' else 'applied'
+            if item.status != expected_status:
+                raise PermissionError('LEARNING_CANDIDATE_TRANSITION_CHANGED')
+            if item.applied_version:
+                candidate = conn.execute('SELECT is_active FROM rule_version_registry WHERE version=?', (item.applied_version,)).fetchone()
+                if candidate is None or candidate['is_active'] != 0:
+                    raise PermissionError('LEARNING_CANDIDATE_MUST_REMAIN_INACTIVE')
+        return True
+    finally:
+        if connection is None:
+            conn.close()
+
+
+# Narrow durable approval for content-pattern transitions. This is not a grant
+# to generic SQL, import, training, production facts or arbitrary configuration.
+_PATTERN_TRANSITION_SEAL = object()
+_PATTERN_APPROVAL_FEATURE = "CONTENT_PATTERN_APPROVAL"
+_PATTERN_PROCESS_INSTANCE = secrets.token_hex(24)
+
+
+def _pattern_issuer():
+    # Process ID also rejects inherited pre-fork authorities. Restart/replacement
+    # requires a new preview; generic COMMIT/HUMAN revocation is not distributed.
+    import os
+    return {"process": os.getpid(), "instance": _PATTERN_PROCESS_INSTANCE,
+            "gate": id(get_permission_gate())}
+
+
+def _require_pattern_issuer(event):
+    if event.get("issuer") != _pattern_issuer():
+        raise PermissionError("PATTERN_APPROVAL_ISSUER_MISMATCH")
+
+
+@dataclass(frozen=True)
+class PatternTransitionAdmission:
+    approval_id: str
+    binding_json: str
+    binding_hash: str
+    activation_resource: str
+    write_resource: str
+    _seal: Any = field(repr=False, compare=False)
+
+
+def _pattern_json(value):
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+
+
+def _pattern_hash(value):
+    return hashlib.sha256(_pattern_json(value).encode("utf-8")).hexdigest()
+
+
+def pattern_transition_resources(binding):
+    digest = _pattern_hash(binding)
+    write_set = ["content_pattern_decision:append", "content_pattern_approval:consume"]
+    return ("content-pattern-activation:v1:" + digest,
+            "content-pattern-write:v1:" + _pattern_hash({"transition_sha256": digest, "write_set": write_set}))
+
+
+def _pattern_transition_authority():
+    from flask import g
+    import content_generation as c
+    c.authorize_content_root_request(strict=True)
+    gate = get_permission_gate()
+    if (type(gate) is not PermissionGate or not gate.fail_closed or is_testing_bypass_enabled()
+            or not gate.has_permission(PermissionLevel.COMMIT)
+            or not gate.has_permission(PermissionLevel.HUMAN_APPROVAL)):
+        raise PermissionError("PATTERN_TRANSITION_HUMAN_AUTHORITY_REQUIRED")
+    if isinstance(g.content_actor, dict) and g.content_actor.get("role") not in {"owner", "admin"}:
+        raise PermissionError("PATTERN_TRANSITION_REVIEWER_ROLE_REQUIRED")
+    if "shared_workspace_scope" not in g.content_scope:
+        from experience_runtime import _content_project_scope
+        _content_project_scope("write", module="learning_review", read_only_auth=True)
+    # Shared workspace uses its existing content authority, plus this exact typed
+    # human/COMMIT admission. No expansion of generic workspace operations.
+    for op in (OperationType.CONFIG_MODIFY, OperationType.DB_WRITE):
+        spec = gate.get_operation_spec(op)
+        if (type(spec) is not OperationSpec or spec.permission is not PermissionLevel.COMMIT
+                or spec.risk is not RiskLevel.HIGH or spec.auto_allow is not False):
+            raise PermissionError("PATTERN_TRANSITION_POLICY_CHANGED")
+    return c._context()
+
+
+def pattern_approval_events(connection, approval_id, *, context):
+    from lumenis.shared.evidence import store
+    rows = connection.execute("SELECT * FROM app_evidence_records WHERE feature_id=? AND asset_id=? ORDER BY id",
+                              (_PATTERN_APPROVAL_FEATURE, approval_id)).fetchall()
+    result, parent_hash = [], None
+    allowed = {None: {"PREPARED"}, "PREPARED": {"CONFIRMED", "REVOKED"},
+               "CONFIRMED": {"CONSUMED", "REVOKED"}, "CONSUMED": set(), "REVOKED": set()}
+    for raw in rows:
+        row = dict(raw)
+        if (row.get("source") != "system_permission" or row.get("provider") != __name__
+                or row.get("version") != "pattern-approval:v1" or row.get("integrity_version") != 2
+                or not store.verify_evidence_record_integrity(row)):
+            raise PermissionError("PATTERN_APPROVAL_INTEGRITY_FAILED")
+        value = json.loads(row.get("outputs_json") or "{}")
+        previous = result[-1] if result else None
+        if (json.loads(row.get("inputs_json") or "{}").get("context") != context
+                or value.get("context") != context or value.get("approval_id") != approval_id
+                or value.get("parent_hash") != parent_hash or value.get("sequence") != len(result)
+                or value.get("state") not in allowed[previous["state"] if previous else None]
+                or previous and any(value.get(k) != previous.get(k) for k in ("binding", "expires_at", "issuer"))):
+            raise PermissionError("PATTERN_APPROVAL_CHAIN_INVALID")
+        parent_hash = row["integrity_digest"]
+        result.append({**value, "event_id": row["id"], "event_hash": parent_hash})
+    if not result:
+        raise PermissionError("PATTERN_APPROVAL_NOT_FOUND")
+    return result
+
+
+def _append_pattern_approval(connection, *, approval_id, binding, state, context, previous=None):
+    from lumenis.shared.evidence import store
+    from .effect_fence import EffectFence
+    if not EffectFence._skill_metadata_connection_is_canonical(connection):
+        raise PermissionError("PATTERN_CANONICAL_TRANSACTION_REQUIRED")
+    value = {"approval_id": approval_id, "binding": binding, "context": context, "state": state,
+             "issuer": _pattern_issuer() if previous is None else previous["issuer"],
+             "sequence": 0 if previous is None else previous["sequence"] + 1,
+             "parent_hash": None if previous is None else previous["event_hash"],
+             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
+                           if previous is None else previous["expires_at"]}
+    eid = store.record_evidence(connection=connection, source="system_permission", product="SHARED",
+        feature_id=_PATTERN_APPROVAL_FEATURE, asset_id=approval_id, provider=__name__, version="pattern-approval:v1",
+        inputs={"context": context}, outputs=value, result="RECORDED", status="authorization_event")
+    events = pattern_approval_events(connection, approval_id, context=context)
+    if events[-1]["event_id"] != eid:
+        raise PermissionError("PATTERN_APPROVAL_READBACK_FAILED")
+    return events[-1]
+
+
+def prepare_pattern_transition(connection, *, binding):
+    import content_generation as c
+    context = _pattern_transition_authority()
+    if binding != c._pattern_transition_binding_from_selectors(binding, connection=connection):
+        raise PermissionError("PATTERN_TRANSITION_BINDING_CHANGED")
+    approval_id = "PAP-" + secrets.token_hex(24)
+    event = _append_pattern_approval(connection, approval_id=approval_id, binding=binding,
+                                     state="PREPARED", context=context)
+    activation, write = pattern_transition_resources(binding)
+    return {"state": "APPROVAL_REQUIRED", "confirmation_id": approval_id,
+            "activation_resource": activation, "write_resource": write,
+            "expires_at": event["expires_at"], "binding": binding}
+
+
+def confirm_pattern_transition(connection, *, approval_id, binding, activation_resource, write_resource):
+    from flask import request
+    import content_generation as c
+    context = _pattern_transition_authority()
+    body = request.get_json(silent=True)
+    if (request.method != "POST" or request.endpoint != "content_generation.api_pattern_transition"
+            or not isinstance(body, dict) or body.get("confirmed") is not True
+            or body.get("confirmation_id") != approval_id
+            or body.get("activation_resource") != activation_resource or body.get("write_resource") != write_resource):
+        raise PermissionError("PATTERN_EXACT_CONFIRMATION_REQUIRED")
+    if (binding != c._pattern_transition_binding_from_selectors(binding, connection=connection)
+            or pattern_transition_resources(binding) != (activation_resource, write_resource)):
+        raise PermissionError("PATTERN_TRANSITION_BINDING_CHANGED")
+    last = pattern_approval_events(connection, approval_id, context=context)[-1]
+    _require_pattern_issuer(last)
+    if (last["state"] != "PREPARED" or last["binding"] != binding
+            or datetime.fromisoformat(last["expires_at"]) <= datetime.now(timezone.utc)):
+        raise PermissionError("PATTERN_APPROVAL_NOT_CURRENT")
+    _append_pattern_approval(connection, approval_id=approval_id, binding=binding,
+                            state="CONFIRMED", context=context, previous=last)
+    return PatternTransitionAdmission(approval_id, _pattern_json(binding), _pattern_hash(binding),
+                                      activation_resource, write_resource, _PATTERN_TRANSITION_SEAL)
+
+
+def validate_pattern_transition_admission(admission, *, connection):
+    from .effect_fence import EffectFence
+    if (type(admission) is not PatternTransitionAdmission or admission._seal is not _PATTERN_TRANSITION_SEAL
+            or not EffectFence._skill_metadata_connection_is_canonical(connection)):
+        raise PermissionError("PATTERN_TYPED_ADMISSION_REQUIRED")
+    context = _pattern_transition_authority()
+    binding = json.loads(admission.binding_json)
+    if (binding.get("context") != context or _pattern_hash(binding) != admission.binding_hash
+            or pattern_transition_resources(binding) != (admission.activation_resource, admission.write_resource)):
+        raise PermissionError("PATTERN_TRANSITION_BINDING_CHANGED")
+    last = pattern_approval_events(connection, admission.approval_id, context=context)[-1]
+    _require_pattern_issuer(last)
+    if (last["state"] != "CONFIRMED" or last["binding"] != binding
+            or datetime.fromisoformat(last["expires_at"]) <= datetime.now(timezone.utc)):
+        raise PermissionError("PATTERN_APPROVAL_NOT_CURRENT")
+    return last
+
+
+def consume_pattern_transition(connection, *, admission):
+    last = validate_pattern_transition_admission(admission, connection=connection)
+    return _append_pattern_approval(connection, approval_id=admission.approval_id,
+        binding=json.loads(admission.binding_json), state="CONSUMED", context=last["context"], previous=last)
+
+
+def revoke_pattern_transition(connection, *, approval_id):
+    context = _pattern_transition_authority()
+    last = pattern_approval_events(connection, approval_id, context=context)[-1]
+    if last["state"] == "CONSUMED":
+        return {"state": "ALREADY_EXECUTED", "rollback_requires_confirmation": True}
+    if last["state"] == "REVOKED":
+        return {"state": "REVOKED", "replayed": True}
+    _append_pattern_approval(connection, approval_id=approval_id, binding=last["binding"],
+                            state="REVOKED", context=context, previous=last)
+    return {"state": "REVOKED"}
+
+
+@contextmanager
+def pattern_approval_commit_lease(*, connection, approval_id, expected_state):
+    """SQLite serializes durable revocation; local lock serializes permission withdrawal."""
+    from .effect_fence import EffectFence
+    if not EffectFence._skill_metadata_connection_is_canonical(connection):
+        raise PermissionError("PATTERN_CANONICAL_TRANSACTION_REQUIRED")
+    context = _pattern_transition_authority()
+    last = pattern_approval_events(connection, approval_id, context=context)[-1]
+    if last["state"] != expected_state:
+        raise PermissionError("PATTERN_APPROVAL_COMMIT_STATE_CHANGED")
+    if expected_state != "REVOKED":
+        _require_pattern_issuer(last)
+    gate = get_permission_gate()
+    if not gate._approval_lock.acquire(timeout=2.0):
+        raise PermissionError("PATTERN_APPROVAL_COMMIT_LOCK_UNAVAILABLE")
+    try:
+        # No Gate.check or token lookup under this non-reentrant lock.
+        if (gate is not get_permission_gate() or not gate.fail_closed or is_testing_bypass_enabled()
+                or not gate.has_permission(PermissionLevel.COMMIT)
+                or not gate.has_permission(PermissionLevel.HUMAN_APPROVAL)):
+            raise PermissionError("PATTERN_APPROVAL_COMMIT_REVOKED")
+        if expected_state != "REVOKED" and datetime.fromisoformat(last["expires_at"]) <= datetime.now(timezone.utc):
+            raise PermissionError("PATTERN_APPROVAL_EXPIRED")
+        yield
+    finally:
+        gate._approval_lock.release()

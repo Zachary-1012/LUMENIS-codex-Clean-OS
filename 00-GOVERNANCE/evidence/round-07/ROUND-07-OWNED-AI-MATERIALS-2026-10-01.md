@@ -423,7 +423,7 @@ state=`not_requested`. It is real intake/reopen evidence, not useful-AI completi
 
 ## Independent cloud verification
 
-Existing Codex Cloud task `01a0f350-f55f-75d6-ac80-75b74fc37033` fast-forwarded
+Existing Codex Cloud task `private-source-id-sha256-e7ec0baf9ed805990fe02e853a6063c2f71e1dc1fb96e3dbc0df69a9bc7964bd` fast-forwarded
 cleanly to the base SHA and verified the same SHA before/after. Report suites:
 55 passed in 17.80s, exit 0. Constitution and takeover gates: exit 0. Three old
 startup/migration tests reproduced failures (exit 1), requiring repair; this is

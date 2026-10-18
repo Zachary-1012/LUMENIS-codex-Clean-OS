@@ -149,7 +149,7 @@ def test_document_analyzer_uses_owned_gateway_and_keeps_unavailable_truthful(mon
 
     monkeypatch.setattr(builtins, "__import__", reject_retired)
 
-    note = analyzer.analyze_text("广州太古汇的访客今天反馈排队较长。", ["广州太古汇"])[0]
+    note = analyzer.analyze_text("广州太古汇的访客今天反馈排队较长。", ["广州太古汇"], ai_enhancement=True)[0]
 
     assert calls and "source text" in calls[0]["text"].casefold()
     assert note.analysis_status == "UNAVAILABLE"

@@ -5,6 +5,11 @@ account/api.py — 账户体系 API 蓝图
 包含：资料/密码/设备/成员/审批/审计/恢复/密钥/验证码/TOTP/产品保护/导航/技能
 """
 import json
+import threading as _threading
+import time as _time
+import uuid as _uuid
+import sqlite3 as _sqlite3
+from urllib.parse import urlsplit as _urlsplit
 from flask import Blueprint, request, jsonify, g
 
 from .service import (
@@ -642,80 +647,293 @@ def api_activate_installed_skill():
     return jsonify(result), 200 if result.get("success") else 400
 
 
+# Short-lived server-issued candidates, bound to actor and registry snapshot.
+# Multi-worker misses fail closed; clients repeat preparation on that worker.
+_MCP_REVIEW_LOCK = _threading.RLock()
+_MCP_REVIEW_CANDIDATES = {}
+
+
+def _mcp_same_origin():
+    """Match the product's browser-origin policy; native bearer clients may omit Origin."""
+    if not request.is_json:
+        return False
+    if request.headers.get("Sec-Fetch-Site", "").lower() in {"cross-site", "cross-origin"}:
+        return False
+    candidate = request.headers.get("Origin", request.headers.get("Referer"))
+    if candidate is None:
+        return True
+    try:
+        parsed = _urlsplit(candidate)
+        return (
+            parsed.scheme in {"http", "https"}
+            and not parsed.username
+            and not parsed.password
+            and parsed.scheme.lower() == request.scheme.lower()
+            and parsed.netloc.lower() == request.host.lower()
+        )
+    except (ValueError, TypeError):
+        return False
+
+
+def _mcp_review_scope(data):
+    """Recheck the authenticated actor's current exact skills scope before process startup."""
+    from lumenis.system.security import permission
+
+    scope = {
+        "domain_id": data.get("domain_id", "cth"),
+        "subject_id": data.get("subject_id"),
+        "brand_focus_id": data.get("brand_focus_id"),
+        "global_scope": data.get("global_scope", True),
+    }
+    decision = permission.check_actor_scope_permission(
+        {"id": g.current_user["id"]},
+        action="write",
+        module="skills",
+        gate=permission.get_permission_gate(),
+        **scope,
+    )
+    if (
+        type(decision) is not permission.ActorScopePermissionResult
+        or decision.allowed is not True
+        or decision.verification_state != "verified"
+    ):
+        raise PermissionError("MCP_SKILL_SCOPE_DENIED")
+    return scope
+
+
 @account_bp.route("/skills/source/mcp/discover", methods=["POST"])
 @require_owner
 def api_discover_mcp_source():
-    """只读发现 MCP 能力；不调用工具、不注册、不授予权限。"""
+    """Discover only the registered entrypoint; request argv is never executed."""
+    from mcp_skill_runtime import discover_registered_mcp
+
+    if not _mcp_same_origin():
+        return jsonify({"ok": False, "error": "MCP_SAME_ORIGIN_JSON_REQUIRED"}), 403
     data = request.get_json(silent=True) or {}
-    source = str(data.get("source") or "")
-    from lumenis.shared.agents.skills.package_runtime import detect_source
-    detected = detect_source(source)
-    if detected.source_type != "mcp_stdio":
-        return jsonify({"ok": False, "state": "BLOCKED", "error": "source must be an mcp+stdio source"}), 400
-    command = data.get("command")
-    args = data.get("args", [])
-    if not isinstance(command, list) or not isinstance(args, list):
-        return jsonify({"ok": False, "state": "BLOCKED", "error": "command and args must be argv lists"}), 400
-    result = discover_mcp_stdio(
-        command,
-        args,
-        allow_process=bool(data.get("confirm_process", False)),
-        timeout=float(data.get("timeout", 10.0)),
-    )
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "MCP request must be a JSON object"}), 400
+    skill_id = data.get("skill_id")
+    if (
+        not isinstance(skill_id, str)
+        or not skill_id
+        or any(k in data for k in ("command", "args", "source"))
+    ):
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "state": "REGISTERED_SKILL_REQUIRED",
+                    "error": "Use skill_id for an installed registered MCP Skill; arbitrary argv discovery is disabled.",
+                }
+            ),
+            400,
+        )
+    if data.get("confirm_process") is not True:
+        return (
+            jsonify({"ok": False, "state": "BLOCKED", "error": "confirm_process must be true"}),
+            400,
+        )
+    info = get_skill_info(skill_id)
+    if not info or info.get("runtime") != "mcp":
+        return jsonify({"ok": False, "state": "REGISTERED_SKILL_REQUIRED"}), 404
+    try:
+        _mcp_review_scope(data)
+    except PermissionError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 403
+    result = discover_registered_mcp(info)
     return jsonify(result), 200 if result.get("ok") else 400
+
+
+@account_bp.route("/skills/<skill_id>/mcp/contract/prepare", methods=["POST"])
+@require_owner
+def api_prepare_mcp_contract(skill_id):
+    from lumenis.shared.agents.skills.lifecycle import prepare_skill_metadata_change
+    from lumenis.system.security import permission
+
+    if not _mcp_same_origin():
+        return jsonify({"ok": False, "error": "MCP_SAME_ORIGIN_JSON_REQUIRED"}), 403
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "MCP request must be a JSON object"}), 400
+    if any(key in data for key in ("discovery", "tools", "tool_contracts", "command", "args")):
+        return jsonify({"ok": False, "error": "Contract discovery must be server-generated"}), 400
+    try:
+        actor = g.current_user["id"]
+        scope = _mcp_review_scope(data)
+        candidate = prepare_skill_metadata_change(
+            skill_id,
+            "review_mcp_contract",
+            operation_id=str(_uuid.uuid4()),
+            confirm_process=data.get("confirm_process") is True,
+        )
+        resource = permission.skill_metadata_approval_resource(
+            candidate, actor_id=actor, principal=None, **scope
+        )
+        with _MCP_REVIEW_LOCK:
+            now = _time.monotonic()
+            for key, item in list(_MCP_REVIEW_CANDIDATES.items()):
+                if item[0] <= now:
+                    del _MCP_REVIEW_CANDIDATES[key]
+            if len(_MCP_REVIEW_CANDIDATES) >= 128:
+                return jsonify({"ok": False, "error": "Too many pending contract reviews"}), 429
+            _MCP_REVIEW_CANDIDATES[candidate.candidate_sha256] = (
+                now + 300,
+                actor,
+                candidate,
+                scope,
+            )
+        return jsonify(
+            {
+                "ok": True,
+                "candidate": candidate.to_dict(),
+                "approval_resource": resource,
+                "expires_in_seconds": 300,
+                "next": "Review schemas, then POST confirm=true and candidate_sha256 to mcp/contract/approve",
+            }
+        )
+    except (ValueError, PermissionError, LookupError, RuntimeError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+
+
+@account_bp.route("/skills/<skill_id>/mcp/contract/approve", methods=["POST"])
+@require_owner
+def api_approve_mcp_contract(skill_id):
+    from lumenis.shared.agents.skills.lifecycle import apply_skill_metadata_change
+    from lumenis.system.security import permission
+
+    if not _mcp_same_origin():
+        return jsonify({"ok": False, "error": "MCP_SAME_ORIGIN_JSON_REQUIRED"}), 403
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "MCP request must be a JSON object"}), 400
+    fingerprint = data.get("candidate_sha256")
+    if data.get("confirm") is not True or not isinstance(fingerprint, str):
+        return (
+            jsonify({"ok": False, "error": "Exact candidate_sha256 and confirm=true are required"}),
+            400,
+        )
+    with _MCP_REVIEW_LOCK:
+        entry = _MCP_REVIEW_CANDIDATES.get(fingerprint)
+        if (
+            not entry
+            or entry[0] <= _time.monotonic()
+            or entry[1] != g.current_user["id"]
+            or entry[2].skill_id != skill_id
+        ):
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": "Contract review expired or does not match actor/Skill; prepare again",
+                    }
+                ),
+                409,
+            )
+        _expires, actor, candidate, scope = entry
+        gate = permission.get_permission_gate()
+        spec = gate.get_operation_spec(permission.OperationType.CONFIG_MODIFY)
+        if (
+            permission.is_testing_bypass_enabled()
+            or not gate.has_permission(permission.PermissionLevel.COMMIT)
+            or spec.permission is not permission.PermissionLevel.COMMIT
+            or spec.risk not in {permission.RiskLevel.HIGH, permission.RiskLevel.CRITICAL}
+            or spec.auto_allow is not False
+        ):
+            return (
+                jsonify(
+                    {"ok": False, "error": "Canonical COMMIT/manual approval policy is required"}
+                ),
+                403,
+            )
+        token = None
+        try:
+            resource = permission.skill_metadata_approval_resource(
+                candidate, actor_id=actor, principal=None, **scope
+            )
+            token = gate.grant_approval(
+                permission.OperationType.CONFIG_MODIFY.value,
+                duration_minutes=5,
+                resource=resource,
+                granted_by=f"mcp_contract_owner:{actor}",
+            )
+            result = apply_skill_metadata_change(
+                candidate, gate=gate, actor_id=actor, principal=None, **scope
+            )
+            del _MCP_REVIEW_CANDIDATES[fingerprint]
+            return jsonify(
+                {
+                    "ok": True,
+                    "result": result,
+                    "next": "Skill remains disabled. Re-run the existing local activation/self-check for the same package, then enable and execute. A changed runtime requires a fresh contract review.",
+                }
+            )
+        except _sqlite3.DatabaseError:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": "MCP contract approval storage is not ready; initialize the canonical database first",
+                    }
+                ),
+                503,
+            )
+        except (ValueError, PermissionError, LookupError, RuntimeError) as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 403
+        finally:
+            if token:
+                gate.revoke_approval(token)
 
 
 @account_bp.route("/skills/source/mcp/call", methods=["POST"])
 @require_owner
 def api_call_mcp_tool():
-    """Call one reviewed read-only MCP tool; never persist its result."""
+    """Compatibility endpoint delegates to the canonical registered execution chain."""
+    if not _mcp_same_origin():
+        return jsonify({"ok": False, "error": "MCP_SAME_ORIGIN_JSON_REQUIRED"}), 403
     data = request.get_json(silent=True) or {}
-    source = str(data.get("source") or "")
-    from lumenis.shared.agents.skills.package_runtime import detect_source
-    detected = detect_source(source)
-    if detected.source_type != "mcp_stdio":
-        return jsonify({
-            "ok": False, "state": "BLOCKED",
-            "error": "source must be an mcp+stdio source",
-        }), 400
-    command = data.get("command")
-    args = data.get("args", [])
-    if not isinstance(command, list) or not isinstance(args, list):
-        return jsonify({
-            "ok": False, "state": "BLOCKED",
-            "error": "command and args must be argv lists",
-        }), 400
-    tool_name = data.get("tool_name")
-    permissions = data.get("permissions_granted", [])
-    allowed_tools = data.get("allowed_tools", [])
-    arguments = data.get("arguments", {})
-    if not isinstance(tool_name, str) or not isinstance(permissions, list):
-        return jsonify({
-            "ok": False, "state": "BLOCKED",
-            "error": "tool_name and permissions_granted are required",
-        }), 400
-    if not isinstance(allowed_tools, list) or not isinstance(arguments, dict):
-        return jsonify({
-            "ok": False, "state": "BLOCKED",
-            "error": "allowed_tools must be a list and arguments must be an object",
-        }), 400
-    try:
-        timeout = float(data.get("timeout", 10.0))
-    except (TypeError, ValueError):
-        return jsonify({"ok": False, "state": "BLOCKED", "error": "timeout is invalid"}), 400
-    result = call_mcp_stdio(
-        command,
-        args,
-        tool_name=tool_name,
-        arguments=arguments,
-        allow_process=data.get("confirm_process") is True,
-        allow_tool_call=data.get("confirm_tool_call") is True,
-        human_approved=data.get("human_approved") is True,
-        permissions_granted=permissions,
-        allowed_tools=allowed_tools,
-        timeout=timeout,
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "MCP request must be a JSON object"}), 400
+    skill_id = data.get("skill_id")
+    if (
+        not isinstance(skill_id, str)
+        or not skill_id
+        or any(
+            k in data
+            for k in (
+                "command",
+                "args",
+                "source",
+                "permissions_granted",
+                "allowed_tools",
+                "tool_contracts",
+            )
+        )
+    ):
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "state": "REGISTERED_SKILL_REQUIRED",
+                    "error": "Use a registered skill_id: prepare/approve its mcp/contract, enable it, then call /skills/<skill_id>/execute. Client-provided argv and grants are not accepted.",
+                }
+            ),
+            400,
+        )
+    info = get_skill_info(skill_id)
+    if not info or info.get("runtime") != "mcp":
+        return jsonify({"ok": False, "state": "REGISTERED_SKILL_REQUIRED"}), 404
+    payload = {
+        key: data[key]
+        for key in ("tool_name", "arguments", "human_approved", "timeout")
+        if key in data
+    }
+    result = execute_skill_api(
+        skill_id=skill_id,
+        input_payload=payload,
+        user_id=g.current_user["id"],
+        product=data.get("product"),
     )
-    return jsonify(result), 200 if result.get("ok") else 400
+    return jsonify(result), 200 if result.get("success") else 400
 
 
 @account_bp.route("/connectors/github/status", methods=["GET"])
@@ -797,7 +1015,7 @@ def api_execute_skill(skill_id):
         user_role=user.get("role", "user"),
         # Product is a requested lens only; execute_skill_api rechecks it
         # against the authenticated user's server-side authorization matrix.
-        product=data.get("product"),
+        product=data.get("product"), scope=data.get("scope"),
     )
     status_code = 200 if result.get("success") else (404 if result.get("code") == "NOT_FOUND" else 400)
     return jsonify(result), status_code

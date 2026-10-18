@@ -1,7 +1,7 @@
 """Bounded typed dispatch; no eval/exec/shell/network/model calls."""
 
 from .core import Budget, MathInputError, digest, strict_keys, wire
-from .provenance import source_card
+from .provenance import source_card, assert_review
 
 OPERATIONS = {
     "unique_games.evaluate": (
@@ -31,7 +31,7 @@ OPERATIONS = {
 }
 
 
-def execute(request, *, budget=None):
+def execute(request, *, budget=None, offline_review=False):
     strict_keys(request, {"operation", "parameters"})
     op = request["operation"]
     p = request["parameters"]
@@ -39,6 +39,12 @@ def execute(request, *, budget=None):
         raise MathInputError("UNSUPPORTED_PAPER_OPERATION")
     family, required, optional = OPERATIONS[op]
     strict_keys(p, required, optional)
+    if type(offline_review) is not bool:
+        raise MathInputError("OFFLINE_REVIEW_FLAG")
+    review = ({"status": "OFFLINE_PIN_REVIEW_ONLY",
+               "review_revision": "fixed-source-registry-only",
+               "current_withdrawal_status": "NOT_VERIFIED",
+               "publishable": False} if offline_review else assert_review(family))
     b = budget or Budget()
     b.tick()
     if op == "unique_games.evaluate":
@@ -98,12 +104,14 @@ def execute(request, *, budget=None):
         }[op]
         result = fn(**p, b=b)
     b.tick()
+    if not offline_review:
+        assert_review(family, review)
     return wire(
         {
             "operation": op,
             "input_sha256": digest(request),
             "result": result,
-            "paper": source_card(family),
+            "paper": {**source_card(family), "review": review},
             "computation": b.receipt(),
             "base_math": "COMPLETED_COMPUTATION_ONLY",
             "business_outcome": "NOT_OBSERVED",

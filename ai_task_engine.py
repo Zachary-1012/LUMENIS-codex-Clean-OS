@@ -3124,16 +3124,25 @@ class TaskEngine:
                 agent_id = task.get("agent_id", "")
                 if "browser" in agent_id:
                     op_type = OperationType.BROWSER_OPERATION
-                elif task.get("intent") == "generate_report" or agent_id == "analysis_agent":
+                elif (task.get("intent") == "generate_report" or agent_id == "analysis_agent"
+                      or (task.get("context") or {}).get("source_brief_job_id")):
                     op_type = OperationType.REPORT_GENERATE
                 else:
                     op_type = OperationType.AI_CALL
 
+                permission_context = {}
+                if (task.get("context") or {}).get("source_brief_job_id"):
+                    # Reopen through the scoped Owner before using its domain.
+                    # Body-supplied domain fields and cached operation decisions
+                    # must not substitute for live source/actor authorization.
+                    report = self._read_analysis_source(task)
+                    permission_context["domain_id"] = report["source_brief"]["scope"]["domain_id"]
                 result = self.permission_gate.check(
                     operation_type=op_type,
                     resource=f"ai_task:{task_id}",
                     caller="task_engine",
-                    operation_id=f"task_{task_id}",
+                    operation_id=None if permission_context else f"task_{task_id}",
+                    **permission_context,
                 )
 
                 if not result.allowed:
@@ -3507,39 +3516,18 @@ class TaskEngine:
         return self._execute_ai_assist(task, intent)
 
     def _execute_data_query(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
-        """数据查询：只读查询 DB。"""
-        parameters = task.get("parameters", {})
-        result: Dict[str, Any] = {
-            "query_type": intent,
-            "parameters": parameters,
-            "data_source": "monitor.db (read-only)",
-            "note": "Data query executed in read-only mode",
-        }
-
-        # 尝试查询笔记数量（只读）
-        try:
-            with get_db() as conn:
-                total_notes = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
-                total_events = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
-            result["notes_count"] = total_notes
-            result["events_count"] = total_events
-            result["query_success"] = True
-        except Exception as e:
-            result["query_success"] = False
-            result["query_error"] = str(e)
-
-        # AI 辅助总结（可选，带降级）
-        ai_summary = self._try_ai_summarize(task.get("user_input", ""), result)
-        if ai_summary and ai_summary.get("status") == "completed":
-            result["ai_summary"] = ai_summary
-        else:
-            result["ai_summary"] = None
-        result["ai_summary_status"] = (ai_summary or {}).get("status", "unavailable")
-        result["ai_summary_provider"] = (ai_summary or {}).get("provider", "unknown")
-        if (ai_summary or {}).get("error"):
-            result["ai_summary_error"] = ai_summary["error"]
-
-        return result
+        """Query only an admitted, version-bound Source Owner sample."""
+        context = task.get("context") or {}
+        if (context.get("source_brief_job_id") and
+                context.get("analysis_operation") in {"source_statistics", "openai_math"}):
+            return self._execute_analysis(task, intent)
+        return {"status": "unavailable", "error": "SCOPED_SOURCE_OWNER_REQUIRED",
+                "query_type": intent, "ai_required": False,
+                "business_outcome": "NOT_OBSERVED",
+                "next_action": {"method": "POST",
+                                "path": "/api/experience/reports/source-brief/start",
+                                "context": "current authorized GLOBAL or selected focus",
+                                "description": "Generate or select a scoped source result before querying it."}}
 
     def _execute_analysis(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
         """Compute useful statistics over an admitted SourceBrief; AI is opt-in."""
@@ -3651,19 +3639,8 @@ class TaskEngine:
                 "interpretation": "Sample counts and native publication dates only; not market demand, sentiment or platform-wide coverage."}
 
     def _execute_report(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
-        """报告生成：只读聚合。"""
-        result: Dict[str, Any] = {
-            "report_type": intent,
-            "status": "generated",
-            "note": "Report generated from read-only data aggregation",
-        }
-        try:
-            with get_db() as conn:
-                result["notes_count"] = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
-                result["events_count"] = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
-        except Exception as e:
-            result["error"] = str(e)
-        return result
+        """Reports use the same admitted Owner path, never a global DB count."""
+        return self._execute_data_query(task, intent)
 
     def _execute_browser(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
         """浏览器 Agent：只读操作。严格遵守官方账号只读保护。"""
@@ -3925,7 +3902,8 @@ class TaskEngine:
         """Consume current canonical Owner readers, never a caller's verified flag."""
         if not isinstance(result, dict) or result.get("error"):
             return False, "EXECUTION_RETURN"
-        if task.get("agent_id") == "analysis_agent":
+        if (task.get("agent_id") == "analysis_agent" or
+                (task.get("context") or {}).get("analysis_operation") in {"source_statistics", "openai_math"}):
             try:
                 if (task.get("context") or {}).get("analysis_operation") == "openai_math":
                     from lumenis.shared.evaluation.openai_math_papers.product_outcome import verify_product_outcome

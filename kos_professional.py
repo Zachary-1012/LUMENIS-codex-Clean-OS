@@ -248,3 +248,274 @@ def kos_circuit_breaker(timeout: float = 30.0, default_return=None):
 
 # 初始化
 init_db()
+
+
+# Current actor/BrandFocus work records use the existing versioned KOS ledger.
+# Legacy professional_accounts rows have no actor ownership and are never
+# silently attributed to the current workspace.
+def _scoped_account_key(platform, account_id):
+    from lumenis.shared.reporting.saved_work import _digest
+
+    if (
+        not isinstance(platform, str)
+        or not platform.strip()
+        or len(platform) > 80
+        or not isinstance(account_id, str)
+        or not account_id.strip()
+        or len(account_id) > 200
+    ):
+        raise ValueError("PROFESSIONAL_ACCOUNT_INPUT_INVALID")
+    return "professional:" + _digest({"platform": platform, "account_id": account_id})
+
+
+def validate_private_payload(operation, payload):
+    import math
+
+    if operation == "professional_config":
+        required = {"platform", "account_id", "account_name", "enabled"}
+        if set(payload) != required or type(payload["enabled"]) is not bool:
+            raise ValueError("PROFESSIONAL_CONFIG_INVALID")
+        if (
+            not isinstance(payload["account_name"], str)
+            or len(payload["account_name"]) > 300
+        ):
+            raise ValueError("PROFESSIONAL_ACCOUNT_NAME_INVALID")
+    else:
+        if (
+            set(payload) != {"platform", "account_id", "metrics", "source_kind"}
+            or payload["source_kind"] != "USER_DECLARED"
+        ):
+            raise ValueError("PROFESSIONAL_METRIC_ORIGIN_INVALID")
+        rows = payload["metrics"]
+        if not isinstance(rows, list) or not 1 <= len(rows) <= 500:
+            raise ValueError("PROFESSIONAL_METRICS_REQUIRED")
+        dates = set()
+        metrics = {
+            "impressions",
+            "views",
+            "cover_ctr",
+            "follower_gain",
+            "likes",
+            "comments",
+            "collects",
+            "shares",
+        }
+        for row in rows:
+            if (
+                not isinstance(row, dict)
+                or set(row) - metrics - {"metric_date"}
+                or not isinstance(row.get("metric_date"), str)
+            ):
+                raise ValueError("PROFESSIONAL_METRIC_INPUT_INVALID")
+            from datetime import date
+
+            normalized_date = date.fromisoformat(row["metric_date"]).isoformat()
+            if normalized_date in dates:
+                raise ValueError("PROFESSIONAL_METRIC_DUPLICATE_DATE")
+            dates.add(normalized_date)
+            for field in metrics:
+                value = row.get(field)
+                if value is not None and (
+                    type(value) not in (int, float)
+                    or not math.isfinite(value)
+                    or (field != "follower_gain" and value < 0)
+                ):
+                    raise ValueError("PROFESSIONAL_METRIC_NUMBER_INVALID")
+    _scoped_account_key(payload["platform"], payload["account_id"])
+
+
+def read_scoped_accounts(*, actor, scope, platform=None):
+    import kos_ops
+
+    records = kos_ops.read_scoped_operations(
+        actor=actor, scope=scope, operation="professional_config", limit=200,
+        complete_history=True
+    )
+    latest = {}
+    for record in records["items"]:
+        latest.setdefault(record["author_id"], record)
+    accounts = []
+    for record in latest.values():
+        payload = record["payload"]
+        validate_private_payload("professional_config", payload)
+        if _scoped_account_key(payload["platform"], payload["account_id"]) != record["author_id"]:
+            raise ValueError("PROFESSIONAL_ACCOUNT_IDENTITY_MISMATCH")
+        if platform is not None and payload["platform"] != platform:
+            continue
+        accounts.append(
+            {
+                **payload,
+                "version": record["version"],
+                "sha256": record["sha256"],
+                "auth_status": "UNKNOWN",
+                "platform_connection": "NOT_VERIFIED",
+                "state": "LOCAL_ENABLED" if payload["enabled"] else "LOCAL_DISABLED",
+            }
+        )
+    return {
+        "accounts": accounts,
+        "legacy_scope": "UNKNOWN",
+        "scope": scope,
+        "coverage": "LATEST_PER_ACCOUNT_FROM_COMPLETE_VERIFIED_HISTORY",
+    }
+
+
+def configure_scoped_account(
+    *,
+    actor,
+    scope,
+    platform,
+    account_id,
+    enabled,
+    account_name="",
+    request_id,
+    expected_version=0
+):
+    import kos_ops
+
+    payload = {
+        "platform": platform,
+        "account_id": account_id,
+        "account_name": account_name,
+        "enabled": enabled,
+    }
+    validate_private_payload("professional_config", payload)
+    result = kos_ops.write_scoped_operation(
+        actor=actor,
+        scope=scope,
+        author_id=_scoped_account_key(platform, account_id),
+        operation="professional_config",
+        payload=payload,
+        request_id=request_id,
+        expected_version=expected_version,
+    )
+    return {
+        **result,
+        "state": "LOCAL_ENABLED" if enabled else "LOCAL_DISABLED",
+        "auth_status": "UNKNOWN",
+        "platform_connection": "NOT_VERIFIED",
+        "external_effect": "not_performed",
+    }
+
+
+def import_scoped_metrics(
+    *, actor, scope, platform, account_id, metrics, request_id, expected_version=0
+):
+    import kos_ops
+
+    key = _scoped_account_key(platform, account_id)
+    configurations = kos_ops.read_scoped_operations(
+        actor=actor, scope=scope, author_id=key, operation="professional_config"
+    )
+    if (
+        not configurations["items"]
+        or configurations["items"][0]["payload"]["enabled"] is not True
+    ):
+        raise ValueError("PROFESSIONAL_LOCAL_CONFIGURATION_DISABLED")
+    payload = {
+        "platform": platform,
+        "account_id": account_id,
+        "metrics": metrics,
+        "source_kind": "USER_DECLARED",
+    }
+    validate_private_payload("professional_metrics", payload)
+    return kos_ops.write_scoped_operation(
+        actor=actor,
+        scope=scope,
+        author_id=key,
+        operation="professional_metrics",
+        payload=payload,
+        request_id=request_id,
+        expected_version=expected_version,
+    )
+
+
+def read_scoped_metrics(
+    *, actor, scope, platform, account_id, start_date="", end_date=""
+):
+    import kos_ops
+    from datetime import date
+
+    if start_date:
+        start_date = date.fromisoformat(start_date).isoformat()
+    if end_date:
+        end_date = date.fromisoformat(end_date).isoformat()
+    if start_date and end_date and start_date > end_date:
+        raise ValueError("PROFESSIONAL_DATE_RANGE_INVALID")
+    records = kos_ops.read_scoped_operations(
+        actor=actor,
+        scope=scope,
+        author_id=_scoped_account_key(platform, account_id),
+        operation="professional_metrics",
+        complete_history=True,
+    )
+    current = records["items"][0] if records["items"] else None
+    fields = (
+        "impressions",
+        "views",
+        "cover_ctr",
+        "follower_gain",
+        "likes",
+        "comments",
+        "collects",
+        "shares",
+    )
+    # Each accepted import replaces only its named dates. Newer batches must
+    # not hide prior dates, and previous revisions must never be summed twice.
+    by_date = {}
+    for record in records["items"]:
+        payload = record["payload"]
+        validate_private_payload("professional_metrics", payload)
+        if payload["platform"] != platform or payload["account_id"] != account_id:
+            raise ValueError("PROFESSIONAL_ACCOUNT_IDENTITY_MISMATCH")
+        for row in payload["metrics"]:
+            metric_date = date.fromisoformat(row["metric_date"]).isoformat()
+            if metric_date not in by_date:
+                by_date[metric_date] = {
+                    **row,
+                    **{field: row.get(field) for field in fields},
+                    "metric_date": metric_date,
+                    "source_kind": "USER_DECLARED",
+                    "official_verification": "NOT_VERIFIED",
+                    "version": record["version"],
+                    "record_id": record["record_id"],
+                    "sha256": record["sha256"],
+                    "imported_at": record["created_at"],
+                }
+    values = [by_date[key] for key in sorted(by_date, reverse=True)
+              if (not start_date or key >= date.fromisoformat(start_date).isoformat())
+              and (not end_date or key <= date.fromisoformat(end_date).isoformat())]
+    return {
+        "metrics": values,
+        "current": current,
+        "versions": records["items"],
+        "scope": scope,
+        "legacy_scope": "UNKNOWN",
+        "external_campaign_results": "NOT_ESTABLISHED",
+        "projection": "latest-row-per-date-from-complete-verified-history:v1",
+        "import_semantics": "replace_named_dates_retain_omitted_dates",
+        "withdrawal_semantics": "no_date_deletion_by_omission; account_disable_preserves_history",
+    }
+
+
+def validate_configuration_at_commit(connection, *, context, account_key):
+    """Recheck local enablement in the same serialized ledger transaction."""
+    import json
+    from lumenis.shared.reporting.saved_work import _digest
+
+    rows = connection.execute(
+        "SELECT note FROM kos_operations WHERE author_id=? AND action='scoped_professional_config' ORDER BY id DESC",
+        (account_key,),
+    ).fetchall()
+    for row in rows:
+        value = json.loads(row[0])
+        if value.get("context") != context:
+            continue
+        if value.get("sha256") != _digest(
+            {key: item for key, item in value.items() if key != "sha256"}
+        ):
+            raise ValueError("KOS_OPERATION_INTEGRITY_FAILED")
+        if value["payload"]["enabled"] is not True:
+            raise ValueError("PROFESSIONAL_LOCAL_CONFIGURATION_DISABLED")
+        return
+    raise ValueError("PROFESSIONAL_LOCAL_CONFIGURATION_DISABLED")

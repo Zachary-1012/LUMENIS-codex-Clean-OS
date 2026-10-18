@@ -582,7 +582,16 @@ def test_manual_focus_collect_search_uses_native_xhs_items_and_exact_scope(
     class FakeXhsBackend:
         calls = []
 
-        def search_xiaohongshu(self, source_keyword, *, max_scroll, output_path=None, max_details=10):
+        def search_xiaohongshu(
+            self, source_keyword, *, max_scroll, output_path=None, max_details=10,
+            region=None, account=None, worker_chunk_seconds=300,
+            acquisition_fingerprint=None, detail_media_mode="legacy",
+        ):
+            assert region == "intl"
+            assert account is None
+            assert worker_chunk_seconds == 300
+            assert acquisition_fingerprint is None
+            assert detail_media_mode == "legacy"
             self.calls.append((source_keyword, max_scroll, output_path, max_details))
             return {
                 "notes": [raw], "total": 1, "channel": "isolated_fixture",

@@ -339,11 +339,15 @@ def get_skill_info(skill_id: str) -> dict:
 
 def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
                       action_type: str = "ANALYZE", user_id: int = None,
-                      user_role: str = "user", product: str = None) -> dict:
+                      user_role: str = "user", product: str = None, *,
+                      _execution_id=None, _background=False, _agent_task_id=None, _workspace_principal=None, scope=None) -> dict:
     """执行 Skill（走完整执行链：Permission→Firewall→Effect Fence→Execute→Evidence→Evaluation→Trace）"""
     from lumenis.shared.agents.skills.execution import (
-        run_execution_chain, ActionType, SkillRuntimeInfo,
+        run_execution_chain, ActionType, SkillRuntimeInfo, registered_background_handler,
     )
+    if _workspace_principal is not None:
+        return _execute_local_agent_skill(skill_id, task, input_payload or {}, action_type,
+            _execution_id, _agent_task_id, _workspace_principal)
     # 获取 Skill 信息用于权限检查
     info = get_skill_info(skill_id)
     if not info:
@@ -367,6 +371,22 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
     if not row or row["status"] != "active" or row["role"] not in ("owner", "admin", "user"):
         return {"success": False, "error": "active authenticated actor required", "code": "ACTOR_INVALID"}
     actual_role = row["role"]
+    agent_context = None
+    if _agent_task_id is not None:
+        try:
+            from ai_task_engine import get_task_engine
+            from agent_runtime.task_binding import authorized_context
+            original = get_task_engine().get_task(_agent_task_id)
+            if not isinstance(original, dict):
+                raise PermissionError('AGENT_TASK_UNAVAILABLE')
+            agent_context = authorized_context(original, {'id': user_id})
+            if (agent_context['actor_id'] != user_id or _background
+                    or (scope is not None and scope != agent_context['scope'])
+                    or task != original['user_input']):
+                raise PermissionError('AGENT_SKILL_BINDING_INVALID')
+            scope = dict(agent_context['scope'])
+        except (PermissionError, ValueError, KeyError, TypeError):
+            return {'success': False, 'error': 'Agent task binding denied', 'code': 'AGENT_SKILL_SCOPE_DENIED'}
 
     requested_product = str(product or info.get("product") or "").strip().upper()
     product_map = {
@@ -379,6 +399,8 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
     if not selected_scope or requested_product == "SHARED":
         return {"success": False, "error": "select an authorized CTH, BMP or SYSTEM context", "code": "PRODUCT_CONTEXT_REQUIRED"}
     product_id, domain_id = selected_scope
+    if agent_context is not None and (product_id != agent_context['product'] or domain_id != agent_context['domain_id']):
+        return {'success': False, 'error': 'Agent task product mismatch', 'code': 'AGENT_SKILL_SCOPE_DENIED'}
 
     at_name = str(action_type or "ANALYZE").upper()
     if actual_role == "user" and at_name in {"COMMIT", "PUSH"}:
@@ -404,6 +426,7 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
     for key in (
         "runtime", "source", "source_type", "entrypoint", "install_path",
         "active_version", "version", "tools_json", "permissions_granted_json",
+        "input_schema_json", "output_schema_json", "compatibility_json",
         "install_state", "lifecycle_state", "health_state",
     ):
         if info.get(key) is not None:
@@ -444,18 +467,62 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
             "system_writer" if access_action == "write" else "system_operator"
         )
 
-    ctx = run_execution_chain(
-        skill_id=skill_id,
-        task=task,
-        input_payload=input_payload or {},
-        action_type=at,
-        user_id=user_id,
-        user_role=actual_role,
-        product=product_id,
-        domain=domain_id,
-        permission_role=permission_role,
-        skill_info=skill_runtime,
-    )
+    if _background:
+        from lumenis.shared.agents.skills.execution import enqueue_registered_skill
+        return enqueue_registered_skill(skill_id=skill_id, task=task,
+            input_payload=input_payload or {}, action_type=at, user_id=user_id,
+            product=product_id, domain=domain_id, skill_info=info, scope=scope)
+
+    try:
+        ctx = run_execution_chain(
+            skill_id=skill_id,
+            task=task,
+            input_payload=input_payload or {},
+            action_type=at,
+            user_id=user_id,
+            user_role=actual_role,
+            product=product_id,
+            domain=domain_id,
+            permission_role=permission_role,
+            skill_info=skill_runtime,
+            execution_id=_execution_id,
+            request_context=({"skill_scope": scope, "agent_task_id": _agent_task_id} if agent_context is not None
+                             else {"skill_scope": scope} if scope is not None else None),
+            handler=registered_background_handler(skill_id) if _execution_id is not None else None,
+        )
+    except Exception:
+        if scope is None:
+            raise
+        # Exception text can contain handler-derived data just as a failed
+        # return value can. Do not publish it outside the execution owner.
+        return {"success": False, "execution_id": _execution_id, "status": "failed",
+                "skill_id": skill_id, "result": None, "evidence": None,
+                "evaluation": None, "error": "SKILL_RESULT_NOT_AUTHORIZED"}
+
+    # Scoped outputs cross this API boundary only after durable signed proof and
+    # live read authorization. A failed receipt must not leak handler data through
+    # an error response, evidence summary, or an Agent's failed checkpoint.
+    if scope is not None and ctx.execute_result is not None:
+        from lumenis.shared.agents.skills.execution import query_executions, verified_execution_scope, _trace_json
+        try:
+            rows = query_executions(execution_id=ctx.execution_id, limit=1, strict=True)
+            readable = (ctx.status.value == "completed" and rows
+                        and verified_execution_scope(rows[0], {"id": user_id})
+                        and json.loads(rows[0]['output_json']) == json.loads(_trace_json(ctx.execute_result)))
+        except Exception:
+            readable = False
+        if not readable:
+            return {"success": False, "execution_id": ctx.execution_id,
+                    "status": "failed", "skill_id": skill_id, "result": None,
+                    "evidence": None, "evaluation": None,
+                    "error": (ctx.error if ctx.error in {
+                        "SKILL_EXECUTION_TRACE_FINALIZATION_FAILED", "EVIDENCE_RECORD_FAILED"}
+                        else "SKILL_RESULT_NOT_AUTHORIZED")}
+        # The durable owner already sanitized these fields before signing. Return
+        # that exact projection, never the unsanitized in-memory handler value.
+        ctx.execute_result = json.loads(rows[0]['output_json'])
+        ctx.evidence = json.loads(rows[0]['evidence_json'] or 'null')
+        ctx.evaluation = json.loads(rows[0]['evaluation_json'] or 'null')
 
     return {
         "success": ctx.status.value == "completed",
@@ -538,3 +605,26 @@ def recover_skill_metadata_candidate(skill_id: str, evidence_ref: str):
     """Recover a signed candidate; this delegate grants no execution permission."""
     from lumenis.shared.agents.skills.lifecycle import recover_skill_metadata_candidate as recover
     return recover(skill_id, evidence_ref)
+
+
+def _execute_local_agent_skill(skill_id, task, inputs, action_type, execution_id, task_id, principal):
+    """Only the original server Agent task may invoke five bounded local tools."""
+    from agent_runtime.task_binding import authorized_context, _current_binding, _digest
+    from ai_task_engine import get_task_engine
+    from lumenis.shared.agents.skills.execution import (run_execution_chain, ActionType,
+        registered_background_handler, _BACKGROUND_INPUTS)
+    original = get_task_engine().get_task(task_id)
+    context = authorized_context(original, principal)
+    _current_binding(task_id, skill_id)
+    expected = 'agentstep_' + _digest({'task': task_id, 'skill': skill_id, 'inputs': inputs})[:32]
+    if (context['actor_id'] is not None or skill_id not in _BACKGROUND_INPUTS
+            or set(inputs) - _BACKGROUND_INPUTS[skill_id] or action_type != 'READ'
+            or execution_id != expected or original['status'] == 'cancelled'):
+        raise PermissionError('LOCAL_AGENT_SKILL_BINDING_INVALID')
+    ctx = run_execution_chain(skill_id=skill_id, task=original['user_input'], input_payload=inputs,
+        action_type=ActionType.READ, user_id=None, user_role='user', product=context['product'],
+        domain=context['domain_id'], permission_role=context['role'],
+        request_context={'agent_task_id': task_id}, workspace_principal=principal,
+        execution_id=execution_id, handler=registered_background_handler(skill_id))
+    return {'success': ctx.status.value == 'completed', 'execution_id': ctx.execution_id,
+            'status': ctx.status.value, 'result': ctx.execute_result, 'error': ctx.error}

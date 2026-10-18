@@ -1,0 +1,295 @@
+# kos_attribution.py:1-294
+1: # -*- coding: utf-8 -*-
+2: """LUMENIS BMP KOS attribution compatibility module
+3: 
+4: 原则：
+5: 1. 不把最终结果简单全部归因给最后一个KOS。
+6: 2. 支持多触点：内容贡献/互动贡献/传播贡献/事件贡献/品牌贡献/用户需求贡献/商业贡献/风险贡献。
+7: 3. 数据来自真实数据库，不造虚假归因。
+8: 
+9: G1 修复（2026-09-06）：
+10: - demand_score 阈值从 config/kos_platform_rules.json 的 attribution_weights.demand_threshold 读取，不再硬编码 /500
+11: - time_weight 系数从 attribution_weights.time_weight_coeff 读取，不再硬编码 0.5
+12: - interactions 按平台权重计算（各平台 likes/comments/shares/collects 权重不同），从 platform_weights 读取
+13: - 配置缺失时显式 WARNING 日志 + 回退默认值（默认值与配置一致，不静默）
+14: """
+15: from __future__ import annotations
+16: import json
+17: import logging
+18: import math
+19: import sqlite3
+20: from canonical_metrics import engagement_count
+21: from typing import Optional
+22: from pathlib import Path
+23: from lumenis.shared.database import main_db_path
+24: from lumenis.shared.database.repository import DatabaseRepository
+25: 
+26: logger = logging.getLogger(__name__)
+27: 
+28: DB_PATH = Path(main_db_path())
+29: CONFIG_PATH = Path(__file__).parent / "config" / "kos_platform_rules.json"
+30: 
+31: # G1: 归因模块默认值（必须与 config/kos_platform_rules.json 的 attribution_weights 一致）
+32: # 配置缺失时显式 WARNING 后回退到此默认，不静默。
+33: _DEFAULT_ATTRIBUTION_WEIGHTS = {
+34:     "demand_threshold": 500,
+35:     "time_weight_coeff": 0.5,
+36:     "time_weight_range": 1.0,
+37:     "interaction_threshold": 5000,
+38:     "reach_threshold": 2000,
+39:     "commercial_threshold": 1000,
+40: }
+41: 
+42: # 平台名归一化：xhs / xiaohongshu-cdp → xiaohongshu
+43: _PLATFORM_ALIASES = {
+44:     "xhs": "xiaohongshu",
+45:     "xiaohongshu-cdp": "xiaohongshu",
+46:     "rednote": "xiaohongshu",
+47: }
+48: 
+49: _attr_config_cache = None
+50: _attr_config_status = "unloaded"
+51: 
+52: 
+53: def _normalize_platform(platform):
+54:     """归一化平台名，未知平台回退 xiaohongshu。"""
+55:     if not platform:
+56:         return "xiaohongshu"
+57:     p = str(platform).strip().lower()
+58:     return _PLATFORM_ALIASES.get(p, p)
+59: 
+60: 
+61: def load_attribution_config():
+62:     """G1: 从 config/kos_platform_rules.json 加载归因权重配置。
+63: 
+64:     返回 dict，包含 attribution_weights 和 platform_weights（从各平台 engagement_weights 提取）。
+65:     配置缺失/损坏时显式 WARNING 并回退内置默认值（默认值与配置一致）。
+66:     """
+67:     global _attr_config_cache, _attr_config_status
+68:     if _attr_config_cache is not None:
+69:         return _attr_config_cache
+70: 
+71:     result = {
+72:         "attribution_weights": dict(_DEFAULT_ATTRIBUTION_WEIGHTS),
+73:         "platform_weights": {},
+74:         "config_status": "fallback_default",
+75:     }
+76: 
+77:     try:
+78:         if CONFIG_PATH.exists():
+79:             data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+80:             # attribution_weights：顶层配置（以下划线开头，避免被 kos_metrics 当作平台遍历）
+81:             cfg_aw = data.get("_attribution_weights", data.get("attribution_weights", {}))
+82:             if cfg_aw:
+83:                 for k in _DEFAULT_ATTRIBUTION_WEIGHTS:
+84:                     if k in cfg_aw:
+85:                         result["attribution_weights"][k] = cfg_aw[k]
+86:                 result["config_status"] = "configured"
+87:             else:
+88:                 logger.warning(
+89:                     "KOS归因配置缺失: attribution_weights，使用默认值 %s，可能导致口径漂移",
+90:                     _DEFAULT_ATTRIBUTION_WEIGHTS)
+91:             # platform_weights：从各平台 engagement_weights 提取
+92:             for plat_key in ("xiaohongshu", "douyin", "weibo", "bilibili", "zhihu"):
+93:                 plat_cfg = data.get(plat_key, {})
+94:                 ew = plat_cfg.get("engagement_weights", {})
+95:                 if ew:
+96:                     result["platform_weights"][plat_key] = {
+97:                         "likes": float(ew.get("likes", 1.0)),
+98:                         "comments": float(ew.get("comments", 1.0)),
+99:                         "collects": float(ew.get("collects", 1.0)),
+100:                         "shares": float(ew.get("shares", 1.0)),
+101:                     }
+102:             if not result["platform_weights"]:
+103:                 logger.warning(
+104:                     "KOS归因配置缺失: platform_weights，所有平台回退等权，可能导致口径漂移")
+105:                 result["platform_weights"] = {
+106:                     "xiaohongshu": {"likes": 1.0, "comments": 1.0, "collects": 1.0, "shares": 1.0}}
+107:         else:
+108:             logger.warning(
+109:                 "KOS归因配置缺失: 配置文件 %s 不存在，使用默认值，可能导致口径漂移", CONFIG_PATH)
+110:             result["platform_weights"] = {
+111:                 "xiaohongshu": {"likes": 1.0, "comments": 1.0, "collects": 1.0, "shares": 1.0}}
+112:     except Exception as e:
+113:         logger.warning(
+114:             "KOS归因配置损坏: 读取 %s 失败(%s)，使用默认值，可能导致口径漂移", CONFIG_PATH, e)
+115:         result["platform_weights"] = {
+116:             "xiaohongshu": {"likes": 1.0, "comments": 1.0, "collects": 1.0, "shares": 1.0}}
+117: 
+118:     _attr_config_cache = result
+119:     _attr_config_status = result["config_status"]
+120:     return result
+121: 
+122: 
+123: def reload_attribution_config():
+124:     """重新加载归因配置（测试/热更新用）。"""
+125:     global _attr_config_cache, _attr_config_status
+126:     _attr_config_cache = None
+127:     _attr_config_status = "unloaded"
+128:     return load_attribution_config()
+129: 
+130: 
+131: def _platform_weighted_interactions(note, platform=""):
+132:     """G1: 按平台权重计算单条笔记的加权互动量。
+133: 
+134:     权重从 config/kos_platform_rules.json 的 platform_weights 读取。
+135:     未知平台回退 xiaohongshu 权重；配置缺失时回退等权（已在 load_attribution_config 中 WARNING）。
+136:     """
+137:     cfg = load_attribution_config()
+138:     plat = _normalize_platform(platform or note.get("source_platform", ""))
+139:     pw = cfg["platform_weights"].get(
+140:         plat, cfg["platform_weights"].get("xiaohongshu",
+141:         {"likes": 1.0, "comments": 1.0, "collects": 1.0, "shares": 1.0}))
+142:     values = {key: engagement_count(note.get(key))
+143:               for key in ("likes", "comments", "collects", "shares")}
+144:     if any(value is None for value in values.values()):
+145:         return None
+146:     return sum(float(values[key]) * pw[key] for key in values)
+147: 
+148: 
+149: def _conn():
+150:     return DatabaseRepository(str(DB_PATH)).connect()
+151: 
+152: 
+153: def calculate_attribution(author_id: str, brand_name: str, *, scope=None) -> dict:
+154:     """Return a truthful blocker while the event owner has no exact-scope evidence."""
+155:     from reprocess import _normalize_scope
+156: 
+157:     try:
+158:         _normalize_scope(scope, allow_global=False)
+159:     except ValueError as exc:
+160:         return {"ok": False, "status": "blocked", "code": str(exc)}
+161:     if not isinstance(author_id, str) or not author_id.strip():
+162:         return {"ok": False, "status": "invalid_request", "code": "AUTHOR_ID_REQUIRED"}
+163:     if not isinstance(brand_name, str) or not brand_name.strip():
+164:         return {"ok": False, "status": "invalid_request", "code": "BRAND_SCOPE_REQUIRED"}
+165:     return {
+166:         "ok": False,
+167:         "status": "blocked",
+168:         "code": "EVENT_SCOPE_EVIDENCE_REQUIRED",
+169:         "reason": "单作者归因需要与所选品牌范围一致的事件证据；当前事件读取合同未提供该范围。",
+170:         "author_id": author_id,
+171:         "brand_name": brand_name,
+172:     }
+173: 
+174: 
+175: def calculate_multi_touch_attribution(note_ids: list, brand_name: str, *, scope=None) -> dict:
+176:     """Calculate attribution only from notes verified in the exact selected BrandFocus."""
+177:     from reprocess import _canonical_source_ids, _normalize_scope
+178: 
+179:     try:
+180:         exact = _normalize_scope(scope, allow_global=False)
+181:     except ValueError as exc:
+182:         return {"ok": False, "status": "blocked", "code": str(exc)}
+183:     if exact["domain_id"] != "zbmp":
+184:         return {"ok": False, "status": "invalid_request", "code": "BMP_SCOPE_REQUIRED"}
+185:     if not isinstance(brand_name, str) or not brand_name.strip():
+186:         return {"ok": False, "status": "invalid_request", "code": "BRAND_SCOPE_REQUIRED"}
+187:     if not isinstance(note_ids, list) or not note_ids or len(note_ids) > 100:
+188:         return {"ok": False, "status": "invalid_request", "code": "NOTE_IDS_REQUIRED"}
+189:     normalized_ids = []
+190:     for note_id in note_ids:
+191:         if not isinstance(note_id, str) or not note_id or note_id != note_id.strip():
+192:             return {"ok": False, "status": "invalid_request", "code": "NOTE_IDS_INVALID"}
+193:         if note_id not in normalized_ids:
+194:             normalized_ids.append(note_id)
+195: 
+196:     cfg = load_attribution_config()
+197:     aw = cfg["attribution_weights"]
+198:     conn = _conn()
+199:     try:
+200:         admitted_ids = _canonical_source_ids(
+201:             exact, source_ids=normalized_ids, limit=len(normalized_ids), connection=conn,
+202:         )
+203:         if set(admitted_ids) != set(normalized_ids):
+204:             return {"ok": False, "status": "denied", "code": "CANONICAL_NOTE_SCOPE_MISMATCH"}
+205: 
+206:         placeholders = ",".join("?" for _ in normalized_ids)
+207:         notes = conn.execute(
+208:             "SELECT note_id, author_id, author_nickname, likes, comments, collects, shares, "
+209:             "publish_datetime, source_platform FROM notes WHERE note_id IN (" + placeholders + ") "
+210:             "AND product_id=? AND domain_id=? AND scope_status='VERIFIED' AND brand_focus_id=? "
+211:             "AND COALESCE(subject_id,'')='' AND NULLIF(TRIM(scope_evidence_ref),'') IS NOT NULL "
+212:             "ORDER BY publish_datetime ASC",
+213:             tuple(normalized_ids) + (exact["product_id"], exact["domain_id"], exact["brand_focus_id"]),
+214:         ).fetchall()
+215:         if len(notes) != len(normalized_ids):
+216:             return {"ok": False, "status": "denied", "code": "CANONICAL_NOTE_SCOPE_CHANGED"}
+217: 
+218:         missing_authors = sum(
+219:             not isinstance(note["author_id"], str) or not note["author_id"].strip()
+220:             for note in notes
+221:         )
+222:         if missing_authors:
+223:             return {
+224:                 "ok": False, "status": "incomplete", "code": "AUTHOR_ID_UNAVAILABLE",
+225:                 "total_notes": len(notes),
+226:                 "identified_author_notes": len(notes) - missing_authors,
+227:                 "unattributed_note_count": missing_authors,
+228:                 "attribution": [],
+229:             }
+230: 
+231:         interactions_by_note = [
+232:             _platform_weighted_interactions(dict(note)) for note in notes
+233:         ]
+234:         incomplete_engagement = sum(value is None for value in interactions_by_note)
+235:         if incomplete_engagement:
+236:             return {
+237:                 "ok": False, "status": "incomplete", "code": "ENGAGEMENT_DATA_INCOMPLETE",
+238:                 "total_notes": len(notes),
+239:                 "engagement_complete_note_count": len(notes) - incomplete_engagement,
+240:                 "engagement_incomplete_note_count": incomplete_engagement,
+241:                 "attribution": [],
+242:             }
+243:         kos_contrib = {}
+244:         for index, note in enumerate(notes):
+245:             author = note["author_id"].strip()
+246:             if author not in kos_contrib:
+247:                 kos_contrib[author] = {
+248:                     "author_nickname": note["author_nickname"], "notes": 0,
+249:                     "interactions": 0, "weighted_score": 0,
+250:                 }
+251:             interactions = interactions_by_note[index]
+252:             time_weight = float(aw["time_weight_coeff"]) + (
+253:                 index / max(1, len(notes) - 1)
+254:             ) * float(aw["time_weight_range"])
+255:             kos_contrib[author]["notes"] += 1
+256:             kos_contrib[author]["interactions"] += interactions
+257:             kos_contrib[author]["weighted_score"] += interactions * time_weight
+258: 
+259:         total_weighted = math.fsum(item["weighted_score"] for item in kos_contrib.values())
+260:         if not math.isfinite(total_weighted) or total_weighted <= 0:
+261:             return {
+262:                 "ok": False, "status": "unavailable",
+263:                 "code": "ZERO_ENGAGEMENT_DENOMINATOR" if total_weighted == 0
+264:                 else "ENGAGEMENT_DENOMINATOR_UNAVAILABLE",
+265:                 "total_notes": len(notes), "total_kos": len(kos_contrib),
+266:                 "total_weighted_interactions": total_weighted if math.isfinite(total_weighted) else None,
+267:                 "attribution": [],
+268:             }
+269:         result = [
+270:             {
+271:                 "author_id": author,
+272:                 "author_nickname": values["author_nickname"],
+273:                 "note_count": values["notes"],
+274:                 "interactions": round(values["interactions"], 1),
+275:                 "attribution_pct": round(values["weighted_score"] / total_weighted * 100, 1),
+276:             }
+277:             for author, values in sorted(
+278:                 kos_contrib.items(), key=lambda item: item[1]["weighted_score"], reverse=True,
+279:             )
+280:         ]
+281:         return {
+282:             "ok": True,
+283:             "status": "COMPLETED",
+284:             "brand_name": brand_name,
+285:             "brand_focus_id": exact["brand_focus_id"],
+286:             "total_notes": len(notes),
+287:             "total_kos": len(kos_contrib),
+288:             "total_weighted_interactions": total_weighted,
+289:             "config_status": cfg["config_status"],
+290:             "attribution": result,
+291:             "method": "time_decay_multi_touch (canonical BrandFocus verified; platform weighted)",
+292:         }
+293:     finally:
+294:         conn.close()

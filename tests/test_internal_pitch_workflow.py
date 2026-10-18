@@ -237,7 +237,7 @@ def client(workspace):
     from lumenis_app_api import domain_api_bp
     app = workspace["app"]
     app.register_blueprint(domain_api_bp)
-    names = {"_auth_enabled", "_is_cth_readonly_get", "_basic_auth",
+    names = {"_auth_enabled", "_is_cth_readonly_get", "_basic_auth", "_owner_authorized_root_request",
              "_pg_resolve_operation_type", "_permission_gate_write_check"}
     constants = {"_PG_WRITE_METHODS", "_PG_BYPASS_PATHS", "_CTH_READONLY_GET_PREFIXES"}
     nodes = [node for node in ast.parse(Path("app.py").read_text(encoding="utf-8-sig")).body if
@@ -312,7 +312,12 @@ def test_api_rejects_bad_input_without_creating_task(workspace, client, change):
     if change == "large":
         body = " " * (1024 * 1024 + 1)
     response = client.post(PREFIX, data=body, content_type="application/json")
-    assert response.status_code in {400, 401}
+    # Mixed selected-Subject/global scope is rejected by the real owner guard.
+    if change == "global":
+        assert response.status_code == 403
+        assert response.get_json() == {"ok": False, "code": "WORK_PERMISSION_DENIED"}
+    else:
+        assert response.status_code in {400, 401}
     assert workspace["repo"].query_one("SELECT COUNT(*) FROM ai_task")[0] == 0
 
 
@@ -367,7 +372,8 @@ with app.test_request_context('/', headers={'Host':'localhost'}, environ_overrid
     internal_pitch.run_internal_pitch(sys.argv[1], actor=actor, scope=json.loads(sys.argv[2]))
 '''
     result = subprocess.run([sys.executable, "-c", script, task["task_id"], json.dumps(workspace["scope"])],
-        cwd=Path.cwd(), env={**os.environ, "PYTHONPATH": str(Path.cwd())},
+        cwd=Path.cwd(), env={**os.environ, "PYTHONPATH": os.pathsep.join(filter(None,
+            (str(Path.cwd()), os.environ.get("PYTHONPATH", ""))))},
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     assert result.returncode == 23, result.stdout.decode(errors="replace")

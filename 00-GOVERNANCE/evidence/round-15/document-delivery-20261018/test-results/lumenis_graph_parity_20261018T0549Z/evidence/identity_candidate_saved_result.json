@@ -1,0 +1,524 @@
+{
+  "source": {
+    "source_id": "DOC-5c7ecb79ed6a9b241880a7ecd8f2e228",
+    "evidence_id": 2,
+    "canonical_id": "can_b7e793cac28b4829",
+    "source_artifact_ref": "ART-671a759fd85c4374",
+    "scope": {
+      "domain_id": "cth",
+      "subject_id": null,
+      "brand_focus_id": null,
+      "global_scope": true
+    },
+    "replayed": false,
+    "source_replayed": false,
+    "metadata": {
+      "format": "txt",
+      "encoding": "utf-8",
+      "encoding_state": "assumed_decoder",
+      "decoding_warnings": [
+        "Encoding inferred by deterministic decoder order; source encoding not independently verified."
+      ],
+      "original_bytes_modified": false,
+      "source_name": "entity_matching.txt",
+      "source_fingerprint": "374b5125b8d759aa2dd02d7dac110afb965927d254a86063ce3ea23f447e0eae",
+      "network_mode": "local_only",
+      "parsed_text_sha256": "374b5125b8d759aa2dd02d7dac110afb965927d254a86063ce3ea23f447e0eae"
+    },
+    "locators": [
+      {
+        "unit": "parsed_line",
+        "index": 1,
+        "start": 0,
+        "end": 6598
+      }
+    ],
+    "scope_status": "UNASSIGNED",
+    "global_projection": "NOT_VERIFIED",
+    "selected_row_indices": [],
+    "canonical_rows_inserted": 0,
+    "canonical_row_records": [],
+    "preview_rows_sha256": null,
+    "source_boundaries": {
+      "content_origin": {
+        "kind": "self-authored",
+        "claim_type": "author_statement"
+      },
+      "claim_type": "author_statement",
+      "fact_verification": "NOT_VERIFIED",
+      "learning_admission": "NOT_ADMITTED",
+      "training_eligible": false,
+      "held_out": false,
+      "rights_statement": null,
+      "research_transport": null
+    }
+  },
+  "analysis": {
+    "analysis": "entity_matching",
+    "business_purpose": null,
+    "state": "READY",
+    "result": {
+      "method": "supervised-fellegi-sunter@1",
+      "state": "READY",
+      "n": 81,
+      "unit": "conditional match probability",
+      "limitations": [
+        "Comparison fields assumed conditionally independent given match status.",
+        "Labeled sample class balance supplies the prior; blocking/selection bias can invalidate it.",
+        "No automatic merge or identity permission change; review is required.",
+        "Supplied labels and Registry IDs are identity claims, not official-name verification; source quotes only establish custody."
+      ],
+      "m_probabilities": [
+        0.9545454545454546,
+        0.9545454545454546
+      ],
+      "u_probabilities": [
+        0.045454545454545456,
+        0.045454545454545456
+      ],
+      "class_prior": 0.5,
+      "smoothing": "Beta(1,1)",
+      "match_threshold": 0.95,
+      "nonmatch_threshold": 0.05,
+      "train_n": 40,
+      "positive_train_n": 20,
+      "negative_train_n": 20,
+      "probability_calibration_state": "NOT_ESTABLISHED",
+      "test_n": 40,
+      "precision": 1.0,
+      "recall": 1.0,
+      "candidates": [
+        {
+          "id": "comparison-pair-1",
+          "identity_pair": {
+            "left": {
+              "label": "Brand A",
+              "registry_subject_id": null,
+              "source_evidence_id": 1,
+              "start": 111,
+              "end": 118,
+              "quote": "Brand A"
+            },
+            "right": {
+              "label": "Brand B",
+              "registry_subject_id": null,
+              "source_evidence_id": 1,
+              "start": 131,
+              "end": 138,
+              "quote": "Brand B"
+            }
+          },
+          "source_binding_state": "SOURCE_QUOTES_VERIFIED_NOT_IDENTITY_CONFIRMED",
+          "registry_identity_state": "REQUIRES_SEPARATE_REGISTRY_REVIEW",
+          "probability": 0.4999999999999998,
+          "recommendation": "MANUAL_REVIEW"
+        }
+      ],
+      "interpretation_status": "NOT_BUSINESS_VALIDATED",
+      "input_unit": "trial",
+      "implementation_versions": {
+        "numpy": "2.5.4",
+        "scipy": "1.18.1"
+      }
+    },
+    "saved_work_draft": {
+      "title": "Statistical analysis: entity_matching",
+      "kind": "report",
+      "markdown": "# Statistical analysis: entity_matching\n\nMethod: supervised-fellegi-sunter@1\n\nState: READY\n\nSource Evidence: 2\n\nDerived from the declared source dataset. Scope/rights and file custody do not establish observational truth or causality.\n\n{\n  \"candidates\": [\n    {\n      \"id\": \"comparison-pair-1\",\n      \"identity_pair\": {\n        \"left\": {\n          \"end\": 118,\n          \"label\": \"Brand A\",\n          \"quote\": \"Brand A\",\n          \"registry_subject_id\": null,\n          \"source_evidence_id\": 1,\n          \"start\": 111\n        },\n        \"right\": {\n          \"end\": 138,\n          \"label\": \"Brand B\",\n          \"quote\": \"Brand B\",\n          \"registry_subject_id\": null,\n          \"source_evidence_id\": 1,\n          \"start\": 131\n        }\n      },\n      \"probability\": 0.4999999999999998,\n      \"recommendation\": \"MANUAL_REVIEW\",\n      \"registry_identity_state\": \"REQUIRES_SEPARATE_REGISTRY_REVIEW\",\n      \"source_binding_state\": \"SOURCE_QUOTES_VERIFIED_NOT_IDENTITY_CONFIRMED\"\n    }\n  ],\n  \"class_prior\": 0.5,\n  \"implementation_versions\": {\n    \"numpy\": \"2.5.4\",\n    \"scipy\": \"1.18.1\"\n  },\n  \"input_unit\": \"trial\",\n  \"interpretation_status\": \"NOT_BUSINESS_VALIDATED\",\n  \"limitations\": [\n    \"Comparison fields assumed conditionally independent given match status.\",\n    \"Labeled sample class balance supplies the prior; blocking/selection bias can invalidate it.\",\n    \"No automatic merge or identity permission change; review is required.\",\n    \"Supplied labels and Registry IDs are identity claims, not official-name verification; source quotes only establish custody.\"\n  ],\n  \"m_probabilities\": [\n    0.9545454545454546,\n    0.9545454545454546\n  ],\n  \"match_threshold\": 0.95,\n  \"method\": \"supervised-fellegi-sunter@1\",\n  \"n\": 81,\n  \"negative_train_n\": 20,\n  \"nonmatch_threshold\": 0.05,\n  \"positive_train_n\": 20,\n  \"precision\": 1.0,\n  \"probability_calibration_state\": \"NOT_ESTABLISHED\",\n  \"recall\": 1.0,\n  \"smoothing\": \"Beta(1,1)\",\n  \"state\": \"READY\",\n  \"test_n\": 40,\n  \"train_n\": 40,\n  \"u_probabilities\": [\n    0.045454545454545456,\n    0.045454545454545456\n  ],\n  \"unit\": \"conditional match probability\"\n}",
+      "payload": {
+        "statistics": {
+          "recipe": "report-statistics-source/1",
+          "analysis": "entity_matching",
+          "business_purpose": null,
+          "result": {
+            "method": "supervised-fellegi-sunter@1",
+            "state": "READY",
+            "n": 81,
+            "unit": "conditional match probability",
+            "limitations": [
+              "Comparison fields assumed conditionally independent given match status.",
+              "Labeled sample class balance supplies the prior; blocking/selection bias can invalidate it.",
+              "No automatic merge or identity permission change; review is required.",
+              "Supplied labels and Registry IDs are identity claims, not official-name verification; source quotes only establish custody."
+            ],
+            "m_probabilities": [
+              0.9545454545454546,
+              0.9545454545454546
+            ],
+            "u_probabilities": [
+              0.045454545454545456,
+              0.045454545454545456
+            ],
+            "class_prior": 0.5,
+            "smoothing": "Beta(1,1)",
+            "match_threshold": 0.95,
+            "nonmatch_threshold": 0.05,
+            "train_n": 40,
+            "positive_train_n": 20,
+            "negative_train_n": 20,
+            "probability_calibration_state": "NOT_ESTABLISHED",
+            "test_n": 40,
+            "precision": 1.0,
+            "recall": 1.0,
+            "candidates": [
+              {
+                "id": "comparison-pair-1",
+                "identity_pair": {
+                  "left": {
+                    "label": "Brand A",
+                    "registry_subject_id": null,
+                    "source_evidence_id": 1,
+                    "start": 111,
+                    "end": 118,
+                    "quote": "Brand A"
+                  },
+                  "right": {
+                    "label": "Brand B",
+                    "registry_subject_id": null,
+                    "source_evidence_id": 1,
+                    "start": 131,
+                    "end": 138,
+                    "quote": "Brand B"
+                  }
+                },
+                "source_binding_state": "SOURCE_QUOTES_VERIFIED_NOT_IDENTITY_CONFIRMED",
+                "registry_identity_state": "REQUIRES_SEPARATE_REGISTRY_REVIEW",
+                "probability": 0.4999999999999998,
+                "recommendation": "MANUAL_REVIEW"
+              }
+            ],
+            "interpretation_status": "NOT_BUSINESS_VALIDATED",
+            "input_unit": "trial",
+            "implementation_versions": {
+              "numpy": "2.5.4",
+              "scipy": "1.18.1"
+            }
+          },
+          "options": {},
+          "dataset_sha256": "374b5125b8d759aa2dd02d7dac110afb965927d254a86063ce3ea23f447e0eae",
+          "dataset_unit": "trial",
+          "source_evidence_id": 2,
+          "source_asset_id": "DOC-5c7ecb79ed6a9b241880a7ecd8f2e228",
+          "claim_type": "derived_from_declared_source_dataset; source custody does not verify measured truth",
+          "ai_used": false,
+          "causal_claim": "NOT_ESTABLISHED"
+        }
+      },
+      "citations": [
+        {
+          "evidence_id": 2,
+          "start": 0,
+          "end": 6598,
+          "quote": "{\"schema\": \"lumenis.statistics-input/v1\", \"analysis\": \"entity_matching\", \"unit\": \"trial\", \"data\": {\"rows\": [{\"id\": \"0\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"1\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"2\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"3\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"4\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"5\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"6\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"7\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"8\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"9\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"10\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"11\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"12\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"13\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"14\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"15\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"16\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"17\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"18\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"19\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"20\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"21\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"22\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"23\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"24\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"25\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"26\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"27\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"28\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"29\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"30\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"31\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"32\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"33\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"34\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"35\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"36\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"37\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"38\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"39\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"40\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"41\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"42\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"43\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"44\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"45\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"46\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"47\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"48\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"49\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"50\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"51\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"52\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"53\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"54\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"55\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"56\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"57\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"58\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"59\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"60\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"61\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"62\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"63\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"64\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"65\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"66\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"67\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"68\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"69\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"70\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"71\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"72\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"73\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"74\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"75\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"76\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"77\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"78\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"79\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"comparison-pair-1\", \"partition\": \"candidate\", \"agreements\": [true, false], \"label\": null, \"identity_pair\": {\"left\": {\"label\": \"Brand A\", \"registry_subject_id\": null, \"source_evidence_id\": 1, \"start\": 111, \"end\": 118, \"quote\": \"Brand A\"}, \"right\": {\"label\": \"Brand B\", \"registry_subject_id\": null, \"source_evidence_id\": 1, \"start\": 131, \"end\": 138, \"quote\": \"Brand B\"}}}]}}"
+        },
+        {
+          "evidence_id": 1,
+          "start": 111,
+          "end": 118,
+          "quote": "Brand A"
+        },
+        {
+          "evidence_id": 1,
+          "start": 131,
+          "end": 138,
+          "quote": "Brand B"
+        }
+      ]
+    },
+    "saved_work_payload_hash": "6cf257f972d1d440101e68c74afbe0d57d3317494b7cba926277f3c872d37995",
+    "recipe": "report-statistics-source/1",
+    "ai_used": false,
+    "publish_status": "not_performed"
+  },
+  "saved": {
+    "artifact": {
+      "artifact_id": "ART-4adabe9b2bd94c26",
+      "kind": "saved_document",
+      "product_id": "CTH",
+      "domain_id": "cth",
+      "source_execution_id": "WORK-dd1da72b37ccf2e5dc15dd90",
+      "evidence_id": "2",
+      "note_id": "",
+      "filename": "ART-4adabe9b2bd94c26.json",
+      "media_type": "application/json",
+      "relative_path": "ART-4adabe9b2bd94c26.json",
+      "size_bytes": 13144,
+      "sha256": "b4e8c6d5ccef02723101b78510666f7ea72a1a8c245666a1570f14d0444d54a5",
+      "status": "staged",
+      "approval_required": 1,
+      "approval_status": "pending",
+      "created_at": "2026-10-18T05:56:24.863415+00:00",
+      "updated_at": "2026-10-18T05:56:24.863415+00:00"
+    },
+    "document": {
+      "assertion_id": null,
+      "authorship": "user-supplied; source facts require citations",
+      "citations": [
+        {
+          "end": 6598,
+          "evidence_id": 2,
+          "quote": "{\"schema\": \"lumenis.statistics-input/v1\", \"analysis\": \"entity_matching\", \"unit\": \"trial\", \"data\": {\"rows\": [{\"id\": \"0\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"1\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"2\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"3\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"4\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"5\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"6\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"7\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"8\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"9\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"10\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"11\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"12\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"13\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"14\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"15\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"16\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"17\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"18\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"19\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"20\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"21\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"22\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"23\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"24\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"25\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"26\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"27\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"28\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"29\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"30\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"31\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"32\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"33\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"34\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"35\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"36\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"37\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"38\", \"partition\": \"train\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"39\", \"partition\": \"train\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"40\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"41\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"42\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"43\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"44\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"45\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"46\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"47\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"48\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"49\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"50\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"51\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"52\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"53\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"54\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"55\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"56\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"57\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"58\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"59\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"60\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"61\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"62\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"63\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"64\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"65\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"66\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"67\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"68\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"69\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"70\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"71\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"72\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"73\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"74\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"75\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"76\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"77\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"78\", \"partition\": \"test\", \"agreements\": [false, false], \"label\": 0}, {\"id\": \"79\", \"partition\": \"test\", \"agreements\": [true, true], \"label\": 1}, {\"id\": \"comparison-pair-1\", \"partition\": \"candidate\", \"agreements\": [true, false], \"label\": null, \"identity_pair\": {\"left\": {\"label\": \"Brand A\", \"registry_subject_id\": null, \"source_evidence_id\": 1, \"start\": 111, \"end\": 118, \"quote\": \"Brand A\"}, \"right\": {\"label\": \"Brand B\", \"registry_subject_id\": null, \"source_evidence_id\": 1, \"start\": 131, \"end\": 138, \"quote\": \"Brand B\"}}}]}}",
+          "source_scope": {
+            "domain_id": "cth",
+            "subject_id": null,
+            "brand_focus_id": null,
+            "global_scope": true
+          },
+          "start": 0
+        },
+        {
+          "end": 118,
+          "evidence_id": 1,
+          "quote": "Brand A",
+          "source_scope": {
+            "domain_id": "cth",
+            "subject_id": null,
+            "brand_focus_id": null,
+            "global_scope": true
+          },
+          "start": 111
+        },
+        {
+          "end": 138,
+          "evidence_id": 1,
+          "quote": "Brand B",
+          "source_scope": {
+            "domain_id": "cth",
+            "subject_id": null,
+            "brand_focus_id": null,
+            "global_scope": true
+          },
+          "start": 131
+        }
+      ],
+      "context": {
+        "brand_focus_id": null,
+        "domain_id": "cth",
+        "global_scope": true,
+        "principal_kind": "local_workspace",
+        "principal_ref": "workspace:local",
+        "subject_id": null
+      },
+      "contract": {
+        "id": "lumenis.saved-work",
+        "required_payload_paths": [],
+        "version": "1"
+      },
+      "created_at": "2026-10-18T05:56:24.862066+00:00",
+      "draft_digest": "6cf257f972d1d440101e68c74afbe0d57d3317494b7cba926277f3c872d37995",
+      "input_hash": "a8e35fb64f24d047cb51b2874d93bb4e1efdf145b1186622f23d4022aca58fd9",
+      "kind": "report",
+      "markdown": "# Statistical analysis: entity_matching\n\nMethod: supervised-fellegi-sunter@1\n\nState: READY\n\nSource Evidence: 2\n\nDerived from the declared source dataset. Scope/rights and file custody do not establish observational truth or causality.\n\n{\n  \"candidates\": [\n    {\n      \"id\": \"comparison-pair-1\",\n      \"identity_pair\": {\n        \"left\": {\n          \"end\": 118,\n          \"label\": \"Brand A\",\n          \"quote\": \"Brand A\",\n          \"registry_subject_id\": null,\n          \"source_evidence_id\": 1,\n          \"start\": 111\n        },\n        \"right\": {\n          \"end\": 138,\n          \"label\": \"Brand B\",\n          \"quote\": \"Brand B\",\n          \"registry_subject_id\": null,\n          \"source_evidence_id\": 1,\n          \"start\": 131\n        }\n      },\n      \"probability\": 0.4999999999999998,\n      \"recommendation\": \"MANUAL_REVIEW\",\n      \"registry_identity_state\": \"REQUIRES_SEPARATE_REGISTRY_REVIEW\",\n      \"source_binding_state\": \"SOURCE_QUOTES_VERIFIED_NOT_IDENTITY_CONFIRMED\"\n    }\n  ],\n  \"class_prior\": 0.5,\n  \"implementation_versions\": {\n    \"numpy\": \"2.5.4\",\n    \"scipy\": \"1.18.1\"\n  },\n  \"input_unit\": \"trial\",\n  \"interpretation_status\": \"NOT_BUSINESS_VALIDATED\",\n  \"limitations\": [\n    \"Comparison fields assumed conditionally independent given match status.\",\n    \"Labeled sample class balance supplies the prior; blocking/selection bias can invalidate it.\",\n    \"No automatic merge or identity permission change; review is required.\",\n    \"Supplied labels and Registry IDs are identity claims, not official-name verification; source quotes only establish custody.\"\n  ],\n  \"m_probabilities\": [\n    0.9545454545454546,\n    0.9545454545454546\n  ],\n  \"match_threshold\": 0.95,\n  \"method\": \"supervised-fellegi-sunter@1\",\n  \"n\": 81,\n  \"negative_train_n\": 20,\n  \"nonmatch_threshold\": 0.05,\n  \"positive_train_n\": 20,\n  \"precision\": 1.0,\n  \"probability_calibration_state\": \"NOT_ESTABLISHED\",\n  \"recall\": 1.0,\n  \"smoothing\": \"Beta(1,1)\",\n  \"state\": \"READY\",\n  \"test_n\": 40,\n  \"train_n\": 40,\n  \"u_probabilities\": [\n    0.045454545454545456,\n    0.045454545454545456\n  ],\n  \"unit\": \"conditional match probability\"\n}",
+      "parent_artifact_id": null,
+      "parent_sha256": null,
+      "payload": {
+        "statistics": {
+          "ai_used": false,
+          "analysis": "entity_matching",
+          "business_purpose": null,
+          "causal_claim": "NOT_ESTABLISHED",
+          "claim_type": "derived_from_declared_source_dataset; source custody does not verify measured truth",
+          "dataset_sha256": "374b5125b8d759aa2dd02d7dac110afb965927d254a86063ce3ea23f447e0eae",
+          "dataset_unit": "trial",
+          "options": {},
+          "recipe": "report-statistics-source/1",
+          "result": {
+            "candidates": [
+              {
+                "id": "comparison-pair-1",
+                "identity_pair": {
+                  "left": {
+                    "end": 118,
+                    "label": "Brand A",
+                    "quote": "Brand A",
+                    "registry_subject_id": null,
+                    "source_evidence_id": 1,
+                    "start": 111
+                  },
+                  "right": {
+                    "end": 138,
+                    "label": "Brand B",
+                    "quote": "Brand B",
+                    "registry_subject_id": null,
+                    "source_evidence_id": 1,
+                    "start": 131
+                  }
+                },
+                "probability": 0.4999999999999998,
+                "recommendation": "MANUAL_REVIEW",
+                "registry_identity_state": "REQUIRES_SEPARATE_REGISTRY_REVIEW",
+                "source_binding_state": "SOURCE_QUOTES_VERIFIED_NOT_IDENTITY_CONFIRMED"
+              }
+            ],
+            "class_prior": 0.5,
+            "implementation_versions": {
+              "numpy": "2.5.4",
+              "scipy": "1.18.1"
+            },
+            "input_unit": "trial",
+            "interpretation_status": "NOT_BUSINESS_VALIDATED",
+            "limitations": [
+              "Comparison fields assumed conditionally independent given match status.",
+              "Labeled sample class balance supplies the prior; blocking/selection bias can invalidate it.",
+              "No automatic merge or identity permission change; review is required.",
+              "Supplied labels and Registry IDs are identity claims, not official-name verification; source quotes only establish custody."
+            ],
+            "m_probabilities": [
+              0.9545454545454546,
+              0.9545454545454546
+            ],
+            "match_threshold": 0.95,
+            "method": "supervised-fellegi-sunter@1",
+            "n": 81,
+            "negative_train_n": 20,
+            "nonmatch_threshold": 0.05,
+            "positive_train_n": 20,
+            "precision": 1.0,
+            "probability_calibration_state": "NOT_ESTABLISHED",
+            "recall": 1.0,
+            "smoothing": "Beta(1,1)",
+            "state": "READY",
+            "test_n": 40,
+            "train_n": 40,
+            "u_probabilities": [
+              0.045454545454545456,
+              0.045454545454545456
+            ],
+            "unit": "conditional match probability"
+          },
+          "source_asset_id": "DOC-5c7ecb79ed6a9b241880a7ecd8f2e228",
+          "source_evidence_id": 2
+        }
+      },
+      "request_id": "statistics-identity-review",
+      "schema": "lumenis.saved-work/v1",
+      "task_id": null,
+      "title": "Statistical analysis: entity_matching",
+      "version": 1,
+      "work_id": "WORK-dd1da72b37ccf2e5dc15dd90"
+    },
+    "return_ref": {
+      "artifact_id": "ART-4adabe9b2bd94c26",
+      "work_id": "WORK-dd1da72b37ccf2e5dc15dd90",
+      "version": 1,
+      "scope": {
+        "domain_id": "cth",
+        "subject_id": null,
+        "brand_focus_id": null,
+        "global_scope": true
+      }
+    },
+    "receipt": {
+      "schema": "lumenis.committed-saved-work/v1",
+      "task_id": null,
+      "assertion_id": null,
+      "contract": {
+        "id": "lumenis.saved-work",
+        "required_payload_paths": [],
+        "version": "1"
+      },
+      "scope": {
+        "domain_id": "cth",
+        "subject_id": null,
+        "brand_focus_id": null,
+        "global_scope": true
+      },
+      "ref": "ART-4adabe9b2bd94c26",
+      "work_id": "WORK-dd1da72b37ccf2e5dc15dd90",
+      "version": 1,
+      "parent": {
+        "ref": null,
+        "sha256": null
+      },
+      "sha256": "b4e8c6d5ccef02723101b78510666f7ea72a1a8c245666a1570f14d0444d54a5",
+      "size_bytes": 13144,
+      "draft_digest": "6cf257f972d1d440101e68c74afbe0d57d3317494b7cba926277f3c872d37995",
+      "sources": [
+        {
+          "evidence_id": 1,
+          "source_id": "DOC-0958b4064454fd03b9fc992d2def7de5",
+          "evidence_version": "document-import/1",
+          "source_artifact_ref": "ART-52e4b5c819e248ad",
+          "scope": {
+            "domain_id": "cth",
+            "subject_id": null,
+            "brand_focus_id": null,
+            "global_scope": true
+          },
+          "source_url": null,
+          "source_fingerprint": "57ac8c64a9094856f68e229292aa9b99663af8ce029f2f76b8b5d099a38dd0dd",
+          "parsed_text_sha256": "57ac8c64a9094856f68e229292aa9b99663af8ce029f2f76b8b5d099a38dd0dd",
+          "rights": "owner-approved",
+          "intended_use": "research_reference",
+          "capture": null,
+          "published_at": null,
+          "captured_at": "2026-10-17T01:00:00Z",
+          "purposes": [
+            "quote_reference"
+          ],
+          "content_origin": {
+            "kind": "self-authored",
+            "claim_type": "author_statement"
+          },
+          "claim_type": "author_statement",
+          "fact_verification": "NOT_VERIFIED",
+          "learning_admission": "NOT_ADMITTED",
+          "training_eligible": false,
+          "held_out": false,
+          "rights_statement": null,
+          "research_transport": null
+        },
+        {
+          "evidence_id": 2,
+          "source_id": "DOC-5c7ecb79ed6a9b241880a7ecd8f2e228",
+          "evidence_version": "document-import/1",
+          "source_artifact_ref": "ART-671a759fd85c4374",
+          "scope": {
+            "domain_id": "cth",
+            "subject_id": null,
+            "brand_focus_id": null,
+            "global_scope": true
+          },
+          "source_url": null,
+          "source_fingerprint": "374b5125b8d759aa2dd02d7dac110afb965927d254a86063ce3ea23f447e0eae",
+          "parsed_text_sha256": "374b5125b8d759aa2dd02d7dac110afb965927d254a86063ce3ea23f447e0eae",
+          "rights": "owner-approved",
+          "intended_use": "research_reference",
+          "capture": null,
+          "published_at": null,
+          "captured_at": "2026-10-17T01:00:00Z",
+          "purposes": [
+            "quote_reference"
+          ],
+          "content_origin": {
+            "kind": "self-authored",
+            "claim_type": "author_statement"
+          },
+          "claim_type": "author_statement",
+          "fact_verification": "NOT_VERIFIED",
+          "learning_admission": "NOT_ADMITTED",
+          "training_eligible": false,
+          "held_out": false,
+          "rights_statement": null,
+          "research_transport": null
+        }
+      ],
+      "constraint_observations": {
+        "committed_bytes_match": true,
+        "parent_chain_verified": true,
+        "required_payload_paths_present": [],
+        "source_authorization": "fresh-per-source",
+        "source_count": 2,
+        "factual_verification": "NOT_ESTABLISHED_BY_STORAGE",
+        "learning_admission": "NOT_ESTABLISHED_BY_STORAGE",
+        "training_eligible": false,
+        "held_out": false,
+        "assertion_binding": "absent",
+        "media_lineage": "not_applicable"
+      },
+      "commit_state": "registry_committed_artifact_staged"
+    },
+    "replayed": false
+  },
+  "claim": "Self-owned engineering fixture and source custody; not real-market acceptance"
+}

@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import hashlib
+import math
 import traceback
 from flask import Blueprint, request, jsonify
 
@@ -160,31 +161,43 @@ def api_runtime_validate():
 def api_breakout():
     """破圈分类：current vs baseline，返回 normal/breakout/viral"""
     try:
-        import breakout as bo
-        b = request.get_json(force=True, silent=True) or {}
-        state = bo.classify_breakout(
-            float(b["current"]), float(b["baseline"]),
-            breakout_ratio=float(b.get("breakout_ratio", 1.8)),
-            viral_ratio=float(b.get("viral_ratio", 3.0)),
-        )
-        return _ok(state=getattr(state, "value", str(state)))
-    except Exception as e:
-        return _err(f"破圈分类失败: {e}", 500)
+        from podcast.intelligence import breakout as bo
+        b=request.get_json(silent=True)
+        if not isinstance(b,dict) or set(b)-{"current","baseline","breakout_ratio","viral_ratio"}:
+            raise ValueError("PODCAST_BREAKOUT_INPUT_INVALID")
+        current,baseline=b.get("current"),b.get("baseline")
+        state=bo.classify_breakout(current,baseline,breakout_ratio=b.get("breakout_ratio",1.8),viral_ratio=b.get("viral_ratio",3.0))
+        missing=[name for name in ("current","baseline") if b.get(name) is None]
+        ratio=current/baseline if current is not None and baseline else None
+        ratio_finite=ratio is None or math.isfinite(ratio)
+        return _ok(state=state.value,current=current,baseline=baseline,
+                   ratio=ratio if ratio_finite else None,
+                   missing_inputs=missing,reason="missing_observations" if missing else ("zero_baseline_ratio_undefined" if baseline==0 else ("ratio_out_of_numeric_range" if not ratio_finite else None)),
+                   provenance="caller_supplied_observations_not_independently_verified")
+    except (ValueError,TypeError):
+        return jsonify({"ok":False,"state":"invalid_input","code":"PODCAST_BREAKOUT_INPUT_INVALID"}),400
+    except Exception:
+        return jsonify({"ok":False,"state":"unavailable","code":"PODCAST_BREAKOUT_UNAVAILABLE"}),503
+
 
 
 @podcast_bp.route("/content-yield", methods=["POST"])
 def api_content_yield():
     """内容产出规划：输入一个内容信号，返回可衍生资产计划"""
     try:
-        import content_yield as cy
-        b = request.get_json(force=True, silent=True) or {}
-        sig_fields = cy.YieldSignal.__dataclass_fields__
-        kwargs = {k: b[k] for k in sig_fields if k in b}
-        signal = cy.YieldSignal(**kwargs)
-        plan = cy.plan_yield(signal)
-        return _ok(plan=_dataclass_to_dict(plan, deep=True))
-    except Exception as e:
-        return _err(f"内容产出规划失败: {e}", 500)
+        from podcast.intelligence import content_yield as cy
+        b=request.get_json(silent=True)
+        if not isinstance(b,dict) or set(b)-set(cy.YieldSignal.__dataclass_fields__):
+            raise ValueError("PODCAST_YIELD_INPUT_INVALID")
+        signal=cy.YieldSignal(**b)
+        plan=cy.plan_yield(signal)
+        return _ok(plan=_dataclass_to_dict(plan,deep=True),signals={k:getattr(signal,k) for k in signal.__dataclass_fields__},
+                   provenance="caller_supplied_counts_not_independently_verified",assets_created=False)
+    except (ValueError,TypeError):
+        return jsonify({"ok":False,"state":"invalid_input","code":"PODCAST_YIELD_INPUT_INVALID"}),400
+    except Exception:
+        return jsonify({"ok":False,"state":"unavailable","code":"PODCAST_YIELD_UNAVAILABLE"}),503
+
 
 
 def _dataclass_to_dict(obj, deep=False):

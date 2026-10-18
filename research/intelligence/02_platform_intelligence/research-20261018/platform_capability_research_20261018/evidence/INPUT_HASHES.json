@@ -1,0 +1,22 @@
+[
+  {
+    "path": "[LOCAL_WORKSPACE]/recovery_20261017T1925Z/validated_candidates/LUMENIS_20261017T1620Z_dot-zack_NOT_FINAL/research/platform_official_matrix.md",
+    "sha256": "0095004563cea51b4f809d83ec4a3752358ab746f69b927aba508f5a0442be1c"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/recovery_20261017T1925Z/validated_candidates/LUMENIS_20261017T1620Z_dot-zack_NOT_FINAL/product/source/lumenis/system/collector/adapters/config.py",
+    "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/recovery_20261017T1925Z/validated_candidates/LUMENIS_20261017T1620Z_dot-zack_NOT_FINAL/product/source/lumenis/system/collector/runtime/browser_extract.py",
+    "sha256": "c0a8792a4ce2129db10195c190cda21c970c24f48669fea2be6c871c384bb1bf"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/recovery_20261017T1925Z/validated_candidates/LUMENIS_20261017T1620Z_dot-zack_NOT_FINAL/product/source/00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/recovery_20261017T1925Z/validated_candidates/LUMENIS_20261017T1620Z_dot-zack_NOT_FINAL/product/source/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "sha256": "04edb41316f6b9576fdcc021d82c26843c2d543ff0ba316d24c8082f2189f1e4"
+  }
+]

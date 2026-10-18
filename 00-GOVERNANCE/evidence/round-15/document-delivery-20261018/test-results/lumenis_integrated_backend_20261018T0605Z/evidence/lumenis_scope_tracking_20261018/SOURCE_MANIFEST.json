@@ -1,0 +1,123 @@
+{
+  "sources": [
+    {
+      "path": "[LOCAL_WORKSPACE]/product_task_register_v2_20261017/MASTER_REGISTER.md",
+      "bytes": 177121,
+      "sha256": "b379b016f8c990e744c5729d2305df04ae2f768acc63d68c90ae1c0f44068356",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/product_task_register_v2_20261017/REQUIREMENTS_LEDGER.json",
+      "bytes": 4039358,
+      "sha256": "07cb2d765b2a4ea69473a5d4aefc4935bd91c9c8cfe3073138dbe101a3905efc",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/product_task_register_v2_20261017/COVERAGE_CHECK.json",
+      "bytes": 2183,
+      "sha256": "b341fa50d4688fa0160e947b527d8f2fb4150b25e1a2a9016b9928c9cd2d712d",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/product_task_register_v2_20261017/v2_1/CORRECTION_V2_1.md",
+      "bytes": 6420,
+      "sha256": "92fbc78e40cb904cebaa4d221000e6c96fb6aa9eb518785296221aff97db5e07",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/product_task_register_v2_20261017/v2_1/REQUIREMENTS_LEDGER_V2_1_DELTA.json",
+      "bytes": 3380,
+      "sha256": "1f1fa991ce868d3779bb717071e4cb01beb7eda03c51cdfe66b41ef9b80121f9",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/noon_review_index_20261018_v003/01_COMPLETE_DELIVERY_INDEX.md",
+      "bytes": 27599,
+      "sha256": "7d5ec6c51237571035ee660a90ce3c4ff45f1cbe06642b780f994641d9cd35db",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/noon_review_index_20261018_v003/02_NINETEEN_GROUP_CURRENT_STATUS.json",
+      "bytes": 180099,
+      "sha256": "a40b3dd42301cd8c2a10df92ab0102b6b5370aac0375741427929aaa7875a15f",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/noon_review_index_20261018_v003/MANIFEST.json",
+      "bytes": 2100,
+      "sha256": "1c6db6787cf95e9199eaf47216361dd892ff2e418b3de9cb54495da377e0bcfd",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/noon_latest_entry_addendum_20261018T0345Z/01_NOON_LATEST_ENTRY.md",
+      "bytes": 6169,
+      "sha256": "07cd1c3d50b06ec33fe7bddee3158bd3bad526bff4c9eb9f3599b759bc8dff58",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/noon_latest_entry_addendum_20261018T0345Z/02_CURRENT_DELIVERY_STATUS.json",
+      "bytes": 3229,
+      "sha256": "602cfb35d311459f916e06d373be15bc597a65d1c717bfbcbd6faaff1b4e8775",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/frontend_pdf_upgrade_20261018/frozen_review_v010_20261018T0326Z/source/UNIFIED_FRONTEND_WORKING_v010.md",
+      "bytes": 493601,
+      "sha256": "9d9db9c1f205fc7d206ded88784d9fd6b2aff053b3222ca61bad4fa096f4d63a",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/real_public_validation_research_20261018/REPORT.md",
+      "bytes": 14665,
+      "sha256": "45be4fa26e1442b22a59f771aaa5770173cf7c7f7169982b66142f310dc69212",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/real_public_validation_research_20261018/LEDGER_ADDENDUM.json",
+      "bytes": 3862,
+      "sha256": "0d823b5fcbdf1e232601bf19ffd514616a9d0835ffdba9f6c3ad3699756fc0f3",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/real_public_validation_research_20261018/FIELD_CONTRACT.md",
+      "bytes": 4529,
+      "sha256": "870d7ea7facd974e6db59b31450a95276145663ae9d1670a620df3b06ac7b76f",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/commercial_media_selection_20261018/REPORT.md",
+      "bytes": 16160,
+      "sha256": "e965847db27e43085501f45014870867225a68f21348acb895bad3f383ce547b",
+      "role": "immutable_requirement_or_research_source"
+    },
+    {
+      "path": "[LOCAL_WORKSPACE]/commercial_media_selection_20261018/MANIFEST.json",
+      "bytes": 884,
+      "sha256": "08edd5aa042d684705475e683175bdf645c3f38592f7cdc312ddcb749a85050b",
+      "role": "immutable_requirement_or_research_source"
+    }
+  ],
+  "original_source_pins": [
+    {
+      "path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+      "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+      "line_count": 1075,
+      "source_role": "完整产品规划及原G要求"
+    },
+    {
+      "path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+      "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+      "line_count": 1430,
+      "source_role": "唯一完整产品草图"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+      "sha256": "7c67042b5ff8aecc36b7d48abf799cf8678fec774178ec54a4bf89cdba486efc",
+      "line_count": 1025,
+      "source_role": "既有Owner与R/J/U要求"
+    }
+  ],
+  "live_code_root": "[LOCAL_WORKSPACE]/lumenis_development_20261018/source",
+  "live_code_hash": null,
+  "live_code_note": "正在修改；源码只记录路径/观察，不宣称冻结稳定版本。"
+}

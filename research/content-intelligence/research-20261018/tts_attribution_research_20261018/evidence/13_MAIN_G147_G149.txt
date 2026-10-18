@@ -1,0 +1,7 @@
+426: | G145 | 趋势/异常/拐点 | STL 分解+EWMA/CUSUM 告警+变点检测（PELT）替代固定“环比≥200%/阈值”；ETS/ARIMA 短期预测带区间；CTH 事件、BMP 声量、舆情日报；回测：历史注入异常召回≥0.8、误报率可报告；<14 个点返回 INSUFFICIENT | statsmodels(BSD)、ruptures(BSD-2)、statsforecast(Apache-2.0)；alert_engine.py 阈值 | 阿康1 |
+427: | G146 | 小样本置信与排序 | Beta-Binomial/Wilson 区间显示所有比率（负面率、互动率、转化率）；经验贝叶斯收缩用于 KOS/创作者/门店排行，避免小样本冲顶；界面显示 n 与区间 | scipy(BSD)；G119 KOS 排行 | 阿康1/阿康 |
+428: | G147 | 传播扩散 | 事件级 Hawkes 自激过程估计“爆发强度/半衰期/预计峰值”；新品/话题 Bass 曲线拟合（创新/模仿系数）；样本不足（<30 条带时间戳）弃答；回测：前 50% 时间预测后 50% 累计量误差报告 | tick(BSD-3) 或 scipy 自实现；docs/reference/CTR-EVENT-CLUSTER | 阿康1 |
+429: | G148 | 影响力网络 | 转发/提及/合作关系图上 PageRank/HITS/中介中心性，输出 KOL/KOC/KOS 影响力与桥接者；无关系边则 NO_DATA；与粉丝数分开展示 | networkx(BSD) | 阿康1 |
+430: | G149 | 归因与因果（公开数据优先） | 多触点 Markov/Shapley 归因用已采集公开行为路径（曝光→互动→搜索/到店公开信号），用户自填转化为可选增强；活动效果用 DiD/合成控制（对照门店/品牌/时段）；uplift 仅在有对照时；输出带区间与“相关≠因果”标注，前提不满足（平行趋势检验失败）则拒答 | dowhy(MIT)、pysyncon(MIT)、causalml(Apache-2.0)、shap(MIT)；G81 | 阿康1 |
+431: | G150 | 评分校准与预测区间 | 所有“概率/预测”经 isotonic/Platt 校准（ECE 报告）；预测给 conformal 区间（覆盖率在保留集达名义±5%）；CTR 预测器从启发式升级为校准模型后才显示概率 | scikit-learn(BSD)、MAPIE(BSD-3) | 阿康1 |
+432: | G151 | 营销组合与预算（公开数据自上而下，见 G166–G169） | 不依赖用户输入：用财报营销费用、公开刊例×已采集曝光估算的渠道花费代理、公开销售/客流/租金为结果，按 品牌/集团×季度/半年/年 运行 Bayesian MMM（adstock+饱和），输出渠道贡献/边际 ROI 区间与预算再分配（凸优化，用户设约束）；用户自填数据为可选细化输入；期数不足（季度<12 期）或渠道无变化则 INSUFFICIENT；样本外 MAPE 报告 | Meridian(Apache-2.0)/PyMC-Marketing(Apache-2.0)、cvxpy(Apache-2.0)；BMP Campaign | 阿康1 |

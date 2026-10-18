@@ -1,0 +1,51 @@
+{
+  "record_type": "BOUNDED_SAME_SOURCE_REGRESSION_NOT_PRODUCT_ACCEPTANCE",
+  "verified_at_utc": "2026-10-18T09:31:31Z",
+  "base_main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+  "tested_source": {
+    "files": 3946,
+    "manifest_sha256": "538707d245fa85a53dd833e846612069db622ca67cf405e751f064ec4a17226d",
+    "changed_after_test": [],
+    "unexpected_files_after_test": []
+  },
+  "result": {
+    "tests": 2900,
+    "passed": 2900,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "exit": 0,
+    "junit_sha256": "e56be224fa32c514f8cbd772d44581907dd302e3774a3620152657368d3efbc8",
+    "log_sha256": "ea3086d8327340281e44f3a6405306455792312ed1ee29ed8debb50adc029015"
+  },
+  "scope": "Retained bounded regression plus every newly added or changed test module; not every repository test and not whole-product acceptance",
+  "independent_security_review": {
+    "tests": 940,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "scope": "Seven exact repair packages; overlaps other suites and must not be added to 2900",
+    "report_sha256": "9647e0d6642fb0dc33523f0cdb603d0738a6b88d751801434918a98900703e5b"
+  },
+  "new_memory_delta_sha256": "c67c8c1696cf0838218a98a536aa756352c3ab0e4a8f8cc23dbf7cccfb32967c",
+  "pitch_test_only_delta_sha256": "1e4775902db3be5801d64a009a4469700d06fb7a11ffda27ca884e15dbe54705",
+  "network": {
+    "non_loopback_allowed": false,
+    "attempts_denied": [],
+    "exit": 0
+  },
+  "publication": {
+    "status": "NOT_PUBLISHED",
+    "candidate_branch": "zack/20261018-complete-candidate",
+    "candidate_head": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "reason": "Tree creation returned cancelled; no tree SHA or new commit/PR established. Resume confirmation requested.",
+    "required_next": "Resume authorized publication, exact remote required gates, merge and readback"
+  },
+  "post_test_document_updates": "This dated receipt and later handoff/evidence-only edits are outside the frozen test source. No later production/test code change may inherit this pass without revalidation.",
+  "remaining_acceptance": [
+    "Native platform/front-end user flows",
+    "Real platform and owned model quality/coverage",
+    "All approved capabilities and research adoption",
+    "Remote repository gates and merge readback"
+  ]
+}

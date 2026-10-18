@@ -1,0 +1,9 @@
+{
+  "baseline": "[LOCAL_WORKSPACE]/lumenis_bmp09_parser_20261017T2248Z",
+  "baseline_manifest_sha256": "6eadb7d8217016205966c418bf52b42473009b45cc5b3daf74ad53814dc05b41",
+  "files": 3307,
+  "branch": "isolated-cloud/scoped-read-closure-20261018",
+  "git_branch": "NOT_A_GIT_CHECKOUT",
+  "remote": "NOT_TOUCHED",
+  "status": "IN_PROGRESS_NOT_ACCEPTED"
+}

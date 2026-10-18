@@ -99,7 +99,7 @@ Status: **DESIGN_READY — reviewed by M / 序境12 on 2026-10-02**. This is a
 subordinate implementation specification, not a new design authority. It does
 not accept the operational product, a model, or a deployed public destination.
 
-M review (thread `01a0cd84-7685-7a73-97d9-83a14a546e71`): approved this complete
+M review (thread `private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186`): approved this complete
 bounded candidate under the sole Experience Constitution §§31–36, only for the
 listed Website files and interactions. Workflow explanations and the fictional
 nine-step Trace must remain visibly identified as previews/demonstrations.
@@ -318,7 +318,7 @@ coverage baseline, not a scope ceiling. This record alone proves no integration.
 
 ### M acceptance — 2026-10-02
 
-M (序境12, thread `01a0cd84-7685-7a73-97d9-83a14a546e71`) accepted
+M (序境12, thread `private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186`) accepted
 this bounded Website visitor workflow's local engineering result after reading
 the implementation/test diff, the evidence above and desktop/mobile/orbit
 screenshots. The five source/test files are frozen. The accepted publication

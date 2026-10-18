@@ -138,3 +138,54 @@ def test_server_attempt_receipt_fences_stale_reclaimed_and_normal_work(tmp_path)
                        run_id=current_receipt["run_id"],
                        lease_owner=current_receipt["lease_owner"]) is False
     q.close()
+
+
+def test_progress_checkpoint_survives_reopen_and_stale_receipt_cannot_replace_it(tmp_path):
+    q = _q(tmp_path)
+    task_id = q.enqueue('collector_source', {'actor_id': 7, 'scope': {'domain_id': 'cth'}})
+    task = q.dequeue(worker_id='first', lease_owner='first', task_id=task_id)
+    assert q.save_progress(task_id, {'completed': ['web_atom']}, **_receipt(task))
+    q.close()
+    q = _q(tmp_path)
+    assert q.get(task_id)['payload']['progress'] == {'completed': ['web_atom']}
+    with q._conn:
+        q._conn.execute('UPDATE tasks SET last_heartbeat_at=0 WHERE id=?', (task_id,))
+    assert q.reap_stale(1, task_id=task_id) == [task_id]
+    assert not q.save_progress(task_id, {'completed': ['forged']}, **_receipt(task))
+    assert q.get(task_id)['payload']['progress'] == {'completed': ['web_atom']}
+    q.close()
+
+
+def test_attempt_guard_serializes_real_cross_process_reaper(tmp_path):
+    import subprocess
+    import sys
+    q = _q(tmp_path)
+    task_id = q.enqueue('collect', {})
+    task = q.dequeue(worker_id='active', lease_owner='active')
+    with q._conn:
+        q._conn.execute('UPDATE tasks SET last_heartbeat_at=0 WHERE id=?', (task_id,))
+    code = (
+        'from lumenis.system.collector.guard.task_queue import TaskQueue; '
+        f'q=TaskQueue({q.path!r}); print(q.reap_stale(1), flush=True); q.close()'
+    )
+    with q.attempt_guard(task_id, **_receipt(task)) as allowed:
+        assert allowed
+        proc = subprocess.Popen([sys.executable, '-c', code], stdout=subprocess.PIPE, text=True)
+        time.sleep(0.2)
+        assert proc.poll() is None  # Reaper cannot take ownership inside business commit.
+    output, _ = proc.communicate(timeout=10)
+    assert str(task_id) in output
+    assert not q.ack(task_id, **_receipt(task))
+    q.close()
+
+
+def test_local_deferral_preserves_failure_budget_and_attempt_fence(tmp_path):
+    q = TaskQueue(str(tmp_path / 'defer.db'))
+    identity = q.enqueue('collector_source', {})
+    claimed = q.dequeue(worker_id='a', lease_owner='a')
+    receipt = {key: claimed[key] for key in ('run_id', 'worker_id', 'lease_owner')}
+    assert q.defer(identity, delay_seconds=10, **receipt)
+    assert q.get(identity)['attempts'] == 0
+    assert q.dequeue(worker_id='b', lease_owner='b', task_id=identity) is None
+    assert not q.defer(identity, delay_seconds=0, **receipt)
+    q.close()

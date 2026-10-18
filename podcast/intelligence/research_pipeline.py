@@ -70,16 +70,20 @@ def classify_freshness(published_at: datetime | None, now: datetime | None = Non
     return "evergreen"
 
 
-def evidence_gate(claims: Iterable[ResearchClaim], minimum_confidence: float = 0.7) -> list[ResearchClaim]:
-    """Return claims eligible for downstream rule/hypothesis consideration.
+def evidence_gate(claims: Iterable[ResearchClaim], minimum_confidence: float = 0.7, *,
+                  artifact_id: str | None = None, review_evidence_id: str | None = None) -> list[ResearchClaim]:
+    """Only current signed human review makes a claim eligible for reuse.
 
-    AI-suggested claims remain suggestions. A claim is not promoted to a
-    transferable rule merely because a model produced it.
+    Ordinary draft claims remain usable as drafts, including UNKNOWN. Self-reported
+    status, source identifiers and model confidence are never approval receipts.
+    Even an eligible claim remains a human-reviewed assertion, not automatic truth.
     """
-    return [
-        claim
-        for claim in claims
-        if claim.evidence_ids
-        and claim.confidence >= minimum_confidence
-        and claim.status in {EvidenceStatus.OBSERVED, EvidenceStatus.DERIVED, EvidenceStatus.HUMAN_VERIFIED}
-    ]
+    if not artifact_id or not review_evidence_id:
+        return []
+    from content_generation import _review_approved_claim_ids, _context
+    if _context() is None:
+        return []
+    approved = _review_approved_claim_ids(artifact_id, review_evidence_id)
+    return [claim for claim in claims if claim.claim_id in approved
+            and claim.text == approved[claim.claim_id]["text"]
+            and list(claim.evidence_ids) == approved[claim.claim_id]["evidence_ids"]]

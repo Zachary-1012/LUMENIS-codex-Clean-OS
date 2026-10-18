@@ -1703,17 +1703,17 @@
     },
     "adoption_receipts": [
       {
-        "path": "C:/Users/28049/Documents/Codex/2026-10-16/issue17-repair/brio-20261015/root-adoption.md",
+        "path": "C:/Users/private-user-121dcc385158/Documents/Codex/2026-10-16/issue17-repair/brio-20261015/root-adoption.md",
         "sha256": "B01EFA81FB709E2BCBBCE5CE80CDBCA790BFAF9622CCF58FBBBF689C4839B698",
         "decisions": "ADAPT platform/source fields to C1 PlatformManifest/Collector and C3 metrics; ADOPT existing PlatformSession/RecoverySheet, Subject/BrandFocus/Campaign, Timeline/Artifact, and the single Gateway/Agent/Permission path; DEFER unverified API/free-tier claims, static tokens, percentages, vendor details, and third-party asset/license reuse."
       },
       {
-        "path": "C:/Users/28049/Documents/Codex/2026-10-16/issue17-repair/brio-20261015/pack1-adoption-receipt.md",
+        "path": "C:/Users/private-user-121dcc385158/Documents/Codex/2026-10-16/issue17-repair/brio-20261015/pack1-adoption-receipt.md",
         "sha256": "C610265E364FBF44AEFFA621EEDE519BF98B3E4C62773E3943EA73DD727CE3ED",
         "decisions": "ADAPT clip-to-material continuity and valid transition adjacency/timing to C4 Timeline; ADOPT existing Task, Artifact, Skills, connector, Permission, and controlled Browser owners; DEFER unsupported feature catalogs, cloud/OS control, new connector/provider scope, and vendor code/assets without exact license review."
       },
       {
-        "path": "C:/Users/28049/Documents/Codex/2026-10-16/issue17-repair/brio-20261015/pack1-6-7-adoption-receipt.md",
+        "path": "C:/Users/private-user-121dcc385158/Documents/Codex/2026-10-16/issue17-repair/brio-20261015/pack1-6-7-adoption-receipt.md",
         "sha256": "878852427FA6CDF0B20CA534FE04597A820E2BC237E654153F0D50DC451CA7ED",
         "decisions": "ADAPT platform identities, native fields, metrics, and creator/campaign vocabulary through C1/C3; ADOPT existing PlatformSession/RecoverySheet, Subject/BrandFocus/relations/Campaign, and Artifact/Evaluation continuity; DEFER publishing, spend, audience uploads, automated replies, unverified API/price/terms, and third-party code/packages."
       }
@@ -1789,25 +1789,25 @@
     ],
     "audit_files": [
       {
-        "path": "C:/Users/28049/Documents/Codex/2026-10-16/cortechchat-audit/LUMENIS-ADOPTION-REPORT.md",
+        "path": "C:/Users/private-user-121dcc385158/Documents/Codex/2026-10-16/cortechchat-audit/LUMENIS-ADOPTION-REPORT.md",
         "sha256": "973AD7723416F11F381E9F5AD6A4B8CDCB304A34EDBF3B687F0CBC672E339E0C"
       },
       {
-        "path": "C:/Users/28049/Documents/Codex/2026-10-16/cortechchat-audit/frontend-audit.md",
+        "path": "C:/Users/private-user-121dcc385158/Documents/Codex/2026-10-16/cortechchat-audit/frontend-audit.md",
         "sha256": "72285E28AD1A10DA21A760FA209B80945FCD84411B941001C902334E02C16647"
       },
       {
-        "path": "C:/Users/28049/Documents/Codex/2026-10-16/cortechchat-audit/file-coverage.json",
+        "path": "C:/Users/private-user-121dcc385158/Documents/Codex/2026-10-16/cortechchat-audit/file-coverage.json",
         "bytes": 3267872,
         "sha256": "A8E9EE63DF4D8665618575E45B2492F014047F585B6A25BEEC60D152A9CBDD50"
       },
       {
-        "path": "C:/Users/28049/Documents/Codex/2026-10-16/cortechchat-audit/backend-file-coverage.json",
+        "path": "C:/Users/private-user-121dcc385158/Documents/Codex/2026-10-16/cortechchat-audit/backend-file-coverage.json",
         "bytes": 28770,
         "sha256": "4AB0DEEE57B09EF8DBBA14D49E5AA1A16D647351E76D9E8CBC2ADEA13ED88775"
       },
       {
-        "path": "C:/Users/28049/Documents/Codex/2026-10-16/cortechchat-audit/backend-audit.md",
+        "path": "C:/Users/private-user-121dcc385158/Documents/Codex/2026-10-16/cortechchat-audit/backend-audit.md",
         "sha256": "7507994C18180F6785837ADB9FED106568A76FCDBD03FCBBC2AE93FA253185A4"
       }
     ],
@@ -1983,7 +1983,7 @@
   "flutter": {
     "base_sha": "b58f2d7288ba69f3c47800072f0577faf0863be5",
     "build_command": "flutter build web --release --no-pub --no-web-resources-cdn",
-    "output_directory": "C:/Users/28049/Documents/Codex/2026-10-16/issue17-repair/sh04-locale-web-b9b4b45b8d3c4c2ca3f3b6f072e29381",
+    "output_directory": "C:/Users/private-user-121dcc385158/Documents/Codex/2026-10-16/issue17-repair/sh04-locale-web-b9b4b45b8d3c4c2ca3f3b6f072e29381",
     "build_exit_code": 0,
     "built_files": 45,
     "output_tree_sha256": "28a97d806d5e02c33ada04bfd57c74cd2ae6260d6f605c0eea1e811c4e6a6d08",
@@ -2161,7 +2161,7 @@
           }
         ],
         "patch": {
-          "path": "C:\\Users\\28049\\Documents\\Codex\\2026-10-16\\issue17-repair\\issue17-product-repairs-3e0014f9ca713c43f9dcf0be2aaaa770b7b345f0e0cc2001e8054ca0989c42a4.patch",
+          "path": "C:\\Users\\private-user-121dcc385158\\Documents\\Codex\\2026-10-16\\issue17-repair\\issue17-product-repairs-3e0014f9ca713c43f9dcf0be2aaaa770b7b345f0e0cc2001e8054ca0989c42a4.patch",
           "sha256": "3e0014f9ca713c43f9dcf0be2aaaa770b7b345f0e0cc2001e8054ca0989c42a4",
           "size_bytes": 213296,
           "git_reverse_check_exit": 0,
@@ -2205,22 +2205,22 @@
         ],
         "receipts": [
           {
-            "path": "C:\\Users\\28049\\Documents\\Codex\\2026-10-16\\issue17-repair\\issue17-product-repairs-pytest-final.log",
+            "path": "C:\\Users\\private-user-121dcc385158\\Documents\\Codex\\2026-10-16\\issue17-repair\\issue17-product-repairs-pytest-final.log",
             "sha256": "921d8fff0fac13643a3e765516bb8c29979089bac2f5d9a68112928c8b58ec86",
             "size_bytes": 562
           },
           {
-            "path": "C:\\Users\\28049\\Documents\\Codex\\2026-10-16\\issue17-repair\\issue17-product-repairs-junit-final.xml",
+            "path": "C:\\Users\\private-user-121dcc385158\\Documents\\Codex\\2026-10-16\\issue17-repair\\issue17-product-repairs-junit-final.xml",
             "sha256": "a9b57841abd1c1a6e9c9ac50b7e36d412dcfc5e1d05d82d3bd7d10805ba018e4",
             "size_bytes": 27751
           },
           {
-            "path": "C:\\Users\\28049\\Documents\\Codex\\2026-10-16\\issue17-repair\\issue17-product-repairs-pycompile.log",
+            "path": "C:\\Users\\private-user-121dcc385158\\Documents\\Codex\\2026-10-16\\issue17-repair\\issue17-product-repairs-pycompile.log",
             "sha256": "c1e97067c5f479a44a6f57297a0a8f87a59d181c3c529910f8bf059094bc3abb",
             "size_bytes": 13
           },
           {
-            "path": "C:\\Users\\28049\\Documents\\Codex\\2026-10-16\\issue17-repair\\issue17-product-repairs-ruff-delta.log",
+            "path": "C:\\Users\\private-user-121dcc385158\\Documents\\Codex\\2026-10-16\\issue17-repair\\issue17-product-repairs-ruff-delta.log",
             "sha256": "78b4941882ed899782877b3b08ef10973e4d9b406aa86f29171e8dfe78961fb8",
             "size_bytes": 119
           }
@@ -2244,7 +2244,7 @@
       },
       "result": {
         "base": "b58f2d7288ba69f3c47800072f0577faf0863be5",
-        "patch": "C:\\Users\\28049\\Documents\\Codex\\2026-10-16\\issue17-repair\\groq-review-v3.patch",
+        "patch": "C:\\Users\\private-user-121dcc385158\\Documents\\Codex\\2026-10-16\\issue17-repair\\groq-review-v3.patch",
         "sha256": "d382dcf71bf9d95385c1614907be18e9391c3f3b64e5989bfd75db5fc37b7049",
         "regression": "groq-v3-regression.log",
         "regression_sha256": "4ee266f84129c85203b591aac655d27688946788efcf6a1c044d2ff5edcb4190",
@@ -2465,7 +2465,7 @@
         "entry": "http://127.0.0.1:18218/workspace/SH-04",
         "real_input": "Actual author conclusions from the Cortech source audit; no external source assertions or Canonical facts are created.",
         "input_artifact": {
-          "path": "C:\\Users\\28049\\Documents\\Codex\\2026-10-16\\issue17-repair\\sh04-ui-inputs.json",
+          "path": "C:\\Users\\private-user-121dcc385158\\Documents\\Codex\\2026-10-16\\issue17-repair\\sh04-ui-inputs.json",
           "sha256": "7af8377d1cec778a7d37eec544241ee6b70479866b19055fcdaf5da20166edc8",
           "bytes": 2088
         },
@@ -2489,12 +2489,12 @@
         },
         "screenshots": [
           {
-            "path": "C:\\Users\\28049\\Documents\\Codex\\2026-10-16\\issue17-repair\\sh04-final-user-result-top.jpg",
+            "path": "C:\\Users\\private-user-121dcc385158\\Documents\\Codex\\2026-10-16\\issue17-repair\\sh04-final-user-result-top.jpg",
             "sha256": "4c03cc22f48c1455cf12344e6230dbd410f4fef05c7258aeaac70c2b3841d4a9",
             "bytes": 32530
           },
           {
-            "path": "C:\\Users\\28049\\Documents\\Codex\\2026-10-16\\issue17-repair\\sh04-final-user-result.jpg",
+            "path": "C:\\Users\\private-user-121dcc385158\\Documents\\Codex\\2026-10-16\\issue17-repair\\sh04-final-user-result.jpg",
             "sha256": "29d5b6a585269f0ed7fb8623dc561e572dca18edf8f4e873f8403fc7b1f3efa0",
             "bytes": 40223
           }
@@ -2503,10 +2503,10 @@
           "repository": "D:\\LUMENIS_REBUILD\\loop-20261014-rules",
           "base": "b58f2d7288ba69f3c47800072f0577faf0863be5",
           "port": 18218,
-          "area": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-sh04-final-61bb0aec8df64b439754c547d9e0b8e5",
-          "data_dir": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-sh04-final-61bb0aec8df64b439754c547d9e0b8e5\\data",
-          "db": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-sh04-final-61bb0aec8df64b439754c547d9e0b8e5\\data\\monitor.db",
-          "web_build": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-sh04-final-61bb0aec8df64b439754c547d9e0b8e5\\web",
+          "area": "C:\\Users\\private-user-121dcc385158\\AppData\\Local\\Temp\\lumenis-sh04-final-61bb0aec8df64b439754c547d9e0b8e5",
+          "data_dir": "C:\\Users\\private-user-121dcc385158\\AppData\\Local\\Temp\\lumenis-sh04-final-61bb0aec8df64b439754c547d9e0b8e5\\data",
+          "db": "C:\\Users\\private-user-121dcc385158\\AppData\\Local\\Temp\\lumenis-sh04-final-61bb0aec8df64b439754c547d9e0b8e5\\data\\monitor.db",
+          "web_build": "C:\\Users\\private-user-121dcc385158\\AppData\\Local\\Temp\\lumenis-sh04-final-61bb0aec8df64b439754c547d9e0b8e5\\web",
           "sources": {
             "account/authorization.py": "6f1b1699dcc0bfb55214632136ff1c4f26dfbd51de7f7a15e9776b967c08eb2e",
             "account/models.py": "a43a21625870489b5cab9f853f82cb8538c63f12e05a038900c196c6790833d1",
@@ -2560,7 +2560,7 @@
         },
         "web_build": {
           "artifact": {
-            "path": "C:\\Users\\28049\\Documents\\Codex\\2026-10-16\\issue17-repair\\sh04-locale-web-b9b4b45b8d3c4c2ca3f3b6f072e29381.json",
+            "path": "C:\\Users\\private-user-121dcc385158\\Documents\\Codex\\2026-10-16\\issue17-repair\\sh04-locale-web-b9b4b45b8d3c4c2ca3f3b6f072e29381.json",
             "sha256": "f7a907b069ad65900b34c66f38905f13347b0d3c67b21f333a6b26cc764cf2ea",
             "bytes": 5999
           },

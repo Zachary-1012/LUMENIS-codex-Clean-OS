@@ -1,0 +1,56 @@
+[
+  {
+    "path": "app/lib/features/shared/read_aloud_service.dart",
+    "main_sha256": "85f56fc866aeda4827e69fc2044456f2016c2bdb516c8b6c9a54dc5acff0b4af",
+    "candidate_sha256": "85f56fc866aeda4827e69fc2044456f2016c2bdb516c8b6c9a54dc5acff0b4af",
+    "equal": true
+  },
+  {
+    "path": "app/lib/features/shared/read_aloud_backend_web.dart",
+    "main_sha256": "33416a898cd720c11f556fd44b86d531d581c4e58b9d661ed6f9a40c9fcf1ce3",
+    "candidate_sha256": "33416a898cd720c11f556fd44b86d531d581c4e58b9d661ed6f9a40c9fcf1ce3",
+    "equal": true
+  },
+  {
+    "path": "app/lib/features/shared/read_aloud_backend_io.dart",
+    "main_sha256": "2f05ab748868f1f3c33cb6ceb2ded70a550f1e8644554b0a16dee98c60ff6566",
+    "candidate_sha256": "2f05ab748868f1f3c33cb6ceb2ded70a550f1e8644554b0a16dee98c60ff6566",
+    "equal": true
+  },
+  {
+    "path": "app/android/app/src/main/kotlin/com/lumenis/lumenis_app/MainActivity.kt",
+    "main_sha256": "283a4cf95f632010673144b4f3dfc46078ff1b93d184dbf0c3f717a4bddca252",
+    "candidate_sha256": "283a4cf95f632010673144b4f3dfc46078ff1b93d184dbf0c3f717a4bddca252",
+    "equal": true
+  },
+  {
+    "path": "app/ios/Runner/AppDelegate.swift",
+    "main_sha256": "a4c9e84fca709a1cba4ee1820899ac6d50acc535f3d13d8ab6c912f16cfc3f57",
+    "candidate_sha256": "a4c9e84fca709a1cba4ee1820899ac6d50acc535f3d13d8ab6c912f16cfc3f57",
+    "equal": true
+  },
+  {
+    "path": "app/macos/Runner/MainFlutterWindow.swift",
+    "main_sha256": "7cf810742043725e51091110387aaf569197fdf4bac631b131c32182f3fb3a78",
+    "candidate_sha256": "7cf810742043725e51091110387aaf569197fdf4bac631b131c32182f3fb3a78",
+    "equal": true
+  },
+  {
+    "path": "app/windows/runner/read_aloud_platform.cpp",
+    "main_sha256": "68c22079d690a123e7580695d9df6927e387bd464f387e4f1092eedc7048b51a",
+    "candidate_sha256": "68c22079d690a123e7580695d9df6927e387bd464f387e4f1092eedc7048b51a",
+    "equal": true
+  },
+  {
+    "path": "kos_attribution.py",
+    "main_sha256": "e8f88e3399fd6be17b242f76738ff66eed415c379dded8755f5f7e7309b79d43",
+    "candidate_sha256": "8abb5e527ecbddc0ba2c1f7d7797a12884c62b71e7151af5b3cde4e7d084431b",
+    "equal": false
+  },
+  {
+    "path": "kos_routes.py",
+    "main_sha256": "9460447a266ffba387e0ee6c5af369c04dcdd32b0cec75410628a64315c7aa3c",
+    "candidate_sha256": "fe51689ad0cb1f5751ad45da797214aa3a7abb1603252c183c554010df28ebb8",
+    "equal": false
+  }
+]

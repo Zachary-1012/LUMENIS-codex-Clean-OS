@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import threading
 from datetime import datetime
 from typing import Any, Callable
 from urllib.parse import urljoin, urlsplit
@@ -12,6 +13,7 @@ from bs4 import BeautifulSoup
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .public_source import PublicResponse, PublicSourceError, fetch_public_url, public_source_provenance
 from .registry import register_adapter
+from ..guard.rate_limiter import AdaptiveRateLimiter
 
 
 MAX_PUBLIC_BODY_CHARS = 16_000
@@ -129,6 +131,39 @@ class PublicHttpAdapter(BasePlatformAdapter):
     def __init__(self, *, fetcher: Callable[[str], PublicResponse] | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.fetcher = fetcher or fetch_public_url
+
+    _document_lock = threading.Lock()
+    _document_limiter = AdaptiveRateLimiter(jitter=False)
+
+    def fetch_document(self, url: str, *, allowed_content_types: tuple[str, ...],
+                       before_fetch: Callable[[], None] | None = None) -> PublicResponse:
+        """Retain one bounded document response through the shared safe transport.
+
+        The caller owns registered-scope and effect admission. This method adds
+        no cookies, alternate network client, size override or persistence.
+        """
+        if not allowed_content_types or not all(isinstance(v, str) for v in allowed_content_types):
+            raise ValueError("document content types required")
+        # One process-wide original Collector limiter, not a fresh limiter per
+        # request. Serialize wait+fetch so concurrent callers cannot burst.
+        with self._document_lock:
+            limiter = self._document_limiter
+            if not limiter.can_run():
+                raise PublicSourceError("public document collector cooling down")
+            limiter.wait_slot()
+            if before_fetch is not None:
+                before_fetch()  # authorization may expire while waiting
+            try:
+                response = self.fetcher(url)
+                if (type(response) is not PublicResponse or not 200 <= response.status_code < 300
+                        or response.content_type not in allowed_content_types
+                        or not 0 < len(response.content) <= 2 * 1024 * 1024):
+                    raise PublicSourceError("unsupported or oversized public document response")
+            except Exception:
+                limiter.on_failure()
+                raise
+            limiter.on_success()
+            return response
 
     @staticmethod
     def _item(response: PublicResponse) -> dict[str, Any]:

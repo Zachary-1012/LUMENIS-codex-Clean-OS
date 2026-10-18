@@ -6,21 +6,51 @@ import pytest
 from lumenis.system.ai_gateway import core, user_api_adapter
 
 
+def _approved_gateway(system, user, **kwargs):
+    """Synthetic user confirms the exact preview; never bypasses Permission."""
+    result = core.chat(system, user, **kwargs)
+    if result[1] == "user_api_approval_required":
+        preview = result[2]["approval_request"]
+        return core.chat(system, user, **kwargs, external_approval={
+            "confirmed": True, "confirmation_id": preview["confirmation_id"],
+            "resource": preview["resource"],
+        })
+    return result
+
+
+def _approved_adapter(system, user, **kwargs):
+    result = user_api_adapter.chat(system, user, **kwargs)
+    if result[1] == "user_api_approval_required":
+        preview = result[2]["approval_request"]
+        return user_api_adapter.chat(system, user, **kwargs, external_approval={
+            "confirmed": True, "confirmation_id": preview["confirmation_id"],
+            "resource": preview["resource"],
+        })
+    return result
+
+
+def _configure_test_runtime(**values):
+    """Fault injection on synthetic runtime state, never real env credentials."""
+    _actor, gate, caller = user_api_adapter._identity()
+    cfg = user_api_adapter._configurations[gate][caller]
+    cfg.update(values)
+
+
 def test_default_never_calls_third_party(monkeypatch):
     monkeypatch.delenv("AI_PROVIDER", raising=False)
-    monkeypatch.setenv("USER_MODEL_API_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("USER_MODEL_API_BASE_URL", "https://api.groq.com/openai/v1")
     monkeypatch.setenv("USER_MODEL_API_KEY", "k")
     monkeypatch.setenv("USER_MODEL_API_MODEL", "m")
     monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: (_ for _ in ()).throw(AssertionError("called")))
     assert core._chat("s", "u") == (None, "provider_disabled")
-    assert core.chat("s", "u")[1] == "provider_disabled"
+    assert _approved_gateway("s", "u")[1] == "provider_disabled"
 
 
-def test_explicit_user_api_is_used_without_fallback(monkeypatch):
+def test_explicit_user_api_is_used_without_fallback(configured, monkeypatch):
     import io
     import json
     monkeypatch.setenv("AI_PROVIDER", "user_api")
-    monkeypatch.setenv("USER_MODEL_API_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("USER_MODEL_API_BASE_URL", "https://api.groq.com/openai/v1")
     monkeypatch.setenv("USER_MODEL_API_KEY", "k")
     monkeypatch.setenv("USER_MODEL_API_MODEL", "m")
 
@@ -34,22 +64,35 @@ def test_explicit_user_api_is_used_without_fallback(monkeypatch):
     monkeypatch.setattr(user_api_adapter, "_open", fake)
     # Global API selection must not activate old data/learning call sites.
     assert core._chat("s", "u") == (None, "provider_disabled")
-    assert core.chat("s", "u")[1] == "provider_disabled"
+    assert _approved_gateway("s", "u")[1] == "provider_disabled"
     assert seen == {}
-    assert core.chat("s", "u", external_user_input=True)[:2] == ("ok", "user_api")
-    assert seen["url"] == "https://example.invalid/v1/chat/completions"
+    assert _approved_gateway("s", "u", external_user_input=True)[:2] == ("ok", "user_api")
+    assert seen["url"] == "https://api.groq.com/openai/v1/chat/completions"
 
     def boom(req, timeout=None): raise OSError("down")
     monkeypatch.setattr(user_api_adapter, "_open", boom)
-    assert core.chat("s", "u", external_user_input=True)[:2] == (None, "user_api_unavailable")
+    assert _approved_gateway("s", "u", external_user_input=True)[:2] == (None, "user_api_unavailable")
 
 
 @pytest.fixture
 def configured(monkeypatch):
+    from lumenis.system.security import permission
+    from flask import Flask
+    # Real canonical Gate, isolated in memory, with testing bypass disabled.
+    monkeypatch.setattr(permission, "_TESTING_BYPASS_ENABLED", False)
+    monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+    monkeypatch.setattr(permission, "get_permission_gate", lambda: gate)
+    gate = permission.PermissionGate()
     monkeypatch.setenv("AI_PROVIDER", "user_api")
     monkeypatch.setenv("USER_MODEL_API_BASE_URL", "https://api.groq.com/openai/v1")
     monkeypatch.setenv("USER_MODEL_API_KEY", "test-private-key")
     monkeypatch.setenv("USER_MODEL_API_MODEL", "openai/gpt-oss-20b")
+    app = Flask(__name__)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    with app.test_request_context("/", method="POST", json={}, environ_base={"REMOTE_ADDR": "127.0.0.1"}):
+        user_api_adapter.configure({"provider": "user_api", "base_url": user_api_adapter.GROQ_BASE_URL,
+                                    "api_key": "test-private-key", "model": "openai/gpt-oss-20b"})
+        yield
 
 
 def test_configuration_is_not_live_availability(configured, monkeypatch):
@@ -65,9 +108,9 @@ def test_configuration_is_not_live_availability(configured, monkeypatch):
 
 @pytest.mark.parametrize("url", ["http://api.groq.com/openai/v1", "https://user:password@api.groq.com/v1", "https://api.groq.com/v1?key=private", "https://api.groq.com:invalid/v1"])
 def test_invalid_destination_cannot_send_credentials(configured, monkeypatch, url):
-    monkeypatch.setenv("USER_MODEL_API_BASE_URL", url)
+    _configure_test_runtime(base_url=url)
     monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("invalid URL sent request"))
-    assert user_api_adapter.chat("s", "u")[1] == "provider_disabled"
+    assert _approved_adapter("s", "u", external_user_input=True)[1] == "user_api_destination_not_allowed"
 
 
 @pytest.mark.parametrize("http_status, code", [(401, "authentication_failed"), (403, "access_denied"), (429, "rate_limited"), (500, "unavailable")])
@@ -75,7 +118,7 @@ def test_provider_error_is_sanitized_without_fallback(configured, monkeypatch, h
     def denied(req, timeout):
         raise urllib.error.HTTPError(req.full_url, http_status, "private provider error", {}, None)
     monkeypatch.setattr(user_api_adapter, "_open", denied)
-    assert user_api_adapter.chat("s", "u") == (None, "user_api_" + code, None)
+    assert _approved_adapter("s", "u", external_user_input=True) == (None, "user_api_" + code, None)
 
 
 def test_redirect_never_forwards_bearer_token():
@@ -90,7 +133,7 @@ def test_selected_chat_uses_gateway_without_exporting_business_sources(configure
     monkeypatch.setattr(service, "_get_db", lambda: pytest.fail("untyped chat read database"))
     monkeypatch.setattr(service.freg, "search_function_metadata", lambda *a, **k: [])
     monkeypatch.setattr(service, "_run_owned", lambda *a, **k: pytest.fail("selected API fell back to owned"))
-    def chat(system, user, *, external_user_input=False):
+    def chat(system, user, *, external_user_input=False, external_approval=None):
         assert external_user_input is True
         calls.append((system, user))
         return "真实响应", "user_api", {}
@@ -115,7 +158,7 @@ def test_transport_redacts_system_and_user_before_external_send(configured, monk
         sent.update(json.loads(request.data))
         return Response(b'{"choices":[{"message":{"content":"ok"}}]}')
     monkeypatch.setattr(user_api_adapter, "_open", capture)
-    result = core.chat(
+    result = _approved_gateway(
         "api_key=hidden-system-secret contact: sample@example.com",
         "password=hidden-password test-private-key 13800138000",
         external_user_input=True,
@@ -131,7 +174,7 @@ def test_transport_redacts_system_and_user_before_external_send(configured, monk
 @pytest.mark.parametrize("admission", [False, None, 1, "true"])
 def test_generic_gateway_cannot_export_by_global_configuration(configured, monkeypatch, admission):
     monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("unadmitted data escaped"))
-    assert core.chat("database context", "private source", external_user_input=admission)[1] == "provider_disabled"
+    assert _approved_gateway("database context", "private source", external_user_input=admission)[1] == "provider_disabled"
     assert core._chat("architecture scan", "private source") == (None, "provider_disabled")
 
 
@@ -146,6 +189,7 @@ def test_product_chat_route_returns_real_failure_status(configured, monkeypatch)
     monkeypatch.setattr(ai_api, "_run_owned_analysis", lambda *a, **k: pytest.fail("fallback"))
     app = Flask(__name__)
     app.register_blueprint(ai_api.bp)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
     result = app.test_client().post("/api/ai/chat", json={"message": "hello"})
     assert result.status_code == 503
     assert result.json["ok"] is False
@@ -200,3 +244,254 @@ def test_chat_usage_excludes_untrusted_non_counts(configured, monkeypatch, tmp_p
     ))
     assert service.chat("hello")["usage"] is None
     assert json.loads(log_path.read_text(encoding="utf-8"))["usage"] is None
+
+
+@pytest.mark.parametrize("url", [
+    "https://example.invalid/v1", "https://api.groq.com.evil.invalid/openai/v1",
+    "https://evil-api.groq.com/openai/v1", "https://api.groq.com/openai/v1?",
+    "https://api.groq.com/openai/v1#", "https://api.groq.com/openai/v1/../other",
+    "https://api.groq.com/openai/v1//", "https://api.groq.com:444/openai/v1",
+    "https://api.groq.com./openai/v1", "https://api.groq.com/openai%2fv1",
+    "https://api.groq.com/openai/v1\n/other", "https://@api.groq.com/openai/v1",
+    "https://api.groq.com:/openai/v1", "https://127.0.0.1/openai/v1",
+])
+def test_only_official_groq_destination_is_admitted(configured, monkeypatch, url):
+    _configure_test_runtime(base_url=url)
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("invalid destination"))
+    assert user_api_adapter.status()["reason"] == "USER_API_DESTINATION_NOT_ALLOWED"
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_destination_not_allowed"
+
+
+@pytest.mark.parametrize("url", [
+    "https://api.groq.com/openai/v1", "https://api.groq.com/openai/v1/",
+    "https://API.GROQ.COM:443/openai/v1",
+])
+def test_approved_url_is_normalized_to_fixed_transport(configured, monkeypatch, url):
+    import io
+    _configure_test_runtime(base_url=url)
+    requests = []
+    def fake(req, timeout):
+        requests.append(req.full_url)
+        return io.BytesIO(b'{"choices":[{"message":{"content":"result"}}]}')
+    monkeypatch.setattr(user_api_adapter, "_open", fake)
+    assert _approved_gateway("s", "u", external_user_input=True)[:2] == ("result", "user_api")
+    assert requests == [user_api_adapter.GROQ_CHAT_URL]
+
+
+@pytest.mark.parametrize("field,code", [
+    ("BASE_URL", "BASE_URL"), ("KEY", "KEY"), ("MODEL", "MODEL"),
+])
+def test_missing_configuration_does_not_call_network(configured, monkeypatch, field, code):
+    _configure_test_runtime(**{{"BASE_URL": "base_url", "KEY": "api_key", "MODEL": "model"}[field]: ""})
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("incomplete configuration"))
+    assert user_api_adapter.status()["reason"] == "USER_API_" + code + "_REQUIRED"
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_" + code.lower() + "_required"
+
+
+@pytest.mark.parametrize("admission", [False, None, 1, "true"])
+def test_direct_transport_requires_explicit_data_admission(configured, monkeypatch, admission):
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("direct bypass"))
+    result = _approved_adapter("s", "u", external_user_input=admission)
+    assert result[:2] == (None, "provider_disabled")
+    from lumenis.system.security import permission
+    assert result[2]['audit_id'] == permission.get_permission_gate().get_audit_log()[-1]['audit_id']
+
+
+def test_canonical_permission_denial_prevents_transport(configured, monkeypatch):
+    from lumenis.system.security import permission
+    gate = permission.PermissionGate(enabled_permissions=set())
+    monkeypatch.setattr(permission, "get_permission_gate", lambda: gate)
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("denied call"))
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_permission_denied"
+    assert gate.get_audit_log()[-1]["result"] == "denied"
+    assert gate.get_audit_log()[-1]["audit_id"]
+    assert gate.get_audit_log()[-1]["reason"] == "USER_API_ANALYZE_PERMISSION_REQUIRED"
+
+
+def test_closed_workspace_prevents_transport(configured, monkeypatch):
+    from flask import current_app
+    current_app.config["LUMENIS_OPEN_WORKSPACE"] = False
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("missing context"))
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_permission_denied"
+
+
+def test_permission_failure_is_sanitized_and_does_not_call_transport(configured, monkeypatch):
+    from lumenis.system.security import permission
+    def broken():
+        raise RuntimeError("private-key-sentinel")
+    monkeypatch.setattr(permission, "get_permission_gate", broken)
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("permission failure"))
+    result = _approved_gateway("s", "u", external_user_input=True)
+    assert result[1] == "user_api_audit_unavailable"
+    assert "private-key-sentinel" not in repr(result)
+
+
+def test_configuration_validation_is_total():
+    for cfg in (None, {}, {"base_url": []}, {"base_url": user_api_adapter.GROQ_BASE_URL}):
+        assert user_api_adapter.configuration_is_complete(cfg) is False
+
+
+@pytest.mark.parametrize("payload", [
+    b"not-json", b"[]", b"null", b'{"choices":[null]}',
+    b'{"choices":[{"message":{"content":""}}]}',
+    b'{"choices":[{"message":{"content":"partial"},"finish_reason":"length"}]}',
+    b'{"error":{"message":"private"},"choices":[{"message":{"content":"wrong"}}]}',
+    b"x" * 2_000_001,
+])
+def test_malformed_incomplete_provider_output_is_not_success(configured, monkeypatch, payload):
+    import io
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: io.BytesIO(payload))
+    assert _approved_adapter("s", "u", external_user_input=True) == (None, "user_api_invalid_response", None)
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"temperature": float("nan")}, {"temperature": True}, {"temperature": 3},
+    {"max_tokens": -1}, {"max_tokens": True}, {"timeout": float("inf")},
+])
+def test_invalid_request_never_leaves_transport(configured, monkeypatch, kwargs):
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("invalid request"))
+    assert _approved_adapter("s", "u", external_user_input=True, **kwargs)[1] == "user_api_invalid_request"
+
+
+def test_transport_usage_retains_only_nonnegative_counts(configured, monkeypatch):
+    import io
+    import json
+    payload = {"choices": [{"message": {"content": "ok"}}], "usage": {
+        "prompt_tokens": 3, "completion_tokens": True, "total_tokens": -1,
+        "debug": "private-provider-content",
+    }}
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: io.BytesIO(json.dumps(payload).encode()))
+    assert _approved_adapter("s", "u", external_user_input=True)[2] == {"prompt_tokens": 3}
+
+
+def test_permission_is_rechecked_on_each_call_and_recovers(configured, monkeypatch):
+    import io
+    from lumenis.system.security import permission
+    gate = permission.get_permission_gate()
+    calls = []
+    def fake(*a, **k):
+        calls.append(True)
+        return io.BytesIO(b'{"choices":[{"message":{"content":"ok"}}]}')
+    monkeypatch.setattr(user_api_adapter, "_open", fake)
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api"
+    gate._enabled_permissions.discard(permission.PermissionLevel.ANALYZE)
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_permission_denied"
+    gate._enabled_permissions.add(permission.PermissionLevel.ANALYZE)
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api"
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize("headers", [
+    {"X-Actor-ID": "1"}, {"X-Forwarded-For": "127.0.0.1"},
+    {"Origin": "https://untrusted.invalid"}, {"Host": "untrusted.invalid"},
+])
+def test_client_identity_or_untrusted_origin_cannot_authorize_external_call(configured, monkeypatch, headers):
+    from flask import current_app
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("forged request"))
+    with current_app.test_request_context("/", headers=headers, environ_base={"REMOTE_ADDR": "127.0.0.1"}):
+        assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_permission_denied"
+
+
+def test_request_context_is_required_even_with_selected_provider(configured, monkeypatch):
+    import flask
+    monkeypatch.setattr(flask, "has_request_context", lambda: False)
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("no identity context"))
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_permission_context_required"
+
+
+def test_configuration_revocation_during_permission_check_prevents_send(configured, monkeypatch):
+    from lumenis.system.security import permission
+    gate = permission.get_permission_gate()
+    original = gate.confirm_user_api_request
+    def revoke(actor, binding, confirmation):
+        token = original(actor, binding, confirmation)
+        user_api_adapter.configure({"provider": "owned"})
+        return token
+    monkeypatch.setattr(gate, "confirm_user_api_request", revoke)
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("revoked selection"))
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_configuration_changed"
+
+
+def test_exact_prompt_and_model_are_bound_to_permission_without_raw_audit(configured, monkeypatch):
+    import io
+    from lumenis.system.security import permission
+    gate = permission.get_permission_gate()
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: io.BytesIO(b'{"choices":[{"message":{"content":"ok"}}]}'))
+    resources = []
+    for text, model in [("private-first", "model-a"), ("private-second", "model-a"), ("private-second", "model-b")]:
+        _configure_test_runtime(model=model)
+        assert _approved_gateway("s", text, external_user_input=True)[1] == "user_api"
+        resources.append(gate.get_audit_log()[-1]["resource"])
+    assert len(set(resources)) == 3
+    audits = repr(gate.get_audit_log())
+    assert "private-first" not in audits and "private-second" not in audits
+    assert "test-private-key" not in audits
+    assert gate._current_check_domain is None
+
+
+def test_authenticated_shared_member_grant_is_rechecked(configured, monkeypatch):
+    import io
+    from lumenis.auth import service as auth
+    from lumenis.system.security import permission
+    monkeypatch.setattr(auth, "get_current_user", lambda **kw: {"id": 17})
+    monkeypatch.setattr(permission, "_load_actor_scope_role", lambda *a, **k: "user")
+    monkeypatch.setattr(permission, "_actor_has_scope_action", lambda actor, product, module, action, **kw:
+                        (actor, product, module, action) == (17, "SHARED", "conversation", "write"))
+    grants = [{"product_id": "SHARED", "module": "conversation", "action": "write"}]
+    monkeypatch.setattr(permission, "_load_actor_scope_grants", lambda *a, **k: grants)
+    user_api_adapter.configure({"provider": "user_api", "base_url": user_api_adapter.GROQ_BASE_URL,
+                                "api_key": "test-private-key", "model": "openai/gpt-oss-20b"})
+    calls = []
+    def fake(*a, **k):
+        calls.append(True)
+        return io.BytesIO(b'{"choices":[{"message":{"content":"ok"}}]}')
+    monkeypatch.setattr(user_api_adapter, "_open", fake)
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api"
+    grants.clear()
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_permission_denied"
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("module,action,resource", [
+    ("content", "write", "user-api-conversation:v1:" + "a" * 64),
+    ("conversation", "read", "user-api-conversation:v1:" + "a" * 64),
+    ("conversation", "write", "https://other.invalid"),
+    ("conversation", "write", "user-api-conversation:v1:invalid"),
+])
+def test_shared_ai_admission_cannot_be_reused_for_other_effects(configured, module, action, resource):
+    from lumenis.system.security import permission
+    principal = permission.resolve_local_workspace_principal(module="conversation", action="write")
+    decision = permission.check_shared_workspace_effect(
+        principal, {"scope_kind": "shared_workspace", "version": 1},
+        permission.OperationType.AI_CALL, resource, module=module, action=action,
+    )
+    assert decision.allowed is False
+
+
+def test_groq_route_normal_success_and_permission_denial(configured, monkeypatch):
+    import io
+    from flask import current_app
+    import ai_api
+    from lumenis.ai_hub import service
+    from lumenis.system.security import permission
+    current_app.register_blueprint(ai_api.bp)
+    monkeypatch.setattr(service, "record_learning", lambda *a, **k: None)
+    monkeypatch.setattr(service.freg, "search_function_metadata", lambda *a, **k: [])
+    monkeypatch.setattr(service, "retrieve", lambda *a, **k: pytest.fail("business source exported"))
+    calls = []
+    def fake(*a, **k):
+        calls.append(True)
+        return io.BytesIO(b'{"choices":[{"message":{"content":"requested answer"}}]}')
+    monkeypatch.setattr(user_api_adapter, "_open", fake)
+    client = current_app.test_client()
+    preview = client.post("/api/ai/chat", json={"message": "my own question"})
+    assert preview.status_code == 409 and not calls
+    consent = preview.json["approval_request"]
+    result = client.post("/api/ai/chat", json={"message": "my own question", "external_approval": {
+        "confirmed": True, "confirmation_id": consent["confirmation_id"], "resource": consent["resource"],
+    }})
+    assert result.status_code == 200 and result.json["reply"] == "requested answer"
+    permission.get_permission_gate()._enabled_permissions.clear()
+    denied = client.post("/api/ai/chat", json={"message": "my own question", "permission": True, "actor_id": 1})
+    assert denied.status_code == 503 and denied.json["code"] == "USER_API_PERMISSION_DENIED"
+    assert denied.json["reply"] is None and len(calls) == 1

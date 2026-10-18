@@ -1,0 +1,38 @@
+F                                                                        [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+=================================== FAILURES ===================================
+______ test_shared_content_project_real_api_save_reopen_revise_and_export ______
+
+local_client = (<FlaskClient <Flask 'tests.test_local_content_source_routes'>>, {'source': PosixPath('/tmp/pytest-of-agent/pytest-4/t...ed.database.repository.DatabaseRepository object at 0x7fd51c5caff0>}, <Flask 'tests.test_local_content_source_routes'>)
+
+    def test_shared_content_project_real_api_save_reopen_revise_and_export(local_client):
+        client, store, app = local_client
+        pending_response = shared_upload(client, store)
+        assert pending_response.status_code == 403, pending_response.get_json()
+        pending = pending_response.get_json().get("confirmation")
+        assert pending is not None, pending_response.get_json()
+        assert pending["resource"].startswith("content-source-import:shared-workspace:v1:")
+        assert "approval_token" not in json.dumps(pending_response.get_json())
+        assert rows(store) == []
+    
+        confirmed = client.post(
+            f"/api/experience/content-source-confirmations/{pending['confirmation_id']}",
+            json={"confirmed": True}, headers=SHARED_HEADERS,
+        )
+        assert confirmed.status_code == 200, confirmed.get_json()
+        imported = shared_upload(client, store)
+>       assert imported.status_code == 201, imported.get_json()
+E       AssertionError: {'code': 'CONTENT_PROJECT_FAILED', 'execution_id': 'e9fd1a66012344e6', 'ok': False, 'publish_status': 'not_performed', ...}
+E       assert 503 == 201
+E        +  where 503 = <WrapperTestResponse streamed [503 SERVICE UNAVAILABLE]>.status_code
+
+tests/test_local_content_source_routes.py:245: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_local_content_source_routes.py::test_shared_content_project_real_api_save_reopen_revise_and_export

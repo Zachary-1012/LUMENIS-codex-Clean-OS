@@ -289,3 +289,12 @@ def test_resonate_service_topic_uses_realistic():
         assert hk in allowed, "service 主题词命中了高语境手法 %s" % i["tension_type"]
 
 
+
+
+def test_calendar_never_uses_clock_or_category_as_exact_day():
+    for signals in ({}, {'target_date': '2027-02-17'}, {'target_date': '2026-02-01'}):
+        result = generate_ideas('独立书店', '美妆', signals, n=1)
+        assert result['meta']['bound_hotspot'] == '（未绑定节点）'
+    result = generate_ideas('独立书店', '图书', {'target_date': '2026-04-23'}, n=1)
+    assert result['meta']['bound_hotspot'] == '世界读书日'
+    assert result['meta']['hotspot_origin'] == 'editorial_reference'

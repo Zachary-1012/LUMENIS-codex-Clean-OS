@@ -149,7 +149,8 @@ def test_changed_or_truncated_audio_is_not_accepted(local_candidate):
         speech._wav_bytes(audio, digest(audio))
 
 
-def test_pipeline_has_no_script_prompt_download_or_fallback(local_candidate, monkeypatch):
+@pytest.mark.parametrize("language_hint", [None,*sorted(speech.CONTENT_LANGUAGE_CODES)])
+def test_pipeline_has_no_script_prompt_download_or_fallback(local_candidate, monkeypatch, language_hint):
     audio, runtime, _paths = local_candidate
     calls = []
 
@@ -160,14 +161,17 @@ def test_pipeline_has_no_script_prompt_download_or_fallback(local_candidate, mon
             assert "pipe:0" in command and audio.read_bytes() == payload
             return b"\x00" * (16000 * 4)
         spec, _samples = payload.split(b"\n", 1)
-        assert set(json.loads(spec)) == {"manifest_path", "manifest_sha256", "weight_path", "duration_seconds"}
+        assert set(json.loads(spec)) == {"manifest_path", "manifest_sha256", "weight_path", "duration_seconds", "language_hint"}
+        assert json.loads(spec)["language_hint"] == language_hint
         assert command[1] == "-I" and command[-1] == "--worker"
         return json.dumps(raw_transcript()).encode()
 
     monkeypatch.setattr(speech, "_communicate", run)
     result = speech.transcribe_audio(str(audio), expected_audio_sha256=digest(audio), runtime=runtime,
-                                     source_ref="source:caller-locator")
+                                     source_ref="source:caller-locator",language_hint=language_hint)
     assert result["source_ref_authenticated_by_adapter"] is False
+    assert result["declared_language"] == language_hint
+    assert result["language_selection"] == ("user_declared" if language_hint else "automatic")
     assert result["rights_state"] == "UNKNOWN"
     assert result["fallback_allowed"] is False
     assert result["script_or_target_supplied"] is False
@@ -268,3 +272,120 @@ def test_typed_failure_reason_is_allowlisted_and_raw_stderr_is_never_an_error():
     assert str(speech._failed_process(["worker", "--worker"], 1,
                b"SpeechBlocked: NOT_APPROVED_REASON\n")) == "SPEECH_OFFLINE_WORKER_FAILED"
     assert str(speech._failed_process(["ffmpeg"], 1, stderr)) == "SPEECH_OFFLINE_WORKER_FAILED"
+
+
+def test_slow_worker_reads_full_large_input_across_poll_timeouts():
+    payload = b'\x01\x02\x03\x04' * 200000
+    script = "import time,sys,hashlib; time.sleep(.6); print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())"
+    checks = []
+    output = speech._communicate([sys.executable, '-I', '-c', script], payload,
+        cancelled=lambda: checks.append(time.monotonic()) or False, deadline=time.monotonic()+5)
+    assert output.strip().decode() == hashlib.sha256(payload).hexdigest()
+    assert len(checks) >= 3
+
+
+def test_slow_large_input_worker_remains_cancellable():
+    start=time.monotonic()
+    with pytest.raises(speech.SpeechCancelled):
+        speech._communicate([sys.executable,'-I','-c','import time,sys;time.sleep(10);sys.stdin.buffer.read()'],b'x'*800000,
+            cancelled=lambda: time.monotonic()-start>.4,deadline=start+5)
+    assert time.monotonic()-start<3
+
+
+@pytest.mark.parametrize('hint',[True,[],{},'auto','zh-CN','../../ko'])
+def test_invalid_declared_language_rejected_before_runtime(local_candidate,hint):
+    audio,runtime,_=local_candidate
+    with pytest.raises(speech.SpeechBlocked,match='DECLARED_LANGUAGE'):
+        speech.transcribe_audio(str(audio),expected_audio_sha256=digest(audio),runtime=runtime,language_hint=hint)
+
+
+@pytest.mark.parametrize('model_id',['openai/whisper-medium','small','',None,[],True])
+def test_unadmitted_model_fails_before_assets(local_candidate,monkeypatch,model_id):
+    from dataclasses import replace
+    audio,runtime,_=local_candidate
+    runtime=replace(runtime,model_id=model_id)
+    monkeypatch.setattr(speech,'_local_file',lambda *a:pytest.fail('must reject before file access'))
+    with pytest.raises(speech.SpeechBlocked,match='MODEL_NOT_ADMITTED'):
+        speech.transcribe_audio(str(audio),expected_audio_sha256=digest(audio),runtime=runtime)
+
+
+def test_explicit_small_binds_worker_and_report_without_changing_base(local_candidate,monkeypatch):
+    from dataclasses import replace
+    audio,runtime,paths=local_candidate
+    original_default=speech.MODEL_ID
+    monkeypatch.setitem(speech.EVALUATION_MODEL_HASHES,'openai/whisper-small',digest(paths['weight']))
+    calls=[]
+    def run(command,payload,**kwargs):
+        calls.append(payload)
+        if len(calls)==1:return b'\0'*(16000*4)
+        spec=json.loads(payload.split(b'\n',1)[0]);assert spec['model_id']=='openai/whisper-small'
+        return json.dumps(raw_transcript()).encode()
+    monkeypatch.setattr(speech,'_communicate',run)
+    result=speech.transcribe_audio(str(audio),expected_audio_sha256=digest(audio),runtime=replace(runtime,model_id='openai/whisper-small'))
+    assert result['model_id']=='openai/whisper-small' and result['weight_sha256']==digest(paths['weight'])
+    assert result['evaluation_candidate'] and result['promotion_status']=='NOT_PROMOTED'
+    assert result['model_revision']==digest(paths['weight'])
+    assert speech.MODEL_ID==original_default=='openai/whisper-base'
+
+
+@pytest.mark.parametrize('hint',sorted(speech.CONTENT_LANGUAGE_CODES))
+def test_worker_accepts_declared_languages_before_manifest_check(monkeypatch,hint):
+    import io
+    spec={'manifest_path':'/missing','manifest_sha256':'a'*64,'weight_path':'/missing','duration_seconds':1,'language_hint':hint}
+    monkeypatch.setattr(sys,'stdin',type('Input',(),{'buffer':io.BytesIO(json.dumps(spec).encode()+b'\n')})())
+    with pytest.raises(speech.SpeechBlocked,match='LOCAL_SPEECH_ASSET_MISSING'):speech._worker()
+
+
+@pytest.mark.parametrize('hint',['EN','es-419','auto',' en',[],True])
+def test_worker_rejects_invalid_languages_before_manifest(monkeypatch,hint):
+    import io
+    spec={'manifest_path':'/missing','manifest_sha256':'a'*64,'weight_path':'/missing','duration_seconds':1,'language_hint':hint}
+    monkeypatch.setattr(sys,'stdin',type('Input',(),{'buffer':io.BytesIO(json.dumps(spec).encode()+b'\n')})())
+    with pytest.raises(speech.SpeechBlocked,match='WORKER_CONTRACT_INVALID'):speech._worker()
+
+
+def hpr_terminal_envelope_case():
+    raw=raw_transcript();s=raw['segments'][0]
+    s.update(start=0.0,end=6.72,text=' there.',words=[{'word':' there.','start':6.52,'end':6.82,'probability':.9849562048912048}])
+    raw['text']=' there.'
+    return raw
+
+
+def test_hpr_terminal_word_outside_segment_is_preserved_with_pinned_warning():
+    raw=hpr_terminal_envelope_case();before=copy.deepcopy(raw)
+    result=speech.validate_transcript(raw,duration_seconds=60)
+    assert raw==before and result['transcript']==before
+    warning=next(w for w in result['warnings'] if w['reason']=='LAST_WORD_CROSSES_SEGMENT_END_REVIEW_REQUIRED')
+    assert warning['segment_end']==6.72 and warning['end']==6.82 and warning['word_index']==0
+    assert warning['word_values_modified'] is False and warning['applicability']=='openai-whisper==20250625'
+    assert result['review_state']=='UNREVIEWED'
+
+
+@pytest.mark.parametrize('mutation',[
+    lambda r:r['segments'][0]['words'][0].update(start=6.0), # terminal duration>.7
+    lambda r:r['segments'][0]['words'][0].update(start=6.73), # wholly after segment
+    lambda r:r['segments'][0]['words'][0].update(end=60.01), # actual audio bound
+    lambda r:r['segments'][0]['words'][0].update(start=float('nan')),
+    lambda r:r['segments'][0]['words'][0].update(end=float('inf')),
+    lambda r:r['segments'][0]['words'][0].update(start=6.9), # reversed
+    lambda r:r['segments'][0]['words'].append({'word':' next','start':6.83,'end':6.9,'probability':.9}), # nonterminal overflow
+])
+def test_terminal_envelope_does_not_admit_invalid_geometry(mutation):
+    raw=hpr_terminal_envelope_case();mutation(raw)
+    with pytest.raises(speech.SpeechBlocked):speech.validate_transcript(raw,duration_seconds=60)
+
+
+def test_terminal_envelope_rejects_crossing_next_segment():
+    raw=hpr_terminal_envelope_case();s=copy.deepcopy(raw['segments'][0]);s.update(id=1,start=6.75,end=7.2,text=' next',words=[{'word':' next','start':6.9,'end':7.2,'probability':.9}]);raw['segments'].append(s);raw['text']+=' next'
+    with pytest.raises(speech.SpeechBlocked,match='INTERVAL'):speech.validate_transcript(raw,duration_seconds=60)
+
+
+def test_first_word_crossing_rejects_previous_segment_overlap():
+    raw=raw_transcript();raw['segments'][0]['words'][-1]['end']=.9
+    s=copy.deepcopy(raw['segments'][0]);s.update(id=1,start=1.0,end=1.4,text=' next',words=[{'word':' next','start':.8,'end':1.2,'probability':.9}]);raw['segments'].append(s);raw['text']+=' next'
+    with pytest.raises(speech.SpeechBlocked,match='INTERVAL'):speech.validate_transcript(raw,duration_seconds=2)
+
+
+def test_word_exceeding_audio_by_point_zero_one_is_rejected():
+    raw=raw_transcript();raw['segments'][0]['end']=1.01;raw['segments'][0]['words'][-1]['end']=1.01
+    with pytest.raises(speech.SpeechBlocked,match='INTERVAL'):speech.validate_transcript(raw,duration_seconds=1)

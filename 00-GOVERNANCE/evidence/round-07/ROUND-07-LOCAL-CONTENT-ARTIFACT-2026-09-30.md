@@ -33,7 +33,7 @@ changes are a separate pending integration Batch in this commit.
 
 ## Real licensed media and process recovery
 
-Evidence: `C:/Users/28049/AppData/Local/Temp/lumenis-local-artifact-20260930-tzy1egkw/`.
+Evidence: `C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-local-artifact-20260930-tzy1egkw/`.
 `local-acceptance.json` records actual loopback Flask principal, no account table,
 no global COMMIT/bypass, confirmed sources, two 12-second MP4 revisions (360 frames)
 and two 10-second WAV revisions, followed by independent-process reopen/hash

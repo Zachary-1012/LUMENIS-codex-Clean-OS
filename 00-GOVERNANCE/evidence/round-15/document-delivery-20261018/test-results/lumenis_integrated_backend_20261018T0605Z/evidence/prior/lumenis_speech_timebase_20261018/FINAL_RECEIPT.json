@@ -1,0 +1,11 @@
+{
+  "manifest_files": 3318,
+  "after_test_mismatches": [
+    ".pytest_cache/v/cache/nodeids"
+  ],
+  "explanation": "Only pytest-generated nodeids cache changed; all 3317 other inventoried files, including both changed source/test files, remain identical.",
+  "diff_sha256": "14b8c75e02abe213642708081d9b0f549b7a8dfe9d9b1b11a4601b51ae187bca",
+  "manifest_sha256": "d3474e649581f8ee70db7a524d2732aa2b4bfd6206c9d35f063164bca8b77559",
+  "regression_log_sha256": "0581c565bc8d344213be21f068498919439c5650b7e0807ee5e0da5d618ae556",
+  "result": "353 passed in 62.92s; no skipped tests; no background-thread leak"
+}

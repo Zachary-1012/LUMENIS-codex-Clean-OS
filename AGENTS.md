@@ -790,9 +790,9 @@ W6 applies that exact patch in isolation and performs local runtime/E2E validati
 
 #### C3/C5 retained continuation ownership and historical Cloud handoff
 
-Local thread `01a10117-03c7-7503-8a9b-670e80a474a7` (`序境 C3/W3｜CTH与BMP业务闭环`)
+Local thread `private-source-id-sha256-27f88d66834adf1c5a246ecb88c11f85d5a2fcd4db9666e464598eb4a5443061` (`序境 C3/W3｜CTH与BMP业务闭环`)
 is **C3 only** (PO, 2026-10-08), with the complete CTH/BMP scope and its research
-obligations. Local **C5** thread `01a1186a-7c8b-7ef1-90b1-75afebb01bca`
+obligations. Local **C5** thread `private-source-id-sha256-2bf63c2d66f700c5382827c13e36d220ab973f77d86bcbde8af39e3817b634c9`
 (`序境 C5/W5｜研究资料与共享成果闭环`) holds the complete Importer/Research/
 shared-deliverable scope and unfinished C5 materials; original combined-window
 materials remain preserved. Both retain their mapped R/J/U requirements and
@@ -804,8 +804,8 @@ zero-cost path under its current Permission/recipe/checkpoint/evaluation contrac
 Paid GPU or billing operations still require a new explicit cost authorization.
 W6 coordinates exact shared-file reservations, formal DB writes and main publication.
 
-Former Cloud W3 `01a0fbd3-b280-779c-8431-207a71739022` and Cloud W5
-`01a0f9df-91e3-70b4-b9e7-db3e49e4701b` stop new development, research,
+Former Cloud W3 `private-source-id-sha256-0df3ba1d8208b13dfa31803c4c590c47cb40bb8c2a04ab5ce71a89bc9b3a2364` and Cloud W5
+`private-source-id-sha256-d48e5c33863f685116f15037de4222053eb3521229257c18c472d5dd09de94d8` stop new development, research,
 tests, collection and source synchronization. Preserve fixed d92 candidates,
 logs and unresolved material states; use their complete handoffs and retrieve
 only genuinely missing bytes. Do not delete/recreate environments, rerun valid

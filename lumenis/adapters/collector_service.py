@@ -10,8 +10,8 @@
    杜绝多标签并发操作同一浏览器而触发风控/封号；
 3. 六态如实：每平台 SUCCESS/EMPTY/AUTH_REQUIRED/CAPTCHA/BLOCKED/NETWORK_ERROR/FAIL，
    风控绝不显示成“0条”；
-4. 结果统一入库（persist.py），并以 web_runs/web_sources 作为全局健康状态中心数据源，
-   进程重启后健康灯仍可从数据库还原。
+4. 结果经现有 secondary_collection 单一 owner 写入 Source/Evidence/Canonical；
+   TaskQueue 保存运营进度，健康投影沿用 web_runs/web_sources，不另造来源事实。
 """
 import threading
 import uuid
@@ -39,6 +39,7 @@ _browser_lock = threading.Lock()
 # 内存任务表：task_id -> 任务状态
 _TASKS: Dict[str, dict] = {}
 _TASKS_LOCK = threading.Lock()
+_ACTIVE_JOBS: set[str] = set()
 _HUMAN_BROWSER_LEASE: Optional[tuple[str, str]] = None
 
 
@@ -210,126 +211,298 @@ def update_human_browser_state(task_id: str, platform: str, status: str,
         return True
 
 
-def _run_one(platform: str, keyword: str, max_results: int, manual: bool = False) -> dict:
-    """采集并入库单个平台。浏览器平台持锁串行；采集前经动态风控放行判断。"""
-    adapter = registry.get(platform)
-    if adapter is None:
-        return {"platform": platform, "state": persist.STATE_FAIL, "success": False,
-                "fetched": 0, "inserted": 0, "updated": 0, "error": "适配器未注册", "duration": 0}
-
-    # 动态风控：自动任务严格遵循间隔/熔断；手动仅在需验证/熔断时硬拦截以保护账号
-    allowed, reason = risk_controller.allow(platform, manual=manual)
-    if not allowed:
-        lv = risk_controller._of(platform).level
-        state = "NEED_VERIFY" if lv == "NEED_VERIFY" else ("IP_RISK" if lv == "IP_RISK" else "COOLDOWN")
-        return {"platform": platform, "display": getattr(adapter, "platform_display", platform),
-                "state": state, "success": False, "skipped": True, "fetched": 0,
-                "inserted": 0, "updated": 0, "error": reason, "duration": 0, "risk_level": lv}
-
-    locked = platform in BROWSER_PLATFORMS
-    try:
-        if locked:
-            _browser_lock.acquire()
-        if locked:
-            activity_guard = platform_activity_lock(platform)
-        else:
-            from contextlib import nullcontext
-            activity_guard = nullcontext(True)
-        with activity_guard as activity_acquired:
-            if activity_acquired is not True:
-                return {"platform": platform,
-                        "display": getattr(adapter, "platform_display", platform),
-                        "state": "BLOCKED", "success": False, "skipped": True,
-                        "fetched": 0, "inserted": 0, "updated": 0,
-                        "error": "COLLECTOR_MAINTENANCE_ATTEMPT_ACTIVE", "duration": 0}
-            t0 = time.time()
-            result = adapter.collect(keyword, max_results)
-            result.duration_seconds = result.duration_seconds or (time.time() - t0)
-            stats = persist.persist_result(platform, adapter.platform_display, result, keyword)
-            # 六态驱动动态风控状态机
-            risk_controller.report(platform, stats["state"], stats.get("error", ""))
-            stats["risk_level"] = risk_controller._of(platform).level
-            return stats
-    except Exception as e:
-        risk_controller.report(platform, persist.STATE_FAIL, str(e))
-        return {"platform": platform, "display": getattr(adapter, "platform_display", platform),
-                "state": persist.STATE_FAIL, "success": False, "fetched": 0,
-                "inserted": 0, "updated": 0, "error": str(e), "duration": 0,
-                "risk_level": risk_controller._of(platform).level}
-    finally:
-        if locked and _browser_lock.locked():
-            _browser_lock.release()
+class CollectorAdmissionError(PermissionError):
+    def __init__(self, result):
+        self.result = result
+        super().__init__(result.get("status", "COLLECTOR_ADMISSION_DENIED"))
 
 
-def _job(task_id: str, keyword: str, platforms: List[str], max_results: int, manual: bool = True):
-    """后台采集任务主体：网页组并行 + 浏览器组串行。"""
-    task = _TASKS[task_id]
-    web_targets = [p for p in platforms if p not in BROWSER_PLATFORMS]
-    browser_targets = [p for p in platforms if p in BROWSER_PLATFORMS]
+def _queue():
+    from lumenis.system.collector.guard.task_queue import TaskQueue
+    return TaskQueue()
 
-    def _mark(stats: dict):
-        with _TASKS_LOCK:
-            task["per_platform"][stats["platform"]] = stats
-            task["done"] += 1
 
-    # 免登网页平台并行
-    if web_targets:
-        futs = {_web_pool.submit(_run_one, p, keyword, max_results, manual): p for p in web_targets}
-        for fut in futs:
-            try:
-                _mark(fut.result())
-            except Exception as e:
-                _mark({"platform": futs[fut], "state": persist.STATE_FAIL, "success": False,
-                       "fetched": 0, "inserted": 0, "updated": 0, "error": str(e), "duration": 0})
+def _queue_id(task_id):
+    value = str(task_id or "")
+    return int(value[3:]) if value.startswith("cq-") and value[3:].isdigit() else None
 
-    # 真人浏览器平台串行（持锁，逐个跑，最稳）
-    for p in browser_targets:
-        _mark(_run_one(p, keyword, max_results, manual))
 
+def _admit(actor, scope, platforms, keyword, max_results):
+    from lumenis.system.collector.adapters.secondary_collection import (
+        _manual_collection_guard, _validate_request,
+    )
+    if not isinstance(actor, dict) or type(actor.get("id")) is not int:
+        raise CollectorAdmissionError({"ok": False, "status": "AUTH_REQUIRED"})
+    if not isinstance(platforms, list) or not platforms or len(platforms) > 32:
+        raise ValueError("An explicit bounded platform list is required")
+    canonical = []
+    for platform in platforms:
+        platform = "xiaohongshu" if platform == "xhs" else platform
+        platform, keyword, max_results = _validate_request(platform, keyword, max_results)
+        if platform in canonical:
+            continue
+        _, error = _manual_collection_guard(actor, scope, platform, keyword, max_results)
+        if error is not None:
+            raise CollectorAdmissionError(error)
+        canonical.append(platform)
+    return canonical, keyword, max_results
+
+
+def _run_one(platform, keyword, max_results, manual=True, *, actor=None, scope=None, attempt_guard=None, operation_key=None):
+    """Compatibility caller of the single permission/Evidence/Canonical owner."""
+    from lumenis.system.collector.adapters.secondary_collection import collect_search
+    from contextlib import nullcontext
+    browser_platform = platform in BROWSER_PLATFORMS
+    with (_browser_lock if browser_platform else nullcontext()):
+        with (platform_activity_lock(platform) if browser_platform else nullcontext(True)) as acquired:
+            if acquired is not True:
+                return {"platform": platform, "state": "BUSY", "success": False}
+            result = collect_search(platform, keyword, max_results=max_results,
+                                    operator="human", actor=actor, scope=scope,
+                                    attempt_guard=attempt_guard, operation_key=operation_key)
+    # Keep operational references and counts, never a second raw content store.
+    keys = ("ok", "status", "error_type", "approval_resource", "evidence_ref",
+            "evidence_recorded", "canonical_synced", "native_fields_synced",
+            "refresh_verified", "scope_status", "returned_count", "imported", "updated",
+            "read_only", "external_write", "next_cursor", "continuation_required",
+            "task_commit_evidence_ref", "commit_reconciled", "network_attempted", "historical_commit_verified",
+            "new_collection_required", "retry_safe", "recovery_action", "source_status", "wait_seconds")
+    stats = {key: result[key] for key in keys if key in result}
+    transport_error = (result.get("provenance") or {}).get("error_type")
+    stats["retryable_transport_failure"] = (result.get("status") == "PROVIDER_UNAVAILABLE"
+        and transport_error in {"ConnectionError", "Timeout", "ConnectTimeout", "ReadTimeout", "TimeoutError"})
+    stats.update(platform=platform, state=result.get("status", "FAIL"),
+                 success=result.get("ok") is True,
+                 fetched=result.get("returned_count", 0),
+                 inserted=result.get("imported", 0), updated=result.get("updated", 0))
+    return stats
+
+
+def _job(task_id, *_legacy_args):
+    """Consume this durable task; retries preserve completed platform checkpoints."""
+    queue = _queue()
+    identity = _queue_id(task_id)
     with _TASKS_LOCK:
-        per = list(task["per_platform"].values())
-        task["status"] = "finished"
-        task["finished_at"] = _now()
-        task["total_fetched"] = sum(s.get("fetched", 0) for s in per)
-        task["total_inserted"] = sum(s.get("inserted", 0) for s in per)
-        task["total_updated"] = sum(s.get("updated", 0) for s in per)
+        _ACTIVE_JOBS.add(task_id)
+    worker = "collector-" + uuid.uuid4().hex
+    try:
+        while True:
+            row = queue.get(identity)
+            if row is None or row["status"] in {"done", "failed"}:
+                return
+            if row["status"] == "running":
+                # Another live process owns it. Never steal its attempt.
+                return
+            delay = max(0, row["scheduled_at"] - time.time())
+            if delay:
+                time.sleep(min(delay, 4))
+                continue
+            task = queue.dequeue(worker_id=worker, lease_owner=worker, task_id=identity)
+            if task is None:
+                return
+            receipt = {key: task[key] for key in ("run_id", "worker_id", "lease_owner")}
+            get_task(task_id)  # Keep the existing human-browser lane's live task cache current.
+            payload = task["payload"]
+            if time.time() >= float(payload.get("deadline_at", task["created_at"] + _manual_window_seconds(payload["platforms"]))):
+                existing_per = dict((payload.get("progress") or {}).get("per_platform") or {})
+                deadline_progress = {"per_platform": {platform: existing_per[platform]
+                    if existing_per.get(platform, {}).get("success") is True else {
+                    **existing_per.get(platform, {}), "platform": platform,
+                    "state": "TASK_DEADLINE_EXCEEDED", "success": False,
+                    "network_attempted": False} for platform in payload["platforms"]}, "waiting_user": False}
+                queue.save_progress(identity, deadline_progress, **receipt)
+                queue.fail(identity, "TASK_DEADLINE_EXCEEDED", retryable=False, **receipt)
+                return
+            progress = payload.get("progress") or {}
+            per = dict(progress.get("per_platform") or {})
+            stop = threading.Event()
+            def renew():
+                heartbeat_queue = _queue()
+                try:
+                    while not stop.wait(15):
+                        if not heartbeat_queue.heartbeat(identity, worker,
+                                run_id=receipt["run_id"], lease_owner=worker):
+                            return
+                finally:
+                    heartbeat_queue.close()
+            heartbeat = threading.Thread(target=renew, daemon=True)
+            heartbeat.start()
+            try:
+                for platform in payload["platforms"]:
+                    if per.get(platform, {}).get("success") is True:
+                        continue
+                    if not queue.heartbeat(identity, worker, run_id=receipt["run_id"], lease_owner=worker):
+                        return
+                    try:
+                        if not payload.get("operation_id"):
+                            raise RuntimeError("LEGACY_COLLECTION_COMMIT_UNKNOWN")
+                        stats = _run_one(platform, payload["keyword"], payload["max_results"],
+                                         actor={"id": payload["actor_id"]}, scope=payload["scope"],
+                                         operation_key=(payload["operation_id"] + ":" + platform) if payload.get("operation_id") else None,
+                                         attempt_guard=lambda: queue.attempt_guard(identity, **receipt))
+                    except Exception as exc:
+                        stats = {"platform": platform, "state": "FAIL", "success": False,
+                                 "error_type": type(exc).__name__}
+                        if str(exc) == "LEGACY_COLLECTION_COMMIT_UNKNOWN":
+                            stats.update(state="LEGACY_COLLECTION_COMMIT_UNKNOWN",
+                                error_type="LEGACY_COLLECTION_COMMIT_UNKNOWN", retry_safe=False,
+                                new_collection_required=True,
+                                recovery_action="REVIEW_EXISTING_SOURCES_THEN_CREATE_NEW_REQUEST")
+                    if stats.get("success") is not True and time.time() >= float(payload.get("deadline_at", task["created_at"] + _manual_window_seconds(payload["platforms"]))):
+                        stats.update(state="TASK_DEADLINE_EXCEEDED", retry_safe=False)
+                    per[platform] = stats
+                    progress = {"per_platform": per, "updated_at": _now(), "waiting_user": False}
+                    if not queue.save_progress(identity, progress, **receipt):
+                        return
+                if all(per.get(platform, {}).get("success") is True for platform in payload["platforms"]):
+                    queue.ack(identity, **receipt)
+                    return
+                incomplete = [value for value in per.values() if value.get("success") is not True]
+                if any(value.get("state") == "TASK_DEADLINE_EXCEEDED" for value in incomplete):
+                    queue.fail(identity, "TASK_DEADLINE_EXCEEDED", retryable=False, **receipt)
+                    return
+                if incomplete and all(value.get("state") == "RATE_LIMITED"
+                        and value.get("error_type") == "LOCAL_RATE_LIMIT" for value in incomplete):
+                    delay = max(0.1, min(60.0, max(float(value.get("wait_seconds", 1)) for value in incomplete)))
+                    if not queue.defer(identity, delay_seconds=delay, **receipt):
+                        return
+                    continue
+                # Permission/challenge states must await an explicit user action,
+                # never trigger repeated network acquisition automatically.
+                retryable = {"NETWORK_ERROR", "RATE_LIMITED", "BUSY"}
+                waiting_user = any(value.get("success") is not True and value.get("state") not in retryable
+                                   and value.get("retryable_transport_failure") is not True
+                                   for value in per.values())
+                progress["waiting_user"] = waiting_user
+                queue.save_progress(identity, progress, **receipt)
+                queue.fail(identity, "COLLECTION_NOT_COMPLETED", **receipt)
+                if waiting_user:
+                    return
+            finally:
+                stop.set()
+                heartbeat.join(timeout=2)
+    finally:
+        queue.close()
+        with _TASKS_LOCK:
+            _ACTIVE_JOBS.discard(task_id)
+
+
+def _manual_window_seconds(platforms):
+    """Use the existing deterministic server scheduling policy, never client budget."""
+    from lumenis.system.collector.adapters.scheduling.policy import DEFAULT_POLICIES, PlatformSchedulePolicy
+    windows = []
+    for platform in platforms:
+        key = "xhs" if platform == "xiaohongshu" else platform
+        policy = DEFAULT_POLICIES.get(key) or PlatformSchedulePolicy(platform=key)
+        windows.append(max(1, min(int(policy.run_duration_manual), policy.MAX_MANUAL_DURATION)))
+    return min(windows) if windows else PlatformSchedulePolicy(platform="manual").run_duration_manual
 
 
 def start_collect(keyword: str, platforms: Optional[List[str]] = None,
                   max_results: int = 20, manual: bool = True,
-                  actor_ref: Optional[str] = None) -> str:
-    """启动一次后台采集，返回 task_id。manual=True 为用户手动触发。"""
-    if not registry.list_platforms():
-        register_default_adapters()
-    targets = platforms or registry.list_platforms()
-    task_id = uuid.uuid4().hex[:12]
-    with _TASKS_LOCK:
-        _TASKS[task_id] = {
-            "task_id": task_id, "keyword": keyword, "manual": bool(manual),
-            "_actor_ref": str(actor_ref).strip() if actor_ref else None,
-            "platforms": list(targets),
-            "status": "running",
-            "total": len(targets), "done": 0,
-            "per_platform": {}, "started_at": _now(), "finished_at": "",
-            "total_fetched": 0, "total_inserted": 0, "total_updated": 0,
-        }
-    _job_pool.submit(_job, task_id, keyword, targets, max_results, manual)
+                  actor_ref: Optional[str] = None, *, actor=None, scope=None) -> str:
+    """Admit exact actor/scope requests before durable enqueue; no implicit platforms."""
+    if manual is not True:
+        raise ValueError("Automatic collection requires the signed scheduler owner")
+    targets, keyword, max_results = _admit(actor, scope, platforms, keyword, max_results)
+    queue = _queue()
+    try:
+        identity = queue.enqueue("collector_source", {
+            "keyword": keyword, "platforms": targets, "max_results": max_results,
+            "actor_id": actor["id"], "scope": dict(scope), "manual": True,
+            "operation_id": uuid.uuid4().hex, "deadline_at": time.time() + _manual_window_seconds(targets),
+        })
+    finally:
+        queue.close()
+    task_id = "cq-" + str(identity)
+    _job_pool.submit(_job, task_id)
     return task_id
 
 
 def get_task(task_id: str) -> Optional[dict]:
-    """查询任务进度（返回副本）。"""
+    """Read durable progress after restart; polling never executes acquisition."""
+    identity = _queue_id(task_id)
+    if identity is None:
+        with _TASKS_LOCK:
+            t = _TASKS.get(task_id)
+            return {key: value for key, value in t.items() if not key.startswith("_")} if t else None
+    queue = _queue()
+    try:
+        row = queue.get(identity)
+    finally:
+        queue.close()
+    if row is None or row["task_type"] != "collector_source":
+        return None
+    payload = row["payload"]
+    per = (payload.get("progress") or {}).get("per_platform") or {}
+    new_required = any(item.get("new_collection_required") is True for item in per.values())
+    expired = row["status"] == "failed" and row["last_error"] == "TASK_DEADLINE_EXCEEDED"
+    terminal = row["status"] in {"done", "failed"}
+    waiting = row["status"] == "pending" and (payload.get("progress") or {}).get("waiting_user") is True
     with _TASKS_LOCK:
-        t = _TASKS.get(task_id)
-        return {key: value for key, value in t.items() if not key.startswith("_")} if t else None
+        active = task_id in _ACTIVE_JOBS
+    task = {
+        "task_id": task_id, "keyword": payload["keyword"], "manual": True,
+        "platforms": payload["platforms"], "scope": payload["scope"],
+        "status": "finished" if terminal or waiting else row["status"],
+        "queue_status": row["status"], "success": row["status"] == "done",
+        "total": len(payload["platforms"]), "done": len(per), "per_platform": per,
+        "started_at": row["created_at"], "finished_at": row["last_success_at"] or "",
+        "attempts": row["attempts"], "resume_required": (row["status"] == "pending" or expired) and not active and not new_required,
+        "deadline_expired": expired,
+        "new_collection_required": new_required,
+        "waiting_user": waiting,
+        "total_fetched": sum(item.get("fetched", 0) or 0 for item in per.values()),
+        "total_inserted": sum(item.get("inserted", 0) or 0 for item in per.values()),
+        "total_updated": sum(item.get("updated", 0) or 0 for item in per.values()),
+    }
+    with _TASKS_LOCK:
+        prior = _TASKS.get(task_id) or {}
+        _TASKS[task_id] = {**task, "_actor_ref": "actor:" + str(payload["actor_id"])}
+        if "human_browser" in prior:
+            _TASKS[task_id]["human_browser"] = prior["human_browser"]
+    return task
 
 
 def get_task_owner(task_id: str) -> Optional[str]:
-    """Read the authenticated actor bound when this in-memory Collector task was created."""
+    identity = _queue_id(task_id)
+    if identity is not None:
+        queue = _queue()
+        try:
+            row = queue.get(identity)
+            if row and row["task_type"] == "collector_source":
+                return "actor:" + str(row["payload"]["actor_id"])
+        finally:
+            queue.close()
+        return None
     with _TASKS_LOCK:
         task = _TASKS.get(str(task_id or "").strip())
-        owner = task.get("_actor_ref") if isinstance(task, dict) else None
-        return owner if isinstance(owner, str) and owner else None
+        return task.get("_actor_ref") if isinstance(task, dict) else None
+
+
+def resume_collect(task_id, *, actor, scope):
+    """Explicit resume preserves input identity and rechecks current approval."""
+    task = get_task(task_id)
+    if (task is None or get_task_owner(task_id) != "actor:" + str(actor.get("id"))
+            or task.get("scope") != scope):
+        raise CollectorAdmissionError({"ok": False, "status": "SCOPE_UNAUTHORIZED"})
+    if (task["queue_status"] == "done" or (task["queue_status"] == "failed" and not task.get("deadline_expired"))
+            or task.get("new_collection_required") is True):
+        return task
+    queue = _queue()
+    try:
+        row = queue.get(_queue_id(task_id))
+        payload = row["payload"]
+        _admit(actor, scope, payload["platforms"], payload["keyword"], payload["max_results"])
+        if task.get("deadline_expired"):
+            if not queue.resume_expired(_queue_id(task_id), time.time() + _manual_window_seconds(payload["platforms"])):
+                raise CollectorAdmissionError({"ok": False, "status": "COLLECTION_RESUME_CONFLICT"})
+        else:
+            queue.reap_stale(120, task_id=_queue_id(task_id))
+    finally:
+        queue.close()
+    _job_pool.submit(_job, task_id)
+    return get_task(task_id)
 
 
 def _state_from_row(fetched: int, error: str) -> str:

@@ -1,0 +1,135 @@
+[
+  {
+    "url": "https://pypi.org/pypi/unsloth/2026.9.12/json",
+    "file": "unsloth_release.json",
+    "bytes": 75140,
+    "sha256": "7f8abb4d9576d3eaf751715aabddc52c331fa6ff6db20dd3c649ec28ebcad250",
+    "observed_at": "2026-10-18T00:23:10.833238+00:00"
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/a4/5c/6b3617d6cf050280bb19aa034eab1d8834733f12f45b4d05540db779396a/unsloth-2026.9.12-py3-none-any.whl",
+    "file": "unsloth-2026.9.12-py3-none-any.whl",
+    "bytes": 25375955,
+    "sha256": "0b0a8d5694c693ff7a5183b1df073a2b045f503193d76a0beec1696d1fef6013",
+    "observed_at": "2026-10-18T00:23:13.951769+00:00"
+  },
+  {
+    "url": "https://pypi.org/pypi/unsloth-zoo/2026.9.8/json",
+    "file": "unsloth-zoo_release.json",
+    "bytes": 36111,
+    "sha256": "4e55957967cf77ae38f30200e25d381a4b317a72e8ae64c27f4f0d1e1811de7e",
+    "observed_at": "2026-10-18T00:23:16.837768+00:00"
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/be/d9/e493106d1f4331dd61283ea9bcf1a0e0c6f9ec9568e3e2bf9c7af9ac9ce0/unsloth_zoo-2026.9.8-py3-none-any.whl",
+    "file": "unsloth_zoo-2026.9.8-py3-none-any.whl",
+    "bytes": 1993630,
+    "sha256": "740aacbb70f6f735ef367905cd753d321b3088aaff404ebfb4f1cdf9f62e56e8",
+    "observed_at": "2026-10-18T00:23:20.755218+00:00"
+  },
+  {
+    "url": "https://api.github.com/repos/QwenLM/Qwen3-TTS/commits/main",
+    "file": "Qwen3-TTS_commit.json",
+    "bytes": 5374,
+    "sha256": "13a3e54955dd73f4af215aad1ebdd327fbf82529c2a9b1c61754cf3a575c373e",
+    "observed_at": "2026-10-18T00:23:23.921232+00:00"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/QwenLM/Qwen3-TTS/022e286b98fbec7e1e916cb940cdf532cd9f488e/LICENSE",
+    "file": "Qwen3-TTS_LICENSE",
+    "bytes": 11343,
+    "sha256": "a44a6081c73ad75f0255bb2bb5cab74ef1829565a895a24e53a4f11290ab7655",
+    "observed_at": "2026-10-18T00:23:26.801219+00:00"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/QwenLM/Qwen3-TTS/022e286b98fbec7e1e916cb940cdf532cd9f488e/README.md",
+    "file": "Qwen3-TTS_README.md",
+    "bytes": 60501,
+    "sha256": "51f4497e70e9ae024b10ee4bbcb470366f10592edeab56c58d2194ba2dadb745",
+    "observed_at": "2026-10-18T00:23:29.779240+00:00"
+  },
+  {
+    "url": "https://api.github.com/repos/anthropics/claude-quickstarts/commits/main",
+    "file": "claude-quickstarts_commit.json",
+    "bytes": 136330,
+    "sha256": "2bceadbafc98912ea141c059d384df5dba58a201ee7a6f2bd813b48b0d6dc47b",
+    "observed_at": "2026-10-18T00:23:33.000987+00:00"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/anthropics/claude-quickstarts/9ec32b91df50b0d4906cae64b13c6298055ff40d/LICENSE",
+    "file": "claude-quickstarts_LICENSE",
+    "bytes": 1065,
+    "sha256": "d7a04bf11ce24a7b79cd44b4a78dcc9971eaeb3b565821de437e0ecb7723e634",
+    "observed_at": "2026-10-18T00:23:35.913402+00:00"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/anthropics/claude-quickstarts/9ec32b91df50b0d4906cae64b13c6298055ff40d/README.md",
+    "file": "claude-quickstarts_README.md",
+    "bytes": 9985,
+    "sha256": "8dcfdc6fda662dacb7a88d3a7661d4b05dbcb2730fd637ab0cbb5d727a80a620",
+    "observed_at": "2026-10-18T00:23:41.077449+00:00"
+  },
+  {
+    "url": "https://huggingface.co/api/models/Qwen/Qwen3-TTS-12Hz-0.6B-Base/revision/main",
+    "file": "Qwen3-TTS-12Hz-0.6B-Base_identity.json",
+    "bytes": 4184,
+    "sha256": "43b589a7eb9a0b26e3446b2293145e951e8d853e55beecc1bc543045e79192f1",
+    "observed_at": "2026-10-18T00:23:44.118576+00:00"
+  },
+  {
+    "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base/resolve/5d83992436eae1d760afd27aff78a71d676296fc/README.md",
+    "file": "Qwen3-TTS-12Hz-0.6B-Base_README.md",
+    "bytes": 3640,
+    "sha256": "181187b6057906bd960bc7f938d0b7a16652509776a0d52c4885b4ae5ccda0ea",
+    "observed_at": "2026-10-18T00:23:51.309245+00:00"
+  },
+  {
+    "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base/resolve/5d83992436eae1d760afd27aff78a71d676296fc/config.json",
+    "file": "Qwen3-TTS-12Hz-0.6B-Base_config.json",
+    "bytes": 4494,
+    "sha256": "2e714c787c8edb98b05432685cddb634add2de4d4e645f653d68251ef72ba011",
+    "observed_at": "2026-10-18T00:23:59.996216+00:00"
+  },
+  {
+    "url": "https://huggingface.co/api/models/Qwen/Qwen3-TTS-Tokenizer-12Hz/revision/main",
+    "file": "Qwen3-TTS-Tokenizer-12Hz_identity.json",
+    "bytes": 1338,
+    "sha256": "fde4e2f9b14c718747c77705152037d4f5373a1dce7cecbb48c3793894ed03d1",
+    "observed_at": "2026-10-18T00:24:04.181350+00:00"
+  },
+  {
+    "url": "https://huggingface.co/Qwen/Qwen3-TTS-Tokenizer-12Hz/resolve/7dd38ad4e9bad454aae9cd937d0cd577604fe229/README.md",
+    "file": "Qwen3-TTS-Tokenizer-12Hz_README.md",
+    "bytes": 3482,
+    "sha256": "1d9016fbb07873cd720d008423c3da275eac7a20c3997a525594025608d3e1cf",
+    "observed_at": "2026-10-18T00:24:11.491317+00:00"
+  },
+  {
+    "url": "https://huggingface.co/Qwen/Qwen3-TTS-Tokenizer-12Hz/resolve/7dd38ad4e9bad454aae9cd937d0cd577604fe229/config.json",
+    "file": "Qwen3-TTS-Tokenizer-12Hz_config.json",
+    "bytes": 2336,
+    "sha256": "ee65bb901c876664ab8707c487157aa1a6ee57c65969b28fb5ec9dc211e68167",
+    "observed_at": "2026-10-18T00:24:24.705380+00:00"
+  },
+  {
+    "url": "https://huggingface.co/api/models/unsloth/gpt-oss-20b-unsloth-bnb-4bit/revision/093fba6992ef5a7152481afec0bdfca1ac486998",
+    "file": "gpt-oss-20b-unsloth-bnb-4bit_identity.json",
+    "bytes": 53346,
+    "sha256": "331231cab6a46df0c380a25e20b99cbf65f6b4674f2f582768284dbf12f4f286",
+    "observed_at": "2026-10-18T00:24:27.722186+00:00"
+  },
+  {
+    "url": "https://huggingface.co/unsloth/gpt-oss-20b-unsloth-bnb-4bit/resolve/093fba6992ef5a7152481afec0bdfca1ac486998/README.md",
+    "file": "gpt-oss-20b-unsloth-bnb-4bit_README.md",
+    "bytes": 8552,
+    "sha256": "29cca71085279c7224e86d65c31fec498426566407ead2be6794742db53d7cb3",
+    "observed_at": "2026-10-18T00:24:40.176863+00:00"
+  },
+  {
+    "url": "https://huggingface.co/unsloth/gpt-oss-20b-unsloth-bnb-4bit/resolve/093fba6992ef5a7152481afec0bdfca1ac486998/config.json",
+    "file": "gpt-oss-20b-unsloth-bnb-4bit_config.json",
+    "bytes": 2155,
+    "sha256": "8d2a25b5980bb9135abe915c9e62ed57dd824bec53dfb57b3dbfc4abe5d2d39c",
+    "observed_at": "2026-10-18T00:24:52.480426+00:00"
+  }
+]

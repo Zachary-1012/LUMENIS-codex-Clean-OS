@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="2" time="1.585" timestamp="2026-10-17T23:07:49.026875-07:00" hostname="REDACTED_HOST"><testcase classname="tests.test_semantic_asset_parity" name="test_real_admission_preserves_library_and_original_asset_id" time="0.933"><failure message="AssertionError: {'code': 'SHARED_WORK_UNAVAILABLE', 'ok': False, 'publish_status': 'not_performed'}&#10;assert 503 == 200&#10; +  where 503 = &lt;WrapperTestResponse streamed [503 SERVICE UNAVAILABLE]&gt;.status_code">catalog = {'api': &lt;FlaskClient &lt;Flask 'tests.test_skill_http_durable_identity'&gt;&gt;, 'app': &lt;Flask 'tests.test_skill_http_durable_i...n-one', 'X-Domain-Id': 'CTH', 'X-Lumenis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-f7461f4b2fa361b4548b01ce'}, ...}
+
+    def test_real_admission_preserves_library_and_original_asset_id(catalog):
+        ws=catalog
+&gt;       ws['source_evidence_ref']=import_source(ws)
+                                  ^^^^^^^^^^^^^^^^^
+
+tests/test_semantic_asset_parity.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+ws = {'api': &lt;FlaskClient &lt;Flask 'tests.test_skill_http_durable_identity'&gt;&gt;, 'app': &lt;Flask 'tests.test_skill_http_durable_i...n-one', 'X-Domain-Id': 'CTH', 'X-Lumenis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-f7461f4b2fa361b4548b01ce'}, ...}
+text = 'orchid market knowledge\nReviewed catalog fixture', headers = None
+
+    def import_source(ws,text='orchid market knowledge\nReviewed catalog fixture',headers=None):
+        provenance={'source_url':None,'published_at':None,'captured_at':'2026-10-18T06:00:00Z',
+            'rights':'owner-approved','title':'Approved synthetic source fixture',
+            'content_origin':{'kind':'self-authored','claim_type':'synthetic_sample'}}
+        def post(**extra):
+            return ws['api'].post('/api/experience/materials/documents',headers=headers or ws['headers'],
+                data={'file':(io.BytesIO(text.encode()),'catalog-source.txt'),'provenance':json.dumps(provenance),**extra})
+        preview=post(mode='prepare')
+        assert preview.status_code==200,preview.get_json()
+        result=post(confirm='true',confirmed_resource=preview.json['result']['resource'])
+&gt;       assert result.status_code==200,result.get_json()
+E       AssertionError: {'code': 'SHARED_WORK_UNAVAILABLE', 'ok': False, 'publish_status': 'not_performed'}
+E       assert 503 == 200
+E        +  where 503 = &lt;WrapperTestResponse streamed [503 SERVICE UNAVAILABLE]&gt;.status_code
+
+tests/test_semantic_asset_parity.py:89: AssertionError</failure></testcase><testcase classname="tests.test_semantic_asset_parity" name="test_active_rule_older_than_twenty_history_rows" time="0.255" /></testsuite></testsuites>

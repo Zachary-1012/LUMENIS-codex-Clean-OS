@@ -1,0 +1,3218 @@
+[
+  {
+    "platform_id": "xiaohongshu",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK/other market content availability; profile region is not evidence of audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "xiaohongshu",
+    "source_refs": [
+      "S001",
+      "S002",
+      "S003",
+      "S004"
+    ]
+  },
+  {
+    "platform_id": "xiaohongshu",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK/other market content availability; profile region is not evidence of audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "xiaohongshu",
+    "source_refs": [
+      "S001",
+      "S002",
+      "S003",
+      "S004"
+    ]
+  },
+  {
+    "platform_id": "xiaohongshu",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK/other market content availability; profile region is not evidence of audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "xiaohongshu",
+    "source_refs": [
+      "S001",
+      "S002",
+      "S003",
+      "S004"
+    ]
+  },
+  {
+    "platform_id": "xiaohongshu",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK/other market content availability; profile region is not evidence of audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "xiaohongshu",
+    "source_refs": [
+      "S001",
+      "S002",
+      "S003",
+      "S004"
+    ]
+  },
+  {
+    "platform_id": "xiaohongshu",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK/other market content availability; profile region is not evidence of audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "xiaohongshu",
+    "source_refs": [
+      "S001",
+      "S002",
+      "S003",
+      "S004"
+    ]
+  },
+  {
+    "platform_id": "xiaohongshu",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK/other market content availability; profile region is not evidence of audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "xiaohongshu",
+    "source_refs": [
+      "S001",
+      "S002",
+      "S003",
+      "S004"
+    ]
+  },
+  {
+    "platform_id": "xiaohongshu",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK/other market content availability; profile region is not evidence of audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "xiaohongshu",
+    "source_refs": [
+      "S001",
+      "S002",
+      "S003",
+      "S004"
+    ]
+  },
+  {
+    "platform_id": "xiaohongshu",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK/other market content availability; profile region is not evidence of audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "xiaohongshu",
+    "source_refs": [
+      "S001",
+      "S002",
+      "S003",
+      "S004"
+    ]
+  },
+  {
+    "platform_id": "douyin",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory entitlement; Douyin is not TikTok",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "douyin",
+    "source_refs": [
+      "S005",
+      "S006",
+      "S007",
+      "S008",
+      "S009",
+      "S010"
+    ]
+  },
+  {
+    "platform_id": "douyin",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory entitlement; Douyin is not TikTok",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "douyin",
+    "source_refs": [
+      "S005",
+      "S006",
+      "S007",
+      "S008",
+      "S009",
+      "S010"
+    ]
+  },
+  {
+    "platform_id": "douyin",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory entitlement; Douyin is not TikTok",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "douyin",
+    "source_refs": [
+      "S005",
+      "S006",
+      "S007",
+      "S008",
+      "S009",
+      "S010"
+    ]
+  },
+  {
+    "platform_id": "douyin",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory entitlement; Douyin is not TikTok",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "douyin",
+    "source_refs": [
+      "S005",
+      "S006",
+      "S007",
+      "S008",
+      "S009",
+      "S010"
+    ]
+  },
+  {
+    "platform_id": "douyin",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory entitlement; Douyin is not TikTok",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "douyin",
+    "source_refs": [
+      "S005",
+      "S006",
+      "S007",
+      "S008",
+      "S009",
+      "S010"
+    ]
+  },
+  {
+    "platform_id": "douyin",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory entitlement; Douyin is not TikTok",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "douyin",
+    "source_refs": [
+      "S005",
+      "S006",
+      "S007",
+      "S008",
+      "S009",
+      "S010"
+    ]
+  },
+  {
+    "platform_id": "douyin",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory entitlement; Douyin is not TikTok",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "douyin",
+    "source_refs": [
+      "S005",
+      "S006",
+      "S007",
+      "S008",
+      "S009",
+      "S010"
+    ]
+  },
+  {
+    "platform_id": "douyin",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory entitlement; Douyin is not TikTok",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "douyin",
+    "source_refs": [
+      "S005",
+      "S006",
+      "S007",
+      "S008",
+      "S009",
+      "S010"
+    ]
+  },
+  {
+    "platform_id": "kuaishou",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional entitlement",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "kuaishou",
+    "source_refs": [
+      "S011"
+    ]
+  },
+  {
+    "platform_id": "kuaishou",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional entitlement",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "kuaishou",
+    "source_refs": [
+      "S011"
+    ]
+  },
+  {
+    "platform_id": "kuaishou",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional entitlement",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "kuaishou",
+    "source_refs": [
+      "S011"
+    ]
+  },
+  {
+    "platform_id": "kuaishou",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional entitlement",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "kuaishou",
+    "source_refs": [
+      "S011"
+    ]
+  },
+  {
+    "platform_id": "kuaishou",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional entitlement",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "kuaishou",
+    "source_refs": [
+      "S011"
+    ]
+  },
+  {
+    "platform_id": "kuaishou",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional entitlement",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "kuaishou",
+    "source_refs": [
+      "S011"
+    ]
+  },
+  {
+    "platform_id": "kuaishou",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional entitlement",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "kuaishou",
+    "source_refs": [
+      "S011"
+    ]
+  },
+  {
+    "platform_id": "kuaishou",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional entitlement",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "kuaishou",
+    "source_refs": [
+      "S011"
+    ]
+  },
+  {
+    "platform_id": "weibo",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional and corpus coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "weibo",
+    "source_refs": [
+      "S012",
+      "S013",
+      "S014",
+      "S015"
+    ]
+  },
+  {
+    "platform_id": "weibo",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional and corpus coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "weibo",
+    "source_refs": [
+      "S012",
+      "S013",
+      "S014",
+      "S015"
+    ]
+  },
+  {
+    "platform_id": "weibo",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional and corpus coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "weibo",
+    "source_refs": [
+      "S012",
+      "S013",
+      "S014",
+      "S015"
+    ]
+  },
+  {
+    "platform_id": "weibo",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional and corpus coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "weibo",
+    "source_refs": [
+      "S012",
+      "S013",
+      "S014",
+      "S015"
+    ]
+  },
+  {
+    "platform_id": "weibo",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional and corpus coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "weibo",
+    "source_refs": [
+      "S012",
+      "S013",
+      "S014",
+      "S015"
+    ]
+  },
+  {
+    "platform_id": "weibo",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional and corpus coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "weibo",
+    "source_refs": [
+      "S012",
+      "S013",
+      "S014",
+      "S015"
+    ]
+  },
+  {
+    "platform_id": "weibo",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional and corpus coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "weibo",
+    "source_refs": [
+      "S012",
+      "S013",
+      "S014",
+      "S015"
+    ]
+  },
+  {
+    "platform_id": "weibo",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional and corpus coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "weibo",
+    "source_refs": [
+      "S012",
+      "S013",
+      "S014",
+      "S015"
+    ]
+  },
+  {
+    "platform_id": "bilibili",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market-specific access",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "bilibili",
+    "source_refs": [
+      "S016",
+      "S017",
+      "S018",
+      "S019",
+      "S020"
+    ]
+  },
+  {
+    "platform_id": "bilibili",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market-specific access",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "bilibili",
+    "source_refs": [
+      "S016",
+      "S017",
+      "S018",
+      "S019",
+      "S020"
+    ]
+  },
+  {
+    "platform_id": "bilibili",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market-specific access",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "bilibili",
+    "source_refs": [
+      "S016",
+      "S017",
+      "S018",
+      "S019",
+      "S020"
+    ]
+  },
+  {
+    "platform_id": "bilibili",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market-specific access",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "bilibili",
+    "source_refs": [
+      "S016",
+      "S017",
+      "S018",
+      "S019",
+      "S020"
+    ]
+  },
+  {
+    "platform_id": "bilibili",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market-specific access",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "bilibili",
+    "source_refs": [
+      "S016",
+      "S017",
+      "S018",
+      "S019",
+      "S020"
+    ]
+  },
+  {
+    "platform_id": "bilibili",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market-specific access",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "bilibili",
+    "source_refs": [
+      "S016",
+      "S017",
+      "S018",
+      "S019",
+      "S020"
+    ]
+  },
+  {
+    "platform_id": "bilibili",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market-specific access",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "bilibili",
+    "source_refs": [
+      "S016",
+      "S017",
+      "S018",
+      "S019",
+      "S020"
+    ]
+  },
+  {
+    "platform_id": "bilibili",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market-specific access",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "bilibili",
+    "source_refs": [
+      "S016",
+      "S017",
+      "S018",
+      "S019",
+      "S020"
+    ]
+  },
+  {
+    "platform_id": "zhihu",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "zhihu",
+    "source_refs": [
+      "S021",
+      "S022"
+    ]
+  },
+  {
+    "platform_id": "zhihu",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "zhihu",
+    "source_refs": [
+      "S021",
+      "S022"
+    ]
+  },
+  {
+    "platform_id": "zhihu",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "zhihu",
+    "source_refs": [
+      "S021",
+      "S022"
+    ]
+  },
+  {
+    "platform_id": "zhihu",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "zhihu",
+    "source_refs": [
+      "S021",
+      "S022"
+    ]
+  },
+  {
+    "platform_id": "zhihu",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "zhihu",
+    "source_refs": [
+      "S021",
+      "S022"
+    ]
+  },
+  {
+    "platform_id": "zhihu",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "zhihu",
+    "source_refs": [
+      "S021",
+      "S022"
+    ]
+  },
+  {
+    "platform_id": "zhihu",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "zhihu",
+    "source_refs": [
+      "S021",
+      "S022"
+    ]
+  },
+  {
+    "platform_id": "zhihu",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "zhihu",
+    "source_refs": [
+      "S021",
+      "S022"
+    ]
+  },
+  {
+    "platform_id": "tieba",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "tieba",
+    "source_refs": [
+      "S023"
+    ]
+  },
+  {
+    "platform_id": "tieba",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "tieba",
+    "source_refs": [
+      "S023"
+    ]
+  },
+  {
+    "platform_id": "tieba",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "tieba",
+    "source_refs": [
+      "S023"
+    ]
+  },
+  {
+    "platform_id": "tieba",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "tieba",
+    "source_refs": [
+      "S023"
+    ]
+  },
+  {
+    "platform_id": "tieba",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "tieba",
+    "source_refs": [
+      "S023"
+    ]
+  },
+  {
+    "platform_id": "tieba",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "tieba",
+    "source_refs": [
+      "S023"
+    ]
+  },
+  {
+    "platform_id": "tieba",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "tieba",
+    "source_refs": [
+      "S023"
+    ]
+  },
+  {
+    "platform_id": "tieba",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "tieba",
+    "source_refs": [
+      "S023"
+    ]
+  },
+  {
+    "platform_id": "channels",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "channels",
+    "source_refs": [
+      "S040"
+    ]
+  },
+  {
+    "platform_id": "channels",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "channels",
+    "source_refs": [
+      "S040"
+    ]
+  },
+  {
+    "platform_id": "channels",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "channels",
+    "source_refs": [
+      "S040"
+    ]
+  },
+  {
+    "platform_id": "channels",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "channels",
+    "source_refs": [
+      "S040"
+    ]
+  },
+  {
+    "platform_id": "channels",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "channels",
+    "source_refs": [
+      "S040"
+    ]
+  },
+  {
+    "platform_id": "channels",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "channels",
+    "source_refs": [
+      "S040"
+    ]
+  },
+  {
+    "platform_id": "channels",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "channels",
+    "source_refs": [
+      "S040"
+    ]
+  },
+  {
+    "platform_id": "channels",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: market coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "channels",
+    "source_refs": [
+      "S040"
+    ]
+  },
+  {
+    "platform_id": "instagram",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional object availability; account type independent of market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "instagram",
+    "source_refs": [
+      "S024",
+      "S025",
+      "S026"
+    ]
+  },
+  {
+    "platform_id": "instagram",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional object availability; account type independent of market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "instagram",
+    "source_refs": [
+      "S024",
+      "S025",
+      "S026"
+    ]
+  },
+  {
+    "platform_id": "instagram",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional object availability; account type independent of market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "instagram",
+    "source_refs": [
+      "S024",
+      "S025",
+      "S026"
+    ]
+  },
+  {
+    "platform_id": "instagram",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional object availability; account type independent of market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "instagram",
+    "source_refs": [
+      "S024",
+      "S025",
+      "S026"
+    ]
+  },
+  {
+    "platform_id": "instagram",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional object availability; account type independent of market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "instagram",
+    "source_refs": [
+      "S024",
+      "S025",
+      "S026"
+    ]
+  },
+  {
+    "platform_id": "instagram",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional object availability; account type independent of market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "instagram",
+    "source_refs": [
+      "S024",
+      "S025",
+      "S026"
+    ]
+  },
+  {
+    "platform_id": "instagram",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional object availability; account type independent of market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "instagram",
+    "source_refs": [
+      "S024",
+      "S025",
+      "S026"
+    ]
+  },
+  {
+    "platform_id": "instagram",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional object availability; account type independent of market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "instagram",
+    "source_refs": [
+      "S024",
+      "S025",
+      "S026"
+    ]
+  },
+  {
+    "platform_id": "facebook",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory/corpus eligibility",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "facebook",
+    "source_refs": [
+      "S027",
+      "S028",
+      "S029",
+      "S030",
+      "S031"
+    ]
+  },
+  {
+    "platform_id": "facebook",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory/corpus eligibility",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "facebook",
+    "source_refs": [
+      "S027",
+      "S028",
+      "S029",
+      "S030",
+      "S031"
+    ]
+  },
+  {
+    "platform_id": "facebook",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory/corpus eligibility",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "facebook",
+    "source_refs": [
+      "S027",
+      "S028",
+      "S029",
+      "S030",
+      "S031"
+    ]
+  },
+  {
+    "platform_id": "facebook",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory/corpus eligibility",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "facebook",
+    "source_refs": [
+      "S027",
+      "S028",
+      "S029",
+      "S030",
+      "S031"
+    ]
+  },
+  {
+    "platform_id": "facebook",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory/corpus eligibility",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "facebook",
+    "source_refs": [
+      "S027",
+      "S028",
+      "S029",
+      "S030",
+      "S031"
+    ]
+  },
+  {
+    "platform_id": "facebook",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory/corpus eligibility",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "facebook",
+    "source_refs": [
+      "S027",
+      "S028",
+      "S029",
+      "S030",
+      "S031"
+    ]
+  },
+  {
+    "platform_id": "facebook",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory/corpus eligibility",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "facebook",
+    "source_refs": [
+      "S027",
+      "S028",
+      "S029",
+      "S030",
+      "S031"
+    ]
+  },
+  {
+    "platform_id": "facebook",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: territory/corpus eligibility",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "facebook",
+    "source_refs": [
+      "S027",
+      "S028",
+      "S029",
+      "S030",
+      "S031"
+    ]
+  },
+  {
+    "platform_id": "x",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Withheld/geo/language are separate signals; profile location cannot determine market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "x",
+    "source_refs": [
+      "S032",
+      "S033",
+      "S034",
+      "S035",
+      "S036"
+    ]
+  },
+  {
+    "platform_id": "x",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Withheld/geo/language are separate signals; profile location cannot determine market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "x",
+    "source_refs": [
+      "S032",
+      "S033",
+      "S034",
+      "S035",
+      "S036"
+    ]
+  },
+  {
+    "platform_id": "x",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Withheld/geo/language are separate signals; profile location cannot determine market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "x",
+    "source_refs": [
+      "S032",
+      "S033",
+      "S034",
+      "S035",
+      "S036"
+    ]
+  },
+  {
+    "platform_id": "x",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Withheld/geo/language are separate signals; profile location cannot determine market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "x",
+    "source_refs": [
+      "S032",
+      "S033",
+      "S034",
+      "S035",
+      "S036"
+    ]
+  },
+  {
+    "platform_id": "x",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Withheld/geo/language are separate signals; profile location cannot determine market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "x",
+    "source_refs": [
+      "S032",
+      "S033",
+      "S034",
+      "S035",
+      "S036"
+    ]
+  },
+  {
+    "platform_id": "x",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Withheld/geo/language are separate signals; profile location cannot determine market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "x",
+    "source_refs": [
+      "S032",
+      "S033",
+      "S034",
+      "S035",
+      "S036"
+    ]
+  },
+  {
+    "platform_id": "x",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Withheld/geo/language are separate signals; profile location cannot determine market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "x",
+    "source_refs": [
+      "S032",
+      "S033",
+      "S034",
+      "S035",
+      "S036"
+    ]
+  },
+  {
+    "platform_id": "x",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Withheld/geo/language are separate signals; profile location cannot determine market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "x",
+    "source_refs": [
+      "S032",
+      "S033",
+      "S034",
+      "S035",
+      "S036"
+    ]
+  },
+  {
+    "platform_id": "wechat",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK and other markets; public links do not establish account-wide coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "wechat",
+    "source_refs": [
+      "S037",
+      "S038",
+      "S039"
+    ]
+  },
+  {
+    "platform_id": "wechat",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK and other markets; public links do not establish account-wide coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "wechat",
+    "source_refs": [
+      "S037",
+      "S038",
+      "S039"
+    ]
+  },
+  {
+    "platform_id": "wechat",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK and other markets; public links do not establish account-wide coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "wechat",
+    "source_refs": [
+      "S037",
+      "S038",
+      "S039"
+    ]
+  },
+  {
+    "platform_id": "wechat",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK and other markets; public links do not establish account-wide coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "wechat",
+    "source_refs": [
+      "S037",
+      "S038",
+      "S039"
+    ]
+  },
+  {
+    "platform_id": "wechat",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK and other markets; public links do not establish account-wide coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "wechat",
+    "source_refs": [
+      "S037",
+      "S038",
+      "S039"
+    ]
+  },
+  {
+    "platform_id": "wechat",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK and other markets; public links do not establish account-wide coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "wechat",
+    "source_refs": [
+      "S037",
+      "S038",
+      "S039"
+    ]
+  },
+  {
+    "platform_id": "wechat",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK and other markets; public links do not establish account-wide coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "wechat",
+    "source_refs": [
+      "S037",
+      "S038",
+      "S039"
+    ]
+  },
+  {
+    "platform_id": "wechat",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: CN/HK and other markets; public links do not establish account-wide coverage",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "wechat",
+    "source_refs": [
+      "S037",
+      "S038",
+      "S039"
+    ]
+  },
+  {
+    "platform_id": "youtube",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "regionRestriction and localization describe object availability/language, not verified creator/audience domicile",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "youtube",
+    "source_refs": [
+      "S041",
+      "S042",
+      "S043",
+      "S044",
+      "S045",
+      "S046",
+      "S047",
+      "S048",
+      "S075"
+    ]
+  },
+  {
+    "platform_id": "youtube",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "regionRestriction and localization describe object availability/language, not verified creator/audience domicile",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "youtube",
+    "source_refs": [
+      "S041",
+      "S042",
+      "S043",
+      "S044",
+      "S045",
+      "S046",
+      "S047",
+      "S048",
+      "S075"
+    ]
+  },
+  {
+    "platform_id": "youtube",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "regionRestriction and localization describe object availability/language, not verified creator/audience domicile",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "youtube",
+    "source_refs": [
+      "S041",
+      "S042",
+      "S043",
+      "S044",
+      "S045",
+      "S046",
+      "S047",
+      "S048",
+      "S075"
+    ]
+  },
+  {
+    "platform_id": "youtube",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "regionRestriction and localization describe object availability/language, not verified creator/audience domicile",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "youtube",
+    "source_refs": [
+      "S041",
+      "S042",
+      "S043",
+      "S044",
+      "S045",
+      "S046",
+      "S047",
+      "S048",
+      "S075"
+    ]
+  },
+  {
+    "platform_id": "youtube",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "regionRestriction and localization describe object availability/language, not verified creator/audience domicile",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "youtube",
+    "source_refs": [
+      "S041",
+      "S042",
+      "S043",
+      "S044",
+      "S045",
+      "S046",
+      "S047",
+      "S048",
+      "S075"
+    ]
+  },
+  {
+    "platform_id": "youtube",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "regionRestriction and localization describe object availability/language, not verified creator/audience domicile",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "youtube",
+    "source_refs": [
+      "S041",
+      "S042",
+      "S043",
+      "S044",
+      "S045",
+      "S046",
+      "S047",
+      "S048",
+      "S075"
+    ]
+  },
+  {
+    "platform_id": "youtube",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "regionRestriction and localization describe object availability/language, not verified creator/audience domicile",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "youtube",
+    "source_refs": [
+      "S041",
+      "S042",
+      "S043",
+      "S044",
+      "S045",
+      "S046",
+      "S047",
+      "S048",
+      "S075"
+    ]
+  },
+  {
+    "platform_id": "youtube",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "regionRestriction and localization describe object availability/language, not verified creator/audience domicile",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "youtube",
+    "source_refs": [
+      "S041",
+      "S042",
+      "S043",
+      "S044",
+      "S045",
+      "S046",
+      "S047",
+      "S048",
+      "S075"
+    ]
+  },
+  {
+    "platform_id": "tiktok",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Portability user-data geography EEA/UK; applicant eligibility separate; Douyin not included",
+    "portability_region_only": "NOT_IN_DOCUMENTED_USER_DATA_REGION",
+    "capability_record": "tiktok",
+    "source_refs": [
+      "S049",
+      "S050",
+      "S051",
+      "S052",
+      "S053",
+      "S054",
+      "S074"
+    ]
+  },
+  {
+    "platform_id": "tiktok",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Portability user-data geography EEA/UK; applicant eligibility separate; Douyin not included",
+    "portability_region_only": "NOT_IN_DOCUMENTED_USER_DATA_REGION",
+    "capability_record": "tiktok",
+    "source_refs": [
+      "S049",
+      "S050",
+      "S051",
+      "S052",
+      "S053",
+      "S054",
+      "S074"
+    ]
+  },
+  {
+    "platform_id": "tiktok",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Portability user-data geography EEA/UK; applicant eligibility separate; Douyin not included",
+    "portability_region_only": "NOT_IN_DOCUMENTED_USER_DATA_REGION",
+    "capability_record": "tiktok",
+    "source_refs": [
+      "S049",
+      "S050",
+      "S051",
+      "S052",
+      "S053",
+      "S054",
+      "S074"
+    ]
+  },
+  {
+    "platform_id": "tiktok",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Portability user-data geography EEA/UK; applicant eligibility separate; Douyin not included",
+    "portability_region_only": "DOCUMENTED_ELIGIBLE_REGION_NOT_ENTITLEMENT",
+    "capability_record": "tiktok",
+    "source_refs": [
+      "S049",
+      "S050",
+      "S051",
+      "S052",
+      "S053",
+      "S054",
+      "S074"
+    ]
+  },
+  {
+    "platform_id": "tiktok",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Portability user-data geography EEA/UK; applicant eligibility separate; Douyin not included",
+    "portability_region_only": "DOCUMENTED_ELIGIBLE_REGION_NOT_ENTITLEMENT",
+    "capability_record": "tiktok",
+    "source_refs": [
+      "S049",
+      "S050",
+      "S051",
+      "S052",
+      "S053",
+      "S054",
+      "S074"
+    ]
+  },
+  {
+    "platform_id": "tiktok",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Portability user-data geography EEA/UK; applicant eligibility separate; Douyin not included",
+    "portability_region_only": "NOT_IN_DOCUMENTED_USER_DATA_REGION",
+    "capability_record": "tiktok",
+    "source_refs": [
+      "S049",
+      "S050",
+      "S051",
+      "S052",
+      "S053",
+      "S054",
+      "S074"
+    ]
+  },
+  {
+    "platform_id": "tiktok",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Portability user-data geography EEA/UK; applicant eligibility separate; Douyin not included",
+    "portability_region_only": "NOT_IN_DOCUMENTED_USER_DATA_REGION",
+    "capability_record": "tiktok",
+    "source_refs": [
+      "S049",
+      "S050",
+      "S051",
+      "S052",
+      "S053",
+      "S054",
+      "S074"
+    ]
+  },
+  {
+    "platform_id": "tiktok",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Portability user-data geography EEA/UK; applicant eligibility separate; Douyin not included",
+    "portability_region_only": "NOT_IN_DOCUMENTED_USER_DATA_REGION",
+    "capability_record": "tiktok",
+    "source_refs": [
+      "S049",
+      "S050",
+      "S051",
+      "S052",
+      "S053",
+      "S054",
+      "S074"
+    ]
+  },
+  {
+    "platform_id": "reddit",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional coverage and corpus gaps",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "reddit",
+    "source_refs": [
+      "S055",
+      "S056",
+      "S057"
+    ]
+  },
+  {
+    "platform_id": "reddit",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional coverage and corpus gaps",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "reddit",
+    "source_refs": [
+      "S055",
+      "S056",
+      "S057"
+    ]
+  },
+  {
+    "platform_id": "reddit",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional coverage and corpus gaps",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "reddit",
+    "source_refs": [
+      "S055",
+      "S056",
+      "S057"
+    ]
+  },
+  {
+    "platform_id": "reddit",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional coverage and corpus gaps",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "reddit",
+    "source_refs": [
+      "S055",
+      "S056",
+      "S057"
+    ]
+  },
+  {
+    "platform_id": "reddit",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional coverage and corpus gaps",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "reddit",
+    "source_refs": [
+      "S055",
+      "S056",
+      "S057"
+    ]
+  },
+  {
+    "platform_id": "reddit",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional coverage and corpus gaps",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "reddit",
+    "source_refs": [
+      "S055",
+      "S056",
+      "S057"
+    ]
+  },
+  {
+    "platform_id": "reddit",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional coverage and corpus gaps",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "reddit",
+    "source_refs": [
+      "S055",
+      "S056",
+      "S057"
+    ]
+  },
+  {
+    "platform_id": "reddit",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional coverage and corpus gaps",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "reddit",
+    "source_refs": [
+      "S055",
+      "S056",
+      "S057"
+    ]
+  },
+  {
+    "platform_id": "linkedin",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional eligibility and member corpus",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "linkedin",
+    "source_refs": [
+      "S058",
+      "S059",
+      "S060",
+      "S061",
+      "S062"
+    ]
+  },
+  {
+    "platform_id": "linkedin",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional eligibility and member corpus",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "linkedin",
+    "source_refs": [
+      "S058",
+      "S059",
+      "S060",
+      "S061",
+      "S062"
+    ]
+  },
+  {
+    "platform_id": "linkedin",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional eligibility and member corpus",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "linkedin",
+    "source_refs": [
+      "S058",
+      "S059",
+      "S060",
+      "S061",
+      "S062"
+    ]
+  },
+  {
+    "platform_id": "linkedin",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional eligibility and member corpus",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "linkedin",
+    "source_refs": [
+      "S058",
+      "S059",
+      "S060",
+      "S061",
+      "S062"
+    ]
+  },
+  {
+    "platform_id": "linkedin",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional eligibility and member corpus",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "linkedin",
+    "source_refs": [
+      "S058",
+      "S059",
+      "S060",
+      "S061",
+      "S062"
+    ]
+  },
+  {
+    "platform_id": "linkedin",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional eligibility and member corpus",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "linkedin",
+    "source_refs": [
+      "S058",
+      "S059",
+      "S060",
+      "S061",
+      "S062"
+    ]
+  },
+  {
+    "platform_id": "linkedin",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional eligibility and member corpus",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "linkedin",
+    "source_refs": [
+      "S058",
+      "S059",
+      "S060",
+      "S061",
+      "S062"
+    ]
+  },
+  {
+    "platform_id": "linkedin",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "UNKNOWN: regional eligibility and member corpus",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "linkedin",
+    "source_refs": [
+      "S058",
+      "S059",
+      "S060",
+      "S061",
+      "S062"
+    ]
+  },
+  {
+    "platform_id": "google",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Search locality/date filters do not certify author/audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "google",
+    "source_refs": [
+      "S063",
+      "S064"
+    ]
+  },
+  {
+    "platform_id": "google",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Search locality/date filters do not certify author/audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "google",
+    "source_refs": [
+      "S063",
+      "S064"
+    ]
+  },
+  {
+    "platform_id": "google",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Search locality/date filters do not certify author/audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "google",
+    "source_refs": [
+      "S063",
+      "S064"
+    ]
+  },
+  {
+    "platform_id": "google",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Search locality/date filters do not certify author/audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "google",
+    "source_refs": [
+      "S063",
+      "S064"
+    ]
+  },
+  {
+    "platform_id": "google",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Search locality/date filters do not certify author/audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "google",
+    "source_refs": [
+      "S063",
+      "S064"
+    ]
+  },
+  {
+    "platform_id": "google",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Search locality/date filters do not certify author/audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "google",
+    "source_refs": [
+      "S063",
+      "S064"
+    ]
+  },
+  {
+    "platform_id": "google",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Search locality/date filters do not certify author/audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "google",
+    "source_refs": [
+      "S063",
+      "S064"
+    ]
+  },
+  {
+    "platform_id": "google",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Search locality/date filters do not certify author/audience market",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "google",
+    "source_refs": [
+      "S063",
+      "S064"
+    ]
+  },
+  {
+    "platform_id": "github",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Global access candidate; individual repo/content jurisdiction and language unknown",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "github",
+    "source_refs": [
+      "S065",
+      "S066"
+    ]
+  },
+  {
+    "platform_id": "github",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Global access candidate; individual repo/content jurisdiction and language unknown",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "github",
+    "source_refs": [
+      "S065",
+      "S066"
+    ]
+  },
+  {
+    "platform_id": "github",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Global access candidate; individual repo/content jurisdiction and language unknown",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "github",
+    "source_refs": [
+      "S065",
+      "S066"
+    ]
+  },
+  {
+    "platform_id": "github",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Global access candidate; individual repo/content jurisdiction and language unknown",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "github",
+    "source_refs": [
+      "S065",
+      "S066"
+    ]
+  },
+  {
+    "platform_id": "github",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Global access candidate; individual repo/content jurisdiction and language unknown",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "github",
+    "source_refs": [
+      "S065",
+      "S066"
+    ]
+  },
+  {
+    "platform_id": "github",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Global access candidate; individual repo/content jurisdiction and language unknown",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "github",
+    "source_refs": [
+      "S065",
+      "S066"
+    ]
+  },
+  {
+    "platform_id": "github",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Global access candidate; individual repo/content jurisdiction and language unknown",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "github",
+    "source_refs": [
+      "S065",
+      "S066"
+    ]
+  },
+  {
+    "platform_id": "github",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "Global access candidate; individual repo/content jurisdiction and language unknown",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "github",
+    "source_refs": [
+      "S065",
+      "S066"
+    ]
+  },
+  {
+    "platform_id": "public_http",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "public_http",
+    "source_refs": [
+      "S067"
+    ]
+  },
+  {
+    "platform_id": "public_http",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "public_http",
+    "source_refs": [
+      "S067"
+    ]
+  },
+  {
+    "platform_id": "public_http",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "public_http",
+    "source_refs": [
+      "S067"
+    ]
+  },
+  {
+    "platform_id": "public_http",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "public_http",
+    "source_refs": [
+      "S067"
+    ]
+  },
+  {
+    "platform_id": "public_http",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "public_http",
+    "source_refs": [
+      "S067"
+    ]
+  },
+  {
+    "platform_id": "public_http",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "public_http",
+    "source_refs": [
+      "S067"
+    ]
+  },
+  {
+    "platform_id": "public_http",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "public_http",
+    "source_refs": [
+      "S067"
+    ]
+  },
+  {
+    "platform_id": "public_http",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "public_http",
+    "source_refs": [
+      "S067"
+    ]
+  },
+  {
+    "platform_id": "web_rss",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_rss",
+    "source_refs": [
+      "S068"
+    ]
+  },
+  {
+    "platform_id": "web_rss",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_rss",
+    "source_refs": [
+      "S068"
+    ]
+  },
+  {
+    "platform_id": "web_rss",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_rss",
+    "source_refs": [
+      "S068"
+    ]
+  },
+  {
+    "platform_id": "web_rss",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_rss",
+    "source_refs": [
+      "S068"
+    ]
+  },
+  {
+    "platform_id": "web_rss",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_rss",
+    "source_refs": [
+      "S068"
+    ]
+  },
+  {
+    "platform_id": "web_rss",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_rss",
+    "source_refs": [
+      "S068"
+    ]
+  },
+  {
+    "platform_id": "web_rss",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_rss",
+    "source_refs": [
+      "S068"
+    ]
+  },
+  {
+    "platform_id": "web_rss",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_rss",
+    "source_refs": [
+      "S068"
+    ]
+  },
+  {
+    "platform_id": "web_atom",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_atom",
+    "source_refs": [
+      "S069"
+    ]
+  },
+  {
+    "platform_id": "web_atom",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_atom",
+    "source_refs": [
+      "S069"
+    ]
+  },
+  {
+    "platform_id": "web_atom",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_atom",
+    "source_refs": [
+      "S069"
+    ]
+  },
+  {
+    "platform_id": "web_atom",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_atom",
+    "source_refs": [
+      "S069"
+    ]
+  },
+  {
+    "platform_id": "web_atom",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_atom",
+    "source_refs": [
+      "S069"
+    ]
+  },
+  {
+    "platform_id": "web_atom",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_atom",
+    "source_refs": [
+      "S069"
+    ]
+  },
+  {
+    "platform_id": "web_atom",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_atom",
+    "source_refs": [
+      "S069"
+    ]
+  },
+  {
+    "platform_id": "web_atom",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "web_atom",
+    "source_refs": [
+      "S069"
+    ]
+  },
+  {
+    "platform_id": "sitemap",
+    "review_market": "CN",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "sitemap",
+    "source_refs": [
+      "S071"
+    ]
+  },
+  {
+    "platform_id": "sitemap",
+    "review_market": "HK",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "sitemap",
+    "source_refs": [
+      "S071"
+    ]
+  },
+  {
+    "platform_id": "sitemap",
+    "review_market": "US",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "sitemap",
+    "source_refs": [
+      "S071"
+    ]
+  },
+  {
+    "platform_id": "sitemap",
+    "review_market": "GB",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "sitemap",
+    "source_refs": [
+      "S071"
+    ]
+  },
+  {
+    "platform_id": "sitemap",
+    "review_market": "EEA",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "sitemap",
+    "source_refs": [
+      "S071"
+    ]
+  },
+  {
+    "platform_id": "sitemap",
+    "review_market": "JP",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "sitemap",
+    "source_refs": [
+      "S071"
+    ]
+  },
+  {
+    "platform_id": "sitemap",
+    "review_market": "KR",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "sitemap",
+    "source_refs": [
+      "S071"
+    ]
+  },
+  {
+    "platform_id": "sitemap",
+    "review_market": "OTHER_TASK_MARKET",
+    "market_scope_basis": "Proposed review dimensions, not confirmed user target list and not proven platform availability",
+    "account_region_entitlement": "UNKNOWN",
+    "content_origin_evidence": "UNKNOWN",
+    "audience_market_evidence": "UNKNOWN",
+    "language_coverage": "UNKNOWN",
+    "live_coverage": "NOT_TESTED",
+    "specific_rule": "No universal market restriction/coverage claim; publisher, language, event location distinct",
+    "portability_region_only": "NOT_APPLICABLE",
+    "capability_record": "sitemap",
+    "source_refs": [
+      "S071"
+    ]
+  }
+]

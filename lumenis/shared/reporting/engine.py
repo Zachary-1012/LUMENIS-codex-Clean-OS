@@ -213,17 +213,19 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
         _mc = suggest_hotspot(end, "商业地产")
         report['marketing_nodes'] = {
             "nodes": [n["name"] for n in _mc.get("nodes", [])],
+            "calendar_reference": _mc["calendar_reference"],
+            "node_references": _mc.get("nodes", []),
             "themes": _mc.get("themes", []),
             "tonality_advice": _mc.get("tonality_advice", ""),
             "cross": cross_industry_season("商业地产", end[:7]).get("advice", []),
             "global": cross_global(date_str=end[:7]).get("advice", []),
-            "global_nodes": [n["name"] for n in global_nodes(int(end[5:7]))],
-            "region": {r: [n["name"] for n in region_nodes(r, int(end[5:7]))]
+            "global_nodes": [n["name"] for n in global_nodes(int(end[5:7]))] if _mc["state"] == "reference_only_not_live_verified" else [],
+            "region": {r: [n["name"] for n in region_nodes(r, int(end[5:7]))] if _mc["state"] == "reference_only_not_live_verified" else []
                        for r in ["东南亚", "欧洲", "中东", "拉美", "北美", "东亚", "澳新"]},
         }
     except Exception as _e:
         logger.warning('marketing_calendar import failed (non-blocking): %s', _e)
-        report['marketing_nodes'] = {"nodes": [], "themes": [], "tonality_advice": "",
+        report['marketing_nodes'] = {"calendar_reference": {"state": "unavailable", "canonical": False}, "nodes": [], "themes": [], "tonality_advice": "",
                                      "cross": [], "global": [], "global_nodes": [],
                                      "region": {}}
     # 报告消费 EMV（芥子→须弥）：MET-CONTENT-04 估算媒体价值，独立开关、失败不阻塞报告生成

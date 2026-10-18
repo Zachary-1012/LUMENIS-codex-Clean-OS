@@ -77,6 +77,15 @@ class Scheduler:
         self.jobs: Dict[str, CollectorJob] = {}
         self._collect_callback: Optional[Callable] = None
     
+    def tick_upstream_review(self, queue, *, actor, scope, now=None):
+        """Explicit existing-runtime tick; no schedule exists/enables by default."""
+        from .upstream_math_review import tick
+        return tick(queue, actor=actor, scope=scope, now=now)
+
+    def upstream_review_processor(self, queue, *, actor_provider):
+        from .upstream_math_review import processor
+        return processor(queue, actor_provider=actor_provider)
+
     def _load_state(self) -> Dict:
         """加载调度状态（持久化，重启不丢失）"""
         if os.path.exists(self.state_file):

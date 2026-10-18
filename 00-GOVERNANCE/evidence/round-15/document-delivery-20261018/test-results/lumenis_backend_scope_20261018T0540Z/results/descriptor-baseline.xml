@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="8" skipped="0" tests="8" time="2.917" timestamp="2026-10-17T22:40:22.675707-07:00" hostname="REDACTED_HOST"><testcase classname="tests.test_bmp_local_read_transport" name="test_local_projection_from_original_guard[False-BMP-03]" time="0.734"><failure message="KeyError: 'read_transport'">ready = (&lt;FlaskClient &lt;Flask 'tests.test_saved_document_workflow'&gt;&gt;, {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_backend_sco...nis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-7e905d921effbe0eefeec235'}, {'Authorization': 'Bearer bmp-two'}, ...)
+screen = 'BMP-03', focus = False
+
+    @pytest.mark.parametrize('screen', SCREENS)
+    @pytest.mark.parametrize('focus', [False, True])
+    def test_local_projection_from_original_guard(ready, screen, focus):
+        http, ws, a, b, h, two, eid = ready
+        ws['app'].config['LUMENIS_OPEN_WORKSPACE'] = True
+        headers = {k: v for k, v in h.items() if k != 'Authorization'} if focus else {}
+        response = http.get('/api/experience/screen/' + screen, headers=headers)
+        assert response.status_code == 200, response.get_json()
+        body = response.get_json()
+        scope = binding(body)
+&gt;       assert scope['read_transport'] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^
+            'contract': 'lumenis.local-read-transport.v1',
+            'module': 'brand_market_overview', 'action': 'read', 'verified': True,
+        }
+E       KeyError: 'read_transport'
+
+tests/test_bmp_local_read_transport.py:31: KeyError</failure></testcase><testcase classname="tests.test_bmp_local_read_transport" name="test_local_projection_from_original_guard[False-BMP-04]" time="0.226"><failure message="KeyError: 'read_transport'">ready = (&lt;FlaskClient &lt;Flask 'tests.test_saved_document_workflow'&gt;&gt;, {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_backend_sco...nis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-7e905d921effbe0eefeec235'}, {'Authorization': 'Bearer bmp-two'}, ...)
+screen = 'BMP-04', focus = False
+
+    @pytest.mark.parametrize('screen', SCREENS)
+    @pytest.mark.parametrize('focus', [False, True])
+    def test_local_projection_from_original_guard(ready, screen, focus):
+        http, ws, a, b, h, two, eid = ready
+        ws['app'].config['LUMENIS_OPEN_WORKSPACE'] = True
+        headers = {k: v for k, v in h.items() if k != 'Authorization'} if focus else {}
+        response = http.get('/api/experience/screen/' + screen, headers=headers)
+        assert response.status_code == 200, response.get_json()
+        body = response.get_json()
+        scope = binding(body)
+&gt;       assert scope['read_transport'] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^
+            'contract': 'lumenis.local-read-transport.v1',
+            'module': 'brand_market_overview', 'action': 'read', 'verified': True,
+        }
+E       KeyError: 'read_transport'
+
+tests/test_bmp_local_read_transport.py:31: KeyError</failure></testcase><testcase classname="tests.test_bmp_local_read_transport" name="test_local_projection_from_original_guard[False-BMP-09]" time="0.267"><failure message="KeyError: 'read_transport'">ready = (&lt;FlaskClient &lt;Flask 'tests.test_saved_document_workflow'&gt;&gt;, {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_backend_sco...nis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-7e905d921effbe0eefeec235'}, {'Authorization': 'Bearer bmp-two'}, ...)
+screen = 'BMP-09', focus = False
+
+    @pytest.mark.parametrize('screen', SCREENS)
+    @pytest.mark.parametrize('focus', [False, True])
+    def test_local_projection_from_original_guard(ready, screen, focus):
+        http, ws, a, b, h, two, eid = ready
+        ws['app'].config['LUMENIS_OPEN_WORKSPACE'] = True
+        headers = {k: v for k, v in h.items() if k != 'Authorization'} if focus else {}
+        response = http.get('/api/experience/screen/' + screen, headers=headers)
+        assert response.status_code == 200, response.get_json()
+        body = response.get_json()
+        scope = binding(body)
+&gt;       assert scope['read_transport'] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^
+            'contract': 'lumenis.local-read-transport.v1',
+            'module': 'brand_market_overview', 'action': 'read', 'verified': True,
+        }
+E       KeyError: 'read_transport'
+
+tests/test_bmp_local_read_transport.py:31: KeyError</failure></testcase><testcase classname="tests.test_bmp_local_read_transport" name="test_local_projection_from_original_guard[False-BMP-10]" time="0.234"><failure message="KeyError: 'read_transport'">ready = (&lt;FlaskClient &lt;Flask 'tests.test_saved_document_workflow'&gt;&gt;, {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_backend_sco...nis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-7e905d921effbe0eefeec235'}, {'Authorization': 'Bearer bmp-two'}, ...)
+screen = 'BMP-10', focus = False
+
+    @pytest.mark.parametrize('screen', SCREENS)
+    @pytest.mark.parametrize('focus', [False, True])
+    def test_local_projection_from_original_guard(ready, screen, focus):
+        http, ws, a, b, h, two, eid = ready
+        ws['app'].config['LUMENIS_OPEN_WORKSPACE'] = True
+        headers = {k: v for k, v in h.items() if k != 'Authorization'} if focus else {}
+        response = http.get('/api/experience/screen/' + screen, headers=headers)
+        assert response.status_code == 200, response.get_json()
+        body = response.get_json()
+        scope = binding(body)
+&gt;       assert scope['read_transport'] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^
+            'contract': 'lumenis.local-read-transport.v1',
+            'module': 'brand_market_overview', 'action': 'read', 'verified': True,
+        }
+E       KeyError: 'read_transport'
+
+tests/test_bmp_local_read_transport.py:31: KeyError</failure></testcase><testcase classname="tests.test_bmp_local_read_transport" name="test_local_projection_from_original_guard[True-BMP-03]" time="0.243"><failure message="KeyError: 'read_transport'">ready = (&lt;FlaskClient &lt;Flask 'tests.test_saved_document_workflow'&gt;&gt;, {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_backend_sco...nis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-7e905d921effbe0eefeec235'}, {'Authorization': 'Bearer bmp-two'}, ...)
+screen = 'BMP-03', focus = True
+
+    @pytest.mark.parametrize('screen', SCREENS)
+    @pytest.mark.parametrize('focus', [False, True])
+    def test_local_projection_from_original_guard(ready, screen, focus):
+        http, ws, a, b, h, two, eid = ready
+        ws['app'].config['LUMENIS_OPEN_WORKSPACE'] = True
+        headers = {k: v for k, v in h.items() if k != 'Authorization'} if focus else {}
+        response = http.get('/api/experience/screen/' + screen, headers=headers)
+        assert response.status_code == 200, response.get_json()
+        body = response.get_json()
+        scope = binding(body)
+&gt;       assert scope['read_transport'] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^
+            'contract': 'lumenis.local-read-transport.v1',
+            'module': 'brand_market_overview', 'action': 'read', 'verified': True,
+        }
+E       KeyError: 'read_transport'
+
+tests/test_bmp_local_read_transport.py:31: KeyError</failure></testcase><testcase classname="tests.test_bmp_local_read_transport" name="test_local_projection_from_original_guard[True-BMP-04]" time="0.233"><failure message="KeyError: 'read_transport'">ready = (&lt;FlaskClient &lt;Flask 'tests.test_saved_document_workflow'&gt;&gt;, {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_backend_sco...nis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-7e905d921effbe0eefeec235'}, {'Authorization': 'Bearer bmp-two'}, ...)
+screen = 'BMP-04', focus = True
+
+    @pytest.mark.parametrize('screen', SCREENS)
+    @pytest.mark.parametrize('focus', [False, True])
+    def test_local_projection_from_original_guard(ready, screen, focus):
+        http, ws, a, b, h, two, eid = ready
+        ws['app'].config['LUMENIS_OPEN_WORKSPACE'] = True
+        headers = {k: v for k, v in h.items() if k != 'Authorization'} if focus else {}
+        response = http.get('/api/experience/screen/' + screen, headers=headers)
+        assert response.status_code == 200, response.get_json()
+        body = response.get_json()
+        scope = binding(body)
+&gt;       assert scope['read_transport'] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^
+            'contract': 'lumenis.local-read-transport.v1',
+            'module': 'brand_market_overview', 'action': 'read', 'verified': True,
+        }
+E       KeyError: 'read_transport'
+
+tests/test_bmp_local_read_transport.py:31: KeyError</failure></testcase><testcase classname="tests.test_bmp_local_read_transport" name="test_local_projection_from_original_guard[True-BMP-09]" time="0.266"><failure message="KeyError: 'read_transport'">ready = (&lt;FlaskClient &lt;Flask 'tests.test_saved_document_workflow'&gt;&gt;, {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_backend_sco...nis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-7e905d921effbe0eefeec235'}, {'Authorization': 'Bearer bmp-two'}, ...)
+screen = 'BMP-09', focus = True
+
+    @pytest.mark.parametrize('screen', SCREENS)
+    @pytest.mark.parametrize('focus', [False, True])
+    def test_local_projection_from_original_guard(ready, screen, focus):
+        http, ws, a, b, h, two, eid = ready
+        ws['app'].config['LUMENIS_OPEN_WORKSPACE'] = True
+        headers = {k: v for k, v in h.items() if k != 'Authorization'} if focus else {}
+        response = http.get('/api/experience/screen/' + screen, headers=headers)
+        assert response.status_code == 200, response.get_json()
+        body = response.get_json()
+        scope = binding(body)
+&gt;       assert scope['read_transport'] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^
+            'contract': 'lumenis.local-read-transport.v1',
+            'module': 'brand_market_overview', 'action': 'read', 'verified': True,
+        }
+E       KeyError: 'read_transport'
+
+tests/test_bmp_local_read_transport.py:31: KeyError</failure></testcase><testcase classname="tests.test_bmp_local_read_transport" name="test_local_projection_from_original_guard[True-BMP-10]" time="0.273"><failure message="KeyError: 'read_transport'">ready = (&lt;FlaskClient &lt;Flask 'tests.test_saved_document_workflow'&gt;&gt;, {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_backend_sco...nis-Context-Mode': 'FOCUS', 'X-Subject-ID': 'SUBJ-7e905d921effbe0eefeec235'}, {'Authorization': 'Bearer bmp-two'}, ...)
+screen = 'BMP-10', focus = True
+
+    @pytest.mark.parametrize('screen', SCREENS)
+    @pytest.mark.parametrize('focus', [False, True])
+    def test_local_projection_from_original_guard(ready, screen, focus):
+        http, ws, a, b, h, two, eid = ready
+        ws['app'].config['LUMENIS_OPEN_WORKSPACE'] = True
+        headers = {k: v for k, v in h.items() if k != 'Authorization'} if focus else {}
+        response = http.get('/api/experience/screen/' + screen, headers=headers)
+        assert response.status_code == 200, response.get_json()
+        body = response.get_json()
+        scope = binding(body)
+&gt;       assert scope['read_transport'] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^
+            'contract': 'lumenis.local-read-transport.v1',
+            'module': 'brand_market_overview', 'action': 'read', 'verified': True,
+        }
+E       KeyError: 'read_transport'
+
+tests/test_bmp_local_read_transport.py:31: KeyError</failure></testcase></testsuite></testsuites>

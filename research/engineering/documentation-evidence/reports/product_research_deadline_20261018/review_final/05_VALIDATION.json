@@ -1,0 +1,19 @@
+{
+  "groups": 19,
+  "unique_original_ledger_records_referenced": 2617,
+  "unique_original_G_referenced": 195,
+  "older_matrix_overwritten": false,
+  "product_edits": false,
+  "runtime_or_model_executed": false,
+  "external_publishing": false,
+  "primary_sources_reopened_by_integrator": false,
+  "new_pdf": false,
+  "third_party_word_finalized": false,
+  "old_review_v2_overwritten": false,
+  "original_requirement_references_exact_preserved": true,
+  "new_reports_read_full": 4,
+  "frontend_current_manuscript_independently_full_read": false,
+  "research_and_product_blanket_completion": false,
+  "stage": "NOON_STAGE_ONE_REVIEW",
+  "changes": 16
+}

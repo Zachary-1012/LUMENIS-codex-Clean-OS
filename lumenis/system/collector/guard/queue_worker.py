@@ -17,6 +17,7 @@ task_queue.fail 内置）。采集/事件分析/报告生成等批量任务可�
   w.process_once()          # 单步（测试/定时器）
   w.run(stop_event, sleep=1.0)   # 常驻循环（stop_event 触发退出）
 """
+from collections.abc import Mapping
 import threading
 import time
 import uuid
@@ -50,7 +51,7 @@ class QueueWorker:
         ):
             return (task_id, False)
         try:
-            ok = self.processor(task)
+            ok = self.processor(task) is True
         except Exception:
             ok = False
         if ok:
@@ -88,6 +89,13 @@ def collect_processor_factory(collect_fn):
         tt = task.get("task_type", "")
         if tt in ("collect", "collect_keyword"):
             payload = task.get("payload") or {}
-            return bool(collect_fn(payload))
+            result = collect_fn(payload)
+            # Collector service results are mappings, including non-empty
+            # failure/approval responses. Truthiness would acknowledge those
+            # failures and permanently discard the requested work.
+            if isinstance(result, Mapping):
+                return result.get("ok") is True or (
+                    "ok" not in result and result.get("success") is True)
+            return result is True
         return False  # Unknown work must use the failure/recovery path, never fake success.
     return processor

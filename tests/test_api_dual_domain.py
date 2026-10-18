@@ -17,6 +17,26 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 
 
+@pytest.fixture(scope="module", autouse=True)
+def isolated_business_schema():
+    """Initialize the actual isolated DB even when another test imported app first."""
+    from pathlib import Path
+    import database
+    from lumenis.shared.database import get_repository, main_db_path
+    import tempfile
+    repository = get_repository()
+    # conftest makes this copy before collection. Do not import conftest again
+    # or initialize a checkout/production DB when app was cached elsewhere.
+    path = Path(repository.db_path or main_db_path()).resolve()
+    assert path.name == "monitor-test-copy.db"
+    assert path.parent.name.startswith("lumenis-pytest-")
+    assert path.parent.parent == Path(tempfile.gettempdir()).resolve()
+    assert path == Path(os.environ["ZBC_DB_PATH"]).resolve()
+    database.init_db()
+    from lumenis.shared.database import migrations
+    assert migrations.migrate(), "isolated canonical schema initialization failed"
+
+
 @pytest.fixture(scope="module")
 def client():
     """Authenticated test client for ZBMP and SYSTEM endpoints."""

@@ -11,6 +11,7 @@ LUMENIS compatibility configuration adapter
 """
 
 import os
+import sys
 import json
 from typing import Any, Optional, Dict
 from dotenv import load_dotenv
@@ -29,7 +30,14 @@ _config_loaded = False
 
 
 def load_env():
-    """Load only the protected local .env. The example file is documentation."""
+    """Load ordinary local config; explicit isolated profiles never read it."""
+    isolated_flags = {
+        '--manual-workspace', '--internal-beta-acceptance',
+        '--internal-beta-workspace-context-acceptance',
+        '--internal-beta-browser-outcome-acceptance',
+    }
+    if isolated_flags.intersection(sys.argv[1:]):
+        return
     if os.path.exists(ENV_FILE):
         load_dotenv(ENV_FILE, override=True)
 

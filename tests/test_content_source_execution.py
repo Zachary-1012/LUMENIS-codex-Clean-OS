@@ -140,7 +140,7 @@ def _run(gate, skill, upload, handler, **overrides):
 
 def _track_persistent_bridges(monkeypatch):
     calls = {"trace": [], "evidence": []}
-    monkeypatch.setattr(execution, "write_trace", lambda ctx, *_a: calls["trace"].append(ctx))
+    monkeypatch.setattr(execution, "write_trace", lambda ctx, *_a: calls["trace"].append(ctx) or True)
     monkeypatch.setattr(
         execution, "record_execution_evidence",
         lambda ctx: calls["evidence"].append(ctx) or {"ok": True},

@@ -18,7 +18,7 @@ def boundary(monkeypatch):
     monkeypatch.setattr(p, "get_permission_gate", lambda: gate)
     monkeypatch.setattr(security, "get_permission_gate", lambda: gate)
     calls = {"trace": [], "evidence": [], "handler": []}
-    monkeypatch.setattr(e, "write_trace", lambda ctx, *_: calls["trace"].append(ctx))
+    monkeypatch.setattr(e, "write_trace", lambda ctx, *_: calls["trace"].append(ctx) or True)
     monkeypatch.setattr(
         e, "record_execution_evidence",
         lambda ctx: calls["evidence"].append(ctx) or {"ok": True},

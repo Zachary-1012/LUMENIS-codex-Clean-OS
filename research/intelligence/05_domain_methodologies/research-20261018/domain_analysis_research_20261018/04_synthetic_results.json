@@ -1,0 +1,160 @@
+{
+  "label": "SYNTHETIC_ONLY_NOT_CUSTOMER_RESULTS",
+  "python": "3.12.14",
+  "small_sample": {
+    "A": {
+      "negative": 8,
+      "classified": 10,
+      "ratio": 0.8,
+      "wilson95": [
+        0.49016247153664183,
+        0.9433178485456247
+      ]
+    },
+    "B": {
+      "negative": 60,
+      "classified": 100,
+      "ratio": 0.6,
+      "wilson95": [
+        0.5020025867910618,
+        0.6905987135675411
+      ]
+    },
+    "decision": "Intervals overlap; raw rank does not establish A has higher population negativity."
+  },
+  "unknown_bound": {
+    "negative": 20,
+    "classified": 50,
+    "unknown": 50,
+    "known_only_rate": 0.4,
+    "whole_observed_set_bounds": [
+      0.2,
+      0.7
+    ],
+    "decision": "Unknown exclusion changes estimand; report unknown fraction, do not show 40% as all-content negativity."
+  },
+  "exposure": {
+    "previous": {
+      "negative": 20,
+      "observed": 100
+    },
+    "current": {
+      "negative": 40,
+      "observed": 400
+    },
+    "negative_count_growth": 1.0,
+    "observed_rate_change_pp": -10.0,
+    "decision": "Count doubled while within-sample rate halved. Neither is population risk without stable coverage."
+  },
+  "did_confounding": {
+    "treated_pre": 100,
+    "treated_post": 130,
+    "control_pre": 100,
+    "control_post": 110,
+    "did": 20,
+    "true_treatment_effect_in_constructed_world": 0,
+    "unobserved_treated_only_road_reopening": 20,
+    "decision": "DiD arithmetic is correct yet causal claim false. Identical pretrends cannot rule out post-treatment confounding."
+  },
+  "spend_proxy": {
+    "impressions": 100000,
+    "cpm_bounds": [
+      20,
+      60
+    ],
+    "sponsor_probability_bounds": [
+      0.3,
+      0.7
+    ],
+    "derived_currency_bounds": [
+      600,
+      4200
+    ],
+    "decision": "A seven-fold interval is a sensitivity scenario, not a calibrated confidence interval. Do not multiply post count by CPM."
+  },
+  "creator_overlap": {
+    "options": [
+      {
+        "ids": [
+          "A"
+        ],
+        "cost": 60,
+        "sum_audience": 100,
+        "unique_audience": 100
+      },
+      {
+        "ids": [
+          "B"
+        ],
+        "cost": 40,
+        "sum_audience": 80,
+        "unique_audience": 80
+      },
+      {
+        "ids": [
+          "C"
+        ],
+        "cost": 40,
+        "sum_audience": 70,
+        "unique_audience": 70
+      },
+      {
+        "ids": [
+          "A",
+          "B"
+        ],
+        "cost": 100,
+        "sum_audience": 180,
+        "unique_audience": 100
+      },
+      {
+        "ids": [
+          "A",
+          "C"
+        ],
+        "cost": 100,
+        "sum_audience": 170,
+        "unique_audience": 170
+      },
+      {
+        "ids": [
+          "B",
+          "C"
+        ],
+        "cost": 80,
+        "sum_audience": 150,
+        "unique_audience": 150
+      }
+    ],
+    "additive_winner": [
+      "A",
+      "B"
+    ],
+    "deduplicated_winner": [
+      "A",
+      "C"
+    ],
+    "decision": "Overlap changes the optimal creator set. If overlap unavailable, do not claim unique reach."
+  },
+  "forecast_baseline": {
+    "train_points": 21,
+    "rolling_one_step_test_points": 21,
+    "last_value_mae": 17.142857142857142,
+    "seasonal_naive_mae": 0.0,
+    "decision": "Synthetic perfect weekly repetition favors seasonal naive; no evidence of real forecast gain or interval calibration."
+  },
+  "identity": {
+    "same_name": true,
+    "brand_id": "brand-A",
+    "store_id": "store-A-101",
+    "filing_entity": "group-X",
+    "relationship": "brand operated by group; store belongs to brand",
+    "decision": "Relationship edges are not identity equivalence. Never merge these three entities or allocate group expense without disclosure."
+  },
+  "recovery_checks": {
+    "roundtrip_same_hash": true,
+    "upstream_change_new_hash": true,
+    "zero_denominator_unknown": true,
+    "scope": "Research JSON roundtrip only; not product SavedWork or runtime recovery."
+  }
+}

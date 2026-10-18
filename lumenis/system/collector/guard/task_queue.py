@@ -14,6 +14,7 @@ neotask（neopen/neotask, 2026-03）是 Celery 的轻量零依赖替代——SQL
   - stats()                                        -> 各状态计数（监控/Observatory 用）
 零第三方依赖（纯 sqlite3），数据落盘可恢复（数据零丢失）。
 """
+from contextlib import contextmanager
 import json
 import os
 import threading
@@ -84,7 +85,23 @@ class TaskQueue:
                  now, now + float(delay)))
             return cur.lastrowid
 
-    def dequeue(self, worker_id="", lease_owner=""):
+    def enqueue_once(self, task_type, payload, request_key):
+        """Atomically recover one server-bound request without a second task store."""
+        now = time.time()
+        with _LOCK, self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            row = self._conn.execute(
+                "SELECT id FROM tasks WHERE task_type=? AND json_extract(payload, '$.request_key')=? "
+                "ORDER BY id LIMIT 1", (task_type, request_key)).fetchone()
+            if row is not None:
+                return row['id']
+            material = {**payload, 'request_key': request_key}
+            return self._conn.execute(
+                "INSERT INTO tasks(task_type,payload,priority,status,created_at,scheduled_at) "
+                "VALUES(?,?,5,'pending',?,?)",
+                (task_type, json.dumps(material, ensure_ascii=False), now, now)).lastrowid
+
+    def dequeue(self, worker_id="", lease_owner="", *, task_id=None):
         """Claim the next due task and issue a fresh server-owned run_id receipt.
 
         A new receipt is generated for every claim, including retries. Callers
@@ -96,10 +113,11 @@ class TaskQueue:
         with _LOCK, self._conn:
             # Serialize the read/claim pair across processes, not only threads.
             self._conn.execute("BEGIN IMMEDIATE")
+            target = " AND id=?" if task_id is not None else ""
+            params = (time.time(), task_id) if task_id is not None else (time.time(),)
             row = self._conn.execute(
-                "SELECT * FROM tasks WHERE status='pending' AND scheduled_at <= ? "
-                "ORDER BY priority ASC, scheduled_at ASC, id ASC LIMIT 1",
-                (time.time(),)).fetchone()
+                "SELECT * FROM tasks WHERE status='pending' AND scheduled_at <= ? " + target +
+                " ORDER BY priority ASC, scheduled_at ASC, id ASC LIMIT 1", params).fetchone()
             if row is None:
                 return None
             now = time.time()
@@ -159,14 +177,14 @@ class TaskQueue:
                 (str(checkpoint_id), now, task_id, run_id, worker_id, lease_owner))
             return cur.rowcount == 1
 
-    def fail(self, task_id, error="", *, run_id=None, worker_id=None, lease_owner=None):
+    def fail(self, task_id, error="", *, run_id=None, worker_id=None, lease_owner=None, retryable=True):
         """Fail only the active attempt; return False for a stale receipt."""
         return self._fail_attempt(
             task_id, error, run_id=run_id, worker_id=worker_id,
-            lease_owner=lease_owner)
+            lease_owner=lease_owner, retryable=retryable)
 
     def _fail_attempt(self, task_id, error, *, run_id, worker_id, lease_owner,
-                      stale_before=None):
+                      stale_before=None, retryable=True):
         if not self._has_attempt_receipt(run_id, worker_id, lease_owner):
             return False
         where = (
@@ -185,7 +203,7 @@ class TaskQueue:
             if row is None:
                 return False
             attempts = int(row["attempts"] or 0) + 1
-            if attempts >= self.max_attempts:
+            if retryable is False or attempts >= self.max_attempts:
                 cur = self._conn.execute(
                     "UPDATE tasks SET status='failed', attempts=?, last_error=?, "
                     "lease_owner='', recovery_reason=? WHERE " + where,
@@ -199,14 +217,15 @@ class TaskQueue:
                 (attempts, error_text, time.time() + backoff, error_text, *identity))
             return cur.rowcount == 1
 
-    def reap_stale(self, timeout_seconds, reason="heartbeat timeout"):
+    def reap_stale(self, timeout_seconds, reason="heartbeat timeout", *, task_id=None):
         """Recover stale running leases through bounded retry, never leave them running."""
         cutoff = time.time() - max(0, float(timeout_seconds))
         with _LOCK, self._conn:
             rows = self._conn.execute(
                 "SELECT id, run_id, worker_id, lease_owner FROM tasks "
-                "WHERE status='running' AND last_heartbeat_at < ? AND COALESCE(run_id, '') <> ''",
-                (cutoff,)).fetchall()
+                "WHERE status='running' AND last_heartbeat_at < ? AND COALESCE(run_id, '') <> ''"
+                + (" AND id=?" if task_id is not None else ""),
+                (cutoff, task_id) if task_id is not None else (cutoff,)).fetchall()
         recovered = []
         for row in rows:
             if self._fail_attempt(
@@ -214,6 +233,107 @@ class TaskQueue:
                 lease_owner=row["lease_owner"], stale_before=cutoff):
                 recovered.append(row["id"])
         return recovered
+
+    def defer(self, task_id, *, run_id=None, worker_id=None, lease_owner=None, delay_seconds=0):
+        """Yield a valid continuation/local-throttle boundary without failure."""
+        if type(delay_seconds) not in (int, float) or not 0 <= delay_seconds <= 3600:
+            raise ValueError("invalid queue deferral delay")
+        if not self._has_attempt_receipt(run_id, worker_id, lease_owner):
+            return False
+        with _LOCK, self._conn:
+            cur = self._conn.execute(
+                "UPDATE tasks SET status='pending', scheduled_at=?, locked_at=0, lease_owner='' "
+                "WHERE id=? AND status='running' AND run_id=? AND worker_id=? AND lease_owner=?",
+                (time.time() + delay_seconds, task_id, run_id, worker_id, lease_owner))
+            return cur.rowcount == 1
+
+    def resume_expired(self, task_id, deadline_at):
+        """Server-authorized new window for the same expired task and operation IDs."""
+        if type(deadline_at) not in (int, float) or not time.time() < deadline_at <= time.time() + 3600:
+            raise ValueError("invalid resumed task deadline")
+        with _LOCK, self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            row = self._conn.execute(
+                "SELECT payload FROM tasks WHERE id=? AND status='failed' AND last_error='TASK_DEADLINE_EXCEEDED'",
+                (task_id,)).fetchone()
+            if row is None:
+                return False
+            payload = json.loads(row["payload"])
+            if payload.get("cancel_requested") is True:
+                return False
+            payload["deadline_at"] = deadline_at
+            self._conn.execute(
+                "UPDATE tasks SET payload=?,status='pending',scheduled_at=?,attempts=0,locked_at=0,"
+                "lease_owner='',last_error='',recovery_reason='EXPLICIT_DEADLINE_CONTINUATION' WHERE id=?",
+                (json.dumps(payload, ensure_ascii=False), time.time(), task_id))
+            return True
+
+    @contextmanager
+    def attempt_guard(self, task_id, *, run_id=None, worker_id=None, lease_owner=None):
+        """Fence a short business commit against concurrent lease reclamation.
+
+        Enter only at the existing business transaction, never around network
+        acquisition. Keep the queue write reservation until that transaction
+        commits or rolls back, so a stale attempt cannot publish business truth.
+        """
+        if not self._has_attempt_receipt(run_id, worker_id, lease_owner):
+            yield False
+            return
+        with _LOCK:
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = self._conn.execute(
+                    "SELECT id,payload FROM tasks WHERE id=? AND status='running' AND run_id=? "
+                    "AND worker_id=? AND lease_owner=?",
+                    (task_id, run_id, worker_id, lease_owner)).fetchone()
+                payload = json.loads(row["payload"]) if row is not None else {}
+                deadline = payload.get("deadline_at")
+                valid_deadline = deadline is None or (type(deadline) in (int, float) and time.time() < deadline)
+                yield row is not None and valid_deadline and payload.get("cancel_requested") is not True
+            finally:
+                # This context is a reservation only: no operational writes
+                # after the inner business DB has committed. Releasing the
+                # reservation must not turn committed Evidence into false zero
+                # or cause its already-referenced files to be cleaned up.
+                try:
+                    self._conn.rollback()
+                except Exception:
+                    import logging
+                    logging.getLogger(__name__).exception("Queue reservation release failed; business outcome unchanged")
+
+
+    def get(self, task_id):
+        """Read durable operational state, including its existing JSON payload."""
+        with _LOCK, self._conn:
+            row = self._conn.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
+            if row is None:
+                return None
+            result = dict(row)
+            result["payload"] = json.loads(result["payload"])
+            return result
+
+    def save_progress(self, task_id, progress, *, run_id=None, worker_id=None, lease_owner=None):
+        """Checkpoint operational result references in the existing payload column.
+
+        This is not business/Evidence storage. The same attempt fence guards
+        this update as ack/fail; immutable request fields remain untouched.
+        """
+        if not self._has_attempt_receipt(run_id, worker_id, lease_owner):
+            return False
+        with _LOCK, self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            row = self._conn.execute(
+                "SELECT payload FROM tasks WHERE id=? AND status='running' AND run_id=? "
+                "AND worker_id=? AND lease_owner=?",
+                (task_id, run_id, worker_id, lease_owner)).fetchone()
+            if row is None:
+                return False
+            payload = json.loads(row["payload"])
+            payload["progress"] = progress
+            self._conn.execute(
+                "UPDATE tasks SET payload=?, last_checkpoint_at=? WHERE id=?",
+                (json.dumps(payload, ensure_ascii=False), time.time(), task_id))
+            return True
 
     def close(self):
         """关闭数据库连接（测试/清理用）。"""

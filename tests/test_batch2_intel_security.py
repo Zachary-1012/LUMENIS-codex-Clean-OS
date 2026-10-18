@@ -347,8 +347,24 @@ class TestKosMetrics:
     def test_koc_campaign_review_empty(self):
         from kos_metrics import koc_campaign_review
         r = koc_campaign_review('camp1', [])
-        assert r['koc_count'] == 0
-        assert r['viewership'] == 0
+        assert r['koc_count'] == 0 and r['tiers'] == {}
+        assert r['population_coverage'] == 'UNKNOWN'
+        assert r['external_campaign_results'] == 'NOT_ESTABLISHED'
+        for field in ('viewership', 'engagement', 'high_intent_comments'):
+            assert r[field] is None
+            assert r['coverage'][field] == {'known': 0, 'provided_rows': 0, 'known_subtotal': None}
+
+    def test_koc_campaign_review_explicit_zero_is_not_unknown(self):
+        from kos_metrics import koc_campaign_review
+        row = {'author_id': 'fixture', 'viewership': 0, 'engagement': 0,
+               'high_intent_comments': 0, 'engagement_24h': 0, 'engagement_7d': 0}
+        r = koc_campaign_review('camp1', [row])
+        assert r['koc_count'] == 1 and r['tiers'] == {'none': 1}
+        assert r['population_coverage'] == 'UNKNOWN'
+        assert r['calculation_basis'] == 'USER_DECLARED_UNVERIFIED'
+        for field in ('viewership', 'engagement', 'high_intent_comments'):
+            assert r[field] == 0
+            assert r['coverage'][field] == {'known': 1, 'provided_rows': 1, 'known_subtotal': 0}
 
     def test_koc_campaign_review_with_data(self):
         from kos_metrics import koc_campaign_review

@@ -222,7 +222,8 @@ def _runtime_info():
     info = get_skill_info("owned.read")
     config = dict(info["config"])
     fields = ("runtime", "source", "source_type", "entrypoint", "install_path", "active_version", "version",
-              "tools_json", "permissions_granted_json", "install_state", "lifecycle_state", "health_state")
+              "tools_json", "permissions_granted_json", "install_state", "lifecycle_state", "health_state",
+              "input_schema_json", "output_schema_json", "compatibility_json")
     config.update({name: info[name] for name in fields if info[name] is not None})
     config["registry_sha256"] = info["registry_sha256"]
     return SkillRuntimeInfo(skill_id="owned.read", name=info["name"], product="SYSTEM", enabled=True,

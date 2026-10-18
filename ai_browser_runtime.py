@@ -285,6 +285,17 @@ class FailureClass(str, Enum):
 
 # 敏感信息正则模式（用于从页面内容/DOM/日志/Evidence中脱敏）
 _SENSITIVE_PATTERNS = [
+    # Consume the complete credential value before generic key/token patterns.
+    # Deliberately conservative for unquoted header lines; this is not an
+    # exhaustive secret detector and may remove adjacent same-line prose.
+    (r"(?i)\b(?:proxy-)?authorization[\"']?\s*[:=]\s*(?:\"[^\"]*\"|'[^']*'|[^\r\n}]+)",
+     'Authorization=[REDACTED]'),
+    (r"(?i)\b(?:bearer|basic)\s+[A-Za-z0-9_+/=.-]+", '[AUTH_REDACTED]'),
+    (r"(?i)\b(signature|x-amz-signature)[\"']?\s*[:=]\s*(?:\"[^\"]*\"|'[^']*'|[^\r\n}]+)",
+     r'\1=[REDACTED]'),
+    # Browser content signatures and anti-CSRF values are never research material.
+    (r'(?i)\b(xsec_token|csrf[_-]?token|xsrf[_-]?token|authorization|x-amz-signature|signature)\s*["\']?\s*[:=]\s*["\']?[^"\'\s,;}]+',
+     r'\1=[REDACTED]'),
     # JWT format (xxx.yyy.zzz) — 先匹配，避免被其他模式截断
     (r'\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b', '[JWT_REDACTED]'),
     # JSON 格式的敏感键值对："token":"value" / 'cookie': 'value'
@@ -1780,6 +1791,349 @@ class AIBrowserRuntime:
     # ──────────────────────────────────────────────────────────
     # 核心：execute_action（带 Verification 闭环）
     # ──────────────────────────────────────────────────────────
+
+    def extract(self, options: dict, *, _capture_context=None) -> dict:
+        """Extract an already-open page without navigating or granting SourceUse.
+
+        The actor gate is owned by the API. This method owns page binding,
+        browser-thread confinement, human-control exclusion and bounded capture.
+        """
+        from concurrent.futures import TimeoutError as FutureTimeout
+        from lumenis.system.collector.runtime.browser_extract import (
+            BrowserExtractionError, CAPTURE_SCRIPT, check_deadline,
+            format_capture, validate_extract_request, same_document_url, capture_structure,
+        )
+        options = validate_extract_request(options)
+        deadline = (_capture_context['deadline'] if _capture_context is not None
+                    else time.monotonic() + options['timeout_ms'] / 1000.0)
+
+        operation_id = str(uuid.uuid4())
+        outcome_lock = threading.Lock()
+        outcome = {'state': 'NOT_STARTED', 'cancelled': False, 'evidence_id': None}
+
+        def timeout_error():
+            with outcome_lock:
+                outcome['cancelled'] = True
+                state = outcome['state']
+                details = {
+                    'operation_id': operation_id, 'session_id': self.session_id,
+                    'persistence_outcome': state,
+                    'retry_safe': state == 'NOT_STARTED',
+                    'receipt_query': f'/api/browser/sessions/{self.session_id}/evidence',
+                }
+                if outcome['evidence_id'] is not None:
+                    details['evidence_id'] = outcome['evidence_id']
+                return BrowserExtractionError('BROWSER_EXTRACTION_TIMEOUT', **details)
+
+        if _capture_context is not None:
+            _capture_context['timeout_error'] = timeout_error
+
+        def operation():
+            if time.monotonic() >= deadline:
+                raise timeout_error()
+            self._begin_control_action(control_mode="agent", human_control_token=None)
+            cdp = None
+            try:
+                if self.status != SessionStatus.RUNNING or self._closed or self._page is None:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_SESSION_NOT_RUNNING')
+                if not same_document_url(self._page.url, options['url']):
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_NAVIGATION_REQUIRED')
+                revision = self._page_revision
+                target_id = self._target_id
+                allowed, _reason = self.firewall.check_action(
+                    BrowserActionType.OBSERVE, url=options['url'])
+                if not allowed:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_PERMISSION_DENIED')
+                check_deadline(deadline)
+                cdp = self._context.new_cdp_session(self._page)
+                frame = cdp.send('Page.getFrameTree')['frameTree']['frame']['id']
+                world = cdp.send('Page.createIsolatedWorld', {
+                    'frameId': frame, 'worldName': 'lumenis-read-only-extract',
+                    'grantUniveralAccess': False,
+                })
+                check_deadline(deadline)
+                result = cdp.send('Runtime.evaluate', {
+                    'expression': CAPTURE_SCRIPT,
+                    'contextId': world['executionContextId'],
+                    'returnByValue': True,
+                    'awaitPromise': False,
+                    'timeout': max(1, int((deadline - time.monotonic()) * 1000)),
+                })
+                check_deadline(deadline)
+                if result.get('exceptionDetails'):
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_CAPTURE_UNAVAILABLE')
+                capture = result.get('result', {}).get('value')
+                if type(capture) is not dict:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_CAPTURE_INVALID')
+                if capture.get('interaction_required') is True:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_HUMAN_REQUIRED')
+                if (not same_document_url(capture.get('url'), options['url']) or not same_document_url(self._page.url, options['url'])
+                        or self._page_revision != revision or self._target_id != target_id
+                        or self.status != SessionStatus.RUNNING or self._closed):
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_PAGE_CHANGED')
+                def safe_text(value):
+                    scanned = self.injection_guard.scan(value, source='browser_extract')
+                    return redact_browser_url_queries(sanitize_sensitive(scanned.sanitized_text))
+                formats = format_capture(capture, options['formats'], safe_text)
+                structure = capture_structure(capture, safe_text)
+                check_deadline(deadline)
+                captured_at = datetime.now(timezone.utc).isoformat()
+                metadata = {
+                    'url': safe_browser_display_url(capture['url']),
+                    'title': safe_text(str(capture.get('title', ''))[:300]),
+                    'page_revision': revision,
+                    'captured_at': captured_at,
+                }
+                truncated = capture.get('truncated') is True
+                digest = hashlib.sha256(json.dumps({'formats': formats, 'structure': structure}, sort_keys=True,
+                    ensure_ascii=False).encode('utf-8')).hexdigest()
+                # Only hashes/locators enter Browser Evidence. Bodies are returned
+                # to the owner; saving requires the existing SavedWork workflow.
+                with outcome_lock:
+                    check_deadline(deadline)
+                    if outcome['cancelled']:
+                        raise BrowserExtractionError('BROWSER_EXTRACTION_TIMEOUT')
+                    outcome['state'] = 'UNKNOWN'
+                evidence_id = self._record_evidence(
+                    action='extract', timestamp=captured_at, result='PARTIAL' if truncated else 'PASS',
+                    target=metadata['url'], after_state_hash=digest,
+                    verification=json.dumps({
+                        'operation_id': operation_id, 'formats': list(formats), 'page_revision': revision,
+                        'truncated': truncated, 'source_capture': 'NOT_IMPORTED',
+                        'source_use': 'NOT_ADMITTED', 'untrusted_content': True,
+                    }), risk_level='low',
+                )
+                if type(evidence_id) is not int or evidence_id <= 0:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_EVIDENCE_UNAVAILABLE',
+                        operation_id=operation_id, persistence_outcome='UNKNOWN', retry_safe=False,
+                        receipt_query=f'/api/browser/sessions/{self.session_id}/evidence')
+                with outcome_lock:
+                    outcome.update(state='COMMITTED', evidence_id=evidence_id)
+                if time.monotonic() >= deadline:
+                    raise timeout_error()
+                self.last_activity = time.time()
+                return {
+                    'ok': True, 'session_id': self.session_id, 'formats': formats, 'structure': structure,
+                    'operation_id': operation_id, 'persistence_outcome': 'COMMITTED',
+                    'metadata': metadata, 'evidence_id': evidence_id,
+                    'untrusted_content': True, 'ai_used': False,
+                    'source_capture': 'NOT_IMPORTED', 'source_use': 'NOT_ADMITTED',
+                    'partial': truncated, 'truncated': truncated,
+                    'format_semantics': 'sanitized_visible_document',
+                    'capture_scope': 'main_frame_visible_light_dom',
+                }
+            except BrowserExtractionError as exc:
+                if exc.code == 'BROWSER_EXTRACTION_TIMEOUT':
+                    raise timeout_error() from None
+                raise
+            except BrowserHumanControlError:
+                raise
+            except Exception:
+                if time.monotonic() >= deadline:
+                    raise timeout_error() from None
+                with outcome_lock:
+                    persistence_started = outcome['state'] != 'NOT_STARTED'
+                if persistence_started:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_EVIDENCE_UNAVAILABLE',
+                        operation_id=operation_id, persistence_outcome='UNKNOWN', retry_safe=False,
+                        receipt_query=f'/api/browser/sessions/{self.session_id}/evidence') from None
+                raise BrowserExtractionError('BROWSER_EXTRACTION_CAPTURE_UNAVAILABLE') from None
+            finally:
+                if cdp is not None:
+                    try:
+                        cdp.detach()
+                    except Exception:
+                        pass
+                self._end_control_action()
+
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            with self._worker_lock:
+                future = self._browser_worker.submit(self._browser_thread_operation, operation)
+            try:
+                return future.result(timeout=max(0.001, deadline - time.monotonic()))
+            except FutureTimeout:
+                # A running SQLite commit cannot be cancelled. Report its outcome
+                # honestly and correlate it through the existing Evidence owner.
+                future.cancel()
+                raise timeout_error() from None
+        result = operation()
+        if time.monotonic() >= deadline:
+            raise timeout_error()
+        return result
+
+    def capture_command(self, data: dict, *, _capture_context=None) -> dict:
+        """One deterministic handler for trusted UI and authorized AI callers.
+
+        Authentication is always performed by the existing API/agent boundary;
+        a caller-supplied initiator/actor/permission is deliberately not accepted.
+        Captures are temporary, not a second Source or persistence store.
+        """
+        import copy
+        from lumenis.system.collector.runtime.browser_extract import (
+            BrowserExtractionError, CAPTURE_TTL_SECONDS, validate_capture_command,
+            select_capture, same_document_url,
+        )
+        data = validate_capture_command(data)
+        if _capture_context is None:
+            _capture_context = {'deadline': time.monotonic() + data.get('timeout_ms', 10000) / 1000.0}
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            from concurrent.futures import TimeoutError as FutureTimeout
+            with self._worker_lock:
+                future = self._browser_worker.submit(self._browser_thread_operation,
+                    lambda: self.capture_command(data, _capture_context=_capture_context))
+            try:
+                return future.result(timeout=max(0.001, _capture_context['deadline'] - time.monotonic()))
+            except FutureTimeout:
+                cancelled = future.cancel()
+                timeout_error = _capture_context.get('timeout_error')
+                if timeout_error is not None:
+                    raise timeout_error() from None
+                raise BrowserExtractionError('BROWSER_CAPTURE_TIMEOUT',
+                    persistence_outcome='NOT_STARTED' if cancelled else 'UNKNOWN',
+                    retry_safe=cancelled, request_id=data.get('request_id'),
+                    receipt_query=f'/api/browser/sessions/{self.session_id}/evidence') from None
+        if time.monotonic() >= _capture_context['deadline']:
+            raise BrowserExtractionError('BROWSER_CAPTURE_TIMEOUT',
+                persistence_outcome='NOT_STARTED', retry_safe=True)
+        command = data['command']
+        if command == 'capabilities':
+            return {'ok': True, 'schema': 'lumenis.browser-capture/v1',
+                    'commands': ['preview', 'select', 'discard'],
+                    'entrypoints': ['user', 'authorized_agent'], 'ai_required': False,
+                    'agent_dispatch_state': 'UNBOUND', 'model_execution': 'NOT_RUN',
+                    'availability': 'AVAILABLE' if self.status == SessionStatus.RUNNING and not self._closed else 'UNAVAILABLE',
+                    'source_capture': 'NOT_IMPORTED', 'source_use': 'NOT_ADMITTED',
+                    'source_admission': {'state': 'REQUIRES_APPROVAL', 'kind': 'SANITIZED_SNAPSHOT',
+                        'commands': ['source_prepare','source_import','source_use_prepare'],
+                        'original_resource_sha256': None},
+                    'save_owner': 'SavedWork', 'saved_note_authenticity': 'USER_AUTHORED_NOT_VERIFIED',
+                    'human_lease_policy': 'RELEASE_BEFORE_CAPTURE',
+                    'capture_ttl_seconds': CAPTURE_TTL_SECONDS,
+                    'persistence': 'SESSION_EPHEMERAL', 'restart_requires_new_capture': True}
+        cache = getattr(self, '_capture_previews', None)
+        if cache is None:
+            cache = self._capture_previews = {}
+        def valid(entry):
+            if entry.get('discarded'):
+                raise BrowserExtractionError('BROWSER_CAPTURE_CANCELLED')
+            if time.monotonic() >= entry['expires']:
+                entry['result'] = None
+                raise BrowserExtractionError('BROWSER_CAPTURE_EXPIRED')
+            if (self._closed or self.status != SessionStatus.RUNNING
+                    or self._target_id != entry['target_id'] or self._page_revision != entry['revision']
+                    or self._page is None or not same_document_url(self._page.url, entry['url'])):
+                raise BrowserExtractionError('BROWSER_CAPTURE_STALE')
+            allowed, _ = self.firewall.check_action(BrowserActionType.OBSERVE, url=entry['url'])
+            if not allowed:
+                raise BrowserExtractionError('BROWSER_EXTRACTION_PERMISSION_DENIED')
+        if command == 'preview':
+            options = {k:v for k,v in data.items() if k not in {'command', 'request_id'}}
+            fingerprint = hashlib.sha256(json.dumps(options, sort_keys=True).encode()).hexdigest()
+            old = next((e for e in cache.values() if e['request_id'] == data['request_id']), None)
+            if old:
+                self._begin_control_action(control_mode='agent', human_control_token=None)
+                try:
+                    if old['fingerprint'] != fingerprint:
+                        raise BrowserExtractionError('BROWSER_CAPTURE_REQUEST_CONFLICT')
+                    # Terminal receipts contain no page body. API actor/session
+                    # authorization still applies, independently of page expiry,
+                    # navigation and page-read permission. Never execute twice.
+                    if old.get('error'):
+                        if time.monotonic() >= old['expires']:
+                            old['result'] = None
+                        raise BrowserExtractionError(old['error']['code'], **old['error']['details'])
+                    valid(old)
+                    return copy.deepcopy(old['result'])
+                finally:
+                    self._end_control_action()
+            # Fail closed instead of evicting a request and silently replaying it.
+            if len(cache) >= 16:
+                raise BrowserExtractionError('BROWSER_CAPTURE_SESSION_LIMIT')
+            target, revision = self._target_id, self._page_revision
+            capture_id = 'cap_' + uuid.uuid4().hex
+            entry = cache[capture_id] = {'request_id': data['request_id'], 'fingerprint': fingerprint,
+                                'target_id': target, 'revision': revision, 'url': options['url'],
+                                'expires': time.monotonic()+CAPTURE_TTL_SECONDS, 'result': None}
+            try:
+                result = self.extract(options, _capture_context=_capture_context)
+                if self._target_id != target or self._page_revision != revision:
+                    raise BrowserExtractionError('BROWSER_CAPTURE_STALE')
+                result.update(capture_id=capture_id, schema='lumenis.browser-capture/v1',
+                              capture_ttl_seconds=CAPTURE_TTL_SECONDS, persistence='SESSION_EPHEMERAL')
+                entry['result'] = copy.deepcopy(result)
+                return result
+            except BrowserHumanControlError:
+                # The lease gate runs before any capture or persistence. Denial
+                # is safely retryable and must not consume the 16-record budget.
+                cache.pop(capture_id, None)
+                raise
+            except BrowserExtractionError as exc:
+                # An uncertain write stays queryable; repeating request_id never recaptures.
+                entry['error'] = {'code': exc.code, 'details': dict(exc.details)}
+                raise
+            except Exception:
+                entry['error'] = {'code': 'BROWSER_CAPTURE_UNAVAILABLE', 'details': {}}
+                raise
+        self._begin_control_action(control_mode='agent', human_control_token=None)
+        try:
+            entry = cache.get(data['capture_id'])
+            if entry is None:
+                raise BrowserExtractionError('BROWSER_CAPTURE_NOT_FOUND')
+            if command == 'discard':
+                entry['discarded'] = True
+                entry['result'] = None
+                entry['url'] = ''
+                return {'ok': True, 'capture_id': data['capture_id'], 'state': 'CANCELLED',
+                        'scope': 'LOCAL_PREVIEW_ONLY', 'source_capture': 'NOT_IMPORTED'}
+            valid(entry)
+            if entry.get('error'):
+                raise BrowserExtractionError(entry['error']['code'], **entry['error']['details'])
+            result = entry['result']
+            selection = select_capture(result, data)
+            return {'ok': True, 'capture_id': data['capture_id'], 'selection': selection,
+                    'metadata': copy.deepcopy(result['metadata']), 'evidence_id': result['evidence_id'],
+                    'untrusted_content': True, 'source_capture': 'NOT_IMPORTED', 'source_use': 'NOT_ADMITTED',
+                    'source_verification': 'NOT_VERIFIED',
+                    'saved_note_authenticity': 'USER_AUTHORED_NOT_VERIFIED'}
+        finally:
+            self._end_control_action()
+
+    def snapshot_for_source(self, capture_id: str, *, _deadline=None):
+        """Server-only source resolver; admission and persistence belong to Collector."""
+        import copy
+        from concurrent.futures import TimeoutError as FutureTimeout
+        from lumenis.system.collector.runtime.browser_extract import (
+            BrowserExtractionError, make_source_snapshot, same_document_url)
+        deadline = _deadline if _deadline is not None else time.monotonic() + 10
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            with self._worker_lock:
+                future = self._browser_worker.submit(self._browser_thread_operation,
+                    lambda: self.snapshot_for_source(capture_id, _deadline=deadline))
+            try:
+                return future.result(timeout=max(.001, deadline-time.monotonic()))
+            except FutureTimeout:
+                future.cancel()
+                raise BrowserExtractionError('BROWSER_CAPTURE_TIMEOUT') from None
+        if time.monotonic() >= deadline:
+            raise BrowserExtractionError('BROWSER_CAPTURE_TIMEOUT')
+        self._begin_control_action(control_mode='agent', human_control_token=None)
+        try:
+            entry = getattr(self, '_capture_previews', {}).get(capture_id)
+            if not entry or entry.get('discarded') or not entry.get('result'):
+                raise BrowserExtractionError('BROWSER_CAPTURE_NOT_FOUND')
+            if time.monotonic() >= entry['expires']:
+                entry['result'] = None
+                raise BrowserExtractionError('BROWSER_CAPTURE_EXPIRED')
+            if (self._closed or self.status != SessionStatus.RUNNING or self._page is None
+                    or self._target_id != entry['target_id'] or self._page_revision != entry['revision']
+                    or not same_document_url(self._page.url, entry['url'])):
+                raise BrowserExtractionError('BROWSER_CAPTURE_STALE')
+            if not self.firewall.check_action(BrowserActionType.OBSERVE, url=entry['url'])[0]:
+                raise BrowserExtractionError('BROWSER_EXTRACTION_PERMISSION_DENIED')
+            return make_source_snapshot(copy.deepcopy(entry['result']),
+                target_id=entry['target_id'], page_revision=entry['revision'])
+        finally:
+            self._end_control_action()
 
     def _expire_human_control_locked(self) -> None:
         if self._human_control_token_digest and time.time() >= self._human_control_expires_at:

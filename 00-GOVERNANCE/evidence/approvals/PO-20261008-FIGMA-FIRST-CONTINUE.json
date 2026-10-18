@@ -7,7 +7,7 @@
   "approval_source_type": "direct_product_owner_instruction",
   "scope_manifest": {
     "instruction": "为什么前端又暂停了，做一做就暂停，这个问题要解决，还有我不是说让他先用figma把产品整体的设计都做出来吗，可编辑文件",
-    "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+    "source_thread_id": "private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186",
     "owner": "F",
     "dispatch": "continue_existing_goal_with_whole_product_editable_figma_design_first",
     "design_scope": "all existing 44 App screens and Website content families, approved surface variants and task interaction prototypes",

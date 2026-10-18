@@ -1,0 +1,1 @@
+{"method": "ast.parse + compile without execution", "files": ["kos_engine.py", "kos_routes.py", "tests/test_kos_scoped_profile_parity.py"], "passed": true}

@@ -192,7 +192,7 @@ def test_v19_migration_is_additive_and_preserves_existing_rows(tmp_path, monkeyp
     _seed_v18_database(db_path, migrations)
     _bind_isolated_database(monkeypatch, migrations, db_path)
 
-    assert migrations.CURRENT_VERSION == 19
+    assert migrations.CURRENT_VERSION >= 19
     assert 18 in migrations.MIGRATIONS
     assert migrations.migrate(target_version=19) is True
 

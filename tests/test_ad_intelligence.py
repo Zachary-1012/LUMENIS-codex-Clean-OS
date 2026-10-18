@@ -100,9 +100,10 @@ class TestCTRPredictor:
         from ad_intelligence.models.ctr_predictor import CTRPredictor
         predictor = CTRPredictor()
         result = predictor.predict({"platform": "xhs", "hour": 20})
-        assert 0 < result.predicted_ctr < 1
-        assert result.confidence > 0
-        assert result.model_version == "baseline-v1.0"
+        assert result.predicted_ctr is None
+        assert 0 < result.heuristic_signal < 1
+        assert result.confidence is None
+        assert result.model_version == "heuristic-v1.0"
 
     def test_batch_predict(self):
         from ad_intelligence.models.ctr_predictor import CTRPredictor
@@ -112,14 +113,14 @@ class TestCTRPredictor:
             {"platform": "douyin", "hour": 3},
         ])
         assert len(results) == 2
-        assert results[0].predicted_ctr > results[1].predicted_ctr  # 晚间 > 凌晨
+        assert results[0].heuristic_signal > results[1].heuristic_signal  # 晚间 > 凌晨
 
     def test_model_info(self):
         from ad_intelligence.models.ctr_predictor import CTRPredictor
         predictor = CTRPredictor()
         info = predictor.get_model_info()
-        assert info["mode"] == "baseline"
-        assert info["baseline_ctr"] == 0.02
+        assert info["mode"] == "heuristic_uncalibrated"
+        assert info["heuristic_base_scale"] == 0.02
 
 
 class TestFeatureEngineer:

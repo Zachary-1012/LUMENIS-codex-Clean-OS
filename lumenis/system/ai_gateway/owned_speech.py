@@ -17,12 +17,25 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import wave
 
 MODEL_ID = "openai/whisper-base"
 MODEL_REVISION = "31243bad24cc746f07d4c8bfdd2d974872cb1803"
 WEIGHT_SHA256 = "ed3a0b6b1c0edf879ad9b11b1af5a0e6ab5db9205f891f668f8b0e6c6326e34e"
+CONTENT_LANGUAGE_CODES = frozenset({'zh','en','ko','ja','fr','de','es','pt','ru','ar','hi','id'})
+EVALUATION_MODEL_HASHES = {'openai/whisper-small': '9ecf779972d90ba49c06d968637d720dd632c55bbf19d441fb42bf17a411e794'}
+
+
+def model_weight_sha256(model_id):
+    if model_id == MODEL_ID:
+        return WEIGHT_SHA256
+    if isinstance(model_id, str) and model_id in EVALUATION_MODEL_HASHES:
+        return EVALUATION_MODEL_HASHES[model_id]
+    raise SpeechBlocked('SPEECH_MODEL_NOT_ADMITTED')
+
+
 _SHA = re.compile(r"^[0-9a-f]{64}$")
 _MAX_AUDIO_BYTES = 256 * 1024 * 1024
 _MAX_DURATION_SECONDS = 600
@@ -71,6 +84,7 @@ class SpeechRuntime:
     weight_path: str
     ffmpeg_path: str
     ffmpeg_sha256: str
+    model_id: str = MODEL_ID
 
 
 def _digest(path: Path) -> str:
@@ -136,6 +150,7 @@ def _wav_bytes(path: Path, expected_sha256: str) -> tuple[bytes, float]:
 
 
 _WORKER_REASON_CODES = frozenset({
+    "SPEECH_MODEL_NOT_ADMITTED",
     "SPEECH_ASSET_HASH_MISMATCH", "SPEECH_ASSET_MISSING", "SPEECH_CPU_ONLY_REQUIRED",
     "SPEECH_PINNED_CPU_RUNTIME_REQUIRED", "SPEECH_RUNTIME_MANIFEST_INVALID",
     "SPEECH_RUNTIME_PATH_INVALID", "SPEECH_RUNTIME_VERSION_MISMATCH",
@@ -168,26 +183,33 @@ def _communicate(command, payload: bytes, *, cancelled, deadline: float) -> byte
     if cancelled():
         raise SpeechCancelled("SPEECH_CANCELLED_NO_RESULT")
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE, creationflags=flags)
-    try:
-        pending = payload
-        while True:
-            if cancelled():
-                raise SpeechCancelled("SPEECH_CANCELLED_NO_RESULT")
-            if time.monotonic() >= deadline:
-                raise SpeechBlocked("SPEECH_COMPUTATION_TIMEOUT")
-            try:
-                stdout, stderr = process.communicate(input=pending, timeout=0.2)
-                if process.returncode != 0:
-                    raise _failed_process(command, process.returncode, stderr or b"")
-                return stdout
-            except subprocess.TimeoutExpired:
-                pending = None
-    finally:
-        if process.poll() is None:
-            process.kill()
-        process.communicate()
+    # A slow-starting worker may not drain its stdin pipe before the first
+    # cancellation polling timeout. CPython 3.12 communicate(input=None) then
+    # does not resume a partially written input pipe. A private seekable input
+    # gives the child the complete bounded payload and EOF independently of
+    # output polling, without a writer thread or a cancellability gap.
+    with tempfile.TemporaryFile(mode="w+b") as source:
+        source.write(payload)
+        source.seek(0)
+        process = subprocess.Popen(command, stdin=source, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, creationflags=flags)
+        try:
+            while True:
+                if cancelled():
+                    raise SpeechCancelled("SPEECH_CANCELLED_NO_RESULT")
+                if time.monotonic() >= deadline:
+                    raise SpeechBlocked("SPEECH_COMPUTATION_TIMEOUT")
+                try:
+                    stdout, stderr = process.communicate(timeout=0.2)
+                    if process.returncode != 0:
+                        raise _failed_process(command, process.returncode, stderr or b"")
+                    return stdout
+                except subprocess.TimeoutExpired:
+                    continue
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.communicate()
 
 
 def validate_transcript(raw: dict, *, duration_seconds: float) -> dict:
@@ -200,12 +222,14 @@ def validate_transcript(raw: dict, *, duration_seconds: float) -> dict:
             or len(raw["segments"]) > 4096 or not _finite_number(duration_seconds) or duration_seconds <= 0):
         raise SpeechBlocked("SPEECH_TRANSCRIPT_INVALID")
     previous, warnings = 0.0, []
+    previous_word_end = 0.0
     for index, segment in enumerate(raw["segments"]):
         if not isinstance(segment, dict) or type(segment.get("id")) is not int or segment["id"] != index or not isinstance(segment.get("text"), str):
             raise SpeechBlocked("SPEECH_SEGMENT_INVALID")
         start, end = segment.get("start"), segment.get("end")
         if not all(_finite_number(value) for value in (start, end)) or not previous <= start <= end <= duration_seconds + 0.05:
             raise SpeechBlocked("SPEECH_SEGMENT_INTERVAL_INVALID")
+        previous_segment_end = previous
         previous = end
         for key in ("avg_logprob", "compression_ratio", "no_speech_prob"):
             value = segment.get(key)
@@ -223,10 +247,32 @@ def validate_transcript(raw: dict, *, duration_seconds: float) -> dict:
             begin, finish, probability = (word.get(key) for key in ("start", "end", "probability"))
             if not all(_finite_number(value) for value in (begin, finish, probability)):
                 raise SpeechBlocked("SPEECH_WORD_VALUE_INVALID")
-            if (not 0 <= begin <= finish <= min(end + 0.05, duration_seconds + 0.05)
+            if (not 0 <= begin <= finish <= duration_seconds
+                    or begin < previous_word_end
                     or (word_end is not None and begin < word_end)
-                    or (word_index == 0 and begin < start and finish < start)):
+                    or (word_index == 0 and begin < start and
+                        (finish < start or begin < previous_segment_end))):
                 raise SpeechBlocked("SPEECH_WORD_INTERVAL_INVALID")
+            if finish > end + 0.05:
+                # Only the pinned 20250625 timing.py terminal-word preference
+                # can retain segment.end while using start + capped median
+                # (<=0.7s) for the word. This is not a wider tolerance: require
+                # that exact structural case and no adjacent-segment collision.
+                # The worker hard-pins this version and the timing.py byte hash.
+                next_segment = raw["segments"][index + 1] if index + 1 < len(raw["segments"]) else None
+                next_start = next_segment.get("start") if isinstance(next_segment, dict) else duration_seconds
+                if (word_index != len(words) - 1 or not start <= begin <= end
+                        or finish - begin > 0.7 + 1e-9 or not _finite_number(next_start)
+                        or finish > next_start):
+                    raise SpeechBlocked("SPEECH_WORD_INTERVAL_INVALID")
+                warnings.append({"segment_id": index, "word_index": word_index,
+                                 "segment_start": start, "segment_end": end,
+                                 "start": begin, "end": finish,
+                                 "reason": "LAST_WORD_CROSSES_SEGMENT_END_REVIEW_REQUIRED",
+                                 "applicability": "openai-whisper==20250625",
+                                 "timing_source_sha256": _WHISPER_FILES["timing.py"],
+                                 "word_values_modified": False})
+            previous_word_end = finish
             if not 0 <= probability <= 1:
                 raise SpeechBlocked("SPEECH_WORD_PROBABILITY_INVALID")
             if word_index == 0 and begin < start:
@@ -262,13 +308,16 @@ def _transcript_wire_bytes(raw: dict, *, duration_seconds: float) -> bytes:
 
 
 def transcribe_audio(audio_path: str, *, expected_audio_sha256: str, runtime: SpeechRuntime,
-                     source_ref: str | None = None, is_cancelled=None, timeout_seconds: float = 600) -> dict:
+                     source_ref: str | None = None, is_cancelled=None, timeout_seconds: float = 600,
+                     language_hint: str | None = None) -> dict:
     """Transcribe one authorized local PCM WAV; return a derivative for its owner.
 
     ``source_ref`` is an opaque caller locator, never proof of authorization.
     A TaskEngine cancellation predicate can abort either owned subprocess.
     No partial transcript is persisted or reused on a subsequent invocation.
     """
+    if language_hint is not None and (not isinstance(language_hint,str) or language_hint not in CONTENT_LANGUAGE_CODES):
+        raise SpeechBlocked("SPEECH_DECLARED_LANGUAGE_INVALID")
     if not isinstance(runtime, SpeechRuntime) or (source_ref is not None and (not isinstance(source_ref, str) or not source_ref.strip() or len(source_ref) > 512)):
         raise SpeechBlocked("SPEECH_CALLER_CONTRACT_INVALID")
     if type(timeout_seconds) not in {int, float} or not math.isfinite(timeout_seconds) or not 1 <= timeout_seconds <= 1800:
@@ -278,12 +327,13 @@ def transcribe_audio(audio_path: str, *, expected_audio_sha256: str, runtime: Sp
         raise SpeechBlocked("SPEECH_CANCELLATION_PREDICATE_REQUIRED")
     if cancelled():
         raise SpeechCancelled("SPEECH_CANCELLED_NO_RESULT")
+    weight_sha = model_weight_sha256(runtime.model_id)
     started = time.monotonic()
     paths = {
         "audio": _local_file(audio_path, expected_audio_sha256),
         "python": _local_file(runtime.python_path, runtime.python_sha256),
         "manifest": _local_file(runtime.manifest_path, runtime.manifest_sha256),
-        "weight": _local_file(runtime.weight_path, WEIGHT_SHA256),
+        "weight": _local_file(runtime.weight_path, weight_sha),
         "ffmpeg": _local_file(runtime.ffmpeg_path, runtime.ffmpeg_sha256),
     }
     audio, duration = _wav_bytes(paths["audio"], expected_audio_sha256)
@@ -296,7 +346,9 @@ def transcribe_audio(audio_path: str, *, expected_audio_sha256: str, runtime: Sp
     if not normalized or len(normalized) % 4 or abs(len(normalized) / 4 / _SAMPLE_RATE - duration) > 1 / _SAMPLE_RATE:
         raise SpeechBlocked("SPEECH_NORMALIZED_DURATION_MISMATCH")
     spec = {"manifest_path": str(paths["manifest"]), "manifest_sha256": runtime.manifest_sha256,
-            "weight_path": str(paths["weight"]), "duration_seconds": duration}
+            "weight_path": str(paths["weight"]), "duration_seconds": duration, "language_hint": language_hint}
+    if runtime.model_id != MODEL_ID:
+        spec["model_id"] = runtime.model_id
     module_path = Path(__file__).resolve()
     module_sha = _digest(module_path)
     try:
@@ -306,14 +358,14 @@ def transcribe_audio(audio_path: str, *, expected_audio_sha256: str, runtime: Sp
     except SpeechBlocked as exc:
         exc.diagnostic.update(audio_sha256=expected_audio_sha256, adapter_sha256=module_sha,
                               runtime_manifest_sha256=runtime.manifest_sha256,
-                              python_sha256=runtime.python_sha256, weight_sha256=WEIGHT_SHA256,
+                              python_sha256=runtime.python_sha256, weight_sha256=weight_sha,
                               ffmpeg_sha256=runtime.ffmpeg_sha256)
         raise
     if cancelled():
         raise SpeechCancelled("SPEECH_CANCELLED_NO_RESULT")
     # Revalidate named assets and source before handing bytes back to their owner.
     for path, expected in ((paths["audio"], expected_audio_sha256), (paths["python"], runtime.python_sha256),
-                           (paths["manifest"], runtime.manifest_sha256), (paths["weight"], WEIGHT_SHA256),
+                           (paths["manifest"], runtime.manifest_sha256), (paths["weight"], weight_sha),
                            (paths["ffmpeg"], runtime.ffmpeg_sha256), (module_path, module_sha)):
         _local_file(str(path), expected)
     raw = _strict_json(response)
@@ -321,10 +373,13 @@ def transcribe_audio(audio_path: str, *, expected_audio_sha256: str, runtime: Sp
     return {"schema": "owned-speech-derivative:v1", "owner": "SYSTEM AI Gateway", **result,
             "source_ref": source_ref, "source_ref_authenticated_by_adapter": False,
             "source_sha256": expected_audio_sha256, "duration_seconds": duration,
-            "model_id": MODEL_ID, "model_revision": MODEL_REVISION, "weight_sha256": WEIGHT_SHA256,
+            "model_id": runtime.model_id, "model_revision": MODEL_REVISION if runtime.model_id == MODEL_ID else weight_sha,
+            "weight_sha256": weight_sha,
+            "evaluation_candidate": runtime.model_id != MODEL_ID,
             "runtime_manifest_sha256": runtime.manifest_sha256, "adapter_sha256": module_sha,
             "ffmpeg_sha256": runtime.ffmpeg_sha256, "elapsed_seconds": time.monotonic() - started,
             "offline": True, "fallback_allowed": False, "script_or_target_supplied": False,
+            "declared_language": language_hint, "language_selection": "user_declared" if language_hint else "automatic",
             "rights_state": "UNKNOWN", "human_listening_acceptance": False,
             "promotion_status": "NOT_PROMOTED", "product_acceptance": False}
 
@@ -334,8 +389,11 @@ def _worker() -> None:
     from importlib import metadata, util
 
     spec = _strict_json(sys.stdin.buffer.readline(16384))
-    if not isinstance(spec, dict) or set(spec) != {"manifest_path", "manifest_sha256", "weight_path", "duration_seconds"}:
+    if not isinstance(spec, dict) or set(spec) not in ({"manifest_path", "manifest_sha256", "weight_path", "duration_seconds", "language_hint"}, {"manifest_path", "manifest_sha256", "weight_path", "duration_seconds", "language_hint", "model_id"}):
         raise SpeechBlocked("SPEECH_WORKER_CONTRACT_INVALID")
+    if spec["language_hint"] is not None and (not isinstance(spec["language_hint"],str) or spec["language_hint"] not in CONTENT_LANGUAGE_CODES):
+        raise SpeechBlocked("SPEECH_WORKER_CONTRACT_INVALID")
+    weight_sha = model_weight_sha256(spec.get("model_id", MODEL_ID))
     manifest_path = _local_file(spec["manifest_path"], spec["manifest_sha256"])
     manifest = _strict_json(manifest_path.read_bytes())
     if manifest.get("schema") != "owned-speech-runtime:v1" or manifest.get("owner") != "SYSTEM AI Gateway":
@@ -354,7 +412,7 @@ def _worker() -> None:
     module_dir = Path(util.find_spec("whisper").origin).parent
     for relative, digest in _WHISPER_FILES.items():
         _local_file(str(module_dir / relative), digest)
-    weight = _local_file(spec["weight_path"], WEIGHT_SHA256)
+    weight = _local_file(spec["weight_path"], weight_sha)
 
     def offline(event, _args):
         if event in {"socket.connect", "socket.bind", "socket.getaddrinfo", "socket.sendto", "sqlite3.connect", "subprocess.Popen"}:
@@ -375,10 +433,10 @@ def _worker() -> None:
     if not np.isfinite(audio).all():
         raise SpeechBlocked("SPEECH_WORKER_AUDIO_NONFINITE")
     model = whisper.load_model(str(weight), device="cpu")
-    result = model.transcribe(audio, fp16=False, verbose=None, language=None, task="transcribe",
+    result = model.transcribe(audio, fp16=False, verbose=None, language=spec["language_hint"], task="transcribe",
                               condition_on_previous_text=False, temperature=0.0, beam_size=1,
                               initial_prompt=None, word_timestamps=True)
-    _local_file(str(weight), WEIGHT_SHA256)
+    _local_file(str(weight), weight_sha)
     sys.stdout.buffer.write(_transcript_wire_bytes(result, duration_seconds=spec["duration_seconds"]))
 
 

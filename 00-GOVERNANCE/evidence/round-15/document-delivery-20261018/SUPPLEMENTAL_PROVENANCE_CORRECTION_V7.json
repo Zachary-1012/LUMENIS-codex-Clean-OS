@@ -1,0 +1,20 @@
+[
+  {
+    "path": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/RESEARCH_COMPLETENESS_MATRIX.json",
+    "occurrences": 9,
+    "original_sha256": "826f194569b84e95a3b76ce29e5216795e57bd13df4ee2e34dff5c435b67d64f",
+    "published_sha256": "bddba501f24e314ef1083b08a5b11c8d0db3ec440e57fdfa3f81887168f44688"
+  },
+  {
+    "path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/01_FULL_REQUIREMENT_PRESERVATION.json",
+    "occurrences": 9,
+    "original_sha256": "e5f83cc7762562196d1c6ffb102e21e54454afc11a257e46832b07b2373f551b",
+    "published_sha256": "bfd5b6e84cd7eec5fa1e01a181ceb457d36d526226cf7ea9d4e8d47fe963cbca"
+  },
+  {
+    "path": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/review_final/02_NINETEEN_GROUP_DECISIONS.json",
+    "occurrences": 9,
+    "original_sha256": "ab8186c2c6b75352932877e8dab9631ae08e215589d388c26750aebfc9d2749c",
+    "published_sha256": "d3e8377a989351b16efa218a71d480d967fa74136d963c675d8d31293dae7812"
+  }
+]

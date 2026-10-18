@@ -1,0 +1,32 @@
+[
+  {
+    "path": "19_FIGMA_INLINE_COUNTEREXAMPLE.md",
+    "bytes": 1584,
+    "sha256": "14f4047a59099abaa9d50e88b76011394140e010d397a11656b0aebb617a8952"
+  },
+  {
+    "path": "rea_public_reconstruction/evidence/FIGMA_DERIVATION.json",
+    "bytes": 550,
+    "sha256": "91f2a433205eaff917f82b683d3a20eabf67c4943b859db2e10423109ed3f4b2"
+  },
+  {
+    "path": "rea_public_reconstruction/evidence/figma_inline_derived_rea_analysis.json",
+    "bytes": 58758,
+    "sha256": "74c97002e555c4164e02806c216b35038a6110cb04928e68df0ff5db444d1de4"
+  },
+  {
+    "path": "rea_public_reconstruction/evidence/figma_inline_derived_stderr.log",
+    "bytes": 2280,
+    "sha256": "608ea29d56f5f119860fefb53eda15a7ef80b593a501a55cf17b690e8b6f70b2"
+  },
+  {
+    "path": "rea_public_reconstruction/evidence/figma_inline_derived_exit.txt",
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  {
+    "path": "rea_public_reconstruction/figma_inline_derived/ui_inline_1.js",
+    "bytes": 243,
+    "sha256": "bd5ce50b7c436d7d168d65877d99e42e414f5e92812825e268299cee37323a0d"
+  }
+]

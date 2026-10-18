@@ -206,21 +206,71 @@ PLATFORM_CAPABILITIES = {
 }
 
 
+# Sole static discovery metadata: registration and read-only catalog projections
+# consume this existing capability owner. Metadata never grants source access.
+for _key, _name in (("channels", "视频号"), ("youtube", "YouTube"),
+                    ("tiktok", "TikTok"), ("reddit", "Reddit"), ("linkedin", "LinkedIn")):
+    PLATFORM_CAPABILITIES[_key] = {
+        "name": _name, "enabled": False, "manual_collection_enabled": False,
+        "priority": "planned", "search": False, "detail": False, "comments": False,
+        "creator": False, "author": False, "author_posts": False, "healthcheck": False,
+        "implementation_state": "PLANNED",
+        "provider_state": "implementation_and_authorized_provider_required",
+    }
+PLATFORM_CAPABILITIES["github"] = {
+    "name": "GitHub", "enabled": False, "manual_collection_enabled": False,
+    "priority": "optional", "provider_state": "authorized_connector_required",
+}
+# Preserve existing physical schema names; no table/schema is created here.
+_RAW_CATALOG_TABLES = {'xiaohongshu': ['xhs_notes', 'xhs_note_comments', 'xhs_users'],
+ 'douyin': ['douyin_videos', 'douyin_comments', 'douyin_users'],
+ 'bilibili': ['bilibili_videos', 'bilibili_comments', 'bilibili_users'],
+ 'channels': ['channels_videos', 'channels_comments'],
+ 'youtube': ['youtube_videos', 'youtube_comments', 'youtube_channels'],
+ 'tiktok': ['tiktok_videos', 'tiktok_comments', 'tiktok_users'],
+ 'instagram': ['instagram_media', 'instagram_comments', 'instagram_users'],
+ 'x': ['x_posts', 'x_users'],
+ 'reddit': ['reddit_posts', 'reddit_comments', 'reddit_subreddits'],
+ 'linkedin': ['linkedin_posts', 'linkedin_users'],
+ 'github': ['github_repositories', 'github_issues', 'github_pull_requests', 'github_releases'],
+ 'zhihu': ['zhihu_answers', 'zhihu_questions', 'zhihu_articles', 'zhihu_comments']}
+for _key, _cap in PLATFORM_CAPABILITIES.items():
+    _canonical = "xiaohongshu" if _key == "xhs" else _key
+    _module = {"x": "x_platform", "google": None, "tieba": None}.get(_key, _key)
+    _kind = ("public_web" if _key in {"public_http", "web_rss", "web_atom", "sitemap"}
+             else "discovery" if _key == "google"
+             else "developer_source" if _key == "github" else "social")
+    _cap.update(canonical_id=_canonical, source_kind=_kind,
+                adapter_module="lumenis.system.collector.adapters." + _module if _module else None,
+                raw_tables=list(_RAW_CATALOG_TABLES.get(_canonical, [])))
+    _cap.setdefault("implementation_state", "IMPLEMENTED_BOUNDARY" if _module else "PLANNED")
+    _cap["collection_surface_visible"] = _kind in {"social", "public_web"}
+    # Preserve the existing 14 dispatchable source identities. Google has a
+    # legacy manual flag but is not bound to this SYSTEM collection entry.
+    _cap["collection_entry_enabled"] = _cap["collection_surface_visible"] and (
+        _key == "xhs" or bool(_cap.get("manual_collection_enabled")))
+    _cap["catalog_status"] = ("ACTIVE" if _key == "xhs" else
+        "PLANNED" if _cap["implementation_state"] == "PLANNED" else "PARTIAL")
+del _key, _name, _cap, _canonical, _module, _kind, _RAW_CATALOG_TABLES
+
+
 def resolve_platform_config_key(platform: str) -> str:
     """Resolve XHS/RedNote aliases to the existing adapter/config key.
 
     Canonical source identity remains ``xiaohongshu`` in platform naming and
     stored data; the registered adapter's stable key remains ``xhs`` for
-    compatibility. Other platform/provider aliases retain their exact keys.
+    compatibility. All known aliases resolve through the existing naming owner.
     """
     key = str(platform or "").strip().lower()
     from .platform_naming import normalize_platform_name
 
-    return "xhs" if normalize_platform_name(key) == "xiaohongshu" else key
+    canonical = normalize_platform_name(key)
+    return "xhs" if canonical == "xiaohongshu" else (canonical or key)
 
 
 def get_platform_capabilities(platform: str) -> dict:
     key = resolve_platform_config_key(platform)
     if key not in PLATFORM_CAPABILITIES:
         raise KeyError(f"Unsupported platform: {platform}")
-    return dict(PLATFORM_CAPABILITIES[key])
+    from copy import deepcopy
+    return deepcopy(PLATFORM_CAPABILITIES[key])

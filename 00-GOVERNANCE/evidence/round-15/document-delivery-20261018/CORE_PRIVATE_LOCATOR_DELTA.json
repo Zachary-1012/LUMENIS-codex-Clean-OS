@@ -1,0 +1,10 @@
+{
+  "path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+  "line": 4235,
+  "original_file_sha256": "381968d2d6dcf6ca58c40c4e6181857202772f2b1907e68f71d061028569f62a",
+  "published_file_sha256": "69b03b8667814fc9c357f560e301584f5f89bb7cbe62b87c16a43166976fae2f",
+  "original_value_sha256": "be1add9d40399731d4b45de79092009a127762e625050a53cc69df7bc300c9ea",
+  "replacement": "PRIVATE_SOURCE_SHA256:be1add9d40399731d4b45de79092009a127762e625050a53cc69df7bc300c9ea",
+  "occurrences": 1,
+  "scope": "Only private source task UUID replaced; Owner, authority, workflow and requirements unchanged. Original core freeze retained. Earlier full-body validation applies with this explicit locator-only substitution."
+}

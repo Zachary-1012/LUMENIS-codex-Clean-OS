@@ -1,0 +1,169 @@
+{
+  "version": "real-public-v1",
+  "frozen_utc": "2026-10-18T05:08:08.910249+00:00",
+  "files": [
+    {
+      "path": "CASE_READING.md",
+      "bytes": 2468,
+      "sha256": "27a32449576e89f192e610b8fad7c04432ec10553712251fe246ae5f9b57c334"
+    },
+    {
+      "path": "DATA_DOWNLOAD_RECEIPT.json",
+      "bytes": 1890,
+      "sha256": "c8abe2b9929a303c1e450285c99b721cb68e0e4d5b89a5a74be0cc842839bbc2"
+    },
+    {
+      "path": "EXPERIMENT_DESIGN.md",
+      "bytes": 1544,
+      "sha256": "5d43f4497802740401a263d903a211702d37509d16e1d09c3ed7eee50f1ff94e"
+    },
+    {
+      "path": "FIELD_CONTRACT.md",
+      "bytes": 4529,
+      "sha256": "870d7ea7facd974e6db59b31450a95276145663ae9d1670a620df3b06ac7b76f"
+    },
+    {
+      "path": "LEDGER_ADDENDUM.json",
+      "bytes": 3862,
+      "sha256": "0d823b5fcbdf1e232601bf19ffd514616a9d0835ffdba9f6c3ad3699756fc0f3"
+    },
+    {
+      "path": "README.md",
+      "bytes": 898,
+      "sha256": "195de691fe9033fe66423ae43b7067324fa63fdd325657cafedf507c15fd4b9a"
+    },
+    {
+      "path": "REPORT.md",
+      "bytes": 14665,
+      "sha256": "45be4fa26e1442b22a59f771aaa5770173cf7c7f7169982b66142f310dc69212"
+    },
+    {
+      "path": "RESULTS.json",
+      "bytes": 9762,
+      "sha256": "06c4d3a126f92e1f8b1559a0056937d782d583d798e40f6c3b2073fb3dd2fdc1"
+    },
+    {
+      "path": "SOURCE_READING_LEDGER.json",
+      "bytes": 1545,
+      "sha256": "47efe5f2f787bc17358a87fb6f11dcf9b28cdc5e0899bbb0bfdb5e6383ea4fe1"
+    },
+    {
+      "path": "SOURCE_RECEIPT.json",
+      "bytes": 3186,
+      "sha256": "a32efeb3f324c695613412102b38bfeacdd5e7f9ce484ca1e8481ea0027ec960"
+    },
+    {
+      "path": "VALIDATION_RECEIPT.json",
+      "bytes": 771,
+      "sha256": "d40c67bbfa84d0f74e62f19e1c95dacf59d591264b12794c973424a981aabc49"
+    },
+    {
+      "path": "ebay_w20171.txt",
+      "bytes": 118618,
+      "sha256": "9f4e3180d38aa2dfadc87023f809b997ce450916641fe2a3b333b3bb27d0dcea"
+    },
+    {
+      "path": "facebook_holdout_predictions.csv",
+      "bytes": 4874,
+      "sha256": "0184d807a981d717481df271e9a9ff81ef365aa66f06208205ebe93729e78d2c"
+    },
+    {
+      "path": "fetch_sources.py",
+      "bytes": 1074,
+      "sha256": "a97ea156b71d97778d55dca6d385f8c8f40024d4611f583edc082fde0aca7283"
+    },
+    {
+      "path": "google_geo_38355.txt",
+      "bytes": 46280,
+      "sha256": "f1215ba68cc0c4131e1d23f7b2abedd5b6af71efd66abc77fb7b7f0a8bcb6a41"
+    },
+    {
+      "path": "originals/Facebook_metrics.txt",
+      "bytes": 1613,
+      "sha256": "bd311d4240a39268e197a137f913a58f118c6cc44b3efef977285b4318db46c9"
+    },
+    {
+      "path": "originals/Online Retail.xlsx",
+      "bytes": 23715344,
+      "sha256": "43465a06f2ccf7c8b5bd2892bc7defb52f97487934fe93b16ae4c3936424676d"
+    },
+    {
+      "path": "originals/criteo_source.html",
+      "bytes": 71123,
+      "sha256": "ecfe39e81776f5dc835d359343b67ae985a7c669425c8d8f69f68834e3c1bdc5"
+    },
+    {
+      "path": "originals/dataset_Facebook.csv",
+      "bytes": 37891,
+      "sha256": "666ec82952b7ce90b464f5a87ec4f0fe92d9a63208f2fcb2d0443cb5f31c3f4c"
+    },
+    {
+      "path": "originals/ebay_w20171.pdf",
+      "bytes": 808066,
+      "sha256": "4402a9219f049624f9d328f065a129891e44532a26e41ae7784c21e82d8255c2"
+    },
+    {
+      "path": "originals/facebook_metrics.zip",
+      "bytes": 16281,
+      "sha256": "48e4739b4acbbcca8f03cbcfe145d82c2e665cdd5bb9e20618690d454ce93fd3"
+    },
+    {
+      "path": "originals/facebook_source.html",
+      "bytes": 151836,
+      "sha256": "b91ca7b975c0ffc715503402b1ab6bf6a5c79f5ac3dd6a506d8aced20a31bf71"
+    },
+    {
+      "path": "originals/google_geo_38355.pdf",
+      "bytes": 318851,
+      "sha256": "ef4794c4f125375fe42fdb560f76ed99beaf6f3fa3f1847be845a120485703b5"
+    },
+    {
+      "path": "originals/online_retail.zip",
+      "bytes": 23715478,
+      "sha256": "f5385cbb54bbebf7196389109c6b0621faab0c304e3702548165e71c84aede8b"
+    },
+    {
+      "path": "originals/online_shoppers.zip",
+      "bytes": 1072219,
+      "sha256": "2972e6184d3ad7beaaa831d9fc2b059dc3ee29df69d1ec593c466a5cd8485d14"
+    },
+    {
+      "path": "originals/online_shoppers_intention.csv",
+      "bytes": 1072063,
+      "sha256": "b3055ee355f59134d851d32641183cb4a8b45def7124d2f50442a042f358e0d9"
+    },
+    {
+      "path": "originals/retail_source.html",
+      "bytes": 174303,
+      "sha256": "8e36ee60489a549d5e3ea3b7b6320dd8951297ee6282fa3da9013006ecb923a7"
+    },
+    {
+      "path": "originals/shoppers_source.html",
+      "bytes": 128863,
+      "sha256": "8a476914ca3260668d0693433018e46fcbc2d5b832f38dae34e43f28d6986f09"
+    },
+    {
+      "path": "retail_daily_forecast.csv",
+      "bytes": 2396,
+      "sha256": "3f73162903a2ceea076b601d59f4fecddb6d9277102cd4681461720cbf83de86"
+    },
+    {
+      "path": "run.py",
+      "bytes": 8571,
+      "sha256": "2f4f69740ae047d9bb00823ff53f9070de2cb40a02fa3f7590f300f6e826732c"
+    },
+    {
+      "path": "run_stdout.txt",
+      "bytes": 9762,
+      "sha256": "06c4d3a126f92e1f8b1559a0056937d782d583d798e40f6c3b2073fb3dd2fdc1"
+    },
+    {
+      "path": "verify_outputs.py",
+      "bytes": 1459,
+      "sha256": "97b33829286fd73518362848181c4746c56ba6969ba31c7f2ef3ccdacb04a17c"
+    }
+  ],
+  "file_count": 32,
+  "total_bytes": 51522085,
+  "scope": "Independent research only; product unchanged; no paid/API/model-training work"
+}

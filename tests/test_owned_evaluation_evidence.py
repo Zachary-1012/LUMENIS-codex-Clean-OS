@@ -377,35 +377,45 @@ def test_revoked_approval_after_insert_rolls_back_evidence(capture_db, monkeypat
 
 
 def test_revocation_at_transaction_commit_boundary_cannot_leave_evidence(capture_db, monkeypatch):
-    """Expose a revoke after the final Permission recheck, before repository commit."""
+    """Revoke before the actual commit lease: no Evidence may survive."""
     packet = _packet()
-    actor, scope, submission, gate, _resource, token = _authorized_capture(capture_db, packet)
+    actor, scope, submission, gate, resource, token = _authorized_capture(capture_db, packet)
+    original_lease = gate.owned_evaluation_capture_commit_lease
+    revocations = []
+    @contextmanager
+    def revoke_before_real_commit(**kwargs):
+        revocations.append(gate.revoke_approval(token))
+        with original_lease(**kwargs):
+            yield
+    monkeypatch.setattr(gate, "owned_evaluation_capture_commit_lease", revoke_before_real_commit)
+    with pytest.raises(PermissionError):
+        evaluation.record_owned_evaluation_evidence(authenticated_actor=actor,
+            expected_scope=scope, submission_id=submission, evaluation_packet=packet)
+    assert revocations == [True]
+    assert gate.get_valid_approval_token(permission.OperationType.DB_WRITE.value, resource, exact=True) is None
+    assert _evidence_rows(capture_db) == []
+
+
+def test_revocation_after_actual_commit_preserves_row_but_denies_readback(capture_db, monkeypatch):
+    """The outer transaction exit is after the producer's explicit protected commit."""
+    packet = _packet()
+    actor, scope, submission, gate, resource, token = _authorized_capture(capture_db, packet)
     repository = get_repository()
     original_transaction = repository.transaction
     revocations = []
-
     @contextmanager
-    def revoke_before_commit(**kwargs):
+    def revoke_after_real_commit(**kwargs):
         with original_transaction(**kwargs) as connection:
             yield connection
-            # The producer has left its transaction body and completed its final
-            # _authorize call. The underlying repository context commits next.
+            assert connection.in_transaction is False
             revocations.append(gate.revoke_approval(token))
-
-    monkeypatch.setattr(repository, "transaction", revoke_before_commit)
-    result = evaluation.record_owned_evaluation_evidence(
-        authenticated_actor=actor, expected_scope=scope, submission_id=submission,
-        evaluation_packet=packet,
-    )
-
+    monkeypatch.setattr(repository, "transaction", revoke_after_real_commit)
+    with pytest.raises(PermissionError, match="EXACT_DB_WRITE_APPROVAL_REQUIRED"):
+        evaluation.record_owned_evaluation_evidence(authenticated_actor=actor,
+            expected_scope=scope, submission_id=submission, evaluation_packet=packet)
     assert revocations == [True]
-    assert result["evaluation_ref"]
-    assert gate.get_valid_approval_token(
-        permission.OperationType.DB_WRITE.value,
-        _resource,
-        exact=True,
-    ) is None
-    assert _evidence_rows(capture_db) == []
+    assert len(_evidence_rows(capture_db)) == 1
+    assert gate.get_valid_approval_token(permission.OperationType.DB_WRITE.value, resource, exact=True) is None
 
 
 def test_tampered_hmac_row_after_insert_rolls_back_evidence(capture_db, monkeypatch):
@@ -428,3 +438,220 @@ def test_tampered_hmac_row_after_insert_rolls_back_evidence(capture_db, monkeypa
             evaluation_packet=packet,
         )
     assert _evidence_rows(capture_db) == []
+
+
+@pytest.fixture
+def synthetic_context(capture_db):
+    from ai_task_engine import init_task_engine_db, reset_task_engine, get_task_engine
+    from agent_runtime.task_binding import create_agent_task
+    from agent_runtime.durable_adapter import DurableExecutionAdapter
+    from lumenis.shared.evaluation import recorder
+    init_task_engine_db()
+    reset_task_engine()
+    recorder.init_db()
+    with sqlite3.connect(capture_db) as con:
+        from account.models import SKILLS_TABLES_SQL
+        con.executescript(SKILLS_TABLES_SQL)
+        con.execute("UPDATE v4_users SET role='user' WHERE id=1")
+        con.execute("INSERT INTO v4_member_authorizations(user_id,product_id,module,action,data_scope) "
+                    "VALUES(1,'CTH','agent_runtime','read',?)", (json.dumps({'subject_ids':['SUBJ-EVAL-A']}),))
+    gate = permission.get_permission_gate()
+    gate.grant_permission(permission.PermissionLevel.COMMIT)
+    for resource in ('ai_task', 'ai_task_step'):
+        gate.grant_approval(permission.OperationType.DB_WRITE.value, resource=resource, granted_by='isolated-test-reviewer')
+    engine = get_task_engine()
+    task = create_agent_task(engine, actor={'id':1}, goal='Record synthetic diagnostic experiment',
+        domain_id='cth', scope={'subject_id':'SUBJ-EVAL-A','brand_focus_id':None,'global_scope':False})
+    packet = {'schema':'synthetic-interpretability:v1','prototype_status':'SYNTHETIC_PROTOTYPE',
+        'model_kind':'synthetic_numeric_network','run_id':'synthetic-test-1','task_id':task['task_id'],
+        'checkpoint_id':'pending','weights_sha256':'a'*64,'inputs_sha256':'b'*64,
+        'heldout_sha256':'c'*64,'hypotheses_sha256':'d'*64,'trace_sha256':'e'*64,
+        'capture_status':'AVAILABLE','reason':'NONE','counts':{'heldout':512,'neurons':8,'explained':1},
+        'metrics':{'activation_prediction_nmse':.3,'intervention_prediction_error':1e-16,'replay_max_error':0.},
+        'business_acceptance':'NOT_EVALUATED','promotion_status':'NOT_PROMOTED'}
+    from lumenis.system.collector.guard.task_queue import TaskQueue
+    from lumenis.system.security.permission import admit_task_operational_write
+    queue = TaskQueue(capture_db.parent / "synthetic-queue.sqlite")
+    queued = queue.enqueue('agent_runtime', {'task_id':task['task_id'],'actor_id':1})
+    attempt = queue.dequeue(worker_id='synthetic-test',task_id=queued)
+    admission = admit_task_operational_write(task_id=task['task_id'],actor_id=1,queue=queue,attempt=attempt)
+    adapter = DurableExecutionAdapter(task_engine=engine, operational_admission=admission)
+    cp = adapter.checkpoint(task['task_id'], 0, 'observed',
+        context=task['context'], metadata={k:packet[k] for k in ('run_id','weights_sha256','inputs_sha256','hypotheses_sha256','trace_sha256')})
+    packet['checkpoint_id'] = cp.checkpoint_id
+    args = {'authenticated_actor':{'id':1},'expected_scope':_scope(),
+            'submission_id':str(uuid.uuid4()),'packet':packet}
+    resource = evaluation.synthetic_interpretability_approval_resource(**args)
+    token = gate.grant_approval(permission.OperationType.DB_WRITE.value, resource=resource, granted_by='isolated-test-reviewer')
+    yield capture_db, args, gate, token
+    queue.close()
+    reset_task_engine()
+
+
+def _synthetic_counts(path):
+    with sqlite3.connect(path) as con:
+        return (con.execute("SELECT count(*) FROM app_evidence_records WHERE feature_id='SYNTHETIC_INTERPRETABILITY_PACKET'").fetchone()[0],
+                con.execute("SELECT count(*) FROM evaluation_records WHERE source='synthetic_interpretability'").fetchone()[0])
+
+
+def test_synthetic_task_evidence_metrics_atomic_idempotent(synthetic_context):
+    path,args,gate,token=synthetic_context
+    first=evaluation.record_synthetic_interpretability_evidence(**args)
+    second=evaluation.record_synthetic_interpretability_evidence(**args)
+    assert first['state']=='recorded' and second['state']=='already_recorded'
+    assert first['evidence_ref']==second['evidence_ref']
+    assert first['evaluation_ids']==second['evaluation_ids']
+    assert first['prototype_status']=='SYNTHETIC_PROTOTYPE' and first['promotion_status']=='NOT_PROMOTED'
+    assert _synthetic_counts(path)==(1,3)
+
+
+def test_synthetic_metric_failure_rolls_back_evidence_and_recovers(synthetic_context,monkeypatch):
+    from lumenis.shared.evaluation import recorder
+    path,args,gate,token=synthetic_context
+    original=recorder.record_evaluation
+    calls=[]
+    def failing(**kwargs):
+        calls.append(1)
+        if len(calls)==2:raise RuntimeError('injected second metric write failure')
+        return original(**kwargs)
+    monkeypatch.setattr(recorder,'record_evaluation',failing)
+    with pytest.raises(RuntimeError,match='injected'):
+        evaluation.record_synthetic_interpretability_evidence(**args)
+    assert _synthetic_counts(path)==(0,0)
+    monkeypatch.setattr(recorder,'record_evaluation',original)
+    assert evaluation.record_synthetic_interpretability_evidence(**args)['state']=='recorded'
+    assert _synthetic_counts(path)==(1,3)
+
+
+def test_synthetic_revoked_and_cancelled_task_cannot_capture(synthetic_context):
+    from ai_task_engine import get_task_engine
+    path,args,gate,token=synthetic_context
+    get_task_engine().cancel_task(args['packet']['task_id'])
+    with pytest.raises(PermissionError,match='TASK_NOT_ACTIVE'):
+        evaluation.record_synthetic_interpretability_evidence(**args)
+    assert _synthetic_counts(path)==(0,0)
+
+
+def test_synthetic_scope_revoked_after_approval(synthetic_context):
+    path,args,gate,token=synthetic_context
+    with sqlite3.connect(path) as con:con.execute("DELETE FROM v4_member_authorizations WHERE module='owned_model_admission'")
+    with pytest.raises(PermissionError):evaluation.record_synthetic_interpretability_evidence(**args)
+    assert _synthetic_counts(path)==(0,0)
+
+
+def test_synthetic_approval_revocation_before_commit_rolls_back(synthetic_context,monkeypatch):
+    from lumenis.shared.evaluation import recorder
+    path,args,gate,token=synthetic_context
+    original=recorder.record_evaluation
+    def revoke(**kwargs):
+        result=original(**kwargs)
+        gate.revoke_approval(token)
+        return result
+    monkeypatch.setattr(recorder,'record_evaluation',revoke)
+    with pytest.raises(PermissionError):evaluation.record_synthetic_interpretability_evidence(**args)
+    assert _synthetic_counts(path)==(0,0)
+
+
+@pytest.mark.parametrize('field,value', [('unexpected','x'),('weights_sha256','../weights.pt'),
+    ('run_id','/tmp/private'),('business_acceptance','PASS'),('promotion_status','PROMOTED')])
+def test_synthetic_rejects_fields_paths_and_claims(synthetic_context,field,value):
+    path,args,gate,token=synthetic_context
+    args['packet'][field]=value
+    with pytest.raises(ValueError):evaluation.record_synthetic_interpretability_evidence(**args)
+    assert _synthetic_counts(path)==(0,0)
+
+
+@pytest.mark.parametrize('value',[float('nan'),float('inf'),-1,True,'0'])
+def test_synthetic_rejects_invalid_metric(synthetic_context,value):
+    path,args,gate,token=synthetic_context
+    args['packet']['metrics']['replay_max_error']=value
+    with pytest.raises(ValueError):evaluation.record_synthetic_interpretability_evidence(**args)
+    assert _synthetic_counts(path)==(0,0)
+
+
+def test_synthetic_changed_packet_requires_new_exact_approval(synthetic_context):
+    path,args,gate,token=synthetic_context
+    args['packet']['metrics']['activation_prediction_nmse']=.4
+    with pytest.raises(PermissionError):evaluation.record_synthetic_interpretability_evidence(**args)
+    assert _synthetic_counts(path)==(0,0)
+
+
+def test_synthetic_wrong_task_actor(synthetic_context):
+    path,args,gate,token=synthetic_context
+    with sqlite3.connect(path) as con:
+        con.execute("INSERT INTO v4_users VALUES(2,'owner','active')")
+    args['authenticated_actor']={'id':2}
+    resource=evaluation.synthetic_interpretability_approval_resource(**args)
+    gate.grant_approval(permission.OperationType.DB_WRITE.value,resource=resource,granted_by='isolated-test-reviewer')
+    with pytest.raises(PermissionError):evaluation.record_synthetic_interpretability_evidence(**args)
+    assert _synthetic_counts(path)==(0,0)
+
+
+def test_synthetic_checkpoint_hash_mismatch(synthetic_context):
+    path,args,gate,token=synthetic_context
+    args['packet']['trace_sha256']='f'*64
+    resource=evaluation.synthetic_interpretability_approval_resource(**args)
+    gate.grant_approval(permission.OperationType.DB_WRITE.value,resource=resource,granted_by='isolated-test-reviewer')
+    with pytest.raises(ValueError,match='CHECKPOINT_BINDING'):
+        evaluation.record_synthetic_interpretability_evidence(**args)
+    assert _synthetic_counts(path)==(0,0)
+
+
+def test_synthetic_summary_isolation_and_diagnostic_visibility(synthetic_context):
+    from lumenis.shared.evaluation import recorder
+    path,args,gate,token=synthetic_context
+    recorder.record_evaluation('ai','business_quality',0.,.8,.5,source='business_evaluation')
+    before=recorder.get_evaluation_summary();before.pop('generated_at')
+    # Three exact synthetic packet captures produce fail/pass/unknown, never business scores.
+    for state in ('AVAILABLE','NOT_AVAILABLE','UNSUPPORTED'):
+        args['submission_id']=str(uuid.uuid4())
+        args['packet']['capture_status']=state
+        args['packet']['reason']={'AVAILABLE':'NONE','NOT_AVAILABLE':'ACTIVATIONS_UNAVAILABLE','UNSUPPORTED':'ARCHITECTURE_UNSUPPORTED'}[state]
+        if state=='AVAILABLE':args['packet']['metrics']['activation_prediction_nmse']=.9
+        else:
+            args['packet']['metrics']={k:None for k in args['packet']['metrics']}
+            args['packet']['counts']={k:0 for k in args['packet']['counts']}
+        resource=evaluation.synthetic_interpretability_approval_resource(**args)
+        gate.grant_approval(permission.OperationType.DB_WRITE.value,resource=resource,granted_by='isolated-test-reviewer')
+        result=evaluation.record_synthetic_interpretability_evidence(**args)
+        read=evaluation.read_synthetic_interpretability_evidence(evidence_ref=result['evidence_ref'],
+            authenticated_actor=args['authenticated_actor'],expected_scope=args['expected_scope'])
+        assert read['integrity_verified'] and len(read['metrics'])==3 and len(read['lineage'])==1
+        if state!='AVAILABLE':assert all(m['status']=='unknown' for m in read['metrics'])
+    after=recorder.get_evaluation_summary();after.pop('generated_at')
+    assert before==after and after['global_status']=='fail'
+    with sqlite3.connect(path) as con:assert con.execute("SELECT count(*) FROM evaluation_records WHERE source='synthetic_interpretability'").fetchone()[0]==9
+
+
+def test_synthetic_source_cannot_hide_real_failure(synthetic_context):
+    from lumenis.shared.evaluation import recorder
+    path,args,gate,token=synthetic_context
+    with pytest.raises(ValueError,match='signed owner evidence'):
+        recorder.record_evaluation('ai','business_quality',0.,.8,.5,source='synthetic_interpretability')
+    # Even a directly forged stored source label without signed exact matching Evidence
+    # remains in the business summary. This is deliberate tampering, not the write API.
+    recorder.record_evaluation('ai','business_quality',0.,.8,.5,source='business_evaluation')
+    with sqlite3.connect(path) as con:con.execute("UPDATE evaluation_records SET source='synthetic_interpretability'")
+    summary=recorder.get_evaluation_summary()
+    assert summary['global_status']=='fail' and summary['total_records']==1
+
+
+def test_synthetic_readback_after_revocation_and_tamper(synthetic_context):
+    path,args,gate,token=synthetic_context
+    result=evaluation.record_synthetic_interpretability_evidence(**args)
+    read_args=dict(evidence_ref=result['evidence_ref'],authenticated_actor={'id':1},expected_scope=args['expected_scope'])
+    assert evaluation.read_synthetic_interpretability_evidence(**read_args)['packet_sha256']==result['packet_sha256']
+    with sqlite3.connect(path) as con:con.execute("DELETE FROM v4_member_authorizations WHERE module='owned_model_admission'")
+    with pytest.raises(PermissionError):evaluation.read_synthetic_interpretability_evidence(**read_args)
+
+
+def test_synthetic_commit_lease_blocks_late_revocation(synthetic_context,monkeypatch):
+    path,args,gate,token=synthetic_context
+    original=gate.owned_evaluation_capture_commit_lease
+    @contextmanager
+    def late_revoke(**kwargs):
+        gate.revoke_approval(token)
+        with original(**kwargs):yield
+    monkeypatch.setattr(gate,'owned_evaluation_capture_commit_lease',late_revoke)
+    with pytest.raises(PermissionError):evaluation.record_synthetic_interpretability_evidence(**args)
+    assert _synthetic_counts(path)==(0,0)

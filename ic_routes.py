@@ -89,12 +89,20 @@ def marketing_calendar():
         "mc_api", "scripts/marketing_calendar.py")
     mc = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mc)
-    month = request.args.get("month", type=int)
+    month_raw = request.args.get("month")
+    month = None
     try:
+        month = int(month_raw) if month_raw is not None else None
+        date_arg = request.args.get("date", "")
+        year = int(request.args.get("year", date_arg[:4] if len(date_arg) == 10 else "2026"))
+        market = request.args.get("market", "CN")
+        context = mc.calendar_context(request.args.get("date", ""), year=year, market=market)
+        if context["state"] == "invalid_input" or (month is not None and not 1 <= month <= 12):
+            return jsonify({"ok": False, "calendar_reference": context}), 400
         if month:
-            nodes = mc.nodes_for_month(month)
-            return jsonify({"ok": True, "month": month, "nodes": nodes})
-        return jsonify({"ok": True, "summary": mc.yearly_summary()})
+            nodes = mc.nodes_for_month(month, year=context["year"], market=market)
+            return jsonify({"ok": True, "month": month, "nodes": nodes, "calendar_reference": context})
+        return jsonify({"ok": True, "summary": mc.yearly_summary() if context["state"] == "reference_only_not_live_verified" else None, "calendar_reference": context})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 400
 

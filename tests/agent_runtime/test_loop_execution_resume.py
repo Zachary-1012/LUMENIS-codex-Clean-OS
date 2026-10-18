@@ -508,3 +508,21 @@ def test_resume_rejects_memory_only_checkpoint(resume_env):
 
     with pytest.raises(RuntimeError, match="TaskEngine-backed checkpoint"):
         loop.resume(task_id, context=_context())
+
+
+def test_resume_after_last_step_before_final_commit_never_repeats_tool(resume_env):
+    _grant(resume_env["path"])
+    plan = _plan()
+    plan.steps[1].status = "completed"
+    plan.steps[1].result = {"output": "persisted last result"}
+    task_id = _persist_checkpoint(resume_env, plan, state="completed", index=1, steps_started=2)
+    calls = []
+    reopened = _loop(resume_env, tool_calls=calls).resume(task_id, context=_context())
+    assert reopened.status == "already_completed"
+    assert calls == []
+    assert TaskEngine().get_task(task_id)["status"] == "succeeded"
+    assert TaskEngine().get_task(task_id)["result"] == reopened.result
+    count = len(TaskEngine().get_steps(task_id))
+    _loop(resume_env, tool_calls=calls).resume(task_id, context=_context())
+    assert len(TaskEngine().get_steps(task_id)) == count
+    assert calls == []

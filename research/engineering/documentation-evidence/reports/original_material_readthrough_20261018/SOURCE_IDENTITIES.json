@@ -1,0 +1,57 @@
+[
+  {
+    "name": "AI_Native_Product_Development_Constitution_Light_v1.0.docx",
+    "library_file_id": "[PRIVATE_LIBRARY_ID]",
+    "material_ids": [
+      "MAT-d9ab37705ebac0472343"
+    ],
+    "identity": "PREFIX_STRIPPED_NAME_CANDIDATE_NO_OLD_HASH",
+    "read_scope": "Full document main text read on 2026-10-17; document layout/linked external sources NOT audited in this pass",
+    "bytes": 39216,
+    "sha256": "464d9700c824ad0f24ba4af42e5ff9786562e0a0c92382e8fe1c62c494d01429",
+    "local_original": "[LOCAL_WORKSPACE]/original_material_recovery_20261018/originals/AI_Native_Product_Development_Constitution_Light_v1.0.docx",
+    "distribution": "Reviewed text in this component; original retained in Library; 1440 personal sections/path redacted",
+    "library_version_number": 0
+  },
+  {
+    "name": "LUMENIS_20261003_1440_Report_for_Codex.txt",
+    "library_file_id": "[PRIVATE_LIBRARY_ID]",
+    "material_ids": [
+      "MAT-be03a3c5875d3350fa92"
+    ],
+    "identity": "PREFIX_STRIPPED_NAME_AND_CONTENT_CANDIDATE_NO_OLD_HASH",
+    "read_scope": "Full document main text read on 2026-10-17; document layout/linked external sources NOT audited in this pass",
+    "bytes": 35638,
+    "sha256": "87fb26824cbb8553c6abc205ad3ea97e7e646743c4a578c7dcc6e8cfe89298a5",
+    "local_original": "[LOCAL_WORKSPACE]/original_material_recovery_20261018/originals/LUMENIS_20261003_1440_Report_for_Codex.txt",
+    "distribution": "Reviewed text in this component; original retained in Library; 1440 personal sections/path redacted",
+    "library_version_number": 0
+  },
+  {
+    "name": "声音识听_中英韩与音乐情绪_Codex接入增补.md",
+    "library_file_id": "[PRIVATE_LIBRARY_ID]",
+    "material_ids": [
+      "MAT-265eaba773a248f1e7f0"
+    ],
+    "identity": "PREFIX_STRIPPED_NAME_AND_CONTENT_CANDIDATE_NO_OLD_HASH",
+    "read_scope": "Full document main text read on 2026-10-17; document layout/linked external sources NOT audited in this pass",
+    "bytes": 102142,
+    "sha256": "065ea7b73e5ecffa60a06cac01cbff9f4d16fb596f8c0b1666124044af38e340",
+    "local_original": "[LOCAL_WORKSPACE]/original_material_recovery_20261018/originals/声音识听_中英韩与音乐情绪_Codex接入增补.md",
+    "distribution": "Reviewed text in this component; original retained in Library; 1440 personal sections/path redacted",
+    "library_version_number": 0
+  },
+  {
+    "name": "xujing_topic_seed_100_4confirmed_20261004.xlsx",
+    "library_file_id": "[PRIVATE_LIBRARY_ID]",
+    "file_id": "[REDACTED_PRIVATE_IDENTIFIER]",
+    "library_version_number": 0,
+    "material_ids": [
+      "MAT-7ca7671d4d4567a5477b"
+    ],
+    "identity": "PREFIX_STRIPPED_NAME_AND_CONTENT_CANDIDATE_NO_OLD_HASH",
+    "bytes": 46358,
+    "sha256": "8e45d88ae3f13174ca5a16f8d07f73eab55af897330e744a05b29af245c9af52",
+    "read_scope": "All four sheets business text read, 100 topic semantic rows, 41 source rows, 14 formulas; repeated URLs/paths joined by machine; styles/date storage inspected; no rendered/native-app acceptance"
+  }
+]

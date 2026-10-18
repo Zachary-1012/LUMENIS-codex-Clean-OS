@@ -1,0 +1,360 @@
+[
+  {
+    "group": 1,
+    "title": "当前主线与完整规划",
+    "original_scope": "完整主线、195个原G、R01–R15/J1–J8/U01–U25及非G章节/Owner合同；SYSTEM、CTH、BMP、独立Shared、五角色和四表面均保留。",
+    "owner": "各原Owner；C6统版本，F统适用表面。",
+    "review_decision": "升级：将本次各研究结论收敛成可审核的采用/不采用/待核决策；新增不替代原任务。",
+    "current_research_and_design": "原范围与全量逐行账已保全；本索引将最新研究补篇挂回固定 19 项。",
+    "research_evidence_open": "199 原材料的逐件原文、被引合同、采用/许可尚未全闭；不能把 2617 文本记录当 2617 独立任务全部完成。",
+    "implementation_runtime_and_acceptance_open": "当前源码、研究、前端、历史主线分版；所有原要求逐义务实现与验收仍需证据。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "original_research_gap_closure_20261018/REPORT.md",
+      "missing_originals_locator_20261018/reviewed_component/01_REPORT.md"
+    ],
+    "current_executable": "复用原Owner/完整账做逐义务映射，新增只累加",
+    "remaining_resources_and_acceptance": "199原件及被引合同缺口逐件补；不阻已有独立开发",
+    "source_record_ids_ref": "original v003 / group 1",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 2,
+    "title": "全部非最终页面的产品闭环",
+    "original_scope": "CTH全经营链、BMP全品牌/市场/传播/活动链，Shared独立创作/研究，账号/权限/生命周期与无AI基础路径。",
+    "owner": "C3领域；C1资料/身份；C5报告/Evaluation；C2增强；C6/F接线。适用CTH/BMP与独立Shared。",
+    "review_decision": "升级：采用12条领域任务链，问题→可比数据→描述/预测/因果/决策→人工选择→获准行动→独立结果；继承现有BusinessDecisionWorkflow，不另建分析平台。",
+    "current_research_and_design": "12 条领域链和决策协议已有，商业可比性新补 11 条独立参考断言、4 个真实官方统计值；无需重造分析平台。",
+    "research_evidence_open": "真实领域阈值及质量需试点校准，不能以合成研究替客户收益。",
+    "implementation_runtime_and_acceptance_open": "6eadb7d 已核 1890 pytest / 28 HTTP / 217 Dart，但四个 local HTTP 200 的 parser=false、计数/日期表示和 UI 未展示仍未闭。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "domain_analysis_research_20261018/01_DOMAIN_ANALYSIS_RESEARCH.md",
+      "brand_comparability_research_20261018/README.md"
+    ],
+    "current_executable": "4 BMP合法local解析及typed UI；普通局部回归立即执行",
+    "remaining_resources_and_acceptance": "真实业务数据/独立成果、保存修改冷开与适用表面；无需等待真实收益才测局部",
+    "source_record_ids_ref": "original v003 / group 2",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 3,
+    "title": "原规划研究、数学模型及OpenAI相关数学研究",
+    "original_scope": "G143–169、全部相邻数学/统计要求、九family/26稿、G163自研训练、G164形式重放、G165修订撤回和财报/实体/代理/MMM。",
+    "owner": "C5现统计/Evaluation与C3领域，C1真实来源，C2训练/Gateway，C6/F。",
+    "review_decision": "升级：26稿阅读闭合；优先真实主题/排程/比率区间/时间外基线，再考虑独立理论算法。UG定位困难性与有限约束评估；随机104不能改名复用确定性策略循环。",
+    "current_research_and_design": "数学 26/26 稿阅读已有，1121 页包括 24 篇继承与 2 篇新读；财报新增 3 份官方原件与 10 条研究断言，区分修订、主体、时窗及数据口径。 新增 26 篇官方 README/路径历史/目录及 PDF blob 定点对照已完成，两次 HEAD 均为原 pin 1581d4cb，未见此次官方发布渠道的变更或撤回/勘误公告，不需因本次差分重读全文。",
+    "research_evidence_open": "官方发布快照观察已补；各篇外部 arXiv/期刊身份与状态仍 UNKNOWN，未穷尽间接定理依赖；一般算法/solution 导入闭包及跨市场实际财报证据未全闭。",
+    "implementation_runtime_and_acceptance_open": "Lean/Comparator 实际重放、通用算法、真实 MMM 足期数据、训练和收益未验；不把阅读完成当算法完成。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "math_research_completion_20261018",
+      "financial_source_research_20261018/README.md",
+      "math_revision_status_research_20261018/01_REVISION_STATUS_RESEARCH.md"
+    ],
+    "current_executable": "公开UCI反例/口径可做确定性分析测试，保留负结果",
+    "remaining_resources_and_acceptance": "Lean/Comparator、足期MMM渠道成本及真实业务校准",
+    "source_record_ids_ref": "original v003 / group 3",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 4,
+    "title": "自研AI、多模态、Agent与多语言",
+    "original_scope": "自研/自有大模型目标、多模态、唯一Gateway、Agent/Skills/MCP、Memory、工具/权限/取消恢复、三语UI与至少10种创作语言。",
+    "owner": "C2 Gateway/Model/Agent/Memory；C4媒体；C5成果；C6权限；F。",
+    "review_decision": "升级：现有确定性结果与获准AI增强分账；语义错字/ASR建议绑定输入版本，否定/数字/专名歧义先确认；新增外部本人音色仅受控导入，不开发手机录音App。 保留固定gpt-oss-20b/NF4既有路线；按任务增小专家，不按五角色各造模型。由原SkillRegistry/Shared catalog/ToolDefinition/Owner生成版本化能力知识投影，不建第二权限库；用户直做与AI入口复用同一业务合同、版本和恢复链。",
+    "current_research_and_design": "保留 20B 主线与任务专家；Skills/MCP/GitHub 官方与源码深研已有；记忆引用和多语质量专篇已有，15 合成断言与 96 语言格 NOT_RUN 分开。 新补 NF4 转换基座 revision 溯源、Qwen3-TTS 固定模型/tokenizer/voice prompt 和精确环境约束；transformers 4.57.3 与原 20B 4.56.2 同环境约束冲突已静态确认。",
+    "research_evidence_open": "NF4 base_revision 仍 UPSTREAM_UNSPECIFIED；PEFT/datasets/safetensors 无实际精确锁；本人声音包兼容/权利、真实多语质量、资源和训练资格未闭。声音候选应先研究独立 runtime，不自动升级原20B环境。",
+    "implementation_runtime_and_acceptance_open": "完整模型、caller、连续任务、checkpoint、真实工具/取消/恢复及多语业务成果未验。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "owned_ai_research_20261018/REPORT.md",
+      "original_research_gap_closure_20261018/10_SKILLS_MCP_GITHUB_DEEP_RESEARCH.md",
+      "original_research_gap_closure_20261018/22_MULTILINGUAL_QUALITY_RESEARCH.md",
+      "model_dependency_gap_research_20261018/REPORT.md"
+    ],
+    "current_executable": "现有Gateway类型/取消恢复/无AI路径可先验证；TTS独立runtime设计",
+    "remaining_resources_and_acceptance": "20B资源/精确训练锁、真实中英韩和本人声音输入；不能自动升级原环境",
+    "source_record_ids_ref": "original v003 / group 4",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 5,
+    "title": "学习、评价、批准与回滚",
+    "original_scope": "Outcome→独立Evaluation→纠正/负样本→学习资产→候选→保留集→批准→采用→撤回/回滚，事实与创意/权限分开。",
+    "owner": "C2学习与Gateway，C5 Evaluation/SavedWork，C3实际Outcome，C4作品。",
+    "review_decision": "升级：采用创意18 Brief/12锁定题/48成果包/12负对照协议，单件质量和批次多样性分报；不让模型总分、embedding距离或日志done放行。 保留原用户输入；低风险错字只做候选扩展，高影响金额、日期、数量、收件人、否定和动作歧义必须确认。能力知识更新不自动训练，会话保存不等训练同意。",
+    "current_research_and_design": "原创 18 Brief / 12 锁题 / 48 成果包 / 12 负对照协议已有，旧 NOT_ELIGIBLE 及负结果保留。",
+    "research_evidence_open": "独立评审、母语阈值及分布变化需许可样本校准；协议不是收益证明。",
+    "implementation_runtime_and_acceptance_open": "训练、候选采用、产品回滚和真实独立收益仍分层验收。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "creative_quality_research_20261018/01_ORIGINAL_CREATIVE_QUALITY_RESEARCH.md"
+    ],
+    "current_executable": "评价协议、批准失效与回滚状态机可先实现/测",
+    "remaining_resources_and_acceptance": "独立样本/母语评审/训练资源及真实收益",
+    "source_record_ids_ref": "original v003 / group 5",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 6,
+    "title": "全产品数据和资料库",
+    "original_scope": "经营主体/品牌/门店/创作者/活动/财经/营销/研究/媒体全资料，原件、四种时间、口径、关系、版本、缺失、权利及普通导入。",
+    "owner": "C1 Source/Evidence/身份；C5 Library/Importer/SavedWork；C4媒体；C6 Permission。",
+    "review_decision": "升级：来源用途细分为读/分析/模型处理/训练/编辑/发布/导出；历史累计值与历史观测分开；声音、许可素材、私有包、voice_id不混作一种资产。",
+    "current_research_and_design": "声音 1194 行、1440 报告 404 行、宪法 DOCX 正文、四表 XLSX 已按范围实读；能力 34 章及补充需求 1193 段完整仓库转录已读。",
+    "research_evidence_open": "原 199 件并非全读；13 精确目标仍缺原字节：2 DOCX、BUSINESS-DRAFTS、10 UUID 粘贴。转录与历史采用报告不得替代原件字节/版式/完整性核验。",
+    "implementation_runtime_and_acceptance_open": "XLSX 100 词与 41 来源、14 公式为研究；热度 UNKNOWN，主体 4/6。rights 字段与全部消费者/真实资料流程未全验。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "original_material_readthrough_20261018/01_ORIGINAL_READTHROUGH_AND_ADOPTION.md",
+      "missing_originals_locator_20261018/reviewed_component/01_REPORT.md",
+      "pasted_adoption_readthrough_20261018"
+    ],
+    "current_executable": "现有Importer/Research/SavedWork和rights未知保真可开发",
+    "remaining_resources_and_acceptance": "13原字节缺件另列；全消费者、检索引用及恢复实验",
+    "source_record_ids_ref": "original v003 / group 6",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 7,
+    "title": "全平台采集系统",
+    "original_scope": "所有规划平台及公开网页/国际韩国来源，同一Collector/PlatformManifest/PlatformSession；原G2的17类×19字段要求保留。",
+    "owner": "C1统一Collector/Browser/Manifest/Session，C6 Permission，C5消费者，F来源检查。",
+    "review_decision": "升级：22源×14合同字段、176市场审查行，增加命名空间、时间单位、字段用途、原生指标及停止原因；API/合作源是追加provider，不强制取代其他合法路径。",
+    "current_research_and_design": "原 G2 17×19 的 323 格保留，新 22×14 与 176 市场审查行属于补充，不替代原范围。 Bluesky 新补官方词典/固定实现/协议的 14 格候选合同；v2 匿名 cursor 后页拒绝，v1 cursor 不保证全集，时间/线程/媒体/恢复语义已有原始证据。",
+    "research_evidence_open": "不再标 Bluesky 官方技术正文零读取；具体商业/模型处理/训练/保留/导出用途仍未获证明，部署 feature/速率/回放窗口与当前 Jetstream 协议仍待核。其他平台原未闭合同保持。",
+    "implementation_runtime_and_acceptance_open": "真实会话、分页、评论、媒体、计数对账、撤权/重启及持续刷新未逐平台验收。 Bluesky 12 项新验收全部 NOT_RUN，未实采或接入，不改 G2 原323格。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "platform_capability_research_20261018/REPORT.md",
+      "platform_capability_research_20261018/G2_RECONCILIATION_APPENDIX.md",
+      "platform_evidence_gap_research_20261018/01_REPORT.md"
+    ],
+    "current_executable": "合法导入与平台字段/未知/拒绝/删除同步合同可开发",
+    "remaining_resources_and_acceptance": "逐平台账号资格/用途/限流/真实分页媒体；保留原323格",
+    "source_record_ids_ref": "original v003 / group 7",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 8,
+    "title": "内置浏览器配件与用户/AI双入口",
+    "original_scope": "真实产品浏览器、标签/导航/历史/Reader/DOM/来源定位、用户与AI双入口、媒体/文件取得、人工接管/取消/恢复。",
+    "owner": "C1/C6 Browser/Collector/Permission，C5 Source/Evidence/SavedWork，C2工具注册，F。",
+    "review_decision": "升级：继承后续受控快照Source和精确quote_reference许可；把查看/入库/引用/其他用途区分；任务回跳保选区与版本。",
+    "current_research_and_design": "已有 Browser/Source/SavedWork 与限定 SQLite/合成 CDP 证据保留；不再将所有历史旧切片问题当作当前未修。",
+    "research_evidence_open": "快照完整性、媒体实际取得与合法用途不能仅由 hash 推定。",
+    "implementation_runtime_and_acceptance_open": "真实 Chromium/网页/媒体消费、Agent 工具及四表面仍需同版验收。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "product_research_deadline_20261018/review_final/01_WHOLE_PRODUCT_UPGRADE_REVIEW.md"
+    ],
+    "current_executable": "已授权来源保存与双入口合同回归可做",
+    "remaining_resources_and_acceptance": "真实Chromium会话、媒体完整性及四表面",
+    "source_record_ids_ref": "original v003 / group 8",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 9,
+    "title": "原创创意能力与新增常规稿多平台传播",
+    "original_scope": "L0–L3原创策略/Big Idea、三调性、三方视角、命名、多语、反模板/组合/九维审核；常规稿快路并存；独立Shared/串联/聊天三入口。",
+    "owner": "C3 Brief/品牌；C4 Content/Creation；C5事实墙/版本/Evaluation；C2获准生成；F。",
+    "review_decision": "升级：2–4实质不同机制与失败原因，可组合A机制+B结尾、局部修订保人工段；跨平台重建表达、事实不漂移；普通用户直接编辑作品。",
+    "current_research_and_design": "原原创策略、Big Idea、三调性/三方视角/命名/多语和常规稿两路保留；有限量规、反例与样稿已在研究稿。",
+    "research_evidence_open": "部分论文仅摘要；普通/失败实际案例、母语审读、完整广告案例视频和真稿对照仍缺。20 个界面参考视频不自动关闭这些广告/创作素材。",
+    "implementation_runtime_and_acceptance_open": "盲评、可编辑作品、事实修订/旧批准失效、冷开恢复、真实反馈仍未全验。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "creative_quality_research_20261018/01_ORIGINAL_CREATIVE_QUALITY_RESEARCH.md"
+    ],
+    "current_executable": "可编辑作品、事实修订/旧批准失效/恢复可做",
+    "remaining_resources_and_acceptance": "母语盲评/实际创作案例与真实反馈，不用界面视频替代",
+    "source_record_ids_ref": "original v003 / group 9",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 10,
+    "title": "视频、音频、播客和AIGC创作",
+    "original_scope": "完整视频E与播客P生产要求、实际工程/成品、Timeline/多轨/字幕/时基/交换、Idea Vault日周月及节目制作/复盘；新增后期、插件和授权外部声音导入。",
+    "owner": "C4 rendering/Timeline/MediaAsset；C5 Artifact/SourceUse；C2 Voice/Model；C6 Permission隔离；F。",
+    "review_decision": "升级：先固定三转场及许可素材/既有混音；音频、声明式预设、原生插件、声音条件包分型。外部兼容声音包由LUMENIS按明确许可导入与设置。",
+    "current_research_and_design": "媒体时基/交换、播客包研究新增 14 条参考断言；本地 TTS 与 Creator 归因再补 23 条；短句 85 / 音效 130、三转场和混音研究保留。 本轮 Qwen3-TTS 固定官方代码和模型卡补核明确 voice prompt 的 ref_code/embedding/text 与 tokenizer 绑定；不等通用音色模型或 .voicenpc 跨App兼容。",
+    "research_evidence_open": "声音私有 schema/跨引擎/商用默认、长曲库、原生宿主/SDK 许可及完整长节目听审未闭。",
+    "implementation_runtime_and_acceptance_open": "外部手机制作本人音色后导入；没有样包/声样不声称可用。不增采声 App；实际工程/成片/听审/恢复另验。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "media_pipeline_research_20261018/README.md",
+      "tts_attribution_research_20261018/README.md",
+      "voice_postproduction_research_20261018",
+      "model_dependency_gap_research_20261018/REPORT.md"
+    ],
+    "current_executable": "CC0素材/固定可信滤镜/安全导入与署名链可分项开发",
+    "remaining_resources_and_acceptance": "本人录音、声音授权范围、Qwen资源、长节目听审和发行构建；不等315MB",
+    "source_record_ids_ref": "original v003 / group 10",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 11,
+    "title": "至少200种交互、动效、特效、物理与AIGC底层",
+    "original_scope": "≥200有用交互、全状态动效、物理参数/按压/拿起/磁吸/惯性/翻面、90ms反馈、减动态/关闭/跳过。",
+    "owner": "F设计/组件与各任务Owner，C6端侧。",
+    "review_decision": "升级：保留已去重213设计（188任务+25机制），不再凑数；交互逐项绑定任务、前后状态、取消/恢复和测量。",
+    "current_research_and_design": "213 去重设计＝188 任务交互＋25 机制已达设计枚举层；44 入口和 498 测试独立保留，不重凑 200。",
+    "research_evidence_open": "逐项原 Owner/用途/测量与可访问/减动态/帧率/90ms 首反馈协议及候选组件许可仍需核。",
+    "implementation_runtime_and_acceptance_open": "213 项实际接线和 30/60/120Hz、掉帧/失焦/反抓、真实设备效果未全验。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "product_research_deadline_20261018/review_final/01_WHOLE_PRODUCT_UPGRADE_REVIEW.md"
+    ],
+    "current_executable": "既有213合同逐项Owner接线/减少动态/键盘测试",
+    "remaining_resources_and_acceptance": "真实设备30/60/120Hz及帧率/触控/读屏测量",
+    "source_record_ids_ref": "original v003 / group 11",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 12,
+    "title": "全产品前端规划与文字视觉草图",
+    "original_scope": "整个产品前端、所有ACC/CTH/BMP/Shared/AI/SYSTEM屏及官网；Astro/Web/Windows/macOS/iOS真实角色，三语/键盘/触控/读屏/200%字号。",
+    "owner": "F Experience/Core/ViewModel与原业务Owner；C2提出类型化计划；C6权限/连续性。",
+    "review_decision": "升级：工作界面本身AIGC按任务/证据/设备生成原生表现提议；保焦点/选区/播放头/锁定布局，事实控件不由模型伪造；新增领域12链、创作九组与后期/平台/数学状态。 当前唯一连贯方案改以frontend_current_manuscript_20261018/CURRENT_FRONTEND_REVIEW.md为准；旧V2是历史迭代材料，不要求读者自行判断后章覆盖前章。",
+    "current_research_and_design": "v009 完整 301 页及源稿冻结，301 页视觉 QA 与机器检查已完成；原 2887 段中 2884 原样、3 段有显式状态纠正，6 幅概念图保留。增量结果静态源码与 21 条事件研究断言已有。",
+    "research_evidence_open": "方案仍待用户审核；原设计引用正文/全部可用机制不因排版 QA 自动全读。界面自身 AIGC 按 V2.1 单独追踪，不等媒体生成。",
+    "implementation_runtime_and_acceptance_open": "真实 Gateway 表现选择、Owner callable、四端编辑/恢复、可访问/模型收益仍未全验。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "frontend_pdf_upgrade_20261018/frozen_review_v009_20261017T2350Z/REVIEW_FREEZE_RECEIPT.json",
+      "incremental_result_research_20261018/README.md"
+    ],
+    "current_executable": "已批准v010按全工作面推进；本轮4屏结果消费先行",
+    "remaining_resources_and_acceptance": "Gateway表现选择、四端编辑/恢复/无障碍/原创视觉；不以44屏为上限",
+    "source_record_ids_ref": "original v003 / group 12",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 13,
+    "title": "视觉参考与视频机制研究",
+    "original_scope": "视觉参考与完整视频机制研究：分别记录来源取得、实际阅读、可采用与已实现，并遵守使用许可。",
+    "owner": "F与C4研究，C5来源/权利。",
+    "review_decision": "升级：完整包确认后做逐文件和时段阅读/采用清单；此前已用旧参考不因新包未到而失效。",
+    "current_research_and_design": "当前已收到 20 视频、40863 解码帧，连续结构/布局/状态观察及细节限制记录已整合 v009；旧“未收到/等上传”的概括被此状态替代。",
+    "research_evidence_open": "已研究20视频的证据不外推未到的另2归档；待归档真实出现、文件身份核对及完整读取后再纳新版本，不说尚未收到内容已研究。既有观察不宣称每帧每字可读，也不覆盖seek跳过的嵌入源视频。",
+    "implementation_runtime_and_acceptance_open": "设计采用与真实前端效果各自验；研究完成不代表复制他人资产或已实现。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "frontend_pdf_upgrade_20261018/frozen_review_v009_20261017T2350Z/REVIEW_FREEZE_RECEIPT.json"
+    ],
+    "current_executable": "22唯一视频已读机制可继续适配验收",
+    "remaining_resources_and_acceptance": "仅315MB追加读取已取消；其他已采参考与媒体能力保留",
+    "source_record_ids_ref": "original v003 / group 13",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 14,
+    "title": "全SaaS、社媒对标与REA实用研究",
+    "original_scope": "原全SaaS/社媒/REA比较，LLM、Khoj/Pipali、Dify、DataStory、Brandwatch、Meltwater、Adobe及已有/新增对象全保留。",
+    "owner": "各领域Owner联合C5 Evaluation/F，C6版本。",
+    "review_decision": "升级：采用六产品官方基准和T1–T8经营/品牌/研究/数据/内容/媒体/传播/运行；既比单品，也比合理组合，分初次搭建和日常使用成本。",
+    "current_research_and_design": "六竞品 T1–T8 与合理组合基准已有；REA 6.5.0 实际安装、自有静态样本和 Figma/Brandwatch/Runway 新公开静态重建已有。",
+    "research_evidence_open": "旧三份 REA JSON 未找回这一历史事实保留；新重建不是找回。原全部对标对象深度不齐，无公平实测排名。",
+    "implementation_runtime_and_acceptance_open": "账号/版本/plan/同题对跑、盲评、全 SaaS/社媒真实能力仍未验。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "rea_research_frozen_20261018_2136",
+      "original_research_gap_closure_20261018/17_REA_PUBLIC_SAMPLE_RECONSTRUCTION.md",
+      "competitor_research_20261018/01_official_competitor_benchmark.md"
+    ],
+    "current_executable": "既有同题协议与许可公开样本可测试",
+    "remaining_resources_and_acceptance": "账号/plan/版本下同题真实对跑、盲评与公平比较",
+    "source_record_ids_ref": "original v003 / group 14",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 15,
+    "title": "外部开源项目适配",
+    "original_scope": "Claude Quickstarts全部29适配、EvoOntology、Obelisk及其他原获准项目；依赖、许可、服务/源码/运行边界。",
+    "owner": "原C1–C6相应Owner；依赖清单由对应工程责任汇总。",
+    "review_decision": "升级：沿既有Owner借机制，不整套移植第二架构。SlashUI经核是方法文章翻译，采用结果/反证/外部验证，不安装所谓UI库。第三方双基线清单纳入交接。",
+    "current_research_and_design": "本次第三方唯一主审核件改为v11完整190页Word：前置1页＋完整旧180页＋附录9页。旧1044个正文XML节点与其他ZIP成员按结构收据原样保全；179旧页PNG SHA相同继承已记录QA，物理页1、2、182–190共11页实际重新查看。v10作为历史保留，独立Markdown补篇仅为编制源稿，不是竞争主版本。新增固定wheel混合许可/训练可达AGPL、TTS环境冲突、精确锁/NF4来源与Quickstarts边界已写入v11。",
+    "research_evidence_open": "固定wheel许可读取缺口已推进，但实际模块/修改/内部训练/分发/网络提供方案须合格审阅。不能笼统称全栈Apache，也不推断全产品必须开源。精确训练锁、wheel/native完整闭包、NF4转换来源和模型独立LICENSE等仍未齐。",
+    "implementation_runtime_and_acceptance_open": "100 Python 身份、362 前端锁实例、74 服务路径、214 配置名均非全部已运行；真实 provider/采用/业务验证未全验。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "owned_ai_research_20261018/LICENSE_EVIDENCE_ADDENDUM.md",
+      "product_research_deadline_20261018/delivery_preparation/DELIVERY_MANIFEST.json",
+      "model_dependency_gap_research_20261018/REPORT.md",
+      "05_HISTORICAL_WORD_ADDENDUM_SOURCE.md",
+      "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/README.md",
+      "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/VERSION_DIFF.md",
+      "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/ACTUAL_QA.md",
+      "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/FINAL_PAGE_QA.json",
+      "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/structural-preservation.json"
+    ],
+    "current_executable": "已选固定组件逐项适配，明确许可不重复等待笼统审批",
+    "remaining_resources_and_acceptance": "精确依赖闭包/原生运行与发行义务；Qwen/20B等式冲突隔离",
+    "source_record_ids_ref": "original v003 / group 15",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 16,
+    "title": "模型可解释性与产品运行追踪",
+    "original_scope": "Nick/Goodfire内部行为观察、可检验解释、反例/保留集/因果干预/保存重载，与Gateway/Evaluation/Lineage/运行轨迹连接。",
+    "owner": "C2解释性/Gateway，C5 Evaluation/Evidence，C6追踪。",
+    "review_decision": "升级：继续观察、预测、干预、用户结果四层，不把小模型标签或相关性宣传成完整解释器。",
+    "current_research_and_design": "解释性 16 参数控制实验、8 单元 600 步仅 1/8 达阈值和限定持久化探针保留。",
+    "research_evidence_open": "真实大模型假说覆盖/稳健性/因果与业务价值未证，不能由小模型或漂亮图代替。",
+    "implementation_runtime_and_acceptance_open": "真实模型/资源/接线及业务验证未全验；负结果不得删除。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "product_research_deadline_20261018/review_final/01_WHOLE_PRODUCT_UPGRADE_REVIEW.md"
+    ],
+    "current_executable": "追踪持久化和解释证据界面可先开发",
+    "remaining_resources_and_acceptance": "真实大模型/资源、因果稳健性与业务价值；保留1/8负结果",
+    "source_record_ids_ref": "original v003 / group 16",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 17,
+    "title": "整体质量、独立审查与统一运行",
+    "original_scope": "持续同版兼容、独立审查、真实HTTP/DB/媒体/E2E、性能、安全、正常和异常恢复；工程/PO/发布/运行/商业分层。",
+    "owner": "C6全版运行，所有Owner交付边界，F四表面，独立评审。",
+    "review_decision": "升级：统一T1–T8与原J/U，机器合同和业务含义双验证；性能按用户动作/数据规模/冷热/设备报p50/p95/失败，不用日志done或测试总量代替成果。",
+    "current_research_and_design": "当前独立候选身份 6eadb7d 的 1890/28/217 为已核工程证据；历史失败及其他候选独立保留，不相加。",
+    "research_evidence_open": "研究质量/反例/性能/成本/可用性协议仍需逐原任务核，不以安全测试总量关闭业务质量。",
+    "implementation_runtime_and_acceptance_open": "4 local 解析拒绝、BMP04 计数 3 过 1 败、日期表示、UI 未展示仍明确未修；2306 草案暂停且未测试，不得引用为新通过版。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "task_backup_control_20261017/LATEST_FULL_STAGE_2302_RECEIPT.json"
+    ],
+    "current_executable": "冻结前局部回归、冻结后同版独立审查与HTTP/UI验证",
+    "remaining_resources_and_acceptance": "四端真实启动、性能/无障碍、冷开恢复和业务质量",
+    "source_record_ids_ref": "original v003 / group 17",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "group": 18,
+    "title": "成果保护、全日志备份与最终交付",
+    "original_scope": "完整自足源码、必要数据/实际模型、依赖/启动/全日志、失败/修订/恢复点、可编辑工程和成品、Drive核hash备份。",
+    "owner": "C6保护/重建；各Owner交证；C5资料索引。",
+    "review_decision": "升级：新报告与原恢复包分版本保存，每项标原件/阅读/实验/实现/缺失；第三方与前端新文稿冻结后再排版和校验。",
+    "current_research_and_design": "The versioned research/document artifacts and existing private archive checksums are recorded separately. Their presence is not product implementation, runtime acceptance, or a current complete-source restoration claim.",
+    "research_evidence_open": "5 原活跃根缺失历史、原资料/大模型/媒体缺件仍保留；独立恢复不证明历史全部增量找到。",
+    "implementation_runtime_and_acceptance_open": "本新索引仅本地文档冻结，未上传/发送/用户批准；最终同版自足包、干净启动、PO 重复与发布各自需要证据。",
+    "user_review": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED",
+    "current_sources": [
+      "task_backup_control_20261017/LATEST_REVIEW_v009_RECEIPT.json",
+      "task_backup_control_20261017/LATEST_FULL_STAGE_2302_RECEIPT.json",
+      "continuation_register_20261018/CHAT_SEND_RECEIPTS.json",
+      "task_backup_control_20261017/LATEST_RESEARCH_0025_RECEIPT.json"
+    ],
+    "current_executable": "分阶段来源manifest、证据/失败保全与最终包结构可做",
+    "remaining_resources_and_acceptance": "最终冻结SHA、独立回下载、干净启动与用户复核；不把备份当送达",
+    "source_record_ids_ref": "original v003 / group 18",
+    "execution_ownership": "云端：后端/研究/安全可行测试；前端UI/Dart/构建及本地设备：本地Codex/Grokbot。可推进不等已执行。"
+  },
+  {
+    "id": 19,
+    "title": "非产品私人事项（公开范围排除）",
+    "public_scope": "非产品私人事项，原义务保留在私人总账，不构成产品开发依赖。",
+    "original_record_sha256": "27bc8c6fec9cf425e874c49b82c15e81912dcda01b0d3addaadbc57fa122060e"
+  }
+]

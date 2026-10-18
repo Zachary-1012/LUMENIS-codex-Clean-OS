@@ -1,0 +1,366 @@
+[
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/collector_report_extracted.txt",
+    "candidate_sha256": "51c2b65461e91ddd6a6ee4f5e1155ad61f36ca4672e986456e26ebe8c5019392",
+    "bytes": 27304,
+    "reason": "Literal user-supplied original or workbook extraction; public redistribution authority not established",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/constitution_docx_extracted.txt",
+    "candidate_sha256": "f473e84745cf964f3b86a5c8654c4ef55872f40e782844eeb6bf1a7e017669a3",
+    "bytes": 4264,
+    "reason": "Literal user-supplied original or workbook extraction; public redistribution authority not established",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/original_material_readthrough_20261018/WORKBOOK_EXTRACT.json",
+    "candidate_sha256": "d40261bb7bcbf946821e86886dadbbb44cc779b3e039d10b69ac7e3231d7591f",
+    "bytes": 94976,
+    "reason": "Literal user-supplied original or workbook extraction; public redistribution authority not established",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/REA_VERIFIED_UPDATE.md",
+    "candidate_sha256": "30e0b61f28830d38e296d70b4efb65235b3a8f27fa7e82ca407eea0e0f29c82f",
+    "bytes": 6983,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/RESTORE_AND_VALIDATE.md",
+    "candidate_sha256": "dc9395dadcc199750aeaba2158884c3d1c9e66f55483aa7aeef092743ed59ae1",
+    "bytes": 7555,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/ADDITIVE_REQUIREMENTS.json",
+    "candidate_sha256": "88adc13191af2dd026a34c60ffae5e5d9a80c60a6288b9d1487b1878b0551f4b",
+    "bytes": 8934,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/RESEARCH_PROJECT_REGISTER.json",
+    "candidate_sha256": "0d328dcfeab13f5b2dd5185983faa01c9af0fc5402f12b8c992e5798f64f62ba",
+    "bytes": 917759,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/CAPTURE_SOURCE_MANIFEST.json",
+    "candidate_sha256": "10bf69bb9f43f90acfcbd71823678714c53ae6e131aa4b545e95c00058a0535b",
+    "bytes": 1016083,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/KNOWN_OPEN_ITEMS.md",
+    "candidate_sha256": "6cfba9f29e31faceeecc5e47c107e5038b208114ff88f215bc9325d7b8345bf2",
+    "bytes": 5250,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/FILE_MANIFEST.json",
+    "candidate_sha256": "189db17c6efdf7a8544d2f13bac800d26767d567d229083e1eec85879628da10",
+    "bytes": 315663,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/RESEARCH_DOCUMENT_CATALOG.json",
+    "candidate_sha256": "d15f4c977c7d48a7f2c91eed3cfbe7afce4facd9d5d04e1099745309941c0ab0",
+    "bytes": 851695,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/ORIGINAL_REFERENCE_INDEX.json",
+    "candidate_sha256": "4c72c6600f79f845e17ce0bb544e134723c1075384579cccbed05e1088562e96",
+    "bytes": 151339,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/CAPTURE_STABILITY_CHECK.json",
+    "candidate_sha256": "74e40a5da5a76feecff80f9a3363c0a5456c2ac5e8bf75d5a86b44eb0272034d",
+    "bytes": 371,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/VALIDATION.json",
+    "candidate_sha256": "705d8743ea3f200f59a12ab75d41b0228f4cd9b907e1d1ef2b43c5a602864c71",
+    "bytes": 1521,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/REA_DOWNLOAD_CONFIG_USAGE.md",
+    "candidate_sha256": "b6a7646eca94aca094ca151e19dcd1e6b7a92feb90ff98815f6690130104dffb",
+    "bytes": 2783,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/FREEZE_RECEIPT.json",
+    "candidate_sha256": "f20bda7fdba065a3f62de6d54ecd71b3507b873e242b8b8ac57601cfea2dc8be",
+    "bytes": 839,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/REA_AND_ORIGINAL_RESEARCH_INTAKE.json",
+    "candidate_sha256": "32c739b064172bdf0b6b1bf53122af6a89f065bcfcc88f2435838060aae24807",
+    "bytes": 9827,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/EXCLUSIONS.json",
+    "candidate_sha256": "67fe6adec5ba5c20101f52633195c69e1c0c799e8fb4f0e753658f33a02c5739",
+    "bytes": 135,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/continuation_register_20261018/00_START_HERE.md",
+    "candidate_sha256": "d8ecb5146a2e62bd6bb4e5c161becb40af125236680e2ceff3f3beb85f8721de",
+    "bytes": 6543,
+    "reason": "Private assistant continuity/control material; not product research publication",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/reviewed_full_text/CONSTITUTION_FULL_TEXT.md",
+    "candidate_sha256": "3470bb520e91611e446d8b49a1f024b403642eccc8bac3b8a745b62dbb3e99d3",
+    "bytes": 5826,
+    "reason": "Literal user-supplied original or workbook extraction; public redistribution authority not established",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/reviewed_full_text/1645_FULL_TEXT.txt",
+    "candidate_sha256": "b36b7aa71e9c45b106ec5e58e1aaf74b8aa6e11f1a41002477fd53d049d32f31",
+    "bytes": 25419,
+    "reason": "Literal user-supplied original or workbook extraction; public redistribution authority not established",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_NOON_ENTRY_0330_RECEIPT.json",
+    "candidate_sha256": "24b36827933aa6c5452a8dae665ef71b2144720e237483578e11107571d6c2de",
+    "bytes": 736,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/PENDING_STABLE_STAGES.json",
+    "candidate_sha256": "87dc3732a9d41cca8bed743e45a386bd071583d19780f064820a573b55e695d1",
+    "bytes": 750,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_FULL_STAGE_2302_RECEIPT.json",
+    "candidate_sha256": "9623753d29f264dc868ebc5c3c3d2f2d8a470a9d079b1cd03032896b10bcc2c2",
+    "bytes": 1102,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/BLOCKER_RECEIPT.json",
+    "candidate_sha256": "c56197df1d8f87e995c183caa0b2aa53c0eeff6f4b5b1ccf498348f19a7bf529",
+    "bytes": 768,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_RESEARCH_0025_RECEIPT.json",
+    "candidate_sha256": "f0d90723f049c386e61c035b20a7b9e8036c962a3bcf671a1aa11657519daefd",
+    "bytes": 865,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/BACKUP_SOURCES.json",
+    "candidate_sha256": "1168fbeefc7f2c93a2ffe51d538f383c4b11edd354069796f1995b51fbcb39ea",
+    "bytes": 35920,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_BMP03_FULL_STAGE_RECEIPT.json",
+    "candidate_sha256": "247201bedcea6c9104387797313b0e0077fc2adc560bcbcba5de6569a1652d35",
+    "bytes": 1321,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_VIDEO_V21_V23_RECEIPT.json",
+    "candidate_sha256": "81edb368b5f6f11d9edf390cd3263a2125846e47adefd107115634ee481750b4",
+    "bytes": 745,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_FULL_STAGE_2243_RECEIPT.json",
+    "candidate_sha256": "132713e0d868dd7b3a7fadd6f03d65abef06c62da331087c23a091ea0d586455",
+    "bytes": 1439,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_RESEARCH_2330_RECEIPT.json",
+    "candidate_sha256": "689c2868a2f44ca40bfc5526e99c773462dd78f163927dcbee4ce7d865364013",
+    "bytes": 872,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_REVIEW_v009_RECEIPT.json",
+    "candidate_sha256": "0de5539f652587d19ef78e18004b694f627d188c9f3a29f2b873355c5df82109",
+    "bytes": 851,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_NOON_v003_RECEIPT.json",
+    "candidate_sha256": "f7f089de1f315efd4c90604868be3f3719893ea8c9c71fefad546ef67af27ed2",
+    "bytes": 783,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_D830_FULL_STAGE_RECEIPT.json",
+    "candidate_sha256": "20d8f4426ecd0707ce459ec657b490e962b4faabcf8e3edcdb4bfa2216c2bf18",
+    "bytes": 1214,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_COMPLETE_CONTINUATION_DOCUMENT_RECEIPT.json",
+    "candidate_sha256": "83e114f227e36815cbb167a2ddb58e01050b2930b8cb8f06adce3e89f0f2aeeb",
+    "bytes": 1263,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_REVIEW_v010_RECEIPT.json",
+    "candidate_sha256": "0e2c118e134226c6ff7298bc63565a341748ad584c2b01e619928660619cc1ec",
+    "bytes": 750,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/RECONSTRUCTED_BASELINE_PROPOSAL_1934.md",
+    "candidate_sha256": "55f24617329a2e201155c199a93243239bf051c9a6e0bebac9f987f757fb00d1",
+    "bytes": 7397,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_CONTINUATION_STAGE_RECEIPT.json",
+    "candidate_sha256": "2f28231e9fd3fcf7eb641d819e31c9139fd7ded12d73521d903d9ffa26aa893f",
+    "bytes": 1260,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_FRONTEND_WORKING_TEXT_RECEIPT.json",
+    "candidate_sha256": "4a66ee70ef458a3891c165c34fc884dcfc41a428174523ea399647ec7830e0c6",
+    "bytes": 898,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_THIRD_PARTY_v11_RECEIPT.json",
+    "candidate_sha256": "a88c2a4274f44fc80ec1ef5460b9907a052754c62cbfea1216b853bb2af7662e",
+    "bytes": 864,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_VERIFIED_REA_COMPLETE.json",
+    "candidate_sha256": "9f0c366c9091216d802892adae34b69da82583eb147a9fa23bdde907cc618535",
+    "bytes": 941,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_EVENT_STAGE_RECEIPT.json",
+    "candidate_sha256": "467935ca6e0905545df3076e56ee7368517e5102a265f16ba1a6d4b0b75f51d7",
+    "bytes": 959,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_PUBLIC_RESEARCH_0520_RECEIPT.json",
+    "candidate_sha256": "f98f1275c6d7794b2ff59a1b2b5e08b308b9179b410b841d6bc09845c2be65a8",
+    "bytes": 947,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/CHECK_20261018T0220Z.json",
+    "candidate_sha256": "53101995419080759f447268b88101087911a4208edde2d09b70c87ec993dc0f",
+    "bytes": 2071,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/CHECK_20261018T0420Z.json",
+    "candidate_sha256": "3826d179d5ae59dff3473a274e67ceba30d250e25b51794f13cbe52f6e315f3b",
+    "bytes": 1962,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_DOCUMENT_STAGE_RECEIPT.json",
+    "candidate_sha256": "b07031951c8a28117ba58e86239bd27cd980281790d25abe1d2fd634bee42c54",
+    "bytes": 2238,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_RECONSTRUCTED_PRESERVATION_RECEIPT.json",
+    "candidate_sha256": "c5601b69d2121cdda98e3b813efa7a13bd0f2a681ab69ac694e36fdbe23648ef",
+    "bytes": 2292,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_PROJECT_README_RECEIPT.json",
+    "candidate_sha256": "7256659dc730b689da4a9a2a9c83878ca199c6ee30e52e54b85b11cc1a268a8f",
+    "bytes": 817,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_VERIFIED_REPAIR_CANDIDATE.json",
+    "candidate_sha256": "76a1ce8c9654bf5eda94a24263569d5037234a7438ad643f9f2c14c7d65888b2",
+    "bytes": 1144,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_RESEARCH_2320_RECEIPT.json",
+    "candidate_sha256": "9ed4e4b7c9b41b1f3c87a074dbf318cc391c2d19a150a76c68198341a8edb508",
+    "bytes": 823,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/TASK_ARTIFACT_INDEX.md",
+    "candidate_sha256": "707805fe93dc99bd748ac1d73d64e6be482192304105122561a7a1d8f333aa6a",
+    "bytes": 25231,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/backup-retention/task_backup_control_20261017/LATEST_RESEARCH_2259_RECEIPT.json",
+    "candidate_sha256": "f5e4a22848ae512187d9f42472854242b3c3a8cefa6eddf2f2e27d78bc35e254",
+    "bytes": 682,
+    "reason": "Private backup-control receipt; replaced by product-only custody checksum summary",
+    "original_retention": "Original private source retained unchanged; no deletion of source or private backup"
+  }
+]

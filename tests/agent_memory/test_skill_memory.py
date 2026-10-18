@@ -11,52 +11,45 @@ from agent_memory.skill import SkillMemory
 
 class TestSkillMemory:
     def test_list_skills(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         sm = SkillMemory(db_path=seeded_db, enabled=True)
-        skills = sm.list_skills()
-        assert len(skills) >= 2
-        skill_ids = [s["skill_id"] for s in skills]
-        assert "test_skill_a" in skill_ids
-        assert "collector_xhs" in skill_ids
+        assert sm.list_skills() == []
 
     def test_list_skills_by_status(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         sm = SkillMemory(db_path=seeded_db, enabled=True)
-        enabled = sm.list_skills(status="enabled")
-        assert len(enabled) >= 1
-        assert all(s["status"] == "enabled" for s in enabled)
+        assert sm.list_skills(status="enabled") == []
 
     def test_get_skill(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         sm = SkillMemory(db_path=seeded_db, enabled=True)
-        skill = sm.get_skill("test_skill_a")
-        assert skill is not None
-        assert skill["name"] == "测试技能A"
+        assert sm.get_skill("test_skill_a") is None
 
     def test_get_skill_not_found(self, seeded_db):
         sm = SkillMemory(db_path=seeded_db, enabled=True)
         assert sm.get_skill("nonexistent") is None
 
     def test_get_skill_stats(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         sm = SkillMemory(db_path=seeded_db, enabled=True)
-        stats = sm.get_skill_stats("test_skill_a")
-        assert stats["total"] == 2
-        assert stats["success"] == 1
-        assert stats["success_rate"] == 0.5
-        assert stats["failed"] == 1
+        assert sm.get_skill_stats("test_skill_a")["success_rate"] is None
+        assert sm.get_skill_stats("test_skill_a")["business_success_rate"] is None
 
     def test_get_skill_stats_no_executions(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         sm = SkillMemory(db_path=seeded_db, enabled=True)
-        stats = sm.get_skill_stats("collector_xhs")
-        assert stats["total"] == 0
-        assert stats["success_rate"] == 0.0
+        assert sm.get_skill_stats("collector_xhs")["total"] == 0
+        assert sm.get_skill_stats("collector_xhs")["success_rate"] is None
 
     def test_get_all_skill_stats(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         sm = SkillMemory(db_path=seeded_db, enabled=True)
-        all_stats = sm.get_all_skill_stats()
-        assert len(all_stats) >= 2
+        assert sm.get_all_skill_stats() == []
 
     def test_get_recent_executions(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         sm = SkillMemory(db_path=seeded_db, enabled=True)
-        execs = sm.get_recent_executions(skill_id="test_skill_a")
-        assert len(execs) == 2
+        assert sm.get_recent_executions("test_skill_a") == []
 
     def test_record_feedback(self, seeded_db):
         sm = SkillMemory(db_path=seeded_db, enabled=True)
@@ -83,7 +76,6 @@ class TestSkillMemory:
         assert sm.get_skill_stats("test_skill_a")["total"] == 0
 
     def test_stats(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         sm = SkillMemory(db_path=seeded_db, enabled=True)
-        s = sm.stats()
-        assert s["skills_registry_total"] >= 2
-        assert s["skill_executions_total"] >= 2
+        assert sm.stats()["visible_execution_count"] == 0

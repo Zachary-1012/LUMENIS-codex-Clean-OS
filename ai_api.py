@@ -6,6 +6,7 @@ Learning. The historical ungrounded "AI web search" route is kept only as an
 explicit retired compatibility surface and cannot create canonical events.
 """
 from __future__ import annotations
+import json
 import re
 import threading
 from flask import Blueprint, jsonify, request
@@ -403,19 +404,23 @@ def api_web_sentiment_history():
 
 @bp.route('/api/ai/chat', methods=['POST'])
 def api_ai_chat():
+    def invalid(code, http_status, external_approval=None):
+        from lumenis.ai_hub import service
+        result = service.invalid_chat_input(code, external_approval=external_approval)
+        return jsonify(result), 503 if result['status'] == 'UNAVAILABLE' else http_status
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
-        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'JSON_OBJECT_REQUIRED'}), 400
+        return invalid('JSON_OBJECT_REQUIRED', 400)
     text = data.get('message', data.get('text'))
     if not isinstance(text, str) or not text.strip():
-        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'MESSAGE_REQUIRED'}), 400
+        return invalid('MESSAGE_REQUIRED', 400, data.get('external_approval'))
     if len(text) > 4000:
-        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'MESSAGE_TOO_LARGE'}), 413
+        return invalid('MESSAGE_TOO_LARGE', 413, data.get('external_approval'))
     from lumenis.system.ai_gateway import user_api_adapter
-    if user_api_adapter.is_selected():
+    if user_api_adapter.is_selected() or data.get('external_approval') is not None:
         from lumenis.ai_hub import service
-        result = service.chat(text, history=data.get('history'))
-        return jsonify(result), 200 if result['ok'] else 503
+        result = service.chat(text, history=data.get('history'), external_approval=data.get('external_approval'))
+        return jsonify(result), 200 if result['ok'] else (409 if result.get('status') == 'APPROVAL_REQUIRED' else 503)
     functions = function_registry.search_function_metadata(text, 5)
     context = (
         '可用功能入口（仅路由信息，不代表当前业务数据）：'
@@ -667,13 +672,17 @@ def _source_brief_task_local_access_allowed():
     if actor is None:
         return False
     try:
+        if request.endpoint == 'ai_api.api_ai_tasks' and request.method == 'GET':
+            return True  # The list filters every row through its live Owner below.
         if request.endpoint == 'ai_api.api_ai_tasks' and request.method == 'POST':
             body = request.get_json(silent=True)
             if not isinstance(body, dict) or 'task' in body or 'skill_id' in body:
                 return False
             context = body.get('context')
-        elif request.endpoint in {'ai_api.api_ai_tasks_get', 'ai_api.api_ai_tasks_run'}:
-            expected_method = 'POST' if request.endpoint.endswith('_run') else 'GET'
+        elif request.endpoint in {'ai_api.api_ai_tasks_get', 'ai_api.api_ai_tasks_run',
+                                  'ai_api.api_ai_tasks_steps', 'ai_api.api_ai_tasks_evidence',
+                                  'ai_api.api_ai_tasks_cancel'}:
+            expected_method = 'POST' if request.endpoint.endswith(('_run', '_cancel')) else 'GET'
             if request.method != expected_method:
                 return False
             task = _get_engine().get_task((request.view_args or {}).get('task_id', ''))
@@ -705,9 +714,15 @@ def _scoped_report_task_boundary():
             or (path == '/api/ai/trace' and request.args.get('task_id', '').startswith('rbrief_'))):
         return jsonify({'ok': False, 'code': 'REPORT_TASK_SCOPED_ROUTE_REQUIRED'}), 403
     task_id = (request.view_args or {}).get('task_id')
+    if path == '/api/ai/trace':
+        task_id = request.args.get('task_id')
     if task_id:
         engine = _get_engine()
         task = engine.get_task(task_id)
+        if task and not (task.get('context') or {}).get('source_brief_job_id'):
+            include_result = request.endpoint != 'ai_api.api_ai_tasks_cancel'
+            if not _task_row_read_allowed(task, include_result=include_result):
+                return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
         if task and (task.get('context') or {}).get('source_brief_job_id'):
             try:
                 engine._read_analysis_source(task)
@@ -729,6 +744,8 @@ def api_ai_tasks():
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return jsonify({'ok': False, 'code': 'JSON_OBJECT_REQUIRED'}), 400
+    if data.get('execution_mode') == 'agent':
+        return _agent_runtime_create(data)
     if 'task' in data or 'skill_id' in data:
         return api_ai_skill_execution_create(data)
     return api_ai_tasks_create(data)
@@ -787,6 +804,13 @@ def api_ai_tasks_create(data=None):
                            'openai_math_declaration': declaration,
                            'openai_math_problem_sha256': frozen_hash,
                            'openai_math_source_scope': _scope_material(**material)}
+        if 'source_brief_job_id' not in context:
+            from lumenis.auth.service import get_current_user
+            actor = get_current_user(read_only=True)
+            if not isinstance(actor, dict) or type(actor.get('id')) is not int:
+                return jsonify({'ok': False, 'code': 'AUTHENTICATED_ACTOR_REQUIRED'}), 403
+            created_by = f"actor:{actor['id']}"
+            context = {**context, 'actor_id': actor['id']}
         if not isinstance(user_input, str) or not user_input.strip():
             return jsonify({'ok': False, 'error': 'input is required'}), 400
         engine = _get_engine()
@@ -814,31 +838,118 @@ def api_ai_skill_execution_create(data):
     if not task_desc.strip() and not skill_id.strip():
         return jsonify({'ok': False, 'error': 'task or skill_id required'}), 400
     try:
-        from lumenis.shared.agents.skills.execution import run_execution_chain, ActionType
-        try:
-            action_type = ActionType(data.get('action_type', 'ANALYZE'))
-        except (TypeError, ValueError):
-            return jsonify({'ok': False, 'code': 'ACTION_TYPE_INVALID'}), 400
-        ctx = run_execution_chain(
-            skill_id=skill_id or 'zbc.generic_analysis',
-            task=task_desc,
-            input_payload=data.get('input', {}),
-            action_type=action_type,
-            user_id=data.get('user_id'),
-            product=data.get('product', 'SYSTEM'),
-            domain=data.get('domain', 'global'),
+        from lumenis.auth.service import get_current_user
+        from account.skills import execute_skill_api
+        actor = get_current_user(read_only=True)
+        if not isinstance(actor, dict) or type(actor.get('id')) is not int:
+            return jsonify({'ok': False, 'code': 'AUTHENTICATED_ACTOR_REQUIRED'}), 403
+        outcome = execute_skill_api(
+            skill_id=skill_id or 'zbc.generic_analysis', task=task_desc,
+            input_payload=data.get('input', {}), action_type=data.get('action_type', 'ANALYZE'),
+            user_id=actor['id'], product=data.get('product', 'SYSTEM'),
+            _background=data.get('background') is True, scope=data.get('scope'),
         )
-        evidence_record = getattr(ctx, 'evidence_record', None)
-        return jsonify({
-            'ok': True,
-            'execution_id': ctx.execution_id,
-            'status': getattr(ctx.status, 'value', str(ctx.status)),
-            'evidence_recorded': bool(
-                isinstance(evidence_record, dict) and evidence_record.get('ok')
-            ),
-        })
+        if outcome.get('accepted'):
+            from lumenis.shared.agents.skills.execution import start_registered_skill_job
+            start_registered_skill_job(outcome['execution_id'])
+            return jsonify({'ok': True, **outcome}), 202
+        return jsonify({'ok': outcome.get('success') is True, **outcome}), (
+            200 if outcome.get('success') else 403 if outcome.get('code') in {
+                'ACTOR_REQUIRED', 'ACTOR_INVALID', 'PRODUCT_SCOPE_DENIED', 'PRODUCT_SCOPE_UNAVAILABLE',
+            } else 409)
     except Exception:
         return jsonify({'ok': False, 'code': 'SKILL_EXECUTION_FAILED'}), 500
+
+
+def _task_row_read_allowed(record, *, kind='TASK_ENGINE', include_result=True):
+    try:
+        if kind == 'TASK_ENGINE' and (record.get('context') or {}).get('source_brief_job_id'):
+            engine = _get_engine()
+            engine._read_analysis_source(record)
+            if record.get('status') == 'succeeded':
+                stored = record.get('result')
+                output = stored.get('output') if isinstance(stored, dict) else None
+                valid, _ = engine._verify_owner_outcome(record, output)
+                return valid
+            return True
+        from lumenis.auth.service import get_current_user
+        from account.authorization import check_dual_domain_permission
+        actor = get_current_user(read_only=True)
+        if kind == 'TASK_ENGINE' and record.get('created_by') == 'agent_runtime':
+            from agent_runtime.task_binding import authorize_task_result_read, authorized_context
+            from lumenis.system.security.permission import resolve_local_workspace_principal
+            current = actor if isinstance(actor, dict) else resolve_local_workspace_principal(module='skills', action='read')
+            if current is None:
+                return False
+            if include_result is not True:
+                # Stopping one's existing task does not require continued access
+                # to a revoked child Skill's output. No output is returned here.
+                authorized_context(record, current)
+                return True
+            return authorize_task_result_read(record, current) is True
+        if not isinstance(actor, dict) or type(actor.get('id')) is not int:
+            return False
+        if kind == 'SKILL_EXECUTION':
+            if not (record.get('user_id') == actor['id'] and check_dual_domain_permission(
+                    actor['id'], record.get('product'), module=record.get('skill_id'), action='read')):
+                return False
+            from lumenis.shared.agents.skills.execution import verified_execution_scope, _queued_execution_scope
+            scoped_id = str(record.get('execution_id') or '').startswith(('skillscope_', 'skilljob_scoped_', 'agentstep_'))
+            has_receipt = bool(json.loads(record.get('evidence_json') or '{}').get('scope_receipt'))
+            if scoped_id or has_receipt:
+                if record.get('status') == 'completed':
+                    return verified_execution_scope(record, actor) is not None
+                # Pending/cancelled background requests carry a submission
+                # receipt, not a successful-result receipt. Recheck both.
+                return _queued_execution_scope(record) is not None
+            return True
+        return (record.get('created_by') == f"actor:{actor['id']}" and
+                (record.get('context') or {}).get('actor_id') == actor['id'])
+    except Exception:
+        return False
+
+
+def authorize_local_agent_root_request():
+    """Exact Basic-perimeter delegation; every handler repeats its owner checks."""
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    try:
+        principal = resolve_local_workspace_principal(module='skills', action='read')
+        if principal is None:
+            return False
+        routes = {
+            'api_ai_tasks': ('/api/ai/tasks', {'GET', 'POST'}),
+            'api_ai_tasks_get': ('/api/ai/tasks/<task_id>', {'GET'}),
+            'api_ai_tasks_run': ('/api/ai/tasks/<task_id>/run', {'POST'}),
+            'api_ai_tasks_cancel': ('/api/ai/tasks/<task_id>/cancel', {'POST'}),
+            'api_ai_tasks_steps': ('/api/ai/tasks/<task_id>/steps', {'GET'}),
+            'api_ai_tasks_evidence': ('/api/ai/tasks/<task_id>/evidence', {'GET'}),
+            'api_ai_task_memory': ('/api/ai/tasks/<task_id>/memory', {'GET', 'POST', 'DELETE'}),
+            'api_ai_task_learning': ('/api/ai/tasks/<task_id>/learning', {'GET', 'POST'}),
+        }
+        entry = routes.get((request.endpoint or '').removeprefix('ai_api.'))
+        if (not request.endpoint or not request.endpoint.startswith('ai_api.') or not entry
+                or request.url_rule.rule != entry[0] or request.method not in entry[1]):
+            return False
+        task_id = (request.view_args or {}).get('task_id')
+        if task_id:
+            task = _get_engine().get_task(task_id)
+            if not task or task.get('created_by') != 'agent_runtime':
+                return False
+            from agent_runtime.task_binding import authorized_context
+            authorized_context(task, principal)
+            return True
+        if request.method == 'POST':
+            data = request.get_json(silent=True)
+            return isinstance(data, dict) and data.get('execution_mode') == 'agent'
+        # Listing filters each row through current owner before pagination.
+        return True
+    except Exception:
+        return False
+
+
+def _task_notification(record, kind):
+    from agent_focus.notification import project_persisted_task_notification
+    return project_persisted_task_notification(record, task_kind=kind)
 
 
 @bp.route('/api/ai/tasks/<task_id>', methods=['GET'])
@@ -847,9 +958,28 @@ def api_ai_tasks_get(task_id):
     try:
         engine = _get_engine()
         task = engine.get_task(task_id)
+        kind = 'TASK_ENGINE'
         if not task:
+            from lumenis.shared.agents.skills.execution import query_executions
+            rows = query_executions(execution_id=task_id, limit=1, strict=True)
+            task = rows[0] if rows else None
+            kind = 'SKILL_EXECUTION'
+        if not task or not _task_row_read_allowed(task, kind=kind):
             return jsonify({'ok': False, 'error': 'task not found'}), 404
-        return jsonify({'ok': True, 'task': task})
+        conversation_refs = []
+        conversation_links_state = 'not_applicable'
+        if kind in {'TASK_ENGINE', 'SKILL_EXECUTION'}:
+            try:
+                from lumenis.ai_hub.conversations import current_actor, task_conversation_refs
+                conversation_refs = task_conversation_refs(current_actor(), task_id)
+                conversation_links_state = 'verified'
+            except PermissionError:
+                conversation_links_state = 'not_authorized'
+            except Exception:
+                conversation_links_state = 'unavailable'  # Ordinary task read stays usable.
+        return jsonify({'ok': True, 'task': {**task, 'task_kind': kind},
+                        'notification': _task_notification(task, kind),
+                        'conversation_refs': conversation_refs, 'conversation_links_state': conversation_links_state})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -858,11 +988,19 @@ def api_ai_tasks_get(task_id):
 def api_ai_tasks_run(task_id):
     """执行任务（完整调用链：parse → agent → skill → permission → execute）。"""
     try:
+        if task_id.startswith('skilljob_'):
+            return _registered_skill_mutation(task_id, cancel=False)
         engine = _get_engine()
         task = engine.get_task(task_id)
         if not task:
             return jsonify({'ok': False, 'error': 'task not found'}), 404
-        result = engine.run_task(task_id)
+        if task.get("created_by") == "agent_runtime":
+            from agent_runtime.task_binding import run_agent_task
+            result = run_agent_task(task_id)
+        else:
+            result = engine.run_task(task_id)
+        if result.get('created_by') == 'agent_runtime' and not _task_row_read_allowed(result):
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
         return jsonify({'ok': True, 'task': result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -874,6 +1012,9 @@ def api_ai_tasks_steps(task_id):
     try:
         engine = _get_engine()
         steps = engine.get_steps(task_id)
+        task = engine.get_task(task_id)
+        if task and task.get('created_by') == 'agent_runtime' and not _task_row_read_allowed(task):
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
         return jsonify({'ok': True, 'steps': steps, 'count': len(steps)})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -885,6 +1026,9 @@ def api_ai_tasks_evidence(task_id):
     try:
         engine = _get_engine()
         evidence = engine.get_evidence(task_id)
+        task = engine.get_task(task_id)
+        if task and task.get('created_by') == 'agent_runtime' and not _task_row_read_allowed(task):
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
         return jsonify({'ok': True, 'evidence': evidence, 'count': len(evidence)})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -910,8 +1054,12 @@ def api_ai_tasks_approve(task_id):
 def api_ai_tasks_cancel(task_id):
     """取消任务。"""
     try:
+        if task_id.startswith('skilljob_'):
+            return _registered_skill_mutation(task_id, cancel=True)
         engine = _get_engine()
         result = engine.cancel_task(task_id)
+        if result.get('created_by') == 'agent_runtime' and not _task_row_read_allowed(result):
+            return jsonify({'ok': True, 'task': {'task_id': task_id, 'status': result.get('status')}})
         return jsonify({'ok': True, 'task': result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -928,17 +1076,28 @@ def api_ai_tasks_list():
         status = request.args.get('status') or None
         engine = _get_engine()
         window = offset + limit
-        engine_tasks = engine.list_tasks(status=status, limit=window, offset=0)
         from lumenis.shared.agents.skills.execution import query_executions
-        executions = query_executions(
-            status=status, limit=window, offset=0, strict=True,
-        )
-        combined = [
-            {**dict(task), 'task_kind': 'TASK_ENGINE'} for task in engine_tasks
-        ] + [
-            {**dict(execution), 'task_kind': 'SKILL_EXECUTION'}
-            for execution in executions
-        ]
+
+        def visible_rows(kind):
+            visible, raw_offset = [], 0
+            batch_size = 100
+            while len(visible) < window + 1:
+                if kind == 'TASK_ENGINE':
+                    rows = engine.list_tasks(status=status, limit=batch_size, offset=raw_offset)
+                else:
+                    rows = query_executions(status=status, limit=batch_size, offset=raw_offset, strict=True)
+                for raw in rows:
+                    row = engine.get_task(raw['task_id']) if kind == 'TASK_ENGINE' else raw
+                    if row is not None and _task_row_read_allowed(row, kind=kind):
+                        visible.append({**dict(row), 'task_kind': kind})
+                raw_offset += len(rows)
+                if len(rows) < batch_size:
+                    break
+            return visible
+
+        # Offset belongs to the authorized combined view, never raw multi-user
+        # rows. Scan each existing Owner until enough visible records or EOF.
+        combined = visible_rows('TASK_ENGINE') + visible_rows('SKILL_EXECUTION')
         combined.sort(
             key=lambda item: str(
                 item.get('created_at') or item.get('timestamp') or item.get('started_at') or ''
@@ -950,8 +1109,11 @@ def api_ai_tasks_list():
         execution_page = [item for item in page if item['task_kind'] == 'SKILL_EXECUTION']
         return jsonify({
             'ok': True, 'tasks': page, 'count': len(page),
+            'has_more': len(combined) > offset + limit,
+            'next_offset': offset + len(page) if len(combined) > offset + limit else None,
             'task_engine_tasks': task_engine_page,
             'skill_executions': execution_page,
+            'notifications': [_task_notification(row, row['task_kind']) for row in page],
         })
     except Exception:
         return jsonify({'ok': False, 'code': 'AI_TASK_LIST_UNAVAILABLE'}), 503
@@ -1000,6 +1162,15 @@ def api_ai_trace():
         limit = int(request.args.get('limit', 100))
         engine = _get_engine()
         traces = engine.get_trace(task_id=task_id, limit=limit)
+        # The no-task trace view is also actor-filtered; a global diagnostic
+        # endpoint cannot disclose another user's or a revoked Skill's result.
+        visible = {}
+        for row in traces:
+            identifier = row.get('task_id')
+            if identifier not in visible:
+                task = engine.get_task(identifier) if identifier else None
+                visible[identifier] = bool(task and _task_row_read_allowed(task))
+        traces = [row for row in traces if visible.get(row.get('task_id'))]
         return jsonify({'ok': True, 'traces': traces, 'count': len(traces)})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -1041,3 +1212,195 @@ def register_ai_api(app):
     """注册 AI API 蓝图。"""
     app.register_blueprint(bp)
     return bp
+
+
+def _registered_skill_mutation(task_id, *, cancel):
+    from lumenis.shared.agents.skills.execution import (
+        query_executions, cancel_registered_skill, run_registered_skill_job)
+    rows = query_executions(execution_id=task_id, limit=1, strict=True)
+    if not rows or not _task_row_read_allowed(rows[0], kind='SKILL_EXECUTION'):
+        return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
+    row = cancel_registered_skill(task_id) if cancel else run_registered_skill_job(task_id)
+    return jsonify({'ok': True, 'task': {**row, 'task_kind': 'SKILL_EXECUTION'},
+                    'notification': _task_notification(row, 'SKILL_EXECUTION')})
+
+
+def _agent_runtime_create(data):
+    from lumenis.auth.service import get_current_user
+    from agent_runtime.task_binding import create_agent_task, start_agent_task
+    actor = get_current_user(read_only=True)
+    if not isinstance(actor, dict):
+        from lumenis.system.security.permission import resolve_local_workspace_principal
+        actor = resolve_local_workspace_principal(module='skills', action='read')
+    if actor is None:
+        return jsonify({'ok': False, 'code': 'VERIFIED_ACTOR_REQUIRED'}), 403
+    try:
+        task = create_agent_task(_get_engine(), actor=actor, goal=data.get('input'),
+            domain_id=data.get('domain_id'), scope=data.get('scope'), steps=data.get('steps'))
+        start_agent_task(task['task_id'])
+        return jsonify({'ok': True, 'accepted': True, 'task': task}), 202
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 403
+    except (ValueError, TypeError) as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 400
+
+
+@bp.route('/api/ai/tasks/<task_id>/memory', methods=['GET', 'POST', 'DELETE'])
+def api_ai_task_memory(task_id):
+    """Scoped derived memory; corrections never mutate Source or audit evidence."""
+    try:
+        from lumenis.auth.service import get_current_user
+        from lumenis.shared.database import main_db_path
+        from agent_memory.episodic import EpisodicMemory
+        from agent_memory.semantic import SemanticMemory
+        from agent_memory.task import TaskMemory
+        actor = get_current_user(read_only=True)
+        task = _get_engine().get_task(task_id)
+        if not task or not _task_row_read_allowed(task):
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
+        data = request.get_json(silent=True) or {} if request.method != 'GET' else request.args
+        layer = data.get('layer', 'episodic')
+        classes = {'episodic': EpisodicMemory, 'semantic': SemanticMemory, 'task': TaskMemory}
+        if layer not in classes:
+            return jsonify({'ok': False, 'code': 'MEMORY_LAYER_INVALID'}), 400
+        memory = classes[layer](db_path=main_db_path(), enabled=True).bind_task(task_id, actor['id'] if isinstance(actor, dict) else None)
+        if request.method == 'GET':
+            key = data.get('key')
+            records = [memory.retrieve(key)] if key else memory.query(limit=50)
+            return jsonify({'ok': True, 'records': [r.to_dict() for r in records if r],
+                            'truth_kind': 'derived_memory'})
+        if set(data) - {'layer', 'key', 'value', 'expected_revision'}:
+            return jsonify({'ok': False, 'code': 'MEMORY_FIELDS_INVALID'}), 400
+        key = data.get('key')
+        if not isinstance(key, str) or not key or len(key) > 256:
+            return jsonify({'ok': False, 'code': 'MEMORY_KEY_INVALID'}), 400
+        memory._binding_context(write=True)
+        if request.method == 'DELETE':
+            changed = memory.forget_revision(key, expected_revision=data.get('expected_revision'))
+            return jsonify({'ok': True, 'forgotten': changed})
+        value = data.get('value')
+        if not isinstance(value, dict):
+            return jsonify({'ok': False, 'code': 'MEMORY_VALUE_INVALID'}), 400
+        record = memory.correct(key, value, expected_revision=data.get('expected_revision'))
+        return jsonify({'ok': True, 'record': record.to_dict(), 'truth_kind': 'derived_memory'})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 403
+    except ValueError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 400
+    except RuntimeError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 409
+    except Exception:
+        return jsonify({'ok': False, 'code': 'MEMORY_STORAGE_UNAVAILABLE'}), 503
+
+
+@bp.route('/api/ai/tasks/<task_id>/learning', methods=['GET', 'POST'])
+def api_ai_task_learning(task_id):
+    """Existing Learning owner, scoped to the original task; no activation here."""
+    try:
+        from lumenis.auth.service import get_current_user
+        from lumenis.shared.database import main_db_path
+        from lumenis.shared.learning.loop import LearningLoop
+        actor = get_current_user(read_only=True)
+        task = _get_engine().get_task(task_id)
+        if not task or not _task_row_read_allowed(task):
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
+        actor_id = actor['id'] if isinstance(actor, dict) else None
+        learning = LearningLoop(db_path=main_db_path(), enabled=True).bind_source_task(task_id, actor_id)
+        learning.learning_memory._scoped_check()
+        if request.method == 'GET':
+            return jsonify({'ok': True, 'suggestions': learning.list_rule_suggestions(),
+                            'active_policy_changed': False})
+        data = request.get_json(silent=True) or {}
+        if not isinstance(data, dict) or set(data) - {'operation', 'text', 'content', 'rule_type',
+                'suggestion_id', 'expected_revision', 'approved', 'candidate_ref', 'confirm'}:
+            return jsonify({'ok': False, 'code': 'LEARNING_FIELDS_INVALID'}), 400
+        operation = data.get('operation')
+        learning.learning_memory._scoped_check(write=True)
+        if operation in ('prepare_review', 'prepare_apply', 'confirm_review', 'confirm_apply'):
+            from lumenis.system.security.permission import prepare_learning_candidate, confirm_learning_candidate
+            action = operation.split('_', 1)[1]
+            if operation.startswith('confirm_') and data.get('confirm') is True:
+                # Read-only reconciliation of an already committed exact request.
+                # Never restore an expired approval or perform another write.
+                from agent_memory.base import get_db_connection
+                conn = get_db_connection(main_db_path())
+                try:
+                    rows = conn.execute("SELECT * FROM agent_learning_records WHERE related_task_id=? AND learning_type='rule_suggestion'",
+                                        (task_id,)).fetchall()
+                    for row in rows:
+                        if not learning.learning_memory._row_visible(row, conn):
+                            continue
+                        content = json.loads(row['content_json'] or '{}')
+                        metadata = json.loads(row['metadata_json'] or '{}')
+                        receipt = (metadata.get('transitions') or [{}])[-1]
+                        if (content.get('suggestion_id') == data.get('suggestion_id')
+                                and receipt.get('candidate_ref') == data.get('candidate_ref')
+                                and receipt.get('action') == action
+                                and receipt.get('approved') == (data.get('approved') if action == 'review' else None)
+                                and receipt.get('from_revision') == data.get('expected_revision')
+                                and receipt.get('to_revision') == content.get('revision')):
+                            return jsonify({'ok': True, 'idempotent_hit': True,
+                                'suggestions': learning.list_rule_suggestions(), 'active_policy_changed': False})
+                finally:
+                    conn.close()
+            admission = prepare_learning_candidate(learning, suggestion_id=data.get('suggestion_id'),
+                revision=data.get('expected_revision'), action=action,
+                approved=data.get('approved') if action == 'review' else None)
+            if operation.startswith('prepare_'):
+                return jsonify({'ok': True, 'candidate_ref': admission.resource, 'action': action,
+                    'expected_revision': admission.revision, 'approval_required': True,
+                    'active_policy_changed': False})
+            if data.get('confirm') is not True:
+                raise ValueError('LEARNING_EXPLICIT_CONFIRMATION_REQUIRED')
+            admission = confirm_learning_candidate(admission, candidate_ref=data.get('candidate_ref'),
+                revision=data.get('expected_revision'), action=action)
+            learning.learning_memory._review_admission = admission
+            operation = action
+        learning.learning_memory._scoped_check(write=True, review=operation in ('review', 'apply'))
+        if operation == 'feedback':
+            text = data.get('text')
+            if not isinstance(text, str) or not text.strip() or len(text.encode()) > 128 * 1024:
+                raise ValueError('LEARNING_FEEDBACK_INVALID')
+            record = learning.record_user_feedback(text, related_task_id=task_id)
+            if not record:
+                raise RuntimeError('LEARNING_RECORD_NOT_COMMITTED')
+            return jsonify({'ok': True, 'record_id': record, 'lifecycle_stage': 'raw'})
+        if operation == 'suggest':
+            content = data.get('content')
+            if not isinstance(content, dict):
+                raise ValueError('LEARNING_CONTENT_INVALID')
+            rule_type = data.get('rule_type', 'general')
+            if rule_type not in {'general', 'subject_words', 'exclude_words', 'risk', 'sentiment'}:
+                raise ValueError('LEARNING_RULE_TYPE_INVALID')
+            item = learning.generate_rule_suggestion('user_feedback', content, rule_type=rule_type)
+            if item is None:
+                raise RuntimeError('LEARNING_SUGGESTION_NOT_COMMITTED')
+            return jsonify({'ok': True, 'suggestion': item.to_dict(), 'active_policy_changed': False})
+        if operation not in ('review', 'apply'):
+            raise ValueError('LEARNING_OPERATION_INVALID')
+        revision = data.get('expected_revision')
+        if type(revision) is not int or revision < 1:
+            raise ValueError('LEARNING_REVISION_REQUIRED')
+        identifier = data.get('suggestion_id')
+        if not isinstance(identifier, str) or not identifier:
+            raise ValueError('LEARNING_SUGGESTION_REQUIRED')
+        if operation == 'review':
+            if type(data.get('approved')) is not bool:
+                raise ValueError('LEARNING_REVIEW_DECISION_REQUIRED')
+            ok = learning.review_rule_suggestion(identifier, data['approved'],
+                reviewer='actor:' + str(actor_id), expected_revision=revision)
+        else:
+            ok = learning.apply_approved_rule(identifier, applied_by='actor:' + str(actor_id),
+                                             expected_revision=revision)
+        if not ok:
+            return jsonify({'ok': False, 'code': 'LEARNING_REVISION_OR_STATE_CONFLICT'}), 409
+        return jsonify({'ok': True, 'suggestions': learning.list_rule_suggestions(),
+                        'active_policy_changed': False})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 403
+    except ValueError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 400
+    except RuntimeError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 409
+    except Exception:
+        return jsonify({'ok': False, 'code': 'LEARNING_STORAGE_UNAVAILABLE'}), 503

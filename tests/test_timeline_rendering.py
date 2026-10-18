@@ -350,7 +350,7 @@ def test_overlay_unavailable_or_cancel_preserves_previous_and_cleans_work(
     if failure == "cancel":
         assert result.value is sentinel
     else:
-        assert str(result.value) == ("CAPTION_FONT_UNAVAILABLE" if failure in {"font", "platform"}
+        assert str(result.value) == ("CAPTION_FONT_UNAVAILABLE" if failure == "font"
                                      else "CAPTION_RENDER_UNAVAILABLE")
     assert previous.read_bytes() == b"keep verified film"
     assert not (tmp_path / "new.mp4").exists()
@@ -367,7 +367,9 @@ def test_caption_and_text_follow_concat_without_changing_muted_audio(media, rend
     assert graph.count("drawtext=") == 2 and graph.count("gte(n,6)*lt(n,24)") == 2
     assert "y=h-text_h-30" in graph and "y=30" in graph
     assert "-an" in render_calls[-1][0] and not result["measurement"]["has_audio"]
-    assert result["overlay_processing"] == {"count": 2, "profile": "literal-cjk-windows-v1"}
+    assert result["overlay_processing"]["count"] == 2
+    assert result["overlay_processing"]["profile"] == "literal-cjk-installed-font-v2"
+    assert len(result["overlay_processing"]["font_sha256"]) == 64
     assert result["renderer"] == "lumenis-timeline-4"
 
 
@@ -615,9 +617,10 @@ def test_caption_font_cmap12_and_malformed_directory_fail_closed(tmp_path, monke
 
 
 @pytest.fixture
-def installed_caption_runtime(timestamped_audio_source):
-    if sys.platform != "win32" or not rendering.CAPTION_FONT.is_file():
-        pytest.skip("caption profile requires its installed Windows font")
+def installed_caption_runtime(timestamped_audio_source, monkeypatch):
+    monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(timestamped_audio_source[1].parent))
+    if not rendering.CAPTION_FONT.is_file():
+        pytest.skip("caption profile requires an installed verified CJK font")
     return timestamped_audio_source
 
 
@@ -680,7 +683,7 @@ def test_actual_caption_export_reopen_keeps_audio_and_duration(installed_caption
     assert result["measurement"]["video_frames"] == 15
 
 
-@pytest.mark.parametrize("text", ["한글 테스트", "\U0001f600"])
+@pytest.mark.parametrize("text", ["\U0001d11e", "\U0001f600"])
 def test_installed_font_missing_glyph_never_publishes_output(installed_caption_runtime, tmp_path, monkeypatch, text):
     _, source = installed_caption_runtime
     monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(source.parent))
@@ -705,7 +708,7 @@ def test_dissolve_uses_centred_handles_and_preserves_cuts_caption_and_audio(medi
     assert [command[command.index("-ss") + 1] for command in video] == ["2.000000", "1.866667", "2.000000"]
     graph = next(graph for _, graph in render_calls if "xfade=" in graph)
     assert "xfade=transition=fade:duration=0.300000:offset=1.866667" in graph
-    assert "concat=n=2:v=1:a=0,settb=1/30" in graph and "trim=end_frame=180" in graph
+    assert "concat=n=2:v=1:a=0,settb=1/30,setpts=PTS-STARTPTS,fps=30" in graph and "trim=end_frame=180" in graph
     assert "gte(n,60)*lt(n,90)" in graph
     audio_graph = next(graph for _, graph in render_calls if "atrim=" in graph)
     assert audio_graph.count("atrim=start=2.000000:end=4.000000") == 3
@@ -895,3 +898,10 @@ def test_actual_wide_caption_export_reopen_retains_audio_and_parent(installed_ca
     assert _audio_packets(video_editing._ffprobe_path(), baseline) == _audio_packets(video_editing._ffprobe_path(), rendered)
     assert original.overlays[0].text == "short original" and original.version + 1 == changed.version
     assert reopened.to_dict() == changed.to_dict() and not list(tmp_path.glob("timeline-render-*"))
+
+
+@pytest.mark.parametrize("prefix", ["", "[Eval @ 001] "])
+def test_caption_measurement_accepts_actual_ffmpeg_log_styles(tmp_path, monkeypatch, prefix):
+    report = "\n".join(prefix + value for value in ["140.000000", "34.000000", "140.000000"])
+    monkeypatch.setattr(rendering, "_run", lambda *a, **k: report)
+    assert rendering._measure_caption_box("ffmpeg", work=tmp_path, filename="caption.txt", font="fixed") == (140, 34)

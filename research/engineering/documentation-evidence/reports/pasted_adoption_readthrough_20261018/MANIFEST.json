@@ -1,0 +1,39 @@
+{
+  "files": [
+    {
+      "path": "01_ADOPTION_AND_OPEN_MECHANISMS.md",
+      "bytes": 6574,
+      "sha256": "fc8faca94bbdaa130611a4540a7b2b5a22c4cc687742b39861acc06b784a0fc0"
+    },
+    {
+      "path": "README.md",
+      "bytes": 956,
+      "sha256": "2ab54e3812b25b503846950b7419a33f6c7e5d45c8125a07f8e600fd140f88b7"
+    },
+    {
+      "path": "SOURCE_READ_RANGES.json",
+      "bytes": 1261,
+      "sha256": "e06079c8cdc6ddab532333fa6f17328e82b635ffe2af187c9583f89b27cbe150"
+    },
+    {
+      "path": "UUID_SEARCH_RECEIPTS.json",
+      "bytes": 1158,
+      "sha256": "74c644dae6fee16d057863b5a7b6b060f4426d6af44e2a067f6af3f681ab4b3f"
+    },
+    {
+      "path": "transcripts/INTELLIGENT-UI-ADOPTION-20261008.md",
+      "bytes": 14016,
+      "sha256": "beda46c59e3eac0306e20cfd01a17a5a5f21110369da20f2375ffcdc12aa55b9"
+    },
+    {
+      "path": "transcripts/PUBLIC-ACQUISITION-RESEARCH-20261008.md",
+      "bytes": 7774,
+      "sha256": "c6ef46653baee5849cd424f82b926339f8ffcf39245ff6e4de1cf66d88a2410c"
+    },
+    {
+      "path": "transcripts/READ-ALOUD-SYSTEM-20261008.md",
+      "bytes": 8593,
+      "sha256": "1d17d4f4472f15bcfaff7ca24c0f162362e0ceb2c76bfea3f711a9df58646d77"
+    }
+  ]
+}

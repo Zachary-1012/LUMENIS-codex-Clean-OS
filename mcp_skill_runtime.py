@@ -8,15 +8,16 @@ canonical local Skill package root; invocation is read-only, permissioned,
 human-approved, bounded, and delegated to the existing ``mcp_discovery``
 firewall.
 """
+
 from __future__ import annotations
 
 import json
+import hashlib
 import shutil
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from mcp_discovery import call_mcp_stdio, discover_mcp_stdio
-
 
 PACKAGE_ROOT = (Path(__file__).resolve().parent / "runtime" / "skill_packages").resolve()
 READ_ONLY_PERMISSIONS = (
@@ -46,14 +47,17 @@ def _package_path(install_path: Any) -> Path:
     try:
         path.relative_to(PACKAGE_ROOT)
     except ValueError as exc:
-        raise ValueError("MCP Skill must be installed below the canonical Skill package root") from exc
+        raise ValueError(
+            "MCP Skill must be installed below the canonical Skill package root"
+        ) from exc
     if not path.is_dir():
         raise ValueError("MCP Skill install_path does not exist")
     return path
 
 
-def validate_installation(install_path: Any, *, expected_skill_id: str = "",
-                          expected_version: str = "") -> Dict[str, Any]:
+def validate_installation(
+    install_path: Any, *, expected_skill_id: str = "", expected_version: str = ""
+) -> Dict[str, Any]:
     """Validate a built local package without starting it."""
     try:
         path = _package_path(install_path)
@@ -87,12 +91,19 @@ def validate_installation(install_path: Any, *, expected_skill_id: str = "",
             errors.append(f"missing built runtime: {label}")
     if errors:
         return {
-            "ok": False, "state": "NOT_READY", "install_path": str(path),
-            "skill_id": skill_id, "version": version, "errors": errors,
+            "ok": False,
+            "state": "NOT_READY",
+            "install_path": str(path),
+            "skill_id": skill_id,
+            "version": version,
+            "errors": errors,
         }
     return {
-        "ok": True, "state": "READY", "install_path": str(path),
-        "skill_id": skill_id, "version": version,
+        "ok": True,
+        "state": "READY",
+        "install_path": str(path),
+        "skill_id": skill_id,
+        "version": version,
         "manifest_path": str(manifest_path),
         "entrypoint": str(launcher),
         "errors": [],
@@ -166,8 +177,23 @@ def discover_registered_mcp(info: Dict[str, Any], *, timeout: float = 30.0) -> D
         command, args, _ = _entrypoint(info)
     except ValueError as exc:
         return {"ok": False, "state": "NOT_READY", "errors": [str(exc)]}
-    return discover_mcp_stdio([command], args, allow_process=True, timeout=timeout,
-                              extra_env={"TRENTHUB_AUTOUPDATE": "0"})
+    return discover_mcp_stdio(
+        [command], args, allow_process=True, timeout=timeout, extra_env={"TRENTHUB_AUTOUPDATE": "0"}
+    )
+
+
+def runtime_contract_binding(info: Dict[str, Any]) -> str:
+    """Bind reviewed schemas to the registered runtime, not an arbitrary process."""
+    entry = info.get("entrypoint")
+    if isinstance(entry, str):
+        entry = json.loads(entry)
+    material = {key: info.get(key) for key in ("install_path", "version", "active_version")}
+    material["entrypoint"] = entry
+    return hashlib.sha256(
+        json.dumps(
+            material, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+        ).encode()
+    ).hexdigest()
 
 
 def invoke_registered_mcp(info: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -179,8 +205,11 @@ def invoke_registered_mcp(info: Dict[str, Any], payload: Dict[str, Any]) -> Dict
         expected_version=str(info.get("active_version") or info.get("version") or ""),
     )
     if not package_check.get("ok"):
-        return {"ok": False, "state": package_check.get("state", "NOT_READY"),
-                "errors": package_check.get("errors", [])}
+        return {
+            "ok": False,
+            "state": package_check.get("state", "NOT_READY"),
+            "errors": package_check.get("errors", []),
+        }
     try:
         command, args, _ = _entrypoint(info)
     except ValueError as exc:
@@ -193,13 +222,48 @@ def invoke_registered_mcp(info: Dict[str, Any], payload: Dict[str, Any]) -> Dict
     if not tool_name:
         return {"ok": False, "state": "BLOCKED", "errors": ["tool_name is required"]}
     if tool_name not in allowed_tools:
-        return {"ok": False, "state": "BLOCKED", "errors": ["tool is not in the registered allowlist"]}
+        return {
+            "ok": False,
+            "state": "BLOCKED",
+            "errors": ["tool is not in the registered allowlist"],
+        }
     if payload.get("human_approved") is not True:
-        return {"ok": False, "state": "BLOCKED", "errors": ["MCP tool call requires human approval"]}
+        return {
+            "ok": False,
+            "state": "BLOCKED",
+            "errors": ["MCP tool call requires human approval"],
+        }
     if not isinstance(arguments, dict):
         return {"ok": False, "state": "BLOCKED", "errors": ["MCP tool arguments must be an object"]}
+    try:
+        compatibility = info.get("compatibility_json") or {}
+        if isinstance(compatibility, str):
+            compatibility = json.loads(compatibility)
+        contracts = compatibility.get("mcp_tool_contracts", {})
+        if not isinstance(contracts, dict) or not contracts.get(tool_name):
+            return {
+                "ok": False,
+                "state": "CONTRACT_APPROVAL_REQUIRED",
+                "errors": ["MCP tool contract requires approval"],
+            }
+        if compatibility.get("mcp_runtime_binding") != runtime_contract_binding(info):
+            return {
+                "ok": False,
+                "state": "CONTRACT_CHANGED",
+                "errors": ["MCP runtime changed; renewed contract approval required"],
+            }
+        timeout = float(payload.get("timeout", 30.0) or 30.0)
+        if not 0 < timeout <= 60:
+            raise ValueError("timeout out of range")
+    except (ValueError, TypeError, AttributeError):
+        return {
+            "ok": False,
+            "state": "BLOCKED",
+            "errors": ["invalid MCP runtime contract or timeout"],
+        }
     result = call_mcp_stdio(
-        [command], args,
+        [command],
+        args,
         tool_name=tool_name,
         arguments=arguments,
         allow_process=True,
@@ -207,7 +271,8 @@ def invoke_registered_mcp(info: Dict[str, Any], payload: Dict[str, Any]) -> Dict
         human_approved=True,
         permissions_granted=granted,
         allowed_tools=allowed_tools,
-        timeout=min(float(payload.get("timeout", 30.0) or 30.0), 60.0),
+        reviewed_tool_contracts=contracts,
+        timeout=timeout,
         extra_env={"TRENTHUB_AUTOUPDATE": "0"},
     )
     result["skill_id"] = info.get("skill_id")

@@ -393,6 +393,7 @@ _daily_manual_runs = 0  # 今日手动触发次数
 _daily_auto_runs = 0  # 今日自动采集次数
 _last_run_time = None  # 上次运行时间
 _stats_loaded = False  # 是否已加载持久化统计
+_stats_init_lock = threading.RLock()
 
 _lock=threading.Lock()
 _tasks={}
@@ -428,6 +429,12 @@ def _load_stats_from_db():
         print(f'[Stats] 从数据库恢复计数失败: {e}')
 
 def _load_stats():
+    """Initialize after schema bootstrap, or on the first explicit stats use."""
+    with _stats_init_lock:
+        return _load_stats_unlocked()
+
+
+def _load_stats_unlocked():
     """从持久化文件加载统计数据（优先），失败则从数据库恢复"""
     global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time, _stats_loaded
     if _stats_loaded:
@@ -471,8 +478,9 @@ def _save_stats():
     except Exception as e:
         print(f'[Stats] 保存统计失败: {e}')
 
-# 模块加载时自动恢复统计
-_load_stats()
+# Importing a session owner must not query or create a database. Product Core
+# initializes stats after its canonical schema lifecycle; standalone consumers
+# initialize lazily below without starting collection or a browser.
 
 def _effective_cookie_file() -> str:
     """返回当前生效的 Cookie 文件路径：优先 select_account() 设置的 override；否则默认 PRIMARY。"""
@@ -566,6 +574,7 @@ def check_rate_limit(run_type='manual'):
     run_type: 'manual'（一键实时更新）或 'auto'（定时自动采集）
     """
     global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time
+    _load_stats()
     now = time.time()
     today = datetime.now().strftime('%Y-%m-%d')
     # 清理非今日的记录
@@ -590,6 +599,7 @@ def record_run(run_type='manual'):
     run_type: 'manual'（一键实时更新）或 'auto'（定时自动采集）
     """
     global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time
+    _load_stats()
     now = time.time()
     _daily_runs.append(now)
     _last_run_time = now
@@ -655,6 +665,7 @@ def get_account_status(account=None):
             binding_valid = False
             worker_available = False
 
+    _load_stats()
     today = datetime.now().astimezone().strftime("%Y-%m-%d")
     today_runs = len([
         t for t in _daily_runs

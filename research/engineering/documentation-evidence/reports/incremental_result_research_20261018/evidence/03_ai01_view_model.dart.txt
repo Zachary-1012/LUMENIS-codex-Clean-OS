@@ -1,0 +1,89 @@
+# app/lib/features/ai01/ai01_view_model.dart:83-170
+83:   bool get canSubmit => !_disposed && submitBlock == Ai01SubmitBlock.none;
+84: 
+85:   /// Sends the trimmed draft once. There is no automatic retry: a transport
+86:   /// failure or timeout after sending leaves the outcome unknown.
+87:   Future<void> submit() async {
+88:     if (!canSubmit) return;
+89: 
+90:     final task = _draft.trim();
+91:     _submittedDraft = _draft;
+92:     _submitPhase = Ai01SubmitPhase.submitting;
+93:     _intentResult = null;
+94:     _notifyIfAlive();
+95: 
+96:     Ai01SubmitPhase next;
+97:     Ai01IntentResult? result;
+98:     try {
+99:       result = await _repository.submitIntent(task);
+100:       next = switch (result.kind) {
+101:         Ai01IntentKind.completed => Ai01SubmitPhase.completed,
+102:         Ai01IntentKind.notCompleted => Ai01SubmitPhase.notCompleted,
+103:         Ai01IntentKind.pendingApproval => Ai01SubmitPhase.pendingApproval,
+104:       };
+105:     } catch (error) {
+106:       result = null;
+107:       next = _classifySubmitFailure(error);
+108:     }
+109:     if (_disposed) return;
+110: 
+111:     _intentResult = result;
+112:     _submitPhase = next;
+113:     _notifyIfAlive();
+114:   }
+115: 
+116:   Future<void> refresh() async {
+117:     if (_disposed) return;
+118: 
+119:     final requestGeneration = ++_requestGeneration;
+120:     _phase = Ai01LoadPhase.loading;
+121:     _failureKind = null;
+122:     _failureMessage = null;
+123:     _snapshot = null;
+124:     _notifyIfAlive();
+125: 
+126:     try {
+127:       final snapshot = await _repository.load();
+128:       if (_isStale(requestGeneration)) return;
+129: 
+130:       _snapshot = snapshot;
+131:       _phase = Ai01LoadPhase.ready;
+132:     } catch (error) {
+133:       if (_isStale(requestGeneration)) return;
+134: 
+135:       _snapshot = null;
+136:       _failureKind = _classifyFailure(error);
+137:       _failureMessage = _failureText(_failureKind!);
+138:       _phase = Ai01LoadPhase.failed;
+139:     }
+140: 
+141:     _notifyIfAlive();
+142:   }
+143: 
+144:   void updateDraft(String value) {
+145:     if (_disposed || value == _draft) return;
+146:     _draft = value;
+147:     _notifyIfAlive();
+148:   }
+149: 
+150:   void useSuggestion(Ai01Suggestion suggestion) {
+151:     final intent = suggestion.safeIntent;
+152:     if (intent == null || intent.isEmpty) return;
+153:     updateDraft(intent);
+154:   }
+155: 
+156:   bool _isStale(int requestGeneration) =>
+157:       _disposed || requestGeneration != _requestGeneration;
+158: 
+159:   void _notifyIfAlive() {
+160:     if (!_disposed) notifyListeners();
+161:   }
+162: 
+163:   @override
+164:   void dispose() {
+165:     _disposed = true;
+166:     _requestGeneration++;
+167:     super.dispose();
+168:   }
+169: 
+170:   static Ai01FailureKind _classifyFailure(Object error) {

@@ -132,9 +132,14 @@ def test_kos_intelligence_routes_resolve_existing_intel_owner(
 
     response = app.test_client().open(path, method=method.upper())
 
-    assert response.status_code == 200
-    assert response.get_json() == {"ok": True, "data": expected}
-    assert len(calls) == 1
+    if owner_method in {"analyze_comments_intent", "competitor_benchmark", "recognize_kos_identity", "refresh_kos_identity"}:
+        # Current readers require actual scope authorization before owner access.
+        assert response.status_code == 401
+        assert calls == []
+    else:
+        assert response.status_code == 200
+        assert response.get_json() == {"ok": True, "data": expected}
+        assert len(calls) == 1
 
 
 @pytest.mark.parametrize(
@@ -169,9 +174,9 @@ def test_reply_review_uses_exact_visible_suggestion_and_never_records_empty(
     )
     executions = []
     monkeypatch.setitem(sys.modules, "kos_execution", SimpleNamespace(
-        create_execution=lambda **kwargs: executions.append(kwargs) or {
+        create_scoped_execution=lambda **kwargs: executions.append(kwargs) or {"execution": {
             "status": "AI_GENERATED", "execution_id": "KX-review-1",
-        }
+        }}
     ))
 
     app.register_blueprint(kos_routes.kos_bp)
@@ -184,10 +189,8 @@ def test_reply_review_uses_exact_visible_suggestion_and_never_records_empty(
     else:
         payload = executions[0]["payload"]
         assert payload["generated_reply"] == engine_result["suggested_reply"]
-        assert executions[0]["actor"] == "workspace:local"
-        assert payload["permission_identity"] == {
-            "caller": "workspace:local",
-            "principal_kind": "local_workspace",
-            "principal_ref": "workspace:local",
-        }
+        assert not isinstance(executions[0]["actor"], str)
+        assert executions[0]["scope"] == scope
+        assert payload["target_binding"] == "UNASSIGNED_RECIPIENT"
+        assert "permission_identity" not in payload
         assert response.get_json()["suggested_reply"] == payload["generated_reply"]

@@ -31,11 +31,15 @@ class TaskMemory(BaseMemoryLayer):
         if not self.enabled or not self.db_path:
             return None
         try:
+            binding = self._binding_context()
+            if task_id != binding["task_id"]:
+                return None
             conn = get_db_connection(self.db_path)
             try:
                 row = conn.execute(
                     "SELECT * FROM ai_task WHERE task_id=?", (task_id,)
                 ).fetchone()
+                self._binding_context(connection=conn)
                 return dict(row) if row else None
             finally:
                 conn.close()
@@ -47,6 +51,8 @@ class TaskMemory(BaseMemoryLayer):
         if not self.enabled or not self.db_path:
             return []
         try:
+            if not self.get_task(task_id):
+                return []
             conn = get_db_connection(self.db_path)
             try:
                 rows = conn.execute(
@@ -54,6 +60,7 @@ class TaskMemory(BaseMemoryLayer):
                        WHERE task_id=? ORDER BY started_at ASC LIMIT ?""",
                     (task_id, limit),
                 ).fetchall()
+                self._binding_context(connection=conn)
                 return [dict(r) for r in rows]
             finally:
                 conn.close()
@@ -65,6 +72,8 @@ class TaskMemory(BaseMemoryLayer):
         if not self.enabled or not self.db_path:
             return []
         try:
+            if not self.get_task(task_id):
+                return []
             conn = get_db_connection(self.db_path)
             try:
                 rows = conn.execute(
@@ -72,35 +81,21 @@ class TaskMemory(BaseMemoryLayer):
                        WHERE task_id=? ORDER BY created_at ASC LIMIT ?""",
                     (task_id, limit),
                 ).fetchall()
+                self._binding_context(connection=conn)
                 return [dict(r) for r in rows]
             finally:
                 conn.close()
         except Exception:
             return []
 
-    def query_tasks(self, intent: Optional[str] = None,
-                    status: Optional[str] = None,
-                    limit: int = 50) -> List[Dict[str, Any]]:
-        """按意图/状态查询历史任务。"""
-        if not self.enabled or not self.db_path:
+    def query_tasks(self, intent=None, status=None, limit=50):
+        if not self.enabled or not self.db_path or limit <= 0:
             return []
         try:
-            conn = get_db_connection(self.db_path)
-            try:
-                sql = "SELECT * FROM ai_task WHERE 1=1"
-                params: list = []
-                if intent:
-                    sql += " AND intent LIKE ?"
-                    params.append(f"%{intent}%")
-                if status:
-                    sql += " AND status=?"
-                    params.append(status)
-                sql += " ORDER BY created_at DESC LIMIT ?"
-                params.append(limit)
-                rows = conn.execute(sql, params).fetchall()
-                return [dict(r) for r in rows]
-            finally:
-                conn.close()
+            row = self.get_task(self._binding_context()["task_id"])
+            if not row or (intent and intent not in (row.get("intent") or "")) or (status and row.get("status") != status):
+                return []
+            return [row]
         except Exception:
             return []
 
@@ -109,11 +104,16 @@ class TaskMemory(BaseMemoryLayer):
         task = self.get_task(task_id)
         if not task:
             return None
-        return {
+        summary = {
             "task": task,
             "steps": self.get_task_steps(task_id),
             "evidence": self.get_task_evidence(task_id),
         }
+        try:
+            self._binding_context()
+        except Exception:
+            return None
+        return summary
 
     # ── 轻量写入（仅记录任务结果摘要，不修改 ai_task 主表） ──────
 
@@ -135,16 +135,5 @@ class TaskMemory(BaseMemoryLayer):
         )
         return rec is not None
 
-    def stats(self) -> Dict[str, Any]:
-        s = super().stats()
-        if self.db_path:
-            try:
-                conn = get_db_connection(self.db_path)
-                try:
-                    total = conn.execute("SELECT COUNT(*) FROM ai_task").fetchone()[0]
-                    s["ai_task_total"] = total
-                finally:
-                    conn.close()
-            except Exception:
-                pass
-        return s
+    def stats(self):
+        return {**super().stats(), "visible_task_count": len(self.query_tasks())}

@@ -1,0 +1,114 @@
+{
+  "files": [
+    {
+      "path": "01_LOCAL_TTS_RESEARCH.md",
+      "bytes": 6514,
+      "sha256": "5fe186b53c7db4e43884e2163c1d73e849e06a313154a84364c11147e36dbb06"
+    },
+    {
+      "path": "02_CREATOR_ATTRIBUTION_RESEARCH.md",
+      "bytes": 8501,
+      "sha256": "5455395445c9a5a70b47bd4bbd31a1e409251c513b3a618682ef99b7a9ef8d16"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1061,
+      "sha256": "9a15c1e58b77ad0964b2d3103cc0deb72be11d316087d468f2b1666cb7ea8d7d"
+    },
+    {
+      "path": "capture_static.py",
+      "bytes": 1242,
+      "sha256": "cec911ba991745d11944b3ad19d59a37b1dddd2bdc6e1fff2284f1cbff9d38df"
+    },
+    {
+      "path": "evidence/01_read_aloud_service.dart.txt",
+      "bytes": 10015,
+      "sha256": "3f9c6f6b84ba66ac3eac78aa9091bd2ec8095332a6d5b7e17841e396f8ed2bb0"
+    },
+    {
+      "path": "evidence/02_read_aloud_backend_web.dart.txt",
+      "bytes": 4350,
+      "sha256": "aa82e818d11c3a71fd19b39fc6ef6ed148d72b24d070cf340992f993e7379ac9"
+    },
+    {
+      "path": "evidence/03_read_aloud_backend_io.dart.txt",
+      "bytes": 3603,
+      "sha256": "3d7bd1853b50037cb8fe71a61fd16357382fbad1e6c6f6ecbbe62701d1975640"
+    },
+    {
+      "path": "evidence/04_MainActivity.kt.txt",
+      "bytes": 5424,
+      "sha256": "b6f8c03fd386409b56c676bf4db234054394aed8057e66a72b8cf73bee43181c"
+    },
+    {
+      "path": "evidence/05_AppDelegate.swift.txt",
+      "bytes": 3520,
+      "sha256": "3d66b5792b786f1af4a86ae487753c6e958ebcbd9fec6ae9108d8683f47effcd"
+    },
+    {
+      "path": "evidence/06_MainFlutterWindow.swift.txt",
+      "bytes": 2669,
+      "sha256": "a0ed48f4e4018e7aaa9a12bd2e6135b59bab2ebf86c91acba19f84b38ae0ad83"
+    },
+    {
+      "path": "evidence/07_read_aloud_platform.cpp.txt",
+      "bytes": 3735,
+      "sha256": "2b3b72f300ecc013e13edbd70d4c503cc194d97131cbef49130807a8f7c8f1aa"
+    },
+    {
+      "path": "evidence/08_kos_attribution.py.txt",
+      "bytes": 14683,
+      "sha256": "d9a32f398f6688d1478380f990ac5fc2d23e5c67289a79e9ebe6090eb1682c0b"
+    },
+    {
+      "path": "evidence/09_kos_routes.py.txt",
+      "bytes": 1914,
+      "sha256": "2a443614037fcd04724b288f46d6d7922ad29d02e77717363b77c6a84209904e"
+    },
+    {
+      "path": "evidence/10_ACTIVE2248_KOS_FUNCTION.txt",
+      "bytes": 8109,
+      "sha256": "fbea6c8e3173f8f128e89ac35ff2882312301c52c7d25879a7129596c9d8e4e2"
+    },
+    {
+      "path": "evidence/11_ACTIVE2248_KOS_CALLER.txt",
+      "bytes": 2067,
+      "sha256": "2441ed7f48604334d26b3a20d948972529a9d08154afb58b08da636592bfc765"
+    },
+    {
+      "path": "evidence/12_ACTIVE2248_KOS_CONFIG.txt",
+      "bytes": 798,
+      "sha256": "a6be31439114ff988b78d2f2847d47c86ffed953bfa6c41c169099b45c253844"
+    },
+    {
+      "path": "evidence/13_MAIN_G147_G149.txt",
+      "bytes": 2662,
+      "sha256": "00e309bfb13b686161c1076fbbcffd2ec5e1c1686dee84ed8eca5c92dbed2b22"
+    },
+    {
+      "path": "evidence/ACTIVE_2248_COMPARISON.json",
+      "bytes": 2366,
+      "sha256": "4cebe0b06227fff484b49964c270e3cb0213c72b3dfa57093610353eb375c9b2"
+    },
+    {
+      "path": "evidence/KOS_COPY_HASH_COMPARISON.json",
+      "bytes": 10501,
+      "sha256": "e191f9ef4cd99fc3292a3e7586c05027bb9f82a4d9dcf857ebb6cfb20cf06100"
+    },
+    {
+      "path": "evidence/STATIC_SOURCE_RECEIPT.json",
+      "bytes": 3128,
+      "sha256": "b5e3635868a0ee039fa5842ec79a098af9016786b6d61ca19654176f4af6a671"
+    },
+    {
+      "path": "lab/RESULTS.json",
+      "bytes": 3888,
+      "sha256": "22e513d03bd163f5cdfa5a99817285e9e4ec79390013c7c1987cd1e9e0c3c124"
+    },
+    {
+      "path": "lab/counterexamples.py",
+      "bytes": 4125,
+      "sha256": "f042ee806c80bc450af036abb276d2a0e740846fafd67118d7b15046159d7099"
+    }
+  ]
+}

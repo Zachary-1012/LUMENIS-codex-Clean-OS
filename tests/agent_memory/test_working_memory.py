@@ -62,9 +62,7 @@ class TestWorkingMemory:
             "SELECT * FROM ai_task_step WHERE task_id=?", ("task_persist",)
         ).fetchone()
         conn.close()
-        assert row is not None
-        assert row["phase"] == "working_memory_step_1"
-        assert json.loads(row["detail"])["action"] == "test_action"
+        assert row is None  # Unbound memory cannot write TaskEngine execution truth.
 
     def test_recent_steps_limit(self, temp_db):
         wm = WorkingMemory(db_path=temp_db, enabled=True, max_steps=5)
@@ -105,13 +103,10 @@ class TestWorkingMemory:
         wm.begin_task("task-long", "Read source content")
         content = "A long actual source result. " * 240
         result = wm.add_step("read", output_data={"content": content})
-        assert result["persistence"]["state"] == "PERSISTED"
+        assert result["persistence"]["state"] == "UNAVAILABLE"
+        assert result["output"]["content"] == content
         with sqlite3.connect(temp_db) as connection:
-            detail = connection.execute("SELECT detail FROM ai_task_step WHERE step_id=?", (result["step_id"],)).fetchone()[0]
-        payload = json.loads(detail)
-        assert payload["output"]["content"] == content
-        assert payload["seq"] == 1
-        assert payload["checkpoint_resumable"] is False
+            assert connection.execute("SELECT detail FROM ai_task_step WHERE step_id=?", (result["step_id"],)).fetchone() is None
 
     def test_credentials_are_excluded_from_context_step_and_persisted_observation(self, temp_db):
         import json
@@ -125,16 +120,17 @@ class TestWorkingMemory:
         assert "api_key" not in wm.get_context()
         assert "authorization" not in result["input"]
         with sqlite3.connect(temp_db) as connection:
-            detail = connection.execute("SELECT detail FROM ai_task_step WHERE step_id=?", (result["step_id"],)).fetchone()[0]
+            assert connection.execute("SELECT detail FROM ai_task_step WHERE step_id=?", (result["step_id"],)).fetchone() is None
+        detail = json.dumps(result)
         assert credential not in detail and "private-credential-material" not in detail
-        assert json.loads(detail)["output"]["observed"] is True
+        assert result["output"]["observed"] is True
 
     def test_oversize_step_fails_durability_explicitly_and_does_not_write_truncated_json(self, temp_db):
         import sqlite3
         wm = WorkingMemory(db_path=temp_db, enabled=True)
         wm.begin_task("task-large", "Preserve business output")
         result = wm.add_step("read", output_data={"content": "x" * (129 * 1024)})
-        assert result["persistence"]["code"] == "WORKING_MEMORY_DETAIL_TOO_LARGE"
+        assert result["persistence"]["code"] == "WORKING_MEMORY_PERSISTENCE_FAILED"
         assert result["status"] == "completed" and len(result["output"]["content"]) == 129 * 1024
         with sqlite3.connect(temp_db) as connection:
             assert connection.execute("SELECT COUNT(*) FROM ai_task_step WHERE task_id='task-large'").fetchone()[0] == 0

@@ -400,6 +400,7 @@ def create_source_brief_job(
         include_analysis_text=business_question is not None,
         source_ids=source_ids,
         analysis_question=business_question,
+        actor_ref=actor_id,
     )
     if brief.get("scope") != scope:
         raise RuntimeError("SOURCE_BRIEF_CANONICAL_SCOPE_MISMATCH")
@@ -555,6 +556,15 @@ def get_source_brief_job(job_id: str, *, actor_id: str,
                     product_id=item[3], domain_id=item[4], subject_id=item[5],
                     brand_focus_id=item[6], scope_status=item[7],
                     scope_evidence_ref=str(item[8])))
+                if source.get("profile_research") is not None:
+                    from .operational_brief import project_profile_research
+                    cursor = con.execute("SELECT * FROM canonical_data WHERE canonical_id=?", (item[0],))
+                    raw = cursor.fetchone()
+                    current = dict(zip((column[0] for column in cursor.description), raw)) if raw else None
+                    if current is None or project_profile_research(
+                        con, current, item[8], actor_ref=actor_id
+                    ) != source["profile_research"]:
+                        raise PermissionError("SOURCE_BRIEF_PROFILE_SOURCE_CHANGED")
     evaluation_ids = verified["snapshot"].get("evaluation_ids")
     evaluations = [get_evaluation_record(evaluation_ids[name]) for name in _evaluation_ids(job_id)]
     present = [record for record in evaluations if record]
@@ -619,3 +629,82 @@ def _resolve_current_source(con, source: dict[str, Any], product_id: str):
     if len(matching) != 1:
         raise RuntimeError("SOURCE_BRIEF_CURRENT_SOURCE_INVALID")
     return matching[0]
+
+
+def list_source_brief_jobs(*, actor, scope: dict[str, Any], limit: int = 30) -> dict[str, Any]:
+    """Discover only the current actor's exact-scope report artifacts, bounded.
+
+    SavedWork documents are a different resource type. This owner reopens each
+    candidate and matches evaluations to its current artifact bytes; it never
+    assigns daily_reports evaluations to a SavedWork artifact.
+    """
+    from .saved_work import authorize
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("SOURCE_BRIEF_LIST_LIMIT_INVALID")
+    context = authorize(actor, scope, action="read")
+    actor_ref = context.get("principal_ref") or f"actor:{context.get('actor_id')}"
+    selected = {key: context[key] for key in ("domain_id", "subject_id", "brand_focus_id", "global_scope")}
+    product = "CTH" if selected["domain_id"] == "cth" else "ZBMP"
+    with get_repository().connection(read_only=True, wal=False) as con:
+        columns = {row[1] for row in con.execute("PRAGMA table_info(daily_reports)")}
+        evaluation_columns = {row[1] for row in con.execute("PRAGMA table_info(evaluation_records)")}
+        missing_reason = ("SOURCE_BRIEF_STORAGE_NOT_INITIALIZED"
+                          if not {"id", "report_id", "source_snapshot", "artifact_hash"} <= columns
+                          else "SOURCE_BRIEF_EVALUATION_STORAGE_NOT_INITIALIZED"
+                          if not {"evaluation_id", "dimension", "metadata", "evidence_ref"} <= evaluation_columns
+                          else None)
+        if missing_reason:
+            if authorize(actor, selected, action="read") != context:
+                raise PermissionError("SOURCE_BRIEF_PRINCIPAL_CHANGED")
+            return {"resource_type": "source_brief_job", "items": [], "state": "UNAVAILABLE",
+                    "reason": missing_reason, "scanned_count": 0,
+                    "returned_count": 0, "rejected_count": 0, "read_complete": False,
+                    "has_more": None, "limit": limit}
+        snapshot = "CASE WHEN json_valid(source_snapshot) THEN source_snapshot ELSE '{}' END"
+        # Restrict identity and all authorization dimensions before reading or
+        # counting candidates. No global population count is exposed.
+        rows = con.execute(f"""SELECT id,report_id,source_snapshot FROM daily_reports
+            WHERE json_extract({snapshot},'$.schema')=?
+              AND json_extract({snapshot},'$.actor_id')=?
+              AND json_extract({snapshot},'$.scope.domain_id')=?
+              AND json_extract({snapshot},'$.scope.product_id')=?
+              AND json_extract({snapshot},'$.scope.global')=?
+              AND json_extract({snapshot},'$.scope.subject_id') IS ?
+              AND json_extract({snapshot},'$.scope.brand_focus_id') IS ?
+            ORDER BY id DESC LIMIT ?""",
+            (JOB_SCHEMA, actor_ref, selected["domain_id"], product, int(selected["global_scope"]),
+             selected["subject_id"], selected["brand_focus_id"], limit + 1)).fetchall()
+    items = []
+    rejected = 0
+    for row in rows[:limit]:
+        try:
+            stored_scope = json.loads(row["source_snapshot"])["scope"]
+            if _media_scope(stored_scope) != selected:
+                raise PermissionError("SOURCE_BRIEF_SCOPE_MISMATCH")
+            job = get_source_brief_job(row["report_id"], actor_id=actor_ref,
+                                      expected_scope=stored_scope, actor=actor)
+            artifact = job["artifact_outcome"]
+            evaluations = get_artifact_evaluations(
+                job_id=job["job_id"], artifact_hash=artifact["artifact_hash"],
+                scope=stored_scope, actor_id=actor_ref,
+                evidence_refs={f"daily_reports:{job['job_id']}:{artifact['artifact_hash']}"},
+            )
+            expected = set(_evaluation_ids(job["job_id"]).values())
+            matching = {item["evaluation_id"] for item in evaluations}
+            items.append({"resource_type": "source_brief_job", "job_id": job["job_id"],
+                "artifact_hash": artifact["artifact_hash"], "revision": job.get("revision"),
+                "source_count": artifact["source_count"], "review_status": job["review_status"],
+                "evaluation_state": "recorded" if expected <= matching else "partial",
+                "evaluations": [{key: item.get(key) for key in
+                    ("evaluation_id", "metric_name", "status", "evaluated_at", "evidence_ref")}
+                    for item in evaluations]})
+        except (ValueError, LookupError, PermissionError, RuntimeError):
+            rejected += 1
+    if authorize(actor, selected, action="read") != context:
+        raise PermissionError("SOURCE_BRIEF_PRINCIPAL_CHANGED")
+    more = len(rows) > limit
+    complete = not more and rejected == 0
+    return {"resource_type": "source_brief_job", "items": items,
+            "state": "PARTIAL" if not complete else "READY" if items else "EMPTY",
+            "scanned_count": min(len(rows), limit), "returned_count": len(items),
+            "rejected_count": rejected, "read_complete": complete, "has_more": more, "limit": limit}

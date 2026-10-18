@@ -1,0 +1,1902 @@
+[
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 3,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../../AGENTS.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "exists": true,
+    "sha256": "f748d46d7a18c357d27576f44c345023601e452344f5da56f74106f52e850367",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+    "exists": true,
+    "sha256": "5df16c7164d3493be462eb1ed59f637e897ceec444aeb8e15b5280cc520bdc0a",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+    "exists": true,
+    "sha256": "6c01f3ea4e7ccb7be597d4ed3cd79afb482d55c80ed84430c077a81579f21868",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../AI-NATIVE-PRODUCT-CONSTITUTION.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md",
+    "exists": true,
+    "sha256": "5804ea697a484d25375024d2caac9f9a7e532c2a659d123793ae0d1f742a0a8b",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "exists": true,
+    "sha256": "04edb41316f6b9576fdcc021d82c26843c2d543ff0ba316d24c8082f2189f1e4",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "exists": true,
+    "sha256": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
+    "exists": true,
+    "sha256": "b14681921568f99a5d5e51a34513b5c03a0413d1988d79dfe6404bd88aed44d4",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "exists": true,
+    "sha256": "7c67042b5ff8aecc36b7d48abf799cf8678fec774178ec54a4bf89cdba486efc",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+    "exists": true,
+    "sha256": "a6b156856e6e50933ad7422ac43c00be0da9a40a197ed326ff3c293d4aca9caf",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+    "exists": true,
+    "sha256": "3481d93ce68b107dbc0a1145f55766ada0e5d2f92c50b53957282d4a3f5ba626",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../PRODUCT-POSITIONING-CURRENT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md",
+    "exists": true,
+    "sha256": "39479a58e39cc14903f28827c1b5d0febd67e3b238cffbaac2be123e7eb4d1e7",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../../README.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/README.md",
+    "exists": true,
+    "sha256": "fdb47c2b4d336adc532b7bd891b5528ff705f564a22ae731d5b0c5c5b9f62eed",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../CROSS-REPO-CANONICAL-REGISTRY-V1.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md",
+    "exists": true,
+    "sha256": "356dc33c49abe1addec2edfb0b2841346104f75698b5499acd2d9c50a092224b",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
+    "exists": true,
+    "sha256": "0ca1b98b195f1f9970bcc0ef1a781fa63a93ab29258ad0f8d6cd987eb9b024ed",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 28,
+    "target": "../SECURITY-BOUNDARY-CURRENT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md",
+    "exists": true,
+    "sha256": "a6dfbded3b60c27561b19675b74227231343d6e4602a110a2e77f82a06a68f6a",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 52,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 809,
+    "target": "../evidence/round-15/ISSUE17-SLACK-PRODUCT-REPAIRS-20261016.json",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/ISSUE17-SLACK-PRODUCT-REPAIRS-20261016.json",
+    "exists": true,
+    "sha256": "3343d38f2b85515f4565a1c8be63b6acca4a9983c818f7b67673d6eca31f13c4",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 846,
+    "target": "../evidence/round-15/pixi-probe-evidence-20261016.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/pixi-probe-evidence-20261016.md",
+    "exists": true,
+    "sha256": "18d5d7820545731a68ce3f17a8374c07a5e1d43709e5e0b881b50f3c1f26026a",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 846,
+    "target": "../evidence/round-15/pixi-probe-evidence-20261016.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/pixi-probe-evidence-20261016.md",
+    "exists": true,
+    "sha256": "18d5d7820545731a68ce3f17a8374c07a5e1d43709e5e0b881b50f3c1f26026a",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 906,
+    "target": "../evidence/round-15/ISSUE17-SLACK-PRODUCT-REPAIRS-20261016.json",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/ISSUE17-SLACK-PRODUCT-REPAIRS-20261016.json",
+    "exists": true,
+    "sha256": "3343d38f2b85515f4565a1c8be63b6acca4a9983c818f7b67673d6eca31f13c4",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 907,
+    "target": "../evidence/round-15/ISSUE17-SLACK-PRODUCT-REPAIRS-20261016.json",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/ISSUE17-SLACK-PRODUCT-REPAIRS-20261016.json",
+    "exists": true,
+    "sha256": "3343d38f2b85515f4565a1c8be63b6acca4a9983c818f7b67673d6eca31f13c4",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 967,
+    "target": "../../contracts/experience/screen-specifications/ACC-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/ACC-01.md",
+    "exists": true,
+    "sha256": "fdab87422aab5112e5e2054c04ef05200358563c22f92e36b4efddcab7d7dd70",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 967,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 968,
+    "target": "../../contracts/experience/screen-specifications/ACC-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/ACC-02.md",
+    "exists": true,
+    "sha256": "285a9e15a731b261554fe9caeea4e84310b40624880c2749c8c2ab87c6bcaa76",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 968,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 969,
+    "target": "../../contracts/experience/screen-specifications/ACC-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/ACC-03.md",
+    "exists": true,
+    "sha256": "fb9bdb6f60ca19cb75b456304c5823060687d58f7cdbd5642a2519e75c20fb20",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 969,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 970,
+    "target": "../../contracts/experience/screen-specifications/ACC-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/ACC-04.md",
+    "exists": true,
+    "sha256": "274a07b62ca841726e2e0aa364d5158ad545e2b89dabc663608021c7625fec12",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 970,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 971,
+    "target": "../../contracts/experience/screen-specifications/AI-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/AI-01.md",
+    "exists": true,
+    "sha256": "7e0a38328d3f09c298240ba5ca571f1ab417fdceb7f06f3422cebaa02ee4b3d7",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 971,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 972,
+    "target": "../../contracts/experience/screen-specifications/AI-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/AI-02.md",
+    "exists": true,
+    "sha256": "5e6da5a8911cdf442bc00f9e84e6127c7d60c3f036af66ccf52e3dd2bbaa1c05",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 972,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 973,
+    "target": "../../contracts/experience/screen-specifications/AI-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/AI-03.md",
+    "exists": true,
+    "sha256": "5002c5e432c2a8924258a7a059d9c442a36b68d05ca6e56393a8c0fbc72d636a",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 973,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 974,
+    "target": "../../contracts/experience/screen-specifications/AI-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/AI-04.md",
+    "exists": true,
+    "sha256": "2573b6aec9b06c704797d9316035eef9552c2e5f28117c4f30913c6a18d5c80e",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 974,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 975,
+    "target": "../../contracts/experience/screen-specifications/AI-05.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/AI-05.md",
+    "exists": true,
+    "sha256": "8a7d86ca1af22074f4a348e745ec20060da8e8f52950013e235ae91bc136be46",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 975,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 976,
+    "target": "../../contracts/experience/screen-specifications/BMP-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-01.md",
+    "exists": true,
+    "sha256": "1aa739fad48b8073a96ab3c7089b7f3dc6765af69e199455cce027725140a33c",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 976,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 977,
+    "target": "../../contracts/experience/screen-specifications/BMP-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-02.md",
+    "exists": true,
+    "sha256": "f3f5e82f56d2ebf644e6f6e0bb7f25ab1384eda5e7c1c3227dce6e54aa5daf43",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 977,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 978,
+    "target": "../../contracts/experience/screen-specifications/BMP-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-03.md",
+    "exists": true,
+    "sha256": "b42b6b461e1595132a99ed7a05a60d6a0eb38a829eba96031a933fca04ae82be",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 978,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 979,
+    "target": "../../contracts/experience/screen-specifications/BMP-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-04.md",
+    "exists": true,
+    "sha256": "872e7a8772c2015b9ba96f6920e31f09bc7661a49ec499184bc4844daf014900",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 979,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 980,
+    "target": "../../contracts/experience/screen-specifications/BMP-05.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-05.md",
+    "exists": true,
+    "sha256": "f960fe98c783e9d8249fe4b86812ba7c4308af4c6dd0f9599aa37e127f59f220",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 980,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 981,
+    "target": "../../contracts/experience/screen-specifications/BMP-06.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-06.md",
+    "exists": true,
+    "sha256": "b19883c6e3a1c6cc5f59060f9adf22dcc947708dc2590d3954ba1d4bc62b38a4",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 981,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 982,
+    "target": "../../contracts/experience/screen-specifications/BMP-07.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-07.md",
+    "exists": true,
+    "sha256": "b37c83ca9defab9d346274ec8f99e251f8a115e7b623914d2f47753470758914",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 982,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 983,
+    "target": "../../contracts/experience/screen-specifications/BMP-08.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-08.md",
+    "exists": true,
+    "sha256": "faf53e2e3cdf42083462af6f3e050009ae47bfaf2464df6db1914512fb2f2042",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 983,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 984,
+    "target": "../../contracts/experience/screen-specifications/BMP-09.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-09.md",
+    "exists": true,
+    "sha256": "aa5a7aeffd58dec6d38b23464f9b2c403731cb084baad2da9bc8831709cdb1e6",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 984,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 985,
+    "target": "../../contracts/experience/screen-specifications/BMP-10.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-10.md",
+    "exists": true,
+    "sha256": "e51064fab656d23c2c236259317193ae9e955214b7ab0708efee01523d113ab0",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 985,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 986,
+    "target": "../../contracts/experience/screen-specifications/BMP-11.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-11.md",
+    "exists": true,
+    "sha256": "9fa9077974f1b2ec62107d5d653d78189f240d7d1177a9874f7af6379d8c97fe",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 986,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 987,
+    "target": "../../contracts/experience/screen-specifications/CTH-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-01.md",
+    "exists": true,
+    "sha256": "40d3fe7dedc68b336a84bf68b842bd5df658e589c8e76874227508e68871ec3f",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 987,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 988,
+    "target": "../../contracts/experience/screen-specifications/CTH-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-02.md",
+    "exists": true,
+    "sha256": "48ef2df0a7e5b71134a719ba8b3111bd7996e5ae4d83d79fcd3d4d803f26e337",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 988,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 989,
+    "target": "../../contracts/experience/screen-specifications/CTH-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-03.md",
+    "exists": true,
+    "sha256": "17ceb43b813acf5284b0d0e03ad77f6fecb430351444556fbbcd139d2c366046",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 989,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 990,
+    "target": "../../contracts/experience/screen-specifications/CTH-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-04.md",
+    "exists": true,
+    "sha256": "b7ef07588946bc7e64c179d9e73bd7956c22c2495ace36bb5f8f19ed11642e02",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 990,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 991,
+    "target": "../../contracts/experience/screen-specifications/CTH-05.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-05.md",
+    "exists": true,
+    "sha256": "164ab4394ce31af8ff19cf5e3828f8be53ba519f162056f933167d160d7a20c8",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 991,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 992,
+    "target": "../../contracts/experience/screen-specifications/CTH-06.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-06.md",
+    "exists": true,
+    "sha256": "4598f7b0477986203f0ac77fa8b92b308f57769f5f0d4b2b9b5dfe8d5ef0f013",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 992,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 993,
+    "target": "../../contracts/experience/screen-specifications/CTH-07.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-07.md",
+    "exists": true,
+    "sha256": "cede9df90b2674fbf620f7b5ab1115dd30464128571389ade1c46ea15553c14b",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 993,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 994,
+    "target": "../../contracts/experience/screen-specifications/CTH-08.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-08.md",
+    "exists": true,
+    "sha256": "f3d5fb2100d2b782fdc8d9ccc135089e505e4d86e12c67c9d84017d0ce82efe4",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 994,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 995,
+    "target": "../../contracts/experience/screen-specifications/CTH-09.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-09.md",
+    "exists": true,
+    "sha256": "389e7ab07dd7269a6d35e4f9b97c278a120a63874d74cb9c3e41220a646f10d2",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 995,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 996,
+    "target": "../../contracts/experience/screen-specifications/CTH-10.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-10.md",
+    "exists": true,
+    "sha256": "1743bbfb4e4d8a2f688b501a2ec1222064ec854c137aec45018a31c0decf8d07",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 996,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 997,
+    "target": "../../contracts/experience/screen-specifications/SH-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-01.md",
+    "exists": true,
+    "sha256": "0edade67f00c4a7deb886c05c73fdc8e75fe541610ac9e07918b9de7ecd38892",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 997,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 998,
+    "target": "../../contracts/experience/screen-specifications/SH-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-02.md",
+    "exists": true,
+    "sha256": "da449172ea32481e40f65aecfd500a4ca91660343d7fcd0ab64aacfb5e95c0b6",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 998,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 999,
+    "target": "../../contracts/experience/screen-specifications/SH-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-03.md",
+    "exists": true,
+    "sha256": "dd1b09ab30e4ea5eff58bbb2c85bb700f46a0b157c5a1575ac021f33dfa73f90",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 999,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1000,
+    "target": "../../contracts/experience/screen-specifications/SH-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-04.md",
+    "exists": true,
+    "sha256": "9435cdcdcad81942b4a81d67378db4134d3b21ea53486a7ed5dd7f357cc8d07f",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1000,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1001,
+    "target": "../../contracts/experience/screen-specifications/SH-05.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-05.md",
+    "exists": true,
+    "sha256": "80bc9f8b9679b8e1198ba31f11206d0ab5acaf1840438f1528e961add0d5170b",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1001,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1002,
+    "target": "../../contracts/experience/screen-specifications/SH-06.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-06.md",
+    "exists": true,
+    "sha256": "70c3058054683683373be569fd00233ead4265721964ea358d56a81a8507e2ef",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1002,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1003,
+    "target": "../../contracts/experience/screen-specifications/SYS-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-01.md",
+    "exists": true,
+    "sha256": "fc0080b65aaf74186d89ee757b27cbc6ae2037e67fa9e674201a526df70bafe8",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1003,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1004,
+    "target": "../../contracts/experience/screen-specifications/SYS-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-02.md",
+    "exists": true,
+    "sha256": "a078cd9d33391d543ef841bfe478e14b5bc4ab51bf6d928c9ad5cb784c99005c",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1004,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1005,
+    "target": "../../contracts/experience/screen-specifications/SYS-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-03.md",
+    "exists": true,
+    "sha256": "7c8cb2edab8429e347519b9a512bf759e59fe6010a69b24545260f74d9325021",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1005,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1006,
+    "target": "../../contracts/experience/screen-specifications/SYS-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-04.md",
+    "exists": true,
+    "sha256": "bfe2fbb36c684d03b579c3deaee1665c710d6e1131f828f3e44e97ceb2a52903",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1006,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1007,
+    "target": "../../contracts/experience/screen-specifications/SYS-05.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-05.md",
+    "exists": true,
+    "sha256": "0427c83edb380e08fd8df2117e6b6386d7493245ea3ff44a3f386fd73f3544f2",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1007,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1008,
+    "target": "../../contracts/experience/screen-specifications/SYS-06.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-06.md",
+    "exists": true,
+    "sha256": "02d84c9e3ca31d3067a3c9f84ca3d41f6f16c80942b2fd3578be2121da347e6b",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1008,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1009,
+    "target": "../../contracts/experience/screen-specifications/SYS-07.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-07.md",
+    "exists": true,
+    "sha256": "9444805d30b3d58519450f71fc5a40bc932a25c30af63ed1c57b17922e328948",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1009,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1010,
+    "target": "../../contracts/experience/screen-specifications/SYS-08.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-08.md",
+    "exists": true,
+    "sha256": "b6024b4415cd88461f58b91204bfeae2156c1d9b1efe12323b1b1e655a560dfe",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1010,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1020,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1021,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1022,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1023,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1024,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1025,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1026,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1027,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1028,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1029,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1030,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1031,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1032,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1033,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1034,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1035,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1036,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1037,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1038,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1039,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1040,
+    "target": "sketches/FULL-PRODUCT-SKETCH.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1056,
+    "target": "../../README.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/README.md",
+    "exists": true,
+    "sha256": "fdb47c2b4d336adc532b7bd891b5528ff705f564a22ae731d5b0c5c5b9f62eed",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1056,
+    "target": "../../AGENTS.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "exists": true,
+    "sha256": "f748d46d7a18c357d27576f44c345023601e452344f5da56f74106f52e850367",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 3,
+    "target": "../product-plan-full.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "exists": true,
+    "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 7,
+    "target": "../product-plan-full.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "exists": true,
+    "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 11,
+    "target": "../product-plan-full.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "exists": true,
+    "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 11,
+    "target": "../../LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "exists": true,
+    "sha256": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 55,
+    "target": "../product-plan-full.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "exists": true,
+    "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 73,
+    "target": "../product-plan-full.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "exists": true,
+    "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 243,
+    "target": "../../../contracts/experience/screen-specifications/ACC-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/ACC-01.md",
+    "exists": true,
+    "sha256": "fdab87422aab5112e5e2054c04ef05200358563c22f92e36b4efddcab7d7dd70",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 337,
+    "target": "../../../contracts/experience/screen-specifications/ACC-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/ACC-02.md",
+    "exists": true,
+    "sha256": "285a9e15a731b261554fe9caeea4e84310b40624880c2749c8c2ab87c6bcaa76",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 347,
+    "target": "../../../contracts/experience/screen-specifications/ACC-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/ACC-03.md",
+    "exists": true,
+    "sha256": "fb9bdb6f60ca19cb75b456304c5823060687d58f7cdbd5642a2519e75c20fb20",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 357,
+    "target": "../../../contracts/experience/screen-specifications/ACC-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/ACC-04.md",
+    "exists": true,
+    "sha256": "274a07b62ca841726e2e0aa364d5158ad545e2b89dabc663608021c7625fec12",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 369,
+    "target": "../../../contracts/experience/screen-specifications/CTH-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-01.md",
+    "exists": true,
+    "sha256": "40d3fe7dedc68b336a84bf68b842bd5df658e589c8e76874227508e68871ec3f",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 379,
+    "target": "../../../contracts/experience/screen-specifications/CTH-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-02.md",
+    "exists": true,
+    "sha256": "48ef2df0a7e5b71134a719ba8b3111bd7996e5ae4d83d79fcd3d4d803f26e337",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 389,
+    "target": "../../../contracts/experience/screen-specifications/CTH-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-03.md",
+    "exists": true,
+    "sha256": "17ceb43b813acf5284b0d0e03ad77f6fecb430351444556fbbcd139d2c366046",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 401,
+    "target": "../../../contracts/experience/screen-specifications/CTH-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-04.md",
+    "exists": true,
+    "sha256": "b7ef07588946bc7e64c179d9e73bd7956c22c2495ace36bb5f8f19ed11642e02",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 413,
+    "target": "../../../contracts/experience/screen-specifications/CTH-05.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-05.md",
+    "exists": true,
+    "sha256": "164ab4394ce31af8ff19cf5e3828f8be53ba519f162056f933167d160d7a20c8",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 425,
+    "target": "../../../contracts/experience/screen-specifications/CTH-06.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-06.md",
+    "exists": true,
+    "sha256": "4598f7b0477986203f0ac77fa8b92b308f57769f5f0d4b2b9b5dfe8d5ef0f013",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 437,
+    "target": "../../../contracts/experience/screen-specifications/CTH-07.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-07.md",
+    "exists": true,
+    "sha256": "cede9df90b2674fbf620f7b5ab1115dd30464128571389ade1c46ea15553c14b",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 447,
+    "target": "../../../contracts/experience/screen-specifications/CTH-08.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-08.md",
+    "exists": true,
+    "sha256": "f3d5fb2100d2b782fdc8d9ccc135089e505e4d86e12c67c9d84017d0ce82efe4",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 457,
+    "target": "../../../contracts/experience/screen-specifications/CTH-09.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-09.md",
+    "exists": true,
+    "sha256": "389e7ab07dd7269a6d35e4f9b97c278a120a63874d74cb9c3e41220a646f10d2",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 496,
+    "target": "../../../contracts/experience/screen-specifications/CTH-10.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/CTH-10.md",
+    "exists": true,
+    "sha256": "1743bbfb4e4d8a2f688b501a2ec1222064ec854c137aec45018a31c0decf8d07",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 508,
+    "target": "../../../contracts/experience/screen-specifications/BMP-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-01.md",
+    "exists": true,
+    "sha256": "1aa739fad48b8073a96ab3c7089b7f3dc6765af69e199455cce027725140a33c",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 520,
+    "target": "../../../contracts/experience/screen-specifications/BMP-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-02.md",
+    "exists": true,
+    "sha256": "f3f5e82f56d2ebf644e6f6e0bb7f25ab1384eda5e7c1c3227dce6e54aa5daf43",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 532,
+    "target": "../../../contracts/experience/screen-specifications/BMP-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-03.md",
+    "exists": true,
+    "sha256": "b42b6b461e1595132a99ed7a05a60d6a0eb38a829eba96031a933fca04ae82be",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 544,
+    "target": "../../../contracts/experience/screen-specifications/BMP-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-04.md",
+    "exists": true,
+    "sha256": "872e7a8772c2015b9ba96f6920e31f09bc7661a49ec499184bc4844daf014900",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 554,
+    "target": "../../../contracts/experience/screen-specifications/BMP-05.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-05.md",
+    "exists": true,
+    "sha256": "f960fe98c783e9d8249fe4b86812ba7c4308af4c6dd0f9599aa37e127f59f220",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 590,
+    "target": "../../../contracts/experience/screen-specifications/BMP-06.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-06.md",
+    "exists": true,
+    "sha256": "b19883c6e3a1c6cc5f59060f9adf22dcc947708dc2590d3954ba1d4bc62b38a4",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 644,
+    "target": "../../../contracts/experience/screen-specifications/BMP-07.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-07.md",
+    "exists": true,
+    "sha256": "b37c83ca9defab9d346274ec8f99e251f8a115e7b623914d2f47753470758914",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 680,
+    "target": "../../../contracts/experience/screen-specifications/BMP-08.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-08.md",
+    "exists": true,
+    "sha256": "faf53e2e3cdf42083462af6f3e050009ae47bfaf2464df6db1914512fb2f2042",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 740,
+    "target": "../../../contracts/experience/screen-specifications/BMP-09.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-09.md",
+    "exists": true,
+    "sha256": "aa5a7aeffd58dec6d38b23464f9b2c403731cb084baad2da9bc8831709cdb1e6",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 778,
+    "target": "../../../contracts/experience/screen-specifications/BMP-10.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-10.md",
+    "exists": true,
+    "sha256": "e51064fab656d23c2c236259317193ae9e955214b7ab0708efee01523d113ab0",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 788,
+    "target": "../../../contracts/experience/screen-specifications/BMP-11.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/BMP-11.md",
+    "exists": true,
+    "sha256": "9fa9077974f1b2ec62107d5d653d78189f240d7d1177a9874f7af6379d8c97fe",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 800,
+    "target": "../../../contracts/experience/screen-specifications/SH-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-01.md",
+    "exists": true,
+    "sha256": "0edade67f00c4a7deb886c05c73fdc8e75fe541610ac9e07918b9de7ecd38892",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 816,
+    "target": "../../../contracts/experience/screen-specifications/SH-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-02.md",
+    "exists": true,
+    "sha256": "da449172ea32481e40f65aecfd500a4ca91660343d7fcd0ab64aacfb5e95c0b6",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 828,
+    "target": "../../../contracts/experience/screen-specifications/SH-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-03.md",
+    "exists": true,
+    "sha256": "dd1b09ab30e4ea5eff58bbb2c85bb700f46a0b157c5a1575ac021f33dfa73f90",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 840,
+    "target": "../../../contracts/experience/screen-specifications/SH-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-04.md",
+    "exists": true,
+    "sha256": "9435cdcdcad81942b4a81d67378db4134d3b21ea53486a7ed5dd7f357cc8d07f",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 852,
+    "target": "../../../contracts/experience/screen-specifications/SH-05.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-05.md",
+    "exists": true,
+    "sha256": "80bc9f8b9679b8e1198ba31f11206d0ab5acaf1840438f1528e961add0d5170b",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 864,
+    "target": "../../../contracts/experience/screen-specifications/SH-06.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SH-06.md",
+    "exists": true,
+    "sha256": "70c3058054683683373be569fd00233ead4265721964ea358d56a81a8507e2ef",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 874,
+    "target": "../../../contracts/experience/screen-specifications/AI-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/AI-01.md",
+    "exists": true,
+    "sha256": "7e0a38328d3f09c298240ba5ca571f1ab417fdceb7f06f3422cebaa02ee4b3d7",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 940,
+    "target": "../../../contracts/experience/screen-specifications/AI-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/AI-02.md",
+    "exists": true,
+    "sha256": "5e6da5a8911cdf442bc00f9e84e6127c7d60c3f036af66ccf52e3dd2bbaa1c05",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 952,
+    "target": "../../../contracts/experience/screen-specifications/AI-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/AI-03.md",
+    "exists": true,
+    "sha256": "5002c5e432c2a8924258a7a059d9c442a36b68d05ca6e56393a8c0fbc72d636a",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 964,
+    "target": "../../../contracts/experience/screen-specifications/AI-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/AI-04.md",
+    "exists": true,
+    "sha256": "2573b6aec9b06c704797d9316035eef9552c2e5f28117c4f30913c6a18d5c80e",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 1028,
+    "target": "../../../contracts/experience/screen-specifications/AI-05.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/AI-05.md",
+    "exists": true,
+    "sha256": "8a7d86ca1af22074f4a348e745ec20060da8e8f52950013e235ae91bc136be46",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 1068,
+    "target": "../../../contracts/experience/screen-specifications/SYS-01.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-01.md",
+    "exists": true,
+    "sha256": "fc0080b65aaf74186d89ee757b27cbc6ae2037e67fa9e674201a526df70bafe8",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 1078,
+    "target": "../../../contracts/experience/screen-specifications/SYS-02.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-02.md",
+    "exists": true,
+    "sha256": "a078cd9d33391d543ef841bfe478e14b5bc4ab51bf6d928c9ad5cb784c99005c",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 1117,
+    "target": "../../../contracts/experience/screen-specifications/SYS-03.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-03.md",
+    "exists": true,
+    "sha256": "7c8cb2edab8429e347519b9a512bf759e59fe6010a69b24545260f74d9325021",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 1127,
+    "target": "../../../contracts/experience/screen-specifications/SYS-04.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-04.md",
+    "exists": true,
+    "sha256": "bfe2fbb36c684d03b579c3deaee1665c710d6e1131f828f3e44e97ceb2a52903",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 1212,
+    "target": "../../../contracts/experience/screen-specifications/SYS-05.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-05.md",
+    "exists": true,
+    "sha256": "0427c83edb380e08fd8df2117e6b6386d7493245ea3ff44a3f386fd73f3544f2",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 1251,
+    "target": "../../../contracts/experience/screen-specifications/SYS-06.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-06.md",
+    "exists": true,
+    "sha256": "02d84c9e3ca31d3067a3c9f84ca3d41f6f16c80942b2fd3578be2121da347e6b",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 1318,
+    "target": "../../../contracts/experience/screen-specifications/SYS-07.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-07.md",
+    "exists": true,
+    "sha256": "9444805d30b3d58519450f71fc5a40bc932a25c30af63ed1c57b17922e328948",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 1361,
+    "target": "../../../contracts/experience/screen-specifications/SYS-08.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/SYS-08.md",
+    "exists": true,
+    "sha256": "b6024b4415cd88461f58b91204bfeae2156c1d9b1efe12323b1b1e655a560dfe",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 444,
+    "target": "LUMENIS-ROUND-02-CHARTER-CURRENT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-ROUND-02-CHARTER-CURRENT.md",
+    "exists": true,
+    "sha256": "1051283ebfa1b7411f61ea7951aae2dab866f018965874c7f59ce5927631f8eb",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 471,
+    "target": "evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md",
+    "exists": true,
+    "sha256": "2932c4e4405af361fde95de7b50c1e9ac1befd2925d8eaacf9c297b17d07b746",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 501,
+    "target": "evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md",
+    "exists": true,
+    "sha256": "6f603dbb12d81dc6d7b93289ea513dc81bfaadfe8cef49bd7cf5158cccc9570a",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 502,
+    "target": "evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json",
+    "exists": true,
+    "sha256": "d964449d505e81bc15a4cacec370abb53086ace3deb5ec6c5bccd42123bde66d",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 860,
+    "target": "evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md",
+    "exists": true,
+    "sha256": "40a72135fc0965bb249fd6d2be14ade3a208481702ee962f5de444e8e73c740a",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 860,
+    "target": "evidence/round-15/SEMANTIC-CALIBRATION-20261007.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/SEMANTIC-CALIBRATION-20261007.md",
+    "exists": true,
+    "sha256": "032695c4b65f006c955fdcab101273075983048fa7243a4c7eb8ae080372ebea",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 1024,
+    "target": "evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md",
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md",
+    "exists": true,
+    "sha256": "1d23f232a31518621b265d23dbbb04766c1e089d91ee36f38b01c40ee266b511",
+    "read_status": "REFERENCE_RESOLVED_ONLY_NOT_READ",
+    "kind": "ORIGINAL_LINK_NOT_NEW_SCOPE"
+  }
+]

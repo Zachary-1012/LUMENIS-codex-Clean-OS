@@ -1,0 +1,106 @@
+{
+  "sha": "f1b41ba424db21e9fb08e32a7e2a2d951946c0ad",
+  "node_id": "C_kwDOSaqmLNoAKGYxYjQxYmE0MjRkYjIxZTlmYjA4ZTMyYTdlMmEyZDk1MTk0NmMwYWQ",
+  "commit": {
+    "author": {
+      "name": "Sarah Murphy",
+      "email": "[REDACTED_PRIVATE_IDENTIFIER]",
+      "date": "2026-10-15T23:24:04Z"
+    },
+    "committer": {
+      "name": "GitHub",
+      "email": "[REDACTED_PRIVATE_IDENTIFIER]",
+      "date": "2026-10-15T23:24:04Z"
+    },
+    "message": "Merge pull request #374 from bluesky-social/offboarding/jetstream-codeowners\n\nAssign Jetstream code ownership to Atmosphere maintainers",
+    "tree": {
+      "sha": "29080d79faa5a810d04b026ad7d0e58bed368513",
+      "url": "https://api.github.com/repos/bluesky-social/jetstream/git/trees/29080d79faa5a810d04b026ad7d0e58bed368513"
+    },
+    "url": "https://api.github.com/repos/bluesky-social/jetstream/git/commits/f1b41ba424db21e9fb08e32a7e2a2d951946c0ad",
+    "comment_count": 0,
+    "verification": {
+      "verified": true,
+      "reason": "valid",
+      "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsFcBAABCAAQBQJq0WCUCRC1aQ7uu5UhlAAAc2oQAChNeYN3zbC3frHyyY7WU5+x\nIJwmKW/tRqTrXlsk6jfjdelJ6uB6SZo/E9ybpv2Cg0T75JYAvaMr2vjTkAWOAGau\nW6HKCZ2YZ/G2dhhoNdlE47JAux/nXBN3BS7lyx3kst6rcgXoMO514ZwLuy7GU2td\nlUdgcHWin/h3QsYtiFVxJdcXzoSq4S8azMjBoDSSUKQpmLByXySuLfIIwJmq+tdm\naW2RPh3wdTWXNUF8JO/ZufXEx2nMnx9BzY6Rq40znP1Q8okC5rStBnyAU3WwgRcE\np8M6yJANMvFpkhA6t1yXcNyhxZYt051VObmfi3TJC5tmO/bfMa6SmhXELOU6O0au\nnXhDfmZEMt3vahAdkQHtFL68z1PkuUNPPSzdUkZ+29250M7sm8a4YdqNZ6Yin0JR\nGm6xCbX/PRw7Pnn3ueRKt/zniWcmdyHkNKXXIjFytazw0A5WD59F2xFPtwdWHntw\ngKVPBSo6/kVz7bKChekNIbjd7TKHQodtNxX9zBi6SXHBqCnmER1IeRUhRU3HCdMx\nibBMjErDxsSjvfTitKUJrk3DYu08Ds12VLjYnxejWYusu4kHR/dbspH3cu2XaEdJ\noVwJl0NHAaf8j7BlyKuqwVc+hn/1i6IuvR9+1MAFqnp6XemX1m3KKQGBgSfr/qgy\nwVKMTxscjzIQcDN5xJGa\n=FFwX\n-----END PGP SIGNATURE-----\n",
+      "payload": "tree 29080d79faa5a810d04b026ad7d0e58bed368513\nparent d4db8c08eb887dd148cd7c1d5f4a9fb327e15f06\nparent 09f2ee36d4daacb54f1c7532c37cfdd3f96e29e1\nauthor Sarah Murphy <[REDACTED_EMAIL]> 1792106644 -0700\ncommitter GitHub <[REDACTED_EMAIL]> 1792106644 -0700\n\nMerge pull request #374 from bluesky-social/offboarding/jetstream-codeowners\n\nAssign Jetstream code ownership to Atmosphere maintainers",
+      "verified_at": "2026-10-15T23:24:05Z"
+    }
+  },
+  "url": "https://api.github.com/repos/bluesky-social/jetstream/commits/f1b41ba424db21e9fb08e32a7e2a2d951946c0ad",
+  "html_url": "https://github.com/bluesky-social/jetstream/commit/f1b41ba424db21e9fb08e32a7e2a2d951946c0ad",
+  "comments_url": "https://api.github.com/repos/bluesky-social/jetstream/commits/f1b41ba424db21e9fb08e32a7e2a2d951946c0ad/comments",
+  "author": {
+    "login": "sarahmaeve",
+    "id": 1178870,
+    "node_id": "MDQ6VXNlcjExNzg4NzA=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/1178870?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/sarahmaeve",
+    "html_url": "https://github.com/sarahmaeve",
+    "followers_url": "https://api.github.com/users/sarahmaeve/followers",
+    "following_url": "https://api.github.com/users/sarahmaeve/following{/other_user}",
+    "gists_url": "https://api.github.com/users/sarahmaeve/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/sarahmaeve/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/sarahmaeve/subscriptions",
+    "organizations_url": "https://api.github.com/users/sarahmaeve/orgs",
+    "repos_url": "https://api.github.com/users/sarahmaeve/repos",
+    "events_url": "https://api.github.com/users/sarahmaeve/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/sarahmaeve/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "committer": {
+    "login": "web-flow",
+    "id": 19864447,
+    "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+    "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/web-flow",
+    "html_url": "https://github.com/web-flow",
+    "followers_url": "https://api.github.com/users/web-flow/followers",
+    "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+    "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+    "organizations_url": "https://api.github.com/users/web-flow/orgs",
+    "repos_url": "https://api.github.com/users/web-flow/repos",
+    "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/web-flow/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "parents": [
+    {
+      "sha": "d4db8c08eb887dd148cd7c1d5f4a9fb327e15f06",
+      "url": "https://api.github.com/repos/bluesky-social/jetstream/commits/d4db8c08eb887dd148cd7c1d5f4a9fb327e15f06",
+      "html_url": "https://github.com/bluesky-social/jetstream/commit/d4db8c08eb887dd148cd7c1d5f4a9fb327e15f06"
+    },
+    {
+      "sha": "09f2ee36d4daacb54f1c7532c37cfdd3f96e29e1",
+      "url": "https://api.github.com/repos/bluesky-social/jetstream/commits/09f2ee36d4daacb54f1c7532c37cfdd3f96e29e1",
+      "html_url": "https://github.com/bluesky-social/jetstream/commit/09f2ee36d4daacb54f1c7532c37cfdd3f96e29e1"
+    }
+  ],
+  "stats": {
+    "total": 2,
+    "additions": 1,
+    "deletions": 1
+  },
+  "files": [
+    {
+      "sha": "5edf56862f3f0129dc9b7ee60875bd1186263d68",
+      "filename": "CODEOWNERS",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/bluesky-social/jetstream/blob/f1b41ba424db21e9fb08e32a7e2a2d951946c0ad/CODEOWNERS",
+      "raw_url": "https://github.com/bluesky-social/jetstream/raw/f1b41ba424db21e9fb08e32a7e2a2d951946c0ad/CODEOWNERS",
+      "contents_url": "https://api.github.com/repos/bluesky-social/jetstream/contents/CODEOWNERS?ref=f1b41ba424db21e9fb08e32a7e2a2d951946c0ad",
+      "patch": "@@ -1,2 +1,2 @@\n # Default code owner for Jetstream changes.\n-* @jcalabro\n+* @devinivy @bnewbold"
+    }
+  ]
+}

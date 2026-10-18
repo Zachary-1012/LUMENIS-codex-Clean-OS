@@ -45,7 +45,7 @@ and hiding new scoped artifacts from the old reader required adaptation.
 ## Real media and recovery evidence
 
 Evidence directory:
-`C:/Users/28049/AppData/Local/Temp/lumenis-artifact-final-20260930-b440187dfeee492ebd7d469d01fa2765`.
+`C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-artifact-final-20260930-b440187dfeee492ebd7d469d01fa2765`.
 
 `acceptance-evidence.json` SHA256:
 `e8534806e4eabc536c763a5c4c9d0019246b541866c6b5583db64db66c656f1a`.

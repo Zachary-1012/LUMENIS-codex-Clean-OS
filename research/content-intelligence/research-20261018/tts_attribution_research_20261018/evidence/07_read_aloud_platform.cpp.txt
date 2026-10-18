@@ -1,0 +1,107 @@
+# app/windows/runner/read_aloud_platform.cpp:100-132
+100:   if (com_initialized_) CoUninitialize();
+101: }
+102: 
+103: void ReadAloudPlatform::Stop() {
+104:   if (voice_) voice_->Speak(nullptr, SPF_PURGEBEFORESPEAK, nullptr);
+105:   status_ = "STOPPED";
+106: }
+107: 
+108: void ReadAloudPlatform::HandleMethodCall(
+109:     const flutter::MethodCall<EncodableValue>& call,
+110:     std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
+111:   if (call.method_name() == "availableLocales") {
+112:     EncodableMap response{
+113:         {EncodableValue("supported"), EncodableValue(true)},
+114:         {EncodableValue("localLocales"), EncodableValue(LocalLocales())},
+115:     };
+116:     result->Success(EncodableValue(response));
+117:     return;
+118:   }
+119:   if (call.method_name() == "stop") {
+120:     Stop();
+121:     result->Success();
+122:     return;
+123:   }
+124:   if (call.method_name() == "observe") {
+125:     result->Success(StatusResult(Observe()));
+126:     return;
+127:   }
+128:   if (call.method_name() != "speak") {
+129:     result->NotImplemented();
+130:     return;
+131:   }
+132: 
+
+# app/windows/runner/read_aloud_platform.cpp:194-264
+194: }
+195: 
+196: EncodableList ReadAloudPlatform::LocalLocales() {
+197:   EncodableList found;
+198:   for (const char* locale : {"zh-CN", "en-US", "ko-KR"}) {
+199:     ISpObjectToken* token = FindLocalVoice(locale);
+200:     if (token) {
+201:       found.emplace_back(locale);
+202:       token->Release();
+203:     }
+204:   }
+205:   return found;
+206: }
+207: 
+208: ISpObjectToken* ReadAloudPlatform::FindLocalVoice(const std::string& locale) {
+209:   ISpObjectTokenCategory* category = nullptr;
+210:   if (FAILED(CoCreateInstance(CLSID_SpObjectTokenCategory, nullptr,
+211:                               CLSCTX_INPROC_SERVER,
+212:                               IID_ISpObjectTokenCategory,
+213:                               reinterpret_cast<void**>(&category))) ||
+214:       !category) {
+215:     return nullptr;
+216:   }
+217:   if (FAILED(category->SetId(SPCAT_VOICES, FALSE))) {
+218:     category->Release();
+219:     return nullptr;
+220:   }
+221:   IEnumSpObjectTokens* tokens = nullptr;
+222:   const HRESULT enumeration = category->EnumTokens(nullptr, nullptr, &tokens);
+223:   category->Release();
+224:   if (FAILED(enumeration) || !tokens) {
+225:     return nullptr;
+226:   }
+227:   ULONG count = 0;
+228:   tokens->GetCount(&count);
+229:   ISpObjectToken* match = nullptr;
+230:   for (ULONG index = 0; index < count; ++index) {
+231:     ISpObjectToken* token = nullptr;
+232:     if (FAILED(tokens->Item(index, &token)) || !token) continue;
+233:     ISpDataKey* attributes = nullptr;
+234:     WCHAR* language = nullptr;
+235:     const bool matching =
+236:         SUCCEEDED(token->OpenKey(L"Attributes", &attributes)) && attributes &&
+237:         SUCCEEDED(attributes->GetStringValue(L"Language", &language)) &&
+238:         language && CanonicalTag(language) == locale;
+239:     if (language) CoTaskMemFree(language);
+240:     if (attributes) attributes->Release();
+241:     if (matching) {
+242:       match = token;
+243:       break;
+244:     }
+245:     token->Release();
+246:   }
+247:   tokens->Release();
+248:   return match;
+249: }
+250: 
+251: std::string ReadAloudPlatform::Observe() {
+252:   if (!voice_ || (status_ != "STARTING" && status_ != "PLAYING")) {
+253:     return status_;
+254:   }
+255:   SPVOICESTATUS voice_status{};
+256:   if (FAILED(voice_->GetStatus(&voice_status, nullptr))) {
+257:     status_ = "FAILED";
+258:   } else if (voice_status.dwRunningState == SPRS_IS_SPEAKING) {
+259:     status_ = "PLAYING";
+260:   } else if (voice_status.dwRunningState == SPRS_DONE) {
+261:     status_ = "COMPLETED";
+262:   }
+263:   return status_;
+264: }

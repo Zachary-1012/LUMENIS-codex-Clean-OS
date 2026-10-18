@@ -21,7 +21,7 @@ class ActionType(str, Enum):
 
 class ExecutionStatus(str, Enum):
     PENDING = "pending"; RUNNING = "running"; COMPLETED = "completed"
-    FAILED = "failed"; BLOCKED = "blocked"; REJECTED = "rejected"
+    CANCELLED = "cancelled"; FAILED = "failed"; BLOCKED = "blocked"; REJECTED = "rejected"
 
 _VALID_TRANSITIONS = {
     SkillState.REGISTERED: {SkillState.ENABLED, SkillState.DISABLED},
@@ -210,6 +210,27 @@ def check_permission(ctx, user_role="user", skill_info=None):
         return payload
 
     target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
+    if (ctx.workspace_principal is not None and isinstance(request_context, dict)
+            and set(request_context) == {'agent_task_id'}):
+        try:
+            from agent_runtime.task_binding import authorized_context, _current_binding, _digest
+            from ai_task_engine import get_task_engine
+            task_id = request_context['agent_task_id']
+            task = get_task_engine().get_task(task_id)
+            context = authorized_context(task, ctx.workspace_principal)
+            _current_binding(task_id, ctx.skill_id)
+            expected = 'agentstep_' + _digest({'task': task_id, 'skill': ctx.skill_id, 'inputs': ctx.input_payload})[:32]
+            if (ctx.skill_id not in _BACKGROUND_INPUTS or ctx.action_type is not ActionType.READ
+                    or ctx.user_id is not None or ctx.execution_id != expected
+                    or set(ctx.input_payload) - _BACKGROUND_INPUTS[ctx.skill_id]
+                    or ctx.domain != context['domain_id'] or ctx.product != context['product']
+                    or task['status'] == 'cancelled'):
+                raise PermissionError('LOCAL_AGENT_SKILL_BINDING_INVALID')
+            return {'allowed': True, 'reason': 'Scoped server local Agent read', 'code': 'PERMISSION_GRANTED',
+                    'resource': 'skill:' + ctx.skill_id, 'caller': 'workspace:local',
+                    'operation_type': 'read', 'requires_approval': False}
+        except Exception:
+            return {'allowed': False, 'reason': 'Local Agent task binding unavailable', 'code': 'LOCAL_AGENT_SCOPE_DENIED'}
     if ctx.workspace_principal is not None:
         shared_scope = request_context.get("shared_workspace_scope") if isinstance(request_context, dict) else None
         if not (
@@ -338,6 +359,7 @@ _RESULT_METADATA_FIELDS = frozenset({
     "protocol_version", "transport", "security", "trace", "warnings", "duration_ms",
     "implementation_state", "external_fetch", "provider_call", "production_truth_write",
     "query", "task", "version", "timestamp", "created_at", "updated_at", "type",
+    "diagnostics",
 })
 _RESULT_VALUE_FIELDS = frozenset({
     "result", "output", "osai", "structuredContent", "content", "data", "value",
@@ -586,28 +608,252 @@ def ensure_skill_executions_table():
         finally: conn.close()
     except Exception: pass
 
-def _trace_json(value, limit=128 * 1024):
+def _trace_json(value, limit=8 * 1024 * 1024):
+    """Keep complete sanitized JSON in the existing trace owner, never a digest.
+
+    Oversize is explicit failure, not successful persistence of missing content.
+    Credentials remain excluded by the shared checkpoint sanitizer.
+    """
     from agent_runtime.durable_adapter import _sanitize_checkpoint_value
-    import hashlib
     safe, _sensitive = _sanitize_checkpoint_value(value)
     text = json.dumps(safe, ensure_ascii=False, default=str, allow_nan=False)
-    if len(text.encode("utf-8")) <= limit:
-        return text
-    return json.dumps({"representation": "digest_only", "code": "TRACE_PAYLOAD_TOO_LARGE",
-                       "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
-                       "bytes": len(text.encode("utf-8")), "full_result_in_trace": False})
+    if len(text.encode("utf-8")) > limit:
+        raise ValueError("SKILL_TRACE_PAYLOAD_TOO_LARGE: maximum 8 MiB; use existing Artifact reference")
+    return text
+
+
+def _agent_scope_binding(ctx, *, connection=None):
+    """Bind an account Skill invocation to its current server-owned Agent task."""
+    request = ctx.request_context if isinstance(ctx.request_context, dict) else {}
+    if 'agent_task_id' not in request:
+        if str(ctx.execution_id).startswith('skillscope_agentstep_'):
+            raise PermissionError('AGENT_SKILL_TASK_BINDING_REQUIRED')
+        return None
+    from ai_task_engine import get_task_engine
+    from agent_runtime.task_binding import authorized_context, _current_binding, _digest
+    task_id = request['agent_task_id']
+    task = get_task_engine().get_task(task_id)
+    if not isinstance(task, dict):
+        raise PermissionError('AGENT_TASK_UNAVAILABLE')
+    context = authorized_context(task, {'id': ctx.user_id}, connection=connection)
+    _current_binding(task_id, ctx.skill_id)
+    expected = 'skillscope_agentstep_' + _digest({'task': task_id, 'skill': ctx.skill_id, 'inputs': ctx.input_payload})[:32]
+    if (type(ctx.user_id) is not int or context['actor_id'] != ctx.user_id
+            or ctx.workspace_principal is not None or ctx.action_type is not ActionType.READ
+            or ctx.skill_id not in _BACKGROUND_INPUTS or set(ctx.input_payload) - _BACKGROUND_INPUTS[ctx.skill_id]
+            or ctx.execution_id != expected or task['status'] == 'cancelled'
+            or ctx.domain != context['domain_id'] or ctx.product != context['product']
+            or ctx.task != task['user_input'] or request.get('skill_scope') != context['scope']):
+        raise PermissionError('AGENT_SKILL_BINDING_INVALID')
+    return {'task_id': task_id, 'binding_sha256': _digest({
+        'task_id': task_id, 'created_by': task['created_by'],
+        'context': task['context'], 'user_input': task['user_input']})}
+
+
+def _direct_scope_admission(ctx, *, connection=None):
+    """Admit an explicit selector through Permission; input_payload is never scope."""
+    context = ctx.request_context if isinstance(ctx.request_context, dict) else {}
+    agent_binding = _agent_scope_binding(ctx, connection=connection) if ctx.workspace_principal is None else None
+    if "skill_scope" not in context:
+        return None
+    scope = context["skill_scope"]
+    if (type(scope) is not dict or not scope
+            or set(scope) - {"subject_id", "brand_focus_id", "global_scope"}
+            or type(ctx.user_id) is not int or ctx.user_id <= 0
+            or ctx.workspace_principal is not None
+            or ctx.domain not in ("cth", "zbmp")
+            or ctx.product != {"cth": "CTH", "zbmp": "ZBMP"}.get(ctx.domain)):
+        raise PermissionError("SKILL_SCOPE_SELECTOR_INVALID")
+    from lumenis.system.security.permission import check_actor_scope_permission
+    decision = check_actor_scope_permission(
+        {"id": ctx.user_id}, domain_id=ctx.domain, module=ctx.skill_id,
+        action="write" if ctx.action_type in (ActionType.WRITE, ActionType.COMMIT, ActionType.PUSH) else "read",
+        subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
+        global_scope=scope.get("global_scope", False), connection=connection,
+    )
+    if not decision.allowed or decision.verification_state != "verified":
+        raise PermissionError("SKILL_SCOPE_PERMISSION_DENIED")
+    return {"domain_id": decision.domain_id, "subject_id": decision.subject_id,
+            "brand_focus_id": decision.brand_focus_id, "global_scope": decision.global_scope,
+            "scope_audit_id": decision.scope_audit_id, "scope_basis": "explicit_selection",
+            **({"agent_task": agent_binding} if agent_binding is not None else {})}
+
+
+def _execution_scope_digest(row):
+    """Bind the saved result, principal and every material trace field, not a preview."""
+    import hashlib
+    fields = {key: row.get(key) for key in (
+        "execution_id", "skill_id", "user_id", "domain", "product", "task", "action_type",
+        "input_json", "output_json", "status", "error", "evaluation_json",
+        "permission_json", "firewall_json", "effect_fence_json", "created_at")}
+    evidence = json.loads(row.get("evidence_json") or "{}")
+    evidence.pop("scope_receipt", None)
+    fields["evidence"] = evidence
+    return hashlib.sha256(json.dumps(fields, ensure_ascii=False, sort_keys=True,
+        separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+
+
+def _execution_request_scope_digest(row):
+    import hashlib
+    fields = {key: row.get(key) for key in (
+        "execution_id", "skill_id", "user_id", "domain", "product", "task", "action_type",
+        "input_json", "permission_json", "created_at")}
+    return hashlib.sha256(json.dumps(fields, ensure_ascii=False, sort_keys=True,
+        separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+
+
+def _queued_execution_scope(row):
+    """Recover an explicit selector from signed submission, then recheck live admission."""
+    if not row['execution_id'].startswith('skilljob_scoped_'):
+        return None
+    from account.models import get_db
+    from lumenis.shared.evidence import store
+    proof = json.loads(row.get('evidence_json') or '{}').get('scope_receipt') or {}
+    con = get_db()
+    try:
+        receipt = con.execute('SELECT * FROM app_evidence_records WHERE id=?',
+                              (proof.get('evidence_id'),)).fetchone()
+    finally:
+        con.close()
+    if not receipt or not store.verify_evidence_record_integrity(receipt):
+        raise PermissionError('BACKGROUND_SCOPE_RECEIPT_INVALID')
+    material = json.loads(receipt['inputs_json'])['scope_receipt']
+    if (material.get('contract') != 'skill-execution-request-scope-v1'
+            or material.get('execution_id') != row['execution_id']
+            or material.get('actor_id') != row['user_id']
+            or material.get('trace_sha256') != _execution_request_scope_digest(row)
+            or material.get('domain_id') != row['domain']
+            or receipt['source'] != 'skill_execution_scope'):
+        raise PermissionError('BACKGROUND_SCOPE_BINDING_CHANGED')
+    scope = {key: material[key] for key in ('subject_id', 'brand_focus_id', 'global_scope')}
+    context = SkillExecutionContext(skill_id=row['skill_id'], user_id=row['user_id'],
+        domain=row['domain'], product=row['product'], action_type=ActionType(row['action_type']),
+        request_context={'skill_scope': scope})
+    _direct_scope_admission(context)
+    return scope
+
+
+def _record_execution_scope_receipt(ctx, conn):
+    context = ctx.request_context if isinstance(ctx.request_context, dict) else {}
+    pending = ctx.status is ExecutionStatus.PENDING and ctx.execution_id.startswith('skilljob_scoped_')
+    if "skill_scope" not in context or (ctx.status is not ExecutionStatus.COMPLETED and not pending):
+        return
+    # Revalidate at finalization too: a handler cannot mint a receipt after
+    # the selected source scope has been withdrawn while it was running.
+    admission = _direct_scope_admission(ctx, connection=conn)
+    if not getattr(ctx, "_scope_admission", None):
+        raise PermissionError("SKILL_SCOPE_ADMISSION_MISSING")
+    for key in ("domain_id", "subject_id", "brand_focus_id", "global_scope", "agent_task"):
+        if admission.get(key) != ctx._scope_admission.get(key):
+            raise PermissionError("SKILL_SCOPE_CHANGED_DURING_EXECUTION")
+    row = dict(conn.execute("SELECT * FROM skill_executions WHERE execution_id=?",
+                           (ctx.execution_id,)).fetchone())
+    expected = {"user_id": ctx.user_id, "skill_id": ctx.skill_id, "domain": ctx.domain,
+                "product": ctx.product, "task": ctx.task, "action_type": ctx.action_type.value,
+                "input_json": _trace_json(ctx.input_payload)}
+    if any(row[key] != value for key, value in expected.items()):
+        raise PermissionError("SKILL_SCOPE_TRACE_IDENTITY_MISMATCH")
+    from lumenis.shared.evidence import store
+    store.ensure_evidence_schema(conn)
+    material = {"contract": "skill-execution-request-scope-v1" if pending else "skill-execution-scope-v1",
+                "actor_id": ctx.user_id, "execution_id": ctx.execution_id,
+                "trace_sha256": _execution_request_scope_digest(row) if pending else _execution_scope_digest(row),
+                **admission}
+    evidence_id = store.record_evidence(
+        source="skill_execution_scope", feature_id=ctx.execution_id,
+        product=ctx.product, domain_id=admission["domain_id"],
+        subject_id=admission["subject_id"], brand_focus_id=admission["brand_focus_id"],
+        global_scope=admission["global_scope"], inputs={"scope_receipt": material},
+        outputs={"execution_status": row["status"], "result_validation": "not_established_by_scope_receipt"},
+        account="actor:" + str(ctx.user_id), status="pending", result="PASS",
+        test_name="execution-scope-binding", provider=__name__, connection=conn)
+    receipt = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,)).fetchone()
+    if not receipt or not store.verify_evidence_record_integrity(receipt):
+        raise ValueError("SKILL_SCOPE_RECEIPT_READBACK_FAILED")
+    evidence = json.loads(row.get("evidence_json") or "{}")
+    evidence["scope_receipt"] = {"version": 1, "evidence_id": evidence_id}
+    conn.execute("UPDATE skill_executions SET evidence_json=? WHERE execution_id=?",
+                 (_trace_json(evidence), ctx.execution_id))
+    ctx.evidence = evidence
+
+
+def verified_execution_scope(row, actor):
+    """Return current, signed scope for status projection, never result/source admission.
+
+    Legacy/no-proof rows remain unknown. The caller still needs the original
+    result owner's fresh source-use checks before reading protected output.
+    """
+    try:
+        from account.models import get_db
+        from lumenis.shared.evidence import store
+        from lumenis.system.security.permission import check_actor_scope_permission
+        if (not isinstance(row, dict) or not isinstance(actor, dict)
+                or type(actor.get("id")) is not int or row.get("user_id") != actor["id"]):
+            return None
+        proof = json.loads(row.get("evidence_json") or "{}").get("scope_receipt")
+        if (type(proof) is not dict or set(proof) != {"version", "evidence_id"}
+                or proof["version"] != 1 or type(proof["evidence_id"]) is not int):
+            return None
+        con = get_db()
+        try:
+            live = con.execute("SELECT * FROM skill_executions WHERE execution_id=?",
+                               (row.get("execution_id"),)).fetchone()
+            receipt = con.execute("SELECT * FROM app_evidence_records WHERE id=?",
+                                  (proof["evidence_id"],)).fetchone()
+        finally:
+            con.close()
+        if (not live or dict(live) != row or not receipt
+                or not store.verify_evidence_record_integrity(receipt)):
+            return None
+        record = dict(receipt)
+        material = json.loads(record["inputs_json"])["scope_receipt"]
+        if (material.get("contract") != "skill-execution-scope-v1"
+                or material.get("scope_basis") != "explicit_selection"
+                or record.get("source") != "skill_execution_scope"
+                or material.get("actor_id") != actor["id"]
+                or material.get("execution_id") != row.get("execution_id")
+                or material.get("trace_sha256") != _execution_scope_digest(row)
+                or material.get("domain_id") != row.get("domain")
+                or record.get("domain_id") != row.get("domain")
+                or record.get("product_id") != row.get("product")
+                or row.get("status") != "completed"):
+            return None
+        scope = {key: material[key] for key in (
+            "domain_id", "subject_id", "brand_focus_id", "global_scope")}
+        agent_binding = material.get('agent_task')
+        if agent_binding is not None or row['execution_id'].startswith('skillscope_agentstep_'):
+            if not isinstance(agent_binding, dict) or set(agent_binding) != {'task_id', 'binding_sha256'}:
+                return None
+            ctx = SkillExecutionContext(execution_id=row['execution_id'], skill_id=row['skill_id'],
+                user_id=row['user_id'], domain=row['domain'], product=row['product'], task=row['task'],
+                input_payload=json.loads(row['input_json']), action_type=ActionType(row['action_type']),
+                request_context={'agent_task_id': agent_binding['task_id'],
+                    'skill_scope': {key: scope[key] for key in ('subject_id', 'brand_focus_id', 'global_scope')}})
+            if _agent_scope_binding(ctx) != agent_binding:
+                return None
+        decision = check_actor_scope_permission(actor, module=row["skill_id"], action="read", **scope)
+        if not decision.allowed or decision.verification_state != "verified":
+            return None
+        return {**scope, "evidence_id": proof["evidence_id"], "digest": material["trace_sha256"]}
+    except Exception:
+        return None
 
 
 def write_trace(ctx, duration_ms=0, *, connection=None):
     try:
         if connection is None:
             ensure_skill_executions_table()
+            if (ctx.status in (ExecutionStatus.PENDING, ExecutionStatus.COMPLETED) and isinstance(ctx.request_context, dict)
+                    and "skill_scope" in ctx.request_context):
+                from lumenis.shared.evidence import store
+                store.init_evidence_store()
             from account.models import get_db
             conn = get_db()
         else:
             conn = connection
         try:
-            conn.execute("""INSERT INTO skill_executions
+            conn.execute("SAVEPOINT skill_scope_trace")
+            cursor = conn.execute("""INSERT INTO skill_executions
                 (execution_id, skill_id, user_id, domain, product, task, action_type,
                  input_json, output_json, status, error, evidence_json, evaluation_json,
                  permission_json, firewall_json, effect_fence_json, duration_ms)
@@ -616,7 +862,8 @@ def write_trace(ctx, duration_ms=0, *, connection=None):
                 output_json=excluded.output_json,status=excluded.status,error=excluded.error,
                 evidence_json=excluded.evidence_json,evaluation_json=excluded.evaluation_json,
                 permission_json=excluded.permission_json,firewall_json=excluded.firewall_json,
-                effect_fence_json=excluded.effect_fence_json,duration_ms=excluded.duration_ms""", (
+                effect_fence_json=excluded.effect_fence_json,duration_ms=excluded.duration_ms
+                WHERE skill_executions.status NOT IN ('cancelled', 'completed')""", (
                 ctx.execution_id, ctx.skill_id, ctx.user_id, ctx.domain, ctx.product,
                 ctx.task, ctx.action_type.value,
                 _trace_json(ctx.input_payload),
@@ -628,13 +875,23 @@ def write_trace(ctx, duration_ms=0, *, connection=None):
                 _trace_json(ctx.firewall_result) if ctx.firewall_result else None,
                 _trace_json(ctx.effect_fence_result) if ctx.effect_fence_result else None,
                 duration_ms))
+            if cursor.rowcount == 1:
+                _record_execution_scope_receipt(ctx, conn)
+            conn.execute("RELEASE SAVEPOINT skill_scope_trace")
             if connection is None:
                 conn.commit()
-            return True
+            return cursor.rowcount == 1
+        except Exception:
+            conn.execute("ROLLBACK TO SAVEPOINT skill_scope_trace")
+            conn.execute("RELEASE SAVEPOINT skill_scope_trace")
+            raise
         finally:
             if connection is None:
                 conn.close()
-    except Exception: return False
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Skill trace finalization failed")
+        return False
 
 
 def _reserve_package_execution(ctx, skill_info):
@@ -644,7 +901,8 @@ def _reserve_package_execution(ctx, skill_info):
         return None
     from lumenis.shared.database import get_repository
     fields = ("runtime", "source", "source_type", "entrypoint", "install_path", "active_version", "version",
-              "tools_json", "permissions_granted_json", "install_state", "lifecycle_state", "health_state")
+              "tools_json", "permissions_granted_json", "input_schema_json", "output_schema_json",
+              "compatibility_json", "install_state", "lifecycle_state", "health_state")
     try:
         with get_repository().transaction(timeout=10) as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -677,12 +935,15 @@ def _reserve_package_execution(ctx, skill_info):
     except Exception:
         return "SKILL_EXECUTION_RESERVATION_UNAVAILABLE"
 
-def query_executions(skill_id=None, limit=50, status=None, offset=0, *, strict=False):
+def query_executions(skill_id=None, limit=50, status=None, offset=0, *, strict=False, execution_id=None):
     try:
         from account.models import get_db
         conn = get_db()
         try:
+            if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='skill_executions'").fetchone() is None:
+                return []  # A fresh workspace has no Skill executions yet.
             sql = "SELECT * FROM skill_executions"; conds = []; params = []
+            if execution_id: conds.append("execution_id=?"); params.append(execution_id)
             if skill_id: conds.append("skill_id=?"); params.append(skill_id)
             if status: conds.append("status=?"); params.append(status)
             if conds: sql += " WHERE " + " AND ".join(conds)
@@ -781,7 +1042,7 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
                         user_id=None, user_role="user", product="SYSTEM", domain="system",
                         permission_role=None,
                         skill_info=None, handler=None, content_source_import=None,
-                        request_context=None, workspace_principal=None):
+                        request_context=None, workspace_principal=None, execution_id=None):
     import time
     start = time.time()
     ctx = SkillExecutionContext(skill_id=skill_id, task=task, input_payload=input_payload or {},
@@ -790,6 +1051,12 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
                                  content_source_import=content_source_import,
                                  request_context=request_context,
                                  workspace_principal=workspace_principal)
+    if execution_id is not None:
+        ctx.execution_id = execution_id
+    elif isinstance(request_context, dict) and "skill_scope" in request_context:
+        # Preserve the fact that this row requires a scope proof even if its
+        # evidence_json is damaged or removed later. Legacy IDs stay unknown.
+        ctx.execution_id = "skillscope_" + ctx.execution_id
     source_import = content_source_import is not None
     if source_import and not callable(handler):
         ctx.status = ExecutionStatus.REJECTED
@@ -798,6 +1065,14 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
     ctx.permission_result = check_permission(ctx, user_role=user_role, skill_info=skill_info)
     if not ctx.permission_result["allowed"]:
         ctx.status = ExecutionStatus.REJECTED; ctx.error = ctx.permission_result["reason"]
+        if not source_import:
+            write_trace(ctx, int((time.time() - start) * 1000))
+        return ctx
+    try:
+        ctx._scope_admission = _direct_scope_admission(ctx)
+    except PermissionError as exc:
+        ctx.status = ExecutionStatus.REJECTED
+        ctx.error = str(exc)
         if not source_import:
             write_trace(ctx, int((time.time() - start) * 1000))
         return ctx
@@ -862,6 +1137,17 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
         ctx.status = ExecutionStatus.REJECTED
         ctx.error = reservation
         return ctx
+    if (getattr(ctx, '_scope_admission', None) or {}).get('agent_task'):
+        try:
+            current = _direct_scope_admission(ctx)
+            if any(current.get(key) != ctx._scope_admission.get(key) for key in
+                   ('domain_id', 'subject_id', 'brand_focus_id', 'global_scope', 'agent_task')):
+                raise PermissionError('AGENT_SKILL_CHANGED_BEFORE_EXECUTION')
+        except PermissionError as exc:
+            ctx.status = ExecutionStatus.REJECTED
+            ctx.error = str(exc)
+            write_trace(ctx, int((time.time() - start) * 1000))
+            return ctx
     ctx.status = ExecutionStatus.RUNNING
     ctx.execute_result = execute_skill(ctx, handler=handler, skill_info=skill_info)
     try:
@@ -899,9 +1185,14 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
             "reason": "effect completed but required Evidence could not be recorded",
         }
     trace_saved = write_trace(ctx, int((time.time() - start) * 1000))
-    if reservation == "reserved" and not trace_saved:
+    if not trace_saved and (reservation == "reserved" or ctx.status is ExecutionStatus.COMPLETED):
         ctx.status = ExecutionStatus.FAILED
         ctx.error = "SKILL_EXECUTION_TRACE_FINALIZATION_FAILED"
+        ctx.evaluation = {
+            **(ctx.evaluation or {}), "success": False, "auto_admitted": False,
+            "validation_required": True, "validation_status": "failed_no_trace",
+            "reason": "execution output could not be durably recorded",
+        }
     return ctx
 
 def get_skills_light_status(product=None):
@@ -925,3 +1216,199 @@ def get_skills_light_status(product=None):
                 "version": meta.version, "risk_level": meta.risk_level.value, "source": "builtin_registry"})
     except Exception: pass
     return results
+
+
+# This is a handler binding to the existing TaskQueue, not a second scheduler.
+# Only bounded, local, non-business-reading handlers are safe for this lane.
+_BACKGROUND_INPUTS = {
+    'zbc.skill_registry_snapshot': set(),
+    'zbc.agent_boundary_audit': set(),
+    'shared.social_card': {'title', 'subtitle', 'accent', 'width', 'height'},
+    'shared.video_shotcraft': {'brief'},
+    'shared.huashu': {'brief', 'domain', 'product', 'platform', 'asset_type', 'audience', 'goal'},
+}
+
+
+def _background_binding(info):
+    return _stable_hash({k: info.get(k) for k in (
+        'skill_id', 'version', 'registry_sha256', 'status', 'product', 'domain',
+        'source', 'runtime', 'entrypoint', 'config', 'active_version')})
+
+
+def enqueue_registered_skill(*, skill_id, task, input_payload, action_type,
+                             user_id, product, domain, skill_info, scope=None):
+    if (skill_id not in _BACKGROUND_INPUTS or action_type not in (ActionType.READ, ActionType.ANALYZE)
+            or skill_info.get('status') != 'enabled'
+            or not isinstance(input_payload, dict)
+            or set(input_payload) - _BACKGROUND_INPUTS[skill_id]
+            or len(json.dumps(input_payload, ensure_ascii=False)) > 16000
+            or len(task) > 4000):
+        return {'success': False, 'code': 'BACKGROUND_HANDLER_NOT_ALLOWED'}
+    ctx = SkillExecutionContext(execution_id=('skilljob_scoped_' if scope is not None else 'skilljob_') + uuid.uuid4().hex,
+        skill_id=skill_id, task=task, input_payload=input_payload, action_type=action_type,
+        user_id=user_id, product=product, domain=domain,
+        request_context={'skill_scope': scope} if scope is not None else None)
+    try:
+        ctx._scope_admission = _direct_scope_admission(ctx)
+    except PermissionError as exc:
+        return {'success': False, 'code': str(exc)}
+    # Durable server-created binding also recovers submit->enqueue interruptions.
+    ctx.permission_result = {'background_binding': _background_binding(skill_info)}
+    if not write_trace(ctx):
+        return {'success': False, 'code': 'SKILL_EXECUTION_TRACE_FINALIZATION_FAILED'}
+    return {'success': True, 'accepted': True, 'execution_id': ctx.execution_id,
+            'status': 'pending', 'skill_id': skill_id}
+
+
+def cancel_registered_skill(execution_id):
+    from account.models import get_db
+    conn = get_db()
+    try:
+        conn.execute("UPDATE skill_executions SET status='cancelled', error='USER_CANCELLED' "
+                     "WHERE execution_id=? AND status IN ('pending','running')", (execution_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    return query_executions(execution_id=execution_id, limit=1, strict=True)[0]
+
+
+def run_registered_skill_job(execution_id):
+    """Recover/consume exactly one submitted Skill using the existing leased worker.
+
+    The durable Skill terminal receipt wins over a missing queue ack. No effectful
+    or model-backed handlers are admitted, and no session credential is persisted.
+    """
+    from account.skills import execute_skill_api, get_skill_info
+    from lumenis.system.collector.guard.task_queue import TaskQueue
+    from lumenis.system.collector.guard.queue_worker import QueueWorker
+    rows = query_executions(execution_id=execution_id, limit=1, strict=True)
+    if not rows or not execution_id.startswith('skilljob_'):
+        raise LookupError('registered background execution not found')
+    row = rows[0]
+    try:
+        scope = _queued_execution_scope(row) if row['status'] in ('pending', 'running') else None
+    except Exception:
+        from account.models import get_db
+        con = get_db()
+        try:
+            con.execute("UPDATE skill_executions SET status='rejected',error='BACKGROUND_SCOPE_BINDING_CHANGED' "
+                        "WHERE execution_id=? AND status IN ('pending','running')", (execution_id,))
+            con.commit()
+        finally:
+            con.close()
+        return query_executions(execution_id=execution_id, limit=1, strict=True)[0]
+    binding = json.loads(row.get('permission_json') or '{}').get('background_binding')
+    if not binding and row['status'] in ('pending', 'running'):
+        raise ValueError('background binding missing')
+    queue = TaskQueue()
+    try:
+        queue_id = queue.enqueue_once('registered_skill', {
+            'execution_id': execution_id, 'actor_id': row['user_id'],
+            'product': row['product'], 'binding': binding,
+        }, execution_id)
+        operational = queue.get(queue_id)
+        if row['status'] not in ('pending', 'running') and operational['status'] == 'running':
+            # The business receipt is already terminal; reconcile the ack gap
+            # with the current server-issued lease, without executing a handler.
+            queue.ack(queue_id, run_id=operational['run_id'],
+                      worker_id=operational['worker_id'], lease_owner=operational['lease_owner'])
+            return row
+        queue.reap_stale(60, task_id=queue_id)
+
+        class SelectedQueue:
+            def dequeue(self, **kwargs):
+                return queue.dequeue(task_id=queue_id, **kwargs)
+            def __getattr__(self, name):
+                return getattr(queue, name)
+
+        def processor(job):
+            # Fence lease reclamation around this bounded local-only computation
+            # and its existing trace transaction. Never hold it across a provider.
+            with queue.attempt_guard(job['id'], run_id=job['run_id'],
+                    worker_id=job['worker_id'], lease_owner=job['lease_owner']) as current:
+                if not current:
+                    return False
+                live = query_executions(execution_id=execution_id, limit=1, strict=True)[0]
+                if live['status'] not in ('pending', 'running'):
+                    return True
+                try:
+                    current_scope = _queued_execution_scope(live)
+                except Exception:
+                    from account.models import get_db
+                    con = get_db()
+                    try:
+                        con.execute("UPDATE skill_executions SET status='rejected',error='BACKGROUND_SCOPE_BINDING_CHANGED' "
+                                    "WHERE execution_id=? AND status IN ('pending','running')", (execution_id,))
+                        con.commit()
+                    finally:
+                        con.close()
+                    return True
+                if current_scope != scope:
+                    raise PermissionError('BACKGROUND_SCOPE_BINDING_CHANGED')
+                info = get_skill_info(live['skill_id'])
+                expected = job['payload']
+                if (live['user_id'] != expected['actor_id'] or live['product'] != expected['product']
+                        or not info or _background_binding(info) != expected['binding']
+                        or live['skill_id'] not in _BACKGROUND_INPUTS):
+                    from account.models import get_db
+                    con = get_db()
+                    try:
+                        con.execute("UPDATE skill_executions SET status='rejected',error='BACKGROUND_BINDING_CHANGED' "
+                                    "WHERE execution_id=? AND status IN ('pending','running')", (execution_id,))
+                        con.commit()
+                    finally:
+                        con.close()
+                    return True
+                from account.models import get_db
+                con = get_db()
+                try:
+                    changed = con.execute("UPDATE skill_executions SET status='running' "
+                        "WHERE execution_id=? AND status IN ('pending','running')", (execution_id,)).rowcount
+                    con.commit()
+                finally:
+                    con.close()
+                if not changed:
+                    return True
+                result = execute_skill_api(live['skill_id'], task=live['task'],
+                    input_payload=json.loads(live['input_json'] or '{}'),
+                    action_type=live['action_type'], user_id=live['user_id'],
+                    product=live['product'], _execution_id=execution_id, scope=current_scope)
+                persisted = query_executions(execution_id=execution_id, limit=1, strict=True)[0]
+                if persisted['status'] in ('pending', 'running') and not result.get('success'):
+                    # Account/registry rejection can occur before the chain starts.
+                    from account.models import get_db
+                    con = get_db()
+                    try:
+                        con.execute("UPDATE skill_executions SET status='rejected',error=? "
+                                    "WHERE execution_id=? AND status IN ('pending','running')",
+                                    (result.get('code', 'SKILL_EXECUTION_REJECTED'), execution_id))
+                        con.commit()
+                    finally:
+                        con.close()
+                return query_executions(execution_id=execution_id, limit=1, strict=True)[0]['status'] not in ('pending','running')
+        QueueWorker(SelectedQueue(), processor).process_once()
+    finally:
+        queue.close()
+    return query_executions(execution_id=execution_id, limit=1, strict=True)[0]
+
+
+def start_registered_skill_job(execution_id):
+    """Wake the existing leased worker for a selected durable request."""
+    import threading
+    def work():
+        try:
+            run_registered_skill_job(execution_id)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception('Registered Skill worker interrupted; durable request can resume')
+    thread = threading.Thread(target=work, name='registered-skill-worker', daemon=True)
+    thread.start()
+    return thread
+
+
+def registered_background_handler(skill_id):
+    if skill_id not in _BACKGROUND_INPUTS:
+        raise ValueError('BACKGROUND_HANDLER_NOT_ALLOWED')
+    # Explicit local dispatch prevents installed OSAI/MCP adapters from changing
+    # the execution effects of a queued deterministic request.
+    return lambda ctx: _execute_builtin_local(ctx, None)

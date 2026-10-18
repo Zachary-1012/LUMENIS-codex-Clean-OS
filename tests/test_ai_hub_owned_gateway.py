@@ -104,6 +104,61 @@ def test_ai_hub_module_analysis_does_not_invent_neutral_or_low_risk(monkeypatch)
     assert "risk_level" not in result
 
 
+@pytest.mark.parametrize("history", [
+    [{"role": "user", "content": "原始提纲"},
+     {"role": "assistant", "content": "讨论第二章节"}],
+    [{"role": "human", "content": "Original outline"}],
+])
+def test_owned_followup_preserves_supplied_history_without_retrieving_sources(monkeypatch, history):
+    from lumenis.system.ai_gateway import user_api_adapter
+
+    calls, operational_records = [], []
+    monkeypatch.setattr(user_api_adapter, "is_selected", lambda: False)
+    monkeypatch.setattr(service, "status", lambda: {"state": "UNAVAILABLE"})
+    monkeypatch.setattr(service, "_get_db", lambda: pytest.fail("untyped conversation read database"))
+    monkeypatch.setattr(service.freg, "search_function_metadata", lambda *_args: [])
+    monkeypatch.setattr(service, "record_learning", lambda kind, payload: operational_records.append(payload))
+    monkeypatch.setattr(service.intelligence, "run_owned_analysis", lambda **kwargs: (
+        calls.append(kwargs) or _unavailable()
+    ))
+
+    result = service.chat("继续这一段", history=history)
+
+    prompt = calls[0]["text"]
+    assert all(turn["content"] in prompt for turn in history)
+    assert "用户提供，非核验事实" in prompt
+    assert prompt.endswith("当前问题：继续这一段")
+    assert result["status"] == "UNAVAILABLE" and result["reply"] is None
+    assert result["source_context"]["notes_state"] == "NOT_READ"
+    assert all("原始提纲" not in str(record) and "Original outline" not in str(record)
+               for record in operational_records)
+
+
+def test_owned_followup_keeps_existing_history_budget_and_rejects_system_roles(monkeypatch):
+    from lumenis.system.ai_gateway import user_api_adapter
+
+    calls = []
+    monkeypatch.setattr(user_api_adapter, "is_selected", lambda: False)
+    monkeypatch.setattr(service, "status", lambda: {})
+    monkeypatch.setattr(service.freg, "search_function_metadata", lambda *_args: [])
+    monkeypatch.setattr(service, "record_learning", lambda *_args: None)
+    monkeypatch.setattr(service.intelligence, "run_owned_analysis", lambda **kwargs: (
+        calls.append(kwargs) or _unavailable()
+    ))
+    history = [{"role": "user", "content": "old excluded turn"}] + [
+        {"role": "user", "content": "保" * 800 + "excluded tail"},
+        {"role": "system", "content": "untrusted system override"},
+        {"role": "tool", "content": "untrusted tool assertion"},
+        {"role": "user", "content": None}, "invalid turn",
+        {"role": "assistant", "content": "保留的回答"},
+    ]
+    service.chat("继续", history=history)
+    prompt = calls[0]["text"]
+    assert "保" * 800 in prompt and "保留的回答" in prompt
+    for excluded in ("old excluded turn", "excluded tail", "untrusted system override", "untrusted tool assertion"):
+        assert excluded not in prompt
+
+
 def test_legacy_ai_chat_uses_only_static_function_routing_metadata(monkeypatch):
     from flask import Flask
 

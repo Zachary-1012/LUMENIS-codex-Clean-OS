@@ -3,23 +3,23 @@
 Planner — 基于 OSAI Contract 的规划器
 ======================================
 将 goal（自然语言目标）分解为步骤列表。
-调用智谱 GLM：glm-5.3 做深度规划，glm-4.5-air 做常规规划。
+经唯一 Gateway 调用获准的类型化请求；未配置时明确不可用。
 
 每步包含：action、tool、params、expected_output、risk_level。
 
 复用：
-  - intelligence._chat() 调用智谱 GLM（不重写 AI 调用）
+  - 唯一 SYSTEM AI Gateway（不重写 AI 调用）
   - ai_task_engine 持久化规划结果到 ai_task 表（复用）
 
 设计原则：
   - AI 输出必须经过 JSON 解析和结构验证，不直接信任
-  - 规划失败时降级为单步计划（直接执行 goal）
+  - 规划失败返回空计划与明确原因，不伪造执行动作
   - 规划结果可持久化、可人工修正
   - 不引入 OSAI 运行时依赖，通过 Contract 接口对齐
 
 与 OSAI Contract 对齐点（C-01 Agent Runtime Contract）：
   - Plan 结构：steps[].{action, tool, params, expected_output, risk_level}
-  - 规划模型选择：deep=glm-5.3, routine=glm-4.5-air
+  - 规划模式仅代表预算；模型选择归唯一 Gateway
 """
 from __future__ import annotations
 
@@ -34,8 +34,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 class PlanMode(str, Enum):
     """规划模式。"""
-    ROUTINE = "routine"       # 常规规划，glm-4.5-air
-    DEEP = "deep"             # 深度规划，glm-5.3
+    ROUTINE = "routine"       # 常规规划预算
+    DEEP = "deep"             # 深度规划预算
     RULE_BASED = "rule_based"  # 规则降级，不调用 AI
 
 
@@ -79,6 +79,7 @@ class Plan:
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     token_usage: Dict[str, int] = field(default_factory=dict)
     raw_response: str = ""
+    context_budget: Optional[Dict[str, Any]] = None
     is_fallback: bool = False           # 是否为降级规划
     fallback_reason: str = ""
     outcome_contract_sha256: Optional[str] = None
@@ -142,31 +143,82 @@ class Planner:
         ai_chat_func: Optional[Callable] = None,
         persist_func: Optional[Callable] = None,
         default_mode: PlanMode = PlanMode.ROUTINE,
+        gateway_request_factory: Optional[Callable] = None,
     ):
         """
         Args:
             ai_chat_func: AI 调用函数 callback(system, user, model) -> (content, provider)
-                          None 则使用 intelligence._chat
+                          None 则使用唯一 Gateway 的类型化请求工厂
             persist_func: 规划结果持久化回调 callback(plan) -> None
             default_mode: 默认规划模式
         """
         self._ai_chat_func = ai_chat_func
         self._persist_func = persist_func
         self._default_mode = default_mode
+        self._gateway_request_factory = gateway_request_factory
+        self._gateway_context = {}
 
     def _get_ai_chat(self) -> Callable:
         """获取 AI 调用函数。"""
         if self._ai_chat_func:
             return self._ai_chat_func
-        # 复用 ZBC 现有 AI 调用（智谱 GLM）
-        from intelligence import _chat as zbc_chat
-        return zbc_chat
+        def gateway_chat(system, user, **kwargs):
+            from lumenis.system.ai_gateway import core
+            if self._gateway_request_factory is None:
+                # A generic context cannot mint source-use or external-send
+                # authority. An unconfigured planner remains explicitly absent.
+                raise RuntimeError("PLANNER_AUTHORIZED_REQUEST_REQUIRED")
+            request = self._gateway_request_factory(system, user, dict(self._gateway_context))
+            from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
+            if type(request) is not OwnedServiceRequest:
+                raise RuntimeError("PLANNER_TYPED_REQUEST_REQUIRED")
+            from lumenis.system.ai_gateway.owned_service import measure_owned_request, owned_service_status
+            measured = measure_owned_request(request)
+            omitted = []
+            reduced = dict(self._gateway_context)
+            # Preserve goal, identity/scope and tool contracts in full. Remove
+            # only complete low-priority derived sections, with explicit receipt.
+            for key in ("derived_memory", "reviewed_learning_context"):
+                if measured.get("ok") is not True or measured.get("fits") is True:
+                    break
+                if key not in reduced:
+                    continue
+                value = reduced.pop(key)
+                import hashlib
+                omitted.append({"section": key, "sha256": hashlib.sha256(json.dumps(
+                    value, ensure_ascii=False, sort_keys=True).encode()).hexdigest(),
+                    "reason": "selected_model_context_budget"})
+                reduced["context_omissions"] = list(omitted)
+                user = self._build_user_prompt(self._gateway_goal, reduced, self._gateway_max_steps)
+                request = self._gateway_request_factory(system, user, dict(self._gateway_context))
+                if type(request) is not OwnedServiceRequest:
+                    raise RuntimeError("PLANNER_TYPED_REQUEST_REQUIRED")
+                measured = measure_owned_request(request)
+            if measured.get("ok") is not True:
+                raise RuntimeError(measured.get("code", "PLANNER_TOKEN_COUNT_UNAVAILABLE"))
+            self._last_context_budget = {**measured, "omitted_sections": omitted}
+            if measured.get("fits") is not True:
+                raise RuntimeError("PLANNER_REQUIRED_CONTEXT_EXCEEDS_MODEL_BUDGET")
+            status = owned_service_status(request.domain_id)
+            if status.get("binding_sha256") != measured.get("binding_sha256"):
+                raise RuntimeError("PLANNER_MEASURED_BINDING_CHANGED")
+            # Gateway and runtime revalidate binding, source and exact tokenizer
+            # budget again before generation; this receipt is never an authority.
+            result = core.run_owned_request(request, expected_binding_sha256=measured["binding_sha256"])
+            if not isinstance(result, dict) or result.get("ok") is not True:
+                raise RuntimeError((result or {}).get("code", "PLANNER_GATEWAY_UNAVAILABLE"))
+            content = result.get("analysis")
+            if isinstance(content, dict):
+                content = json.dumps(content, ensure_ascii=False, allow_nan=False)
+            if not isinstance(content, str) or not content.strip():
+                raise RuntimeError("PLANNER_GATEWAY_RESULT_INVALID")
+            return content, result.get("provider", "owned")
+        return gateway_chat
 
     def _select_model(self, mode: PlanMode) -> str:
-        """根据规划模式选择模型。"""
-        if mode == PlanMode.DEEP:
-            return "glm-5.3"
-        return "glm-4.5-air"
+        # The unique Gateway owns actual user/provider/model selection. These
+        # planning budgets do not choose or silently fall back to any provider.
+        return "gateway-selected" if mode is not PlanMode.RULE_BASED else "none"
 
     def plan(
         self,
@@ -194,6 +246,9 @@ class Planner:
             return self._rule_based_plan(goal, plan)
 
         try:
+            self._gateway_context = dict(context or {})
+            self._gateway_goal, self._gateway_max_steps = goal, max_steps
+            self._last_context_budget = None
             user_prompt = self._build_user_prompt(goal, context, max_steps)
             chat_func = self._get_ai_chat()
 
@@ -205,6 +260,7 @@ class Planner:
                 max_tokens=2000,
             )
 
+            plan.context_budget = self._last_context_budget
             plan.raw_response = content or ""
             plan.token_usage = self._extract_token_usage()
 
@@ -239,7 +295,11 @@ class Planner:
         """构建用户提示词。"""
         parts = [f"目标：{goal}", f"最大步骤数：{max_steps}"]
         if context:
-            parts.append(f"上下文：{json.dumps(context, ensure_ascii=False, default=str)[:500]}")
+            raw = json.dumps(context, ensure_ascii=False, allow_nan=False)
+            # Explicit bounded payload, never an invalid half-JSON or silent loss.
+            if len(raw.encode("utf-8")) > 8 * 1024 * 1024:
+                raise ValueError("PLANNER_CONTEXT_TOO_LARGE")
+            parts.append(f"上下文：{raw}")
         parts.append("请输出规划 JSON。")
         return "\n".join(parts)
 
@@ -314,16 +374,9 @@ class Planner:
         """降级规划：单步直接执行。"""
         plan.is_fallback = True
         plan.fallback_reason = reason
-        plan.steps = [
-            PlanStep(
-                index=0,
-                action=f"执行目标：{goal}",
-                tool="direct_execution",
-                params={"goal": goal},
-                expected_output="目标执行结果",
-                risk_level="medium",
-            )
-        ]
+        plan.context_budget = getattr(self, "_last_context_budget", None)
+        # A missing/invalid model response is not a generic executable action.
+        plan.steps = []
         return plan
 
     def _rule_based_plan(self, goal: str, plan: Plan) -> Plan:
@@ -344,17 +397,9 @@ class Planner:
 
     @staticmethod
     def _extract_token_usage() -> Dict[str, int]:
-        """从 intelligence 模块提取 token 使用量。"""
-        try:
-            from intelligence import _get_call_meta
-            meta = _get_call_meta()
-            return {
-                "prompt_tokens": meta.get("prompt_tokens", 0),
-                "completion_tokens": meta.get("completion_tokens", 0),
-                "total_tokens": meta.get("total_tokens", 0),
-            }
-        except Exception:
-            return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        # No usage claim without the exact Gateway receipt. Never read a stale
+        # thread-local receipt from a retired provider module.
+        return {}
 
     def validate_plan(self, plan: Plan) -> List[str]:
         """验证规划结果的完整性和安全性。

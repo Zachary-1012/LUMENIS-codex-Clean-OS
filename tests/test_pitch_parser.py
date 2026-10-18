@@ -176,3 +176,20 @@ def test_new_topic_roles_covered():
     assert _topic_role("亲子乐园") == "family"
     assert _topic_role("露营") == "sport"
     assert _topic_role("威士忌") == "wine"
+
+
+def test_explicit_brief_date_reaches_creative_calendar(tmp_path):
+    for date, market, expected in [('2026-02-17', 'CN', 'reference_only_not_live_verified'),
+                                   ('2027-02-17', 'CN', 'year_not_covered'),
+                                   ('2026-02-17', 'HK', 'market_not_covered')]:
+        value = analyze_pitch('社区汤店，预算3000，轮班工作者单人晚餐', target_date=date, market=market)
+        assert value['marketing']['state'] == expected
+        assert value['ideas']['meta']['calendar_reference']['date'] == date
+        assert value['ideas']['meta']['calendar_reference']['state'] == expected
+        if expected != 'reference_only_not_live_verified':
+            assert value['ideas']['meta']['bound_hotspot'] == '（未绑定节点）'
+    assert analyze_pitch('独立书店')['marketing']['state'] == 'date_required'
+    path = tmp_path / 'brief.txt'
+    path.write_text('独立书店500元阅读交流活动')
+    result = analyze_pitch_file(str(path), target_date='2026-04-23')
+    assert result['ideas']['meta']['bound_hotspot'] == '世界读书日'

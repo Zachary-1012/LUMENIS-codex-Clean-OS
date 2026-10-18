@@ -1,0 +1,168 @@
+{
+  "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+  "files": [
+    {
+      "path": "mcp_discovery.py",
+      "sha256": "bb487a0422b0ab9c1da1457d9fba434b776a3ecb797c5945d9f89fb205ed8260",
+      "line_count": 512,
+      "functions": [
+        {
+          "name": "_safe_env",
+          "start": 71,
+          "end": 79
+        },
+        {
+          "name": "_reader",
+          "start": 92,
+          "end": 112
+        },
+        {
+          "name": "_next_response",
+          "start": 115,
+          "end": 140
+        },
+        {
+          "name": "_items",
+          "start": 143,
+          "end": 155
+        },
+        {
+          "name": "discover_mcp_stdio",
+          "start": 158,
+          "end": 291
+        },
+        {
+          "name": "call_mcp_stdio",
+          "start": 338,
+          "end": 512
+        }
+      ],
+      "method": "AST_STRUCTURE_ONLY_NO_IMPORT_OR_EXECUTION"
+    },
+    {
+      "path": "mcp_skill_runtime.py",
+      "sha256": "847e0c2c4511f450112a4c0e324d7cb79558eb090a4cdac6c81cf8892dcf44aa",
+      "line_count": 215,
+      "functions": [
+        {
+          "name": "validate_installation",
+          "start": 55,
+          "end": 99
+        },
+        {
+          "name": "_entrypoint",
+          "start": 102,
+          "end": 144
+        },
+        {
+          "name": "invoke_registered_mcp",
+          "start": 173,
+          "end": 215
+        }
+      ],
+      "method": "AST_STRUCTURE_ONLY_NO_IMPORT_OR_EXECUTION"
+    },
+    {
+      "path": "github_connector.py",
+      "sha256": "2da2814365ed9b0ff8d7fc0f7715986144dcdd9cf7945ec37da1081cdbceac3a",
+      "line_count": 228,
+      "functions": [
+        {
+          "name": "snapshot",
+          "start": 77,
+          "end": 99
+        },
+        {
+          "name": "status",
+          "start": 121,
+          "end": 126
+        },
+        {
+          "name": "authorization_url",
+          "start": 128,
+          "end": 144
+        },
+        {
+          "name": "get_json",
+          "start": 165,
+          "end": 193
+        },
+        {
+          "name": "repository_collection",
+          "start": 211,
+          "end": 218
+        }
+      ],
+      "method": "AST_STRUCTURE_ONLY_NO_IMPORT_OR_EXECUTION"
+    },
+    {
+      "path": "account/skills.py",
+      "sha256": "33488c84cd92744dfd23777e03f8b7172d40c26c3039e57e66207faf02ab4bda",
+      "line_count": 540,
+      "functions": [
+        {
+          "name": "activate_installed_mcp_skill",
+          "start": 237,
+          "end": 295
+        },
+        {
+          "name": "execute_skill_api",
+          "start": 340,
+          "end": 472
+        }
+      ],
+      "method": "AST_STRUCTURE_ONLY_NO_IMPORT_OR_EXECUTION"
+    },
+    {
+      "path": "account/api.py",
+      "sha256": "cad1c735e0fbea9ec0cd0685bffc6505098b8a6634abf0934094da49412494ef",
+      "line_count": 843,
+      "functions": [
+        {
+          "name": "api_discover_mcp_source",
+          "start": 647,
+          "end": 665
+        },
+        {
+          "name": "api_call_mcp_tool",
+          "start": 670,
+          "end": 718
+        },
+        {
+          "name": "api_github_connector_status",
+          "start": 723,
+          "end": 725
+        }
+      ],
+      "method": "AST_STRUCTURE_ONLY_NO_IMPORT_OR_EXECUTION"
+    },
+    {
+      "path": "lumenis/shared/agents/skills/execution.py",
+      "sha256": "9f4e3b721ed1e00a5c9e82ffed3e1a53786425169f21a74654ab9873ae772a80",
+      "line_count": 927,
+      "functions": [
+        {
+          "name": "_product_result_is_success",
+          "start": 367,
+          "end": 420
+        },
+        {
+          "name": "execute_skill",
+          "start": 437,
+          "end": 513
+        },
+        {
+          "name": "write_trace",
+          "start": 601,
+          "end": 637
+        },
+        {
+          "name": "_reserve_package_execution",
+          "start": 640,
+          "end": 678
+        }
+      ],
+      "method": "AST_STRUCTURE_ONLY_NO_IMPORT_OR_EXECUTION"
+    }
+  ]
+}

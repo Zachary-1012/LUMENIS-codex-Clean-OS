@@ -32,6 +32,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional
+from urllib.parse import urlsplit
 
 from lumenis.shared.database import get_repository, main_db_path
 from lumenis.system.security.permission import LocalWorkspacePrincipal
@@ -424,23 +425,29 @@ def _content_artifact_context(
 def _content_project_export_resource_for_context(
     context: Mapping[str, Any], timeline_data: Mapping[str, Any],
     source_refs: list[str], output_kind: str, previous_artifact_id: str | None,
+    render_options: dict | None = None, delivery_options: dict | None = None,
 ) -> str:
     return "content-project-export:v1:" + hashlib.sha256(_json_bytes({
         "context": dict(context), "timeline": dict(timeline_data),
         "source_refs": list(source_refs), "output_kind": output_kind,
         "parent_artifact_id": previous_artifact_id,
+        **({"render_options": render_options} if render_options else {}),
+        **({"delivery_options": delivery_options} if delivery_options else {}),
     })).hexdigest()
 
 
 def content_project_export_resource(
     timeline: Any, *, actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     source_artifact_refs: list[str] | None, output_kind: str,
-    previous_artifact_id: str | None = None,
+    previous_artifact_id: str | None = None, render_options: dict | None = None, delivery_options: dict | None = None,
     domain_id: str | None = None, subject_id: str | None = None,
     brand_focus_id: str | None = None, global_scope: bool = False,
     shared_workspace_scope: Mapping[str, Any] | None = None,
 ) -> str:
     """Bind the existing export Permission request to the exact project inputs."""
+    from lumenis.shared.content_creation.rendering import validate_render_options
+    render_options = validate_render_options(render_options)
+    delivery_options = _validate_content_delivery_options(delivery_options)
     actor_id, scope = _authorize_content_project(
         actor, domain_id=domain_id, subject_id=subject_id,
         brand_focus_id=brand_focus_id, global_scope=global_scope,
@@ -460,7 +467,7 @@ def content_project_export_resource(
     )
     return _content_project_export_resource_for_context(
         _content_artifact_context(actor, actor_id, scope), timeline_data,
-        refs, output_kind, previous_artifact_id,
+        refs, output_kind, previous_artifact_id, render_options, delivery_options,
     )
 
 
@@ -552,7 +559,10 @@ def _verified_content_project(
         with zipfile.ZipFile(candidate, "r") as archive:
             infos = archive.infolist()
             names = [info.filename for info in infos]
-            if len(names) != 3 or len(set(names)) != 3:
+            basic_names = {"project.json", "render.json", "media.mp4", "media.wav", "captions.srt", "captions.vtt"}
+            if (not 3 <= len(names) <= 85 or len(set(names)) != len(names)
+                    or any(name not in basic_names and not _content_delivery_filename(name) for name in names)
+                    or (("captions.srt" in names) != ("captions.vtt" in names))):
                 raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
             project_infos = [info for info in infos if info.filename == "project.json"]
             render_infos = [info for info in infos if info.filename == "render.json"]
@@ -562,7 +572,7 @@ def _verified_content_project(
             for info in infos:
                 limit = (
                     _MAX_CONTENT_PROJECT_MEDIA_BYTES
-                    if info.filename in {"media.mp4", "media.wav"}
+                    if info.filename in {"media.mp4", "media.wav"} or _content_delivery_filename(info.filename)
                     else _MAX_PROJECT_JSON_BYTES
                 )
                 if (
@@ -573,6 +583,14 @@ def _verified_content_project(
                     raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
             project_data = json.loads(archive.read(project_infos[0]).decode("utf-8"))
             render_data = json.loads(archive.read(render_infos[0]).decode("utf-8"))
+            manifest = project_data.get("delivery_manifest", {}) if isinstance(project_data, dict) else None
+            extra_names = set(names) - basic_names
+            if not isinstance(manifest, dict) or set(manifest) != extra_names:
+                raise LocalArtifactError("CONTENT_DELIVERY_MANIFEST_INVALID")
+            for name, info in manifest.items():
+                raw = archive.read(name)
+                if info != {"sha256": hashlib.sha256(raw).hexdigest(), "size_bytes": len(raw)}:
+                    raise LocalArtifactError("CONTENT_DELIVERY_INTEGRITY_FAILED")
     except LocalArtifactError:
         raise
     except (OSError, zipfile.BadZipFile, RuntimeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -604,7 +622,7 @@ def _verified_content_project(
         or _contains_local_path_field(render_data)
     ):
         raise LocalArtifactError("CONTENT_PROJECT_CONTEXT_MISMATCH")
-    _validate_content_source_refs(
+    _, verified_sources, _ = _validate_content_source_refs(
         source_artifact_refs, actor=actor,
         domain_id=scope.get("domain_id"),
         subject_id=scope.get("subject_id"),
@@ -612,6 +630,14 @@ def _verified_content_project(
         global_scope=scope.get("global_scope", False),
         shared_workspace_scope=scope.get("shared_workspace_scope"),
     )
+    expected_credits = _content_license_credits(verified_sources, project_data["timeline"], project_data.get("render_options"))
+    if project_data.get("media_credits") != expected_credits:
+        raise LocalArtifactError("CONTENT_MEDIA_CREDITS_MISMATCH")
+    expected_credit_files = _content_license_credit_files(expected_credits) if expected_credits is not None else {}
+    with zipfile.ZipFile(candidate, "r") as archive:
+        if ({name for name in names if name in {"credits.json", "credits.txt"}} != set(expected_credit_files)
+                or any(archive.read(name) != data for name, data in expected_credit_files.items())):
+            raise LocalArtifactError("CONTENT_MEDIA_CREDITS_MISMATCH")
     project_data["source_artifact_refs"] = list(source_artifact_refs)
     expected_media = "media.mp4" if project_data["output_kind"] == "video" else "media.wav"
     claimed_media_hash = render_data.get("media_sha256")
@@ -634,6 +660,142 @@ def _verified_content_project(
         raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
     _authorize_content_project(actor, action="read", **scope)
     return project_data, render_data, {**record, "media_member": expected_media}, candidate
+
+
+_MEDIA_LICENSE_MAX_BYTES = 16 * 1024
+_MEDIA_LICENSE_URLS = {
+    "CC0-1.0": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "CC-BY-4.0": "https://creativecommons.org/licenses/by/4.0/",
+}
+
+
+def parse_media_license_header(raw: str | None) -> dict | None:
+    """Parse inert, bounded user declarations. Never fetch a URL or grant rights."""
+    if raw is None:
+        return None
+    try:
+        if not isinstance(raw, str) or len(raw.encode("utf-8", errors="strict")) > _MEDIA_LICENSE_MAX_BYTES:
+            raise ValueError()
+        def unique_pairs(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError()
+                result[key] = value
+            return result
+        value = json.loads(raw, object_pairs_hook=unique_pairs,
+                           parse_constant=lambda _: (_ for _ in ()).throw(ValueError()))
+        if value is None:
+            raise ValueError()
+        return validate_media_license(value)
+    except (ValueError, TypeError, UnicodeError, RecursionError) as exc:
+        raise LocalArtifactError("CONTENT_MEDIA_LICENSE_INVALID") from exc
+
+
+def validate_media_license(value: Any, *, asset_sha256: str | None = None) -> dict | None:
+    """Asset license declaration only; code/model/voice consent is a separate owner.
+
+    This records what was supplied, not an independently verified legal conclusion.
+    Unknown general rights and all Permission gates are intentionally unchanged.
+    """
+    if value is None:
+        return None
+    keys = {"schema_version", "object_kind", "license_id", "license_url", "source_url",
+            "source_version", "asset_sha256", "creator", "title", "notice", "changes",
+            "evidence_text", "evidence_sha256"}
+    try:
+        if (type(value) is not dict or set(value) != keys
+                or type(value["schema_version"]) is not int or value["schema_version"] != 1
+                or value["object_kind"] != "media_asset"):
+            raise ValueError()
+        for key in keys - {"schema_version"}:
+            text = value[key]
+            if (not isinstance(text, str)
+                    or (key != "evidence_text" and text != text.strip())
+                    or (not text.strip() and key not in {"notice", "changes"})
+                    or any(ord(char) < 32 and char not in ("\n\r\t" if key == "evidence_text" else "\n") for char in text)
+                    or any(ord(char) == 127 for char in text)):
+                raise ValueError()
+        if (value["license_id"] not in _MEDIA_LICENSE_URLS
+                or value["license_url"] != _MEDIA_LICENSE_URLS[value["license_id"]]
+                or not re.fullmatch(r"[0-9a-f]{64}", value["asset_sha256"])
+                or not re.fullmatch(r"[0-9a-f]{64}", value["evidence_sha256"])
+                or (asset_sha256 is not None and value["asset_sha256"] != asset_sha256)
+                or hashlib.sha256(value["evidence_text"].encode("utf-8")).hexdigest() != value["evidence_sha256"]):
+            raise ValueError()
+        for key in ("source_url", "license_url"):
+            url = value[key]
+            parsed = urlsplit(url)
+            # Locator only: reject embedded credentials, query tokens and fragments.
+            if (parsed.scheme != "https" or not parsed.hostname or parsed.username
+                    or parsed.password or parsed.query or parsed.fragment
+                    or any(char.isspace() for char in url) or "\\" in url
+                    or "%" in parsed.netloc or parsed.port not in (None, 443)):
+                raise ValueError()
+        if len(_json_bytes(value)) > _MEDIA_LICENSE_MAX_BYTES:
+            raise ValueError()
+    except (ValueError, TypeError, UnicodeError, KeyError, RecursionError) as exc:
+        raise LocalArtifactError("CONTENT_MEDIA_LICENSE_INVALID") from exc
+    return dict(value)
+
+
+def _media_license_digest(value: dict | None) -> str | None:
+    return hashlib.sha256(_json_bytes(value)).hexdigest() if value is not None else None
+
+
+def _media_license_public(metadata: Mapping[str, Any]) -> dict:
+    if metadata.get("schema_version") != 2:
+        return {}
+    return {"media_license": metadata["media_license"],
+            "media_license_sha256": metadata["media_license_sha256"],
+            "license_verification_state": "declared_not_independently_verified"}
+
+
+def _content_license_credits(entries: list, timeline: dict, render_options: dict | None = None) -> dict | None:
+    if not any(entry["metadata"].get("schema_version") == 2 for entry in entries):
+        return None
+    sources = []
+    for entry in entries:
+        metadata, record = entry["metadata"], entry["record"]
+        asset = metadata["asset"]
+        uses = []
+        for track in timeline.get("tracks", []):
+            for clip in track.get("clips", []):
+                if clip.get("media_asset_id") == asset["asset_id"]:
+                    uses.append({"track_id": track["track_id"], "track_kind": track["kind"], "clip": clip})
+        sources.append({"artifact_id": record["artifact_id"], "artifact_sha256": record["sha256"],
+                        "asset_id": asset["asset_id"], "asset_sha256": asset["sha256"],
+                        "media_license": metadata.get("media_license"),
+                        "media_license_sha256": metadata.get("media_license_sha256"),
+                        "license_verification_state": ("declared_not_independently_verified"
+                                                       if metadata.get("media_license") else "unknown"),
+                        "actual_timeline_uses": uses})
+    return {"schema_version": 1, "rights_state": "unknown",
+            "notice": "License declarations are not independently verified; code/model licenses and personal voice consent are not granted.",
+            "timeline_version": timeline["version"],
+            "actual_render_options": render_options or {},
+            "actual_transitions": timeline.get("transitions", []),
+            "actual_overlays": timeline.get("overlays", []),
+            "timeline_sha256": hashlib.sha256(_json_bytes(timeline)).hexdigest(), "sources": sources}
+
+
+def _content_license_credit_files(credits: dict) -> dict[str, bytes]:
+    lines = ["Media credits", credits["notice"],
+             "Timeline version: " + str(credits["timeline_version"]),
+             "Render options: " + json.dumps(credits["actual_render_options"], ensure_ascii=False, sort_keys=True),
+             "Transitions: " + json.dumps(credits["actual_transitions"], ensure_ascii=False, sort_keys=True),
+             "Overlays: " + json.dumps(credits["actual_overlays"], ensure_ascii=False, sort_keys=True)]
+    for item in credits["sources"]:
+        lines.extend(["", "Asset: " + item["asset_id"], "Source artifact: " + item["artifact_id"],
+                      "Asset SHA256: " + item["asset_sha256"],
+                      "License verification: " + item["license_verification_state"]])
+        declaration = item["media_license"]
+        if declaration:
+            for key in ("title", "creator", "source_url", "source_version", "license_id", "license_url", "notice", "changes"):
+                lines.append(key + ": " + declaration[key])
+        lines.append("Actual edit operations (source in/out, placement and effects): " +
+                     json.dumps(item["actual_timeline_uses"], ensure_ascii=False, sort_keys=True))
+    return {"credits.json": _json_bytes(credits), "credits.txt": ("\n".join(lines) + "\n").encode("utf-8")}
 
 
 def _safe_content_source_filename(filename: Any) -> str:
@@ -836,9 +998,10 @@ def _verified_content_source(
         )
     if (
         not isinstance(metadata, dict)
-        or set(metadata) != {"schema_version", "context", "asset", "media_filename", "rights_state"}
         or type(metadata.get("schema_version")) is not int
-        or metadata.get("schema_version") != 1
+        or metadata.get("schema_version") not in {1, 2}
+        or set(metadata) != ({"schema_version", "context", "asset", "media_filename", "rights_state"}
+                            | ({"media_license", "media_license_sha256"} if metadata.get("schema_version") == 2 else set()))
         or source_context != expected_context
         or metadata.get("media_filename") != media_filename
         or metadata.get("rights_state") != "unknown"
@@ -846,6 +1009,16 @@ def _verified_content_source(
         or media_info.file_size <= 0
     ):
         raise LocalArtifactError("CONTENT_SOURCE_CONTEXT_MISMATCH")
+    if metadata["schema_version"] == 2:
+        declaration = validate_media_license(metadata["media_license"], asset_sha256=metadata["asset"]["sha256"])
+        if declaration is None or _media_license_digest(declaration) != metadata["media_license_sha256"]:
+            raise LocalArtifactError("CONTENT_MEDIA_LICENSE_INTEGRITY_FAILED")
+        digest = hashlib.sha256()
+        with zipfile.ZipFile(candidate, "r") as archive, archive.open(media_filename) as media:
+            for chunk in iter(lambda: media.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != metadata["asset"]["sha256"]:
+            raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
     if record.get("media_type") != "application/zip":
         raise LocalArtifactError("CONTENT_SOURCE_CONTEXT_MISMATCH")
     _authorize_content_project(actor, action=action, **scope)
@@ -903,6 +1076,7 @@ def _recover_shared_source_after_evidence_failure(
     filename: str,
     size_bytes: int,
     body_sha256: str,
+    license_metadata_sha256: str | None = None,
 ) -> dict[str, Any] | None:
     """Reuse an exact committed source from a failed Skill Evidence finalization.
 
@@ -924,6 +1098,7 @@ def _recover_shared_source_after_evidence_failure(
         "size_bytes": size_bytes,
         "body_sha256": body_sha256,
         "effect_mode": "staging",
+        **({"license_metadata_sha256": license_metadata_sha256} if license_metadata_sha256 else {}),
     }
     try:
         ensure_artifact_table()
@@ -970,6 +1145,7 @@ def _recover_shared_source_after_evidence_failure(
                 not isinstance(asset, dict)
                 or asset.get("sha256") != body_sha256
                 or metadata.get("media_filename") != filename
+                or metadata.get("media_license_sha256") != license_metadata_sha256
                 or record.get("media_size_bytes") != size_bytes
                 or record.get("source_execution_id") != row["source_execution_id"]
             ):
@@ -982,7 +1158,7 @@ def _recover_shared_source_after_evidence_failure(
                     "approval_required", "approval_status", "created_at", "updated_at",
                 )
             }
-            return {"artifact": public_record, "asset": asset, "rights_state": "unknown"}
+            return {"artifact": public_record, "asset": asset, "rights_state": "unknown", **_media_license_public(metadata)}
         except Exception:  # noqa: BLE001, S112 -- skip one malformed recovery candidate.
             continue
     return None
@@ -1053,6 +1229,7 @@ def stage_content_source_artifact(
     shared_workspace_scope: Mapping[str, Any] | None = None,
     source_execution_id: str,
     expected_sha256: Optional[str] = None,
+    media_license: dict | None = None,
 ) -> Dict[str, Any]:
     """Package one probed upload as an immutable, scope-bound canonical Artifact."""
     actor_id, scope = _authorize_content_project(
@@ -1075,6 +1252,8 @@ def stage_content_source_artifact(
     # An unapproved request must not depend on FFprobe/FFmpeg availability and
     # must not spend decoder work before the Permission owner has allowed it.
     observed_sha256 = _hash_file(path)
+    media_license = validate_media_license(media_license, asset_sha256=observed_sha256)
+    license_digest = _media_license_digest(media_license)
     if expected_sha256 is not None and observed_sha256 != expected_sha256:
         raise LocalArtifactError("CONTENT_SOURCE_CHANGED_DURING_IMPORT")
     from lumenis.system.security.permission import (
@@ -1097,6 +1276,7 @@ def stage_content_source_artifact(
         principal_ref=principal.principal_ref if principal is not None else None,
         scope_kind=shared_scope.get("scope_kind") if shared_scope is not None else None,
         scope_version=shared_scope.get("version") if shared_scope is not None else None,
+        license_metadata_sha256=license_digest,
     )
     permission = check_content_source_import_permission(
         permission_actor, upload, principal=principal, gate=gate,
@@ -1111,7 +1291,7 @@ def stage_content_source_artifact(
         recovered = _recover_shared_source_after_evidence_failure(
             actor=actor, shared_workspace_scope=shared_scope,
             filename=safe_filename, size_bytes=source_stat.st_size,
-            body_sha256=observed_sha256,
+            body_sha256=observed_sha256, license_metadata_sha256=license_digest,
         )
         if recovered is not None:
             with gate._content_import_artifact_commit(
@@ -1133,6 +1313,8 @@ def stage_content_source_artifact(
         "media_filename": safe_filename,
         "rights_state": "unknown",
     }
+    if media_license is not None:
+        source_metadata.update(schema_version=2, media_license=media_license, media_license_sha256=license_digest)
     metadata_bytes = _json_bytes(source_metadata)
     if len(metadata_bytes) > _MAX_CONTENT_SOURCE_METADATA_BYTES:
         raise LocalArtifactError("CONTENT_SOURCE_METADATA_TOO_LARGE")
@@ -1216,6 +1398,7 @@ def stage_content_source_artifact(
                     or existing_metadata.get("asset") != asset.to_dict()
                     or existing_metadata.get("media_filename") != safe_filename
                     or existing_metadata.get("rights_state") != "unknown"
+                    or existing_metadata.get("media_license_sha256") != license_digest
                     or existing_record.get("media_size_bytes") != source_stat.st_size
                 ):
                     raise LocalArtifactError(
@@ -1250,7 +1433,7 @@ def stage_content_source_artifact(
             "approval_required", "approval_status", "created_at", "updated_at",
         )
     }
-    return {"artifact": public_record, "asset": asset.to_dict(), "rights_state": "unknown"}
+    return {"artifact": public_record, "asset": asset.to_dict(), "rights_state": "unknown", **_media_license_public(source_metadata)}
 
 
 def read_content_source_artifact(
@@ -1281,7 +1464,7 @@ def read_content_source_artifact(
             "approval_required", "approval_status", "created_at", "updated_at",
         )
     }
-    return {"artifact": public_record, "asset": metadata["asset"], "rights_state": "unknown"}
+    return {"artifact": public_record, "asset": metadata["asset"], "rights_state": "unknown", **_media_license_public(metadata)}
 
 
 @contextmanager
@@ -1372,6 +1555,9 @@ def stage_timeline_artifact(
     output_kind: str = "video",
     previous_artifact_id: Optional[str] = None,
     source_artifact_refs: Optional[List[str]] = None,
+    render_options: dict | None = None,
+    delivery_options: dict | None = None,
+    operation_binding: dict | None = None,
 ) -> Dict[str, Any]:
     """Render a permission-scoped project without an additional demo checkbox.
 
@@ -1379,6 +1565,9 @@ def stage_timeline_artifact(
     authorizes rendering. Source read/write scope and DATA_EXPORT admission are
     checked independently; unknown rights remain unknown in the stored result.
     """
+    from lumenis.shared.content_creation.rendering import validate_render_options
+    render_options = validate_render_options(render_options)
+    delivery_options = _validate_content_delivery_options(delivery_options)
     actor_id, scope = _authorize_content_project(
         actor,
         domain_id=domain_id,
@@ -1388,6 +1577,11 @@ def stage_timeline_artifact(
         shared_workspace_scope=shared_workspace_scope,
         action="write",
     )
+    if operation_binding is not None and (not isinstance(operation_binding, dict)
+            or set(operation_binding) != {"operation_id", "resource"}
+            or re.fullmatch(r"content-edl:[0-9a-f]{64}", str(operation_binding.get("operation_id", ""))) is None
+            or re.fullmatch(r"content-project-export:v1:[0-9a-f]{64}", str(operation_binding.get("resource", ""))) is None):
+        raise LocalArtifactError("CONTENT_EDL_OPERATION_BINDING_INVALID")
     if not isinstance(source_execution_id, str) or not source_execution_id.strip():
         raise LocalArtifactError("SOURCE_EXECUTION_ID_REQUIRED")
     if demo_acknowledged is not None and type(demo_acknowledged) is not bool:
@@ -1455,7 +1649,7 @@ def stage_timeline_artifact(
     if is_testing_bypass_enabled():
         raise LocalArtifactError("CONTENT_EXPORT_PERMISSION_UNVERIFIED")
     export_resource = _content_project_export_resource_for_context(
-        expected_context, timeline_data, source_refs, output_kind, previous_artifact_id,
+        expected_context, timeline_data, source_refs, output_kind, previous_artifact_id, render_options, delivery_options,
     )
     gate = get_permission_gate()
     caller = expected_context["principal_ref"] if actor_id is None else f"actor:{actor_id}"
@@ -1497,10 +1691,13 @@ def stage_timeline_artifact(
             )
         if not current.allowed or is_testing_bypass_enabled():
             raise LocalArtifactError("CONTENT_EXPORT_PERMISSION_DENIED")
+        if operation_binding and not gate.get_valid_approval_token(
+                OperationType.DATA_EXPORT.value, operation_binding["resource"], exact=True):
+            raise LocalArtifactError("CONTENT_EDL_EXACT_APPROVAL_REQUIRED")
 
     root = artifact_root()
     root.mkdir(parents=True, exist_ok=True)
-    artifact_id = _new_artifact_id()
+    artifact_id = _content_edl_artifact_id(operation_binding["operation_id"]) if operation_binding else _new_artifact_id()
     media_suffix = ".mp4" if output_kind == "video" else ".wav"
     media_name = f"media{media_suffix}"
     package_path = root / f"{artifact_id}.zip"
@@ -1508,12 +1705,13 @@ def stage_timeline_artifact(
     render_result: Optional[Mapping[str, Any]] = None
     package_created = False
     try:
-        with tempfile.TemporaryDirectory(prefix="content-project-") as work_dir:
+        with tempfile.TemporaryDirectory(prefix="content-project-",dir=root) as work_dir:
             rendered_path = Path(work_dir) / media_name
-            from lumenis.shared.content_creation.rendering import render_timeline
+            from lumenis.shared.content_creation.rendering import render_timeline, subtitle_documents
 
             measured = render_timeline(timeline, rendered_path, output_kind=output_kind,
-                                       check_continue=check_export_permission)
+                                       check_continue=check_export_permission,
+                                       **({"render_options": render_options} if render_options else {}))
             if (
                 not isinstance(measured, Mapping)
                 or measured.get("state") != "rendered_verified"
@@ -1531,8 +1729,33 @@ def stage_timeline_artifact(
             ):
                 raise LocalArtifactError("CONTENT_RENDER_INTEGRITY_FAILED")
             render_result = dict(measured)
+            try:
+                subtitle_output = subtitle_documents(timeline)
+                render_result["subtitle_export"] = {"state": "exported" if subtitle_output else "not_applicable",
+                                                    "files": list(subtitle_output)}
+            except ValueError as exc:
+                if str(exc) != "SUBTITLE_TEXT_NOT_SUPPORTED":
+                    raise
+                subtitle_output = {}
+                render_result["subtitle_export"] = {"state": "unsupported", "reason": str(exc), "files": []}
+            delivery_files, delivery_reports = _build_content_delivery(
+                timeline, rendered_path, output_kind=output_kind, options=delivery_options,
+                render_options=render_options, check_continue=check_export_permission)
+            credits = _content_license_credits(source_entries, timeline_data, render_options)
+            if credits is not None:
+                delivery_files.update(_content_license_credit_files(credits))
+            if len(delivery_files) > 80 or sum(map(len, delivery_files.values())) > 128 * 1024 * 1024:
+                raise LocalArtifactError("CONTENT_DELIVERY_TOO_LARGE")
+            delivery_manifest = {name: {"sha256": hashlib.sha256(data).hexdigest(), "size_bytes": len(data)}
+                                 for name, data in delivery_files.items()}
+            if delivery_reports:
+                render_result["delivery_reports"] = delivery_reports
             project = {
                 "schema_version": 1,
+                **({"operation_binding": operation_binding} if operation_binding else {}),
+                **({"delivery_options": delivery_options, "delivery_manifest": delivery_manifest} if delivery_manifest or delivery_options else {}),
+                **({"media_credits": credits} if credits is not None else {}),
+                **({"render_options": render_options} if render_options else {}),
                 "timeline": timeline_data,
                 "source_artifact_refs": source_refs,
                 "context": expected_context,
@@ -1545,6 +1768,8 @@ def stage_timeline_artifact(
             }
             project_bytes = _json_bytes(project)
             render_bytes = _json_bytes(render_result)
+            if len(project_bytes) > _MAX_PROJECT_JSON_BYTES or len(render_bytes) > _MAX_PROJECT_JSON_BYTES:
+                raise LocalArtifactError("CONTENT_PROJECT_PACKAGE_TOO_LARGE")
             try:
                 package_handle = package_path.open("xb")
             except FileExistsError as exc:
@@ -1557,6 +1782,10 @@ def stage_timeline_artifact(
                     archive.writestr("project.json", project_bytes)
                     archive.writestr("render.json", render_bytes)
                     archive.write(rendered_path, media_name)
+                    for name, data in delivery_files.items():
+                        archive.writestr(name, data)
+                    for name, text in subtitle_output.items():
+                        archive.writestr(name, text.encode("utf-8"))
         package_size = package_path.stat().st_size
         if package_size > _MAX_CONTENT_PROJECT_BYTES:
             raise LocalArtifactError("CONTENT_PROJECT_PACKAGE_TOO_LARGE")
@@ -2300,3 +2529,332 @@ __all__ = [
     "stage_timeline_artifact",
     "validate_local_asset",
 ]
+
+
+def _validate_content_delivery_options(value=None):
+    """Bound optional offline deliverables to the same project authorization."""
+    if value is None:
+        return {}
+    if not isinstance(value, dict) or set(value) - {"audio_formats", "podcast_plan", "publication_urls", "interchange", "cover", "include_ass_subtitles", "audio_visual", "include_source_probe", "reference_analysis", "transcription", "podcast_cover", "podcast_analysis"}:
+        raise LocalArtifactError("CONTENT_DELIVERY_OPTIONS_INVALID")
+    if len(_json_bytes(value)) > _MAX_PROJECT_JSON_BYTES:
+        raise LocalArtifactError("CONTENT_DELIVERY_OPTIONS_TOO_LARGE")
+    value = json.loads(_json_bytes(value))
+    if "include_ass_subtitles" in value and type(value["include_ass_subtitles"]) is not bool:
+        raise LocalArtifactError("CONTENT_SUBTITLE_OPTIONS_INVALID")
+    if "include_source_probe" in value and type(value["include_source_probe"]) is not bool:
+        raise LocalArtifactError("SOURCE_PROBE_OPTIONS_INVALID")
+    formats = value.get("audio_formats", [])
+    if not isinstance(formats, list) or len(formats) > 2 or any(not isinstance(x,str) or x not in {"mp3", "m4a"} for x in formats) or len(formats) != len(set(formats)):
+        raise LocalArtifactError("CONTENT_DELIVERY_FORMAT_INVALID")
+    if "podcast_plan" in value:
+        from podcast.intelligence.episode_runtime import PodcastPlan
+        PodcastPlan.from_dict(value["podcast_plan"])
+        if not formats:
+            raise LocalArtifactError("PODCAST_DELIVERY_REQUIRES_AUDIO_FORMAT")
+    elif "publication_urls" in value:
+        raise LocalArtifactError("PODCAST_DELIVERY_PLAN_REQUIRED")
+    exchange = value.get("interchange")
+    if "interchange" in value and (not isinstance(exchange, dict) or set(exchange) - {"formats", "frame_rate", "allow_loss"}):
+        raise LocalArtifactError("CONTENT_INTERCHANGE_OPTIONS_INVALID")
+    cover = value.get("cover")
+    if "cover" in value and (not isinstance(cover, dict) or set(cover) - {"audience", "industry", "visual_hook", "body_text", "count"}):
+        raise LocalArtifactError("CONTENT_COVER_OPTIONS_INVALID")
+    analysis=value.get("podcast_analysis")
+    if "podcast_analysis" in value and (not isinstance(analysis,dict) or "timeline_version" not in analysis or set(analysis)-{"timeline_version","nodes"}):
+        raise LocalArtifactError("PODCAST_ANALYSIS_OPTIONS_INVALID")
+    podcast_cover=value.get("podcast_cover")
+    if "podcast_cover" in value and (not isinstance(podcast_cover,dict) or not {"title","subtitle"}<=set(podcast_cover) or set(podcast_cover)-{"title","subtitle","footer"}):
+        raise LocalArtifactError("PODCAST_COVER_OPTIONS_INVALID")
+    from lumenis.system.ai_gateway.owned_speech import CONTENT_LANGUAGE_CODES
+    transcription=value.get("transcription")
+    if "transcription" in value and (not isinstance(transcription,dict) or "asset_id" not in transcription
+            or set(transcription)-{"asset_id","audio_stream_index","language_hint"} or not isinstance(transcription["asset_id"],str)
+            or not re.fullmatch(r"MEDIA-[a-fA-F0-9]+",transcription["asset_id"])):
+        raise LocalArtifactError("CONTENT_TRANSCRIPTION_OPTIONS_INVALID")
+    if isinstance(transcription,dict) and transcription.get("language_hint") is not None and (not isinstance(transcription["language_hint"],str) or transcription["language_hint"] not in CONTENT_LANGUAGE_CODES):
+        raise LocalArtifactError("CONTENT_ASR_LANGUAGE_INVALID")
+    reference=value.get("reference_analysis")
+    if "reference_analysis" in value and (not isinstance(reference,dict) or set(reference)!={"asset_id"}
+            or not isinstance(reference["asset_id"],str) or not re.fullmatch(r"MEDIA-[a-fA-F0-9]+",reference["asset_id"])):
+        raise LocalArtifactError("REFERENCE_ANALYSIS_OPTIONS_INVALID")
+    visual=value.get("audio_visual")
+    if "audio_visual" in value and (not isinstance(visual,dict) or set(visual)-{"start_sec","end_sec","quote","title","format_ratio"}
+            or not {"start_sec","end_sec","quote","title"} <= set(visual)):
+        raise LocalArtifactError("CONTENT_AUDIO_VISUAL_OPTIONS_INVALID")
+    return value
+
+
+def _content_delivery_filename(name):
+    fixed = {"credits.json", "credits.txt", "episode.mp3", "episode.m4a", "podcast-plan.json", "script.txt", "transcript-original.vtt",
+             "transcript-corrected.vtt", "chapters.json", "corrections.json", "metadata.json", "show-notes.txt", "feed.xml",
+             "timeline.otio", "timeline.fcpxml", "timeline.edl", "interchange.json", "cover.json", "captions.ass", "subtitles.json", "audio-visual.png", "quote-card.png", "audio-visual.mp4", "audio-visual.json", "source-probe.json", "analysis.json", "frame-metrics.csv", "shot-candidates.csv", "transcription.json", "transcript-asr.vtt", "transcript-asr.srt", "transcript-words.json", "transcript-timeline.json", "transcript-timeline.srt", "transcript-timeline.vtt", "podcast-cover.png", "podcast-cover.json", "podcast-analysis.json"}
+    return isinstance(name, str) and (name in fixed or re.fullmatch(r"contact-sheet-(?:0[1-9]|10)\.png", name) is not None or re.fullmatch(r"cover-0[1-9]\.png", name) is not None
+        or re.fullmatch(r"source-MEDIA-[a-fA-F0-9]+\.(?:mp4|mov|webm|mkv|avi|wav|mp3|m4a|flac|ogg|aac|aiff)", name) is not None)
+
+
+def _build_content_delivery(timeline, rendered_path, *, output_kind, options, render_options, check_continue):
+    from lumenis.shared.content_creation.rendering import encode_audio_delivery
+    files, reports = {}, {}
+    if "transcription" in options:
+        from lumenis.shared.content_creation.speech_transcription import build_transcription_files, build_timeline_transcription_files
+        selected=next((asset for asset in timeline.assets if asset.asset_id==options["transcription"]["asset_id"]),None)
+        if selected is None:raise LocalArtifactError("CONTENT_TRANSCRIPTION_SOURCE_SCOPE_MISMATCH")
+        item=build_transcription_files(selected,check_cancel=check_continue,**{key:value for key,value in options["transcription"].items() if key!="asset_id"})
+        if item["report"].get("review_state")=="NO_RECOGNIZED_SPEECH":raise LocalArtifactError("CONTENT_ASR_NO_RECOGNIZED_SPEECH")
+        files.update(item["files"]);reports["transcription"]=item["report"]
+        edited=build_timeline_transcription_files(timeline,item,rendered_sha256=hashlib.sha256(Path(rendered_path).read_bytes()).hexdigest(),check_cancel=check_continue)
+        files.update(edited["files"]);reports["timeline_transcription"]=edited["report"]
+    if "podcast_analysis" in options:
+        from podcast.intelligence.episode_analysis import build_episode_analysis_files
+        from lumenis.shared.content_creation.video_editing import fingerprint_local_media
+        item=build_episode_analysis_files(fingerprint_local_media(str(rendered_path)),expected_timeline_version=timeline.version,check_cancel=check_continue,**options["podcast_analysis"])
+        files.update(item["files"]);reports["podcast_analysis"]=item["report"]
+    if "podcast_cover" in options:
+        from lumenis.shared.content_creation.podcast_cover import build_podcast_cover_files
+        from lumenis.shared.content_creation.video_editing import fingerprint_local_media
+        item=build_podcast_cover_files(fingerprint_local_media(str(rendered_path)),check_cancel=check_continue,**options["podcast_cover"])
+        files.update(item["files"]);reports["podcast_cover"]=item["report"]
+    if "reference_analysis" in options:
+        from lumenis.shared.content_creation.reference_analysis import build_reference_analysis_files
+        selected=next((asset for asset in timeline.assets if asset.asset_id==options["reference_analysis"]["asset_id"]),None)
+        if selected is None:raise LocalArtifactError("REFERENCE_ANALYSIS_SOURCE_SCOPE_MISMATCH")
+        item=build_reference_analysis_files(selected,check_cancel=check_continue)
+        files.update(item["files"])
+        reports["reference_analysis"]=item["report"]
+    if options.get("include_source_probe"):
+        from lumenis.shared.content_creation.stream_probe import probe_source_streams
+        source_probe=[probe_source_streams(asset,analyze_timing=True,check_cancel=check_continue) for asset in timeline.assets]
+        files["source-probe.json"]=_json_bytes({"sources":source_probe})
+        reports["source_probe"]={"sources":source_probe}
+    if options.get("include_ass_subtitles"):
+        from lumenis.shared.content_creation.subtitle_export import build_ass_files
+        item = build_ass_files(timeline)
+        files.update(item["files"]); reports["subtitles"] = item["report"]
+    formats = options.get("audio_formats", [])
+    if formats and output_kind != "audio":
+        raise LocalArtifactError("PODCAST_DELIVERY_REQUIRES_AUDIO_PROJECT")
+    for format in formats:
+        item = encode_audio_delivery(rendered_path, format=format, duration=timeline.duration_sec,
+                                     target_lufs=render_options.get("loudness_target_lufs"), check_continue=check_continue)
+        files.update(item["files"]); reports[format] = item["report"]
+    if "podcast_plan" in options:
+        from podcast.intelligence.episode_runtime import PodcastPlan, build_offline_publication_documents
+        plan = PodcastPlan.from_dict(options["podcast_plan"])
+        expected = plan.build_timeline(tuple(timeline.assets))
+        def spans(value):
+            return sorted((c.media_asset_id, c.source_in, c.source_out, c.timeline_start, c.audio_stream_index or 0)
+                          for t in value.tracks for c in t.clips)
+        if spans(expected) != spans(timeline):
+            raise LocalArtifactError("PODCAST_PLAN_TIMELINE_MISMATCH")
+        name = "episode." + formats[0]
+        item = build_offline_publication_documents(plan,audio_filename=name,audio_size=len(files[name]),
+                                                   urls=options.get("publication_urls"))
+        files.update(item["files"]); reports["publication"] = item["report"]
+    if "interchange" in options:
+        from lumenis.shared.content_creation.timeline_interchange import build_interchange_files
+        refs = {}
+        for asset in timeline.assets:
+            check_continue()
+            path = validate_local_asset(asset.path)
+            if _hash_file(path) != asset.sha256:
+                raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+            name = "source-" + asset.asset_id + path.suffix.lower()
+            if sum(map(len,files.values())) + path.stat().st_size > 128 * 1024 * 1024:
+                raise LocalArtifactError("CONTENT_DELIVERY_TOO_LARGE")
+            data = path.read_bytes()
+            if hashlib.sha256(data).hexdigest() != asset.sha256:
+                raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+            files[name] = data; refs[asset.asset_id] = name
+        item = build_interchange_files(timeline,media_refs=refs,check_cancel=check_continue,**options["interchange"])
+        files.update(item["files"]); reports["interchange"] = item["report"]
+    if "audio_visual" in options:
+        from lumenis.shared.content_creation.audio_visuals import build_audio_visual_files
+        from lumenis.shared.content_creation.video_editing import fingerprint_local_media
+        asset=fingerprint_local_media(str(rendered_path))
+        item=build_audio_visual_files(asset,check_cancel=check_continue,**options["audio_visual"])
+        item["report"]["source_kind"]="rendered_output"
+        item["files"]["audio-visual.json"]=_json_bytes(item["report"])
+        files.update(item["files"]);reports["audio_visual"]=item["report"]
+    if "cover" in options:
+        from lumenis.shared.content_creation.cover_candidates import build_cover_files
+        if output_kind != "video":
+            raise LocalArtifactError("CONTENT_COVER_REQUIRES_RENDERED_VIDEO")
+        from lumenis.shared.content_creation.video_editing import fingerprint_local_media
+        asset = fingerprint_local_media(str(rendered_path))
+        item = build_cover_files(asset,check_cancel=check_continue,**options["cover"])
+        item["report"]["source_kind"] = "rendered_output"
+        item["files"]["cover.json"] = _json_bytes(item["report"])
+        files.update(item["files"]); reports["cover"] = item["report"]
+    if len(files) > 80 or sum(map(len, files.values())) > 128 * 1024 * 1024:
+        raise LocalArtifactError("CONTENT_DELIVERY_TOO_LARGE")
+    if any(not _content_delivery_filename(name) or not isinstance(data, bytes) or not data for name,data in files.items()):
+        raise LocalArtifactError("CONTENT_DELIVERY_FILE_INVALID")
+    check_continue()
+    return files, reports
+
+
+_CONTENT_EDL_LOCK = threading.RLock()
+
+
+def _parse_content_edl(value):
+    from lumenis.shared.content_creation.video_editing import EditDecision, EditDecisionList
+    if not isinstance(value, dict) or set(value) != {"candidate_id", "decisions"} or not isinstance(value["decisions"], list) or not 1 <= len(value["decisions"]) <= 128:
+        raise LocalArtifactError("CONTENT_EDL_INPUT_INVALID")
+    _json_bytes(value)  # Same bounded, finite JSON contract as saved project metadata.
+    try:
+        decisions = []
+        for raw in value["decisions"]:
+            if not isinstance(raw, dict):raise ValueError("decision")
+            item=dict(raw)
+            for key in ("affected_audio", "affected_text"):
+                if key in item:
+                    if not isinstance(item[key], list):raise ValueError("list")
+                    item[key]=tuple(item[key])
+            decisions.append(EditDecision(**item))
+        return EditDecisionList(value["candidate_id"], (), tuple(decisions))
+    except (ValueError, TypeError, KeyError) as exc:
+        raise LocalArtifactError("CONTENT_EDL_INPUT_INVALID") from exc
+
+
+def _content_edl_artifact_id(operation_id):
+    return "ART-" + hashlib.sha256(operation_id.encode()).hexdigest()[:16]
+
+
+def _content_edl_binding(project_id, edl, *, actor, scope, request_id):
+    if not isinstance(request_id,str) or re.fullmatch(r"[A-Za-z0-9_-]{8,128}",request_id) is None:
+        raise LocalArtifactError("CONTENT_EDL_REQUEST_ID_INVALID")
+    actor_id,current_scope=_authorize_content_project(actor,action="write",**scope)
+    context=_content_artifact_context(actor,actor_id,current_scope)
+    project,render,record,path=_verified_content_project(project_id,actor=actor,**scope)
+    if not project.get("source_artifact_refs"):
+        raise LocalArtifactError("CONTENT_EDL_SAVED_SOURCES_REQUIRED")
+    from lumenis.shared.content_creation.video_editing import Timeline, _apply_edl_operations
+    with resolve_content_source_assets(project["source_artifact_refs"],actor=actor,**scope) as sources:
+        original=Timeline.from_dict(project["timeline"],assets=[item["asset"] for item in sources])
+        preview=_apply_edl_operations(original,edl).to_dict()
+    binding={"operation_type":"content_edl_derived_export_v1","context":context,
+             "parent_artifact_id":project_id,"parent_sha256":record["sha256"],
+             "timeline":project["timeline"],"edl":edl.to_dict(),"preview":preview,
+             "render_options":project.get("render_options",{}),"request_id":request_id}
+    resource="content-project-export:v1:"+hashlib.sha256(_json_bytes(binding)).hexdigest()
+    operation_id="content-edl:"+hashlib.sha256(_json_bytes({"context":context,"request_id":request_id})).hexdigest()
+    return project,record,context,resource,operation_id
+
+
+def _check_content_edl_effect(actor,scope,context,resource):
+    from lumenis.system.security.permission import OperationType,get_permission_gate,check_shared_workspace_effect,is_testing_bypass_enabled
+    if is_testing_bypass_enabled():raise LocalArtifactError("CONTENT_EDL_APPROVAL_UNVERIFIED")
+    _authorize_content_project(actor,action="write",**scope)
+    gate=get_permission_gate()
+    if "shared_workspace_scope" in scope:
+        result=check_shared_workspace_effect(actor,scope["shared_workspace_scope"],OperationType.DATA_EXPORT,resource,module="content",action="write",gate=gate)
+    else:
+        result=gate.check(OperationType.DATA_EXPORT,resource=resource,caller=context["principal_ref"] if context.get("actor_id") is None else f"actor:{context['actor_id']}",domain_id="bmp" if context["domain_id"]=="zbmp" else "cth")
+    if not result.allowed:raise LocalArtifactError("CONTENT_EDL_EFFECT_DENIED")
+    return gate
+
+
+def prepare_content_edl_application(project_id, edl_input, *, actor, scope, request_id):
+    from lumenis.shared.content_creation.video_editing import Timeline,_apply_edl_operations
+    edl=_parse_content_edl(edl_input)
+    project,record,context,resource,operation_id=_content_edl_binding(project_id,edl,actor=actor,scope=scope,request_id=request_id)
+    _check_content_edl_effect(actor,scope,context,resource)
+    with resolve_content_source_assets(project["source_artifact_refs"],actor=actor,**scope) as sources:
+        timeline=Timeline.from_dict(project["timeline"],assets=[item["asset"] for item in sources])
+        preview=_apply_edl_operations(timeline,edl)
+    return {"state":"confirmation_required","parent_artifact_id":project_id,"parent_sha256":record["sha256"],
+            "resource":resource,"operation_id":operation_id,"request_id":request_id,"preview_timeline":preview.to_dict(),
+            "requires_confirmation":True,"delivery_policy":"rendered_media_and_subtitles_only; rebuild_optional_delivery_package_explicitly",
+            "publish_status":"not_performed"}
+
+
+def _authorize_content_edl_application(timeline,edl,*,actor,scope,project_id,request_id,expected_resource):
+    from lumenis.system.security.permission import OperationType
+    project,record,context,resource,operation_id=_content_edl_binding(project_id,edl,actor=actor,scope=scope,request_id=request_id)
+    if timeline.to_dict()!=project["timeline"] or expected_resource!=resource:
+        raise LocalArtifactError("CONTENT_EDL_BASE_CHANGED")
+    gate=_check_content_edl_effect(actor,scope,context,resource)
+    token=gate.get_valid_approval_token(OperationType.DATA_EXPORT.value,resource,exact=True)
+    if not token:raise LocalArtifactError("CONTENT_EDL_EXACT_APPROVAL_REQUIRED")
+    return gate,token
+
+
+@contextmanager
+def _content_edl_process_lock(artifact_id):
+    """Serialize the deterministic ID across workers; never leave a live writer's ZIP behind."""
+    root=artifact_root()/".content-edl-locks"
+    root.mkdir(parents=True,exist_ok=True)
+    with (root/(artifact_id+".lock")).open("a+b") as handle:
+        if os.name == "posix":
+            import fcntl
+            try:fcntl.flock(handle.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+            except BlockingIOError as exc:raise LocalArtifactError("CONTENT_EDL_OPERATION_IN_PROGRESS") from exc
+            try:yield
+            finally:fcntl.flock(handle.fileno(),fcntl.LOCK_UN)
+        elif os.name == "nt":
+            import msvcrt
+            handle.seek(0);handle.write(b"0");handle.flush();handle.seek(0)
+            try:msvcrt.locking(handle.fileno(),msvcrt.LK_NBLCK,1)
+            except OSError as exc:raise LocalArtifactError("CONTENT_EDL_OPERATION_IN_PROGRESS") from exc
+            try:yield
+            finally:
+                handle.seek(0);msvcrt.locking(handle.fileno(),msvcrt.LK_UNLCK,1)
+        else:
+            raise LocalArtifactError("CONTENT_EDL_PROCESS_LOCK_UNAVAILABLE")
+
+
+def apply_content_edl_application(project_id,edl_input,*,actor,scope,request_id,expected_resource,confirmed=False):
+    from lumenis.system.security.permission import OperationType
+    from lumenis.shared.content_creation.video_editing import Timeline,apply_edl_suggestion
+    if confirmed is not True:raise LocalArtifactError("CONTENT_EDL_CONFIRMATION_REQUIRED")
+    edl=_parse_content_edl(edl_input)
+    with _CONTENT_EDL_LOCK:
+        project,record,context,resource,operation_id=_content_edl_binding(project_id,edl,actor=actor,scope=scope,request_id=request_id)
+        if resource!=expected_resource:raise LocalArtifactError("CONTENT_EDL_BASE_CHANGED")
+        gate=_check_content_edl_effect(actor,scope,context,resource)
+        artifact_id=_content_edl_artifact_id(operation_id)
+        with _content_edl_process_lock(artifact_id):
+            existing=_artifact_record(artifact_id,read_only=True)
+            if existing:
+                cached=read_content_project(artifact_id,actor=actor,**scope)
+                if cached["project"].get("operation_binding")!={"operation_id":operation_id,"resource":resource}:
+                    raise LocalArtifactError("CONTENT_EDL_REQUEST_ID_CONFLICT")
+                pending=gate.get_valid_approval_token(OperationType.DATA_EXPORT.value,resource,exact=True)
+                if pending:gate.revoke_approval(pending)
+                return {"state":"already_applied","artifact_id":artifact_id,"result":cached,"idempotent_replay":True}
+            # A dead process may have written a partial/complete ZIP before DB commit.
+            # Under the per-ID OS lock, retain those bytes verbatim as an orphan;
+            # they are never accepted as a valid Artifact or silently deleted.
+            orphan=artifact_root()/(artifact_id+".zip")
+            recovered_orphan=None
+            if orphan.exists() or orphan.is_symlink():
+                if orphan.is_symlink() or not orphan.is_file():
+                    raise LocalArtifactError("CONTENT_EDL_ORPHAN_REQUIRES_REVIEW")
+                retained=artifact_root()/(artifact_id+".orphan-"+uuid.uuid4().hex+".zip")
+                # link() is exclusive even on POSIX: never overwrite any retained
+                # bytes. A crash before unlink merely leaves two safe names.
+                os.link(orphan,retained,follow_symlinks=False)
+                orphan.unlink()
+                recovered_orphan=retained.name
+            # The canonical service computes identity; no caller/reviewer string is accepted.
+            caller=context["principal_ref"] if context.get("actor_id") is None else f"actor:{context['actor_id']}"
+            token=gate.grant_approval(OperationType.DATA_EXPORT.value,resource=resource,duration_minutes=5,granted_by=caller)
+            try:
+                with resolve_content_source_assets(project["source_artifact_refs"],actor=actor,**scope) as sources:
+                    timeline=Timeline.from_dict(project["timeline"],assets=[item["asset"] for item in sources])
+                    changed=apply_edl_suggestion(timeline,edl,actor=actor,scope=scope,project_id=project_id,request_id=request_id,expected_resource=resource)
+                    _authorize_content_edl_application(timeline,edl,actor=actor,scope=scope,project_id=project_id,request_id=request_id,expected_resource=resource)
+                    result=stage_timeline_artifact(changed,actor=actor,**scope,source_execution_id=operation_id,
+                        output_kind=project["output_kind"],previous_artifact_id=project_id,source_artifact_refs=project["source_artifact_refs"],
+                        render_options=project.get("render_options"),
+                        operation_binding={"operation_id":operation_id,"resource":resource})
+            except Exception:
+                gate.revoke_approval(token)
+                raise
+            # Committed deterministic ID is read back before consuming approval. A
+            # crash here reopens that same version on retry, never creates another.
+            read_content_project(artifact_id,actor=actor,**scope)
+            gate.revoke_approval(token)
+            return {"state":"applied","artifact_id":artifact_id,"result":result,"idempotent_replay":False,
+                    "recovery":{"retained_orphan":recovered_orphan,"unknown_bytes_preserved":bool(recovered_orphan)}}

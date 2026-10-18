@@ -241,3 +241,14 @@ def test_builtin_local_exception_and_no_handler_are_failures(monkeypatch):
     assert missing["success"] is False
     assert missing["source"] == "none"
     assert missing["code"] == "NO_HANDLER"
+
+
+def test_verified_artifact_receipt_with_non_success_diagnostics_is_not_empty_result():
+    from lumenis.shared.agents.skills.execution import _product_result_is_success
+    receipt = {"success": True, "result": {"artifact": {"artifact_id": "test-artifact", "sha256": "fixture-hash"}},
+               "diagnostics": {"subtitle_export": {"state": "not_applicable", "files": []},
+                               "audio_processing": {"true_peak_verified": False}}}
+    assert _product_result_is_success(receipt) is True
+    assert _product_result_is_success({"success": True, "diagnostics": receipt["diagnostics"]}) is False
+    receipt["result"]["artifact"]["status"] = "failed"
+    assert _product_result_is_success(receipt) is False

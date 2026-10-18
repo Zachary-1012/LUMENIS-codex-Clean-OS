@@ -44,7 +44,7 @@ def parse_file(file_path: str) -> ParseResult:
         result = parse_legacy_excel(file_path)
     elif ext == ".csv":
         result = parse_csv(file_path)
-    elif ext == ".txt":
+    elif ext in (".txt", ".json", ".xml", ".xbrl"):
         result = parse_txt(file_path)
     elif ext in (".pptx", ".html", ".htm"):
         result = parse_markitdown(file_path)
@@ -124,27 +124,113 @@ def parse_markitdown(file_path: str) -> ParseResult:
     return result
 
 
+
+def decode_local_text(raw: bytes):
+    """Bounded, deterministic local decoding; never rewrite original bytes.
+
+    A successful non-BOM fallback is an assumption, not proof of source encoding.
+    Binary controls and invalid code units are rejected, not silently replaced.
+    """
+    import unicodedata
+    if not isinstance(raw, bytes) or not 0 < len(raw) <= 8 * 1024 * 1024:
+        raise ValueError("DOCUMENT_TEXT_SIZE_INVALID")
+    if raw.startswith((b"\xff\xfe\x00\x00", b"\x00\x00\xfe\xff")):
+        encodings, certainty = ("utf-32",), "bom_declared"
+    elif raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        encodings, certainty = ("utf-16",), "bom_declared"
+    elif raw.startswith(b"\xef\xbb\xbf"):
+        encodings, certainty = ("utf-8-sig",), "bom_declared"
+    else:
+        encodings, certainty = ("utf-8", "gb18030"), "assumed_decoder"
+    for encoding in encodings:
+        try:
+            text = raw.decode(encoding, errors="strict")
+        except UnicodeDecodeError:
+            continue
+        if any(unicodedata.category(char) in {"Cc", "Cs"} and char not in "\t\n\r\f" for char in text):
+            continue
+        warnings = [] if certainty == "bom_declared" else ["Encoding inferred by deterministic decoder order; source encoding not independently verified."]
+        return text, {"encoding": encoding, "encoding_state": certainty, "decoding_warnings": warnings,
+                      "original_bytes_modified": False}
+    raise ValueError("DOCUMENT_TEXT_ENCODING_OR_CONTROL_INVALID")
+
 def parse_txt(file_path: str) -> ParseResult:
     """纯文本解析"""
     result = ParseResult()
     result.metadata["format"] = "txt"
-    with open(file_path, "r", encoding="utf-8-sig") as f:
-        result.text = f.read()
+    with open(file_path, "rb") as f:
+        result.text, decoding = decode_local_text(f.read(8 * 1024 * 1024 + 1))
+    result.metadata.update(decoding)
     result.paragraphs = [p.strip() for p in result.text.split("\n") if p.strip()]
     return result
 
 
 def parse_csv(file_path: str) -> ParseResult:
-    """CSV解析"""
+    """Parse one bounded CSV without silently treating another dialect as one column.
+
+    The existing entry has no delimiter declaration. Infer only a unique,
+    rectangular multi-column interpretation among comma, semicolon and tab,
+    using the actual CSV quote/newline grammar over the entire bounded input.
+    A declaration-free single-column file remains supported. Ambiguous dialects,
+    inconsistent columns and malformed quoting fail explicitly; none is padded,
+    flattened into a successful column, or treated as an encoding decision.
+    """
     import csv
+    import io
+
     result = ParseResult()
     result.metadata["format"] = "csv"
-    table = []
-    with open(file_path, "r", encoding="utf-8-sig", newline="") as f:
-        reader = csv.reader(f)
-        for row in reader:
-            table.append(row)
+    with open(file_path, "rb") as source:
+        text, decoding = decode_local_text(source.read(8 * 1024 * 1024 + 1))
+    result.metadata.update(decoding)
+    candidates = []
+    saw_multiple_columns = False
+    saw_parse_error = False
+    # Three linear, bounded scans keep only shape summaries, not three tables.
+    # Blank records are retained but do not decide the field width.
+    for delimiter in (",", ";", "\t"):
+        widths = set()
+        try:
+            for row in csv.reader(io.StringIO(text, newline=""),
+                                  delimiter=delimiter, strict=True):
+                if row:
+                    widths.add(len(row))
+            multiple = any(width > 1 for width in widths)
+            saw_multiple_columns = saw_multiple_columns or multiple
+            if len(widths) == 1 and multiple:
+                candidates.append(delimiter)
+        except csv.Error:
+            saw_parse_error = True
+    if len(candidates) > 1:
+        raise ValueError("CSV_DIALECT_AMBIGUOUS")
+    if candidates:
+        delimiter = candidates[0]
+        dialect_state = "inferred_unique_rectangular"
+    elif saw_multiple_columns:
+        raise ValueError("CSV_COLUMNS_INCONSISTENT")
+    elif saw_parse_error:
+        raise ValueError("CSV_DIALECT_UNDETERMINED")
+    else:
+        delimiter = ","
+        dialect_state = "single_column_or_empty"
+    try:
+        table = list(csv.reader(io.StringIO(text, newline=""),
+                                delimiter=delimiter, strict=True))
+    except csv.Error as exc:
+        raise ValueError("CSV_PARSE_INVALID") from exc
+    result.metadata.update(csv_delimiter=delimiter,
+                           csv_dialect_state=dialect_state,
+                           csv_dialect_candidates=[",", ";", "\t"],
+                           csv_row_count=len(table),
+                           csv_column_count=next((len(row) for row in table if row), 0),
+                           csv_blank_record_count=sum(not row for row in table),
+                           csv_missing_cell_count=sum(cell == "" for row in table for cell in row),
+                           csv_dialect_warnings=[
+                               "Delimiter inferred from bounded CSV structure; not a publisher declaration."
+                           ])
     result.tables = [table]
+    # Preserve the established comma-normalized text/locator contract. Original
+    # bytes remain separately retained; tables preserve quotes/newlines/empties.
     result.text = "\n".join([",".join(row) for row in table])
     result.paragraphs = [",".join(row) for row in table if any(cell.strip() for cell in row)]
     return result
@@ -334,6 +420,8 @@ def parse_legacy_word(file_path: str) -> ParseResult:
         # The decoder receives only its public runtime configuration, never
         # caller credentials, private environment variables or a user profile.
         environment = {"PATH": os.defpath, "LANG": "C.UTF-8", "TMPDIR": str(work)}
+        if os.environ.get("ORT_DISABLE_TELEMETRY") == "1":
+            environment["ORT_DISABLE_TELEMETRY"] = "1"
         version = subprocess.run([executable, "-env:UserInstallation=" + profile.as_uri(), "--version"],
                                  capture_output=True, text=True, env=environment, timeout=5, check=False)
         parser_version = version.stdout.strip()[:200] if version.returncode == 0 else "not_reported"

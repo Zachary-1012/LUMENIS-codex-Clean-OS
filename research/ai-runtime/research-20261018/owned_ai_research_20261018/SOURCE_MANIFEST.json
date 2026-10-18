@@ -1,0 +1,117 @@
+{
+  "source_root": "[LOCAL_WORKSPACE]/recovery_20261017T1925Z/validated_candidates/LUMENIS_20261017T1620Z_dot-zack_NOT_FINAL/product/source",
+  "read_only_research": true,
+  "product_modified": false,
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "f748d46d7a18c357d27576f44c345023601e452344f5da56f74106f52e850367",
+      "bytes": 114680
+    },
+    {
+      "path": "config/ai-owned-foundation.json",
+      "sha256": "8139a5398fcdcd34103dd94d1e0cb54f0196f9a826b234317451ac58d553a666",
+      "bytes": 9352
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+      "sha256": "04edb41316f6b9576fdcc021d82c26843c2d543ff0ba316d24c8082f2189f1e4",
+      "bytes": 108216
+    },
+    {
+      "path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+      "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+      "bytes": 250700
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1-20260911.md",
+      "sha256": "6047d2abaf669b01ca243e1ccb94c0d767791c5c9be4306a2a8f536c454dc68f",
+      "bytes": 12761
+    },
+    {
+      "path": "lumenis/system/ai_gateway/owned_training.py",
+      "sha256": "fea9d52ae119b13247b961bd4c80c3118ede8866b25664e2c0d16a950dfdcff3",
+      "bytes": 39371
+    },
+    {
+      "path": "lumenis/system/ai_gateway/owned_training_checkpoints.py",
+      "sha256": "fcc48f3c40c46266ee045ecaefb4a9df19e48ad7d2359d10300f8895c6d9ac66",
+      "bytes": 78845
+    },
+    {
+      "path": "lumenis/system/ai_gateway/owned_service.py",
+      "sha256": "d595e151b075c71a5e0f861006c3721fddd5ea16c98fb2358418c4faef9ca154",
+      "bytes": 51855
+    },
+    {
+      "path": "lumenis/system/ai_gateway/owned_evaluation.py",
+      "sha256": "09ee3846bf7f9cbcd25de6c8e3949b1d7a0b779203491e15c3b6e48755835809",
+      "bytes": 63199
+    },
+    {
+      "path": "lumenis/system/ai_gateway/owned_speech.py",
+      "sha256": "5c1df750f0b255543df9102671ded452d63c12aaf9c1161389723fff5f294523",
+      "bytes": 24707
+    },
+    {
+      "path": "lumenis/system/ai_gateway/core.py",
+      "sha256": "251b3eed0db91699bb1d029f4e8c80b29ebfef6f96edec7e15c3a30ed4829103",
+      "bytes": 36395
+    },
+    {
+      "path": "lumenis/system/ai_gateway/user_api_adapter.py",
+      "sha256": "63058e51509d2da54ba5cbe68df52e8008b9c9826e5492537cf95f0bec22d64e",
+      "bytes": 9108
+    },
+    {
+      "path": "lumenis/system/ai_gateway/providers.py",
+      "sha256": "95757bf8336329f5ceb114e9c9ed11f392d20765143c258123bc326911937165",
+      "bytes": 4216
+    },
+    {
+      "path": "lumenis/shared/content_creation/speech_transcription.py",
+      "sha256": "372558765fd210e225f64297d3eba2af619a0d484ede02918e9eeb6a1df8e150",
+      "bytes": 13023
+    },
+    {
+      "path": "lumenis/shared/reporting/business_brief.py",
+      "sha256": "9b742d656a8804e6211140c9f9ae78ab8b4e67cd455ed48635eb3aac7884426f",
+      "bytes": 66950
+    },
+    {
+      "path": "lumenis/shared/learning/training_cases.py",
+      "sha256": "19e05c731174e4e3cb83f171aa69a2eb79d76a1571929a24198b03852cc52e96",
+      "bytes": 15054
+    },
+    {
+      "path": "lumenis/shared/learning/training_review.py",
+      "sha256": "24de577776028e3aef0eb8fd7cace33660362b2fc051453f16e48012ad7606ac",
+      "bytes": 16956
+    },
+    {
+      "path": "lumenis/shared/evaluation/runner.py",
+      "sha256": "e02f56d78e09a12e939b210c1d042f4a551a9046fa08dcea7d031c0c40dc6ee1",
+      "bytes": 13306
+    },
+    {
+      "path": "agent_runtime/task_binding.py",
+      "sha256": "178951072894c75e4520a94ce116a97021e2ea8ca852f5da1f05671b78f5d84e",
+      "bytes": 18102
+    },
+    {
+      "path": "requirements-statistics-cpu.txt",
+      "sha256": "ce9682e9171aad32fe6c112eeceeb25831451b91db4ae1ed59ed10c7bb99700d",
+      "bytes": 457
+    },
+    {
+      "path": "../../research/jev/independent_cpu_prototype_v2/REPORT.md",
+      "sha256": "0f3ce8a233fade3fbc0bdd99629d571d64045c343bfde7996362de7aa4106ef0",
+      "bytes": 4940
+    },
+    {
+      "path": "../../research/jev/independent_cpu_prototype_v2/results/evaluation.json",
+      "sha256": "cb83be4d1d86c9c576d04458781e2d2046a39d239d2be7713fbdb7763ef77c0a",
+      "bytes": 41896
+    }
+  ]
+}

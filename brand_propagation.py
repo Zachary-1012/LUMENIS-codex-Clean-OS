@@ -504,3 +504,51 @@ def _category_title(c: PropagationEventCategory) -> str:
         PropagationEventCategory.INDUSTRY_EVENT: "行业事件看板",
     }
     return titles.get(c, c.value)
+
+
+def read_scoped_propagation(binding):
+    """Reuse signed source observations and existing exact-scope curated events.
+
+    Legacy propagation rows have no trustworthy subject binding and are not
+    silently assigned to a brand. Curated event count and source observations
+    remain distinct; engagement is not relabelled as reach or heat.
+    """
+    from kos_engine import _read_scoped_canonical_material
+    import database
+    material = _read_scoped_canonical_material(binding)
+    focused = binding["canonical_scope"] == "FOCUS"
+    scope = database._normalize_event_scope({"domain_id": "zbmp", "subject_id": None,
+        "brand_focus_id": binding.get("brand_focus_id") if focused else None, "global_scope": not focused}, allow_global=True)
+    events = database.get_events_curated(100, scope=scope)
+    records = material["records"]
+    counts = {key: 0 for key in ("positive", "neutral", "negative", "unknown")}
+    platforms = {}
+    for record in records:
+        sentiment = record.get("sentiment")
+        counts[sentiment if sentiment in {"positive", "neutral", "negative"} else "unknown"] += 1
+        platform = record.get("source_platform") or "UNKNOWN"
+        platforms[platform] = platforms.get(platform, 0) + 1
+    source_incomplete = (material.get("truncated") is not False
+        or type(material.get("rejected_count")) is not int or material.get("rejected_count", 0) != 0)
+    event_metadata = events if isinstance(events, dict) else {}
+    event_incomplete = event_metadata.get("read_complete") is not True
+    return {"events": events,
+            "source_count": None if source_incomplete else len(records),
+            "observed_source_count": len(records),
+            "source_truncated": material.get("truncated"),
+            "source_observations": [{"id": row["canonical_id"], "title": row.get("title"),
+                "platform": row.get("source_platform"), "scope_evidence": row["scope_evidence"]}
+                for row in records],
+            "source_read_complete": not source_incomplete,
+            "rejected_source_count": material.get("rejected_count", 0),
+            "event_read_complete": not event_incomplete,
+            "rejected_event_count": event_metadata.get("rejected_count"),
+            "event_scanned_count": event_metadata.get("scanned_count"),
+            "event_returned_count": event_metadata.get("returned_count"),
+            "data_state": "PARTIAL" if source_incomplete or event_incomplete else "READY" if records or event_metadata.get("total") else "EMPTY",
+            "observed_sentiment_counts": counts,
+            "platform_counts": platforms, "heat": None, "reach": None,
+            "source_refs": [{"canonical_id": record["canonical_id"], "scope_evidence": record["scope_evidence"]} for record in records],
+            "truncated": bool(material.get("truncated")) or bool(event_metadata.get("truncated")),
+            "coverage": "NOT_VERIFIED", "legacy_event_scope": "UNKNOWN_NOT_ASSIGNED",
+            "method": "signed-source-observations-and-curated-events:v1"}

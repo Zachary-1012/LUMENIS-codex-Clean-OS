@@ -662,3 +662,372 @@ def infer_and_persist_relations(**kwargs) -> Dict[str, Any]:
         4. 状态可见：运行中/完成/失败状态应在系统内可见，不得静默失败。
     """
     return get_event_graph().infer_and_link_relations(**kwargs)
+
+
+# Scoped HTTP owner. Existing tables remain the sole event graph store; old rows
+# lacking this versioned server binding retain UNKNOWN ownership.
+def _graph_identity(actor, scope, action='read', connection=None):
+    from lumenis.shared.reporting.saved_work import authorize
+    return authorize(actor, scope, action=action, connection=connection)
+
+
+def _graph_hash(value):
+    from lumenis.shared.reporting.saved_work import _digest
+    return _digest(value)
+
+
+def read_scoped_graph(*, actor, scope, connection=None):
+    import contextlib
+    context = _graph_identity(actor, scope)
+    manager = contextlib.nullcontext(connection) if connection is not None else get_repository().connection(read_only=True, wal=False)
+    with manager as con:
+        if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_graph_events'").fetchone() is None:
+            return {'events': [], 'relations': [], 'rejected': 0, 'legacy_scope': 'UNKNOWN'}
+        events, rejected = {}, 0
+        for raw in con.execute('SELECT * FROM event_graph_events ORDER BY id'):
+            row = dict(raw)
+            try:
+                meta = json.loads(row['metadata'])
+                if meta.get('schema') != 'lumenis.scoped-event-graph/v1' or meta.get('context') != context:
+                    continue
+                content = {key: row[key] for key in ('event_id','event_type','title','event_time','source','description','status','source_event_id')}
+                if meta.get('sha256') != _graph_hash({'content':content,'context':context,'request_id':meta['request_id'],'origin':meta['origin']}):
+                    raise ValueError('GRAPH_EVENT_INTEGRITY_FAILED')
+                if meta['origin']['kind'] == 'verified_scoped_source':
+                    import database
+                    source = database.get_scoped_event(row['source_event_id'], scope, connection=con)
+                    if not source or source.get('scope_evidence_ref') != meta['origin'].get('scope_evidence_ref'):
+                        raise ValueError('GRAPH_SOURCE_CHANGED')
+                row['metadata'] = meta
+                row['evidence_state'] = meta['origin']['kind']
+                events[row['event_id']] = row
+            except (ValueError, TypeError, KeyError, LookupError):
+                rejected += 1
+        relations = []
+        for raw in con.execute('SELECT * FROM event_graph_relations ORDER BY id'):
+            row = dict(raw)
+            if row['source_event_id'] not in events or row['target_event_id'] not in events:
+                continue
+            try:
+                proof = json.loads(row['evidence'])
+                if proof.get('schema') != 'lumenis.scoped-event-relation/v1' or proof.get('context') != context:
+                    continue
+                material = {key:value for key,value in proof.items() if key != 'sha256'}
+                if proof.get('sha256') != _graph_hash(material):
+                    raise ValueError('GRAPH_RELATION_INTEGRITY_FAILED')
+                if (proof['source_sha256'] != events[row['source_event_id']]['metadata']['sha256']
+                        or proof['target_sha256'] != events[row['target_event_id']]['metadata']['sha256']
+                        or proof['relation_type'] != row['relation_type']):
+                    raise ValueError('GRAPH_RELATION_SOURCE_CHANGED')
+                row['evidence'] = proof
+                relations.append(row)
+            except (ValueError,TypeError,KeyError):
+                rejected += 1
+        _graph_identity(actor,scope,connection=con)
+    return {'events':list(events.values()),'relations':relations,'rejected':rejected,'legacy_scope':'UNKNOWN'}
+
+
+def _graph_inference_options(payload):
+    """Preserve main HTTP int()/float() inputs, excluding bool/nonfinite data.
+
+    These are inference windows, not authority or a new retention boundary.
+    Keep raw payload in the approval hash; normalization only drives the rule.
+    """
+    import math
+    days=payload.get('days_window',21)
+    parallel=payload.get('parallel_hours',36)
+    try:
+        if type(days) not in (str,int,float) or type(parallel) not in (str,int,float):
+            raise ValueError('GRAPH_WINDOW_INVALID')
+        if isinstance(days,float) and not math.isfinite(days):
+            raise ValueError('GRAPH_WINDOW_INVALID')
+        days=int(days)
+        parallel=float(parallel)
+        if not math.isfinite(parallel):
+            raise ValueError('GRAPH_PARALLEL_WINDOW_INVALID')
+    except (ValueError,TypeError,OverflowError) as exc:
+        raise ValueError('GRAPH_WINDOW_INVALID') from exc
+    return {'days_window':days,'parallel_hours':parallel}
+
+
+def prepare_scoped_graph_command(command, payload, *, actor, scope, request_id):
+    import re
+    from lumenis.shared.reporting.saved_work import _safe_payload
+    if (command not in {'create','relation','import','infer'} or not isinstance(payload,dict)
+            or not isinstance(request_id,str) or not re.fullmatch(r'[A-Za-z0-9_-]{8,128}',request_id)):
+        raise ValueError('GRAPH_COMMAND_INVALID')
+    _safe_payload(payload)
+    fields = {'create':{'event_type','title','description','event_time','status'},
+              'relation':{'source_event_id','target_event_id','relation_type','evidence'},
+              'import':{'source_event_ids'},'infer':{'days_window','parallel_hours'}}
+    if set(payload)-fields[command]:
+        raise ValueError('GRAPH_FIELDS_INVALID')
+    context=_graph_identity(actor,scope,'write')
+    current=read_scoped_graph(actor=actor,scope=scope)
+    if command=='create':
+        if payload.get('event_type') not in EVENT_TYPES or payload.get('status','ongoing') not in EVENT_STATUS:
+            raise ValueError('GRAPH_EVENT_CLASS_INVALID')
+        if not isinstance(payload.get('title'),str) or not payload['title'].strip() or len(payload['title'])>500:
+            raise ValueError('GRAPH_TITLE_INVALID')
+        for key in ('description','event_time'):
+            if key in payload and (not isinstance(payload[key],str) or len(payload[key])>10000):
+                raise ValueError('GRAPH_TEXT_INVALID')
+    if command=='relation':
+        ids={row['event_id'] for row in current['events']}
+        if (payload.get('source_event_id') not in ids or payload.get('target_event_id') not in ids
+                or payload['source_event_id']==payload['target_event_id'] or payload.get('relation_type') not in RELATION_TYPES):
+            raise ValueError('GRAPH_RELATION_ENDPOINT_INVALID')
+        if not isinstance(payload.get('evidence',''),str) or len(payload.get('evidence',''))>10000:
+            raise ValueError('GRAPH_RELATION_EVIDENCE_INVALID')
+    imported=[]
+    if command=='import':
+        import database
+        ids=payload.get('source_event_ids')
+        if not isinstance(ids,list) or not 1<=len(ids)<=100 or any(type(i) is not int or i<=0 for i in ids) or len(set(ids))!=len(ids):
+            raise ValueError('GRAPH_SOURCE_IDS_INVALID')
+        for source_id in ids:
+            source=database.get_scoped_event(source_id,scope)
+            if not source:
+                raise PermissionError('GRAPH_SOURCE_NOT_IN_SCOPE')
+            imported.append(source)
+    inference_options=_graph_inference_options(payload) if command=='infer' else None
+    # Existing nodes and sources are pinned, so a preview cannot authorize a
+    # different graph after concurrent edits or source revocation.
+    pins=([{'event_id':r['event_id'],'sha256':r['metadata']['sha256']} for r in current['events']]
+          if command in {'relation','infer'} else [])
+    # Rebuild also mutates automatic edges: bind the reviewed relation set,
+    # not just node hashes, to exact confirmation. Never authorize global cleanup.
+    relation_pins=([{'id':r['id'],'sha256':r['evidence']['sha256']} for r in current['relations']]
+                   if command=='infer' else [])
+    material={'context':context,'command':command,'payload':payload,
+        'request_id':request_id,'pins':pins,'sources':imported}
+    if command=='infer':
+        material['relation_pins']=relation_pins
+    resource='event-graph:v1:'+_graph_hash(material)
+    return {'resource':resource,'context':context,'current':current,'imported':imported,
+        'inference_options':inference_options}
+
+
+def write_scoped_graph_command(command,payload,*,actor,scope,request_id,resource):
+    from lumenis.shared.reporting.saved_work import _check_effect
+    from lumenis.system.security.permission import OperationType, get_permission_gate
+    prepared=prepare_scoped_graph_command(command,payload,actor=actor,scope=scope,request_id=request_id)
+    if prepared['resource']!=resource:
+        raise PermissionError('GRAPH_PREVIEW_CHANGED')
+    if get_permission_gate().get_valid_approval_token('db_write',resource,exact=True) is None:
+        raise ValueError('WORK_EFFECT_PERMISSION_DENIED')
+    _check_effect(actor,scope,OperationType.DB_WRITE,resource)
+    context=prepared['context']
+    init_db()
+    with get_repository().transaction() as con:
+        _graph_identity(actor,scope,'write',connection=con)
+        fresh=read_scoped_graph(actor=actor,scope=scope,connection=con)
+        if command in {'relation','infer'} and fresh!=prepared['current']:
+            raise ValueError('GRAPH_CONCURRENT_CHANGE')
+        output=[]
+        inference_result={'dropped_auto':0,'added':0,
+            'by_type':{'follow':0,'derive':0,'parallel':0},'no_evidence_pairs':0}
+        inference_stats=None
+        def node(data,origin,source_id=None,suffix=''):
+            event_id='GE-S-'+_graph_hash({'context':context,'request_id':request_id,'suffix':suffix})[:32]
+            content={'event_id':event_id,'event_type':data['event_type'],'title':data['title'],
+                'event_time':data.get('event_time'),'source':origin['kind'],'description':data.get('description',''),
+                'status':data.get('status','ongoing'),'source_event_id':source_id}
+            meta={'schema':'lumenis.scoped-event-graph/v1','context':context,'request_id':request_id,'origin':origin}
+            meta['sha256']=_graph_hash({'content':content,'context':context,'request_id':request_id,'origin':origin})
+            old=con.execute('SELECT metadata FROM event_graph_events WHERE event_id=?',(event_id,)).fetchone()
+            if old and json.loads(old[0])!=meta:
+                raise ValueError('GRAPH_REQUEST_CONFLICT')
+            if not old:
+                con.execute('INSERT INTO event_graph_events(event_id,event_type,title,event_time,source,description,status,source_event_id,metadata,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                    tuple(content.values())+(json.dumps(meta,ensure_ascii=False),_now(),_now()))
+            output.append(event_id)
+        def relation(source,target,kind,claim,statement):
+            proof={'schema':'lumenis.scoped-event-relation/v1','context':context,'relation_type':kind,
+                'source_sha256':source['metadata']['sha256'],'target_sha256':target['metadata']['sha256'],
+                'claim_type':claim,'statement':statement,'request_id':request_id,
+                'causality_verified':False}
+            proof['sha256']=_graph_hash(proof)
+            old=con.execute('SELECT evidence FROM event_graph_relations WHERE source_event_id=? AND target_event_id=? AND relation_type=?',
+                (source['event_id'],target['event_id'],kind)).fetchone()
+            if old:
+                existing=json.loads(old[0])
+                if existing.get('claim_type')=='user_statement' and claim=='automatic_inference':
+                    return
+                if existing!=proof:
+                    raise ValueError('GRAPH_RELATION_ALREADY_EXISTS')
+            else:
+                con.execute('INSERT INTO event_graph_relations(source_event_id,target_event_id,relation_type,evidence,confidence,created_at) VALUES(?,?,?,?,?,?)',
+                    (source['event_id'],target['event_id'],kind,json.dumps(proof,ensure_ascii=False),None,_now()))
+            output.append({'source':source['event_id'],'target':target['event_id'],'type':kind,'claim_type':claim})
+        if command=='create':
+            node(payload,{'kind':'user_statement','verification':'NOT_ESTABLISHED'})
+        elif command=='import':
+            import database
+            for source in prepared['imported']:
+                checked=database.get_scoped_event(source['id'],scope,connection=con)
+                if checked!=source:
+                    raise PermissionError('GRAPH_SOURCE_CHANGED')
+                node({'event_type':'public_opinion_event','title':source['title'],'description':source.get('summary',''),
+                      'event_time':source.get('event_date'),'status':'ongoing'},
+                     {'kind':'verified_scoped_source','scope_evidence_ref':source['scope_evidence_ref'],
+                      'causality_verified':False},source['id'],str(source['id']))
+        elif command=='relation':
+            nodes={row['event_id']:row for row in fresh['events']}
+            relation(nodes[payload['source_event_id']],nodes[payload['target_event_id']],payload['relation_type'],
+                     'user_statement',payload.get('evidence',''))
+        else:
+            # Only integrity-verified automatic edges belonging to this exact
+            # actor/scope are replaceable. Manual, legacy, rejected and other
+            # scope rows are never deleted by inference. The transaction rolls
+            # cleanup back if either final authorization check fails.
+            for row in fresh['relations']:
+                if row['evidence'].get('claim_type')=='automatic_inference':
+                    con.execute('DELETE FROM event_graph_relations WHERE id=?',(row['id'],))
+                    inference_result['dropped_auto']+=1
+            items=[(_parse_dt(row['event_time']),row) for row in fresh['events']]
+            items=sorted((item for item in items if item[0] is not None),key=lambda item:item[0])
+            for i,(at,a) in enumerate(items):
+                if not _text_tokens(a['title']):
+                    continue
+                for bt,b in items[i+1:]:
+                    shared=_text_tokens(a['title']) & _text_tokens(b['title'])
+                    if not shared:
+                        inference_result['no_evidence_pairs']+=1
+                        continue
+                    gap_hours=(bt-at).total_seconds()/3600
+                    kind=None
+                    if gap_hours<=prepared['inference_options']['parallel_hours']:
+                        kind='parallel'
+                    elif 0<gap_hours<=prepared['inference_options']['days_window']*24:
+                        kind='derive' if len(shared)>=3 else 'follow'
+                    if kind is None:
+                        inference_result['no_evidence_pairs']+=1
+                    else:
+                        relation(a,b,kind,'automatic_inference',{'shared_terms':sorted(shared),
+                            'time_order':gap_hours>0,'gap_hours':gap_hours,
+                            'basis':'temporal-and-title-overlap; not causality'})
+            inference_result['added']=len(output)
+            for row in output:
+                inference_result['by_type'][row['type']]+=1
+            updated=read_scoped_graph(actor=actor,scope=scope,connection=con)
+            event_counts={}
+            relation_counts={}
+            for row in updated['events']:
+                name=EVENT_TYPES.get(row['event_type'],row['event_type'])
+                event_counts[name]=event_counts.get(name,0)+1
+            for row in updated['relations']:
+                name=RELATION_TYPES.get(row['relation_type'],row['relation_type'])
+                relation_counts[name]=relation_counts.get(name,0)+1
+            inference_stats={'total_events':len(updated['events']),'total_relations':len(updated['relations']),
+                'events_by_type':event_counts,'relations_by_type':relation_counts}
+        _graph_identity(actor,scope,'write',connection=con)
+        if get_permission_gate().get_valid_approval_token('db_write',resource,exact=True) is None:
+            raise ValueError('WORK_EFFECT_PERMISSION_DENIED')
+        _check_effect(actor,scope,OperationType.DB_WRITE,resource)
+    result={'ok':True,'output':output,'external_effect':'not_performed','claim_types':['user_statement','automatic_inference','verified_scoped_source']}
+    if command=='infer':
+        result.update(result=inference_result,stats=inference_stats)
+    return result
+
+
+def graph_http(mode, event_id=None):
+    from flask import request, jsonify
+    from experience_runtime import _shared_work_actor_scope, _content_source_same_origin
+    from lumenis.system.security.permission import get_permission_gate, PermissionLevel
+    try:
+        action='read' if request.method=='GET' else 'write'
+        actor,scope=_shared_work_actor_scope(action)
+        if action=='read':
+            result=read_scoped_graph(actor=actor,scope=scope)
+            if mode=='stats':
+                return jsonify({'ok':True,'data':{'events':len(result['events']),'relations':len(result['relations']),
+                    'by_type':{kind:sum(r['event_type']==kind for r in result['events']) for kind in EVENT_TYPES},
+                    'rejected':result['rejected'],'legacy_scope':'UNKNOWN'}})
+            if mode=='chain':
+                depth=int(request.args.get('max_depth','5'))
+                if not 0<=depth<=20:
+                    raise ValueError('GRAPH_DEPTH_INVALID')
+                nodes={r['event_id']:r for r in result['events']}
+                if event_id not in nodes:
+                    raise LookupError('GRAPH_EVENT_NOT_FOUND_IN_SCOPE')
+                reached={event_id}; frontier={event_id}
+                for _ in range(depth):
+                    frontier={r['target_event_id'] for r in result['relations'] if r['source_event_id'] in frontier}-reached
+                    reached.update(frontier)
+                return jsonify({'ok':True,'chain':[nodes[key] for key in sorted(reached)],
+                    'relations':[r for r in result['relations'] if r['source_event_id'] in reached and r['target_event_id'] in reached],
+                    'count':len(reached)})
+            kind=request.args.get('type')
+            if kind is not None and kind not in EVENT_TYPES:
+                raise ValueError('GRAPH_TYPE_INVALID')
+            rows=[r for r in result['events'] if not kind or r['event_type']==kind]
+            return jsonify({'ok':True,**result,'events':rows,'count':len(rows)})
+        if not _content_source_same_origin():
+            raise PermissionError('GRAPH_ORIGIN_DENIED')
+        body=request.get_json(silent=True)
+        if (not isinstance(body,dict) or set(body)-{'request_id','payload','confirm','confirmed_resource','command'}
+                or type(body.get('confirm',False)) is not bool):
+            raise ValueError('GRAPH_EXACT_REQUEST_REQUIRED')
+        command=body.get('command') if mode=='revoke' else mode
+        preview=prepare_scoped_graph_command(command,body.get('payload'),actor=actor,scope=scope,request_id=body.get('request_id'))
+        if body.get('confirm') is not True:
+            return jsonify({'ok':True,'state':'PREPARED','resource':preview['resource'],
+                'operation_type':'db_write','approval_issued':False,'external_effect':'not_performed'})
+        if body.get('confirmed_resource')!=preview['resource']:
+            raise PermissionError('GRAPH_PREVIEW_CHANGED')
+        gate=get_permission_gate()
+        if not gate.has_permission(PermissionLevel.HUMAN_APPROVAL) or not gate.has_permission(PermissionLevel.COMMIT):
+            raise PermissionError('GRAPH_MANUAL_AUTHORITY_REQUIRED')
+        resource=preview['resource']
+        token=gate.get_valid_approval_token('db_write',resource,exact=True)
+        if mode=='revoke':
+            return jsonify({'ok':True,'revoked':bool(token and gate.revoke_approval(token))})
+        if token is None:
+            token=gate.grant_approval('db_write',resource=resource,duration_minutes=5,
+                granted_by=preview['context'].get('principal_ref') or 'actor:'+str(preview['context']['actor_id']))
+        try:
+            result=write_scoped_graph_command(command,body['payload'],actor=actor,scope=scope,
+                request_id=body['request_id'],resource=resource)
+        except Exception:
+            gate.revoke_approval(token)
+            raise
+        return jsonify(result)
+    except PermissionError as exc:
+        return jsonify({'ok':False,'code':str(exc)}),403
+    except LookupError as exc:
+        return jsonify({'ok':False,'code':str(exc)}),404
+    except (TypeError,ValueError) as exc:
+        return jsonify({'ok':False,'code':str(exc)}),400
+    except Exception:
+        return jsonify({'ok':False,'code':'SCOPED_GRAPH_UNAVAILABLE'}),503
+
+
+_GRAPH_HTTP_ROUTES={
+    'event_graph_stats':('/api/event-graph/stats','GET'),
+    'event_graph_events':('/api/event-graph/events','GET'),
+    'event_graph_chain':('/api/event-graph/chain/<event_id>','GET'),
+    'event_graph_create_event':('/api/event-graph/events','POST'),
+    'event_graph_add_relation':('/api/event-graph/relations','POST'),
+    'event_graph_import_existing':('/api/event-graph/import','POST'),
+    'event_graph_rebuild_relations':('/api/event-graph/rebuild-relations','POST'),
+    'event_graph_revoke_approval':('/api/event-graph/approval/revoke','POST'),
+}
+
+
+def scoped_graph_route_matches():
+    from flask import request
+    return bool(request.url_rule is not None and _GRAPH_HTTP_ROUTES.get(request.endpoint)==(request.url_rule.rule,request.method))
+
+
+def scoped_graph_local_access_allowed():
+    from flask import request
+    from experience_runtime import _shared_work_actor_scope
+    from lumenis.system.security.permission import LocalWorkspacePrincipal
+    if not scoped_graph_route_matches():
+        return False
+    try:
+        actor,_scope=_shared_work_actor_scope('read' if request.method=='GET' else 'write')
+        return type(actor) is LocalWorkspacePrincipal
+    except (ValueError,PermissionError):
+        return False

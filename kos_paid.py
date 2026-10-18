@@ -220,3 +220,59 @@ def reward_ledger(author_id: str = "", limit: int = 50) -> list:
         return [dict(r) for r in rows]
     finally:
         conn.close()
+
+
+def resolve_scoped_paid_plan(*, actor, scope, plan_id, author_id="", connection=None):
+    """Resolve current scoped plan versions; historical unscoped rows grant nothing.
+
+    Results remain user-supplied observations. A resolved plan is neither a
+    platform delivery receipt nor proof that paid amplification occurred.
+    """
+    import re
+    from contextlib import nullcontext
+    import kos_ops
+    context = kos_ops._scoped_operation_identity(actor, scope, "read", connection=connection)
+    if not isinstance(plan_id, str) or not plan_id or plan_id != plan_id.strip():
+        raise ValueError("KOS_PRIVATE_PLAN_REQUIRED")
+    if author_id and (not isinstance(author_id, str) or author_id != author_id.strip()):
+        raise ValueError("AUTHOR_ID_REQUIRED")
+    if re.fullmatch(r"kos-plan:v1:[0-9a-f]{64}", plan_id):
+        records = kos_ops.read_scoped_operations(actor=actor, scope=scope, operation="paid_plan",
+            complete_history=True, connection=connection)["items"]
+        matches = [item for item in records if item["plan_id"] == plan_id]
+        if len(matches) != 1:
+            raise PermissionError("KOS_PLAN_NOT_FOUND_IN_SCOPE")
+        source = matches[0]
+        if any(item["author_id"] == source["author_id"] and item["version"] > source["version"] for item in records):
+            raise ValueError("KOS_PLAN_VERSION_SUPERSEDED")
+        binding = {"schema": "lumenis.kos-plan-binding/v1", "plan_id": plan_id,
+                   "author_id": source["author_id"], "source_record_id": source["record_id"],
+                   "source_sha256": source["sha256"], "source_version": source["version"]}
+    elif re.fullmatch(r"KX-S-[0-9a-f]{32}", plan_id):
+        manager = nullcontext(connection) if connection is not None else get_repository().connection(read_only=True, wal=False)
+        with manager as con:
+            exists = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='kos_executions'").fetchone()
+            row = con.execute("SELECT * FROM kos_executions WHERE execution_id=?", (plan_id,)).fetchone() if exists else None
+            if row is None:
+                raise PermissionError("KOS_PLAN_NOT_FOUND_IN_SCOPE")
+            record, stored = kx._scoped_record(row, context)
+            request = stored["request"]
+            if (record["action_type"] != "paid_media" or request.get("action_type") != "paid_media"
+                    or record["target_author_id"] != request.get("target_author_id")
+                    or record["target_brand"] != scope["brand_focus_id"]):
+                raise ValueError("KOS_PLAN_ACTION_OR_TARGET_MISMATCH")
+            if record["status"] not in {"AI_GENERATED", "PENDING_HUMAN_REVIEW", "HUMAN_APPROVED", "EXECUTING", "SUCCESS"}:
+                raise ValueError("KOS_PLAN_STATE_INVALID")
+            binding = {"schema": "lumenis.kos-plan-binding/v1", "plan_id": plan_id,
+                       "author_id": request["target_author_id"], "source_execution_id": plan_id,
+                       "source_sha256": stored["request_sha256"]}
+            kos_ops._scoped_operation_identity(actor, scope, "read", connection=con)
+    elif plan_id.startswith(("PAID-", "KX-")):
+        raise ValueError("KOS_LEGACY_PLAN_REQUIRES_SCOPED_RECREATION")
+    else:
+        raise ValueError("KOS_PLAN_REFERENCE_INVALID")
+    if author_id and binding["author_id"] != author_id:
+        raise ValueError("KOS_PLAN_AUTHOR_MISMATCH")
+    if not isinstance(binding["author_id"], str) or not binding["author_id"].strip():
+        raise ValueError("KOS_PLAN_AUTHOR_INVALID")
+    return binding

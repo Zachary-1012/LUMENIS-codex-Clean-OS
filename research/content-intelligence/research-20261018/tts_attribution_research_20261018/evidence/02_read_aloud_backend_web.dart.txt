@@ -1,0 +1,116 @@
+# app/lib/features/shared/read_aloud_backend_web.dart:1-115
+1: import 'dart:async';
+2: import 'dart:js_interop';
+3: 
+4: import 'package:web/web.dart' as web;
+5: 
+6: import 'read_aloud_contract.dart';
+7: 
+8: ReadAloudPlatform createReadAloudPlatform() => _WebReadAloudPlatform();
+9: 
+10: class _WebReadAloudPlatform implements ReadAloudPlatform {
+11:   web.SpeechSynthesisUtterance? _utterance;
+12:   ReadAloudPlaybackObservation _status = ReadAloudPlaybackObservation.failed;
+13:   bool _started = false;
+14: 
+15:   @override
+16:   Future<ReadAloudAvailability> availableLocales() async {
+17:     late List<web.SpeechSynthesisVoice> voices;
+18:     try {
+19:       voices = web.window.speechSynthesis.getVoices().toDart;
+20:     } catch (_) {
+21:       return const ReadAloudAvailability(supported: false, localLocales: {});
+22:     }
+23:     if (voices.isEmpty) {
+24:       // Browsers may populate the system voice list asynchronously. Wait only
+25:       // for the local list; no remote voice or network fetch is requested.
+26:       await Future<void>.delayed(const Duration(milliseconds: 250));
+27:       try {
+28:         voices = web.window.speechSynthesis.getVoices().toDart;
+29:       } catch (_) {
+30:         return const ReadAloudAvailability(supported: false, localLocales: {});
+31:       }
+32:     }
+33:     final localLocales = voices
+34:         .where((voice) => voice.localService)
+35:         .map((voice) => _canonicalLocale(voice.lang))
+36:         .whereType<String>()
+37:         .toSet();
+38:     return ReadAloudAvailability(supported: true, localLocales: localLocales);
+39:   }
+40: 
+41:   @override
+42:   Future<ReadAloudStartResult> speak(ReadAloudRequest request) async {
+43:     final availability = await availableLocales();
+44:     if (!availability.supported) {
+45:       return const ReadAloudStartResult(
+46:         ReadAloudStatus.unavailable,
+47:         ReadAloudErrorCode.platformUnsupported,
+48:       );
+49:     }
+50:     web.SpeechSynthesisVoice? voice;
+51:     for (final candidate in web.window.speechSynthesis.getVoices().toDart) {
+52:       if (candidate.localService &&
+53:           _canonicalLocale(candidate.lang) == request.locale.tag) {
+54:         voice = candidate;
+55:         break;
+56:       }
+57:     }
+58:     if (voice == null) {
+59:       return const ReadAloudStartResult(
+60:         ReadAloudStatus.unavailable,
+61:         ReadAloudErrorCode.voiceUnavailable,
+62:       );
+63:     }
+64:     await stop();
+65:     final utterance = web.SpeechSynthesisUtterance(request.text);
+66:     utterance.lang = request.locale.tag;
+67:     utterance.voice = voice;
+68:     utterance.rate = request.rate.multiplier;
+69:     utterance.onstart = ((web.Event _) {
+70:       if (!identical(_utterance, utterance)) return;
+71:       _started = true;
+72:       _status = ReadAloudPlaybackObservation.playing;
+73:     }).toJS;
+74:     utterance.onend = ((web.Event _) {
+75:       if (!identical(_utterance, utterance)) return;
+76:       _status = ReadAloudPlaybackObservation.completed;
+77:     }).toJS;
+78:     utterance.onerror = ((web.SpeechSynthesisErrorEvent _) {
+79:       if (!identical(_utterance, utterance)) return;
+80:       _status = ReadAloudPlaybackObservation.failed;
+81:     }).toJS;
+82:     _utterance = utterance;
+83:     _started = false;
+84:     _status = ReadAloudPlaybackObservation.starting;
+85:     web.window.speechSynthesis.speak(utterance);
+86:     return const ReadAloudStartResult(ReadAloudStatus.starting);
+87:   }
+88: 
+89:   @override
+90:   Future<void> stop() async {
+91:     web.window.speechSynthesis.cancel();
+92:     _utterance = null;
+93:     _started = false;
+94:     _status = ReadAloudPlaybackObservation.failed;
+95:   }
+96: 
+97:   @override
+98:   Future<ReadAloudPlaybackObservation> observe() async {
+99:     if (_utterance == null) return _status;
+100:     if (_started && web.window.speechSynthesis.paused) {
+101:       return ReadAloudPlaybackObservation.paused;
+102:     }
+103:     return _status;
+104:   }
+105: 
+106:   String? _canonicalLocale(String raw) {
+107:     final normalized = raw.replaceAll('_', '-').toLowerCase();
+108:     return switch (normalized) {
+109:       'zh-cn' => ReadAloudLocale.zhCn.tag,
+110:       'en-us' => ReadAloudLocale.enUs.tag,
+111:       'ko-kr' => ReadAloudLocale.koKr.tag,
+112:       _ => null,
+113:     };
+114:   }
+115: }

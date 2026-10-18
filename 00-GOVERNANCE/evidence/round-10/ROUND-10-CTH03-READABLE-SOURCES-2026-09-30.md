@@ -35,7 +35,7 @@ filter live acceptance remains NOT_VERIFIED without a verified lane projection.
 ## Verification and snapshot
 
 Artifact directory:
-`C:/Users/28049/AppData/Local/Temp/lumenis-cth03-readable-20260930`.
+`C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-cth03-readable-20260930`.
 `acceptance-snapshot.json` contains all eight source SHA256 values, build and
 actual API summaries. Screenshots/AX snapshots include Shenzhen desktop/mobile,
 offline mobile and restored GLOBAL.

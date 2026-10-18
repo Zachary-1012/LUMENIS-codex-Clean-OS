@@ -792,6 +792,10 @@ class BusinessDecisionWorkflow:
             allowed_roles = {"OFFICIAL_BRAND_SELF_DESCRIPTION", "VENUE_OPERATOR_DISCLOSURE",
                              "CONSUMER_FEEDBACK", "MARKET_DISCLOSURE", "CREATOR_CONTENT"}
             role = role if isinstance(role, str) and role in allowed_roles else "UNKNOWN"
+            from lumenis.shared.reporting.operational_brief import project_profile_research
+            research = project_profile_research(connection, record, evidence_id, actor_ref=report["snapshot"]["actor_id"])
+            if research is not None:
+                role = "ENTITY_PROFILE_RESEARCH_COMPILATION"
             fields = {key: record.get("engagement_" + key) if type(record.get("engagement_" + key)) is int and record["engagement_" + key] >= 0 else None
                       for key in ("likes", "comments", "collects", "shares")}
             # Use the sole metric owner only when every component was measured.
@@ -800,6 +804,7 @@ class BusinessDecisionWorkflow:
             sources.append({"source_id": source["source_id"], "scope_evidence_ref": ref,
                             "url": record.get("url"), "declared_role": role,
                             "role_status": "CAPTURE_ANNOTATION_ONLY",
+                            "profile_research": research,
                             "captured_at": record.get("captured_at"),
                             "published_at": record.get("publish_datetime") or None,
                             "commercial_reuse": annotations.get("commercial_reuse", "UNKNOWN"),
@@ -812,6 +817,11 @@ class BusinessDecisionWorkflow:
                    "state": "REVIEW_REQUIRED" if role in roles else "MISSING_MATERIAL",
                    "source_ids": [s["source_id"] for s in sources if s["declared_role"] == role]}
                   for role, check in requirements]
+        if any(item.get("profile_research") for item in sources):
+            checks.append({"required_role": "ENTITY_PROFILE_RESEARCH_COMPILATION",
+                           "check": "已有身份/地址/官网等来源断言可逐字段核对，仍未独立验真或自动采纳",
+                           "state": "AVAILABLE_FOR_REVIEW",
+                           "source_ids": [item["source_id"] for item in sources if item.get("profile_research")]})
         return {"state": "INSUFFICIENT_MATERIAL" if any(c["state"] == "MISSING_MATERIAL" for c in checks)
                 else "MATERIAL_REVIEW_REQUIRED", "checks": checks, "sources": sources,
                 "consumer_conclusion": "NOT_ESTABLISHED", "causation": "NOT_ESTABLISHED",
@@ -1124,12 +1134,23 @@ class BusinessDecisionWorkflow:
         for source in work["material_review"]["sources"]:
             source_url, url_state = _source_url(source.get("url"))
             lines += ["来源：" + text(source["source_id"]),
-                      "出处：" + text(source_url or ("已隐去（地址含未经批准的参数或凭据）" if url_state == "WITHHELD" else "未知")),
+                      "出处：" + text(source_url or ("多个研究出处，详见下列逐字段引用" if source.get("profile_research") else "已隐去（地址含未经批准的参数或凭据）" if url_state == "WITHHELD" else "未知")),
                       "捕获时间：" + text(source.get("captured_at") or "未知"),
                       "发布时间：" + text(source.get("published_at") or "未知（不能以捕获时间替代）"),
                       "材料角色标注：" + text(source["declared_role"]) + "（仍需原文核验）",
                       "商业使用许可：" + text(source.get("commercial_reuse") or "UNKNOWN"),
                       "范围证据：" + text(source["scope_evidence_ref"])]
+            research = source.get("profile_research")
+            if research:
+                lines += ["研究汇编多出处（签名不等于事实验证；捕获方式为工具文本提取）："]
+                for reference in research["references"]:
+                    lines += [text(reference["source_id"]) + "：" + text(reference["url"] or reference["url_state"]),
+                              "来源时点：" + text(reference["source_as_of"] or "UNKNOWN") + "；" + text(reference["temporal_scope_note"] or "当前有效性未核实")]
+                for assertion in research["assertions"]:
+                    selected = research["review"].get(assertion["field"]) == assertion["id"]
+                    lines += [text(assertion["field"]) + "：" + text(str(assertion["value"])) +
+                              "；来源 " + text(assertion["source_id"]) +
+                              ("；人工选择（仍非独立验真）" if selected else "；未采纳来源断言")]
             metric = source["engagement"]
             lines += ["来源互动字段合计：" + (str(metric["value"]) if metric["value"] is not None else "未知（字段未齐）"),
                       "此数值仅来自来源互动字段，不代表客流、需求、销量或投放回报。", ""]

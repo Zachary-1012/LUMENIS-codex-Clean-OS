@@ -155,7 +155,7 @@ class EffectFence:
         from lumenis.shared.agents.skills import lifecycle
 
         lifecycle._validate_candidate(candidate)
-        if candidate.action not in {"update", "uninstall", "restore"}:
+        if candidate.action not in {"update", "uninstall", "restore", "review_mcp_contract"}:
             raise ValueError("SKILL_METADATA_ACTION_INVALID")
         lifecycle._operation_id(candidate.operation_id)
         if not all(_SHA256.fullmatch(value or "") for value in (
@@ -171,13 +171,38 @@ class EffectFence:
             raise ValueError("SKILL_METADATA_IDENTITY_CHANGED")
         if (before["product"], before["domain"]) != (after["product"], after["domain"]):
             raise ValueError("SKILL_METADATA_OWNER_CHANGED")
-        if (after["status"] != "disabled" or after["permissions_granted_json"] != "[]"
-                or after["trust_level"] != "unverified" or after["health_state"] != "unknown"
-                or after["install_state"] != "not_installed" or after["install_path"] is not None
-                or after["active_version"] is not None or after["previous_version"] != before["version"]
-                or after["lifecycle_state"] != ("uninstalled" if candidate.action == "uninstall" else "validated")
-                or (candidate.action == "uninstall" and after["entrypoint"] is not None)):
-            raise ValueError("SKILL_METADATA_EFFECT_SCOPE_INVALID")
+        if candidate.action == "review_mcp_contract":
+            mutable = {"compatibility_json", "status", "health_state"}
+            if (after["status"] != "disabled" or after["health_state"] != "unknown"
+                    or before["runtime"] != "mcp" or before["install_state"] != "installed"
+                    or any(after[key] != before[key] for key in before if key not in mutable)):
+                raise ValueError("SKILL_METADATA_EFFECT_SCOPE_INVALID")
+            old = json.loads(before["compatibility_json"] or "{}")
+            new = json.loads(after["compatibility_json"] or "{}")
+            contract_keys = {"mcp_tool_contracts", "mcp_protocol_version", "mcp_reviewed_tools", "mcp_runtime_binding"}
+            if (not isinstance(old, dict) or not isinstance(new, dict)
+                    or {k: v for k, v in old.items() if k not in contract_keys} != {k: v for k, v in new.items() if k not in contract_keys}
+                    or new.get("mcp_protocol_version") != "2025-11-25"):
+                raise ValueError("SKILL_METADATA_MCP_CONTRACT_INVALID")
+            from mcp_skill_runtime import runtime_contract_binding
+            if new.get("mcp_runtime_binding") != runtime_contract_binding(before):
+                raise ValueError("SKILL_METADATA_MCP_RUNTIME_CHANGED")
+            from mcp_discovery import tool_contract_hash
+            tools = new.get("mcp_reviewed_tools")
+            if not isinstance(tools, list) or not tools or any(not isinstance(tool, dict) for tool in tools):
+                raise ValueError("SKILL_METADATA_MCP_CONTRACT_INVALID")
+            contracts = {tool.get("name"): tool_contract_hash(tool) for tool in tools}
+            if (len(contracts) != len(tools) or set(contracts) != set(json.loads(after["tools_json"]))
+                    or new.get("mcp_tool_contracts") != contracts):
+                raise ValueError("SKILL_METADATA_MCP_CONTRACT_INVALID")
+        else:
+            if (after["status"] != "disabled" or after["permissions_granted_json"] != "[]"
+                    or after["trust_level"] != "unverified" or after["health_state"] != "unknown"
+                    or after["install_state"] != "not_installed" or after["install_path"] is not None
+                    or after["active_version"] is not None or after["previous_version"] != before["version"]
+                    or after["lifecycle_state"] != ("uninstalled" if candidate.action == "uninstall" else "validated")
+                    or (candidate.action == "uninstall" and after["entrypoint"] is not None)):
+                raise ValueError("SKILL_METADATA_EFFECT_SCOPE_INVALID")
         if candidate.action == "restore":
             if not isinstance(candidate.restore_evidence_ref, str) or not candidate.restore_evidence_ref:
                 raise ValueError("SKILL_METADATA_RESTORE_REFERENCE_INVALID")
@@ -723,6 +748,24 @@ class EffectFence:
             idempotency_key=key,
             reservation_status="reserved",
         )
+
+    def check_pattern_transition(self, admission, *, connection, phase="before_write"):
+        """Typed derived learning metadata only; generic production-write denial stays intact."""
+        from . import permission
+        import content_generation as content
+        if phase not in {"before_write", "before_commit"}:
+            raise PermissionError("PATTERN_FENCE_PHASE_INVALID")
+        permission.validate_pattern_transition_admission(admission, connection=connection)
+        binding = json.loads(admission.binding_json)
+        rebuilt = content._pattern_transition_binding_from_selectors(
+            binding, connection=connection, after_write=phase == "before_commit")
+        if binding != rebuilt:
+            raise PermissionError("PATTERN_FENCE_BINDING_CHANGED")
+        return {"allowed": True, "effect_mode": "content_pattern_derived_transition",
+                "binding_hash": admission.binding_hash, "approval_id": admission.approval_id,
+                "activation_resource": admission.activation_resource,
+                "write_resource": admission.write_resource,
+                "production_truth_write": False, "model_execution_allowed": False}
 
     def complete(self, idempotency_key: Optional[str], *, success: bool) -> None:
         if not idempotency_key:

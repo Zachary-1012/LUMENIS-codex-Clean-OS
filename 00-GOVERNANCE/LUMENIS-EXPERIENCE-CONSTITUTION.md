@@ -749,7 +749,7 @@ Creative-industry research, accessed 2026-09-28, principle-only:
   maintained upstream: reuse existing route, dialog, focus and paint primitives.
   No new runtime dependency, copied asset, external effect or account is needed.
 
-The original F user message at session 01a0cf2d-6ece-7c90-8877-b58fc80a4480,
+The original F user message at session private-source-id-sha256-8dc079e68318826e375eb22dd929b2ba98662fbb00e98e440d7521111e741ee1,
 line13050, distinguishes AIGC/3D frontend presentation from a request to add an
 AIGC-production feature. The current four-surface direction requires original
 generated visuals, creative composition and rich interactive/motion presentation;
@@ -1526,8 +1526,8 @@ product rules, task-specific composition, creative workbench and AI/Evidence/
 Permission/Recovery contracts, adapting suitable Cue principles without scaling
 the Website. The same five architecture identities above map across all four
 surfaces; Agent does not add another identity. This scope follows the human messages
-`01a1057b-200e-7a01-b256-cf1faabb2c9b` and
-`01a10576-48c2-7e53-abe6-e445d94f2b68`, reconciled by M on 2026-10-04.
+`private-source-id-sha256-2c7ad78267d4c38238490fd61e514bcff295a079db9ecbd6281d5a607f87aa62` and
+`private-source-id-sha256-9c001996ece8ff3a78a4b2364a46bff3d144a62326522afdf78008225af350be`, reconciled by M on 2026-10-04.
 The 319b creative video applies
 only to Public Website. d16fc is Cue Website operation narrative; 7ac450 is the
 startup/authorization/onboarding state machine. Retain the earlier five videos,

@@ -1,0 +1,1186 @@
+[
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 325,
+    "target": "skill.json",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 325,
+    "target": "SKILL.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 474,
+    "target": "THIRD-PARTY-COMPONENT-REGISTER.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 708,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-02-cannes-launch-expo-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-02-cannes-launch-expo-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 709,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-03-crosscategory-pitch-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-03-crosscategory-pitch-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 710,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-05-luxury-pitch-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-05-luxury-pitch-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 711,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-06-real-cases-taikoo-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-06-real-cases-taikoo-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 712,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-07-global-2026-trends-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-07-global-2026-trends-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 713,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-08-meta-framework-seed-to-world-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-08-meta-framework-seed-to-world-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 714,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-09-zhipu-glm47-second-opinion-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-09-zhipu-glm47-second-opinion-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 715,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-10-real-pitch-l3l0-and-topic-contamination-fix-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-10-real-pitch-l3l0-and-topic-contamination-fix-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 716,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-12-three-party-perspective-adaptation-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-12-three-party-perspective-adaptation-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 717,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-14-emo-role-adaptation-and-intelligence-loop-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-14-emo-role-adaptation-and-intelligence-loop-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 718,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-16-rules-eng-round-pitch-export-category-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-16-rules-eng-round-pitch-export-category-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 719,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-17-marketing-calendar-kotler-cook-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-17-marketing-calendar-kotler-cook-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 720,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-18-marketing-loop-edit-ready-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-18-marketing-loop-edit-ready-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 721,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-19-marketing-loop-experience-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-19-marketing-loop-experience-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 722,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-20-edit-closed-loop-overseas-nodes-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-20-edit-closed-loop-overseas-nodes-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 723,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 724,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-21-overseas-cross-csv-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-21-overseas-cross-csv-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 725,
+    "target": "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-22-region-overseas-matrix-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-22-region-overseas-matrix-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 732,
+    "target": "docs/content-learning/KDRAMA_DIALOGUE_RESEARCH_2023_2026.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/docs/content-learning/KDRAMA_DIALOGUE_RESEARCH_2023_2026.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 733,
+    "target": "docs/content-learning/KDRAMA_FANSUB_TRANSLATION_STUDY_2023_2026.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/docs/content-learning/KDRAMA_FANSUB_TRANSLATION_STUDY_2023_2026.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 740,
+    "target": "intelligence_library/09_Research-Hub/平台内容研究/XHS-TOPIC-MONITOR-TEMPORARY-STRATEGY-V1-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/平台内容研究/XHS-TOPIC-MONITOR-TEMPORARY-STRATEGY-V1-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 741,
+    "target": "intelligence_library/09_Research-Hub/平台内容研究/XHS-TOPIC-MONITOR-GLOBAL-ADAPTATION-RESEARCH-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/平台内容研究/XHS-TOPIC-MONITOR-GLOBAL-ADAPTATION-RESEARCH-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 742,
+    "target": "intelligence_library/09_Research-Hub/平台内容研究/XHS-RESEARCH-SYNTHESIS-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/平台内容研究/XHS-RESEARCH-SYNTHESIS-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 743,
+    "target": "intelligence_library/09_Research-Hub/平台内容研究/XHS-REDNOTE-SAFE-ARCHITECTURE-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/平台内容研究/XHS-REDNOTE-SAFE-ARCHITECTURE-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 744,
+    "target": "intelligence_library/09_Research-Hub/平台内容研究/XHS-REDNOTE-RESEARCH-DECISION-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/平台内容研究/XHS-REDNOTE-RESEARCH-DECISION-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 745,
+    "target": "intelligence_library/09_Research-Hub/平台内容研究/XHS-QUICK-SEARCH-EXTENSION-ASSESSMENT-2026-09-28.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/平台内容研究/XHS-QUICK-SEARCH-EXTENSION-ASSESSMENT-2026-09-28.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 746,
+    "target": "intelligence_library/09_Research-Hub/平台内容研究/XHS-ACCOUNT-SAFETY-INCIDENT-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/平台内容研究/XHS-ACCOUNT-SAFETY-INCIDENT-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 747,
+    "target": "intelligence_library/09_Research-Hub/工程研究/R-2026-0003-safe-xhs-collection.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/工程研究/R-2026-0003-safe-xhs-collection.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 748,
+    "target": "intelligence_library/09_Research-Hub/engineering研究/XHS-TOPIC-MONITOR-TEMPORARY-GATE-V1-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/engineering研究/XHS-TOPIC-MONITOR-TEMPORARY-GATE-V1-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 749,
+    "target": "intelligence_library/09_Research-Hub/engineering研究/XHS-TOPIC-MONITOR-GLOBAL-ADAPTATION-GATE-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/engineering研究/XHS-TOPIC-MONITOR-GLOBAL-ADAPTATION-GATE-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 750,
+    "target": "intelligence_library/09_Research-Hub/engineering研究/XHS-RESEARCH-GATE-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/engineering研究/XHS-RESEARCH-GATE-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 751,
+    "target": "intelligence_library/09_Research-Hub/engineering研究/XHS-REDNOTE-SAFE-ARCHITECTURE-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/engineering研究/XHS-REDNOTE-SAFE-ARCHITECTURE-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 752,
+    "target": "intelligence_library/09_Research-Hub/engineering研究/XHS-REDNOTE-BROWSER-GATE-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/engineering研究/XHS-REDNOTE-BROWSER-GATE-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 753,
+    "target": "intelligence_library/09_Research-Hub/engineering研究/XHS-ACCOUNT-SAFETY-INCIDENT-2026-08-31.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/engineering研究/XHS-ACCOUNT-SAFETY-INCIDENT-2026-08-31.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 754,
+    "target": "intelligence_library/09_Research-Hub/engineering研究/PRODUCTION-GATE-XHS-APP.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/engineering研究/PRODUCTION-GATE-XHS-APP.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 761,
+    "target": "intelligence_library/07_Data-Evidence-Evaluation/工程案例/content-intelligence/CASE-2026-CONTENT-BENCHMARK-001.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/07_Data-Evidence-Evaluation/工程案例/content-intelligence/CASE-2026-CONTENT-BENCHMARK-001.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 762,
+    "target": "intelligence_library/09_Research-Hub/研究收件箱/KOS-BENCHMARK-CASES-20260903.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/intelligence_library/09_Research-Hub/研究收件箱/KOS-BENCHMARK-CASES-20260903.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 763,
+    "target": "docs/GLOBAL_BIL_BENCHMARK_SELECTION_V1.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/docs/GLOBAL_BIL_BENCHMARK_SELECTION_V1.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 797,
+    "target": "00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 851,
+    "target": "pixi-probe-result-20261016.json",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 855,
+    "target": "app/toolchain.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/app/toolchain.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 855,
+    "target": "website/package.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/website/package.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 875,
+    "target": "work/frontend-plan-rea-20261016/rea65-method-handoff-20261016-v2.zip",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 875,
+    "target": "LOCAL-RAW-EVIDENCE-INDEX.json",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 878,
+    "target": "pixi-actual-calibration-20261016/runtime-receipt.json",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 878,
+    "target": "actual-cue-current-website-report.json",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 878,
+    "target": "capture.json",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 880,
+    "target": "screen-coverage/cortechchat-owner-integration-package.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 894,
+    "target": "current-snapshot-verification-20261016/js-html-manual-static-review.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 908,
+    "target": "1广州太古汇十五周年采集数据.xlsx",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 908,
+    "target": "2广州太古汇十五周年-102篇帖子清单.xlsx",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 908,
+    "target": "3广州太古汇十五周年舆情专题报告.pdf",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 908,
+    "target": "4报告.docx",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 908,
+    "target": "5广州太古汇十五周年最终交付数据-完整版.xlsx",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1020,
+    "target": "ACC-01-ADD-account-settings.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1021,
+    "target": "ACC-01-ADD-sign-in.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1022,
+    "target": "CTH-09-ADD-math-result-card.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1023,
+    "target": "BMP-05-ADD-kos-funnel.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1024,
+    "target": "BMP-06-ADD-video-editing-studio.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1025,
+    "target": "BMP-07-ADD-marketing-calendar.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1026,
+    "target": "BMP-08-ADD-podcast-studio.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1027,
+    "target": "BMP-09-ADD-public-mmm.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1028,
+    "target": "AI-01-ADD-intelligent-cards.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1029,
+    "target": "AI-01-ADD-tool-permission-confirm.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1030,
+    "target": "AI-04-ADD-github-mcp-connectors.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1031,
+    "target": "AI-04-ADD-skills-store.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1032,
+    "target": "AI-05-ADD-byo-api.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1033,
+    "target": "SYS-02-ADD-manual-collect.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1034,
+    "target": "SYS-04-ADD-keys-compliance.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1035,
+    "target": "SYS-04-ADD-user-developer-mode.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1036,
+    "target": "SYS-05-ADD-visual-brand-roles.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1037,
+    "target": "SYS-06-ADD-browser-tabs.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1038,
+    "target": "SYS-06-ADD-login-recovery-sheet.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1039,
+    "target": "SYS-07-ADD-founder-developer-mode.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1040,
+    "target": "SYS-08-ADD-ops-workspace-lifecycle.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1041,
+    "target": "UI-STEP-PLAN.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "line": 1042,
+    "target": "CREATION-COVERAGE-20261014.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 814,
+    "target": "1广州太古汇十五周年采集数据.xlsx",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 814,
+    "target": "2广州太古汇十五周年-102篇帖子清单.xlsx",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 814,
+    "target": "3广州太古汇十五周年舆情专题报告.pdf",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 814,
+    "target": "4报告.docx",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "line": 814,
+    "target": "5广州太古汇十五周年最终交付数据-完整版.xlsx",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 25,
+    "target": "evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 27,
+    "target": "evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 57,
+    "target": "contracts/experience/screen-specifications/README.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/README.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 57,
+    "target": "LOOP-PLAN-20261014/product-plan-full.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 57,
+    "target": "LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 62,
+    "target": "evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 64,
+    "target": "evidence/round-06/GLOBAL-DATA-SOURCE-RESEARCH-20261013.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-06/GLOBAL-DATA-SOURCE-RESEARCH-20261013.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 65,
+    "target": "evidence/round-06/GLOBAL-DATA-SOURCE-RESEARCH-20261013-C-RETAIL.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-06/GLOBAL-DATA-SOURCE-RESEARCH-20261013-C-RETAIL.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 225,
+    "target": "LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 226,
+    "target": "LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 228,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 243,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 244,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 245,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 246,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 247,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 253,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 256,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 307,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 307,
+    "target": "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 308,
+    "target": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 308,
+    "target": "00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 309,
+    "target": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 309,
+    "target": "contracts/experience/README.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/README.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 309,
+    "target": "contracts/experience/screen-specifications/<SCREEN-ID>.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 310,
+    "target": "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 312,
+    "target": "app/README.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/app/README.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 313,
+    "target": "contracts/experience/lumenis_app_binding_registry.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/lumenis_app_binding_registry.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 330,
+    "target": "tests/CI_TEST_TIERS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/tests/CI_TEST_TIERS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 332,
+    "target": "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 333,
+    "target": "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 334,
+    "target": "THIRD-PARTY-COMPONENT-REGISTER.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 417,
+    "target": "LUMENIS-ROOT-PYTHON-CALLER-INVENTORY-ROUND-02.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-ROOT-PYTHON-CALLER-INVENTORY-ROUND-02.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 432,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 493,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 612,
+    "target": "contracts/experience/source-target-contract-v1.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/source-target-contract-v1.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 616,
+    "target": "app/toolchain.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/app/toolchain.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 622,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 634,
+    "target": "evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 874,
+    "target": "声音识听_中英韩与音乐情绪_Codex接入增补.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 895,
+    "target": "00-GOVERNANCE/evidence/round-15/APPROVED-CONVERGENCE-20261004.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/APPROVED-CONVERGENCE-20261004.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 929,
+    "target": "evidence/round-15/PRODUCT-LOGIC-REVIEW-20261008.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/PRODUCT-LOGIC-REVIEW-20261008.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 947,
+    "target": "BROWSER-COMPUTER-CONTINUITY-20261008.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 995,
+    "target": "evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "line": 1000,
+    "target": "evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 22,
+    "target": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 389,
+    "target": "LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 816,
+    "target": "contracts/experience/source-target-contract-v1.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/source-target-contract-v1.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 897,
+    "target": "AGENTS.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/AGENTS.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 979,
+    "target": "LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 979,
+    "target": "evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1084,
+    "target": "LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1204,
+    "target": "contracts/experience/screen-specifications/<SCREEN-ID>.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1424,
+    "target": "contracts/experience/screen-specifications/README.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/contracts/experience/screen-specifications/README.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1429,
+    "target": "evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1470,
+    "target": "work/frontend-2026-10-03/LUMENIS-ICON-REVISION.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1536,
+    "target": "work/frontend-2026-10-03/FRONTEND-REFERENCE-EXECUTABLE-20261004.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1583,
+    "target": "work/frontend-2026-10-03/NIELSEN-OPERATION-MAPPING.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1584,
+    "target": "work/frontend-2026-10-03/textbook-research/教材到序境-开发采用说明.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1632,
+    "target": "LOOP-PLAN-20261014/product-plan-full.md",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1650,
+    "target": "evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1652,
+    "target": "evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "exists": true,
+    "resolved_path": "[LOCAL_WORKSPACE]/third_party_inventory_recovered_20261018/main4dab/00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json",
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  },
+  {
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "line": 1678,
+    "target": "INTELLIGENT-UI-ADOPTION-20261008.md",
+    "exists": false,
+    "resolved_path": null,
+    "read_status": "PATH_INDEX_NOT_FULL_READING"
+  }
+]

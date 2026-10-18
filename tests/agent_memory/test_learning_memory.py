@@ -257,3 +257,28 @@ class TestLearningMemory:
         assert s["feedback_keywords_total"] >= 2
         assert s["positive_samples"] == 0
         assert s["negative_samples"] == 0
+
+
+def test_full_learning_json_survives_and_failed_commit_is_not_success(seeded_db):
+    import json
+    import sqlite3
+    from lumenis.shared.learning.memory import LearningMemory, LearningType
+    owner = LearningMemory(db_path=seeded_db, enabled=True)
+    content = {'text': '中文完整资料' * 2000}
+    record = owner.record_learning(LearningType.FEEDBACK, content)
+    assert record is not None
+    with sqlite3.connect(seeded_db) as conn:
+        stored = conn.execute('SELECT content_json FROM agent_learning_records WHERE record_id=?', (record.record_id,)).fetchone()[0]
+        assert json.loads(stored) == content
+        conn.execute("CREATE TRIGGER break_learning_insert BEFORE INSERT ON agent_learning_records BEGIN SELECT RAISE(ABORT,'fault'); END")
+    assert owner.record_learning(LearningType.FEEDBACK, {'text': 'must not succeed'}) is None
+    assert all(rec.value['content'] != {'text': 'must not succeed'} for rec in owner._in_memory.values())
+
+
+def test_oversized_learning_is_explicit_not_truncated(seeded_db):
+    import pytest
+    from lumenis.shared.learning.memory import LearningMemory, LearningType
+    owner = LearningMemory(db_path=seeded_db, enabled=True)
+    with pytest.raises(ValueError, match='LEARNING_CONTENT_TOO_LARGE'):
+        owner.record_learning(LearningType.FEEDBACK, {'text': 'x' * (8 * 1024 * 1024)})
+    assert owner._in_memory == {}

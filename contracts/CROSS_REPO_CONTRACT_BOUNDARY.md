@@ -113,7 +113,7 @@ All production code MUST obtain paths via:
 - `get_python_executable()` — venv python resolution
 - `registry_snapshot()` — full registry state for health checks
 
-**Forbidden**: Hardcoded `D:\Taikoo-monitor-new`, `D:\Zachary OS AI`, `C:\Users\28049` in production .py files.
+**Forbidden**: Hardcoded `D:\Taikoo-monitor-new`, `D:\Zachary OS AI`, `C:\Users\private-user-efa8e21551f0 in production .py files.
 
 ### 5.2 Test Files
 Test files may use `os.path.dirname(os.path.dirname(os.path.abspath(__file__)))` for path resolution, or set `ZBC_ROOT` env var in conftest.py.
@@ -143,7 +143,7 @@ grep -rn "import app\|import risk_engine\|import collector" --include="*.py" osa
 
 ### 7.2 Hardcoded Path Scan
 ```bash
-grep -rn "D:\\\\Taikoo-monitor-new\|D:\\\\Zachary OS AI\|C:\\\\Users\\\\28049" --include="*.py" .
+grep -rn "D:\\\\Taikoo-monitor-new\|D:\\\\Zachary OS AI\|C:\\\\Users\\\\private-user-121dcc385158" --include="*.py" .
 ```
 Expected: 0 in production code (excluding tests/, scripts/, docs/, and documented fallbacks).
 

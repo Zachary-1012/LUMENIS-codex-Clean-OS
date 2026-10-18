@@ -3,7 +3,7 @@
 
 职责：为 LUMENIS 前端页面提供真实数据聚合，全部来自：
   - .env 配置（只回传 provider/model 名，绝不回传任何 API Key/Secret）
-  - ZBC SQLite（只读 SELECT，不写生产业务数据）
+  - LUMENIS SQLite（只读 SELECT，不写生产业务数据）
   - OSAI Intelligence Core（动态只读 import，不可用时返回 UNAVAILABLE，不造假）
   - Git（subprocess 只读 rev-parse/status）
 
@@ -176,7 +176,7 @@ def intelligence_models():
         "gateway": selected_gateway,
         "providers": providers,
         "domain_statuses": status.get("domains", {}),
-        "truth_boundary": "AI is enhancement only; ZBC rules remain Production Truth",
+        "truth_boundary": "AI is enhancement only; LUMENIS Canonical data and Evidence remain authoritative",
     })
 
 
@@ -350,9 +350,9 @@ def operations_permissions():
 
 @agg_bp.route("/api/system/repository")
 def system_repository():
-    """Repository Registry —— ZBC + OSAI（+GGI）真实 git 状态，只读。"""
+    """Repository Registry —— LUMENIS + OSAI（+GGI）真实 git 状态，只读。"""
     repos = [
-        {"repository_id": "ZBC", "name": "Z-Brand-Core", "role": "Production Core",
+        {"repository_id": "ZBC", "name": "LUMENIS-codex-Clean-OS", "role": "Production Core",
          "path": str(_ZBC_ROOT), "git": _git_info(_ZBC_ROOT)},
     ]
     osai = _osai_root()
@@ -589,71 +589,26 @@ def _kos_pro():
 
 @agg_bp.route("/api/kos/professional/status")
 def kos_professional_status():
-    kp = _kos_pro()
-    if not kp:
-        return jsonify({"ok": False, "state": "UNAVAILABLE"})
-    brand = request.args.get("brand_id", "default")
-    try:
-        enabled = kp.is_enabled(brand_id=brand)
-        accounts = kp.list_accounts(brand_id=brand)
-        return jsonify({"ok": True, "state": "CONNECTED", "enabled": enabled,
-                        "brand_id": brand, "accounts": accounts,
-                        "account_count": len(accounts),
-                        "optional_per_brand": True})
-    except Exception as e:
-        return jsonify({"ok": False, "state": "ERROR", "error": str(e)}), 500
+    from kos_routes import _professional_scoped_response
+    return _professional_scoped_response("status")
 
 
 @agg_bp.route("/api/kos/professional/enable", methods=["POST"])
 def kos_professional_enable():
-    kp = _kos_pro()
-    if not kp:
-        return jsonify({"ok": False, "state": "UNAVAILABLE"}), 503
-    d = request.get_json(silent=True) or {}
-    try:
-        res = kp.enable(brand_id=d.get("brand_id", "default"),
-                        platform=d.get("platform", "xiaohongshu"),
-                        account_id=d.get("account_id", ""),
-                        account_name=d.get("account_name", ""),
-                        verified_type=d.get("verified_type", ""))
-        return jsonify({"ok": True, "state": "ENABLED", "result": res})
-    except Exception as e:
-        return jsonify({"ok": False, "state": "ERROR", "error": str(e)}), 500
+    from kos_routes import _professional_scoped_response
+    return _professional_scoped_response("enable")
 
 
 @agg_bp.route("/api/kos/professional/disable", methods=["POST"])
 def kos_professional_disable():
-    kp = _kos_pro()
-    if not kp:
-        return jsonify({"ok": False, "state": "UNAVAILABLE"}), 503
-    d = request.get_json(silent=True) or {}
-    try:
-        res = kp.disable(brand_id=d.get("brand_id", "default"),
-                         platform=d.get("platform", "xiaohongshu"),
-                         account_id=d.get("account_id", ""))
-        return jsonify({"ok": True, "state": "DISABLED", "result": res})
-    except Exception as e:
-        return jsonify({"ok": False, "state": "ERROR", "error": str(e)}), 500
+    from kos_routes import _professional_scoped_response
+    return _professional_scoped_response("disable")
 
 
 @agg_bp.route("/api/kos/professional/import", methods=["POST"])
 def kos_professional_import():
-    kp = _kos_pro()
-    if not kp:
-        return jsonify({"ok": False, "state": "UNAVAILABLE"}), 503
-    d = request.get_json(silent=True) or {}
-    metrics = d.get("metrics") or []
-    if not isinstance(metrics, list) or not metrics:
-        return jsonify({"ok": False, "state": "VALIDATION_ERROR",
-                        "error": "metrics list required"}), 400
-    try:
-        res = kp.import_metrics(brand_id=d.get("brand_id", "default"),
-                                account_id=d.get("account_id", ""),
-                                metrics=metrics,
-                                source=d.get("source", "import"))
-        return jsonify({"ok": True, "state": "IMPORTED", "result": res})
-    except Exception as e:
-        return jsonify({"ok": False, "state": "ERROR", "error": str(e)}), 500
+    from kos_routes import _professional_scoped_response
+    return _professional_scoped_response("import")
 
 
 def register_agg_api(app):

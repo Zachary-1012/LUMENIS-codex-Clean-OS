@@ -53,7 +53,7 @@ DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 19
+CURRENT_VERSION = 21
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -76,6 +76,8 @@ MIGRATION_HISTORY = {
     17: "Add nullable full-record integrity metadata to canonical Evidence records",
     18: "Add Evidence-backed exact country relations and source-specific venue tenant assertions",
     19: "Add canonical CTH Case storage with Subject and Evidence references",
+    20: "Integrate existing Agent Learning Memory schema into canonical startup migration",
+    21: "Add AI Hub conversation and turn storage with explicit owner and workspace binding",
 }
 
 
@@ -814,6 +816,54 @@ def migration_18_to_19(conn: sqlite3.Connection):
     ensure_cth_case_schema(conn)
 
 
+def migration_19_to_20(conn: sqlite3.Connection):
+    """Reuse the existing learning schema without a second bootstrap writer.
+
+    The historical standalone upgrade commits its own connection. Apply its
+    unchanged schema statements on this migration's transaction instead, so
+    a failure cannot leave an unversioned, partially installed memory owner.
+    """
+    from importlib import import_module
+
+    schema = import_module("migrations.011_create_agent_learning_records")
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
+    conn.execute(schema.CREATE_TABLE_SQL)
+    for statement in schema.CREATE_INDEX_SQL.split(";"):
+        if statement.strip():
+            conn.execute(statement)
+    required = {
+        "id", "record_id", "learning_type", "source", "content_json",
+        "confidence", "lifecycle_stage", "related_task_id", "created_at",
+        "promoted_at", "promoted_by", "metadata_json",
+    }
+    column_rows = list(conn.execute("PRAGMA table_info(agent_learning_records)"))
+    columns = {row[1]: row for row in column_rows}
+    if not required <= columns.keys():
+        raise sqlite3.DatabaseError("Agent Learning Memory schema is incomplete")
+    unique_record_id = False
+    for index in conn.execute("PRAGMA index_list(agent_learning_records)"):
+        if not index[2] or index[4]:
+            continue
+        # Index names originate in SQLite; quote them rather than interpolating
+        # an unescaped pre-existing database identifier.
+        name = index[1].replace('"', '""')
+        index_columns = [row[2] for row in conn.execute(f'PRAGMA index_info("{name}")')]
+        if index_columns == ["record_id"]:
+            unique_record_id = True
+    if not unique_record_id or columns["record_id"][3] != 1 or columns["id"][5] != 1:
+        raise sqlite3.DatabaseError("Agent Learning Memory identity constraints are incomplete")
+
+
+def migration_20_to_21(conn: sqlite3.Connection):
+    """Install the single AI Hub conversation owner's schema atomically."""
+    from lumenis.ai_hub.conversations import ensure_schema
+
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
+    ensure_schema(conn)
+
+
 def _ensure_migration_prerequisites(
     conn, current_version: int, target_version: int
 ) -> int:
@@ -954,6 +1004,8 @@ MIGRATIONS = {
     16: migration_16_to_17,
     17: migration_17_to_18,
     18: migration_18_to_19,
+    19: migration_19_to_20,
+    20: migration_20_to_21,
 }
 
 

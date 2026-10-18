@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """数据驱动原创创意生成器 V2（反模板化：多维组合引擎）。
 
-对标全球 4A（阳狮/Ogilvy/WPP/戛纳范式）× ZBC 真实数据。
+对标全球 4A（阳狮/Ogilvy/WPP/戛纳范式）× LUMENIS 真实数据。
 V2 核心升级（针对 V1 模板填空缺陷）：
   1. 反模板化：同一机制不再固定一句式，而是「机制 × 张力句式库 × 角度 × 语义角色」多维组合，
      同一主题可产出观点、行动、故事、反转、共创、文化暗语等多种张力表达，禁止重复循环。
@@ -708,9 +708,9 @@ def _provenance(topic, sentiment, mech, tonality, circle, signals, angle):
     evidence_level = "repeated" if n_notes >= 10 else ("single_case" if n_notes > 0 else "assumption")
     confidence = round(min(0.4 + min(n_notes, 50) / 100.0, 0.9), 2) if has_db else 0.35
     return {
-        "seed_signal": ("ZBC 真实信号：主题「%s」、情绪=%s、样本笔记=%d、风险事件=%d"
+        "seed_signal": ("LUMENIS 真实信号：主题「%s」、情绪=%s、样本笔记=%d、风险事件=%d"
                         % (topic, sentiment, n_notes, int(signals.get("risk_events", 0) or 0)))
-                       if has_db else "结构化假设：未接入 ZBC 真实样本（keyword/DB 缺失），信号为占位，需真实数据回填",
+                       if has_db else "结构化假设：未接入 LUMENIS 真实样本（keyword/DB 缺失），信号为占位，需真实数据回填",
         "parent_L1_formula": MECH_TO_L1.get(mech, "未归类公式"),
         "parent_L2_tone": TONALITIES.get(tonality, TONALITIES["premium"])["name"],
         "parent_circle": circle,
@@ -729,7 +729,7 @@ def _provenance(topic, sentiment, mech, tonality, circle, signals, angle):
 
 
 def signals_from_db(db_path, keyword, circle="都市职场", hotspot=""):
-    """从 ZBC 舆情数据提取创意信号（主题词/情绪/风险），叠加圈层与热点时效。"""
+    """从 LUMENIS 舆情数据提取创意信号（主题词/情绪/风险），叠加圈层与热点时效。"""
     from scripts.brand_insight import diagnose
     r = diagnose(db_path, keyword)
     topics = [t[0] if isinstance(t, (tuple, list)) else str(t) for t in r.get("topics", [])]
@@ -814,17 +814,15 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
     sentiment = signals.get("sentiment", "neutral")
     circle = signals.get("circle", "都市职场")
     hotspot = signals.get("hotspot", "")
-    # 芥子→须弥：未显式指定热点时，自动绑定当下营销节点（时效自动增强）。
-    # 仅非 luxury 调性启用——高奢克制叙事原则：不参与流量狂欢、不追热点。
+    from scripts.marketing_calendar import suggest_hotspot
+    calendar = suggest_hotspot(signals.get("target_date", ""), category,
+                               market=signals.get("market", "CN"))
+    # Only an explicit Brief date can select a date-matching editorial idea.
+    # No machine clock fallback; category suggestions are not same-day events.
     if not hotspot and tonality != "luxury":
-        try:
-            import datetime as _dt
-            from scripts.marketing_calendar import suggest_hotspot
-            _mc = suggest_hotspot(_dt.date.today().strftime("%Y-%m-%d"), category)
-            if _mc and _mc.get("nodes"):
-                hotspot = _mc["nodes"][0]["name"]
-        except Exception:
-            pass
+        exact = [n for n in calendar["nodes"] if n.get("match_reason") == "date"]
+        if exact:
+            hotspot = exact[0]["name"]
     style = EMOTION_STYLES.get(sentiment, EMOTION_STYLES["neutral"])
     cs = CIRCLE_SYMBOLS.get(circle, CIRCLE_SYMBOLS["都市职场"])
     tone = TONALITIES.get(tonality, TONALITIES["premium"])["name"]
@@ -909,6 +907,8 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
         })
     return {"meta": {"brand": brand, "category": category, "signals": signals,
                      "tonality": tone, "budget": budget,
+                     "calendar_reference": calendar["calendar_reference"],
+                     "hotspot_origin": "user_annotation" if signals.get("hotspot") else "editorial_reference" if hotspot else "not_bound",
                      "bound_hotspot": hotspot if hotspot else "（未绑定节点）",
                      "framework": "Seed-Sumeru×Taiji V2：芥子(真实信号)→须弥(机制×角度×句式)→Contract→再生产；"
                                   "形可变道不可移；反模板化=多维组合而非固定句式"},
@@ -938,7 +938,7 @@ def main():
     ap = argparse.ArgumentParser(description="数据驱动原创创意生成器 V2（反模板化）")
     ap.add_argument("--brand", default="示例品牌")
     ap.add_argument("--category", default="通用")
-    ap.add_argument("--keyword", default="", help="ZBC 舆情关键词(从 DB 提信号)")
+    ap.add_argument("--keyword", default="", help="LUMENIS 舆情关键词(从 DB 提信号)")
     ap.add_argument("--db", default="data/monitor.db")
     ap.add_argument("--circle", default="都市职场", choices=list(CIRCLE_SYMBOLS.keys()))
     ap.add_argument("--tonality", default="premium", choices=list(TONALITIES.keys()))

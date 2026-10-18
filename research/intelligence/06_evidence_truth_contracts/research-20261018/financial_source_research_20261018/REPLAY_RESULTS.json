@@ -1,0 +1,17 @@
+{
+  "checks": {
+    "2025_consolidated_expense_4689m": true,
+    "2025_repeated_in_2026_same_value": true,
+    "2026_expense_4754m": true,
+    "context_id_not_cross_document_key": true,
+    "fiscal_2025_not_calendar_2025": true,
+    "USD_not_millions_unit": true,
+    "original_obligation_7_9bn": true,
+    "correction_approximately_5bn": true,
+    "correction_document_8K": true,
+    "correction_not_amendment_flag": true
+  },
+  "pass": 10,
+  "total": 10,
+  "scope": "research fixtures only; product acceptance NOT_RUN"
+}

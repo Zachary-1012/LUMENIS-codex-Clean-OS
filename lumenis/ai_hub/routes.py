@@ -13,20 +13,33 @@ def ai_status():
     return jsonify({"success": True, "ai": service.status()})
 
 
+@ai_bp.route("/ai/settings", methods=["GET", "POST"])
+@require_auth
+def ai_settings():
+    # Authenticated App entry delegates to the one settings/Gateway owner.
+    # It does not require a server-wide Basic-auth credential to set user choice.
+    from settings_module import user_ai_settings
+    return user_ai_settings()
+
+
 @ai_bp.route("/ai/chat", methods=["POST"])
 @require_auth
 def ai_chat():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        result = service.invalid_chat_input("JSON_OBJECT_REQUIRED")
+        result.pop("ok", None)
+        return jsonify({"success": False, **result}), 503 if result["status"] == "UNAVAILABLE" else 400
     q = data.get("message") or data.get("question") or ""
     # Ordinary chat must not depend on selecting a business report scope.
     # A reports:read scope alone is not a SourceUse grant for sending business
     # records to a model. Until a typed Gateway operation supplies and validates
     # that SourceUse contract, the service receives no business retrieval scope.
     result = service.chat(q, history=data.get("history"), scope=data.get("scope", "all"),
-                          source_scope=None)
+                          source_scope=None, external_approval=data.get("external_approval"))
     success = result.pop("ok", False)
     status = result.get("status")
-    http_status = 200 if success else (400 if status == "INVALID_INPUT" else 503 if status == "UNAVAILABLE" else 502)
+    http_status = 200 if success else (409 if status == "APPROVAL_REQUIRED" else 400 if status == "INVALID_INPUT" else 503 if status == "UNAVAILABLE" else 502)
     return jsonify({"success": success, **result}), http_status
 
 
@@ -81,3 +94,117 @@ def ai_shadow_decide(sid):
 @require_auth
 def ai_shadow_stats():
     return jsonify({"success": True, "stats": shadow.stats()})
+
+
+# Persistent conversation routes live in the existing AI Hub, not a second chat service.
+def _conversation_response(call):
+    try:
+        return jsonify({'ok': True, **call()})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 403
+    except TypeError:
+        return jsonify({'ok': False, 'code': 'CONVERSATION_FIELDS_INVALID'}), 400
+    except ValueError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 400
+    except RuntimeError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 409
+    except Exception:
+        return jsonify({'ok': False, 'code': 'CONVERSATION_STORAGE_UNAVAILABLE'}), 503
+
+
+def _conversation_body(allowed):
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or set(data) - set(allowed):
+        raise ValueError('CONVERSATION_FIELDS_INVALID')
+    return data
+
+
+@ai_bp.route('/ai/conversations', methods=['GET', 'POST'])
+def ai_conversations_list_create():
+    from . import conversations as owner
+    def call():
+        actor = owner.current_actor('read' if request.method == 'GET' else 'write')
+        if request.method == 'GET':
+            return owner.list_conversations(actor, limit=int(request.args.get('limit',30)), offset=int(request.args.get('offset',0)))
+        data = _conversation_body({'title'})
+        return {'conversation': owner.create_conversation(actor, title=data.get('title',''))}
+    return _conversation_response(call)
+
+
+@ai_bp.route('/ai/conversations/<conversation_id>', methods=['GET', 'PATCH'])
+def ai_conversation_read_update(conversation_id):
+    from . import conversations as owner
+    def call():
+        actor = owner.current_actor('read' if request.method == 'GET' else 'write')
+        if request.method == 'GET':
+            return {'conversation': owner.read_conversation(actor, conversation_id,
+                after_sequence=int(request.args.get('after_sequence',0)), limit=int(request.args.get('limit',30)))}
+        data = _conversation_body({'title','state','expected_revision'})
+        return {'conversation': owner.update_conversation(actor, conversation_id, **data)}
+    return _conversation_response(call)
+
+
+@ai_bp.route('/ai/conversations/<conversation_id>/turns', methods=['POST'])
+def ai_conversation_append(conversation_id):
+    from . import conversations as owner
+    def call():
+        data = _conversation_body({'text','idempotency_key','expected_revision'})
+        return owner.append_user_turn(owner.current_actor('write'), conversation_id, **data)
+    return _conversation_response(call)
+
+
+@ai_bp.route('/ai/conversations/<conversation_id>/tasks', methods=['POST'])
+def ai_conversation_attach_task(conversation_id):
+    from . import conversations as owner
+    def call():
+        data = _conversation_body({'task_id','idempotency_key','expected_revision'})
+        return owner.attach_task(owner.current_actor('write'), conversation_id, **data)
+    return _conversation_response(call)
+
+
+@ai_bp.route('/ai/conversations/<conversation_id>/turns/<turn_id>/respond', methods=['POST'])
+def ai_conversation_respond(conversation_id, turn_id):
+    from . import conversations as owner
+    def call():
+        data = _conversation_body({'operation','idempotency_key','expected_revision','retry_confirmed','confirmed'})
+        actor = owner.current_actor('write')
+        operation = data.pop('operation', 'respond')
+        if operation == 'interrupt':
+            if set(data) - {'expected_revision','confirmed'}:
+                raise ValueError('CONVERSATION_FIELDS_INVALID')
+            return owner.interrupt_response(actor, conversation_id, turn_id, **data)
+        if operation != 'respond' or 'confirmed' in data:
+            raise ValueError('CONVERSATION_OPERATION_INVALID')
+        return owner.respond(actor, conversation_id, turn_id, **data)
+    return _conversation_response(call)
+
+
+def authorize_conversation_root_request():
+    """Exact full-app perimeter delegation; Owner rechecks every DB operation."""
+    from . import conversations as owner
+    entries = {
+        'v4.v4_ai.ai_conversations_list_create': ('/v4/ai/conversations', {'GET','POST'}),
+        'v4.v4_ai.ai_conversation_read_update': ('/v4/ai/conversations/<conversation_id>', {'GET','PATCH'}),
+        'v4.v4_ai.ai_conversation_append': ('/v4/ai/conversations/<conversation_id>/turns', {'POST'}),
+        'v4.v4_ai.ai_conversation_attach_task': ('/v4/ai/conversations/<conversation_id>/tasks', {'POST'}),
+        'v4.v4_ai.ai_conversation_respond': ('/v4/ai/conversations/<conversation_id>/turns/<turn_id>/respond', {'POST'}),
+    }
+    entry = entries.get(request.endpoint)
+    if not entry or request.url_rule is None or request.url_rule.rule != entry[0] or request.method not in entry[1]:
+        return False
+    con = None
+    try:
+        action = 'read' if request.method == 'GET' else 'write'
+        actor = owner.current_actor(action)
+        con = owner._connect()
+        identifier = (request.view_args or {}).get('conversation_id')
+        if identifier:
+            owner._authorize(con, identifier, actor, action)
+        else:
+            owner._identity(actor, action, con)
+        return True
+    except Exception:
+        return False
+    finally:
+        if con is not None:
+            con.close()

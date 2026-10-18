@@ -241,7 +241,8 @@ def _selected_source_rows(parsed, *, selected_row_indices, preview_row_count,
 def import_document(file_path: str, *, actor: Any, scope: Mapping,
                     provenance: Mapping, selected_row_indices=None,
                     preview_row_count=None,
-                    expected_preview_rows_sha256: str | None = None) -> dict:
+                    expected_preview_rows_sha256: str | None = None,
+                    _transaction_validator=None, _owner_metadata=None) -> dict:
     """Atomically retain parsed source, signed provenance and canonical content.
 
     A retry uses exactly the same provenance including capture time. A modified
@@ -264,9 +265,17 @@ def import_document(file_path: str, *, actor: Any, scope: Mapping,
                 "parsed_text": parsed.text,
                 "capture_mode": "assisted_file_import", **source_boundaries(provenance),
                 "autonomous_collection": False}
+    if _owner_metadata is not None:
+        if not callable(_transaction_validator) or not isinstance(_owner_metadata, dict) or set(_owner_metadata) != {"entity_profile"}:
+            raise SavedWorkError("DOCUMENT_OWNER_METADATA_INVALID")
+        metadata.update(json.loads(_json(_owner_metadata)))
     with get_repository().transaction() as con:
         con.execute("BEGIN IMMEDIATE")
         _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"], connection=con)
+        if _transaction_validator is not None:
+            if not callable(_transaction_validator):
+                raise SavedWorkError("DOCUMENT_TRANSACTION_VALIDATOR_INVALID")
+            _transaction_validator(con)
         cur = con.execute("SELECT * FROM app_evidence_records WHERE feature_id='DOCUMENT_IMPORT' AND asset_id=?",
                           (source_id,))
         row = cur.fetchone()
@@ -432,6 +441,16 @@ def _persist_selected_rows(con, *, source_id, evidence_id, parsed, selected_rows
     return records, inserted_count
 
 
+def _verify_imported_document_producer(evidence):
+    provenance = evidence.get('provenance')
+    if (not isinstance(provenance, dict)
+            or evidence.get('source') != 'document_import'
+            or evidence.get('feature_id') != 'DOCUMENT_IMPORT'
+            or evidence.get('provider') != 'importer'
+            or evidence.get('version') not in {'document-import/1', 'document-import/2'}):
+        raise SavedWorkError('DOCUMENT_SOURCE_PRODUCER_INVALID')
+
+
 def _source_bytes(con, evidence):
     import shared_artifacts
     provenance = evidence["provenance"]
@@ -441,6 +460,8 @@ def _source_bytes(con, evidence):
     if row is None:
         raise SavedWorkError("DOCUMENT_SOURCE_ARTIFACT_MISSING")
     record = dict(zip((c[0] for c in cur.description), row))
+    if record['kind'] == 'imported_document_source':
+        _verify_imported_document_producer(evidence)
     root = shared_artifacts.artifact_root()
     path = (root / record["relative_path"]).resolve()
     if (record["source_execution_id"] != evidence["asset_id"] or record["evidence_id"] != str(evidence["id"])
@@ -465,6 +486,8 @@ def _verify_collected_source(con, evidence, raw, record):
     an alternate Canonical record. Native body offsets are Unicode code points
     in the unchanged body, never byte offsets into its JSON transport envelope.
     """
+    if evidence.get('version') == 'collected-browser-snapshot:v1':
+        return _verify_browser_snapshot_source(con, evidence, raw, record)
     signed = evidence['provenance']
     binding = signed.get('native_source_binding')
     try:
@@ -727,3 +750,335 @@ def locate_quote(evidence_id: int, *, actor: Any, scope: Mapping, start: int, en
             "captured_at": source["provenance"]["captured_at"], "locators": locators,
             **source_boundaries(source["provenance"]), "rights": source["provenance"]["rights"],
             "intended_use": source["provenance"].get("intended_use", "research_reference")}
+
+
+def save_private_document(file_path, *, actor, scope, request_id, title=None,
+                          context_keywords=None):
+    """Retain an uploaded original and deterministic analysis in private Shared.
+
+    This is custody, not Canonical admission or an external-use rights grant.
+    Reopening, revision, recovery and export stay with the existing SavedWork owner.
+    """
+    from pathlib import Path
+    from lumenis.importer.parser import parse_file
+    from lumenis.importer.analyzer import analyze_source_basics
+    from lumenis.shared.reporting import saved_work
+
+    if scope != {"scope_kind": "shared_workspace", "version": 1}:
+        raise ValueError("DOCUMENT_PRIVATE_SCOPE_REQUIRED")
+    saved_work.authorize_saved_work(actor, scope, action="write")
+    path = Path(file_path)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("DOCUMENT_SOURCE_INVALID")
+    with path.open("rb") as source:
+        raw = source.read(8 * 1024 * 1024 + 1)
+    if not 0 < len(raw) <= 8 * 1024 * 1024:
+        raise ValueError("DOCUMENT_SOURCE_SIZE_INVALID")
+    digest = hashlib.sha256(raw).hexdigest()
+    extension = path.suffix.lower().lstrip(".")
+    spec = {**saved_work._OFFICE_FORMATS, **saved_work._CUSTODY_FORMATS}.get(extension)
+    if spec is None:
+        raise ValueError("DOCUMENT_FORMAT_UNSUPPORTED")
+    # Validate before parsing any untrusted office package.
+    attachment = {"name": "original-" + digest[:20] + "." + extension,
+                  "content": raw, "media_type": spec["media_type"]}
+    checked = saved_work._attachment_spec(attachment["name"], attachment["media_type"])
+    if not saved_work._valid_ooxml_attachment(raw, checked):
+        raise ValueError("DOCUMENT_SOURCE_INVALID")
+    parsed = parse_file(str(path))
+    if parsed.metadata.get("source_fingerprint") != digest:
+        raise ValueError("DOCUMENT_SOURCE_CHANGED")
+    analysis = analyze_source_basics(parsed, context_keywords)
+    payload = {
+        "source_material": {"original_filename": path.name, "sha256": digest,
+            "size_bytes": len(raw), "attachment_name": attachment["name"],
+            "rights": "UNKNOWN", "author": None, "origin": "user-upload",
+            "allowed_use": "private_custody_and_analysis", "external_redistribution": False,
+            "canonical_admitted": False, "training_eligible": False},
+        "parsed_source": {"text": parsed.text, "tables": parsed.tables,
+                          "locators": parsed.locators, "metadata": parsed.metadata},
+        "basic_analysis": analysis,
+    }
+    heading = title or path.name
+    markdown = ("# " + heading + "\n\nPrivate uploaded source analysis\n\n"
+                + f"Characters: {analysis['character_count']}\n\n"
+                + f"Tables: {analysis['table_count']}\n\n"
+                + "## Source excerpts (not verified facts)\n\n"
+                + "\n\n".join(item["text"] for item in analysis["source_excerpts"])
+                + "\n\n## Limitations\n\n" + "\n".join(analysis["limitations"]))
+    return saved_work.save_work(
+        title=heading, markdown=markdown, kind="research", payload=payload,
+        citations=[], request_id=request_id, actor=actor, scope=scope,
+        attachments=[attachment],
+    )
+
+
+_CAPTURE_RECEIPT_VERSION = 'admitted-document-receipt/1'
+
+
+def _admitted_document_receipt_binding(record, document, spec, phase):
+    return {'phase': phase, 'capture_schema': spec['capture_schema'],
+            'artifact_id': record['artifact_id'], 'artifact_sha256': record['sha256'],
+            'context': document['context'], 'request_id': document['request_id'],
+            'payload_sha256': _digest(document['payload']),
+            'attachments_sha256': _digest(document.get('attachments', []))}
+
+
+def _write_admitted_document_receipt(con, record, document, *, spec, phase):
+    """Internal capture owner only; same transaction as immutable SavedWork bytes."""
+    binding = _admitted_document_receipt_binding(record, document, spec, phase)
+    context = document['context']
+    evidence_store.record_evidence(
+        source='admitted_document_collector', product='CTH' if context['domain_id']=='cth' else 'ZBMP',
+        feature_id='ADMITTED_DOCUMENT_' + phase.upper(), asset_id=record['artifact_id'],
+        version=_CAPTURE_RECEIPT_VERSION, env='staging', capture_mode='owner_network_capture_receipt',
+        provider='admitted_document_collector', inputs=binding, outputs={'saved_work_sha256': record['sha256']},
+        raw_content=_json(binding).decode('utf-8'),
+        collection_metadata={'context': context, 'binding': binding},
+        domain_id=context['domain_id'], subject_id=context['subject_id'],
+        brand_focus_id=context['brand_focus_id'], global_scope=context['global_scope'], connection=con)
+
+
+def _verify_admitted_document_receipt(work, *, spec, phase):
+    """A public SavedWork schema/string is never an acquisition credential."""
+    binding = _admitted_document_receipt_binding(work['artifact'], work['document'], spec, phase)
+    with get_repository().connection(read_only=True, wal=False) as con:
+        cur = con.execute('SELECT * FROM app_evidence_records WHERE asset_id=? AND feature_id=?',
+                          (work['artifact']['artifact_id'], 'ADMITTED_DOCUMENT_' + phase.upper()))
+        rows = [dict(zip((c[0] for c in cur.description), row)) for row in cur.fetchall()]
+    if len(rows) != 1:
+        raise SavedWorkError(spec['error_prefix']+'_CAPTURE_OWNER_RECEIPT_REQUIRED')
+    row = rows[0]
+    expected_scope = evidence_store._normalize_record_evidence_scope(
+        product='CTH' if binding['context']['domain_id']=='cth' else 'ZBMP',
+        **{k: binding['context'][k] for k in ('domain_id','subject_id','brand_focus_id','global_scope')})
+    try:
+        valid = (evidence_store.classify_evidence_integrity(row)['verified'] is True
+            and row.get('source') == 'admitted_document_collector'
+            and row.get('provider') == 'admitted_document_collector'
+            and row.get('version') == _CAPTURE_RECEIPT_VERSION
+            and row.get('capture_mode') == 'owner_network_capture_receipt'
+            and json.loads(row['inputs_json']) == {**binding, '_lumenis_scope': expected_scope}
+            and json.loads(row['collection_metadata']) == {'context': binding['context'], 'binding': binding}
+            and row.get('content_hash') == hashlib.sha256(_json(binding)).hexdigest()
+            and json.loads(row['outputs_json']) == {'saved_work_sha256': work['artifact']['sha256']})
+    except (ValueError, TypeError, KeyError):
+        valid = False
+    if not valid:
+        raise SavedWorkError(spec['error_prefix']+'_CAPTURE_OWNER_RECEIPT_INVALID')
+    return row['id']
+
+
+def _collect_admitted_document(target_artifact_id, *, actor, scope, request_id, spec,
+        prepare_collection, read_target, existing_request, validate_response, prepare_capture):
+    """Shared original document capture, parameterized only by internal owners.
+
+    A revoked approval blocks even replay. Failure creates no successful capture;
+    retry uses the same existing owner and never substitutes an unofficial host.
+    """
+    from lumenis.shared.reporting import saved_work
+    from datetime import datetime, timezone
+    from lumenis.system.security.permission import OperationType, get_permission_gate
+    from lumenis.system.collector.adapters.public_http import PublicHttpAdapter
+    from lumenis.system.collector.adapters.public_source import public_source_provenance, PublicSourceError
+    prepared=prepare_collection(target_artifact_id,actor=actor,scope=scope)
+    gate=get_permission_gate()
+    def admitted():
+        saved_work.authorize(actor,scope,action='write')
+        read_target(target_artifact_id,actor=actor,scope=scope)
+        if gate.get_valid_approval_token(OperationType.COLLECTOR_START.value,prepared['resource'],exact=True) is None:
+            raise PermissionError(spec['error_prefix']+'_COLLECTION_EXACT_APPROVAL_REQUIRED')
+        saved_work._check_effect(actor,scope,OperationType.EXTERNAL_NETWORK,prepared['resource'])
+    admitted()
+    existing=existing_request(request_id,actor=actor,scope=scope)
+    if existing:
+        _verify_admitted_document_receipt(existing,spec=spec,phase='run')
+        run=existing['document']['payload'].get(spec['run_key'],{})
+        if run.get('target_artifact_id') != target_artifact_id:
+            raise ValueError(spec['error_prefix']+'_REQUEST_REUSE_CONFLICT')
+        capture=saved_work.reopen_work(run['capture_artifact_id'],actor=actor,scope=scope)
+        return {'state':'CAPTURED','capture':capture,'replayed':True,
+                'import_preview':prepare_capture(capture['artifact']['artifact_id'],actor=actor,scope=scope)}
+    target_work,target=read_target(target_artifact_id,actor=actor,scope=scope)
+    try:
+        response=PublicHttpAdapter().fetch_document(target['url'],allowed_content_types=(spec['media_type'](target),),before_fetch=admitted)
+    except PublicSourceError as exc:
+        return {'state':'UNAVAILABLE','reason':'SAFE_PUBLIC_TRANSPORT_FAILED','error':str(exc)[:300],
+                'url':target['url'],'source_saved':False,'analysis_status':'NOT_RUN',
+                'next_step':spec['unavailable_hint']}
+    admitted()  # cancellation, revoked scope/identity and approval during I/O
+    if response.url != target['url']:
+        raise ValueError(spec['error_prefix']+'_SOURCE_REDIRECT_TARGET_CHANGED')
+    validate_response(response.content, target)
+    filename=spec['filename'](target)
+    media_type=spec['media_type'](target)
+    sha=hashlib.sha256(response.content).hexdigest()
+    stable_request=spec['capture_request_prefix']+saved_work._digest({'target':target_artifact_id,'sha256':sha})[:40]
+    capture=existing_request(stable_request,actor=actor,scope=scope)
+    def receipt_commit(phase):
+        def commit(con, record, document):
+            admitted()
+            _write_admitted_document_receipt(con,record,document,spec=spec,phase=phase)
+        return commit
+    if capture is None:
+        captured_at=datetime.now(timezone.utc).isoformat()
+        provenance={'source_url':target['url'],'published_at':None,'captured_at':captured_at,
+            'rights':'public-reference-only','title':spec['source_title'](target),
+            'content_origin':{'kind':'publisher-material','claim_type':'source_statement'},
+            'rights_statement':'Public disclosure response retained for internal reference; no redistribution or training grant.'}
+        material={'schema':spec['capture_schema'],'target_artifact_id':target_artifact_id,
+            'target_sha256':target_work['artifact']['sha256'],'sha256':sha,'size_bytes':len(response.content),
+            'filename':filename,'source_provenance':provenance,
+            'transport':public_source_provenance(response,target['url']),
+            'capture_kind':'RAW_HTTP_RESPONSE_BODY','filing_document_original':spec['original_filing'](target),
+            'source_admission':'PENDING_EXACT_IMPORT_APPROVAL','format':target['format']}
+        capture=saved_work.save_work(title=spec['capture_title'],markdown=target['url']+'\nSHA256 '+sha+
+            '\nRetained raw HTTP response; original-file status is recorded in the capture metadata. Canonical source admission is pending.',
+            kind='research',payload={spec['capture_key']:material},citations=target_work['document']['citations'],
+            request_id=stable_request,actor=actor,scope=scope,
+            contract={'id':spec['capture_schema'],'version':'1','required_payload_paths':[spec['capture_key']]},
+            attachments=[{'name':filename,'content':response.content,'media_type':spec.get('attachment_media_type',lambda _target:media_type)(target)}],
+            before_commit=receipt_commit('capture'))
+    _verify_admitted_document_receipt(capture,spec=spec,phase='capture')
+    admitted()
+    run=saved_work.save_work(title=spec['run_title'],markdown=target['url']+'\nCaptured '+sha,
+        kind='research',payload={spec['run_key']:{'target_artifact_id':target_artifact_id,
+            'capture_artifact_id':capture['artifact']['artifact_id'],'sha256':sha}},
+        citations=target_work['document']['citations'],request_id=request_id,actor=actor,scope=scope,
+        before_commit=receipt_commit('run'))
+    _verify_admitted_document_receipt(run,spec=spec,phase='run')
+    return {'state':'CAPTURED','capture':capture,'run':run,'replayed':False,
+            'import_preview':prepare_capture(capture['artifact']['artifact_id'],actor=actor,scope=scope)}
+
+
+
+def _read_admitted_document_capture(capture_artifact_id, *, actor, scope, spec, read_target, validate_response):
+    """Reuse immutable SavedWork originals; callback owners bind source identity."""
+    from lumenis.shared.reporting import saved_work
+    work=saved_work.reopen_work(capture_artifact_id,actor=actor,scope=scope)
+    _verify_admitted_document_receipt(work,spec=spec,phase='capture')
+    def fail(suffix):
+        raise ValueError(spec['error_prefix']+suffix)
+    if work['document']['contract']['id']!=spec['capture_schema']:
+        fail('_CAPTURE_CONTRACT_INVALID')
+    material=work['document']['payload'].get(spec['capture_key'],{})
+    target_work,target=read_target(material.get('target_artifact_id'),actor=actor,scope=scope)
+    if target_work['artifact']['sha256']!=material.get('target_sha256'):
+        fail('_TARGET_CHANGED')
+    expected_filename=spec['filename'](target)
+    if material.get('filename') != expected_filename:
+        fail('_CAPTURE_FILENAME_INVALID')
+    raw=saved_work.download_attachment(capture_artifact_id,name=expected_filename,actor=actor,scope=scope)['content']
+    if hashlib.sha256(raw).hexdigest()!=material.get('sha256') or material['source_provenance']['source_url']!=target['url']:
+        fail('_CAPTURE_CHANGED')
+    validate_response(raw,target)
+    return material,raw
+
+
+def _prepare_admitted_document_capture(capture_artifact_id, *, actor, scope, read_capture):
+    material,raw=read_capture(capture_artifact_id,actor=actor,scope=scope)
+    with tempfile.TemporaryDirectory(prefix='lumenis-source-import-') as temporary:
+        path=Path(temporary)/material['filename'];path.write_bytes(raw)
+        resource=document_import_resource(str(path),actor=actor,scope=scope,provenance=material['source_provenance'])
+    return {'state':'PREPARED','resource':resource,'sha256':material['sha256'],'source_url':material['source_provenance']['source_url'],
+            'capture_artifact_id':capture_artifact_id,'effect':'CANONICAL_SOURCE_IMPORT','scope':scope}
+
+
+def _import_admitted_document_capture(capture_artifact_id, *, actor, scope, read_capture, error_prefix):
+    from lumenis.system.security.permission import get_permission_gate
+    material,raw=read_capture(capture_artifact_id,actor=actor,scope=scope)
+    with tempfile.TemporaryDirectory(prefix='lumenis-source-import-') as temporary:
+        path=Path(temporary)/material['filename'];path.write_bytes(raw)
+        resource=document_import_resource(str(path),actor=actor,scope=scope,provenance=material['source_provenance'])
+        if get_permission_gate().get_valid_approval_token('data_import',resource,exact=True) is None:
+            raise PermissionError(error_prefix+'_IMPORT_EXACT_APPROVAL_REQUIRED')
+        def recheck(_con):
+            current,current_raw=read_capture(capture_artifact_id,actor=actor,scope=scope)
+            if current != material or current_raw != raw:
+                raise ValueError(error_prefix+'_CAPTURE_CHANGED')
+            if get_permission_gate().get_valid_approval_token('data_import',resource,exact=True) is None:
+                raise PermissionError(error_prefix+'_IMPORT_EXACT_APPROVAL_REQUIRED')
+        source=import_document(str(path),actor=actor,scope=scope,provenance=material['source_provenance'],
+            _transaction_validator=recheck)
+    return material,source
+
+
+def _existing_source_request(request_id, *, actor, scope, error_prefix):
+    from lumenis.shared.reporting import saved_work
+    if not isinstance(request_id,str) or not re.fullmatch(r'[A-Za-z0-9_-]{8,128}',request_id):
+        raise ValueError(error_prefix+'_REQUEST_ID_INVALID')
+    context=saved_work.authorize(actor,scope,action='read')
+    work_id='WORK-'+saved_work._digest({'context':context,'request_id':request_id})[:24]
+    with get_repository().connection(read_only=True,wal=False) as con:
+        versions=saved_work._versions(con,work_id,context,actor)
+    return saved_work.reopen_work(versions[-1]['artifact']['artifact_id'],actor=actor,scope=scope) if versions else None
+
+
+def _verify_browser_snapshot_source(con, evidence, raw, record):
+    """Pure integrity reader for Collector's sanitized snapshot producer."""
+    from lumenis.system.collector.runtime.browser_extract import validate_source_snapshot, snapshot_bytes
+    try:
+        snapshot = validate_source_snapshot(json.loads(raw))
+        if snapshot_bytes(snapshot) != raw:
+            raise ValueError('noncanonical snapshot')
+        metadata = evidence['provenance']
+        binding = {**snapshot['binding'], 'snapshot_sha256': hashlib.sha256(raw).hexdigest()}
+        integrity = evidence_store.classify_evidence_integrity(evidence)
+        request = metadata['browser_admission_request']
+        source = metadata['provenance']
+        inputs = json.loads(evidence['inputs_json'])
+        context = metadata['context']
+        owner = {k:v for k,v in context.items() if k not in ('domain_id','subject_id','brand_focus_id','global_scope')}
+        if (evidence.get('source') != 'collector' or evidence.get('feature_id') != 'COLLECTED_SOURCE'
+                or evidence.get('provider') != 'collector-browser-snapshot'
+                or evidence.get('version') != 'collected-browser-snapshot:v1'
+                or evidence.get('status') != 'verified' or evidence.get('result') != 'PASS'
+                or integrity.get('verified') is not True or integrity.get('assurance') != 'writer-authenticated'
+                or metadata.get('browser_snapshot_binding') != binding
+                or 'native_source_binding' in metadata
+                or metadata.get('capture_mode') != 'sanitized_browser_snapshot'
+                or metadata.get('source_kind') != 'collected_source'
+                or metadata.get('original_resource_sha256', 'missing') is not None
+                or metadata.get('parsed_text') != snapshot['body']
+                or metadata.get('locators') != snapshot['block_map']
+                or evidence.get('content_hash') != binding['body_sha256']
+                or record.get('note_id') != evidence.get('asset_id')
+                or request.get('context') != context or metadata.get('owner') != owner
+                or source.get('source_url') != snapshot['metadata']['url']
+                or metadata.get('source_url') != source.get('source_url')
+                or source.get('captured_at') != snapshot['metadata']['captured_at']
+                or source.get('title') != snapshot['metadata']['title']
+                or source.get('published_at', 'missing') is not None
+                or any(source.get(k) != request.get(k) for k in ('rights','rights_statement','intended_use'))
+                or source.get('rights') not in ('public-reference-only','owner-approved')):
+            raise ValueError('snapshot binding')
+        source_boundaries(source)
+        expected_id = 'browser_' + _digest({'context':context,'request_id':request['request_id']})
+        expected_resource = 'browser-snapshot-import:v1:' + _digest({**request,'snapshot_sha256':binding['snapshot_sha256']})
+        if (evidence['asset_id'] != expected_id or metadata['source_intake_resource'] != expected_resource
+                or inputs.get('source_intake_resource') != expected_resource):
+            raise ValueError('request binding')
+        ref = metadata.get('collection_evidence_ref')
+        if (not isinstance(ref, str) or re.fullmatch(r'app_evidence_records:[1-9][0-9]*',ref) is None
+                or inputs.get('collection_evidence_ref') != ref):
+            raise ValueError('parent reference')
+        parent = con.execute('SELECT * FROM app_evidence_records WHERE id=?',(int(ref.split(':')[1]),)).fetchone()
+        if parent is None:
+            raise ValueError('missing parent')
+        parent = dict(parent)
+        parent_meta = json.loads(parent['collection_metadata'])
+        parent_inputs = json.loads(parent['inputs_json'])
+        integrity = evidence_store.classify_evidence_integrity(parent)
+        if (parent.get('source') != 'collector' or parent.get('feature_id') != 'BROWSER_SNAPSHOT_ADMISSION'
+                or parent.get('provider') != 'collector-browser-snapshot'
+                or parent.get('version') != 'browser-snapshot-admission:v1'
+                or parent.get('asset_id') != expected_id or parent.get('content_hash') != binding['body_sha256']
+                or parent.get('status') != 'verified' or parent.get('result') != 'PASS'
+                or integrity.get('verified') is not True or integrity.get('assurance') != 'writer-authenticated'
+                or any(parent_meta.get(k) != metadata.get(k) for k in
+                    ('context','owner','browser_admission_request','source_intake_resource','browser_snapshot_binding'))
+                or parent_inputs.get('source_intake_resource') != expected_resource
+                or parent_inputs.get('_lumenis_scope') != inputs.get('_lumenis_scope')):
+            raise ValueError('parent binding')
+    except (ValueError, TypeError, KeyError, UnicodeError) as exc:
+        raise SavedWorkError('BROWSER_SOURCE_INTEGRITY_FAILED') from exc

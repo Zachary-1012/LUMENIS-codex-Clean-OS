@@ -1,0 +1,7 @@
+# 26篇数学论文版本补核
+
+先读01_REVISION_STATUS_RESEARCH.md，再查03_PER_PAPER_VERSION_STATUS.md或02_PAPER_STATUS_LEDGER.json。
+
+26/26官方发布目录与原pin相同；26篇当前README和路径历史已逐一实际读取。官方已读范围没有这26篇修订/撤回公告；跨渠道arXiv/期刊状态UNKNOWN。26/26阅读结果保持，形式验证、一般算法与产品验收均不因此升级。
+
+原要求完整保留于baseline；其中旧阅读状态由后续26/26补全报告覆盖。所有SHA可通过SHA256SUMS核验。

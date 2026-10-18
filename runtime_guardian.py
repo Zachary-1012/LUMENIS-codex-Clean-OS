@@ -1461,8 +1461,6 @@ def legacy_global_exception_handler(func: Callable) -> Callable:
     return wrapper
 
 
-# 模块加载时初始化 DB（不阻断）
-try:
-    init_db()
-except Exception:
-    pass
+# Importing runtime types must not create a default database before the caller
+# selects its canonical runtime path. RuntimeGuardian and DLQ initialize their
+# explicitly resolved store on construction; direct callers may use init_db().

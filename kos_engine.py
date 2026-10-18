@@ -1451,3 +1451,229 @@ def get_kol_tier_summary(authors: list, config: dict = None) -> dict:
                               "min_engagement_rate": c.get("min_engagement_rate")}
                          for t, c in config.items() if t != "unknown"},
     }
+
+
+def read_scoped_profiles(binding: dict) -> dict:
+    """Aggregate authors only from signed Canonical records in the admitted BMP view.
+
+    Cross-platform account IDs remain distinct. Missing labels/engagement are
+    unknown; legacy global KOS tiers are not copied into an unrelated BrandFocus.
+    The caller owns actor authorization and must recheck it before projection.
+    """
+    material = _read_scoped_profile_material(binding)
+    authors = {}
+    unknown_author_count = 0
+    for row in material["records"]:
+        if not row.get("author_id") or not row.get("source_platform"):
+            unknown_author_count += 1
+            continue
+        key = (row["source_platform"], row["author_id"])
+        profile = authors.setdefault(key, {"author_id": key[1], "source_platform": key[0],
+            "author_nickname": row.get("author_name") or None, "note_count": 0,
+            "total_engagement": 0, "engagement_unknown_count": 0, "risk_count": 0,
+            "risk_unknown_count": 0, "kos_tier": None, "kos_score": None,
+            "identity_label": "UNKNOWN", "source_refs": [], "observations": [],
+            "total_likes": 0, "_engagement_totals": [0, 0, 0, 0]})
+        profile["note_count"] += 1
+        values = [row.get("engagement_" + field) for field in ("likes", "comments", "collects", "shares")]
+        if all(type(value) in (int, float) and math.isfinite(value) and value >= 0 for value in values):
+            if profile["total_engagement"] is not None:
+                profile["total_engagement"] += sum(values)
+        else:
+            profile["engagement_unknown_count"] += 1
+            profile["total_engagement"] = None
+        likes = row.get("engagement_likes")
+        if type(likes) not in (int, float) or not math.isfinite(likes) or likes < 0:
+            profile["total_likes"] = None
+        elif profile["total_likes"] is not None:
+            profile["total_likes"] += likes
+        if all(type(v) in (int, float) and math.isfinite(v) and v >= 0 for v in values):
+            profile["_engagement_totals"] = [a + b for a, b in zip(profile["_engagement_totals"], values)]
+        risk = row.get("risk_level")
+        if risk not in {"none", "low", "medium", "high", "critical"}:
+            profile["risk_unknown_count"] += 1
+        elif risk in {"high", "critical"}:
+            profile["risk_count"] += 1
+        profile["source_refs"].append({"canonical_id": row["canonical_id"], "scope_evidence": row["scope_evidence"]})
+        profile["observations"].append({"canonical_id": row["canonical_id"], "source_id": row.get("source_id"),
+            "title": row.get("title") or "", "content": row.get("content") or "",
+            "publish_datetime": row.get("publish_datetime"), "sentiment": row.get("sentiment"),
+            "scope_evidence": row["scope_evidence"]})
+    complete = not material.get("truncated") and not material.get("rejected_count")
+    for profile in authors.values():
+        _scoped_profile_classification(profile, complete=complete)
+    return {"profiles": list(authors.values()), "total": len(authors),
+            "unknown_author_count": unknown_author_count, "coverage": "NOT_VERIFIED",
+            "source_read_complete": complete,
+            "truncated": bool(material.get("truncated")),
+            "source_count": len(material["records"]),
+            "rejected_count": material.get("rejected_count", 0),
+            "method": "signed-scope-author-observations:v1"}
+
+
+
+def _scoped_profile_classification(profile, *, complete):
+    """Retain legacy lifecycle/potential rules on known, same-platform inputs only.
+
+    These are inspectable observation heuristics, not ownership, calibrated
+    suitability, an audience estimate or a claim of full collection coverage.
+    """
+    from kos_metrics import PLATFORM_RULES, get_platform_rules_status, platform_engagement
+    totals = profile.pop("_engagement_totals")
+    count = profile["note_count"]
+    profile.update(avg_engagement=None, raw_avg_engagement=None, weighted_avg_engagement=None,
+                   active_days=None, lifecycle_stage=None, is_potential=None,
+                   classification_method="legacy-observation-heuristics:v1",
+                   classification_basis="returned signed scope observations",
+                   classification_rule_source=get_platform_rules_status(),
+                   classification_reasons={"kos_tier": "SCOPED_SCORE_NOT_ESTABLISHED"})
+    reasons = profile["classification_reasons"]
+    if profile["total_engagement"] is not None:
+        profile["raw_avg_engagement"] = profile["total_engagement"] / count
+    platform = profile["source_platform"]
+    if profile["engagement_unknown_count"]:
+        reasons["is_potential"] = "ENGAGEMENT_UNKNOWN"
+    elif platform not in PLATFORM_RULES:
+        reasons["is_potential"] = "PLATFORM_WEIGHTS_UNAVAILABLE"
+    else:
+        weights = PLATFORM_RULES[platform].get("engagement_weights", {})
+        if all(type(weights.get(k)) in (int, float) and math.isfinite(weights[k]) and weights[k] >= 0
+               for k in ("likes", "comments", "collects", "shares")):
+            weighted_average = platform_engagement(platform, *totals) / count
+            if math.isfinite(weighted_average):
+                profile["weighted_avg_engagement"] = weighted_average
+                profile["avg_engagement"] = weighted_average
+            else:
+                reasons["is_potential"] = "ENGAGEMENT_AGGREGATE_OUT_OF_RANGE"
+        else:
+            reasons["is_potential"] = "PLATFORM_WEIGHTS_UNAVAILABLE"
+    if not complete:
+        reasons.update(lifecycle_stage="SOURCE_READ_INCOMPLETE", is_potential="SOURCE_READ_INCOMPLETE")
+        return
+    average = profile["weighted_avg_engagement"]
+    if average is not None:
+        profile["is_potential"] = count <= 3 and average > 500
+    dates = []
+    for row in profile["observations"]:
+        value = row.get("publish_datetime")
+        try:
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("missing native publication date")
+            dates.append(datetime.fromisoformat(value.replace("Z", "+00:00")))
+        except ValueError:
+            dates = []
+            break
+    if dates:
+        try:
+            profile["active_days"] = (max(dates) - min(dates)).days
+        except TypeError:
+            # Never infer a timezone for mixed local and offset-aware timestamps.
+            pass
+    days = profile["active_days"]
+    if count == 1:
+        profile["lifecycle_stage"] = "discovered"
+    elif days is None:
+        reasons["lifecycle_stage"] = "NATIVE_PUBLICATION_TIME_UNKNOWN"
+    elif days < 7:
+        profile["lifecycle_stage"] = "growing"
+    elif days >= 30 and average is None:
+        reasons["lifecycle_stage"] = "ENGAGEMENT_OR_PLATFORM_WEIGHTS_UNKNOWN"
+    elif days >= 30 and average > 100:
+        profile["lifecycle_stage"] = "stable"
+    elif days >= 90 and count >= 5:
+        profile["lifecycle_stage"] = "mature"
+    else:
+        profile["lifecycle_stage"] = "active"
+
+
+def _read_scoped_profile_material(binding):
+    """Extend bounded author aggregation without bypassing Canonical validation.
+
+    The first-page reader remains the scope validator. When necessary, enumerate
+    at most 5,000 scoped source identities in a single read snapshot, then read
+    each batch through that same signed reader. A source with >100 projections
+    remains explicitly truncated rather than pretending its first page is full.
+    """
+    material = _read_scoped_canonical_material(binding)
+    if not material.get("truncated"):
+        return material
+    from canonical_data import list_scoped_canonical
+    focus = binding.get("brand_focus_id") if binding["canonical_scope"] == "FOCUS" else None
+    with get_repository().connection(read_only=True, wal=False) as con:
+        con.execute("BEGIN")
+        where = "product_id='ZBMP' AND domain_id='zbmp'"
+        params = ()
+        if focus is not None:
+            where += " AND brand_focus_id=? AND (subject_id IS NULL OR subject_id='')"
+            params = (focus,)
+        ids = [row[0] for row in con.execute(
+            "SELECT DISTINCT source_id FROM canonical_data WHERE " + where +
+            " ORDER BY source_id LIMIT 5001", params)]
+        overflow = len(ids) > 5000
+        ids = ids[:5000]
+        # Unusable source IDs must stay a visible incomplete read.
+        valid_ids = [value for value in ids if isinstance(value, str) and value and value == value.strip()]
+        pages = []
+        def read_batch(batch):
+            page = list_scoped_canonical(con, product_id="ZBMP", brand_focus_id=focus,
+                                         source_ids=batch, limit=100)
+            if page["truncated"] and len(batch) > 1:
+                middle = len(batch) // 2
+                read_batch(batch[:middle])
+                read_batch(batch[middle:])
+            else:
+                pages.append(page)
+        for start in range(0, len(valid_ids), 100):
+            read_batch(valid_ids[start:start + 100])
+    return {"records": [row for page in pages for row in page["records"]],
+            "rejected_count": sum(page["rejected_count"] for page in pages),
+            "truncated": overflow or len(valid_ids) != len(ids) or any(page["truncated"] for page in pages)}
+
+def _read_scoped_canonical_material(binding):
+    from canonical_data import list_scoped_canonical
+    if (not isinstance(binding, dict) or binding.get("contract") != "lumenis.scope-read-binding.v1"
+            or binding.get("domain_id") != "BMP" or binding.get("product_id") != "ZBMP"
+            or binding.get("read_allowed") is not True or binding.get("scope_verified") is not True
+            or binding.get("canonical_scope") not in {"FOCUS", "GLOBAL_ALL"}
+            or (binding.get("canonical_scope") == "FOCUS" and not binding.get("brand_focus_id"))):
+        raise ValueError("BMP_PROFILE_SCOPE_REQUIRED")
+    focus = binding.get("brand_focus_id") if binding["canonical_scope"] == "FOCUS" else None
+    with get_repository().connection(read_only=True, wal=False) as connection:
+        material = list_scoped_canonical(connection, product_id="ZBMP", brand_focus_id=focus, limit=100)
+    return material
+
+
+def read_scoped_comments(binding, *, author_id="", note_id="", limit=50):
+    """Read comment children only under currently admitted Canonical parent notes."""
+    if type(limit) is not int or not 1 <= limit <= 200:
+        raise ValueError("KOS_COMMENT_LIMIT_INVALID")
+    material = _read_scoped_canonical_material(binding)
+    parents = {row["source_id"]: row for row in material["records"]
+               if row.get("source_id") and row.get("source_type") == "note"
+               and (not author_id or row.get("author_id") == author_id)
+               and (not note_id or row.get("source_id") == note_id or row.get("canonical_id") == note_id)}
+    if not parents:
+        return {"comments": [], "total": 0, "state": "EMPTY", "coverage": "NOT_VERIFIED",
+                "source_count": 0, "truncated": bool(material.get("truncated"))}
+    with get_repository().connection(read_only=True, wal=False) as con:
+        exists = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='note_comments'").fetchone()
+        if exists is None:
+            return {"comments": [], "total": None, "state": "NOT_COLLECTED", "coverage": "NOT_VERIFIED"}
+        marks = ",".join("?" for _ in parents)
+        total = con.execute("SELECT COUNT(*) FROM note_comments WHERE note_id IN (" + marks + ")", tuple(parents)).fetchone()[0]
+        rows = con.execute("SELECT * FROM note_comments WHERE note_id IN (" + marks + ") ORDER BY publish_time DESC LIMIT ?",
+                           (*parents, limit)).fetchall()
+    from kos_intel import classify_intent
+    comments = []
+    for row in rows:
+        item = dict(row)
+        parent = parents[item["note_id"]]
+        content = item.get("content") or ""
+        item.update({"source_parent": {"canonical_id": parent["canonical_id"], "scope_evidence": parent["scope_evidence"]},
+            "comment_integrity": "NOT_INDEPENDENTLY_VERIFIED",
+            "analysis_method": "deterministic-comment-rules:v1",
+            "derived_sentiment": _comment_sentiment(content), "derived_intent": classify_intent(content),
+            "ai_state": "NOT_RUN"})
+        comments.append(item)
+    return {"comments": comments, "total": total, "returned": len(comments), "state": "READY" if comments else "EMPTY",
+            "coverage": "NOT_VERIFIED", "source_count": len(parents), "truncated": bool(material.get("truncated")) or total > limit}

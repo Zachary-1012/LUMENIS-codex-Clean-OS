@@ -161,6 +161,8 @@ def load_config():
 def save_config(config):
     """保存系统配置"""
     try:
+        # Actor-specific AI selection/credentials never enter this legacy global file.
+        config = {key: value for key, value in config.items() if key != 'ai'}
         os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
@@ -198,8 +200,15 @@ def update_config():
         # owners keep AI routing, collection activation, Basic auth and Core URL.
         incoming = dict(data)
         if 'ai' in incoming:
-            ignored.append('ai')
-            incoming.pop('ai', None)
+            from lumenis.system.ai_gateway import user_api_adapter
+            try:
+                user_api_adapter.configure(incoming.pop('ai'))
+            except PermissionError as exc:
+                return _user_ai_denied_response(exc, 'USER_API_PERMISSION_DENIED', 403)
+            except ValueError as exc:
+                return _user_ai_denied_response(exc, str(exc), 400)
+            # Return fresh owner state; never persist the submitted secret.
+            config = load_config()
         if isinstance(incoming.get('collection'), dict) and 'auto_collect' in incoming['collection']:
             incoming['collection'] = dict(incoming['collection'])
             incoming['collection'].pop('auto_collect', None)
@@ -229,6 +238,39 @@ def update_config():
             return jsonify({'ok': False, 'error': '保存失败'}), 500
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+def _user_ai_denied_response(error, code, status):
+    """Use the canonical audit and expose only its opaque correlation ID."""
+    from lumenis.system.ai_gateway import user_api_adapter
+    safe_code = user_api_adapter.safe_error_code(code)
+    if safe_code != code:
+        code, status = safe_code, 503
+    try:
+        audit_id = user_api_adapter.audit_denial(code, error)
+    except Exception:
+        return jsonify({'ok': False, 'code': 'USER_API_AUDIT_UNAVAILABLE'}), 503
+    return jsonify({'ok': False, 'code': code, 'audit_id': audit_id}), status
+
+
+@settings_bp.route('/api/settings/ai', methods=['GET', 'POST'])
+def user_ai_settings():
+    """Current user's runtime-only external API selection or withdrawal."""
+    from lumenis.system.ai_gateway import user_api_adapter
+    try:
+        if request.method == 'GET':
+            actor, gate, _caller = user_api_adapter._identity()
+            gate.authorize_user_api_action(actor)
+            return jsonify({'ok': True, 'ai': load_config()['ai'],
+                            'external': user_api_adapter.status()})
+        result = user_api_adapter.configure(request.get_json(silent=True))
+        return jsonify({'ok': True, 'ai': result})
+    except PermissionError as exc:
+        return _user_ai_denied_response(exc, 'USER_API_PERMISSION_DENIED', 403)
+    except ValueError as exc:
+        return _user_ai_denied_response(exc, str(exc), 400)
+    except Exception as exc:
+        return _user_ai_denied_response(exc, 'USER_API_SETTINGS_UNAVAILABLE', 503)
 
 
 # ============================================
