@@ -100,7 +100,7 @@ v010规划审批与产品验收分别记录；历史文稿的未审批状态不�
 
 已存在可用的**完整排版源Markdown**，不需要从PDF抽取碎行重建。实核源SHA `9d9db9c1f205fc7d206ded88784d9fd6b2aff053b3222ca61bad4fa096f4d63a`，UTF-8无BOM、LF、末尾换行、7,983行。按有序段落清单本次重新算hash：2,884个exact段全部匹配；3个显式resolved替换全文全部存在。原保全回执记311步骤/195G/25媒体/213UX/29旅程，本次对该回执源hash与段落字节复核；不把计数当产品完成。
 
-六张图全部存在、1600×900；与304页PDF第37/39/41/43/45/47页内嵌图片逐RGB像素相同。源中6个相对图链接均可解；无其他非图片本地相对链接。完整机器证明见 frontend-markdown-validation.json。
+六张图全部存在、1600×900；与304页PDF第37/39/41/43/45/47页内嵌图片逐RGB像素相同。源中6个相对图链接均可解；无其他非图片本地相对链接。完整机器证明见 surface-markdown-validation.json。
 
 建议下一文稿阶段沿main原位置更新，不把UNIFIED_FRONTEND_WORKING作为另一个current/router：
 

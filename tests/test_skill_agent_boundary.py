@@ -730,3 +730,159 @@ class TestAgentNoSuperPermissionComprehensive:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
+
+
+class TestExactSingleUseApproval:
+    """Legacy boundary regressions; no production reachability is asserted."""
+
+    def _approved(self):
+        boundary = AgentBoundary()
+        actor = boundary.create_agent("approval-owner", AgentRole.OPERATOR)
+        params = {"target": "fixture-record", "options": {"revision": 3}}
+        request = boundary.request_approval(
+            actor, "delete_fixture", tool_name="delete_note", params=params,
+        )
+        assert boundary.approvals.approve(request.request_id, approver="human-admin")["ok"]
+        return boundary, actor, params, request
+
+    def _execute(self, boundary, actor, params, request, **overrides):
+        arguments = dict(tool_name="delete_note", params=params,
+                         approval_request_id=request.request_id)
+        arguments.update(overrides)
+        return boundary.execute_with_approval(actor, "delete_fixture", lambda: "done", **arguments)
+
+    @pytest.mark.parametrize("mismatch", ["actor", "action", "tool", "params"])
+    def test_wrong_binding_does_not_execute_or_consume(self, mismatch):
+        boundary, actor, params, request = self._approved()
+        attempted_actor = boundary.create_agent("other-actor") if mismatch == "actor" else actor
+        action = "delete_other" if mismatch == "action" else "delete_fixture"
+        tool = "delete_event" if mismatch == "tool" else "delete_note"
+        attempted_params = {**params, "options": {"revision": 4}} if mismatch == "params" else params
+        calls = []
+        result = boundary.execute_with_approval(
+            attempted_actor, action, lambda: calls.append(True), tool_name=tool,
+            params=attempted_params, approval_request_id=request.request_id,
+        )
+        assert result["executed"] is False
+        assert calls == []
+        assert boundary.approvals.is_approved(request.request_id)
+        assert self._execute(boundary, actor, params, request)["executed"] is True
+
+    def test_exact_approval_is_single_use_after_idempotency_window(self):
+        boundary, actor, params, request = self._approved()
+        boundary.idempotency = IdempotencyGuard(window_seconds=0)
+        assert self._execute(boundary, actor, params, request)["result"] == "done"
+        assert request.status == ApprovalStatus.CONSUMED
+        assert not boundary.approvals.approve(request.request_id, approver="human-admin")["ok"]
+        assert self._execute(boundary, actor, params, request)["executed"] is False
+
+    @pytest.mark.parametrize("state", ["expired", "revoked", "pending", "missing"])
+    def test_nonapproved_request_cannot_execute(self, state):
+        from datetime import datetime, timezone, timedelta
+        boundary, actor, params, request = self._approved()
+        if state == "expired":
+            request.expires_at = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
+        elif state == "revoked":
+            assert boundary.approvals.reject(request.request_id, approver="human-admin")["ok"]
+            assert not boundary.approvals.approve(request.request_id, approver="human-admin")["ok"]
+        elif state == "pending":
+            request = boundary.request_approval(actor, "delete_fixture", tool_name="delete_note", params=params)
+        else:
+            request.request_id = "missing-id"
+        assert self._execute(boundary, actor, params, request)["executed"] is False
+
+    def test_unapproved_attempt_does_not_poison_authorized_retry(self):
+        boundary, actor, params, request = self._approved()
+        assert not self._execute(boundary, actor, params, request, approval_request_id=None)["executed"]
+        assert self._execute(boundary, actor, params, request)["executed"]
+
+    def test_executor_failure_cannot_replay_grant(self):
+        boundary, actor, params, request = self._approved()
+        boundary.idempotency = IdempotencyGuard(window_seconds=0)
+        def fail():
+            raise RuntimeError("effect may have started")
+        result = boundary.execute_with_approval(
+            actor, "delete_fixture", fail, tool_name="delete_note", params=params,
+            approval_request_id=request.request_id,
+        )
+        assert not result["executed"]
+        assert "executor error" in result["reason"]
+        assert request.status == ApprovalStatus.CONSUMED
+        assert not self._execute(boundary, actor, params, request)["executed"]
+
+    def test_concurrent_attempts_consume_only_once(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+        boundary, actor, params, request = self._approved()
+        boundary.idempotency = IdempotencyGuard(window_seconds=0)
+        barrier = Barrier(8)
+        def execute(_):
+            barrier.wait(timeout=5)
+            return self._execute(boundary, actor, params, request)["executed"]
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(execute, range(8)))
+        assert sum(results) == 1
+
+    def test_configured_zero_ttl_cannot_be_approved(self):
+        manager = ApprovalManager(ttl_minutes=0)
+        actor = AgentIdentity("expiry-owner", AgentRole.OPERATOR)
+        request = manager.request(actor, "delete_fixture")
+        assert not manager.approve(request.request_id, approver="human-admin")["ok"]
+        assert request.status == ApprovalStatus.EXPIRED
+
+    def test_firewall_denial_cannot_be_overridden_by_approval(self):
+        boundary, actor, params, request = self._approved()
+        result = boundary.execute_with_approval(
+            actor, "read_fixture", lambda: pytest.fail("denied executor ran"),
+            tool_name="execute_shell", params=params, approval_request_id=request.request_id,
+        )
+        assert not result["executed"]
+        assert result["check"]["decision"] == "DENY"
+        assert boundary.approvals.is_approved(request.request_id)
+
+    def test_distinct_grant_still_obeys_idempotency_window(self):
+        boundary, actor, params, request = self._approved()
+        assert self._execute(boundary, actor, params, request)["executed"]
+        second = boundary.request_approval(actor, "delete_fixture", tool_name="delete_note", params=params)
+        assert boundary.approvals.approve(second.request_id, approver="human-admin")["ok"]
+        result = self._execute(boundary, actor, params, second)
+        assert not result["executed"]
+        assert result["check"]["matched_rule"] == "idempotency"
+
+    def test_concurrent_distinct_grants_still_execute_once(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+        boundary, actor, params, first = self._approved()
+        requests = [first]
+        for _ in range(7):
+            request = boundary.request_approval(actor, "delete_fixture", tool_name="delete_note", params=params)
+            assert boundary.approvals.approve(request.request_id, approver="human-admin")["ok"]
+            requests.append(request)
+        barrier = Barrier(len(requests))
+        def execute(request):
+            barrier.wait(timeout=5)
+            return self._execute(boundary, actor, params, request)["executed"]
+        with ThreadPoolExecutor(max_workers=len(requests)) as pool:
+            results = list(pool.map(execute, requests))
+        assert sum(results) == 1
+
+    def test_permission_preview_does_not_prevent_approved_execution(self):
+        boundary = AgentBoundary()
+        actor = boundary.create_agent("preview-owner")
+        params = {"target": "fixture-record"}
+        preview = boundary.check_action(actor, "delete_fixture", tool_name="delete_note", params=params)
+        assert preview["decision"] == "REQUIRE_APPROVAL"
+        request = boundary.request_approval(actor, "delete_fixture", tool_name="delete_note", params=params)
+        assert boundary.approvals.approve(request.request_id, approver="human-admin")["ok"]
+        assert self._execute(boundary, actor, params, request)["executed"]
+
+    def test_duplicate_attempt_preserves_new_grant_for_later_execution(self):
+        boundary, actor, params, request = self._approved()
+        assert self._execute(boundary, actor, params, request)["executed"]
+        second = boundary.request_approval(actor, "delete_fixture", tool_name="delete_note", params=params)
+        assert boundary.approvals.approve(second.request_id, approver="human-admin")["ok"]
+        assert not self._execute(boundary, actor, params, second)["executed"]
+        assert boundary.approvals.is_approved(second.request_id)
+        boundary.idempotency = IdempotencyGuard(window_seconds=0)
+        assert self._execute(boundary, actor, params, second)["executed"]
+        assert second.status == ApprovalStatus.CONSUMED

@@ -55,7 +55,7 @@ def _clips(timeline):
     return [c for t in timeline.tracks for c in t.clips]
 
 
-def _probe_rates(timeline, *, dimensions=None):
+def _probe_rates(timeline, *, dimensions=None, conflicting_rates=None):
     rates = {}
     probe = _ffprobe_path()
     if not probe:
@@ -69,12 +69,23 @@ def _probe_rates(timeline, *, dimensions=None):
                 '-show_entries', 'stream=avg_frame_rate,r_frame_rate,time_base,width,height', '-of', 'json',
                 '-i', asset.path], capture_output=True, text=True, check=True, timeout=15)
             stream = json.loads(result.stdout)['streams'][0]
+            # Geometry is independently useful even when a stream clock is unknown.
+            if dimensions is not None:
+                try:
+                    width, height = int(stream['width']), int(stream['height'])
+                    if width > 0 and height > 0:
+                        dimensions[asset.asset_id] = (width, height)
+                except (TypeError, ValueError, KeyError, OverflowError):
+                    pass
             avg, real = _rate(stream['avg_frame_rate']), _rate(stream['r_frame_rate'])
-            if avg == real and Fraction(stream['time_base']) > 0:
+            if avg != real:
+                if conflicting_rates is not None:
+                    conflicting_rates.add(asset.asset_id)
+                continue
+            if Fraction(stream['time_base']) > 0:
                 rates[asset.asset_id] = str(avg)
-                if dimensions is not None:
-                    dimensions[asset.asset_id] = (int(stream['width']), int(stream['height']))
-        except (OSError, subprocess.SubprocessError, ValueError, KeyError, IndexError):
+        except (OSError, subprocess.SubprocessError, ValueError, TypeError,
+                ZeroDivisionError, OverflowError, KeyError, IndexError):
             continue
     return rates
 
@@ -96,7 +107,19 @@ def preflight_interchange(timeline: Timeline, *, format: str, frame_rate=None,
         rate = None
         issue('PROJECT_TIMEBASE_UNKNOWN', 'UNKNOWN')
     dimensions = {}
-    source_frame_rates = _probe_rates(timeline, dimensions=dimensions)
+    conflicting_rates = set()
+    probed_rates = _probe_rates(timeline, dimensions=dimensions, conflicting_rates=conflicting_rates)
+    supplied_rates = source_frame_rates if isinstance(source_frame_rates, Mapping) else {}
+    source_frame_rates = dict(probed_rates)
+    declared_rates = set()
+    for asset in timeline.assets:
+        if not asset.has_video or asset.asset_id in probed_rates or asset.asset_id in conflicting_rates:
+            continue
+        try:
+            source_frame_rates[asset.asset_id] = str(_rate(supplied_rates.get(asset.asset_id)))
+            declared_rates.add(asset.asset_id)
+        except VideoEditingError:
+            continue
     media_refs = media_refs if isinstance(media_refs, Mapping) else {}
     clips = _clips(timeline)
     if not clips or len(clips) > _MAX_CLIPS:
@@ -113,8 +136,10 @@ def preflight_interchange(timeline: Timeline, *, format: str, frame_rate=None,
         except VideoEditingError:
             source_rate = None
             issue('SOURCE_TIMEBASE_UNKNOWN', 'UNKNOWN', affected)
-        # Source time bases are declarations from a verified probe owner, not
-        # guessed from the desired output frame rate.
+        # A caller declaration is a fallback, never an override of measured
+        # clocks or a full-file CFR assertion. Project rates are never guessed.
+        if format == 'fcpxml' and asset.has_video and asset.asset_id not in dimensions:
+            issue('SOURCE_DIMENSIONS_UNKNOWN', 'UNKNOWN', affected)
         if format == 'otio' and asset.asset_id in dimensions:
             width, height = dimensions[asset.asset_id]
             if height and Fraction(width,height) != Fraction(timeline.format_ratio.replace(':','/')):
@@ -144,6 +169,8 @@ def preflight_interchange(timeline: Timeline, *, format: str, frame_rate=None,
             measured = None
             if timing.get('cfr_verified') and timing.get('minimum_delta_ticks'):
                 measured = 1/(Fraction(timing['time_base'])*timing['minimum_delta_ticks'])
+            if measured is not None and asset.asset_id in declared_rates and measured != _rate(source_frame_rates[asset.asset_id]):
+                issue('CMX_SOURCE_RATE_CONFLICT','UNKNOWN',affected)
             if measured != rate or abs(timing.get('first_timestamp_seconds',1)) > 1e-7:
                 issue('CMX_FULL_CFR_ZERO_ORIGIN_REQUIRED','UNKNOWN',affected)
             audible = [c.clip_id for c in clips if c.media_asset_id==asset.asset_id and c.audio_role!='muted']
@@ -191,10 +218,13 @@ def preflight_interchange(timeline: Timeline, *, format: str, frame_rate=None,
     return {'schema': 'lumenis.interchange-preflight/v1', 'format': format, 'status': status,
             'issues': issues, 'frame_rate': str(rate) if rate else None,
             'source_frame_rates': {key:source_frame_rates[key] for key in sorted(used) if key in source_frame_rates},
+            'source_dimensions': {key:list(dimensions[key]) for key in sorted(used) if key in dimensions},
+            'source_rate_origins': {key:('CALLER_DECLARED' if key in declared_rates else 'FFPROBE_STREAM_METADATA')
+                                    for key in sorted(used) if key in source_frame_rates},
             'timeline_version': timeline.version,
             'timeline_sha256': hashlib.sha256(json.dumps(timeline.to_dict(), sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
             'compatibility': 'BOUNDED_FORMAT_ONLY_APPLICATION_IMPORT_NOT_VERIFIED',
-            'source_rate_verification': ('FULL_SOURCE_PTS_CFR_ZERO_ORIGIN' if format=='cmx3600' and status not in ('BLOCKED','UNKNOWN') else 'FFPROBE_STREAM_METADATA_NOT_FULL_FILE_CFR_ASSERTION'),
+            'source_rate_verification': ('FULL_SOURCE_PTS_CFR_ZERO_ORIGIN' if format=='cmx3600' and status not in ('BLOCKED','UNKNOWN') else ('CALLER_DECLARED_FALLBACK_NOT_FULL_FILE_CFR_ASSERTION' if declared_rates & used else 'FFPROBE_STREAM_METADATA_NOT_FULL_FILE_CFR_ASSERTION')),
             'external_import_frame_rate_required': format == 'cmx3600',
             'preserved': ['source_ranges', 'timeline_offsets', 'media_references', 'gaps', 'track_order']}
 
@@ -207,9 +237,8 @@ def _range(start, duration, rate):
     return {'OTIO_SCHEMA': 'TimeRange.1', 'start_time': _rt(start, rate), 'duration': _rt(duration, rate)}
 
 
-def _otio(timeline, rate, media_refs):
+def _otio(timeline, rate, media_refs, source_rates, dimensions):
     assets = {a.asset_id: a for a in timeline.assets}
-    source_rates = _probe_rates(timeline)
     tracks = []
     for track in timeline.tracks:
         children = []
@@ -245,13 +274,13 @@ def _time(value):
     return f'{value.numerator}/{value.denominator}s'
 
 
-def _fcpxml(timeline, rate, media_refs):
+def _fcpxml(timeline, rate, media_refs, source_rates, dimensions):
     from .rendering import FRAME_SIZES
     root = ET.Element('fcpxml', version='1.10')
     resources = ET.SubElement(root, 'resources')
     width, height = FRAME_SIZES[timeline.format_ratio]
     ET.SubElement(resources, 'format', id='r0', name='LUMENIS', frameDuration=_time(1/rate), width=str(width), height=str(height))
-    refs = {}; source_rates = _probe_rates(timeline)
+    refs = {}
     used = {c.media_asset_id for c in _clips(timeline)}
     for i, asset in enumerate(timeline.assets, 1):
         if asset.asset_id not in used: continue
@@ -259,14 +288,10 @@ def _fcpxml(timeline, rate, media_refs):
         attrs = dict(id=rid, name=asset.asset_id, start='0s', duration=_time(Fraction(str(asset.duration_sec))),
                      hasVideo='1' if asset.has_video else '0', hasAudio='1' if asset.audio_stream_count else '0')
         if asset.has_video:
-            info = subprocess.run([_ffprobe_path(), '-v', 'error', '-protocol_whitelist', 'file',
-                '-format_whitelist', MEDIA_INPUT_DEMUXERS, '-select_streams', 'v:0',
-                '-show_entries', 'stream=width,height', '-of', 'json', '-i', asset.path],
-                capture_output=True, text=True, check=True, timeout=15)
-            dims = json.loads(info.stdout)['streams'][0]
+            source_width, source_height = dimensions[asset.asset_id]
             source_format = f'f{i}'
             ET.SubElement(resources, 'format', id=source_format, frameDuration=_time(1/Fraction(source_rates[asset.asset_id])),
-                          width=str(int(dims['width'])), height=str(int(dims['height'])))
+                          width=str(source_width), height=str(source_height))
             attrs['format'] = source_format
         node = ET.SubElement(resources, 'asset', **attrs)
         ET.SubElement(node, 'media-rep', kind='original-media', src=media_refs[asset.asset_id])
@@ -300,7 +325,7 @@ def _fcpxml(timeline, rate, media_refs):
     return ET.tostring(root, encoding='utf-8', xml_declaration=True)
 
 
-def _cmx3600(timeline, rate, media_refs):
+def _cmx3600(timeline, rate, media_refs, source_rates, dimensions):
     """CMX 3600 video cuts; import rate is explicit in the bound report."""
     def tc(seconds):
         frames = _sec(seconds,rate)*rate
@@ -341,7 +366,8 @@ def build_interchange_files(timeline: Timeline, *, formats=('otio', 'fcpxml'), f
             raise VideoEditingError('INTERCHANGE_MEDIA_CHANGED')
     rate = _rate(frame_rate)
     exporters = {'otio':_otio,'fcpxml':_fcpxml,'cmx3600':_cmx3600}
-    files = {('timeline.edl' if f=='cmx3600' else f'timeline.{f}'): exporters[f](timeline,rate,media_refs) for f in formats}
+    files = {('timeline.edl' if f=='cmx3600' else f'timeline.{f}'): exporters[f](timeline,rate,media_refs, assessment['source_frame_rates'], assessment['source_dimensions'])
+             for f, assessment in zip(formats, reports)}
     report = {'schema': 'lumenis.interchange-package/v1', 'preflight': reports,
               'loss_accepted': allow_loss, 'source_sha256': {a.asset_id: a.sha256 for a in timeline.assets},
               'file_sha256': {n: hashlib.sha256(b).hexdigest() for n, b in files.items()}}
@@ -445,7 +471,10 @@ def import_interchange(data: bytes, *, format: str, assets, media_refs: Mapping[
             raise ValueError()
         project = projects[0]; sequence = project.find('sequence'); spine = sequence.find('spine')
         fmt = formats[sequence.get('format')]
-        ratio = str(Fraction(int(fmt.get('width')), int(fmt.get('height')))).replace('/', ':')
+        width, height = int(fmt.get('width')), int(fmt.get('height'))
+        if width <= 0 or height <= 0:
+            raise ValueError()
+        ratio = str(Fraction(width, height)).replace('/', ':')
         if ratio == '1': ratio = '1:1'
         anchor = spine.find('gap')
         identities = sequence.find("./metadata/md[@key='com.lumenis.track-identities']")

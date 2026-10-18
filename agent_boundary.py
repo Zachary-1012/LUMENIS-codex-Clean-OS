@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import re
 import time
+from threading import RLock
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone, timedelta
 from enum import Enum
@@ -59,6 +60,7 @@ class ApprovalStatus(str, Enum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     EXPIRED = "EXPIRED"
+    CONSUMED = "CONSUMED"
 
 
 ROLE_DEFAULT_PERMISSIONS: Dict[AgentRole, Set[Permission]] = {
@@ -289,6 +291,7 @@ class ApprovalManager:
     def __init__(self, *, ttl_minutes: int = 30) -> None:
         self._requests: Dict[str, ApprovalRequest] = {}
         self._ttl = ttl_minutes
+        self._lock = RLock()
 
     def request(
         self,
@@ -311,39 +314,70 @@ class ApprovalManager:
             tool_name=tool_name,
             reason=reason,
             params_hash=params_hash,
+            expires_at=(datetime.now(timezone.utc) + timedelta(minutes=self._ttl)).isoformat(),
         )
-        self._requests[request_id] = req
+        with self._lock:
+            self._requests[request_id] = req
         return req
 
     def approve(self, request_id: str, *, approver: str) -> Dict[str, Any]:
-        req = self._requests.get(request_id)
-        if req is None:
-            return {"ok": False, "error": "request not found"}
-        if self._is_expired(req):
-            req.status = ApprovalStatus.EXPIRED
-            return {"ok": False, "error": "request expired"}
-        req.status = ApprovalStatus.APPROVED
-        req.decided_at = datetime.now(timezone.utc).isoformat()
-        req.decided_by = approver
-        return {"ok": True, "request_id": request_id, "status": "APPROVED"}
+        with self._lock:
+            req = self._requests.get(request_id)
+            if req is None:
+                return {"ok": False, "error": "request not found"}
+            if req.status in {ApprovalStatus.REJECTED, ApprovalStatus.EXPIRED, ApprovalStatus.CONSUMED}:
+                return {"ok": False, "error": "request is terminal"}
+            if self._is_expired(req):
+                req.status = ApprovalStatus.EXPIRED
+                return {"ok": False, "error": "request expired"}
+            req.status = ApprovalStatus.APPROVED
+            req.decided_at = datetime.now(timezone.utc).isoformat()
+            req.decided_by = approver
+            return {"ok": True, "request_id": request_id, "status": "APPROVED"}
 
     def reject(self, request_id: str, *, approver: str, reason: str = "") -> Dict[str, Any]:
-        req = self._requests.get(request_id)
-        if req is None:
-            return {"ok": False, "error": "request not found"}
-        req.status = ApprovalStatus.REJECTED
-        req.decided_at = datetime.now(timezone.utc).isoformat()
-        req.decided_by = approver
-        return {"ok": True, "request_id": request_id, "status": "REJECTED", "reason": reason}
+        with self._lock:
+            req = self._requests.get(request_id)
+            if req is None:
+                return {"ok": False, "error": "request not found"}
+            if req.status == ApprovalStatus.CONSUMED:
+                return {"ok": False, "error": "request already consumed"}
+            req.status = ApprovalStatus.REJECTED
+            req.decided_at = datetime.now(timezone.utc).isoformat()
+            req.decided_by = approver
+            return {"ok": True, "request_id": request_id, "status": "REJECTED", "reason": reason}
 
     def is_approved(self, request_id: str) -> bool:
-        req = self._requests.get(request_id)
-        if req is None:
-            return False
-        if self._is_expired(req):
-            req.status = ApprovalStatus.EXPIRED
-            return False
-        return req.status == ApprovalStatus.APPROVED
+        with self._lock:
+            req = self._requests.get(request_id)
+            if req is None:
+                return False
+            if self._is_expired(req):
+                req.status = ApprovalStatus.EXPIRED
+                return False
+            return req.status == ApprovalStatus.APPROVED
+
+    def consume(
+        self, request_id: str, identity: AgentIdentity, action: str, *,
+        tool_name: Optional[str] = None, params: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Claim one exact grant before invoking an executor, including failed calls.
+
+        Like SYSTEM Permission's consume_user_api_approval, binding validation
+        and single-use consumption share a lock; idempotency expiry cannot
+        revive a spent grant. This legacy in-memory API is not an identity
+        authenticator or a replacement for the product Permission owner.
+        """
+        params_hash = hashlib.sha256(str(sorted((params or {}).items())).encode()).hexdigest()[:16]
+        with self._lock:
+            req = self._requests.get(request_id)
+            if not self.is_approved(request_id):
+                return False
+            if (req.agent_id != identity.agent_id or req.action != action
+                    or req.tool_name != tool_name or req.params_hash != params_hash):
+                return False
+            req.status = ApprovalStatus.CONSUMED
+            return True
 
     def get(self, request_id: str) -> Optional[ApprovalRequest]:
         return self._requests.get(request_id)
@@ -366,26 +400,31 @@ class IdempotencyGuard:
     def __init__(self, *, window_seconds: int = 300) -> None:
         self._seen: Dict[str, float] = {}
         self._window = window_seconds
+        self._lock = RLock()
 
     def _key(self, agent_id: str, action: str, params: Optional[Dict[str, Any]]) -> str:
         params_str = str(sorted((params or {}).items()))
         return hashlib.sha256(f"{agent_id}:{action}:{params_str}".encode()).hexdigest()[:16]
 
-    def check(self, agent_id: str, action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        key = self._key(agent_id, action, params)
-        now = time.time()
-        last = self._seen.get(key)
-        if last is not None and (now - last) < self._window:
-            return {"duplicate": True, "key": key, "last_seen": last}
-        self._seen[key] = now
-        return {"duplicate": False, "key": key, "last_seen": last}
+    def check(self, agent_id: str, action: str, params: Optional[Dict[str, Any]] = None,
+              *, record: bool = True) -> Dict[str, Any]:
+        with self._lock:
+            key = self._key(agent_id, action, params)
+            now = time.time()
+            last = self._seen.get(key)
+            if last is not None and (now - last) < self._window:
+                return {"duplicate": True, "key": key, "last_seen": last}
+            if record:
+                self._seen[key] = now
+            return {"duplicate": False, "key": key, "last_seen": last}
 
     def cleanup(self) -> int:
-        now = time.time()
-        expired = [k for k, t in self._seen.items() if (now - t) >= self._window]
-        for k in expired:
-            del self._seen[k]
-        return len(expired)
+        with self._lock:
+            now = time.time()
+            expired = [k for k, t in self._seen.items() if (now - t) >= self._window]
+            for k in expired:
+                del self._seen[k]
+            return len(expired)
 
 
 class AgentBoundary:
@@ -445,6 +484,13 @@ class AgentBoundary:
         params: Optional[Dict[str, Any]] = None,
         description: str = "",
     ) -> Dict[str, Any]:
+        fw = self.firewall.check(
+            identity, action, tool_name=tool_name, params=params, description=description,
+        )
+        if fw["decision"] == ActionDecision.REQUIRE_APPROVAL.value:
+            # A permission preview is not an executed operation.
+            fw["idempotency_key"] = self.idempotency._key(identity.agent_id, action, params)
+            return fw
         idem = self.idempotency.check(identity.agent_id, action, params)
         if idem["duplicate"]:
             return {
@@ -455,9 +501,6 @@ class AgentBoundary:
                 "matched_rule": "idempotency",
                 "idempotency_key": idem["key"],
             }
-        fw = self.firewall.check(
-            identity, action, tool_name=tool_name, params=params, description=description,
-        )
         fw["idempotency_key"] = idem["key"]
         return fw
 
@@ -485,18 +528,35 @@ class AgentBoundary:
         approval_request_id: Optional[str] = None,
         description: str = "",
     ) -> Dict[str, Any]:
-        check = self.check_action(
+        check = self.firewall.check(
             identity, action, tool_name=tool_name, params=params, description=description,
         )
         if check["decision"] == ActionDecision.DENY.value:
             return {"executed": False, "reason": check["reason"], "check": check}
-        if check["decision"] == ActionDecision.REQUIRE_APPROVAL.value:
-            if not approval_request_id or not self.approvals.is_approved(approval_request_id):
+        # Admission is atomic across duplicate detection, exact grant
+        # consumption and reservation. Do not spend a grant on a duplicate;
+        # do not reserve an operation for an invalid grant. Executors run
+        # outside the lock, after the single-use grant is irrevocably claimed.
+        with self.idempotency._lock:
+            idem = self.idempotency.check(identity.agent_id, action, params, record=False)
+            check["idempotency_key"] = idem["key"]
+            if idem["duplicate"]:
                 return {
                     "executed": False,
-                    "reason": "requires human approval (none provided or not approved)",
-                    "check": check,
+                    "reason": f"duplicate operation within {self.idempotency._window}s window",
+                    "check": {**check, "decision": ActionDecision.DENY.value,
+                              "matched_rule": "idempotency"},
                 }
+            if check["decision"] == ActionDecision.REQUIRE_APPROVAL.value:
+                if not approval_request_id or not self.approvals.consume(
+                    approval_request_id, identity, action, tool_name=tool_name, params=params,
+                ):
+                    return {
+                        "executed": False,
+                        "reason": "requires human approval (missing, mismatched, expired, revoked or consumed)",
+                        "check": check,
+                    }
+            self.idempotency.check(identity.agent_id, action, params)
         try:
             result = executor()
             return {"executed": True, "result": result, "check": check}

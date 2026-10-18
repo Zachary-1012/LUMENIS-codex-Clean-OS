@@ -263,7 +263,7 @@ def _current_binding(task_id, skill_id):
             'implementation_revision': expected, 'available': True}
 
 
-def _invoke_local_tool(task_id, skill_id, **inputs):
+def _invoke_local_tool(task_id, skill_id, *, _source_free=False, **inputs):
     from ai_task_engine import get_task_engine
     from account.skills import execute_skill_api
     from lumenis.shared.agents.skills.execution import _BACKGROUND_INPUTS, query_executions, verified_execution_scope
@@ -288,7 +288,7 @@ def _invoke_local_tool(task_id, skill_id, **inputs):
         outcome = execute_skill_api(skill_id, task=task['user_input'], input_payload=inputs,
             action_type='READ', user_id=context['actor_id'], product=context['product'], _execution_id=execution_id,
             _agent_task_id=task_id, scope=context['scope'] if context['actor_id'] is not None else None,
-            _workspace_principal=context['actor'] if context['actor_id'] is None else None)
+            _workspace_principal=context['actor'] if context['actor_id'] is None else None, _local_only=_source_free)
     except Exception:
         if context['actor_id'] is None:
             raise

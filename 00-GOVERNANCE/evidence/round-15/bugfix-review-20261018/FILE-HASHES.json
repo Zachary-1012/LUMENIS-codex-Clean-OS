@@ -80,7 +80,8 @@
         {
           "path": "tests/test_kos_legacy_input_compatibility.py",
           "before_sha256": null,
-          "after_sha256": "be5222f1df0bd221bc18eb604bff6a87053a4e6d94d22b7d4969024649fcbbef"
+          "after_sha256": "be5222f1df0bd221bc18eb604bff6a87053a4e6d94d22b7d4969024649fcbbef",
+          "published_path": "tests/test_kos_input_compatibility.py"
         },
         {
           "path": "tests/test_kos_execution_source_atomicity.py",
@@ -396,11 +397,200 @@
           "after_sha256": "acfbae243f6e6e01bbb20fd6acb6fd458a1bea8ad868d975ecfe4a1bd9f95023"
         }
       ]
+    },
+    {
+      "id": "approval-compatibility",
+      "patch_sha256": "d65bb41443981a061667f358172e59c798d4f48dee244d2f0b3ff3cfc3318557",
+      "hash_scope": "Exact package before/after; prior groups retain their historical stage hashes; not a self-referential final manifest.",
+      "files": [
+        {
+          "path": "agent_boundary.py",
+          "before_sha256": "796e6b061d1cca983db18a5bd6e0ac1f45734c2adae73fb30626822c39fe49d8",
+          "after_sha256": "e618affe99f146b35b54534092af933a5a382e5558178357ca92876ed7aaea3f"
+        },
+        {
+          "path": "tests/test_skill_agent_boundary.py",
+          "before_sha256": "39f6d6c90ca3823d63d13b8169f28388274b4a755bf434c7c57773964ed41ea6",
+          "after_sha256": "68b3aada7a740f67b723e2ce20c9810dde16deff6d2a34e9d864f2e651d6a4e3"
+        }
+      ]
+    },
+    {
+      "id": "skill-api-source-authorization",
+      "patch_sha256": "89c763af7785895f0d67f7c73e0badc97da58c4381f9c1d2e94a6de06754b80d",
+      "hash_scope": "Exact package before/after; prior groups retain their historical stage hashes; not a self-referential final manifest.",
+      "files": [
+        {
+          "path": "account/skills.py",
+          "before_sha256": "ffb68cd31cfc2bdc8567d4f5d4f02638087e5da6f8de441f4c78757f15d69143",
+          "after_sha256": "cb7a76c667552994a144416aa0e99987ce8a03d1457375b85aaef95a7e7113f6"
+        },
+        {
+          "path": "agent_runtime/task_binding.py",
+          "before_sha256": "152bdea331f7a16ae0c3abe5f352ec8c4f79f14fce7e73a9a85fff93e7d830b7",
+          "after_sha256": "7c99ef64456794d6d3c9d7fa78ddee038604f173f271ea296a7dc33e5431ae95"
+        },
+        {
+          "path": "lumenis/shared/agents/skills/execution.py",
+          "before_sha256": "a9fbeb7f9e13fb375b36c2d1ba52cd80f6fe3cd39d0afa82c28d85e0165cb672",
+          "after_sha256": "0ed9e5e94728e8cc540e9c5173cce6daf3c56e4fe23e720ec3190e46c5c26747"
+        },
+        {
+          "path": "lumenis_app_api.py",
+          "before_sha256": "7db5d28d312694aa171c04ef6dcd4c117ec4e116a79fa2279c3b8efb6060443d",
+          "after_sha256": "306f499bfdc0105ea2ad61b53e04fed413c5bde8facb7954a476d02f74757ce3"
+        },
+        {
+          "path": "tests/test_lumenis_skill_invoke.py",
+          "before_sha256": "935e264932cee8c5b4b13ed38b44285237d557c85f8b1ff436477c212bc41c52",
+          "after_sha256": "d50ebd6d9365cf228ea95d63c55af11e43c1dd2c2074018df4c5f6cee8c1ab5f"
+        },
+        {
+          "path": "tests/test_skill_api_authorization.py",
+          "before_sha256": null,
+          "after_sha256": "30970fee8331574fe56c7fbfd4e5bf8698867b9a72c627700e77cf9302a9407d"
+        }
+      ]
+    },
+    {
+      "id": "runtime-fault-diagnostics",
+      "patch_sha256": "7443612f372d55c207d9cf1f98c9d53aeab829eb4abf1882f646b676ed96e21e",
+      "hash_scope": "Exact package before/after, historical stages unchanged",
+      "files": [
+        {
+          "path": "app.py",
+          "before_sha256": "5425e740f13ebae5122de78451a6607d0fed8408bd8e9611d7f1e909c538d39e",
+          "after_sha256": "8edbc4fb1a6c0d3694e6916cedaedfb774dfa18329215733512de76baff146e3"
+        },
+        {
+          "path": "lumenis/system/runtime/fault_diagnostics.py",
+          "before_sha256": null,
+          "after_sha256": "1fc53aa83d45b1b85d9e806609d8b8c5c82f84a72f57d050a9e32382560a08d0"
+        },
+        {
+          "path": "tests/test_fault_diagnostics.py",
+          "before_sha256": null,
+          "after_sha256": "8d94feb8cb7a06470d0a0556c86bac329f2a3d584558d0213f13355a14369c52"
+        }
+      ]
+    },
+    {
+      "id": "platform-observation-replay",
+      "patch_sha256": "efb6795ca0236729d10fed6b955195ab89e2bf8b6e538cfcfd902ca28eab2890",
+      "hash_scope": "Exact package stage; historical package hashes preserved unchanged",
+      "files": [
+        {
+          "path": "lumenis/shared/database/platform_content.py",
+          "before_sha256": "c78d33aab0f7c1bf84a4aa99e17159291cde94f0a800c49b155adca30ae91ac8",
+          "round1_sha256": "544998012871fc2a4d665c9a6a08678d59ae52fdbf08f726acd5615e0c051c45",
+          "after_sha256": "e19f5bcb018ac64e8bc3b85425f825a6240aa6470c30022c09b00b50de64d28a"
+        },
+        {
+          "path": "tests/test_platform_capture_semantic_replay.py",
+          "before_sha256": null,
+          "round1_sha256": "8b7ab85233427a7c0093967089abcfca327e68c11de3c885040fc0cc11fcfe32",
+          "after_sha256": "dc9d2e921d2bce3b6667fd9fafea2451fd8d2e56be1ff74fd2f0dded9799042a"
+        }
+      ]
+    },
+    {
+      "id": "timeline-interchange-inputs",
+      "patch_sha256": "d237ef4a033f6f1a3ce495298b04b9a96917c5971d74345716e70a9fb9f37072",
+      "hash_scope": "Exact package stage; historical package hashes preserved unchanged",
+      "files": [
+        {
+          "path": "lumenis/shared/content_creation/timeline_interchange.py",
+          "before_sha256": "36e398b7b7219ec2304f3391fa1860298dafdc308174c501c7841069805965d7",
+          "after_sha256": "68705bc9f04584acd1e7e9e11537215020d4bf6405404162d937656b0f53d974"
+        },
+        {
+          "path": "tests/test_timeline_interchange_review_regressions.py",
+          "before_sha256": null,
+          "after_sha256": "46e3b40844508b40accc56e70d22e409031da55882cb857e25f94bc3548fa198"
+        }
+      ]
     }
   ],
   "final_integrated_source_manifest": {
     "status": "PENDING",
     "sha256": null,
     "commit_sha": null
+  },
+  "publication_path_normalization": {
+    "reason": "Tracked publication paths aligned with the unchanged Only-One path contract; historical source locators and original contents remain intact.",
+    "base_commit": "57e41b4ff276f03ce9b2efe874768c5defb2d413",
+    "renames": [
+      {
+        "original_published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/frontend-adoption-receipt.json",
+        "published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/surface-adoption-receipt.json",
+        "unchanged_sha256": "f342ace59f8e315574c10392a202c854d2fc974c3660f5c754c152db7541250a"
+      },
+      {
+        "original_published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/frontend-final-text-validation.json",
+        "published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/surface-final-text-validation.json",
+        "unchanged_sha256": "112082e7c1bc3afe8067e0df989d30fdb47e3f3f0cd943f348ba8f376b0e3fe0"
+      },
+      {
+        "original_published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/frontend-source-validation/CHANGE_OVERVIEW_v010.json",
+        "published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/surface-source-validation/CHANGE_OVERVIEW_v010.json",
+        "unchanged_sha256": "0981defe8313beadad0dee6a49dbd09dc78f33dff35dbafc2065b43ac10b6ee5"
+      },
+      {
+        "original_published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/frontend-source-validation/NEW_SOURCE_VALIDATION_v010.json",
+        "published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/surface-source-validation/NEW_SOURCE_VALIDATION_v010.json",
+        "unchanged_sha256": "84a51b7a3d3ee1a11b29cea7debdce81c42ab84b05468bf1753fa07e2fc8dd64"
+      },
+      {
+        "original_published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/frontend-source-validation/ORDERED_PARAGRAPH_AND_FIGURE_PROOF_v010.json",
+        "published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/surface-source-validation/ORDERED_PARAGRAPH_AND_FIGURE_PROOF_v010.json",
+        "unchanged_sha256": "3f0691c5b6676b98e3cc0f5502921296f23cba6a7de38fd66d8a6b6242457574"
+      },
+      {
+        "original_published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/frontend-source-validation/ORIGINAL_PARAGRAPH_RESOLUTIONS_v010.json",
+        "published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/surface-source-validation/ORIGINAL_PARAGRAPH_RESOLUTIONS_v010.json",
+        "unchanged_sha256": "edc4d0d4bb00339463e2cb2004665ab29ae44d848d2ee396a64d5d555e3e77d5"
+      },
+      {
+        "original_published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/frontend-source-validation/PRESERVATION_CHECK_v010.json",
+        "published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/surface-source-validation/PRESERVATION_CHECK_v010.json",
+        "unchanged_sha256": "9ca3810dcb91f5079ec18c0e3b002d16c249237cb5201d7cc298f25e31126c1a"
+      },
+      {
+        "original_published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/frontend-source-validation/V009_CONTENT_CONTINUITY_v010.json",
+        "published_path": "00-GOVERNANCE/evidence/round-15/document-consolidation-20261018/surface-source-validation/V009_CONTENT_CONTINUITY_v010.json",
+        "unchanged_sha256": "bee0ed8b9e8e3dcd020585952a66892cb2e82591c35014fc83629ba7741c9a99"
+      },
+      {
+        "original_published_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json",
+        "published_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/surface_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json",
+        "unchanged_sha256": "45d44e1300ead37eb8b8bce91c0dda3ab0d24cbf1024ddcb47c233c14e03dff8"
+      },
+      {
+        "original_published_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PAUSE_RECEIPT.json",
+        "published_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/surface_pause_20261018T0538Z/PAUSE_RECEIPT.json",
+        "unchanged_sha256": "985e751ee57c7cf41fd4e7de3806bed76741b165bdeb668d4a3054f34c4246f6"
+      },
+      {
+        "original_published_path": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/frontend-markdown-validation.json",
+        "published_path": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/surface-markdown-validation.json",
+        "unchanged_sha256": "4139fb0c7abd4997cc62aa9a8e175bd9c3d853be75b71fa1f2a6c39c7d888b21"
+      },
+      {
+        "original_published_path": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/frontend-rule-map.json",
+        "published_path": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/surface-rule-map.json",
+        "unchanged_sha256": "019821932503ecbc078e8c864345065b83dc3849a281372b3c85c36bde38f5fd"
+      },
+      {
+        "original_published_path": "tests/test_kos_legacy_input_compatibility.py",
+        "published_path": "tests/test_kos_input_compatibility.py",
+        "unchanged_sha256": "be5222f1df0bd221bc18eb604bff6a87053a4e6d94d22b7d4969024649fcbbef"
+      }
+    ],
+    "test_import_update": {
+      "path": "tests/test_kos_execution_source_atomicity.py",
+      "before_sha256": "55b6cf69c1d2454fc9a06fa7f114e24fed599041861d881aae3464c93c07f226",
+      "after_sha256": "c34a6117d594a7716521847bbfff448117a12fba25acde2b6fac56b04cfaf00a"
+    },
+    "scope": "Twelve JSON files and one test module moved byte-for-byte; only the importing test module changes its module path. No production behavior, test cases, assertions, gates or budgets changed."
   }
 }

@@ -246,10 +246,11 @@
     "reason": "UTF-8 without BOM; LF; terminal newline"
   },
   {
-    "path": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/frontend-rule-map.json",
+    "path": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/surface-rule-map.json",
     "before_sha256": "2c3af7ade2b668a679db001da4bf8e9707df2a1f8f6598152484eaf27a09377d",
     "after_sha256": "019821932503ecbc078e8c864345065b83dc3849a281372b3c85c36bde38f5fd",
-    "reason": "UTF-8 without BOM; LF; terminal newline"
+    "reason": "UTF-8 without BOM; LF; terminal newline",
+    "original_published_path": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/frontend-rule-map.json"
   },
   {
     "path": "research/intelligence/12_tests_regression_memory/research-20261018/real_public_validation_research_20261018/VALIDATION_RECEIPT.json",
@@ -984,10 +985,11 @@
     "reason": "UTF-8 without BOM; LF; terminal newline"
   },
   {
-    "path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json",
+    "path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/surface_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json",
     "before_sha256": "de4d689ce13038b9d16b3d03055af0f69b3b1b1208d508d755f06506d23a3439",
     "after_sha256": "6923b1f55837b747c6406f009ff578fc304220a068920448cac0d907c2c62dad",
-    "reason": "UTF-8 without BOM; LF; terminal newline"
+    "reason": "UTF-8 without BOM; LF; terminal newline",
+    "original_published_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json"
   },
   {
     "path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/results/sourcebrief-prepare.json",

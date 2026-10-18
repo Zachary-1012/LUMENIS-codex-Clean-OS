@@ -340,14 +340,14 @@ def get_skill_info(skill_id: str) -> dict:
 def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
                       action_type: str = "ANALYZE", user_id: int = None,
                       user_role: str = "user", product: str = None, *,
-                      _execution_id=None, _background=False, _agent_task_id=None, _workspace_principal=None, scope=None) -> dict:
+                      _execution_id=None, _background=False, _agent_task_id=None, _workspace_principal=None, scope=None, _local_only=False) -> dict:
     """执行 Skill（走完整执行链：Permission→Firewall→Effect Fence→Execute→Evidence→Evaluation→Trace）"""
     from lumenis.shared.agents.skills.execution import (
         run_execution_chain, ActionType, SkillRuntimeInfo, registered_background_handler,
     )
     if _workspace_principal is not None:
         return _execute_local_agent_skill(skill_id, task, input_payload or {}, action_type,
-            _execution_id, _agent_task_id, _workspace_principal)
+            _execution_id, _agent_task_id, _workspace_principal, local_only=_local_only)
     # 获取 Skill 信息用于权限检查
     info = get_skill_info(skill_id)
     if not info:
@@ -420,6 +420,20 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
     except Exception:
         return {"success": False, "error": "product scope permission unavailable", "code": "PRODUCT_SCOPE_UNAVAILABLE"}
 
+    if _local_only:
+        from lumenis.shared.agents.skills.execution import _BACKGROUND_INPUTS, validate_source_free_input
+        if (skill_id not in _BACKGROUND_INPUTS or (input_payload is not None and not isinstance(input_payload, dict))
+                or set(input_payload or {}) - _BACKGROUND_INPUTS[skill_id]
+                or at_name not in {"READ", "ANALYZE"}
+                or str(info.get("runtime") or "builtin").lower() != "builtin"
+                or str(info.get("source") or "builtin").lower() != "builtin"):
+            return {"success": False, "code": "SOURCE_READER_UNBOUND", "error": "Source reader is not bound"}
+        try:
+            validate_source_free_input(skill_id, input_payload or {})
+        except PermissionError:
+            return {"success": False, "code": "SOURCE_READER_UNBOUND", "error": "Source reader is not bound"}
+    from lumenis.shared.agents.skills.execution import _background_binding
+    local_binding = _background_binding(info)
     runtime_config = dict(info.get("config") or {})
     if "registry_sha256" in info:
         runtime_config["registry_sha256"] = info["registry_sha256"]
@@ -488,7 +502,7 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
             execution_id=_execution_id,
             request_context=({"skill_scope": scope, "agent_task_id": _agent_task_id} if agent_context is not None
                              else {"skill_scope": scope} if scope is not None else None),
-            handler=registered_background_handler(skill_id) if _execution_id is not None else None,
+            handler=registered_background_handler(skill_id) if _execution_id is not None or _local_only else None,
         )
     except Exception:
         if scope is None:
@@ -498,6 +512,24 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
         return {"success": False, "execution_id": _execution_id, "status": "failed",
                 "skill_id": skill_id, "result": None, "evidence": None,
                 "evaluation": None, "error": "SKILL_RESULT_NOT_AUTHORIZED"}
+
+    if _local_only and ctx.status.value == "completed":
+        from lumenis.shared.agents.skills.execution import _record_source_free_execution, read_source_free_execution, query_executions
+        try:
+            if _background_binding(get_skill_info(skill_id)) != local_binding:
+                raise PermissionError("SKILL_PRODUCER_CHANGED")
+            _record_source_free_execution(ctx, registry_binding=local_binding)
+            rows = query_executions(execution_id=ctx.execution_id, limit=1, strict=True)
+            if not rows or read_source_free_execution(rows[0], {"id": user_id}) is None:
+                raise PermissionError("SKILL_PRODUCER_READ_DENIED")
+            # SYSTEM has no domain scope receipt. It still returns exactly the
+            # sanitized, producer-signed durable projection, never raw memory.
+            ctx.execute_result = json.loads(rows[0]['output_json'])
+            ctx.evidence = json.loads(rows[0]['evidence_json'] or 'null')
+            ctx.evaluation = json.loads(rows[0]['evaluation_json'] or 'null')
+        except Exception:
+            return {"success": False, "execution_id": ctx.execution_id, "status": "failed",
+                    "result": None, "error": "SOURCE_READER_UNBOUND"}
 
     # Scoped outputs cross this API boundary only after durable signed proof and
     # live read authorization. A failed receipt must not leak handler data through
@@ -607,7 +639,7 @@ def recover_skill_metadata_candidate(skill_id: str, evidence_ref: str):
     return recover(skill_id, evidence_ref)
 
 
-def _execute_local_agent_skill(skill_id, task, inputs, action_type, execution_id, task_id, principal):
+def _execute_local_agent_skill(skill_id, task, inputs, action_type, execution_id, task_id, principal, *, local_only=False):
     """Only the original server Agent task may invoke five bounded local tools."""
     from agent_runtime.task_binding import authorized_context, _current_binding, _digest
     from ai_task_engine import get_task_engine
@@ -621,10 +653,31 @@ def _execute_local_agent_skill(skill_id, task, inputs, action_type, execution_id
             or set(inputs) - _BACKGROUND_INPUTS[skill_id] or action_type != 'READ'
             or execution_id != expected or original['status'] == 'cancelled'):
         raise PermissionError('LOCAL_AGENT_SKILL_BINDING_INVALID')
+    from lumenis.shared.agents.skills.execution import (_background_binding, _record_source_free_execution,
+                                                        validate_source_free_input)
+    local_info = get_skill_info(skill_id)
+    if local_only:
+        validate_source_free_input(skill_id, inputs)
+        if (str(local_info.get('runtime') or 'builtin').lower() != 'builtin'
+                or str(local_info.get('source') or 'builtin').lower() != 'builtin'):
+            raise PermissionError('SOURCE_READER_UNBOUND')
+    local_binding = _background_binding(local_info)
     ctx = run_execution_chain(skill_id=skill_id, task=original['user_input'], input_payload=inputs,
         action_type=ActionType.READ, user_id=None, user_role='user', product=context['product'],
         domain=context['domain_id'], permission_role=context['role'],
         request_context={'agent_task_id': task_id}, workspace_principal=principal,
         execution_id=execution_id, handler=registered_background_handler(skill_id))
+    if local_only and ctx.status.value == 'completed':
+        _current_binding(task_id, skill_id)
+        if _background_binding(get_skill_info(skill_id)) != local_binding:
+            raise PermissionError('SKILL_PRODUCER_CHANGED')
+        _record_source_free_execution(ctx, registry_binding=local_binding)
+        from lumenis.shared.agents.skills.execution import query_executions, read_source_free_execution
+        rows = query_executions(execution_id=ctx.execution_id, limit=1, strict=True)
+        if not rows or read_source_free_execution(rows[0], principal) is None:
+            raise PermissionError('SKILL_PRODUCER_READ_DENIED')
+        ctx.execute_result = json.loads(rows[0]['output_json'])
+        ctx.evidence = json.loads(rows[0]['evidence_json'] or 'null')
+        ctx.evaluation = json.loads(rows[0]['evaluation_json'] or 'null')
     return {'success': ctx.status.value == 'completed', 'execution_id': ctx.execution_id,
             'status': ctx.status.value, 'result': ctx.execute_result, 'error': ctx.error}

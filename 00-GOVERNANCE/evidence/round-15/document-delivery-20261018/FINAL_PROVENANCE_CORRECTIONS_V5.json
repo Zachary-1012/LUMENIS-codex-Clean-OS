@@ -6,16 +6,18 @@
     "replacement": "4dab98ed; recorded baseline reference, not independently reconciled by this receipt"
   },
   {
-    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json",
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/surface_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json",
     "pointer": "/reason",
     "old_value_sha256": "751beb77584d0245f659b21fa14757eb1d6cbc32bd36442c55d24e8a70ddabf4",
-    "replacement": "Frontend/parser/model changes are excluded from this backend-only candidate and require separate local implementation review."
+    "replacement": "Frontend/parser/model changes are excluded from this backend-only candidate and require separate local implementation review.",
+    "original_published_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json"
   },
   {
-    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PAUSE_RECEIPT.json",
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/surface_pause_20261018T0538Z/PAUSE_RECEIPT.json",
     "pointer": "/next_step",
     "old_value_sha256": "f7c60090242d34c772c5972b2089153a436317efb156a19088dbd0963dd803da",
-    "replacement": "Review the retained partial UI diff separately. Paused UI files are excluded from backend-only accepted source unless explicitly classified as unverified retained work."
+    "replacement": "Review the retained partial UI diff separately. Paused UI files are excluded from backend-only accepted source unless explicitly classified as unverified retained work.",
+    "original_published_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PAUSE_RECEIPT.json"
   },
   {
     "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/ARCHIVE_RECEIPT.json",

@@ -50,12 +50,18 @@
     {
       "relative_path": "research/frontend-markdown-validation.json",
       "bytes": 2626,
-      "sha256": "c44e897d0670cf8d012f2ef1538663123226011fa73c9aadd653eb8350baa834"
+      "sha256": "c44e897d0670cf8d012f2ef1538663123226011fa73c9aadd653eb8350baa834",
+      "published_relative_path": "research/surface-markdown-validation.json",
+      "published_sha256": "4139fb0c7abd4997cc62aa9a8e175bd9c3d853be75b71fa1f2a6c39c7d888b21",
+      "published_bytes": 2613
     },
     {
       "relative_path": "research/frontend-rule-map.json",
       "bytes": 1578,
-      "sha256": "2c3af7ade2b668a679db001da4bf8e9707df2a1f8f6598152484eaf27a09377d"
+      "sha256": "2c3af7ade2b668a679db001da4bf8e9707df2a1f8f6598152484eaf27a09377d",
+      "published_relative_path": "research/surface-rule-map.json",
+      "published_sha256": "019821932503ecbc078e8c864345065b83dc3849a281372b3c85c36bde38f5fd",
+      "published_bytes": 1579
     },
     {
       "relative_path": "research/historical-candidate-locator.json",
@@ -75,7 +81,10 @@
     {
       "relative_path": "research/reconciliation.md",
       "bytes": 16339,
-      "sha256": "1816ded3a2607e15d3467fc5296dc94a293be85396455a1b4c76548fb46985da"
+      "sha256": "1816ded3a2607e15d3467fc5296dc94a293be85396455a1b4c76548fb46985da",
+      "published_relative_path": "research/reconciliation.md",
+      "published_sha256": "6c678d9575d8e1d576b77b28903e9e247bf770dca8ba3555de2d7f113e2360ff",
+      "published_bytes": 16092
     },
     {
       "relative_path": "research/v010_pdf_pages.json",

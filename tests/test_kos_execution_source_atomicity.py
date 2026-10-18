@@ -3,7 +3,7 @@ import json
 import pytest
 
 from tests.test_saved_document_workflow import workspace
-from tests.test_kos_legacy_input_compatibility import kos_compat, post
+from tests.test_kos_input_compatibility import kos_compat, post
 
 
 def draft(kos_compat, *, author='race-author', key='source-atomic-draft'):

@@ -338,11 +338,10 @@ import traceback as _fault_tb
 try:
     _LOG_DIR = _startup_log_dir()
     os.makedirs(_LOG_DIR, exist_ok=True)
-    _fault_fh = open(os.path.join(_LOG_DIR, 'faulthandler.log'), 'a', encoding='utf-8')
-    _faulthandler.enable(file=_fault_fh, all_threads=True)
-    # Bounded periodic all-thread dump: when the supervisor later kills a
-    # "false alive" Core, the traceback file shows what the threads were doing.
-    _faulthandler.dump_traceback_later(120, repeat=True, file=_fault_fh)
+    from lumenis.system.runtime.fault_diagnostics import install_fault_diagnostics
+    # Keep fatal handling and periodic snapshots without CPython's unsafe
+    # native watchdog walking concurrently changing frames (cpython#116008).
+    _fault_fh = install_fault_diagnostics(os.path.join(_LOG_DIR, 'faulthandler.log'))
 except Exception as _fault_e:
     print('[FaultHandler] enable failed:', _fault_e)
 

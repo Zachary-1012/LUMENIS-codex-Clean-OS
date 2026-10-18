@@ -1411,4 +1411,133 @@ def registered_background_handler(skill_id):
         raise ValueError('BACKGROUND_HANDLER_NOT_ALLOWED')
     # Explicit local dispatch prevents installed OSAI/MCP adapters from changing
     # the execution effects of a queued deterministic request.
-    return lambda ctx: _execute_builtin_local(ctx, None)
+    def run(ctx):
+        if ctx.skill_id != skill_id:
+            raise PermissionError('REGISTERED_HANDLER_BINDING_MISMATCH')
+        return _execute_builtin_local(ctx, None)
+    return run
+
+
+_SOURCE_FREE_HANDLER_VERSION = 'registered-local-input-only-v1'
+
+
+def validate_source_free_input(skill_id, payload):
+    """Typed bounded input for the existing five local handlers; no Source refs."""
+    if (skill_id not in _BACKGROUND_INPUTS or not isinstance(payload, dict)
+            or set(payload) - _BACKGROUND_INPUTS[skill_id]):
+        raise PermissionError('SOURCE_READER_UNBOUND')
+    for key, value in payload.items():
+        if key in {'width', 'height'}:
+            if type(value) is not int or not 1 <= value <= 4096:
+                raise PermissionError('SOURCE_FREE_INPUT_INVALID')
+        elif not isinstance(value, str) or len(value) > 32768:
+            raise PermissionError('SOURCE_FREE_INPUT_INVALID')
+    if len(json.dumps(payload, ensure_ascii=False).encode()) > 65536:
+        raise PermissionError('SOURCE_FREE_INPUT_INVALID')
+
+
+def _record_source_free_execution(ctx, *, registry_binding):
+    """Receipt for the existing bounded local handlers, never arbitrary adapters.
+
+    Called only by the account owner after registered_background_handler ran.
+    This is producer proof in the existing Evidence store, not a scope grant.
+    """
+    from account.models import get_db
+    from lumenis.shared.evidence import store
+    if ctx.status is not ExecutionStatus.COMPLETED:
+        return
+    if (ctx.skill_id not in _BACKGROUND_INPUTS or set(ctx.input_payload) - _BACKGROUND_INPUTS[ctx.skill_id]
+            or ctx.action_type not in (ActionType.READ, ActionType.ANALYZE)):
+        raise PermissionError('SOURCE_READER_UNBOUND')
+    validate_source_free_input(ctx.skill_id, ctx.input_payload)
+    from account.skills import get_skill_info
+    info = get_skill_info(ctx.skill_id)
+    if (str(info.get('runtime') or 'builtin').lower() != 'builtin'
+            or str(info.get('source') or 'builtin').lower() != 'builtin'
+            or _background_binding(info) != registry_binding):
+        raise PermissionError('SOURCE_READER_UNBOUND')
+    store.init_evidence_store()
+    con = get_db()
+    try:
+        store.ensure_evidence_schema(con)
+        row = dict(con.execute('SELECT * FROM skill_executions WHERE execution_id=?',
+                               (ctx.execution_id,)).fetchone())
+        material = {'contract': 'bounded-local-skill-result-v1', 'execution_id': ctx.execution_id,
+            'actor_id': ctx.user_id, 'registry_binding': registry_binding,
+            'trace_sha256': _execution_scope_digest(row),
+            'agent_task_id': (ctx.request_context or {}).get('agent_task_id'),
+            'producer': 'registered_background_handler', 'handler_version': _SOURCE_FREE_HANDLER_VERSION, 'source_use': 'user-input-only'}
+        identifier = store.record_evidence(source='skill_execution_local_producer',
+            feature_id=ctx.execution_id, product=ctx.product, inputs=material,
+            outputs={'result_validation': 'bounded-local-producer'},
+            provider=__name__, version='bounded-local-skill-result-v1', connection=con)
+        receipt = con.execute('SELECT * FROM app_evidence_records WHERE id=?', (identifier,)).fetchone()
+        if not receipt or not store.verify_evidence_record_integrity(receipt):
+            raise PermissionError('SKILL_PRODUCER_RECEIPT_FAILED')
+        con.commit()
+    finally:
+        con.close()
+
+
+def read_source_free_execution(row, actor):
+    """Reopen only producer-proven local outputs under current original owners."""
+    from account.models import get_db
+    from account.skills import get_skill_info
+    from account.authorization import check_dual_domain_permission
+    from lumenis.shared.evidence import store
+    from lumenis.system.security.permission import _is_server_local_workspace_principal
+    try:
+        if row['skill_id'] not in _BACKGROUND_INPUTS or row['status'] != 'completed':
+            return None
+        inputs = json.loads(row.get('input_json') or '{}')
+        if not isinstance(inputs, dict) or set(inputs) - _BACKGROUND_INPUTS[row['skill_id']]:
+            return None
+        validate_source_free_input(row['skill_id'], inputs)
+        con = get_db()
+        try:
+            live = con.execute('SELECT * FROM skill_executions WHERE execution_id=?', (row['execution_id'],)).fetchone()
+            proofs = con.execute("SELECT * FROM app_evidence_records WHERE source='skill_execution_local_producer' AND feature_id=? ORDER BY id DESC", (row['execution_id'],)).fetchall()
+            user = con.execute('SELECT status FROM v4_users WHERE id=?', (row['user_id'],)).fetchone() if row['user_id'] else None
+        finally:
+            con.close()
+        if not live or dict(live) != row:
+            return None
+        proof = next((dict(item) for item in proofs if store.verify_evidence_record_integrity(item)), None)
+        if proof is None or proof['provider'] != __name__ or proof['version'] != 'bounded-local-skill-result-v1':
+            return None
+        material = json.loads(proof['inputs_json'])
+        info = get_skill_info(row['skill_id'])
+        if (material.get('contract') != 'bounded-local-skill-result-v1'
+                or material.get('execution_id') != row['execution_id'] or material.get('actor_id') != row['user_id']
+                or material.get('trace_sha256') != _execution_scope_digest(row)
+                or material.get('producer') != 'registered_background_handler'
+                or material.get('source_use') != 'user-input-only'
+                or material.get('handler_version') != _SOURCE_FREE_HANDLER_VERSION
+                or str(info.get('runtime') or 'builtin').lower() != 'builtin'
+                or str(info.get('source') or 'builtin').lower() != 'builtin'
+                or not info or info.get('status') != 'enabled'
+                or material.get('registry_binding') != _background_binding(info)):
+            return None
+        if row['user_id'] is not None:
+            if (not isinstance(actor, dict) or type(actor.get('id')) is not int
+                    or actor['id'] != row['user_id'] or not user or user['status'] != 'active'
+                    or not check_dual_domain_permission(actor['id'], row['product'], module=row['skill_id'], action='read')):
+                return None
+            if row['product'] != 'SYSTEM' and not verified_execution_scope(row, actor):
+                return None
+        else:
+            if not _is_server_local_workspace_principal(actor):
+                return None
+            from ai_task_engine import get_task_engine
+            from agent_runtime.task_binding import authorized_context, _current_binding, _digest
+            task_id = material.get('agent_task_id')
+            task = get_task_engine().get_task(task_id)
+            context = authorized_context(task, actor)
+            _current_binding(task_id, row['skill_id'])
+            expected = 'agentstep_' + _digest({'task':task_id,'skill':row['skill_id'],'inputs':inputs})[:32]
+            if (context['actor_id'] is not None or row['execution_id'] != expected
+                    or row['task'] != task['user_input'] or row['product'] != context['product']):
+                return None
+        return row
+    except Exception:
+        return None

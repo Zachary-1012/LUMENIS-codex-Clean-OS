@@ -616,8 +616,8 @@
     "source": "local_handoff_received_20261018/RECONCILIATION_MANIFEST.json",
     "original_sha256": "67bee94922c78dce012be05e58e2a585040b35e74f85fb24d03d551ce0e473c9",
     "original_bytes": 2970,
-    "published_sha256": "f75a0f3912235853f7148dbc6613f854e544af630d0c2b59196ecf91ce1b5ad7",
-    "published_bytes": 2971,
+    "published_sha256": "10eed9ceac0714d92c2eb9e794de4bd8d3a023245e025b3b3a2051691387b5fa",
+    "published_bytes": 3555,
     "destination": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/RECONCILIATION_MANIFEST.json",
     "status": "SANITIZED_OR_STANDARDIZED_COPY",
     "redactions": {}
@@ -690,11 +690,12 @@
     "original_bytes": 2626,
     "published_sha256": "4139fb0c7abd4997cc62aa9a8e175bd9c3d853be75b71fa1f2a6c39c7d888b21",
     "published_bytes": 2613,
-    "destination": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/frontend-markdown-validation.json",
+    "destination": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/surface-markdown-validation.json",
     "status": "SANITIZED_OR_STANDARDIZED_COPY",
     "redactions": {
       "workspace_path": 1
-    }
+    },
+    "previous_published_destination": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/frontend-markdown-validation.json"
   },
   {
     "source": "local_handoff_received_20261018/research/frontend-rule-map.json",
@@ -702,9 +703,10 @@
     "original_bytes": 1578,
     "published_sha256": "019821932503ecbc078e8c864345065b83dc3849a281372b3c85c36bde38f5fd",
     "published_bytes": 1579,
-    "destination": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/frontend-rule-map.json",
+    "destination": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/surface-rule-map.json",
     "status": "SANITIZED_OR_STANDARDIZED_COPY",
-    "redactions": {}
+    "redactions": {},
+    "previous_published_destination": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/frontend-rule-map.json"
   },
   {
     "source": "local_handoff_received_20261018/research/historical-candidate-locator.json",
@@ -722,8 +724,8 @@
     "source": "local_handoff_received_20261018/research/reconciliation.md",
     "original_sha256": "1816ded3a2607e15d3467fc5296dc94a293be85396455a1b4c76548fb46985da",
     "original_bytes": 16339,
-    "published_sha256": "77942e6a7e32b0f7d227160a6d6b51d6d25fc603d98f7939590a50d045736774",
-    "published_bytes": 16093,
+    "published_sha256": "6c678d9575d8e1d576b77b28903e9e247bf770dca8ba3555de2d7f113e2360ff",
+    "published_bytes": 16092,
     "destination": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/reconciliation.md",
     "status": "SANITIZED_OR_STANDARDIZED_COPY",
     "redactions": {
@@ -5199,9 +5201,10 @@
     "original_bytes": 859,
     "published_sha256": "45d44e1300ead37eb8b8bce91c0dda3ab0d24cbf1024ddcb47c233c14e03dff8",
     "published_bytes": 904,
-    "destination": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json",
+    "destination": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/surface_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json",
     "status": "SANITIZED_OR_STANDARDIZED_COPY",
-    "redactions": {}
+    "redactions": {},
+    "previous_published_destination": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json"
   },
   {
     "source": "lumenis_development_20261018/frontend_pause_20261018T0538Z/PAUSE_RECEIPT.json",
@@ -5209,11 +5212,12 @@
     "original_bytes": 1555,
     "published_sha256": "985e751ee57c7cf41fd4e7de3806bed76741b165bdeb668d4a3054f34c4246f6",
     "published_bytes": 1506,
-    "destination": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PAUSE_RECEIPT.json",
+    "destination": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/surface_pause_20261018T0538Z/PAUSE_RECEIPT.json",
     "status": "SANITIZED_OR_STANDARDIZED_COPY",
     "redactions": {
       "workspace_path": 1
-    }
+    },
+    "previous_published_destination": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PAUSE_RECEIPT.json"
   },
   {
     "source": "lumenis_development_20261018/nodeids.txt",
