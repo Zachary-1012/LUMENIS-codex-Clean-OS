@@ -777,7 +777,7 @@ class LumenisCoreClient {
       payload: {
         'source_event_id': sourceEventId, 'category': category,
         'request_id': requestId, 'confirm': confirmedResource != null,
-        if (confirmedResource != null) 'confirmed_resource': confirmedResource,
+        'confirmed_resource': ?confirmedResource,
       },
     );
   }
@@ -931,7 +931,7 @@ class LumenisCoreClient {
     }
     final query = Uri(queryParameters: {
       'kind': 'podcast_episode', 'latest_only': 'true', 'limit': '30',
-      if (cursor != null) 'cursor': cursor,
+      'cursor': ?cursor,
     }).query;
     return _request('GET', '/api/experience/saved-work?$query',
       operationContext: domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId),

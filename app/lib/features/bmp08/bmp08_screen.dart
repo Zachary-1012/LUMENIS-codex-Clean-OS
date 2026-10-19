@@ -1965,7 +1965,9 @@ class _SavedPodcastDialogState extends State<_SavedPodcastDialog> {
         if (raw is! Map || raw['artifact'] is! Map || raw['document'] is! Map) throw const FormatException();
         final id = raw['artifact']['artifact_id']; final title = raw['document']['title'];
         if (id is! String || !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(id) || title is! String ||
-            title.trim().isEmpty || raw['document']['kind'] != 'podcast_episode') throw const FormatException();
+            title.trim().isEmpty || raw['document']['kind'] != 'podcast_episode') {
+          throw const FormatException();
+        }
         items.add({'id': id, 'title': title});
       }
       if (!mounted || generation != _generation) return;

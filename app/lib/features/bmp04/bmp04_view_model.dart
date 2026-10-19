@@ -35,7 +35,9 @@ class Bmp04ViewModel extends ChangeNotifier {
 
   Future<bool> previewClassification(int eventId, String category) async {
     if (!canClassify || !bmp04Categories.contains(category) ||
-        !(_snapshot?.curatedEvents.any((event) => event.id == eventId) ?? false)) return false;
+        !(_snapshot?.curatedEvents.any((event) => event.id == eventId) ?? false)) {
+      return false;
+    }
     final original = _snapshot!;
     final displayedEvent = original.curatedEvents.firstWhere((event) => event.id == eventId);
     final generation = ++_generation;

@@ -682,7 +682,9 @@ List<Bmp04CuratedEvent> _eventRows(Object? raw) {
     final evidence = row['evidence_ref'];
     if (id is! int || id <= 0 || title == null || evidence is! String ||
         !RegExp(r'^EV-[1-9][0-9]*$').hasMatch(evidence) ||
-        row['evidence_state'] != 'REFERENCED' || !seen.add(id)) continue;
+        row['evidence_state'] != 'REFERENCED' || !seen.add(id)) {
+      continue;
+    }
     events.add(Bmp04CuratedEvent(id, title, evidence));
   }
   return List.unmodifiable(events);
@@ -701,7 +703,9 @@ List<Bmp04Dashboard> _dashboards(Map<String, dynamic> truth, Bmp04FocusContext f
   final raw = truth['dashboards'];
   if (raw is! List || raw.length != 3 ||
       !const ['READY', 'EMPTY', 'PARTIAL'].contains(truth['classification_state']) ||
-      truth['total_events_semantics'] != 'current_verified_curated_sample_not_population') return const [];
+      truth['total_events_semantics'] != 'current_verified_curated_sample_not_population') {
+    return const [];
+  }
   final result = <Bmp04Dashboard>[];
   final seen = <String>{};
   final classifiedIds = <int>{};
@@ -716,7 +720,9 @@ List<Bmp04Dashboard> _dashboards(Map<String, dynamic> truth, Bmp04FocusContext f
         (total != null && (total is! int || total != observed ||
           truth['event_read_complete'] != true || truth['unclassified_event_count'] != 0 ||
           truth['classification_rejected'] != 0 ||
-          !const ['READY', 'EMPTY'].contains(truth['classification_state'])))) return const [];
+          !const ['READY', 'EMPTY'].contains(truth['classification_state'])))) {
+      return const [];
+    }
     final refs = row['source_refs'];
     if (refs is! List || refs.length != observed) return const [];
     final references = <int, String>{};
@@ -735,7 +741,9 @@ List<Bmp04Dashboard> _dashboards(Map<String, dynamic> truth, Bmp04FocusContext f
           !RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(digest) ||
           scope['domain_id'] != 'zbmp' || scope['product_id'] != 'ZBMP' ||
           scope['global'] != false || _observationText(scope['brand_focus_id']) == null ||
-          (!focus.isGlobal && scope['brand_focus_id'] != focus.brandFocusId)) return const [];
+          (!focus.isGlobal && scope['brand_focus_id'] != focus.brandFocusId)) {
+        return const [];
+      }
       references[id] = 'EV-$evidenceId';
     }
     final events = _eventRows(row['events']);

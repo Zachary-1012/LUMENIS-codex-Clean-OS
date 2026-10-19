@@ -6,8 +6,9 @@ import 'package:lumenis_app/features/system/sys02/sys_system_foundation.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_appearance_controller.dart';
 
 class _Store extends Fake implements SharedPreferencesAsync {
+  _Store({this.fail = false});
   final data = <String, String>{};
-  bool fail = false;
+  final bool fail;
   @override
   Future<String?> getString(String key) async => data[key];
   @override
@@ -37,7 +38,7 @@ void main() {
     c.dispose(); restored.dispose();
   });
   test('save failure is reported and does not forge persistent success', () async {
-    final store = _Store()..fail = true;
+    final store = _Store(fail: true);
     final c = Sys05AppearanceController(storage: store);
     await c.update(waitingTone: WaitingTone.off);
     expect(c.errorKey, 'appearance.saveFailed'); expect(store.data, isEmpty);

@@ -1044,7 +1044,7 @@ class _WaitingPaperState extends State<_WaitingPaper>
     WidgetsBinding.instance.addObserver(this);
   }
   void _sync() {
-    if (!widget.reduced && _foreground && TickerMode.of(context)) {
+    if (!widget.reduced && _foreground && TickerMode.valuesOf(context).enabled) {
       if (!_motion.isAnimating) _motion.repeat(reverse: true);
     } else {
       _motion.stop();
