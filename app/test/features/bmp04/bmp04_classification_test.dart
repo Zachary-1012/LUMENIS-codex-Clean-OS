@@ -286,7 +286,7 @@ Map<String, dynamic> response() {
       'actor_scope': 'authenticated', 'applied': true, 'read_allowed': true,
       'scope_verified': true, 'global_all_granted': false},
     'source_observations': [],
-    'truth': {'domain_id': 'zbmp', 'product_id': 'ZBMP', 'source_read_complete': true,
+    'truth': <String, dynamic>{'domain_id': 'zbmp', 'product_id': 'ZBMP', 'source_read_complete': true,
       'event_read_complete': true, 'rejected_source_count': 0, 'source_truncated': false,
       'observed_source_count': 0, 'source_count': 0, 'event_returned_count': 1,
       'data_state': 'READY', 'analysis_state': 'NOT_COMPUTED',

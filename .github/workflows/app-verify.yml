@@ -114,7 +114,13 @@ jobs:
             test/features/system/sys_waiting_feedback_test.dart \
             test/features/bmp08/bmp08_saved_work_test.dart \
             test/features/bmp08/bmp08_saved_editor_widget_test.dart \
-            test/features/bmp04/bmp04_classification_test.dart
+            test/features/bmp04/bmp04_classification_test.dart \
+            test/features/bmp04/bmp04_screen_test.dart \
+            test/core/lumenis_core_client_test.dart \
+            test/features/shared/sh01/media_project_controller_test.dart \
+            test/features/shared/sh01/media_project_workbench_test.dart \
+            test/features/shared/pr83_observation_presentation_test.dart \
+            test/features/bmp09/bmp09_artifact_display_test.dart
 
       - name: Build real Web Workspace (BLOCKING)
         working-directory: app
