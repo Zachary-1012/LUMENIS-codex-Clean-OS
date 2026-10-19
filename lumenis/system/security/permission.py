@@ -1342,6 +1342,22 @@ def _shared_workspace_admission_caller(admission: _SharedWorkspaceGateAdmission)
     return f"actor:{admission.actor_id}" if admission.actor_id is not None else "workspace:local"
 
 
+def _shared_report_effect_action(resource: Any) -> str | None:
+    """Exact existing report-owner resources; no prefix-wide Shared effect grant.
+
+    Internal pitch preserves its historical DATA_EXPORT effect classification.
+    Prepare/run/cancel also need live reports/write, even though SavedWork maps
+    that operation's effect admission to reports/read.
+    """
+    if type(resource) is not str:
+        return None
+    if re.fullmatch(r"(?:saved-work(?:-export)?|internal-pitch-export):v1:[0-9a-f]{64}", resource):
+        return "read"
+    if re.fullmatch(r"internal-pitch-(?:prepare|run|cancel):v1:[0-9a-f]{64}", resource):
+        return "write"
+    return None
+
+
 def _shared_workspace_admission_valid(
     admission: Any, *, gate: PermissionGate, operation_type: OperationType,
     domain_id: str | None, role: str | None, caller: str | None,
@@ -1377,9 +1393,15 @@ def _shared_workspace_admission_valid(
                 return False
         elif operation_type is OperationType.DATA_EXPORT:
             if admission.module == "reports":
-                if (admission.action != "read" or type(resource) is not str
-                        or re.fullmatch(r"saved-work(?:-export)?:v1:[0-9a-f]{64}", resource) is None):
+                required_action = _shared_report_effect_action(resource)
+                if admission.action != "read" or required_action is None:
                     return False
+                if required_action == "write":
+                    actor = admission.principal if admission.principal is not None else {"id": admission.actor_id}
+                    authorize_shared_workspace(
+                        actor, {"scope_kind": _SHARED_WORKSPACE_SCOPE_KIND, "version": _SHARED_WORKSPACE_VERSION},
+                        module="reports", action="write", connection=admission.connection, gate=gate,
+                    )
             elif (admission.module != "content" or admission.action != "write"
                   or type(resource) is not str
                   or re.fullmatch(r"(?:content-project-export|content-derived):v1:[0-9a-f]{64}", resource) is None):
@@ -1467,8 +1489,7 @@ def check_shared_workspace_effect(
         return _shared_workspace_denial(permission_gate, operation, resource, caller, str(exc))
     resource_valid = (
         module == "reports" and action == "read"
-        and type(resource) is str
-        and re.fullmatch(r"saved-work(?:-export)?:v1:[0-9a-f]{64}", resource) is not None
+        and _shared_report_effect_action(resource) is not None
     ) or (
         module == "content" and action == "write"
         and operation is OperationType.DATA_EXPORT

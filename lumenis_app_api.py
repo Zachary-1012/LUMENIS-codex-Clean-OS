@@ -53,18 +53,33 @@ def _internal_pitch_body():
 
 
 def _internal_pitch_scope(data=None):
+    domain_keys = {"domain_id", "subject_id", "brand_focus_id", "global_scope"}
+    shared_keys = {"scope_kind", "version"}
     if data is not None:
+        # A POST has one scope location. Do not silently ignore a competing query.
+        if request.args:
+            raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
         scope = data.get("scope")
     else:
-        if set(request.args) != {"domain_id", "subject_id", "brand_focus_id", "global_scope"} or any(
-                len(request.args.getlist(key)) != 1 for key in request.args):
+        if any(len(request.args.getlist(key)) != 1 for key in request.args):
             raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
-        if request.args["global_scope"] not in {"true", "false"}:
-            raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
-        scope = {"domain_id": request.args["domain_id"], "subject_id": request.args["subject_id"] or None,
-                 "brand_focus_id": request.args["brand_focus_id"] or None,
-                 "global_scope": request.args["global_scope"] == "true"}
-    if (not isinstance(scope, dict) or set(scope) != {"domain_id", "subject_id", "brand_focus_id", "global_scope"}
+        if set(request.args) == shared_keys:
+            if request.args["scope_kind"] != "shared_workspace" or request.args["version"] != "1":
+                raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
+            scope = {"scope_kind": "shared_workspace", "version": 1}
+        elif set(request.args) == domain_keys:
+            if request.args["global_scope"] not in {"true", "false"}:
+                raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
+            scope = {"domain_id": request.args["domain_id"], "subject_id": request.args["subject_id"] or None,
+                     "brand_focus_id": request.args["brand_focus_id"] or None,
+                     "global_scope": request.args["global_scope"] == "true"}
+        else:
+            raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
+    if isinstance(scope, dict) and set(scope) == shared_keys:
+        if scope["scope_kind"] == "shared_workspace" and type(scope["version"]) is int and scope["version"] == 1:
+            return scope
+        raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
+    if (not isinstance(scope, dict) or set(scope) != domain_keys
             or type(scope["global_scope"]) is not bool):
         raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
     return scope
@@ -84,7 +99,7 @@ def _internal_pitch_actor(action):
 def _internal_pitch_local_access_allowed():
     """The explicitly open workspace still checks exact live Registry scope."""
     import re
-    from lumenis.shared.reporting.saved_work import authorize
+    from lumenis.shared.reporting.saved_work import authorize_saved_work
     from lumenis.system.security.permission import resolve_local_workspace_principal
     prefix = "/api/experience/creation/internal-pitches"
     path = request.path
@@ -102,7 +117,7 @@ def _internal_pitch_local_access_allowed():
         return False
     try:
         data = _internal_pitch_body() if request.method == "POST" else None
-        authorize(actor, _internal_pitch_scope(data), action=action)
+        authorize_saved_work(actor, _internal_pitch_scope(data), action=action)
         return True
     except (ValueError, PermissionError):
         return False

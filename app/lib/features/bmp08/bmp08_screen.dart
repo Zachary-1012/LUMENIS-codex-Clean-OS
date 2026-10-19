@@ -1974,7 +1974,8 @@ class _SavedPodcastDialogState extends State<_SavedPodcastDialog> {
       setState(() {
         for (final item in items) { if (!_items.any((old) => old['id'] == item['id'])) _items.add(item); }
         _cursor = result['has_more'] == true ? result['next_cursor'] as String : null;
-        _unverified = result['verification_complete'] != true;
+        // Completeness is page-local; retain omissions until this list is reopened.
+        _unverified = _unverified || result['verification_complete'] != true;
       });
     } catch (error) {
       if (mounted && generation == _generation) setState(() => _error = _errorKey(error));

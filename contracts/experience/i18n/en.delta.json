@@ -870,6 +870,12 @@
   "sh01.media.apply_before_replace": "Apply or cancel the current adjustments first",
   "sh01.media.cancel_adjustment": "Cancel adjustments",
   "sh01.media.replacement_audio_missing": "This source has no audio, so the clip will remain silent",
-  "sh01.media.replacement_transition_blocked": "This project contains transitions; clip replacement is unavailable"
+  "sh01.media.replacement_transition_blocked": "This project contains transitions; clip replacement is unavailable",
+  "sh01.media.batch_preview": "Preview all adjustments",
+  "sh01.media.batch_adopt": "Adopt adjustments",
+  "sh01.media.batch_preview_description": "Review the pending clip adjustments below. Adoption changes this draft only, as one undo step. It does not render or save a version.",
+  "sh01.media.batch_unsupported": "Apply or cancel pending stream, replacement, or split changes with their clip controls first. All drafts are retained.",
+  "sh01.media.batch_stale": "The draft or access changed. Preview the adjustments again.",
+  "sh01.media.batch_inspecting": "Checking adjustments…"
  }
 }

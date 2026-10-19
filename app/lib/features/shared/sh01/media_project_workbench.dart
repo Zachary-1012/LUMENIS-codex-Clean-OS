@@ -94,6 +94,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   String? _notice;
   bool _choosing = false;
   bool _retrieving = false;
+  bool _batchPreviewOpen = false;
+  int _layerGeneration = 0;
   bool _sourcesVisible = true;
   bool _propertiesVisible = true;
   double _timelineFraction = .38;
@@ -242,7 +244,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   }
 
   bool get _isBusy =>
-      _choosing || _retrieving || _controllerInitialized && _controller.busy;
+      _choosing || _retrieving || _batchPreviewOpen ||
+      _controllerInitialized && _controller.busy;
 
   WaitingScene get _waitingScene => _retrieving
       ? WaitingScene.search
@@ -259,6 +262,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       : switch (_controller.operation) {
           MediaProjectOperation.exporting => 'exporting',
           MediaProjectOperation.reopening => 'saved_loading',
+          MediaProjectOperation.inspecting =>
+            _batchPreviewOpen ? 'batch_inspecting' : 'importing',
           _ => 'importing',
         };
 
@@ -284,6 +289,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           .where((candidate) => candidate.clipId == entry.key)
           .firstOrNull;
       if (clip == null) return true;
+      final video = timeline!.tracks.firstWhere(
+        (track) => track.trackId == clip.trackId).kind == 'video';
       final expected = <String, double>{
         'source_in': clip.sourceIn,
         'source_out': clip.sourceOut,
@@ -294,7 +301,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         'split_position': (clip.sourceIn + clip.sourceOut) / 2,
       };
       if (entry.value.values.entries.any(
-        (value) => expected[value.key] != double.tryParse(value.value),
+        (value) => !(video && value.key == 'position') &&
+            expected[value.key] != double.tryParse(value.value),
       )) {
         return true;
       }
@@ -767,6 +775,180 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     return false;
   }
 
+  List<Map<String, dynamic>> _inspectorBatchCommands(
+    MediaProjectSnapshot timeline,
+    Map<String, _ClipInspectorDraft> drafts,
+  ) {
+    final commands = <Map<String, dynamic>>[];
+    for (final entry in drafts.entries) {
+      final clip = timeline.tracks.expand((track) => track.clips)
+          .where((clip) => clip.clipId == entry.key).firstOrNull;
+      if (clip == null) throw const FormatException('Missing draft clip.');
+      final draft = entry.value;
+      double value(String key) {
+        final number = double.tryParse(draft.values[key] ?? '');
+        if (number == null || !number.isFinite) {
+          throw const FormatException('Invalid draft number.');
+        }
+        return number;
+      }
+      final video = timeline.tracks
+          .firstWhere((track) => track.trackId == clip.trackId).kind == 'video';
+      if (draft.replacement != null ||
+          draft.stream != (clip.audioRole == 'muted' ? -1 : clip.audioStreamIndex) ||
+          value('split_position') != (clip.sourceIn + clip.sourceOut) / 2) {
+        // These intents still have their original single-clip controls. Never
+        // silently clear them when adopting only trim/move/audio commands.
+        throw StateError('Unsupported pending batch intent.');
+      }
+      final sourceIn = value('source_in');
+      final sourceOut = value('source_out');
+      // Video positions are reflowed by Core and are never editable here.
+      final position = video ? clip.timelineStart : value('position');
+      final mix = MediaProjectAudioMix(
+        volume: value('gain'),
+        fadeInSec: value('fade_in'),
+        fadeOutSec: value('fade_out'),
+        ducking: clip.audioMix.ducking,
+      );
+      mix.validate(sourceOut - sourceIn);
+      final trim = sourceIn != clip.sourceIn || sourceOut != clip.sourceOut;
+      final move = !video && position != clip.timelineStart;
+      final audio = mix.volume != clip.audioMix.volume ||
+          mix.fadeInSec != clip.audioMix.fadeInSec ||
+          mix.fadeOutSec != clip.audioMix.fadeOutSec;
+      final shorter = sourceOut - sourceIn < clip.durationSec;
+      final mixCommand = <String, dynamic>{
+        'op': 'audio_mix', 'clip_id': clip.clipId, 'mix': mix.toJson(),
+      };
+      final moveCommand = <String, dynamic>{
+        'op': 'move_audio_clip', 'clip_id': clip.clipId,
+        'timeline_start': position,
+      };
+      // A shorter range can require shorter fades first. An expanded range can
+      // require an earlier position first. Every intermediate owner operation
+      // still validates; failure preserves the entire original draft.
+      if (audio && shorter) commands.add(mixCommand);
+      if (move && !shorter) commands.add(moveCommand);
+      if (trim) {
+        commands.add({
+          'op': 'trim', 'clip_id': clip.clipId,
+          'source_in': sourceIn, 'source_out': sourceOut,
+        });
+      }
+      if (audio && !shorter) commands.add(mixCommand);
+      if (move && shorter) commands.add(moveCommand);
+    }
+    return commands;
+  }
+
+  Future<void> _previewInspectorBatch() async {
+    if (_isBusy || !_canUseCurrentContext) return;
+    final controller = _controller;
+    final layerGeneration = _layerGeneration;
+    final base = controller.timeline;
+    if (base == null) return;
+    final drafts = Map<String, _ClipInspectorDraft>.of(_inspectorDrafts);
+    List<Map<String, dynamic>> commands;
+    try {
+      commands = _inspectorBatchCommands(base, drafts);
+    } on StateError {
+      setState(() => _notice = 'batch_unsupported');
+      _sheetUpdates.refresh();
+      return;
+    } on FormatException {
+      setState(() => _notice = 'invalid');
+      _sheetUpdates.refresh();
+      return;
+    }
+    if (commands.isEmpty) return;
+    bool draftsMatch() => drafts.length == _inspectorDrafts.length &&
+        drafts.entries.every((entry) =>
+            identical(_inspectorDrafts[entry.key], entry.value));
+    setState(() { _batchPreviewOpen = true; _notice = null; });
+    _sheetUpdates.refresh();
+    try {
+      final preview = await controller.previewEditBatch(commands);
+      if (!mounted || !identical(_controller, controller) || preview == null ||
+          _layerGeneration != layerGeneration) {
+        return;
+      }
+      bool current() => _layerGeneration == layerGeneration &&
+          _canUseCurrentContext && draftsMatch() &&
+          controller.canAdoptEditBatch(preview);
+      if (!current()) {
+        setState(() => _notice = 'batch_stale');
+        return;
+      }
+      final clipIds = commands.map((command) => command['clip_id']).toSet();
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => ListenableBuilder(
+          listenable: Listenable.merge([controller, _sheetUpdates]),
+          builder: (context, _) {
+            final valid = current();
+            return AlertDialog(
+              key: const Key('media-batch-preview-dialog'),
+              title: Text(_copy(context, 'batch_preview')),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_copy(context, valid ? 'batch_preview_description' : 'batch_stale')),
+                    if (valid)
+                      for (final clip in preview.timeline.tracks
+                          .expand((track) => track.clips)
+                          .where((clip) => clipIds.contains(clip.clipId))) ...[
+                        const SizedBox(height: 12),
+                        Text(preview.timeline.assets.firstWhere(
+                          (asset) => asset.assetId == clip.mediaAssetId).filename),
+                        Text('${_copy(context, 'source_in')}: ${_seconds(clip.sourceIn)}; '
+                            '${_copy(context, 'source_out')}: ${_seconds(clip.sourceOut)}'),
+                        Text('${_copy(context, 'position')}: ${_seconds(clip.timelineStart)}; '
+                            '${_copy(context, 'gain')}: ${_seconds(clip.audioMix.volume)}'),
+                        Text('${_copy(context, 'fade_in')}: ${_seconds(clip.audioMix.fadeInSec)}; '
+                            '${_copy(context, 'fade_out')}: ${_seconds(clip.audioMix.fadeOutSec)}'),
+                      ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  key: const Key('media-batch-cancel'),
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: Text(_copy(context, 'cancel')),
+                ),
+                FilledButton(
+                  key: const Key('media-batch-adopt'),
+                  onPressed: valid ? () => Navigator.pop(dialogContext, true) : null,
+                  child: Text(_copy(context, 'batch_adopt')),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+      if (!mounted || accepted != true || !identical(_controller, controller)) return;
+      if (!current()) {
+        setState(() => _notice = 'batch_stale');
+        return;
+      }
+      if (controller.adoptEditBatch(preview)) {
+        setState(() {
+          for (final id in drafts.keys) { _inspectorDrafts.remove(id); }
+          _notice = null;
+        });
+        _leaveGuard?.refresh();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _batchPreviewOpen = false);
+        _sheetUpdates.refresh();
+      }
+    }
+  }
+
   Future<void> _add(MediaProjectAsset asset) async {
     final result = await showDialog<_NewClip>(
       context: context,
@@ -886,6 +1068,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         code == 'CONTENT_PROJECT_PARENT_REVISION_REQUIRED') {
       return 'no_changes';
     }
+    if (code == 'CONTENT_BATCH_PREVIEW_STALE') return 'batch_stale';
     if (code.contains('CONTEXT')) return 'context';
     if (code.contains('AUTH') || code.contains('DENIED')) return 'denied';
     if (code == 'CONTENT_SOURCE_ALREADY_ADDED') return 'duplicate';
@@ -1452,6 +1635,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                 timeline: timeline,
                 clip: clip,
                 onEdit: _edit,
+                onPreviewBatch: !_isBusy && _canUseCurrentContext &&
+                        _hasUnappliedClipDrafts
+                    ? _previewInspectorBatch
+                    : null,
                 draft: clip == null ? null : _inspectorDrafts[clip.clipId],
                 onDraftChanged: _updateInspectorDraft,
                 onImportSource: () {
@@ -1608,7 +1795,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     content,
   }) async {
     if (_activeLayer != null) return;
-    setState(() => _activeLayer = layer);
+    setState(() { _activeLayer = layer; _layerGeneration++; });
     try {
       await showModalBottomSheet<void>(
         context: context,
@@ -1700,7 +1887,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       );
     } finally {
       if (mounted && _activeLayer == layer) {
-        setState(() => _activeLayer = null);
+        setState(() { _activeLayer = null; _layerGeneration++; });
       }
     }
   }
@@ -2863,6 +3050,7 @@ class _ClipInspector extends StatefulWidget {
     required this.draft,
     required this.onDraftChanged,
     required this.onImportSource,
+    required this.onPreviewBatch,
   });
   final MediaProjectSnapshot? timeline;
   final MediaProjectClip? clip;
@@ -2871,6 +3059,7 @@ class _ClipInspector extends StatefulWidget {
   final _ClipInspectorDraft? draft;
   final void Function(String clipId, _ClipInspectorDraft? draft) onDraftChanged;
   final VoidCallback onImportSource;
+  final VoidCallback? onPreviewBatch;
   @override
   State<_ClipInspector> createState() => _ClipInspectorState();
 }
@@ -2967,10 +3156,12 @@ class _ClipInspectorState extends State<_ClipInspector> {
   bool get _hasClipFieldChanges {
     final clip = widget.clip;
     if (clip == null) return false;
+    final video = widget.timeline!.tracks.firstWhere(
+      (track) => track.trackId == clip.trackId).kind == 'video';
     final expected = {
       'source_in': clip.sourceIn,
       'source_out': clip.sourceOut,
-      'position': clip.timelineStart,
+      if (!video) 'position': clip.timelineStart,
       'gain': clip.audioMix.volume,
       'fade_in': clip.audioMix.fadeInSec,
       'fade_out': clip.audioMix.fadeOutSec,
@@ -3336,6 +3527,12 @@ class _ClipInspectorState extends State<_ClipInspector> {
               if (applied) widget.onDraftChanged(clip.clipId, null);
             },
             child: Text(_copy(context, 'apply')),
+          ),
+          OutlinedButton(
+            key: const Key('media-batch-preview'),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: widget.onPreviewBatch,
+            child: Text(_copy(context, 'batch_preview')),
           ),
           if (_hasReplacementBlockingChanges)
             TextButton(

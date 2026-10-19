@@ -114,6 +114,10 @@ class _ReadyState extends StatelessWidget {
                     _ClassificationWorkspace(snapshot: snapshot, viewModel: viewModel),
                     const SizedBox(height: 20),
                   ],
+                  if (snapshot.scopeReady &&
+                      (snapshot.presentationState == Bmp04PresentationState.observationsOnly ||
+                       snapshot.sourceObservations.isNotEmpty))
+                    _SourceObservationsWorkspace(snapshot: snapshot),
                   if (snapshot.presentationState ==
                           Bmp04PresentationState.ready ||
                       snapshot.presentationState ==
@@ -125,7 +129,7 @@ class _ReadyState extends StatelessWidget {
                       viewModel: viewModel,
                       compact: compact,
                     )
-                  else
+                  else if (snapshot.presentationState != Bmp04PresentationState.observationsOnly)
                     _AvailabilityPanel(
                       snapshot: snapshot,
                       onRetry: viewModel.refresh,
@@ -224,6 +228,46 @@ class _FocusBand extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _SourceObservationsWorkspace extends StatelessWidget {
+  const _SourceObservationsWorkspace({required this.snapshot});
+
+  final Bmp04Snapshot snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Panel(child: Column(
+      key: const Key('bmp04-source-observations'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(_classificationCopy(context, 'Source observations', '来源观测', '출처 관측'),
+          style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        Text(_classificationCopy(context,
+          'These source observations do not establish reach, popularity or conversion.',
+          '来源观测不代表覆盖、热度或转化。',
+          '출처 관측은 도달률, 인기도 또는 전환을 입증하지 않습니다.')),
+        if (snapshot.analysisState == 'NOT_COMPUTED')
+          Text(_classificationCopy(context,
+            'Propagation analysis has not been computed.',
+            '传播分析尚未计算。',
+            '전파 분석은 아직 계산되지 않았습니다.')),
+        if (snapshot.presentationState == Bmp04PresentationState.partial)
+          Text(context.lumenisL10n.text('state.partial_d')),
+        for (final observation in snapshot.sourceObservations)
+          ListTile(
+            key: Key('bmp04-observation-${observation.id}'),
+            title: Text(observation.title ?? '—'),
+            subtitle: Text('${observation.platform ?? '—'} · ${observation.evidenceReference}'),
+          ),
+        // Events already shown in the classification workspace are not duplicated.
+        if (snapshot.dashboards.isEmpty)
+          for (final event in snapshot.curatedEvents)
+            ListTile(title: Text(event.title), subtitle: Text(event.evidenceReference)),
+      ],
+    ));
   }
 }
 

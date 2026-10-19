@@ -139,7 +139,119 @@ def _manuscript_document(manuscript):
     return doc
 
 
-def export_pitch_docx(analysis, out_path=None, *, manuscript=None, check_continue=None):
+def _append_audiovisual_plan(doc, snapshot, language, check_continue=None):
+    """Render the complete saved planning snapshot, without inferring media facts."""
+    from lumenis.shared.content_creation.contracts import AudiovisualPlan
+    if not isinstance(snapshot, dict) or "input" not in snapshot:
+        raise ValueError("AV_PLAN_SNAPSHOT_INVALID")
+    expected = AudiovisualPlan.from_dict(snapshot["input"])
+    if not expected.matches_snapshot(snapshot):
+        raise ValueError("AV_PLAN_SNAPSHOT_INVALID")
+    text = {
+        "zh": ("完整视听计划", "以下为保存的创作意图与计划，尚未制作媒体。来源声明未重新核验；研究方法引用不等于素材许可。视觉、声音、事实和权益均待审查。稿件与计划的一致性仍待审阅。",
+               "未知／未提供", "未提供项目", "空文本", "是", "否"),
+        "en": ("Complete audiovisual plan", "Saved authoring intent and planning only. Media has not been produced. Provenance declarations are not revalidated; method references are not material licences. Visual, audio, factual and rights reviews remain pending. Manuscript/plan consistency still needs review.",
+               "Unknown / not provided", "No items supplied", "Empty text", "Yes", "No"),
+        "ko": ("전체 시청각 계획", "저장된 창작 의도와 계획이며 미디어는 아직 제작되지 않았습니다. 출처 선언은 재검증되지 않았고 연구 방법 참조는 소재 사용 허가가 아닙니다. 영상, 음성, 사실 및 권리와 원고·계획의 일치 여부는 검토가 필요합니다.",
+               "알 수 없음 / 미제공", "제공된 항목 없음", "빈 텍스트", "예", "아니요"),
+    }[language]
+    labels = {
+        "input": ("创作意图", "Authoring intent"), "schema": ("计划格式版本", "Plan format"),
+        "brief_text": ("完整原始需求", "Complete original brief"),
+        "method_source": ("研究方法出处（非素材许可）", "Research method reference (not a material licence)"),
+        "reference": ("参考出处", "Reference"), "sha256": ("声明的摘要", "Declared SHA-256"),
+        "outputs": ("交付计划", "Planned outputs"), "output_id": ("输出标识", "Output identifier"),
+        "medium": ("媒体类型", "Medium"), "purpose": ("用途", "Purpose"),
+        "canvas_ratio": ("画幅比例", "Canvas ratio"), "duration": ("时长要求", "Duration requirements"),
+        "min_seconds": ("最短秒数", "Minimum seconds"), "max_seconds": ("最长秒数", "Maximum seconds"),
+        "tolerance_seconds": ("容差秒数", "Tolerance seconds"), "sound": ("声音策略", "Sound policy"),
+        "original": ("原声", "Original sound"), "voice": ("配音", "Voice"), "music": ("音乐", "Music"),
+        "languages": ("语言", "Languages"), "constraints": ("约束及媒体验证状态", "Constraints and media validation"),
+        "provenance": ("各项来源声明", "Provenance declarations"), "kind": ("声明类型", "Declaration kind"),
+        "locator": ("声明位置", "Declaration locator"), "plan": ("镜头或播客分段计划", "Shot or podcast segment plan"),
+        "rule_assessments": ("规则条件与排除项", "Rule conditions and exclusions"),
+        "rule_ref": ("规则出处", "Rule reference"), "output_ids": ("适用输出", "Applicable outputs"),
+        "required_conditions": ("必要条件", "Required conditions"), "exclusions": ("排除条件", "Exclusions"),
+        "predicate": ("待判断事项", "Condition"), "value": ("声明结果", "Declared value"),
+        "rule_decisions": ("规则评估（非执行许可）", "Rule assessment (not execution permission)"),
+        "decision": ("评估状态", "Assessment status"), "status": ("计划状态", "Plan status"),
+        "input_sha256": ("保存计划摘要", "Saved plan SHA-256"), "brief_sha256": ("原始需求摘要", "Brief SHA-256"),
+        "estimated_duration_seconds": ("声明的预计时长（秒）", "Declared estimated duration (seconds)"),
+        "execution": ("媒体执行状态", "Media execution status"), "predicate_evidence": ("条件核验状态", "Condition verification status"),
+        "reviews": ("待完成的审查", "Pending reviews"), "visual": ("视觉", "Visual"), "audio": ("声音", "Audio"),
+        "facts": ("事实", "Facts"), "rights": ("权益", "Rights"), "rendition_binding": ("实际成品关联", "Actual rendition binding"),
+        "shots": ("镜头", "Shots"), "segments": ("播客分段", "Podcast segments"),
+        "brief_ref": ("绑定的需求引用", "Bound brief reference"), "evidence_refs": ("绑定的证据引用", "Bound evidence references"),
+        "narrative_beat": ("叙事节拍", "Narrative beat"), "emotional_beat": ("情绪节拍", "Emotional beat"),
+        "shot_purpose": ("镜头用途", "Shot purpose"), "visual_motif": ("视觉母题", "Visual motif"),
+        "shot_size": ("景别", "Shot size"), "camera_motion": ("镜头运动", "Camera movement"),
+        "subject_action": ("主体动作", "Subject action"), "continuity": ("连贯性", "Continuity"),
+        "audio_role": ("声音作用", "Audio role"), "original_sound": ("原声内容", "Original sound content"),
+        "voice_over": ("配音文字", "Voice-over text"), "text_subtitles": ("字幕", "Subtitles"),
+        "transition_type": ("转场方式", "Transition type"), "transition_reason": ("转场原因", "Transition reason"),
+        "duration_sec": ("镜头时长（秒）", "Shot duration (seconds)"), "hold_sec": ("停留时长（秒）", "Hold duration (seconds)"),
+        "pacing": ("节奏", "Pacing"), "title": ("标题", "Title"), "description": ("说明", "Description"),
+        "language": ("语言", "Language"), "revision": ("修订号", "Revision"), "version": ("格式版本", "Format version"),
+        "segment_id": ("分段标识", "Segment identifier"), "chapter_title": ("章节标题", "Chapter title"),
+        "media_asset_id": ("声明的媒体素材标识", "Declared media asset identifier"),
+        "audio_stream_index": ("声明的音轨索引", "Declared audio stream index"),
+        "source_in": ("源片段入点（秒）", "Source in point (seconds)"), "source_out": ("源片段出点（秒）", "Source out point (seconds)"),
+        "original_text": ("原始文字", "Original text"), "corrected_text": ("修订文字", "Revised text"),
+        "speaker": ("说话人", "Speaker"),
+    }
+    from docx.oxml.ns import qn
+    for element in [doc.styles["Title"].element, *[p._p for p in doc.paragraphs if p.style.name == "Title"]]:
+        for border in list(element.iter(qn("w:pBdr"))):
+            border.getparent().remove(border)
+    doc.add_page_break()
+    doc.add_heading(text[0], level=1)
+    doc.add_paragraph(text[1])
+
+    def field_label(key):
+        pair = labels.get(key)
+        return pair[0 if language == "zh" else 1] if pair else str(key).replace("_", " ")
+
+    def render(label, value, depth=0):
+        if check_continue:
+            check_continue()
+        paragraph = doc.add_paragraph()
+        paragraph.paragraph_format.left_indent = Cm(min(depth, 4) * 0.35)
+        paragraph.paragraph_format.space_before = Pt(0)
+        paragraph.paragraph_format.space_after = Pt(3)
+        paragraph.paragraph_format.line_spacing = 1.0
+        paragraph.paragraph_format.keep_with_next = isinstance(value, (dict, list)) and bool(value)
+        paragraph.add_run(label + ": ").bold = True
+        if isinstance(value, dict) and value:
+            priority = ("output_id", "medium", "purpose", "brief_text", "title", "description", "canvas_ratio",
+                        "duration", "sound", "languages", "constraints", "plan", "provenance", "method_source",
+                        "outputs", "rule_assessments", "schema")
+            keys = [key for key in priority if key in value] + [key for key in value if key not in priority]
+            for key in keys:
+                render(field_label(key), value[key], depth + 1)
+        elif isinstance(value, list) and value:
+            for number, child in enumerate(value, 1):
+                render(str(number), child, depth + 1)
+        else:
+            if value is None:
+                display = text[2]
+            elif value == [] or value == {}:
+                display = text[3]
+            elif type(value) is bool:
+                display = text[5] if value else text[6]
+            elif value == "":
+                display = text[4]
+            else:
+                display = str(value)
+            paragraph.add_run(display)
+
+    # Render every field, including full original nested constraints and media
+    # plan, then the derived snapshot statuses and hashes. Do not summarize away
+    # unknowns, user text, source declarations or exclusions.
+    for key, value in snapshot.items():
+        render(field_label(key), value)
+
+
+def export_pitch_docx(analysis, out_path=None, *, manuscript=None, check_continue=None, audiovisual_plan=None):
     """导出需求分析或实际提供的成稿；新版本须新路径，不覆盖旧件。"""
     if not _HAS_DOCX:
         raise RuntimeError("python-docx 不可用，无法导出 Word")
@@ -150,7 +262,12 @@ def export_pitch_docx(analysis, out_path=None, *, manuscript=None, check_continu
     if manuscript is None:
         manuscript = analysis.get("manuscript")
     if manuscript is not None:
-        return _save_new_document(_manuscript_document(manuscript), out_path, check_continue)
+        doc = _manuscript_document(manuscript)
+        if audiovisual_plan is not None:
+            _append_audiovisual_plan(doc, audiovisual_plan, manuscript.get("language", "zh"), check_continue)
+        return _save_new_document(doc, out_path, check_continue)
+    if audiovisual_plan is not None:
+        raise ValueError("AV_PLAN_MANUSCRIPT_REQUIRED")
     ex = (analysis.get("extracted") or {})
     doc = Document()
     # 封面标题

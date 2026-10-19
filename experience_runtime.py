@@ -3462,7 +3462,7 @@ def inspect_content_project_media():
         if not isinstance(body, dict) or body.get("action_type") != "READ":
             raise LocalArtifactError("CONTENT_INSPECT_REQUIRES_READ")
         payload = body.get("input")
-        if not isinstance(payload, dict) or (set(payload) - {"asset_paths", "asset_refs", "waveform", "silence_proposal", "timeline", "stream_metadata", "broll", "toolchain", "transcription", "transcript_edit"} or (("asset_paths" in payload) == ("asset_refs" in payload))):
+        if not isinstance(payload, dict) or (set(payload) - {"asset_paths", "asset_refs", "waveform", "silence_proposal", "timeline", "stream_metadata", "broll", "toolchain", "transcription", "transcript_edit", "edit_batch"} or (("asset_paths" in payload) == ("asset_refs" in payload))):
             raise LocalArtifactError("INVALID_CONTENT_INPUT")
         actor, scope = _content_project_scope("read")
         with _content_project_assets(payload, actor, scope) as (_, assets, source_refs):
@@ -3470,6 +3470,24 @@ def inspect_content_project_media():
                 current_actor, current_scope = _content_project_scope("read")
                 if current_actor != actor or current_scope != scope:
                     raise LocalArtifactError("CONTENT_PROJECT_CONTEXT_MISMATCH")
+            edit_batch = None
+            if "edit_batch" in payload:
+                from lumenis.shared.content_creation.video_editing import Timeline
+                options = payload["edit_batch"]
+                if (not isinstance(options, dict) or set(options) != {"commands", "expected_version"}
+                        or "timeline" not in payload):
+                    raise LocalArtifactError("EDIT_BATCH_INPUT_INVALID")
+                original = Timeline.from_dict(payload["timeline"], assets=assets)
+                updated = original.apply_edit_batch(options["commands"], expected_version=options["expected_version"])
+                check_read()
+                with _content_project_assets(payload, actor, scope) as (_, fresh_assets, _):
+                    if [asset.to_dict() for asset in fresh_assets] != [asset.to_dict() for asset in assets]:
+                        raise LocalArtifactError("CONTENT_SOURCE_CHANGED_DURING_BATCH_PREVIEW")
+                edit_batch = {"state": "preview", "base_version": original.version,
+                              "base_digest": original._view_digest(), "timeline": updated.to_dict(),
+                              "timeline_digest": updated._view_digest(), "persisted": False,
+                              "export_performed": False, "approval_required": True,
+                              "undo_scope": "session_per_operation_not_persisted"}
             transcript_edit = None
             if "transcript_edit" in payload:
                 from lumenis.shared.content_creation.transcript_editing import project_word_deletion_candidate
@@ -3520,7 +3538,7 @@ def inspect_content_project_media():
                 check_read()
             silence_proposals = []
             silence_edl = None
-            if "timeline" in payload and "silence_proposal" not in payload and "broll" not in payload:
+            if "timeline" in payload and "silence_proposal" not in payload and "broll" not in payload and "edit_batch" not in payload:
                 raise LocalArtifactError("SILENCE_EDL_REQUIRES_MEASUREMENT")
             if "silence_proposal" in payload:
                 from lumenis.shared.content_creation.rendering import propose_silence_edits
@@ -3541,7 +3559,7 @@ def inspect_content_project_media():
                     raise LocalArtifactError("WAVEFORM_INPUT_INVALID")
                 waveforms = [extract_waveform(asset, **options, check_continue=check_read) for asset in assets]
                 check_read()
-            return jsonify({"ok": True, **({"transcript_edit":transcript_edit} if transcript_edit is not None else {}), **({"transcription":transcription} if transcription is not None else {}), **({"toolchain":toolchain} if toolchain is not None else {}), **({"broll":broll} if broll is not None else {}), **({"stream_metadata":stream_metadata} if "stream_metadata" in payload else {}), **({"silence_edl":silence_edl} if silence_edl is not None else {}), **({"silence_proposals": silence_proposals} if "silence_proposal" in payload else {}), **({"waveforms": waveforms} if "waveform" in payload else {}), "assets": [asset.to_dict() for asset in assets],
+            return jsonify({"ok": True, **({"edit_batch": edit_batch} if edit_batch is not None else {}), **({"transcript_edit":transcript_edit} if transcript_edit is not None else {}), **({"transcription":transcription} if transcription is not None else {}), **({"toolchain":toolchain} if toolchain is not None else {}), **({"broll":broll} if broll is not None else {}), **({"stream_metadata":stream_metadata} if "stream_metadata" in payload else {}), **({"silence_edl":silence_edl} if silence_edl is not None else {}), **({"silence_proposals": silence_proposals} if "silence_proposal" in payload else {}), **({"waveforms": waveforms} if "waveform" in payload else {}), "assets": [asset.to_dict() for asset in assets],
                             "source_artifact_refs": source_refs, "rights_state": "unknown",
                             "external_fetch": False})
     except ValueError as exc:

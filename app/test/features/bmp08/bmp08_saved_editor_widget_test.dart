@@ -11,6 +11,26 @@ import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'bmp08_saved_work_test.dart' show fixture;
 
 void main() {
+  testWidgets('incomplete first page stays warned after a clean page and resets on reopen', (tester) async {
+    final repo = _Repository()..paginate = true..firstPageIncomplete = true;
+    const warning = 'Some records could not be verified; the list may be incomplete.';
+    await tester.pumpWidget(_app(repo)); await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('podcast-open-shared'))); await tester.pumpAndSettle();
+    expect(find.text(warning), findsOneWidget);
+    await tester.tap(find.text('Load more')); await tester.pumpAndSettle();
+    expect(repo.cursors, [null, 'opaque-next']);
+    expect(find.text(warning), findsOneWidget);
+    expect(find.text('Episode'), findsOneWidget);
+    await tester.tap(find.text('Close')); await tester.pumpAndSettle();
+    repo.paginate = false;
+    repo.firstPageIncomplete = false;
+    await tester.tap(find.byKey(const ValueKey('podcast-open-shared'))); await tester.pumpAndSettle();
+    expect(repo.cursors, [null, 'opaque-next', null]);
+    expect(find.text('Episode'), findsOneWidget);
+    expect(find.text(warning), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Shared editor works without brand binding; cancel preserves dirty text; failure retries same request', (tester) async {
     final repo = _Repository()..failNextSave = true;
     await tester.pumpWidget(_app(repo)); await tester.pumpAndSettle();
@@ -101,7 +121,7 @@ Widget _app(_Repository repository, {String language = 'en', double textScale = 
 );
 
 class _Repository implements Bmp08Repository, Bmp08SavedWorkRepository {
-  bool failNextSave = false, paginate = false;
+  bool failNextSave = false, paginate = false, firstPageIncomplete = false;
   final cursors = <String?>[];
   Completer<Bmp08SavedEpisode>? pendingSave;
   Completer<Map<String, dynamic>>? pendingList;
@@ -117,6 +137,7 @@ class _Repository implements Bmp08Repository, Bmp08SavedWorkRepository {
     domains.add(domainId); cursors.add(cursor);
     if (paginate && cursor == null) {
       final value = listResult;
+      value['result']['verification_complete'] = !firstPageIncomplete;
       value['result']['has_more'] = true; value['result']['next_cursor'] = 'opaque-next'; return value;
     }
     return pendingList == null ? listResult : await pendingList!.future;

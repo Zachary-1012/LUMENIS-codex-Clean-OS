@@ -11,6 +11,59 @@ import 'package:lumenis_app/features/bmp04/bmp04_screen.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 
 void main() {
+  test('bound observation-only sources and events have a renderable presentation', () {
+    for (final data in [response(), observationResponse()]) {
+      final snapshot = Bmp04Snapshot.fromResponse(data);
+      expect(snapshot.presentationState, Bmp04PresentationState.observationsOnly);
+      expect(snapshot.channels, isEmpty);
+      expect(snapshot.analysisState, 'NOT_COMPUTED');
+      expect(snapshot.dashboards.every((d) => d.total == null), isTrue);
+    }
+    final snapshot = Bmp04Snapshot.fromResponse(observationResponse());
+    expect(snapshot.sourceObservations.single.evidenceReference, 'EV-12');
+  });
+  for (final mode in ['sources', 'events', 'partial', 'denied']) {
+    testWidgets('observation renderer preserves source evidence and $mode state', (tester) async {
+      final data = mode == 'events' ? response() : observationResponse();
+      if (mode == 'partial') {
+        final truth = data['truth'] as Map;
+        truth['source_read_complete'] = false;
+        truth['source_truncated'] = true;
+        truth['source_count'] = null;
+        truth['data_state'] = 'PARTIAL';
+      }
+      if (mode == 'denied') {
+        (data['observation_read_binding'] as Map)['read_allowed'] = false;
+      }
+      final repository = FakeRepository()..nextResponse = data;
+      await tester.pumpWidget(MaterialApp(theme: LumenisTheme.dark,
+        locale: const Locale('en'), supportedLocales: LumenisLocalizations.supportedLocales,
+        localizationsDelegates: const [LumenisLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate],
+        home: Scaffold(body: Bmp04Screen(client: LumenisCoreClient(), repository: repository))));
+      await tester.pumpAndSettle();
+      final panel = find.byKey(const Key('bmp04-source-observations'));
+      if (mode == 'denied') {
+        expect(panel, findsNothing);
+        expect(find.text('Observed launch'), findsNothing);
+      } else {
+        expect(panel, findsOneWidget);
+        expect(find.text('Source observations'), findsOneWidget);
+        expect(find.textContaining('Propagation analysis has not been computed.'), findsOneWidget);
+        final copy = tester.element(find.byType(Bmp04Screen)).lumenisL10n;
+        expect(find.text(copy.text('state.error')), findsNothing);
+        expect(find.text('Complete sample count: —'), findsOneWidget);
+        if (mode != 'events') {
+          expect(find.byKey(const Key('bmp04-observation-SRC-12')), findsOneWidget);
+          expect(find.text('Observed launch'), findsOneWidget);
+          expect(find.text('— · EV-12'), findsOneWidget);
+        }
+      }
+      expect(repository.commits, 0);
+      expect(tester.takeException(), isNull);
+    });
+  }
   test('three views retain unknown totals and only individual curated events', () {
     final snapshot = Bmp04Snapshot.fromResponse(response());
     expect(snapshot.scopeReady, isTrue);
@@ -244,4 +297,21 @@ Map<String, dynamic> response() {
           'observed_events': 0, 'total_events': null, 'events': [], 'source_refs': []}]},
     'sections': [{'type': 'events', 'items': [{'event_id': 21, 'title': 'Product launch',
       'evidence_ref': 'EV-10', 'evidence_state': 'REFERENCED'}]}]};
+}
+
+Map<String, dynamic> observationResponse() {
+  final data = response();
+  (data['truth'] as Map)['observed_source_count'] = 1;
+  (data['truth'] as Map)['source_count'] = 1;
+  data['source_observations'] = [{
+    'id': 'SRC-12', 'title': 'Observed launch', 'platform': null,
+    'scope_evidence': {
+      'id': 12,
+      'stored_scope': {'domain_id': 'zbmp', 'product_id': 'ZBMP',
+        'scope_status': 'VERIFIED', 'subject_id': null, 'brand_focus_id': 'BRAND-ONE'},
+      'integrity': {'verified': true, 'lineage_verified': true,
+        'assurance': 'writer-authenticated', 'algorithm': 'hmac-sha256', 'digest': 'a' * 64},
+    },
+  }];
+  return data;
 }

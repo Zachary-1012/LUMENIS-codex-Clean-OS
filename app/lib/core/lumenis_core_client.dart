@@ -657,6 +657,31 @@ class LumenisCoreClient {
     },
   );
 
+  /// Read-only batch preview through the existing media inspection owner.
+  Future<Map<String, dynamic>> inspectContentEditBatch({
+    required String domainId,
+    List<String>? assetPaths,
+    List<String>? assetRefs,
+    required Map<String, dynamic> timeline,
+    required List<Map<String, dynamic>> commands,
+    required int expectedVersion,
+  }) => _request(
+    'POST',
+    '/api/experience/shared-skills/shared.content_project/inspect',
+    operationContext: _contentContext(domainId),
+    payload: {
+      'action_type': 'READ',
+      'input': {
+        ..._contentAssets(assetPaths, assetRefs),
+        'timeline': timeline,
+        'edit_batch': {
+          'commands': commands,
+          'expected_version': expectedVersion,
+        },
+      },
+    },
+  );
+
   Future<Map<String, dynamic>> exportContentProject({
     required String domainId,
     List<String>? assetPaths,

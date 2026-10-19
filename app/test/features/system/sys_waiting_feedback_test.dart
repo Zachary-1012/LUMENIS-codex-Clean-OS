@@ -135,8 +135,11 @@ void main() {
     expect(find.byKey(const ValueKey('sys/waiting-extra-text')), findsNothing);
     expect(find.byKey(const ValueKey('sys/waiting-paper')), findsOneWidget);
     final context = tester.element(find.byType(SysLoadingView));
-    expect(find.bySemanticsLabel(SysSystemCopy.text(context, 'sys.common.loading')),
-        findsWidgets);
+    final statusLabel = SysSystemCopy.text(context, 'sys.common.loading');
+    final status = find.bySemanticsLabel(statusLabel);
+    expect(status, findsOneWidget);
+    expect(tester.getSemantics(status),
+        matchesSemantics(label: statusLabel, isLiveRegion: true));
     expect(tester.binding.hasScheduledFrame, isFalse);
     await tester.pumpWidget(const SizedBox());
     semantics.dispose(); c.dispose();

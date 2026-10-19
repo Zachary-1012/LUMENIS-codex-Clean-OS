@@ -10,6 +10,35 @@ import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import '../shared/bmp_scope_test_support.dart';
 
 void main() {
+  for (final state in ['READY', 'PARTIAL', 'STALE', 'DENIED']) {
+    testWidgets('source observations preserve existing channel workspace in $state', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final parsed = Bmp04Snapshot.fromResponse(_response(
+        dataState: state == 'DENIED' ? 'READY' : state,
+        channels: [_channel('CH-ONE', 'Short video')],
+      ));
+      final snapshot = Bmp04Snapshot(
+        contractBound: parsed.contractBound, isBmpOwner: parsed.isBmpOwner,
+        dataState: parsed.dataState, focus: parsed.focus,
+        focusBindingApplied: state != 'DENIED' && parsed.focusBindingApplied,
+        readAllowed: state != 'DENIED' && parsed.readAllowed,
+        globalScopeReady: parsed.globalScopeReady, channels: parsed.channels,
+        rejectedCrossFocusCount: 0, rejectedUnscopedCount: 0,
+        sourceObservations: const [Bmp04SourceObservation(
+          id: 'SRC-12', evidenceReference: 'EV-12', title: 'Observed launch')],
+      );
+      await tester.pumpWidget(_app(_SnapshotRepository(snapshot)));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('bmp04-source-observations')),
+        state == 'DENIED' ? findsNothing : findsOneWidget);
+      expect(find.byKey(const Key('bmp04-channel-CH-ONE')),
+        state == 'DENIED' ? findsNothing : findsOneWidget);
+      expect(find.text('Observed launch'), state == 'DENIED' ? findsNothing : findsOneWidget);
+      expect(find.text('传播分析尚未计算。'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
   test(
     'propagation rows require the selected BrandFocus and metric lineage',
     () {
@@ -314,3 +343,10 @@ String _visibleCopy(WidgetTester tester) => <String>[
       .widgetList<Semantics>(find.byType(Semantics))
       .map((widget) => widget.properties.label ?? ''),
 ].join('\n');
+
+class _SnapshotRepository implements Bmp04Repository {
+  const _SnapshotRepository(this.snapshot);
+  final Bmp04Snapshot snapshot;
+  @override
+  Future<Bmp04Snapshot> load() async => snapshot;
+}

@@ -31,6 +31,31 @@ ALLOWED_OPERATIONS = frozenset({"trim", "split", "reorder", "delete", "transitio
 MAX_EDIT_TIME_SEC = 24 * 60 * 60
 MAX_TRANSITION_DURATION_SEC = 30.0
 MAX_SERIALIZED_INTEGER = 1_000_000_000
+_EDIT_BATCH_COMMAND_FIELDS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
+    "trim": (frozenset({"op", "clip_id", "source_in", "source_out"}), frozenset()),
+    "split": (frozenset({"op", "clip_id", "at_sec"}), frozenset()),
+    "delete": (frozenset({"op", "clip_id"}), frozenset({"ripple"})),
+    "reorder": (frozenset({"op", "clip_id", "new_index"}), frozenset()),
+    "audio_mix": (frozenset({"op", "clip_id", "mix"}), frozenset()),
+    "move_audio_clip": (frozenset({"op", "clip_id", "timeline_start"}), frozenset()),
+    "add_caption": (
+        frozenset({"op", "start_sec", "end_sec", "text"}),
+        frozenset({"layout_profile"}),
+    ),
+    "update_caption": (
+        frozenset({"op", "overlay_id", "start_sec", "end_sec", "text"}),
+        frozenset({"layout_profile"}),
+    ),
+    "remove_overlay": (frozenset({"op", "overlay_id"}), frozenset()),
+    "set_format": (frozenset({"op", "format_ratio"}), frozenset()),
+    "undo": (frozenset({"op"}), frozenset()),
+}
+_EDIT_BATCH_AUDIO_MIX_FIELDS = frozenset(
+    {"volume", "fade_in_sec", "fade_out_sec", "ducking"}
+)
+_MAX_EDIT_BATCH_COMMANDS = 128
+
+
 # File-only protocols still allow playlist demuxers to open other local files.
 # User sources are self-contained media; generated concat lists belong only to
 # the renderer's private working directory, never to this input boundary.
@@ -1454,6 +1479,104 @@ class Timeline:
         if format_ratio not in ALLOWED_FORMAT_RATIOS:
             raise VideoEditingError("FORMAT_RATIO_NOT_SUPPORTED")
         return self._commit(format_ratio=format_ratio)
+
+    def apply_edit_batch(self, commands: Any, *, expected_version: int) -> Timeline:
+        """Apply a bounded sequence of existing immutable Timeline operations.
+
+        Each command uses its normal owner method and per-operation history.
+        If a later command fails, this value remains unchanged and no partial
+        Timeline is returned. Undo retains its existing single-operation
+        semantics; a batch does not create a separate undo transaction.
+        """
+        self.validate()
+        if type(expected_version) is not int or expected_version != self.version:
+            raise VideoEditingError("TIMELINE_VERSION_MISMATCH")
+        if not isinstance(commands, (tuple, list)):
+            raise VideoEditingError("EDIT_COMMANDS_INVALID")
+        if len(commands) > _MAX_EDIT_BATCH_COMMANDS:
+            raise VideoEditingError("EDIT_COMMAND_COUNT_EXCEEDED")
+
+        updated = self
+        for raw_command in commands:
+            if not isinstance(raw_command, Mapping):
+                raise VideoEditingError("EDIT_COMMAND_INVALID")
+            command = dict(raw_command)
+            op = command.get("op")
+            if not isinstance(op, str) or op not in _EDIT_BATCH_COMMAND_FIELDS:
+                raise VideoEditingError("EDIT_OPERATION_NOT_SUPPORTED")
+            required, optional = _EDIT_BATCH_COMMAND_FIELDS[op]
+            fields = set(command)
+            if not required <= fields or fields - required - optional:
+                raise VideoEditingError("EDIT_COMMAND_FIELDS_INVALID")
+
+            if op == "trim":
+                updated = updated.trim(
+                    command["clip_id"],
+                    source_in=command["source_in"],
+                    source_out=command["source_out"],
+                )
+            elif op == "split":
+                updated = updated.split(command["clip_id"], at_sec=command["at_sec"])
+            elif op == "delete":
+                updated = updated.delete(
+                    command["clip_id"], ripple=command.get("ripple", True)
+                )
+            elif op == "reorder":
+                updated = updated.reorder(
+                    command["clip_id"], new_index=command["new_index"]
+                )
+            elif op == "audio_mix":
+                value = command["mix"]
+                if not isinstance(value, AudioMix):
+                    if (
+                        not isinstance(value, Mapping)
+                        or set(value) - _EDIT_BATCH_AUDIO_MIX_FIELDS
+                    ):
+                        raise VideoEditingError("INVALID_AUDIO_MIX")
+                    try:
+                        value = AudioMix(**dict(value))
+                    except (TypeError, ValueError) as exc:
+                        raise VideoEditingError("INVALID_AUDIO_MIX") from exc
+                updated = updated.set_audio_mix(command["clip_id"], value)
+            elif op == "move_audio_clip":
+                updated = updated.move_audio_clip(
+                    command["clip_id"], timeline_start=command["timeline_start"]
+                )
+            elif op == "add_caption":
+                updated = updated.add_caption(
+                    command["start_sec"],
+                    command["end_sec"],
+                    command["text"],
+                    layout_profile=command.get("layout_profile"),
+                )
+            elif op == "update_caption":
+                profile = command.get("layout_profile")
+                if "layout_profile" not in command:
+                    profile = next(
+                        (
+                            overlay.layout_profile
+                            for overlay in updated.overlays
+                            if overlay.overlay_id == command["overlay_id"]
+                        ),
+                        None,
+                    )
+                updated = updated.update_caption(
+                    command["overlay_id"],
+                    command["start_sec"],
+                    command["end_sec"],
+                    command["text"],
+                    layout_profile=profile,
+                    style=next((item.style for item in updated.overlays if item.overlay_id == command["overlay_id"]), None) if profile is None else None,
+                )
+            elif op == "remove_overlay":
+                updated = updated.remove_overlay(command["overlay_id"])
+            elif op == "set_format":
+                updated = updated.set_format(command["format_ratio"])
+            else:  # "undo"; the allowlist rejects every additional field.
+                updated = updated.undo()
+
+        updated.validate()
+        return updated
 
     def undo(self) -> "Timeline":
         if not self._history:

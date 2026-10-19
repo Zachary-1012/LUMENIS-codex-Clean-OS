@@ -194,6 +194,8 @@ class BusinessDecisionWorkflow:
              "required_payload_paths": ["manuscript", "input_manifest", "truth_state"]},
             {"id": "lumenis.internal-pitch", "version": "3",
              "required_payload_paths": ["manuscript", "upstream_binding", "truth_state"]},
+            {"id": "lumenis.internal-pitch", "version": "5",
+             "required_payload_paths": ["manuscript", "audiovisual_plan", "truth_state"]},
         )
         if (receipt.get("owner") != "Shared ContentCreation/TaskEngine/SavedWork"
                 or receipt.get("action_kind") != ("INTERNAL_TEXT_CREATION" if receipt.get("version") == 1 else "INTERNAL_TEXT_REVISION")

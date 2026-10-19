@@ -870,6 +870,12 @@
   "sh01.media.apply_before_replace": "先应用或取消当前调整",
   "sh01.media.cancel_adjustment": "取消调整",
   "sh01.media.replacement_audio_missing": "这段素材没有音频，将保留静音",
-  "sh01.media.replacement_transition_blocked": "此工程含转场，暂不能替换镜头"
+  "sh01.media.replacement_transition_blocked": "此工程含转场，暂不能替换镜头",
+  "sh01.media.batch_preview": "预览全部调整",
+  "sh01.media.batch_adopt": "采用调整",
+  "sh01.media.batch_preview_description": "请核对下列待应用片段调整。采用只更新当前草稿，可一次撤销；不会渲染或保存版本。",
+  "sh01.media.batch_unsupported": "请先在对应片段中应用或取消待处理的音轨选择、素材替换或拆分调整。所有草稿均已保留。",
+  "sh01.media.batch_stale": "草稿或访问权限已变化，请重新预览调整。",
+  "sh01.media.batch_inspecting": "正在检查调整…"
  }
 }

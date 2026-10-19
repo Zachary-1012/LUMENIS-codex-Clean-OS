@@ -64,7 +64,7 @@ void main() {
       (v) => v['result']['receipt']['constraint_observations']['committed_bytes_match'] = false,
       (v) => v['result']['receipt']['constraint_observations']['media_lineage'] = 'verified',
       (v) => v['result']['document']['payload']['podcast_plan']['segments'][0]['source_out'] = 0,
-      (v) { final list = v['result']['document']['payload']['podcast_plan']['segments'] as List; list.add(Map.of(list.first)); },
+      (v) { final list = v['result']['document']['payload']['podcast_plan']['segments'] as List; list.add(Map<String, Object>.from(list.first)); },
     ];
     for (final mutate in mutations) {
       final value = fixture(); mutate(value);

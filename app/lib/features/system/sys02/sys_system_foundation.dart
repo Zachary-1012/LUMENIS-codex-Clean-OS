@@ -838,6 +838,7 @@ class SysLoadingView extends StatelessWidget {
     return Semantics(
       liveRegion: true,
       label: copy,
+      excludeSemantics: true,
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(

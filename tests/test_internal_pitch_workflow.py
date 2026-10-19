@@ -596,3 +596,183 @@ def test_input_compatibility_public_manifest_unchanged_and_origin_not_mixed(work
     invalid["input_manifest"]["materials"][0]["source_origin"] = {"kind": "approved-file", "ref": "TEST-UPLOAD-0001"}
     with pytest.raises(ValueError, match="INTERNAL_PITCH_INPUT_MANIFEST_INVALID"):
         pitch.prepare_internal_pitch(**invalid)
+
+
+def audiovisual_arguments(ws, request="av-plan-0001"):
+    values = arguments(ws, request)
+    declared = {"kind": "USER_EXPLICIT", "locator": "current_user_brief"}
+    unknown = {"kind": "UNKNOWN", "locator": None}
+    values["profile"] = "audiovisual-planning/v5"
+    values["shot_plan"] = {
+        "schema": "lumenis.audiovisual-plan/v1", "brief_text": "保留手部三个关键操作，35秒竖屏完全静音。",
+        "method_source": {"reference": "dot-av-v2", "sha256": "a" * 64},
+        "outputs": [{"output_id": "silent-craft", "medium": "video", "purpose": "三个关键操作清晰可读",
+                     "canvas_ratio": "9:16", "duration": {"min_seconds": 35, "max_seconds": 35,
+                                                              "tolerance_seconds": 0},
+                     "sound": {name: "forbidden" for name in ("original", "voice", "music")},
+                     "languages": ["zh"], "constraints": {"must_preserve": ["hands", "tools", "causality"]},
+                     "provenance": {name: dict(declared) for name in
+                                    ("purpose", "canvas_ratio", "duration", "languages", "constraints", "original", "voice", "music")},
+                     "plan": None}],
+        "rule_assessments": [{"rule_ref": "dot-av-v2:R10", "output_ids": ["silent-craft"],
+                              "required_conditions": [{"predicate": "same_action_chain_verified", "value": None,
+                                                       "provenance": unknown}], "exclusions": []}],
+    }
+    return values
+
+
+def test_audiovisual_profile_persists_reopens_revises_and_downloads_without_media_claim(workspace):
+    ws = workspace
+    args = audiovisual_arguments(ws)
+    first = run(ws, pitch.prepare_internal_pitch(**args))
+    document = first["work"]["document"]
+    assert document["contract"] == pitch.AV_PLAN_CONTRACT
+    plan = document["payload"]["audiovisual_plan"]
+    assert plan["input"] == args["shot_plan"]
+    assert plan["rule_decisions"][0]["decision"] == "NEEDS_REVIEW"
+    assert plan["execution"] == "NOT_EXECUTED" and plan["rendition_binding"] is None
+    assert set(plan["reviews"].values()) == {"NEEDS_REVIEW"}
+    assert document["citations"] == []
+    downloaded = pitch.download_internal_pitch(first["task_id"], actor=ws["actor"], scope=ws["scope"])
+    assert hashlib.sha256(downloaded["content"]).hexdigest() == first["action_receipt"]["output"]["sha256"]
+    assert Document(io.BytesIO(downloaded["content"])).paragraphs
+    revised = audiovisual_arguments(ws, "av-plan-0002")
+    revised["shot_plan"]["brief_text"] += " 允许按动作调整镜头顺序。"
+    revised["shot_plan"]["outputs"][0]["constraints"]["preserve_order"] = False
+    second = run(ws, pitch.prepare_internal_pitch(**revised, work_id=document["work_id"],
+                previous_artifact_id=first["action_receipt"]["artifact_id"],
+                expected_draft_digest=document["draft_digest"]))
+    assert second["action_receipt"]["version"] == 2
+    assert second["action_receipt"]["parent_sha256"] == first["action_receipt"]["sha256"]
+    new_plan = second["work"]["document"]["payload"]["audiovisual_plan"]
+    assert new_plan["brief_sha256"] != plan["brief_sha256"]
+    reopened = pitch.read_internal_pitch(first["task_id"], actor=ws["actor"], scope=ws["scope"])
+    assert reopened["work"]["document"]["payload"]["audiovisual_plan"] == plan
+    assert run(ws, first)["action_receipt"] == first["action_receipt"]
+    assert count(ws) == 4
+
+
+def test_audiovisual_changed_brief_cannot_reuse_request_or_erase_unknowns(workspace):
+    args = audiovisual_arguments(workspace)
+    task = pitch.prepare_internal_pitch(**args)
+    args["shot_plan"]["brief_text"] += " Changed."
+    with pytest.raises(ValueError, match="INTERNAL_PITCH_REQUEST_REUSE_CONFLICT"):
+        pitch.prepare_internal_pitch(**args)
+    cancelled = pitch.cancel_internal_pitch(task["task_id"], actor=workspace["actor"], scope=workspace["scope"])
+    assert cancelled["state"] == "cancelled" and count(workspace) == 0
+
+
+@pytest.mark.parametrize("reference", ["brief", "plan_evidence", "shot_evidence", "podcast_evidence"])
+def test_audiovisual_unbound_source_references_cannot_create_task(workspace, reference):
+    from lumenis.shared.content_creation.contracts import Shot, ShotPlan
+    args = audiovisual_arguments(workspace)
+    plan = ShotPlan((Shot(shot_purpose="Show the permitted action", duration_sec=35),)).to_dict()
+    if reference == "brief":
+        plan["brief_ref"] = "unbound-brief"
+    elif reference == "plan_evidence":
+        plan["evidence_refs"] = ["unbound-evidence"]
+    elif reference == "shot_evidence":
+        plan["shots"][0]["evidence_refs"] = ["unbound-evidence"]
+    output = args["shot_plan"]["outputs"][0]
+    if reference == "podcast_evidence":
+        from podcast.intelligence.episode_runtime import PodcastPlan, PodcastSegment
+        plan = PodcastPlan("Interview", "Preserve original speech", "zh", (
+            PodcastSegment("segment-1", "UNRESOLVED_MEDIA", 0, 35, "原话", "原话", "Guest",
+                           "Opening", ("unbound-evidence",)),
+        )).to_dict()
+        output.update(medium="podcast", canvas_ratio=None)
+        output["provenance"]["canvas_ratio"] = {"kind": "UNKNOWN", "locator": None}
+        output["sound"]["original"] = "required"
+    output["plan"] = plan
+    with pytest.raises(ValueError, match="INTERNAL_PITCH_SOURCE_BINDING_REQUIRED"):
+        pitch.prepare_internal_pitch(**args)
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM ai_task")[0] == 0
+    assert count(workspace) == 0
+
+
+
+
+def test_audiovisual_planned_video_and_current_podcast_survive_actual_saved_work(workspace):
+    from lumenis.shared.content_creation.contracts import Shot, ShotPlan
+    from podcast.intelligence.episode_runtime import PodcastPlan, PodcastSegment
+    args = audiovisual_arguments(workspace)
+    args["shot_plan"]["outputs"][0]["plan"] = ShotPlan((Shot(shot_purpose="Preserve the action", duration_sec=35),)).to_dict()
+    audio = copy.deepcopy(args["shot_plan"]["outputs"][0])
+    audio.update(output_id="spoken-version", medium="podcast", canvas_ratio=None)
+    audio["sound"]["original"] = "required"
+    audio["provenance"]["canvas_ratio"] = {"kind": "UNKNOWN", "locator": None}
+    audio["plan"] = PodcastPlan("Spoken version", "Declared existing media", "zh", (
+        PodcastSegment("speech", "UNRESOLVED", 0, 35, "原文", "修订文字", "Host", "Opening", (), 1),
+    ), revision=3).to_dict()
+    args["shot_plan"]["outputs"].append(audio)
+    result = run(workspace, pitch.prepare_internal_pitch(**args))
+    retained = result["work"]["document"]["payload"]["audiovisual_plan"]
+    assert retained["input"] == args["shot_plan"]
+    assert [item["estimated_duration_seconds"] for item in retained["outputs"]] == [35, 35]
+    assert {item["status"] for item in retained["outputs"]} == {"PLANNED_NOT_EXECUTED"}
+    assert retained["rendition_binding"] is None
+    assert pitch.read_internal_pitch(result["task_id"], actor=workspace["actor"], scope=workspace["scope"])["work"]["document"]["payload"]["audiovisual_plan"] == retained
+
+
+@pytest.mark.parametrize("mixed", [{"input_manifest": {}}, {"upstream_ref": {"kind": "saved_work"}}])
+def test_audiovisual_profile_rejects_mixed_contract_inputs_before_task(workspace, mixed):
+    args = audiovisual_arguments(workspace)
+    args.update(mixed)
+    with pytest.raises(ValueError, match="INTERNAL_PITCH_PROFILE_INVALID"):
+        pitch.prepare_internal_pitch(**args)
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM ai_task")[0] == 0
+
+
+def test_audiovisual_cannot_rewrite_existing_v1_work_contract(workspace):
+    first = run(workspace, prepare(workspace))
+    parent = first["work"]["document"]
+    args = audiovisual_arguments(workspace)
+    args.update(work_id=parent["work_id"], previous_artifact_id=first["action_receipt"]["artifact_id"],
+                expected_draft_digest=parent["draft_digest"])
+    pending = pitch.prepare_internal_pitch(**args)
+    with pytest.raises(ValueError, match="WORK_CONTRACT_CHANGE_FORBIDDEN"):
+        run(workspace, pending)
+    assert pitch.read_internal_pitch(first["task_id"], actor=workspace["actor"], scope=workspace["scope"])["work"]["document"] == parent
+    assert count(workspace) == 2
+
+
+def test_audiovisual_read_compares_exact_saved_snapshot(workspace, monkeypatch):
+    committed = run(workspace, pitch.prepare_internal_pitch(**audiovisual_arguments(workspace)))
+    original = work.reopen_work
+    def substituted(*args, **kwargs):
+        result = original(*args, **kwargs)
+        result["document"]["payload"]["audiovisual_plan"]["input"]["brief_text"] += " wrong owner payload"
+        return result
+    monkeypatch.setattr(work, "reopen_work", substituted)
+    with pytest.raises(ValueError, match="INTERNAL_PITCH_AV_PLAN_INTEGRITY_FAILED"):
+        pitch.read_internal_pitch(committed["task_id"], actor=workspace["actor"], scope=workspace["scope"])
+    assert count(workspace) == 2
+
+
+def test_audiovisual_actual_domain_http_prepare_run_read_and_export(workspace, client):
+    args = audiovisual_arguments(workspace)
+    args.pop("actor")
+    reply = client.post(PREFIX, json=args)
+    assert reply.status_code == 202
+    task = reply.get_json()["result"]["task_id"]
+    result = client.post(PREFIX + "/" + task + "/run", json={"scope": workspace["scope"]})
+    assert result.status_code == 200
+    assert result.get_json()["result"]["work"]["document"]["contract"] == pitch.AV_PLAN_CONTRACT
+    read = client.get(PREFIX + "/" + task, query_string=query(workspace))
+    assert read.status_code == 200
+    snapshot = read.get_json()["result"]["work"]["document"]["payload"]["audiovisual_plan"]
+    assert snapshot["execution"] == "NOT_EXECUTED"
+    output = client.get(PREFIX + "/" + task + "/export", query_string=query(workspace))
+    assert output.status_code == 200
+    assert hashlib.sha256(output.data).hexdigest() == output.headers["X-Artifact-SHA256"]
+    assert args["manuscript"]["sections"][0]["body"] in [paragraph.text for paragraph in Document(io.BytesIO(output.data)).paragraphs]
+
+
+def test_audiovisual_shared_path_reuses_saved_work_owner(workspace):
+    args = audiovisual_arguments(workspace)
+    args["scope"] = {"scope_kind": "shared_workspace", "version": 1}
+    pending = pitch.prepare_internal_pitch(**args)
+    saved = pitch.run_internal_pitch(pending["task_id"], actor=args["actor"], scope=args["scope"])
+    assert saved["scope"] == args["scope"]
+    assert saved["work"]["document"]["payload"]["audiovisual_plan"]["input"] == args["shot_plan"]
+    assert saved["work"]["document"]["context"]["scope_kind"] == "shared_workspace"

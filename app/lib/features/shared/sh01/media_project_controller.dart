@@ -12,6 +12,13 @@ abstract interface class MediaProjectRepository {
     String domain,
     List<String> refs,
   );
+  Future<Map<String, dynamic>> inspectEditBatch({
+    required String domain,
+    required List<String> paths,
+    List<String>? refs,
+    required MediaProjectSnapshot timeline,
+    required List<Map<String, dynamic>> commands,
+  });
   Future<Map<String, dynamic>> importFile(
     String domain,
     String filename,
@@ -94,6 +101,22 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
       (response['assets'] as List).map(MediaProjectAsset.fromJson),
     );
   }
+
+  @override
+  Future<Map<String, dynamic>> inspectEditBatch({
+    required String domain,
+    required List<String> paths,
+    List<String>? refs,
+    required MediaProjectSnapshot timeline,
+    required List<Map<String, dynamic>> commands,
+  }) => client.inspectContentEditBatch(
+    domainId: domain,
+    assetPaths: refs == null ? paths : null,
+    assetRefs: refs,
+    timeline: timeline.toJson(),
+    commands: commands,
+    expectedVersion: timeline.version,
+  );
 
   @override
   Future<Map<String, dynamic>> importFile(
@@ -201,6 +224,23 @@ final class MediaProjectVersion {
   }
 }
 
+/// A validated, in-memory preview tied to one controller and one exact draft.
+/// Keeping this object never saves, exports, or grants source rights.
+final class MediaProjectBatchPreview {
+  const MediaProjectBatchPreview._(
+    this._owner,
+    this._base,
+    this._context,
+    this.timeline,
+    this.commandCount,
+  );
+  final MediaProjectController _owner;
+  final MediaProjectSnapshot _base;
+  final String _context;
+  final MediaProjectSnapshot timeline;
+  final int commandCount;
+}
+
 /// Presentation state only. Core reauthorizes, fingerprints and renders every
 /// export; neither a local edit nor a server response is public publication.
 final class MediaProjectController extends ChangeNotifier {
@@ -274,6 +314,103 @@ final class MediaProjectController extends ChangeNotifier {
     }
     _failureCode = null;
     notifyListeners();
+  }
+
+  Future<MediaProjectBatchPreview?> previewEditBatch(
+    List<Map<String, dynamic>> commands,
+  ) async {
+    if (_disposed || busy || _timeline == null) return null;
+    if (!contextMatches) {
+      _fail('CONTENT_CONTEXT_CHANGED');
+      return null;
+    }
+    final base = _timeline!;
+    final context = _contextKey;
+    final refs = _sourceRefs;
+    if (!_begin(MediaProjectOperation.inspecting)) return null;
+    try {
+      if (commands.isEmpty || commands.length > 128) {
+        throw const FormatException('Invalid batch command count.');
+      }
+      // Detach the request from fields that may change while inspection awaits.
+      final frozen = (jsonDecode(jsonEncode(commands)) as List)
+          .map((value) => Map<String, dynamic>.from(value as Map))
+          .toList(growable: false);
+      final response = await repository.inspectEditBatch(
+        domain: domain,
+        paths: _paths,
+        refs: refs,
+        timeline: base,
+        commands: frozen,
+      );
+      if (!_acceptContext(context) || _sourcesNeedRevalidation) return null;
+      if (!identical(_timeline, base)) {
+        _fail('CONTENT_BATCH_PREVIEW_STALE');
+        return null;
+      }
+      final batch = response['edit_batch'];
+      if (response['ok'] != true ||
+          response['assets'] is! List ||
+          response['rights_state'] != 'unknown' ||
+          response['external_fetch'] != false ||
+          jsonEncode(response['source_artifact_refs']) !=
+              jsonEncode(refs ?? const <String>[]) ||
+          batch is! Map ||
+          batch['state'] != 'preview' ||
+          batch['base_version'] != base.version ||
+          batch['persisted'] != false ||
+          batch['export_performed'] != false ||
+          batch['approval_required'] != true ||
+          !RegExp(r'^[0-9a-f]{64}$').hasMatch('${batch['base_digest']}') ||
+          !RegExp(r'^[0-9a-f]{64}$').hasMatch('${batch['timeline_digest']}')) {
+        throw const FormatException('Invalid batch preview response.');
+      }
+      final assets = (response['assets'] as List)
+          .map(MediaProjectAsset.fromJson)
+          .toList(growable: false);
+      MediaProjectSnapshot.fromJson(base.toJson(), inspectedAssets: assets);
+      final candidate = MediaProjectSnapshot.fromJson(
+        batch['timeline'],
+        inspectedAssets: assets,
+      );
+      if (candidate.version <= base.version) {
+        throw const FormatException('Batch preview did not advance the draft.');
+      }
+      return MediaProjectBatchPreview._(
+        this, base, context, candidate, frozen.length,
+      );
+    } catch (error) {
+      if (_acceptContext(context)) _capture(error);
+      return null;
+    } finally {
+      _end();
+    }
+  }
+
+  bool canAdoptEditBatch(MediaProjectBatchPreview preview) =>
+      !_disposed &&
+      !busy &&
+      identical(preview._owner, this) &&
+      identical(_timeline, preview._base) &&
+      contextMatches &&
+      _contextKey == preview._context;
+
+  bool adoptEditBatch(MediaProjectBatchPreview preview) {
+    if (!canAdoptEditBatch(preview)) {
+      if (!_disposed) _fail('CONTENT_BATCH_PREVIEW_STALE');
+      return false;
+    }
+    // Use the concrete returned IDs. Export later submits this snapshot without
+    // rerunning the commands; Artifact parent/version checks remain unchanged.
+    _timeline = preview._base.adoptInspectedPreview(preview.timeline);
+    if (!_timeline!.tracks.any(
+      (track) => track.clips.any((clip) => clip.clipId == _selectedClipId),
+    )) {
+      _selectedClipId = null;
+    }
+    _failureCode = null;
+    notifyListeners();
+    return true;
   }
 
   Future<void> createFromLocalFiles(

@@ -1,6 +1,7 @@
 enum Bmp04PresentationState {
   global,
   ready,
+  observationsOnly,
   empty,
   notCollected,
   stale,
@@ -27,6 +28,7 @@ class Bmp04Snapshot {
     this.curatedEvents = const [],
     this.unclassifiedEventCount,
     this.classificationState = 'UNAVAILABLE',
+    this.analysisState = 'UNKNOWN',
 
   });
 
@@ -45,6 +47,7 @@ class Bmp04Snapshot {
   final List<Bmp04CuratedEvent> curatedEvents;
   final int? unclassifiedEventCount;
   final String classificationState;
+  final String analysisState;
 
 
   bool get scopeReady => focus.isGlobal
@@ -68,6 +71,7 @@ class Bmp04Snapshot {
                   ? Bmp04PresentationState.blocked
                   : Bmp04PresentationState.empty)
             : Bmp04PresentationState.ready,
+      'OBSERVATIONS_ONLY' => Bmp04PresentationState.observationsOnly,
       'PARTIAL' => Bmp04PresentationState.partial,
       'STALE' =>
         channels.isEmpty
@@ -644,6 +648,7 @@ Bmp04Snapshot _sourceObservationSnapshot(Map<String,dynamic> response) {
   return Bmp04Snapshot(contractBound:bound,isBmpOwner:owner,dataState:!allowed?'UNKNOWN':incomplete || rejectedRows>0?'PARTIAL':expected=='READY'?'OBSERVATIONS_ONLY':'EMPTY',
       focus:focus,focusBindingApplied:allowed,readAllowed:allowed,globalScopeReady:allowed && focus.isGlobal,
       channels:const [],rejectedCrossFocusCount:0,rejectedUnscopedCount:rejectedRows,sourceObservations:List.unmodifiable(observations),
+      analysisState: allowed ? 'NOT_COMPUTED' : 'UNKNOWN',
       dashboards: allowed ? _dashboards(truth, focus) : const [],
       curatedEvents: allowed ? _curatedEvents(response['sections']) : const [],
       classificationState: allowed && truth['classification_state'] is String
