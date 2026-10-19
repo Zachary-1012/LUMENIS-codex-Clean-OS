@@ -67,12 +67,15 @@ class Bmp09Snapshot {
     required this.dimensions,
     required this.reports,
     required this.grantedPermissions,
+    this.usesReportArtifactContract = false,
     this.savedArtifacts = const [],
     this.sourceBriefArtifacts = const [],
     this.savedArtifactRead,
     this.sourceBriefRead,
   });
 
+  /// Distinguishes even empty/unknown artifact reads from legacy measurements.
+  final bool usesReportArtifactContract;
   final bool contractBound;
   final String dataState;
   final Bmp09Scope scope;
@@ -542,6 +545,7 @@ Bmp09Snapshot _reportArtifactSnapshot(Map<String, dynamic> response) {
     dimensions: const [],
     reports: const [],
     grantedPermissions: const {},
+    usesReportArtifactContract: true,
     savedArtifacts: List.unmodifiable(saved),
     sourceBriefArtifacts: List.unmodifiable(briefs),
     savedArtifactRead: savedRead,

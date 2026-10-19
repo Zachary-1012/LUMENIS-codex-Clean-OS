@@ -70,6 +70,7 @@ class Bmp10Snapshot {
     required this.grantedPermissions,
     this.observedEvents = const [],
     this.observedRisks = const [],
+    this.observationContract = false,
   });
 
   final bool contractBound;
@@ -81,6 +82,7 @@ class Bmp10Snapshot {
   final Set<String> grantedPermissions;
   final List<Bmp10Observation> observedEvents;
   final List<Bmp10Observation> observedRisks;
+  final bool observationContract;
 
   bool canStage(String permission) =>
       scopeApproved && grantedPermissions.contains(permission);
@@ -362,5 +364,6 @@ Bmp10Snapshot _observationSnapshot(Map<String,dynamic> response) {
   return Bmp10Snapshot(contractBound:bound,dataState:!allowed?'UNKNOWN':rejected>0?'PARTIAL':expectedState,
     scope:Bmp10Scope(mode:mode is String?mode:'UNKNOWN',brandId:brand is String?brand:null,displayNames:const {}),
     scopeApproved:allowed,risks:const [],events:const [],grantedPermissions:const {},
-    observedEvents:observedEvents,observedRisks:observedRisks);
+    observedEvents:observedEvents,observedRisks:observedRisks,
+    observationContract:true);
 }

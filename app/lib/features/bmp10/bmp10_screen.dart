@@ -87,6 +87,8 @@ class _RiskDesk extends StatelessWidget {
         final padding = constraints.maxWidth >= 800 ? 32.0 : 18.0;
         final body = !snapshot.scopeApproved
             ? _Gate(snapshot: snapshot, copy: copy)
+            : snapshot.observationContract
+            ? _ObservedResults(snapshot: snapshot)
             : snapshot.risks.isEmpty && snapshot.events.isEmpty
             ? _Empty(copy: copy)
             : wide
@@ -845,4 +847,84 @@ class _Bmp10Copy {
       'event.RESOLVED': '검토 완료',
     },
   };
+}
+
+
+class _ObservedResults extends StatelessWidget {
+  const _ObservedResults({required this.snapshot});
+  final Bmp10Snapshot snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget group(String kind, List<Bmp10Observation> rows) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(_observedCopy(context, kind),
+          style: Theme.of(context).textTheme.titleLarge),
+        if (rows.isEmpty)
+          Padding(padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(_observedCopy(context, 'noneReturned'))),
+        for (final row in rows)
+          Card(
+            margin: const EdgeInsets.only(top: 12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(row.title, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text('${_observedCopy(context, 'date')}: ${row.date ?? "—"}'),
+                  if (kind == 'events')
+                    Text('${_observedCopy(context, 'status')}: ${row.status ?? "—"}'),
+                  if (kind == 'risks') ...[
+                    Text('${_observedCopy(context, 'level')}: ${row.level ?? "—"}'),
+                    Text('${_observedCopy(context, 'score')}: ${row.score ?? "—"}'),
+                  ],
+                  Text('${_observedCopy(context, 'evidence')}: ${row.evidenceReference}'),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+    return Column(
+      key: const Key('bmp10-observations'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(_observedCopy(context, 'notComputed')),
+        if (snapshot.dataState == 'PARTIAL') ...[
+          const SizedBox(height: 12),
+          Semantics(liveRegion: true,
+            child: Text(_observedCopy(context, 'partial'))),
+        ],
+        const SizedBox(height: 20),
+        group('events', snapshot.observedEvents),
+        const SizedBox(height: 20),
+        group('risks', snapshot.observedRisks),
+      ],
+    );
+  }
+}
+
+String _observedCopy(BuildContext context, String key) {
+  const copy = {
+    'events': ['事件观察', 'Observed events', '관찰된 이벤트'],
+    'risks': ['风险观察', 'Observed risks', '관찰된 위험'],
+    'notComputed': ['以下为来源观察，尚未计算风险分析。缺失值保留为“—”。',
+      'These are source observations. Risk analysis has not been computed. Missing values remain “—”.',
+      '출처 관찰이며 위험 분석은 아직 계산되지 않았습니다. 누락된 값은 “—”로 표시합니다.'],
+    'partial': ['读取不完整，以下仅显示通过核验的观察，不能据此判断没有其他风险或事件。',
+      'The read is incomplete. Only admitted observations are shown; other risks or events may be missing.',
+      '읽기가 불완전합니다. 검증된 관찰만 표시하며 다른 위험이나 이벤트가 누락될 수 있습니다.'],
+    'noneReturned': ['本次未返回此类观察。', 'No observations of this type were returned.',
+      '이 유형의 관찰이 반환되지 않았습니다.'],
+    'date': ['日期', 'Date', '날짜'],
+    'status': ['来源状态', 'Source status', '출처 상태'],
+    'level': ['来源风险级别', 'Source risk level', '출처 위험 수준'],
+    'score': ['来源风险分数', 'Source risk score', '출처 위험 점수'],
+    'evidence': ['证据', 'Evidence', '근거'],
+  };
+  final language = Localizations.localeOf(context).languageCode;
+  return copy[key]![language == 'zh' ? 0 : language == 'ko' ? 2 : 1];
 }

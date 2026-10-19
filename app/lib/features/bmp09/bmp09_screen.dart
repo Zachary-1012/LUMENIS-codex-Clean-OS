@@ -84,6 +84,8 @@ class _EvaluationDesk extends StatelessWidget {
         final padding = constraints.maxWidth >= 800 ? 32.0 : 18.0;
         final body = !snapshot.scopeApproved
             ? _Gate(snapshot: snapshot, copy: copy)
+            : snapshot.usesReportArtifactContract
+            ? _ArtifactDesk(snapshot: snapshot, copy: copy)
             : snapshot.dimensions.isEmpty
             ? _NoResults(copy: copy)
             : wide
@@ -449,6 +451,149 @@ class _ReportShelf extends StatelessWidget {
   );
 }
 
+// Artifact reads are useful independently of measured brand dimensions.
+// Authorization stays in the parent gate; these widgets introduce no actions.
+class _ArtifactDesk extends StatelessWidget {
+  const _ArtifactDesk({required this.snapshot, required this.copy});
+
+  final Bmp09Snapshot snapshot;
+  final _Bmp09Copy copy;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        snapshot.scope.isGlobal ? copy.allBrands : copy.focus,
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      const SizedBox(height: 12),
+      Text(copy.artifact('boundary')),
+      const SizedBox(height: 18),
+      _ArtifactSection(
+        title: copy.artifact('saved'),
+        read: snapshot.savedArtifactRead,
+        copy: copy,
+        children: [
+          for (final item in snapshot.savedArtifacts)
+            _ArtifactCard(
+              title: item.title,
+              lines: [
+                '${copy.artifact('kind.${item.kind}')} · '
+                    '${copy.artifact('version')} ${item.version} · '
+                    '${copy.artifact('sources')} ${item.sourceCount}',
+                copy.artifact('stored'),
+                '${copy.artifact('fingerprint')}: ${item.sha256}',
+              ],
+            ),
+        ],
+      ),
+      const SizedBox(height: 18),
+      _ArtifactSection(
+        title: copy.artifact('briefs'),
+        read: snapshot.sourceBriefRead,
+        copy: copy,
+        children: [
+          for (final item in snapshot.sourceBriefArtifacts)
+            _ArtifactCard(
+              title: item.jobId,
+              lines: [
+                '${copy.artifact('sources')} ${item.sourceCount} · '
+                    '${copy.artifact('humanPending')}',
+                copy.artifact(item.evaluationState == 'recorded'
+                    ? 'recorded' : 'evaluationPartial'),
+                for (final evaluation in item.evaluations)
+                  '${copy.metric(evaluation.metricName)}: '
+                      '${copy.artifact('status.${evaluation.status}')} · '
+                      '${evaluation.evaluatedAt}',
+                if (item.rejectedEvaluationCount > 0)
+                  '${copy.artifact('rejectedEvaluations')}: '
+                      '${item.rejectedEvaluationCount}',
+                if (item.revision != null)
+                  '${copy.artifact('revision')}: ${item.revision!.parentJobId}',
+                '${copy.artifact('fingerprint')}: ${item.artifactHash}',
+              ],
+            ),
+        ],
+      ),
+    ],
+  );
+}
+
+class _ArtifactSection extends StatelessWidget {
+  const _ArtifactSection({
+    required this.title,
+    required this.read,
+    required this.copy,
+    required this.children,
+  });
+
+  final String title;
+  final Bmp09ArtifactRead? read;
+  final _Bmp09Copy copy;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final result = read;
+    final state = result == null || result.state == 'UNAVAILABLE'
+        ? 'unknown'
+        : !result.readComplete
+        ? 'partial'
+        : children.isEmpty
+        ? 'empty'
+        : 'complete';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text(copy.artifact(state)),
+        if (result != null && !result.readComplete) ...[
+          if (result.hasMore == true) Text(copy.artifact('more')),
+          if (result.rejectedCount + result.clientRejectedCount > 0)
+            Text('${copy.artifact('omitted')}: '
+                '${result.rejectedCount + result.clientRejectedCount}'),
+        ],
+        const SizedBox(height: 10),
+        ...children,
+      ],
+    );
+  }
+}
+
+class _ArtifactCard extends StatelessWidget {
+  const _ArtifactCard({required this.title, required this.lines});
+
+  final String title;
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: LumenisTheme.of(context).surface,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: LumenisTheme.of(context).line),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleSmall),
+        for (final line in lines)
+          Padding(
+            padding: const EdgeInsets.only(top: 7),
+            child: Text(line, style: TextStyle(
+              color: LumenisTheme.of(context).muted,
+              height: 1.5,
+            )),
+          ),
+      ],
+    ),
+  );
+}
+
 class _NoResults extends StatelessWidget {
   const _NoResults({required this.copy});
 
@@ -673,6 +818,10 @@ class _Bmp09Copy {
   String get retryDetail => _get('retryDetail');
   String get generateReport => _get('generateReport');
 
+  String artifact(String key) => _get('artifact.$key');
+  String metric(String key) =>
+      _values[languageCode]?['artifact.metric.$key'] ?? key;
+
   String movement(String value) => _get('movement.$value');
   String confidence(String value) => _get('confidence.$value');
   String coverage(String value) => _get('coverage.$value');
@@ -682,6 +831,35 @@ class _Bmp09Copy {
 
   static const _values = <String, Map<String, String>>{
     'zh-CN': {
+      'artifact.boundary': '报告存档和检查记录不代表已测得的市场效果；保存成功也不代表评估通过。',
+      'artifact.saved': '已保存作品',
+      'artifact.briefs': '来源简报',
+      'artifact.version': '版本',
+      'artifact.sources': '来源数',
+      'artifact.stored': '已保存；评估尚未由保存行为确立。',
+      'artifact.fingerprint': '内容指纹',
+      'artifact.humanPending': '等待人工审核',
+      'artifact.recorded': '检查记录已齐全，请逐项查看结果。',
+      'artifact.evaluationPartial': '检查记录不完整；缺失结果仍未确定。',
+      'artifact.rejectedEvaluations': '未展示的无效检查记录',
+      'artifact.revision': '修订自',
+      'artifact.unknown': '读取状态未知或暂不可用，不能确认是否为空。',
+      'artifact.partial': '读取尚不完整，以下仅展示已验证的部分。',
+      'artifact.empty': '本次完整读取未发现作品。',
+      'artifact.complete': '本次作品读取完整。',
+      'artifact.more': '还有更多作品未读取。',
+      'artifact.omitted': '未展示的未验证作品',
+      'artifact.kind.research': '研究',
+      'artifact.kind.report': '报告',
+      'artifact.kind.podcast_episode': '播客单集',
+      'artifact.kind.delivery_preferences': '交付偏好',
+      'artifact.status.pass': '通过',
+      'artifact.status.warn': '警告',
+      'artifact.status.fail': '失败',
+      'artifact.status.unknown': '未知',
+      'artifact.metric.report_artifact_integrity': '报告完整性',
+      'artifact.metric.source_evidence_grounding': '来源支持',
+      'artifact.metric.multimodal_analysis_integrity': '多模态分析完整性',
       'subtitle': '只从已记录的真实结果建立品牌评估，让分数、变化、可信度和来源彼此对得上。',
       'refresh': '刷新评估',
       'focus': '当前品牌',
@@ -717,6 +895,35 @@ class _Bmp09Copy {
       'coverage.PARTIAL': '来源部分完整',
     },
     'en': {
+      'artifact.boundary': 'Report storage and checks do not establish measured market effects; saved does not mean evaluation passed.',
+      'artifact.saved': 'Saved work',
+      'artifact.briefs': 'Source briefs',
+      'artifact.version': 'Version',
+      'artifact.sources': 'Sources',
+      'artifact.stored': 'Saved; assessment is not established by storage.',
+      'artifact.fingerprint': 'Content fingerprint',
+      'artifact.humanPending': 'Human review pending',
+      'artifact.recorded': 'Checks are fully recorded. Review each result.',
+      'artifact.evaluationPartial': 'Checks are incomplete; missing results remain unknown.',
+      'artifact.rejectedEvaluations': 'Invalid checks omitted',
+      'artifact.revision': 'Revised from',
+      'artifact.unknown': 'Read status is unknown or unavailable; emptiness is not confirmed.',
+      'artifact.partial': 'Read is incomplete. Only verified items are shown below.',
+      'artifact.empty': 'This complete read found no artifacts.',
+      'artifact.complete': 'This artifact read is complete.',
+      'artifact.more': 'More artifacts have not yet been read.',
+      'artifact.omitted': 'Unverified artifacts omitted',
+      'artifact.kind.research': 'Research',
+      'artifact.kind.report': 'Report',
+      'artifact.kind.podcast_episode': 'Podcast episode',
+      'artifact.kind.delivery_preferences': 'Delivery preferences',
+      'artifact.status.pass': 'Pass',
+      'artifact.status.warn': 'Warning',
+      'artifact.status.fail': 'Fail',
+      'artifact.status.unknown': 'Unknown',
+      'artifact.metric.report_artifact_integrity': 'Report integrity',
+      'artifact.metric.source_evidence_grounding': 'Source grounding',
+      'artifact.metric.multimodal_analysis_integrity': 'Multimodal analysis integrity',
       'subtitle':
           'Build the brand evaluation from recorded actual results so score, movement, confidence and source agree.',
       'refresh': 'Refresh evaluation',
@@ -759,6 +966,35 @@ class _Bmp09Copy {
       'coverage.PARTIAL': 'Partial source coverage',
     },
     'ko': {
+      'artifact.boundary': '보고서 저장과 검사 기록은 측정된 시장 효과를 입증하지 않습니다. 저장은 평가 통과를 의미하지 않습니다.',
+      'artifact.saved': '저장된 작업',
+      'artifact.briefs': '출처 브리프',
+      'artifact.version': '버전',
+      'artifact.sources': '출처 수',
+      'artifact.stored': '저장됨. 저장만으로 평가 결과가 확정되지 않습니다.',
+      'artifact.fingerprint': '콘텐츠 지문',
+      'artifact.humanPending': '사람의 검토 대기 중',
+      'artifact.recorded': '검사 기록이 모두 있습니다. 각 결과를 확인하세요.',
+      'artifact.evaluationPartial': '검사 기록이 불완전하며 누락된 결과는 알 수 없습니다.',
+      'artifact.rejectedEvaluations': '제외된 유효하지 않은 검사',
+      'artifact.revision': '수정 원본',
+      'artifact.unknown': '읽기 상태를 알 수 없거나 사용할 수 없어 비어 있는지 확인되지 않았습니다.',
+      'artifact.partial': '읽기가 불완전합니다. 확인된 항목만 아래에 표시합니다.',
+      'artifact.empty': '완료된 이번 읽기에서 작업을 찾지 못했습니다.',
+      'artifact.complete': '이번 작업 읽기가 완료되었습니다.',
+      'artifact.more': '아직 읽지 않은 작업이 더 있습니다.',
+      'artifact.omitted': '제외된 미확인 작업',
+      'artifact.kind.research': '연구',
+      'artifact.kind.report': '보고서',
+      'artifact.kind.podcast_episode': '팟캐스트 에피소드',
+      'artifact.kind.delivery_preferences': '전달 설정',
+      'artifact.status.pass': '통과',
+      'artifact.status.warn': '경고',
+      'artifact.status.fail': '실패',
+      'artifact.status.unknown': '알 수 없음',
+      'artifact.metric.report_artifact_integrity': '보고서 무결성',
+      'artifact.metric.source_evidence_grounding': '출처 근거',
+      'artifact.metric.multimodal_analysis_integrity': '멀티모달 분석 무결성',
       'subtitle': '기록된 실제 결과만으로 브랜드를 평가하여 점수, 변화, 신뢰도와 출처를 맞춥니다.',
       'refresh': '평가 새로고침',
       'focus': '현재 브랜드',

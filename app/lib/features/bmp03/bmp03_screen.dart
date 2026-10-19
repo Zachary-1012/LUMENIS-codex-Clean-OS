@@ -153,6 +153,7 @@ class _ReadyStateState extends State<_ReadyState> {
         final viewModel = widget.viewModel;
         final available =
             snapshot.scopeReady &&
+            !snapshot.sourceObservationContract &&
             {
               Bmp03PresentationState.ready,
               Bmp03PresentationState.partial,
@@ -208,7 +209,9 @@ class _ReadyStateState extends State<_ReadyState> {
           controller: _briefScroll,
           child: _SourceBrief(signal: viewModel.selectedSignal),
         );
-        final content = !available
+        final content = snapshot.scopeReady && snapshot.sourceObservationContract
+            ? _SourceObservations(snapshot: snapshot)
+            : !available
             ? SingleChildScrollView(
                 child: _AvailabilityPanel(
                   snapshot: snapshot,
@@ -951,4 +954,76 @@ String _readingCopy(BuildContext context, String key) {
       : language == 'ko'
       ? 2
       : 1];
+}
+
+
+class _SourceObservations extends StatelessWidget {
+  const _SourceObservations({required this.snapshot});
+  final Bmp03Snapshot snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      key: const Key('bmp03-source-observations'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(_observationCopy(context, 'title'),
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Text(_observationCopy(context, 'notComputed')),
+          if (snapshot.dataState == 'PARTIAL') ...[
+            const SizedBox(height: 12),
+            Semantics(liveRegion: true,
+              child: Text(_observationCopy(context, 'partial'))),
+          ],
+          if (snapshot.sourceObservations.isEmpty) ...[
+            const SizedBox(height: 16),
+            Text(_observationCopy(context,
+              snapshot.dataState == 'EMPTY' ? 'empty' : 'noAdmitted')),
+          ],
+          for (final observation in snapshot.sourceObservations)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: _Panel(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(observation.title,
+                      style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Text('${_observationCopy(context, 'platform')}: '
+                      '${observation.platform ?? "—"}'),
+                    Text('${_observationCopy(context, 'evidence')}: '
+                      '${observation.evidenceReference}'),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+String _observationCopy(BuildContext context, String key) {
+  const copy = {
+    'title': ['来源观察', 'Source observations', '출처 관찰'],
+    'notComputed': ['以下是已读取的来源资料，尚未计算市场洞察。',
+      'These are source observations. Market insights have not been computed.',
+      '읽어 온 출처 자료입니다. 시장 인사이트는 아직 계산되지 않았습니다.'],
+    'partial': ['来源读取不完整，以下仅显示通过核验的资料。',
+      'The source read is incomplete. Only admitted observations are shown.',
+      '출처 읽기가 불완전합니다. 검증된 자료만 표시합니다.'],
+    'empty': ['当前范围没有来源观察。', 'No source observations in this scope.',
+      '현재 범위에 출처 관찰이 없습니다.'],
+    'noAdmitted': ['本次未返回可展示的来源观察，不能据此判断没有资料。',
+      'No admitted observations were returned; this does not establish an empty source.',
+      '표시할 수 있는 관찰이 반환되지 않았으며, 자료가 없다는 뜻은 아닙니다.'],
+    'platform': ['来源平台', 'Platform', '플랫폼'],
+    'evidence': ['证据', 'Evidence', '근거'],
+  };
+  final language = Localizations.localeOf(context).languageCode;
+  return copy[key]![language == 'zh' ? 0 : language == 'ko' ? 2 : 1];
 }

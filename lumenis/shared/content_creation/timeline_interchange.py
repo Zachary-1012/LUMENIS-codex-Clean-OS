@@ -380,8 +380,11 @@ def build_interchange_files(timeline: Timeline, *, formats=('otio', 'fcpxml'), f
         raise VideoEditingError('INTERCHANGE_PREFLIGHT_BLOCKED_OR_UNKNOWN')
     if not allow_loss and any(r['status'] == 'LOSS' for r in reports):
         raise VideoEditingError('INTERCHANGE_LOSS_REQUIRES_EXPLICIT_ACCEPTANCE')
+    # Verify only exported sources; deleted clips retain assets for undo.
+    used = {clip.media_asset_id for clip in _clips(timeline)}
+    exported_assets = tuple(asset for asset in timeline.assets if asset.asset_id in used)
     # Verify bytes again, not merely a saved MediaAsset label. Do not infer rights.
-    for asset in timeline.assets:
+    for asset in exported_assets:
         if check_cancel:
             check_cancel()
         current = fingerprint_local_media(asset.path)
@@ -392,7 +395,7 @@ def build_interchange_files(timeline: Timeline, *, formats=('otio', 'fcpxml'), f
     files = {('timeline.edl' if f=='cmx3600' else f'timeline.{f}'): exporters[f](timeline,rate,media_refs, assessment['source_frame_rates'], assessment['source_dimensions'])
              for f, assessment in zip(formats, reports)}
     report = {'schema': 'lumenis.interchange-package/v1', 'preflight': reports,
-              'loss_accepted': allow_loss, 'source_sha256': {a.asset_id: a.sha256 for a in timeline.assets},
+              'loss_accepted': allow_loss, 'source_sha256': {a.asset_id: a.sha256 for a in exported_assets},
               'file_sha256': {n: hashlib.sha256(b).hexdigest() for n, b in files.items()}}
     if check_cancel:
         check_cancel()

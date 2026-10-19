@@ -1,6 +1,7 @@
 enum Bmp03PresentationState {
   global,
   ready,
+  observations,
   empty,
   notCollected,
   stale,
@@ -23,6 +24,7 @@ class Bmp03Snapshot {
     required this.rejectedCrossFocusCount,
     required this.rejectedUnscopedCount,
     this.sourceObservations = const [],
+    this.sourceObservationContract = false,
   });
 
   final bool contractBound;
@@ -35,6 +37,7 @@ class Bmp03Snapshot {
   final List<Bmp03Signal> signals;
   // Source observations never acquire signal scores or insight status.
   final List<Bmp03SourceObservation> sourceObservations;
+  final bool sourceObservationContract;
   final int rejectedCrossFocusCount;
   final int rejectedUnscopedCount;
 
@@ -53,6 +56,7 @@ class Bmp03Snapshot {
     }
     if (!scopeReady) return Bmp03PresentationState.blocked;
     return switch (dataState) {
+      'OBSERVATIONS_ONLY' => Bmp03PresentationState.observations,
       'READY' =>
         signals.isEmpty
             ? (rejectedUnscopedCount > 0
@@ -228,8 +232,15 @@ Bmp03Snapshot _sourceObservationSnapshot(Map<String, dynamic> response) {
     }
   } else { rejected++; }
   return Bmp03Snapshot(contractBound: bound, isBmpOwner: owner,
-    // The existing insight view stays unknown until insight is actually computed.
-    dataState: admitted ? (rejected > 0 || incomplete ? 'PARTIAL' : 'OBSERVATIONS_ONLY') : 'BLOCKED',
+    // Sources remain distinct from computed insights, including partial/empty reads.
+    dataState: !admitted
+        ? 'BLOCKED'
+        : rejected > 0 || incomplete
+        ? 'PARTIAL'
+        : observations.isEmpty
+        ? 'EMPTY'
+        : 'OBSERVATIONS_ONLY',
+    sourceObservationContract: true,
     focus: focus, focusBindingApplied: admitted, readAllowed: admitted,
     globalScopeReady: focus.isGlobal && admitted, signals: const [],
     sourceObservations: List.unmodifiable(observations),
