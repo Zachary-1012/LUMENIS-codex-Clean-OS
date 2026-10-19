@@ -1,0 +1,15 @@
+﻿source_id,title,classification,official_url,version_date,verification,bounded_use,accessed_utc
+S01,Apple HIG Progress indicators,P,https://developer.apple.com/design/human-interface-guidelines/progress-indicators,滚动文档；可见变更2023-09-12,官方.md正文读取,真实进度/停滞/取消后果；不采用外观,2026-10-18
+S02,Apple HIG Undo and redo,P,https://developer.apple.com/design/human-interface-guidelines/undo-and-redo,无正式版号/发布日期,官方.md正文读取,撤销对象可预测、结果可见；不推断持久事务实现,2026-10-18
+S03,Apple HIG Privacy,P,https://developer.apple.com/design/human-interface-guidelines/privacy,滚动文档；可见变更2023-06-21,官方.md正文读取,按需最小访问与平台差异；不套用系统弹窗为通用UI,2026-10-18
+S04,Use Handoff to continue tasks,P,https://support.apple.com/en-us/102426,Published 2026-06-10,官方支持页正文,接续任务和公开前提；内部同步算法未公开,2026-10-18
+S05,Tesla Software Updates,P,https://www.tesla.com/support/software-updates,无正式版号/发布日期；部分设置适用2019.16+,官方支持页正文,下载/安装/排期/版本；车载不可回退不适用于序境,2026-10-18
+S06,Tesla Fleet API Vehicle Commands,P,https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands,滚动API文档；取消安装倒计时端点无独立版本,官方API正文,命令前置条件、取消范围；不引入车辆API,2026-10-18
+S07,Tesla vehicle-command error.go,C,https://github.com/teslamotors/vehicle-command/blob/v0.4.1/pkg/protocol/error.go,固定tag v0.4.1；未声称最新或生产部署版本,官方仓库源码行核验,MayHaveSucceeded/Temporary/ShouldRetry；未知结果不自动重试,2026-10-18
+S08,SmartThings Capabilities,P,https://developer.smartthings.com/docs/devices/capabilities,滚动文档；能力version仅支持1；属性示例JSON Schema draft4,官方开发正文,类型/单位/约束/属性命令分离；不复制其版本体系,2026-10-18
+S09,SmartThings Authorization and Permissions,P,https://developer.smartthings.com/docs/getting-started/authorization-and-permissions,滚动文档；现PAT 24小时，2024-12-30前例外,官方开发正文,操作scope；不授权创建token或接入,2026-10-18
+S10,SmartThings Check Your Device Health,P,https://developer.smartthings.com/docs/devices/health/,无正式版号/发布日期,官方开发正文,健康检查覆盖盲区；不等于业务成果,2026-10-18
+S11,SmartThings Test Your Device and Certification,P,https://developer.smartthings.com/docs/devices/test-your-device/,无正式版号/发布日期,官方开发正文；另核certification/overview,准确状态/错误与功能测试；非通用认证,2026-10-18
+S12,WCAG 2.2,S,https://www.w3.org/TR/2024/REC-WCAG22-20241212/,W3C Recommendation 2024-12-12,正式规范正文/指定条款,3.3.7/4.1.3/2.4.11/2.5.7等；不证明原生全合规,2026-10-18
+S13,Xcode Cloud workflow actions,P,https://developer.apple.com/documentation/xcode/configuring-your-xcode-cloud-workflow-s-actions,无正式版号/发布日期；metadataVersion不作产品版本,官方.md正文读取,build/test/analyze/archive分离；不证明Apple内部统一流程,2026-10-18
+S14,NIST SP 800-218 SSDF,S,https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-218.pdf,Version 1.1 February 2022；Final 2022-02-03,公开PDF相关PO.4/RV.3条款及出版页,安全开发证据和根因；不是全产品充分质量标准,2026-10-18

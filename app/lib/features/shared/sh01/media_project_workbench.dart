@@ -2822,6 +2822,7 @@ Widget _numberField(
   TextEditingController controller, {
   ValueChanged<String>? onChanged,
 }) => Padding(
+  key: ObjectKey(controller),
   padding: const EdgeInsets.symmetric(vertical: 6),
   child: TextField(
     controller: controller,

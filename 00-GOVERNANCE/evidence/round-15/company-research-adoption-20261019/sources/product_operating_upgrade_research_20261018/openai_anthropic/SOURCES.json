@@ -1,0 +1,182 @@
+[
+  {
+    "id": "S01",
+    "title": "Building effective agents",
+    "version": "2024-12-19; 页面已提示工具变化",
+    "evidence_class": "B",
+    "url": "https://www.anthropic.com/engineering/building-effective-agents",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "简单编排优先；成本/延迟权衡",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S02",
+    "title": "How we built our multi-agent research system",
+    "version": "2025-06-13",
+    "evidence_class": "B",
+    "url": "https://www.anthropic.com/engineering/multi-agent-research-system",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "内部研究评估，不能泛化90.2%或token倍率",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S03",
+    "title": "Effective context engineering for AI agents",
+    "version": "2025-09-29",
+    "evidence_class": "B",
+    "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "轻量引用/按需检索；上下文预算",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S04",
+    "title": "Effective harnesses for long-running agents",
+    "version": "2025-11-26",
+    "evidence_class": "B",
+    "url": "https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "增量进展、完整功能清单、真实E2E；仅特定实验",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S05",
+    "title": "Scaling Managed Agents: Decoupling the brain from the hands",
+    "version": "2026-04-08",
+    "evidence_class": "B",
+    "url": "https://www.anthropic.com/engineering/managed-agents",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "session/harness/sandbox分离；不建议采购或照搬实现",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S06",
+    "title": "OpenAI Agents SDK Human-in-the-loop",
+    "version": "动态文档;未固定SDK发布tag",
+    "evidence_class": "A",
+    "url": "https://openai.github.io/openai-agents-python/human_in_the_loop/",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "持久审批与版本恢复",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S07",
+    "title": "OpenAI Agents SDK Sessions",
+    "version": "动态文档;未固定SDK发布tag",
+    "evidence_class": "A",
+    "url": "https://openai.github.io/openai-agents-python/sessions/",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "历史会话存储不替代权限",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S08",
+    "title": "Harness engineering: leveraging Codex in an agent-first world",
+    "version": "2026-02-11",
+    "evidence_class": "B",
+    "url": "https://openai.com/index/harness-engineering/",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "边界机械校验；低阻塞合并不可外推",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S09",
+    "title": "Structured model outputs",
+    "version": "动态文档;未固定API版本",
+    "evidence_class": "A",
+    "url": "https://developers.openai.com/api/docs/guides/structured-outputs",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "schema与拒绝/不完整分支；不证明事实真实",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S10",
+    "title": "Security & Privacy – Plugins",
+    "version": "动态文档;旧Apps SDK URL重定向",
+    "evidence_class": "A",
+    "url": "https://developers.openai.com/plugins/guides/security-privacy",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "最小权限、服务器校验、防御纵深",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S11",
+    "title": "Projects in ChatGPT",
+    "version": "页面显示更新28天前;不反推精确发布日期",
+    "evidence_class": "A",
+    "url": "https://help.openai.com/en/articles/10169521-projects-in-chatgpt",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "项目上下文与共享project-only边界",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S12",
+    "title": "How can I create and manage projects?",
+    "version": "动态帮助文档",
+    "evidence_class": "A",
+    "url": "https://support.claude.com/en/articles/9519177-how-can-i-create-and-manage-projects",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "项目知识与记忆开关",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S13",
+    "title": "What are artifacts and how do I use them?",
+    "version": "页面显示更新一周以上;具体版本未标",
+    "evidence_class": "A",
+    "url": "https://support.claude.com/en/articles/17153992-what-are-artifacts-and-how-do-i-use-them",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "可编辑返回成果；计划和功能可变",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S14",
+    "title": "Demystifying evals for AI agents",
+    "version": "2026-01-09",
+    "evidence_class": "B",
+    "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "task/trial/grader/outcome分离",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S15",
+    "title": "OpenAI Agents SDK Tracing",
+    "version": "动态文档;未固定SDK发布tag",
+    "evidence_class": "A",
+    "url": "https://openai.github.io/openai-agents-python/tracing/",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "默认trace及敏感数据风险",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S16",
+    "title": "MCP Authorization",
+    "version": "规范版本2025-11-25",
+    "evidence_class": "D",
+    "url": "https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "版本化社区规范，不是ISO标准；OAuth受众/禁止token透传",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S17",
+    "title": "How AI is transforming work at Anthropic",
+    "version": "2025-12-02;2025-08调查",
+    "evidence_class": "C",
+    "url": "https://www.anthropic.com/research/how-ai-is-transforming-work-at-anthropic",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "132调查/53访谈，选择与自报限制",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  },
+  {
+    "id": "S18",
+    "title": "How employment is changing at Anthropic",
+    "version": "2026-10-16",
+    "evidence_class": "C",
+    "url": "https://www.anthropic.com/research/employment-at-anthropic",
+    "accessed_at": "2026-10-18 UTC",
+    "use_and_limit": "人类注意力、协调瓶颈；公司内部观察不代表普遍因果",
+    "method": "官方web页面实际检索/打开；仅保存原创摘要，不复制全文"
+  }
+]

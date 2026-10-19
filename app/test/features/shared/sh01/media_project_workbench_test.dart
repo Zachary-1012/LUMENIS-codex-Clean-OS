@@ -698,6 +698,36 @@ void main() {
     expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [8, 8]);
   });
 
+  testWidgets('inspector retains field identity and focus when dirty controls appear', (tester) async {
+    await _prepareEditableProject(client, controller);
+    controller.selectClip(controller.timeline!.tracks.single.clips.single.clipId);
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(client, controller));
+    await tester.pumpAndSettle();
+    final endField = sourceEnd();
+    await tester.ensureVisible(endField);
+    await tester.showKeyboard(endField);
+    final editable = find.descendant(of: endField, matching: find.byType(EditableText));
+    final state = tester.state<EditableTextState>(editable);
+    expect(state.widget.focusNode.hasFocus, isTrue);
+    expect(find.byKey(const Key('media-apply-before-replace')), findsNothing);
+    await tester.enterText(endField, '7');
+    await tester.pump();
+    expect(find.byKey(const Key('media-apply-before-replace')), findsOneWidget);
+    expect(identical(tester.state<EditableTextState>(editable), state), isTrue);
+    expect(state.widget.focusNode.hasFocus, isTrue);
+    expect(tester.widget<TextField>(endField).controller!.text, '7');
+    await tester.enterText(endField, '6');
+    await tester.pump();
+    expect(identical(tester.state<EditableTextState>(editable), state), isTrue);
+    expect(state.widget.focusNode.hasFocus, isTrue);
+    expect(tester.widget<TextField>(endField).controller!.text, '6');
+    expect(controller.timeline!.tracks.single.clips.single.sourceOut, 8);
+    expect(client.batchCalls, 0);
+    expect(client.exports, 0);
+  });
+
   testWidgets('audio range position and fades use ordered batch commands', (tester) async {
     await _prepareEditableProject(client, controller);
     controller.edit((s) => s.addAudioTrack('voice', audioRole: 'voiceover')
@@ -721,6 +751,55 @@ void main() {
     await tester.enterText(field('音量'), '0.5');
     await tester.enterText(field('淡入（秒）'), '1');
     await tester.enterText(field('淡出（秒）'), '1');
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    await previewBatch(tester);
+    expect(client.batchCommands!.map((c) => c['op']), ['audio_mix', 'trim', 'move_audio_clip']);
+    await tester.tap(find.byKey(const Key('media-batch-adopt')));
+    await tester.pumpAndSettle();
+    final clip = controller.timeline!.tracks.last.clips.single;
+    expect(clip.sourceOut, 3);
+    expect(clip.timelineStart, 1);
+    expect(clip.audioMix.toJson(), {
+      'volume': .5, 'fade_in_sec': 1.0, 'fade_out_sec': 1.0, 'ducking': false,
+    });
+    expect(client.exports, 0);
+  });
+
+  testWidgets('audio range position and fades retain draft across staged input frames', (tester) async {
+    await _prepareEditableProject(client, controller);
+    controller.edit((s) => s.addAudioTrack('voice', audioRole: 'voiceover')
+      .addClip(s.assets.single.assetId, trackId: 'voice', sourceOut: 8,
+        audioRole: 'voiceover', audioStreamIndex: 0));
+    final id = controller.timeline!.tracks.last.clips.single.clipId;
+    controller.edit((s) => s.setAudioMix(id, const MediaProjectAudioMix(fadeInSec: 4)));
+    controller.selectClip(id);
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(client, controller));
+    await tester.pumpAndSettle();
+    Finder field(String label) => find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.labelText == label);
+    expect(controller.timeline!.tracks.last.clips.single.timelineStart, 0);
+    await tester.enterText(sourceEnd(), '3');
+    await tester.pump();
+    final position = field('时间线位置（秒）');
+    await tester.ensureVisible(position);
+    await tester.enterText(position, '1');
+    await tester.pump();
+    expect(tester.widget<TextField>(position).controller!.text, '1');
+    final sound = find.byKey(const Key('media-sound-settings'));
+    await tester.ensureVisible(sound);
+    await tester.tap(sound);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(position).controller!.text, '1');
+    await tester.enterText(field('音量'), '0.5');
+    await tester.pump();
+    await tester.enterText(field('淡入（秒）'), '1');
+    await tester.pump();
+    await tester.enterText(field('淡出（秒）'), '1');
+    await tester.pump();
+    expect(tester.widget<TextField>(position).controller!.text, '1');
     tester.testTextInput.hide();
     await tester.pumpAndSettle();
     await previewBatch(tester);
