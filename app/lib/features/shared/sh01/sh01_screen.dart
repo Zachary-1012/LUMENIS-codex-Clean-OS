@@ -150,6 +150,7 @@ class Sh01Screen extends StatefulWidget {
 
 class _Sh01ScreenState extends State<Sh01Screen> {
   bool _editing = false;
+  bool _independent = true;
   late final Sh01ViewModel _viewModel = Sh01ViewModel(
     repository: widget.repository ?? CoreSh01Repository(client: widget.client),
   );
@@ -171,6 +172,7 @@ class _Sh01ScreenState extends State<Sh01Screen> {
       ? MediaProjectWorkbench(
           client: widget.client,
           invokingDomain: widget.invokingDomain,
+          sharedWorkspace: _independent && widget.invokingDomain == null,
           contextAvailable: widget.contextAvailable,
           onBack: () => setState(() => _editing = false),
         )
@@ -183,11 +185,29 @@ class _Sh01ScreenState extends State<Sh01Screen> {
                   alignment: Alignment.centerLeft,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: OutlinedButton.icon(
-                      key: const Key('sh01-open-video-editor'),
-                      onPressed: () => setState(() => _editing = true),
-                      icon: const LumenisIcon(Icons.video_collection_outlined),
-                      label: Text(context.lumenisL10n.text('sh01.media.open')),
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          key: const Key('sh01-open-video-editor'),
+                          onPressed: () => setState(() {
+                            _independent = true;
+                            _editing = true;
+                          }),
+                          icon: const LumenisIcon(Icons.video_collection_outlined),
+                          label: Text(context.lumenisL10n.text('sh01.media.open')),
+                        ),
+                        OutlinedButton.icon(
+                          key: const Key('sh01-open-linked-media'),
+                          onPressed: () => setState(() {
+                            _independent = false;
+                            _editing = true;
+                          }),
+                          icon: const LumenisIcon(Icons.folder_open_outlined),
+                          label: Text(context.lumenisL10n.text('sh01.media.linked_workspace')),
+                        ),
+                      ],
                     ),
                   ),
                 ),

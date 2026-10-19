@@ -66,7 +66,7 @@ class ContentSourceConfirmation {
         RegExp(r'[\x00-\x1f]').hasMatch(id) ||
         resource is! String ||
         RegExp(
-              r'^content-source-import:v1:[a-f0-9]{64}$',
+              r'^content-source-import:(?:shared-workspace:)?v1:[a-f0-9]{64}$',
             ).stringMatch(resource) !=
             resource ||
         parsedExpiry == null ||
@@ -643,14 +643,20 @@ class LumenisCoreClient {
     };
   }
 
+  /// An explicit null selects the existing independent Shared workspace.
+  /// Business context is never merged into this actor-free wire scope; Core
+  /// still authorizes the current workspace, source uses and every effect.
+  Map<String, String> _mediaContentContext(String? domainId) =>
+      domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId);
+
   Future<Map<String, dynamic>> inspectContentMedia({
-    required String domainId,
+    required String? domainId,
     List<String>? assetPaths,
     List<String>? assetRefs,
   }) => _request(
     'POST',
     '/api/experience/shared-skills/shared.content_project/inspect',
-    operationContext: _contentContext(domainId),
+    operationContext: _mediaContentContext(domainId),
     payload: {
       'action_type': 'READ',
       'input': _contentAssets(assetPaths, assetRefs),
@@ -659,7 +665,7 @@ class LumenisCoreClient {
 
   /// Read-only batch preview through the existing media inspection owner.
   Future<Map<String, dynamic>> inspectContentEditBatch({
-    required String domainId,
+    required String? domainId,
     List<String>? assetPaths,
     List<String>? assetRefs,
     required Map<String, dynamic> timeline,
@@ -668,7 +674,7 @@ class LumenisCoreClient {
   }) => _request(
     'POST',
     '/api/experience/shared-skills/shared.content_project/inspect',
-    operationContext: _contentContext(domainId),
+    operationContext: _mediaContentContext(domainId),
     payload: {
       'action_type': 'READ',
       'input': {
@@ -683,7 +689,7 @@ class LumenisCoreClient {
   );
 
   Future<Map<String, dynamic>> exportContentProject({
-    required String domainId,
+    required String? domainId,
     List<String>? assetPaths,
     List<String>? assetRefs,
     required Map<String, dynamic> timeline,
@@ -700,7 +706,7 @@ class LumenisCoreClient {
     return _request(
       'POST',
       '/api/experience/content-projects/export',
-      operationContext: _contentContext(domainId),
+      operationContext: _mediaContentContext(domainId),
       connectionTimeout: const Duration(minutes: 5),
       payload: {
         'action_type': 'EXPORT',
@@ -722,7 +728,7 @@ class LumenisCoreClient {
   }
 
   Future<Map<String, dynamic>> listContentProjects({
-    required String domainId,
+    required String? domainId,
     int limit = 20,
     String? cursor,
   }) {
@@ -738,19 +744,19 @@ class LumenisCoreClient {
     return _request(
       'GET',
       '/api/experience/content-projects?$query',
-      operationContext: _contentContext(domainId),
+      operationContext: _mediaContentContext(domainId),
     );
   }
 
   Future<Map<String, dynamic>> reopenContentProject({
-    required String domainId,
+    required String? domainId,
     required String artifactId,
   }) {
     _validateContentArtifactId(artifactId);
     return _request(
       'GET',
       '/api/experience/content-projects/$artifactId',
-      operationContext: _contentContext(domainId),
+      operationContext: _mediaContentContext(domainId),
     );
   }
 
@@ -808,7 +814,7 @@ class LumenisCoreClient {
   }
 
   Future<Map<String, dynamic>> importContentSource({
-    required String domainId,
+    required String? domainId,
     required String filename,
     required Uint8List bytes,
   }) {
@@ -822,7 +828,7 @@ class LumenisCoreClient {
     return _request(
       'POST',
       '/api/experience/content-sources?filename=${Uri.encodeQueryComponent(filename)}',
-      operationContext: _contentContext(domainId),
+      operationContext: _mediaContentContext(domainId),
       connectionTimeout: const Duration(minutes: 4),
       binaryBody: bytes,
       requestHeaders: const {'X-Lumenis-Action': 'WRITE'},
@@ -836,7 +842,7 @@ class LumenisCoreClient {
   }
 
   Future<Map<String, dynamic>> confirmContentSource({
-    required String domainId,
+    required String? domainId,
     required String confirmationId,
     required bool confirmed,
   }) {
@@ -848,18 +854,18 @@ class LumenisCoreClient {
     return _request(
       'POST',
       '/api/experience/content-source-confirmations/${Uri.encodeComponent(confirmationId)}',
-      operationContext: _contentContext(domainId),
+      operationContext: _mediaContentContext(domainId),
       payload: {'confirmed': confirmed},
     );
   }
 
   Future<ContentProjectFile> contentProjectFile({
-    required String domainId,
+    required String? domainId,
     required String artifactId,
     required bool package,
   }) async {
     _validateContentArtifactId(artifactId);
-    final context = _contentContext(domainId);
+    final context = _mediaContentContext(domainId);
     final uri = _uri(
       '/api/experience/content-projects/$artifactId/${package ? 'package' : 'media'}',
     );

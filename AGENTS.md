@@ -1051,7 +1051,7 @@ Verify each capability claim against the source, contracts, routes, runtime beha
 The Product Owner retired legacy Ollama/local-model-provider, Zhipu and Jev
 provider paths. Keep compatibility interfaces and historical artifacts, but
 do not call, auto-discover, probe, fall back to, or reactivate them. This
-supersedes older local-first, Ollama, Zhipu and Jev activation guidance. It does
+supersedes older local-first, Ollama, Zhipu and Jev activation guidance. Retiring those historical product routes does not prohibit separately selected user BYOK connections through the existing SYSTEM Gateway, supported protocol adapters, validated destinations and applicable Permission/SourceUse. Groq is the product-provided connection, not a vendor-wide limit on BYOK; this clarification grants no live credential use, provider probe or external call. It does
 not retire approved C2/W2 work to build and validate a LUMENIS-owned model using
 commercially permitted open base weights and approved training resources (available/free first; paid resources require the actual approved cost boundary)
 behind the existing SYSTEM AI Gateway. Do not change the user's persistent

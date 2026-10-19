@@ -7,37 +7,37 @@ import 'media_project_snapshot.dart';
 
 abstract interface class MediaProjectRepository {
   String get contextKey;
-  Future<List<MediaProjectAsset>> inspect(String domain, List<String> paths);
+  Future<List<MediaProjectAsset>> inspect(String? domain, List<String> paths);
   Future<List<MediaProjectAsset>> inspectReferences(
-    String domain,
+    String? domain,
     List<String> refs,
   );
   Future<Map<String, dynamic>> inspectEditBatch({
-    required String domain,
+    required String? domain,
     required List<String> paths,
     List<String>? refs,
     required MediaProjectSnapshot timeline,
     required List<Map<String, dynamic>> commands,
   });
   Future<Map<String, dynamic>> importFile(
-    String domain,
+    String? domain,
     String filename,
     Uint8List bytes,
   );
   Future<Map<String, dynamic>> confirmImport(
-    String domain,
+    String? domain,
     String confirmationId, {
     required bool confirmed,
   });
   Future<Map<String, dynamic>> export({
-    required String domain,
+    required String? domain,
     required List<String> paths,
     required MediaProjectSnapshot timeline,
     required String outputKind,
     List<String>? refs,
     String? previousArtifactId,
   });
-  Future<Map<String, dynamic>> reopen(String domain, String artifactId);
+  Future<Map<String, dynamic>> reopen(String? domain, String artifactId);
 }
 
 final class CoreMediaProjectRepository implements MediaProjectRepository {
@@ -49,7 +49,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
 
   @override
   Future<List<MediaProjectAsset>> inspect(
-    String domain,
+    String? domain,
     List<String> paths,
   ) async {
     final response = await client.inspectContentMedia(
@@ -66,7 +66,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
 
   @override
   Future<Map<String, dynamic>> export({
-    required String domain,
+    required String? domain,
     required List<String> paths,
     required MediaProjectSnapshot timeline,
     required String outputKind,
@@ -82,12 +82,12 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
   );
 
   @override
-  Future<Map<String, dynamic>> reopen(String domain, String artifactId) =>
+  Future<Map<String, dynamic>> reopen(String? domain, String artifactId) =>
       client.reopenContentProject(domainId: domain, artifactId: artifactId);
 
   @override
   Future<List<MediaProjectAsset>> inspectReferences(
-    String domain,
+    String? domain,
     List<String> refs,
   ) async {
     final response = await client.inspectContentMedia(
@@ -104,7 +104,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
 
   @override
   Future<Map<String, dynamic>> inspectEditBatch({
-    required String domain,
+    required String? domain,
     required List<String> paths,
     List<String>? refs,
     required MediaProjectSnapshot timeline,
@@ -120,7 +120,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
 
   @override
   Future<Map<String, dynamic>> importFile(
-    String domain,
+    String? domain,
     String filename,
     Uint8List bytes,
   ) => client.importContentSource(
@@ -131,7 +131,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
 
   @override
   Future<Map<String, dynamic>> confirmImport(
-    String domain,
+    String? domain,
     String confirmationId, {
     required bool confirmed,
   }) => client.confirmContentSource(
@@ -245,13 +245,14 @@ final class MediaProjectBatchPreview {
 /// export; neither a local edit nor a server response is public publication.
 final class MediaProjectController extends ChangeNotifier {
   MediaProjectController({required this.repository, required this.domain}) {
-    if (!const ['CTH', 'BMP'].contains(domain)) {
+    if (domain != null && !const ['CTH', 'BMP'].contains(domain)) {
       throw ArgumentError.value(domain, 'domain');
     }
   }
 
   final MediaProjectRepository repository;
-  final String domain;
+  /// Null explicitly selects independent Shared creation, not a business domain.
+  final String? domain;
   MediaProjectSnapshot? _timeline;
   MediaProjectVersion? _version;
   List<String> _paths = const [];
@@ -263,6 +264,8 @@ final class MediaProjectController extends ChangeNotifier {
   String? _selectedClipId;
   bool _disposed = false;
   bool _completionUnknown = false;
+  int _scopeGeneration = 0;
+  int _operationScopeGeneration = 0;
   MediaProjectOperation _operation = MediaProjectOperation.idle;
 
   MediaProjectSnapshot? get timeline => contextMatches ? _timeline : null;
@@ -283,7 +286,7 @@ final class MediaProjectController extends ChangeNotifier {
       _draftContext == null ||
       (_matchesContext(_draftContext!) && !_sourcesNeedRevalidation);
 
-  String get _contextKey => '$domain:${repository.contextKey}';
+  String get _contextKey => '${domain ?? 'shared_workspace:v1'}:${repository.contextKey}';
 
   void selectClip(String? id) {
     if (_disposed) return;
@@ -754,6 +757,7 @@ final class MediaProjectController extends ChangeNotifier {
   bool _begin(MediaProjectOperation operation) {
     if (_disposed || busy) return false;
     _operation = operation;
+    _operationScopeGeneration = _scopeGeneration;
     _failureCode = null;
     notifyListeners();
     return !_disposed;
@@ -761,7 +765,8 @@ final class MediaProjectController extends ChangeNotifier {
 
   bool _acceptContext(String expected) {
     if (_disposed) return false;
-    if (!_matchesContext(expected)) {
+    if (_operationScopeGeneration != _scopeGeneration ||
+        !_matchesContext(expected)) {
       _failureCode = 'CONTENT_CONTEXT_CHANGED';
       return false;
     }
@@ -778,6 +783,9 @@ final class MediaProjectController extends ChangeNotifier {
   /// retained its last envelope. Keep the draft for explicit source revalidation.
   void quarantineDraftSources() {
     if (_disposed) return;
+    // Invalidate pending work even if a failed scope read retains its envelope.
+    // Keep the draft identity unchanged so explicit revalidation can recover it.
+    _scopeGeneration++;
     _suspendedSourceRefs ??= _sourceRefs;
     _sourceRefs = null;
     if (_timeline != null || _version != null) {

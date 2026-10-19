@@ -550,3 +550,40 @@ def test_settings_get_and_direct_chat_sanitize_dynamic_identity_failure(runtime,
     assert result[1] == 'user_api_permission_unavailable'
     assert 'SYNTHETIC_PRIVATE_SECRET' not in repr(gate.get_audit_log())
     assert 'synthetic_private_secret' not in repr(result)
+
+
+@pytest.mark.parametrize("destination", ["https://api.openai.com/v1", "https://api.deepseek.com", "https://custom.example.net/v1"])
+def test_user_endpoint_selection_revokes_previous_destination_consent(runtime, monkeypatch, destination):
+    app, client, gate, actor = runtime
+    select(client)
+    confirmation, _ = preview(client)
+    select(client, base_url=destination)
+    calls = transport(monkeypatch)
+    denied = client.post('/api/ai/chat', json={'message': 'my question', 'external_approval': confirmation})
+    assert denied.json['code'] == 'USER_API_CONFIRMATION_INVALID'
+    assert calls == []
+    response = client.post('/api/ai/chat', json={'message': 'my question'})
+    p = response.json['approval_request']
+    assert p['destination'] != adapter.GROQ_CHAT_URL and p['connection_origin'] == 'user_api'
+    approval = {'confirmed': True, 'confirmation_id': p['confirmation_id'], 'resource': p['resource']}
+    sent = client.post('/api/ai/chat', json={'message': 'my question', 'external_approval': approval})
+    assert sent.status_code == 200
+    assert len(calls) == 1 and calls[0].full_url == p['destination']
+    assert json.loads(calls[0].data) == p['request']
+    assert CONFIG['api_key'] not in json.dumps(client.get('/api/settings/ai').json)
+
+
+def test_custom_byok_configuration_and_consent_remain_actor_isolated(runtime, monkeypatch):
+    app, client, gate, actor = runtime
+    select(client, base_url='https://custom.example.net/v1')
+    p = client.post('/api/ai/chat', json={'message': 'my question'}).json['approval_request']
+    approval = {'confirmed': True, 'confirmation_id': p['confirmation_id'], 'resource': p['resource']}
+    actor['id'] = 18
+    assert client.get('/api/settings/ai').json['ai']['provider'] == 'owned'
+    select(client, base_url='https://custom.example.net/v1', api_key='synthetic-user-18-secret')
+    calls = transport(monkeypatch)
+    denied = client.post('/api/ai/chat', json={'message': 'my question', 'external_approval': approval})
+    assert denied.json['code'] == 'USER_API_CONFIRMATION_INVALID' and calls == []
+    actor['id'] = 17
+    assert client.post('/api/ai/chat', json={'message': 'my question', 'external_approval': approval}).status_code == 200
+    assert calls[0].headers['Authorization'] == 'Bearer synthetic-test-secret'

@@ -7,8 +7,49 @@ import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/features/shared/sh01/sh01_repository.dart';
 import 'package:lumenis_app/features/shared/sh01/sh01_screen.dart';
 import 'package:lumenis_app/features/shared/sh01/sh01_snapshot.dart';
+import 'package:lumenis_app/features/shared/sh01/media_project_workbench.dart';
 
 void main() {
+
+  testWidgets('Shared creation opens independently even with an existing business focus', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final client = _CatalogOnlyClient()..contextEnvelope = {
+      'contract': 'lumenis.context.v1', 'selection_only': true,
+      'context': {'mode': 'FOCUS', 'domain_id': 'BMP', 'subject_id': 'brand-a'},
+    };
+    await tester.pumpWidget(_app(CoreSh01Repository(client: client), client: client));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh01-open-video-editor')));
+    await tester.pumpAndSettle();
+    final editor = tester.widget<MediaProjectWorkbench>(find.byType(MediaProjectWorkbench));
+    expect(editor.sharedWorkspace, isTrue);
+    expect(editor.invokingDomain, isNull);
+    expect(find.text('独立作品'), findsOneWidget);
+    expect(find.byKey(const Key('media-import')), findsOneWidget);
+    expect(find.byKey(const Key('media-domain-bmp')), findsNothing);
+    expect(client.contextEnvelope!['context']['domain_id'], 'BMP');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Shared entry retains the separate business-linked media path', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final client = _CatalogOnlyClient()..contextEnvelope = {
+      'contract': 'lumenis.context.v1', 'selection_only': true,
+      'context': {'mode': 'FOCUS', 'domain_id': 'CTH', 'subject_id': 'shop-1'},
+    };
+    await tester.pumpWidget(_app(CoreSh01Repository(client: client), client: client));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh01-open-linked-media')));
+    await tester.pumpAndSettle();
+    final editor = tester.widget<MediaProjectWorkbench>(find.byType(MediaProjectWorkbench));
+    expect(editor.sharedWorkspace, isFalse);
+    expect(find.text('商业运营'), findsOneWidget);
+    expect(find.byKey(const Key('media-import')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('desktop browses shared catalog and blocks unscoped Evidence', (
     tester,
   ) async {
@@ -328,6 +369,9 @@ class _FakeSh01Repository implements Sh01Repository {
 }
 
 class _CatalogOnlyClient extends LumenisCoreClient {
+  Map<String, dynamic>? contextEnvelope;
+  @override
+  Map<String, dynamic>? get currentContextEnvelope => contextEnvelope;
   int catalogCalls = 0;
   int screenCalls = 0;
   int detailCalls = 0;

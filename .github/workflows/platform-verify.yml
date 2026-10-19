@@ -149,7 +149,8 @@ jobs:
               'tests/test_xhs_cdp_native_truth.py', 'tests/test_source_brief_job.py',
               'tests/test_business_decision_workflow.py', 'tests/test_runtime_api_diagnostics.py',
               'tests/agent_capability/test_router.py',
-              'tests/agent_runtime/test_formation_dispatch.py', 'tests/test_business_brief_typed_owned.py']))
+              'tests/agent_runtime/test_formation_dispatch.py', 'tests/test_business_brief_typed_owned.py',
+              'tests/test_user_api_adapter.py', 'tests/test_user_api_consent_binding.py']))
           PY
 
       - name: Record gate scope (INFORMATIONAL)

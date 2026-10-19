@@ -1,21 +1,28 @@
 """User-selected external AI within the single Gateway, with exact consent.
 
-User-supplied external APIs remain a product capability. The currently admitted
-transport is Groq only; another destination needs its own reviewed admission.
+User-supplied external APIs remain a multi-provider product capability. Reviewed
+connections resolve through the existing origin-scoped registry. Custom HTTPS
+connections use the same protocol and IP-pinned TLS safety boundary; unsupported
+protocols remain explicitly not adapted.
 Process environment variables never select a provider for a product user.
 Credentials are held only in this process for their authenticated actor (or the
 explicit local workspace), never persisted, returned, logged or auto-restored.
 """
+from contextlib import contextmanager
 import hashlib
+import http.client
 import ipaddress
 import json
 import math
 import secrets
+import socket
+import ssl
 import threading
 import urllib.error
 import urllib.request
 import weakref
 from urllib.parse import urlsplit
+from .providers import user_api_connection
 
 PROVIDER = "user_api"
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
@@ -73,6 +80,7 @@ def safe_error_code(code, default="USER_API_SETTINGS_UNAVAILABLE"):
         "USER_API_SETTINGS_INVALID", "USER_API_SETTINGS_UNAVAILABLE",
         "USER_API_CONFIGURATION_REQUIRED", "USER_API_CONFIGURATION_CHANGED",
         "USER_API_BASE_URL_REQUIRED", "USER_API_DESTINATION_NOT_ALLOWED",
+        "USER_API_PROTOCOL_NOT_ADAPTED",
         "USER_API_KEY_REQUIRED", "USER_API_KEY_INVALID", "USER_API_MODEL_REQUIRED",
         "USER_API_MODEL_INVALID", "USER_API_INVALID_REQUEST", "USER_API_NOT_SELECTED",
         "USER_API_REQUEST_BINDING_INVALID", "USER_API_CONFIRMATION_INVALID", "USER_API_APPROVAL_REVOKED",
@@ -137,7 +145,7 @@ def _configure_current_user(data):
     if (type(data) is not dict or type(data.get("provider")) is not str
             or data.get("provider") not in {"owned", PROVIDER}):
         raise ValueError("USER_API_SETTINGS_INVALID")
-    if set(data) - {"provider", "base_url", "api_key", "model"}:
+    if set(data) - {"provider", "base_url", "api_key", "model", "protocol"}:
         raise ValueError("USER_API_SETTINGS_INVALID")
     actor, gate, caller = _identity()
     provider = data["provider"]
@@ -151,6 +159,7 @@ def _configure_current_user(data):
                 "credential_persistence": "NONE", "fallback_allowed": False}
     gate.authorize_user_api_action(actor)
     cfg = {key: data.get(key) for key in ("base_url", "api_key", "model")}
+    cfg["protocol"] = data.get("protocol", "openai_chat_completions")
     error = configuration_error(cfg)
     if error:
         raise ValueError(error)
@@ -168,23 +177,12 @@ def configuration_error(cfg):
     base = cfg.get("base_url")
     if not isinstance(base, str) or not base:
         return "USER_API_BASE_URL_REQUIRED"
-    try:
-        url = urlsplit(base)
-        # Reject parser normalization of control characters, empty query/fragment
-        # delimiters, alternate paths, lookalike hosts and credential forwarding.
-        valid_url = (
-            not any(ord(c) <= 32 or ord(c) == 127 for c in base)
-            and "?" not in base and "#" not in base
-            and url.scheme == "https" and url.hostname == "api.groq.com"
-            and url.username is None and url.password is None
-            and url.port in (None, 443)
-            and url.netloc.lower() in {"api.groq.com", "api.groq.com:443"}
-            and url.path in {"/openai/v1", "/openai/v1/"}
-        )
-    except (ValueError, TypeError):
-        valid_url = False
-    if not valid_url:
+    connection = user_api_connection(base, cfg.get("protocol", "openai_chat_completions"))
+    if connection is None:
         return "USER_API_DESTINATION_NOT_ALLOWED"
+    if (connection["protocol"] != "openai_chat_completions"
+            or connection["token_field"] not in {"max_tokens", "max_completion_tokens"}):
+        return "USER_API_PROTOCOL_NOT_ADAPTED"
     for field, code in (("api_key", "KEY"), ("model", "MODEL")):
         value = cfg.get(field)
         if not isinstance(value, str) or not value.strip():
@@ -209,6 +207,7 @@ def status():
     selected = cfg.get("provider") == PROVIDER
     error = configuration_error(cfg)
     configured = selected and error is None
+    connection = user_api_connection(cfg.get("base_url"), cfg.get("protocol", "openai_chat_completions")) if selected else None
     return {
         "provider": PROVIDER, "selected": selected,
         "configured": configured, "available": False,
@@ -216,7 +215,11 @@ def status():
         "reason": ("INFERENCE_NOT_VERIFIED" if configured else
                    "USER_API_NOT_SELECTED" if not selected else error),
         "service_binding": "CONFIGURED" if configured else "NOT_BOUND",
-        "service_provider": "groq", "destination": GROQ_CHAT_URL if configured else None,
+        "service_provider": connection["service_provider"] if connection else None,
+        "connection_origin": "user_api", "protocol": connection["protocol"] if connection else None,
+        "destination": connection["destination"] if configured else None,
+        "admission_state": ("NOT_ADAPTED" if error == "USER_API_PROTOCOL_NOT_ADAPTED" else
+                            "REQUIRES_DNS_VALIDATION" if configured else "NOT_ADMITTED"),
         "model_id": cfg.get("model") if configured else None,
         "fallback_allowed": False, "credential_persistence": "NONE",
         "confirmation_required": True,
@@ -228,8 +231,74 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def _public_address(value):
+    """Deny special/local ranges, including mapped IPv4 and IPv6 tunnels."""
+    try:
+        address = ipaddress.ip_address(value)
+        if (not address.is_global or address.is_multicast or address.is_reserved
+                or address.is_loopback or address.is_link_local or address.is_unspecified):
+            return False
+        if address.version == 6:
+            # Do not admit IPv4-mapped, NAT64, 6to4 or Teredo routes whose embedded
+            # target can differ from the apparently public IPv6 destination.
+            return (address in ipaddress.ip_network("2000::/3")
+                    and address not in ipaddress.ip_network("2001::/23")
+                    and address not in ipaddress.ip_network("2002::/16"))
+        # Python versions differ on newer special-use classifications.
+        return not any(address in ipaddress.ip_network(network) for network in
+                       ("192.0.0.0/24", "192.88.99.0/24", "198.18.0.0/15"))
+    except (TypeError, ValueError):
+        return False
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """One validated numeric address; TLS authenticates the original hostname."""
+    def __init__(self, host, address, timeout):
+        context = ssl.create_default_context()
+        context.set_alpn_protocols(["http/1.1"])
+        super().__init__(host, 443, timeout=timeout, context=context)
+        self._validated_address = address
+
+    def connect(self):
+        family, socktype, proto, _canonname, sockaddr = self._validated_address
+        sock = socket.socket(family, socktype, proto)
+        try:
+            sock.settimeout(self.timeout)
+            sock.connect(sockaddr)  # Numeric address: no second DNS lookup.
+            self.sock = self._context.wrap_socket(sock, server_hostname=self.host)
+        except BaseException:
+            sock.close()
+            raise
+
+
+@contextmanager
 def _open(req, timeout):
-    return urllib.request.build_opener(_NoRedirect()).open(req, timeout=timeout)
+    """Public-only pinned HTTPS; no env proxy, redirect, DNS rebinding or retry."""
+    url = urlsplit(req.full_url)
+    # The request URL is reconstructed from the same connection as the consent.
+    # This final defensive check precedes DNS, TLS and transmission of any key.
+    if (url.scheme != "https" or url.port not in (None, 443) or not url.hostname
+            or url.username is not None or url.password is not None
+            or url.query or url.fragment or req.get_method() != "POST"):
+        raise PermissionError("USER_API_DESTINATION_NOT_ALLOWED")
+    addresses = socket.getaddrinfo(url.hostname, 443, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)
+    if (not addresses or any(item[0] not in (socket.AF_INET, socket.AF_INET6)
+            or item[1] != socket.SOCK_STREAM or item[2] != socket.IPPROTO_TCP
+            or not _public_address(item[4][0]) or item[4][1] != 443
+            or (item[0] == socket.AF_INET6 and item[4][3] != 0)
+            for item in addresses)):
+        raise PermissionError("USER_API_DESTINATION_NOT_ALLOWED")
+    connection = _PinnedHTTPSConnection(url.hostname, addresses[0], timeout)
+    try:
+        connection.request("POST", url.path or "/", body=req.data, headers=dict(req.header_items()))
+        response = connection.getresponse()
+        if not 200 <= response.status < 300:
+            # No redirect handling, including same-origin redirects. Do not read
+            # or expose an error body that could echo credentials or prompts.
+            raise urllib.error.HTTPError(req.full_url, response.status, "Provider request failed", {}, None)
+        yield response
+    finally:
+        connection.close()
 
 
 def chat(system, user, *, temperature=0.2, max_tokens=1200, timeout=60,
@@ -262,21 +331,23 @@ def chat(system, user, *, temperature=0.2, max_tokens=1200, timeout=60,
     from .core import redact_for_cloud
     system = redact_for_cloud(system).replace(cfg["api_key"], "[REDACTED]") if system else ""
     user = redact_for_cloud(user).replace(cfg["api_key"], "[REDACTED]") if user else ""
+    connection = user_api_connection(cfg["base_url"], cfg.get("protocol", "openai_chat_completions"))
     payload = {
         "model": cfg["model"],
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-        "temperature": temperature, "max_tokens": max_tokens,
+        "temperature": temperature, connection["token_field"]: max_tokens,
     }
     body = json.dumps(payload).encode("utf-8")
-    binding = {"caller": caller, "destination": GROQ_CHAT_URL, "model": cfg["model"],
+    binding = {"caller": caller, "destination": connection["destination"], "model": cfg["model"],
                "body_sha256": hashlib.sha256(body).hexdigest(), "configuration_revision": cfg["revision"]}
     token = None
     try:
         if external_approval is None:
             preview = gate.prepare_user_api_request(actor, binding)
             return None, "user_api_approval_required", {
-                "approval_request": {**preview, "destination": GROQ_CHAT_URL,
-                    "provider": "groq", "model": cfg["model"], "request": payload,
+                "approval_request": {**preview, "destination": connection["destination"],
+                    "provider": connection["service_provider"], "connection_origin": "user_api",
+                    "protocol": connection["protocol"], "model": cfg["model"], "request": payload,
                     "body_sha256": binding["body_sha256"], "single_use": True,
                     "data_scope": "This exact redacted conversation only; no stored business sources."},
             }
@@ -284,10 +355,10 @@ def chat(system, user, *, temperature=0.2, max_tokens=1200, timeout=60,
         # Serialize withdrawal with the final check and transport initiation.
         # No retry occurs after consumption, even when the remote result is unknown.
         with _configuration_lock:
-            if config() != cfg:
+            if config() != cfg or user_api_connection(cfg["base_url"], cfg.get("protocol", "openai_chat_completions")) != connection:
                 raise PermissionError("USER_API_CONFIGURATION_CHANGED")
             decision = gate.consume_user_api_approval(actor, binding, token)
-            result = _send(cfg, body, timeout)
+            result = _send(cfg, body, timeout, connection=connection)
             try:
                 gate._write_audit(
                     operation_type=decision.operation_type, resource=decision.resource,
@@ -311,10 +382,16 @@ def chat(system, user, *, temperature=0.2, max_tokens=1200, timeout=60,
             gate.revoke_approval(token)
 
 
-def _send(cfg, body, timeout):
+def _send(cfg, body, timeout, *, connection=None):
     """Only chat's exact single-use permission boundary may initiate transport."""
+    current = user_api_connection(cfg.get("base_url"), cfg.get("protocol", "openai_chat_completions"))
+    error = configuration_error(cfg)
+    if error:
+        return None, error.lower(), None
+    if connection is not None and current != connection:
+        return None, "user_api_configuration_changed", None
     req = urllib.request.Request(
-        GROQ_CHAT_URL, data=body, method="POST",
+        current["destination"], data=body, method="POST",
         headers={"Content-Type": "application/json", "Accept": "application/json",
                  "User-Agent": "LUMENIS-Gateway/1.0",
                  "Authorization": "Bearer " + cfg["api_key"]})
@@ -336,13 +413,19 @@ def _send(cfg, body, timeout):
                   if type(value := raw_usage.get(key)) is int and value >= 0}
                  if isinstance(raw_usage, dict) else None)
         return content, PROVIDER, usage or None
+    except PermissionError:
+        return None, "user_api_destination_not_allowed", None
     except urllib.error.HTTPError as exc:
         # Do not leak raw provider bodies, prompts, credentials or URLs.
         code = ("authentication_failed" if exc.code == 401 else
                 "access_denied" if exc.code == 403 else
                 "rate_limited" if exc.code == 429 else "unavailable")
         return None, "user_api_" + code, None
+    except ssl.SSLError:
+        # Certificate verification errors also inherit ValueError. They are
+        # transport failures, never a malformed model response or retry grant.
+        return None, "user_api_unavailable", None
     except (ValueError, TypeError, KeyError, IndexError, AttributeError):
         return None, "user_api_invalid_response", None
-    except OSError:
+    except (OSError, http.client.HTTPException):
         return None, "user_api_unavailable", None

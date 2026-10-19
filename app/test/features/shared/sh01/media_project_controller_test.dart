@@ -48,6 +48,7 @@ Map<String, dynamic> _batchResponse(
 final class _Repository implements MediaProjectRepository {
   @override
   String contextKey = 'BMP:GLOBAL';
+  final observedDomains = <String?>[];
   final asset = MediaProjectAsset(
     assetId: 'MEDIA-aaaaaaaaaaaaaaaa',
     filename: 'interview.mp4',
@@ -81,12 +82,13 @@ final class _Repository implements MediaProjectRepository {
 
   @override
   Future<Map<String, dynamic>> inspectEditBatch({
-    required String domain,
+    required String? domain,
     required List<String> paths,
     List<String>? refs,
     required MediaProjectSnapshot timeline,
     required List<Map<String, dynamic>> commands,
   }) async {
+    observedDomains.add(domain);
     batchCalls++;
     batchCommands = commands;
     await pendingBatch?.future;
@@ -104,9 +106,10 @@ final class _Repository implements MediaProjectRepository {
 
   @override
   Future<List<MediaProjectAsset>> inspect(
-    String domain,
+    String? domain,
     List<String> paths,
   ) async {
+    observedDomains.add(domain);
     await pendingInspection?.future;
     if (failure != null) throw failure!;
     return inspectedAssets ?? [asset];
@@ -114,13 +117,14 @@ final class _Repository implements MediaProjectRepository {
 
   @override
   Future<Map<String, dynamic>> export({
-    required String domain,
+    required String? domain,
     required List<String> paths,
     required MediaProjectSnapshot timeline,
     required String outputKind,
     List<String>? refs,
     String? previousArtifactId,
   }) async {
+    observedDomains.add(domain);
     calls++;
     exported = timeline;
     parent = previousArtifactId;
@@ -161,7 +165,8 @@ final class _Repository implements MediaProjectRepository {
   };
 
   @override
-  Future<Map<String, dynamic>> reopen(String domain, String artifactId) async {
+  Future<Map<String, dynamic>> reopen(String? domain, String artifactId) async {
+    observedDomains.add(domain);
     if (failure != null) throw failure!;
     return {
       'ok': true,
@@ -171,9 +176,10 @@ final class _Repository implements MediaProjectRepository {
 
   @override
   Future<List<MediaProjectAsset>> inspectReferences(
-    String domain,
+    String? domain,
     List<String> refs,
   ) async {
+    observedDomains.add(domain);
     referenceInspections++;
     final started = referenceInspectionStarted;
     if (started != null && !started.isCompleted) started.complete();
@@ -184,10 +190,11 @@ final class _Repository implements MediaProjectRepository {
 
   @override
   Future<Map<String, dynamic>> importFile(
-    String domain,
+    String? domain,
     String filename,
     Uint8List bytes,
   ) async {
+    observedDomains.add(domain);
     importCalls++;
     if (approvalRequired && !approvalIssued) {
       approvalIssued = true;
@@ -197,7 +204,7 @@ final class _Repository implements MediaProjectRepository {
         errorCode: 'CONTENT_SOURCE_APPROVAL_REQUIRED',
         sourceConfirmation: ContentSourceConfirmation(
           confirmationId: 'CONF-source',
-          resource: 'content-source-import:v1:${'b' * 64}',
+          resource: 'content-source-import:${domain == null ? 'shared-workspace:' : ''}v1:${'b' * 64}',
           expiresAt: DateTime.utc(2026, 9, 29),
           filename: filename,
           sizeBytes: bytes.length,
@@ -218,10 +225,11 @@ final class _Repository implements MediaProjectRepository {
 
   @override
   Future<Map<String, dynamic>> confirmImport(
-    String domain,
+    String? domain,
     String confirmationId, {
     required bool confirmed,
   }) async {
+    observedDomains.add(domain);
     confirmationCalls++;
     confirmedImport = confirmed;
     return confirmationResult;
@@ -249,6 +257,61 @@ void main() {
     'clip_id': controller.timeline!.tracks.single.clips.single.clipId,
     'source_in': 0.0, 'source_out': 3.0,
   }];
+
+
+  test('independent media imports edits exports and reopens with null domain', () async {
+    final shared = MediaProjectController(repository: repository, domain: null);
+    addTearDown(shared.dispose);
+    await shared.importFile('interview.mp4', Uint8List.fromList([1, 2]));
+    shared.edit((s) => s.addClip(repository.asset.assetId,
+      trackId: 'video', sourceOut: 4));
+    await shared.export(outputKind: 'video');
+    expect(shared.version!.artifactId, 'ART-1');
+    final saved = shared.timeline!.toJson();
+    await shared.reopen('ART-1');
+    expect(shared.timeline!.toJson(), saved);
+    expect(shared.hasUnsavedChanges, isFalse);
+    expect(repository.referenceInspections, 1);
+    expect(repository.observedDomains, isNotEmpty);
+    expect(repository.observedDomains, everyElement(isNull));
+    expect(() => MediaProjectController(repository: repository, domain: 'SHARED'),
+      throwsArgumentError);
+  });
+
+  test('Shared import approval retries only its exact independent context', () async {
+    final shared = MediaProjectController(repository: repository, domain: null);
+    addTearDown(shared.dispose);
+    repository.approvalRequired = true;
+    await shared.importFile('voice.wav', Uint8List.fromList([1, 2]),
+      requestApproval: (confirmation) async {
+        expect(confirmation.resource,
+          'content-source-import:shared-workspace:v1:${'b' * 64}');
+        return true;
+      });
+    expect(repository.importCalls, 2);
+    expect(repository.confirmationCalls, 1);
+    expect(shared.sourceRefs, ['ART-source']);
+    expect(repository.observedDomains, everyElement(isNull));
+  });
+
+  test('independent draft rejects a late export after workspace context changes', () async {
+    final shared = MediaProjectController(repository: repository, domain: null);
+    addTearDown(shared.dispose);
+    await shared.importFile('interview.mp4', Uint8List.fromList([1, 2]));
+    shared.edit((s) => s.addClip(repository.asset.assetId,
+      trackId: 'video', sourceOut: 4));
+    repository.pending = Completer<void>();
+    final saving = shared.export(outputKind: 'video');
+    repository.contextKey = 'other-workspace';
+    repository.pending!.complete();
+    await saving;
+    expect(shared.version, isNull);
+    expect(shared.timeline, isNull);
+    expect(shared.completionUnknown, isTrue);
+    expect(shared.failureCode, 'CONTENT_CONTEXT_CHANGED');
+    expect(shared.hasUnsavedChanges, isTrue);
+    expect(repository.calls, 1);
+  });
 
   test('batch inspect does not edit or export until explicit adoption', () async {
     await create();

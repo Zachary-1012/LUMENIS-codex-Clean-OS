@@ -58,6 +58,7 @@ class MediaProjectWorkbench extends StatefulWidget {
     required this.client,
     required this.onBack,
     this.invokingDomain,
+    this.sharedWorkspace = false,
     this.contextAvailable = true,
     this.controller,
     this.files,
@@ -66,6 +67,8 @@ class MediaProjectWorkbench extends StatefulWidget {
   final LumenisCoreClient client;
   final VoidCallback onBack;
   final String? invokingDomain;
+  /// Explicit independent entry; never inherits a selected CTH/BMP focus.
+  final bool sharedWorkspace;
   final bool contextAvailable;
   final MediaProjectController? controller;
   final MediaProjectFiles? files;
@@ -129,6 +132,12 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   @override
   void initState() {
     super.initState();
+    if (widget.sharedWorkspace) {
+      _scopeAvailable = true;
+      _attachController(null);
+      if (!widget.contextAvailable) _controller.quarantineDraftSources();
+      return;
+    }
     final context = widget.client.currentContextEnvelope?['context'];
     final mode = context is Map ? context['mode'] : null;
     final rawDomain = mode == 'FOCUS'
@@ -177,7 +186,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     });
   }
 
-  void _attachController(String domain) {
+  void _attachController(String? domain) {
     final supplied = widget.controller;
     if (supplied != null && supplied.domain == domain) {
       _controller = supplied;
@@ -202,7 +211,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   String get _savedContextKey =>
       '${widget.contextAvailable}:${_controller.domain}:${jsonEncode(widget.client.currentContextEnvelope)}';
 
-  void _chooseInvokingDomain(String domain) {
+  void _chooseInvokingDomain(String? domain) {
     if (_controllerInitialized) {
       _controller.removeListener(_changed);
       _savedProjects.dispose();
@@ -596,49 +605,76 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   Future<bool?> _confirmSourceImport(
     ContentSourceConfirmation confirmation,
   ) async {
-    final contextEnvelope = widget.client.currentContextEnvelope?['context'];
-    if (contextEnvelope is! Map) {
+    if (!mounted || !_canUseCurrentContext) return null;
+    final approvalController = _controller;
+    final approvalContextKey = _savedContextKey;
+    final repositoryContextKey = approvalController.repository.contextKey;
+    final shared = approvalController.domain == null;
+    // A business approval must never be presented as independent permission.
+    if (shared &&
+        !RegExp(
+          r'^content-source-import:shared-workspace:v1:[a-f0-9]{64}$',
+        ).hasMatch(confirmation.resource)) {
       return null;
     }
-    final mode = contextEnvelope['mode'];
-    final domain = contextEnvelope['domain_id'];
-    final subjectId = contextEnvelope['subject_id'];
-    final focused = mode == 'FOCUS';
-    final global = mode == 'GLOBAL_ALL';
-    final invokedDomain = global ? _controller.domain : domain;
-    if ((!focused && !global) ||
-        (invokedDomain != 'CTH' && invokedDomain != 'BMP') ||
-        (global &&
-            widget.invokingDomain != null &&
-            widget.invokingDomain != invokedDomain) ||
-        invokedDomain != _controller.domain ||
-        (focused && (subjectId is! String || subjectId.isEmpty))) {
+    final rawContext = widget.client.currentContextEnvelope?['context'];
+    final contextEnvelope = rawContext is Map ? rawContext : null;
+    final mode = contextEnvelope?['mode'];
+    final domain = contextEnvelope?['domain_id'];
+    final subjectId = contextEnvelope?['subject_id'];
+    final focused = !shared && mode == 'FOCUS';
+    final global = !shared && mode == 'GLOBAL_ALL';
+    final invokedDomain = global ? approvalController.domain : domain;
+    if (!shared &&
+        ((!focused && !global) ||
+            (invokedDomain != 'CTH' && invokedDomain != 'BMP') ||
+            (global &&
+                widget.invokingDomain != null &&
+                widget.invokingDomain != invokedDomain) ||
+            invokedDomain != approvalController.domain ||
+            (focused && (subjectId is! String || subjectId.isEmpty)))) {
       return null;
     }
-    final businessName = context.lumenisL10n.text(
-      invokedDomain == 'CTH' ? 'navgroup.cth' : 'navgroup.bmp',
-    );
+    final businessName = shared
+        ? null
+        : context.lumenisL10n.text(
+            invokedDomain == 'CTH' ? 'navgroup.cth' : 'navgroup.bmp',
+          );
     final focusName = focused
         ? _safeDisplayName(
-            contextEnvelope['display_name'],
+            contextEnvelope?['display_name'],
             Localizations.localeOf(context).languageCode,
           )
         : null;
-    final scope = focused
+    final scope = shared
+        ? _copy(context, 'independent_workspace')
+        : focused
         ? [businessName, ?focusName, _copy(context, 'focus_scope')].join(' · ')
         : '${_copy(context, 'global_all')} · $businessName';
     final purpose = _copy(
       context,
-      invokedDomain == 'CTH' ? 'purpose_cth' : 'purpose_bmp',
+      shared
+          ? 'purpose_shared'
+          : invokedDomain == 'CTH'
+          ? 'purpose_cth'
+          : 'purpose_bmp',
     );
     var expiredOnAttempt = !confirmation.expiresAt.isAfter(DateTime.now());
     var contextChanged = false;
     bool stillInScope() {
+      if (!mounted ||
+          !widget.contextAvailable ||
+          !_controllerInitialized ||
+          !identical(_controller, approvalController) ||
+          _savedContextKey != approvalContextKey ||
+          approvalController.repository.contextKey != repositoryContextKey) {
+        return false;
+      }
+      if (shared) return _controller.domain == null;
       final current = widget.client.currentContextEnvelope?['context'];
       if (current is! Map || current['mode'] != mode) return false;
       if (global) {
-        return widget.client.currentContextEnvelope?['context'] is Map &&
-            (widget.invokingDomain == null ||
+        return (widget.invokingDomain == null ||
                 widget.invokingDomain == invokedDomain) &&
             _controller.domain == invokedDomain;
       }
@@ -722,7 +758,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
+              onPressed: () => Navigator.pop(
+                dialogContext,
+                stillInScope() ? false : null,
+              ),
               child: Text(_copy(dialogContext, 'cancel')),
             ),
             FilledButton(
@@ -1117,6 +1156,15 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                         runSpacing: 12,
                         children: [
                           FilledButton.icon(
+                            key: const Key('media-workspace-shared'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                            ),
+                            onPressed: () => _chooseInvokingDomain(null),
+                            icon: const LumenisIcon(Icons.edit_outlined),
+                            label: Text(_copy(context, 'independent_workspace')),
+                          ),
+                          OutlinedButton.icon(
                             key: const Key('media-domain-cth'),
                             style: FilledButton.styleFrom(
                               minimumSize: const Size(48, 48),
@@ -1292,7 +1340,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     final version = _controller.version;
     final status = timeline == null && version == null
         ? context.lumenisL10n.text(
-            _controller.domain == 'CTH' ? 'navgroup.cth' : 'navgroup.bmp',
+            switch (_controller.domain) {
+              'CTH' => 'navgroup.cth',
+              'BMP' => 'navgroup.bmp',
+              _ => 'sh01.media.independent_workspace',
+            },
           )
         : _copy(context, _hasUnsavedChanges ? 'draft' : 'saved');
     return Column(
