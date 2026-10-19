@@ -169,7 +169,7 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 4. Merge a PR once all required checks are green; no PO wait.
 5. Brand names = official-site names with source URL.
 6. The developer runs end-to-end tests for newly added subjects and keeps them in CI.
-7. Retired AI providers (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) have their calling code and config deleted; the owned 序境 model is default, the existing user_api adapter is required to serve only explicitly selected Groq through the sole Gateway/Permission, with no arbitrary endpoint or automatic fallback. Current endpoint enforcement remains an implementation gap until verified; this rule does not claim it repaired.
+7. Retired product routes (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) remain inactive; do not restore their old calling code, probes or fallback. Keep the owned model goal, product-provided Groq connection and user BYOK connections to other providers behind the sole SYSTEM Gateway and existing configuration/secret/Permission owners. A retired route is not a permanent vendor-wide BYOK ban. Support each protocol and modality explicitly; validate destinations, actor isolation and exact external-send authorization. No unrestricted endpoint transport, implicit credential activation or automatic fallback is granted; actual implementation and user outcomes require current evidence.
 8. In-loop: collection, CTH, BMP, Shared, AI, no-shell tools in built-in browser, chat UI cards, full Skill Store, GitHub connector, MCP, frontend functions, competitor proofs, accounts (free email codes/Google; Apple after developer-account activation; original settings presentation), user and founder developer modes, commercial-readiness items, visuals, logo, role art. Post-launch: real-user validation, paid/licensed sources.
 
 ## 2026-10-16 unique frontend plan and visual sketch (historical planning-only scope)
@@ -209,6 +209,8 @@ Candidate source publication at [PR #83](https://github.com/Zachary-1012/LUMENIS
 | Runtime / Database | 原生产8201未在本次重启/升级；隔离58577的最后启动回执为PID16652、boot `3b6b8a6bdf614fec86245044e373fb3f`，无Scheduler、隔离DB。当前存活/装载组合不因历史启动或文档推断。首次真实导入confirm503、未持久化独立读回/预览过期保留；最新源下五文件完整用户导入与成果链 NOT_VERIFIED，不自动重放。 |
 | 采集与主体 | 注册、获准自动采集补全、Source/Evidence/Canonical或Pending、刷新/恢复和下游用户成果全部保留。最新维护任务观察为Disabled、PT5M/Logon；237旧计划保护性迁移仅为候选，未执行生产迁移或恢复调度。受限身份只阻塞自身，手动导入/静态通过不能证明自主采集已闭环。 |
 | Groq / 自研AI / REA | Groq是唯一获准外部接口，显式选择并经现有Gateway/Permission；源码host allowlist与调用权限仍须真实闭环，不能将当前任意HTTPS适配能力当授权。自研训练/checkpoint重载/独立评价、Hybrid交叉精排、Math完整适用算法和模型收益各自待验。REA V2完整输入已保护，31条离线资料未准入；采集/办公/媒体/平台底层方法和UI采用须接真实Owner与用户链，不能用包/截图代替。 |
+
+2026-10-19 现行纠偏（来源：用户当日06:43 UTC（北京时间14:43）澄清“我规划的是唯一接口，可以接外面任意key，这个只是我给产品内置的”）：上表记录当时有界执行范围，不构成永久BYOK供应商限制。当前完整目标是唯一SYSTEM Gateway、产品内置Groq、用户自带其他供应商API及自有模型建设目标；对应协议、安全目的地、凭据隔离、Permission/SourceUse与实际用户成果仍分别验证，不自动启用凭据、调用模型或恢复退休专用路线。
 
 五份附件已完整只读解析及校准：三份XLSX共11sheet、820物理行（813非空，811条非表头投影）；PDF2页36块；DOCX198段落对象/143非空。102清单与最终表交集79个ID，23/44各自独有；最终129行仅123个唯一可识别ID，不能与85/102样本相加。85行中58无链接/日期、49标题/作者占位；最终表9个明示日期越出报告时间窗。322评论中36无父帖编号，286数字编号有147一致、138标题冲突、1无父帖。来源报告的情感标签、约40强相关、“零缺口”等保留为来源主张，不推广为事实、代表性比例或因果。证据 `source-materials-review-20261016/source-materials-review.json` SHA256 `0a0549d3d6d08df745423fcce49aa2dea66d6020963d066738d93aa7251120ce`；定位复核 `importer-five-material-locator-replay-final-20261016.json` SHA256 `b3b091d1da6c9d62143a28ced37e6816120569ec03b4efa9bfd1559043cee144`。原件留在受保护本机，不提交到Git。当前候选已补全表投影/原件保存与PDF/DOCX定位hash等，普通直传/自动逐材料分析/物理卡片、跨域接线和完整保存恢复在该批仍待实现验收；当前按§1接续，不以旧停点延期已批准工作。
 

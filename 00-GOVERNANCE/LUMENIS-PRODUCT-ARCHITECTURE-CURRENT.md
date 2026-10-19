@@ -361,7 +361,7 @@ Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Eval
 | GLOBAL / ALL | 默认未聚焦的获准全域工作范围 | 不等于隐式广州太古汇，不等于无限权限或全球数据已齐全；Clear 保留历史成果的原范围 |
 | Source / Evidence / Canonical | 来源、可定位且带出处的证据、经当前合同接收的规范事实 | 研究笔记、AI 输出、缓存、文件存在、mock、旧报告不能自行升级为 Production Truth |
 | Metric / Truth Table / ViewModel | 按明确单位/分母/时间口径计算及表达事实 | `0` 是已知数值，`UNKNOWN`/缺测不是零；ViewModel 不创建另一份业务真相 |
-| Product AI | 单一 SYSTEM AI Gateway；寰意自有模型与唯一获准的 Groq 外部接口均经此调用 | Groq 外部调用须用户明确选择并通过现有权限；兼容 Provider 注册和状态枚举不证明实际可用或允许自动 fallback |
+| Product AI | 单一 SYSTEM AI Gateway；寰意自有模型、产品内置 Groq 连接与用户自带外部 API 均经此调用 | 用户明确选择具体连接及模型，外发经适用 Permission/SourceUse；协议适配、配置、实际可用与调用授权分别验证，无自动 fallback |
 | 四 Surface | Public Website / Web Workspace / Desktop / Mobile Companion | Desktop App 是 Desktop 的描述性名称；Flutter 是实现技术；四表面按各自角色并行建设、独立验收 |
 
 状态必须随其已有 Owner/字段解释：例如 `query_plan.status=READY` 只说明查询计划可提交，
@@ -513,9 +513,9 @@ P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 
 AI provider and owned-model responsibilities:
 
 - lumenis/system/ai_gateway/ remains the sole SYSTEM owner; every product model call passes through this Gateway. C2 owns approved commercially usable open foundation weights, owned training/inference and held-out business evaluation; use existing/free resources first. Codex Cloud configuration is not proof of production inference or free GPU capacity.
-- Groq is the only currently approved external model interface. It is available only through the same Gateway after explicit user selection and applicable Permission; it is not a hidden default, automatic provider switch or fallback. Provider configuration/readiness is a runtime fact and must not be inferred from documentation.
-- This is the current execution approval boundary, not removal of the retained user-supplied external API capability. Other compatible providers require their own approval and validation before use; retaining this product requirement does not authorize live calls, hidden fallback or additional permissions.
-- Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are retired from product execution; Jev is an inactive historical typed candidate. For these retired routes: no calls, probes, auto-discovery, fallback or reactivation are permitted. Retained compatibility interfaces and historical artifacts are not permission to use them.
+- Groq is the product-provided external connection, not the sole provider allowed for user-supplied API credentials. The product retains BYOK connections to other providers through the same SYSTEM Gateway, with explicit user selection, supported protocol adapters, validated destinations and applicable Permission/SourceUse. Configuration does not prove inference availability or authorize transmission; there is no hidden default, automatic provider switch or fallback.
+- Restore this capability through the existing Gateway, configuration/secret and Permission owners. A compatible API key does not imply support for every native protocol or modality, and a user-configured endpoint is not an unrestricted URL transport. Credentials remain actor-isolated and secret; selection, exact request confirmation, cancellation/revocation, provenance and saved-work recovery retain their contracts. Implementing BYOK does not itself authorize live credential use, external calls, training or spending.
+- Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are retired from product execution; Jev is an inactive historical typed candidate. For these retired routes: no calls, probes, auto-discovery, fallback or reactivation are permitted. Retiring a historical product route does not permanently prohibit a separately configured user BYOK connection to the same vendor; such a connection must satisfy the current Gateway protocol, destination and authorization contracts without reviving the old transport. Retained compatibility interfaces and historical artifacts are not permission to use them.
 - Owned AI must prove understanding, reasoning, original creation, tools,
   continuity/recovery and controlled learning on real CTH/BMP/creation work.
   Source Brief, multimodal inputs, uncertainty, latency/cost, feedback,

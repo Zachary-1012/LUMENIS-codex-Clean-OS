@@ -28,9 +28,9 @@ AI 贯穿适用的工作环节，辅助理解、分析、建议和创作；正�
 
 AI assists understanding, analysis, recommendations, and creation across applicable workflows. Ordinary business operations, deterministic analysis, manual editing, saving, and recovery do not require a model, external AI API, or GPU. Source facts, computed results, AI suggestions, and human decisions retain distinct provenance.
 
-产品 AI 经唯一的 SYSTEM AI Gateway 调用。寰意自有模型是产品自有能力目标；当前唯一获准的外部模型接口为 Groq，且只能经该 Gateway、由用户明确选择并通过适用权限调用。其他退役路线不调用、不探测、不自动回退。AI 不可用时，只有依赖 AI 的增强动作不可用；正常业务、确定性分析、人工编辑、保存与恢复继续工作。
+产品 AI 经唯一的 SYSTEM AI Gateway 调用。寰意自有模型是默认建设路线与完整能力目标；Groq 是产品内置的外部连接，用户也可自带其他供应商 API，经同一 Gateway 的相应协议适配、安全目的地校验、明确选择及适用 Permission/SourceUse 使用。配置不等于可用或外发授权；旧退役路线不恢复、不探测，不自动切换或回退。AI 不可用时，只有依赖 AI 的增强动作不可用；正常业务、确定性分析、人工编辑、保存与恢复继续工作。
 
-Product AI uses the single SYSTEM AI Gateway. OEVIRA-owned models remain a product capability goal; Groq is the only currently approved external model interface and may be called only through that Gateway after explicit user selection and applicable permission. Other retired routes are not called, probed, or used as automatic fallbacks. If AI is unavailable, only AI-dependent enhancements are unavailable; ordinary business work, deterministic analysis, manual editing, saving, and recovery continue.
+Product AI uses the single SYSTEM AI Gateway. OEVIRA-owned models remain the default development route and complete capability goal. Groq is the product-provided external connection; users may also bring other providers’ API credentials through supported adapters, validated destinations, explicit selection and applicable Permission/SourceUse in the same Gateway. Configuration proves neither availability nor permission to transmit. Retired routes are not revived or probed, and no automatic switching or fallback occurs. If AI is unavailable, ordinary business work, deterministic analysis, manual editing, saving and recovery continue.
 
 ## 用户如何工作 / User workflows
 

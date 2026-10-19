@@ -69,7 +69,7 @@ class _Client extends LumenisCoreClient {
 
   @override
   Future<Map<String, dynamic>> inspectContentEditBatch({
-    required String domainId,
+    required String? domainId,
     List<String>? assetPaths,
     List<String>? assetRefs,
     required Map<String, dynamic> timeline,
@@ -97,6 +97,8 @@ class _Client extends LumenisCoreClient {
   String? exportFailureCode;
   Duration confirmationLifetime = const Duration(minutes: 5);
   Completer<void>? pendingImport;
+  Completer<void>? pendingConfirmation;
+  String? confirmationResource;
   Completer<void>? pendingRetrieval;
   String? retrievalFailureCode;
   int retrievalCalls = 0;
@@ -140,7 +142,7 @@ class _Client extends LumenisCoreClient {
 
   @override
   Future<ContentProjectFile> contentProjectFile({
-    required String domainId,
+    required String? domainId,
     required String artifactId,
     required bool package,
   }) async {
@@ -163,7 +165,7 @@ class _Client extends LumenisCoreClient {
 
   @override
   Future<Map<String, dynamic>> inspectContentMedia({
-    required String domainId,
+    required String? domainId,
     List<String>? assetPaths,
     List<String>? assetRefs,
   }) async {
@@ -176,7 +178,7 @@ class _Client extends LumenisCoreClient {
 
   @override
   Future<Map<String, dynamic>> importContentSource({
-    required String domainId,
+    required String? domainId,
     required String filename,
     required Uint8List bytes,
   }) async {
@@ -192,7 +194,8 @@ class _Client extends LumenisCoreClient {
         errorCode: 'CONTENT_SOURCE_APPROVAL_REQUIRED',
         sourceConfirmation: ContentSourceConfirmation(
           confirmationId: 'CONF-widget',
-          resource: 'content-source-import:v1:${'b' * 64}',
+          resource: confirmationResource ??
+              'content-source-import:${domainId == null ? 'shared-workspace:' : ''}v1:${'b' * 64}',
           expiresAt: DateTime.now().add(confirmationLifetime),
           filename: confirmationFilename ?? filename,
           sizeBytes: confirmationSizeBytes ?? bytes.length,
@@ -216,13 +219,14 @@ class _Client extends LumenisCoreClient {
 
   @override
   Future<Map<String, dynamic>> confirmContentSource({
-    required String domainId,
+    required String? domainId,
     required String confirmationId,
     required bool confirmed,
   }) async {
     confirmationCalls++;
     confirmedImport = confirmed;
     lastImportDomain = domainId;
+    await pendingConfirmation?.future;
     return confirmed
         ? {
             'ok': true,
@@ -234,7 +238,7 @@ class _Client extends LumenisCoreClient {
 
   @override
   Future<Map<String, dynamic>> exportContentProject({
-    required String domainId,
+    required String? domainId,
     List<String>? assetPaths,
     List<String>? assetRefs,
     required Map<String, dynamic> timeline,
@@ -289,7 +293,7 @@ class _Client extends LumenisCoreClient {
 
   @override
   Future<Map<String, dynamic>> listContentProjects({
-    required String domainId,
+    required String? domainId,
     int limit = 20,
     String? cursor,
   }) async {
@@ -319,7 +323,7 @@ class _Client extends LumenisCoreClient {
 
   @override
   Future<Map<String, dynamic>> reopenContentProject({
-    required String domainId,
+    required String? domainId,
     required String artifactId,
   }) async {
     reopenCalls++;
@@ -365,6 +369,7 @@ Widget _app(
   _Client client,
   MediaProjectController? controller, {
   String? invokingDomain,
+  bool sharedWorkspace = false,
   Locale locale = const Locale('zh', 'CN'),
   double scale = 1,
   EdgeInsets viewInsets = EdgeInsets.zero,
@@ -392,6 +397,7 @@ Widget _app(
           client,
           controller,
           invokingDomain: invokingDomain,
+          sharedWorkspace: sharedWorkspace,
           contextAvailable: contextAvailable,
           onBack: onBack,
           files: files ?? _Files(),
@@ -402,6 +408,7 @@ Widget _app(
             client,
             controller,
             invokingDomain: invokingDomain,
+            sharedWorkspace: sharedWorkspace,
             contextAvailable: contextAvailable,
             onBack: onBack,
             files: files ?? _Files(),
@@ -413,6 +420,7 @@ Widget _workbenchHome(
   _Client client,
   MediaProjectController? controller, {
   String? invokingDomain,
+  required bool sharedWorkspace,
   required bool contextAvailable,
   VoidCallback? onBack,
   required MediaProjectFiles files,
@@ -420,6 +428,7 @@ Widget _workbenchHome(
   body: MediaProjectWorkbench(
     client: client,
     invokingDomain: invokingDomain,
+    sharedWorkspace: sharedWorkspace,
     controller: controller,
     contextAvailable: contextAvailable,
     files: files,
@@ -1160,7 +1169,29 @@ void main() {
     },
   );
 
-  testWidgets('GLOBAL_ALL asks for an explicit business purpose', (
+
+  testWidgets('GLOBAL_ALL independent choice imports without a business domain', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    client.contextEnvelope = {
+      'contract': 'lumenis.context.v1', 'selection_only': true,
+      'context': {'mode': 'GLOBAL_ALL', 'subject_id': null},
+    };
+    await tester.pumpWidget(_app(client, null));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-workspace-shared')), findsOneWidget);
+    expect(client.importCalls, 0);
+    await tester.tap(find.byKey(const Key('media-workspace-shared')));
+    await tester.pumpAndSettle();
+    expect(find.text('独立作品'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('media-import')));
+    await tester.pumpAndSettle();
+    expect(client.importCalls, 1);
+    expect(client.lastImportDomain, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('GLOBAL_ALL offers independent creation alongside business purposes', (
     tester,
   ) async {
     client.contextEnvelope = {
@@ -1170,7 +1201,7 @@ void main() {
     };
     await tester.pumpWidget(_app(client, null));
     await tester.pumpAndSettle();
-    expect(find.text('请选择本次剪辑的用途：商业运营或品牌市场。'), findsOneWidget);
+    expect(find.text('选择独立作品，或将本次剪辑关联到商业运营、品牌市场。'), findsOneWidget);
     expect(find.text('商业运营'), findsOneWidget);
     expect(find.text('品牌市场'), findsOneWidget);
     expect(find.byKey(const Key('media-import')), findsNothing);
@@ -1244,6 +1275,186 @@ void main() {
       candidate.dispose();
     }
   });
+
+  Future<void> openSharedApproval(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    controller.dispose();
+    controller = MediaProjectController(
+      repository: CoreMediaProjectRepository(client),
+      domain: null,
+    );
+    client.approvalRequired = true;
+    await tester.pumpWidget(
+      _app(client, controller, sharedWorkspace: true),
+    );
+    await tester.tap(find.byKey(const Key('media-import')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
+  for (final withBusinessFocus in [false, true]) {
+    testWidgets(
+      'independent source approval works with business focus $withBusinessFocus',
+      (tester) async {
+        client.contextEnvelope = withBusinessFocus
+            ? {
+                'contract': 'lumenis.context.v1',
+                'selection_only': true,
+                'context': {
+                  'mode': 'FOCUS',
+                  'domain_id': 'BMP',
+                  'subject_id': 'SUBJECT-not-shared',
+                  'display_name': {'zh': '不应出现在独立确认中'},
+                },
+              }
+            : null;
+        await openSharedApproval(tester);
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('本次用途：独立视频或音频制作。'), findsOneWidget);
+        expect(find.text('当前范围：独立作品'), findsOneWidget);
+        expect(find.textContaining('不会公开发布'), findsOneWidget);
+        expect(find.textContaining('品牌市场'), findsNothing);
+        expect(find.textContaining('不应出现在独立确认中'), findsNothing);
+        await tester.tap(find.byKey(const Key('media-import-technical-details')));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.textContaining('SUBJECT-not-shared'), findsNothing);
+        expect(
+          find.textContaining('content-source-import:shared-workspace:v1:'),
+          findsOneWidget,
+        );
+        expect(client.confirmationCalls, 0);
+        expect(client.importCalls, 1);
+        await tester.tap(find.text('确认并导入所选文件'));
+        await tester.pumpAndSettle();
+        expect(client.confirmationCalls, 1);
+        expect(client.confirmedImport, isTrue);
+        expect(client.importCalls, 2);
+        expect(client.lastImportDomain, isNull);
+        expect(client.importedBytes[0], client.importedBytes[1]);
+        expect(controller.sourceRefs, ['ART-source']);
+        expect(controller.failureCode, isNull);
+      },
+    );
+  }
+
+  testWidgets('independent source approval cancellation never retries', (
+    tester,
+  ) async {
+    await openSharedApproval(tester);
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(client.confirmationCalls, 1);
+    expect(client.confirmedImport, isFalse);
+    expect(client.lastImportDomain, isNull);
+    expect(client.importCalls, 1);
+    expect(controller.sourceRefs, isEmpty);
+    expect(controller.failureCode, 'CONTENT_IMPORT_CANCELLED');
+  });
+
+  testWidgets('independent approval rejects a business resource', (
+    tester,
+  ) async {
+    client.confirmationResource = 'content-source-import:v1:${'b' * 64}';
+    await openSharedApproval(tester);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(client.confirmationCalls, 0);
+    expect(client.importCalls, 1);
+    expect(controller.sourceRefs, isEmpty);
+    expect(controller.failureCode, 'CONTENT_APPROVAL_PENDING');
+  });
+
+  testWidgets('expired independent approval never authorizes a retry', (
+    tester,
+  ) async {
+    client.confirmationLifetime = const Duration(seconds: -1);
+    await openSharedApproval(tester);
+    await tester.tap(find.text('确认并导入所选文件'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining('确认已过期'), findsOneWidget);
+    expect(client.confirmationCalls, 0);
+    expect(client.importCalls, 1);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(client.confirmationCalls, 1);
+    expect(client.confirmedImport, isFalse);
+    expect(client.importCalls, 1);
+    expect(controller.sourceRefs, isEmpty);
+  });
+
+  for (final availabilityOnly in [false, true]) {
+    testWidgets(
+      'independent approval blocks changed scope, availability only $availabilityOnly',
+      (tester) async {
+        await openSharedApproval(tester);
+        if (availabilityOnly) {
+          await tester.pumpWidget(_app(
+            client,
+            controller,
+            sharedWorkspace: true,
+            contextAvailable: false,
+          ));
+        } else {
+          client.contextEnvelope = {
+            'context': {'mode': 'GLOBAL_ALL'},
+          };
+        }
+        await tester.tap(find.text('确认并导入所选文件'));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.textContaining('查看范围已改变'),
+          ),
+          findsOneWidget,
+        );
+        expect(client.confirmationCalls, 0);
+        expect(client.importCalls, 1);
+        await tester.tap(find.text('取消'));
+        await tester.pumpAndSettle();
+        expect(client.confirmationCalls, 0);
+        expect(client.importCalls, 1);
+        expect(controller.sourceRefs, isEmpty);
+        expect(controller.failureCode, 'CONTENT_CONTEXT_CHANGED');
+      },
+    );
+
+    testWidgets(
+      'independent approval ignores late response, availability only $availabilityOnly',
+      (tester) async {
+        client.pendingConfirmation = Completer<void>();
+        await openSharedApproval(tester);
+        await tester.tap(find.text('确认并导入所选文件'));
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(client.confirmationCalls, 1);
+        expect(client.confirmedImport, isTrue);
+        expect(client.importCalls, 1);
+        if (availabilityOnly) {
+          await tester.pumpWidget(_app(
+            client,
+            controller,
+            sharedWorkspace: true,
+            contextAvailable: false,
+          ));
+        } else {
+          client.contextEnvelope = {
+            'context': {'mode': 'GLOBAL_ALL'},
+          };
+        }
+        client.pendingConfirmation!.complete();
+        await tester.pumpAndSettle();
+        expect(client.confirmationCalls, 1);
+        expect(client.importCalls, 1);
+        expect(client.lastImportDomain, isNull);
+        expect(controller.sourceRefs, isEmpty);
+        expect(controller.timeline, isNull);
+        expect(controller.failureCode, 'CONTENT_CONTEXT_CHANGED');
+      },
+    );
+  }
 
   testWidgets(
     'source import requires the user confirmation and retries same bytes',

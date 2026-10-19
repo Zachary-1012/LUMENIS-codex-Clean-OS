@@ -120,7 +120,8 @@ jobs:
             test/features/shared/sh01/media_project_controller_test.dart \
             test/features/shared/sh01/media_project_workbench_test.dart \
             test/features/shared/pr83_observation_presentation_test.dart \
-            test/features/bmp09/bmp09_artifact_display_test.dart
+            test/features/bmp09/bmp09_artifact_display_test.dart \
+            test/features/shared/sh01/sh01_screen_test.dart
 
       - name: Build real Web Workspace (BLOCKING)
         working-directory: app

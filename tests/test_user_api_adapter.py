@@ -248,14 +248,14 @@ def test_chat_usage_excludes_untrusted_non_counts(configured, monkeypatch, tmp_p
 
 @pytest.mark.parametrize("url", [
     "https://example.invalid/v1", "https://api.groq.com.evil.invalid/openai/v1",
-    "https://evil-api.groq.com/openai/v1", "https://api.groq.com/openai/v1?",
+    "https://api.groq.com/openai/v1?",
     "https://api.groq.com/openai/v1#", "https://api.groq.com/openai/v1/../other",
     "https://api.groq.com/openai/v1//", "https://api.groq.com:444/openai/v1",
     "https://api.groq.com./openai/v1", "https://api.groq.com/openai%2fv1",
     "https://api.groq.com/openai/v1\n/other", "https://@api.groq.com/openai/v1",
     "https://api.groq.com:/openai/v1", "https://127.0.0.1/openai/v1",
 ])
-def test_only_official_groq_destination_is_admitted(configured, monkeypatch, url):
+def test_unsafe_or_reserved_destination_is_denied(configured, monkeypatch, url):
     _configure_test_runtime(base_url=url)
     monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("invalid destination"))
     assert user_api_adapter.status()["reason"] == "USER_API_DESTINATION_NOT_ALLOWED"
@@ -495,3 +495,185 @@ def test_groq_route_normal_success_and_permission_denial(configured, monkeypatch
     denied = client.post("/api/ai/chat", json={"message": "my own question", "permission": True, "actor_id": 1})
     assert denied.status_code == 503 and denied.json["code"] == "USER_API_PERMISSION_DENIED"
     assert denied.json["reply"] is None and len(calls) == 1
+
+
+@pytest.mark.parametrize("base,provider,destination,token_field", [
+    ("https://api.groq.com/openai/v1", "groq", "https://api.groq.com/openai/v1/chat/completions", "max_tokens"),
+    ("https://api.openai.com/v1", "openai", "https://api.openai.com/v1/chat/completions", "max_completion_tokens"),
+    ("https://api.deepseek.com/v1/", "deepseek", "https://api.deepseek.com/chat/completions", "max_tokens"),
+    ("https://CUSTOM.EXAMPLE.NET:443/inference/v1/", "custom.example.net", "https://custom.example.net/inference/v1/chat/completions", "max_tokens"),
+])
+def test_explicit_byok_protocol_and_destination_share_exact_consent(configured, monkeypatch, base, provider, destination, token_field):
+    import hashlib
+    import io
+    import json
+    user_api_adapter.configure({"provider": "user_api", "base_url": base,
+                               "api_key": "synthetic-byok-key", "model": "synthetic-model",
+                               "protocol": "openai_chat_completions"})
+    monkeypatch.setattr(user_api_adapter.socket, "getaddrinfo", lambda *a, **k: pytest.fail("preview queried DNS"))
+    status = user_api_adapter.status()
+    assert status["service_provider"] == provider
+    assert status["connection_origin"] == "user_api" and status["available"] is False
+    assert status["destination"] == destination
+    preview = core.chat("s", "u", external_user_input=True)[2]["approval_request"]
+    assert preview["provider"] == provider and preview["destination"] == destination
+    assert preview["request"][token_field] == 1200
+    sent = []
+    def opened(req, timeout):
+        sent.append(req)
+        assert req.full_url == destination
+        assert req.headers["Authorization"] == "Bearer synthetic-byok-key"
+        assert hashlib.sha256(req.data).hexdigest() == preview["body_sha256"]
+        assert json.loads(req.data) == preview["request"]
+        return io.BytesIO(b'{"choices":[{"message":{"content":"ok"},"finish_reason":"stop"}]}')
+    monkeypatch.setattr(user_api_adapter, "_open", opened)
+    approval = {"confirmed": True, "confirmation_id": preview["confirmation_id"], "resource": preview["resource"]}
+    assert core.chat("s", "u", external_user_input=True, external_approval=approval)[:2] == ("ok", "user_api")
+    assert core.chat("s", "u", external_user_input=True, external_approval=approval)[1] == "user_api_confirmation_invalid"
+    assert len(sent) == 1
+
+
+def test_retired_builtin_brand_does_not_retire_explicit_byok():
+    from lumenis.system.ai_gateway import providers
+    for name, base in (("openai", "https://api.openai.com/v1"), ("deepseek", "https://api.deepseek.com")):
+        assert providers.is_provider_retired(name)
+        assert providers.provider_status(name) == providers.DISABLED
+        connection = providers.user_api_connection(base)
+        assert connection["connection_origin"] == "user_api"
+        assert connection["service_provider"] == name
+    assert providers.available_providers() == []
+
+
+def test_unimplemented_native_protocol_is_explicit_and_never_sent(configured, monkeypatch):
+    monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: pytest.fail("unadapted protocol dispatched"))
+    with pytest.raises(ValueError, match="USER_API_PROTOCOL_NOT_ADAPTED"):
+        user_api_adapter.configure({"provider": "user_api", "base_url": "https://api.anthropic.com/v1",
+                                   "api_key": "synthetic-key", "model": "synthetic-model", "protocol": "anthropic_messages"})
+    # Failed validation preserves the previous working actor configuration.
+    assert user_api_adapter.status()["service_provider"] == "groq"
+    _configure_test_runtime(base_url="https://api.anthropic.com/v1", protocol="anthropic_messages")
+    assert user_api_adapter.status()["admission_state"] == "NOT_ADAPTED"
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_protocol_not_adapted"
+
+
+@pytest.mark.parametrize("url", [
+    "https://localhost/v1", "https://foo.local/v1", "https://foo.internal/v1",
+    "https://127.1/v1", "https://[::1]/v1", "https://10.0.0.1/v1", "https://8.8.8.8/v1",
+    "https://custom.example.net:8443/v1", "https://custom.example.net/v1?x=1",
+    "https://custom.example.net/v1#fragment", "https://key@custom.example.net/v1",
+    "https://custom.example.net/../v1", "https://custom.example.net/v1%2fchat",
+    "https://custom.example.net//v1", "https://custom.example.net./v1",
+])
+def test_custom_endpoint_unsafe_grammar_never_resolves(configured, monkeypatch, url):
+    monkeypatch.setattr(user_api_adapter.socket, "getaddrinfo", lambda *a, **k: pytest.fail("unsafe URL resolved"))
+    _configure_test_runtime(base_url=url)
+    assert _approved_gateway("s", "u", external_user_input=True)[1] == "user_api_destination_not_allowed"
+
+
+@pytest.mark.parametrize("address", ["127.0.0.1", "10.0.0.1", "169.254.169.254", "100.64.0.1", "192.168.1.1",
+    "192.0.0.8", "198.18.0.1", "224.0.0.1", "0.0.0.0", "::1", "fc00::1", "fe80::1",
+    "::ffff:127.0.0.1", "::ffff:8.8.8.8", "64:ff9b::7f00:1", "2002:7f00:1::", "2001::1"])
+def test_nonpublic_or_tunneled_addresses_are_denied(address):
+    assert user_api_adapter._public_address(address) is False
+
+
+def _dns_answer(address):
+    import socket
+    return (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", (address, 443))
+
+
+@pytest.mark.parametrize("addresses", [[], [_dns_answer("127.0.0.1")], [_dns_answer("8.8.8.8"), _dns_answer("10.0.0.1")]])
+def test_dns_private_empty_and_mixed_answers_fail_closed(monkeypatch, addresses):
+    monkeypatch.setattr(user_api_adapter.socket, "getaddrinfo", lambda *a, **k: addresses)
+    monkeypatch.setattr(user_api_adapter, "_PinnedHTTPSConnection", lambda *a, **k: pytest.fail("unvalidated address connected"))
+    req = urllib.request.Request("https://custom.example.net/v1/chat/completions", data=b"{}", method="POST")
+    with pytest.raises(PermissionError, match="USER_API_DESTINATION_NOT_ALLOWED"):
+        with user_api_adapter._open(req, timeout=1):
+            pytest.fail("invalid DNS was admitted")
+
+
+def test_pinned_tls_authenticates_original_hostname_without_second_dns(monkeypatch):
+    import ssl
+    import socket
+    connections = []
+    class FakeSocket:
+        def settimeout(self, timeout): assert timeout == 3
+        def connect(self, address): connections.append(address)
+        def close(self): pass
+    monkeypatch.setattr(socket, "socket", lambda *a: FakeSocket())
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *a, **k: pytest.fail("DNS rebinding attempted"))
+    conn = user_api_adapter._PinnedHTTPSConnection("custom.example.net", _dns_answer("8.8.8.8"), 3)
+    assert conn._context.verify_mode == ssl.CERT_REQUIRED
+    assert conn._context.check_hostname is True
+    seen = []
+    monkeypatch.setattr(conn._context, "wrap_socket", lambda sock, **kw: seen.append(kw["server_hostname"]) or sock)
+    conn.connect()
+    assert connections == [("8.8.8.8", 443)] and seen == ["custom.example.net"]
+    conn.close()
+
+
+@pytest.mark.parametrize("response_status", [200, 301, 302, 303, 307, 308, 401])
+def test_transport_pins_once_ignores_proxies_and_never_redirects(monkeypatch, response_status):
+    from types import SimpleNamespace
+    lookups, calls, closed = [], [], []
+    def resolve(host, port, **kw):
+        lookups.append((host, port))
+        return [_dns_answer("8.8.8.8")] if len(lookups) == 1 else [_dns_answer("127.0.0.1")]
+    class FakeConnection:
+        def __init__(self, host, address, timeout):
+            assert host == "custom.example.net" and address == _dns_answer("8.8.8.8")
+        def request(self, method, path, body, headers): calls.append((method, path, body, headers))
+        def getresponse(self): return SimpleNamespace(status=response_status, headers={"Location": "http://127.0.0.1/secret"})
+        def close(self): closed.append(True)
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:8888")
+    monkeypatch.setattr(user_api_adapter.socket, "getaddrinfo", resolve)
+    monkeypatch.setattr(user_api_adapter, "_PinnedHTTPSConnection", FakeConnection)
+    req = urllib.request.Request("https://custom.example.net/v1/chat/completions", data=b"{}", headers={"Authorization": "Bearer synthetic"}, method="POST")
+    if response_status == 200:
+        with user_api_adapter._open(req, 1) as response: assert response.status == 200
+    else:
+        with pytest.raises(urllib.error.HTTPError) as error:
+            with user_api_adapter._open(req, 1): pytest.fail("redirect/error body accepted")
+        assert error.value.code == response_status
+    assert lookups == [("custom.example.net", 443)]
+    assert len(calls) == 1 and len(closed) == 1
+    assert calls[0][:3] == ("POST", "/v1/chat/completions", b"{}")
+
+
+def test_tls_failure_closes_socket_before_credentials_are_transmitted(configured, monkeypatch):
+    import ssl
+    sockets = []
+    class FakeSocket:
+        def __init__(self): self.closed = False
+        def settimeout(self, timeout): pass
+        def connect(self, address): assert address == ('8.8.8.8', 443)
+        def sendall(self, data): pytest.fail('credentials sent before TLS verification')
+        def close(self): self.closed = True
+    def new_socket(*args):
+        item = FakeSocket(); sockets.append(item); return item
+    context = ssl.create_default_context()
+    def bad_certificate(*args, **kwargs):
+        raise ssl.SSLCertVerificationError('synthetic certificate mismatch')
+    monkeypatch.setattr(context, 'wrap_socket', bad_certificate)
+    monkeypatch.setattr(user_api_adapter.ssl, 'create_default_context', lambda: context)
+    monkeypatch.setattr(user_api_adapter.socket, 'getaddrinfo', lambda *a, **k: [_dns_answer('8.8.8.8')])
+    monkeypatch.setattr(user_api_adapter.socket, 'socket', new_socket)
+    _configure_test_runtime(base_url='https://custom.example.net/v1')
+    assert _approved_adapter('s', 'u', external_user_input=True) == (None, 'user_api_unavailable', None)
+    assert len(sockets) == 1 and sockets[0].closed
+
+
+def test_dns_denial_happens_only_after_exact_consent_and_is_not_replayed(configured, monkeypatch):
+    _configure_test_runtime(base_url='https://custom.example.net/v1')
+    lookups = []
+    def private_destination(*a, **k):
+        lookups.append(True)
+        return [_dns_answer('169.254.169.254')]
+    monkeypatch.setattr(user_api_adapter.socket, 'getaddrinfo', private_destination)
+    monkeypatch.setattr(user_api_adapter, '_PinnedHTTPSConnection', lambda *a, **k: pytest.fail('private socket opened'))
+    preview = core.chat('s', 'u', external_user_input=True)[2]['approval_request']
+    assert lookups == []
+    approval = {'confirmed': True, 'confirmation_id': preview['confirmation_id'], 'resource': preview['resource']}
+    assert core.chat('s', 'u', external_user_input=True, external_approval=approval)[1] == 'user_api_destination_not_allowed'
+    assert core.chat('s', 'u', external_user_input=True, external_approval=approval)[1] == 'user_api_confirmation_invalid'
+    assert lookups == [True]
