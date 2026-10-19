@@ -238,7 +238,7 @@ class _LocalTextKernel:
             raise OwnedInferenceBlocked("OWNED_INFERENCE_CANCELLED")
         try:
             with owned_training._offline_hf(self._base_recipe), self._torch.inference_mode():
-                encoded = self._tokenizer(prompt, return_tensors="pt", add_special_tokens=False)
+                encoded = self._tokenizer(prompt, return_tensors="pt", add_special_tokens=False, truncation=False)
                 input_length = int(encoded["input_ids"].shape[1])
                 limit = self._max_sequence_length if context_window_tokens is None else context_window_tokens
                 if input_length + max_new_tokens > limit:
@@ -498,6 +498,7 @@ class OwnedProductionRuntime:
             kernel._model, kernel._tokenizer, kernel._torch,
         )
         self._kernel_handler = kernel._generate.__func__
+        self._formatter_handle = type(self)._request_prompt
 
     def identity(self):
         with self._lock:
@@ -505,6 +506,7 @@ class OwnedProductionRuntime:
                     or self._kernel._tokenizer is not self._tokenizer_handle
                     or self._kernel._torch is not self._torch_handle
                     or getattr(self._kernel._generate, "__func__", None) is not self._kernel_handler
+                    or type(self)._request_prompt is not self._formatter_handle
                     or _production_executor_identity(self.generate) != self._identity["executor_sha256"]):
                 raise OwnedInferenceBlocked("OWNED_RUNTIME_HANDLE_CHANGED")
             _require_model_admission(self._admission)
@@ -538,6 +540,44 @@ class OwnedProductionRuntime:
             self._admission, self._source_validator, self._source_dependency_paths,
         )
 
+    @staticmethod
+    def _request_prompt(request):
+        return (
+            f"<|start|>system<|message|>{request.system_prompt}<|end|>"
+            f"<|start|>user<|message|>{request.user_payload}<|end|>"
+            "<|start|>assistant<|channel|>final<|message|>"
+        )
+
+    def measure_request(self, request):
+        """Exact loaded-tokenizer count, with no generation or model loading."""
+        from .owned_service import (OwnedServiceRequest, validate_owned_service_request,
+            _request_matches_admission, owned_service_request_digest)
+        if type(request) is not OwnedServiceRequest:
+            raise OwnedInferenceBlocked("OWNED_SERVICE_REQUEST_REQUIRED")
+        validate_owned_service_request(request)
+        _request_matches_admission(request, self._admission.request, self._admission.public_identity)
+        if any(_HARMONY_CONTROL.search(value) for value in (request.system_prompt, request.user_payload)):
+            raise OwnedInferenceBlocked("OWNED_SERVICE_REQUEST_MISMATCH")
+        with self._lock:
+            identity = self.identity()
+            self._verify_source(request)
+            prompt = self._request_prompt(request)
+            with owned_training._offline_hf(self._kernel._base_recipe):
+                encoded = self._tokenizer_handle(prompt, return_tensors="pt", add_special_tokens=False, truncation=False)
+                count = int(encoded["input_ids"].shape[1])
+            if count < 0 or self.identity() != identity:
+                raise OwnedInferenceBlocked("OWNED_RUNTIME_IDENTITY_CHANGED")
+            self._verify_source(request)
+            return {"prompt_tokens": count, "output_tokens_reserved": request.max_output_tokens,
+                "context_window_tokens": identity["context_window_tokens"],
+                "output_token_limit": identity["output_token_limit"],
+                "fits": count + request.max_output_tokens <= identity["context_window_tokens"],
+                "request_sha256": owned_service_request_digest(request),
+                "runtime_sha256": identity["runtime_sha256"],
+                "tokenizer_identity": identity["runtime_sha256"],
+                "formatter_sha256": identity["executor_sha256"],
+                "count_method": "loaded_runtime_tokenizer", "generation_performed": False}
+
     def generate(self, request, *, is_cancelled=None):
         from dataclasses import asdict
         from .owned_service import OwnedServiceRequest, validate_owned_service_request
@@ -562,11 +602,7 @@ class OwnedProductionRuntime:
             asdict(request), sort_keys=True, separators=(",", ":"), ensure_ascii=False,
             allow_nan=False,
         ).encode("utf-8")).hexdigest()
-        prompt = (
-            f"<|start|>system<|message|>{request.system_prompt}<|end|>"
-            f"<|start|>user<|message|>{request.user_payload}<|end|>"
-            "<|start|>assistant<|channel|>final<|message|>"
-        )
+        prompt = self._request_prompt(request)
 
         def must_stop():
             if is_cancelled is not None:
@@ -595,5 +631,5 @@ class OwnedProductionRuntime:
     __slots__ = (
         "_kernel", "_parts", "_identity", "_admission", "_lock",
         "_source_validator", "_source_dependency_paths", "_model_handle",
-        "_tokenizer_handle", "_torch_handle", "_kernel_handler",
+        "_tokenizer_handle", "_torch_handle", "_kernel_handler", "_formatter_handle",
     )

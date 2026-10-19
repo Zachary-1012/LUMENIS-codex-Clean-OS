@@ -1,0 +1,12 @@
+{
+  "status": "FINAL_SAME_SOURCE_SIX_REAL_TCP_NODES_PASSED",
+  "source_manifest_sha256": "549d6cfa8added1d11c4178df3b4d5f7fcc0a0d3dde6903ed9c2fc03c39e0f22",
+  "five_node_receipt_path": "ggi_independent_review_20261018T1217Z/evidence/final_tcp_receipt.json",
+  "five_node_receipt_sha256": "18671d0115f187133c154d1c2455633e1a3246d6a9f8a3981389d9f245dfcd68",
+  "five_node_proof_sha256": "a5864980abcabd3af3bd60ceac213167a52a8d4c0b1774659f0e14a8bf221304",
+  "five_node_log_sha256": "cfabb2a25678eda91672662b2e663cc27bab2775a821ddc67d4f2d29a9262224",
+  "media_node_receipt_path": "media_tcp/VERIFICATION.json",
+  "media_node_receipt_sha256": "abf56faf7a170b60977fe42444f5ca55a029a37050f86481bbdbb5710fc9f0da",
+  "main_no_route_suite_status": "RUNNING_SEPARATELY",
+  "not_added_to_other_versions": true
+}

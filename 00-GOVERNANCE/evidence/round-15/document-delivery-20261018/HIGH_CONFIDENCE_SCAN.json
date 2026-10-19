@@ -1,0 +1,5 @@
+{
+  "status": "PASS_BOUNDED_PATTERNS",
+  "findings": [],
+  "limitations": "Pattern scan is not universal secret or personal-data clearance. All keyword matches are retained in separate adjudication inventory."
+}

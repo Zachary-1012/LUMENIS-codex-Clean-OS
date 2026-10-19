@@ -740,7 +740,7 @@ def register_data_query_api(app):
             return jsonify({'ok': False, 'error': 'invalid action'}), 400
         cpu = request.args.get('cpu', type=float)
         ram = request.args.get('ram', type=float)
-        lag = request.args.get('queue_lag', 0, type=int)
+        lag = request.args.get('queue_lag', type=int)
         snap = _resource_guard.snapshot(action, cpu_pct=cpu, ram_pct=ram, queue_lag=lag)
         return jsonify({'ok': True, **snap})
 

@@ -115,6 +115,8 @@ def _build_root_hooks(app: Flask):
 
 @pytest.fixture
 def auth_composition(tmp_path, monkeypatch):
+    # These tests explicitly exercise the optional account-gated configuration.
+    monkeypatch.setenv("ACCOUNT_SYSTEM_ENABLED", "on")
     monkeypatch.setenv("ZBC_DB_PATH", str(tmp_path / "saved-work.sqlite3"))
     monkeypatch.setenv("ZBC_ARTIFACT_DIR", str(tmp_path / "artifacts"))
     monkeypatch.setenv(
@@ -217,9 +219,22 @@ def auth_composition(tmp_path, monkeypatch):
     root_hooks = _build_root_hooks(app)
 
     experience_path, experience_tree = _source_tree("experience_runtime.py")
-    experience_namespace = {"request": request, "jsonify": jsonify, "re": re}
+    experience_namespace = {"request": request, "jsonify": jsonify, "re": re, "json": json}
+    constant_names = {
+        "_SHARED_WORKSPACE_SCOPE_HEADER", "_SHARED_WORKSPACE_LEGACY_SCOPE_HEADERS",
+        "_SHARED_WORKSPACE_CLIENT_IDENTITY_ARGS",
+    }
+    constants = [copy.deepcopy(node) for node in experience_tree.body
+                 if isinstance(node, ast.Assign) and any(
+                     isinstance(target, ast.Name) and target.id in constant_names
+                     for target in node.targets)]
+    assert len(constants) == len(constant_names)
+    module = ast.fix_missing_locations(ast.Module(body=constants, type_ignores=[]))
+    exec(compile(module, str(experience_path), "exec"), experience_namespace)
     _compile_functions(experience_path, experience_tree, {
         "_content_project_scope", "_source_brief_context", "_shared_work_actor_scope",
+        "_shared_saved_work_route_allowed", "_shared_content_project_route_allowed",
+        "_artifact_experiment_route_matches", "_parse_shared_workspace_scope_header",
         "_shared_work_response", "save_shared_work", "read_shared_work", "runtime_subjects",
         "register_experience_runtime",
     }, experience_namespace)
@@ -821,3 +836,14 @@ def test_manual_evidence_http_upload_exact_withdraw_restore_and_denials(manual_o
     assert restore_audit["actor"] == ws["identity"]
     assert restore_audit["reason"] == restore_reason
     assert restore_audit["resource"] == restore_resource
+
+
+def test_account_gate_off_keeps_local_registry_picker_usable(auth_composition, monkeypatch):
+    """Account-only assertions must not impose a default product account wall."""
+    monkeypatch.setenv("ACCOUNT_SYSTEM_ENABLED", "off")
+    auth_composition["actor_state"]["current"] = None
+    response = auth_composition["client"].get(
+        "/api/settings/subjects?domain_id=CTH", environ_overrides={"REMOTE_ADDR": "127.0.0.1"})
+    assert response.status_code == 200
+    assert {item["subject_id"] for item in response.get_json()["subjects"]} == {"SUBJECT-A", "SUBJECT-B"}
+    assert auth_composition["dual_domain_calls"] == []

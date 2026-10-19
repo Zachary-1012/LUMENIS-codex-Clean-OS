@@ -1,0 +1,31 @@
+{
+  "source_manifest_sha256": "549d6cfa8added1d11c4178df3b4d5f7fcc0a0d3dde6903ed9c2fc03c39e0f22",
+  "files": 4003,
+  "source_before_after_equal": true,
+  "isolated_copy_source_equal": true,
+  "AGENTS_bytes": 114680,
+  "headroom_bytes": 16384,
+  "budget_bytes": 131072,
+  "remaining_bytes": 8,
+  "exchange_byte_identical": true,
+  "original_requirement_ids_preserved": {
+    "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md": {
+      "original_ids": 227,
+      "missing_ids": []
+    },
+    "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md": {
+      "original_ids": 10,
+      "missing_ids": []
+    }
+  },
+  "full_PR_changed_paths": 1113,
+  "history_created": false,
+  "remote_mutation": false,
+  "gate_scope": "STATIC_LOCAL_CANDIDATE_ONLY_NOT_REMOTE_CI_PUBLICATION_OR_FOUR_SURFACE_ACCEPTANCE",
+  "governance_pytest": {
+    "passed": 289,
+    "subtests_passed": 318,
+    "seconds": 29.89
+  },
+  "final_gates": "11 static validators PASS (machine/takeover use verified full candidate paths; exchange required path supplied)"
+}

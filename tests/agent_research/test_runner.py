@@ -2,7 +2,7 @@
 """
 agent_research.runner 集成测试
 ==============================
-覆盖：基本研究流程、多专家并行探索、假设生成、验证步骤、结果排序、
+覆盖：真实来源研究流程、专家计划兼容、假设生成、非事实验证、结果排序、
 证据血缘可追溯、空 goal 处理、自定义专家列表、max_rounds 限制、
 ResearchResult JSON 序列化、模块级便捷函数。
 """
@@ -16,39 +16,46 @@ from agent_research.runner import ResearchRunner, ResearchResult, run_research
 
 
 GOAL = "分析广州太古汇2026年第三季度小红书舆情趋势与风险因素"
+# Synthetic, already-resolved SourceBrief fixtures; not live research evidence.
+RECORDS = [
+    {"source_id": "source-one", "evidence_id": "scope:one", "scope_evidence_ref": "scope:one",
+     "title": "抽样来源", "content_excerpt": "广州太古汇小红书舆情抽样显示排队投诉；样本不能证明总体趋势。"},
+    {"source_id": "source-two", "evidence_id": "scope:two", "scope_evidence_ref": "scope:two",
+     "title": "服务记录", "content_excerpt": "本来源仅记录服务体验，未开展平台全量统计。"},
+]
 
 
 class TestBasicResearchFlow:
     """基本研究流程测试。"""
 
     def test_run_research_returns_result(self):
-        """run_research 应返回 ResearchResult 对象。"""
         runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
+        result = runner.run_research(GOAL, records=RECORDS, max_rounds=1)
         assert isinstance(result, ResearchResult)
-        assert result.research_id.startswith("res_")
-        assert result.goal == GOAL
-        assert result.summary != ""
-        assert result.started_at != ""
-        assert result.finished_at != ""
+        assert result.research_id.startswith("research_")
+        assert result.goal == GOAL and result.summary
+        assert result.status == "research_draft"
+        # Pure analysis does not invent execution timestamps.
+        assert result.started_at == result.finished_at == ""
+        assert result == runner.run_research(GOAL, records=RECORDS, max_rounds=1)
 
     def test_research_produces_findings(self):
         """研究应产出非空 findings。"""
         runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
+        result = runner.run_research(GOAL, records=RECORDS, max_rounds=1)
         assert len(result.ranked_findings) > 0
 
-    def test_research_produces_debate_transcript(self):
-        """研究应产出辩论记录。"""
-        runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
-        assert len(result.debate_transcript) > 0
-        assert result.debate_transcript[0]["round_number"] == 1
+    def test_research_produces_open_questions_without_simulated_debate(self):
+        result = ResearchRunner().run_research(GOAL, records=RECORDS)
+        assert result.debate_transcript == []
+        assert result.hypotheses
+        assert all(h["status"] == "proposed" for h in result.hypotheses)
+        assert all(h["validation_needed"] for h in result.hypotheses)
 
     def test_every_finding_has_evidence_and_lineage(self):
         """每个 finding 必须带 evidence_refs 和 lineage_id。"""
         runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
+        result = runner.run_research(GOAL, records=RECORDS, max_rounds=1)
         for f in result.ranked_findings:
             assert len(f["evidence_refs"]) > 0, f"finding {f.get('finding_id')} 缺少 evidence_refs"
             assert f.get("lineage_id"), f"finding {f.get('finding_id')} 缺少 lineage_id"
@@ -57,24 +64,19 @@ class TestBasicResearchFlow:
 class TestParallelExploration:
     """多专家并行探索测试。"""
 
-    def test_all_specialists_contribute(self):
-        """所有启用专家都应贡献 findings。"""
+    def test_specialist_plan_does_not_claim_executed_contributions(self):
         runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
-        for sp in default_specialists():
-            assert result.specialist_contributions.get(sp.specialist_id, 0) > 0
+        assert {s.specialist_id for s in runner._specialists} == {s.specialist_id for s in default_specialists()}
+        result = runner.run_research(GOAL, records=RECORDS)
+        assert result.specialist_contributions == {"source_reader": len(RECORDS)}
+        # Configured specialists have not independently read/verified sources.
+        assert not any(result.specialist_contributions.get(s.specialist_id, 0) for s in default_specialists())
 
-    def test_findings_count_matches_specialists_times_hypotheses(self):
-        """单轮 findings 数量 = 专家数 × 假设数。"""
-        runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
-        n_specialists = len([s for s in default_specialists() if s.enabled])
-        # 每个专家最多 2 个假设
-        expected_max = n_specialists * 2 * n_specialists  # specialists * hypotheses_per_specialist... actually
-        # 实际：每个专家对每个假设生成1条finding，假设数=专家数*2（每专家2个）
-        n_hypotheses = n_specialists * 2
-        expected = n_specialists * n_hypotheses
-        assert len(result.ranked_findings) == expected
+    def test_findings_count_tracks_sources_not_specialist_multiplication(self):
+        result = ResearchRunner().run_research(GOAL, records=RECORDS, max_rounds=1)
+        assert len(result.ranked_findings) == len(RECORDS)
+        assert {f["evidence_refs"][0] for f in result.ranked_findings} == {r["evidence_id"] for r in RECORDS}
+        assert not ResearchRunner().run_research(GOAL).ranked_findings
 
 
 class TestHypothesisGeneration:
@@ -107,24 +109,21 @@ class TestHypothesisGeneration:
 class TestValidationStep:
     """验证步骤测试。"""
 
-    def test_findings_marked_validated(self):
-        """有证据的 finding 应被标记为 validated=True。"""
-        runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
-        # 所有 finding 都有 evidence_refs，应全部 validated
-        for f in result.ranked_findings:
-            assert f["validated"] is True
+    def test_citations_do_not_mark_findings_validated(self):
+        result = ResearchRunner().run_research(GOAL, records=RECORDS)
+        assert result.ranked_findings  # Do not let the negative assertion pass vacuously.
+        for finding in result.ranked_findings:
+            assert finding["validated"] is False
+            assert finding["fact_verified"] is False
+            assert finding["confidence"] is None
+            assert finding["claim_type"] == "source_statement"
 
-    def test_hypothesis_statuses_include_verified_or_rejected(self):
-        """经过验证后，假设状态应包含 verified 或 rejected（或保持 challenged）。"""
-        runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=2)
-        # 从 debate_transcript 中提取最终假设状态
-        last_round = result.debate_transcript[-1]
-        statuses = {h["status"] for h in last_round["hypotheses"]}
-        # 至少应有 challenged / verified / rejected 中的一种
-        assert statuses.issubset({"proposed", "challenged", "verified", "rejected"})
-        assert len(statuses) > 0
+    def test_source_hypotheses_remain_proposed_without_independent_review(self):
+        result = ResearchRunner().run_research(GOAL, records=RECORDS, max_rounds=2)
+        assert result.hypotheses
+        assert {h["status"] for h in result.hypotheses} == {"proposed"}
+        assert all(h["evidence_refs"] for h in result.hypotheses)
+        assert not result.debate_transcript  # No simulated independent approval/rejection.
 
 
 class TestRanking:
@@ -133,17 +132,18 @@ class TestRanking:
     def test_findings_sorted_by_rank_score_desc(self):
         """ranked_findings 应按 rank_score 降序排列。"""
         runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=2)
+        result = runner.run_research(GOAL, records=RECORDS, max_rounds=2)
         scores = [f["rank_score"] for f in result.ranked_findings]
         assert scores == sorted(scores, reverse=True)
 
-    def test_top_finding_has_highest_confidence_or_evidence(self):
-        """排名第一的 finding 应有较高的 rank_score。"""
-        runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
+    def test_top_finding_has_highest_explainable_lexical_overlap(self):
+        result = ResearchRunner().run_research(GOAL, records=RECORDS, max_rounds=1)
         top = result.ranked_findings[0]
         assert top["rank_score"] > 0
-        assert "evidence_strength" in top
+        assert top["rank_score"] == len(top["matched_terms"])
+        assert top["source_id"] == "source-one"
+        assert top["rank_method"] == "question_lexical_overlap"
+        assert top["confidence"] is None
 
 
 class TestEvidenceLineage:
@@ -152,20 +152,20 @@ class TestEvidenceLineage:
     def test_result_has_evidence_lineage(self):
         """ResearchResult 应包含非空 evidence_lineage。"""
         runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
+        result = runner.run_research(GOAL, records=RECORDS, max_rounds=1)
         assert len(result.evidence_lineage) > 0
 
     def test_lineage_records_have_required_fields(self):
-        """每条血缘记录应包含 lineage_id / evidence_id / source / path / provenance。"""
-        runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
+        result = ResearchRunner().run_research(GOAL, records=RECORDS)
+        assert len(result.evidence_lineage) == len(RECORDS)
         for record in result.evidence_lineage:
-            assert record["lineage_id"].startswith("lin_")
-            assert record["evidence_id"].startswith("ev_")
-            assert record["source"] != ""
-            assert isinstance(record["path"], list)
-            assert len(record["path"]) > 0
-            assert isinstance(record["provenance"], dict)
+            assert record["lineage_id"].startswith("lineage_")
+            assert record["evidence_id"] in {r["evidence_id"] for r in RECORDS}
+            assert record["source"] in {r["source_id"] for r in RECORDS}
+            assert record["lineage_steps"][:2] == [record["source"], record["evidence_id"]]
+            finding = next(f for f in result.ranked_findings if f["lineage_id"] == record["lineage_id"])
+            assert record["lineage_steps"][-1] == finding["finding_id"]
+            assert record["provenance"]["fact_verified"] is False
 
     def test_lineage_traceable_from_finding_to_hypothesis(self):
         """finding 的 lineage 应能追溯到 hypothesis（path[0] 为 hypothesis_id）。"""
@@ -203,14 +203,12 @@ class TestEmptyGoal:
     """空 goal 处理测试。"""
 
     def test_empty_goal_returns_empty_result(self):
-        """空 goal 应返回空结果，不报错。"""
-        runner = ResearchRunner()
-        result = runner.run_research("", max_rounds=1)
+        result = ResearchRunner().run_research("", max_rounds=1)
         assert result.goal == ""
-        assert len(result.ranked_findings) == 0
-        assert len(result.debate_transcript) == 0
-        assert result.confidence == 0.0
-        assert "为空" in result.summary
+        assert result.ranked_findings == result.debate_transcript == []
+        assert result.confidence is None
+        assert result.status == "needs_sources"
+        assert result.metrics["evaluation_status"] == "NO_DATA"
 
     def test_whitespace_goal_returns_empty_result(self):
         """纯空格 goal 应返回空结果。"""
@@ -222,64 +220,46 @@ class TestEmptyGoal:
 class TestCustomSpecialists:
     """自定义专家列表测试。"""
 
-    def test_custom_specialists_used(self):
-        """传入自定义专家列表时应使用自定义专家。"""
-        custom = Specialist(
-            specialist_id="market_researcher",
-            name="市场研究员",
-            role="analyst",
-            domain="market",
-            capabilities=["market_analysis"],
-            priority=1,
-        )
+    def test_custom_specialist_configuration_preserved_without_fake_work(self):
+        custom = Specialist(specialist_id="market_researcher", name="市场研究员", role="analyst", domain="market", capabilities=["market_analysis"])
         runner = ResearchRunner(specialists=[custom])
-        result = runner.run_research(GOAL, specialists=[custom], max_rounds=1)
-        assert "market_researcher" in result.specialist_contributions
-        assert result.specialist_contributions["market_researcher"] > 0
+        assert runner._specialists == [custom]
+        result = runner.run_research(GOAL, specialists=[custom], records=RECORDS, max_rounds=1)
+        assert result.specialist_contributions == {"source_reader": len(RECORDS)}
+        assert result.status == "research_draft"
 
     def test_module_level_function_with_custom_specialists(self):
-        """模块级 run_research 函数应支持自定义专家。"""
-        custom = Specialist(
-            specialist_id="custom_analyst",
-            name="自定义分析员",
-            role="analyst",
-            domain="custom",
-            capabilities=["custom_cap"],
-        )
-        result = run_research(GOAL, specialists=[custom])
+        custom = Specialist(specialist_id="custom_analyst", name="自定义分析员", role="analyst", domain="custom", capabilities=["custom_cap"])
+        result = run_research(GOAL, specialists=[custom], records=RECORDS)
         assert isinstance(result, ResearchResult)
-        assert "custom_analyst" in result.specialist_contributions
+        assert result.specialist_contributions == {"source_reader": len(RECORDS)}
+        assert all(f["validated"] is False for f in result.ranked_findings)
 
 
 class TestMaxRounds:
     """max_rounds 限制测试。"""
 
-    def test_max_rounds_1_produces_1_debate_round(self):
-        """max_rounds=1 应只产生 1 轮辩论。"""
-        runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
-        assert len(result.debate_transcript) == 1
+    def test_one_round_does_not_invent_debate(self):
+        result = ResearchRunner().run_research(GOAL, records=RECORDS, max_rounds=1)
+        assert result.debate_transcript == []
+        assert len(result.ranked_findings) == len(RECORDS)
 
-    def test_max_rounds_3_produces_3_debate_rounds(self):
-        """max_rounds=3 应产生 3 轮辩论。"""
-        runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=3)
-        assert len(result.debate_transcript) == 3
-        for i, dr in enumerate(result.debate_transcript):
-            assert dr["round_number"] == i + 1
+    def test_three_rounds_do_not_invent_debate(self):
+        result = ResearchRunner().run_research(GOAL, records=RECORDS, max_rounds=3)
+        assert result.debate_transcript == []
+        assert len(result.ranked_findings) == len(RECORDS)
+        assert result.confidence is None
 
     def test_max_rounds_zero_treated_as_one(self):
-        """max_rounds<1 应被修正为 1。"""
         runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=0)
-        assert len(result.debate_transcript) == 1
+        assert runner.run_research(GOAL, records=RECORDS, max_rounds=0) == runner.run_research(GOAL, records=RECORDS, max_rounds=1)
 
-    def test_more_rounds_produces_more_findings(self):
-        """更多轮次应产出更多 findings。"""
+    def test_more_rounds_do_not_inflate_findings(self):
         runner = ResearchRunner()
-        result_1 = runner.run_research(GOAL, max_rounds=1)
-        result_3 = runner.run_research(GOAL, max_rounds=3)
-        assert len(result_3.ranked_findings) > len(result_1.ranked_findings)
+        result_1 = runner.run_research(GOAL, records=RECORDS, max_rounds=1)
+        result_3 = runner.run_research(GOAL, records=RECORDS, max_rounds=3)
+        assert result_3 == result_1
+        assert len(result_3.ranked_findings) == len(RECORDS)
 
 
 class TestResearchResultSerialization:
@@ -288,7 +268,7 @@ class TestResearchResultSerialization:
     def test_to_dict_returns_serializable_dict(self):
         """ResearchResult.to_dict() 应返回可 JSON 序列化的字典。"""
         runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
+        result = runner.run_research(GOAL, records=RECORDS, max_rounds=1)
         d = result.to_dict()
         assert isinstance(d, dict)
         # 应能被 json.dumps 序列化
@@ -299,7 +279,7 @@ class TestResearchResultSerialization:
     def test_to_json_returns_valid_json(self):
         """ResearchResult.to_json() 应返回合法 JSON 字符串。"""
         runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
+        result = runner.run_research(GOAL, records=RECORDS, max_rounds=1)
         json_str = result.to_json()
         parsed = json.loads(json_str)
         assert parsed["research_id"] == result.research_id
@@ -312,7 +292,7 @@ class TestResearchResultSerialization:
     def test_result_contains_all_required_fields(self):
         """ResearchResult 应包含所有必需字段。"""
         runner = ResearchRunner()
-        result = runner.run_research(GOAL, max_rounds=1)
+        result = runner.run_research(GOAL, records=RECORDS, max_rounds=1)
         d = result.to_dict()
         required_fields = [
             "research_id", "goal", "summary", "ranked_findings",
@@ -328,7 +308,7 @@ class TestModuleLevelFunction:
 
     def test_run_research_module_function(self):
         """模块级 run_research 函数应正常工作。"""
-        result = run_research(GOAL)
+        result = run_research(GOAL, records=RECORDS)
         assert isinstance(result, ResearchResult)
         assert result.goal == GOAL
         assert len(result.ranked_findings) > 0

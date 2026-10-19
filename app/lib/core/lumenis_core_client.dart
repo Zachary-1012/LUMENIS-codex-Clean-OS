@@ -452,7 +452,7 @@ class LumenisCoreClient {
         response['contract'] != 'lumenis.context.v1' ||
         response['selection_only'] != true) {
       throw const FormatException(
-        'Invalid LUMENIS context selection contract.',
+        'Invalid OEVIRA context selection contract.',
       );
     }
     final rawContext = response['context'];
@@ -657,6 +657,31 @@ class LumenisCoreClient {
     },
   );
 
+  /// Read-only batch preview through the existing media inspection owner.
+  Future<Map<String, dynamic>> inspectContentEditBatch({
+    required String domainId,
+    List<String>? assetPaths,
+    List<String>? assetRefs,
+    required Map<String, dynamic> timeline,
+    required List<Map<String, dynamic>> commands,
+    required int expectedVersion,
+  }) => _request(
+    'POST',
+    '/api/experience/shared-skills/shared.content_project/inspect',
+    operationContext: _contentContext(domainId),
+    payload: {
+      'action_type': 'READ',
+      'input': {
+        ..._contentAssets(assetPaths, assetRefs),
+        'timeline': timeline,
+        'edit_batch': {
+          'commands': commands,
+          'expected_version': expectedVersion,
+        },
+      },
+    },
+  );
+
   Future<Map<String, dynamic>> exportContentProject({
     required String domainId,
     List<String>? assetPaths,
@@ -751,6 +776,35 @@ class LumenisCoreClient {
       return {'asset_refs': refs};
     }
     return {'asset_paths': paths};
+  }
+
+  /// Exact human classification preview/commit; the server binds actor, source
+  /// version and prior classification revision into the returned resource.
+  Future<Map<String, dynamic>> classifyPropagationEvent({
+    required String subjectId,
+    required int sourceEventId,
+    required String category,
+    required String requestId,
+    String? confirmedResource,
+  }) {
+    final context = _contentContext('BMP');
+    if (context['X-Lumenis-Context-Mode'] != 'FOCUS' ||
+        context['X-Subject-ID'] != subjectId || sourceEventId <= 0 ||
+        !const {'brand_event', 'product_event', 'industry_event'}.contains(category) ||
+        !RegExp(r'^[A-Za-z0-9_-]{8,128}$').hasMatch(requestId) ||
+        (confirmedResource != null && !RegExp(
+          r'^propagation-classification:v1:[a-f0-9]{64}$',
+        ).hasMatch(confirmedResource))) {
+      throw const FormatException('Classification context or preview changed.');
+    }
+    return _request('POST', '/api/experience/propagation/classify',
+      operationContext: context,
+      payload: {
+        'source_event_id': sourceEventId, 'category': category,
+        'request_id': requestId, 'confirm': confirmedResource != null,
+        'confirmed_resource': ?confirmedResource,
+      },
+    );
   }
 
   Future<Map<String, dynamic>> importContentSource({
@@ -891,6 +945,43 @@ class LumenisCoreClient {
       '/api/browser/sessions/${Uri.encodeComponent(sessionId)}',
       withContext: false,
     );
+  }
+
+  /// Existing podcast SavedWork owner. A null domain explicitly selects the
+  /// independent Shared workspace; BMP retains its current exact context.
+  Future<Map<String, dynamic>> listPodcastWork({String? domainId, String? cursor}) {
+    if (cursor != null && (cursor.isEmpty || cursor.length > 4096 ||
+        RegExp(r'[\x00-\x1f\x7f]').hasMatch(cursor))) {
+      throw const FormatException('Invalid SavedWork cursor.');
+    }
+    final query = Uri(queryParameters: {
+      'kind': 'podcast_episode', 'latest_only': 'true', 'limit': '30',
+      'cursor': ?cursor,
+    }).query;
+    return _request('GET', '/api/experience/saved-work?$query',
+      operationContext: domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'});
+  }
+
+  Future<Map<String, dynamic>> reopenPodcastWork(String artifactId, {String? domainId}) {
+    _validateSavedWorkArtifactId(artifactId);
+    return _request('GET', '/api/experience/saved-work/$artifactId',
+      operationContext: domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'});
+  }
+
+  Future<Map<String, dynamic>> savePodcastWork({
+    required Map<String, Object?> body, String? domainId,
+  }) {
+    _validateSavedWorkRequestId(body['request_id'] as String);
+    _validateSavedWorkArtifactId(body['previous_artifact_id'] as String);
+    if (body['kind'] != 'podcast_episode' ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(body['expected_draft_digest'] as String)) {
+      throw const FormatException('Invalid podcast revision.');
+    }
+    return _request('POST', '/api/experience/saved-work', payload: body,
+      operationContext: domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'});
   }
 
   /// Reads the existing Shared SavedWork registry for Browser-authored notes.
@@ -1596,7 +1687,7 @@ class LumenisCoreClient {
   void _requireLocalBrowserEndpoint() {
     if (!_isLoopback(_uri('/api/browser/sessions'))) {
       throw const LumenisCoreException(
-        'Controlled browser access is available only through local LUMENIS Core.',
+        'Controlled browser access is available only through local OEVIRA Core.',
         errorCode: 'BROWSER_LOCAL_CORE_REQUIRED',
       );
     }
@@ -1739,7 +1830,7 @@ class LumenisCoreClient {
       return decoded;
     } on LumenisTransportException catch (error) {
       throw LumenisCoreException(
-        'LUMENIS Core unavailable at $baseUrl for $method $path: '
+        'OEVIRA Core unavailable at $baseUrl for $method $path: '
         '$error',
       );
     }
@@ -1748,7 +1839,7 @@ class LumenisCoreClient {
   Uri _uri(String path) {
     final uri = Uri.parse('$baseUrl$path');
     if (uri.userInfo.isNotEmpty || uri.host.isEmpty) {
-      throw const LumenisCoreException('Invalid LUMENIS Core URL.');
+      throw const LumenisCoreException('Invalid OEVIRA Core URL.');
     }
     return uri;
   }

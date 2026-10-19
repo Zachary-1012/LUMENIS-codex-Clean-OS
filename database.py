@@ -299,11 +299,14 @@ def insert_note(note_data, *, connection=None):
                              (_stype, _stype, _ctype, _ctype, nid))
             # 指标快照（基线§11 Snapshot Date）：互动量被覆盖前留痕；纯旁路，任何异常都不得阻断采集主流程
             try:
-                record_note_metric_snapshot(
-                    conn, nid,
-                    {'likes': vals['likes'], 'comments': vals['comments'],
-                     'collects': vals['collects'], 'shares': vals['shares']},
-                    source='live', collector_version=note_data.get('collector_version', '') or '')
+                effective_metrics = {
+                    name: vals[name] if _should_write_metric(name) else existing[name]
+                    for name in _NOTE_METRIC_KEYS
+                }
+                if any(effective_metrics[name] != existing[name] for name in _NOTE_METRIC_KEYS):
+                    record_note_metric_snapshot(
+                        conn, nid, effective_metrics,
+                        source='live', collector_version=note_data.get('collector_version', '') or '')
             except Exception:
                 pass
             _write_analysis_values(new_record=False)
@@ -486,7 +489,7 @@ def _apply_filters(query, params, filters):
     if filters.get('date_end'): query += ' AND publish_date<=?'; params.append(filters['date_end'])
     if filters.get('verified') is not None: query += ' AND is_taikoo_verified=?'; params.append(1 if filters['verified'] else 0)
     # GAP-06 双维度筛选：固定枚举白名单，拒绝任意列名/非法值，不接受旧 user_type=UGC 写法
-    _ST = {'official','kos','kol','koc','normal_user','media','institution'}
+    _ST = {'unknown', 'official','kos','kol','koc','normal_user','media','institution'}
     _CT = {'ugc','commercial','official','review','experience','complaint','event'}
     if filters.get('subject_type') in _ST: query += ' AND subject_type=?'; params.append(filters['subject_type'])
     if filters.get('content_type') in _CT: query += ' AND content_type=?'; params.append(filters['content_type'])
@@ -1374,6 +1377,8 @@ def get_scoped_event_source_rows(scope, *, limit=2000, source_types=None,
                                 })
                             except ValueError:
                                 rejected_count += 1
+                for source in verified:
+                    source["scope_evidence"] = _event_evidence_projection(conn, source["scope_evidence_ref"], source_scope)
                 sources.extend(verified)
     finally:
         conn.close()
@@ -1381,6 +1386,27 @@ def get_scoped_event_source_rows(scope, *, limit=2000, source_types=None,
     return {"sources": sources, "candidate_count": candidate_count,
             "rejected_count": rejected_count, "truncated": truncated,
             "state": "TRUNCATED" if truncated else "AVAILABLE" if sources else "EMPTY"}
+
+
+def _event_evidence_projection(conn, evidence_ref, scope):
+    """Expose current signed assurance only after the owner verified lineage."""
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    row = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (str(evidence_ref),)).fetchone()
+    if row is None:
+        raise ValueError("EVENT_EVIDENCE_MISSING")
+    evidence = dict(row)
+    integrity = classify_evidence_integrity(evidence)
+    if integrity.get("verified") is not True or integrity.get("assurance") != "writer-authenticated":
+        raise ValueError("EVENT_EVIDENCE_UNVERIFIED")
+    stored = json.loads(evidence.get("inputs_json") or "{}").get("_lumenis_scope")
+    focus = "subject_id" if scope["product_id"] == "CTH" else "brand_focus_id"
+    expected = {"domain_id": scope["domain_id"], "product_id": scope["product_id"],
+                "global": False, focus: scope[focus]}
+    if stored != expected:
+        raise ValueError("EVENT_EVIDENCE_SCOPE_CHANGED")
+    return {"id": evidence["id"], "stored_scope": stored,
+            "integrity": {"verified": integrity["verified"], "assurance": integrity["assurance"],
+                          "algorithm": integrity.get("algorithm"), "digest": evidence.get("integrity_digest")}}
 
 
 def _event_evidence_matches(conn, evidence_ref, scope, payload, content_hash, source_refs):
@@ -1450,6 +1476,7 @@ def _verified_scoped_event(conn, row, requested_scope, *, include_sources=False)
                                            payload, content_hash, refs)):
         raise ValueError("EVENT_SCOPE_EVIDENCE_MISMATCH")
     result = _event_row_payload(event)
+    result["scope_evidence"] = _event_evidence_projection(conn, event["scope_evidence_ref"], stored_scope)
     if include_sources:
         result["sources"] = [
             {**raw_rows[(item["source_table"], item["source_type"], item["source_id"])],
@@ -1695,15 +1722,18 @@ def get_events_curated(limit=50, *, scope=None):
         where.append(f"{focus_column}=?")
         params.append(requested[focus_column])
     featured, generic_count, noise_count, rejected_count = [], 0, 0, 0
+    scanned_count = 0
+    scan_budget = max(limit * 8, 200)
     with get_db() as conn:
         rows = conn.execute(
             "SELECT * FROM events WHERE " + " AND ".join(where) +
             " ORDER BY CASE WHEN status='active' THEN 0 ELSE 1 END, "
             "CASE risk_level WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, "
             "COALESCE(event_date,first_seen,last_seen,'') DESC, risk_score DESC, mention_count DESC LIMIT ?",
-            tuple(params + [max(limit * 8, 200)]),
+            tuple(params + [scan_budget + 1]),
         ).fetchall()
-        for row in rows:
+        for row in rows[:scan_budget]:
+            scanned_count += 1
             try:
                 event = _verified_scoped_event(conn, row, requested)
             except ValueError:
@@ -1719,10 +1749,15 @@ def get_events_curated(limit=50, *, scope=None):
                 featured.append(event)
             if len(featured) >= limit:
                 break
+    truncated = scanned_count < len(rows)
+    complete = not truncated and rejected_count == 0
     return {"featured": featured, "generic_count": generic_count,
             "noise_count": noise_count, "rejected_count": rejected_count,
             "total": len(featured) + generic_count + noise_count,
-            "state": "AVAILABLE" if featured or generic_count or noise_count else "EMPTY"}
+            "total_semantics": "observed_verified_rows_not_population_total",
+            "scanned_count": scanned_count, "returned_count": len(featured),
+            "scan_budget": scan_budget, "truncated": truncated, "read_complete": complete,
+            "state": "PARTIAL" if not complete else "AVAILABLE" if featured or generic_count or noise_count else "EMPTY"}
 
 
 

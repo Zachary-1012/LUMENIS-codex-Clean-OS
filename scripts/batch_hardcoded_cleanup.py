@@ -27,7 +27,7 @@ SCAN_DIRS = ['', 'collector_v2', 'platform_adapters', 'browser_runtime',
 PATTERNS = [
     (r'D:\\Taikoo-monitor-new', 'ZBC'),
     (r'D:\\Zachary OS AI', 'OSAI'),
-    (r'C:\\Users\\28049', 'HOME'),
+    (r'C:\\Users\\', 'HOME'),
 ]
 
 def is_production_file(filepath):

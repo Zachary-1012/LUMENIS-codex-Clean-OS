@@ -96,6 +96,8 @@ if __name__ == "__main__":
     import sys
 
     validate_contract(Path(sys.argv[1]))
+    from verify_source_adoption import validate_local_adoption
+    validate_local_adoption(Path(sys.argv[1]).resolve().parents[1])
     print(
         f"CONTRACT OK {EXPECTED_CONTRACT_ID} v{EXPECTED_VERSION} "
         f"{EXPECTED_FINGERPRINT} repo={LOCAL_REPO}"

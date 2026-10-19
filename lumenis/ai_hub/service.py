@@ -140,12 +140,26 @@ def _completed(result):
     )
 
 
-def chat(question: str, history=None, scope: str = "all", *, source_scope=None) -> dict:
+def invalid_chat_input(code, *, external_approval=None):
+    """Retain ordinary validation; audit rejected external conversation input."""
+    result = {"ok": False, "status": "INVALID_INPUT", "code": code}
+    from lumenis.system.ai_gateway import user_api_adapter
+    if external_approval is not None or user_api_adapter.is_selected():
+        try:
+            result["audit_id"] = user_api_adapter.audit_denial("USER_API_INVALID_REQUEST")
+        except Exception:
+            return {"ok": False, "status": "UNAVAILABLE", "code": "USER_API_AUDIT_UNAVAILABLE"}
+    return result
+
+
+def chat(question: str, history=None, scope: str = "all", *, source_scope=None, external_approval=None) -> dict:
     """Chat through the explicitly selected Gateway, without business data export."""
     t0 = time.time()
-    question = (question or "").strip()
+    if not isinstance(question, str) or len(question) > 4000 or not isinstance(scope, str):
+        return invalid_chat_input("MESSAGE_INVALID", external_approval=external_approval)
+    question = question.strip()
     if not question:
-        return {"ok": False, "status": "INVALID_INPUT", "code": "MESSAGE_REQUIRED"}
+        return invalid_chat_input("MESSAGE_REQUIRED", external_approval=external_approval)
     # This compatibility chat operation has no typed SourceUse request. Do
     # not call retrieve/build_context here: those helpers may load business
     # directories and case material. Route hints come only from static
@@ -181,15 +195,19 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None) 
                 turns.append(f"{role}：{content[:800]}")
         if turns:
             conversation = "最近对话（用户提供，非核验事实）：\n" + "\n".join(turns) + "\n当前问题：" + question
-    prompt = sys_prompt + "\n\n用户问题：" + question
+    # Both routes must receive the same bounded, caller-supplied conversation.
+    # Passing only the last question makes follow-up turns lose their context.
+    prompt = sys_prompt + "\n\n用户对话：" + conversation
     from lumenis.system.ai_gateway import user_api_adapter
     usage = None
+    approval_request = None
     if user_api_adapter.is_selected():
         # Only user-entered conversation and static routing metadata go out.
         # Configuring an API does not grant export of stored business sources.
         content, transport, _meta = intelligence.chat(
-            sys_prompt, conversation, external_user_input=True,
+            sys_prompt, conversation, external_user_input=True, external_approval=external_approval,
         )
+        approval_request = _meta.get("approval_request") if isinstance(_meta, dict) else None
         provider_usage = _meta.get("usage") if isinstance(_meta, dict) else None
         if isinstance(provider_usage, dict):
             usage = {
@@ -199,8 +217,18 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None) 
         completed = transport == "user_api" and isinstance(content, str) and bool(content.strip())
         provider = "user_api"
         result = {"ok": completed, "provider": provider, "analysis": content if completed else None,
-                  "status": "COMPLETED" if completed else "UNAVAILABLE",
-                  "code": None if completed else transport.upper()}
+                  "status": "COMPLETED" if completed else ("APPROVAL_REQUIRED" if approval_request else "UNAVAILABLE"),
+                  "code": None if completed else transport.upper(),
+                  "audit_id": _meta.get("audit_id") if isinstance(_meta, dict) else None}
+    elif external_approval is not None:
+        # A stale external request must not silently turn into owned inference.
+        result = {"ok": False, "status": "UNAVAILABLE", "code": "USER_API_NOT_SELECTED"}
+        try:
+            result["audit_id"] = user_api_adapter.audit_denial("USER_API_NOT_SELECTED")
+        except Exception:
+            result["code"] = "USER_API_AUDIT_UNAVAILABLE"
+        completed = False
+        provider = "user_api"
     else:
         result = _run_owned(prompt, "conversation")
         completed = _completed(result)
@@ -220,7 +248,7 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None) 
         "code": None if completed else (result.get("code") or "OWNED_ANALYSIS_NOT_COMPLETED"),
         "reply": _owned_result_text(result) if completed else None,
         "provider": provider, "model": st.get("model_id"), "runtime": st.get("state"),
-        "usage": usage,
+        "usage": usage, "approval_request": approval_request, "audit_id": result.get("audit_id"),
         "used_rule_fallback": False, "fallback_allowed": False, "targets": targets,
         "context": context,
         "source_context": {

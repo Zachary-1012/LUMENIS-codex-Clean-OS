@@ -1,0 +1,156 @@
+[
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/01_LOCAL_AND_ARCHIVE_LOCATOR_SCAN.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "4434fcee9c5c7c9872b8d0d121bb46ee8e62dbf7063734259d6bc5b6cb4f6d36",
+    "corrected_reference": "https://goldentrailer.com/wp-content/uploads/2025/05/GTA-25-WINNERS.pdf",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/01_LOCAL_AND_ARCHIVE_LOCATOR_SCAN.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "2656913822200edef234b9e8cee7b098366694dd0a8070a39ac6d39ac2025482",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/tree/bdbad537a7b7af3213475651774030c47568c181)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/01_LOCAL_AND_ARCHIVE_LOCATOR_SCAN.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "95ed58af75e89c731b77c352e82665f276e86761c91e5c9ebeae62595b48ccd8",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/blob/bdbad537a7b7af3213475651774030c47568c181/LICENSE)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "4434fcee9c5c7c9872b8d0d121bb46ee8e62dbf7063734259d6bc5b6cb4f6d36",
+    "corrected_reference": "https://goldentrailer.com/wp-content/uploads/2025/05/GTA-25-WINNERS.pdf",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "4434fcee9c5c7c9872b8d0d121bb46ee8e62dbf7063734259d6bc5b6cb4f6d36",
+    "corrected_reference": "https://goldentrailer.com/wp-content/uploads/2025/05/GTA-25-WINNERS.pdf",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "2656913822200edef234b9e8cee7b098366694dd0a8070a39ac6d39ac2025482",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/tree/bdbad537a7b7af3213475651774030c47568c181)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "2656913822200edef234b9e8cee7b098366694dd0a8070a39ac6d39ac2025482",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/tree/bdbad537a7b7af3213475651774030c47568c181)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "95ed58af75e89c731b77c352e82665f276e86761c91e5c9ebeae62595b48ccd8",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/blob/bdbad537a7b7af3213475651774030c47568c181/LICENSE)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "95ed58af75e89c731b77c352e82665f276e86761c91e5c9ebeae62595b48ccd8",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/blob/bdbad537a7b7af3213475651774030c47568c181/LICENSE)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/01_ORIGINAL_READING_FINDINGS.md",
+    "type": "PRESERVE_SOURCE_EXPLANATION",
+    "original_malformed_reference_sha256": "48bdb6dde7ac748d514ce59769d27255ec6e35d6637355e3495275ffe2b98b28",
+    "reason": "Source explanation describes malformed or concatenated URLs; this is not a public citation or a valid URL. Preserve its original explanatory text.",
+    "preserved_explanation": "s://或拼接文本"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "4434fcee9c5c7c9872b8d0d121bb46ee8e62dbf7063734259d6bc5b6cb4f6d36",
+    "corrected_reference": "https://goldentrailer.com/wp-content/uploads/2025/05/GTA-25-WINNERS.pdf",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "2656913822200edef234b9e8cee7b098366694dd0a8070a39ac6d39ac2025482",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/tree/bdbad537a7b7af3213475651774030c47568c181)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "95ed58af75e89c731b77c352e82665f276e86761c91e5c9ebeae62595b48ccd8",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/blob/bdbad537a7b7af3213475651774030c47568c181/LICENSE)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "4434fcee9c5c7c9872b8d0d121bb46ee8e62dbf7063734259d6bc5b6cb4f6d36",
+    "corrected_reference": "https://goldentrailer.com/wp-content/uploads/2025/05/GTA-25-WINNERS.pdf",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "4434fcee9c5c7c9872b8d0d121bb46ee8e62dbf7063734259d6bc5b6cb4f6d36",
+    "corrected_reference": "https://goldentrailer.com/wp-content/uploads/2025/05/GTA-25-WINNERS.pdf",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "2656913822200edef234b9e8cee7b098366694dd0a8070a39ac6d39ac2025482",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/tree/bdbad537a7b7af3213475651774030c47568c181)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "2656913822200edef234b9e8cee7b098366694dd0a8070a39ac6d39ac2025482",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/tree/bdbad537a7b7af3213475651774030c47568c181)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "95ed58af75e89c731b77c352e82665f276e86761c91e5c9ebeae62595b48ccd8",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/blob/bdbad537a7b7af3213475651774030c47568c181/LICENSE)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "95ed58af75e89c731b77c352e82665f276e86761c91e5c9ebeae62595b48ccd8",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/blob/bdbad537a7b7af3213475651774030c47568c181/LICENSE)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "4434fcee9c5c7c9872b8d0d121bb46ee8e62dbf7063734259d6bc5b6cb4f6d36",
+    "corrected_reference": "https://goldentrailer.com/wp-content/uploads/2025/05/GTA-25-WINNERS.pdf",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "2656913822200edef234b9e8cee7b098366694dd0a8070a39ac6d39ac2025482",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/tree/bdbad537a7b7af3213475651774030c47568c181)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "type": "RESTORE_PUBLIC_REFERENCE",
+    "original_malformed_reference_sha256": "95ed58af75e89c731b77c352e82665f276e86761c91e5c9ebeae62595b48ccd8",
+    "corrected_reference": "https://github.com/mexicat/pdoom-video/blob/bdbad537a7b7af3213475651774030c47568c181/LICENSE)",
+    "reason": "Original source misspelled HTTPS as s://; previous local-path scrub was overbroad. Exact public citation body restored."
+  }
+]

@@ -1,0 +1,191 @@
+[
+  {
+    "path": "app/lib/features/ai01/ai01_repository.dart",
+    "sha256": "17660144f37551ca779a8959f6c77ec49a96146961b5b0197276bff9daa4e374",
+    "bytes": 720,
+    "read_ranges": [
+      [
+        1,
+        40
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "01_ai01_repository.dart.txt"
+  },
+  {
+    "path": "app/lib/features/ai01/ai01_intent.dart",
+    "sha256": "d408c6737f8518c6f9eabcbd2b34fb45c13506e53e6cf4da6ac2c390b6198189",
+    "bytes": 2333,
+    "read_ranges": [
+      [
+        1,
+        85
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "02_ai01_intent.dart.txt"
+  },
+  {
+    "path": "app/lib/features/ai01/ai01_view_model.dart",
+    "sha256": "683145b0ac766cfa5fcc98ec85f0e204abe6e1f4462acb7bc811a19e3298c1ca",
+    "bytes": 6360,
+    "read_ranges": [
+      [
+        83,
+        170
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "03_ai01_view_model.dart.txt"
+  },
+  {
+    "path": "app/lib/core/lumenis_core_client.dart",
+    "sha256": "4f7f08deea4b04755abbb8a281caf1e05af7428d6d5d8aef014749837e53de09",
+    "bytes": 58241,
+    "read_ranges": [
+      [
+        497,
+        515
+      ],
+      [
+        1494,
+        1525
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "04_lumenis_core_client.dart.txt"
+  },
+  {
+    "path": "app/lib/core/transport/lumenis_http_transport_web.dart",
+    "sha256": "a787b956500b4e2d22e3f932a4dff2610226953b8e36cd5076e0b8fd37d59de1",
+    "bytes": 4679,
+    "read_ranges": [
+      [
+        1,
+        42
+      ],
+      [
+        112,
+        163
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "05_lumenis_http_transport_web.dart.txt"
+  },
+  {
+    "path": "app/lib/core/transport/lumenis_http_transport_io.dart",
+    "sha256": "aa0f16b1fbb4ab0834c6def03cec0bb362eae4901bf2fa61259d3389e625acf6",
+    "bytes": 5258,
+    "read_ranges": [
+      [
+        125,
+        177
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "06_lumenis_http_transport_io.dart.txt"
+  },
+  {
+    "path": "experience_runtime.py",
+    "sha256": "851a229d138bf6b0d2f2bd8067e04d6814d469471ab247f0c18be17c2f6affb4",
+    "bytes": 208377,
+    "read_ranges": [
+      [
+        3920,
+        4021
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "07_experience_runtime.py.txt"
+  },
+  {
+    "path": "ai_browser_api.py",
+    "sha256": "3ae51d67eeb06b57913dc1c6878d9691757cf9f54f2f92207cf0dcd8348cf5c2",
+    "bytes": 53875,
+    "read_ranges": [
+      [
+        1020,
+        1065
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "08_ai_browser_api.py.txt"
+  },
+  {
+    "path": "lumenis_app_api.py",
+    "sha256": "7db5d28d312694aa171c04ef6dcd4c117ec4e116a79fa2279c3b8efb6060443d",
+    "bytes": 46192,
+    "read_ranges": [
+      [
+        207,
+        230
+      ],
+      [
+        276,
+        331
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "09_lumenis_app_api.py.txt"
+  },
+  {
+    "path": "lumenis/shared/reporting/saved_work.py",
+    "sha256": "c17e1bad3930c81a771965b4754435039b8792501dc8e8e6d6a6675fd3349aa4",
+    "bytes": 63928,
+    "read_ranges": [
+      [
+        630,
+        797
+      ],
+      [
+        968,
+        1018
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "10_saved_work.py.txt"
+  },
+  {
+    "path": "api_dual_domain.py",
+    "sha256": "56011b7ba1180a5b1df1546c86cca1af00c38d9d8adfe0b7f973c5739a4a9a06",
+    "bytes": 129501,
+    "read_ranges": [
+      [
+        473,
+        515
+      ],
+      [
+        983,
+        1051
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "11_api_dual_domain.py.txt"
+  },
+  {
+    "path": "lumenis/shared/reporting/source_brief_tasks.py",
+    "sha256": "365e2f9aecee6e949fc8b02ee269cda65df7def189d95d016ae337dfb1684499",
+    "bytes": 6765,
+    "read_ranges": [
+      [
+        1,
+        85
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "12_source_brief_tasks.py.txt"
+  },
+  {
+    "path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "sha256": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+    "bytes": 176045,
+    "read_ranges": [
+      [
+        1384,
+        1409
+      ]
+    ],
+    "snapshot": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "excerpt": "13_LUMENIS-EXPERIENCE-CONSTITUTION.md.txt"
+  }
+]

@@ -63,6 +63,8 @@ def test_completed_plan_and_cumulative_budget_survive_engine_reopen(durable, mon
 
     reopened = DurableExecutionAdapter(task_engine=TaskEngine(), permission_gate=gate).recover(result.task_id)
     assert reopened["source"] == "db"
+    assert reopened["task"]["status"] == "succeeded"
+    assert reopened["task"]["result"] == result.result
     assert reopened["task"]["context"] == {
         "actor_id": "actor-1", "domain_id": "cth", "scope": "weekly-report",
     }
@@ -106,7 +108,7 @@ def test_working_observation_does_not_replace_resumable_checkpoint(durable, memo
     )
     if not memory_first:
         observation = observe()
-    assert observation["persistence"]["state"] == "PERSISTED"
+    assert observation["persistence"]["state"] == "UNAVAILABLE"
 
     reopened = DurableExecutionAdapter(task_engine=TaskEngine(), permission_gate=gate)
     recovery = reopened.recover(task_id)
@@ -115,12 +117,8 @@ def test_working_observation_does_not_replace_resumable_checkpoint(durable, memo
     assert recovery["last_checkpoint"] == checkpoint.to_dict()
     assert recovery["last_checkpoint"]["metadata"]["resumable"] is True
     assert reopened.get_checkpoints(task_id) == [checkpoint]
-    memory_row = next(row for row in engine.get_steps(task_id) if row["step_id"] == observation["step_id"])
-    assert memory_row["phase"] == "working_memory_step_1"
-    detail = json.loads(memory_row["detail"])
-    assert detail["action"] == "agent_step_0"
-    assert detail["output"] == {"observed": "real persisted output"}
-    assert detail["checkpoint_resumable"] is False
+    assert not any(row["step_id"] == observation["step_id"] for row in engine.get_steps(task_id))
+    assert observation["output"] == {"observed": "real persisted output"}
 
 
 def test_secret_plan_material_is_omitted_and_checkpoint_marked_non_resumable(

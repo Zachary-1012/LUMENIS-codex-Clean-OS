@@ -1,0 +1,65 @@
+[
+  {
+    "source": "domain_analysis_research_20261018/03_synthetic_research.py",
+    "destination": "research/intelligence/05_domain_methodologies/research-20261018/domain_analysis_research_20261018/03_synthetic_research.py",
+    "original_sha256": "23fe70093f3947a9e186e00f2870e1bc69336cd5aac7530b35ddc223c1cbb51d",
+    "published_sha256": "23fe70093f3947a9e186e00f2870e1bc69336cd5aac7530b35ddc223c1cbb51d",
+    "bytes": 4305,
+    "review": "Full source inspected: offline standard-library research or numeric public-data output; no credential, private contact, product import or product mutation; not rerun",
+    "reproduction_inputs": "Official source hashes and URLs in corresponding report; upstream original files not republished"
+  },
+  {
+    "source": "financial_source_research_20261018/extract_selected_facts.py",
+    "destination": "research/intelligence/06_evidence_truth_contracts/research-20261018/financial_source_research_20261018/extract_selected_facts.py",
+    "original_sha256": "5ce48b7273539ebe80be0af4a084b312bc91eba59054b0e46b34655ec5d776e9",
+    "published_sha256": "5ce48b7273539ebe80be0af4a084b312bc91eba59054b0e46b34655ec5d776e9",
+    "bytes": 4071,
+    "review": "Full source inspected: offline standard-library research or numeric public-data output; no credential, private contact, product import or product mutation; not rerun",
+    "reproduction_inputs": "Official source hashes and URLs in corresponding report; upstream original files not republished"
+  },
+  {
+    "source": "real_public_validation_research_20261018/run.py",
+    "destination": "research/intelligence/12_tests_regression_memory/research-20261018/real_public_validation_research_20261018/run.py",
+    "original_sha256": "2f4f69740ae047d9bb00823ff53f9070de2cb40a02fa3f7590f300f6e826732c",
+    "published_sha256": "2f4f69740ae047d9bb00823ff53f9070de2cb40a02fa3f7590f300f6e826732c",
+    "bytes": 8571,
+    "review": "Full source inspected: offline standard-library research or numeric public-data output; no credential, private contact, product import or product mutation; not rerun",
+    "reproduction_inputs": "Official source hashes and URLs in corresponding report; upstream original files not republished"
+  },
+  {
+    "source": "real_public_validation_research_20261018/verify_outputs.py",
+    "destination": "research/intelligence/12_tests_regression_memory/research-20261018/real_public_validation_research_20261018/verify_outputs.py",
+    "original_sha256": "97b33829286fd73518362848181c4746c56ba6969ba31c7f2ef3ccdacb04a17c",
+    "published_sha256": "97b33829286fd73518362848181c4746c56ba6969ba31c7f2ef3ccdacb04a17c",
+    "bytes": 1459,
+    "review": "Full source inspected: offline standard-library research or numeric public-data output; no credential, private contact, product import or product mutation; not rerun",
+    "reproduction_inputs": "Official source hashes and URLs in corresponding report; upstream original files not republished"
+  },
+  {
+    "source": "original_research_gap_closure_20261018/memory_reference_lab/run.py",
+    "destination": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/memory_reference_lab/run.py",
+    "original_sha256": "f19e7a61b61abad84de17fc731f6dc1fac34d3fecb925bdb113111736db2b5a3",
+    "published_sha256": "f19e7a61b61abad84de17fc731f6dc1fac34d3fecb925bdb113111736db2b5a3",
+    "bytes": 5447,
+    "review": "Full source inspected: offline standard-library research or numeric public-data output; no credential, private contact, product import or product mutation; not rerun",
+    "reproduction_inputs": "Official source hashes and URLs in corresponding report; upstream original files not republished"
+  },
+  {
+    "source": "real_public_validation_research_20261018/retail_daily_forecast.csv",
+    "destination": "research/intelligence/12_tests_regression_memory/research-20261018/real_public_validation_research_20261018/retail_daily_forecast.csv",
+    "original_sha256": "3f73162903a2ceea076b601d59f4fecddb6d9277102cd4681461720cbf83de86",
+    "published_sha256": "3f73162903a2ceea076b601d59f4fecddb6d9277102cd4681461720cbf83de86",
+    "bytes": 2396,
+    "review": "Full source inspected: offline standard-library research or numeric public-data output; no credential, private contact, product import or product mutation; not rerun",
+    "reproduction_inputs": "Official source hashes and URLs in corresponding report; upstream original files not republished"
+  },
+  {
+    "source": "real_public_validation_research_20261018/facebook_holdout_predictions.csv",
+    "destination": "research/intelligence/12_tests_regression_memory/research-20261018/real_public_validation_research_20261018/facebook_holdout_predictions.csv",
+    "original_sha256": "0184d807a981d717481df271e9a9ff81ef365aa66f06208205ebe93729e78d2c",
+    "published_sha256": "0184d807a981d717481df271e9a9ff81ef365aa66f06208205ebe93729e78d2c",
+    "bytes": 4874,
+    "review": "Full source inspected: offline standard-library research or numeric public-data output; no credential, private contact, product import or product mutation; not rerun",
+    "reproduction_inputs": "Official source hashes and URLs in corresponding report; upstream original files not republished"
+  }
+]

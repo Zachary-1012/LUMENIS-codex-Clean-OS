@@ -261,8 +261,8 @@ class TestRuntimeFailureRecovery(unittest.TestCase):
         # 最终结果应该是 FAIL 或 HUMAN_ESCALATION
         self.assertIn(result.result, [ActionResult.FAIL, ActionResult.HUMAN_ESCALATION, ActionResult.RETRY])
 
-    def test_recovery_success_after_retry(self):
-        """重试后成功应标记为 RETRY。"""
+    def test_recovery_reads_landed_effect_without_retry(self):
+        """超时后先读已发生结果，不重复点击。"""
         call_count = [0]
         def click_side_effect(*args, **kwargs):
             call_count[0] += 1
@@ -272,8 +272,8 @@ class TestRuntimeFailureRecovery(unittest.TestCase):
 
         self.mock_page.click.side_effect = click_side_effect
         self.mock_page.evaluate.side_effect = [
-            "before", 2,   # before observe
-            "after success", 5,  # after first failure observe
+            {"text": "before", "truncated": False, "ready_state": "complete"}, 2,   # before observe
+            {"text": "after success", "truncated": False, "ready_state": "complete"}, 5,  # readback after failure
             "after success", 5,  # after retry observe
         ]
 
@@ -283,7 +283,7 @@ class TestRuntimeFailureRecovery(unittest.TestCase):
             selector="#btn",
             expected=expected,
         )
-        # 重试后成功
+        self.assertEqual(call_count[0], 1)
         self.assertTrue(result.success)
         self.assertIn(result.result, [ActionResult.PASS, ActionResult.RETRY])
 

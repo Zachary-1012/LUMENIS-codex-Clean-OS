@@ -1,7 +1,7 @@
-# LUMENIS Canonical Naming & Compatibility Boundary
+# OEVIRA Canonical Naming & Compatibility Boundary
 
 > **Protocol state:** `IMPLEMENTED`
-> **Current product identity:** **序境 / LUMENIS**
+> **Current product identity:** **寰意 / OEVIRA**
 > **Scope:** display naming, legacy-name disposition and compatibility migration gates
 > **Sole product architecture authority:** [`LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`](LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)
 > **Current source-owner index:** [`LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`](LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)
@@ -10,16 +10,18 @@ This document is a compatibility protocol, not a second product architecture, ru
 
 ## 1. Current naming boundary
 
+2026-10-18 main-product display migration: 寰意 / OEVIRA, oevira.com, “An Open Space for Thought and Creation.” The existing canonical registry remains the naming authority. This migration does not rename repository URLs, package/class names, Bundle IDs, API routes, environment/header names, DB/Evidence/Permission identities, launch/recovery paths, sibling products, copyright owners or historical evidence. Former 序境 / LUMENIS display text is retained only in marked history, source quotations or compatibility references. Source edits and protocol state do not prove deployment, device installation or CI/PR acceptance.
+
 | Layer | Current user-facing identity | Boundary |
 | --- | --- | --- |
-| Product | **序境 / LUMENIS** | The only current product name. |
-| CTH | **CTH / LUMENIS Commerce Operations** | Subject-first commercial operations. |
-| BMP | **BMP / LUMENIS Brand & Market** | Brand/Market-first. `ZBMP` and `zbmp` remain compatibility IDs only. |
+| Product | **寰意 / OEVIRA** | The only current product name. |
+| CTH | **CTH / OEVIRA Commerce Operations** | Subject-first commercial operations. |
+| BMP | **BMP / OEVIRA Brand & Market** | Brand/Market-first. `ZBMP` and `zbmp` remain compatibility IDs only. |
 | Shared Capability | **Shared Capability** | Content & Creation, Evidence, Research, Evaluation, Learning, Reporting and AI enhancement; not a separate product. |
 | SYSTEM | **SYSTEM** | Runtime, Collector, Browser, AI Gateway, Database, Security, Permission, Settings, Recovery and Observability. |
 | Repository | `Zachary-1012/LUMENIS-codex-Clean-OS` | Current canonical repository identity. Historical `Z-Brand-Core` references do not redefine it. |
 
-Current App copy, operator guidance and new entry points use 序境 / LUMENIS / BMP / CTH. Historical Z-Brand/ZBC names may remain only where the compatibility ledger or a clearly marked provenance document requires them.
+Current App copy, operator guidance and new entry points use 寰意 / OEVIRA / BMP / CTH. Historical Z-Brand/ZBC names may remain only where the compatibility ledger or a clearly marked provenance document requires them.
 
 ## 2. Compatibility ledger
 

@@ -322,6 +322,16 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 全部新增标签、说明、确认及读屏名称须沿现有三语键实现；上表仅通用状态，不证明全产品翻译/运行完成。逐屏验收覆盖 zh-CN/en/ko、200%字号、键盘/读屏和减少动态。
 
+### 正文/结构捕获与来源快照（B01–B05）
+
+既有Browser Runtime的extract/capture_command/snapshot_for_source是同一受控页面能力；前端使用原已注册合同，不能从这些函数名臆造route。新增可见工作面在本屏原“收集资料”内：结构导航、可信正文、选择区、覆盖/截断/缺失、原任务与必要控制权；原网页可逆返回。Web/Windows/macOS主辅并读，窄Web逐层，iOS页面→预览→选段→保存读回，固定取消/返回；官网仅公开去敏例。
+
+能力回读为preview/select/discard时仅开放这些真实动作；保存笔记、source_prepare/source_import/source_use_prepare沿各原Owner实际准入，不凭capabilities宣称已接通。capture为SESSION_EPHEMERAL，Source snapshot非原资源字节，original_resource_sha256缺失保未知。笔记、来源接收、SourceUse与Canonical核验分开；没有正式回执不能显示已入资料库。持久后回SH-02同来源/版本并可独立重开。
+
+SESSION/target/page revision、捕获TTL、request身份和当前权限由服务器校验。人工控制必须结束后才可捕获，不自动释放；导航/重启/到期/撤权使预览失效并拒旧选段，跨页迟到结果不得显示。discard只放弃预览，UNKNOWN写入先查同request证据回执，COMMITTED不重复提交。HTML/标题/错误安全文本渲染，不暴露会话token/端点/路径；缺页正文不以模型补写。
+
+自身智能UI可按真实结构选目录/正文/选段并读，保原选区、滚动锚和简洁路径；状态/权限/准入用原生控件，不能被生成图替换。验正文/结构部分覆盖、重复文本选段、Unicode、人工接管排除、过期/同target新revision、请求超时三持久化结果、取消迟到、source读回、跨actor与SourceUse拒绝；四表面适用流程及zh/en/ko/读屏分别验，不提升旧frontmatter。
+
 ## 5A. Web Workspace composition
 
 > 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#sys-06)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
@@ -591,3 +601,45 @@ source increment does not close Task/Source bindings, arbitrary page control,
 remote Web transport or intelligent Browser Use. General computer operation
 was withdrawn by PO and is no longer an acceptance gap. Actual
 operation and limits are recorded in the existing M delivery evidence.
+
+
+### 原要求具体工作合同：免费来源数据类别与聚光未配置边界
+
+原来源任务范围内，按平台注册的广告/流量、创作者中心、公开内容等实际对象显示当前合法取得路径与可得字段。每行分别列免费/费用未知/需额外许可、公开路径/获准自有会话/已授API、身份条件与实际最近结果；“平台注册”不等“免费可采全部”。缺某类数据保其他可用材料，不能以公开视频替广告账户观测或把零条当成功。
+聚光为来源/活动当前任务的一项：未配置专业号、授权未知/失效、字段未取得分别写具体原因；未配置保持UNAVAILABLE，用户可跳过继续当前规划，不强制开通或付费。KFS的F“24h互动>20再投”只列方法假设及适用性，旁边明确“未执行投放”，不能据此出现自动充值/投放成功。
+
+SYS-02平台lane详情“本任务数据”表列数据类别→字段→取得路径→费用/许可条件→实际状态，选行打开具体限制和原来源；BMP-07在所选活动的数据依据中显示聚光可用性及方法说明，不另建广告管理器。Web/Windows/macOS表与详情并读，iOS一类别一详情并保原lane/活动，官网只公开验证过路径。UI可据实际缺项聚焦解释，不生成授权、专业号或预算执行；简洁同源列表可锁。
+
+选择来源/类别不自动登录、请求付费API或外发；恢复依原Source/Session/Permission明确动作。验每平台注册字段缺失、免费但未获权、授权但无数据、聚光专业号未配置、授权撤回、零条与未知、取消和重开；完整平台注册范围逐项运行仍OPEN，不能以一来源示例验全部。
+
+### 原G188具体终态合同：书签、历史、搜索与策略说明
+
+原浏览器地址栏旁“书签/历史/搜索”打开同一SYS-06侧面；书签列表可按原Owner支持动作查看/保存/移除，历史按真实访问时间列当前权限可读项及上限1000的实际截断说明，列表搜索不冒完整无限历史。多引擎搜索显示当前实际可用引擎与查询去向，选择后由原安全导航执行，不泄漏原任务私有正文。当前strict/allowlist/open模式用可读限制说明与被阻断原因呈现，open不表示关闭SSRF/安全门；未经原授权不提供切换安全策略控件。Reader元数据/正文与A11y结构仍沿已补捕获/阅读工作面，不把截图等于DOM。
+
+构图：标签条/地址与导航固定，正文为主；侧面分书签、历史、搜索三个任务页签，选中项保安全地址/时间和回原任务；iOS页→单侧面列表→返回，长列表虚拟化不丢选中。
+
+历史缺失/超上限、书签失效、引擎不可用、URL被拒、权限撤销/页面过期分别显示；取消搜索保原页，返回不重新采集，重开核当前任务/target和安全权限。保存/删除书签须真实回执，未绑定保持OPEN。
+
+Public Website仅用获准真实样例说明书签、历史、搜索与策略说明及未核范围，不展示内部资料；Web按窗口宽度保主对象与可逆检查器、刷新读回原版本；Windows/macOS分别验证文件/窗口冷开和同版恢复；iOS按本组对象清单→单对象→检查/确认顺序重组，复杂编辑续接同版本，合法轻改不因窄屏丢失。三语、200%文字、键盘/读屏及48px触控均保关键字段和取消/返回。
+
+UI可按真实历史密度提出列表分组/Reader层级，保稳定地址栏、锁定和无AI基础导航；不生成页面/历史/搜索成功状态。
+
+沿本屏现有Owner/Permission/SourceUse/版本/回执接线；缺callable保持OPEN并禁对应效果，不猜route，不改既有当前实现/验收状态。此段补全旧要求的可执行设计，不证明实现通过。
+
+### 同账号浏览器任务连续与有界并行（原Owner接续）
+
+用户本轮提出的浏览器目标是：同一已授权账号保持登录连续，多项获准工作可各用自己的tab推进，少反复登录和手动切换。Muse并行能力仅记为用户观察，未经本轮独立实测；不能把观察当序境已经具备的功能或把外部产品行为当供应商API。原G82/G83/G115/G123/G133/G188继续由原Browser/Collector/Task/Permission Owner承接，不建第二浏览器或任务队列。
+
+具体工作面：SYS-06顶部保当前产品浏览器会话与账号状态（不显cookie/凭据），下方按原Task列工作标签和所属tab；AI-02每个任务卡显示“观察中/待批准动作/执行中/核验结果/结果不明/等待限流/需要人控/取消待安全边界”等实际状态，点击直接回该任务tab与最近已确认结果。SYS-02只呈同账号/平台共享限额和真实采集进度，不把多个任务数当可并发额度。Web/桌面可按需并读任务tab，默认主工作面舒展；iOS以单任务浏览与可逆任务切换Sheet保返回位置，不要求复制桌面分屏；官网仅有权公开的受控演示说明同账号多任务，未接通功能明确标目标。切任务保原稿、任务身份及观察位置，不自动取消、重发或共享不同任务的业务scope。
+
+登录context由原服务端账号/BrowserSession Owner管理，任务只租赁自己的tab。复用已获授权的登录不等新授权：每次动作仍核当前actor、task/run、tab、目标与原Permission/effect fence；跨actor/账号、别的任务tab或过期run禁止操作。单页同一时刻单写者，人控lease优先，弹窗也必须确定所属任务；结束/取消A只释放A的tab，不能关闭兄弟任务或整个共享context。共享context的生命周期和Playwright调用仍由原单线程Owner/正式调度维护，不把对象跨独立worker直接共用。当前这些共享context/tab dispatcher接线尚未完成，界面不得先显示“同登录并行已启用”。
+
+每个动作之前观察当前document/frame/revision，定位用当前DOM/截图；文档变化使旧引用失效，页面文本不能扩大权限或变成系统指令。动作后必须观察并核明确预期结果，元素/计数/加载状态缺失保持未知，真实0和空输入依实际观察区分；不能把“请求发出”“返回200”或动画结束当目标达成。定位失败先再观察和重新定位，不扩大到任意脚本或用户其他App。外部副作用是否发生不明时保UNKNOWN及最后已确认结果，先读回核对，不盲重试click/input/提交；只有明确幂等读操作才按原Owner允许次数有限重试。迟到成功回执仍归原task/run，不覆盖新工作。
+
+同账号/平台的所有适用任务遵守原Collector限额，使用同一账号/平台限流Owner；429/Retry-After、冷却、配额未知分别显示，等待可取消且不会绕限额换账号/会话。每任务详情/评论游标独立，来源按原Evidence/Canonical键去重并保scope，不跨域复制。当前rate修复只证明同实例放行间隔，不证明跨进程或所有任务已共用实例。暂停/取消呈请求→安全边界→真实终态，已派发外部效果不可回滚；恢复先新观察/新frame，新run重新取得sealed admission，不复用旧DOM或批准。登录/CAPTCHA/敏感步骤沿原人工接管入口，人控结束后重新核状态，不偷偷代填凭据。
+
+当前实现事实：ActionVerifier状态核验、未知副作用恢复、同实例限流与内部Task admission→Browser绑定桥已有独立候选及隔离测试；原tab策略已有边界检查。这不是Task工具dispatcher已接通，更不是同登录多tab端到端完成。当前start仍每runtime新context，原manager同owner异task限制仍存在；不能为迎合并行直接删隔离锁。尚待同版证明的最小纵向链是：真实队列任务→获准Registry/Skill版本及明确browser effect→原工具dispatcher→一个产品tab→真实Observation/Evidence/Task checkpoint→实际结束，再扩同登录两任务tab。HTTP自报task/run不可替代内部封装准入，内部桥本身不算全链。
+
+验收先用合成测试站和真实Chromium证明一次登录两任务连续、tab隔离/弹窗归属、一个取消不影响另一个、同账号429等待、动作超时已生效/未生效分别恢复、进程/lease回收及撤权；不得用真实用户凭据做单测。真实外站、多账号和各平台覆盖尚未验证；云端浏览器socket受限时如实记环境阻塞，不绕过，不把纯mock当真浏览器通过。四表面实际前端构建与有权本地产品浏览器验收继续分账。主任务预算、界面自身AIGC原创表达和200以上交互要求保留，便利不省略必要批准/成功核验。
+
+官方参考（2026-10-18已核文本）：[OpenAI Computer use](https://developers.openai.com/api/docs/guides/tools-computer-use)、[browser drivers](https://developers.openai.com/api/docs/guides/tools-computer-use-sdk-drivers)支持动作后观察、过期引用与不明效果恢复的工程参考；[Grok Bot computer and apps](https://docs.x.ai/grok-bot/computer-and-apps)描述共享登录、分屏单任务与人控。这些是机制参考，不构成新模型调用/供应商接入，也未证明序境或Muse端到端能力。

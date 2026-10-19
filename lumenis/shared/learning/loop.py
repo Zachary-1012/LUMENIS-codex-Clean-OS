@@ -48,6 +48,10 @@ class RuleSuggestion:
     created_at: str = field(default_factory=_utc_now_iso)
     reviewed_by: Optional[str] = None
     reviewed_at: Optional[str] = None
+    schema_version: int = 1
+    revision: int = 1
+    applied_version: Optional[str] = None
+    approved_content_sha256: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -62,6 +66,10 @@ class RuleSuggestion:
             "created_at": self.created_at,
             "reviewed_by": self.reviewed_by,
             "reviewed_at": self.reviewed_at,
+            "schema_version": self.schema_version,
+            "revision": self.revision,
+            "applied_version": self.applied_version,
+            "approved_content_sha256": self.approved_content_sha256,
         }
 
 
@@ -84,6 +92,22 @@ class LearningLoop:
             db_path=db_path, enabled=enabled)
         self._rule_suggestions: List[RuleSuggestion] = []
         self._prompt_context_cache: Optional[str] = None
+
+    def bind_source_task(self, task_id, actor_id):
+        self.learning_memory.bind_source_task(task_id, actor_id)
+        return self
+
+    def build_reviewed_research_context(self, candidate_ids, *, actor, actor_id, expected_scope):
+        """Revalidate selected adopted research references, without invoking AI.
+
+        The Gateway still owns exact model consent and source-use admission.
+        Disabled learning does not block ordinary deterministic business work.
+        """
+        if not self.enabled:
+            return {"state": "disabled", "references": []}
+        from .contribution import build_reviewed_context
+        return build_reviewed_context(candidate_ids, actor=actor, actor_id=actor_id,
+                                      expected_scope=expected_scope)
 
     # ── 反馈入口 ─────────────────────────────────────────────────
 
@@ -144,113 +168,216 @@ class LearningLoop:
             return None
         suggestion = RuleSuggestion(
             rule_type=rule_type,
-            suggestion_text=json.dumps(content, ensure_ascii=False)[:500],
+            suggestion_text=json.dumps(content, ensure_ascii=False, allow_nan=False),
             evidence={"learning_type": learning_type, "content": content},
             confidence=confidence,
         )
-        # 同时记录到 Learning Memory，并保存真实 record_id 作为治理关联键。
         learning_record = self.learning_memory.record_learning(
             learning_type=LearningType.RULE_SUGGESTION,
-            content={
-                "suggestion_id": suggestion.suggestion_id,
-                "rule_type": rule_type,
-                "suggestion_text": suggestion.suggestion_text,
-                "confidence": confidence,
-            },
-            source="lumenis.shared.learning.loop",
-            confidence=confidence,
-            lifecycle_stage=LifecycleStage.RAW,
-        )
-        if learning_record:
-            suggestion.learning_record_id = learning_record.record_id
+            content=suggestion.to_dict(), source="lumenis.shared.learning.loop",
+            confidence=confidence, lifecycle_stage=LifecycleStage.RAW)
+        if not learning_record:
+            return None
+        suggestion.learning_record_id = learning_record.record_id
+        if self.db_path:
+            # The configured DB owner must confirm persistence, never silently
+            # replace a failed write with process memory.
+            persisted = self._read_suggestions()
+            found = next((item for item in persisted if item.suggestion_id == suggestion.suggestion_id), None)
+            if found is None:
+                return None
+            self._rule_suggestions = persisted
+            return found
         self._rule_suggestions.append(suggestion)
         return suggestion
 
-    def review_rule_suggestion(self, suggestion_id: str, approved: bool,
-                               reviewer: str = "human") -> bool:
-        """人工审核规则建议。
+    @staticmethod
+    def _decode_suggestion(row):
+        try:
+            data = json.loads(row["content_json"] or "{}")
+            if data.get("schema_version") != 1 or type(data.get("revision")) is not int:
+                return None
+            fields = RuleSuggestion.__dataclass_fields__
+            item = RuleSuggestion(**{key: value for key, value in data.items() if key in fields})
+            item.learning_record_id = row["record_id"]
+            # Lifecycle is a second persisted constraint, not a cached approval.
+            expected = {"proposed": "raw", "approved": "reviewed", "applied": "validated", "rejected": "archived"}
+            if expected.get(item.status) != row["lifecycle_stage"]:
+                return None
+            return item
+        except (ValueError, TypeError, KeyError):
+            return None
 
-        approved=True → status=approved → 可写入 rule_version_registry
-        approved=False → status=rejected
-        """
-        for s in self._rule_suggestions:
-            if s.suggestion_id == suggestion_id:
-                s.status = "approved" if approved else "rejected"
-                s.reviewed_by = reviewer
-                s.reviewed_at = _utc_now_iso()
-                if s.learning_record_id:
-                    target_stage = (
-                        LifecycleStage.REVIEWED if approved
-                        else LifecycleStage.ARCHIVED
-                    )
-                    self.learning_memory.promote_record(
-                        s.learning_record_id, target_stage)
-                return True
-        return False
+    def _read_suggestions(self, connection=None):
+        if not self.enabled:
+            return []
+        if not self.db_path:
+            return list(self._rule_suggestions)
+        conn = connection or get_db_connection(self.db_path)
+        try:
+            rows = conn.execute("SELECT * FROM agent_learning_records "
+                                "WHERE learning_type=? ORDER BY created_at,record_id",
+                                (LearningType.RULE_SUGGESTION.value,)).fetchall()
+            return [item for row in rows if self.learning_memory._row_visible(row, conn)
+                    and (item := self._decode_suggestion(row)) is not None]
+        finally:
+            if connection is None:
+                conn.close()
+
+    @staticmethod
+    def _suggestion_hash(item):
+        import hashlib
+        content = item.to_dict()
+        material = {key: content[key] for key in (
+            "suggestion_id", "source", "rule_type", "suggestion_text", "evidence", "confidence", "created_at")}
+        return hashlib.sha256(json.dumps(material, sort_keys=True, ensure_ascii=False,
+            allow_nan=False, separators=(",", ":")).encode()).hexdigest()
+
+    def _save_suggestion(self, conn, suggestion, stage, previous_revision):
+        payload = json.dumps(suggestion.to_dict(), ensure_ascii=False, allow_nan=False)
+        row = conn.execute("SELECT metadata_json FROM agent_learning_records WHERE record_id=?", (suggestion.learning_record_id,)).fetchone()
+        metadata = json.loads(row["metadata_json"] or "{}") if row else {}
+        admission = getattr(self.learning_memory, "_review_admission", None)
+        transition = {"from_revision": previous_revision, "to_revision": suggestion.revision,
+            "status": suggestion.status, "actor_ref": suggestion.reviewed_by,
+            "recorded_at": _utc_now_iso(), "active_policy_changed": False}
+        if admission is not None:
+            transition.update(candidate_ref=admission.resource, action=admission.action, approved=admission.approved)
+        metadata["transitions"] = [*metadata.get("transitions", []), transition]
+        metadata_payload = json.dumps(metadata, ensure_ascii=False, allow_nan=False)
+        if len(payload.encode()) + len(metadata_payload.encode()) > 8 * 1024 * 1024:
+            raise ValueError("LEARNING_CONTENT_TOO_LARGE")
+        changed = conn.execute("UPDATE agent_learning_records SET content_json=?,lifecycle_stage=?,metadata_json=? "
+            "WHERE record_id=? AND json_extract(content_json,'$.revision')=?",
+            (payload, stage, metadata_payload, suggestion.learning_record_id, previous_revision)).rowcount
+        if changed != 1:
+            raise RuntimeError("LEARNING_SUGGESTION_REVISION_CONFLICT")
+
+    def review_rule_suggestion(self, suggestion_id: str, approved: bool,
+                               reviewer: str = "human", *, expected_revision=None) -> bool:
+        if not self.enabled or not reviewer:
+            return False
+        if not self.db_path:
+            for item in self._rule_suggestions:
+                if item.suggestion_id == suggestion_id and item.status in ("proposed", "approved"):
+                    if expected_revision is not None and item.revision != expected_revision:
+                        return False
+                    item.approved_content_sha256 = self._suggestion_hash(item) if approved else None
+                    item.status = "approved" if approved else "rejected"
+                    item.reviewed_by, item.reviewed_at = reviewer, _utc_now_iso()
+                    item.revision += 1
+                    return True
+            return False
+        conn = get_db_connection(self.db_path)
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            binding = self.learning_memory._scoped_check(connection=conn, write=True, review=True)
+            if binding is not None:
+                reviewer = "workspace:local" if binding["actor_id"] is None else "actor:" + str(binding["actor_id"])
+            item = next((s for s in self._read_suggestions(conn) if s.suggestion_id == suggestion_id), None)
+            if not item or (expected_revision is not None and item.revision != expected_revision):
+                return False
+            if item.status not in ("proposed", "approved", "applied") or (approved and item.status == "applied"):
+                return False
+            if item.status == "applied":
+                version = conn.execute("SELECT is_active FROM rule_version_registry WHERE version=?", (item.applied_version,)).fetchone()
+                if not version or version["is_active"] != 0:
+                    # Activated rules belong to the existing rule rollback owner.
+                    return False
+            previous = item.revision
+            item.approved_content_sha256 = self._suggestion_hash(item) if approved else None
+            item.status = "approved" if approved else "rejected"
+            item.reviewed_by, item.reviewed_at = reviewer, _utc_now_iso()
+            item.revision += 1
+            self._save_suggestion(conn, item, "reviewed" if approved else "archived", previous)
+            self.learning_memory._scoped_check(connection=conn, write=True, review=True, after_write=True)
+            admission = getattr(self.learning_memory, "_review_admission", None)
+            if admission is not None:
+                from lumenis.system.security.permission import get_permission_gate
+                with get_permission_gate().learning_candidate_commit_lease(admission, connection=conn):
+                    conn.commit()
+            else:
+                conn.commit()
+            try:
+                self._rule_suggestions = self._read_suggestions()
+            except Exception:
+                self._rule_suggestions = []  # Cache failure cannot undo a confirmed commit.
+            return True
+        except Exception:
+            conn.rollback()
+            logger.exception("Learning suggestion review did not commit")
+            if getattr(self.learning_memory, "_scope_owner", None) is not None:
+                raise
+            return False
+        finally:
+            conn.close()
 
     def apply_approved_rule(self, suggestion_id: str,
-                            applied_by: str = "human") -> bool:
-        """将已批准的规则建议写入 rule_version_registry（需人工触发）。
+                            applied_by: str = "human", *, expected_revision=None) -> bool:
+        """Atomically create one inactive candidate and advance its learning row.
 
-        安全约束：只有 status=approved 的建议才能写入，且写入后 is_active=0
-        （不自动激活，需额外人工激活步骤）。
+        This cannot activate a rule or promote training. Approval must still be
+        current when the write transaction holds its existing DB reservation.
         """
-        if not self.enabled or not self.db_path:
+        if not self.enabled or not self.db_path or not applied_by:
             return False
-        suggestion = next((s for s in self._rule_suggestions
-                           if s.suggestion_id == suggestion_id), None)
-        if not suggestion or suggestion.status != "approved":
-            return False
-
+        conn = get_db_connection(self.db_path)
         try:
-            conn = get_db_connection(self.db_path)
-            try:
-                # 获取当前活跃版本的计数作为基线
-                current = conn.execute(
-                    "SELECT subject_words_count, exclude_words_count FROM rule_version_registry WHERE is_active=1 LIMIT 1"
-                ).fetchone()
-                sw_count = current["subject_words_count"] if current else 0
-                ew_count = current["exclude_words_count"] if current else 0
-
-                new_version = f"learning_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
-                conn.execute(
-                    """INSERT INTO rule_version_registry
-                       (version, rule_type, description, subject_words_count,
-                        exclude_words_count, subject_words_hash, exclude_words_hash,
-                        applied_at, applied_by, is_active, changelog)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                    (
-                        new_version,
-                        suggestion.rule_type,
-                        f"Learning Loop auto-suggestion: {suggestion.suggestion_text[:200]}",
-                        sw_count, ew_count,
-                        "", "",  # 哈希需人工计算后补充
-                        _utc_now_iso(),
-                        applied_by,
-                        0,  # 不自动激活
-                        json.dumps(suggestion.to_dict(), ensure_ascii=False)[:1000],
-                    ),
-                )
+            conn.execute("BEGIN IMMEDIATE")
+            binding = self.learning_memory._scoped_check(connection=conn, write=True, review=True)
+            if binding is not None:
+                applied_by = "workspace:local" if binding["actor_id"] is None else "actor:" + str(binding["actor_id"])
+            item = next((s for s in self._read_suggestions(conn) if s.suggestion_id == suggestion_id), None)
+            if not item or (expected_revision is not None and item.revision != expected_revision):
+                return False
+            if item.approved_content_sha256 != self._suggestion_hash(item):
+                return False
+            if item.status == "applied":
+                row = conn.execute("SELECT is_active,changelog FROM rule_version_registry WHERE version=?", (item.applied_version,)).fetchone()
+                return bool(row and row["is_active"] == 0 and json.loads(row["changelog"])["suggestion_id"] == suggestion_id)
+            if item.status != "approved":
+                return False
+            current = conn.execute("SELECT subject_words_count,exclude_words_count FROM rule_version_registry WHERE is_active=1 LIMIT 1").fetchone()
+            previous = item.revision
+            item.status, item.applied_version = "applied", "learning_" + item.suggestion_id
+            item.revision += 1
+            conn.execute("""INSERT INTO rule_version_registry
+                (version,rule_type,description,subject_words_count,exclude_words_count,
+                 subject_words_hash,exclude_words_hash,applied_at,applied_by,is_active,changelog)
+                VALUES(?,?,?,?,?,?,?,?,?,0,?)""", (
+                item.applied_version, item.rule_type, "Learning Loop candidate: " + item.suggestion_text[:200],
+                current["subject_words_count"] if current else 0,
+                current["exclude_words_count"] if current else 0, "", "", _utc_now_iso(), applied_by,
+                json.dumps(item.to_dict(), ensure_ascii=False, allow_nan=False)))
+            self._save_suggestion(conn, item, "validated", previous)
+            self.learning_memory._scoped_check(connection=conn, write=True, review=True, after_write=True)
+            admission = getattr(self.learning_memory, "_review_admission", None)
+            if admission is not None:
+                from lumenis.system.security.permission import get_permission_gate
+                with get_permission_gate().learning_candidate_commit_lease(admission, connection=conn):
+                    conn.commit()
+            else:
                 conn.commit()
-                suggestion.status = "applied"
-                # 写入的是 inactive 候选版本，只能推进到 validated；
-                # promoted 必须由后续显式激活/治理步骤完成。
-                if suggestion.learning_record_id:
-                    self.learning_memory.promote_record(
-                        suggestion.learning_record_id, LifecycleStage.VALIDATED)
-                return True
-            finally:
-                conn.close()
-        except Exception as e:
-            logger.error("LearningLoop: apply_approved_rule failed: %s", e)
+            try:
+                self._rule_suggestions = self._read_suggestions()
+            except Exception:
+                self._rule_suggestions = []  # Cache failure cannot undo a confirmed commit.
+            return True
+        except Exception:
+            conn.rollback()
+            logger.exception("Learning inactive candidate did not commit")
+            if getattr(self.learning_memory, "_scope_owner", None) is not None:
+                raise
             return False
+        finally:
+            conn.close()
 
     def list_rule_suggestions(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
-        """列出规则建议。"""
-        results = [s.to_dict() for s in self._rule_suggestions]
-        if status:
-            results = [s for s in results if s["status"] == status]
-        return results
+        try:
+            self._rule_suggestions = self._read_suggestions()
+            return [s.to_dict() for s in self._rule_suggestions if status is None or s.status == status]
+        except Exception:
+            return []
 
     # ── AI 调用质量分析（复用 ai_call_logs） ─────────────────────
 
@@ -417,7 +544,8 @@ class LearningLoop:
                 parts.append(f"{i}. {corrected}")
 
         # 3. 反馈关键词（高频）
-        keywords = self.learning_memory.list_feedback_keywords(enabled_only=True)[:10]
+        keywords = ([] if getattr(self.learning_memory, "_scope_owner", None) is not None
+                    else self.learning_memory.list_feedback_keywords(enabled_only=True)[:10])
         if keywords:
             parts.append("\n【关注关键词】")
             kw_text = ", ".join(k["keyword"] for k in keywords)

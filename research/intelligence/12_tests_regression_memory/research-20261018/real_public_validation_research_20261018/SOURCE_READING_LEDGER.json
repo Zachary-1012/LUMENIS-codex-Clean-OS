@@ -1,0 +1,29 @@
+{
+  "existing_read": [
+    "noon_review_index_20261018_v003/01_COMPLETE_DELIVERY_INDEX.md (all 19 sections)",
+    "math_research_completion_20261018/REPORT.md",
+    "domain_analysis_research_20261018/01_DOMAIN_ANALYSIS_RESEARCH.md",
+    "brand_comparability_research_20261018/README.md",
+    "brand_comparability_research_20261018/01_SEARCH_INTEREST_COMPARABILITY.md",
+    "brand_comparability_research_20261018/02_VINTAGE_AND_SCOPE_RESEARCH.md",
+    "financial_source_research_20261018/README.md",
+    "financial_source_research_20261018/01_REAL_FINANCIAL_FIELD_AND_REVISION_RESEARCH.md"
+  ],
+  "new_read": [
+    "Official UCI dataset 352 metadata and license; entire 541909 data rows parsed",
+    "Official UCI dataset 368 metadata and license; entire 500 data rows and package text",
+    "Official UCI dataset 468 metadata and license; entire 12330 data rows",
+    "Official Criteo uplift page, erratum and privacy section, no raw data downloaded",
+    "Official CC BY 4.0 deed",
+    "NBER 20171 selected design/results and copyright pages; not full paper",
+    "Google geo 38355 selected example and limitations pages; not full paper"
+  ],
+  "search_scope": "Public web discovery across UCI, Criteo, NBER and Google; representative candidates, not exhaustive world dataset search",
+  "not_claimed": [
+    "Full re-reading of all original 2617 records",
+    "All 26 mathematical manuscripts re-read",
+    "All historic research artifacts re-tested",
+    "All paper proofs or image pages verified",
+    "New product code/main inspected"
+  ]
+}

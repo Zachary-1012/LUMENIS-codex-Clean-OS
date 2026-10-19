@@ -149,8 +149,13 @@ def logout(token: str):
         conn.close()
 
 
-def get_current_user(*, read_only: bool = False) -> dict:
+def get_current_user(*, read_only: bool = False, connection=None) -> dict:
     """从请求中获取当前登录用户"""
+    if connection is not None:
+        if not read_only:
+            raise ValueError("AUTH_EXTERNAL_CONNECTION_READ_ONLY_REQUIRED")
+        from lumenis.system.security.permission import _require_canonical_scope_connection
+        _require_canonical_scope_connection(connection)
     if not read_only:
         ensure_initialized()
     token = None
@@ -165,7 +170,9 @@ def get_current_user(*, read_only: bool = False) -> dict:
     if not token:
         return None
 
-    if read_only:
+    if connection is not None:
+        conn = connection
+    elif read_only:
         from lumenis.shared.database import get_repository
         conn = get_repository().connect(read_only=True, wal=False, timeout=0.25, busy_timeout_ms=250)
     else:
@@ -179,6 +186,8 @@ def get_current_user(*, read_only: bool = False) -> dict:
         row = cur.fetchone()
         if not row:
             return None
+        if not hasattr(row, "keys"):
+            row = dict(zip((column[0] for column in cur.description), row))
         # 检查过期
         if row["expires_at"] < time.strftime("%Y-%m-%d %H:%M:%S"):
             if not read_only:
@@ -193,7 +202,8 @@ def get_current_user(*, read_only: bool = False) -> dict:
             "token": token,
         }
     finally:
-        conn.close()
+        if connection is None:
+            conn.close()
 
 
 def require_auth(f):

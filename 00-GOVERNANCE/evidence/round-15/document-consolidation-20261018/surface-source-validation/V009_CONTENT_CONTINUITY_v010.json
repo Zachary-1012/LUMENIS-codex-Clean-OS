@@ -1,0 +1,42 @@
+{
+  "all_v009_blocks_retained_or_explicit_time_status_updated": true,
+  "time_status_resolved": [
+    {
+      "block": 3,
+      "old_sha256": "c8aec2b3af74da834c4161f8b3e6fe9149e4a6230727903aa24930f33fa5f2d4",
+      "new_sha256": "129151a6bbd91ea83d588bfd3ede38d033cbebb9e829715fbf38e7f24525980a"
+    },
+    {
+      "block": 8,
+      "old_sha256": "f5700b5b71c7965639f9938b57aa578d5d587d0d54b559cb29890df70f39ac8b",
+      "new_sha256": "f2a319e0eec111dfcc5443dbd0bee49317107ce218ff9705695d3740a1958e64"
+    },
+    {
+      "block": 16,
+      "old_sha256": "1032b7d13a31847004a5e4b30ab972266e931999c6b5a405d9039766c7764cbe",
+      "new_sha256": "05b77c024a7b117528433d4946ad4cb23dae7a7bcccc63ff9b57292997afa426"
+    },
+    {
+      "block": 576,
+      "old_sha256": "cc675a59e65ae9a13b74c424320b1dd0074c81571d943703564f6ff6b6bdf1c6",
+      "new_sha256": "044cea4833c2e19d4b1c6e1807c8c7f66cee32730d11b1deb415b23950a134aa"
+    },
+    {
+      "block": 3064,
+      "old_sha256": "73839ab85a3d4eb15246d0f8ba7986de06da1f26ef11dedf36584d5b546dd5e0",
+      "new_sha256": "9ed5fec1cfc1bc4147eaedb0993409b1df7d81cec05eea6b989f55da3accbe0a"
+    },
+    {
+      "block": 3080,
+      "old_sha256": "3bb4d9b2b9e321704587f3959c5924a45bfa72c58c25ff66e5f16b11b294a9d6",
+      "new_sha256": "46792b989d6ed7da0f5b02dd7928aeb0d6560cfca60230bb4b356856b52ad412"
+    },
+    {
+      "block": 3083,
+      "old_sha256": "04807b2957cc66d1fd5dc9781619ffa8ef3466d774dfb30d384ada51ba159be7",
+      "new_sha256": "06173286fcadbd9b906c89fe4bbe7d4221d0a95577239b85cefa1f9b1fd48cb6"
+    }
+  ],
+  "missing": [],
+  "new_additions": "J02/J21/J29 and five existingUX, four-surface table, frontsummary and source/PTS/boundaries;zero new capability count"
+}

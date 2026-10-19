@@ -1,0 +1,282 @@
+Native network-isolation proof complete; ONNX telemetry explicitly disabled.
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- $WORKSPACE/python_compat_fix_20261018/testdeps/venv311/bin/python
+rootdir: $WORKSPACE/tooling_validation_baseline_20261018T1310Z/source
+configfile: pytest.ini
+collecting ... collected 4 items
+
+tests/browser_runtime/test_browser_frame_inventory_paths.py::test_real_git_inventory_preserves_complete_paths[deployment/\u5065\u5eb7\u68c0\u67e5.py] FAILED [ 25%]
+tests/browser_runtime/test_browser_frame_inventory_paths.py::test_real_git_inventory_preserves_complete_paths[deployment/file with spaces.py] PASSED [ 50%]
+tests/browser_runtime/test_browser_frame_inventory_paths.py::test_real_git_inventory_preserves_complete_paths[deployment/line\nbreak.py] FAILED [ 75%]
+tests/browser_runtime/test_browser_frame_inventory_paths.py::test_real_git_inventory_still_detects_untracked_foreign_owner FAILED [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+=================================== FAILURES ===================================
+_ test_real_git_inventory_preserves_complete_paths[deployment/\u5065\u5eb7\u68c0\u67e5.py] _
+
+tmp_path = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f47e177b250>
+relative = 'deployment/健康检查.py'
+
+    @pytest.mark.parametrize("relative", [
+        "deployment/健康检查.py",
+        "deployment/file with spaces.py",
+        "deployment/line\nbreak.py",
+    ])
+    def test_real_git_inventory_preserves_complete_paths(tmp_path, monkeypatch, relative):
+        root = _repository(tmp_path)
+        source = root / relative
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text("value = 1\n", encoding="utf-8")
+        subprocess.run(["git", "add", "--", relative], cwd=root, check=True)
+        monkeypatch.setattr(inventory, "ROOT", root)
+>       inventory.test_no_screencast_stream_module_outside_owner()
+
+tests/browser_runtime/test_browser_frame_inventory_paths.py:29: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def test_no_screencast_stream_module_outside_owner():
+        import os
+        if (ROOT / '.git').exists():
+            out = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "--", "*.py"],
+                                 cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=True)
+            paths = sorted(set(out.stdout.splitlines()))
+        else:
+            # Both values are supplied by the external runner; a mutable manifest alone is insufficient.
+            paths = _verified_snapshot_paths(ROOT, os.environ['LUMENIS_VALIDATION_SOURCE_MANIFEST'],
+                                             os.environ['LUMENIS_VALIDATION_SOURCE_MANIFEST_SHA256'])
+>       assert _screencast_offenders(ROOT, paths) == []
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/browser_runtime/test_browser_frame_stream.py:229: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser0/source')
+paths = ['"deployment/\\345\\201\\245\\345\\272\\267\\346\\243\\200\\346\\237\\245.py"']
+
+    def _screencast_offenders(root, paths):
+        offenders = []
+        for rel in paths:
+            p = Path(rel)
+            if p.parts[:1] in {("tests",), (".codex",), (".venv",), ("node_modules",), ("intelligence_library",)}:
+                continue
+            if Path(*p.parts[:4]) == OWNER:
+                continue
+>           text = (root / p).read_text(encoding="utf-8", errors="strict")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/browser_runtime/test_browser_frame_stream.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser0/source/"deployment/\\345\\201\\245\\345\\272\\267\\346\\243\\200\\346\\237\\245.py"')
+encoding = 'utf-8', errors = 'strict'
+
+    def read_text(self, encoding=None, errors=None):
+        """
+        Open the file in text mode, read it, and close the file.
+        """
+        encoding = io.text_encoding(encoding)
+>       with self.open(mode='r', encoding=encoding, errors=errors) as f:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../../python_compat_fix_20261018/testdeps/python/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/pathlib.py:1058: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser0/source/"deployment/\\345\\201\\245\\345\\272\\267\\346\\243\\200\\346\\237\\245.py"')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = 'strict'
+newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser0/source/"deployment/\\345\\201\\245\\345\\272\\267\\346\\243\\200\\346\\237\\245.py"'
+
+../../python_compat_fix_20261018/testdeps/python/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/pathlib.py:1044: FileNotFoundError
+_ test_real_git_inventory_preserves_complete_paths[deployment/line\nbreak.py] __
+
+tmp_path = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f47e177bd90>
+relative = 'deployment/line\nbreak.py'
+
+    @pytest.mark.parametrize("relative", [
+        "deployment/健康检查.py",
+        "deployment/file with spaces.py",
+        "deployment/line\nbreak.py",
+    ])
+    def test_real_git_inventory_preserves_complete_paths(tmp_path, monkeypatch, relative):
+        root = _repository(tmp_path)
+        source = root / relative
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text("value = 1\n", encoding="utf-8")
+        subprocess.run(["git", "add", "--", relative], cwd=root, check=True)
+        monkeypatch.setattr(inventory, "ROOT", root)
+>       inventory.test_no_screencast_stream_module_outside_owner()
+
+tests/browser_runtime/test_browser_frame_inventory_paths.py:29: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def test_no_screencast_stream_module_outside_owner():
+        import os
+        if (ROOT / '.git').exists():
+            out = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "--", "*.py"],
+                                 cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=True)
+            paths = sorted(set(out.stdout.splitlines()))
+        else:
+            # Both values are supplied by the external runner; a mutable manifest alone is insufficient.
+            paths = _verified_snapshot_paths(ROOT, os.environ['LUMENIS_VALIDATION_SOURCE_MANIFEST'],
+                                             os.environ['LUMENIS_VALIDATION_SOURCE_MANIFEST_SHA256'])
+>       assert _screencast_offenders(ROOT, paths) == []
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/browser_runtime/test_browser_frame_stream.py:229: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser2/source')
+paths = ['"deployment/line\\nbreak.py"']
+
+    def _screencast_offenders(root, paths):
+        offenders = []
+        for rel in paths:
+            p = Path(rel)
+            if p.parts[:1] in {("tests",), (".codex",), (".venv",), ("node_modules",), ("intelligence_library",)}:
+                continue
+            if Path(*p.parts[:4]) == OWNER:
+                continue
+>           text = (root / p).read_text(encoding="utf-8", errors="strict")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/browser_runtime/test_browser_frame_stream.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser2/source/"deployment/line\\nbreak.py"')
+encoding = 'utf-8', errors = 'strict'
+
+    def read_text(self, encoding=None, errors=None):
+        """
+        Open the file in text mode, read it, and close the file.
+        """
+        encoding = io.text_encoding(encoding)
+>       with self.open(mode='r', encoding=encoding, errors=errors) as f:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../../python_compat_fix_20261018/testdeps/python/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/pathlib.py:1058: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser2/source/"deployment/line\\nbreak.py"')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = 'strict'
+newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser2/source/"deployment/line\\nbreak.py"'
+
+../../python_compat_fix_20261018/testdeps/python/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/pathlib.py:1044: FileNotFoundError
+________ test_real_git_inventory_still_detects_untracked_foreign_owner _________
+
+tmp_path = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_still_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f47e1778890>
+
+    def test_real_git_inventory_still_detects_untracked_foreign_owner(tmp_path, monkeypatch):
+        root = _repository(tmp_path)
+        source = root / "deployment" / "异常\nnew owner.py"
+        source.parent.mkdir(parents=True)
+        source.write_text("value = 'Page.startScreencast'\n", encoding="utf-8")
+        monkeypatch.setattr(inventory, "ROOT", root)
+        with pytest.raises(AssertionError):
+>           inventory.test_no_screencast_stream_module_outside_owner()
+
+tests/browser_runtime/test_browser_frame_inventory_paths.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def test_no_screencast_stream_module_outside_owner():
+        import os
+        if (ROOT / '.git').exists():
+            out = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "--", "*.py"],
+                                 cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=True)
+            paths = sorted(set(out.stdout.splitlines()))
+        else:
+            # Both values are supplied by the external runner; a mutable manifest alone is insufficient.
+            paths = _verified_snapshot_paths(ROOT, os.environ['LUMENIS_VALIDATION_SOURCE_MANIFEST'],
+                                             os.environ['LUMENIS_VALIDATION_SOURCE_MANIFEST_SHA256'])
+>       assert _screencast_offenders(ROOT, paths) == []
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/browser_runtime/test_browser_frame_stream.py:229: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_still_0/source')
+paths = ['"deployment/\\345\\274\\202\\345\\270\\270\\nnew owner.py"']
+
+    def _screencast_offenders(root, paths):
+        offenders = []
+        for rel in paths:
+            p = Path(rel)
+            if p.parts[:1] in {("tests",), (".codex",), (".venv",), ("node_modules",), ("intelligence_library",)}:
+                continue
+            if Path(*p.parts[:4]) == OWNER:
+                continue
+>           text = (root / p).read_text(encoding="utf-8", errors="strict")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/browser_runtime/test_browser_frame_stream.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_still_0/source/"deployment/\\345\\274\\202\\345\\270\\270\\nnew owner.py"')
+encoding = 'utf-8', errors = 'strict'
+
+    def read_text(self, encoding=None, errors=None):
+        """
+        Open the file in text mode, read it, and close the file.
+        """
+        encoding = io.text_encoding(encoding)
+>       with self.open(mode='r', encoding=encoding, errors=errors) as f:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../../python_compat_fix_20261018/testdeps/python/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/pathlib.py:1058: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_still_0/source/"deployment/\\345\\274\\202\\345\\270\\270\\nnew owner.py"')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = 'strict'
+newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_still_0/source/"deployment/\\345\\274\\202\\345\\270\\270\\nnew owner.py"'
+
+../../python_compat_fix_20261018/testdeps/python/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/pathlib.py:1044: FileNotFoundError
+- generated xml file: $WORKSPACE/tooling_validation_baseline_20261018T1310Z/results/full.xml -
+=========================== short test summary info ============================
+FAILED tests/browser_runtime/test_browser_frame_inventory_paths.py::test_real_git_inventory_preserves_complete_paths[deployment/\u5065\u5eb7\u68c0\u67e5.py] - FileNotFoundError: [Errno 2] No such file or directory: '$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser0/source/"deployment/\\345\\201\\245\\345\\272\\267\\346\\243\\200\\346\\237\\245.py"'
+FAILED tests/browser_runtime/test_browser_frame_inventory_paths.py::test_real_git_inventory_preserves_complete_paths[deployment/line\nbreak.py] - FileNotFoundError: [Errno 2] No such file or directory: '$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_preser2/source/"deployment/line\\nbreak.py"'
+FAILED tests/browser_runtime/test_browser_frame_inventory_paths.py::test_real_git_inventory_still_detects_untracked_foreign_owner - FileNotFoundError: [Errno 2] No such file or directory: '$WORKSPACE/tooling_validation_baseline_20261018T1310Z/tmp/full/test_real_git_inventory_still_0/source/"deployment/\\345\\274\\202\\345\\270\\270\\nnew owner.py"'
+========================= 3 failed, 1 passed in 0.39s ==========================

@@ -1,0 +1,45 @@
+{
+  "private_originals_retained": true,
+  "private_storage_urls_not_published": true,
+  "historical_archives": [
+    {
+      "artifact_category": "historical code candidate",
+      "bytes": 43513331,
+      "sha256": "b479aa9361060875425769f97accb1d861cda728fbecd21dcc45967c3d3f02e6",
+      "verified_utc": "2026-10-17T23:04:53.775486+00:00",
+      "scope": "Historical private archive checksum; not evidence of current public release or complete product acceptance"
+    },
+    {
+      "artifact_category": "historical frontend review v009",
+      "bytes": 2806810,
+      "sha256": "45c669aa5df98c8ffc19db5d90015a9f301afcc25482d5c5be899906dd772559",
+      "manifest_entries": 25,
+      "verified_utc": "2026-10-17T23:52:03.896858+00:00",
+      "scope": "Historical private archive checksum; not evidence of current public release or complete product acceptance"
+    },
+    {
+      "artifact_category": "frontend review v010",
+      "bytes": 2819534,
+      "sha256": "e60e54e70aa231ae48be489893c3bba1ebd31ae3baaf2db8523d72be67081d52",
+      "manifest_entries": 25,
+      "verified_utc": "2026-10-18T03:28:32.798903+00:00",
+      "scope": "Historical private archive checksum; not evidence of current public release or complete product acceptance"
+    },
+    {
+      "artifact_category": "third-party review v11",
+      "bytes": 2666954,
+      "sha256": "e8bbb5e5af58f10df19ce8dc255f2996d07e25aaaa7121c6a575441e19ff75c9",
+      "manifest_entries": 13,
+      "verified_utc": "2026-10-18T00:34:36.464427+00:00",
+      "scope": "Historical private archive checksum; not evidence of current public release or complete product acceptance"
+    },
+    {
+      "artifact_category": "research results",
+      "bytes": 1295724,
+      "sha256": "6d10f6b94f7ead9abf8b01c1281c9cc8c8a8baba95abeb90b32e4511637338db",
+      "manifest_entries": 41,
+      "verified_utc": "2026-10-18T05:22:09.110856+00:00",
+      "scope": "Historical private archive checksum; not evidence of current public release or complete product acceptance"
+    }
+  ]
+}

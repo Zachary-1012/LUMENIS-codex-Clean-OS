@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "$WORKSPACE/governance_final_static_20261018T1311Z/source/scripts/audit_tools/verify_lumenis_ggi_contract.py", line 98, in <module>
+    validate_contract(Path(sys.argv[1]))
+                           ~~~~~~~~^^^
+IndexError: list index out of range

@@ -1,0 +1,21 @@
+{
+  "commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+  "status": "fixed main snapshot, not live runtime",
+  "files": [
+    {
+      "path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+      "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+      "read_scope": "Only passages explicitly cited in report; not a new full-document reading"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+      "sha256": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+      "read_scope": "Only passages explicitly cited in report; not a new full-document reading"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+      "sha256": "04edb41316f6b9576fdcc021d82c26843c2d543ff0ba316d24c8082f2189f1e4",
+      "read_scope": "Only passages explicitly cited in report; not a new full-document reading"
+    }
+  ]
+}

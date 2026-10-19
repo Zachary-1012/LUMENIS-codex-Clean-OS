@@ -150,18 +150,18 @@ void main() {
       final semantics = tester.ensureSemantics();
       try {
         final cases = [
-          (const Locale('zh', 'CN'), '界面基础字号', '外观预览', '序境 LUMENIS · 字号示例'),
+          (const Locale('zh', 'CN'), '界面基础字号', '外观预览', '寰意 OEVIRA · 字号示例'),
           (
             const Locale('en'),
             'Workspace base text size',
             'Appearance preview',
-            'LUMENIS · text size sample',
+            'OEVIRA · text size sample',
           ),
           (
             const Locale('ko'),
             '작업 공간 기본 글자 크기',
             '모양 미리보기',
-            'LUMENIS · 글자 크기 예시',
+            'OEVIRA · 글자 크기 예시',
           ),
         ];
 

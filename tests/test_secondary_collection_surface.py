@@ -45,7 +45,7 @@ def _stub_approved_global_guard(monkeypatch, request):
     monkeypatch.setattr(surface, "_manual_collection_guard", allow)
 
 
-def test_surface_has_exact_launch_allowlist(monkeypatch):
+def test_surface_preserves_dispatch_set_with_complete_planned_visibility(monkeypatch):
     monkeypatch.setattr(
         surface,
         "_adapter_health",
@@ -57,11 +57,13 @@ def test_surface_has_exact_launch_allowlist(monkeypatch):
 
     assert result["product"] == "LUMENIS"
     assert result["domain"] == "CTH"
+    from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
     assert [item["platform"] for item in result["platforms"]] == [
-        "bilibili", "weibo", "douyin", "x", "kuaishou", "web_rss",
-        "public_http", "web_atom", "sitemap", "zhihu", "instagram",
-        "wechat", "facebook", "xiaohongshu"
-    ]
+        cap["canonical_id"] for cap in PLATFORM_CAPABILITIES.values() if cap["collection_surface_visible"]]
+    assert set(surface.SECONDARY_COLLECTION_PLATFORMS) == {
+        "bilibili", "weibo", "douyin", "x", "kuaishou", "web_rss", "public_http",
+        "web_atom", "sitemap", "zhihu", "instagram", "wechat", "facebook", "xiaohongshu"}
+    assert not set(surface.SECONDARY_COLLECTION_PLATFORMS) & {"youtube","tiktok","reddit","linkedin","channels","google","tieba","github"}
     assert result["manual_only"] is True
     assert result["read_only"] is True
     assert result["external_write"] is False
@@ -96,7 +98,7 @@ def test_primary_xhs_status_is_a_separate_read_only_projection(monkeypatch):
     result = surface.get_collection_surface()
     primary = result["primary_collection"]
 
-    assert health_calls == list(surface.SECONDARY_COLLECTION_PLATFORMS)
+    assert health_calls == [row["platform"] for row in result["platforms"]]
     assert primary["platform"] == "xiaohongshu"
     assert primary["region"] == "hk_international"
     assert primary["status"] == "READY"
@@ -579,7 +581,7 @@ def test_preflight_without_a_source_request_keeps_observation_counts_unknown(mon
     monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: run_log.update(kwargs))
     _stub_approved_global_guard(monkeypatch, approved_global_request)
     monkeypatch.setattr(
-        surface, "_write_prelaunch_evidence",
+        surface, "_write_evidence",
         lambda _platform, _keyword, result, **_kwargs: evidence.update(result) or 13,
     )
     monkeypatch.setitem(surface._last_action, "bilibili", 0.0)
@@ -771,3 +773,28 @@ def test_requested_adapters_expose_uniform_capability_contract():
     assert rss.detail("news-1").status == CollectionStatus.NOT_SUPPORTED
     assert rss.comments("news-1").status == CollectionStatus.NOT_SUPPORTED
     assert rss.author_posts("publisher").status == CollectionStatus.NOT_SUPPORTED
+
+
+def test_planned_visibility_and_provider_failure_do_not_enable_or_block_others(monkeypatch):
+    class Healthy:
+        def health_check(self):
+            return CollectionResult(CollectionStatus.SUCCESS, 'wechat', metadata={'healthcheck_scope':'configuration_only'})
+    def get_adapter(platform):
+        if platform == 'wechat':
+            return Healthy()
+        raise RuntimeError('unavailable provider')
+    monkeypatch.setattr(surface, '_get_runtime_adapter', get_adapter)
+    monkeypatch.setattr(surface, '_last_run', lambda platform: None)
+    monkeypatch.setattr(surface, '_xhs_primary_runtime_status', lambda: {})
+    monkeypatch.setattr(surface, '_xhs_primary_last_run', lambda: None)
+    for _retry in range(2):
+        value = surface.get_collection_surface()
+        rows = {r['platform']:r for r in value['platforms']}
+        assert rows['wechat']['status'] == 'CONFIGURED'
+        assert rows['facebook']['status'] == 'UNAVAILABLE'
+        for platform in ('channels','youtube','tiktok','reddit','linkedin','tieba'):
+            assert rows[platform]['status'] == 'PLANNED'
+            assert rows[platform]['manual_collection_enabled'] is False
+            assert rows[platform]['scheduled_collection_enabled'] is False
+        assert not set(rows) & set(value['out_of_scope_platforms'])
+        assert set(value['auxiliary_sources']) == {'google','github'}

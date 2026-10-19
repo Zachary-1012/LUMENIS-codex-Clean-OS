@@ -1,0 +1,1621 @@
+{
+  "schema_version": "1.0",
+  "as_of_utc": "2026-10-17T19:41:00Z",
+  "scope": "Current static catalog snapshot, not product scope ceiling; documentary research only",
+  "row_count": 22,
+  "unknown_semantics": "UNKNOWN means no adequate current evidence, never unsupported or zero. DOCUMENTED_CONDITIONAL never means entitled or live-verified.",
+  "rows": [
+    {
+      "platform_id": "xiaohongshu",
+      "platform": "小红书",
+      "source_kind": "social",
+      "route": "Identity OAuth; separate content/partner product unverified",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "basic_info authorized profile"
+      },
+      "post": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: note search/detail via current official content product"
+      },
+      "comment": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: root/reply contract"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Avatar from identity API; note media license unknown"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "open_id is app-scoped; nickname/avatar/region do not prove real-world or cross-platform identity"
+      },
+      "native_metrics": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: content metric fields; identity profile is not note analytics"
+      },
+      "history": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: note history"
+      },
+      "pagination": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: content cursor/termination"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Identity app/interface limits cannot be assigned to content"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "App entitlement + user consent for identity; browser/partner rights separately checked"
+      },
+      "commercial_license": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: content commercial-use agreement"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: note text/media export"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: content retention; authorization revocation separate from deletion contract"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: CN/HK/other market content availability; profile region is not evidence of audience market"
+      },
+      "source_refs": [
+        "S001",
+        "S002",
+        "S003",
+        "S004"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "小红书（xhs / xiaohongshu）\n\n- **官方边界**：账号授权快速入门当前只列 `basic_info`。API Reference 是授权、token/refresh、基础信息、撤销等身份功能，不是笔记搜索、详情或评论库。商业开放平台另有达人报价/合作内容能力，必须逐产品、scope、合作对象确认，不能把某个商业接口扩大为所有用户的全部笔记。来源：[账号快速入门](https://openaccount.xiaohongshu.com/docs/quick-start)、[账号 API Reference](https://openaccount.xiaohongshu.com/docs/api-reference)、[商业平台能力文档](https://ad-market.xiaohongshu.com/docs-center?articleId=3196&bizType=944)。\n- **窗口/游标/层级**：未取得可覆盖 Muse 个案的官方笔记内容 API 契约。因此历史窗口、排序、分页 cursor、根评论/楼中楼、推荐截断、删除可见性全部待核；不能写“最多 N 条”“只能采近 N 天”。\n- **认证/限流**：账号平台按接口和 app_id 限流，但内容 API 的规则不能从身份 API 外推；token 有过期、scope 和应用匹配要求。应保留平台业务码、request/log ID、刷新失败和授权撤销状态。[账号 FAQ](https://openaccount.xiaohongshu.com/docs/faq)\n- **导出/验收**：要求提供实际内容提供方、官方合作产品/合同、获批用途、字段、保存期、导出受众及删除规则。只读验收应核到同一笔记的详情、顶层分页、至少一个多回复线程及终止理由。若来源是网页会话，必须独立审查其许可和实际接口行为，不标成官方 API 已接通。\n\n"
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "source_kind": "social",
+      "route": "Authorized mini-app video/comment capability",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Authorized user public works"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Authorized videos; not general whole-site search"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "ma.item.comment roots and replies via separate endpoints"
+      },
+      "media": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: binary download/re-edit rights; preserve source links"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "item_id + comment_id; author identity scope must be retained"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "reply_comment_total is reply count; separate statistics capability has its own terms"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "30-day condition on a statistics capability must not be applied to all comments"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "list_comment count 1..50; cursor+has_more; replies separately paged"
+      },
+      "rate": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: read quota by approved capability"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "App capability approval + user authorization"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Some statistics capabilities prohibit selling data/platform statistical analysis; endpoint terms must be checked"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: customer export permitted fields"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: field-specific TTL and deletion requirements"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: territory entitlement; Douyin is not TikTok"
+      },
+      "source_refs": [
+        "S005",
+        "S006",
+        "S007",
+        "S008",
+        "S009",
+        "S010"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "抖音（douyin）\n\n- **授权对象**：小程序申请 `ma.item.comment` 能力并取得用户授权，可读授权用户公开视频的评论；不能由该能力推导出任意账号搜索/评论。`tt.showDouyinOpenAuth`、scope 获批、用户同意是不同门槛。[能力说明](https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/introduction/capabilities)、[授权说明](https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/api/open-interface/authorization/tt-show-douyin-open-auth/)\n- **分页/层级**：`GET /api/apps/v1/item/list_comment/` 根评论，`count=1..50`，首个 cursor=0，继续使用返回 cursor/has_more；有 `comment_id`、`create_time`、`reply_comment_total`。`GET /api/apps/v1/item/list_comment_reply/` 对 item_id+comment_id 另分页；支持推荐、时间倒序/正序相关排序。回复数不替代回复内容队列。[根评论](https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/basic-abilities/video-id-convert/video-review-data/comment-list)、[回复](https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/basic-abilities/video-id-convert/video-review-data/comment-reply-list)\n- **窗口/限流**：另一项 `ma.item.data_bc` 视频统计有“近30天创建作品”条件，不能把它套到评论正文接口。每条 capability 的限额与 err_no/extra.error_code、log_id 要分别处理；数值额度本次未核。[授权统计接口](https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/video-id-convert/user-recent-video-data/get-comment-bc)\n- **用途/验收**：某些用户互动统计能力明确限制对外销售数据服务和平台统计分析，此限制至少适用于该能力；LUMENIS 使用时需核目标能力的独立条款。验收：一个获授权账号、一个有多页根评论和回复的公开视频；证明用户撤权与能力未开通分别返回权限失败，不吞成“0条”。[互动统计能力限制](https://developer.open-douyin.com/capacity-center-page/capacity-detail/7180284622729658424)\n\n"
+    },
+    {
+      "platform_id": "kuaishou",
+      "platform": "快手",
+      "source_kind": "social",
+      "route": "user_video_info authorized photo list/info",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Authorized user"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Photo/video list and info"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Only comment_count confirmed; body/replies unknown"
+      },
+      "media": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: media reuse license"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "photo_id is source key; user identity mapping separately verified"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "comment_count is native count; not available comment-body denominator"
+      },
+      "history": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: full historical window"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Default20/max200; cursor derived from last page oldest create_time photo_id"
+      },
+      "rate": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: read endpoint limits"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "app_id + user token + scope"
+      },
+      "commercial_license": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: commercial analysis terms"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: raw export"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: retention/deletion"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: regional entitlement"
+      },
+      "source_refs": [
+        "S011"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "快手（kuaishou）\n\n- **官方路线**：`user_video_info` + 用户 access_token/app_id；`GET /openapi/photo/list` 读取授权用户作品，`/openapi/photo/info` 读取作品信息。列表默认20、最大200；首轮不传 cursor，后续按文档使用上轮最小 create_time 对应的 photo_id。详情的 comment_count 是计数，不能证明有评论正文/回复接口。[官方查询视频文档](https://open.kuaishou.com/platformDocs/openAbility/contentManagement/searchForVideos.html)\n- **范围/窗口**：通用关键词搜索、跨账号全历史、明确起止时间过滤、正文评论与楼中楼，均待取得当前官方接口证据。作品 count 接口出现 public/private/friend/all 分类，不表示调用者能读其他账号私密内容。\n- **限流/认证**：本次未核 read 端点日限额。发布/上传文档出现的用户/应用写入限额不得套到读取。分别记录 token/scope 失败、120001 不存在等业务错误、频控和空列表。\n- **导出/验收**：先核应用审核、scope、用户授权、用途与存储合同；用超过一页的获授权作品验证顺序、cursor 与重叠去重。评论正文未证实前在结果中明确“仅计数”，不造空评论集。\n\n"
+    },
+    {
+      "platform_id": "weibo",
+      "platform": "微博",
+      "source_kind": "social",
+      "route": "Official CLI/API per command and tier",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Command-dependent authorized/public scope"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "limited search and user timeline commands documented"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "comments/show/all exists; full reply hierarchy needs command contract"
+      },
+      "media": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: media binary/reuse rights"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Use idstr, preserve long-text and edit/relationship distinctions"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Command-specific metric schema must be frozen; totals not unique returned count"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Search historical window depends on command/tier"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Freeze catalog version; do not mix page/cursor/max_time; dynamic lists not snapshots"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Trial and paid per-interface budgets differ; no inherited old hourly quota"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Current command, developer status, package and whitelist"
+      },
+      "commercial_license": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: commercial content use contract"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: display/export conditions"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: retention and deletion"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: regional and corpus coverage"
+      },
+      "source_refs": [
+        "S012",
+        "S013",
+        "S014",
+        "S015"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "微博（weibo）\n\n- **官方路线**：当前官方 CLI quickstart 提供命令目录/单命令参数与套餐查询；须固定 `catalog_version` 和命令的当前权限。官方示例包含 `search/statuses/limited`、`statuses/user_timeline/biz`、`comments/to_me/biz`、`comments/show/all`。名称的 limited/all/biz 不是完整性保证。[Quickstart](https://open.weibo.com/cli/quickstart)、[搜索示例](https://open.weibo.com/cli/skills/conversion-desk)、[评论示例](https://open.weibo.com/cli/skills/community-desk)\n- **分页/窗口/全文**：官方提醒列表不是冻结快照、total_number 不等于最终可见唯一条数；按 idstr 去重，不混用 page/cursor/max_time。长文参数要看命令支持，is_long_text 本身不保证已返回全文。搜索日期范围、最大历史深度、子评论是否独立接口仍需冻结后的具体命令文档。\n- **认证/额度**：开发者验证、试用/付费权限与白名单分层；试用通常7天且每个读接口有低次数限制，不能当作生产额度。实际 endpoint 套餐/扣费/限流优先。旧 wiki 页面本次不可读，不沿用旧博客中的“每小时 N 次”。\n- **导出/验收**：核商业内容展示、持久保存与导出协议；测试超过两页、长文、根/子评论、套餐耗尽、token 失败，并核读接口和写接口配额分离。当前文档有搜索能力，不表示 LUMENIS 已购买或获准该命令。[统计示例](https://open.weibo.com/cli/skills/usage-insights)\n\n"
+    },
+    {
+      "platform_id": "bilibili",
+      "platform": "B站",
+      "source_kind": "social",
+      "route": "Creator-authorized open platform",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "USER_INFO + UP authorization"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Authorized creator submissions"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Comment/danmaku count does not establish body APIs"
+      },
+      "media": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: media/danmaku binary or text access rights"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Source creator/submission IDs; app authorization separate from subject attribution"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Submission counts may be returned; exact granted schema must be checked"
+      },
+      "history": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: generic search/full history"
+      },
+      "pagination": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: endpoint-specific pagination"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Errors distinguish no app permission, no user authorization, rate/busy, whitelist"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Creator authorization + app approved interfaces"
+      },
+      "commercial_license": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: commercial analysis and onward-use terms"
+      },
+      "export": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Review developer agreement; no default raw redistribution grant"
+      },
+      "retention": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Unbind/data-exit obligations; exact TTL unknown"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: market-specific access"
+      },
+      "source_refs": [
+        "S016",
+        "S017",
+        "S018",
+        "S019",
+        "S020"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "B站（bilibili）\n\n- **授权对象**：官方开放平台提供账号授权和创作者稿件等能力。基础账号信息要求 `USER_INFO` 与用户授权；签名/Access-Token 等需按当前规范。开发者协议要求相关 UP 授权和数据退出/解绑处理。[开放文档](https://open.bilibili.com/doc)、[账号信息接口](https://open.bilibili.com/doc/4/feb66f99-7d87-c206-00e7-d84164cd701c)、[开发者协议](https://open.bilibili.com/agreement/developer-service)\n- **范围/评论**：授权稿件数据可含评论数、弹幕数等，不等于评论或弹幕逐条正文。公开可用的站内 Web API、社区逆向接口说明不自动成为官方对商业应用开放的合同。[开放平台隐私政策](https://open.bilibili.com/agreement/privacy-policy)\n- **分页/窗口/认证**：通用搜索、稿件历史窗口、评论层级分页待核具体获批接口。官方错误中，127007 为应用无接口权限、127011 为用户未授权、127009 可能限额/忙、127305 涉白名单；不能全部转成“采完”。[签名及状态码文档](https://open.bilibili.com/doc/4/8673959e-f7bb-56e6-6e68-d225f971b81b)\n- **导出/验收**：需接口清单+scope+UP 授权+用途/保存/转授条款。各 endpoint 独立验收多页稿件、缺失/下架稿件、撤权；评论正文未经获批接口证实则保持待核。\n\n"
+    },
+    {
+      "platform_id": "zhihu",
+      "platform": "知乎",
+      "source_kind": "social",
+      "route": "Institution/advertising products do not prove generic content read",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current approved account contract"
+      },
+      "post": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: general search/history rights"
+      },
+      "comment": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: root/reply read contract"
+      },
+      "media": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: media object and reuse rights"
+      },
+      "identity": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: stable identity schema and scope"
+      },
+      "native_metrics": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: native metric schema"
+      },
+      "history": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: historical range"
+      },
+      "pagination": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: pagination and exhaustion"
+      },
+      "rate": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: rate/quota"
+      },
+      "access": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current product/application prerequisites"
+      },
+      "commercial_license": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: commercial purpose and field rights"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: export rights"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: retention/deletion"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: market coverage"
+      },
+      "source_refs": [
+        "S021",
+        "S022"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "知乎（zhihu）\n\n- **已核边界**：官方机构号协议描述账号运营、发布、互动等，不构成全站问题/回答/文章/评论的读取接口授权。此次未核得当前通用内容查询的官方公开开发者合同。[机构号服务协议](https://www.zhihu.com/org_service_agreement)、[官方隐私保护政策](https://www.zhihu.com/term/privacy)\n- **窗口/分页/评论/限流**：搜索起止时间、offset/游标、回答详情、根评论/子评论、限流码和账号要求全部待核。配置里的 engine_verified_no_cookie_required 只能说明实现边界，不能代替平台许可。\n- **导出/验收**：先取得服务方授权证据/正式产品接口清单，核正文、作者、互动数据、再展示/导出和删除义务。再按一个问题下多个回答、一个多页评论线程、文章详情、已删除内容做只读测试。若只具备公开页面许可，则按该受限覆盖标注，不承诺全站历史。\n\n"
+    },
+    {
+      "platform_id": "tieba",
+      "platform": "贴吧",
+      "source_kind": "social",
+      "route": "Historical official content cooperation page",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current approved account contract"
+      },
+      "post": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: general search/history rights"
+      },
+      "comment": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: root/reply read contract"
+      },
+      "media": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: media object and reuse rights"
+      },
+      "identity": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: stable identity schema and scope"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Historical Tieba page lists reply count; not reply text"
+      },
+      "history": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: historical range"
+      },
+      "pagination": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: pagination and exhaustion"
+      },
+      "rate": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: rate/quota"
+      },
+      "access": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current product/application prerequisites"
+      },
+      "commercial_license": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: commercial purpose and field rights"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: export rights"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: retention/deletion"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: market coverage"
+      },
+      "source_refs": [
+        "S023"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "贴吧（tieba）\n\n- **历史官方路线**：百度贴吧官方旧“贴吧开放平台”页描述申请指定吧或精品内容的合作，列标题、摘要、缩略图、发布时间、昵称、最后回复时间、回复数等字段。这是历史合作入口，不能证明2026年仍可自助开通，也不能把回复数当作完整楼层正文。[官方历史开放平台页](https://tieba.baidu.com/tb/zt/tiebaapi/index.html)\n- **窗口/游标/层级/额度**：当前合作准入、关键词搜索、楼层和楼中楼、删除/折叠楼层、历史时间范围、游标和频控数值均待核。本次不引用民间移动端接口作为官方合同。\n- **导出/验收**：先核现行合作方、允许吧范围、字段和用途/存储/导出协议，再设计跨页主题和楼中楼树验收。当前静态目录无 adapter binding，属于计划项，不能列已通平台。\n\n"
+    },
+    {
+      "platform_id": "channels",
+      "platform": "视频号",
+      "source_kind": "social",
+      "route": "No current generic video/comment read contract verified",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current approved account contract"
+      },
+      "post": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: general search/history rights"
+      },
+      "comment": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: root/reply read contract"
+      },
+      "media": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: media object and reuse rights"
+      },
+      "identity": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: stable identity schema and scope"
+      },
+      "native_metrics": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: native metric schema"
+      },
+      "history": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: historical range"
+      },
+      "pagination": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: pagination and exhaustion"
+      },
+      "rate": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: rate/quota"
+      },
+      "access": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current product/application prerequisites"
+      },
+      "commercial_license": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: commercial purpose and field rights"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: export rights"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: retention/deletion"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: market coverage"
+      },
+      "source_refs": [
+        "S040"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "视频号（channels）\n\n- **官方证据状态**：本次未核得允许任意视频号关键词搜索、视频详情、评论正文与楼中楼批量读取的当前官方合同。微信视频号店铺/电商/带货、广告或直播工具的 API 不能因品牌同属视频号而替代此能力；第三方“视频号API”也不自动是腾讯授权。\n- **待核项**：具体官方产品名称、接口目录、申请主体、账号所有权/授权关系、scope、时间范围、分页 token、根/子评论层级、频控和可导出字段。官方 channels 入口本次无法取得可读正文：[官方文档入口](https://developers.weixin.qq.com/doc/channels/API/basics/getaccesstoken.html)。\n- **验收门槛**：先有可验证许可和合同，再选择获授权账号与多评论视频，验证分页/楼中楼/删除和错误状态；此时仍不得承诺全站搜索。当前产品目录为 PLANNED，必须保持未实现/未配置的区别。\n\n"
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "source_kind": "social",
+      "route": "Instagram Login and Facebook Login are distinct professional routes",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Business/Creator; not consumer account API"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Owned media; limited discovery/hashtag/business capabilities separately gated"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Owned professional media comment management; replies separate"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Media fields/links subject to endpoint + display rights; no blanket asset reuse"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Platform object IDs; no name-based cross-network join"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Endpoint-specific media/insights; not every metric on every media/account"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Generic arbitrary-user full history not established"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Cursor pagination; time pagination only on specific insights"
+      },
+      "rate": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: actual Graph version business-use quota"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "App review/access level; professional user consent; FB Login additionally Page link"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Check applicable Meta product/platform terms; broad discovery is not unrestricted use"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: bulk raw export and onward sharing"
+      },
+      "retention": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Deletion/retention obligations require actual app terms; no universal TTL asserted"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: regional object availability; account type independent of market"
+      },
+      "source_refs": [
+        "S024",
+        "S025",
+        "S026"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "Instagram（instagram）\n\n- **官方路线与账号**：Meta 官方维护的 Postman 集合确认：Instagram API 面向 Business/Creator 专业账号。Facebook Login 路线需关联 Facebook Page；Instagram Login 不要求关联 Page。普通消费者账号不是这套专业账号 API 的目标。[Meta 官方 Instagram 工作区](https://www.postman.com/meta/instagram/overview)、[Facebook Login 集合](https://www.postman.com/meta/instagram/folder/9cgqucg/instagram-api-with-facebook-login)、[Instagram Login 集合](https://www.postman.com/meta/instagram/folder/1z5vxzu/instagram-api-with-instagram-login)\n- **scope**：两条路线不要混配：Facebook Login 有 instagram_basic、instagram_manage_comments、pages_show_list/pages_read_engagement 等；Instagram Login 使用 instagram_business_basic、instagram_business_manage_comments。生产第三方账号还需对应 app review/access level，账号授权不等于应用已获全部能力。\n- **范围/分页**：自有 media 评论管理、mentions、有限 hashtag/business 信息路线不等于任意个人全部历史内容。集合说明通常 cursor 分页；只有部分 insights 支持时间分页，不能泛化所有对象都支持 since/until。评论根节点与 replies 要分别核 endpoint、paging.next 和可见权限。\n- **限流/导出/验收**：Graph 当前版本、业务用例限额、响应 usage headers、错误码/subcode、app review、保存/删除政策待项目核验。本次 developers.facebook.com 多页读取返回429，是文档访问失败，不能当作 API 实际配额。验收专业账号、两页媒体、两页评论/回复与撤权；普通账号/非自有媒体应明确不支持或权限缺失。\n\n"
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "source_kind": "social",
+      "route": "Pages API vs research-only Meta Content Library",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Page role and feature entitlements required; research project approval separate"
+      },
+      "post": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current Pages contract unreadable; not arbitrary personal posts"
+      },
+      "comment": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current comment/reply field contract"
+      },
+      "media": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current media/download terms"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Page/post identity distinct from people and entity candidates"
+      },
+      "native_metrics": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current native field and insights contract"
+      },
+      "history": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: Pages history; research corpus not commercial entitlement"
+      },
+      "pagination": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current Graph cursor/time parameters"
+      },
+      "rate": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: documentation 429 is not runtime quota"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Pages role/feature; Content Library eligible academic/nonprofit public-interest research"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Content Library is not general commercial input; Pages actual terms remain open"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: Pages exports; research environment restrictions apply"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: specific product retention/delete rule"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: territory/corpus eligibility"
+      },
+      "source_refs": [
+        "S027",
+        "S028",
+        "S029",
+        "S030",
+        "S031"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "Facebook（facebook）\n\n- **路线分开**：Pages API 是需核当前 Graph 版本和账号角色的候选；Page 管理权限、非自有 Page 内容访问功能、普通个人内容是不同授权范围。不能从“我能看见公开 Page”推成应用有 API 权限。[Pages 官方入口](https://developers.facebook.com/docs/pages-api/posts/)、[官方 Page access 说明](https://www.facebook.com/help/289207354498410/r.php/)\n- **官方研究路线**：Meta Content Library/API 面向合格学术/非营利公共利益研究；数据范围、申请和运行环境有专门要求。它不是普通商业产品的无条件广泛读取入口，也不是现存 CrowdTangle 凭证替代品。[Meta 官方研究工具介绍](https://about.fb.com/news/2023/11/new-tools-to-support-independent-research/)、[Content Library 官方入口](https://transparency.meta.com/researchtools/meta-content-library)\n- **分页/评论/限流**：本次 Pages/Graph 关键正文获取被429阻挡，未验证当前 posts/comments/replies 字段、cursor、since/until、分页上限、PPCA 等 feature 的具体适用规则；保持待核，不能用旧版本文章填空。实际接口应解析 Graph error code/subcode，不将权限错误当空页。\n- **导出/验收**：需 app ID/Graph version、授权 Page、角色、获批权限/feature 和平台条款，再核多页 posts、评论和回复及撤权/下架。Meta 官方也明确区分授权与未授权自动抓取；个人下载自身信息能力不授予第三方内容批量导出权。[官方 scraping 说明](https://www.facebook.com/help/463983701520800)\n\n"
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "source_kind": "social",
+      "route": "v2 recent/full archive public post APIs",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Public user data; protected users limited"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Recent search 7 days; archive from 2006 with appropriate paid entitlement"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Replies are Posts; conversation_id and referenced_tweets reconstruct edges"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "media expansion is metadata; variants do not automatically authorize reuse"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Post/user IDs; edit_history_tweet_ids; location is user-entered free text"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "public_metrics: repost/reply/like/quote/impression/bookmark counts; non-public/organic/promoted require user context"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "7-day recent versus paid archive; no guarantee all deleted/withheld/protected content"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "next_token; max100 recent/max500 archive; query-bound checkpoints"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Endpoint/app/user limits; headers and reset; actual plan not checked"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Developer app and paid entitlement/credits as applicable"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Developer policy and signed agreement, not browser cookie presence"
+      },
+      "export": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Generally redistribute IDs; exceptions do not prove bulk text CSV entitlement"
+      },
+      "retention": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Refresh/delete unavailable content according to policy; exact contract controls"
+      },
+      "market_rule": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Withheld/geo/language are separate signals; profile location cannot determine market"
+      },
+      "source_refs": [
+        "S032",
+        "S033",
+        "S034",
+        "S035",
+        "S036"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "X（x）\n\n- **窗口/授权**：v2 recent search `/2/tweets/search/recent` 是近7天，单页最多100；full-archive `/2/tweets/search/all` 从2006年历史开始，需相应 pay-per-use/Enterprise 访问，单页最多500。是否获批、付费余额和应用权限本次未验证。[搜索介绍](https://docs.x.com/x-api/posts/search/introduction)\n- **分页/评论**：传递返回 next_token，固定 query/start_time/end_time、排序和字段；不得把下一页 token 换到不同查询。回复本质是 Post，需按会话与 replied_to 关系构建，而非认为一个详情对象包含所有评论；旧回复可能落在当前搜索窗外，删除/保护账号影响可见性。[分页规范](https://docs.x.com/x-api/posts/search/integrate/paginate)、[数据字典](https://docs.x.com/x-api/fundamentals/data-dictionary)\n- **429**：按 endpoint、app/user 计限；429 后遵守 x-rate-limit-reset，记录 x-rate-limit-limit/remaining。当前文档 recent 的应用级示例为450次/15分钟，full-archive 还受每秒限制；实际套餐和控制台仍需核验，不能只按一个全局 QPS。[官方限流](https://docs.x.com/x-api/fundamentals/rate-limits)\n- **导出**：通用政策对第三方再分发主要限 IDs；有有限非自动对象下载例外，不可据此默认提供全量正文 CSV/API。展示需更新，内容不可用/收到删除请求需按政策处理。[开发者政策](https://docs.x.com/developer-terms/policy)\n- **验收**：同一查询跨页、7天边界、全档案 entitlement、conversation 子树、重复 ID、429 后断点、删除同步与导出受限字段。仅配置 cookie/browser engine 不能证明官方 API 可用。\n\n"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "source_kind": "social",
+      "route": "Owned/authorized publish records and comment management candidate",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Own or third-party-authorized OA"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Official batch publish docs inaccessible; candidate is not all-account search"
+      },
+      "comment": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current selected comments/author replies semantics"
+      },
+      "media": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: article asset rights"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Article composite ID/index must be confirmed; public author label not ownership"
+      },
+      "native_metrics": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: official native count schema"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Publish records and broadcast history may differ; cannot infer no historical content from empty publish list"
+      },
+      "pagination": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: offset/count candidate parameters not independently confirmed"
+      },
+      "rate": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current quota/IP restrictions"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Official account credentials or proper third-party authorization"
+      },
+      "commercial_license": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: commercial source use"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: article/comment export rights"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: retention/delete rule"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: CN/HK and other markets; public links do not establish account-wide coverage"
+      },
+      "source_refs": [
+        "S037",
+        "S038",
+        "S039"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "微信公众号（wechat）\n\n- **候选路线**：自有或正式授权公众号的已发布消息/留言管理，和任意公众号全网搜索是两种范围。官方旧发布记录、留言管理文档及新 subscription/service 发布记录链接本次均未取得可读正文，故不将第三方 SDK 的参数宣称为已核官方当前合同。[旧发布记录入口](https://developers.weixin.qq.com/doc/offiaccount/Publish/Get_publication_records.html)、[新发布记录入口](https://developers.weixin.qq.com/doc/subscription/api/public/api_freepublish_batchget.html)、[留言管理入口](https://developers.weixin.qq.com/doc/offiaccount/Comments_management/Image_Comments_Management_Interface.html)\n- **必须核验**：账号类型/认证、app 凭证或第三方授权 token、发布记录与群发记录的集合差异、文章复合 ID/index、正文与摘要差异、留言是否仅精选/可见、作者回复与用户楼中楼区别。\n- **分页/时间/限流**：候选 `freepublish/batchget` 的 offset/count/no_content 与 `comment/list` 的 begin/count/type，应以当前官方正文确认；本报告不填未经一手核定的页大小、历史天数或频控。空发表列表不能证明账号无历史文章，可能是记录集合/权限不同。\n- **导出/验收**：先取得当前正式文档与权限页，核一个自有账号文章跨页、同一图文多篇、含留言文章、token 失效、IP/权限约束和正文保存/外发条款。只有公开原文许可时，标明链接级覆盖，不冒充全号历史采集。\n\n"
+    },
+    {
+      "platform_id": "youtube",
+      "platform": "YouTube",
+      "source_kind": "social",
+      "route": "Data API public metadata; private/management OAuth separately",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Public channels; OAuth for protected/owned capabilities"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Video search/list and uploads playlist alternatives"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "commentThreads roots; comments(parentId) for all visible replies; embedded replies partial"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Thumbnails/embed/duration/regionRestriction are metadata; captions/media download distinct permissions"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "video id/channelId; channel reassignment possible; publication time may differ from upload time"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "viewCount/likeCount/commentCount distinct; unavailable metrics null; counts are observations, not historical snapshots"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Search date filter; some channel video searches capped500; uploads playlist not guarantee deleted/private access"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Search max50; comment APIs max100; nextPageToken authoritative"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Default100 search calls/day +10,000 units other endpoints; actual project override/migration unverified"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "API project/key public reads; OAuth as required; additional analytics acceptance separate"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Derived analytics only under accepted amendment; no protected-attribute inference"
+      },
+      "export": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Only policy-permitted exports; fetched metadata does not grant video reuse"
+      },
+      "retention": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "30-day refresh/delete for titles/descriptions/comments; accepted stats/derived up to36 months"
+      },
+      "market_rule": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "regionRestriction and localization describe object availability/language, not verified creator/audience domicile"
+      },
+      "source_refs": [
+        "S041",
+        "S042",
+        "S043",
+        "S044",
+        "S045",
+        "S046",
+        "S047",
+        "S048",
+        "S075"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "YouTube（youtube）\n\n- **官方读取**：Data API 可用 API key 获取允许公开读取的数据；账户管理、非公开数据或审核状态需恰当 OAuth。搜索支持 publishedAfter/publishedBefore（含边界，RFC3339）、pageToken、maxResults≤50；短页也可能有 nextPageToken。特定 channelId+type=video 且无 owner/developer/mine filter 时有500视频限制；日期排序/过滤仍可能索引不全。频道最新上传宜走 uploads playlist，不以搜索代替全历史。[search.list 当前正文](https://developers.google.com/youtube/data/reference/rest/v3/search/list)\n- **评论树**：commentThreads.list 顶层线程、comments.list(parentId) 补全部可见回复，各自 maxResults≤100/pageToken；嵌入 replies 可能只是子集。顶层列表没有可泛用的视频 publishedAfter 式评论时间过滤；需按评论时间处理，不以视频发布时间代替。commentsDisabled/forbidden/404 是不同停止状态。[线程列表](https://developers.google.com/youtube/data/reference/rest/v3/commentThreads/list)、[回复列表](https://developers.google.com/youtube/data/reference/rest/v3/comments/list)、[线程资源的子集警告](https://developers.google.com/youtube/data/reference/rest/v3/commentThreads)\n- **额度新旧口径**：官方修订历史 **2026-06-01** 开始 granular quota 转换，search.list/videos.insert 分独立桶；当前文档最近更新 **2026-10-15**。当前默认：每日100次 search.list、100次 videos.insert、其余端点合计10,000 units；search.list 每次消耗 Search Queries 桶1 unit。不要继续硬编码旧“search.list 每次100 units”，也不能把10月15日当上线日。**实际 project console、获批调整和迁移状态优先**；本次未查项目控制台。[修订历史](https://developers.google.com/youtube/data/revision_history)、[Quota/Audit 正文](https://developers.google.com/youtube/data/guides/quota_and_compliance_audits)\n- **存储/衍生用途**：通用政策有30天刷新/删除、用户删除请求等规则及衍生数据限制。自2026-06-01起，经过审计并申请接受 Analytics & Reporting 附录的项目，可在规定条件下做评论 NLP 情绪、频道评分/标签等；已获准的统计与衍生指标可保存至36个月，评论正文/标题/描述仍30天刷新或删除。未获批不能自动用例外；不可推断用户敏感受保护属性。[通用政策](https://developers.google.com/youtube/terms/developer-policies)、[衍生指标与存储附录，2026-09-14更新](https://developers.google.com/youtube/terms/derived-metrics-policy)\n- **验收**：项目额度桶与API enablement、两页搜索及日期边界、一个 replies 多页线程、禁评/私密/删除视频、quota耗尽分类、30天刷新与删除、分析用例获批证据。对外呈现只能是“指定查询和时段内可见样本”，不能叫全平台完整语料。\n\n"
+    },
+    {
+      "platform_id": "tiktok",
+      "platform": "TikTok",
+      "source_kind": "social",
+      "route": "Display vs Research vs Portability, never interchangeable",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Display authorized user; Research eligible noncommercial project; Portability authorized user"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Display public user works; Research query max30-day slices; Portability own export"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Research root/reply endpoint; not established as commercial Display comment API"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "cover_image_url TTL6h; share/embed links; no raw video reuse grant"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Video id/create_time seconds; list cursor milliseconds; keep identity namespace"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Display like/comment/share/view counts; snapshot retrieval time required"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Display earlier cursor; Research indexing delays; 30-day query span is not corpus retention"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Display max20; Research max100 cursor/search_id/has_more; separate comment parent requests"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Research typical1000 requests/day and100k records/day; not commercial quota"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Each product separately reviewed; Research excludes commercial users"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Commercial broad listening unresolved; Research cannot be repurposed"
+      },
+      "export": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Portability only authorized user data; no third-party universe"
+      },
+      "retention": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Product-specific retention/revocation unknown; cover URL expiry is not content retention"
+      },
+      "market_rule": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Portability user-data geography EEA/UK; applicant eligibility separate; Douyin not included"
+      },
+      "source_refs": [
+        "S049",
+        "S050",
+        "S051",
+        "S052",
+        "S053",
+        "S054",
+        "S074"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "TikTok（tiktok）\n\n- **三种路线独立**：Display API `video.list` 读取授权用户公开作品（默认10、最大20；按 create_time 倒序，cursor 为毫秒时间戳，可指定更早位置）；不能替代任意用户搜索或评论读取。[Display video.list](https://developers.tiktok.com/docs/en/tiktok-api-v2-video-list)\n- **Research API**：须合格研究机构/项目审核，开发者账号本身不够；官方FAQ明确商业用户、广告主/创作者不适用。video query 单次 start_date/end_date 的跨度≤30天，最大100，使用 cursor+search_id+has_more；30天是单查询窗口，不等于全部历史只保留30天。评论接口 video_id 与 comment_id 二选一，根评论与回复分开请求，最大100。短页可能来自删除/私密内容。[Research FAQ](https://developers.tiktok.com/docs/en/research-api-faq)、[视频查询](https://developers.tiktok.com/docs/en/research-api-specs-query-videos)、[评论查询](https://developers.tiktok.com/docs/en/research-api-specs-query-video-comments)\n- **研究专属额度/时效**：通常1000请求/日、至多100,000记录/日，UTC零点重置；token约2小时；新视频入索引可延迟48小时，统计最多延迟10天。这些条件仅说明研究API，不能作为LUMENIS已可用的商业计划。\n- **Portability**：数据可携带产品可由符合条件的全球申请者申请，但导出的用户数据地区目前限定EEA/UK；还需Login Kit与Portability双重批准，授权范围、single/ongoing独立。它是用户自身导出，不是第三方内容宇宙。[产品说明](https://developers.tiktok.com/products/data-portability-api/)、[申请说明](https://developers.tiktok.com/docs/en/data-portability-api-application-guidelines?enter_method=left_navigation)\n- **导出/验收**：商业广泛读取需另核正式 Business/合作产品及用途；不得拿Research凭证做商业采集。自有账号先验 display 跨页；若用户导出，验地区/范围/撤回/删除；评论树只在真实获准的相应产品内验。\n\n"
+    },
+    {
+      "platform_id": "reddit",
+      "platform": "Reddit",
+      "source_kind": "social",
+      "route": "Approved OAuth Data API with commercial agreement",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Approved scope; public accounts/community restrictions"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Search/listing index not full-history guarantee"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Tree plus morechildren; deleted/removed/private states distinct"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Media metadata/links require separate content rights"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "fullname IDs, parent/link IDs; deleted accounts require author removal"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "score/num_comments not an exact complete-comment or user census; exact fields need endpoint validation"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No arbitrary-date exhaustive guarantee"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "after/before +count/limit max100; morechildren max100 IDs one concurrent request"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Eligible free use100QPM averaged10min; commercial agreement may differ"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Approved OAuth client + unique User-Agent; commercial contract"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Commercial use requires agreement; training rights separate"
+      },
+      "export": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Raw redistribution/use only within approved contract"
+      },
+      "retention": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Delete removed content and deleted-account identity;48h routine purge is guidance, not universal TTL"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: regional coverage and corpus gaps"
+      },
+      "source_refs": [
+        "S055",
+        "S056",
+        "S057"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "Reddit（reddit）\n\n- **许可优先**：Data API 商业使用需与 Reddit 另行协议；OAuth或低请求量不免除这一条件。保留/使用不能超获批用途；AI模型训练还需相应权利人许可，不能把普通分析与训练混为一谈。[Data API Terms，2026-07-20版本](https://redditinc.com/policies/data-api-terms)\n- **认证/限流**：注册OAuth客户端和真实独特User-Agent；符合免费使用条件的客户端通常100 QPM，以10分钟窗口平均，读 X-Ratelimit-Used/Remaining/Reset。无身份或错误身份可能阻断，实际商业合同另定。[官方 Data API Wiki，2026-05-11更新](https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki)\n- **分页/层级**：listing 用 after/before fullname、count、limit（最大100）；帖子评论是树，包含 more 占位。`/api/morechildren` 一次最多100 child IDs，官方要求该接口同一时刻只发一个请求；不展开就不完整。search时间档位和索引不保证任意历史日期段穷尽。旧API参考自身不等于2026许可。[官方 API Reference](https://www.reddit.com/dev/api/)\n- **删除/导出**：已删除内容应移除，账户删除需去除相关作者标识。Wiki提到48小时例行清理是建议，不能误写成所有数据统一强制48小时TTL；实际要满足删除同步与批准用途。对外正文导出、再分发、持久分析需商业协议明确。\n- **验收**：先看商业协议与审批范围，再验两页listing、跨层 morechildren、removed/deleted、private/quarantined限制、429/reset；记录未展开 child IDs 和不可见原因，不用 post.num_comments 当采全判据。\n\n"
+    },
+    {
+      "platform_id": "linkedin",
+      "platform": "LinkedIn",
+      "source_kind": "social",
+      "route": "Approved Community Management API",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Organization roles; member access specifically restricted"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Author finder not global keyword/member search"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "socialActions comments and commentURN replies; specific scopes"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Media references not general download/reuse permission"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Organization/person/post/comment URNs preserve namespace and role context"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Native social stats require endpoint/version/role; member demographic inference not licensed"
+      },
+      "history": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: current version historical window"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "start/count/paging links; endpoint-specific limits"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "App/member daily quotas; UTC reset; numerical limit from actual app"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Product approval + tier + YYYYMM version + endpoint scope"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Additional terms must govern storage/mixing; general API terms restrictive"
+      },
+      "export": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Do not assume client raw warehouse/export entitlement"
+      },
+      "retention": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Default storage/mixing restrictions; isolate deletions and specific exceptions"
+      },
+      "market_rule": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: regional eligibility and member corpus"
+      },
+      "source_refs": [
+        "S058",
+        "S059",
+        "S060",
+        "S061",
+        "S062"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": "LinkedIn（linkedin）\n\n- **准入/角色**：Community Management 需产品审批，开发测试层与生产 Standard 层分开；请求固定 LinkedIn-Version（YYYYMM）和Rest.li协议版本。Posts API 的 r_organization_social/r_member_social 与新版 Comments 的 r_organization_social_feed/r_member_social_feed 不应合并成一个“读社媒”scope；成员读取受额外限制，组织读取还核授权人的组织角色。[准入](https://learn.microsoft.com/en-us/linkedin/marketing/increasing-access?view=li-lms-2026-09)、[Posts API](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api?view=li-lms-2026-09)、[Comments API](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/comments-api?view=li-lms-2026-09)\n- **范围/分页/树**：author finder 针对获授权作者/组织，不是全网关键词搜索；按相应 endpoint 的 start/count/返回paging链接读完，不由短页判尾页。评论通过 socialActions/{share/ugcPost/comment URN}/comments，commentURN可进一步定位回复；保留父URN和复合ID。时间窗口、层级最大深度与页大小仍需锁定API版本后核。\n- **429**：应用与成员级每日限额，UTC午夜重置，具体数值不公开统一表，应查应用Analytics；429也可能基础设施保护，不能只按固定QPS重试。[Rate Limits](https://learn.microsoft.com/en-us/linkedin/shared/api-guide/concepts/rate-limits)\n- **存储/导出高风险**：通用API条款默认不允许任意持久存储（含转换/哈希表达），特定条款例外另论；允许的存储须可隔离删除，不得成为无关第三方可访问数据仓；跨源混合与来源不可辨聚合亦受限。不能把获得API数据等价成可建跨平台原始正文仓或导出客户名单。[API Terms](https://www.linkedin.com/legal/l/api-terms-of-use)\n- **验收**：先审实际Additional Terms与存储/分析用途，再验组织角色、scope、author多页、评论回复、版本失效、429与撤权；本次未确认任何LUMENIS应用权限。普通任意成员抓取路线不视为本产品官方许可。\n"
+    },
+    {
+      "platform_id": "google",
+      "platform": "Google Search",
+      "source_kind": "auxiliary_or_web",
+      "route": "Custom Search JSON API legacy clients only",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Existing eligible project; key and search engine"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Search snippets/URLs; not source full text"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Not a comment API"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Thumbnails/snippets do not grant source media rights"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "URL/title not stable person identity"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Rank/search count not source native engagement"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "New customers closed; migration before2027-01-01; query max100 results"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "num<=10; start+num<=100"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Existing default100 queries/day; actual plan unknown"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Existing customer eligibility/key/cx"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Search discoverability does not grant target content license"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: SERP export/reuse terms"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: cache/retention requirements"
+      },
+      "market_rule": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Search locality/date filters do not certify author/audience market"
+      },
+      "source_refs": [
+        "S063",
+        "S064"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": ""
+    },
+    {
+      "platform_id": "github",
+      "platform": "GitHub",
+      "source_kind": "auxiliary_or_web",
+      "route": "REST public resources / authorized connector",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Public account/org; private requires scoped authorization"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Repositories/issues/PRs/releases"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Issue comments, PR review comments and reviews are different objects"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Repo asset links and licenses independently reviewed"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Repository/node IDs; login mutable; identity not same-name across sources"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Stars/forks/issues are development metrics, not social reach"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Search maximum1000 results; incomplete_results may be true"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "page/per_page and Link; query-specific caps"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Typically unauth60/hour/IP; auth5000/hour; search separate"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Public read or least-privileged authorized connector"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Repository license and user content rights separately reviewed"
+      },
+      "export": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Only licensed content/fields; public code does not imply all content reusable"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: service terms and retention/deletion for use case"
+      },
+      "market_rule": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Global access candidate; individual repo/content jurisdiction and language unknown"
+      },
+      "source_refs": [
+        "S065",
+        "S066"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": ""
+    },
+    {
+      "platform_id": "public_http",
+      "platform": "Public HTTP",
+      "source_kind": "auxiliary_or_web",
+      "route": "Publisher-permitted public discovery/read",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No social account required for genuinely public permitted resources"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Exact public resource according to site permission"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No generic comment content guarantee"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Links/enclosures are not asset-use rights"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Canonical URL plus capture digest; not person ID"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No generic social engagement metric"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Only observed resource/version; no history guarantee"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Site-defined links; not inferred API cursor"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "HTTP429/Retry-After and site policy"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Check resource/site permissions; robots is not authorization"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Publisher/rights-holder use terms apply; no blanket public-web commercial license"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: per-publisher export rights"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: publisher retention/delete conditions"
+      },
+      "market_rule": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No universal market restriction/coverage claim; publisher, language, event location distinct"
+      },
+      "source_refs": [
+        "S067"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": ""
+    },
+    {
+      "platform_id": "web_rss",
+      "platform": "RSS",
+      "source_kind": "auxiliary_or_web",
+      "route": "Publisher-permitted public discovery/read",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No social account required for genuinely public permitted resources"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Publisher entries; summary or full text varies"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No generic comment content guarantee"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Links/enclosures are not asset-use rights"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "guid may be absent/not URL; link plus publisher namespace"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No generic social engagement metric"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Feed can be recent truncated window"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No universal history/paging standard"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "ttl is refresh hint, not request entitlement"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Check resource/site permissions; robots is not authorization"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Publisher/rights-holder use terms apply; no blanket public-web commercial license"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: per-publisher export rights"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: publisher retention/delete conditions"
+      },
+      "market_rule": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No universal market restriction/coverage claim; publisher, language, event location distinct"
+      },
+      "source_refs": [
+        "S068"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": ""
+    },
+    {
+      "platform_id": "web_atom",
+      "platform": "Atom",
+      "source_kind": "auxiliary_or_web",
+      "route": "Publisher-permitted public discovery/read",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No social account required for genuinely public permitted resources"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Publisher entries/content/summary"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No generic comment content guarantee"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Links/enclosures are not asset-use rights"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "entry id; updated is not first publication"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No generic social engagement metric"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Optional RFC5005 archives, not universal"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Follow actual next/archive links; prevent loops"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Publisher HTTP limits, not global numeric quota"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Check resource/site permissions; robots is not authorization"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Publisher/rights-holder use terms apply; no blanket public-web commercial license"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: per-publisher export rights"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: publisher retention/delete conditions"
+      },
+      "market_rule": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No universal market restriction/coverage claim; publisher, language, event location distinct"
+      },
+      "source_refs": [
+        "S069"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": ""
+    },
+    {
+      "platform_id": "sitemap",
+      "platform": "Sitemap",
+      "source_kind": "auxiliary_or_web",
+      "route": "Publisher-permitted public discovery/read",
+      "record_scope": "EXISTING_22",
+      "account": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No social account required for genuinely public permitted resources"
+      },
+      "post": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "URL discovery only; no body/comment data"
+      },
+      "comment": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No generic comment content guarantee"
+      },
+      "media": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Links/enclosures are not asset-use rights"
+      },
+      "identity": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "loc URL; lastmod not reliable original publish time"
+      },
+      "native_metrics": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No generic social engagement metric"
+      },
+      "history": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Not complete historical URL census"
+      },
+      "pagination": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Index files; max50000URL/50MB uncompressed per sitemap"
+      },
+      "rate": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Site HTTP limits; file limits are not daily quotas"
+      },
+      "access": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Check resource/site permissions; robots is not authorization"
+      },
+      "commercial_license": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "Publisher/rights-holder use terms apply; no blanket public-web commercial license"
+      },
+      "export": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: per-publisher export rights"
+      },
+      "retention": {
+        "status": "UNKNOWN",
+        "detail": "UNKNOWN: publisher retention/delete conditions"
+      },
+      "market_rule": {
+        "status": "DOCUMENTED_CONDITIONAL",
+        "detail": "No universal market restriction/coverage claim; publisher, language, event location distinct"
+      },
+      "source_refs": [
+        "S071"
+      ],
+      "actual_entitlement": "NOT_VERIFIED",
+      "live_collection": "NOT_TESTED_IN_THIS_RESEARCH",
+      "public_visibility": "Must be evaluated for exact resource, viewer/session and time; not an API or commercial-use grant",
+      "no_account_baseflow": "Use already authorized user materials or permitted public exact URLs/feed resources; preserve unknown fields; never require social account for independent editing/research",
+      "source_evidence_text": ""
+    }
+  ]
+}

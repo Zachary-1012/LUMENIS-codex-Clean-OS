@@ -20,22 +20,69 @@ def scoped_notes_db(tmp_path, monkeypatch):
     path = tmp_path / "kos-attribution-isolated.sqlite"
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
-    conn.execute("""CREATE TABLE notes (
+    conn.execute(
+        """CREATE TABLE notes (
         note_id TEXT PRIMARY KEY, author_id TEXT, author_nickname TEXT,
         likes INTEGER, comments INTEGER, collects INTEGER, shares INTEGER,
         publish_datetime TEXT, source_platform TEXT, product_id TEXT,
         domain_id TEXT, scope_status TEXT, brand_focus_id TEXT, subject_id TEXT,
         scope_evidence_ref TEXT
-    )""")
+    )"""
+    )
     conn.executemany(
         "INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         [
-            ("n1", "kos_a", "KOS A", 100, 20, 30, 5, "2026-08-01", "xiaohongshu",
-             "ZBMP", "zbmp", "VERIFIED", "BRAND-1", None, "ev-1"),
-            ("n2", "kos_b", "KOS B", 20, 4, 8, 1, "2026-08-02", "xiaohongshu",
-             "ZBMP", "zbmp", "VERIFIED", "BRAND-1", None, "ev-2"),
-            ("n3", "kos_other", "Other", 900, 90, 90, 90, "2026-08-03", "xiaohongshu",
-             "ZBMP", "zbmp", "VERIFIED", "BRAND-2", None, "ev-3"),
+            (
+                "n1",
+                "kos_a",
+                "KOS A",
+                100,
+                20,
+                30,
+                5,
+                "2026-08-01",
+                "xiaohongshu",
+                "ZBMP",
+                "zbmp",
+                "VERIFIED",
+                "BRAND-1",
+                None,
+                "ev-1",
+            ),
+            (
+                "n2",
+                "kos_b",
+                "KOS B",
+                20,
+                4,
+                8,
+                1,
+                "2026-08-02",
+                "xiaohongshu",
+                "ZBMP",
+                "zbmp",
+                "VERIFIED",
+                "BRAND-1",
+                None,
+                "ev-2",
+            ),
+            (
+                "n3",
+                "kos_other",
+                "Other",
+                900,
+                90,
+                90,
+                90,
+                "2026-08-03",
+                "xiaohongshu",
+                "ZBMP",
+                "zbmp",
+                "VERIFIED",
+                "BRAND-2",
+                None,
+                "ev-3",
+            ),
         ],
     )
     conn.commit()
@@ -47,17 +94,28 @@ def scoped_notes_db(tmp_path, monkeypatch):
         return result
 
     monkeypatch.setattr(ka, "_conn", connect)
-    monkeypatch.setattr(ka, "load_attribution_config", lambda: {
-        "attribution_weights": {"time_weight_coeff": 0.5, "time_weight_range": 1.0},
-        "platform_weights": {"xiaohongshu": {
-            "likes": 1.0, "comments": 1.0, "collects": 1.0, "shares": 1.0,
-        }},
-        "config_status": "isolated-test-config",
-    })
+    monkeypatch.setattr(
+        ka,
+        "load_attribution_config",
+        lambda: {
+            "attribution_weights": {"time_weight_coeff": 0.5, "time_weight_range": 1.0},
+            "platform_weights": {
+                "xiaohongshu": {
+                    "likes": 1.0,
+                    "comments": 1.0,
+                    "collects": 1.0,
+                    "shares": 1.0,
+                }
+            },
+            "config_status": "isolated-test-config",
+        },
+    )
 
     import reprocess
 
-    def canonical_ids(scope, *, source_ids=None, limit=5000, connection=None, **_kwargs):
+    def canonical_ids(
+        scope, *, source_ids=None, limit=5000, connection=None, **_kwargs
+    ):
         assert scope["brand_focus_id"] == "BRAND-1"
         if source_ids is None:
             return ["n1", "n2"][:limit]
@@ -67,11 +125,9 @@ def scoped_notes_db(tmp_path, monkeypatch):
     return path
 
 
-def test_author_attribution_waits_for_scoped_event_evidence():
-    result = ka.calculate_attribution("kos_a", "Test Brand", scope=SCOPE)
-    assert result["ok"] is False
-    assert result["status"] == "blocked"
-    assert result["code"] == "EVENT_SCOPE_EVIDENCE_REQUIRED"
+def test_author_attribution_requires_current_server_actor():
+    with pytest.raises(ValueError, match="WORK_PERMISSION_DENIED"):
+        ka.calculate_attribution("kos_a", "Test Brand", scope=SCOPE)
 
 
 def test_attribution_requires_explicit_brand_scope():
@@ -81,16 +137,22 @@ def test_attribution_requires_explicit_brand_scope():
 
 
 def test_multi_touch_uses_only_canonical_notes_in_selected_brand(scoped_notes_db):
-    result = ka.calculate_multi_touch_attribution(["n1", "n2"], "Test Brand", scope=SCOPE)
+    result = ka.calculate_multi_touch_attribution(
+        ["n1", "n2"], "Test Brand", scope=SCOPE
+    )
     assert result["ok"] is True
     assert result["brand_focus_id"] == "BRAND-1"
     assert result["total_notes"] == 2
     assert result["total_kos"] == 2
-    assert sum(row["attribution_pct"] for row in result["attribution"]) == pytest.approx(100.0)
+    assert sum(
+        row["attribution_pct"] for row in result["attribution"]
+    ) == pytest.approx(100.0)
 
 
 def test_multi_touch_rejects_note_outside_selected_brand(scoped_notes_db):
-    result = ka.calculate_multi_touch_attribution(["n1", "n3"], "Test Brand", scope=SCOPE)
+    result = ka.calculate_multi_touch_attribution(
+        ["n1", "n3"], "Test Brand", scope=SCOPE
+    )
     assert result["ok"] is False
     assert result["status"] == "denied"
     assert result["code"] == "CANONICAL_NOTE_SCOPE_CHANGED"
@@ -99,9 +161,13 @@ def test_multi_touch_rejects_note_outside_selected_brand(scoped_notes_db):
 @pytest.mark.parametrize("author_id", [None, "", "   "])
 def test_multi_touch_does_not_group_unknown_author(scoped_notes_db, author_id):
     with sqlite3.connect(scoped_notes_db) as connection:
-        connection.execute("UPDATE notes SET author_id=? WHERE note_id='n1'", (author_id,))
+        connection.execute(
+            "UPDATE notes SET author_id=? WHERE note_id='n1'", (author_id,)
+        )
 
-    result = ka.calculate_multi_touch_attribution(["n1", "n2"], "Test Brand", scope=SCOPE)
+    result = ka.calculate_multi_touch_attribution(
+        ["n1", "n2"], "Test Brand", scope=SCOPE
+    )
     assert result["ok"] is False
     assert result["status"] == "incomplete"
     assert result["code"] == "AUTHOR_ID_UNAVAILABLE"
@@ -110,11 +176,15 @@ def test_multi_touch_does_not_group_unknown_author(scoped_notes_db, author_id):
     assert result["attribution"] == []
 
 
-def test_multi_touch_zero_engagement_has_no_completed_zero_percent_attribution(scoped_notes_db):
+def test_multi_touch_zero_engagement_has_no_completed_zero_percent_attribution(
+    scoped_notes_db,
+):
     with sqlite3.connect(scoped_notes_db) as connection:
         connection.execute("UPDATE notes SET likes=0, comments=0, collects=0, shares=0")
 
-    result = ka.calculate_multi_touch_attribution(["n1", "n2"], "Test Brand", scope=SCOPE)
+    result = ka.calculate_multi_touch_attribution(
+        ["n1", "n2"], "Test Brand", scope=SCOPE
+    )
     assert result["ok"] is False
     assert result["status"] == "unavailable"
     assert result["code"] == "ZERO_ENGAGEMENT_DENOMINATOR"
@@ -128,10 +198,34 @@ def test_multi_touch_missing_engagement_is_incomplete_not_zero(scoped_notes_db):
     with sqlite3.connect(scoped_notes_db) as connection:
         connection.execute("UPDATE notes SET comments=NULL WHERE note_id='n1'")
 
-    result = ka.calculate_multi_touch_attribution(["n1", "n2"], "Test Brand", scope=SCOPE)
+    result = ka.calculate_multi_touch_attribution(
+        ["n1", "n2"], "Test Brand", scope=SCOPE
+    )
     assert result["ok"] is False
     assert result["status"] == "incomplete"
     assert result["code"] == "ENGAGEMENT_DATA_INCOMPLETE"
     assert result["engagement_complete_note_count"] == 1
     assert result["engagement_incomplete_note_count"] == 1
     assert result["attribution"] == []
+
+
+def test_multi_touch_same_account_token_on_different_platforms_is_not_one_identity(
+    scoped_notes_db,
+):
+    with sqlite3.connect(scoped_notes_db) as con:
+        con.execute(
+            "UPDATE notes SET author_id='same-token',source_platform='x' WHERE note_id='n1'"
+        )
+        con.execute(
+            "UPDATE notes SET author_id='same-token',source_platform='xiaohongshu' WHERE note_id='n2'"
+        )
+    result = ka.calculate_multi_touch_attribution(
+        ["n1", "n2"], "Test Brand", scope=SCOPE
+    )
+    assert result["total_kos"] == 2
+    assert {row["source_platform"] for row in result["attribution"]} == {
+        "x",
+        "xiaohongshu",
+    }
+    assert result["verified_conversion"] == "NOT_ESTABLISHED"
+    assert result["method"] == "ordered-position-weighted-source-share:v1"

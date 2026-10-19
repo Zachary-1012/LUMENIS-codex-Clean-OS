@@ -1,0 +1,108 @@
+# app/android/app/src/main/kotlin/com/lumenis/lumenis_app/MainActivity.kt:20-48
+20:     private var failed = false
+21:     private var destroyed = false
+22:     private val pendingUtterances = mutableSetOf<String>()
+23:     private data class PendingTtsCall(val call: MethodCall, val result: MethodChannel.Result)
+24:     private val pendingCalls = mutableListOf<PendingTtsCall>()
+25: 
+26:     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+27:         super.configureFlutterEngine(flutterEngine)
+28:         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
+29:             .setMethodCallHandler { call, result ->
+30:                 when (call.method) {
+31:                     "availableLocales", "speak" -> withEngine(call, result)
+32:                     "stop" -> {
+33:                         pendingUtterances.clear()
+34:                         if (ttsReady) textToSpeech?.stop()
+35:                         failed = false
+36:                         playbackState = "STOPPED"
+37:                         val canceledSpeaks = pendingCalls.filter { it.call.method == "speak" }
+38:                         pendingCalls.removeAll(canceledSpeaks.toSet())
+39:                         canceledSpeaks.forEach { it.result.success(mapOf("status" to "STOPPED")) }
+40:                         result.success(null)
+41:                     }
+42:                     "observe" -> result.success(mapOf("status" to observedState()))
+43:                     else -> result.notImplemented()
+44:                 }
+45:             }
+46:     }
+47: 
+48:     private fun withEngine(call: MethodCall, result: MethodChannel.Result) {
+
+# app/android/app/src/main/kotlin/com/lumenis/lumenis_app/MainActivity.kt:110-185
+110:         if (call.method == "availableLocales") {
+111:             result.success(mapOf("supported" to true, "localLocales" to localLocales(engine).toList()))
+112:         } else {
+113:             speak(call.arguments as? Map<*, *>, engine, result)
+114:         }
+115:     }
+116: 
+117:     private fun localLocales(engine: TextToSpeech): Set<String> =
+118:         engine.voices.orEmpty()
+119:             .asSequence()
+120:             .filter(::isLocalVoice)
+121:             .mapNotNull { canonicalTag(it.locale) }
+122:             .toSet()
+123: 
+124:     private fun isLocalVoice(voice: Voice): Boolean =
+125:         !voice.isNetworkConnectionRequired &&
+126:             !voice.features.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)
+127: 
+128:     private fun findLocalVoice(engine: TextToSpeech, tag: String): Voice? =
+129:         engine.voices.orEmpty().firstOrNull {
+130:             isLocalVoice(it) && canonicalTag(it.locale) == tag
+131:         }
+132: 
+133:     private fun canonicalTag(locale: Locale): String? = when {
+134:         locale.language.equals("zh", ignoreCase = true) && locale.country.equals("CN", ignoreCase = true) -> "zh-CN"
+135:         locale.language.equals("en", ignoreCase = true) && locale.country.equals("US", ignoreCase = true) -> "en-US"
+136:         locale.language.equals("ko", ignoreCase = true) && locale.country.equals("KR", ignoreCase = true) -> "ko-KR"
+137:         else -> null
+138:     }
+139: 
+140:     private fun speak(arguments: Map<*, *>?, engine: TextToSpeech, result: MethodChannel.Result) {
+141:         val text = arguments?.get("text") as? String
+142:         val localeTag = arguments?.get("locale") as? String
+143:         val rate = (arguments?.get("rate") as? Number)?.toFloat()
+144:         if (text.isNullOrBlank() || rate == null || localeTag == null || rate !in setOf(0.75f, 1.0f, 1.25f)) {
+145:             result.error("INVALID_REQUEST", "Text, exact locale, and rate are required.", null)
+146:             return
+147:         }
+148:         val voice = findLocalVoice(engine, localeTag)
+149:         if (voice == null) {
+150:             result.success(mapOf("status" to "UNAVAILABLE"))
+151:             return
+152:         }
+153:         pendingUtterances.clear()
+154:         failed = false
+155:         playbackState = "STOPPED"
+156:         engine.stop()
+157:         if (engine.setVoice(voice) != TextToSpeech.SUCCESS || engine.setSpeechRate(rate) != TextToSpeech.SUCCESS) {
+158:             playbackState = "FAILED"
+159:             result.success(mapOf("status" to "FAILED"))
+160:             return
+161:         }
+162:         val chunks = splitText(text, TextToSpeech.getMaxSpeechInputLength())
+163:         playbackState = "STARTING"
+164:         chunks.forEachIndexed { index, chunk ->
+165:             val id = UUID.randomUUID().toString()
+166:             pendingUtterances.add(id)
+167:             val queueMode = if (index == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+168:             val status = engine.speak(chunk, queueMode, Bundle(), id)
+169:             if (status != TextToSpeech.SUCCESS) {
+170:                 pendingUtterances.remove(id)
+171:                 failed = true
+172:                 playbackState = "FAILED"
+173:             }
+174:         }
+175:         if (failed) {
+176:             engine.stop()
+177:             pendingUtterances.clear()
+178:             result.success(mapOf("status" to "FAILED"))
+179:         } else {
+180:             result.success(mapOf("status" to "STARTING"))
+181:         }
+182:     }
+183: 
+184:     private fun splitText(text: String, maxLength: Int): List<String> {
+185:         val chunks = mutableListOf<String>()

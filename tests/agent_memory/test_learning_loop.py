@@ -229,3 +229,58 @@ class TestLearningLoop:
         s = loop.stats()
         assert s["enabled"] is True
         assert s["rule_suggestions_total"] == 1
+
+
+def test_suggestion_reopens_reviews_applies_once_and_remains_inactive(seeded_db):
+    first = LearningLoop(db_path=seeded_db, enabled=True)
+    item = first.generate_rule_suggestion('pattern', {'text': 'full content ' * 1000})
+    assert item is not None
+    restarted = LearningLoop(db_path=seeded_db, enabled=True)
+    row = restarted.list_rule_suggestions()[0]
+    assert row['evidence']['content']['text'] == 'full content ' * 1000
+    assert restarted.review_rule_suggestion(item.suggestion_id, True, expected_revision=1)
+    assert not first.review_rule_suggestion(item.suggestion_id, False, expected_revision=1)
+    assert LearningLoop(db_path=seeded_db, enabled=True).apply_approved_rule(item.suggestion_id, expected_revision=2)
+    assert LearningLoop(db_path=seeded_db, enabled=True).apply_approved_rule(item.suggestion_id)
+    with sqlite3.connect(seeded_db) as conn:
+        rows = conn.execute("SELECT is_active FROM rule_version_registry WHERE version=?", ('learning_' + item.suggestion_id,)).fetchall()
+        assert rows == [(0,)]
+    assert restarted.review_rule_suggestion(item.suggestion_id, False, expected_revision=3)
+    assert not first.apply_approved_rule(item.suggestion_id)
+
+
+def test_rule_candidate_and_learning_transition_rollback_together(seeded_db):
+    owner = LearningLoop(db_path=seeded_db, enabled=True)
+    item = owner.generate_rule_suggestion('pattern', {'test': 'atomic'})
+    assert owner.review_rule_suggestion(item.suggestion_id, True)
+    with sqlite3.connect(seeded_db) as conn:
+        conn.execute("CREATE TRIGGER break_learning BEFORE UPDATE ON agent_learning_records BEGIN SELECT RAISE(ABORT,'fault'); END")
+    assert owner.apply_approved_rule(item.suggestion_id) is False
+    with sqlite3.connect(seeded_db) as conn:
+        assert conn.execute('SELECT COUNT(*) FROM rule_version_registry WHERE version=?', ('learning_' + item.suggestion_id,)).fetchone()[0] == 0
+        conn.execute('DROP TRIGGER break_learning')
+    reopened = LearningLoop(db_path=seeded_db, enabled=True)
+    assert reopened.list_rule_suggestions()[0]['status'] == 'approved'
+    assert reopened.apply_approved_rule(item.suggestion_id)
+
+
+def test_two_learning_writers_create_one_candidate(seeded_db):
+    from concurrent.futures import ThreadPoolExecutor
+    first = LearningLoop(db_path=seeded_db, enabled=True)
+    item = first.generate_rule_suggestion('pattern', {'test': 'concurrent'})
+    assert first.review_rule_suggestion(item.suggestion_id, True)
+    def apply(_):
+        return LearningLoop(db_path=seeded_db, enabled=True).apply_approved_rule(item.suggestion_id)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert list(pool.map(apply, [1,2])) == [True, True]
+    with sqlite3.connect(seeded_db) as conn:
+        assert conn.execute('SELECT COUNT(*) FROM rule_version_registry WHERE version=?', ('learning_' + item.suggestion_id,)).fetchone()[0] == 1
+
+
+def test_changed_approved_content_is_not_applied(seeded_db):
+    owner = LearningLoop(db_path=seeded_db, enabled=True)
+    item = owner.generate_rule_suggestion('pattern', {'text': 'original'})
+    assert owner.review_rule_suggestion(item.suggestion_id, True)
+    with sqlite3.connect(seeded_db) as conn:
+        conn.execute("UPDATE agent_learning_records SET content_json=json_set(content_json,'$.suggestion_text','changed') WHERE record_id=?", (item.learning_record_id,))
+    assert owner.apply_approved_rule(item.suggestion_id) is False

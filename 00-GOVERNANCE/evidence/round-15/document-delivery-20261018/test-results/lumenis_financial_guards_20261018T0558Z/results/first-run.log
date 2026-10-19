@@ -1,0 +1,23 @@
+........F............................                                    [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+=================================== FAILURES ===================================
+_______ test_opendart_uses_explicit_accumulated_dates_not_quarter_amount _______
+
+    def test_opendart_uses_explicit_accumulated_dates_not_quarter_amount():
+        r=parse_opendart_json(dart()); f=r['facts'][0]
+>       assert f['value']=='25' and f['period_kind']=='half_year'
+E       AssertionError: assert ('10' == '25'
+E         
+E         - 25
+E         + 10)
+
+tests/test_regional_financial_intake.py:76: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_regional_financial_intake.py::test_opendart_uses_explicit_accumulated_dates_not_quarter_amount

@@ -1,0 +1,25 @@
+{
+  "private_archive": {
+    "path": "[LOCAL_WORKSPACE]/LUMENIS_COMPLETE_CANDIDATE_PRIVATE_BACKUP_20261018T0605Z.zip",
+    "sha256": "5e5be025ef479d64c57a12803553f3aca09b22935cfdd2fb71e8c2eb3713ad06",
+    "bytes": 48063257,
+    "files": 3551,
+    "complete_source": true,
+    "private_evidence_included": true
+  },
+  "public_source_archive": {
+    "path": "[LOCAL_WORKSPACE]/LUMENIS_COMPLETE_CANDIDATE_PUBLIC_SOURCE_20261018T0605Z.zip",
+    "sha256": "60e68f6e5b816593cde67cc4c7c4d3648a0f2da3b1f4ae431fd18d5df7c5cebf",
+    "bytes": 41795323,
+    "files": 3315,
+    "exact_tested_source": true,
+    "private_evidence_included": false,
+    "documentation_overlay": "Not applied in this historical archive; a separately reviewed documentation overlay is required for the final candidate tree."
+  },
+  "archive_readback_all_file_hashes_match": true,
+  "source_manifest_sha256": "2f57b6040192177f319b7a59c015541603ea72179b4c0d23688c4e6e0f98b59e",
+  "package_index_sha256": "3add36ae9fb05c43f02e0875a3745eec59f468886b33f17418e2abfeb538c013",
+  "packages_are_not_same_bytes": true,
+  "not_included": "No cache/venv/private.env/DB/user originals/reference videos/nested old ZIP. Official tracked.env.example retained.",
+  "status": "frozen review candidate; 7 regressions fail; not merge ready"
+}

@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum WaitingTone { playful, simple, off }
+
 enum WorkspaceBackdrop { frosted, wallpaper, desktop, white, black, solid }
 
 /// Device appearance belongs to SYS-05. It contains no business or account data.
@@ -26,6 +28,7 @@ class Sys05AppearanceController extends ChangeNotifier {
   bool darkGlass = false;
   bool compact = false;
   bool reducedMotion = false;
+  WaitingTone waitingTone = WaitingTone.simple;
   double blur = 24;
   double panelOpacity = .9;
   double uiFontSize = defaultUiFontSize;
@@ -76,6 +79,10 @@ class Sys05AppearanceController extends ChangeNotifier {
         darkGlass = value['darkGlass'] == true;
         compact = value['compact'] == true;
         reducedMotion = value['reducedMotion'] == true;
+        waitingTone = WaitingTone.values.firstWhere(
+          (tone) => tone.name == value['waitingTone'],
+          orElse: () => WaitingTone.simple,
+        );
         if (value['blur'] is num) {
           blur = (value['blur'] as num).toDouble().clamp(0, 48);
         }
@@ -102,6 +109,7 @@ class Sys05AppearanceController extends ChangeNotifier {
       darkGlass = false;
       compact = false;
       reducedMotion = false;
+      waitingTone = WaitingTone.simple;
       blur = 24;
       panelOpacity = .9;
       uiFontSize = defaultUiFontSize;
@@ -118,6 +126,7 @@ class Sys05AppearanceController extends ChangeNotifier {
     bool? darkGlass,
     bool? compact,
     bool? reducedMotion,
+    WaitingTone? waitingTone,
     double? blur,
     double? panelOpacity,
     double? uiFontSize,
@@ -128,6 +137,7 @@ class Sys05AppearanceController extends ChangeNotifier {
     this.darkGlass = darkGlass ?? this.darkGlass;
     this.compact = compact ?? this.compact;
     this.reducedMotion = reducedMotion ?? this.reducedMotion;
+    this.waitingTone = waitingTone ?? this.waitingTone;
     this.blur = (blur ?? this.blur).clamp(0, 48);
     this.panelOpacity = (panelOpacity ?? this.panelOpacity).clamp(.65, 1);
     this.uiFontSize = uiFontSize == null
@@ -142,6 +152,7 @@ class Sys05AppearanceController extends ChangeNotifier {
       'darkGlass': this.darkGlass,
       'compact': this.compact,
       'reducedMotion': this.reducedMotion,
+      'waitingTone': this.waitingTone.name,
       'blur': this.blur,
       'panelOpacity': this.panelOpacity,
       'uiFontSize': this.uiFontSize,
@@ -203,6 +214,7 @@ class Sys05AppearanceController extends ChangeNotifier {
           darkGlass = false;
           compact = false;
           reducedMotion = false;
+      waitingTone = WaitingTone.simple;
           blur = 24;
           panelOpacity = .9;
           uiFontSize = defaultUiFontSize;

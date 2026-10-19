@@ -532,3 +532,32 @@ def quick_summary() -> Dict[str, Any]:
         'provider_health': evaluate_provider_health(),
         'rule_verification': verify_ai_not_replacing_rules(),
     }
+
+
+def project_synthetic_interpretability_metrics(packet, *, evidence_ref, packet_sha256):
+    """Pure projection; only the authorized Gateway owner may persist these rows.
+
+    Diagnostic experiment scores must never be interpreted as business quality.
+    No filesystem loading, model execution, identity inference or DB writes here.
+    """
+    import re
+    from lumenis.system.ai_gateway.owned_evaluation import (
+        validate_synthetic_interpretability_packet, _evaluation_packet_sha256,
+    )
+    clean = validate_synthetic_interpretability_packet(packet)
+    if (type(evidence_ref) is not str or re.fullmatch(r"app_evidence_records:[1-9][0-9]*", evidence_ref) is None
+            or packet_sha256 != _evaluation_packet_sha256(clean)):
+        raise ValueError("INTERPRETABILITY_PROJECTION_BINDING_INVALID")
+    thresholds = {"activation_prediction_nmse": (.1, .5),
+                  "intervention_prediction_error": (1e-8, 1e-4), "replay_max_error": (1e-12, 1e-8)}
+    metadata = {"schema": clean["schema"], "prototype_status": "SYNTHETIC_PROTOTYPE",
+                "business_acceptance": "NOT_EVALUATED", "promotion_status": "NOT_PROMOTED",
+                "packet_sha256": packet_sha256, "task_id": clean["task_id"],
+                "checkpoint_id": clean["checkpoint_id"], "run_id": clean["run_id"],
+                "weights_sha256": clean["weights_sha256"], "inputs_sha256": clean["inputs_sha256"],
+                "hypotheses_sha256": clean["hypotheses_sha256"], "capture_status": clean["capture_status"]}
+    return [{"dimension": "ai", "metric_name": "synthetic_interpretability." + name,
+             "metric_value": clean["metrics"][name], "pass_threshold": thresholds[name][0],
+             "warn_threshold": thresholds[name][1], "higher_is_better": False,
+             "source": "synthetic_interpretability", "evidence_ref": evidence_ref, "metadata": metadata}
+            for name in sorted(thresholds)]

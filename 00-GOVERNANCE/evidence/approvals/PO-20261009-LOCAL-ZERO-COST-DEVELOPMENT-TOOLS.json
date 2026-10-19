@@ -6,7 +6,7 @@
   "approved_at": "2026-10-09",
   "approval_source_type": "direct_product_owner_instruction",
   "scope_manifest": {
-    "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+    "source_thread_id": "private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186",
     "direct_quote": "优先完成这个：完成后向我报告：序境 / LUMENIS｜本地零新增费用研发自动化与 Codex 额度优化执行令",
     "refinement_quote": "优化了刚才的指令",
     "refinement_sha256": "8d13afcb9788ceb1ec6577a96151d79d27d6184d9be1900e22c70a40e86f5913",

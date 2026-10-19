@@ -1,6 +1,22 @@
-# 序境 / LUMENIS — Codex Takeover CURRENT
+# 寰意 / OEVIRA — Codex Takeover CURRENT
+
+Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canonical naming authority](CANONICAL-NAMING-AND-TWIN-SYNC.md) governs this rename. Technical identifiers, package names, environment variables, commands and source paths retain their compatibility spelling; dated records below preserve their original names and evidence.
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
+
+## 2026-10-18 source-adoption validation handoff
+
+Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,
+reference lifecycle, business review and local contribution capabilities. The
+single planning/screen-specification chain and all original requirements remain.
+Evidence: [source-adoption validation receipt](evidence/round-15/source-adoption-20261018/VALIDATION_README.md).
+The 4003-file tested source is preserved byte-for-byte for product and tests;
+this packaging adds documentation/evidence only. Static gates and six same-source
+real TCP nodes passed. The unified regression finished with 4087 passed, 6 deselected, 318 subtests passed
+in 556.07 seconds; all six deselected TCP nodes passed separately on the same
+source. Logs and prior failures are preserved. This record does
+not claim this candidate is published, remote checks passed, four-surface UI
+acceptance, external delivery, production activation or business results.
 
 ## 2026-10-17 README engineering-guide navigation
 
@@ -122,7 +138,8 @@ The October 13 observations covered PR31's protected business-decision work, PR3
 
 ## 2026-10-13 SYS-06 built-in browser live stream (dated readback, PR #35)
 
-Root internal_browser_stream.py moved to the single owner lumenis/system/browser/runtime/screencast_stream.py; new rame_stream.py streams frames of the isolated /api/browser/sessions/<id> page over SSE (/frames/stream, /stream-policy). PO defaults: page AI-readable OFF and nothing to Evidence unless registered; leaving the view pauses the agent on sensitive/logged-in pages (unknown login = logged in); during human takeover no frames to AI and none stored, only action receipts; isolated sessions without personal cookies. SYS-06 shows pushed frames with gaplessPlayback; human-control actions still use lease-bound single frames. Runtime load and user acceptance: NOT_VERIFIED. 阿康1（bot）
+Root internal_browser_stream.py moved to the single owner lumenis/system/browser/runtime/screencast_stream.py; new 
+rame_stream.py streams frames of the isolated /api/browser/sessions/<id> page over SSE (/frames/stream, /stream-policy). PO defaults: page AI-readable OFF and nothing to Evidence unless registered; leaving the view pauses the agent on sensitive/logged-in pages (unknown login = logged in); during human takeover no frames to AI and none stored, only action receipts; isolated sessions without personal cookies. SYS-06 shows pushed frames with gaplessPlayback; human-control actions still use lease-bound single frames. Runtime load and user acceptance: NOT_VERIFIED. 阿康1（bot）
 
 ## 2026-10-13 AI-01 submit receipt read-back (dated readback)
 
@@ -155,31 +172,33 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 7. Retired AI providers (Zhipu, Ollama, Jev, OpenCode, Ark, LM Studio, llama.cpp) have their calling code and config deleted; the owned 序境 model is default, the existing user_api adapter is required to serve only explicitly selected Groq through the sole Gateway/Permission, with no arbitrary endpoint or automatic fallback. Current endpoint enforcement remains an implementation gap until verified; this rule does not claim it repaired.
 8. In-loop: collection, CTH, BMP, Shared, AI, no-shell tools in built-in browser, chat UI cards, full Skill Store, GitHub connector, MCP, frontend functions, competitor proofs, accounts (free email codes/Google; Apple after developer-account activation; original settings presentation), user and founder developer modes, commercial-readiness items, visuals, logo, role art. Post-launch: real-user validation, paid/licensed sources.
 
-## 2026-10-16 unique frontend plan and visual sketch (planning-only)
+## 2026-10-16 unique frontend plan and visual sketch (historical planning-only scope)
 
-最新直接PO补充：两份主稿是持续演进、集中维护的工作基线，不冻结UI/前端或限制M当前及未来升级；后续获准改进在原Owner/合同内继续原位更新。本窗口的规划发布→REA次序不派工或暂停其他窗口。REA使用前须认真研究官方GitHub适用版本的文档、实际源码/测试、许可与发布差异，保留commit和阅读/验证边界。本窗口2026-10-16直接PO新增沉重弹性、磁吸、流畅、抛出及产品适配物理交互，要求质量/刚度/阻尼、吸附范围/力/阈值、释放速度/摩擦/边界恢复等参数真正参与计算并可测影响；已原位纳入Experience §19及两份主稿。保留原动效/用户选择/减少动态，逐表面实际参数接线、轨迹/性能/中断恢复仍OPEN，本次不实现物理交互或新增引擎。
+最新直接PO补充：两份主稿是持续演进、集中维护的工作基线，不冻结UI/前端或限制M当前及未来升级；后续获准改进在原Owner/合同内继续原位更新。本窗口的规划发布→REA次序不派工或暂停其他窗口。REA使用前须认真研究官方GitHub适用版本的文档、实际源码/测试、许可与发布差异，保留commit和阅读/验证边界。本窗口2026-10-16直接PO新增沉重弹性、磁吸、流畅、抛出及产品适配物理交互，要求质量/刚度/阻尼、吸附范围/力/阈值、释放速度/摩擦/边界恢复等参数真正参与计算并可测影响；已原位纳入Experience §19及两份主稿。保留原动效/用户选择/减少动态，逐表面实际参数接线、轨迹/性能/中断恢复仍OPEN；2026-10-16该文档批次未实现物理交互或新增引擎，当前获准建设按§1接续。
 
 前端规划现仅使用[完整产品/前端规划](LOOP-PLAN-20261014/product-plan-full.md)和[唯一视觉文字草图](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)。本次收敛保留全部195个G标识、原26个R/N/O有效要求、F0–F13完整建设分组与原研究指纹；覆盖Public Website、Web Workspace、Windows/macOS和iOS、44屏基线以外的完整用户工作、独立Shared研究/提案文稿/视频/播客、三语/无障碍/原动效/保存修订重开恢复。原21份ADD、分步稿和创作覆盖共23个重复活跃文件的有效内容已迁入，精确原文仍可在父版本Git历史查证，研究原件/资产/审批/失败记录未删。ScreenSpec保留独特Owner/API/Permission/SourceUse/字段/状态/动作/幂等/恢复/验收合同，布局指向唯一草图，不升级原设计或实现状态。
 
-本任务窗口最新直接PO明确PixiJS用于过往参考网站/产品的提取、重建与前端校准，不采用像素画风。浏览器/REA负责真实可见结构/样式/状态取证，隔离PixiJS校准器负责几何重建/对照；不是新增产品renderer/采集真相或引入像素艺术。已完成8.22.0小型WebGL绘制/DPR/销毁探针；完整参考目标提取、对照校准、产品性能和四端运行仍未因此验证。2026-10-16直接PO给当前规划/REA窗口（01a142d1-74c0-7940-b8b9-a66414eb5f8c）的两项任务以该质量次序执行；这是限定窗口的授权来源事实，发布/读回不派工、不恢复旧窗口，其他或后续窗口不可据此自行启动REA。
+本任务窗口最新直接PO明确PixiJS用于过往参考网站/产品的提取、重建与前端校准，不采用像素画风。浏览器/REA负责真实可见结构/样式/状态取证，隔离PixiJS校准器负责几何重建/对照；不是新增产品renderer/采集真相或引入像素艺术。已完成8.22.0小型WebGL绘制/DPR/销毁探针；完整参考目标提取、对照校准、产品性能和四端运行仍未因此验证。2026-10-16直接PO给当前规划/REA窗口（private-source-id-sha256-be1add9d40399731d4b45de79092009a127762e625050a53cc69df7bc300c9ea）的两项任务以该质量次序执行；这是限定窗口的授权来源事实，发布/读回不派工、不恢复旧窗口，其他或后续窗口不可据此自行启动REA。
 
-本次统一原唯一完整产品执行规划（前后端）和唯一四表面视觉操作草图，保留195个G、44屏合同、SYSTEM/CTH/BMP/Shared、Math/AI、媒体、采集、研究、账户/权限、恢复及全部资料和未完项，不另拆专项规划或队列。最新直接PO全产品语言纠偏落在规划§4.2、草图§1.4及Experience§22：操作页使用任务、内容、结果、行动和必要真实状态、错误、风险及权限文案；方法、算法、口径和引用按需查看，业务约束、覆盖缺口、误差与不确定性不能隐藏。普通研究资料直接上传导入、自动解析和无AI基础分析，模型增强独立可选；不设通用“来源使用/本次用途”表单，后台仍保留来源、Permission、权益UNKNOWN及真正敏感/额外用途的确认。资料库按实际入库时间组织，每份资料及分析各有卡片，关联原文/结果和版本并可修改、保存、重开、恢复，未知发布时间不由入库时间代替。鼠标如手的按压、拾起/轻倾、阻尼拖动、放手回弹和适用卡片翻转进入同一完整计划；实际参数须控制真实几何/轨迹，保留约90ms反馈、键盘/触摸/读屏等价、减少动态及原全部视觉/动效选择。当前ChatGPT Work/Grok Bot官方操作说明仅作ADAPT参考；REA/Pixi已得局部方法和V2包及全部未完恢复点归档于规划§20.4，不代表全包质量或产品验收。Experience仅§22作精确共享发布，产品树§19及其他dirty候选不复制。最新直接PO明确：当前整体前端不合格、尚未接受（NOT_ACCEPTED），需要继续重做不足部分、升级并按完整视觉/UI/UX/AIGC/动效及四表面范围验收；规划、文案、编译或局部操作通过均不能升级这一整体判断。本轮只整合发布文档，完整前后端产品闭环留待下次直接PO派工；本窗口不再REA或产品运行，生产Core/DB/模型/采集/训练/部署未在本任务执行，原主工作区及其他窗口工作受保护。已集成源码、冻结候选与旧/未核运行分别报告，PR79及其hooks未合并/未核装载不能称上线。本条不暂停、派工或恢复其他窗口；文档检查不能代替真实用户成果、运行恢复、M接受或PO重复操作，完整产品仍OPEN。
+本次统一原唯一完整产品执行规划（前后端）和唯一四表面视觉操作草图，保留195个G、44屏合同、SYSTEM/CTH/BMP/Shared、Math/AI、媒体、采集、研究、账户/权限、恢复及全部资料和未完项，不另拆专项规划或队列。最新直接PO全产品语言纠偏落在规划§4.2、草图§1.4及Experience§22：操作页使用任务、内容、结果、行动和必要真实状态、错误、风险及权限文案；方法、算法、口径和引用按需查看，业务约束、覆盖缺口、误差与不确定性不能隐藏。普通研究资料直接上传导入、自动解析和无AI基础分析，模型增强独立可选；不设通用“来源使用/本次用途”表单，后台仍保留来源、Permission、权益UNKNOWN及真正敏感/额外用途的确认。资料库按实际入库时间组织，每份资料及分析各有卡片，关联原文/结果和版本并可修改、保存、重开、恢复，未知发布时间不由入库时间代替。鼠标如手的按压、拾起/轻倾、阻尼拖动、放手回弹和适用卡片翻转进入同一完整计划；实际参数须控制真实几何/轨迹，保留约90ms反馈、键盘/触摸/读屏等价、减少动态及原全部视觉/动效选择。当前ChatGPT Work/Grok Bot官方操作说明仅作ADAPT参考；REA/Pixi已得局部方法和V2包及全部未完恢复点归档于规划§20.4，不代表全包质量或产品验收。Experience仅§22作精确共享发布，产品树§19及其他dirty候选不复制。最新直接PO明确：当前整体前端不合格、尚未接受（NOT_ACCEPTED），需要继续重做不足部分、升级并按完整视觉/UI/UX/AIGC/动效及四表面范围验收；规划、文案、编译或局部操作通过均不能升级这一整体判断。2026-10-16该窗口收尾只整合发布文档，当时将完整前后端闭环留待后续派工，未继续REA或产品运行；该批生产Core/DB/模型/采集/训练/部署未执行的事实保留。2026-10-18获准完整开发与当前分工见§1，该旧收尾不再构成当前等待条件；原主工作区及其他窗口工作受保护。已集成源码、冻结候选与旧/未核运行分别报告，PR79及其hooks未合并/未核装载不能称上线。本条不暂停、派工或恢复其他窗口；文档检查不能代替真实用户成果、运行恢复、M接受或PO重复操作，完整产品仍OPEN。
 
-本次规划审查同步补正：23个迁移来源记录Git blob原始字节SHA-256与明确标注的本机CRLF读取指纹；SYS-05保留BACKEND-GAP-040只读snapshot，ACC-04注明既有registry别名，BMP-08注明Shared/C4-W4制作Owner。既有隔离PixiJS小探针完整HTML源码/观察JSON原文以UTF-8/LF及HTML末尾空行规范化后，在round15研究文档代码围栏中发布，可按围栏正文哈希提取复原；原hash/围栏正文hash与未保留截图等限制明确，未重跑。现行RULES_ONLY_PUBLICATION门保持，未发布可执行HTML或任意JSON路径。草图链接仅为视觉规划输入，不替代Experience或本屏实际合同；触控、营销budgeted/单项结果、学习资产筛选、移动返回与目录responsive/reduced-motion等原合同约束原位保留。不是前端或REA目标采用接受。
+本次规划审查同步补正：23个迁移来源记录Git blob原始字节SHA-256与明确标注的本机CRLF读取指纹；SYS-05保留BACKEND-GAP-040只读snapshot，ACC-04注明既有registry别名，BMP-08注明Shared/C4-W4制作Owner。既有隔离PixiJS小探针完整HTML源码/观察JSON原文以UTF-8/LF及HTML末尾空行规范化后，在round15研究文档代码围栏中发布，可按围栏正文哈希提取复原；原hash/围栏正文hash与未保留截图等限制明确，未重跑。该文档批次按RULES_ONLY_PUBLICATION校验，未发布可执行HTML或任意JSON路径；当前组合的发布状态须按实际变更和同版证据另核。草图链接仅为视觉规划输入，不替代Experience或本屏实际合同；触控、营销budgeted/单项结果、学习资产筛选、移动返回与目录responsive/reduced-motion等原合同约束原位保留。不是前端或REA目标采用接受。
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Database state: `NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`
 Real user E2E: `NOT_VERIFIED`
 
-本次审查原位清理 Security/Experience 的账号与两种开发者模式旧延期句，并将已批准实时语音目标对齐 Architecture/Overlay；未启用麦克风、模型或服务。AI-05和草图限于Groq固定端点，原任意HTTPS执行限制仍是未修实现缺口，完成前不得据该接口发送数据。首个文档提交的Product Gate因三项Architecture精确措辞不匹配失败，失败记录保留；本次恢复等价的唯一Gateway/退役路径安全表述，未删减校验。
+Candidate source publication at [PR #83](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/83) was verified first at `4c95faaaaa5fb52b676d2f63166968f097e7359f` (3,947 remote blobs and modes), then the bounded CI repair was published at `57e41b4ff276f03ce9b2efe874768c5defb2d413`, tree `6a6bc9909be20b7e76b00e08e75b7d5f384d3411`. On that second head Flutter analysis and Web build passed, while Product Gate failed on 13 tracked path names. Both rounds of failures remain evidence. The current local increment preserves bytes while normalizing those paths, repairs exact single-use approval in the trusted in-process compatibility library, and closes three compatibility API authorization gaps through existing account, Task, Source and Evidence owners. Its exact package identities and separate same-version validation are recorded in FINAL-VALIDATION.json and FILE-HASHES.json; bounded independent reviews and the 3136-case same-source regression passed, with exact limits and hashes recorded. The increment also addresses the four reviewed observation-replay/media-input findings, preserving real-source and export contracts, and repairs periodic fault-diagnostic frame traversal and sink lifecycle while retaining fatal handling; it requires a normal process restart and is not a hot runtime repair. This increment is not yet published and inherits no CI success. The publication status above refers only to the verified remote candidate baseline, not this increment, merged main, runtime load or product acceptance. Main remained `4dab98ed6357133da9307de846180ed4f7bba5f5` at readback. New-head required checks, substantive review, normal protected merge and exact main readback remain mandatory. Arbitrary OSAI/MCP producer SourceUse bindings and unowned historical-result migration remain open; unknown producers fail closed without deleting their product requirements or historical files.
 
-本次只执行文档与状态收敛、成果保护和既有 PR 发布；直接 PO 明确将实际产品闭环留到下次。该延期不删除功能、未完实现、研究采用或验收，不暂停或派工其他窗口。下一阶段仍是同一个完整产品闭环，未完能力是其内部责任项，不另造产品/规划/队列。唯一完整前后端规划为 [product-plan-full.md](LOOP-PLAN-20261014/product-plan-full.md)，唯一完整视觉文字草图为 [FULL-PRODUCT-SKETCH.md](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)，二者覆盖今天更新及全部既有 SYSTEM/CTH/BMP/Shared/Agent–自研 AI、四表面、195 个 G 和原 J/R/U；44 屏只是追溯基线。Architecture、Experience、Owner、验收规范、逐屏合同各保留唯一内容责任，README只作稳定中英产品指南，不复制状态。
+2026-10-16文档审查原位清理 Security/Experience 的账号与两种开发者模式旧延期句，并将已批准实时语音目标对齐 Architecture/Overlay；该批未启用麦克风、模型或服务。当时AI-05和草图限于Groq固定端点，任意HTTPS执行限制尚有实现缺口；这项历史观察不代替当前源码、精确批准与执行边界核验。首个文档提交的Product Gate因三项Architecture精确措辞不匹配失败，失败记录保留；本次恢复等价的唯一Gateway/退役路径安全表述，未删减校验。
 
-| 当前证据层 | 2026-10-16 本次收尾的事实与未完边界 |
+2026-10-18直接PO已批准完整19类能力及新增要求的完整开发，沿既有Owner承接同一个完整产品闭环，保留已批准的范围和排除项，不另造产品/规划/队列。当前优先完成完整候选PR整合、门禁与合并；为此安排开发先后或暂缓执行不取消已批准能力范围。当前分工：云端dot负责候选PR整合、后端/数据/AI等获批能力实现与bug修复、同版测试、日志备份及交接；本地Codex与Akang（GrokBot）仍由PO等权安排前端实际构建及必须本机完成的验证，互不取得对方派工权。云端按已批准流程将同版候选提交PR，回归、实质审阅及必需CI通过后正常合并并远端读回，不以等待本地Codex上传为前置；本地候选后补核对，原有未提交工作与真实端侧验收分别保护和保留。2026-10-16仅文档收尾的历史延期不再限制这次已获准开发；本记录不自动启动其他窗口、不派工Brio、不改变模型/额度，不越过既有前端、Permission、数据与发布边界；完整开发批准不代替具体外部模型调用、训练、费用、生产写入或上线部署所需的原适用权限。唯一完整前后端规划为 [product-plan-full.md](LOOP-PLAN-20261014/product-plan-full.md)，唯一完整视觉文字草图为 [FULL-PRODUCT-SKETCH.md](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)，二者覆盖今天更新及全部既有 SYSTEM/CTH/BMP/Shared/Agent–自研 AI、四表面、195 个 G 和原 J/R/U；44 屏只是追溯基线。Architecture、Experience、Owner、验收规范、逐屏合同各保留唯一内容责任，README只作稳定中英产品指南，不复制状态。
+
+| 历史证据层 | 2026-10-16 当次收尾的事实与未完边界（不作为当前派工或运行状态） |
 | --- | --- |
 | 已发布源码与文档 | PR60/77/78/80 的既有回执按原版本保留；本次开始读回 main 为 `0907fd67f71500bd3065485d873a3324d0efbda5`。本 PR 只发布13条现有文档路径和原治理检查器的一处过时账号句匹配，发布结果以本PR合并提交和远端读回为准，不复制未来SHA。 |
 | 完整规划与前端 | 完整前后端计划、全产品视觉/操作草图、研究直传和逐材料分析时间线/物理卡片、产品语言、四端、账号/两开发者模式等已纳入本次文档；**整体前端 NOT_ACCEPTED**，这些仍须真实实现与验收，不能以局部文案/编译/规划当通过。 |
@@ -191,17 +210,17 @@ Real user E2E: `NOT_VERIFIED`
 | 采集与主体 | 注册、获准自动采集补全、Source/Evidence/Canonical或Pending、刷新/恢复和下游用户成果全部保留。最新维护任务观察为Disabled、PT5M/Logon；237旧计划保护性迁移仅为候选，未执行生产迁移或恢复调度。受限身份只阻塞自身，手动导入/静态通过不能证明自主采集已闭环。 |
 | Groq / 自研AI / REA | Groq是唯一获准外部接口，显式选择并经现有Gateway/Permission；源码host allowlist与调用权限仍须真实闭环，不能将当前任意HTTPS适配能力当授权。自研训练/checkpoint重载/独立评价、Hybrid交叉精排、Math完整适用算法和模型收益各自待验。REA V2完整输入已保护，31条离线资料未准入；采集/办公/媒体/平台底层方法和UI采用须接真实Owner与用户链，不能用包/截图代替。 |
 
-五份附件已完整只读解析及校准：三份XLSX共11sheet、820物理行（813非空，811条非表头投影）；PDF2页36块；DOCX198段落对象/143非空。102清单与最终表交集79个ID，23/44各自独有；最终129行仅123个唯一可识别ID，不能与85/102样本相加。85行中58无链接/日期、49标题/作者占位；最终表9个明示日期越出报告时间窗。322评论中36无父帖编号，286数字编号有147一致、138标题冲突、1无父帖。来源报告的情感标签、约40强相关、“零缺口”等保留为来源主张，不推广为事实、代表性比例或因果。证据 `source-materials-review-20261016/source-materials-review.json` SHA256 `0a0549d3d6d08df745423fcce49aa2dea66d6020963d066738d93aa7251120ce`；定位复核 `importer-five-material-locator-replay-final-20261016.json` SHA256 `b3b091d1da6c9d62143a28ced37e6816120569ec03b4efa9bfd1559043cee144`。原件留在受保护本机，不提交到Git。当前候选已补全表投影/原件保存与PDF/DOCX定位hash等，普通直传/自动逐材料分析/物理卡片、跨域接线和完整保存恢复仍须下次实现验收。
+五份附件已完整只读解析及校准：三份XLSX共11sheet、820物理行（813非空，811条非表头投影）；PDF2页36块；DOCX198段落对象/143非空。102清单与最终表交集79个ID，23/44各自独有；最终129行仅123个唯一可识别ID，不能与85/102样本相加。85行中58无链接/日期、49标题/作者占位；最终表9个明示日期越出报告时间窗。322评论中36无父帖编号，286数字编号有147一致、138标题冲突、1无父帖。来源报告的情感标签、约40强相关、“零缺口”等保留为来源主张，不推广为事实、代表性比例或因果。证据 `source-materials-review-20261016/source-materials-review.json` SHA256 `0a0549d3d6d08df745423fcce49aa2dea66d6020963d066738d93aa7251120ce`；定位复核 `importer-five-material-locator-replay-final-20261016.json` SHA256 `b3b091d1da6c9d62143a28ced37e6816120569ec03b4efa9bfd1559043cee144`。原件留在受保护本机，不提交到Git。当前候选已补全表投影/原件保存与PDF/DOCX定位hash等，普通直传/自动逐材料分析/物理卡片、跨域接线和完整保存恢复在该批仍待实现验收；当前按§1接续，不以旧停点延期已批准工作。
 
 所有未完要求统一留在原完整计划和本机既有 `full-resume.json#continuity`：#17/Slack逐项采用和Brio/历史PDF/Cortech原报告完整研究、Cortech19类非Muse账号功能、REA真实采集/资料/办公/媒体/Agent方法、Math/Hybrid与独立训练、主体/采集、自有素材与跨域SourceUse、持久聊天032/048、Pattern045/FactWall046、54bindings/11chapters、制作/来源撤回/崩溃恢复、全前端及四端真实用户结果、候选安全集成、精确组合版本CI/运行/数据库/发布。原研究/失败证据不删；上述任何项未完成都不能将同一产品闭环记为完成。
 
-本机精确证据根为 `C:/Users/28049/Documents/Codex/2026-10-16/issue17-repair/`，只作同一任务的恢复/验证材料，非另一规划权威。历史136 source rows→122去重消息、33评论/43频道消息/7线程53回复的核对在 `history-reconciliation.json`（SHA256 `67ca2f94a9da35685f2ef499285257f123a9039bc6364dddc91f63212780dc72`）；逐source处置为 `issue17-slack-deduplicated-disposition.md`（`d7fac655f54dfda392cc34e4c6b3faabb2ddd861b472fcdd4927daa98f90f792`）。这些明确采样的消息读完不等于附件全文研究或产品采用全部完成。
+本机精确证据根为 `C:/Users/private-user-121dcc385158/Documents/Codex/2026-10-16/issue17-repair/`，只作同一任务的恢复/验证材料，非另一规划权威。历史136 source rows→122去重消息、33评论/43频道消息/7线程53回复的核对在 `history-reconciliation.json`（SHA256 `67ca2f94a9da35685f2ef499285257f123a9039bc6364dddc91f63212780dc72`）；逐source处置为 `issue17-slack-deduplicated-disposition.md`（`d7fac655f54dfda392cc34e4c6b3faabb2ddd861b472fcdd4927daa98f90f792`）。这些明确采样的消息读完不等于附件全文研究或产品采用全部完成。
 
 本次规则校验先发现根指令字节预算超限及检查器仍强求旧账号后置句；已压缩重复路由说明、保留唯一规划链接，并让原检查器明确核验已批准的账号/免费登录/双开发者模式在工程闭环内、Apple准入和无通用账号墙/Permission，不删检查、不改机器合同或放宽门禁。首轮失败保留，最终结果以当前版本检查为准。
 
 以下保留既有各批次原始范围和失败/未完结论；不把其旧回执自动迁移到本次组合版本。
 
-当前发布仅包含 M 的既有工程钩子、受影响回归和规则说明；不包含产品行为源码，不升级下述已发布产品回执的验收范围。原生注册与受保护主树中的实际钩子装载须在合并后独立读回。
+前述工程钩子发布批次仅包含 M 的既有工程钩子、受影响回归和规则说明；该批不包含产品行为源码，不升级下述已发布产品回执的验收范围。原生注册与受保护主树中的实际钩子装载须在合并后独立读回。
 
 
 本次 PR #60 冲突收敛保留当前账号/免费登录、独立工作区、视觉和来源同权规则。规划继续只使用 `00-GOVERNANCE/LOOP-PLAN-20261014/` 的现行版本及 [唯一完整前端规划](LOOP-PLAN-20261014/product-plan-full.md)与[唯一视觉文字草图](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)；不恢复旧目录下的重复规划。补入既有 Gibbs 训练/validation/holdout 三份原始日志并链接当前数学采用记录，状态仍为“已训练、未上线”，G163 仍 OPEN。这是规则与历史证据同步，不含新训练、产品运行或验收升级；下述 PR #77/#78 回执保留其原有范围。
@@ -231,13 +250,13 @@ PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR
 定向回归196项通过、2项跳过；跳过的是既有导入器覆盖：`:920` 的XLS二进制解析要求可选 `xlrd` 与本机 `soffice`，`:951` 的旧DOC解析需要本机LibreOffice/`soffice`，与本批报告导出格式改动无关。31个改动Python文件编译通过。七个直接相关路径的所选Ruff规则为111项既有诊断，与同口径origin基线133项相比无新增；这是增量对照，不是全仓Ruff通过。`git diff --check`通过。Gateway源码复核通过；Runtime加载、生产DB和真实用户E2E仍NOT_VERIFIED，本批未操作它们。PR #76 的最终路由修复涉及 `app.py`、`lumenis/shared/reporting/routes.py`、`lumenis/system/security/permission.py` 与 `tests/test_reporting_route.py`：认证请求Scope解析归入SYSTEM Permission，`app.py`仅保留兼容包装，Shared Reporting直接调用该Owner。受影响路由回归8项、单产品架构守卫、Python编译与差异检查通过。PR审查发现的调用缺口已在原Owner修正：事件审核接收服务端签发的本地工作区身份；报告核验先按请求时间过滤；完整样本空日为真实0，未知覆盖或分类保持None；截断来源在事件持久化前返回PARTIAL并保留既有完整事件；采集后处理按每个已准入精确Scope独立分析/聚合，含糊关键词不猜主体；作者检索在已核Canonical来源内先按作者过滤再限量；canonical报告与Word/PDF导出沿相同Scope、SourceUse和DATA_EXPORT边界。最终组合的17个受影响回归函数（参数化后20项）通过，16个改动Python文件编译通过，架构和Database唯一Owner守卫通过；E9/F63/F7/F82静态检查仍有app的6项和KOS的3项既有诊断，与HEAD同口径结果相同，没有新增，不能报告全量Ruff通过。Word/PDF部分写入失败只清理本次唯一文件，保留已成功格式；导出保留用户日期。追加审查修复：CTH-04/08、BMP-10传递服务端核验Scope，读失败不伪为空；dashboard各业务聚合统一消费同一Scoped Canonical/Evidence样本，截断或未知时间不填零；关联笔记已知高风险分数优先；full_refresh写入前必须取得既有Shared数据库快照，失败时所有写阶段NOT_RUN；日报只分析已核相关记录，相关性不完整时保留UNKNOWN。ACT建议移除固定主体与退役Provider，保留可编辑确定性建议，AI增强绑定仍OPEN/UNAVAILABLE，不宣称已执行动作。该组合4份受影响回归共46项通过、10个Python文件编译通过；所选静态规则仍有app.py六项未变化的既有诊断，非全量Ruff通过。事件分组达到上限时保留PARTIAL及已处理/剩余数，full_refresh传播该结果；KOS使用Permission回执中的真实actor或本地工作区caller，审核动作绑定实际展示的suggested_reply，缺文本拒绝登记；作者未知或互动不完整/零分母不生成假归因百分比。这六项审查修复的隔离KOS定向29项、事件/刷新定向5项通过，目标Python编译通过；ACT入口另拒绝非对象、错误字段类型及纯空白问题，页面/ACT回归11项和该路径所选Ruff规则通过；新回归文件末尾空行已规范化，差异检查通过；遗留源码Ruff存量问题仍单独保留。此前回执只适用未变化范围，不自动成为当前组合验收。Runtime加载、生产DB与真实用户E2E仍NOT_VERIFIED。
 
 
-本文件只呈现当前有效的交接入口和未闭要求，不保留按日期堆叠的旧指令、旧运行快照或旧完成声明。当前用户要求是让线上与本地研发只读取同一套有效规则；本次在原文件内清理重复规则正文和旧入口，不启动Brio产品开发，不修改F/M原生Goal，不接入dot。
+本文件呈现当前有效的交接入口和未闭要求；既有日期事实只作版本化证据，不成为旧指令或当前运行/完成声明。线上与本地研发读取同一套有效规则，云端dot按§1的2026-10-18直接PO分工接续。此前规则清理未包含dot接续的范围记录已被本次明确授权更新；不启动Brio产品开发，不修改用户管理的F/M原生Goal。
 
 本次修改范围：移除经全文核对的退役执行正文、嵌套副本与活动引用，包含旧ZBC/OSAI执行基线及双仓库硬门；有效安全、复用、资料采用与验收要求由原AGENTS/Architecture/Experience/Owner承接。原缺口清单及绑定镜像纠正CTH-09已有Decision Owner与Flutter reader却标ABSENT的失真，并纠正已见Widget和Shell入口的屏幕不存在声明；汇总由同一批原记录计算。44份实际屏幕规范中的全局二维/禁3D旧限制已在原段纠正，未以模板更新代替消费者修正。屏幕存在、字段接线、动作、权限和用户验收分开，PENDING不改成通过，其余源码/运行语义不由存在性检查升级。 旧蓝图55章中的有效差异/置信度/配置管理/服务与采集诊断/格式失败边界已回填原Owner职责，旧Provider配方与示例值不恢复；这是要求承接而非11个新项目或实现完成。Shared目录仅按当前架构和真实Python绑定读取。原源码、未完成候选、研究原件、审批、业务数据与失败结果不因清理规则删除。
 
-当前发布（规则-14，阿康（bot））采集先免费广告/流量与创作者中心数据、聚光延后；创作须 Brief/人设模板/调性/事实质检；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。上一发布（PR #40 AI-01 可信范围，阿康1（bot））：AI-01 提交只认服务端 FOCUS 范围的产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR SH-06 收件箱，阿康1（bot））：SH-06 只读收件箱后端产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR AI-01 回执，阿康1（bot））：AI-01 提交回执校验产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR #35，阿康1（bot））为 SYS-06 内置浏览器实时画面流产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前规则型发布：AGENTS.md 固定 LF 换行（内容不变），T04 历史禁止项迁入机器合同 red_lines，由阻塞校验器结构化检查；不含产品源码。此前AGENTS.md LF/T04发布仅涉及治理文件，不代表产品源码已发布、生产已加载或用户任务已验收。下段 PR #25 主体登记源码已按源码口径发布。
+此前发布（规则-14，阿康（bot））采集先免费广告/流量与创作者中心数据、聚光延后；创作须 Brief/人设模板/调性/事实质检；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。上一发布（PR #40 AI-01 可信范围，阿康1（bot））：AI-01 提交只认服务端 FOCUS 范围的产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR SH-06 收件箱，阿康1（bot））：SH-06 只读收件箱后端产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR AI-01 回执，阿康1（bot））：AI-01 提交回执校验产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前发布（PR #35，阿康1（bot））为 SYS-06 内置浏览器实时画面流产品源码发布；`PUBLISHED_SOURCE_VERIFIED`只表示源码与 CI 已核实，不代表生产已加载或用户验收。此前规则型发布：AGENTS.md 固定 LF 换行（内容不变），T04 历史禁止项迁入机器合同 red_lines，由阻塞校验器结构化检查；不含产品源码。此前AGENTS.md LF/T04发布仅涉及治理文件，不代表产品源码已发布、生产已加载或用户任务已验收。下段 PR #25 主体登记源码已按源码口径发布。
 
-当前发布包含主体登记种子的产品源码：`scripts/import_subject_registry_seed.py`（默认 dry-run；研发阶段由开发者备份数据库后直接执行 `--apply`（PO 2026-10-13 直接指令），且只经既有 `subject_registry.add_subject` 幂等写入）与已在线核实的种子 `scripts/data_candidates/subject_registry_seed_20261013.jsonl`（610条，清单固定sha256），并登记全球数据源研究现行版；场内 TENANT_OF 关系仍为候选、未写入。`PUBLISHED_SOURCE_VERIFIED`不代表生产已加载、种子已写入生产库、真实用户任务验收或产品功能完成。此前 AGENTS.md 重复叙述精简（PR #26）与 T04 历史禁止项锚点（PR #24）按规则型发布，第7节复用诊断源码已由 PR #23 按源码口径发布；结果以实际Git对象和Actions核实，不在文档中冻结“当前main”的SHA。
+此前主体登记种子发布包含产品源码：`scripts/import_subject_registry_seed.py`（默认 dry-run；研发阶段由开发者备份数据库后直接执行 `--apply`（PO 2026-10-13 直接指令），且只经既有 `subject_registry.add_subject` 幂等写入）与已在线核实的种子 `scripts/data_candidates/subject_registry_seed_20261013.jsonl`（610条，清单固定sha256），并登记全球数据源研究现行版；场内 TENANT_OF 关系仍为候选、未写入。`PUBLISHED_SOURCE_VERIFIED`不代表生产已加载、种子已写入生产库、真实用户任务验收或产品功能完成。此前 AGENTS.md 重复叙述精简（PR #26）与 T04 历史禁止项锚点（PR #24）按规则型发布，第7节复用诊断源码已由 PR #23 按源码口径发布；结果以实际Git对象和Actions核实，不在文档中冻结“当前main”的SHA。
 
 本轮在现有规则型提交的精确文件白名单内，原位降级四份存活旧执行语义：历史 ADR、两份内容制作母指令与 AI 编程旧基线，均只保留归档研究身份；有效 J6/C4 的 Daily/Weekly/Monthly 播客选题与可编辑成品要求已在现有 Owner 保留。此项来源清理不等于开发、运行或产品验收完成。
 
@@ -272,7 +291,7 @@ PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR
 
 ## 3. Current owner continuation
 
-以下是职责与未闭验收，不是窗口开停、模型配置或执行中的状态表。具体目标以Source Owner Index的原完整成果卡为准；需要执行时读取原任务的当前准入和最后有效回执。
+以下是职责与未闭验收，不是窗口开停、模型配置或执行中的状态表。2026-10-18云端dot与本地Codex/Akang的当前授权分工见§1；仍复用本表原Owner，不新增人员层级或改派Brio。具体目标以Source Owner Index的原完整成果卡为准；需要执行时读取原任务的当前准入和最后有效回执。
 
 | 原源码职责 | 完整工作与待核结果 |
 |---|---|
@@ -314,3 +333,14 @@ PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR
 
 - 抖音响应结构诊断与可选静态DLL导入观察：源码来自 `codex/reuse-diagnostics-20261013`（`72db140a`），经 PR #23 发布，按用户直接批准的复用ZIP有界接入，不从ZIP重新覆盖；原生指标、风控失败、来源和权限语义保留，无新增采集器、数据真相、模型或运行依赖；值隔离，失败恢复沿原适配器合同。
 - 现有证据为隔离工程回归（本地82项、隔离main候选59项适配器回归、各5+5项构建辅助回归），不是实际采集、新版本App构建、加载运行或真实用户验收；这些仍须各自核验。精确输入、哈希、失败恢复与未闭项见 [本批原位证据](evidence/round-15/REUSE-DIAGNOSTICS-20261013.md)。
+
+## 2026-10-18 Python runtime compatibility and approved integration continuation
+
+PR83 head `5160f638755c16b50c0fb84aa3317072175c9cd4` / tree `dcebff505d8879eeab8793d0e3289226cc9fca63` was read back with all 3,955 file blobs and modes matching the frozen candidate. Its App Gate passed; Product Gate passed static/architecture/compilation checks but failed dependency installation because the unchanged CI uses Python 3.11 while SciPy 1.18.1 requires 3.12. The local compatibility repair preserves the original 3.12 scientific pin, selects the official 1.17.1 pin for 3.11, and corrects two stale test fixtures without lowering production authorization or changing CI. Real isolated 3.11 validation passed 603 primary CI cases and 318 separate unittest subtests, plus 258 separate supplementary cases. See the exact scoped receipt in `evidence/round-15/bugfix-review-20261018/PYTHON-COMPAT-VALIDATION.json`; counts from different stages are not additive. This local increment still requires new-head remote checks.
+
+The Product Owner has additionally approved full global-growth-intelligence capability and four-product protocol absorption into LUMENIS in this same main delivery, including sanitized source/document publication. Existing candidate work and requirements remain intact. Follow current LUMENIS naming, directories, Owners, Source/Evidence/Permission and truth boundaries; reconcile earlier independent-product wording to this new direction without importing duplicate runtime/account/database stacks or automatically treating research as production fact. GGI absorption is in progress, not yet implemented or accepted by this continuation receipt. The current PR must not be merged as a substitute for completing the newly included integration scope.
+
+
+### 2026-10-18 研究采用交接
+
+采用范围、唯一Owner与完整逐文件/逐API/逐能力来源由[LUMENIS-SOURCE-ADOPTION-V1.json](LUMENIS-SOURCE-ADOPTION-V1.json)链接；同一完整规划与草图、原ScreenSpec已补接研究用户旅程。A/B/C后端已交付有界源码与隔离真实session/HTTP证据，最终合并门禁待root核验；F本地实际构建/四表面验收NOT_VERIFIED；任何后续实证只更新对应范围，不能据治理回归宣称产品完成。先核当前源码与调用、再接原接口，保全部旧成果和历史失败。外仓1.1.0/原指纹未改，不把本地附件冒称四仓共同发布。不得以旧候选合并代替本次新增范围闭环。

@@ -53,7 +53,8 @@ def test_digest_approval_changes_when_original_body_changes():
 
 def test_frozen_intake_requires_real_guard_and_never_contacts_adapter_before_approval(monkeypatch):
     record=observed("x");cap=capture(record);seen=[]
-    def denied(actor,scope,platform,keyword,limit):
+    def denied(actor,scope,platform,keyword,limit, *, max_scroll=None):
+        assert max_scroll is None
         seen.append((platform,keyword))
         return None,{"ok":False,"status":"AUTH_REQUIRED"}
     monkeypatch.setattr(entry,"_manual_collection_guard",denied)

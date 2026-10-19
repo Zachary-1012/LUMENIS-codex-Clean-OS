@@ -13,6 +13,7 @@ from __future__ import annotations
 from contextlib import nullcontext
 from dataclasses import dataclass
 import ipaddress
+import sqlite3
 
 import threading
 import time
@@ -34,25 +35,14 @@ from .routing import RouteIdentityMismatch, bind_collection_route
 from .safe_collection import CollectionHygienePolicy, RateGovernor
 
 
-SECONDARY_COLLECTION_PLATFORMS = (
-    "bilibili", "weibo", "douyin", "x", "kuaishou", "web_rss", "public_http", "web_atom", "sitemap", "zhihu", "instagram", "wechat", "facebook", "xiaohongshu",
-)
-PLATFORM_NAMES = {
-    "bilibili": "B站",
-    "douyin": "抖音",
-    "x": "X",
-    "kuaishou": "快手",
-    "weibo": "微博",
-    "web_rss": "Web RSS",
-    "public_http": "Public HTTP",
-    "web_atom": "Web Atom",
-    "sitemap": "Sitemap",
-    "zhihu": "知乎",
-    "instagram": "Instagram",
-    "wechat": "微信公众号",
-    "facebook": "Facebook",
-    "xiaohongshu": "小红书",
-}
+# Planned visibility is separate from the unchanged executable source set.
+SECONDARY_COLLECTION_PLATFORMS = tuple(
+    cap["canonical_id"] for cap in PLATFORM_CAPABILITIES.values()
+    if cap["collection_entry_enabled"])
+_COLLECTION_SURFACE_PLATFORMS = tuple(
+    cap["canonical_id"] for cap in PLATFORM_CAPABILITIES.values()
+    if cap["collection_surface_visible"])
+PLATFORM_NAMES = {cap["canonical_id"]: cap["name"] for cap in PLATFORM_CAPABILITIES.values()}
 MAX_RESULTS = 20
 MAX_XHS_SCROLL = 20
 MIN_INTERVAL_SECONDS = 3.0
@@ -319,8 +309,8 @@ def get_collection_surface() -> Dict[str, Any]:
     an external request.
     """
     platforms: List[Dict[str, Any]] = []
-    for platform in SECONDARY_COLLECTION_PLATFORMS:
-        cap = PLATFORM_CAPABILITIES.get(platform, {})
+    for platform in _COLLECTION_SURFACE_PLATFORMS:
+        cap = PLATFORM_CAPABILITIES["xhs" if platform == "xiaohongshu" else platform]
         health = _adapter_health(platform)
         last_run = _last_run(platform)
         health_scope = (health.get("metadata") or {}).get("healthcheck_scope")
@@ -337,6 +327,8 @@ def get_collection_surface() -> Dict[str, Any]:
         platforms.append({
             "platform": platform,
             "name": PLATFORM_NAMES[platform],
+            "implementation_state": cap["implementation_state"],
+            "source_kind": cap["source_kind"],
             "product_owner": "CTH",
             "consumer_views": ["CTH", "BMP"],
             "manual_collection_enabled": bool(cap.get("manual_collection_enabled")),
@@ -345,7 +337,7 @@ def get_collection_surface() -> Dict[str, Any]:
             # Local readiness and the last real run are separate facts.  A
             # readable cookie file must not overwrite a verified session
             # failure or collection error in the product surface.
-            "status": display_status,
+            "status": "PLANNED" if cap["implementation_state"] == "PLANNED" else display_status,
             "health": health,
             "last_run": last_run,
             "external_write": False,
@@ -392,10 +384,9 @@ def get_collection_surface() -> Dict[str, Any]:
         "primary_collection": primary_collection,
         "platforms": platforms,
         "paused_platforms": ["xiaohongshu_cn"],
-        "out_of_scope_platforms": [
-            "tieba", "facebook", "youtube",
-            "tiktok", "reddit", "linkedin", "github", "channels",
-        ],
+        "out_of_scope_platforms": [],
+        "auxiliary_sources": [cap["canonical_id"] for cap in PLATFORM_CAPABILITIES.values()
+                              if not cap["collection_surface_visible"]],
         "manual_only": True,
         "manual_only_scope": "secondary_platform_form",
         "read_only": True,
@@ -1608,6 +1599,85 @@ class _CollectionWriteRejected(Exception):
         super().__init__(str(result.get("status") or "COLLECTION_WRITE_FAILED"))
 
 
+def _task_commit_binding(operation_key, actor, scope, operator, authorization,
+                         platform, keyword, max_results, business_query):
+    """Server-only task instance plus exact authorized operation, never an HTTP field."""
+    if not isinstance(operation_key, str) or not operation_key:
+        raise ValueError("invalid server collection operation")
+    from lumenis.system.security.permission import LocalWorkspacePrincipal
+    if type(actor) is LocalWorkspacePrincipal:
+        identity = {"principal_ref": actor.principal_ref}
+    elif isinstance(actor, dict) and type(actor.get("id")) is int:
+        identity = {"actor_id": actor["id"]}
+    elif operator == "prelaunch_maintenance" and authorization is not None:
+        identity = {"maintenance_plan": authorization.plan_id}
+    else:
+        raise PermissionError("server collection identity required")
+    material = {"operation_key": operation_key, "identity": identity,
+        "scope": dict(scope), "operator": operator, "platform": platform,
+        "keyword": keyword, "max_results": max_results,
+        "query": business_query.to_dict() if business_query is not None else None}
+    return json.loads(json.dumps(material, sort_keys=True, ensure_ascii=False))
+
+
+def _task_commit_receipt(connection, binding, result=None):
+    """Existing signed Evidence transaction receipt, not collected source truth.
+
+    Caller holds BEGIN IMMEDIATE when writing. The serialized lookup+insert is
+    the uniqueness fence for this feature/asset key; no parallel task store.
+    """
+    from lumenis.shared.evidence.store import classify_evidence_integrity, record_evidence
+    key = "collector-task:" + hashlib.sha256(json.dumps(binding, sort_keys=True,
+        ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+    if not connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='app_evidence_records'").fetchone():
+        if result is None:
+            return None
+        raise ValueError("source Evidence schema unavailable")
+    rows = connection.execute("SELECT * FROM app_evidence_records WHERE feature_id=? AND asset_id=?",
+        ("COLLECTOR_TASK_COMMIT", key)).fetchall()
+    if rows:
+        row = dict(rows[0])
+        if (len(rows) != 1 or row.get("version") != "collector-task-commit:v1"
+                or row.get("result") != "PASS"
+                or classify_evidence_integrity(row).get("assurance") != "writer-authenticated"
+                or json.loads(row["inputs_json"]).get("binding") != binding):
+            raise ValueError("COLLECTION_COMMIT_RECEIPT_UNVERIFIED")
+        saved = json.loads(row["outputs_json"])["result"]
+        source_ref = json.loads(row["inputs_json"]).get("source_evidence_ref")
+        if not isinstance(source_ref, str) or not source_ref.startswith("app_evidence_records:"):
+            raise ValueError("COLLECTION_SOURCE_RECEIPT_UNVERIFIED")
+        source_row = connection.execute("SELECT * FROM app_evidence_records WHERE id=?",
+            (int(source_ref.split(":", 1)[1]),)).fetchone()
+        if source_row is None or classify_evidence_integrity(dict(source_row)).get("assurance") != "writer-authenticated":
+            raise ValueError("COLLECTION_SOURCE_RECEIPT_UNVERIFIED")
+        if result is not None:
+            raise ValueError("COLLECTION_COMMIT_ALREADY_EXISTS")
+        return {**saved, "task_commit_evidence_ref": "app_evidence_records:" + str(row["id"]),
+                "commit_reconciled": True, "network_attempted": False,
+                "historical_commit_verified": True, "refresh_verified": False}
+    if result is None:
+        return None
+    if result.get("ok") is not True:
+        result.update(source_status=result.get("status"), status="PARTIAL_COMMITTED",
+                      retry_safe=False, new_collection_required=True,
+                      recovery_action="REVIEW_COMMITTED_SOURCES_THEN_CREATE_NEW_REQUEST")
+    scope = binding["scope"]
+    evidence_id = record_evidence(source="collector", feature_id="COLLECTOR_TASK_COMMIT",
+        asset_id=key, version="collector-task-commit:v1", capture_mode="derived_task_commit",
+        inputs={"binding": binding, "source_evidence_ref": "app_evidence_records:" + str(result.get("evidence_ref"))},
+        collection_metadata={"kind": "DERIVATIVE_EXECUTION_OUTCOME", "grants_source_use": False},
+        outputs={"result": result}, result="PASS",
+        actual="SOURCE_TRANSACTION_COMMITTED", provider="collector_task_transaction",
+        product="CTH" if scope["domain_id"] == "cth" else "ZBMP",
+        domain_id="cth" if scope["domain_id"] == "cth" else "zbmp",
+        subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
+        global_scope=scope.get("global_scope", False), connection=connection)
+    if type(evidence_id) is not int or evidence_id <= 0:
+        raise ValueError("COLLECTION_COMMIT_RECEIPT_UNAVAILABLE")
+    result["task_commit_evidence_ref"] = "app_evidence_records:" + str(evidence_id)
+    return result
+
+
 def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULTS,
                    operator: str = "human", scope: Mapping[str, Any] | None = None,
                    actor: Any = None,
@@ -1616,7 +1686,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                    prelaunch_authorization: Any = None,
                    raw_capture: PublicRawCapture | None = None,
                    business_query: Any = None,
-                   native_capture: NativePublicCapture | None = None) -> Dict[str, Any]:
+                   native_capture: NativePublicCapture | None = None,
+                   attempt_guard=None, operation_key=None) -> Dict[str, Any]:
     """Run one explicit, read-only platform search and persist its evidence."""
     operator = str(operator or "").strip().lower()
     maintenance_operator = operator == "prelaunch_maintenance"
@@ -1669,6 +1740,12 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 or business_query.keyword != keyword
                 or normalize_platform(business_query.business_context.get('platform')) != platform):
             raise ValueError('business query must match the exact planned platform and keyword')
+        query_domain = 'cth' if business_query.domain_id == 'CTH' else 'bmp'
+        scope_domain = (scope or {}).get('domain_id') if isinstance(scope, Mapping) else None
+        if scope_domain == 'zbmp':
+            scope_domain = 'bmp'
+        if scope_domain != query_domain:
+            raise ValueError('business query domain must match the authorized source scope')
     if raw_capture is not None:
         try:
             if (not prelaunch_local_import or operator != "human" or actor is not None
@@ -1733,6 +1810,20 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         except Exception:
             return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
                     "keyword": keyword, "read_only": True, "external_write": False}
+    task_binding = None
+    if operation_key is not None:
+        task_binding = _task_commit_binding(operation_key, actor, manual_scope or prelaunch_scope,
+            operator, prelaunch_authorization, platform, keyword, max_results, business_query)
+        import database as db
+        try:
+            with db.get_db() as receipt_conn:
+                committed = _task_commit_receipt(receipt_conn, task_binding)
+            if committed is not None:
+                return committed
+        except Exception:
+            return {"ok": False, "status": "COLLECTION_COMMIT_UNVERIFIED",
+                    "network_attempted": False, "persistence_attempted": False,
+                    "platform": platform, "keyword": keyword}
     policy = CollectionHygienePolicy(
         platform=platform,
         read_only=True,
@@ -2091,7 +2182,14 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             # Reserve the writer before checking either source owner. Every
             # scoped write below uses this connection and commits only after
             # the final permission check, including Evidence and native fields.
-            with db.get_db() as conn:
+            # Server-owned queue fence spans only this existing transaction,
+            # after acquisition. Reapers cannot supersede the active lease
+            # between the identity check and the business commit.
+            from contextlib import nullcontext
+            with (attempt_guard() if attempt_guard is not None else nullcontext(True)) as attempt_active, db.get_db() as conn:
+                if attempt_active is not True:
+                    raise _CollectionWriteRejected({"ok": False, "status": "STALE_ATTEMPT",
+                        "platform": platform, "read_only": True, "external_write": False})
                 conn.execute("BEGIN IMMEDIATE")
                 if raw_capture is not None and not _authorize_prelaunch_public(
                     prelaunch_scope, keyword, platform, raw_capture=raw_capture,
@@ -2609,6 +2707,14 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                         "error": _status_message("PARTIAL_SCOPE_REVIEW_REQUIRED"),
                         "scope_status": "PARTIAL", "refresh_verified": False,
                     })
+                has_source_effect = any(int(result.get(field, 0) or 0) > 0 for field in
+                    ("imported", "updated", "canonical_synced", "native_fields_synced")) or any(
+                    item.get("status") == "SAVED" for item in
+                    result.get("live_original_refs", []) + result.get("pending_original_refs", []))
+                # A transient error's diagnostic Evidence is not a completed
+                # source effect. Permit retry; committed partial sources remain fenced.
+                if task_binding is not None and (result.get("ok") is True or has_source_effect):
+                    _task_commit_receipt(conn, task_binding, result)
             source_files_committed = True
             # The operational checkpoint follows the actual Source transaction.
             # Observed/skipped cards and rejected IDs cannot count as committed.
@@ -2736,10 +2842,219 @@ def _business_source_reviews(records, query, observed_at):
     return reviewed
 
 
+def _business_batch_binding(actor, scopes, operator, prelaunch_authorization):
+    """Verify current actor authority before reading any durable task result."""
+    from lumenis.system.security.permission import (
+        LocalWorkspacePrincipal, check_actor_scope_permission,
+        check_local_workspace_scope_permission,
+    )
+    if operator == "prelaunch_maintenance":
+        if prelaunch_authorization is None:
+            raise PermissionError("SIGNED_MAINTENANCE_REQUIRED")
+        identity = {"maintenance_plan": prelaunch_authorization.plan_id}
+    else:
+        if type(actor) is LocalWorkspacePrincipal:
+            identity = {"principal_ref": actor.principal_ref}
+            checker = check_local_workspace_scope_permission
+        elif isinstance(actor, dict) and type(actor.get("id")) is int:
+            identity = {"actor_id": actor["id"]}
+            checker = check_actor_scope_permission
+        else:
+            raise PermissionError("AUTH_REQUIRED")
+        if not isinstance(scopes, Mapping) or not scopes:
+            raise PermissionError("SCOPE_UNAUTHORIZED")
+        for scope_key, scope in scopes.items():
+            if not isinstance(scope, Mapping):
+                raise PermissionError("SCOPE_UNAUTHORIZED")
+            normalized_domain = 'bmp' if scope.get('domain_id') == 'zbmp' else scope.get('domain_id')
+            if scope_key not in {'cth', 'bmp'} or normalized_domain != scope_key:
+                raise PermissionError("QUERY_CALLER_SCOPE_MISMATCH")
+            decision = checker(actor, module="collector", action="write", **scope)
+            if decision.allowed is not True or decision.verification_state != "verified":
+                raise PermissionError("SCOPE_UNAUTHORIZED")
+    return {"identity": identity, "scopes": scopes, "operator": operator}
+
+
+def _historical_business_result(result):
+    """Cached task truth is explicitly historical, never a new source refresh."""
+    cached = json.loads(json.dumps(result))
+    cached.update(cached=True, execution_attempted=False, refresh_performed=False,
+                  result_freshness="HISTORICAL_TASK_RESULT")
+    for run in cached.get("runs", []):
+        outcome = run.get("result") or {}
+        outcome["refresh_verified"] = False
+        outcome["historical_task_result"] = True
+    return cached
+
+
 def collect_business_queries(business_requests, *, actor=None, scopes=None,
                              operator='human', continuation=None, checkpoint=None,
                              max_queries=32, max_results=MAX_RESULTS,
-                             prelaunch_authorization=None):
+                             prelaunch_authorization=None, request_id=None):
+    """Resume only server-issued, actor/scope/plan-bound operational receipts.
+
+    Client completed keys are an inspectable echo, never task truth or approval.
+    Native pagination stays in the existing acquisition plan's separate cursor.
+    """
+    import uuid
+    from ..acquisition_plan import build_acquisition_plan, AcquisitionPlanError
+    from ..guard.task_queue import TaskQueue
+    if operator in {'human', 'human_ui'} and actor is None:
+        return {'ok': False, 'status': 'AUTH_REQUIRED', 'runs': [], 'network_attempted': False}
+    plan = build_acquisition_plan(business_requests=business_requests,
+                                 continuation=continuation, max_queries=max_queries)
+    if checkpoint is not None and (not isinstance(checkpoint, Mapping)
+            or set(checkpoint) != {'input_fingerprint', 'completed_query_keys', 'task_id', 'receipt'}):
+        raise AcquisitionPlanError('server-issued collection checkpoint required')
+    binding = _business_batch_binding(actor, scopes, operator, prelaunch_authorization)
+    if operator == 'prelaunch_maintenance':
+        for query in plan.queries:
+            domain = 'cth' if query.domain_id == 'CTH' else 'bmp'
+            source_scope = (scopes or {}).get(domain)
+            if not _authorize_prelaunch_public(source_scope, query.keyword,
+                    query.business_context['platform'], maintenance_authorization=prelaunch_authorization,
+                    business_query=query, max_results=max_results):
+                raise PermissionError('SCOPE_UNAUTHORIZED')
+    binding = json.loads(json.dumps({**binding, 'input_fingerprint': plan.input_fingerprint,
+                                    'max_queries': max_queries, 'max_results': max_results}, sort_keys=True))
+    if request_id is not None and (not isinstance(request_id, str) or not 1 <= len(request_id) <= 128):
+        raise AcquisitionPlanError('invalid collection request_id')
+    binding['request_id'] = request_id
+    page_key = json.dumps(continuation, sort_keys=True, separators=(',', ':'))
+    queue = TaskQueue()
+    try:
+        if checkpoint is not None:
+            task_id = checkpoint.get('task_id')
+            if type(task_id) is not int or type(checkpoint.get('receipt')) is not str:
+                raise AcquisitionPlanError('invalid server collection receipt')
+            task = queue.get(task_id)
+            if (task is None or task['task_type'] != 'collector_business_batch'
+                    or task['payload'].get('binding') != binding):
+                raise AcquisitionPlanError('collection checkpoint actor, scope or plan mismatch')
+            progress = task['payload'].get('progress') or {}
+            issued = (progress.get('receipts') or {}).get(checkpoint['receipt'])
+            if (issued is None or checkpoint['completed_query_keys'] != issued['completed_query_keys']
+                    or checkpoint['input_fingerprint'] != plan.input_fingerprint
+                    or page_key not in {issued['page_key'], json.dumps(issued['next_cursor'], sort_keys=True, separators=(',', ':'))}):
+                raise AcquisitionPlanError('collection checkpoint was not issued for this continuation')
+            cached = (progress.get('pages') or {}).get(page_key)
+            if cached is not None:
+                return _historical_business_result(cached)
+            # A saved receipt is never a live permission/import grant.
+            for query in plan.queries:
+                domain = 'cth' if query.domain_id == 'CTH' else 'bmp'
+                source_scope = (scopes or {}).get(domain)
+                platform = query.business_context['platform']
+                if operator == 'prelaunch_maintenance':
+                    if not _authorize_prelaunch_public(source_scope, query.keyword, platform,
+                            maintenance_authorization=prelaunch_authorization,
+                            business_query=query, max_results=max_results):
+                        raise PermissionError('SCOPE_UNAUTHORIZED')
+                elif platform in SECONDARY_COLLECTION_PLATFORMS:
+                    _, error = _manual_collection_guard(actor, source_scope, platform, query.keyword, max_results)
+                    if error is not None:
+                        return {**error, 'runs': [], 'network_attempted': False}
+            queue.reap_stale(120, task_id=task_id)
+        else:
+            if continuation is not None:
+                raise AcquisitionPlanError('continuation requires a server checkpoint')
+            request_key = hashlib.sha256(json.dumps(binding, sort_keys=True,
+                ensure_ascii=False, separators=(',', ':')).encode('utf-8')).hexdigest()
+            task_id = queue.enqueue_once('collector_business_batch', {'binding': binding, 'operation_id': uuid.uuid4().hex}, request_key)
+            task = queue.get(task_id)
+            progress = task['payload'].get('progress') or {}
+            cached = (progress.get('pages') or {}).get(page_key)
+            if cached is not None:
+                return _historical_business_result(cached)
+            queue.reap_stale(120, task_id=task_id)
+        if not task['payload'].get('operation_id'):
+            return {'ok': False, 'status': 'LEGACY_COLLECTION_COMMIT_UNKNOWN', 'runs': [],
+                    'task_id': task_id, 'network_attempted': False,
+                    'new_collection_requires_new_request_id': True}
+        worker = 'business-batch-' + uuid.uuid4().hex
+        claimed = queue.dequeue(worker_id=worker, lease_owner=worker, task_id=task_id)
+        if claimed is None:
+            current = queue.get(task_id)
+            queue_state = current['status'] if current else 'missing'
+            state = 'FAILED' if queue_state == 'failed' else 'PENDING' if queue_state == 'pending' else 'BUSY'
+            return {'ok': False, 'status': state, 'runs': [], 'network_attempted': False,
+                    'task_id': task_id, 'attempts': current['attempts'] if current else None,
+                    'retry_after_seconds': max(0, current['scheduled_at'] - time.time()) if queue_state == 'pending' else None,
+                    'new_collection_requires_new_request_id': queue_state == 'failed'}
+        receipt = {key: claimed[key] for key in ('run_id', 'worker_id', 'lease_owner')}
+        progress = claimed['payload'].get('progress') or progress
+        stop_heartbeat = threading.Event()
+        def renew_batch():
+            heartbeat_queue = TaskQueue()
+            try:
+                while not stop_heartbeat.wait(15):
+                    if not heartbeat_queue.heartbeat(task_id, worker,
+                            run_id=receipt['run_id'], lease_owner=worker):
+                        return
+            finally:
+                heartbeat_queue.close()
+        heartbeat_thread = threading.Thread(target=renew_batch, daemon=True)
+        heartbeat_thread.start()
+        def save_completed(completed):
+            progress['completed_query_keys'] = completed
+            if not queue.save_progress(task_id, progress, **receipt):
+                raise RuntimeError('COLLECTION_ATTEMPT_SUPERSEDED')
+        try:
+            result = _execute_business_queries(business_requests, actor=actor, scopes=scopes,
+                operator=operator, continuation=continuation,
+                checkpoint={'input_fingerprint': plan.input_fingerprint,
+                            'completed_query_keys': progress.get('completed_query_keys', [])},
+                max_queries=max_queries, max_results=max_results,
+                prelaunch_authorization=prelaunch_authorization,
+                progress_callback=save_completed,
+                operation_prefix=claimed['payload'].get('operation_id'),
+                attempt_guard=lambda: queue.attempt_guard(task_id, **receipt))
+            result = json.loads(json.dumps(result, ensure_ascii=False))
+            outcomes = [run.get('result') or {} for run in result.get('runs', [])]
+            reconciled_only = bool(outcomes) and all(outcome.get('commit_reconciled') is True for outcome in outcomes)
+            refreshed = any(outcome.get('ok') is True and outcome.get('commit_reconciled') is not True
+                            and outcome.get('network_attempted') is not False for outcome in outcomes)
+            result.update(cached=False, execution_attempted=True, refresh_performed=refreshed,
+                result_freshness='HISTORICAL_COMMIT_RECONCILED' if reconciled_only else 'CURRENT_TASK_EXECUTION')
+            if any(outcome.get('new_collection_required') is True for outcome in outcomes):
+                result.update(new_collection_required=True, continuation_required=False,
+                    recovery_action='REVIEW_COMMITTED_SOURCES_THEN_CREATE_NEW_REQUEST')
+            result['new_collection_requires_new_request_id'] = True
+            result['task_created_at'] = claimed['created_at']
+            result['request_identity_mode'] = 'explicit' if request_id is not None else 'default_idempotent'
+            # Store terminal operation receipts, not a second Source/Evidence store.
+            token = uuid.uuid4().hex
+            completed = result.get('checkpoint', {}).get('completed_query_keys', [])
+            result['checkpoint'] = {'input_fingerprint': plan.input_fingerprint,
+                'completed_query_keys': completed, 'task_id': task_id, 'receipt': token}
+            progress.setdefault('receipts', {})[token] = {
+                'completed_query_keys': completed, 'page_key': page_key,
+                'next_cursor': result.get('next_cursor')}
+            if result.get('ok') is True:
+                progress.setdefault('pages', {})[page_key] = result
+            progress['completed_query_keys'] = completed
+            if not queue.save_progress(task_id, progress, **receipt):
+                raise RuntimeError('COLLECTION_ATTEMPT_SUPERSEDED')
+            if result.get('ok') is True and result.get('continuation_required') is not True:
+                queue.ack(task_id, **receipt)
+            else:
+                queue.defer(task_id, **receipt)
+            return result
+        except Exception:
+            queue.fail(task_id, 'COLLECTION_BATCH_INTERRUPTED', **receipt)
+            raise
+        finally:
+            stop_heartbeat.set()
+            heartbeat_thread.join(timeout=2)
+    finally:
+        queue.close()
+
+
+def _execute_business_queries(business_requests, *, actor=None, scopes=None,
+                             operator='human', continuation=None, checkpoint=None,
+                             max_queries=32, max_results=MAX_RESULTS,
+                             prelaunch_authorization=None, progress_callback=None,
+                             attempt_guard=None, operation_prefix=None):
     """Execute a task-selected batch through the existing guarded collection entry.
 
     Existing task owners persist the returned checkpoint. Source scopes come
@@ -2805,13 +3120,17 @@ def collect_business_queries(business_requests, *, actor=None, scopes=None,
                     result = collect_search(platform, query.keyword, max_results=max_results,
                         actor=actor, operator=operator, scope=scope, business_query=query,
                         prelaunch_local_import=operator == 'prelaunch_maintenance',
-                        prelaunch_authorization=prelaunch_authorization)
+                        prelaunch_authorization=prelaunch_authorization,
+                        attempt_guard=attempt_guard,
+                        operation_key=(operation_prefix + ":" + key) if operation_prefix else None)
                 except (ValueError, PermissionError) as exc:
                     result = {'ok': False, 'status': 'COLLECTION_REQUEST_REJECTED',
                               'platform': platform, 'error_type': type(exc).__name__}
             runs.append({'query_key': key, 'planned_query': query.to_dict(), 'result': result})
             if result.get('ok') is True and result.get('status') in {'SUCCESS', 'NO_NEW_DATA'}:
                 completed.add(key)
+                if progress_callback is not None:
+                    progress_callback(sorted(completed))
             else:
                 blocked[platform] = result.get('status') or 'UNAVAILABLE'
                 deferred.append({'query_key': key, 'query': query.to_dict(), 'reason': blocked[platform]})
@@ -3198,12 +3517,16 @@ def _persist_live_source_original(connection, *, platform, record, source_id,
 def _persist_pending_live_source_original(connection, *, platform, record, source_id,
                                           collection_evidence_id, context, staged_paths,
                                           scope, keyword, authorization, business_query,
-                                          max_results, reason):
+                                          max_results, reason, recovery_binding=None):
     """Preserve an authorized native observation pending business-entity assignment."""
-    if not _authorize_prelaunch_public(
-            scope, keyword, platform, maintenance_authorization=authorization,
-            business_query=business_query, max_results=max_results):
-        raise ValueError("COLLECTED_SOURCE_IMPORT_PERMISSION_DENIED")
+    if recovery_binding is None:
+        if not _authorize_prelaunch_public(
+                scope, keyword, platform, maintenance_authorization=authorization,
+                business_query=business_query, max_results=max_results):
+            raise ValueError("COLLECTED_SOURCE_IMPORT_PERMISSION_DENIED")
+    elif (not isinstance(recovery_binding, Mapping)
+          or getattr(authorization, "recovery_only", False) is not True):
+        raise ValueError("PENDING_SOURCE_RECOVERY_BINDING_INVALID")
     if not isinstance(reason, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", reason):
         raise ValueError("PENDING_SOURCE_REASON_INVALID")
     if not isinstance(context, Mapping):
@@ -3301,6 +3624,15 @@ def _persist_pending_live_source_original(connection, *, platform, record, sourc
                               separators=(",", ":")).encode("utf-8")
     fingerprint = hashlib.sha256(source_bytes).hexdigest()
     _validate_native_source_bytes(platform, source_bytes, fingerprint)
+    if recovery_binding is not None and not _authorize_prelaunch_pending_source_recovery(
+            scope, authorization=authorization,
+            parent_evidence_ref=recovery_binding["parent_evidence_ref"],
+            parent_integrity_digest=recovery_binding["parent_integrity_digest"],
+            observation_sha256=recovery_binding["observation_sha256"],
+            native_id=native_id, source_fingerprint=fingerprint,
+            source_url=keyword, platform=platform, business_query=business_query,
+            max_results=max_results, connection=connection):
+        raise ValueError("PENDING_SOURCE_RECOVERY_PERMISSION_DENIED")
     return _persist_collected_source_original(
         connection, value=value, source_bytes=source_bytes,
         source_fingerprint=fingerprint, source_id=source_id,
@@ -3432,7 +3764,8 @@ def _persist_collected_source_original(connection, *, value, source_bytes,
 def _persist_pending_live_observations(connection, *, platform, records,
                                        collection_evidence_id, context, staged_paths,
                                        scope, keyword, authorization, business_query,
-                                       max_results, reviews, saved_ids, covers=None):
+                                       max_results, reviews, saved_ids, covers=None,
+                                       recovery_bindings=None):
     """Preserve reviewed/unbound native originals without assigning entity facts."""
     from .platform_naming import get_platform_fields, normalize_content_id
     from lumenis.shared.evidence import store
@@ -3465,7 +3798,8 @@ def _persist_pending_live_observations(connection, *, platform, records,
                 collection_evidence_id=collection_evidence_id, context=context,
                 staged_paths=staged_paths, scope=scope, keyword=keyword,
                 authorization=authorization, business_query=business_query,
-                max_results=max_results, reason="SOURCE_ENTITY_IDENTITY_UNCONFIRMED")
+                max_results=max_results, reason="SOURCE_ENTITY_IDENTITY_UNCONFIRMED",
+                recovery_binding=(recovery_bindings or {}).get(str(source_id)))
             if isinstance(covers, Mapping):
                 cover_refs = {"status": "NULL", "reason": "NO_OBSERVED_COVER",
                               "media_asset_refs": None}
@@ -3787,18 +4121,36 @@ def _preserve_prelaunch_originals_after_rollback(*, platform, keyword, scope,
 
 def recover_prelaunch_pending_sources(*, limit=40):
     """Recover permitted originals from retained observations, never recollect."""
+    import sqlite3
+
+    from lumenis.importer.documents import _source_bytes
     from lumenis.shared.database import get_repository
     from lumenis.shared.evidence import store
-    from lumenis.importer.documents import _source_bytes
+
     from .scheduling.prelaunch_baseline import (
-        PURPOSE_POLICY, _purpose_query, load_prelaunch_baseline_config, maintenance_authorization,
+        PURPOSE_POLICY,
+        BaselineConfigError,
+        _purpose_query,
+        load_prelaunch_baseline_config,
+        maintenance_authorization,
     )
     if type(limit) is not int or not 1 <= limit <= 40:
         raise ValueError("PENDING_SOURCE_RECOVERY_LIMIT_INVALID")
-    loaded = load_prelaunch_baseline_config(os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None)
+    config_error = None
+    try:
+        loaded = load_prelaunch_baseline_config(
+            os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None)
+    except BaselineConfigError as exc:
+        loaded = {"plans": [], "recovery_plans": []}
+        config_error = exc.code
+    if loaded.get("status") == "DISABLED":
+        config_error = "PRELAUNCH_SERVICE_DISABLED"
     plans = {p.plan_id: p for p in loaded.get("plans", []) if p.policy_id == PURPOSE_POLICY}
+    for plan in loaded.get("recovery_plans", []):
+        if plan.policy_id == PURPOSE_POLICY:
+            plans.setdefault(plan.plan_id, plan)
     con = get_repository().connect(timeout=10)
-    outcomes, scanned, deferred = [], 0, 0
+    outcomes, scanned, deferred, invalid_parents = [], 0, 0, 0
     try:
         preserved = set()
         for row in con.execute("SELECT * FROM app_evidence_records WHERE feature_id='COLLECTED_SOURCE' "
@@ -3820,16 +4172,40 @@ def recover_prelaunch_pending_sources(*, limit=40):
             if len(outcomes) >= limit:
                 break
             parent = dict(row)
+            parent_ref = "app_evidence_records:" + str(parent.get("id"))
             try:
                 metadata = json.loads(parent["collection_metadata"] or "{}")
                 plan = plans.get(metadata.get("maintenance_plan_id"))
-                if plan is None:
-                    continue
                 inputs = json.loads(parent["inputs_json"] or "{}")
                 observations = inputs.get("source_observation_records")
                 integrity = store.classify_evidence_integrity(parent)
                 if (not isinstance(observations, list) or integrity.get("verified") is not True
-                        or integrity.get("assurance") != "writer-authenticated"):
+                        or integrity.get("assurance") != "writer-authenticated"
+                        or parent.get("status") != "verified"
+                        or parent.get("result") not in {"PASS", "FAIL"}):
+                    invalid_parents += 1
+                    continue
+                if plan is None:
+                    platform = inputs.get("platform") if isinstance(inputs, dict) else None
+                    if platform:
+                        from .platform_naming import normalize_platform
+                        platform = normalize_platform(platform)
+                    needs_recovery = False
+                    for observation in observations[:40]:
+                        try:
+                            native_id, _ = _verified_live_native_observation(platform, observation)
+                        except (TypeError, ValueError):
+                            deferred += 1
+                            continue
+                        scanned += 1
+                        if (parent_ref, native_id) not in preserved:
+                            needs_recovery = True
+                    if needs_recovery:
+                        outcomes.append({
+                            "collection_evidence_ref": parent_ref, "status": "PENDING",
+                            "reason": config_error or "RECOVERY_AUTHORIZATION_UNAVAILABLE",
+                            "network_collection": False, "canonical_ref": None,
+                        })
                     continue
                 query = _purpose_query(plan.purpose_query)
                 scope = {"domain_id": plan.domain_id, "subject_id": plan.subject_id,
@@ -3837,9 +4213,9 @@ def recover_prelaunch_pending_sources(*, limit=40):
                 context = {**scope, "domain_id": "zbmp" if plan.domain_id == "bmp" else "cth",
                            "global_scope": False, "collector_plan_id": plan.plan_id,
                            "collector_authorization_ref": plan.authorization_ref}
-                authorization = maintenance_authorization(plan)
-                parent_ref = "app_evidence_records:" + str(parent["id"])
+                authorization = maintenance_authorization(plan, recovery_only=True)
                 eligible = []
+                recovery_bindings = {}
                 for observation in observations[:plan.max_results]:
                     scanned += 1
                     try:
@@ -3849,6 +4225,15 @@ def recover_prelaunch_pending_sources(*, limit=40):
                         continue
                     if (parent_ref, native_id) not in preserved:
                         eligible.append(observation)
+                        encoded_observation = json.dumps(
+                            observation, ensure_ascii=False, sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode("utf-8")
+                        recovery_bindings[native_id] = {
+                            "parent_evidence_ref": parent_ref,
+                            "parent_integrity_digest": str(parent.get("integrity_digest") or ""),
+                            "observation_sha256": hashlib.sha256(encoded_observation).hexdigest(),
+                        }
                 if not eligible:
                     continue
                 # Use the actual observation cutoff in the retained parent.
@@ -3867,16 +4252,33 @@ def recover_prelaunch_pending_sources(*, limit=40):
                 continue
             paths, committed = [], False
             try:
+                from .platform_naming import normalize_platform
+                recovery_platform = normalize_platform(plan.platform)
+                if recovery_platform is None:
+                    raise ValueError("PENDING_SOURCE_RECOVERY_PLATFORM_INVALID")
                 con.execute("BEGIN IMMEDIATE")
                 result = _persist_pending_live_observations(
-                    con, platform=plan.platform, records=eligible,
+                    con, platform=recovery_platform, records=eligible,
                     collection_evidence_id=parent["id"], context=context, staged_paths=paths,
                     scope=scope, keyword=plan.source_url, authorization=authorization,
-                    business_query=query, max_results=plan.max_results, reviews=reviews, saved_ids=set())
-                if not _authorize_prelaunch_public(
-                        scope, plan.source_url, plan.platform, maintenance_authorization=authorization,
-                        business_query=query, max_results=plan.max_results):
-                    raise ValueError("COLLECTED_SOURCE_IMPORT_PERMISSION_DENIED")
+                    business_query=query, max_results=plan.max_results, reviews=reviews,
+                    saved_ids=set(), recovery_bindings=recovery_bindings)
+                for item in result.get("original_refs", []):
+                    if item.get("status") != "SAVED":
+                        continue
+                    native_id = str(item.get("source_id") or "")
+                    binding = recovery_bindings.get(native_id)
+                    if (binding is None or not _authorize_prelaunch_pending_source_recovery(
+                            scope, authorization=authorization,
+                            parent_evidence_ref=binding["parent_evidence_ref"],
+                            parent_integrity_digest=binding["parent_integrity_digest"],
+                            observation_sha256=binding["observation_sha256"],
+                            native_id=native_id,
+                            source_fingerprint=item.get("source_fingerprint"),
+                            source_url=plan.source_url, platform=plan.platform,
+                            business_query=query, max_results=plan.max_results,
+                            connection=con)):
+                        raise ValueError("PENDING_SOURCE_RECOVERY_PERMISSION_REVOKED")
                 con.commit()
                 committed = True
                 for item in result["original_refs"]:
@@ -3884,17 +4286,24 @@ def recover_prelaunch_pending_sources(*, limit=40):
                                      "outcome_ref": result["outcome_ref"], **item})
                     if item.get("status") == "SAVED":
                         preserved.add((parent_ref, str(item["source_id"])))
-            except Exception:
+            except (ImportError, KeyError, OSError, PermissionError, RuntimeError,
+                    TypeError, ValueError, sqlite3.Error) as exc:
                 con.rollback()
                 outcomes.append({"collection_evidence_ref": parent_ref, "status": "UNAVAILABLE",
-                                 "reason": "PENDING_SOURCE_RECOVERY_UNAVAILABLE"})
+                    "reason": str(exc) if isinstance(exc, ValueError)
+                        and re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", str(exc))
+                        else "PENDING_SOURCE_RECOVERY_UNAVAILABLE",
+                    "network_collection": False})
             finally:
                 if not committed:
                     _cleanup_collected_source_paths(paths)
         saved = sum(r.get("status") == "SAVED" for r in outcomes)
-        return {"status": "PARTIAL" if any(r.get("status") == "UNAVAILABLE" for r in outcomes)
+        pending = sum(r.get("status") == "PENDING" for r in outcomes)
+        return {"status": "PARTIAL" if any(r.get("status") in {"UNAVAILABLE", "PENDING"}
+                                                for r in outcomes)
                 else "COMPLETED", "processed": len(outcomes), "saved": saved,
                 "observations_scanned": scanned, "native_detail_unavailable": deferred,
+                "pending_authorization": pending, "invalid_parent_count": invalid_parents,
                 "canonical_rows_created": 0, "network_collection": False,
                 "scope_status": "UNASSIGNED", "results": outcomes}
     finally:
@@ -4453,3 +4862,206 @@ def _native_capture_collection(capture):
                   "source":"platform:"+platform,"collected_at":value["capture_observation_native"],
                   "original_body_available":True,"native_capture_sha256":capture.sha256,
                   "source_native_time_unknown":publication.get("published_at_utc") is None})
+
+
+# Browser snapshots are a distinct producer under the existing Collector owner.
+# They never impersonate native originals or an uploaded document.
+def _browser_source_request(*, actor, scope, request_id, capture_id, rights, intended_use, rights_statement):
+    from lumenis.shared.reporting.saved_work import authorize, SavedWorkError, _digest
+    if (not isinstance(request_id, str) or re.fullmatch(r'[A-Za-z0-9_-]{8,128}', request_id) is None
+            or not isinstance(capture_id, str) or re.fullmatch(r'cap_[a-f0-9]{32}', capture_id) is None
+            or rights not in ('public-reference-only', 'owner-approved')
+            or intended_use not in ('research_reference', 'report_quote', 'internal_draft')
+            or (rights == 'public-reference-only' and intended_use == 'internal_draft')
+            or not isinstance(rights_statement, str) or not 0 < len(rights_statement) <= 2000):
+        raise SavedWorkError('BROWSER_SOURCE_ADMISSION_INVALID')
+    context = authorize(actor, scope, action='write')
+    request = dict(context=context, request_id=request_id, capture_id=capture_id,
+                   rights=rights, intended_use=intended_use, rights_statement=rights_statement)
+    source_id = 'browser_' + _digest({'context': context, 'request_id': request_id})
+    return context, request, source_id
+
+
+def _browser_import_admitted(actor, scope, resource, *, connection=None):
+    from lumenis.shared.reporting.saved_work import authorize, SavedWorkError
+    from lumenis.system.security import permission
+    context = authorize(actor, scope, action='write', connection=connection)
+    if permission.is_testing_bypass_enabled():
+        raise SavedWorkError('WORK_PERMISSION_UNVERIFIED')
+    caller = context.get('principal_ref') or f"actor:{context['actor_id']}"
+    result = permission.get_permission_gate().check(permission.OperationType.DATA_IMPORT,
+        resource=resource, caller=caller, domain_id=context['domain_id'], exact_approval_required=True)
+    if not result.allowed:
+        raise SavedWorkError('BROWSER_SOURCE_IMPORT_APPROVAL_REQUIRED')
+    return context
+
+
+def _browser_source_existing(con, source_id, request):
+    from lumenis.shared.reporting.saved_work import SavedWorkError
+    from lumenis.importer.documents import _source_bytes
+    from lumenis.shared.evidence import store
+    row = con.execute("SELECT * FROM app_evidence_records WHERE source='collector' AND "
+        "feature_id='COLLECTED_SOURCE' AND asset_id=? AND version='collected-browser-snapshot:v1'",
+        (source_id,)).fetchone()
+    if row is None:
+        return None
+    evidence = dict(row)
+    metadata = json.loads(evidence['collection_metadata'])
+    if metadata.get('browser_admission_request') != request:
+        raise SavedWorkError('BROWSER_SOURCE_REQUEST_CONFLICT')
+    integrity = store.classify_evidence_integrity(evidence)
+    if integrity.get('verified') is not True or integrity.get('assurance') != 'writer-authenticated':
+        raise SavedWorkError('BROWSER_SOURCE_INTEGRITY_FAILED')
+    _source_bytes(con, {**evidence, 'provenance': metadata})
+    return evidence, metadata
+
+
+def _browser_source_result(evidence, metadata, *, replayed):
+    return {'ok': True, 'source_id': evidence['asset_id'], 'evidence_id': evidence['id'],
+        'source_evidence_ref': 'app_evidence_records:' + str(evidence['id']),
+        'source_artifact_ref': metadata['source_artifact_ref'], 'source_version': evidence['version'],
+        'snapshot_sha256': metadata['source_fingerprint'],
+        'body_sha256': metadata['browser_snapshot_binding']['body_sha256'],
+        'source_capture': 'SANITIZED_SNAPSHOT_RETAINED', 'source_use': 'NOT_ADMITTED',
+        'fact_verification': 'NOT_VERIFIED', 'original_resource_sha256': None,
+        'canonical_ref': None, 'replayed': replayed}
+
+
+def admit_browser_snapshot(session, *, actor, scope, request_id, capture_id, rights,
+                           intended_use, rights_statement, prepare=False):
+    """Explicit server-bound snapshot admission; no network or automatic grants."""
+    from lumenis.shared.reporting.saved_work import SavedWorkError, _digest, _stage_bytes, staging_write
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.evidence import store
+    from lumenis.importer.documents import _source_bytes, source_boundaries
+    from lumenis.system.collector.runtime.browser_extract import (
+        snapshot_bytes, validate_source_snapshot, BROWSER_SOURCE_VERSION)
+    context, request, source_id = _browser_source_request(actor=actor, scope=scope,
+        request_id=request_id, capture_id=capture_id, rights=rights, intended_use=intended_use,
+        rights_statement=rights_statement)
+    # Bind the authenticated API actor to the owned browser session again at the service seam.
+    expected_actor = context.get('actor_id')
+    expected_principal = context.get('principal_ref')
+    if (session.owner_actor_id != expected_actor or session.owner_principal_ref != expected_principal
+            or (expected_actor is not None and session.owner_account_session_id != actor.get('session_id'))):
+        raise SavedWorkError('BROWSER_SOURCE_OWNER_MISMATCH')
+    repo = get_repository()
+    with repo.connection() as con:
+        old = _browser_source_existing(con, source_id, request)
+    if old:
+        resource = old[1]['source_intake_resource']
+        if prepare:
+            return {'ok': True, 'state': 'APPROVAL_REQUIRED', 'operation': 'data_import', 'resource': resource}
+        _browser_import_admitted(actor, scope, resource)
+        return _browser_source_result(*old, replayed=True)
+    snapshot = validate_source_snapshot(session.snapshot_for_source(capture_id))
+    binding = snapshot['binding']
+    rows = session.evidence_store.query(session_id=session.session_id, action='extract', limit=1000)
+    receipt = next((row for row in rows if row['id'] == binding['browser_evidence_id']), None)
+    if (receipt is None or receipt.get('after_state_hash') != binding['capture_sha256']
+            or receipt.get('result') not in ('PASS', 'PARTIAL')
+            or json.loads(receipt.get('verification') or '{}').get('operation_id') != binding['operation_id']):
+        raise SavedWorkError('BROWSER_SOURCE_CAPTURE_RECEIPT_INVALID')
+    raw = snapshot_bytes(snapshot)
+    fingerprint = hashlib.sha256(raw).hexdigest()
+    resource = 'browser-snapshot-import:v1:' + _digest({**request, 'snapshot_sha256': fingerprint})
+    if prepare:
+        return {'ok': True, 'state': 'APPROVAL_REQUIRED', 'operation': 'data_import', 'resource': resource,
+                'snapshot_sha256': fingerprint, 'original_resource_sha256': None}
+    _browser_import_admitted(actor, scope, resource)
+    paths = []
+    committed = False
+    commit_attempted = False
+    try:
+        with repo.transaction() as con:
+            con.execute('BEGIN IMMEDIATE')
+            _browser_import_admitted(actor, scope, resource, connection=con)
+            old = _browser_source_existing(con, source_id, request)
+            if old:
+                if old[1]['source_fingerprint'] != fingerprint:
+                    raise SavedWorkError('BROWSER_SOURCE_REQUEST_CONFLICT')
+                return _browser_source_result(*old, replayed=True)
+            provenance = {'source_url': snapshot['metadata']['url'], 'title': snapshot['metadata']['title'],
+                'captured_at': snapshot['metadata']['captured_at'], 'published_at': None,
+                'rights': rights, 'intended_use': intended_use, 'rights_statement': rights_statement,
+                'content_origin': {'kind': 'publisher-material', 'claim_type': 'source_statement'}}
+            owner = {k:v for k,v in context.items() if k not in ('domain_id','subject_id','brand_focus_id','global_scope')}
+            parent_metadata = {'context': context, 'owner': owner, 'browser_admission_request': request,
+                'source_intake_resource': resource, 'snapshot_sha256': fingerprint,
+                'browser_snapshot_binding': {**binding, 'snapshot_sha256': fingerprint}}
+            with staging_write(resource):
+                parent_id = store.record_evidence(connection=con, source='collector', product='CTH' if context['domain_id']=='cth' else 'ZBMP',
+                    feature_id='BROWSER_SNAPSHOT_ADMISSION', asset_id=source_id, version='browser-snapshot-admission:v1',
+                    provider='collector-browser-snapshot', capture_mode='sanitized_browser_snapshot',
+                    captured_at=provenance['captured_at'], raw_content=snapshot['body'],
+                    inputs={'source_intake_resource': resource}, outputs={'snapshot_sha256': fingerprint},
+                    collection_metadata=parent_metadata, domain_id=context['domain_id'],
+                    subject_id=context['subject_id'], brand_focus_id=context['brand_focus_id'], global_scope=context['global_scope'])
+                artifact, path = _stage_bytes(con, raw=raw, context=context, kind='collected_source',
+                    source_execution_id=source_id, extension='.json', media_type='application/json')
+                paths.append(path)
+                metadata = {**parent_metadata, 'source_kind': 'collected_source', 'provenance': provenance,
+                    'source_url': provenance['source_url'], 'source_fingerprint': fingerprint,
+                    'parsed_text': snapshot['body'], 'locators': snapshot['block_map'],
+                    'capture_mode': 'sanitized_browser_snapshot', 'original_resource_sha256': None,
+                    'source_artifact_ref': artifact['artifact_id'],
+                    'collection_evidence_ref': 'app_evidence_records:'+str(parent_id),
+                    **source_boundaries(provenance)}
+                evidence_id = store.record_evidence(connection=con, source='collector', product='CTH' if context['domain_id']=='cth' else 'ZBMP',
+                    feature_id='COLLECTED_SOURCE', asset_id=source_id, version=BROWSER_SOURCE_VERSION,
+                    provider='collector-browser-snapshot', capture_mode='sanitized_browser_snapshot',
+                    captured_at=provenance['captured_at'], raw_content=snapshot['body'],
+                    inputs={'source_ids':[source_id], 'source_intake_resource':resource,
+                            'collection_evidence_ref':metadata['collection_evidence_ref']},
+                    outputs={'source_artifact_ref':artifact['artifact_id'], 'snapshot_sha256':fingerprint},
+                    collection_metadata=metadata, domain_id=context['domain_id'], subject_id=context['subject_id'],
+                    brand_focus_id=context['brand_focus_id'], global_scope=context['global_scope'])
+                con.execute('UPDATE lumenis_shared_artifacts SET note_id=?,evidence_id=? WHERE artifact_id=?',
+                    (source_id, str(evidence_id), artifact['artifact_id']))
+                evidence = dict(con.execute('SELECT * FROM app_evidence_records WHERE id=?',(evidence_id,)).fetchone())
+                _source_bytes(con, {**evidence, 'provenance': metadata})
+                _browser_import_admitted(actor, scope, resource, connection=con)
+                commit_attempted = True
+                con.commit()
+                committed = True
+                return _browser_source_result(evidence, metadata, replayed=False)
+    except Exception:
+        if commit_attempted and not committed:
+            # A failed commit acknowledgement is not proof of rollback. Keep
+            # possibly committed bytes; replay resolves the durable request.
+            from lumenis.system.collector.runtime.browser_extract import BrowserExtractionError
+            raise BrowserExtractionError('BROWSER_SOURCE_COMMIT_UNKNOWN',
+                source_id=source_id, request_id=request_id, retry_safe=False,
+                recovery='REPLAY_SAME_SOURCE_IMPORT_REQUEST') from None
+        raise
+    finally:
+        if not committed and not commit_attempted:
+            for path in paths:
+                path.unlink(missing_ok=True)
+
+
+def _authorize_prelaunch_pending_source_recovery(
+    scope: Mapping[str, Any], *, authorization, parent_evidence_ref: str,
+    parent_integrity_digest: str, observation_sha256: str, native_id: str,
+    source_fingerprint: str, source_url: str, platform: str, business_query,
+    max_results: int, connection,
+) -> bool:
+    """Recheck a current signed recovery grant for one stored parent item."""
+    try:
+        from lumenis.system.security import (
+            get_permission_gate,
+            is_testing_bypass_enabled,
+        )
+        if is_testing_bypass_enabled():
+            return False
+        decision = get_permission_gate().check_prelaunch_pending_source_recovery(
+            authorization, parent_evidence_ref=parent_evidence_ref,
+            parent_integrity_digest=parent_integrity_digest,
+            observation_sha256=observation_sha256, native_id=native_id,
+            source_fingerprint=source_fingerprint, source_url=source_url,
+            platform=platform, business_query=business_query,
+            max_results=max_results, scope=dict(scope), connection=connection,
+        )
+        return decision.allowed is True and bool(decision.audit_id)
+    except (ImportError, OSError, RuntimeError, TypeError, ValueError):
+        return False

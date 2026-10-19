@@ -26,7 +26,7 @@
         "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_ai_native_constitution.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-continuity-rule-5fe-0j7_e37x",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-continuity-rule-5fe-0j7_e37x",
       "exit_code": 0,
       "log_sha256": "e30d82c88700d83e334b9d746d862749bb960251f028c8d76450046dcbfcaeca",
       "log_text": "AI-NATIVE CONSTITUTION GATE: PASS\r\n - 18 lightweight principles present\r\n - AGENTS/README bootstrap routes through the constitution\r\n - non-bypass status and dirty-worktree protections present\r\n - missing!=0 and CI anti-bypass regression anchors present\r\n - Product Gate executes this validator as BLOCKING\r\n"
@@ -36,7 +36,7 @@
         "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_codex_takeover_governance.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-continuity-rule-5fe-0j7_e37x",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-continuity-rule-5fe-0j7_e37x",
       "exit_code": 0,
       "log_sha256": "b3b3bb0c406adabf6d42e4d4f77059cc70155e01f0bcd5261315342439c8e1ea",
       "log_text": "CODEX TAKEOVER GOVERNANCE OK lumenis-ggi-cross-product v1.1.0 68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f single-machine-contract=PASS six-round-routing=PASS legacy-coverage=PASS cloud-boundaries=PASS workflow-guards=PASS online-progress=PASS\r\n"

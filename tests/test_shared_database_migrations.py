@@ -24,6 +24,32 @@ def _index_names(conn, table):
     return {row[1] for row in conn.execute(f"PRAGMA index_list({table})")}
 
 
+def _assert_current_owner_schemas_and_idempotence(migrations, db_path):
+    """Verify v20/v21 owner contracts and a no-op replay, including retained data."""
+    with sqlite3.connect(db_path) as conn:
+        assert {"id", "record_id", "content_json", "lifecycle_stage", "related_task_id"} <= set(
+            _table_contract(conn, "agent_learning_records")
+        )
+        assert {"idx_agent_learning_type", "idx_agent_learning_stage", "idx_agent_learning_task",
+                "idx_agent_learning_created"} <= _index_names(conn, "agent_learning_records")
+        assert {"conversation_id", "actor_ref", "workspace_binding", "scope_json"} <= set(
+            _table_contract(conn, "ai_conversations")
+        )
+        assert {"turn_id", "conversation_id", "idempotency_key", "request_sha256", "sequence"} <= set(
+            _table_contract(conn, "ai_conversation_turns")
+        )
+        assert "idx_ai_conversation_owner" in _index_names(conn, "ai_conversations")
+        assert "idx_ai_conversation_task" in _index_names(conn, "ai_conversation_turns")
+        assert conn.execute(
+            "SELECT version, COUNT(*) FROM schema_version WHERE version IN (20,21) GROUP BY version ORDER BY version"
+        ).fetchall() == [(20, 1), (21, 1)]
+        before = list(conn.iterdump())
+    assert migrations.migrate() is True
+    with sqlite3.connect(db_path) as conn:
+        assert migrations.get_current_version(conn) == migrations.CURRENT_VERSION
+        assert list(conn.iterdump()) == before
+
+
 def test_migrate_output_handles_gbk_redirect_without_db_migration():
     """Startup migration status must not crash when redirected stdout uses GBK."""
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -163,7 +189,7 @@ def test_migrate_only_bootstraps_empty_database_through_canonical_owners(
             } == owner_contract
             assert owner_indexes[table] <= _index_names(conn, table)
 
-    expected_version = 19
+    expected_version = 21
     assert migrations.CURRENT_VERSION == expected_version
     assert version == expected_version
     assert numeric_history == list(range(1, expected_version + 1))
@@ -188,6 +214,7 @@ def test_migrate_only_bootstraps_empty_database_through_canonical_owners(
         }
     assert "canonical_data" not in backup_tables
     assert "zbc_canonical_data" not in backup_tables
+    _assert_current_owner_schemas_and_idempotence(migrations, db_path)
 
 
 def test_existing_versioned_data_and_null_semantics_are_preserved(
@@ -239,7 +266,9 @@ def test_existing_versioned_data_and_null_semantics_are_preserved(
         None,
         None,
     )
-    assert numeric_history == [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    assert migrations.CURRENT_VERSION == 21
+    assert numeric_history == list(range(9, migrations.CURRENT_VERSION + 1))
+    _assert_current_owner_schemas_and_idempotence(migrations, db_path)
 
 
 def test_failed_migration_step_rolls_back_data_and_version(tmp_path, monkeypatch):

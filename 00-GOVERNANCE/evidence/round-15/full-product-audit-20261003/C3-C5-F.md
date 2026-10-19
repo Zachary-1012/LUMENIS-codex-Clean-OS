@@ -7,7 +7,7 @@
 - 实际 repo 为 D:/LUMENIS_REBUILD/序/序境。当前本地 main 与 origin/main 都是 a6844a98032ed1ffa0be8f99c40f7b99ba14d453。没有 fetch，以免改变只读检查的 ref 状态。
 - root 存在未提交改动。与本切片直接相关的 dirty paths 包含 app.py、experience_runtime.py、app/lib/features/bmp08/bmp08_screen.dart、app/lib/features/shared/sh01/media_preview*.dart、media_project_workbench.dart、lumenis/shared/reporting/business_brief.py、lumenis/shared/content_creation/rendering.py、podcast/intelligence/episode_runtime.py、database.py、lumenis/shared/database/platform_content.py、subject_registry.py，以及相应测试。它们是 root-local candidate，不能算作 a684 主线能力。
 - work/ 整体未跟踪，含 W3/W4/W5 评审、增量和收据；00-GOVERNANCE/evidence/round-11/c3-workflow-source-20261003 下的新增收据也在 root-local 层。下文只把这些记录作为本地候选/评审证据。
-- F 的冻结 clip/precision/profile 候选在 C:/Users/28049/AppData/Local/Temp/lumenis-f-clip-replacement-d4v86ttj/b。前序独立读回确认其 9 个文件前/后像匹配清单，补丁 SHA 为 f51118f0ba1cf1a2049a61bb75b1402f515bbdd7b6ba0fbf4f55a05a29dcd20c；四项已有 tests/analyze/Web build/Windows build 收据哈希及退出码匹配，测试日志记 97 项通过。它仍是冻结 local candidate；未验证真实媒体操作、挂载、导出/重开运行链。
+- F 的冻结 clip/precision/profile 候选在 C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-f-clip-replacement-d4v86ttj/b。前序独立读回确认其 9 个文件前/后像匹配清单，补丁 SHA 为 f51118f0ba1cf1a2049a61bb75b1402f515bbdd7b6ba0fbf4f55a05a29dcd20c；四项已有 tests/analyze/Web build/Windows build 收据哈希及退出码匹配，测试日志记 97 项通过。它仍是冻结 local candidate；未验证真实媒体操作、挂载、导出/重开运行链。
 - source owner 路由依据 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md:101-135、207-227：C3 覆盖 J2/J3、U06-U12；C4 覆盖 J4-J6、U13-U15；C5 覆盖 J7、U16-U17；F 是这些交付的 Flutter/官网表面，不取代 Core/API/Permission/Evidence owners。
 
 ## 能力覆盖表

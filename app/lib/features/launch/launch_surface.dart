@@ -91,7 +91,7 @@ class _LaunchSurfaceState extends State<LaunchSurface> {
       final identity = await client.runtimeIdentity();
       if (identity['ok'] != true) {
         throw const FormatException(
-          'LUMENIS Core returned an invalid runtime identity.',
+          'OEVIRA Core returned an invalid runtime identity.',
         );
       }
 

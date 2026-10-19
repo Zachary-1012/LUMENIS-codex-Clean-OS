@@ -39,7 +39,7 @@ def _registered_brand_patterns():
         return []
 
 SENSITIVE_PATTERNS = {
-    "BRAND": _registered_brand_patterns(),
+    "BRAND": [],  # Registry-backed patterns are loaded on first actual use.
     "PERSON": [
         r"Zachary", r"zachary", r"云智",
     ],
@@ -60,7 +60,10 @@ class AIDesensitizer:
     """AI 脱敏回传引擎：替换敏感实体，调用完成后按请求映射恢复。"""
 
     def __init__(self):
-        self._build_patterns()
+        # Construction/import must not open a not-yet-initialized business DB.
+        self.patterns = {}
+        self._patterns_loaded = False
+        self._patterns_lock = threading.RLock()
 
     def _build_patterns(self):
         """预编译所有敏感实体正则。"""
@@ -72,8 +75,9 @@ class AIDesensitizer:
                     registered = list(registered_subject_names())
                 except Exception:
                     registered = []
-                keywords = list(dict.fromkeys([*registered, *keywords]))
+                keywords = list(dict.fromkeys([*registered, *_registered_brand_patterns(), *keywords]))
             self.patterns[entity_type] = [re.compile(re.escape(kw)) for kw in keywords]
+        self._patterns_loaded = True
 
     def desensitize(self, text: str) -> Tuple[str, Dict[str, str]]:
         """
@@ -82,6 +86,9 @@ class AIDesensitizer:
         """
         if not text:
             return text, {}
+        with self._patterns_lock:
+            if not self._patterns_loaded:
+                self._build_patterns()
         mapping = {}
         counter = {}
         result = text

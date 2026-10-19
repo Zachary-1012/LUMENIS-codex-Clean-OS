@@ -188,42 +188,14 @@ class WorkingMemory(BaseMemoryLayer):
         reports durability separately. No table creation, migration or retry.
         """
         try:
-            detail = json.dumps({"format": "lumenis.agent_memory.working_step", "version": 1,
-                                 "seq": step["seq"], "action": step["action"],
-                                 "input": step["input"], "output": step["output"],
-                                 "memory_sanitized": step["memory_sanitized"], "checkpoint_resumable": False},
-                                ensure_ascii=False, allow_nan=False, separators=(",", ":"))
-            if len(detail.encode("utf-8")) > 128 * 1024:
-                return {"state": "UNAVAILABLE", "code": "WORKING_MEMORY_DETAIL_TOO_LARGE",
-                        "checkpoint_resumable": False}
-            conn = get_db_connection(self.db_path)
-            try:
-                conn.execute(
-                    """INSERT INTO ai_task_step
-                       (step_id, task_id, phase, status, detail, agent_id,
-                        skill_id, started_at, finished_at, duration_ms, error)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                    (
-                        step["step_id"], step["task_id"],
-                        f"working_memory_step_{step['seq']}", step["status"],
-                        detail,
-                        step.get("agent_id", "agent_runtime"),
-                        step.get("skill_id", ""),
-                        step["timestamp"], step["timestamp"], 0,
-                        step.get("error"),
-                    ),
-                )
-                stored = conn.execute("SELECT detail FROM ai_task_step WHERE step_id=? AND task_id=?",
-                                      (step["step_id"], step["task_id"])).fetchone()
-                if stored is None or stored["detail"] != detail:
-                    raise RuntimeError("Working Memory step readback mismatch")
-                conn.commit()
-            except Exception:
-                conn.rollback()
-                raise
-            finally:
-                conn.close()
-            return {"state": "PERSISTED", "step_ref": step["step_id"], "checkpoint_resumable": False}
+            binding = self._binding_context()
+            if step["task_id"] != binding["task_id"]:
+                raise PermissionError("WORKING_MEMORY_TASK_MISMATCH")
+            record = self.store("step:" + step["step_id"], step,
+                                metadata={"type": "working_step", "checkpoint_resumable": False})
+            if not record:
+                raise RuntimeError("WORKING_MEMORY_NOT_COMMITTED")
+            return {"state": "PERSISTED", "step_ref": record.record_id, "checkpoint_resumable": False}
         except Exception:
             return {"state": "UNAVAILABLE", "code": "WORKING_MEMORY_PERSISTENCE_FAILED",
                     "checkpoint_resumable": False}

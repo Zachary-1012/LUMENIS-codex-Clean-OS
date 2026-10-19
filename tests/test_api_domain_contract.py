@@ -12,6 +12,8 @@ P1 API 域契约 + 兼容层测试 — test_api_domain_contract.py
 import os
 import sys
 import pytest
+from tests.test_saved_document_workflow import workspace
+from tests.test_independent_growth_real_app import real_app
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
@@ -21,6 +23,10 @@ sys.path.insert(0, PROJECT_ROOT)
 def client(monkeypatch):
     import base64
     from app import app
+    from account.models import init_account_db
+    # App import may have occurred in another fixture's isolated repository.
+    # Initialize the original owner schema in this fixture's current test DB.
+    init_account_db()
     monkeypatch.setitem(app.config, "TESTING", True)
     c = app.test_client()
     username = os.environ.get("TAIKOO_AUTH_USER")
@@ -202,9 +208,9 @@ class TestBrokenRouteFixes:
         data = resp.get_json()
         assert "sources" in data.get("data", {}) or "items" in data.get("data", {})
 
-    def test_system_account_route(self, client):
+    def test_system_account_route(self, real_app):
         """/api/system/account 可达（settings.js 调用）。"""
-        resp = client.get("/api/system/account")
+        resp = real_app["api"].get("/api/system/account", headers={"Authorization": "Bearer synthetic-session-201"})
         assert resp.status_code == 200
         data = resp.get_json()
         assert "success" in data

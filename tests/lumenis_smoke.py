@@ -11,6 +11,8 @@ os.environ["V4_TOKEN_SECRET"] = "smoke-test-secret"
 # D7: 密钥登录走与生产一致的“环境变量注入”路径（生产由 .env V4_ACCESS_KEY 提供），
 # 测试用固定假密钥自洽验证，不再硬编码历史默认值、也不依赖真实 .env / 真实密钥。
 os.environ["V4_ACCESS_KEY"] = "smoke-test-access-key"
+# Explicit test-only fixtures; production recovery defaults remain empty.
+SYNTHETIC_RECOVERY_ANSWERS = {"Synthetic color": "fixture-blue", "Synthetic city": "fixture-orbit"}
 
 PASS, FAIL = [], []
 def check(name, cond, extra=""):
@@ -49,6 +51,10 @@ c = sqlite3.connect(TMP)
 apply_business_schema(c)
 c.execute("INSERT INTO notes(note_id,title,content,publish_date,collected_at) VALUES('n1','空正文笔记','','3小时前','2026-08-29 10:00:00')")
 c.execute("INSERT INTO notes(note_id,title,content,publish_date,collected_at) VALUES('n2','正常笔记','太古汇商场环境很舒适，很喜欢','2026-08-28','2026-08-29 10:00:00')")
+from lumenis.auth.security import hash_security_answer
+for question, answer in SYNTHETIC_RECOVERY_ANSWERS.items():
+    c.execute("INSERT INTO v4_security_questions (question, answer_hash, is_active) VALUES (?,?,1)",
+              (question, hash_security_answer(answer)))
 c.commit(); c.close()
 
 # 4) 临时库是否只建了 v4_ 表（不污染既有表名）
@@ -110,21 +116,21 @@ r = jget("/v4/settings/api/users", owner_token)
 us = r.get_json(); check("owner 看用户列表含Zachary", any(u["username"]=="Zachary" for u in us.get("users",[])))
 r = jget("/v4/settings/api/audit-stats", owner_token); check("审计统计200", r.status_code==200)
 r = jget("/v4/settings/api/security-questions", owner_token)
-check("默认安全问答2条", len(r.get_json().get("questions",[]))==2)
+check("隔离测试安全问答2条", len(r.get_json().get("questions",[]))==2)
 
 # 12) 创建管理员：缺安全问答->403；带正确问答->成功
 r = jpost("/v4/settings/api/users", {"username":"admin1","password":"abc123","role":"admin"}, owner_token)
 check("建管理员缺安全问答->403", r.status_code==403)
 r = jpost("/v4/settings/api/users", {"username":"admin1","password":"abc123","role":"admin",
-    "security_answers":{"手机号":"18504635216","生日":"1012"}}, owner_token)
+    "security_answers":SYNTHETIC_RECOVERY_ANSWERS}, owner_token)
 check("带正确安全问答建管理员成功", r.get_json().get("success") is True, str(r.get_json()))
 # 错误问答
 r = jpost("/v4/settings/api/users", {"username":"u2","password":"abc123","role":"user",
-    "security_answers":{"手机号":"000","生日":"1012"}}, owner_token)
+    "security_answers":{**SYNTHETIC_RECOVERY_ANSWERS, "Synthetic color": "wrong-synthetic-answer"}}, owner_token)
 check("错误安全问答被拒", r.status_code==403)
 # 管理员上限/角色
 r = jpost("/v4/settings/api/users", {"username":"admin4","password":"abc123","role":"admin",
-    "security_answers":{"手机号":"18504635216","生日":"1012"}}, owner_token)  # 只建了1个，应成功第2个；测到第4个才拒
+    "security_answers":SYNTHETIC_RECOVERY_ANSWERS}, owner_token)
 # 13) admin 登录后越权 owner 接口
 r = jpost("/v4/auth/login", {"username":"admin1","password":"abc123"}); at=r.get_json().get("token","")
 check("管理员登录成功", bool(at))

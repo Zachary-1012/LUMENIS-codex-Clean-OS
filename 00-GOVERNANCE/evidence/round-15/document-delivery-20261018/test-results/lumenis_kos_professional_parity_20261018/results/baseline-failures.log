@@ -1,0 +1,52 @@
+FF                                                                       [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+=================================== FAILURES ===================================
+_________ test_incremental_dates_retain_history_and_replace_exact_day __________
+
+professional = (<module 'kos_professional' from '[LOCAL_WORKSPACE]/lumenis_development_20261018/source/kos_professional.py'>, {'root'...d': None, 'brand_focus_id': 'HCG-BRAND', 'global_scope': False}, 'platform': 'xiaohongshu', 'account_id': 'account-a'})
+
+    def test_incremental_dates_retain_history_and_replace_exact_day(professional):
+        owner,ws,args=professional
+        first=[{'metric_date':'2026-10-16','likes':4,'views':90}]
+        second=[{'metric_date':'2026-10-17','likes':8}]
+        for version,rows in enumerate((first,second)):
+            _approve_call(ws,lambda:owner.import_scoped_metrics(**args,metrics=rows,request_id=f'metrics-day-{version:03}',expected_version=version))
+        result=owner.read_scoped_metrics(**args)
+>       assert {r['metric_date']:r['likes'] for r in result['metrics']}=={'2026-10-16':4,'2026-10-17':8}
+E       AssertionError: assert {'2026-10-17': 8} == {'2026-10-16'...026-10-17': 8}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Right contains 1 more item:
+E         {'2026-10-16': 4}
+E         Use -v to get more diff
+
+tests/test_kos_professional_incremental.py:24: AssertionError
+____________ test_old_account_is_not_evicted_by_200_newer_versions _____________
+
+professional = (<module 'kos_professional' from '[LOCAL_WORKSPACE]/lumenis_development_20261018/source/kos_professional.py'>, {'root'...d': None, 'brand_focus_id': 'HCG-BRAND', 'global_scope': False}, 'platform': 'xiaohongshu', 'account_id': 'account-a'})
+
+    def test_old_account_is_not_evicted_by_200_newer_versions(professional):
+        owner,ws,args=professional
+        second={**args,'account_id':'account-b'}
+        for version in range(201):
+            _approve_call(ws,lambda:owner.configure_scoped_account(**second,enabled=version%2==0,request_id=f'config-repeated-{version:03}',expected_version=version))
+        rows=owner.read_scoped_accounts(actor=args['actor'],scope=args['scope'])['accounts']
+>       assert {r['account_id'] for r in rows}=={'account-a','account-b'}
+E       AssertionError: assert {'account-b'} == {'account-a', 'account-b'}
+E         
+E         Extra items in the right set:
+E         'account-a'
+E         Use -v to get more diff
+
+tests/test_kos_professional_incremental.py:42: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_kos_professional_incremental.py::test_incremental_dates_retain_history_and_replace_exact_day
+FAILED tests/test_kos_professional_incremental.py::test_old_account_is_not_evicted_by_200_newer_versions
+2 failed in 1.75s

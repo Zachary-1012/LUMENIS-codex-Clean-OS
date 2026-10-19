@@ -1,0 +1,103 @@
+# experience_runtime.py:3920-4021
+3920: @experience_bp.route("/api/experience/ai/intent", methods=["POST"])
+3921: def ai_intent():
+3922:     """AI-01 composer 提交：先过标准权限门（P0-WRITEPERM-02），通过后复用既有
+3923:     Agent Groups Skill Execution（不重复实现 AI），走 Contract/Artifact 边界。
+3924: 
+3925:     四态：granted / pending_approval / denied / permanent_deny。未通过权限门时在进入
+3926:     执行链之前返回，保证不写任何证据、不触碰生产写侧，也不回显任何安全内部。
+3927:     """
+3928:     body = request.get_json(silent=True)
+3929:     # AI-01.md:56-57 / BACKEND-GAP-029: only task and action_type are accepted;
+3930:     # identity, domain, product, skill and input never come from the body.
+3931:     if not isinstance(body, dict) or set(body) - _AI_INTENT_BODY_FIELDS:
+3932:         return jsonify({"ok": False, "status": "denied",
+3933:                         "reason": "only task and action_type are accepted"}), 400
+3934:     task = body.get("task") if isinstance(body.get("task"), str) else ""
+3935:     task = task.strip()
+3936:     if not task:
+3937:         return jsonify({"ok": False, "error": "task required"}), 400
+3938:     if len(task) > 4000:
+3939:         return jsonify({"ok": False, "error": "task too long (max 4000)"}), 400
+3940: 
+3941:     # ── 第 1 步：解析动作类型（非法值 fail-closed） ──
+3942:     from lumenis.shared.agents.skills.execution import ActionType, run_execution_chain
+3943:     raw_action = str(body.get("action_type", "ANALYZE")).upper()
+3944:     try:
+3945:         action_type = ActionType(raw_action)
+3946:     except ValueError:
+3947:         return jsonify({"ok": False, "status": "denied",
+3948:                         "reason": f"unknown action_type: {raw_action}"}), 400
+3949: 
+3950:     # ── 第 2 步：永久拒绝类别（AI 派生层永不发布/推送/删除） ──
+3951:     if raw_action in PERMANENT_DENY_ACTIONS:
+3952:         return jsonify({
+3953:             "ok": False, "status": "permanent_deny",
+3954:             "reason": "AI composer 为派生增强层，不允许执行发布/上线/推送/删除类操作。",
+3955:         }), 403
+3956: 
+3957:     # ── 第 3 步：标准权限门检查 ──
+3958:     gate_spec = _action_gate_spec(raw_action)
+3959:     if gate_spec is None:
+3960:         return jsonify({"ok": False, "status": "denied",
+3961:                         "reason": f"action_type {raw_action} 未注册权限映射（fail-closed）"}), 403
+3962:     operation_type, risk_level = gate_spec
+3963:     trusted = _ai_intent_trusted_domain()
+3964:     decision = get_permission_gate().check(
+3965:         operation_type,
+3966:         resource="zbc.generic_analysis",
+3967:         risk_level=risk_level,
+3968:         caller=trusted[2] if trusted else "experience_user",
+3969:         domain_id=trusted[0].upper() if trusted else "CTH",
+3970:     )
+3971:     if not decision.allowed:
+3972:         # pending_approval 用 200（流程未失败，等待人工）；denied 用 403。两者都不执行。
+3973:         status = "pending_approval" if decision.requires_approval else "denied"
+3974:         http_code = 200 if status == "pending_approval" else 403
+3975:         return jsonify({
+3976:             "ok": False,
+3977:             "status": status,
+3978:             "reason": decision.reason,
+3979:             "permission_required": getattr(decision.permission_required, "value", decision.permission_required),
+3980:             "risk_level": risk_level.value,
+3981:             "requires_approval": bool(decision.requires_approval),
+3982:             "audit_id": decision.audit_id,
+3983:         }), http_code
+3984: 
+3985:     # ── 第 4 步：仅在 granted 后进入执行链（此前任何分支都不会写证据） ──
+3986:     if trusted is None:
+3987:         # GLOBAL_ALL or no server-resolved FOCUS: honest not-executable, no Evidence.
+3988:         return jsonify({
+3989:             "ok": False, "permission_status": "granted", "status": "not_executable",
+3990:             "code": "AI_INTENT_FOCUS_SCOPE_REQUIRED", "audit_id": decision.audit_id,
+3991:             "evidence_recorded": False, "ai_is_derivative": True,
+3992:         })
+3993:     intent_domain, intent_product, actor_ref = trusted
+3994:     try:
+3995:         ctx = run_execution_chain(
+3996:             skill_id="zbc.generic_analysis",
+3997:             task=task,
+3998:             input_payload={},
+3999:             action_type=action_type,
+4000:             user_id=actor_ref,
+4001:             product=intent_product,
+4002:             domain=intent_domain.upper(),
+4003:         )
+4004:         return jsonify({
+4005:             "ok": True,
+4006:             "permission_status": "granted",
+4007:             "audit_id": decision.audit_id,
+4008:             "execution_id": ctx.execution_id,
+4009:             "status": ctx.status.value,
+4010:             "evidence_recorded": _verified_execution_evidence(ctx),
+4011:             "ai_is_derivative": True,
+4012:             "note": "AI 输出为派生结果，不覆盖 Evidence/Canonical；前端须展示引用与可追溯状态。",
+4013:         })
+4014:     except Exception as exc:  # noqa: BLE001
+4015:         return jsonify({"ok": False, "error": str(exc)}), 500
+4016: 
+4017: 
+4018: def register_experience_runtime(app):
+4019:     """在 app.py 中调用以注册本蓝图（与其他蓝图一致的加法式挂载）。"""
+4020:     app.register_blueprint(experience_bp)
+4021:     return app

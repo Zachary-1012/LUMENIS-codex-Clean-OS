@@ -1,0 +1,11 @@
+{
+  "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+  "official_gitblob_files_verified": 3187,
+  "official_gitblob_mismatches": [],
+  "env_example_from_candidate_verified_official_gitblob": "8b9952e94b2acdd4ed4f986fbac61fad056e44ae",
+  "patch_sha256": "e46ed4ee101ac3ab738b8ccef660672be09998e2207fc8484152b22fe49d72a0",
+  "git_apply_check": true,
+  "applied_tree_matches_full_candidate": true,
+  "files": 3315,
+  "semantic_acceptance": false
+}

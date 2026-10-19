@@ -1,0 +1,373 @@
+[
+  {
+    "file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/RESEARCH_COMPLETENESS_MATRIX.json",
+    "pointer": "/groups/0/exact_requirement_sources/359/original_text",
+    "original_value_sha256": "743a2f12ec9e6d038c6d8b57b41a69de6f060fb787957e437cdd34cb2389b333",
+    "published_value_sha256": "43c5caa6d1eabf6c159f2d63f62894bbfbc8f4b4fdb33896f2fd60eb77ff344d",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/RESEARCH_COMPLETENESS_MATRIX.json",
+    "pointer": "/groups/1/exact_requirement_sources/33/original_text",
+    "original_value_sha256": "c12690cc8e3c684253566ce1b59e59a243440b835213860747a26f1d82362ac5",
+    "published_value_sha256": "08306785489e3e3a5de46431a4444c2e44b7da4d87bf2e2dfe9b2ea07f897390",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/RESEARCH_COMPLETENESS_MATRIX.json",
+    "pointer": "/groups/1/exact_requirement_sources/1098/original_text",
+    "original_value_sha256": "743a2f12ec9e6d038c6d8b57b41a69de6f060fb787957e437cdd34cb2389b333",
+    "published_value_sha256": "43c5caa6d1eabf6c159f2d63f62894bbfbc8f4b4fdb33896f2fd60eb77ff344d",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/RESEARCH_COMPLETENESS_MATRIX.json",
+    "pointer": "/groups/6/exact_requirement_sources/7/original_text",
+    "original_value_sha256": "e526c1066ce1cce98bbb4a8e54c4eca353af30689b5530518366b2accbc494b8",
+    "published_value_sha256": "4bcb24ba1e47120901ab8ce74b0bff7bb26b04faf41e472250f621df102e71b5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/RESEARCH_COMPLETENESS_MATRIX.json",
+    "pointer": "/groups/16/exact_requirement_sources/951/original_text",
+    "original_value_sha256": "743a2f12ec9e6d038c6d8b57b41a69de6f060fb787957e437cdd34cb2389b333",
+    "published_value_sha256": "43c5caa6d1eabf6c159f2d63f62894bbfbc8f4b4fdb33896f2fd60eb77ff344d",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/02_G_R_J_U_REPORT_CROSSWALK.json",
+    "pointer": "/17/original_row",
+    "original_value_sha256": "c12690cc8e3c684253566ce1b59e59a243440b835213860747a26f1d82362ac5",
+    "published_value_sha256": "08306785489e3e3a5de46431a4444c2e44b7da4d87bf2e2dfe9b2ea07f897390",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/02_G_R_J_U_REPORT_CROSSWALK.json",
+    "pointer": "/100/original_row",
+    "original_value_sha256": "e526c1066ce1cce98bbb4a8e54c4eca353af30689b5530518366b2accbc494b8",
+    "published_value_sha256": "4bcb24ba1e47120901ab8ce74b0bff7bb26b04faf41e472250f621df102e71b5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/02_G_R_J_U_REPORT_CROSSWALK.json",
+    "pointer": "/246/original_row",
+    "original_value_sha256": "743a2f12ec9e6d038c6d8b57b41a69de6f060fb787957e437cdd34cb2389b333",
+    "published_value_sha256": "43c5caa6d1eabf6c159f2d63f62894bbfbc8f4b4fdb33896f2fd60eb77ff344d",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/01_FULL_REQUIREMENT_PRESERVATION.json",
+    "pointer": "/rows/110/original_text",
+    "original_value_sha256": "c12690cc8e3c684253566ce1b59e59a243440b835213860747a26f1d82362ac5",
+    "published_value_sha256": "08306785489e3e3a5de46431a4444c2e44b7da4d87bf2e2dfe9b2ea07f897390",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/01_FULL_REQUIREMENT_PRESERVATION.json",
+    "pointer": "/rows/194/original_text",
+    "original_value_sha256": "e526c1066ce1cce98bbb4a8e54c4eca353af30689b5530518366b2accbc494b8",
+    "published_value_sha256": "4bcb24ba1e47120901ab8ce74b0bff7bb26b04faf41e472250f621df102e71b5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/01_FULL_REQUIREMENT_PRESERVATION.json",
+    "pointer": "/rows/1946/original_text",
+    "original_value_sha256": "743a2f12ec9e6d038c6d8b57b41a69de6f060fb787957e437cdd34cb2389b333",
+    "published_value_sha256": "43c5caa6d1eabf6c159f2d63f62894bbfbc8f4b4fdb33896f2fd60eb77ff344d",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/01_FULL_REQUIREMENT_PRESERVATION.json",
+    "pointer": "/experience_constitution/1140/text",
+    "original_value_sha256": "3ef5f624fc5366e69c49e57ab0f7b8d2eb45a62ec58fc6c8b704ab239515f028",
+    "published_value_sha256": "baecfa6236a3bbc6c38060afad7ee5e77f54b799f27272599eb4fdced0c25158",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/01_FULL_REQUIREMENT_PRESERVATION.json",
+    "pointer": "/experience_constitution/1141/text",
+    "original_value_sha256": "1d8b0ebdaf2c819d1e9ffc889a0d8eeaa78719b7eb459593b90e643c00757023",
+    "published_value_sha256": "2c23f30bacf76c84fe95458f8799495988b7b469ca14dffbd493f2b9e2730d6b",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/2/target",
+    "original_value_sha256": "d4d4071a701143d975494702dbc7ef5a511987da6e2f28c501285e630db4451b",
+    "published_value_sha256": "bd541ec524d8022c2d81fe745770d35eb690c48dd36c2ae48642e116459f355f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/3/target",
+    "original_value_sha256": "136dffb3f7b5ff56b689e78bc8891af7e1fb59259eb9d649bb78a048624c93d4",
+    "published_value_sha256": "7a277832e9419bf1a8e7868c6f694f539da255507ec6586543cef8e61b03f93f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/4/target",
+    "original_value_sha256": "2eef3b47358b0e77c29b928862d4ec2a221112933b724425c6123de38fc12d6b",
+    "published_value_sha256": "096ffe08609ae2b0821ae4f6225d87c854712f2e1e703ce3ef050745d7a4388f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/5/target",
+    "original_value_sha256": "24ed18f0e7deb87c14fd4cbe3a14d0f540488cee430e4886fa3d44bb1d716d9d",
+    "published_value_sha256": "916b1574a7f1b3fecbf28cd84fb71a5f78d2429782a08a38d5d993e83a53f5c5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/6/target",
+    "original_value_sha256": "d3880b71c4b87d45a8ec34dc31cac7e2125ace6cb066101dcd8ee5a865aa88b1",
+    "published_value_sha256": "faf496c5713c8f6ae3246fd79fb82737fc1ac2a57136edfd4d12c48008f02f14",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/7/target",
+    "original_value_sha256": "d4d4071a701143d975494702dbc7ef5a511987da6e2f28c501285e630db4451b",
+    "published_value_sha256": "bd541ec524d8022c2d81fe745770d35eb690c48dd36c2ae48642e116459f355f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/8/target",
+    "original_value_sha256": "136dffb3f7b5ff56b689e78bc8891af7e1fb59259eb9d649bb78a048624c93d4",
+    "published_value_sha256": "7a277832e9419bf1a8e7868c6f694f539da255507ec6586543cef8e61b03f93f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/9/target",
+    "original_value_sha256": "2eef3b47358b0e77c29b928862d4ec2a221112933b724425c6123de38fc12d6b",
+    "published_value_sha256": "096ffe08609ae2b0821ae4f6225d87c854712f2e1e703ce3ef050745d7a4388f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/10/target",
+    "original_value_sha256": "24ed18f0e7deb87c14fd4cbe3a14d0f540488cee430e4886fa3d44bb1d716d9d",
+    "published_value_sha256": "916b1574a7f1b3fecbf28cd84fb71a5f78d2429782a08a38d5d993e83a53f5c5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/11/target",
+    "original_value_sha256": "d3880b71c4b87d45a8ec34dc31cac7e2125ace6cb066101dcd8ee5a865aa88b1",
+    "published_value_sha256": "faf496c5713c8f6ae3246fd79fb82737fc1ac2a57136edfd4d12c48008f02f14",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/12/target",
+    "original_value_sha256": "d4d4071a701143d975494702dbc7ef5a511987da6e2f28c501285e630db4451b",
+    "published_value_sha256": "bd541ec524d8022c2d81fe745770d35eb690c48dd36c2ae48642e116459f355f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/13/target",
+    "original_value_sha256": "136dffb3f7b5ff56b689e78bc8891af7e1fb59259eb9d649bb78a048624c93d4",
+    "published_value_sha256": "7a277832e9419bf1a8e7868c6f694f539da255507ec6586543cef8e61b03f93f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/14/target",
+    "original_value_sha256": "2eef3b47358b0e77c29b928862d4ec2a221112933b724425c6123de38fc12d6b",
+    "published_value_sha256": "096ffe08609ae2b0821ae4f6225d87c854712f2e1e703ce3ef050745d7a4388f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/15/target",
+    "original_value_sha256": "24ed18f0e7deb87c14fd4cbe3a14d0f540488cee430e4886fa3d44bb1d716d9d",
+    "published_value_sha256": "916b1574a7f1b3fecbf28cd84fb71a5f78d2429782a08a38d5d993e83a53f5c5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/16/target",
+    "original_value_sha256": "d3880b71c4b87d45a8ec34dc31cac7e2125ace6cb066101dcd8ee5a865aa88b1",
+    "published_value_sha256": "faf496c5713c8f6ae3246fd79fb82737fc1ac2a57136edfd4d12c48008f02f14",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/17/target",
+    "original_value_sha256": "d4d4071a701143d975494702dbc7ef5a511987da6e2f28c501285e630db4451b",
+    "published_value_sha256": "bd541ec524d8022c2d81fe745770d35eb690c48dd36c2ae48642e116459f355f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/18/target",
+    "original_value_sha256": "136dffb3f7b5ff56b689e78bc8891af7e1fb59259eb9d649bb78a048624c93d4",
+    "published_value_sha256": "7a277832e9419bf1a8e7868c6f694f539da255507ec6586543cef8e61b03f93f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/19/target",
+    "original_value_sha256": "2eef3b47358b0e77c29b928862d4ec2a221112933b724425c6123de38fc12d6b",
+    "published_value_sha256": "096ffe08609ae2b0821ae4f6225d87c854712f2e1e703ce3ef050745d7a4388f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/20/target",
+    "original_value_sha256": "24ed18f0e7deb87c14fd4cbe3a14d0f540488cee430e4886fa3d44bb1d716d9d",
+    "published_value_sha256": "916b1574a7f1b3fecbf28cd84fb71a5f78d2429782a08a38d5d993e83a53f5c5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/21/target",
+    "original_value_sha256": "d3880b71c4b87d45a8ec34dc31cac7e2125ace6cb066101dcd8ee5a865aa88b1",
+    "published_value_sha256": "faf496c5713c8f6ae3246fd79fb82737fc1ac2a57136edfd4d12c48008f02f14",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/23/target",
+    "original_value_sha256": "d4d4071a701143d975494702dbc7ef5a511987da6e2f28c501285e630db4451b",
+    "published_value_sha256": "bd541ec524d8022c2d81fe745770d35eb690c48dd36c2ae48642e116459f355f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/24/target",
+    "original_value_sha256": "136dffb3f7b5ff56b689e78bc8891af7e1fb59259eb9d649bb78a048624c93d4",
+    "published_value_sha256": "7a277832e9419bf1a8e7868c6f694f539da255507ec6586543cef8e61b03f93f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/25/target",
+    "original_value_sha256": "2eef3b47358b0e77c29b928862d4ec2a221112933b724425c6123de38fc12d6b",
+    "published_value_sha256": "096ffe08609ae2b0821ae4f6225d87c854712f2e1e703ce3ef050745d7a4388f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/26/target",
+    "original_value_sha256": "24ed18f0e7deb87c14fd4cbe3a14d0f540488cee430e4886fa3d44bb1d716d9d",
+    "published_value_sha256": "916b1574a7f1b3fecbf28cd84fb71a5f78d2429782a08a38d5d993e83a53f5c5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/27/target",
+    "original_value_sha256": "d3880b71c4b87d45a8ec34dc31cac7e2125ace6cb066101dcd8ee5a865aa88b1",
+    "published_value_sha256": "faf496c5713c8f6ae3246fd79fb82737fc1ac2a57136edfd4d12c48008f02f14",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/137/target",
+    "original_value_sha256": "d4d4071a701143d975494702dbc7ef5a511987da6e2f28c501285e630db4451b",
+    "published_value_sha256": "bd541ec524d8022c2d81fe745770d35eb690c48dd36c2ae48642e116459f355f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/138/target",
+    "original_value_sha256": "136dffb3f7b5ff56b689e78bc8891af7e1fb59259eb9d649bb78a048624c93d4",
+    "published_value_sha256": "7a277832e9419bf1a8e7868c6f694f539da255507ec6586543cef8e61b03f93f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/139/target",
+    "original_value_sha256": "2eef3b47358b0e77c29b928862d4ec2a221112933b724425c6123de38fc12d6b",
+    "published_value_sha256": "096ffe08609ae2b0821ae4f6225d87c854712f2e1e703ce3ef050745d7a4388f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/140/target",
+    "original_value_sha256": "24ed18f0e7deb87c14fd4cbe3a14d0f540488cee430e4886fa3d44bb1d716d9d",
+    "published_value_sha256": "916b1574a7f1b3fecbf28cd84fb71a5f78d2429782a08a38d5d993e83a53f5c5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/141/target",
+    "original_value_sha256": "d3880b71c4b87d45a8ec34dc31cac7e2125ace6cb066101dcd8ee5a865aa88b1",
+    "published_value_sha256": "faf496c5713c8f6ae3246fd79fb82737fc1ac2a57136edfd4d12c48008f02f14",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/145/target",
+    "original_value_sha256": "d4d4071a701143d975494702dbc7ef5a511987da6e2f28c501285e630db4451b",
+    "published_value_sha256": "bd541ec524d8022c2d81fe745770d35eb690c48dd36c2ae48642e116459f355f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/146/target",
+    "original_value_sha256": "136dffb3f7b5ff56b689e78bc8891af7e1fb59259eb9d649bb78a048624c93d4",
+    "published_value_sha256": "7a277832e9419bf1a8e7868c6f694f539da255507ec6586543cef8e61b03f93f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/147/target",
+    "original_value_sha256": "2eef3b47358b0e77c29b928862d4ec2a221112933b724425c6123de38fc12d6b",
+    "published_value_sha256": "096ffe08609ae2b0821ae4f6225d87c854712f2e1e703ce3ef050745d7a4388f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/148/target",
+    "original_value_sha256": "24ed18f0e7deb87c14fd4cbe3a14d0f540488cee430e4886fa3d44bb1d716d9d",
+    "published_value_sha256": "916b1574a7f1b3fecbf28cd84fb71a5f78d2429782a08a38d5d993e83a53f5c5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/149/target",
+    "original_value_sha256": "d3880b71c4b87d45a8ec34dc31cac7e2125ace6cb066101dcd8ee5a865aa88b1",
+    "published_value_sha256": "faf496c5713c8f6ae3246fd79fb82737fc1ac2a57136edfd4d12c48008f02f14",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/152/target",
+    "original_value_sha256": "d4d4071a701143d975494702dbc7ef5a511987da6e2f28c501285e630db4451b",
+    "published_value_sha256": "bd541ec524d8022c2d81fe745770d35eb690c48dd36c2ae48642e116459f355f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/153/target",
+    "original_value_sha256": "136dffb3f7b5ff56b689e78bc8891af7e1fb59259eb9d649bb78a048624c93d4",
+    "published_value_sha256": "7a277832e9419bf1a8e7868c6f694f539da255507ec6586543cef8e61b03f93f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/154/target",
+    "original_value_sha256": "2eef3b47358b0e77c29b928862d4ec2a221112933b724425c6123de38fc12d6b",
+    "published_value_sha256": "096ffe08609ae2b0821ae4f6225d87c854712f2e1e703ce3ef050745d7a4388f",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/155/target",
+    "original_value_sha256": "24ed18f0e7deb87c14fd4cbe3a14d0f540488cee430e4886fa3d44bb1d716d9d",
+    "published_value_sha256": "916b1574a7f1b3fecbf28cd84fb71a5f78d2429782a08a38d5d993e83a53f5c5",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/historical-candidate-locator.json",
+    "pointer": "/fingerprint_mentions_only/156/target",
+    "original_value_sha256": "d3880b71c4b87d45a8ec34dc31cac7e2125ace6cb066101dcd8ee5a865aa88b1",
+    "published_value_sha256": "faf496c5713c8f6ae3246fd79fb82737fc1ac2a57136edfd4d12c48008f02f14",
+    "reason": "Private source locator/account fact redacted; product requirements preserved"
+  }
+]

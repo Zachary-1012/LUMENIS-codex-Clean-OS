@@ -8,7 +8,7 @@
         "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_ai_native_constitution.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
       "pid": 21804,
       "start_utc": "2026-10-03T05:15:16.143720+00:00",
       "end_utc": "2026-10-03T05:15:16.533248+00:00",
@@ -23,7 +23,7 @@
         "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_codex_takeover_governance.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
       "pid": 29260,
       "start_utc": "2026-10-03T05:15:16.144345+00:00",
       "end_utc": "2026-10-03T05:15:17.065576+00:00",
@@ -38,7 +38,7 @@
         "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_database_authority.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
       "pid": 9620,
       "start_utc": "2026-10-03T05:15:16.145020+00:00",
       "end_utc": "2026-10-03T05:15:30.209468+00:00",
@@ -53,7 +53,7 @@
         "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_lumenis_single_product.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
       "pid": 33372,
       "start_utc": "2026-10-03T05:15:16.145883+00:00",
       "end_utc": "2026-10-03T05:15:22.620741+00:00",
@@ -68,7 +68,7 @@
         "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_experience_authority_exclusive.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
       "pid": 21252,
       "start_utc": "2026-10-03T05:15:16.146425+00:00",
       "end_utc": "2026-10-03T05:15:16.734155+00:00",
@@ -84,7 +84,7 @@
         "scripts/audit_tools/verify_experience_anti_template.py",
         "--strict"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
       "pid": 13996,
       "start_utc": "2026-10-03T05:15:16.147195+00:00",
       "end_utc": "2026-10-03T05:15:17.166464+00:00",
@@ -99,7 +99,7 @@
         "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_experience_screen_blueprints.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
       "pid": 59296,
       "start_utc": "2026-10-03T05:15:16.147990+00:00",
       "end_utc": "2026-10-03T05:15:16.675845+00:00",
@@ -116,7 +116,7 @@
         "--cached",
         "--check"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
       "pid": 62844,
       "start_utc": "2026-10-03T05:15:16.148601+00:00",
       "end_utc": "2026-10-03T05:15:16.307298+00:00",

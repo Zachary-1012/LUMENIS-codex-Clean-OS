@@ -1,0 +1,66 @@
+{
+  "sources": [
+    {
+      "path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+      "fixed_main": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+      "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+      "read_scope": "§14全文；§0–7/§15输出部分截断，仅可见段，其他非G本批未全文重读"
+    },
+    {
+      "path": "intelligence_library/01_序境产品研究/VIDEO-WORKFLOW-INTERCHANGE-RESEARCH-20260930.md",
+      "fixed_main": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+      "sha256": "46ad74e4f9a7ea8f67e46beb5d5ee9bfcbfa9ff9a527da72220fa259a4bdd8f1",
+      "read_scope": "全文123行，初次截断处75–123补读；未重新读取所有外链"
+    },
+    {
+      "path": "docs/research/PODCAST_MODULE_RESEARCH_V1.md",
+      "fixed_main": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+      "sha256": "040fef8c045d44a7b6de932c6c19b341f5c731c56cf09eea09b218f349efc741",
+      "read_scope": "全文104行，初次截断处1–38补读；未重新读取所有候选外链"
+    },
+    {
+      "path": "podcast/intelligence/episode_runtime.py",
+      "fixed_main": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+      "sha256": "d8d1403e814d9154ff0fb9f2736f7854c1726ae3a1e34514dc65f393181332d7",
+      "read_scope": "1–115、390–560行完整静态阅读"
+    }
+  ],
+  "podcast_spans": [
+    {
+      "name": "_output_segments",
+      "lines": [
+        392,
+        400
+      ],
+      "text": "    def _output_segments(self) -> tuple[tuple[PodcastSegment, float, float], ...]:\n        result = []\n        cursor = 0.0\n        for segment in self.segments:\n            # Match Shared TimelineClip's six-decimal duration and boundaries.\n            end = round(cursor + round(segment.duration, 6), 6)\n            result.append((segment, cursor, end))\n            cursor = end\n        return tuple(result)"
+    },
+    {
+      "name": "chapter_document",
+      "lines": [
+        451,
+        462
+      ],
+      "text": "    def chapter_document(self) -> dict[str, Any]:\n        chapters: list[dict[str, Any]] = []\n        for segment, start, end in self._output_segments():\n            if chapters and chapters[-1][\"title\"] == segment.chapter_title and chapters[-1][\"endTime\"] == start:\n                chapters[-1][\"endTime\"] = end\n            else:\n                chapters.append({\n                    \"startTime\": start,\n                    \"title\": segment.chapter_title,\n                    \"endTime\": end,\n                })\n        return {\"version\": \"1.2.0\", \"chapters\": chapters}"
+    },
+    {
+      "name": "_transcript_vtt",
+      "lines": [
+        476,
+        499
+      ],
+      "text": "    def _transcript_vtt(self, text_field: str) -> str:\n        cues = [\"WEBVTT\", \"\"]\n        for index, (segment, start, end) in enumerate(self._output_segments(), start=1):\n            start_code, end_code = _timecode(start), _timecode(end)\n            if start_code == end_code:\n                raise ValueError(\"Podcast transcript cue is shorter than millisecond precision\")\n            # Escape markup while preserving the Unicode text as visible cue content.\n            speaker = \" \".join(segment.speaker.split())\n            speaker = speaker.replace(\"&\", \"&amp;\").replace(\"<\", \"&lt;\").replace(\">\", \"&gt;\")\n            body = getattr(segment, text_field)\n            body = body.replace(\"&\", \"&amp;\").replace(\"<\", \"&lt;\").replace(\">\", \"&gt;\")\n            if \"\\x00\" in speaker or \"\\x00\" in body:\n                raise ValueError(\"Podcast transcript contains a null character\")\n            # WebVTT uses physical line breaks, not HTML br elements. Keep\n            # authored blank lines inside the cue using a visible-space entity.\n            body = \"\\n\".join(line if line.strip() else \"&nbsp;\" for line in\n                             body.replace(\"\\r\\n\", \"\\n\").replace(\"\\r\", \"\\n\").split(\"\\n\"))\n            cues.extend((\n                str(index),\n                f\"{start_code} --> {end_code}\",\n                f\"{speaker}: {body}\",\n                \"\",\n            ))\n        return \"\\n\".join(cues)"
+    },
+    {
+      "name": "editable_documents",
+      "lines": [
+        507,
+        556
+      ],
+      "text": "    def editable_documents(self) -> dict[str, str]:\n        \"\"\"Build content members for the existing Artifact wrapper; persist nothing.\"\"\"\n        corrections = {\n            \"version\": 1,\n            \"segments\": [\n                {\n                    \"segment_id\": segment.segment_id,\n                    \"original_text\": segment.original_text,\n                    \"corrected_text\": segment.corrected_text,\n                    \"changed\": segment.original_text != segment.corrected_text,\n                    \"media_asset_id\": segment.media_asset_id,\n                    \"source_in\": segment.source_in,\n                    \"source_out\": segment.source_out,\n                    \"speaker\": segment.speaker,\n                    \"chapter_title\": segment.chapter_title,\n                    \"evidence_refs\": list(segment.evidence_refs),\n                }\n                for segment in self.segments\n            ],\n        }\n        metadata = {\n            \"original_text_semantics\": (\n                \"Preserved plan source text; it does not automatically establish verified ASR.\"\n            ),\n            \"transcript_edits_change_audio\": False,\n            \"transcript_to_existing_audio_alignment\": (\n                \"Not asserted by this plan; correcting a transcript to match an existing recording requires actual alignment review.\"\n            ),\n            \"intended_spoken_content_and_audio_identity\": (\n                \"Not asserted by this plan; a new intended wording or order requires matching recorded or generated media and an actual render before claiming a match.\"\n            ),\n            \"human_listening_acceptance\": \"not_asserted_by_plan\",\n            \"persistence_semantics\": (\n                \"This builder only serializes content members and performs no persistence.\"\n            ),\n            \"artifact_evidence_permission_binding\": (\n                \"Not asserted by the plan; bind actual media identity, provenance, permission, review and artifact references through the existing external owners.\"\n            ),\n            \"revision\": self.revision,\n            \"content_digest\": self.content_digest(),\n        }\n        return {\n            \"podcast-plan.json\": json.dumps(self.to_dict(), ensure_ascii=False, indent=2, allow_nan=False),\n            \"script.txt\": self.script_text(),\n            \"transcript-original.vtt\": self.original_transcript_vtt(),\n            \"transcript-corrected.vtt\": self.transcript_vtt(),\n            \"chapters.json\": json.dumps(self.chapter_document(), ensure_ascii=False, indent=2, allow_nan=False),\n            \"corrections.json\": json.dumps(corrections, ensure_ascii=False, indent=2, allow_nan=False),\n            \"metadata.json\": json.dumps(metadata, ensure_ascii=False, indent=2, allow_nan=False),\n        }"
+    }
+  ],
+  "inherited_reports_read": [
+    "original_research_gap_closure_20261018/REPORT.md",
+    "voice_postproduction_research_20261018/postproduction/REVIEW_PLAN_ZH.md"
+  ]
+}

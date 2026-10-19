@@ -1227,8 +1227,15 @@ def list_scoped_canonical(
     con: sqlite3.Connection, *, product_id: str, subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None, limit: int = 30,
     source_ids: list[str] | None = None, source_level: bool = False,
+    offset: int = 0, sentiment: str | None = None, risk_levels: list[str] | None = None,
+    canonical_ids: list[str] | None = None, complete: bool = False,
 ) -> Dict[str, Any]:
-    """Read Canonical rows only when their exact signed scope still verifies."""
+    """Verify the complete scoped population before filtering and pagination.
+
+    Complete discovery is explicit so existing bounded source-preview callers
+    retain their established result contract. Classification selectors always
+    use complete verification before pagination; offsets count verified matches.
+    """
     if not isinstance(con, sqlite3.Connection):
         raise TypeError("con must be a SQLite connection")
     if type(product_id) is not str:
@@ -1245,6 +1252,18 @@ def list_scoped_canonical(
     if type(source_level) is not bool:
         raise TypeError("source_level must be an explicit boolean")
     source_ids = validate_source_ids(source_ids, limit=limit)
+    if type(complete) is not bool:
+        raise TypeError("complete must be an explicit boolean")
+    if type(offset) is not int or offset < 0:
+        raise ValueError("offset must be a nonnegative integer")
+    complete = complete or offset > 0 or sentiment is not None or risk_levels is not None
+    if sentiment is not None and sentiment not in {"positive", "neutral", "negative"}:
+        raise ValueError("sentiment must be positive, neutral or negative")
+    if risk_levels is not None and (type(risk_levels) is not list or not risk_levels
+            or any(type(value) is not str or value not in {"none", "low", "medium", "high", "critical"}
+                   for value in risk_levels) or len(set(risk_levels)) != len(risk_levels)):
+        raise ValueError("risk_levels must contain unique known risk levels")
+    canonical_ids = validate_source_ids(canonical_ids, limit=limit)
 
     def validate_focus(value: Optional[str], name: str) -> Optional[str]:
         if value is None:
@@ -1276,6 +1295,9 @@ def list_scoped_canonical(
     if source_ids is not None:
         where.append("source_id IN (" + ",".join("?" for _ in source_ids) + ")")
         params.extend(source_ids)
+    if canonical_ids is not None:
+        where.append("canonical_id IN (" + ",".join("?" for _ in canonical_ids) + ")")
+        params.extend(canonical_ids)
     if source_level:
         # A selected document row is a Canonical projection of its parent
         # source, not another source-level sample. Hide that projection only
@@ -1284,19 +1306,22 @@ def list_scoped_canonical(
         # Source Brief owner can fail closed instead of masking the conflict.
         where.append(CANONICAL_SOURCE_LEVEL_PREDICATE)
     predicate = " AND ".join(where)
+    snapshot = (con.execute("PRAGMA data_version").fetchone()[0], con.total_changes) if complete else None
     candidate_count = con.execute(
         f"SELECT COUNT(*) FROM {CANONICAL_TABLE} WHERE {predicate}", tuple(params),
     ).fetchone()[0]
     cursor = con.execute(
         f"SELECT * FROM {CANONICAL_TABLE} WHERE {predicate} "
-        "ORDER BY captured_at DESC, canonical_id ASC LIMIT ?",
-        tuple(params + [limit]),
+        "ORDER BY captured_at DESC, canonical_id ASC" + ("" if complete else " LIMIT ?"),
+        tuple(params if complete else params + [limit]),
     )
     columns = [column[0] for column in cursor.description]
-    rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
     records: List[Dict[str, Any]] = []
-    rejected_count = 0
-    for row in rows:
+    rejected_count = scanned_count = matched_count = verified_count = 0
+    unknown_sentiment_count = unknown_risk_count = 0
+    for values in cursor:
+        scanned_count += 1
+        row = dict(zip(columns, values))
         record = CanonicalRecord()
         for field_name in (
             "canonical_id", "product_id", "domain_id", "subject_id",
@@ -1311,18 +1336,50 @@ def list_scoped_canonical(
         if proof is None:
             rejected_count += 1
             continue
-        row["scope_evidence"] = proof
-        records.append(row)
+        verified_count += 1
+        unknown_sentiment_count += row.get("sentiment") not in {"positive", "neutral", "negative"}
+        unknown_risk_count += row.get("risk_level") not in {"none", "low", "medium", "high", "critical"}
+        if sentiment is not None and row.get("sentiment") != sentiment:
+            continue
+        if risk_levels is not None and row.get("risk_level") not in risk_levels:
+            continue
+        matched_count += 1
+        if offset < matched_count <= offset + limit:
+            row["scope_evidence"] = proof
+            records.append(row)
 
-    scanned_count = len(rows)
+    if not complete:
+        return {"records": records, "candidate_count": candidate_count,
+                "scanned_count": scanned_count, "rejected_count": rejected_count,
+                "returned_count": len(records), "limit": limit,
+                "truncated": candidate_count > scanned_count}
+    # A long complete scan must not return an earlier source whose original
+    # Evidence or row changed while later candidates were being checked.
+    for previous in records:
+        current_cursor = con.execute(f"SELECT * FROM {CANONICAL_TABLE} WHERE canonical_id=?",
+                                     (previous["canonical_id"],))
+        current_values = current_cursor.fetchone()
+        current = dict(zip((column[0] for column in current_cursor.description), current_values)) if current_values else None
+        if current != {key: value for key, value in previous.items() if key != "scope_evidence"}:
+            raise RuntimeError("CANONICAL_READ_SNAPSHOT_CHANGED")
+        record = CanonicalRecord(**{key: value for key, value in current.items()
+                                    if key in CanonicalRecord.__dataclass_fields__})
+        if _validate_canonical_scope(con, record) != previous["scope_evidence"]:
+            raise RuntimeError("CANONICAL_READ_SNAPSHOT_CHANGED")
+    if snapshot != (con.execute("PRAGMA data_version").fetchone()[0], con.total_changes):
+        raise RuntimeError("CANONICAL_READ_SNAPSHOT_CHANGED")
     return {
         "records": records,
         "candidate_count": candidate_count,
         "scanned_count": scanned_count,
         "rejected_count": rejected_count,
         "returned_count": len(records),
-        "limit": limit,
-        "truncated": candidate_count > scanned_count,
+        "limit": limit, "offset": offset,
+        "verified_count": verified_count, "matched_count": matched_count,
+        "unknown_sentiment_count": unknown_sentiment_count, "unknown_risk_count": unknown_risk_count,
+        "verification_complete": rejected_count == 0,
+        "truncated": matched_count > offset + len(records),
+        "next_offset": offset + len(records) if matched_count > offset + len(records) else None,
     }
 
 

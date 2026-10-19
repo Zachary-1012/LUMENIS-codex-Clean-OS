@@ -78,7 +78,7 @@ browser integration. No production DB, scheduler or social identity was used.
   retain honest distinct states. Widget acceptance covers 320 px/200% text and
   preserved input focus. Browser checks exercise rendered controls and real text.
 - EVIDENCE: final 56-test regression, 8 live assertions and inspectable screenshots
-  under `C:/Users/28049/AppData/Local/Temp/lumenis-browser-entry-20260927`.
+  under `C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-browser-entry-20260927`.
 - ACCEPTANCE ASSERTION: bounded Web recovery is LIVE_VERIFIED; user sign-off,
   native Windows/macOS/Linux/Android/iOS and full SYS-06 work are NOT VERIFIED.
   This batch is not Round 14 PASS or all-frontend completion.

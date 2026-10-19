@@ -1,0 +1,68 @@
+{
+  "publishable_product_tree": "source/ only; parent may later add separately reviewed documentation overlay",
+  "source_manifest": "PUBLIC_SOURCE_MANIFEST.json",
+  "public_review_artifacts": [
+    "public-review/PR_BODY.md",
+    "public-review/VERIFICATION_SUMMARY.json"
+  ],
+  "public_source_same_as_tested_tree": true,
+  "private_backup_same_as_public_bundle": false,
+  "excluded_from_publication": [
+    {
+      "paths": [
+        "review-only/local-handoff/"
+      ],
+      "reason": "private machine paths, local process/environment report, source bytes missing"
+    },
+    {
+      "paths": [
+        "review-only/approved-v010-planning/",
+        "review-only/semantic/",
+        "review-only/byok/",
+        "review-only/frontend-paused/"
+      ],
+      "reason": "Planning and unadopted work; requires a separately reviewed/redacted documentation overlay and is not automatically product source."
+    },
+    {
+      "paths": [
+        "evidence/",
+        "results/",
+        "csv-http/",
+        "validation-inputs/"
+      ],
+      "reason": "raw local paths/runtime traces/input custody; publish hash-only summary instead"
+    },
+    {
+      "paths": [
+        "data/",
+        "artifacts/",
+        "logs/",
+        "tmp/"
+      ],
+      "reason": "disposable runtime databases, caches, generated outputs; excluded from both release and backup archive"
+    }
+  ],
+  "redaction_mapping": [
+    {
+      "private": "results/full-final.log and full-final.xml",
+      "public": "public-review/VERIFICATION_SUMMARY.json",
+      "kept": "exact test totals, failure node IDs, source identity and evidence hashes",
+      "removed": "absolute paths, host identifier, raw traceback and fixture response bodies"
+    },
+    {
+      "private": "MAIN_TO_CANDIDATE.json / PATCH_APPLICATION.json / FINAL_RECEIPT.json",
+      "public": "public-review/PR_BODY.md and VERIFICATION_SUMMARY.json",
+      "kept": "base SHA, tree counts, patch proof, bounded test status, blockers",
+      "removed": "private workspace paths and machine runtime identity"
+    }
+  ],
+  "privacy_review": {
+    "new_or_modified_source_paths_scanned": 306,
+    "personal_machine_path_findings": 0,
+    "unresolved_credential_signature_findings": 0,
+    "confirmed_synthetic_secret_rejection_test_literals": 2,
+    "known_path_false_positives": "/workspace HTTP routes; generic synthetic C:[REDACTED_HOME] denial fixture; generic private /workspace/key.sql sanitization fixture",
+    "preexisting_main_files": "unchanged official public bytes retained; no new customer originals or reference videos added",
+    "limitation": "bounded pattern/delta inspection, not universal secret or legal clearance"
+  }
+}

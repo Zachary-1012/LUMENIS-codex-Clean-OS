@@ -574,6 +574,30 @@ final class MediaProjectSnapshot {
     );
   }
 
+  /// Adopt one inspected batch as one local undo step, retaining earlier edits.
+  /// The preview's version and stable IDs are preserved exactly.
+  MediaProjectSnapshot adoptInspectedPreview(MediaProjectSnapshot preview) {
+    _require(preview.version > version, 'preview must advance the timeline');
+    MediaProjectSnapshot.fromJson(toJson(), inspectedAssets: preview.assets);
+    return MediaProjectSnapshot._(
+      assets: preview.assets,
+      tracks: preview.tracks,
+      transitions: preview.transitions,
+      overlays: preview.overlays,
+      formatRatio: preview.formatRatio,
+      version: preview.version,
+      history: [
+        ..._history,
+        _SnapshotState(
+          tracks: tracks,
+          transitions: transitions,
+          overlays: overlays,
+          formatRatio: formatRatio,
+        ),
+      ],
+    );
+  }
+
   bool get canUndo => _history.isNotEmpty;
 
   /// End time of the latest clip or overlay in timeline coordinates.

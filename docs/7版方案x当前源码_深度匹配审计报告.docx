@@ -56,7 +56,7 @@
 | 方案要求 | 状态 | 证据 |
 |---|---|---|
 | 一套 Core、两种 Release、运行时隔离 | ❌ | 无 products/core 目录、无 RELEASE_PROFILE/profile 切换、无 ZBMP 任何源码 |
-| ZBMP 密钥门（사랑해 / 椭圆弹窗 / 后端拦截） | ❌ | 零证据 |
+| ZBMP 密钥门（[REDACTED_HISTORICAL_GATE_KEY] / 椭圆弹窗 / 后端拦截） | ❌ | 零证据 |
 | 登录双方式（账密+手机验证码滑动切换） | ❌ | 无 login.html、无 sms/send_code；仅 Basic |
 | 三级权限 RBAC | ❌ | 无 is_admin/permission/role 权限（app.py 的 role 只是聊天"用户/诺米"角色） |
 | 安全问答（手机号/生日） | ❌ | 无 security_question |
@@ -105,7 +105,7 @@
 ## 5. ⑥ 7 版方案之间 / 方案与"你的最新调整"之间的冲突（不自行删，列对比+建议）
 | # | 冲突点 | 各方主张 | 建议（以你最新口径为准） |
 |---|---|---|---|
-| C1 | 两个产品是"两套独立部署"还是"一套系统+密钥门" | 1.4/1.5/1.6 倾向两种独立 Release、运行时完全隔离；你最新要求"一套 Z-Brand Core 里默认 CTH-POMS，密钥사랑해解锁 ZBMP" | **开发/本地=一套 Core+功能门**；交付时再用同一 Core 打出两个 Release 包。运行时隔离通过"配置 profile + 后端路由裁剪 + 独立 DB"实现，而非两份源码 |
+| C1 | 两个产品是"两套独立部署"还是"一套系统+密钥门" | 1.4/1.5/1.6 倾向两种独立 Release、运行时完全隔离；你最新要求"一套 Z-Brand Core 里默认 CTH-POMS，密钥[REDACTED_HISTORICAL_GATE_KEY]解锁 ZBMP" | **开发/本地=一套 Core+功能门**；交付时再用同一 Core 打出两个 Release 包。运行时隔离通过"配置 profile + 后端路由裁剪 + 独立 DB"实现，而非两份源码 |
 | C2 | 哪些能力给客户版 CTH-POMS | 1.6 把传播主体/三类事件/消费者洞察等偏"母平台能力"；你最新说"有些可以给产品1用" | **业务分析能力下沉 Core、CTH-POMS 可用**：传播主体、content_type、三类事件、事件关系、消费者需求、品牌对标、案例库、报告升级都给客户版；**仅研发实验域留 ZBMP**：多品牌多客户、规则实验、AI Shadow 样本库、一键 Release、跨客户 Benchmark |
 | C3 | AI 路线 | 早期版本接云端豆包；1.2 起撤出云端、仅 Ollama；你确认撤出 | 云端 provider 全部默认关、保留接口；Core 规则为主，Ollama 可选；daily_report/xhs_bridge 硬 import 改 try |
 | C4 | 采集频率 | 旧：固定 30min/20min/每日9+3/冷却1h或15分；1.3/1.6：动态，不硬编码 | 保留数值作"健康态默认"，但由健康态驱动升降频/熔断，不写死为永久规则 |

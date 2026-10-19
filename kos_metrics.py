@@ -43,93 +43,198 @@ PLATFORM_RULES_PATH = Path(__file__).parent / "config" / "kos_platform_rules.jso
 _DEFAULT_PLATFORM_RULES = {
     "xiaohongshu": {
         "label": "小红书",
-        "engagement_weights": {"likes": 1.0, "comments": 2.0, "collects": 1.5, "shares": 2.0},
+        "engagement_weights": {
+            "likes": 1.0,
+            "comments": 2.0,
+            "collects": 1.5,
+            "shares": 2.0,
+        },
         "influence": {
-            "engagement_coeff": 15.0, "engagement_max": 40.0,
-            "volume_coeff": 12.0, "volume_max": 20.0,
-            "brand_relevance_coeff": 0.2, "quality_coeff": 10.0, "quality_max": 10.0,
+            "engagement_coeff": 15.0,
+            "engagement_max": 40.0,
+            "volume_coeff": 12.0,
+            "volume_max": 20.0,
+            "brand_relevance_coeff": 0.2,
+            "quality_coeff": 10.0,
+            "quality_max": 10.0,
             "risk_penalty_coeff": 0.5,
         },
         "score": {"min": 0, "max": 100, "round_digits": 2},
         "ad_candidate": {
-            "natural_coeff": 12.0, "natural_max": 40.0,
-            "interaction_quality_coeff": 30.0, "interaction_quality_max": 30.0,
-            "quality_coeff": 20.0, "quality_max": 20.0, "risk_penalty_per_unit": 10.0,
+            "natural_coeff": 12.0,
+            "natural_max": 40.0,
+            "interaction_quality_coeff": 30.0,
+            "interaction_quality_max": 30.0,
+            "quality_coeff": 20.0,
+            "quality_max": 20.0,
+            "risk_penalty_per_unit": 10.0,
         },
-        "brand_relevance_base": {"kos": 30, "official": 20, "media": 15, "institution": 10, "normal_user": 5, "default": 3},
-        "brand_relevance_note_bonus": 2.0, "brand_relevance_note_bonus_max": 20.0,
+        "brand_relevance_base": {
+            "kos": 30,
+            "official": 20,
+            "media": 15,
+            "institution": 10,
+            "normal_user": 5,
+            "default": 3,
+        },
+        "brand_relevance_note_bonus": 2.0,
+        "brand_relevance_note_bonus_max": 20.0,
     },
     "douyin": {
         "label": "抖音",
-        "engagement_weights": {"likes": 1.0, "comments": 2.0, "collects": 1.0, "shares": 3.0},
+        "engagement_weights": {
+            "likes": 1.0,
+            "comments": 2.0,
+            "collects": 1.0,
+            "shares": 3.0,
+        },
         "influence": {
-            "engagement_coeff": 15.0, "engagement_max": 40.0,
-            "volume_coeff": 12.0, "volume_max": 20.0,
-            "brand_relevance_coeff": 0.2, "quality_coeff": 10.0, "quality_max": 10.0,
+            "engagement_coeff": 15.0,
+            "engagement_max": 40.0,
+            "volume_coeff": 12.0,
+            "volume_max": 20.0,
+            "brand_relevance_coeff": 0.2,
+            "quality_coeff": 10.0,
+            "quality_max": 10.0,
             "risk_penalty_coeff": 0.5,
         },
         "score": {"min": 0, "max": 100, "round_digits": 2},
         "ad_candidate": {
-            "natural_coeff": 12.0, "natural_max": 40.0,
-            "interaction_quality_coeff": 30.0, "interaction_quality_max": 30.0,
-            "quality_coeff": 20.0, "quality_max": 20.0, "risk_penalty_per_unit": 10.0,
+            "natural_coeff": 12.0,
+            "natural_max": 40.0,
+            "interaction_quality_coeff": 30.0,
+            "interaction_quality_max": 30.0,
+            "quality_coeff": 20.0,
+            "quality_max": 20.0,
+            "risk_penalty_per_unit": 10.0,
         },
-        "brand_relevance_base": {"kos": 30, "official": 20, "media": 15, "institution": 10, "normal_user": 5, "default": 3},
-        "brand_relevance_note_bonus": 2.0, "brand_relevance_note_bonus_max": 20.0,
+        "brand_relevance_base": {
+            "kos": 30,
+            "official": 20,
+            "media": 15,
+            "institution": 10,
+            "normal_user": 5,
+            "default": 3,
+        },
+        "brand_relevance_note_bonus": 2.0,
+        "brand_relevance_note_bonus_max": 20.0,
     },
     "weibo": {
         "label": "微博",
-        "engagement_weights": {"likes": 1.0, "comments": 1.5, "collects": 0.5, "shares": 2.5},
+        "engagement_weights": {
+            "likes": 1.0,
+            "comments": 1.5,
+            "collects": 0.5,
+            "shares": 2.5,
+        },
         "influence": {
-            "engagement_coeff": 15.0, "engagement_max": 40.0,
-            "volume_coeff": 12.0, "volume_max": 20.0,
-            "brand_relevance_coeff": 0.2, "quality_coeff": 10.0, "quality_max": 10.0,
+            "engagement_coeff": 15.0,
+            "engagement_max": 40.0,
+            "volume_coeff": 12.0,
+            "volume_max": 20.0,
+            "brand_relevance_coeff": 0.2,
+            "quality_coeff": 10.0,
+            "quality_max": 10.0,
             "risk_penalty_coeff": 0.5,
         },
         "score": {"min": 0, "max": 100, "round_digits": 2},
         "ad_candidate": {
-            "natural_coeff": 12.0, "natural_max": 40.0,
-            "interaction_quality_coeff": 30.0, "interaction_quality_max": 30.0,
-            "quality_coeff": 20.0, "quality_max": 20.0, "risk_penalty_per_unit": 10.0,
+            "natural_coeff": 12.0,
+            "natural_max": 40.0,
+            "interaction_quality_coeff": 30.0,
+            "interaction_quality_max": 30.0,
+            "quality_coeff": 20.0,
+            "quality_max": 20.0,
+            "risk_penalty_per_unit": 10.0,
         },
-        "brand_relevance_base": {"kos": 30, "official": 20, "media": 15, "institution": 10, "normal_user": 5, "default": 3},
-        "brand_relevance_note_bonus": 2.0, "brand_relevance_note_bonus_max": 20.0,
+        "brand_relevance_base": {
+            "kos": 30,
+            "official": 20,
+            "media": 15,
+            "institution": 10,
+            "normal_user": 5,
+            "default": 3,
+        },
+        "brand_relevance_note_bonus": 2.0,
+        "brand_relevance_note_bonus_max": 20.0,
     },
     "bilibili": {
         "label": "B站",
-        "engagement_weights": {"likes": 1.0, "comments": 2.0, "collects": 2.0, "shares": 2.0},
+        "engagement_weights": {
+            "likes": 1.0,
+            "comments": 2.0,
+            "collects": 2.0,
+            "shares": 2.0,
+        },
         "influence": {
-            "engagement_coeff": 15.0, "engagement_max": 40.0,
-            "volume_coeff": 12.0, "volume_max": 20.0,
-            "brand_relevance_coeff": 0.2, "quality_coeff": 10.0, "quality_max": 10.0,
+            "engagement_coeff": 15.0,
+            "engagement_max": 40.0,
+            "volume_coeff": 12.0,
+            "volume_max": 20.0,
+            "brand_relevance_coeff": 0.2,
+            "quality_coeff": 10.0,
+            "quality_max": 10.0,
             "risk_penalty_coeff": 0.5,
         },
         "score": {"min": 0, "max": 100, "round_digits": 2},
         "ad_candidate": {
-            "natural_coeff": 12.0, "natural_max": 40.0,
-            "interaction_quality_coeff": 30.0, "interaction_quality_max": 30.0,
-            "quality_coeff": 20.0, "quality_max": 20.0, "risk_penalty_per_unit": 10.0,
+            "natural_coeff": 12.0,
+            "natural_max": 40.0,
+            "interaction_quality_coeff": 30.0,
+            "interaction_quality_max": 30.0,
+            "quality_coeff": 20.0,
+            "quality_max": 20.0,
+            "risk_penalty_per_unit": 10.0,
         },
-        "brand_relevance_base": {"kos": 30, "official": 20, "media": 15, "institution": 10, "normal_user": 5, "default": 3},
-        "brand_relevance_note_bonus": 2.0, "brand_relevance_note_bonus_max": 20.0,
+        "brand_relevance_base": {
+            "kos": 30,
+            "official": 20,
+            "media": 15,
+            "institution": 10,
+            "normal_user": 5,
+            "default": 3,
+        },
+        "brand_relevance_note_bonus": 2.0,
+        "brand_relevance_note_bonus_max": 20.0,
     },
     "zhihu": {
         "label": "知乎",
-        "engagement_weights": {"likes": 1.5, "comments": 2.0, "collects": 2.5, "shares": 1.5},
+        "engagement_weights": {
+            "likes": 1.5,
+            "comments": 2.0,
+            "collects": 2.5,
+            "shares": 1.5,
+        },
         "influence": {
-            "engagement_coeff": 15.0, "engagement_max": 40.0,
-            "volume_coeff": 12.0, "volume_max": 20.0,
-            "brand_relevance_coeff": 0.2, "quality_coeff": 10.0, "quality_max": 10.0,
+            "engagement_coeff": 15.0,
+            "engagement_max": 40.0,
+            "volume_coeff": 12.0,
+            "volume_max": 20.0,
+            "brand_relevance_coeff": 0.2,
+            "quality_coeff": 10.0,
+            "quality_max": 10.0,
             "risk_penalty_coeff": 0.5,
         },
         "score": {"min": 0, "max": 100, "round_digits": 2},
         "ad_candidate": {
-            "natural_coeff": 12.0, "natural_max": 40.0,
-            "interaction_quality_coeff": 30.0, "interaction_quality_max": 30.0,
-            "quality_coeff": 20.0, "quality_max": 20.0, "risk_penalty_per_unit": 10.0,
+            "natural_coeff": 12.0,
+            "natural_max": 40.0,
+            "interaction_quality_coeff": 30.0,
+            "interaction_quality_max": 30.0,
+            "quality_coeff": 20.0,
+            "quality_max": 20.0,
+            "risk_penalty_per_unit": 10.0,
         },
-        "brand_relevance_base": {"kos": 30, "official": 20, "media": 15, "institution": 10, "normal_user": 5, "default": 3},
-        "brand_relevance_note_bonus": 2.0, "brand_relevance_note_bonus_max": 20.0,
+        "brand_relevance_base": {
+            "kos": 30,
+            "official": 20,
+            "media": 15,
+            "institution": 10,
+            "normal_user": 5,
+            "default": 3,
+        },
+        "brand_relevance_note_bonus": 2.0,
+        "brand_relevance_note_bonus_max": 20.0,
     },
 }
 
@@ -155,20 +260,25 @@ def load_platform_rules() -> dict:
             else:
                 logger.warning(
                     "KOS配置缺失: %s 存在但无有效平台规则，使用默认值，可能导致口径漂移",
-                    PLATFORM_RULES_PATH)
+                    PLATFORM_RULES_PATH,
+                )
                 _platform_rules_status = "fallback_default"
         else:
             logger.warning(
                 "KOS配置缺失: %s 不存在，使用默认值，可能导致口径漂移",
-                PLATFORM_RULES_PATH)
+                PLATFORM_RULES_PATH,
+            )
             _platform_rules_status = "missing"
     except Exception as e:
         logger.warning(
             "KOS配置损坏: 读取 %s 失败(%s)，使用默认值，可能导致口径漂移",
-            PLATFORM_RULES_PATH, e)
+            PLATFORM_RULES_PATH,
+            e,
+        )
         _platform_rules_status = "fallback_default"
     # 深拷贝默认规则，防止调用方修改污染全局
     import copy
+
     return copy.deepcopy(_DEFAULT_PLATFORM_RULES)
 
 
@@ -199,13 +309,15 @@ def get_platform_rule(platform: str) -> dict:
     # 未知平台：回退默认（xiaohongshu 基准），但记录 WARNING
     logger.warning(
         "KOS配置缺失: 未知平台 '%s'，回退 xiaohongshu 默认规则，可能导致口径漂移",
-        platform)
+        platform,
+    )
     fallback = PLATFORM_RULES.get("xiaohongshu", _DEFAULT_PLATFORM_RULES["xiaohongshu"])
     return fallback
 
 
-def platform_engagement(platform: str, likes: float, comments: float,
-                        collects: float, shares: float) -> float:
+def platform_engagement(
+    platform: str, likes: float, comments: float, collects: float, shares: float
+) -> float:
     """按平台规则计算加权互动量。
 
     G3: 配置缺失时已在 load_platform_rules/get_platform_rule 中 WARNING。
@@ -223,9 +335,16 @@ def platform_engagement(platform: str, likes: float, comments: float,
     )
 
 
-def platform_kos_score(platform: str, *, engagement: float, note_count: int,
-                       subject_type: str = "", content_quality: float = 0.0,
-                       risk_count: int = 0, negative_count: int = 0) -> dict:
+def platform_kos_score(
+    platform: str,
+    *,
+    engagement: float,
+    note_count: int,
+    subject_type: str = "",
+    content_quality: float = 0.0,
+    risk_count: int = 0,
+    negative_count: int = 0,
+) -> dict:
     """按平台规则计算 KOS 影响力得分（取代 kos_engine.py 中的硬编码公式）。
 
     返回 dict: {score, engagement_score, volume_score, brand_relevance,
@@ -235,6 +354,7 @@ def platform_kos_score(platform: str, *, engagement: float, note_count: int,
     P0 红线：所有系数从规则配置读取，函数体内无硬编码 0.3/0.5/100 等。
     """
     import math
+
     rule = get_platform_rule(platform)
     inf = rule.get("influence", {})
     score_cfg = rule.get("score", {})
@@ -249,12 +369,16 @@ def platform_kos_score(platform: str, *, engagement: float, note_count: int,
     # 互动得分：log10(eng+1) * coeff，上限 max
     eng_coeff = float(inf.get("engagement_coeff", 15.0))
     eng_max = float(inf.get("engagement_max", 40.0))
-    eng_score = min(math.log10(engagement + 1) * eng_coeff, eng_max) if engagement > 0 else 0.0
+    eng_score = (
+        min(math.log10(engagement + 1) * eng_coeff, eng_max) if engagement > 0 else 0.0
+    )
 
     # 体量得分：log10(nc+1) * coeff，上限 max
     vol_coeff = float(inf.get("volume_coeff", 12.0))
     vol_max = float(inf.get("volume_max", 20.0))
-    vol_score = min(math.log10(note_count + 1) * vol_coeff, vol_max) if note_count > 0 else 0.0
+    vol_score = (
+        min(math.log10(note_count + 1) * vol_coeff, vol_max) if note_count > 0 else 0.0
+    )
 
     # 质量得分：cq * coeff，上限 max
     q_coeff = float(inf.get("quality_coeff", 10.0))
@@ -265,12 +389,20 @@ def platform_kos_score(platform: str, *, engagement: float, note_count: int,
     risk_coeff_risk = 5.0  # 风险计数系数（规则中可扩展）
     risk_coeff_neg = 2.0
     risk_cap = 15.0
-    risk_pen = min(risk_count * risk_coeff_risk + negative_count * risk_coeff_neg, risk_cap)
+    risk_pen = min(
+        risk_count * risk_coeff_risk + negative_count * risk_coeff_neg, risk_cap
+    )
 
     # 总分：eng + vol + brand_rel * brand_coeff + q - risk_pen * risk_coeff
     brand_coeff = float(inf.get("brand_relevance_coeff", 0.2))
     risk_pen_coeff = float(inf.get("risk_penalty_coeff", 0.5))
-    raw = eng_score + vol_score + brand_rel * brand_coeff + q_score - risk_pen * risk_pen_coeff
+    raw = (
+        eng_score
+        + vol_score
+        + brand_rel * brand_coeff
+        + q_score
+        - risk_pen * risk_pen_coeff
+    )
 
     score_min = float(score_cfg.get("min", 0))
     score_max = float(score_cfg.get("max", 100))
@@ -290,25 +422,40 @@ def platform_kos_score(platform: str, *, engagement: float, note_count: int,
     }
 
 
-def platform_ad_score(platform: str, *, engagement: float, likes: float,
-                      comments: float, collects: float, quality: float = 0.0,
-                      is_risk: bool = False, is_negative: bool = False) -> dict:
+def platform_ad_score(
+    platform: str,
+    *,
+    engagement: float,
+    likes: float,
+    comments: float,
+    collects: float,
+    quality: float = 0.0,
+    is_risk: bool = False,
+    is_negative: bool = False,
+) -> dict:
     """按平台规则计算投流候选评分（取代 kos_engine.ad_candidate_score 硬编码）。
 
     G3: 新增 config_status 字段。
     P0 红线：所有系数从规则配置读取。
     """
     import math
+
     rule = get_platform_rule(platform)
     ad = rule.get("ad_candidate", {})
 
     nat_coeff = float(ad.get("natural_coeff", 12.0))
     nat_max = float(ad.get("natural_max", 40.0))
-    nat_score = min(math.log10(engagement + 1) * nat_coeff, nat_max) if engagement > 0 else 0.0
+    nat_score = (
+        min(math.log10(engagement + 1) * nat_coeff, nat_max) if engagement > 0 else 0.0
+    )
 
     iq_coeff = float(ad.get("interaction_quality_coeff", 30.0))
     iq_max = float(ad.get("interaction_quality_max", 30.0))
-    interact_quality = min((comments + collects) / max(likes, 1) * iq_coeff, iq_max) if likes > 0 else 0.0
+    interact_quality = (
+        min((comments + collects) / max(likes, 1) * iq_coeff, iq_max)
+        if likes > 0
+        else 0.0
+    )
 
     q_coeff = float(ad.get("quality_coeff", 20.0))
     q_max = float(ad.get("quality_max", 20.0))
@@ -330,11 +477,12 @@ def platform_ad_score(platform: str, *, engagement: float, likes: float,
         "config_status": _platform_rules_status,
     }
 
+
 # KOC 分层阈值（对齐 DFS Gold/Silver/Bronze 可配置；24h 与 7d 双口径，取高者判定）
 KOC_TIER_RULES = {
-    "gold":   {"24h_min": 100, "7d_min": 500},
-    "silver": {"24h_min": 50,  "7d_min": 100},
-    "bronze": {"24h_min": 1,   "7d_min": 1},
+    "gold": {"24h_min": 100, "7d_min": 500},
+    "silver": {"24h_min": 50, "7d_min": 100},
+    "bronze": {"24h_min": 1, "7d_min": 1},
 }
 
 # KOS 分层看板切点（Top5 / Top6-10 / Top11-20 / Others）
@@ -354,14 +502,20 @@ def _load_manual() -> dict:
 def _save_manual(data: dict) -> None:
     """写回手动回填层（仅本模块维护的 kos_metrics_manual.json）。"""
     MANUAL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    MANUAL_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    MANUAL_PATH.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
-def set_manual(kos_id: str, *, wecom_add: Optional[int] = None,
-               sales_amount: Optional[float] = None,
-               boosting_budget: Optional[float] = None,
-               inquiry: Optional[int] = None,
-               clicks: Optional[int] = None) -> dict:
+def set_manual(
+    kos_id: str,
+    *,
+    wecom_add: Optional[int] = None,
+    sales_amount: Optional[float] = None,
+    boosting_budget: Optional[float] = None,
+    inquiry: Optional[int] = None,
+    clicks: Optional[int] = None,
+) -> dict:
     """登记/更新单个 KOS 的手动回填指标（WeCom/Sales/Boosting 预算/进线/点击）。"""
     data = _load_manual()
     entry = data.setdefault(kos_id, {})
@@ -406,22 +560,27 @@ def funnel_metrics(entity: str = "all", limit: int = 20) -> dict:
     for r in rows:
         kos_id = r["author_id"]
         m = manual.get(kos_id, {})
-        items.append({
-            "kos_id": kos_id,
-            "author_name": r["author_nickname"],
-            "tier": r["kos_tier"],
-            "identity_label": r["identity_label"],
-            "funnel": {
-                "viewership": int(r["exposure"] or 0),
-                "wecom_add": int(m.get("wecom_add", 0)),
-                "sales_amount": float(m.get("sales_amount", 0.0)),
-            },
-            "notes": int(r["note_cnt"] or 0),
-            "total_engagement": int(r["total_engagement"] or 0),
-        })
+        items.append(
+            {
+                "kos_id": kos_id,
+                "author_name": r["author_nickname"],
+                "tier": r["kos_tier"],
+                "identity_label": r["identity_label"],
+                "funnel": {
+                    "viewership": int(r["exposure"] or 0),
+                    "wecom_add": int(m.get("wecom_add", 0)),
+                    "sales_amount": float(m.get("sales_amount", 0.0)),
+                },
+                "notes": int(r["note_cnt"] or 0),
+                "total_engagement": int(r["total_engagement"] or 0),
+            }
+        )
 
-    pending = [it["kos_id"] for it in items
-               if it["funnel"]["wecom_add"] <= 0 and it["funnel"]["sales_amount"] <= 0]
+    pending = [
+        it["kos_id"]
+        for it in items
+        if it["funnel"]["wecom_add"] <= 0 and it["funnel"]["sales_amount"] <= 0
+    ]
 
     if entity == "kos":
         return {"entity": "kos", "items": items[:limit], "manual_pending": pending}
@@ -429,8 +588,10 @@ def funnel_metrics(entity: str = "all", limit: int = 20) -> dict:
     # 按品牌聚合（identity_label 非空时以品牌为组，否则归 all）
     by_brand: Dict[str, dict] = {}
     for it in items:
-        brand = (it["identity_label"] or "all")
-        b = by_brand.setdefault(brand, {"viewership": 0, "wecom_add": 0, "sales_amount": 0.0, "kos_cnt": 0})
+        brand = it["identity_label"] or "all"
+        b = by_brand.setdefault(
+            brand, {"viewership": 0, "wecom_add": 0, "sales_amount": 0.0, "kos_cnt": 0}
+        )
         b["viewership"] += it["funnel"]["viewership"]
         b["wecom_add"] += it["funnel"]["wecom_add"]
         b["sales_amount"] += it["funnel"]["sales_amount"]
@@ -446,7 +607,12 @@ def funnel_metrics(entity: str = "all", limit: int = 20) -> dict:
         total["wecom_add"] += it["funnel"]["wecom_add"]
         total["sales_amount"] += it["funnel"]["sales_amount"]
         total["kos_cnt"] += 1
-    return {"entity": "all", "funnel": total, "top_kos": items[:limit], "manual_pending": pending}
+    return {
+        "entity": "all",
+        "funnel": total,
+        "top_kos": items[:limit],
+        "manual_pending": pending,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -474,7 +640,9 @@ def cost_metrics(period: str = "month") -> dict:
         "inquiry": total_inquiry,
         "clicks": total_clicks,
         "wecom_add": total_wecom,
-        "manual_pending": ["inquiry", "clicks"] if (not total_inquiry or not total_clicks) else [],
+        "manual_pending": (
+            ["inquiry", "clicks"] if (not total_inquiry or not total_clicks) else []
+        ),
     }
     return out
 
@@ -498,15 +666,17 @@ def tier_benchmark(limit: int = 40) -> dict:
     ranked = []
     for r in rows:
         m = manual.get(r["author_id"], {})
-        ranked.append({
-            "kos_id": r["author_id"],
-            "author_name": r["author_nickname"],
-            "engagement": int(r["total_engagement"] or 0),
-            "note_count": int(r["note_count"] or 0),
-            "wecom_add": int(m.get("wecom_add", 0)),
-            "sales_amount": float(m.get("sales_amount", 0.0)),
-            "boosting_budget": float(m.get("boosting_budget", 0.0)),
-        })
+        ranked.append(
+            {
+                "kos_id": r["author_id"],
+                "author_name": r["author_nickname"],
+                "engagement": int(r["total_engagement"] or 0),
+                "note_count": int(r["note_count"] or 0),
+                "wecom_add": int(m.get("wecom_add", 0)),
+                "sales_amount": float(m.get("sales_amount", 0.0)),
+                "boosting_budget": float(m.get("boosting_budget", 0.0)),
+            }
+        )
 
     def _slice(a, b):
         return ranked[a:b]
@@ -527,28 +697,54 @@ def tier_benchmark(limit: int = 40) -> dict:
     for name, items in tiers.items():
         summary[name] = {
             "kos_cnt": len(items),
-            "engagement_share": round(sum(i["engagement"] for i in items) / total["engagement"] * 100, 1),
+            "engagement_share": round(
+                sum(i["engagement"] for i in items) / total["engagement"] * 100, 1
+            ),
             "wecom_sum": sum(i["wecom_add"] for i in items),
             "sales_sum": round(sum(i["sales_amount"] for i in items), 2),
-            "avg_boosting": round(sum(i["boosting_budget"] for i in items) / len(items), 2) if items else 0,
+            "avg_boosting": (
+                round(sum(i["boosting_budget"] for i in items) / len(items), 2)
+                if items
+                else 0
+            ),
         }
     # 高/低产出画像（有 manual 数据才可比）
     with_data = [r for r in ranked if r["wecom_add"] > 0 or r["sales_amount"] > 0]
-    high = [r for r in with_data if (r["sales_amount"] or 0) >= 10000]  # Sales ≥ 1W 为高产出
+    high = [
+        r for r in with_data if (r["sales_amount"] or 0) >= 10000
+    ]  # Sales ≥ 1W 为高产出
     low = [r for r in with_data if (r["sales_amount"] or 0) < 10000]
     profile = {
         "high_avg": {
-            "note_count": round(sum(r["note_count"] for r in high) / len(high), 1) if high else 0,
-            "wecom": round(sum(r["wecom_add"] for r in high) / len(high), 1) if high else 0,
-            "boosting": round(sum(r["boosting_budget"] for r in high) / len(high), 2) if high else 0,
+            "note_count": (
+                round(sum(r["note_count"] for r in high) / len(high), 1) if high else 0
+            ),
+            "wecom": (
+                round(sum(r["wecom_add"] for r in high) / len(high), 1) if high else 0
+            ),
+            "boosting": (
+                round(sum(r["boosting_budget"] for r in high) / len(high), 2)
+                if high
+                else 0
+            ),
         },
         "low_avg": {
-            "note_count": round(sum(r["note_count"] for r in low) / len(low), 1) if low else 0,
-            "wecom": round(sum(r["wecom_add"] for r in low) / len(low), 1) if low else 0,
-            "boosting": round(sum(r["boosting_budget"] for r in low) / len(low), 2) if low else 0,
+            "note_count": (
+                round(sum(r["note_count"] for r in low) / len(low), 1) if low else 0
+            ),
+            "wecom": (
+                round(sum(r["wecom_add"] for r in low) / len(low), 1) if low else 0
+            ),
+            "boosting": (
+                round(sum(r["boosting_budget"] for r in low) / len(low), 2)
+                if low
+                else 0
+            ),
         },
         "manual_data_kos": len(with_data),
-        "manual_pending": [r["kos_id"] for r in ranked if not (r["wecom_add"] or r["sales_amount"])],
+        "manual_pending": [
+            r["kos_id"] for r in ranked if not (r["wecom_add"] or r["sales_amount"])
+        ],
     }
     return {"tiers": summary, "top_detail": ranked[:5], "profile": profile}
 
@@ -556,8 +752,9 @@ def tier_benchmark(limit: int = 40) -> dict:
 # ---------------------------------------------------------------------------
 # 4. KOC 分层判定
 # ---------------------------------------------------------------------------
-def koc_reward_tier(interactions_24h: int, interactions_7d: int,
-                    rules: Optional[dict] = None) -> dict:
+def koc_reward_tier(
+    interactions_24h: int, interactions_7d: int, rules: Optional[dict] = None
+) -> dict:
     """KOC 分层判定：Gold/Silver/Bronze（24h 或 7d 任一达标取高）。
 
     对齐 DFS：Gold=24h≥100 或 7d≥500；Silver=24h≥50 或 7d≥100；Bronze=参与。
@@ -567,33 +764,82 @@ def koc_reward_tier(interactions_24h: int, interactions_7d: int,
     for tier in ("gold", "silver"):
         rule = rules[tier]
         if interactions_24h >= rule["24h_min"] or interactions_7d >= rule["7d_min"]:
-            return {"tier": tier, "interactions_24h": interactions_24h,
-                    "interactions_7d": interactions_7d, "rule": rule}
+            return {
+                "tier": tier,
+                "interactions_24h": interactions_24h,
+                "interactions_7d": interactions_7d,
+                "rule": rule,
+            }
     if interactions_24h >= 1 or interactions_7d >= 1:
-        return {"tier": "bronze", "interactions_24h": interactions_24h,
-                "interactions_7d": interactions_7d, "rule": rules["bronze"]}
-    return {"tier": "none", "interactions_24h": interactions_24h,
-            "interactions_7d": interactions_7d, "rule": None}
+        return {
+            "tier": "bronze",
+            "interactions_24h": interactions_24h,
+            "interactions_7d": interactions_7d,
+            "rule": rules["bronze"],
+        }
+    return {
+        "tier": "none",
+        "interactions_24h": interactions_24h,
+        "interactions_7d": interactions_7d,
+        "rule": None,
+    }
 
 
 def koc_campaign_review(campaign: str, kocs: List[dict]) -> dict:
-    """KOC campaign 复盘聚合：KOC 数 / 曝光 / 互动 / High-intent comment。
+    """Bounded arithmetic on explicitly user-declared rows; missing is unknown."""
+    import math
 
-    kocs: [{author_id, viewership, engagement, high_intent_comments}]
-    复用 classify_intent 的强意向分层概念（由调用方传入 high_intent_comments 计数）。
-    """
-    if not kocs:
-        return {"campaign": campaign, "koc_count": 0, "viewership": 0,
-                "engagement": 0, "high_intent_comments": 0, "tiers": {}}
-    view = sum(int(k.get("viewership", 0)) for k in kocs)
-    eng = sum(int(k.get("engagement", 0)) for k in kocs)
-    hi = sum(int(k.get("high_intent_comments", 0)) for k in kocs)
-    tier_cnt = {}
-    for k in kocs:
-        t = koc_reward_tier(int(k.get("engagement_24h", 0)), int(k.get("engagement_7d", 0)))
-        tier_cnt[t["tier"]] = tier_cnt.get(t["tier"], 0) + 1
-    return {"campaign": campaign, "koc_count": len(kocs), "viewership": view,
-            "engagement": eng, "high_intent_comments": hi, "tiers": tier_cnt}
+    if not isinstance(campaign, str) or not campaign.strip() or len(campaign) > 200:
+        raise ValueError("KOS_CAMPAIGN_NAME_INVALID")
+    if not isinstance(kocs, list) or len(kocs) > 500:
+        raise ValueError("KOS_CAMPAIGN_ROWS_INVALID")
+    metrics = {
+        "viewership",
+        "engagement",
+        "high_intent_comments",
+        "engagement_24h",
+        "engagement_7d",
+    }
+    tiers = {}
+    for row in kocs:
+        if not isinstance(row, dict) or set(row) - metrics - {"author_id"}:
+            raise ValueError("KOS_CAMPAIGN_ROW_INVALID")
+        if "author_id" in row and (
+            not isinstance(row["author_id"], str) or len(row["author_id"]) > 200
+        ):
+            raise ValueError("KOS_CAMPAIGN_AUTHOR_INVALID")
+        for field in metrics:
+            value = row.get(field)
+            if value is not None and (
+                type(value) not in (int, float) or not math.isfinite(value) or value < 0
+            ):
+                raise ValueError("KOS_CAMPAIGN_NUMBER_INVALID")
+        if (
+            row.get("engagement_24h") is not None
+            and row.get("engagement_7d") is not None
+        ):
+            tier = koc_reward_tier(row["engagement_24h"], row["engagement_7d"])["tier"]
+        else:
+            tier = "UNKNOWN"
+        tiers[tier] = tiers.get(tier, 0) + 1
+    result = {
+        "campaign": campaign,
+        "koc_count": len(kocs),
+        "tiers": tiers,
+        "calculation_basis": "USER_DECLARED_UNVERIFIED",
+        "population_coverage": "UNKNOWN",
+        "external_campaign_results": "NOT_ESTABLISHED",
+        "coverage": {},
+    }
+    for field in ("viewership", "engagement", "high_intent_comments"):
+        values = [row[field] for row in kocs if row.get(field) is not None]
+        result[field] = sum(values) if values and len(values) == len(kocs) else None
+        result["coverage"][field] = {
+            "known": len(values),
+            "provided_rows": len(kocs),
+            "known_subtotal": sum(values) if values else None,
+        }
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -629,12 +875,16 @@ def channel_roi(channels: Optional[dict] = None) -> dict:
     }
     if channels:
         for name, cfg in channels.items():
-            merged = builtin.setdefault(name, {"budget": 0, "inquiry": 0, "clicks": 0, "wecom": 0})
+            merged = builtin.setdefault(
+                name, {"budget": 0, "inquiry": 0, "clicks": 0, "wecom": 0}
+            )
             for k in ("budget", "inquiry", "clicks", "wecom"):
                 if k in cfg:
                     merged[k] = cfg[k]
             if "reference_cpl" in cfg:
-                CHANNEL_BENCHMARKS.setdefault(name, {"label": name, "reference_cpl": None})
+                CHANNEL_BENCHMARKS.setdefault(
+                    name, {"label": name, "reference_cpl": None}
+                )
                 CHANNEL_BENCHMARKS[name]["reference_cpl"] = cfg["reference_cpl"]
 
     out = {"channels": [], "generated_at": None}
@@ -657,8 +907,81 @@ def channel_roi(channels: Optional[dict] = None) -> dict:
             "reference_cpl": bench.get("reference_cpl"),
         }
         if row["cpl"] is not None and row["reference_cpl"]:
-            row["vs_reference_pct"] = round((row["cpl"] - row["reference_cpl"]) / row["reference_cpl"] * 100, 1)
+            row["vs_reference_pct"] = round(
+                (row["cpl"] - row["reference_cpl"]) / row["reference_cpl"] * 100, 1
+            )
         else:
             row["vs_reference_pct"] = None
         out["channels"].append(row)
     return out
+
+
+def read_scoped_manual_metrics(*, actor, scope, period="all"):
+    """Exact private manual metrics, with absent inputs and zero denominators NULL.
+
+    Period filtering is not inferred from a ledger write timestamp: the current
+    records are user-entered snapshots unless an explicit observation period is
+    part of a future approved source contract.
+    """
+    import kos_ops
+    import math
+
+    if period not in {"all", "month", "week", "day"}:
+        raise ValueError("KOS_METRICS_PERIOD_INVALID")
+    ledger = kos_ops.read_scoped_operations(
+        actor=actor, scope=scope, operation="manual_metrics", limit=200
+    )
+    latest = {}
+    for item in ledger["items"]:
+        latest.setdefault(item["author_id"], item)
+    fields = (
+        "wecom_add",
+        "sales_amount",
+        "boosting_budget",
+        "inquiry",
+        "clicks",
+        "impressions",
+        "revenue",
+    )
+    totals, missing = {}, {}
+    for field in fields:
+        values = [item["payload"].get(field) for item in latest.values()]
+        valid = [
+            value
+            for value in values
+            if type(value) in (int, float) and math.isfinite(value) and value >= 0
+        ]
+        missing[field] = len(values) - len(valid)
+        totals[field] = (
+            sum(valid)
+            if period == "all" and values and len(valid) == len(values)
+            else None
+        )
+
+    def ratio(numerator, denominator):
+        a, b = totals[numerator], totals[denominator]
+        return a / b if a is not None and b is not None and b > 0 else None
+
+    return {
+        "period": period,
+        "period_coverage": (
+            "NOT_ESTABLISHED" if period != "all" else "recorded_snapshots"
+        ),
+        "method": "actor-brand-private-manual-inputs:v1",
+        "input_basis": "user-supplied; not platform-verified",
+        **totals,
+        "cpl": ratio("boosting_budget", "inquiry"),
+        "cpc": ratio("boosting_budget", "clicks"),
+        "cost_per_wecom": ratio("boosting_budget", "wecom_add"),
+        "roi": (
+            (ratio("revenue", "boosting_budget") - 1)
+            if ratio("revenue", "boosting_budget") is not None
+            else None
+        ),
+        "missing_input_counts": missing,
+        "author_count": len(latest),
+        "manual_pending": [field for field in fields if totals[field] is None],
+        "observations": list(latest.values()),
+        "legacy_scope": "UNKNOWN",
+        "external_effect": "not_performed",
+    }

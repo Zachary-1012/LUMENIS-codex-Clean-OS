@@ -1,0 +1,62 @@
+[
+  {
+    "file": "research/content-intelligence/research-20261018/tts_attribution_research_20261018/02_CREATOR_ATTRIBUTION_RESEARCH.md",
+    "original_sha256": "50bf4c16c226342b6444501ff4c07501379137c7778a572b308a616e3dcf0c3b",
+    "published_sha256": "e6c3fac21a37c2ba7ff4affd27cc0ba15ca5e2bb607f867ea0dd4d7c51b3d93a",
+    "reason": "Remove private coordination or anonymize unverified private case; technical body preserved"
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/tts_attribution_research_20261018/README.md",
+    "original_sha256": "9a15c1e58b77ad0964b2d3103cc0deb72be11d316087d468f2b1666cb7ea8d7d",
+    "published_sha256": "ae12578608ebe0f80ba35a8fe7a3a4e3517653634f744e938d1d44a0ffec04db",
+    "reason": "Remove private coordination or anonymize unverified private case; technical body preserved"
+  },
+  {
+    "file": "research/intelligence/02_platform_intelligence/research-20261018/platform_capability_research_20261018/00_REUSED_OFFICIAL_BASELINE.md",
+    "original_sha256": "0095004563cea51b4f809d83ec4a3752358ab746f69b927aba508f5a0442be1c",
+    "published_sha256": "8a7db0d19375450f1720f15829f8abde69bff7a6f9fbc3ac8dc465412913cc31",
+    "reason": "Remove private coordination or anonymize unverified private case; technical body preserved"
+  },
+  {
+    "file": "research/intelligence/02_platform_intelligence/research-20261018/platform_capability_research_20261018/REPORT.md",
+    "original_sha256": "549479dfe23c730ebf34a8b3e0195fc87765b370b111960d90bf03c55d0aded5",
+    "published_sha256": "80b8e2a847fdf19006b5ac83040c4bf33d0801c4c54a296d7639356e068353b9",
+    "reason": "Remove private coordination or anonymize unverified private case; technical body preserved"
+  },
+  {
+    "file": "research/intelligence/12_tests_regression_memory/research-20261018/real_public_validation_research_20261018/README.md",
+    "original_sha256": "195de691fe9033fe66423ae43b7067324fa63fdd325657cafedf507c15fd4b9a",
+    "published_sha256": "c7cec5d168e91ad2ee865998014966dd3b17ae89dba19cf26864c0f050936995",
+    "reason": "Remove private coordination or anonymize unverified private case; technical body preserved"
+  },
+  {
+    "file": "research/intelligence/12_tests_regression_memory/research-20261018/real_public_validation_research_20261018/REPORT.md",
+    "original_sha256": "45be4fa26e1442b22a59f771aaa5770173cf7c7f7169982b66142f310dc69212",
+    "published_sha256": "b67d00e9a1ee84441d1cb254f88bb5216e78e0f743d6a4da3917e197d2176502",
+    "reason": "Remove private coordination or anonymize unverified private case; technical body preserved"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/RESEARCH_COMPLETENESS_MATRIX.json",
+    "original_sha256": "88c340a77f908e2f5a4aba9ac87bf688f73993cafffcf65459260c94a44fb68e",
+    "published_sha256": "826f194569b84e95a3b76ce29e5216795e57bd13df4ee2e34dff5c435b67d64f",
+    "reason": "Generic personal-profile separation, no named personal account"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/01_FULL_REQUIREMENT_PRESERVATION.json",
+    "original_sha256": "f5e37bcabd8c3c5418879651962729fad34ec808980b2638d4889e466d250380",
+    "published_sha256": "e5f83cc7762562196d1c6ffb102e21e54454afc11a257e46832b07b2373f551b",
+    "reason": "Generic personal-profile separation, no named personal account"
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/04_FIXED_PLANNING_READBACK.json",
+    "original_sha256": "b0cf5cef4ce1795de6ac9fb923aa21ca12d42ac359c22e15220b092788580e2b",
+    "published_sha256": "8d036b7f822b7ab42e2c8fa031278e870e898f3c519c1c4fb20e57af50841f2a",
+    "reason": "Generic personal-profile separation, no named personal account"
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/delivery_preparation/DELIVERY_MANIFEST.json",
+    "original_sha256": "f83ff2f682e68f6a2ae520d48a097a64a2cbe0c0e749e42869a5b01aaa9ff313",
+    "published_sha256": "e5f5496572736acb0edb137e4382130e0d5d728eb4870e0b2285291fbe209f4f",
+    "reason": "Private storage history replaced by technical custody scope"
+  }
+]

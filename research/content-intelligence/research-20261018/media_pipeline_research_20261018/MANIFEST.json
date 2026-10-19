@@ -1,0 +1,67 @@
+{
+  "freeze_utc": "2026-10-17T22:10:00Z",
+  "supersedes_manifest_sha256": "624d8b23f24b74c50ea0b8e22e4e3ae19476c4254b87cc43d698726e16cf2355",
+  "reason": "Put third-party DEFER/no-current-caller status before numeric counterexample per review",
+  "files": [
+    {
+      "path": "01_TIMING_INTERCHANGE_RESEARCH.md",
+      "bytes": 5754,
+      "sha256": "54201a8ed04d9d2857a5df0afca08f4237244f1f9d0ac93f4eb2124c6c785c4d"
+    },
+    {
+      "path": "02_PODCAST_TIMECODE_PACKAGE_RESEARCH.md",
+      "bytes": 5338,
+      "sha256": "dd8c842fc33af2dd64f360499a73c72fb3d9b5120b0ae03c1a379c7b49d42074"
+    },
+    {
+      "path": "03_MATERIAL_READING_LEDGER.json",
+      "bytes": 78327,
+      "sha256": "173d6e98bf4037ec0bd6aaedc173a2c363100d893ce51089b7408bac10b8d718"
+    },
+    {
+      "path": "04_LOCAL_SOURCE_EVIDENCE.json",
+      "bytes": 7403,
+      "sha256": "c58fcea6e3dffb605d7f0dfdf32d06a1f84decc6761dc60edaa3750f4bbeec41"
+    },
+    {
+      "path": "05_CURRENT_CALLER_SCOPE_CHECK.json",
+      "bytes": 789,
+      "sha256": "cbb498be1eb753359b59aa9c38fdef9772b8213d24c384f6f35cefd76de334f9"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1284,
+      "sha256": "81979597d7ca196060649b948e57356cad03fce58aa89bc67c3a0e7e45fc9b58"
+    },
+    {
+      "path": "experiments/RESULTS.json",
+      "bytes": 3930,
+      "sha256": "b3b2f28f61f6ef0e76bf20f9f39c33df038b286891502467555be225a0efe884"
+    },
+    {
+      "path": "experiments/run.py",
+      "bytes": 4499,
+      "sha256": "d0d6d9068ddcd0cffe6483668b60bee6739a9b735525cb5885974454c8184b59"
+    },
+    {
+      "path": "sources/chapters.md",
+      "bytes": 1452,
+      "sha256": "f905c8da34a99dfd7c7256a2d61a94e68a4fa4977128b1d5aa41f3a657a651c0"
+    },
+    {
+      "path": "sources/fcpx_xml.py",
+      "bytes": 38468,
+      "sha256": "e1d5205a21c725bae0d63a8303526c1d91a11a0b304a1a57d79553f09aa11f73"
+    },
+    {
+      "path": "sources/jsonChapters.md",
+      "bytes": 6956,
+      "sha256": "eff327fa569644e6a24bc6ab40340396d1222d278e5dfb80e5508e4908019c38"
+    },
+    {
+      "path": "sources/transcript.md",
+      "bytes": 1561,
+      "sha256": "ba14390b1444221b2c338c60d0accd38378bedc87ad84cb445b0ca7f0b47247a"
+    }
+  ]
+}

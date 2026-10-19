@@ -1,0 +1,113 @@
+FFF......................F.                                              [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+=================================== FAILURES ===================================
+______ test_declared_license_http_import_reopen_revision_credits[CC0-1.0] ______
+
+local_client = (<FlaskClient <Flask 'tests.test_local_content_source_routes'>>, {'source': PosixPath('/tmp/pytest-of-agent/pytest-0/t...ed.database.repository.DatabaseRepository object at 0x7f92cbe65e80>}, <Flask 'tests.test_local_content_source_routes'>)
+license_id = 'CC0-1.0'
+
+    @pytest.mark.parametrize("license_id", ["CC0-1.0", "CC-BY-4.0"])
+    def test_declared_license_http_import_reopen_revision_credits(local_client, license_id):
+        client, store, app = local_client
+        value = declaration(store, license_id)
+>       imported = import_declared(client, store, value)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_content_media_license.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+client = <FlaskClient <Flask 'tests.test_local_content_source_routes'>>
+store = {'source': PosixPath('/tmp/pytest-of-agent/pytest-0/test_declared_license_http_imp0/voice.wav'), 'root': PosixPath('/t...ect at 0x7f92cc72e930>, 'repository': <lumenis.shared.database.repository.DatabaseRepository object at 0x7f92cbe65e80>}
+value = {'schema_version': 1, 'object_kind': 'media_asset', 'license_id': 'CC0-1.0', 'license_url': 'https://creativecommons.org/publicdomain/zero/1.0/', ...}
+
+    def import_declared(client, store, value):
+        pending = upload(client, store, value)
+        assert pending.status_code == 403, pending.get_json()
+        assert pending.get_json()["media_license"] == value
+        assert pending.get_json()["confirmation"]["license_metadata_sha256"] == artifacts._media_license_digest(value)
+        assert approve(client, pending.get_json()).status_code == 200
+        imported = upload(client, store, value)
+>       assert imported.status_code == 201, imported.get_json()
+E       AssertionError: {'code': 'CONTENT_PROJECT_FAILED', 'execution_id': 'c917ab3aae3c482b', 'ok': False, 'publish_status': 'not_performed', ...}
+E       assert 503 == 201
+E        +  where 503 = <WrapperTestResponse streamed [503 SERVICE UNAVAILABLE]>.status_code
+
+tests/test_content_media_license.py:47: AssertionError
+_____ test_declared_license_http_import_reopen_revision_credits[CC-BY-4.0] _____
+
+local_client = (<FlaskClient <Flask 'tests.test_local_content_source_routes'>>, {'source': PosixPath('/tmp/pytest-of-agent/pytest-0/t...ed.database.repository.DatabaseRepository object at 0x7f92cbe92120>}, <Flask 'tests.test_local_content_source_routes'>)
+license_id = 'CC-BY-4.0'
+
+    @pytest.mark.parametrize("license_id", ["CC0-1.0", "CC-BY-4.0"])
+    def test_declared_license_http_import_reopen_revision_credits(local_client, license_id):
+        client, store, app = local_client
+        value = declaration(store, license_id)
+>       imported = import_declared(client, store, value)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_content_media_license.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+client = <FlaskClient <Flask 'tests.test_local_content_source_routes'>>
+store = {'source': PosixPath('/tmp/pytest-of-agent/pytest-0/test_declared_license_http_imp1/voice.wav'), 'root': PosixPath('/t...ect at 0x7f92cbe90860>, 'repository': <lumenis.shared.database.repository.DatabaseRepository object at 0x7f92cbe92120>}
+value = {'schema_version': 1, 'object_kind': 'media_asset', 'license_id': 'CC-BY-4.0', 'license_url': 'https://creativecommons.org/licenses/by/4.0/', ...}
+
+    def import_declared(client, store, value):
+        pending = upload(client, store, value)
+        assert pending.status_code == 403, pending.get_json()
+        assert pending.get_json()["media_license"] == value
+        assert pending.get_json()["confirmation"]["license_metadata_sha256"] == artifacts._media_license_digest(value)
+        assert approve(client, pending.get_json()).status_code == 200
+        imported = upload(client, store, value)
+>       assert imported.status_code == 201, imported.get_json()
+E       AssertionError: {'code': 'CONTENT_PROJECT_FAILED', 'execution_id': 'bb178541072645e4', 'ok': False, 'publish_status': 'not_performed', ...}
+E       assert 503 == 201
+E        +  where 503 = <WrapperTestResponse streamed [503 SERVICE UNAVAILABLE]>.status_code
+
+tests/test_content_media_license.py:47: AssertionError
+___ test_changed_declaration_requires_new_confirmation_and_preserves_source ____
+
+local_client = (<FlaskClient <Flask 'tests.test_local_content_source_routes'>>, {'source': PosixPath('/tmp/pytest-of-agent/pytest-0/t...ed.database.repository.DatabaseRepository object at 0x7f92cbe93e60>}, <Flask 'tests.test_local_content_source_routes'>)
+
+    def test_changed_declaration_requires_new_confirmation_and_preserves_source(local_client):
+        client, store, _ = local_client
+        value = declaration(store)
+        pending = upload(client, store, value).get_json()
+        assert approve(client, pending).status_code == 200
+        changed = {**value, "source_version": "fixture-v2", "notice": "Corrected notice"}
+        denied = upload(client, store, changed)
+        assert denied.status_code == 403
+        assert rows(store) == []
+        original = upload(client, store, value)
+>       assert original.status_code == 201, original.get_json()
+E       AssertionError: {'code': 'CONTENT_PROJECT_FAILED', 'execution_id': '23b9e27eaa3847a8', 'ok': False, 'publish_status': 'not_performed', ...}
+E       assert 503 == 201
+E        +  where 503 = <WrapperTestResponse streamed [503 SERVICE UNAVAILABLE]>.status_code
+
+tests/test_content_media_license.py:109: AssertionError
+______________ test_legacy_unknown_source_keeps_original_envelope ______________
+
+local_client = (<FlaskClient <Flask 'tests.test_local_content_source_routes'>>, {'source': PosixPath('/tmp/pytest-of-agent/pytest-0/t...ed.database.repository.DatabaseRepository object at 0x7f92cae76f30>}, <Flask 'tests.test_local_content_source_routes'>)
+
+    def test_legacy_unknown_source_keeps_original_envelope(local_client):
+        client, store, _ = local_client
+        pending = upload(client, store, None).get_json()
+        assert "license_metadata_sha256" not in pending["confirmation"]
+        assert approve(client, pending).status_code == 200
+>       result = upload(client, store, None).get_json()["result"]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'result'
+
+tests/test_content_media_license.py:153: KeyError
+=========================== short test summary info ============================
+FAILED tests/test_content_media_license.py::test_declared_license_http_import_reopen_revision_credits[CC0-1.0]
+FAILED tests/test_content_media_license.py::test_declared_license_http_import_reopen_revision_credits[CC-BY-4.0]
+FAILED tests/test_content_media_license.py::test_changed_declaration_requires_new_confirmation_and_preserves_source
+FAILED tests/test_content_media_license.py::test_legacy_unknown_source_keeps_original_envelope

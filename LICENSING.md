@@ -76,3 +76,9 @@ The license change does not certify every historical file, dependency, dataset,
 model, binary distribution or current runtime as legally cleared or product-ready.
 Existing unresolved release obligations remain explicit; they do not change the
 standard license granted for covered original LUMENIS software.
+
+## 2026-10-18 source-origin adoption
+
+Origin: `Zachary-1012/global-growth-intelligence`, commit `e6cde984480cff3176eb39b038c7c0a66e1e2124` (72 files). No LICENSE or NOTICE was present in that source snapshot. The owner explicitly authorized sanitized owned-source/document publication into LUMENIS. Adapted original owned/authorized work falls within the existing LICENSING.md grant; this is not a fabricated upstream third-party license.
+
+The 7 market, 12 platform, 14 policy and 3 scenario references retain original source URLs/dates and historical claims. Third-party reuse rights are UNKNOWN / NOT_DECLARED_IN_SOURCE, not Apache-2.0 by inference. Acquisition, publication and training permission are separate. Preserve effective/observation/capture dates, jurisdiction, uncertainty and provenance; no current legal/market fact or legal clearance is established. Full source file/rights mappings: `00-GOVERNANCE/LUMENIS-SOURCE-ADOPTION-V1.json`. Original example configuration, old provider defaults and passwords are not production configuration. No source runtime DB, credentials or standalone dependency stack is imported by this adoption record.

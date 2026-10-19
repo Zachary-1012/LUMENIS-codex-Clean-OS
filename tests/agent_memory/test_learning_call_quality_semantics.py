@@ -36,14 +36,21 @@ def _analyze(db_path):
     )
 
 
+def _correction_samples(result):
+    return {"state": "no_data" if result["total_calls"] == 0 else "unknown",
+            "valid_samples": 0, "unknown_samples": result["total_calls"],
+            "observed_corrections": result["human_correction_count"],
+            "denominator_state": "REVIEWED_CALLS_NOT_RECORDED"}
+
+
 def _assert_legacy_shape(result):
     assert LEGACY_RESULT_KEYS <= result.keys()
     assert result["metric_definitions"]["human_correction_rate"] == {
         "numerator": "calls_with_nonempty_human_correction",
-        "denominator": "calls_with_known_recorded_correction_state",
+        "denominator": "reviewed_calls_not_recorded",
         "meaning": (
-            "recorded correction incidence among calls with a known "
-            "correction state; not review accuracy"
+            "rate is unavailable because the reviewed-call denominator "
+            "is not recorded; the numerator is an observed correction count"
         ),
     }
     assert result["human_review_coverage"] == {
@@ -54,6 +61,8 @@ def _assert_legacy_shape(result):
     }
     for name, metric in result["metric_samples"].items():
         expected = {"state", "valid_samples", "unknown_samples"}
+        if name == "human_correction_rate":
+            expected |= {"observed_corrections", "denominator_state"}
         if name == "avg_latency_ms":
             expected |= {"zero_value_samples", "zero_value_provenance"}
         assert set(metric) == expected
@@ -73,9 +82,7 @@ def test_no_rows_returns_null_metrics_and_zero_sample_counts(temp_db):
     assert result["metric_samples"]["success_rate"] == {
         "state": "no_data", "valid_samples": 0, "unknown_samples": 0,
     }
-    assert result["metric_samples"]["human_correction_rate"] == {
-        "state": "no_data", "valid_samples": 0, "unknown_samples": 0,
-    }
+    assert result["metric_samples"]["human_correction_rate"] == _correction_samples(result)
     assert result["metric_samples"]["avg_latency_ms"] == {
         "state": "no_data", "valid_samples": 0, "unknown_samples": 0,
         "zero_value_samples": 0, "zero_value_provenance": "no_zero_values",
@@ -100,9 +107,7 @@ def test_all_null_samples_are_unknown_not_zero_or_known_failures(temp_db):
     assert result["metric_samples"]["success_rate"] == {
         "state": "unknown", "valid_samples": 0, "unknown_samples": 2,
     }
-    assert result["metric_samples"]["human_correction_rate"] == {
-        "state": "unknown", "valid_samples": 0, "unknown_samples": 2,
-    }
+    assert result["metric_samples"]["human_correction_rate"] == _correction_samples(result)
     assert result["metric_samples"]["avg_latency_ms"] == {
         "state": "unknown", "valid_samples": 0, "unknown_samples": 2,
         "zero_value_samples": 0, "zero_value_provenance": "no_zero_values",
@@ -122,14 +127,14 @@ def test_mixed_valid_and_null_samples_use_metric_specific_denominators(temp_db):
     assert result["success_count"] == 1
     assert result["success_rate"] == 0.5
     assert result["human_correction_count"] == 1
-    assert result["human_correction_rate"] == 0.5
-    assert result["avg_latency_ms"] == 50.0
+    assert result["human_correction_rate"] is None
+    assert result["avg_latency_ms"] == 100.0
     assert result["failure_reasons"] == {"timeout": 1}
     assert result["metric_samples"] == {
         "success_rate": {"state": "partial", "valid_samples": 2, "unknown_samples": 1},
-        "human_correction_rate": {"state": "partial", "valid_samples": 2, "unknown_samples": 1},
+        "human_correction_rate": _correction_samples(result),
         "avg_latency_ms": {
-            "state": "partial", "valid_samples": 2, "unknown_samples": 1,
+            "state": "partial", "valid_samples": 1, "unknown_samples": 2,
             "zero_value_samples": 1,
             "zero_value_provenance": "unresolved_legacy_default_or_measured_zero",
         },
@@ -144,17 +149,15 @@ def test_explicit_zero_values_are_preserved_with_unresolved_latency_provenance(t
     assert result["success_count"] == 0
     assert result["success_rate"] == 0.0
     assert result["human_correction_count"] == 0
-    assert result["human_correction_rate"] == 0.0
-    assert result["avg_latency_ms"] == 0.0
+    assert result["human_correction_rate"] is None
+    assert result["avg_latency_ms"] is None
     assert result["failure_reasons"] == {"timeout": 1}
     assert result["metric_samples"]["success_rate"] == {
         "state": "available", "valid_samples": 1, "unknown_samples": 0,
     }
-    assert result["metric_samples"]["human_correction_rate"] == {
-        "state": "available", "valid_samples": 1, "unknown_samples": 0,
-    }
+    assert result["metric_samples"]["human_correction_rate"] == _correction_samples(result)
     assert result["metric_samples"]["avg_latency_ms"] == {
-        "state": "available", "valid_samples": 1, "unknown_samples": 0,
+        "state": "unknown", "valid_samples": 0, "unknown_samples": 1,
         "zero_value_samples": 1,
         "zero_value_provenance": "unresolved_legacy_default_or_measured_zero",
     }
@@ -179,9 +182,18 @@ def test_invalid_latency_and_unknown_success_do_not_enter_denominators(temp_db):
     assert result["failure_reasons"] == {"timeout": 1}
     assert result["metric_samples"] == {
         "success_rate": {"state": "partial", "valid_samples": 3, "unknown_samples": 2},
-        "human_correction_rate": {"state": "unknown", "valid_samples": 0, "unknown_samples": 5},
+        "human_correction_rate": _correction_samples(result),
         "avg_latency_ms": {
             "state": "partial", "valid_samples": 1, "unknown_samples": 4,
             "zero_value_samples": 0, "zero_value_provenance": "no_zero_values",
         },
     }
+
+
+def test_correction_count_never_manufactures_a_review_denominator(temp_db):
+    _insert_calls(temp_db, [(1, 10, "corrected", None), (1, 10, "", None)])
+    result = _analyze(temp_db)
+    assert result["human_correction_count"] == 1
+    assert result["human_correction_rate"] is None
+    assert result["human_review_coverage"]["reviewed_calls"] is None
+    assert result["metric_samples"]["human_correction_rate"]["valid_samples"] == 0

@@ -1,0 +1,27 @@
+[
+  {
+    "file": "01_WHOLE_PRODUCT_UPGRADE_REVIEW.md",
+    "bytes": 37371,
+    "sha256": "ee8a8d0a48e1a8f50e9a236c71ad733f86df235c6bd71b3dacf2cfa3fe24b854"
+  },
+  {
+    "file": "02_NINETEEN_GROUP_DECISIONS.json",
+    "bytes": 1801883,
+    "sha256": "165b9ba71a996dffb07707e265ea5853905a95af1c8eb4ce53c60cec80a2a636"
+  },
+  {
+    "file": "03_SOURCE_HASHES_AND_READ_SCOPE.json",
+    "bytes": 9313,
+    "sha256": "cc37bbca687005b00486fd4066e22371998530a713dbe3d25e9c7cb0b4de2425"
+  },
+  {
+    "file": "04_REVISION_LEDGER.json",
+    "bytes": 12080,
+    "sha256": "adf33f140cc2ce1811783cd10d512ae1911a0ccbeab5fcbf16f5bd54829d4f0d"
+  },
+  {
+    "file": "05_VALIDATION.json",
+    "bytes": 649,
+    "sha256": "a3aefdbfa71b45f56f1a02ed9ec9d84fda38c9cbae7f53355051996d9ca7230a"
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "path": "research/engineering/documentation-evidence/reports/video_reference_research_20261018/COORDINATION.json",
+    "original_sha256": "2191faeadb476390c92649570e58f42c94f56d48e6a42153e1a610b4d013088d",
+    "disposition": "EXCLUDED_PRIVATE_COORDINATION_OR_STORAGE_SEARCH",
+    "original_retained": true
+  },
+  {
+    "path": "research/engineering/documentation-evidence/reports/local_handoff_received_20261018/research/drive-locator-receipts.json",
+    "original_sha256": "dce0aab425f675cf0afd7a75acc033c2defc5fe088905aa494904978961fe4d4",
+    "disposition": "EXCLUDED_PRIVATE_COORDINATION_OR_STORAGE_SEARCH",
+    "original_retained": true
+  },
+  {
+    "path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/BACKUP_RETENTION.md",
+    "original_sha256": "03346b47412216d1e49d14e6ea9505fc8e02ea3caf1dfad8db63836faef630bd",
+    "published_sha256": "4cb2af4c5b56e67eeb9fb2fe92a20b6e821b4e3ffe00e75e774cac0cc35ed357"
+  },
+  {
+    "path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_backend_scope_20261018T0540Z/LOCAL_CONSUMER_HANDOFF.md",
+    "original_sha256": "04ccf9a91d78c3fa04d7ad3407ecdbfffafbb99706d00d03f4ff8bd30f68338c",
+    "published_sha256": "f968a572b5721b7a10490ea8f50e993a8eb0a9f4e44255b30f11390a63bc64ea"
+  },
+  {
+    "path": "research/engineering/documentation-evidence/reports/pasted_adoption_readthrough_20261018/UUID_SEARCH_RECEIPTS.json",
+    "original_sha256": "74c644dae6fee16d057863b5a7b6b060f4426d6af44e2a067f6af3f681ab4b3f",
+    "disposition": "EXCLUDED_PRIVATE_ORIGINAL_LOOKUP_RECEIPT",
+    "original_retained": true
+  },
+  {
+    "path": "research/engineering/documentation-evidence/reports/pasted_adoption_readthrough_20261018/01_ADOPTION_AND_OPEN_MECHANISMS.md",
+    "original_sha256": "fc8faca94bbdaa130611a4540a7b2b5a22c4cc687742b39861acc06b784a0fc0",
+    "published_sha256": "8da7e71a537fb6c238c004a93a2eae715a4271669b4db48fdcfbdab6357bc4fe",
+    "reason": "Remove private original locators, preserve adoption scope and unresolved source-byte evidence"
+  },
+  {
+    "path": "research/engineering/documentation-evidence/reports/missing_originals_locator_20261018/reviewed_component/01_REPORT.md",
+    "original_sha256": "2f4bfba7a1f620bad195b0a293437330b6f8ba7f7aad6275ef839efd46250097",
+    "published_sha256": "88f0fcfafb246daa7e7af67d7c3d09017bceb23cba956f98ddd286bbc6235d49",
+    "reason": "Private original locator replaced with hash"
+  }
+]

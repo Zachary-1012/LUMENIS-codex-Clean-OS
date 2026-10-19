@@ -426,7 +426,7 @@ def test_parser_rejects_corrupt_utf8_instead_of_silent_loss(tmp_path):
     from lumenis.importer.parser import parse_file
     path = tmp_path / "bad.txt"
     path.write_bytes(b"valid\xffinvalid")
-    with pytest.raises(UnicodeError):
+    with pytest.raises(ValueError, match="DOCUMENT_TEXT_ENCODING_OR_CONTROL_INVALID"):
         parse_file(str(path))
 
 
@@ -914,24 +914,19 @@ def test_artifact_collision_cannot_replace_or_delete_saved_bytes(workspace, monk
 
 
 def test_binary_xls_uses_legacy_decoder_and_retains_zero_boolean_and_coordinates(tmp_path):
-    import shutil
-    from openpyxl import Workbook
+    # Generate genuine BIFF8 directly; this tests xlrd, not Calc conversion.
+    # The earlier soffice exit 137 is retained in macro_pipeline/xls-safe-recheck.log.
+    import xlwt
     from lumenis.importer.parser import parse_file
-    pytest.importorskip("xlrd", reason="optional XLS runtime must be installed for XLS acceptance")
-    soffice = shutil.which("soffice")
-    if not soffice:
-        pytest.skip("generating this owned binary XLS regression requires local LibreOffice")
-    source = tmp_path / "owned.xlsx"
-    book = Workbook()
-    book.active.title = "Owned sheet"
-    book.active.append(["Own source statement", 0, False])
-    book.active.append([None, "Exact second-row source", None])
-    book.save(source)
-    conversion = subprocess.run([soffice, "--headless", "--convert-to", "xls:MS Excel 97",
-                                 "--outdir", str(tmp_path), str(source)],
-                                capture_output=True, text=True, timeout=30)
-    assert conversion.returncode == 0, conversion.stderr
+    pytest.importorskip("xlrd", reason="XLS runtime must be installed for XLS acceptance")
     path = tmp_path / "owned.xls"
+    book = xlwt.Workbook()
+    sheet = book.add_sheet("Owned sheet")
+    sheet.write(0, 0, "Own source statement")
+    sheet.write(0, 1, 0)
+    sheet.write(0, 2, False)
+    sheet.write(1, 1, "Exact second-row source")
+    book.save(str(path))
     assert path.read_bytes().startswith(bytes.fromhex("d0cf11e0a1b11ae1"))
     result = parse_file(str(path))
     assert result.tables[0][0] == ["Own source statement", "0", "False"]

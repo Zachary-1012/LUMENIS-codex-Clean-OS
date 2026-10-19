@@ -35,7 +35,7 @@ cohort is **not** approved for user-facing commercial distribution or automatic
 scheduled collection.
 
 Execution: a pre-write SQLite backup was made at
-`C:\Users\28049\AppData\Local\Temp\lumenis-prelaunch-db-backup-9cz_j8w0\monitor-before.db`.
+`C:\Users\private-user-121dcc385158\AppData\Local\Temp\lumenis-prelaunch-db-backup-9cz_j8w0\monitor-before.db`.
 The exact 50-source apply returned 50 verified and 0 blocked. A separate
 read-only reopen returned 50/50 verified with 50 relation IDs. Immediate Run 2
 returned 50/50 `ALREADY_VERIFIED` and no new Subject/Raw/Canonical/Evidence/

@@ -1,0 +1,1 @@
+{"method": "ast.parse + compile without execution", "files": ["kos_professional.py", "kos_ops.py", "kos_routes.py", "tests/test_kos_professional_incremental.py"], "passed": true}

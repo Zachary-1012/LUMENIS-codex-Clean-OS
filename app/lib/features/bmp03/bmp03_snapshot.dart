@@ -1,6 +1,7 @@
 enum Bmp03PresentationState {
   global,
   ready,
+  observations,
   empty,
   notCollected,
   stale,
@@ -22,6 +23,8 @@ class Bmp03Snapshot {
     required this.signals,
     required this.rejectedCrossFocusCount,
     required this.rejectedUnscopedCount,
+    this.sourceObservations = const [],
+    this.sourceObservationContract = false,
   });
 
   final bool contractBound;
@@ -32,6 +35,9 @@ class Bmp03Snapshot {
   final bool readAllowed;
   final bool globalScopeReady;
   final List<Bmp03Signal> signals;
+  // Source observations never acquire signal scores or insight status.
+  final List<Bmp03SourceObservation> sourceObservations;
+  final bool sourceObservationContract;
   final int rejectedCrossFocusCount;
   final int rejectedUnscopedCount;
 
@@ -50,6 +56,7 @@ class Bmp03Snapshot {
     }
     if (!scopeReady) return Bmp03PresentationState.blocked;
     return switch (dataState) {
+      'OBSERVATIONS_ONLY' => Bmp03PresentationState.observations,
       'READY' =>
         signals.isEmpty
             ? (rejectedUnscopedCount > 0
@@ -73,6 +80,10 @@ class Bmp03Snapshot {
   factory Bmp03Snapshot.fromResponse(Map<String, dynamic> response) {
     if (response['ok'] != true || response['screen'] != 'BMP-03') {
       throw const FormatException('BMP-03 runtime response is not valid.');
+    }
+    if (response['source_observation_contract'] ==
+        'lumenis.bmp03-source-observations.v1') {
+      return _sourceObservationSnapshot(response);
     }
     final truth = _asMap(response['truth']);
     final binding = _asMap(response['focus_binding']);
@@ -136,6 +147,104 @@ class Bmp03Snapshot {
       rejectedUnscopedCount: rejectedUnscopedCount,
     );
   }
+}
+
+class Bmp03SourceObservation {
+  const Bmp03SourceObservation({required this.id, required this.title,
+    required this.platform, required this.evidenceReference});
+  final String id;
+  final String title;
+  final String? platform;
+  final String evidenceReference;
+}
+
+String? _observationText(Object? value) {
+  if (value is! String) return null;
+  final text = value.trim();
+  if (text.isEmpty || text.length > 180 ||
+      RegExp(r'[\x00-\x1F<>]').hasMatch(text)) {
+    return null;
+  }
+  return text;
+}
+
+Bmp03Snapshot _sourceObservationSnapshot(Map<String, dynamic> response) {
+  final truth = _asMap(response['truth']);
+  final binding = _asMap(response['source_read_binding']);
+  final focus = Bmp03FocusContext.fromJson(response['source_context']);
+  final owner = truth?['product_id'] == 'ZBMP' && truth?['domain_id'] == 'zbmp';
+  final bound = response['bound'] == true && response['source'] == 'runtime';
+  final raw = response['source_observations'];
+  final sourceCount = truth?['source_count'];
+  final rejectedCount = truth?['rejected_count'];
+  final truncated = truth?['truncated'];
+  final state = truth?['data_state'];
+  final countersValid = raw is List && sourceCount is int && sourceCount >= 0 &&
+      sourceCount == raw.length && rejectedCount is int && rejectedCount >= 0 &&
+      truncated is bool;
+  final incomplete = countersValid && (truncated == true || rejectedCount > 0);
+  final stateValid = countersValid &&
+      ((state == 'PARTIAL' && incomplete) ||
+       (state == 'EMPTY' && sourceCount == 0 && !incomplete) ||
+       (state == 'READY' && sourceCount > 0 && !incomplete));
+  final admitted = bound && owner && stateValid &&
+      binding?['contract'] == 'lumenis.scope-read-binding.v1' &&
+      binding?['module'] == 'brand_market_overview' &&
+      binding?['policy'] == 'actor-exact-scope-v1' &&
+      binding?['actor_scope'] == 'authenticated' &&
+      _positiveInteger(binding?['actor_id']) != null &&
+      binding?['applied'] == true && binding?['read_allowed'] == true &&
+      binding?['scope_verified'] == true &&
+      binding?['domain_id'] == focus.domainId &&
+      binding?['product_id'] == focus.productId &&
+      binding?['canonical_scope'] == focus.mode &&
+      binding?['subject_id'] == focus.subjectId &&
+      binding?['brand_focus_id'] == focus.brandFocusId &&
+      ((focus.isGlobal && binding?['global_all_granted'] == true) ||
+       (focus.isFocused && binding?['global_all_granted'] == false));
+  final observations = <Bmp03SourceObservation>[];
+  var rejected = 0;
+  if (raw is List) {
+    for (final value in raw) {
+      final row = _asMap(value);
+      final proof = _asMap(row?['scope_evidence']);
+      final integrity = _asMap(proof?['integrity']);
+      final scope = _asMap(proof?['stored_scope']);
+      final id = _scopeId(row?['id']);
+      final title = _observationText(row?['title']);
+      final evidenceId = _positiveInteger(proof?['id']);
+      final brand = _scopeId(scope?['brand_focus_id']);
+      final digest = integrity?['digest'];
+      final valid = admitted && id != null && title != null && evidenceId != null &&
+          _scopeId(proof?['source_id']) != null &&
+          scope?['product_id'] == 'ZBMP' && scope?['domain_id'] == 'zbmp' &&
+          scope?['scope_status'] == 'VERIFIED' &&
+          (scope?['subject_id'] == null || scope?['subject_id'] == '') &&
+          brand != null && (focus.isGlobal || brand == focus.brandFocusId) &&
+          integrity?['integrity_version'] == 2 && integrity?['verified'] == true &&
+          integrity?['lineage_verified'] == true &&
+          integrity?['assurance'] == 'writer-authenticated' &&
+          integrity?['algorithm'] == 'hmac-sha256' &&
+          digest is String && RegExp(r'^[0-9a-f]{64}$').hasMatch(digest);
+      if (!valid) { rejected++; continue; }
+      observations.add(Bmp03SourceObservation(id: id, title: title,
+        platform: _safeText(row?['platform']), evidenceReference: 'EV-$evidenceId'));
+    }
+  } else { rejected++; }
+  return Bmp03Snapshot(contractBound: bound, isBmpOwner: owner,
+    // Sources remain distinct from computed insights, including partial/empty reads.
+    dataState: !admitted
+        ? 'BLOCKED'
+        : rejected > 0 || incomplete
+        ? 'PARTIAL'
+        : observations.isEmpty
+        ? 'EMPTY'
+        : 'OBSERVATIONS_ONLY',
+    sourceObservationContract: true,
+    focus: focus, focusBindingApplied: admitted, readAllowed: admitted,
+    globalScopeReady: focus.isGlobal && admitted, signals: const [],
+    sourceObservations: List.unmodifiable(observations),
+    rejectedCrossFocusCount: 0, rejectedUnscopedCount: rejected);
 }
 
 class Bmp03FocusContext {

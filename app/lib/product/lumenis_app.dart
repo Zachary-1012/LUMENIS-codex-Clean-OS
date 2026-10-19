@@ -106,7 +106,7 @@ class _LumenisAppState extends State<LumenisApp> {
       );
     }
     return MaterialApp.router(
-      title: '序境 · LUMENIS',
+      title: '寰意 · OEVIRA',
       locale: _locale,
       supportedLocales: LumenisLocalizations.supportedLocales,
       localeResolutionCallback: (deviceLocale, supportedLocales) =>

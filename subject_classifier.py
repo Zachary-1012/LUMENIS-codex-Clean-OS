@@ -30,6 +30,7 @@ from typing import Any, Dict, Optional, Tuple
 
 # 主体类型定义
 SUBJECT_TYPES = {
+    'unknown': '待核验',
     'official': '官方',
     'kos': 'KOS',
     'kol': 'KOL',
@@ -132,14 +133,32 @@ class SubjectClassifier:
             confidence = max(confidence, resolved['confidence'])
             reasons.extend(resolved['reasons'])
 
+            # A display name/bio/claimed verification label is not proof of
+            # official identity. Keep the lexical suggestion without promoting
+            # it into the persisted subject_type or official-content hint.
+            verified_input = (is_verified is True or
+                              (type(is_verified) is int and is_verified == 1))
+            if subject_type == 'official':
+                result = self._result('unknown', 0.3,
+                    reasons + ['官方命名或平台认证仅为身份线索，未核目标主体归属，需人工复核'], 'ugc')
+                result.update(suggested_subject_type='official',
+                              identity_status='UNVERIFIED_CLAIM',
+                              platform_verification_observed=verified_input,
+                              needs_manual_review=True, identity_truth='NOT_ESTABLISHED')
+                return result
+
             content_hint_map = {
                 'official': 'official',
                 'media': 'ugc',
-                'institution': 'official',
+                'institution': 'ugc',
                 'kos': 'commercial',
             }
-            return self._result(subject_type, confidence, reasons,
-                                content_hint_map.get(subject_type, 'ugc'))
+            result = self._result(subject_type, confidence, reasons,
+                                  content_hint_map.get(subject_type, 'ugc'))
+            result.update(identity_truth='NOT_ESTABLISHED',
+                          needs_manual_review=True,
+                          identity_status='HEURISTIC_CANDIDATE')
+            return result
 
         # KOL/KOC/普通用户判断（基于粉丝数）
         if followers > 0:
@@ -350,7 +369,7 @@ def enrich_note_types(author_name='', author_desc='', followers=0,
             _ENRICHER_SINGLETON = get_subject_classifier()
         res = _ENRICHER_SINGLETON.classify(
             str(author_name or ''), str(author_desc or ''), int(followers or 0),
-            bool(is_verified), str(verified_type or ''), str(content_pattern or '')[:500])
+            is_verified, str(verified_type or ''), str(content_pattern or '')[:500])
         return (res.get('subject_type', '') or '', res.get('content_type_hint', '') or '')
     except Exception:
         return ('', '')

@@ -175,3 +175,24 @@ def test_path_source_origin_and_duplicate_provenance_are_rejected(route_workspac
                                    "provenance": provenance}, content_type="multipart/form-data")
         assert response.status_code == 400, response.get_json()
     assert ws["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0] == 0
+
+
+def test_normal_report_route_continues_signed_dependency_and_rejects_forgery(route_workspace):
+    from tests.test_work_dependencies import _revision_setup, _owned_counts
+    from tests.test_saved_document_workflow import _save
+    from lumenis.shared.reporting import work_dependencies as owner
+    ws = route_workspace
+    _, bound, kwargs, body = _revision_setup(ws)
+    response = ws['api'].post(WORKS + '/' + bound['artifact']['artifact_id'] + '/revise', headers=GLOBAL, json=body)
+    assert response.status_code == 200, response.get_json()
+    revised = response.get_json()['result']
+    assert owner.preview_impact(revised['artifact']['artifact_id'], **kwargs)['items'][0]['state'] == 'CURRENT'
+    repeated = ws['api'].post(WORKS + '/' + bound['artifact']['artifact_id'] + '/revise', headers=GLOBAL, json=body)
+    assert repeated.status_code == 200 and repeated.get_json()['result']['replayed']
+    forged = _save(ws, request_id='dep-route-forged-001', payload=bound['document']['payload'])
+    before = _owned_counts(ws)
+    body.update(expected_sha256=forged['artifact']['sha256'], request_id='dep-route-forged-002',
+                edits=[{'pointer': '/title', 'expected': forged['document']['title'], 'value': 'Forged'}])
+    denied = ws['api'].post(WORKS + '/' + forged['artifact']['artifact_id'] + '/revise', headers=GLOBAL, json=body)
+    assert denied.status_code == 400 and denied.get_json()['code'] == 'DEPENDENCY_OWNER_RECEIPT_REQUIRED'
+    assert _owned_counts(ws) == before

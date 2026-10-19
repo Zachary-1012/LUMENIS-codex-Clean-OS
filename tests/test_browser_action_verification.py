@@ -208,8 +208,8 @@ class TestActionVerificationWithRuntime(unittest.TestCase):
     def test_action_with_passing_verification(self):
         """Action 执行后状态符合期望 → PASS。"""
         self.mock_page.evaluate.side_effect = [
-            "before", 2,   # before observe
-            "after success", 5,  # after observe
+            {"text": "before", "truncated": False, "ready_state": "complete"}, 2,   # before observe
+            {"text": "after success", "truncated": False, "ready_state": "complete"}, 5,  # after observe
         ]
         expected = ExpectedState(text_present="after success")
         result = self.runtime.execute_action(

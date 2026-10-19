@@ -16,7 +16,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from ai_task_engine import TaskEngine
-from lumenis.shared.content_creation.contracts import Shot, ShotPlan, resolve_creation_upstream
+from lumenis.shared.content_creation.contracts import AudiovisualPlan, Shot, ShotPlan, resolve_creation_upstream
 from lumenis.shared.database import get_repository
 from lumenis.shared.reporting import saved_work as work
 from lumenis.system.security.permission import OperationType
@@ -29,6 +29,9 @@ MANUSCRIPT_CONTRACT = {"id": "lumenis.internal-pitch", "version": "2",
 SOURCE_PROFILE = "source-bound/v3"
 SOURCE_CONTRACT = {"id": "lumenis.internal-pitch", "version": "3",
                    "required_payload_paths": ["manuscript", "upstream_binding", "truth_state"]}
+AV_PLAN_PROFILE = "audiovisual-planning/v5"
+AV_PLAN_CONTRACT = {"id": "lumenis.internal-pitch", "version": "5",
+                    "required_payload_paths": ["manuscript", "audiovisual_plan", "truth_state"]}
 INPUT_MANIFEST_SCHEMA = "lumenis.internal-pitch-input-manifest/v1"
 _SCOPE = ("domain_id", "subject_id", "brand_focus_id", "global_scope")
 
@@ -117,6 +120,23 @@ def _contract(value):
     # keys to old task hashes or reinterpret a committed ShotPlan work.
     if "profile" not in value:
         return CONTRACT
+    if value["profile"] == AV_PLAN_PROFILE:
+        if (any(key in value for key in ("input_manifest", "upstream_binding", "upstream_ref"))
+                or "shot_plan" not in value):
+            raise ValueError("INTERNAL_PITCH_PROFILE_INVALID")
+        plan = AudiovisualPlan.from_dict(value["shot_plan"]).to_dict()
+        for output in plan["outputs"]:
+            media_plan = output["plan"]
+            if media_plan is None:
+                continue
+            if output["medium"] == "video":
+                unbound = (media_plan["brief_ref"] or media_plan["evidence_refs"]
+                           or any(shot["evidence_refs"] for shot in media_plan["shots"]))
+            else:
+                unbound = any(segment["evidence_refs"] for segment in media_plan["segments"])
+            if unbound:
+                raise ValueError("INTERNAL_PITCH_SOURCE_BINDING_REQUIRED")
+        return AV_PLAN_CONTRACT
     if value["profile"] == SOURCE_PROFILE:
         if "shot_plan" in value or "input_manifest" in value or not isinstance(value.get("upstream_binding"), dict):
             raise ValueError("INTERNAL_PITCH_PROFILE_INVALID")
@@ -133,10 +153,10 @@ def engine():
 
 
 def _context(actor, scope, action, *, connection=None):
-    # Explicit GLOBAL/ALL is valid for internal work. The existing Permission
-    # owner rejects inconsistent focus fields; NULL focus never implies a grant.
+    # Reuse the SavedWork owner for either an explicit domain or actor-owned
+    # Shared workspace. A selector never replaces the live Permission grant.
     options = {"connection": connection} if connection is not None else {}
-    return work.authorize(actor, scope, action=action, **options)
+    return work.authorize_saved_work(actor, scope, action=action, **options)
 
 
 def _permission(actor, scope, resource, *, connection=None):
@@ -158,11 +178,13 @@ def _check_upstream(value, *, actor, scope, connection=None):
 def prepare_internal_pitch(*, manuscript, request_id, actor, scope, shot_plan=None,
                            citations=None, work_id=None, previous_artifact_id=None,
                            expected_draft_digest=None, profile=None, input_manifest=None, upstream_ref=None):
-    """Seal the existing ShotPlan v1 or explicit manuscript-only v2 input."""
+    """Seal an exact legacy input or the explicit audiovisual planning profile."""
     context = _context(actor, scope, "write")
     value = {"manuscript": manuscript, "citations": citations if citations is not None else [], "work_id": work_id,
              "previous_artifact_id": previous_artifact_id, "expected_draft_digest": expected_draft_digest}
     if profile == SOURCE_PROFILE and shot_plan is None and input_manifest is None:
+        if work._shared_context(context):
+            raise ValueError("INTERNAL_PITCH_SOURCE_SCOPE_REQUIRED")
         binding = resolve_creation_upstream(upstream_ref, actor=actor, scope=scope)
         inherited = binding["document"].get("citations", [])
         merged = inherited + value["citations"]
@@ -174,6 +196,8 @@ def prepare_internal_pitch(*, manuscript, request_id, actor, scope, shot_plan=No
         value["shot_plan"] = shot_plan
     elif profile == MANUSCRIPT_PROFILE and shot_plan is None and upstream_ref is None:
         value.update(profile=profile, input_manifest=input_manifest)
+    elif profile == AV_PLAN_PROFILE and input_manifest is None and upstream_ref is None:
+        value.update(profile=profile, shot_plan=AudiovisualPlan.from_dict(shot_plan).to_dict())
     else:
         raise ValueError("INTERNAL_PITCH_PROFILE_INVALID")
     value = json.loads(work._json(value))
@@ -196,6 +220,10 @@ def prepare_internal_pitch(*, manuscript, request_id, actor, scope, shot_plan=No
         _check_upstream(value, actor=actor, scope=scope)
     elif _contract(value) == MANUSCRIPT_CONTRACT:
         _input_manifest(value["input_manifest"])
+    elif _contract(value) == AV_PLAN_CONTRACT:
+        # _contract validates the exact AV input and refuses unbound sources.
+        # It remains authoring intent, never a media/source-use grant.
+        pass
     else:
         shot = value["shot_plan"]
         if (not isinstance(shot, dict) or set(shot) != {"shots", "brief_ref", "evidence_refs"}
@@ -256,7 +284,11 @@ def run_internal_pitch(task_id, *, actor, scope):
         from lumenis.shared.reporting.artifact import verify_artifact_file
         with tempfile.TemporaryDirectory(prefix="lumenis-internal-pitch-") as temporary:
             output = Path(temporary) / "document.docx"
-            result_path = Path(export_pitch_docx({}, str(output), manuscript=value["manuscript"], check_continue=check_continue))
+            export_options = {}
+            if _contract(value) == AV_PLAN_CONTRACT:
+                export_options["audiovisual_plan"] = AudiovisualPlan.from_dict(value["shot_plan"]).snapshot()
+            result_path = Path(export_pitch_docx({}, str(output), manuscript=value["manuscript"],
+                                                 check_continue=check_continue, **export_options))
             if result_path.resolve() != output.resolve() or not verify_artifact_file(str(output))["valid"]:
                 raise ValueError("INTERNAL_PITCH_OUTPUT_INVALID")
             raw = output.read_bytes()
@@ -281,6 +313,14 @@ def run_internal_pitch(task_id, *, actor, scope):
                                        "citation_admission": "SIGNED_CITATIONS_BOUND" if value["citations"] else "PENDING",
                                        "owned_model_execution": "NOT_RUN", "external_effect": "NOT_PERFORMED",
                                        "business_outcome": "NOT_OBSERVED"}}
+        if contract == AV_PLAN_CONTRACT:
+            payload = {"manuscript": value["manuscript"],
+                       "audiovisual_plan": AudiovisualPlan.from_dict(value["shot_plan"]).snapshot(),
+                       "truth_state": {"source_admission": "DECLARED_NOT_ADMITTED",
+                                       "method_source": "RESEARCH_REFERENCE_NOT_MATERIAL_LICENSE",
+                                       "citation_admission": "SIGNED_CITATIONS_BOUND" if value["citations"] else "NO_SIGNED_QUOTE",
+                                       "media_execution": "NOT_EXECUTED", "owned_model_execution": "NOT_RUN",
+                                       "external_effect": "NOT_PERFORMED", "business_outcome": "NOT_OBSERVED"}}
         markdown = value["manuscript"]["title"] + "\n\n" + value["manuscript"]["summary"] + "\n\n" + "\n\n".join(
             "## " + s["heading"] + "\n\n" + s["body"] for s in value["manuscript"]["sections"])
 
@@ -313,7 +353,7 @@ def read_internal_pitch(task_id, *, actor, scope):
     context = _context(actor, scope, "read")
     task = engine().get_pitch_task(task_id, owner_context=context)
     result = {"task_id": task_id, "state": task["status"], "error": task["error"],
-              "action_receipt": None, "work": None, "scope": {k: context[k] for k in _SCOPE}}
+              "action_receipt": None, "work": None, "scope": work._client_scope(context)}
     if task["status"] == "succeeded":
         upstream = _check_upstream(task["context"]["input"], actor=actor, scope=scope)
         stored = task["result"]
@@ -330,6 +370,10 @@ def read_internal_pitch(task_id, *, actor, scope):
             if committed["document"]["payload"].get("upstream_binding") != upstream:
                 raise ValueError("INTERNAL_PITCH_UPSTREAM_INTEGRITY_FAILED")
             result["research_return_ref"] = upstream["return_ref"]
+        if _contract(task["context"]["input"]) == AV_PLAN_CONTRACT:
+            expected = AudiovisualPlan.from_dict(task["context"]["input"]["shot_plan"])
+            if not expected.matches_snapshot(committed["document"]["payload"].get("audiovisual_plan")):
+                raise ValueError("INTERNAL_PITCH_AV_PLAN_INTEGRITY_FAILED")
         result["work"] = committed
         result["action_receipt"] = {"owner": "Shared ContentCreation/TaskEngine/SavedWork",
                                     "task_id": task_id, **stored, "scope": result["scope"],
@@ -360,7 +404,7 @@ def download_internal_pitch(task_id, *, actor, scope):
     work._check_effect(actor, scope, OperationType.DATA_EXPORT, resource)
     context = _context(actor, scope, "read")
     with get_repository().connection(read_only=True, wal=False) as con:
-        raw = work._read_attachment(con, binding, context, result["action_receipt"]["work_id"])
+        raw = work._read_attachment(con, binding, context, result["action_receipt"]["work_id"], actor=actor)
     read_internal_pitch(task_id, actor=actor, scope=scope)
     work._check_effect(actor, scope, OperationType.DATA_EXPORT, resource)
     return {"content": raw, "filename": binding["name"], "media_type": binding["media_type"],

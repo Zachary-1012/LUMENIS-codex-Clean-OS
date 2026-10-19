@@ -9,8 +9,8 @@
     "instruction": "更新目标：现在窗口全部开工，按照规则执行闭环，你作为总控要定期把关不要出现偏移，无事你就待命",
     "followup": "记得更新目标不要出错，效率要提高",
     "window_identity_instruction": "原先窗口作为c3，你再开一个作为c5",
-    "c3_thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
-    "c5_thread_id": "01a1186a-7c8b-7ef1-90b1-75afebb01bca",
+    "c3_thread_id": "private-source-id-sha256-27f88d66834adf1c5a246ecb88c11f85d5a2fcd4db9666e464598eb4a5443061",
+    "c5_thread_id": "private-source-id-sha256-2bf63c2d66f700c5382827c13e36d220ab973f77d86bcbde8af39e3817b634c9",
     "roles": [
       "M",
       "F",

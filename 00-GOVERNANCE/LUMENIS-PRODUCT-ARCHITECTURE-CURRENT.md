@@ -1,8 +1,11 @@
-# LUMENIS Product Architecture — CURRENT
+# OEVIRA Product Architecture — CURRENT
+
+2026-10-18当前主产品显示名为寰意 / OEVIRA，定位“An Open Space for Thought and Creation.”，域名oevira.com；沿原Canonical Registry，不新建品牌或架构权威。旧文件路径/技术LUMENIS身份与历史来源保留；其它仓库品牌不随本次更名。两类受众与大众愿景边界见现有PRODUCT-POSITIONING-CURRENT.md；不改变本规范原能力/原创视觉/权限和验收要求，不证明部署。
+
 
 ## 2026-10-11 产品定位与业务闭环校正（最新直接 PO）
 
-序境是面向商业运营与品牌市场的证据驱动工作平台。CTH、BMP 是两个业务领域；Shared 是可独立使用、也可供业务领域调用的共享能力；SYSTEM 提供共同基础。用户既可完成业务研究/决策，也可直接进行研究或内容制作，不新增产品入口或架构。
+寰意是面向商业运营与品牌市场的证据驱动工作平台。CTH、BMP 是两个业务领域；Shared 是可独立使用、也可供业务领域调用的共享能力；SYSTEM 提供共同基础。用户既可完成业务研究/决策，也可直接进行研究或内容制作，不新增产品入口或架构。
 
 **通用电脑控制已撤出产品范围**：不再交付操作系统桌面、任意本机应用/键鼠控制、远程电脑助手或 Agent Zero GUI worker。该项为 PO 撤回的要求，不是已完成或后置任务。已有源码、研究与失败证据保留为历史；内置浏览器、采集、正常文件导入/导出、媒体制作、服务运行和研发工具不受此撤回影响。
 
@@ -36,7 +39,7 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 
 ### 用户看到什么
 
-资料视图保留真实封面、标题/正文、作者、平台、原帖、原生时间/采集时间、实际互动维度和来源状态，以序境自己的业务布局呈现；未知显示“—”并说明原因。首采单封面不等于全部媒体已理解，后续媒体分析保留位置/时间码和实际覆盖。报告优先显示问题与结论、依据和比较、限制及可执行建议，方法/样本口径可展开追溯。编辑、保存、引用返回、修订和恢复均围绕同一任务与版本。
+资料视图保留真实封面、标题/正文、作者、平台、原帖、原生时间/采集时间、实际互动维度和来源状态，以寰意自己的业务布局呈现；未知显示“—”并说明原因。首采单封面不等于全部媒体已理解，后续媒体分析保留位置/时间码和实际覆盖。报告优先显示问题与结论、依据和比较、限制及可执行建议，方法/样本口径可展开追溯。编辑、保存、引用返回、修订和恢复均围绕同一任务与版本。
 
 ### 本次实际顺序
 
@@ -46,7 +49,7 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 
 本节把既有产品要求展开为用户的完整工作方式。Product Owner 已明确“以上ok，然后更新，然后重新规划各窗口应该做的事情给我审核，目的仍旧是产品闭环运行能够上线”。本蓝图及第11节解析采用方向已确认；这不是功能已实现、用户验收或开工批准。窗口执行审核稿归既有 Source Owner Index 的完整成果卡；任何已明确给出的直接PO派工按其适用范围执行，规划发布本身不派工。独立制作、AI 非依赖和撤回电脑控制保持约束，具体布局仍归唯一 Experience 与现有44屏合同。
 
-#### 1. 用户进入序境后如何开始
+#### 1. 用户进入寰意后如何开始
 
 用户从官网了解产品、工作示例与帮助，再进入工作区；也可以直接打开工作区或已有成果。工作区围绕现有 CTH、BMP、Shared、SYSTEM 入口提供“新建工作”和“继续已有工作”。不要求用户学习五轮研发顺序、内部 Agent 名称、论文操作名或复制 Task ID。
 
@@ -65,7 +68,7 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 
 - **入口：** 进入 BMP，选择品牌、目标市场、竞品比较、消费者/创作者/渠道研究、传播问题或已有 Campaign。支持多品牌和市场的明确比较范围，不把某一参考品牌当全产品默认。
 - **操作：** 输入目的、市场、期间、比较对象和适用预算；查看品牌与竞品资料、传播内容、创作者表现和趋势解释；调整方案、内容要求与执行计划；记录实际执行材料和观察到的结果，进行评价。
-- **系统处理：** 在后台核对市场、币种、单位、统计期与分母，分析可比较数据，关联真实行业案例。平台官方排行、序境样本热点、模型推断和推荐分别说明；点赞/浏览量不能推导销售、全市场需求或因果增益。
+- **系统处理：** 在后台核对市场、币种、单位、统计期与分母，分析可比较数据，关联真实行业案例。平台官方排行、寰意样本热点、模型推断和推荐分别说明；点赞/浏览量不能推导销售、全市场需求或因果增益。
 - **成果：** 可使用的品牌/市场/竞品/创作者/传播研究报告、可编辑 Campaign 方案、内容要求、执行记录与效果评价。有数据给出分析结论，缺数据说明影响和可完成部分，不用空白或假零值填满页面。
 - **保存与恢复：** 方案、预算、选定来源、创作者/渠道选择和人工决定属于同一版本链；保存、关闭、重开、修改、恢复均保留身份与引用。新数据或资源变化后只更新确认受影响部分，原决定和执行记录不被覆盖。
 - **可选联动：** 用户可从方案发起制作，也可选择独立制作的内容用于 Campaign。内容做好不等于已发布；发布、外部执行及使用权继续经过适用授权。
@@ -123,7 +126,7 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 
 #### 9. 每条工作都共用的资料、结果与恢复规则
 
-**工作区首页与导航（2026-10-12 PO）。** 打开工作区直接进入聊天/任务界面；复用 ACC-03 与 AI-01 同一输入、对话、草稿、上下文和成果合同。导航栏提供 CTH、BMP、Shared 独立研究、提案/视频/播客制作、内置浏览器与 SYSTEM 既有入口。聊天采用经官网/源码核实的GPT、Grok Bot及Muse适用操作：同一入口连续交办多项既有任务，长任务异步处理，输入保持可用，结果回到原任务；短问答和确定性轻操作不强制委派。任务actor/范围/输入版本、取消/恢复和成果Owner保持隔离；内部过程与用户可见回复分开，按有用结果、重要异常和必要决定发送，支持查看真实进度。记忆可查改并保留来源/时效，不能代替Canonical或授权；复用现有Task/Agent/Memory/通知/Artifact，不增加Runtime或外部IM。附件、上下文编辑、分段回复、智能UI、停止/续做、结果引用及保存恢复按序境原创Experience呈现；详细研究与工程出口见现有闭环规划§§16–17：按需上下文预算、持久任务/有界重试、分层可更正记忆、Hybrid检索纠错、类型化MCP、轨迹不变量、可打断语音及PII最小化全部沿现有Owner；模型路由尊重用户选择，反馈只经合法偏好对与训练授权晋升。进入某能力不必先让 AI 执行一轮，无模型时仍能从同一导航完成正常业务。四端角色、独立制作、来源权限和完整验收不变；官网仍承接介绍与进入工作区。
+**工作区首页与导航（2026-10-12 PO）。** 打开工作区直接进入聊天/任务界面；复用 ACC-03 与 AI-01 同一输入、对话、草稿、上下文和成果合同。导航栏提供 CTH、BMP、Shared 独立研究、提案/视频/播客制作、内置浏览器与 SYSTEM 既有入口。聊天采用经官网/源码核实的GPT、Grok Bot及Muse适用操作：同一入口连续交办多项既有任务，长任务异步处理，输入保持可用，结果回到原任务；短问答和确定性轻操作不强制委派。任务actor/范围/输入版本、取消/恢复和成果Owner保持隔离；内部过程与用户可见回复分开，按有用结果、重要异常和必要决定发送，支持查看真实进度。记忆可查改并保留来源/时效，不能代替Canonical或授权；复用现有Task/Agent/Memory/通知/Artifact，不增加Runtime或外部IM。附件、上下文编辑、分段回复、智能UI、停止/续做、结果引用及保存恢复按寰意原创Experience呈现；详细研究与工程出口见现有闭环规划§§16–17：按需上下文预算、持久任务/有界重试、分层可更正记忆、Hybrid检索纠错、类型化MCP、轨迹不变量、可打断语音及PII最小化全部沿现有Owner；模型路由尊重用户选择，反馈只经合法偏好对与训练授权晋升。进入某能力不必先让 AI 执行一轮，无模型时仍能从同一导航完成正常业务。四端角色、独立制作、来源权限和完整验收不变；官网仍承接介绍与进入工作区。
 
 **采集与资料呈现。** 用户选择主体/品牌/主题、明确范围和可选时间，系统接收获准平台、公开网页、上传或导入的数据；原始观察、待核验与正式接收分别可辨。无统一“2026-01-01起”的硬截断。六主平台不是数据上限，词条随时间/品牌/活动/事件增补并保留原词。平台与公开网页类别同权，不等于每条内容质量相同。一个平台受限不阻塞已有获准数据的研究、分析和制作。
 
@@ -202,7 +205,7 @@ Reranker 对查询与候选二次精排。不同量纲分数不直接相加；�
 | WPS 程序与公开接口观察；原创 DOCX/XLSX/PPTX 适配 | 用户在既有资料/成果流程导入和使用适用办公文件，保留可编辑文字、表格与演示内容；将真实输出作为成果/附件保存、修订、重开和导出 | 现有 Importer、报告/提案、SavedWork/Artifact，沿已有成果入口 | 各格式内容/主部件/类型、安全限额、依赖许可、实际客户端打开与格式保真；不是新增完整 WPS 套件，也不声称所有专有格式/宏/嵌入对象可用 |
 | 已有媒体入口与附件补丁 | 移除无业务意义的demo勾选及DOCX-only阻挡，让用户直接完成正常制作/保存；保留真正授权检查和旧成果读取 | 原媒体API/SH-01规格、SavedWork、Permission | 与主仓来源用途等并发修改逐处合并；历史兼容、安全、实际成果版本和正常用户路径仍需验收 |
 
-这些能力必须随序境既有工作流运行，不停留为离线样例或单独 wheel。接入优先复用已有 Owner，逐处审查补丁，不整文件覆盖当前工作；验证许可证和已有依赖后处理必要缺项，禁止把研究工具目录硬编码为用户运行前提。解析没有取得或没有证明的能力仍在原缺口内，不凭包内检查数量升级为完整实现。
+这些能力必须随寰意既有工作流运行，不停留为离线样例或单独 wheel。接入优先复用已有 Owner，逐处审查补丁，不整文件覆盖当前工作；验证许可证和已有依赖后处理必要缺项，禁止把研究工具目录硬编码为用户运行前提。解析没有取得或没有证明的能力仍在原缺口内，不凭包内检查数量升级为完整实现。
 
 #### 12. 最终要求与当前未完成项（有界证据，非全产品新审计）
 
@@ -326,7 +329,7 @@ OpenAI Math 已核读研究直接服务上述分析：先区分可行性、优�
 AI 解释、语义关联、建议和生成单独记录输入、版本、状态及评价，不改写 Canonical，不把可选增强失败提升为基础任务失败；真正的 AI 专属任务仍可诚实 UNAVAILABLE。现存 `ai_task_engine.py` 的分析实现/失败判定缺口仍须由获准 Owner 修复和真实操作验收；本规则采用不冒称修复或部署。
 
 
-序境所有基础业务能力在无模型、无外部 AI API、无 GPU、无推理服务时，仍须完成正常任务。AI 只增强效率、理解、建议、生成及辅助决策，不生产事实，不拥有 Canonical Data，不是核心业务链必经条件。AI 专属动作缺模型可准确标为 UNAVAILABLE，不能因此阻断普通任务。安全/权限拒绝、来源权益失效和真实输入缺失仍是有效阻塞，不能伪造或绕过。
+寰意所有基础业务能力在无模型、无外部 AI API、无 GPU、无推理服务时，仍须完成正常任务。AI 只增强效率、理解、建议、生成及辅助决策，不生产事实，不拥有 Canonical Data，不是核心业务链必经条件。AI 专属动作缺模型可准确标为 UNAVAILABLE，不能因此阻断普通任务。安全/权限拒绝、来源权益失效和真实输入缺失仍是有效阻塞，不能伪造或绕过。
 
 | 领域 | 无 AI 必须完成的基础任务 | 可选 AI 增强 |
 | --- | --- | --- |
@@ -352,13 +355,13 @@ Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Eval
 
 | 概念 | 当前含义 | 兼容与禁止混用 |
 |---|---|---|
-| 序境 / LUMENIS | 一个产品 | ZBC、Z-Brand-Core、母平台等旧命名不得成为当前用户可见产品层级；旧仓库/包/环境变量名按调用方保留 |
+| 寰意 / OEVIRA | 一个产品 | ZBC、Z-Brand-Core、母平台等旧命名不得成为当前用户可见产品层级；旧仓库/包/环境变量名按调用方保留 |
 | CTH / BMP | 商业运营域 / 品牌市场域 | `PRODUCT_CTH`、`PRODUCT_ZBMP`、`product_id=CTH/ZBMP` 和 `domain_id=cth/zbmp` 是现存技术合同；`product_id` 字段名不意味着两个产品 |
 | Subject / BrandFocus | 商业主体上下文 / 品牌聚焦上下文 | 不互作别名，不从名字、页面或 Context 推导 Permission；同名主体、城市、门店、时间分别绑定 |
 | GLOBAL / ALL | 默认未聚焦的获准全域工作范围 | 不等于隐式广州太古汇，不等于无限权限或全球数据已齐全；Clear 保留历史成果的原范围 |
 | Source / Evidence / Canonical | 来源、可定位且带出处的证据、经当前合同接收的规范事实 | 研究笔记、AI 输出、缓存、文件存在、mock、旧报告不能自行升级为 Production Truth |
 | Metric / Truth Table / ViewModel | 按明确单位/分母/时间口径计算及表达事实 | `0` 是已知数值，`UNKNOWN`/缺测不是零；ViewModel 不创建另一份业务真相 |
-| Product AI | 单一 SYSTEM AI Gateway；序境自有模型与唯一获准的 Groq 外部接口均经此调用 | Groq 外部调用须用户明确选择并通过现有权限；兼容 Provider 注册和状态枚举不证明实际可用或允许自动 fallback |
+| Product AI | 单一 SYSTEM AI Gateway；寰意自有模型与唯一获准的 Groq 外部接口均经此调用 | Groq 外部调用须用户明确选择并通过现有权限；兼容 Provider 注册和状态枚举不证明实际可用或允许自动 fallback |
 | 四 Surface | Public Website / Web Workspace / Desktop / Mobile Companion | Desktop App 是 Desktop 的描述性名称；Flutter 是实现技术；四表面按各自角色并行建设、独立验收 |
 
 状态必须随其已有 Owner/字段解释：例如 `query_plan.status=READY` 只说明查询计划可提交，
@@ -382,22 +385,22 @@ Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Eval
 
 研究方法须通过现有产品输入、处理、校验与成果路径采用。冻结业务命题/约束与独立
 反例后验证实际实现；人工纠正保留来源和生命周期，仅获准晋升的学习记录进入提示上下文。
-OpenAI Math/Lean/Comparator 是方法来源，不构成序境已获形式化证明、商业因果或训练授权。
+OpenAI Math/Lean/Comparator 是方法来源，不构成寰意已获形式化证明、商业因果或训练授权。
 具体实现、证据和未验证运行范围见同一语义清单及 Math 采用记录。
 
 Latest PO: F builds the complete task-shaped frontend directly from current Experience, screen contracts and source across Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile in parallel. Website remains the public presentation surface; one Flutter `app/` serves Web/Desktop/Mobile over the same Product Core. No separate design draft, Figma completion or M DESIGN_READY approval is a coding prerequisite. Update existing specifications alongside code. Bind available real APIs/Core immediately; connect remaining existing-owner dependencies incrementally and keep missing behavior OPEN/UNBOUND without mock results. Existing design artifacts and review states remain provenance, not proof of implementation. Do not authorize implementation from a PDF, screenshot, fixture, Figma frame or a generic swapped-title renderer alone; the current contracts and direct PO construction instruction govern. Keep each surface's role, actual user operation and acceptance evidence distinct. The 44 existing specifications are a baseline, not a ceiling. Android/Linux native clients are no longer delivery targets; preserve historical source/evidence. Linux server/CI and browser access remain separate. No new product, owner, design system or paid service is introduced. This 2026-10-11 rule supersedes the 2026-10-08 Website/Web-first order. Approval: `evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
 
 一、闭环后，用户实际得到什么
 
-用户既可以独立研究、编写提案/文稿、制作视频或播客，也可以提出商业或品牌任务。选择业务任务时，提供目标、主体、市场、时间、预算与已有资料。序境能理解文件和材料，补充授权范围内的真实数据，形成有依据的判断与可执行方案，按需要选择继续制作文稿、视频或播客。用户改变预算、来源或创作要求时，系统定位受影响部分、提出修改、经确认后应用，保留旧版、修改原因与可回滚关系。用户可以保存、关闭、换端、重开和在中断后继续，不必重述目标或重新选择同一批材料。
+用户既可以独立研究、编写提案/文稿、制作视频或播客，也可以提出商业或品牌任务。选择业务任务时，提供目标、主体、市场、时间、预算与已有资料。寰意能理解文件和材料，补充授权范围内的真实数据，形成有依据的判断与可执行方案，按需要选择继续制作文稿、视频或播客。用户改变预算、来源或创作要求时，系统定位受影响部分、提出修改、经确认后应用，保留旧版、修改原因与可回滚关系。用户可以保存、关闭、换端、重开和在中断后继续，不必重述目标或重新选择同一批材料。
 
-**Platform-native Source → Source/Evidence/Canonical → LUMENIS presentation → Open Original → Return** 是同一产品闭环。平台内容被正式接收后，序境保留原生正文、作者、来源平台、原始 URL/locator、发布时间、采集时间、原生指标、许可与 Evidence lineage，但用户看到的是按当前 CTH/BMP 或独立 Shared 工作语义和 LUMENIS Experience 重新组织的呈现，不复制来源平台 Feed、视觉外壳、无限滑动或自动播放。获准用户可从记录、事件、趋势、案例、风险、报告或创作引用中点击“查看原贴 / Open Original”，默认把经过校验的公开 HTTPS 目标放在序境内置受控浏览器中，用户也可明确选择外部浏览器，并在返回时恢复原任务、GLOBAL/FOCUS、筛选、选中对象和滚动位置。普通原贴跳转不读取本地 Cookie、不静默登录、不启动采集、不生成新 Evidence、不发布也不写外部状态；受控网页导航与证据捕获继续只归 SYS-06。
+**Platform-native Source → Source/Evidence/Canonical → OEVIRA presentation → Open Original → Return** 是同一产品闭环。平台内容被正式接收后，寰意保留原生正文、作者、来源平台、原始 URL/locator、发布时间、采集时间、原生指标、许可与 Evidence lineage，但用户看到的是按当前 CTH/BMP 或独立 Shared 工作语义和 OEVIRA Experience 重新组织的呈现，不复制来源平台 Feed、视觉外壳、无限滑动或自动播放。获准用户可从记录、事件、趋势、案例、风险、报告或创作引用中点击“查看原贴 / Open Original”，默认把经过校验的公开 HTTPS 目标放在寰意内置受控浏览器中，用户也可明确选择外部浏览器，并在返回时恢复原任务、GLOBAL/FOCUS、筛选、选中对象和滚动位置。普通原贴跳转不读取本地 Cookie、不静默登录、不启动采集、不生成新 Evidence、不发布也不写外部状态；受控网页导航与证据捕获继续只归 SYS-06。
 
 示例一：广州太古汇活动策划。用户输入客群、活动周期和预算；系统限定该场所及场内品牌关系，区分品牌自述、消费者讨论、媒体报道和广告，给出依据与不确定性，形成活动方案、预算分配、文稿、视频与播客任务。预算变更后只修相应方案、镜头或音频内容，保留来源与旧成果。销售、客流、满意率或真实活动效果没有数据时，不能编造。
 
-示例二：Nike或Le Labo品牌任务。选定市场、城市和时间范围后，系统把竞争品牌、消费者讨论、内容传播、渠道和商业主体关系放在可比较口径下，形成研究、Brief与可编辑作品。跨城市、币种和统计期间不直接混排；平台热榜、序境样本热点和用户偏好推荐分别解释。
+示例二：Nike或Le Labo品牌任务。选定市场、城市和时间范围后，系统把竞争品牌、消费者讨论、内容传播、渠道和商业主体关系放在可比较口径下，形成研究、Brief与可编辑作品。跨城市、币种和统计期间不直接混排；平台热榜、寰意样本热点和用户偏好推荐分别解释。
 
-示例三：来源更正。某来源撤回或被纠错，序境能定位引用它的判断、报告、文稿、镜头和节目段落，展示影响，要求明确采用新版后修订，保存旧版和原因。原始Evidence不被新结论覆盖。
+示例三：来源更正。某来源撤回或被纠错，寰意能定位引用它的判断、报告、文稿、镜头和节目段落，展示影响，要求明确采用新版后修订，保存旧版和原因。原始Evidence不被新结论覆盖。
 
 ### 全产品智能交互蓝图（2026-10-08）
 
@@ -440,7 +443,7 @@ SYSTEM：采集、产品浏览器、Scheduler、AI Gateway、Agent/Skills/Memory
 
 四端共同遵守：整体视觉方向依据用户已批准研究、当前任务与屏幕合同，不固定二维或三维；手绘彩绘用于五位架构身份/功能图标及适合的局部页面元素。线性功能glyph、彩绘身份图标、第三方来源icon分层；颜色丰富但不滥用；人物根据脚本或描述生成；AIGC呈现按任务设计，不使用助手虚构的70–80%/20–30%固定配额。除官网外避免无必要的整页纵向滚动，必要长文和无障碍操作不被截断。增加有用交互，不做换标题的模板页。
 
-产品账号体系、用户与创始人两种开发者模式、六项商业能力、视觉、Logo和角色均在工程闭环内。免费 Google 登录和邮箱验证码为账号登录的明确例外；Apple 登录待开发者账号开通后启用。设置分区可借鉴成熟产品的信息结构，视觉与资产采用序境原创表达。不设账号墙，服务端权限、平台授权和效果控制继续执行。仅真实用户验证及付费/授权来源安排在上线后；既有工程操作、安全、恢复验收仍须完成。
+产品账号体系、用户与创始人两种开发者模式、六项商业能力、视觉、Logo和角色均在工程闭环内。免费 Google 登录和邮箱验证码为账号登录的明确例外；Apple 登录待开发者账号开通后启用。设置分区可借鉴成熟产品的信息结构，视觉与资产采用寰意原创表达。不设账号墙，服务端权限、平台授权和效果控制继续执行。仅真实用户验证及付费/授权来源安排在上线后；既有工程操作、安全、恢复验收仍须完成。
 
 四、完整能力覆盖与可验收出口
 
@@ -469,7 +472,7 @@ R01–R15仅作为保留的验收依赖，不再成为另一套派工日程。C1
 | 传播/新闻/网络传播、广告商业与品牌案例 | 事实核验、来源角色、框架/议程、替代解释、代表性和因果判断 | C3/C5研究/业务服务及C2评价；报告对判断给依据、反例和适用范围 |
 | 广告法与行业规范 | 广告识别、事实主张、地区/条件/时效、引用校正 | C3/C4/C5现有决策、内容和Evidence边界；提示实质风险，不把模型输出称法律裁决 |
 | SNU课程与教材 | 研究设计、分析方法、创作训练和评价尺度 | 现有研究/创作/Evaluation；课程目录、已读教材、未读材料分开，不由课纲推断整课已掌握 |
-| OpenAI/Codex/ChatGPT/Claude/Muse资料 | 目标执行、恢复、上下文、工具身份、结构输出、多模态质量 | C2 Gateway/Agent/Skills/Memory与C6运行；不替代序境Permission/Evidence/效果Owner |
+| OpenAI/Codex/ChatGPT/Claude/Muse资料 | 目标执行、恢复、上下文、工具身份、结构输出、多模态质量 | C2 Gateway/Agent/Skills/Memory与C6运行；不替代寰意Permission/Evidence/效果Owner |
 | Baseten推理工程 | 模型加载、资源与延迟、传输/缓存、成本、恢复 | C2/C6现有运行；实际计量与恢复结果，不把书名或安装成功当推理能力 |
 | 剪辑/视听/V2、音频与中英韩/音乐情绪资料 | 镜头节奏、视听关系、节目结构、音频理解和专业编辑 | C4 Timeline/render/podcast及F真实编辑；真看真听，保留位置与来源 |
 | 前端视频与Cue/Manus/OpenAI官方页面 | 任务入口、对象身份、操作叙事、可逆交互、状态恢复 | F现有屏幕、官网及Experience规范；逐帧阅读与帧提取分开，不套厂商模板 |
@@ -495,7 +498,7 @@ P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 
 
 第二批：视频与播客完整正常路径。合并仍在本地的必要媒体实现，解决播放、横向时间轴、实际渲染/试听、版本与Artifact绑定。与F完成对应端的实际操作；不等待自有训练先验证确定性的编辑和恢复。
 
-独立能力链：自有AI实际训练与服务；按五轮架构及必要依赖落实，实际窗口由PO决定，不设固定业务席位。现有/免费资源优先，许可允许的基础权重、自有训练部署、实际step/loss/checkpoint/重载/独立语义评价。以真实CTH/BMP/创作结果验收；Codex Cloud和免费临时GPU不冒充上线推理服务。开发电脑关闭、Codex停止、外部模型API禁用时，承诺的产品运行必须由序境自有运行环境完成；部署与资源可用性要实际证明。
+独立能力链：自有AI实际训练与服务；按五轮架构及必要依赖落实，实际窗口由PO决定，不设固定业务席位。现有/免费资源优先，许可允许的基础权重、自有训练部署、实际step/loss/checkpoint/重载/独立语义评价。以真实CTH/BMP/创作结果验收；Codex Cloud和免费临时GPU不冒充上线推理服务。开发电脑关闭、Codex停止、外部模型API禁用时，承诺的产品运行必须由寰意自有运行环境完成；部署与资源可用性要实际证明。
 
 第三批：跨端统一运行与发布。一个同版本成果在承诺的四入口衔接；不要求四端相同布局。验证启动/崩溃/取消/撤权/重试/重开/恢复，完成同SHA Product/App门禁、备份回滚与打包。工程可用后由你重复完成核心任务，记录耗时、成本、正确性、修改成本与人工补救。
 
@@ -511,6 +514,7 @@ AI provider and owned-model responsibilities:
 
 - lumenis/system/ai_gateway/ remains the sole SYSTEM owner; every product model call passes through this Gateway. C2 owns approved commercially usable open foundation weights, owned training/inference and held-out business evaluation; use existing/free resources first. Codex Cloud configuration is not proof of production inference or free GPU capacity.
 - Groq is the only currently approved external model interface. It is available only through the same Gateway after explicit user selection and applicable Permission; it is not a hidden default, automatic provider switch or fallback. Provider configuration/readiness is a runtime fact and must not be inferred from documentation.
+- This is the current execution approval boundary, not removal of the retained user-supplied external API capability. Other compatible providers require their own approval and validation before use; retaining this product requirement does not authorize live calls, hidden fallback or additional permissions.
 - Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are retired from product execution; Jev is an inactive historical typed candidate. For these retired routes: no calls, probes, auto-discovery, fallback or reactivation are permitted. Retained compatibility interfaces and historical artifacts are not permission to use them.
 - Owned AI must prove understanding, reasoning, original creation, tools,
   continuity/recovery and controlled learning on real CTH/BMP/creation work.
@@ -525,11 +529,11 @@ AI provider and owned-model responsibilities:
   Permission or Truth owners. Surfaces consume the one Core/Gateway result.
 - The approved realtime voice/interruption capability remains an OPEN complete-product target in the existing C2/C4/C5/C6/F owners. User initiation, microphone Permission, authorized available model/transport, measured interruption latency, stop/reconnect and task return require actual acceptance. No automatic recording, new external voice API or paid service is authorized by this plan. Local Read Aloud and file audio/video/image understanding or podcast production retain their separate requirements; neither proves realtime conversation, and unavailable enhancement never blocks normal text/editing work.
 
-The platform identity boundary is also explicit: media Cookie/session/browser authorization belongs to the SYSTEM collector/browser chain and stays separate from the future LUMENIS product account. Approved account/login/settings and the user/Founder developer modes are part of engineering closure, without a universal account wall. Free Google/email login uses existing identity contracts; Apple requires its account/authorization prerequisites. Server-side Permission, approval and effect-fence enforcement remain mandatory.
+The platform identity boundary is also explicit: media Cookie/session/browser authorization belongs to the SYSTEM collector/browser chain and stays separate from the future OEVIRA product account. Approved account/login/settings and the user/Founder developer modes are part of engineering closure, without a universal account wall. Free Google/email login uses existing identity contracts; Apple requires its account/authorization prerequisites. Server-side Permission, approval and effect-fence enforcement remain mandatory.
 
 ### Platform acquisition decision — Product Owner, 2026-10-07
 
-The current pre-investment closure does not assume that social platforms have granted LUMENIS official/partner API access. Current capability therefore continues to use approved public sources, Product-Owner-authorized owned R&D accounts and managed read-only session/browser connectors where required. Lack of official authorization must not be used to downgrade a proven collection outcome merely to simplify engineering.
+The current pre-investment closure does not assume that social platforms have granted OEVIRA official/partner API access. Current capability therefore continues to use approved public sources, Product-Owner-authorized owned R&D accounts and managed read-only session/browser connectors where required. Lack of official authorization must not be used to downgrade a proven collection outcome merely to simplify engineering.
 
 The six current primary social platforms are an acceptance baseline rather than a final product limit. Platform acquisition converges on a universal connector contract: one PlatformManifest, one PlatformSession truth owner and one shared recovery Experience over the existing SYSTEM Collector/Browser. Future official or partner APIs are additional providers under that same connector, not a new product, truth stack or prerequisite for current product closure. New platforms must reuse the same Source → Evidence → Canonical path and may not create their own scheduler, account system, Evidence/Canonical store or frontend platform architecture.
 
@@ -561,13 +565,13 @@ model-learning input, and is not the final production voice owner. No third-part
 service account, cloud speech or paid model is introduced. A future saved voice
 output remains a separate explicitly authorized Media/AI capability.
 
-LUMENIS Production Core must run independently.
+OEVIRA Production Core must run independently.
 
-- LUMENIS does not depend on GGI production code or production databases.
+- OEVIRA does not depend on another repository runtime or production database. PO-authorized source capabilities are adapted into existing local owners; they are not a GGI subproduct/service or an external code/runtime dependency.
 - OSAI / LUMENIS Intelligence is not a startup, collection, analysis, reporting or core-runtime prerequisite.
 - LUMENIS Command / 序枢 is a private R&D sidecar: Observe → Control → Verify.
 - Cross-repository exchange is versioned, traceable Contract/Artifact only.
-- Sidecar failure or deletion must not break LUMENIS.
+- Sidecar failure or deletion must not break OEVIRA.
 
 ## 8. Convergence target
 
@@ -594,7 +598,7 @@ lumenis/
 └─ core/
 
 app/
-└─ Flutter LUMENIS Experience
+└─ Flutter OEVIRA Experience
    ├─ Web Workspace
    ├─ Desktop App
    └─ Mobile Companion
@@ -662,7 +666,7 @@ competing active UI/UX authorities = 0; source reference originals retained
 clean clone = PASS
 blocking CI = GREEN
 critical E2E = PASS
-LUMENIS production repositories = 1
+OEVIRA production repositories = 1
 ```
 
 
@@ -672,7 +676,7 @@ LUMENIS production repositories = 1
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
-### 2026-10-08 成熟基础能力与序境特色的统一升级
+### 2026-10-08 成熟基础能力与寰意特色的统一升级
 
 现有 J1–J8 / U01–U25 产品终态同时包含两层：普通用户能直接操作的成熟基础能力；在这些能力上连续使用 Source/Evidence/Canonical、CTH/BMP、业务约束、研究、创作版本及 Evaluation/Learning。智能建议、组件数量或安装成功不能替代第一层。现有可靠能力复用，断开的调用先修，确实缺失的通用底层能力才经第三方准入适配；不创建另一套编辑器内核、Timeline、播放器服务、Agent、Truth、Runtime或永久候选。
 
@@ -734,7 +738,7 @@ Product Owner 直接更正（2026-10-11复核为既有要求，不另建权重�
 
 外部浏览器只作用户可选的查看原文跳转，不用于采集、登录或交互；禁止自动外弹、读取个人浏览器档案、暴露 raw CDP、绕过网页安全限制，不能简单删除 loopback 防护冒称 Web 可用。无需通用桌面/OS executor，不安装 Agent Zero GUI 来满足本链。Website、Web、Windows/macOS Desktop 与 iOS Mobile 并行构建并按端独立核验。模型/远端工作机/部署可用性各自据实，不因类比 ChatGPT 承诺关机后持续运行。
 
-工程参考（2026-10-11 核读）：[OpenAI browser environment integration](https://developers.openai.com/api/docs/guides/tools-computer-use-integration#prepare-an-environment) 提供会话保持、浏览器自动化和画面获取的公开实践；[ChatGPT cloud browser](https://help.openai.com/en/articles/20001280-using-cloud-browser-in-chatgpt) 说明独立会话、人工接管和网站/重要动作授权。这里只采用适用的公开原则，不宣称取得 ChatGPT 私有实现，不将其云电脑/付费资源带入序境。
+工程参考（2026-10-11 核读）：[OpenAI browser environment integration](https://developers.openai.com/api/docs/guides/tools-computer-use-integration#prepare-an-environment) 提供会话保持、浏览器自动化和画面获取的公开实践；[ChatGPT cloud browser](https://help.openai.com/en/articles/20001280-using-cloud-browser-in-chatgpt) 说明独立会话、人工接管和网站/重要动作授权。这里只采用适用的公开原则，不宣称取得 ChatGPT 私有实现，不将其云电脑/付费资源带入寰意。
 
 ### 全产品数据到成果链升级 — 2026-10-09
 
@@ -743,3 +747,17 @@ Global §10 记录本轮完整直接 PO 命令及原实现落实点：采集授�
 C1 保留采集链及获准必要依赖的源码责任；当前窗口执行状态不得由本蓝图推断。跨 Owner 写入仍由 M/W6 既有预约有界交接；原非 C1 候选、未集成成果及完整资料采用继续保留，实际执行需当前PO指令。仅修数据链影响的现有 Web 消费与状态/来源返回，不重做44屏、不新增架构或队列。六平台各自实证与阻塞分列，至少一个获准平台或公开网页来源通过完整真实操作链；同口径吞吐、延迟、覆盖缺失、身份/数据错误、恢复、成果保存重开须有真实数据，无旧基线写 BASELINE NOT VERIFIED。旧逻辑先追有效 caller 再收敛，全部历史/原件/有效兼容保留。
 
 本规则采用不证明源码已改、运行已加载或用户已验收；最终 A–F 成果、OBSERVED/INFERRED/NOT VERIFIED 和 ACCEPTED 条件归既有 Real Delivery Overlay，保持完整 R/J/U 和当前编译/静态安全数据/真实E2E，按当前批准执行相关隔离单元/集成回归，结果不替代真实用户验收。
+
+### 2026-10-18 全能力源级采用（同一产品，实施中）
+
+本次将固定来源 `global-growth-intelligence` 的全部72文件、51个API意图、33能力、九维taxonomy及7市场/12平台/14政策/3场景资料逐项吸收、适配或明确拒绝不安全实现；不得只迁移outbox或目录。来源身份/旧技术别名保留溯源，新增界面、目录和接口遵循寰意现有命名。外仓依旧是观测到的交换主体；内部能力采用不新增第五域、账号、独立服务、数据库或无限writer。
+
+[本地采用记录](LUMENIS-SOURCE-ADOPTION-V1.json)是本架构的有界来源附件，不是另一架构/协议/执行队列。四仓交换仍1.1.0及原指纹，`copy_product_business_code=false`约束跨运行时交换，不禁止本次PO明确批准的自有源级改写；不得flip安全flag掩盖缺失实现。外仓未修改、未共同发布，GGI旧1.0运行导出不得被接受为当前1.1.0。
+
+C5/C6扩展已有SourceBrief/Task/SavedWork/Importer以支持真实授权Shared workspace，不伪造Subject/Brand；C2研究消费真实引用；C3继续同一BusinessDecisionWorkflow的选择、真实行动读回、结果未知/来源声明与评价；C2 Learning/Gateway仅形成有来源版本的候选及受控本地outbox。空来源、AI离线、缺权利、来源撤回、跨scope、陈旧版本、取消/恢复与重放必须有诚实结果，不能靠证据条数或数据库链标业务成功。
+
+原195G及所有R/J/U、原创空间、≥200交互、前端界面AIGC、四表面和未闭工作全部保留。前端由本地Codex/GrokBot沿唯一规划/草图/原ScreenSpec接线，后台测试不替代真实四表面验收。当前后端有界实现及隔离HTTP/原文权益/版本/本地学习回执已有A/B/C实证；全合并门禁和完整产品接受仍IN_PROGRESS，真实四表面仍NOT_VERIFIED。
+
+### 2026-10-18 12:49–12:50 PO 命名与归属确认
+
+本次不是增加GGI模块，而是把来源能力吸收为寰意已有能力。研究问题/九维/参考版本/来源报告归Shared，方案/行动/结果归CTH或BMP真实域，鉴权/Task/运行/单一AI Gateway归SYSTEM，学习引用归原Shared Learning。新界面、API意图、方法说明和能力名称均跟随寰意；GGI只保留必要的来源repo/commit/原文件、历史标识和未改1.1.0交换协议兼容身份，不作为新导航、模块、服务或功能品牌。原全部能力要求继续有效。

@@ -70,6 +70,15 @@ def _required_text(value: Any, field_name: str) -> str:
         value.encode("utf-8")
     except UnicodeEncodeError as exc:
         raise ValueError(f"{field_name} must contain valid Unicode") from exc
+    if "\x00" in value:
+        raise ValueError(f"{field_name} contains a null character")
+    # Plans are persisted before their text is exported as WebVTT and RSS.
+    # Reject non-text XML 1.0 characters at the shared contract boundary,
+    # rather than accepting a saved plan which cannot later be delivered.
+    if any(not (character in "\t\n\r" or "\u0020" <= character <= "\ud7ff"
+                or "\ue000" <= character <= "\ufffd"
+                or "\U00010000" <= character <= "\U0010ffff") for character in value):
+        raise ValueError(f"{field_name} contains an unsupported control character")
     return value
 
 
@@ -563,3 +572,43 @@ __all__ = [
     "SegmentKind",
     "validate_segments",
 ]
+
+
+def build_offline_publication_documents(plan: PodcastPlan, *, audio_filename: str,
+                                        audio_size: int, urls: dict | None = None) -> dict:
+    """Package editable text and a truthful RSS draft; never publish or fetch URLs."""
+    import xml.etree.ElementTree as ET
+    from urllib.parse import urlsplit
+    if not isinstance(plan, PodcastPlan) or audio_filename not in {"episode.mp3", "episode.m4a"} or type(audio_size) is not int or audio_size <= 0:
+        raise ValueError("PODCAST_PUBLICATION_INPUT_INVALID")
+    urls = {} if urls is None else urls
+    keys = {"episode", "audio", "transcript", "chapters"}
+    if not isinstance(urls, dict) or set(urls) - keys:
+        raise ValueError("PODCAST_PUBLICATION_URLS_INVALID")
+    for value in urls.values():
+        if not isinstance(value, str) or len(value) > 2048:
+            raise ValueError("PODCAST_PUBLICATION_URLS_INVALID")
+        parsed = urlsplit(value)
+        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+            raise ValueError("PODCAST_PUBLICATION_URLS_INVALID")
+    namespace = "https://podcastindex.org/namespace/1.0"
+    ET.register_namespace("podcast", namespace)
+    rss = ET.Element("rss", {"version": "2.0"}); channel = ET.SubElement(rss, "channel")
+    for name,value in (("title",plan.title),("description",plan.description),("language",plan.language),("link",urls.get("episode","episode.html"))):
+        ET.SubElement(channel,name).text=value
+    item=ET.SubElement(channel,"item"); ET.SubElement(item,"title").text=plan.title
+    ET.SubElement(item,"description").text=plan.description
+    ET.SubElement(item,"guid",{"isPermaLink":"false"}).text=plan.content_digest()
+    ET.SubElement(item,"enclosure",{"url":urls.get("audio",audio_filename),"length":str(audio_size),
+                                     "type":"audio/mpeg" if audio_filename.endswith('.mp3') else "audio/mp4"})
+    ET.SubElement(item,f"{{{namespace}}}transcript",{"url":urls.get("transcript","transcript-corrected.vtt"),"type":"text/vtt","language":plan.language})
+    ET.SubElement(item,f"{{{namespace}}}chapters",{"url":urls.get("chapters","chapters.json"),"type":"application/json+chapters"})
+    raw=ET.tostring(rss,encoding='utf-8',xml_declaration=True)
+    ET.fromstring(raw)
+    files={name:value.encode('utf-8') for name,value in plan.editable_documents().items()}
+    notes=plan.title+'\n\n'+plan.description+'\n\n'+ '\n'.join(f"{chapter['startTime']:.3f}s — {chapter['title']}" for chapter in plan.chapter_document()['chapters'])
+    files.update({'show-notes.txt':notes.encode('utf-8'),'feed.xml':raw})
+    return {'files':files,'report':{'xml_well_formed':True,'absolute_urls_supplied':keys.issubset(urls),
+            'publishable':False,'reason':'Requires host availability, feed validation and explicit publication approval',
+            'missing_url_fields':sorted(keys-set(urls)), 'publish_status':'not_performed',
+            'transcript_alignment':'operator-declared; not ASR-verified'}}

@@ -53,7 +53,7 @@ def bmp_client(tmp_path, monkeypatch):
 
     monkeypatch.setattr(canonical_data, "list_scoped_canonical", read_rows)
     monkeypatch.setattr(runtime, "_all_builders", lambda: {"BMP-01": screens._build_bmp01})
-    monkeypatch.setattr(auth, "get_current_user", lambda: None)
+    monkeypatch.setattr(auth, "get_current_user", lambda **_kwargs: None)
     def subject(domain, subject_id):
         if domain == "BMP" and subject_id == "SUBJ-NIKE":
             return {
@@ -139,3 +139,19 @@ def test_truncated_rows_do_not_claim_global_total_or_partial_engagement(bmp_clie
     assert values["bmp01.eng"]["value"] is None
     assert body["truth"]["truncated"] is True
     assert body["truth"]["engagement_complete"] is False
+
+
+def test_global_uses_signed_canonical_reader(bmp_client, monkeypatch):
+    client, state = bmp_client
+    import canonical_data
+    import api_dual_domain
+    monkeypatch.setattr(api_dual_domain, "get_zbmp_product_snapshot", lambda: pytest.fail("legacy unsigned global reader"))
+    def read_rows(con, *, product_id, brand_focus_id, limit):
+        assert product_id == "ZBMP" and brand_focus_id is None
+        return {"records": state["records"], "truncated": False}
+    monkeypatch.setattr(canonical_data, "list_scoped_canonical", read_rows)
+    response = client.get("/api/experience/screen/BMP-01")
+    assert response.status_code == 200, response.get_json()
+    result = response.get_json()
+    assert result["global_binding"]["canonical_scope"] == "GLOBAL_ALL"
+    assert result["truth"]["canonical_count"] == 1

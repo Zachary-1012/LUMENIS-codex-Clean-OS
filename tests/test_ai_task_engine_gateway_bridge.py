@@ -184,13 +184,13 @@ def test_noncompletion_state_reaches_task_without_fake_ai_response(status, provi
     assist = engine._execute_ai_assist({"user_input": "question"}, "reason")
 
     assert analysis["ai_analysis"] is None
-    assert analysis["ai_analysis_status"] == status
-    assert analysis["analysis_provider"] == provider
+    assert analysis["ai_analysis_status"] == "not_requested"
+    assert analysis["analysis_provider"] == "unavailable"
     assert assist["ai_response"] is None
     assert assist["ai_status"] == status
     assert assist["provider"] == provider
     if error:
-        assert analysis["ai_analysis_error"] == error
+        assert not analysis.get("ai_analysis_error")
         assert assist["ai_error"] == error
 
 
@@ -203,7 +203,7 @@ def test_noncompletion_state_reaches_task_without_fake_ai_response(status, provi
         }, "OWNED_RUNTIME_NOT_BOUND"),
         ("analysis_agent", {
             "ai_analysis": None, "ai_analysis_status": "unavailable",
-            "analysis_provider": "owned", "ai_analysis_error": "OWNED_RUNTIME_NOT_BOUND",
+            "analysis_provider": "owned", "ai_analysis_error": "OWNED_RUNTIME_NOT_BOUND", "ai_required": True,
         }, "OWNED_RUNTIME_NOT_BOUND"),
     ],
 )
@@ -239,33 +239,12 @@ def test_ai_dependent_task_is_not_marked_succeeded_without_owned_result(
     assert traces and traces[0][0][3] == "error"
 
 
-def test_data_query_exposes_summary_rule_state_without_summary(monkeypatch):
-    class _Row:
-        def fetchone(self):
-            return (3,)
-
-    class _Connection:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_args):
-            return False
-
-        def execute(self, *_args):
-            return _Row()
-
-    monkeypatch.setattr(task_engine_module, "get_db", _Connection)
+def test_unscoped_data_query_never_reads_business_database_or_calls_ai(monkeypatch):
+    monkeypatch.setattr(task_engine_module, "get_db", lambda: pytest.fail("unscoped database read"))
     engine = _engine()
-    engine._try_ai_summarize = lambda *_args: {
-        "status": "unavailable",
-        "provider": "owned",
-        "response": None,
-        "model": None,
-        "error": "OWNED_RUNTIME_NOT_BOUND",
-    }
-
-    result = engine._execute_data_query({"user_input": "count"}, "query_data")
-
-    assert result["ai_summary"] is None
-    assert result["ai_summary_status"] == "unavailable"
-    assert result["ai_summary_provider"] == "owned"
+    engine._try_ai_summarize = lambda *_args: pytest.fail("unscoped AI call")
+    for method in (engine._execute_data_query, engine._execute_report):
+        result = method({"user_input": "count"}, "query_data")
+        assert result["error"] == "SCOPED_SOURCE_OWNER_REQUIRED"
+        assert result["business_outcome"] == "NOT_OBSERVED"
+        assert result["next_action"]["path"] == "/api/experience/reports/source-brief/start"

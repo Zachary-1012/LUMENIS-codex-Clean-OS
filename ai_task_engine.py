@@ -262,7 +262,7 @@ _REPORT_CONTEXT_KEYS = frozenset({
     "actor_ref", "scope", "job_id", "limit", "image_source_ref",
     "business_question", "permission_audit_ref",
 })
-_REPORT_CONTEXT_OPTIONAL_KEYS = frozenset({"operation_audit_ref", "source_ids", "revision"})
+_REPORT_CONTEXT_OPTIONAL_KEYS = frozenset({"operation_audit_ref", "source_ids", "revision", "research", "request_id", "reference"})
 _REPORT_SCOPE_KEYS = frozenset({
     "product_id", "global_scope", "entity_label", "subject_id",
     "brand_focus_id",
@@ -666,28 +666,30 @@ def _validate_managed_report_context(context: Any) -> Dict[str, Any]:
         raise ValueError("managed report actor_ref is invalid")
 
     scope = context.get("scope")
-    if type(scope) is not dict or set(scope) != _REPORT_SCOPE_KEYS:
-        raise ValueError("managed report scope has missing or unsupported fields")
-    product_id = scope.get("product_id")
-    global_scope = scope.get("global_scope")
-    entity_label = scope.get("entity_label")
-    subject_id = scope.get("subject_id")
-    brand_focus_id = scope.get("brand_focus_id")
-    if (
-        product_id not in {"CTH", "ZBMP"}
-        or type(global_scope) is not bool
-        or not _valid_report_text(entity_label, 256)
-        or not entity_label.strip()
-    ):
-        raise ValueError("managed report scope is invalid")
-    if global_scope:
-        if subject_id is not None or brand_focus_id is not None:
-            raise ValueError("global managed report scope must not carry a focus id")
-    elif product_id == "CTH":
-        if not _valid_report_scope_id(subject_id) or brand_focus_id is not None:
-            raise ValueError("CTH managed report scope requires only subject_id")
-    elif not _valid_report_scope_id(brand_focus_id) or subject_id is not None:
-        raise ValueError("BMP managed report scope requires only brand_focus_id")
+    shared = scope == {"scope_kind": "shared_workspace", "version": 1} and type(scope.get("version")) is int
+    if not shared:
+        if type(scope) is not dict or set(scope) != _REPORT_SCOPE_KEYS:
+            raise ValueError("managed report scope has missing or unsupported fields")
+        product_id = scope.get("product_id")
+        global_scope = scope.get("global_scope")
+        entity_label = scope.get("entity_label")
+        subject_id = scope.get("subject_id")
+        brand_focus_id = scope.get("brand_focus_id")
+        if (
+            product_id not in {"CTH", "ZBMP"}
+            or type(global_scope) is not bool
+            or not _valid_report_text(entity_label, 256)
+            or not entity_label.strip()
+        ):
+            raise ValueError("managed report scope is invalid")
+        if global_scope:
+            if subject_id is not None or brand_focus_id is not None:
+                raise ValueError("global managed report scope must not carry a focus id")
+        elif product_id == "CTH":
+            if not _valid_report_scope_id(subject_id) or brand_focus_id is not None:
+                raise ValueError("CTH managed report scope requires only subject_id")
+        elif not _valid_report_scope_id(brand_focus_id) or subject_id is not None:
+            raise ValueError("BMP managed report scope requires only brand_focus_id")
 
     job_id = context.get("job_id")
     if type(job_id) is not str or re.fullmatch(r"brief-[0-9a-f]{32}", job_id) is None:
@@ -701,7 +703,7 @@ def _validate_managed_report_context(context: Any) -> Dict[str, Any]:
         if (type(parent_job_id) is not str
                 or re.fullmatch(r"brief-[0-9a-f]{32}", parent_job_id) is None
                 or parent_job_id == job_id or type(review_id) is not str
-                or re.fullmatch(r"[0-9a-f]{64}", review_id) is None):
+                or re.fullmatch(r"ART-[0-9a-f]{16}" if shared else r"[0-9a-f]{64}", review_id) is None):
             raise ValueError("managed report revision reference is invalid")
 
     limit = context.get("limit")
@@ -723,6 +725,24 @@ def _validate_managed_report_context(context: Any) -> Dict[str, Any]:
         raise ValueError("managed report business_question is invalid")
     from canonical_data import validate_source_ids
     validate_source_ids(context.get("source_ids"), limit=min(limit, 8) if question is not None else limit)
+
+    request_id = context.get("request_id")
+    if request_id is not None and (type(request_id) is not str or re.fullmatch(r"[A-Za-z0-9_-]{8,128}", request_id) is None):
+        raise ValueError("SOURCE_BRIEF_REQUEST_ID_INVALID")
+    reference = context.get("reference")
+    if reference is not None:
+        if (type(reference) is not dict or set(reference) != {"artifact_id", "sha256", "work_id", "version"}
+                or type(reference.get("version")) is not int or reference["version"] < 1
+                or re.fullmatch(r"ART-[0-9a-f]{16}", str(reference.get("artifact_id"))) is None
+                or re.fullmatch(r"[0-9a-f]{64}", str(reference.get("sha256"))) is None
+                or re.fullmatch(r"WORK-[0-9a-f]{24}", str(reference.get("work_id"))) is None):
+            raise ValueError("RESEARCH_REFERENCE_INVALID")
+    research = context.get("research")
+    if research is not None:
+        if type(research) is not dict or set(research) - {"dimension", "regions", "languages", "decision_brief"}:
+            raise ValueError("RESEARCH_METADATA_INVALID")
+        from agent_research.source_bound import analyze_source_records
+        analyze_source_records("Validate research metadata", [], **research)
 
     permission_audit_ref = context.get("permission_audit_ref")
     if (
@@ -1459,10 +1479,24 @@ class TaskEngine:
         """
         report_context = _validate_managed_report_context(context)
         task_id = f"{_MANAGED_REPORT_TASK_PREFIX}{uuid.uuid4()}"
+        if report_context.get("request_id"):
+            binding = _serialize_strict_json({key: report_context[key] for key in ("actor_ref", "scope", "request_id")},
+                                             field_name="report request binding")
+            task_id = _MANAGED_REPORT_TASK_PREFIX + str(uuid.uuid5(uuid.NAMESPACE_URL, binding))
+            try:
+                existing = self.get_report_task(task_id)
+            except KeyError:
+                existing = None
+            if existing is not None:
+                excluded = {"permission_audit_ref", "operation_audit_ref"}
+                if ({k:v for k,v in existing["context"].items() if k not in excluded}
+                        != {k:v for k,v in report_context.items() if k not in excluded}):
+                    raise RuntimeError("SOURCE_BRIEF_REQUEST_ID_CONFLICT")
+                return existing
         now = self._now()
         with get_db() as conn:
             conn.execute(
-                """INSERT INTO ai_task
+                """INSERT OR IGNORE INTO ai_task
                    (task_id, user_input, intent, parameters_json, context_json,
                     status, risk_level, created_at, updated_at, created_by)
                    VALUES (?, ?, 'generate_report', '{}', ?, 'pending', 'L0', ?, ?, ?)""",
@@ -1477,7 +1511,12 @@ class TaskEngine:
                     _MANAGED_REPORT_TASK_CREATOR,
                 ),
             )
-        return self.get_report_task(task_id)
+        stored = self.get_report_task(task_id)
+        excluded = {"permission_audit_ref", "operation_audit_ref"}
+        if ({k:v for k,v in stored["context"].items() if k not in excluded}
+                != {k:v for k,v in report_context.items() if k not in excluded}):
+            raise RuntimeError("SOURCE_BRIEF_REQUEST_ID_CONFLICT")
+        return stored
 
     def get_report_task(self, task_id: str) -> Dict[str, Any]:
         """Return one managed report task, failing closed on malformed JSON."""
@@ -1490,6 +1529,10 @@ class TaskEngine:
         if row is None:
             raise KeyError(f"Managed report task not found: {task_id}")
 
+        return self._decode_report_task(row)
+
+    @staticmethod
+    def _decode_report_task(row):
         task = dict(row)
         if task.get("created_by") != _MANAGED_REPORT_TASK_CREATOR:
             raise PermissionError("task is not owned by Source Brief reporting")
@@ -1506,6 +1549,120 @@ class TaskEngine:
                 task["result_json"], field_name="managed report result"
             )
         return task
+
+    @staticmethod
+    def report_revision(task):
+        """Opaque compare-and-swap token covering state, worker and all inputs."""
+        return hashlib.sha256(_serialize_strict_json({key: task.get(key) for key in
+            ("task_id", "context_json", "status", "parameters_json", "result_json", "error", "updated_at")},
+            field_name="report revision").encode()).hexdigest()
+
+    def mutate_report_task(self, task_id, *, actor_ref, scope, expected_revision,
+                           operation, changes=None):
+        task = self.get_report_task(task_id)
+        if task["context"]["actor_ref"] != actor_ref or task["context"]["scope"] != scope:
+            raise PermissionError("SOURCE_BRIEF_TASK_SCOPE_DENIED")
+        if expected_revision != self.report_revision(task):
+            raise RuntimeError("SOURCE_BRIEF_TASK_REVISION_CONFLICT")
+        state = task["status"]
+        if operation == "cancel":
+            if state not in {"pending", "running", "interrupted", "failed"}:
+                raise ValueError("SOURCE_BRIEF_TASK_NOT_CANCELLABLE")
+            next_state, context = "cancelled", task["context"]
+        elif operation == "restore":
+            if state != "cancelled":
+                raise ValueError("SOURCE_BRIEF_TASK_NOT_CANCELLED")
+            next_state, context = "pending", task["context"]
+        elif operation == "edit":
+            if state not in {"pending", "interrupted", "failed", "cancelled"}:
+                raise ValueError("SOURCE_BRIEF_TASK_NOT_EDITABLE")
+            if (not isinstance(changes, dict) or not changes
+                    or set(changes) - {"business_question", "source_ids", "limit", "research", "reference"}
+                    or task["context"].get("revision") is not None):
+                raise ValueError("SOURCE_BRIEF_TASK_EDIT_INVALID")
+            context = _validate_managed_report_context({**task["context"], **changes})
+            next_state = state
+        else:
+            raise ValueError("SOURCE_BRIEF_TASK_OPERATION_INVALID")
+        with get_db() as conn:
+            cursor = conn.execute("""UPDATE ai_task SET context_json=?, user_input=?, status=?,
+                updated_at=?, error=NULL WHERE task_id=? AND created_by=? AND status=?
+                AND context_json=? AND parameters_json=? AND updated_at=?
+                AND NOT EXISTS(SELECT 1 FROM daily_reports WHERE report_id=?)""",
+                (_serialize_strict_json(context, field_name="managed report context"),
+                 context["business_question"] or "Source Brief", next_state, self._now(), task_id,
+                 _MANAGED_REPORT_TASK_CREATOR, state, task["context_json"], task["parameters_json"],
+                 task["updated_at"], task["context"]["job_id"]))
+            if cursor.rowcount != 1:
+                raise RuntimeError("SOURCE_BRIEF_TASK_REVISION_CONFLICT")
+        return self.get_report_task(task_id)
+
+    def list_report_tasks(self, *, actor_ref, scope, limit=30, cursor=None,
+                          dimension=None, state=None):
+        """Filter exact actor/scope and dimension before stable keyset pagination."""
+        import base64
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("SOURCE_BRIEF_LIST_LIMIT_INVALID")
+        if state is not None and state not in {"pending", "running", "interrupted", "failed", "cancelled", "succeeded"}:
+            raise ValueError("SOURCE_BRIEF_TASK_STATE_INVALID")
+        if dimension is not None:
+            from agent_research.taxonomy import normalize_dimension
+            normalize_dimension(dimension)
+        selectors = {"actor": actor_ref, "scope": scope, "dimension": dimension, "state": state}
+        identity = hashlib.sha256(_serialize_strict_json(selectors, field_name="selector").encode()).hexdigest()
+        boundary = None
+        if cursor is not None:
+            try:
+                decoded = json.loads(base64.urlsafe_b64decode(cursor.encode()).decode())
+                if set(decoded) != {"identity", "boundary"} or decoded["identity"] != identity:
+                    raise ValueError()
+                boundary = _require_managed_report_task_id(decoded["boundary"])
+            except Exception as exc:
+                raise ValueError("SOURCE_BRIEF_TASK_CURSOR_INVALID") from exc
+        conditions = ["created_by=?", "json_valid(context_json)", "json_extract(context_json,'$.actor_ref')=?"]
+        params = [_MANAGED_REPORT_TASK_CREATOR, actor_ref]
+        for key in ("product_id", "global_scope", "entity_label", "subject_id", "brand_focus_id", "scope_kind", "version"):
+            conditions.append("json_extract(context_json,'$.scope." + key + "') IS ?")
+            params.append(scope.get(key))
+        scope_conditions, scope_params = list(conditions), list(params)
+        if dimension is not None:
+            conditions.append("COALESCE(json_extract(context_json,'$.research.dimension'),'growth_opportunity')=?")
+            params.append(dimension)
+        if state is not None:
+            conditions.append("status=?")
+            params.append(state)
+        with get_db() as conn:
+            conn.execute('BEGIN')
+            from agent_research.taxonomy import RESEARCH_DIMENSIONS
+            states = ('pending','running','interrupted','failed','cancelled','succeeded')
+            grouped = conn.execute("SELECT COALESCE(json_extract(context_json,'$.research.dimension'),'growth_opportunity'),status,COUNT(*) FROM ai_task WHERE " +
+                " AND ".join(scope_conditions) + " GROUP BY 1,2", scope_params).fetchall()
+            dimension_summary = [{**label, 'task_count':0, 'states':{state:0 for state in states}}
+                                 for label in RESEARCH_DIMENSIONS]
+            by_dimension = {item['key']:item for item in dimension_summary}
+            for key, task_state, count in grouped:
+                if key not in by_dimension or task_state not in states:
+                    raise RuntimeError('SOURCE_BRIEF_TASK_SUMMARY_UNKNOWN_CLASSIFICATION')
+                by_dimension[key]['states'][task_state] = count
+                by_dimension[key]['task_count'] += count
+            for item in dimension_summary:
+                item['open'] = sum(item['states'][state] for state in ('pending','running','interrupted','failed'))
+                item['completed'] = item['states']['succeeded']
+            summary_total = sum(item['task_count'] for item in dimension_summary)
+            total = conn.execute("SELECT COUNT(*) FROM ai_task WHERE " + " AND ".join(conditions), params).fetchone()[0]
+            if boundary:
+                conditions.append("task_id<?")
+                params.append(boundary)
+            rows = conn.execute("SELECT * FROM ai_task WHERE " + " AND ".join(conditions) +
+                                " ORDER BY task_id DESC LIMIT ?", [*params, limit + 1]).fetchall()
+            tasks = [self._decode_report_task(row) for row in rows[:limit]]
+        more = len(rows) > limit
+        token = base64.urlsafe_b64encode(json.dumps({"identity": identity,
+            "boundary": tasks[-1]["task_id"]}).encode()).decode() if more else None
+        return {"items": tasks, "total": total, "has_more": more, "next_cursor": token,
+                "summary": {"dimensions": dimension_summary, "total": summary_total,
+                            "basis": "persisted_task_state_same_sqlite_snapshot",
+                            "business_outcome": "NOT_ESTABLISHED", "scope": scope}}
 
     def claim_report_task(self, task_id: str) -> bool:
         """Atomically claim an eligible managed report task for this process."""
@@ -1530,14 +1687,14 @@ class TaskEngine:
                 """UPDATE ai_task
                    SET status='running', started_at=?, finished_at=NULL,
                        result_json=NULL, error=NULL, parameters_json=?, updated_at=?
-                   WHERE task_id=? AND created_by=? AND status=?""",
+                   WHERE task_id=? AND created_by=? AND status=? AND context_json=? AND updated_at=?""",
                 (
                     now,
                     worker_parameters,
                     now,
                     task_id,
                     _MANAGED_REPORT_TASK_CREATOR,
-                    expected_status,
+                    expected_status, task["context_json"], task["updated_at"],
                 ),
             )
         return cursor.rowcount == 1
@@ -3124,16 +3281,25 @@ class TaskEngine:
                 agent_id = task.get("agent_id", "")
                 if "browser" in agent_id:
                     op_type = OperationType.BROWSER_OPERATION
-                elif task.get("intent") == "generate_report" or agent_id == "analysis_agent":
+                elif (task.get("intent") == "generate_report" or agent_id == "analysis_agent"
+                      or (task.get("context") or {}).get("source_brief_job_id")):
                     op_type = OperationType.REPORT_GENERATE
                 else:
                     op_type = OperationType.AI_CALL
 
+                permission_context = {}
+                if (task.get("context") or {}).get("source_brief_job_id"):
+                    # Reopen through the scoped Owner before using its domain.
+                    # Body-supplied domain fields and cached operation decisions
+                    # must not substitute for live source/actor authorization.
+                    report = self._read_analysis_source(task)
+                    permission_context["domain_id"] = report["source_brief"]["scope"]["domain_id"]
                 result = self.permission_gate.check(
                     operation_type=op_type,
                     resource=f"ai_task:{task_id}",
                     caller="task_engine",
-                    operation_id=f"task_{task_id}",
+                    operation_id=None if permission_context else f"task_{task_id}",
+                    **permission_context,
                 )
 
                 if not result.allowed:
@@ -3507,39 +3673,18 @@ class TaskEngine:
         return self._execute_ai_assist(task, intent)
 
     def _execute_data_query(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
-        """数据查询：只读查询 DB。"""
-        parameters = task.get("parameters", {})
-        result: Dict[str, Any] = {
-            "query_type": intent,
-            "parameters": parameters,
-            "data_source": "monitor.db (read-only)",
-            "note": "Data query executed in read-only mode",
-        }
-
-        # 尝试查询笔记数量（只读）
-        try:
-            with get_db() as conn:
-                total_notes = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
-                total_events = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
-            result["notes_count"] = total_notes
-            result["events_count"] = total_events
-            result["query_success"] = True
-        except Exception as e:
-            result["query_success"] = False
-            result["query_error"] = str(e)
-
-        # AI 辅助总结（可选，带降级）
-        ai_summary = self._try_ai_summarize(task.get("user_input", ""), result)
-        if ai_summary and ai_summary.get("status") == "completed":
-            result["ai_summary"] = ai_summary
-        else:
-            result["ai_summary"] = None
-        result["ai_summary_status"] = (ai_summary or {}).get("status", "unavailable")
-        result["ai_summary_provider"] = (ai_summary or {}).get("provider", "unknown")
-        if (ai_summary or {}).get("error"):
-            result["ai_summary_error"] = ai_summary["error"]
-
-        return result
+        """Query only an admitted, version-bound Source Owner sample."""
+        context = task.get("context") or {}
+        if (context.get("source_brief_job_id") and
+                context.get("analysis_operation") in {"source_statistics", "openai_math"}):
+            return self._execute_analysis(task, intent)
+        return {"status": "unavailable", "error": "SCOPED_SOURCE_OWNER_REQUIRED",
+                "query_type": intent, "ai_required": False,
+                "business_outcome": "NOT_OBSERVED",
+                "next_action": {"method": "POST",
+                                "path": "/api/experience/reports/source-brief/start",
+                                "context": "current authorized GLOBAL or selected focus",
+                                "description": "Generate or select a scoped source result before querying it."}}
 
     def _execute_analysis(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
         """Compute useful statistics over an admitted SourceBrief; AI is opt-in."""
@@ -3651,19 +3796,8 @@ class TaskEngine:
                 "interpretation": "Sample counts and native publication dates only; not market demand, sentiment or platform-wide coverage."}
 
     def _execute_report(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
-        """报告生成：只读聚合。"""
-        result: Dict[str, Any] = {
-            "report_type": intent,
-            "status": "generated",
-            "note": "Report generated from read-only data aggregation",
-        }
-        try:
-            with get_db() as conn:
-                result["notes_count"] = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
-                result["events_count"] = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
-        except Exception as e:
-            result["error"] = str(e)
-        return result
+        """Reports use the same admitted Owner path, never a global DB count."""
+        return self._execute_data_query(task, intent)
 
     def _execute_browser(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
         """浏览器 Agent：只读操作。严格遵守官方账号只读保护。"""
@@ -3925,7 +4059,8 @@ class TaskEngine:
         """Consume current canonical Owner readers, never a caller's verified flag."""
         if not isinstance(result, dict) or result.get("error"):
             return False, "EXECUTION_RETURN"
-        if task.get("agent_id") == "analysis_agent":
+        if (task.get("agent_id") == "analysis_agent" or
+                (task.get("context") or {}).get("analysis_operation") in {"source_statistics", "openai_math"}):
             try:
                 if (task.get("context") or {}).get("analysis_operation") == "openai_math":
                     from lumenis.shared.evaluation.openai_math_papers.product_outcome import verify_product_outcome

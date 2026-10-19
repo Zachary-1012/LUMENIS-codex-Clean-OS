@@ -117,10 +117,26 @@ def request_identity(step):
 
 
 def context_identity(context):
-    # Check the authorized caller/scope/module, not ephemeral timestamps. No
-    # raw context or credentials become part of the persisted call identity.
-    return digest({key: context.get(key) for key in
-                   ("actor_id", "actor", "domain_id", "scope", "module", "role", "product", "permission_role")})
+    # Never serialize a server seal or let a wire dictionary impersonate it.
+    from lumenis.system.security.permission import (_is_server_local_workspace_principal,
+        resolve_local_workspace_principal, LocalWorkspacePrincipal)
+    actor = context.get("actor")
+    manifest = context.get("agent_runtime") or {}
+    local = _is_server_local_workspace_principal(actor)
+    if local or manifest.get("principal_kind") == "local_workspace" or type(actor) is LocalWorkspacePrincipal:
+        from agent_runtime.task_binding import _workspace_binding
+        if (not local or resolve_local_workspace_principal(module="skills", action="read") is None
+                or context.get("actor_id") is not None
+                or manifest.get("workspace_binding") != _workspace_binding()
+                or manifest.get("principal_ref") != "workspace:local"):
+            raise FormationError("LOCAL_PRINCIPAL_BINDING_INVALID")
+        actor = {"principal_kind": "local_workspace", "principal_ref": "workspace:local", "actor_id": None}
+    identity = {key: context.get(key) for key in
+                ("actor_id", "domain_id", "scope", "module", "role", "product", "permission_role")}
+    identity["actor"] = actor
+    if local:
+        identity["workspace_binding"] = manifest["workspace_binding"]
+    return digest(identity)
 
 
 class FormedCall:
@@ -162,7 +178,21 @@ class FormedCall:
         # No second registry lookup: the exact checked implementation and
         # copied parameters are held until the actual call completes.
         self.assert_current(step, context)
-        return self._invoke(deepcopy(self._step), deepcopy(self._context))
+        invocation_context = deepcopy(self._context)
+        from lumenis.system.security.permission import _is_server_local_workspace_principal
+        if _is_server_local_workspace_principal(context.get("actor")):
+            # assert_current above verified the live immutable principal and
+            # full actor/scope/workspace identity against formation.
+            invocation_context["actor"] = context["actor"]
+        control = context.get("execution_control")
+        if control is not None:
+            from agent_runtime.loop import StepExecutionControl
+            if type(control) is not StepExecutionControl:
+                raise FormationError("TOOL_EXECUTION_CONTROL_INVALID")
+            # Server-only dispatch control is deliberately not model data or a
+            # replacement for the captured actor/scope/parameter binding.
+            invocation_context["execution_control"] = control
+        return self._invoke(deepcopy(self._step), invocation_context)
 
 
 class BoundToolExecutor:

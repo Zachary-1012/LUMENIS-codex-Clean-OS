@@ -1,0 +1,22 @@
+[
+  {
+    "path": "shared_artifacts.py",
+    "before_sha256": "31b36dbdfeeb7614a3d37241a9c7479c10392a1212e24270361cfecb3c4d2b99",
+    "after_sha256": "3098bfee69c71609092d9be8f79c6e765cd93a7adbc9c56cf20384bafc9e2056"
+  },
+  {
+    "path": "experience_runtime.py",
+    "before_sha256": "f16ac02242eb8ff0acb291bd6c2248373bbd294baed2d89dbe0c6e34f5f0e6a2",
+    "after_sha256": "5744d55a35229c2cda867ca2dabc1525f4db4cb6eb41833042fd58fa21fc07c5"
+  },
+  {
+    "path": "lumenis/system/security/permission.py",
+    "before_sha256": "dbc58ce5adcbb7e2542012e23fc4776d057518eef92d8cbcb3a53cb639bd690a",
+    "after_sha256": "027319f2b578e79d17cf36b6d7a25a3a5a2c8f45d44034c067ebf33adb228fff"
+  },
+  {
+    "path": "tests/test_content_media_license.py",
+    "before_sha256": null,
+    "after_sha256": "4ea5b81fb7ee8dfccd7e232f57b01a0f3eca7eaa368d4f332a1c4320d19ce4e3"
+  }
+]

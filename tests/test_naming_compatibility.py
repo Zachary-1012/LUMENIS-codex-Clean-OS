@@ -92,9 +92,10 @@ def test_compatibility_ledger_retains_stable_identifiers_with_migration_gates() 
         "scripts/start-zbrand-autostart.cmd",
     )
 
-    assert "序境 / LUMENIS" in text
-    assert "CTH / LUMENIS Commerce Operations" in text
-    assert "BMP / LUMENIS Brand & Market" in text
+    assert "寰意 / OEVIRA" in text
+    assert "Former 序境 / LUMENIS" in text
+    assert "CTH / OEVIRA Commerce Operations" in text
+    assert "BMP / OEVIRA Brand & Market" in text
     assert "COMPATIBILITY-KEEP" in text
     assert "| Owner | Why it is retained | Migration gate | Rollback gate |" in text
     for identifier in retained_identifiers:

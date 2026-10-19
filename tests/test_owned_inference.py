@@ -40,7 +40,7 @@ class _Tokenizer:
 
     def __call__(self, prompt, **kwargs):
         self.prompt = prompt
-        assert kwargs == {"return_tensors": "pt", "add_special_tokens": False}
+        assert kwargs == {"return_tensors": "pt", "add_special_tokens": False, "truncation": False}
         return {"input_ids": _Tensor([[1, 2, 3]]), "attention_mask": _Tensor([[1, 1, 1]])}
 
     def decode(self, tokens, *, skip_special_tokens):
@@ -635,3 +635,24 @@ def test_production_factory_detects_base_snapshot_changed_during_load(production
             source_validator=runtime._source_validator,
         )
     assert len(calls["base_load"]) == 2
+
+
+def test_measure_uses_same_production_formatter_and_loaded_tokenizer_without_generation(production_unit, monkeypatch):
+    runtime, request, state, calls, tokenizer, _ = production_unit
+    measured = runtime.measure_request(request)
+    measured_prompt = tokenizer.prompt
+    assert measured['prompt_tokens'] == 3 and measured['fits'] is True
+    assert measured['generation_performed'] is False
+    assert calls['model'].generated == []
+    runtime.generate(request)
+    assert tokenizer.prompt == measured_prompt
+    assert measured['formatter_sha256'] == runtime.identity()['executor_sha256']
+    def over_budget(self, prompt, **kwargs):
+        return {'input_ids': _Tensor([[1] * 970])}
+    monkeypatch.setattr(tokenizer.__class__, '__call__', over_budget)
+    count_before = len(calls['model'].generated)
+    assert runtime.measure_request(request)['fits'] is False
+    assert len(calls['model'].generated) == count_before
+    state['source_denied'] = True
+    with pytest.raises(inference.OwnedInferenceBlocked, match='SOURCE_USE_NOT_AUTHORIZED'):
+        runtime.measure_request(request)

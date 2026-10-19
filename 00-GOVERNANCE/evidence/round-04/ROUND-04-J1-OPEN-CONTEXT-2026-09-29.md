@@ -36,7 +36,7 @@ not changed. The service was restarted on loopback only.
 - Independent frontend task reported actual narrow-screen browser
   GLOBAL → picker → search Guangzhou Taikoo Hui → focus header → clear → GLOBAL,
   without a login action. Its local screenshots are in
-  `C:/Users/28049/AppData/Local/Temp/lumenis-cth03-20260929/`.
+  `C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-cth03-20260929/`.
   This verifies selection UX only; frontend candidate files are not part of
   this backend commit.
 

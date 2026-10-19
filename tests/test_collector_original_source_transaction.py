@@ -4,11 +4,13 @@ import hashlib
 import json
 import sqlite3
 import time
+from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from tests.test_collector_transaction_truth import REGISTERED_NAME
+from tests.test_collector_transaction_truth import REGISTERED_NAME, collector_case
 
 
 NATIVE_ID = "1987654321098765432"
@@ -177,7 +179,8 @@ def _snapshot(case):
             "scope_evidence_ref FROM canonical_data WHERE source_table='notes' ORDER BY source_id"
         ).fetchall()
         platform_contents = connection.execute(
-            "SELECT platform,platform_content_id,title,content,view_count,raw_data,last_collected_at "
+            "SELECT platform,platform_content_id,title,content,view_count,raw_data,last_collected_at, "
+            "first_collected_at,collected_at "
             "FROM platform_contents ORDER BY platform,platform_content_id"
         ).fetchall()
         metrics = connection.execute(
@@ -231,7 +234,9 @@ def test_native_original_is_exact_signed_source_with_unicode_body_locator(native
     refs = result["native_original_refs"]
     original = refs["original_source"]
     assert refs["source_id"] == str(refs["canonical"]["source_id"])
-    assert original["status"] == "SAVED" and original["source_signature_verified"] is True
+    assert original["status"] == "SAVED"
+    # The platform did not supply a native signature; our Evidence HMAC is separate.
+    assert original["source_signature_verified"] is False
     assert original["source_kind"] == "collected_source"
     assert original["rights"] == "public-reference-only"
     assert original["per_use_admission"] == {
@@ -240,6 +245,8 @@ def test_native_original_is_exact_signed_source_with_unicode_body_locator(native
     }
 
     evidence = _evidence(case, original["source_evidence_ref"])
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    assert classify_evidence_integrity(evidence)["assurance"] == "writer-authenticated"
     artifact = _artifact(case, original["source_artifact_ref"])
     metadata = evidence["metadata"]
     assert evidence["source"] == "collector" and evidence["feature_id"] == "COLLECTED_SOURCE"
@@ -302,7 +309,11 @@ def test_native_original_is_exact_signed_source_with_unicode_body_locator(native
     assert quote["locators"] == [locator]
 
 
-def test_identical_capture_reuses_artifact_evidence_and_preserves_canonical_raw_ref(native_case):
+def test_identical_capture_reuses_artifact_evidence_and_preserves_canonical_raw_ref(native_case, monkeypatch):
+    from lumenis.shared.database import platform_content
+
+    clock = [datetime(2026, 10, 8, 4, 0, 0, tzinfo=timezone.utc)]
+    monkeypatch.setattr(platform_content, "datetime", SimpleNamespace(now=lambda tz: clock[0]))
     case = native_case
     capture, _ = _native_capture(case)
     first = _approved_collect(case, capture)
@@ -312,6 +323,8 @@ def test_identical_capture_reuses_artifact_evidence_and_preserves_canonical_raw_
     assert raw_ref["content_evidence_ref"] == first_original["source_evidence_ref"]
     before = _snapshot(case)
 
+    # A replay must stay idempotent even when processing crosses a clock second.
+    clock[0] = datetime(2026, 10, 8, 4, 0, 2, tzinfo=timezone.utc)
     replay = _collect(case, capture)
     assert replay.get("ok") is True and replay.get("status") == "SUCCESS", replay
     replay_original = replay["native_original_refs"]["original_source"]
@@ -322,7 +335,11 @@ def test_identical_capture_reuses_artifact_evidence_and_preserves_canonical_raw_
     assert _source_canonical(case, first_refs["source_id"])["raw_ref_value"] == raw_ref
 
 
-def test_changed_bytes_create_distinct_original_while_retaining_one_note_canonical(native_case):
+def test_changed_bytes_create_distinct_original_while_retaining_one_note_canonical(native_case, monkeypatch):
+    from lumenis.shared.database import platform_content
+
+    clock = [datetime(2026, 10, 8, 4, 0, 0, tzinfo=timezone.utc)]
+    monkeypatch.setattr(platform_content, "datetime", SimpleNamespace(now=lambda tz: clock[0]))
     case = native_case
     first_capture, first_value = _native_capture(case)
     first = _approved_collect(case, first_capture)
@@ -330,6 +347,7 @@ def test_changed_bytes_create_distinct_original_while_retaining_one_note_canonic
     first_original = first_refs["original_source"]
 
     second_capture, second_value = _native_capture(case, body=BODY + "\n第二个合成原文版本。")
+    clock[0] = datetime(2026, 10, 8, 4, 0, 2, tzinfo=timezone.utc)
     _approval_for_capture(case, second_capture)
     second = _collect(case, second_capture)
     assert second.get("ok") is True and second.get("status") == "SUCCESS", second
@@ -350,7 +368,14 @@ def test_changed_bytes_create_distinct_original_while_retaining_one_note_canonic
     assert raw_ref["table"] == "notes" and raw_ref["note_id"] == first_refs["source_id"]
     assert raw_ref["content_evidence_ref"] == second_original["source_evidence_ref"]
     snapshot = _snapshot(case)
-    assert len(snapshot["canonical"]) == len(snapshot["artifacts"]) == len(snapshot["source_evidence"]) == 2
+    assert len(snapshot["canonical"]) == 1
+    with _connect(case) as connection:
+        timestamps = tuple(connection.execute(
+            "SELECT first_collected_at,last_collected_at,collected_at FROM platform_contents"
+        ).fetchone())
+    assert timestamps == ("2026-10-08T04:00:00+00:00",
+                          "2026-10-08T04:00:02+00:00", "2026-10-08T04:00:02+00:00")
+    assert len(snapshot["artifacts"]) == len(snapshot["source_evidence"]) == 2
     assert snapshot["document_evidence"] == 0
 
 

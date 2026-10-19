@@ -5,6 +5,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 
 void main() {
+  test('batch preview uses existing READ inspect scope and exact command envelope', () async {
+    final server = await _CoreStub.start(contextResponses: [_contextEnvelope('GLOBAL_ALL')]);
+    addTearDown(server.close);
+    final client = LumenisCoreClient(baseUrl: server.baseUrl);
+    await client.settingsContext();
+    final timeline = <String, dynamic>{'version': 4};
+    final commands = <Map<String, dynamic>>[{
+      'op': 'trim', 'clip_id': 'CLIP-stable', 'source_in': 0.0, 'source_out': 3.0,
+    }];
+    await client.inspectContentEditBatch(domainId: 'BMP', assetRefs: ['ART-source'],
+      timeline: timeline, commands: commands, expectedVersion: 4);
+    final request = server.requests.last;
+    expect(request.method, 'POST');
+    expect(request.path, '/api/experience/shared-skills/shared.content_project/inspect');
+    expect(request.domainId, 'BMP');
+    expect(request.authorization, isNull);
+    expect(jsonDecode(request.body!), {
+      'action_type': 'READ',
+      'input': {
+        'asset_refs': ['ART-source'], 'timeline': timeline,
+        'edit_batch': {'commands': commands, 'expected_version': 4},
+      },
+    });
+  });
+
   test(
     'reads the open workspace without fetching or forwarding Core credentials',
     () async {
@@ -625,6 +650,10 @@ class _CoreStub {
       return;
     }
 
+    if (path == '/api/experience/shared-skills/shared.content_project/inspect') {
+      await _reply(request, HttpStatus.ok, const {'ok': true});
+      return;
+    }
     if (path == '/api/auth/config') {
       await _reply(request, HttpStatus.ok, {'ok': true, 'auth_enabled': true});
       return;

@@ -1,0 +1,14 @@
+[
+  {
+    "path": "[LOCAL_WORKSPACE]/recovery_20261017T1925Z/validated_candidates/LUMENIS_20261017T1620Z_dot-zack_NOT_FINAL/product/source/lumenis/shared/evaluation/openai_math_papers/unique_games_102.py",
+    "bytes": 1780,
+    "sha256": "73f92a8b32914b3bbcc462c73248ca3dc99b61c2aa9b0855e523d43433b4d00c",
+    "inspection": "full file read-only"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/recovery_20261017T1925Z/validated_candidates/LUMENIS_20261017T1620Z_dot-zack_NOT_FINAL/product/source/lumenis/shared/evaluation/openai_math_papers/games_104.py",
+    "bytes": 2388,
+    "sha256": "d58a5ae3a10bc3b72b6eb4c6a33ede0c1ae8f4b9eb10fb096c599e8680b470f7",
+    "inspection": "full file read-only"
+  }
+]

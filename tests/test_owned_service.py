@@ -85,6 +85,16 @@ class _FakeRuntime:
     def identity(self):
         return dict(self._identity)
 
+    def measure_request(self, request):
+        return {'prompt_tokens': 17, 'output_tokens_reserved': request.max_output_tokens,
+            'context_window_tokens': self._identity['context_window_tokens'],
+            'output_token_limit': self._identity['output_token_limit'], 'fits': True,
+            'request_sha256': owned_service.owned_service_request_digest(request),
+            'runtime_sha256': self._identity['runtime_sha256'],
+            'tokenizer_identity': self._identity['runtime_sha256'],
+            'formatter_sha256': self._identity['executor_sha256'],
+            'count_method': 'loaded_runtime_tokenizer', 'generation_performed': False}
+
     def generate(self, request, *, is_cancelled=None):
         self.generated += 1
         if self.on_generate is not None:
@@ -393,3 +403,50 @@ def test_domain_slot_status_requires_explicit_canonical_scope():
     assert core.owned_inference_status()["available"] is False
     assert core.owned_inference_status("bmp")["reason"] == "OWNED_SERVICE_EXECUTOR_NOT_BOUND"
     assert core.owned_inference_status("zbmp")["reason"] == "OWNED_SERVICE_DOMAIN_INVALID"
+
+
+def test_status_reports_only_verified_bound_token_budget(monkeypatch):
+    unavailable = owned_service.owned_service_status('cth')
+    assert 'context_window_tokens' not in unavailable
+    admission = _admission_request()
+    binding, runtime = _binding(monkeypatch, admission)
+    bound = owned_service.bind_owned_service(binding)
+    status = owned_service.owned_service_status('cth')
+    assert status['available'] is True
+    assert status['context_window_tokens'] == admission.context_window_tokens
+    assert status['output_token_limit'] == admission.output_token_limit
+    assert status['binding_sha256'] == bound['binding_sha256']
+    monkeypatch.setattr(owned_service, '_validate_binding', lambda *a, **kw: (_ for _ in ()).throw(
+        owned_service.OwnedServiceBlocked('REVOKED')))
+    revoked = owned_service.owned_service_status('cth')
+    assert revoked['available'] is False
+    assert 'context_window_tokens' not in revoked and 'output_token_limit' not in revoked
+
+
+def test_measurement_validates_bound_source_and_budget_without_generation(monkeypatch):
+    binding, runtime = _binding(monkeypatch)
+    owned_service.bind_owned_service(binding)
+    result = owned_service.measure_owned_request(_request())
+    assert result['ok'] is True and result['prompt_tokens'] == 17
+    assert runtime.generated == 0
+    assert owned_service.measure_owned_request(_request(actor_ref='other'))['ok'] is False
+    assert runtime.generated == 0
+
+
+def test_expected_measured_binding_must_match_before_generation(monkeypatch):
+    binding, runtime = _binding(monkeypatch)
+    bound = owned_service.bind_owned_service(binding)
+    result = core.run_owned_request(_request(), expected_binding_sha256=bound['binding_sha256'])
+    assert result['ok'] is True
+    before = runtime.generated
+    changed = core.run_owned_request(_request(), expected_binding_sha256='f' * 64)
+    assert changed['code'] == 'OWNED_SERVICE_BINDING_CHANGED' and runtime.generated == before
+    invalid = core.run_owned_request(_request(), expected_binding_sha256='invalid')
+    assert invalid['status'] == 'INVALID_INPUT' and runtime.generated == before
+    replacement_request = replace(binding.admission_verifier.request, action='rollback',
+                                  prior_binding_sha256=bound['binding_sha256'])
+    replacement, new_runtime = _binding(monkeypatch, replacement_request)
+    newer = owned_service.bind_owned_service(replacement)
+    replaced = core.run_owned_request(_request(), expected_binding_sha256=bound['binding_sha256'])
+    assert replaced['code'] == 'OWNED_SERVICE_BINDING_CHANGED' and new_runtime.generated == 0
+    assert core.run_owned_request(_request(), expected_binding_sha256=newer['binding_sha256'])['ok'] is True

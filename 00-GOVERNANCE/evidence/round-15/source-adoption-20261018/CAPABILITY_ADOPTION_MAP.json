@@ -1,0 +1,493 @@
+[
+  {
+    "id": "R01",
+    "capability": "R01 研究任务创建/列表/问题/范围",
+    "baseline_observation": "部分。GGI `research_pipeline.py:48–108` 有独立任务；LUMENIS 有 managed report task，非 GGI 泛研究任务。",
+    "existing_owner": "`source_brief_tasks.py`; `ai_task_engine.py:642–746,1453–1570`; C6+C5",
+    "positive_acceptance": "同一服务器 actor、scope、问题及来源快照可创建/列出/读回，重试同工作不复制结果。",
+    "negative_acceptance": "请求里的 user_id/actor/audit/任意新增 context 键不能取得权限；跨 scope 不可读。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "experience_runtime.py"
+    ],
+    "remaining": "Task create/list/read/edit/cancel/restore HTTP and duplicate/CAS tests passed in A final owner evidence; final merged gates and frontend acceptance pending",
+    "current_target_callable": "experience_runtime.py::start_source_brief_task/list_source_brief_tasks/source_brief_task_status"
+  },
+  {
+    "id": "R02",
+    "capability": "R02 九研究维度",
+    "baseline_observation": "缺失。目标 `standard_taxonomy.py` 是事件/风险/情感/主体/FactStatus，并无九维研究合同。",
+    "existing_owner": "`lumenis/shared/reporting/standard_taxonomy.py` + `saved_work.py` 既有 payload + SourceBrief/Task 有界合同扩展；C5/C6",
+    "positive_acceptance": "九键、版本和三语标签可往返持久化/筛选；旧结果保留原 taxonomy 版本。",
+    "negative_acceptance": "未知键不能静默变 `global_market`；不能混为事件类型或在 Task 固定 context 中任意注入字段。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "agent_research/taxonomy.py"
+    ],
+    "remaining": "Nine dimensions/trilingual metadata/filter paths implemented and owner tests passed; final merged and real frontend acceptance pending",
+    "current_target_callable": "agent_research/taxonomy.py::get_research_taxonomy/taxonomy_payload"
+  },
+  {
+    "id": "R03",
+    "capability": "R03 区域/国家/市场分类",
+    "baseline_observation": "冲突。GGI taxonomy `china/asia_pacific/europe`、seed `CN/APAC/NA/EU/Europe/SEA`、规则 `EMEA` 混用。",
+    "existing_owner": "`standard_taxonomy.py`; `subject_registry.py:426–546`; `lumenis/shared/database/entity_relations.py`; C5+C1/C3",
+    "positive_acceptance": "显式保留 region vs country vs market 聚合；CN/US/GB/JP/KR 与 EU/SEA 区分，映射版本可查。",
+    "negative_acceptance": "不能将 EU/SEA 传为实际国家关系；不能把 `cn/us/sea` 静默归 global；总部/注册/营销/经营地不能互换。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "agent_research/reference_assets.py",
+      "agent_research/taxonomy.py"
+    ],
+    "remaining": "Region expansion is discovery only, not country identity or jurisdiction applicability; mixed/unknown source geographies remain explicit",
+    "current_target_callable": "agent_research/reference_assets.py::query_reference_assets; agent_research/taxonomy.py"
+  },
+  {
+    "id": "R04",
+    "capability": "R04 九维统计/首页待办",
+    "baseline_observation": "部分。GGI `list_tasks` 先 LIMIT 后 dimension 过滤；summary 截 100000；home 总量截1000、open只在最近5中找。",
+    "existing_owner": "Task 列表/状态及 `source_brief_job.py::list_source_brief_jobs`; 相关 `experience_screens.py`; C6+C5/F",
+    "positive_acceptance": "先授权、筛选再分页；总量/页量明确；完成数只数有产物验真的对应状态。",
+    "negative_acceptance": "稀疏维度在第二页不能假空；超过1000不可称总量；模板 COMPLETE 不计业务完成。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "ai_task_engine.py",
+      "experience_runtime.py"
+    ],
+    "remaining": "Nine-dimensional full-scope zero-filled SQL aggregation is one snapshot; basis=persisted_task_state_same_sqlite_snapshot. snapshot_state is persisted summary state; live reconciled state is separately labelled. Final whole-PR and frontend acceptance pending; NOT_ESTABLISHED business outcome",
+    "current_target_callable": "ai_task_engine.py::list_report_tasks; experience_runtime.py::list_source_brief_tasks"
+  },
+  {
+    "id": "R05",
+    "capability": "R05 独立 Shared 通用研究",
+    "baseline_observation": "部分。`saved_work.py:231–260` 有 shared workspace；`documents.py:100`、`source_brief_job.py:45–70`、Task scope 仍域限制。",
+    "existing_owner": "`saved_work.py`; `documents.py`; `source_brief_job.py`; `source_brief_tasks.py`; `ai_task_engine.py`; C5+C6",
+    "positive_acceptance": "无 Subject/BrandFocus 的授权 Shared 研究可保存、修订、重开；可选显式采用到 CTH/BMP。",
+    "negative_acceptance": "不得伪造领域身份或将 Shared actor 权利扩到所有域；不得让独立研究成为领域任务的旁路。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "lumenis/shared/reporting/source_brief_job.py",
+      "lumenis/importer/documents.py"
+    ],
+    "remaining": "Independent Shared and explicit DATA_IMPORT to real focused CTH/BMP with parent-source revocation tested; full merged gates and real frontend acceptance pending",
+    "current_target_callable": "lumenis/shared/reporting/source_brief_job.py::_create_shared_report/_verify_shared_report; lumenis/importer/documents.py::adopt_shared_research_source"
+  },
+  {
+    "id": "R06",
+    "capability": "R06 状态流转/取消/恢复",
+    "baseline_observation": "冲突。GGI `update_task_status:136–146` 仅枚举检查，任意跳转，completed_at 在重开后保留。",
+    "existing_owner": "`source_brief_tasks.py:56–160`; `ai_task_engine.py` managed report transitions；C6",
+    "positive_acceptance": "真实进程失活才 interrupted；新请求重新授权；terminal CAS；重启读回已提交产物而不重做副作用。",
+    "negative_acceptance": "直接 PENDING→COMPLETED、读操作修复写入、持久化 JSON 自动恢复授权均拒绝；unknown进程不可假死。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "experience_runtime.py",
+      "lumenis/shared/reporting/source_brief_tasks.py",
+      "ai_task_engine.py"
+    ],
+    "remaining": "Opaque CAS cancel/restore/edit delivered; real interrupted worker/restart/parallel navigation acceptance still required",
+    "current_target_callable": "experience_runtime.py::_mutate_source_brief_task; lumenis/shared/reporting/source_brief_tasks.py; ai_task_engine.py"
+  },
+  {
+    "id": "R07",
+    "capability": "R07 无AI基础研究",
+    "baseline_observation": "部分。GGI 无AI主链存在但只有模板；序境 deterministic SourceBrief、宏观/统计分析可用。",
+    "existing_owner": "`operational_brief.py`; `source_brief_job.py`; `statistics_methods.py`; `lumenis/importer/macro.py`; C5/C3",
+    "positive_acceptance": "关闭模型/API仍产出真实来源摘要、明确限制与适用分析并保存。",
+    "negative_acceptance": "AI unavailable 不得填模板冒充理解；也不能阻断普通来源/保存功能。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "lumenis/shared/reporting/source_brief_job.py",
+      "agent_research/runner.py"
+    ],
+    "remaining": "Source-driven deterministic path; grounded usefulness and limits require final no-AI integrated user result",
+    "current_target_callable": "lumenis/shared/reporting/source_brief_job.py::create_source_brief_job; agent_research/runner.py::run_research"
+  },
+  {
+    "id": "R08",
+    "capability": "R08 Specialist/假设/质疑/验证/排序",
+    "baseline_observation": "冲突。`agent_research/runner.py:113–181` 自建ev_id和模板，validated只看引用非空与数值范围，分数随轮数增加。",
+    "existing_owner": "`agent_research/{runner,hypothesis,debate,lineage}.py` 消费 C5 的引用验证器；C2+C5",
+    "positive_acceptance": "每条finding有真实原文片段、来源版本、方法/局限；独立反证能降低/推翻结论；排序依据可解释。",
+    "negative_acceptance": "仅目标文本不能产生 verified findings；随机ev_id/不存在/撤回来源不能通过；已rejected假设的finding不能仍作为有效结论。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "agent_research/source_bound.py",
+      "lumenis/shared/reporting/source_brief_job.py",
+      "experience_runtime.py",
+      "api_dual_domain.py",
+      "lumenis/shared/learning/contribution.py",
+      "lumenis/importer/documents.py"
+    ],
+    "remaining": "Source-bound human challenge/reject/reinstate and effective-support filtering, saved/derived report and Shared origin reference binding, B signed prepare/adopt and C candidate/evaluation/staged-envelope freshness all implemented. Reject→reinstate never revives old approval; explicit new B adoption or genuinely new C evaluation required. Independent counterexamples pass; final whole-PR/frontend acceptance pending; no automatic fact verification",
+    "current_target_callable": "agent_research/source_bound.py::analyze_source_records; lumenis/shared/reporting/source_brief_job.py::get_hypothesis_review/write_hypothesis_review; experience_runtime.py::research_hypothesis_review; api_dual_domain.py::BusinessDecisionWorkflow; lumenis/shared/learning/contribution.py::_fresh"
+  },
+  {
+    "id": "R09",
+    "capability": "R09 研究→源→发现→洞见全链",
+    "baseline_observation": "部分。目标有 SourceBrief/Artifact/dependency；GGI lineage可选外键且只取第一条 insight/decision。",
+    "existing_owner": "`saved_work.py`; `work_dependencies.py`; `business_brief.py`; `api_dual_domain.py`; C5+C3",
+    "positive_acceptance": "多源、多推断、多方案关系均保留，引用版本和父链完整，修改来源可预览影响且显式采用。",
+    "negative_acceptance": "不能覆盖 Evidence.finding_id 重挂历史；不能只给第一条下游误称全链；跨actor关联拒绝。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "lumenis/shared/reporting/source_brief_job.py",
+      "api_dual_domain.py"
+    ],
+    "remaining": "Report and domain source chain exist; automatic arbitrary source→finding→insight→decision graph and cross-domain adoption not claimed complete",
+    "current_target_callable": "lumenis/shared/reporting/source_brief_job.py::resolve_report_sources; api_dual_domain.py::BusinessDecisionWorkflow"
+  },
+  {
+    "id": "E01",
+    "capability": "E01 来源采集/导入/原文保留",
+    "baseline_observation": "部分。GGI `add_source`仅写输入字符串/URL，无取得原文、内容指纹、权利或published时间。",
+    "existing_owner": "`lumenis/importer/documents.py`; C1 collector; `canonical_data.py`; C5+C1",
+    "positive_acceptance": "原文件/抓取字节、准确时间、来源URL、声明权利、内容指纹与范围均可读回，正文引用定位到页/段。",
+    "negative_acceptance": "任意用户提供URL不证明已抓取；来源缺失/权利未知不能变owner-approved；不因有标题标覆盖完整。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "lumenis/importer/documents.py"
+    ],
+    "remaining": "Source bytes/intake paths delivered; URL alone does not prove capture/rights",
+    "current_target_callable": "lumenis/importer/documents.py::import_document/save_private_document/read_private_document_source"
+  },
+  {
+    "id": "E02",
+    "capability": "E02 事实/证据/推断/假设/决策分层",
+    "baseline_observation": "冲突。GGI五层标签存在，但API默认FACT，类型不被服务校验；序境已有 `documents.source_boundaries`。",
+    "existing_owner": "`documents.py:69–97`; `intelligence_library_api.py:267–294`; `business_brief.py:120–147`; `standard_taxonomy.py`; C5+C2/C3",
+    "positive_acceptance": "publisher source_statement / researcher research_inference / synthetic_sample / operator proposal分离，fact_verification明确。",
+    "negative_acceptance": "非空文本、研究作者断言、AI输出、数据目录FACT标签、签名或引用存在均不得等同独立事实核验。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "agent_research/runner.py",
+      "api_dual_domain.py"
+    ],
+    "remaining": "Source statement/derived/unknown types retained; no automatic FACT promotion",
+    "current_target_callable": "agent_research/runner.py; api_dual_domain.py::BusinessDecisionWorkflow._verify_outcome"
+  },
+  {
+    "id": "E03",
+    "capability": "E03 证据真实性/完整性与范围",
+    "baseline_observation": "已完整（有界基础）。`store.py` writer-authenticated HMAC、scope及签名检查；GGI只存普通行。",
+    "existing_owner": "`lumenis/shared/evidence/store.py:186–375,891–958,1657…`; `canonical_data.py`; C5+C1",
+    "positive_acceptance": "完整性、producer、原字节、scope与原始权利可分别验证，旧证据assurance等级保持。",
+    "negative_acceptance": "一字段篡改/重签主体不明/legacy partial不可当writer-authenticated；签名成功不证明内容为真。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "lumenis/shared/evidence/store.py",
+      "lumenis/shared/reporting/source_brief_job.py"
+    ],
+    "remaining": "Existing signed evidence integrity retained; signature is not fact verification",
+    "current_target_callable": "lumenis/shared/evidence/store.py; lumenis/shared/reporting/source_brief_job.py::_verify_report"
+  },
+  {
+    "id": "E04",
+    "capability": "E04 证据核验/拒绝/撤回",
+    "baseline_observation": "冲突。GGI `verify_evidence`不验证内容、忽略verifier、不记方法；目标manual有当前授权、版本、原因与引用保护。",
+    "existing_owner": "`lumenis/shared/evidence/manual.py:376–436`; `store.py`; C5+C6",
+    "positive_acceptance": "服务器核验人/方法/理由，版本绑定、可审计历史；撤回后消费者重新验证并显示受影响结果。",
+    "negative_acceptance": "客户端填写verified_by、仅凭ID翻verified、撤回源继续可用、已引用记录无受控处理被改写均失败。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "lumenis/shared/evidence/manual.py"
+    ],
+    "remaining": "Current source/reference withdrawal and dependent readback rejection tested; fact verification still requires original method/rights; final merged gate pending",
+    "current_target_callable": "lumenis/shared/evidence/manual.py::update_evidence_status/evidence_transition_resource"
+  },
+  {
+    "id": "E05",
+    "capability": "E05 服务端actor与隔离",
+    "baseline_observation": "已完整（目标基础）；GGI调用方式冲突。目标 `saved_work.authorize` 实际检查密封 principal/actor scope。",
+    "existing_owner": "`saved_work.py:205–260`; `permission.py`; `experience_runtime.py::_source_brief_context`; C6+C5",
+    "positive_acceptance": "当前已认证主体或server-issued local principal，原始scope读写均新鲜核查。",
+    "negative_acceptance": "裸user_id、客户端principal JSON/audit receipt、空user_id全表、同名ID跨域、撤销后commit全部拒绝。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "experience_runtime.py",
+      "lumenis/shared/reporting/saved_work.py"
+    ],
+    "remaining": "Real server session/Shared principal; anonymous/foreign/deleted-session/current-source rejection tested in A/C; final merged gate and frontend acceptance pending",
+    "current_target_callable": "experience_runtime.py::_source_brief_context; lumenis/shared/reporting/saved_work.py::authorize"
+  },
+  {
+    "id": "E06",
+    "capability": "E06 外键/引用同任务同owner约束",
+    "baseline_observation": "冲突。GGI create_finding任意改evidence；source/insight/decision引用不校验。",
+    "existing_owner": "`saved_work._verified_evidence`; `source_brief_job._verify_report`; `api_dual_domain._history/_report/_options`; C5+C3",
+    "positive_acceptance": "引用同时绑定source版本、actor、scope、用途和所选任务/报告；授权共享来源须显式可读。",
+    "negative_acceptance": "用A的task挂B的source/evidence/finding/decision失败，且失败不先留下半条写入；lineage不泄漏B内容。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "lumenis/shared/reporting/source_brief_job.py",
+      "api_dual_domain.py"
+    ],
+    "remaining": "Original attachment/SourceUse/current rights checked beyond report signature; cross-object/source deletion/race tests reported on fixed dependency versions; full merged gate pending",
+    "current_target_callable": "lumenis/shared/reporting/source_brief_job.py::resolve_report_sources; api_dual_domain.py::BusinessDecisionWorkflow._bound_report"
+  },
+  {
+    "id": "E07",
+    "capability": "E07 真实来源关联和时效",
+    "baseline_observation": "部分。GGI full loop创建Evidence时没有传source_id，且正文截500字符；seed date不是实际核验时间。",
+    "existing_owner": "`documents.py`; `operational_brief.py::_content_evidence_ref`; `source_brief_job.py`; C5+C1",
+    "positive_acceptance": "每条摘录对应准确原文区间/内容hash/发布时间/抓取时间/核验时间，截断显式披露。",
+    "negative_acceptance": "空source_id、假引用、截断缺限定词、过期seed被当今日规则、freshness UNKNOWN被展示最新均失败。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "lumenis/importer/documents.py",
+      "lumenis/shared/reporting/source_brief_job.py"
+    ],
+    "remaining": "Original source times/bytes preserved; seed dates are historical, fresh verification not performed",
+    "current_target_callable": "lumenis/importer/documents.py::locate_quote/read_private_document_source; lumenis/shared/reporting/source_brief_job.py::resolve_report_sources"
+  },
+  {
+    "id": "E08",
+    "capability": "E08 不可变Artifact/读回/修订/恢复",
+    "baseline_observation": "已完整（目标有界基础）。GGI研究表缺版本与不可变结果。",
+    "existing_owner": "`saved_work.py`; `artifact.py`; `source_brief_job.py:121–231,339–513`; `operator_review.py`; C5+C6",
+    "positive_acceptance": "持久化后独立重开校验hash、父版本、scope；同请求重试一致，旧父写入冲突；更正保持历史。",
+    "negative_acceptance": "字节不匹配、DB写成功但文件缺失、只返回生成文本、来源撤销、冲突重试不可标成功。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "lumenis/shared/reporting/saved_work.py",
+      "lumenis/shared/reporting/source_brief_job.py"
+    ],
+    "remaining": "Source/report current-version readback and task CAS/cancel/restore tested; generic history remains viewable without authorizing stale adoption; full merged gate and frontend acceptance pending",
+    "current_target_callable": "lumenis/shared/reporting/saved_work.py; lumenis/shared/reporting/source_brief_job.py::get_source_brief_job/resolve_shared_report_revision"
+  },
+  {
+    "id": "B01",
+    "capability": "B01 Finding/Insight→业务方案",
+    "baseline_observation": "部分。GGI只创建标题/默认0.5信心；目标有source_observations/interpretations/proposed_actions/unknowns。",
+    "existing_owner": "`business_brief.py`; `api_dual_domain.py::_options/_material_review`; C3+C5/C2",
+    "positive_acceptance": "至少可比较的任务适配方案，来源、假设、未知、检查方式、预算资源清晰。",
+    "negative_acceptance": "一条品牌自述不推出消费需求/ROI；不相关材料不算覆盖；仅标题或默认信心无用。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "api_dual_domain.py"
+    ],
+    "remaining": "Existing attributed alternatives; Shared→focused-domain adoption uses explicit source rights and exact DATA_IMPORT; no automatic adoption",
+    "current_target_callable": "api_dual_domain.py::BusinessDecisionWorkflow.prepare/_options/_material_review"
+  },
+  {
+    "id": "B02",
+    "capability": "B02 决策批准/选择",
+    "baseline_observation": "冲突。GGI route批准允许客户端approved_by，service无user_id谓词。",
+    "existing_owner": "`api_dual_domain.py:authorize_business_work_request, _selection, advance`; C3+C6",
+    "positive_acceptance": "同scope当前授权下选择明确option、owner、review_at，保留签名revision，标INTERNAL_SELECTION_ONLY。",
+    "negative_acceptance": "A批准B决策、仅登录、伪造批准人、陈旧revision均拒绝；内部选择不授权发布/付款/训练。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "api_dual_domain.py"
+    ],
+    "remaining": "choose records server selected_by; INTERNAL_SELECTION_ONLY, never external effect grant",
+    "current_target_callable": "api_dual_domain.py::BusinessDecisionWorkflow.advance/_selection"
+  },
+  {
+    "id": "B03",
+    "capability": "B03 Action生命周期与真实执行",
+    "baseline_observation": "冲突。GGI complete_action只是UPDATE，full loop不等待审批或执行。",
+    "existing_owner": "`api_dual_domain.py::_read_action/_verify_actions`; `ai_task_engine.py::_verify_owner_outcome`; 实际行动owner；C3+C6/C4",
+    "positive_acceptance": "仅从现有行动owner读回COMMITTED产物、task/actor/scope/hash/parent一致后记录；内容创建与外部动作分开。",
+    "negative_acceptance": "caller给receipt、PENDING动作、未绑定reader、无批准决策、模型“已做”均不得变执行成功。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "api_dual_domain.py"
+    ],
+    "remaining": "Actual Task/Artifact readback retained; external campaign execution is not implemented by this bounded adoption",
+    "current_target_callable": "api_dual_domain.py::BusinessDecisionWorkflow._read_action/_verify_actions"
+  },
+  {
+    "id": "B04",
+    "capability": "B04 Outcome记录",
+    "baseline_observation": "冲突。GGI任何result/metrics写为observed，full loop写固定“real evidence”成功句。",
+    "existing_owner": "`api_dual_domain.py::_transition(outcome/outcome_unknown)`; C3+C5",
+    "positive_acceptance": "源结果为SOURCE_CLAIM且原文摘录匹配；未知/未观察/实际内部Artifact独立；因果NOT_ESTABLISHED。",
+    "negative_acceptance": "方案预期、完成数据库链、likes/评论、用户自行填数字不能当实际增长/商业因果。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "api_dual_domain.py"
+    ],
+    "remaining": "SOURCE_CLAIM/UNKNOWN/internal artifact only; no measured business causal outcome proved",
+    "current_target_callable": "api_dual_domain.py::BusinessDecisionWorkflow._transition/_verify_outcome"
+  },
+  {
+    "id": "B05",
+    "capability": "B05 Evaluation",
+    "baseline_observation": "部分。目标有NO_DATA/真实Artifact完整性/grounding/人审；GGI把证据条数×0.25当分数。",
+    "existing_owner": "`source_brief_job.py:239–337`; `evaluation/recorder.py`; `api_dual_domain.py:523–553`; C5+C3/C2",
+    "positive_acceptance": "指标含方法、观察、样本、限制、对应结果hash；空样本NO_DATA；完整性通过与质量/增长收益分开。",
+    "negative_acceptance": "4条垃圾文本不得得1.0业务质量；自评/反馈分数不证明事实；数值非空不直接EVALUATED/PASS。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "api_dual_domain.py",
+      "lumenis/shared/evaluation/recorder.py"
+    ],
+    "remaining": "Source-limited evaluation and feedback; no quantity-based business score; actual measured outcome evaluation remains evidence-dependent",
+    "current_target_callable": "api_dual_domain.py::BusinessDecisionWorkflow._evaluation_metadata; lumenis/shared/evaluation/recorder.py"
+  },
+  {
+    "id": "B06",
+    "capability": "B06 人工反馈/复核/更正",
+    "baseline_observation": "部分。GGI feedback只存任意target_id/rating；目标有绑定报告hash的operator review和修订。",
+    "existing_owner": "`operator_review.py`; `work_dependencies.py`; `api_dual_domain.py::adopt`; C5+C3",
+    "positive_acceptance": "人审针对确切job/hash/版本，理由与实改字段可比，来源更正有impact preview与显式adopt。",
+    "negative_acceptance": "错owner/错版本反馈、无变化“已改”、无审查自动采用下游、把反馈数字当事实都拒绝。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "api_dual_domain.py",
+      "lumenis/shared/reporting/operator_review.py"
+    ],
+    "remaining": "Version-bound operator feedback and record restore delivered; current source admissibility is rechecked and tested",
+    "current_target_callable": "api_dual_domain.py::BusinessDecisionWorkflow.advance(review|restore); lumenis/shared/reporting/operator_review.py::write_operator_review"
+  },
+  {
+    "id": "B07",
+    "capability": "B07 Learning候选/晋升",
+    "baseline_observation": "部分。GGI无源也产CANDIDATE且内容就是description/title；目标有更强review/evaluation依赖。",
+    "existing_owner": "`learning/report_cases.py`; `learning/content_assets.py`; `learning/operations.py`; `permission.py`; C2+C5",
+    "positive_acceptance": "可追溯到真实报告、反馈、评价的RAW/候选，负例保留；独立准入才可训练/晋升。",
+    "negative_acceptance": "仅CANDIDATE、导出ACK、人赞同、规则演示、目录FACT不得自动TRAINING_ELIGIBLE或生产晋升。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "api_dual_domain.py",
+      "lumenis/shared/learning/contribution.py",
+      "experience_runtime.py"
+    ],
+    "remaining": "Business exact revision/evaluation/feedback/current SourceUse and Shared HTTP approval chain tested; local-reference adoption only, no training/production promotion",
+    "current_target_callable": "api_dual_domain.py::BusinessDecisionWorkflow.read_learning_material; lumenis/shared/learning/contribution.py::create_business_candidate/transition_candidate; experience_runtime.py::research_learning"
+  },
+  {
+    "id": "B08",
+    "capability": "B08 独立领域决策与修订链",
+    "baseline_observation": "已完整（有界领域基础）。BusinessDecisionWorkflow已有版本/恢复/内部选择/源结果路径；非GGI泛增长完成。",
+    "existing_owner": "`api_dual_domain.py:121–850`; `cth_cases.py`; C3",
+    "positive_acceptance": "CTH case→方案→选择→内部产物→源结果/unknown→evaluation→重开，保留旧版本/资源约束。",
+    "negative_acceptance": "BMP/CTH交叉scope、GLOBAL无精确focus做领域决策、修改SourceBrief历史、跨作品替换版本均拒绝。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "api_dual_domain.py",
+      "cth_cases.py"
+    ],
+    "remaining": "CTH/BMP workflow and explicit Shared source adoption/parent revocation tested with real isolated HTTP owners; true live business outcome and four-surface acceptance not verified",
+    "current_target_callable": "api_dual_domain.py::BusinessDecisionWorkflow.reopen/advance/save_result_request; cth_cases.py"
+  },
+  {
+    "id": "I01",
+    "capability": "I01 7市场资料",
+    "baseline_observation": "部分。目标有研究库、宏观解析、实体国家关系，但没有这7条来源化资产的已接入证据。",
+    "existing_owner": "`intelligence_library_api.py`; `documents.py`; `macro.py`; `entity_relations.py`; C5+C1/C3",
+    "positive_acceptance": "全7条保留原来源/原日期/单位/币种/地域类型/声明，逐字段材料与限定可查。",
+    "negative_acceptance": "seed的2023/2024数值不能代表2026当前市场；文化泛化不算普遍事实；EU/SEA不作国家实体。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "agent_research/reference_assets.py"
+    ],
+    "remaining": "7 historical market records read only; not current macro facts or complete market coverage",
+    "current_target_callable": "agent_research/reference_assets.py::query_reference_assets(kind=markets)"
+  },
+  {
+    "id": "I02",
+    "capability": "I02 12平台研究资料",
+    "baseline_observation": "部分。现有Collector registry管实现能力；GGI audience/API/policy文案只为资料。",
+    "existing_owner": "`intelligence_library_api.py`; `documents.py`; `collector/adapters/{registry,config,platform_naming}.py`（只关联，不覆盖）；C5+C1/C3",
+    "positive_acceptance": "12条资料按官方/研究来源与日期保留，可显示对应实际adapter能力另列。",
+    "negative_acceptance": "“Official API/No Public API”文案不启用/禁用平台、不产生账号权利；旧人群画像不作已核实统计。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "agent_research/reference_assets.py"
+    ],
+    "remaining": "12 historical platform references; no Collector capability/account permission changes",
+    "current_target_callable": "agent_research/reference_assets.py::query_reference_assets(kind=platforms)"
+  },
+  {
+    "id": "I03",
+    "capability": "I03 14法规/政策资料",
+    "baseline_observation": "缺失（GGI专属资料的受控接入）；不能作为新的Permission规则引擎。",
+    "existing_owner": "`intelligence_library_api.py`; `documents.py`; `standard_taxonomy.py`; `business_brief.py`; C5+C3",
+    "positive_acceptance": "原规则id、适用国家/地区/行业/平台、来源、施行日期、核验状态/时效一起呈现为待审核参考。",
+    "negative_acceptance": "一个法律主页/静态date/0.95信心不证明现行条文；命中不直接要求行动/授权，未命中不表示合法。",
+    "status": "IMPLEMENTED_EXISTING_OWNER_ADAPTATION_FINAL_ACCEPTANCE_PENDING",
+    "current_target_paths": [
+      "agent_research/reference_assets.py"
+    ],
+    "remaining": "14 historical policy references; no current legal verification, applicability engine or legal clearance",
+    "current_target_callable": "agent_research/reference_assets.py::query_reference_assets(kind=rules)"
+  },
+  {
+    "id": "I04",
+    "capability": "I04 关键词合规提示",
+    "baseline_observation": "冲突。GGI `check_rule_match:180–223`仅字符串包含；taxonomy地区不兼容规则；无时间、平台、排除/例外处理。",
+    "existing_owner": "既有 Research/Reporting派生分析，`business_brief.py`或`standard_taxonomy.py`有界提示；C5+C3",
+    "positive_acceptance": "返回“可能相关资料”+匹配词+范围/有效期/不确定性，可人工核对。",
+    "negative_acceptance": "`north_america`不能漏掉US而显示无风险；`europe`与EU/GB不等价；空region不冒充全球合规；不能改变SYSTEM Permission。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "agent_research/reference_assets.py",
+      "experience_runtime.py"
+    ],
+    "remaining": "Date/region/industry/business/platform/as_of matching with applicability unknown implemented and HTTP tested; no current legal truth or clearance; real frontend acceptance pending",
+    "current_target_callable": "agent_research/reference_assets.py::match_rule_references; experience_runtime.py::research_match_rules"
+  },
+  {
+    "id": "I05",
+    "capability": "I05 3商业场景模板",
+    "baseline_observation": "部分。目标BusinessDecisionWorkflow已有资源约束；没有这3个场景的显式研究模板接入。",
+    "existing_owner": "`saved_work.py` research payload; `api_dual_domain.py::_resources/_selection`; C5+C3",
+    "positive_acceptance": "template/synthetic标记、预算币种/时间/人力/目标及所有未知可编辑；采用时形成新版本。",
+    "negative_acceptance": "“5000玩家/€5000营收/1000注册300激活”是期望，不是观测结果；budget=0不是免费执行许可。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "agent_research/reference_work.py",
+      "experience_runtime.py",
+      "lumenis/shared/reporting/source_brief_job.py"
+    ],
+    "remaining": "Editable declared scenario parameters→version-bound Task→Report→SavedWork tested; no observed business outcome implied; real frontend acceptance pending",
+    "current_target_callable": "agent_research/reference_work.py::adopt_reference_asset/revise_reference_work; experience_runtime.py::research_reference_work; lumenis/shared/reporting/source_brief_job.py"
+  },
+  {
+    "id": "I06",
+    "capability": "I06 种子幂等与更新",
+    "baseline_observation": "部分。GGI SQLite/Postgres on_conflict_do_nothing有效避免并发重复，但不会更新变更后的来源/规则。",
+    "existing_owner": "既有 importer intake幂等/Artifact版本/目录binding；C5+C6",
+    "positive_acceptance": "同指纹重试复用，内容变更生成新版本，保存旧date/来源与withdraw/superseded状态。",
+    "negative_acceptance": "不在应用启动自动写入未经准入研究“Canonical”；同code新内容被静默忽略不能称已更新。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "agent_research/reference_work.py",
+      "lumenis/shared/reporting/source_brief_job.py"
+    ],
+    "remaining": "Current version/CAS/update/withdraw/restore and dependent old-version rejection implemented; 102-version/rollback tests passed; full merged gates and real frontend acceptance pending",
+    "current_target_callable": "agent_research/reference_work.py::read_reference_work/revise_reference_work; lumenis/shared/reporting/source_brief_job.py"
+  },
+  {
+    "id": "I07",
+    "capability": "I07 研究库发现/检索/目录绑定",
+    "baseline_observation": "已完整（目标有界基础）。`intelligence_library_api`核原文件hash、catalog status、签名binding及当前权限，标签不产生事实。",
+    "existing_owner": "`intelligence_library_api.py:39–294,338…`; C5+C6",
+    "positive_acceptance": "GGI资料按允许用途检索、分页、标签，目录原文件/证据/actor/scope一一对应；撤回后不可读。",
+    "negative_acceptance": "只传research_id、同字节别人的资料、目录FACT/VERIFIED、ADMITTED标签均不能自动授权或事实晋升。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "intelligence_library_api.py",
+      "experience_runtime.py"
+    ],
+    "remaining": "Signed RAW/REFERENCE Library binding committed atomically with SavedWork; current-source/rights/version checks and rollback tested; real frontend acceptance pending",
+    "current_target_callable": "intelligence_library_api.py::adopt_reference_library_asset/read_reference_library_source/discover_reference_library_sources; experience_runtime.py::research_reference_library"
+  },
+  {
+    "id": "I08",
+    "capability": "I08 跨产品研究候选交付",
+    "baseline_observation": "部分，需与另一接口审计联合确认。GGI outbox明确EXPORTED≠ACK≠adopt，但内容可无证据。",
+    "existing_owner": "本地允许的Source/Research intake和Learning owner；C5+C2/C6；不得直接写Production Truth",
+    "positive_acceptance": "artifact运输hash、来源版本、scope/权利、候选状态、接收验证、评价和显式采用分别有证据。",
+    "negative_acceptance": "ACK即完成、GGI user_id即LUMENIS actor、跨库写、无授权原文外传均拒绝。",
+    "status": "IMPLEMENTED_BOUNDED_OWNER_HTTP_VERIFIED_FINAL_MERGED_AND_FRONTEND_PENDING",
+    "current_target_paths": [
+      "lumenis/shared/learning/contribution.py",
+      "experience_runtime.py"
+    ],
+    "remaining": "Real-session HTTP through signed local staging and atomic local ACK tested; external receiver/delivery unbound and unauthorized, remote_delivery_proven=false; real frontend acceptance pending",
+    "current_target_callable": "lumenis/shared/learning/contribution.py::enqueue_candidate/transition_outbox/receive_local_contribution; experience_runtime.py::research_learning"
+  }
+]

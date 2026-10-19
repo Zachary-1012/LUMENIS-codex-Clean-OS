@@ -65,7 +65,15 @@ def _write_manifest(path: Path, manifest: dict) -> None:
 
 
 def _current_import_actor_scope():
-    from experience_runtime import _source_brief_context
+    from experience_runtime import _source_brief_context, _parse_shared_workspace_scope_header
+    if "X-Lumenis-Workspace-Scope" in request.headers:
+        from lumenis.shared.reporting.saved_work import authorize_saved_work
+        scope = _parse_shared_workspace_scope_header()
+        actor = get_current_user(read_only=True)
+        if actor is None:
+            raise PermissionError("AUTH_REQUIRED")
+        context = authorize_saved_work(actor, scope, action="write")
+        return "user:" + str(context["actor_id"]), scope, actor
 
     actor_ref, _audit_ref, material, actor = _source_brief_context("write", include_actor=True)
     scope = {
@@ -256,7 +264,22 @@ def upload_file():
         task_dir.mkdir(parents=True, exist_ok=False)
         file_path = task_dir / original_filename
         file_path.write_bytes(raw)
-        # 解析
+        if scope.get("scope_kind") == "shared_workspace":
+            from lumenis.importer.documents import save_private_document
+            saved = save_private_document(
+                str(file_path), actor=_actor, scope=scope,
+                request_id=request.form.get("request_id") or "upload-" + task_id,
+                context_keywords=[term.strip() for term in request.form.get("keywords", "").split(",") if term.strip()],
+            )
+            # The immutable SavedWork registry now owns original bytes and analysis.
+            shutil.rmtree(task_dir)
+            response = jsonify({"success": True, "status": "PRIVATE_SOURCE_SAVED",
+                "analysis_status": "COMPLETED", "analysis_method": "deterministic-source-basics:v1",
+                "ai_state": "NOT_RUN", "canonical_admitted": False, "rights": "UNKNOWN",
+                "result": saved})
+            response.headers["Cache-Control"] = "no-store"
+            return response
+        # Deterministic parsing; model enhancement is a separate explicit action.
         parsed = parse_file(str(file_path))
         # AI分析
         context_keywords = request.form.get("keywords", "").split(",")
@@ -308,6 +331,13 @@ def upload_file():
             "notes": [_note_to_dict(n) for n in preview_notes],
             "tables_count": len(parsed.tables),
         })
+    except (ValueError, PermissionError) as exc:
+        if "task_dir" in locals() and task_dir.is_dir():
+            shutil.rmtree(task_dir)
+        code = str(exc)
+        if re.fullmatch(r"[A-Z_0-9]{1,100}", code) is None:
+            code = "IMPORT_INPUT_INVALID"
+        return jsonify({"success": False, "status": "ERROR", "code": code}), (403 if isinstance(exc, PermissionError) or "PERMISSION" in code else 400)
     except Exception:
         try:
             if "task_dir" in locals() and task_dir.is_dir():
@@ -370,6 +400,10 @@ def _note_to_dict(note: AnalyzedNote) -> dict:
         "analysis_status": note.analysis_status,
         "analysis_code": note.analysis_code,
         "keyword_method": note.keyword_method,
+        "source_locator": note.source_locator,
+        "source_row_sha256": note.source_row_sha256,
+        "source_record": getattr(note, "source_record", None),
+        "source_fields": getattr(note, "source_fields", []),
     }
 
 

@@ -65,6 +65,8 @@ def main():
                         "split": args.split,
                         "checkpoint_sha": c["payload_sha256"],
                         "gold_match": set(pred["map_matching"]) == gold,
+                        "baseline_gold_match": set(prior["map_matching"]) == gold,
+                        "model_step": model.step,
                         "nll": nll,
                         "baseline_nll": base_nll,
                         "constraint_valid": g.check(pred["map_matching"]),

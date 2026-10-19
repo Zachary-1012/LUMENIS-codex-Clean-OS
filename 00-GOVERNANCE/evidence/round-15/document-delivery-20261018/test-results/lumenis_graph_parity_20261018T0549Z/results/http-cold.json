@@ -1,0 +1,1233 @@
+{
+  "synthetic": true,
+  "actual_http": true,
+  "records": [
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 200,
+      "body": {
+        "approval_issued": false,
+        "external_effect": "not_performed",
+        "ok": true,
+        "operation_type": "db_write",
+        "resource": "event-graph:v1:96367c0f30dad7aa1c6caab4b9b7bae604a80855c3c70e19063c5e6bb814d7dc",
+        "state": "PREPARED"
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 200,
+      "body": {
+        "claim_types": [
+          "user_statement",
+          "automatic_inference",
+          "verified_scoped_source"
+        ],
+        "external_effect": "not_performed",
+        "ok": true,
+        "output": [
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target": "GE-S-24ead13057342d054f2c276c96830560",
+            "type": "parallel"
+          },
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "type": "derive"
+          },
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target": "GE-S-c64416970e41d96fe30fdfc564202919",
+            "type": "follow"
+          },
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-24ead13057342d054f2c276c96830560",
+            "target": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "type": "follow"
+          },
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-24ead13057342d054f2c276c96830560",
+            "target": "GE-S-c64416970e41d96fe30fdfc564202919",
+            "type": "follow"
+          },
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "target": "GE-S-c64416970e41d96fe30fdfc564202919",
+            "type": "follow"
+          }
+        ],
+        "result": {
+          "added": 6,
+          "by_type": {
+            "derive": 1,
+            "follow": 4,
+            "parallel": 1
+          },
+          "dropped_auto": 1,
+          "no_evidence_pairs": 0
+        },
+        "stats": {
+          "events_by_type": {
+            "\u8425\u9500\u4e8b\u4ef6": 4
+          },
+          "relations_by_type": {
+            "\u5e76\u884c": 1,
+            "\u7ee7\u53d1": 4,
+            "\u884d\u751f": 1,
+            "\u89e6\u53d1": 1
+          },
+          "total_events": 4,
+          "total_relations": 7
+        }
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 200,
+      "body": {
+        "approval_issued": false,
+        "external_effect": "not_performed",
+        "ok": true,
+        "operation_type": "db_write",
+        "resource": "event-graph:v1:74e7aee8a948bd4602f8c1c2d0906201fb66154cf1b9e36b4fd09a15b0654755",
+        "state": "PREPARED"
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 200,
+      "body": {
+        "claim_types": [
+          "user_statement",
+          "automatic_inference",
+          "verified_scoped_source"
+        ],
+        "external_effect": "not_performed",
+        "ok": true,
+        "output": [
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target": "GE-S-24ead13057342d054f2c276c96830560",
+            "type": "parallel"
+          },
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "type": "derive"
+          },
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target": "GE-S-c64416970e41d96fe30fdfc564202919",
+            "type": "follow"
+          },
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-24ead13057342d054f2c276c96830560",
+            "target": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "type": "follow"
+          },
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-24ead13057342d054f2c276c96830560",
+            "target": "GE-S-c64416970e41d96fe30fdfc564202919",
+            "type": "follow"
+          },
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "target": "GE-S-c64416970e41d96fe30fdfc564202919",
+            "type": "follow"
+          }
+        ],
+        "result": {
+          "added": 6,
+          "by_type": {
+            "derive": 1,
+            "follow": 4,
+            "parallel": 1
+          },
+          "dropped_auto": 6,
+          "no_evidence_pairs": 0
+        },
+        "stats": {
+          "events_by_type": {
+            "\u8425\u9500\u4e8b\u4ef6": 4
+          },
+          "relations_by_type": {
+            "\u5e76\u884c": 1,
+            "\u7ee7\u53d1": 4,
+            "\u884d\u751f": 1,
+            "\u89e6\u53d1": 1
+          },
+          "total_events": 4,
+          "total_relations": 7
+        }
+      }
+    },
+    {
+      "path": "/api/event-graph/events",
+      "status": 200,
+      "body": {
+        "count": 4,
+        "events": [
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "event_time": "2026-01-01",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 1,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0000",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid violet jasmine",
+            "updated_at": "2026-10-17 22:52:42"
+          },
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-24ead13057342d054f2c276c96830560",
+            "event_time": "2026-01-02",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 2,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0001",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "d4d4cfdb956f5b25319fcd846bcb13d99423e6e48c23081a95751e49585457ed"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid",
+            "updated_at": "2026-10-17 22:52:42"
+          },
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "event_time": "2026-01-05",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 3,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0002",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "02a15c4e4632e6be435e4d2c098c7b98de18c49d50bef6f0741dd69e46677d39"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid violet jasmine",
+            "updated_at": "2026-10-17 22:52:42"
+          },
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-c64416970e41d96fe30fdfc564202919",
+            "event_time": "2026-01-09",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 4,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0003",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid",
+            "updated_at": "2026-10-17 22:52:42"
+          }
+        ],
+        "legacy_scope": "UNKNOWN",
+        "ok": true,
+        "rejected": 0,
+        "relations": [
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:52:42",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "user_statement",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "trigger",
+              "request_id": "http-manual-001",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "9cb35de3f191c09b4b07a1abf769073d7f192a5a6b6c5b6ac3a8736bfe850b0e",
+              "source_sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5",
+              "statement": "Synthetic manual hypothesis",
+              "target_sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "id": 1,
+            "relation_type": "trigger",
+            "source_event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target_event_id": "GE-S-c64416970e41d96fe30fdfc564202919"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "parallel",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "1764b18b59155531840e60d957a8f896c76adddb4ea5f827dcf208282f9aa607",
+              "source_sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 24.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "d4d4cfdb956f5b25319fcd846bcb13d99423e6e48c23081a95751e49585457ed"
+            },
+            "id": 73,
+            "relation_type": "parallel",
+            "source_event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target_event_id": "GE-S-24ead13057342d054f2c276c96830560"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "derive",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "ffc9765d68b51078c7ffbc22e1c4fad5fff70c7fc72505d5cfb939491160b04f",
+              "source_sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 96.0,
+                "shared_terms": [
+                  "jasmine",
+                  "orchid",
+                  "violet"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "02a15c4e4632e6be435e4d2c098c7b98de18c49d50bef6f0741dd69e46677d39"
+            },
+            "id": 74,
+            "relation_type": "derive",
+            "source_event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target_event_id": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "follow",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "5914d8885e77625b6d85097b79d7f73a5e34fb91293d1d7d984ae6a4ddf29255",
+              "source_sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 192.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "id": 75,
+            "relation_type": "follow",
+            "source_event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target_event_id": "GE-S-c64416970e41d96fe30fdfc564202919"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "follow",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "56e4aa9d0a184e6f7150140c19df4c4b28f422519cfd8e00bbb0cfef098d8689",
+              "source_sha256": "d4d4cfdb956f5b25319fcd846bcb13d99423e6e48c23081a95751e49585457ed",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 72.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "02a15c4e4632e6be435e4d2c098c7b98de18c49d50bef6f0741dd69e46677d39"
+            },
+            "id": 76,
+            "relation_type": "follow",
+            "source_event_id": "GE-S-24ead13057342d054f2c276c96830560",
+            "target_event_id": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "follow",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "e15f62247bfb4f0b5ee4db304e5160fdbb338413e38310d2c2fc0585fcdd62df",
+              "source_sha256": "d4d4cfdb956f5b25319fcd846bcb13d99423e6e48c23081a95751e49585457ed",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 168.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "id": 77,
+            "relation_type": "follow",
+            "source_event_id": "GE-S-24ead13057342d054f2c276c96830560",
+            "target_event_id": "GE-S-c64416970e41d96fe30fdfc564202919"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "follow",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "3aca624f61671740afd3a05c6ab926e9846f46db07ea75a72bff2ba0c1690a74",
+              "source_sha256": "02a15c4e4632e6be435e4d2c098c7b98de18c49d50bef6f0741dd69e46677d39",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 96.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "id": 78,
+            "relation_type": "follow",
+            "source_event_id": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "target_event_id": "GE-S-c64416970e41d96fe30fdfc564202919"
+          }
+        ]
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 400,
+      "body": {
+        "code": "GRAPH_WINDOW_INVALID",
+        "ok": false
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 403,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "ok": false
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 200,
+      "body": {
+        "approval_issued": false,
+        "external_effect": "not_performed",
+        "ok": true,
+        "operation_type": "db_write",
+        "resource": "event-graph:v1:5d5f1077d7f3a3a67db2e4ca5451b312032089ca0e49b03f0f1ebdff2747939e",
+        "state": "PREPARED"
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 403,
+      "body": {
+        "code": "GRAPH_MANUAL_AUTHORITY_REQUIRED",
+        "ok": false
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 403,
+      "body": {
+        "code": "GRAPH_PREVIEW_CHANGED",
+        "ok": false
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 403,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "ok": false
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 403,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "ok": false
+      }
+    },
+    {
+      "path": "/api/event-graph/events",
+      "status": 200,
+      "body": {
+        "count": 4,
+        "events": [
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "event_time": "2026-01-01",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 1,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0000",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid violet jasmine",
+            "updated_at": "2026-10-17 22:52:42"
+          },
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-24ead13057342d054f2c276c96830560",
+            "event_time": "2026-01-02",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 2,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0001",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "d4d4cfdb956f5b25319fcd846bcb13d99423e6e48c23081a95751e49585457ed"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid",
+            "updated_at": "2026-10-17 22:52:42"
+          },
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "event_time": "2026-01-05",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 3,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0002",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "02a15c4e4632e6be435e4d2c098c7b98de18c49d50bef6f0741dd69e46677d39"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid violet jasmine",
+            "updated_at": "2026-10-17 22:52:42"
+          },
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-c64416970e41d96fe30fdfc564202919",
+            "event_time": "2026-01-09",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 4,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0003",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid",
+            "updated_at": "2026-10-17 22:52:42"
+          }
+        ],
+        "legacy_scope": "UNKNOWN",
+        "ok": true,
+        "rejected": 0,
+        "relations": [
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:52:42",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "user_statement",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "trigger",
+              "request_id": "http-manual-001",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "9cb35de3f191c09b4b07a1abf769073d7f192a5a6b6c5b6ac3a8736bfe850b0e",
+              "source_sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5",
+              "statement": "Synthetic manual hypothesis",
+              "target_sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "id": 1,
+            "relation_type": "trigger",
+            "source_event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target_event_id": "GE-S-c64416970e41d96fe30fdfc564202919"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "parallel",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "1764b18b59155531840e60d957a8f896c76adddb4ea5f827dcf208282f9aa607",
+              "source_sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 24.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "d4d4cfdb956f5b25319fcd846bcb13d99423e6e48c23081a95751e49585457ed"
+            },
+            "id": 73,
+            "relation_type": "parallel",
+            "source_event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target_event_id": "GE-S-24ead13057342d054f2c276c96830560"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "derive",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "ffc9765d68b51078c7ffbc22e1c4fad5fff70c7fc72505d5cfb939491160b04f",
+              "source_sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 96.0,
+                "shared_terms": [
+                  "jasmine",
+                  "orchid",
+                  "violet"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "02a15c4e4632e6be435e4d2c098c7b98de18c49d50bef6f0741dd69e46677d39"
+            },
+            "id": 74,
+            "relation_type": "derive",
+            "source_event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target_event_id": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "follow",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "5914d8885e77625b6d85097b79d7f73a5e34fb91293d1d7d984ae6a4ddf29255",
+              "source_sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 192.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "id": 75,
+            "relation_type": "follow",
+            "source_event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target_event_id": "GE-S-c64416970e41d96fe30fdfc564202919"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "follow",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "56e4aa9d0a184e6f7150140c19df4c4b28f422519cfd8e00bbb0cfef098d8689",
+              "source_sha256": "d4d4cfdb956f5b25319fcd846bcb13d99423e6e48c23081a95751e49585457ed",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 72.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "02a15c4e4632e6be435e4d2c098c7b98de18c49d50bef6f0741dd69e46677d39"
+            },
+            "id": 76,
+            "relation_type": "follow",
+            "source_event_id": "GE-S-24ead13057342d054f2c276c96830560",
+            "target_event_id": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "follow",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "e15f62247bfb4f0b5ee4db304e5160fdbb338413e38310d2c2fc0585fcdd62df",
+              "source_sha256": "d4d4cfdb956f5b25319fcd846bcb13d99423e6e48c23081a95751e49585457ed",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 168.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "id": 77,
+            "relation_type": "follow",
+            "source_event_id": "GE-S-24ead13057342d054f2c276c96830560",
+            "target_event_id": "GE-S-c64416970e41d96fe30fdfc564202919"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "follow",
+              "request_id": "http-cold-infer-002",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "3aca624f61671740afd3a05c6ab926e9846f46db07ea75a72bff2ba0c1690a74",
+              "source_sha256": "02a15c4e4632e6be435e4d2c098c7b98de18c49d50bef6f0741dd69e46677d39",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 96.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "id": 78,
+            "relation_type": "follow",
+            "source_event_id": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "target_event_id": "GE-S-c64416970e41d96fe30fdfc564202919"
+          }
+        ]
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 200,
+      "body": {
+        "approval_issued": false,
+        "external_effect": "not_performed",
+        "ok": true,
+        "operation_type": "db_write",
+        "resource": "event-graph:v1:79181651225394c93d01519c610bafdb9fdc9f958f26c84ef735c04b56baabf9",
+        "state": "PREPARED"
+      }
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "status": 200,
+      "body": {
+        "claim_types": [
+          "user_statement",
+          "automatic_inference",
+          "verified_scoped_source"
+        ],
+        "external_effect": "not_performed",
+        "ok": true,
+        "output": [
+          {
+            "claim_type": "automatic_inference",
+            "source": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target": "GE-S-24ead13057342d054f2c276c96830560",
+            "type": "follow"
+          }
+        ],
+        "result": {
+          "added": 1,
+          "by_type": {
+            "derive": 0,
+            "follow": 1,
+            "parallel": 0
+          },
+          "dropped_auto": 6,
+          "no_evidence_pairs": 5
+        },
+        "stats": {
+          "events_by_type": {
+            "\u8425\u9500\u4e8b\u4ef6": 4
+          },
+          "relations_by_type": {
+            "\u7ee7\u53d1": 1,
+            "\u89e6\u53d1": 1
+          },
+          "total_events": 4,
+          "total_relations": 2
+        }
+      }
+    },
+    {
+      "path": "/api/event-graph/events",
+      "status": 200,
+      "body": {
+        "count": 4,
+        "events": [
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "event_time": "2026-01-01",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 1,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0000",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid violet jasmine",
+            "updated_at": "2026-10-17 22:52:42"
+          },
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-24ead13057342d054f2c276c96830560",
+            "event_time": "2026-01-02",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 2,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0001",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "d4d4cfdb956f5b25319fcd846bcb13d99423e6e48c23081a95751e49585457ed"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid",
+            "updated_at": "2026-10-17 22:52:42"
+          },
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-74135ba870a8a4ad9060a59d7c25e9ce",
+            "event_time": "2026-01-05",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 3,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0002",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "02a15c4e4632e6be435e4d2c098c7b98de18c49d50bef6f0741dd69e46677d39"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid violet jasmine",
+            "updated_at": "2026-10-17 22:52:42"
+          },
+          {
+            "created_at": "2026-10-17 22:52:42",
+            "description": "",
+            "event_id": "GE-S-c64416970e41d96fe30fdfc564202919",
+            "event_time": "2026-01-09",
+            "event_type": "marketing_event",
+            "evidence_state": "user_statement",
+            "id": 4,
+            "metadata": {
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "origin": {
+                "kind": "user_statement",
+                "verification": "NOT_ESTABLISHED"
+              },
+              "request_id": "http-node-0003",
+              "schema": "lumenis.scoped-event-graph/v1",
+              "sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "source": "user_statement",
+            "source_event_id": null,
+            "status": "ongoing",
+            "title": "orchid",
+            "updated_at": "2026-10-17 22:52:42"
+          }
+        ],
+        "legacy_scope": "UNKNOWN",
+        "ok": true,
+        "rejected": 0,
+        "relations": [
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:52:42",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "user_statement",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "trigger",
+              "request_id": "http-manual-001",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "9cb35de3f191c09b4b07a1abf769073d7f192a5a6b6c5b6ac3a8736bfe850b0e",
+              "source_sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5",
+              "statement": "Synthetic manual hypothesis",
+              "target_sha256": "7c643f4ff3a56026a64de8ffadd9c21c4c5099db3135be2a3cd8440ae7415f47"
+            },
+            "id": 1,
+            "relation_type": "trigger",
+            "source_event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target_event_id": "GE-S-c64416970e41d96fe30fdfc564202919"
+          },
+          {
+            "confidence": null,
+            "created_at": "2026-10-17 22:56:23",
+            "evidence": {
+              "causality_verified": false,
+              "claim_type": "automatic_inference",
+              "context": {
+                "brand_focus_id": null,
+                "domain_id": "cth",
+                "global_scope": true,
+                "principal_kind": "local_workspace",
+                "principal_ref": "workspace:local",
+                "subject_id": null
+              },
+              "relation_type": "follow",
+              "request_id": "http-cold-narrow-001",
+              "schema": "lumenis.scoped-event-relation/v1",
+              "sha256": "7467532fc093e383297780f80f84ffe24f131e8fd549e74f8dc9f179754c99df",
+              "source_sha256": "b204a75b5332fcf60a0d6ef1132aeaf588d45638ceefc25893e40e3e2e24c6b5",
+              "statement": {
+                "basis": "temporal-and-title-overlap; not causality",
+                "gap_hours": 24.0,
+                "shared_terms": [
+                  "orchid"
+                ],
+                "time_order": true
+              },
+              "target_sha256": "d4d4cfdb956f5b25319fcd846bcb13d99423e6e48c23081a95751e49585457ed"
+            },
+            "id": 79,
+            "relation_type": "follow",
+            "source_event_id": "GE-S-20b5a28fc05670a4eab819b7887f7c9c",
+            "target_event_id": "GE-S-24ead13057342d054f2c276c96830560"
+          }
+        ]
+      }
+    }
+  ]
+}

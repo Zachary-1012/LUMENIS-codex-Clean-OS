@@ -227,7 +227,7 @@ void main() {
       final close = find.byKey(const ValueKey('workspace-navigation-close'));
       expect(tester.getSize(close).width, greaterThanOrEqualTo(44));
       expect(tester.getSize(close).height, greaterThanOrEqualTo(44));
-      expect(find.bySemanticsLabel('序境 / LUMENIS'), findsOneWidget);
+      expect(find.bySemanticsLabel('寰意 / OEVIRA'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.tap(close);
       await tester.pumpAndSettle();

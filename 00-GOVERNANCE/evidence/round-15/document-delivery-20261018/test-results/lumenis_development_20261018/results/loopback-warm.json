@@ -1,0 +1,4814 @@
+{
+  "actual_http": true,
+  "fresh_process": true,
+  "synthetic_inputs": true,
+  "requests": [
+    {
+      "screen": "BMP-03",
+      "case": "local-global",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-03",
+          "unavailable": []
+        },
+        "bound": true,
+        "generated_at": "2026-10-17T22:40:08",
+        "global_binding": {
+          "actor_id": null,
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": null,
+          "canonical_scope": "GLOBAL_ALL",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": null
+        },
+        "ok": true,
+        "screen": "BMP-03",
+        "sections": [
+          {
+            "desc": "\u884c\u4e1a\u8d8b\u52bf\u3001\u54c1\u7c7b\u673a\u4f1a\u4e0e\u5916\u90e8\u60c5\u62a5\uff0c\u533a\u5206\u5df2\u786e\u8ba4\u60c5\u62a5\u4e0e\u5f85\u6838\u5b9e\u7ebf\u7d22\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u5e02\u573a\u60c5\u62a5",
+            "titleKey": "screen.BMP-03",
+            "type": "head"
+          },
+          {
+            "can_trigger": false,
+            "collection_owner": "CTH",
+            "collection_runtime": {
+              "reason": "COLLECTOR_RUN_SCOPE_NOT_VERIFIED",
+              "state": "UNKNOWN"
+            },
+            "consumer": "BMP",
+            "count_complete": true,
+            "coverage": "NOT_VERIFIED",
+            "description": "\u4ec5\u663e\u793a\u5f53\u524d\u6388\u6743\u8303\u56f4\u5185\u6709\u7b7e\u540d\u6765\u6e90\u4f9d\u636e\u7684\u8bb0\u5f55\uff1b\u6765\u6e90\u8ba1\u6570\u4e0d\u662f\u5e02\u573a\u6d1e\u5bdf\u6216\u91c7\u96c6\u6210\u529f\u7387\u3002",
+            "endpoint": "",
+            "external_write": false,
+            "items": [
+              {
+                "can_attempt": false,
+                "form_selectable": false,
+                "manual_collection_enabled": false,
+                "observed_source_count": 2,
+                "platform": "web_rss",
+                "platform_id": "web_rss",
+                "source_references": [
+                  {
+                    "canonical_id": "can-synthetic-note-0",
+                    "scope_evidence": {
+                      "id": 1,
+                      "integrity": {
+                        "algorithm": "hmac-sha256",
+                        "assurance": "writer-authenticated",
+                        "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                        "integrity_version": 2,
+                        "lineage_verified": true,
+                        "verified": true
+                      },
+                      "source_id": "synthetic-note-0",
+                      "stored_scope": {
+                        "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                        "domain_id": "zbmp",
+                        "product_id": "ZBMP",
+                        "scope_status": "VERIFIED",
+                        "subject_id": ""
+                      }
+                    },
+                    "source_id": "synthetic-note-0"
+                  },
+                  {
+                    "canonical_id": "can-synthetic-note-1",
+                    "scope_evidence": {
+                      "id": 3,
+                      "integrity": {
+                        "algorithm": "hmac-sha256",
+                        "assurance": "writer-authenticated",
+                        "digest": "bec04d6c92c975bcc1208582b0fad803350507efac74040c68e4958112311560",
+                        "integrity_version": 2,
+                        "lineage_verified": true,
+                        "verified": true
+                      },
+                      "source_id": "synthetic-note-1",
+                      "stored_scope": {
+                        "brand_focus_id": "BRAND-9f6c564a9d161e5526493b42",
+                        "domain_id": "zbmp",
+                        "product_id": "ZBMP",
+                        "scope_status": "VERIFIED",
+                        "subject_id": ""
+                      }
+                    },
+                    "source_id": "synthetic-note-1"
+                  }
+                ]
+              }
+            ],
+            "manual_only": true,
+            "product_will_not_publish": true,
+            "read_only": true,
+            "rejected_count": 0,
+            "source_count": 2,
+            "source_endpoint": "",
+            "source_freshness": "UNKNOWN",
+            "state": "ready",
+            "title": "\u5e73\u53f0\u6765\u6e90 \u00b7 \u5f53\u524d\u54c1\u724c\u8303\u56f4\u53ea\u8bfb\u6d88\u8d39",
+            "truncated": false,
+            "type": "platforms"
+          },
+          {
+            "columns": [
+              {
+                "key": "title",
+                "label": "\u6807\u9898"
+              },
+              {
+                "key": "platform",
+                "label": "\u6765\u6e90\u5e73\u53f0"
+              },
+              {
+                "key": "source_type",
+                "label": "\u6765\u6e90\u7c7b\u578b"
+              }
+            ],
+            "rows": [
+              {
+                "id": "can-synthetic-note-0",
+                "platform": "web_rss",
+                "scope_evidence": {
+                  "id": 1,
+                  "integrity": {
+                    "algorithm": "hmac-sha256",
+                    "assurance": "writer-authenticated",
+                    "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                    "integrity_version": 2,
+                    "lineage_verified": true,
+                    "verified": true
+                  },
+                  "source_id": "synthetic-note-0",
+                  "stored_scope": {
+                    "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                    "domain_id": "zbmp",
+                    "product_id": "ZBMP",
+                    "scope_status": "VERIFIED",
+                    "subject_id": ""
+                  }
+                },
+                "source_type": "note",
+                "title": "Synthetic signed observation 0"
+              },
+              {
+                "id": "can-synthetic-note-1",
+                "platform": "web_rss",
+                "scope_evidence": {
+                  "id": 3,
+                  "integrity": {
+                    "algorithm": "hmac-sha256",
+                    "assurance": "writer-authenticated",
+                    "digest": "bec04d6c92c975bcc1208582b0fad803350507efac74040c68e4958112311560",
+                    "integrity_version": 2,
+                    "lineage_verified": true,
+                    "verified": true
+                  },
+                  "source_id": "synthetic-note-1",
+                  "stored_scope": {
+                    "brand_focus_id": "BRAND-9f6c564a9d161e5526493b42",
+                    "domain_id": "zbmp",
+                    "product_id": "ZBMP",
+                    "scope_status": "VERIFIED",
+                    "subject_id": ""
+                  }
+                },
+                "source_type": "note",
+                "title": "Synthetic signed observation 1"
+              }
+            ],
+            "state": "ready",
+            "title": "\u5f53\u524d\u8303\u56f4\u5e02\u573a\u6765\u6e90\u8d44\u6599",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_context": {
+          "brand_focus_id": null,
+          "domain_id": "BMP",
+          "mode": "GLOBAL_ALL",
+          "product_id": "ZBMP",
+          "subject_id": null
+        },
+        "source_observation_contract": "lumenis.bmp03-source-observations.v1",
+        "source_observations": [
+          {
+            "id": "can-synthetic-note-0",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-0",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "source_type": "note",
+            "title": "Synthetic signed observation 0"
+          },
+          {
+            "id": "can-synthetic-note-1",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 3,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "bec04d6c92c975bcc1208582b0fad803350507efac74040c68e4958112311560",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-1",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-9f6c564a9d161e5526493b42",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "source_type": "note",
+            "title": "Synthetic signed observation 1"
+          }
+        ],
+        "source_read_binding": {
+          "actor_id": null,
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": null,
+          "canonical_scope": "GLOBAL_ALL",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": null
+        },
+        "truth": {
+          "classification": "source observations, not automatically verified market facts",
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "insight_state": "NOT_COMPUTED",
+          "legacy_asset_scope": "UNKNOWN_NOT_ASSIGNED",
+          "product_id": "ZBMP",
+          "rejected_count": 0,
+          "source_count": 2,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "local-focus",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-03",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_id": null,
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:08",
+        "ok": true,
+        "screen": "BMP-03",
+        "sections": [
+          {
+            "desc": "\u884c\u4e1a\u8d8b\u52bf\u3001\u54c1\u7c7b\u673a\u4f1a\u4e0e\u5916\u90e8\u60c5\u62a5\uff0c\u533a\u5206\u5df2\u786e\u8ba4\u60c5\u62a5\u4e0e\u5f85\u6838\u5b9e\u7ebf\u7d22\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u5e02\u573a\u60c5\u62a5",
+            "titleKey": "screen.BMP-03",
+            "type": "head"
+          },
+          {
+            "can_trigger": false,
+            "collection_owner": "CTH",
+            "collection_runtime": {
+              "reason": "COLLECTOR_RUN_SCOPE_NOT_VERIFIED",
+              "state": "UNKNOWN"
+            },
+            "consumer": "BMP",
+            "count_complete": true,
+            "coverage": "NOT_VERIFIED",
+            "description": "\u4ec5\u663e\u793a\u5f53\u524d\u6388\u6743\u8303\u56f4\u5185\u6709\u7b7e\u540d\u6765\u6e90\u4f9d\u636e\u7684\u8bb0\u5f55\uff1b\u6765\u6e90\u8ba1\u6570\u4e0d\u662f\u5e02\u573a\u6d1e\u5bdf\u6216\u91c7\u96c6\u6210\u529f\u7387\u3002",
+            "endpoint": "",
+            "external_write": false,
+            "items": [
+              {
+                "can_attempt": false,
+                "form_selectable": false,
+                "manual_collection_enabled": false,
+                "observed_source_count": 1,
+                "platform": "web_rss",
+                "platform_id": "web_rss",
+                "source_references": [
+                  {
+                    "canonical_id": "can-synthetic-note-0",
+                    "scope_evidence": {
+                      "id": 1,
+                      "integrity": {
+                        "algorithm": "hmac-sha256",
+                        "assurance": "writer-authenticated",
+                        "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                        "integrity_version": 2,
+                        "lineage_verified": true,
+                        "verified": true
+                      },
+                      "source_id": "synthetic-note-0",
+                      "stored_scope": {
+                        "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                        "domain_id": "zbmp",
+                        "product_id": "ZBMP",
+                        "scope_status": "VERIFIED",
+                        "subject_id": ""
+                      }
+                    },
+                    "source_id": "synthetic-note-0"
+                  }
+                ]
+              }
+            ],
+            "manual_only": true,
+            "product_will_not_publish": true,
+            "read_only": true,
+            "rejected_count": 0,
+            "source_count": 1,
+            "source_endpoint": "",
+            "source_freshness": "UNKNOWN",
+            "state": "ready",
+            "title": "\u5e73\u53f0\u6765\u6e90 \u00b7 \u5f53\u524d\u54c1\u724c\u8303\u56f4\u53ea\u8bfb\u6d88\u8d39",
+            "truncated": false,
+            "type": "platforms"
+          },
+          {
+            "columns": [
+              {
+                "key": "title",
+                "label": "\u6807\u9898"
+              },
+              {
+                "key": "platform",
+                "label": "\u6765\u6e90\u5e73\u53f0"
+              },
+              {
+                "key": "source_type",
+                "label": "\u6765\u6e90\u7c7b\u578b"
+              }
+            ],
+            "rows": [
+              {
+                "id": "can-synthetic-note-0",
+                "platform": "web_rss",
+                "scope_evidence": {
+                  "id": 1,
+                  "integrity": {
+                    "algorithm": "hmac-sha256",
+                    "assurance": "writer-authenticated",
+                    "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                    "integrity_version": 2,
+                    "lineage_verified": true,
+                    "verified": true
+                  },
+                  "source_id": "synthetic-note-0",
+                  "stored_scope": {
+                    "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                    "domain_id": "zbmp",
+                    "product_id": "ZBMP",
+                    "scope_status": "VERIFIED",
+                    "subject_id": ""
+                  }
+                },
+                "source_type": "note",
+                "title": "Synthetic signed observation 0"
+              }
+            ],
+            "state": "ready",
+            "title": "\u5f53\u524d\u8303\u56f4\u5e02\u573a\u6765\u6e90\u8d44\u6599",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_context": {
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "domain_id": "BMP",
+          "mode": "FOCUS",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "source_observation_contract": "lumenis.bmp03-source-observations.v1",
+        "source_observations": [
+          {
+            "id": "can-synthetic-note-0",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-0",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "source_type": "note",
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "source_read_binding": {
+          "actor_id": null,
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "truth": {
+          "classification": "source observations, not automatically verified market facts",
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "insight_state": "NOT_COMPUTED",
+          "legacy_asset_scope": "UNKNOWN_NOT_ASSIGNED",
+          "product_id": "ZBMP",
+          "rejected_count": 0,
+          "source_count": 1,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "account-focus",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-03",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:08",
+        "ok": true,
+        "screen": "BMP-03",
+        "sections": [
+          {
+            "desc": "\u884c\u4e1a\u8d8b\u52bf\u3001\u54c1\u7c7b\u673a\u4f1a\u4e0e\u5916\u90e8\u60c5\u62a5\uff0c\u533a\u5206\u5df2\u786e\u8ba4\u60c5\u62a5\u4e0e\u5f85\u6838\u5b9e\u7ebf\u7d22\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u5e02\u573a\u60c5\u62a5",
+            "titleKey": "screen.BMP-03",
+            "type": "head"
+          },
+          {
+            "can_trigger": false,
+            "collection_owner": "CTH",
+            "collection_runtime": {
+              "reason": "COLLECTOR_RUN_SCOPE_NOT_VERIFIED",
+              "state": "UNKNOWN"
+            },
+            "consumer": "BMP",
+            "count_complete": true,
+            "coverage": "NOT_VERIFIED",
+            "description": "\u4ec5\u663e\u793a\u5f53\u524d\u6388\u6743\u8303\u56f4\u5185\u6709\u7b7e\u540d\u6765\u6e90\u4f9d\u636e\u7684\u8bb0\u5f55\uff1b\u6765\u6e90\u8ba1\u6570\u4e0d\u662f\u5e02\u573a\u6d1e\u5bdf\u6216\u91c7\u96c6\u6210\u529f\u7387\u3002",
+            "endpoint": "",
+            "external_write": false,
+            "items": [
+              {
+                "can_attempt": false,
+                "form_selectable": false,
+                "manual_collection_enabled": false,
+                "observed_source_count": 1,
+                "platform": "web_rss",
+                "platform_id": "web_rss",
+                "source_references": [
+                  {
+                    "canonical_id": "can-synthetic-note-0",
+                    "scope_evidence": {
+                      "id": 1,
+                      "integrity": {
+                        "algorithm": "hmac-sha256",
+                        "assurance": "writer-authenticated",
+                        "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                        "integrity_version": 2,
+                        "lineage_verified": true,
+                        "verified": true
+                      },
+                      "source_id": "synthetic-note-0",
+                      "stored_scope": {
+                        "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                        "domain_id": "zbmp",
+                        "product_id": "ZBMP",
+                        "scope_status": "VERIFIED",
+                        "subject_id": ""
+                      }
+                    },
+                    "source_id": "synthetic-note-0"
+                  }
+                ]
+              }
+            ],
+            "manual_only": true,
+            "product_will_not_publish": true,
+            "read_only": true,
+            "rejected_count": 0,
+            "source_count": 1,
+            "source_endpoint": "",
+            "source_freshness": "UNKNOWN",
+            "state": "ready",
+            "title": "\u5e73\u53f0\u6765\u6e90 \u00b7 \u5f53\u524d\u54c1\u724c\u8303\u56f4\u53ea\u8bfb\u6d88\u8d39",
+            "truncated": false,
+            "type": "platforms"
+          },
+          {
+            "columns": [
+              {
+                "key": "title",
+                "label": "\u6807\u9898"
+              },
+              {
+                "key": "platform",
+                "label": "\u6765\u6e90\u5e73\u53f0"
+              },
+              {
+                "key": "source_type",
+                "label": "\u6765\u6e90\u7c7b\u578b"
+              }
+            ],
+            "rows": [
+              {
+                "id": "can-synthetic-note-0",
+                "platform": "web_rss",
+                "scope_evidence": {
+                  "id": 1,
+                  "integrity": {
+                    "algorithm": "hmac-sha256",
+                    "assurance": "writer-authenticated",
+                    "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                    "integrity_version": 2,
+                    "lineage_verified": true,
+                    "verified": true
+                  },
+                  "source_id": "synthetic-note-0",
+                  "stored_scope": {
+                    "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                    "domain_id": "zbmp",
+                    "product_id": "ZBMP",
+                    "scope_status": "VERIFIED",
+                    "subject_id": ""
+                  }
+                },
+                "source_type": "note",
+                "title": "Synthetic signed observation 0"
+              }
+            ],
+            "state": "ready",
+            "title": "\u5f53\u524d\u8303\u56f4\u5e02\u573a\u6765\u6e90\u8d44\u6599",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_context": {
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "domain_id": "BMP",
+          "mode": "FOCUS",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "source_observation_contract": "lumenis.bmp03-source-observations.v1",
+        "source_observations": [
+          {
+            "id": "can-synthetic-note-0",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-0",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "source_type": "note",
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "source_read_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "truth": {
+          "classification": "source observations, not automatically verified market facts",
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "insight_state": "NOT_COMPUTED",
+          "legacy_asset_scope": "UNKNOWN_NOT_ASSIGNED",
+          "product_id": "ZBMP",
+          "rejected_count": 0,
+          "source_count": 1,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "transport-reject:Host",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "transport-reject:Origin",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "transport-reject:Forwarded",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "transport-reject:X-Forwarded-For",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "transport-reject:Authorization",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "transport-reject:Cookie",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "account-scope-reject",
+      "status": 403,
+      "body": {
+        "code": "SUBJECT_SCOPE_DENIED",
+        "error": "\u6ca1\u6709\u8bfb\u53d6\u8be5\u4e3b\u4f53\u8303\u56f4\u7684\u6743\u9650",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "account-scope-reject",
+      "status": 400,
+      "body": {
+        "code": "INVALID_CONTEXT",
+        "error": "\u9700\u8981\u6709\u6548\u7684\u54c1\u724c\u5173\u6ce8\u8303\u56f4",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "account-scope-reject",
+      "status": 403,
+      "body": {
+        "code": "SUBJECT_SCOPE_DENIED",
+        "error": "\u5f53\u524d\u54c1\u724c\u8303\u56f4\u4e0d\u53ef\u8bfb\u53d6",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "closed-workspace-forged-labels",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "local-global",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-04",
+          "unavailable": []
+        },
+        "bound": true,
+        "generated_at": "2026-10-17T22:40:08",
+        "global_binding": {
+          "actor_id": null,
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": null,
+          "canonical_scope": "GLOBAL_ALL",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": null
+        },
+        "observation_context": {
+          "actor_id": null,
+          "brand_focus_id": null,
+          "canonical_scope": "GLOBAL_ALL",
+          "domain_id": "BMP",
+          "product_id": "ZBMP",
+          "subject_id": null
+        },
+        "observation_contract": "lumenis.bmp04-source-observations.v1",
+        "observation_read_binding": {
+          "actor_id": null,
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": null,
+          "canonical_scope": "GLOBAL_ALL",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": null
+        },
+        "ok": true,
+        "screen": "BMP-04",
+        "sections": [
+          {
+            "desc": "\u6e20\u9053\u00d7\u5185\u5bb9\u00d7\u65f6\u6bb5\u7684\u4f20\u64ad\u8868\u73b0\u4e0e\u8f6c\u5316\u6f0f\u6597\uff0c\u7edf\u4e00\u53e3\u5f84\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u4f20\u64ad\u5206\u6790",
+            "titleKey": "screen.BMP-04",
+            "type": "head"
+          },
+          {
+            "items": [
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "trend",
+                "id": "bmp04.total",
+                "label": "\u5df2\u89c2\u6d4b\u6e90\u8bb0\u5f55",
+                "source": "brand_propagation.read_scoped_propagation",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 2
+              },
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "event",
+                "id": "bmp04.events",
+                "label": "\u5f53\u524d\u8303\u56f4\u7b56\u5c55\u4e8b\u4ef6",
+                "source": "database.get_events_curated",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 2
+              }
+            ],
+            "state": "ready",
+            "type": "kpis"
+          },
+          {
+            "items": [
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 1,
+                "evidence": "EV-2",
+                "evidence_ref": "EV-2",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 0"
+              },
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 2,
+                "evidence": "EV-4",
+                "evidence_ref": "EV-4",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 1"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 2,
+              "observed_returned_count": 2,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "scanned_count": 2,
+              "truncated": false
+            },
+            "state": "ready",
+            "type": "events"
+          },
+          {
+            "columns": [
+              {
+                "key": "platform",
+                "label": "\u5e73\u53f0"
+              },
+              {
+                "key": "count",
+                "label": "\u8bb0\u5f55"
+              }
+            ],
+            "rows": [
+              {
+                "count": 2,
+                "platform": "web_rss"
+              }
+            ],
+            "state": "ready",
+            "title": "\u6e90\u8bb0\u5f55\u5e73\u53f0\u5206\u5e03",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_observations": [
+          {
+            "id": "can-synthetic-note-0",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-0",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "title": "Synthetic signed observation 0"
+          },
+          {
+            "id": "can-synthetic-note-1",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 3,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "bec04d6c92c975bcc1208582b0fad803350507efac74040c68e4958112311560",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-1",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-9f6c564a9d161e5526493b42",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "title": "Synthetic signed observation 1"
+          }
+        ],
+        "truth": {
+          "analysis_state": "NOT_COMPUTED",
+          "coverage": "NOT_VERIFIED",
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "event_read_complete": true,
+          "event_returned_count": 2,
+          "event_scanned_count": 2,
+          "heat": null,
+          "legacy_event_scope": "UNKNOWN_NOT_ASSIGNED",
+          "method": "signed-source-observations-and-curated-events:v1",
+          "observed_sentiment_counts": {
+            "negative": 2,
+            "neutral": 0,
+            "positive": 0,
+            "unknown": 0
+          },
+          "observed_source_count": 2,
+          "platform_counts": {
+            "web_rss": 2
+          },
+          "product_id": "ZBMP",
+          "reach": null,
+          "rejected_event_count": 0,
+          "rejected_source_count": 0,
+          "source_count": 2,
+          "source_read_complete": true,
+          "source_refs": [
+            {
+              "canonical_id": "can-synthetic-note-0",
+              "scope_evidence": {
+                "id": 1,
+                "integrity": {
+                  "algorithm": "hmac-sha256",
+                  "assurance": "writer-authenticated",
+                  "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                  "integrity_version": 2,
+                  "lineage_verified": true,
+                  "verified": true
+                },
+                "source_id": "synthetic-note-0",
+                "stored_scope": {
+                  "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                  "domain_id": "zbmp",
+                  "product_id": "ZBMP",
+                  "scope_status": "VERIFIED",
+                  "subject_id": ""
+                }
+              }
+            },
+            {
+              "canonical_id": "can-synthetic-note-1",
+              "scope_evidence": {
+                "id": 3,
+                "integrity": {
+                  "algorithm": "hmac-sha256",
+                  "assurance": "writer-authenticated",
+                  "digest": "bec04d6c92c975bcc1208582b0fad803350507efac74040c68e4958112311560",
+                  "integrity_version": 2,
+                  "lineage_verified": true,
+                  "verified": true
+                },
+                "source_id": "synthetic-note-1",
+                "stored_scope": {
+                  "brand_focus_id": "BRAND-9f6c564a9d161e5526493b42",
+                  "domain_id": "zbmp",
+                  "product_id": "ZBMP",
+                  "scope_status": "VERIFIED",
+                  "subject_id": ""
+                }
+              }
+            }
+          ],
+          "source_truncated": false,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "local-focus",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-04",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_id": null,
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:08",
+        "observation_context": {
+          "actor_id": null,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "domain_id": "BMP",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observation_contract": "lumenis.bmp04-source-observations.v1",
+        "observation_read_binding": {
+          "actor_id": null,
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "ok": true,
+        "screen": "BMP-04",
+        "sections": [
+          {
+            "desc": "\u6e20\u9053\u00d7\u5185\u5bb9\u00d7\u65f6\u6bb5\u7684\u4f20\u64ad\u8868\u73b0\u4e0e\u8f6c\u5316\u6f0f\u6597\uff0c\u7edf\u4e00\u53e3\u5f84\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u4f20\u64ad\u5206\u6790",
+            "titleKey": "screen.BMP-04",
+            "type": "head"
+          },
+          {
+            "items": [
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "trend",
+                "id": "bmp04.total",
+                "label": "\u5df2\u89c2\u6d4b\u6e90\u8bb0\u5f55",
+                "source": "brand_propagation.read_scoped_propagation",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              },
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "event",
+                "id": "bmp04.events",
+                "label": "\u5f53\u524d\u8303\u56f4\u7b56\u5c55\u4e8b\u4ef6",
+                "source": "database.get_events_curated",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              }
+            ],
+            "state": "ready",
+            "type": "kpis"
+          },
+          {
+            "items": [
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 1,
+                "evidence": "EV-2",
+                "evidence_ref": "EV-2",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "scanned_count": 1,
+              "truncated": false
+            },
+            "state": "ready",
+            "type": "events"
+          },
+          {
+            "columns": [
+              {
+                "key": "platform",
+                "label": "\u5e73\u53f0"
+              },
+              {
+                "key": "count",
+                "label": "\u8bb0\u5f55"
+              }
+            ],
+            "rows": [
+              {
+                "count": 1,
+                "platform": "web_rss"
+              }
+            ],
+            "state": "ready",
+            "title": "\u6e90\u8bb0\u5f55\u5e73\u53f0\u5206\u5e03",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_observations": [
+          {
+            "id": "can-synthetic-note-0",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-0",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "truth": {
+          "analysis_state": "NOT_COMPUTED",
+          "coverage": "NOT_VERIFIED",
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "event_read_complete": true,
+          "event_returned_count": 1,
+          "event_scanned_count": 1,
+          "heat": null,
+          "legacy_event_scope": "UNKNOWN_NOT_ASSIGNED",
+          "method": "signed-source-observations-and-curated-events:v1",
+          "observed_sentiment_counts": {
+            "negative": 1,
+            "neutral": 0,
+            "positive": 0,
+            "unknown": 0
+          },
+          "observed_source_count": 1,
+          "platform_counts": {
+            "web_rss": 1
+          },
+          "product_id": "ZBMP",
+          "reach": null,
+          "rejected_event_count": 0,
+          "rejected_source_count": 0,
+          "source_count": 1,
+          "source_read_complete": true,
+          "source_refs": [
+            {
+              "canonical_id": "can-synthetic-note-0",
+              "scope_evidence": {
+                "id": 1,
+                "integrity": {
+                  "algorithm": "hmac-sha256",
+                  "assurance": "writer-authenticated",
+                  "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                  "integrity_version": 2,
+                  "lineage_verified": true,
+                  "verified": true
+                },
+                "source_id": "synthetic-note-0",
+                "stored_scope": {
+                  "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                  "domain_id": "zbmp",
+                  "product_id": "ZBMP",
+                  "scope_status": "VERIFIED",
+                  "subject_id": ""
+                }
+              }
+            }
+          ],
+          "source_truncated": false,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "account-focus",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-04",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:08",
+        "observation_context": {
+          "actor_id": 1,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "domain_id": "BMP",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observation_contract": "lumenis.bmp04-source-observations.v1",
+        "observation_read_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "ok": true,
+        "screen": "BMP-04",
+        "sections": [
+          {
+            "desc": "\u6e20\u9053\u00d7\u5185\u5bb9\u00d7\u65f6\u6bb5\u7684\u4f20\u64ad\u8868\u73b0\u4e0e\u8f6c\u5316\u6f0f\u6597\uff0c\u7edf\u4e00\u53e3\u5f84\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u4f20\u64ad\u5206\u6790",
+            "titleKey": "screen.BMP-04",
+            "type": "head"
+          },
+          {
+            "items": [
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "trend",
+                "id": "bmp04.total",
+                "label": "\u5df2\u89c2\u6d4b\u6e90\u8bb0\u5f55",
+                "source": "brand_propagation.read_scoped_propagation",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              },
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "event",
+                "id": "bmp04.events",
+                "label": "\u5f53\u524d\u8303\u56f4\u7b56\u5c55\u4e8b\u4ef6",
+                "source": "database.get_events_curated",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              }
+            ],
+            "state": "ready",
+            "type": "kpis"
+          },
+          {
+            "items": [
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 1,
+                "evidence": "EV-2",
+                "evidence_ref": "EV-2",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "scanned_count": 1,
+              "truncated": false
+            },
+            "state": "ready",
+            "type": "events"
+          },
+          {
+            "columns": [
+              {
+                "key": "platform",
+                "label": "\u5e73\u53f0"
+              },
+              {
+                "key": "count",
+                "label": "\u8bb0\u5f55"
+              }
+            ],
+            "rows": [
+              {
+                "count": 1,
+                "platform": "web_rss"
+              }
+            ],
+            "state": "ready",
+            "title": "\u6e90\u8bb0\u5f55\u5e73\u53f0\u5206\u5e03",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_observations": [
+          {
+            "id": "can-synthetic-note-0",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-0",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "truth": {
+          "analysis_state": "NOT_COMPUTED",
+          "coverage": "NOT_VERIFIED",
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "event_read_complete": true,
+          "event_returned_count": 1,
+          "event_scanned_count": 1,
+          "heat": null,
+          "legacy_event_scope": "UNKNOWN_NOT_ASSIGNED",
+          "method": "signed-source-observations-and-curated-events:v1",
+          "observed_sentiment_counts": {
+            "negative": 1,
+            "neutral": 0,
+            "positive": 0,
+            "unknown": 0
+          },
+          "observed_source_count": 1,
+          "platform_counts": {
+            "web_rss": 1
+          },
+          "product_id": "ZBMP",
+          "reach": null,
+          "rejected_event_count": 0,
+          "rejected_source_count": 0,
+          "source_count": 1,
+          "source_read_complete": true,
+          "source_refs": [
+            {
+              "canonical_id": "can-synthetic-note-0",
+              "scope_evidence": {
+                "id": 1,
+                "integrity": {
+                  "algorithm": "hmac-sha256",
+                  "assurance": "writer-authenticated",
+                  "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                  "integrity_version": 2,
+                  "lineage_verified": true,
+                  "verified": true
+                },
+                "source_id": "synthetic-note-0",
+                "stored_scope": {
+                  "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                  "domain_id": "zbmp",
+                  "product_id": "ZBMP",
+                  "scope_status": "VERIFIED",
+                  "subject_id": ""
+                }
+              }
+            }
+          ],
+          "source_truncated": false,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "transport-reject:Host",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "transport-reject:Origin",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "transport-reject:Forwarded",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "transport-reject:X-Forwarded-For",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "transport-reject:Authorization",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "transport-reject:Cookie",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "account-scope-reject",
+      "status": 403,
+      "body": {
+        "code": "SUBJECT_SCOPE_DENIED",
+        "error": "\u6ca1\u6709\u8bfb\u53d6\u8be5\u4e3b\u4f53\u8303\u56f4\u7684\u6743\u9650",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "account-scope-reject",
+      "status": 400,
+      "body": {
+        "code": "INVALID_CONTEXT",
+        "error": "\u9700\u8981\u6709\u6548\u7684\u54c1\u724c\u5173\u6ce8\u8303\u56f4",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "account-scope-reject",
+      "status": 403,
+      "body": {
+        "code": "SUBJECT_SCOPE_DENIED",
+        "error": "\u5f53\u524d\u54c1\u724c\u8303\u56f4\u4e0d\u53ef\u8bfb\u53d6",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "closed-workspace-forged-labels",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "local-global",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-09",
+          "unavailable": []
+        },
+        "bound": true,
+        "generated_at": "2026-10-17T22:40:08",
+        "global_binding": {
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": null,
+          "canonical_scope": "GLOBAL_ALL",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": null
+        },
+        "ok": true,
+        "report_artifact_contract": "lumenis.bmp09-report-artifacts.v1",
+        "report_authorization": {
+          "action": "read",
+          "context": {
+            "brand_focus_id": null,
+            "domain_id": "zbmp",
+            "global_scope": true,
+            "principal_kind": "local_workspace",
+            "principal_ref": "workspace:local",
+            "subject_id": null
+          },
+          "module": "reports"
+        },
+        "report_screen_binding": {
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": null,
+          "canonical_scope": "GLOBAL_ALL",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": null
+        },
+        "saved_artifacts": [],
+        "screen": "BMP-09",
+        "sections": [
+          {
+            "desc": "\u54c1\u724c\u8d44\u4ea7\u8bc4\u4f30\u3001\u5468\u671f\u62a5\u544a\u4e0e\u8bc4\u5206\uff0c\u7ed3\u8bba\u5747\u53ef\u56de\u6eaf\u8bc1\u636e\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u54c1\u724c\u62a5\u544a\u4e0e\u8bc4\u4f30",
+            "titleKey": "screen.BMP-09",
+            "type": "head"
+          },
+          {
+            "columns": [
+              {
+                "key": "title",
+                "label": "\u6807\u9898"
+              },
+              {
+                "key": "kind",
+                "label": "\u7c7b\u578b"
+              },
+              {
+                "key": "version",
+                "label": "\u7248\u672c"
+              },
+              {
+                "key": "source_count",
+                "label": "\u5f15\u7528\u6765\u6e90"
+              }
+            ],
+            "rows": [],
+            "state": "empty",
+            "title": "\u5f53\u524d\u8303\u56f4\u5df2\u4fdd\u5b58\u7814\u7a76\u4e0e\u62a5\u544a",
+            "type": "table"
+          },
+          {
+            "columns": [
+              {
+                "key": "job_id",
+                "label": "\u62a5\u544a"
+              },
+              {
+                "key": "evaluation_state",
+                "label": "\u8bc4\u4f30\u72b6\u6001"
+              }
+            ],
+            "resource_type": "source_brief_job",
+            "rows": [],
+            "state": "empty",
+            "title": "\u6765\u6e90\u7b80\u62a5 \u00b7 \u7ed1\u5b9a\u5f53\u524d\u62a5\u544a\u7248\u672c\u7684\u8bc4\u4f30",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_brief_artifacts": [],
+        "truth": {
+          "evaluation": "artifact-specific; storage is not evaluation",
+          "has_more": false,
+          "market_effect_state": "NOT_ESTABLISHED",
+          "next_cursor": null,
+          "saved_count": 0,
+          "scope": {
+            "brand_focus_id": null,
+            "domain_id": "zbmp",
+            "global_scope": true,
+            "subject_id": null
+          },
+          "source_brief_reports": {
+            "has_more": false,
+            "limit": 30,
+            "read_complete": true,
+            "rejected_count": 0,
+            "resource_type": "source_brief_job",
+            "returned_count": 0,
+            "scanned_count": 0,
+            "state": "EMPTY"
+          },
+          "unverified_candidates": 0,
+          "verification_complete": true
+        }
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "local-focus",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-09",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:08",
+        "ok": true,
+        "report_artifact_contract": "lumenis.bmp09-report-artifacts.v1",
+        "report_authorization": {
+          "action": "read",
+          "context": {
+            "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+            "domain_id": "zbmp",
+            "global_scope": false,
+            "principal_kind": "local_workspace",
+            "principal_ref": "workspace:local",
+            "subject_id": null
+          },
+          "module": "reports"
+        },
+        "report_screen_binding": {
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "saved_artifacts": [],
+        "screen": "BMP-09",
+        "sections": [
+          {
+            "desc": "\u54c1\u724c\u8d44\u4ea7\u8bc4\u4f30\u3001\u5468\u671f\u62a5\u544a\u4e0e\u8bc4\u5206\uff0c\u7ed3\u8bba\u5747\u53ef\u56de\u6eaf\u8bc1\u636e\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u54c1\u724c\u62a5\u544a\u4e0e\u8bc4\u4f30",
+            "titleKey": "screen.BMP-09",
+            "type": "head"
+          },
+          {
+            "columns": [
+              {
+                "key": "title",
+                "label": "\u6807\u9898"
+              },
+              {
+                "key": "kind",
+                "label": "\u7c7b\u578b"
+              },
+              {
+                "key": "version",
+                "label": "\u7248\u672c"
+              },
+              {
+                "key": "source_count",
+                "label": "\u5f15\u7528\u6765\u6e90"
+              }
+            ],
+            "rows": [],
+            "state": "empty",
+            "title": "\u5f53\u524d\u8303\u56f4\u5df2\u4fdd\u5b58\u7814\u7a76\u4e0e\u62a5\u544a",
+            "type": "table"
+          },
+          {
+            "columns": [
+              {
+                "key": "job_id",
+                "label": "\u62a5\u544a"
+              },
+              {
+                "key": "evaluation_state",
+                "label": "\u8bc4\u4f30\u72b6\u6001"
+              }
+            ],
+            "resource_type": "source_brief_job",
+            "rows": [],
+            "state": "empty",
+            "title": "\u6765\u6e90\u7b80\u62a5 \u00b7 \u7ed1\u5b9a\u5f53\u524d\u62a5\u544a\u7248\u672c\u7684\u8bc4\u4f30",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_brief_artifacts": [],
+        "truth": {
+          "evaluation": "artifact-specific; storage is not evaluation",
+          "has_more": false,
+          "market_effect_state": "NOT_ESTABLISHED",
+          "next_cursor": null,
+          "saved_count": 0,
+          "scope": {
+            "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+            "domain_id": "zbmp",
+            "global_scope": false,
+            "subject_id": null
+          },
+          "source_brief_reports": {
+            "has_more": false,
+            "limit": 30,
+            "read_complete": true,
+            "rejected_count": 0,
+            "resource_type": "source_brief_job",
+            "returned_count": 0,
+            "scanned_count": 0,
+            "state": "EMPTY"
+          },
+          "unverified_candidates": 0,
+          "verification_complete": true
+        }
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "account-focus",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-09",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:08",
+        "ok": true,
+        "report_artifact_contract": "lumenis.bmp09-report-artifacts.v1",
+        "report_authorization": {
+          "action": "read",
+          "context": {
+            "actor_id": 1,
+            "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+            "domain_id": "zbmp",
+            "global_scope": false,
+            "subject_id": null
+          },
+          "module": "reports"
+        },
+        "report_screen_binding": {
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "saved_artifacts": [
+          {
+            "assessment": "NOT_ESTABLISHED_BY_STORAGE",
+            "id": "ART-25e5849172234b0a",
+            "kind": "research",
+            "resource_type": "saved_work",
+            "sha256": "db76c5f6d9dd15f767795430bc02bc07166cf3b033f57513a26661e3d76f63bf",
+            "source_count": 0,
+            "title": "Synthetic saved research",
+            "version": 1
+          }
+        ],
+        "screen": "BMP-09",
+        "sections": [
+          {
+            "desc": "\u54c1\u724c\u8d44\u4ea7\u8bc4\u4f30\u3001\u5468\u671f\u62a5\u544a\u4e0e\u8bc4\u5206\uff0c\u7ed3\u8bba\u5747\u53ef\u56de\u6eaf\u8bc1\u636e\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u54c1\u724c\u62a5\u544a\u4e0e\u8bc4\u4f30",
+            "titleKey": "screen.BMP-09",
+            "type": "head"
+          },
+          {
+            "columns": [
+              {
+                "key": "title",
+                "label": "\u6807\u9898"
+              },
+              {
+                "key": "kind",
+                "label": "\u7c7b\u578b"
+              },
+              {
+                "key": "version",
+                "label": "\u7248\u672c"
+              },
+              {
+                "key": "source_count",
+                "label": "\u5f15\u7528\u6765\u6e90"
+              }
+            ],
+            "rows": [
+              {
+                "assessment": "NOT_ESTABLISHED_BY_STORAGE",
+                "id": "ART-25e5849172234b0a",
+                "kind": "research",
+                "sha256": "db76c5f6d9dd15f767795430bc02bc07166cf3b033f57513a26661e3d76f63bf",
+                "source_count": 0,
+                "title": "Synthetic saved research",
+                "version": 1
+              }
+            ],
+            "state": "ready",
+            "title": "\u5f53\u524d\u8303\u56f4\u5df2\u4fdd\u5b58\u7814\u7a76\u4e0e\u62a5\u544a",
+            "type": "table"
+          },
+          {
+            "columns": [
+              {
+                "key": "job_id",
+                "label": "\u62a5\u544a"
+              },
+              {
+                "key": "evaluation_state",
+                "label": "\u8bc4\u4f30\u72b6\u6001"
+              }
+            ],
+            "resource_type": "source_brief_job",
+            "rows": [
+              {
+                "artifact_hash": "ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                "evaluation_state": "recorded",
+                "evaluations": [
+                  {
+                    "evaluated_at": "2026-10-17T22:38:10",
+                    "evaluation_id": "56498d371608da1cfaf72f9e83a9c18f1dca9b42283e07ff315262780038357e",
+                    "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                    "metric_name": "multimodal_analysis_integrity",
+                    "status": "unknown"
+                  },
+                  {
+                    "evaluated_at": "2026-10-17T22:38:10",
+                    "evaluation_id": "2ee5da9eb8f510b59a447b6a61f8ff68336e0423b0572d8a7192ed91d5a79455",
+                    "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                    "metric_name": "source_evidence_grounding",
+                    "status": "pass"
+                  },
+                  {
+                    "evaluated_at": "2026-10-17T22:38:10",
+                    "evaluation_id": "2c2a30c9d2fd4cdae09549cfdd239072f6aa90813cd02728947e043b650acdaf",
+                    "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                    "metric_name": "report_artifact_integrity",
+                    "status": "pass"
+                  }
+                ],
+                "job_id": "brief-3bd159828545416697d2f1c8b099c3b3",
+                "resource_type": "source_brief_job",
+                "review_status": "HUMAN_PENDING",
+                "revision": null,
+                "source_count": 1
+              }
+            ],
+            "state": "ready",
+            "title": "\u6765\u6e90\u7b80\u62a5 \u00b7 \u7ed1\u5b9a\u5f53\u524d\u62a5\u544a\u7248\u672c\u7684\u8bc4\u4f30",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_brief_artifacts": [
+          {
+            "artifact_hash": "ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+            "evaluation_state": "recorded",
+            "evaluations": [
+              {
+                "evaluated_at": "2026-10-17T22:38:10",
+                "evaluation_id": "56498d371608da1cfaf72f9e83a9c18f1dca9b42283e07ff315262780038357e",
+                "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                "metric_name": "multimodal_analysis_integrity",
+                "status": "unknown"
+              },
+              {
+                "evaluated_at": "2026-10-17T22:38:10",
+                "evaluation_id": "2ee5da9eb8f510b59a447b6a61f8ff68336e0423b0572d8a7192ed91d5a79455",
+                "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                "metric_name": "source_evidence_grounding",
+                "status": "pass"
+              },
+              {
+                "evaluated_at": "2026-10-17T22:38:10",
+                "evaluation_id": "2c2a30c9d2fd4cdae09549cfdd239072f6aa90813cd02728947e043b650acdaf",
+                "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                "metric_name": "report_artifact_integrity",
+                "status": "pass"
+              }
+            ],
+            "job_id": "brief-3bd159828545416697d2f1c8b099c3b3",
+            "resource_type": "source_brief_job",
+            "review_status": "HUMAN_PENDING",
+            "revision": null,
+            "source_count": 1
+          }
+        ],
+        "truth": {
+          "evaluation": "artifact-specific; storage is not evaluation",
+          "has_more": false,
+          "market_effect_state": "NOT_ESTABLISHED",
+          "next_cursor": null,
+          "saved_count": 1,
+          "scope": {
+            "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+            "domain_id": "zbmp",
+            "global_scope": false,
+            "subject_id": null
+          },
+          "source_brief_reports": {
+            "has_more": false,
+            "limit": 30,
+            "read_complete": true,
+            "rejected_count": 0,
+            "resource_type": "source_brief_job",
+            "returned_count": 1,
+            "scanned_count": 1,
+            "state": "READY"
+          },
+          "unverified_candidates": 0,
+          "verification_complete": true
+        }
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "transport-reject:Host",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "transport-reject:Origin",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "transport-reject:Forwarded",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "transport-reject:X-Forwarded-For",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "transport-reject:Authorization",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "transport-reject:Cookie",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "account-scope-reject",
+      "status": 403,
+      "body": {
+        "code": "SUBJECT_SCOPE_DENIED",
+        "error": "\u6ca1\u6709\u8bfb\u53d6\u8be5\u4e3b\u4f53\u8303\u56f4\u7684\u6743\u9650",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "account-scope-reject",
+      "status": 400,
+      "body": {
+        "code": "INVALID_CONTEXT",
+        "error": "\u9700\u8981\u6709\u6548\u7684\u54c1\u724c\u5173\u6ce8\u8303\u56f4",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "account-scope-reject",
+      "status": 403,
+      "body": {
+        "code": "SUBJECT_SCOPE_DENIED",
+        "error": "\u5f53\u524d\u54c1\u724c\u8303\u56f4\u4e0d\u53ef\u8bfb\u53d6",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "closed-workspace-forged-labels",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "local-global",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-10",
+          "unavailable": []
+        },
+        "bound": true,
+        "generated_at": "2026-10-17T22:40:08",
+        "observation_context": {
+          "actor_id": null,
+          "brand_focus_id": null,
+          "canonical_scope": "GLOBAL_ALL",
+          "domain_id": "BMP",
+          "product_id": "ZBMP",
+          "subject_id": null
+        },
+        "observation_contract": "lumenis.bmp10-observations.v1",
+        "observation_read_binding": {
+          "actor_id": null,
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": null,
+          "canonical_scope": "GLOBAL_ALL",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": null
+        },
+        "observed_events": [
+          {
+            "date": null,
+            "id": 1,
+            "scope_evidence": {
+              "id": 2,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "c26c545d44f900d54ed3eff1fd7a9273761d32714d478d52c9291a46e18b3d99",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "status": "active",
+            "title": "Synthetic curated event 0"
+          },
+          {
+            "date": null,
+            "id": 2,
+            "scope_evidence": {
+              "id": 4,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "91f42f5451638927ef0462a56519d5d21ca01f18490547060a4295d317654002",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-9f6c564a9d161e5526493b42",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "status": "active",
+            "title": "Synthetic curated event 1"
+          }
+        ],
+        "observed_risks": [
+          {
+            "date": null,
+            "id": "synthetic-note-0",
+            "level": "high",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "score": null,
+            "title": "Synthetic signed observation 0"
+          },
+          {
+            "date": null,
+            "id": "synthetic-note-1",
+            "level": "high",
+            "scope_evidence": {
+              "id": 3,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "bec04d6c92c975bcc1208582b0fad803350507efac74040c68e4958112311560",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-9f6c564a9d161e5526493b42",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "score": null,
+            "title": "Synthetic signed observation 1"
+          }
+        ],
+        "ok": true,
+        "screen": "BMP-10",
+        "sections": [
+          {
+            "desc": "\u54c1\u724c\u4fa7\u98ce\u9669/\u8206\u60c5\u4e8b\u4ef6\u7684\u76d1\u6d4b\u3001\u5206\u7ea7\u4e0e\u5904\u7f6e\uff0c\u590d\u7528\u7edf\u4e00\u98ce\u9669\u5f15\u64ce\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u54c1\u724c\u98ce\u9669\u4e0e\u4e8b\u4ef6",
+            "titleKey": "screen.BMP-10",
+            "type": "head"
+          },
+          {
+            "items": [
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "event",
+                "id": "bmp10.events",
+                "label": "\u5f53\u524d\u8303\u56f4\u5df2\u89c2\u6d4b\u7b56\u5c55\u4e8b\u4ef6",
+                "source": "database.get_events_curated",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 2
+              },
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "risk",
+                "id": "bmp10.high_risk",
+                "label": "\u9ad8\u98ce\u9669\u8bb0\u5f55",
+                "source": "database.get_scoped_event_source_rows",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 2
+              }
+            ],
+            "state": "ready",
+            "type": "kpis"
+          },
+          {
+            "items": [
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 1,
+                "evidence": "EV-2",
+                "evidence_ref": "EV-2",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 0"
+              },
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 2,
+                "evidence": "EV-4",
+                "evidence_ref": "EV-4",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 1"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 2,
+              "observed_returned_count": 2,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "scanned_count": 2,
+              "truncated": false
+            },
+            "state": "ready",
+            "type": "events"
+          },
+          {
+            "items": [
+              {
+                "desc": "Synthetic engineering input; classification not verified",
+                "evidence": "1",
+                "level": "high",
+                "score": null,
+                "title": "Synthetic signed observation 0"
+              },
+              {
+                "desc": "Synthetic engineering input; classification not verified",
+                "evidence": "3",
+                "level": "high",
+                "score": null,
+                "title": "Synthetic signed observation 1"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 2,
+              "observed_returned_count": 2,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "risk_truncated": false,
+              "source_truncated": false
+            },
+            "state": "ready",
+            "type": "risks"
+          }
+        ],
+        "source": "runtime",
+        "truth": {
+          "analysis_state": "NOT_COMPUTED",
+          "counts_are_returned_observations": true,
+          "coverage": {
+            "rejected_sources": 0,
+            "risk_observed_count": 2,
+            "risk_read_complete": true,
+            "risk_returned_count": 2,
+            "risk_truncated": false,
+            "source_read_complete": true,
+            "source_truncated": false
+          },
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "event_read": {
+            "display_truncated": false,
+            "displayed_count": 2,
+            "observed_returned_count": 2,
+            "read_complete": true,
+            "reasons": [],
+            "rejected_count": 0,
+            "scanned_count": 2,
+            "truncated": false
+          },
+          "product_id": "ZBMP"
+        }
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "local-focus",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-10",
+          "unavailable": []
+        },
+        "bound": true,
+        "generated_at": "2026-10-17T22:40:08",
+        "observation_context": {
+          "actor_id": null,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "domain_id": "BMP",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observation_contract": "lumenis.bmp10-observations.v1",
+        "observation_read_binding": {
+          "actor_id": null,
+          "actor_scope": "anonymous_read",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "local-workspace-read-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "read_transport": {
+            "action": "read",
+            "contract": "lumenis.local-read-transport.v1",
+            "module": "brand_market_overview",
+            "verified": true
+          },
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observed_events": [
+          {
+            "date": null,
+            "id": 1,
+            "scope_evidence": {
+              "id": 2,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "c26c545d44f900d54ed3eff1fd7a9273761d32714d478d52c9291a46e18b3d99",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "status": "active",
+            "title": "Synthetic curated event 0"
+          }
+        ],
+        "observed_risks": [
+          {
+            "date": null,
+            "id": "synthetic-note-0",
+            "level": "high",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "score": null,
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "ok": true,
+        "screen": "BMP-10",
+        "sections": [
+          {
+            "desc": "\u54c1\u724c\u4fa7\u98ce\u9669/\u8206\u60c5\u4e8b\u4ef6\u7684\u76d1\u6d4b\u3001\u5206\u7ea7\u4e0e\u5904\u7f6e\uff0c\u590d\u7528\u7edf\u4e00\u98ce\u9669\u5f15\u64ce\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u54c1\u724c\u98ce\u9669\u4e0e\u4e8b\u4ef6",
+            "titleKey": "screen.BMP-10",
+            "type": "head"
+          },
+          {
+            "items": [
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "event",
+                "id": "bmp10.events",
+                "label": "\u5f53\u524d\u8303\u56f4\u5df2\u89c2\u6d4b\u7b56\u5c55\u4e8b\u4ef6",
+                "source": "database.get_events_curated",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              },
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "risk",
+                "id": "bmp10.high_risk",
+                "label": "\u9ad8\u98ce\u9669\u8bb0\u5f55",
+                "source": "database.get_scoped_event_source_rows",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              }
+            ],
+            "state": "ready",
+            "type": "kpis"
+          },
+          {
+            "items": [
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 1,
+                "evidence": "EV-2",
+                "evidence_ref": "EV-2",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "scanned_count": 1,
+              "truncated": false
+            },
+            "state": "ready",
+            "type": "events"
+          },
+          {
+            "items": [
+              {
+                "desc": "Synthetic engineering input; classification not verified",
+                "evidence": "1",
+                "level": "high",
+                "score": null,
+                "title": "Synthetic signed observation 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "risk_truncated": false,
+              "source_truncated": false
+            },
+            "state": "ready",
+            "type": "risks"
+          }
+        ],
+        "source": "runtime",
+        "truth": {
+          "analysis_state": "NOT_COMPUTED",
+          "counts_are_returned_observations": true,
+          "coverage": {
+            "rejected_sources": 0,
+            "risk_observed_count": 1,
+            "risk_read_complete": true,
+            "risk_returned_count": 1,
+            "risk_truncated": false,
+            "source_read_complete": true,
+            "source_truncated": false
+          },
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "event_read": {
+            "display_truncated": false,
+            "displayed_count": 1,
+            "observed_returned_count": 1,
+            "read_complete": true,
+            "reasons": [],
+            "rejected_count": 0,
+            "scanned_count": 1,
+            "truncated": false
+          },
+          "product_id": "ZBMP"
+        }
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "account-focus",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-10",
+          "unavailable": []
+        },
+        "bound": true,
+        "generated_at": "2026-10-17T22:40:08",
+        "observation_context": {
+          "actor_id": 1,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "domain_id": "BMP",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observation_contract": "lumenis.bmp10-observations.v1",
+        "observation_read_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observed_events": [
+          {
+            "date": null,
+            "id": 1,
+            "scope_evidence": {
+              "id": 2,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "c26c545d44f900d54ed3eff1fd7a9273761d32714d478d52c9291a46e18b3d99",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "status": "active",
+            "title": "Synthetic curated event 0"
+          }
+        ],
+        "observed_risks": [
+          {
+            "date": null,
+            "id": "synthetic-note-0",
+            "level": "high",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "score": null,
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "ok": true,
+        "screen": "BMP-10",
+        "sections": [
+          {
+            "desc": "\u54c1\u724c\u4fa7\u98ce\u9669/\u8206\u60c5\u4e8b\u4ef6\u7684\u76d1\u6d4b\u3001\u5206\u7ea7\u4e0e\u5904\u7f6e\uff0c\u590d\u7528\u7edf\u4e00\u98ce\u9669\u5f15\u64ce\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u54c1\u724c\u98ce\u9669\u4e0e\u4e8b\u4ef6",
+            "titleKey": "screen.BMP-10",
+            "type": "head"
+          },
+          {
+            "items": [
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "event",
+                "id": "bmp10.events",
+                "label": "\u5f53\u524d\u8303\u56f4\u5df2\u89c2\u6d4b\u7b56\u5c55\u4e8b\u4ef6",
+                "source": "database.get_events_curated",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              },
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "risk",
+                "id": "bmp10.high_risk",
+                "label": "\u9ad8\u98ce\u9669\u8bb0\u5f55",
+                "source": "database.get_scoped_event_source_rows",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              }
+            ],
+            "state": "ready",
+            "type": "kpis"
+          },
+          {
+            "items": [
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 1,
+                "evidence": "EV-2",
+                "evidence_ref": "EV-2",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "scanned_count": 1,
+              "truncated": false
+            },
+            "state": "ready",
+            "type": "events"
+          },
+          {
+            "items": [
+              {
+                "desc": "Synthetic engineering input; classification not verified",
+                "evidence": "1",
+                "level": "high",
+                "score": null,
+                "title": "Synthetic signed observation 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "risk_truncated": false,
+              "source_truncated": false
+            },
+            "state": "ready",
+            "type": "risks"
+          }
+        ],
+        "source": "runtime",
+        "truth": {
+          "analysis_state": "NOT_COMPUTED",
+          "counts_are_returned_observations": true,
+          "coverage": {
+            "rejected_sources": 0,
+            "risk_observed_count": 1,
+            "risk_read_complete": true,
+            "risk_returned_count": 1,
+            "risk_truncated": false,
+            "source_read_complete": true,
+            "source_truncated": false
+          },
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "event_read": {
+            "display_truncated": false,
+            "displayed_count": 1,
+            "observed_returned_count": 1,
+            "read_complete": true,
+            "reasons": [],
+            "rejected_count": 0,
+            "scanned_count": 1,
+            "truncated": false
+          },
+          "product_id": "ZBMP"
+        }
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "transport-reject:Host",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "transport-reject:Origin",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "transport-reject:Forwarded",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "transport-reject:X-Forwarded-For",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "transport-reject:Authorization",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "transport-reject:Cookie",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "account-scope-reject",
+      "status": 403,
+      "body": {
+        "code": "SUBJECT_SCOPE_DENIED",
+        "error": "\u6ca1\u6709\u8bfb\u53d6\u8be5\u4e3b\u4f53\u8303\u56f4\u7684\u6743\u9650",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "account-scope-reject",
+      "status": 400,
+      "body": {
+        "code": "INVALID_CONTEXT",
+        "error": "\u9700\u8981\u6709\u6548\u7684\u54c1\u724c\u5173\u6ce8\u8303\u56f4",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "account-scope-reject",
+      "status": 403,
+      "body": {
+        "code": "SUBJECT_SCOPE_DENIED",
+        "error": "\u5f53\u524d\u54c1\u724c\u8303\u56f4\u4e0d\u53ef\u8bfb\u53d6",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "closed-workspace-forged-labels",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u5f53\u524d\u8bf7\u6c42\u6ca1\u6709\u8bfb\u53d6\u6388\u6743",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "reports-owner-independent-denial",
+      "status": 403,
+      "body": {
+        "bound": false,
+        "code": "BMP_REPORT_SCOPE_DENIED",
+        "ok": false,
+        "screen": "BMP-09"
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "overview-remains-granted",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-03",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:08",
+        "ok": true,
+        "screen": "BMP-03",
+        "sections": [
+          {
+            "desc": "\u884c\u4e1a\u8d8b\u52bf\u3001\u54c1\u7c7b\u673a\u4f1a\u4e0e\u5916\u90e8\u60c5\u62a5\uff0c\u533a\u5206\u5df2\u786e\u8ba4\u60c5\u62a5\u4e0e\u5f85\u6838\u5b9e\u7ebf\u7d22\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u5e02\u573a\u60c5\u62a5",
+            "titleKey": "screen.BMP-03",
+            "type": "head"
+          },
+          {
+            "can_trigger": false,
+            "collection_owner": "CTH",
+            "collection_runtime": {
+              "reason": "COLLECTOR_RUN_SCOPE_NOT_VERIFIED",
+              "state": "UNKNOWN"
+            },
+            "consumer": "BMP",
+            "count_complete": true,
+            "coverage": "NOT_VERIFIED",
+            "description": "\u4ec5\u663e\u793a\u5f53\u524d\u6388\u6743\u8303\u56f4\u5185\u6709\u7b7e\u540d\u6765\u6e90\u4f9d\u636e\u7684\u8bb0\u5f55\uff1b\u6765\u6e90\u8ba1\u6570\u4e0d\u662f\u5e02\u573a\u6d1e\u5bdf\u6216\u91c7\u96c6\u6210\u529f\u7387\u3002",
+            "endpoint": "",
+            "external_write": false,
+            "items": [
+              {
+                "can_attempt": false,
+                "form_selectable": false,
+                "manual_collection_enabled": false,
+                "observed_source_count": 1,
+                "platform": "web_rss",
+                "platform_id": "web_rss",
+                "source_references": [
+                  {
+                    "canonical_id": "can-synthetic-note-0",
+                    "scope_evidence": {
+                      "id": 1,
+                      "integrity": {
+                        "algorithm": "hmac-sha256",
+                        "assurance": "writer-authenticated",
+                        "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                        "integrity_version": 2,
+                        "lineage_verified": true,
+                        "verified": true
+                      },
+                      "source_id": "synthetic-note-0",
+                      "stored_scope": {
+                        "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                        "domain_id": "zbmp",
+                        "product_id": "ZBMP",
+                        "scope_status": "VERIFIED",
+                        "subject_id": ""
+                      }
+                    },
+                    "source_id": "synthetic-note-0"
+                  }
+                ]
+              }
+            ],
+            "manual_only": true,
+            "product_will_not_publish": true,
+            "read_only": true,
+            "rejected_count": 0,
+            "source_count": 1,
+            "source_endpoint": "",
+            "source_freshness": "UNKNOWN",
+            "state": "ready",
+            "title": "\u5e73\u53f0\u6765\u6e90 \u00b7 \u5f53\u524d\u54c1\u724c\u8303\u56f4\u53ea\u8bfb\u6d88\u8d39",
+            "truncated": false,
+            "type": "platforms"
+          },
+          {
+            "columns": [
+              {
+                "key": "title",
+                "label": "\u6807\u9898"
+              },
+              {
+                "key": "platform",
+                "label": "\u6765\u6e90\u5e73\u53f0"
+              },
+              {
+                "key": "source_type",
+                "label": "\u6765\u6e90\u7c7b\u578b"
+              }
+            ],
+            "rows": [
+              {
+                "id": "can-synthetic-note-0",
+                "platform": "web_rss",
+                "scope_evidence": {
+                  "id": 1,
+                  "integrity": {
+                    "algorithm": "hmac-sha256",
+                    "assurance": "writer-authenticated",
+                    "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                    "integrity_version": 2,
+                    "lineage_verified": true,
+                    "verified": true
+                  },
+                  "source_id": "synthetic-note-0",
+                  "stored_scope": {
+                    "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                    "domain_id": "zbmp",
+                    "product_id": "ZBMP",
+                    "scope_status": "VERIFIED",
+                    "subject_id": ""
+                  }
+                },
+                "source_type": "note",
+                "title": "Synthetic signed observation 0"
+              }
+            ],
+            "state": "ready",
+            "title": "\u5f53\u524d\u8303\u56f4\u5e02\u573a\u6765\u6e90\u8d44\u6599",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_context": {
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "domain_id": "BMP",
+          "mode": "FOCUS",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "source_observation_contract": "lumenis.bmp03-source-observations.v1",
+        "source_observations": [
+          {
+            "id": "can-synthetic-note-0",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-0",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "source_type": "note",
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "source_read_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "truth": {
+          "classification": "source observations, not automatically verified market facts",
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "insight_state": "NOT_COMPUTED",
+          "legacy_asset_scope": "UNKNOWN_NOT_ASSIGNED",
+          "product_id": "ZBMP",
+          "rejected_count": 0,
+          "source_count": 1,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "overview-remains-granted",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-04",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:08",
+        "observation_context": {
+          "actor_id": 1,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "domain_id": "BMP",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observation_contract": "lumenis.bmp04-source-observations.v1",
+        "observation_read_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "ok": true,
+        "screen": "BMP-04",
+        "sections": [
+          {
+            "desc": "\u6e20\u9053\u00d7\u5185\u5bb9\u00d7\u65f6\u6bb5\u7684\u4f20\u64ad\u8868\u73b0\u4e0e\u8f6c\u5316\u6f0f\u6597\uff0c\u7edf\u4e00\u53e3\u5f84\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u4f20\u64ad\u5206\u6790",
+            "titleKey": "screen.BMP-04",
+            "type": "head"
+          },
+          {
+            "items": [
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "trend",
+                "id": "bmp04.total",
+                "label": "\u5df2\u89c2\u6d4b\u6e90\u8bb0\u5f55",
+                "source": "brand_propagation.read_scoped_propagation",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              },
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "event",
+                "id": "bmp04.events",
+                "label": "\u5f53\u524d\u8303\u56f4\u7b56\u5c55\u4e8b\u4ef6",
+                "source": "database.get_events_curated",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              }
+            ],
+            "state": "ready",
+            "type": "kpis"
+          },
+          {
+            "items": [
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 1,
+                "evidence": "EV-2",
+                "evidence_ref": "EV-2",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "scanned_count": 1,
+              "truncated": false
+            },
+            "state": "ready",
+            "type": "events"
+          },
+          {
+            "columns": [
+              {
+                "key": "platform",
+                "label": "\u5e73\u53f0"
+              },
+              {
+                "key": "count",
+                "label": "\u8bb0\u5f55"
+              }
+            ],
+            "rows": [
+              {
+                "count": 1,
+                "platform": "web_rss"
+              }
+            ],
+            "state": "ready",
+            "title": "\u6e90\u8bb0\u5f55\u5e73\u53f0\u5206\u5e03",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_observations": [
+          {
+            "id": "can-synthetic-note-0",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-0",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "truth": {
+          "analysis_state": "NOT_COMPUTED",
+          "coverage": "NOT_VERIFIED",
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "event_read_complete": true,
+          "event_returned_count": 1,
+          "event_scanned_count": 1,
+          "heat": null,
+          "legacy_event_scope": "UNKNOWN_NOT_ASSIGNED",
+          "method": "signed-source-observations-and-curated-events:v1",
+          "observed_sentiment_counts": {
+            "negative": 1,
+            "neutral": 0,
+            "positive": 0,
+            "unknown": 0
+          },
+          "observed_source_count": 1,
+          "platform_counts": {
+            "web_rss": 1
+          },
+          "product_id": "ZBMP",
+          "reach": null,
+          "rejected_event_count": 0,
+          "rejected_source_count": 0,
+          "source_count": 1,
+          "source_read_complete": true,
+          "source_refs": [
+            {
+              "canonical_id": "can-synthetic-note-0",
+              "scope_evidence": {
+                "id": 1,
+                "integrity": {
+                  "algorithm": "hmac-sha256",
+                  "assurance": "writer-authenticated",
+                  "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                  "integrity_version": 2,
+                  "lineage_verified": true,
+                  "verified": true
+                },
+                "source_id": "synthetic-note-0",
+                "stored_scope": {
+                  "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                  "domain_id": "zbmp",
+                  "product_id": "ZBMP",
+                  "scope_status": "VERIFIED",
+                  "subject_id": ""
+                }
+              }
+            }
+          ],
+          "source_truncated": false,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "overview-remains-granted",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-10",
+          "unavailable": []
+        },
+        "bound": true,
+        "generated_at": "2026-10-17T22:40:08",
+        "observation_context": {
+          "actor_id": 1,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "domain_id": "BMP",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observation_contract": "lumenis.bmp10-observations.v1",
+        "observation_read_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observed_events": [
+          {
+            "date": null,
+            "id": 1,
+            "scope_evidence": {
+              "id": 2,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "c26c545d44f900d54ed3eff1fd7a9273761d32714d478d52c9291a46e18b3d99",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "status": "active",
+            "title": "Synthetic curated event 0"
+          }
+        ],
+        "observed_risks": [
+          {
+            "date": null,
+            "id": "synthetic-note-0",
+            "level": "high",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "score": null,
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "ok": true,
+        "screen": "BMP-10",
+        "sections": [
+          {
+            "desc": "\u54c1\u724c\u4fa7\u98ce\u9669/\u8206\u60c5\u4e8b\u4ef6\u7684\u76d1\u6d4b\u3001\u5206\u7ea7\u4e0e\u5904\u7f6e\uff0c\u590d\u7528\u7edf\u4e00\u98ce\u9669\u5f15\u64ce\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u54c1\u724c\u98ce\u9669\u4e0e\u4e8b\u4ef6",
+            "titleKey": "screen.BMP-10",
+            "type": "head"
+          },
+          {
+            "items": [
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "event",
+                "id": "bmp10.events",
+                "label": "\u5f53\u524d\u8303\u56f4\u5df2\u89c2\u6d4b\u7b56\u5c55\u4e8b\u4ef6",
+                "source": "database.get_events_curated",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              },
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "risk",
+                "id": "bmp10.high_risk",
+                "label": "\u9ad8\u98ce\u9669\u8bb0\u5f55",
+                "source": "database.get_scoped_event_source_rows",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              }
+            ],
+            "state": "ready",
+            "type": "kpis"
+          },
+          {
+            "items": [
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 1,
+                "evidence": "EV-2",
+                "evidence_ref": "EV-2",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "scanned_count": 1,
+              "truncated": false
+            },
+            "state": "ready",
+            "type": "events"
+          },
+          {
+            "items": [
+              {
+                "desc": "Synthetic engineering input; classification not verified",
+                "evidence": "1",
+                "level": "high",
+                "score": null,
+                "title": "Synthetic signed observation 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "risk_truncated": false,
+              "source_truncated": false
+            },
+            "state": "ready",
+            "type": "risks"
+          }
+        ],
+        "source": "runtime",
+        "truth": {
+          "analysis_state": "NOT_COMPUTED",
+          "counts_are_returned_observations": true,
+          "coverage": {
+            "rejected_sources": 0,
+            "risk_observed_count": 1,
+            "risk_read_complete": true,
+            "risk_returned_count": 1,
+            "risk_truncated": false,
+            "source_read_complete": true,
+            "source_truncated": false
+          },
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "event_read": {
+            "display_truncated": false,
+            "displayed_count": 1,
+            "observed_returned_count": 1,
+            "read_complete": true,
+            "reasons": [],
+            "rejected_count": 0,
+            "scanned_count": 1,
+            "truncated": false
+          },
+          "product_id": "ZBMP"
+        }
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "account-revoked",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u9700\u8981\u6709\u6548\u8d26\u53f7\u4f1a\u8bdd",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "account-revoked",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u9700\u8981\u6709\u6548\u8d26\u53f7\u4f1a\u8bdd",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "account-revoked",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u9700\u8981\u6709\u6548\u8d26\u53f7\u4f1a\u8bdd",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "account-revoked",
+      "status": 401,
+      "body": {
+        "code": "AUTH_REQUIRED",
+        "error": "\u9700\u8981\u6709\u6548\u8d26\u53f7\u4f1a\u8bdd",
+        "ok": false
+      }
+    },
+    {
+      "screen": "BMP-03",
+      "case": "account-recovered",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-03",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:09",
+        "ok": true,
+        "screen": "BMP-03",
+        "sections": [
+          {
+            "desc": "\u884c\u4e1a\u8d8b\u52bf\u3001\u54c1\u7c7b\u673a\u4f1a\u4e0e\u5916\u90e8\u60c5\u62a5\uff0c\u533a\u5206\u5df2\u786e\u8ba4\u60c5\u62a5\u4e0e\u5f85\u6838\u5b9e\u7ebf\u7d22\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u5e02\u573a\u60c5\u62a5",
+            "titleKey": "screen.BMP-03",
+            "type": "head"
+          },
+          {
+            "can_trigger": false,
+            "collection_owner": "CTH",
+            "collection_runtime": {
+              "reason": "COLLECTOR_RUN_SCOPE_NOT_VERIFIED",
+              "state": "UNKNOWN"
+            },
+            "consumer": "BMP",
+            "count_complete": true,
+            "coverage": "NOT_VERIFIED",
+            "description": "\u4ec5\u663e\u793a\u5f53\u524d\u6388\u6743\u8303\u56f4\u5185\u6709\u7b7e\u540d\u6765\u6e90\u4f9d\u636e\u7684\u8bb0\u5f55\uff1b\u6765\u6e90\u8ba1\u6570\u4e0d\u662f\u5e02\u573a\u6d1e\u5bdf\u6216\u91c7\u96c6\u6210\u529f\u7387\u3002",
+            "endpoint": "",
+            "external_write": false,
+            "items": [
+              {
+                "can_attempt": false,
+                "form_selectable": false,
+                "manual_collection_enabled": false,
+                "observed_source_count": 1,
+                "platform": "web_rss",
+                "platform_id": "web_rss",
+                "source_references": [
+                  {
+                    "canonical_id": "can-synthetic-note-0",
+                    "scope_evidence": {
+                      "id": 1,
+                      "integrity": {
+                        "algorithm": "hmac-sha256",
+                        "assurance": "writer-authenticated",
+                        "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                        "integrity_version": 2,
+                        "lineage_verified": true,
+                        "verified": true
+                      },
+                      "source_id": "synthetic-note-0",
+                      "stored_scope": {
+                        "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                        "domain_id": "zbmp",
+                        "product_id": "ZBMP",
+                        "scope_status": "VERIFIED",
+                        "subject_id": ""
+                      }
+                    },
+                    "source_id": "synthetic-note-0"
+                  }
+                ]
+              }
+            ],
+            "manual_only": true,
+            "product_will_not_publish": true,
+            "read_only": true,
+            "rejected_count": 0,
+            "source_count": 1,
+            "source_endpoint": "",
+            "source_freshness": "UNKNOWN",
+            "state": "ready",
+            "title": "\u5e73\u53f0\u6765\u6e90 \u00b7 \u5f53\u524d\u54c1\u724c\u8303\u56f4\u53ea\u8bfb\u6d88\u8d39",
+            "truncated": false,
+            "type": "platforms"
+          },
+          {
+            "columns": [
+              {
+                "key": "title",
+                "label": "\u6807\u9898"
+              },
+              {
+                "key": "platform",
+                "label": "\u6765\u6e90\u5e73\u53f0"
+              },
+              {
+                "key": "source_type",
+                "label": "\u6765\u6e90\u7c7b\u578b"
+              }
+            ],
+            "rows": [
+              {
+                "id": "can-synthetic-note-0",
+                "platform": "web_rss",
+                "scope_evidence": {
+                  "id": 1,
+                  "integrity": {
+                    "algorithm": "hmac-sha256",
+                    "assurance": "writer-authenticated",
+                    "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                    "integrity_version": 2,
+                    "lineage_verified": true,
+                    "verified": true
+                  },
+                  "source_id": "synthetic-note-0",
+                  "stored_scope": {
+                    "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                    "domain_id": "zbmp",
+                    "product_id": "ZBMP",
+                    "scope_status": "VERIFIED",
+                    "subject_id": ""
+                  }
+                },
+                "source_type": "note",
+                "title": "Synthetic signed observation 0"
+              }
+            ],
+            "state": "ready",
+            "title": "\u5f53\u524d\u8303\u56f4\u5e02\u573a\u6765\u6e90\u8d44\u6599",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_context": {
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "domain_id": "BMP",
+          "mode": "FOCUS",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "source_observation_contract": "lumenis.bmp03-source-observations.v1",
+        "source_observations": [
+          {
+            "id": "can-synthetic-note-0",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-0",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "source_type": "note",
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "source_read_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "truth": {
+          "classification": "source observations, not automatically verified market facts",
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "insight_state": "NOT_COMPUTED",
+          "legacy_asset_scope": "UNKNOWN_NOT_ASSIGNED",
+          "product_id": "ZBMP",
+          "rejected_count": 0,
+          "source_count": 1,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "screen": "BMP-04",
+      "case": "account-recovered",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-04",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:09",
+        "observation_context": {
+          "actor_id": 1,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "domain_id": "BMP",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observation_contract": "lumenis.bmp04-source-observations.v1",
+        "observation_read_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "ok": true,
+        "screen": "BMP-04",
+        "sections": [
+          {
+            "desc": "\u6e20\u9053\u00d7\u5185\u5bb9\u00d7\u65f6\u6bb5\u7684\u4f20\u64ad\u8868\u73b0\u4e0e\u8f6c\u5316\u6f0f\u6597\uff0c\u7edf\u4e00\u53e3\u5f84\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u4f20\u64ad\u5206\u6790",
+            "titleKey": "screen.BMP-04",
+            "type": "head"
+          },
+          {
+            "items": [
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "trend",
+                "id": "bmp04.total",
+                "label": "\u5df2\u89c2\u6d4b\u6e90\u8bb0\u5f55",
+                "source": "brand_propagation.read_scoped_propagation",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              },
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "event",
+                "id": "bmp04.events",
+                "label": "\u5f53\u524d\u8303\u56f4\u7b56\u5c55\u4e8b\u4ef6",
+                "source": "database.get_events_curated",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              }
+            ],
+            "state": "ready",
+            "type": "kpis"
+          },
+          {
+            "items": [
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 1,
+                "evidence": "EV-2",
+                "evidence_ref": "EV-2",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "scanned_count": 1,
+              "truncated": false
+            },
+            "state": "ready",
+            "type": "events"
+          },
+          {
+            "columns": [
+              {
+                "key": "platform",
+                "label": "\u5e73\u53f0"
+              },
+              {
+                "key": "count",
+                "label": "\u8bb0\u5f55"
+              }
+            ],
+            "rows": [
+              {
+                "count": 1,
+                "platform": "web_rss"
+              }
+            ],
+            "state": "ready",
+            "title": "\u6e90\u8bb0\u5f55\u5e73\u53f0\u5206\u5e03",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_observations": [
+          {
+            "id": "can-synthetic-note-0",
+            "platform": "web_rss",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "integrity_version": 2,
+                "lineage_verified": true,
+                "verified": true
+              },
+              "source_id": "synthetic-note-0",
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "product_id": "ZBMP",
+                "scope_status": "VERIFIED",
+                "subject_id": ""
+              }
+            },
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "truth": {
+          "analysis_state": "NOT_COMPUTED",
+          "coverage": "NOT_VERIFIED",
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "event_read_complete": true,
+          "event_returned_count": 1,
+          "event_scanned_count": 1,
+          "heat": null,
+          "legacy_event_scope": "UNKNOWN_NOT_ASSIGNED",
+          "method": "signed-source-observations-and-curated-events:v1",
+          "observed_sentiment_counts": {
+            "negative": 1,
+            "neutral": 0,
+            "positive": 0,
+            "unknown": 0
+          },
+          "observed_source_count": 1,
+          "platform_counts": {
+            "web_rss": 1
+          },
+          "product_id": "ZBMP",
+          "reach": null,
+          "rejected_event_count": 0,
+          "rejected_source_count": 0,
+          "source_count": 1,
+          "source_read_complete": true,
+          "source_refs": [
+            {
+              "canonical_id": "can-synthetic-note-0",
+              "scope_evidence": {
+                "id": 1,
+                "integrity": {
+                  "algorithm": "hmac-sha256",
+                  "assurance": "writer-authenticated",
+                  "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                  "integrity_version": 2,
+                  "lineage_verified": true,
+                  "verified": true
+                },
+                "source_id": "synthetic-note-0",
+                "stored_scope": {
+                  "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                  "domain_id": "zbmp",
+                  "product_id": "ZBMP",
+                  "scope_status": "VERIFIED",
+                  "subject_id": ""
+                }
+              }
+            }
+          ],
+          "source_truncated": false,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "screen": "BMP-09",
+      "case": "account-recovered",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-09",
+          "unavailable": []
+        },
+        "bound": true,
+        "focus_binding": {
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "generated_at": "2026-10-17T22:40:09",
+        "ok": true,
+        "report_artifact_contract": "lumenis.bmp09-report-artifacts.v1",
+        "report_authorization": {
+          "action": "read",
+          "context": {
+            "actor_id": 1,
+            "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+            "domain_id": "zbmp",
+            "global_scope": false,
+            "subject_id": null
+          },
+          "module": "reports"
+        },
+        "report_screen_binding": {
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "saved_artifacts": [
+          {
+            "assessment": "NOT_ESTABLISHED_BY_STORAGE",
+            "id": "ART-25e5849172234b0a",
+            "kind": "research",
+            "resource_type": "saved_work",
+            "sha256": "db76c5f6d9dd15f767795430bc02bc07166cf3b033f57513a26661e3d76f63bf",
+            "source_count": 0,
+            "title": "Synthetic saved research",
+            "version": 1
+          }
+        ],
+        "screen": "BMP-09",
+        "sections": [
+          {
+            "desc": "\u54c1\u724c\u8d44\u4ea7\u8bc4\u4f30\u3001\u5468\u671f\u62a5\u544a\u4e0e\u8bc4\u5206\uff0c\u7ed3\u8bba\u5747\u53ef\u56de\u6eaf\u8bc1\u636e\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u54c1\u724c\u62a5\u544a\u4e0e\u8bc4\u4f30",
+            "titleKey": "screen.BMP-09",
+            "type": "head"
+          },
+          {
+            "columns": [
+              {
+                "key": "title",
+                "label": "\u6807\u9898"
+              },
+              {
+                "key": "kind",
+                "label": "\u7c7b\u578b"
+              },
+              {
+                "key": "version",
+                "label": "\u7248\u672c"
+              },
+              {
+                "key": "source_count",
+                "label": "\u5f15\u7528\u6765\u6e90"
+              }
+            ],
+            "rows": [
+              {
+                "assessment": "NOT_ESTABLISHED_BY_STORAGE",
+                "id": "ART-25e5849172234b0a",
+                "kind": "research",
+                "sha256": "db76c5f6d9dd15f767795430bc02bc07166cf3b033f57513a26661e3d76f63bf",
+                "source_count": 0,
+                "title": "Synthetic saved research",
+                "version": 1
+              }
+            ],
+            "state": "ready",
+            "title": "\u5f53\u524d\u8303\u56f4\u5df2\u4fdd\u5b58\u7814\u7a76\u4e0e\u62a5\u544a",
+            "type": "table"
+          },
+          {
+            "columns": [
+              {
+                "key": "job_id",
+                "label": "\u62a5\u544a"
+              },
+              {
+                "key": "evaluation_state",
+                "label": "\u8bc4\u4f30\u72b6\u6001"
+              }
+            ],
+            "resource_type": "source_brief_job",
+            "rows": [
+              {
+                "artifact_hash": "ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                "evaluation_state": "recorded",
+                "evaluations": [
+                  {
+                    "evaluated_at": "2026-10-17T22:38:10",
+                    "evaluation_id": "56498d371608da1cfaf72f9e83a9c18f1dca9b42283e07ff315262780038357e",
+                    "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                    "metric_name": "multimodal_analysis_integrity",
+                    "status": "unknown"
+                  },
+                  {
+                    "evaluated_at": "2026-10-17T22:38:10",
+                    "evaluation_id": "2ee5da9eb8f510b59a447b6a61f8ff68336e0423b0572d8a7192ed91d5a79455",
+                    "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                    "metric_name": "source_evidence_grounding",
+                    "status": "pass"
+                  },
+                  {
+                    "evaluated_at": "2026-10-17T22:38:10",
+                    "evaluation_id": "2c2a30c9d2fd4cdae09549cfdd239072f6aa90813cd02728947e043b650acdaf",
+                    "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                    "metric_name": "report_artifact_integrity",
+                    "status": "pass"
+                  }
+                ],
+                "job_id": "brief-3bd159828545416697d2f1c8b099c3b3",
+                "resource_type": "source_brief_job",
+                "review_status": "HUMAN_PENDING",
+                "revision": null,
+                "source_count": 1
+              }
+            ],
+            "state": "ready",
+            "title": "\u6765\u6e90\u7b80\u62a5 \u00b7 \u7ed1\u5b9a\u5f53\u524d\u62a5\u544a\u7248\u672c\u7684\u8bc4\u4f30",
+            "type": "table"
+          }
+        ],
+        "source": "runtime",
+        "source_brief_artifacts": [
+          {
+            "artifact_hash": "ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+            "evaluation_state": "recorded",
+            "evaluations": [
+              {
+                "evaluated_at": "2026-10-17T22:38:10",
+                "evaluation_id": "56498d371608da1cfaf72f9e83a9c18f1dca9b42283e07ff315262780038357e",
+                "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                "metric_name": "multimodal_analysis_integrity",
+                "status": "unknown"
+              },
+              {
+                "evaluated_at": "2026-10-17T22:38:10",
+                "evaluation_id": "2ee5da9eb8f510b59a447b6a61f8ff68336e0423b0572d8a7192ed91d5a79455",
+                "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                "metric_name": "source_evidence_grounding",
+                "status": "pass"
+              },
+              {
+                "evaluated_at": "2026-10-17T22:38:10",
+                "evaluation_id": "2c2a30c9d2fd4cdae09549cfdd239072f6aa90813cd02728947e043b650acdaf",
+                "evidence_ref": "daily_reports:brief-3bd159828545416697d2f1c8b099c3b3:ac8faf8f49ab7f02e5491af94b63688366f8e26b7d0398a120a6e8b645fe1fb4",
+                "metric_name": "report_artifact_integrity",
+                "status": "pass"
+              }
+            ],
+            "job_id": "brief-3bd159828545416697d2f1c8b099c3b3",
+            "resource_type": "source_brief_job",
+            "review_status": "HUMAN_PENDING",
+            "revision": null,
+            "source_count": 1
+          }
+        ],
+        "truth": {
+          "evaluation": "artifact-specific; storage is not evaluation",
+          "has_more": false,
+          "market_effect_state": "NOT_ESTABLISHED",
+          "next_cursor": null,
+          "saved_count": 1,
+          "scope": {
+            "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+            "domain_id": "zbmp",
+            "global_scope": false,
+            "subject_id": null
+          },
+          "source_brief_reports": {
+            "has_more": false,
+            "limit": 30,
+            "read_complete": true,
+            "rejected_count": 0,
+            "resource_type": "source_brief_job",
+            "returned_count": 1,
+            "scanned_count": 1,
+            "state": "READY"
+          },
+          "unverified_candidates": 0,
+          "verification_complete": true
+        }
+      }
+    },
+    {
+      "screen": "BMP-10",
+      "case": "account-recovered",
+      "status": 200,
+      "body": {
+        "binding": {
+          "blocked": [],
+          "bound": true,
+          "screen": "BMP-10",
+          "unavailable": []
+        },
+        "bound": true,
+        "generated_at": "2026-10-17T22:40:09",
+        "observation_context": {
+          "actor_id": 1,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "domain_id": "BMP",
+          "product_id": "ZBMP",
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observation_contract": "lumenis.bmp10-observations.v1",
+        "observation_read_binding": {
+          "actor_id": 1,
+          "actor_scope": "authenticated",
+          "applied": true,
+          "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+          "canonical_scope": "FOCUS",
+          "contract": "lumenis.scope-read-binding.v1",
+          "domain_id": "BMP",
+          "global_all_granted": false,
+          "module": "brand_market_overview",
+          "policy": "actor-exact-scope-v1",
+          "product_id": "ZBMP",
+          "read_allowed": true,
+          "scope_verified": true,
+          "subject_id": "SUBJ-752328af70586ba5adc4d1b0"
+        },
+        "observed_events": [
+          {
+            "date": null,
+            "id": 1,
+            "scope_evidence": {
+              "id": 2,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "c26c545d44f900d54ed3eff1fd7a9273761d32714d478d52c9291a46e18b3d99",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "status": "active",
+            "title": "Synthetic curated event 0"
+          }
+        ],
+        "observed_risks": [
+          {
+            "date": null,
+            "id": "synthetic-note-0",
+            "level": "high",
+            "scope_evidence": {
+              "id": 1,
+              "integrity": {
+                "algorithm": "hmac-sha256",
+                "assurance": "writer-authenticated",
+                "digest": "048a9b1eada26425db7d89e11af10bbfcabb3d28e7863f8350d0d5916306ff9a",
+                "verified": true
+              },
+              "stored_scope": {
+                "brand_focus_id": "BRAND-752328af70586ba5adc4d1b0",
+                "domain_id": "zbmp",
+                "global": false,
+                "product_id": "ZBMP"
+              }
+            },
+            "score": null,
+            "title": "Synthetic signed observation 0"
+          }
+        ],
+        "ok": true,
+        "screen": "BMP-10",
+        "sections": [
+          {
+            "desc": "\u54c1\u724c\u4fa7\u98ce\u9669/\u8206\u60c5\u4e8b\u4ef6\u7684\u76d1\u6d4b\u3001\u5206\u7ea7\u4e0e\u5904\u7f6e\uff0c\u590d\u7528\u7edf\u4e00\u98ce\u9669\u5f15\u64ce\u3002",
+            "eyebrow": "BMP \u00b7 \u54c1\u724c\u5e02\u573a",
+            "state": "ready",
+            "title": "\u54c1\u724c\u98ce\u9669\u4e0e\u4e8b\u4ef6",
+            "titleKey": "screen.BMP-10",
+            "type": "head"
+          },
+          {
+            "items": [
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "event",
+                "id": "bmp10.events",
+                "label": "\u5f53\u524d\u8303\u56f4\u5df2\u89c2\u6d4b\u7b56\u5c55\u4e8b\u4ef6",
+                "source": "database.get_events_curated",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              },
+              {
+                "decimals": 0,
+                "delta": null,
+                "deltaUnit": "%",
+                "evidenceId": "",
+                "fresh": "live",
+                "icon": "risk",
+                "id": "bmp10.high_risk",
+                "label": "\u9ad8\u98ce\u9669\u8bb0\u5f55",
+                "source": "database.get_scoped_event_source_rows",
+                "spark": null,
+                "state": "ready",
+                "stateNote": "",
+                "unit": "",
+                "value": 1
+              }
+            ],
+            "state": "ready",
+            "type": "kpis"
+          },
+          {
+            "items": [
+              {
+                "date": "",
+                "desc": "Synthetic statement, not verified market fact",
+                "event_id": 1,
+                "evidence": "EV-2",
+                "evidence_ref": "EV-2",
+                "evidence_state": "REFERENCED",
+                "level": "high",
+                "tags": [
+                  "\u63d0\u53ca 1",
+                  "\u6765\u6e90 1"
+                ],
+                "time": "\u2014",
+                "title": "Synthetic curated event 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "scanned_count": 1,
+              "truncated": false
+            },
+            "state": "ready",
+            "type": "events"
+          },
+          {
+            "items": [
+              {
+                "desc": "Synthetic engineering input; classification not verified",
+                "evidence": "1",
+                "level": "high",
+                "score": null,
+                "title": "Synthetic signed observation 0"
+              }
+            ],
+            "read_status": {
+              "display_truncated": false,
+              "displayed_count": 1,
+              "observed_returned_count": 1,
+              "read_complete": true,
+              "reasons": [],
+              "rejected_count": 0,
+              "risk_truncated": false,
+              "source_truncated": false
+            },
+            "state": "ready",
+            "type": "risks"
+          }
+        ],
+        "source": "runtime",
+        "truth": {
+          "analysis_state": "NOT_COMPUTED",
+          "counts_are_returned_observations": true,
+          "coverage": {
+            "rejected_sources": 0,
+            "risk_observed_count": 1,
+            "risk_read_complete": true,
+            "risk_returned_count": 1,
+            "risk_truncated": false,
+            "source_read_complete": true,
+            "source_truncated": false
+          },
+          "data_state": "READY",
+          "domain_id": "zbmp",
+          "event_read": {
+            "display_truncated": false,
+            "displayed_count": 1,
+            "observed_returned_count": 1,
+            "read_complete": true,
+            "reasons": [],
+            "rejected_count": 0,
+            "scanned_count": 1,
+            "truncated": false
+          },
+          "product_id": "ZBMP"
+        }
+      }
+    }
+  ]
+}

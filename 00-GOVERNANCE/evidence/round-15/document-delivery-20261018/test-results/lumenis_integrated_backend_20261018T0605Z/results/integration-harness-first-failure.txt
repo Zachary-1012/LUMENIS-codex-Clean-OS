@@ -1,0 +1,1 @@
+Initial integration harness stopped after first three patches with AttributeError: media source-manifest is a list, not dict. No patch conflict or source modification to pass; resumed at speech after adapting external harness manifest reader. All before/after hashes checked. Original script retained outside source.

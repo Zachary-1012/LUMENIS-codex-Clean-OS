@@ -56,7 +56,7 @@ hit=False
 for f in glob.glob(os.path.join(ROOT,'**','*.py'),recursive=True):
     if '.venv' in f or 'node_modules' in f: continue
     t=open(f,encoding='utf-8',errors='ignore').read()
-    for kw in ['zbmp','Z-Brand','ZBRAND','사랑해','product_profile','RELEASE_PROFILE','customer_release']:
+    for kw in ['zbmp','Z-Brand','ZBRAND','master_access_key', 'V4_ACCESS_KEY','product_profile','RELEASE_PROFILE','customer_release']:
         if kw.lower() in t.lower():
             ln=t.lower()[:t.lower().find(kw.lower())].count('\n')+1
             p(f'{os.path.relpath(f,ROOT)}:{ln}  hit={kw}'); hit=True

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Agent Research — 探索式 Agent / Research & Exploration Mode
-多 Specialist 并行探索 → 互相质疑 → 验证 → 排序 → 汇总，保留完整 Evidence/Lineage。
+真实SourceBrief片段 → 可解释排序 → 待核验问题；保留来源引用，不把引用视为事实验证。
+旧Specialist/Hypothesis/Debate类仅供研究计划兼容，不构成已执行的独立验证。
 复用现有 agent_runtime/agent_memory/agent_capability，不重写其源码。
 不调用外部 AI，不创建多进程/多线程，纯规则实现。
 Feature Flag: AGENT_RESEARCH_ENABLED=1 启用，默认关闭。
@@ -35,3 +36,8 @@ __all__ = [
     "EvidenceLineage", "LineageTracker",
     "ResearchResult", "ResearchRunner", "run_research",
 ]
+
+from agent_research.source_bound import analyze_source_records
+from agent_research.taxonomy import get_research_taxonomy
+from agent_research.reference_assets import query_reference_assets
+__all__ += ['analyze_source_records', 'get_research_taxonomy', 'query_reference_assets']

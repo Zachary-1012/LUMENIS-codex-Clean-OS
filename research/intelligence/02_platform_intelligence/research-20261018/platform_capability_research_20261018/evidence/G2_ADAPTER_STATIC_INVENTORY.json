@@ -1,0 +1,2944 @@
+[
+  {
+    "path": "lumenis/system/collector/adapters/facebook.py",
+    "sha256": "aedaf304f7fa3905a087f1fbe3e0edfb19ad000df60eec85a2f1b43f93f44957",
+    "classes": [
+      {
+        "class": "FacebookAdapter",
+        "line": 12,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 23,
+        "end_line": 25
+      },
+      {
+        "function": "_load_backend",
+        "line": 27,
+        "end_line": 34
+      },
+      {
+        "function": "_v4_status_to_main",
+        "line": 37,
+        "end_line": 49
+      },
+      {
+        "function": "_v4_notes_to_items",
+        "line": 51,
+        "end_line": 70
+      },
+      {
+        "function": "_post_identity_from_url",
+        "line": 73,
+        "end_line": 80
+      },
+      {
+        "function": "_observed_native_post_id",
+        "line": 83,
+        "end_line": 93
+      },
+      {
+        "function": "_detail_failure_state",
+        "line": 96,
+        "end_line": 111
+      },
+      {
+        "function": "_begin_detail_observation",
+        "line": 114,
+        "end_line": 138
+      },
+      {
+        "function": "_record_detail_outcome",
+        "line": 141,
+        "end_line": 201
+      },
+      {
+        "function": "search",
+        "line": 203,
+        "end_line": 330
+      },
+      {
+        "function": "detail",
+        "line": 332,
+        "end_line": 333
+      },
+      {
+        "function": "comments",
+        "line": 335,
+        "end_line": 336
+      },
+      {
+        "function": "creator",
+        "line": 338,
+        "end_line": 339
+      },
+      {
+        "function": "_delegate_v4",
+        "line": 341,
+        "end_line": 356
+      },
+      {
+        "function": "health_check",
+        "line": 358,
+        "end_line": 366
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 369,
+        "call": "register_adapter(\"facebook\", FacebookAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+    "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+    "classes": [
+      {
+        "class": "XHSAppTopicAdapter",
+        "line": 36,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 54,
+        "end_line": 60
+      },
+      {
+        "function": "search",
+        "line": 64,
+        "end_line": 111
+      },
+      {
+        "function": "detail",
+        "line": 113,
+        "end_line": 151
+      },
+      {
+        "function": "health_check",
+        "line": 153,
+        "end_line": 183
+      },
+      {
+        "function": "_discover_topics_from_app",
+        "line": 187,
+        "end_line": 206
+      },
+      {
+        "function": "_topic_metrics_from_app",
+        "line": 208,
+        "end_line": 225
+      },
+      {
+        "function": "enrich_note_with_source",
+        "line": 230,
+        "end_line": 237
+      },
+      {
+        "function": "is_enabled",
+        "line": 240,
+        "end_line": 242
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 247,
+        "call": "register_adapter(\"xhs_app_topic\", XHSAppTopicAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/overture_places.py",
+    "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+    "classes": [],
+    "functions": [
+      {
+        "function": "_mapping",
+        "line": 19,
+        "end_line": 26
+      },
+      {
+        "function": "_text",
+        "line": 29,
+        "end_line": 30
+      },
+      {
+        "function": "_clean_sources",
+        "line": 33,
+        "end_line": 36
+      },
+      {
+        "function": "_address_for_country",
+        "line": 39,
+        "end_line": 60
+      },
+      {
+        "function": "_confidence",
+        "line": 63,
+        "end_line": 67
+      },
+      {
+        "function": "normalize_overture_place_row",
+        "line": 70,
+        "end_line": 148
+      },
+      {
+        "function": "parse_overture_place_rows",
+        "line": 151,
+        "end_line": 197
+      },
+      {
+        "function": "read_overture_places_parquet",
+        "line": 200,
+        "end_line": 241
+      },
+      {
+        "function": "rows",
+        "line": 234,
+        "end_line": 237
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/linkedin.py",
+    "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+    "classes": [
+      {
+        "class": "LinkedInAdapter",
+        "line": 19,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "capability_map",
+        "line": 29,
+        "end_line": 33
+      },
+      {
+        "function": "normalize_to_platform_contents",
+        "line": 35,
+        "end_line": 36
+      },
+      {
+        "function": "search",
+        "line": 38,
+        "end_line": 43
+      },
+      {
+        "function": "detail",
+        "line": 45,
+        "end_line": 50
+      },
+      {
+        "function": "comments",
+        "line": 52,
+        "end_line": 57
+      },
+      {
+        "function": "creator",
+        "line": 59,
+        "end_line": 64
+      },
+      {
+        "function": "health_check",
+        "line": 66,
+        "end_line": 71
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 74,
+        "call": "register_adapter(\"linkedin\", LinkedInAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/evidence_exporter.py",
+    "sha256": "a0ca95999529ea11420756e0ca946f3e1f47c727e5328511b329b710cc44be4e",
+    "classes": [],
+    "functions": [
+      {
+        "function": "_strip_token_url",
+        "line": 70,
+        "end_line": 75
+      },
+      {
+        "function": "project_row",
+        "line": 78,
+        "end_line": 93
+      },
+      {
+        "function": "_assert_no_forbidden",
+        "line": 96,
+        "end_line": 99
+      },
+      {
+        "function": "_safe_identifier",
+        "line": 102,
+        "end_line": 106
+      },
+      {
+        "function": "_fetch",
+        "line": 109,
+        "end_line": 123
+      },
+      {
+        "function": "build_export",
+        "line": 126,
+        "end_line": 153
+      },
+      {
+        "function": "build_manifest",
+        "line": 156,
+        "end_line": 177
+      },
+      {
+        "function": "_sha256_file",
+        "line": 180,
+        "end_line": 185
+      },
+      {
+        "function": "export_evidence",
+        "line": 188,
+        "end_line": 221
+      },
+      {
+        "function": "redact_text",
+        "line": 32,
+        "end_line": 39
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/routing.py",
+    "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+    "classes": [
+      {
+        "class": "RouteIdentityMismatch",
+        "line": 18,
+        "bases": [
+          "ValueError"
+        ]
+      },
+      {
+        "class": "CapabilityRoute",
+        "line": 23,
+        "bases": []
+      }
+    ],
+    "functions": [
+      {
+        "function": "_route",
+        "line": 35,
+        "end_line": 42
+      },
+      {
+        "function": "_canonical_platform",
+        "line": 137,
+        "end_line": 139
+      },
+      {
+        "function": "_is_public_post_url",
+        "line": 142,
+        "end_line": 154
+      },
+      {
+        "function": "_is_http_url",
+        "line": 157,
+        "end_line": 161
+      },
+      {
+        "function": "_is_wechat_article_url",
+        "line": 164,
+        "end_line": 180
+      },
+      {
+        "function": "_route_matches",
+        "line": 183,
+        "end_line": 199
+      },
+      {
+        "function": "resolve_capability_route",
+        "line": 202,
+        "end_line": 215
+      },
+      {
+        "function": "select_explicit_fallback",
+        "line": 218,
+        "end_line": 245
+      },
+      {
+        "function": "_safe_source_url",
+        "line": 248,
+        "end_line": 263
+      },
+      {
+        "function": "_platform_identity",
+        "line": 266,
+        "end_line": 276
+      },
+      {
+        "function": "_validate_result_identity",
+        "line": 279,
+        "end_line": 311
+      },
+      {
+        "function": "bind_collection_route",
+        "line": 314,
+        "end_line": 406
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/xhs.py",
+    "sha256": "9e6ae79eb01e0c15f78ec8d352653bd29d37e1232d5c75f2dd2bf58d082d8634",
+    "classes": [
+      {
+        "class": "XiaohongshuAdapter",
+        "line": 13,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 25,
+        "end_line": 27
+      },
+      {
+        "function": "_load_backend",
+        "line": 29,
+        "end_line": 36
+      },
+      {
+        "function": "search",
+        "line": 38,
+        "end_line": 369
+      },
+      {
+        "function": "_failed_result",
+        "line": 371,
+        "end_line": 393
+      },
+      {
+        "function": "detail",
+        "line": 395,
+        "end_line": 403
+      },
+      {
+        "function": "health_check",
+        "line": 405,
+        "end_line": 486
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 489,
+        "call": "register_adapter(\"xhs\", XiaohongshuAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/kuaishou.py",
+    "sha256": "dcc83399ece9b8237b25c67482976c2801faf23248a882ca386f9aa10bf455f2",
+    "classes": [
+      {
+        "class": "KuaishouAdapter",
+        "line": 9,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 20,
+        "end_line": 22
+      },
+      {
+        "function": "_delegate",
+        "line": 24,
+        "end_line": 54
+      },
+      {
+        "function": "search",
+        "line": 56,
+        "end_line": 57
+      },
+      {
+        "function": "detail",
+        "line": 59,
+        "end_line": 60
+      },
+      {
+        "function": "comments",
+        "line": 62,
+        "end_line": 63
+      },
+      {
+        "function": "creator",
+        "line": 65,
+        "end_line": 66
+      },
+      {
+        "function": "author_posts",
+        "line": 68,
+        "end_line": 69
+      },
+      {
+        "function": "health_check",
+        "line": 71,
+        "end_line": 82
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 85,
+        "call": "register_adapter(\"kuaishou\", KuaishouAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/github.py",
+    "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+    "classes": [
+      {
+        "class": "GitHubAdapter",
+        "line": 21,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 31,
+        "end_line": 33
+      },
+      {
+        "function": "_map_item",
+        "line": 36,
+        "end_line": 55
+      },
+      {
+        "function": "_error",
+        "line": 58,
+        "end_line": 77
+      },
+      {
+        "function": "normalize_to_platform_contents",
+        "line": 79,
+        "end_line": 80
+      },
+      {
+        "function": "search",
+        "line": 82,
+        "end_line": 95
+      },
+      {
+        "function": "detail",
+        "line": 97,
+        "end_line": 110
+      },
+      {
+        "function": "comments",
+        "line": 112,
+        "end_line": 114
+      },
+      {
+        "function": "list_issues",
+        "line": 116,
+        "end_line": 118
+      },
+      {
+        "function": "list_pull_requests",
+        "line": 120,
+        "end_line": 122
+      },
+      {
+        "function": "list_releases",
+        "line": 124,
+        "end_line": 126
+      },
+      {
+        "function": "_collection",
+        "line": 128,
+        "end_line": 142
+      },
+      {
+        "function": "health_check",
+        "line": 144,
+        "end_line": 165
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 168,
+        "call": "register_adapter(\"github\", GitHubAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+    "sha256": "b231c27b38cc2d34ec9e91da6ea8a8a51c8b52e403dd5263cd6091478d2d7405",
+    "classes": [],
+    "functions": [
+      {
+        "function": "_format_epoch_publication",
+        "line": 59,
+        "end_line": 79
+      },
+      {
+        "function": "_normalize_source_publication",
+        "line": 82,
+        "end_line": 151
+      },
+      {
+        "function": "_normalize_douyin_publish_datetime",
+        "line": 154,
+        "end_line": 165
+      },
+      {
+        "function": "_to_note_payload",
+        "line": 168,
+        "end_line": 281
+      },
+      {
+        "function": "import_multi_platform_records",
+        "line": 284,
+        "end_line": 361
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/reddit.py",
+    "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+    "classes": [
+      {
+        "class": "RedditAdapter",
+        "line": 19,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "capability_map",
+        "line": 30,
+        "end_line": 34
+      },
+      {
+        "function": "normalize_to_platform_contents",
+        "line": 36,
+        "end_line": 37
+      },
+      {
+        "function": "search",
+        "line": 39,
+        "end_line": 44
+      },
+      {
+        "function": "detail",
+        "line": 46,
+        "end_line": 51
+      },
+      {
+        "function": "comments",
+        "line": 53,
+        "end_line": 58
+      },
+      {
+        "function": "health_check",
+        "line": 60,
+        "end_line": 65
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 68,
+        "call": "register_adapter(\"reddit\", RedditAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/web_rss.py",
+    "sha256": "a89615ab86a7af265cc4dc1c1a4dc74a14750e99ca12aa1fc3587dcce862c44d",
+    "classes": [
+      {
+        "class": "WebRSSAdapter",
+        "line": 10,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "search",
+        "line": 17,
+        "end_line": 95
+      },
+      {
+        "function": "detail",
+        "line": 97,
+        "end_line": 102
+      },
+      {
+        "function": "capability_map",
+        "line": 104,
+        "end_line": 107
+      },
+      {
+        "function": "health_check",
+        "line": 109,
+        "end_line": 119
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 122,
+        "call": "register_adapter(\"web_rss\", WebRSSAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/base.py",
+    "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+    "classes": [
+      {
+        "class": "CollectionStatus",
+        "line": 9,
+        "bases": [
+          "str",
+          "Enum"
+        ]
+      },
+      {
+        "class": "AccessClass",
+        "line": 24,
+        "bases": [
+          "str",
+          "Enum"
+        ]
+      },
+      {
+        "class": "CollectionResult",
+        "line": 37,
+        "bases": []
+      },
+      {
+        "class": "BasePlatformAdapter",
+        "line": 69,
+        "bases": [
+          "ABC"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "map_v4_comments",
+        "line": 163,
+        "end_line": 178
+      },
+      {
+        "function": "ok",
+        "line": 62,
+        "end_line": 66
+      },
+      {
+        "function": "__init__",
+        "line": 81,
+        "end_line": 83
+      },
+      {
+        "function": "search",
+        "line": 86,
+        "end_line": 87
+      },
+      {
+        "function": "detail",
+        "line": 90,
+        "end_line": 91
+      },
+      {
+        "function": "comments",
+        "line": 93,
+        "end_line": 98
+      },
+      {
+        "function": "creator",
+        "line": 100,
+        "end_line": 105
+      },
+      {
+        "function": "author",
+        "line": 107,
+        "end_line": 109
+      },
+      {
+        "function": "author_posts",
+        "line": 111,
+        "end_line": 116
+      },
+      {
+        "function": "health_check",
+        "line": 118,
+        "end_line": 123
+      },
+      {
+        "function": "healthcheck",
+        "line": 125,
+        "end_line": 127
+      },
+      {
+        "function": "capability_map",
+        "line": 129,
+        "end_line": 141
+      },
+      {
+        "function": "normalize_item",
+        "line": 143,
+        "end_line": 160
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/x_platform.py",
+    "sha256": "9f409347174c72ddfbe778e0908c06987b958e7fc53c955305634a7cd62ddaf6",
+    "classes": [
+      {
+        "class": "XAdapter",
+        "line": 19,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 30,
+        "end_line": 32
+      },
+      {
+        "function": "_load_backend",
+        "line": 34,
+        "end_line": 41
+      },
+      {
+        "function": "_v4_status_to_main",
+        "line": 44,
+        "end_line": 62
+      },
+      {
+        "function": "_v4_notes_to_items",
+        "line": 64,
+        "end_line": 82
+      },
+      {
+        "function": "_status_id_from_url",
+        "line": 85,
+        "end_line": 99
+      },
+      {
+        "function": "_observed_tweet_id",
+        "line": 102,
+        "end_line": 118
+      },
+      {
+        "function": "_detail_tweet_id_matches",
+        "line": 121,
+        "end_line": 131
+      },
+      {
+        "function": "_detail_failure_state",
+        "line": 134,
+        "end_line": 152
+      },
+      {
+        "function": "_detail_failure_status",
+        "line": 155,
+        "end_line": 163
+      },
+      {
+        "function": "_begin_detail_observation",
+        "line": 166,
+        "end_line": 202
+      },
+      {
+        "function": "_record_detail_outcome",
+        "line": 205,
+        "end_line": 271
+      },
+      {
+        "function": "_continuation_metadata",
+        "line": 274,
+        "end_line": 287
+      },
+      {
+        "function": "search",
+        "line": 289,
+        "end_line": 475
+      },
+      {
+        "function": "detail",
+        "line": 477,
+        "end_line": 478
+      },
+      {
+        "function": "comments",
+        "line": 480,
+        "end_line": 481
+      },
+      {
+        "function": "creator",
+        "line": 483,
+        "end_line": 484
+      },
+      {
+        "function": "_delegate_v4",
+        "line": 486,
+        "end_line": 494
+      },
+      {
+        "function": "health_check",
+        "line": 496,
+        "end_line": 511
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 514,
+        "call": "register_adapter(\"x\", XAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/secondary_collection.py",
+    "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+    "classes": [
+      {
+        "class": "_CollectionWriteRejected",
+        "line": 1593,
+        "bases": [
+          "Exception"
+        ]
+      },
+      {
+        "class": "PublicRawCapture",
+        "line": 3156,
+        "bases": []
+      },
+      {
+        "class": "NativeCaptureError",
+        "line": 3298,
+        "bases": [
+          "ValueError"
+        ]
+      },
+      {
+        "class": "NativePublicCapture",
+        "line": 3305,
+        "bases": []
+      }
+    ],
+    "functions": [
+      {
+        "function": "_get_runtime_adapter",
+        "line": 56,
+        "end_line": 69
+      },
+      {
+        "function": "_now",
+        "line": 76,
+        "end_line": 77
+      },
+      {
+        "function": "_canonical_status",
+        "line": 80,
+        "end_line": 84
+      },
+      {
+        "function": "_observed_raw_count",
+        "line": 87,
+        "end_line": 99
+      },
+      {
+        "function": "_status_message",
+        "line": 102,
+        "end_line": 128
+      },
+      {
+        "function": "_last_run",
+        "line": 131,
+        "end_line": 196
+      },
+      {
+        "function": "_xhs_primary_runtime_status",
+        "line": 199,
+        "end_line": 241
+      },
+      {
+        "function": "_xhs_primary_last_run",
+        "line": 244,
+        "end_line": 266
+      },
+      {
+        "function": "_adapter_health",
+        "line": 269,
+        "end_line": 301
+      },
+      {
+        "function": "get_collection_surface",
+        "line": 304,
+        "end_line": 395
+      },
+      {
+        "function": "_validate_request",
+        "line": 398,
+        "end_line": 414
+      },
+      {
+        "function": "_blocked_youtube_atom_feed",
+        "line": 417,
+        "end_line": 422
+      },
+      {
+        "function": "_native_record",
+        "line": 425,
+        "end_line": 552
+      },
+      {
+        "function": "_daily_action_count",
+        "line": 555,
+        "end_line": 579
+      },
+      {
+        "function": "_mark_subject_and_sync",
+        "line": 582,
+        "end_line": 632
+      },
+      {
+        "function": "_write_run_log",
+        "line": 635,
+        "end_line": 644
+      },
+      {
+        "function": "_ensure_evidence_schema",
+        "line": 647,
+        "end_line": 662
+      },
+      {
+        "function": "_prelaunch_scope",
+        "line": 667,
+        "end_line": 681
+      },
+      {
+        "function": "_prelaunch_public_import_resource",
+        "line": 684,
+        "end_line": 703
+      },
+      {
+        "function": "_authorize_prelaunch_public",
+        "line": 706,
+        "end_line": 737
+      },
+      {
+        "function": "_prelaunch_manual_import_resource",
+        "line": 740,
+        "end_line": 749
+      },
+      {
+        "function": "_prelaunch_douyin_manual_import_resource",
+        "line": 752,
+        "end_line": 758
+      },
+      {
+        "function": "_authorize_prelaunch_manual",
+        "line": 761,
+        "end_line": 781
+      },
+      {
+        "function": "_authorize_prelaunch_douyin_manual",
+        "line": 784,
+        "end_line": 790
+      },
+      {
+        "function": "_validate_prelaunch_registry",
+        "line": 793,
+        "end_line": 803
+      },
+      {
+        "function": "_prelaunch_entity_mentions",
+        "line": 806,
+        "end_line": 857
+      },
+      {
+        "function": "_existing_prelaunch_evidence",
+        "line": 860,
+        "end_line": 877
+      },
+      {
+        "function": "_prelaunch_scope_conflict",
+        "line": 880,
+        "end_line": 928
+      },
+      {
+        "function": "_write_prelaunch_evidence",
+        "line": 931,
+        "end_line": 987
+      },
+      {
+        "function": "_credential_free_observations",
+        "line": 990,
+        "end_line": 1022
+      },
+      {
+        "function": "_sync_unassigned_collection",
+        "line": 1025,
+        "end_line": 1059
+      },
+      {
+        "function": "_persist_prelaunch_scope",
+        "line": 1062,
+        "end_line": 1071
+      },
+      {
+        "function": "prepare_xhs_observations",
+        "line": 1074,
+        "end_line": 1113
+      },
+      {
+        "function": "bind_collected_social_scope",
+        "line": 1116,
+        "end_line": 1212
+      },
+      {
+        "function": "_bind_collected_social_observations",
+        "line": 1215,
+        "end_line": 1295
+      },
+      {
+        "function": "_prelaunch_scope_note_ids_needing_verification",
+        "line": 1298,
+        "end_line": 1328
+      },
+      {
+        "function": "_sync_prelaunch_canonical_source_fields",
+        "line": 1331,
+        "end_line": 1417
+      },
+      {
+        "function": "_existing_prelaunch_observation_evidence",
+        "line": 1420,
+        "end_line": 1465
+      },
+      {
+        "function": "_write_evidence",
+        "line": 1468,
+        "end_line": 1498
+      },
+      {
+        "function": "_manual_collection_approval_resource",
+        "line": 1501,
+        "end_line": 1516
+      },
+      {
+        "function": "_manual_collection_guard",
+        "line": 1519,
+        "end_line": 1590
+      },
+      {
+        "function": "_task_commit_binding",
+        "line": 1601,
+        "end_line": 1619
+      },
+      {
+        "function": "_task_commit_receipt",
+        "line": 1622,
+        "end_line": 1677
+      },
+      {
+        "function": "collect_search",
+        "line": 1680,
+        "end_line": 2817
+      },
+      {
+        "function": "_business_source_reviews",
+        "line": 2820,
+        "end_line": 2841
+      },
+      {
+        "function": "_business_batch_binding",
+        "line": 2844,
+        "end_line": 2874
+      },
+      {
+        "function": "_historical_business_result",
+        "line": 2877,
+        "end_line": 2886
+      },
+      {
+        "function": "collect_business_queries",
+        "line": 2889,
+        "end_line": 3049
+      },
+      {
+        "function": "_execute_business_queries",
+        "line": 3052,
+        "end_line": 3142
+      },
+      {
+        "function": "_public_raw_collection",
+        "line": 3170,
+        "end_line": 3206
+      },
+      {
+        "function": "_public_raw_material",
+        "line": 3208,
+        "end_line": 3251
+      },
+      {
+        "function": "_record_public_raw_admission",
+        "line": 3253,
+        "end_line": 3287
+      },
+      {
+        "function": "approved_public_raw_resource",
+        "line": 3289,
+        "end_line": 3295
+      },
+      {
+        "function": "_native_capture_record",
+        "line": 3311,
+        "end_line": 3315
+      },
+      {
+        "function": "_validate_native_source_bytes",
+        "line": 3318,
+        "end_line": 3362
+      },
+      {
+        "function": "native_capture_permission_keyword",
+        "line": 3364,
+        "end_line": 3367
+      },
+      {
+        "function": "_cleanup_collected_source_paths",
+        "line": 3370,
+        "end_line": 3378
+      },
+      {
+        "function": "_persist_native_source_original",
+        "line": 3381,
+        "end_line": 3397
+      },
+      {
+        "function": "_verified_live_native_observation",
+        "line": 3400,
+        "end_line": 3425
+      },
+      {
+        "function": "_persist_live_source_original",
+        "line": 3428,
+        "end_line": 3513
+      },
+      {
+        "function": "_persist_pending_live_source_original",
+        "line": 3516,
+        "end_line": 3629
+      },
+      {
+        "function": "_persist_collected_source_original",
+        "line": 3632,
+        "end_line": 3747
+      },
+      {
+        "function": "_persist_pending_live_observations",
+        "line": 3750,
+        "end_line": 3903
+      },
+      {
+        "function": "_preserve_prelaunch_originals_after_rollback",
+        "line": 3906,
+        "end_line": 4103
+      },
+      {
+        "function": "recover_prelaunch_pending_sources",
+        "line": 4106,
+        "end_line": 4219
+      },
+      {
+        "function": "process_prelaunch_keyword_backlog",
+        "line": 4222,
+        "end_line": 4323
+      },
+      {
+        "function": "_keyword_candidate_bytes",
+        "line": 4326,
+        "end_line": 4355
+      },
+      {
+        "function": "_persist_post_intake_keyword_candidates",
+        "line": 4358,
+        "end_line": 4552
+      },
+      {
+        "function": "_post_intake_extraction_context",
+        "line": 4555,
+        "end_line": 4561
+      },
+      {
+        "function": "_bind_keyword_candidate_ref",
+        "line": 4564,
+        "end_line": 4586
+      },
+      {
+        "function": "_persist_internal_source_use_receipts",
+        "line": 4589,
+        "end_line": 4619
+      },
+      {
+        "function": "_persist_live_post_cover",
+        "line": 4622,
+        "end_line": 4681
+      },
+      {
+        "function": "_bind_native_source_original",
+        "line": 4684,
+        "end_line": 4711
+      },
+      {
+        "function": "_native_capture_collection",
+        "line": 4713,
+        "end_line": 4773
+      },
+      {
+        "function": "_browser_source_request",
+        "line": 4778,
+        "end_line": 4791
+      },
+      {
+        "function": "_browser_import_admitted",
+        "line": 4794,
+        "end_line": 4805
+      },
+      {
+        "function": "_browser_source_existing",
+        "line": 4808,
+        "end_line": 4825
+      },
+      {
+        "function": "_browser_source_result",
+        "line": 4828,
+        "end_line": 4836
+      },
+      {
+        "function": "admit_browser_snapshot",
+        "line": 4839,
+        "end_line": 4949
+      },
+      {
+        "function": "fill_native",
+        "line": 465,
+        "end_line": 467
+      },
+      {
+        "function": "normalized",
+        "line": 816,
+        "end_line": 817
+      },
+      {
+        "function": "denied",
+        "line": 1527,
+        "end_line": 1531
+      },
+      {
+        "function": "__init__",
+        "line": 1596,
+        "end_line": 1598
+      },
+      {
+        "function": "__init__",
+        "line": 3299,
+        "end_line": 3301
+      },
+      {
+        "function": "refs",
+        "line": 3657,
+        "end_line": 3674
+      },
+      {
+        "function": "unavailable",
+        "line": 3926,
+        "end_line": 3954
+      },
+      {
+        "function": "admit",
+        "line": 4398,
+        "end_line": 4404
+      },
+      {
+        "function": "known",
+        "line": 1086,
+        "end_line": 1090
+      },
+      {
+        "function": "renew_batch",
+        "line": 2986,
+        "end_line": 2994
+      },
+      {
+        "function": "save_completed",
+        "line": 2997,
+        "end_line": 3000
+      },
+      {
+        "function": "fetch_cover",
+        "line": 2159,
+        "end_line": 2165
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/public_http.py",
+    "sha256": "933e4f6a102e7474e11ed6ea52d148324b94f113522ecfbae924b0c4213a3b69",
+    "classes": [
+      {
+        "class": "PublicHttpAdapter",
+        "line": 124,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "_substantive_body",
+        "line": 27,
+        "end_line": 57
+      },
+      {
+        "function": "_publication_signals",
+        "line": 60,
+        "end_line": 121
+      },
+      {
+        "function": "__init__",
+        "line": 131,
+        "end_line": 133
+      },
+      {
+        "function": "fetch_document",
+        "line": 138,
+        "end_line": 166
+      },
+      {
+        "function": "_item",
+        "line": 169,
+        "end_line": 214
+      },
+      {
+        "function": "search",
+        "line": 216,
+        "end_line": 268
+      },
+      {
+        "function": "detail",
+        "line": 270,
+        "end_line": 274
+      },
+      {
+        "function": "health_check",
+        "line": 276,
+        "end_line": 289
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 292,
+        "call": "register_adapter(\"public_http\", PublicHttpAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/weibo.py",
+    "sha256": "3a084385f6565dcd5e1f976527a9bcff48ed59437d77556ebb44f55e885a5b4d",
+    "classes": [
+      {
+        "class": "WeiboAdapter",
+        "line": 12,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 24,
+        "end_line": 26
+      },
+      {
+        "function": "_load_backend",
+        "line": 28,
+        "end_line": 36
+      },
+      {
+        "function": "_v4_status_to_main",
+        "line": 39,
+        "end_line": 55
+      },
+      {
+        "function": "_v4_notes_to_items",
+        "line": 57,
+        "end_line": 75
+      },
+      {
+        "function": "search",
+        "line": 77,
+        "end_line": 104
+      },
+      {
+        "function": "_delegate_v4",
+        "line": 106,
+        "end_line": 133
+      },
+      {
+        "function": "detail",
+        "line": 135,
+        "end_line": 136
+      },
+      {
+        "function": "comments",
+        "line": 138,
+        "end_line": 139
+      },
+      {
+        "function": "creator",
+        "line": 141,
+        "end_line": 142
+      },
+      {
+        "function": "health_check",
+        "line": 144,
+        "end_line": 165
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 168,
+        "call": "register_adapter(\"weibo\", WeiboAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/health_center.py",
+    "sha256": "345f819707efa5ad93afddf9aa2bd264d6ff171940883297c2b2bcdec00c4db7",
+    "classes": [],
+    "functions": [
+      {
+        "function": "_xhs_runtime",
+        "line": 29,
+        "end_line": 57
+      },
+      {
+        "function": "build_platform_health",
+        "line": 60,
+        "end_line": 176
+      },
+      {
+        "function": "_message",
+        "line": 179,
+        "end_line": 200
+      },
+      {
+        "function": "_escalate",
+        "line": 210,
+        "end_line": 211
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/youtube.py",
+    "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+    "classes": [
+      {
+        "class": "YouTubeAdapter",
+        "line": 19,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "capability_map",
+        "line": 30,
+        "end_line": 34
+      },
+      {
+        "function": "normalize_to_platform_contents",
+        "line": 36,
+        "end_line": 37
+      },
+      {
+        "function": "search",
+        "line": 39,
+        "end_line": 44
+      },
+      {
+        "function": "detail",
+        "line": 46,
+        "end_line": 51
+      },
+      {
+        "function": "comments",
+        "line": 53,
+        "end_line": 58
+      },
+      {
+        "function": "creator",
+        "line": 60,
+        "end_line": 65
+      },
+      {
+        "function": "health_check",
+        "line": 67,
+        "end_line": 72
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 75,
+        "call": "register_adapter(\"youtube\", YouTubeAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/registry.py",
+    "sha256": "1fe98dbabc238cc0791039379d1797c2f746e0eaf7b27702b143d4b3554f92ca",
+    "classes": [],
+    "functions": [
+      {
+        "function": "register_adapter",
+        "line": 12,
+        "end_line": 16
+      },
+      {
+        "function": "list_adapters",
+        "line": 19,
+        "end_line": 20
+      },
+      {
+        "function": "get_adapter",
+        "line": 23,
+        "end_line": 31
+      },
+      {
+        "function": "capability_matrix",
+        "line": 34,
+        "end_line": 35
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/config.py",
+    "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+    "classes": [],
+    "functions": [
+      {
+        "function": "resolve_platform_config_key",
+        "line": 257,
+        "end_line": 268
+      },
+      {
+        "function": "get_platform_capabilities",
+        "line": 271,
+        "end_line": 276
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/__init__.py",
+    "sha256": "72c4642048330a4745987a7347b6a5750f0f1f1906693b2013d506f47f7c9234",
+    "classes": [],
+    "functions": [],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/tiktok.py",
+    "sha256": "a7a8f23e9f8b25260d66cd4584f014568ba4ff9ff0b509351ab516bbf45bd26d",
+    "classes": [
+      {
+        "class": "TikTokAdapter",
+        "line": 19,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "capability_map",
+        "line": 30,
+        "end_line": 34
+      },
+      {
+        "function": "normalize_to_platform_contents",
+        "line": 36,
+        "end_line": 37
+      },
+      {
+        "function": "search",
+        "line": 39,
+        "end_line": 44
+      },
+      {
+        "function": "detail",
+        "line": 46,
+        "end_line": 51
+      },
+      {
+        "function": "comments",
+        "line": 53,
+        "end_line": 58
+      },
+      {
+        "function": "health_check",
+        "line": 60,
+        "end_line": 65
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 68,
+        "call": "register_adapter(\"tiktok\", TikTokAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/web_atom.py",
+    "sha256": "4c94e3a886d1488dffca99a01ce58e645963776c2a3852cafb2535f5d2245fa5",
+    "classes": [
+      {
+        "class": "AtomAdapter",
+        "line": 33,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "_entry_time",
+        "line": 16,
+        "end_line": 24
+      },
+      {
+        "function": "_is_blocked_youtube_feed",
+        "line": 27,
+        "end_line": 30
+      },
+      {
+        "function": "__init__",
+        "line": 40,
+        "end_line": 42
+      },
+      {
+        "function": "search",
+        "line": 44,
+        "end_line": 147
+      },
+      {
+        "function": "detail",
+        "line": 149,
+        "end_line": 150
+      },
+      {
+        "function": "health_check",
+        "line": 152,
+        "end_line": 165
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 168,
+        "call": "register_adapter(\"web_atom\", AtomAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/safe_collection.py",
+    "sha256": "4f80b2e45207b5f062ebb83b6f5ec3c6eed9200462483711427f626a169eb1b1",
+    "classes": [
+      {
+        "class": "CollectionHygienePolicy",
+        "line": 128,
+        "bases": []
+      },
+      {
+        "class": "RateGovernor",
+        "line": 182,
+        "bases": []
+      }
+    ],
+    "functions": [
+      {
+        "function": "sanitize",
+        "line": 56,
+        "end_line": 68
+      },
+      {
+        "function": "redact_text",
+        "line": 71,
+        "end_line": 82
+      },
+      {
+        "function": "redact_record",
+        "line": 85,
+        "end_line": 110
+      },
+      {
+        "function": "build_collection_audit",
+        "line": 219,
+        "end_line": 248
+      },
+      {
+        "function": "validate_collection_audit",
+        "line": 251,
+        "end_line": 267
+      },
+      {
+        "function": "run_offline_pipeline",
+        "line": 271,
+        "end_line": 313
+      },
+      {
+        "function": "walk",
+        "line": 90,
+        "end_line": 108
+      },
+      {
+        "function": "validate",
+        "line": 146,
+        "end_line": 173
+      },
+      {
+        "function": "is_safe",
+        "line": 175,
+        "end_line": 176
+      },
+      {
+        "function": "snapshot",
+        "line": 178,
+        "end_line": 179
+      },
+      {
+        "function": "__init__",
+        "line": 184,
+        "end_line": 185
+      },
+      {
+        "function": "permit",
+        "line": 187,
+        "end_line": 193
+      },
+      {
+        "function": "within_daily_cap",
+        "line": 195,
+        "end_line": 196
+      },
+      {
+        "function": "within_batch",
+        "line": 198,
+        "end_line": 199
+      },
+      {
+        "function": "assess_risk_signal",
+        "line": 201,
+        "end_line": 207
+      },
+      {
+        "function": "_repl",
+        "line": 77,
+        "end_line": 80
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/douyin.py",
+    "sha256": "f0526316ce258320687918ca99525898432fd2149c007bb24bc171521b41c2de",
+    "classes": [
+      {
+        "class": "DouyinAdapter",
+        "line": 24,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 36,
+        "end_line": 38
+      },
+      {
+        "function": "_load_backend",
+        "line": 40,
+        "end_line": 49
+      },
+      {
+        "function": "_v4_status_to_main",
+        "line": 52,
+        "end_line": 69
+      },
+      {
+        "function": "_v4_notes_to_items",
+        "line": 71,
+        "end_line": 104
+      },
+      {
+        "function": "_native_aweme_id",
+        "line": 107,
+        "end_line": 112
+      },
+      {
+        "function": "_detail_failure_state",
+        "line": 115,
+        "end_line": 137
+      },
+      {
+        "function": "_begin_detail_observation",
+        "line": 140,
+        "end_line": 158
+      },
+      {
+        "function": "_record_detail_outcome",
+        "line": 161,
+        "end_line": 230
+      },
+      {
+        "function": "search",
+        "line": 232,
+        "end_line": 358
+      },
+      {
+        "function": "_delegate_v4",
+        "line": 360,
+        "end_line": 387
+      },
+      {
+        "function": "detail",
+        "line": 389,
+        "end_line": 390
+      },
+      {
+        "function": "comments",
+        "line": 392,
+        "end_line": 393
+      },
+      {
+        "function": "creator",
+        "line": 395,
+        "end_line": 396
+      },
+      {
+        "function": "health_check",
+        "line": 398,
+        "end_line": 461
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 464,
+        "call": "register_adapter(\"douyin\", DouyinAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/bilibili.py",
+    "sha256": "bd1ef1e968dbbabdc17f1b95de2d9401ac1c41605382203f68267facbe45a0c7",
+    "classes": [
+      {
+        "class": "BilibiliAdapter",
+        "line": 12,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 24,
+        "end_line": 26
+      },
+      {
+        "function": "_load_backend",
+        "line": 28,
+        "end_line": 36
+      },
+      {
+        "function": "_v4_status_to_main",
+        "line": 39,
+        "end_line": 55
+      },
+      {
+        "function": "_v4_notes_to_items",
+        "line": 57,
+        "end_line": 75
+      },
+      {
+        "function": "search",
+        "line": 77,
+        "end_line": 104
+      },
+      {
+        "function": "_delegate_v4",
+        "line": 106,
+        "end_line": 134
+      },
+      {
+        "function": "detail",
+        "line": 136,
+        "end_line": 137
+      },
+      {
+        "function": "comments",
+        "line": 139,
+        "end_line": 140
+      },
+      {
+        "function": "creator",
+        "line": 142,
+        "end_line": 143
+      },
+      {
+        "function": "health_check",
+        "line": 145,
+        "end_line": 167
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 170,
+        "call": "register_adapter(\"bilibili\", BilibiliAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/channels.py",
+    "sha256": "119da37032bf96e35f329c7b6d7b604091b4ead387657c25af941b7a151bd686",
+    "classes": [
+      {
+        "class": "ChannelsAdapter",
+        "line": 20,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "capability_map",
+        "line": 31,
+        "end_line": 35
+      },
+      {
+        "function": "normalize_to_platform_contents",
+        "line": 37,
+        "end_line": 39
+      },
+      {
+        "function": "search",
+        "line": 41,
+        "end_line": 46
+      },
+      {
+        "function": "detail",
+        "line": 48,
+        "end_line": 53
+      },
+      {
+        "function": "comments",
+        "line": 55,
+        "end_line": 60
+      },
+      {
+        "function": "health_check",
+        "line": 62,
+        "end_line": 67
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 70,
+        "call": "register_adapter(\"channels\", ChannelsAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/wechat.py",
+    "sha256": "544c8dfa1fa8a62bc7f8d87b3fbcc61dd262adeaf74ec54dcb1861a697234e67",
+    "classes": [
+      {
+        "class": "WechatPublicAdapter",
+        "line": 112,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "_challenge",
+        "line": 23,
+        "end_line": 27
+      },
+      {
+        "function": "parse_public_article",
+        "line": 30,
+        "end_line": 87
+      },
+      {
+        "function": "parse_sogou_discovery",
+        "line": 90,
+        "end_line": 109
+      },
+      {
+        "function": "__init__",
+        "line": 117,
+        "end_line": 119
+      },
+      {
+        "function": "health_check",
+        "line": 121,
+        "end_line": 124
+      },
+      {
+        "function": "_discovery_original",
+        "line": 126,
+        "end_line": 167
+      },
+      {
+        "function": "detail",
+        "line": 169,
+        "end_line": 192
+      },
+      {
+        "function": "search",
+        "line": 194,
+        "end_line": 235
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 238,
+        "call": "register_adapter('wechat', WechatPublicAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/_init.py",
+    "sha256": "0ce42a0178aea8b233c00cbb2adc5b48641c2fd91a7f8fa06337ba737f06ad76",
+    "classes": [],
+    "functions": [],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/platform_naming.py",
+    "sha256": "0c1bd40f01774d1da55e15a1d76f77d9713155b4fa26a3cedf166ff8e2164388",
+    "classes": [
+      {
+        "class": "PlatformFieldSpec",
+        "line": 109,
+        "bases": []
+      },
+      {
+        "class": "PlatformConnectionStatus",
+        "line": 811,
+        "bases": []
+      }
+    ],
+    "functions": [
+      {
+        "function": "normalize_platform",
+        "line": 89,
+        "end_line": 96
+      },
+      {
+        "function": "platform_display_name",
+        "line": 99,
+        "end_line": 102
+      },
+      {
+        "function": "_inverse_like",
+        "line": 269,
+        "end_line": 281
+      },
+      {
+        "function": "_exact_nonempty_text",
+        "line": 289,
+        "end_line": 293
+      },
+      {
+        "function": "_native_media_url_observation",
+        "line": 296,
+        "end_line": 319
+      },
+      {
+        "function": "_instagram_media_observations",
+        "line": 322,
+        "end_line": 359
+      },
+      {
+        "function": "_wechat_media_observations",
+        "line": 362,
+        "end_line": 373
+      },
+      {
+        "function": "_normalize_author_identity",
+        "line": 376,
+        "end_line": 391
+      },
+      {
+        "function": "_normalize_bilibili_publication",
+        "line": 394,
+        "end_line": 435
+      },
+      {
+        "function": "to_canonical_record",
+        "line": 438,
+        "end_line": 462
+      },
+      {
+        "function": "safe_content_id",
+        "line": 465,
+        "end_line": 472
+      },
+      {
+        "function": "classify_historical_platform_values",
+        "line": 478,
+        "end_line": 491
+      },
+      {
+        "function": "normalize_platform_name",
+        "line": 497,
+        "end_line": 503
+      },
+      {
+        "function": "get_platform_fields",
+        "line": 506,
+        "end_line": 514
+      },
+      {
+        "function": "normalize_content_id",
+        "line": 517,
+        "end_line": 543
+      },
+      {
+        "function": "build_content_url",
+        "line": 546,
+        "end_line": 566
+      },
+      {
+        "function": "get_platform_aliases",
+        "line": 569,
+        "end_line": 578
+      },
+      {
+        "function": "get_raw_table",
+        "line": 608,
+        "end_line": 613
+      },
+      {
+        "function": "map_raw_to_normalized",
+        "line": 751,
+        "end_line": 804
+      },
+      {
+        "function": "get_connection_status",
+        "line": 836,
+        "end_line": 841
+      },
+      {
+        "function": "get_ui_visible_platforms",
+        "line": 844,
+        "end_line": 846
+      },
+      {
+        "function": "get_all_platforms_with_status",
+        "line": 849,
+        "end_line": 867
+      },
+      {
+        "function": "get_platform_registry_catalog",
+        "line": 870,
+        "end_line": 892
+      },
+      {
+        "function": "calculate_engagement",
+        "line": 898,
+        "end_line": 914
+      },
+      {
+        "function": "calculate_engagement_rate",
+        "line": 917,
+        "end_line": 925
+      },
+      {
+        "function": "engagement_from_normalized",
+        "line": 928,
+        "end_line": 935
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/rednote_policy.py",
+    "sha256": "bec29ab886672b3a3b2e340b815ee90460297b946896be4519b27a56700b1182",
+    "classes": [
+      {
+        "class": "RedNotePolicy",
+        "line": 83,
+        "bases": []
+      }
+    ],
+    "functions": [
+      {
+        "function": "_env_bool",
+        "line": 61,
+        "end_line": 65
+      },
+      {
+        "function": "automatic_collection_opt_in_enabled",
+        "line": 68,
+        "end_line": 79
+      },
+      {
+        "function": "effective_policy",
+        "line": 126,
+        "end_line": 143
+      },
+      {
+        "function": "get_cdp_port",
+        "line": 161,
+        "end_line": 167
+      },
+      {
+        "function": "collection_gate",
+        "line": 170,
+        "end_line": 203
+      },
+      {
+        "function": "select_region",
+        "line": 206,
+        "end_line": 252
+      },
+      {
+        "function": "can_run_kind",
+        "line": 92,
+        "end_line": 94
+      },
+      {
+        "function": "region_allowed",
+        "line": 96,
+        "end_line": 103
+      },
+      {
+        "function": "account_allowed",
+        "line": 105,
+        "end_line": 111
+      },
+      {
+        "function": "to_dict",
+        "line": 113,
+        "end_line": 123
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/zhihu.py",
+    "sha256": "37c2ee86e52e46f26ba5f297bfd978bfd50b3df8fd06c80c499e1e11033d6c1f",
+    "classes": [
+      {
+        "class": "ZhihuAdapter",
+        "line": 12,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 24,
+        "end_line": 26
+      },
+      {
+        "function": "_load_backend",
+        "line": 28,
+        "end_line": 35
+      },
+      {
+        "function": "_v4_status_to_main",
+        "line": 38,
+        "end_line": 50
+      },
+      {
+        "function": "_v4_notes_to_items",
+        "line": 52,
+        "end_line": 70
+      },
+      {
+        "function": "search",
+        "line": 72,
+        "end_line": 94
+      },
+      {
+        "function": "_delegate_v4",
+        "line": 96,
+        "end_line": 111
+      },
+      {
+        "function": "detail",
+        "line": 113,
+        "end_line": 114
+      },
+      {
+        "function": "comments",
+        "line": 116,
+        "end_line": 117
+      },
+      {
+        "function": "creator",
+        "line": 119,
+        "end_line": 120
+      },
+      {
+        "function": "health_check",
+        "line": 122,
+        "end_line": 140
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 143,
+        "call": "register_adapter(\"zhihu\", ZhihuAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/sitemap.py",
+    "sha256": "0518b3eac7103be2077da65a2f89581b42fc0f25fa92f017162a798d8d87066d",
+    "classes": [
+      {
+        "class": "SitemapAdapter",
+        "line": 16,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "__init__",
+        "line": 23,
+        "end_line": 25
+      },
+      {
+        "function": "search",
+        "line": 27,
+        "end_line": 83
+      },
+      {
+        "function": "detail",
+        "line": 85,
+        "end_line": 86
+      },
+      {
+        "function": "health_check",
+        "line": 88,
+        "end_line": 106
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 109,
+        "call": "register_adapter(\"sitemap\", SitemapAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/response_shape.py",
+    "sha256": "ac2346d0d47c0ed75af0992f03f4deca2b1e4c01bdd94c6ee925914e1f55b14c",
+    "classes": [
+      {
+        "class": "SearchShapeDiagnostics",
+        "line": 204,
+        "bases": []
+      }
+    ],
+    "functions": [
+      {
+        "function": "summarize",
+        "line": 30,
+        "end_line": 123
+      },
+      {
+        "function": "compare",
+        "line": 126,
+        "end_line": 139
+      },
+      {
+        "function": "_load",
+        "line": 142,
+        "end_line": 159
+      },
+      {
+        "function": "main",
+        "line": 162,
+        "end_line": 179
+      },
+      {
+        "function": "_diagnostic_bytes",
+        "line": 200,
+        "end_line": 201
+      },
+      {
+        "function": "_checked_shape",
+        "line": 274,
+        "end_line": 319
+      },
+      {
+        "function": "validate_acquisition_diagnostics",
+        "line": 322,
+        "end_line": 358
+      },
+      {
+        "function": "reject_constant",
+        "line": 149,
+        "end_line": 150
+      },
+      {
+        "function": "unique_keys",
+        "line": 151,
+        "end_line": 157
+      },
+      {
+        "function": "__init__",
+        "line": 207,
+        "end_line": 212
+      },
+      {
+        "function": "_increment",
+        "line": 214,
+        "end_line": 218
+      },
+      {
+        "function": "response_observed",
+        "line": 220,
+        "end_line": 221
+      },
+      {
+        "function": "parse_failed",
+        "line": 223,
+        "end_line": 224
+      },
+      {
+        "function": "observe_json",
+        "line": 226,
+        "end_line": 257
+      },
+      {
+        "function": "snapshot",
+        "line": 259,
+        "end_line": 271
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/public_source.py",
+    "sha256": "f482bee782f7a6c92297b3d412501ac1785f25000b390930830d29f3dcfcca71",
+    "classes": [
+      {
+        "class": "PublicSourceError",
+        "line": 48,
+        "bases": [
+          "RuntimeError"
+        ]
+      },
+      {
+        "class": "PublicResponse",
+        "line": 53,
+        "bases": []
+      },
+      {
+        "class": "PublicSourceHTTPAdapter",
+        "line": 346,
+        "bases": [
+          "HTTPAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "_is_blocked_youtube_feed",
+        "line": 63,
+        "end_line": 66
+      },
+      {
+        "function": "public_source_provenance",
+        "line": 69,
+        "end_line": 89
+      },
+      {
+        "function": "_resolved_addresses",
+        "line": 92,
+        "end_line": 100
+      },
+      {
+        "function": "_doh_addresses",
+        "line": 103,
+        "end_line": 157
+      },
+      {
+        "function": "_canonical_hostname",
+        "line": 160,
+        "end_line": 180
+      },
+      {
+        "function": "_is_globally_routable",
+        "line": 183,
+        "end_line": 198
+      },
+      {
+        "function": "load_public_source_host_pins",
+        "line": 201,
+        "end_line": 239
+      },
+      {
+        "function": "_host_pin",
+        "line": 242,
+        "end_line": 243
+      },
+      {
+        "function": "_validate_public_url_and_pin",
+        "line": 246,
+        "end_line": 312
+      },
+      {
+        "function": "validate_public_url",
+        "line": 315,
+        "end_line": 322
+      },
+      {
+        "function": "_validate_allowed_https_host",
+        "line": 325,
+        "end_line": 343
+      },
+      {
+        "function": "fetch_public_url",
+        "line": 416,
+        "end_line": 533
+      },
+      {
+        "function": "_post_cover_null_result",
+        "line": 536,
+        "end_line": 550
+      },
+      {
+        "function": "_native_cover_url",
+        "line": 553,
+        "end_line": 568
+      },
+      {
+        "function": "_post_cover_candidate",
+        "line": 571,
+        "end_line": 629
+      },
+      {
+        "function": "_sanitize_post_cover_url",
+        "line": 632,
+        "end_line": 642
+      },
+      {
+        "function": "_post_cover_magic_extension",
+        "line": 645,
+        "end_line": 661
+      },
+      {
+        "function": "fetch_observed_post_cover",
+        "line": 664,
+        "end_line": 730
+      },
+      {
+        "function": "safe_url",
+        "line": 71,
+        "end_line": 78
+      },
+      {
+        "function": "reject_duplicate_pairs",
+        "line": 210,
+        "end_line": 216
+      },
+      {
+        "function": "__init__",
+        "line": 355,
+        "end_line": 361
+      },
+      {
+        "function": "get_connection_with_tls_context",
+        "line": 363,
+        "end_line": 381
+      },
+      {
+        "function": "request_url",
+        "line": 383,
+        "end_line": 396
+      },
+      {
+        "function": "send",
+        "line": 398,
+        "end_line": 413
+      }
+    ],
+    "registration_statements": [],
+    "runtime_imported": false,
+    "live_verified": false
+  },
+  {
+    "path": "lumenis/system/collector/adapters/instagram.py",
+    "sha256": "1db211062fce4c1bd9004ebb6a5601f99aa62d1826598d3d9528a7e2a015ee27",
+    "classes": [
+      {
+        "class": "InstagramAdapter",
+        "line": 104,
+        "bases": [
+          "BasePlatformAdapter"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "function": "parse_public_instagram_document",
+        "line": 32,
+        "end_line": 101
+      },
+      {
+        "function": "visit",
+        "line": 37,
+        "end_line": 45
+      },
+      {
+        "function": "metric",
+        "line": 69,
+        "end_line": 71
+      },
+      {
+        "function": "__init__",
+        "line": 124,
+        "end_line": 128
+      },
+      {
+        "function": "_get_engine",
+        "line": 133,
+        "end_line": 139
+      },
+      {
+        "function": "_verify_native_topic_reference",
+        "line": 142,
+        "end_line": 193
+      },
+      {
+        "function": "_map_status",
+        "line": 199,
+        "end_line": 215
+      },
+      {
+        "function": "_notes_to_items",
+        "line": 220,
+        "end_line": 225
+      },
+      {
+        "function": "_shortcode_from_url",
+        "line": 228,
+        "end_line": 242
+      },
+      {
+        "function": "_observed_shortcode",
+        "line": 245,
+        "end_line": 258
+      },
+      {
+        "function": "_detail_shortcode_matches",
+        "line": 261,
+        "end_line": 270
+      },
+      {
+        "function": "_detail_failure_state",
+        "line": 273,
+        "end_line": 293
+      },
+      {
+        "function": "_begin_detail_observation",
+        "line": 296,
+        "end_line": 329
+      },
+      {
+        "function": "_record_detail_outcome",
+        "line": 332,
+        "end_line": 400
+      },
+      {
+        "function": "search",
+        "line": 405,
+        "end_line": 571
+      },
+      {
+        "function": "_public_detail",
+        "line": 573,
+        "end_line": 597
+      },
+      {
+        "function": "detail",
+        "line": 599,
+        "end_line": 633
+      },
+      {
+        "function": "comments",
+        "line": 635,
+        "end_line": 674
+      },
+      {
+        "function": "creator",
+        "line": 676,
+        "end_line": 706
+      },
+      {
+        "function": "health_check",
+        "line": 708,
+        "end_line": 727
+      },
+      {
+        "function": "normalize_item",
+        "line": 732,
+        "end_line": 757
+      },
+      {
+        "function": "_proxy_configured",
+        "line": 763,
+        "end_line": 764
+      }
+    ],
+    "registration_statements": [
+      {
+        "line": 767,
+        "call": "register_adapter(\"instagram\", InstagramAdapter)"
+      }
+    ],
+    "runtime_imported": false,
+    "live_verified": false
+  }
+]

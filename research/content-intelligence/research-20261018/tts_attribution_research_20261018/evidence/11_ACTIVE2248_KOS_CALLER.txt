@@ -1,0 +1,46 @@
+# specified candidate [LOCAL_WORKSPACE]/lumenis_bmp09_parser_20261017T2248Z/source/kos_routes.py
+1180: @kos_bp.route("/attribution", methods=["GET"])
+1181: def api_attribution():
+1182:     """Return attribution from notes verified within the selected BrandFocus."""
+1183:     try:
+1184:         _actor, _actor_id, scope, selected, decision = _resolve_kos_brand_scope("read")
+1185:         author_id = request.args.get("author_id", "")
+1186:         note_ids = request.args.get("note_ids", "")
+1187:         brand_name = _kos_selected_brand_name(selected)
+1188:         if author_id:
+1189:             import kos_attribution
+1190: 
+1191:             outcome = kos_attribution.calculate_attribution(
+1192:                 author_id,
+1193:                 brand_name=brand_name,
+1194:                 scope=scope,
+1195:                 actor=_actor,
+1196:             )
+1197:         elif note_ids:
+1198:             normalized = [part.strip() for part in note_ids.split(",") if part.strip()]
+1199:             import kos_attribution
+1200: 
+1201:             outcome = kos_attribution.calculate_multi_touch_attribution(
+1202:                 normalized,
+1203:                 brand_name=brand_name,
+1204:                 scope=scope,
+1205:             )
+1206:         else:
+1207:             return (
+1208:                 jsonify(
+1209:                     {
+1210:                         "ok": False,
+1211:                         "status": "invalid_request",
+1212:                         "code": "AUTHOR_ID_OR_NOTE_IDS_REQUIRED",
+1213:                     }
+1214:                 ),
+1215:                 400,
+1216:             )
+1217:         if outcome.get("ok") is not True:
+1218:             status = 403 if outcome.get("status") == "denied" else 409
+1219:             return (
+1220:                 jsonify({**outcome, "scope_audit_id": decision.scope_audit_id}),
+1221:                 status,
+1222:             )
+1223:         current = _resolve_kos_brand_scope("read")
+1224:         if current[1] != _actor_id or current[2] != scope or current[3] != selected:

@@ -1,0 +1,176 @@
+# specified candidate [LOCAL_WORKSPACE]/lumenis_bmp09_parser_20261017T2248Z/source/kos_attribution.py
+287: def calculate_multi_touch_attribution(
+288:     note_ids: list, brand_name: str, *, scope=None
+289: ) -> dict:
+290:     """Calculate attribution only from notes verified in the exact selected BrandFocus."""
+291:     from reprocess import _canonical_source_ids, _normalize_scope
+292: 
+293:     try:
+294:         exact = _normalize_scope(scope, allow_global=False)
+295:     except ValueError as exc:
+296:         return {"ok": False, "status": "blocked", "code": str(exc)}
+297:     if exact["domain_id"] != "zbmp":
+298:         return {"ok": False, "status": "invalid_request", "code": "BMP_SCOPE_REQUIRED"}
+299:     if not isinstance(brand_name, str) or not brand_name.strip():
+300:         return {
+301:             "ok": False,
+302:             "status": "invalid_request",
+303:             "code": "BRAND_SCOPE_REQUIRED",
+304:         }
+305:     if not isinstance(note_ids, list) or not note_ids or len(note_ids) > 100:
+306:         return {"ok": False, "status": "invalid_request", "code": "NOTE_IDS_REQUIRED"}
+307:     normalized_ids = []
+308:     for note_id in note_ids:
+309:         if not isinstance(note_id, str) or not note_id or note_id != note_id.strip():
+310:             return {
+311:                 "ok": False,
+312:                 "status": "invalid_request",
+313:                 "code": "NOTE_IDS_INVALID",
+314:             }
+315:         if note_id not in normalized_ids:
+316:             normalized_ids.append(note_id)
+317: 
+318:     cfg = load_attribution_config()
+319:     aw = cfg["attribution_weights"]
+320:     conn = _conn()
+321:     try:
+322:         admitted_ids = _canonical_source_ids(
+323:             exact,
+324:             source_ids=normalized_ids,
+325:             limit=len(normalized_ids),
+326:             connection=conn,
+327:         )
+328:         if set(admitted_ids) != set(normalized_ids):
+329:             return {
+330:                 "ok": False,
+331:                 "status": "denied",
+332:                 "code": "CANONICAL_NOTE_SCOPE_MISMATCH",
+333:             }
+334: 
+335:         placeholders = ",".join("?" for _ in normalized_ids)
+336:         notes = conn.execute(
+337:             "SELECT note_id, author_id, author_nickname, likes, comments, collects, shares, "
+338:             "publish_datetime, source_platform FROM notes WHERE note_id IN ("
+339:             + placeholders
+340:             + ") "
+341:             "AND scope_status='VERIFIED' AND brand_focus_id=? "
+342:             "AND COALESCE(subject_id,'')='' AND NULLIF(TRIM(scope_evidence_ref),'') IS NOT NULL "
+343:             "ORDER BY publish_datetime ASC",
+344:             tuple(normalized_ids) + (exact["brand_focus_id"],),
+345:         ).fetchall()
+346:         if len(notes) != len(normalized_ids):
+347:             return {
+348:                 "ok": False,
+349:                 "status": "denied",
+350:                 "code": "CANONICAL_NOTE_SCOPE_CHANGED",
+351:             }
+352: 
+353:         missing_authors = sum(
+354:             not isinstance(note["author_id"], str) or not note["author_id"].strip()
+355:             for note in notes
+356:         )
+357:         if missing_authors:
+358:             return {
+359:                 "ok": False,
+360:                 "status": "incomplete",
+361:                 "code": "AUTHOR_ID_UNAVAILABLE",
+362:                 "total_notes": len(notes),
+363:                 "identified_author_notes": len(notes) - missing_authors,
+364:                 "unattributed_note_count": missing_authors,
+365:                 "attribution": [],
+366:             }
+367: 
+368:         interactions_by_note = [
+369:             _platform_weighted_interactions(dict(note)) for note in notes
+370:         ]
+371:         incomplete_engagement = sum(value is None for value in interactions_by_note)
+372:         if incomplete_engagement:
+373:             return {
+374:                 "ok": False,
+375:                 "status": "incomplete",
+376:                 "code": "ENGAGEMENT_DATA_INCOMPLETE",
+377:                 "total_notes": len(notes),
+378:                 "engagement_complete_note_count": len(notes) - incomplete_engagement,
+379:                 "engagement_incomplete_note_count": incomplete_engagement,
+380:                 "attribution": [],
+381:             }
+382:         kos_contrib = {}
+383:         for index, note in enumerate(notes):
+384:             platform = str(note["source_platform"] or "").strip()
+385:             author = (
+386:                 platform or "UNKNOWN:" + note["note_id"],
+387:                 note["author_id"].strip(),
+388:             )
+389:             if author not in kos_contrib:
+390:                 kos_contrib[author] = {
+391:                     "author_nickname": note["author_nickname"],
+392:                     "source_platform": platform or None,
+393:                     "source_ids": [],
+394:                     "notes": 0,
+395:                     "interactions": 0,
+396:                     "weighted_score": 0,
+397:                 }
+398:             interactions = interactions_by_note[index]
+399:             time_weight = float(aw["time_weight_coeff"]) + (
+400:                 index / max(1, len(notes) - 1)
+401:             ) * float(aw["time_weight_range"])
+402:             kos_contrib[author]["source_ids"].append(note["note_id"])
+403:             kos_contrib[author]["notes"] += 1
+404:             kos_contrib[author]["interactions"] += interactions
+405:             kos_contrib[author]["weighted_score"] += interactions * time_weight
+406: 
+407:         total_weighted = math.fsum(
+408:             item["weighted_score"] for item in kos_contrib.values()
+409:         )
+410:         if not math.isfinite(total_weighted) or total_weighted <= 0:
+411:             return {
+412:                 "ok": False,
+413:                 "status": "unavailable",
+414:                 "code": (
+415:                     "ZERO_ENGAGEMENT_DENOMINATOR"
+416:                     if total_weighted == 0
+417:                     else "ENGAGEMENT_DENOMINATOR_UNAVAILABLE"
+418:                 ),
+419:                 "total_notes": len(notes),
+420:                 "total_kos": len(kos_contrib),
+421:                 "total_weighted_interactions": (
+422:                     total_weighted if math.isfinite(total_weighted) else None
+423:                 ),
+424:                 "attribution": [],
+425:             }
+426:         result = [
+427:             {
+428:                 "author_id": author[1],
+429:                 "source_platform": values["source_platform"],
+430:                 "source_ids": values["source_ids"],
+431:                 "author_nickname": values["author_nickname"],
+432:                 "note_count": values["notes"],
+433:                 "interactions": round(values["interactions"], 1),
+434:                 "attribution_pct": round(
+435:                     values["weighted_score"] / total_weighted * 100, 1
+436:                 ),
+437:             }
+438:             for author, values in sorted(
+439:                 kos_contrib.items(),
+440:                 key=lambda item: item[1]["weighted_score"],
+441:                 reverse=True,
+442:             )
+443:         ]
+444:         return {
+445:             "ok": True,
+446:             "status": "COMPLETED",
+447:             "brand_name": brand_name,
+448:             "brand_focus_id": exact["brand_focus_id"],
+449:             "total_notes": len(notes),
+450:             "total_kos": len(kos_contrib),
+451:             "total_weighted_interactions": total_weighted,
+452:             "config_status": cfg["config_status"],
+453:             "attribution": result,
+454:             "method": "ordered-position-weighted-source-share:v1",
+455:             "interpretation": "DESCRIPTIVE_WEIGHTED_INTERACTION_SHARE_NOT_CONVERSION",
+456:             "model_attribution": "LEGACY_POSITION_WEIGHTED_SHARE_NOT_MARKOV_SHAPLEY",
+457:             "verified_conversion": "NOT_ESTABLISHED",
+458:             "causal_effect": "NOT_ESTABLISHED",
+459:         }
+460:     finally:
+461:         conn.close()

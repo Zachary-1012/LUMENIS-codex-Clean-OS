@@ -1,0 +1,52 @@
+[
+  {
+    "path": "refresh",
+    "status": 200,
+    "post": true
+  },
+  {
+    "path": "refresh",
+    "status": 200,
+    "post": true
+  },
+  {
+    "path": "list",
+    "status": 200,
+    "post": false
+  },
+  {
+    "path": "list?lifecycle=growing&sort_by=note_count",
+    "status": 200,
+    "post": false
+  },
+  {
+    "path": "koc-tier?interactions_24h=50&interactions_7d=100",
+    "status": 200,
+    "post": false
+  },
+  {
+    "path": "koc-tier?interactions_24h=-1&interactions_7d=100",
+    "status": 400,
+    "post": false
+  },
+  {
+    "path": "list",
+    "status": 403,
+    "post": false
+  },
+  {
+    "path": "list",
+    "status": 403,
+    "post": false
+  },
+  {
+    "path": "refresh",
+    "status": 401,
+    "post": true
+  },
+  {
+    "path": "list",
+    "status": 200,
+    "post": false
+  }
+]

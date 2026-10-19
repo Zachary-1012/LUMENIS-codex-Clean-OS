@@ -219,7 +219,7 @@ covered by the scoped tests; a full brand evaluation/report job is not accepted.
 
 ### M bounded final acceptance — 2026-10-02
 
-M (thread `01a0cd84-7685-7a73-97d9-83a14a546e71`) accepted the source-only
+M (thread `private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186`) accepted the source-only
 SourceBrief main flow: real canonical sources, saved artifact, reference reopen,
 offline recovery and scope-switch isolation. The 14 Dart source/test files remain
 frozen for W6's exact App + CURRENT co-publication. This note records M's decision;

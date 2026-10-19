@@ -1,0 +1,32 @@
+{'namespace': 'net:[4026532466]', 'interfaces': ['lo'], 'routes': '', 'libc_reserved_test_address': '203.0.113.1', 'connect_result': -1, 'errno': 101, 'errno_name': 'ENETUNREACH'}
+[0;93m2026-10-18 06:07:25.168899464 [W:onnxruntime:Default, telemetry_1ds.cc:600 operator()] Failed to persist telemetry device ID; using an in-memory identifier[m
+ONNX Runtime explicit telemetry disable called inside network-isolated namespace
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- $WORKSPACE/python_compat_fix_20261018/testdeps/venv311/bin/python
+rootdir: $WORKSPACE/ggi_independent_review_20261018T1217Z/source_r08
+configfile: pytest.ini
+collecting ... collected 13 items
+
+tests/test_independent_hypothesis_commit.py::test_counterevidence_commit_rechecks_original_source_inside_writer_transaction PASSED [  7%]
+tests/test_independent_hypothesis_consumers.py::test_real_session_counterevidence_blocks_stale_learning_even_after_reinstatement PASSED [ 15%]
+tests/test_independent_hypothesis_outbox.py::test_real_session_counterevidence_invalidates_staged_outbox_and_old_receipt_approval PASSED [ 23%]
+tests/test_growth_hypothesis_review.py::test_manual_counterevidence_effective_view_history_cas_replay PASSED [ 30%]
+tests/test_growth_hypothesis_review.py::test_unbound_counterevidence_rejected_without_artifacts[fake_ref] PASSED [ 38%]
+tests/test_growth_hypothesis_review.py::test_unbound_counterevidence_rejected_without_artifacts[fake_hypothesis] PASSED [ 46%]
+tests/test_growth_hypothesis_review.py::test_unbound_counterevidence_rejected_without_artifacts[empty_ref] PASSED [ 53%]
+tests/test_growth_hypothesis_review.py::test_counter_source_deletion_invalidates_review_report_and_replay PASSED [ 61%]
+tests/test_growth_hypothesis_review.py::test_inline_reviews_cannot_bypass_manual_owner PASSED [ 69%]
+tests/test_growth_hypothesis_review.py::test_generic_saved_work_cannot_erase_review_history PASSED [ 76%]
+tests/test_growth_hypothesis_review.py::test_real_session_counterevidence_actor_revocation_and_read_only PASSED [ 84%]
+tests/test_growth_hypothesis_review.py::test_concurrent_manual_reviews_use_original_saved_work_cas PASSED [ 92%]
+tests/test_growth_hypothesis_review.py::test_derived_report_preserves_counterevidence_and_parent_review_dependency PASSED [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+============================= 13 passed in 13.80s ==============================

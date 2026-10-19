@@ -92,7 +92,7 @@ to R08. No package dependency or font transformation is added.
   Screenshots and automated fixtures alone are not business completion.
 
 Local drivers/logs/manifests:
-`C:/Users/28049/AppData/Local/Temp/lumenis-quiet-canvas-20260928`.
+`C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-quiet-canvas-20260928`.
 The earlier emoji-only build has ten actual browser assertions and inspected
 glyph captures; its evidence remains separately recorded under ROUND 08.
 The adjacent `.receipt.json` records this final six-source-file snapshot, 208

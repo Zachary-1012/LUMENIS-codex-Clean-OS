@@ -188,7 +188,7 @@ def _history_row(connection, evidence_ref: str, skill_id: str) -> tuple[dict, di
         "config_sha256", "restore_evidence_ref")}
     material.update(before_metadata=before, after_metadata=after)
     _operation_id(material["operation_id"])
-    if material["action"] not in {"update", "uninstall", "restore"} \
+    if material["action"] not in {"update", "uninstall", "restore", "review_mcp_contract"} \
             or inputs.get("candidate_sha256") != _hash(material) \
             or row.get("version") != SCHEMA_VERSION + ":" + inputs["candidate_sha256"] \
             or row.get("test_name") != material["operation_id"]:
@@ -217,14 +217,23 @@ def read_skill_version_history(skill_id: str, *, limit: int = 50) -> list[dict]:
     return history
 
 
-def prepare_skill_metadata_change(skill_id: str, action: str, *, operation_id: str,
-                                  source: str | None = None, restore_evidence_ref: str | None = None,
-                                  resolve_remote: bool = False) -> SkillMetadataChange:
+def prepare_skill_metadata_change(
+    skill_id: str,
+    action: str,
+    *,
+    operation_id: str,
+    source: str | None = None,
+    restore_evidence_ref: str | None = None,
+    resolve_remote: bool = False,
+    confirm_process: bool = False
+) -> SkillMetadataChange:
     """Prepare one update/uninstall/restore without changing registry or package files."""
     _operation_id(operation_id)
-    if action not in {"update", "uninstall", "restore"}:
+    if action not in {"update", "uninstall", "restore", "review_mcp_contract"}:
         raise ValueError("SKILL_METADATA_ACTION_INVALID")
-    if (action == "update") != (source is not None) or (action == "restore") != (restore_evidence_ref is not None):
+    if (action == "update") != (source is not None) or (action == "restore") != (
+        restore_evidence_ref is not None
+    ):
         raise ValueError("SKILL_METADATA_INPUT_INVALID")
     with get_repository().connection(read_only=True, wal=False) as connection:
         row = _registry_row(connection, skill_id)
@@ -235,42 +244,130 @@ def prepare_skill_metadata_change(skill_id: str, action: str, *, operation_id: s
         if action == "restore":
             _event, _inputs, outputs = _history_row(connection, restore_evidence_ref, skill_id)
             after = dict(outputs["before_metadata"])
-            if (after["product"], after["domain"]) != (before["product"], before["domain"]) \
-                    or str(after["source_type"] or "builtin").lower() == "builtin":
+            if (after["product"], after["domain"]) != (before["product"], before["domain"]) or str(
+                after["source_type"] or "builtin"
+            ).lower() == "builtin":
                 raise ValueError("SKILL_RESTORE_OWNER_MISMATCH")
     if action == "update":
-        preview = preview_skill_source(source, resolve_remote=resolve_remote, fetch_remote_manifest=resolve_remote)
+        preview = preview_skill_source(
+            source, resolve_remote=resolve_remote, fetch_remote_manifest=resolve_remote
+        )
         source_info = preview.get("source") or {}
         source_type = source_info.get("source_type")
         expected_state = "REMOTE_VALIDATED" if source_type == "github" else "VALIDATED"
-        if source_type not in {"local", "zip", "skill_md", "github"} or preview.get("state") != expected_state:
+        if (
+            source_type not in {"local", "zip", "skill_md", "github"}
+            or preview.get("state") != expected_state
+        ):
             raise ValueError("SKILL_UPDATE_SOURCE_NOT_VALIDATED")
         normalized = (preview.get("validation") or {}).get("normalized") or {}
         if normalized.get("skill_id") != skill_id:
             raise ValueError("SKILL_UPDATE_ID_MISMATCH")
         if not re.fullmatch(r"[0-9a-f]{64}", str(preview.get("digest") or "")):
             raise ValueError("SKILL_UPDATE_DIGEST_MISSING")
-        if source_type == "github" and not re.fullmatch(r"[0-9a-f]{40}", str(preview.get("revision") or "")):
+        if source_type == "github" and not re.fullmatch(
+            r"[0-9a-f]{40}", str(preview.get("revision") or "")
+        ):
             raise ValueError("SKILL_UPDATE_REVISION_MISSING")
-        after.update({"name": normalized["name"], "description": normalized["description"],
-                      "version": normalized["version"], "runtime": normalized["runtime"],
-                      "entrypoint": normalized["entrypoint"] or None, "source": source_info["source"],
-                      "source_type": source_type, "revision": preview.get("revision"), "digest": preview["digest"]})
-        for name in ("capabilities", "tools", "input_schema", "output_schema", "permissions_requested", "secrets_required", "dependencies"):
+        after.update(
+            {
+                "name": normalized["name"],
+                "description": normalized["description"],
+                "version": normalized["version"],
+                "runtime": normalized["runtime"],
+                "entrypoint": normalized["entrypoint"] or None,
+                "source": source_info["source"],
+                "source_type": source_type,
+                "revision": preview.get("revision"),
+                "digest": preview["digest"],
+            }
+        )
+        for name in (
+            "capabilities",
+            "tools",
+            "input_schema",
+            "output_schema",
+            "permissions_requested",
+            "secrets_required",
+            "dependencies",
+        ):
             after[name + "_json"] = _json(normalized[name])
         after["compatibility_json"] = _json(preview.get("compatibility") or {})
-        if (after["version"], after["revision"], after["digest"]) == (before["version"], before["revision"], before["digest"]):
+        if (after["version"], after["revision"], after["digest"]) == (
+            before["version"],
+            before["revision"],
+            before["digest"],
+        ):
             raise ValueError("SKILL_UPDATE_UNCHANGED")
-    after.update({"status": "disabled", "permissions_granted_json": "[]", "trust_level": "unverified",
-                  "health_state": "unknown", "install_state": "not_installed", "install_path": None,
-                  "active_version": None, "previous_version": before["version"],
-                  "lifecycle_state": "uninstalled" if action == "uninstall" else "validated"})
-    if action == "uninstall":
-        after["entrypoint"] = None
+    if action == "review_mcp_contract":
+        if confirm_process is not True:
+            raise PermissionError("MCP_DISCOVERY_PROCESS_CONFIRMATION_REQUIRED")
+        if row["runtime"] != "mcp" or row["install_state"] != "installed":
+            raise ValueError("MCP_REGISTERED_INSTALLATION_REQUIRED")
+        from mcp_skill_runtime import discover_registered_mcp, runtime_contract_binding
+        from mcp_discovery import tool_contract_hash
+
+        runtime_binding = runtime_contract_binding(dict(row))
+        discovery = discover_registered_mcp(dict(row))
+        if runtime_contract_binding(dict(row)) != runtime_binding:
+            raise ValueError("MCP_PACKAGE_CHANGED_DURING_DISCOVERY")
+        if discovery.get("ok") is not True or discovery.get("protocol_version") != "2025-11-25":
+            raise ValueError(
+                "MCP_CONTRACT_DISCOVERY_FAILED: " + "; ".join(discovery.get("errors", []))
+            )
+        allowed = json.loads(row["tools_json"] or "[]")
+        if (
+            not isinstance(allowed, list)
+            or not allowed
+            or any(not isinstance(name, str) for name in allowed)
+        ):
+            raise ValueError("MCP_REGISTERED_ALLOWLIST_REQUIRED")
+        tools = {tool["name"]: tool for tool in discovery["tools"]}
+        if any(name not in tools for name in allowed):
+            raise ValueError("MCP_REGISTERED_TOOL_NOT_ADVERTISED")
+        compatibility = json.loads(row["compatibility_json"] or "{}")
+        if not isinstance(compatibility, dict):
+            raise ValueError("MCP_COMPATIBILITY_METADATA_INVALID")
+        compatibility["mcp_tool_contracts"] = {
+            name: tool_contract_hash(tools[name]) for name in allowed
+        }
+        compatibility["mcp_protocol_version"] = "2025-11-25"
+        compatibility["mcp_runtime_binding"] = runtime_binding
+        # Retain full schemas for human inspection; hashing alone is not a review UI.
+        compatibility["mcp_reviewed_tools"] = [tools[name] for name in allowed]
+        after.update(
+            compatibility_json=_json(compatibility), status="disabled", health_state="unknown"
+        )
+    else:
+        after.update(
+            {
+                "status": "disabled",
+                "permissions_granted_json": "[]",
+                "trust_level": "unverified",
+                "health_state": "unknown",
+                "install_state": "not_installed",
+                "install_path": None,
+                "active_version": None,
+                "previous_version": before["version"],
+                "lifecycle_state": "uninstalled" if action == "uninstall" else "validated",
+            }
+        )
+        if action == "uninstall":
+            after["entrypoint"] = None
     _safe_metadata(after)
-    values = dict(skill_id=skill_id, action=action, operation_id=operation_id, before_sha256=_hash(row),
-                  after_sha256=_hash(after), candidate_sha256="", config_sha256=_hash(row["config_json"]),
-                  restore_evidence_ref=restore_evidence_ref, _before_json=_json(before), _after_json=_json(after), _issuer=_ISSUER)
+    values = dict(
+        skill_id=skill_id,
+        action=action,
+        operation_id=operation_id,
+        before_sha256=_hash(row),
+        after_sha256=_hash(after),
+        candidate_sha256="",
+        config_sha256=_hash(row["config_json"]),
+        restore_evidence_ref=restore_evidence_ref,
+        _before_json=_json(before),
+        _after_json=_json(after),
+        _issuer=_ISSUER,
+    )
     candidate = SkillMetadataChange(**values)
     values["candidate_sha256"] = _hash(_candidate_material(candidate))
     return SkillMetadataChange(**values)

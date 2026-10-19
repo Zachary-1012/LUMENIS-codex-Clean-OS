@@ -9,8 +9,8 @@ extension ProductDomainDefinition on ProductDomain {
   };
 
   String get zhName => switch (this) {
-    ProductDomain.cth => '序境·商业运营',
-    ProductDomain.bmp => '序境·品牌市场',
+    ProductDomain.cth => '寰意·商业运营',
+    ProductDomain.bmp => '寰意·品牌市场',
     ProductDomain.shared => '共享能力',
     ProductDomain.system => '系统',
   };

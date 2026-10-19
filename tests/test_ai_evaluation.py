@@ -240,7 +240,10 @@ class TestAIEvaluation:
             {'provider': 'zhipu', 'success': True, 'human_correction': ''},
         ])
         result = aev.evaluate_ai_quality()
-        assert abs(result['human_correction_rate'] - 0.25) < 0.01
+        assert result['human_correction_rate'] is None
+        assert result['human_correction_count'] == 1
+        assert result['human_correction_state'] == 'REVIEW_DENOMINATOR_NOT_RECORDED'
+        assert result['human_review_coverage']['reviewed_calls'] is None
 
     def test_evaluate_confidence_distribution(self, test_db):
         _seed_calls(test_db, [
@@ -361,7 +364,11 @@ class TestAIEvaluation:
 class TestAINotReplacingRules:
     def test_subject_hit_before_ai(self):
         """验证 subject_hit() 是独立的确定性函数，不依赖 AI。"""
-        from subject_rules import subject_hit, SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS
+        from subject_rules import subject_hit as unfocused_hit, subject_hit_for_brand
+        from functools import partial
+        assert unfocused_hit(title='广州太古汇探店') is False
+        subject_hit = partial(subject_hit_for_brand, brand_key='guangzhou_taikoo_hui')
+        # Explicit Guangzhou focus, never inferred from unbound text
         # 广州太古汇应命中
         assert subject_hit(title='广州太古汇探店', body='', content='') is True
         # 上海太古汇应被排除
@@ -573,7 +580,10 @@ class TestHumanCorrection:
             {'provider': 'zhipu', 'success': True, 'human_correction': ''},
         ])
         result = aev.evaluate_ai_quality()
-        assert abs(result['human_correction_rate'] - 0.5) < 0.01
+        assert result['human_correction_rate'] is None
+        assert result['human_correction_count'] == 1
+        assert result['human_correction_state'] == 'REVIEW_DENOMINATOR_NOT_RECORDED'
+        assert result['human_review_coverage']['reviewed_calls'] is None
 
     def test_correction_closes_feedback_loop(self, test_db):
         """完整闭环：AI 调用 → 记录 → 人工修正 → 可查询 → 用于评估。"""
@@ -597,7 +607,10 @@ class TestHumanCorrection:
         assert feedback[0]['id'] == log_id
         # 4. 评估指标反映修正
         quality = aev.evaluate_ai_quality()
-        assert quality['human_correction_rate'] == 1.0
+        assert quality['human_correction_rate'] is None
+        assert quality['human_correction_count'] == 1
+        assert quality['human_review_coverage']['reviewed_calls'] is None
+        assert quality['human_correction_state'] == 'REVIEW_DENOMINATOR_NOT_RECORDED'
 
 
 # ============================================================
@@ -633,8 +646,12 @@ class TestModuleStatusMarkers:
         from lumenis.system.ai_gateway import providers
         assert intelligence.MODULE_STATUS == 'ACTIVE_PRIMARY'
         assert intelligence.AI_ROLE == 'CENTRAL_GATEWAY'
-        assert 'retired' in intelligence.PROVIDER_POLICY.lower()
-        assert 'fail closed' in intelligence.PROVIDER_POLICY.lower()
+        assert 'owned-only' in intelligence.PROVIDER_POLICY.lower()
+        for provider in providers.RETIRED_PROVIDERS:
+            assert providers.provider_status(provider) == providers.DISABLED
+            assert providers.is_provider_available(provider) is False
+            assert intelligence._selected_provider_disabled(provider) is True
+        assert providers.is_provider_available('unregistered-provider') is False
         assert providers.provider_status('zhipu') == providers.DISABLED
         assert providers.provider_status('ollama') == providers.DISABLED
 
@@ -683,3 +700,55 @@ def test_empty_evaluation_report_discloses_unknown_and_no_accuracy_claim(test_db
     assert '未知／未测量' in report and 'UNKNOWN' in report
     assert '非独立正确率' in report
     assert 'AI 准确率:' not in report
+
+
+def test_recorder_external_transaction_rollback_and_connection_lifetime(tmp_path, monkeypatch):
+    import sqlite3
+    from lumenis.shared.evaluation import recorder
+    path=tmp_path/'external.sqlite'
+    recorder.init_db(str(path))
+    connection=sqlite3.connect(path);connection.row_factory=sqlite3.Row
+    connection.execute('BEGIN IMMEDIATE')
+    def unexpected(*args,**kwargs):raise AssertionError('must not open another connection')
+    monkeypatch.setattr(recorder,'_get_connection',unexpected)
+    recorder.record_evaluation('ai','external_test',.3,.8,.5,source='ordinary',connection=connection)
+    assert connection.in_transaction
+    assert connection.execute('SELECT count(*) FROM evaluation_records').fetchone()[0]==1
+    connection.rollback()
+    assert connection.execute('SELECT count(*) FROM evaluation_records').fetchone()[0]==0
+    assert connection.execute('SELECT 42').fetchone()[0]==42
+    connection.close()
+
+
+def test_recorder_external_connection_requires_transaction_and_no_db_path(tmp_path):
+    import sqlite3
+    from lumenis.shared.evaluation import recorder
+    path=tmp_path/'external.sqlite';recorder.init_db(str(path))
+    con=sqlite3.connect(path);con.row_factory=sqlite3.Row
+    with pytest.raises(ValueError,match='active transaction'):
+        recorder.record_evaluation('ai','test',1.,.8,.5,connection=con)
+    con.execute('BEGIN')
+    with pytest.raises(ValueError,match='db_path'):
+        recorder.record_evaluation('ai','test',1.,.8,.5,connection=con,db_path=str(path))
+    assert con.in_transaction
+    con.rollback();con.close()
+
+
+def test_recorder_external_error_does_not_rollback_or_close(tmp_path):
+    import sqlite3
+    from lumenis.shared.evaluation import recorder
+    path=tmp_path/'missing-schema.sqlite';con=sqlite3.connect(path);con.row_factory=sqlite3.Row
+    con.execute('BEGIN')
+    con.execute('CREATE TABLE unrelated(value)');con.execute('INSERT INTO unrelated VALUES(7)')
+    with pytest.raises(sqlite3.OperationalError):
+        recorder.record_evaluation('ai','test',1.,.8,.5,connection=con)
+    assert con.in_transaction and con.execute('SELECT value FROM unrelated').fetchone()[0]==7
+    assert con.execute("SELECT count(*) FROM sqlite_master WHERE name='evaluation_records'").fetchone()[0]==0
+    con.rollback();con.close()
+
+
+def test_recorder_default_connection_behavior_preserved(tmp_path):
+    from lumenis.shared.evaluation import recorder
+    path=str(tmp_path/'default.sqlite');recorder.init_db(path)
+    r=recorder.record_evaluation('ai','ordinary',.5,.8,.3,db_path=path)
+    assert recorder.get_evaluation_record(r.evaluation_id,db_path=path)['status']=='warn'

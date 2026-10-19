@@ -1,0 +1,754 @@
+{
+  "source": {
+    "source_id": "DOC-37ae14538e9f7bbd152a7718f1883c6c",
+    "evidence_id": 1,
+    "canonical_id": "can_e10acc7cade54b3b",
+    "source_artifact_ref": "ART-a5663103f0c94d87",
+    "scope": {
+      "domain_id": "cth",
+      "subject_id": null,
+      "brand_focus_id": null,
+      "global_scope": true
+    },
+    "replayed": false,
+    "source_replayed": false,
+    "metadata": {
+      "format": "txt",
+      "encoding": "utf-8",
+      "encoding_state": "assumed_decoder",
+      "decoding_warnings": [
+        "Encoding inferred by deterministic decoder order; source encoding not independently verified."
+      ],
+      "original_bytes_modified": false,
+      "source_name": "None.txt",
+      "source_fingerprint": "b22e8eabd305ea5ed4c2e4c4e1538ee2c3caba5ead38d2afc62c6bc01d79c44d",
+      "network_mode": "local_only",
+      "parsed_text_sha256": "b22e8eabd305ea5ed4c2e4c4e1538ee2c3caba5ead38d2afc62c6bc01d79c44d"
+    },
+    "locators": [
+      {
+        "unit": "parsed_line",
+        "index": 1,
+        "start": 0,
+        "end": 3306
+      }
+    ],
+    "scope_status": "UNASSIGNED",
+    "global_projection": "NOT_VERIFIED",
+    "selected_row_indices": [],
+    "canonical_rows_inserted": 0,
+    "canonical_row_records": [],
+    "preview_rows_sha256": null,
+    "source_boundaries": {
+      "content_origin": {
+        "kind": "self-authored",
+        "claim_type": "author_statement"
+      },
+      "claim_type": "author_statement",
+      "fact_verification": "NOT_VERIFIED",
+      "learning_admission": "NOT_ADMITTED",
+      "training_eligible": false,
+      "held_out": false,
+      "rights_statement": null,
+      "research_transport": null
+    }
+  },
+  "analysis": {
+    "analysis": "synthetic_control",
+    "business_purpose": "compare_with_synthetic_baseline",
+    "state": "READY",
+    "result": {
+      "method": "outcome-only-simplex-synthetic-control@1",
+      "state": "READY",
+      "n": 30,
+      "donor_n": 3,
+      "unit": "input outcome units",
+      "pre_n": 24,
+      "post_n": 6,
+      "causal_claim": "NOT_ESTABLISHED",
+      "design": {
+        "no_anticipation": true,
+        "no_spillovers": true,
+        "comparable_measurement": true,
+        "selection_protocol": "Owned known-mixture engineering fixture fixed before outcome inspection"
+      },
+      "design_verification": "USER_DECLARED_NOT_INDEPENDENTLY_VERIFIED",
+      "interval": null,
+      "interval_state": "NOT_ESTABLISHED",
+      "limitations": [
+        "Outcome-only synthetic control with equal pre-outcome importance and nonnegative weights summing to one; not the full covariate-V selection procedure.",
+        "Treated pre-outcomes alone train weights; a disjoint pre-intervention segment checks fit before all pre-periods are refitted. Post outcomes never tune weights or thresholds.",
+        "Donor nonexposure, no anticipation/spillovers and comparable measurement are declared assumptions, not established facts.",
+        "Post-period discrepancy is descriptive unless causal design assumptions hold; no confidence interval or causal proof is supplied.",
+        "In-space donor placebos are sensitivity diagnostics, not randomized-treatment p-values; poor prefit placebos remain visible and excluded from comparison."
+      ],
+      "fit": {
+        "training_n": 18,
+        "validation_n": 6,
+        "training_rmse": 1.6747652892626935e-14,
+        "validation_rmse": 2.3920432895754778e-14,
+        "max_pre_rmse": 0.01,
+        "state": "READY",
+        "weights": [
+          0.20000000000000479,
+          0.2999999999999983,
+          0.4999999999999969
+        ],
+        "synthetic": [
+          100.8,
+          101.30723474296738,
+          101.48370543906984,
+          101.32294314082111,
+          101.01455404327906,
+          100.84016074347961,
+          101.00960897535552,
+          101.53296226522039,
+          102.20603700208855,
+          102.72226749888637,
+          102.84907380122664,
+          102.5669216162286,
+          102.08854592449453,
+          101.74421705298104,
+          101.79696809931019,
+          102.29354643906797,
+          103.03742344992922,
+          103.700239059805,
+          104.00810636641373,
+          103.89588698771846,
+          103.54118640749003,
+          103.25950394732939,
+          103.32200014867746,
+          103.80116530181976,
+          104.53218746095638,
+          105.2099046096822,
+          105.56301202720113,
+          105.50422159816954,
+          105.1715577687506,
+          104.8410074629319
+        ],
+        "pre_rmse": 9.173067274558417e-15,
+        "post_rmse": 1.9999999999999951,
+        "post_pre_rmse_ratio": null,
+        "ratio_state": "PRE_ERROR_NEAR_ZERO_RATIO_UNDEFINED",
+        "post_observed_minus_synthetic": [
+          1.9999999999999858,
+          2.0,
+          2.0,
+          2.0,
+          1.9999999999999858,
+          2.0
+        ],
+        "mean_post_gap": 1.9999999999999953
+      },
+      "periods": [
+        "2026-01-01",
+        "2026-01-02",
+        "2026-01-03",
+        "2026-01-04",
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08",
+        "2026-01-09",
+        "2026-01-10",
+        "2026-01-11",
+        "2026-01-12",
+        "2026-01-13",
+        "2026-01-14",
+        "2026-01-15",
+        "2026-01-16",
+        "2026-01-17",
+        "2026-01-18",
+        "2026-01-19",
+        "2026-01-20",
+        "2026-01-21",
+        "2026-01-22",
+        "2026-01-23",
+        "2026-01-24",
+        "2026-01-25",
+        "2026-01-26",
+        "2026-01-27",
+        "2026-01-28",
+        "2026-01-29",
+        "2026-01-30"
+      ],
+      "donor_weights": {
+        "donor0": 0.20000000000000479,
+        "donor1": 0.2999999999999983,
+        "donor2": 0.4999999999999969
+      },
+      "placebos": [
+        {
+          "unit_id": "donor0",
+          "training_n": 18,
+          "validation_n": 6,
+          "training_rmse": 0.8675845507513253,
+          "validation_rmse": 1.3048539695834451,
+          "max_pre_rmse": 0.01,
+          "state": "INSUFFICIENT",
+          "reason": "PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE"
+        },
+        {
+          "unit_id": "donor1",
+          "training_n": 18,
+          "validation_n": 6,
+          "training_rmse": 2.7463808391162035,
+          "validation_rmse": 2.0729517628918783,
+          "max_pre_rmse": 0.01,
+          "state": "INSUFFICIENT",
+          "reason": "PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE"
+        },
+        {
+          "unit_id": "donor2",
+          "training_n": 18,
+          "validation_n": 6,
+          "training_rmse": 1.7614124575517571,
+          "validation_rmse": 0.9595802472891934,
+          "max_pre_rmse": 0.01,
+          "state": "INSUFFICIENT",
+          "reason": "PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE"
+        }
+      ],
+      "placebo_comparison": {
+        "eligible_n": 0,
+        "p_value": null,
+        "reason": "OBSERVATIONAL_PLACEBOS_DO_NOT_ESTABLISH_RANDOMIZED_ASSIGNMENT"
+      },
+      "interpretation_status": "NOT_BUSINESS_VALIDATED",
+      "input_unit": "trial",
+      "implementation_versions": {
+        "numpy": "2.5.4",
+        "scipy": "1.18.1"
+      }
+    },
+    "saved_work_draft": {
+      "title": "Statistical analysis: synthetic_control",
+      "kind": "report",
+      "markdown": "# Statistical analysis: synthetic_control\n\nMethod: outcome-only-simplex-synthetic-control@1\n\nState: READY\n\nSource Evidence: 1\n\nDerived from the declared source dataset. Scope/rights and file custody do not establish observational truth or causality.\n\n{\n  \"causal_claim\": \"NOT_ESTABLISHED\",\n  \"design\": {\n    \"comparable_measurement\": true,\n    \"no_anticipation\": true,\n    \"no_spillovers\": true,\n    \"selection_protocol\": \"Owned known-mixture engineering fixture fixed before outcome inspection\"\n  },\n  \"design_verification\": \"USER_DECLARED_NOT_INDEPENDENTLY_VERIFIED\",\n  \"donor_n\": 3,\n  \"donor_weights\": {\n    \"donor0\": 0.20000000000000479,\n    \"donor1\": 0.2999999999999983,\n    \"donor2\": 0.4999999999999969\n  },\n  \"fit\": {\n    \"max_pre_rmse\": 0.01,\n    \"mean_post_gap\": 1.9999999999999953,\n    \"post_observed_minus_synthetic\": [\n      1.9999999999999858,\n      2.0,\n      2.0,\n      2.0,\n      1.9999999999999858,\n      2.0\n    ],\n    \"post_pre_rmse_ratio\": null,\n    \"post_rmse\": 1.9999999999999951,\n    \"pre_rmse\": 9.173067274558417e-15,\n    \"ratio_state\": \"PRE_ERROR_NEAR_ZERO_RATIO_UNDEFINED\",\n    \"state\": \"READY\",\n    \"synthetic\": [\n      100.8,\n      101.30723474296738,\n      101.48370543906984,\n      101.32294314082111,\n      101.01455404327906,\n      100.84016074347961,\n      101.00960897535552,\n      101.53296226522039,\n      102.20603700208855,\n      102.72226749888637,\n      102.84907380122664,\n      102.5669216162286,\n      102.08854592449453,\n      101.74421705298104,\n      101.79696809931019,\n      102.29354643906797,\n      103.03742344992922,\n      103.700239059805,\n      104.00810636641373,\n      103.89588698771846,\n      103.54118640749003,\n      103.25950394732939,\n      103.32200014867746,\n      103.80116530181976,\n      104.53218746095638,\n      105.2099046096822,\n      105.56301202720113,\n      105.50422159816954,\n      105.1715577687506,\n      104.8410074629319\n    ],\n    \"training_n\": 18,\n    \"training_rmse\": 1.6747652892626935e-14,\n    \"validation_n\": 6,\n    \"validation_rmse\": 2.3920432895754778e-14,\n    \"weights\": [\n      0.20000000000000479,\n      0.2999999999999983,\n      0.4999999999999969\n    ]\n  },\n  \"implementation_versions\": {\n    \"numpy\": \"2.5.4\",\n    \"scipy\": \"1.18.1\"\n  },\n  \"input_unit\": \"trial\",\n  \"interpretation_status\": \"NOT_BUSINESS_VALIDATED\",\n  \"interval\": null,\n  \"interval_state\": \"NOT_ESTABLISHED\",\n  \"limitations\": [\n    \"Outcome-only synthetic control with equal pre-outcome importance and nonnegative weights summing to one; not the full covariate-V selection procedure.\",\n    \"Treated pre-outcomes alone train weights; a disjoint pre-intervention segment checks fit before all pre-periods are refitted. Post outcomes never tune weights or thresholds.\",\n    \"Donor nonexposure, no anticipation/spillovers and comparable measurement are declared assumptions, not established facts.\",\n    \"Post-period discrepancy is descriptive unless causal design assumptions hold; no confidence interval or causal proof is supplied.\",\n    \"In-space donor placebos are sensitivity diagnostics, not randomized-treatment p-values; poor prefit placebos remain visible and excluded from comparison.\"\n  ],\n  \"method\": \"outcome-only-simplex-synthetic-control@1\",\n  \"n\": 30,\n  \"periods\": [\n    \"2026-01-01\",\n    \"2026-01-02\",\n    \"2026-01-03\",\n    \"2026-01-04\",\n    \"2026-01-05\",\n    \"2026-01-06\",\n    \"2026-01-07\",\n    \"2026-01-08\",\n    \"2026-01-09\",\n    \"2026-01-10\",\n    \"2026-01-11\",\n    \"2026-01-12\",\n    \"2026-01-13\",\n    \"2026-01-14\",\n    \"2026-01-15\",\n    \"2026-01-16\",\n    \"2026-01-17\",\n    \"2026-01-18\",\n    \"2026-01-19\",\n    \"2026-01-20\",\n    \"2026-01-21\",\n    \"2026-01-22\",\n    \"2026-01-23\",\n    \"2026-01-24\",\n    \"2026-01-25\",\n    \"2026-01-26\",\n    \"2026-01-27\",\n    \"2026-01-28\",\n    \"2026-01-29\",\n    \"2026-01-30\"\n  ],\n  \"placebo_comparison\": {\n    \"eligible_n\": 0,\n    \"p_value\": null,\n    \"reason\": \"OBSERVATIONAL_PLACEBOS_DO_NOT_ESTABLISH_RANDOMIZED_ASSIGNMENT\"\n  },\n  \"placebos\": [\n    {\n      \"max_pre_rmse\": 0.01,\n      \"reason\": \"PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE\",\n      \"state\": \"INSUFFICIENT\",\n      \"training_n\": 18,\n      \"training_rmse\": 0.8675845507513253,\n      \"unit_id\": \"donor0\",\n      \"validation_n\": 6,\n      \"validation_rmse\": 1.3048539695834451\n    },\n    {\n      \"max_pre_rmse\": 0.01,\n      \"reason\": \"PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE\",\n      \"state\": \"INSUFFICIENT\",\n      \"training_n\": 18,\n      \"training_rmse\": 2.7463808391162035,\n      \"unit_id\": \"donor1\",\n      \"validation_n\": 6,\n      \"validation_rmse\": 2.0729517628918783\n    },\n    {\n      \"max_pre_rmse\": 0.01,\n      \"reason\": \"PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE\",\n      \"state\": \"INSUFFICIENT\",\n      \"training_n\": 18,\n      \"training_rmse\": 1.7614124575517571,\n      \"unit_id\": \"donor2\",\n      \"validation_n\": 6,\n      \"validation_rmse\": 0.9595802472891934\n    }\n  ],\n  \"post_n\": 6,\n  \"pre_n\": 24,\n  \"state\": \"READY\",\n  \"unit\": \"input outcome units\"\n}",
+      "payload": {
+        "statistics": {
+          "recipe": "report-statistics-source/1",
+          "analysis": "synthetic_control",
+          "business_purpose": "compare_with_synthetic_baseline",
+          "result": {
+            "method": "outcome-only-simplex-synthetic-control@1",
+            "state": "READY",
+            "n": 30,
+            "donor_n": 3,
+            "unit": "input outcome units",
+            "pre_n": 24,
+            "post_n": 6,
+            "causal_claim": "NOT_ESTABLISHED",
+            "design": {
+              "no_anticipation": true,
+              "no_spillovers": true,
+              "comparable_measurement": true,
+              "selection_protocol": "Owned known-mixture engineering fixture fixed before outcome inspection"
+            },
+            "design_verification": "USER_DECLARED_NOT_INDEPENDENTLY_VERIFIED",
+            "interval": null,
+            "interval_state": "NOT_ESTABLISHED",
+            "limitations": [
+              "Outcome-only synthetic control with equal pre-outcome importance and nonnegative weights summing to one; not the full covariate-V selection procedure.",
+              "Treated pre-outcomes alone train weights; a disjoint pre-intervention segment checks fit before all pre-periods are refitted. Post outcomes never tune weights or thresholds.",
+              "Donor nonexposure, no anticipation/spillovers and comparable measurement are declared assumptions, not established facts.",
+              "Post-period discrepancy is descriptive unless causal design assumptions hold; no confidence interval or causal proof is supplied.",
+              "In-space donor placebos are sensitivity diagnostics, not randomized-treatment p-values; poor prefit placebos remain visible and excluded from comparison."
+            ],
+            "fit": {
+              "training_n": 18,
+              "validation_n": 6,
+              "training_rmse": 1.6747652892626935e-14,
+              "validation_rmse": 2.3920432895754778e-14,
+              "max_pre_rmse": 0.01,
+              "state": "READY",
+              "weights": [
+                0.20000000000000479,
+                0.2999999999999983,
+                0.4999999999999969
+              ],
+              "synthetic": [
+                100.8,
+                101.30723474296738,
+                101.48370543906984,
+                101.32294314082111,
+                101.01455404327906,
+                100.84016074347961,
+                101.00960897535552,
+                101.53296226522039,
+                102.20603700208855,
+                102.72226749888637,
+                102.84907380122664,
+                102.5669216162286,
+                102.08854592449453,
+                101.74421705298104,
+                101.79696809931019,
+                102.29354643906797,
+                103.03742344992922,
+                103.700239059805,
+                104.00810636641373,
+                103.89588698771846,
+                103.54118640749003,
+                103.25950394732939,
+                103.32200014867746,
+                103.80116530181976,
+                104.53218746095638,
+                105.2099046096822,
+                105.56301202720113,
+                105.50422159816954,
+                105.1715577687506,
+                104.8410074629319
+              ],
+              "pre_rmse": 9.173067274558417e-15,
+              "post_rmse": 1.9999999999999951,
+              "post_pre_rmse_ratio": null,
+              "ratio_state": "PRE_ERROR_NEAR_ZERO_RATIO_UNDEFINED",
+              "post_observed_minus_synthetic": [
+                1.9999999999999858,
+                2.0,
+                2.0,
+                2.0,
+                1.9999999999999858,
+                2.0
+              ],
+              "mean_post_gap": 1.9999999999999953
+            },
+            "periods": [
+              "2026-01-01",
+              "2026-01-02",
+              "2026-01-03",
+              "2026-01-04",
+              "2026-01-05",
+              "2026-01-06",
+              "2026-01-07",
+              "2026-01-08",
+              "2026-01-09",
+              "2026-01-10",
+              "2026-01-11",
+              "2026-01-12",
+              "2026-01-13",
+              "2026-01-14",
+              "2026-01-15",
+              "2026-01-16",
+              "2026-01-17",
+              "2026-01-18",
+              "2026-01-19",
+              "2026-01-20",
+              "2026-01-21",
+              "2026-01-22",
+              "2026-01-23",
+              "2026-01-24",
+              "2026-01-25",
+              "2026-01-26",
+              "2026-01-27",
+              "2026-01-28",
+              "2026-01-29",
+              "2026-01-30"
+            ],
+            "donor_weights": {
+              "donor0": 0.20000000000000479,
+              "donor1": 0.2999999999999983,
+              "donor2": 0.4999999999999969
+            },
+            "placebos": [
+              {
+                "unit_id": "donor0",
+                "training_n": 18,
+                "validation_n": 6,
+                "training_rmse": 0.8675845507513253,
+                "validation_rmse": 1.3048539695834451,
+                "max_pre_rmse": 0.01,
+                "state": "INSUFFICIENT",
+                "reason": "PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE"
+              },
+              {
+                "unit_id": "donor1",
+                "training_n": 18,
+                "validation_n": 6,
+                "training_rmse": 2.7463808391162035,
+                "validation_rmse": 2.0729517628918783,
+                "max_pre_rmse": 0.01,
+                "state": "INSUFFICIENT",
+                "reason": "PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE"
+              },
+              {
+                "unit_id": "donor2",
+                "training_n": 18,
+                "validation_n": 6,
+                "training_rmse": 1.7614124575517571,
+                "validation_rmse": 0.9595802472891934,
+                "max_pre_rmse": 0.01,
+                "state": "INSUFFICIENT",
+                "reason": "PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE"
+              }
+            ],
+            "placebo_comparison": {
+              "eligible_n": 0,
+              "p_value": null,
+              "reason": "OBSERVATIONAL_PLACEBOS_DO_NOT_ESTABLISH_RANDOMIZED_ASSIGNMENT"
+            },
+            "interpretation_status": "NOT_BUSINESS_VALIDATED",
+            "input_unit": "trial",
+            "implementation_versions": {
+              "numpy": "2.5.4",
+              "scipy": "1.18.1"
+            }
+          },
+          "options": {},
+          "dataset_sha256": "b22e8eabd305ea5ed4c2e4c4e1538ee2c3caba5ead38d2afc62c6bc01d79c44d",
+          "dataset_unit": "trial",
+          "source_evidence_id": 1,
+          "source_asset_id": "DOC-37ae14538e9f7bbd152a7718f1883c6c",
+          "claim_type": "derived_from_declared_source_dataset; source custody does not verify measured truth",
+          "ai_used": false,
+          "causal_claim": "NOT_ESTABLISHED"
+        }
+      },
+      "citations": [
+        {
+          "evidence_id": 1,
+          "start": 0,
+          "end": 3306,
+          "quote": "{\"schema\": \"lumenis.statistics-input/v1\", \"unit\": \"trial\", \"data\": {\"periods\": [\"2026-01-01\", \"2026-01-02\", \"2026-01-03\", \"2026-01-04\", \"2026-01-05\", \"2026-01-06\", \"2026-01-07\", \"2026-01-08\", \"2026-01-09\", \"2026-01-10\", \"2026-01-11\", \"2026-01-12\", \"2026-01-13\", \"2026-01-14\", \"2026-01-15\", \"2026-01-16\", \"2026-01-17\", \"2026-01-18\", \"2026-01-19\", \"2026-01-20\", \"2026-01-21\", \"2026-01-22\", \"2026-01-23\", \"2026-01-24\", \"2026-01-25\", \"2026-01-26\", \"2026-01-27\", \"2026-01-28\", \"2026-01-29\", \"2026-01-30\"], \"frequency\": \"day\", \"treated\": {\"id\": \"treated\", \"outcomes\": [100.8, 101.30723474296738, 101.48370543906984, 101.32294314082111, 101.01455404327905, 100.8401607434796, 101.00960897535552, 101.53296226522039, 102.20603700208855, 102.72226749888637, 102.84907380122665, 102.5669216162286, 102.08854592449453, 101.74421705298104, 101.79696809931019, 102.29354643906797, 103.03742344992924, 103.70023905980501, 104.00810636641376, 103.89588698771847, 103.54118640749003, 103.25950394732939, 103.32200014867746, 103.80116530181976, 106.53218746095637, 107.2099046096822, 107.56301202720113, 107.50422159816954, 107.17155776875059, 106.8410074629319]}, \"donors\": [{\"id\": \"donor0\", \"outcomes\": [100.0, 100.49552020666134, 100.96464247339505, 101.38332690962747, 101.73203908596723, 101.99749498660405, 102.1738476308782, 102.26320936664888, 102.27546318055114, 102.22737988023383, 102.14112000805987, 102.04225430585676, 101.95747955670515, 101.91223384081601, 101.9284242275864, 102.0224698823349, 102.20383539116416, 102.47418531767228, 102.827235512444, 103.24931445740236, 103.72058450180107, 104.21681390048435, 104.71154136351339, 105.17843976438819, 105.59366786384915, 105.93799997677473, 106.1985433453746, 106.3698898108451, 106.45459890808827, 106.46296923008218], \"untreated_declared\": true}, {\"id\": \"donor1\", \"outcomes\": [106.0, 105.66484218728449, 104.96996714290024, 104.19515389540014, 103.65777765933133, 103.5635433127092, 103.90973917865931, 104.48651236942257, 104.97556587851025, 105.09985863638342, 104.7539022543433, 104.05337386203787, 103.28071134588332, 102.75227839786889, 102.66957372789524, 103.02446307200401, 103.60300486381875, 104.08607029614103, 104.19943458550101, 103.84274917270366, 103.13673721820783, 102.3664156134109, 101.84704708311281, 101.77586719992688, 102.13932141258863, 102.71943996321146, 103.19635247029193, 103.2987279672435, 102.93138609564551, 102.22006191504242], \"untreated_declared\": true}, {\"id\": \"donor2\", \"outcomes\": [98.0, 99.01735609089953, 99.5995736030415, 99.57546318055115, 99.14162585657242, 98.74319750469208, 98.80383539116416, 99.46873336212768, 100.5165492048505, 101.49366786384915, 101.98935824662338, 101.88491719289176, 101.425673218777, 101.07217353091436, 101.22082227084869, 101.96342708199957, 103.03150982510154, 103.95916181485649, 104.36565777654928, 104.1863986888538, 103.71209668333493, 103.41243296641849, 103.65115550208186, 104.46543437792812, 105.5433149288199, 106.41294525072763, 106.72879523407724, 106.48125049165493, 106.00244431687857, 105.76479008480547], \"untreated_declared\": true}], \"pre_periods\": 24, \"max_pre_rmse\": 0.01, \"design\": {\"no_anticipation\": true, \"no_spillovers\": true, \"comparable_measurement\": true, \"selection_protocol\": \"Owned known-mixture engineering fixture fixed before outcome inspection\"}}}"
+        }
+      ]
+    },
+    "saved_work_payload_hash": "eff5343df99139c6616e24ee87b906e953a5b9a693e185cb335bc48d42cbe7e5",
+    "recipe": "report-statistics-source/1",
+    "ai_used": false,
+    "publish_status": "not_performed"
+  },
+  "saved": {
+    "artifact": {
+      "artifact_id": "ART-a4ab0d03d1b44d09",
+      "kind": "saved_document",
+      "product_id": "CTH",
+      "domain_id": "cth",
+      "source_execution_id": "WORK-b31ff4583d8b24adf6c3e515",
+      "evidence_id": "1",
+      "note_id": "",
+      "filename": "ART-a4ab0d03d1b44d09.json",
+      "media_type": "application/json",
+      "relative_path": "ART-a4ab0d03d1b44d09.json",
+      "size_bytes": 14043,
+      "sha256": "f5e922b0d1747182152b8082b5b82ba3a4021f061d1ae6b98b28ddda93edaba2",
+      "status": "staged",
+      "approval_required": 1,
+      "approval_status": "pending",
+      "created_at": "2026-10-18T05:43:48.937400+00:00",
+      "updated_at": "2026-10-18T05:43:48.937400+00:00"
+    },
+    "document": {
+      "assertion_id": null,
+      "authorship": "user-supplied; source facts require citations",
+      "citations": [
+        {
+          "end": 3306,
+          "evidence_id": 1,
+          "quote": "{\"schema\": \"lumenis.statistics-input/v1\", \"unit\": \"trial\", \"data\": {\"periods\": [\"2026-01-01\", \"2026-01-02\", \"2026-01-03\", \"2026-01-04\", \"2026-01-05\", \"2026-01-06\", \"2026-01-07\", \"2026-01-08\", \"2026-01-09\", \"2026-01-10\", \"2026-01-11\", \"2026-01-12\", \"2026-01-13\", \"2026-01-14\", \"2026-01-15\", \"2026-01-16\", \"2026-01-17\", \"2026-01-18\", \"2026-01-19\", \"2026-01-20\", \"2026-01-21\", \"2026-01-22\", \"2026-01-23\", \"2026-01-24\", \"2026-01-25\", \"2026-01-26\", \"2026-01-27\", \"2026-01-28\", \"2026-01-29\", \"2026-01-30\"], \"frequency\": \"day\", \"treated\": {\"id\": \"treated\", \"outcomes\": [100.8, 101.30723474296738, 101.48370543906984, 101.32294314082111, 101.01455404327905, 100.8401607434796, 101.00960897535552, 101.53296226522039, 102.20603700208855, 102.72226749888637, 102.84907380122665, 102.5669216162286, 102.08854592449453, 101.74421705298104, 101.79696809931019, 102.29354643906797, 103.03742344992924, 103.70023905980501, 104.00810636641376, 103.89588698771847, 103.54118640749003, 103.25950394732939, 103.32200014867746, 103.80116530181976, 106.53218746095637, 107.2099046096822, 107.56301202720113, 107.50422159816954, 107.17155776875059, 106.8410074629319]}, \"donors\": [{\"id\": \"donor0\", \"outcomes\": [100.0, 100.49552020666134, 100.96464247339505, 101.38332690962747, 101.73203908596723, 101.99749498660405, 102.1738476308782, 102.26320936664888, 102.27546318055114, 102.22737988023383, 102.14112000805987, 102.04225430585676, 101.95747955670515, 101.91223384081601, 101.9284242275864, 102.0224698823349, 102.20383539116416, 102.47418531767228, 102.827235512444, 103.24931445740236, 103.72058450180107, 104.21681390048435, 104.71154136351339, 105.17843976438819, 105.59366786384915, 105.93799997677473, 106.1985433453746, 106.3698898108451, 106.45459890808827, 106.46296923008218], \"untreated_declared\": true}, {\"id\": \"donor1\", \"outcomes\": [106.0, 105.66484218728449, 104.96996714290024, 104.19515389540014, 103.65777765933133, 103.5635433127092, 103.90973917865931, 104.48651236942257, 104.97556587851025, 105.09985863638342, 104.7539022543433, 104.05337386203787, 103.28071134588332, 102.75227839786889, 102.66957372789524, 103.02446307200401, 103.60300486381875, 104.08607029614103, 104.19943458550101, 103.84274917270366, 103.13673721820783, 102.3664156134109, 101.84704708311281, 101.77586719992688, 102.13932141258863, 102.71943996321146, 103.19635247029193, 103.2987279672435, 102.93138609564551, 102.22006191504242], \"untreated_declared\": true}, {\"id\": \"donor2\", \"outcomes\": [98.0, 99.01735609089953, 99.5995736030415, 99.57546318055115, 99.14162585657242, 98.74319750469208, 98.80383539116416, 99.46873336212768, 100.5165492048505, 101.49366786384915, 101.98935824662338, 101.88491719289176, 101.425673218777, 101.07217353091436, 101.22082227084869, 101.96342708199957, 103.03150982510154, 103.95916181485649, 104.36565777654928, 104.1863986888538, 103.71209668333493, 103.41243296641849, 103.65115550208186, 104.46543437792812, 105.5433149288199, 106.41294525072763, 106.72879523407724, 106.48125049165493, 106.00244431687857, 105.76479008480547], \"untreated_declared\": true}], \"pre_periods\": 24, \"max_pre_rmse\": 0.01, \"design\": {\"no_anticipation\": true, \"no_spillovers\": true, \"comparable_measurement\": true, \"selection_protocol\": \"Owned known-mixture engineering fixture fixed before outcome inspection\"}}}",
+          "source_scope": {
+            "domain_id": "cth",
+            "subject_id": null,
+            "brand_focus_id": null,
+            "global_scope": true
+          },
+          "start": 0
+        }
+      ],
+      "context": {
+        "brand_focus_id": null,
+        "domain_id": "cth",
+        "global_scope": true,
+        "principal_kind": "local_workspace",
+        "principal_ref": "workspace:local",
+        "subject_id": null
+      },
+      "contract": {
+        "id": "lumenis.saved-work",
+        "required_payload_paths": [],
+        "version": "1"
+      },
+      "created_at": "2026-10-18T05:43:48.936153+00:00",
+      "draft_digest": "eff5343df99139c6616e24ee87b906e953a5b9a693e185cb335bc48d42cbe7e5",
+      "input_hash": "7917893c83ba9da9e5adf6a7efcf0a16a793b094e0e05031978028765f7d48d5",
+      "kind": "report",
+      "markdown": "# Statistical analysis: synthetic_control\n\nMethod: outcome-only-simplex-synthetic-control@1\n\nState: READY\n\nSource Evidence: 1\n\nDerived from the declared source dataset. Scope/rights and file custody do not establish observational truth or causality.\n\n{\n  \"causal_claim\": \"NOT_ESTABLISHED\",\n  \"design\": {\n    \"comparable_measurement\": true,\n    \"no_anticipation\": true,\n    \"no_spillovers\": true,\n    \"selection_protocol\": \"Owned known-mixture engineering fixture fixed before outcome inspection\"\n  },\n  \"design_verification\": \"USER_DECLARED_NOT_INDEPENDENTLY_VERIFIED\",\n  \"donor_n\": 3,\n  \"donor_weights\": {\n    \"donor0\": 0.20000000000000479,\n    \"donor1\": 0.2999999999999983,\n    \"donor2\": 0.4999999999999969\n  },\n  \"fit\": {\n    \"max_pre_rmse\": 0.01,\n    \"mean_post_gap\": 1.9999999999999953,\n    \"post_observed_minus_synthetic\": [\n      1.9999999999999858,\n      2.0,\n      2.0,\n      2.0,\n      1.9999999999999858,\n      2.0\n    ],\n    \"post_pre_rmse_ratio\": null,\n    \"post_rmse\": 1.9999999999999951,\n    \"pre_rmse\": 9.173067274558417e-15,\n    \"ratio_state\": \"PRE_ERROR_NEAR_ZERO_RATIO_UNDEFINED\",\n    \"state\": \"READY\",\n    \"synthetic\": [\n      100.8,\n      101.30723474296738,\n      101.48370543906984,\n      101.32294314082111,\n      101.01455404327906,\n      100.84016074347961,\n      101.00960897535552,\n      101.53296226522039,\n      102.20603700208855,\n      102.72226749888637,\n      102.84907380122664,\n      102.5669216162286,\n      102.08854592449453,\n      101.74421705298104,\n      101.79696809931019,\n      102.29354643906797,\n      103.03742344992922,\n      103.700239059805,\n      104.00810636641373,\n      103.89588698771846,\n      103.54118640749003,\n      103.25950394732939,\n      103.32200014867746,\n      103.80116530181976,\n      104.53218746095638,\n      105.2099046096822,\n      105.56301202720113,\n      105.50422159816954,\n      105.1715577687506,\n      104.8410074629319\n    ],\n    \"training_n\": 18,\n    \"training_rmse\": 1.6747652892626935e-14,\n    \"validation_n\": 6,\n    \"validation_rmse\": 2.3920432895754778e-14,\n    \"weights\": [\n      0.20000000000000479,\n      0.2999999999999983,\n      0.4999999999999969\n    ]\n  },\n  \"implementation_versions\": {\n    \"numpy\": \"2.5.4\",\n    \"scipy\": \"1.18.1\"\n  },\n  \"input_unit\": \"trial\",\n  \"interpretation_status\": \"NOT_BUSINESS_VALIDATED\",\n  \"interval\": null,\n  \"interval_state\": \"NOT_ESTABLISHED\",\n  \"limitations\": [\n    \"Outcome-only synthetic control with equal pre-outcome importance and nonnegative weights summing to one; not the full covariate-V selection procedure.\",\n    \"Treated pre-outcomes alone train weights; a disjoint pre-intervention segment checks fit before all pre-periods are refitted. Post outcomes never tune weights or thresholds.\",\n    \"Donor nonexposure, no anticipation/spillovers and comparable measurement are declared assumptions, not established facts.\",\n    \"Post-period discrepancy is descriptive unless causal design assumptions hold; no confidence interval or causal proof is supplied.\",\n    \"In-space donor placebos are sensitivity diagnostics, not randomized-treatment p-values; poor prefit placebos remain visible and excluded from comparison.\"\n  ],\n  \"method\": \"outcome-only-simplex-synthetic-control@1\",\n  \"n\": 30,\n  \"periods\": [\n    \"2026-01-01\",\n    \"2026-01-02\",\n    \"2026-01-03\",\n    \"2026-01-04\",\n    \"2026-01-05\",\n    \"2026-01-06\",\n    \"2026-01-07\",\n    \"2026-01-08\",\n    \"2026-01-09\",\n    \"2026-01-10\",\n    \"2026-01-11\",\n    \"2026-01-12\",\n    \"2026-01-13\",\n    \"2026-01-14\",\n    \"2026-01-15\",\n    \"2026-01-16\",\n    \"2026-01-17\",\n    \"2026-01-18\",\n    \"2026-01-19\",\n    \"2026-01-20\",\n    \"2026-01-21\",\n    \"2026-01-22\",\n    \"2026-01-23\",\n    \"2026-01-24\",\n    \"2026-01-25\",\n    \"2026-01-26\",\n    \"2026-01-27\",\n    \"2026-01-28\",\n    \"2026-01-29\",\n    \"2026-01-30\"\n  ],\n  \"placebo_comparison\": {\n    \"eligible_n\": 0,\n    \"p_value\": null,\n    \"reason\": \"OBSERVATIONAL_PLACEBOS_DO_NOT_ESTABLISH_RANDOMIZED_ASSIGNMENT\"\n  },\n  \"placebos\": [\n    {\n      \"max_pre_rmse\": 0.01,\n      \"reason\": \"PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE\",\n      \"state\": \"INSUFFICIENT\",\n      \"training_n\": 18,\n      \"training_rmse\": 0.8675845507513253,\n      \"unit_id\": \"donor0\",\n      \"validation_n\": 6,\n      \"validation_rmse\": 1.3048539695834451\n    },\n    {\n      \"max_pre_rmse\": 0.01,\n      \"reason\": \"PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE\",\n      \"state\": \"INSUFFICIENT\",\n      \"training_n\": 18,\n      \"training_rmse\": 2.7463808391162035,\n      \"unit_id\": \"donor1\",\n      \"validation_n\": 6,\n      \"validation_rmse\": 2.0729517628918783\n    },\n    {\n      \"max_pre_rmse\": 0.01,\n      \"reason\": \"PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE\",\n      \"state\": \"INSUFFICIENT\",\n      \"training_n\": 18,\n      \"training_rmse\": 1.7614124575517571,\n      \"unit_id\": \"donor2\",\n      \"validation_n\": 6,\n      \"validation_rmse\": 0.9595802472891934\n    }\n  ],\n  \"post_n\": 6,\n  \"pre_n\": 24,\n  \"state\": \"READY\",\n  \"unit\": \"input outcome units\"\n}",
+      "parent_artifact_id": null,
+      "parent_sha256": null,
+      "payload": {
+        "statistics": {
+          "ai_used": false,
+          "analysis": "synthetic_control",
+          "business_purpose": "compare_with_synthetic_baseline",
+          "causal_claim": "NOT_ESTABLISHED",
+          "claim_type": "derived_from_declared_source_dataset; source custody does not verify measured truth",
+          "dataset_sha256": "b22e8eabd305ea5ed4c2e4c4e1538ee2c3caba5ead38d2afc62c6bc01d79c44d",
+          "dataset_unit": "trial",
+          "options": {},
+          "recipe": "report-statistics-source/1",
+          "result": {
+            "causal_claim": "NOT_ESTABLISHED",
+            "design": {
+              "comparable_measurement": true,
+              "no_anticipation": true,
+              "no_spillovers": true,
+              "selection_protocol": "Owned known-mixture engineering fixture fixed before outcome inspection"
+            },
+            "design_verification": "USER_DECLARED_NOT_INDEPENDENTLY_VERIFIED",
+            "donor_n": 3,
+            "donor_weights": {
+              "donor0": 0.20000000000000479,
+              "donor1": 0.2999999999999983,
+              "donor2": 0.4999999999999969
+            },
+            "fit": {
+              "max_pre_rmse": 0.01,
+              "mean_post_gap": 1.9999999999999953,
+              "post_observed_minus_synthetic": [
+                1.9999999999999858,
+                2.0,
+                2.0,
+                2.0,
+                1.9999999999999858,
+                2.0
+              ],
+              "post_pre_rmse_ratio": null,
+              "post_rmse": 1.9999999999999951,
+              "pre_rmse": 9.173067274558417e-15,
+              "ratio_state": "PRE_ERROR_NEAR_ZERO_RATIO_UNDEFINED",
+              "state": "READY",
+              "synthetic": [
+                100.8,
+                101.30723474296738,
+                101.48370543906984,
+                101.32294314082111,
+                101.01455404327906,
+                100.84016074347961,
+                101.00960897535552,
+                101.53296226522039,
+                102.20603700208855,
+                102.72226749888637,
+                102.84907380122664,
+                102.5669216162286,
+                102.08854592449453,
+                101.74421705298104,
+                101.79696809931019,
+                102.29354643906797,
+                103.03742344992922,
+                103.700239059805,
+                104.00810636641373,
+                103.89588698771846,
+                103.54118640749003,
+                103.25950394732939,
+                103.32200014867746,
+                103.80116530181976,
+                104.53218746095638,
+                105.2099046096822,
+                105.56301202720113,
+                105.50422159816954,
+                105.1715577687506,
+                104.8410074629319
+              ],
+              "training_n": 18,
+              "training_rmse": 1.6747652892626935e-14,
+              "validation_n": 6,
+              "validation_rmse": 2.3920432895754778e-14,
+              "weights": [
+                0.20000000000000479,
+                0.2999999999999983,
+                0.4999999999999969
+              ]
+            },
+            "implementation_versions": {
+              "numpy": "2.5.4",
+              "scipy": "1.18.1"
+            },
+            "input_unit": "trial",
+            "interpretation_status": "NOT_BUSINESS_VALIDATED",
+            "interval": null,
+            "interval_state": "NOT_ESTABLISHED",
+            "limitations": [
+              "Outcome-only synthetic control with equal pre-outcome importance and nonnegative weights summing to one; not the full covariate-V selection procedure.",
+              "Treated pre-outcomes alone train weights; a disjoint pre-intervention segment checks fit before all pre-periods are refitted. Post outcomes never tune weights or thresholds.",
+              "Donor nonexposure, no anticipation/spillovers and comparable measurement are declared assumptions, not established facts.",
+              "Post-period discrepancy is descriptive unless causal design assumptions hold; no confidence interval or causal proof is supplied.",
+              "In-space donor placebos are sensitivity diagnostics, not randomized-treatment p-values; poor prefit placebos remain visible and excluded from comparison."
+            ],
+            "method": "outcome-only-simplex-synthetic-control@1",
+            "n": 30,
+            "periods": [
+              "2026-01-01",
+              "2026-01-02",
+              "2026-01-03",
+              "2026-01-04",
+              "2026-01-05",
+              "2026-01-06",
+              "2026-01-07",
+              "2026-01-08",
+              "2026-01-09",
+              "2026-01-10",
+              "2026-01-11",
+              "2026-01-12",
+              "2026-01-13",
+              "2026-01-14",
+              "2026-01-15",
+              "2026-01-16",
+              "2026-01-17",
+              "2026-01-18",
+              "2026-01-19",
+              "2026-01-20",
+              "2026-01-21",
+              "2026-01-22",
+              "2026-01-23",
+              "2026-01-24",
+              "2026-01-25",
+              "2026-01-26",
+              "2026-01-27",
+              "2026-01-28",
+              "2026-01-29",
+              "2026-01-30"
+            ],
+            "placebo_comparison": {
+              "eligible_n": 0,
+              "p_value": null,
+              "reason": "OBSERVATIONAL_PLACEBOS_DO_NOT_ESTABLISH_RANDOMIZED_ASSIGNMENT"
+            },
+            "placebos": [
+              {
+                "max_pre_rmse": 0.01,
+                "reason": "PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE",
+                "state": "INSUFFICIENT",
+                "training_n": 18,
+                "training_rmse": 0.8675845507513253,
+                "unit_id": "donor0",
+                "validation_n": 6,
+                "validation_rmse": 1.3048539695834451
+              },
+              {
+                "max_pre_rmse": 0.01,
+                "reason": "PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE",
+                "state": "INSUFFICIENT",
+                "training_n": 18,
+                "training_rmse": 2.7463808391162035,
+                "unit_id": "donor1",
+                "validation_n": 6,
+                "validation_rmse": 2.0729517628918783
+              },
+              {
+                "max_pre_rmse": 0.01,
+                "reason": "PRE_FIT_OR_HOLDOUT_ERROR_EXCEEDS_DECLARED_TOLERANCE",
+                "state": "INSUFFICIENT",
+                "training_n": 18,
+                "training_rmse": 1.7614124575517571,
+                "unit_id": "donor2",
+                "validation_n": 6,
+                "validation_rmse": 0.9595802472891934
+              }
+            ],
+            "post_n": 6,
+            "pre_n": 24,
+            "state": "READY",
+            "unit": "input outcome units"
+          },
+          "source_asset_id": "DOC-37ae14538e9f7bbd152a7718f1883c6c",
+          "source_evidence_id": 1
+        }
+      },
+      "request_id": "statistics-synthetic-control",
+      "schema": "lumenis.saved-work/v1",
+      "task_id": null,
+      "title": "Statistical analysis: synthetic_control",
+      "version": 1,
+      "work_id": "WORK-b31ff4583d8b24adf6c3e515"
+    },
+    "return_ref": {
+      "artifact_id": "ART-a4ab0d03d1b44d09",
+      "work_id": "WORK-b31ff4583d8b24adf6c3e515",
+      "version": 1,
+      "scope": {
+        "domain_id": "cth",
+        "subject_id": null,
+        "brand_focus_id": null,
+        "global_scope": true
+      }
+    },
+    "receipt": {
+      "schema": "lumenis.committed-saved-work/v1",
+      "task_id": null,
+      "assertion_id": null,
+      "contract": {
+        "id": "lumenis.saved-work",
+        "required_payload_paths": [],
+        "version": "1"
+      },
+      "scope": {
+        "domain_id": "cth",
+        "subject_id": null,
+        "brand_focus_id": null,
+        "global_scope": true
+      },
+      "ref": "ART-a4ab0d03d1b44d09",
+      "work_id": "WORK-b31ff4583d8b24adf6c3e515",
+      "version": 1,
+      "parent": {
+        "ref": null,
+        "sha256": null
+      },
+      "sha256": "f5e922b0d1747182152b8082b5b82ba3a4021f061d1ae6b98b28ddda93edaba2",
+      "size_bytes": 14043,
+      "draft_digest": "eff5343df99139c6616e24ee87b906e953a5b9a693e185cb335bc48d42cbe7e5",
+      "sources": [
+        {
+          "evidence_id": 1,
+          "source_id": "DOC-37ae14538e9f7bbd152a7718f1883c6c",
+          "evidence_version": "document-import/1",
+          "source_artifact_ref": "ART-a5663103f0c94d87",
+          "scope": {
+            "domain_id": "cth",
+            "subject_id": null,
+            "brand_focus_id": null,
+            "global_scope": true
+          },
+          "source_url": null,
+          "source_fingerprint": "b22e8eabd305ea5ed4c2e4c4e1538ee2c3caba5ead38d2afc62c6bc01d79c44d",
+          "parsed_text_sha256": "b22e8eabd305ea5ed4c2e4c4e1538ee2c3caba5ead38d2afc62c6bc01d79c44d",
+          "rights": "owner-approved",
+          "intended_use": "research_reference",
+          "capture": null,
+          "published_at": null,
+          "captured_at": "2026-10-17T01:00:00Z",
+          "purposes": [
+            "quote_reference"
+          ],
+          "content_origin": {
+            "kind": "self-authored",
+            "claim_type": "author_statement"
+          },
+          "claim_type": "author_statement",
+          "fact_verification": "NOT_VERIFIED",
+          "learning_admission": "NOT_ADMITTED",
+          "training_eligible": false,
+          "held_out": false,
+          "rights_statement": null,
+          "research_transport": null
+        }
+      ],
+      "constraint_observations": {
+        "committed_bytes_match": true,
+        "parent_chain_verified": true,
+        "required_payload_paths_present": [],
+        "source_authorization": "fresh-per-source",
+        "source_count": 1,
+        "factual_verification": "NOT_ESTABLISHED_BY_STORAGE",
+        "learning_admission": "NOT_ESTABLISHED_BY_STORAGE",
+        "training_eligible": false,
+        "held_out": false,
+        "assertion_binding": "absent",
+        "media_lineage": "not_applicable"
+      },
+      "commit_state": "registry_committed_artifact_staged"
+    },
+    "replayed": false
+  },
+  "claim": "Self-owned engineering fixture and source custody; not real-market acceptance"
+}

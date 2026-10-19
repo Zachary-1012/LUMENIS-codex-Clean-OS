@@ -1,0 +1,3737 @@
+[
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Adapter",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "registration_statements": [
+          {
+            "line": 168,
+            "call": "register_adapter(\"github\", GitHubAdapter)"
+          }
+        ],
+        "classes": [
+          {
+            "class": "GitHubAdapter",
+            "line": 21,
+            "bases": [
+              "BasePlatformAdapter"
+            ]
+          }
+        ]
+      },
+      {
+        "path": "lumenis/system/collector/adapters/registry.py",
+        "sha256": "1fe98dbabc238cc0791039379d1797c2f746e0eaf7b27702b143d4b3554f92ca",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/__init__.py",
+        "sha256": "72c4642048330a4745987a7347b6a5750f0f1f1906693b2013d506f47f7c9234",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Prove exact callable/provider binding in current main; file/class/registration alone is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Search",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "search",
+            "line": 82,
+            "end_line": 95
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Run authorized query with page receipts, time/market/object boundaries and explicit termination."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Detail",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "detail",
+            "line": 97,
+            "end_line": 110
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Prove source-native detail/body and stable ID, including long/truncated/unavailable cases."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Comments",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "comments",
+            "line": 112,
+            "end_line": 114
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Prove root and reply body coverage separately; counts or inherited methods cannot prove this."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Creator",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Prove permitted creator endpoint/fields, identity namespace and account attribution."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Auth",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Validate current permission/consent/role for exact route without conflating product login."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Cookie",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Record whether route needs cookie and authorized session validity without exposing secrets; existence is not validity."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Session",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Validate session ownership/expiry/isolation and authorized recovery."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Proxy",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Document actual route requirement and approval; config flag is neither working proxy nor permission to evade."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Provider",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Name actual source/provider/version/contract and verify runtime binding."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Live Connectivity",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/health_center.py",
+        "sha256": "345f819707efa5ad93afddf9aa2bd264d6ff171940883297c2b2bcdec00c4db7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Obtain current authenticated/authorized route connectivity evidence; health alone is not collection."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Real Result",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Obtain real query/object results or explicit legitimate zero; test fixtures are not live evidence."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Evidence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/evidence_exporter.py",
+        "sha256": "a0ca95999529ea11420756e0ca946f3e1f47c727e5328511b329b710cc44be4e",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Verify raw original acquisition record persists and reads back with provenance and permitted use."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Canonical Persistence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+        "sha256": "b231c27b38cc2d34ec9e91da6ea8a8a51c8b52e403dd5263cd6091478d2d7405",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Verify actual admission and DB readback separately from raw persistence; no automatic fact promotion."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Scope",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/acquisition_plan.py",
+        "sha256": "45b4910e3a1d484e5c2cca1e7575772fc1280d7c2b0f598078e8ee91f74c00ab",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Verify actor/workspace/query/platform/market/object/use scope and request authorization."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Rate Limit",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/rate_limiter.py",
+        "sha256": "0b1de04293067372450fcabcae3fae2582cc27537634b7de25159d6b28b7d9f7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/guard.py",
+        "sha256": "31d54eb5d79869bf046f7764913558802947cdaeda248b15ed249ed68a24a1ad",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Observe actual account/provider quota and typed rate/credit/budget errors, respecting allowed backoff."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Risk",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/risk_engine.py",
+        "sha256": "18c214a011123599f8191105c84c6b9b95348f254d4286acdf1635d05d71a988",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/safe_collection.py",
+        "sha256": "4f80b2e45207b5f062ebb83b6f5ec3c6eed9200462483711427f626a169eb1b1",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Verify actual security/challenge/rights handling; unknown permissions cannot be silently allowed."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Recovery",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/checkpoint.py",
+        "sha256": "a7312228d1f17160d7c82d71563e6d525a49815f52e19133f61b3b877b674ff7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/dlq_replay.py",
+        "sha256": "106149a6779dba25eeb92d2fcead5f993488c9eedac8c4a2dfc14dfe1e2afe2a",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Prove interruption/checkpoint/resume without duplicate or lost permitted objects."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "github",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Continuous Operation",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/github.py",
+        "sha256": "91379e4474ea64bee04205863df4559384ed2f95814108943d6ed480d2515ffb",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/schedule_adapter.py",
+        "sha256": "fdcbf2f0a7b94d9ad0998142301f7b56804cf3021d486a6d8e3e1a5753abd27f",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/runtime_guardian.py",
+        "sha256": "797e90285dd47d34e64893c85d43834c3299d153daefa479297097d7fdd4db80",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "REST public resources / authorized connector",
+    "live_classification": null,
+    "gap": "Prove authorized sustained operation across real time, refresh, deletion, limits and interruption; one success is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Adapter",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/registry.py",
+        "sha256": "1fe98dbabc238cc0791039379d1797c2f746e0eaf7b27702b143d4b3554f92ca",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/__init__.py",
+        "sha256": "72c4642048330a4745987a7347b6a5750f0f1f1906693b2013d506f47f7c9234",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Prove exact callable/provider binding in current main; file/class/registration alone is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Search",
+    "code_evidence": [],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Run authorized query with page receipts, time/market/object boundaries and explicit termination."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Detail",
+    "code_evidence": [],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Prove source-native detail/body and stable ID, including long/truncated/unavailable cases."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Comments",
+    "code_evidence": [],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Prove root and reply body coverage separately; counts or inherited methods cannot prove this."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Creator",
+    "code_evidence": [],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Prove permitted creator endpoint/fields, identity namespace and account attribution."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Auth",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Validate current permission/consent/role for exact route without conflating product login."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Cookie",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Record whether route needs cookie and authorized session validity without exposing secrets; existence is not validity."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Session",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Validate session ownership/expiry/isolation and authorized recovery."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Proxy",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Document actual route requirement and approval; config flag is neither working proxy nor permission to evade."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Provider",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Name actual source/provider/version/contract and verify runtime binding."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Live Connectivity",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/health_center.py",
+        "sha256": "345f819707efa5ad93afddf9aa2bd264d6ff171940883297c2b2bcdec00c4db7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Obtain current authenticated/authorized route connectivity evidence; health alone is not collection."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Real Result",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Obtain real query/object results or explicit legitimate zero; test fixtures are not live evidence."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Evidence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/evidence_exporter.py",
+        "sha256": "a0ca95999529ea11420756e0ca946f3e1f47c727e5328511b329b710cc44be4e",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Verify raw original acquisition record persists and reads back with provenance and permitted use."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Canonical Persistence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+        "sha256": "b231c27b38cc2d34ec9e91da6ea8a8a51c8b52e403dd5263cd6091478d2d7405",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Verify actual admission and DB readback separately from raw persistence; no automatic fact promotion."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Scope",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/acquisition_plan.py",
+        "sha256": "45b4910e3a1d484e5c2cca1e7575772fc1280d7c2b0f598078e8ee91f74c00ab",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Verify actor/workspace/query/platform/market/object/use scope and request authorization."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Rate Limit",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/guard/rate_limiter.py",
+        "sha256": "0b1de04293067372450fcabcae3fae2582cc27537634b7de25159d6b28b7d9f7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/guard.py",
+        "sha256": "31d54eb5d79869bf046f7764913558802947cdaeda248b15ed249ed68a24a1ad",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Observe actual account/provider quota and typed rate/credit/budget errors, respecting allowed backoff."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Risk",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/guard/risk_engine.py",
+        "sha256": "18c214a011123599f8191105c84c6b9b95348f254d4286acdf1635d05d71a988",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/safe_collection.py",
+        "sha256": "4f80b2e45207b5f062ebb83b6f5ec3c6eed9200462483711427f626a169eb1b1",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Verify actual security/challenge/rights handling; unknown permissions cannot be silently allowed."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Recovery",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/guard/checkpoint.py",
+        "sha256": "a7312228d1f17160d7c82d71563e6d525a49815f52e19133f61b3b877b674ff7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/dlq_replay.py",
+        "sha256": "106149a6779dba25eeb92d2fcead5f993488c9eedac8c4a2dfc14dfe1e2afe2a",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Prove interruption/checkpoint/resume without duplicate or lost permitted objects."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "google",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Continuous Operation",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/guard/schedule_adapter.py",
+        "sha256": "fdcbf2f0a7b94d9ad0998142301f7b56804cf3021d486a6d8e3e1a5753abd27f",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/runtime_guardian.py",
+        "sha256": "797e90285dd47d34e64893c85d43834c3299d153daefa479297097d7fdd4db80",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Custom Search JSON API legacy clients only",
+    "live_classification": null,
+    "gap": "Prove authorized sustained operation across real time, refresh, deletion, limits and interruption; one success is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Adapter",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "registration_statements": [
+          {
+            "line": 74,
+            "call": "register_adapter(\"linkedin\", LinkedInAdapter)"
+          }
+        ],
+        "classes": [
+          {
+            "class": "LinkedInAdapter",
+            "line": 19,
+            "bases": [
+              "BasePlatformAdapter"
+            ]
+          }
+        ]
+      },
+      {
+        "path": "lumenis/system/collector/adapters/registry.py",
+        "sha256": "1fe98dbabc238cc0791039379d1797c2f746e0eaf7b27702b143d4b3554f92ca",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/__init__.py",
+        "sha256": "72c4642048330a4745987a7347b6a5750f0f1f1906693b2013d506f47f7c9234",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Prove exact callable/provider binding in current main; file/class/registration alone is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Search",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "search",
+            "line": 38,
+            "end_line": 43
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Run authorized query with page receipts, time/market/object boundaries and explicit termination."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Detail",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "detail",
+            "line": 45,
+            "end_line": 50
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Prove source-native detail/body and stable ID, including long/truncated/unavailable cases."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Comments",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "comments",
+            "line": 52,
+            "end_line": 57
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Prove root and reply body coverage separately; counts or inherited methods cannot prove this."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Creator",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "creator",
+            "line": 59,
+            "end_line": 64
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Prove permitted creator endpoint/fields, identity namespace and account attribution."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Auth",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Validate current permission/consent/role for exact route without conflating product login."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Cookie",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Record whether route needs cookie and authorized session validity without exposing secrets; existence is not validity."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Session",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Validate session ownership/expiry/isolation and authorized recovery."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Proxy",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Document actual route requirement and approval; config flag is neither working proxy nor permission to evade."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Provider",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Name actual source/provider/version/contract and verify runtime binding."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Live Connectivity",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/health_center.py",
+        "sha256": "345f819707efa5ad93afddf9aa2bd264d6ff171940883297c2b2bcdec00c4db7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Obtain current authenticated/authorized route connectivity evidence; health alone is not collection."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Real Result",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Obtain real query/object results or explicit legitimate zero; test fixtures are not live evidence."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Evidence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/evidence_exporter.py",
+        "sha256": "a0ca95999529ea11420756e0ca946f3e1f47c727e5328511b329b710cc44be4e",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Verify raw original acquisition record persists and reads back with provenance and permitted use."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Canonical Persistence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+        "sha256": "b231c27b38cc2d34ec9e91da6ea8a8a51c8b52e403dd5263cd6091478d2d7405",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Verify actual admission and DB readback separately from raw persistence; no automatic fact promotion."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Scope",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/acquisition_plan.py",
+        "sha256": "45b4910e3a1d484e5c2cca1e7575772fc1280d7c2b0f598078e8ee91f74c00ab",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Verify actor/workspace/query/platform/market/object/use scope and request authorization."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Rate Limit",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/rate_limiter.py",
+        "sha256": "0b1de04293067372450fcabcae3fae2582cc27537634b7de25159d6b28b7d9f7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/guard.py",
+        "sha256": "31d54eb5d79869bf046f7764913558802947cdaeda248b15ed249ed68a24a1ad",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Observe actual account/provider quota and typed rate/credit/budget errors, respecting allowed backoff."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Risk",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/risk_engine.py",
+        "sha256": "18c214a011123599f8191105c84c6b9b95348f254d4286acdf1635d05d71a988",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/safe_collection.py",
+        "sha256": "4f80b2e45207b5f062ebb83b6f5ec3c6eed9200462483711427f626a169eb1b1",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Verify actual security/challenge/rights handling; unknown permissions cannot be silently allowed."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Recovery",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/checkpoint.py",
+        "sha256": "a7312228d1f17160d7c82d71563e6d525a49815f52e19133f61b3b877b674ff7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/dlq_replay.py",
+        "sha256": "106149a6779dba25eeb92d2fcead5f993488c9eedac8c4a2dfc14dfe1e2afe2a",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Prove interruption/checkpoint/resume without duplicate or lost permitted objects."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "linkedin",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Continuous Operation",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/linkedin.py",
+        "sha256": "c666aaab6d0f51e0a2f76e985d481d820559c3dedb35f17b392417d74c4193ef",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/schedule_adapter.py",
+        "sha256": "fdcbf2f0a7b94d9ad0998142301f7b56804cf3021d486a6d8e3e1a5753abd27f",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/runtime_guardian.py",
+        "sha256": "797e90285dd47d34e64893c85d43834c3299d153daefa479297097d7fdd4db80",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved Community Management API",
+    "live_classification": null,
+    "gap": "Prove authorized sustained operation across real time, refresh, deletion, limits and interruption; one success is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Adapter",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "registration_statements": [
+          {
+            "line": 68,
+            "call": "register_adapter(\"reddit\", RedditAdapter)"
+          }
+        ],
+        "classes": [
+          {
+            "class": "RedditAdapter",
+            "line": 19,
+            "bases": [
+              "BasePlatformAdapter"
+            ]
+          }
+        ]
+      },
+      {
+        "path": "lumenis/system/collector/adapters/registry.py",
+        "sha256": "1fe98dbabc238cc0791039379d1797c2f746e0eaf7b27702b143d4b3554f92ca",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/__init__.py",
+        "sha256": "72c4642048330a4745987a7347b6a5750f0f1f1906693b2013d506f47f7c9234",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Prove exact callable/provider binding in current main; file/class/registration alone is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Search",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "search",
+            "line": 39,
+            "end_line": 44
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Run authorized query with page receipts, time/market/object boundaries and explicit termination."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Detail",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "detail",
+            "line": 46,
+            "end_line": 51
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Prove source-native detail/body and stable ID, including long/truncated/unavailable cases."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Comments",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "comments",
+            "line": 53,
+            "end_line": 58
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Prove root and reply body coverage separately; counts or inherited methods cannot prove this."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Creator",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Prove permitted creator endpoint/fields, identity namespace and account attribution."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Auth",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Validate current permission/consent/role for exact route without conflating product login."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Cookie",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Record whether route needs cookie and authorized session validity without exposing secrets; existence is not validity."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Session",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Validate session ownership/expiry/isolation and authorized recovery."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Proxy",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Document actual route requirement and approval; config flag is neither working proxy nor permission to evade."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Provider",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Name actual source/provider/version/contract and verify runtime binding."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Live Connectivity",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/health_center.py",
+        "sha256": "345f819707efa5ad93afddf9aa2bd264d6ff171940883297c2b2bcdec00c4db7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Obtain current authenticated/authorized route connectivity evidence; health alone is not collection."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Real Result",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Obtain real query/object results or explicit legitimate zero; test fixtures are not live evidence."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Evidence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/evidence_exporter.py",
+        "sha256": "a0ca95999529ea11420756e0ca946f3e1f47c727e5328511b329b710cc44be4e",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Verify raw original acquisition record persists and reads back with provenance and permitted use."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Canonical Persistence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+        "sha256": "b231c27b38cc2d34ec9e91da6ea8a8a51c8b52e403dd5263cd6091478d2d7405",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Verify actual admission and DB readback separately from raw persistence; no automatic fact promotion."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Scope",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/acquisition_plan.py",
+        "sha256": "45b4910e3a1d484e5c2cca1e7575772fc1280d7c2b0f598078e8ee91f74c00ab",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Verify actor/workspace/query/platform/market/object/use scope and request authorization."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Rate Limit",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/rate_limiter.py",
+        "sha256": "0b1de04293067372450fcabcae3fae2582cc27537634b7de25159d6b28b7d9f7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/guard.py",
+        "sha256": "31d54eb5d79869bf046f7764913558802947cdaeda248b15ed249ed68a24a1ad",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Observe actual account/provider quota and typed rate/credit/budget errors, respecting allowed backoff."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Risk",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/risk_engine.py",
+        "sha256": "18c214a011123599f8191105c84c6b9b95348f254d4286acdf1635d05d71a988",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/safe_collection.py",
+        "sha256": "4f80b2e45207b5f062ebb83b6f5ec3c6eed9200462483711427f626a169eb1b1",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Verify actual security/challenge/rights handling; unknown permissions cannot be silently allowed."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Recovery",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/checkpoint.py",
+        "sha256": "a7312228d1f17160d7c82d71563e6d525a49815f52e19133f61b3b877b674ff7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/dlq_replay.py",
+        "sha256": "106149a6779dba25eeb92d2fcead5f993488c9eedac8c4a2dfc14dfe1e2afe2a",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Prove interruption/checkpoint/resume without duplicate or lost permitted objects."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "reddit",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Continuous Operation",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/reddit.py",
+        "sha256": "5bb25551246b800aa9a67f21942ddf22a2b74c9a73b466a80e2c71942afb950d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/schedule_adapter.py",
+        "sha256": "fdcbf2f0a7b94d9ad0998142301f7b56804cf3021d486a6d8e3e1a5753abd27f",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/runtime_guardian.py",
+        "sha256": "797e90285dd47d34e64893c85d43834c3299d153daefa479297097d7fdd4db80",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Approved OAuth Data API with commercial agreement",
+    "live_classification": null,
+    "gap": "Prove authorized sustained operation across real time, refresh, deletion, limits and interruption; one success is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Adapter",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/registry.py",
+        "sha256": "1fe98dbabc238cc0791039379d1797c2f746e0eaf7b27702b143d4b3554f92ca",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/__init__.py",
+        "sha256": "72c4642048330a4745987a7347b6a5750f0f1f1906693b2013d506f47f7c9234",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Prove exact callable/provider binding in current main; file/class/registration alone is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Search",
+    "code_evidence": [],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Run authorized query with page receipts, time/market/object boundaries and explicit termination."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Detail",
+    "code_evidence": [],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Prove source-native detail/body and stable ID, including long/truncated/unavailable cases."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Comments",
+    "code_evidence": [],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Prove root and reply body coverage separately; counts or inherited methods cannot prove this."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Creator",
+    "code_evidence": [],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Prove permitted creator endpoint/fields, identity namespace and account attribution."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Auth",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Validate current permission/consent/role for exact route without conflating product login."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Cookie",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Record whether route needs cookie and authorized session validity without exposing secrets; existence is not validity."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Session",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Validate session ownership/expiry/isolation and authorized recovery."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Proxy",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Document actual route requirement and approval; config flag is neither working proxy nor permission to evade."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Provider",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Name actual source/provider/version/contract and verify runtime binding."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Live Connectivity",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/health_center.py",
+        "sha256": "345f819707efa5ad93afddf9aa2bd264d6ff171940883297c2b2bcdec00c4db7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Obtain current authenticated/authorized route connectivity evidence; health alone is not collection."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Real Result",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Obtain real query/object results or explicit legitimate zero; test fixtures are not live evidence."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Evidence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/evidence_exporter.py",
+        "sha256": "a0ca95999529ea11420756e0ca946f3e1f47c727e5328511b329b710cc44be4e",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Verify raw original acquisition record persists and reads back with provenance and permitted use."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Canonical Persistence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+        "sha256": "b231c27b38cc2d34ec9e91da6ea8a8a51c8b52e403dd5263cd6091478d2d7405",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Verify actual admission and DB readback separately from raw persistence; no automatic fact promotion."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Scope",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/acquisition_plan.py",
+        "sha256": "45b4910e3a1d484e5c2cca1e7575772fc1280d7c2b0f598078e8ee91f74c00ab",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Verify actor/workspace/query/platform/market/object/use scope and request authorization."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Rate Limit",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/guard/rate_limiter.py",
+        "sha256": "0b1de04293067372450fcabcae3fae2582cc27537634b7de25159d6b28b7d9f7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/guard.py",
+        "sha256": "31d54eb5d79869bf046f7764913558802947cdaeda248b15ed249ed68a24a1ad",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Observe actual account/provider quota and typed rate/credit/budget errors, respecting allowed backoff."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Risk",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/guard/risk_engine.py",
+        "sha256": "18c214a011123599f8191105c84c6b9b95348f254d4286acdf1635d05d71a988",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/safe_collection.py",
+        "sha256": "4f80b2e45207b5f062ebb83b6f5ec3c6eed9200462483711427f626a169eb1b1",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Verify actual security/challenge/rights handling; unknown permissions cannot be silently allowed."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Recovery",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/guard/checkpoint.py",
+        "sha256": "a7312228d1f17160d7c82d71563e6d525a49815f52e19133f61b3b877b674ff7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/dlq_replay.py",
+        "sha256": "106149a6779dba25eeb92d2fcead5f993488c9eedac8c4a2dfc14dfe1e2afe2a",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Prove interruption/checkpoint/resume without duplicate or lost permitted objects."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "tieba",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Continuous Operation",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/guard/schedule_adapter.py",
+        "sha256": "fdcbf2f0a7b94d9ad0998142301f7b56804cf3021d486a6d8e3e1a5753abd27f",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/runtime_guardian.py",
+        "sha256": "797e90285dd47d34e64893c85d43834c3299d153daefa479297097d7fdd4db80",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Historical official content cooperation page",
+    "live_classification": null,
+    "gap": "Prove authorized sustained operation across real time, refresh, deletion, limits and interruption; one success is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Adapter",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "registration_statements": [
+          {
+            "line": 75,
+            "call": "register_adapter(\"youtube\", YouTubeAdapter)"
+          }
+        ],
+        "classes": [
+          {
+            "class": "YouTubeAdapter",
+            "line": 19,
+            "bases": [
+              "BasePlatformAdapter"
+            ]
+          }
+        ]
+      },
+      {
+        "path": "lumenis/system/collector/adapters/registry.py",
+        "sha256": "1fe98dbabc238cc0791039379d1797c2f746e0eaf7b27702b143d4b3554f92ca",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/__init__.py",
+        "sha256": "72c4642048330a4745987a7347b6a5750f0f1f1906693b2013d506f47f7c9234",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Prove exact callable/provider binding in current main; file/class/registration alone is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Search",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "search",
+            "line": 39,
+            "end_line": 44
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Run authorized query with page receipts, time/market/object boundaries and explicit termination."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Detail",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "detail",
+            "line": 46,
+            "end_line": 51
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Prove source-native detail/body and stable ID, including long/truncated/unavailable cases."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Comments",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "comments",
+            "line": 53,
+            "end_line": 58
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Prove root and reply body coverage separately; counts or inherited methods cannot prove this."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Creator",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "creator",
+            "line": 60,
+            "end_line": 65
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Prove permitted creator endpoint/fields, identity namespace and account attribution."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Auth",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Validate current permission/consent/role for exact route without conflating product login."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Cookie",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Record whether route needs cookie and authorized session validity without exposing secrets; existence is not validity."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Session",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Validate session ownership/expiry/isolation and authorized recovery."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Proxy",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Document actual route requirement and approval; config flag is neither working proxy nor permission to evade."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Provider",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Name actual source/provider/version/contract and verify runtime binding."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Live Connectivity",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/health_center.py",
+        "sha256": "345f819707efa5ad93afddf9aa2bd264d6ff171940883297c2b2bcdec00c4db7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Obtain current authenticated/authorized route connectivity evidence; health alone is not collection."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Real Result",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Obtain real query/object results or explicit legitimate zero; test fixtures are not live evidence."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Evidence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/evidence_exporter.py",
+        "sha256": "a0ca95999529ea11420756e0ca946f3e1f47c727e5328511b329b710cc44be4e",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Verify raw original acquisition record persists and reads back with provenance and permitted use."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Canonical Persistence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+        "sha256": "b231c27b38cc2d34ec9e91da6ea8a8a51c8b52e403dd5263cd6091478d2d7405",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Verify actual admission and DB readback separately from raw persistence; no automatic fact promotion."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Scope",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/acquisition_plan.py",
+        "sha256": "45b4910e3a1d484e5c2cca1e7575772fc1280d7c2b0f598078e8ee91f74c00ab",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Verify actor/workspace/query/platform/market/object/use scope and request authorization."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Rate Limit",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/rate_limiter.py",
+        "sha256": "0b1de04293067372450fcabcae3fae2582cc27537634b7de25159d6b28b7d9f7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/guard.py",
+        "sha256": "31d54eb5d79869bf046f7764913558802947cdaeda248b15ed249ed68a24a1ad",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Observe actual account/provider quota and typed rate/credit/budget errors, respecting allowed backoff."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Risk",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/risk_engine.py",
+        "sha256": "18c214a011123599f8191105c84c6b9b95348f254d4286acdf1635d05d71a988",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/safe_collection.py",
+        "sha256": "4f80b2e45207b5f062ebb83b6f5ec3c6eed9200462483711427f626a169eb1b1",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Verify actual security/challenge/rights handling; unknown permissions cannot be silently allowed."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Recovery",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/checkpoint.py",
+        "sha256": "a7312228d1f17160d7c82d71563e6d525a49815f52e19133f61b3b877b674ff7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/dlq_replay.py",
+        "sha256": "106149a6779dba25eeb92d2fcead5f993488c9eedac8c4a2dfc14dfe1e2afe2a",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Prove interruption/checkpoint/resume without duplicate or lost permitted objects."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "youtube",
+    "candidate_kind": "CATALOG_EXTRA_REQUIRES_RUNTIME_VERIFICATION",
+    "dimension": "Continuous Operation",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/youtube.py",
+        "sha256": "e9e7a3fdcffaad22b1053967faf7f41793ad71448d8aa5085fe8d1054828f21d",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/schedule_adapter.py",
+        "sha256": "fdcbf2f0a7b94d9ad0998142301f7b56804cf3021d486a6d8e3e1a5753abd27f",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/runtime_guardian.py",
+        "sha256": "797e90285dd47d34e64893c85d43834c3299d153daefa479297097d7fdd4db80",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": "Data API public metadata; private/management OAuth separately",
+    "live_classification": null,
+    "gap": "Prove authorized sustained operation across real time, refresh, deletion, limits and interruption; one success is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Adapter",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "registration_statements": [],
+        "classes": []
+      },
+      {
+        "path": "lumenis/system/collector/adapters/registry.py",
+        "sha256": "1fe98dbabc238cc0791039379d1797c2f746e0eaf7b27702b143d4b3554f92ca",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/__init__.py",
+        "sha256": "72c4642048330a4745987a7347b6a5750f0f1f1906693b2013d506f47f7c9234",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove exact callable/provider binding in current main; file/class/registration alone is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Search",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Run authorized query with page receipts, time/market/object boundaries and explicit termination."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Detail",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove source-native detail/body and stable ID, including long/truncated/unavailable cases."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Comments",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove root and reply body coverage separately; counts or inherited methods cannot prove this."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Creator",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove permitted creator endpoint/fields, identity namespace and account attribution."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Auth",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Validate current permission/consent/role for exact route without conflating product login."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Cookie",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Record whether route needs cookie and authorized session validity without exposing secrets; existence is not validity."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Session",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Validate session ownership/expiry/isolation and authorized recovery."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Proxy",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Document actual route requirement and approval; config flag is neither working proxy nor permission to evade."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Provider",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Name actual source/provider/version/contract and verify runtime binding."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Live Connectivity",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/health_center.py",
+        "sha256": "345f819707efa5ad93afddf9aa2bd264d6ff171940883297c2b2bcdec00c4db7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Obtain current authenticated/authorized route connectivity evidence; health alone is not collection."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Real Result",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Obtain real query/object results or explicit legitimate zero; test fixtures are not live evidence."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Evidence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/evidence_exporter.py",
+        "sha256": "a0ca95999529ea11420756e0ca946f3e1f47c727e5328511b329b710cc44be4e",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Verify raw original acquisition record persists and reads back with provenance and permitted use."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Canonical Persistence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+        "sha256": "b231c27b38cc2d34ec9e91da6ea8a8a51c8b52e403dd5263cd6091478d2d7405",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Verify actual admission and DB readback separately from raw persistence; no automatic fact promotion."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Scope",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/acquisition_plan.py",
+        "sha256": "45b4910e3a1d484e5c2cca1e7575772fc1280d7c2b0f598078e8ee91f74c00ab",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Verify actor/workspace/query/platform/market/object/use scope and request authorization."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Rate Limit",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/rate_limiter.py",
+        "sha256": "0b1de04293067372450fcabcae3fae2582cc27537634b7de25159d6b28b7d9f7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/guard.py",
+        "sha256": "31d54eb5d79869bf046f7764913558802947cdaeda248b15ed249ed68a24a1ad",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Observe actual account/provider quota and typed rate/credit/budget errors, respecting allowed backoff."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Risk",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/risk_engine.py",
+        "sha256": "18c214a011123599f8191105c84c6b9b95348f254d4286acdf1635d05d71a988",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/safe_collection.py",
+        "sha256": "4f80b2e45207b5f062ebb83b6f5ec3c6eed9200462483711427f626a169eb1b1",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Verify actual security/challenge/rights handling; unknown permissions cannot be silently allowed."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Recovery",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/checkpoint.py",
+        "sha256": "a7312228d1f17160d7c82d71563e6d525a49815f52e19133f61b3b877b674ff7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/dlq_replay.py",
+        "sha256": "106149a6779dba25eeb92d2fcead5f993488c9eedac8c4a2dfc14dfe1e2afe2a",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove interruption/checkpoint/resume without duplicate or lost permitted objects."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "overture_places",
+    "candidate_kind": "LOCAL_PARQUET_CANDIDATE_NOT_CONFIRMED_REGISTERED_PLATFORM",
+    "dimension": "Continuous Operation",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/overture_places.py",
+        "sha256": "dfd401bff3b7bdf6fbfe7dc2fb4732e8badcf9665f584d18349d970a745b4644",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/schedule_adapter.py",
+        "sha256": "fdcbf2f0a7b94d9ad0998142301f7b56804cf3021d486a6d8e3e1a5753abd27f",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/runtime_guardian.py",
+        "sha256": "797e90285dd47d34e64893c85d43834c3299d153daefa479297097d7fdd4db80",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove authorized sustained operation across real time, refresh, deletion, limits and interruption; one success is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Adapter",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "registration_statements": [
+          {
+            "line": 247,
+            "call": "register_adapter(\"xhs_app_topic\", XHSAppTopicAdapter)"
+          }
+        ],
+        "classes": [
+          {
+            "class": "XHSAppTopicAdapter",
+            "line": 36,
+            "bases": [
+              "BasePlatformAdapter"
+            ]
+          }
+        ]
+      },
+      {
+        "path": "lumenis/system/collector/adapters/registry.py",
+        "sha256": "1fe98dbabc238cc0791039379d1797c2f746e0eaf7b27702b143d4b3554f92ca",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/__init__.py",
+        "sha256": "72c4642048330a4745987a7347b6a5750f0f1f1906693b2013d506f47f7c9234",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove exact callable/provider binding in current main; file/class/registration alone is insufficient."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Search",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "search",
+            "line": 64,
+            "end_line": 111
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Run authorized query with page receipts, time/market/object boundaries and explicit termination."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Detail",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [
+          {
+            "function": "detail",
+            "line": 113,
+            "end_line": 151
+          }
+        ],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove source-native detail/body and stable ID, including long/truncated/unavailable cases."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Comments",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove root and reply body coverage separately; counts or inherited methods cannot prove this."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Creator",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF",
+        "matching_definitions": [],
+        "absence_means": "No direct matching definition found; may inherit/delegate; does not prove unsupported."
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove permitted creator endpoint/fields, identity namespace and account attribution."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Auth",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Validate current permission/consent/role for exact route without conflating product login."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Cookie",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Record whether route needs cookie and authorized session validity without exposing secrets; existence is not validity."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Session",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/browser_session.py",
+        "sha256": "ab7ea2cea9a20924dde3bf2978c16f82a8ccc39a06b5b9ef2d84b54362357bed",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/runtime/session/browser_session.py",
+        "sha256": "68389623d0862567b450186b97630015a9e8d6d9ae2a9417fd1fa6ffb81bb138",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Validate session ownership/expiry/isolation and authorized recovery."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Proxy",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Document actual route requirement and approval; config flag is neither working proxy nor permission to evade."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Provider",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/routing.py",
+        "sha256": "8ab844a7eceba58ce61d15e3062365708f129b7868380af809075fb89d408a06",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/config.py",
+        "sha256": "a7622ece1d05d6dd4d2e0cd11987f695d153972600bb535544aea25ee52cd91c",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Name actual source/provider/version/contract and verify runtime binding."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Live Connectivity",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/health_center.py",
+        "sha256": "345f819707efa5ad93afddf9aa2bd264d6ff171940883297c2b2bcdec00c4db7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Obtain current authenticated/authorized route connectivity evidence; health alone is not collection."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Real Result",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/base.py",
+        "sha256": "1698b88437835065f893f87a426ea21fbb359c7c73a42aaf4acd0b034f630bec",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Obtain real query/object results or explicit legitimate zero; test fixtures are not live evidence."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Evidence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/evidence_exporter.py",
+        "sha256": "a0ca95999529ea11420756e0ca946f3e1f47c727e5328511b329b710cc44be4e",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Verify raw original acquisition record persists and reads back with provenance and permitted use."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Canonical Persistence",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+        "sha256": "b231c27b38cc2d34ec9e91da6ea8a8a51c8b52e403dd5263cd6091478d2d7405",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Verify actual admission and DB readback separately from raw persistence; no automatic fact promotion."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Scope",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/secondary_collection.py",
+        "sha256": "9f745515550e2f618aeb6da03d01bad0c5d218ff16e4dde272f226eaeacd7b63",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/acquisition_plan.py",
+        "sha256": "45b4910e3a1d484e5c2cca1e7575772fc1280d7c2b0f598078e8ee91f74c00ab",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Verify actor/workspace/query/platform/market/object/use scope and request authorization."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Rate Limit",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/rate_limiter.py",
+        "sha256": "0b1de04293067372450fcabcae3fae2582cc27537634b7de25159d6b28b7d9f7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/guard.py",
+        "sha256": "31d54eb5d79869bf046f7764913558802947cdaeda248b15ed249ed68a24a1ad",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Observe actual account/provider quota and typed rate/credit/budget errors, respecting allowed backoff."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Risk",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/risk_engine.py",
+        "sha256": "18c214a011123599f8191105c84c6b9b95348f254d4286acdf1635d05d71a988",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/adapters/safe_collection.py",
+        "sha256": "4f80b2e45207b5f062ebb83b6f5ec3c6eed9200462483711427f626a169eb1b1",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Verify actual security/challenge/rights handling; unknown permissions cannot be silently allowed."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Recovery",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/checkpoint.py",
+        "sha256": "a7312228d1f17160d7c82d71563e6d525a49815f52e19133f61b3b877b674ff7",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/dlq_replay.py",
+        "sha256": "106149a6779dba25eeb92d2fcead5f993488c9eedac8c4a2dfc14dfe1e2afe2a",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove interruption/checkpoint/resume without duplicate or lost permitted objects."
+  },
+  {
+    "parent_requirement_row": 17,
+    "candidate": "xhs_app_topic",
+    "candidate_kind": "XHS_COMPATIBILITY_ROUTE_NOT_NEW_PLATFORM",
+    "dimension": "Continuous Operation",
+    "code_evidence": [
+      {
+        "path": "lumenis/system/collector/adapters/xhs_app_topic.py",
+        "sha256": "679aea9167b3ba7eef3e785aef6e82fbce69f6a95dc0b421e882b44fc4811353",
+        "finding": "STATIC_MODULE_PRESENT_NOT_LIVE_PROOF"
+      },
+      {
+        "path": "lumenis/system/collector/guard/schedule_adapter.py",
+        "sha256": "fdcbf2f0a7b94d9ad0998142301f7b56804cf3021d486a6d8e3e1a5753abd27f",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      },
+      {
+        "path": "lumenis/system/collector/guard/runtime_guardian.py",
+        "sha256": "797e90285dd47d34e64893c85d43834c3299d153daefa479297097d7fdd4db80",
+        "finding": "SHARED_CANDIDATE_OWNER_FILE_PRESENT_PLATFORM_WIRING_NOT_PROVEN"
+      }
+    ],
+    "research_mapping": null,
+    "live_classification": null,
+    "gap": "Prove authorized sustained operation across real time, refresh, deletion, limits and interruption; one success is insufficient."
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "path": "platform_capability_research_20261018/REPORT.md",
+    "sha256": "549479dfe23c730ebf34a8b3e0195fc87765b370b111960d90bf03c55d0aded5",
+    "scope": "相关段落/结构定位及复用，不声称所有引用再核"
+  },
+  {
+    "path": "platform_capability_research_20261018/00_REUSED_OFFICIAL_BASELINE.md",
+    "sha256": "0095004563cea51b4f809d83ec4a3752358ab746f69b927aba508f5a0442be1c",
+    "scope": "相关段落/结构定位及复用，不声称所有引用再核"
+  },
+  {
+    "path": "platform_capability_research_20261018/01_PLATFORM_CAPABILITY_MATRIX.json",
+    "sha256": "a570f03b4a6de495647f1691e07f70204c7d741075eb9c455cb64a2b291877c3",
+    "scope": "相关段落/结构定位及复用，不声称所有引用再核"
+  },
+  {
+    "path": "platform_capability_research_20261018/G2_RECONCILIATION_APPENDIX.md",
+    "sha256": "4e200b33cd5294b8feea45b1f6e4b1568f27bdd23345dfeaba05d42dd2f364ae",
+    "scope": "相关段落/结构定位及复用，不声称所有引用再核"
+  },
+  {
+    "path": "platform_capability_research_20261018/evidence/source_register.json",
+    "sha256": "d7f009271aec11576dccba0b2cb106a1f1a0db2a41bd95385344591ccf32d6df",
+    "scope": "相关段落/结构定位及复用，不声称所有引用再核"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/REPORT.md",
+    "sha256": "269285082a34ff68bdd671858643911c8948f5d01484b26a46837f964ed56f6a",
+    "scope": "相关段落/结构定位及复用，不声称所有引用再核"
+  },
+  {
+    "path": "continuation_register_20261018/KNOWN_OPEN_ITEMS.md",
+    "sha256": "6cfba9f29e31faceeecc5e47c107e5038b208114ff88f215bc9325d7b8345bf2",
+    "scope": "相关段落/结构定位及复用，不声称所有引用再核"
+  },
+  {
+    "path": "continuation_register_20261018/RESEARCH_PROJECT_REGISTER.json",
+    "sha256": "ce9426ee3c858821bf0f7918ab31055bacaaa2058691d9941fd4336968818aa8",
+    "scope": "相关段落/结构定位及复用，不声称所有引用再核"
+  },
+  {
+    "path": "incremental_result_research_20261018/01_RESEARCH.md",
+    "sha256": "0bc5ce0069371b5ebccf24311e2c2ac8bc4c2592918555fe4161790e99cb00d7",
+    "scope": "相关段落/结构定位及复用，不声称所有引用再核"
+  }
+]

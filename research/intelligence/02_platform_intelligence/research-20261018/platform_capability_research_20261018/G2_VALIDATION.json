@@ -1,0 +1,30 @@
+{
+  "original_rows": 17,
+  "original_dimensions": 19,
+  "original_cells": 323,
+  "unique_cell_ids": 323,
+  "preserved_original_labels": true,
+  "original_live_status_enum_preserved": [
+    "OPERATING",
+    "LIVE_VERIFIED",
+    "IMPLEMENTED_LIVE_UNVERIFIED",
+    "PARTIAL",
+    "NOT_CONFIGURED",
+    "PLANNED",
+    "BLOCKED",
+    "ABSENT"
+  ],
+  "claimed_live_pass_count": 0,
+  "all_original_cells_open": true,
+  "extra_catalog_candidates": [
+    "github",
+    "google",
+    "linkedin",
+    "reddit",
+    "tieba",
+    "youtube"
+  ],
+  "dynamic_child_rows": 152,
+  "current_main_not_verified": true,
+  "new_product_changes": false
+}

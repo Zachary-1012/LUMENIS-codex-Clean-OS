@@ -1,0 +1,204 @@
+{
+  "files": [
+    {
+      "path": "PRODUCT_SOURCE_READBACK.json",
+      "bytes": 696,
+      "sha256": "3c04ab54358cfa2f9cc46c89b495875eaf5d804aae6145237602115f1103e96b"
+    },
+    {
+      "path": "READING_LEDGER.json",
+      "bytes": 30104,
+      "sha256": "b3ab7d3d281f610d03c6c3c4dee90ec3bca499850ec2f7f61fc180fe0892c2a7"
+    },
+    {
+      "path": "REPORT.md",
+      "bytes": 6239,
+      "sha256": "96896c4cd6d02dccb3500f3c4447359164dc1a7a97dc9591037f14ee8f43140c"
+    },
+    {
+      "path": "extracted/stochastic-mean-payoff.txt",
+      "bytes": 69084,
+      "sha256": "d30f882198b3137c9ef1ddab307398e3c5c4b7910f0729dc3b6d3c1212aafe5a"
+    },
+    {
+      "path": "extracted/unique-games.txt",
+      "bytes": 216194,
+      "sha256": "6b4f4e14beb2eda070432dbaffae8d259ce875e9198146fddd5de7c1e8e643a2"
+    },
+    {
+      "path": "formal/SOURCE_MANIFEST.json",
+      "bytes": 2634,
+      "sha256": "dc22ba8e1c39387007afb500193c76bdc4ac018440ae8719ac047adf36b48bff"
+    },
+    {
+      "path": "formal/STATIC_PREFLIGHT.md",
+      "bytes": 6735,
+      "sha256": "8f67b0d20cba8bf5bc4e2c1afb696ad1c227ca4a6e92f2358a167ba74771ae51"
+    },
+    {
+      "path": "formal/comparator-master-README.md",
+      "bytes": 10290,
+      "sha256": "39e03761a9b24379478d88ceaa02b3b1051f39d7c21e698118e39e145a4aec58"
+    },
+    {
+      "path": "formal/lean__ComparatorChallenges__MatchingEntropyBounds.json",
+      "bytes": 355,
+      "sha256": "73dda5ee4bf497674dc8e760ae812cb134327602d27e0e6c23010dbd22ba2e07"
+    },
+    {
+      "path": "formal/lean__ComparatorChallenges__MatchingEntropyBounds.lean",
+      "bytes": 2457,
+      "sha256": "0327e6c5cadc415707c982adf0d966a29631636fa40719fefbaea069efd51b88"
+    },
+    {
+      "path": "formal/lean__ComparatorChallenges__README.md",
+      "bytes": 1060,
+      "sha256": "2ed835b3c59709be6feffe0dec54fc9783fb26aa22d35517475a82ef5199c555"
+    },
+    {
+      "path": "formal/lean__OAI__Combinatorics__MatchingEntropy__ExpansionSequences.lean",
+      "bytes": 8190,
+      "sha256": "2c552208f8f6c1e649f16970a72b89ebfb05f01e9dea6341511623f056eb8dac"
+    },
+    {
+      "path": "formal/lean__OAI__Combinatorics__MatchingEntropy__Main.lean",
+      "bytes": 821,
+      "sha256": "56419c7eb7799f265990781a791b604100d8ad0bdfc0a14d55bd4f0ce9776ff4"
+    },
+    {
+      "path": "formal/lean__lake-manifest.json",
+      "bytes": 14622,
+      "sha256": "cf6105a25d9dca2f166b241d9191bd12c7e13305890dc9c4d0952351cccc0794"
+    },
+    {
+      "path": "formal/lean__lakefile.lean",
+      "bytes": 15457,
+      "sha256": "4cca977ebece444b6c999d99755c1ad3c93119bafc127ea761f7f703c7279e74"
+    },
+    {
+      "path": "formal/lean__lean-toolchain",
+      "bytes": 25,
+      "sha256": "d5edba4e4b8faad9c1baeadb265716d20d03be4d1a2647dc5e35b0c0325bea7b"
+    },
+    {
+      "path": "official/1581d4cb__history.md",
+      "bytes": 2282,
+      "sha256": "ea19da82a387c476bed00deda40463fe5a6c0745c6608d4d9166bca974cd173b"
+    },
+    {
+      "path": "official/1581d4cb__preprints__The-Unique-Games-Theorem-September-23-2026__README.md",
+      "bytes": 481,
+      "sha256": "074f627808b746d29068a11476ab51801467914107f0a6cb1d2bc8e4100eddaa"
+    },
+    {
+      "path": "official/1581d4cb__preprints__Turn-Based-Stochastic-Mean-Payoff-Games-in-Deterministic-Quasipolynomial-Time-October-5-2026__README.md",
+      "bytes": 780,
+      "sha256": "ea813c59b72df88e804dc57d1d93e6101339c195993f90eca639218739a3500d"
+    },
+    {
+      "path": "official/main__history.md",
+      "bytes": 2282,
+      "sha256": "ea19da82a387c476bed00deda40463fe5a6c0745c6608d4d9166bca974cd173b"
+    },
+    {
+      "path": "official/pdf_manifest.json",
+      "bytes": 515,
+      "sha256": "ebc054946796e39147ab3ad655863f94f7f543c6f3d37ba8f726face9fc479f0"
+    },
+    {
+      "path": "official/stochastic-mean-payoff.pdf",
+      "bytes": 455004,
+      "sha256": "77e967a1db5965db666692bdd37226ed8eeb5223b8d355e614f23f0ebc0b007d"
+    },
+    {
+      "path": "official/stochastic-mean-payoff.pdf.b64",
+      "bytes": 616785,
+      "sha256": "3f414b56bde2fcc88c0b34d5297bbd6c5d925b40c377d6543021128389d610a4"
+    },
+    {
+      "path": "official/unique-games.pdf",
+      "bytes": 801214,
+      "sha256": "04d0290a9cb7ee815060f82cf556cee893d32b5255613160ca8b8d02a5fe1289"
+    },
+    {
+      "path": "official/unique-games.pdf.b64",
+      "bytes": 1086094,
+      "sha256": "9aac82045a1e9c90e4474d7dd88949cc99f9d4cff38b06e5743796cfd0266292"
+    },
+    {
+      "path": "reviews/STOCHASTIC_MEAN_PAYOFF.md",
+      "bytes": 9379,
+      "sha256": "f27297c87bf895cd05f3013e4136a5e98fd91c2d8cca2724ceb13ca5c7cd6e01"
+    },
+    {
+      "path": "reviews/UNIQUE_GAMES.md",
+      "bytes": 14121,
+      "sha256": "e008df7519eee22aa9900f1b6fea2b85abb1bb9cccd1172026a193d63b1427dc"
+    },
+    {
+      "path": "visual/stochastic-mean-payoff-10.png",
+      "bytes": 344956,
+      "sha256": "4f06acf7afae9cfe8bfae27f64f4219ab566a3a0c77a1a0678536a282a46a056"
+    },
+    {
+      "path": "visual/stochastic-mean-payoff-17.png",
+      "bytes": 288581,
+      "sha256": "eda3e0ad45a4994b67d95dbb6de9808edeb6fdc793dc7758e9385cb7bfc0dc70"
+    },
+    {
+      "path": "visual/stochastic-mean-payoff-18.png",
+      "bytes": 333012,
+      "sha256": "9ca1acd52b0c1657494fd13046bf713faa34e0ca9c1a0017e558617ed323a0fa"
+    },
+    {
+      "path": "visual/stochastic-mean-payoff-9.png",
+      "bytes": 363011,
+      "sha256": "b48b36d43eb230e280ec25dfe2e777039f3a80511bddc2004c62c5e0f3b7ffff"
+    },
+    {
+      "path": "visual/unique-games-10.png",
+      "bytes": 330782,
+      "sha256": "c285b4a2a28ce1aed26e8294715edc195a28057a3af7357bfca19e193d098887"
+    },
+    {
+      "path": "visual/unique-games-11.png",
+      "bytes": 369590,
+      "sha256": "8baff6953c4b15380973ed72224ba343f6332a9aabe9b637284637860045e6ca"
+    },
+    {
+      "path": "visual/unique-games-12.png",
+      "bytes": 418637,
+      "sha256": "23bada1266fe05efaa15596f6ff8cffa372af13eff5ba80552e64c8f0cc568a6"
+    },
+    {
+      "path": "visual/unique-games-28.png",
+      "bytes": 375233,
+      "sha256": "16e071fce4e3167a25acc439f3805aa133e8c9e6f95bb5a3bfe1da127248b0ab"
+    },
+    {
+      "path": "visual/unique-games-34.png",
+      "bytes": 374278,
+      "sha256": "8cbb85af6be5f49937f6dd97021161e53813fbfeb620451c0f47c6cba25425d7"
+    },
+    {
+      "path": "visual/unique-games-38.png",
+      "bytes": 348267,
+      "sha256": "23746653c890f09fda1ad7a94309300d4e507d91cdd92296372b56dbd0854951"
+    },
+    {
+      "path": "visual/unique-games-44.png",
+      "bytes": 335311,
+      "sha256": "cc783590c39a244ffa7e59bc2f623a06403f28061ebca4f6fe635f1ce3b05584"
+    },
+    {
+      "path": "visual/unique-games-50.png",
+      "bytes": 397043,
+      "sha256": "c4823bd054f3020b1ee9c3e0d7dac473806836816d097197aee4eccf1e5baadf"
+    },
+    {
+      "path": "visual/unique-games-53.png",
+      "bytes": 381663,
+      "sha256": "544cbc04f754a61391244f0e0dc9f0529434d8e390bbb8faf61e22149e374fcf"
+    }
+  ]
+}

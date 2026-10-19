@@ -6,7 +6,7 @@
   "approved_at": "2026-10-08T20:39:55.532523+00:00",
   "approval_source_type": "direct_product_owner_instruction",
   "scope_manifest": {
-    "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+    "source_thread_id": "private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186",
     "direct_quotes": [
       "C1我先暂停了",
       "序境的所有基础业务能力必须在没有 AI 模型、没有外部 AI API、没有 GPU、没有模型推理服务的情况下，仍然能够完成对应的正常业务任务。",

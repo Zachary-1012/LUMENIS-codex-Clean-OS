@@ -1,0 +1,102 @@
+[
+  {
+    "path": "app.py",
+    "line": 519,
+    "text": "    'lumenis_workspace_host.root_slash': '/workspace/',"
+  },
+  {
+    "path": "app.py",
+    "line": 550,
+    "text": "    if endpoint == 'lumenis_workspace_host.resource' and path.startswith('/workspace/'):"
+  },
+  {
+    "path": "app.py",
+    "line": 1915,
+    "text": "    if any(k in p for k in ('/skill', '/workspace/term')):"
+  },
+  {
+    "path": "app.py",
+    "line": 2797,
+    "text": "    return redirect('/workspace/')"
+  },
+  {
+    "path": "app.py",
+    "line": 6923,
+    "text": "@app.route('/api/workspace/file-tree')"
+  },
+  {
+    "path": "app.py",
+    "line": 6956,
+    "text": "@app.route('/api/workspace/term', methods=['POST'])"
+  },
+  {
+    "path": "app.py",
+    "line": 7008,
+    "text": "@app.route('/api/workspace/file')"
+  },
+  {
+    "path": "tests/test_root_owner_auth_composition.py",
+    "line": 591,
+    "text": "        \"lumenis_workspace_host.root_slash\": (\"/workspace/\", index_bytes),"
+  },
+  {
+    "path": "tests/test_root_owner_auth_composition.py",
+    "line": 592,
+    "text": "        \"lumenis_workspace_host.resource\": (\"/workspace/<path:resource>\", asset_bytes),"
+  },
+  {
+    "path": "tests/test_root_owner_auth_composition.py",
+    "line": 606,
+    "text": "        (\"/workspace/\", index_bytes),"
+  },
+  {
+    "path": "tests/test_root_owner_auth_composition.py",
+    "line": 607,
+    "text": "        (\"/workspace/main.dart.js\", asset_bytes),"
+  },
+  {
+    "path": "tests/test_root_owner_auth_composition.py",
+    "line": 625,
+    "text": "        for path in (\"/workspace\", \"/workspace/main.dart.js\", \"/main.dart.js\"):"
+  },
+  {
+    "path": "tests/test_permission_gate_app_integration.py",
+    "line": 177,
+    "text": "        assert app_module._pg_resolve_operation_type('/api/workspace/term', 'POST') == OperationType.SKILL_EXECUTE"
+  },
+  {
+    "path": "tests/test_ai_browser_default_engine.py",
+    "line": 160,
+    "text": "                            url=\"file:///C:[REDACTED_HOME]\")"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 109,
+    "text": "    @v4_bp.route(\"/auth/workspace/unlock\", methods=[\"POST\"])"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 138,
+    "text": "    @v4_bp.route(\"/auth/workspace/status\", methods=[\"GET\"])"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 147,
+    "text": "    @v4_bp.route(\"/auth/workspace/keys\", methods=[\"GET\"])"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 153,
+    "text": "    @v4_bp.route(\"/auth/workspace/keys\", methods=[\"POST\"])"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 164,
+    "text": "    @v4_bp.route(\"/auth/workspace/keys/revoke\", methods=[\"POST\"])"
+  },
+  {
+    "path": "tests/test_content_pattern_promotion.py",
+    "line": 263,
+    "text": "@pytest.mark.parametrize(\"error,status\", [(PermissionError(\"private /workspace/key.sql\"), 403),"
+  }
+]

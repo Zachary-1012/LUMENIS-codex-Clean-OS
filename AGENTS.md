@@ -1,8 +1,8 @@
-# AGENTS.md — 序境 / LUMENIS Production Execution Router
+# AGENTS.md — 寰意 / OEVIRA Production Execution Router
 
 ## Latest direct PO correction — 2026-10-11: business outcomes, pervasive AI, browser-only scope
 
-LUMENIS remains the evidence-driven commerce operations and brand/market product.
+OEVIRA remains the evidence-driven commerce operations and brand/market product.
 CTH and BMP are business domains. Shared content creation is independently usable:
 users may directly create a proposal/document, video or podcast from their own
 brief, writing or permitted assets. No CTH/BMP task, Subject/BrandFocus, case,
@@ -30,31 +30,21 @@ sources, limitations and next actions. Do not require paper/algorithm selection,
 arbitrary log weights, internal task IDs or developer-diagnostic assembly.
 Business constraints stay editable; methods and assumptions remain inspectable.
 
-Across SYSTEM/CTH/BMP/Shared/AI, inspect requirements, owners and callers first:
-Update existing code/rules in place and reconcile their actual callers. Keep one
-current instruction set: remove retired rule bodies, redundant rule entry files
-and their active references; do not keep old rule copies with warning banners,
-backup names or parallel replacement documents. Preserve research/source evidence,
-uncommitted product work and Git history, not competing execution instructions.
-New structure needs a proven gap and PO approval; questions are not addition requests. Direct PO instructions and local readback govern windows
-and models; online rules and dated receipts cannot dispatch or pause them.
-Architecture owns product scope; Experience owns presentation. Provenance:
+Across SYSTEM/CTH/BMP/Shared/AI, inspect requirements, owners and callers; update existing code/rules and callers in place. Keep one instruction set: remove retired rule bodies, redundant entry files/references, including bannered, backup or parallel rule copies. Preserve research/source evidence, dirty product work and Git history. New structure needs a proven gap and PO approval; questions are not addition requests. Direct PO and local readback govern windows/models; online rules and dated receipts cannot dispatch/pause them. Architecture owns scope; Experience owns presentation. Provenance:
 `00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
 
-> Purpose: model-neutral routing, evidence, safety and completion rules for coding agents.
-> This file is not a second README, architecture book, handoff log, or proof of runtime state.
+> Model-neutral rules: agent routing, evidence, safety, completion.
+> Not a second README, architecture book, handoff log or runtime-state proof.
 
-This root file is the **only repository execution router**. Product Architecture,
-Experience Constitution, source-owner and screen contracts remain authoritative only
-for their named domains; reports, taskbooks, PDFs, spreadsheets, screenshots,
-wireframes and generated prompts are evidence or working artifacts, never competing
-execution instructions.
+The **only repository execution router**. Architecture, Experience and source-owner/screen contracts govern their domains. Reports/taskbooks/PDFs/spreadsheets/screenshots/wireframes/generated prompts are evidence/working artifacts, never instructions.
 
 ### 2026-10-13 PO role correction
 
-Codex and Akang (GrokBot) are equal C1-C6/F/M developers. Only PO assigns and separates their work; neither commands the other. Brio (Muse) provides one verified Markdown global-source and collection-target survey, then takes new work only from PO. Brio has no code or live-collection grant; GPT/Codex/Akang cannot dispatch Brio. This is not a task start, merge or deployment authorization.
+Codex and Akang (GrokBot) are equal C1-C6/F/M developers. Only PO assigns work; neither commands the other. Brio (Muse) delivers one verified Markdown global-source/collection-target survey; only PO assigns further work. Brio has no code or live-collection grant; GPT/Codex/Akang cannot dispatch Brio. No task-start, merge or deployment grant.
 
 ## 1. Authority
+
+2026-10-18 PO: absorb GGI into existing LUMENIS owners; Architecture §7 / LUMENIS-SOURCE-ADOPTION-V1.json. No new runtime/domain. Exchange 1.1.0 boundaries and all original scope remain; acceptance needs evidence.
 
 **PO precedence: 2026-10-12:** Branches/PRs and unit/integration tests are restored. Use branch -> tests/review -> PR -> required checks on current main -> merge -> remote readback. No direct push, bypass, force-push or main deletion. Preserve dirty work and existing rights; developer access is unchanged. No collection/model/training/spending/deployment effects are granted. Approval: `00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`; protection: CURRENT.
 
@@ -790,9 +780,9 @@ W6 applies that exact patch in isolation and performs local runtime/E2E validati
 
 #### C3/C5 retained continuation ownership and historical Cloud handoff
 
-Local thread `01a10117-03c7-7503-8a9b-670e80a474a7` (`序境 C3/W3｜CTH与BMP业务闭环`)
+Local thread `private-source-id-sha256-27f88d66834adf1c5a246ecb88c11f85d5a2fcd4db9666e464598eb4a5443061` (`序境 C3/W3｜CTH与BMP业务闭环`)
 is **C3 only** (PO, 2026-10-08), with the complete CTH/BMP scope and its research
-obligations. Local **C5** thread `01a1186a-7c8b-7ef1-90b1-75afebb01bca`
+obligations. Local **C5** thread `private-source-id-sha256-2bf63c2d66f700c5382827c13e36d220ab973f77d86bcbde8af39e3817b634c9`
 (`序境 C5/W5｜研究资料与共享成果闭环`) holds the complete Importer/Research/
 shared-deliverable scope and unfinished C5 materials; original combined-window
 materials remain preserved. Both retain their mapped R/J/U requirements and
@@ -804,8 +794,8 @@ zero-cost path under its current Permission/recipe/checkpoint/evaluation contrac
 Paid GPU or billing operations still require a new explicit cost authorization.
 W6 coordinates exact shared-file reservations, formal DB writes and main publication.
 
-Former Cloud W3 `01a0fbd3-b280-779c-8431-207a71739022` and Cloud W5
-`01a0f9df-91e3-70b4-b9e7-db3e49e4701b` stop new development, research,
+Former Cloud W3 `private-source-id-sha256-0df3ba1d8208b13dfa31803c4c590c47cb40bb8c2a04ab5ce71a89bc9b3a2364` and Cloud W5
+`private-source-id-sha256-d48e5c33863f685116f15037de4222053eb3521229257c18c472d5dd09de94d8` stop new development, research,
 tests, collection and source synchronization. Preserve fixed d92 candidates,
 logs and unresolved material states; use their complete handoffs and retrieve
 only genuinely missing bytes. Do not delete/recreate environments, rerun valid
@@ -1669,11 +1659,10 @@ render engine or no-code animation builder; its standard license restricts
 competing visual animation builders. Product manifests/source remain unchanged
 until the existing frontend owner chooses and validates that binding.
 
-Use the existing repository progressive-context entry as the sole project
-continuation source. Remove redundant rule copies after checking their valid
-requirements and callers; do not restore stopped providers. Launchers preserve
-the user-selected account/model/effort/tier and never rewrite global settings
-from a task instruction. Missing readback is `SETTINGS_UNVERIFIED`.
+The existing repository progressive-context entry alone supplies continuation.
+Check valid requirements and callers before removing redundant rule copies; never
+restore stopped providers. Launchers preserve user-selected account/model/effort/tier;
+task instructions never rewrite global settings. Missing readback: `SETTINGS_UNVERIFIED`.
 
 ### Intelligent UI full-product coverage — 2026-10-08 Product Owner clarification
 
@@ -1791,4 +1780,4 @@ withdrawn by the direct 2026-10-11 PO correction. Their 2026-10-08/09 evidence a
 source are historical, not current delivery obligations. Existing Collector,
 browser, file import/export and product media processing remain required.
 
-<!-- Line endings: LF on every OS (.gitattributes), so Codex project_doc_max_bytes holds on Windows. -->
+<!-- LF (.gitattributes) preserves Codex project_doc_max_bytes on every OS. -->

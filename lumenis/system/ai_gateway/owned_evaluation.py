@@ -370,7 +370,8 @@ def _evaluation_capture_resource(material: Mapping[str, Any]) -> str:
     payload = {
         "schema_version": 1,
         "operation": "db_write",
-        "purpose": "derived_owned_evaluation_packet_capture",
+        "purpose": ("synthetic_interpretability_capture" if material.get("interpretability") is True
+                    else "derived_owned_evaluation_packet_capture"),
         "candidate_identity_sha256": material["candidate_identity_sha256"],
         "evaluation_packet_sha256": material["packet_sha256"],
         "submission_id": material["submission_id"],
@@ -978,3 +979,266 @@ def evaluate_owned_candidate(
                                    for key, question in BUSINESS_REVIEW_RUBRIC],
         "cases": results,
     }
+
+# Synthetic interpretability evidence is a separate, bounded diagnostic schema.
+# It cannot enter the owned-model acceptance/promotion packet above.
+_INTERPRETABILITY_SCHEMA = "synthetic-interpretability:v1"
+_INTERPRETABILITY_FEATURE = "SYNTHETIC_INTERPRETABILITY_PACKET"
+_INTERPRETABILITY_FIELDS = frozenset({
+    "schema", "prototype_status", "model_kind", "run_id", "task_id", "checkpoint_id",
+    "weights_sha256", "inputs_sha256", "heldout_sha256", "hypotheses_sha256", "trace_sha256",
+    "capture_status", "reason", "counts", "metrics", "business_acceptance", "promotion_status",
+})
+_INTERPRETABILITY_METRICS = frozenset({
+    "activation_prediction_nmse", "intervention_prediction_error", "replay_max_error",
+})
+_INTERPRETABILITY_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$")
+
+
+def validate_synthetic_interpretability_packet(packet: Any) -> dict[str, Any]:
+    """Validate typed summaries only: no filesystem paths, raw text or tensor loader."""
+    if type(packet) is not dict or set(packet) != _INTERPRETABILITY_FIELDS:
+        raise ValueError("INTERPRETABILITY_PACKET_FIELDS_INVALID")
+    fixed = {"schema": _INTERPRETABILITY_SCHEMA, "prototype_status": "SYNTHETIC_PROTOTYPE",
+             "model_kind": "synthetic_numeric_network", "business_acceptance": "NOT_EVALUATED",
+             "promotion_status": "NOT_PROMOTED"}
+    if any(type(packet[k]) is not str or packet[k] != v for k, v in fixed.items()):
+        raise ValueError("INTERPRETABILITY_CLAIM_BOUNDARY_INVALID")
+    for key in ("run_id", "task_id", "checkpoint_id"):
+        if type(packet[key]) is not str or not _INTERPRETABILITY_ID.fullmatch(packet[key]):
+            raise ValueError("INTERPRETABILITY_IDENTIFIER_INVALID")
+    for key in ("weights_sha256", "inputs_sha256", "heldout_sha256", "hypotheses_sha256", "trace_sha256"):
+        if type(packet[key]) is not str or not _DIGEST.fullmatch(packet[key]):
+            raise ValueError("INTERPRETABILITY_DIGEST_INVALID")
+    state = packet["capture_status"]
+    if type(state) is not str or state not in {"AVAILABLE", "NOT_AVAILABLE", "UNSUPPORTED"}:
+        raise ValueError("INTERPRETABILITY_CAPTURE_STATE_INVALID")
+    expected_reason = {"AVAILABLE": "NONE", "NOT_AVAILABLE": "ACTIVATIONS_UNAVAILABLE", "UNSUPPORTED": "ARCHITECTURE_UNSUPPORTED"}
+    if packet["reason"] != expected_reason[state]:
+        raise ValueError("INTERPRETABILITY_REASON_INVALID")
+    counts = packet["counts"]
+    if (type(counts) is not dict or set(counts) != {"heldout", "neurons", "explained"}
+            or any(type(v) is not int for v in counts.values())
+            or not 0 <= counts["heldout"] <= 1024
+            or not 0 <= counts["explained"] <= counts["neurons"] <= 64):
+        raise ValueError("INTERPRETABILITY_COUNTS_INVALID")
+    metrics = packet["metrics"]
+    if type(metrics) is not dict or set(metrics) != _INTERPRETABILITY_METRICS:
+        raise ValueError("INTERPRETABILITY_METRICS_INVALID")
+    for value in metrics.values():
+        if value is not None and (type(value) not in {int, float} or not 0 <= value <= 1e9):
+            raise ValueError("INTERPRETABILITY_METRIC_VALUE_INVALID")
+    if state == "AVAILABLE":
+        if not counts["heldout"] or not counts["neurons"] or any(v is None for v in metrics.values()):
+            raise ValueError("INTERPRETABILITY_AVAILABLE_DATA_REQUIRED")
+    elif any(v is not None for v in metrics.values()) or any(counts.values()):
+        raise ValueError("INTERPRETABILITY_UNAVAILABLE_MUST_BE_UNKNOWN")
+    encoded = _evaluation_json(packet)
+    if len(encoded.encode("utf-8")) > 16384:
+        raise ValueError("INTERPRETABILITY_PACKET_TOO_LARGE")
+    return json.loads(encoded)
+
+
+def _interpretability_material(*, authenticated_actor, expected_scope, submission_id, packet, principal=None):
+    if type(submission_id) is not str or not _EVALUATION_UUID.fullmatch(submission_id):
+        raise ValueError("INTERPRETABILITY_SUBMISSION_INVALID")
+    clean = validate_synthetic_interpretability_packet(packet)
+    identity = _capture_identity(authenticated_actor, principal)
+    scope, marker = _capture_scope(expected_scope)
+    return {"interpretability": True, "identity": identity, "principal": principal,
+            "scope": scope, "scope_marker": marker, "submission_id": submission_id,
+            "packet": clean, "packet_json": _evaluation_json(clean),
+            "packet_sha256": _evaluation_packet_sha256(clean),
+            "candidate_identity_sha256": clean["weights_sha256"]}
+
+
+def synthetic_interpretability_approval_resource(*, authenticated_actor=None, expected_scope,
+                                                 submission_id, packet, principal=None):
+    """Exact request resource only; this neither grants permission nor writes data."""
+    return _evaluation_capture_resource(_interpretability_material(
+        authenticated_actor=authenticated_actor, expected_scope=expected_scope,
+        submission_id=submission_id, packet=packet, principal=principal))
+
+
+def _interpretability_task(connection, material, *, require_active=True):
+    from agent_runtime.task_binding import authorized_context
+    from agent_runtime.durable_adapter import DurableExecutionAdapter
+    packet, identity = material["packet"], material["identity"]
+    row = connection.execute("SELECT * FROM ai_task WHERE task_id=?", (packet["task_id"],)).fetchone()
+    if row is None:
+        raise PermissionError("INTERPRETABILITY_TASK_MISSING")
+    task = dict(row)
+    task["context"] = json.loads(task["context_json"])
+    actor = {"id": identity["actor_id"]} if identity["identity_kind"] == "account" else material["principal"]
+    context = authorized_context(task, actor, connection=connection)
+    scope = material["scope"]
+    expected = {"subject_id": scope.get("subject_id"), "brand_focus_id": scope.get("brand_focus_id"),
+                "global_scope": scope["global"]}
+    if context["domain_id"] != scope["domain_id"] or context["scope"] != expected:
+        raise PermissionError("INTERPRETABILITY_TASK_SCOPE_MISMATCH")
+    if require_active and task["status"] not in {"pending", "running", "executing", "paused"}:
+        raise PermissionError("INTERPRETABILITY_TASK_NOT_ACTIVE")
+    steps = connection.execute("SELECT * FROM ai_task_step WHERE task_id=? LIMIT 1025", (packet["task_id"],)).fetchall()
+    if len(steps) > 1024:
+        raise ValueError("INTERPRETABILITY_TASK_HISTORY_LIMIT")
+    matches = []
+    for step in steps:
+        cp = DurableExecutionAdapter._checkpoint_from_step(dict(step))
+        if cp is not None and cp.checkpoint_id == packet["checkpoint_id"]:
+            matches.append(cp)
+    if len(matches) != 1:
+        raise ValueError("INTERPRETABILITY_CHECKPOINT_MISSING_OR_DUPLICATE")
+    cp = matches[0]
+    # Bind the experiment identity before ingestion. The checkpoint is created
+    # by the existing durable owner; no second runtime or checkpoint table.
+    for key in ("run_id", "weights_sha256", "inputs_sha256", "hypotheses_sha256", "trace_sha256"):
+        if cp.metadata.get(key) != packet[key]:
+            raise ValueError("INTERPRETABILITY_CHECKPOINT_BINDING_MISMATCH")
+    return task
+
+
+def _interpretability_row(connection, row_id, material, resource):
+    from lumenis.shared.evidence import store
+    row = connection.execute("SELECT * FROM app_evidence_records WHERE id=?", (row_id,)).fetchone()
+    if row is None or not store.verify_evidence_record_integrity(dict(row)):
+        raise RuntimeError("INTERPRETABILITY_EVIDENCE_INTEGRITY_FAILED")
+    row = dict(row)
+    inputs, outputs = json.loads(row["inputs_json"]), json.loads(row["outputs_json"])
+    expected = {"packet": material["packet"], "packet_sha256": material["packet_sha256"],
+                "runtime_verification": "CAPTURE_ONLY_NOT_REEXECUTED"}
+    identity, scope = material["identity"], material["scope"]
+    if (row["source"] != "owned_ai_gateway" or row["feature_id"] != _INTERPRETABILITY_FEATURE
+            or row["asset_id"] != material["submission_id"] or row["test_name"] != material["submission_id"]
+            or row["version"] != _INTERPRETABILITY_SCHEMA or row["status"] != "derived"
+            or row["result"] != "RECORDED" or row["capture_mode"] != "derived_evaluation"
+            or row["domain_id"] != scope["domain_id"] or row["product_id"] != scope["product_id"]
+            or outputs != expected
+            or inputs.get("actor") != identity or inputs.get("scope") != scope
+            or inputs.get("approval_resource") != resource
+            or inputs.get("_lumenis_scope") != material["scope_marker"]):
+        raise RuntimeError("INTERPRETABILITY_EVIDENCE_BINDING_INVALID")
+    return row
+
+
+def record_synthetic_interpretability_evidence(*, authenticated_actor=None, expected_scope,
+                                               submission_id, packet, principal=None):
+    """Atomically capture scoped diagnostic Evidence and separate Evaluation metrics.
+
+    No model is loaded or evaluated here. Claims remain caller-supplied synthetic
+    experiment summaries, even when their persistence/integrity is verified.
+    """
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.evidence import store
+    from lumenis.shared.evaluation.ai import project_synthetic_interpretability_metrics
+    from lumenis.shared.evaluation import recorder
+    from lumenis.system.security import permission
+    material = _interpretability_material(authenticated_actor=authenticated_actor,
+        expected_scope=expected_scope, submission_id=submission_id, packet=packet, principal=principal)
+    resource = _evaluation_capture_resource(material)
+    gate = permission.get_permission_gate()
+    initial = _authorize_evaluation_capture(gate, material, resource)
+    with get_repository().transaction(timeout=10) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        _interpretability_task(connection, material)
+        current = _authorize_evaluation_capture(gate, material, resource, connection=connection)
+        if current["approval_token"] != initial["approval_token"]:
+            raise PermissionError("INTERPRETABILITY_APPROVAL_CHANGED")
+        existing = connection.execute("SELECT id FROM app_evidence_records WHERE source=? AND feature_id=? "
+            "AND (asset_id=? OR test_name=?)", ("owned_ai_gateway", _INTERPRETABILITY_FEATURE,
+             submission_id, submission_id)).fetchall()
+        if len(existing) > 1:
+            raise RuntimeError("INTERPRETABILITY_DUPLICATE_SUBMISSION")
+        if existing:
+            row_id = int(existing[0][0])
+            _interpretability_row(connection, row_id, material, resource)
+        else:
+            row_id = store.record_evidence(connection=connection, source="owned_ai_gateway", project="LUMENIS",
+                product=material["scope"]["product_id"], feature_id=_INTERPRETABILITY_FEATURE,
+                asset_id=submission_id, test_name=submission_id, version=_INTERPRETABILITY_SCHEMA,
+                env="local", level="L4", capture_mode="derived_evaluation", result="RECORDED",
+                inputs={"actor": material["identity"], "scope": material["scope"],
+                        "approval_resource": resource, "scope_audit_ref": current["scope_audit_id"],
+                        "permission_audit_ref": current["permission_audit_id"]},
+                outputs={"packet": material["packet"], "packet_sha256": material["packet_sha256"],
+                         "runtime_verification": "CAPTURE_ONLY_NOT_REEXECUTED"},
+                metric_name="synthetic_interpretability_capture", metric_value="RECORDED", status="derived",
+                domain_id=material["scope"]["domain_id"], subject_id=material["scope"].get("subject_id"),
+                brand_focus_id=material["scope"].get("brand_focus_id"), global_scope=material["scope"]["global"],
+                notes="Synthetic prototype; no business acceptance, model promotion or real-model execution.")
+            if type(row_id) is not int or row_id < 1:
+                raise RuntimeError("INTERPRETABILITY_EVIDENCE_WRITE_FAILED")
+        _interpretability_row(connection, row_id, material, resource)
+        ref = f"app_evidence_records:{row_id}"
+        projected = project_synthetic_interpretability_metrics(material["packet"], evidence_ref=ref,
+                                                               packet_sha256=material["packet_sha256"])
+        metric_ids = []
+        for item in projected:
+            identifier = str(uuid.uuid5(uuid.NAMESPACE_URL, resource + ":" + item["metric_name"]))
+            record = recorder.record_evaluation(**item, evaluation_id=identifier, connection=connection)
+            metric_ids.append(record.evaluation_id)
+        _interpretability_task(connection, material)
+        current = _authorize_evaluation_capture(gate, material, resource, connection=connection)
+        if current["approval_token"] != initial["approval_token"]:
+            raise PermissionError("INTERPRETABILITY_APPROVAL_CHANGED")
+        with gate.owned_evaluation_capture_commit_lease(material=material, resource=resource,
+                                                       authorization=current, connection=connection):
+            connection.commit()
+    return {"state": "already_recorded" if existing else "recorded", "evidence_ref": ref,
+            "packet_sha256": material["packet_sha256"], "evaluation_ids": metric_ids,
+            "task_id": packet["task_id"], "checkpoint_id": packet["checkpoint_id"],
+            "prototype_status": "SYNTHETIC_PROTOTYPE", "business_acceptance": "NOT_EVALUATED",
+            "promotion_status": "NOT_PROMOTED", "runtime_verification": "CAPTURE_ONLY_NOT_REEXECUTED"}
+
+
+def read_synthetic_interpretability_evidence(*, evidence_ref, authenticated_actor=None,
+                                             expected_scope, principal=None):
+    """Fresh-process readback through current identity, scope and Task permissions."""
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.evidence import store
+    from lumenis.system.security import permission
+    if type(evidence_ref) is not str or not _EVALUATION_REF.fullmatch(evidence_ref):
+        raise ValueError("INTERPRETABILITY_EVIDENCE_REF_INVALID")
+    identity = _capture_identity(authenticated_actor, principal)
+    scope, _ = _capture_scope(expected_scope)
+    with get_repository().connection(read_only=True, wal=False) as connection:
+        row = connection.execute("SELECT * FROM app_evidence_records WHERE id=?",
+                                 (int(evidence_ref.split(":")[1]),)).fetchone()
+        if row is None or not store.verify_evidence_record_integrity(dict(row)):
+            raise RuntimeError("INTERPRETABILITY_EVIDENCE_INTEGRITY_FAILED")
+        row = dict(row)
+        inputs, outputs = json.loads(row["inputs_json"]), json.loads(row["outputs_json"])
+        if inputs.get("actor") != identity or inputs.get("scope") != scope:
+            raise PermissionError("INTERPRETABILITY_READ_IDENTITY_SCOPE_MISMATCH")
+        kwargs = dict(domain_id=scope['domain_id'], action='write', module='owned_model_admission',
+                      subject_id=scope.get('subject_id'),brand_focus_id=scope.get('brand_focus_id'),
+                      global_scope=scope['global'],connection=connection)
+        decision = (permission.check_local_workspace_scope_permission(principal, **kwargs)
+                    if identity['identity_kind']=='workspace'
+                    else permission.check_actor_scope_permission({'id':identity['actor_id']}, **kwargs))
+        if not decision.allowed:
+            raise PermissionError("INTERPRETABILITY_READ_SCOPE_REVOKED")
+        material = _interpretability_material(authenticated_actor=authenticated_actor,
+            expected_scope=expected_scope, submission_id=row['asset_id'], packet=outputs.get('packet'), principal=principal)
+        resource = _evaluation_capture_resource(material)
+        _interpretability_row(connection,int(row['id']),material,resource)
+        _interpretability_task(connection,material,require_active=False)
+        from lumenis.shared.evaluation.ai import project_synthetic_interpretability_metrics
+        from lumenis.shared.evaluation.recorder import _is_synthetic_interpretability_record
+        expected = project_synthetic_interpretability_metrics(material['packet'],evidence_ref=evidence_ref,
+                                                             packet_sha256=material['packet_sha256'])
+        metric_rows=[]
+        for item in expected:
+            identifier=str(uuid.uuid5(uuid.NAMESPACE_URL,resource+':'+item['metric_name']))
+            metric=connection.execute('SELECT * FROM evaluation_records WHERE evaluation_id=?',(identifier,)).fetchone()
+            if metric is None or not _is_synthetic_interpretability_record(connection,dict(metric)):
+                raise RuntimeError('INTERPRETABILITY_METRIC_READBACK_FAILED')
+            metric_rows.append(dict(metric))
+        from agent_research.lineage import LineageTracker
+        lineage=LineageTracker()
+        lineage.track(evidence_ref,'synthetic_interpretability',
+            path=[material['packet']['hypotheses_sha256'],material['packet']['weights_sha256'],
+                  material['packet']['task_id'],material['packet']['checkpoint_id']],
+            provenance={'packet_sha256':material['packet_sha256'],'evaluation_ids':[m['evaluation_id'] for m in metric_rows]})
+        return {'evidence_ref':evidence_ref,'packet':material['packet'],'packet_sha256':material['packet_sha256'],
+                'metrics':metric_rows,'lineage':lineage.export(),'integrity_verified':True,
+                'runtime_verification':'CAPTURE_ONLY_NOT_REEXECUTED'}

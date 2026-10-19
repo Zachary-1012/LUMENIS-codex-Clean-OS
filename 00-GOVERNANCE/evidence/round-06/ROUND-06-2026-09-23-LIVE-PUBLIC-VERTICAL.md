@@ -13,7 +13,7 @@ The first run failed closed: this workstation's normal DNS returned synthetic `1
 
 ## Successful second run
 
-The second probe exited `0` with `ok=true`. Its isolated database was `C:\Users\28049\AppData\Local\Temp\lumenis-live-public-probe-jrbnr84j\isolated.sqlite3`; the report artifact was under a separate OS-temp `lumenis-live-public-probe-z6400j3e\artifacts` directory. The probe migrated its own database to v17, created the Guangzhou Taikoo Hui Subject and a least-privilege actor, and first verified that an unauthorized cross-scope collection attempt made **no network or persistence attempt**.
+The second probe exited `0` with `ok=true`. Its isolated database was `C:\Users\private-user-121dcc385158\AppData\Local\Temp\lumenis-live-public-probe-jrbnr84j\isolated.sqlite3`; the report artifact was under a separate OS-temp `lumenis-live-public-probe-z6400j3e\artifacts` directory. The probe migrated its own database to v17, created the Guangzhou Taikoo Hui Subject and a least-privilege actor, and first verified that an unauthorized cross-scope collection attempt made **no network or persistence attempt**.
 
 | Observed result | Value |
 | --- | --- |

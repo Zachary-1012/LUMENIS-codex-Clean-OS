@@ -1,0 +1,361 @@
+{
+  "package": "platform_evidence_gap_research_20261018",
+  "frozen_at_utc": "2026-10-18T00:28:30Z",
+  "files": [
+    {
+      "path": "01_REPORT.md",
+      "bytes": 14385,
+      "sha256": "a31989d57e351ae9cfcd9e254110f89ecc91f1d0117ffe4bdad4d398a1d545f2"
+    },
+    {
+      "path": "02_CELL_DELTA.json",
+      "bytes": 3431,
+      "sha256": "46d751a10d91cabd0ecf6182a1d718d8e803d6f913e76738d36e3280bebd152f"
+    },
+    {
+      "path": "03_SOURCE_READING_LEDGER.json",
+      "bytes": 31344,
+      "sha256": "7897b19a8c5601e0589b2ccdfa6a1e793e3c08892513cf06c0ac7f80aca3a99c"
+    },
+    {
+      "path": "04_ACCEPTANCE_CASES.json",
+      "bytes": 3889,
+      "sha256": "ddc0a08aa5a5f66eceb7515c540eaee81d73f663f4479460a8c8337ab98d4288"
+    },
+    {
+      "path": "05_INPUT_REUSE_MANIFEST.json",
+      "bytes": 2217,
+      "sha256": "76e7b30fd48744e112d988cffa468900a4956ff3568696e68cbb846c5966c227"
+    },
+    {
+      "path": "06_READ_FAILURES.json",
+      "bytes": 880,
+      "sha256": "958d72210edf21680241bb90502d6e598984b2fde30fb6a3bf418d24803400ef"
+    },
+    {
+      "path": "07_VALIDATION.json",
+      "bytes": 253,
+      "sha256": "43aef17481a7ed450b8162cc1e96ba8984f7836b2660c239afe0eb7bfd0d7390"
+    },
+    {
+      "path": "README.md",
+      "bytes": 383,
+      "sha256": "fb78862f7b6f7c11062467a494e327c094dd0fa16fc10719ee731b8693f61a66"
+    },
+    {
+      "path": "evidence/atproto-commit.json",
+      "bytes": 34187,
+      "sha256": "7068a0690e69e1ca1e832b6e12ad69716c89f654c19bc03becc5d23fb54c10d2"
+    },
+    {
+      "path": "evidence/atproto-tree.json",
+      "bytes": 1306369,
+      "sha256": "3d04b3a6a01ee4cc7bf3dc9fc50080cc9ed6dee2d766f4f563051418d7404e2b"
+    },
+    {
+      "path": "evidence/atproto__lexicons__com__atproto__repo__listRecords.json",
+      "bytes": 1729,
+      "sha256": "d862390bf7b25d7f41b113570380320ce96ada19a529b4f50d88f509a7b20b5c"
+    },
+    {
+      "path": "evidence/atproto__lexicons__com__atproto__sync__subscribeRepos.json",
+      "bytes": 8594,
+      "sha256": "bfc3e22bfeae701736fbbbd68a56f0b4b8b66ef4e0e10f1c281b2de61c3328ae"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__embed__gallery.json",
+      "bytes": 2335,
+      "sha256": "ce6b968cc1197c588907b25becc3b8912702453947b90ae74c36244d30bfce2b"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__embed__images.json",
+      "bytes": 2094,
+      "sha256": "06491ead4a1bec37271a517d3c8ff2baa47ab5996d25819df471a6f68dd5d912"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__embed__video.json",
+      "bytes": 1916,
+      "sha256": "63239d424f3951fefa2968b6f807cf9b8730ad1a07f71832530da47d60d99999"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__feed__defs.json",
+      "bytes": 12120,
+      "sha256": "60293b2c1c26eedaff12af45ed96aaad479a090dbbb1293c4716645302f033ad"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__feed__getAuthorFeed.json",
+      "bytes": 1610,
+      "sha256": "a84efcf23bc3c05149c0151bf62f8424f583a2d20ba3649378d9171ab455b72b"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__feed__getPostThread.json",
+      "bytes": 1656,
+      "sha256": "fe068e102cdcc828eafce2605e6cfe494f39614db0556147b70279a574d16966"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__feed__post.json",
+      "bytes": 3335,
+      "sha256": "383935b9d8425c7a4be904da95e6ab5e94ceb5d07e073c0eb8f7d39213525ce4"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__feed__searchPosts.json",
+      "bytes": 3976,
+      "sha256": "f09264f915ce03ac2360e968daf8a0bc8d09472a56c255c3793b94c60703b07b"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__feed__searchPostsV2.json",
+      "bytes": 7361,
+      "sha256": "3f5b64c8d1b926bf8bd5ec932fd3f8c3137344f5b775427645e5f90057705d11"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__richtext__facet.json",
+      "bytes": 1998,
+      "sha256": "aee552f8aac2f1b13980e50daffe90b2de30764ca6aff292537a9c4b62c51f48"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__unspecced__getPostThreadOtherV2.json",
+      "bytes": 2013,
+      "sha256": "9f4f8626e132ce326a4eadffbb664f08d89f6bf01823ea8ddea304951bc4da99"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__unspecced__getPostThreadV2.json",
+      "bytes": 3657,
+      "sha256": "2d4784dc1e3254e3d831aabfbcd44b7637d96086dd2d62a9f6b198055b8d55d7"
+    },
+    {
+      "path": "evidence/atproto__packages__api__lexicons__app__bsky__unspecced__searchPostsSkeleton.json",
+      "bytes": 4145,
+      "sha256": "422f32ea671dadbb863b8117a6df3f3f1c9e090f2a2fab650b4d1665ce4d0769"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__lexicons__app__bsky__embed__images.json",
+      "bytes": 2094,
+      "sha256": "06491ead4a1bec37271a517d3c8ff2baa47ab5996d25819df471a6f68dd5d912"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__lexicons__app__bsky__embed__video.json",
+      "bytes": 1916,
+      "sha256": "63239d424f3951fefa2968b6f807cf9b8730ad1a07f71832530da47d60d99999"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__lexicons__app__bsky__feed__getAuthorFeed.json",
+      "bytes": 1610,
+      "sha256": "a84efcf23bc3c05149c0151bf62f8424f583a2d20ba3649378d9171ab455b72b"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__lexicons__app__bsky__feed__getPostThread.json",
+      "bytes": 1656,
+      "sha256": "fe068e102cdcc828eafce2605e6cfe494f39614db0556147b70279a574d16966"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__lexicons__app__bsky__feed__post.json",
+      "bytes": 3335,
+      "sha256": "383935b9d8425c7a4be904da95e6ab5e94ceb5d07e073c0eb8f7d39213525ce4"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__lexicons__app__bsky__feed__searchPosts.json",
+      "bytes": 3976,
+      "sha256": "f09264f915ce03ac2360e968daf8a0bc8d09472a56c255c3793b94c60703b07b"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__lexicons__app__bsky__feed__searchPostsV2.json",
+      "bytes": 7361,
+      "sha256": "3f5b64c8d1b926bf8bd5ec932fd3f8c3137344f5b775427645e5f90057705d11"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__lexicons__app__bsky__unspecced__getPostThreadOtherV2.json",
+      "bytes": 2013,
+      "sha256": "9f4f8626e132ce326a4eadffbb664f08d89f6bf01823ea8ddea304951bc4da99"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__lexicons__app__bsky__unspecced__getPostThreadV2.json",
+      "bytes": 3657,
+      "sha256": "2d4784dc1e3254e3d831aabfbcd44b7637d96086dd2d62a9f6b198055b8d55d7"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__lexicons__app__bsky__unspecced__searchPostsSkeleton.json",
+      "bytes": 4145,
+      "sha256": "422f32ea671dadbb863b8117a6df3f3f1c9e090f2a2fab650b4d1665ce4d0769"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__src__api__app__bsky__feed__getPostThread.ts",
+      "bytes": 4601,
+      "sha256": "c7337dc7911e3177b05b07987bef96b074b99d60cf92bed8edbc25bf2a86a18a"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__src__api__app__bsky__feed__searchPosts.ts",
+      "bytes": 9258,
+      "sha256": "27001d6fdecc6815460e53f2efe94c69e8eabd3ed34fdd731c4a98b78537f7ad"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__src__api__app__bsky__feed__searchPostsV2.ts",
+      "bytes": 8612,
+      "sha256": "09ef783f521d655e73e55fd8f6b39d511fe038500189cd9723f460b00b5ce5fc"
+    },
+    {
+      "path": "evidence/atproto__packages__bsky__src__api__util.ts",
+      "bytes": 3081,
+      "sha256": "718bd1004fbe425bc339fa92ed1e398247407eb843a480dd2bbb78dcef9cf361"
+    },
+    {
+      "path": "evidence/atproto__packages__oauth__oauth-client-browser-example__lexicons__app__bsky__embed__images.json",
+      "bytes": 2135,
+      "sha256": "a5e8ad4c8df5462d9256b1f64663319fb5498ba24e47089b4a77d8cc34e3de53"
+    },
+    {
+      "path": "evidence/atproto__packages__oauth__oauth-client-browser-example__lexicons__app__bsky__embed__video.json",
+      "bytes": 1957,
+      "sha256": "2450447193316bc4a47e4207dfbadcf457fd4da1de47bba5a892addb1312813c"
+    },
+    {
+      "path": "evidence/atproto__packages__ozone__lexicons__app__bsky__embed__images.json",
+      "bytes": 2094,
+      "sha256": "06491ead4a1bec37271a517d3c8ff2baa47ab5996d25819df471a6f68dd5d912"
+    },
+    {
+      "path": "evidence/atproto__packages__ozone__lexicons__app__bsky__embed__video.json",
+      "bytes": 1916,
+      "sha256": "63239d424f3951fefa2968b6f807cf9b8730ad1a07f71832530da47d60d99999"
+    },
+    {
+      "path": "evidence/atproto__packages__ozone__lexicons__app__bsky__feed__getAuthorFeed.json",
+      "bytes": 1610,
+      "sha256": "a84efcf23bc3c05149c0151bf62f8424f583a2d20ba3649378d9171ab455b72b"
+    },
+    {
+      "path": "evidence/atproto__packages__ozone__lexicons__app__bsky__feed__getPostThread.json",
+      "bytes": 1656,
+      "sha256": "fe068e102cdcc828eafce2605e6cfe494f39614db0556147b70279a574d16966"
+    },
+    {
+      "path": "evidence/atproto__packages__ozone__lexicons__app__bsky__feed__post.json",
+      "bytes": 3335,
+      "sha256": "383935b9d8425c7a4be904da95e6ab5e94ceb5d07e073c0eb8f7d39213525ce4"
+    },
+    {
+      "path": "evidence/atproto__packages__ozone__lexicons__app__bsky__feed__searchPosts.json",
+      "bytes": 3976,
+      "sha256": "f09264f915ce03ac2360e968daf8a0bc8d09472a56c255c3793b94c60703b07b"
+    },
+    {
+      "path": "evidence/atproto__packages__ozone__lexicons__app__bsky__feed__searchPostsV2.json",
+      "bytes": 7361,
+      "sha256": "3f5b64c8d1b926bf8bd5ec932fd3f8c3137344f5b775427645e5f90057705d11"
+    },
+    {
+      "path": "evidence/atproto__packages__ozone__lexicons__app__bsky__unspecced__getPostThreadOtherV2.json",
+      "bytes": 2013,
+      "sha256": "9f4f8626e132ce326a4eadffbb664f08d89f6bf01823ea8ddea304951bc4da99"
+    },
+    {
+      "path": "evidence/atproto__packages__ozone__lexicons__app__bsky__unspecced__getPostThreadV2.json",
+      "bytes": 3657,
+      "sha256": "2d4784dc1e3254e3d831aabfbcd44b7637d96086dd2d62a9f6b198055b8d55d7"
+    },
+    {
+      "path": "evidence/atproto__packages__ozone__lexicons__app__bsky__unspecced__searchPostsSkeleton.json",
+      "bytes": 4145,
+      "sha256": "422f32ea671dadbb863b8117a6df3f3f1c9e090f2a2fab650b4d1665ce4d0769"
+    },
+    {
+      "path": "evidence/atproto__packages__pds__lexicons__app__bsky__embed__images.json",
+      "bytes": 2135,
+      "sha256": "a5e8ad4c8df5462d9256b1f64663319fb5498ba24e47089b4a77d8cc34e3de53"
+    },
+    {
+      "path": "evidence/atproto__packages__pds__lexicons__app__bsky__embed__video.json",
+      "bytes": 1957,
+      "sha256": "2450447193316bc4a47e4207dfbadcf457fd4da1de47bba5a892addb1312813c"
+    },
+    {
+      "path": "evidence/atproto__packages__pds__lexicons__app__bsky__feed__getAuthorFeed.json",
+      "bytes": 1651,
+      "sha256": "14a3050d91696a3d2bff1369cbce366ff6cf5b4448fdff0cdcfb739ec4661d62"
+    },
+    {
+      "path": "evidence/atproto__packages__pds__lexicons__app__bsky__feed__getPostThread.json",
+      "bytes": 1697,
+      "sha256": "f3b83e497dc35e99497b1624c490430fc4a0441da59684b7844ac4dd6c40ba0b"
+    },
+    {
+      "path": "evidence/atproto__packages__pds__lexicons__app__bsky__feed__post.json",
+      "bytes": 3376,
+      "sha256": "1b748087368b5afb1c99b7a8d1bb9700085eef615db75eab1d1eea9a1f74b84b"
+    },
+    {
+      "path": "evidence/bsky-docs-commit.json",
+      "bytes": 4630,
+      "sha256": "92937195bf7603b69bf731bd8cf5ba115623538ddf81bead9c867569455ddd96"
+    },
+    {
+      "path": "evidence/bsky-docs-tree.json",
+      "bytes": 63941,
+      "sha256": "65ac7aa36ca240c9d6a9cfeab93a33d8e519b0054c1fbf7c949aa48c8470ee31"
+    },
+    {
+      "path": "evidence/bsky-docs__blog__2023-09-15-rate-limits-pds-v3__index.md",
+      "bytes": 5704,
+      "sha256": "c40ae59f92a9ef7305a8ee059262a2146fd7921d626c5f537b3099c5ffac9110"
+    },
+    {
+      "path": "evidence/bsky-docs__blog__2023-09-15-rate-limits-pds-v3__invalid-handle.png",
+      "bytes": 150335,
+      "sha256": "b7a58737aa57adc3aa76ffbb30ab35f81429a50c638d9d85c5f6ed9738a62adc"
+    },
+    {
+      "path": "evidence/bsky-docs__docs__advanced-guides__api-directory.mdx",
+      "bytes": 5012,
+      "sha256": "061ac544164eb174e3dfab286d977993fe052e243dd3de7a9062e0f7d5d0fea1"
+    },
+    {
+      "path": "evidence/bsky-docs__docs__advanced-guides__firehose.mdx",
+      "bytes": 3753,
+      "sha256": "2e179c1e0fc88f894244f0165daa2581cdeca5d5c9d171baa66a16be96758dc6"
+    },
+    {
+      "path": "evidence/bsky-docs__docs__advanced-guides__rate-limits.md",
+      "bytes": 4615,
+      "sha256": "14cbc14085a870895fbee5c855bfa70c0175b429721011b9790d8901d7d6fdb2"
+    },
+    {
+      "path": "evidence/bsky-docs__src__data__showcase__skyware-firehose.png",
+      "bytes": 25666,
+      "sha256": "009bece9a622b8be7a7ca53710ee48f82f4e4781e313da654d1f1e6d44a2bcd5"
+    },
+    {
+      "path": "evidence/event-stream.html",
+      "bytes": 116028,
+      "sha256": "34dc5c69c76984d9147a9bac6b4d845ffe57e72622965bc1ee5acaa1460ebc85"
+    },
+    {
+      "path": "evidence/event-stream.txt",
+      "bytes": 12790,
+      "sha256": "ebbca52f09b7baeed8ca52e3e3951ef9bc989bae6bb359181e642ec9c3bb186e"
+    },
+    {
+      "path": "evidence/jetstream-commit.json",
+      "bytes": 6243,
+      "sha256": "e28dc037189ba33ab63d90c0c5ba810180ede22eb6b13d62a9896280c68c12f7"
+    },
+    {
+      "path": "evidence/jetstream-tree.json",
+      "bytes": 297672,
+      "sha256": "2d5f4e675c95abdc3f943d3c37a8dc45c70bf6d366fd8ca5b54a078e67b47a21"
+    },
+    {
+      "path": "evidence/jetstream__README.md",
+      "bytes": 7132,
+      "sha256": "84b0c1081563307bc16637d9a9df070ff16e8eb5ee0445b5158415860e2207d8"
+    },
+    {
+      "path": "evidence/sync.html",
+      "bytes": 162303,
+      "sha256": "db90d9aa48583d3f2202eec51d46d921e23adcaa754d45bed47cc52a0acff241"
+    },
+    {
+      "path": "evidence/sync.txt",
+      "bytes": 26573,
+      "sha256": "f46205d4988bb9614cfc61b6aba6d75a635aebd635a4927607abf2490811de16"
+    }
+  ]
+}

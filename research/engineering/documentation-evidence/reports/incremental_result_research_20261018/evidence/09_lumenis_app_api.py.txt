@@ -1,0 +1,83 @@
+# lumenis_app_api.py:207-230
+207: 
+208: 
+209: def _business_work_binding(operation):
+210:     """Compose existing domain and creation readers with the current server actor."""
+211:     from api_dual_domain import BusinessDecisionWorkflow, authorize_business_work_request
+212:     from experience_runtime import _source_brief_context
+213:     from lumenis.shared.content_creation.internal_pitch import read_internal_pitch
+214:     from lumenis.shared.reporting.source_brief_job import _scope_material
+215: 
+216:     actor_ref, _audit, material, actor = _source_brief_context(
+217:         "read" if operation == "read" else "write", include_actor=True,
+218:     )
+219:     scope = _scope_material(**material)
+220:     if scope["global"]:
+221:         raise PermissionError("BUSINESS_WORK_FOCUS_REQUIRED")
+222:     service = BusinessDecisionWorkflow(internal_action_reader=read_internal_pitch, action_actor=actor)
+223:     authorize = lambda selected: authorize_business_work_request(
+224:         selected, actor_ref=actor_ref, scope=scope,
+225:     )
+226:     return service, actor_ref, scope, authorize
+227: 
+228: 
+229: def _business_work_local_access_allowed():
+230:     """Open entry uses the same sealed loopback principal and exact live scope."""
+
+# lumenis_app_api.py:276-331
+276: @domain_api_bp.post("/api/experience/business-works")
+277: def api_business_work_prepare():
+278:     def execute():
+279:         data = _business_work_body()
+280:         common = {"submission_id", "kind", "options"}
+281:         source_fields = common | {"source_job_id", "question"}
+282:         case_fields = common | {"case_id"}
+283:         if set(data) not in (source_fields, case_fields):
+284:             raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+285:         service, actor_ref, scope, authorize = _business_work_binding("prepare")
+286:         if "case_id" in data:
+287:             return service.prepare_from_case(actor_ref=actor_ref, scope=scope, authorize=authorize, **data)
+288:         return service.prepare(actor_ref=actor_ref, scope=scope, authorize=authorize, **data)
+289:     return _business_work_response(execute)
+290: 
+291: 
+292: @domain_api_bp.get("/api/experience/business-works/<work_id>")
+293: def api_business_work_read(work_id):
+294:     def execute():
+295:         if (set(request.args) - {"revision"}
+296:                 or any(len(request.args.getlist(key)) != 1 for key in request.args)
+297:                 or ("revision" in request.args and not request.args["revision"])):
+298:             raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+299:         service, actor_ref, scope, authorize = _business_work_binding("read")
+300:         revision = request.args.get("revision")
+301:         return service.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize,
+302:                               revision=revision)
+303:     return _business_work_response(execute)
+304: 
+305: 
+306: @domain_api_bp.post("/api/experience/business-works/<work_id>/<operation>")
+307: def api_business_work_advance(work_id, operation):
+308:     def execute():
+309:         if operation not in {"choose", "adopt", "cancel", "interrupt", "resume", "action", "outcome", "outcome_unknown",
+310:                              "save-request", "save"}:
+311:             raise LookupError("BUSINESS_WORK_OPERATION_NOT_FOUND")
+312:         data = _business_work_body()
+313:         if operation in {"save-request", "save"}:
+314:             required = {"request_id", "expected_revision", "citations"}
+315:             optional = {"previous_artifact_id", "expected_draft_digest"}
+316:             if (not required.issubset(data) or set(data) - required - optional
+317:                     or (("previous_artifact_id" in data) != ("expected_draft_digest" in data))
+318:                     or not isinstance(data["expected_revision"], str)
+319:                     or not isinstance(data["request_id"], str)
+320:                     or not isinstance(data["citations"], list)):
+321:                 raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+322:             service, actor_ref, scope, authorize = _business_work_binding("save")
+323:             save = service.save_result_request if operation == "save-request" else service.save_result
+324:             return save(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize, **data)
+325:         if set(data) != {"submission_id", "payload", "expected_revision"}:
+326:             raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+327:         service, actor_ref, scope, authorize = _business_work_binding(operation)
+328:         return service.advance(work_id, actor_ref=actor_ref, scope=scope, operation=operation,
+329:                                authorize=authorize, **data)
+330:     return _business_work_response(execute)
+331: 

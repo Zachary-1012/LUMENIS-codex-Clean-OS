@@ -36,6 +36,7 @@ def _seed_collected_source(
     locator=None,
     binding_source_id=None,
     artifact_note_id=None,
+    omit_child_parent_ref=False,
 ):
     """Create test-only signed Collection and source Evidence plus the original Artifact bytes."""
     from_scope = workspace["scope"]
@@ -156,7 +157,7 @@ def _seed_collected_source(
             test_name="collected-source-citation-fixture",
             result="PASS",
             status="verified",
-            inputs={"source_ids": [_SOURCE_ID]},
+            inputs={"source_ids": [_SOURCE_ID], **({} if omit_child_parent_ref else {"collection_evidence_ref": parent_ref})},
             outputs={"native_body_sha256": body_sha256},
             raw_content=body,
             collection_metadata=collection_metadata,
@@ -348,3 +349,57 @@ def test_collected_source_denials_preserve_source_bytes_and_evidence_history(
         )
 
     _assert_denial_preserved_source(workspace, source, before)
+
+
+@pytest.mark.parametrize('tamper', ['body','block_map','original_resource_sha256','artifact_bytes','quote','actorless'])
+def test_browser_snapshot_citation_subset_and_tampering(workspace,monkeypatch,tamper):
+    from tests.test_browser_extract_saved_work import _admitted_snapshot,_approve_source_use
+    from lumenis.shared.reporting import saved_work
+    from lumenis.importer.documents import _source_bytes
+    ws=workspace;obj,cap,args,source,token=_admitted_snapshot(ws,monkeypatch)
+    _approve_source_use(ws,source)
+    if tamper=='quote':
+        with pytest.raises(ValueError,match='WORK_CITATION_UNGROUNDED'):
+            saved_work.save_work(title='Forged quote',kind='research',markdown='FORGED',payload={},
+                citations=[{'evidence_id':source['evidence_id'],'start':0,'end':6,'quote':'FORGED'}],
+                request_id='browser-forged-quote-0001',actor=ws['actor'],scope=ws['scope'])
+        return
+    with ws['repo'].connection() as con:
+        evidence=dict(con.execute('SELECT * FROM app_evidence_records WHERE id=?',(source['evidence_id'],)).fetchone())
+        evidence['provenance']=json.loads(evidence['collection_metadata'])
+        if tamper=='actorless':
+            with pytest.raises(ValueError,match='CURRENT_ACTOR_REQUIRED'):
+                saved_work._verified_evidence(con,source['evidence_id'],evidence['provenance']['context'])
+            return
+        raw,record=_source_bytes(con,evidence)
+    import shared_artifacts
+    path=shared_artifacts.artifact_root()/record['relative_path']
+    value=json.loads(raw)
+    if tamper=='artifact_bytes':
+        path.write_bytes(raw+b' ')
+    else:
+        if tamper=='body': value['body']='forged body'
+        elif tamper=='block_map': value['block_map'][0]['end']+=1
+        else:value['original_resource_sha256']='a'*64
+        changed=_json_bytes(value)
+        path.write_bytes(changed)
+        # Even a re-signed artifact/metadata claim cannot bypass snapshot projection validation.
+        with ws['repo'].transaction() as con:
+            digest=hashlib.sha256(changed).hexdigest()
+            meta=evidence['provenance'];meta['source_fingerprint']=digest
+            con.execute('UPDATE lumenis_shared_artifacts SET sha256=?,size_bytes=? WHERE artifact_id=?',
+                (digest,len(changed),record['artifact_id']))
+            con.execute('UPDATE app_evidence_records SET collection_metadata=? WHERE id=?',
+                (json.dumps(meta),source['evidence_id']))
+            store._sign_evidence_record(con,source['evidence_id'])
+    with pytest.raises(ValueError):
+        ws['documents'].locate_quote(source['evidence_id'],actor=ws['actor'],scope=ws['scope'],start=0,end=1)
+
+
+def test_signed_native_fixture_without_child_parent_link_is_rejected(workspace):
+    source = _seed_collected_source(workspace, omit_child_parent_ref=True)
+    before = _snapshot(workspace, source)
+    with pytest.raises(workspace["work"].SavedWorkError, match="COLLECTED_SOURCE_PARENT_INVALID"):
+        workspace["documents"].locate_quote(source["evidence_id"], actor=workspace["actor"],
+            scope=workspace["scope"], start=0, end=2)
+    assert _snapshot(workspace, source) == before

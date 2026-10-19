@@ -45,7 +45,7 @@ environment, credentials, production DB or external provider configuration chang
   partial reset failure, retry, bad image and storage failure.
 - EVIDENCE: [machine receipt](ROUND-14-WALLPAPER-AND-LOCAL-CONTINUITY-2026-09-27.json)
   records exact file hashes/Git blobs, commands, exits and browser assertions.
-  Local raw logs/screenshots: `C:/Users/28049/AppData/Local/Temp/lumenis-frontend-verification-801adbf8`.
+  Local raw logs/screenshots: `C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-frontend-verification-801adbf8`.
 - ACCEPTANCE ASSERTION: the above local user jobs pass the bounded automated and
   actual browser paths. This does not accept complete AI/BMP tasks or the Round.
 

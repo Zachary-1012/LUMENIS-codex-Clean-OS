@@ -61,7 +61,7 @@ jobs:
         run: |
           mode="--baseline"
           changed="$(git diff --name-only HEAD^ HEAD || true)"
-          if echo "$changed" | grep -Eq '^(app/lib/|app/pubspec.yaml|website/|00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md|00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md)'; then
+          if echo "$changed" | grep -E '^(app/lib/|app/pubspec.yaml|website/|00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md|00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md)' >/dev/null; then
             mode="--strict"
             echo "Canonical Experience or approved surface changed; strict multi-surface gate required."
           else

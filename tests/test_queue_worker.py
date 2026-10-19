@@ -132,3 +132,37 @@ def test_runtime_guardian_forwards_attempt_receipt_end_to_end(tmp_path):
     assert guardian.heartbeat(second_id, **current_receipt) is True
     assert guardian.checkpoint(second_id, "current", **current_receipt) is True
     assert q.ack(second_id, **current_receipt) is True
+
+
+def test_collector_failure_mapping_is_retried_not_acknowledged(tmp_path):
+    q = _mk_queue(tmp_path)
+    task_id = q.enqueue("collect", {"keyword": "owned fixture source"})
+    worker = QueueWorker(q, collect_processor_factory(
+        lambda payload: {"ok": False, "status": "NETWORK_ERROR"}))
+    assert worker.process_once() == (task_id, False)
+    assert q.stats() == {"pending": 1, "total": 1}
+    assert q.list_by_status("pending")[0]["attempts"] == 1
+    q.close()
+
+
+def test_collector_success_requires_explicit_success_result(tmp_path):
+    for result, expected in [
+        ({"ok": True, "status": "SUCCESS"}, True),
+        ({"success": True}, True),
+        ({"ok": False, "success": True}, False),
+        ({"status": "APPROVAL_REQUIRED"}, False),
+        ({"ok": "false"}, False),
+        (True, True), (False, False), (None, False),
+    ]:
+        processor = collect_processor_factory(lambda payload: result)
+        assert processor({"task_type": "collect", "payload": {}}) is expected
+
+
+def test_generic_processor_contract_never_acknowledges_nonboolean_truthiness(tmp_path):
+    for value in ({'ok': False}, {'status': 'UNKNOWN'}, 1, 'success'):
+        queue = TaskQueue(str(tmp_path / ('truth-' + str(len(str(value))) + '.db')))
+        identity = queue.enqueue('job', {})
+        outcome = QueueWorker(queue, lambda task: value).process_once()
+        assert outcome == (identity, False)
+        assert queue.get(identity)['status'] == 'pending'
+        queue.close()

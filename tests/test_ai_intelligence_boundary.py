@@ -7,13 +7,13 @@ ZBC OSAI Interface Boundary 测试套件
   2. ZBC不直接依赖OSAI Runtime
   3. OSAI→ZBC请求边界（只能请求Task/Skill/Reasoning等）
   4. OSAI不能直接写ZBC DB/改业务代码/绕过Permission
-  5. AI Provider降级链（智谱→ARK→千问→Ollama→本地规则）
+  5. 唯一 owned Gateway 不可用时，有授权来源的基础统计仍完成
   6. Case6: OSAI Down
 """
 import os
 import sys
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -22,11 +22,14 @@ from ai_task_engine import (
     get_task_engine, reset_task_engine,
 )
 from ai_task_parser import get_task_parser, reset_task_parser
+from tests.test_no_ai_query_source_contract import (
+    job_db, client, scoped_query, run_scoped_query, assert_verified_statistics,
+)
 
 
 @pytest.fixture(autouse=True)
 def _hermetic_ai_gateway(monkeypatch):
-    """Keep task-engine tests on an explicit local-rule Gateway outcome."""
+    """Keep legacy smoke cases on an explicitly unavailable owned Gateway."""
     from lumenis.system.ai_gateway import core as ai_gateway
 
     monkeypatch.setattr(
@@ -34,9 +37,9 @@ def _hermetic_ai_gateway(monkeypatch):
         "ai_status",
         lambda: {
             "enabled": False,
-            "provider": "local_rule",
-            "model": "deterministic_rule",
-            "runtime": "rule",
+            "provider": "owned",
+            "model": None,
+            "runtime": "owned",
             "running": False,
         },
     )
@@ -45,9 +48,17 @@ def _hermetic_ai_gateway(monkeypatch):
         "chat",
         lambda *args, **kwargs: (
             None,
-            "rule",
-            {"provider": "rule", "model": "deterministic_rule"},
+            "owned",
+            {"provider": "owned", "code": "OWNED_RUNTIME_NOT_BOUND"},
         ),
+    )
+    monkeypatch.setattr(
+        ai_gateway,
+        "run_owned_analysis",
+        lambda *args, **kwargs: {
+            "ok": False, "status": "UNAVAILABLE", "provider": "owned",
+            "code": "OWNED_RUNTIME_NOT_BOUND", "analysis": None,
+        },
     )
 
 
@@ -68,15 +79,12 @@ class TestOSAIDownZBCWorks:
         caps = engine.get_capabilities()
         assert caps["osai_boundary"]["zbc_depends_on_osai"] is False
 
-    def test_task_execution_without_osai(self, engine):
-        """OSAI不可用时，任务仍可执行（降级到本地规则）"""
-        # 模拟AI调用全部失败（返回None → 本地规则兜底）
-        with patch.object(TaskEngine, "_call_ai_with_fallback", return_value=None):
-            created = engine.create_task("查一下数据统计")
-            result = engine.run_task(created["task_id"])
-            # 即使AI不可用，任务也应完成（降级到本地规则）
-            assert result["status"] == TaskStatus.SUCCEEDED.value
-            assert result["result_json"] is not None
+    def test_task_execution_without_osai(self, scoped_query):
+        """OSAI 不可用时，真实获准 SourceBrief 基础统计照常完成。"""
+        with patch.object(TaskEngine, "_call_ai_with_fallback", return_value=None) as ai_call:
+            result = run_scoped_query(scoped_query)
+            assert_verified_statistics(scoped_query, result)
+            ai_call.assert_not_called()
 
     def test_parser_works_without_osai(self):
         """Task Parser不依赖OSAI（纯规则匹配）"""
@@ -150,7 +158,7 @@ class TestOSAIRequestBoundary:
 
 
 # ═══════════════════════════════════════════════════════════════
-# 3. AI Provider降级链
+# 3. 当前 owned Gateway 与无 AI 基础路径
 # ═══════════════════════════════════════════════════════════════
 
 class TestOwnedGatewayRoute:
@@ -163,68 +171,45 @@ class TestOwnedGatewayRoute:
         assert boundary["fallback_allowed"] is False
         assert "unavailable" in boundary["osai_down_impact"].lower()
 
-    def test_provider_failure_degrades(self, engine):
-        """AI Provider失败时自动降级"""
-        call_count = {"n": 0}
+    def test_provider_failure_degrades(self, scoped_query):
+        """保留旧名；基础统计不调用失败的 owned Gateway，也不启用退役 Provider。"""
+        with patch.object(TaskEngine, "_call_ai_with_fallback",
+                          side_effect=RuntimeError("OWNED_RUNTIME_NOT_BOUND")) as ai_call:
+            result = run_scoped_query(scoped_query)
+            assert_verified_statistics(scoped_query, result)
+            ai_call.assert_not_called()
 
-        def mock_ai_call(self, operation, text, data):
-            call_count["n"] += 1
-            if call_count["n"] <= 2:
-                return None  # 模拟Provider失败 → 降级
-            return {
-                "response": "降级后本地规则返回的分析结果",
-                "provider": "local_rules",
-            }
-
-        with patch.object(TaskEngine, "_call_ai_with_fallback", mock_ai_call):
-            created = engine.create_task("查一下数据统计")
-            result = engine.run_task(created["task_id"])
-            assert result["status"] == TaskStatus.SUCCEEDED.value
-
-    def test_all_providers_fail_uses_local_rules(self, engine):
-        """所有Provider失败时使用本地规则，任务不中断"""
-        with patch.object(TaskEngine, "_call_ai_with_fallback", return_value=None):
-            created = engine.create_task("查一下数据统计")
-            result = engine.run_task(created["task_id"])
-            # 任务应成功（本地规则兜底），而非失败
-            assert result["status"] == TaskStatus.SUCCEEDED.value
+    def test_all_providers_fail_uses_local_rules(self, scoped_query):
+        """保留旧名；无模型响应时，以真实来源做确定性统计而非伪造 AI 结果。"""
+        with patch.object(TaskEngine, "_call_ai_with_fallback", return_value=None) as ai_call:
+            result = run_scoped_query(scoped_query)
+            assert_verified_statistics(scoped_query, result)
+            ai_call.assert_not_called()
 
 
 # ═══════════════════════════════════════════════════════════════
-# 4. Case6: OSAI Down（E2E）
+# 4. Case6: OSAI Down（隔离集成，不代表真实用户 E2E）
 # ═══════════════════════════════════════════════════════════════
 
 class TestCase6OSAIDown:
-    def test_case6_osai_down_full_scenario(self, engine):
-        """Case6: OSAI Down — ZBC核心功能全部正常"""
-        # 模拟OSAI完全不可用（AI调用返回None → 本地规则兜底）
-        with patch.object(TaskEngine, "_call_ai_with_fallback", return_value=None):
-
-            # 1. 任务创建正常
-            created = engine.create_task("查一下数据统计", context={"scenario": "case6"})
-            assert created["task_id"] is not None
-
-            # 2. 任务执行正常（降级）
-            result = engine.run_task(created["task_id"])
-            assert result["status"] == TaskStatus.SUCCEEDED.value
-
-            # 3. 步骤完整
-            steps = engine.get_steps(created["task_id"])
-            assert len(steps) >= 4  # 至少 parse/permission/execute/verify
-
-            # 4. Evidence存在
-            evidence = engine.get_evidence(created["task_id"])
+    def test_case6_osai_down_full_scenario(self, scoped_query):
+        """Case6: 无 AI 的授权来源统计、保存验证、Evidence、Trace、权限链。"""
+        engine = scoped_query.engine
+        with patch.object(TaskEngine, "_call_ai_with_fallback", return_value=None) as ai_call:
+            result = run_scoped_query(scoped_query, context={**scoped_query.context, "scenario": "case6"})
+            assert result["task_id"] is not None
+            assert_verified_statistics(scoped_query, result)
+            steps = engine.get_steps(result["task_id"])
+            assert len(steps) >= 4
+            evidence = engine.get_evidence(result["task_id"])
             assert len(evidence) >= 1
-
-            # 5. Trace存在
-            trace = engine.get_trace(created["task_id"])
+            trace = engine.get_trace(result["task_id"])
             assert len(trace) >= 1
-
-            # 6. 权限检查正常
             created2 = engine.create_task("帮我支付100元")
             result2 = engine.run_task(created2["task_id"])
             assert result2["status"] == TaskStatus.FAILED.value
             assert result2["permanent_deny"] == 1
+            ai_call.assert_not_called()
 
     def test_case6_osai_down_api_contract(self, engine):
         """Case6: OSAI Down时所有API端点仍可访问"""
@@ -248,15 +233,12 @@ class TestCase6OSAIDown:
 # ═══════════════════════════════════════════════════════════════
 
 class TestOSAIBoundaryLock:
-    def test_zbc_provides_validated_artifacts(self, engine):
-        """ZBC→OSAI只提供经过验证的Artifact（Task/Result/Evidence/Evaluation）"""
-        created = engine.create_task("查一下数据统计")
-        result = engine.run_task(created["task_id"])
-        # 结果包含验证信息
-        assert result["result_json"] is not None
-        evidence = engine.get_evidence(created["task_id"])
+    def test_zbc_provides_validated_artifacts(self, scoped_query):
+        """真实 SourceBrief 产物和统计结果必须通过独立读回，失败回执不冒充产物。"""
+        result = run_scoped_query(scoped_query)
+        assert_verified_statistics(scoped_query, result)
+        evidence = scoped_query.engine.get_evidence(result["task_id"])
         assert len(evidence) >= 1
-        # Evidence有哈希验证
         for ev in evidence:
             assert ev["current_hash"] is not None
 
@@ -277,16 +259,9 @@ class TestOSAIBoundaryLock:
         # 这些模块存在且不可通过AI Task修改
         assert os.path.exists(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app.py"))
 
-    def test_ai_is_enhancement_not_truth(self, engine):
-        """AI只是增强层，不做业务最终真值"""
-        created = engine.create_task("查一下数据统计")
-        result = engine.run_task(created["task_id"])
-        # 结果中AI输出标记为ai_summary/ai_analysis，而非最终数据
-        try:
-            import json
-            ro = json.loads(result["result_json"]) if isinstance(result["result_json"], str) else result["result_json"]
-            if ro.get("output"):
-                # AI输出有明确标记
-                assert any(k.startswith("ai_") for k in ro["output"].keys()) or "note" in ro["output"]
-        except Exception:
-            pass  # 格式兼容
+    def test_ai_is_enhancement_not_truth(self, scoped_query):
+        """无 AI 输出也有可核查统计；不吞异常、不把空结果当真值。"""
+        result = run_scoped_query(scoped_query)
+        data = assert_verified_statistics(scoped_query, result)
+        assert data["output"]["ai_analysis"] is None
+        assert data["output"]["base_analysis"]["coverage"] == "UNKNOWN"

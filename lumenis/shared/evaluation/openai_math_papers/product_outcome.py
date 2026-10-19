@@ -168,6 +168,9 @@ def execute_product_task(engine, task):
         parent_digest = parent["document"]["draft_digest"]
 
     def before_commit(con, record, document):
+        from .provenance import assert_review
+        # The same SQLite writer transaction serializes reviews and publication.
+        assert_review(payload["paper"]["family"], payload["paper"]["review"], connection=con)
         current = con.execute(
             "SELECT status,context_json,created_by FROM ai_task WHERE task_id=?",
             (task["task_id"],),

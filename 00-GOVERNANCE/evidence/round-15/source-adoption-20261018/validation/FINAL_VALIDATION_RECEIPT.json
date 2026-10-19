@@ -1,0 +1,85 @@
+{
+  "status": "PASS_FINAL_SAME_SOURCE_BOUNDED_REGRESSION",
+  "source_manifest_sha256": "549d6cfa8added1d11c4178df3b4d5f7fcc0a0d3dde6903ed9c2fc03c39e0f22",
+  "source_files": 4003,
+  "all_source_files_unchanged": true,
+  "main": {
+    "primary_passed": 4087,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "real_tcp_explicitly_deselected": 6,
+    "subtests_passed_separate": 318,
+    "junit_testcase_records": 4087,
+    "junit_suite_tests_including_subtests": 4405,
+    "duration_seconds": 556.07,
+    "warnings": 0,
+    "selected_nodeids_unique": true
+  },
+  "separate_same_source_real_tcp": {
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "five_node_group_passed": 5,
+    "media_real_render_and_independent_python_passed": 1,
+    "exactly_covers_main_deselections": true,
+    "disjoint_from_main_selected": true,
+    "media_child_proof_pairs": 10,
+    "media_original_python_payload_completed": true
+  },
+  "combined_exact_same_source_primary_tests": 4093,
+  "prior_version_counts_added": false,
+  "scope": {
+    "selectors": 1740,
+    "modules": 192,
+    "baseline_selectors_preserved": 1711,
+    "new_or_changed_test_modules": 40,
+    "independent_modules": 14,
+    "original_ci_selectors": 13
+  },
+  "safety": {
+    "native_no_route_and_dual_ENETUNREACH": true,
+    "onnx_telemetry_disabled_before_tests": true,
+    "spawn_entry_does_not_reenter_pytest": true,
+    "parent_namespace_and_routes_unchanged": true,
+    "source_harness_interpreter_test_dependency_hashes_unchanged": true,
+    "main_python_network_denials": 0,
+    "real_tcp_formal_guard_blocks": 0,
+    "real_tcp_forbidden_models_loaded": 0,
+    "native_media_children_isolated": true
+  },
+  "root_source_paths_differing_at_receipt": [],
+  "artifacts_sha256": {
+    "SOURCE_MANIFEST.json": "549d6cfa8added1d11c4178df3b4d5f7fcc0a0d3dde6903ed9c2fc03c39e0f22",
+    "FROZEN_INPUTS.json": "ad9fef5bbdaeceea19b53388fe7bb6995c932e6712d0af1772d42613574b38e5",
+    "SCOPE.json": "5779bcf07575fabd0f6d1031053edceb5206315bb4376888b9f77149d82bcf03",
+    "HARNESS_MANIFEST.json": "53a66d4a0080f8552068b12549ff4c775e852039f3e62721102cdddf620c73be",
+    "selectors.txt": "15f1c5184dd4e6029e239f0a9c9d05f51007a7824d18f67eb6cf913f8d4407fd",
+    "tcp-deferred.txt": "1649e4c9c793d87de3eb66b659e23cdfafef58dcac64c062da297cbc4ad9a195",
+    "results/full.log": "cf8753119d9a79ba781f4f64c8297b9c88d1bfa7e246983047a0f3547e16d2eb",
+    "results/full.xml": "765cd2c88f5d69e3fc95b19a80c1428400f855a95afb6e217f8e75477b6721fb",
+    "results/full.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "results/launch.json": "369389e6fc679a1c8329954e04ac58974cd7d4420360769176fa1f6f4795d686",
+    "results/network-guard.json": "e068094d3fb4c481552d1addb931de2dbd4cd4201866f16e7690834bfd48d4ec",
+    "results/offline_namespace_proof.json": "1103035c1ca83306d859ecd26f8554fbbf9d72428341cccfa934ab8fa1e705ec",
+    "results/spawn-entry-proof.json": "900b15baf475885ce5f8e8d4a84216b109f57021b0b9b772bfbad147b9f2e113",
+    "results/collected_nodes.json": "41ddacb3b4502467aec39a363d30c932a261b48b99bdfddfb54ae1c3b1e6f42f",
+    "results/deselected_nodes.json": "aca3cbf8c0dcb9b7401ced1da9c792f52527a4705f509dadad7b7fe899f43f9f",
+    "SIX_TCP_RECEIPT.json": "4d294bd52851115030dc2bb0f68321bac0978a611490f50c128311253843ea40",
+    "media_tcp/VERIFICATION.json": "abf56faf7a170b60977fe42444f5ca55a029a37050f86481bbdbb5710fc9f0da",
+    "media_tcp/result.log": "fcd4341269b6c33e81243c6ff468cf271aa93dde97021dfe9c8907a9963d52b5",
+    "media_tcp/result.xml": "bd44f75a56a69433718ac60ec727319df59193e2f6d2a9c4453fab81d9c6a2a7"
+  },
+  "separate_tcp_receipt": {
+    "path": "$WORKSPACE/ggi_independent_review_20261018T1217Z/evidence/final_tcp_receipt.json",
+    "sha256": "18671d0115f187133c154d1c2455633e1a3246d6a9f8a3981389d9f245dfcd68"
+  },
+  "prior_failure_evidence_preserved": "unified_validation_preparation_20261018T1254Z/results/full.log and full.xml; tooling_validation_baseline_20261018T1310Z/results/full.log and full.xml",
+  "limitations": [
+    "Bounded source regression, not complete product E2E acceptance.",
+    "Remote required CI, publication and merge are separate states.",
+    "Native frontend builds and required user-machine checks are not established by this cloud run.",
+    "Synthetic disposable data and controlled loopback fixtures are not live production data or external service acceptance."
+  ],
+  "raw_evidence_private": true
+}

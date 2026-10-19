@@ -82,7 +82,7 @@ def authorize_business_work_request(operation, *, actor_ref, scope):
     from experience_runtime import _source_brief_context
     from lumenis.shared.reporting.source_brief_job import _scope_material
     from lumenis.system.security import get_permission_gate, OperationType
-    if operation not in {"read", "prepare", "choose", "adopt", "cancel", "interrupt", "resume", "action", "outcome", "outcome_unknown", "evaluate"}:
+    if operation not in {"read", "prepare", "choose", "adopt", "cancel", "interrupt", "resume", "action", "outcome", "outcome_unknown", "evaluate", "review", "restore"}:
         raise PermissionError("BUSINESS_WORK_OPERATION_DENIED")
     action = "read" if operation == "read" else "write"
     current_ref, scope_audit, material = _source_brief_context(action)
@@ -135,12 +135,13 @@ class BusinessDecisionWorkflow:
     FEATURE = "CTH_BMP_DECISION_WORK"
     KINDS = {"venue_operations", "consumer_risk", "brand_market", "creator_campaign"}
 
-    def __init__(self, *, internal_action_reader=None, action_actor=None):
+    def __init__(self, *, internal_action_reader=None, action_actor=None, source_actor=None):
         # W6 binds the observed read_internal_pitch(task_id, *, actor, scope)
         # callable and server principal. Never load owner candidates implicitly
         # or take a reader/principal/receipt from an HTTP/model payload.
         self._internal_action_reader = internal_action_reader
         self._action_actor = action_actor
+        self._source_actor = source_actor
 
     @staticmethod
     def _action_scope(scope):
@@ -193,6 +194,8 @@ class BusinessDecisionWorkflow:
              "required_payload_paths": ["manuscript", "input_manifest", "truth_state"]},
             {"id": "lumenis.internal-pitch", "version": "3",
              "required_payload_paths": ["manuscript", "upstream_binding", "truth_state"]},
+            {"id": "lumenis.internal-pitch", "version": "5",
+             "required_payload_paths": ["manuscript", "audiovisual_plan", "truth_state"]},
         )
         if (receipt.get("owner") != "Shared ContentCreation/TaskEngine/SavedWork"
                 or receipt.get("action_kind") != ("INTERNAL_TEXT_CREATION" if receipt.get("version") == 1 else "INTERNAL_TEXT_REVISION")
@@ -318,8 +321,18 @@ class BusinessDecisionWorkflow:
         except ValueError as exc:
             raise PermissionError("BUSINESS_WORK_AUDIT_REQUIRED") from exc
 
-    def _report(self, connection, job_id, actor_ref, scope):
-        from lumenis.shared.reporting.source_brief_job import _verify_report
+    def _report(self, connection, job_id, actor_ref, scope, *, require_content=True):
+        from lumenis.shared.reporting.source_brief_job import _verify_report, resolve_report_sources
+        from lumenis.system.security import permission
+        actor = self._source_actor
+        if actor is None:
+            actor = permission.resolve_local_workspace_principal(module="reports", action="read")
+        if actor is None:
+            actor = self._action_actor
+        if actor is None:
+            raise PermissionError("BUSINESS_WORK_SOURCE_ACTOR_REQUIRED")
+        # This owner reopens original retained bytes and current SourceUse;
+        # neither a signed scope annotation nor a body hash grants content use.
         row = connection.execute(
             "SELECT * FROM daily_reports WHERE report_id=? ORDER BY id DESC LIMIT 1", (job_id,),
         ).fetchone()
@@ -337,6 +350,29 @@ class BusinessDecisionWorkflow:
                 source_id=source["source_id"], product_id=scope["product_id"], domain_id=scope["domain_id"],
                 subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
                 scope_status="VERIFIED", scope_evidence_ref=str(source["scope_evidence_ref"])))
+        if require_content:
+            admitted = resolve_report_sources(job_id, actor=actor, actor_id=actor_ref,
+                                              expected_scope=verified["snapshot"]["scope"], connection=connection)
+            if not _same_business_scope(admitted["scope"], scope) or admitted["allowed_use"] != "research_reference":
+                raise PermissionError("BUSINESS_WORK_DOMAIN_SOURCE_USE_REQUIRED")
+            # Consume the current owner projection, not the immutable report's
+            # historical analysis. Manual review versions are approval inputs.
+            current = admitted["report"]
+            verified = {**verified, "hypothesis_review": current.get("hypothesis_review"),
+                        "business_analysis": current.get("business_analysis"),
+                        "research_analysis": current.get("research_analysis")}
+
+        else:
+            # The related lens is an index, not permission to quote source
+            # bodies or expose profile compilations/analysis from other scopes.
+            brief = dict(verified["source_brief"])
+            brief["records"] = [{k: v for k, v in source.items() if k != "profile_research"}
+                                for source in brief["records"]]
+            brief["markdown"] = "Related source index; full source use requires current SourceUse admission."
+            import hashlib
+            brief["content_hash"] = hashlib.sha256(brief["markdown"].encode()).hexdigest()
+            brief["view_kind"] = "METADATA_INDEX_ONLY"
+            verified = {**verified, "source_brief": brief}
         return verified
 
     @staticmethod
@@ -357,6 +393,11 @@ class BusinessDecisionWorkflow:
         report = self._report(connection, origin["inputs"]["payload"]["source_job_id"], actor_ref, scope)
         if report["row"]["artifact_hash"] != origin["outputs"]["source_report_hash"]:
             raise RuntimeError("BUSINESS_WORK_SOURCE_REPORT_CHANGED")
+        if origin["outputs"].get("hypothesis_review") != report.get("hypothesis_review"):
+            raise RuntimeError("BUSINESS_WORK_RESEARCH_REVIEW_CHANGED")
+        bindings = origin["outputs"].get("source_body_bindings")
+        if bindings is not None and bindings != self._source_bindings(connection, report, scope):
+            raise RuntimeError("BUSINESS_WORK_SOURCE_BODY_CHANGED")
         case_id = origin["inputs"]["payload"].get("case_id")
         if case_id:
             case = self._case(connection, case_id, actor_ref, scope)
@@ -364,6 +405,15 @@ class BusinessDecisionWorkflow:
                     or case["creation_evidence_ref"] != origin["outputs"].get("case_evidence_ref")):
                 raise RuntimeError("BUSINESS_WORK_CASE_BINDING_CHANGED")
         return report
+
+    def _source_bindings(self, connection, report, scope):
+        import hashlib
+        result = []
+        for source in report["source_brief"]["records"]:
+            row = self._canonical_source(connection, source["source_id"], scope)
+            result.append({"source_id": source["source_id"], "canonical_id": row["canonical_id"],
+                           "body_sha256": hashlib.sha256((row.get("content") or "").encode()).hexdigest()})
+        return result
 
     @staticmethod
     def _active_origin(history):
@@ -492,6 +542,7 @@ class BusinessDecisionWorkflow:
                 if revision != expected_revision:
                     raise RuntimeError("BUSINESS_WORK_REVISION_CONFLICT")
                 outputs = self._transition(connection, history, operation, payload, actor_ref, scope, authorize)
+                self._verify_outcome(connection, outputs, actor_ref, scope)
                 audits = self._authorize(authorize, actor_ref, scope, operation)
                 inputs = {"work_id": work_id, "actor_ref": actor_ref, "scope": scope,
                           "submission_id": submission_id, "operation": operation,
@@ -512,25 +563,46 @@ class BusinessDecisionWorkflow:
                 history = self._history(connection, work_id, actor_ref, scope)
             # Explicit adoption replaces the active input, never its signed history.
             self._bound_report(connection, history, actor_ref, scope)
+            self._verify_outcome(connection, history[-1]["outputs"], actor_ref, scope)
             active_history = self._active_history(history)
             action_read = self._verify_actions(active_history, actor_ref, scope, authorize)
             if any(e["inputs"]["operation"] == "action" for e in active_history):
                 if action_read["state"] != "FRESH_OWNER_VERIFIED":
                     raise RuntimeError("BUSINESS_WORK_ACTION_OWNER_NOT_BOUND")
                 self._authorize(authorize, actor_ref, scope, operation)
+            # Owner readers and authorization callbacks may observe revocation;
+            # verify the source chain last, before this Evidence transaction commits.
+            self._bound_report(connection, history, actor_ref, scope)
+            self._verify_outcome(connection, history[-1]["outputs"], actor_ref, scope)
         if history[-1]["outputs"]["state"] == "OUTCOME_RECORDED":
             # Evaluation is a recoverable derivative side-write. Replay retains
             # the signed outcome and repairs its exact deterministic evaluation.
             from lumenis.shared.evaluation.recorder import record_evaluation
             import hashlib
             self._authorize(authorize, actor_ref, scope, "evaluate")
-            record_evaluation(
-                dimension="report", metric_name="business_decision_usefulness",
-                metric_value=None, pass_threshold=1.0, warn_threshold=0.8,
-                source="cth_bmp_business", evidence_ref=history[-1]["evidence_ref"],
-                evaluation_id=hashlib.sha256((work_id + history[-1]["evidence_ref"]).encode()).hexdigest(),
-                metadata=self._evaluation_metadata(work_id, history[-1], actor_ref, scope),
-            )
+            with get_repository().transaction(timeout=10) as evaluation_connection:
+                evaluation_connection.execute("BEGIN IMMEDIATE")
+                latest = self._history(evaluation_connection, work_id, actor_ref, scope)
+                if latest[-1]["evidence_ref"] != history[-1]["evidence_ref"]:
+                    raise RuntimeError("BUSINESS_WORK_REVISION_CONFLICT")
+                self._bound_report(evaluation_connection, latest, actor_ref, scope)
+                self._verify_outcome(evaluation_connection, latest[-1]["outputs"], actor_ref, scope)
+                self._authorize(authorize, actor_ref, scope, "evaluate")
+                # Recheck after the permission callback, while the write lock
+                # prevents another DB writer changing the admitted source chain.
+                self._bound_report(evaluation_connection, latest, actor_ref, scope)
+                self._verify_outcome(evaluation_connection, latest[-1]["outputs"], actor_ref, scope)
+                record_evaluation(
+                    dimension="report", metric_name="business_decision_usefulness",
+                    metric_value=None, pass_threshold=1.0, warn_threshold=0.8,
+                    source="cth_bmp_business", evidence_ref=latest[-1]["evidence_ref"],
+                    evaluation_id=hashlib.sha256((work_id + latest[-1]["evidence_ref"]).encode()).hexdigest(),
+                    metadata=self._evaluation_metadata(work_id, latest[-1], actor_ref, scope),
+                    connection=evaluation_connection,
+                )
+                self._authorize(authorize, actor_ref, scope, "evaluate")
+                self._bound_report(evaluation_connection, latest, actor_ref, scope)
+                self._verify_outcome(evaluation_connection, latest[-1]["outputs"], actor_ref, scope)
         return self.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize)
 
     @staticmethod
@@ -542,6 +614,8 @@ class BusinessDecisionWorkflow:
         if outputs.get("action"):
             metadata["action"] = outputs["action"]
             metadata["business_outcome"] = outputs["business_outcome"]
+        if outputs.get("operator_review"):
+            metadata["operator_review"] = outputs["operator_review"]
         if "resource_constraints" in (outputs.get("decision") or {}):
             metadata["resource_constraints"] = outputs["decision"]["resource_constraints"]
         return metadata
@@ -572,6 +646,8 @@ class BusinessDecisionWorkflow:
             options = self._options(payload["options"], selected)
             return {"state": "PREPARED", "options": options, "decision": None,
                     "source_report_hash": report["row"]["artifact_hash"],
+                    "source_body_bindings": self._source_bindings(connection, report, scope),
+                    "hypothesis_review": report.get("hypothesis_review"),
                     "case_id": payload.get("case_id"),
                     "case_evidence_ref": case["creation_evidence_ref"] if case else None,
                     "resume_count": 0, "outcome_state": "NOT_OBSERVED", "business_outcome": "NOT_OBSERVED",
@@ -581,8 +657,21 @@ class BusinessDecisionWorkflow:
         original = history[0]["inputs"]["payload"]
         prior = history[-1]["outputs"]
         state = prior["state"]
-        if state == "CANCELLED" or (state == "OUTCOME_RECORDED" and operation not in {"action", "adopt"}):
+        if (state == "CANCELLED" and operation != "restore") or (state == "OUTCOME_RECORDED" and operation not in {"action", "adopt", "review"}):
             raise RuntimeError("BUSINESS_WORK_TERMINAL")
+        if operation == "restore":
+            if state != "CANCELLED":
+                raise RuntimeError("BUSINESS_WORK_CANCELLED_REQUIRED")
+            self._text(payload["reason"])
+            # Restore the exact pre-cancel record, including an interrupted
+            # state's original resume target. Never restart an external task.
+            cancelled = next(i for i in range(len(history) - 1, -1, -1)
+                             if history[i]["inputs"]["operation"] == "cancel")
+            restored = dict(history[cancelled - 1]["outputs"])
+            restored["recovery"] = {"cancelled_revision": history[cancelled]["evidence_ref"],
+                                    "reason": payload["reason"], "restored_by": actor_ref,
+                                    "external_effect": "NOT_PERFORMED"}
+            return restored
         if operation == "adopt":
             if state == "INTERRUPTED":
                 raise RuntimeError("BUSINESS_WORK_RESUME_REQUIRED")
@@ -604,7 +693,8 @@ class BusinessDecisionWorkflow:
             active = self._active_origin(history)
             if (payload["source_job_id"] == active["inputs"]["payload"]["source_job_id"]
                     and payload["question"] == active["inputs"]["payload"]["question"]
-                    and options == prior["options"] and selection == prior["decision"]):
+                    and options == prior["options"] and selection == prior["decision"]
+                    and report.get("hypothesis_review") == active["outputs"].get("hypothesis_review")):
                 raise ValueError("BUSINESS_WORK_ADOPTION_HAS_NO_CHANGE")
             adoption = {"parent_revision": history[-1]["evidence_ref"], "reason": payload["reason"],
                         "source_job_id": payload["source_job_id"], "changed_option_ids": changed,
@@ -612,23 +702,55 @@ class BusinessDecisionWorkflow:
                         "unchanged_option_ids": unchanged,
                         "source_changed": payload["source_job_id"] != active["inputs"]["payload"]["source_job_id"],
                         "question_changed": payload["question"] != active["inputs"]["payload"]["question"],
+                        "research_review_changed": report.get("hypothesis_review") != active["outputs"].get("hypothesis_review"),
                         "resources_changed": selection.get("resource_constraints") != (prior["decision"] or {}).get("resource_constraints"),
                         "previous_action_ref": (prior.get("action") or {}).get("receipt", {}).get("artifact_id"),
                         "previous_outcome_revision": history[-1]["evidence_ref"] if state == "OUTCOME_RECORDED" else None,
                         "downstream_adoption": "EXPLICIT_NEW_VERSION_REQUIRED",
                         "uncited_dependencies": "NOT_VERIFIED"}
-            return {"state": "DECIDED", "options": options, "decision": selection,
+            return {"state": "DECIDED", "options": options, "decision": selection, "selected_by": actor_ref,
                     "source_report_hash": report["row"]["artifact_hash"],
+                    "source_body_bindings": self._source_bindings(connection, report, scope),
+                    "hypothesis_review": report.get("hypothesis_review"),
                     "case_id": history[0]["outputs"].get("case_id"),
                     "case_evidence_ref": history[0]["outputs"].get("case_evidence_ref"),
                     "resume_count": prior["resume_count"], "outcome_state": "NOT_OBSERVED",
                     "business_outcome": "NOT_OBSERVED", "action_state": "NOT_EXECUTED", "adoption": adoption}
         self._bound_report(connection, history, actor_ref, scope)
         result = dict(prior)
-        if operation == "choose":
+        if operation == "review":
+            if state != "OUTCOME_RECORDED":
+                raise RuntimeError("BUSINESS_WORK_OUTCOME_REVIEW_REQUIRED")
+            if (not isinstance(payload["assessment"], str) or not isinstance(payload["next_step"], str)
+                    or payload["assessment"] not in {"useful", "not_useful", "inconclusive"}
+                    or payload["next_step"] not in {"retain", "revise", "stop"}):
+                raise ValueError("BUSINESS_WORK_REVIEW_INVALID")
+            self._text(payload["observations"])
+            limits = payload["limitations"]
+            if not isinstance(limits, list) or not 1 <= len(limits) <= 8:
+                raise ValueError("BUSINESS_WORK_REVIEW_LIMITATIONS_REQUIRED")
+            for limitation in limits:
+                self._text(limitation)
+            report = self._bound_report(connection, history, actor_ref, scope)
+            available = {r["source_id"] for r in report["source_brief"]["records"]}
+            if prior.get("outcome"):
+                available.add(prior["outcome"]["source_id"])
+            refs = payload["source_ids"]
+            if (not isinstance(refs, list) or not refs or any(type(ref) is not str for ref in refs)
+                    or len(refs) != len(set(refs)) or not set(refs) <= available):
+                raise PermissionError("BUSINESS_WORK_REVIEW_SOURCE_INVALID")
+            result["operator_review"] = {**payload, "reviewer": actor_ref,
+                "reviewed_revision": history[-1]["evidence_ref"],
+                "outcome_revision": next(e["evidence_ref"] for e in reversed(history)
+                                         if e["inputs"]["operation"] in {"outcome", "outcome_unknown"}),
+                "outcome_state": prior["outcome_state"],
+                "claim_type": "OPERATOR_FEEDBACK", "causation": "NOT_ESTABLISHED",
+                "metric_value": None, "external_effect": "NOT_PERFORMED"}
+        elif operation == "choose":
             if state not in {"PREPARED", "DECIDED"} or payload["option_id"] not in {o["option_id"] for o in prior["options"]}:
                 raise ValueError("BUSINESS_WORK_DECISION_INVALID")
-            result.update(state="DECIDED", decision=self._selection(payload, prior["options"]))
+            result.update(state="DECIDED", decision=self._selection(payload, prior["options"]),
+                          selected_by=actor_ref)
         elif operation in {"cancel", "interrupt"}:
             self._text(payload["reason"])
             if operation == "interrupt" and state == "INTERRUPTED":
@@ -656,6 +778,7 @@ class BusinessDecisionWorkflow:
             # A new committed revision starts a new effects review. Previous
             # evaluations/UNKNOWN limitations remain in immutable history.
             result.pop("outcome_unknown", None)
+            result.pop("operator_review", None)
         elif operation == "outcome_unknown":
             if state != "ACTION_RECORDED":
                 raise RuntimeError("BUSINESS_WORK_ACTION_REQUIRED")
@@ -749,7 +872,8 @@ class BusinessDecisionWorkflow:
     def advance(self, work_id, *, actor_ref, scope, submission_id, operation, payload, expected_revision, authorize):
         fields = {"choose": {"option_id", "reason", "owner", "review_at"},
                   "adopt": {"source_job_id", "question", "options", "decision", "reason"},
-                  "cancel": {"reason"}, "interrupt": {"reason"}, "resume": set(),
+                  "cancel": {"reason"}, "restore": {"reason"}, "interrupt": {"reason"}, "resume": set(),
+                  "review": {"assessment", "observations", "limitations", "next_step", "source_ids"},
                   "action": {"option_id", "task_id"}, "outcome_unknown": {"limits"},
                   "outcome": {"source_job_id", "source_id", "quote", "limits"}}
         if (operation not in fields or not isinstance(payload, dict)
@@ -759,6 +883,53 @@ class BusinessDecisionWorkflow:
         return self._append(work_id=work_id, actor_ref=actor_ref, scope=scope,
                             submission_id=submission_id, operation=operation, payload=payload,
                             expected_revision=expected_revision, authorize=authorize)
+
+    @staticmethod
+    def read_learning_material(work_id, *, actor, actor_ref, scope, expected_revision, connection=None):
+        """Minimal fresh business feedback projection for the existing learning owner.
+
+        No client reader, action receipt or claimed evaluation is accepted.
+        The caller must bind the exact business revision it intends to learn from.
+        """
+        from lumenis.system.security import permission
+        from lumenis.shared.content_creation.internal_pitch import read_internal_pitch
+        media_scope = BusinessDecisionWorkflow._action_scope(scope)
+        def authorized(operation):
+            if operation != "read":
+                raise PermissionError("BUSINESS_LEARNING_READ_ONLY")
+            checker = (permission.check_local_workspace_scope_permission
+                       if type(actor) is permission.LocalWorkspacePrincipal
+                       else permission.check_actor_scope_permission)
+            decision = checker(actor, module="reports", action="read", **media_scope,
+                               **({"connection": connection} if connection is not None else {}))
+            actual_ref = (actor.principal_ref if type(actor) is permission.LocalWorkspacePrincipal
+                          else f"actor:{actor.get('id')}" if type(actor) is dict else None)
+            if (not decision.allowed or not decision.audit_id or actual_ref != actor_ref
+                    or decision.verification_state != "verified"):
+                raise PermissionError("BUSINESS_LEARNING_CONTEXT_DENIED")
+            return {"actor_id": actual_ref, "scope": scope, "operation": "read",
+                    "permission_audit_ref": decision.audit_id, "operation_audit_ref": decision.audit_id}
+        service = BusinessDecisionWorkflow(internal_action_reader=read_internal_pitch,
+                                           action_actor=actor, source_actor=actor)
+        current = service.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorized)
+        if current["revision"] != expected_revision:
+            raise RuntimeError("BUSINESS_WORK_REVISION_CONFLICT")
+        feedback = current.get("operator_review")
+        evaluation = current["evaluation"]
+        if (current["state"] != "OUTCOME_RECORDED" or not feedback
+                or evaluation["state"] != "RECORDED" or feedback["reviewer"] != actor_ref):
+            raise RuntimeError("BUSINESS_LEARNING_REVIEW_REQUIRED")
+        authorized("read")
+        return {"work_id": work_id, "revision": current["revision"],
+                "job_id": current["source_report"]["job_id"],
+                "artifact_hash": current["source_report"]["artifact_hash"],
+                "evaluation_id": evaluation["evaluation_id"],
+                "feedback_decision": feedback["assessment"],
+                "feedback_text": feedback["observations"], "limitations": feedback["limitations"],
+                "outcome_state": current["outcome_state"],
+                "business_outcome": current["business_outcome"],
+                "review_evidence_ref": current["revision"],
+                "outcome_evidence_ref": feedback["outcome_revision"]}
 
     def _material_review(self, connection, report, scope, kind):
         """Task-specific gaps from signed provenance, never inferred source roles.
@@ -792,6 +963,10 @@ class BusinessDecisionWorkflow:
             allowed_roles = {"OFFICIAL_BRAND_SELF_DESCRIPTION", "VENUE_OPERATOR_DISCLOSURE",
                              "CONSUMER_FEEDBACK", "MARKET_DISCLOSURE", "CREATOR_CONTENT"}
             role = role if isinstance(role, str) and role in allowed_roles else "UNKNOWN"
+            from lumenis.shared.reporting.operational_brief import project_profile_research
+            research = project_profile_research(connection, record, evidence_id, actor_ref=report["snapshot"]["actor_id"])
+            if research is not None:
+                role = "ENTITY_PROFILE_RESEARCH_COMPILATION"
             fields = {key: record.get("engagement_" + key) if type(record.get("engagement_" + key)) is int and record["engagement_" + key] >= 0 else None
                       for key in ("likes", "comments", "collects", "shares")}
             # Use the sole metric owner only when every component was measured.
@@ -800,6 +975,7 @@ class BusinessDecisionWorkflow:
             sources.append({"source_id": source["source_id"], "scope_evidence_ref": ref,
                             "url": record.get("url"), "declared_role": role,
                             "role_status": "CAPTURE_ANNOTATION_ONLY",
+                            "profile_research": research,
                             "captured_at": record.get("captured_at"),
                             "published_at": record.get("publish_datetime") or None,
                             "commercial_reuse": annotations.get("commercial_reuse", "UNKNOWN"),
@@ -812,10 +988,29 @@ class BusinessDecisionWorkflow:
                    "state": "REVIEW_REQUIRED" if role in roles else "MISSING_MATERIAL",
                    "source_ids": [s["source_id"] for s in sources if s["declared_role"] == role]}
                   for role, check in requirements]
+        if any(item.get("profile_research") for item in sources):
+            checks.append({"required_role": "ENTITY_PROFILE_RESEARCH_COMPILATION",
+                           "check": "已有身份/地址/官网等来源断言可逐字段核对，仍未独立验真或自动采纳",
+                           "state": "AVAILABLE_FOR_REVIEW",
+                           "source_ids": [item["source_id"] for item in sources if item.get("profile_research")]})
         return {"state": "INSUFFICIENT_MATERIAL" if any(c["state"] == "MISSING_MATERIAL" for c in checks)
                 else "MATERIAL_REVIEW_REQUIRED", "checks": checks, "sources": sources,
                 "consumer_conclusion": "NOT_ESTABLISHED", "causation": "NOT_ESTABLISHED",
                 "commercial_readiness": "NOT_VERIFIED", "collection_triggered": False}
+
+    def _verify_outcome(self, connection, outputs, actor_ref, scope):
+        """Recheck source bytes before a derivative write as well as on reopen."""
+        import hashlib
+        outcome = outputs.get("outcome")
+        if not outcome:
+            return
+        body = self._canonical_source(connection, outcome["source_id"], scope)["content"] or ""
+        if (hashlib.sha256(body.encode()).hexdigest() != outcome["body_sha256"]
+                or outcome["quote"] not in body):
+            raise RuntimeError("BUSINESS_WORK_OUTCOME_SOURCE_CHANGED")
+        report = self._report(connection, outcome["source_job_id"], actor_ref, scope)
+        if report["row"]["artifact_hash"] != outcome["report_hash"]:
+            raise RuntimeError("BUSINESS_WORK_OUTCOME_SOURCE_CHANGED")
 
     def reopen(self, work_id, *, actor_ref, scope, authorize, revision=None):
         self._authorize(authorize, actor_ref, scope, "read")
@@ -832,19 +1027,12 @@ class BusinessDecisionWorkflow:
                     raise RuntimeError("BUSINESS_WORK_REVISION_CONFLICT")
                 history = history[:selected + 1]
             original = self._active_origin(history)["inputs"]["payload"]
-            report = self._bound_report(connection, history, actor_ref, scope)
             current = history[-1]
+            self._verify_outcome(connection, current["outputs"], actor_ref, scope)
+            report = self._bound_report(connection, history, actor_ref, scope)
             kind = history[0]["inputs"]["payload"]["kind"]
             material_review = self._material_review(connection, report, scope, kind)
-            if current["outputs"].get("outcome"):
-                import hashlib
-                outcome = current["outputs"]["outcome"]
-                outcome_report = self._report(connection, outcome["source_job_id"], actor_ref, scope)
-                body = self._canonical_source(connection, outcome["source_id"], scope)["content"] or ""
-                if (outcome_report["row"]["artifact_hash"] != outcome["report_hash"]
-                        or hashlib.sha256(body.encode()).hexdigest() != outcome["body_sha256"]
-                        or outcome["quote"] not in body):
-                    raise RuntimeError("BUSINESS_WORK_OUTCOME_SOURCE_CHANGED")
+            self._verify_outcome(connection, current["outputs"], actor_ref, scope)
         active_history = self._active_history(history)
         action_read = self._verify_actions(active_history, actor_ref, scope, authorize)
         evaluation = {"state": "NOT_EVALUATED", "business_usefulness": "UNKNOWN"}
@@ -951,7 +1139,8 @@ class BusinessDecisionWorkflow:
                              if outcome_revision else None,
             "evidence_ref": outcome_revision,
         }
-        for key in ("adoption", "action", "outcome", "outcome_unknown", "case_id", "case_evidence_ref"):
+        for key in ("adoption", "action", "outcome", "outcome_unknown", "case_id", "case_evidence_ref",
+                    "operator_review", "recovery", "selected_by"):
             if key in work:
                 business[key] = work[key]
         business["source_bindings"] = sorted(bindings, key=lambda item: item["source_id"])
@@ -1080,12 +1269,12 @@ class BusinessDecisionWorkflow:
                 seen.add(job_id)
                 receipt = lambda operation: authorize_related(original, operation)
                 self._authorize(receipt, actor_ref, original, "read")
-                report = self._report(connection, job_id, actor_ref, original)
+                report = self._report(connection, job_id, actor_ref, original, require_content=False)
                 contexts.append({"job_id": job_id, "artifact_hash": report["row"]["artifact_hash"],
                                  "original_scope": original, "task_focus_scope": scope, "purpose": purpose,
                                  "relationship_state": "OPERATOR_CONTEXT_REQUEST_NOT_VERIFIED_RELATION",
                                  "source_brief": report["source_brief"],
-                                 "multimodal": report["snapshot"]["multimodal"],
+                                 "multimodal": {"state": "unavailable", "reason": "SOURCE_USE_REQUIRED"},
                                  "interpretation": "BACKGROUND_ONLY_NOT_FOCUS_FACT_OR_CAUSATION"})
                 # Revocation during the read must prevent returning material.
                 self._authorize(receipt, actor_ref, original, "read")
@@ -1124,12 +1313,23 @@ class BusinessDecisionWorkflow:
         for source in work["material_review"]["sources"]:
             source_url, url_state = _source_url(source.get("url"))
             lines += ["来源：" + text(source["source_id"]),
-                      "出处：" + text(source_url or ("已隐去（地址含未经批准的参数或凭据）" if url_state == "WITHHELD" else "未知")),
+                      "出处：" + text(source_url or ("多个研究出处，详见下列逐字段引用" if source.get("profile_research") else "已隐去（地址含未经批准的参数或凭据）" if url_state == "WITHHELD" else "未知")),
                       "捕获时间：" + text(source.get("captured_at") or "未知"),
                       "发布时间：" + text(source.get("published_at") or "未知（不能以捕获时间替代）"),
                       "材料角色标注：" + text(source["declared_role"]) + "（仍需原文核验）",
                       "商业使用许可：" + text(source.get("commercial_reuse") or "UNKNOWN"),
                       "范围证据：" + text(source["scope_evidence_ref"])]
+            research = source.get("profile_research")
+            if research:
+                lines += ["研究汇编多出处（签名不等于事实验证；捕获方式为工具文本提取）："]
+                for reference in research["references"]:
+                    lines += [text(reference["source_id"]) + "：" + text(reference["url"] or reference["url_state"]),
+                              "来源时点：" + text(reference["source_as_of"] or "UNKNOWN") + "；" + text(reference["temporal_scope_note"] or "当前有效性未核实")]
+                for assertion in research["assertions"]:
+                    selected = research["review"].get(assertion["field"]) == assertion["id"]
+                    lines += [text(assertion["field"]) + "：" + text(str(assertion["value"])) +
+                              "；来源 " + text(assertion["source_id"]) +
+                              ("；人工选择（仍非独立验真）" if selected else "；未采纳来源断言")]
             metric = source["engagement"]
             lines += ["来源互动字段合计：" + (str(metric["value"]) if metric["value"] is not None else "未知（字段未齐）"),
                       "此数值仅来自来源互动字段，不代表客流、需求、销量或投放回报。", ""]
@@ -1162,6 +1362,16 @@ class BusinessDecisionWorkflow:
             if adoption["previous_action_ref"]:
                 lines += ["上一版本已执行内部制作的回执：" + text(adoption["previous_action_ref"]),
                           "既有制作事实与历史评价保留；本次修改尚未重新执行或产生新的业务效果。"]
+        review = work.get("operator_review")
+        if review:
+            lines += ["", "## 人工效果复核（不是增长事实或执行授权）",
+                      "复核版本：" + text(review["reviewed_revision"]),
+                      "复核人：" + text(review["reviewer"]),
+                      "评价：" + text(review["assessment"]), text(review["observations"]),
+                      "限制：" + text("；".join(review["limitations"])),
+                      "建议下一步：" + text(review["next_step"]),
+                      "反馈来源：" + text("、".join(review["source_ids"])),
+                      "评价是人工意见；实际收益和因果仍未验证。"]
         action = work.get("action")
         if action:
             receipt = action["receipt"]

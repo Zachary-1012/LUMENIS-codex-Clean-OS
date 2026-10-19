@@ -302,7 +302,7 @@ OPEN states. Historical module suites/failures are not run or changed.
 ## 2026-10-08 C1 direct throughput priority and unique Brief recovery
 
 The current PO message in the original C1 thread is
-`01a11bb2-b90c-7c53-b3b8-1327cc8b54b0`, read as actual user text, not an agent
+`private-source-id-sha256-3691a5b0b8a33c327c810dc460c3375276a947c36fcf0b6361fb31e70be777be`, read as actual user text, not an agent
 summary. M was separately instructed to optimize, co-publish and send C1 the
 verified revision. Existing Global section 10 now defines subject-scoped bulk
 posts, immediate processing of each batch through Source/Evidence/Canonical,
@@ -336,7 +336,7 @@ their separate states; the remaining original-material corpus stays OPEN.
 
 ### C1 post-intake purpose binding — current-rule clarification
 
-Direct PO message 01a11bb2-b90c-7c53-b3b8-1327cc8b54b0 explicitly requires
+Direct PO message private-source-id-sha256-3691a5b0b8a33c327c810dc460c3375276a947c36fcf0b6361fb31e70be777be explicitly requires
 post-acquisition keyword/topic analysis. Source inspection at 85b16ae7 confirmed
 Permission.check_prelaunch_maintenance currently produces only DATA_IMPORT,
 while Reporting._source_use_material and SavedWork._verified_evidence require

@@ -74,8 +74,8 @@ def test_breakout_viral():
 
 
 def test_breakout_zero_baseline_safe():
-    # 基线为 0 时不得除零，回落到 normal
-    assert classify_breakout(999, 0).value == "normal"
+    # 基线为 0 时比率未知，不得假报正常
+    assert classify_breakout(999, 0).value == "insufficient_data"
 
 
 # ---------- 运行时分段 ----------

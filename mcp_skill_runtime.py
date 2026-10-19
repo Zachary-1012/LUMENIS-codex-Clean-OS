@@ -8,15 +8,16 @@ canonical local Skill package root; invocation is read-only, permissioned,
 human-approved, bounded, and delegated to the existing ``mcp_discovery``
 firewall.
 """
+
 from __future__ import annotations
 
 import json
+import hashlib
 import shutil
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from mcp_discovery import call_mcp_stdio, discover_mcp_stdio
-
 
 PACKAGE_ROOT = (Path(__file__).resolve().parent / "runtime" / "skill_packages").resolve()
 READ_ONLY_PERMISSIONS = (
@@ -46,14 +47,17 @@ def _package_path(install_path: Any) -> Path:
     try:
         path.relative_to(PACKAGE_ROOT)
     except ValueError as exc:
-        raise ValueError("MCP Skill must be installed below the canonical Skill package root") from exc
+        raise ValueError(
+            "MCP Skill must be installed below the canonical Skill package root"
+        ) from exc
     if not path.is_dir():
         raise ValueError("MCP Skill install_path does not exist")
     return path
 
 
-def validate_installation(install_path: Any, *, expected_skill_id: str = "",
-                          expected_version: str = "") -> Dict[str, Any]:
+def validate_installation(
+    install_path: Any, *, expected_skill_id: str = "", expected_version: str = ""
+) -> Dict[str, Any]:
     """Validate a built local package without starting it."""
     try:
         path = _package_path(install_path)
@@ -87,12 +91,19 @@ def validate_installation(install_path: Any, *, expected_skill_id: str = "",
             errors.append(f"missing built runtime: {label}")
     if errors:
         return {
-            "ok": False, "state": "NOT_READY", "install_path": str(path),
-            "skill_id": skill_id, "version": version, "errors": errors,
+            "ok": False,
+            "state": "NOT_READY",
+            "install_path": str(path),
+            "skill_id": skill_id,
+            "version": version,
+            "errors": errors,
         }
     return {
-        "ok": True, "state": "READY", "install_path": str(path),
-        "skill_id": skill_id, "version": version,
+        "ok": True,
+        "state": "READY",
+        "install_path": str(path),
+        "skill_id": skill_id,
+        "version": version,
         "manifest_path": str(manifest_path),
         "entrypoint": str(launcher),
         "errors": [],
@@ -166,8 +177,117 @@ def discover_registered_mcp(info: Dict[str, Any], *, timeout: float = 30.0) -> D
         command, args, _ = _entrypoint(info)
     except ValueError as exc:
         return {"ok": False, "state": "NOT_READY", "errors": [str(exc)]}
-    return discover_mcp_stdio([command], args, allow_process=True, timeout=timeout,
-                              extra_env={"TRENTHUB_AUTOUPDATE": "0"})
+    return discover_mcp_stdio(
+        [command], args, allow_process=True, timeout=timeout, extra_env={"TRENTHUB_AUTOUPDATE": "0"}
+    )
+
+
+
+def package_tree_snapshot(install_path: Any) -> Dict[str, Any]:
+    """Bounded local byte identity; never return paths, file bytes or secrets.
+
+    Detect links, changing files/directories and secret-like entries before
+    including them. This is an admission snapshot, not an OS execution sandbox.
+    """
+    import os
+    import stat
+    maximum_files, maximum_bytes = 100_000, 1024 * 1024 * 1024
+    def identity(info):
+        return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+    def linked(info):
+        return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_file_attributes', 0) & 0x400)
+    try:
+        root = _package_path(install_path)
+        raw = Path(str(install_path)).absolute()
+        for component in (raw, *raw.parents):
+            if linked(os.lstat(component)):
+                raise ValueError('PACKAGE_LINK_BLOCKED')
+            if component == PACKAGE_ROOT:
+                break
+        pending, directories, files, total = [root], [], [], 0
+        while pending:
+            directory = pending.pop()
+            before = os.lstat(directory)
+            if linked(before):
+                raise ValueError('PACKAGE_LINK_BLOCKED')
+            entries = []
+            with os.scandir(directory) as scan:
+                for entry in scan:
+                    entries.append(entry)
+                    if len(entries) > maximum_files:
+                        raise ValueError('PACKAGE_SNAPSHOT_LIMIT_EXCEEDED')
+            entries.sort(key=lambda entry: entry.name)
+            directories.append((directory, before))
+            if len(directories) + len(pending) + len(files) > maximum_files:
+                raise ValueError('PACKAGE_SNAPSHOT_LIMIT_EXCEEDED')
+            for entry in entries:
+                name = entry.name.casefold()
+                if (name == '.git' or name.startswith('.env')
+                        or name in {'id_rsa','id_ed25519','credentials','credentials.json','secrets.json',
+                                    'cookies.json','cookies.txt','cookie.json','api_key','private_key','password'}
+                        or name.endswith(('.key','.p12','.pfx'))):
+                    raise ValueError('SENSITIVE_RUNTIME_CONTENT_BLOCKED')
+                info = entry.stat(follow_symlinks=False)
+                if linked(info):
+                    raise ValueError('PACKAGE_LINK_BLOCKED')
+                path = Path(entry.path)
+                if stat.S_ISDIR(info.st_mode):
+                    pending.append(path)
+                elif stat.S_ISREG(info.st_mode):
+                    files.append((path,info));total += info.st_size
+                else:
+                    raise ValueError('PACKAGE_NONREGULAR_FILE_BLOCKED')
+                if len(files) + len(directories) + len(pending) > maximum_files or total > maximum_bytes:
+                    raise ValueError('PACKAGE_SNAPSHOT_LIMIT_EXCEEDED')
+        digest, verified = hashlib.sha256(), 0
+        for directory,_ in sorted(directories,key=lambda item:str(item[0])):
+            digest.update(b'D\0'+directory.relative_to(root).as_posix().encode()+b'\0')
+        for path,before in sorted(files,key=lambda item:str(item[0])):
+            fd = os.open(path, os.O_RDONLY | getattr(os,'O_NOFOLLOW',0) | getattr(os,'O_BINARY',0))
+            with os.fdopen(fd,'rb') as stream:
+                if identity(os.fstat(stream.fileno())) != identity(before):
+                    raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+                count, file_hash = 0, hashlib.sha256()
+                while chunk := stream.read(1024*1024):
+                    count += len(chunk); verified += len(chunk)
+                    if count > before.st_size or verified > maximum_bytes:
+                        raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+                    file_hash.update(chunk)
+                if identity(os.fstat(stream.fileno())) != identity(before):
+                    raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+            after = os.lstat(path)
+            if linked(after) or identity(after) != identity(before) or count != before.st_size:
+                raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+            digest.update(b'F\0'+path.relative_to(root).as_posix().encode()+b'\0'+str(count).encode()+b'\0'+file_hash.digest())
+        # A later file read may mutate an earlier, already hashed file without
+        # touching its parent directory. Revalidate every captured file identity
+        # (including ctime/inode), not only directory membership, before return.
+        for path, before in files:
+            final = os.lstat(path)
+            if linked(final) or not stat.S_ISREG(final.st_mode) or identity(final) != identity(before):
+                raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+        if any(linked(os.lstat(path)) or identity(os.lstat(path)) != identity(before) for path,before in directories):
+            raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+        return {'ok':True,'package_tree_sha256':digest.hexdigest(),'file_count':len(files),'total_bytes':total}
+    except (OSError, ValueError, UnicodeError):
+        return {'ok':False,'state':'BLOCKED','errors':['MCP_PACKAGE_SNAPSHOT_UNAVAILABLE']}
+
+def runtime_contract_binding(info: Dict[str, Any]) -> str:
+    """Bind reviewed schemas to the registered runtime, not an arbitrary process."""
+    entry = info.get("entrypoint")
+    if isinstance(entry, str):
+        entry = json.loads(entry)
+    material = {key: info.get(key) for key in ("install_path", "version", "active_version")}
+    material["entrypoint"] = entry
+    snapshot = package_tree_snapshot(info.get("install_path"))
+    if snapshot.get("ok") is not True:
+        raise ValueError("MCP_PACKAGE_SNAPSHOT_UNAVAILABLE")
+    material["package_tree_sha256"] = snapshot["package_tree_sha256"]
+    return hashlib.sha256(
+        json.dumps(
+            material, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+        ).encode()
+    ).hexdigest()
 
 
 def invoke_registered_mcp(info: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -179,8 +299,11 @@ def invoke_registered_mcp(info: Dict[str, Any], payload: Dict[str, Any]) -> Dict
         expected_version=str(info.get("active_version") or info.get("version") or ""),
     )
     if not package_check.get("ok"):
-        return {"ok": False, "state": package_check.get("state", "NOT_READY"),
-                "errors": package_check.get("errors", [])}
+        return {
+            "ok": False,
+            "state": package_check.get("state", "NOT_READY"),
+            "errors": package_check.get("errors", []),
+        }
     try:
         command, args, _ = _entrypoint(info)
     except ValueError as exc:
@@ -193,13 +316,48 @@ def invoke_registered_mcp(info: Dict[str, Any], payload: Dict[str, Any]) -> Dict
     if not tool_name:
         return {"ok": False, "state": "BLOCKED", "errors": ["tool_name is required"]}
     if tool_name not in allowed_tools:
-        return {"ok": False, "state": "BLOCKED", "errors": ["tool is not in the registered allowlist"]}
+        return {
+            "ok": False,
+            "state": "BLOCKED",
+            "errors": ["tool is not in the registered allowlist"],
+        }
     if payload.get("human_approved") is not True:
-        return {"ok": False, "state": "BLOCKED", "errors": ["MCP tool call requires human approval"]}
+        return {
+            "ok": False,
+            "state": "BLOCKED",
+            "errors": ["MCP tool call requires human approval"],
+        }
     if not isinstance(arguments, dict):
         return {"ok": False, "state": "BLOCKED", "errors": ["MCP tool arguments must be an object"]}
+    try:
+        compatibility = info.get("compatibility_json") or {}
+        if isinstance(compatibility, str):
+            compatibility = json.loads(compatibility)
+        contracts = compatibility.get("mcp_tool_contracts", {})
+        if not isinstance(contracts, dict) or not contracts.get(tool_name):
+            return {
+                "ok": False,
+                "state": "CONTRACT_APPROVAL_REQUIRED",
+                "errors": ["MCP tool contract requires approval"],
+            }
+        if compatibility.get("mcp_runtime_binding") != runtime_contract_binding(info):
+            return {
+                "ok": False,
+                "state": "CONTRACT_CHANGED",
+                "errors": ["MCP runtime changed; renewed contract approval required"],
+            }
+        timeout = float(payload.get("timeout", 30.0) or 30.0)
+        if not 0 < timeout <= 60:
+            raise ValueError("timeout out of range")
+    except (ValueError, TypeError, AttributeError):
+        return {
+            "ok": False,
+            "state": "BLOCKED",
+            "errors": ["invalid MCP runtime contract or timeout"],
+        }
     result = call_mcp_stdio(
-        [command], args,
+        [command],
+        args,
         tool_name=tool_name,
         arguments=arguments,
         allow_process=True,
@@ -207,7 +365,8 @@ def invoke_registered_mcp(info: Dict[str, Any], payload: Dict[str, Any]) -> Dict
         human_approved=True,
         permissions_granted=granted,
         allowed_tools=allowed_tools,
-        timeout=min(float(payload.get("timeout", 30.0) or 30.0), 60.0),
+        reviewed_tool_contracts=contracts,
+        timeout=timeout,
         extra_env={"TRENTHUB_AUTOUPDATE": "0"},
     )
     result["skill_id"] = info.get("skill_id")

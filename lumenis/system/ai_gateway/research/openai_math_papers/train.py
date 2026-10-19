@@ -46,6 +46,49 @@ def save_new(path, obj):
         os.fsync(f.fileno())
 
 
+def topology_isomorphic(a, b, budget):
+    """Exact multigraph topology check, bounded and fail-closed on audit exhaustion.
+
+    Intentionally ignores edge features: the split policy is stricter than merely
+    rejecting identical feature-labelled tasks. Parallel edges remain distinct.
+    """
+    if a.vertices != b.vertices or len(a.edges) != len(b.edges):
+        return False
+    n = a.vertices
+    def adjacency(g):
+        m = [[0] * n for _ in range(n)]
+        for u, v in g.edges:
+            m[u][v] += 1
+            m[v][u] += 1
+        return m
+    aa, bb = adjacency(a), adjacency(b)
+    signatures_a = [tuple(sorted(row)) for row in aa]
+    signatures_b = [tuple(sorted(row)) for row in bb]
+    if sorted(signatures_a) != sorted(signatures_b):
+        return False
+    order = sorted(range(n), key=lambda u: (signatures_a.count(signatures_a[u]), -sum(aa[u])))
+    mapping, used = {}, set()
+    def visit(k):
+        budget.tick()
+        if k == n:
+            return True
+        u = order[k]
+        for v in range(n):
+            budget.tick()
+            if v in used or signatures_a[u] != signatures_b[v]:
+                continue
+            if any(aa[u][x] != bb[v][y] for x, y in mapping.items()):
+                continue
+            mapping[u] = v
+            used.add(v)
+            if visit(k + 1):
+                return True
+            used.remove(v)
+            del mapping[u]
+        return False
+    return visit(0)
+
+
 def load_data(path):
     if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_BYTES:
         raise MathInputError("DATASET_SIZE")
@@ -55,6 +98,8 @@ def load_data(path):
         raise MathInputError("DATASET_ROW_COUNT")
     seen = {}
     record_ids = set()
+    audited_graphs = []
+    audit_budget = Budget(seconds=30, max_steps=2_000_000, max_items=2000)
     for r in rows:
         if type(r) is not dict or set(r) != {
             "id",
@@ -84,6 +129,10 @@ def load_data(path):
         if r["origin"] not in {"DECLARED_SYNTHETIC_MATH", "APPROVED_TASK_DERIVATIVE"}:
             raise MathInputError("DATA_ORIGIN_REQUIRED")
         g = Graph.read(r["graph"])
+        for previous_split, previous_graph in audited_graphs:
+            if previous_split != r["split"] and topology_isomorphic(g, previous_graph, audit_budget):
+                raise MathInputError("CROSS_SPLIT_TOPOLOGY_LEAKAGE")
+        audited_graphs.append((r["split"], g))
         if not g.check(r["target"]):
             raise MathInputError("TARGET_NOT_A_MATCHING")
         for key in (
@@ -93,7 +142,7 @@ def load_data(path):
             old = seen.setdefault(key, r["split"])
             if old != r["split"]:
                 raise MathInputError("CROSS_SPLIT_LEAKAGE")
-    # Graph isomorphism/permutation deduplication is a separate outstanding audit.
+    # Cross-split topology is audited exactly, including vertex/edge permutations.
     return rows, hashlib.sha256(raw).hexdigest()
 
 

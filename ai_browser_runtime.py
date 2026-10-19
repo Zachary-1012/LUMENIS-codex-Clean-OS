@@ -285,6 +285,17 @@ class FailureClass(str, Enum):
 
 # 敏感信息正则模式（用于从页面内容/DOM/日志/Evidence中脱敏）
 _SENSITIVE_PATTERNS = [
+    # Consume the complete credential value before generic key/token patterns.
+    # Deliberately conservative for unquoted header lines; this is not an
+    # exhaustive secret detector and may remove adjacent same-line prose.
+    (r"(?i)\b(?:proxy-)?authorization[\"']?\s*[:=]\s*(?:\"[^\"]*\"|'[^']*'|[^\r\n}]+)",
+     'Authorization=[REDACTED]'),
+    (r"(?i)\b(?:bearer|basic)\s+[A-Za-z0-9_+/=.-]+", '[AUTH_REDACTED]'),
+    (r"(?i)\b(signature|x-amz-signature)[\"']?\s*[:=]\s*(?:\"[^\"]*\"|'[^']*'|[^\r\n}]+)",
+     r'\1=[REDACTED]'),
+    # Browser content signatures and anti-CSRF values are never research material.
+    (r'(?i)\b(xsec_token|csrf[_-]?token|xsrf[_-]?token|authorization|x-amz-signature|signature)\s*["\']?\s*[:=]\s*["\']?[^"\'\s,;}]+',
+     r'\1=[REDACTED]'),
     # JWT format (xxx.yyy.zzz) — 先匹配，避免被其他模式截断
     (r'\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b', '[JWT_REDACTED]'),
     # JSON 格式的敏感键值对："token":"value" / 'cookie': 'value'
@@ -979,7 +990,7 @@ class ActionVerifier:
         actual_url = actual_state.get("url", "")
         actual_title = actual_state.get("title", "")
         actual_status = actual_state.get("status_code")
-        actual_loading = actual_state.get("loading", False)
+        actual_loading = actual_state.get("loading")
         actual_text = actual_state.get("body_text", "")
         actual_elements = actual_state.get("elements", {})  # selector -> {visible, text, value, count}
 
@@ -1003,7 +1014,7 @@ class ActionVerifier:
         # 3. 元素可见性检查
         if expected.element_visible:
             elem = actual_elements.get(expected.element_visible, {})
-            if not elem.get("visible", False):
+            if elem.get("visible") is not True:
                 differences.append(
                     f"元素不可见: selector={expected.element_visible}"
                 )
@@ -1012,18 +1023,18 @@ class ActionVerifier:
         if expected.element_text:
             selector, exp_text = expected.element_text
             elem = actual_elements.get(selector, {})
-            actual_elem_text = elem.get("text", "")
-            if exp_text not in actual_elem_text:
+            actual_elem_text = elem.get("text")
+            if not isinstance(actual_elem_text, str) or not isinstance(exp_text, str) or exp_text not in actual_elem_text:
                 differences.append(
                     f"元素文本不匹配: selector={selector}, "
-                    f"expected_contains={exp_text}, actual={actual_elem_text[:100]}"
+                    f"expected_contains={exp_text}, actual={str(actual_elem_text)[:100]}"
                 )
 
         # 5. Input value 检查
         if expected.input_value:
             selector, exp_value = expected.input_value
             elem = actual_elements.get(selector, {})
-            actual_value = elem.get("value", "")
+            actual_value = elem.get("value")
             if exp_value != actual_value:
                 differences.append(
                     f"Input值不匹配: selector={selector}, "
@@ -1034,8 +1045,8 @@ class ActionVerifier:
         if expected.element_count_gte:
             selector, min_count = expected.element_count_gte
             elem = actual_elements.get(selector, {})
-            actual_count = elem.get("count", 0)
-            if actual_count < min_count:
+            actual_count = elem.get("count")
+            if type(min_count) is not int or min_count < 0 or type(actual_count) is not int or actual_count < min_count:
                 differences.append(
                     f"元素数量不足: selector={selector}, "
                     f"expected>={min_count}, actual={actual_count}"
@@ -1047,6 +1058,14 @@ class ActionVerifier:
                 f"页面文本不存在: expected={expected.text_present}"
             )
 
+        # Missing/truncated text cannot prove that a requested string is absent.
+        if expected.text_absent and ("body_text" not in actual_state or
+                "body_text" in actual_state.get("truncated_fields", []) or
+                "body_text" in actual_state.get("observation_errors", {})):
+            differences.append("正文不完整，无法验证文本不存在")
+        if expected.custom_check is not None:
+            differences.append("自定义检查未绑定实际验证器")
+
         # 8. 文本不存在检查
         if expected.text_absent and expected.text_absent in actual_text:
             differences.append(
@@ -1054,14 +1073,14 @@ class ActionVerifier:
             )
 
         # 9. 状态码检查
-        if expected.status_code and actual_status and actual_status != expected.status_code:
+        if expected.status_code is not None and (type(actual_status) is not int or actual_status != expected.status_code):
             differences.append(
                 f"状态码不匹配: expected={expected.status_code}, actual={actual_status}"
             )
 
         # 10. 加载完成检查
-        if expected.loading_complete and actual_loading:
-            differences.append("页面仍在加载中（loading=true）")
+        if expected.loading_complete and actual_loading is not False:
+            differences.append("页面加载未证实完成（loading不是明确false）")
 
         passed = len(differences) == 0
         # Full URLs are used above only for comparisons. Verification is also
@@ -1407,6 +1426,8 @@ class AIBrowserRuntime:
         self.task_id = task_id
         self.run_id = run_id
         self.task_binding_status = "UNVERIFIED" if task_id is not None else "UNBOUND"
+        self._server_task_admission = None
+        self._server_task_actor = None
 
         # 状态
         self.status = SessionStatus.CREATED
@@ -1674,6 +1695,7 @@ class AIBrowserRuntime:
             return self._run_on_browser_thread(
                 lambda: self.observe(include_dom, include_accessibility, max_text_length)
             )
+        self._check_bound_task_operation(BrowserActionType.OBSERVE)
         self.last_activity = time.time()
         state = BrowserPageState()
 
@@ -1684,16 +1706,21 @@ class AIBrowserRuntime:
         try:
             state.url = self._page.url
             state.title = self._page.title()
-            state.loading = False  # sync API 中操作完成后通常已加载
+            state.loading = None  # Unknown until this observation reads document.readyState.
 
             # 获取 body 文本（脱敏 + 注入扫描）
             try:
                 # Bound the browser-to-Python transfer, including the scan input.
                 extracted = self._page.evaluate(
                     "limit => { const text = document.body ? document.body.innerText : ''; "
-                    "return {text: text.slice(0, limit), truncated: text.length > limit}; }",
+                    "return {text: text.slice(0, limit), truncated: text.length > limit, ready_state: document.readyState}; }",
                     max_text_length,
                 )
+                ready_state = extracted.get("ready_state")
+                if ready_state in {"loading", "interactive", "complete"}:
+                    state.loading = ready_state != "complete"
+                else:
+                    state.observation_errors["loading"] = "BROWSER_READY_STATE_UNAVAILABLE"
                 body_text = extracted["text"]
                 if extracted["truncated"]:
                     state.truncated_fields.append("body_text")
@@ -1775,11 +1802,357 @@ class AIBrowserRuntime:
         except Exception as e:
             state.error = sanitize_sensitive(str(e)[:300])
 
+        # Revoke read access before releasing collected page data, outside the
+        # observation error fallback so a denial cannot return stale content.
+        self._check_bound_task_operation(BrowserActionType.OBSERVE)
         return state
 
     # ──────────────────────────────────────────────────────────
     # 核心：execute_action（带 Verification 闭环）
     # ──────────────────────────────────────────────────────────
+
+    def extract(self, options: dict, *, _capture_context=None) -> dict:
+        """Extract an already-open page without navigating or granting SourceUse.
+
+        The actor gate is owned by the API. This method owns page binding,
+        browser-thread confinement, human-control exclusion and bounded capture.
+        """
+        from concurrent.futures import TimeoutError as FutureTimeout
+        from lumenis.system.collector.runtime.browser_extract import (
+            BrowserExtractionError, CAPTURE_SCRIPT, check_deadline,
+            format_capture, validate_extract_request, same_document_url, capture_structure,
+        )
+        options = validate_extract_request(options)
+        deadline = (_capture_context['deadline'] if _capture_context is not None
+                    else time.monotonic() + options['timeout_ms'] / 1000.0)
+
+        operation_id = str(uuid.uuid4())
+        outcome_lock = threading.Lock()
+        outcome = {'state': 'NOT_STARTED', 'cancelled': False, 'evidence_id': None}
+
+        def timeout_error():
+            with outcome_lock:
+                outcome['cancelled'] = True
+                state = outcome['state']
+                details = {
+                    'operation_id': operation_id, 'session_id': self.session_id,
+                    'persistence_outcome': state,
+                    'retry_safe': state == 'NOT_STARTED',
+                    'receipt_query': f'/api/browser/sessions/{self.session_id}/evidence',
+                }
+                if outcome['evidence_id'] is not None:
+                    details['evidence_id'] = outcome['evidence_id']
+                return BrowserExtractionError('BROWSER_EXTRACTION_TIMEOUT', **details)
+
+        if _capture_context is not None:
+            _capture_context['timeout_error'] = timeout_error
+
+        def operation():
+            if time.monotonic() >= deadline:
+                raise timeout_error()
+            self._begin_control_action(control_mode="agent", human_control_token=None)
+            cdp = None
+            try:
+                if self.status != SessionStatus.RUNNING or self._closed or self._page is None:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_SESSION_NOT_RUNNING')
+                if not same_document_url(self._page.url, options['url']):
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_NAVIGATION_REQUIRED')
+                revision = self._page_revision
+                target_id = self._target_id
+                allowed, _reason = self.firewall.check_action(
+                    BrowserActionType.OBSERVE, url=options['url'])
+                if not allowed:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_PERMISSION_DENIED')
+                check_deadline(deadline)
+                cdp = self._context.new_cdp_session(self._page)
+                frame = cdp.send('Page.getFrameTree')['frameTree']['frame']['id']
+                world = cdp.send('Page.createIsolatedWorld', {
+                    'frameId': frame, 'worldName': 'lumenis-read-only-extract',
+                    'grantUniveralAccess': False,
+                })
+                check_deadline(deadline)
+                result = cdp.send('Runtime.evaluate', {
+                    'expression': CAPTURE_SCRIPT,
+                    'contextId': world['executionContextId'],
+                    'returnByValue': True,
+                    'awaitPromise': False,
+                    'timeout': max(1, int((deadline - time.monotonic()) * 1000)),
+                })
+                check_deadline(deadline)
+                if result.get('exceptionDetails'):
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_CAPTURE_UNAVAILABLE')
+                capture = result.get('result', {}).get('value')
+                if type(capture) is not dict:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_CAPTURE_INVALID')
+                if capture.get('interaction_required') is True:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_HUMAN_REQUIRED')
+                if (not same_document_url(capture.get('url'), options['url']) or not same_document_url(self._page.url, options['url'])
+                        or self._page_revision != revision or self._target_id != target_id
+                        or self.status != SessionStatus.RUNNING or self._closed):
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_PAGE_CHANGED')
+                def safe_text(value):
+                    scanned = self.injection_guard.scan(value, source='browser_extract')
+                    return redact_browser_url_queries(sanitize_sensitive(scanned.sanitized_text))
+                formats = format_capture(capture, options['formats'], safe_text)
+                structure = capture_structure(capture, safe_text)
+                check_deadline(deadline)
+                captured_at = datetime.now(timezone.utc).isoformat()
+                metadata = {
+                    'url': safe_browser_display_url(capture['url']),
+                    'title': safe_text(str(capture.get('title', ''))[:300]),
+                    'page_revision': revision,
+                    'captured_at': captured_at,
+                }
+                truncated = capture.get('truncated') is True
+                digest = hashlib.sha256(json.dumps({'formats': formats, 'structure': structure}, sort_keys=True,
+                    ensure_ascii=False).encode('utf-8')).hexdigest()
+                # Only hashes/locators enter Browser Evidence. Bodies are returned
+                # to the owner; saving requires the existing SavedWork workflow.
+                with outcome_lock:
+                    check_deadline(deadline)
+                    if outcome['cancelled']:
+                        raise BrowserExtractionError('BROWSER_EXTRACTION_TIMEOUT')
+                    outcome['state'] = 'UNKNOWN'
+                evidence_id = self._record_evidence(
+                    action='extract', timestamp=captured_at, result='PARTIAL' if truncated else 'PASS',
+                    target=metadata['url'], after_state_hash=digest,
+                    verification=json.dumps({
+                        'operation_id': operation_id, 'formats': list(formats), 'page_revision': revision,
+                        'truncated': truncated, 'source_capture': 'NOT_IMPORTED',
+                        'source_use': 'NOT_ADMITTED', 'untrusted_content': True,
+                    }), risk_level='low',
+                )
+                if type(evidence_id) is not int or evidence_id <= 0:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_EVIDENCE_UNAVAILABLE',
+                        operation_id=operation_id, persistence_outcome='UNKNOWN', retry_safe=False,
+                        receipt_query=f'/api/browser/sessions/{self.session_id}/evidence')
+                with outcome_lock:
+                    outcome.update(state='COMMITTED', evidence_id=evidence_id)
+                if time.monotonic() >= deadline:
+                    raise timeout_error()
+                self.last_activity = time.time()
+                return {
+                    'ok': True, 'session_id': self.session_id, 'formats': formats, 'structure': structure,
+                    'operation_id': operation_id, 'persistence_outcome': 'COMMITTED',
+                    'metadata': metadata, 'evidence_id': evidence_id,
+                    'untrusted_content': True, 'ai_used': False,
+                    'source_capture': 'NOT_IMPORTED', 'source_use': 'NOT_ADMITTED',
+                    'partial': truncated, 'truncated': truncated,
+                    'format_semantics': 'sanitized_visible_document',
+                    'capture_scope': 'main_frame_visible_light_dom',
+                }
+            except BrowserExtractionError as exc:
+                if exc.code == 'BROWSER_EXTRACTION_TIMEOUT':
+                    raise timeout_error() from None
+                raise
+            except BrowserHumanControlError:
+                raise
+            except Exception:
+                if time.monotonic() >= deadline:
+                    raise timeout_error() from None
+                with outcome_lock:
+                    persistence_started = outcome['state'] != 'NOT_STARTED'
+                if persistence_started:
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_EVIDENCE_UNAVAILABLE',
+                        operation_id=operation_id, persistence_outcome='UNKNOWN', retry_safe=False,
+                        receipt_query=f'/api/browser/sessions/{self.session_id}/evidence') from None
+                raise BrowserExtractionError('BROWSER_EXTRACTION_CAPTURE_UNAVAILABLE') from None
+            finally:
+                if cdp is not None:
+                    try:
+                        cdp.detach()
+                    except Exception:
+                        pass
+                self._end_control_action()
+
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            with self._worker_lock:
+                future = self._browser_worker.submit(self._browser_thread_operation, operation)
+            try:
+                return future.result(timeout=max(0.001, deadline - time.monotonic()))
+            except FutureTimeout:
+                # A running SQLite commit cannot be cancelled. Report its outcome
+                # honestly and correlate it through the existing Evidence owner.
+                future.cancel()
+                raise timeout_error() from None
+        result = operation()
+        if time.monotonic() >= deadline:
+            raise timeout_error()
+        return result
+
+    def capture_command(self, data: dict, *, _capture_context=None) -> dict:
+        """One deterministic handler for trusted UI and authorized AI callers.
+
+        Authentication is always performed by the existing API/agent boundary;
+        a caller-supplied initiator/actor/permission is deliberately not accepted.
+        Captures are temporary, not a second Source or persistence store.
+        """
+        import copy
+        from lumenis.system.collector.runtime.browser_extract import (
+            BrowserExtractionError, CAPTURE_TTL_SECONDS, validate_capture_command,
+            select_capture, same_document_url,
+        )
+        data = validate_capture_command(data)
+        if _capture_context is None:
+            _capture_context = {'deadline': time.monotonic() + data.get('timeout_ms', 10000) / 1000.0}
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            from concurrent.futures import TimeoutError as FutureTimeout
+            with self._worker_lock:
+                future = self._browser_worker.submit(self._browser_thread_operation,
+                    lambda: self.capture_command(data, _capture_context=_capture_context))
+            try:
+                return future.result(timeout=max(0.001, _capture_context['deadline'] - time.monotonic()))
+            except FutureTimeout:
+                cancelled = future.cancel()
+                timeout_error = _capture_context.get('timeout_error')
+                if timeout_error is not None:
+                    raise timeout_error() from None
+                raise BrowserExtractionError('BROWSER_CAPTURE_TIMEOUT',
+                    persistence_outcome='NOT_STARTED' if cancelled else 'UNKNOWN',
+                    retry_safe=cancelled, request_id=data.get('request_id'),
+                    receipt_query=f'/api/browser/sessions/{self.session_id}/evidence') from None
+        if time.monotonic() >= _capture_context['deadline']:
+            raise BrowserExtractionError('BROWSER_CAPTURE_TIMEOUT',
+                persistence_outcome='NOT_STARTED', retry_safe=True)
+        command = data['command']
+        if command == 'capabilities':
+            return {'ok': True, 'schema': 'lumenis.browser-capture/v1',
+                    'commands': ['preview', 'select', 'discard'],
+                    'entrypoints': ['user', 'authorized_agent'], 'ai_required': False,
+                    'agent_dispatch_state': 'UNBOUND', 'model_execution': 'NOT_RUN',
+                    'availability': 'AVAILABLE' if self.status == SessionStatus.RUNNING and not self._closed else 'UNAVAILABLE',
+                    'source_capture': 'NOT_IMPORTED', 'source_use': 'NOT_ADMITTED',
+                    'source_admission': {'state': 'REQUIRES_APPROVAL', 'kind': 'SANITIZED_SNAPSHOT',
+                        'commands': ['source_prepare','source_import','source_use_prepare'],
+                        'original_resource_sha256': None},
+                    'save_owner': 'SavedWork', 'saved_note_authenticity': 'USER_AUTHORED_NOT_VERIFIED',
+                    'human_lease_policy': 'RELEASE_BEFORE_CAPTURE',
+                    'capture_ttl_seconds': CAPTURE_TTL_SECONDS,
+                    'persistence': 'SESSION_EPHEMERAL', 'restart_requires_new_capture': True}
+        cache = getattr(self, '_capture_previews', None)
+        if cache is None:
+            cache = self._capture_previews = {}
+        def valid(entry):
+            if entry.get('discarded'):
+                raise BrowserExtractionError('BROWSER_CAPTURE_CANCELLED')
+            if time.monotonic() >= entry['expires']:
+                entry['result'] = None
+                raise BrowserExtractionError('BROWSER_CAPTURE_EXPIRED')
+            if (self._closed or self.status != SessionStatus.RUNNING
+                    or self._target_id != entry['target_id'] or self._page_revision != entry['revision']
+                    or self._page is None or not same_document_url(self._page.url, entry['url'])):
+                raise BrowserExtractionError('BROWSER_CAPTURE_STALE')
+            allowed, _ = self.firewall.check_action(BrowserActionType.OBSERVE, url=entry['url'])
+            if not allowed:
+                raise BrowserExtractionError('BROWSER_EXTRACTION_PERMISSION_DENIED')
+        if command == 'preview':
+            options = {k:v for k,v in data.items() if k not in {'command', 'request_id'}}
+            fingerprint = hashlib.sha256(json.dumps(options, sort_keys=True).encode()).hexdigest()
+            old = next((e for e in cache.values() if e['request_id'] == data['request_id']), None)
+            if old:
+                self._begin_control_action(control_mode='agent', human_control_token=None)
+                try:
+                    if old['fingerprint'] != fingerprint:
+                        raise BrowserExtractionError('BROWSER_CAPTURE_REQUEST_CONFLICT')
+                    # Terminal receipts contain no page body. API actor/session
+                    # authorization still applies, independently of page expiry,
+                    # navigation and page-read permission. Never execute twice.
+                    if old.get('error'):
+                        if time.monotonic() >= old['expires']:
+                            old['result'] = None
+                        raise BrowserExtractionError(old['error']['code'], **old['error']['details'])
+                    valid(old)
+                    return copy.deepcopy(old['result'])
+                finally:
+                    self._end_control_action()
+            # Fail closed instead of evicting a request and silently replaying it.
+            if len(cache) >= 16:
+                raise BrowserExtractionError('BROWSER_CAPTURE_SESSION_LIMIT')
+            target, revision = self._target_id, self._page_revision
+            capture_id = 'cap_' + uuid.uuid4().hex
+            entry = cache[capture_id] = {'request_id': data['request_id'], 'fingerprint': fingerprint,
+                                'target_id': target, 'revision': revision, 'url': options['url'],
+                                'expires': time.monotonic()+CAPTURE_TTL_SECONDS, 'result': None}
+            try:
+                result = self.extract(options, _capture_context=_capture_context)
+                if self._target_id != target or self._page_revision != revision:
+                    raise BrowserExtractionError('BROWSER_CAPTURE_STALE')
+                result.update(capture_id=capture_id, schema='lumenis.browser-capture/v1',
+                              capture_ttl_seconds=CAPTURE_TTL_SECONDS, persistence='SESSION_EPHEMERAL')
+                entry['result'] = copy.deepcopy(result)
+                return result
+            except BrowserHumanControlError:
+                # The lease gate runs before any capture or persistence. Denial
+                # is safely retryable and must not consume the 16-record budget.
+                cache.pop(capture_id, None)
+                raise
+            except BrowserExtractionError as exc:
+                # An uncertain write stays queryable; repeating request_id never recaptures.
+                entry['error'] = {'code': exc.code, 'details': dict(exc.details)}
+                raise
+            except Exception:
+                entry['error'] = {'code': 'BROWSER_CAPTURE_UNAVAILABLE', 'details': {}}
+                raise
+        self._begin_control_action(control_mode='agent', human_control_token=None)
+        try:
+            entry = cache.get(data['capture_id'])
+            if entry is None:
+                raise BrowserExtractionError('BROWSER_CAPTURE_NOT_FOUND')
+            if command == 'discard':
+                entry['discarded'] = True
+                entry['result'] = None
+                entry['url'] = ''
+                return {'ok': True, 'capture_id': data['capture_id'], 'state': 'CANCELLED',
+                        'scope': 'LOCAL_PREVIEW_ONLY', 'source_capture': 'NOT_IMPORTED'}
+            valid(entry)
+            if entry.get('error'):
+                raise BrowserExtractionError(entry['error']['code'], **entry['error']['details'])
+            result = entry['result']
+            selection = select_capture(result, data)
+            return {'ok': True, 'capture_id': data['capture_id'], 'selection': selection,
+                    'metadata': copy.deepcopy(result['metadata']), 'evidence_id': result['evidence_id'],
+                    'untrusted_content': True, 'source_capture': 'NOT_IMPORTED', 'source_use': 'NOT_ADMITTED',
+                    'source_verification': 'NOT_VERIFIED',
+                    'saved_note_authenticity': 'USER_AUTHORED_NOT_VERIFIED'}
+        finally:
+            self._end_control_action()
+
+    def snapshot_for_source(self, capture_id: str, *, _deadline=None):
+        """Server-only source resolver; admission and persistence belong to Collector."""
+        import copy
+        from concurrent.futures import TimeoutError as FutureTimeout
+        from lumenis.system.collector.runtime.browser_extract import (
+            BrowserExtractionError, make_source_snapshot, same_document_url)
+        deadline = _deadline if _deadline is not None else time.monotonic() + 10
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            with self._worker_lock:
+                future = self._browser_worker.submit(self._browser_thread_operation,
+                    lambda: self.snapshot_for_source(capture_id, _deadline=deadline))
+            try:
+                return future.result(timeout=max(.001, deadline-time.monotonic()))
+            except FutureTimeout:
+                future.cancel()
+                raise BrowserExtractionError('BROWSER_CAPTURE_TIMEOUT') from None
+        if time.monotonic() >= deadline:
+            raise BrowserExtractionError('BROWSER_CAPTURE_TIMEOUT')
+        self._begin_control_action(control_mode='agent', human_control_token=None)
+        try:
+            entry = getattr(self, '_capture_previews', {}).get(capture_id)
+            if not entry or entry.get('discarded') or not entry.get('result'):
+                raise BrowserExtractionError('BROWSER_CAPTURE_NOT_FOUND')
+            if time.monotonic() >= entry['expires']:
+                entry['result'] = None
+                raise BrowserExtractionError('BROWSER_CAPTURE_EXPIRED')
+            if (self._closed or self.status != SessionStatus.RUNNING or self._page is None
+                    or self._target_id != entry['target_id'] or self._page_revision != entry['revision']
+                    or not same_document_url(self._page.url, entry['url'])):
+                raise BrowserExtractionError('BROWSER_CAPTURE_STALE')
+            if not self.firewall.check_action(BrowserActionType.OBSERVE, url=entry['url'])[0]:
+                raise BrowserExtractionError('BROWSER_EXTRACTION_PERMISSION_DENIED')
+            return make_source_snapshot(copy.deepcopy(entry['result']),
+                target_id=entry['target_id'], page_revision=entry['revision'])
+        finally:
+            self._end_control_action()
 
     def _expire_human_control_locked(self) -> None:
         if self._human_control_token_digest and time.time() >= self._human_control_expires_at:
@@ -1846,6 +2219,92 @@ class AIBrowserRuntime:
             self._human_control_expires_at = 0.0
         self._invalidate_human_links()
         return True
+
+    def bind_task_admission(self, admission, *, actor):
+        """Internal original-Task bridge; a metadata seal never grants browser effects.
+
+        HTTP callers cannot supply this sealed object. The existing API keeps
+        client task/run strings UNVERIFIED and existing capacity isolation.
+        """
+        with self._control_lock:
+            from lumenis.system.security.permission import TaskOperationalWriteAdmission
+            if type(admission) is not TaskOperationalWriteAdmission:
+                raise PermissionError("BROWSER_TASK_ADMISSION_REQUIRED")
+            if self._closed or self.task_id not in (None, admission.task_id) or self.run_id not in (None, admission.run_id):
+                raise PermissionError("BROWSER_TASK_BINDING_CONFLICT")
+            if self._active_control_actions or (self._server_task_admission is not None and self._server_task_admission is not admission):
+                raise PermissionError("BROWSER_TASK_BINDING_BUSY_OR_IMMUTABLE")
+            prior = (self._server_task_admission, self._server_task_actor)
+            self._server_task_admission, self._server_task_actor = admission, (dict(actor) if isinstance(actor, dict) else actor)
+            try:
+                self._check_bound_task_operation(BrowserActionType.OBSERVE)
+            except Exception:
+                self._server_task_admission, self._server_task_actor = prior
+                raise
+            self.task_id, self.run_id = admission.task_id, admission.run_id
+            self.task_binding_status = "BOUND"
+
+    def _check_bound_task_operation(self, action_type, **arguments):
+        admission = getattr(self, "_server_task_admission", None)
+        if admission is None:
+            return  # Existing unbound/manual browser path remains unchanged.
+        from lumenis.system.security.permission import get_permission_gate, OperationType
+        context = self._check_bound_task_owner(admission)
+        resource = "browser-task-operation:v1:" + hashlib.sha256(json.dumps({
+            "session": self.session_id, "target": self._target_id,
+            "task": admission.task_id, "run": admission.run_id,
+            "scope": context["scope"], "domain": context["domain_id"],
+            "action": action_type.value, "arguments": arguments,
+        }, sort_keys=True, ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+        # authorized_context supplies a fixed analyst role for local tools, not
+        # the account browser grant. Scope and SYSTEM/browser grant were both
+        # checked above against original account owners, never a client role.
+        browser = get_permission_gate().check(OperationType.BROWSER_OPERATION,
+            resource=resource, caller="ai_browser_runtime.bound_task",
+            domain_id=context["domain_id"])
+        if not browser.allowed:
+            raise PermissionError("BROWSER_OPERATION_PERMISSION_DENIED")
+        # Gate evaluation can itself take time: never reuse its earlier Owner snapshot.
+        self._check_bound_task_owner(admission)
+
+    def _check_bound_task_owner(self, admission, *, attempt_guarded=False):
+        from ai_task_engine import get_task_engine
+        from agent_runtime.task_binding import authorized_context
+        decision = admission.check("ai_task", fields={"status"})
+        if not decision.allowed:
+            raise PermissionError("BROWSER_TASK_ATTEMPT_OR_SCOPE_REVOKED")
+        if not attempt_guarded:
+            attempt = admission.queue.get(admission.queue_task_id)
+            payload = attempt.get("payload", {}) if attempt else {}
+            deadline = payload.get("deadline_at")
+            if (payload.get("cancel_requested") is True or
+                    (deadline is not None and (type(deadline) not in (int, float) or not time.time() < deadline))):
+                raise PermissionError("BROWSER_TASK_CANCELLED_OR_EXPIRED")
+        task = get_task_engine().get_task(admission.task_id)
+        if not task or task.get("status") in {"succeeded", "failed", "cancelled"}:
+            raise PermissionError("BROWSER_TASK_NOT_ACTIVE")
+        context = authorized_context(task, self._server_task_actor)
+        actor_id = context.get("actor_id")
+        if actor_id != self.owner_actor_id:
+            raise PermissionError("BROWSER_TASK_ACTOR_MISMATCH")
+        if actor_id is not None:
+            from account.models import get_db
+            from account.authorization import check_dual_domain_permission
+            con = get_db()
+            try:
+                row = con.execute("SELECT user_id,expires_at FROM v4_sessions WHERE id=?", (self.owner_account_session_id,)).fetchone()
+            finally:
+                con.close()
+            if not row or row["user_id"] != actor_id or row["expires_at"] < time.strftime("%Y-%m-%d %H:%M:%S"):
+                raise PermissionError("BROWSER_ACCOUNT_SESSION_REVOKED")
+            if not check_dual_domain_permission(actor_id, "SYSTEM", module="browser", action="write"):
+                raise PermissionError("BROWSER_PERMISSION_REVOKED")
+        else:
+            from lumenis.system.security.permission import resolve_local_workspace_principal
+            principal = resolve_local_workspace_principal(module="browser", action="write")
+            if self.owner_principal_ref != "workspace:local" or principal is None:
+                raise PermissionError("BROWSER_TASK_WORKSPACE_MISMATCH")
+        return context
 
     def _resolve_task_trace(
         self, task_id: Optional[str], run_id: Optional[str]
@@ -2358,6 +2817,7 @@ class AIBrowserRuntime:
             ))
         if control_mode == "human":
             self.assert_current_frame_binding(frame_binding)
+        self._check_bound_task_operation(action_type, target=target, selector=selector, text=text, value=value, url=url)
         resolved_task_id, resolved_run_id = self._resolve_task_trace(task_id, run_id)
         self._begin_control_action(
             control_mode=control_mode,
@@ -2587,6 +3047,40 @@ class AIBrowserRuntime:
                 result.escalation_reason = f"权限被拒绝: {result.error}"
                 return result
 
+            # An exception may occur after the browser applied the effect. Read back
+            # before any replay; page readiness alone is not an action postcondition.
+            read_only_actions = {BrowserActionType.OBSERVE, BrowserActionType.SCREENSHOT,
+                                 BrowserActionType.WAIT}
+            meaningful_expected = expected is not None and any(
+                value is not None for name, value in asdict(expected).items()
+                if name not in {"loading_complete", "custom_check"}
+            )
+            if failure_class != FailureClass.SESSION_ERROR and meaningful_expected:
+                try:
+                    observed = self.observe()
+                    result.after_state = observed
+                    verification = self.verifier.verify(expected, observed.verification_state())
+                    result.verification = verification
+                    result.recovery_attempts.append(RecoveryAttempt(
+                        strategy="observe_before_retry", success=verification.passed,
+                        detail="postcondition checked without replaying the action"))
+                    before_verification = self.verifier.verify(expected, before_state.verification_state())
+                    if verification.passed and not before_verification.passed:
+                        result.success = True
+                        result.result = ActionResult.PASS
+                        result.error = None
+                        return result
+                except Exception:
+                    # Unknown readback does not authorize repeating a possible effect.
+                    pass
+            if failure_class == FailureClass.SESSION_ERROR:
+                self.status = SessionStatus.NEED_VERIFY
+            if action_type not in read_only_actions:
+                result.result = ActionResult.HUMAN_ESCALATION
+                result.human_escalation_required = True
+                result.escalation_reason = "BROWSER_EFFECT_UNCERTAIN_REOBSERVE_REQUIRED"
+                return result
+
             # 尝试 Recovery 策略链
             strategies = self.recovery.get_recovery_strategies(failure_class)
             for strategy in strategies:
@@ -2754,6 +3248,17 @@ class AIBrowserRuntime:
         url: str = "",
     ):
         """执行原始 Playwright 操作（不含 Verification/Recovery）。"""
+        self._check_bound_task_operation(action_type, target=target, selector=selector, text=text, value=value, url=url)
+        admission = getattr(self, "_server_task_admission", None)
+        if admission is not None:
+            # Final short dispatch admission only. The original queue fence
+            # must never span browser/network acquisition. In-flight external
+            # effects cannot be rolled back when authority subsequently changes.
+            with admission.guard():
+                self._check_bound_task_owner(admission, attempt_guarded=True)
+        return self._do_execute_impl(action_type, target, selector, text, value, url)
+
+    def _do_execute_impl(self, action_type, target="", selector="", text="", value="", url=""):
         if not self._page and action_type not in (BrowserActionType.NAVIGATE, BrowserActionType.TAB_NEW):
             raise RuntimeError("No active page. Call start() first or navigate to create a page.")
 
@@ -2806,6 +3311,11 @@ class AIBrowserRuntime:
             time.sleep(wait_ms / 1000.0)
 
         elif action_type == BrowserActionType.TAB_NEW:
+            if url:
+                import browser_surface
+                navigation = browser_surface.evaluate_navigation(url)
+                if not navigation.get("allowed"):
+                    raise PermissionError("AI Browser navigation is blocked by the existing browser policy")
             if self._context:
                 new_page = self._context.new_page()
                 tab_id = f"tab_{uuid.uuid4().hex[:8]}"

@@ -1,0 +1,1226 @@
+[
+  {
+    "path": "product_research_deadline_20261018/review_final/01_WHOLE_PRODUCT_UPGRADE_REVIEW.md",
+    "bytes": 37371,
+    "sha256": "ee8a8d0a48e1a8f50e9a236c71ad733f86df235c6bd71b3dacf2cfa3fe24b854",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "product_research_deadline_20261018/review_final/02_NINETEEN_GROUP_DECISIONS.json",
+    "bytes": 1801883,
+    "sha256": "165b9ba71a996dffb07707e265ea5853905a95af1c8eb4ce53c60cec80a2a636",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "product_research_deadline_20261018/review_final/03_SOURCE_HASHES_AND_READ_SCOPE.json",
+    "bytes": 9313,
+    "sha256": "cc37bbca687005b00486fd4066e22371998530a713dbe3d25e9c7cb0b4de2425",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "product_research_deadline_20261018/review_final/04_REVISION_LEDGER.json",
+    "bytes": 12080,
+    "sha256": "adf33f140cc2ce1811783cd10d512ae1911a0ccbeab5fcbf16f5bd54829d4f0d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "product_research_deadline_20261018/review_final/05_VALIDATION.json",
+    "bytes": 649,
+    "sha256": "a3aefdbfa71b45f56f1a02ed9ec9d84fda38c9cbae7f53355051996d9ca7230a",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "product_research_deadline_20261018/review_final/06_BUNDLE_FILE_HASHES.json",
+    "bytes": 774,
+    "sha256": "ce0a6873debc2b0aecacf2f00ba5fd85816c8c376867f9c0e2b1116e812cb949",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "product_research_deadline_20261018/delivery_preparation/DELIVERY_MANIFEST.json",
+    "bytes": 2034,
+    "sha256": "fb55f0850f5edcbe6da64bae4720421672bf713344dadccfca95d6299c6f5599",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/00_START_HERE.md",
+    "bytes": 6737,
+    "sha256": "ece1667f23a5c725b819ba1fd7ad450cf93fb868a9d0c65cff17dde022adfd29",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/ADDITIVE_REQUIREMENTS.json",
+    "bytes": 9077,
+    "sha256": "047216d010e7efe5932c94a50cbd4b0894d7a1ce9d4db14877c12facb354a44f",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/CAPTURE_SOURCE_MANIFEST.json",
+    "bytes": 1020254,
+    "sha256": "2444e09c721808bd87d4c0bc89d89e3f010ebe9db91fa75f079c602adc9ad0c3",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/CAPTURE_STABILITY_CHECK.json",
+    "bytes": 370,
+    "sha256": "6080a5477e2dd3eff33cfbeeed5eea8929bb6b48bf5b85c5df37ef728eae4f85",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/CHAT_PARTS_INDEX.json",
+    "bytes": 4322,
+    "sha256": "6564683e8457ddf0c7a9cbaf4a97788174076fa24428b9f9aea3adfcf1db892b",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/CHAT_SEND_RECEIPTS.json",
+    "bytes": 6005,
+    "sha256": "058675ea7608ac341446b60d8752793b147e8a97baa3dba7600deee2ab8a094e",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/CURRENT_STATUS_AND_AUTHORIZATION_OVERLAY.json",
+    "bytes": 2027,
+    "sha256": "3baf7d35724ebcc7133343a0b8204cf02d7a5e70af0e6042abd24e0cdff5842b",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/EXCLUSIONS.json",
+    "bytes": 148,
+    "sha256": "5db3ce7a43d16e655c46c417344deecd85ca4f550013afac5579e38c6e788559",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/FILE_MANIFEST.json",
+    "bytes": 315662,
+    "sha256": "0b3a03dcd46017399c5d3ecdd8b61fbcd844d75513e8f37ee9671443a02c3ced",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/FREEZE_RECEIPT.json",
+    "bytes": 876,
+    "sha256": "869fad7724b07c054c8da36102457969747d2fdd5264e220fbe2c424d04f77ba",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/FULL_CONTINUATION_LEDGER.json",
+    "bytes": 17103386,
+    "sha256": "50b287715f6dde4065602602ca2a01a03f5674632f80e25bc6abbabc9f84096e",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/KNOWN_OPEN_ITEMS.md",
+    "bytes": 5250,
+    "sha256": "6cfba9f29e31faceeecc5e47c107e5038b208114ff88f215bc9325d7b8345bf2",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/ORIGINAL_REFERENCE_INDEX.json",
+    "bytes": 151338,
+    "sha256": "42878eaaf4c12d8c33becb1fc6b89a3e411d4abffe1562faaaed6a02b60262c8",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/REA_AND_ORIGINAL_RESEARCH_INTAKE.json",
+    "bytes": 9826,
+    "sha256": "b87449a18e616d2c2584279004609bd05931eaba2a5304184bfcbe31194f1bd5",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/REA_DOWNLOAD_CONFIG_USAGE.md",
+    "bytes": 2783,
+    "sha256": "b6a7646eca94aca094ca151e19dcd1e6b7a92feb90ff98815f6690130104dffb",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/REA_SOURCE_OCCURRENCES.json",
+    "bytes": 35745,
+    "sha256": "addef944a46ed0cb2e8a43b7531350921bf4a31827909ee023eba5514f781696",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/REA_VERIFIED_UPDATE.md",
+    "bytes": 6983,
+    "sha256": "30e0b61f28830d38e296d70b4efb65235b3a8f27fa7e82ca407eea0e0f29c82f",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/RECOVERY_RUNTIME_SNAPSHOT.json",
+    "bytes": 2672,
+    "sha256": "31d5926c03ea0a54f5e8969c1c8a3972351f13ece88fdb4a3846e03073c1ced0",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/RESEARCH_DOCUMENT_CATALOG.json",
+    "bytes": 852898,
+    "sha256": "65a2daf4f7137b1cd93b2af1dafb6a60a56eeca0998a11dbc7ef8cd58b7004c3",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/RESEARCH_PROJECT_REGISTER.json",
+    "bytes": 917816,
+    "sha256": "ce9426ee3c858821bf0f7918ab31055bacaaa2058691d9941fd4336968818aa8",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/RESTORE_AND_VALIDATE.md",
+    "bytes": 7555,
+    "sha256": "dc9395dadcc199750aeaba2158884c3d1c9e66f55483aa7aeef092743ed59ae1",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "continuation_register_20261018/VALIDATION.json",
+    "bytes": 1520,
+    "sha256": "67f3bfb19bede632d66fa0b19169dccc41650a4a1b680be309a13f52939a9dfc",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/BACKUP_SOURCES.json",
+    "bytes": 30661,
+    "sha256": "593f18958fbc31112036cb1ecc6dc0c6c31e936949fc92e34c5ab2fcc76d6c75",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/BLOCKER_RECEIPT.json",
+    "bytes": 767,
+    "sha256": "6a9649e4e44731bd06d0a0bb19a7a08dedb2846e88318b059685d80603d9e87f",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_BMP03_FULL_STAGE_RECEIPT.json",
+    "bytes": 1513,
+    "sha256": "81c6a636655cde54a99f59e29709e4947e21d6473f6fe0a51dd8a8ca9e968477",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_COMPLETE_CONTINUATION_DOCUMENT_RECEIPT.json",
+    "bytes": 1518,
+    "sha256": "3afdbe2e049d582148b4b506d226498cc0579e810c2e5774898db7e017fa43b7",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_CONTINUATION_STAGE_RECEIPT.json",
+    "bytes": 1452,
+    "sha256": "27344188482e84d32a78f875a46d58d51b4c3958b1453c38e3ba6a6141091675",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_D830_FULL_STAGE_RECEIPT.json",
+    "bytes": 1406,
+    "sha256": "bcaa88ee0c714f6fe54561c466ba50527b52b98ecea9bc1681167bea07f95986",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_DOCUMENT_STAGE_RECEIPT.json",
+    "bytes": 2581,
+    "sha256": "1e4e4333429ba22019bb3b74c531539eaa788c60e7db4930f5aa7f33d4bc7c44",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_EVENT_STAGE_RECEIPT.json",
+    "bytes": 1111,
+    "sha256": "31812f4f79a51c8d8df8438a291c6646af013461a0797447b4f27fdc38f2b203",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_FRONTEND_WORKING_TEXT_RECEIPT.json",
+    "bytes": 1050,
+    "sha256": "489b368c5ff1fedb8892bb50954a1389c2725824e2b18154209701b035286581",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_FULL_STAGE_2243_RECEIPT.json",
+    "bytes": 1631,
+    "sha256": "839e019c3a2133aba42315f1623ca2c76687d1c457e139b7afe4d0e0971ffb95",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_FULL_STAGE_2302_RECEIPT.json",
+    "bytes": 1254,
+    "sha256": "58fae8f63263465a5dc8c0a761f98835c17de0363e6400a34e8f63fcda5e8913",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_PROJECT_README_RECEIPT.json",
+    "bytes": 969,
+    "sha256": "cd2e54695570b327461ede39ae410b75e7b0baf345d060b1542e01bb87a7f1b6",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_RECONSTRUCTED_PRESERVATION_RECEIPT.json",
+    "bytes": 2484,
+    "sha256": "00bbb02331535726c45c8cba8d89b94932d563b4d02bd4fb6f814dc3984ac870",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_RESEARCH_2259_RECEIPT.json",
+    "bytes": 732,
+    "sha256": "fe1e5f2248f36c1e85172a32876cd27c6ab930ac7e1f6f7ff1c85d95756bad02",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_RESEARCH_2320_RECEIPT.json",
+    "bytes": 975,
+    "sha256": "03843537f8f6293dfc3b1c6e528512b027e545457d85b9b19c1bdd021de67a1b",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_RESEARCH_2330_RECEIPT.json",
+    "bytes": 1024,
+    "sha256": "fbeabf95405dcb8a43d1674e0f3c3a585fbcf9edafcf24767234199397c2c199",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_REVIEW_v009_RECEIPT.json",
+    "bytes": 1003,
+    "sha256": "ffbf5ca41a972d9552129a058e475fcb161d5360087795328d79591ef95831e7",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_VERIFIED_REA_COMPLETE.json",
+    "bytes": 1093,
+    "sha256": "8f1b09020e9e87334998d662cd82cab5d67437d6e6bc3cc3a440c3e1e7cdd991",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/LATEST_VERIFIED_REPAIR_CANDIDATE.json",
+    "bytes": 1336,
+    "sha256": "25b3b70ea6183e5823a7acfbdbf9e58c363f0a57b72b9af8e6f0ee1360937961",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/PENDING_STABLE_STAGES.json",
+    "bytes": 749,
+    "sha256": "a49485d9b743e55bde0411c9d64a44ec350ec987b2afe97c43c71684bb0469d4",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/RECONSTRUCTED_BASELINE_PROPOSAL_1934.md",
+    "bytes": 7411,
+    "sha256": "38377a0776f50ec5b1fa930ca3b50fce83bb5424f54ad9c2b6b086e287fad88c",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "task_backup_control_20261017/TASK_ARTIFACT_INDEX.md",
+    "bytes": 26460,
+    "sha256": "01c76a819d0031999eab209e9c0c88ab0580d2e1cc576eac9240eca1ef91f721",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/01_FULL_REQUIREMENT_PRESERVATION.json",
+    "bytes": 5195569,
+    "sha256": "131b5df62a919fa98960f9c8f8362431c8d2ec628a6774d4a893dce4b8715850",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/02_G_R_J_U_REPORT_CROSSWALK.json",
+    "bytes": 152255,
+    "sha256": "dda93f10cdcab7b4e839c79106e2b7c1a4963be60092b9c97186d8b30cdb34af",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/03_SAVED_REPORT_CATALOG.json",
+    "bytes": 14319,
+    "sha256": "bc7433210fc0f8ed14cf8e126fe4ee695d89bc5e4395ec66e5210cfe224f4e59",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/04_ORIGINAL_REFERENCE_INVENTORY.json",
+    "bytes": 98333,
+    "sha256": "d81f553b74fc7fbdf99c403790cacfe43ca0b543ede24782b459cbc409468ff6",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/05_SOURCE_MANIFEST.json",
+    "bytes": 1039,
+    "sha256": "b0f6dd0829d51f80a0baf2320a945a1d08dd121dfd744cbd932de08c64ff5e51",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/06_STRUCTURAL_CHECK.json",
+    "bytes": 373,
+    "sha256": "4d54ff185d9d65bf09d10df8b0cd8692b13e41760aaeb1c2d846aecc0b3fa705",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/07_BACKTICK_SOURCE_REFERENCES.json",
+    "bytes": 53009,
+    "sha256": "53bbd0a1fdf2cdec57c4c6ac180bcaf3b722466700a5d2078857aaffbbaf83b3",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "bytes": 387409,
+    "sha256": "d964449d505e81bc15a4cacec370abb53086ace3deb5ec6c5bccd42123bde66d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/10_SKILLS_MCP_GITHUB_DEEP_RESEARCH.md",
+    "bytes": 18580,
+    "sha256": "49cfa0207d1d14da5dfefb6dc2fdd52dad161832350b58105b69f3952cc055c6",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/11_CODE_EVIDENCE.json",
+    "bytes": 3968,
+    "sha256": "e75d095cde70cdba4fcfcd9fab1e6174b0f210b844d02e8f5ba906e83235b85d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/12_STATIC_STRUCTURE_CHECKS.json",
+    "bytes": 664,
+    "sha256": "1cc357aedb7bf5acc0db8b167bd23e540a6e5f61c70e05eb3ca97eced75b3443",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/13_REA_OFFICIAL_INSTALL_AND_RESEARCH.md",
+    "bytes": 6983,
+    "sha256": "30e0b61f28830d38e296d70b4efb65235b3a8f27fa7e82ca407eea0e0f29c82f",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/14_KOREAN_NLP_SOURCE_CORRECTION.md",
+    "bytes": 3946,
+    "sha256": "0903da487fd119de0b418a0b940178e6ce949944bfcde8f831a6998d5b91f987",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/15_NINETEEN_GROUP_RESEARCH_GAPS.json",
+    "bytes": 33344,
+    "sha256": "2848f5b971002e3971c5a56bbe37f51f48af5069063d2e78f51eef431983a2e8",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/16_DELIVERABLE_MANIFEST.json",
+    "bytes": 8232,
+    "sha256": "bc8f7a5c63e9ec20350e95734de0e54c0235bd914006cb9472ae1be221146d15",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/17_REA_PUBLIC_SAMPLE_RECONSTRUCTION.md",
+    "bytes": 7631,
+    "sha256": "a378cc898e0c2a2f3cf8d60a50bbf5420cce58bc618054683604503467bec449",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/18_REA_RECONSTRUCTION_MANIFEST.json",
+    "bytes": 4176,
+    "sha256": "af918716b6b737cf363c4468b684e018f66d87c8e708742e986a46ac435a3326",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/19_FIGMA_INLINE_COUNTEREXAMPLE.md",
+    "bytes": 1584,
+    "sha256": "14f4047a59099abaa9d50e88b76011394140e010d397a11656b0aebb617a8952",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/20_INLINE_COUNTEREXAMPLE_MANIFEST.json",
+    "bytes": 1102,
+    "sha256": "65eb5ec57980e76d689ce8831951bf7ec9f5a58431735704cbdd4ce782ddc097",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/21_MEMORY_RETRIEVAL_REFERENCE_RESEARCH.md",
+    "bytes": 7529,
+    "sha256": "f3eeaf092904be9dfbe2e542f8fe463c7791b581611b816fcefb54110ce5dfee",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/22_LANGUAGE_TASK_MATRIX.json",
+    "bytes": 32438,
+    "sha256": "ae3863048c3f322b099216ad6eef98d67f02d50567403ce48ff4f47d977cd6df",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/22_MULTILINGUAL_QUALITY_RESEARCH.md",
+    "bytes": 6403,
+    "sha256": "b32e6986c39d82c55b332b5e310f2d03e932cd4dbad6e5afad316a97f8f1766b",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/23_MEMORY_STATIC_SOURCE_EVIDENCE.json",
+    "bytes": 5577,
+    "sha256": "2490b55fbfc313b961301522d5a41cc1e5f7852eca460147f82c5d7114965c66",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_research_gap_closure_20261018/REPORT.md",
+    "bytes": 8321,
+    "sha256": "269285082a34ff68bdd671858643911c8948f5d01484b26a46837f964ed56f6a",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_recovery_20261018/reviewed_component/01_ORIGINAL_READING_FINDINGS.md",
+    "bytes": 6095,
+    "sha256": "7b2b7cda9233c7e07ea92c54ff39d006f1eba00146377332b1c3c8d9d62c111a",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_recovery_20261018/reviewed_component/02_RECOVERED_FILE_IDENTITIES.json",
+    "bytes": 6346,
+    "sha256": "19e92030be210e9c15fcab2b672bae5bf22d6ec8e65ff5987dfbcda9585ea103",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_recovery_20261018/reviewed_component/03_TOPIC_DATA_STRUCTURE_CHECK.json",
+    "bytes": 557,
+    "sha256": "eb23045ada4f3986619020240711356ad0189f70a7dc6a699cbad5275dd621c2",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "bytes": 109909,
+    "sha256": "8309d2173dbe5aa85c72732163e20e49f601feea17caa9b45429569752a5d560",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_recovery_20261018/reviewed_component/07_PRIVACY_AND_PRESERVATION.md",
+    "bytes": 816,
+    "sha256": "a7b886549d96fb0cb9794ad26ec2ab63d25332b95e65002b94f8a9bfc19ee4eb",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_recovery_20261018/reviewed_component/MANIFEST.json",
+    "bytes": 1754,
+    "sha256": "57ec1aded7870450cd198f61a47bca04e120565af9d83d039c5c7b9e77b6f040",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_recovery_20261018/reviewed_component/README.md",
+    "bytes": 1366,
+    "sha256": "cb26580821fe33e480aafb0a580850c0569e989448f1312f786ba278641d8d54",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_readthrough_20261018/01_ORIGINAL_READTHROUGH_AND_ADOPTION.md",
+    "bytes": 6161,
+    "sha256": "1d39d1e5c25892f05eaf31b21bd3f1150b336cca1c8fa2be3209cef9dc20c633",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_readthrough_20261018/02_PRIVACY_AND_READING_BOUNDARIES.md",
+    "bytes": 1407,
+    "sha256": "aaac076889e234cbd1f0f31d4e9b96bf4fb152ad4636a168916c744a89d5b9fc",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_readthrough_20261018/CURRENT_PLANNING_IDENTITIES.json",
+    "bytes": 915,
+    "sha256": "954be220907e7cb989a271edc5b68b84c8d3b8fc2df42f122800a8b929d44ef8",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_readthrough_20261018/MANIFEST.json",
+    "bytes": 2375,
+    "sha256": "03c4d2f808f8ca5b98b48312940b9ff4857b83b7d74ad09c4dbff56a4dcd0334",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_readthrough_20261018/README.md",
+    "bytes": 667,
+    "sha256": "592be4170480b5d618b5faef34a275c898cd8ef24692c50ae6531c5129bc7373",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_readthrough_20261018/SOURCE_IDENTITIES.json",
+    "bytes": 3143,
+    "sha256": "5984daf6d2a94bd90bf4073b0e05223f6f7d22174c3312e600ad943e231c44f6",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_readthrough_20261018/WORKBOOK_CHECKS.json",
+    "bytes": 19487,
+    "sha256": "661442ddf277b5de5142ff238cdd432c79e265634ffef0e1e5114f44698d8737",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "original_material_readthrough_20261018/WORKBOOK_EXTRACT.json",
+    "bytes": 94975,
+    "sha256": "14845b2befecf6c0eb1da8014669adeb172641074b71fe78ec0a351d550a0302",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "missing_originals_locator_20261018/reviewed_component/01_REPORT.md",
+    "bytes": 6297,
+    "sha256": "2f4bfba7a1f620bad195b0a293437330b6f8ba7f7aad6275ef839efd46250097",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "missing_originals_locator_20261018/reviewed_component/02_IDENTITIES_AND_READ_RANGE.json",
+    "bytes": 2961,
+    "sha256": "2176ffe2cd223cb7421c5d0932906ecc2c2f2a80c7de51047436606855a4e065",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "missing_originals_locator_20261018/reviewed_component/03_EXACT_MISSING_IDENTITIES.json",
+    "bytes": 7356,
+    "sha256": "654ebe158bdbfcf1544030e1a044a74cd6820bd2933165f7f5c4edddd306bf88",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "missing_originals_locator_20261018/reviewed_component/04_SEARCH_RECEIPTS.json",
+    "bytes": 4020,
+    "sha256": "96ea8c190d50112d93a8ad9e2b46f219008508f8c5e8368962f41f70747edd26",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "missing_originals_locator_20261018/reviewed_component/05_CAPABILITY_CHAPTER_REVIEW.md",
+    "bytes": 7990,
+    "sha256": "c6197159e3a4dd24c3ba2f525546c320c0dab163c3d19bbbc0e45e85f981f836",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "missing_originals_locator_20261018/reviewed_component/MANIFEST.json",
+    "bytes": 1866,
+    "sha256": "1e5297198c0863336b37240153d7b3c6582e1c3e89c9816ff603db52a1b361d8",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "missing_originals_locator_20261018/reviewed_component/README.md",
+    "bytes": 1783,
+    "sha256": "993f52995dfa3fd13c75767186d08a03516e6d063b1c0e7410894fc3dc7be7d1",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "pasted_adoption_readthrough_20261018/01_ADOPTION_AND_OPEN_MECHANISMS.md",
+    "bytes": 6574,
+    "sha256": "fc8faca94bbdaa130611a4540a7b2b5a22c4cc687742b39861acc06b784a0fc0",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "pasted_adoption_readthrough_20261018/MANIFEST.json",
+    "bytes": 1194,
+    "sha256": "17fb10915d83006c51fff2b210a346535e0818a52edd079c591d00275e585047",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "pasted_adoption_readthrough_20261018/README.md",
+    "bytes": 956,
+    "sha256": "2ab54e3812b25b503846950b7419a33f6c7e5d45c8125a07f8e600fd140f88b7",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "pasted_adoption_readthrough_20261018/SOURCE_READ_RANGES.json",
+    "bytes": 1261,
+    "sha256": "e06079c8cdc6ddab532333fa6f17328e82b635ffe2af187c9583f89b27cbe150",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "pasted_adoption_readthrough_20261018/UUID_SEARCH_RECEIPTS.json",
+    "bytes": 1158,
+    "sha256": "74c644dae6fee16d057863b5a7b6b060f4426d6af44e2a067f6af3f681ab4b3f",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "financial_source_research_20261018/01_REAL_FINANCIAL_FIELD_AND_REVISION_RESEARCH.md",
+    "bytes": 4942,
+    "sha256": "a839f9ab278618efbed6c4d601d820644feadcf6fc1f3d1fee0ea9189ccee2b1",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "financial_source_research_20261018/02_SOURCE_READING_LEDGER.md",
+    "bytes": 1525,
+    "sha256": "fa68aa05422a75959ad7177c15d09c4183695fa7602689c071610fe8494edd60",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "financial_source_research_20261018/DOWNLOAD_RECEIPT.json",
+    "bytes": 1331,
+    "sha256": "d31799de9cd11ec8ec8e9eef351070ed41abb88a4a957903034c094a07bb4d7b",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "financial_source_research_20261018/MANIFEST.json",
+    "bytes": 1621,
+    "sha256": "0d0fd98d05f31fce63acaf7c6189e050e37b38cbe637eba95b17dff0f76bb0d6",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "financial_source_research_20261018/README.md",
+    "bytes": 607,
+    "sha256": "d02a1d5c4d95767028b6c24d980e708d1430ba6b3ea5e363c1ffcd15b7f84790",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "financial_source_research_20261018/REPLAY_RESULTS.json",
+    "bytes": 522,
+    "sha256": "3edf3cc3963cacf6958654f7f0bf7a0dbb8a3879bfbe250ecc3f7e59fb9b35c8",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "financial_source_research_20261018/SELECTED_FACTS.json",
+    "bytes": 74542,
+    "sha256": "0ae206390a79538e801ee9a4122a9edc98348beac215a0ab1a491254a55c4cf4",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "brand_comparability_research_20261018/01_SEARCH_INTEREST_COMPARABILITY.md",
+    "bytes": 4157,
+    "sha256": "8666666675685b259803d9e55c54421f4d9d7efe6a2439017dc3fa659564cff7",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "brand_comparability_research_20261018/02_VINTAGE_AND_SCOPE_RESEARCH.md",
+    "bytes": 5433,
+    "sha256": "db2679cd7d4f3b17e33f344f120122b5d775c62e9c2d7771d5129259c2483896",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "brand_comparability_research_20261018/03_OFFICIAL_OBSERVATIONS.json",
+    "bytes": 1274,
+    "sha256": "12f6bc9db90c10bd95fd71e6b9e2c45a3806bab2e4f55ffe333d9911fdcc0d93",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "brand_comparability_research_20261018/04_FIXED_PLANNING_READBACK.json",
+    "bytes": 21612,
+    "sha256": "08f6268c560ddd4dd61835b82060cb740623f76310036243f1f2e6acf8da529d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "bytes": 399387,
+    "sha256": "18280cedfc831284135e425dd937704e1004d05592158e5666a086b87447b1e5",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "brand_comparability_research_20261018/06_SOURCE_READING_LEDGER.json",
+    "bytes": 2578,
+    "sha256": "37b68d24eb021e2d92a878a435967f9225a92fced2d363e29f079168c2ff158f",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "brand_comparability_research_20261018/MANIFEST.json",
+    "bytes": 1538,
+    "sha256": "842b3e23a00410137e6b6186aacad26ba0066eeef4ed67b527c8c935c0b7ff76",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "brand_comparability_research_20261018/README.md",
+    "bytes": 2430,
+    "sha256": "0f00436b4327fe08835564e847f193b729f463b7c3e3c7770308457497387a3c",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "media_pipeline_research_20261018/01_TIMING_INTERCHANGE_RESEARCH.md",
+    "bytes": 5754,
+    "sha256": "54201a8ed04d9d2857a5df0afca08f4237244f1f9d0ac93f4eb2124c6c785c4d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "media_pipeline_research_20261018/02_PODCAST_TIMECODE_PACKAGE_RESEARCH.md",
+    "bytes": 5338,
+    "sha256": "dd8c842fc33af2dd64f360499a73c72fb3d9b5120b0ae03c1a379c7b49d42074",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "bytes": 78327,
+    "sha256": "173d6e98bf4037ec0bd6aaedc173a2c363100d893ce51089b7408bac10b8d718",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "media_pipeline_research_20261018/04_LOCAL_SOURCE_EVIDENCE.json",
+    "bytes": 7403,
+    "sha256": "c58fcea6e3dffb605d7f0dfdf32d06a1f84decc6761dc60edaa3750f4bbeec41",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "media_pipeline_research_20261018/05_CURRENT_CALLER_SCOPE_CHECK.json",
+    "bytes": 789,
+    "sha256": "cbb498be1eb753359b59aa9c38fdef9772b8213d24c384f6f35cefd76de334f9",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "media_pipeline_research_20261018/MANIFEST.json",
+    "bytes": 2183,
+    "sha256": "c89d82d21384735072de110c08b6cacff9349a90ef2d8626742561bc9b8b10e9",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "media_pipeline_research_20261018/README.md",
+    "bytes": 1284,
+    "sha256": "81979597d7ca196060649b948e57356cad03fce58aa89bc67c3a0e7e45fc9b58",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "incremental_result_research_20261018/01_RESEARCH.md",
+    "bytes": 9067,
+    "sha256": "0bc5ce0069371b5ebccf24311e2c2ac8bc4c2592918555fe4161790e99cb00d7",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "incremental_result_research_20261018/MANIFEST.json",
+    "bytes": 3188,
+    "sha256": "ef6e8ffe0ddc10be7dc72b6809cfd47447b728cc6b73b4de2455cc8a1fd03513",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "incremental_result_research_20261018/README.md",
+    "bytes": 1151,
+    "sha256": "b8e5e6f9c50aa64e6ef93d9fc5ab1ec4b0548907845ed1c212778ddc5c638348",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "tts_attribution_research_20261018/01_LOCAL_TTS_RESEARCH.md",
+    "bytes": 6514,
+    "sha256": "5fe186b53c7db4e43884e2163c1d73e849e06a313154a84364c11147e36dbb06",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "tts_attribution_research_20261018/02_CREATOR_ATTRIBUTION_RESEARCH.md",
+    "bytes": 8501,
+    "sha256": "5455395445c9a5a70b47bd4bbd31a1e409251c513b3a618682ef99b7a9ef8d16",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "tts_attribution_research_20261018/MANIFEST.json",
+    "bytes": 3694,
+    "sha256": "ac4f6176e41c9e49db45d81715692f83c1f5305fdf5e2670ac1e9aaabd80675d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "tts_attribution_research_20261018/README.md",
+    "bytes": 1061,
+    "sha256": "9a15c1e58b77ad0964b2d3103cc0deb72be11d316087d468f2b1666cb7ea8d7d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "owned_ai_research_20261018/APPENDIX_PRODUCT_UNDERSTANDING.md",
+    "bytes": 14449,
+    "sha256": "cb3026fbeddfa5d11e3a04c10888a4cdfb2bf534b10c8381627ffafc4fcfd5a0",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "owned_ai_research_20261018/APPENDIX_SOURCE_MANIFEST.json",
+    "bytes": 2322,
+    "sha256": "141331129b21d36d0233805a657aa5be6b0863a7df0dda70c847206f2e6b6ca2",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "owned_ai_research_20261018/EXISTING_G_MAPPING.csv",
+    "bytes": 2979,
+    "sha256": "63168d1c3c436f86ba23c90476bfa9798616a79b7370c27c3a5f75b7ac0b10da",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "owned_ai_research_20261018/LICENSE_EVIDENCE_ADDENDUM.md",
+    "bytes": 1073,
+    "sha256": "125b6fe638f69f361cb5768a6c68a7b596eb63a96e176b78444ce35addc3ae7f",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "owned_ai_research_20261018/README.md",
+    "bytes": 407,
+    "sha256": "3c449a096e7ef966abe3b40f221ff299ab767409e8aeb756e54860f6f7ba4eba",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "owned_ai_research_20261018/REPORT.md",
+    "bytes": 17530,
+    "sha256": "2b4315ac3dac80e25e6c3b29ddaa68933849d078040010006b82e64a8c923edb",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "owned_ai_research_20261018/SOURCE_MANIFEST.json",
+    "bytes": 4177,
+    "sha256": "c7b94d2d80cab0120cd60aab1546ef7d9fdd24f6a86e088e7c0c0f0822f40de6",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/00_REUSED_OFFICIAL_BASELINE.md",
+    "bytes": 42615,
+    "sha256": "0095004563cea51b4f809d83ec4a3752358ab746f69b927aba508f5a0442be1c",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/01_PLATFORM_CAPABILITY_MATRIX.csv",
+    "bytes": 37449,
+    "sha256": "412d758126e69b196e792a5950eef1f1e1d593ee41e345bda3c29afdd99a1377",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/01_PLATFORM_CAPABILITY_MATRIX.json",
+    "bytes": 87654,
+    "sha256": "a570f03b4a6de495647f1691e07f70204c7d741075eb9c455cb64a2b291877c3",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/02_PLATFORM_MARKET_REVIEW.csv",
+    "bytes": 48230,
+    "sha256": "e592a9540fe00c77db13fa4a5c326f290a3e360cdbe0a844f6ea348ad9fcb54f",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/02_PLATFORM_MARKET_REVIEW.json",
+    "bytes": 112746,
+    "sha256": "abac3c4ee9141ad38d3247359e5dc145236d0a209cfa6523debf117943fdf58d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/03_ROUTE_ELIGIBILITY.json",
+    "bytes": 8277,
+    "sha256": "3b8dceb28698401feda2f1e9dedc578193dc5014d13810a4659abb8db64add47",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/04_ACCEPTANCE_CASES.json",
+    "bytes": 7957,
+    "sha256": "19b4a87bdb188d6d854330790bbe6e72b7c978a9a1aa92712e8e2c224823196e",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/05_OBSERVATION_CONTRACT_PROPOSAL.json",
+    "bytes": 1687,
+    "sha256": "ee4dea0758a3becb2c9e319efe4e59e680c4b53f2eaf05da0ba108b5258f4990",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/06_G2_17x19_CROSSWALK.csv",
+    "bytes": 538133,
+    "sha256": "53ae75a757aa6aaace6d4bb5453aeff48f8a44e7ed261d4cb88a275615f1ee70",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/06_G2_17x19_CROSSWALK.json",
+    "bytes": 872742,
+    "sha256": "4b52874fe150219f677b9231690b7417848d4d0b1088a6e701f94abf5434b830",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/07_G2_DYNAMIC_OTHER_ADAPTERS.json",
+    "bytes": 160568,
+    "sha256": "ad09dba42afb6134eb305547777203d0e179e451c84bbf2e773a82d0568ed9ce",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/G2_RECONCILIATION_APPENDIX.md",
+    "bytes": 7221,
+    "sha256": "4e200b33cd5294b8feea45b1f6e4b1568f27bdd23345dfeaba05d42dd2f364ae",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/G2_VALIDATION.json",
+    "bytes": 630,
+    "sha256": "199e230b995b7d064f80d1f130c6157028d4aceec936858f6f5da21dcb7d3119",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/README.md",
+    "bytes": 1525,
+    "sha256": "380401a5efd8d630f8d29b6234e72b3293a113854cbe61edca603b5b7f66e7a1",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/REPORT.md",
+    "bytes": 16430,
+    "sha256": "549479dfe23c730ebf34a8b3e0195fc87765b370b111960d90bf03c55d0aded5",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "platform_capability_research_20261018/VALIDATION.json",
+    "bytes": 355,
+    "sha256": "e15fd4ffeff3c7711f65890822d87976eeb5a38b6e449fd63824ed673ce2af60",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "creative_quality_research_20261018/01_ORIGINAL_CREATIVE_QUALITY_RESEARCH.md",
+    "bytes": 20901,
+    "sha256": "797aaaf0a5975473cf836b48057ceabed5877e562b22810a70342cc3893cd6be",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "creative_quality_research_20261018/02_SYNTHETIC_CREATIVE_DEMONSTRATION.md",
+    "bytes": 9878,
+    "sha256": "05d85e67544c14e6bfd7036ca7f6758c7eedb55a0c0e2cb27ba13b38cd15771f",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "creative_quality_research_20261018/03_MANIFEST.json",
+    "bytes": 1858,
+    "sha256": "651bafa86e90fa6febf8db50f455e8f70d81d76029413f41de9a8b3acfc84a60",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "domain_analysis_research_20261018/01_DOMAIN_ANALYSIS_RESEARCH.md",
+    "bytes": 24465,
+    "sha256": "1710ae9a464565ae7118d667acf5376b8ec81480ee57b08cd5fbd1a2c47ed714",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "domain_analysis_research_20261018/02_source_manifest.json",
+    "bytes": 2794,
+    "sha256": "2d05f9ffaf8e9a3cbb1c607158afaec0d6155359d7b69629fa9953062bda0883",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "domain_analysis_research_20261018/04_synthetic_results.json",
+    "bytes": 3950,
+    "sha256": "14e8ef0c06c4c523a15c763d52d7d4af793f125a69ec16d58821a3d6b1c6328f",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "domain_analysis_research_20261018/05_validation_receipt.json",
+    "bytes": 655,
+    "sha256": "d160c4faa24742d6aae67a2fb038a9ef492aefce2a89a83bebc7128c34a7ee22",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "competitor_research_20261018/01_official_competitor_benchmark.md",
+    "bytes": 17760,
+    "sha256": "86bd37e7e6a13414c23eab949c736d2cc0e636c8f7dc5bb30d66256be5419a4d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "math_research_completion_20261018/MANIFEST.json",
+    "bytes": 6899,
+    "sha256": "f37cc66e9c5a2ee2abc321ea6f7a901ab99200b4e05c922843b4905978420cb6",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "math_research_completion_20261018/PRODUCT_SOURCE_READBACK.json",
+    "bytes": 696,
+    "sha256": "3c04ab54358cfa2f9cc46c89b495875eaf5d804aae6145237602115f1103e96b",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "math_research_completion_20261018/READING_LEDGER.json",
+    "bytes": 30104,
+    "sha256": "b3ab7d3d281f610d03c6c3c4dee90ec3bca499850ec2f7f61fc180fe0892c2a7",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "math_research_completion_20261018/REPORT.md",
+    "bytes": 6239,
+    "sha256": "96896c4cd6d02dccb3500f3c4447359164dc1a7a97dc9591037f14ee8f43140c",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "slashui_research_20261018/01_SLASHUI_LUMENIS_RESEARCH.md",
+    "bytes": 14082,
+    "sha256": "66d43bd39debeb93cb5933a77320124cec4fccf0a6fd76a57d30736d7c2cb745",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "slashui_research_20261018/02_SOURCE_EVIDENCE.json",
+    "bytes": 28455,
+    "sha256": "99c6172ad282f7f73a1e7d9682d9770b0557ea72c45bb732455bc2629827a32d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "slashui_research_20261018/03_EXECUTIVE_SUMMARY.md",
+    "bytes": 1257,
+    "sha256": "1b8dbbcbed30dcd7f59f8954db0326b9a0e34430f174f5c837e8d26462aef062",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "frontend_pdf_upgrade_20261018/frozen_review_v009_20261017T2350Z/LUMENIS_COMPLETE_FRONTEND_v009_REVIEW.pdf",
+    "bytes": 2149952,
+    "sha256": "e5f5987de39101a52bab57a5fb02eb4a8593f8cecdc674aaa417643866b8a39e",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "frontend_pdf_upgrade_20261018/frozen_review_v009_20261017T2350Z/MANIFEST.json",
+    "bytes": 3364,
+    "sha256": "c5f5d8664ce5e20fbcd578fd5777066f140fe55c447aec3c360cef7e4064d54c",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "frontend_pdf_upgrade_20261018/frozen_review_v009_20261017T2350Z/README.md",
+    "bytes": 706,
+    "sha256": "080527b4e82aa79a926a6db88bcce7561b16a8362fd40788df95b6fb279c486d",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "frontend_pdf_upgrade_20261018/frozen_review_v009_20261017T2350Z/REVIEW_FREEZE_RECEIPT.json",
+    "bytes": 1413,
+    "sha256": "2cc8665d37c761b0ba3495e9d1cc0024e11a8a82956b8e5faae37bd87efce808",
+    "status_note": "索引/字节校验不等本轮全文语义阅读或运行通过"
+  },
+  {
+    "path": "math_revision_status_research_20261018/01_REVISION_STATUS_RESEARCH.md",
+    "bytes": 5557,
+    "sha256": "0a81208e70a8b5bdde8193722040b6b3be0b783c9aa622cf8670bd4fa4e6e5e4",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "math_revision_status_research_20261018/02_PAPER_STATUS_LEDGER.json",
+    "bytes": 60996,
+    "sha256": "5a173acd9f066eadffa6af00b4b88c1240654492b63780a5892adac116833742",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "math_revision_status_research_20261018/03_PER_PAPER_VERSION_STATUS.md",
+    "bytes": 36718,
+    "sha256": "78ea48b420d567b2a50ec691e9f4e320f76df1865ecadbb51efe23ae2354ebc8",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "math_revision_status_research_20261018/MANIFEST.json",
+    "bytes": 19185,
+    "sha256": "b4a631e815aa2a2e63c24a2542976626efbfa664d1a5f732dc8fafc168c0ad95",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "math_revision_status_research_20261018/README.md",
+    "bytes": 551,
+    "sha256": "a8aa3c2e0f5c754b48bcbe613cefe5daa7bc8f4094597b250c4aad1162f40dbc",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "model_dependency_gap_research_20261018/ADDITIONAL_SOURCE_MANIFEST.json",
+    "bytes": 862,
+    "sha256": "e300270daf8eea52130dd379cdceee6424e274c91b4e4ee187e3c893d9bbe7b6",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "model_dependency_gap_research_20261018/AGPL_FILE_MAP.json",
+    "bytes": 388167,
+    "sha256": "201b2684645494a60e44888c4a1e3c141a9dbe5aae0089166d7212e25961cb18",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "model_dependency_gap_research_20261018/FILE_MANIFEST.json",
+    "bytes": 11773,
+    "sha256": "79123a433404c294d01edf5d612a511614dc3467987c29de208f3bb9d2204fb9",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "model_dependency_gap_research_20261018/PRODUCT_SOURCE_MANIFEST.json",
+    "bytes": 885,
+    "sha256": "7177ab7711366394186200a82c0012d7be80030db0e7bc3047030198c009ee37",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "model_dependency_gap_research_20261018/QA.json",
+    "bytes": 916,
+    "sha256": "4b59d2542085939f2b110a62d65a936be664fcbe172814e565fef5c0b41052c0",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "model_dependency_gap_research_20261018/README.md",
+    "bytes": 520,
+    "sha256": "f67bad9377ab415f25c054da163db808d1e5af32665755d0df51f4b457f4d943",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "model_dependency_gap_research_20261018/READ_FAILURES.json",
+    "bytes": 606,
+    "sha256": "c22adb976b4a4d8a999571c749b4193059cff4e51664fdacc86155c161b04fb8",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "model_dependency_gap_research_20261018/REPORT.md",
+    "bytes": 14015,
+    "sha256": "c0dd4e4be8ebd860e86585bb4740db85abf62c4e80b4c180900a54666030e564",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "model_dependency_gap_research_20261018/SOURCE_MANIFEST.json",
+    "bytes": 6204,
+    "sha256": "86571a3afe97985ce57b0624642f7443161c91672259cadd9d5ce10319d22ca8",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "platform_evidence_gap_research_20261018/01_REPORT.md",
+    "bytes": 14385,
+    "sha256": "a31989d57e351ae9cfcd9e254110f89ecc91f1d0117ffe4bdad4d398a1d545f2",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "platform_evidence_gap_research_20261018/02_CELL_DELTA.json",
+    "bytes": 3431,
+    "sha256": "46d751a10d91cabd0ecf6182a1d718d8e803d6f913e76738d36e3280bebd152f",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "platform_evidence_gap_research_20261018/03_SOURCE_READING_LEDGER.json",
+    "bytes": 31344,
+    "sha256": "7897b19a8c5601e0589b2ccdfa6a1e793e3c08892513cf06c0ac7f80aca3a99c",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "platform_evidence_gap_research_20261018/04_ACCEPTANCE_CASES.json",
+    "bytes": 3889,
+    "sha256": "ddc0a08aa5a5f66eceb7515c540eaee81d73f663f4479460a8c8337ab98d4288",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "platform_evidence_gap_research_20261018/05_INPUT_REUSE_MANIFEST.json",
+    "bytes": 2217,
+    "sha256": "76e7b30fd48744e112d988cffa468900a4956ff3568696e68cbb846c5966c227",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "platform_evidence_gap_research_20261018/06_READ_FAILURES.json",
+    "bytes": 880,
+    "sha256": "958d72210edf21680241bb90502d6e598984b2fde30fb6a3bf418d24803400ef",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "platform_evidence_gap_research_20261018/07_VALIDATION.json",
+    "bytes": 253,
+    "sha256": "43aef17481a7ed450b8162cc1e96ba8984f7836b2660c239afe0eb7bfd0d7390",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "platform_evidence_gap_research_20261018/MANIFEST.json",
+    "bytes": 14127,
+    "sha256": "05fd936e10ffa1294586222244e2a4796d11a746d02712da28b23b5122496288",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "platform_evidence_gap_research_20261018/README.md",
+    "bytes": 383,
+    "sha256": "fb78862f7b6f7c11062467a494e327c094dd0fa16fc10719ee731b8693f61a66",
+    "status_note": "本轮新增冻结研究；主报告全文已读，其余为文件身份/引用，不继承产品运行验收"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/README.md",
+    "bytes": 562,
+    "sha256": "9bf9e9d9ab7f49f8443403f1b45f61a991f5a362929411bbec2e14e4801effc6",
+    "status_note": "v003身份核验；v11本地冻结且官方保全待回执，非用户验收"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/VERSION_DIFF.md",
+    "bytes": 1450,
+    "sha256": "985e9a816f3bd81e66bbebfc95d4940d08e3e6485418368f215ddcb04625fbea",
+    "status_note": "v003身份核验；v11本地冻结且官方保全待回执，非用户验收"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/ACTUAL_QA.md",
+    "bytes": 1263,
+    "sha256": "19794659bdbd57f99749869771c0fcd623ce491658e59820e7b82c60c9e2fe17",
+    "status_note": "v003身份核验；v11本地冻结且官方保全待回执，非用户验收"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/FINAL_PAGE_QA.json",
+    "bytes": 65986,
+    "sha256": "7355d6d17564278d0f3335c64eb780d255edbbbb5dd1a60c0505ceb8a0da4cdf",
+    "status_note": "v003身份核验；v11本地冻结且官方保全待回执，非用户验收"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/structural-preservation.json",
+    "bytes": 310,
+    "sha256": "bd3fbf24081427d002e9d195b05c9daaf9463d6c8d9f178f44dee18504f4c0e1",
+    "status_note": "v003身份核验；v11本地冻结且官方保全待回执，非用户验收"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/MANIFEST.json",
+    "bytes": 16634,
+    "sha256": "c9653a90ac15b803899d4d3aed6068ce25c72e3873250f99bde9120a339b8415",
+    "status_note": "v003身份核验；v11本地冻结且官方保全待回执，非用户验收"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/third_party_review_v11_20261018/delivery/序境当前第三方接入研究审核报告_依赖补核v11.docx",
+    "bytes": 236447,
+    "sha256": "279fc9f1c0bd4914da45e236d998fa74281dcd4c554365ae68f4b276e5643ed6",
+    "status_note": "v003身份核验；v11本地冻结且官方保全待回执，非用户验收"
+  },
+  {
+    "path": "[LOCAL_WORKSPACE]/task_backup_control_20261017/LATEST_RESEARCH_0025_RECEIPT.json",
+    "bytes": 1017,
+    "sha256": "1f208b94a3074c3ef28a7ed082edbb53d2d43c3c7eadf9457a07cb182a0c46ec",
+    "status_note": "v003身份核验；v11本地冻结且官方保全待回执，非用户验收"
+  }
+]

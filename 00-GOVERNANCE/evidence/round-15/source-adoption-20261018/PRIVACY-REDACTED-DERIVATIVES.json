@@ -1,0 +1,272 @@
+{
+  "credentials_rotated": false,
+  "files": [
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "08445297eeb52f2452124cb8142661838db3888581cc771c1d05e69ab9ea7535",
+      "original_sha256": "7586d1c80258635be255620122974f60d04476876078e89a6da29e1c1719ab57",
+      "path": "00-GOVERNANCE/evidence/round-06/current-owner-guard-20261002/isolated-verification.json"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "060c7e80050cbff89f8870b79f39250f7fbf783ac0cc30cc42aa68255cc0d7ac",
+      "original_sha256": "f7ecfa4b7dc6ce819cc5b4124d858b6e18a404e83750eede37476ec200c6f09c",
+      "path": "00-GOVERNANCE/evidence/round-07/internal-creation-source-20261003/publication-gates.json"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "f8d33dba1e8da2946bc91398e098cc125a10d129bd52dcca8cf98f951afc52e5",
+      "original_sha256": "011b2b8b7a2648ef4551c8e52fa1a21e002a38a93dff73ed3de033d3125b62da",
+      "path": "00-GOVERNANCE/evidence/round-07/internal-creation-source-20261003/source-evidence.json"
+    },
+    {
+      "classification": [
+        "CONCRETE_TEST_HOSTNAME"
+      ],
+      "derived_sha256": "c1a3bf13e55d9f5b1db223141bb58c579bade74f25b8f1b58ce874bb88256dd6",
+      "original_sha256": "00266094afab5809f77d0ce5fe2a5981a9599b907c4eba307a039690c1b78e41",
+      "path": "00-GOVERNANCE/evidence/round-07/owned-source-followon-20261002/formation-178-current-d92.junit.xml"
+    },
+    {
+      "classification": [
+        "CONCRETE_TEST_HOSTNAME"
+      ],
+      "derived_sha256": "d8291f9d402110570d8d5206a20f3556250e57b7abee64b248a250f571074a18",
+      "original_sha256": "7c70ac0637b990ef7ff73603b4732906b3e97269c37423ea8c3ba4c8af918e12",
+      "path": "00-GOVERNANCE/evidence/round-07/owned-source-followon-20261002/speech-42-prior-candidate.junit.xml"
+    },
+    {
+      "classification": [
+        "CONCRETE_TEST_HOSTNAME",
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "813859e6947ef7688c6a7945db8c9579ea9e83fd641de3435398f8c08135b5e6",
+      "original_sha256": "fff8cd02122f994f305dea3d472cdab91243cfe1b37eaf3ce460ec4e1123dc68",
+      "path": "00-GOVERNANCE/evidence/round-07/owned-training-phase-callback-20261003/history-repair-junit.xml"
+    },
+    {
+      "classification": [
+        "CONCRETE_TEST_HOSTNAME",
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "bc27dad0afb4b9d0ff1f805eee64c39788a581afbc210ccc61583936d5df7f7e",
+      "original_sha256": "443730ba82d76844f1735691bf9379f4feda3ed8ae77ce18043abe489e3b310d",
+      "path": "00-GOVERNANCE/evidence/round-07/owned-training-phase-callback-20261003/initial-343-junit.xml"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "58346b28ae437f6144d9d3df705346ec2d6e2f31b40475460ee06700a5283622",
+      "original_sha256": "4e53a1cc34c235450b97ccea64e9e180161698a44e47eee140f969312790bd87",
+      "path": "00-GOVERNANCE/evidence/round-07/owned-training-phase-callback-20261003/initial-343-pytest.log"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "57434de1bb211ca3a41478007af4924032a51db794822968bb40a4e5e9984ffa",
+      "original_sha256": "a046e304d3aa46d916f9c9fd982acd45240ffdc37fbcaa767c44653b194335a4",
+      "path": "00-GOVERNANCE/evidence/round-08/global-discover-rules-20261003/clip-replacement-gates.json"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "757212783a477e32ef9421a9f4b913fd18462f420c2c57249ea45fc8cba58d69",
+      "original_sha256": "1f78a3624e4dc7624e12842cfe1f6f3cc017d08efb6e2f41b947eb045a2c1e43",
+      "path": "00-GOVERNANCE/evidence/round-08/global-discover-rules-20261003/communication-storyboard-gates.json"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "c96b09b58ef2ebafbf7160e15ce8c6f162b28f1c170800051bee2c248f6ddaf8",
+      "original_sha256": "622330a643cd6cd1ae6b748651a3d3db50e3208c6dcebadc1a96905b696903ef",
+      "path": "00-GOVERNANCE/evidence/round-08/global-discover-rules-20261003/continuity-rule-gates.json"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "18c6fa86091146aa055e0df64fc3073aa5dbd39a3004db922b198117a68d4461",
+      "original_sha256": "13b02039c92ecb9ef812ef7f0ed3f63fafe48e78a960c7a463a0fbf76b29bbf3",
+      "path": "00-GOVERNANCE/evidence/round-08/global-discover-rules-20261003/publication-gates.json"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "7406f6cb1461ba20121eed340f06524de2afdd5fedaa10bec3e691e1420a75b7",
+      "original_sha256": "7c337095370ecac1cab0c6b4318e9d5bf05127cfe88c58592dddf095069001e6",
+      "path": "00-GOVERNANCE/evidence/round-08/global-discover-rules-20261003/retired-rule-gates.json"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "f10e72e82386593543bbfc6a0f57152457387678275d65bb3cf1304dad841f89",
+      "original_sha256": "cd8fa1caf5d2d152ca1b378003b19a41c2185823cd99b3c4edbd293e454d9ddc",
+      "path": "00-GOVERNANCE/evidence/round-08/global-discover-rules-20261003/sh01-continuity-gates.json"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "5162826e4bbcc772e2e4123d3c5d2cd59ce73df594f6dff3720360b6101e5598",
+      "original_sha256": "0ccb1d9efc17d888934fb849be1d587a622b0598df0123ff6148a282c768e9f6",
+      "path": "00-GOVERNANCE/evidence/round-14/ROUND-14-BROWSER-ENTRY-TRUTH-2026-09-27.json"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "219579ab236d4c55edb72b2879e339efb65557ca8684d2f9f8662c4ef512fa7c",
+      "original_sha256": "e834d6d52f06508a00b08bbcf16c2ff03e94edeb489d00ea10488a0acd34577b",
+      "path": "00-GOVERNANCE/evidence/round-14/ROUND-14-MOBILE-WORKSPACE-REFINEMENT-2026-09-27.json"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "7dc560d2fcfecda733c9cf14fbf795305ece4327900e90fad81152a1d464f9ed",
+      "original_sha256": "a222ddc2cd88ffdc32e3bd3da4eea6dbe0f531dd6af71ee80b282f29a1a3362c",
+      "path": "00-GOVERNANCE/evidence/round-14/ROUND-14-RESTRAINED-NAVIGATION-2026-09-28.receipt.json"
+    },
+    {
+      "classification": [
+        "CONCRETE_TEST_HOSTNAME"
+      ],
+      "derived_sha256": "603bc0322068267fcb13f97c7b1041162d1631bfe5ce97a8e67650f908316c41",
+      "original_sha256": "aab0e8db723483524062d10b01d52a50f3d7e293ce84d18b22bf5ee15dadc9c1",
+      "path": "00-GOVERNANCE/evidence/round-15/direct-repair-20261004/final-related-regression.xml"
+    },
+    {
+      "classification": [
+        "HISTORICAL_GATE_CREDENTIAL"
+      ],
+      "derived_sha256": "8005cac76efd2dced0807cf38efb3d2601cd3eebe1f85895982e27ddb7faa77c",
+      "original_sha256": "bffd03b3506e560bfa7a8e9fc04082afd8410f610780c1f2c8564e9fd240b323",
+      "path": "docs/7版方案x当前源码_深度匹配审计报告.docx"
+    },
+    {
+      "classification": [
+        "PERSONAL_RECOVERY_ANSWERS"
+      ],
+      "derived_sha256": "8356a82c40e33351559078ed4e44654188a30e71059b4d5bf11e6c6c9537d7a3",
+      "original_sha256": "0df95701bca4997716389a66220e4e174a6a2237234ef0c5e432929d8827a405",
+      "path": "docs/V4升级模块_旁路测试报告.md"
+    },
+    {
+      "classification": [
+        "HISTORICAL_OWNER_CREDENTIAL"
+      ],
+      "derived_sha256": "f0cdcf4f5221279176347ab5a284de89d6be752137531faf9aa377fbc67ca231",
+      "original_sha256": "3e513c140e575ee93fec4ab277155e552e9a23beeb5c45b01c5165d00721fccf",
+      "path": "docs/V4接入_密钥登录与采集前置清单_20260830.md"
+    },
+    {
+      "classification": [
+        "HISTORICAL_GATE_CREDENTIAL"
+      ],
+      "derived_sha256": "c8a665bfc5a419fda139ae52cd2591322257d7ba771426b0ff1b3261e97b859a",
+      "original_sha256": "0d046b8a91fa9963200cbc4cd32f3f1b695d7cf58084fe11e3464015262a829a",
+      "path": "docs/Z-Brand双产品线最终基线_V1.0.docx"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_PATH_OR_ATTACHMENT_LOCATION"
+      ],
+      "derived_sha256": "8fb7e47d694148faea9d630f0c0c260d0183eeb2f2246a0afba98ed9d735544d",
+      "original_sha256": "bd83629f6955d50871bfd203cdb1eb02277e7b9cbc81e944acc5ed8374fef897",
+      "path": "output/pdf/LUMENIS_ROUND_01_DUAL_SOURCE_AUDIT_MULTI_SURFACE_PROPOSAL_2026-09-21.pdf"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_PATH_OR_ATTACHMENT_LOCATION"
+      ],
+      "derived_sha256": "028192431cb8005199a1cc6790d449281984172c3c8d106a35220b8181d1c3a7",
+      "original_sha256": "af411653b909e79f337d0816f0e60eb4cb4ce81d8ff56337d5cbb5db2d0c28c2",
+      "path": "plan_document.docx"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "f32d1bab1a309ca3ded4f1a4bad77321f5b68407827e13eb167ca3ce833bd508",
+      "original_sha256": "f4140ef566b8cc9392e4fafdb148edae75f14ce89f0559e21eb39fcb299cc56d",
+      "path": "scripts/batch_hardcoded_cleanup.py"
+    },
+    {
+      "classification": [
+        "LEGACY_OWNER_LABEL_COLLIDING_WITH_OLD_KEY"
+      ],
+      "derived_sha256": "828c741f5c8f796e04117e0f08b0d17125e8fd27f64edbf84aef6d0948fbb75b",
+      "original_sha256": "e0781b91d01d57f7c368b8abc61bc2460ea981814223bb544170cbe501a8c01b",
+      "path": "scripts/data_candidates/subject_registry_seed_tkh_20261013.manifest.json"
+    },
+    {
+      "classification": [
+        "LEGACY_OWNER_LABEL_COLLIDING_WITH_OLD_KEY"
+      ],
+      "derived_sha256": "5c485ea777a1fa598e88318a164ab76af150bf37d11346cfbe93689d71c1d8e9",
+      "original_sha256": "0e95677e32e9d261738a4c5899bc040cf159523f02136a7a029f7a66cd84b3c8",
+      "path": "scripts/data_candidates/tkh_directory_20261013.manifest.json"
+    },
+    {
+      "classification": [
+        "HISTORICAL_GATE_CREDENTIAL"
+      ],
+      "derived_sha256": "8c2b5dd90e25266d664987cc1c8e8da6741ed85e852c38c4996db1a73275ac5e",
+      "original_sha256": "373fd33804030898667b17aacdd5e491f718dfbd9085ff6d73747ccb2a84044e",
+      "path": "tests/audit_probe_1.py"
+    },
+    {
+      "classification": [
+        "PERSONAL_RECOVERY_ANSWERS"
+      ],
+      "derived_sha256": "93d85a1a5cce12e5474b730299b0473f39f7a36215a96cc262bf8ef71d7b5ff3",
+      "original_sha256": "90848084d781f02c0aef29b158815998e1fe53ccb5e340b01f719713da417155",
+      "path": "tests/lumenis_smoke.py"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "64434f68d8322ce701f71f540b01ed48b5d69816d75683bfd3fa96e765b868a3",
+      "original_sha256": "7a923ad279725c1f215e09e1361d12b2c68ea5ff2c9106c669fb265528512635",
+      "path": "tests/test_repository_registry.py"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "73e802af9e4e4784ee84ee0f569cc72b1fb9e801524bb36ee9c1f2ba49faacce",
+      "original_sha256": "4779ee6f85f97feb0b9bf4ad106f2c7359744012427b8d940e9cb12048a45385",
+      "path": "vendor/colorama-0.4.6.dist-info/RECORD"
+    },
+    {
+      "classification": [
+        "UNNECESSARY_PERSONAL_USER_PATH"
+      ],
+      "derived_sha256": "4b827f31551771e81d98c90fd7a8b6c054966d1d9b34584ed3064166d199e1ef",
+      "original_sha256": "98bb014938bb4aec74f926179cf2d7de00ddf77c30fd4dc677441aae94f20459",
+      "path": "vendor/qrcode-8.2.dist-info/RECORD"
+    }
+  ],
+  "historical_remote_exposure_removed": false,
+  "private_patch_published": false,
+  "raw_originals_published": false,
+  "schema": "privacy-redacted-historical-derivatives-v1",
+  "scope": "32 minimal privacy derivatives; original historical run results/counts/timings preserved",
+  "status": "APPLIED_INDEPENDENTLY_REVIEWED_DERIVATIVES",
+  "independent_review_receipt_sha256": "140490eb611763177c0968ebaea30c001c17bdcb56e2958f50a520eb2f8e5bc5",
+  "full_current_source_security_admission": "PENDING_FINAL_FREEZE",
+  "recorded_utc": "2026-10-18T21:53:14.900554+00:00"
+}

@@ -1,0 +1,14 @@
+{
+  "synthetic": true,
+  "actual_http": true,
+  "records": [
+    {
+      "path": "/api/event-graph/events",
+      "status": 403,
+      "body": {
+        "code": "DOMAIN_REQUIRED",
+        "ok": false
+      }
+    }
+  ]
+}

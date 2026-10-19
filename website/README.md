@@ -1,10 +1,13 @@
-# LUMENIS Public Website｜序境官网
+# OEVIRA Public Website｜寰意官网
 
-This package contains the public, static Astro website for introducing LUMENIS
+Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canonical naming authority](../00-GOVERNANCE/CANONICAL-NAMING-AND-TWIN-SYNC.md) governs this rename. Technical identifiers, package names, environment variables, commands and source paths retain their compatibility spelling; dated records below preserve their original names and evidence.
+The approved brand domain is `oevira.com`; the positioning line is “An Open Space for Thought and Creation.” This documentation does not configure DNS, a public origin or deployment, or establish that the destination is live. Existing verified-origin and unavailable-link rules below still apply.
+
+This package contains the public, static Astro website for introducing OEVIRA
 and its product boundaries. It is separate from the Product Core-backed Web Workspace
 in [`../app/`](../app/README.md).
 
-本目录是序境面向公众的静态 Astro 官网，用于介绍产品及其边界；它与
+本目录是寰意面向公众的静态 Astro 官网，用于介绍产品及其边界；它与
 [`../app/`](../app/README.md) 中的 Web Workspace 相互独立。
 
 ## Local development｜本地开发
@@ -101,11 +104,11 @@ Constitution define the product and experience boundaries.
 第二套产品或设计权威。产品范围由仓库的 Product Architecture 定义，体验边界由
 唯一的 Experience Constitution 定义。
 
-The website introduces LUMENIS; it does not own Product Truth, accounts,
+The website introduces OEVIRA; it does not own Product Truth, accounts,
 workflow execution, Evidence, Permission, data collection or provider keys.
 Do not imply that a link, static page or successful build proves the linked
 workspace or service is available.
 
-官网负责介绍序境，不拥有 Product Truth、账户、工作流执行、Evidence、Permission、
+官网负责介绍寰意，不拥有 Product Truth、账户、工作流执行、Evidence、Permission、
 数据采集或 Provider 密钥。不得暗示链接、静态页面或构建成功能够证明目标工作区或
 服务当前可用。

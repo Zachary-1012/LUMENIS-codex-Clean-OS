@@ -1,0 +1,64 @@
+[
+  {
+    "path": "agent_memory/semantic.py",
+    "sha256": "c0ac22fd78db586268a3e2e84d50e944b5f67788c9b0d6f95826bbae82f48bca",
+    "fixed_main": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "spans": [
+      {
+        "function": "search_assets",
+        "start_line": 32,
+        "end_line": 68,
+        "source": "    def search_assets(self, query: str, sub_library: Optional[str] = None,\n                      tags: Optional[List[str]] = None,\n                      limit: int = 30) -> List[Dict[str, Any]]:\n        \"\"\"按关键词 + 标签检索情报资产。\"\"\"\n        if not self.enabled or not self.db_path:\n            return []\n        tokens = [t for t in re.split(r\"[\\s,，。！？、/|:：;；]+\", query.lower()) if len(t) >= 2]\n        try:\n            conn = get_db_connection(self.db_path)\n            try:\n                sql = \"SELECT * FROM intelligence_assets WHERE knowledge_status IN ('FACT','VERIFIED') AND admission_status='ADMITTED'\"\n                params: list = []\n                if sub_library:\n                    sql += \" AND sub_library=?\"\n                    params.append(sub_library)\n                sql += \" ORDER BY updated_at DESC LIMIT 500\"\n                rows = conn.execute(sql, params).fetchall()\n\n                scored: List[Tuple[int, Dict[str, Any]]] = []\n                for row in rows:\n                    d = dict(row)\n                    text = \" \".join(str(d.get(k, \"\")) for k in\n                                    (\"title\", \"summary\", \"tags\", \"sub_library\")).lower()\n                    score = 0\n                    if tokens:\n                        score = sum(2 for t in tokens if t in text)\n                    if tags:\n                        row_tags = (d.get(\"tags\") or \"\").lower()\n                        score += sum(3 for t in tags if t.lower() in row_tags)\n                    if score > 0 or not tokens:\n                        scored.append((score, d))\n                scored.sort(key=lambda x: x[0], reverse=True)\n                return [r for _, r in scored[:limit]]\n            finally:\n                conn.close()\n        except Exception:\n            return []"
+      },
+      {
+        "function": "get_knowledge_context",
+        "start_line": 152,
+        "end_line": 163,
+        "source": "    def get_knowledge_context(self, query: str, limit: int = 5) -> str:\n        \"\"\"为 AI prompt 生成知识上下文（检索 top-N 资产摘要）。\"\"\"\n        assets = self.search_assets(query, limit=limit)\n        if not assets:\n            return \"\"\n        lines = [\"【语义记忆检索结果】\"]\n        for a in assets:\n            title = a.get(\"title\", \"未知\")\n            summary = (a.get(\"summary\") or \"\")[:200]\n            tags = a.get(\"tags\", \"\")\n            lines.append(f\"- [{a.get('sub_library','')}] {title}: {summary} (tags: {tags})\")\n        return \"\\n\".join(lines)"
+      }
+    ]
+  },
+  {
+    "path": "agent_memory/base.py",
+    "sha256": "fac5a19ef022a20fdfb18cda24901a2eac5d75d0f918cdf694f536d096c5b9be",
+    "fixed_main": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "spans": [
+      {
+        "function": "query",
+        "start_line": 103,
+        "end_line": 109,
+        "source": "    def query(self, filters: Optional[Dict[str, Any]] = None,\n              limit: int = 50) -> List[MemoryRecord]:\n        if not self.enabled:\n            return []\n        results = self._query(filters or {}, limit)\n        now = time.time()\n        return [r for r in results if not r.is_expired(now)][:limit]"
+      },
+      {
+        "function": "_store",
+        "start_line": 135,
+        "end_line": 137,
+        "source": "    def _store(self, record: MemoryRecord) -> bool:\n        self._in_memory[record.key] = record\n        return True"
+      },
+      {
+        "function": "_retrieve",
+        "start_line": 139,
+        "end_line": 140,
+        "source": "    def _retrieve(self, key: str) -> Optional[MemoryRecord]:\n        return self._in_memory.get(key)"
+      },
+      {
+        "function": "_query",
+        "start_line": 142,
+        "end_line": 163,
+        "source": "    def _query(self, filters: Dict[str, Any], limit: int) -> List[MemoryRecord]:\n        results = []\n        for rec in self._in_memory.values():\n            match = True\n            for fk, fv in filters.items():\n                if fk == \"keyword\":\n                    text = json.dumps(rec.value, ensure_ascii=False).lower()\n                    if str(fv).lower() not in text:\n                        match = False\n                        break\n                elif fk == \"source\":\n                    if rec.source != fv:\n                        match = False\n                        break\n                elif fk in rec.metadata:\n                    if rec.metadata[fk] != fv:\n                        match = False\n                        break\n            if match:\n                results.append(rec)\n        results.sort(key=lambda r: r.timestamp, reverse=True)\n        return results[:limit]"
+      },
+      {
+        "function": "_forget",
+        "start_line": 165,
+        "end_line": 166,
+        "source": "    def _forget(self, key: str) -> bool:\n        return self._in_memory.pop(key, None) is not None"
+      }
+    ]
+  },
+  {
+    "path": "agent_memory/working.py",
+    "sha256": "01caa49fa5531f69096445a0031394c52e770fabf3929cd295efc6fb2944aab8",
+    "fixed_main": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "spans": []
+  }
+]

@@ -42,13 +42,13 @@ def test_cooldown_advice_blocks_new():
 def test_schedule_state_mapping():
     assert schedule_state("pause_until_cooldown") == RESOURCE_GUARDED
     assert schedule_state("ramp_up") == RECOVERY
-    assert schedule_state("schedule_normal") == HIGH_EFFICIENCY
-    assert schedule_state(None) in (HIGH_EFFICIENCY, NORMAL)
+    assert schedule_state("schedule_normal") == NORMAL
+    assert schedule_state(None) == RESOURCE_GUARDED
 
 
-def test_empty_lifecycle_no_stop():
-    assert should_stop_schedule(None) is False
-    assert should_stop_schedule("") is False
+def test_empty_lifecycle_stops_until_known():
+    assert should_stop_schedule(None) is True
+    assert should_stop_schedule("") is True
 
 
 # --- collector._feed_risk_engine 接线冒烟 ---

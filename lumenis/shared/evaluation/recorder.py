@@ -188,6 +188,7 @@ def record_evaluation(
     db_path: Optional[str] = None,
     evaluated_at: Optional[str] = None,
     evaluation_id: Optional[str] = None,
+    connection: Optional[sqlite3.Connection] = None,
 ) -> EvaluationRecord:
     """记录一条评估结果，自动判断状态并持久化。
 
@@ -229,8 +230,15 @@ def record_evaluation(
     if evaluated_at:
         record.evaluated_at = evaluated_at
 
-    conn = _get_connection(db_path)
+    if connection is not None and db_path is not None:
+        raise ValueError("external connection cannot be combined with db_path")
+    owned_connection = connection is None
+    conn = _get_connection(db_path) if owned_connection else connection
+    if not owned_connection and not conn.in_transaction:
+        raise ValueError("external evaluation connection requires an active transaction")
     try:
+        if source == "synthetic_interpretability" and not _is_synthetic_interpretability_record(conn, record.to_dict()):
+            raise ValueError("synthetic diagnostic source requires exact signed owner evidence")
         existing = None
         if evaluation_id:
             existing = conn.execute(
@@ -256,9 +264,11 @@ def record_evaluation(
                  record.metric_value, record.threshold, record.status,
                  record.evaluated_at, record.source, record.evidence_ref, record.metadata),
             )
-        conn.commit()
+        if owned_connection:
+            conn.commit()
     finally:
-        conn.close()
+        if owned_connection:
+            conn.close()
 
     return record
 
@@ -412,7 +422,8 @@ def get_evaluation_summary(
             params.append(since)
         query += " ORDER BY evaluated_at DESC"
         rows = conn.execute(query, params).fetchall()
-        records = [project_current_assurance(conn, dict(row)) for row in rows]
+        records = [project_current_assurance(conn, dict(row)) for row in rows
+                   if not _is_synthetic_interpretability_record(conn, dict(row))]
     finally:
         conn.close()
 
@@ -527,3 +538,48 @@ try:
     init_db()
 except Exception as _e:
     print(f"[SharedEvaluation] init_db warning: {_e}", flush=True)
+
+
+def _is_synthetic_interpretability_record(conn, record):
+    """Only exact signed synthetic-owner records are separate from business ratings.
+
+    A self-reported source label cannot remove an unrelated business failure.
+    Invalid/tampered rows stay in normal summaries rather than disappearing.
+    """
+    if record.get("source") != "synthetic_interpretability":
+        return False
+    import re
+    reference = record.get("evidence_ref")
+    if type(reference) is not str or re.fullmatch(r"app_evidence_records:[1-9][0-9]*", reference) is None:
+        return False
+    try:
+        from lumenis.shared.evidence import store
+        from lumenis.shared.evaluation.ai import project_synthetic_interpretability_metrics
+        row = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (int(reference.split(":")[1]),)).fetchone()
+        if row is None:
+            return False
+        row = dict(row)
+        if (row.get("source") != "owned_ai_gateway"
+                or row.get("feature_id") != "SYNTHETIC_INTERPRETABILITY_PACKET"
+                or row.get("version") != "synthetic-interpretability:v1"
+                or row.get("status") != "derived" or row.get("result") != "RECORDED"
+                or not store.verify_evidence_record_integrity(row)):
+            return False
+        outputs = json.loads(row["outputs_json"])
+        if outputs.get("runtime_verification") != "CAPTURE_ONLY_NOT_REEXECUTED":
+            return False
+        projected = project_synthetic_interpretability_metrics(outputs["packet"],
+            evidence_ref=reference, packet_sha256=outputs["packet_sha256"])
+        for item in projected:
+            if (record.get("metric_name") == item["metric_name"]
+                    and record.get("dimension") == item["dimension"]
+                    and record.get("metric_value") == item["metric_value"]
+                    and json.loads(record.get("metadata", "{}")) == item["metadata"]
+                    and json.loads(record.get("threshold", "{}")) == json.loads(threshold_to_str(
+                        item["pass_threshold"], item["warn_threshold"], False))
+                    and record.get("status") == judge_status(item["metric_value"],
+                        item["pass_threshold"], item["warn_threshold"], False)):
+                return True
+    except (KeyError, TypeError, ValueError, sqlite3.Error):
+        return False
+    return False

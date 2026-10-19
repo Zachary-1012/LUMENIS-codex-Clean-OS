@@ -184,26 +184,82 @@ def test_root_stream_module_moved_to_single_owner():
     assert "lumenis.system.browser.runtime import screencast_stream" in app_src
 
 
-def test_no_screencast_stream_module_outside_owner():
-    out = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "--", "*.py"],
-                         cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=True)
+def _verified_snapshot_paths(root, manifest_path, expected_sha256):
+    """Verify an externally pinned inventory against the full actual tree, not vice versa."""
+    import hashlib
+    root, manifest_path = Path(root).resolve(), Path(manifest_path).resolve()
+    assert not manifest_path.is_relative_to(root), "MANIFEST_MUST_BE_EXTERNAL"
+    raw = manifest_path.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == expected_sha256, "MANIFEST_PIN_MISMATCH"
+    expected = json.loads(raw)
+    assert isinstance(expected, dict) and expected, "EMPTY_SOURCE_MANIFEST"
+    actual = {}
+    for path in root.rglob('*'):
+        assert not path.is_symlink(), "SOURCE_SYMLINK_NOT_ALLOWED"
+        if path.is_file():
+            actual[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+    assert actual == expected, "SOURCE_TREE_MANIFEST_MISMATCH"
+    return sorted(name for name in actual if name.endswith('.py'))
+
+
+def _screencast_offenders(root, paths):
     offenders = []
-    for rel in out.stdout.splitlines():
+    for rel in paths:
         p = Path(rel)
         if p.parts[:1] in {("tests",), (".codex",), (".venv",), ("node_modules",), ("intelligence_library",)}:
             continue
         if Path(*p.parts[:4]) == OWNER:
             continue
-        full = ROOT / p
-        if not full.is_file():
-            continue
-        try:
-            text = full.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            continue
+        text = (root / p).read_text(encoding="utf-8", errors="strict")
         if "Page.startScreencast" in text or "text/event-stream" in text and "screencastFrame" in text:
             offenders.append(rel)
-    assert offenders == []
+    return offenders
+
+
+def test_no_screencast_stream_module_outside_owner():
+    import os
+    if (ROOT / '.git').exists():
+        out = subprocess.run(["git", "ls-files", "-z", "-co", "--exclude-standard", "--", "*.py"],
+                             cwd=ROOT, capture_output=True, check=True)
+        paths = sorted({path.decode("utf-8", errors="strict")
+                        for path in out.stdout.split(b"\0") if path})
+    else:
+        # Both values are supplied by the external runner; a mutable manifest alone is insufficient.
+        paths = _verified_snapshot_paths(ROOT, os.environ['LUMENIS_VALIDATION_SOURCE_MANIFEST'],
+                                         os.environ['LUMENIS_VALIDATION_SOURCE_MANIFEST_SHA256'])
+    assert _screencast_offenders(ROOT, paths) == []
+
+
+def _scan_fixture(tmp_path):
+    import hashlib
+    root = tmp_path / 'source'; root.mkdir()
+    (root / 'safe.py').write_text('value = 1\n')
+    manifest = tmp_path / 'manifest.json'
+    manifest.write_text(json.dumps({'safe.py': hashlib.sha256((root/'safe.py').read_bytes()).hexdigest()}))
+    return root, manifest, hashlib.sha256(manifest.read_bytes()).hexdigest()
+
+
+@pytest.mark.parametrize('mutation', ['added', 'changed', 'deleted', 'manifest_forged'])
+def test_snapshot_scan_cannot_hide_unmanifested_or_tampered_files(tmp_path, mutation):
+    import hashlib
+    root, manifest, pin = _scan_fixture(tmp_path)
+    assert _verified_snapshot_paths(root, manifest, pin) == ['safe.py']
+    if mutation == 'added': (root/'rogue.py').write_text('Page.startScreencast')
+    elif mutation == 'changed': (root/'safe.py').write_text('Page.startScreencast')
+    elif mutation == 'deleted': (root/'safe.py').unlink()
+    else:
+        (root/'safe.py').write_text('Page.startScreencast')
+        manifest.write_text(json.dumps({'safe.py': hashlib.sha256((root/'safe.py').read_bytes()).hexdigest()}))
+    with pytest.raises(AssertionError): _verified_snapshot_paths(root, manifest, pin)
+
+
+def test_snapshot_scan_detects_forbidden_owner_even_when_inventory_is_valid(tmp_path):
+    import hashlib
+    root, manifest, _ = _scan_fixture(tmp_path)
+    (root/'safe.py').write_text('Page.startScreencast')
+    manifest.write_text(json.dumps({'safe.py': hashlib.sha256((root/'safe.py').read_bytes()).hexdigest()}))
+    paths = _verified_snapshot_paths(root, manifest, hashlib.sha256(manifest.read_bytes()).hexdigest())
+    assert _screencast_offenders(root, paths) == ['safe.py']
 
 
 def test_core_session_stream_routes_registered_and_allowlisted():

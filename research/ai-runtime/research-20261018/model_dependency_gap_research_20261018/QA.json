@@ -1,0 +1,26 @@
+{
+  "scope": "static archive/text/hash verification only; no imported third-party code",
+  "checks": [
+    {
+      "check": "wheel_hash",
+      "file": "unsloth-2026.9.12-py3-none-any.whl",
+      "expected": "0b0a8d5694c693ff7a5183b1df073a2b045f503193d76a0beec1696d1fef6013",
+      "actual": "0b0a8d5694c693ff7a5183b1df073a2b045f503193d76a0beec1696d1fef6013",
+      "passed": true
+    },
+    {
+      "check": "wheel_hash",
+      "file": "unsloth_zoo-2026.9.8-py3-none-any.whl",
+      "expected": "740aacbb70f6f735ef367905cd753d321b3088aaff404ebfb4f1cdf9f62e56e8",
+      "actual": "740aacbb70f6f735ef367905cd753d321b3088aaff404ebfb4f1cdf9f62e56e8",
+      "passed": true
+    },
+    {
+      "check": "transformers_exact_pin_conflict",
+      "product": "4.56.2",
+      "tts": "4.57.3",
+      "passed": true,
+      "meaning": "static incompatibility of same-environment exact constraints, not runtime failure"
+    }
+  ]
+}

@@ -240,7 +240,7 @@ def build_benchmark(category, tonality, circle):
             ]}
 
 
-def analyze_pitch(text, brand_hint="", n_ideas=3, hotspot=""):
+def analyze_pitch(text, brand_hint="", n_ideas=3, hotspot="", *, target_date="", market="CN"):
     """主入口：方案需求文本 → 拆解分析。"""
     category = detect_category(text)
     circle = detect_circle(text)
@@ -255,7 +255,7 @@ def analyze_pitch(text, brand_hint="", n_ideas=3, hotspot=""):
         assumptions["tonality"] = generation_tonality
     signals = {"topics": extract_creative_leads(text), "sentiment": "UNKNOWN",
                "negative_rate": None, "risk_events": None, "circle": generation_circle,
-               "hotspot": hotspot, "volume_notes": None}
+               "hotspot": hotspot, "volume_notes": None, "target_date": target_date, "market": market}
     ideas = generate_ideas(detect_brand(text, brand_hint), category, signals, n_ideas, generation_tonality)
     ideas["meta"]["assumed_brief_fields"] = assumptions
     ideas["meta"]["observed_signals_state"] = "NOT_COLLECTED"
@@ -264,12 +264,14 @@ def analyze_pitch(text, brand_hint="", n_ideas=3, hotspot=""):
     # 营销节点适配（芥子→须弥：当月/当天节点 + 情感主题 + 建议调性）
     try:
         from scripts.marketing_calendar import suggest_hotspot
-        marketing = suggest_hotspot(datetime.date.today().strftime("%Y-%m-%d"), category)
+        marketing = suggest_hotspot(target_date, category, market=market)
     except Exception:
         marketing = None
     return {
         "extracted": {
             "brand": detect_brand(text, brand_hint),
+            "target_date": target_date or None,
+            "market": market,
             "category": category,
             "budget": detect_budget(text),
             "circle": circle,
@@ -327,7 +329,7 @@ def _extract_pptx_text(content):
     return "\n".join(parts)
 
 
-def analyze_pitch_file(path, brand_hint="", n_ideas=3, hotspot=""):
+def analyze_pitch_file(path, brand_hint="", n_ideas=3, hotspot="", *, target_date="", market="CN"):
     """从文件导入方案需求：支持 txt/md/json/csv/pptx/docx。"""
     ext = os.path.splitext(path)[1].lower()
     supported = {".txt", ".md", ".json", ".csv", ".pptx", ".docx"}
@@ -359,7 +361,7 @@ def analyze_pitch_file(path, brand_hint="", n_ideas=3, hotspot=""):
             raise ValueError("文本文件包含二进制内容")
     if not text.strip():
         raise ValueError("无法从 %s 抽取文本（文件为空或无可读文本）" % ext)
-    r = analyze_pitch(text, brand_hint, n_ideas, hotspot)
+    r = analyze_pitch(text, brand_hint, n_ideas, hotspot, target_date=target_date, market=market)
     r["source_file"] = path
     r["input_provenance"] = {
         "kind": "file_import_input",

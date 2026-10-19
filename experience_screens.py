@@ -131,13 +131,42 @@ def _notes_table(title: str, notes: List[Dict[str, Any]], limit: int = 12,
                    columns=cols, rows=rows)
 
 
-def _platform_collection_section(*, consumer: str = "CTH") -> Dict[str, Any]:
+def _platform_collection_section(*, consumer: str = "CTH", scoped_material=None) -> Dict[str, Any]:
     """Build the shared platform-intelligence surface for CTH and BMP.
 
     CTH owns the collector and its Evidence/Canonical writes.  BMP receives
     the same read-only view as a market-intelligence consumer; this helper
     deliberately does not create a second BMP collector or truth table.
     """
+    if consumer == "BMP":
+        # BMP may consume authorized source observations, never the collector's
+        # unscoped web_runs or account health. Reuse the existing Canonical read.
+        if not isinstance(scoped_material, dict):
+            raise ValueError("BMP_SCOPED_PLATFORM_MATERIAL_REQUIRED")
+        records = scoped_material["records"]
+        groups = {}
+        for record in records:
+            platform = record.get("source_platform") or "UNKNOWN"
+            group = groups.setdefault(platform, {"platform": platform,
+                "platform_id": platform, "observed_source_count": 0,
+                "source_references": [], "can_attempt": False,
+                "manual_collection_enabled": False, "form_selectable": False})
+            group["observed_source_count"] += 1
+            group["source_references"].append({"canonical_id": record["canonical_id"],
+                "source_id": record.get("source_id"),
+                "scope_evidence": record["scope_evidence"]})
+        incomplete = bool(scoped_material.get("truncated") or scoped_material.get("rejected_count"))
+        return section("platforms", "partial" if incomplete else STATE_READY if records else STATE_EMPTY,
+            title="平台来源 · 当前品牌范围只读消费",
+            description="仅显示当前授权范围内有签名来源依据的记录；来源计数不是市场洞察或采集成功率。",
+            consumer="BMP", collection_owner="CTH", items=list(groups.values()),
+            can_trigger=False, endpoint="", source_endpoint="", manual_only=True,
+            read_only=True, external_write=False, product_will_not_publish=True,
+            source_count=len(records), count_complete=not incomplete,
+            rejected_count=scoped_material.get("rejected_count", 0),
+            truncated=bool(scoped_material.get("truncated")),
+            collection_runtime={"state": "UNKNOWN", "reason": "COLLECTOR_RUN_SCOPE_NOT_VERIFIED"},
+            coverage="NOT_VERIFIED", source_freshness="UNKNOWN")
     try:
         from lumenis.system.collector.adapters.secondary_collection import get_collection_surface
 
@@ -292,6 +321,10 @@ def _curated(v: Any) -> List[Dict[str, Any]]:
 def _events_items(events: List[Dict[str, Any]], limit: int = 6) -> List[Dict[str, Any]]:
     out = []
     for e in (events or [])[:limit]:
+        # Event identity and Shared Evidence identity are separate namespaces.
+        raw_ref = e.get("scope_evidence_ref")
+        evidence_ref = str(raw_ref) if type(raw_ref) is int or isinstance(raw_ref, str) else ""
+        evidence_ref = f"EV-{evidence_ref}" if evidence_ref.isascii() and evidence_ref.isdigit() and int(evidence_ref) > 0 else None
         out.append({
             "time": str(e.get("event_date") or e.get("last_seen") or "")[5:16] or "—",
             "date": str(e.get("first_seen") or "")[:10],
@@ -299,7 +332,10 @@ def _events_items(events: List[Dict[str, Any]], limit: int = 6) -> List[Dict[str
             "desc": (e.get("summary") or "")[:120],
             "level": _LV.get(e.get("risk_level") or "low", "low"),
             "tags": [f"提及 {e.get('mention_count', 0)}", f"来源 {e.get('source_count', 1)}"],
-            "evidence": f"EV:{e.get('event_id') or e.get('id') or 'UNKNOWN'}",
+            "event_id": e.get("event_id") or e.get("id"),
+            "evidence": evidence_ref,
+            "evidence_ref": evidence_ref,
+            "evidence_state": "REFERENCED" if evidence_ref is not None else "UNKNOWN",
         })
     return out
 
@@ -460,19 +496,27 @@ def _event_screen_material(binding, domain, event_limit, risk_limit=0):
     }, allow_global=True)
     events = db.get_events_curated(event_limit, scope=scope)
     risk = []
+    coverage = {"source_truncated": False, "rejected_sources": 0}
     if risk_limit:
         source_read = db.get_scoped_event_source_rows(
             scope, source_types=("note", "web_mention"), limit=5000)
-        if source_read.get("truncated") or source_read.get("rejected_count"):
-            raise ValueError("EVENT_SOURCE_COVERAGE_INCOMPLETE")
-        risk = [row for row in source_read["sources"]
-                if row.get("risk_level") in {"high", "critical"}][:risk_limit]
-    return events, risk
+        candidates = [row for row in source_read["sources"]
+                      if row.get("risk_level") in {"high", "critical"}]
+        rejected = source_read.get("rejected_count")
+        source_complete = source_read.get("truncated") is False and type(rejected) is int and rejected == 0
+        risk_truncated = len(candidates) > risk_limit
+        risk = candidates[:risk_limit]
+        coverage = {"source_truncated": source_read.get("truncated"),
+                    "rejected_sources": rejected, "source_read_complete": source_complete,
+                    "risk_read_complete": source_complete and not risk_truncated,
+                    "risk_truncated": risk_truncated, "risk_observed_count": len(candidates),
+                    "risk_returned_count": len(risk)}
+    return events, risk, coverage
 
 
 def _build_cth04(*, binding=None) -> Dict[str, Any]:
     """事件与事件关系：真实事件列表；关系图需图关系数据，缺则诚实 blocked。"""
-    events, _risk = _event_screen_material(binding, "CTH", 20)
+    events, _risk, coverage = _event_screen_material(binding, "CTH", 20)
     items = _events_items(_curated(events))
     kpis = [
         metric("cth04.events", "已策展事件", value=len(items), state=STATE_READY,
@@ -481,184 +525,311 @@ def _build_cth04(*, binding=None) -> Dict[str, Any]:
                icon="trend", note="关系图需要事件关联边表（mention/event_link），当前无独立关系口径",
                source="BLOCKED: event relationship edge table"),
     ]
-    blocked = [_block("cth04.graph", "BLOCKED_BY_EXTERNAL_DEPENDENCY", "需事件关系边数据")]
+    graph_state = "PERMISSION_NOT_AVAILABLE"
+    graph_data = None
+    try:
+        from experience_runtime import _shared_work_actor_scope
+        from event_graph import read_scoped_graph
+        actor, scope = _shared_work_actor_scope("read")
+        graph_data = read_scoped_graph(actor=actor, scope=scope)
+        graph_state = "available"
+    except (ValueError, PermissionError):
+        # Public source observations and actor-owned graph work have separate
+        # read rights. A denied private projection must not hide legal sources.
+        pass
+    kpis[1] = metric("cth04.graph", "当前账户范围关系边", value=len(graph_data["relations"]) if graph_data is not None else None,
+        state=STATE_READY if graph_data is not None else STATE_NOT_COLLECTED, icon="trend",
+        source="event_graph.read_scoped_graph", note="用户声明与自动推断分别标记；关系不自动证明因果")
     ev_sec = section("events", STATE_READY if items else STATE_EMPTY, title="事件列表（真实）", items=items)
     sections = [_head("CTH-04"), section("kpis", STATE_READY, items=kpis), ev_sec]
-    return _envelope("CTH-04", sections, blocked=blocked)
+    if graph_data is not None:
+        rows=[{"source":r["source_event_id"],"target":r["target_event_id"],"relation_type":r["relation_type"],
+               "claim_type":r["evidence"]["claim_type"],"causality_verified":False} for r in graph_data["relations"]]
+        sections.append(section("table",STATE_READY if rows else STATE_EMPTY,title="已保存关系与推断",columns=[
+            {"label":"来源","key":"source"},{"label":"目标","key":"target"},
+            {"label":"关系","key":"relation_type"},{"label":"依据类型","key":"claim_type"}],rows=rows))
+    return _envelope("CTH-04", sections, truth={"coverage":coverage,"graph_state":graph_state,
+        "graph_rejected":graph_data["rejected"] if graph_data else None,"legacy_graph_scope":"UNKNOWN"})
 
 
-def _build_cth05() -> Dict[str, Any]:
-    """舆情日历：真实近 14 日按天负面/高风险序列。"""
-    labels, neg, high = days_labels_series(14)
-    total_neg, total_high = sum(neg), sum(high)
-    kpis = [
-        metric("cth05.neg14", "近14日负面", value=total_neg, state=STATE_READY,
-               icon="risk", source="database.get_stats_by_date_range"),
-        metric("cth05.high14", "近14日高风险", value=total_high, state=STATE_READY,
-               icon="event", source="database.get_stats_by_date_range"),
-    ]
-    chart = section("chart", STATE_READY, kind="line", title="近 14 日舆情日历趋势",
-                    sub="按天现算，不补点、不平滑",
-                    series=[{"name": "负面", "data": neg, "color": "var(--lum-c-danger,#c0563f)"},
-                            {"name": "高风险", "data": high, "color": "var(--lum-c-info,#4FC4E8)"}],
-                    labels=labels,
-                    legend=[{"label": "负面", "color": "var(--lum-c-danger,#c0563f)"},
-                            {"label": "高风险", "color": "var(--lum-c-info,#4FC4E8)"}])
-    sections = [_head("CTH-05"), section("kpis", STATE_READY, items=kpis), chart]
-    return _envelope("CTH-05", sections)
+def _cth_temporal_screen(screen_id: str, *, binding, authorize=None) -> Dict[str, Any]:
+    """Project the existing domain metric reader; never manufacture aggregate Evidence.
+
+    temporal_metrics is the complete typed derived snapshot. Its source Evidence
+    remains in contributions, while snapshot_sha256 pins the computation only.
+    Missing publication/classification/coverage stays null, not an invented zero.
+    """
+    from alert_engine import read_cth_temporal_alerts
+    from lumenis.shared.database import get_repository
+
+    end = _dt.date.today()
+    start = end - _dt.timedelta(days=13)
+    with get_repository().connection(read_only=True) as connection:
+        result = read_cth_temporal_alerts(
+            connection, start_date=start.isoformat(), end_date=end.isoformat(),
+            authorize=authorize if callable(authorize) else lambda: binding,
+        )
+    fields = (("negative", "负面"), ("high", "高风险")) if screen_id == "CTH-05" else (
+        ("total", "声量"), ("negative", "负面"), ("high", "高风险"),
+    )
+    state = result["state"]
+    kpis = [metric(screen_id.lower() + "." + key, "近14日" + label,
+                   value=result["totals"][key]["value"],
+                   state=result["totals"][key]["state"], icon="trend",
+                   source="已核验来源的原生发布时间统计") for key, label in fields]
+    chart = section("chart", state, kind="line", title="近14日已收录资料",
+                    labels=[day["date"] for day in result["days"]],
+                    series=[{"name": label, "metric": key,
+                             "data": [day[key]["value"] for day in result["days"]]}
+                            for key, label in fields],
+                    note="仅统计获准收录资料；空缺不补零，收录样本不代表整体市场。")
+    response = _envelope(screen_id, [_head(screen_id), section("kpis", state, items=kpis), chart],
+                         truth={"data_state": state, "coverage": result["coverage"],
+                                "source_freshness": result["source_freshness"]})
+    response["temporal_metrics"] = result
+    mode = result["binding"]["canonical_scope"]
+    response["global_binding" if mode == "GLOBAL_ALL" else "focus_binding"] = result["binding"]
+    response["trend_metadata"] = {
+        "numerator": "所选原生发布时间内的已收录资料数量",
+        "denominator": "计数，不使用市场总体分母",
+        "time_window": start.isoformat() + " / " + end.isoformat(),
+        "subject": "GLOBAL/ALL" if mode == "GLOBAL_ALL" else result["binding"]["subject_id"],
+        "source": "已获准资料", "freshness": result["source_freshness"],
+        "recipe": result["recipe"], "snapshot_sha256": result.get("snapshot_sha256"),
+    }
+    return response
 
 
-def _build_cth06() -> Dict[str, Any]:
-    """负面与用户/评论反馈：真实负面记录。"""
-    import database as db
-
-    neg = _safe(db.get_negative_comments, 40, default=[])
-    rows = neg if isinstance(neg, list) else []
-    kpi = metric("cth06.negative", "负面反馈条数", value=len(rows), state=STATE_READY,
-                 icon="risk", source="database.get_negative_comments")
-    tbl = _notes_table("负面 / 用户反馈（真实）", rows, 20)
-    sections = [_head("CTH-06"), section("kpis", STATE_READY, items=[kpi]), tbl]
-    return _envelope("CTH-06", sections)
+def _build_cth05(*, binding=None, authorize=None) -> Dict[str, Any]:
+    return _cth_temporal_screen("CTH-05", binding=binding, authorize=authorize)
 
 
-def _build_cth07() -> Dict[str, Any]:
-    """趋势分析：真实近 14 日三序列（总/负面/高风险）。"""
-    import database as db
+def _cth_source_material(binding, *, sentiment=None, risk_levels=None, offset=0):
+    """Read source-backed CTH records using the existing Canonical owner."""
+    from canonical_data import list_scoped_canonical
+    from lumenis.shared.database import get_repository
 
-    labels: List[str] = []
-    totals, negs, highs = [], [], []
-    today = _dt.date.today()
-    for back in range(13, -1, -1):
-        d = today - _dt.timedelta(days=back)
-        st = _safe(db.get_stats_by_date_range, d.strftime("%Y-%m-%d"), d.strftime("%Y-%m-%d"), default={})
-        labels.append(d.strftime("%m-%d"))
-        totals.append(int(st.get("total", 0)) if isinstance(st, dict) and not _is_err(st) else 0)
-        negs.append(int(st.get("negative", 0)) if isinstance(st, dict) and not _is_err(st) else 0)
-        highs.append(int(st.get("high_risk", 0)) if isinstance(st, dict) and not _is_err(st) else 0)
-    kpis = [
-        metric("cth07.total", "近14日声量", value=sum(totals), state=STATE_READY,
-               icon="trend", source="database.get_stats_by_date_range"),
-        metric("cth07.neg", "近14日负面", value=sum(negs), state=STATE_READY,
-               icon="risk", source="database.get_stats_by_date_range"),
-    ]
-    chart = section("chart", STATE_READY, kind="line", title="声量 / 负面 / 高风险趋势",
-                    sub="按天现算",
-                    series=[{"name": "总声量", "data": totals, "color": "var(--lum-text-2,#8a8f98)"},
-                            {"name": "负面", "data": negs, "color": "var(--lum-c-danger,#c0563f)"},
-                            {"name": "高风险", "data": highs, "color": "var(--lum-c-info,#4FC4E8)"}],
-                    labels=labels,
-                    legend=[{"label": "总声量", "color": "var(--lum-text-2,#8a8f98)"},
-                            {"label": "负面", "color": "var(--lum-c-danger,#c0563f)"},
-                            {"label": "高风险", "color": "var(--lum-c-info,#4FC4E8)"}])
-    sections = [_head("CTH-07"), section("kpis", STATE_READY, items=kpis), chart]
-    return _envelope("CTH-07", sections)
+    if (not isinstance(binding, dict) or binding.get("contract") != "lumenis.scope-read-binding.v1"
+            or binding.get("domain_id") != "CTH" or binding.get("product_id") != "CTH"
+            or binding.get("read_allowed") is not True or binding.get("scope_verified") is not True
+            or binding.get("canonical_scope") not in {"GLOBAL_ALL", "FOCUS"}):
+        raise PermissionError("CTH_SOURCE_BINDING_REQUIRED")
+    focused = binding["canonical_scope"] == "FOCUS"
+    if focused != bool(binding.get("subject_id")):
+        raise PermissionError("CTH_SOURCE_SCOPE_INVALID")
+    with get_repository().connection(read_only=True) as connection:
+        result = list_scoped_canonical(connection, product_id="CTH",
+                                       subject_id=binding.get("subject_id"), limit=100,
+                                       source_level=True, sentiment=sentiment,
+                                       risk_levels=risk_levels, offset=offset)
+    return result
+
+
+def _cth_view_scope(binding):
+    return {"mode": binding["canonical_scope"], "domain_id": "CTH", "product_id": "CTH",
+            "subject_id": binding.get("subject_id"), "scope_verified": True,
+            "global_all_granted": binding.get("global_all_granted") is True}
+
+
+def _cth_record_evidence(record, binding):
+    proof = record["scope_evidence"]
+    integrity = proof["integrity"]
+    if integrity.get("verified") is not True or integrity.get("lineage_verified") is not True:
+        raise ValueError("CTH_SOURCE_LINEAGE_UNVERIFIED")
+    return {"canonical_ref": "evidence:canonical:" + str(proof["id"]),
+            "canonical": True, "read_allowed": True, "quote": record.get("title") or "",
+            "captured_at": record.get("captured_at"), "scope": _cth_view_scope(binding),
+            "stored_scope": proof.get("stored_scope"),
+            "integrity": {**integrity, "status": "verified", "version": str(integrity.get("integrity_version"))}}
+
+
+def _cth_bound_response(screen_id, sections, binding, *, truth=None):
+    response = _envelope(screen_id, sections, truth=truth)
+    response["binding"].update({**binding, "context_mode": binding["canonical_scope"],
+                                "evidence_lineage": "verified"})
+    response["global_binding" if binding["canonical_scope"] == "GLOBAL_ALL" else "focus_binding"] = dict(binding)
+    return response
+
+
+def _cth_source_offset(offset):
+    if offset is None:
+        from flask import has_request_context, request
+        raw = request.args.get("offset", "0") if has_request_context() else "0"
+        if not raw.isascii() or not raw.isdigit():
+            raise ValueError("CTH_SOURCE_OFFSET_INVALID")
+        offset = int(raw)
+    if type(offset) is not int or offset < 0:
+        raise ValueError("CTH_SOURCE_OFFSET_INVALID")
+    return offset
+
+
+def _build_cth06(*, binding=None, offset=None) -> Dict[str, Any]:
+    offset = _cth_source_offset(offset)
+    result = _cth_source_material(binding, sentiment="negative", offset=offset)
+    rows = []
+    for record in result["records"]:
+        if record.get("sentiment") != "negative":
+            continue
+        proof = record["scope_evidence"]
+        evidence = _cth_record_evidence(record, binding)
+        projection = {"contract": "lumenis.shared.experience-row-projection", "version": 2,
+                      "read_allowed": True, "scope": _cth_view_scope(binding),
+                      "canonical_reference": record["canonical_id"],
+                      "stored_scope": proof.get("stored_scope"),
+                      "evidence": {"canonical_reference": evidence["canonical_ref"],
+                                   "evidence_id": str(proof["id"]), "source_id": proof["source_id"]},
+                      "integrity": proof["integrity"]}
+        rows.append({"id": record["canonical_id"], "title": record.get("title") or "未命名资料",
+                     "date": record.get("publish_datetime"), "platform": record.get("source_platform"),
+                     "sentiment": record.get("sentiment"), "risk": record.get("risk_level"),
+                     "category": "unclassified", "analysis_state": "stored_labels_not_reverified",
+                     "subject_id": record.get("subject_id"), "read_allowed": True,
+                     "scope_mode": binding["canonical_scope"], "canonical_scope": binding["canonical_scope"],
+                     "projection": projection})
+    unknown = result["unknown_sentiment_count"]
+    partial = bool(result.get("truncated") or result.get("rejected_count") or unknown)
+    state = "partial" if partial else STATE_READY if rows else STATE_EMPTY
+    response = _cth_bound_response("CTH-06", [_head("CTH-06"),
+        section("table", state, title="已收录负面反馈", rows=rows)], binding,
+        truth={"coverage": "UNKNOWN", "unknown_classification_count": unknown,
+               "read": {key: value for key, value in result.items() if key != "records"},
+               "classification_provenance": "stored_canonical_labels; analysis_correctness_not_verified"})
+    return response
+
+
+def _build_cth07(*, binding=None, authorize=None) -> Dict[str, Any]:
+    return _cth_temporal_screen("CTH-07", binding=binding, authorize=authorize)
 
 
 def _build_cth08(*, binding=None) -> Dict[str, Any]:
     """案例库 / 案例分析：真实高风险笔记 + 已策展事件。"""
-    events, risk = _event_screen_material(binding, "CTH", 10, 20)
+    events, risk, coverage = _event_screen_material(binding, "CTH", 10, 20)
     kpi = metric("cth08.cases", "高风险候选案例", value=len(risk), state=STATE_READY,
                  icon="risk", source="database.get_scoped_event_source_rows")
     tbl = _notes_table("高风险案例（真实）", risk, 14)
     ev = section("events", STATE_READY if _curated(events) else STATE_EMPTY, title="已策展事件",
                  items=_events_items(_curated(events)))
     sections = [_head("CTH-08"), section("kpis", STATE_READY, items=[kpi]), tbl, ev]
-    return _envelope("CTH-08", sections)
+    return _envelope("CTH-08", sections, truth={"coverage": coverage, "counts_are_returned_observations": True})
 
 
-def _build_cth09() -> Dict[str, Any]:
-    """风险中心与决策看板：真实风险笔记 + Canonical 风险指数。"""
-    import database as db
-    from lumenis.shared.reporting import daily as daily_report
-
-    risk = _safe(db.get_high_risk_notes, 10, default=[])
-    summ = _safe(daily_report.generate_today_summary, today_str(), default={})
-    risk = risk if isinstance(risk, list) else []
-    ri = summ.get("risk_index") if isinstance(summ, dict) and not _is_err(summ) else None
-    bh = summ.get("brand_health_score") if isinstance(summ, dict) and not _is_err(summ) else None
-    kpis = [
-        metric("cth09.risk_index", "风险指数", value=ri, decimals=1, state=STATE_READY if ri is not None else STATE_EMPTY,
-               icon="risk", source="lumenis.shared.reporting.daily.generate_today_summary", evidence_id="MET-RISK-01"),
-        metric("cth09.health", "品牌健康分", value=bh, decimals=1, state=STATE_READY if bh is not None else STATE_EMPTY,
-               icon="trend", source="lumenis.shared.reporting.daily.generate_today_summary", evidence_id="MET-RISK-02"),
-        metric("cth09.risk_notes", "高风险记录", value=len(risk), state=STATE_READY,
-               icon="event", source="database.get_high_risk_notes"),
-    ]
-    risk_items = []
-    for n in risk[:5]:
-        rs = n.get("risk_score")
-        risk_items.append({
-            "level": _LV.get(n.get("risk_level", "low"), "low"),
-            "score": rs if isinstance(rs, (int, float)) and rs else None,
-            "title": (n.get("title") or "风险笔记")[:40],
-            "desc": (n.get("content") or "")[:90],
-            "evidence": f"NOTE:{n.get('note_id') or n.get('id') or 'UNKNOWN'}",
-        })
-    risks_sec = section("risks", STATE_READY if risk_items else STATE_EMPTY, items=risk_items)
-    sections = [_head("CTH-09"), section("kpis", STATE_READY, items=kpis), risks_sec]
-    return _envelope("CTH-09", sections,
-                     truth={"risk_index": ri, "brand_health_score": bh})
+def _build_cth09(*, binding=None, offset=None) -> Dict[str, Any]:
+    """Scoped risk sources; decisions remain owned by BusinessDecisionWorkflow."""
+    offset = _cth_source_offset(offset)
+    result = _cth_source_material(binding, risk_levels=["high", "critical"], offset=offset)
+    items = []
+    for record in result["records"]:
+        if record.get("risk_level") not in {"high", "critical"}:
+            continue
+        score = record.get("risk_score")
+        items.append({"id": record["canonical_id"], "title": record.get("title") or "风险资料",
+                      "level": record.get("risk_level"),
+                      "score": score if type(score) in (int, float) and _finite_metric(score) else None,
+                      "summary": "已存风险标签，判断准确性需结合原始资料复核。",
+                      "analysis_state": "stored_labels_not_reverified",
+                      "evidence": [_cth_record_evidence(record, binding)]})
+    unknown = result["unknown_risk_count"]
+    state = "partial" if result.get("truncated") or result.get("rejected_count") or unknown else (
+        STATE_READY if items else STATE_EMPTY)
+    return _cth_bound_response("CTH-09", [_head("CTH-09"), section("risks", state, items=items)], binding,
+        truth={"coverage": "UNKNOWN", "unknown_risk_count": unknown,
+               "decision_owner": "api_dual_domain.BusinessDecisionWorkflow",
+               "read": {key: value for key, value in result.items() if key != "records"}})
 
 
-def _build_cth10() -> Dict[str, Any]:
-    """报告 / 周报 / 证据：最近报告元数据 + 真实证据链。"""
-    import database as db
-    from lumenis.shared.evidence import store as es
+def _finite_metric(value):
+    import math
+    return math.isfinite(value)
 
-    rep = _safe(db.get_latest_report, "daily", default=None)
-    evid = _safe(es.query_evidence, limit=6, default=[])
-    rep = rep if isinstance(rep, dict) and not _is_err(rep) else None
-    kpis = [
-        metric("cth10.report_date", "最近报告日期",
-               value=(rep.get("report_date") if rep else None),
-               state=STATE_READY if rep else STATE_EMPTY, icon="report",
-               source="database.get_latest_report"),
-        metric("cth10.evidence", "证据记录",
-               value=len(evid) if isinstance(evid, list) else None,
-               state=STATE_READY if isinstance(evid, list) else STATE_OFFLINE,
-               icon="link", source="evidence_store.query_evidence"),
-    ]
-    ev_sec = section("evidence", STATE_READY if isinstance(evid, list) and evid else STATE_EMPTY,
-                     title="证据链（真实）", items=_evidence_items(evid if isinstance(evid, list) else []))
-    sections = [_head("CTH-10"), section("kpis", STATE_READY, items=kpis), ev_sec]
-    return _envelope("CTH-10", sections)
+
+def _build_cth10(*, binding=None) -> Dict[str, Any]:
+    """Preview the existing source brief in exact scope; never query global Evidence."""
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.reporting.operational_brief import build_scoped_source_brief
+
+    # Validate before any read, using the same scoped Canonical owner as the source list.
+    material = _cth_source_material(binding)
+    focused = binding["canonical_scope"] == "FOCUS"
+    with get_repository().connection(read_only=True) as connection:
+        brief = build_scoped_source_brief(connection, product_id="CTH", global_scope=not focused,
+                                          entity_label=binding["subject_id"] if focused else "全部获准主体",
+                                          subject_id=binding.get("subject_id"), limit=100)
+    records = {row["source_id"]: row for row in material["records"]}
+    evidence = [_cth_record_evidence(records[row["source_id"]], binding)
+                for row in brief["records"] if row["source_id"] in records]
+    if (len(evidence) != len(brief["records"]) or any(
+            str(records[row["source_id"]].get("scope_evidence_ref")) != str(row["scope_evidence_ref"])
+            for row in brief["records"])):
+        raise RuntimeError("CTH_REPORT_SOURCE_SNAPSHOT_CHANGED")
+    items = []
+    if evidence:
+        items.append({"id": "source-brief:" + brief["content_hash"], "title": "资料来源简报",
+                      "period": "当前已收录资料", "scope": brief["scope"]["entity_label"],
+                      "state": "derived_preview_not_saved", "evidence": evidence,
+                      "blocks": [{"id": "source-summary", "title": "来源与覆盖",
+                                  "kind": "source_brief", "body": brief["markdown"],
+                                  "status": brief["status"]}]})
+    response = _cth_bound_response("CTH-10", [_head("CTH-10"),
+        section("reports", "partial" if brief["status"] == "PARTIAL" else STATE_READY if items else STATE_EMPTY,
+                items=items)], binding, truth={"coverage": brief["coverage"],
+                "freshness": brief["freshness"], "persisted": False,
+                "source_only": True, "save_owner": "Shared SavedWork / SourceBrief tasks"})
+    response["source_brief"] = brief
+    return response
 
 
 # ===========================================================================
 # AI Agent 域（真实数据源：Agent Groups Skill Execution / ai_governance / function_registry）
 # ===========================================================================
-def _task_timeline(limit: int = 8) -> Dict[str, Any]:
-    from lumenis.shared.agents.skills.execution import query_executions
-
-    tasks = _safe(query_executions, limit, default=[])
+def _task_timeline(limit: int = 8, *, inbox=None) -> Dict[str, Any]:
+    """Reuse authorized inbox status projections, never enumerate raw traces."""
+    notifications = ((inbox or {}).get("data") or {}).get("notifications", [])
     items = []
-    for t in (tasks if isinstance(tasks, list) else [])[:limit]:
+    for notice in notifications[:limit]:
+        event = notice["event"]
         items.append({
-            "time": str(t.get("created_at") or "")[5:16] or "—",
-            "title": t.get("task") or t.get("skill_id") or "AI 任务",
-            "desc": f"{t.get('status', 'unknown')} · {str(t.get('execution_id', ''))[:10]}",
-            "done": t.get("status") in ("completed", "success", "done"),
+            "time": str(event.get("timestamp") or "")[5:16] or "—",
+            "title": event.get("title") or "AI 任务",
+            "desc": event.get("message") or "unknown",
+            "done": notice.get("terminal") is True,
+            "return_ref": notice["return_ref"],
         })
     return section("timeline", STATE_READY if items else STATE_EMPTY,
                    title="执行链任务（真实）", label="History", items=items)
 
 
-def _build_ai02() -> Dict[str, Any]:
-    """能力任务工作台：真实执行链。"""
-    sections = [_head("AI-02"), _task_timeline(12)]
-    return _envelope("AI-02", sections)
+def _build_ai02(*, binding=None) -> Dict[str, Any]:
+    """Current authorized task status, retaining the original task owner."""
+    inbox = _build_sh06(binding=binding)
+    result = _envelope("AI-02", [_head("AI-02"), _task_timeline(12, inbox=inbox)])
+    result["scope"] = inbox.get("scope")
+    result["truth"] = inbox.get("truth", {"data_state": "scope_unavailable"})
+    return result
 
 
 def _build_ai03() -> Dict[str, Any]:
-    """证据锚定分析线程：执行链 + 证据。"""
-    from lumenis.shared.evidence import store as es
+    """Project the actor's persistent Shared conversations and original turns."""
+    from flask import request
+    from lumenis.ai_hub import conversations as owner
 
-    evid = _safe(es.query_evidence, limit=6, default=[])
-    tl = _task_timeline(8)
-    ev = section("evidence", STATE_READY if isinstance(evid, list) and evid else STATE_EMPTY,
-                 title="证据跳转锚点（真实）", items=_evidence_items(evid if isinstance(evid, list) else []))
-    sections = [_head("AI-03"), tl, ev]
-    return _envelope("AI-03", sections)
+    if set(request.args) - {"conversation_id"} or any(
+            len(request.args.getlist(key)) != 1 for key in request.args):
+        raise ValueError("CONVERSATION_SCREEN_QUERY_INVALID")
+    actor = owner.current_actor("read")
+    listing = owner.list_conversations(actor, limit=30)
+    selected_id = request.args.get("conversation_id")
+    selected = owner.read_conversation(actor, selected_id) if selected_id else None
+    result = _envelope("AI-03", [_head("AI-03"),
+        section("conversations", STATE_READY if listing["conversations"] else STATE_EMPTY,
+                items=listing["conversations"]),
+        section("conversation", STATE_READY if selected else STATE_EMPTY,
+                items=selected["turns"] if selected else [])])
+    result["data"] = {**listing, "selected_conversation": selected}
+    result["truth"] = {"source": "ai_hub.conversations",
+                       "scope": "actor-owned-shared-workspace",
+                       "task_turns": "derived-reference-with-fresh-owner-authorization",
+                       "training_admission": "NOT_GRANTED"}
+    return result
 
 
 def _build_ai04() -> Dict[str, Any]:
@@ -1205,6 +1376,54 @@ def _sh06_scope_accepts(row_scope: Dict[str, Any], binding: Dict[str, Any]) -> b
 _SH06_PRIORITY = {"L0": "LOW", "L1": "LOW", "L2": "MEDIUM", "L3": "HIGH", "L4": "HIGH"}
 
 
+
+def _sh06_skill_notifications(binding: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Project only live actor-owned Skill rows carrying an Owner scope receipt.
+
+    These signed terminal traces have their own evidence contract. They are not
+    TaskEngine hash chains and do not authorize reading protected result data.
+    Legacy traces without a receipt remain absent from the scoped inbox.
+    """
+    from lumenis.auth.service import get_current_user
+    from lumenis.shared.agents.skills.execution import (
+        query_executions, verified_execution_scope,
+    )
+    from ai_api import _task_row_read_allowed
+    from agent_focus.notification import project_persisted_task_notification
+
+    actor = _safe(get_current_user, read_only=True, default=None)
+    if not isinstance(actor, dict) or type(actor.get("id")) is not int:
+        return []
+    rows = _safe(query_executions, limit=50, default=[])
+    notifications = []
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict) or not _task_row_read_allowed(row, kind="SKILL_EXECUTION"):
+            continue
+        proof = verified_execution_scope(row, actor)
+        if not isinstance(proof, dict):
+            continue
+        if proof.get("global_scope") is True:
+            row_scope = {"mode": "GLOBAL_ALL"}
+        else:
+            domain = str(proof.get("domain_id") or "").upper()
+            domain = "BMP" if domain == "ZBMP" else domain
+            key = "brand_focus_id" if domain == "BMP" else "subject_id"
+            identifier = proof.get(key)
+            if domain not in {"CTH", "BMP"} or not isinstance(identifier, str) or not identifier:
+                continue
+            row_scope = {"mode": "FOCUS", "domain_id": domain, "id": identifier}
+        if not _sh06_scope_accepts(row_scope, binding):
+            continue
+        notification = project_persisted_task_notification(row, task_kind="SKILL_EXECUTION")
+        notification["scope_evidence"] = {
+            "contract": "skill-execution-scope-v1",
+            "evidence_id": proof["evidence_id"], "digest": proof["digest"],
+            "stored_scope": row_scope,
+        }
+        notifications.append(notification)
+    return notifications
+
+
 def _build_sh06(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """SH-06 read-only inbox (SH-06.md §1-§5).
 
@@ -1242,10 +1461,19 @@ def _build_sh06(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         else:
             view_scope["subject_id"] = binding["subject_id"]
     items: List[Dict[str, Any]] = []
+    notifications: List[Dict[str, Any]] = []
     dropped = 0
     for task in tasks if isinstance(tasks, list) else []:
         task_id = task.get("task_id") if isinstance(task, dict) else None
         if type(task_id) is not str or not _SH06_REFERENCE.match(task_id):
+            dropped += 1
+            continue
+        # Reuse the task owner's live actor and source-evidence checks. A valid
+        # hash chain proves integrity only, never access to another actor's task.
+        from ai_api import _task_row_read_allowed
+        from agent_focus.notification import project_persisted_task_notification
+        record = _safe(eng.get_task, task_id, default=None)
+        if not isinstance(record, dict) or not _task_row_read_allowed(record):
             dropped += 1
             continue
         row_scope = _sh06_task_scope(task)
@@ -1256,6 +1484,7 @@ def _build_sh06(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         if chain is None:
             dropped += 1
             continue
+        notifications.append(project_persisted_task_notification(record, task_kind="TASK_ENGINE"))
         status = task.get("status")
         status = status if isinstance(status, str) else getattr(status, "value", None)
         title = task.get("intent") or task.get("user_input") or ""
@@ -1282,107 +1511,136 @@ def _build_sh06(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
                 },
             },
         })
+    notifications.extend(_sh06_skill_notifications(binding))
     response = _envelope("SH-06", [_head("SH-06"), note], truth={
-        "data_state": "available" if items else "empty",
+        "data_state": "available" if items or notifications else "empty",
         "dropped_unverified": dropped,
     })
     response["scope"] = dict(view_scope)
     if mode == "FOCUS":
         response["scope"]["display_name"] = binding.get("display_name")
     response["permission"] = {"decision": "ALLOW", "read": True, "module": binding["module"]}
-    response["data"] = {"tasks": items, "notifications": [], "alerts": [],
+    response["data"] = {"tasks": items, "notifications": notifications, "alerts": [],
                         "operational_state": operational}
     response["focus_binding" if mode == "FOCUS" else "global_binding"] = binding
     return response
 
 
-def _build_bmp06() -> Dict[str, Any]:
-    """内容中心：content_generation 模块状态 + 内容证据（真实）。"""
-    import content_generation as cg
+def _bmp_content_project_screen(screen_id, *, binding, podcast=False):
+    from experience_runtime import _content_project_scope, _shared_work_actor_scope
+    from shared_artifacts import list_content_projects
+    from lumenis.shared.reporting.saved_work import search_work
+    actor, scope = _content_project_scope("read", read_only_auth=True)
+    if scope.get("domain_id") != "zbmp":
+        raise ValueError("BMP_CONTENT_SCOPE_REQUIRED")
+    projects = list_content_projects(actor=actor, **scope, limit=20)
+    rows = projects["projects"]
+    if podcast:
+        rows = [row for row in rows if row["output_kind"] == "audio"]
+    sections = [_head(screen_id), section("table", STATE_READY if rows else STATE_EMPTY,
+        title="当前范围音频制作项目" if podcast else "当前范围内容制作项目",
+        columns=[{"label":"项目","key":"artifact_id"},{"label":"类型","key":"output_kind"},
+                 {"label":"状态","key":"status"}], rows=rows)]
+    truth = {"project_list_status": projects["status"], "next_cursor": projects["next_cursor"],
+             "returned_projects":len(rows), "legacy_unscoped_content":"NOT_ASSIGNED",
+             "audio_is_not_automatically_podcast":True}
+    if podcast:
+        report_actor, report_scope = _shared_work_actor_scope("read")
+        plans = search_work(actor=report_actor, scope=report_scope, kind="podcast_episode", limit=30)
+        episodes = [{"artifact_id":row["artifact"]["artifact_id"], "title":row["document"]["title"],
+                     "version":row["document"]["version"]} for row in plans["items"]]
+        sections.append(section("table", STATE_READY if episodes else STATE_EMPTY, title="已保存播客节目方案",
+            columns=[{"label":"标题","key":"title"},{"label":"版本","key":"version"}], rows=episodes))
+        truth.update(podcast_plan_has_more=plans["has_more"], podcast_plan_next_cursor=plans["next_cursor"],
+                     podcast_plan_verification_complete=plans["verification_complete"])
+    result = _envelope(screen_id, sections, truth=truth)
+    result["global_binding" if binding["canonical_scope"] == "GLOBAL_ALL" else "focus_binding"] = binding
+    return result
 
-    le = _safe(cg.list_evidence, limit=20, default={})
-    mods = _safe(cg.get_module_status, default=[])
-    le = le if isinstance(le, dict) and not _is_err(le) else {}
-    mods = mods if isinstance(mods, list) else []
-    items = le.get("items") if isinstance(le.get("items"), list) else []
-    active = [m for m in mods if isinstance(m, dict) and m.get("status") == "ACTIVE"]
-    ev_total = _int_or_none(le.get("total"))
-    if ev_total is None:
-        ev_total = len(items) or None
-    kpis = [
-        metric("bmp06.evidence", "内容证据", value=ev_total,
-               state=STATE_READY if ev_total is not None else STATE_EMPTY, icon="content",
-               source="content_generation.list_evidence"),
-        metric("bmp06.modules", "ACTIVE 模块", value=len(active) or None,
-               state=STATE_READY if active else STATE_EMPTY, icon="ai",
-               source="content_generation.get_module_status"),
-    ]
-    rows = [{"模块": m.get("name") or m.get("id"), "ID": m.get("id"),
-             "状态": m.get("status") or "—", "AI": "是" if m.get("ai") else "否",
-             "端点": m.get("api") or "—"} for m in mods if isinstance(m, dict)]
-    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="内容生成模块状态（真实）",
-                  columns=[{"label": "模块", "key": "模块"}, {"label": "ID", "key": "ID"},
-                           {"label": "状态", "key": "状态"}, {"label": "AI", "key": "AI"},
-                           {"label": "端点", "key": "端点"}], rows=rows)
-    sections = [_head("BMP-06"), section("kpis", STATE_READY, items=kpis), tbl]
-    return _envelope("BMP-06", sections, truth={"module_count": len(mods)})
+
+def _build_bmp06(*, binding=None) -> Dict[str, Any]:
+    return _bmp_content_project_screen("BMP-06", binding=binding)
 
 
-def _build_bmp08() -> Dict[str, Any]:
-    """播客工作室：podcast_store 统计 + 实体（真实，空库如实 EMPTY）。"""
-    import podcast_store as ps
+def _build_bmp08(*, binding=None) -> Dict[str, Any]:
+    return _bmp_content_project_screen("BMP-08", binding=binding, podcast=True)
 
-    st = _safe(ps.get_stats, default={})
-    ents = _safe(ps.list_entities, limit=20, default=[])
-    st = st if isinstance(st, dict) and not _is_err(st) else {}
-    ents = ents if isinstance(ents, list) else []
-    total = _int_or_none(st.get("total"))
-    if total is None:
-        total = len(ents) or None
-    by_ev = st.get("by_evidence") if isinstance(st.get("by_evidence"), dict) else {}
-    verified = sum(v for v in by_ev.values() if isinstance(v, int)) if by_ev else None
-    kpis = [
-        metric("bmp08.entities", "播客实体", value=total,
-               state=STATE_READY if total is not None else STATE_EMPTY, icon="content",
-               source="podcast_store.get_stats"),
-        metric("bmp08.evidence", "已标证据状态", value=verified,
-               state=STATE_READY if verified is not None else STATE_EMPTY, icon="link",
-               source="podcast_store.get_stats.by_evidence"),
-    ]
-    rows = [{"类型": e.get("entity_type"), "标题": e.get("title") or "—",
-             "证据状态": e.get("evidence_status") or "unverified",
-             "ID": str(e.get("entity_id") or "—")[:24]} for e in ents if isinstance(e, dict)]
-    tbl = section("table", STATE_READY if rows else STATE_EMPTY,
-                  title="播客实体（真实；空库显示空态，不造假数据）",
-                  columns=[{"label": "类型", "key": "类型"}, {"label": "标题", "key": "标题"},
-                           {"label": "证据状态", "key": "证据状态"}, {"label": "ID", "key": "ID"}], rows=rows)
-    sections = [_head("BMP-08"), section("kpis", STATE_READY, items=kpis), tbl]
-    return _envelope("BMP-08", sections, truth={"stats": st})
+
+def _event_read_state(material, items):
+    """Keep bounded/rejected owner reads visibly partial at the event section."""
+    meta = material if isinstance(material, dict) else {}
+    complete = meta.get("read_complete") is True
+    reasons = []
+    if meta.get("truncated") is True:
+        reasons.append("READ_LIMIT_OR_SCAN_BUDGET")
+    if type(meta.get("rejected_count")) is int and meta["rejected_count"] > 0:
+        reasons.append("SOURCE_OR_EVENT_VERIFICATION_REJECTED")
+    if not complete and not reasons:
+        reasons.append("READ_COMPLETENESS_UNVERIFIED")
+    return (STATE_READY if items else STATE_EMPTY) if complete else "partial", {
+        "read_complete": complete, "reasons": reasons,
+        "observed_returned_count": meta.get("returned_count"), "displayed_count": len(items),
+        "display_truncated": (meta["returned_count"] > len(items)) if type(meta.get("returned_count")) is int else None,
+        "scanned_count": meta.get("scanned_count"),
+        "rejected_count": meta.get("rejected_count"), "truncated": meta.get("truncated")}
 
 
 def _build_bmp10(*, binding=None) -> Dict[str, Any]:
     """品牌风险与事件：database 真实事件 + 高风险笔记（与 CTH 同源只读，域适配 BMP）。"""
-    ev, rn = _event_screen_material(binding, "BMP", 12, 10)
+    ev, rn, coverage = _event_screen_material(binding, "BMP", 12, 10)
+    event_material = ev
     ev = _curated(ev)
+    event_items = _events_items(ev)
+    event_state, event_read = _event_read_state(event_material, event_items)
     rn = rn if isinstance(rn, list) else []
+    risk_complete = coverage.get("risk_read_complete") is True
+    risk_state = (STATE_READY if rn else STATE_EMPTY) if risk_complete else "partial"
+    risk_reasons = []
+    if coverage.get("source_truncated") is True or coverage.get("risk_truncated") is True:
+        risk_reasons.append("SOURCE_OR_RISK_READ_LIMIT")
+    if type(coverage.get("rejected_sources")) is int and coverage["rejected_sources"] > 0:
+        risk_reasons.append("SOURCE_VERIFICATION_REJECTED")
+    if not risk_complete and not risk_reasons:
+        risk_reasons.append("READ_COMPLETENESS_UNVERIFIED")
     kpis = [
-        metric("bmp10.events", "在办事件", value=len(ev),
-               state=STATE_READY if ev else STATE_EMPTY, icon="event",
+        metric("bmp10.events", "当前范围已观测策展事件", value=len(ev) if event_read["read_complete"] else None,
+               state=event_state, icon="event",
                source="database.get_events_curated"),
-        metric("bmp10.high_risk", "高风险记录", value=len(rn), state=STATE_READY,
-               icon="risk", source="database.get_high_risk_notes"),
+        metric("bmp10.high_risk", "高风险记录", value=len(rn) if risk_complete else None, state=risk_state,
+               icon="risk", source="database.get_scoped_event_source_rows"),
     ]
-    ev_sec = section("events", STATE_READY if ev else STATE_EMPTY, items=_events_items(ev))
+    ev_sec = section("events", event_state, items=event_items, read_status=event_read)
     risk_items = [{
         "level": _LV.get(n.get("risk_level", "low"), "low"),
-        "score": n.get("risk_score") if isinstance(n.get("risk_score"), (int, float)) and n.get("risk_score") else None,
+        "score": n.get("risk_score") if type(n.get("risk_score")) in (int, float) and _finite_metric(n["risk_score"]) else None,
         "title": (n.get("title") or "风险记录")[:40],
         "desc": (n.get("content") or "")[:90],
-        "evidence": f"NOTE:{n.get('note_id') or n.get('id') or 'UNKNOWN'}",
+        "evidence": n.get("scope_evidence_ref"),
     } for n in rn[:5] if isinstance(n, dict)]
-    risk_sec = section("risks", STATE_READY if risk_items else STATE_EMPTY, items=risk_items)
-    sections = [_head("BMP-10"), section("kpis", STATE_READY, items=kpis), ev_sec, risk_sec]
-    return _envelope("BMP-10", sections)
+    risk_sec = section("risks", risk_state, items=risk_items, read_status={
+        "read_complete": risk_complete, "reasons": risk_reasons,
+        "observed_returned_count": len(rn), "displayed_count": len(risk_items),
+        "display_truncated": len(rn) > len(risk_items),
+        "rejected_count": coverage.get("rejected_sources"),
+        "source_truncated": coverage.get("source_truncated"),
+        "risk_truncated": coverage.get("risk_truncated")})
+    sections = [_head("BMP-10"), section("kpis", "partial" if not risk_complete or not event_read["read_complete"] else STATE_READY, items=kpis), ev_sec, risk_sec]
+    result = _envelope("BMP-10", sections, truth={"coverage": coverage, "event_read": event_read,
+        "counts_are_returned_observations": True, "domain_id": "zbmp", "product_id": binding["product_id"],
+        "data_state": "PARTIAL" if not risk_complete or not event_read["read_complete"] else "READY" if ev or rn else "EMPTY",
+        "analysis_state": "NOT_COMPUTED"})
+    result["observation_contract"] = "lumenis.bmp10-observations.v1"
+    result["observation_read_binding"] = binding
+    result["observation_context"] = {key: binding.get(key) for key in
+        ("domain_id", "product_id", "canonical_scope", "subject_id", "brand_focus_id", "actor_id")}
+    result["observed_events"] = [{"id": row.get("id"), "title": row.get("title"),
+        "date": row.get("event_date"), "status": row.get("status"), "scope_evidence": row.get("scope_evidence")}
+        for row in ev]
+    result["observed_risks"] = [{"id": row.get("source_id"), "title": row.get("title"),
+        "date": row.get("publish_date") or row.get("published_at"), "level": row.get("risk_level"),
+        "score": row.get("risk_score"), "scope_evidence": row.get("scope_evidence")}
+        for row in rn]
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -1400,13 +1658,13 @@ def _risk_items(notes: List[Dict[str, Any]], limit: int = 5) -> List[Dict[str, A
             "score": rs if isinstance(rs, (int, float)) and rs else None,
             "title": (n.get("title") or "风险记录")[:40],
             "desc": (n.get("content") or "")[:90],
-            "evidence": f"NOTE:{n.get('note_id') or n.get('id') or 'UNKNOWN'}",
+            "evidence": n.get("scope_evidence_ref"),
         })
     return out
 
 
 def _build_bmp01_focus(binding: Dict[str, Any]) -> Dict[str, Any]:
-    """Build one exact BrandFocus overview from signed Canonical rows only."""
+    """Build authorized global/exact BrandFocus from signed Canonical rows only."""
     from canonical_data import list_scoped_canonical
     from lumenis.shared.database import get_repository
     from subject_registry import get_subject_by_id
@@ -1422,23 +1680,23 @@ def _build_bmp01_focus(binding: Dict[str, Any]) -> Dict[str, Any]:
     truncated = bool(result.get("truncated"))
     total = len(records)
     sentiments = [str(row.get("sentiment") or "").lower() for row in records]
-    sentiment_known = bool(records) and all(
+    sentiment_known = bool(records) and not truncated and all(
         value in {"positive", "neutral", "negative"} for value in sentiments
     )
     negative = sum(value == "negative" for value in sentiments) if sentiment_known else None
     risks = [str(row.get("risk_level") or "").lower() for row in records]
-    risk_known = bool(records) and all(
+    risk_known = bool(records) and not truncated and all(
         value in {"none", "low", "medium", "high", "critical"} for value in risks
     )
     high_risk = sum(value in {"high", "critical"} for value in risks) if risk_known else None
     engagement_values = []
-    engagement_complete = bool(records)
+    engagement_complete = bool(records) and not truncated
     for row in records:
         fields = [
             row.get("engagement_likes"), row.get("engagement_comments"),
             row.get("engagement_collects"), row.get("engagement_shares"),
         ]
-        if all(isinstance(value, (int, float)) for value in fields):
+        if all(type(value) in (int, float) and _finite_metric(value) for value in fields):
             engagement_values.append(sum(
                 int(value) for value in fields
             ))
@@ -1490,7 +1748,11 @@ def _build_bmp01_focus(binding: Dict[str, Any]) -> Dict[str, Any]:
             section("events", STATE_NOT_COLLECTED, title="重点事件", items=[],
                     description="ZBMP 事件源尚未形成 canonical 事件契约。"),
             section("risks", STATE_READY if risk_known else STATE_NOT_COLLECTED,
-                    items=_risk_items(records)),
+                    items=[{"level": row["risk_level"], "score": row.get("risk_score") if type(row.get("risk_score")) in (int, float) and _finite_metric(row["risk_score"]) else None,
+                            "title": row.get("title") or "风险记录", "desc": (row.get("content") or "")[:90],
+                            "evidence": "evidence:canonical:" + str(row["scope_evidence"]["id"]),
+                            "scope_evidence": row["scope_evidence"]}
+                           for row in records if row.get("risk_level") in {"medium", "high", "critical"}]),
         ],
         truth={
             "domain_id": "zbmp", "product_id": "ZBMP",
@@ -1499,7 +1761,7 @@ def _build_bmp01_focus(binding: Dict[str, Any]) -> Dict[str, Any]:
             "returned_count": result.get("returned_count", total),
             "candidate_count": result.get("candidate_count"),
             "truncated": truncated,
-            "metric_basis": "exact_brand_focus_returned_rows",
+            "metric_basis": "signed_scope_returned_rows",
             "engagement_complete": engagement_complete,
             "coverage": "NOT_VERIFIED",
             "source_freshness": "UNKNOWN",
@@ -1507,16 +1769,16 @@ def _build_bmp01_focus(binding: Dict[str, Any]) -> Dict[str, Any]:
         },
         blocked=blocked,
     )
-    response["focus_context"] = {
-        "mode": "FOCUS", "subject_id": subject_id,
+    response["focus_context" if binding["canonical_scope"] == "FOCUS" else "global_context"] = {
+        "mode": binding["canonical_scope"], "subject_id": subject_id,
         "brand_focus_id": brand_focus_id, "display_name": display_name,
     }
-    response["focus_binding"] = binding
+    response["focus_binding" if binding["canonical_scope"] == "FOCUS" else "global_binding"] = binding
     return response
 
 
 def _build_bmp01(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    if binding and binding.get("canonical_scope") == "FOCUS":
+    if binding and binding.get("canonical_scope") in {"FOCUS", "GLOBAL_ALL"}:
         return _build_bmp01_focus(binding)
     """品牌市场总览：只读 ZBMP canonical snapshot，不借用 CTH 统计。"""
     from api_dual_domain import get_zbmp_product_snapshot
@@ -1674,75 +1936,80 @@ def _build_bmp07() -> Dict[str, Any]:
     return _envelope("BMP-07", sections, truth={"quota": q})
 
 
-def _build_bmp09() -> Dict[str, Any]:
-    """品牌报告与评估：Shared Evaluation 汇总与真实记录（空库诚实空态）。"""
-    from lumenis.shared.evaluation import get_evaluation_records, get_evaluation_summary
-
-    s = _safe(get_evaluation_summary, default={})
-    s = s if isinstance(s, dict) and not _is_err(s) else {}
-    recs = _safe(get_evaluation_records, limit=100, default=[])
-    recs = recs if isinstance(recs, list) else []
-    counts = s.get("counts")
-    counts = counts if isinstance(counts, dict) else {}
-
-    def _c(k: str):
-        return _int_or_none(counts.get(k))
-
-    kpis = [
-        metric("bmp09.total", "评估记录总数", value=_int_or_none(s.get("total_records")),
-               state=STATE_READY if "total_records" in s else STATE_NOT_COLLECTED, icon="report",
-               source="lumenis.shared.evaluation.get_evaluation_summary"),
-        metric("bmp09.pass", "通过", value=_c("pass"),
-               state=STATE_READY if "pass" in counts else STATE_NOT_COLLECTED, icon="check",
-               source="lumenis.shared.evaluation.get_evaluation_summary"),
-        metric("bmp09.warn", "警示", value=_c("warn"),
-               state=STATE_READY if "warn" in counts else STATE_NOT_COLLECTED, icon="risk",
-               source="lumenis.shared.evaluation.get_evaluation_summary"),
-        metric("bmp09.fail", "失败", value=_c("fail"),
-               state=STATE_READY if "fail" in counts else STATE_NOT_COLLECTED, icon="risk",
-               source="lumenis.shared.evaluation.get_evaluation_summary"),
-    ]
-    crows = [{"评估状态": {"pass": "通过", "warn": "警示", "fail": "失败", "unknown": "未知"}.get(k, k),
-              "数量": _c(k)} for k in ("pass", "warn", "fail", "unknown")]
-    ctbl = section("table", STATE_READY if counts else STATE_NOT_COLLECTED,
-                   title="评估状态分布（真实）",
-                   columns=[{"label": "评估状态", "key": "评估状态"},
-                            {"label": "数量", "key": "数量", "numeric": True}], rows=crows)
-    rrows = [{"维度": str(r.get("dimension") or "—"), "指标": str(r.get("metric_id") or r.get("metric") or "—"),
-              "状态": str(r.get("status") or "—")} for r in recs[:30] if isinstance(r, dict)]
-    rtbl = section("table", STATE_READY if rrows else STATE_EMPTY, title="最近评估记录",
-                   columns=[{"label": "维度", "key": "维度"}, {"label": "指标", "key": "指标"},
-                            {"label": "状态", "key": "状态"}], rows=rrows)
-    gstatus = s.get("global_status")
-    note = section("note", STATE_READY, kind="STATUS",
-                   text=f"全局评估状态：{gstatus or '—'}（来自 Shared Evaluation，未产生评估记录前为 unknown，属真实空态）。")
-    sections = [_head("BMP-09"), section("kpis", STATE_READY, items=kpis), ctbl, rtbl, note]
-    return _envelope("BMP-09", sections, truth={"global_status": gstatus})
+def _build_bmp09(*, binding=None) -> Dict[str, Any]:
+    """Read actual SavedWork reports using the report owner's exact actor/scope."""
+    from experience_runtime import _bmp_saved_work_actor_scope
+    from lumenis.shared.reporting.saved_work import search_work, authorize
+    actor, scope = _bmp_saved_work_actor_scope(binding)
+    context = authorize(actor, scope, action="read")
+    if scope.get("domain_id") != "zbmp":
+        raise ValueError("BMP_REPORT_SCOPE_REQUIRED")
+    data = search_work(actor=actor, scope=scope, limit=100)
+    rows = [{"id": item["artifact"]["artifact_id"], "title": item["document"]["title"],
+             "kind": item["document"]["kind"], "version": item["document"]["version"],
+             "sha256": item["artifact"]["sha256"], "source_count": len(item["document"]["citations"]),
+             "assessment": "NOT_ESTABLISHED_BY_STORAGE"} for item in data["items"]]
+    state = STATE_READY if rows else STATE_EMPTY
+    response = _envelope("BMP-09", [_head("BMP-09"),
+        section("table", state, title="当前范围已保存研究与报告", columns=[
+            {"label": "标题", "key": "title"}, {"label": "类型", "key": "kind"},
+            {"label": "版本", "key": "version"}, {"label": "引用来源", "key": "source_count"}], rows=rows)],
+        truth={"saved_count": len(rows), "has_more": data["has_more"], "next_cursor": data["next_cursor"],
+               "unverified_candidates": data["unverified_candidates"], "verification_complete": data["verification_complete"],
+               "scope": scope, "evaluation": "artifact-specific; storage is not evaluation"})
+    response["global_binding" if binding["canonical_scope"] == "GLOBAL_ALL" else "focus_binding"] = binding
+    from lumenis.shared.reporting.source_brief_job import list_source_brief_jobs
+    reports = list_source_brief_jobs(actor=actor, scope=scope, limit=30)
+    response["sections"].append(section("table", reports["state"].lower(),
+        title="来源简报 · 绑定当前报告版本的评估", resource_type="source_brief_job",
+        columns=[{"label": "报告", "key": "job_id"}, {"label": "评估状态", "key": "evaluation_state"}],
+        rows=reports["items"]))
+    response["truth"]["source_brief_reports"] = {key: value for key, value in reports.items() if key != "items"}
+    available = reports["state"] != "UNAVAILABLE"
+    counts = {status: sum(item["evaluation_counts"][status] for item in reports["items"])
+              if available else None for status in ("pass", "warn", "fail", "unknown")}
+    distribution = {"counts": counts, "unit": "artifact_bound_check",
+        "population": "returned_source_brief_page", "read_complete": reports["read_complete"],
+        "has_more": reports["has_more"], "next_cursor": reports.get("next_cursor"),
+        "missing_evaluation_count": sum(item["missing_evaluation_count"] for item in reports["items"])
+            if available else None,
+        "saved_work_evaluation": "NOT_ESTABLISHED", "business_effect": "NOT_ESTABLISHED"}
+    response["sections"].insert(1, section("table", reports["state"].lower(),
+        title="当前报告版本评价检查分布", resource_type="report_evaluation_distribution",
+        columns=[{"label": "状态", "key": "status"}, {"label": "检查数", "key": "count"}],
+        rows=[{"status": status, "count": count} for status, count in counts.items()],
+        basis=distribution))
+    response["truth"]["evaluation_distribution"] = distribution
+    # Serialize the original reports owner's authorization result, not a new grant.
+    response["report_artifact_contract"] = "lumenis.bmp09-report-artifacts.v1"
+    response["report_screen_binding"] = dict(binding)
+    response["report_authorization"] = {"module": "reports", "action": "read", "context": dict(context)}
+    response["saved_artifacts"] = [{"resource_type": "saved_work", **row} for row in rows]
+    response["source_brief_artifacts"] = reports["items"]
+    response["truth"]["market_effect_state"] = "NOT_ESTABLISHED"
+    current_actor, current_scope = _bmp_saved_work_actor_scope(binding)
+    if authorize(current_actor, current_scope, action="read") != context:
+        raise PermissionError("BMP_REPORT_PRINCIPAL_CHANGED")
+    return response
 
 
 def _build_sh05() -> Dict[str, Any]:
-    """学习与评估资产：Shared Learning 真实学习历史（空库诚实空态）。"""
-    from lumenis.shared.learning import collector as lc
-
-    h = _safe(lc.get_learning_history, default={})
-    h = h if isinstance(h, dict) and not _is_err(h) else {}
-    items = h.get("learnings")
-    items = items if isinstance(items, list) else []
-    kpis = [
-        metric("sh05.count", "学习资产", value=len(items), state=STATE_READY, icon="collection",
-               source="lumenis.shared.learning.collector.get_learning_history"),
-    ]
-    rows = [{"标题": str(x.get("title") or x.get("summary") or "—")[:60],
-             "类型": str(x.get("type") or x.get("kind") or "—"),
-             "时间": str(x.get("created_at") or x.get("learned_at") or "—")}
-            for x in items[:40] if isinstance(x, dict)]
-    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="学习历史（真实）",
-                  columns=[{"label": "标题", "key": "标题"}, {"label": "类型", "key": "类型"},
-                           {"label": "时间", "key": "时间"}], rows=rows)
-    note = section("note", STATE_EMPTY if not items else STATE_READY, kind="EMPTY-OK",
-                   text="学习资产由生产运行沉淀；当前无学习记录时显示空态，不生成示例/占位资产。")
-    sections = [_head("SH-05"), section("kpis", STATE_READY, items=kpis), tbl, note]
-    return _envelope("SH-05", sections, truth={"learning_count": len(items)})
+    """Scoped learning candidates and reproducible measurements, never legacy scan lift."""
+    from content_generation import read_pattern_learning_projection
+    data = read_pattern_learning_projection()  # Permission/storage failures remain failures.
+    rows = [{"标题": item["title"], "状态": item["state"], "评价次数": len(item["evaluations"]),
+             "已生效": item["effective"], "模式": item["pattern_id"]} for item in data["items"]]
+    kpis = [metric("sh05.count", "当前范围学习模式", value=data["count"], state=STATE_READY, icon="collection",
+                   source=data["source"]),
+            metric("sh05.effective", "当前有效模式", value=data["effective_count"], state=STATE_READY,
+                   source=data["source"])]
+    table = section("table", STATE_READY if rows else STATE_EMPTY, title="学习模式与评价",
+                    columns=[{"label": key, "key": key} for key in ("标题", "状态", "评价次数", "已生效")], rows=rows)
+    note = section("note", STATE_READY, kind="LEARNING-QUALIFICATION",
+                   text="可复查保存产物、原始观察和计算方法。工程测量不等于独立业务增益；未满足保留集、真实任务及人工批准时不会晋升。")
+    return _envelope("SH-05", [_head("SH-05"), section("kpis", STATE_READY, items=kpis), table, note],
+                     truth={"learning_count": data["count"], "effective_count": data["effective_count"],
+                            "business_lift_verified": data["business_lift_verified"]})
 
 
 def _build_sys05() -> Dict[str, Any]:
@@ -1895,105 +2162,96 @@ def _build_acc03() -> Dict[str, Any]:
     return _envelope("ACC-03", sections, truth={"overall": h.get("overall")})
 
 
-def _build_bmp03() -> Dict[str, Any]:
-    """市场情报：canonical 连接只读 intelligence_assets（表不存在则诚实空态，不造假）。"""
-    import database as db
+def _build_bmp03(*, binding=None) -> Dict[str, Any]:
+    """Scoped market source observations; legacy unbound assets are not assigned."""
+    from kos_engine import _read_scoped_canonical_material
+    data = _read_scoped_canonical_material(binding)
+    records = data["records"]
+    rows = [{"id": row["canonical_id"], "title": row.get("title"),
+             "platform": row.get("source_platform"), "source_type": row.get("source_type"),
+             "scope_evidence": row["scope_evidence"]} for row in records]
+    state = STATE_READY if rows else STATE_EMPTY
+    result = _envelope("BMP-03", [_head("BMP-03"),
+        _platform_collection_section(consumer="BMP", scoped_material=data),
+        section("table", state, title="当前范围市场来源资料", columns=[
+            {"label":"标题","key":"title"},{"label":"来源平台","key":"platform"},
+            {"label":"来源类型","key":"source_type"}], rows=rows)],
+        truth={"source_count":len(rows), "truncated":bool(data.get("truncated")),
+            "legacy_asset_scope":"UNKNOWN_NOT_ASSIGNED", "classification":"source observations, not automatically verified market facts"})
+    result["global_binding" if binding["canonical_scope"] == "GLOBAL_ALL" else "focus_binding"] = binding
+    # A source-observation contract is distinct from analyzed market signals.
+    # Permission comes from the request owner; source Evidence is not a grant.
+    result["source_observation_contract"] = "lumenis.bmp03-source-observations.v1"
+    result["source_read_binding"] = binding
+    result["source_context"] = {"mode": binding["canonical_scope"], "domain_id": binding["domain_id"],
+        "product_id": binding["product_id"], "subject_id": binding.get("subject_id"),
+        "brand_focus_id": binding.get("brand_focus_id")}
+    result["source_observations"] = rows
+    result["truth"].update({"product_id": binding["product_id"], "domain_id": "zbmp",
+        "data_state": "PARTIAL" if data.get("truncated") or data.get("rejected_count") else "READY" if rows else "EMPTY",
+        "insight_state": "NOT_COMPUTED", "rejected_count": data.get("rejected_count", 0)})
+    return result
 
-    total = None
-    by_sub: Dict[str, int] = {}
-    table_exists = False
+
+def _build_bmp04(*, binding=None) -> Dict[str, Any]:
+    import brand_propagation
+    data = brand_propagation.read_scoped_propagation(binding)
+    events = _events_items(_curated(data["events"]))
+    event_state, event_read = _event_read_state(data["events"], events)
+    state = "partial" if data["data_state"] == "PARTIAL" else STATE_READY if data["source_count"] or events else STATE_EMPTY
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    actor = resolve_local_workspace_principal(module="reports", action="read")
+    if actor is None:
+        actor = get_current_user(read_only=True)
+    scope = {"domain_id": "zbmp", "subject_id": None,
+             "brand_focus_id": binding.get("brand_focus_id"),
+             "global_scope": binding["canonical_scope"] == "GLOBAL_ALL"}
     try:
-        with db.get_db() as conn:
-            cur = conn.cursor()
-            cur.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='intelligence_assets'")
-            table_exists = cur.fetchone() is not None
-            if table_exists:
-                cur.execute("SELECT COUNT(*) FROM intelligence_assets WHERE knowledge_status IN ('FACT','VERIFIED') AND admission_status='ADMITTED'")
-                total = int(cur.fetchone()[0])
-                cur.execute("SELECT sub_library, COUNT(*) FROM intelligence_assets WHERE knowledge_status IN ('FACT','VERIFIED') AND admission_status='ADMITTED' GROUP BY sub_library ORDER BY sub_library")
-                by_sub = {str(r[0] or "未分类"): int(r[1]) for r in cur.fetchall()}
-    except Exception as exc:  # 只读守卫：任何异常都降级为未采集，绝不抛到 UI
-        return _envelope("BMP-03", [_head("BMP-03"),
-                                    section("note", STATE_NOT_COLLECTED, kind="OFFLINE",
-                                            text=f"市场情报只读探测失败：{type(exc).__name__}；保持未采集态，不造假。")],
-                         truth={"error": type(exc).__name__})
-    state = STATE_READY if table_exists else STATE_NOT_COLLECTED
-    kpis = [
-        metric("bmp03.total", "情报资产", value=total if table_exists else None,
-               state=state, icon="collection", source="intelligence_assets (read-only)"),
-    ]
-    rows = [{"子库": k, "资产数": _int_or_none(v)} for k, v in by_sub.items()]
-    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="按子库分布（真实）",
-                  columns=[{"label": "子库", "key": "子库"},
-                           {"label": "资产数", "key": "资产数", "numeric": True}], rows=rows)
-    if not table_exists:
-        note = section("note", STATE_NOT_COLLECTED, kind="NOT-COLLECTED",
-                       text="intelligence_assets 表尚未在当前库建立（情报入库流水线未运行），保持未采集态，不补默认值。")
-    else:
-        note = section("note", STATE_READY, kind="SOURCE",
-                       text="只读自 canonical 库 intelligence_assets；情报入库/评审属写入侧，走权限链。")
-    platform_sec = _platform_collection_section(consumer="BMP")
-    sections = [_head("BMP-03"), section("kpis", STATE_READY, items=kpis), tbl, platform_sec, note]
-    return _envelope("BMP-03", sections, truth={"table_exists": table_exists, "total": total})
+        classification = brand_propagation.read_scoped_classifications(actor=actor, scope=scope)
+    except (ValueError, PermissionError):
+        classification = {"rows": [], "rejected": None, "state": "UNAVAILABLE"}
+    # Counts describe only the current verified event sample, not the market population.
+    event_ids = {item["id"] for item in data["events"].get("featured", [])}
+    classified = [row for row in classification["rows"] if row["event"]["id"] in event_ids]
+    unknown_count = len(event_ids - {row["event"]["id"] for row in classified})
+    complete = data["event_read_complete"] and classification["state"] in {"READY", "EMPTY"} and not classification["rejected"]
+    dashboards = []
+    for category, title in (("brand_event", "品牌事件看板"), ("product_event", "产品事件看板"), ("industry_event", "行业事件看板")):
+        selected = [row for row in classified if row["category"] == category]
+        dashboards.append({"category": category, "title": title,
+            "observed_events": len(selected), "total_events": len(selected) if complete and not unknown_count else None,
+            "state": "ready" if selected and complete and not unknown_count else "empty" if complete and not unknown_count else "partial",
+            "claim_type": "human_business_classification", "source_refs": [{"event_id": row["event"]["id"],
+                "scope_evidence": row["source_evidence"]} for row in selected],
+            "events": _events_items([row["event"] for row in selected])})
+    data.update(total_events=data["event_returned_count"] if data["event_read_complete"] else None,
+        total_events_semantics="current_verified_curated_sample_not_population", dashboards=dashboards,
+        unclassified_event_count=unknown_count, classification_state=classification["state"],
+        classification_rejected=classification["rejected"])
+    response = _envelope("BMP-04", [_head("BMP-04"),
+        section("kpis", state, items=[metric("bmp04.total", "已观测源记录", value=data["source_count"], state=state,
+                source="brand_propagation.read_scoped_propagation", icon="trend"),
+                metric("bmp04.events", "当前范围策展事件", value=data["event_returned_count"] if data["event_read_complete"] else None, state=state,
+                source="database.get_events_curated", icon="event")]),
+        section("events", event_state, items=events, read_status=event_read),
+        section("table", "partial" if not complete or unknown_count else state, title="品牌 / 产品 / 行业事件看板",
+                columns=[{"label": "看板", "key": "title"}, {"label": "已分类观测", "key": "observed_events"},
+                         {"label": "范围内完整计数", "key": "total_events"}], rows=dashboards),
+        section("table", state, title="源记录平台分布", columns=[{"label": "平台", "key": "platform"},
+                {"label": "记录", "key": "count"}], rows=[{"platform": k, "count": v} for k,v in data["platform_counts"].items()])],
+        truth={key: value for key, value in data.items() if key not in {"events", "source_observations"}})
+    response["global_binding" if binding["canonical_scope"] == "GLOBAL_ALL" else "focus_binding"] = binding
+    response["observation_contract"] = "lumenis.bmp04-source-observations.v1"
+    response["observation_read_binding"] = binding
+    response["observation_context"] = {key: binding.get(key) for key in
+        ("domain_id", "product_id", "canonical_scope", "subject_id", "brand_focus_id", "actor_id")}
+    response["source_observations"] = data["source_observations"]
+    response["truth"].update({"domain_id": "zbmp", "product_id": binding["product_id"],
+                              "analysis_state": "NOT_COMPUTED"})
+    return response
 
 
-def _build_bmp04() -> Dict[str, Any]:
-    """传播分析：brand_propagation 三类传播看板真实只读汇总（空库诚实空态）。"""
-    import brand_propagation as bp
-
-    eng = _safe(bp.get_brand_propagation_engine, default=None)
-    dash = _safe(eng.get_all_dashboards, default={}) if eng is not None else {}
-    dash = dash if isinstance(dash, dict) and not _is_err(dash) else {}
-    entities = _safe(eng.list_entities, default=[]) if eng is not None else []
-    entities = entities if isinstance(entities, list) else []
-
-    def _g(d, k):
-        return getattr(d, k, None)
-
-    tot = pos = neu = neg = 0
-    heats = []
-    rows = []
-    for cat, d in dash.items():
-        t = _int_or_none(_g(d, "total_events")) or 0
-        p = _int_or_none(_g(d, "positive_count")) or 0
-        nu = _int_or_none(_g(d, "neutral_count")) or 0
-        ng = _int_or_none(_g(d, "negative_count")) or 0
-        ah = _g(d, "avg_heat")
-        tot += t; pos += p; neu += nu; neg += ng
-        if isinstance(ah, (int, float)):
-            heats.append(ah)
-        rows.append({"传播看板": str(_g(d, "title") or cat), "事件数": t, "正面": p,
-                     "中性": nu, "负面": ng, "平均热度": round(float(ah), 2) if isinstance(ah, (int, float)) else None})
-    avg_heat = round(sum(heats) / len(heats), 2) if heats else None
-    kpis = [
-        metric("bmp04.total", "传播事件", value=tot, state=STATE_READY, icon="trend",
-               source="brand_propagation.get_all_dashboards"),
-        metric("bmp04.pos", "正面", value=pos, state=STATE_READY, icon="check",
-               source="brand_propagation.get_all_dashboards"),
-        metric("bmp04.neg", "负面", value=neg, state=STATE_READY, icon="risk",
-               source="brand_propagation.get_all_dashboards"),
-        metric("bmp04.heat", "平均热度", value=avg_heat, decimals=2,
-               state=STATE_READY if avg_heat is not None else STATE_EMPTY, icon="trend",
-               source="brand_propagation.get_all_dashboards"),
-        metric("bmp04.ent", "传播实体", value=len(entities), state=STATE_READY, icon="collection",
-               source="brand_propagation.list_entities"),
-    ]
-    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="分域传播看板（真实）",
-                  columns=[{"label": "传播看板", "key": "传播看板"},
-                           {"label": "事件数", "key": "事件数", "numeric": True},
-                           {"label": "正面", "key": "正面", "numeric": True},
-                           {"label": "中性", "key": "中性", "numeric": True},
-                           {"label": "负面", "key": "负面", "numeric": True},
-                           {"label": "平均热度", "key": "平均热度", "numeric": True}], rows=rows)
-    note = section("note", STATE_EMPTY if tot == 0 else STATE_READY, kind="EMPTY-OK",
-                   text="传播事件由采集与传播引擎沉淀；当前无事件时显示真实 0/空态，不生成示例传播链。")
-    sections = [_head("BMP-04"), section("kpis", STATE_READY, items=kpis), tbl, note]
-    return _envelope("BMP-04", sections, truth={"total_events": tot, "entities": len(entities)})
-
-
-# ---------------------------------------------------------------------------
-# 最终六屏生产绑定：只读既有 Canonical 能力，不复制业务规则
-# ---------------------------------------------------------------------------
 def _build_acc01() -> Dict[str, Any]:
     """统一入口：只陈述认证入口配置是否具备，不返回用户名或密钥。"""
     user_configured = bool(os.environ.get("TAIKOO_AUTH_USER", "").strip())
@@ -2040,66 +2298,48 @@ def _build_acc04() -> Dict[str, Any]:
     return _envelope("ACC-04", sections, truth=None if failed else {"pending_count": pending})
 
 
-def _build_bmp05() -> Dict[str, Any]:
-    """创作者：复用 KOS Canonical Profile，只读聚合。"""
+def _build_bmp05(*, binding=None) -> Dict[str, Any]:
+    """Scoped observed authors; identity, relationship and score remain unclaimed."""
     import kos_engine
-
-    stats = _safe(kos_engine.get_stats, default={"__error__": "unavailable"})
-    listing = _safe(kos_engine.list_profiles, limit=20, default={"__error__": "unavailable"})
-    failed = _is_err(stats) or _is_err(listing)
-    profiles = [] if failed else listing.get("profiles", [])
-    rows = [{"name": p.get("author_nickname") or p.get("author_id") or "—",
-             "type": p.get("subject_type") or p.get("identity_label") or "UNKNOWN",
-             "tier": p.get("kos_tier") or "—", "score": p.get("kos_score"),
-             "engagement": p.get("total_engagement", 0)} for p in profiles]
-    state = STATE_OFFLINE if failed else (STATE_READY if rows else STATE_EMPTY)
-    total = None if failed else int(stats.get("total", 0) or 0)
-    sections = [
-        _head("BMP-05"),
-        section("kpis", state, items=[
-            metric("bmp05.total", "传播主体", value=total, state=state, icon="creators",
-                   source="kos_engine.get_stats"),
-            metric("bmp05.potential", "潜力主体", value=None if failed else stats.get("potential", 0),
-                   state=state, icon="trend", source="kos_engine.get_stats"),
-            metric("bmp05.risk", "风险主体", value=None if failed else stats.get("risk", 0),
-                   state=state, icon="risk", source="kos_engine.get_stats"),
-        ]),
-        section("table", state, title="KOS / KOL / KOC / UGC 主体", columns=[
-            {"label": "主体", "key": "name"}, {"label": "类型", "key": "type"},
-            {"label": "层级", "key": "tier"}, {"label": "评分", "key": "score", "numeric": True},
-            {"label": "互动", "key": "engagement", "numeric": True}], rows=rows),
-    ]
-    return _envelope("BMP-05", sections, truth=None if failed else {"total": total})
+    data = kos_engine.read_scoped_profiles(binding)
+    rows = [{"name": row["author_nickname"] or row["author_id"],
+             "platform": row["source_platform"], "type": row["identity_label"],
+             "tier": row["kos_tier"], "score": row["kos_score"],
+             "engagement": row["total_engagement"], "observed_records": row["note_count"],
+             "source_refs": row["source_refs"]} for row in data["profiles"]]
+    state = STATE_READY if rows else STATE_EMPTY
+    response = _envelope("BMP-05", [_head("BMP-05"),
+        section("kpis", state, items=[metric("bmp05.total", "已观测传播主体", value=data["total"], state=state,
+                source="kos_engine.read_scoped_profiles", icon="creators")]),
+        section("table", state, title="当前授权范围的源记录作者", columns=[
+            {"label": "主体", "key": "name"}, {"label": "平台", "key": "platform"},
+            {"label": "身份", "key": "type"}, {"label": "互动", "key": "engagement", "numeric": True}], rows=rows)],
+        truth={key: value for key, value in data.items() if key != "profiles"})
+    response["global_binding" if binding["canonical_scope"] == "GLOBAL_ALL" else "focus_binding"] = binding
+    return response
 
 
-def _build_bmp11() -> Dict[str, Any]:
-    """竞品对标：复用 kos_intel 的实体消歧与确定性评分。"""
+def _build_bmp11(*, binding=None) -> Dict[str, Any]:
     import kos_intel
-
-    data = _safe(kos_intel.competitor_benchmark, default={"__error__": "unavailable"})
-    failed = _is_err(data)
-    ranking = [] if failed else data.get("ranking", [])
-    rows = [{"entity": r.get("entity", "—"), "score": r.get("score")} for r in ranking]
-    state = STATE_OFFLINE if failed else (STATE_READY if rows else STATE_EMPTY)
-    sections = [
-        _head("BMP-11"),
-        section("kpis", state, items=[
-            metric("bmp11.entities", "对标实体", value=None if failed else len(rows), state=state,
-                   icon="benchmark", source="kos_intel.competitor_benchmark"),
-            metric("bmp11.leader", "当前领先", value=None if failed else data.get("leader"), state=state,
-                   icon="trend", source="kos_intel.competitor_benchmark"),
-        ]),
-        section("table", state, title="可追溯对标", columns=[
-            {"label": "实体", "key": "entity"}, {"label": "确定性评分", "key": "score", "numeric": True}], rows=rows),
-        section("note", state, kind="METHOD", text="评分来自内容量、互动、强意向和作者数；AI 不改写统计口径。"),
-    ]
-    return _envelope("BMP-11", sections, truth=None if failed else {"leader": data.get("leader"), "ranking": ranking})
+    data = kos_intel.read_scoped_benchmark(binding)
+    rows = data["ranking"]
+    state = STATE_READY if rows else STATE_EMPTY
+    response = _envelope("BMP-11", [_head("BMP-11"),
+        section("kpis", state, items=[metric("bmp11.entities", "可比较已观测品牌", value=len(rows), state=state,
+                source="kos_intel.read_scoped_benchmark", icon="benchmark")]),
+        section("table", state, title="授权品牌范围的源记录样本", columns=[
+            {"label": "品牌范围", "key": "entity"}, {"label": "样本记录", "key": "record_count", "numeric": True},
+            {"label": "互动", "key": "engagement", "numeric": True}], rows=rows)],
+        truth={key: value for key, value in data.items() if key != "ranking"})
+    response["global_binding" if binding["canonical_scope"] == "GLOBAL_ALL" else "focus_binding"] = binding
+    return response
 
 
 def _build_sh01() -> Dict[str, Any]:
     """内容创作工作室：呈现已登记能力与真实内容 Evidence，不生成示例内容。"""
     import content_generation
 
+    context = content_generation.authorize_content_root_request(strict=True)
     modules = _safe(content_generation.get_module_status, default=[])
     evidence = _safe(content_generation.list_evidence, limit=12, default={"__error__": "unavailable"})
     failed = _is_err(evidence)
@@ -2130,7 +2370,10 @@ def _build_sh01() -> Dict[str, Any]:
                      'aria-live="polite"><span class="lum-eyebrow">Evidence Detail</span>'
                      '<p class="lum-body-2">选择一条真实创作 Evidence 查看可追溯结果。</p></section>'),
     ]
-    return _envelope("SH-01", sections, truth=None if failed else {"evidence_total": evidence.get("total", 0)})
+    result = _envelope("SH-01", sections, truth=None if failed else {"evidence_total": evidence.get("total", 0)})
+    if content_generation.authorize_content_root_request(strict=True) != context:
+        raise PermissionError("CONTENT_SCOPE_CHANGED")
+    return result
 
 
 def _browser_surface_markup() -> str:

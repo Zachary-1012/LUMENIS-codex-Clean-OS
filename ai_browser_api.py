@@ -673,6 +673,116 @@ def register_ai_browser_api(app):
     # 3. Observe（观察页面）
     # ──────────────────────────────────────────────────────────
 
+    @bp.route("/api/browser/sessions/<session_id>/capture", methods=["POST"])
+    def capture_component(session_id: str):
+        """Typed component commands, under the same actor and session checks."""
+        from lumenis.system.collector.runtime.browser_extract import BrowserExtractionError
+        import json
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        status = 200
+        try:
+            raw = request.stream.read(8193)
+            if len(raw) > 8192:
+                raise BrowserExtractionError('BROWSER_EXTRACTION_TOO_LARGE')
+            try:
+                data = json.loads(raw) if request.is_json else None
+            except (ValueError, UnicodeDecodeError):
+                data = None
+            if isinstance(data, dict) and data.get('command') in {'source_prepare', 'source_import', 'source_use_prepare'}:
+                from lumenis.system.security.permission import resolve_web_request_scope, get_permission_gate
+                from lumenis.system.collector.adapters.secondary_collection import admit_browser_snapshot
+                from lumenis.shared.reporting.saved_work import SavedWorkError
+                from lumenis.shared.database import get_repository
+                actor, scope, _, _ = resolve_web_request_scope('write', module='reports')
+                if data['command'] == 'source_use_prepare':
+                    required = {'command','source_evidence_ref','source_fingerprint','body_sha256','source_version','purpose'}
+                    if set(data) != required:
+                        raise BrowserExtractionError('BROWSER_SOURCE_REQUEST_INVALID')
+                    with get_repository().connection() as con:
+                        decision = get_permission_gate().prepare_browser_snapshot_use(actor, scope=scope,
+                            connection=con, **{k:v for k,v in data.items() if k != 'command'})
+                    body = {'ok': decision.allowed, 'state':'APPROVAL_REQUIRED',
+                            'resource': decision.resource, 'operation':'collector_source_read',
+                            'reason':decision.reason, 'source_use':'NOT_ADMITTED'}
+                    status = 200 if decision.allowed else 403
+                else:
+                    required = {'command','capture_id','request_id','rights','rights_statement','intended_use'}
+                    if set(data) != required:
+                        raise BrowserExtractionError('BROWSER_SOURCE_REQUEST_INVALID')
+                    body = admit_browser_snapshot(session, actor=actor, scope=scope,
+                        prepare=data['command']=='source_prepare',
+                        **{k:v for k,v in data.items() if k != 'command'})
+            else:
+                body = session.capture_command(data)
+        except BrowserExtractionError as exc:
+            code = exc.code
+            status = (400 if code.endswith('_INVALID') else 403 if code.endswith('_PERMISSION_DENIED')
+                      else 413 if code.endswith('_TOO_LARGE') else 504 if code.endswith('_TIMEOUT')
+                      else 503 if code.endswith('_UNAVAILABLE') else 409)
+            body = {'ok': False, 'error_code': code, **exc.details}
+        except (BrowserHumanControlError, BrowserSessionBindingError) as exc:
+            body, status = {'ok': False, 'error_code': exc.code}, 409
+        except ValueError as exc:
+            code = str(exc)
+            code = code if re.fullmatch(r'[A-Z][A-Z0-9_]{1,100}', code) else 'BROWSER_SOURCE_UNAVAILABLE'
+            body = {'ok': False, 'error_code': code}
+            status = 403 if any(x in code for x in ('APPROVAL','PERMISSION','OWNER')) else 409
+        except Exception:
+            body, status = {'ok': False, 'error_code': 'BROWSER_CAPTURE_UNAVAILABLE'}, 503
+        response = jsonify(body)
+        response.headers['Cache-Control'] = 'no-store, private'
+        response.headers['Pragma'] = 'no-cache'
+        return response, status
+
+    @bp.route("/api/browser/sessions/<session_id>/extract", methods=["POST"])
+    def extract_page(session_id: str):
+        """Bounded formats from this actor's currently opened page; never login."""
+        from lumenis.system.collector.runtime.browser_extract import BrowserExtractionError
+        import json
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        try:
+            if request.content_length is not None and request.content_length > 8192:
+                raise BrowserExtractionError('BROWSER_EXTRACTION_TOO_LARGE')
+            raw = request.stream.read(8193)
+            if len(raw) > 8192:
+                raise BrowserExtractionError('BROWSER_EXTRACTION_TOO_LARGE')
+            try:
+                data = json.loads(raw) if request.is_json else None
+            except (ValueError, UnicodeDecodeError):
+                data = None
+            result = session.extract(data)
+            reply = jsonify(result)
+            reply.headers['Cache-Control'] = 'no-store, private'
+            reply.headers['Pragma'] = 'no-cache'
+            return reply, 200
+        except BrowserExtractionError as exc:
+            code = exc.code
+            if code.endswith(('_INVALID', '_OPTIONS_INVALID')):
+                status = 400
+            elif code.endswith('_TIMEOUT'):
+                status = 504
+            elif code.endswith('_TOO_LARGE'):
+                status = 413
+            elif code.endswith('_PERMISSION_DENIED'):
+                status = 403
+            elif code.endswith(('_NAVIGATION_REQUIRED', '_PAGE_CHANGED', '_HUMAN_REQUIRED', '_SESSION_NOT_RUNNING')):
+                status = 409
+            else:
+                status = 503
+            reply = jsonify({'ok': False, 'error_code': code,
+                'human_escalation_required': code.endswith('_HUMAN_REQUIRED'), **exc.details})
+            reply.headers['Cache-Control'] = 'no-store, private'
+            return reply, status
+        except (BrowserHumanControlError, BrowserSessionBindingError) as exc:
+            return jsonify({'ok': False, 'error_code': exc.code}), 409
+        except Exception:
+            # Avoid logging page content, target URL queries or provider errors.
+            return jsonify({'ok': False, 'error_code': 'BROWSER_EXTRACTION_UNAVAILABLE'}), 503
+
     @bp.route("/api/browser/sessions/<session_id>/observe", methods=["POST"])
     def observe(session_id: str):
         """观察当前页面（返回脱敏后的 DOM 摘要/Accessibility Tree/screenshot）。

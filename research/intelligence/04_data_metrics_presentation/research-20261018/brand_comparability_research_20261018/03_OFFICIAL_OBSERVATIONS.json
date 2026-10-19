@@ -1,0 +1,13 @@
+{
+  "kind": "Manually transcribed selected official numeric table cells, not synthetic data or a full dataset",
+  "retrieved_at_utc": "2026-10-17T22:13:00Z",
+  "series": "China total retail sales, seasonally adjusted month-on-month growth",
+  "unit": "percent",
+  "observations": [
+    {"period":"2026-06","release":"2026-08-17","value":"0.35","url":"https://www.stats.gov.cn/sj/zxfbhjd/202608/t20260817_1965052.html","locator":"附注5 环比数据修订, 2026年6月"},
+    {"period":"2026-07","release":"2026-08-17","value":"0.06","url":"https://www.stats.gov.cn/sj/zxfbhjd/202608/t20260817_1965052.html","locator":"附注5 环比数据修订, 2026年7月"},
+    {"period":"2026-06","release":"2026-09-15","value":"0.40","url":"https://www.stats.gov.cn/sj/zxfb/202609/t20260915_1965311.html","locator":"附注5 环比数据修订, 2026年6月"},
+    {"period":"2026-07","release":"2026-09-15","value":"0.01","url":"https://www.stats.gov.cn/sj/zxfb/202609/t20260915_1965311.html","locator":"附注5 环比数据修订, 2026年7月"}
+  ],
+  "limitations": "Live official dated pages inspected now; no historical byte archive proves these exact bytes were served on release day. Not first-release claims. No source table attachments downloaded. No data API account used."
+}

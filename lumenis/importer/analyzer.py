@@ -11,7 +11,7 @@ class AnalyzedNote:
     def __init__(self):
         self.title: str = ""
         self.content: str = ""
-        self.author: str = "外部导入"
+        self.author: str = ""
         self.publish_date: str = ""
         self.source_platform: str = "import"
         self.sentiment: str = "unknown"
@@ -29,9 +29,11 @@ class AnalyzedNote:
         self.raw_chunk: str = ""
         self.source_locator: Optional[Dict] = None
         self.source_row_sha256: Optional[str] = None
+        self.source_fields: List[Dict] = []
+        self.source_record: Optional[Dict] = None
 
 
-def analyze_text(text: str, context_keywords: List[str] = None) -> List[AnalyzedNote]:
+def analyze_text(text: str, context_keywords: List[str] = None, *, ai_enhancement: bool = False) -> List[AnalyzedNote]:
     """
     分析文本，返回结构化笔记列表
     Text parsing continues without a model; absent owned inference remains
@@ -40,19 +42,20 @@ def analyze_text(text: str, context_keywords: List[str] = None) -> List[Analyzed
     chunks = split_into_chunks(text, max_chunk_size=800)
     results = []
     for chunk in chunks:
-        note = _analyze_chunk(chunk, context_keywords)
+        note = _analyze_chunk(chunk, context_keywords, ai_enhancement=ai_enhancement)
         if note.title or note.content:
             results.append(note)
     return results
 
 
-def _analyze_chunk(chunk: str, context_keywords: List[str] = None) -> AnalyzedNote:
+def _analyze_chunk(chunk: str, context_keywords: List[str] = None, *, ai_enhancement: bool = False) -> AnalyzedNote:
     """分析单个文本块"""
     note = AnalyzedNote()
     note.raw_chunk = chunk
     note.content = chunk[:500] if len(chunk) > 500 else chunk
 
-    result = _ai_analyze(chunk, context_keywords)
+    result = (_ai_analyze(chunk, context_keywords) if ai_enhancement is True else
+              {"status": "NOT_RUN", "code": "DETERMINISTIC_SOURCE_ANALYSIS", "analysis": None})
     analysis = result.get("analysis") if result.get("status") == "COMPLETED" else None
     if isinstance(analysis, dict):
         note.title = str(analysis.get("title") or _extract_title(chunk))
@@ -296,11 +299,104 @@ def analyze_table_rows(parsed, context_keywords=None) -> List[AnalyzedNote]:
 def analyze_parsed(parsed, context_keywords=None) -> List[AnalyzedNote]:
     """统一分析入口：表格型文件按行成稿，PDF/Word/TXT 走文本分块。"""
     fmt = parsed.metadata.get("format", "")
+    if ((fmt == "excel" and getattr(parsed, "source_tables", None))
+            or (fmt in ("pdf", "word") and getattr(parsed, "source_blocks", None))):
+        return extract_source_rows(parsed)
     if fmt in ("excel", "csv") and parsed.tables:
         rows = analyze_table_rows(parsed, context_keywords)
         if rows:
             return rows
     return analyze_text(parsed.text, context_keywords)
+
+
+def _retained_source_note(record, *, locator, content, title="", fields=None):
+    """Keep structured source bytes separate from derived/verified assertions."""
+    note = AnalyzedNote()
+    note.title = title
+    note.content = content
+    note.raw_chunk = json.dumps(record, ensure_ascii=False, sort_keys=True,
+                               separators=(",", ":"), allow_nan=False)
+    note.source_record = record
+    note.source_fields = fields or []
+    note.source_locator = locator
+    note.source_row_sha256 = hashlib.sha256(note.raw_chunk.encode("utf-8")).hexdigest()
+    note.analysis_status = "NOT_RUN"
+    note.analysis_code = "SOURCE_ROW_PROJECTION_NOT_ANALYZED"
+    note.keyword_method = "source_excerpt"
+    return note
+
+
+def _source_cell_text(cell):
+    value = cell["value"]
+    if value is None:
+        return ""
+    if type(value) is bool:
+        return "true" if value else "false"
+    return str(value)
+
+
+def _extract_typed_table_rows(parsed):
+    """All sheets, physical row/column identity and inert original typed values."""
+    result = []
+    for table_index, table in enumerate(parsed.source_tables):
+        if table.get("table_index") != table_index or not isinstance(table.get("sheet_name"), str):
+            raise ValueError("DOCUMENT_TYPED_TABLE_ORDER_INVALID")
+        rows = table["rows"]
+        # Header detection only affects friendly labels. Every row (including
+        # the header and blank rows) remains independently preserved below.
+        headers = rows[0]["values"] if rows and _looks_like_header(
+            [_source_cell_text(cell) for cell in rows[0]["values"]]) else []
+        columns = _map_columns([_source_cell_text(cell) for cell in headers]) if headers else {}
+        prior_row = 0
+        for row in rows:
+            physical_row = row.get("row_index")
+            if type(physical_row) is not int or physical_row <= prior_row:
+                raise ValueError("DOCUMENT_TYPED_ROW_ORDER_INVALID")
+            prior_row = physical_row
+            values = row["values"]
+            fields = [{"column_index": column + 1,
+                       "header": headers[column] if column < len(headers) else None,
+                       "value": value} for column, value in enumerate(values)]
+            locator = {"unit": "parsed_table_row", "table_index": table_index,
+                       "sheet_name": table["sheet_name"], "row_index": physical_row,
+                       "row_index_basis": "physical_one_based"}
+            record = {"schema": "xlsx-source-row/v1", "source_sha256": parsed.metadata["source_fingerprint"],
+                      "sheet_name": table["sheet_name"], "table_index": table_index,
+                      "row_index": physical_row, "headers": headers,
+                      "values": values, "source_fields": fields,
+                      "row_role": "header" if headers and row is rows[0] else "source_row"}
+            def mapped(key):
+                column = columns.get(key)
+                return _source_cell_text(values[column]) if column is not None and column < len(values) else ""
+            display = " | ".join(_source_cell_text(value) for value in values)
+            note = _retained_source_note(record, locator=locator,
+                                         content=mapped("content") or display,
+                                         title=mapped("title"), fields=fields)
+            note.author = mapped("author")
+            note.publish_date = mapped("date")
+            result.append(note)
+    return result
+
+
+def _extract_document_block_rows(parsed):
+    """Ordered physical blocks; no 800-character truncation or blank elision."""
+    result = []
+    for index, block in enumerate(parsed.source_blocks, 1):
+        content, locator = block["text"], block["locator"]
+        if not isinstance(content, str) or not isinstance(locator, dict):
+            raise ValueError("DOCUMENT_SOURCE_BLOCK_INVALID")
+        start, end = locator.get("start"), locator.get("end")
+        if (type(start) is not int or type(end) is not int or not 0 <= start <= end <= len(parsed.text)
+                or parsed.text[start:end] != content):
+            raise ValueError("DOCUMENT_SOURCE_BLOCK_LOCATOR_INVALID")
+        fields = block.get("source_fields", [])
+        record = {"schema": "document-source-block/v1",
+                  "source_sha256": parsed.metadata["source_fingerprint"], "block_index": index,
+                  "source_category": block["source_category"], "locator": locator,
+                  "text": content, "source_fields": fields}
+        result.append(_retained_source_note(record, locator=locator, content=content,
+                                            fields=fields))
+    return result
 
 
 def extract_source_rows(parsed) -> List[AnalyzedNote]:
@@ -310,6 +406,10 @@ def extract_source_rows(parsed) -> List[AnalyzedNote]:
     UNKNOWN/NOT_RUN; user-visible AI analysis is a separate owned-Gateway job.
     """
     fmt = parsed.metadata.get("format", "")
+    if fmt == "excel" and getattr(parsed, "source_tables", None):
+        return _extract_typed_table_rows(parsed)
+    if fmt in ("pdf", "word") and getattr(parsed, "source_blocks", None):
+        return _extract_document_block_rows(parsed)
     if fmt in ("excel", "csv") and parsed.tables:
         rows = analyze_table_rows(parsed, context_keywords=[])
         if rows:
@@ -411,3 +511,38 @@ def source_rows_fingerprint(parsed, rows: List[AnalyzedNote], *, count: int) -> 
     return hashlib.sha256(json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
     ).encode("utf-8")).hexdigest()
+
+
+def analyze_source_basics(parsed, context_keywords=None) -> dict:
+    """A reproducible private source analysis, with no model or fact admission.
+
+    Excerpts are verbatim, counts describe this upload only, and missing author,
+    sentiment, risk and rights remain unknown. The retained parsed text permits
+    every range and count to be independently checked.
+    """
+    text = str(parsed.text or "")
+    lines = [line for line in text.splitlines() if line.strip()]
+    terms = extract_source_keyword_candidates(text, context_keywords)
+    excerpts = []
+    start = 0
+    for line in lines[:8]:
+        position = text.find(line, start)
+        if position >= 0:
+            excerpt = line[:500]
+            excerpts.append({"text": excerpt, "start": position,
+                             "end": position + len(excerpt), "unit": "unicode-codepoint"})
+            start = position + len(line)
+    return {
+        "schema": "lumenis.private-source-analysis/v1",
+        "method": "deterministic-source-basics:v1", "state": "COMPLETED",
+        "ai_state": "NOT_RUN", "source_text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "character_count": len(text), "nonempty_line_count": len(lines),
+        "table_count": len(parsed.tables),
+        "table_row_counts": [len(table) for table in parsed.tables],
+        "keyword_candidates": terms, "source_excerpts": excerpts,
+        "sentiment": None, "risk": None, "author": None,
+        "factual_verification": "NOT_ESTABLISHED", "training_eligible": False,
+        "limitations": ["Counts describe this uploaded document only.",
+                         "Excerpts are source text, not verified facts or model summaries.",
+                         "Authorship, rights and external redistribution are not established."],
+    }

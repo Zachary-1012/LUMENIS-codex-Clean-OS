@@ -13,22 +13,34 @@ AssetKind = Literal[
 
 @dataclass(frozen=True)
 class YieldSignal:
-    story_count: int = 0
-    insight_count: int = 0
-    emotion_peak_count: int = 0
-    quote_count: int = 0
-    evidence_count: int = 0
+    story_count: int | None = None
+    insight_count: int | None = None
+    emotion_peak_count: int | None = None
+    quote_count: int | None = None
+    evidence_count: int | None = None
+
+
+    def __post_init__(self):
+        for name in self.__dataclass_fields__:
+            value=getattr(self,name)
+            if value is not None and (type(value) is not int or not 0<=value<=1000000):
+                raise ValueError("PODCAST_YIELD_SIGNAL_INVALID:"+name)
 
 
 @dataclass(frozen=True)
 class YieldPlan:
     assets: tuple[AssetKind, ...]
     rationale: tuple[str, ...]
+    state: str = "planned"
+    missing_signals: tuple[str, ...] = ()
 
 
 def plan_yield(signal: YieldSignal) -> YieldPlan:
+    missing=tuple(name for name in signal.__dataclass_fields__ if getattr(signal,name) is None)
+    if missing:
+        return YieldPlan(assets=(),rationale=("Missing counts are unknown, not zero; provide observations before planning.",),state="input_required",missing_signals=missing)
     assets: list[AssetKind] = ["full_episode"]
-    rationale: list[str] = ["Every interview retains a canonical full-episode asset."]
+    rationale: list[str] = ["Plan to retain the full episode; this does not create an asset or promote Canonical facts."]
 
     if signal.story_count:
         assets.append("chapter")

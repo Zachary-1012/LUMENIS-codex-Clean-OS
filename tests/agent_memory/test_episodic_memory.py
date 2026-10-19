@@ -12,10 +12,9 @@ from agent_memory.episodic import EpisodicMemory
 
 class TestEpisodicMemory:
     def test_search_cases(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         em = EpisodicMemory(db_path=seeded_db, enabled=True)
-        results = em.search_cases("trend value")
-        assert len(results) >= 1
-        assert results[0]["evidence_id"] == "ev_001"
+        assert em.search_cases("trend value") == []
 
     def test_search_cases_no_match(self, seeded_db):
         em = EpisodicMemory(db_path=seeded_db, enabled=True)
@@ -23,29 +22,24 @@ class TestEpisodicMemory:
         assert results == []
 
     def test_get_success_patterns(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         em = EpisodicMemory(db_path=seeded_db, enabled=True)
-        patterns = em.get_success_patterns(limit=10)
-        assert len(patterns) >= 1
-        assert all(p["authenticity_score"] >= 0.8 for p in patterns)
+        assert em.get_success_patterns() == []  # Evidence confidence is not business success.
 
     def test_get_failure_patterns(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         em = EpisodicMemory(db_path=seeded_db, enabled=True)
-        patterns = em.get_failure_patterns(limit=10)
-        assert len(patterns) >= 1
-        assert any("error" in p["evidence_type"] for p in patterns)
+        assert em.get_failure_patterns() == []
 
     def test_get_review_experience(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         em = EpisodicMemory(db_path=seeded_db, enabled=True)
-        reviews = em.get_review_experience(limit=10)
-        assert len(reviews) >= 1
-        assert reviews[0]["note_id"] == "note_001"
+        assert em.get_review_experience() == []
 
     def test_get_correction_patterns(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         em = EpisodicMemory(db_path=seeded_db, enabled=True)
-        corrections = em.get_correction_patterns(limit=10)
-        assert len(corrections) >= 1
-        # old_risk=high, new_risk=low → 有修正
-        assert corrections[0]["old_risk"] != corrections[0]["new_risk"]
+        assert em.get_correction_patterns() == []
 
     def test_store_case(self, seeded_db):
         em = EpisodicMemory(db_path=seeded_db, enabled=True)
@@ -57,17 +51,12 @@ class TestEpisodicMemory:
         assert retrieved.metadata["outcome"] == "success"
 
     def test_store_case_persist(self, seeded_db):
-        import sqlite3
+        # Legacy rows have no verified actor/scope binding.
         em = EpisodicMemory(db_path=seeded_db, enabled=True)
-        em.store_case("case:persist_test", {"task_id": "t_persist", "data": "x"},
-                      outcome="success", persist=True)
-        conn = sqlite3.connect(seeded_db)
-        conn.row_factory = sqlite3.Row
-        row = conn.execute(
-            "SELECT * FROM ai_task_evidence WHERE evidence_type LIKE 'episodic_%'"
-        ).fetchone()
-        conn.close()
-        assert row is not None
+        assert em.store_case("case:unbound", {"task_id": "task_001"}, persist=True) is None
+        import sqlite3
+        with sqlite3.connect(seeded_db) as con:
+            assert con.execute("SELECT COUNT(*) FROM ai_task_evidence WHERE evidence_type LIKE 'episodic_%'").fetchone()[0] == 0
 
     def test_disabled(self, seeded_db):
         em = EpisodicMemory(db_path=seeded_db, enabled=False)
@@ -75,7 +64,6 @@ class TestEpisodicMemory:
         assert em.get_success_patterns() == []
 
     def test_stats(self, seeded_db):
+        # Legacy rows have no verified actor/scope binding.
         em = EpisodicMemory(db_path=seeded_db, enabled=True)
-        s = em.stats()
-        assert s["ai_task_evidence_total"] >= 2
-        assert s["note_review_history_total"] >= 1
+        assert em.stats()["visible_evidence_count"] == 0

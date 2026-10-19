@@ -1,0 +1,345 @@
+[
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/01_LOCAL_AND_ARCHIVE_LOCATOR_SCAN.json",
+    "pointer": "/materials/15/original_references/0",
+    "original_value_sha256": "c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546",
+    "replacement": "[PRIVATE_NOTEBOOK_SOURCE_SHA256:c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546]",
+    "reason": "Drive-backed Colab notebook original reference; no explicit public release evidence in ledger; replace with public source or provenance confirmation."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/01_LOCAL_AND_ARCHIVE_LOCATOR_SCAN.json",
+    "pointer": "/materials/37/original_references/0",
+    "original_value_sha256": "c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/01_LOCAL_AND_ARCHIVE_LOCATOR_SCAN.json",
+    "pointer": "/materials/41/original_references/0",
+    "original_value_sha256": "6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/01_LOCAL_AND_ARCHIVE_LOCATOR_SCAN.json",
+    "pointer": "/materials/57/original_references/0",
+    "original_value_sha256": "43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/01_LOCAL_AND_ARCHIVE_LOCATOR_SCAN.json",
+    "pointer": "/materials/90/original_references/0",
+    "original_value_sha256": "d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/01_LOCAL_AND_ARCHIVE_LOCATOR_SCAN.json",
+    "pointer": "/materials/91/original_references/0",
+    "original_value_sha256": "d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/01_LOCAL_AND_ARCHIVE_LOCATOR_SCAN.json",
+    "pointer": "/materials/113/original_references/0",
+    "original_value_sha256": "04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/15/resolved_original_references/0",
+    "original_value_sha256": "c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546",
+    "replacement": "[PRIVATE_NOTEBOOK_SOURCE_SHA256:c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546]",
+    "reason": "Drive-backed Colab notebook original reference; no explicit public release evidence in ledger; replace with public source or provenance confirmation."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/15/availability/0/reference",
+    "original_value_sha256": "c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546",
+    "replacement": "[PRIVATE_NOTEBOOK_SOURCE_SHA256:c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546]",
+    "reason": "Drive-backed Colab notebook original reference; no explicit public release evidence in ledger; replace with public source or provenance confirmation."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/37/resolved_original_references/0",
+    "original_value_sha256": "c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/37/availability/0/reference",
+    "original_value_sha256": "c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/41/resolved_original_references/0",
+    "original_value_sha256": "6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/41/availability/0/reference",
+    "original_value_sha256": "6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/57/resolved_original_references/0",
+    "original_value_sha256": "43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/57/availability/0/reference",
+    "original_value_sha256": "43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/90/resolved_original_references/0",
+    "original_value_sha256": "d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/90/availability/0/reference",
+    "original_value_sha256": "d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/91/resolved_original_references/0",
+    "original_value_sha256": "d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/91/availability/0/reference",
+    "original_value_sha256": "d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/113/resolved_original_references/0",
+    "original_value_sha256": "04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",
+    "pointer": "/materials/113/availability/0/reference",
+    "original_value_sha256": "04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "pointer": "/materials/15/original_references/0",
+    "original_value_sha256": "c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546",
+    "replacement": "[PRIVATE_NOTEBOOK_SOURCE_SHA256:c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546]",
+    "reason": "Drive-backed Colab notebook original reference; no explicit public release evidence in ledger; replace with public source or provenance confirmation."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "pointer": "/materials/37/original_references/0",
+    "original_value_sha256": "c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "pointer": "/materials/41/original_references/0",
+    "original_value_sha256": "6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "pointer": "/materials/57/original_references/0",
+    "original_value_sha256": "43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "pointer": "/materials/90/original_references/0",
+    "original_value_sha256": "d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "pointer": "/materials/91/original_references/0",
+    "original_value_sha256": "d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/engineering/documentation-evidence/reports/original_material_recovery_20261018/reviewed_component/04_199_MATERIAL_LOCATOR_STATUS.json",
+    "pointer": "/materials/113/original_references/0",
+    "original_value_sha256": "04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/15/resolved_original_references/0",
+    "original_value_sha256": "c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546",
+    "replacement": "[PRIVATE_NOTEBOOK_SOURCE_SHA256:c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546]",
+    "reason": "Drive-backed Colab notebook original reference; no explicit public release evidence in ledger; replace with public source or provenance confirmation."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/15/availability/0/reference",
+    "original_value_sha256": "c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546",
+    "replacement": "[PRIVATE_NOTEBOOK_SOURCE_SHA256:c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546]",
+    "reason": "Drive-backed Colab notebook original reference; no explicit public release evidence in ledger; replace with public source or provenance confirmation."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/37/resolved_original_references/0",
+    "original_value_sha256": "c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/37/availability/0/reference",
+    "original_value_sha256": "c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/41/resolved_original_references/0",
+    "original_value_sha256": "6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/41/availability/0/reference",
+    "original_value_sha256": "6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/57/resolved_original_references/0",
+    "original_value_sha256": "43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/57/availability/0/reference",
+    "original_value_sha256": "43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/90/resolved_original_references/0",
+    "original_value_sha256": "d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/90/availability/0/reference",
+    "original_value_sha256": "d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/91/resolved_original_references/0",
+    "original_value_sha256": "d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/91/availability/0/reference",
+    "original_value_sha256": "d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/113/resolved_original_references/0",
+    "original_value_sha256": "04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/intelligence/04_data_metrics_presentation/research-20261018/brand_comparability_research_20261018/05_MATERIAL_READING_LEDGER.json",
+    "pointer": "/materials/113/availability/0/reference",
+    "original_value_sha256": "04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "pointer": "/rows/15/references/0",
+    "original_value_sha256": "c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546",
+    "replacement": "[PRIVATE_NOTEBOOK_SOURCE_SHA256:c925bf9f9d9b6b7497043f5e341161084adbf538431b66d3167df03d9a52e546]",
+    "reason": "Drive-backed Colab notebook original reference; no explicit public release evidence in ledger; replace with public source or provenance confirmation."
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "pointer": "/rows/37/references/0",
+    "original_value_sha256": "c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:c64387ba621c368c774caa6f23645e5e38a0128c59b0511c89d44be897a2ccf9]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "pointer": "/rows/41/references/0",
+    "original_value_sha256": "6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:6ca660566fd1192a462aae8e54f7eb40ef5822d50cfbe4aa87a0717808379979]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "pointer": "/rows/57/references/0",
+    "original_value_sha256": "43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:43c5f8862919fa084917632b4114b3cf7ff8a7fb5a25648cfe63bfe3d7a5ff6d]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "pointer": "/rows/90/references/0",
+    "original_value_sha256": "d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d5c9193ab4e9c78ee49c29d572c6173a83e76b6c5a9583deaad4945238129312]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "pointer": "/rows/91/references/0",
+    "original_value_sha256": "d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:d7d4bac6d33fa0eb57e997df45305d0ada1a910a4f8d6515a449f4df9773e618]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  },
+  {
+    "file": "research/content-intelligence/research-20261018/media_pipeline_research_20261018/03_MATERIAL_READING_LEDGER.json",
+    "pointer": "/rows/113/references/0",
+    "original_value_sha256": "04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae",
+    "replacement": "[PRIVATE_ORIGINAL_MATERIAL_URL_SHA256:04e54d1ecf07b4b29705f642d7f2b60543e7e64427b3f7412375325e255ecdae]",
+    "reason": "Loopback URL bound to original material locator in ledger, including historical local port and workspace route; non-public source locator rather than generic API example. Preserve requirements/source title and replace locator only."
+  }
+]

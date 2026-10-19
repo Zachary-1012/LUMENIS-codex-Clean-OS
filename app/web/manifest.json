@@ -1,12 +1,12 @@
 {
-  "name": "序境 · LUMENIS Workspace",
-  "short_name": "序境",
+  "name": "寰意 · OEVIRA Workspace",
+  "short_name": "寰意",
     "start_url": "./workspace/ACC-03",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0B0F10",
   "theme_color": "#17221F",
-  "description": "序境 LUMENIS 浏览器工作区",
+  "description": "寰意 OEVIRA 浏览器工作区",
   "orientation": "any",
   "prefer_related_applications": false,
   "icons": [

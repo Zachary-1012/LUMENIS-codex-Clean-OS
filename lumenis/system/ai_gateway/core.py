@@ -76,11 +76,11 @@ def revoke_owned_service(admission_verifier):
     return revoke(admission_verifier)
 
 
-def run_owned_request(request, *, is_cancelled=None):
+def run_owned_request(request, *, is_cancelled=None, expected_binding_sha256=None):
     """Run a complete typed, source-authorized request through the one Gateway."""
     from .owned_service import run_owned_request as run
 
-    return run(request, is_cancelled=is_cancelled)
+    return run(request, is_cancelled=is_cancelled, expected_binding_sha256=expected_binding_sha256)
 
 
 def owned_inference_status(domain_id=None):
@@ -705,20 +705,34 @@ def _budget_record(pack_id='glm_4_5_air', amount=1, endpoint='', detail=''):
         pass
 
 
-def chat(system, user, level='medium', use_cache=False, temperature=None, max_tokens=None, model=None, pack_id='glm_4_5_air', track=True, capability='daily', *, external_user_input=False):
+def chat(system, user, level='medium', use_cache=False, temperature=None, max_tokens=None, model=None, pack_id='glm_4_5_air', track=True, capability='daily', *, external_user_input=False, external_approval=None):
     """Preserved three-tuple signature; no provider fallback or hidden billing.
 
     Generic prompts lack the canonical actor/domain/source-use request and cannot
     be silently promoted to owned execution. Use run_owned_request explicitly.
-    A user-supplied API is used only when explicitly selected and the caller
-    identifies direct user conversation, never retrieved business/source data.
+    The admitted external API is used only when selected by the current user and the caller identifies direct
+    user conversation, never retrieved business/source data. The final adapter
+    rechecks the server identity and exact request in Shared Permission; this
+    internal input-classification flag is not an authorization grant.
     Existing source-bearing callers require their typed SourceUse contract and
     cannot acquire external transmission permission from global configuration.
     """
     from lumenis.system.ai_gateway import user_api_adapter as _user_api
-    if external_user_input is True and _user_api.is_configured():
-        content, provider, usage = _user_api.chat(system, user, temperature=0.2 if temperature is None else temperature, max_tokens=max_tokens or 1200)
-        return content, provider, {'provider': provider, 'model': _user_api.config()['model'], 'usage': usage}
+    if external_user_input is True:
+        content, provider, usage = _user_api.chat(
+            system, user, temperature=0.2 if temperature is None else temperature,
+            max_tokens=1200 if max_tokens is None else max_tokens,
+            external_user_input=True, external_approval=external_approval,
+        )
+        preview = usage.get('approval_request') if isinstance(usage, dict) else None
+        audit_id = usage.get('audit_id') if isinstance(usage, dict) else None
+        if type(audit_id) is not str or re.fullmatch(r'aud_[0-9a-f]{16}', audit_id) is None:
+            audit_id = None
+        return content, provider, {
+            'provider': provider, 'model': _user_api.config().get('model'),
+            'usage': None if preview or audit_id else usage, 'approval_request': preview,
+            'audit_id': audit_id,
+        }
     return None, 'provider_disabled', _provider_disabled_meta(level, model)
 
 

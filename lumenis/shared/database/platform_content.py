@@ -68,6 +68,14 @@ def _stable_observation(record: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _stable_observation_json(record: Mapping[str, Any]) -> str:
+    """Use the type-sensitive canonical JSON contract of signed observations."""
+    return json.dumps(
+        _stable_observation(record), ensure_ascii=False, sort_keys=True,
+        separators=(",", ":"), allow_nan=False,
+    )
+
+
 def _persist_native_records(
     records: Sequence[Mapping[str, Any]], normalized: Sequence[Mapping[str, Any]], *,
     expected_ids: Sequence[str], platform: str, evidence_id: int, product: str,
@@ -76,9 +84,23 @@ def _persist_native_records(
     """Write the current native view and append changed metrics, including unknowns."""
     from lumenis.system.collector.adapters.multi_platform_import import _normalize_source_publication
 
+    # Repository.transaction() may not yet have opened a SQLite transaction.
+    # Serialize the read/compare/write without committing a caller's transaction.
+    if not connection.in_transaction:
+        connection.execute("BEGIN IMMEDIATE")
+    else:
+        # Also acquire the writer reservation for caller-owned deferred BEGINs.
+        # No rows change; a stale WAL snapshot fails closed instead of overwriting.
+        connection.execute("UPDATE platform_contents SET raw_data=raw_data WHERE 0")
+
     columns = ", ".join(_CONTENT_FIELDS)
     placeholders = ", ".join("?" for _ in _CONTENT_FIELDS)
     updates = ", ".join(f"{field}=excluded.{field}" for field in _CONTENT_FIELDS)
+    # Reusing the exact observation must not manufacture a fresh collection time.
+    changed_fields = " OR ".join(
+        f"platform_contents.{field} IS NOT excluded.{field}"
+        for field in _CONTENT_FIELDS
+    )
     for record, content in zip(records, normalized):
         content_id = str(content["platform_content_id"])
         values = []
@@ -94,6 +116,21 @@ def _persist_native_records(
         observation = dict(record)
         observation["_lumenis_evidence_id"] = evidence_id
         raw_json = json.dumps(observation, ensure_ascii=False, sort_keys=True)
+        prior_native = connection.execute(
+            "SELECT raw_data FROM platform_contents WHERE platform=? AND platform_content_id=?",
+            (platform, content_id),
+        ).fetchone()
+        try:
+            prior_observation = json.loads(prior_native[0]) if prior_native else None
+            prior_stable = (
+                _stable_observation_json(prior_observation)
+                if isinstance(prior_observation, dict) else None
+            )
+        except (TypeError, ValueError):
+            prior_stable = None
+        observation_changed = prior_stable != _stable_observation_json(observation)
+        # Preserve the latest raw capture/Evidence lineage independently of the
+        # stable business observation time. Native-only fields still count.
         connection.execute(
             f"INSERT INTO platform_contents "
             f"(platform, platform_content_id, {columns}, raw_data, "
@@ -101,9 +138,12 @@ def _persist_native_records(
             f"VALUES (?, ?, {placeholders}, ?, ?, ?, ?) "
             f"ON CONFLICT(platform, platform_content_id) DO UPDATE SET "
             f"{updates}, raw_data=excluded.raw_data, "
-            f"last_collected_at=excluded.last_collected_at, "
-            f"collected_at=excluded.collected_at",
-            (platform, content_id, *values, raw_json, now, now, now),
+            f"last_collected_at=CASE WHEN ({changed_fields}) OR ? "
+            f"THEN excluded.last_collected_at ELSE platform_contents.last_collected_at END, "
+            f"collected_at=CASE WHEN ({changed_fields}) OR ? "
+            f"THEN excluded.collected_at ELSE platform_contents.collected_at END",
+            (platform, content_id, *values, raw_json, now, now, now,
+             observation_changed, observation_changed),
         )
         metrics = {name: content.get(name) for name in (
             "like_count", "comment_count", "collect_count", "share_count", "view_count",
@@ -275,7 +315,11 @@ def platform_records_changed(
             except (TypeError, ValueError):
                 return True
             current = _credential_free_observations(dict(record))
-            if _stable_observation(prior) != _stable_observation(current):
+            try:
+                if (not isinstance(prior, dict)
+                        or _stable_observation_json(prior) != _stable_observation_json(current)):
+                    return True
+            except (TypeError, ValueError):
                 return True
     return False
 

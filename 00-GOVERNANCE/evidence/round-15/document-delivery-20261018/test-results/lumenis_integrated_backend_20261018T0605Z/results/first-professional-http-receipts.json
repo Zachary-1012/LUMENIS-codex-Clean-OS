@@ -1,0 +1,62 @@
+[
+  {
+    "path": "professional/import",
+    "status": 403,
+    "write": true
+  },
+  {
+    "path": "approvals/confirm",
+    "status": 200,
+    "write": true
+  },
+  {
+    "path": "professional/import",
+    "status": 200,
+    "write": true
+  },
+  {
+    "path": "professional/import",
+    "status": 403,
+    "write": true
+  },
+  {
+    "path": "approvals/confirm",
+    "status": 200,
+    "write": true
+  },
+  {
+    "path": "professional/import",
+    "status": 200,
+    "write": true
+  },
+  {
+    "path": "professional/metrics?platform=xiaohongshu&account_id=account-a",
+    "status": 200,
+    "write": false
+  },
+  {
+    "path": "professional/import",
+    "status": 200,
+    "write": true
+  },
+  {
+    "path": "professional/metrics?platform=xiaohongshu&account_id=account-a&start_date=2026-10-01&end_date=2026-10-01",
+    "status": 200,
+    "write": false
+  },
+  {
+    "path": "professional/metrics?platform=xiaohongshu&account_id=account-a",
+    "status": 503,
+    "write": false
+  },
+  {
+    "path": "professional/metrics?platform=xiaohongshu&account_id=account-a",
+    "status": 400,
+    "write": false
+  },
+  {
+    "path": "professional/metrics?platform=xiaohongshu&account_id=account-a",
+    "status": 200,
+    "write": false
+  }
+]

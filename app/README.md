@@ -1,19 +1,21 @@
-# LUMENIS App｜序境应用
+# OEVIRA App｜寰意应用
 
-This directory contains LUMENIS's Flutter application for the Web Workspace,
+Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canonical naming authority](../00-GOVERNANCE/CANONICAL-NAMING-AND-TWIN-SYNC.md) governs this rename. Technical identifiers, package names, environment variables, commands and source paths retain their compatibility spelling; dated records below preserve their original names and evidence.
+
+This directory contains OEVIRA's Flutter application for the Web Workspace,
 Windows/macOS Desktop and iOS Mobile Companion. The public acquisition website
 is maintained separately in [`../website/`](../website/README.md).
 
-本目录是序境的 Flutter 应用，面向 Web Workspace、Windows/macOS 桌面端和
+本目录是寰意的 Flutter 应用，面向 Web Workspace、Windows/macOS 桌面端和
 iOS 移动伴侣。Public Website 独立维护在 [`../website/`](../website/README.md)。
 
 ## Product and domain boundaries｜产品与领域边界
 
-LUMENIS is one product. The Flutter app presents existing Product Core
+OEVIRA is one product. The Flutter app presents existing Product Core
 capabilities; it does not own a second database, business-rule engine,
 Canonical Data, Evidence, Metric, Permission or runtime.
 
-序境是一个产品。Flutter 应用负责呈现既有 Product Core 能力，不另建数据库、
+寰意是一个产品。Flutter 应用负责呈现既有 Product Core 能力，不另建数据库、
 业务规则引擎、Canonical Data、Evidence、Metric、Permission 或 Runtime。
 
 - **CTH** is Subject-first commerce operations. Preserve the authorized Subject,
@@ -89,7 +91,7 @@ Permission 和 Evidence 关系；合同存在不等于接口或用户流程已�
 
 - Native loopback clients may read the existing Core Basic Auth header from
   `GET /api/auth/config` when Core transport authentication is enabled. The
-  header stays in process memory and is transport authentication, not a LUMENIS
+  header stays in process memory and is transport authentication, not an OEVIRA
   product account.
 - Web builds never request or retain a reusable local Basic credential. The
   App never requests that credential from a remote Core or sends it to a
@@ -103,7 +105,7 @@ Permission 和 Evidence 关系；合同存在不等于接口或用户流程已�
 
 - 原生端连接 loopback Core 时，如启用了传输认证，可从
   `GET /api/auth/config` 读取既有 Core Basic Auth 请求头。该请求头仅保存在进程
-  内存中，属于传输认证，不是序境产品账户。
+  内存中，属于传输认证，不是寰意产品账户。
 - Web 构建不得请求或保留可复用的本地 Basic 凭据。应用不得向远端 Core 请求该
   凭据，也不得将其发送到非 loopback 主机。远端 Core 认证沿用现有部署侧传输路径。
 - 已认证请求不跟随重定向。不得跨源转发 Subject、BrandFocus、actor 或授权上下文。
@@ -279,19 +281,19 @@ Preserve its neighboring DLLs and `data/` when running or packaging it.
 - [`motion-web`](https://github.com/Zachary-1012/motion-web) is reading-only
   research. Its CC BY-NC 4.0 license bars commercial use of its Skill, prompts,
   cases and derivative workflows. Do not bring its code, assets, cases,
-  parameters, verification recipes or derivative workflows into LUMENIS.
+  parameters, verification recipes or derivative workflows into OEVIRA.
 - The public [Toss Design System guide](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components)
   may inform documentation clarity and consistency only. Its UI Kit materials
   are limited to the Apps in Toss service. Do not reuse its components, assets,
   visual patterns or screen layouts.
 - Record each permitted reference's source, abstract principle and the distinct
-  LUMENIS task/composition it informs. Third-party licenses remain theirs.
+  OEVIRA task/composition it informs. Third-party licenses remain theirs.
 
 - [`motion-web`](https://github.com/Zachary-1012/motion-web) 仅供阅读研究。其
   CC BY-NC 4.0 许可禁止将 Skill、提示词、案例及衍生工作流用于商业用途。不得把其
-  代码、素材、案例、参数、验证方案或衍生工作流带入序境。
+  代码、素材、案例、参数、验证方案或衍生工作流带入寰意。
 - 公开的 [Toss Design System 指南](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components)
   仅可用于参考文档清晰度和一致性实践。其 UI Kit 材料仅限 Apps in Toss 服务使用；
   不得复用其组件、素材、视觉模式或屏幕布局。
-- 对允许参考的材料，记录来源、抽象原则和受其启发的序境独立任务/构图。第三方
+- 对允许参考的材料，记录来源、抽象原则和受其启发的寰意独立任务/构图。第三方
   许可证仍归其权利人所有。

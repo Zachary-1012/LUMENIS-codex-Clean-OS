@@ -33,6 +33,9 @@ class _Engine:
     def list_tasks(self, limit=50):
         return self.tasks
 
+    def get_task(self, task_id):
+        return next((row for row in self.tasks if row["task_id"] == task_id), None)
+
     def get_evidence(self, task_id):
         return self.evidence.get(task_id, [])
 
@@ -48,6 +51,8 @@ def _task(task_id, context=None, status="running", risk="L3"):
 @pytest.fixture
 def engine(monkeypatch):
     import ai_task_engine
+    import ai_api
+    monkeypatch.setattr(ai_api, "_task_row_read_allowed", lambda row: True)
 
     holder = {}
     monkeypatch.setattr(ai_task_engine, "get_task_engine", lambda: holder["engine"])
@@ -80,7 +85,8 @@ def test_global_inbox_emits_projection_v2_for_verified_task(engine):
     assert i["assurance"] == "content-integrity-only" and i["algorithm"] == "sha256"
     assert i["digest"] == _chain("t1", ["a", "b"])[-1]["current_hash"]
     assert item["kind"] == "TASK" and item["state"] == "running" and item["priority"] == "HIGH"
-    assert r["data"]["notifications"] == [] and r["data"]["alerts"] == []
+    assert len(r["data"]["notifications"]) == 1 and r["data"]["alerts"] == []
+    assert r["data"]["notifications"][0]["external_delivery"] is False
 
 
 def test_tasks_without_verified_evidence_lineage_are_dropped(engine):
@@ -108,7 +114,7 @@ def test_global_envelope_rejects_focus_scoped_task_and_focus_accepts_only_exact(
 
 def test_inbox_cards_carry_no_actions_or_raw_diagnostics(engine):
     r = _build(engine, [_task("t1")], {"t1": _chain("t1", ["a"])}, GLOBAL)
-    text = json.dumps(r, ensure_ascii=False)
+    text = json.dumps({"tasks": r["data"]["tasks"], "sections": r["sections"]}, ensure_ascii=False)
     assert "actions" not in r["sections"][0]
     for word in ("approve", "assign", "snooze", "retry", "dismiss", "dlq", "circuit"):
         assert word not in text.lower()
@@ -123,6 +129,14 @@ def test_route_without_signed_in_actor_shows_not_displayed_state(monkeypatch):
     app = Flask(__name__)
     app.register_blueprint(experience_runtime.experience_bp)
     import lumenis.auth.service as auth
-    monkeypatch.setattr(auth, "get_current_user", lambda: None)
+    monkeypatch.setattr(auth, "get_current_user", lambda **kwargs: None)
     body = app.test_client().get("/api/experience/screen/SH-06").get_json()
     assert body["bound"] is True and "data" not in body and "scope" not in body
+
+
+def test_inbox_fresh_owner_denial_hides_integrity_valid_task(engine, monkeypatch):
+    import ai_api
+    monkeypatch.setattr(ai_api, "_task_row_read_allowed", lambda row: False)
+    result = _build(engine, [_task("t1")], {"t1": _chain("t1", ["a"])}, GLOBAL)
+    assert result["data"]["tasks"] == []
+    assert result["data"]["notifications"] == []

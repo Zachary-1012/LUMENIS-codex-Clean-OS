@@ -1,0 +1,14 @@
+[
+  {
+    "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base/resolve/5d83992436eae1d760afd27aff78a71d676296fc/LICENSE",
+    "result": "HTTP 404; model card metadata separately retained"
+  },
+  {
+    "url": "https://huggingface.co/Qwen/Qwen3-TTS-Tokenizer-12Hz/resolve/7dd38ad4e9bad454aae9cd937d0cd577604fe229/LICENSE",
+    "result": "HTTP 404; model card metadata separately retained"
+  },
+  {
+    "url": "https://huggingface.co/unsloth/gpt-oss-20b-unsloth-bnb-4bit/resolve/093fba6992ef5a7152481afec0bdfca1ac486998/LICENSE",
+    "result": "HTTP 404; model card metadata separately retained"
+  }
+]

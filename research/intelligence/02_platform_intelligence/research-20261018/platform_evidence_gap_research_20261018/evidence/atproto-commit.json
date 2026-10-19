@@ -1,0 +1,269 @@
+{
+  "sha": "9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+  "node_id": "C_kwDOGjFwnNoAKDlmNjZhN2U1NGIwMzA3MDBjMDNlZGEwYmRiZjM1ZmZlNzU2ZjRjZDg",
+  "commit": {
+    "author": {
+      "name": "Eric Bailey",
+      "email": "[REDACTED_PRIVATE_IDENTIFIER]",
+      "date": "2026-10-17T12:15:04Z"
+    },
+    "committer": {
+      "name": "GitHub",
+      "email": "[REDACTED_PRIVATE_IDENTIFIER]",
+      "date": "2026-10-17T12:15:04Z"
+    },
+    "message": "Relax Grain photo alt validation for AppView reads (#5680)\n\n* Relax Grain photo alt validation for AppView reads\n\n* Add Grain photo compatibility override to Ozone",
+    "tree": {
+      "sha": "74077f63b278bf92c1a101cd8337e65ec5727c5a",
+      "url": "https://api.github.com/repos/bluesky-social/atproto/git/trees/74077f63b278bf92c1a101cd8337e65ec5727c5a"
+    },
+    "url": "https://api.github.com/repos/bluesky-social/atproto/git/commits/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+    "comment_count": 0,
+    "verification": {
+      "verified": true,
+      "reason": "valid",
+      "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsFcBAABCAAQBQJq02bICRC1aQ7uu5UhlAAAs9wQAAHcgE+bJgdNhAl4Bg0CWWCM\n/F9Ei1GcfEpPQAQ0LBoxKljrkSKk35wN/mxE4lofR15MdKQtVWVXfv7uR23nkKbG\nu0b7UcolEVSZOsXd6FRkyJm4qAq0Xk6EtYzZivnyTQzhyfM0sKCDG71oCZ7/Ygb/\n6K0QabLpeCFlHLbXbt+aR0Yca7Qy16fQODHs6Dmrek8OvOBKH6Nrl8gt6JglWpjs\nc/T/Qt1DWZpRYg3xC8Yg9DR81Q5vrCpLidun+3llIFsDEIuvRArFlyLWgPpUyeEF\n/NbAFRzZV8qjp2oqp3EVnhTJkOl9q2/EXv35zB/P6+cXPduOyp441IwOTZzoRTa2\nQo7odqM61aqQKmKTXAuv85uP8EM6PnMjN4KJ8z+ooZ0pMcsiTIYy2bwurqfW1l9B\nuO1PhituDgcfvvSqNnBWZj2QC5fXELgkVg8tj55aKZBrEI+OLDLy0hWgp/90F31e\nAMgHc6irvnZyFcvKTsv8XDo1G3HeSnwfL8oCcWEGwOIBWUVaqEF4ILs+NNXQpcEQ\nhzOhUqunf9eVB9FAqWbVsdkCDrNoDxIXSFmx113TySVvU2e+UUUxY0XeY5yfpJpI\nDxLWb14ftyO8QlwOzr5llP7xrHt3zTNKdxtEJ9FzllojeD/vJjwmgdG/eBO4v5U9\nr2+B1ommX44KwvTRULpN\n=KrQQ\n-----END PGP SIGNATURE-----\n",
+      "payload": "tree 74077f63b278bf92c1a101cd8337e65ec5727c5a\nparent 3380a6c2f80b127de8ac13e7202760c9532a1398\nauthor Eric Bailey <[REDACTED_EMAIL]> 1792239304 -0500\ncommitter GitHub <[REDACTED_EMAIL]> 1792239304 -0500\n\nRelax Grain photo alt validation for AppView reads (#5680)\n\n* Relax Grain photo alt validation for AppView reads\n\n* Add Grain photo compatibility override to Ozone",
+      "verified_at": "2026-10-17T12:15:05Z"
+    }
+  },
+  "url": "https://api.github.com/repos/bluesky-social/atproto/commits/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+  "html_url": "https://github.com/bluesky-social/atproto/commit/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+  "comments_url": "https://api.github.com/repos/bluesky-social/atproto/commits/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/comments",
+  "author": {
+    "login": "estrattonbailey",
+    "id": 4732330,
+    "node_id": "MDQ6VXNlcjQ3MzIzMzA=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/4732330?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/estrattonbailey",
+    "html_url": "https://github.com/estrattonbailey",
+    "followers_url": "https://api.github.com/users/estrattonbailey/followers",
+    "following_url": "https://api.github.com/users/estrattonbailey/following{/other_user}",
+    "gists_url": "https://api.github.com/users/estrattonbailey/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/estrattonbailey/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/estrattonbailey/subscriptions",
+    "organizations_url": "https://api.github.com/users/estrattonbailey/orgs",
+    "repos_url": "https://api.github.com/users/estrattonbailey/repos",
+    "events_url": "https://api.github.com/users/estrattonbailey/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/estrattonbailey/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "committer": {
+    "login": "web-flow",
+    "id": 19864447,
+    "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+    "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/web-flow",
+    "html_url": "https://github.com/web-flow",
+    "followers_url": "https://api.github.com/users/web-flow/followers",
+    "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+    "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+    "organizations_url": "https://api.github.com/users/web-flow/orgs",
+    "repos_url": "https://api.github.com/users/web-flow/repos",
+    "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/web-flow/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "parents": [
+    {
+      "sha": "3380a6c2f80b127de8ac13e7202760c9532a1398",
+      "url": "https://api.github.com/repos/bluesky-social/atproto/commits/3380a6c2f80b127de8ac13e7202760c9532a1398",
+      "html_url": "https://github.com/bluesky-social/atproto/commit/3380a6c2f80b127de8ac13e7202760c9532a1398"
+    }
+  ],
+  "stats": {
+    "total": 299,
+    "additions": 229,
+    "deletions": 70
+  },
+  "files": [
+    {
+      "sha": "aae6d262cd5ce22b1e4afea0d3cc1aa675cb95ef",
+      "filename": ".agents/skills/lex-setup/SKILL.md",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 2,
+      "changes": 9,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/.agents%2Fskills%2Flex-setup%2FSKILL.md",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/.agents%2Fskills%2Flex-setup%2FSKILL.md",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/.agents%2Fskills%2Flex-setup%2FSKILL.md?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -144,8 +144,13 @@ last fallback. The kinds:\n   resolver but **before** the `http`/network ones, so it overrides the lexicons\n   they would otherwise return (it cannot override canonical, which resolves\n   first). Put any document that must differ here: unpublished NSIDs (`internal.*`,\n-  `place.stream.badge.defs`, a not-yet-published `app.bsky.unspecced.*`) and\n-  documents whose local version is ahead of the published one. All packages share\n+  `place.stream.badge.defs`, a not-yet-published `app.bsky.unspecced.*`),\n+  documents whose local version is ahead of the published one, and minimal\n+  compatibility relaxations of published third-party lexicons that network\n+  records violate (see\n+  [Compatibility overrides](../../../lexicons-overrides/README.md#compatibility-overrides);\n+  the PDS must `exclude` them so writes keep validating against the published\n+  schema). All packages share\n   the one [lexicons-overrides/](../../../lexicons-overrides/) at the repo root.\n \n [packages/bsky/lexicons.json](../../../packages/bsky/lexicons.json) is the full"
+    },
+    {
+      "sha": "06354f6ff105ec6ed4992ac63418bc17e3ed8363",
+      "filename": ".changeset/vast-groups-knock.md",
+      "status": "added",
+      "additions": 7,
+      "deletions": 0,
+      "changes": 7,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/.changeset%2Fvast-groups-knock.md",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/.changeset%2Fvast-groups-knock.md",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/.changeset%2Fvast-groups-knock.md?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -0,0 +1,7 @@\n+---\n+\"@atproto/bsky\": patch\n+\"@atproto/ozone\": patch\n+\"@atproto/pds\": patch\n+---\n+\n+Add a `social.grain.photo` compatibility override that no longer requires `alt`, so the AppView renders Grain gallery photos that omit it. Ozone resolves the override; the PDS keeps validating writes against the published lexicon."
+    },
+    {
+      "sha": "9f77e5ae3b744acac3050d62f30dd07c2f9ca563",
+      "filename": "lexicons-overrides/README.md",
+      "status": "modified",
+      "additions": 13,
+      "deletions": 0,
+      "changes": 13,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/lexicons-overrides%2FREADME.md",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/lexicons-overrides%2FREADME.md",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/lexicons-overrides%2FREADME.md?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -29,6 +29,7 @@ Because this resolver is listed after the canonical one (which resolves `com.atp\n - Providing prototypes or experimental versions of lexicons before they are finalized.\n - Overriding a network- or GitHub-resolved lexicon for testing or development purposes.\n - Providing a copy of a lexicon document that can no longer be resolved from its upstream source.\n+- Relaxing a published third-party lexicon that existing network records violate, so read paths accept them (see [Compatibility overrides](#compatibility-overrides)).\n \n > [!NOTE]\n >\n@@ -39,3 +40,15 @@ Create JSON Lexicon schemas in this directory to provide custom implementations\n > [!NOTE]\n >\n > Please keep this directory tidy. Do remove any override file that is no longer needed (then run `pnpm run lex:update`).\n+\n+## Compatibility overrides\n+\n+A compatibility override is a copy of a published third-party lexicon with the smallest relaxation that lets read paths accept records already on the network. Keep every other constraint identical to the upstream document.\n+\n+Packages that validate writes (the PDS) must keep validating against the publisher's schema, so they must exclude every compatibility override from their overrides resolver (see the `exclude` list in [packages/pds/lexicons.json](../packages/pds/lexicons.json)). Read-only consumers (the AppView and Ozone) resolve them like any other override.\n+\n+- `social.grain.photo`\n+  - Upstream: `at://did:plc:e7rftrdyz5e2rw4y6ocszew2/com.atproto.lexicon.schema/social.grain.photo` (CID `bafyreiec24azdo2caoijpefea3x6qfewjvkfu3zcjj3u3lwf3nx3q7nunu`).\n+  - Relaxation: `alt` is no longer required.\n+  - Evidence: published Grain photo records omit `alt` (observed 2026-10-17), so the AppView dropped them from gallery views.\n+  - Remove when: Grain backfills `alt` on existing records or publishes the relaxation."
+    },
+    {
+      "sha": "7641624677e54aebb4b81f635d7427d705b1c869",
+      "filename": "lexicons-overrides/social/grain/photo.json",
+      "status": "added",
+      "additions": 31,
+      "deletions": 0,
+      "changes": 31,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/lexicons-overrides%2Fsocial%2Fgrain%2Fphoto.json",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/lexicons-overrides%2Fsocial%2Fgrain%2Fphoto.json",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/lexicons-overrides%2Fsocial%2Fgrain%2Fphoto.json?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -0,0 +1,31 @@\n+{\n+  \"id\": \"social.grain.photo\",\n+  \"defs\": {\n+    \"main\": {\n+      \"key\": \"tid\",\n+      \"type\": \"record\",\n+      \"record\": {\n+        \"type\": \"object\",\n+        \"required\": [\"photo\"],\n+        \"properties\": {\n+          \"alt\": {\n+            \"type\": \"string\",\n+            \"description\": \"Alt text description of the image, for accessibility.\"\n+          },\n+          \"photo\": {\n+            \"type\": \"blob\",\n+            \"accept\": [\"image/*\"],\n+            \"maxSize\": 1000000\n+          },\n+          \"createdAt\": { \"type\": \"string\", \"format\": \"datetime\" },\n+          \"aspectRatio\": {\n+            \"ref\": \"social.grain.defs#aspectRatio\",\n+            \"type\": \"ref\"\n+          }\n+        }\n+      }\n+    }\n+  },\n+  \"$type\": \"com.atproto.lexicon.schema\",\n+  \"lexicon\": 1\n+}"
+    },
+    {
+      "sha": "0eb0812aa809c96a76db5c6fcc33de28fa44aa44",
+      "filename": "packages/bsky/AGENTS.md",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2FAGENTS.md",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2FAGENTS.md",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fbsky%2FAGENTS.md?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -5,6 +5,7 @@\n - `ExternalHydrator` generic record lookups decode record bodies without collection-specific validation. Validate against the relevant Lexicon before using typed fields; do not apply parse-mode defaults to stored records.\n - `getRecordsByURI`/`getRecordsByRef` split input into sequential requests of at most `MAX_RECORDS_PER_REQUEST` (the dataplane rejects more than 100 URIs), pairing results positionally per request. Any failed request rejects the whole call; never return partially fetched batches. Bound requests there, not in callers or traversal.\n - `Views.externalRecordView` consumes `HydrationState.externalRecords` (latest versions), `externalRecordBacklinks` (target URI → available source URI samples), and `externalRecordBacklinkCounts`. Hydrate referenced publications, gallery item/photo records, backlink source records, labels, and profiles before building views. Counts are independent of the sampled previews.\n+- External view builders keep strict Lexicon validation (`$matches`). Handle third-party records that violate their own published lexicon with a minimal compatibility override (see `lexicons-overrides/README.md`), not by loosening view validation.\n - Modality builders do not resolve web URLs. Grain galleries use their record AT URI; Streamplace uses a declared HTTP(S) URL or falls back to its AT URI. A stream is active only without `endedAt` and with a `lastSeenAt` within `LIVESTREAM_HEARTBEAT_WINDOW_MS` (2 minutes) of `now`, on either side; record `idleTimeoutSeconds` and `createdAt` are ignored.\n - Atmosphere Explore uses each worker item’s `canonicalUri` as its sole hydration/view root; a missing or invalid root skips the item with no fallback or backfill. With the `AtmosphereExploreArticlesIrisEnable` gate off, worker groups also supply articles; with it on, up to 10 Iris `site.standard.document` roots (fetched concurrently with the worker) are the exclusive article source when the call succeeds with a nonempty articles list: worker articles are ignored and worker location/topic selection does not apply to them. Every list is capped at 10: selected record-backed lists (including Iris articles) are shuffled before hydration with scheduled featured items first, and presentation preserves that order; apps are capped at 10 in worker order. Worker ingestion is best-effort per item: malformed banners, groups, and app cards are skipped without failing siblings or the request; only the first 100 entries per worker section are examined. Call Iris directly with request-scoped headers and abort signals, explicitly enabling XRPC response validation even outside debug mode; do not add a separate response parser. Keep article-root validation and the 10-item cap. A successful empty Iris list falls back to worker-curated articles and retains Iris's rec ID; a nonempty Iris list fully removed by root filtering or hydration does not trigger curated fallback. Catch Iris request and response-validation failures (rethrowing request aborts): log a warning and fall back to worker-curated articles with no rec ID; worker failures stay fatal, and the gate-on missing-Iris-client 501 is unchanged. The worker fetch retains its decoded-byte limit and deadline. Each list is an `{ items, recIdStr? }` section; `articles.recIdStr` comes from a successful Iris response, including the empty-list worker fallback, rather than identifying the source of the returned articles. Keep root validation in `getAtmosphereExploreTab.ts`; one shared hydration traversal discovers publications and other dependencies.\n - Exact-ref hydration maps are keyed by the branded `ExactRecordKey` from `genericRecordKey({ uri, cid })`, not URI alone; `parseGenericRecordKey` accepts only those keys and throws on malformed ones. Unavailable records are `null`, and takedowns are excluded unless explicitly requested."
+    },
+    {
+      "sha": "cd182eac9ac56422ceb0c20748633abff0017586",
+      "filename": "packages/bsky/lexicons.json",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "changes": 4,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2Flexicons.json",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2Flexicons.json",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fbsky%2Flexicons.json?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -1809,8 +1809,8 @@\n       \"cid\": \"bafyreiawd6n4mlqng7w4kdbux7qzidpzhda3qun7n7xnilurtsxvwdpmje\"\n     },\n     \"social.grain.photo\": {\n-      \"uri\": \"at://did:plc:e7rftrdyz5e2rw4y6ocszew2/com.atproto.lexicon.schema/social.grain.photo\",\n-      \"cid\": \"bafyreiec24azdo2caoijpefea3x6qfewjvkfu3zcjj3u3lwf3nx3q7nunu\"\n+      \"uri\": \"file://../../lexicons-overrides/social/grain/photo.json\",\n+      \"cid\": \"bafyreicyugyl45yfydyxrhy4ii5zrxsnl75yqq6nopevaw7cv5do4pl5oa\"\n     },\n     \"tools.ozone.communication.createTemplate\": {\n       \"uri\": \"file://../../lexicons/tools/ozone/communication/createTemplate.json\","
+    },
+    {
+      "sha": "20cf0b1e9f85d33e6ee1fd985bb6478b6aeee69a",
+      "filename": "packages/bsky/lexicons/social/grain/photo.json",
+      "status": "removed",
+      "additions": 0,
+      "deletions": 31,
+      "changes": 31,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/3380a6c2f80b127de8ac13e7202760c9532a1398/packages%2Fbsky%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/3380a6c2f80b127de8ac13e7202760c9532a1398/packages%2Fbsky%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fbsky%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json?ref=3380a6c2f80b127de8ac13e7202760c9532a1398",
+      "patch": "@@ -1,31 +0,0 @@\n-{\n-  \"id\": \"social.grain.photo\",\n-  \"defs\": {\n-    \"main\": {\n-      \"key\": \"tid\",\n-      \"type\": \"record\",\n-      \"record\": {\n-        \"type\": \"object\",\n-        \"required\": [\"photo\", \"alt\"],\n-        \"properties\": {\n-          \"alt\": {\n-            \"type\": \"string\",\n-            \"description\": \"Alt text description of the image, for accessibility.\"\n-          },\n-          \"photo\": {\n-            \"type\": \"blob\",\n-            \"accept\": [\"image/*\"],\n-            \"maxSize\": 1000000\n-          },\n-          \"createdAt\": { \"type\": \"string\", \"format\": \"datetime\" },\n-          \"aspectRatio\": {\n-            \"ref\": \"social.grain.defs#aspectRatio\",\n-            \"type\": \"ref\"\n-          }\n-        }\n-      }\n-    }\n-  },\n-  \"$type\": \"com.atproto.lexicon.schema\",\n-  \"lexicon\": 1\n-}"
+    },
+    {
+      "sha": "b0b51366121794cb410c7ce4a022c4aaeea87cc0",
+      "filename": "packages/bsky/lexicons/social/grain/photo.json",
+      "status": "added",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fbsky%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -0,0 +1 @@\n+../../../../../lexicons-overrides/social/grain/photo.json\n\\ No newline at end of file"
+    },
+    {
+      "sha": "ac7dc720c5945a304791d8328533be5f09465d6b",
+      "filename": "packages/bsky/src/views/external.test.ts",
+      "status": "modified",
+      "additions": 56,
+      "deletions": 0,
+      "changes": 56,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2Fsrc%2Fviews%2Fexternal.test.ts",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2Fsrc%2Fviews%2Fexternal.test.ts",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fbsky%2Fsrc%2Fviews%2Fexternal.test.ts?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -410,6 +410,62 @@ describe('record modality views', () => {\n     ])\n   })\n \n+  it('renders gallery photos that omit alt', () => {\n+    const state = createState()\n+    addGallery(state)\n+    const withAlt = addPhoto(state, 'with-alt', 0)\n+    const withoutAlt = addPhoto(state, 'without-alt', 1)\n+    delete state.externalRecords.get(withoutAlt.photoUri)!.record.alt\n+\n+    const view = views.externalRecordView(galleryUri, state)\n+    assert(view && app.bsky.embed.external.viewGallery.$isTypeOf(view))\n+    assertValid(view)\n+    const items = view.items.filter(\n+      app.bsky.embed.external.viewGalleryImage.$isTypeOf,\n+    )\n+    expect(items).toHaveLength(2)\n+    expect(items[0].alt).toBe('with-alt')\n+    expect(items[1].alt).toBeUndefined()\n+    expect(items[1]).toMatchObject({\n+      fullsize: `https://cdn.example.com/img/feed_fullsize/plain/${did}/${blob.ref}`,\n+      aspectRatio: { width: 3, height: 2 },\n+    })\n+    expect(view.associatedRefs?.map((ref) => ref.uri)).toEqual([\n+      galleryUri,\n+      withAlt.linkUri,\n+      withAlt.photoUri,\n+      withoutAlt.linkUri,\n+      withoutAlt.photoUri,\n+    ])\n+  })\n+\n+  test.each([\n+    { note: 'an oversized blob', photo: { ...blob, size: 1_000_001 } },\n+    { note: 'a non-image blob', photo: { ...blob, mimeType: 'text/plain' } },\n+  ])('still drops a photo without alt but with $note', ({ photo }) => {\n+    const state = createState()\n+    addGallery(state)\n+    const good = addPhoto(state, 'good', 0)\n+    const bad = addPhoto(state, 'bad', 1)\n+    const record = state.externalRecords.get(bad.photoUri)!.record\n+    delete record.alt\n+    record.photo = photo\n+\n+    const view = views.externalRecordView(galleryUri, state)\n+    assert(view && app.bsky.embed.external.viewGallery.$isTypeOf(view))\n+    assertValid(view)\n+    expect(\n+      view.items\n+        .filter(app.bsky.embed.external.viewGalleryImage.$isTypeOf)\n+        .map((item) => item.alt),\n+    ).toEqual(['good'])\n+    expect(view.associatedRefs?.map((ref) => ref.uri)).toEqual([\n+      galleryUri,\n+      good.linkUri,\n+      good.photoUri,\n+    ])\n+  })\n+\n   it('allows an empty gallery', () => {\n     const state = createState()\n     addGallery(state)"
+    },
+    {
+      "sha": "58afd0b3ca6596fae1503b6f3120ddd36a085f37",
+      "filename": "packages/bsky/tests/atmosphere-explore.test.ts",
+      "status": "modified",
+      "additions": 74,
+      "deletions": 1,
+      "changes": 75,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2Ftests%2Fatmosphere-explore.test.ts",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2Ftests%2Fatmosphere-explore.test.ts",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fbsky%2Ftests%2Fatmosphere-explore.test.ts?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -6,7 +6,16 @@ import {\n   createPromiseClient,\n   createRouterTransport,\n } from '@connectrpc/connect'\n-import { afterEach, beforeEach, describe, expect, it, test, vi } from 'vitest'\n+import {\n+  afterEach,\n+  assert,\n+  beforeEach,\n+  describe,\n+  expect,\n+  it,\n+  test,\n+  vi,\n+} from 'vitest'\n import {\n   type AtUriString,\n   Client,\n@@ -587,6 +596,70 @@ describe('Atmosphere Explore', () => {\n     ).toEqual([galleryUri, itemUri, photoUri])\n   })\n \n+  it('renders a selected gallery whose photos all omit alt', async () => {\n+    const noAltGalleryUri = atUri(author, grainGallery.$type, 'no-alt')\n+    await using fixture = await setup({\n+      photos: [group(galleryUri), group(noAltGalleryUri)],\n+    })\n+    fixture.records.set(\n+      noAltGalleryUri,\n+      grainGallery.$build({ title: 'No alt', createdAt: publishedAt }),\n+    )\n+    const noAltItems = Array.from({ length: 2 }, (_, i) => {\n+      const rkey = `no-alt-${i}`\n+      const item = atUri(author, grainGalleryItem.$type, rkey)\n+      const photo = atUri(author, grainPhoto.$type, rkey)\n+      fixture.records.set(\n+        item,\n+        grainGalleryItem.$build({\n+          gallery: noAltGalleryUri,\n+          item: photo,\n+          position: i,\n+          createdAt: publishedAt,\n+        }),\n+      )\n+      fixture.records.set(\n+        photo,\n+        grainPhoto.$build({\n+          photo: {\n+            $type: 'blob',\n+            ref: parseCid(photoCid),\n+            mimeType: 'image/jpeg',\n+            size: 12,\n+          },\n+          aspectRatio: { width: 4, height: 3 },\n+        }),\n+      )\n+      return { item, photo }\n+    })\n+    fixture.galleryItems.set(\n+      noAltGalleryUri,\n+      noAltItems.map(({ item }) => item),\n+    )\n+    const { status, body } = await fixture.query()\n+\n+    expect(status).toBe(200)\n+    expect(body.photos.items.map(({ view }) => view.uri)).toEqual([\n+      galleryUri,\n+      noAltGalleryUri,\n+    ])\n+    const gallery = body.photos.items[1].view\n+    assert(app.bsky.embed.external.viewGallery.$matches(gallery))\n+    expect(gallery.associatedRefs?.map(({ uri }) => uri)).toEqual([\n+      noAltGalleryUri,\n+      ...noAltItems.flatMap(({ item, photo }) => [item, photo]),\n+    ])\n+    expect(gallery.items).toHaveLength(2)\n+    for (const image of gallery.items) {\n+      expect(image).toMatchObject({\n+        $type: app.bsky.embed.external.viewGalleryImage.$type,\n+        thumbnail: `https://images.example.com/feed_thumbnail/plain/${author}/${photoCid}`,\n+        aspectRatio: { width: 4, height: 3 },\n+      })\n+      expect(image).not.toHaveProperty('alt')\n+    }\n+  })\n+\n   it('renders dependency passes larger than one record request', async () => {\n     const galleries = Array.from({ length: 10 }, (_, i) =>\n       atUri(author, grainGallery.$type, `large${i}`),"
+    },
+    {
+      "sha": "d758b9884de141e38a3218b8f09f2f6b71ec1ca4",
+      "filename": "packages/bsky/tests/get-embed-external-view.test.ts",
+      "status": "modified",
+      "additions": 33,
+      "deletions": 0,
+      "changes": 33,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2Ftests%2Fget-embed-external-view.test.ts",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fbsky%2Ftests%2Fget-embed-external-view.test.ts",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fbsky%2Ftests%2Fget-embed-external-view.test.ts?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -741,6 +741,39 @@ describe('app.bsky.embed.getEmbedExternalView', () => {\n       ])\n     })\n \n+    it('persists a gallery photo that omits alt exactly as stored', async () => {\n+      await using fixture = await setup()\n+      fixture.records.set(\n+        photoUri,\n+        grainPhoto.$build({\n+          photo: blob,\n+          aspectRatio: { width: 3, height: 2 },\n+          createdAt: publishedAt,\n+        }),\n+      )\n+      const { body } = await fixture.query({\n+        url: 'https://good.com/gallery/1',\n+        canonicalUri: galleryUri,\n+      })\n+      expect(app.bsky.embed.external.viewGallery.$matches(body.data)).toBe(true)\n+      expect(body.data).toMatchObject({\n+        items: [{ aspectRatio: { width: 3, height: 2 } }],\n+      })\n+      expect((body.data as { items: object[] }).items[0]).not.toHaveProperty(\n+        'alt',\n+      )\n+      expectPersisted(body.associatedRefs, body.associatedRecords, [\n+        galleryUri,\n+        itemUri,\n+        photoUri,\n+      ])\n+      const persistedPhoto = body.associatedRecords?.[2]\n+      expect(persistedPhoto).not.toHaveProperty('alt')\n+      expect(JSON.stringify(persistedPhoto)).toBe(\n+        lexStringify(fixture.records.get(photoUri)!),\n+      )\n+    })\n+\n     test.each([\n       [\n         'an article',"
+    },
+    {
+      "sha": "cd182eac9ac56422ceb0c20748633abff0017586",
+      "filename": "packages/ozone/lexicons.json",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "changes": 4,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fozone%2Flexicons.json",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fozone%2Flexicons.json",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fozone%2Flexicons.json?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -1809,8 +1809,8 @@\n       \"cid\": \"bafyreiawd6n4mlqng7w4kdbux7qzidpzhda3qun7n7xnilurtsxvwdpmje\"\n     },\n     \"social.grain.photo\": {\n-      \"uri\": \"at://did:plc:e7rftrdyz5e2rw4y6ocszew2/com.atproto.lexicon.schema/social.grain.photo\",\n-      \"cid\": \"bafyreiec24azdo2caoijpefea3x6qfewjvkfu3zcjj3u3lwf3nx3q7nunu\"\n+      \"uri\": \"file://../../lexicons-overrides/social/grain/photo.json\",\n+      \"cid\": \"bafyreicyugyl45yfydyxrhy4ii5zrxsnl75yqq6nopevaw7cv5do4pl5oa\"\n     },\n     \"tools.ozone.communication.createTemplate\": {\n       \"uri\": \"file://../../lexicons/tools/ozone/communication/createTemplate.json\","
+    },
+    {
+      "sha": "20cf0b1e9f85d33e6ee1fd985bb6478b6aeee69a",
+      "filename": "packages/ozone/lexicons/social/grain/photo.json",
+      "status": "removed",
+      "additions": 0,
+      "deletions": 31,
+      "changes": 31,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/3380a6c2f80b127de8ac13e7202760c9532a1398/packages%2Fozone%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/3380a6c2f80b127de8ac13e7202760c9532a1398/packages%2Fozone%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fozone%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json?ref=3380a6c2f80b127de8ac13e7202760c9532a1398",
+      "patch": "@@ -1,31 +0,0 @@\n-{\n-  \"id\": \"social.grain.photo\",\n-  \"defs\": {\n-    \"main\": {\n-      \"key\": \"tid\",\n-      \"type\": \"record\",\n-      \"record\": {\n-        \"type\": \"object\",\n-        \"required\": [\"photo\", \"alt\"],\n-        \"properties\": {\n-          \"alt\": {\n-            \"type\": \"string\",\n-            \"description\": \"Alt text description of the image, for accessibility.\"\n-          },\n-          \"photo\": {\n-            \"type\": \"blob\",\n-            \"accept\": [\"image/*\"],\n-            \"maxSize\": 1000000\n-          },\n-          \"createdAt\": { \"type\": \"string\", \"format\": \"datetime\" },\n-          \"aspectRatio\": {\n-            \"ref\": \"social.grain.defs#aspectRatio\",\n-            \"type\": \"ref\"\n-          }\n-        }\n-      }\n-    }\n-  },\n-  \"$type\": \"com.atproto.lexicon.schema\",\n-  \"lexicon\": 1\n-}"
+    },
+    {
+      "sha": "b0b51366121794cb410c7ce4a022c4aaeea87cc0",
+      "filename": "packages/ozone/lexicons/social/grain/photo.json",
+      "status": "added",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fozone%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fozone%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fozone%2Flexicons%2Fsocial%2Fgrain%2Fphoto.json?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -0,0 +1 @@\n+../../../../../lexicons-overrides/social/grain/photo.json\n\\ No newline at end of file"
+    },
+    {
+      "sha": "0fd7a6513d8b16b3f07da13eff0e66d5d681c4c5",
+      "filename": "packages/pds/lexicons.json",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/bluesky-social/atproto/blob/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fpds%2Flexicons.json",
+      "raw_url": "https://github.com/bluesky-social/atproto/raw/9f66a7e54b030700c03eda0bdbf35ffe756f4cd8/packages%2Fpds%2Flexicons.json",
+      "contents_url": "https://api.github.com/repos/bluesky-social/atproto/contents/packages%2Fpds%2Flexicons.json?ref=9f66a7e54b030700c03eda0bdbf35ffe756f4cd8",
+      "patch": "@@ -9,7 +9,7 @@\n     {\n       \"type\": \"directory\",\n       \"path\": \"../../lexicons-overrides\",\n-      \"exclude\": [\"app.bsky.*\", \"chat.bsky.*\"]\n+      \"exclude\": [\"app.bsky.*\", \"chat.bsky.*\", \"social.grain.photo\"]\n     }\n   ],\n   \"lexicons\": ["
+    }
+  ]
+}

@@ -6,6 +6,45 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_controller.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_snapshot.dart';
 
+// Contract fixture only; real backend behavior is covered by TC02 Python tests.
+MediaProjectSnapshot _batchFixture(
+  MediaProjectSnapshot snapshot, List<Map<String, dynamic>> commands,
+) {
+  var current = snapshot;
+  for (final command in commands) {
+    final id = command['clip_id'] as String;
+    current = switch (command['op']) {
+      'trim' => current.trimClip(id,
+        sourceIn: (command['source_in'] as num).toDouble(),
+        sourceOut: (command['source_out'] as num).toDouble()),
+      'move_audio_clip' => current.moveAudioClip(id,
+        timelineStart: (command['timeline_start'] as num).toDouble()),
+      'audio_mix' => current.setAudioMix(id, MediaProjectAudioMix.fromJson(
+        command['mix'], clipDuration: current.tracks.expand((t) => t.clips)
+            .firstWhere((c) => c.clipId == id).durationSec)),
+      'split' => current.splitClip(id, atSec: (command['at_sec'] as num).toDouble()),
+      _ => throw const FormatException('Unsupported fixture command'),
+    };
+  }
+  return current;
+}
+
+Map<String, dynamic> _batchResponse(
+  MediaProjectSnapshot base, MediaProjectSnapshot candidate, List<String>? refs,
+) => {
+  'ok': true,
+  'assets': base.assets.map((asset) => asset.toJson()).toList(),
+  'source_artifact_refs': refs ?? <String>[],
+  'rights_state': 'unknown', 'external_fetch': false,
+  'edit_batch': {
+    'state': 'preview', 'base_version': base.version,
+    'base_digest': 'a' * 64, 'timeline_digest': 'b' * 64,
+    'timeline': candidate.toJson(), 'persisted': false,
+    'export_performed': false, 'approval_required': true,
+    'undo_scope': 'session_per_operation_not_persisted',
+  },
+};
+
 final class _Repository implements MediaProjectRepository {
   @override
   String contextKey = 'BMP:GLOBAL';
@@ -34,6 +73,27 @@ final class _Repository implements MediaProjectRepository {
     'status': 'ready_for_retry',
     'purpose': 'local_content_draft',
   };
+  int batchCalls = 0;
+  Completer<void>? pendingBatch;
+  Object? batchFailure;
+  Map<String, dynamic>? batchOverride;
+  List<Map<String, dynamic>>? batchCommands;
+
+  @override
+  Future<Map<String, dynamic>> inspectEditBatch({
+    required String domain,
+    required List<String> paths,
+    List<String>? refs,
+    required MediaProjectSnapshot timeline,
+    required List<Map<String, dynamic>> commands,
+  }) async {
+    batchCalls++;
+    batchCommands = commands;
+    await pendingBatch?.future;
+    if (batchFailure != null) throw batchFailure!;
+    return batchOverride ?? _batchResponse(timeline, _batchFixture(timeline, commands), refs);
+  }
+
   int calls = 0;
   int referenceInspections = 0;
   Object? referenceFailure;
@@ -183,6 +243,155 @@ void main() {
           s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
     );
   }
+
+  List<Map<String, dynamic>> trims() => [{
+    'op': 'trim',
+    'clip_id': controller.timeline!.tracks.single.clips.single.clipId,
+    'source_in': 0.0, 'source_out': 3.0,
+  }];
+
+  test('batch inspect does not edit or export until explicit adoption', () async {
+    await create();
+    final base = controller.timeline!;
+    final preview = await controller.previewEditBatch(trims());
+    expect(preview, isNotNull);
+    expect(controller.timeline, same(base));
+    expect(repository.calls, 0);
+    expect(controller.adoptEditBatch(preview!), isTrue);
+    expect(controller.timeline!.toJson(), preview.timeline.toJson());
+    expect(controller.adoptEditBatch(preview), isFalse);
+    expect(repository.batchCalls, 1);
+    controller.edit((s) => s.undo());
+    expect(controller.timeline!.tracks.single.clips.single.sourceOut, 4);
+    controller.edit((s) => s.undo());
+    expect(controller.timeline!.tracks.single.clips, isEmpty);
+  });
+
+  test('preview discard leaves draft selection and prior history untouched', () async {
+    await create();
+    final id = controller.timeline!.tracks.single.clips.single.clipId;
+    controller.selectClip(id);
+    final base = controller.timeline;
+    await controller.previewEditBatch(trims());
+    expect(controller.timeline, same(base));
+    expect(controller.selectedClipId, id);
+    expect(controller.timeline!.canUndo, isTrue);
+    expect(repository.calls, 0);
+  });
+
+  test('batch adoption exports stable returned IDs and preserves saved parent', () async {
+    await create();
+    await controller.export(outputKind: 'video');
+    final preview = await controller.previewEditBatch([{
+      'op': 'split',
+      'clip_id': controller.timeline!.tracks.single.clips.single.clipId,
+      'at_sec': 2.0,
+    }]);
+    expect(controller.adoptEditBatch(preview!), isTrue);
+    final adopted = controller.timeline!;
+    await controller.export(outputKind: 'video');
+    expect(repository.parent, 'ART-1');
+    expect(repository.exported, same(adopted));
+    expect(repository.exported!.toJson(), preview.timeline.toJson());
+    expect(repository.batchCalls, 1);
+    expect(controller.version!.artifactId, 'ART-2');
+  });
+
+  test('a later local edit rejects an in-flight or unadopted preview', () async {
+    await create();
+    repository.pendingBatch = Completer<void>();
+    final pending = controller.previewEditBatch(trims());
+    controller.edit((s) => s.setAudioMix(s.tracks.single.clips.single.clipId,
+      const MediaProjectAudioMix(volume: 0.8)));
+    final changed = controller.timeline;
+    repository.pendingBatch!.complete();
+    expect(await pending, isNull);
+    expect(controller.failureCode, 'CONTENT_BATCH_PREVIEW_STALE');
+    expect(controller.timeline, same(changed));
+    repository.pendingBatch = null;
+    final preview = await controller.previewEditBatch(trims());
+    controller.edit((s) => s.setAudioMix(s.tracks.single.clips.single.clipId,
+      const MediaProjectAudioMix(volume: 0.7)));
+    expect(controller.adoptEditBatch(preview!), isFalse);
+  });
+
+  test('changed context or quarantined sources reject preview adoption', () async {
+    await create();
+    final preview = await controller.previewEditBatch(trims());
+    controller.quarantineDraftSources();
+    expect(controller.adoptEditBatch(preview!), isFalse);
+    expect(repository.calls, 0);
+  });
+
+  test('context switch during inspection keeps the result quarantined', () async {
+    await create();
+    repository.pendingBatch = Completer<void>();
+    final pending = controller.previewEditBatch(trims());
+    repository.contextKey = 'BMP:OTHER';
+    repository.pendingBatch!.complete();
+    expect(await pending, isNull);
+    expect(controller.timeline, isNull);
+    expect(controller.sourcesNeedRevalidation, isTrue);
+    expect(repository.calls, 0);
+  });
+
+  test('batch failure keeps saved parent draft selection and retry available', () async {
+    await create();
+    await controller.export(outputKind: 'video');
+    final base = controller.timeline;
+    final id = base!.tracks.single.clips.single.clipId;
+    controller.selectClip(id);
+    repository.batchFailure = const LumenisCoreException(
+      'private diagnostic', statusCode: 403, errorCode: 'CONTENT_SCOPE_DENIED');
+    expect(await controller.previewEditBatch(trims()), isNull);
+    expect(controller.timeline, same(base));
+    expect(controller.version!.artifactId, 'ART-1');
+    expect(controller.selectedClipId, id);
+    expect(controller.busy, isFalse);
+    repository.batchFailure = null;
+    expect(await controller.previewEditBatch(trims()), isNotNull);
+  });
+
+  test('invalid response flags metadata and stale versions are rejected', () async {
+    await create();
+    final base = controller.timeline!;
+    final candidate = _batchFixture(base, trims());
+    for (final mutate in <void Function(Map<String, dynamic>)>[
+      (r) => (r['edit_batch'] as Map)['persisted'] = true,
+      (r) => (r['edit_batch'] as Map)['export_performed'] = true,
+      (r) => (r['edit_batch'] as Map)['base_version'] = base.version + 1,
+      (r) => (r['edit_batch'] as Map)['timeline'] = base.toJson(),
+      (r) => r['source_artifact_refs'] = ['ART-unrequested'],
+      (r) => ((r['assets'] as List).first as Map)['filename'] = 'substituted.mp4',
+    ]) {
+      final response = _batchResponse(base, candidate, null);
+      mutate(response);
+      repository.batchOverride = response;
+      expect(await controller.previewEditBatch(trims()), isNull);
+      expect(controller.timeline, same(base));
+      expect(controller.failureCode, 'CONTENT_RESPONSE_INVALID');
+    }
+  });
+
+  test('busy preview rejects repeat calls and captures immutable commands', () async {
+    await create();
+    repository.pendingBatch = Completer<void>();
+    final commands = trims();
+    final pending = controller.previewEditBatch(commands);
+    commands.first['source_out'] = 1.0;
+    expect(await controller.previewEditBatch(trims()), isNull);
+    repository.pendingBatch!.complete();
+    final preview = await pending;
+    expect(preview!.timeline.tracks.single.clips.single.sourceOut, 3);
+    expect(repository.batchCalls, 1);
+  });
+
+  test('empty or excessive batches never reach the repository', () async {
+    await create();
+    expect(await controller.previewEditBatch([]), isNull);
+    expect(await controller.previewEditBatch(List.generate(129, (_) => trims().single)), isNull);
+    expect(repository.batchCalls, 0);
+  });
 
   test(
     'inspection starts a blank timeline, not an invented automatic cut',

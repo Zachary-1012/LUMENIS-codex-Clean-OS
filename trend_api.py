@@ -202,6 +202,27 @@ def read_cth_temporal_metrics(connection, *, start_date, end_date, authorize):
     result["snapshot_sha256"] = hashlib.sha256(json.dumps(
         material, ensure_ascii=False, sort_keys=True, allow_nan=False,
     ).encode("utf-8")).hexdigest()
+    # Reuse the authorized native-time observations, never a second source/data owner.
+    # Confidence describes the known observed-label sample, not population coverage.
+    from canonical_metrics import binomial_confidence
+    labeled = [record for record in in_window if record.get("quality_status") == "ok"
+               and record.get("sentiment") in SENTIMENT_KNOWN]
+    observed_ratio = binomial_confidence(sum(record["sentiment"] == "negative" for record in labeled), len(labeled))
+    observed_ratio["coverage"] = "NOT_VERIFIED"
+    observed_ratio["classification_provenance"] = result["classification_provenance"]
+    observed_ratio["excluded_count"] = len(in_window)-len(labeled)
+    series = [point["total"]["value"] for point in days]
+    trend = {"state": "INSUFFICIENT", "reason": "INCOMPLETE_DAILY_OBSERVATIONS", "n": len(series)}
+    if series and all(type(value) is int for value in series):
+        try:
+            trend = analyze_observed_series(series, unit="observed Canonical records per native day")
+        except ImportError:
+            trend = {"state": "UNAVAILABLE", "reason": "STATISTICS_DEPENDENCY_UNAVAILABLE", "n": len(series)}
+        except ValueError as exc:
+            trend = {"state": "INSUFFICIENT", "reason": str(exc), "n": len(series)}
+    result["statistics"] = {"negative_ratio": observed_ratio, "trend": trend,
+                            "snapshot_sha256": result["snapshot_sha256"],
+                            "interpretation_status": "NOT_BUSINESS_VALIDATED"}
     return result
 
 # ============================================================
@@ -634,3 +655,149 @@ def _get_engagement_series(days):
     finally:
         conn.close()
     return _fill_zeros(data_by_date, _date_range(days))
+
+
+def analyze_observed_series(values, *, unit, period=7, horizon=7):
+    """G145 bounded daily STL/ARIMA, PELT and held-out monitoring.
+
+    No gap filling, smoothing of missing data, or population coverage inference.
+    Model intervals are conditional on the ARIMA error model, not guarantees.
+    """
+    import math
+
+    if (
+        not isinstance(values, list)
+        or len(values) > 5000
+        or any(type(v) not in (int, float) or not math.isfinite(v) or abs(v) > 1e12 for v in values)
+        or not isinstance(unit, str)
+        or not unit.strip()
+        or type(period) is not int
+        or not 2 <= period <= 365
+        or type(horizon) is not int
+        or not 1 <= horizon <= 30
+    ):
+        raise ValueError("STATISTICS_SERIES_INPUT_INVALID")
+    result = {
+        "method": "stl-arima-pelt-ewma-cusum@1",
+        "n": len(values),
+        "unit": unit,
+        "state": "INSUFFICIENT",
+        "period": period,
+        "horizon": horizon,
+        "assumptions": [
+            "Equally spaced complete observations in a single consistent unit.",
+            "Seasonality period is a declared business assumption.",
+            "ARIMA(1,1,0) Gaussian conditional prediction intervals; not coverage guarantees.",
+        ],
+        "limitations": [
+            "PELT change points are retrospective; not causal events.",
+            "No labeled injected-anomaly benchmark has been established by this run.",
+        ],
+    }
+    split = max(14, 2 * period, int(len(values) * 0.7))
+    if len(values) < max(14, 2 * period) or split >= len(values):
+        result["reason"] = "NEED_TWO_SEASONS_AND_DISJOINT_HOLDOUT"
+        return result
+    import numpy as np
+    import statsmodels
+    import ruptures
+    from statsmodels.tsa.forecasting.stl import STLForecast
+    from statsmodels.tsa.arima.model import ARIMA
+    from statsmodels.tsa.seasonal import STL
+
+    y = np.asarray(values, dtype=float)
+    if np.std(y[:split]) <= np.finfo(float).eps * max(1, abs(np.mean(y[:split]))):
+        result["reason"] = "BASELINE_HAS_NO_ESTIMABLE_VARIANCE"
+        return result
+
+    def fit(sequence):
+        import warnings
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+        with warnings.catch_warnings(record=True) as captured:
+            warnings.simplefilter("always", ConvergenceWarning)
+            fitted = STLForecast(
+                sequence, ARIMA, model_kwargs={"order": (1, 1, 0)}, period=period, robust=True
+            ).fit()
+        if any(issubclass(w.category, ConvergenceWarning) for w in captured):
+            raise ValueError("STATISTICS_FORECAST_NOT_CONVERGED")
+        convergence = getattr(fitted.model_result, "mle_retvals", {})
+        if convergence.get("converged") is not True:
+            raise ValueError("STATISTICS_FORECAST_NOT_CONVERGED")
+        return fitted
+
+    baseline = fit(y[:split])
+    prediction = baseline.get_prediction(start=split, end=len(y) - 1)
+    mean = np.asarray(prediction.predicted_mean)
+    ci = np.asarray(prediction.conf_int(alpha=0.05))
+    residual = y[split:] - mean
+    scale = float(np.std(STL(y[:split], period=period, robust=True).fit().resid, ddof=1))
+    monitoring = {"state": "INSUFFICIENT", "reason": "BASELINE_RESIDUAL_VARIANCE_ZERO"}
+    if scale > 1e-10 * max(1, abs(np.mean(y[:split]))):
+        ewma, upper, lower = 0.0, 0.0, 0.0
+        points = []
+        for i, error in enumerate(residual):
+            z = float(error / scale)
+            ewma = 0.2 * z + 0.8 * ewma
+            upper, lower = max(0.0, upper + z - 0.5), min(0.0, lower + z + 0.5)
+            limit = 3 * math.sqrt(0.2 / 1.8 * (1 - 0.8 ** (2 * (i + 1))))
+            points.append(
+                {
+                    "index": split + i,
+                    "standardized_error": z,
+                    "ewma": ewma,
+                    "ewma_alarm": abs(ewma) > limit,
+                    "cusum_positive": upper,
+                    "cusum_negative": lower,
+                    "cusum_alarm": upper > 5 or lower < -5,
+                }
+            )
+        monitoring = {
+            "state": "READY",
+            "baseline_end_exclusive": split,
+            "points": points,
+            "parameters": {"lambda": 0.2, "ewma_sigma_limit": 3, "cusum_k": 0.5, "cusum_h": 5},
+            "calibration": "standard control-chart defaults; actual false-positive rate not calibrated",
+        }
+    normalized = (y - y.mean()) / y.std()
+    penalty = 3 * math.log(len(y))
+    breaks = ruptures.Pelt(model="l2", min_size=3, jump=1).fit(normalized).predict(pen=penalty)
+    full = fit(y)
+    future = full.get_prediction(start=len(y), end=len(y) + horizon - 1)
+    decomposition = STL(y, period=period, robust=True).fit()
+    result.update(
+        state="READY",
+        versions={"statsmodels": statsmodels.__version__, "ruptures": ruptures.__version__},
+        decomposition={
+            "trend": decomposition.trend.tolist(),
+            "seasonal": decomposition.seasonal.tolist(),
+            "residual": decomposition.resid.tolist(),
+        },
+        change_points={
+            "indices": breaks[:-1],
+            "method": "PELT l2 on standardized observations",
+            "penalty": penalty,
+        },
+        monitoring=monitoring,
+        holdout={
+            "train_n": split,
+            "test_n": len(y) - split,
+            "mae": float(np.mean(abs(residual))),
+            "rmse": float(np.sqrt(np.mean(residual**2))),
+            "interval_coverage": float(np.mean((y[split:] >= ci[:, 0]) & (y[split:] <= ci[:, 1]))),
+            "nominal_coverage": 0.95,
+            "predicted": mean.tolist(),
+            "intervals": ci.tolist(),
+        },
+        forecast={
+            "value": np.asarray(future.predicted_mean).tolist(),
+            "intervals": np.asarray(future.conf_int(alpha=0.05)).tolist(),
+            "nominal_coverage": 0.95,
+        },
+    )
+    # Numerical failures never escape as JSON NaN/Infinity.
+    try:
+        json.dumps(result, allow_nan=False)
+    except (ValueError, OverflowError) as exc:
+        raise ValueError("STATISTICS_NUMERICAL_RESULT_INVALID") from exc
+    return result

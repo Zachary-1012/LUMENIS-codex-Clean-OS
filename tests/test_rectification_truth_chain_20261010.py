@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from tests.test_source_brief_job import job_db, _source, _document_row
+from tests.test_saved_document_workflow import workspace
 
 
 def test_actual_cdp_projection_reaches_business_time_review():
@@ -273,16 +274,38 @@ def test_cancel_cannot_win_over_concurrent_completion(task_engine, monkeypatch):
     assert original_get(task['task_id'])['result']['artifact_id'] == 'committed'
 
 
-def test_failed_generation_route_returns_unavailable_not_http_success(monkeypatch):
+def test_failed_generation_route_returns_unavailable_not_http_success(workspace, monkeypatch):
+    import account.models
     import content_generation as generation
-    from flask import Flask
-    app = Flask(__name__)
+    monkeypatch.setattr(generation, 'get_repository', lambda: workspace['repo'])
+    generation.init_db()
+    with workspace['repo'].transaction() as con:
+        con.executescript(account.models.BASE_TABLES_SQL)
+        con.execute("INSERT INTO v4_users(id,username,password_hash,role,status) VALUES (1,'generation-fixture','not-a-login','owner','active')")
+        con.execute("INSERT INTO v4_sessions(user_id,token,expires_at) VALUES (1,'generation-fixture-token','2099-01-01 00:00:00')")
+    app = workspace['app']
+    app.config['LUMENIS_OPEN_WORKSPACE'] = False
     app.register_blueprint(generation.content_bp)
-    monkeypatch.setattr(generation, 'generate_content', lambda **kwargs: {
-        'ok': False, 'meta': {'status': 'failed'}, 'evaluation': {'overall': None}})
-    response = app.test_client().post('/api/content/generate', json={'content_type': 'ad_copy'})
-    assert response.status_code == 503
+    calls = []
+    def failed_generation(**kwargs):
+        calls.append(kwargs)
+        return {'ok': False, 'meta': {'status': 'failed'}, 'evaluation': {'overall': None}}
+    monkeypatch.setattr(generation, 'generate_content', failed_generation)
+    http = app.test_client()
+    body = {'content_type': 'ad_copy'}
+    headers = {'X-Domain-Id': 'CTH', 'X-Product-Id': 'CTH'}
+    anonymous = http.post('/api/content/generate', json=body, headers=headers)
+    assert anonymous.status_code == 401
+    assert calls == []
+    invalid = http.post('/api/content/generate', json=body,
+                        headers={**headers, 'Authorization': 'Bearer invalid-fixture-token'})
+    assert invalid.status_code == 401
+    assert calls == []
+    response = http.post('/api/content/generate', json=body,
+                         headers={**headers, 'Authorization': 'Bearer generation-fixture-token'})
+    assert response.status_code == 503, response.get_json()
     assert response.get_json()['ok'] is False
+    assert len(calls) == 1
 
 
 def test_source_keys_are_encoded_before_dynamic_html_interpolation():

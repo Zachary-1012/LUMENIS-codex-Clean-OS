@@ -344,3 +344,47 @@ if __name__ == "__main__":
     print("intent2:", classify_intent("好不好用"))
     print("benchmark:", json.dumps(competitor_benchmark(), ensure_ascii=False)[:400])
     print("refresh:", refresh_kos_identity(limit=50))
+
+
+def read_scoped_benchmark(binding: dict) -> dict:
+    """Compare explicit BrandFocus observations, never keyword-guessed entities.
+
+    Results describe this source sample; no market-leader or composite-score
+    claim is manufactured from unavailable reach, intent or conversion data.
+    """
+    from canonical_data import list_scoped_canonical
+    from lumenis.shared.database import get_repository
+    import math
+    if (not isinstance(binding, dict) or binding.get("contract") != "lumenis.scope-read-binding.v1"
+            or binding.get("domain_id") != "BMP" or binding.get("product_id") != "ZBMP"
+            or binding.get("read_allowed") is not True or binding.get("scope_verified") is not True
+            or binding.get("canonical_scope") not in {"FOCUS", "GLOBAL_ALL"}
+            or (binding.get("canonical_scope") == "FOCUS" and not binding.get("brand_focus_id"))):
+        raise ValueError("BMP_BENCHMARK_SCOPE_REQUIRED")
+    focus = binding.get("brand_focus_id") if binding["canonical_scope"] == "FOCUS" else None
+    with get_repository().connection(read_only=True, wal=False) as connection:
+        material = list_scoped_canonical(connection, product_id="ZBMP", brand_focus_id=focus, limit=100)
+    groups, unknown = {}, 0
+    for row in material["records"]:
+        identity = row.get("brand_focus_id")
+        if not identity:
+            unknown += 1
+            continue
+        group = groups.setdefault(identity, {"entity": identity, "record_count": 0,
+            "engagement": 0, "engagement_unknown_count": 0, "score": None, "source_refs": []})
+        group["record_count"] += 1
+        values = [row.get("engagement_" + field) for field in ("likes", "comments", "collects", "shares")]
+        if all(type(value) in (int, float) and math.isfinite(value) and value >= 0 for value in values):
+            if group["engagement"] is not None:
+                group["engagement"] += sum(values)
+        else:
+            group["engagement_unknown_count"] += 1
+            group["engagement"] = None
+        group["source_refs"].append({"canonical_id": row["canonical_id"], "scope_evidence": row["scope_evidence"]})
+    return {"ranking": sorted(groups.values(), key=lambda item: (-item["record_count"], item["entity"])),
+        "leader": None, "comparison_state": "AVAILABLE" if len(groups) > 1 else "INSUFFICIENT_ENTITIES",
+        "method": "signed-brand-focus-observation-counts:v1", "coverage": "NOT_VERIFIED",
+        "truncated": bool(material.get("truncated")), "unknown_brand_focus_count": unknown,
+        "source_count": len(material["records"]), "source_freshness": "UNKNOWN",
+        "limitations": ["Source sample counts are not market share or campaign effectiveness.",
+                        "Other BrandFocus records require their own authorized scope."]}

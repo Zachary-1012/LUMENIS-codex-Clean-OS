@@ -1,0 +1,15 @@
+......................................... [ 14%]
+..................................................................... [ 38%]
+.................................................. [ 55%]
+................................................ [ 71%]
+.................................................. [ 89%]
+...............................                                          [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+289 passed, 318 subtests passed in 29.89s

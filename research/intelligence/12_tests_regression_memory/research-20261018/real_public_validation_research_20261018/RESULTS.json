@@ -1,0 +1,311 @@
+{
+  "all_checks_pass": true,
+  "checks": {
+    "facebook_real_missing_counterexample": true,
+    "facebook_row_count": true,
+    "retail_real_missing_counterexample": true,
+    "retail_row_count": true,
+    "retail_value_reconciliation": true,
+    "shoppers_labels": true,
+    "shoppers_row_count": true,
+    "train_test_disjoint_facebook": true
+  },
+  "facebook": {
+    "coarse_month_holdout": {
+      "global_median_MAE": 8985.41935483871,
+      "global_past_median": 5526,
+      "relative_MAE_improvement": 0.08015997242845041,
+      "test_n": 155,
+      "train_n": 345,
+      "type_median_MAE": 8265.148387096775,
+      "type_past_medians": {
+        "Link": 10948.0,
+        "Photo": 5209.0,
+        "Status": 11570.0,
+        "Video": 30624
+      }
+    },
+    "group_descriptions": {
+      "Link": {
+        "interaction_mean": 89.04545454545455,
+        "mean_of_post_interaction_reach_ratios": 0.0072661425449611645,
+        "n": 22,
+        "ratio_of_sums": 0.004801694196543467,
+        "reach_mean": 18544.590909090908,
+        "reach_median": 7422.0
+      },
+      "Photo": {
+        "interaction_mean": 216.57981220657277,
+        "mean_of_post_interaction_reach_ratios": 0.026060388821472737,
+        "n": 426,
+        "ratio_of_sums": 0.01648522372701529,
+        "reach_mean": 13137.81455399061,
+        "reach_median": 4675.0
+      },
+      "Status": {
+        "interaction_mean": 217.04444444444445,
+        "mean_of_post_interaction_reach_ratios": 0.015866669077432796,
+        "n": 45,
+        "ratio_of_sums": 0.016595021663410075,
+        "reach_mean": 13078.888888888889,
+        "reach_median": 11096
+      },
+      "Video": {
+        "interaction_mean": 295.85714285714283,
+        "mean_of_post_interaction_reach_ratios": 0.00852526502208687,
+        "n": 7,
+        "ratio_of_sums": 0.005777814976007142,
+        "reach_mean": 51205.71428571428,
+        "reach_median": 30624
+      }
+    },
+    "interaction_component_complete_rows": 496,
+    "interaction_sum_mismatches_complete_rows": 0,
+    "metadata_claim_no_missing": true,
+    "missing_by_field": {
+      "Category": 0,
+      "Lifetime Engaged Users": 0,
+      "Lifetime People who have liked your Page and engaged with your post": 0,
+      "Lifetime Post Consumers": 0,
+      "Lifetime Post Consumptions": 0,
+      "Lifetime Post Impressions by people who have liked your Page": 0,
+      "Lifetime Post Total Impressions": 0,
+      "Lifetime Post Total Reach": 0,
+      "Lifetime Post reach by people who like your Page": 0,
+      "Page total likes": 0,
+      "Paid": 1,
+      "Post Hour": 0,
+      "Post Month": 0,
+      "Post Weekday": 0,
+      "Total Interactions": 0,
+      "Type": 0,
+      "comment": 0,
+      "like": 1,
+      "share": 4
+    },
+    "observed_missing_cells": 6,
+    "rows": 500
+  },
+  "inputs": {
+    "Online Retail.xlsx": "43465a06f2ccf7c8b5bd2892bc7defb52f97487934fe93b16ae4c3936424676d",
+    "dataset_Facebook.csv": "666ec82952b7ce90b464f5a87ec4f0fe92d9a63208f2fcb2d0443cb5f31c3f4c",
+    "facebook_metrics.zip": "48e4739b4acbbcca8f03cbcfe145d82c2e665cdd5bb9e20618690d454ce93fd3",
+    "online_retail.zip": "f5385cbb54bbebf7196389109c6b0621faab0c304e3702548165e71c84aede8b",
+    "online_shoppers.zip": "2972e6184d3ad7beaaa831d9fc2b059dc3ee29df69d1ec593c466a5cd8485d14",
+    "online_shoppers_intention.csv": "b3055ee355f59134d851d32641183cb4a8b45def7124d2f50442a042f358e0d9"
+  },
+  "retail": {
+    "all_complete_month_sensitivity": [
+      {
+        "four_week_mean_MAE": 9977.42306451613,
+        "month": "2011-01",
+        "n": 31,
+        "relative_MAE_improvement": 0.15162314208828664,
+        "weekly_naive_MAE": 11760.602580645162
+      },
+      {
+        "four_week_mean_MAE": 4230.989107142857,
+        "month": "2011-02",
+        "n": 28,
+        "relative_MAE_improvement": -0.08905267947839923,
+        "weekly_naive_MAE": 3885.0178571428573
+      },
+      {
+        "four_week_mean_MAE": 5872.262661290322,
+        "month": "2011-03",
+        "n": 31,
+        "relative_MAE_improvement": 0.15064464220210372,
+        "weekly_naive_MAE": 6913.787741935484
+      },
+      {
+        "four_week_mean_MAE": 6309.046883333333,
+        "month": "2011-04",
+        "n": 30,
+        "relative_MAE_improvement": 0.20336904625485175,
+        "weekly_naive_MAE": 7919.660733333333
+      },
+      {
+        "four_week_mean_MAE": 9587.440467741935,
+        "month": "2011-05",
+        "n": 31,
+        "relative_MAE_improvement": 0.09951217093530673,
+        "weekly_naive_MAE": 10646.94064516129
+      },
+      {
+        "four_week_mean_MAE": 6844.156,
+        "month": "2011-06",
+        "n": 30,
+        "relative_MAE_improvement": 0.30460040107507447,
+        "weekly_naive_MAE": 9842.047666666667
+      },
+      {
+        "four_week_mean_MAE": 7366.972387096774,
+        "month": "2011-07",
+        "n": 31,
+        "relative_MAE_improvement": 0.15837299291482787,
+        "weekly_naive_MAE": 8753.250935483871
+      },
+      {
+        "four_week_mean_MAE": 9529.20243548387,
+        "month": "2011-08",
+        "n": 31,
+        "relative_MAE_improvement": -0.05148457235033432,
+        "weekly_naive_MAE": 9062.617451612903
+      },
+      {
+        "four_week_mean_MAE": 13370.091983333332,
+        "month": "2011-09",
+        "n": 30,
+        "relative_MAE_improvement": 0.16065026724033626,
+        "weekly_naive_MAE": 15929.107333333332
+      },
+      {
+        "four_week_mean_MAE": 9820.62,
+        "month": "2011-10",
+        "n": 31,
+        "relative_MAE_improvement": 0.22193724474861865,
+        "weekly_naive_MAE": 12621.886774193546
+      },
+      {
+        "four_week_mean_MAE": 13224.044416666668,
+        "month": "2011-11",
+        "n": 30,
+        "relative_MAE_improvement": -0.09906510658973078,
+        "weekly_naive_MAE": 12032.084666666668
+      }
+    ],
+    "all_line_signed_value": "9747747.933999999975832209",
+    "counts": {
+      "cancellation_lines": 9288,
+      "exact_duplicate_rows_beyond_first": 5268,
+      "missing_customer": 135080,
+      "missing_description": 1454,
+      "negative_price": 2,
+      "negative_quantity": 10624,
+      "rows": 541909,
+      "zero_price": 2515
+    },
+    "currency": "GBP (sterling)",
+    "date_max": "2011-12-09",
+    "date_min": "2010-12-01",
+    "difference_positive_vs_signed": "918936.609999999998487321",
+    "duplicate_line_signed_value": "21740.97999999999993398",
+    "forecast": {
+      "four_prior_same_weekdays_mean_MAE_GBP": 11494.435286885246,
+      "n": 61,
+      "raw_signed_value_including_corrections": true,
+      "relative_MAE_improvement": 0.06790440226319483,
+      "weekly_naive_MAE_GBP": 12331.820163934426,
+      "window": [
+        "2011-10-01",
+        "2011-11-30"
+      ],
+      "zero_days_mean": "No recorded lines, not evidence retailer was closed"
+    },
+    "headers": {
+      "A": "InvoiceNo",
+      "B": "StockCode",
+      "C": "Description",
+      "D": "Quantity",
+      "E": "InvoiceDate",
+      "F": "UnitPrice",
+      "G": "CustomerID",
+      "H": "Country"
+    },
+    "monthly_signed_value": {
+      "2010-12": "748957.019999999997487960",
+      "2011-01": "560000.25999999999570880",
+      "2011-02": "498062.64999999999753416",
+      "2011-03": "683267.07999999999657152",
+      "2011-04": "493207.120999999998320160",
+      "2011-05": "723333.50999999999834800",
+      "2011-06": "691123.119999999999426120",
+      "2011-07": "681300.11099999999971325",
+      "2011-08": "682680.509999999998981459",
+      "2011-09": "1019687.621999999997957770",
+      "2011-10": "1070704.669999999999049460",
+      "2011-11": "1461756.24999999999808035",
+      "2011-12": "433668.00999999999865320"
+    },
+    "positive_quantity_and_positive_price_value": "10666684.543999999974319530"
+  },
+  "scope": "Research only; external real data, not LUMENIS execution or benefit; no model training",
+  "shoppers": {
+    "all_negative_accuracy": 0.8452554744525548,
+    "all_negative_balanced_accuracy": 0.5,
+    "all_negative_recall": 0,
+    "coarse_month_holdout": {
+      "all_negative_brier": 0.2068638604474782,
+      "constant_train_rate_brier": 0.17236601934883294,
+      "note": "Month labels only: not an exact chronological/backtest or as-of test",
+      "test_n": 5274,
+      "test_rate": 0.2068638604474782,
+      "train_n": 7056,
+      "train_rate": 0.11578798185941043
+    },
+    "empty_cells": 0,
+    "monthly": {
+      "Aug": {
+        "n": 433,
+        "positive": 76,
+        "rate": 0.17551963048498845
+      },
+      "Dec": {
+        "n": 1727,
+        "positive": 216,
+        "rate": 0.1250723798494499
+      },
+      "Feb": {
+        "n": 184,
+        "positive": 3,
+        "rate": 0.016304347826086956
+      },
+      "Jul": {
+        "n": 432,
+        "positive": 66,
+        "rate": 0.1527777777777778
+      },
+      "June": {
+        "n": 288,
+        "positive": 29,
+        "rate": 0.10069444444444445
+      },
+      "Mar": {
+        "n": 1907,
+        "positive": 192,
+        "rate": 0.10068169900367069
+      },
+      "May": {
+        "n": 3364,
+        "positive": 365,
+        "rate": 0.10850178359096314
+      },
+      "Nov": {
+        "n": 2998,
+        "positive": 760,
+        "rate": 0.25350233488992663
+      },
+      "Oct": {
+        "n": 549,
+        "positive": 115,
+        "rate": 0.20947176684881602
+      },
+      "Sep": {
+        "n": 448,
+        "positive": 86,
+        "rate": 0.19196428571428573
+      }
+    },
+    "pagevalue_counterexample": {
+      "note": "Do not assume PageValues known before a target decision; require timestamp and metric provenance, no early prediction claim.",
+      "positive_pagevalue_count": 2730
+    },
+    "positive": 1908,
+    "rate": 0.15474452554744525,
+    "rows": 12330,
+    "wilson95_conditional_on_sample": [
+      0.14846850895658126,
+      0.16123560647040025
+    ]
+  }
+}

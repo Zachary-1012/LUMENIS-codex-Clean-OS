@@ -28,7 +28,7 @@ scope or Canonical identity was edited.
 - Disposable real-data clone: seven changes (`ok=6`, `missing=1`); second dry-run
   zero eligible; source/lineage fingerprint unchanged, integrity ok, FK zero.
 - Actual product DB: same seven corrections, second dry-run zero eligible;
-  backup `C:\Users\28049\AppData\Local\Temp\lumenis-publish-quality-backup-kloh175a\monitor-before.db`.
+  backup `C:\Users\private-user-121dcc385158\AppData\Local\Temp\lumenis-publish-quality-backup-kloh175a\monitor-before.db`.
   Reopened totals: Raw=267, Canonical=267, quality `ok=57`, `missing=210`,
   `error=0`; Canonical scope VERIFIED=264, UNASSIGNED=3; integrity ok, FK zero.
 - Local existing supervisor restored on `127.0.0.1:8201`; `/healthz` returned

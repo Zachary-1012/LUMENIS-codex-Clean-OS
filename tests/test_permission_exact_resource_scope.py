@@ -579,3 +579,231 @@ def test_evidence_api_global_requires_grant_and_returns_only_global_rows(
 
     denied = _scoped_evidence_api_client(monkeypatch, {"id": 4, "role": "user"})
     assert denied.get("/api/evidence/list", headers=headers).status_code == 403
+
+
+@pytest.fixture
+def browser_snapshot_permission(isolated_scope_database, monkeypatch):
+    """Exercise real signed Evidence/account/grant owners; stub only byte I/O.
+
+    Collector/Source integration tests cover the actual artifact decoder. Here
+    its pure verification boundary is replaced to isolate Permission semantics.
+    """
+    import hashlib
+    from lumenis.system.security import permission as p
+    from lumenis.shared.database import DatabaseRepository
+    import lumenis.shared.database as database
+    from lumenis.shared.evidence import store
+    from lumenis.importer import documents
+
+    monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+    monkeypatch.setattr(p, "_TESTING_BYPASS_ENABLED", False)
+    repo = DatabaseRepository(str(isolated_scope_database))
+    monkeypatch.setattr(database, "get_repository", lambda: repo)
+    monkeypatch.setattr(store, "get_repository", lambda: repo)
+    store.init_evidence_store(str(isolated_scope_database))
+    gate = p.PermissionGate()
+    monkeypatch.setattr(p, "get_permission_gate", lambda: gate)
+    _grant(isolated_scope_database, 1, "CTH", "reports", "read",
+           {"subject_ids": ["SUBJ-CTH-A"]})
+    body = "A sanitized browser snapshot."
+    raw = json.dumps({"body": body}).encode()
+    fingerprint = hashlib.sha256(raw).hexdigest()
+    body_hash = hashlib.sha256(body.encode()).hexdigest()
+    scope = dict(domain_id="cth", subject_id="SUBJ-CTH-A", brand_focus_id=None,
+                 global_scope=False)
+    metadata = {"context": {**scope, "actor_id": 1},
+                "source_fingerprint": fingerprint,
+                "browser_snapshot_binding": {
+                    "schema": "lumenis.browser-snapshot/v1",
+                    "snapshot_sha256": fingerprint, "body_sha256": body_hash}}
+    evidence_id = store.record_evidence(
+        source="collector", feature_id="COLLECTED_SOURCE", product="CTH",
+        provider="collector-browser-snapshot", version="collected-browser-snapshot:v1",
+        collection_metadata=metadata, **scope,
+    )
+    calls = []
+    def source_bytes(con, evidence):
+        calls.append(evidence["id"])
+        return raw, {}
+    monkeypatch.setattr(documents, "_source_bytes", source_bytes)
+    con = sqlite3.connect(isolated_scope_database)
+    con.row_factory = sqlite3.Row
+    args = dict(scope=scope, source_evidence_ref=f"app_evidence_records:{evidence_id}",
+                source_fingerprint=fingerprint, body_sha256=body_hash,
+                source_version="collected-browser-snapshot:v1", purpose="quote_reference",
+                connection=con)
+    yield p, gate, {"id": 1}, args, calls
+    con.close()
+
+
+def test_browser_snapshot_prepare_is_not_authorization_and_grant_is_revocable(browser_snapshot_permission):
+    p, gate, actor, args, calls = browser_snapshot_permission
+    prepared = gate.prepare_browser_snapshot_use(actor, **args)
+    assert prepared.allowed, prepared
+    assert prepared.reason == "BROWSER_SNAPSHOT_PREPARED_NOT_AUTHORIZED"
+    assert prepared.requires_approval and prepared.approval_token is None
+    assert not gate.check_browser_snapshot_use(actor, **args).allowed
+    token = gate.grant_approval(p.OperationType.COLLECTOR_SOURCE_READ.value,
+                               resource=prepared.resource)
+    checked = gate.check_browser_snapshot_use(actor, **args)
+    assert checked.allowed and checked.approval_token is None
+    assert checked.resource == prepared.resource
+    gate.revoke_approval(token)
+    assert not gate.check_browser_snapshot_use(actor, **args).allowed
+    assert len(calls) == 4
+
+
+@pytest.mark.parametrize("kind", ["wildcard", "broad", "expired", "wrong_operation", "wrong_resource"])
+def test_browser_snapshot_requires_exact_unexpired_read_grant(browser_snapshot_permission, kind):
+    p, gate, actor, args, _ = browser_snapshot_permission
+    prepared = gate.prepare_browser_snapshot_use(actor, **args)
+    assert prepared.allowed
+    gate.grant_approval(
+        "*" if kind == "wildcard" else (p.OperationType.DATA_EXPORT.value
+             if kind == "wrong_operation" else p.OperationType.COLLECTOR_SOURCE_READ.value),
+        duration_minutes=-1 if kind == "expired" else 30,
+        resource=None if kind == "broad" else ("different" if kind == "wrong_resource" else prepared.resource),
+    )
+    assert not gate.check_browser_snapshot_use(actor, **args).allowed
+
+
+@pytest.mark.parametrize("field,value", [
+    ("purpose", "ANALYZE"), ("purpose", "export"),
+    ("source_fingerprint", "a" * 64), ("body_sha256", "b" * 64),
+    ("source_version", "collected-native-source:live-v1"),
+    ("source_evidence_ref", "app_evidence_records:999999"),
+    ("scope", dict(domain_id="cth", subject_id="SUBJ-CTH-B", brand_focus_id=None)),
+])
+def test_browser_snapshot_wrong_binding_cannot_prepare_resource(browser_snapshot_permission, field, value):
+    _, gate, actor, args, _ = browser_snapshot_permission
+    assert not gate.prepare_browser_snapshot_use(actor, **{**args, field: value}).allowed
+
+
+def test_browser_snapshot_rechecks_account_scope_and_integrity(browser_snapshot_permission):
+    p, gate, actor, args, _ = browser_snapshot_permission
+    prepared = gate.prepare_browser_snapshot_use(actor, **args)
+    assert prepared.allowed
+    gate.grant_approval(p.OperationType.COLLECTOR_SOURCE_READ.value, resource=prepared.resource)
+    assert gate.check_browser_snapshot_use(actor, **args).allowed
+    assert not gate.check_browser_snapshot_use({"id": 2}, **args).allowed
+    con = args["connection"]
+    con.execute("DELETE FROM v4_member_authorizations WHERE user_id=1")
+    assert not gate.check_browser_snapshot_use(actor, **args).allowed
+    con.rollback()
+    assert gate.check_browser_snapshot_use(actor, **args).allowed
+    con.execute("UPDATE app_evidence_records SET provider='forged' WHERE id=?",
+                (int(args["source_evidence_ref"].split(":")[1]),))
+    assert not gate.check_browser_snapshot_use(actor, **args).allowed
+    con.rollback()
+    assert gate.check_browser_snapshot_use(actor, **args).allowed
+    con.execute("UPDATE lumenis_subject_registry SET status='disabled' WHERE subject_id='SUBJ-CTH-A'")
+    assert not gate.check_browser_snapshot_use(actor, **args).allowed
+
+
+def test_browser_snapshot_rejects_bypass_wrong_gate_and_physical_failure(browser_snapshot_permission, monkeypatch):
+    p, gate, actor, args, _ = browser_snapshot_permission
+    from lumenis.importer import documents
+    assert not p.PermissionGate().prepare_browser_snapshot_use(actor, **args).allowed
+    monkeypatch.setenv("PERMISSION_GATE_TESTING", "1")
+    assert not gate.prepare_browser_snapshot_use(actor, **args).allowed
+    monkeypatch.delenv("PERMISSION_GATE_TESTING")
+    monkeypatch.setattr(documents, "_source_bytes", lambda *_: (b'{"body":"tampered"}', {}))
+    assert not gate.prepare_browser_snapshot_use(actor, **args).allowed
+
+
+@pytest.mark.parametrize("local", [False, True])
+def test_browser_snapshot_supports_exact_global_and_local_scope(browser_snapshot_permission, local):
+    from flask import Flask
+    from lumenis.shared.evidence import store
+    p, gate, actor, args, _ = browser_snapshot_permission
+    con = args["connection"]
+    old = dict(con.execute("SELECT * FROM app_evidence_records WHERE id=?",
+                           (int(args["source_evidence_ref"].split(":")[1]),)).fetchone())
+    metadata = json.loads(old["collection_metadata"])
+    scope = dict(domain_id="cth", subject_id=None, brand_focus_id=None, global_scope=True)
+    app = Flask(__name__)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    with app.test_request_context("/", headers={"Host": "localhost"},
+                                  environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+        if local:
+            actor = p.resolve_local_workspace_principal(module="reports", action="read")
+            identity = dict(actor_id=None, principal_kind=actor.principal_kind,
+                            principal_ref=actor.principal_ref)
+        else:
+            con.execute("UPDATE v4_member_authorizations SET data_scope=? WHERE user_id=1",
+                        (json.dumps({"global": True}),))
+            con.commit()
+            identity = {"actor_id": 1}
+        metadata["context"] = {**scope, **identity}
+        evidence_id = store.record_evidence(
+            source="collector", feature_id="COLLECTED_SOURCE", product="CTH",
+            provider="collector-browser-snapshot", version=args["source_version"],
+            collection_metadata=metadata, **scope,
+        )
+        args = {**args, "scope": scope, "source_evidence_ref": f"app_evidence_records:{evidence_id}"}
+        prepared = gate.prepare_browser_snapshot_use(actor, **args)
+        assert prepared.allowed, prepared
+        gate.grant_approval(p.OperationType.COLLECTOR_SOURCE_READ.value, resource=prepared.resource)
+        assert gate.check_browser_snapshot_use(actor, **args).allowed
+        if local:
+            app.config["LUMENIS_OPEN_WORKSPACE"] = False
+        else:
+            con.execute("UPDATE v4_users SET status='inactive' WHERE id=1")
+        assert not gate.check_browser_snapshot_use(actor, **args).allowed
+
+
+def test_browser_snapshot_audit_failure_cannot_authorize(browser_snapshot_permission, monkeypatch):
+    p, gate, actor, args, _ = browser_snapshot_permission
+    prepared = gate.prepare_browser_snapshot_use(actor, **args)
+    assert prepared.allowed
+    gate.grant_approval(p.OperationType.COLLECTOR_SOURCE_READ.value, resource=prepared.resource)
+    original = gate._write_audit
+    def failed_audit(**kwargs):
+        if kwargs.get("permission_required") == "browser_snapshot_exact_quote_use":
+            raise OSError("isolated audit failure")
+        return original(**kwargs)
+    monkeypatch.setattr(gate, "_write_audit", failed_audit)
+    checked = gate.check_browser_snapshot_use(actor, **args)
+    assert not checked.allowed and checked.audit_id is None
+    assert checked.reason == "BROWSER_SNAPSHOT_AUDIT_UNAVAILABLE"
+
+
+@pytest.mark.parametrize("restriction", [
+    {"revoked": True}, {"private": True}, {"restricted": True},
+    {"confidential": True}, {"use_prohibited": True},
+    {"use_status": "DENIED"}, {"use_status": "REVOKED"},
+    {"use_status": "WITHDRAWN"}, {"privacy_status": "PRIVATE"},
+])
+def test_browser_snapshot_honors_signed_explicit_restrictions(browser_snapshot_permission, restriction):
+    from lumenis.shared.evidence import store
+    _, gate, actor, args, _ = browser_snapshot_permission
+    con = args["connection"]
+    old = dict(con.execute("SELECT * FROM app_evidence_records WHERE id=?",
+                           (int(args["source_evidence_ref"].split(":")[1]),)).fetchone())
+    metadata = json.loads(old["collection_metadata"])
+    metadata["provenance"] = {"rights": restriction}
+    evidence_id = store.record_evidence(
+        source="collector", feature_id="COLLECTED_SOURCE", product="CTH",
+        provider="collector-browser-snapshot", version=args["source_version"],
+        collection_metadata=metadata, **args["scope"],
+    )
+    args = {**args, "source_evidence_ref": f"app_evidence_records:{evidence_id}"}
+    assert not gate.prepare_browser_snapshot_use(actor, **args).allowed
+
+
+@pytest.mark.parametrize('change', ['token', 'scope'])
+def test_browser_snapshot_revocation_during_audit_is_not_admitted(browser_snapshot_permission,monkeypatch,change):
+    p,gate,actor,args,_=browser_snapshot_permission
+    prepared=gate.prepare_browser_snapshot_use(actor,**args)
+    token=gate.grant_approval(p.OperationType.COLLECTOR_SOURCE_READ.value,resource=prepared.resource)
+    audit=gate._write_audit
+    def revoke(**kw):
+        result=audit(**kw)
+        if kw.get('permission_required')=='browser_snapshot_exact_quote_use' and kw.get('result')=='allowed':
+            if change=='token':gate.revoke_approval(token)
+            else:args['connection'].execute('DELETE FROM v4_member_authorizations WHERE user_id=1')
+        return result
+    monkeypatch.setattr(gate,'_write_audit',revoke)
+    decision=gate.check_browser_snapshot_use(actor,**args)
+    assert not decision.allowed
+    assert decision.reason=='BROWSER_SNAPSHOT_APPROVAL_OR_SCOPE_CHANGED'

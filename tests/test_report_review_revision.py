@@ -8,18 +8,51 @@ import pytest
 from tests.test_source_brief_job import job_db
 from tests.test_source_brief_job_routes import client, GLOBAL, URL
 from tests.test_source_brief_tasks import task_schema, _poll
-from tests.test_business_brief_job import _mock_model, _answer
+from tests.test_business_brief_job import _answer
 from lumenis.shared.reporting import source_brief_tasks as tasks, business_brief as analysis
 from lumenis.system.security.permission import PermissionLevel
 
 
+def _revision_model(client, monkeypatch, model):
+    """Use the owned gateway contract with the actual authenticated principal."""
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
+    from tests.test_business_brief_typed_owned import _owned_result
+    with client[1].test_request_context(
+        "/", headers={"Host": "localhost"},
+        environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
+    ):
+        actor = resolve_local_workspace_principal(module="reports", action="write")
+    def run_owned(request):
+        assert type(request) is OwnedServiceRequest
+        return _owned_result(request, actor=actor,
+                             analysis=model(None, json.dumps(json.loads(request.user_payload)["material"])))
+    monkeypatch.setattr(analysis.gateway, "run_owned_request", run_owned)
+
+
 def _parent(client, monkeypatch, decision="request_changes"):
     api, _, _, entry, _ = client
-    calls = _mock_model(monkeypatch)
+    import lumenis.auth.service
+    monkeypatch.setattr(lumenis.auth.service, "get_current_user", lambda **kwargs: None)
+    from tests.test_growth_business_fixture import prepare_owner_source
     headers = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
+    ws = {"db": client[2], "app": client[1], "headers": headers, "gate": client[4],
+          "scope": {"domain_id": "cth", "subject_id": entry["subject_id"],
+                    "brand_focus_id": None, "global_scope": False}, "source_id": "brief-job-source"}
+    source = prepare_owner_source(ws)
+    calls = []
+    def initial_model(system, user):
+        payload = json.loads(user)
+        calls.append(payload)
+        answer = _answer(user)
+        if "revision" in payload:
+            return {"changes": [{"section": "unknowns", "reason": "Address the saved review."}],
+                    "analysis": answer}
+        return answer
+    _revision_model(client, monkeypatch, initial_model)
     parent = api.post(URL + "/generate", headers=headers, json={
         "business_question": "Propose a measurable content experiment using these sources.",
-        "source_ids": ["brief-job-source"],
+        "source_ids": [source["source_id"]],
     }).get_json()["result"]
     response = api.post(URL + "/jobs/" + parent["job_id"] + "/reviews", headers=headers, json={
         "submission_id": str(uuid.uuid4()), "decision": decision,
@@ -37,9 +70,9 @@ def test_revision_uses_saved_feedback_and_preserves_original_through_reopen_resu
         calls.append(json.loads(user))
         answer = _answer(user)
         answer["unknowns"] = ["Baseline is unknown; gather initial observations before comparing change."]
-        return json.dumps({"changes": [{"section": "unknowns", "reason": "Make the absent baseline explicit."}],
-                           "analysis": answer}), "ollama", {"model": "test-local"}
-    monkeypatch.setattr(analysis, "_request_business_inference", revised_model)
+        return {"changes": [{"section": "unknowns", "reason": "Make the absent baseline explicit."}],
+                "analysis": answer}
+    _revision_model(client, monkeypatch, revised_model)
     reference = {"parent_job_id": parent["job_id"], "review_id": review["review_id"]}
     response = api.post(URL + "/start", headers=headers, json={"revision": reference})
     assert response.status_code == 202, response.get_json()
@@ -115,8 +148,8 @@ def test_revision_cannot_claim_an_edit_it_did_not_make(client, monkeypatch, bad)
             changes = []
         else:
             changes[0]["reason"] = " "
-        return json.dumps({"analysis": answer, "changes": changes}), "ollama", {"model": "test-local"}
-    monkeypatch.setattr(analysis, "_request_business_inference", model)
+        return {"analysis": answer, "changes": changes}
+    _revision_model(client, monkeypatch, model)
     response = api.post(URL + "/start", headers=headers, json={"revision": {
         "parent_job_id": parent["job_id"], "review_id": review["review_id"]}})
     task = _poll(api, response.get_json()["task"]["task_id"], headers)
@@ -157,9 +190,9 @@ def test_revision_rechecks_permission_before_derivative_evidence(client, monkeyp
         gate.revoke_permission(PermissionLevel.ANALYZE)
         answer = _answer(user)
         answer["unknowns"] = ["Baseline is not measured."]
-        return json.dumps({"analysis": answer, "changes": [
-            {"section": "unknowns", "reason": "Clarify absent baseline."}]}), "ollama", {"model": "test-local"}
-    monkeypatch.setattr(analysis, "_request_business_inference", revoke_during_model)
+        return {"analysis": answer, "changes": [
+            {"section": "unknowns", "reason": "Clarify absent baseline."}]}
+    _revision_model(client, monkeypatch, revoke_during_model)
     response = api.post(URL + "/start", headers=headers, json={
         "revision": {"parent_job_id": parent["job_id"], "review_id": review["review_id"]}})
     assert response.status_code == 202, response.get_json()

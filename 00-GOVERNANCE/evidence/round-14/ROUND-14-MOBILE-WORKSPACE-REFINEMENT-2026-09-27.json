@@ -57,7 +57,7 @@
         "test/shell",
         "test/navigation"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8\\app",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8\\app",
       "exit_code": 0,
       "duration_seconds": 32.36,
       "unchanged": true
@@ -68,7 +68,7 @@
         "analyze",
         "--no-pub"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8\\app",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8\\app",
       "exit_code": 0,
       "duration_seconds": 10.89,
       "unchanged": true
@@ -83,7 +83,7 @@
         "--no-web-resources-cdn",
         "--no-wasm-dry-run"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8\\app",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8\\app",
       "exit_code": 0,
       "duration_seconds": 58.19,
       "unchanged": true
@@ -93,7 +93,7 @@
         "D:\\LUMENIS_REBUILD\\序\\序境\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_ai_native_constitution.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
       "exit_code": 0,
       "duration_seconds": 0.15,
       "unchanged": true
@@ -103,7 +103,7 @@
         "D:\\LUMENIS_REBUILD\\序\\序境\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_experience_authority_exclusive.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
       "exit_code": 0,
       "duration_seconds": 0.22,
       "unchanged": true
@@ -114,7 +114,7 @@
         "scripts/audit_tools/verify_experience_anti_template.py",
         "--strict"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
       "exit_code": 0,
       "duration_seconds": 0.41,
       "unchanged": true
@@ -124,7 +124,7 @@
         "D:\\LUMENIS_REBUILD\\序\\序境\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_experience_screen_blueprints.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
       "exit_code": 0,
       "duration_seconds": 0.17,
       "unchanged": true
@@ -134,7 +134,7 @@
         "D:\\LUMENIS_REBUILD\\序\\序境\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_lumenis_single_product.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
       "exit_code": 0,
       "duration_seconds": 3.11,
       "unchanged": true
@@ -144,7 +144,7 @@
         "D:\\LUMENIS_REBUILD\\序\\序境\\.venv\\Scripts\\python.exe",
         "scripts/audit_tools/verify_codex_takeover_governance.py"
       ],
-      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
+      "cwd": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-frontend-801adbf8",
       "exit_code": 0,
       "duration_seconds": 0.31,
       "unchanged": true
@@ -262,5 +262,5 @@
     "released": false,
     "commercial_ready": false
   },
-  "raw_local_evidence": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-mobile-refinement-20260927"
+  "raw_local_evidence": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-mobile-refinement-20260927"
 }

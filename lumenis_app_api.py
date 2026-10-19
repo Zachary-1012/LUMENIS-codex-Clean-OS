@@ -53,18 +53,33 @@ def _internal_pitch_body():
 
 
 def _internal_pitch_scope(data=None):
+    domain_keys = {"domain_id", "subject_id", "brand_focus_id", "global_scope"}
+    shared_keys = {"scope_kind", "version"}
     if data is not None:
+        # A POST has one scope location. Do not silently ignore a competing query.
+        if request.args:
+            raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
         scope = data.get("scope")
     else:
-        if set(request.args) != {"domain_id", "subject_id", "brand_focus_id", "global_scope"} or any(
-                len(request.args.getlist(key)) != 1 for key in request.args):
+        if any(len(request.args.getlist(key)) != 1 for key in request.args):
             raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
-        if request.args["global_scope"] not in {"true", "false"}:
-            raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
-        scope = {"domain_id": request.args["domain_id"], "subject_id": request.args["subject_id"] or None,
-                 "brand_focus_id": request.args["brand_focus_id"] or None,
-                 "global_scope": request.args["global_scope"] == "true"}
-    if (not isinstance(scope, dict) or set(scope) != {"domain_id", "subject_id", "brand_focus_id", "global_scope"}
+        if set(request.args) == shared_keys:
+            if request.args["scope_kind"] != "shared_workspace" or request.args["version"] != "1":
+                raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
+            scope = {"scope_kind": "shared_workspace", "version": 1}
+        elif set(request.args) == domain_keys:
+            if request.args["global_scope"] not in {"true", "false"}:
+                raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
+            scope = {"domain_id": request.args["domain_id"], "subject_id": request.args["subject_id"] or None,
+                     "brand_focus_id": request.args["brand_focus_id"] or None,
+                     "global_scope": request.args["global_scope"] == "true"}
+        else:
+            raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
+    if isinstance(scope, dict) and set(scope) == shared_keys:
+        if scope["scope_kind"] == "shared_workspace" and type(scope["version"]) is int and scope["version"] == 1:
+            return scope
+        raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
+    if (not isinstance(scope, dict) or set(scope) != domain_keys
             or type(scope["global_scope"]) is not bool):
         raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
     return scope
@@ -84,7 +99,7 @@ def _internal_pitch_actor(action):
 def _internal_pitch_local_access_allowed():
     """The explicitly open workspace still checks exact live Registry scope."""
     import re
-    from lumenis.shared.reporting.saved_work import authorize
+    from lumenis.shared.reporting.saved_work import authorize_saved_work
     from lumenis.system.security.permission import resolve_local_workspace_principal
     prefix = "/api/experience/creation/internal-pitches"
     path = request.path
@@ -102,7 +117,7 @@ def _internal_pitch_local_access_allowed():
         return False
     try:
         data = _internal_pitch_body() if request.method == "POST" else None
-        authorize(actor, _internal_pitch_scope(data), action=action)
+        authorize_saved_work(actor, _internal_pitch_scope(data), action=action)
         return True
     except (ValueError, PermissionError):
         return False
@@ -307,7 +322,7 @@ def api_business_work_read(work_id):
 def api_business_work_advance(work_id, operation):
     def execute():
         if operation not in {"choose", "adopt", "cancel", "interrupt", "resume", "action", "outcome", "outcome_unknown",
-                             "save-request", "save"}:
+                             "save-request", "save", "restore", "review"}:
             raise LookupError("BUSINESS_WORK_OPERATION_NOT_FOUND")
         data = _business_work_body()
         if operation in {"save-request", "save"}:
@@ -493,11 +508,6 @@ def api_settings_context():
 
 from lumenis_skill_adapter import get_skill_adapter
 
-# Skill 调用记录（内存级 runtime cache，不写数据库，保留最近 100 条）
-# 注意：这不是永久历史，仅作 runtime trace。UI 无持久化证据时显示 NO_DATA。
-_skill_invocations = []
-
-
 @lumenis_bp.route("/api/skills/status")
 def skill_status():
     """Skill Registry 状态 —— 从 OSAI Canonical Registry 真实读取。
@@ -539,166 +549,176 @@ def skill_status():
     })
 
 
-@lumenis_bp.route("/api/skills/invoke", methods=["POST"])
-def skill_invoke():
-    """Skill 调用 —— ZBC → Cross-Core Adapter → OSAI SkillInvoker。
+def _skill_api_actor():
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    actor = get_current_user(read_only=True)
+    if isinstance(actor, dict) and type(actor.get("id")) is int:
+        return actor
+    actor = resolve_local_workspace_principal(module="skills", action="read")
+    if actor is None:
+        raise PermissionError("AUTHENTICATED_ACTOR_REQUIRED")
+    return actor
 
-    完整链：Workspace → Task → Skill Selector → Manifest → Permission →
-    Context → Engine → Provider → Execution → Evidence → Evaluation → Trace → Result
 
-    当前层级：ZBC 记录调用请求（ACCEPTED），实际执行由 OSAI 完成。
-    任何一层不存在返回 PARTIALLY_CONNECTED，不伪造 COMPLETED。
-    """
-    data = request.get_json(silent=True) or {}
-    skill_id = data.get("skill_id", "")
-    task = data.get("task", "manual invoke")
-    workspace = data.get("workspace", "unknown")
+def _skill_bound_task(task_id, actor):
+    from ai_task_engine import get_task_engine
+    from agent_runtime.task_binding import authorized_context
+    if not isinstance(task_id, str) or not task_id:
+        raise PermissionError("SKILL_TASK_BINDING_REQUIRED")
+    task = get_task_engine().get_task(task_id)
+    if not isinstance(task, dict):
+        raise PermissionError("SKILL_TASK_ACCESS_DENIED")
+    return task, authorized_context(task, actor)
 
-    # 从 OSAI Canonical Registry 获取 Skill 定义（唯一 Truth）
-    adapter = get_skill_adapter()
-    skill_info = adapter.get_skill(skill_id)
 
-    if not skill_info.get("found"):
-        return jsonify({
-            "status": "FAILED",
-            "error": "Unknown skill: %s" % skill_id,
-            "registry_status": skill_info.get("status", "UNKNOWN"),
-        }), 404
+def _skill_api_response(payload, status=200):
+    response = jsonify(payload)
+    response.headers["Cache-Control"] = "no-store"
+    return response, status
 
-    skill = skill_info["skill"]
 
-    # 检查 Skill 是否真实可执行
-    if skill["status"] != "IMPLEMENTED":
-        return jsonify({
-            "status": "BLOCKED",
-            "error": "Skill not implemented: %s (status=%s)" % (skill_id, skill["status"]),
-            "skill_status": skill["status"],
-        }), 400
-
-    import os as _os
-    invocation_id = "INV-" + _uuid.uuid4().hex[:10]
-    fallback_trace = "TRACE-" + _uuid.uuid4().hex[:10]
-    skill_version = skill.get("version", "0.0.0")
-
-    # 真实执行：ZBC → Cross-Core Adapter → OSAI SkillInvoker
-    # Permission(fail-close) → Context → Engine → Provider → Evidence(落盘) → Evaluation
-    exec_res = adapter.invoke_skill(
-        task=task, skill_id=skill_id, workspace=workspace,
-        skill_version=skill_version,
-    )
-
-    base = {
-        "invocation_id": invocation_id,
-        "skill_id": skill_id,
-        "skill_name": skill.get("name", ""),
-        "skill_version": skill_version,
-        "task": task,
-        "workspace": workspace,
-        "timestamp": _time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "permissions_required": skill.get("permissions", []),
-        "execution_core": "OSAI Intelligence Core",
-        "canonical_source": "OSAI Canonical Registry",
+def _skill_record(row):
+    """Compatibility projection of the existing durable execution owner."""
+    return {
+        "invocation_id": row["execution_id"], "execution_id": row["execution_id"],
+        "skill_id": row["skill_id"], "task": row["task"],
+        "workspace": row["product"], "timestamp": row["created_at"],
+        "status": str(row["status"]).upper(),
+        "result": json.loads(row.get("output_json") or "null"),
+        "evidence": json.loads(row.get("evidence_json") or "null"),
+        "evaluation": json.loads(row.get("evaluation_json") or "null"),
     }
 
-    if not exec_res.get("connected"):
-        # OSAI 不可用/超时：诚实兜底为已受理，绝不伪造 COMPLETED
-        record = dict(base, **{
-            "trace_id": fallback_trace,
-            "status": "ACCEPTED",
-            "execution_status": "PARTIALLY_CONNECTED",
-            "evidence_status": "NO_EVIDENCE",
-            "evaluation_status": "NO_DATA",
-            "error": exec_res.get("error"),
-            "note": "OSAI runtime unavailable; invocation accepted only, not executed.",
-        })
-    else:
-        osai = exec_res["osai"] or {}
-        ost = osai.get("status", "UNKNOWN")
-        trace_id = osai.get("trace_id", fallback_trace)
-        ev_id = osai.get("evidence_id")
-        eval_id = osai.get("evaluation_id")
-        perm = osai.get("permission_check")
-        result = osai.get("result") or {}
-        if ost == "SUCCESS":
-            record = dict(base, **{
-                "trace_id": trace_id, "status": "COMPLETED",
-                "execution_status": "CONNECTED",
-                "evidence_status": "EVIDENCE_CREATED" if ev_id else "NO_EVIDENCE",
-                "evaluation_status": "EVALUATION_CREATED" if eval_id else "NO_DATA",
-                "evidence_id": ev_id, "evaluation_id": eval_id,
-                "engine_id": osai.get("engine_id"), "model_id": osai.get("model_id"),
-                "result": result, "permission_check": perm,
-            })
-        elif ost == "BLOCKED":
-            record = dict(base, **{
-                "trace_id": trace_id, "status": "BLOCKED",
-                "execution_status": "CONNECTED",
-                "evidence_status": "NO_EVIDENCE",
-                "evaluation_status": "NO_DATA",
-                "permission_check": perm,
-                "error": osai.get("error", "PERMISSION_DENIED"),
-            })
-        else:  # FAILED / UNKNOWN —— 链路连通但执行失败，错误同样进 EvidenceChain
-            record = dict(base, **{
-                "trace_id": trace_id, "status": "FAILED",
-                "execution_status": "CONNECTED",
-                "evidence_status": "EVIDENCE_CREATED" if ev_id else "NO_EVIDENCE",
-                "evaluation_status": "NO_DATA",
-                "evidence_id": ev_id, "evaluation_id": eval_id,
-                "engine_id": osai.get("engine_id"), "model_id": osai.get("model_id"),
-                "permission_check": perm, "error": osai.get("error"),
-            })
 
-    # 持久化到独立 JSONL（不写生产 monitor.db，不改 DB schema）
+def _skill_visible_records(actor):
+    from ai_api import _task_row_read_allowed
+    from lumenis.shared.agents.skills.execution import query_executions, verified_execution_scope
+    limit = max(1, min(200, int(request.args.get("limit", "50"))))
+    task_id = request.args.get("task_id")
+    bound = _skill_bound_task(task_id, actor) if task_id else None
+    account_actor = isinstance(actor, dict) and type(actor.get("id")) is int
+    if not account_actor and bound is None:
+        raise PermissionError("SKILL_TASK_BINDING_REQUIRED")
+    records, snapshots, offset = [], [], 0
+    while len(records) < limit:
+        rows = query_executions(skill_id=request.args.get("skill_id") or None,
+                                limit=100, offset=offset, strict=True)
+        for row in rows:
+            if bound is not None:
+                from agent_runtime.task_binding import _digest, _current_binding
+                task, context = bound
+                inputs = json.loads(row.get("input_json") or "{}")
+                identifier = ("skillscope_" if account_actor else "") + "agentstep_" + _digest({
+                    "task": task_id, "skill": row["skill_id"], "inputs": inputs})[:32]
+                if (row["execution_id"] != identifier or row["task"] != task["user_input"]
+                        or row["product"] != context["product"] or row["user_id"] != context["actor_id"]):
+                    continue
+                try:
+                    _current_binding(task_id, row["skill_id"])
+                except (PermissionError, ValueError, KeyError):
+                    continue
+            if account_actor:
+                if not _task_row_read_allowed(row, kind="SKILL_EXECUTION"):
+                    continue
+                # Legacy domain records without signed scope are not ownership
+                # proof. SYSTEM retains its existing actor/module read contract.
+                if row["product"] != "SYSTEM" and not verified_execution_scope(row, actor):
+                    continue
+            from lumenis.shared.agents.skills.execution import read_source_free_execution
+            if read_source_free_execution(row, actor) is None:
+                continue
+            records.append(_skill_record(row))
+            snapshots.append(row)
+            if len(records) == limit:
+                break
+        offset += len(rows)
+        if len(rows) < 100:
+            break
+    # A later row can race an earlier row's revocation. Reopen every selected
+    # producer at the final response boundary, not just the listing scope.
+    for row in snapshots:
+        if read_source_free_execution(row, _skill_api_actor()) is None:
+            raise PermissionError("SKILL_RESULT_ACCESS_CHANGED")
+    return records
+
+
+@lumenis_bp.route("/api/skills/invoke", methods=["POST"])
+def skill_invoke():
+    """Compatibility transport; execute through the canonical Skill owner.
+
+    A Basic perimeter credential, workspace label or supplied user role is never
+    an actor. Domain executions require explicit, live scope; local work reuses
+    the existing sealed Agent task binding. No independent JSONL truth is written.
+    """
     try:
-        ddir = _os.environ.get("LUMENIS_RUNTIME_DIR") or _os.path.join(
-            _os.path.dirname(_os.path.abspath(__file__)), "data", "lumenis")
-        _os.makedirs(ddir, exist_ok=True)
-        with open(_os.path.join(ddir, "skill_invocations.jsonl"),
-                  "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
-    except Exception as persist_err:
-        record["persist_warning"] = str(persist_err)
-
-    _skill_invocations.append(record)
-    if len(_skill_invocations) > 100:
-        _skill_invocations.pop(0)
-
-    return jsonify(record)
+        actor = _skill_api_actor()
+        data = request.get_json(silent=True)
+        if (not isinstance(data, dict) or (request.content_length or 0) > 1024 * 1024
+                or not isinstance(data.get("skill_id"), str) or not data["skill_id"].strip()
+                or not isinstance(data.get("input", {}), dict)
+                or not isinstance(data.get("task", ""), str)
+                or not isinstance(data.get("action_type", "ANALYZE"), str)):
+            return _skill_api_response({"ok": False, "code": "SKILL_REQUEST_INVALID"}, 400)
+        if data.get("task_id"):
+            from agent_runtime.task_binding import _invoke_local_tool
+            task, context = _skill_bound_task(data["task_id"], actor)
+            if (data.get("action_type", "READ") != "READ"
+                    or ("scope" in data and data["scope"] != context["scope"])
+                    or ("task" in data and data["task"] != task["user_input"])
+                    or ("product" in data and data["product"] != context["product"])):
+                raise PermissionError("SKILL_TASK_BINDING_MISMATCH")
+            outcome = _invoke_local_tool(data["task_id"], data["skill_id"], _source_free=True, **data.get("input", {}))
+            if outcome.get("success") is True:
+                from lumenis.shared.agents.skills.execution import query_executions, read_source_free_execution
+                rows = query_executions(execution_id=outcome.get("skill_execution_id"), limit=1, strict=True)
+                if not rows or read_source_free_execution(rows[0], actor) is None:
+                    return _skill_api_response({"ok": False, "code": "SOURCE_READER_UNBOUND",
+                                               "result": None}, 409)
+        else:
+            from account.skills import execute_skill_api, get_skill_info
+            if not isinstance(actor, dict) or type(actor.get("id")) is not int:
+                raise PermissionError("SKILL_TASK_BINDING_REQUIRED")
+            product = data.get("product", data.get("workspace"))
+            if product not in {"CTH", "BMP", "ZBMP", "SYSTEM"}:
+                return _skill_api_response({"ok": False, "code": "PRODUCT_CONTEXT_REQUIRED"}, 400)
+            info = get_skill_info(data["skill_id"])
+            registered_product = str(info.get("product") or "").upper()
+            if product == "SYSTEM" and registered_product not in {"SYSTEM", "SHARED"}:
+                raise PermissionError("SKILL_PRODUCT_BINDING_DENIED")
+            if product != "SYSTEM" and not isinstance(data.get("scope"), dict):
+                return _skill_api_response({"ok": False, "code": "SKILL_EXACT_SCOPE_REQUIRED"}, 400)
+            outcome = execute_skill_api(data["skill_id"], task=data.get("task", ""),
+                input_payload=data.get("input", {}), action_type=data.get("action_type", "ANALYZE"),
+                user_id=actor["id"], product=product, scope=data.get("scope"), _local_only=True)
+        success = outcome.get("success") is True
+        return _skill_api_response({**outcome, "ok": success,
+            "invocation_id": outcome.get("execution_id", outcome.get("skill_execution_id")),
+            "status": "COMPLETED" if success else str(outcome.get("status") or "BLOCKED").upper()},
+            200 if success else 404 if outcome.get("code") == "NOT_FOUND" else 403)
+    except PermissionError:
+        return _skill_api_response({"ok": False, "code": "SKILL_ACCESS_DENIED"}, 403)
+    except (ValueError, TypeError, KeyError):
+        return _skill_api_response({"ok": False, "code": "SKILL_REQUEST_INVALID"}, 400)
+    except Exception:
+        return _skill_api_response({"ok": False, "code": "SKILL_EXECUTION_UNAVAILABLE"}, 503)
 
 
 @lumenis_bp.route("/api/skills/invocations")
 def skill_invocations_history():
-    """Skill 调用历史 —— 读取持久化 JSONL（重启不丢），非内存假历史。"""
-    import os as _os
-    limit = request.args.get("limit", default=50, type=int)
-    skill_id = request.args.get("skill_id", default="")
-    ddir = _os.environ.get("LUMENIS_RUNTIME_DIR") or _os.path.join(
-        _os.path.dirname(_os.path.abspath(__file__)), "data", "lumenis")
-    fpath = _os.path.join(ddir, "skill_invocations.jsonl")
-    rows = []
+    """Reopen the same actor's executions with fresh owner/scope checks."""
     try:
-        if _os.path.exists(fpath):
-            with open(fpath, "r", encoding="utf-8") as fh:
-                for line in fh:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        rec = json.loads(line)
-                    except Exception:
-                        continue
-                    if skill_id and rec.get("skill_id") != skill_id:
-                        continue
-                    rows.append(rec)
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e), "records": []}), 500
-    rows = rows[-limit:]
-    rows.reverse()
-    return jsonify({
-        "ok": True, "count": len(rows), "records": rows,
-        "persistence": "file_based:data/lumenis/skill_invocations.jsonl",
-    })
+        records = _skill_visible_records(_skill_api_actor())
+        return _skill_api_response({"ok": True, "count": len(records), "records": records,
+            "persistence": "skill_executions", "legacy_history_state": "UNBOUND_NOT_ADMITTED",
+            "source_reader_state": "BOUND_LOCAL_PRODUCERS_ONLY",
+            "recovery": "Re-run the original request through the authorized Skill owner; legacy files are retained."})
+    except PermissionError:
+        return _skill_api_response({"ok": False, "code": "SKILL_ACCESS_DENIED", "records": []}, 403)
+    except (ValueError, TypeError):
+        return _skill_api_response({"ok": False, "code": "SKILL_REQUEST_INVALID", "records": []}, 400)
+    except Exception:
+        return _skill_api_response({"ok": False, "code": "SKILL_HISTORY_UNAVAILABLE", "records": []}, 503)
 
 
 @lumenis_bp.route("/api/skills/sync", methods=["POST"])
@@ -736,44 +756,88 @@ def skill_sync():
         ),
     })
 
+def _skill_evidence_projection(row, scope):
+    """Read a known producer through its original SourceUse owner."""
+    from account.models import get_db
+    from lumenis.shared.evidence.store import verify_evidence_record_integrity
+    from lumenis.shared.reporting.saved_work import authorize, _verified_evidence
+    from lumenis.shared.agents.skills.execution import query_executions, read_source_free_execution
+    if not verify_evidence_record_integrity(row):
+        return None
+    try:
+        if row.get("source") == "skill_execution_scope":
+            material = json.loads(row["inputs_json"])["scope_receipt"]
+            executions = query_executions(execution_id=material["execution_id"], limit=1, strict=True)
+            if not executions or read_source_free_execution(executions[0], scope["actor"]) is None:
+                return None
+            return {"execution_id": executions[0]["execution_id"],
+                    "evidence": _skill_record(executions[0])["evidence"]}
+        con = get_db()
+        try:
+            context = authorize(scope["actor"], {key: scope[key] for key in (
+                "domain_id", "subject_id", "brand_focus_id", "global_scope")}, action="read", connection=con)
+            return _verified_evidence(con, row["id"], context, scope["actor"])
+        finally:
+            con.close()
+    except (PermissionError, ValueError, KeyError, TypeError, LookupError):
+        return None
+
+
 @lumenis_bp.route("/api/intelligence/evidence")
 def api_intelligence_evidence():
-    """Intelligence Evidence — 读取 OSAI 持久化 Evidence Chain。
-
-    Cross-Core: 通过 subprocess 调用 OSAI evidence reader，
-    不直接访问 OSAI 内部模块。
-    """
-    import subprocess
-    import json
-    import os
-
-    osai_root = os.environ.get("OSAI_ROOT") or get_skill_adapter()._osai_root or ""
-    reader_script = os.path.join(osai_root, "scripts", "list_evidence.py") if osai_root else ""
-
-    # Fallback: direct file read if script not available
-    evidence_dir = os.path.join(osai_root, "evidence", "chains")
-    chains = []
+    """Exact-scope discovery followed by the original producer's SourceUse read."""
+    from lumenis.shared.evidence.api import resolve_evidence_request_scope
+    from lumenis.shared.evidence.store import query_scoped_evidence
     try:
-        if os.path.exists(evidence_dir):
-            for fname in sorted(os.listdir(evidence_dir), reverse=True)[:50]:
-                if fname.endswith(".json"):
-                    fpath = os.path.join(evidence_dir, fname)
-                    try:
-                        with open(fpath, "r", encoding="utf-8") as fh:
-                            chains.append(json.load(fh))
-                    except Exception:
-                        pass
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e), "count": 0, "chains": []}), 500
-
-    return jsonify({
-        "ok": True,
-        "count": len(chains),
-        "chains": chains,
-        "source": "osai_evidence_chains",
-        "persistence": "file_based"
-    })
-
+        scope, error = resolve_evidence_request_scope()
+        if error is not None:
+            return error
+        if set(request.args) - {"limit", "offset"}:
+            raise ValueError("unknown query")
+        limit = int(request.args.get("limit", "50"))
+        offset = int(request.args.get("offset", "0"))
+        if not 1 <= limit <= 200 or offset < 0:
+            raise ValueError("invalid pagination")
+        visible, snapshots, skipped = [], [], 0
+        after_time = after_id = None
+        while len(visible) < limit:
+            candidates = query_scoped_evidence(product=scope["product"], domain_id=scope["domain_id"],
+                subject_id=scope["subject_id"], brand_focus_id=scope["brand_focus_id"],
+                global_scope=scope["global_scope"], limit=100,
+                after_created_at=after_time, after_id=after_id)
+            for row in candidates:
+                projection = _skill_evidence_projection(row, scope)
+                if projection is None:
+                    continue
+                if skipped < offset:
+                    skipped += 1
+                    continue
+                visible.append(projection)
+                snapshots.append(row)
+                if len(visible) == limit:
+                    break
+            if len(candidates) < 100:
+                break
+            after_time, after_id = candidates[-1].get("created_at"), candidates[-1]["id"]
+        current_scope, error = resolve_evidence_request_scope()
+        if error is not None:
+            return error
+        if current_scope != scope:
+            raise PermissionError("EVIDENCE_SCOPE_CHANGED")
+        for row, projection in zip(snapshots, visible):
+            if _skill_evidence_projection(row, current_scope) != projection:
+                raise PermissionError("SOURCE_USE_CHANGED_DURING_READ")
+        return _skill_api_response({"ok": True, "count": len(visible), "chains": visible,
+            "scope": scope["response"], "source": "shared_evidence", "persistence": "app_evidence_records",
+            "legacy_history_state": "UNBOUND_NOT_ADMITTED", "source_reader_state": "KNOWN_PRODUCERS_ONLY",
+            "unbound_producer_code": "SOURCE_READER_UNBOUND",
+            "recovery": "Re-run the original request through the authorized Skill owner; legacy files are retained."})
+    except PermissionError:
+        return _skill_api_response({"ok": False, "code": "SKILL_ACCESS_DENIED", "chains": []}, 403)
+    except (ValueError, TypeError):
+        return _skill_api_response({"ok": False, "code": "SKILL_REQUEST_INVALID", "chains": []}, 400)
+    except Exception:
+        return _skill_api_response({"ok": False, "code": "SKILL_EVIDENCE_UNAVAILABLE", "chains": []}, 503)
 
 
 

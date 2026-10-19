@@ -1,0 +1,7 @@
+{
+  "correction": "Earlier bounded scans did not detect six distinct sharing-URL token values. Public research copies remove 42 occurrences and retain only value hashes in the redaction ledger. Earlier zero-hit statements are superseded for this scope.",
+  "private_archive_check": "Four affected source files were found in two historical owner-only archives, containing 36 occurrences of the same six values. Those originals remain private and unchanged; the later 06:20 private candidate does not contain the five named source files. This is not a claim about all external copies.",
+  "published_token_values": false,
+  "source_files_count": 5,
+  "current_public_review": "PENDING_INDEPENDENT_V8_REVIEW"
+}

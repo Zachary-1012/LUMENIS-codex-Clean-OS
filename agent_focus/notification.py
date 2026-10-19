@@ -462,3 +462,40 @@ def should_notify(level: str, event: Optional[Dict[str, Any]] = None) -> bool:
             level_enum = lvl
             break
     return _get_default_protector().should_notify(level_enum, event)
+
+
+def project_persisted_task_notification(record: Dict[str, Any], *, task_kind: str) -> Dict[str, Any]:
+    """Project an already-authorized durable owner row; never persist another inbox.
+
+    Callers must reread and reauthorize the row for every delivery. The stable
+    event ID is tied to that row's outcome/version, so a client can deduplicate.
+    This is an in-product projection, not proof of an external push delivery.
+    """
+    import hashlib
+    import json
+    from urllib.parse import quote
+
+    if task_kind not in {"TASK_ENGINE", "SKILL_EXECUTION"}:
+        raise ValueError("Unknown task owner")
+    key = "task_id" if task_kind == "TASK_ENGINE" else "execution_id"
+    identifier = record.get(key)
+    if not isinstance(identifier, str) or not identifier:
+        raise ValueError("Persisted task reference required")
+    status = str(record.get("status") or "unknown")
+    terminal = status in {"succeeded", "completed", "failed", "cancelled", "rejected", "blocked"}
+    decision = status in {"awaiting_approval", "blocked"}
+    timestamp = record.get("finished_at") or record.get("updated_at") or record.get("created_at") or ""
+    version = hashlib.sha256(json.dumps({"status": status, "timestamp": timestamp,
+        "result": record.get("result_json", record.get("output_json")),
+        "error": record.get("error")}, sort_keys=True, default=str).encode()).hexdigest()[:16]
+    level = (NotificationLevel.HUMAN_DECISION if decision else
+             NotificationLevel.IMPORTANT_SIGNAL if terminal else NotificationLevel.SILENT_PROGRESS)
+    event = NotificationEvent(
+        event_id=f"{task_kind.lower()}:{identifier}:{version}", level=level.value,
+        title=str(record.get("user_input") or record.get("task") or "Task")[:120],
+        message=status, source=task_kind.lower(), event_type="task_" + status,
+        requires_action=decision, timestamp=str(timestamp),
+    )
+    return {"event": event.to_dict(), "return_ref": "/api/ai/tasks/" + quote(identifier, safe=""),
+            "task_kind": task_kind, "delivery": "in-product-projection",
+            "terminal": terminal, "external_delivery": False}

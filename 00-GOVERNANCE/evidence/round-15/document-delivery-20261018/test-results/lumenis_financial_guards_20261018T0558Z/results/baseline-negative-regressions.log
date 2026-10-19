@@ -1,0 +1,92 @@
+FFF                                                                      [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+=================================== FAILURES ===================================
+_________ test_identity_review_is_scoped_literal_latest_and_revocable __________
+
+workspace = {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_financial_guards_20261018T0558Z/tmp/pytest-of-agent/pytest-5/test_identi...actor': LocalWorkspacePrincipal(principal_kind='local_workspace', principal_ref='workspace:local', actor_id=None), ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f05ff5c3530>
+
+    def test_identity_review_is_scoped_literal_latest_and_revocable(workspace,monkeypatch):
+        from subject_registry import ensure_schema
+        w=workspace;monkeypatch.setattr(financial,'get_repository',lambda:w['repo'])
+        with w['repo'].transaction() as con:
+            ensure_schema(con)
+            con.execute("INSERT INTO lumenis_subject_registry (subject_id,domain_id,subject_type,name_en,name_zh,name_en_norm,name_zh_norm,created_at,updated_at) VALUES ('REG','CTH','company','EXAMPLE HOLDINGS LIMITED','示例公司','example holdings limited','示例公司','2026-01-01','2026-01-01')")
+        scope={'domain_id':'cth','subject_id':'REG','brand_focus_id':None,'global_scope':False}
+        args={'actor':w['actor'],'scope':scope}
+        path=w['root']/'identity.txt';path.write_text(TEXT)
+        prov={'source_url':'https://www.hkexnews.hk/listedco/fixture.pdf','published_at':None,
+              'captured_at':'2026-10-17T00:00:00Z','rights':'owner-approved','title':'Synthetic identity',
+              'content_origin':{'kind':'self-authored','claim_type':'synthetic_sample'}}
+        resource=w['documents'].document_import_resource(str(path),provenance=prov,**args)
+        w['gate'].grant_approval('data_import',resource=resource,granted_by='isolated-test')
+        source=w['documents'].import_document(str(path),provenance=prov,**args)
+        entity={'name':'EXAMPLE HOLDINGS LIMITED','scheme':'HKEX-StockCode','identifier':'01234'}
+        options={'entity':entity,'name_span':{'start':0,'end':len(entity['name'])},
+                 'identifier_span':{'start':TEXT.index('01234'),'end':TEXT.index('01234')+5},'reviewed':True,'review_note':'Synthetic reviewer check.'}
+        with pytest.raises(ValueError,match='IDENTIFIER_INVALID'):
+            financial.save_financial_identity_review(source['evidence_id'],**dict(options,entity=dict(entity,identifier='Revenue')),request_id='identity-bad-001',**args)
+        review=financial.save_financial_identity_review(source['evidence_id'],**options,request_id='identity-test-001',**args)
+        rid=review['artifact']['artifact_id']
+        replay=financial.save_financial_identity_review(source['evidence_id'],**options,request_id='identity-test-001',**args)
+        assert replay['replayed'] and replay['artifact']['artifact_id']==rid
+        forged=w['work'].save_work(title='Generic copied review',markdown='User-supplied metadata.',kind='research',
+            payload=review['document']['payload'],citations=review['document']['citations'],
+            contract=review['document']['contract'],request_id='identity-forged-001',**args)
+        assert w['work'].reopen_work(forged['artifact']['artifact_id'],**args)['document']['payload']==review['document']['payload']
+>       with pytest.raises(ValueError,match='OWNER_RECEIPT_REQUIRED'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/test_regional_financial_intake.py:198: Failed
+_______ test_opendart_quarter_and_accumulated_amounts_are_not_conflated ________
+
+    def test_opendart_quarter_and_accumulated_amounts_are_not_conflated():
+        result=parse_opendart_json(dart(thstrm_dt='2025.07.01 ~ 2025.09.30',reprt_code='11014',
+                                       thstrm_amount='300',thstrm_add_amount='900'))
+        fact=result['facts'][0]
+>       assert (fact['value'],fact['period_start'],fact['period_kind'])==('300','2025-07-01','quarter')
+E       AssertionError: assert ('900', '2025...1', 'quarter') == ('300', '2025...1', 'quarter')
+E         
+E         At index 0 diff: '900' != '300'
+E         Use -v to get more diff
+
+tests/test_regional_financial_intake.py:312: AssertionError
+_______ test_registered_entity_scope_never_matches_nulls_or_wrong_domain _______
+
+workspace = {'root': PosixPath('[LOCAL_WORKSPACE]/lumenis_financial_guards_20261018T0558Z/tmp/pytest-of-agent/pytest-5/test_regist...actor': LocalWorkspacePrincipal(principal_kind='local_workspace', principal_ref='workspace:local', actor_id=None), ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f05ff5c0c80>
+
+    def test_registered_entity_scope_never_matches_nulls_or_wrong_domain(workspace,monkeypatch):
+        import subject_registry
+        w=workspace;monkeypatch.setattr(financial,'get_repository',lambda:w['repo'])
+        with w['repo'].transaction() as con:
+            subject_registry.ensure_schema(con)
+            con.execute("INSERT INTO lumenis_subject_registry (subject_id,domain_id,subject_type,name_en,name_zh,name_en_norm,name_zh_norm,created_at,updated_at) VALUES ('selected','CTH','company','Selected issuer','主体','selected issuer','主体','2026-01-01','2026-01-01')")
+        row={'subject_id':'other','brand_focus_id':None,'domain_id':'CTH',
+             'name_en':'Example issuer','name_zh':'示例'}
+        original_list=subject_registry.list_subjects
+        # Inject anomalous rows only into this owner read; Permission keeps its real registry.
+        monkeypatch.setattr(subject_registry,'list_subjects',lambda *a,**k:
+            [row] if k.get('connection') is not None else original_list(*a,**k))
+        entity={'name':'Example issuer'}
+        scoped=dict(w['scope'],subject_id='selected',global_scope=False)
+>       assert financial.match_registered_entity(entity,actor=w['actor'],scope=scoped)['status']=='MISSING'
+E       AssertionError: assert 'EXACT_NAME_CANDIDATE' == 'MISSING'
+E         
+E         - MISSING
+E         + EXACT_NAME_CANDIDATE
+
+tests/test_regional_financial_intake.py:333: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_regional_financial_intake.py::test_identity_review_is_scoped_literal_latest_and_revocable
+FAILED tests/test_regional_financial_intake.py::test_opendart_quarter_and_accumulated_amounts_are_not_conflated
+FAILED tests/test_regional_financial_intake.py::test_registered_entity_scope_never_matches_nulls_or_wrong_domain
+3 failed, 36 deselected in 0.84s

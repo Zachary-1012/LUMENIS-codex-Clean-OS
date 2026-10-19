@@ -221,7 +221,7 @@ class Cth01Repository {
     if (item.isEmpty) {
       return const Cth01Metric(
         state: Cth01BackendState.unknown,
-        note: 'LUMENIS Core did not return this metric.',
+        note: 'OEVIRA Core did not return this metric.',
       );
     }
     final record = item.first;

@@ -77,7 +77,7 @@ class TestPlanGeneration:
         plan = planner.plan("分析今日舆情", mode=PlanMode.ROUTINE)
         assert plan.goal == "分析今日舆情"
         assert plan.mode == "routine"
-        assert plan.model == "glm-4.5-air"
+        assert plan.model == "gateway-selected"
         assert len(plan.steps) == 3
         assert plan.steps[0].action == "查询今日笔记数据"
         assert plan.steps[0].tool == "db_query"
@@ -87,7 +87,7 @@ class TestPlanGeneration:
         planner = Planner(ai_chat_func=_mock_ai_chat)
         plan = planner.plan("深度分析", mode=PlanMode.DEEP)
         assert plan.mode == "deep"
-        assert plan.model == "glm-5.3"
+        assert plan.model == "gateway-selected"
 
     def test_plan_step_structure(self):
         planner = Planner(ai_chat_func=_mock_ai_chat)
@@ -118,8 +118,7 @@ class TestFallbackPlanning:
         plan = planner.plan("test")
         assert plan.is_fallback is True
         assert "empty" in plan.fallback_reason.lower()
-        assert len(plan.steps) == 1
-        assert plan.steps[0].tool == "direct_execution"
+        assert plan.steps == []
 
     def test_invalid_json_fallback(self):
         planner = Planner(ai_chat_func=_mock_ai_chat_invalid_json)
@@ -212,3 +211,64 @@ class TestPlanProperties:
         assert d["goal"] == "test"
         assert isinstance(d["steps"], list)
         assert len(d["steps"]) == 3
+
+
+def test_default_planner_requires_typed_gateway_authority(monkeypatch):
+    from lumenis.system.ai_gateway import core
+    monkeypatch.setattr(core, 'chat', lambda *a, **k: pytest.fail('generic source transmission'))
+    plan = Planner().plan('Plan a source-bearing business task', context={'source': 'private fixture'})
+    assert plan.steps == []
+    assert 'PLANNER_AUTHORIZED_REQUEST_REQUIRED' in plan.fallback_reason
+    assert plan.model == 'gateway-selected'
+
+
+def test_typed_gateway_planning_contract_and_unavailable(monkeypatch):
+    from lumenis.system.ai_gateway import core
+    from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
+    calls = []
+    def factory(system, user, context):
+        return OwnedServiceRequest(operation='fixture_plan', request_id='fixture', job_id='fixture',
+            actor_ref='actor:1', domain_id='cth', scope='GLOBAL / ALL',
+            source_use_policy_version='fixture-v1', source_use_policy_sha256='a'*64,
+            source_binding_sha256='b'*64, source_evidence_refs=('fixture:source',),
+            input_revision_sha256='c'*64, system_prompt=system, user_payload=user,
+            response_schema_json='{}', max_output_tokens=2000)
+    def gateway(request, **kwargs):
+        calls.append(request)
+        return {'ok': True, 'provider': 'owned', 'analysis': {'steps': [{
+            'action': 'Read local metadata', 'tool': 'zbc.skill_registry_snapshot',
+            'params': {}, 'expected_output': 'registry metadata', 'risk_level': 'low'}]}}
+    monkeypatch.setattr(core, 'run_owned_request', gateway)
+    from lumenis.system.ai_gateway import owned_service
+    monkeypatch.setattr(owned_service, 'measure_owned_request', lambda request: {
+        'ok': True, 'fits': True, 'binding_sha256': 'd'*64, 'prompt_tokens': 100,
+        'count_method': 'synthetic_fixture_only'})
+    monkeypatch.setattr(owned_service, 'owned_service_status', lambda domain: {'binding_sha256': 'd'*64})
+    planner = Planner(gateway_request_factory=factory)
+    plan = planner.plan('Read registered metadata')
+    assert len(plan.steps) == 1 and plan.steps[0].tool == 'zbc.skill_registry_snapshot'
+    assert type(calls[0]) is OwnedServiceRequest
+    def measured(request):
+        return {'ok': True, 'fits': 'optional-large-memory' not in request.user_payload,
+                'binding_sha256': 'd'*64, 'prompt_tokens': 100,
+                'count_method': 'synthetic_fixture_only'}
+    monkeypatch.setattr(owned_service, 'measure_owned_request', measured)
+    context = {'domain_id': 'cth', 'scope': {'global_scope': True},
+               'tool_catalog': [{'tool': 'read', 'input_schema': {'type': 'object'}}],
+               'derived_memory': ['optional-large-memory']}
+    reduced = planner.plan('Exact unchanged user goal', context=context)
+    assert reduced.steps and reduced.context_budget['omitted_sections'][0]['section'] == 'derived_memory'
+    assert 'Exact unchanged user goal' in calls[-1].user_payload
+    assert 'input_schema' in calls[-1].user_payload and 'global_scope' in calls[-1].user_payload
+    assert context['derived_memory'] == ['optional-large-memory']
+    monkeypatch.setattr(owned_service, 'measure_owned_request', lambda request: {
+        'ok': True, 'fits': False, 'binding_sha256': 'd'*64, 'prompt_tokens': 9999})
+    before = len(calls)
+    blocked = planner.plan('Required content too large', context={'tool_catalog': ['mandatory']})
+    assert not blocked.steps and 'EXCEEDS_MODEL_BUDGET' in blocked.fallback_reason
+    assert len(calls) == before and blocked.context_budget['fits'] is False
+    monkeypatch.setattr(owned_service, 'measure_owned_request', lambda request: {
+        'ok': True, 'fits': True, 'binding_sha256': 'd'*64})
+    monkeypatch.setattr(core, 'run_owned_request', lambda request, **kwargs: {'ok': False, 'code': 'OWNED_RUNTIME_NOT_BOUND'})
+    unavailable = planner.plan('Read registered metadata')
+    assert unavailable.steps == [] and 'OWNED_RUNTIME_NOT_BOUND' in unavailable.fallback_reason

@@ -1,0 +1,48 @@
+[
+  {
+    "file": "qwen_paper_v1.html",
+    "url": "https://arxiv.org/abs/2601.15621v1",
+    "bytes": 43444,
+    "sha256": "f049d52726b6cdc926e52ef654064d29487a180afc9d08334a336f7ac5687f32",
+    "status": "downloaded_not_executed"
+  },
+  {
+    "file": "carefree.html",
+    "url": "https://remote.incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1400037",
+    "status": "failed",
+    "error": "HTTP Error 502: Bad Gateway"
+  },
+  {
+    "file": "ccby4.html",
+    "url": "https://creativecommons.org/licenses/by/4.0/legalcode.en",
+    "status": "failed",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "file": "apache2.txt",
+    "url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+    "bytes": 11358,
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "status": "downloaded_not_executed"
+  },
+  {
+    "file": "pixabay_terms.html",
+    "url": "https://pixabay.com/service/terms/",
+    "status": "failed",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "file": "youtube_policies.html",
+    "url": "https://developers.google.com/youtube/terms/developer-policies",
+    "bytes": 151823,
+    "sha256": "8328e54fd7feadc96420e05b591d324ae0ee9590c92863cdb052b19286ec4d9c",
+    "status": "downloaded_not_executed"
+  },
+  {
+    "file": "kenney_support.html",
+    "url": "https://kenney.nl/support",
+    "bytes": 11950,
+    "sha256": "465a18b35773066fba50bde9af9a91286dec265fde6c0d8d682ac13a56867230",
+    "status": "downloaded_not_executed"
+  }
+]

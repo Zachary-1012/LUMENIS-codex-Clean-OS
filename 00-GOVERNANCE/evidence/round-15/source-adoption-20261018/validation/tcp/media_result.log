@@ -1,0 +1,18 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- $WORKSPACE/python_compat_fix_20261018/testdeps/venv311/bin/python
+rootdir: $WORKSPACE/unified_validation_final_20261018T1311Z/media_tcp/source
+configfile: pytest.ini
+collecting ... collected 1 item
+
+tests/test_content_media_license.py::test_real_loopback_http_and_independent_process_reopen PASSED [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+- generated xml file: $WORKSPACE/unified_validation_final_20261018T1311Z/media_tcp/result.xml -
+============================== 1 passed in 2.56s ===============================

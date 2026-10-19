@@ -28,13 +28,14 @@ import json
 import re
 import threading
 import uuid
+from contextlib import nullcontext
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
 _CHECKPOINT_FORMAT = "lumenis.agent_runtime.checkpoint"
 _CHECKPOINT_VERSION = 1
-_CHECKPOINT_CONTEXT_KEYS = frozenset({"actor_id", "domain_id", "scope"})
+_CHECKPOINT_CONTEXT_KEYS = frozenset({"actor_id", "domain_id", "scope", "agent_runtime"})
 _CREDENTIAL_VALUE = re.compile(
     r"(?i)\b(?:bearer\s+[\w./~+-]{8,}|(?:sk|pk)-[\w-]{8,}|"
     r"gh[pousr]_[A-Za-z0-9]{10,}|github_pat_[\w]{10,}|"
@@ -50,6 +51,9 @@ def _sanitize_checkpoint_value(value: Any, token_usage: bool = False):
         for key, item in value.items():
             normalized = re.sub(r"[^a-z0-9]", "", str(key).lower())
             metric = token_usage and isinstance(item, (int, float)) and not isinstance(item, bool)
+            if key in {"APPROVAL_REQUIRED", "requiring_approval"} and type(item) is int and item >= 0:
+                cleaned[key] = item  # Registry policy count, never an approval/token.
+                continue
             if normalized == "rawresponse":
                 continue
             if any(word in normalized for word in (
@@ -109,6 +113,7 @@ class DurableExecutionAdapter:
         task_engine: Optional[Any] = None,
         permission_gate: Optional[Any] = None,
         enabled: bool = True,
+        operational_admission=None,
     ):
         """
         Args:
@@ -119,6 +124,7 @@ class DurableExecutionAdapter:
         self._task_engine = task_engine
         self._permission_gate = permission_gate
         self._enabled = enabled
+        self._operational_admission = operational_admission
         self._lock = threading.RLock()
         self._memory_checkpoints: Dict[str, List[Checkpoint]] = {}
         self._memory_tasks: Dict[str, Dict[str, Any]] = {}
@@ -164,7 +170,15 @@ class DurableExecutionAdapter:
             raise RuntimeError("Durable TaskEngine is unavailable")
         return engine
 
-    def _require_write_permission(self, resource: str) -> None:
+    def _require_write_permission(self, resource: str, *, connection=None) -> None:
+        if self._operational_admission is not None:
+            from lumenis.system.security.permission import (
+                check_task_operational_write, _TASK_OPERATIONAL_FIELDS)
+            decision = check_task_operational_write(self._operational_admission,
+                resource=resource, fields=_TASK_OPERATIONAL_FIELDS.get(resource, ()), connection=connection)
+            if not decision.allowed:
+                raise PermissionError(decision.reason)
+            return
         try:
             from lumenis.system.security import OperationType
         except Exception as exc:
@@ -294,11 +308,14 @@ class DurableExecutionAdapter:
         step_status: str = "running",
         agent_id: str = "",
         metadata: Optional[Dict[str, Any]] = None,
+        _terminal: Optional[Dict[str, Any]] = None,
     ) -> Checkpoint:
         """保存检查点（每步完成后调用）。
 
         复用 ai_task_engine._db_add_step()。
         """
+        if self._operational_admission is not None and task_id != self._operational_admission.task_id:
+            raise PermissionError("TASK_OPERATIONAL_TASK_MISMATCH")
         safe_plan, plan_sensitive = _sanitize_checkpoint_value(plan_snapshot or {})
         context = {key: value for key, value in (context or {}).items()
                    if key in _CHECKPOINT_CONTEXT_KEYS}
@@ -345,6 +362,10 @@ class DurableExecutionAdapter:
                     "step_detail": safe_detail,
                     "step_status": step_status,
                 }, ensure_ascii=False, separators=(",", ":"))
+                if _terminal is not None or state == "executing" or self._operational_admission is not None:
+                    self._require_write_permission("ai_task")
+                    outcome = _terminal or {"status": "running", "result": None, "error": None}
+                    return self._commit_terminal_checkpoint(engine, cp, detail, outcome)
                 step_id = engine._db_add_step(
                     task_id=task_id,
                     phase=f"agent_step_{step_index}",
@@ -360,6 +381,71 @@ class DurableExecutionAdapter:
         with self._lock:
             self._memory_checkpoints.setdefault(task_id, []).append(cp)
 
+        return cp
+
+    def finalize_task(self, task_id: str, state: str, *, result=None, error=None, **checkpoint_args) -> Checkpoint:
+        """Commit a whole-task outcome with its checkpoint, never a single step.
+
+        Both records use the existing TaskEngine tables in one SQLite transaction.
+        No tool is rerun by this operation; a repeated identical finalization is a no-op.
+        """
+        if state not in {"completed", "failed", "cancelled"}:
+            raise ValueError("Invalid terminal agent state")
+        safe_result, _ = _sanitize_checkpoint_value(result)
+        safe_error, _ = _sanitize_checkpoint_value(error)
+        terminal = {"status": "succeeded" if state == "completed" else state,
+                    "result": safe_result if state == "completed" else None,
+                    "error": safe_error}
+        if self._enabled:
+            self._require_write_permission("ai_task")
+        cp = self.checkpoint(task_id=task_id, state=state, _terminal=terminal, **checkpoint_args)
+        if not self._enabled:
+            with self._lock:
+                self._memory_tasks[task_id].update(terminal)
+        return cp
+
+    def _commit_terminal_checkpoint(self, engine, cp, detail, terminal):
+        from lumenis.shared.database import get_repository
+
+        encoded = json.dumps(terminal["result"], ensure_ascii=False, sort_keys=True, allow_nan=False)
+        guard = self._operational_admission.guard() if self._operational_admission is not None else nullcontext()
+        with guard, get_repository().transaction() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT status,result_json,error,created_by FROM ai_task WHERE task_id=?",
+                               (cp.task_id,)).fetchone()
+            if row is None or row["created_by"] != "agent_runtime":
+                raise ValueError("Agent finalization requires its existing TaskEngine task")
+            if row["status"] == terminal["status"] == "cancelled":
+                terminal = {**terminal, "error": row["error"]}
+            if (row["status"] in {"succeeded", "failed", "cancelled"}
+                    and not (row["status"] == "failed" and terminal["status"] == "running")):
+                # Cancellation always wins over a late worker outcome.
+                if (row["status"] != terminal["status"] or
+                        json.loads(row["result_json"] or "null") != terminal["result"] or
+                        row["error"] != terminal["error"]):
+                    raise RuntimeError("Task already has a different terminal outcome")
+                rows = conn.execute("SELECT * FROM ai_task_step WHERE task_id=? ORDER BY rowid DESC",
+                                    (cp.task_id,)).fetchall()
+                for existing in rows:
+                    previous = self._checkpoint_from_step(dict(existing))
+                    if previous is not None and previous.state == cp.state:
+                        return previous
+                # A separately cancelled task can still acquire its final checkpoint.
+            now = engine._now()
+            conn.execute("""INSERT INTO ai_task_step
+                (step_id,task_id,phase,status,detail,agent_id,started_at,finished_at,duration_ms)
+                VALUES (?,?,?,?,?,?,?,?,0)""",
+                (engine._gen_id("step"), cp.task_id, f"agent_step_{cp.step_index}",
+                 cp.state, detail, cp.agent_id or None, now, now))
+            conn.execute("""UPDATE ai_task SET status=?,result_json=?,error=?,finished_at=?,updated_at=?
+                            WHERE task_id=?""",
+                         (terminal["status"], encoded, terminal["error"],
+                          None if terminal["status"] == "running" else now, now, cp.task_id))
+            # Recheck write policy at the commit boundary; exceptions roll back both records.
+            self._require_write_permission("ai_task", connection=conn)
+            self._require_write_permission("ai_task_step", connection=conn)
+        with self._lock:
+            self._memory_checkpoints.setdefault(cp.task_id, []).append(cp)
         return cp
 
     def complete_step(
@@ -403,6 +489,24 @@ class DurableExecutionAdapter:
 
         engine = self._require_task_engine()
         self._require_write_permission("ai_task_evidence")
+        if self._operational_admission is not None:
+            if task_id != self._operational_admission.task_id:
+                raise PermissionError("TASK_OPERATIONAL_TASK_MISMATCH")
+            from lumenis.shared.database import get_repository
+            import hashlib
+            evidence_id, now = engine._gen_id("ev"), engine._now()
+            with self._operational_admission.guard(), get_repository().transaction() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                self._require_write_permission("ai_task_evidence", connection=conn)
+                previous = conn.execute("SELECT current_hash FROM ai_task_evidence WHERE task_id=? ORDER BY rowid DESC LIMIT 1", (task_id,)).fetchone()
+                previous_hash = previous[0] if previous else None
+                current_hash = hashlib.sha256(f"{previous_hash or 'genesis'}|{evidence_id}|{task_id}|{content}|{now}".encode()).hexdigest()
+                conn.execute("""INSERT INTO ai_task_evidence(evidence_id,task_id,step_id,evidence_type,
+                    content,source,authenticity_score,created_at,previous_hash,current_hash)
+                    VALUES(?,?,?,?,?,'agent_runtime',?,?,?,?)""",
+                    (evidence_id,task_id,step_id,evidence_type,content,authenticity_score,now,previous_hash,current_hash))
+                self._require_write_permission("ai_task_evidence", connection=conn)
+            return evidence_id
         try:
             evidence_id = engine._db_add_evidence(
                 task_id=task_id,

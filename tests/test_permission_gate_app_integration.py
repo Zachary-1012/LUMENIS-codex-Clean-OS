@@ -95,12 +95,14 @@ class TestOperationTypeResolver:
     def test_collector_start(self):
         assert app_module._pg_resolve_operation_type('/api/collect', 'POST') == OperationType.COLLECTOR_START
         assert app_module._pg_resolve_operation_type('/api/rednote/collect', 'POST') == OperationType.COLLECTOR_START
-        assert app_module._pg_resolve_operation_type('/api/collector/browser/start', 'POST') == OperationType.COLLECTOR_START
+        # Browser lifecycle has its own permission contract; starting the
+        # controlled browser is not a request to start data collection.
+        assert app_module._pg_resolve_operation_type('/api/collector/browser/start', 'POST') == OperationType.BROWSER_OPERATION
         assert app_module._pg_resolve_operation_type('/api/official-info/collect', 'POST') == OperationType.COLLECTOR_START
         assert app_module._pg_resolve_operation_type('/api/web/collect', 'POST') == OperationType.COLLECTOR_START
 
     def test_collector_stop(self):
-        assert app_module._pg_resolve_operation_type('/api/collector/browser/stop', 'POST') == OperationType.COLLECTOR_STOP
+        assert app_module._pg_resolve_operation_type('/api/collector/browser/stop', 'POST') == OperationType.BROWSER_OPERATION
 
     def test_report_generate(self):
         assert app_module._pg_resolve_operation_type('/api/special-report/generate', 'POST') == OperationType.REPORT_GENERATE

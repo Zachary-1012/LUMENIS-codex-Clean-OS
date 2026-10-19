@@ -1,0 +1,16 @@
+[
+  {
+    "file": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "type": "LOCAL_RESEARCH_PATH",
+    "occurrences": 1,
+    "removed_value_sha256": "8024fc9dfcc18d6b72de6849535ffd696ef8540e3dd55fab8f5d218e1f30bc82",
+    "replacement": "本机数学研究归档"
+  },
+  {
+    "file": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "type": "LOCAL_RESEARCH_PATH",
+    "occurrences": 1,
+    "removed_value_sha256": "021a957191ededfcf7a473a4089d8cfd91466dae27e73c865e0fa53c15b8ee1e",
+    "replacement": "本机原研究报告归档"
+  }
+]

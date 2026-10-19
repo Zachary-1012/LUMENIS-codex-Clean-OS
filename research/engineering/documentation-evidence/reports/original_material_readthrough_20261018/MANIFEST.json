@@ -1,0 +1,74 @@
+{
+  "files": [
+    {
+      "path": "01_ORIGINAL_READTHROUGH_AND_ADOPTION.md",
+      "bytes": 6161,
+      "sha256": "1d39d1e5c25892f05eaf31b21bd3f1150b336cca1c8fa2be3209cef9dc20c633"
+    },
+    {
+      "path": "02_PRIVACY_AND_READING_BOUNDARIES.md",
+      "bytes": 1407,
+      "sha256": "aaac076889e234cbd1f0f31d4e9b96bf4fb152ad4636a168916c744a89d5b9fc"
+    },
+    {
+      "path": "CURRENT_PLANNING_IDENTITIES.json",
+      "bytes": 915,
+      "sha256": "954be220907e7cb989a271edc5b68b84c8d3b8fc2df42f122800a8b929d44ef8"
+    },
+    {
+      "path": "README.md",
+      "bytes": 667,
+      "sha256": "592be4170480b5d618b5faef34a275c898cd8ef24692c50ae6531c5129bc7373"
+    },
+    {
+      "path": "SOURCE_IDENTITIES.json",
+      "bytes": 3143,
+      "sha256": "5984daf6d2a94bd90bf4073b0e05223f6f7d22174c3312e600ad943e231c44f6"
+    },
+    {
+      "path": "WORKBOOK_CHECKS.json",
+      "bytes": 19487,
+      "sha256": "661442ddf277b5de5142ff238cdd432c79e265634ffef0e1e5114f44698d8737"
+    },
+    {
+      "path": "WORKBOOK_EXTRACT.json",
+      "bytes": 94975,
+      "sha256": "14845b2befecf6c0eb1da8014669adeb172641074b71fe78ec0a351d550a0302"
+    },
+    {
+      "path": "check_workbook.py",
+      "bytes": 2804,
+      "sha256": "4aef39ef7a6cc5df548bae089e2c9c5060d42390c6d0460337783aab01f6c2c9"
+    },
+    {
+      "path": "originals/xujing_topic_seed_100_4confirmed_20261004.json",
+      "bytes": 126455,
+      "sha256": "cfe3b6cb424ee0efe3d917479ba95db66f4ca9b8df32fa891fcf16fd6c576028"
+    },
+    {
+      "path": "originals/xujing_topic_seed_100_4confirmed_20261004.xlsx",
+      "bytes": 46358,
+      "sha256": "8e45d88ae3f13174ca5a16f8d07f73eab55af897330e744a05b29af245c9af52"
+    },
+    {
+      "path": "read_workbook.py",
+      "bytes": 1224,
+      "sha256": "b744ffce7f896d79a7f7dbf3f54908b8c0eacd23bdb9ea6b902701af6d12f953"
+    },
+    {
+      "path": "reviewed_full_text/1440_PRODUCT_BODY_REDACTED.txt",
+      "bytes": 33533,
+      "sha256": "993ae3a8352dec3490ede9300f0a8de7274ce4567bb599868197554567d0dbaf"
+    },
+    {
+      "path": "reviewed_full_text/AUDIO_FULL_TEXT.md",
+      "bytes": 102142,
+      "sha256": "065ea7b73e5ecffa60a06cac01cbff9f4d16fb596f8c0b1666124044af38e340"
+    },
+    {
+      "path": "reviewed_full_text/CONSTITUTION_DOCX_FULL_TEXT.txt",
+      "bytes": 4263,
+      "sha256": "ae1a5efe4eaaadda794fbb9479334d7824af3213be6a3ebcb5f129b1ae68610e"
+    }
+  ]
+}

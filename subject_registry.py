@@ -282,7 +282,7 @@ def get_subject_by_id(domain_id: str, subject_id: str) -> Optional[Dict[str, Any
     return _row_to_dict(rows[0]) if rows else None
 
 
-def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
+def add_subject(payload: Dict[str, Any], *, strict_identity=False, _authorize_write=None) -> Tuple[Dict[str, Any], bool]:
     if not isinstance(payload, dict):
         raise SubjectValidationError("请求体必须是 JSON 对象")
     domain_id = normalize_domain(payload.get("domain_id"))
@@ -310,6 +310,10 @@ def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     now = _now()
 
     with _db_ready() as conn:
+        if strict_identity:
+            conn.execute("BEGIN IMMEDIATE")
+        if _authorize_write is not None:
+            _authorize_write()
         version = _schema_version(conn)
         table_exists = conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
@@ -325,6 +329,15 @@ def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
             ensure_schema(conn)
         else:
             raise SubjectRegistryUnavailableError("canonical subject registry is unavailable")
+        if strict_identity:
+            conflicts = conn.execute(
+                f"SELECT subject_id,name_en,name_zh FROM {TABLE_NAME} WHERE domain_id=? AND subject_type=? "
+                "AND ((name_en_norm=? AND name_zh_norm<>?) OR (name_zh_norm=? AND name_en_norm<>?))",
+                (domain_id,subject_type,en_norm,zh_norm,zh_norm,en_norm)).fetchall()
+            if conflicts:
+                error = SubjectValidationError("SUBJECT_IDENTITY_CONFLICT")
+                error.conflicts = [dict(zip(("subject_id","name_en","name_zh"),row)) for row in conflicts]
+                raise error
         existing = conn.execute(
             f"SELECT subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, industry, "
             f"keywords_json, status, created_at, updated_at FROM {TABLE_NAME} "
@@ -332,6 +345,8 @@ def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
             (domain_id, subject_type, en_norm, zh_norm),
         ).fetchone()
         if existing:
+            if _authorize_write is not None:
+                _authorize_write()
             return _row_to_dict(existing), False
         conn.execute(
             f"INSERT INTO {TABLE_NAME} (subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, "
@@ -345,6 +360,8 @@ def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
             f"keywords_json, status, created_at, updated_at FROM {TABLE_NAME} WHERE subject_id=?",
             (subject_id,),
         ).fetchone()
+        if _authorize_write is not None:
+            _authorize_write()
     return _row_to_dict(row), True
 
 
@@ -598,3 +615,286 @@ def registered_subject_names(ttl_seconds: int = 300) -> Tuple[str, ...]:
         return _NAMES_CACHE["names"]
     _NAMES_CACHE.update(at=now, names=tuple(names))
     return _NAMES_CACHE["names"]
+
+
+def _batch_actor(domains):
+    """Server identity plus existing per-domain registry permission."""
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    from lumenis.auth.service import get_current_user
+    from account.authorization import check_dual_domain_permission
+
+    principal = resolve_local_workspace_principal(module="reports", action="write")
+    if principal is not None:
+        return principal, principal.principal_ref
+    actor = get_current_user(read_only=True)
+    if (
+        not isinstance(actor, dict)
+        or type(actor.get("id")) is not int
+        or actor["id"] <= 0
+    ):
+        raise PermissionError("AUTH_REQUIRED")
+    if not all(
+        check_dual_domain_permission(
+            actor["id"],
+            "ZBMP" if d == "BMP" else "CTH",
+            module="subject_registry",
+            action="write",
+        )
+        for d in domains
+    ):
+        raise PermissionError("SUBJECT_REGISTRY_WRITE_DENIED")
+    return actor, "actor:" + str(actor["id"])
+
+
+def prepare_subject_batch(entries):
+    from lumenis.shared.reporting.saved_work import _digest
+
+    if not isinstance(entries, list) or not 1 <= len(entries) <= 1000:
+        raise SubjectValidationError("SUBJECT_BATCH_SIZE_INVALID")
+    normalized = []
+    seen = set()
+    for entry in entries:
+        if (
+            not isinstance(entry, dict)
+            or set(entry) != {"baseline_id", "identity"}
+            or not isinstance(entry["baseline_id"], str)
+            or not entry["baseline_id"]
+            or entry["baseline_id"] in seen
+        ):
+            raise SubjectValidationError("SUBJECT_BATCH_ENTRY_INVALID")
+        seen.add(entry["baseline_id"])
+        identity = entry["identity"]
+        if not isinstance(identity, dict) or set(identity) - {
+            "domain_id",
+            "subject_type",
+            "name_en",
+            "name_zh",
+            "industry",
+            "keywords",
+        }:
+            raise SubjectValidationError("SUBJECT_BATCH_IDENTITY_INVALID")
+        domain = normalize_domain(identity.get("domain_id"))
+        kind = normalize_subject_type(identity.get("subject_type"))
+        if (domain == "CTH" and kind != "company") or (
+            domain == "BMP" and kind != "brand"
+        ):
+            raise SubjectValidationError("SUBJECT_BATCH_DOMAIN_TYPE_MISMATCH")
+        en = _text(identity.get("name_en"), field="name_en")
+        zh = _text(identity.get("name_zh"), field="name_zh")
+        if not en or not zh:
+            raise SubjectValidationError("SUBJECT_BATCH_NAMES_REQUIRED")
+        normalized.append(
+            {
+                "baseline_id": entry["baseline_id"],
+                "identity": {
+                    "domain_id": domain,
+                    "subject_type": kind,
+                    "name_en": en,
+                    "name_zh": zh,
+                    "industry": _text(
+                        identity.get("industry"), field="industry", max_len=120
+                    ),
+                    "keywords": _keywords(identity.get("keywords")),
+                },
+            }
+        )
+    domains = sorted({row["identity"]["domain_id"] for row in normalized})
+    actor, caller = _batch_actor(domains)
+    resource = "subject-registry-batch:v1:" + _digest(
+        {"caller": caller, "entries": normalized}
+    )
+    return {
+        "entries": normalized,
+        "domains": domains,
+        "caller": caller,
+        "resource": resource,
+        "actor": actor,
+    }
+
+
+@subject_registry_bp.route("/api/settings/subjects/batch", methods=["POST"])
+def subject_batch_workflow():
+    """Explicit prepare, human confirmation, resumable existing-owner registration."""
+    from experience_runtime import _content_source_same_origin
+    from lumenis.system.security.permission import get_permission_gate, PermissionLevel
+    from lumenis.system.security import OperationType, RiskLevel
+
+    try:
+        if not _content_source_same_origin():
+            raise PermissionError("SUBJECT_BATCH_ORIGIN_DENIED")
+        body = request.get_json(silent=True)
+        if (
+            not isinstance(body, dict)
+            or set(body)
+            - {"entries", "mode", "confirm", "confirmed_resource", "resume_index", "candidate_review"}
+            or body.get("mode", "prepare") not in {"prepare", "apply", "revoke"}
+        ):
+            raise SubjectValidationError("SUBJECT_BATCH_REQUEST_INVALID")
+        prepared = prepare_subject_batch(body.get("entries"))
+        review_binding = None
+        review_request = body.get("candidate_review")
+        if review_request is not None:
+            from lumenis.shared.reporting.entity_candidate_review import registration_proposal
+            from lumenis.shared.reporting.saved_work import _digest
+            if (not isinstance(review_request, dict)
+                    or set(review_request) != {"artifact_id", "scope"}):
+                raise SubjectValidationError("SUBJECT_CANDIDATE_REVIEW_INVALID")
+            review_binding = registration_proposal(
+                review_request["artifact_id"], actor=prepared["actor"], scope=review_request["scope"])
+            if review_binding["entries"] != prepared["entries"]:
+                raise SubjectValidationError("SUBJECT_CANDIDATE_ENTRY_CHANGED")
+            prepared["resource"] = "subject-registry-batch:v1:" + _digest({
+                "caller": prepared["caller"], "entries": prepared["entries"],
+                "candidate_review": review_binding})
+        if body.get("mode", "prepare") == "prepare":
+            return jsonify(
+                {
+                    "ok": True,
+                    "state": "PREPARED",
+                    "resource": prepared["resource"],
+                    "entries": prepared["entries"],
+                    "count": len(prepared["entries"]),
+                    "approval_issued": False,
+                    "creates_identity_only": True,
+                }
+            )
+        if (
+            body.get("confirm") is not True
+            or body.get("confirmed_resource") != prepared["resource"]
+        ):
+            raise PermissionError("SUBJECT_BATCH_EXACT_CONFIRMATION_REQUIRED")
+        index = body.get("resume_index", 0)
+        if type(index) is not int or not 0 <= index <= len(prepared["entries"]):
+            raise SubjectValidationError("SUBJECT_BATCH_RESUME_INVALID")
+        gate = get_permission_gate()
+        if not gate.has_permission(
+            PermissionLevel.HUMAN_APPROVAL
+        ) or not gate.has_permission(PermissionLevel.COMMIT):
+            raise PermissionError("SUBJECT_BATCH_MANUAL_AUTHORITY_REQUIRED")
+        token = gate.get_valid_approval_token(
+            "config_modify", prepared["resource"], exact=True
+        )
+        if body["mode"] == "revoke":
+            return jsonify(
+                {"ok": True, "revoked": bool(token and gate.revoke_approval(token))}
+            )
+        if token is None:
+            token = gate.grant_approval(
+                "config_modify",
+                resource=prepared["resource"],
+                duration_minutes=5,
+                granted_by=prepared["caller"],
+            )
+        results = []
+        for index in range(index, len(prepared["entries"])):
+            entry = prepared["entries"][index]
+            try:
+
+                def authorize_current_write():
+                    _actor, caller = _batch_actor(prepared["domains"])
+                    if caller != prepared["caller"]:
+                        raise PermissionError("SUBJECT_BATCH_IDENTITY_CHANGED")
+                    if review_binding is not None:
+                        current_review = registration_proposal(
+                            review_request["artifact_id"], actor=_actor, scope=review_request["scope"])
+                        if current_review != review_binding:
+                            raise PermissionError("SUBJECT_CANDIDATE_REVIEW_CHANGED")
+                    decision = gate.check(
+                        OperationType.CONFIG_MODIFY,
+                        resource=prepared["resource"],
+                        risk_level=RiskLevel.HIGH,
+                        caller=caller,
+                        domain_id="system",
+                        exact_approval_required=True,
+                    )
+                    if not decision.allowed:
+                        raise PermissionError("SUBJECT_BATCH_APPROVAL_REVOKED")
+
+                authorize_current_write()
+                # Canonical exact normalized pair is idempotent. A one-name
+                # collision is unresolved; never silently merge or overwrite.
+                identity = entry["identity"]
+                try:
+                    registered, created = add_subject(
+                        identity,
+                        strict_identity=True,
+                        _authorize_write=authorize_current_write,
+                    )
+                except SubjectValidationError as exc:
+                    if not hasattr(exc, "conflicts"):
+                        raise
+                    results.append(
+                        {
+                            "baseline_id": entry["baseline_id"],
+                            "status": "IDENTITY_CONFLICT",
+                            "conflicts": exc.conflicts,
+                        }
+                    )
+                    continue
+                results.append(
+                    {
+                        "baseline_id": entry["baseline_id"],
+                        "status": "CREATED" if created else "EXISTING",
+                        "subject": registered,
+                    }
+                )
+            except Exception as exc:
+                return (
+                    jsonify(
+                        {
+                            "ok": False,
+                            "state": "PARTIAL",
+                            "results": results,
+                            "resume_index": index,
+                            "code": (
+                                str(exc)
+                                if isinstance(
+                                    exc, (SubjectValidationError, PermissionError)
+                                )
+                                else "SUBJECT_BATCH_WRITE_FAILED"
+                            ),
+                        }
+                    ),
+                    409,
+                )
+        return jsonify(
+            {
+                "ok": True,
+                "state": (
+                    "COMPLETED_WITH_CONFLICTS"
+                    if any(r["status"] == "IDENTITY_CONFLICT" for r in results)
+                    else "COMPLETED"
+                ),
+                "results": results,
+                "resume_index": len(prepared["entries"]),
+                "resource": prepared["resource"],
+                "fact_admission": "NOT_PERFORMED_BY_IDENTITY_REGISTRATION",
+            }
+        )
+    except PermissionError as exc:
+        return jsonify({"ok": False, "code": str(exc)}), 403
+    except (ValueError, TypeError) as exc:
+        return jsonify({"ok": False, "code": str(exc)}), 400
+    except Exception:
+        return jsonify({"ok": False, "code": "SUBJECT_BATCH_UNAVAILABLE"}), 503
+
+
+def subject_batch_route_matches():
+    return bool(
+        request.endpoint == "subject_registry.subject_batch_workflow"
+        and request.url_rule is not None
+        and request.url_rule.rule == "/api/settings/subjects/batch"
+        and request.method == "POST"
+    )
+
+
+def subject_batch_local_access_allowed():
+    from lumenis.system.security.permission import LocalWorkspacePrincipal
+
+    if not subject_batch_route_matches():
+        return False
+    try:
+        actor, _caller = _batch_actor(["CTH", "BMP"])
+        return type(actor) is LocalWorkspacePrincipal
+    except (PermissionError, ValueError):
+        return False

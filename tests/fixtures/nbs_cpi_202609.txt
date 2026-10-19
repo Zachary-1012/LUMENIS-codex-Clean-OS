@@ -1,0 +1,128 @@
+Oct.18, 2026 Sunday
+
+- [Chinese(GB)](https://www.stats.gov.cn/)
+- [RSS](http://www.stats.gov.cn/wzgl/rss/202305/t20230519_1939842.html)
+- [Organizational Chart](http://www.stats.gov.cn/english/AI/OS/202208/t20220824_1887612.html)
+
+- [Data](http://www.stats.gov.cn/english/Statisticaldata/)
+- [Communiqués](http://www.stats.gov.cn/english/StatisticalCommuniqu/)
+- [Legal Framework](http://www.stats.gov.cn/english/LF/)
+- [Classifications & Methods](http://www.stats.gov.cn/english/ClassificationsMethods/)
+- [Latest Releases](http://www.stats.gov.cn/english/PressRelease/)
+- [International Cooperation](http://www.stats.gov.cn/english/InternationalCooperation/)
+- [Understanding Statistics](http://www.stats.gov.cn/english/understanding/)
+- [Agency](http://www.stats.gov.cn/english/AI/)
+
+[Home](https://www.stats.gov.cn/english/) \> [Latest Releases](https://www.stats.gov.cn/english/PressRelease/ "Latest Releases")
+
+# Consumer Price Index in September 2026
+
+National Bureau of Statistics of China2026-10-15 09:30Print\|
+Large\|
+Medium\|
+Small
+
+In September 2026, China’s Consumer Price Index (CPI) increased by 0.9% year on year. Specifically, the price index in urban areas increased by 0.9% while that in rural areas increased by 0.8%; the price index for food decreased by 1.7% while that for non-food increased by 1.5%; the price index for consumer goods increased by 1.0% while that for services increased by 0.8%. From January to September, on average, China’s CPI increased by 0.9% year on year.
+
+In September, China’s CPI increased by 0.2% month on month. Specifically, the price index in urban areas increased by 0.2% while that in rural areas increased by 0.4%; the price index for food increased by 0.4% while that for non-food increased by 0.2%; the price index for consumer goods increased by 0.5% while that for services decreased by 0.2%.
+
+![](https://www.stats.gov.cn/english/PressRelease/202610/W020261015393502566983.jpg)
+
+I. Year-on-Year Changes in Price Indexes for Various Goods and Services
+
+In September, the price index for food, tobacco, liquor and dining out decreased by 0.9% year on year, bringing the CPI down by about 0.26 percentage points. Among food, the price index for fresh vegetables decreased by 8.1%, bringing the CPI down by about 0.14 percentage points; that for meat of livestock decreased by 3.7%, bringing the CPI down by about 0.15 percentage points, of which the price index for pork decreased by 10.0%; that for fresh fruits decreased by 1.5%, bringing the CPI down by about 0.03 percentage points; that for eggs increased by 14.3%, pushing the CPI up by about 0.07 percentage points.
+
+Among the price indexes for the other seven major categories, six increased, and one decreased year on year. Specifically, the price indexes for miscellaneous goods and services, transportation and telecommunication, and health care and medical services increased by 5.9%, 4.3% and 2.7%, respectively; the price indexes for education, culture and recreation, clothing and household facilities, articles and services increased by 1.4%, 1.2% and 0.2%, respectively; and the price index for residence decreased by 0.3%.
+
+![](https://www.stats.gov.cn/english/PressRelease/202610/W020261015393502739574.jpg)
+
+II. Month-on-Month Changes in Price Indexes for Various Goods and Services
+
+In September, the price index for food, tobacco, liquor and dining out increased by 0.2% month on month, pushing the CPI up by about 0.06 percentage points. Among food, the price index for eggs increased by 2.0%, pushing the CPI up by about 0.01 percentage points; that for meat of livestock increased by 1.4%, pushing the CPI up by about 0.05 percentage points, of which the price index for pork increased by 1.2%; that for fresh fruits increased by 0.6%, pushing the CPI up by about 0.01 percentage points; that for fresh vegetables increased by 0.5%, pushing the CPI up by about 0.01 percentage points; that for aquatic products decreased by 0.8%, bringing the CPI down by about 0.02 percentage points.
+
+Among the price indexes for the other seven major categories, three increased, one remained flat and three decreased month on month. Specifically, the price indexes for transportation and telecommunication, clothing, health care and medical services increased by 1.0%, 0.6% and 0.2%, respectively; the price index for residence remained flat; the price indexes for miscellaneous goods and services, education, culture and recreation, and household facilities, articles and services decreased by 0.8%, 0.3% and 0.1%, respectively.
+
+![](https://www.stats.gov.cn/english/PressRelease/202610/W020261015393502879240.jpg)
+
+Consumer Price Indexes in September 2026
+
+|     |     |     |     |
+| --- | --- | --- | --- |
+|  | Growth Rate M/M<br>(%) | Growth Rate Y/Y<br>(%) | Jan-Sep Growth Rate Y/Y<br>(%) |
+| Consumer Price Index | 0.2 | 0.9 | 0.9 |
+| Of which: Urban | 0.2 | 0.9 | 0.9 |
+| Rural | 0.4 | 0.8 | 0.7 |
+| Of which: Food | 0.4 | -1.7 | -0.9 |
+| Non-food | 0.2 | 1.5 | 1.3 |
+| Of which: Consumer goods | 0.5 | 1.0 | 1.0 |
+| Services | -0.2 | 0.8 | 0.8 |
+| Of which: Excluding food and energy | 0.0 | 1.0 | 1.1 |
+| By category |  |  |  |
+| I. Food, tobacco, liquor and dining out | 0.2 | -0.9 | -0.4 |
+| Grain | -0.1 | -0.6 | -0.4 |
+| Edible oil and fats | 0.1 | -1.1 | -1.0 |
+| Fresh vegetables | 0.5 | -8.1 | 1.4 |
+| Meat of livestock | 1.4 | -3.7 | -5.5 |
+| Of which: Pork | 1.2 | -10.0 | -12.9 |
+| Beef | 3.1 | 7.5 | 6.1 |
+| Mutton | 1.4 | 6.4 | 6.1 |
+| Aquatic products | -0.8 | 0.4 | 1.2 |
+| Eggs | 2.0 | 14.3 | 5.4 |
+| Milk and other dairy products | -0.3 | -1.5 | -1.2 |
+| Fresh fruits | 0.6 | -1.5 | 0.7 |
+| Cigarettes | -0.1 | -0.8 | -0.5 |
+| Liquor | -0.5 | -3.1 | -2.8 |
+| II. Clothing | 0.6 | 1.2 | 1.5 |
+| Garments | 0.7 | 1.4 | 1.6 |
+| Footwear | 0.4 | 0.5 | 1.0 |
+| III. Residence | 0.0 | -0.3 | -0.2 |
+| Rent of rental housing | -0.1 | -0.6 | -0.6 |
+| Water, electricity and fuels | 0.1 | 0.6 | 0.5 |
+| IV. Household facilities, articles and services | -0.1 | 0.2 | 1.4 |
+| Home appliances | -0.2 | -1.8 | 2.2 |
+| Household services | 0.1 | 1.1 | 1.0 |
+| V. Transportation and telecommunication | 1.0 | 4.3 | 2.0 |
+| Automobiles | -0.3 | -1.7 | -1.3 |
+| Energy for transport facilities | 4.5 | 14.9 | 6.6 |
+| Use and maintenance of transport facilities | 0.0 | 0.5 | 0.7 |
+| Communication facilities | 3.6 | 14.3 | 6.3 |
+| Telecommunication services | 0.1 | 0.2 | 0.1 |
+| Postal services | -0.1 | -0.6 | -0.5 |
+| VI. Education, culture and recreation | -0.3 | 1.4 | 1.2 |
+| Education services | 0.4 | 0.4 | 0.5 |
+| Travel agencies and other touring services | -5.3 | 3.5 | 3.2 |
+| VII. Health care and medical services | 0.2 | 2.7 | 2.3 |
+| Traditional Chinese medicines | 0.0 | -0.5 | -1.2 |
+| Western medicines | 0.0 | -1.6 | -1.4 |
+| Medical services | 0.2 | 4.0 | 3.4 |
+| VIII. Miscellaneous goods and services | -0.8 | 5.9 | 9.8 |
+
+Annotations:
+
+1\. Index Interpretation
+
+The Consumer Price Index (CPI) is an indicator that measures relative changes in the price level of consumer goods and services over time. It comprehensively reflects changes in prices of consumer goods and services purchased by residents.
+
+2\. Statistical Coverage
+
+The CPI statistical survey covers the prices of eight major categories of goods and services purchased by national urban and rural residents, including food, tobacco, liquor and dining out, clothing, residence, household facilities, articles and services, transportation and telecommunication, education, culture and recreation, health care and medical services, and miscellaneous goods and services, as well as 268 basic categories.
+
+3\. Survey Method
+
+Survey sites are selected using a sampling method. In accordance with the principle of “fixed person, fixed site, and fixed time”, original prices are collected either through on-site visits to the survey sites or from online sources. The data comes from nearly 120,000 survey sites in about 500 cities and counties in 31 provinces (autonomous regions and municipalities), covering shopping malls (stores), supermarkets, farmers’ (fresh produce) markets, service outlets, and Internet e-commerce.
+
+4\. Data Description
+
+Due to rounding, the aggregate data may be equal to the high or low value of the classified figures.
+
+5\. Base Period Rotation
+
+According to the statistical system arrangement, starting from January 2026, China’s CPI has been compiled and published with 2025 as the base period. Compared with the previous base period, the survey categories, representative specification items, surveyed sites, and the category weights have been adjusted to reflect the latest changes in the consumption structure. According to calculations, the impact of the base period rotation on the monthly year-on-year CPI is approximately 0.06 percentage points on average.
+
+[FAQs](https://www.stats.gov.cn/english/nbs/201312/t20131213_480293.html)
+
+\| [About NBS](https://www.stats.gov.cn/english/nbs/200701/t20070104_59235.html)
+\| [Contact Us](https://www.stats.gov.cn/english/nbs/200703/t20070329_59238.html)
+\| [Terms of Service](https://www.stats.gov.cn/english/nbs/200701/t20070104_59236.html)
+
+National Bureau of Statistics of China

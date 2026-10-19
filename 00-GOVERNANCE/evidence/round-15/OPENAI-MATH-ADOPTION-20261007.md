@@ -173,7 +173,7 @@ PRODUCT_ADOPTION 与 MODEL_LEARNING 分列；CANDIDATE 仅为待审方法卡，�
 
 **日期：** 2026-10-07
 **研究源：** openai/math 固定提交 adc7f1241b42e322a6451854ab7e4b4c146bf78a，提交时间 2026-10-06 21:58:50 UTC。固定版本 README 列 722 篇 manuscripts、372 个 families，并明确不是所有结果都已形式化，未形式化结果可能仍有问题。
-**输入：** C:\Users\28049\.codex\attachments\6736fa5d-c05d-4a83-b271-89d0a18b060f\已粘贴的文本.txt。
+**输入：** C:\Users\private-user-121dcc385158\.codex\attachments\private-source-id-sha256-89d592d7e52bde2e987e7f442ccb08a114b926ed01591cfa5915f2c64e09d50d\已粘贴的文本.txt。
 **产品基线：** checkout、origin/main、live refs/heads/main 为 f6dac9216cbb331e730329a70513e0c90c306e73。这是研究开始时的提交基线；源码阅读包含本地 owner/caller，app.py 等既有 dirty 文件不是线上发布证明。研究任务未修改任何 owner 文件或其他既有 dirty/untracked 项。
 **范围：** 只研究 102、103、104、107 并映射现有 owner/caller。没有产品源码修改、产品测试、runtime/DB 探测、训练或 Lean 构建。
 
@@ -405,7 +405,7 @@ C2 owns SYSTEM AI Gateway inference/training。owned_inference.py:27–48 报告
 
 **日期：** 2026-10-07
 **研究源：** [openai/math 固定提交](https://github.com/openai/math/tree/adc7f1241b42e322a6451854ab7e4b4c146bf78a)，SHA adc7f1241b42e322a6451854ab7e4b4c146bf78a；GitHub live main 核对为同一 SHA，提交时间 2026-10-06 21:58:50 UTC。
-**输入：** C:\Users\28049\.codex\attachments\6736fa5d-c05d-4a83-b271-89d0a18b060f\已粘贴的文本.txt。
+**输入：** C:\Users\private-user-121dcc385158\.codex\attachments\private-source-id-sha256-89d592d7e52bde2e987e7f442ccb08a114b926ed01591cfa5915f2c64e09d50d\已粘贴的文本.txt。
 **范围：** Family 113、114、115 原文研究；只读 C1/C3/C5 owner source；不启动产品开发、产品测试、运行时/数据库探测、训练或 Lean 构建。
 
 ## 研究边界与复核方法

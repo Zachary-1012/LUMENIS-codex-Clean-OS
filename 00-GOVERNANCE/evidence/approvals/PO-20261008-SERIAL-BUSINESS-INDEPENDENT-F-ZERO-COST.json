@@ -6,7 +6,7 @@
   "approved_at": "2026-10-08",
   "approval_source_type": "superseding_product_owner_instruction",
   "scope_manifest": {
-    "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+    "source_thread_id": "private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186",
     "instruction_title": "序境 / LUMENIS｜M 总控执行增补：单业务窗口闭环 + F 前端独立并行 + 零新增付费",
     "direct_quotes": [
       "采用以下模式：M 总控 + F 前端独立窗口 + C1–C6 中一个当前执行窗口。",

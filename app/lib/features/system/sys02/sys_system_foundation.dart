@@ -1,10 +1,14 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../sys05/sys05_appearance_controller.dart';
 
 import '../../../core/lumenis_icon.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../core/transport/lumenis_http_transport.dart';
+
+enum WaitingScene { search, sources, compare, analysis, export, waiting }
 
 enum SysLoadPhase { loading, ready, failed }
 
@@ -41,6 +45,12 @@ abstract final class SysSystemCopy {
 
   static const _translations = <String, Map<String, String>>{
     'zh-CN': {
+      'sys.waiting.preference': '等待文案',
+      'sys.waiting.playful': '轻松',
+      'sys.waiting.simple': '简洁',
+      'sys.waiting.off': '关闭附加文案',
+      'sys.waiting.hint': '工作在继续，你可以先伸个懒腰。',
+      'sys.waiting.neutral': '你可以继续查看其他工作。',
       'sys.common.loading': '正在读取系统状态',
       'sys.common.retry': '重新读取',
       'sys.common.refresh': '刷新',
@@ -212,6 +222,12 @@ abstract final class SysSystemCopy {
       'sys08.safe': '敏感凭证、绝对路径与会话材料不会显示。',
     },
     'en': {
+      'sys.waiting.preference': 'Waiting text',
+      'sys.waiting.playful': 'Light',
+      'sys.waiting.simple': 'Simple',
+      'sys.waiting.off': 'No extra text',
+      'sys.waiting.hint': 'Loading. You can continue with other work.',
+      'sys.waiting.neutral': 'You can continue with other work.',
       'sys.common.loading': 'Reading system state',
       'sys.common.retry': 'Read again',
       'sys.common.refresh': 'Refresh',
@@ -422,6 +438,12 @@ abstract final class SysSystemCopy {
           'Credentials, absolute paths and session material are never displayed.',
     },
     'ko': {
+      'sys.waiting.preference': '대기 문구',
+      'sys.waiting.playful': '가볍게',
+      'sys.waiting.simple': '간결하게',
+      'sys.waiting.off': '추가 문구 끄기',
+      'sys.waiting.hint': '불러오는 중입니다. 다른 작업을 계속할 수 있습니다.',
+      'sys.waiting.neutral': '다른 작업을 계속할 수 있습니다.',
       'sys.common.loading': '시스템 상태를 읽는 중',
       'sys.common.retry': '다시 읽기',
       'sys.common.refresh': '새로 고침',
@@ -816,6 +838,7 @@ class SysLoadingView extends StatelessWidget {
     return Semantics(
       liveRegion: true,
       label: copy,
+      excludeSemantics: true,
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -834,7 +857,7 @@ class SysLoadingView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const LinearProgressIndicator(minHeight: 2),
+                const WaitingFeedback(scene: WaitingScene.waiting),
               ],
             ),
           ),
@@ -963,4 +986,156 @@ class SysMetricLine extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Supplemental decoration only. The caller owns authoritative status and actions.
+class WaitingFeedback extends StatelessWidget {
+  const WaitingFeedback({required this.scene, super.key});
+  final WaitingScene scene;
+  static const _jokes = <WaitingScene, String>{
+    WaitingScene.search: '在找资料，暂时不找借口。',
+    WaitingScene.sources: '让资料排好队，别再开会排队。',
+    WaitingScene.compare: '方案可以多，选项别打架。',
+    WaitingScene.analysis: '把线索理清，比把锅甩清重要。',
+    WaitingScene.export: '正在收尾，希望这版不用叫“最终版7”。',
+    WaitingScene.waiting: '工作在继续，你可以先伸个懒腰。',
+  };
+  @override
+  Widget build(BuildContext context) {
+    final appearance = Sys05AppearanceScope.maybeOf(context);
+    final tone = appearance?.waitingTone ?? WaitingTone.simple;
+    final reduced = appearance?.reducedMotion == true ||
+        MediaQuery.maybeOf(context)?.disableAnimations == true;
+    // English/Korean deliberately use neutral copy pending editorial review.
+    final playfulChinese = tone == WaitingTone.playful &&
+        Localizations.localeOf(context).languageCode == 'zh';
+    return ExcludeSemantics(child: IgnorePointer(child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _WaitingPaper(reduced: reduced, scene: scene),
+        if (tone != WaitingTone.off) ...[
+          const SizedBox(height: 8),
+          Text(playfulChinese ? _jokes[scene]! :
+            SysSystemCopy.text(context, 'sys.waiting.neutral'),
+            key: const ValueKey('sys/waiting-extra-text')),
+        ],
+      ],
+    )));
+  }
+}
+
+class _WaitingPaper extends StatefulWidget {
+  const _WaitingPaper({required this.reduced, required this.scene});
+  final bool reduced;
+  final WaitingScene scene;
+  @override
+  State<_WaitingPaper> createState() => _WaitingPaperState();
+}
+class _WaitingPaperState extends State<_WaitingPaper>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  late final AnimationController _motion;
+  bool _foreground = true;
+  @override
+  void initState() {
+    super.initState();
+    _motion = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
+    _foreground = WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    WidgetsBinding.instance.addObserver(this);
+  }
+  void _sync() {
+    if (!widget.reduced && _foreground && TickerMode.valuesOf(context).enabled) {
+      if (!_motion.isAnimating) _motion.repeat(reverse: true);
+    } else {
+      _motion.stop();
+      _motion.value = 0;
+    }
+  }
+  @override
+  void didChangeDependencies() { super.didChangeDependencies(); _sync(); }
+  @override
+  void didUpdateWidget(covariant _WaitingPaper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.scene != widget.scene) _motion.value = 0;
+    _sync();
+  }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed; _sync();
+  }
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _motion.dispose(); super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _motion, builder: (context, _) => CustomPaint(
+      key: const ValueKey('sys/waiting-paper'), size: const Size(64, 40),
+      painter: _PaperPainter(_motion.value, Theme.of(context).colorScheme.primary, widget.scene),
+    ),
+  );
+}
+class _PaperPainter extends CustomPainter {
+  const _PaperPainter(this.phase, this.color, this.scene);
+  final double phase;
+  final Color color;
+  final WaitingScene scene;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final wave = math.sin(phase * math.pi);
+    final ink = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.6;
+    void line(double x, double y, double xx, double yy) =>
+      canvas.drawLine(Offset(x, y), Offset(xx, yy), ink);
+    switch (scene) {
+      case WaitingScene.search:
+        canvas.drawRect(Rect.fromLTWH(8, 8, 23, 26), ink);
+        line(12, 14, 24, 14); line(12, 20, 22, 20);
+        canvas.drawCircle(Offset(34 + wave * 5, 18), 8, ink);
+        line(40 + wave * 5, 24, 48 + wave * 5, 32);
+        break;
+      case WaitingScene.sources:
+        for (var i = 0; i < 3; i++) {
+          canvas.drawRect(Rect.fromLTWH(10.0 + i * (5.0 - wave * 2.0), 5.0 + i * 5.0, 28.0, 22.0), ink);
+        }
+        canvas.drawCircle(const Offset(40, 9), 3, ink); line(40, 12, 40, 18);
+        break;
+      case WaitingScene.compare:
+        for (var i = 0; i < 2; i++) {
+          final x = 12.0 + i * 26;
+          final y = 6 + (i == 0 ? wave : 1 - wave) * 4;
+          canvas.drawPath(Path()..moveTo(x, y)..lineTo(x + 5, y)
+            ..lineTo(x + 5, 28)..lineTo(x + 2.5, 33)..lineTo(x, 28)..close(), ink);
+        }
+        line(25, 19, 33, 19);
+        break;
+      case WaitingScene.analysis:
+        final d = wave * 3;
+        canvas.drawPath(Path()..moveTo(16 + d, 8)..lineTo(10 + d, 8)
+          ..lineTo(10 + d, 32)..lineTo(16 + d, 32), ink);
+        canvas.drawPath(Path()..moveTo(48 - d, 8)..lineTo(54 - d, 8)
+          ..lineTo(54 - d, 32)..lineTo(48 - d, 32), ink);
+        line(24, 17, 39, 17);
+        canvas.drawCircle(const Offset(31, 26), 3, ink);
+        break;
+      case WaitingScene.export:
+        // A folded paper remains on-screen; no claimed delivery or success.
+        canvas.drawPath(Path()..moveTo(8, 10)..lineTo(53, 8 + wave * 3)
+          ..lineTo(36, 33)..lineTo(27, 23)..close(), ink);
+        line(27, 23, 53, 8 + wave * 3); line(27, 23, 24, 32);
+        break;
+      case WaitingScene.waiting:
+        canvas.drawPath(Path()..moveTo(36, 11)..lineTo(36, 28)
+          ..quadraticBezierTo(36, 36, 28, 36)..quadraticBezierTo(20, 36, 20, 28)
+          ..lineTo(20, 9 - wave * 3)..quadraticBezierTo(20, 3, 26, 3)
+          ..quadraticBezierTo(32, 3, 32, 9)..lineTo(32, 27)
+          ..quadraticBezierTo(32, 31, 28, 31)..quadraticBezierTo(25, 31, 25, 27)
+          ..lineTo(25, 12), ink);
+        break;
+    }
+  }
+  @override
+  bool shouldRepaint(_PaperPainter old) =>
+      old.phase != phase || old.color != color || old.scene != scene;
 }

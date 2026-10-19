@@ -13,6 +13,8 @@ def main():
     a.add_argument("request", type=Path)
     a.add_argument("--seconds", type=float, default=20)
     a.add_argument("--max-items", type=int, default=10000)
+    a.add_argument("--offline-review", action="store_true",
+                   help="Explicit fixed-pin calculation only; current review not verified, not publishable")
     args = a.parse_args()
     try:
         if (
@@ -30,7 +32,8 @@ def main():
         print(
             json.dumps(
                 execute(
-                    obj, budget=Budget(seconds=args.seconds, max_items=args.max_items)
+                    obj, budget=Budget(seconds=args.seconds, max_items=args.max_items),
+                    offline_review=args.offline_review
                 ),
                 ensure_ascii=False,
                 allow_nan=False,
@@ -54,6 +57,7 @@ def main():
                 {
                     "state": "INVALID_OR_UNAVAILABLE",
                     "error_type": type(e).__name__,
+                    "reason": str(e) if isinstance(e, MathInputError) else "INPUT_OR_STORAGE_UNAVAILABLE",
                     "result_accepted": False,
                 }
             )

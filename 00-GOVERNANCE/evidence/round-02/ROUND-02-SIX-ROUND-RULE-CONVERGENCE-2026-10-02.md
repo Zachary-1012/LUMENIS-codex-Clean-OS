@@ -43,7 +43,7 @@ clean, broad stage, provider call or cloud deployment is part of this batch.
 
 Workstation-only instruction updates are outside Git. Original user AGENTS
 and protected-product hashes are backed up under
-`C:\Users\28049\.codex\backups\20261002-six-round-rules\`.
+`C:\Users\private-user-121dcc385158\.codex\backups\20261002-six-round-rules\`.
 Changed durable Skill entrypoints retain adjacent dated backups. These local
 copies do not replace repository Skills for cloud tasks.
 

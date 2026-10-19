@@ -128,7 +128,9 @@ def upsert_entity(entity_type, entity_id=None, title=None, parent_id=None,
              json.dumps(evidence_ids or [], ensure_ascii=False),
              evidence_status, confidence,
              json.dumps(source or {}, ensure_ascii=False),
-             observed_at or now, runtime_seconds, published_at,
+             # Write time is not source observation time. Preserve an unknown
+             # observation as SQL NULL; created_at/updated_at keep write time.
+             observed_at or None, runtime_seconds, published_at,
              json.dumps(metrics or {}, ensure_ascii=False),
              json.dumps(tags or [], ensure_ascii=False), now, now),
         )

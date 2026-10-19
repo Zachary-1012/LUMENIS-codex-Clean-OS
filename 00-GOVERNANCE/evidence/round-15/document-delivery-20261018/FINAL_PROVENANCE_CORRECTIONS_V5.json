@@ -1,0 +1,179 @@
+[
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_backend_scope_20261018T0540Z/BACKEND_RECEIPT.json",
+    "pointer": "/parent_current_main_reference",
+    "old_value_sha256": "e902501c965385df7fbb153fef3a4854114505d0d1f27b060180073936e27a4a",
+    "replacement": "4dab98ed; recorded baseline reference, not independently reconciled by this receipt"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/surface_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json",
+    "pointer": "/reason",
+    "old_value_sha256": "751beb77584d0245f659b21fa14757eb1d6cbc32bd36442c55d24e8a70ddabf4",
+    "replacement": "Frontend/parser/model changes are excluded from this backend-only candidate and require separate local implementation review.",
+    "original_published_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PARSER_PAUSE_RECEIPT.json"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/surface_pause_20261018T0538Z/PAUSE_RECEIPT.json",
+    "pointer": "/next_step",
+    "old_value_sha256": "f7c60090242d34c772c5972b2089153a436317efb156a19088dbd0963dd803da",
+    "replacement": "Review the retained partial UI diff separately. Paused UI files are excluded from backend-only accepted source unless explicitly classified as unverified retained work.",
+    "original_published_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_development_20261018/frontend_pause_20261018T0538Z/PAUSE_RECEIPT.json"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/ARCHIVE_RECEIPT.json",
+    "pointer": "/public_source_archive/documentation_overlay",
+    "old_value_sha256": "c931b4001cd995a6a10ab472de19ea4a40f95e905fc86befab3aa3d8681815e4",
+    "replacement": "Not applied in this historical archive; a separately reviewed documentation overlay is required for the final candidate tree."
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/CANDIDATE_DISPOSITION.json",
+    "pointer": "/local_hash_reconciliation/ongoing_recovery",
+    "old_value_sha256": "78106caf948904c36c84b702d813ad8835f6e50f9c163e2e09982abffa81c5ca",
+    "replacement": "Exact historical 84db066d source bytes remain under reconciliation. A hash-only list does not establish recoverable source or permit candidate substitution."
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/MAIN_TO_CANDIDATE.json",
+    "pointer": "/remote_freshness",
+    "old_value_sha256": "6809b49d759f4919390aa62acd2b7204b29a051963e2b9758a87615de71d55ec",
+    "replacement": "Official main readback recorded at 2026-10-18T06:09:49Z; evidence/MAIN_0609.json."
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/PUBLICATION_MAPPING.json",
+    "pointer": "/excluded_from_publication/1/reason",
+    "old_value_sha256": "5f9958989fdb861194e7d8c5dd89502cccff4458b9efaab501d313ad9ef7659f",
+    "replacement": "Planning and unadopted work; requires a separately reviewed/redacted documentation overlay and is not automatically product source."
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/0/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/1/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/2/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/3/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/4/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/5/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/6/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/7/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/8/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/9/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/10/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/11/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/12/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/13/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/14/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/15/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/16/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/17/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/18/user_review",
+    "old_value_sha256": "5ce2e2a854f7430216fd66bbbe9c4a1b30518d732f4418c131f4e37a3ee1d7e0",
+    "replacement": "DESIGN_APPROVED_2026-10-18_05:34; PRODUCT_NOT_ACCEPTED"
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_scope_tracking_20261018/NINETEEN_GROUP_DEPENDENCIES.json",
+    "pointer": "/17/current_research_and_design",
+    "old_value_sha256": "b27c587e05e276712a13d6a8157afcb6490f212fb4711a72abd8037b770775d9",
+    "replacement": "The versioned research/document artifacts and existing private archive checksums are recorded separately. Their presence is not product implementation, runtime acceptance, or a current complete-source restoration claim."
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_semantic_parity_20261018T0602Z/PAUSE_RECEIPT.json",
+    "pointer": "/stop_instruction",
+    "old_value_sha256": "67cf03525561744e231ea994c0ac305ea57bc090b49679ea6e567607092fbdd4",
+    "replacement": "Candidate remains paused and unadopted pending independent security and semantic-parity review. Retain all source, failure evidence and test results; no incomplete bridge is accepted."
+  },
+  {
+    "file": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_media_rights_20261018/first-regression.log",
+    "pointer": "line1",
+    "old_line_sha256": "bb3391fed2134fc15fc873caf607df7a3ee2c148feea5b2982340dd22dd2196e",
+    "replacement_line": "[TEST_PYTHON]: No module named pytest",
+    "preserved": "No module named pytest failure and remaining log unchanged"
+  }
+]

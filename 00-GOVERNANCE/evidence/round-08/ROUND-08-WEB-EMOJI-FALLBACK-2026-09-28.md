@@ -97,7 +97,7 @@ age does not justify assuming current composite-sequence coverage.
 The isolated archive matched 208 app source/asset files against published base
 `4ef4a0382cf51c69f0bb6ea3d5ca4538350b0353` plus this candidate. Exact five-file
 hashes, font metadata and logs are retained in
-`C:/Users/28049/AppData/Local/Temp/lumenis-web-emoji-20260928`.
+`C:/Users/private-user-121dcc385158/AppData/Local/Temp/lumenis-web-emoji-20260928`.
 
 - `dart analyze --fatal-infos`: exit 0, no issues.
 - Serial existing Theme, AI-01, SYS-05 appearance and appearance-integration

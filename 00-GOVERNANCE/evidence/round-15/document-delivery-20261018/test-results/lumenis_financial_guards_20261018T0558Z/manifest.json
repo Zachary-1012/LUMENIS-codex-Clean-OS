@@ -1,0 +1,27 @@
+[
+  {
+    "path": "lumenis/shared/reporting/statistics_mmm.py",
+    "before_sha256": "94e73ab29832a662c6817d86c2aa46b89143ec68396c851d1adcfcac8c734f29",
+    "after_sha256": "05774b4e3d713d4e5816f6803f6604255134e1f78056ef82df74177935a47ce1"
+  },
+  {
+    "path": "lumenis/importer/financial_tables.py",
+    "before_sha256": "eaec890de0e5335885319ea943d4ab58c090bb79fc35f5fac0bd211f9605f0a7",
+    "after_sha256": "6413cdac0bf93ff5dcdcaae9c070e271479786d00d4910a1860852d70ff283b3"
+  },
+  {
+    "path": "lumenis/importer/financial.py",
+    "before_sha256": "d9c347d7f75977e0960a3b432b436f10c72fb39a495cca4a7c3b34a995759d0e",
+    "after_sha256": "605fe79dfd904d1dc955a87c8b15d98cb0dc52fdd1f7b6a29dfd3901b754c8c9"
+  },
+  {
+    "path": "tests/test_regional_financial_intake.py",
+    "before_sha256": "64e1be66188f659ef493a4bbc12bc03b4397b54df8cff253e19f8a1269a6f6f0",
+    "after_sha256": "1d2b4823ce09f6bbe0b17e01a894b161a26d8a99c1e3b4b5da84713b95389be1"
+  },
+  {
+    "path": "tests/test_mmm_diagnostic_guards.py",
+    "before_sha256": null,
+    "after_sha256": "33f3af080c8e5a63c3a5f180d22ab3db034c83aaba51aeccb8575f87b7de48ff"
+  }
+]

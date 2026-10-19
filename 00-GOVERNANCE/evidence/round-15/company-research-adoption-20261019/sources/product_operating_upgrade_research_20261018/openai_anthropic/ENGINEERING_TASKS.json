@@ -1,0 +1,361 @@
+[
+  {
+    "id": "OA-ANT-T01",
+    "research_id": "OA-ANT-R01",
+    "title": "编排复杂度对照",
+    "existing_owner": "C2/C3/C5",
+    "existing_code_locator": "agent_runtime/loop.py;agent_capability/router.py",
+    "proposed_contract_fields": [
+      "mode",
+      "input_refs",
+      "quality_gate",
+      "budget_ref"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "确定性可用；不新增模型调用",
+    "state_mapping": "输入/计划→既有Task状态→已验证成果",
+    "failure": "单增强/并行无收益或预算超限",
+    "recovery": "退回确定性结果；保留草稿",
+    "acceptance": "同业务基线对照;固定数据/预算;重复trial",
+    "measurable_user_value": "完成率、返工分钟、总成本、重复检索率",
+    "evidence_status": "EXISTING_FOUNDATION_EXPERIMENT_PENDING",
+    "sources": [
+      "S01",
+      "S02"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P2"
+  },
+  {
+    "id": "OA-ANT-T02",
+    "research_id": "OA-ANT-R02",
+    "title": "类型化呈现及动作边界",
+    "existing_owner": "F/C2/C6",
+    "existing_code_locator": "experience_screens.py;experience_runtime.py;现有Core/ViewModel",
+    "proposed_contract_fields": [
+      "schemaVersion",
+      "task_id",
+      "run_id",
+      "attempt_id",
+      "sourceRefs",
+      "actionId",
+      "resultVersion"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "仅既有组件和Action；未知拒绝",
+    "state_mapping": "建议→校验→呈现→原Owner获准操作",
+    "failure": "未知action/注入/旧版本/dirty冲突",
+    "recovery": "保持原生视图和已编辑内容；显示差异",
+    "acceptance": "未知字段、HTML/JS、伪授权、乱序旧回调测试",
+    "measurable_user_value": "未授权执行=0；编辑覆盖=0；局部修订时间",
+    "evidence_status": "REQUIREMENT_PRESENT_END_TO_END_NOT_VERIFIED",
+    "sources": [
+      "S09",
+      "S10"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P1"
+  },
+  {
+    "id": "OA-ANT-T03",
+    "research_id": "OA-ANT-R03",
+    "title": "长任务崩溃恢复",
+    "existing_owner": "C2/C6",
+    "existing_code_locator": "ai_task_engine.py;agent_runtime/durable_adapter.py",
+    "proposed_contract_fields": [
+      "task_id",
+      "step",
+      "checkpoint_version",
+      "contract_hash",
+      "effect_receipt",
+      "artifact_ref"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "复用TaskEngine；未知副作用不盲重试",
+    "state_mapping": "running→checkpoint→resume;未知归既有unknown",
+    "failure": "进程退出/远端结果不明/损坏checkpoint",
+    "recovery": "先核回执再继续；不重复提交",
+    "acceptance": "5个故障点冷重开；真实回执核对",
+    "measurable_user_value": "重复副作用=0；恢复时间；成果丢失=0",
+    "evidence_status": "CODE_AND_TEST_DEFINITIONS_PRESENT_NOT_RUN",
+    "sources": [
+      "S04",
+      "S05"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P0"
+  },
+  {
+    "id": "OA-ANT-T04",
+    "research_id": "OA-ANT-R04",
+    "title": "审批绑定与撤权",
+    "existing_owner": "C6/C2",
+    "existing_code_locator": "lumenis/system/security/permission.py;action_firewall.py;effect_fence.py",
+    "proposed_contract_fields": [
+      "actor",
+      "scope",
+      "operation",
+      "resource",
+      "paramsHash",
+      "inputVersion",
+      "contractHash",
+      "expiry",
+      "attempt"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "不使用全局always approve；服务端状态",
+    "state_mapping": "awaiting_approval→当前准入→running或拒绝",
+    "failure": "目标变更/过期/跨actor/撤权",
+    "recovery": "保持待决策；实质变化依原规则重批",
+    "acceptance": "改变目标/参数/工具版本与重复点击负例",
+    "measurable_user_value": "旧审批越权=0；重复确认数；待决策分钟",
+    "evidence_status": "SECURITY_FOUNDATION_PRESENT_ALL_CONSUMERS_NOT_VERIFIED",
+    "sources": [
+      "S06"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P0"
+  },
+  {
+    "id": "OA-ANT-T05",
+    "research_id": "OA-ANT-R05",
+    "title": "精确上下文和记忆隔离",
+    "existing_owner": "C2/C5/C6/F",
+    "existing_code_locator": "agent_memory/base.py;agent_runtime/task_binding.py",
+    "proposed_contract_fields": [
+      "task_scope",
+      "source_id",
+      "source_version",
+      "actor",
+      "read_permission_ref",
+      "memory_mode"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "按当前任务读；无全局隐式合并",
+    "state_mapping": "选范围→有权限检索→可追溯引用",
+    "failure": "撤权/同名实体/跨项目移动/旧摘要",
+    "recovery": "失效引用停止消费；保留可用原始内容",
+    "acceptance": "2成员2项目移入移出/撤权/导出缓存",
+    "measurable_user_value": "泄漏=0；重复说明次数；上下文重建分钟",
+    "evidence_status": "TASK_BOUND_MEMORY_PRESENT_UI_AND_FULL_CHAIN_NOT_VERIFIED",
+    "sources": [
+      "S03",
+      "S07",
+      "S11",
+      "S12"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P1"
+  },
+  {
+    "id": "OA-ANT-T06",
+    "research_id": "OA-ANT-R06",
+    "title": "成果版本和冷重开",
+    "existing_owner": "C4/C5/F",
+    "existing_code_locator": "shared_artifacts.py;既有SavedWork/Timeline",
+    "proposed_contract_fields": [
+      "artifact_id",
+      "parent_revision",
+      "source_refs",
+      "editable_source",
+      "export_hash",
+      "expected_revision"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "复用canonical成果库；不自动公开",
+    "state_mapping": "draft→saved→revision→export→reopen",
+    "failure": "沙箱消失/导出失败/并发冲突/来源撤回",
+    "recovery": "上版可用；本地编辑不丢；差异核准后新版本",
+    "acceptance": "报告/提案/播客完整保存导出冷开旅程",
+    "measurable_user_value": "重开成功率；修订丢失=0；交接分钟",
+    "evidence_status": "ARTIFACT_FOUNDATION_PRESENT_JOURNEYS_NOT_VERIFIED",
+    "sources": [
+      "S13"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P1"
+  },
+  {
+    "id": "OA-ANT-T07",
+    "research_id": "OA-ANT-R07",
+    "title": "同版真实成果评估",
+    "existing_owner": "C5/C3/C6/F",
+    "existing_code_locator": "lumenis/shared/evaluation/;现有Evaluation owner",
+    "proposed_contract_fields": [
+      "task",
+      "trial",
+      "source_hash",
+      "runtime_hash",
+      "outcome_ref",
+      "grader_version",
+      "human_minutes",
+      "cost"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "独立评价；不以模型自报过关",
+    "state_mapping": "source→runtime→DB→test→用户成果",
+    "failure": "自评过关但无成果/泄漏/指标口径错",
+    "recovery": "保留失败和不可用；禁止自动晋升",
+    "acceptance": "保留集多trial+盲评校准+真实产物读回",
+    "measurable_user_value": "可靠完成率；错误数；人工返工；预算",
+    "evidence_status": "EXISTING_EVALUATION_SCOPE_EXPERIMENT_PENDING",
+    "sources": [
+      "S14",
+      "S08"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P0"
+  },
+  {
+    "id": "OA-ANT-T08",
+    "research_id": "OA-ANT-R08",
+    "title": "脱敏可观测性",
+    "existing_owner": "C6/C2",
+    "existing_code_locator": "现有日志/Evidence;agent_runtime/durable_adapter.py",
+    "proposed_contract_fields": [
+      "trace_id",
+      "task",
+      "run",
+      "attempt",
+      "step",
+      "duration",
+      "error_code",
+      "contract_hash"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "外部遥测关闭；不记录凭据/原文",
+    "state_mapping": "事件→脱敏→权限化读回",
+    "failure": "嵌套密钥/异常回显/旧权限trace",
+    "recovery": "保留安全错误码；封锁外发",
+    "acceptance": "合成哨兵覆盖日志、导出、备份、恢复",
+    "measurable_user_value": "秘密泄漏=0；故障定位分钟",
+    "evidence_status": "REDACTION_FOUNDATION_PRESENT_FULL_SINK_AUDIT_PENDING",
+    "sources": [
+      "S15",
+      "S05"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P0"
+  },
+  {
+    "id": "OA-ANT-T09",
+    "research_id": "OA-ANT-R09",
+    "title": "MCP合同漂移与恢复",
+    "existing_owner": "C2/C6",
+    "existing_code_locator": "mcp_discovery.py;现有Skill Registry/Permission",
+    "proposed_contract_fields": [
+      "protocol_version",
+      "schema_hash",
+      "endpoint",
+      "audience",
+      "scope",
+      "approval_ref"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "发现不安装/启用；403不扩权",
+    "state_mapping": "发现→审阅→批准→隔离自测→启用",
+    "failure": "schema改义/端点换域/错误audience/晚结果",
+    "recovery": "冻结旧合同；按原规则审阅差异再启用",
+    "acceptance": "SSRF/外部ref/恶意描述/撤权老session",
+    "measurable_user_value": "漂移合同执行=0；配置分钟；恢复率",
+    "evidence_status": "SCHEMA_VALIDATION_PRESENT_PROTOCOL_FULL_CONFORMANCE_NOT_VERIFIED",
+    "sources": [
+      "S16",
+      "S10"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P0"
+  },
+  {
+    "id": "OA-ANT-T10",
+    "research_id": "OA-ANT-R10",
+    "title": "累计预算与真实取消",
+    "existing_owner": "C2/C6/F",
+    "existing_code_locator": "agent_runtime/loop.py;原工具执行边界",
+    "proposed_contract_fields": [
+      "parent_budget",
+      "spent",
+      "reserved",
+      "max_steps",
+      "max_time",
+      "max_cost",
+      "cancel_requested",
+      "effect_status"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "不提高20步/300秒/2.0源码限制；不视其为花费许可",
+    "state_mapping": "运行→停止新步骤→工具结束核对→取消终态",
+    "failure": "同步卡死/父子并发透支/晚回调",
+    "recovery": "支持工具硬终止需另验；不支持则显示仍在结束",
+    "acceptance": "并发预留、重启余额、取消提交竞态",
+    "measurable_user_value": "超授权调用=0；取消新增副作用=0；P95用时",
+    "evidence_status": "EXPLICIT_GAP_SYNC_HARD_CANCELLATION_NOT_GUARANTEED",
+    "sources": [
+      "S01",
+      "S02"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P0"
+  },
+  {
+    "id": "OA-ANT-T11",
+    "research_id": "OA-ANT-R11",
+    "title": "多任务审阅与团队交接",
+    "existing_owner": "F/C3/C6",
+    "existing_code_locator": "现有Task工作台/通知/成员权限",
+    "proposed_contract_fields": [
+      "decision_required",
+      "blocker",
+      "artifact_ref",
+      "change_summary",
+      "evidence_ref",
+      "owner_ref"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "合并同主题通知；不扩大授权、不自动派工",
+    "state_mapping": "运行中→需决定/异常/可审成果→交接",
+    "failure": "噪音淹没重要决策/职责不明",
+    "recovery": "可读完整记录与当前阻塞；人工协调",
+    "acceptance": "3并发任务与原体验对照",
+    "measurable_user_value": "每决策阅读分钟、点击数、重复询问、漏阻塞",
+    "evidence_status": "PRODUCT_EXPERIMENT_NOT_VERIFIED",
+    "sources": [
+      "S17",
+      "S18"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P1"
+  },
+  {
+    "id": "OA-ANT-T12",
+    "research_id": "OA-ANT-R12",
+    "title": "四表面智能任务旅程",
+    "existing_owner": "F及现有C1–C6",
+    "existing_code_locator": "V2.1/Experience+现有各屏/组件",
+    "proposed_contract_fields": [
+      "screen",
+      "task",
+      "purpose",
+      "surface",
+      "language",
+      "focus",
+      "selection",
+      "dirty",
+      "playhead"
+    ],
+    "field_policy": "先映射既有字段，避免新表/新Owner/新真相库",
+    "default": "沿原native组件；无AI基本路径可完成",
+    "state_mapping": "材料→理解→操作→成果→修改→重开",
+    "failure": "离线/减少动态/屏幕变化/AI不可用",
+    "recovery": "保留原生编辑器和进度；恢复原任务",
+    "acceptance": "CTH/BMP/Shared/SYSTEM，Web/Desktop/iOS按职责分别验",
+    "measurable_user_value": "任务成功率、人工时间、无障碍缺陷、dirty丢失=0",
+    "evidence_status": "REQUIREMENTS_PRESENT_ALL_SURFACES_NOT_VERIFIED",
+    "sources": [
+      "S11",
+      "S13"
+    ],
+    "authorization": "RESEARCH_ONLY;实施需用户明确具体授权",
+    "priority": "P1"
+  }
+]

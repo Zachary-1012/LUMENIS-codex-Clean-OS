@@ -21,7 +21,7 @@ parity before changing only derived quality status/score in one transaction.
 - `python scripts/audit_tools/verify_ai_native_constitution.py`: **PASS**.
 - Local product DB dry-run: **165 eligible** (`missing=135`, `ok=30`).
 - Disposable snapshot apply: **165 updated**. Immediate second run: **0 updated**. Raw and Canonical quality matched (`missing=135`, `ok=34`), source publication times remained **34 known**, and integrity/FK checks passed.
-- Actual local v18 product DB was backed up to `C:\Users\28049\AppData\Local\Temp\lumenis-publish-quality-backup-laaj4h97\monitor-before.db` before the same bounded apply. The post-write Raw and Canonical quality counts are both `missing=135`, `ok=34`; Raw/Canonical count remains 169, publication times known 34, relation assertions 219, `integrity_check=ok`, FK violations 0, orphan VERIFIED scope refs 0. The tool's source/lineage fingerprint matched before and after.
+- Actual local v18 product DB was backed up to `C:\Users\private-user-121dcc385158\AppData\Local\Temp\lumenis-publish-quality-backup-laaj4h97\monitor-before.db` before the same bounded apply. The post-write Raw and Canonical quality counts are both `missing=135`, `ok=34`; Raw/Canonical count remains 169, publication times known 34, relation assertions 219, `integrity_check=ok`, FK violations 0, orphan VERIFIED scope refs 0. The tool's source/lineage fingerprint matched before and after.
 
 This corrects derived labels only. It does not fill 135 unknown dates, create
 new Source/Evidence records, accept source rights, complete Global coverage,

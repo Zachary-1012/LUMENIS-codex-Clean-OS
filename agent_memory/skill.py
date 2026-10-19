@@ -29,102 +29,87 @@ class SkillMemory(BaseMemoryLayer):
 
     # ── Skill 注册表查询（基于 skills_registry） ─────────────────
 
-    def list_skills(self, status: Optional[str] = None,
-                    product: Optional[str] = None) -> List[Dict[str, Any]]:
-        """列出已注册 Skill。"""
+    def list_skills(self, status=None, product=None):
         if not self.enabled or not self.db_path:
             return []
         try:
-            conn = get_db_connection(self.db_path)
-            try:
-                sql = "SELECT * FROM skills_registry WHERE 1=1"
-                params: list = []
-                if status:
-                    sql += " AND status=?"
-                    params.append(status)
-                if product:
-                    sql += " AND product=?"
-                    params.append(product)
-                sql += " ORDER BY skill_id"
-                rows = conn.execute(sql, params).fetchall()
-                return [dict(r) for r in rows]
-            finally:
-                conn.close()
+            from .task import TaskMemory
+            from agent_runtime.task_binding import _current_binding
+            from account.skills import get_skill_info
+            binding = self._binding_context()
+            task = TaskMemory(self.db_path, enabled=True).bind_task(binding["task_id"], binding["actor_id"]).get_task(binding["task_id"])
+            contract = json.loads(task["context_json"])["agent_runtime"]
+            result = []
+            for sid in contract["registry_bindings"]:
+                _current_binding(binding["task_id"], sid)
+                info = get_skill_info(sid)
+                if status and info.get("status") != status or product and info.get("product") != product:
+                    continue
+                result.append({key: info.get(key) for key in ("skill_id", "name", "version", "product", "domain", "status")})
+            return result
         except Exception:
             return []
 
-    def get_skill(self, skill_id: str) -> Optional[Dict[str, Any]]:
-        """按 skill_id 获取 Skill 元数据。"""
-        if not self.enabled or not self.db_path:
-            return None
-        try:
-            conn = get_db_connection(self.db_path)
-            try:
-                row = conn.execute(
-                    "SELECT * FROM skills_registry WHERE skill_id=?", (skill_id,)
-                ).fetchone()
-                return dict(row) if row else None
-            finally:
-                conn.close()
-        except Exception:
-            return None
+    def get_skill(self, skill_id):
+        return next((row for row in self.list_skills() if row["skill_id"] == skill_id), None)
 
-    # ── 执行统计（基于 skill_executions） ────────────────────────
+    def get_skill_stats(self, skill_id):
+        rows = self.get_recent_executions(skill_id, limit=10000)
+        completed = sum(row.get("status") == "completed" for row in rows)
+        failed = sum(row.get("status") == "failed" for row in rows)
+        terminal = completed + failed
+        return {"skill_id": skill_id, "total": len(rows), "success": completed,
+                "failed": failed, "success_rate": completed / terminal if terminal else None,
+                "avg_duration_ms": sum(row.get("duration_ms") or 0 for row in rows) / len(rows) if rows else None,
+                "metric_kind": "execution_completion_only", "business_success_rate": None}
 
-    def get_skill_stats(self, skill_id: str) -> Dict[str, Any]:
-        """获取 Skill 的执行统计（总次数、成功次数、成功率、平均耗时）。"""
-        if not self.enabled or not self.db_path:
-            return {"skill_id": skill_id, "total": 0, "success": 0, "success_rate": 0.0}
-        try:
-            conn = get_db_connection(self.db_path)
-            try:
-                row = conn.execute(
-                    """SELECT COUNT(*) as total,
-                              SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as success,
-                              AVG(duration_ms) as avg_duration
-                       FROM skill_executions WHERE skill_id=?""",
-                    (skill_id,),
-                ).fetchone()
-                total = row["total"] or 0
-                success = row["success"] or 0
-                rate = (success / total) if total > 0 else 0.0
-                return {
-                    "skill_id": skill_id,
-                    "total": total,
-                    "success": success,
-                    "failed": total - success,
-                    "success_rate": round(rate, 4),
-                    "avg_duration_ms": row["avg_duration"] or 0,
-                }
-            finally:
-                conn.close()
-        except Exception:
-            return {"skill_id": skill_id, "total": 0, "success": 0, "success_rate": 0.0}
+    def get_all_skill_stats(self):
+        return [self.get_skill_stats(s["skill_id"]) for s in self.list_skills()]
 
-    def get_all_skill_stats(self) -> List[Dict[str, Any]]:
-        """获取所有 Skill 的执行统计。"""
-        skills = self.list_skills()
-        return [self.get_skill_stats(s["skill_id"]) for s in skills]
-
-    def get_recent_executions(self, skill_id: Optional[str] = None,
-                              limit: int = 20) -> List[Dict[str, Any]]:
-        """获取最近的 Skill 执行记录。"""
+    def get_recent_executions(self, skill_id=None, limit=20):
         if not self.enabled or not self.db_path:
             return []
         try:
-            conn = get_db_connection(self.db_path)
-            try:
-                sql = "SELECT * FROM skill_executions"
-                params: list = []
-                if skill_id:
-                    sql += " WHERE skill_id=?"
-                    params.append(skill_id)
-                sql += " ORDER BY created_at DESC LIMIT ?"
-                params.append(limit)
-                rows = conn.execute(sql, params).fetchall()
-                return [dict(r) for r in rows]
-            finally:
-                conn.close()
+            from .task import TaskMemory
+            from agent_runtime.task_binding import _digest, _current_binding
+            from lumenis.shared.agents.skills.execution import query_executions, verified_execution_scope
+            binding = self._binding_context()
+            task = TaskMemory(self.db_path, enabled=True).bind_task(binding["task_id"], binding["actor_id"]).get_task(binding["task_id"])
+            context = json.loads(task["context_json"])
+            entries = context["agent_runtime"]["steps"]
+            # Gateway-planned steps are read from the original durable result,
+            # never inferred from another task's executions.
+            result = json.loads(task.get("result_json") or "{}")
+            entries = entries + [{"skill_id": r.get("tool"), "input": r.get("params", {})}
+                                 for r in (result.get("plan") or {}).get("steps", [])]
+            if not entries:
+                from agent_runtime.durable_adapter import DurableExecutionAdapter
+                step_rows = TaskMemory(self.db_path, enabled=True).bind_task(
+                    binding["task_id"], binding["actor_id"]).get_task_steps(binding["task_id"])
+                checkpoints = DurableExecutionAdapter._db_checkpoints(step_rows)
+                if checkpoints:
+                    entries = [{"skill_id": r.get("tool"), "input": r.get("params", {})}
+                               for r in checkpoints[-1].plan_snapshot.get("steps", [])]
+            rows, seen = [], set()
+            for entry in entries:
+                sid = entry["skill_id"]
+                if skill_id and sid != skill_id:
+                    continue
+                _current_binding(binding["task_id"], sid)
+                execution_id = ("skillscope_" if binding["actor_id"] is not None else "") + "agentstep_" + _digest(
+                    {"task": binding["task_id"], "skill": sid, "inputs": entry["input"]})[:32]
+                if execution_id in seen:
+                    continue
+                seen.add(execution_id)
+                for row in query_executions(execution_id=execution_id, limit=1, strict=True):
+                    # Account Agent executions use the canonical signed scope
+                    # receipt. A stale/legacy ID cannot downgrade that boundary.
+                    if binding["actor_id"] is not None and not verified_execution_scope(
+                            row, {"id": binding["actor_id"]}):
+                        continue
+                    rows.append(row)
+            self._binding_context()
+            return sorted(rows, key=lambda row: row.get("created_at") or "", reverse=True)[:limit]
         except Exception:
             return []
 
@@ -140,6 +125,19 @@ class SkillMemory(BaseMemoryLayer):
         """
         if not self.enabled:
             return False
+        if self._task_binding is not None:
+            import uuid
+            if type(success) is not bool or type(duration_ms) is not int or duration_ms < 0:
+                raise ValueError("SKILL_FEEDBACK_INVALID")
+            self._binding_context(write=True)
+            if not self.get_skill(skill_id):
+                raise PermissionError("SKILL_FEEDBACK_SCOPE_DENIED")
+            # Append immutable derived observations; no second execution truth or
+            # unreviewed business-success percentage is written to Skill traces.
+            return bool(self.store("feedback:" + uuid.uuid4().hex,
+                {"skill_id": skill_id, "reported_success": success, "duration_ms": duration_ms,
+                 "details": metadata or {}, "business_success_rate": None},
+                metadata={"type": "skill_feedback", "skill_id": skill_id}))
         cache = self._success_cache.setdefault(skill_id, {"total": 0, "success": 0})
         cache["total"] += 1
         if success:
@@ -162,10 +160,19 @@ class SkillMemory(BaseMemoryLayer):
         if not self.enabled:
             return candidates[0]
 
+        if self._task_binding is not None:
+            allowed = {item["skill_id"] for item in self.list_skills()}
+            candidates = [sid for sid in candidates if sid in allowed]
+
         def score(sid: str) -> Tuple[float, int]:
             stats = self.get_skill_stats(sid)
-            cache = self._success_cache.get(sid, {})
-            rate = max(stats["success_rate"], cache.get("rate", 0.0))
+            cache = self._success_cache.get(sid, {}) if self._task_binding is None else {}
+            if self._task_binding is not None:
+                observations = self.query({"type": "skill_feedback", "skill_id": sid}, limit=1000)
+                total = len(observations)
+                positives = sum(item.value.get("reported_success") is True for item in observations)
+                cache = {"rate": positives / total if total else 0.0, "total": total}
+            rate = max(stats["success_rate"] or 0.0, cache.get("rate", 0.0))
             total = stats["total"] + cache.get("total", 0)
             # 成功率优先，执行次数作为置信度
             return (rate, total)
@@ -174,19 +181,6 @@ class SkillMemory(BaseMemoryLayer):
         scored.sort(key=lambda x: x[0], reverse=True)
         return scored[0][1] if scored else None
 
-    def stats(self) -> Dict[str, Any]:
-        s = super().stats()
-        if self.db_path:
-            try:
-                conn = get_db_connection(self.db_path)
-                try:
-                    sr = conn.execute("SELECT COUNT(*) FROM skills_registry").fetchone()[0]
-                    se = conn.execute("SELECT COUNT(*) FROM skill_executions").fetchone()[0]
-                    s["skills_registry_total"] = sr
-                    s["skill_executions_total"] = se
-                finally:
-                    conn.close()
-            except Exception:
-                pass
-        s["cached_skills"] = len(self._success_cache)
-        return s
+    def stats(self):
+        return {**super().stats(), "visible_execution_count": len(self.get_recent_executions()),
+                "cached_skills": len(self._success_cache)}

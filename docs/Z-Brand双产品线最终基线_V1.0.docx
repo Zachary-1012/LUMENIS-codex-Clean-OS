@@ -12,7 +12,7 @@
 ## 0. 命名与产品基准（定死）
 - **大系统总名：Z-Brand Core**（唯一内核，绝不两份源码；Croe 统一为 Core）。
 - **产品① CTH-POMS**：CorTech Lab-GuangZhou Taikoo Hui Public Opinion Monitoring System｜广州太古汇舆情监测与品牌传播系统｜**默认开启、客户交付、主体口径 LOCK、独立库、独立运行**。
-- **产品② ZBMP**：Z-Brand Monitoring Platform｜Z-品牌舆情监控系统｜**默认隐藏，设置→「ZbMP」→小尺寸椭圆弹窗→密钥 `사랑해` 解锁**；未解锁时**后端所有 ZBMP 接口 403**（不只前端藏）。
+- **产品② ZBMP**：Z-Brand Monitoring Platform｜Z-品牌舆情监控系统｜**默认隐藏，设置→「ZbMP」→小尺寸椭圆弹窗→密钥 `[REDACTED_HISTORICAL_GATE_KEY]` 解锁**；未解锁时**后端所有 ZBMP 接口 403**（不只前端藏）。
 - 当前阶段：**一套运行时 + 产品门**；交付阶段同一 Core 打两个 Release 包。
 - 版本：当前基线 **5.8.5**（app.py 常量、静态戳、footer、CHANGELOG 四处统一；实测活页面 static/index.html 已 5.8.5）。
 
@@ -21,7 +21,7 @@
                  Z-Brand Core（一套内核，profile 驱动）
                           │
         ┌─────────────────┼─────────────────┐
-   RELEASE_PROFILE=customer(默认)      =platform(密钥사랑해解锁)
+   RELEASE_PROFILE=customer(默认)      =platform(密钥[REDACTED_HISTORICAL_GATE_KEY]解锁)
         │                                  │
   CTH-POMS 客户版                    ZBMP 母平台
   太古汇 profile/独立DB/裁剪研发域    多品牌多客户/实验域/Release构建

@@ -12,6 +12,7 @@ from lumenis.shared.evaluation.openai_math_papers.core import (
     digest,
 )
 from lumenis.shared.evaluation.openai_math_papers.dispatch import execute
+from lumenis.shared.evaluation.openai_math_papers.provenance import assert_review
 
 
 def handle_openai_math_task(
@@ -66,6 +67,7 @@ def handle_openai_math_task(
         or not final.get("decision_ref")
     ):
         raise PermissionError("SOURCE_OR_PERMISSION_CHANGED_DURING_COMPUTATION")
+    assert_review(result["paper"]["family"], result["paper"]["review"])
     result.update(
         source_brief_job_id=job,
         source_brief_artifact_hash=version,

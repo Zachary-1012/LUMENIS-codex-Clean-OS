@@ -1,0 +1,49 @@
+{
+  "checked_utc": "2026-10-17T23:30:05.559163+00:00",
+  "videos": {
+    "V14": {
+      "rows": 2266,
+      "continuous_unique": true,
+      "pts_monotonic": true,
+      "scope": "worker actual-view ledger independently checked; not independent rewatch of every frame"
+    },
+    "V15": {
+      "rows": 3477,
+      "continuous_unique": true,
+      "pts_monotonic": true,
+      "scope": "worker actual-view ledger independently checked; not independent rewatch of every frame"
+    },
+    "V16": {
+      "rows": 525,
+      "continuous_unique": true,
+      "pts_monotonic": true,
+      "scope": "worker actual-view ledger independently checked; not independent rewatch of every frame"
+    },
+    "V17": {
+      "rows": 2332,
+      "continuous_unique": true,
+      "pts_monotonic": true,
+      "scope": "worker actual-view ledger independently checked; not independent rewatch of every frame"
+    },
+    "V18": {
+      "rows": 345,
+      "continuous_unique": true,
+      "pts_monotonic": true,
+      "scope": "worker actual-view ledger independently checked; not independent rewatch of every frame"
+    },
+    "V19": {
+      "rows": 2141,
+      "continuous_unique": true,
+      "pts_monotonic": true,
+      "scope": "worker actual-view ledger independently checked; not independent rewatch of every frame"
+    },
+    "V20": {
+      "rows": 669,
+      "continuous_unique": true,
+      "pts_monotonic": true,
+      "scope": "worker actual-view ledger independently checked; not independent rewatch of every frame"
+    }
+  },
+  "total": 11755,
+  "status": "coverage_ledger_pass; manuscript_integration_pending"
+}

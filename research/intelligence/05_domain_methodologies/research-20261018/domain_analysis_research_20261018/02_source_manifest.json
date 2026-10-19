@@ -1,0 +1,62 @@
+{
+  "kind": "READ_ONLY_RESEARCH_BASELINE",
+  "captured_utc": "2026-10-17T19:33:10.918558+00:00",
+  "base": "[LOCAL_WORKSPACE]/recovery_20261017T1925Z/validated_candidates/LUMENIS_20261017T1620Z_dot-zack_NOT_FINAL",
+  "not_current_remote_main_verified": true,
+  "files": [
+    {
+      "path": "product/source/00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+      "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+      "bytes": 250700,
+      "read_scope": "selected relevant sections; not necessarily entire file"
+    },
+    {
+      "path": "product/source/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+      "sha256": "04edb41316f6b9576fdcc021d82c26843c2d543ff0ba316d24c8082f2189f1e4",
+      "bytes": 108216,
+      "read_scope": "selected relevant sections; not necessarily entire file"
+    },
+    {
+      "path": "product/source/00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+      "sha256": "7c67042b5ff8aecc36b7d48abf799cf8678fec774178ec54a4bf89cdba486efc",
+      "bytes": 182919,
+      "read_scope": "selected relevant sections; not necessarily entire file"
+    },
+    {
+      "path": "frontend_design/12_CURRENT_REQUIREMENTS_G.md",
+      "sha256": "6d8fb81905a138cbeb4366a01c808156a0e66527d748f07d5208291633b0b38f",
+      "bytes": 88596,
+      "read_scope": "selected relevant sections; not necessarily entire file"
+    },
+    {
+      "path": "product/source/lumenis/shared/reporting/statistics_methods.py",
+      "sha256": "fb0ae319903d5a145a49e8ea6c41f3bf3c5d9e58aa5464ab6d1e65ef65cf80d6",
+      "bytes": 84949,
+      "read_scope": "selected relevant sections; not necessarily entire file"
+    },
+    {
+      "path": "product/source/lumenis/shared/reporting/statistics_mmm.py",
+      "sha256": "94e73ab29832a662c6817d86c2aa46b89143ec68396c851d1adcfcac8c734f29",
+      "bytes": 20165,
+      "read_scope": "selected relevant sections; not necessarily entire file"
+    },
+    {
+      "path": "product/source/lumenis/shared/reporting/business_brief.py",
+      "sha256": "9b742d656a8804e6211140c9f9ae78ab8b4e67cd455ed48635eb3aac7884426f",
+      "bytes": 66950,
+      "read_scope": "selected relevant sections; not necessarily entire file"
+    },
+    {
+      "path": "product/source/lumenis/shared/evaluation/openai_math_papers/business_scenarios.py",
+      "sha256": "39730f4346ebc6dad896a584deb854278387162b98d514c8f964a5f72402dd93",
+      "bytes": 5412,
+      "read_scope": "selected relevant sections; not necessarily entire file"
+    },
+    {
+      "path": "product/source/lumenis/shared/evaluation/openai_math_papers/product_outcome.py",
+      "sha256": "a705d23f3e0c7fd565c3a3c942e4da9c268c5fd5f476fc7f4803b084925c5f60",
+      "bytes": 10409,
+      "read_scope": "selected relevant sections; not necessarily entire file"
+    }
+  ]
+}

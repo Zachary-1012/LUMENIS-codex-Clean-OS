@@ -1,0 +1,176 @@
+[
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/added_test_body_review.json",
+    "candidate_sha256": "5d36b7731ad36b4412f368837e7d93c06326393c816ceab04f4030e324373608",
+    "bytes": 18402,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/added_tests_supplement_review.json",
+    "candidate_sha256": "7b027c924d34f50a9b950ab25ec48fd32a1cb2cabeb2e45af00c0cf1d8595cf2",
+    "bytes": 12222,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/added_tests_supplement_review.md",
+    "candidate_sha256": "853e72fd7582011dd1e2ea88771ec51fd77a48922f60c3fed0ad4b4898553461",
+    "bytes": 7556,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/backend_findings.md",
+    "candidate_sha256": "d8bf801dd13fd743485e69b34ae036190d739765edb46aa65b6762112f25aa2e",
+    "bytes": 14501,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/changed_tests_complete_review.json",
+    "candidate_sha256": "8926cf9c1a718314b05edd2f19017ea137265bcdfb2a8bbfda947f729cbb4ac5",
+    "bytes": 41911,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/changed_tests_complete_review.md",
+    "candidate_sha256": "47561bb8963a183d9c38210d179ba737098abb12992c01e05eba867a7c890e33",
+    "bytes": 16027,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/changed_tests_review_order.json",
+    "candidate_sha256": "18067f356479d92d970c96cc16dc3de33170444a936da47a50c24d7dcad5198b",
+    "bytes": 2754,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/collector_skills_supplement_review.json",
+    "candidate_sha256": "f7cbcd214efb94a96723b0f249808b49eaac7844070ccd485ab9a31c6141fc06",
+    "bytes": 20765,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/collector_skills_supplement_review.md",
+    "candidate_sha256": "85c3f2b3101a04a1274d305855a1c32e9e13ea6a6b7e76b9dd48640ec7ccea39",
+    "bytes": 5144,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/financial_scope_ast_probe.log",
+    "candidate_sha256": "7cb8beb37ce8cded4f7ea0999db0b9d351d7508dbbcee819c73270acae4b359b",
+    "bytes": 854,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/frontend_requirements_supplement_review.json",
+    "candidate_sha256": "ff6ffdfd898284d1afd8ba1e98311ad1cdf91d820a6d231e5fb90881e2756c83",
+    "bytes": 5362,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/frontend_requirements_supplement_review.md",
+    "candidate_sha256": "bd2a1b94b12bdac76a73dd59a981363030471958c80c4f9eb1f3141e9c21deb6",
+    "bytes": 3519,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/importer_impl_review.json",
+    "candidate_sha256": "831fc4c1f0e0170cfa8c5470e2009f055bfcb56f886899311dec7f7dbaa31334",
+    "bytes": 15664,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/importer_impl_review.md",
+    "candidate_sha256": "9928076a056897fd9863a9c9d8a38d2535fd1c9ae6615afdbf1b2b0040403cdc",
+    "bytes": 5480,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/inventory.json",
+    "candidate_sha256": "4f9ab2ff31632885199194605a0b007b95d4d2c1d36300ee220c4f21c3cb26f8",
+    "bytes": 37856,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/kos_permission_complete_diff_review.json",
+    "candidate_sha256": "036a7832947437bc532a4a7efe0fc8eeb3dcf224be1f14823f11fa160f488f8e",
+    "bytes": 24750,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/kos_permission_complete_diff_review.md",
+    "candidate_sha256": "767d3d66602f4a042b30796ae5a06b47c6ea9c98fd40afcd3194e4c8ad715363",
+    "bytes": 13795,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/media_impl_review.json",
+    "candidate_sha256": "72d8e86b5ec0b734370426eac12d3ca0174308813cdd5127710e49a006378647",
+    "bytes": 18071,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/media_impl_review.md",
+    "candidate_sha256": "3e9a700fc2b633a54be3fb79c4f9b5c353bf71256797636647fb2047815365ee",
+    "bytes": 9316,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/runtime_new_owner_review.json",
+    "candidate_sha256": "3ea313e0d63744d3784a8af8510934449f29b078b8206fce95c015909a6ad6d1",
+    "bytes": 9400,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/runtime_new_owner_review.md",
+    "candidate_sha256": "3acc4abf1eb16c43a55078af199d6cd6b3511bf691fddd41c9b3c75dd16577e1",
+    "bytes": 3271,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/semantic_review_status.json",
+    "candidate_sha256": "c17af03edd71ec2d57d19bdf448eab505cabaa6c1b68ef19dade98494af8b94e",
+    "bytes": 104610,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/statistical_financial_pure_probe.log",
+    "candidate_sha256": "4cfce06b5a819c0a875d06a66f6d724101ca987a20449ae0320273b62011a9f6",
+    "bytes": 1276,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/statistics_impl_review.json",
+    "candidate_sha256": "04d0cf7961179b396e7838e2bc85e6210874df2895f65855757f8a6d582820ef",
+    "bytes": 11722,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_delta_audit_20261018/statistics_impl_review.md",
+    "candidate_sha256": "d6921cd57d34cca27447c276e78552a160750f10db153f23e57b3ce4def8807e",
+    "bytes": 4612,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_delta_audit_20261018/added_test_body_review.json",
+    "candidate_sha256": "b2be2013838448933b09dc067014044b8c3f481c91f1b4d44c25c2eaf5bdd445",
+    "bytes": 6827,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_delta_audit_20261018/backend_findings.md",
+    "candidate_sha256": "a01a0af61499443c2879e9ce6153bb49ec1c64bc984e530a90662b3cac172059",
+    "bytes": 11467,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/evidence/lumenis_delta_audit_20261018/semantic_review_status.json",
+    "candidate_sha256": "4052ab4dfe65e78272f7598661667612366a96712fca5e51afd8f242c206ba67",
+    "bytes": 76852,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  },
+  {
+    "excluded_candidate_path": "research/engineering/documentation-evidence/reports/missing_originals_locator_20261018/reviewed_component/04_SEARCH_RECEIPTS.json",
+    "candidate_sha256": "96ea8c190d50112d93a8ad9e2b46f219008508f8c5e8368962f41f70747edd26",
+    "bytes": 4020,
+    "reason": "Independent public review: raw internal review/control or private search candidate material; preserve private original, publish only product-facing technical findings"
+  }
+]

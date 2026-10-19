@@ -1,4 +1,8 @@
-# LUMENIS Screen Specifications
+# OEVIRA Screen Specifications
+
+**当前交付状态（2026-10-18 16:34:52 UTC 用户验收澄清）：阶段稿，尚未完成最终交付。** “完整”表示必须覆盖的产品范围，不是完成状态。本次PR83是闭环开发前的唯一化基线：研究采用、方案、交互、视觉AIGC要求与前端草图的完整性必须在合并前齐备。当前这些内容仍有具体未闭项，所以规划和草图保持阶段稿；195G保全、74条对应内容核对、锚点/覆盖检查通过只证明各自范围，不证明所有研究、实际效果或四表面任务完成。2026-10-18 05:34批准保留为当时规划/研究批准，不升级为实现或最终完整前端交付。实际实现、真实外站、四表面构建/设备运行及业务效果按原完整范围在基线后继续验收，不作为本次线上唯一化基线的前置。内容完整性与运行验收分账，不能借后续实施省略本次方案或图稿；本状态不暂停其他已授权工作。
+
+本索引的 reviewed/内容核对指已明确审阅的文稿范围；未审条款、实现、运行、研究与效果不随之通过。原待项按[唯一规划开篇接续表](../../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md#现有未闭项与原工作面接续非新队列)关联原页面、[唯一草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)和同版证据，继续原Owner工作，不新设等待设计批准的实现门槛。
 
 This folder holds the reviewed implementation specification for each canonical App screen. The 44 rows in `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` §36 are distinct UX blueprints and a coverage baseline, not a ceiling on the product's pages or approved tasks; they do not prove that routes, source fields, permissions, effects or acceptance behavior have been verified.
 
@@ -29,7 +33,7 @@ The full visual and interaction scope covers all 44 baseline App screens, existi
 
 ## Intelligent UI 全屏语义映射（2026-10-08）
 
-All 44 screens and the existing Website families receive a product-wide, task-specific visual and interaction upgrade under the sole Experience Constitution. Present externally sourced content and capabilities through LUMENIS's existing Experience and owners. Keep original source material, evidence, works, and provenance unchanged; any excerpt or derived presentation stays identifiable as such.
+All 44 screens and the existing Website families receive a product-wide, task-specific visual and interaction upgrade under the sole Experience Constitution. Present externally sourced content and capabilities through OEVIRA's existing Experience and owners. Keep original source material, evidence, works, and provenance unchanged; any excerpt or derived presentation stays identifiable as such.
 
 Apply the Product Architecture's `2026-10-09 来源类别同权与已有数据优先闭环`: public webpages and platform sources have equal source-category base weight. Evaluate each record's quality, identity, time, rights, and permitted use on its own; equal category weight does not merge those dimensions.
 
@@ -103,10 +107,40 @@ Reuse the current Architecture and Experience corrections for the shared product
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 
-验收同时看真实输入、可信 Evidence、Core/ViewModel、用户操作、成果保存/重开/修订、失败恢复和 Evaluation。SOURCE / RUNTIME / DATABASE / TEST-CI / USER OUTCOME 独立记录；设计采用、实现存在与实际完成分开。工具链升级只改善研发环境，不能算序境产品新增能力。
+验收同时看真实输入、可信 Evidence、Core/ViewModel、用户操作、成果保存/重开/修订、失败恢复和 Evaluation。SOURCE / RUNTIME / DATABASE / TEST-CI / USER OUTCOME 独立记录；设计采用、实现存在与实际完成分开。工具链升级只改善研发环境，不能算寰意产品新增能力。
 
 ### 2026-10-08 有用分段与直接操作补充
 
 应用唯一Experience §38“智能UI的逐步交付与组件选择合同”：本屏明确首个有用块、后续补充/更正、Task/run/输入与结果版本、可用组件及动作、保存回执和恢复。采用原组件保持稳定布局/焦点/选区，旧响应不覆盖用户编辑；事实和引用一致、缺值维度保留、纯文本可用。普通确定性操作不等待模型；按本屏任务决定是否需要动态UI，不能为了统一而套通用卡片。现有实现、设计及验收状态保留；逐屏设计评审记录只按实际评审更新，不构成编码前置，也不声明当前窗口派工状态。
 
 2026-10-08 SYS-06 revision 5 retained a general computer/OS executor target as historical source material. The direct PO correction on 2026-10-11 withdrew general OS/computer control from product requirements. Preserve its code and evidence as history; current SYS-06 covers the controlled in-product browser, authorized page actions, human takeover/stop, task return and saved-result continuity. Its external-browser option is explicit. The withdrawn OS-executor target is not an active requirement or acceptance gate; the current browser acceptance status remains as recorded in its existing evidence.
+
+## 2026-10-18 研究能力接续索引
+
+原SH-01/02/04/05/06、AI-01/02/03、CTH-10、BMP-03/04已在各自合同内补充研究/资料/方案/行动/评价/学习交互与负例，参见唯一完整规划§1.3。这是同一原screen合同的增量，不新增页面权威，不接受GGI旧HTML。公共后端owner已交付实际routes与有界HTTP证据；仅未核实前端绑定OPEN，真实四表面NOT_VERIFIED。
+
+
+## 全项规划核对与本地构建接续（2026-10-18）
+
+本轮在原44屏内补足研究、统计、内容制作、会话、学习及系统工作面的具体控件、四表面层级、确认/取消/恢复与界面自身AIGC。唯一完整规划与空间草图仍为原链接；逐屏新增“全项具体工作合同”及同名工作面须与原章节一起实现，不替换原195G、R/J/U、非G、原创和200以上交互要求。Windows、macOS、Web、iOS分别取实机/构建证据，官网只承接公开说明与去敏演示。文稿覆盖不升级任何ScreenSpec实现状态，也不代表全产品或商用验收。先复核服务端身份/Permission、来源/版本及连接实际核验，再接各原Owner；当前长节目复盘、完整OAuth及其他未闭合事项保留原需求与明确缺口，不以有限实现缩写目标。
+
+本轮专属工作面中的“UI自身AIGC仅可……”限定事实、权限、可执行动作和来源安全，不取消原创界面生成。原两条路径并行保留：按任务适配真实控件，以及生成原创、可编辑、可预览采用/撤销的视觉与空间构图；不得降格成固定模板换色或只做内容生成。原200以上交互、动效、物理要求与四表面分别验收仍完整，实际事实/安全字段始终用可核原生表达。用户可锁定、回到基础布局、减少动态，无AI仍完成正常工作。
+
+
+## 44屏共同工作空间约束：舒展、直接继续、不缩功能
+
+五个架构分工是产品内部能力、数据和Owner边界，不是用户完成一件事必须依次打开的五层页面。首页以“我想做什么/继续哪件工作”为入口：选择研究、写作、制作、经营或品牌问题后直接进入该任务的具体工作面，并带当前合法材料、已保存版本和可用上下文；不要求先选架构、再选模块、再重新录同一问题。必要主体/市场/执行范围在使用该动作时就地说明和选择；当前范围明确且仍获授权则复用，歧义或跨域采用须明确核对，不能靠少点一步绕过Permission或复制跨域数据。
+
+工作面默认舒展：一个清楚的主要编辑/阅读区域、少量必要即时操作、可按需展开的上下文/依据。留白用于区分任务层级与当前焦点，不用巨大装饰把正文挤到屏外；有创意的非对称构成、尺度对比和阶段揭示围绕真实对象展开，不把每个字段塞进紧密小卡。现各专属合同的左/中/右描述是信息关系和宽度足够时的可选并读，不代表默认三栏全部常开；桌面也先保主工作舒展，用户决定何时并读。密集表格/多窗仅在当前任务确需且用户选择时展开，可回舒适阅读；不删除字段、功能或完整比较能力来换留白。200%字体、三语长文本、窄窗和键盘出现时仍可到达主操作。
+
+跨能力继续工作优先就地展开或直接带上下文跳转并保返回锚点：来源旁记要点、结论回原文、错误直达需修输入、当前稿查看影响、通知回待决定处。返回不经过首页重新找对象，不重复要求已合法保存的输入；多个真实任务可各自保稿和版本，系统不会因切面自动停止任务或重新发送外部动作。现有路由/Owner缺接线时明确缺项并保原工作，不能用假浮窗模拟后端已完成。便利操作适用于所有能够复用同一真实合同的能力，不限随手记；当前有用的小巧思纳入既有Owner/本地前端实施范围，而不是减少原能力或再造一套快捷操作服务。
+
+官网以工作故事、真实成果与可控演示舒展叙事，不把架构图当必经导航；Web和Windows/macOS保直接任务入口、原位置返回和用户选择的并读；iOS以一个主工作面、可逆Sheet与清楚回链呈现，不层层堆弹窗。底部便笺、加载小动作和AI表达不能遮挡原稿、重要错误或确认。界面自身AIGC可以提出符合当前任务的原创空间/视觉构图和交互呈现，采用前可预览，用户锁定/撤销有效；不复制参考品牌皮肤、人物或叙事，不把规则重排或静态插画冒实时生成。
+
+验收用完整任务路径对照：从首页合法输入到首次有用编辑/阅读、跨来源核对后回原选区、转用成果而不重复录入、切任务再继续、失败后原位恢复。分别记录导航层数、返回/复制/重复输入次数、首个有用结果耗时、错误和工作丢失；未知未测不填漂亮数字。减步骤不能跳掉必要确认/证据，视觉舒展不能牺牲信息可找性；现仍是设计与接口合同，实际四端布局和可用性由本地同版构建验证。
+
+本轮新增品牌视觉参考范围限定为Miu Miu、Prada、YEARPLAN、Le Labo、观夏及韩国品牌；韩国品牌先从已给参考核实，不自行扩大名单。已有视频/品牌产品研究继续复用，新的官方来源核验只补这个范围。关注布局、留白、字体、材质叙事和交互节奏如何服务真实工作，最终转化为寰意原创表达；未核官方页面/实际画面时只列待核，不能宣称研究完成或复制外观。此限定不阻塞已明确的舒展布局、直接继续和可逆交互合同；后续证据附回本章而非另建产品规划。
+
+## 无需独立屏的要求仍须跨屏验收
+
+审计中的“无需独立屏”只说明不另造页面，绝不表示没有前端要求或从验收排除。三语/无障碍/四表面（如G15/G16/G36/G58）映射各屏共同约束；范围与真实状态（如G8/G40/G89/G126）在相应现有工作面可见；用户成果（如G131/G132）保原成果展示与交接。其余工程/研究要求仍按原Owner、已有旅程及跨屏验收判断，不能因未新增屏而删除、标不适用或自动通过。
