@@ -18,6 +18,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 from contextlib import ExitStack, contextmanager
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Mapping
 
 from lumenis.shared.database import get_repository
@@ -78,6 +79,27 @@ _SHARED_SCOPE_VERSION = 1
 
 class SavedWorkError(ValueError):
     """Stable error codes for the Product Core adapter."""
+
+
+class SavedWorkPersistenceState(Enum):
+    """Internal typed marker; no revoked content or resource identity."""
+
+    COMMITTED_READBACK_UNCONFIRMED = "COMMITTED_READBACK_UNCONFIRMED"
+
+
+def committed_readback_state(error):
+    state = getattr(error, "_saved_work_persistence_state", None)
+    return state.value if state is SavedWorkPersistenceState.COMMITTED_READBACK_UNCONFIRMED else None
+
+
+def _reopen_committed_write(artifact_id, *, actor, scope, replayed):
+    try:
+        return {**reopen_work(artifact_id, actor=actor, scope=scope), "replayed": replayed}
+    except Exception as exc:
+        # Preserve the exact original exception class/args and every existing
+        # caller's denial semantics. Only this post-COMMIT readback is marked.
+        exc._saved_work_persistence_state = SavedWorkPersistenceState.COMMITTED_READBACK_UNCONFIRMED
+        raise
 
 
 def _attachment_spec(name: Any, media_type: Any) -> dict | None:
@@ -545,14 +567,38 @@ def _verified_evidence(con, evidence_id: int, context: dict, actor: Any = None,
     return {**item, "raw_content": text, "provenance": provenance}
 
 
-def _validate_citations(con, citations: list, context: dict, actor: Any = None) -> list:
+def _validate_claim_links(links: Any, markdown: str | None) -> list:
+    """Validate exact saved-text spans; declared relationships are not proof."""
+    if not isinstance(markdown, str) or not isinstance(links, list) or not 1 <= len(links) <= 32:
+        raise SavedWorkError("WORK_CLAIM_LINKS_INVALID")
+    seen = set()
+    for link in links:
+        if not isinstance(link, dict) or set(link) != {"start", "end", "quote", "relationship", "reason"}:
+            raise SavedWorkError("WORK_CLAIM_LINKS_INVALID")
+        start, end = link["start"], link["end"]
+        if (type(start) is not int or type(end) is not int or not 0 <= start < end <= len(markdown)
+                or not isinstance(link["quote"], str) or markdown[start:end] != link["quote"]):
+            raise SavedWorkError("WORK_CLAIM_LINK_UNGROUNDED")
+        if (not isinstance(link["relationship"], str)
+                or link["relationship"] not in {"supports", "contradicts", "qualifies", "context_only"}
+                or not isinstance(link["reason"], str) or not link["reason"].strip()
+                or len(link["reason"]) > 1000 or (start, end) in seen):
+            raise SavedWorkError("WORK_CLAIM_LINKS_INVALID")
+        seen.add((start, end))
+    return links
+
+
+def _validate_citations(con, citations: list, context: dict, actor: Any = None,
+                        *, markdown: str | None = None) -> list:
     if not isinstance(citations, list) or len(citations) > 100:
         raise SavedWorkError("WORK_CITATIONS_INVALID")
     checked = []
     for citation in citations:
         required = {"evidence_id", "start", "end", "quote"}
-        if not isinstance(citation, dict) or not required.issubset(citation) or set(citation) - required - {"source_scope", "purpose"}:
+        if not isinstance(citation, dict) or not required.issubset(citation) or set(citation) - required - {"source_scope", "purpose", "claim_links"}:
             raise SavedWorkError("WORK_CITATION_INVALID")
+        if "claim_links" in citation:
+            _validate_claim_links(citation["claim_links"], markdown)
         purpose = citation.get("purpose", "quote_reference")
         if not isinstance(purpose, str) or purpose not in {"quote_reference", "method_reference"}:
             raise SavedWorkError("WORK_CITATION_PURPOSE_INVALID")
@@ -619,7 +665,7 @@ def _read(con, artifact_id: str, context: dict, actor: Any = None, *, verify_sou
         except (ValueError, PermissionError, LookupError, RuntimeError) as exc:
             raise SavedWorkError('WORK_REPORT_ADOPTION_UNAVAILABLE') from exc
     if verify_sources:
-        document["citations"] = _validate_citations(con, document["citations"], context, actor)
+        document["citations"] = _validate_citations(con, document["citations"], context, actor, markdown=document["markdown"])
         if 'fact_wall' in document['payload']:
             from lumenis.shared.evidence.api import validate_fact_wall_saved_payload
             validate_fact_wall_saved_payload(connection=con, payload=document['payload'],
@@ -872,7 +918,7 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
     with get_repository().connection() as con, ExitStack() as effects:
         con.execute("BEGIN IMMEDIATE")
         try:
-            checked_citations = _validate_citations(con, citations, context, actor)
+            checked_citations = _validate_citations(con, citations, context, actor, markdown=markdown)
             if 'fact_wall' in payload:
                 from lumenis.shared.evidence.api import validate_fact_wall_saved_payload
                 validate_fact_wall_saved_payload(connection=con, payload=payload,
@@ -885,7 +931,7 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
                     if existing["document"]["input_hash"] != input_hash:
                         raise SavedWorkError("WORK_REQUEST_REUSE_CONFLICT")
                     con.rollback()
-                    return {**reopen_work(existing["artifact"]["artifact_id"], actor=actor, scope=scope), "replayed": True}
+                    return _reopen_committed_write(existing["artifact"]["artifact_id"], actor=actor, scope=scope, replayed=True)
             if versions and 'domain_report_adoption' in versions[-1]['document']['payload']:
                 if payload.get('domain_report_adoption') != versions[-1]['document']['payload']['domain_report_adoption']:
                     raise SavedWorkError('WORK_REPORT_ADOPTION_IMMUTABLE')
@@ -937,12 +983,12 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
             _read(con, artifact_id, context, actor)
             _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource)
             authorize_saved_work(actor, scope, action="write")
-            _validate_citations(con, checked_citations, context, actor)
+            _validate_citations(con, checked_citations, context, actor, markdown=markdown)
             if before_commit is not None:
                 before_commit(con, record, document)
             _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource, connection=con)
             authorize_saved_work(actor, scope, action="write", connection=con)
-            _validate_citations(con, checked_citations, context, actor)
+            _validate_citations(con, checked_citations, context, actor, markdown=markdown)
             if kind == "note":
                 _validate_note_sources(con, payload, checked_citations, context, actor)
             if 'fact_wall' in payload:
@@ -959,7 +1005,7 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
             committed = True
             # A receipt is issued only after an independent connection has
             # reopened the committed registry row and actual immutable bytes.
-            return {**reopen_work(artifact_id, actor=actor, scope=scope), "replayed": False}
+            return _reopen_committed_write(artifact_id, actor=actor, scope=scope, replayed=False)
         except BaseException:
             con.rollback()
             raise
@@ -1020,7 +1066,14 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connect
                             "published_at": provenance["provenance"]["published_at"],
                             "captured_at": provenance["provenance"]["captured_at"],
                             "purposes": purposes,
-                            **source_boundaries(provenance["provenance"])})
+                            **source_boundaries(provenance["provenance"]),
+                            **({"claim_links": [link for citation in result["document"]["citations"]
+                                                if citation["evidence_id"] == evidence_id
+                                                for link in citation.get("claim_links", [])],
+                                "claim_link_validation": "SPAN_CHECKED_RELATIONSHIP_UNREVIEWED",
+                                "claim_offset_unit": "unicode_codepoint"}
+                               if any(citation.get("claim_links") for citation in result["document"]["citations"]
+                                      if citation["evidence_id"] == evidence_id) else {})})
     if connection is not None:
         # Scope/rights checks use the caller's transaction. This separate view
         # proves only that immutable upstream rows were committed beforehand;
@@ -1085,7 +1138,7 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connect
     authorize_saved_work(actor, scope, action="read", connection=connection)
     reader = get_repository().connection(read_only=True, wal=False) if connection is None else nullcontext(connection)
     with reader as con:
-        _validate_citations(con, result["document"]["citations"], context, actor)
+        _validate_citations(con, result["document"]["citations"], context, actor, markdown=result["document"]["markdown"])
     authorize_saved_work(actor, scope, action="read", connection=connection)
     return {**result, "content": raw, "receipt": receipt}
 
@@ -1394,7 +1447,7 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
     authorize_saved_work(actor, scope, action="read")
     with get_repository().connection(read_only=True, wal=False) as con:
         for item in results:
-            _validate_citations(con, item["document"]["citations"], context, actor)
+            _validate_citations(con, item["document"]["citations"], context, actor, markdown=item["document"]["markdown"])
             if latest_only:
                 reopen_work(item["artifact"]["artifact_id"], actor=actor, scope=scope, connection=con)
                 versions = _versions(con, item["document"]["work_id"], context, actor)

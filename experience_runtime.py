@@ -2333,6 +2333,20 @@ def _source_brief_context(action, *, include_actor=False, module="reports"):
     return (*result, actor) if include_actor else result
 
 
+def _with_committed_readback_state(result, exc):
+    """Add a non-success persistence hint without changing denial semantics."""
+    from lumenis.shared.reporting.saved_work import committed_readback_state
+    state = committed_readback_state(exc)
+    if state is not None:
+        response = result[0] if isinstance(result, tuple) else result
+        body = response.get_json(silent=True)
+        if isinstance(body, dict):
+            body["persistence_state"] = state
+            response.set_data(json.dumps(body))
+            response.headers["Cache-Control"] = "no-store"
+    return result
+
+
 def _source_brief_job_error(exc):
     code = _content_project_error_code(exc)
     if isinstance(exc, PermissionError) or code == "WORK_PERMISSION_DENIED":
@@ -2342,8 +2356,8 @@ def _source_brief_job_error(exc):
     elif isinstance(exc, RuntimeError):
         status = 409 if "CONFLICT" in code or "STOPPING" in code else 503
     else:
-        return _content_project_error(exc)
-    return jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status
+        return _with_committed_readback_state(_content_project_error(exc), exc)
+    return _with_committed_readback_state((jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status), exc)
 
 
 _SHARED_WORKSPACE_SCOPE_HEADER = "X-Lumenis-Workspace-Scope"
@@ -2606,10 +2620,10 @@ def _shared_work_response(call):
             status = 400
         response = jsonify({"ok": False, "code": code, "publish_status": "not_performed"})
         response.headers["Cache-Control"] = "no-store"
-        return response, status
+        return _with_committed_readback_state((response, status), exc)
     except Exception as exc:
         current_app.logger.warning("shared work owner unavailable: %s", type(exc).__name__)
-        return jsonify({"ok": False, "code": "SHARED_WORK_UNAVAILABLE"}), 503
+        return _with_committed_readback_state((jsonify({"ok": False, "code": "SHARED_WORK_UNAVAILABLE"}), 503), exc)
 
 
 def _shared_work_local_access_allowed():

@@ -2641,11 +2641,15 @@ def _build_content_delivery(timeline, rendered_path, *, output_kind, options, re
     if "podcast_plan" in options:
         from podcast.intelligence.episode_runtime import PodcastPlan, build_offline_publication_documents
         plan = PodcastPlan.from_dict(options["podcast_plan"])
-        expected = plan.build_timeline(tuple(timeline.assets))
+        voice_tracks = {t.track_id for t in timeline.tracks if t.kind == "voiceover" and t.clips}
+        separate = voice_tracks != {"podcast_voice"}
+        expected = plan.build_timeline(tuple(timeline.assets), separate_speakers=separate)
         def spans(value):
-            return sorted((c.media_asset_id, c.source_in, c.source_out, c.timeline_start, c.audio_stream_index or 0)
-                          for t in value.tracks for c in t.clips)
-        if spans(expected) != spans(timeline):
+            return sorted((t.track_id, c.purpose, c.media_asset_id, c.source_in, c.source_out,
+                           c.timeline_start, c.audio_stream_index)
+                          for t in value.tracks if t.kind == "voiceover" for c in t.clips)
+        if (spans(expected) != spans(timeline)
+                or any(t.clips and t.kind not in {"voiceover", "bgm", "sfx"} for t in timeline.tracks)):
             raise LocalArtifactError("PODCAST_PLAN_TIMELINE_MISMATCH")
         name = "episode." + formats[0]
         item = build_offline_publication_documents(plan,audio_filename=name,audio_size=len(files[name]),

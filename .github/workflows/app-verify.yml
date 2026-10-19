@@ -107,6 +107,15 @@ jobs:
         working-directory: app
         run: flutter analyze
 
+      - name: Test reviewed UI and saved-work regressions (BLOCKING)
+        working-directory: app
+        run: |
+          flutter test --no-pub \
+            test/features/system/sys_waiting_feedback_test.dart \
+            test/features/bmp08/bmp08_saved_work_test.dart \
+            test/features/bmp08/bmp08_saved_editor_widget_test.dart \
+            test/features/bmp04/bmp04_classification_test.dart
+
       - name: Build real Web Workspace (BLOCKING)
         working-directory: app
         run: flutter build web --release
