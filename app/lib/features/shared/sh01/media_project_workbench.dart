@@ -243,9 +243,12 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     super.dispose();
   }
 
-  bool get _isBusy =>
-      _choosing || _retrieving || _batchPreviewOpen ||
+  bool get _isProcessing =>
+      _choosing || _retrieving ||
       _controllerInitialized && _controller.busy;
+
+  // A confirmation dialog locks edits without claiming a request is running.
+  bool get _isBusy => _batchPreviewOpen || _isProcessing;
 
   WaitingScene get _waitingScene => _retrieving
       ? WaitingScene.search
@@ -1351,7 +1354,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           ],
         ),
         if (!wide) _editorTools(timeline, wide: wide),
-        if (_isBusy && !_layerOpen) ...[
+        if (_isProcessing && !_layerOpen) ...[
           const LinearProgressIndicator(),
           if (_failure == null && _notice == null) WaitingFeedback(scene: _waitingScene),
           Semantics(
@@ -1845,7 +1848,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                               ),
                             ],
                           ),
-                          if (_isBusy) ...[
+                          if (_isProcessing) ...[
                             const LinearProgressIndicator(),
                             if (_failure == null && _notice == null) WaitingFeedback(scene: _waitingScene),
                             Semantics(

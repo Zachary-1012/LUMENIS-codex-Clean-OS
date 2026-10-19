@@ -14,6 +14,7 @@ import 'package:lumenis_app/features/shared/sh01/media_project_files.dart';
 import 'package:lumenis_app/features/shared/sh01/media_preview.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_snapshot.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_workbench.dart';
+import 'package:lumenis_app/features/system/sys02/sys_system_foundation.dart' show WaitingFeedback;
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/navigation/lumenis_leave_guard.dart';
 
@@ -516,6 +517,9 @@ void main() {
     await tester.ensureVisible(button);
     await tester.tap(button);
     await tester.pumpAndSettle();
+    expect(controller.busy, isFalse);
+    expect(find.byType(WaitingFeedback), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
   }
 
   testWidgets('multi-clip drafts preview cancel adopt and undo through existing inspector', (tester) async {
@@ -527,10 +531,15 @@ void main() {
     expect(client.batchCommands, hasLength(2));
     expect(controller.timeline, same(base));
     expect(client.exports, 0);
+    expect(find.byKey(const Key('media-batch-preview-dialog')), findsOneWidget);
+    expect(tester.widget<OutlinedButton>(find.byKey(const Key('media-batch-preview'))).onPressed, isNull);
+    expect(tester.widget<FilledButton>(find.byKey(const Key('media-batch-adopt'))).onPressed, isNotNull);
+    expect(tester.widget<TextButton>(find.byKey(const Key('media-batch-cancel'))).onPressed, isNotNull);
     await tester.tap(find.byKey(const Key('media-batch-cancel')));
     await tester.pumpAndSettle();
     expect(controller.timeline, same(base));
     expect(tester.widget<TextField>(sourceEnd()).controller!.text, '7');
+    expect(tester.widget<OutlinedButton>(find.byKey(const Key('media-batch-preview'))).onPressed, isNotNull);
     await previewBatch(tester);
     await tester.tap(find.byKey(const Key('media-batch-adopt')));
     await tester.pumpAndSettle();
@@ -588,6 +597,8 @@ void main() {
     await tester.ensureVisible(button);
     await tester.tap(button);
     await tester.pump();
+    expect(controller.busy, isTrue);
+    expect(find.byType(LinearProgressIndicator), findsWidgets);
     await tester.enterText(sourceEnd(), '5');
     client.pendingBatch!.complete();
     await tester.pumpAndSettle();

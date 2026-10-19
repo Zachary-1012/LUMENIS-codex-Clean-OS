@@ -47,18 +47,18 @@ void main() {
   test('global scope requires explicit global permission for observations', () {
     final three = _bmp03();
     final threeBinding = three['source_read_binding'] as Map;
-    threeBinding.addAll({'canonical_scope': 'GLOBAL_ALL', 'subject_id': null,
+    threeBinding.addAll(<String, dynamic>{'canonical_scope': 'GLOBAL_ALL', 'subject_id': null,
       'brand_focus_id': null, 'global_all_granted': true});
-    (three['source_context'] as Map).addAll({'mode': 'GLOBAL_ALL',
+    (three['source_context'] as Map).addAll(<String, dynamic>{'mode': 'GLOBAL_ALL',
       'subject_id': null, 'brand_focus_id': null});
     expect(Bmp03Snapshot.fromResponse(three).sourceObservations, hasLength(1));
     threeBinding['global_all_granted'] = false;
     expect(Bmp03Snapshot.fromResponse(three).scopeReady, isFalse);
     final ten = _bmp10();
     final tenBinding = ten['observation_read_binding'] as Map;
-    tenBinding.addAll({'canonical_scope': 'GLOBAL_ALL', 'subject_id': null,
+    tenBinding.addAll(<String, dynamic>{'canonical_scope': 'GLOBAL_ALL', 'subject_id': null,
       'brand_focus_id': null, 'global_all_granted': true});
-    (ten['observation_context'] as Map).addAll({'canonical_scope': 'GLOBAL_ALL',
+    (ten['observation_context'] as Map).addAll(<String, dynamic>{'canonical_scope': 'GLOBAL_ALL',
       'subject_id': null, 'brand_focus_id': null});
     expect(Bmp10Snapshot.fromResponse(ten).observedEvents, hasLength(1));
     tenBinding['global_all_granted'] = false;
@@ -182,7 +182,7 @@ Map<String, dynamic> _bmp03({bool empty = false, bool partial = false}) => {
   'ok': true, 'screen': 'BMP-03', 'bound': true, 'source': 'runtime',
   'source_observation_contract': 'lumenis.bmp03-source-observations.v1',
   'source_read_binding': _binding(),
-  'source_context': {'mode': 'FOCUS', 'domain_id': 'BMP', 'product_id': 'ZBMP',
+  'source_context': <String, dynamic>{'mode': 'FOCUS', 'domain_id': 'BMP', 'product_id': 'ZBMP',
     'subject_id': 'SUBJECT', 'brand_focus_id': 'BRAND'},
   'truth': {'product_id': 'ZBMP', 'domain_id': 'zbmp', 'source_count': empty ? 0 : 1,
     'rejected_count': 0, 'truncated': partial,
@@ -194,7 +194,7 @@ Map<String, dynamic> _bmp10({bool empty = false, bool partial = false}) => {
   'ok': true, 'screen': 'BMP-10', 'bound': true, 'source': 'runtime',
   'observation_contract': 'lumenis.bmp10-observations.v1',
   'observation_read_binding': _binding(),
-  'observation_context': {'canonical_scope': 'FOCUS', 'domain_id': 'BMP',
+  'observation_context': <String, dynamic>{'canonical_scope': 'FOCUS', 'domain_id': 'BMP',
     'product_id': 'ZBMP', 'subject_id': 'SUBJECT', 'brand_focus_id': 'BRAND', 'actor_id': 1},
   'truth': {'domain_id': 'zbmp', 'product_id': 'ZBMP', 'analysis_state': 'NOT_COMPUTED',
     'data_state': partial ? 'PARTIAL' : empty ? 'EMPTY' : 'READY',
