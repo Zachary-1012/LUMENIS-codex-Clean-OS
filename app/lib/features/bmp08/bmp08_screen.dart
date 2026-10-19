@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../core/lumenis_icon.dart';
@@ -22,9 +23,9 @@ class Bmp08Screen extends StatefulWidget {
 }
 
 class _Bmp08ScreenState extends State<Bmp08Screen> {
-  late final Bmp08ViewModel _viewModel = Bmp08ViewModel(
-    repository: widget.repository ?? CoreBmp08Repository(client: widget.client),
-  );
+  late final Bmp08Repository _repository =
+      widget.repository ?? CoreBmp08Repository(client: widget.client);
+  late final Bmp08ViewModel _viewModel = Bmp08ViewModel(repository: _repository);
 
   @override
   void initState() {
@@ -47,12 +48,18 @@ class _Bmp08ScreenState extends State<Bmp08Screen> {
           animation: _viewModel,
           builder: (context, _) => switch (_viewModel.phase) {
             Bmp08LoadPhase.loading => const _Loading(),
-            Bmp08LoadPhase.failed => _Failure(
-              kind: _viewModel.failureKind!,
-              onRetry: _viewModel.refresh,
-            ),
+            Bmp08LoadPhase.failed => Column(children: [
+              Expanded(child: _Failure(kind: _viewModel.failureKind!, onRetry: _viewModel.refresh)),
+              if (_repository is Bmp08SavedWorkRepository)
+                TextButton(onPressed: () => showDialog<void>(context: context,
+                  barrierDismissible: false,
+                  builder: (_) => _SavedPodcastDialog(repository: _repository as Bmp08SavedWorkRepository)),
+                  child: Text(_podcastCopy(context, 'shared'))),
+            ]),
             Bmp08LoadPhase.ready => _PodcastStudio(
               snapshot: _viewModel.snapshot!,
+              savedRepository: _repository is Bmp08SavedWorkRepository
+                  ? _repository as Bmp08SavedWorkRepository : null,
               actionState: _viewModel.actionState,
               actionId: _viewModel.actionId,
               onRefresh: _viewModel.refresh,
@@ -72,8 +79,10 @@ class _PodcastStudio extends StatefulWidget {
     required this.actionId,
     required this.onRefresh,
     required this.onAction,
+    this.savedRepository,
   });
 
+  final Bmp08SavedWorkRepository? savedRepository;
   final Bmp08Snapshot snapshot;
   final Bmp08ActionState actionState;
   final String? actionId;
@@ -159,6 +168,11 @@ class _PodcastStudioState extends State<_PodcastStudio> {
     widget.onRefresh();
   }
 
+  Future<void> _openSaved({String? domainId}) async {
+    await showDialog<void>(context: context, barrierDismissible: false,
+      builder: (_) => _SavedPodcastDialog(repository: widget.savedRepository!, domainId: domainId));
+  }
+
   Bmp08Snapshot _safeSnapshot(Bmp08Snapshot source) {
     if (source.scopeApproved) return source;
     return const Bmp08Snapshot(
@@ -238,6 +252,20 @@ class _PodcastStudioState extends State<_PodcastStudio> {
         final header = <Widget>[
           _Header(copy: copy, onRefresh: _refresh),
           _StudioContext(snapshot: snapshot, copy: copy),
+          if (widget.savedRepository != null)
+            Wrap(spacing: 8, children: [
+              TextButton(
+                key: const ValueKey('podcast-open-shared'),
+                onPressed: () => _openSaved(),
+                child: Text(_podcastCopy(context, 'shared')),
+              ),
+              if (snapshot.scopeApproved)
+                TextButton(
+                  key: const ValueKey('podcast-open-brand'),
+                  onPressed: () => _openSaved(domainId: 'BMP'),
+                  child: Text(_podcastCopy(context, 'brand')),
+                ),
+            ]),
           if (!snapshot.scopeApproved) ...[
             const SizedBox(height: 8),
             _Gate(copy: copy),
@@ -1863,4 +1891,194 @@ class _Bmp08Copy {
       'kind.TRANSCRIPT': '대본',
     },
   };
+}
+
+
+String _podcastCopy(BuildContext context, String key) {
+  final language = Localizations.localeOf(context).languageCode;
+  const values = <String, List<String>>{
+    'shared': ['已存播客 · 独立工作区', 'Saved podcasts · Shared workspace', '저장된 팟캐스트 · 독립 작업 공간'],
+    'brand': ['已存播客 · 当前品牌范围', 'Saved podcasts · current brand scope', '저장된 팟캐스트 · 현재 브랜드 범위'],
+    'empty': ['此范围暂无已存播客。', 'No saved podcasts in this scope.', '이 범위에 저장된 팟캐스트가 없습니다.'],
+    'more': ['加载更多', 'Load more', '더 불러오기'],
+    'retry': ['重试', 'Retry', '다시 시도'],
+    'close': ['关闭', 'Close', '닫기'],
+    'save': ['保存脚本新版本', 'Save new script version', '새 스크립트 버전 저장'],
+    'original': ['原稿', 'Original transcript', '원문'],
+    'corrected': ['校对稿', 'Corrected transcript', '교정본'],
+    'audio': ['改稿不改音频。音频版本和来源链尚未验证。', 'Text edits do not change audio. Audio version and lineage remain unverified.', '원고 수정은 오디오를 바꾸지 않습니다. 오디오 버전과 출처 연결은 미검증입니다.'],
+    'dirty': ['尚未保存的脚本修订', 'Unsaved script revisions', '저장되지 않은 스크립트 수정'],
+    'saved': ['已保存并重新读取脚本版本。', 'Script version saved and read back.', '스크립트 버전을 저장하고 다시 읽었습니다.'],
+    'discard': ['放弃未保存修订并关闭？', 'Discard unsaved edits and close?', '저장되지 않은 수정을 버리고 닫을까요?'],
+    'discardDetail': ['关闭不会撤销可能已提交的保存。重新打开可核对服务端版本。', 'Closing will not undo a save that may have committed. Reopen to check the server version.', '닫아도 이미 제출된 저장은 취소되지 않습니다. 다시 열어 서버 버전을 확인하세요.'],
+    'cancel': ['继续编辑', 'Keep editing', '계속 편집'],
+    'failed': ['未能确认结果。修订仍保留；可重试或关闭后重新打开核对。', 'Result not confirmed. Edits are retained; retry or reopen to check.', '결과를 확인하지 못했습니다. 수정은 유지됩니다. 재시도하거나 다시 열어 확인하세요.'],
+    'denied': ['当前无权读取或保存此播客。修订未清除。', 'Access to read or save this podcast was denied. Edits are retained.', '이 팟캐스트를 읽거나 저장할 권한이 없습니다. 수정은 유지됩니다.'],
+    'conflict': ['版本已变化。修订仍保留，请复制修订后重新打开最新版本。', 'The saved version changed. Edits are retained; copy them before reopening the latest version.', '저장된 버전이 변경되었습니다. 수정은 유지됩니다. 내용을 복사한 뒤 최신 버전을 다시 여세요.'],
+    'pending': ['正在请求保存并核对；请等待结果，关闭不会取消已提交写入。', 'Saving and checking the result. Closing cannot cancel a committed write.', '저장 결과를 확인하고 있습니다. 닫아도 제출된 쓰기는 취소되지 않습니다.'],
+    'unverified': ['部分记录未能核验，列表可能不完整。', 'Some records could not be verified; the list may be incomplete.', '일부 기록을 검증하지 못해 목록이 불완전할 수 있습니다.'],
+  };
+  return values[key]![language == 'zh' ? 0 : language == 'ko' ? 2 : 1];
+}
+
+/// SavedWork revision surface inside the existing studio; no audio executor.
+class _SavedPodcastDialog extends StatefulWidget {
+  const _SavedPodcastDialog({required this.repository, this.domainId});
+  final Bmp08SavedWorkRepository repository;
+  final String? domainId;
+  @override
+  State<_SavedPodcastDialog> createState() => _SavedPodcastDialogState();
+}
+
+class _SavedPodcastDialogState extends State<_SavedPodcastDialog> {
+  final _items = <Map<String, String>>[];
+  final _edits = <String, String>{};
+  Bmp08SavedEpisode? _episode;
+  bool _busy = false, _saving = false, _saved = false, _unverified = false;
+  String? _error, _cursor, _requestId;
+  int _generation = 0;
+
+  @override
+  void initState() { super.initState(); _list(); }
+
+  String _errorKey(Object error) {
+    if (error is LumenisCoreException) {
+      if (error.statusCode == 401 || error.statusCode == 403) return 'denied';
+      if (error.statusCode == 409 || (error.errorCode ?? '').contains('CONFLICT')) return 'conflict';
+    }
+    return 'failed';
+  }
+
+  Future<void> _list() async {
+    final generation = ++_generation;
+    setState(() { _busy = true; _error = null; });
+    try {
+      final response = await widget.repository.listEpisodes(domainId: widget.domainId, cursor: _cursor);
+      if (response['ok'] != true || response['result'] is! Map) throw const FormatException();
+      final result = response['result'] as Map;
+      if (result['items'] is! List || result['has_more'] is! bool ||
+          (result['has_more'] == true && (result['next_cursor'] is! String || result['next_cursor'] == _cursor))) {
+        throw const FormatException();
+      }
+      final items = <Map<String, String>>[];
+      for (final raw in result['items'] as List) {
+        if (raw is! Map || raw['artifact'] is! Map || raw['document'] is! Map) throw const FormatException();
+        final id = raw['artifact']['artifact_id']; final title = raw['document']['title'];
+        if (id is! String || !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(id) || title is! String ||
+            title.trim().isEmpty || raw['document']['kind'] != 'podcast_episode') throw const FormatException();
+        items.add({'id': id, 'title': title});
+      }
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        for (final item in items) { if (!_items.any((old) => old['id'] == item['id'])) _items.add(item); }
+        _cursor = result['has_more'] == true ? result['next_cursor'] as String : null;
+        _unverified = result['verification_complete'] != true;
+      });
+    } catch (error) {
+      if (mounted && generation == _generation) setState(() => _error = _errorKey(error));
+    } finally {
+      if (mounted && generation == _generation) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _open(String id) async {
+    final generation = ++_generation;
+    setState(() { _busy = true; _error = null; });
+    try {
+      final episode = await widget.repository.reopenEpisode(id, domainId: widget.domainId);
+      if (!mounted || generation != _generation) return;
+      setState(() { _episode = episode; _edits.clear(); _saved = false; _requestId = null; });
+    } catch (error) {
+      if (mounted && generation == _generation) setState(() => _error = _errorKey(error));
+    } finally {
+      if (mounted && generation == _generation) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _save() async {
+    if (_busy || _episode == null || _edits.isEmpty) return;
+    final generation = ++_generation;
+    _requestId ??= 'podcast-${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 32)}';
+    setState(() { _busy = true; _saving = true; _error = null; _saved = false; });
+    try {
+      final saved = await widget.repository.saveEpisode(_episode!, Map.of(_edits), _requestId!, domainId: widget.domainId);
+      if (!mounted || generation != _generation) return;
+      setState(() { _episode = saved; _edits.clear(); _requestId = null; _saved = true; });
+    } catch (error) {
+      if (mounted && generation == _generation) setState(() => _error = _errorKey(error));
+    } finally {
+      if (mounted && generation == _generation) setState(() { _busy = false; _saving = false; });
+    }
+  }
+
+  Future<void> _close() async {
+    if (_saving) return;
+    if (_edits.isNotEmpty) {
+      final discard = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+        title: Text(_podcastCopy(context, 'discard')),
+        content: Text(_podcastCopy(context, 'discardDetail')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(_podcastCopy(context, 'cancel'))),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(_podcastCopy(context, 'close'))),
+        ],
+      ));
+      if (discard != true || !mounted) return;
+    }
+    ++_generation;
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final episode = _episode;
+    return PopScope(canPop: false,
+      onPopInvokedWithResult: (didPop, result) { if (!didPop) _close(); },
+      child: Dialog.fullscreen(child: SafeArea(child: Column(children: [
+        Padding(padding: const EdgeInsets.all(12), child: Row(children: [
+          Expanded(child: Text(episode?.title ?? _podcastCopy(context, widget.domainId == null ? 'shared' : 'brand'))),
+          TextButton(onPressed: _saving ? null : _close, child: Text(_podcastCopy(context, 'close'))),
+        ])),
+        if (_busy) const LinearProgressIndicator(),
+        Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_error != null) SelectableText(_podcastCopy(context, _error!)),
+            if (_saving) Text(_podcastCopy(context, 'pending')),
+            if (episode == null) ...[
+              if (!_busy && _items.isEmpty && _error == null) Text(_podcastCopy(context, 'empty')),
+              if (_unverified) Text(_podcastCopy(context, 'unverified')),
+              for (final item in _items) ListTile(title: Text(item['title']!), enabled: !_busy,
+                onTap: () => _open(item['id']!)),
+              if (!_busy && (_cursor != null || _error != null)) TextButton(onPressed: _list,
+                child: Text(_podcastCopy(context, _error == null ? 'more' : 'retry'))),
+            ] else ...[
+              Text('v${episode.version} · r${episode.plan['revision']}'),
+              Text(_podcastCopy(context, 'audio')),
+              if (_saved) Text(_podcastCopy(context, 'saved')),
+              if (_edits.isNotEmpty) Text(_podcastCopy(context, 'dirty')),
+              for (final segment in episode.segments) ...[
+                const SizedBox(height: 16),
+                Text('${segment['chapter_title']} · ${segment['speaker']}'),
+                Text(_podcastCopy(context, 'original')),
+                SelectableText(segment['original_text'] as String),
+                const SizedBox(height: 8),
+                TextFormField(key: ValueKey('${episode.artifactId}:${segment['segment_id']}'),
+                  enabled: !_busy, initialValue: _edits[segment['segment_id']] ?? segment['corrected_text'] as String,
+                  minLines: 3, maxLines: null,
+                  decoration: InputDecoration(labelText: _podcastCopy(context, 'corrected'), border: const OutlineInputBorder()),
+                  onChanged: (value) => setState(() {
+                    final id = segment['segment_id'] as String;
+                    if (value == segment['corrected_text']) { _edits.remove(id); } else { _edits[id] = value; }
+                    _requestId = null; _saved = false;
+                  })),
+              ],
+              const SizedBox(height: 16),
+              FilledButton(onPressed: _busy || _edits.isEmpty || _edits.values.any((v) => v.trim().isEmpty) ? null : _save,
+                child: Text(_podcastCopy(context, 'save'))),
+            ],
+          ],
+        ))),
+      ]))),
+    );
+  }
 }

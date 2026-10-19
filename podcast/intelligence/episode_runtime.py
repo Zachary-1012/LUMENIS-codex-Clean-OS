@@ -70,6 +70,15 @@ def _required_text(value: Any, field_name: str) -> str:
         value.encode("utf-8")
     except UnicodeEncodeError as exc:
         raise ValueError(f"{field_name} must contain valid Unicode") from exc
+    if "\x00" in value:
+        raise ValueError(f"{field_name} contains a null character")
+    # Plans are persisted before their text is exported as WebVTT and RSS.
+    # Reject non-text XML 1.0 characters at the shared contract boundary,
+    # rather than accepting a saved plan which cannot later be delivered.
+    if any(not (character in "\t\n\r" or "\u0020" <= character <= "\ud7ff"
+                or "\ue000" <= character <= "\ufffd"
+                or "\U00010000" <= character <= "\U0010ffff") for character in value):
+        raise ValueError(f"{field_name} contains an unsupported control character")
     return value
 
 

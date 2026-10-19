@@ -110,6 +110,10 @@ class _ReadyState extends StatelessWidget {
                   const SizedBox(height: 20),
                   _FocusBand(snapshot: snapshot),
                   const SizedBox(height: 20),
+                  if (snapshot.scopeReady && snapshot.dashboards.isNotEmpty) ...[
+                    _ClassificationWorkspace(snapshot: snapshot, viewModel: viewModel),
+                    const SizedBox(height: 20),
+                  ],
                   if (snapshot.presentationState ==
                           Bmp04PresentationState.ready ||
                       snapshot.presentationState ==
@@ -817,4 +821,100 @@ class _RiverPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RiverPainter oldDelegate) =>
       oldDelegate.palette != palette;
+}
+
+String _classificationCopy(BuildContext context, String en, String zh, String ko) {
+  return switch (Localizations.localeOf(context).languageCode) {
+    'zh' => zh, 'ko' => ko, _ => en,
+  };
+}
+
+String _categoryLabel(BuildContext context, String category) => switch (category) {
+  'brand_event' => _classificationCopy(context, 'Brand events', '品牌事件', '브랜드 이벤트'),
+  'product_event' => _classificationCopy(context, 'Product events', '产品事件', '제품 이벤트'),
+  _ => _classificationCopy(context, 'Industry events', '行业事件', '업계 이벤트'),
+};
+
+class _ClassificationWorkspace extends StatelessWidget {
+  const _ClassificationWorkspace({required this.snapshot, required this.viewModel});
+  final Bmp04Snapshot snapshot;
+  final Bmp04ViewModel viewModel;
+
+  Future<void> _classify(BuildContext context, Bmp04CuratedEvent event, String category) async {
+    final prepared = await viewModel.previewClassification(event.id, category);
+    if (!context.mounted || !prepared) return;
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: Text(_classificationCopy(context, 'Confirm classification', '确认分类', '분류 확인')),
+      content: Text('${event.title}\n${event.evidenceReference}\n${_categoryLabel(context, category)}\n\n${_classificationCopy(context,
+        'This saves your interpretation of this event. It does not change the source facts. If the source or saved classification changes, preview again.',
+        '仅保存你对此事件的人工判断，不改变来源事实。来源或已保存分类发生变化时，需要重新预览。',
+        '이 이벤트에 대한 판단을 저장합니다. 원본 사실은 변경하지 않습니다. 원본이나 저장된 분류가 바뀌면 다시 미리 보세요.')}'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(_classificationCopy(context, 'Cancel', '取消', '취소'))),
+        FilledButton(key: const Key('bmp04-confirm-classification'),
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(_classificationCopy(context, 'Save classification', '保存分类', '분류 저장'))),
+      ],
+    ));
+    if (confirmed == true && context.mounted) {
+      await viewModel.confirmClassification();
+    } else {
+      viewModel.cancelClassification();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dashboard = snapshot.dashboards.firstWhere(
+      (item) => item.category == viewModel.selectedCategory,
+      orElse: () => snapshot.dashboards.first);
+    return _Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(_classificationCopy(context, 'Human-classified event sample', '人工分类事件样本', '수동 분류 이벤트 표본'),
+        style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 8),
+      Text(_classificationCopy(context,
+        'Counts describe the current verified curated sample, not market reach or popularity. Unclassified events stay unknown.',
+        '计数仅描述当前已核验策展样本，不代表全市场覆盖或热度。未分类事件保持未知。',
+        '집계는 현재 검증된 큐레이션 표본이며 시장 도달률이나 인기도가 아닙니다. 미분류 이벤트는 미확인으로 유지됩니다.')),
+      const SizedBox(height: 12),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final category in bmp04Categories)
+          ChoiceChip(key: Key('bmp04-view-$category'),
+            label: Text(_categoryLabel(context, category)),
+            selected: dashboard.category == category,
+            onSelected: (_) => viewModel.selectCategory(category)),
+      ]),
+      const SizedBox(height: 12),
+      Text('${_classificationCopy(context, 'Observed classified events', '已分类观测事件', '분류된 관측 이벤트')}: ${dashboard.observed}'),
+      Text('${_classificationCopy(context, 'Complete sample count', '完整样本计数', '전체 표본 수')}: ${dashboard.total ?? '—'}'),
+      Text('${_classificationCopy(context, 'Unclassified', '未分类', '미분류')}: ${snapshot.unclassifiedEventCount ?? '—'}'),
+      for (final event in dashboard.events)
+        ListTile(key: Key('bmp04-dashboard-event-${event.id}'),
+          title: Text(event.title), subtitle: Text(event.evidenceReference)),
+      if (dashboard.events.length < dashboard.observed)
+        Text(_classificationCopy(context, 'Only part of the event list is displayed.', '当前仅展示部分事件。', '이벤트 목록의 일부만 표시됩니다.')),
+      const Divider(),
+      Text(_classificationCopy(context, 'Review an individual event', '逐条核对事件', '개별 이벤트 검토')),
+      Text(_classificationCopy(context, 'The displayed event list may be a limited subset of the sample.', '下方事件列表可能只展示当前样本的一部分。', '아래 이벤트 목록은 현재 표본의 일부일 수 있습니다.')),
+      if (snapshot.focus.isGlobal)
+        Text(_classificationCopy(context, 'Select a brand to classify events.', '请选择品牌后再分类。', '이벤트를 분류하려면 브랜드를 선택하세요.')),
+      for (final event in snapshot.curatedEvents)
+        ListTile(title: Text(event.title), subtitle: Text(event.evidenceReference),
+          trailing: PopupMenuButton<String>(key: Key('bmp04-classify-${event.id}'),
+            enabled: viewModel.canClassify,
+            tooltip: _classificationCopy(context, 'Preview classification', '预览分类', '분류 미리 보기'),
+            icon: const Icon(Icons.edit_outlined),
+            onSelected: (category) => _classify(context, event, category),
+            itemBuilder: (context) => [for (final category in bmp04Categories)
+              PopupMenuItem(value: category, child: Text(_categoryLabel(context, category)))],
+          )),
+      if (viewModel.classificationBusy) const LinearProgressIndicator(),
+      if (viewModel.classificationFailure != null)
+        Text(viewModel.classificationOutcomeUnknown
+          ? _classificationCopy(context, 'Save outcome is uncertain. Refresh to check before trying again.', '保存结果尚未确认，请先刷新核对后再尝试。', '저장 결과가 불확실합니다. 다시 시도하기 전에 새로고침하여 확인하세요.')
+          : _classificationCopy(context, 'The classification could not be saved. Check access and refresh for a new preview.', '分类未能保存，请核对权限并刷新后重新预览。', '분류를 저장하지 못했습니다. 권한을 확인하고 새로고침 후 다시 미리 보세요.')),
+      TextButton(onPressed: viewModel.classificationBusy ? null : viewModel.refresh,
+        child: Text(_classificationCopy(context, 'Refresh', '刷新', '새로고침'))),
+    ]));
+  }
 }

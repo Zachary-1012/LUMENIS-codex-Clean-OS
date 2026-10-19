@@ -23,6 +23,11 @@ class Bmp04Snapshot {
     required this.rejectedCrossFocusCount,
     required this.rejectedUnscopedCount,
     this.sourceObservations = const [],
+    this.dashboards = const [],
+    this.curatedEvents = const [],
+    this.unclassifiedEventCount,
+    this.classificationState = 'UNAVAILABLE',
+
   });
 
   final bool contractBound;
@@ -36,6 +41,11 @@ class Bmp04Snapshot {
   final int rejectedCrossFocusCount;
   final int rejectedUnscopedCount;
   final List<Bmp04SourceObservation> sourceObservations;
+  final List<Bmp04Dashboard> dashboards;
+  final List<Bmp04CuratedEvent> curatedEvents;
+  final int? unclassifiedEventCount;
+  final String classificationState;
+
 
   bool get scopeReady => focus.isGlobal
       ? contractBound && isBmpOwner && globalScopeReady
@@ -633,5 +643,105 @@ Bmp04Snapshot _sourceObservationSnapshot(Map<String,dynamic> response) {
   }
   return Bmp04Snapshot(contractBound:bound,isBmpOwner:owner,dataState:!allowed?'UNKNOWN':incomplete || rejectedRows>0?'PARTIAL':expected=='READY'?'OBSERVATIONS_ONLY':'EMPTY',
       focus:focus,focusBindingApplied:allowed,readAllowed:allowed,globalScopeReady:allowed && focus.isGlobal,
-      channels:const [],rejectedCrossFocusCount:0,rejectedUnscopedCount:rejectedRows,sourceObservations:List.unmodifiable(observations));
+      channels:const [],rejectedCrossFocusCount:0,rejectedUnscopedCount:rejectedRows,sourceObservations:List.unmodifiable(observations),
+      dashboards: allowed ? _dashboards(truth, focus) : const [],
+      curatedEvents: allowed ? _curatedEvents(response['sections']) : const [],
+      classificationState: allowed && truth['classification_state'] is String
+          ? truth['classification_state'] as String : 'UNAVAILABLE',
+      unclassifiedEventCount: allowed && count(truth['unclassified_event_count'])
+          ? truth['unclassified_event_count'] as int : null);
+
+}
+
+const bmp04Categories = ['brand_event', 'product_event', 'industry_event'];
+
+class Bmp04CuratedEvent {
+  const Bmp04CuratedEvent(this.id, this.title, this.evidenceReference);
+  final int id;
+  final String title;
+  final String evidenceReference;
+}
+
+class Bmp04Dashboard {
+  const Bmp04Dashboard({required this.category, required this.observed,
+    required this.total, required this.events});
+  final String category;
+  final int observed;
+  final int? total;
+  final List<Bmp04CuratedEvent> events;
+}
+
+List<Bmp04CuratedEvent> _eventRows(Object? raw) {
+  if (raw is! List) return const [];
+  final events = <Bmp04CuratedEvent>[];
+  final seen = <int>{};
+  for (final item in raw) {
+    final row = _asMap(item) ?? {};
+    final id = row['event_id'];
+    final title = _observationText(row['title']);
+    final evidence = row['evidence_ref'];
+    if (id is! int || id <= 0 || title == null || evidence is! String ||
+        !RegExp(r'^EV-[1-9][0-9]*$').hasMatch(evidence) ||
+        row['evidence_state'] != 'REFERENCED' || !seen.add(id)) continue;
+    events.add(Bmp04CuratedEvent(id, title, evidence));
+  }
+  return List.unmodifiable(events);
+}
+
+List<Bmp04CuratedEvent> _curatedEvents(Object? sections) {
+  if (sections is! List) return const [];
+  for (final section in sections) {
+    final row = _asMap(section);
+    if (row?['type'] == 'events') return _eventRows(row?['items']);
+  }
+  return const [];
+}
+
+List<Bmp04Dashboard> _dashboards(Map<String, dynamic> truth, Bmp04FocusContext focus) {
+  final raw = truth['dashboards'];
+  if (raw is! List || raw.length != 3 ||
+      !const ['READY', 'EMPTY', 'PARTIAL'].contains(truth['classification_state']) ||
+      truth['total_events_semantics'] != 'current_verified_curated_sample_not_population') return const [];
+  final result = <Bmp04Dashboard>[];
+  final seen = <String>{};
+  final classifiedIds = <int>{};
+  for (final item in raw) {
+    final row = _asMap(item) ?? {};
+    final category = row['category'];
+    final observed = row['observed_events'];
+    final total = row['total_events'];
+    if (category is! String || !bmp04Categories.contains(category) ||
+        !seen.add(category) || observed is! int || observed < 0 ||
+        row['claim_type'] != 'human_business_classification' ||
+        (total != null && (total is! int || total != observed ||
+          truth['event_read_complete'] != true || truth['unclassified_event_count'] != 0 ||
+          truth['classification_rejected'] != 0 ||
+          !const ['READY', 'EMPTY'].contains(truth['classification_state'])))) return const [];
+    final refs = row['source_refs'];
+    if (refs is! List || refs.length != observed) return const [];
+    final references = <int, String>{};
+    for (final value in refs) {
+      final ref = _asMap(value) ?? {};
+      final id = ref['event_id'];
+      final proof = _asMap(ref['scope_evidence']) ?? {};
+      final integrity = _asMap(proof['integrity']) ?? {};
+      final scope = _asMap(proof['stored_scope']) ?? {};
+      final evidenceId = proof['id'];
+      final digest = integrity['digest'];
+      if (id is! int || id <= 0 || !classifiedIds.add(id) ||
+          evidenceId is! int || evidenceId <= 0 ||
+          integrity['verified'] != true || integrity['assurance'] != 'writer-authenticated' ||
+          integrity['algorithm'] != 'hmac-sha256' || digest is! String ||
+          !RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(digest) ||
+          scope['domain_id'] != 'zbmp' || scope['product_id'] != 'ZBMP' ||
+          scope['global'] != false || _observationText(scope['brand_focus_id']) == null ||
+          (!focus.isGlobal && scope['brand_focus_id'] != focus.brandFocusId)) return const [];
+      references[id] = 'EV-$evidenceId';
+    }
+    final events = _eventRows(row['events']);
+    if (events.any((event) => references[event.id] != event.evidenceReference)) return const [];
+    result.add(Bmp04Dashboard(category: category, observed: observed,
+      total: total as int?, events: events));
+  }
+  return List.unmodifiable(result);
 }

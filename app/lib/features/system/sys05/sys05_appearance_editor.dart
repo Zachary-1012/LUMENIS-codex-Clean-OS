@@ -7,6 +7,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../../../l10n/lumenis_localizations.dart';
 import '../../../platform/lumenis_window_material.dart';
 import 'sys05_appearance_controller.dart';
+import '../sys02/sys_system_foundation.dart' show SysSystemCopy;
 
 class Sys05AppearanceButton extends StatelessWidget {
   const Sys05AppearanceButton({super.key});
@@ -578,6 +579,25 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
               onChanged: c.resetting
                   ? null
                   : (value) => c.update(reducedMotion: value),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(SysSystemCopy.text(context, 'sys.waiting.preference')),
+                  Wrap(
+                    spacing: 8,
+                    children: WaitingTone.values.map((tone) => ChoiceChip(
+                      key: ValueKey('appearance/waitingTone/${tone.name}'),
+                      label: Text(SysSystemCopy.text(context, 'sys.waiting.${tone.name}')),
+                      selected: c.waitingTone == tone,
+                      onSelected: c.resetting ? null : (_) => c.update(waitingTone: tone),
+                    )).toList(),
+                  ),
+                ],
+              ),
             ),
             if (error != null) ...[
               const SizedBox(height: 12),

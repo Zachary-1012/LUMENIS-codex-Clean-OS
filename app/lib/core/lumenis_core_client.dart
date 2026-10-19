@@ -753,6 +753,35 @@ class LumenisCoreClient {
     return {'asset_paths': paths};
   }
 
+  /// Exact human classification preview/commit; the server binds actor, source
+  /// version and prior classification revision into the returned resource.
+  Future<Map<String, dynamic>> classifyPropagationEvent({
+    required String subjectId,
+    required int sourceEventId,
+    required String category,
+    required String requestId,
+    String? confirmedResource,
+  }) {
+    final context = _contentContext('BMP');
+    if (context['X-Lumenis-Context-Mode'] != 'FOCUS' ||
+        context['X-Subject-ID'] != subjectId || sourceEventId <= 0 ||
+        !const {'brand_event', 'product_event', 'industry_event'}.contains(category) ||
+        !RegExp(r'^[A-Za-z0-9_-]{8,128}$').hasMatch(requestId) ||
+        (confirmedResource != null && !RegExp(
+          r'^propagation-classification:v1:[a-f0-9]{64}$',
+        ).hasMatch(confirmedResource))) {
+      throw const FormatException('Classification context or preview changed.');
+    }
+    return _request('POST', '/api/experience/propagation/classify',
+      operationContext: context,
+      payload: {
+        'source_event_id': sourceEventId, 'category': category,
+        'request_id': requestId, 'confirm': confirmedResource != null,
+        if (confirmedResource != null) 'confirmed_resource': confirmedResource,
+      },
+    );
+  }
+
   Future<Map<String, dynamic>> importContentSource({
     required String domainId,
     required String filename,
@@ -891,6 +920,43 @@ class LumenisCoreClient {
       '/api/browser/sessions/${Uri.encodeComponent(sessionId)}',
       withContext: false,
     );
+  }
+
+  /// Existing podcast SavedWork owner. A null domain explicitly selects the
+  /// independent Shared workspace; BMP retains its current exact context.
+  Future<Map<String, dynamic>> listPodcastWork({String? domainId, String? cursor}) {
+    if (cursor != null && (cursor.isEmpty || cursor.length > 4096 ||
+        RegExp(r'[\x00-\x1f\x7f]').hasMatch(cursor))) {
+      throw const FormatException('Invalid SavedWork cursor.');
+    }
+    final query = Uri(queryParameters: {
+      'kind': 'podcast_episode', 'latest_only': 'true', 'limit': '30',
+      if (cursor != null) 'cursor': cursor,
+    }).query;
+    return _request('GET', '/api/experience/saved-work?$query',
+      operationContext: domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'});
+  }
+
+  Future<Map<String, dynamic>> reopenPodcastWork(String artifactId, {String? domainId}) {
+    _validateSavedWorkArtifactId(artifactId);
+    return _request('GET', '/api/experience/saved-work/$artifactId',
+      operationContext: domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'});
+  }
+
+  Future<Map<String, dynamic>> savePodcastWork({
+    required Map<String, Object?> body, String? domainId,
+  }) {
+    _validateSavedWorkRequestId(body['request_id'] as String);
+    _validateSavedWorkArtifactId(body['previous_artifact_id'] as String);
+    if (body['kind'] != 'podcast_episode' ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(body['expected_draft_digest'] as String)) {
+      throw const FormatException('Invalid podcast revision.');
+    }
+    return _request('POST', '/api/experience/saved-work', payload: body,
+      operationContext: domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'});
   }
 
   /// Reads the existing Shared SavedWork registry for Browser-authored notes.

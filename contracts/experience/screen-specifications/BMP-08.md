@@ -480,3 +480,35 @@ UI可按用户目标提出五力证据对照和模式取舍构图，保原始来
 持久化、权限与错误恢复：听过仅本次导航标记，不等准确对齐已确认；采用继续走原明确批准和新工程修订，绑定父工程/候选/转录hash。多次试听不创建版本；保留原词不删除原音频。 父版或转录变化使旧候选过期，保合法选择待重新生成；无词时码、1/30秒下过短残片、全部音频将被删时保原稿和原声。取消试听停止播放并回原头，取消采用不写工程；音轨不支持则保手工阅读与现有编辑路径。 验收：听下一处绝不自动采用上一处；原句与候选有不同的明确播放状态；不把单WAV当前能力写成完整多轨长节目已支持。当前为研发合同，未实测减步数字，未宣称四端接线完成。
 
 验收以同一真实任务记录原路径/新路径的操作、切换、重复录入、失误与恢复；没有实测前不填写节约秒数或成功率。便利界面与接线仍须本地构建，后端只按实际Owner测试证据判断，不能用本段规划声称已完成。
+
+### Existing SavedWork podcast revision binding (2026-10-19)
+
+The studio can list and reopen existing typed `podcast_episode` SavedWork artifacts
+through `/api/experience/saved-work`. The explicit independent-workspace entry
+uses the existing Shared workspace scope even when the legacy brand screen read
+is unavailable; the brand entry retains the current BMP focus/global context.
+Neither entry invents a brand, actor, source grant, or globally authorized read.
+The server freshly authorizes each list, reopen and write and all cited sources.
+
+Only freshly reopened `lumenis.podcast-plan` version-1 contracts enter the typed
+revision surface. Segment identity is `segment_id`, not visual list position.
+Original transcript, source ranges, references, stream selection, retained payload
+metadata and citations are preserved. Editing corrected text increments the plan
+revision and saves a new immutable SavedWork version using the exact parent
+artifact, work identity and expected draft digest. A save is shown as confirmed
+only after another authorized reopen returns the expected content and version.
+
+Pending reads can be dismissed without presenting their late results. Pending
+writes are not represented as cancellable transactions. Failures retain edits;
+retry without an edit reuses its idempotency request ID. Conflicts do not overwrite
+the latest version; users may copy their retained revisions before reopening.
+Closing dirty revisions asks confirmation. Malformed results, denied requests,
+unverified list entries and incomplete pagination remain explicitly distinguishable.
+
+This is transcript-revision persistence, not audio generation or source-fact
+validation. `media_lineage=W4_W6_NOT_VERIFIED` remains visible as an audio limitation.
+The existing manual/independent creation requirements and legacy studio are
+preserved; source-backed typed-plan prerequisites apply only to this revision
+path. Initial creation, real audio playback/mixing/mastering/render/export, and
+native/device acceptance are not closed by this binding. Flutter/widget tests
+require execution on the supported toolchain before surface acceptance.

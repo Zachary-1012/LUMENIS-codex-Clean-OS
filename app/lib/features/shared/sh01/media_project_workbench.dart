@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../system/sys02/sys_system_foundation.dart' show WaitingFeedback, WaitingScene;
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -243,6 +244,16 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   bool get _isBusy =>
       _choosing || _retrieving || _controllerInitialized && _controller.busy;
 
+  WaitingScene get _waitingScene => _retrieving
+      ? WaitingScene.search
+      : switch (_controller.operation) {
+          MediaProjectOperation.exporting => WaitingScene.export,
+          MediaProjectOperation.reopening => WaitingScene.search,
+          MediaProjectOperation.importing => WaitingScene.sources,
+          MediaProjectOperation.inspecting => WaitingScene.analysis,
+          _ => WaitingScene.waiting,
+        };
+
   String get _operationCopyKey => _retrieving
       ? 'saved_loading'
       : switch (_controller.operation) {
@@ -443,6 +454,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       children: [
         if (library.busy) ...[
           const LinearProgressIndicator(),
+          if (error == null) const WaitingFeedback(scene: WaitingScene.search),
           const SizedBox(height: 8),
           Text(_copy(context, 'saved_loading')),
         ],
@@ -1158,6 +1170,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         if (!wide) _editorTools(timeline, wide: wide),
         if (_isBusy && !_layerOpen) ...[
           const LinearProgressIndicator(),
+          if (_failure == null && _notice == null) WaitingFeedback(scene: _waitingScene),
           Semantics(
             liveRegion: true,
             child: Text(_copy(context, _operationCopyKey)),
@@ -1647,6 +1660,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                           ),
                           if (_isBusy) ...[
                             const LinearProgressIndicator(),
+                            if (_failure == null && _notice == null) WaitingFeedback(scene: _waitingScene),
                             Semantics(
                               liveRegion: true,
                               child: Text(
