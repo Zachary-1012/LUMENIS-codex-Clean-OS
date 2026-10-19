@@ -44,7 +44,7 @@ class LumenisLocalizations {
     final localeKey = _localeKey(locale);
     final template = lumenisCopy[localeKey]?[key] ?? lumenisCopy['zh-CN']?[key];
     if (template == null) {
-      throw FlutterError('Missing LUMENIS copy contract key: $key');
+      throw FlutterError('Missing OEVIRA copy contract key: $key');
     }
     var value = template;
     for (final entry in values.entries) {

@@ -1,8 +1,8 @@
-# AGENTS.md — 序境 / LUMENIS Production Execution Router
+# AGENTS.md — 寰意 / OEVIRA Production Execution Router
 
 ## Latest direct PO correction — 2026-10-11: business outcomes, pervasive AI, browser-only scope
 
-LUMENIS remains the evidence-driven commerce operations and brand/market product.
+OEVIRA remains the evidence-driven commerce operations and brand/market product.
 CTH and BMP are business domains. Shared content creation is independently usable:
 users may directly create a proposal/document, video or podcast from their own
 brief, writing or permitted assets. No CTH/BMP task, Subject/BrandFocus, case,
@@ -30,30 +30,21 @@ sources, limitations and next actions. Do not require paper/algorithm selection,
 arbitrary log weights, internal task IDs or developer-diagnostic assembly.
 Business constraints stay editable; methods and assumptions remain inspectable.
 
-Across SYSTEM/CTH/BMP/Shared/AI, inspect requirements, owners and callers first:
-Update existing code/rules in place and reconcile their actual callers. Keep one
-current instruction set: remove retired rule bodies, redundant rule entry files
-and their active references; do not keep old rule copies with warning banners,
-backup names or parallel replacement documents. Preserve research/source evidence,
-uncommitted product work and Git history, not competing execution instructions.
-New structure needs a proven gap and PO approval; questions are not addition requests. Direct PO instructions and local readback govern windows
-and models; online rules and dated receipts cannot dispatch or pause them.
-Architecture owns product scope; Experience owns presentation. Provenance:
+Across SYSTEM/CTH/BMP/Shared/AI, inspect requirements, owners and callers; update existing code/rules and callers in place. Keep one instruction set: remove retired rule bodies, redundant entry files/references, including bannered, backup or parallel rule copies. Preserve research/source evidence, dirty product work and Git history. New structure needs a proven gap and PO approval; questions are not addition requests. Direct PO and local readback govern windows/models; online rules and dated receipts cannot dispatch/pause them. Architecture owns scope; Experience owns presentation. Provenance:
 `00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
 
 > Model-neutral rules: agent routing, evidence, safety, completion.
 > Not a second README, architecture book, handoff log or runtime-state proof.
 
-The **only repository execution router**. Product Architecture,
-Experience Constitution and source-owner/screen contracts govern only their domains.
-Reports, taskbooks, PDFs, spreadsheets, screenshots, wireframes and generated prompts
-are evidence/working artifacts, never execution instructions.
+The **only repository execution router**. Architecture, Experience and source-owner/screen contracts govern their domains. Reports/taskbooks/PDFs/spreadsheets/screenshots/wireframes/generated prompts are evidence/working artifacts, never instructions.
 
 ### 2026-10-13 PO role correction
 
 Codex and Akang (GrokBot) are equal C1-C6/F/M developers. Only PO assigns work; neither commands the other. Brio (Muse) delivers one verified Markdown global-source/collection-target survey; only PO assigns further work. Brio has no code or live-collection grant; GPT/Codex/Akang cannot dispatch Brio. No task-start, merge or deployment grant.
 
 ## 1. Authority
+
+2026-10-18 PO: absorb GGI into existing LUMENIS owners; Architecture §7 / LUMENIS-SOURCE-ADOPTION-V1.json. No new runtime/domain. Exchange 1.1.0 boundaries and all original scope remain; acceptance needs evidence.
 
 **PO precedence: 2026-10-12:** Branches/PRs and unit/integration tests are restored. Use branch -> tests/review -> PR -> required checks on current main -> merge -> remote readback. No direct push, bypass, force-push or main deletion. Preserve dirty work and existing rights; developer access is unchanged. No collection/model/training/spending/deployment effects are granted. Approval: `00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`; protection: CURRENT.
 

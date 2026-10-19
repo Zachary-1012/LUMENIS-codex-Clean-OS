@@ -19,12 +19,18 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 @pytest.fixture()
 def temp_db(tmp_path, monkeypatch):
     import database as db
+    from subject_context import SubjectContext, set_thread_context
+    set_thread_context(SubjectContext(subject_id='guangzhou_taikoo_hui',brand_key='guangzhou_taikoo_hui',product_id='ZBMP'))
     db_file = str(tmp_path / 'dual_dim.db')
     monkeypatch.setenv('ZBC_DB_PATH', db_file)
     monkeypatch.setattr(db, 'DB_PATH', db_file)
     db.init_db()
     db.init_db()  # 幂等：第二次不得因列已存在而报错
-    return db
+    try:
+        yield db
+    finally:
+        from subject_context import clear_thread_context
+        clear_thread_context()
 
 
 # ---------- 纯函数 ----------
@@ -67,7 +73,7 @@ def test_insert_note_persists_dual_dimension(temp_db):
     hit = [r for r in rows if r['note_id'] == 'n1'][0]
     assert 'subject_type' in hit and 'content_type' in hit
     # 官方账号应被识别为 official（非空）
-    assert hit['subject_type'] == 'official'
+    assert hit['subject_type'] == 'unknown'  # self-declared official name is not ownership evidence
 
 
 def test_dual_dimension_is_additive_not_breaking_subject(temp_db):
@@ -134,3 +140,11 @@ def test_strong_media_high_confidence():
         r = clf.classify(author_name=name)
         assert r['subject_type'] == 'media', f'{name} 应判为媒体'
         assert r['confidence'] >= 0.9, f'{name} 置信度应>=0.9'
+
+def test_unknown_subject_filter_returns_only_unknown(temp_db):
+ temp_db.insert_note(_note('unknown-claim',author='合成品牌官方'))
+ temp_db.insert_note(_note('other-user',author='合成消费者'))
+ rows=temp_db.get_notes({'subject_type':'unknown'},10,0)
+ assert [r['note_id'] for r in rows]==['unknown-claim']
+ assert temp_db.get_note_count({'subject_type':'unknown'})==1
+ assert temp_db.get_note_count({})==2

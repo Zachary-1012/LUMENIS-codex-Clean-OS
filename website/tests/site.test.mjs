@@ -291,3 +291,16 @@ test("reserved example hosts cannot stand in for public destinations", () => {
   }
   assert.equal(isReservedPublicHost("lumenis.example-business.cn"), false);
 });
+
+test("online display migration keeps OEVIRA identity and positioning in all locales", async () => {
+  for (const path of pages) {
+    const html = await page(path);
+    assert.match(html, /OEVIRA/);
+    assert.match(html, /An Open Space for Thought and Creation\./);
+    assert.doesNotMatch(html, /序境|서경|LUMENIS/);
+    const schemaText = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)?.[1];
+    assert.ok(schemaText, `${path} contains product metadata`);
+    const schema = JSON.parse(schemaText);
+    assert.ok(JSON.stringify(schema).includes("OEVIRA"));
+  }
+});

@@ -990,7 +990,7 @@ class ActionVerifier:
         actual_url = actual_state.get("url", "")
         actual_title = actual_state.get("title", "")
         actual_status = actual_state.get("status_code")
-        actual_loading = actual_state.get("loading", False)
+        actual_loading = actual_state.get("loading")
         actual_text = actual_state.get("body_text", "")
         actual_elements = actual_state.get("elements", {})  # selector -> {visible, text, value, count}
 
@@ -1014,7 +1014,7 @@ class ActionVerifier:
         # 3. 元素可见性检查
         if expected.element_visible:
             elem = actual_elements.get(expected.element_visible, {})
-            if not elem.get("visible", False):
+            if elem.get("visible") is not True:
                 differences.append(
                     f"元素不可见: selector={expected.element_visible}"
                 )
@@ -1023,18 +1023,18 @@ class ActionVerifier:
         if expected.element_text:
             selector, exp_text = expected.element_text
             elem = actual_elements.get(selector, {})
-            actual_elem_text = elem.get("text", "")
-            if exp_text not in actual_elem_text:
+            actual_elem_text = elem.get("text")
+            if not isinstance(actual_elem_text, str) or not isinstance(exp_text, str) or exp_text not in actual_elem_text:
                 differences.append(
                     f"元素文本不匹配: selector={selector}, "
-                    f"expected_contains={exp_text}, actual={actual_elem_text[:100]}"
+                    f"expected_contains={exp_text}, actual={str(actual_elem_text)[:100]}"
                 )
 
         # 5. Input value 检查
         if expected.input_value:
             selector, exp_value = expected.input_value
             elem = actual_elements.get(selector, {})
-            actual_value = elem.get("value", "")
+            actual_value = elem.get("value")
             if exp_value != actual_value:
                 differences.append(
                     f"Input值不匹配: selector={selector}, "
@@ -1045,8 +1045,8 @@ class ActionVerifier:
         if expected.element_count_gte:
             selector, min_count = expected.element_count_gte
             elem = actual_elements.get(selector, {})
-            actual_count = elem.get("count", 0)
-            if actual_count < min_count:
+            actual_count = elem.get("count")
+            if type(min_count) is not int or min_count < 0 or type(actual_count) is not int or actual_count < min_count:
                 differences.append(
                     f"元素数量不足: selector={selector}, "
                     f"expected>={min_count}, actual={actual_count}"
@@ -1058,6 +1058,14 @@ class ActionVerifier:
                 f"页面文本不存在: expected={expected.text_present}"
             )
 
+        # Missing/truncated text cannot prove that a requested string is absent.
+        if expected.text_absent and ("body_text" not in actual_state or
+                "body_text" in actual_state.get("truncated_fields", []) or
+                "body_text" in actual_state.get("observation_errors", {})):
+            differences.append("正文不完整，无法验证文本不存在")
+        if expected.custom_check is not None:
+            differences.append("自定义检查未绑定实际验证器")
+
         # 8. 文本不存在检查
         if expected.text_absent and expected.text_absent in actual_text:
             differences.append(
@@ -1065,14 +1073,14 @@ class ActionVerifier:
             )
 
         # 9. 状态码检查
-        if expected.status_code and actual_status and actual_status != expected.status_code:
+        if expected.status_code is not None and (type(actual_status) is not int or actual_status != expected.status_code):
             differences.append(
                 f"状态码不匹配: expected={expected.status_code}, actual={actual_status}"
             )
 
         # 10. 加载完成检查
-        if expected.loading_complete and actual_loading:
-            differences.append("页面仍在加载中（loading=true）")
+        if expected.loading_complete and actual_loading is not False:
+            differences.append("页面加载未证实完成（loading不是明确false）")
 
         passed = len(differences) == 0
         # Full URLs are used above only for comparisons. Verification is also
@@ -1418,6 +1426,8 @@ class AIBrowserRuntime:
         self.task_id = task_id
         self.run_id = run_id
         self.task_binding_status = "UNVERIFIED" if task_id is not None else "UNBOUND"
+        self._server_task_admission = None
+        self._server_task_actor = None
 
         # 状态
         self.status = SessionStatus.CREATED
@@ -1685,6 +1695,7 @@ class AIBrowserRuntime:
             return self._run_on_browser_thread(
                 lambda: self.observe(include_dom, include_accessibility, max_text_length)
             )
+        self._check_bound_task_operation(BrowserActionType.OBSERVE)
         self.last_activity = time.time()
         state = BrowserPageState()
 
@@ -1695,16 +1706,21 @@ class AIBrowserRuntime:
         try:
             state.url = self._page.url
             state.title = self._page.title()
-            state.loading = False  # sync API 中操作完成后通常已加载
+            state.loading = None  # Unknown until this observation reads document.readyState.
 
             # 获取 body 文本（脱敏 + 注入扫描）
             try:
                 # Bound the browser-to-Python transfer, including the scan input.
                 extracted = self._page.evaluate(
                     "limit => { const text = document.body ? document.body.innerText : ''; "
-                    "return {text: text.slice(0, limit), truncated: text.length > limit}; }",
+                    "return {text: text.slice(0, limit), truncated: text.length > limit, ready_state: document.readyState}; }",
                     max_text_length,
                 )
+                ready_state = extracted.get("ready_state")
+                if ready_state in {"loading", "interactive", "complete"}:
+                    state.loading = ready_state != "complete"
+                else:
+                    state.observation_errors["loading"] = "BROWSER_READY_STATE_UNAVAILABLE"
                 body_text = extracted["text"]
                 if extracted["truncated"]:
                     state.truncated_fields.append("body_text")
@@ -1786,6 +1802,9 @@ class AIBrowserRuntime:
         except Exception as e:
             state.error = sanitize_sensitive(str(e)[:300])
 
+        # Revoke read access before releasing collected page data, outside the
+        # observation error fallback so a denial cannot return stale content.
+        self._check_bound_task_operation(BrowserActionType.OBSERVE)
         return state
 
     # ──────────────────────────────────────────────────────────
@@ -2200,6 +2219,92 @@ class AIBrowserRuntime:
             self._human_control_expires_at = 0.0
         self._invalidate_human_links()
         return True
+
+    def bind_task_admission(self, admission, *, actor):
+        """Internal original-Task bridge; a metadata seal never grants browser effects.
+
+        HTTP callers cannot supply this sealed object. The existing API keeps
+        client task/run strings UNVERIFIED and existing capacity isolation.
+        """
+        with self._control_lock:
+            from lumenis.system.security.permission import TaskOperationalWriteAdmission
+            if type(admission) is not TaskOperationalWriteAdmission:
+                raise PermissionError("BROWSER_TASK_ADMISSION_REQUIRED")
+            if self._closed or self.task_id not in (None, admission.task_id) or self.run_id not in (None, admission.run_id):
+                raise PermissionError("BROWSER_TASK_BINDING_CONFLICT")
+            if self._active_control_actions or (self._server_task_admission is not None and self._server_task_admission is not admission):
+                raise PermissionError("BROWSER_TASK_BINDING_BUSY_OR_IMMUTABLE")
+            prior = (self._server_task_admission, self._server_task_actor)
+            self._server_task_admission, self._server_task_actor = admission, (dict(actor) if isinstance(actor, dict) else actor)
+            try:
+                self._check_bound_task_operation(BrowserActionType.OBSERVE)
+            except Exception:
+                self._server_task_admission, self._server_task_actor = prior
+                raise
+            self.task_id, self.run_id = admission.task_id, admission.run_id
+            self.task_binding_status = "BOUND"
+
+    def _check_bound_task_operation(self, action_type, **arguments):
+        admission = getattr(self, "_server_task_admission", None)
+        if admission is None:
+            return  # Existing unbound/manual browser path remains unchanged.
+        from lumenis.system.security.permission import get_permission_gate, OperationType
+        context = self._check_bound_task_owner(admission)
+        resource = "browser-task-operation:v1:" + hashlib.sha256(json.dumps({
+            "session": self.session_id, "target": self._target_id,
+            "task": admission.task_id, "run": admission.run_id,
+            "scope": context["scope"], "domain": context["domain_id"],
+            "action": action_type.value, "arguments": arguments,
+        }, sort_keys=True, ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+        # authorized_context supplies a fixed analyst role for local tools, not
+        # the account browser grant. Scope and SYSTEM/browser grant were both
+        # checked above against original account owners, never a client role.
+        browser = get_permission_gate().check(OperationType.BROWSER_OPERATION,
+            resource=resource, caller="ai_browser_runtime.bound_task",
+            domain_id=context["domain_id"])
+        if not browser.allowed:
+            raise PermissionError("BROWSER_OPERATION_PERMISSION_DENIED")
+        # Gate evaluation can itself take time: never reuse its earlier Owner snapshot.
+        self._check_bound_task_owner(admission)
+
+    def _check_bound_task_owner(self, admission, *, attempt_guarded=False):
+        from ai_task_engine import get_task_engine
+        from agent_runtime.task_binding import authorized_context
+        decision = admission.check("ai_task", fields={"status"})
+        if not decision.allowed:
+            raise PermissionError("BROWSER_TASK_ATTEMPT_OR_SCOPE_REVOKED")
+        if not attempt_guarded:
+            attempt = admission.queue.get(admission.queue_task_id)
+            payload = attempt.get("payload", {}) if attempt else {}
+            deadline = payload.get("deadline_at")
+            if (payload.get("cancel_requested") is True or
+                    (deadline is not None and (type(deadline) not in (int, float) or not time.time() < deadline))):
+                raise PermissionError("BROWSER_TASK_CANCELLED_OR_EXPIRED")
+        task = get_task_engine().get_task(admission.task_id)
+        if not task or task.get("status") in {"succeeded", "failed", "cancelled"}:
+            raise PermissionError("BROWSER_TASK_NOT_ACTIVE")
+        context = authorized_context(task, self._server_task_actor)
+        actor_id = context.get("actor_id")
+        if actor_id != self.owner_actor_id:
+            raise PermissionError("BROWSER_TASK_ACTOR_MISMATCH")
+        if actor_id is not None:
+            from account.models import get_db
+            from account.authorization import check_dual_domain_permission
+            con = get_db()
+            try:
+                row = con.execute("SELECT user_id,expires_at FROM v4_sessions WHERE id=?", (self.owner_account_session_id,)).fetchone()
+            finally:
+                con.close()
+            if not row or row["user_id"] != actor_id or row["expires_at"] < time.strftime("%Y-%m-%d %H:%M:%S"):
+                raise PermissionError("BROWSER_ACCOUNT_SESSION_REVOKED")
+            if not check_dual_domain_permission(actor_id, "SYSTEM", module="browser", action="write"):
+                raise PermissionError("BROWSER_PERMISSION_REVOKED")
+        else:
+            from lumenis.system.security.permission import resolve_local_workspace_principal
+            principal = resolve_local_workspace_principal(module="browser", action="write")
+            if self.owner_principal_ref != "workspace:local" or principal is None:
+                raise PermissionError("BROWSER_TASK_WORKSPACE_MISMATCH")
+        return context
 
     def _resolve_task_trace(
         self, task_id: Optional[str], run_id: Optional[str]
@@ -2712,6 +2817,7 @@ class AIBrowserRuntime:
             ))
         if control_mode == "human":
             self.assert_current_frame_binding(frame_binding)
+        self._check_bound_task_operation(action_type, target=target, selector=selector, text=text, value=value, url=url)
         resolved_task_id, resolved_run_id = self._resolve_task_trace(task_id, run_id)
         self._begin_control_action(
             control_mode=control_mode,
@@ -2941,6 +3047,40 @@ class AIBrowserRuntime:
                 result.escalation_reason = f"权限被拒绝: {result.error}"
                 return result
 
+            # An exception may occur after the browser applied the effect. Read back
+            # before any replay; page readiness alone is not an action postcondition.
+            read_only_actions = {BrowserActionType.OBSERVE, BrowserActionType.SCREENSHOT,
+                                 BrowserActionType.WAIT}
+            meaningful_expected = expected is not None and any(
+                value is not None for name, value in asdict(expected).items()
+                if name not in {"loading_complete", "custom_check"}
+            )
+            if failure_class != FailureClass.SESSION_ERROR and meaningful_expected:
+                try:
+                    observed = self.observe()
+                    result.after_state = observed
+                    verification = self.verifier.verify(expected, observed.verification_state())
+                    result.verification = verification
+                    result.recovery_attempts.append(RecoveryAttempt(
+                        strategy="observe_before_retry", success=verification.passed,
+                        detail="postcondition checked without replaying the action"))
+                    before_verification = self.verifier.verify(expected, before_state.verification_state())
+                    if verification.passed and not before_verification.passed:
+                        result.success = True
+                        result.result = ActionResult.PASS
+                        result.error = None
+                        return result
+                except Exception:
+                    # Unknown readback does not authorize repeating a possible effect.
+                    pass
+            if failure_class == FailureClass.SESSION_ERROR:
+                self.status = SessionStatus.NEED_VERIFY
+            if action_type not in read_only_actions:
+                result.result = ActionResult.HUMAN_ESCALATION
+                result.human_escalation_required = True
+                result.escalation_reason = "BROWSER_EFFECT_UNCERTAIN_REOBSERVE_REQUIRED"
+                return result
+
             # 尝试 Recovery 策略链
             strategies = self.recovery.get_recovery_strategies(failure_class)
             for strategy in strategies:
@@ -3108,6 +3248,17 @@ class AIBrowserRuntime:
         url: str = "",
     ):
         """执行原始 Playwright 操作（不含 Verification/Recovery）。"""
+        self._check_bound_task_operation(action_type, target=target, selector=selector, text=text, value=value, url=url)
+        admission = getattr(self, "_server_task_admission", None)
+        if admission is not None:
+            # Final short dispatch admission only. The original queue fence
+            # must never span browser/network acquisition. In-flight external
+            # effects cannot be rolled back when authority subsequently changes.
+            with admission.guard():
+                self._check_bound_task_owner(admission, attempt_guarded=True)
+        return self._do_execute_impl(action_type, target, selector, text, value, url)
+
+    def _do_execute_impl(self, action_type, target="", selector="", text="", value="", url=""):
         if not self._page and action_type not in (BrowserActionType.NAVIGATE, BrowserActionType.TAB_NEW):
             raise RuntimeError("No active page. Call start() first or navigate to create a page.")
 
@@ -3160,6 +3311,11 @@ class AIBrowserRuntime:
             time.sleep(wait_ms / 1000.0)
 
         elif action_type == BrowserActionType.TAB_NEW:
+            if url:
+                import browser_surface
+                navigation = browser_surface.evaluate_navigation(url)
+                if not navigation.get("allowed"):
+                    raise PermissionError("AI Browser navigation is blocked by the existing browser policy")
             if self._context:
                 new_page = self._context.new_page()
                 tab_id = f"tab_{uuid.uuid4().hex[:8]}"

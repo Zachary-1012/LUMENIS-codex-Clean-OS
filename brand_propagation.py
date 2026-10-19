@@ -552,3 +552,220 @@ def read_scoped_propagation(binding):
             "truncated": bool(material.get("truncated")) or bool(event_metadata.get("truncated")),
             "coverage": "NOT_VERIFIED", "legacy_event_scope": "UNKNOWN_NOT_ASSIGNED",
             "method": "signed-source-observations-and-curated-events:v1"}
+
+
+# Explicit human business classifications, stored by the existing propagation owner.
+# They are not source facts, brand ownership assertions, or inferred popularity.
+def prepare_scoped_classification(*, actor, scope, source_event_id, category, request_id):
+    import re
+    import database
+    from lumenis.shared.reporting.saved_work import authorize, _digest
+    if (scope.get('domain_id') not in {'bmp', 'zbmp'} or scope.get('global_scope') is not False
+            or type(source_event_id) is not int or source_event_id <= 0
+            or category not in {x.value for x in PropagationEventCategory}
+            or not isinstance(request_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{8,128}', request_id)):
+        raise ValueError('PROPAGATION_CLASSIFICATION_INVALID')
+    context = authorize(actor, scope, action='write')
+    event = database.get_scoped_event(source_event_id, scope)
+    if not event:
+        raise PermissionError('PROPAGATION_SOURCE_NOT_IN_SCOPE')
+    from lumenis.shared.database import get_repository
+    classification_id = 'PE-S-' + _digest({'context': context, 'source_event_id': source_event_id})[:32]
+    with get_repository().connection(read_only=True, wal=False) as con:
+        exists = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='brand_propagation_events'").fetchone()
+        previous = con.execute('SELECT metadata FROM brand_propagation_events WHERE event_id=?', (classification_id,)).fetchone() if exists else None
+    previous_version = _digest(previous[0]) if previous else None
+    body = {'schema': 'lumenis.propagation-classification/v1', 'context': context,
+            'source_event_id': source_event_id, 'source_evidence_ref': str(event['scope_evidence_ref']),
+            'category': category, 'request_id': request_id, 'previous_version': previous_version, 'claim_type': 'human_business_classification'}
+    if previous:
+        old = json.loads(previous[0])
+        if old.get('request_id') == request_id:
+            if any(old.get(k) != v for k,v in body.items() if k != 'previous_version'):
+                raise ValueError('PROPAGATION_REQUEST_REUSE')
+            body['previous_version'] = old.get('previous_version')
+    return {'body': body, 'resource': 'propagation-classification:v1:' + _digest(body)}
+
+
+def write_scoped_classification(*, actor, scope, source_event_id, category, request_id, resource, authorize_current=None):
+    import database
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.reporting.saved_work import authorize, _digest, _check_effect
+    from lumenis.system.security.permission import get_permission_gate, OperationType
+    prepared = prepare_scoped_classification(actor=actor, scope=scope, source_event_id=source_event_id,
+                                             category=category, request_id=request_id)
+    if prepared['resource'] != resource:
+        raise PermissionError('PROPAGATION_PREVIEW_CHANGED')
+    gate = get_permission_gate()
+    if gate.get_valid_approval_token('db_write', resource, exact=True) is None:
+        raise ValueError('WORK_EFFECT_PERMISSION_DENIED')
+    _check_effect(actor, scope, OperationType.DB_WRITE, resource)
+    body = prepared['body']; proof = {**body, 'sha256': _digest(body)}
+    # Existing table, no global migration and no mutation of source observations.
+    with get_repository().transaction() as con:
+        if authorize_current is not None and authorize_current() != body['context']:
+            raise PermissionError('PROPAGATION_ACTOR_CHANGED')
+        context = authorize(actor, scope, action='write', connection=con)
+        event = database.get_scoped_event(source_event_id, scope, connection=con)
+        if context != body['context'] or not event or str(event['scope_evidence_ref']) != body['source_evidence_ref']:
+            raise PermissionError('PROPAGATION_SOURCE_CHANGED')
+        con.execute('''CREATE TABLE IF NOT EXISTS brand_propagation_events (
+            event_id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT NOT NULL,
+            entity_type TEXT DEFAULT '', entity_ids TEXT DEFAULT '[]', content_type TEXT DEFAULT '',
+            platform TEXT DEFAULT '', sentiment TEXT DEFAULT 'unknown', heat_score REAL DEFAULT 0,
+            mention_count INTEGER DEFAULT 0, engagement_total INTEGER DEFAULT 0,
+            start_time TEXT DEFAULT '', end_time TEXT DEFAULT '', summary TEXT DEFAULT '',
+            key_contents TEXT DEFAULT '[]', metadata TEXT DEFAULT '{}', created_at TEXT DEFAULT '')''')
+        event_id = 'PE-S-' + _digest({'context': context, 'source_event_id': source_event_id})[:32]
+        previous = con.execute('SELECT metadata FROM brand_propagation_events WHERE event_id=?', (event_id,)).fetchone()
+        identical = previous and json.loads(previous[0]) == proof
+        if not identical and (_digest(previous[0]) if previous else None) != body['previous_version']:
+            raise ValueError('PROPAGATION_CONCURRENT_CHANGE')
+        con.execute('''INSERT INTO brand_propagation_events(event_id,title,category,metadata)
+            VALUES(?,?,?,?) ON CONFLICT(event_id) DO UPDATE SET title=excluded.title,
+            category=excluded.category,metadata=excluded.metadata''',
+            (event_id, event['title'], category, json.dumps(proof, sort_keys=True)))
+        authorize(actor, scope, action='write', connection=con)
+        if authorize_current is not None and authorize_current() != body['context']:
+            raise PermissionError('PROPAGATION_ACTOR_CHANGED')
+        if gate.get_valid_approval_token('db_write', resource, exact=True) is None:
+            raise ValueError('WORK_EFFECT_PERMISSION_DENIED')
+        _check_effect(actor, scope, OperationType.DB_WRITE, resource)
+    return {'ok': True, 'classification_id': event_id, 'category': category,
+            'source_event_id': source_event_id, 'claim_type': body['claim_type']}
+
+
+def read_scoped_classifications(*, actor, scope):
+    import database
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.reporting.saved_work import authorize, _digest
+    context = authorize(actor, scope, action='read')
+    rows, rejected, seen_events = [], 0, set()
+    with get_repository().connection(read_only=True, wal=False) as con:
+        if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='brand_propagation_events'").fetchone():
+            return {'rows': [], 'rejected': 0, 'state': 'EMPTY'}
+        # Filter authorized context before pagination. CASE protects JSON functions
+        # from malformed historical metadata; unrelated rows cannot consume a page.
+        predicates = ["json_extract(safe_metadata, '$.schema') = ?",
+                      "json_type(safe_metadata, '$.context') = 'object'",
+                      "(SELECT COUNT(*) FROM json_each(safe_metadata, '$.context')) = ?"]
+        params = ['lumenis.propagation-classification/v1', len(context)]
+        predicates.append("NOT EXISTS (SELECT 1 FROM json_each(safe_metadata, '$.context') "
+                          "WHERE key NOT IN (" + ','.join('?' for _ in context) + "))")
+        params.extend(context)
+        for key, value in context.items():
+            if context['global_scope'] is True and key in {'global_scope', 'brand_focus_id'}:
+                continue
+            predicates.append("json_extract(safe_metadata, ?) IS ?")
+            params.extend(('$.context.' + key, value))
+        if context['global_scope'] is True:
+            predicates.extend(["json_type(safe_metadata, '$.context.global_scope') = 'false'",
+                               "json_type(safe_metadata, '$.context.brand_focus_id') = 'text'",
+                               "length(json_extract(safe_metadata, '$.context.brand_focus_id')) > 0",
+                               "(SELECT COUNT(*) FROM lumenis_subject_registry AS registry "
+                               "WHERE registry.brand_focus_id = json_extract(safe_metadata, '$.context.brand_focus_id') "
+                               "AND registry.domain_id = ? AND registry.subject_type = ? "
+                               "AND registry.status IN (?,?)) = 1"])
+            params.extend(('BMP', 'brand', 'configured', 'active'))
+        else:
+            predicates.append("json_type(safe_metadata, '$.context.global_scope') = 'false'")
+        query = ("WITH safe_rows AS (SELECT event_id,category,metadata, "
+                 "CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END AS safe_metadata "
+                 "FROM brand_propagation_events) "
+                 "SELECT event_id,category,metadata FROM safe_rows WHERE "
+                 + " AND ".join(predicates) + " ORDER BY event_id LIMIT 1001")
+        candidates = con.execute(query, params).fetchall()
+        truncated = len(candidates) > 1000
+        for raw in candidates[:1000]:
+            row = dict(raw)
+            try:
+                proof = json.loads(row['metadata'])
+                stored_context = proof.get('context')
+                same_context = stored_context == context
+                if context['global_scope'] is True and isinstance(stored_context, dict):
+                    same_context = (stored_context.get('global_scope') is False and bool(stored_context.get('brand_focus_id'))
+                        and {k:v for k,v in stored_context.items() if k not in {'global_scope','brand_focus_id'}}
+                        == {k:v for k,v in context.items() if k not in {'global_scope','brand_focus_id'}})
+                if proof.get('schema') != 'lumenis.propagation-classification/v1' or not same_context:
+                    continue
+                expected_id = 'PE-S-' + _digest({'context': stored_context,
+                    'source_event_id': proof['source_event_id']})[:32]
+                if row['event_id'] != expected_id or type(proof['source_event_id']) is not int:
+                    raise ValueError('PROPAGATION_CLASSIFICATION_ID_CHANGED')
+                body = {k:v for k,v in proof.items() if k != 'sha256'}
+                if proof.get('sha256') != _digest(body) or row['category'] != proof['category']:
+                    raise ValueError('PROPAGATION_CLASSIFICATION_CHANGED')
+                if proof['category'] not in {x.value for x in PropagationEventCategory}:
+                    raise ValueError('PROPAGATION_CATEGORY_INVALID')
+                event = database.get_scoped_event(proof['source_event_id'], scope, connection=con)
+                if not event or str(event['scope_evidence_ref']) != proof['source_evidence_ref']:
+                    raise ValueError('PROPAGATION_SOURCE_CHANGED')
+                if proof['source_event_id'] in seen_events:
+                    raise ValueError('PROPAGATION_CLASSIFICATION_DUPLICATE')
+                seen_events.add(proof['source_event_id'])
+                rows.append({'classification_id': row['event_id'], 'category': proof['category'],
+                             'event': event, 'claim_type': 'human_business_classification',
+                             'source_evidence': event['scope_evidence']})
+            except (ValueError, TypeError, KeyError):
+                rejected += 1
+        authorize(actor, scope, action='read', connection=con)
+    return {'rows': rows, 'rejected': rejected, 'truncated': truncated, 'state': 'PARTIAL' if rejected or truncated else 'READY' if rows else 'EMPTY'}
+
+
+def classification_route_matches():
+    from flask import request
+    return bool(request.endpoint == 'experience_runtime.propagation_classify'
+        and request.url_rule is not None and request.url_rule.rule == '/api/experience/propagation/classify'
+        and request.method == 'POST')
+
+
+def classification_access_allowed():
+    from experience_runtime import _shared_work_actor_scope
+    from lumenis.system.security.permission import LocalWorkspacePrincipal
+    if not classification_route_matches():
+        return False
+    try:
+        actor, scope = _shared_work_actor_scope('write')
+        return actor is not None and scope['domain_id'] == 'zbmp' and scope['global_scope'] is False
+    except (ValueError, PermissionError):
+        return False
+
+
+def classification_http():
+    from flask import request, jsonify
+    from experience_runtime import _shared_work_actor_scope, _content_source_same_origin
+    from lumenis.system.security.permission import get_permission_gate, PermissionLevel
+    try:
+        if not classification_route_matches() or not _content_source_same_origin():
+            raise PermissionError('PROPAGATION_ROUTE_DENIED')
+        actor, scope = _shared_work_actor_scope('write')
+        body = request.get_json(silent=True)
+        if (not isinstance(body, dict) or set(body) - {'source_event_id','category','request_id','confirm','confirmed_resource'}
+                or type(body.get('confirm',False)) is not bool):
+            raise ValueError('PROPAGATION_EXACT_REQUEST_REQUIRED')
+        args = {key: body.get(key) for key in ('source_event_id','category','request_id')}
+        preview = prepare_scoped_classification(actor=actor, scope=scope, **args)
+        if body.get('confirm') is not True:
+            return jsonify({'ok': True, 'state': 'PREPARED', 'resource': preview['resource'], 'approval_issued': False})
+        if body.get('confirmed_resource') != preview['resource']:
+            raise PermissionError('PROPAGATION_PREVIEW_CHANGED')
+        gate = get_permission_gate()
+        if not gate.has_permission(PermissionLevel.HUMAN_APPROVAL) or not gate.has_permission(PermissionLevel.COMMIT):
+            raise PermissionError('PROPAGATION_MANUAL_AUTHORITY_REQUIRED')
+        token = gate.grant_approval('db_write', resource=preview['resource'], duration_minutes=5,
+            granted_by=preview['body']['context'].get('principal_ref') or 'actor:'+str(preview['body']['context']['actor_id']))
+        def current_identity():
+            from lumenis.shared.reporting.saved_work import authorize
+            current_actor, current_scope = _shared_work_actor_scope('write')
+            return authorize(current_actor, current_scope, action='write')
+        try:
+            return jsonify(write_scoped_classification(actor=actor, scope=scope, resource=preview['resource'], authorize_current=current_identity, **args))
+        except Exception:
+            gate.revoke_approval(token)
+            raise
+    except PermissionError:
+        return jsonify({'ok': False, 'code':'PROPAGATION_PERMISSION_DENIED'}),403
+    except (ValueError,TypeError):
+        return jsonify({'ok': False, 'code':'PROPAGATION_REQUEST_INVALID'}),400
+    except Exception:
+        return jsonify({'ok': False, 'code':'PROPAGATION_UNAVAILABLE'}),503

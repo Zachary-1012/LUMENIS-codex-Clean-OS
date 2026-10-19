@@ -400,6 +400,10 @@ def _note_to_dict(note: AnalyzedNote) -> dict:
         "analysis_status": note.analysis_status,
         "analysis_code": note.analysis_code,
         "keyword_method": note.keyword_method,
+        "source_locator": note.source_locator,
+        "source_row_sha256": note.source_row_sha256,
+        "source_record": getattr(note, "source_record", None),
+        "source_fields": getattr(note, "source_fields", []),
     }
 
 

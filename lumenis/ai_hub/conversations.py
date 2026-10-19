@@ -407,9 +407,20 @@ def _response_context(connection, conversation_id, user_turn_id):
     return json.loads(target['content_json'])['text'], history, accounting
 
 
-def respond(actor, conversation_id, user_turn_id, *, idempotency_key, expected_revision, retry_confirmed=False):
+def respond(actor, conversation_id, user_turn_id, *, idempotency_key, expected_revision, retry_confirmed=False, external_approval=None):
     """Reserve before inference. Unknown prior effects are never auto-retried."""
-    digest = _sha({'user_turn_id': user_turn_id, 'operation': 'explicit_model_response'})
+    if external_approval is not None and (
+            type(external_approval) is not dict
+            or set(external_approval) != {'confirmed', 'confirmation_id', 'resource'}
+            or external_approval.get('confirmed') is not True
+            or any(type(external_approval.get(k)) is not str or not external_approval[k]
+                   or len(external_approval[k]) > 256 for k in ('confirmation_id', 'resource'))):
+        raise ValueError('CONVERSATION_EXTERNAL_APPROVAL_INVALID')
+    request_binding = {'user_turn_id': user_turn_id, 'operation': 'explicit_model_response'}
+    if external_approval is not None:
+        # Idempotent replay cannot change consent or reuse a preview request key.
+        request_binding['external_approval_sha256'] = _sha(external_approval)
+    digest = _sha(request_binding)
     with _write(conversation_id, actor) as (con, conversation):
         old = _existing(con, conversation_id, idempotency_key, digest)
         if old:
@@ -422,6 +433,13 @@ def respond(actor, conversation_id, user_turn_id, *, idempotency_key, expected_r
         if previous and retry_confirmed is not True:
             raise ValueError('CONVERSATION_NEW_MODEL_ATTEMPT_REQUIRES_CONFIRMATION')
         question, history, accounting = _response_context(con, conversation_id, user_turn_id)
+        context_digest = _sha({'question': question, 'history': history})
+        if external_approval is not None:
+            binding = {'confirmation_sha256': _sha(external_approval['confirmation_id']),
+                       'resource': external_approval['resource'], 'context_sha256': context_digest}
+            if not any(json.loads(row['content_json']).get('approval_binding') == binding
+                       and row['state'] == 'unavailable' for row in previous):
+                raise PermissionError('CONVERSATION_EXTERNAL_APPROVAL_NOT_BOUND')
         _advance(con, conversation, expected_revision)
         reserved = _insert_turn(con, conversation, key=idempotency_key, digest=digest,
             role='assistant', origin='model_output', state='reserved', content={
@@ -430,8 +448,12 @@ def respond(actor, conversation_id, user_turn_id, *, idempotency_key, expected_r
     # The existing unique Gateway service owns model selection and authorization.
     # No transaction/SQLite writer lock is held over an external call.
     from . import service
+    approval_request = None
     try:
-        outcome = service.chat(question, history=history, source_scope=None)
+        kwargs = {'history': history, 'source_scope': None}
+        if external_approval is not None:
+            kwargs['external_approval'] = external_approval
+        outcome = service.chat(question, **kwargs)
         if outcome.get('ok') is True and isinstance(outcome.get('reply'), str) and outcome['reply'].strip():
             content = {'text': outcome['reply'], 'in_reply_to': user_turn_id,
                 'source_policy': 'source_free_conversation', 'context_accounting': accounting,
@@ -443,6 +465,17 @@ def respond(actor, conversation_id, user_turn_id, *, idempotency_key, expected_r
             content = {'in_reply_to': user_turn_id, 'source_policy': 'source_free_conversation',
                 'context_accounting': accounting, 'code': code if type(code) is str and re.fullmatch(r'[A-Z0-9_]{1,96}', code) else 'MODEL_UNAVAILABLE'}
             state = 'unavailable'
+            preview = outcome.get('approval_request')
+            if (code == 'USER_API_APPROVAL_REQUIRED' and external_approval is None
+                    and type(preview) is dict and type(preview.get('confirmation_id')) is str
+                    and type(preview.get('resource')) is str):
+                # Preserve only non-authorizing hashes in conversation storage.
+                # The live preview is returned once; replay never issues consent.
+                content['approval_binding'] = {
+                    'confirmation_sha256': _sha(preview['confirmation_id']),
+                    'resource': preview['resource'], 'context_sha256': context_digest}
+                content['recovery'] = 'NEW_ATTEMPT_WITH_EXACT_APPROVAL_AND_RETRY_CONFIRMATION'
+                approval_request = preview
     except Exception:
         content = {'in_reply_to': user_turn_id, 'source_policy': 'source_free_conversation',
             'context_accounting': accounting, 'code': 'MODEL_RESULT_UNAVAILABLE_NO_AUTO_RETRY'}
@@ -463,7 +496,10 @@ def respond(actor, conversation_id, user_turn_id, *, idempotency_key, expected_r
             raise RuntimeError('CONVERSATION_RESPONSE_INTERRUPTED')
         _advance(con, current, current['revision'])
         made = dict(con.execute('SELECT * FROM ai_conversation_turns WHERE turn_id=?', (reserved['turn_id'],)).fetchone())
-        return {'turn': _public_turn(made), 'revision': current['revision']+1, 'idempotent_hit': False}
+        result = {'turn': _public_turn(made), 'revision': current['revision']+1, 'idempotent_hit': False}
+        if approval_request is not None:
+            result['approval_request'] = approval_request
+        return result
 
 
 def interrupt_response(actor, conversation_id, turn_id, *, expected_revision, confirmed):

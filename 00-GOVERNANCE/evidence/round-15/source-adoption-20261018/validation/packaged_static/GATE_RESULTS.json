@@ -1,0 +1,17 @@
+{
+  "scope": "LOCAL_PACKAGING_STATIC_ONLY",
+  "gates": {
+    "verify_ai_native_constitution": 0,
+    "verify_current_configuration": 0,
+    "verify_database_authority": 0,
+    "verify_experience_anti_template": 0,
+    "verify_experience_authority_exclusive": 0,
+    "verify_experience_screen_blueprints": 0,
+    "verify_lumenis_single_product": 0,
+    "verify_source_adoption": 0,
+    "verify_lumenis_ggi_contract": 0,
+    "takeover": 0,
+    "machine": 0
+  },
+  "changed_paths": 1158
+}

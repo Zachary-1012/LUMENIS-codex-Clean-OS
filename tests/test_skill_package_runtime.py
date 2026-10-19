@@ -568,7 +568,9 @@ def test_github_connector_is_allowlisted_read_only_and_never_exposes_token():
         opener=opener,
     )
     snapshot = connector.status()
-    assert snapshot["state"] == "CONNECTED"
+    assert snapshot["state"] == "PROVIDER_UNAVAILABLE"
+    assert snapshot["authorization_verification"] == "NOT_VERIFIED"
+    assert snapshot["code"] == "HEALTH_CHECK_REQUIRED"
     assert snapshot["write_enabled"] is False
     assert snapshot["secret_material_exposed"] is False
     assert "secret-token-for-test" not in str(snapshot)

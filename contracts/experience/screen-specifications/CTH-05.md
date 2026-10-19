@@ -153,3 +153,26 @@ The page does not call `weekly_events`, `calendar`, a new trend API or a new dat
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+### 原G144/G145具体终态合同：趋势分解、告警与启发式限定
+
+趋势结果保原序列并按实际返回展开趋势/季节/余项，告警/变点用带时点、方法版本及原始值的标记，可点回同源观察。ETS/ARIMA等合法预测只在实际输出区间时画预测段，训练历史与未来范围分界；<14点明确INSUFFICIENT，保原观察表。方法/回测详情列实际异常召回与误报率、评估窗及缺测，原≥0.8目标不伪称已达成。
+旧KOS/归因/CTR启发式结果逐值标v1和“启发式未校准”，不是概率；无数据不回默认0/50。只有原Owner提供同模型校准证据和当前适用结果才可显示概率/区间，UI标签不能自行升级资格。
+
+构图：顶部对象/期间/口径，主图为原序列与可选择分解层，旁侧同源表；选告警后右侧打开观察/方法/回测，启发式标签紧邻实际值。iOS先结论/缺口，再单图层与可访问表。
+
+不足点数、断点缺值、常量序列、模型不可用、拟合/回测失败分开；改窗口新分析，取消保原序列和上版，重开不自动训练。未知不被平滑线遮掉，旧告警不当当前事件。
+
+Public Website仅用获准真实样例说明趋势分解、告警与启发式限定及未核范围，不展示内部资料；Web按窗口宽度保主对象与可逆检查器、刷新读回原版本；Windows/macOS分别验证文件/窗口冷开和同版恢复；iOS按本组对象清单→单对象→检查/确认顺序重组，复杂编辑续接同版本，合法轻改不因窄屏丢失。三语、200%文字、键盘/读屏及48px触控均保关键字段和取消/返回。
+
+UI可按解释目的安排分解图、原值表和告警证据，用户锁图层/简洁/撤销；不造预测带或用亮度表现可靠性。
+
+沿本屏现有Owner/Permission/SourceUse/版本/回执接线；缺callable保持OPEN并禁对应效果，不猜route，不改既有当前实现/验收状态。此段补全旧要求的可执行设计，不证明实现通过。
+
+模型可计算与业务告警已批准必须在同一结果区分列：原Alert Owner当前返回alert_evaluation.state=CONFIGURATION_REQUIRED、reason=APPROVED_SCOPED_BUSINESS_RULE_REQUIRED，旁列真实model_state/model_reason/monitoring_state。即便model_state为READY，也只能说明当前统计计算状态，不能画成“已启用告警”、已获批准或实时监测正常。保原binding/window/source/snapshot_sha256/recipe依据入口；回溯变点不叫未来预警，控制图默认值不当已校准业务阈值。
+
+当前alerts=[]、write_state=NOT_PERFORMED、notification_state=NOT_PERFORMED分别显示“未生成业务告警／未写入／未通知”，不能把空列表显示“无风险”或“所有告警已处理”；rule和threshold为空就显示尚缺当前范围的已批准规则。cooldown.state=NOT_APPLICABLE、reason=NO_COMMITTED_MODEL_ALERT表示没有已提交模型告警，不能启动倒计时或假造冷却到期。读取/刷新不产生告警、通知或授权；缺批准时可继续查看原序列和统计、返回原Owner的规则审查说明，未有实际批准入口不放一键启用的假控件。
+
+旧人工输入阈值须另卡呈现legacy_heuristic；仅真实非DEFAULT有效正数配置可显示CONFIGURED_LEGACY_HEURISTIC，但business_validation仍NOT_VERIFIED、scope_binding仍UNVERIFIED_LEGACY_INPUT、window为空仍未核。MANUAL来源标签不证明当前scope/window绑定或模型校准，历史DEFAULT-IC020行更不能当用户批准。此卡不与模型业务告警合并，不因用户看过卡片自动补齐批准。
+
+Web与桌面在图旁分列“统计状态／业务告警配置／写入与通知”，窄屏和iOS用可展开同一状态组且首行仍可见未批准，官网获准样例也标此界限；刷新、重开、取消后继续读回同一真实版本。拒绝/失效状态保可读原工作，不以颜色、可爱动效或UI自身生成隐藏缺配置。验收覆盖READY但未批准、来源/范围变更、默认旧阈值、真实人工旧阈值及重复读取零写，原G145完整趋势/异常目标保留，当前状态不冒完整告警功能验收。

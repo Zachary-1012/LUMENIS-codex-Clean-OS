@@ -326,6 +326,10 @@ def test_public_document_method_rejects_bad_transport_envelopes(content_type,siz
 def test_document_limiter_cooldown_and_wait_reauthorization(monkeypatch):
     from lumenis.system.collector.adapters.public_http import PublicHttpAdapter
     from lumenis.system.collector.adapters.public_source import PublicResponse, PublicSourceError
+    from types import SimpleNamespace
+    from lumenis.system.collector.guard import rate_limiter
+    clock = SimpleNamespace(wall=1000.0, mono=1000.0)
+    monkeypatch.setattr(rate_limiter, 'time', SimpleNamespace(time=lambda: clock.wall, monotonic=lambda: clock.mono))
     calls=[]
     adapter=PublicHttpAdapter(fetcher=lambda url: calls.append(url) or PublicResponse(url=url,content=b'{}',content_type='application/json',status_code=200))
     adapter._document_limiter.force_pause(cooldown_seconds=60)
@@ -333,7 +337,57 @@ def test_document_limiter_cooldown_and_wait_reauthorization(monkeypatch):
         adapter.fetch_document('https://example.com/a',allowed_content_types=('application/json',))
     assert not calls
     adapter._document_limiter.on_success()
-    def revoked(): raise PermissionError('approval revoked while waiting')
+    # A sibling success must not clear an unelapsed force_pause (rate-v2).
+    assert adapter._document_limiter.remaining_cooldown() == 60
+    assert not adapter._document_limiter.can_run()
+    clock.wall += 60
+    clock.mono += 60
+    assert adapter._document_limiter.can_run()
+    # Exercise the real reservation/wake loop, not a no-op wait replacement.
+    adapter._document_limiter.interval = 1.0
+    wait_slot = adapter._document_limiter.wait_slot
+    waits = []
+    def elapsed_sleep(seconds):
+        waits.append(seconds)
+        clock.wall += seconds
+        clock.mono += seconds
+    monkeypatch.setattr(adapter._document_limiter, 'wait_slot', lambda: wait_slot(sleep=elapsed_sleep))
+    def revoked():
+        assert waits == [1.0] and clock.mono == 1061.0
+        raise PermissionError('approval revoked while waiting')
     with pytest.raises(PermissionError,match='revoked'):
         adapter.fetch_document('https://example.com/a',allowed_content_types=('application/json',),before_fetch=revoked)
     assert not calls
+
+
+def test_financial_collection_rechecks_exact_approval_after_real_limiter_wait(acquisition_workspace, monkeypatch):
+    from types import SimpleNamespace
+    from lumenis.system.collector.adapters import public_http
+    from lumenis.system.collector.guard import rate_limiter
+    ws = acquisition_workspace
+    args = dict(actor=ws['actor'], scope=ws['scope'])
+    target = financial.save_financial_target(ws['identity']['evidence_id'], request_id='financial-wait-target-001', **args)
+    tid = target['artifact']['artifact_id']
+    prepared = financial.prepare_financial_collection(tid, **args)
+    token = ws['gate'].grant_approval('collector_start', resource=prepared['resource'], granted_by='isolated-test')
+    clock = SimpleNamespace(wall=1000.0, mono=1000.0)
+    monkeypatch.setattr(rate_limiter, 'time', SimpleNamespace(time=lambda: clock.wall, monotonic=lambda: clock.mono))
+    limiter = public_http.PublicHttpAdapter._document_limiter
+    limiter.interval = 1.0
+    wait_slot = limiter.wait_slot
+    waits, fetched = [], []
+    def withdraw_during_wait(seconds):
+        waits.append(seconds)
+        clock.wall += seconds
+        clock.mono += seconds
+        assert ws['gate'].revoke_approval(token)
+    monkeypatch.setattr(limiter, 'wait_slot', lambda: wait_slot(sleep=withdraw_during_wait))
+    def forbidden_fetch(url):
+        fetched.append(url)
+        raise AssertionError('revoked collection must not reach transport')
+    monkeypatch.setattr(public_http, 'fetch_public_url', forbidden_fetch)
+    with pytest.raises(PermissionError, match='EXACT_APPROVAL'):
+        financial.collect_financial_target(tid, request_id='financial-wait-run-001', **args)
+    assert waits == [1.0]
+    assert not fetched
+    assert financial._existing_request('financial-wait-run-001', **args) is None

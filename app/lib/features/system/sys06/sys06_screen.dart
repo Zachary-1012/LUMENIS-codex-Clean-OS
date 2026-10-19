@@ -2515,7 +2515,7 @@ class _Sys06Copy {
     'zh': {
       'eyebrow': 'SYSTEM · 受控来源阅读',
       'title': '内置来源阅读器',
-      'subtitle': '页面在序境受控会话中读取，不会跳转或使用你的个人浏览器。',
+      'subtitle': '页面在寰意受控会话中读取，不会跳转或使用你的个人浏览器。',
       'open': '打开受控阅读器',
       'address': '允许的公开来源地址',
       'addressHint': 'https://example.com',
@@ -2592,7 +2592,7 @@ class _Sys06Copy {
       'notice.frameEmpty': '页面没有可用的可视预览。',
       'notice.capacityOccupied': '受控浏览容量暂被其他会话占用。',
       'notice.accessUnavailable': '当前工作区没有此浏览权限。',
-      'notice.localCoreRequired': '目前仅支持连接本机序境 Core；远程 Web 浏览尚未验证或开放。',
+      'notice.localCoreRequired': '目前仅支持连接本机寰意 Core；远程 Web 浏览尚未验证或开放。',
       'notice.invalidAddress': '请输入一个有效的 http 或 https 地址。',
       'notice.unavailable': '受控阅读暂时不可用。',
       'notice.releasingControl': '正在释放人工控制权。',
@@ -2600,7 +2600,7 @@ class _Sys06Copy {
       'notice.controlUnavailable': '人工控制当前不可用或租约已失效。',
       'notice.returnUnavailable': '当前没有可返回的任务页面。',
       'notice.closed': '受控会话已结束。',
-      'empty.ready.title': '在序境内开始读取',
+      'empty.ready.title': '在寰意内开始读取',
       'empty.ready.detail': '先开启受控会话，再输入一个允许的公开来源地址。',
       'empty.enterAddress.title': '输入来源地址',
       'empty.enterAddress.detail': '导航成功后，系统会显示已授权页面的只读快照。',
@@ -2624,7 +2624,7 @@ class _Sys06Copy {
       'empty.accessUnavailable.detail': '请返回工作区继续其他任务，权限恢复后再试。',
       'empty.localCoreRequired.title': '远程浏览尚不可用',
       'empty.localCoreRequired.detail':
-          '当前入口只接受本机序境 Core。远程 Web 的认证、传输与部署能力仍未验证。',
+          '当前入口只接受本机寰意 Core。远程 Web 的认证、传输与部署能力仍未验证。',
       'empty.invalidAddress.title': '地址不可用',
       'empty.invalidAddress.detail': '只接受无凭证的 http 或 https 公开地址。',
       'empty.unavailable.title': '预览暂时不可用',
@@ -2644,7 +2644,7 @@ class _Sys06Copy {
       'eyebrow': 'SYSTEM · CONTROLLED SOURCE READING',
       'title': 'Internal source reader',
       'subtitle':
-          'The page is read in a LUMENIS-controlled session. Your personal browser is never opened or used.',
+          'The page is read in an OEVIRA-controlled session. Your personal browser is never opened or used.',
       'open': 'Open controlled reader',
       'address': 'Allowed public source address',
       'addressHint': 'https://example.com',
@@ -2736,7 +2736,7 @@ class _Sys06Copy {
       'notice.capacityOccupied': 'Controlled browsing capacity is occupied.',
       'notice.accessUnavailable': 'This workspace has no browser access.',
       'notice.localCoreRequired':
-          'Only local LUMENIS Core is supported here; remote Web browsing is not yet verified or enabled.',
+          'Only local OEVIRA Core is supported here; remote Web browsing is not yet verified or enabled.',
       'notice.invalidAddress': 'Enter a valid http or https address.',
       'notice.unavailable': 'Controlled reading is temporarily unavailable.',
       'notice.releasingControl': 'Releasing human control.',
@@ -2746,7 +2746,7 @@ class _Sys06Copy {
           'Human control is unavailable or its lease expired.',
       'notice.returnUnavailable': 'There is no task page to return to.',
       'notice.closed': 'Controlled session ended.',
-      'empty.ready.title': 'Read inside LUMENIS',
+      'empty.ready.title': 'Read inside OEVIRA',
       'empty.ready.detail':
           'Open a controlled session, then enter an allowed public source address.',
       'empty.enterAddress.title': 'Enter a source address',
@@ -2778,7 +2778,7 @@ class _Sys06Copy {
           'Return to other work and try again after access is restored.',
       'empty.localCoreRequired.title': 'Remote browsing is unavailable',
       'empty.localCoreRequired.detail':
-          'This entry accepts local LUMENIS Core only. Remote Web authentication, transport and deployment are not verified.',
+          'This entry accepts local OEVIRA Core only. Remote Web authentication, transport and deployment are not verified.',
       'empty.invalidAddress.title': 'Address unavailable',
       'empty.invalidAddress.detail':
           'Only credential-free http or https public addresses are accepted.',
@@ -2803,7 +2803,7 @@ class _Sys06Copy {
     'ko': {
       'eyebrow': 'SYSTEM · 제어된 소스 읽기',
       'title': '내장 소스 리더',
-      'subtitle': '페이지는 LUMENIS 제어 세션에서 읽습니다. 개인 브라우저를 열거나 사용하지 않습니다.',
+      'subtitle': '페이지는 OEVIRA 제어 세션에서 읽습니다. 개인 브라우저를 열거나 사용하지 않습니다.',
       'open': '제어된 리더 열기',
       'address': '허용된 공개 소스 주소',
       'addressHint': 'https://example.com',
@@ -2883,7 +2883,7 @@ class _Sys06Copy {
       'notice.capacityOccupied': '제어된 브라우징 용량이 사용 중입니다.',
       'notice.accessUnavailable': '이 작업 공간에는 브라우저 권한이 없습니다.',
       'notice.localCoreRequired':
-          '현재는 로컬 LUMENIS Core만 지원합니다. 원격 Web 브라우징은 아직 검증되거나 활성화되지 않았습니다.',
+          '현재는 로컬 OEVIRA Core만 지원합니다. 원격 Web 브라우징은 아직 검증되거나 활성화되지 않았습니다.',
       'notice.invalidAddress': '유효한 http 또는 https 주소를 입력하세요.',
       'notice.unavailable': '제어된 읽기를 일시적으로 사용할 수 없습니다.',
       'notice.releasingControl': '사람 제어권을 해제하고 있습니다.',
@@ -2891,7 +2891,7 @@ class _Sys06Copy {
       'notice.controlUnavailable': '사람 제어를 사용할 수 없거나 임대가 만료되었습니다.',
       'notice.returnUnavailable': '돌아갈 작업 페이지가 없습니다.',
       'notice.closed': '제어된 세션이 종료되었습니다.',
-      'empty.ready.title': 'LUMENIS 안에서 읽기 시작',
+      'empty.ready.title': 'OEVIRA 안에서 읽기 시작',
       'empty.ready.detail': '제어된 세션을 연 다음 허용된 공개 소스 주소를 입력하세요.',
       'empty.enterAddress.title': '소스 주소 입력',
       'empty.enterAddress.detail': '탐색 뒤에 시스템이 승인된 페이지의 읽기 전용 스냅샷을 표시합니다.',
@@ -2915,7 +2915,7 @@ class _Sys06Copy {
       'empty.accessUnavailable.detail': '다른 작업으로 돌아가고 접근이 복구된 뒤 다시 시도하세요.',
       'empty.localCoreRequired.title': '원격 브라우징 사용 불가',
       'empty.localCoreRequired.detail':
-          '이 진입은 로컬 LUMENIS Core만 허용합니다. 원격 Web 인증, 전송 및 배포는 검증되지 않았습니다.',
+          '이 진입은 로컬 OEVIRA Core만 허용합니다. 원격 Web 인증, 전송 및 배포는 검증되지 않았습니다.',
       'empty.invalidAddress.title': '주소를 사용할 수 없음',
       'empty.invalidAddress.detail': '자격 증명이 없는 http 또는 https 공개 주소만 허용됩니다.',
       'empty.unavailable.title': '미리보기를 일시적으로 사용할 수 없음',

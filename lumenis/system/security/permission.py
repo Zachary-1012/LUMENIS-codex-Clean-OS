@@ -197,7 +197,7 @@ def resolve_local_workspace_principal(
     """Resolve the fixed workspace principal from the current server request."""
     if (
         type(module) is not str
-        or module not in {"content", "reports", "cases", "collector", "owned_training", "owned_model_admission", "skills", "browser", "evidence", "conversation", "learning_review"}
+        or module not in {"content", "reports", "cases", "collector", "owned_training", "owned_model_admission", "skills", "browser", "evidence", "conversation", "learning_review", "learning"}
         or type(action) is not str
         or action not in _RESOURCE_SCOPE_ACTIONS
     ):
@@ -606,8 +606,8 @@ _RESOURCE_SCOPE_ACTIONS = frozenset({"read", "write"})
 # discriminator; identity and grants are always resolved on the server.
 _SHARED_WORKSPACE_SCOPE_KIND = "shared_workspace"
 _SHARED_WORKSPACE_VERSION = 1
-_SHARED_WORKSPACE_MODULES = frozenset({"content", "reports", "conversation"})
-_SHARED_WORKSPACE_OPERATIONS = frozenset({OperationType.DATA_EXPORT, OperationType.DB_WRITE, OperationType.AI_CALL})
+_SHARED_WORKSPACE_MODULES = frozenset({"content", "reports", "conversation", "learning"})
+_SHARED_WORKSPACE_OPERATIONS = frozenset({OperationType.DATA_EXPORT, OperationType.DB_WRITE, OperationType.AI_CALL, OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT})
 _SHARED_WORKSPACE_ADMISSION_SEAL = object()
 
 
@@ -1056,7 +1056,7 @@ def check_local_workspace_scope_permission(
 
     valid_request = (
         domain_config is not None
-        and module_value in {"content", "reports", "cases", "collector", "owned_training", "owned_model_admission", "skills", "evidence", "learning_review"}
+        and module_value in {"content", "reports", "cases", "collector", "owned_training", "owned_model_admission", "skills", "evidence", "learning_review", "learning"}
         and (module_value != "cases" or normalized_domain == "cth")
         and action_value in _RESOURCE_SCOPE_ACTIONS
         and type(global_scope) is bool
@@ -1357,7 +1357,18 @@ def _shared_workspace_admission_valid(
                 or admission.module not in _SHARED_WORKSPACE_MODULES
                 or admission.action not in _RESOURCE_SCOPE_ACTIONS):
             return False
-        if operation_type is OperationType.AI_CALL:
+        if operation_type in {OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT}:
+            if (admission.module != "learning" or admission.action != "write"
+                    or type(resource) is not str
+                    or re.fullmatch(r"learning-exchange:[0-9a-f]{64}", resource) is None):
+                return False
+            from lumenis.shared.learning.contribution import validate_learning_exchange_resource
+            actor = admission.principal if admission.principal is not None else {"id": admission.actor_id}
+            if not validate_learning_exchange_resource(resource, actor=actor,
+                    scope={"scope_kind": "shared_workspace", "version": 1},
+                    operation=operation_type, connection=admission.connection):
+                return False
+        elif operation_type is OperationType.AI_CALL:
             # Source-free user conversation only. The Gateway hashes the exact
             # destination, model and redacted request body, then rechecks here.
             if (admission.module != "conversation" or admission.action != "write"
@@ -1472,9 +1483,19 @@ def check_shared_workspace_effect(
         and operation is OperationType.AI_CALL and type(resource) is str
         and re.fullmatch(r"user-api-conversation:v1:[0-9a-f]{64}", resource) is not None
     )
+    learning_valid = (module == "learning" and action == "write"
+        and operation in {OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT}
+        and type(resource) is str and re.fullmatch(r"learning-exchange:[0-9a-f]{64}", resource) is not None)
+    if learning_valid:
+        try:
+            from lumenis.shared.learning.contribution import validate_learning_exchange_resource
+            learning_valid = validate_learning_exchange_resource(resource, actor=actor, scope=scope,
+                                                                  operation=operation, connection=connection)
+        except Exception:
+            learning_valid = False
     if (type(operation) is not OperationType or not (
             (operation is OperationType.DATA_EXPORT and resource_valid)
-            or conversation_valid)):
+            or conversation_valid or learning_valid)):
         return _shared_workspace_denial(
             permission_gate, operation, resource, caller, "SHARED_WORKSPACE_OPERATION_INVALID",
         )
@@ -1483,10 +1504,21 @@ def check_shared_workspace_effect(
             permission_gate, actor, scope, module=module, action=action,
             connection=connection, authorized_context=context,
         )
-        return permission_gate.check(
+        result = permission_gate.check(
             operation, resource=resource, caller=caller,
+            exact_approval_required=learning_valid,
             _shared_workspace_admission=admission,
         )
+        if learning_valid and result.allowed:
+            with permission_gate._approval_lock:
+                approval = permission_gate._approvals.get(result.approval_token)
+                exact = bool(approval and approval.resource == resource and approval.operation == operation.value
+                             and approval.granted_by == caller and approval.issuance_audit_id
+                             and approval.is_valid(operation.value, resource))
+            if not exact:
+                return _shared_workspace_denial(permission_gate, operation, resource, caller,
+                                                "LEARNING_EXCHANGE_EXACT_ACTOR_APPROVAL_REQUIRED")
+        return result
     except Exception:
         logger.exception("Shared workspace Permission Gate unavailable")
         return _shared_workspace_unavailable_result(operation, resource, caller)
@@ -3549,7 +3581,8 @@ class PermissionGate:
             )
             if _TESTING_BYPASS_ENABLED or os.environ.get("PERMISSION_GATE_TESTING") == "1":
                 raise ValueError("testing bypass cannot authorize maintenance")
-            if isinstance(authorization, PrelaunchMaintenanceAuthorization):
+            if (type(authorization) is PrelaunchMaintenanceAuthorization
+                    and authorization.recovery_only is False):
                 loaded = load_prelaunch_baseline_config(
                     os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None,
                 )
@@ -3589,6 +3622,161 @@ class PermissionGate:
             audit_id=audit_id, operation_type=OperationType.DATA_IMPORT.value,
             resource=resource, risk_level=RiskLevel.HIGH.value,
             permission_required="signed_prelaunch_service_grant", caller=caller,
+            domain_id=domain,
+        )
+
+    def check_prelaunch_pending_source_recovery(
+        self, authorization, *, parent_evidence_ref: str, parent_integrity_digest: str,
+        observation_sha256: str, native_id: str, source_fingerprint: str,
+        source_url: str, platform: str, business_query, max_results: int,
+        scope: dict[str, Any], connection,
+    ) -> PermissionResult:
+        """Authorize one persisted observation's Source-preservation retry only.
+
+        Current signed plan membership is reloaded for every call. The parent
+        Evidence, selected native observation and exact Canonical registry scope
+        are verified on the caller's transaction connection. This token cannot
+        be used by the network collection entry.
+        """
+        allowed = False
+        reason = "PENDING_SOURCE_RECOVERY_AUTHORIZATION_REQUIRED"
+        resource = "prelaunch-source-recovery:invalid"
+        domain = scope.get("domain_id") if isinstance(scope, dict) else None
+        try:
+            import sqlite3
+
+            from lumenis.shared.evidence import store
+            from lumenis.system.collector.adapters.platform_naming import (
+                normalize_platform,
+            )
+            from lumenis.system.collector.adapters.scheduling.prelaunch_baseline import (
+                PURPOSE_POLICY,
+                PrelaunchMaintenanceAuthorization,
+                _purpose_query,
+                load_prelaunch_baseline_config,
+            )
+            from lumenis.system.collector.adapters.secondary_collection import (
+                _verified_live_native_observation,
+            )
+
+            if (is_testing_bypass_enabled() or self is not get_permission_gate()
+                    or not self.fail_closed
+                    or type(authorization) is not PrelaunchMaintenanceAuthorization
+                    or authorization.recovery_only is not True
+                    or authorization.policy_id != PURPOSE_POLICY
+                    or type(scope) is not dict or set(scope) != {
+                        "domain_id", "subject_id", "brand_focus_id"}
+                    or type(max_results) is not int or not 1 <= max_results <= 20
+                    or not re.fullmatch(r"app_evidence_records:[1-9][0-9]*", parent_evidence_ref)
+                    or not re.fullmatch(r"[0-9a-f]{64}", parent_integrity_digest)
+                    or not re.fullmatch(r"[0-9a-f]{64}", observation_sha256)
+                    or not re.fullmatch(r"[0-9a-f]{64}", source_fingerprint)
+                    or type(native_id) is not str or not native_id or len(native_id) > 200):
+                raise ValueError("PENDING_SOURCE_RECOVERY_REQUEST_INVALID")
+            loaded = load_prelaunch_baseline_config(
+                os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None,
+            )
+            candidates = {plan.plan_id: plan for plan in [
+                *loaded.get("plans", []), *loaded.get("recovery_plans", [])
+            ]}
+            matches = [plan for plan in candidates.values() if authorization.matches(
+                plan, source_url=source_url, platform=platform, scope=scope,
+            )]
+            if len(matches) != 1 or matches[0].policy_id != PURPOSE_POLICY:
+                raise ValueError("PENDING_SOURCE_RECOVERY_AUTHORIZATION_REVOKED")
+            plan = matches[0]
+            from lumenis.system.collector.acquisition_plan import AcquisitionQuery
+            if (type(business_query) is not AcquisitionQuery
+                    or max_results > plan.max_results
+                    or json.dumps(business_query.to_dict(), sort_keys=True, separators=(",", ":"))
+                    != json.dumps(_purpose_query(plan.purpose_query).to_dict(),
+                                  sort_keys=True, separators=(",", ":"))):
+                raise ValueError("PENDING_SOURCE_RECOVERY_PLAN_MISMATCH")
+            con = _require_canonical_scope_connection(connection)
+            if not _registered_resource_scope_exists(
+                    scope["domain_id"], subject_id=scope["subject_id"],
+                    brand_focus_id=scope["brand_focus_id"], connection=con):
+                raise ValueError("PENDING_SOURCE_RECOVERY_SCOPE_UNAVAILABLE")
+            parent = con.execute("SELECT * FROM app_evidence_records WHERE id=?",
+                                 (int(parent_evidence_ref.split(":")[1]),)).fetchone()
+            if parent is None:
+                raise ValueError("PENDING_SOURCE_RECOVERY_PARENT_UNAVAILABLE")
+            parent = dict(parent)
+            integrity = store.classify_evidence_integrity(parent)
+            if (parent.get("source") != "collector"
+                    or parent.get("version") != "collector-native-observation:v2"
+                    or parent.get("feature_id") != "PRELAUNCH_" + normalize_platform(plan.platform).upper() + "_COLLECT"
+                    or parent.get("status") != "verified"
+                    or parent.get("result") not in {"PASS", "FAIL"}
+                    or integrity.get("verified") is not True
+                    or integrity.get("assurance") != "writer-authenticated"
+                    or parent.get("integrity_digest") != parent_integrity_digest
+                    or parent.get("domain_id") != ("zbmp" if plan.domain_id == "bmp" else "cth")):
+                raise ValueError("PENDING_SOURCE_RECOVERY_PARENT_INVALID")
+            inputs = json.loads(parent.get("inputs_json") or "{}")
+            metadata = json.loads(parent.get("collection_metadata") or "{}")
+            if (not isinstance(inputs, dict) or not isinstance(metadata, dict)
+                    or inputs.get("source_url") != source_url
+                    or inputs.get("_lumenis_scope") is None
+                    or metadata.get("maintenance_plan_id") != plan.plan_id
+                    or metadata.get("authorization_ref") != plan.authorization_ref
+                    or metadata.get("source_version") != plan.source_version
+                    or metadata.get("scope_version") != plan.scope_version
+                    or json.dumps(metadata.get("planned_business_query"), sort_keys=True,
+                                   separators=(",", ":"))
+                    != json.dumps(business_query.to_dict(), sort_keys=True, separators=(",", ":"))):
+                raise ValueError("PENDING_SOURCE_RECOVERY_PARENT_BINDING_INVALID")
+            from lumenis.shared.evidence.store import _normalize_record_evidence_scope
+            expected_scope = _normalize_record_evidence_scope(
+                product="CTH" if plan.domain_id == "cth" else "ZBMP",
+                domain_id=plan.domain_id, subject_id=plan.subject_id,
+                brand_focus_id=plan.brand_focus_id, global_scope=False,
+            )
+            if inputs.get("_lumenis_scope") != expected_scope:
+                raise ValueError("PENDING_SOURCE_RECOVERY_SCOPE_MISMATCH")
+            observations = inputs.get("source_observation_records")
+            if not isinstance(observations, list):
+                raise TypeError("PENDING_SOURCE_RECOVERY_OBSERVATION_INVALID")
+            matched = []
+            for observation in observations:
+                if not isinstance(observation, dict):
+                    continue
+                encoded = json.dumps(observation, ensure_ascii=False, sort_keys=True,
+                                     separators=(",", ":")).encode("utf-8")
+                if hashlib.sha256(encoded).hexdigest() != observation_sha256:
+                    continue
+                observed_id, _body = _verified_live_native_observation(plan.platform, observation)
+                if observed_id == native_id:
+                    matched.append(observation)
+            if len(matched) != 1:
+                raise ValueError("PENDING_SOURCE_RECOVERY_OBSERVATION_MISMATCH")
+            parent_rights = (metadata.get("rights") or
+                             (metadata.get("provenance") or {}).get("rights") or {})
+            if (not isinstance(parent_rights, dict)
+                    or any(parent_rights.get(key) is True for key in
+                           ("revoked", "private", "restricted", "confidential", "use_prohibited"))
+                    or parent_rights.get("use_status") in {"DENIED", "REVOKED", "WITHDRAWN"}
+                    or parent_rights.get("privacy_status") in {"PRIVATE", "RESTRICTED", "CONFIDENTIAL"}):
+                raise ValueError("PENDING_SOURCE_RECOVERY_SOURCE_RESTRICTED")
+            resource = ("prelaunch-source-recovery:" + plan.plan_id + ":" + parent_evidence_ref
+                        + ":" + native_id + ":" + observation_sha256 + ":" + source_fingerprint)
+            allowed = True
+            reason = "SIGNED_PENDING_SOURCE_PRESERVATION_RETRY"
+        except (ImportError, OSError, PermissionError, RuntimeError, TypeError,
+                ValueError, sqlite3.Error):
+            allowed = False
+        caller = "prelaunch_pending_source_recovery"
+        audit_id = self._write_audit(
+            operation_type=OperationType.DATA_IMPORT.value, resource=resource,
+            risk_level=RiskLevel.HIGH.value, permission_required="signed_pending_source_recovery",
+            caller=caller, result="allowed" if allowed else "denied", reason=reason,
+            operation_id=None, approval_token=None,
+        )
+        return PermissionResult(
+            allowed=allowed, reason=reason, requires_approval=not allowed,
+            audit_id=audit_id, operation_type=OperationType.DATA_IMPORT.value,
+            resource=resource, risk_level=RiskLevel.HIGH.value,
+            permission_required="signed_pending_source_recovery", caller=caller,
             domain_id=domain,
         )
 
@@ -4293,6 +4481,42 @@ class PermissionGate:
         try:
             require_current()
             yield require_current
+        finally:
+            active = False
+            self._approval_lock.release()
+
+    @contextmanager
+    def learning_exchange_commit_lease(self, token, *, operation, resource, caller):
+        """Hold exact one-use approval through the owner's SQLite commit.
+
+        No scope or source grant is created here. The owner must first obtain a
+        validated learning-exchange admission and recheck its actor, source
+        versions, object revision and target inside its transaction. Call the
+        yielded checker immediately before committing; consume only on success.
+        """
+        if (operation not in {OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT}
+                or type(resource) is not str
+                or re.fullmatch(r"learning-exchange:[0-9a-f]{64}", resource) is None
+                or type(token) is not str or not token or type(caller) is not str or not caller
+                or type(self) is not PermissionGate or self is not get_permission_gate()):
+            raise PermissionError("LEARNING_EXCHANGE_APPROVAL_INVALID")
+        if not self._approval_lock.acquire(timeout=2.0):
+            raise PermissionError("LEARNING_EXCHANGE_APPROVAL_LOCK_UNAVAILABLE")
+        active = True
+        def require_current():
+            approval = self._approvals.get(token)
+            if (not active or self is not get_permission_gate() or not self.fail_closed
+                    or is_testing_bypass_enabled() or not self.has_permission(PermissionLevel.COMMIT)
+                    or not self.has_permission(PermissionLevel.HUMAN_APPROVAL)
+                    or not approval or approval.operation != operation.value
+                    or approval.resource != resource or approval.granted_by != caller
+                    or not approval.issuance_audit_id or not approval.is_valid(operation.value, resource)):
+                raise PermissionError("LEARNING_EXCHANGE_APPROVAL_REVOKED")
+        try:
+            require_current()
+            yield require_current
+            require_current()
+            self._approvals[token].revoked = True
         finally:
             active = False
             self._approval_lock.release()

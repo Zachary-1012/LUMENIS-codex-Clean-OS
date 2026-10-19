@@ -2267,7 +2267,7 @@ class _LumenisMark extends StatelessWidget {
     final theme = LumenisTheme.of(context);
     return Semantics(
       container: true,
-      label: '序境 / LUMENIS',
+      label: '寰意 / OEVIRA',
       child: ExcludeSemantics(
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -2278,7 +2278,7 @@ class _LumenisMark extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Text(
-              '序境 / LUMENIS',
+              '寰意 / OEVIRA',
               style: TextStyle(
                 color: theme.foreground,
                 fontSize: 13,

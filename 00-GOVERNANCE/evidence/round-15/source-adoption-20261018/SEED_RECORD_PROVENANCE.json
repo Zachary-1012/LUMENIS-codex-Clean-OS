@@ -1,0 +1,929 @@
+[
+  {
+    "source_kind": "market",
+    "source_file": "ggi/intelligence/data/data_markets.py",
+    "source_record_position": 0,
+    "source_identity": {
+      "name": "中国大陆",
+      "country_code": "CN",
+      "region": "APAC",
+      "jurisdiction_type": "Country"
+    },
+    "source_evidence_metadata": {
+      "source": "World Bank / 国家统计局",
+      "authority": "World Bank Group; National Bureau of Statistics of China",
+      "url": "https://data.worldbank.org/country/china",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "CN",
+      "effective_date": "2024-01-01",
+      "confidence": 0.92,
+      "evidence_type": "market_data",
+      "applicable_scope": "中国大陆地区宏观经济与人口数据",
+      "content_summary": "中国大陆人口约14.1亿，互联网普及率约76.4%，人均GDP约12,720美元（2023年世界银行数据）。监管框架包括广告法、个人信息保护法、数据安全法。"
+    },
+    "source_record_sha256": "66fbf87b1df495136eee597125177724a1e3e4aed49861cc7164803c8fa80f92",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "market",
+    "source_file": "ggi/intelligence/data/data_markets.py",
+    "source_record_position": 1,
+    "source_identity": {
+      "name": "美国",
+      "country_code": "US",
+      "region": "NA",
+      "jurisdiction_type": "Country"
+    },
+    "source_evidence_metadata": {
+      "source": "World Bank / U.S. Census Bureau",
+      "authority": "World Bank Group; U.S. Census Bureau",
+      "url": "https://data.worldbank.org/country/united-states",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "US",
+      "effective_date": "2024-01-01",
+      "confidence": 0.95,
+      "evidence_type": "market_data",
+      "applicable_scope": "United States macroeconomic and demographic data",
+      "content_summary": "US population ~334.9M, internet penetration ~92%, GDP per capita ~$81,695 (2023 World Bank). FTC governs endorsements; privacy laws vary by state."
+    },
+    "source_record_sha256": "900b02824b344f6cb1c3c2b7594dfc8e5aaee8ed37e40a8387b927690cfa8a32",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "market",
+    "source_file": "ggi/intelligence/data/data_markets.py",
+    "source_record_position": 2,
+    "source_identity": {
+      "name": "欧盟",
+      "country_code": "EU",
+      "region": "EU",
+      "jurisdiction_type": "Region"
+    },
+    "source_evidence_metadata": {
+      "source": "Eurostat / European Commission",
+      "authority": "European Commission; Eurostat",
+      "url": "https://ec.europa.eu/eurostat",
+      "jurisdiction": "Region",
+      "jurisdiction_detail": "EU",
+      "effective_date": "2024-01-01",
+      "confidence": 0.93,
+      "evidence_type": "market_data",
+      "applicable_scope": "European Union (27 member states) aggregate",
+      "content_summary": "EU population ~448M across 27 states, internet penetration ~89%, GDP per capita ~$40,930 (Eurostat 2023). GDPR, DSA, DMA, AVMSD form the regulatory framework. EU is a regional aggregation, not a single country."
+    },
+    "source_record_sha256": "8612bbf93ea4697853342508f7d2398e40aabbcedc45bb211a2b6347e2b71aed",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "market",
+    "source_file": "ggi/intelligence/data/data_markets.py",
+    "source_record_position": 3,
+    "source_identity": {
+      "name": "英国",
+      "country_code": "GB",
+      "region": "Europe",
+      "jurisdiction_type": "Country"
+    },
+    "source_evidence_metadata": {
+      "source": "ONS / World Bank",
+      "authority": "Office for National Statistics; World Bank Group",
+      "url": "https://www.ons.gov.uk",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "GB",
+      "effective_date": "2024-01-01",
+      "confidence": 0.94,
+      "evidence_type": "market_data",
+      "applicable_scope": "United Kingdom (England, Scotland, Wales, NI)",
+      "content_summary": "UK population ~67.7M, internet penetration ~95%, GDP per capita ~$48,910 (2023). Post-Brexit independent regulator; UK GDPR + Online Safety Act + ASA codes."
+    },
+    "source_record_sha256": "fb88adaee0368c8b875c4cc4f5ef80e5a1fd8010f876b7b33e83d6f2d75090be",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "market",
+    "source_file": "ggi/intelligence/data/data_markets.py",
+    "source_record_position": 4,
+    "source_identity": {
+      "name": "日本",
+      "country_code": "JP",
+      "region": "APAC",
+      "jurisdiction_type": "Country"
+    },
+    "source_evidence_metadata": {
+      "source": "World Bank / 総務省",
+      "authority": "World Bank Group; Ministry of Internal Affairs and Communications",
+      "url": "https://data.worldbank.org/country/japan",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "JP",
+      "effective_date": "2024-01-01",
+      "confidence": 0.91,
+      "evidence_type": "market_data",
+      "applicable_scope": "Japan macroeconomic and demographic data",
+      "content_summary": "Japan population ~124.5M, internet penetration ~84%, GDP per capita ~$33,815 (2023 World Bank). APPI for data protection; CAA guidelines for influencer marketing."
+    },
+    "source_record_sha256": "14834d987f59516ff3ecbfb01d28d24a6df148e47a4ce88b9e9c2f1a15c71ceb",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "market",
+    "source_file": "ggi/intelligence/data/data_markets.py",
+    "source_record_position": 5,
+    "source_identity": {
+      "name": "韩国",
+      "country_code": "KR",
+      "region": "APAC",
+      "jurisdiction_type": "Country"
+    },
+    "source_evidence_metadata": {
+      "source": "World Bank / KISA",
+      "authority": "World Bank Group; Korea Internet & Security Agency",
+      "url": "https://data.worldbank.org/country/korea-republic-of",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "KR",
+      "effective_date": "2024-01-01",
+      "confidence": 0.91,
+      "evidence_type": "market_data",
+      "applicable_scope": "Republic of Korea macroeconomic and demographic data",
+      "content_summary": "South Korea population ~51.7M, internet penetration ~97.6% (highest globally), GDP per capita ~$33,147 (2023 World Bank). PIPA for data protection; KCC/KFTC regulate advertising."
+    },
+    "source_record_sha256": "813aa22ff748358555ab03163375db1c26db419f43a8b5ac26025b193e121b29",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "market",
+    "source_file": "ggi/intelligence/data/data_markets.py",
+    "source_record_position": 6,
+    "source_identity": {
+      "name": "东南亚",
+      "country_code": "SEA",
+      "region": "APAC",
+      "jurisdiction_type": "Region"
+    },
+    "source_evidence_metadata": {
+      "source": "World Bank / ASEAN Secretariat",
+      "authority": "World Bank Group; ASEAN Secretariat",
+      "url": "https://data.worldbank.org/region/east-asia-pacific",
+      "jurisdiction": "Region",
+      "jurisdiction_detail": "SEA",
+      "effective_date": "2024-01-01",
+      "confidence": 0.82,
+      "evidence_type": "market_data",
+      "applicable_scope": "Southeast Asia regional aggregate (11 countries)",
+      "content_summary": "SEA population ~680M across 11 countries, internet penetration ~72%, GDP per capita ~$5,800 (weighted average, 2023). Regional aggregation — each country has independent regulatory framework and currency. Mobile-first, social commerce dominant."
+    },
+    "source_record_sha256": "f8eba70a739a4e94a52da439cc38288e05d0de6538f8f25a9f1bcbf63c2264d5",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 0,
+    "source_identity": {
+      "name": "小红书"
+    },
+    "source_evidence_metadata": {
+      "source": "小红书官方文档 / 蒲公英平台",
+      "authority": "小红书开放平台; 蒲公英平台",
+      "url": "https://open.xiaohongshu.com",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "xiaohongshu",
+      "effective_date": "2024-06-01",
+      "confidence": 0.85,
+      "evidence_type": "platform_policy",
+      "applicable_scope": "小红书平台政策与API状态",
+      "content_summary": "小红书无公开API，仅企业号和蒲公英平台提供有限接口。商业合作需通过蒲公英报备，笔记需标注赞助。内容类型为图文笔记和短视频。"
+    },
+    "source_record_sha256": "57f625829acf5a327effc5743a63528d1a15e1cd4d3aa2f72b37fed73797d771",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 1,
+    "source_identity": {
+      "name": "抖音"
+    },
+    "source_evidence_metadata": {
+      "source": "抖音开放平台 / 巨量引擎",
+      "authority": "抖音开放平台; 巨量引擎",
+      "url": "https://developer.open-douyin.com",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "douyin",
+      "effective_date": "2024-06-01",
+      "confidence": 0.88,
+      "evidence_type": "platform_policy",
+      "applicable_scope": "抖音平台政策与API状态",
+      "content_summary": "抖音提供有限API，需企业资质审核。巨量引擎为广告平台，星图为商单平台。内容类型为短视频和直播，算法推荐为核心分发机制。"
+    },
+    "source_record_sha256": "a07655423b2dbd6de4f4aaf5afd89ebf488505c88e1c1cefff6b561e9ec40060",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 2,
+    "source_identity": {
+      "name": "B站"
+    },
+    "source_evidence_metadata": {
+      "source": "B站开放平台 / 花火平台",
+      "authority": "哔哩哔哩开放平台; 花火平台",
+      "url": "https://openhome.bilibili.com",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "bilibili",
+      "effective_date": "2024-06-01",
+      "confidence": 0.86,
+      "evidence_type": "platform_policy",
+      "applicable_scope": "B站平台政策与API状态",
+      "content_summary": "B站提供有限API，需开发者认证。花火平台为商单渠道。内容以中长视频和专栏为主，弹幕文化和二次元社区为特色。"
+    },
+    "source_record_sha256": "50682d34b884ecc504a3e4e2de46adc5307869526e28a83f8e6954a4601c54be",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 3,
+    "source_identity": {
+      "name": "视频号"
+    },
+    "source_evidence_metadata": {
+      "source": "微信开放平台 / 视频号助手",
+      "authority": "腾讯微信开放平台",
+      "url": "https://developers.weixin.qq.com/doc/channels.html",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "wechat_channels",
+      "effective_date": "2024-06-01",
+      "confidence": 0.82,
+      "evidence_type": "platform_policy",
+      "applicable_scope": "微信视频号平台政策与API状态",
+      "content_summary": "视频号提供有限API，需微信认证。社交推荐为核心分发机制，微信生态私域流量强。内容类型为短视频和直播。"
+    },
+    "source_record_sha256": "089077026fafbc3b7752d086d6b0cbc6a5f05782bff60bbf205e7230b55d625b",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 4,
+    "source_identity": {
+      "name": "YouTube"
+    },
+    "source_evidence_metadata": {
+      "source": "YouTube Data API v3 官方文档",
+      "authority": "Google Developers",
+      "url": "https://developers.google.com/youtube/v3",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "youtube",
+      "effective_date": "2024-06-01",
+      "confidence": 0.95,
+      "evidence_type": "api_doc",
+      "applicable_scope": "YouTube API与平台政策",
+      "content_summary": "YouTube提供官方Data API v3，有配额限制。内容类型为视频、Shorts、直播。YPP广告分成，全球可用。"
+    },
+    "source_record_sha256": "ce58e088073c6d975f586a398953db49eb0ddb65be875473a1ec24a57e9d72b9",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 5,
+    "source_identity": {
+      "name": "TikTok"
+    },
+    "source_evidence_metadata": {
+      "source": "TikTok for Developers 官方文档",
+      "authority": "TikTok",
+      "url": "https://developers.tiktok.com",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "tiktok",
+      "effective_date": "2024-06-01",
+      "confidence": 0.88,
+      "evidence_type": "api_doc",
+      "applicable_scope": "TikTok API与平台政策",
+      "content_summary": "TikTok提供有限API，需申请审核。内容为短视频和直播，FYP算法推荐为核心。Creator Marketplace为商单平台。"
+    },
+    "source_record_sha256": "9ccc8c2c8cca6451488b74fd374a388a458c5cc8ff4bec534bffb1acbf406596",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 6,
+    "source_identity": {
+      "name": "Instagram"
+    },
+    "source_evidence_metadata": {
+      "source": "Instagram Graph API 官方文档",
+      "authority": "Meta for Developers",
+      "url": "https://developers.facebook.com/docs/instagram",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "instagram",
+      "effective_date": "2024-06-01",
+      "confidence": 0.92,
+      "evidence_type": "api_doc",
+      "applicable_scope": "Instagram API与平台政策",
+      "content_summary": "Instagram Graph API仅对专业账号开放，需Meta审核。内容类型为图片、Reels、Stories。品牌合作需Paid Partnership标签。"
+    },
+    "source_record_sha256": "682ce43ad8b0e569ffc2dddc0c917147835a37ca1afc75bb79100fcf7de6712e",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 7,
+    "source_identity": {
+      "name": "X"
+    },
+    "source_evidence_metadata": {
+      "source": "X Developer Platform 官方文档",
+      "authority": "X Corp.",
+      "url": "https://developer.x.com/en/docs",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "x",
+      "effective_date": "2024-06-01",
+      "confidence": 0.9,
+      "evidence_type": "api_doc",
+      "applicable_scope": "X (Twitter) API与平台政策",
+      "content_summary": "X API v2为收费模式，免费层受限。原Twitter API v2已更名。内容为短文本、图片、视频。实时搜索和趋势话题为特色。"
+    },
+    "source_record_sha256": "e7fa529fd78fbd278093c015401558dae1ba12772eabf129e9b2ec28c1f56713",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 8,
+    "source_identity": {
+      "name": "Reddit"
+    },
+    "source_evidence_metadata": {
+      "source": "Reddit Developer API 官方文档",
+      "authority": "Reddit Inc.",
+      "url": "https://www.reddit.com/dev/api",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "reddit",
+      "effective_date": "2024-06-01",
+      "confidence": 0.9,
+      "evidence_type": "api_doc",
+      "applicable_scope": "Reddit API与平台政策",
+      "content_summary": "Reddit API官方开放，有速率限制和条款约束。2023年起对高用量第三方应用收费。社区以subreddit为核心，对营销内容敏感。"
+    },
+    "source_record_sha256": "9880ba9b499ecda049d67bd02251c8e85949720595a3923cde325074bd3caa19",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 9,
+    "source_identity": {
+      "name": "LinkedIn"
+    },
+    "source_evidence_metadata": {
+      "source": "LinkedIn Developer 官方文档",
+      "authority": "LinkedIn / Microsoft",
+      "url": "https://learn.microsoft.com/en-us/linkedin",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "linkedin",
+      "effective_date": "2024-06-01",
+      "confidence": 0.92,
+      "evidence_type": "api_doc",
+      "applicable_scope": "LinkedIn API与平台政策",
+      "content_summary": "LinkedIn API需申请合作伙伴权限，访问受限。B2B职业社交平台，内容为职业内容和文章。Marketing Solutions为广告平台。"
+    },
+    "source_record_sha256": "f35a594f600434e4753d6d2bbb764305b7dcd4192b4b898276aca250f19ca27d",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 10,
+    "source_identity": {
+      "name": "GitHub"
+    },
+    "source_evidence_metadata": {
+      "source": "GitHub REST API 官方文档",
+      "authority": "GitHub Inc.",
+      "url": "https://docs.github.com/en/rest",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "github",
+      "effective_date": "2024-06-01",
+      "confidence": 0.96,
+      "evidence_type": "api_doc",
+      "applicable_scope": "GitHub API与平台政策",
+      "content_summary": "GitHub提供官方REST API v3和GraphQL API v4。认证后5000 req/hour。开发者社区，内容为代码和仓库。"
+    },
+    "source_record_sha256": "8e58870315e94c21c25c8dd084b7813e661dad2eb91d245daf8c96344ca21f0d",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "platform",
+    "source_file": "ggi/intelligence/data/data_platforms.py",
+    "source_record_position": 11,
+    "source_identity": {
+      "name": "知乎"
+    },
+    "source_evidence_metadata": {
+      "source": "知乎开放平台 / 知乎商业产品",
+      "authority": "知乎开放平台",
+      "url": "https://www.zhihu.com/openapi",
+      "jurisdiction": "Platform",
+      "jurisdiction_detail": "zhihu",
+      "effective_date": "2024-06-01",
+      "confidence": 0.84,
+      "evidence_type": "platform_policy",
+      "applicable_scope": "知乎平台政策与API状态",
+      "content_summary": "知乎提供有限API，需企业资质申请。内容类型为问答、文章、视频。知+为商业推广平台，知识分享社区文化。"
+    },
+    "source_record_sha256": "530a4c4f950d739b4041fbf7ddce8655c70e1fde92aa9585f8cf50a38849ddd9",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 0,
+    "source_identity": {
+      "rule_code": "CN-AD-DISC-001",
+      "region": "APAC"
+    },
+    "source_evidence_metadata": {
+      "source": "中华人民共和国广告法第十四条",
+      "authority": "全国人民代表大会常务委员会",
+      "url": "https://www.npc.gov.cn/npc/c2/c30834/202104/t20210429_311845.html",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "CN",
+      "effective_date": "2021-04-29",
+      "confidence": 0.95,
+      "evidence_type": "legal",
+      "content_summary": "广告应当具有可识别性，大众传播媒介发布的广告应显著标明广告"
+    },
+    "source_record_sha256": "7d82d0aa0be4f1d7f0852afedcdf74e03c30639866e30800a139cef580ea570a",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 1,
+    "source_identity": {
+      "rule_code": "CN-PIPL-001",
+      "region": "APAC"
+    },
+    "source_evidence_metadata": {
+      "source": "中华人民共和国个人信息保护法第十三条、第二十九条",
+      "authority": "全国人民代表大会常务委员会",
+      "url": "https://www.npc.gov.cn/npc/c2/c30834/202108/t20210820_313088.html",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "CN",
+      "effective_date": "2021-11-01",
+      "confidence": 0.95,
+      "evidence_type": "legal",
+      "content_summary": "处理个人信息需取得同意，敏感个人信息需单独同意"
+    },
+    "source_record_sha256": "9b3e3af9e8e3c8ad1bc8199381c7c68e5b0867b1eaed13faa1f050e380ae1177",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 2,
+    "source_identity": {
+      "rule_code": "US-FTC-ENDORSE-001",
+      "region": "NA"
+    },
+    "source_evidence_metadata": {
+      "source": "FTC Endorsement Guides 16 CFR Part 255",
+      "authority": "Federal Trade Commission",
+      "url": "https://www.ftc.gov/business-guidance/resources/ftcs-endorsement-guides-what-people-are-asking",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "US",
+      "effective_date": "2023-10-27",
+      "confidence": 0.92,
+      "evidence_type": "legal",
+      "content_summary": "FTC要求背书人披露与品牌的物质关联"
+    },
+    "source_record_sha256": "d702063bf520a159a4dc432980fe54611781e1e9795d42458e85363ee528f6d6",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 3,
+    "source_identity": {
+      "rule_code": "EU-GDPR-ART6-001",
+      "region": "EU"
+    },
+    "source_evidence_metadata": {
+      "source": "GDPR Article 6",
+      "authority": "European Union",
+      "url": "https://gdpr-info.eu/art-6-gdpr/",
+      "jurisdiction": "Region",
+      "jurisdiction_detail": "EU",
+      "effective_date": "2018-05-25",
+      "confidence": 0.97,
+      "evidence_type": "legal",
+      "content_summary": "GDPR第6条规定个人数据处理的合法基础"
+    },
+    "source_record_sha256": "7ddb775f6d0bc9b18bf235ca29ae2f00279d0c57cfb0ae7e857a3c20c3bf3586",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 4,
+    "source_identity": {
+      "rule_code": "GB-GDPR-001",
+      "region": "EMEA"
+    },
+    "source_evidence_metadata": {
+      "source": "UK GDPR / Data Protection Act 2018",
+      "authority": "UK Parliament / Information Commissioner's Office",
+      "url": "https://www.legislation.gov.uk/ukpga/2018/12/contents",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "GB",
+      "effective_date": "2021-01-01",
+      "confidence": 0.9,
+      "evidence_type": "legal",
+      "content_summary": "英国GDPR要求个人数据处理具备合法基础并透明告知"
+    },
+    "source_record_sha256": "7be29b5d8579e0b1c99603ad3893edd40a5a61be9e0bb2e8a14965d0862ebf3d",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 5,
+    "source_identity": {
+      "rule_code": "CN-ANTI-UNFAIR-001",
+      "region": "APAC"
+    },
+    "source_evidence_metadata": {
+      "source": "中华人民共和国反不正当竞争法第八条",
+      "authority": "全国人民代表大会常务委员会",
+      "url": "https://www.npc.gov.cn/npc/c2/c30834/201904/t20190424_295607.html",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "CN",
+      "effective_date": "2019-04-23",
+      "confidence": 0.93,
+      "evidence_type": "legal",
+      "content_summary": "禁止对商品性能、销量、评价等作虚假或引人误解的宣传"
+    },
+    "source_record_sha256": "a8f2ce772a4cafd8a02a9d17a0d1300c6927dc95366e27723651436d839238dd",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 6,
+    "source_identity": {
+      "rule_code": "CN-DEEP-SYNTH-001",
+      "region": "APAC"
+    },
+    "source_evidence_metadata": {
+      "source": "互联网信息服务深度合成管理规定第十七条",
+      "authority": "国家互联网信息办公室",
+      "url": "https://www.cac.gov.cn/2022-12/11/c_1672221949354811.htm",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "CN",
+      "effective_date": "2023-01-10",
+      "confidence": 0.88,
+      "evidence_type": "legal",
+      "content_summary": "深度合成内容需标识，不得生成虚假信息"
+    },
+    "source_record_sha256": "3f4bd2ce97272527e3d5235073824d34ca0765a5eba5c4724d9470b1a513bb85",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 7,
+    "source_identity": {
+      "rule_code": "EU-AI-ACT-001",
+      "region": "EU"
+    },
+    "source_evidence_metadata": {
+      "source": "EU AI Act (Regulation 2024/1689) Article 50",
+      "authority": "European Union",
+      "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
+      "jurisdiction": "Region",
+      "jurisdiction_detail": "EU",
+      "effective_date": "2024-08-01",
+      "confidence": 0.85,
+      "evidence_type": "legal",
+      "content_summary": "欧盟AI法案要求AI生成内容标注及通用AI模型透明度"
+    },
+    "source_record_sha256": "18574f310d6d76c065047da6b3132698a63f74583e860e1ca6461366f04f3632",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 8,
+    "source_identity": {
+      "rule_code": "CN-LOTTERY-001",
+      "region": "APAC"
+    },
+    "source_evidence_metadata": {
+      "source": "中华人民共和国反不正当竞争法第十条",
+      "authority": "全国人民代表大会常务委员会",
+      "url": "https://www.npc.gov.cn/npc/c2/c30834/201904/t20190424_295607.html",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "CN",
+      "effective_date": "2019-04-23",
+      "confidence": 0.92,
+      "evidence_type": "legal",
+      "content_summary": "抽奖式有奖销售最高奖不超过5万元，需明确规则"
+    },
+    "source_record_sha256": "03c629ba7f0740bc9d44552c765a23be09fc8bde4eeff14627aa3cba1a60509c",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 9,
+    "source_identity": {
+      "rule_code": "GLOBAL-COPYRIGHT-UGC-001",
+      "region": null
+    },
+    "source_evidence_metadata": {
+      "source": "Berne Convention for the Protection of Literary and Artistic Works",
+      "authority": "WIPO",
+      "url": "https://www.wipo.int/treaties/en/ip/berne/",
+      "jurisdiction": "Global",
+      "jurisdiction_detail": "Global",
+      "effective_date": "1886-09-09",
+      "confidence": 0.85,
+      "evidence_type": "legal",
+      "content_summary": "伯尔尼公约确立版权保护基本原则，UGC使用需授权或合理使用"
+    },
+    "source_record_sha256": "fb26b6714b6bf19e371fdaa33556de9c9664142c04cf19620abd53f4b0fcca38",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 10,
+    "source_identity": {
+      "rule_code": "CN-MEDICAL-AD-001",
+      "region": "APAC"
+    },
+    "source_evidence_metadata": {
+      "source": "中华人民共和国广告法第四十六条、医疗广告管理办法",
+      "authority": "全国人民代表大会常务委员会 / 国家市场监督管理总局",
+      "url": "https://www.npc.gov.cn/npc/c2/c30834/202104/t20210429_311845.html",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "CN",
+      "effective_date": "2021-04-29",
+      "confidence": 0.95,
+      "evidence_type": "legal",
+      "content_summary": "医疗广告需事前审查，不得保证治愈或说明治愈率"
+    },
+    "source_record_sha256": "29471e9690efa67d32feb2d74d6c0e37fbddd8b89c1bccc3cf1d450dc00ea599",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 11,
+    "source_identity": {
+      "rule_code": "CN-FINANCIAL-MKT-001",
+      "region": "APAC"
+    },
+    "source_evidence_metadata": {
+      "source": "关于进一步规范金融营销宣传行为的通知（银发〔2019〕316号）",
+      "authority": "中国人民银行 / 银保监会 / 证监会",
+      "url": "http://www.pbc.gov.cn/goutongjiaoliu/113456/113469/3944251/index.html",
+      "jurisdiction": "Country",
+      "jurisdiction_detail": "CN",
+      "effective_date": "2020-01-01",
+      "confidence": 0.9,
+      "evidence_type": "legal",
+      "content_summary": "金融营销宣传不得承诺收益，需充分提示风险"
+    },
+    "source_record_sha256": "c0b6bd22163f56460a75866c341516ffa20f79d4be9319969e54df60805d8cf0",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 12,
+    "source_identity": {
+      "rule_code": "GLOBAL-AFFILIATE-001",
+      "region": null
+    },
+    "source_evidence_metadata": {
+      "source": "FTC Endorsement Guides 16 CFR Part 255 / ASA CAP Code",
+      "authority": "Federal Trade Commission / Advertising Standards Authority",
+      "url": "https://www.ftc.gov/business-guidance/resources/ftcs-endorsement-guides-what-people-are-asking",
+      "jurisdiction": "Global",
+      "jurisdiction_detail": "Global",
+      "effective_date": "2023-10-27",
+      "confidence": 0.82,
+      "evidence_type": "legal",
+      "content_summary": "联盟营销内容需披露佣金关系"
+    },
+    "source_record_sha256": "9b1f2c45a1ca8e3770b5f2daf8e156668d397f1afcffeea513e5c9f96b09d308",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "policy",
+    "source_file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_record_position": 13,
+    "source_identity": {
+      "rule_code": "GLOBAL-MINOR-PROTECT-001",
+      "region": null
+    },
+    "source_evidence_metadata": {
+      "source": "UN Convention on the Rights of the Child Article 17 / COPPA / 中国未成年人保护法",
+      "authority": "United Nations / FTC / 全国人大常委会",
+      "url": "https://www.ohchr.org/en/instruments-mechanisms/conviction-rights-child",
+      "jurisdiction": "Global",
+      "jurisdiction_detail": "Global",
+      "effective_date": "1990-09-02",
+      "confidence": 0.88,
+      "evidence_type": "legal",
+      "content_summary": "未成年人营销需特殊保护，数据收集需监护人同意"
+    },
+    "source_record_sha256": "49ff52ee41d56041aad321d07a5a92aa7ff7dc9da8ae28f7e0065807405ee3e7",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "scenario",
+    "source_file": "ggi/intelligence/data/data_scenarios.py",
+    "source_record_position": 0,
+    "source_identity": {
+      "name": "独立游戏出海东南亚",
+      "scenario_id": "indie_game_sea"
+    },
+    "source_evidence_metadata": {},
+    "source_record_sha256": "a21aae038056e49d1d461e9adc93490b5ea63e563fc423b8c548b8c35ad21936",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "scenario",
+    "source_file": "ggi/intelligence/data/data_scenarios.py",
+    "source_record_position": 1,
+    "source_identity": {
+      "name": "消费电子品牌进入欧洲",
+      "scenario_id": "consumer_electronics_eu"
+    },
+    "source_evidence_metadata": {},
+    "source_record_sha256": "4b393ef86a81e5bd6310eec675837cffa2c40287531c5b37fdb21d2a79b250ec",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  },
+  {
+    "source_kind": "scenario",
+    "source_file": "ggi/intelligence/data/data_scenarios.py",
+    "source_record_position": 2,
+    "source_identity": {
+      "name": "SaaS 开发者工具全球增长",
+      "scenario_id": "saas_devtool_global"
+    },
+    "source_evidence_metadata": {},
+    "source_record_sha256": "cb3bc27ef2f26d585b80f8972563fdbf9116566fa1b432a8247192ed3054f8bf",
+    "source_commit": "e6cde984480cff3176eb39b038c7c0a66e1e2124",
+    "rights": "UNKNOWN",
+    "freshness": "NOT_REVERIFIED",
+    "source_claim_is_current_fact": false,
+    "scenario_is_observed_outcome": false
+  }
+]

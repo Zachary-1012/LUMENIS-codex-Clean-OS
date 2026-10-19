@@ -18,7 +18,7 @@ def save(ws, *, actor=None, scope=None, key='global'):
 
 def ids(r):
     assert r.status_code == 200, r.get_json()
-    return [x['id'] for x in r.get_json()['sections'][1]['rows']]
+    return [x['id'] for x in r.get_json()['saved_artifacts']]
 
 def accounts(ws):
     import account.models

@@ -708,9 +708,9 @@ def _provenance(topic, sentiment, mech, tonality, circle, signals, angle):
     evidence_level = "repeated" if n_notes >= 10 else ("single_case" if n_notes > 0 else "assumption")
     confidence = round(min(0.4 + min(n_notes, 50) / 100.0, 0.9), 2) if has_db else 0.35
     return {
-        "seed_signal": ("LUMENIS 真实信号：主题「%s」、情绪=%s、样本笔记=%d、风险事件=%d"
+        "seed_signal": ("OEVIRA 真实信号：主题「%s」、情绪=%s、样本笔记=%d、风险事件=%d"
                         % (topic, sentiment, n_notes, int(signals.get("risk_events", 0) or 0)))
-                       if has_db else "结构化假设：未接入 LUMENIS 真实样本（keyword/DB 缺失），信号为占位，需真实数据回填",
+                       if has_db else "结构化假设：未接入 OEVIRA 真实样本（keyword/DB 缺失），信号为占位，需真实数据回填",
         "parent_L1_formula": MECH_TO_L1.get(mech, "未归类公式"),
         "parent_L2_tone": TONALITIES.get(tonality, TONALITIES["premium"])["name"],
         "parent_circle": circle,
@@ -938,7 +938,7 @@ def main():
     ap = argparse.ArgumentParser(description="数据驱动原创创意生成器 V2（反模板化）")
     ap.add_argument("--brand", default="示例品牌")
     ap.add_argument("--category", default="通用")
-    ap.add_argument("--keyword", default="", help="LUMENIS 舆情关键词(从 DB 提信号)")
+    ap.add_argument("--keyword", default="", help="OEVIRA 舆情关键词(从 DB 提信号)")
     ap.add_argument("--db", default="data/monitor.db")
     ap.add_argument("--circle", default="都市职场", choices=list(CIRCLE_SYMBOLS.keys()))
     ap.add_argument("--tonality", default="premium", choices=list(TONALITIES.keys()))

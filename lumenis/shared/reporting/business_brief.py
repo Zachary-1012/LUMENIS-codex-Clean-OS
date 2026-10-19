@@ -5,6 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from datetime import date, datetime, time, timezone
+from decimal import Decimal, InvalidOperation, localcontext, Context
+from urllib.parse import urlsplit
 
 from lumenis.shared.database import get_repository
 from lumenis.shared.evidence import store as evidence_store
@@ -1572,3 +1575,691 @@ def analyze_statistics_source(
         "ai_used": False,
         "publish_status": "not_performed",
     }
+
+
+_SHARED_METRIC_ALIASES = {
+    "views": {"浏览量", "阅读量", "播放量", "views", "view_count", "read_count"},
+    "likes": {"点赞", "点赞数", "likes", "like_count"},
+    "favorites": {"收藏", "收藏数", "favorites", "favorite_count", "collects"},
+    "comments": {"评论数", "评论量", "comments", "comment_count"},
+    "shares": {"转发数", "分享数", "shares", "share_count"},
+}
+_SHARED_DATE_ALIASES = {"发布时间", "发布日期", "发帖时间", "评论时间", "publish_date",
+                        "publish_time", "published_at", "date", "created_at"}
+_SHARED_PLATFORM_ALIASES = {"平台", "来源平台", "source_platform", "platform"}
+_SHARED_SENTIMENT_ALIASES = {"情感", "情绪", "情感倾向", "sentiment", "sentiment_label"}
+_SHARED_PARENT_ALIASES = {"原帖id", "父帖id", "父级帖子id", "parent_post_id",
+                          "original_post_id", "reply_to_post_id"}
+_SHARED_POST_ID_ALIASES = {"原帖id", "笔记id", "帖子id", "note_id", "post_id"}
+_SHARED_COMMENT_ID_ALIASES = {"评论id", "comment_id"}
+_SHARED_POST_URL_ALIASES = {
+    "原文链接", "原文url", "原帖链接", "原帖url", "笔记链接", "笔记url",
+    "帖子链接", "帖子url", "source_url", "original_url", "post_url", "permalink", "url",
+}
+_SHARED_COMMENT_URL_ALIASES = {"评论链接", "评论url", "comment_url", "permalink"}
+
+
+def _shared_field_header(field):
+    header = field.get("header") if isinstance(field, dict) else None
+    if isinstance(header, dict):
+        header = header.get("value")
+    return header.strip().casefold() if isinstance(header, str) else ""
+
+
+def _shared_field_value(field):
+    if not isinstance(field, dict):
+        return None, None, False
+    cell = field.get("value")
+    formula = field.get("formula")
+    if isinstance(cell, dict):
+        cell_type = cell.get("type")
+        formula = formula if formula is not None else cell.get("formula")
+        value = cell.get("value")
+        is_formula = cell_type == "formula" or formula is not None
+    else:
+        cell_type, value = field.get("cell_type"), cell
+        is_formula = formula is not None
+    return value, cell_type, is_formula
+
+
+def _shared_source_fields(row):
+    fields = row.get("source_fields")
+    if fields:
+        return fields
+    try:
+        raw = json.loads(row.get("raw_chunk") or "")
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(raw, dict):
+        return []
+    headers, values = raw.get("headers"), raw.get("values")
+    if not isinstance(headers, list) or not isinstance(values, list):
+        return []
+    return [
+        {
+            "column_index": index + 1,
+            "header": header,
+            "value": values[index] if index < len(values) else None,
+            "cell_type": "string",
+        }
+        for index, header in enumerate(headers)
+        if isinstance(header, str) and header.strip()
+    ]
+
+
+def _shared_numeric_value(value):
+    if type(value) not in (int, float, str):
+        return None
+    text = str(value).strip()
+    if (not text or len(text) > 128
+            or re.fullmatch(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)", text) is None):
+        return None
+    try:
+        number = Decimal(text)
+    except InvalidOperation:
+        return None
+    return number if number.is_finite() else None
+
+
+def _shared_exact_add(left, right):
+    # Inputs have at most 128 source characters; align their finite decimal
+    # exponents and reserve one carry digit. Never inherit ambient precision.
+    a, b = left.as_tuple(), right.as_tuple()
+    exponent = min(a.exponent, b.exponent)
+    precision = max(len(a.digits) + a.exponent - exponent,
+                    len(b.digits) + b.exponent - exponent) + 1
+    with localcontext(Context(prec=max(precision, 1), Emin=-999999, Emax=999999)):
+        return left + right
+
+
+def _shared_decimal_text(value):
+    if value is None:
+        return None
+    # Decimal.normalize applies the process context and can silently round.
+    text = format(value, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def _shared_explicit_values(row, aliases):
+    values = []
+    for field in _shared_source_fields(row):
+        if _shared_field_header(field) not in aliases:
+            continue
+        value, _, is_formula = _shared_field_value(field)
+        if not is_formula and isinstance(value, str) and value.strip():
+            values.append(value)
+    return list(dict.fromkeys(values))
+
+
+def _shared_full_http_url(value):
+    if (not isinstance(value, str) or not value.strip() or value != value.strip()
+            or any(ord(char) < 0x21 or ord(char) == 0x7f for char in value)):
+        return None
+    try:
+        parsed = urlsplit(value)
+        if (parsed.scheme.casefold() not in {"http", "https"} or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None):
+            return None
+        _ = parsed.port
+    except ValueError:
+        return None
+    return value
+
+
+def _shared_identity_fields(row, category, platform):
+    if category == "post":
+        url_aliases, id_aliases = _SHARED_POST_URL_ALIASES, _SHARED_POST_ID_ALIASES
+    elif category == "comment":
+        url_aliases, id_aliases = _SHARED_COMMENT_URL_ALIASES, _SHARED_COMMENT_ID_ALIASES
+    else:
+        url_aliases, id_aliases = _SHARED_POST_URL_ALIASES, set()
+    urls = _shared_explicit_values(row, url_aliases)
+    urls = [url for url in urls if _shared_full_http_url(url) is not None]
+    native_ids = _shared_explicit_values(row, id_aliases)
+    parent_ids = _shared_explicit_values(row, _SHARED_PARENT_ALIASES) if category == "comment" else []
+    ambiguous = len(urls) > 1 or len(native_ids) > 1 or len(parent_ids) > 1
+    return (urls[0] if len(urls) == 1 else None,
+            native_ids[0] if len(native_ids) == 1 else None,
+            parent_ids,
+            platform if len(parent_ids) <= 1 else None,
+            ambiguous)
+
+
+def _shared_table_key(source_index, locator):
+    table_index = locator.get("table_index")
+    sheet_name = locator.get("sheet_name")
+    if type(table_index) is int or isinstance(sheet_name, str):
+        return ("table", source_index, table_index, sheet_name)
+    return ("source", source_index)
+
+
+def _shared_record_content_sha256(row):
+    fields = _shared_source_fields(row)
+    if fields:
+        material = {"source_fields": fields}
+    else:
+        try:
+            raw = json.loads(row.get("raw_chunk") or "")
+        except (TypeError, ValueError):
+            raw = None
+        if isinstance(raw, dict) and "headers" in raw and "values" in raw:
+            material = {"headers": raw["headers"], "values": raw["values"]}
+        else:
+            material = {
+                "title": row.get("title"), "content": row.get("content"),
+                "author": row.get("author"), "publish_date": row.get("publish_date"),
+            }
+    return hashlib.sha256(_json(material).encode("utf-8")).hexdigest()
+
+
+def _shared_date_value(value):
+    if isinstance(value, datetime):
+        if value.tzinfo is not None and value.utcoffset() is not None:
+            try:
+                normalized = value.astimezone(timezone.utc)
+            except (ValueError, OverflowError):
+                return None
+            return normalized.isoformat().replace("+00:00", "Z"), normalized, "aware"
+        return value.isoformat(), value, "naive"
+    if isinstance(value, date):
+        return value.isoformat(), datetime.combine(value, time.min), "date"
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    match = re.fullmatch(
+        r"(\d{4})年(\d{1,2})月(\d{1,2})日?"
+        r"(?:\s+(\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?)?",
+        text,
+    )
+    if match:
+        try:
+            parsed_date = date(int(match[1]), int(match[2]), int(match[3]))
+            if match[4] is None:
+                return parsed_date.isoformat(), datetime.combine(parsed_date, time.min), "date"
+            parsed_time = time(int(match[4]), int(match[5]), int(match[6] or 0),
+                               int((match[7] or "0").ljust(6, "0")[:6]))
+            parsed = datetime.combine(parsed_date, parsed_time)
+            return parsed.isoformat(), parsed, "naive"
+        except ValueError:
+            return None
+    # Date-only input retains date precision; datetime.fromisoformat otherwise
+    # invents midnight and makes mixed date/timestamp ranges look comparable.
+    try:
+        parsed_date = date.fromisoformat(text)
+    except ValueError:
+        pass
+    else:
+        return parsed_date.isoformat(), datetime.combine(parsed_date, time.min), "date"
+    normalized_text = text.replace("Z", "+00:00") if text.endswith("Z") else text
+    try:
+        parsed_datetime = datetime.fromisoformat(normalized_text)
+    except ValueError:
+        try:
+            parsed_date = date.fromisoformat(text)
+        except ValueError:
+            return None
+        return parsed_date.isoformat(), datetime.combine(parsed_date, time.min), "date"
+    if parsed_datetime.tzinfo is not None and parsed_datetime.utcoffset() is not None:
+        try:
+            normalized = parsed_datetime.astimezone(timezone.utc)
+        except (ValueError, OverflowError):
+            return None
+        return normalized.isoformat().replace("+00:00", "Z"), normalized, "aware"
+    return parsed_datetime.isoformat(), parsed_datetime, "naive"
+
+
+def _shared_row_category(source, row):
+    """Classify only explicit sheet, document-block or row-type labels."""
+    name = str(source.get("source_name") or "").casefold()
+    locator = row.get("source_locator") if isinstance(row.get("source_locator"), dict) else {}
+    sheet = str(locator.get("sheet_name") or "").casefold()
+    category = str(locator.get("source_category") or "").casefold()
+    if name.endswith((".pdf", ".docx")):
+        return "report_assertion"
+    labels = f"{sheet} {category}"
+    if any(word in labels for word in ("汇总", "统计", "summary", "overview", "总览")):
+        return "summary"
+    if any(word in labels for word in ("报告", "report", "assertion", "叙述")):
+        return "report_assertion"
+    if any(word in labels for word in ("评论", "comment")):
+        return "comment"
+    if any(word in labels for word in ("帖子", "笔记", "post")):
+        return "post"
+    for field in _shared_source_fields(row):
+        if _shared_field_header(field) in {"记录类型", "内容类型", "类型", "source_type", "record_type"}:
+            value, _, is_formula = _shared_field_value(field)
+            if not is_formula and isinstance(value, str):
+                normalized = value.strip().casefold()
+                if normalized in {"评论", "comment", "comments"}:
+                    return "comment"
+                if normalized in {"帖子", "笔记", "post", "posts"}:
+                    return "post"
+                if normalized in {"汇总", "统计", "summary", "overview"}:
+                    return "summary"
+                if normalized in {"报告", "report", "assertion", "叙述"}:
+                    return "report_assertion"
+    return "unclassified"
+
+
+def _shared_explicit_header_rows(rows):
+    """Bind field labels to a retained physical row, without discarding preambles.
+
+    This declared-label heuristic is reported, never a claim of source semantics.
+    Every source row/hash stays bound to the original; only the calculation view
+    receives headers from the first exact-label row in the first 20 rows per sheet.
+    """
+    import copy
+    rows = copy.deepcopy(rows)
+    aliases = set().union(*_SHARED_METRIC_ALIASES.values(), _SHARED_DATE_ALIASES,
+        _SHARED_PLATFORM_ALIASES, _SHARED_SENTIMENT_ALIASES, _SHARED_PARENT_ALIASES,
+        _SHARED_POST_ID_ALIASES, _SHARED_COMMENT_ID_ALIASES, _SHARED_POST_URL_ALIASES,
+        _SHARED_COMMENT_URL_ALIASES, {"title", "content", "author", "标题", "正文", "作者"})
+    tables = {}
+    for row in rows:
+        record = row.get("source_record") or {}
+        if record.get("schema") == "xlsx-source-row/v1":
+            tables.setdefault((record["table_index"], record["sheet_name"]), []).append(row)
+    bindings = []
+    for table_rows in tables.values():
+        selected = None
+        for row in table_rows[:20]:
+            values = row["source_record"]["values"]
+            labels = [str(cell.get("value") or "").strip().casefold()
+                      if cell.get("type") == "string" else "" for cell in values]
+            matches = sum(label in aliases for label in labels)
+            if matches >= 2 or (len(labels) == 1 and matches == 1):
+                selected = row
+                break
+        if selected is None:
+            continue
+        header = selected["source_record"]["values"]
+        bindings.append({"source_locator": selected["source_locator"],
+                         "source_row_sha256": selected["source_row_sha256"]})
+        for row in table_rows:
+            row["source_record"]["row_role"] = "source_row"
+            if row["index"] == selected["index"]:
+                row["source_record"]["row_role"] = "header"
+            elif row["index"] > selected["index"]:
+                row["source_fields"] = [{"column_index": index + 1,
+                    "header": header[index] if index < len(header) else None, "value": value}
+                    for index, value in enumerate(row["source_record"]["values"])]
+    return rows, bindings
+
+
+def analyze_shared_typed_source_records(*, question, sources):
+    """Compute bounded, reproducible aggregates over every owner-verified source row.
+
+    This deliberately does not perform text sentiment, parent matching by
+    proximity, report-claim promotion, or inference. It preserves missing and
+    formula cells as unknown and computes only explicit typed fields.
+    """
+    if (not isinstance(question, str) or not 4 <= len(question.strip()) <= 1500
+            or not isinstance(sources, list) or not 1 <= len(sources) <= 30):
+        raise ValueError("SHARED_TYPED_SOURCE_INPUT_INVALID")
+
+    inventory = []
+    flattened = []
+    row_count = 0
+    preserved_header_rows = 0
+    header_bindings = []
+    for source_index, source in enumerate(sources):
+        rows = source.get("source_rows") if isinstance(source, dict) else None
+        if (not isinstance(source, dict) or not isinstance(rows, list)
+                or type(source.get("source_row_count")) is not int
+                or source["source_row_count"] != len(rows) or not rows):
+            raise ValueError("SHARED_TYPED_SOURCE_ROWS_INVALID")
+        reference = source.get("evidence_ref")
+        if not isinstance(reference, str) or not re.fullmatch(r"(?:app_evidence_records:[1-9]\d*|saved_work:ART-[0-9a-f]{16}:[0-9a-f]{64})", reference):
+            raise ValueError("SHARED_TYPED_SOURCE_EVIDENCE_REF_INVALID")
+        inventory.append({
+            "evidence_ref": reference, "title": str(source.get("title") or ""),
+            "source_name": str(source.get("source_name") or ""),
+            "format": str(source.get("format") or "UNKNOWN"),
+            "attachment_published_at": source.get("published_at"),
+            "captured_at": source.get("captured_at"),
+            "source_fingerprint": source["source_fingerprint"],
+            "content_sha256": source["content_sha256"],
+            "source_rows_sha256": source["source_rows_sha256"],
+            "source_row_count": len(rows), "rights": source["rights"],
+            "intended_use": source["intended_use"],
+            "analysis_status": source.get("analysis_status", "NOT_RUN"),
+        })
+        rows, detected_headers = _shared_explicit_header_rows(rows)
+        header_bindings.extend({"evidence_ref": reference, **item} for item in detected_headers)
+        for row_index, row in enumerate(rows):
+            if (not isinstance(row, dict) or row.get("index") != row_index
+                    or not isinstance(row.get("source_locator"), dict)
+                    or not isinstance(row.get("source_row_sha256"), str)
+                    or not isinstance(row.get("source_fields"), list)):
+                raise ValueError("SHARED_TYPED_SOURCE_ROW_INVALID")
+            if row.get("source_record", {}).get("row_role") == "header":
+                preserved_header_rows += 1
+                continue
+            flattened.append((source_index, row_index, source, row))
+            row_count += 1
+
+    identity_keys = {}
+    identity_bearing_rows = set()
+    identity_ambiguous_rows = set()
+    publish_dates = {}
+    category_counts = {"post": 0, "comment": 0, "summary": 0,
+                       "report_assertion": 0, "unclassified": 0}
+    sentiment_fields = {}
+    metric_fields = {}
+    author_count = body_count = 0
+    parent_rows = []
+    for source_index, row_index, source, row in flattened:
+        reference = source["evidence_ref"]
+        locator = row["source_locator"]
+        row_ref = {"evidence_ref": reference, "source_locator": locator,
+                   "source_row_sha256": row["source_row_sha256"]}
+        content_sha256 = _shared_record_content_sha256(row)
+        category = _shared_row_category(source, row)
+        category_counts[category] = category_counts.get(category, 0) + 1
+        author_count += bool(str(row.get("author") or "").strip())
+        body_count += bool(str(row.get("content") or "").strip())
+
+        platform_values = _shared_explicit_values(row, _SHARED_PLATFORM_ALIASES)
+        platform = platform_values[0] if len(platform_values) == 1 else None
+        if platform is None and len(platform_values) > 1:
+            identity_ambiguous_rows.add((source_index, row_index))
+        source_url, native_id, parent_values, parent_platform, identity_ambiguous = (
+            _shared_identity_fields(row, category, platform)
+        )
+        if identity_ambiguous:
+            identity_ambiguous_rows.add((source_index, row_index))
+        row_fields = _shared_source_fields(row)
+        for field in row_fields:
+            header = _shared_field_header(field)
+            value, _cell_type, is_formula = _shared_field_value(field)
+            if header in _SHARED_SENTIMENT_ALIASES:
+                sentiment_key = (
+                    source_index, category, header, field.get("column_index"),
+                    _shared_table_key(source_index, locator),
+                )
+                sentiment_entry = sentiment_fields.setdefault(sentiment_key, {
+                    "evidence_ref": reference, "row_category": category,
+                    "explicit_header": header, "column_index": field.get("column_index"),
+                    "table_locator": {key: locator[key] for key in ("table_index", "sheet_name")
+                                      if key in locator},
+                    "eligible_rows": 0, "known_count": 0, "missing_count": 0,
+                    "formula_count": 0, "invalid_count": 0,
+                    "labels": {},
+                })
+                sentiment_entry["eligible_rows"] += 1
+                if is_formula:
+                    sentiment_entry["formula_count"] += 1
+                elif value in (None, ""):
+                    sentiment_entry["missing_count"] += 1
+                elif isinstance(value, str) and value.strip():
+                    sentiment_entry["known_count"] += 1
+                    category_labels = sentiment_entry["labels"]
+                    category_labels[value.strip()] = category_labels.get(value.strip(), 0) + 1
+                else:
+                    sentiment_entry["invalid_count"] += 1
+
+            if header in _SHARED_DATE_ALIASES:
+                date_key = (source_index, category, header, field.get("column_index"),
+                            _shared_table_key(source_index, locator))
+                date_entry = publish_dates.setdefault(date_key, {
+                    "evidence_ref": reference, "row_category": category,
+                    "explicit_header": header, "column_index": field.get("column_index"),
+                    "table_locator": {key: locator[key] for key in ("table_index", "sheet_name")
+                                      if key in locator},
+                    "denominator": 0, "known_count": 0, "missing_count": 0,
+                    "unparseable_count": 0, "formula_count": 0, "dates": [],
+                })
+                date_entry["denominator"] += 1
+                if is_formula:
+                    date_entry["formula_count"] += 1
+                elif value in (None, ""):
+                    date_entry["missing_count"] += 1
+                else:
+                    normalized_date = _shared_date_value(value)
+                    if normalized_date is None:
+                        date_entry["unparseable_count"] += 1
+                    else:
+                        date_entry["known_count"] += 1
+                        date_entry["dates"].append(normalized_date)
+
+            for metric, aliases in _SHARED_METRIC_ALIASES.items():
+                if header not in aliases:
+                    continue
+                metric_key = (metric, source_index, category, header,
+                              field.get("column_index"), _shared_table_key(source_index, locator))
+                entry = metric_fields.setdefault(metric_key, {
+                    "evidence_ref": reference, "explicit_header": header,
+                    "column_index": field.get("column_index"), "row_category": category,
+                    "table_locator": {key: locator[key] for key in ("table_index", "sheet_name")
+                                      if key in locator},
+                    "eligible_rows": 0, "known_count": 0,
+                    "missing_count": 0, "formula_count": 0, "invalid_count": 0,
+                    "zero_count": 0, "negative_count": 0, "sum": Decimal(0),
+                })
+                entry["eligible_rows"] += 1
+                if is_formula:
+                    entry["formula_count"] += 1
+                    continue
+                if value is None or value == "":
+                    entry["missing_count"] += 1
+                    continue
+                number = _shared_numeric_value(value)
+                if number is None:
+                    entry["invalid_count"] += 1
+                    continue
+                entry["known_count"] += 1
+                entry["sum"] = _shared_exact_add(entry["sum"], number)
+                entry["zero_count"] += number == 0
+                entry["negative_count"] += number < 0
+
+        row_key = (source_index, row_index)
+        if source_url is not None:
+            key = ("url", source_url)
+            identity_bearing_rows.add(row_key)
+            identity_keys.setdefault(key, []).append({
+                "row_key": row_key,
+                **row_ref, "content_sha256": content_sha256,
+                "category": category,
+            })
+        if native_id is not None and platform is not None:
+            key = ("platform_native_id", platform, native_id)
+            identity_bearing_rows.add(row_key)
+            identity_keys.setdefault(key, []).append({
+                "row_key": row_key,
+                **row_ref, "content_sha256": content_sha256,
+                "category": category,
+            })
+        if category == "comment" and parent_values:
+            parent_rows.append({
+                **row_ref, "parent_native_ids": parent_values,
+                "parent_native_id": parent_values[0] if len(parent_values) == 1 else None,
+                "platform": parent_platform, "source_index": source_index,
+                "ambiguous_input": len(parent_values) > 1,
+            })
+
+    parent = {}
+
+    def root(key):
+        parent.setdefault(key, key)
+        while parent[key] != key:
+            parent[key] = parent[parent[key]]
+            key = parent[key]
+        return key
+
+    def join(left, right):
+        left_root, right_root = root(left), root(right)
+        if left_root != right_root:
+            parent[right_root] = left_root
+
+    for matches in identity_keys.values():
+        row_keys = [item["row_key"] for item in matches]
+        for row_key in row_keys[1:]:
+            join(row_keys[0], row_key)
+    identity_groups = {}
+    identity_keys_by_group = {}
+    for matches in identity_keys.values():
+        for item in matches:
+            group_key = root(item["row_key"])
+            identity_groups.setdefault(group_key, {})[item["row_key"]] = item
+
+    exact_duplicates = []
+    identity_conflicts = []
+    cross_source_overlaps = []
+    for identity_key, matches in identity_keys.items():
+        group_key = root(matches[0]["row_key"])
+        identity_hash = hashlib.sha256(_json(list(identity_key)).encode("utf-8")).hexdigest()
+        identity_keys_by_group.setdefault(group_key, []).append(identity_hash)
+    for group_rows in identity_groups.values():
+        matches = sorted(group_rows.values(), key=lambda item: item["row_key"])
+        if len(matches) < 2:
+            continue
+        row_hashes = {item["content_sha256"] for item in matches}
+        group_key = root(matches[0]["row_key"])
+        group = {
+            "identity_sha256": hashlib.sha256(_json(sorted(
+                identity_keys_by_group.get(group_key, [])
+            )).encode("utf-8")).hexdigest(),
+            "records": [{key: value for key, value in item.items() if key != "row_key"}
+                        for item in matches],
+        }
+        source_indexes = {item["row_key"][0] for item in matches}
+        table_keys = {
+            _shared_table_key(item["row_key"][0], item["source_locator"])
+            for item in matches
+        }
+        if len(source_indexes) > 1 or len(table_keys) > 1:
+            cross_source_overlaps.append(group)
+        if len(row_hashes) == 1:
+            exact_duplicates.append(group)
+        else:
+            identity_conflicts.append(group)
+
+    post_ids = {}
+    for source_index, _, source, row in flattened:
+        if _shared_row_category(source, row) != "post":
+            continue
+        platform_values = _shared_explicit_values(row, _SHARED_PLATFORM_ALIASES)
+        platform = platform_values[0] if len(platform_values) == 1 else None
+        _, native_id, _, _, _ = _shared_identity_fields(row, "post", platform)
+        if native_id is None or platform is None:
+            continue
+        post_ids.setdefault((platform, native_id), []).append(row["source_row_sha256"])
+    parent_states = {"matched_exactly": 0, "ambiguous": 0, "unmatched": 0,
+                     "platform_unknown": 0}
+    for parent in parent_rows:
+        if parent["ambiguous_input"]:
+            parent_states["ambiguous"] += 1
+            continue
+        if not parent["platform"]:
+            parent_states["platform_unknown"] += 1
+            continue
+        matches = post_ids.get((parent["platform"], parent["parent_native_id"]), [])
+        if len(matches) == 1:
+            parent_states["matched_exactly"] += 1
+        elif len(matches) > 1:
+            parent_states["ambiguous"] += 1
+        else:
+            parent_states["unmatched"] += 1
+
+    metrics = []
+    for name in sorted(_SHARED_METRIC_ALIASES):
+        entries = [
+            {"metric": metric, "source_evidence_ref": entry["evidence_ref"],
+             "explicit_header": entry["explicit_header"], "column_index": entry["column_index"],
+             "row_category": entry["row_category"], "table_locator": entry["table_locator"],
+             "eligible_rows": entry["eligible_rows"], "known_count": entry["known_count"],
+             "missing_count": entry["missing_count"], "formula_count": entry["formula_count"],
+             "invalid_count": entry["invalid_count"], "zero_count": entry["zero_count"],
+             "negative_count": entry["negative_count"],
+             "sum_of_known_imported_values": _shared_decimal_text(entry["sum"])
+             if entry["known_count"] else None,
+             "aggregation_scope": "raw imported rows in this category; duplicates are not removed"}
+            for (metric, *_), entry in sorted(metric_fields.items(), key=lambda item: _json(item[0]))
+            if metric == name
+        ]
+        metrics.append({"metric": name, "state": "AVAILABLE" if entries else "NOT_PRESENT",
+                        "explicit_fields": entries})
+    for entry in publish_dates.values():
+        date_kinds = {value[2] for value in entry["dates"]}
+        if not entry["dates"]:
+            entry["range_start"] = entry["range_end"] = None
+            entry["range_status"] = "UNKNOWN"
+        elif len(date_kinds) != 1:
+            entry["range_start"] = entry["range_end"] = None
+            entry["range_status"] = "INCOMPARABLE_PRECISION_OR_TIMEZONE"
+        else:
+            ordered = sorted(entry["dates"], key=lambda value: value[1])
+            entry["range_start"], entry["range_end"] = ordered[0][0], ordered[-1][0]
+            entry["range_status"] = "COMPUTED"
+        entry.pop("dates")
+    publish_dates = sorted(publish_dates.values(), key=lambda item: (
+        item["evidence_ref"], item["table_locator"].get("table_index", -1),
+        item["table_locator"].get("sheet_name", ""), item["explicit_header"],
+        item["column_index"] if type(item["column_index"]) is int else -1,
+    ))
+    return {
+        "schema": "lumenis.shared-typed-source-analysis/v1",
+        "business_question": question.strip(),
+        "method": "deterministic_explicit_fields_all_rows/1",
+        "ai_analysis": "NOT_PERFORMED",
+        "header_detection": {"method": "first_exact_label_row_within_first_20_per_sheet",
+                             "semantic_verification": "NOT_PERFORMED", "bindings": header_bindings},
+        "source_inventory": inventory,
+        "row_coverage": {
+            "selected_sources": len(sources), "total_rows": row_count,
+            "preserved_header_rows": preserved_header_rows,
+            "post_rows": category_counts.get("post", 0),
+            "comment_rows": category_counts.get("comment", 0),
+            "summary_rows": category_counts.get("summary", 0),
+            "report_assertion_rows": category_counts.get("report_assertion", 0),
+            "unclassified_rows": category_counts.get("unclassified", 0),
+            "rows_with_author": author_count, "rows_with_body": body_count,
+            "analysis_status": "ALL_OWNER_VERIFIED_SOURCE_ROWS_COMPUTED",
+        },
+        "identity": {
+            "identity_bearing_rows": len(identity_bearing_rows),
+            "rows_without_safe_explicit_url_or_platform_native_id":
+                row_count - len(identity_bearing_rows),
+            "identity_ambiguous_rows": len(identity_ambiguous_rows),
+            "unique_explicit_identity_groups": len(identity_groups),
+            "exact_duplicate_groups": exact_duplicates,
+            "conflicting_identity_groups": identity_conflicts,
+            "cross_source_overlap_groups": cross_source_overlaps,
+            "identity_key_policy": "exact full URL, else exact explicit platform + native ID; no inferred IDs",
+        },
+        "observation_time": {
+            "basis": "explicit source date/time fields as labeled; capture/import time is separate",
+            "by_explicit_field": publish_dates,
+        },
+        "metrics": metrics,
+        "source_reported_sentiment": {
+            "fields": [
+                {**{key: entry[key] for key in (
+                    "evidence_ref", "row_category", "explicit_header", "column_index", "table_locator",
+                    "known_count", "eligible_rows", "missing_count", "formula_count", "invalid_count",
+                )}, "labels": dict(sorted(entry["labels"].items()))}
+                for _key, entry in sorted(sentiment_fields.items(), key=lambda item: _json(item[0]))
+            ],
+            "assessment": "SOURCE_REPORTED_ONLY; no independent sentiment analysis performed",
+        },
+        "comment_parent_links": {
+            **parent_states,
+            "unresolved_or_ambiguous_records": [
+                {key: value for key, value in row.items()
+                 if key not in {"platform", "source_index"}}
+                for row in parent_rows
+                if (not row["platform"]
+                    or len(post_ids.get((row["platform"], row["parent_native_id"]), [])) != 1)
+            ],
+            "match_policy": "exact explicit parent ID against exactly one explicitly classified post ID; no proximity inference",
+        },
+        "interpretation_limits": [
+            "Rows in report or summary sources are source assertions, not independently verified native observations.",
+            "This analysis computes explicit fields only; it does not infer post meaning, audience sentiment, demand, sales, causality, or outcomes.",
+            "Missing, formula, unparseable, and zero values remain separate states; publication time is not replaced by capture time.",
+            "Exact identity overlap does not prove the contents are equivalent; differing row hashes are surfaced as conflicts.",
+        ],
+    }
+

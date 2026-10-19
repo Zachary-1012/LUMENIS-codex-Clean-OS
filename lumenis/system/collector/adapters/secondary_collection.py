@@ -13,6 +13,7 @@ from __future__ import annotations
 from contextlib import nullcontext
 from dataclasses import dataclass
 import ipaddress
+import sqlite3
 
 import threading
 import time
@@ -3516,12 +3517,16 @@ def _persist_live_source_original(connection, *, platform, record, source_id,
 def _persist_pending_live_source_original(connection, *, platform, record, source_id,
                                           collection_evidence_id, context, staged_paths,
                                           scope, keyword, authorization, business_query,
-                                          max_results, reason):
+                                          max_results, reason, recovery_binding=None):
     """Preserve an authorized native observation pending business-entity assignment."""
-    if not _authorize_prelaunch_public(
-            scope, keyword, platform, maintenance_authorization=authorization,
-            business_query=business_query, max_results=max_results):
-        raise ValueError("COLLECTED_SOURCE_IMPORT_PERMISSION_DENIED")
+    if recovery_binding is None:
+        if not _authorize_prelaunch_public(
+                scope, keyword, platform, maintenance_authorization=authorization,
+                business_query=business_query, max_results=max_results):
+            raise ValueError("COLLECTED_SOURCE_IMPORT_PERMISSION_DENIED")
+    elif (not isinstance(recovery_binding, Mapping)
+          or getattr(authorization, "recovery_only", False) is not True):
+        raise ValueError("PENDING_SOURCE_RECOVERY_BINDING_INVALID")
     if not isinstance(reason, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", reason):
         raise ValueError("PENDING_SOURCE_REASON_INVALID")
     if not isinstance(context, Mapping):
@@ -3619,6 +3624,15 @@ def _persist_pending_live_source_original(connection, *, platform, record, sourc
                               separators=(",", ":")).encode("utf-8")
     fingerprint = hashlib.sha256(source_bytes).hexdigest()
     _validate_native_source_bytes(platform, source_bytes, fingerprint)
+    if recovery_binding is not None and not _authorize_prelaunch_pending_source_recovery(
+            scope, authorization=authorization,
+            parent_evidence_ref=recovery_binding["parent_evidence_ref"],
+            parent_integrity_digest=recovery_binding["parent_integrity_digest"],
+            observation_sha256=recovery_binding["observation_sha256"],
+            native_id=native_id, source_fingerprint=fingerprint,
+            source_url=keyword, platform=platform, business_query=business_query,
+            max_results=max_results, connection=connection):
+        raise ValueError("PENDING_SOURCE_RECOVERY_PERMISSION_DENIED")
     return _persist_collected_source_original(
         connection, value=value, source_bytes=source_bytes,
         source_fingerprint=fingerprint, source_id=source_id,
@@ -3750,7 +3764,8 @@ def _persist_collected_source_original(connection, *, value, source_bytes,
 def _persist_pending_live_observations(connection, *, platform, records,
                                        collection_evidence_id, context, staged_paths,
                                        scope, keyword, authorization, business_query,
-                                       max_results, reviews, saved_ids, covers=None):
+                                       max_results, reviews, saved_ids, covers=None,
+                                       recovery_bindings=None):
     """Preserve reviewed/unbound native originals without assigning entity facts."""
     from .platform_naming import get_platform_fields, normalize_content_id
     from lumenis.shared.evidence import store
@@ -3783,7 +3798,8 @@ def _persist_pending_live_observations(connection, *, platform, records,
                 collection_evidence_id=collection_evidence_id, context=context,
                 staged_paths=staged_paths, scope=scope, keyword=keyword,
                 authorization=authorization, business_query=business_query,
-                max_results=max_results, reason="SOURCE_ENTITY_IDENTITY_UNCONFIRMED")
+                max_results=max_results, reason="SOURCE_ENTITY_IDENTITY_UNCONFIRMED",
+                recovery_binding=(recovery_bindings or {}).get(str(source_id)))
             if isinstance(covers, Mapping):
                 cover_refs = {"status": "NULL", "reason": "NO_OBSERVED_COVER",
                               "media_asset_refs": None}
@@ -4105,18 +4121,36 @@ def _preserve_prelaunch_originals_after_rollback(*, platform, keyword, scope,
 
 def recover_prelaunch_pending_sources(*, limit=40):
     """Recover permitted originals from retained observations, never recollect."""
+    import sqlite3
+
+    from lumenis.importer.documents import _source_bytes
     from lumenis.shared.database import get_repository
     from lumenis.shared.evidence import store
-    from lumenis.importer.documents import _source_bytes
+
     from .scheduling.prelaunch_baseline import (
-        PURPOSE_POLICY, _purpose_query, load_prelaunch_baseline_config, maintenance_authorization,
+        PURPOSE_POLICY,
+        BaselineConfigError,
+        _purpose_query,
+        load_prelaunch_baseline_config,
+        maintenance_authorization,
     )
     if type(limit) is not int or not 1 <= limit <= 40:
         raise ValueError("PENDING_SOURCE_RECOVERY_LIMIT_INVALID")
-    loaded = load_prelaunch_baseline_config(os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None)
+    config_error = None
+    try:
+        loaded = load_prelaunch_baseline_config(
+            os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None)
+    except BaselineConfigError as exc:
+        loaded = {"plans": [], "recovery_plans": []}
+        config_error = exc.code
+    if loaded.get("status") == "DISABLED":
+        config_error = "PRELAUNCH_SERVICE_DISABLED"
     plans = {p.plan_id: p for p in loaded.get("plans", []) if p.policy_id == PURPOSE_POLICY}
+    for plan in loaded.get("recovery_plans", []):
+        if plan.policy_id == PURPOSE_POLICY:
+            plans.setdefault(plan.plan_id, plan)
     con = get_repository().connect(timeout=10)
-    outcomes, scanned, deferred = [], 0, 0
+    outcomes, scanned, deferred, invalid_parents = [], 0, 0, 0
     try:
         preserved = set()
         for row in con.execute("SELECT * FROM app_evidence_records WHERE feature_id='COLLECTED_SOURCE' "
@@ -4138,16 +4172,40 @@ def recover_prelaunch_pending_sources(*, limit=40):
             if len(outcomes) >= limit:
                 break
             parent = dict(row)
+            parent_ref = "app_evidence_records:" + str(parent.get("id"))
             try:
                 metadata = json.loads(parent["collection_metadata"] or "{}")
                 plan = plans.get(metadata.get("maintenance_plan_id"))
-                if plan is None:
-                    continue
                 inputs = json.loads(parent["inputs_json"] or "{}")
                 observations = inputs.get("source_observation_records")
                 integrity = store.classify_evidence_integrity(parent)
                 if (not isinstance(observations, list) or integrity.get("verified") is not True
-                        or integrity.get("assurance") != "writer-authenticated"):
+                        or integrity.get("assurance") != "writer-authenticated"
+                        or parent.get("status") != "verified"
+                        or parent.get("result") not in {"PASS", "FAIL"}):
+                    invalid_parents += 1
+                    continue
+                if plan is None:
+                    platform = inputs.get("platform") if isinstance(inputs, dict) else None
+                    if platform:
+                        from .platform_naming import normalize_platform
+                        platform = normalize_platform(platform)
+                    needs_recovery = False
+                    for observation in observations[:40]:
+                        try:
+                            native_id, _ = _verified_live_native_observation(platform, observation)
+                        except (TypeError, ValueError):
+                            deferred += 1
+                            continue
+                        scanned += 1
+                        if (parent_ref, native_id) not in preserved:
+                            needs_recovery = True
+                    if needs_recovery:
+                        outcomes.append({
+                            "collection_evidence_ref": parent_ref, "status": "PENDING",
+                            "reason": config_error or "RECOVERY_AUTHORIZATION_UNAVAILABLE",
+                            "network_collection": False, "canonical_ref": None,
+                        })
                     continue
                 query = _purpose_query(plan.purpose_query)
                 scope = {"domain_id": plan.domain_id, "subject_id": plan.subject_id,
@@ -4155,9 +4213,9 @@ def recover_prelaunch_pending_sources(*, limit=40):
                 context = {**scope, "domain_id": "zbmp" if plan.domain_id == "bmp" else "cth",
                            "global_scope": False, "collector_plan_id": plan.plan_id,
                            "collector_authorization_ref": plan.authorization_ref}
-                authorization = maintenance_authorization(plan)
-                parent_ref = "app_evidence_records:" + str(parent["id"])
+                authorization = maintenance_authorization(plan, recovery_only=True)
                 eligible = []
+                recovery_bindings = {}
                 for observation in observations[:plan.max_results]:
                     scanned += 1
                     try:
@@ -4167,6 +4225,15 @@ def recover_prelaunch_pending_sources(*, limit=40):
                         continue
                     if (parent_ref, native_id) not in preserved:
                         eligible.append(observation)
+                        encoded_observation = json.dumps(
+                            observation, ensure_ascii=False, sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode("utf-8")
+                        recovery_bindings[native_id] = {
+                            "parent_evidence_ref": parent_ref,
+                            "parent_integrity_digest": str(parent.get("integrity_digest") or ""),
+                            "observation_sha256": hashlib.sha256(encoded_observation).hexdigest(),
+                        }
                 if not eligible:
                     continue
                 # Use the actual observation cutoff in the retained parent.
@@ -4185,16 +4252,33 @@ def recover_prelaunch_pending_sources(*, limit=40):
                 continue
             paths, committed = [], False
             try:
+                from .platform_naming import normalize_platform
+                recovery_platform = normalize_platform(plan.platform)
+                if recovery_platform is None:
+                    raise ValueError("PENDING_SOURCE_RECOVERY_PLATFORM_INVALID")
                 con.execute("BEGIN IMMEDIATE")
                 result = _persist_pending_live_observations(
-                    con, platform=plan.platform, records=eligible,
+                    con, platform=recovery_platform, records=eligible,
                     collection_evidence_id=parent["id"], context=context, staged_paths=paths,
                     scope=scope, keyword=plan.source_url, authorization=authorization,
-                    business_query=query, max_results=plan.max_results, reviews=reviews, saved_ids=set())
-                if not _authorize_prelaunch_public(
-                        scope, plan.source_url, plan.platform, maintenance_authorization=authorization,
-                        business_query=query, max_results=plan.max_results):
-                    raise ValueError("COLLECTED_SOURCE_IMPORT_PERMISSION_DENIED")
+                    business_query=query, max_results=plan.max_results, reviews=reviews,
+                    saved_ids=set(), recovery_bindings=recovery_bindings)
+                for item in result.get("original_refs", []):
+                    if item.get("status") != "SAVED":
+                        continue
+                    native_id = str(item.get("source_id") or "")
+                    binding = recovery_bindings.get(native_id)
+                    if (binding is None or not _authorize_prelaunch_pending_source_recovery(
+                            scope, authorization=authorization,
+                            parent_evidence_ref=binding["parent_evidence_ref"],
+                            parent_integrity_digest=binding["parent_integrity_digest"],
+                            observation_sha256=binding["observation_sha256"],
+                            native_id=native_id,
+                            source_fingerprint=item.get("source_fingerprint"),
+                            source_url=plan.source_url, platform=plan.platform,
+                            business_query=query, max_results=plan.max_results,
+                            connection=con)):
+                        raise ValueError("PENDING_SOURCE_RECOVERY_PERMISSION_REVOKED")
                 con.commit()
                 committed = True
                 for item in result["original_refs"]:
@@ -4202,17 +4286,24 @@ def recover_prelaunch_pending_sources(*, limit=40):
                                      "outcome_ref": result["outcome_ref"], **item})
                     if item.get("status") == "SAVED":
                         preserved.add((parent_ref, str(item["source_id"])))
-            except Exception:
+            except (ImportError, KeyError, OSError, PermissionError, RuntimeError,
+                    TypeError, ValueError, sqlite3.Error) as exc:
                 con.rollback()
                 outcomes.append({"collection_evidence_ref": parent_ref, "status": "UNAVAILABLE",
-                                 "reason": "PENDING_SOURCE_RECOVERY_UNAVAILABLE"})
+                    "reason": str(exc) if isinstance(exc, ValueError)
+                        and re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", str(exc))
+                        else "PENDING_SOURCE_RECOVERY_UNAVAILABLE",
+                    "network_collection": False})
             finally:
                 if not committed:
                     _cleanup_collected_source_paths(paths)
         saved = sum(r.get("status") == "SAVED" for r in outcomes)
-        return {"status": "PARTIAL" if any(r.get("status") == "UNAVAILABLE" for r in outcomes)
+        pending = sum(r.get("status") == "PENDING" for r in outcomes)
+        return {"status": "PARTIAL" if any(r.get("status") in {"UNAVAILABLE", "PENDING"}
+                                                for r in outcomes)
                 else "COMPLETED", "processed": len(outcomes), "saved": saved,
                 "observations_scanned": scanned, "native_detail_unavailable": deferred,
+                "pending_authorization": pending, "invalid_parent_count": invalid_parents,
                 "canonical_rows_created": 0, "network_collection": False,
                 "scope_status": "UNASSIGNED", "results": outcomes}
     finally:
@@ -4947,3 +5038,30 @@ def admit_browser_snapshot(session, *, actor, scope, request_id, capture_id, rig
         if not committed and not commit_attempted:
             for path in paths:
                 path.unlink(missing_ok=True)
+
+
+def _authorize_prelaunch_pending_source_recovery(
+    scope: Mapping[str, Any], *, authorization, parent_evidence_ref: str,
+    parent_integrity_digest: str, observation_sha256: str, native_id: str,
+    source_fingerprint: str, source_url: str, platform: str, business_query,
+    max_results: int, connection,
+) -> bool:
+    """Recheck a current signed recovery grant for one stored parent item."""
+    try:
+        from lumenis.system.security import (
+            get_permission_gate,
+            is_testing_bypass_enabled,
+        )
+        if is_testing_bypass_enabled():
+            return False
+        decision = get_permission_gate().check_prelaunch_pending_source_recovery(
+            authorization, parent_evidence_ref=parent_evidence_ref,
+            parent_integrity_digest=parent_integrity_digest,
+            observation_sha256=observation_sha256, native_id=native_id,
+            source_fingerprint=source_fingerprint, source_url=source_url,
+            platform=platform, business_query=business_query,
+            max_results=max_results, scope=dict(scope), connection=connection,
+        )
+        return decision.allowed is True and bool(decision.audit_id)
+    except (ImportError, OSError, RuntimeError, TypeError, ValueError):
+        return False

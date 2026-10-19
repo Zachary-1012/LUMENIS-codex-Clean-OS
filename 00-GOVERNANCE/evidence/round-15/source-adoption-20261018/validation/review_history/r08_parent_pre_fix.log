@@ -1,0 +1,27 @@
+{'namespace': 'net:[4026532323]', 'interfaces': ['lo'], 'routes': '', 'libc_reserved_test_address': '203.0.113.1', 'connect_result': -1, 'errno': 101, 'errno_name': 'ENETUNREACH'}
+[0;93m2026-10-18 06:09:07.573251728 [W:onnxruntime:Default, telemetry_1ds.cc:600 operator()] Failed to persist telemetry device ID; using an in-memory identifier[m
+ONNX Runtime explicit telemetry disable called inside network-isolated namespace
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- $WORKSPACE/python_compat_fix_20261018/testdeps/venv311/bin/python
+rootdir: $WORKSPACE/ggi_independent_review_20261018T1217Z/source_r08
+configfile: pytest.ini
+collecting ... collected 1 item
+
+tests/test_growth_hypothesis_review.py::test_parent_review_changed_before_child_review_commit_is_rejected FAILED [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+=================================== FAILURES ===================================
+______ test_parent_review_changed_before_child_review_commit_is_rejected _______
+tests/test_growth_hypothesis_review.py:197: in test_parent_review_changed_before_child_review_commit_is_rejected
+    assert con.execute('SELECT count(*) FROM lumenis_shared_artifacts').fetchone()[0]==before+1
+E   assert 8 == (6 + 1)
+=========================== short test summary info ============================
+FAILED tests/test_growth_hypothesis_review.py::test_parent_review_changed_before_child_review_commit_is_rejected
+============================== 1 failed in 0.98s ===============================

@@ -7,6 +7,9 @@ Brand: Swire Properties / 太古地产, official site https://www.swirepropertie
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
 import uuid
 
 import pytest
@@ -59,3 +62,61 @@ def test_disabled_subject_is_not_collected(reg):
              "name_en": "Disabled Co", "name_zh": "停用公司", "keywords": [], "status": "disabled"}]
     plan = build_acquisition_plan(None, registry_loader=lambda: rows)
     assert not [q for q in plan.queries if q.subject_id == "SUBJ-x"]
+
+
+def test_registered_subject_and_new_alias_enter_current_signed_service_plan(reg, tmp_path):
+    row, created = reg.add_subject({"domain_id": "CTH", "subject_type": "company",
+                                    "name_en": "Swire Properties", "name_zh": "太古地产",
+                                    "industry": "real estate", "keywords": []})
+    assert created and row["status"] == "configured"
+
+    from lumenis.system.collector.adapters.scheduling.prelaunch_baseline import (
+        PURPOSE_POLICY,
+        _canonical_config,
+        load_prelaunch_baseline_config,
+    )
+
+    key = "isolated-dynamic-plan-signature"
+    config = {
+        "schema_version": 1, "enabled": True, "end_user_auto": False,
+        "internal_auto_opt_in": True, "policy_id": PURPOSE_POLICY,
+        "plan_version": "registered-entity-service-v1", "sources": [],
+        "registry_expansion": {
+            "schema_version": 1, "source_version": "registered-subjects-v1",
+            "scope_version": "current-registry-v1",
+            "authorization_ref": "isolated-approved-cth-purpose-scope",
+            "cadence_seconds": 3600, "max_results": 1,
+            "templates": [{
+                "domain_id": "CTH", "purpose": "Review commercial venue activity",
+                "dimension": "venue_operations", "platforms": ["x"],
+                "acquisition_stage": "SUBJECT_INTAKE",
+            }],
+        },
+    }
+    config_path = tmp_path / "signed-registry-expansion.json"
+
+    def save_signed():
+        config["hmac"] = {
+            "algorithm": "HMAC-SHA256",
+            "value": hmac.new(key.encode(), _canonical_config(config), hashlib.sha256).hexdigest(),
+        }
+        config_path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+
+    save_signed()
+    loaded = load_prelaunch_baseline_config(
+        str(config_path), hmac_key=key, registry_loader=reg.list_subjects)
+    old_plans = [plan for plan in loaded["plans"] if plan.subject_id == row["subject_id"]]
+    assert old_plans
+    assert all(plan.policy_id == PURPOSE_POLICY and plan.end_user_auto is False for plan in old_plans)
+    old_ids = {plan.plan_id for plan in old_plans}
+
+    update = reg.record_official_name(
+        "CTH", row["subject_id"], source_url="https://www.swireproperties.com/zh-cn/",
+        keywords=["太古地产商业物业"],
+    )
+    assert update["changed"] is True
+    refreshed = load_prelaunch_baseline_config(
+        str(config_path), hmac_key=key, registry_loader=reg.list_subjects)
+    refreshed_plans = [plan for plan in refreshed["plans"] if plan.subject_id == row["subject_id"]]
+    assert old_ids <= {plan.plan_id for plan in refreshed_plans}
+    assert any("太古地产商业物业" in plan.purpose_query["keyword"] for plan in refreshed_plans)

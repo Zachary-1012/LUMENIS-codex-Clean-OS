@@ -219,3 +219,17 @@ Public Website, Web Workspace, Desktop and Mobile keep distinct release roles. O
 - **输入、结果与权限：** 输入是确切 artifact/package hash、源版本、测试与签名证据、批准者和目标发布阶段。输出逐项展示 PASS/FAIL/NOT_RUN/UNKNOWN/STALE 及其证据版本、当前审批与真实发布阶段；unit test green 不构成发布许可。非创始人不得看到内部上传入口且服务端须拒绝。每个上传、测试运行、签名、stage/advance、pause、rollback 动作均需既有 Owner 的精确 Permission、Approval、Effect Fence 和目标环境授权；iOS只呈现审阅状态及原权限允许的暂停/回滚，不上传。评价/模型结果仍是派生数据，原始 Evidence 不被覆盖。
 - **版本、保存、返回与恢复：** 所有检查与状态绑定同一 source/artifact/package SHA 和 release stage，保留通过、失败与缺失 Evidence；用户返回原任务可继续检查同一候选版本。中断、拒绝或失败显示准确阶段和恢复依据；只可经既有 owner 的批准/回滚机制回到已知稳定版本，不能自动重试发布或把旧 PASS 复用到新 SHA。
 - **未绑定与验收：** 当前 SYS-07 screen binding 仅供读取，产品计划中的 G20b 动作没有由本屏证明 callable。上传/签名/发布/回滚均保持 OPEN/UNBOUND，直至既有 C6/M release owner 提供真实 route、角色/Permission、Approval 和 readback；不得新增接口、自动批准或将测试状态升级为发布状态。验收须在被授权的内部目标环境完成同版审查、非创始人拒绝、测试未全绿或未签名阻断发布、签名校验、真实分批状态、指标缺失不扩批、暂停/回滚与重开读回，并分别证明 RELEASED 与 OPERATING 的适用门槛；本补丁本身不启动任何发布。
+
+### 原G110/G125具体终态合同：受控能力晋升与真实增益审阅
+
+原Learning/Evaluation的“能力晋升”与本地参考采用/运输分设对象页签。候选详情固定旧版/候选版本、相同预算、保留集与真实新任务来源；分别显示delta.improvement、Learning Lift、规则命中、投毒检查、Safety与局限。原Safety<30阻断和delta为空不晋升明确显示触发项；影子评估、待审、拒绝、已晋升、回滚请求及实际回滚读回不同。晋升按钮只沿原Owner有权动作，先列影响任务/当前生产版与可回滚版本，不能由本地reference ADOPTED升格。
+
+构图：左能力与版本历史，中间旧/候选同预算评价表，右侧独立风险/缺证据，底部原Owner晋升或回滚确认；普通用户看到是否影响当前工作，不常驻训练参数。
+
+不足只保候选，失败不改生产版；取消审阅保理由。回滚≤5s是待实测目标，显示实际开始/确认完成及耗时，未读回不能写已恢复。跨端重开先读当前生产版本和未决动作，不能重复部署。
+
+Public Website仅用获准真实样例说明受控能力晋升与真实增益审阅及未核范围，不展示内部资料；Web按窗口宽度保主对象与可逆检查器、刷新读回原版本；Windows/macOS分别验证文件/窗口冷开和同版恢复；iOS按本组对象清单→单对象→检查/确认顺序重组，复杂编辑续接同版本，合法轻改不因窄屏丢失。三语、200%文字、键盘/读屏及48px触控均保关键字段和取消/返回。
+
+UI可把增益与风险两个轴安排成可解释对照，不生成优胜分或一键自动批准；保稳定表格、锁定/撤销。价值是看清何时该采纳改进及如何恢复。
+
+沿本屏现有Owner/Permission/SourceUse/版本/回执接线；缺callable保持OPEN并禁对应效果，不猜route，不改既有当前实现/验收状态。此段补全旧要求的可执行设计，不证明实现通过。

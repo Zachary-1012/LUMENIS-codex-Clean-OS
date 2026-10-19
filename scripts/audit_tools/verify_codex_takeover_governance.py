@@ -723,6 +723,11 @@ def validate(*, staged: bool = False) -> None:
     _assert_repository_model_neutrality()
 
     _assert_single_machine_contract()
+    try:
+        from .verify_source_adoption import validate_local_adoption
+    except ImportError:
+        from verify_source_adoption import validate_local_adoption
+    validate_local_adoption(ROOT)
     _assert_engineering_owner_routing(agents)
     _assert_current_round_statuses(takeover)
     if staged:
@@ -792,7 +797,7 @@ def validate(*, staged: bool = False) -> None:
         "DESIGN_EXPLORATION",
         "DESIGN_READY",
         "implementation from a PDF, screenshot, fixture, Figma frame",
-        "Platform-native Source → Source/Evidence/Canonical → LUMENIS presentation → Open Original → Return",
+        "Platform-native Source → Source/Evidence/Canonical → OEVIRA presentation → Open Original → Return",
         label="CURRENT product architecture",
     )
 
@@ -806,7 +811,7 @@ def validate(*, staged: bool = False) -> None:
         "M returns `REWORK`",
         "three user-visible language versions",
         "Platform-native SourceTarget / Open Original",
-        "LUMENIS SourceTarget v1",
+        "OEVIRA SourceTarget v1",
         "SYS-06",
         label="CURRENT Experience Constitution",
     )
@@ -827,7 +832,7 @@ def validate(*, staged: bool = False) -> None:
 
     _require(
         source_index,
-        "LUMENIS Source Owner Index",
+        "OEVIRA Source Owner Index",
         "Authority, Only-One and multi-surface decision",
         "Cross-Surface Experience Foundation",
         "Closed-loop internal beta",

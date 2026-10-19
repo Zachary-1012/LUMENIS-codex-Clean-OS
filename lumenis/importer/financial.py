@@ -20,6 +20,7 @@ from lumenis.shared.reporting import saved_work
 from . import documents
 
 SCHEMA = 'lumenis.financial-observations/v1'
+_DEFAULT_DART_BASIS = object()
 CONCEPTS = {
     'AdvertisingExpense': 'advertising_expense',
     'AdvertisingAndMarketingExpense': 'marketing_expense',
@@ -383,7 +384,9 @@ def match_registered_entity(entity, *, actor, scope) -> dict:
 
 
 def analyze_financial_source(evidence_id, *, actor, scope, format='sec-companyfacts', annotations=None,
-                             filing_id=None, filed=None, form=None, identity_review_artifact_id=None) -> dict:
+                             filing_id=None, filed=None, form=None, identity_review_artifact_id=None, fs_div=_DEFAULT_DART_BASIS) -> dict:
+    if fs_div is not _DEFAULT_DART_BASIS and format != 'opendart-json':
+        _fail('FINANCIAL_DART_BASIS_FORMAT_INVALID')
     context = saved_work.authorize(actor, scope, action='read')
     source = documents.reopen_imported_source(evidence_id, actor=actor, scope=scope)
     with get_repository().connection(read_only=True, wal=False) as con:
@@ -408,7 +411,7 @@ def analyze_financial_source(evidence_id, *, actor, scope, format='sec-companyfa
             exchange=exchange, filing_id=filing_id or source['sha256'], filed=filed, form=form)
     elif format == 'opendart-json':
         from .financial_tables import parse_opendart_json
-        result = parse_opendart_json(source['content'])
+        result = parse_opendart_json(source['content'], fs_div='CFS' if fs_div is _DEFAULT_DART_BASIS else fs_div)
     else:
         _fail('FINANCIAL_FORMAT_UNSUPPORTED')
     if len(result['facts']) > 10000:

@@ -1,0 +1,410 @@
+[
+  {
+    "path": "validation/static/exchange_contract_with_required_path.log",
+    "original_sha256": "fae68dbe25ec0c875a064f2b713cf137d5296cd0a8011a572cc02e4fd4c37b8a",
+    "sanitized_sha256": "fae68dbe25ec0c875a064f2b713cf137d5296cd0a8011a572cc02e4fd4c37b8a",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/final_source_readback.log",
+    "original_sha256": "f2913051b5a599f9cb4a200e6f196a1e5d66630e4dff21a22b9019369e231172",
+    "sanitized_sha256": "f2913051b5a599f9cb4a200e6f196a1e5d66630e4dff21a22b9019369e231172",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/governance_regression.log",
+    "original_sha256": "9ff184be52c3862f15f31e28a29e97fdc164d99ca898102b9bac5d25bb01f831",
+    "sanitized_sha256": "9ff184be52c3862f15f31e28a29e97fdc164d99ca898102b9bac5d25bb01f831",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/machine_full_candidate.log",
+    "original_sha256": "46ec75f9fa05dad31174d18904f1504936ef12d4781360ccd9a0dea072ab4d88",
+    "sanitized_sha256": "46ec75f9fa05dad31174d18904f1504936ef12d4781360ccd9a0dea072ab4d88",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/takeover_full_candidate.log",
+    "original_sha256": "79dae9210523c2bba74b5b5dabf9ad85cf862c5757ba59e7c4e3ce21ab151a19",
+    "sanitized_sha256": "79dae9210523c2bba74b5b5dabf9ad85cf862c5757ba59e7c4e3ce21ab151a19",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/verify_ai_native_constitution.log",
+    "original_sha256": "ebc22c326a6d37efe2927a0cea24a7380a9c68012a22e70eef99b6641ccf6843",
+    "sanitized_sha256": "ebc22c326a6d37efe2927a0cea24a7380a9c68012a22e70eef99b6641ccf6843",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/verify_current_configuration.log",
+    "original_sha256": "c8239dc064affd359050308588bc818cc02f4d4c0ab6c7d912f51a3d2cb08195",
+    "sanitized_sha256": "c8239dc064affd359050308588bc818cc02f4d4c0ab6c7d912f51a3d2cb08195",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/verify_database_authority.log",
+    "original_sha256": "9548032eb384715e7925102fab1c6a357288edfdf7298900b18386f3e2659993",
+    "sanitized_sha256": "9548032eb384715e7925102fab1c6a357288edfdf7298900b18386f3e2659993",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/verify_experience_anti_template.log",
+    "original_sha256": "c39a656f9b481a02d7be6ea5514740c7233e4897c730be60e5ceceb3395243b3",
+    "sanitized_sha256": "c39a656f9b481a02d7be6ea5514740c7233e4897c730be60e5ceceb3395243b3",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/verify_experience_authority_exclusive.log",
+    "original_sha256": "c055943c5f4b535db2cf5475ba85206dbd07109e686fd1e23144f57a507a938d",
+    "sanitized_sha256": "c055943c5f4b535db2cf5475ba85206dbd07109e686fd1e23144f57a507a938d",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/verify_experience_screen_blueprints.log",
+    "original_sha256": "2cd9024ef1a0b8e1a299cc2458118e1a3e0111fcb520591efdc1b89484fe6f40",
+    "sanitized_sha256": "2cd9024ef1a0b8e1a299cc2458118e1a3e0111fcb520591efdc1b89484fe6f40",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/verify_governance_machine_contract.log",
+    "original_sha256": "f69360476a7cf8bad82f3ad0612801a6b11b7429b33cd169f15561c9137c7d1a",
+    "sanitized_sha256": "f3159b543fb5524bba528c013d3de779c3c8776a7ee29079ee624c057d1382d6",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/verify_lumenis_ggi_contract.log",
+    "original_sha256": "bb3b1d6d1874086f1f5782292dbd8cdd4781e22a1400d16586e33df92bb3d02c",
+    "sanitized_sha256": "745446f2022bdf328f35e98bc535a6126e2baccb281dd279435a9cfeb080513f",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/verify_lumenis_single_product.log",
+    "original_sha256": "ee4d7803f7aa65d547f0aaaf0139bc5e7ca3c3f9bde05ba792216e3fb325d15e",
+    "sanitized_sha256": "ee4d7803f7aa65d547f0aaaf0139bc5e7ca3c3f9bde05ba792216e3fb325d15e",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/verify_source_adoption.log",
+    "original_sha256": "9a948b2fbeb3d2ec1af1252602ff6cdcf6bb67bf545b8b0a498543b3ee64e4d5",
+    "sanitized_sha256": "9a948b2fbeb3d2ec1af1252602ff6cdcf6bb67bf545b8b0a498543b3ee64e4d5",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/BASE_MAIN_TREE.json",
+    "original_sha256": "d281000a9d00e71f6e746a0a206cb079c05cdac8e99db65d545da9e4ceb7d04d",
+    "sanitized_sha256": "d281000a9d00e71f6e746a0a206cb079c05cdac8e99db65d545da9e4ceb7d04d",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/FULL_PR_CHANGED_PATHS.json",
+    "original_sha256": "62cab00ca51d09ce201775f2ee6e8e33f9db142eeeba0467b058c0a43480ff63",
+    "sanitized_sha256": "62cab00ca51d09ce201775f2ee6e8e33f9db142eeeba0467b058c0a43480ff63",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/static/FINAL_STATIC_SUMMARY.json",
+    "original_sha256": "7350a6c60dc09175707f89d365d152770bef8f4714aad77e50f25d714d7d98b7",
+    "sanitized_sha256": "7350a6c60dc09175707f89d365d152770bef8f4714aad77e50f25d714d7d98b7",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/TESTED_SOURCE_MANIFEST.json",
+    "original_sha256": "549d6cfa8added1d11c4178df3b4d5f7fcc0a0d3dde6903ed9c2fc03c39e0f22",
+    "sanitized_sha256": "549d6cfa8added1d11c4178df3b4d5f7fcc0a0d3dde6903ed9c2fc03c39e0f22",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/SIX_TCP_RECEIPT.json",
+    "original_sha256": "4d294bd52851115030dc2bb0f68321bac0978a611490f50c128311253843ea40",
+    "sanitized_sha256": "4d294bd52851115030dc2bb0f68321bac0978a611490f50c128311253843ea40",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/tcp/five_node_receipt.json",
+    "original_sha256": "18671d0115f187133c154d1c2455633e1a3246d6a9f8a3981389d9f245dfcd68",
+    "sanitized_sha256": "18671d0115f187133c154d1c2455633e1a3246d6a9f8a3981389d9f245dfcd68",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/tcp/media_VERIFICATION.json",
+    "original_sha256": "abf56faf7a170b60977fe42444f5ca55a029a37050f86481bbdbb5710fc9f0da",
+    "sanitized_sha256": "77e3b9ef6506d6714a3ceb25b8a99a61bb5f21bbc6944cb8c023efe477f10f5e",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/tcp/media_result.log",
+    "original_sha256": "fcd4341269b6c33e81243c6ff468cf271aa93dde97021dfe9c8907a9963d52b5",
+    "sanitized_sha256": "f895ffc07bb72c2ea5c8774ed22f0268bd770a4dbe8308fdbfd6bb41dd5380e6",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/tcp/media_result.xml",
+    "original_sha256": "bd44f75a56a69433718ac60ec727319df59193e2f6d2a9c4453fab81d9c6a2a7",
+    "sanitized_sha256": "da4dd7e75460d3cfd30144c317a2868e99dc87c4d3d195056ed8769bdfdb5a21",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/tcp/media_result-proof.json",
+    "original_sha256": "1b305c64112dc3cfc74cfe1c5ef4059f4fa8aa5c399005c5fc194de85b8046f4",
+    "sanitized_sha256": "89fab0db0ebe7306ce393e711317a9b6b4ec6ec8003eb49b3d24525ada9298c7",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/tcp/media_PINS.json",
+    "original_sha256": "6b765bd32db91881733382c73fb5f9bcdcccc38c41559b43ab7bf22a97b6baf5",
+    "sanitized_sha256": "701846e16fb7427f71477a0a3d888cc138e8511c21c9acbd136caa1fdb7a0e9f",
+    "sanitization": "workspace prefix and local test endpoint only; outcome/traceback preserved; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/prior_attempt/full.log",
+    "original_sha256": "23dd2fe32983625a48f7e0a4cbcf4dd4b93d3ed0b455d1334bdad923c1936c91",
+    "sanitized_sha256": "c46aff1aff9e6749b85421a42201572be45457f07d240dbdf164c05a4c0f4c47",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/prior_attempt/SOURCE_MANIFEST.json",
+    "original_sha256": "196eb5d27879d73d9f163f955e3e6be7a866d438d71aba965cdef604728a2d0b",
+    "sanitized_sha256": "196eb5d27879d73d9f163f955e3e6be7a866d438d71aba965cdef604728a2d0b",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/review_history/r08_initial_consumer_counterexample.log",
+    "original_sha256": "5532bde9d66394ea02d7a2ea9b55d67b47f4c0ccaacffdd18415ba7c8b2e58e4",
+    "sanitized_sha256": "0cd337947a18ac809009b2dc9ea463ae8bd6a7268588c6ee9097a3ead230c987",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/review_history/r08_initial_outbox_counterexample.log",
+    "original_sha256": "fddd60f6a917291426ece2ba300243a8be973a926eea9ff212acb8822ba4a356",
+    "sanitized_sha256": "641e3bb8c37e7f548d814f00c84b87a9b6abecefbf936a6256820282505bc659",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/review_history/r08_staged_outbox_counterexample.log",
+    "original_sha256": "c63f87b1bbfc8e4549c2009668f142c714c3a4d24dcc89ec2d08b44a52c68158",
+    "sanitized_sha256": "b8e44255476e664e7399540f99b1f70fb5eeb2bdedf43c0659c275f5cfcb9cfd",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/review_history/r08_final_owners_replay.log",
+    "original_sha256": "86e8fa8b57a7525d6fba4926c64cb4391eb9b4d82071550b32309c996206d764",
+    "sanitized_sha256": "7bd2313d92b3e9c15aa7e11663801558755bf2f4c11ef6035040c0185150a2a0",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/review_history/r08_C_fixed_new_evaluation_replay.log",
+    "original_sha256": "60206429d868f6cf594f63367abd9b9815ab08261112f5ffa9d652173592c38e",
+    "sanitized_sha256": "638a77c05b6248fbeef9c896d5ded52b7ee24128a979db47df49ca3061ab3e5a",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/review_history/r08_parent_pre_fix.log",
+    "original_sha256": "d8eec17cfe81c0eaa3255aa7aeb9bbe5951d9f82d115618edd5ef62f614d588c",
+    "sanitized_sha256": "5e9730d684b2dfc674b3dde63eea34954227b28091b2d72e6cd089b76987ecba",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/review_history/r08_parent_final_replay.log",
+    "original_sha256": "591ef7f4a3ff963bfa41b1426b76abd339d9c414c91c0db6dea60ef7abe50a15",
+    "sanitized_sha256": "fdb74a10df7791747d20919733c53319b0d09fadf0d7df3238c85c05a39f922e",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/review_history/r08_pre_final_commit_counterexample.log",
+    "original_sha256": "e32c00da1f7f42b9da57c09f0473808525652afbadecb72cd27423ae05d620ee",
+    "sanitized_sha256": "854727bcc36e6996ff4d586ac82114ae6cefd757a640f83a511a8127c7da19cf",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/tcp/final_tcp_v3_result.log",
+    "original_sha256": "cfabb2a25678eda91672662b2e663cc27bab2775a821ddc67d4f2d29a9262224",
+    "sanitized_sha256": "6ae21c9c12646d72a95c9464b5d7f7ccd99d7da2a9a6bec20aab062989551d61",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/tcp/final_tcp_v3_proof.json",
+    "original_sha256": "a5864980abcabd3af3bd60ceac213167a52a8d4c0b1774659f0e14a8bf221304",
+    "sanitized_sha256": "7b99be7dffce2ccbfeef1301f47050569c71fb9b868ec056b4976792d66e2a02",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/SCOPE.json",
+    "original_sha256": "5779bcf07575fabd0f6d1031053edceb5206315bb4376888b9f77149d82bcf03",
+    "sanitized_sha256": "6cf5c728d579500a5c18a107ef3c65a1350c32a06bb7f99e5557bbb5dbee52db",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/HARNESS_MANIFEST.json",
+    "original_sha256": "53a66d4a0080f8552068b12549ff4c775e852039f3e62721102cdddf620c73be",
+    "sanitized_sha256": "5825022042060b19929fe6716101906ee632ff14a93f3e884f094cc2b01d3c73",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/selectors.txt",
+    "original_sha256": "15f1c5184dd4e6029e239f0a9c9d05f51007a7824d18f67eb6cf913f8d4407fd",
+    "sanitized_sha256": "253fc45a9fa78eaa5bdd6bf7fee52dd729b9ff7412ceb2f95efd93bf0378cc74",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/tcp-deferred.txt",
+    "original_sha256": "1649e4c9c793d87de3eb66b659e23cdfafef58dcac64c062da297cbc4ad9a195",
+    "sanitized_sha256": "1649e4c9c793d87de3eb66b659e23cdfafef58dcac64c062da297cbc4ad9a195",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/full.log",
+    "original_sha256": "cf8753119d9a79ba781f4f64c8297b9c88d1bfa7e246983047a0f3547e16d2eb",
+    "sanitized_sha256": "e6a8ac410263d03c43a65362bccd7f830b0220e1336c5547117fbda4a5f97249",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/full.xml",
+    "original_sha256": "765cd2c88f5d69e3fc95b19a80c1428400f855a95afb6e217f8e75477b6721fb",
+    "sanitized_sha256": "9cb7c7e6b3948d4d8bd1bb6e37a6ad96ba6fa3f3b6671dad60ce019c2a9c0f29",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/full.exit",
+    "original_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "sanitized_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/collected_nodes.json",
+    "original_sha256": "41ddacb3b4502467aec39a363d30c932a261b48b99bdfddfb54ae1c3b1e6f42f",
+    "sanitized_sha256": "7b7379287ef6f7c66f811eb986b2ee8309b87aa81fb536b029a333015cc1f320",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/deselected_nodes.json",
+    "original_sha256": "aca3cbf8c0dcb9b7401ced1da9c792f52527a4705f509dadad7b7fe899f43f9f",
+    "sanitized_sha256": "aca3cbf8c0dcb9b7401ced1da9c792f52527a4705f509dadad7b7fe899f43f9f",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/offline_namespace_proof.json",
+    "original_sha256": "1103035c1ca83306d859ecd26f8554fbbf9d72428341cccfa934ab8fa1e705ec",
+    "sanitized_sha256": "1103035c1ca83306d859ecd26f8554fbbf9d72428341cccfa934ab8fa1e705ec",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/spawn-entry-proof.json",
+    "original_sha256": "900b15baf475885ce5f8e8d4a84216b109f57021b0b9b772bfbad147b9f2e113",
+    "sanitized_sha256": "900b15baf475885ce5f8e8d4a84216b109f57021b0b9b772bfbad147b9f2e113",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/launch.json",
+    "original_sha256": "369389e6fc679a1c8329954e04ac58974cd7d4420360769176fa1f6f4795d686",
+    "sanitized_sha256": "cb08cd7f7cc0dbd217a4456c45f5924a6ad87611a140c3892b50d3aa0639ff86",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/verify_lumenis_single_product.log",
+    "original_sha256": "ee4d7803f7aa65d547f0aaaf0139bc5e7ca3c3f9bde05ba792216e3fb325d15e",
+    "sanitized_sha256": "ee4d7803f7aa65d547f0aaaf0139bc5e7ca3c3f9bde05ba792216e3fb325d15e",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/verify_source_adoption.log",
+    "original_sha256": "9a948b2fbeb3d2ec1af1252602ff6cdcf6bb67bf545b8b0a498543b3ee64e4d5",
+    "sanitized_sha256": "9a948b2fbeb3d2ec1af1252602ff6cdcf6bb67bf545b8b0a498543b3ee64e4d5",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/verify_experience_screen_blueprints.log",
+    "original_sha256": "2cd9024ef1a0b8e1a299cc2458118e1a3e0111fcb520591efdc1b89484fe6f40",
+    "sanitized_sha256": "2cd9024ef1a0b8e1a299cc2458118e1a3e0111fcb520591efdc1b89484fe6f40",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/machine.log",
+    "original_sha256": "cb16e268a8a1b2f63ba03ba2c4bf22a91af10fd81560a5ab47bbcca436f4e4d7",
+    "sanitized_sha256": "cb16e268a8a1b2f63ba03ba2c4bf22a91af10fd81560a5ab47bbcca436f4e4d7",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/takeover.log",
+    "original_sha256": "5aa2193fe034ea1974bc78a486ec7224d77d1b0496681bdedff8b95e63942d05",
+    "sanitized_sha256": "5aa2193fe034ea1974bc78a486ec7224d77d1b0496681bdedff8b95e63942d05",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/verify_lumenis_ggi_contract.log",
+    "original_sha256": "fae68dbe25ec0c875a064f2b713cf137d5296cd0a8011a572cc02e4fd4c37b8a",
+    "sanitized_sha256": "fae68dbe25ec0c875a064f2b713cf137d5296cd0a8011a572cc02e4fd4c37b8a",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/verify_experience_authority_exclusive.log",
+    "original_sha256": "c055943c5f4b535db2cf5475ba85206dbd07109e686fd1e23144f57a507a938d",
+    "sanitized_sha256": "c055943c5f4b535db2cf5475ba85206dbd07109e686fd1e23144f57a507a938d",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/verify_ai_native_constitution.log",
+    "original_sha256": "ebc22c326a6d37efe2927a0cea24a7380a9c68012a22e70eef99b6641ccf6843",
+    "sanitized_sha256": "ebc22c326a6d37efe2927a0cea24a7380a9c68012a22e70eef99b6641ccf6843",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/verify_database_authority.log",
+    "original_sha256": "9548032eb384715e7925102fab1c6a357288edfdf7298900b18386f3e2659993",
+    "sanitized_sha256": "9548032eb384715e7925102fab1c6a357288edfdf7298900b18386f3e2659993",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/verify_experience_anti_template.log",
+    "original_sha256": "c39a656f9b481a02d7be6ea5514740c7233e4897c730be60e5ceceb3395243b3",
+    "sanitized_sha256": "c39a656f9b481a02d7be6ea5514740c7233e4897c730be60e5ceceb3395243b3",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/verify_current_configuration.log",
+    "original_sha256": "c8239dc064affd359050308588bc818cc02f4d4c0ab6c7d912f51a3d2cb08195",
+    "sanitized_sha256": "c8239dc064affd359050308588bc818cc02f4d4c0ab6c7d912f51a3d2cb08195",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/packaged_static/GATE_RESULTS.json",
+    "original_sha256": "e9991f8a38105f1eaf009f10824ef96f2883d02305e6895e01fdc878cf646aed",
+    "sanitized_sha256": "e9991f8a38105f1eaf009f10824ef96f2883d02305e6895e01fdc878cf646aed",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/FINAL_VALIDATION_RECEIPT.json",
+    "original_sha256": "677015b42d8c2fb5c4b0f582edda8f31aac2bfaf5bce60c0e17b22c0f2b1967e",
+    "sanitized_sha256": "534785374f674503d8bcf0bac1d684b505228cd4db81303c9a7b62dd4420fd3a",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/FROZEN_INPUTS.json",
+    "original_sha256": "ad9fef5bbdaeceea19b53388fe7bb6995c932e6712d0af1772d42613574b38e5",
+    "sanitized_sha256": "ad9fef5bbdaeceea19b53388fe7bb6995c932e6712d0af1772d42613574b38e5",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/unified/network-guard.json",
+    "original_sha256": "e068094d3fb4c481552d1addb931de2dbd4cd4201866f16e7690834bfd48d4ec",
+    "sanitized_sha256": "e068094d3fb4c481552d1addb931de2dbd4cd4201866f16e7690834bfd48d4ec",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/prior_attempt/full.xml",
+    "original_sha256": "7da88ad469463f24d63372f22d6f22381132207a7b11c37cd7a978121e5f33a2",
+    "sanitized_sha256": "96e85497cb7dbd504048ee2740e38b6202e83f641a5faf134a316f4bda8fcf93",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/tooling_baseline/full.log",
+    "original_sha256": "88cd93466f15e49439478011d0015142d2306c20a2d20f1c9d2518b78b3f99bc",
+    "sanitized_sha256": "7e5525d4f294ef4382ff78b4072d88209052d5b6f0ec16b98fcac67ced115319",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  },
+  {
+    "path": "validation/tooling_baseline/full.xml",
+    "original_sha256": "3dc82d14c21b70a3eac9793d83997f8021746e9f32447c6dde99ac70c3f8afab",
+    "sanitized_sha256": "17135364d68a46cfa1868a577df46aa1bd62cfcd0cd20d8d5b5ae0b0687a17e2",
+    "sanitization": "workspace/local-private endpoint and credential token redaction; test outcomes and tracebacks retained; hostname identifiers redacted where present"
+  }
+]

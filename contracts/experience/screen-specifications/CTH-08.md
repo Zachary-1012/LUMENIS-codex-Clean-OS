@@ -22,7 +22,7 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 - **User task:** inspect an authorized Case, follow its Case → Insight → Decision → Action → Outcome history, and distinguish reviewed reusable knowledge from the live Case.
 - **Completion signal for this bounded slice:** render only a source-backed case payload that carries the exact scope and lineage binding below. Otherwise show a blocked, empty or not-collected state without fixture rows.
 - **Invariant:** a Case is a working context, not a relabeled risk note or event row. Knowledge is a reviewed conclusion and never overwrites the original Case facts.
-- **Current limitation:** `experience_screens._build_cth08()` returns high-risk notes and curated events, not canonical Case IDs, lifecycle state or actor-to-Subject lineage. The App must not promote those rows into Cases.
+- **Current limitation:** `experience_screens._build_cth08(binding)` projects scoped risk notes/events; these are not canonical Case IDs or a Case lifecycle payload. The existing `api_dual_domain` Case Owner is real, but this screen read-model has not bound its canonical Case payload and Case-specific lineage/action contract. Do not deny the existing backend Owner or promote observation rows into Cases.
 
 ## 2. Route, entry and return
 
@@ -35,8 +35,8 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | Priority | UI field / action | Source / callable | Definition and missing behavior | Binding |
 | --- | --- | --- | --- | --- |
 | P0 | Scope banner | `settingsContext()` plus the screen binding | Show `GLOBAL / ALL` or a safe focused display name; never use a Subject ID as an authorization claim | Required before any Case data is rendered |
-| P0 | Case rows | Future CTH Case owner via `screen('CTH-08')` | Requires `cases[]` with `id`, `title`, `state`, `summary`, `timeline[]` and trusted `evidence[]`; high-risk notes/events are not accepted | `BACKEND-GAP-014`, currently missing |
-| P1 | Case timeline | Same Case owner | Each step must identify a workflow stage and observed state; no fabricated completion | Unknown until canonical Case lifecycle exists |
+| P0 | Case rows | Existing CTH Case owner, pending binding via `screen('CTH-08')` | Requires `cases[]` with `id`, `title`, `state`, `summary`, `timeline[]` and trusted `evidence[]`; high-risk notes/events are not accepted | `BACKEND-GAP-014`, currently missing |
+| P1 | Case timeline | Same Case owner | Each step must identify a workflow stage and observed state; no fabricated completion | Unverified until this screen binds the existing canonical Case lifecycle |
 | P1 | Knowledge shelf | CTH/Shared reviewed-learning owner | Requires reviewed item, source Case and trusted evidence reference; not the same list as active Cases | Unknown until owner and lineage exist |
 | DRAFT | New Case | `CTH-08.new-case`, `case:write` | Opens no durable write in this batch | Disabled: no Permission, effect fence or result contract is bound |
 
@@ -88,7 +88,7 @@ HTTP 200, a static action registry row, fixture content or a plausible title is 
 ## 8. Review decision and open dependencies
 
 - **Decision:** BLOCKED for full CTH-08 acceptance. The bounded implementation is limited to a source-contract guard and purpose-built read-only composition.
-- **Required before DESIGN_READY / ACCEPTED:** canonical Case owner, actor-to-Subject read decision, Case lifecycle payload, reviewed knowledge owner, trusted Evidence resolution, write Permission, Effect Fence admission, result contract and runtime/E2E evidence.
+- **Required before DESIGN_READY / ACCEPTED:** bind the existing canonical Case owner and its Case-specific actor/scope read decision to this screen, return its Case lifecycle payload, reviewed knowledge owner, trusted Evidence resolution, write Permission, Effect Fence admission, result contract and runtime/E2E evidence.
 - **Current disposition:** no fixtures, high-risk note IDs or curated event IDs are presented as Cases.
 
 

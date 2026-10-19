@@ -1,4 +1,7 @@
-# LUMENIS Experience Constitution — CURRENT
+# OEVIRA Experience Constitution — CURRENT
+
+2026-10-18当前主产品显示名为寰意 / OEVIRA，定位“An Open Space for Thought and Creation.”，域名oevira.com；沿原Canonical Registry，不新建品牌或架构权威。旧文件路径/技术LUMENIS身份与历史来源保留；其它仓库品牌不随本次更名。两类受众与大众愿景边界见现有PRODUCT-POSITIONING-CURRENT.md；不改变本规范原能力/原创视觉/权限和验收要求，不证明部署。
+
 
 ## 2026-10-11 当前体验纠偏：业务成果、贯穿式 AI、浏览器边界
 
@@ -35,12 +38,12 @@ Product/runtime/data truth still outranks presentation truth. This Constitution 
 
 ## 0. Full-product scope
 
-This Constitution governs every current and future user-visible or user-operable surface of 序境 / LUMENIS:
+This Constitution governs every current and future user-visible or user-operable surface of 寰意 / OEVIRA:
 
 - account, authentication, onboarding and access states;
 - global shell, navigation, Subject Context, Domain Lens, search, command and context switching;
-- CTH / 序境·商业运营;
-- BMP / 序境·品牌市场, including KOS / KOL / KOC / UGC workflows;
+- CTH / 寰意·商业运营;
+- BMP / 寰意·品牌市场, including KOS / KOL / KOC / UGC workflows;
 - Shared Capability, including Content & Creation, Evidence, Research, Evaluation and Learning;
 - SYSTEM, including Collector, Runtime, Scheduler, AI Gateway, Database, Security, Permission, Settings, Recovery and Observability;
 - AI / Agent workspaces and artifact flows;
@@ -81,7 +84,7 @@ If code comments, old screenshots, component implementation or historical behavi
 
 ## 2. Product identity
 
-**LUMENIS is a Living Intelligence Space.**
+**OEVIRA is a Living Intelligence Space.**
 
 It is not:
 
@@ -94,13 +97,13 @@ It is not:
 - an Apple clone;
 - a Linear clone;
 - a Notion clone;
-- a copy of ChatGPT visual identity or proprietary assets; settings-section information structure may be studied and adapted with original LUMENIS presentation;
+- a copy of ChatGPT visual identity or proprietary assets; settings-section information structure may be studied and adapted with original OEVIRA presentation;
 - a Korean-brand website clone;
 - a generic AI-gradient interface.
 
 External products may be studied for interaction principles, accessibility, motion, hierarchy or engineering technique. They are never the target appearance.
 
-A user should be able to hide the logo and still recognize LUMENIS from its information grammar, Evidence trace, realm behavior, state transitions and workflow structure.
+A user should be able to hide the logo and still recognize OEVIRA from its information grammar, Evidence trace, realm behavior, state transitions and workflow structure.
 
 ## 3. Philosophy translated into interaction
 
@@ -139,7 +142,7 @@ Metrics support understanding. Metrics are not automatically the page.
 
 ## 4. Native spatial grammar
 
-LUMENIS uses:
+OEVIRA uses:
 
 - **Point**: one real object, fact, signal or Evidence item;
 - **Axis**: time, causality, sequence or stable contextual relationship;
@@ -373,7 +376,7 @@ SYSTEM may be dense and technical. It exposes machine relationships rather than 
 
 ## 9. Account, authentication and global context
 
-The optional LUMENIS product account, login, recovery and settings are in the current engineering closure. The App opens without a global product-account wall; a protected operation may still show a local, truthful Permission boundary enforced by Product Core. Media-platform Cookie/session/browser authorization is a separate SYSTEM connector state and must not become a LUMENIS login flow.
+The optional OEVIRA product account, login, recovery and settings are in the current engineering closure. The App opens without a global product-account wall; a protected operation may still show a local, truthful Permission boundary enforced by Product Core. Media-platform Cookie/session/browser authorization is a separate SYSTEM connector state and must not become a OEVIRA login flow.
 
 When post-beta authentication/access surfaces are implemented, they are calm, direct and explicit about identity, permission, blocked state and recovery. They are not marketing landing pages.
 
@@ -412,7 +415,7 @@ No fake thinking, fake progress, fake tool usage, fake confidence or fake succes
 The product provides a controlled browser within the originating business task.
 The latest direct PO removes general computer/OS and installed-application
 control from delivery; the browser remains. Source/import/export/media operations
-inside LUMENIS remain required. Preserve old OS/Agent Zero source and evidence as
+inside OEVIRA remain required. Preserve old OS/Agent Zero source and evidence as
 history, not a future acceptance debt or a completed capability.
 
 Manual browsing and authorized page actions work without a model. AI may assist
@@ -430,7 +433,7 @@ necessary page scrolling must work; historical frames are explicitly distinguish
 from a fresh live session. Closing the view, stopping the task and ending a session
 are different actions. Preserve draft, focus, selected source and return location.
 
-Desktop and Web Workspace: keep the actual controlled page inside LUMENIS, with
+Desktop and Web Workspace: keep the actual controlled page inside OEVIRA, with
 task/operation context beside it when space permits. The product-owned browser
 session may run on an authorized local/remote worker; do not promise arbitrary
 third-party iframe embedding, control of the user's installed browser from a web
@@ -477,17 +480,17 @@ Acquisition converges toward Evidence/Canonical truth, not a parallel browser-da
 
 ### 11.1 Platform connector recovery
 
-Media-platform authentication recovery is a SYSTEM connector operation, separate from the optional LUMENIS product-account login.
+Media-platform authentication recovery is a SYSTEM connector operation, separate from the optional OEVIRA product-account login.
 
 During approved R&D/internal-beta work, a Product-Owner-authorized owned platform identity may back a managed read-only connector. When its session expires or requires legitimate human interaction, the operational surfaces use one `LumenisPlatformRecoverySheet` contract rather than platform-specific app pages or raw browser windows:
 
 ```text
 AUTH_REQUIRED
-→ LUMENIS recovery sheet
+→ OEVIRA recovery sheet
 → QR scan when the platform provides QR
 
 LOGIN_FORM_REQUIRED
-→ LUMENIS recovery sheet
+→ OEVIRA recovery sheet
 → controlled internal-browser login surface
 
 VERIFY / CAPTCHA
@@ -501,7 +504,7 @@ BLOCKED / IP_RISK / COOLDOWN
 
 When more than one platform needs attention, use one recovery sheet with a queue/list of affected platform sources and one active recovery task at a time. Do not stack platform-specific modal sheets or alerts. The sheet names the suspended source/task, keeps the origin visible enough to preserve context, and provides an obvious dismiss/defer path when the underlying task can safely continue with other sources.
 
-The recovery sheet uses LUMENIS visual language while preserving the platform's actual QR/login content inside the controlled boundary. It never displays or logs Cookie values, tokens, profile paths, CDP endpoints or internal session identifiers. A button press, QR scan or login-form completion is not success by itself: the server-owned PlatformSession must re-read the real platform/runtime health before marking the connector recovered and resuming the exact pending task/checkpoint.
+The recovery sheet uses OEVIRA visual language while preserving the platform's actual QR/login content inside the controlled boundary. It never displays or logs Cookie values, tokens, profile paths, CDP endpoints or internal session identifiers. A button press, QR scan or login-form completion is not success by itself: the server-owned PlatformSession must re-read the real platform/runtime health before marking the connector recovered and resuming the exact pending task/checkpoint.
 
 Modal accessibility follows the W3C APG dialog pattern and platform conventions: focus moves inside the sheet when it opens, Tab/Shift+Tab remain within the active sheet where applicable, Escape/system-dismiss closes only when cancellation is safe, and closing returns focus to the invoking control or the next logical workflow target. Asynchronous states such as waiting for QR scan, scanned, verifying, recovered or cooldown are announced as status updates without stealing keyboard/screen-reader focus. Reference standards: W3C APG Dialog (Modal), WCAG 2.1 Status Messages, and Apple HIG Modality.
 
@@ -683,7 +686,7 @@ Use task-specific product copy such as “导入资料”, “查看结果”, �
 
 Owner/API/Permission/SourceUse contracts, implementation notes, algorithms and wireframe timing arrows remain internal design/engineering material, not literal page text. Public Website and help retain concise, factual task/outcome and necessary operation instructions without unsupported capability claims or development slogans. Chinese, English, Korean and accessible names retain the same meaning. All approved UI/UX, AIGC, original identity/icons/illustrations, operation videos, user choices, motion/physics parameters, approximately 90ms initial feedback and full four-surface scope remain in force. This is a language correction, not implementation or acceptance.
 
-Reference study accessed 2026-10-16: [ChatGPT Work getting started](https://learn.chatgpt.com/docs/get-started-with-work) and [long-running work](https://learn.chatgpt.com/docs/long-running-work) frame work by outcomes, constraints, review and revision; [Grok Bot files/results](https://docs.x.ai/grok-bot/files-and-results) and [approvals](https://docs.x.ai/grok-bot/approvals-security-and-privacy) keep reviewable results, unresolved issues and action boundaries legible. ADAPT only those task/action language principles in existing LUMENIS owners. Vendor branding, layouts, computer-control features, rollout/account claims and their internal activity displays are not adopted as product scope or authority.
+Reference study accessed 2026-10-16: [ChatGPT Work getting started](https://learn.chatgpt.com/docs/get-started-with-work) and [long-running work](https://learn.chatgpt.com/docs/long-running-work) frame work by outcomes, constraints, review and revision; [Grok Bot files/results](https://docs.x.ai/grok-bot/files-and-results) and [approvals](https://docs.x.ai/grok-bot/approvals-security-and-privacy) keep reviewable results, unresolved issues and action boundaries legible. ADAPT only those task/action language principles in existing OEVIRA owners. Vendor branding, layouts, computer-control features, rollout/account claims and their internal activity displays are not adopted as product scope or authority.
 
 ### Direct material intake and purposeful physical interaction — PO addition, 2026-10-16
 
@@ -796,18 +799,18 @@ new page, effect, data meaning, brand asset or overall frontend acceptance.
 
 2026-10-12 direct PO clarification: opening the operational workspace lands directly in the conversation/task home. ACC-03 reuses the existing AI-01 conversation, composer, draft, ViewModel and result owner; it does not add another chat service. Navigation opens the existing CTH, BMP, Shared research and independent proposal/video/podcast creation, controlled browser and SYSTEM destinations. These remain directly usable, with optional linkage and useful non-AI operations. Default scope is GLOBAL/ALL, with optional exact Subject/BrandFocus. Do not substitute a dashboard, marketing hero, introductory cards or a domain/model-selection prerequisite for this entry.
 
-Study GPT and Grok Bot official operation guidance and permitted REA observations together for the existing conversation: understandable input and attachments, editable context/drafts, progressively useful replies, task-appropriate Intelligent UI, actual progress, stop, safe continuation, result/citation actions, history, save/revise/reopen and recovery. F owns original LUMENIS presentation and the existing ACC-03/AI-01 contracts; C2/C6 own actual task/action/result contracts; C3/C4/C5 remain business/output owners. Preserve input, selection and accepted partial results on navigation, reconnect and cancellation; resume from the server's committed result, not a blind repeat. A missing model disables only the genuine AI-exclusive action, not access to normal domain/research/creation tasks. Existing four-surface roles and acceptance remain; Public Website leads into the workspace and retains its own content role. Missing actual behavior stays honest and is repaired by its owner, not shown as fake chat or fake progress.
+Study GPT and Grok Bot official operation guidance and permitted REA observations together for the existing conversation: understandable input and attachments, editable context/drafts, progressively useful replies, task-appropriate Intelligent UI, actual progress, stop, safe continuation, result/citation actions, history, save/revise/reopen and recovery. F owns original OEVIRA presentation and the existing ACC-03/AI-01 contracts; C2/C6 own actual task/action/result contracts; C3/C4/C5 remain business/output owners. Preserve input, selection and accepted partial results on navigation, reconnect and cancellation; resume from the server's committed result, not a blind repeat. A missing model disables only the genuine AI-exclusive action, not access to normal domain/research/creation tasks. Existing four-surface roles and acceptance remain; Public Website leads into the workspace and retains its own content role. Missing actual behavior stays honest and is repaired by its owner, not shown as fake chat or fake progress.
 
-All collected platform lists, details, media, source results and recommendations use LUMENIS information hierarchy, interaction and visual language. Retain native facts, original logos/attribution, source URL, locators, times and metrics; source-platform visual chrome, copied XHS/Douyin feed/layout, endless swipe or forced autoplay are not the product interface. Avoid replacing them with one generic repeated card template. Detail/media reading is reversible and preserves task/context/scroll continuity and honest states.
+All collected platform lists, details, media, source results and recommendations use OEVIRA information hierarchy, interaction and visual language. Retain native facts, original logos/attribution, source URL, locators, times and metrics; source-platform visual chrome, copied XHS/Douyin feed/layout, endless swipe or forced autoplay are not the product interface. Avoid replacing them with one generic repeated card template. Detail/media reading is reversible and preserves task/context/scroll continuity and honest states.
 
 ### Platform-native SourceTarget / Open Original — Product Owner approved 2026-10-06
 
-The approved source handoff is **LUMENIS SourceTarget v1**, subordinate to this Constitution and the existing Product Core, Permission and Evidence owners. Its canonical path is:
+The approved source handoff is **OEVIRA SourceTarget v1**, subordinate to this Constitution and the existing Product Core, Permission and Evidence owners. Its canonical path is:
 
 ```text
 platform-native observation
 → Source → Evidence → Canonical
-→ CTH/BMP task-specific LUMENIS presentation
+→ CTH/BMP task-specific OEVIRA presentation
 → Trace → Open Original
 → in-product SYS-06 viewing (explicit external-browser option)
 → Return to exact task/context/filter/selection/scroll state
@@ -911,7 +914,7 @@ User problem → semantic objects/relationships → composition
 Forbidden order:
 
 ```text
-choose fashionable style → add cards → add glass → insert data → call it LUMENIS
+choose fashionable style → add cards → add glass → insert data → call it OEVIRA
 ```
 
 For non-trivial work, the plan names active workflow, truth sources, semantic primitives, generic pattern being retired/avoided and acceptance checks.
@@ -1050,9 +1053,9 @@ both retain the same preference owner and unsent work. This mapping does not
 import the reference application's accounts, subscription, memory, plugins or
 OS settings, and is not authority to reproduce its feature set or layout.
 
-## 32. LUMENIS interaction signature and motion contract
+## 32. OEVIRA interaction signature and motion contract
 
-LUMENIS’s distinctive interface is the **Trace / Return** relationship expressed through its existing spatial grammar: Point → Axis → Trace → Field → Strata → Boundary. A conclusion can reveal its evidence lineage along the relevant time, relationship, creation or runtime axis; Return restores the exact prior focus, filters, selection and scroll position. This behavior is implemented in each domain’s own composition, not as a generic detail drawer repeated everywhere.
+OEVIRA’s distinctive interface is the **Trace / Return** relationship expressed through its existing spatial grammar: Point → Axis → Trace → Field → Strata → Boundary. A conclusion can reveal its evidence lineage along the relevant time, relationship, creation or runtime axis; Return restores the exact prior focus, filters, selection and scroll position. This behavior is implemented in each domain’s own composition, not as a generic detail drawer repeated everywhere.
 
 Every non-trivial motion/action specification records:
 
@@ -1067,7 +1070,7 @@ Motion may clarify causality, selection, progress, successful persistence, block
 
 ## 33. Inspiration and originality boundary
 
-External creative work, including Korean product-app craft and `motion-web`, may inform general principles such as task clarity, progressive disclosure, crisp response, restrained transitions, accessibility and measurable interaction quality. Product semantics, information architecture, composition and visual identity remain LUMENIS-owned and are derived from real domain objects and workflows.
+External creative work, including Korean product-app craft and `motion-web`, may inform general principles such as task clarity, progressive disclosure, crisp response, restrained transitions, accessibility and measurable interaction quality. Product semantics, information architecture, composition and visual identity remain OEVIRA-owned and are derived from real domain objects and workflows.
 
 The named examples below are non-exhaustive. The user's historical and current
 video/image requirements take priority over an assistant's narrow reference list;
@@ -1075,9 +1078,9 @@ extract and adapt their actual visual and interaction mechanisms, record the
 frames studied and restate the chosen design here or in a governed specification.
 The earlier examples are: Apple informs restraint, content priority, one clear primary action and an uncluttered search entry when an existing workflow is search-led; ChatGPT informs a single intent entry and progressive disclosure of existing complexity; TRAE informs visible **task → execution → result** feedback for existing workflows. These references do not authorize new Chat, Work, Project, recent-content, search, task-platform or account capabilities, and they do not replace any current business function or backend owner.
 
-For Korean product-app craft, study public product-engineering documentation such as the [Toss Design System component guide](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components) for consistency, clear component guidance and task-focused implementation. Its UI Kit terms restrict use of Toss materials to the Apps in Toss service, so LUMENIS does not adopt the UI Kit, components, assets or visual patterns. Extract only general, non-visual principles, then test those against LUMENIS workflows.
+For Korean product-app craft, study public product-engineering documentation such as the [Toss Design System component guide](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components) for consistency, clear component guidance and task-focused implementation. Its UI Kit terms restrict use of Toss materials to the Apps in Toss service, so OEVIRA does not adopt the UI Kit, components, assets or visual patterns. Extract only general, non-visual principles, then test those against OEVIRA workflows.
 
-Do not copy another product's assets, source code, signature layout, visual identity, interaction sequence or implementation recipe. The supplied [motion-web repository](https://github.com/Zachary-1012/motion-web) is a fork of `feitangyuan/motion-web`; its [LICENSE](https://github.com/Zachary-1012/motion-web/blob/main/LICENSE) identifies CC BY-NC 4.0 and expressly restricts commercial integration of its Skill, prompts, cases and derived workflows. No code, case, asset, parameter set or derivative workflow from it is admitted into this commercial product. Inspiration is not a runtime dependency or a competing design authority. Open-source components registered in THIRD-PARTY-COMPONENT-REGISTER may be used behind a LUMENIS adapter; each screen's operation flow follows LUMENIS specifications and does not copy another product's flow.
+Do not copy another product's assets, source code, signature layout, visual identity, interaction sequence or implementation recipe. The supplied [motion-web repository](https://github.com/Zachary-1012/motion-web) is a fork of `feitangyuan/motion-web`; its [LICENSE](https://github.com/Zachary-1012/motion-web/blob/main/LICENSE) identifies CC BY-NC 4.0 and expressly restricts commercial integration of its Skill, prompts, cases and derived workflows. No code, case, asset, parameter set or derivative workflow from it is admitted into this commercial product. Inspiration is not a runtime dependency or a competing design authority. Open-source components registered in THIRD-PARTY-COMPONENT-REGISTER may be used behind a OEVIRA adapter; each screen's operation flow follows OEVIRA specifications and does not copy another product's flow.
 
 ## 34. Ordered cross-surface delivery and acceptance
 
@@ -1086,7 +1089,7 @@ This section retains the approved fifteen-checkpoint dependency coverage in `LUM
 Do not build all screens from a generic template. Work in this order, with a capability-parity gate between phases:
 
 1. **Bind truth:** classify each Experience screen/action by owner, endpoint, ViewModel fields, permission, Evidence, read/write effect and known gaps. Resolve unknown owners from source before creating a new API.
-2. **Make the shell real:** implement Product Core connectivity, current context, routing, error/offline/retry states, keyboard/focus behavior and restorable navigation. The optional LUMENIS account is part of current engineering closure and must not block ordinary browsing or existing product use. Keep server Permission/effect fences intact, and keep media Cookie/session authorization entirely inside the SYSTEM collector/browser chain. Keep CTH SubjectContext separate from BMP BrandFocus.
+2. **Make the shell real:** implement Product Core connectivity, current context, routing, error/offline/retry states, keyboard/focus behavior and restorable navigation. The optional OEVIRA account is part of current engineering closure and must not block ordinary browsing or existing product use. Keep server Permission/effect fences intact, and keep media Cookie/session authorization entirely inside the SYSTEM collector/browser chain. Keep CTH SubjectContext separate from BMP BrandFocus.
 3. **Prove the five Golden Pages:** AI-01, CTH-01, BMP-01, SH-01 and SYS-01 each use their semantic signature in §25 and bind to live owners. Do not mark a fixture-backed page complete.
 4. **Migrate by workflow family:** bind remaining contract screens only after their source/API/Permission/Evidence owner is verified. Preserve established behavior before removing any migrated surface.
 5. **Reach surface parity with independent evidence:** build and verify Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile in parallel under their approved roles. Each receives its applicable interaction, accessibility, viewport/device, error/recovery and visual checks at §20 widths; do not make one surface's closure a prerequisite for another. Verify Public Website acquisition/workspace-entry separately; do not require identical layouts.
@@ -1121,7 +1124,7 @@ The 44 screen IDs and 54 binding records (`BACKEND-GAP-001..054`) are the existi
 - **Mobile Companion:** optimize for timely review and a single owned action: keep Subject or Brand focus visible; provide a compact signal feed, prioritized alerts and a one-task action sheet; allow capture/review/approval and source trace; restore the exact originating campaign, case, filters and scroll position on Return. Dense analysis can be summarized, but its definition, uncertainty and source remain inspectable.
 - **Public Website:** optimize product comprehension, credible capability demonstration and low-friction trial/contact/workspace entry. It never presents marketing fixtures as live production results.
 - **Shared UI:** loading, no data, not collected, stale, blocked, permission denied, offline, partial result and failure have distinct copy and recovery actions. Charts, AI summaries and status badges always disclose the selected scope and time window.
-- **Signature behavior:** Trace / Return follows a signal or creative through source → interpretation → decision → authorized action → observed result, then returns to the same working context. This causal continuity, coupled with the Point → Axis → Trace → Field → Strata → Boundary spatial grammar, is the LUMENIS-owned interaction signature. Visual novelty must follow this workflow and must never disguise missing data or authorization.
+- **Signature behavior:** Trace / Return follows a signal or creative through source → interpretation → decision → authorized action → observed result, then returns to the same working context. This causal continuity, coupled with the Point → Axis → Trace → Field → Strata → Boundary spatial grammar, is the OEVIRA-owned interaction signature. Visual novelty must follow this workflow and must never disguise missing data or authorization.
 
 ### Executable design and accessibility thresholds
 
@@ -1148,17 +1151,17 @@ Prioritize work by real user task and authorized role, not by the size of a scre
 | SYSTEM operator | Diagnose and safely recover an integration | Inspect connector/auth/quota/runtime health → distinguish platform outage from business-data gap → inspect audit trail → request permission/approval where required → apply bounded recovery → verify operational result without changing CTH/BMP business truth |
 | Executive / reviewer | Trust a summary and inspect its basis | Open role-authorized cross-product summary → see owner, metric definition, time window and freshness → open supporting Evidence → distinguish confirmed outcome from model suggestion → return without changing source state |
 
-Korean product-app research is a research method, not a visual dependency: record a named public flow and source, extract only the underlying principle, map it to a LUMENIS task, then test that principle with LUMENIS objects and users. No borrowed palette, signature composition, interaction sequence or source implementation becomes a LUMENIS standard.
+Korean product-app research is a research method, not a visual dependency: record a named public flow and source, extract only the underlying principle, map it to a OEVIRA task, then test that principle with OEVIRA objects and users. No borrowed palette, signature composition, interaction sequence or source implementation becomes a OEVIRA standard.
 
 Initial public references reviewed 2026-09-20:
 
-| Source flow | Principle to study | LUMENIS question and boundary |
+| Source flow | Principle to study | OEVIRA question and boundary |
 |---|---|---|
 | [Toss Shopping discovery](https://toss.im/en-us/service/shopping) | Reduce search effort and connect discovery to a useful next step. | In BMP, can a market or brand insight open a low-friction, evidence-backed next step? Show source, freshness and why it is relevant; do not add opaque personalization or copy Toss's recommendation/checkout sequence. |
 | [KakaoTalk Channel business home and updates](https://business.kakao.com/info/kakaotalkchannel/) | Keep business identity, updates and response paths connected to the audience relationship. | For BMP/Shared, investigate whether verified campaign/content owners can trace approved publication to real platform response and evaluation. This is a product-contract question, not a promise that publishing, chat or analytics already works; never clone Kakao's home, feed or chat composition. |
-| [Toss Design System component guidance](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components) | Make component purpose and usage guidance explicit for consistent implementation. | Apply the documentation discipline to LUMENIS-owned components and states only. The Toss UI Kit materials are limited to Apps in Toss; do not reuse its components, assets, tokens or visual patterns. |
+| [Toss Design System component guidance](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components) | Make component purpose and usage guidance explicit for consistent implementation. | Apply the documentation discipline to OEVIRA-owned components and states only. The Toss UI Kit materials are limited to Apps in Toss; do not reuse its components, assets, tokens or visual patterns. |
 
-The supplied [`motion-web` repository](https://github.com/Zachary-1012/motion-web) is a creative-web research reference only. Its [CC BY-NC 4.0 license](https://github.com/Zachary-1012/motion-web/blob/main/LICENSE) bars commercial integration of its Skill, prompts, cases and derivative workflows. No code, case, asset, parameter set, verification recipe or derivative workflow from it is admitted into LUMENIS; define motion and acceptance independently from verified LUMENIS state transitions and user tasks.
+The supplied [`motion-web` repository](https://github.com/Zachary-1012/motion-web) is a creative-web research reference only. Its [CC BY-NC 4.0 license](https://github.com/Zachary-1012/motion-web/blob/main/LICENSE) bars commercial integration of its Skill, prompts, cases and derivative workflows. No code, case, asset, parameter set, verification recipe or derivative workflow from it is admitted into OEVIRA; define motion and acceptance independently from verified OEVIRA state transitions and user tasks.
 
 ### Implementation sequence and release gates
 
@@ -1308,13 +1311,13 @@ The X page returned 403 during research; the matching official release was read
 at `https://openai.com/index/gpt-6-for-everyone/` (published 2026-10-07).
 OpenAI describes task-shaped interactive answers and progressive rendering.
 This is reference evidence; its release does not expose an installable compiler,
-grant LUMENIS that capability, or change Codex/model settings.
+grant OEVIRA that capability, or change Codex/model settings.
 
 Official scope rechecked 2026-10-09: the [Help Center](https://help.openai.com/en/articles/20001598-intelligent-ui-in-chatgpt)
 limits this OpenAI feature to Chat, excluding Work, Voice and the Pro Astra
 reasoning option. The [product announcement](https://openai.com/index/gpt-6-for-everyone/)
 states this release does not change Work/Codex models. This does not constrain
-LUMENIS's approved cross-product Experience: adopt task-appropriate presentation
+OEVIRA's approved cross-product Experience: adopt task-appropriate presentation
 and progressively useful, factual results through existing owners, not an
 assumed OpenAI SDK or a change to the user's selected model. Product task/version
 and save/reopen/recovery contracts remain the basis for durable UI state.
@@ -1355,7 +1358,7 @@ Required adaptation inside existing screen owners:
    scrolling. A website explains the capability with
    truthful approved examples; Web/Desktop execute work, and Mobile exposes
    appropriate review/adjustment/approval. Do not copy ChatGPT's visual system
-   or transplant its plugin-card limits into the whole LUMENIS product.
+   or transplant its plugin-card limits into the whole OEVIRA product.
 
 | Owner | Existing work to apply this to | Concrete handoff to F / other owners |
 |---|---|---|
@@ -1417,7 +1420,7 @@ C2后续可将经准入的“任务→表现选择→操作结果→评价”作
 5. **变化可解释、可采用。** 调整预算、时间、来源或作品局部后，显示影响范围和建议差异；用户明确采用后由原Owner保存新版本、父版本与原因。未受影响内容保持；旧成果可重开/回滚。预测场景不覆盖真实观测，来源更正不改原Evidence。
 6. **执行真实且可恢复。** 可交互项绑定现有服务动作、版本与Permission。加载/部分/无记录/未知/离线/拒绝/失败/取消/重试有本屏含义；可安全恢复同一任务，不重复外部效果。只有Core确认的保存/执行回执才能显示成功。AI不可用时保留仍可工作的确定性阅读、筛选、编辑与保存，不假装AI已执行。
 7. **四端与无障碍。** 官网解释和演示须对应实证状态；Web/Desktop承载完整工作；Mobile按已有职责重排查看、审阅、调整和接续，不缩小PC画面。键盘、触控、屏幕阅读器、焦点、缩放和减少动效均可用；保留中英韩。操作端无必要的整页上下滚动，必要长文/表格/无障碍区域仍能滚动，视频与播客有实际横向时间轴。
-8. **序境自己的视觉。** 五位架构身份与功能对象可用原创手绘彩绘图标；部分适合的页面元素也可用彩绘。整体视觉空间、层级、布局、动效和交互依用户已批准研究、当前任务及本屏合同，不限定二维，也不预设全三维。功能glyph清晰，身份图标、功能图标和第三方来源icon分层；颜色丰富但有语义节制，图像不表示数据或权限状态。人物按当前脚本描述创造，不复制参考照片人物。不复制ChatGPT、社交平台或通用SaaS模板。外来方法、组件、工具及采集/导入内容的产品外壳、阅读视图、反馈、结果与编辑器遵循适用研究和任务合同，不直接暴露供应商控制台或开发诊断。保留原文、署名、真实封面/媒体和原始网页；内置浏览器的来源页面不是可为统一风格改写的证据。
+8. **寰意自己的视觉。** 五位架构身份与功能对象可用原创手绘彩绘图标；部分适合的页面元素也可用彩绘。整体视觉空间、层级、布局、动效和交互依用户已批准研究、当前任务及本屏合同，不限定二维，也不预设全三维。功能glyph清晰，身份图标、功能图标和第三方来源icon分层；颜色丰富但有语义节制，图像不表示数据或权限状态。人物按当前脚本描述创造，不复制参考照片人物。不复制ChatGPT、社交平台或通用SaaS模板。外来方法、组件、工具及采集/导入内容的产品外壳、阅读视图、反馈、结果与编辑器遵循适用研究和任务合同，不直接暴露供应商控制台或开发诊断。保留原文、署名、真实封面/媒体和原始网页；内置浏览器的来源页面不是可为统一风格改写的证据。
 
 **真实世界验收至少覆盖：**不同城市同名主体、不同期间/币种不可直接比较、来源撤回、预算变更、长任务中断、权限收回、模型不可用、资料不足及跨端继续。每个屏幕挑其实际相关风险，不在不相关页面硬加控件或重复全部测试。验收同时证明正常成功路径：有用结果→用户调整→正确局部结果→保存→重开/恢复；仅能拒绝错误输入仍不交付。
 
@@ -1450,7 +1453,7 @@ authentication/Permission roles.
 | **BMP 品牌市场 / BMP · Brand and market / BMP · 브랜드 및 시장** | BMP-01–11 | In a real brand, market, creator, content or campaign task; identity and meaning come from the actual brand/Brief. |
 | **Shared Capability 共享能力 / Shared · Shared capability / Shared · 공유 기능** | SH-01–06 and cross-domain result handoffs | When making the existing source-to-result shared workflow legible; it never stands in for a Source or Evidence fact. |
 | **System 系统 / System · System / System · 시스템** | SYS-01–08 | Only when explaining a real service state, security/runtime condition or recovery path; it is not the default user-navigation persona. |
-| **序境自研AI / LUMENIS-owned AI / LUMENIS 자체 AI** | AI-01–05 | Only for a real AI task, source explanation, result or unavailable state, through the existing single AI Gateway; suggestions remain inspectable, editable and rejectable. |
+| **寰意自研AI / OEVIRA-owned AI / OEVIRA 자체 AI** | AI-01–05 | Only for a real AI task, source explanation, result or unavailable state, through the existing single AI Gateway; suggestions remain inspectable, editable and rejectable. |
 
 Agent is an execution/coordination pattern inside the existing Agent Runtime,
 not a sixth role identity. The owned-AI identity adds no Gateway, model service,
@@ -1485,7 +1488,7 @@ sole Constitution for Public Website, Web Workspace, Desktop and Mobile. Study
 visual AND functional presentation, composition, UI/UX/AIGC and task-specific
 useful interaction. Define UI/AIGC balance by screen/task/purpose, not a generic
 percentage or replacement of factual controls. Keep the existing approved
-original LUMENIS mark consistent across App, Website, favicon and native/package
+original OEVIRA mark consistent across App, Website, favicon and native/package
 uses under §23; reuse the existing mark and do not design a replacement here.
 Keep functional line glyphs, the five painted identity icons and third-party
 source marks distinct under this section. Startup/re-entry and task progress
@@ -1509,7 +1512,7 @@ device controls. Public Website, Web Workspace, Desktop and Mobile keep their
 approved roles and full capabilities rather than becoming scaled copies.
 
 C1 supplies source-backed text/image presentation examples in the approved
-LUMENIS style: retained platform-native fields, exact entity/city/venue/time,
+OEVIRA style: retained platform-native fields, exact entity/city/venue/time,
 Evidence/citations, question relevance, readable result, uncertainty and versions.
 Genuine source images use their permitted rights; rendered/style illustrations
 are explicitly labeled references, never substituted for source photographs.
@@ -1605,7 +1608,7 @@ evidence that the old controls disappeared for users.
 REA research may inspect corresponding permitted websites/apps/upstream projects
 for current functions, including acquisition gaps; the named examples are not a
 ceiling. Reuse previous research and the existing REA, map actual task/state/input/
-output/recovery behavior, then adapt it into original LUMENIS presentation through
+output/recovery behavior, then adapt it into original OEVIRA presentation through
 the current owner. External page structure or inferred behavior is not source
 truth, a license to copy restricted assets, or new product/OS-control scope.
 
@@ -1614,11 +1617,11 @@ truth, a license to copy restricted assets, or new product/OS-control scope.
 
 核实身份：ChatGPT 的 GPT-6 Intelligent UI、Meta Muse 产品（Muse Spark 为模型）、
 Manus Cue、xAI Grok Bot（区别于普通 Grok 聊天）。以下公开资料于 2026-10-12
-查阅；官方能力、个人反馈/媒体体验与序境设计判断分别记录。少量样本不代表
+查阅；官方能力、个人反馈/媒体体验与寰意设计判断分别记录。少量样本不代表
 全体用户；官网声明不证明可靠性。缺反馈时继续补查官网、帮助、演示、更新和
 可信评测并解决适配问题，不留空搁置，也不编造共识。
 
-| 对应产品与证据 | 有用操作和反面信号 | 现有序境 Owner 的采用/修复 | 实际验收出口 |
+| 对应产品与证据 | 有用操作和反面信号 | 现有寰意 Owner 的采用/修复 | 实际验收出口 |
 | --- | --- | --- | --- |
 | ChatGPT：[官方 UI](https://openai.com/index/gpt-6-for-everyone/)；[用户讨论](https://www.reddit.com/r/OpenAI/comments/1x045qs/gpt6_and_intelligent_ui_for_everyone/)中有图表/交互学习好评，也有跨端可用性和模型命名困惑 | 按任务选择文字、表格或图示，交互帮助理解和操作；不要求理解模型名才能使用 | C3/C5 后端给已分析报告，C4 给制作结果，F 按任务组织内容；C2/C6 提供实际增强和运行状态；保留文本、复制、导出和无障碍 | 图文数值/来源一致；修改真实预算/时间只更新相关内容；保存重开同一版本，各端单独实操 |
 | Meta Muse：[官方说明](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/)描述可审阅执行和撤销授权；[一周体验](https://www.androidauthority.com/meta-muse-one-week-later-hands-on-3718233/)认为引导上手、补充条件有用，初始搜索仍需改进 | 从目标/范围/约束开始，结果可补条件；不能靠隐含记忆扩大访问或虚报连接 | C3/C4/C5 保留独立任务和局部修订；C2 采用有范围可检查上下文，C1/C6 保持原权限/来源/调度；F 呈现所用资料和重要变化 | 新旧结果可比较和重开；撤回来源后不能继续引用；断线不丢编辑，重连先读回而非重复执行 |
@@ -1627,11 +1630,11 @@ Manus Cue、xAI Grok Bot（区别于普通 Grok 聊天）。以下公开资料�
 
 同一聊天入口可在任务执行期间继续输入，独立需求归入可辨认的任务，补充/修改/停止明确作用于对应任务，不能因异步顺序改变而串线。默认简明确认真实接收，随后交付有用成果、来源/限制和下一步；长期任务可查看真实状态、停止与续做，不展示私有思维链，也不把“后台工作”画成假进度。已有任务/历史按需展开，不能强制用户为每个需求另建会话，也不能取消项目和独立制作入口。
 
-后台完成消息与内部执行摘要走不同投递语义：复用现有通知/结果Owner，只对有用完成、重要异常或必要决定打扰；去重与断线补送不能重复业务效果。用户主动询问有答复，必要审批有确定控件且不能被静默抑制；记忆可检查/更正/忘记，群体与个人可见范围不能混用。已批准Agent Groups采用同一任务与投递协议，可选@/Reply定位，不要求每个代理都回答。聊天气泡/任务卡仅服务可读性，序境视觉、Logo、角色、四端、三语、智能UI和完整独立能力保留；不得退化成纯文字IM或照搬外部客户端。
+后台完成消息与内部执行摘要走不同投递语义：复用现有通知/结果Owner，只对有用完成、重要异常或必要决定打扰；去重与断线补送不能重复业务效果。用户主动询问有答复，必要审批有确定控件且不能被静默抑制；记忆可检查/更正/忘记，群体与个人可见范围不能混用。已批准Agent Groups采用同一任务与投递协议，可选@/Reply定位，不要求每个代理都回答。聊天气泡/任务卡仅服务可读性，寰意视觉、Logo、角色、四端、三语、智能UI和完整独立能力保留；不得退化成纯文字IM或照搬外部客户端。
 
 2026-10-14逐项核对：Muse设计原文保留主聊、侧聊、活动/目标视图和确定审批；Grok帮助支持并行任务及异步交接，社区个案要求状态可见、避免漏报。采用与源码缺口、商业推断校准、固定GitHub证据及组合验收统一记在 `LOOP-PLAN-20261014/product-plan-full.md` §16；本文负责呈现，规划不替代Experience权威。文档采用不证明运行完成。
 
-表中适配是序境的设计判断，不是照抄或新增产品。复用已正确组件和服务，实际
+表中适配是寰意的设计判断，不是照抄或新增产品。复用已正确组件和服务，实际
 缺口进入原 ScreenSpec/成果卡修复。Nielsen与已批准研究、原创Logo、彩绘icons及适合页面的插画/操作视频、
 UI/UX/AIGC、中英韩及四端要求全部保留。增量结果不抢焦点、跳动阅读位置或覆盖
 人工编辑；先给有用且范围明确的部分结果，最终核对图文/来源/状态。实现、真实
@@ -1663,7 +1666,7 @@ UI/UX/AIGC、中英韩及四端要求全部保留。增量结果不抢焦点、�
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 
-验收同时看真实输入、可信 Evidence、Core/ViewModel、用户操作、成果保存/重开/修订、失败恢复和 Evaluation。SOURCE / RUNTIME / DATABASE / TEST-CI / USER OUTCOME 独立记录；设计采用、实现存在与实际完成分开。工具链升级只改善研发环境，不能算序境产品新增能力。
+验收同时看真实输入、可信 Evidence、Core/ViewModel、用户操作、成果保存/重开/修订、失败恢复和 Evaluation。SOURCE / RUNTIME / DATABASE / TEST-CI / USER OUTCOME 独立记录；设计采用、实现存在与实际完成分开。工具链升级只改善研发环境，不能算寰意产品新增能力。
 
 ### 成熟操作体验与GPT / Apple / Tesla对标 — 2026-10-08
 
@@ -1675,11 +1678,11 @@ UI/UX/AIGC、中英韩及四端要求全部保留。增量结果不抢焦点、�
 | Apple：动作可预测、反馈清楚、能挽回误操作 | 控件/快捷键/触控语义一致；Undo/Redo说明撤回对象并展示受影响位置；进度、完成、失败各有真实反馈；普通状态内联表达，重要边界才中断 | 撤回后可见内容、项目版本和导出一致；状态不要求猜测；反馈不能谎称已保存 |
 | Tesla：在当前任务里直接控制并看到状态，偏好可保存/恢复 | 复用现有任务/设置Owner保存布局/播放位置/可允许偏好，区分未保存与已保存；明确继续/停止/恢复，设备切换只恢复已授权适用状态 | 重开保留同一工作、失败不丢输入；自动状态可停止；Scope/权限不随偏好或设备转移而扩大 |
 
-这是基于已读官方材料的序境设计适配，不宣称GPT/Apple/Tesla全站全部已研究，不复制UI/品牌资产、车辆功能或第三方登录依赖。官方读取出处及限制记于现有 `INTELLIGENT-UI-ADOPTION-20261008.md`。整体视觉依用户已批准研究和当前任务；手绘彩绘用于原创图标及适合页面元素。保留丰富而克制的色彩、按脚本创作角色、中英韩和无障碍。官网以外非必要不整页上下滚动；媒体横向时间轴和必要长内容滚动保留，不以压缩布局或减少交互损失功能。
+这是基于已读官方材料的寰意设计适配，不宣称GPT/Apple/Tesla全站全部已研究，不复制UI/品牌资产、车辆功能或第三方登录依赖。官方读取出处及限制记于现有 `INTELLIGENT-UI-ADOPTION-20261008.md`。整体视觉依用户已批准研究和当前任务；手绘彩绘用于原创图标及适合页面元素。保留丰富而克制的色彩、按脚本创作角色、中英韩和无障碍。官网以外非必要不整页上下滚动；媒体横向时间轴和必要长内容滚动保留，不以压缩布局或减少交互损失功能。
 
 J5/J6具体操作归既有SH-01、BMP-08规范；完整44屏与官网家族均须核对和升级，复用正确部分、定向改进真实差距，不机械全量重写或只改这两屏。实时预览、临时导出、正式保存、重开不同；Read Aloud、录音、ASR、节目成品不同；脚本变更不代表录音已改。现有组件/变量/可编辑Figma映射沿原规则，不因文档新增晋升DESIGN_READY/IMPLEMENTED。映射保留F/C1-C6完整职责；窗口状态只按最新直接PO指令和新鲜事实判断，历史恢复/等待记录不自动生效。文档更新仍不代表实现或验收完成。
 
-客户验收采用现有Overlay两层卡：既能完成成熟基础工作，也能继续使用序境的真实来源/预算/业务范围/版本/评价。检验正确性、可修改性、误操作恢复、重复输入和有效等待，不以外观相似或控件数量判断体验达标。
+客户验收采用现有Overlay两层卡：既能完成成熟基础工作，也能继续使用寰意的真实来源/预算/业务范围/版本/评价。检验正确性、可修改性、误操作恢复、重复输入和有效等待，不以外观相似或控件数量判断体验达标。
 
 ### C1 媒体结果呈现 — 2026-10-09 需求澄清
 

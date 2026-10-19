@@ -225,9 +225,11 @@ def opendart_request_config(*, corp_code, bsns_year, reprt_code, fs_div='CFS', c
             'note':'Do not persist the authenticated query URL; supply credentials only through the existing authorized credential owner.'}
 
 
-def parse_opendart_json(raw):
+def parse_opendart_json(raw, *, fs_div='CFS'):
     """Retained major-accounts response, never guess fiscal dates from year/code."""
     from .financial import _fact, SCHEMA, _date
+    if not isinstance(fs_div, str) or fs_div not in {'CFS', 'OFS'}:
+        raise ValueError('FINANCIAL_DART_BASIS_INVALID')
     if not isinstance(raw, bytes) or not 0 < len(raw) <= 8*1024*1024:
         raise ValueError('FINANCIAL_SOURCE_SIZE_INVALID')
     def pairs(items):
@@ -247,7 +249,8 @@ def parse_opendart_json(raw):
     code = data['status']
     result = {'schema':SCHEMA,'format':'opendart-json','filing_entity':None,'facts':[], 'candidates':[],
               'missing':[], 'warnings':['Explicit fiscal date ranges only; interim current and accumulated amounts are never conflated.'],
-              'provider_status':code}
+              'provider_status':code, 'selected_fs_div':fs_div,
+              'excluded_basis_rows':0}
     if code != '000':
         states={'010':'INVALID_CREDENTIAL','011':'DISABLED_CREDENTIAL','012':'IP_NOT_ALLOWED',
                 '013':'NO_DATA','014':'NO_FILE','020':'RATE_LIMITED','800':'MAINTENANCE','901':'EXPIRED_CREDENTIAL'}
@@ -270,6 +273,11 @@ def parse_opendart_json(raw):
         if (not re.fullmatch(r'\d{8}',str(row.get('corp_code',''))) or
                 not re.fullmatch(r'\d{14}',str(row.get('rcept_no',''))) or row.get('fs_div') not in {'CFS','OFS'}):
             raise ValueError('FINANCIAL_DART_IDENTITY_INVALID')
+        # Filter before emitting either facts or review candidates. Keep original
+        # JSON indices; the retained source is never rewritten by selection.
+        if row['fs_div'] != fs_div:
+            result['excluded_basis_rows'] += 1
+            continue
         dates=re.findall(r'(20\d{2})[.\-/](\d{2})[.\-/](\d{2})', str(row.get('thstrm_dt','')))
         reason=None
         if len(dates)!=2:

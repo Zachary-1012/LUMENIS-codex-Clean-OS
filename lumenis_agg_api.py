@@ -176,7 +176,7 @@ def intelligence_models():
         "gateway": selected_gateway,
         "providers": providers,
         "domain_statuses": status.get("domains", {}),
-        "truth_boundary": "AI is enhancement only; LUMENIS Canonical data and Evidence remain authoritative",
+        "truth_boundary": "AI is enhancement only; OEVIRA Canonical data and Evidence remain authoritative",
     })
 
 

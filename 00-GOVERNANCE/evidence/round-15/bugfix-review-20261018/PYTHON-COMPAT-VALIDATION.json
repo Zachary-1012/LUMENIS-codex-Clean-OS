@@ -1,0 +1,84 @@
+{
+  "status": "PASS_FOR_BOUNDED_COMPATIBILITY_REPAIR",
+  "python": "CPython 3.11.17",
+  "baseline": "5160f638755c16b50c0fb84aa3317072175c9cd4",
+  "patch": {
+    "baseline_head": "5160f638755c16b50c0fb84aa3317072175c9cd4",
+    "files": [
+      {
+        "path": "requirements.txt",
+        "before_sha256": "5ab175044f0a831998e2e4b921b1f77f2a9723e2860db1ff037293c4c41ba6b2",
+        "after_sha256": "b3fbee13c38241296eabc78044fb5d09e9e6543681aeff4a064850e81da76e61"
+      },
+      {
+        "path": "tests/test_rectification_truth_chain_20261010.py",
+        "before_sha256": "50e35ebfaf8b7a2fef031c086fdbb9f6ed8b2371a03b906ddf7c556298c8c296",
+        "after_sha256": "e52743a341a00d14706e16e19e88b0a0fd9cbe07849143e39c2804d9d3662c94"
+      },
+      {
+        "path": "tests/test_frozen_native_capture_intake.py",
+        "before_sha256": "24523ca87700cabace40734e715332be0e50b8e07cffda513ac8670b462d20bf",
+        "after_sha256": "93296680252cd6c8f789e263f345c5288cf085e6306989921e33f037d5e58ce3"
+      }
+    ],
+    "patch_sha256": "119bb2b8663c86ce203a9878ea9fc30b090ca426968d4f3fe1f8cc920a601543"
+  },
+  "tests": {
+    "ci": {
+      "primary_testcases": 603,
+      "junit_tests_including_subtests": 921,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 38.706
+    },
+    "extra": {
+      "primary_testcases": 258,
+      "junit_tests_including_subtests": 258,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 119.634,
+      "science_testcases": 54
+    }
+  },
+  "disjoint_primary_nodes": true,
+  "production_files_changed": [
+    "requirements.txt"
+  ],
+  "test_files_changed": [
+    "tests/test_rectification_truth_chain_20261010.py",
+    "tests/test_frozen_native_capture_intake.py"
+  ],
+  "ci_workflow_changed": false,
+  "pip_check": "PASS",
+  "official_metadata_pins_before_otio": 126,
+  "official_metadata_pins_with_test_only_otio": 127,
+  "python312_resolution": "125 packages resolved with hashes; scipy remains 1.18.1; not a 3.12 runtime test claim",
+  "remaining_limits": [
+    "Real GitHub CI on eventual new commit has not been run by this worker",
+    "No production deployment, merge, remote publication or user acceptance performed",
+    "Optional topic-model dependencies not installed; existing availability assertions exercised without modifying them",
+    "PyTensor warns optimized BLAS was unavailable; CPU posterior regression passed",
+    "Earlier denied telemetry-related run is incomplete and retained separately; final tests used newly isolated network namespaces"
+  ],
+  "independent_review_sha256": "2358cb24b4a014f58bc0fe298a09e56212f348129b8d5d8d707bdd27464239c0",
+  "network_verification": "New network namespace only lo/no external route; native libc reserved TEST-NET address ENETUNREACH before ONNX import and explicit disable; host namespace/routes unchanged. Earlier unapproved telemetry-related run retained as incomplete, not a pass.",
+  "official_sources": [
+    "https://pypi.org/pypi/scipy/1.17.1/json",
+    "https://pypi.org/pypi/scipy/1.18.1/json",
+    "https://onnxruntime.ai/docs/api/python/api_summary.html#onnxruntime.disable_telemetry_events"
+  ],
+  "log_hashes": {
+    "PYTHON311-CI.log": {
+      "raw_sha256": "02074c746784dd0f78e246713d64ccafc6a394e6e79184d052a8a32f45095466",
+      "published_sha256": "f3ed0dfa83b71e180139705a06f89d3c9fd06d8a8d41ac74348f7e4c82616fe0",
+      "redaction": "Only ANSI controls and execution-environment path/namespace metadata; test names/results preserved"
+    },
+    "PYTHON311-SCIENCE.log": {
+      "raw_sha256": "2aab32f2cc7609fb5b38b5ed24ae177016b77a38794faa0405d0d21f243ee4d2",
+      "published_sha256": "b1f3d8ec5ede8b5700752114031e6af39f7b598c6661fa75c36ca9a401808e04",
+      "redaction": "Only ANSI controls and execution-environment path/namespace metadata; test names/results preserved"
+    }
+  }
+}

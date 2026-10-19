@@ -258,3 +258,52 @@ market coverage. Save/reopen/revision must preserve the same result metadata.
 新 Scope/新版本不能消费旧结果；失败不伪造零值或成功，现有错误/重开途径继续适用。
 实际本机 Web 证明：30 条来源、28 个已知时间、2 个未知，保存后离开页面并重开同一任务。
 完整截图/任务及构建 pins 留在现有私有 work 回执；正式 CI 和整页/跨域用户验收独立记录。
+
+## 2026-10-18 研究能力采用接续（IN_PROGRESS / NOT_VERIFIED）
+
+研究成果显式采用到选定CTH Subject后比较方案/预算/资源，内部选择不授权外部执行；实际行动owner读回后才能记录结果，未知与SOURCE_CLAIM/内部Artifact分开。
+
+接续唯一[完整规划§1.3](../../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md)及[集中草图研究构图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)。当前已验证绑定及既有禁用项不由本节自动解禁；新callable由现有SourceBrief/BusinessDecisionWorkflow/Learning owner及`lumenis_app_api.py`公共注册者给出真实route/方法/输入输出后再接线，未交付保持OPEN。旧GGI API仅来源意图，不直接成为本屏客户端接口。
+
+权限合同：服务器actor、workspace/project、任务/source/hash/父revision及当前Permission同次核验；用户填写user_id/approved_by不能授权。列表按授权→filter→pagination，避免截页后过滤假空。对象深链必须回原父任务和选区；refresh/back/forward、重复进入和乱序响应不覆盖较新工作。
+
+状态与动作：loading不闪empty；无资料说明待补；无观测显示NO_DATA/未知；401/403不展示旧敏感内容，404不泄漏他人对象；离线/500保草稿；CAS冲突保用户编辑并提供重读/比较；cancel只停止当前任务且保已保存版本；recover需新鲜权限，不能重放审批/外部效果。来源/标题/错误按文本安全渲染，不复制旧HTML或存储型注入。成功需实际owner读回，不靠200/提示/进度条。
+
+本地Codex/GrokBot在Web Workspace、Windows/macOS Desktop与iOS Companion分别实测适用路径；Public Website只展示核实说明与真实入口。保留原zh/en/ko、键盘/读屏、48px触控、reduced motion、原创和界面AIGC要求。每屏至少实测同scope保存/独立重开/修订，以及跨scope、陈旧版本、缺来源/权利、来源撤回、取消恢复、断网重试、重复点击与恶意文本。未构建/未运行不升级旧status或DESIGN_READY/ACCEPTED。
+
+
+### 已交付业务服务字段接线（2026-10-18，有界源码证据）
+
+公共入口维持POST `/api/experience/business-works`、GET `/api/experience/business-works/<work_id>`及POST `/api/experience/business-works/<work_id>/<operation>`；变更继续提交`submission_id/payload/expected_revision`，服务为`BusinessDecisionWorkflow.prepare/reopen/advance`。已新增`review`与`restore`意图：`restore`仅CANCELLED+非空reason，恢复记录不重启外部行动；`review`要求OUTCOME_RECORDED，assessment为useful/not_useful/inconclusive，observations非空，limitations为1..8条，next_step为retain/revise/stop，source_ids为非空且已绑定的唯一ID集合。未知/额外身份字段拒绝。
+
+显示服务端`selected_by`，与用户可编辑责任人owner分开。`operator_review`包含reviewer、reviewed_revision、outcome_revision、outcome_state、assessment、observations、limitations、next_step、source_ids；`claim_type=OPERATOR_FEEDBACK`及`metric_value=null`必须保留，意见不画成增长分数。Shared→真实CTH/BMP资料再准入、原文SourceUse与父源撤销、业务feedback→learning已有固定版本隔离HTTP证据；本节不将这些有界证据升级成完整UI/业务效果验收。
+
+### Shared原源到真实业务域的明确采用
+
+POST `/api/experience/reports/source-brief/adopt-source`由`experience_runtime.adopt_research_source`→`lumenis.importer.documents.adopt_shared_research_source`，严格body为`job_id/source_id/provenance/mode`，mode为prepare/import，目标使用真实focused CTH/BMP headers。provenance需明确owner-approved rights_statement；prepare返回原Permission精确DATA_IMPORT resource，import须匹配批准。原Shared report/hash/附件字节成为live dependency，每次原Evidence读取重新核权；原源撤回或删除拒绝重开/重放，不能借已签报告绕过权益。
+
+两域实际Shared上传→研究→明确权益→精确批准导入→domain SourceBrief→B prepare/reopen及父源撤销反例已有固定依赖版本隔离HTTP证据。`BusinessDecisionWorkflow.read_learning_material`只向C提供精确revision、已记录评价/operator_review及新鲜原源权限，不声称业务增长或因果。前端以“采用到当前业务范围”解释，并保原Shared返回锚点、来源版本和明确确认；本地页面尚需构建/验收。
+
+
+## 2026-10-18 全项前端细化：本屏实际工作构图（待本地构建验收）
+
+原frontmatter与真实绑定状态保持；下列完整终态不得缩成现有只读API，也不得以未接通按钮冒运行证据。仅使用服务端已准入字段/当前许可，具体接口沿本屏上文，所有新交互由本地原Owner接线。
+
+### 研究采用、业务决策与实际复盘
+
+研究结果“采用到当前业务”先显示目标CTH主体或BMP品牌聚焦、原Shared来源/版本、当前可用权益与将创建的领域资料；资料权利确认只在实际跨用途/范围动作发生时要求，普通导入不附加通用权利表。缺目标范围时回现有范围选择，不能临时伪造主体。确认关闭回原Shared段落，批准导入与B业务方案采用为独立步骤，各自有真实读回。
+业务页宽屏左侧原研究依据，主区方案逐项比较（资源/约束/预期结果与未知并列），右侧当前决策与行动阶段。内部选择主按钮写“采用此方案”，不写“已经执行”；实际Action回执在独立阶段条，已有Task/Word/Artifact以可打开成果呈现。结果区分来源声称、实际产物、未知业务结果；评价区用当前真实口径，不把预计营收/任务完成换成增长。
+复盘入口仅在真实结果记录后出现：useful/not_useful/inconclusive用“有帮助/无帮助/暂不能判断”，观察为主文本、1–8条限制和下一步保留/修订/停止依次填写，来源选择只列当前已绑定材料。取消只保草稿；保存反馈显示版本和OPERATOR_FEEDBACK性质，不显示自动因果结论。取消工作后的“恢复记录”确认说明不启动行动。复核/来源变更时页顶固定提示旧批准失效，对照新旧依据并显式重新采用；单点重试不得复活旧批准。
+Web保研究→业务→结果深链与原Shared返回锚点；Desktop并读方案/来源并从真实产物打开，关闭应用后按原work revision恢复；iOS先方案摘要与约束→对照→确认→行动/结果，不合成一个“完成”绿勾。官网以去敏真实流程说明从研究到决策，不演示未发生的外部投放或增长。
+界面AIGC可按目标建议比较列和结果解释顺序，金额、单位、未知、引用与审批控件仍固定真实数据；用户锁定的方案列/人工观察不被重写。价值是看清选择依据、执行证据和效果未知，必要时能修正而不丢历史。
+生成式界面根据目标与真实比较字段提议原创方案对照和分阶段成果揭示，未执行区保空态文本而非庆祝动画；不同业务问题可用不同原生表/局部图解/证据阅读构成。用户冻结当前比较列，任何重新构图不改变已选择方案、金额、批准或结果。
+
+## 2026-10-18 恢复候选后的当前接口接续（F待执行）
+
+当前静态事实：backend start已接business_question，Dart VM仍拒非空问句；已有任务重开/恢复/busy反馈继续保留。当前backend保存为同原scope研究成果，不能把它宣称为旧候选无条件跨域采用到Shared。
+
+F输入合同：原`POST /api/experience/reports/source-brief/start`按当前白名单接可选business_question（4–1500字符）及source_ids/research/reference，202只是任务准入。job完成后独立读回；`POST /api/experience/reports/source-brief/jobs/<job_id>/save`严格body`{request_id,title}`，服务端重读job/来源/hash/当前review，输出`{ok:true,result:<SavedWork>}`，kind=research，保原scope/media_scope。保当前SavedWork返回的身份、version/hash并通过其原重开接口读回；客户端不能自改scope取得跨域权限。连接断开先核同request_id结果，不盲重复写。
+
+F输出/视觉：原问题区提供可选业务问句，结果标题旁[保存为可编辑研究成果]→标题/目标范围预览→[取消][确认保存]；保存中/已读回/冲突/来源变化/撤权各就地表达。历史任务选择恢复保原问题/资料/定位，技术编号仅兼容。验收非空问句实际传到现Owner、202不冒完成、保存独立重开/撤权清旧/重复请求幂等/乱序返回不串任务；无AI确定性结果与增强状态按实际method分别显示。前端接线及四端运行仍OPEN。
+
+本段校准旧current断言，历史验收不改写。源码/字段以现Owner为准，静态对齐不升级IMPLEMENTED/ACCEPTED。执行集合Codex、Zack、阿康；F是模块归属，不派个人。

@@ -166,7 +166,7 @@ def ai_conversation_attach_task(conversation_id):
 def ai_conversation_respond(conversation_id, turn_id):
     from . import conversations as owner
     def call():
-        data = _conversation_body({'operation','idempotency_key','expected_revision','retry_confirmed','confirmed'})
+        data = _conversation_body({'operation','idempotency_key','expected_revision','retry_confirmed','confirmed','external_approval'})
         actor = owner.current_actor('write')
         operation = data.pop('operation', 'respond')
         if operation == 'interrupt':

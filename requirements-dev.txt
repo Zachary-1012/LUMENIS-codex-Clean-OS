@@ -4,4 +4,7 @@
 
 pytest>=8.0
 
+# Test-only BIFF8 fixture writer; product XLS parsing uses runtime xlrd.
+xlwt==1.3.0
+
 # PDF extraction/verification inherits the pinned runtime parser above.

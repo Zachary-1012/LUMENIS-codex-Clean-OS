@@ -22,14 +22,14 @@ def guard():
 
 
 def test_normal_to_high_efficiency(guard):
-    d = guard.decide("schedule_normal")
+    d = guard.decide("schedule_normal", cpu_pct=30, ram_pct=40, queue_lag=0)
     assert d["state"] == HIGH_EFFICIENCY
     assert d["allow_new"] is True
     assert d["worker_scale"] <= guard.max_worker_scale  # 有上限
 
 
 def test_backoff_interval_adaptive(guard):
-    d = guard.decide("backoff_interval")
+    d = guard.decide("backoff_interval", cpu_pct=30, ram_pct=40, queue_lag=0)
     assert d["state"] == HIGH_EFFICIENCY
     assert d["interval_multiplier"] >= 1.5
 

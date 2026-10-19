@@ -307,7 +307,10 @@ def prepare_skill_metadata_change(
         from mcp_skill_runtime import discover_registered_mcp, runtime_contract_binding
         from mcp_discovery import tool_contract_hash
 
+        runtime_binding = runtime_contract_binding(dict(row))
         discovery = discover_registered_mcp(dict(row))
+        if runtime_contract_binding(dict(row)) != runtime_binding:
+            raise ValueError("MCP_PACKAGE_CHANGED_DURING_DISCOVERY")
         if discovery.get("ok") is not True or discovery.get("protocol_version") != "2025-11-25":
             raise ValueError(
                 "MCP_CONTRACT_DISCOVERY_FAILED: " + "; ".join(discovery.get("errors", []))
@@ -329,7 +332,7 @@ def prepare_skill_metadata_change(
             name: tool_contract_hash(tools[name]) for name in allowed
         }
         compatibility["mcp_protocol_version"] = "2025-11-25"
-        compatibility["mcp_runtime_binding"] = runtime_contract_binding(dict(row))
+        compatibility["mcp_runtime_binding"] = runtime_binding
         # Retain full schemas for human inspection; hashing alone is not a review UI.
         compatibility["mcp_reviewed_tools"] = [tools[name] for name in allowed]
         after.update(

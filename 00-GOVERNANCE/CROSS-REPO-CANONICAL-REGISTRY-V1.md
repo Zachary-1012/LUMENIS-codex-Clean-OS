@@ -45,7 +45,7 @@ Other products may reference these semantics but may not redefine LUMENIS Produc
 - no shared production database;
 - no production credential sharing;
 - no cross-product runtime hard dependency;
-- no copying product business implementation as an integration mechanism;
+- no copying product business implementation as a cross-runtime exchange mechanism; the explicitly authorized 2026-10-18 internal source adoption is adapted and tested by existing LUMENIS owners;
 - no unrestricted cross-product writer;
 - Research / Growth Truth cannot overwrite LUMENIS Production Truth;
 - AI/OSAI output remains advisory until the receiving product validates and releases it locally;
@@ -102,3 +102,9 @@ AUDIT CURRENT REPO TRUTH
 ```
 
 A README statement alone is not protocol evidence.
+
+## 2026-10-18 当前内部采用与外仓身份的区别
+
+上述四仓名称/角色是交换与来源身份。PO已批准将GGI全部有用能力源级吸收进序境既有Owner；“独立产品”不构成拒绝该内部采用的限制，不能据此另建GGI子模块、账号、数据库或启动依赖。序境新增界面使用研究、资料、方案、行动、结果与学习等当前业务语义，不使用GGI旧品牌作为新的产品入口。兼容ID、来源commit及历史链接不机械改名。
+
+唯一Architecture §7控制产品范围；[本地采用附件](LUMENIS-SOURCE-ADOPTION-V1.json)记录72文件/51API/33能力及权利；不改交换1.1.0/原指纹。安全flags仍用于跨运行时交换，源级采用须经现有Owner重写、验证、测试和本地release，绝不复制生产库、共享秘密或自动升级Production Truth。外仓本次只读，未同步修改；内部实施IN_PROGRESS，四端NOT_VERIFIED。

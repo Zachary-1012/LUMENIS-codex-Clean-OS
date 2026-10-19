@@ -1566,6 +1566,9 @@ def auth_config_api():
 
 
 def _owner_authorized_root_request():
+    if request.endpoint in {'experience_runtime.research_learning', 'experience_runtime.research_reference_library', 'experience_runtime.research_hypothesis_review'}:
+        from experience_runtime import _shared_research_route_allowed
+        return _shared_research_route_allowed()
     """Delegate only registered entries with their own fresh owner guards.
 
     This transfers authentication to the named handler, not authorization to a
@@ -1592,6 +1595,12 @@ def _owner_authorized_root_request():
         return any(guard.__name__ == '_require_browser_actor'
                    for guard in current_app.before_request_funcs.get(request.blueprint, ()))
     routes = {
+        'api_system_account_base': ('/api/system/account', {'GET'}),
+        'api_zbmp_entry_status': ('/api/auth/zbmp-entry/status', {'GET'}),
+        'api_domain_identity': ('/api/auth/domain-identity', {'GET'}),
+        'api_zbmp_entry_unlock': ('/api/auth/zbmp-entry/unlock', {'POST'}),
+        'api_zbmp_entry_verify': ('/api/auth/zbmp-entry/verify', {'POST'}),
+        'api_zbmp_entry_leave': ('/api/auth/zbmp-entry/leave', {'POST'}),
         'subject_registry.get_subjects': ('/api/settings/subjects', {'GET'}),
         'api_collect': ('/api/collect', {'POST'}),
         'api_collect_status': ('/api/collect/status/<task_id>', {'GET'}),
@@ -1617,6 +1626,8 @@ def _owner_authorized_root_request():
         'domain_api.api_internal_pitch_read': ('/api/experience/creation/internal-pitches/<task_id>', {'GET'}),
         'domain_api.api_internal_pitch_action': ('/api/experience/creation/internal-pitches/<task_id>/<action>', {'POST'}),
         'domain_api.api_internal_pitch_export': ('/api/experience/creation/internal-pitches/<task_id>/export', {'GET'}),
+        # Exact read delegates to Content's actor, scope and live-source guard.
+        'experience_runtime.content_evidence_detail': ('/api/experience/content/evidence/<evidence_id>', {'GET'}),
         'experience_runtime.ai_intent': ('/api/experience/ai/intent', {'POST'}),
         'experience_runtime.analyze_financial_material': ('/api/experience/reports/financial/analyze', {'POST'}),
         'experience_runtime.save_financial_material': ('/api/experience/reports/financial/save', {'POST'}),
@@ -1648,6 +1659,17 @@ def _owner_authorized_root_request():
         'experience_runtime.generate_source_brief_job': ('/api/experience/reports/source-brief/generate', {'POST'}),
         'experience_runtime.reopen_source_brief_job': ('/api/experience/reports/source-brief/jobs/<job_id>', {'GET'}),
         'experience_runtime.submit_source_brief_review': ('/api/experience/reports/source-brief/jobs/<job_id>/reviews', {'POST'}),
+        'experience_runtime.list_source_brief_tasks': ('/api/experience/reports/source-brief/tasks', {'GET'}),
+        'experience_runtime.edit_source_brief_task': ('/api/experience/reports/source-brief/tasks/<task_id>', {'PATCH'}),
+        'experience_runtime.change_source_brief_task_state': ('/api/experience/reports/source-brief/tasks/<task_id>/<operation>', {'POST'}),
+        'experience_runtime.research_reference_catalog': ('/api/experience/reports/source-brief/references', {'GET'}),
+        'experience_runtime.research_taxonomy': ('/api/experience/reports/source-brief/taxonomy', {'GET'}),
+        'experience_runtime.save_source_brief_result': ('/api/experience/reports/source-brief/jobs/<job_id>/save', {'POST'}),
+        'experience_runtime.research_reference_work': ('/api/experience/reports/source-brief/reference-work', {'POST', 'GET'}),
+        'experience_runtime.research_reference_version': ('/api/experience/reports/source-brief/reference-work/<artifact_id>', {'POST', 'GET'}),
+        'experience_runtime.research_match_rules': ('/api/experience/reports/source-brief/references/match-rules', {'POST'}),
+        'experience_runtime.adopt_research_source': ('/api/experience/reports/source-brief/adopt-source', {'POST'}),
+        'experience_runtime.list_research_reports': ('/api/experience/reports/source-brief/jobs', {'GET'}),
         'experience_runtime.start_source_brief_task': ('/api/experience/reports/source-brief/start', {'POST'}),
         'experience_runtime.source_brief_task_status': ('/api/experience/reports/source-brief/tasks/<task_id>', {'GET'}),
         'experience_runtime.resume_source_brief_task': ('/api/experience/reports/source-brief/tasks/<task_id>/resume', {'POST'}),
@@ -1738,6 +1760,9 @@ def _basic_auth():
         from experience_runtime import _entity_profile_local_access_allowed
         if _entity_profile_local_access_allowed():
             return None
+    from brand_propagation import classification_access_allowed
+    if classification_access_allowed():
+        return None
     if request.path.startswith('/api/event-graph/'):
         from event_graph import scoped_graph_local_access_allowed
         if scoped_graph_local_access_allowed():
@@ -1857,7 +1882,7 @@ def _pg_resolve_operation_type(path, method):
         # which independently checks the exact DATA_EXPORT resource approval.
         return OperationType.DATA_EXPORT
     if method == 'POST' and re.fullmatch(
-        r'/api/experience/business-works(?:/work-[0-9a-f]{64}/(?:choose|adopt|cancel|interrupt|resume|action|outcome|outcome_unknown))?', p,
+        r'/api/experience/business-works(?:/work-[0-9a-f]{64}/(?:choose|adopt|cancel|interrupt|resume|restore|review|action|outcome|outcome_unknown))?', p,
     ):
         # Domain records only; the service separately binds current actor,
         # exact scope, report revision and any actual creation-owner receipt.
@@ -1874,6 +1899,19 @@ def _pg_resolve_operation_type(path, method):
         if any(k in p for k in ('/stop', '/pause', '/cancel')):
             return OperationType.COLLECTOR_STOP
         return OperationType.COLLECTOR_START
+    if method == 'POST' and re.fullmatch(r'/api/experience/reports/source-brief/jobs/[^/]+/hypotheses/review', p):
+        return OperationType.REPORT_REVIEW
+    if method == 'POST' and p in {'/api/experience/reports/source-brief/adopt-source', '/api/experience/reports/source-brief/reference-library'}:
+        return OperationType.REPORT_REVIEW
+    if method == 'POST' and (re.fullmatch(r'/api/experience/reports/source-brief/reference-work(?:/ART[0-9a-f]{16})?', p)
+            or p == '/api/experience/reports/source-brief/references/match-rules'
+            or re.fullmatch(r'/api/experience/reports/source-brief/learning/(?:candidates|outbox)(?:/[0-9a-f]{64}/(?:review|validate|adopt|withdraw|restore|reject|enqueue|stage|fail|requeue|receive_local))?', p)):
+        return OperationType.REPORT_REVIEW
+    if ((method == 'PATCH' and re.fullmatch(r'/api/experience/reports/source-brief/tasks/rbrief_[0-9a-f-]{36}', p))
+            or (method == 'POST' and re.fullmatch(r'/api/experience/reports/source-brief/tasks/rbrief_[0-9a-f-]{36}/(?:cancel|restore)', p))):
+        return OperationType.REPORT_REVIEW
+    if method == 'POST' and re.fullmatch(r'/api/experience/reports/source-brief/jobs/brief-[0-9a-f]{32}/save', p):
+        return OperationType.DATA_EXPORT
     # 3. 报告生成
     if (method == 'POST' and p.startswith('/api/experience/reports/source-brief/jobs/')
             and p.endswith('/reviews') and len(p.split('/')) == 8):
@@ -1983,6 +2021,14 @@ def _permission_gate_write_check():
             return None
         except (ValueError, PermissionError) as exc:
             return jsonify({'ok': False, 'code': str(exc)}), 403
+    from brand_propagation import classification_route_matches
+    if classification_route_matches():
+        try:
+            from experience_runtime import _shared_work_actor_scope
+            _shared_work_actor_scope('write')
+            return None
+        except (ValueError, PermissionError):
+            return jsonify({'ok': False, 'code': 'PROPAGATION_PERMISSION_DENIED'}), 403
     from event_graph import scoped_graph_route_matches
     if scoped_graph_route_matches():
         try:
@@ -2091,6 +2137,10 @@ def _permission_gate_write_check():
             'experience_runtime.export_content_project': 'write',
         }
         try:
+            from experience_runtime import _shared_research_route_allowed, _source_brief_context
+            if _shared_research_route_allowed():
+                _source_brief_context('write')
+                return None
             if request.endpoint in shared_saved_work_actions:
                 from experience_runtime import _shared_work_actor_scope
                 _shared_work_actor_scope(shared_saved_work_actions[request.endpoint])
@@ -7292,15 +7342,19 @@ def api_cth_base():
 
 @app.route('/api/system/account')
 def api_system_account_base():
-    """SYSTEM Account 基础路由（settings.js 调用）。"""
+    """Compatibility envelope for the current server-authenticated account."""
     try:
-        from account.api import get_account_info
-        info = get_account_info()
-        return jsonify({"success": True, "data": info, "error": "",
+        from lumenis.auth.service import get_current_user
+        user = get_current_user(read_only=True)
+        if not user:
+            return jsonify({"success": False, "data": None, "error": "AUTH_REQUIRED",
+                            "domain_id": "system", "product_id": "SYSTEM"}), 401
+        profile = {key: user.get(key) for key in ("id", "username", "role", "display_name")}
+        return jsonify({"success": True, "data": profile, "error": "",
                         "domain_id": "system", "product_id": "SYSTEM"})
-    except Exception as e:
-        return jsonify({"success": True, "data": {"status": "available", "message": "account module loaded"},
-                        "error": "", "domain_id": "system", "product_id": "SYSTEM"})
+    except Exception:
+        return jsonify({"success": False, "data": None, "error": "ACCOUNT_UNAVAILABLE",
+                        "domain_id": "system", "product_id": "SYSTEM"}), 503
 
 print("[dual-domain] API 契约断链修复完成：skills/auxiliary/web-sources/zbmp|cth base/system/account")
 
@@ -7308,115 +7362,77 @@ print("[dual-domain] API 契约断链修复完成：skills/auxiliary/web-sources
 import ai_governance
 import ai_resource_packs
 
-# ===== P0 登录流程重构：ZBMP 域身份入口（CTH内TOTP验证） =====
-
-@app.route('/api/auth/zbmp-entry/status', methods=['GET'])
-def api_zbmp_entry_status():
-    """检查当前用户ZBMP域身份状态。"""
-    from account.service import get_current_user
-    from account.totp import get_totp_status
-    user = get_current_user()
+# Legacy domain-entry routes only read existing server-authorized scope.
+# Navigation never creates a second account, domain grant, or credential.
+def _legacy_domain_scope_status():
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import resolve_web_request_scope
+    user = get_current_user(read_only=True)
     if not user:
-        return jsonify({"ok": False, "logged_in": False, "error": "未登录CTH"}), 401
-    totp = get_totp_status(user["id"])
-    zbmp_granted = request.cookies.get('zbmp_domain_grant') == '1'
-    return jsonify({
-        "ok": True, "logged_in": True, "user_id": user["id"],
-        "username": user["username"], "totp_bound": totp.get("bound", False),
-        "totp_enabled": totp.get("enabled", False), "zbmp_granted": zbmp_granted,
-        "domain_identity": "zbmp" if zbmp_granted else "cth",
-    })
-
-
-@app.route('/api/auth/zbmp-entry/verify', methods=['POST'])
-def api_zbmp_entry_verify():
-    """CTH已登录用户通过TOTP验证获取ZBMP域身份。"""
-    from account.service import get_current_user
-    from account.totp import verify_user_totp
-    from account.audit import log_audit
-    user = get_current_user()
-    if not user:
-        return jsonify({"success": False, "error": "未登录CTH，请先登录"}), 401
-    data = request.get_json(silent=True) or {}
-    code = data.get("code", "")
-    result = verify_user_totp(user["id"], code)
-    if not result.get("success"):
-        return jsonify(result), 400
-    log_audit("zbmp_entry", "security", str(user["id"]),
-              "用户{}通过TOTP进入ZBMP域".format(user['username']))
-    resp = jsonify({"success": True, "domain_identity": "zbmp",
-                     "message": "ZBMP域身份已授予"})
-    import time as _t
-    expires = _t.strftime("%a, %d %b %Y %H:%M:%S GMT",
-                           _t.gmtime(_t.time() + 8 * 3600))
-    resp.set_cookie('zbmp_domain_grant', '1', max_age=8 * 3600, path='/',
-                    httponly=True, samesite='Lax', expires=expires)
-    return resp
-
-
-@app.route('/api/auth/zbmp-entry/leave', methods=['POST'])
-def api_zbmp_entry_leave():
-    """退出ZBMP域，返回CTH域身份。"""
-    from account.service import get_current_user
-    from account.audit import log_audit
-    user = get_current_user()
-    if user:
-        log_audit("zbmp_leave", "security", str(user["id"]),
-                  "用户{}退出ZBMP域".format(user['username']))
-    resp = jsonify({"success": True, "domain_identity": "cth"})
-    resp.delete_cookie('zbmp_domain_grant', path='/')
-    return resp
-
-
-# ===== ZBMP 产品域解离：固定密钥解锁（替代TOTP，预留完全解离口） =====
-ZBMP_DOMAIN_UNLOCK_KEY = "1012Zzh"
-
-
-@app.route('/api/auth/zbmp-entry/unlock', methods=['POST'])
-def api_zbmp_entry_unlock():
-    """通过固定产品密钥解锁ZBMP域。
-
-    设计意图：ZBMP与CTH目前共享运行时，但产品域身份已解耦。
-    解锁密钥固定为 1012Zzh（废弃TOTP随机动态码），后续完全解离时
-    只需将此处替换为独立产品域认证服务，调用方契约不变。
-    """
-    from account.service import get_current_user
-    from account.audit import log_audit
-    user = get_current_user()
-    if not user:
-        return jsonify({"success": False, "error": "未登录"}), 401
-    data = request.get_json(silent=True) or {}
-    key = (data.get("key") or "").strip()
-    if key != ZBMP_DOMAIN_UNLOCK_KEY:
-        log_audit("zbmp_unlock_fail", "security", str(user["id"]),
-                  "用户{}尝试解锁ZBMP域密钥错误".format(user['username']))
-        return jsonify({"success": False, "error": "密钥不正确"}), 403
-    log_audit("zbmp_unlock", "security", str(user["id"]),
-              "用户{}通过产品密钥解锁ZBMP域".format(user['username']))
-    resp = jsonify({"success": True, "domain_identity": "zbmp",
-                     "message": "ZBMP域已解锁"})
-    import time as _t
-    expires = _t.strftime("%a, %d %b %Y %H:%M:%S GMT",
-                           _t.gmtime(_t.time() + 8 * 3600))
-    resp.set_cookie('zbmp_domain_grant', '1', max_age=8 * 3600, path='/',
-                    httponly=True, samesite='Lax', expires=expires)
-    return resp
+        return None, (jsonify({"ok": False, "success": False,
+            "code": "AUTH_REQUIRED", "logged_in": False}), 401)
+    if request.headers.get("X-Domain-Id", "").strip().lower() not in {"bmp", "zbmp"}:
+        return None, (jsonify({"ok": False, "success": False,
+            "code": "BMP_CONTEXT_REQUIRED", "zbmp_granted": False}), 400)
+    try:
+        actor, scope, _entries, _selected = resolve_web_request_scope("read", module="reports")
+        if actor.get("id") != user["id"] or scope.get("domain_id") != "zbmp":
+            raise PermissionError("SCOPE_PERMISSION_DENIED")
+    except PermissionError:
+        return None, (jsonify({"ok": False, "success": False,
+            "code": "SCOPE_PERMISSION_DENIED", "zbmp_granted": False}), 403)
+    except ValueError:
+        return None, (jsonify({"ok": False, "success": False,
+            "code": "CONTEXT_SCOPE_INVALID", "zbmp_granted": False}), 400)
+    except Exception:
+        return None, (jsonify({"ok": False, "success": False,
+            "code": "SCOPE_PERMISSION_UNAVAILABLE", "zbmp_granted": False}), 503)
+    return {"ok": True, "success": True, "logged_in": True,
+        "user_id": user["id"], "username": user["username"], "role": user["role"],
+        "domain_identity": "zbmp", "zbmp_granted": True, "cth_logged": True,
+        "scope": scope, "grant_created": False,
+        "authorization_basis": "CURRENT_SERVER_SCOPE_PERMISSION"}, None
 
 
 @app.route('/api/auth/domain-identity', methods=['GET'])
 def api_domain_identity():
-    """获取当前会话的域身份（cth/zbmp）。"""
-    from account.service import get_current_user
-    user = get_current_user()
-    if not user:
-        return jsonify({"ok": False, "domain_identity": None, "logged_in": False}), 401
-    zbmp_granted = request.cookies.get('zbmp_domain_grant') == '1'
-    return jsonify({
-        "ok": True, "logged_in": True, "user_id": user["id"],
-        "username": user["username"], "role": user["role"],
-        "domain_identity": "zbmp" if zbmp_granted else "cth",
-        "cth_logged": True, "zbmp_granted": zbmp_granted,
-    })
+    """Read current exact BMP scope permission; legacy cookies have no authority."""
+    result, failure = _legacy_domain_scope_status()
+    return failure if failure else jsonify(result)
+
+
+@app.route('/api/auth/zbmp-entry/status', methods=['GET'])
+def api_zbmp_entry_status():
+    return api_domain_identity()
+
+
+@app.route('/api/auth/zbmp-entry/unlock', methods=['POST'])
+def api_zbmp_entry_unlock():
+    """Compatibility entry checks existing permission without granting new access."""
+    result, failure = _legacy_domain_scope_status()
+    if failure:
+        return failure
+    resp = jsonify(result)
+    resp.delete_cookie('zbmp_domain_grant', path='/')
+    return resp
+
+
+@app.route('/api/auth/zbmp-entry/verify', methods=['POST'])
+def api_zbmp_entry_verify():
+    return api_zbmp_entry_unlock()
+
+
+@app.route('/api/auth/zbmp-entry/leave', methods=['POST'])
+def api_zbmp_entry_leave():
+    """Leave the view; account permissions are unchanged."""
+    from lumenis.auth.service import get_current_user
+    if not get_current_user(read_only=True):
+        return jsonify({"ok": False, "success": False, "code": "AUTH_REQUIRED"}), 401
+    resp = jsonify({"ok": True, "success": True, "navigation_domain": "cth",
+                    "permissions_changed": False})
+    resp.delete_cookie('zbmp_domain_grant', path='/')
+    return resp
+
 
 # ===== 系统启动入口 =====
 

@@ -25,6 +25,7 @@
   decision = guard.decide(lifecycle_action='backoff_interval', cpu_pct=70, ram_pct=80, queue_lag=150)
 """
 from typing import Dict, Optional
+import math
 
 # 四态
 NORMAL = "NORMAL"
@@ -64,10 +65,27 @@ class ResourceGuard:
 
     def decide(self, lifecycle_action: str = "schedule_normal",
                cpu_pct: Optional[float] = None, ram_pct: Optional[float] = None,
-               queue_lag: int = 0) -> Dict:
+               queue_lag: Optional[int] = None) -> Dict:
+        known_action = isinstance(lifecycle_action, str) and lifecycle_action in _ACTION_TABLE
         state, wscale, imult, qpol = _ACTION_TABLE.get(
-            lifecycle_action, (NORMAL, 1.0, 1.0, "drain"))
+            lifecycle_action if known_action else "freeze_and_recover")
+        def valid(value, maximum=None):
+            return (type(value) in (int, float) and value >= 0
+                    and (maximum is None or value <= maximum) and math.isfinite(value))
+        metrics_valid = (valid(cpu_pct, 100), valid(ram_pct, 100),
+                         type(queue_lag) is int and queue_lag >= 0)
+        observed = all(metrics_valid)
+        cpu_pct = cpu_pct if metrics_valid[0] else None
+        ram_pct = ram_pct if metrics_valid[1] else None
+        queue_lag = queue_lag if metrics_valid[2] else None
         reason = f"lifecycle={lifecycle_action}"
+
+        if not known_action:
+            reason += " + unknown_lifecycle"
+        if not observed:
+            reason += " + resource_observation_incomplete"
+            if state == HIGH_EFFICIENCY:
+                state = NORMAL
 
         exceeded = self._resources_exceeded(cpu_pct, ram_pct, queue_lag)
         if exceeded:
@@ -78,11 +96,12 @@ class ResourceGuard:
             else:
                 wscale = min(wscale, 0.3)
                 imult = max(imult, 3.0)
-                qpol = "backpressure" if qpol != "probe_only" else qpol
+                if qpol not in {"queue", "probe_only"}:
+                    qpol = "backpressure"
             reason += f" + resource_guard({exceeded})"
 
         # HIGH-EFFICIENCY：资源充足才允许接近满载的更高并发，且有上限
-        if state == NORMAL:
+        if state == NORMAL and observed and known_action:
             state = HIGH_EFFICIENCY
             wscale = min(self.max_worker_scale, 1.1)
             reason += " -> high_efficiency"
@@ -96,11 +115,12 @@ class ResourceGuard:
             "queue_policy": qpol,
             "allow_new": qpol in ("drain", "backpressure"),
             "reason": reason,
+            "resource_observation_complete": observed,
         }
 
     def snapshot(self, lifecycle_action: str = "schedule_normal",
                  cpu_pct: Optional[float] = None, ram_pct: Optional[float] = None,
-                 queue_lag: int = 0) -> Dict:
+                 queue_lag: Optional[int] = None) -> Dict:
         d = self.decide(lifecycle_action, cpu_pct, ram_pct, queue_lag)
         return {
             "lifecycle_action": lifecycle_action,

@@ -30,7 +30,7 @@ def engine():
 
 
 def create_task(*, actor_ref, scope, permission_audit_ref, limit=30,
-                image_source_ref=None, business_question=None, source_ids=None, revision=None):
+                image_source_ref=None, business_question=None, source_ids=None, revision=None, research=None, request_id=None, reference=None):
     context = {
         "actor_ref": actor_ref, "scope": scope,
         "job_id": "brief-" + uuid.uuid4().hex,
@@ -38,8 +38,14 @@ def create_task(*, actor_ref, scope, permission_audit_ref, limit=30,
         "limit": limit, "image_source_ref": image_source_ref,
         "business_question": business_question,
         "source_ids": source_ids,
-        "revision": revision,
+        "revision": revision, "research": research, "reference": reference,
     }
+    if request_id is not None:
+        import json
+        binding = json.dumps({"actor_ref": actor_ref, "scope": scope, "request_id": request_id},
+                             sort_keys=True, separators=(",", ":"))
+        context["job_id"] = "brief-" + uuid.uuid5(uuid.NAMESPACE_URL, binding).hex
+        context["request_id"] = request_id
     return engine().create_report_task(context)
 
 
@@ -73,12 +79,23 @@ def _worker_alive(task):
         raise RuntimeError("SOURCE_BRIEF_WORKER_IDENTITY_UNAVAILABLE") from exc
 
 
-def status(task):
+def status(task, *, actor=None):
     context = task["context"]
+    if context.get("reference") is not None:
+        from .source_brief_job import _read_research_reference
+        _read_research_reference(context["reference"], actor=actor, scope=_scope_material(**context["scope"]))
     state = task["status"]
     if state == "running" and not _worker_alive(task):
+        # A worker can commit success and leave while source/reference checks
+        # above run. A stale running snapshot is not proof of interruption.
+        current = scoped_task(task['task_id'], actor_ref=context['actor_ref'], scope=context['scope'])
+        if current['status'] != 'running':
+            return status(current, actor=actor)
         state = "interrupted"
     result = {
+        "expected_revision": engine().report_revision(task),
+        "reference": context.get("reference"), "research": context.get("research"), "business_question": context.get("business_question"),
+        "source_ids": context.get("source_ids"),
         "task_id": task["task_id"], "job_id": context["job_id"], "state": state,
         "can_resume": state in {"pending", "interrupted", "failed"},
         "error": task.get("error"), "result": None,
@@ -87,7 +104,7 @@ def status(task):
     if state == "succeeded":
         result["result"] = get_source_brief_job(
             context["job_id"], actor_id=context["actor_ref"],
-            expected_scope=_scope_material(**context["scope"]),
+            expected_scope=_scope_material(**context["scope"]), actor=actor,
         )
     return result
 
@@ -132,8 +149,10 @@ def dispatch(task, *, authorize, request_wrapper):
                         limit=context["limit"], image_source_ref=context["image_source_ref"],
                         image_actor=actor, business_question=context["business_question"],
                         source_ids=context.get("source_ids"),
-                        revision_reference=context.get("revision"),
-                        before_persist=authorize,
+                        revision_reference=context.get("revision"), research=context.get("research"),
+                        reference=context.get("reference"),
+                        before_persist=authorize, task_guard={"task_id": task_id,
+                            "parameters_json": engine().get_report_task(task_id)["parameters_json"]},
                     )
                 finally:
                     con.close()

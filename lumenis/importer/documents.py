@@ -266,7 +266,7 @@ def import_document(file_path: str, *, actor: Any, scope: Mapping,
                 "capture_mode": "assisted_file_import", **source_boundaries(provenance),
                 "autonomous_collection": False}
     if _owner_metadata is not None:
-        if not callable(_transaction_validator) or not isinstance(_owner_metadata, dict) or set(_owner_metadata) != {"entity_profile"}:
+        if not callable(_transaction_validator) or not isinstance(_owner_metadata, dict) or set(_owner_metadata) not in ({"entity_profile"}, {"research_origin"}):
             raise SavedWorkError("DOCUMENT_OWNER_METADATA_INVALID")
         metadata.update(json.loads(_json(_owner_metadata)))
     with get_repository().transaction() as con:
@@ -281,7 +281,7 @@ def import_document(file_path: str, *, actor: Any, scope: Mapping,
         row = cur.fetchone()
         if row is not None:
             evidence_id = dict(zip((column[0] for column in cur.description), row))["id"]
-            evidence = _verified_evidence(con, evidence_id, context)
+            evidence = _verified_evidence(con, evidence_id, context, actor)
             if evidence["raw_content"] != parsed.text or evidence["provenance"].get("source_fingerprint") != parsed.metadata["source_fingerprint"]:
                 raise SavedWorkError("DOCUMENT_REPLAY_CONFLICT")
             _source_bytes(con, evidence)
@@ -347,7 +347,7 @@ def _write_document(con, prepared, context, provenance, product, metadata, scope
         )
         con.execute("UPDATE lumenis_shared_artifacts SET evidence_id=? WHERE artifact_id=?",
                     (str(evidence_id), record["artifact_id"]))
-        evidence = _verified_evidence(con, evidence_id, context)
+        evidence = _verified_evidence(con, evidence_id, context, actor)
         _source_bytes(con, evidence)
         _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"], connection=con)
         result = _result(
@@ -375,7 +375,8 @@ def _persist_selected_rows(con, *, source_id, evidence_id, parsed, selected_rows
         locator = json.loads(_json(note.source_locator))
         row_payload = str(note.raw_chunk or note.content or "")
         row_sha256 = str(note.source_row_sha256 or "")
-        if not row_sha256 or not re.fullmatch(r"[0-9a-f]{64}", row_sha256):
+        if (not row_sha256 or not re.fullmatch(r"[0-9a-f]{64}", row_sha256)
+                or hashlib.sha256(row_payload.encode("utf-8")).hexdigest() != row_sha256):
             raise SavedWorkError("DOCUMENT_ROW_PROJECTION_INVALID")
         identity = json.dumps(locator, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         canonical_id = "CAN-DOCROW-" + hashlib.sha256(
@@ -399,6 +400,14 @@ def _persist_selected_rows(con, *, source_id, evidence_id, parsed, selected_rows
             "analysis_status": "NOT_RUN",
             "analysis_code": "SOURCE_ROW_PROJECTION_NOT_ANALYZED",
         }
+        structured = getattr(note, "source_record", None)
+        if structured is not None:
+            if (_json(structured).decode("utf-8") != row_payload
+                    or structured.get("source_sha256") != parsed.metadata["source_fingerprint"]):
+                raise SavedWorkError("DOCUMENT_ROW_STRUCTURE_INVALID")
+            row_provenance["source_record"] = structured
+            row_provenance["source_fields"] = getattr(note, "source_fields", [])
+            row_provenance["parser_version"] = parsed.metadata.get("parser_version", "")
         record = canonical_data.CanonicalRecord(
             canonical_id=canonical_id,
             product_id=product, domain_id=context["domain_id"],
@@ -699,6 +708,71 @@ def reopen_imported_source(evidence_id: int, *, actor: Any, scope: Mapping) -> d
                       scope_status="UNASSIGNED", canonical_ref=None)
     return result
 
+def read_document_source_rows(source_ref, *, actor, scope, offset, limit,
+                              source_version, source_sha256):
+    """Bounded SH02 inspection of current authorized immutable original rows.
+
+    The route reference plus ART identity and original-byte hash pin a page set.
+    Re-parsing uses the existing bounded parser; no Canonical admission or write.
+    """
+    from .analyzer import extract_source_rows
+    if (type(offset) is not int or not 0 <= offset <= 100000
+            or type(limit) is not int or not 1 <= limit <= 100
+            or not isinstance(source_version, str) or not source_version
+            or not isinstance(source_sha256, str)
+            or re.fullmatch(r"[0-9a-f]{64}", source_sha256) is None):
+        raise ValueError("DOCUMENT_ROW_PAGE_INVALID")
+    if type(source_ref) is int:
+        material = reopen_imported_source(source_ref, actor=actor, scope=scope)
+        version, fingerprint = material["artifact_ref"], material["sha256"]
+        if version != source_version or fingerprint != source_sha256:
+            raise ValueError("DOCUMENT_SOURCE_VERSION_CHANGED")
+        # Collected sources have another producer/format contract, never guess.
+        context = authorize(actor, scope, action="read")
+        with get_repository().connection(read_only=True, wal=False) as con:
+            evidence = _verified_evidence(con, source_ref, context, actor)
+            _verify_imported_document_producer(evidence)
+            revision = evidence["version"]
+        with tempfile.TemporaryDirectory(prefix="lumenis-document-row-read-") as temporary:
+            path = Path(temporary) / ("source" + Path(material["filename"]).suffix)
+            path.write_bytes(material["content"])
+            parsed = parse_file(str(path))
+    else:
+        record, parsed = _read_private_document_material(source_ref, actor=actor, scope=scope,
+                                                        require_current=True)
+        version, fingerprint = record["source_artifact_ref"], record["source_fingerprint"]
+        revision = record["source_version"]
+        if version != source_version or fingerprint != source_sha256:
+            raise ValueError("DOCUMENT_SOURCE_VERSION_CHANGED")
+    if parsed.metadata.get("format") not in {"excel", "word", "pdf", "csv"}:
+        raise ValueError("DOCUMENT_TYPED_ROWS_UNAVAILABLE")
+    notes = extract_source_rows(parsed)
+    rows = []
+    for index, note in enumerate(notes[offset:offset + limit], start=offset):
+        raw = str(note.raw_chunk)
+        if hashlib.sha256(raw.encode()).hexdigest() != note.source_row_sha256:
+            raise ValueError("DOCUMENT_TYPED_ROW_HASH_MISMATCH")
+        rows.append({"index": index, "raw_chunk": raw, "source_locator": note.source_locator,
+                     "source_row_sha256": note.source_row_sha256,
+                     "source_record": note.source_record or {}, "source_fields": note.source_fields,
+                     "analysis_status": "NOT_RUN"})
+    # Revalidate current owner, rights and original bytes after parsing, before release.
+    if type(source_ref) is int:
+        current = reopen_imported_source(source_ref, actor=actor, scope=scope)
+        if current["artifact_ref"] != version or current["sha256"] != fingerprint:
+            raise ValueError("DOCUMENT_SOURCE_VERSION_CHANGED")
+    else:
+        current = read_private_document_source(source_ref, actor=actor, scope=scope)
+        if current["source_artifact_ref"] != version or current["source_fingerprint"] != fingerprint:
+            raise ValueError("DOCUMENT_SOURCE_VERSION_CHANGED")
+    return {"source_version": version, "source_version_kind": "immutable_artifact_ref",
+            "source_revision": revision, "source_sha256": fingerprint,
+            "format": parsed.metadata["format"], "parser_version": parsed.metadata.get("parser_version"),
+            "offset": offset, "limit": limit, "returned_count": len(rows),
+            "source_row_count": len(notes), "has_more": offset + len(rows) < len(notes),
+            "source_rows": rows, "analysis_status": "NOT_RUN", "fact_verified": False}
+
+
 def _result(con, source_id, evidence_id, parsed, scope, product, *, replayed,
             source_replayed=False,
             selected_indices=None, row_records=None, rows_inserted=0,
@@ -796,6 +870,8 @@ def save_private_document(file_path, *, actor, scope, request_id, title=None,
             "allowed_use": "private_custody_and_analysis", "external_redistribution": False,
             "canonical_admitted": False, "training_eligible": False},
         "parsed_source": {"text": parsed.text, "tables": parsed.tables,
+                          "source_tables": getattr(parsed, "source_tables", []),
+                          "source_blocks": getattr(parsed, "source_blocks", []),
                           "locators": parsed.locators, "metadata": parsed.metadata},
         "basic_analysis": analysis,
     }
@@ -1082,3 +1158,168 @@ def _verify_browser_snapshot_source(con, evidence, raw, record):
             raise ValueError('parent binding')
     except (ValueError, TypeError, KeyError, UnicodeError) as exc:
         raise SavedWorkError('BROWSER_SOURCE_INTEGRITY_FAILED') from exc
+
+
+def _read_private_document_material(artifact_id, *, actor, scope, connection=None, require_current=True):
+    """Read verified private custody bytes, never promote user text to fact.
+
+    A user can edit SavedWork payloads. Reparse the checked original attachment
+    rather than trusting a caller-supplied parsed_source or license assertion.
+    """
+    import tempfile
+    from pathlib import Path
+    from lumenis.importer.parser import parse_file
+    from lumenis.shared.reporting import saved_work
+    if scope != {"scope_kind": "shared_workspace", "version": 1}:
+        raise ValueError("DOCUMENT_PRIVATE_SCOPE_REQUIRED")
+    item = saved_work.read_committed_work(artifact_id, actor=actor, scope=scope,
+                                         connection=connection)
+    from contextlib import nullcontext
+    reader = saved_work.get_repository().connection(read_only=True, wal=False) if connection is None else nullcontext(connection)
+    with reader as con:
+        context = saved_work.authorize_saved_work(actor, scope, action='read', connection=con)
+        versions = saved_work._versions(con, item['document']['work_id'], context, actor)
+        if require_current and (not versions or versions[-1]['artifact']['artifact_id'] != artifact_id):
+            raise PermissionError('DOCUMENT_SOURCE_VERSION_CHANGED')
+    material = item["document"]["payload"].get("source_material")
+    if not isinstance(material, dict):
+        raise ValueError("DOCUMENT_ORIGINAL_REQUIRED")
+    name = material.get("attachment_name")
+    attachment = saved_work.download_attachment(artifact_id, name=name, actor=actor, scope=scope)
+    if (material.get("sha256") != attachment["sha256"]
+            or material.get("size_bytes") != len(attachment["content"])):
+        raise ValueError("DOCUMENT_ORIGINAL_CHANGED")
+    suffix = Path(name).suffix
+    with tempfile.TemporaryDirectory(prefix="lumenis-private-reparse-") as temporary:
+        path = Path(temporary) / ("source" + suffix)
+        path.write_bytes(attachment["content"])
+        parsed = parse_file(str(path))
+    saved_work.authorize_saved_work(actor, scope, action="read", connection=connection)
+    ref = "saved_work:" + artifact_id + ":" + item["artifact"]["sha256"]
+    record = {"source_id": artifact_id, "source_artifact_ref": artifact_id,
+            "source_artifact_sha256": item["artifact"]["sha256"],
+            "source_version": item["document"]["version"], "evidence_id": ref,
+            "scope_evidence_ref": ref, "canonical_id": None,
+            "source_type": "private_document", "title": item["document"]["title"],
+            "source_url": None, "published_at": None,
+            "captured_at": item["document"].get("created_at"),
+            "content_hash": hashlib.sha256(parsed.text.encode()).hexdigest(),
+            "source_fingerprint": attachment["sha256"],
+            "content_excerpt": parsed.text[:1200], "character_count": len(parsed.text),
+            "table_count": len(parsed.tables), "truncated": len(parsed.text) > 1200,
+            "rights": "UNKNOWN", "allowed_use": "private_custody_and_analysis",
+            "external_redistribution": False, "training_eligible": False,
+            "claim_type": "SOURCE_STATEMENT", "fact_verified": False,
+            "scope": dict(scope)}
+
+    return record, parsed
+
+
+def adopt_shared_research_source(*, job_id, source_id, actor, target_scope, provenance,
+                                 mode='prepare'):
+    """Explicit same-actor custody-to-domain import using the existing importer.
+
+    The caller must declare lawful intended use and obtain the normal exact
+    DATA_IMPORT approval. Private custody does not assert a redistribution right.
+    The signed origin remains a live dependency on the private report and bytes.
+    """
+    from lumenis.shared.reporting import saved_work, source_brief_job as reports
+    if mode not in {'prepare', 'import'}:
+        raise ValueError('RESEARCH_ADOPTION_MODE_INVALID')
+    context = authorize(actor, target_scope, action='write')
+    if context.get('global_scope') or not (context.get('subject_id') or context.get('brand_focus_id')):
+        raise ValueError('RESEARCH_ADOPTION_FOCUSED_SCOPE_REQUIRED')
+    if (not isinstance(provenance, Mapping) or provenance.get('rights') != 'owner-approved'
+            or not isinstance(provenance.get('rights_statement'), str)
+            or not provenance['rights_statement'].strip()):
+        raise ValueError('RESEARCH_ADOPTION_EXPLICIT_RIGHTS_REQUIRED')
+    identity = saved_work.authorize_saved_work(actor, reports.SHARED_SCOPE, action='read')
+    actor_id = identity.get('principal_ref') or f"actor:{identity.get('actor_id')}"
+    report = reports.get_source_brief_job(job_id, actor=actor, actor_id=actor_id,
+                                         expected_scope=reports.SHARED_SCOPE)
+    if report.get('hypothesis_review_state') == 'requires_reassessment':
+        raise PermissionError('SOURCE_BRIEF_RESEARCH_REASSESSMENT_REQUIRED')
+    matches = [row for row in report['source_brief']['records'] if row['source_id'] == source_id]
+    if len(matches) != 1:
+        raise ValueError('RESEARCH_ADOPTION_SOURCE_NOT_BOUND')
+    source = matches[0]
+    item = saved_work.read_committed_work(source_id, actor=actor, scope=reports.SHARED_SCOPE)
+    name = item['document']['payload']['source_material']['attachment_name']
+    attachment = saved_work.download_attachment(source_id, name=name, actor=actor, scope=reports.SHARED_SCOPE)
+    origin = {'schema': 'shared-research-adoption/v1', 'job_id': job_id, 'actor_id': actor_id,
+              'report_hash': report['artifact_outcome']['artifact_hash'], 'source_id': source_id,
+              'source_artifact_sha256': source['source_artifact_sha256'],
+              'source_fingerprint': attachment['sha256'], 'scope': reports.SHARED_SCOPE}
+    if report.get('hypothesis_review') is not None:
+        origin['hypothesis_review'] = report['hypothesis_review']
+    declaration = json.loads(_json(dict(provenance)))
+    # Origin is determined from verified owner bytes, never a client-provided URL.
+    if declaration.get('source_url') is not None or 'source_origin' in declaration:
+        raise ValueError('RESEARCH_ADOPTION_ORIGIN_IS_SERVER_BOUND')
+    declaration['source_origin'] = {'kind': 'approved-file', 'ref': 'research_' + _digest(origin)}
+    def current(con):
+        validate_shared_research_origin(origin, actor=actor, connection=con)
+    with tempfile.TemporaryDirectory(prefix='lumenis-research-adoption-') as temporary:
+        file_path = Path(temporary) / ('source' + Path(name).suffix)
+        file_path.write_bytes(attachment['content'])
+        resource = document_import_resource(str(file_path), actor=actor, scope=target_scope,
+                                            provenance=declaration)
+        if mode == 'prepare':
+            return {'state': 'awaiting_exact_import_approval', 'resource': resource,
+                    'operation': 'data_import', 'research_origin': origin,
+                    'rights': 'USER_DECLARED_OWNER_APPROVED', 'fact_verified': False}
+        result = import_document(str(file_path), actor=actor, scope=target_scope,
+            provenance=declaration, _transaction_validator=current, _owner_metadata={'research_origin': origin})
+        return {**result, 'research_origin': origin, 'fact_verified': False}
+
+
+def validate_shared_research_origin(origin, *, actor, connection=None):
+    from lumenis.shared.reporting import source_brief_job as reports
+    if (not isinstance(origin, dict) or origin.get('schema') != 'shared-research-adoption/v1'
+            or origin.get('scope') != reports.SHARED_SCOPE):
+        raise PermissionError('RESEARCH_ADOPTION_ORIGIN_INVALID')
+    report = reports.get_source_brief_job(origin['job_id'], actor=actor, actor_id=origin['actor_id'],
+        expected_scope=reports.SHARED_SCOPE, connection=connection)
+    if (report.get('hypothesis_review_state') == 'requires_reassessment'
+            or report.get('hypothesis_review') != origin.get('hypothesis_review')):
+        raise PermissionError('RESEARCH_ADOPTION_REVIEW_CHANGED')
+    matches = [row for row in report['source_brief']['records'] if row['source_id'] == origin['source_id']]
+    if (report['artifact_outcome']['artifact_hash'] != origin['report_hash'] or len(matches) != 1
+            or matches[0]['source_artifact_sha256'] != origin['source_artifact_sha256']
+            or matches[0]['source_fingerprint'] != origin['source_fingerprint']):
+        raise PermissionError('RESEARCH_ADOPTION_ORIGIN_CHANGED')
+    return origin
+
+
+def read_private_document_source(artifact_id, *, actor, scope, connection=None, require_current=True):
+    record, _parsed = _read_private_document_material(artifact_id, actor=actor, scope=scope,
+        connection=connection, require_current=require_current)
+    return record
+
+
+def read_private_document_typed_source(artifact_id, *, actor, scope, connection=None):
+    """Derive complete typed rows only from current authorized original bytes."""
+    from .analyzer import extract_source_rows
+    record, parsed = _read_private_document_material(artifact_id, actor=actor, scope=scope,
+                                                    connection=connection, require_current=True)
+    rows = []
+    typed_rows = extract_source_rows(parsed) if parsed.metadata.get("format") in {"excel", "word", "pdf", "csv"} else []
+    for index, note in enumerate(typed_rows):
+        raw = str(note.raw_chunk)
+        if hashlib.sha256(raw.encode()).hexdigest() != note.source_row_sha256:
+            raise ValueError("DOCUMENT_TYPED_ROW_HASH_MISMATCH")
+        rows.append({"index": index, "title": note.title, "content": note.content,
+                     "author": note.author, "publish_date": note.publish_date,
+                     "raw_chunk": raw, "source_locator": note.source_locator,
+                     "source_row_sha256": note.source_row_sha256,
+                     "source_record": note.source_record or {},
+                     "source_fields": note.source_fields, "analysis_status": "NOT_RUN"})
+    return {"source_record": record, "evidence_ref": record["evidence_id"],
+            "title": record["title"], "source_name": parsed.metadata.get("source_name", ""),
+            "format": parsed.metadata.get("format", "UNKNOWN"),
+            "published_at": record["published_at"], "captured_at": record["captured_at"],
+            "source_fingerprint": record["source_fingerprint"],
+            "content_sha256": record["content_hash"], "source_rows_sha256": _digest(rows),
+            "source_row_count": len(rows), "source_rows": rows,
+            "rights": record["rights"], "intended_use": record["allowed_use"],
+            "analysis_status": "NOT_RUN"}

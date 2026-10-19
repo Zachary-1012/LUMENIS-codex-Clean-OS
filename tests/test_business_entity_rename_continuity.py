@@ -48,8 +48,14 @@ def test_prepare_lost_ack_retry_after_rename_keeps_work_identity(owners):
                    "source_job_id": original["source_report"]["job_id"], "kind": original["kind"],
                    "question": "A different request cannot replace this work.", "options": []}
     refused = ws["api"].post(BUSINESS, headers=ws["headers"], json=conflicting)
-    assert refused.status_code == 400, refused.get_json()
+    # An existing idempotency key with changed intent is the API's explicit
+    # 409 conflict contract; a new malformed request still receives 400.
+    assert refused.status_code == 409, refused.get_json()
     assert refused.get_json()["code"] == "BUSINESS_WORK_SUBMISSION_CONFLICT"
+    invalid = ws["api"].post(BUSINESS, headers=ws["headers"], json={
+        **conflicting, "submission_id": "new-malformed-prepare"})
+    assert invalid.status_code == 400, invalid.get_json()
+    assert invalid.get_json()["code"] == "BUSINESS_WORK_COMPARABLE_OPTIONS_REQUIRED"
     with sqlite3.connect(ws["db"]) as connection:
         assert connection.execute("SELECT COUNT(*) FROM app_evidence_records WHERE feature_id='CTH_BMP_DECISION_WORK'").fetchone()[0] == 1
 
@@ -100,9 +106,11 @@ def test_concurrent_prepare_across_display_labels_records_one_request(business):
             return {"actor_id": ws["actor_ref"], "scope": scope, "operation": operation,
                     "permission_audit_ref": "isolated-concurrent-scope", "operation_audit_ref": "isolated-concurrent-operation"}
         barrier.wait(timeout=10)
-        return ws["service"].prepare(actor_ref=ws["actor_ref"], scope=scope, authorize=authorize,
-            submission_id="concurrent-rename-prepare", source_job_id=ws["current"]["source_report"]["job_id"],
-            kind=ws["current"]["kind"], question=ws["current"]["question"], options=ws["options"])
+        with ws["app"].test_request_context("/", headers={"Host": "localhost"},
+                environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+            return ws["service"].prepare(actor_ref=ws["actor_ref"], scope=scope, authorize=authorize,
+                submission_id="concurrent-rename-prepare", source_job_id=ws["current"]["source_report"]["job_id"],
+                kind=ws["current"]["kind"], question=ws["current"]["question"], options=ws["options"])
     with ThreadPoolExecutor(max_workers=2) as executor:
         futures = [executor.submit(prepare, label) for label in ("Original isolated label", "Renamed isolated label")]
         first, second = [future.result(timeout=30) for future in futures]

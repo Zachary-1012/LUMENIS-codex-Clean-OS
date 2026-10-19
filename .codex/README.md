@@ -322,3 +322,17 @@ the PowerShell extension can bind F8 to run a selection. Inspect Problems direct
 instead of executing a script. Real editor acceptance and exact private receipts
 are indexed in the existing round-15 bounded delivery record; they are development
 tool evidence, not product Job closure or a total Codex-token savings claim.
+
+## 2026-10-18 source-adoption continuation
+
+The authorized complete research-capability absorption continues in existing
+SourceBrief/Task/Shared scope, BusinessDecisionWorkflow and Learning/Gateway
+owners. Read `00-GOVERNANCE/LUMENIS-SOURCE-ADOPTION-V1.json` for the pinned source
+and exhaustive 72-file/51-intent/33-capability/36-reference mappings, then the
+sole complete plan §1.3 and original screen specifications. The attachment is
+local provenance, not a second architecture, runtime or exchange protocol.
+The four-repository exchange remains 1.1.0 with its unchanged fingerprint;
+external repositories were not modified. Backend bounded implementation and real-session HTTP are verified in owner deliveries; final merged gates remain pending;
+frontend builds and four-surface acceptance remain NOT_VERIFIED. Reconcile each
+owner's exact delivered source/tests before changing these states. Do not lose
+any original 195G/R/J/U, original creation, interaction or interface-AIGC scope.

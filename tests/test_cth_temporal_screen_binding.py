@@ -65,7 +65,10 @@ def test_temporal_screen_preserves_scope_missing_days_and_genuine_zero(route, mo
     body = response.get_json()
     temporal = body['temporal_metrics']
     assert temporal['binding'] == current
-    assert len(calls) == 3  # Route, before read, after read.
+    assert len(calls) == 4  # Route, before/after source read, after model analysis.
+    assert temporal["alert_evaluation"]["context"]["binding"] == current
+    assert temporal["alert_evaluation"]["state"] == "CONFIGURATION_REQUIRED"
+    assert temporal["alert_evaluation"]["alerts"] == []
     assert temporal['days'][-1]['total']['value'] == 1
     assert temporal['days'][-1]['negative']['value'] == 0
     assert temporal['days'][0]['total']['value'] is None

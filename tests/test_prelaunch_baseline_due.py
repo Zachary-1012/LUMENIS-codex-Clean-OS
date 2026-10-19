@@ -597,6 +597,8 @@ class PrelaunchBaselineDueTests(unittest.TestCase):
                 patch.object(database, "main_db_path", lambda: db_path),
                 patch.object(scheduling, "get_planner", lambda: planner),
                 patch.object(secondary_collection, "collect_search", collect),
+                patch.object(secondary_collection, "recover_prelaunch_pending_sources", lambda: {"status": "COMPLETED"}),
+                patch.object(secondary_collection, "process_prelaunch_keyword_backlog", lambda: {"status": "COMPLETED"}),
             ):
                 result = entry.run_once()
 

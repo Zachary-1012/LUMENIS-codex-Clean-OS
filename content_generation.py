@@ -767,7 +767,17 @@ def authorize_content_root_request(*, strict=False):
     screen_read = (request.method == "GET" and request.endpoint == "experience_runtime.screen_viewmodel"
                    and request.url_rule is not None and request.url_rule.rule == "/api/experience/screen/<screen_id>"
                    and (request.view_args or {}).get("screen_id") in {"SH-01", "SH-05"})
-    if not screen_read and (request.blueprint != "content_generation" or request.url_rule is None
+    # Delegate only this registered read route; all identity/source checks remain below.
+    import re
+    detail_read = (request.method == "GET"
+                   and request.endpoint == "experience_runtime.content_evidence_detail"
+                   and request.url_rule is not None
+                   and request.url_rule.rule == "/api/experience/content/evidence/<evidence_id>"
+                   and re.fullmatch(r"CGE-[A-Za-z0-9_-]{1,96}",
+                                    str((request.view_args or {}).get("evidence_id", ""))) is not None
+                   and request.path == "/api/experience/content/evidence/" +
+                       str((request.view_args or {}).get("evidence_id", "")))
+    if not (screen_read or detail_read) and (request.blueprint != "content_generation" or request.url_rule is None
             or request.endpoint not in {"content_generation." + name for name in CONTENT_ENDPOINTS}
             or request.url_rule.rule != CONTENT_ENDPOINTS[request.endpoint.split(".")[-1]][0]
             or request.method not in CONTENT_ENDPOINTS[request.endpoint.split(".")[-1]][1]):

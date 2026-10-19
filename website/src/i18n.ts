@@ -5,11 +5,11 @@ export const copy = {
   "zh-CN": {
     lang: "zh-CN",
     languageName: "简体中文",
-    productName: "序境 LUMENIS",
+    productName: "寰意 OEVIRA",
     metadata: {
-      title: "序境 LUMENIS｜让每条线索都能回到来处",
+      title: "寰意 OEVIRA｜An Open Space for Thought and Creation.",
       description:
-        "认识序境 LUMENIS：面向商业运营与品牌市场工作，连接有来源的资料、业务判断、内容计划与复盘。",
+        "认识寰意 OEVIRA：面向商业运营与品牌市场工作，连接有来源的资料、业务判断、内容计划与复盘。",
     },
     navigation: [
       { href: "#structure", label: "产品结构" },
@@ -22,10 +22,10 @@ export const copy = {
     headerNote: "产品探索",
     skipLabel: "跳到主要内容",
     hero: {
-      eyebrow: "一条线索，不止一个终点",
+      eyebrow: "An Open Space for Thought and Creation.",
       title: "沿着变化，看见来处与去向。",
       description:
-        "面向商业运营与品牌市场团队，把有来源的资料、待核实的问题、业务判断和交付物放在同一条工作脉络里。",
+        "从使用产品的人出发，为商业运营、品牌市场与独立研究创作建立可靠的工作空间。服务专业工作的需要，也希望逐步回应大众的个人喜好；面向大众的体验是发展愿景，不代表已上线能力。",
       primary: "进入工作空间",
       primaryUnavailable: "工作空间入口尚未配置",
       secondary: "选择一个业务问题",
@@ -244,7 +244,7 @@ export const copy = {
       workspaceStateId: "workspace-state",
     },
     footer: {
-      product: "序境 LUMENIS",
+      product: "寰意 OEVIRA",
       note: "公开介绍页面。示意内容为虚构；本页面不持有或改变产品事实。",
       navigationLabel: "页脚导航",
     },
@@ -255,11 +255,11 @@ export const copy = {
   en: {
     lang: "en",
     languageName: "English",
-    productName: "LUMENIS",
+    productName: "OEVIRA",
     metadata: {
-      title: "LUMENIS — Follow a trace, return to its source",
+      title: "OEVIRA | An Open Space for Thought and Creation.",
       description:
-        "Meet LUMENIS: a product for commercial operations and brand-market work, connecting sourced material, decisions, content plans, and review.",
+        "Meet OEVIRA: a product for commercial operations and brand-market work, connecting sourced material, decisions, content plans, and review.",
     },
     navigation: [
       { href: "#structure", label: "Product structure" },
@@ -272,10 +272,10 @@ export const copy = {
     headerNote: "PRODUCT EXPLORATION",
     skipLabel: "Skip to main content",
     hero: {
-      eyebrow: "One trace, more than one destination",
+      eyebrow: "An Open Space for Thought and Creation.",
       title: "Follow change. See where it came from and where it leads.",
       description:
-        "For commercial operations and brand-market teams: keep sourced material, open questions, business decisions, and deliverables in one continuous line of work.",
+        "Built around the people using it, OEVIRA is developing a trusted space for commercial operations, brand-market work, and independent research and creation. Supporting personal interests alongside professional needs is our direction, not a claim that future public-facing features are already available.",
       primary: "Open the workspace",
       primaryUnavailable: "Workspace destination not configured",
       secondary: "Choose a business question",
@@ -495,7 +495,7 @@ export const copy = {
       workspaceStateId: "workspace-state",
     },
     footer: {
-      product: "LUMENIS",
+      product: "OEVIRA",
       note: "Public product introduction. The example is fictional; this page does not own or change product truth.",
       navigationLabel: "Footer navigation",
     },
@@ -506,11 +506,11 @@ export const copy = {
   ko: {
     lang: "ko",
     languageName: "한국어",
-    productName: "서경 LUMENIS",
+    productName: "OEVIRA",
     metadata: {
-      title: "서경 LUMENIS | 흔적을 따라가고, 출발점으로 돌아오다",
+      title: "OEVIRA | An Open Space for Thought and Creation.",
       description:
-        "서경 LUMENIS를 소개합니다. 상업 운영과 브랜드·시장 업무에서 출처가 있는 자료, 판단, 콘텐츠 계획과 회고를 연결합니다.",
+        "OEVIRA를 소개합니다. 상업 운영과 브랜드·시장 업무에서 출처가 있는 자료, 판단, 콘텐츠 계획과 회고를 연결합니다.",
     },
     navigation: [
       { href: "#structure", label: "제품 구조" },
@@ -523,10 +523,10 @@ export const copy = {
     headerNote: "제품 탐색",
     skipLabel: "본문으로 건너뛰기",
     hero: {
-      eyebrow: "하나의 흔적, 여러 갈래의 맥락",
+      eyebrow: "An Open Space for Thought and Creation.",
       title: "변화를 따라가며, 시작과 다음을 봅니다.",
       description:
-        "상업 운영과 브랜드·시장 팀을 위해 출처가 있는 자료, 확인할 질문, 업무 판단과 결과물을 하나의 작업 흐름으로 연결합니다.",
+        "사용하는 사람에서 출발합니다. OEVIRA는 상업 운영, 브랜드·시장 업무와 독립적인 연구·창작을 위한 신뢰할 수 있는 공간을 만들어 갑니다. 전문 업무와 개인의 관심을 함께 지원하는 것은 발전 방향이며, 아직 구현되지 않은 대중용 기능이 이미 제공된다는 뜻은 아닙니다.",
       primary: "작업 공간 열기",
       primaryUnavailable: "작업 공간 주소가 설정되지 않았습니다",
       secondary: "업무 질문 선택하기",
@@ -746,7 +746,7 @@ export const copy = {
       workspaceStateId: "workspace-state",
     },
     footer: {
-      product: "서경 LUMENIS",
+      product: "OEVIRA",
       note: "공개 제품 소개 페이지입니다. 예시는 허구이며, 이 페이지는 제품의 사실을 소유하거나 변경하지 않습니다.",
       navigationLabel: "바닥글 탐색",
     },

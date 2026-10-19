@@ -1,0 +1,63 @@
+[
+  {
+    "file": "ggi/intelligence/data/data_markets.py",
+    "source_urls": [
+      "https://data.worldbank.org/country/china",
+      "https://data.worldbank.org/country/japan",
+      "https://data.worldbank.org/country/korea-republic-of",
+      "https://data.worldbank.org/country/united-states",
+      "https://data.worldbank.org/region/east-asia-pacific",
+      "https://ec.europa.eu/eurostat",
+      "https://www.ons.gov.uk"
+    ],
+    "reuse_license": "NOT_DECLARED_IN_SOURCE",
+    "fact_status": "historical_reference_requires_reverification",
+    "allowed_treatment": "retain provenance and date; no automatic Canonical promotion"
+  },
+  {
+    "file": "ggi/intelligence/data/data_legal_rules.py",
+    "source_urls": [
+      "http://www.pbc.gov.cn/goutongjiaoliu/113456/113469/3944251/index.html",
+      "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
+      "https://gdpr-info.eu/art-6-gdpr/",
+      "https://www.cac.gov.cn/2022-12/11/c_1672221949354811.htm",
+      "https://www.ftc.gov/business-guidance/resources/ftcs-endorsement-guides-what-people-are-asking",
+      "https://www.legislation.gov.uk/ukpga/2018/12/contents",
+      "https://www.npc.gov.cn/npc/c2/c30834/201904/t20190424_295607.html",
+      "https://www.npc.gov.cn/npc/c2/c30834/202104/t20210429_311845.html",
+      "https://www.npc.gov.cn/npc/c2/c30834/202108/t20210820_313088.html",
+      "https://www.ohchr.org/en/instruments-mechanisms/conviction-rights-child",
+      "https://www.wipo.int/treaties/en/ip/berne/"
+    ],
+    "reuse_license": "NOT_DECLARED_IN_SOURCE",
+    "fact_status": "historical_reference_requires_reverification",
+    "allowed_treatment": "retain provenance and date; no automatic Canonical promotion"
+  },
+  {
+    "file": "ggi/intelligence/data/data_platforms.py",
+    "source_urls": [
+      "https://developer.open-douyin.com",
+      "https://developer.x.com/en/docs",
+      "https://developers.facebook.com/docs/instagram",
+      "https://developers.google.com/youtube/v3",
+      "https://developers.tiktok.com",
+      "https://developers.weixin.qq.com/doc/channels.html",
+      "https://docs.github.com/en/rest",
+      "https://learn.microsoft.com/en-us/linkedin",
+      "https://open.xiaohongshu.com",
+      "https://openhome.bilibili.com",
+      "https://www.reddit.com/dev/api",
+      "https://www.zhihu.com/openapi"
+    ],
+    "reuse_license": "NOT_DECLARED_IN_SOURCE",
+    "fact_status": "historical_reference_requires_reverification",
+    "allowed_treatment": "retain provenance and date; no automatic Canonical promotion"
+  },
+  {
+    "file": "ggi/intelligence/data/data_scenarios.py",
+    "source_urls": [],
+    "reuse_license": "NOT_DECLARED_IN_SOURCE",
+    "fact_status": "historical_reference_requires_reverification",
+    "allowed_treatment": "retain provenance and date; no automatic Canonical promotion"
+  }
+]

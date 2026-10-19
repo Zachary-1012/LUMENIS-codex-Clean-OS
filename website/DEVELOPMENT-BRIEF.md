@@ -1,5 +1,8 @@
 # Public Website development brief
 
+Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canonical naming authority](../00-GOVERNANCE/CANONICAL-NAMING-AND-TWIN-SYNC.md) governs this rename. Technical identifiers, package names, environment variables, commands and source paths retain their compatibility spelling; dated records below preserve their original names and evidence.
+For current public copy, use OEVIRA as the English and Korean product mark and 寰意 as the Chinese brand. Historical `서경` / `LUMENIS` wording below is superseded for display naming only; dated research, approvals, implementation limits and verification remain historical evidence. The existing product positioning document retains the two-audience vision without treating planned capabilities as available.
+
 Status: retained Website implementation and research evidence. Current execution
 comes only from `../AGENTS.md`, the approved Product Architecture and Experience
 Constitution. Historical bases, file reservations and design approvals below

@@ -1,0 +1,19 @@
+{
+  "status": "REVIEWED_GUARD_FINAL_SOURCE_REPLAY_AUTHORIZED",
+  "python": "$WORKSPACE/python_compat_fix_20261018/testdeps/venv311/bin/python",
+  "unshare": "/usr/bin/unshare",
+  "media": [
+    "/usr/bin/ffmpeg",
+    "/usr/bin/ffprobe"
+  ],
+  "site_packages": "$WORKSPACE/python_compat_fix_20261018/testdeps/venv311/lib/python3.11/site-packages",
+  "executable_sha256": {
+    "$WORKSPACE/python_compat_fix_20261018/testdeps/venv311/bin/python": "a2886d92ebf115fde6eb05569bda5ce2d09113adad3264a267b29f7dbff2c076",
+    "/usr/bin/unshare": "e7d3961bd874d5a4fe531efe6feb61b358b8000bd8c5fe91c5f1bdd9af81a002",
+    "/usr/bin/ffmpeg": "e8a8d46f5225f3062cec7c07fb145d58ae73c603cb740dcd5bad34bfb54e455a",
+    "/usr/bin/ffprobe": "cefc5f81c0b18429cdbf8fa5a89e1e9c759235e10f93f9b329ff1b2fdff26f46"
+  },
+  "test_sha256": "4ea5b81fb7ee8dfccd7e232f57b01a0f3eca7eaa368d4f332a1c4320d19ce4e3",
+  "code_sha256": "fa4484612393fe9cb4e9ceb2992540880cff72a1b5ef8c9c31296c03a0d9867f",
+  "entry_sha256": "fdd969f6671f125eba2a851d5bc0a232cbb7420f03b4301efaa8ea9851070c5d"
+}

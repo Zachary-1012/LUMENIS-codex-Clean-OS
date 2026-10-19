@@ -509,6 +509,28 @@
           "after_sha256": "46e3b40844508b40accc56e70d22e409031da55882cb857e25f94bc3548fa198"
         }
       ]
+    },
+    {
+      "id": "python-runtime-compatibility",
+      "patch_sha256": "119bb2b8663c86ce203a9878ea9fc30b090ca426968d4f3fe1f8cc920a601543",
+      "hash_scope": "Exact three-file package; no production behavior source or CI workflow change",
+      "files": [
+        {
+          "path": "requirements.txt",
+          "before_sha256": "5ab175044f0a831998e2e4b921b1f77f2a9723e2860db1ff037293c4c41ba6b2",
+          "after_sha256": "b3fbee13c38241296eabc78044fb5d09e9e6543681aeff4a064850e81da76e61"
+        },
+        {
+          "path": "tests/test_rectification_truth_chain_20261010.py",
+          "before_sha256": "50e35ebfaf8b7a2fef031c086fdbb9f6ed8b2371a03b906ddf7c556298c8c296",
+          "after_sha256": "e52743a341a00d14706e16e19e88b0a0fd9cbe07849143e39c2804d9d3662c94"
+        },
+        {
+          "path": "tests/test_frozen_native_capture_intake.py",
+          "before_sha256": "24523ca87700cabace40734e715332be0e50b8e07cffda513ac8670b462d20bf",
+          "after_sha256": "93296680252cd6c8f789e263f345c5288cf085e6306989921e33f037d5e58ce3"
+        }
+      ]
     }
   ],
   "final_integrated_source_manifest": {

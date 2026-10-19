@@ -1,4 +1,8 @@
-# 序境 · LUMENIS
+# 寰意 · OEVIRA
+
+**An Open Space for Thought and Creation.**
+
+品牌域名：oevira.com。此源码更名不代表域名已部署或各端已安装新版本。
 
 商业运营、品牌市场、独立研究与内容制作的一体化工作平台。
 An integrated workspace for commerce operations, brand and market work, independent research, and content production.
@@ -7,9 +11,11 @@ An integrated workspace for commerce operations, brand and market work, independ
 
 ## 产品定位 / Product purpose
 
-序境将真实资料、分析、业务判断和可编辑成果连接起来。CTH 与 BMP 是两个业务领域；共享能力中的研究、提案、视频和播客可以独立使用，也可以与业务工作联动。SYSTEM 提供共同的采集、浏览器、权限、数据、调度和恢复基础。
+从使用者出发：为品牌方、商业运营者和代理机构连接可靠资料、判断、可修改成果与实际复盘；也希望服务普通人对品牌、商业空间和公司的个人关注。大众体验是发展愿景，不冒称已上线能力。独立研究、一份文稿、一段影像或一期播客都可从想法开始，不以先完成商业分析为前提。完整品牌陈述见[现行定位](00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md)。
 
-LUMENIS connects real materials, analysis, business decisions, and editable deliverables. CTH and BMP are business domains. Shared research, proposals, video, and podcasts can be used independently or connected to business work. SYSTEM provides acquisition, browsing, permissions, data, scheduling, and recovery.
+寰意将真实资料、分析、业务判断和可编辑成果连接起来。CTH 与 BMP 是两个业务领域；共享能力中的研究、提案、视频和播客可以独立使用，也可以与业务工作联动。SYSTEM 提供共同的采集、浏览器、权限、数据、调度和恢复基础。
+
+OEVIRA connects real materials, analysis, business decisions, and editable deliverables. CTH and BMP are business domains. Shared research, proposals, video, and podcasts can be used independently or connected to business work. SYSTEM provides acquisition, browsing, permissions, data, scheduling, and recovery.
 
 CTH 围绕商业主体工作，BMP 围绕品牌与市场工作，Shared Capability 提供独立、可复用的研究与制作能力。
 CTH is Subject-first, BMP is Brand/Market-first, and Shared Capability provides independent, reusable research and production.
@@ -22,9 +28,9 @@ AI 贯穿适用的工作环节，辅助理解、分析、建议和创作；正�
 
 AI assists understanding, analysis, recommendations, and creation across applicable workflows. Ordinary business operations, deterministic analysis, manual editing, saving, and recovery do not require a model, external AI API, or GPU. Source facts, computed results, AI suggestions, and human decisions retain distinct provenance.
 
-产品 AI 经唯一的 SYSTEM AI Gateway 调用。序境自有模型是产品自有能力目标；当前唯一获准的外部模型接口为 Groq，且只能经该 Gateway、由用户明确选择并通过适用权限调用。其他退役路线不调用、不探测、不自动回退。AI 不可用时，只有依赖 AI 的增强动作不可用；正常业务、确定性分析、人工编辑、保存与恢复继续工作。
+产品 AI 经唯一的 SYSTEM AI Gateway 调用。寰意自有模型是产品自有能力目标；当前唯一获准的外部模型接口为 Groq，且只能经该 Gateway、由用户明确选择并通过适用权限调用。其他退役路线不调用、不探测、不自动回退。AI 不可用时，只有依赖 AI 的增强动作不可用；正常业务、确定性分析、人工编辑、保存与恢复继续工作。
 
-Product AI uses the single SYSTEM AI Gateway. LUMENIS-owned models remain a product capability goal; Groq is the only currently approved external model interface and may be called only through that Gateway after explicit user selection and applicable permission. Other retired routes are not called, probed, or used as automatic fallbacks. If AI is unavailable, only AI-dependent enhancements are unavailable; ordinary business work, deterministic analysis, manual editing, saving, and recovery continue.
+Product AI uses the single SYSTEM AI Gateway. OEVIRA-owned models remain a product capability goal; Groq is the only currently approved external model interface and may be called only through that Gateway after explicit user selection and applicable permission. Other retired routes are not called, probed, or used as automatic fallbacks. If AI is unavailable, only AI-dependent enhancements are unavailable; ordinary business work, deterministic analysis, manual editing, saving, and recovery continue.
 
 ## 用户如何工作 / User workflows
 
@@ -46,7 +52,7 @@ Independent research and production do not require a prior CTH/BMP task, commerc
 ## 数据与成果原则 / Data and deliverable principles
 
 - **真实来源 / Real sources：** 所有平台与公开网页的来源类别基础权重相同，贯穿采集、分析、研究与成果使用；具体质量、时效、身份和使用权分别判断。 / All platforms and public webpages receive equal source-category weight throughout acquisition, analysis, research, and deliverable use; quality, freshness, identity, and usage rights are evaluated individually.
-- **清楚呈现 / Clear presentation：** 资料保留原文、封面、作者、链接、原生时间和真实指标；缺失显示“—”，不填假零值。阅读、结果与操作采用序境自己的视觉语言，不改写原始证据或网页。 / Materials retain source content, covers, authors, links, native timestamps, and observed metrics. Missing values are shown as “—”, never fabricated zeros. Product readers, results, and controls follow LUMENIS’s visual language without altering original evidence or webpages.
+- **清楚呈现 / Clear presentation：** 资料保留原文、封面、作者、链接、原生时间和真实指标；缺失显示“—”，不填假零值。阅读、结果与操作采用寰意自己的视觉语言，不改写原始证据或网页。 / Materials retain source content, covers, authors, links, native timestamps, and observed metrics. Missing values are shown as “—”, never fabricated zeros. Product readers, results, and controls follow OEVIRA’s visual language without altering original evidence or webpages.
 - **结果优先 / Results first：** 用户提出工作问题和业务约束，后台处理适用分析，报告呈现结论、依据、限制及下一步。 / Users provide the question and practical constraints; backend analysis produces conclusions, evidence, limitations, and next actions.
 - **版本连续 / Version continuity：** 成果支持保存、局部修订、重开与恢复；旧版和修改原因保留。 / Work supports saving, local revision, reopening, and recovery, with prior versions and reasons retained.
 - **主体与范围 / Subjects and scope：** 默认范围为 GLOBAL / ALL。用户可以搜索、新增、聚焦和清除商业主体与品牌；聚焦只缩小范围，不授予权限，也不启动采集。品牌名称以品牌官网的正式名称为准，并记录来源。 / The default scope is GLOBAL / ALL. Users can search, add, focus, and clear commercial subjects and brands; focus only narrows scope and neither grants permission nor starts collection. Brand names follow each brand's official website and record the source.
@@ -160,3 +166,9 @@ Follow the [security boundary](00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md). Do n
 仓库源码采用 [Apache License 2.0](LICENSE)。第三方软件、数据、模型、字体和媒体保留其各自许可与使用限制。
 
 Repository source is licensed under [Apache License 2.0](LICENSE). Third-party software, data, models, fonts, and media retain their own licenses and usage restrictions.
+
+## 研究能力整合 · 2026-10-18
+
+已批准将固定GGI来源的完整研究/决策/评价/学习能力吸收进序境现有Owner，当前已交付有界后端/HTTP证据，最终合并与四表面验收待核。九维组织与36份历史参考进入既有来源/权限/版本链，用户可以在Shared工作区独立研究，再按授权采用到CTH/BMP；原完整功能与四表面要求继续有效。参阅[唯一规划](00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md)、[架构与本地采用](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)、[来源及完整映射](00-GOVERNANCE/LUMENIS-SOURCE-ADOPTION-V1.json)。
+
+此为源级整合，不是新GGI服务或已发布/已验收声明。历史资料的权利与现行事实仍待核实；外仓交换1.1.0保持，未宣称四仓已共同更新。前端由本地Codex/GrokBot接续原ScreenSpec，逐表面实测。

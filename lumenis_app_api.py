@@ -307,7 +307,7 @@ def api_business_work_read(work_id):
 def api_business_work_advance(work_id, operation):
     def execute():
         if operation not in {"choose", "adopt", "cancel", "interrupt", "resume", "action", "outcome", "outcome_unknown",
-                             "save-request", "save"}:
+                             "save-request", "save", "restore", "review"}:
             raise LookupError("BUSINESS_WORK_OPERATION_NOT_FOUND")
         data = _business_work_body()
         if operation in {"save-request", "save"}:

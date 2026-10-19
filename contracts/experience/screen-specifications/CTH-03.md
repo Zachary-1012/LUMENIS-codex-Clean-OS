@@ -256,3 +256,32 @@ Follow Global §10 and Experience §38's latest correction. Collection is subjec
 ### 2026-10-08 SourceTarget mode correction
 
 The current approved source-opening target is the actual authorized page inside SYS-06 by default on operational surfaces, with a separate explicit external-browser choice. SourceTarget v1 owns the required mode resolution; old external-only call sites must migrate, never silently fall back or infer consent from a stored mode. Earlier handoff-only acceptance covers the explicitly chosen external option only. Internal reading requires the authorized session and fresh matching page observation; neither launch acceptance nor a screen file proves page readability. Preserve the exact same-row lineage, READ scope, no collection/capture/write side effects and Return context. These are required targets, not a promotion of this screen's existing implementation/design/runtime state.
+
+### 原G123/G140/G178具体终态合同：到期维护、自立路径与分层健康
+
+在现platform lane详情保“本任务能取得什么”并展开原6平台×12能力及后续全部登记能力的路径表；逐格列公开页/RSS/开放文件/自主解析或实际获权路径、可得字段、当前约束和真实入库回执。自立度排序只按已声明准入/依赖，不把免费/HTTP200当成功。原17×19矩阵继续保全，两者不同清单不可互相顶替。
+维护列表按真实到期项列最近有效更新、下一到期/实际计划运行、失败原因、退避/Retry-After、checkpoint和恢复状态；未知调度时点不以倒计时造持续运行。三层健康用“服务可达/页面连接/平台会话”读懂L1/L2/L3，保HEALTHY/NEEDS_LOGIN/CDP_DEGRADED/DOWN及检查时点，不显示端口/CDP地址/凭据。429是软限流并遵原Owner退避，不反复弹登录。
+
+构图：左lane及到期过滤，中间能力路径/更新清单，右选中项的三层检查与失败子项；原恢复Sheet是唯一人工登录入口。iOS一个lane→一项能力/到期项→原因与合法恢复。
+
+未到期不重复处理；已提交资料先读回而不重新采。服务不可用/页面降级/需登录/冷却分别给允许动作，重启恢复按原checkpoint，取消保已得合法资料。缺真实排程与运行证据标NOT_VERIFIED，不由界面动画报持续运行。
+
+Public Website仅用获准真实样例说明到期维护、自立路径与分层健康及未核范围，不展示内部资料；Web按窗口宽度保主对象与可逆检查器、刷新读回原版本；Windows/macOS分别验证文件/窗口冷开和同版恢复；iOS按本组对象清单→单对象→检查/确认顺序重组，复杂编辑续接同版本，合法轻改不因窄屏丢失。三语、200%文字、键盘/读屏及48px触控均保关键字段和取消/返回。
+
+UI可按待恢复/将到期/已取得任务组织清单和检查器，不能生成健康、覆盖率或登陆事实；可锁筛选、无AI线性表和撤销。
+
+沿本屏现有Owner/Permission/SourceUse/版本/回执接线；缺callable保持OPEN并禁对应效果，不猜route，不改既有当前实现/验收状态。此段补全旧要求的可执行设计，不证明实现通过。
+
+### 原G179具体终态合同：来源分工与正文提取质量
+
+来源详情清楚分开“这份资料可支持什么”：官方/媒体身份事实与社媒传播/消费者表达按原来源及主张列依据，资料类型不是自动可信评级。正文提取核对面并读原页/原文、实际抽取正文与截断/缺段；Trafilatura与既有解析的小样对照作为评测记录，不能因库名显示正文合格。按平台/字段列实际有会话/无会话取得值、观察时间、缺失原因与合法取得方式，未知不变可得或0。
+
+构图：来源清单→主张/用途与正文对读→选中字段的采集条件；宽屏原件与抽取旁排，移动原文/抽取切换保同段。评测详情按需开，不要求普通上传者填通用用途表。
+
+只有摘要、页面失效、解析失败、版权未知、会话不可用或未测试条件分开；人工校正存派生版，取消保原件，来源变化使旧质量结论过期。无权路径不能通过换会话绕过。
+
+Public Website仅用获准真实样例说明来源分工与正文提取质量及未核范围，不展示内部资料；Web按窗口宽度保主对象与可逆检查器、刷新读回原版本；Windows/macOS分别验证文件/窗口冷开和同版恢复；iOS按本组对象清单→单对象→检查/确认顺序重组，复杂编辑续接同版本，合法轻改不因窄屏丢失。三语、200%文字、键盘/读屏及48px触控均保关键字段和取消/返回。
+
+UI可按真实缺段与字段冲突提议对照阅读，不能补正文或画“官方即可信”；保原文锁定/简洁/撤销。
+
+沿本屏现有Owner/Permission/SourceUse/版本/回执接线；缺callable保持OPEN并禁对应效果，不猜route，不改既有当前实现/验收状态。此段补全旧要求的可执行设计，不证明实现通过。

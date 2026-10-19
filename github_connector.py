@@ -76,7 +76,8 @@ class GitHubConnectorConfig:
 
     def snapshot(self, *, token_available: bool) -> Dict[str, Any]:
         if token_available:
-            state = "CONNECTED"
+            # Presence is configuration, never proof of live authorization.
+            state = "PROVIDER_UNAVAILABLE"
         elif self.client_id and self.redirect_uri:
             state = "READY_FOR_AUTHORIZATION"
         else:
@@ -95,6 +96,8 @@ class GitHubConnectorConfig:
             "write_policy": "human_approval_required_and_disabled_by_default",
             "secret_material_exposed": False,
             "token_available": bool(token_available),
+            "authorization_verification": "NOT_VERIFIED",
+            "code": "HEALTH_CHECK_REQUIRED" if token_available else "AUTHORIZATION_REQUIRED",
             "authorization_ready": bool(self.client_id and self.redirect_uri),
         }
 
@@ -122,7 +125,8 @@ class GitHubConnector:
         try:
             token_available = bool(self._token_provider())
         except Exception:
-            token_available = False
+            return {**self.config.snapshot(token_available=False),
+                    "state": "PROVIDER_UNAVAILABLE", "code": "CREDENTIAL_PROVIDER_ERROR"}
         return self.config.snapshot(token_available=token_available)
 
     def authorization_url(self, state: str) -> str:

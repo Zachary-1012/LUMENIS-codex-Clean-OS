@@ -257,17 +257,48 @@ def test_terminal_timeout_receipt_survives_payload_invalidity(change):
     obj._record_evidence.assert_called_once()
 
 
-def test_inflight_commit_timeout_has_receipt_and_no_duplicate():
+def test_inflight_commit_timeout_has_receipt_and_no_duplicate(monkeypatch):
     from concurrent.futures import ThreadPoolExecutor
+    from types import SimpleNamespace
+    import threading
+    import ai_browser_runtime
+    from lumenis.system.collector.runtime import browser_extract
+
+    # Advance the logical capture clock only after the actual writer is entered.
+    # A short wall-clock deadline alone does not establish this precondition on
+    # a loaded runner: an operation_id exists even before persistence starts.
+    clock = [0.0]
+    controlled_time = SimpleNamespace(monotonic=lambda: clock[0], time=time.time)
+    monkeypatch.setattr(ai_browser_runtime, 'time', controlled_time)
+    monkeypatch.setattr(browser_extract, 'time', controlled_time)
+    entered, release = threading.Event(), threading.Event()
     obj, _ = runtime()
     obj._browser_worker = ThreadPoolExecutor(max_workers=1)
-    obj._record_evidence.side_effect = lambda **kw: (time.sleep(.2) or 7)
+    def persist(**kw):
+        entered.set()
+        assert release.wait(5), 'test did not release the in-flight writer'
+        return 7
+    obj._record_evidence.side_effect = persist
+    submit = obj._browser_worker.submit
+    def submit_and_observe(*args, **kwargs):
+        future = submit(*args, **kwargs)
+        result = future.result
+        def wait_until_commit_then_timeout(timeout=None):
+            assert entered.wait(5), 'test never reached the persistence boundary'
+            clock[0] = .101  # The same 100ms capture deadline has now expired.
+            return result(timeout=0)  # Writer is held; real Future raises TimeoutError.
+        future.result = wait_until_commit_then_timeout
+        return future
+    monkeypatch.setattr(obj._browser_worker, 'submit', submit_and_observe)
     command = preview(timeout_ms=100)
     try:
         with pytest.raises(BrowserExtractionError) as initial:
             obj.capture_command(command)
+        assert entered.is_set()
         assert initial.value.details['operation_id']
         assert initial.value.details['retry_safe'] is False
+        assert initial.value.details['persistence_outcome'] == 'UNKNOWN'
+        release.set()
         obj._browser_worker.shutdown()
         with pytest.raises(BrowserExtractionError) as repeated:
             obj._browser_worker = None
@@ -277,6 +308,64 @@ def test_inflight_commit_timeout_has_receipt_and_no_duplicate():
         assert repeated.value.details['persistence_outcome'] == 'COMMITTED'
         obj._record_evidence.assert_called_once()
     finally:
+        release.set()
+        if obj._browser_worker: obj._browser_worker.shutdown()
+
+
+def test_timeout_before_writer_with_operation_id_is_safe_and_never_commits(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from types import SimpleNamespace
+    import threading
+    import ai_browser_runtime
+    from lumenis.system.collector.runtime import browser_extract
+
+    clock = [0.0]
+    controlled_time = SimpleNamespace(monotonic=lambda: clock[0], time=time.time)
+    monkeypatch.setattr(ai_browser_runtime, 'time', controlled_time)
+    monkeypatch.setattr(browser_extract, 'time', controlled_time)
+    entered, release = threading.Event(), threading.Event()
+    obj, cdp = runtime()
+    send = cdp.send.side_effect
+    def hold_before_persistence(method, params=None):
+        if method == 'Page.getFrameTree':
+            entered.set()
+            assert release.wait(5), 'test did not release capture setup'
+        return send(method, params)
+    cdp.send.side_effect = hold_before_persistence
+    obj._browser_worker = ThreadPoolExecutor(max_workers=1)
+    submit = obj._browser_worker.submit
+    def submit_and_observe(*args, **kwargs):
+        future = submit(*args, **kwargs)
+        result = future.result
+        def wait_until_capture_then_timeout(timeout=None):
+            assert entered.wait(5), 'capture setup was not entered'
+            clock[0] = .101
+            return result(timeout=0)
+        future.result = wait_until_capture_then_timeout
+        return future
+    monkeypatch.setattr(obj._browser_worker, 'submit', submit_and_observe)
+    command = preview(timeout_ms=100)
+    try:
+        with pytest.raises(BrowserExtractionError) as initial:
+            obj.capture_command(command)
+        assert initial.value.details['operation_id']
+        assert initial.value.details['persistence_outcome'] == 'NOT_STARTED'
+        assert initial.value.details['retry_safe'] is True
+        release.set()
+        obj._browser_worker.shutdown()
+        obj._record_evidence.assert_not_called()
+        obj._browser_worker = obj._browser_thread_id = None
+        # An issued terminal receipt is replayed for the same request ID.
+        # retry_safe means a fresh attempt cannot duplicate a prior commit.
+        with pytest.raises(BrowserExtractionError) as repeated:
+            obj.capture_command(command)
+        assert repeated.value.details['operation_id'] == initial.value.details['operation_id']
+        assert repeated.value.details['persistence_outcome'] == 'NOT_STARTED'
+        assert repeated.value.details['retry_safe'] is True
+        assert obj.capture_command(preview(timeout_ms=100, request_id='retry-before-write'))['ok']
+        obj._record_evidence.assert_called_once()
+    finally:
+        release.set()
         if obj._browser_worker: obj._browser_worker.shutdown()
 
 

@@ -97,6 +97,18 @@ class LearningLoop:
         self.learning_memory.bind_source_task(task_id, actor_id)
         return self
 
+    def build_reviewed_research_context(self, candidate_ids, *, actor, actor_id, expected_scope):
+        """Revalidate selected adopted research references, without invoking AI.
+
+        The Gateway still owns exact model consent and source-use admission.
+        Disabled learning does not block ordinary deterministic business work.
+        """
+        if not self.enabled:
+            return {"state": "disabled", "references": []}
+        from .contribution import build_reviewed_context
+        return build_reviewed_context(candidate_ids, actor=actor, actor_id=actor_id,
+                                      expected_scope=expected_scope)
+
     # ── 反馈入口 ─────────────────────────────────────────────────
 
     def record_user_feedback(self, feedback_text: str,

@@ -199,7 +199,7 @@ class TestBackwardCompatibility:
         source = src_file.read_text(encoding="utf-8")
         assert "D:\\Taikoo-monitor-new" not in source
         assert "D:/Taikoo-monitor-new" not in source
-        assert "C:\\Users\\28049" not in source
+        assert "C:\\Users\\" not in source
         assert "D:\\Zachary" not in source
 
 
@@ -296,8 +296,8 @@ class TestNoHardcodedPathsInProduction:
     HARDCODED_PATTERNS = [
         r"D:\Taikoo-monitor-new",
         r"D:/Taikoo-monitor-new",
-        r"C:\Users\28049",
-        r"C:/Users/28049",
+        'C:\\Users\\',
+        r"C:/Users/",
         r"D:\Zachary",
         r"D:/Zachary",
     ]

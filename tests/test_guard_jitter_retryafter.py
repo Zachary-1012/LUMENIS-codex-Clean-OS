@@ -12,7 +12,7 @@ def test_wait_slot_jitter_bounds():
     """jitter 应在 [0.7, 1.3] * interval 区间内，且 sleep 被真实调用。"""
     l = AdaptiveRateLimiter(base_interval=10.0, min_interval=5.0, jitter=True)
     slept = []
-    l.wait_slot(sleep=lambda s: slept.append(s))
+    _wait(l, sleep=lambda s: slept.append(s))
     assert len(slept) == 1
     got = slept[0]
     assert 10.0 * 0.7 - 1e-6 <= got <= 10.0 * 1.3 + 1e-6, got
@@ -22,7 +22,7 @@ def test_jitter_disabled_no_randomization():
     """jitter=False 时保持原固定间隔，回归旧行为。"""
     l = AdaptiveRateLimiter(base_interval=10.0, min_interval=5.0, jitter=False)
     slept = []
-    l.wait_slot(sleep=lambda s: slept.append(s))
+    _wait(l, sleep=lambda s: slept.append(s))
     assert slept == [10.0]
 
 
@@ -64,3 +64,17 @@ def test_analyzer_no_retry_after_when_absent():
     """未提供 retry_after 时结果不含该键（兼容旧行为）。"""
     r = ResponseAnalyzer.classify(429, '')
     assert 'retry_after' not in r
+
+# A sleeper in this contract must advance elapsed time, not merely record a call.
+def _wait(limiter, sleep):
+    from unittest.mock import patch
+    from types import SimpleNamespace
+    from lumenis.system.collector.guard import rate_limiter as module
+    clock = [module.time.time(), module.time.monotonic()]
+    fake = SimpleNamespace(time=lambda: clock[0], monotonic=lambda: clock[1])
+    def elapsed(seconds):
+        sleep(seconds)
+        clock[0] += seconds
+        clock[1] += seconds
+    with patch.object(module, 'time', fake):
+        return limiter.wait_slot(sleep=elapsed)

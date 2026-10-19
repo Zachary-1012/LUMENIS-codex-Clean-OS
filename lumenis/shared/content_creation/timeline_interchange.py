@@ -161,7 +161,33 @@ def preflight_interchange(timeline: Timeline, *, format: str, frame_rate=None,
                 issue('CMX_ASCII_RELINK_REQUIRED','BLOCKED',affected)
             if not asset.has_video:
                 issue('CMX_VIDEO_SOURCE_REQUIRED','BLOCKED',affected);continue
-            inspected = probe_source_streams(asset,analyze_timing=True,check_cancel=check_cancel)
+            audible = [c.clip_id for c in clips if c.media_asset_id==asset.asset_id and c.audio_role!='muted']
+            if asset.audio_stream_count and audible:
+                issue('CMX_VIDEO_ONLY_SOURCE_AUDIO_OMITTED','LOSS',audible)
+            callback_error = None
+            def check_probe_cancel():
+                nonlocal callback_error
+                if check_cancel:
+                    try:
+                        check_cancel()
+                    except BaseException as exc:
+                        callback_error = exc
+                        raise
+            try:
+                inspected = probe_source_streams(asset, analyze_timing=True,
+                                                  check_cancel=check_probe_cancel)
+            except VideoEditingError as exc:
+                # Only expected measurement failures become unknown timing.
+                # Source integrity, permission, cancellation and unexpected
+                # failures remain fatal, even if a callback uses the same code.
+                if exc is callback_error or str(exc) not in {
+                    'MEDIA_RENDER_TOOLS_UNAVAILABLE', 'MEDIA_RENDER_PROCESS_FAILED',
+                    'MEDIA_RENDER_FAILED', 'SOURCE_PROBE_RESULT_TOO_LARGE',
+                    'SOURCE_PROBE_INVALID', 'SOURCE_TIMING_UNVERIFIABLE',
+                }:
+                    raise
+                issue('CMX_SOURCE_TIMING_UNVERIFIABLE', 'UNKNOWN', affected)
+                continue
             timing = inspected['frame_timing']
             timecodes = [item.get('tags',{}).get('timecode') for item in inspected['streams']+[inspected['format']]]
             if any(value not in (None,'00:00:00:00') for value in timecodes):
@@ -173,9 +199,6 @@ def preflight_interchange(timeline: Timeline, *, format: str, frame_rate=None,
                 issue('CMX_SOURCE_RATE_CONFLICT','UNKNOWN',affected)
             if measured != rate or abs(timing.get('first_timestamp_seconds',1)) > 1e-7:
                 issue('CMX_FULL_CFR_ZERO_ORIGIN_REQUIRED','UNKNOWN',affected)
-            audible = [c.clip_id for c in clips if c.media_asset_id==asset.asset_id and c.audio_role!='muted']
-            if asset.audio_stream_count and audible:
-                issue('CMX_VIDEO_ONLY_SOURCE_AUDIO_OMITTED','LOSS',audible)
         issue('CMX_OUTPUT_GEOMETRY_NOT_ENCODED','LOSS',[c.clip_id for c in clips])
     refs = [media_refs.get(a) for a in used if _ref(media_refs.get(a))]
     if len(set(refs)) != len(refs):

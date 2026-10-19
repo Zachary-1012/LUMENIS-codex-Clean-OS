@@ -143,8 +143,10 @@ class GitHubAdapter(BasePlatformAdapter):
 
     def health_check(self, **_: Any) -> CollectionResult:
         snapshot = self.connector.status()
-        if snapshot["state"] != "CONNECTED":
-            status = CollectionStatus.NOT_CONFIGURED if snapshot["state"] == "NOT_CONFIGURED" else CollectionStatus.NEED_VERIFY
+        if not snapshot.get("token_available"):
+            status = (CollectionStatus.NOT_CONFIGURED if snapshot["state"] == "NOT_CONFIGURED"
+                      else CollectionStatus.PROVIDER_UNAVAILABLE if snapshot["state"] == "PROVIDER_UNAVAILABLE"
+                      else CollectionStatus.NEED_VERIFY)
             return CollectionResult(
                 status=status,
                 platform=self.platform,
@@ -153,13 +155,16 @@ class GitHubAdapter(BasePlatformAdapter):
             )
         try:
             user = self.connector.get_json("/user")
-            if not isinstance(user, dict) or not user.get("login"):
+            if (not isinstance(user, dict) or not isinstance(user.get("login"), str)
+                    or not user["login"].strip()):
                 raise GitHubConnectorError("INVALID_PROVIDER_RESPONSE", "GitHub user payload is invalid")
             return CollectionResult(
                 status=CollectionStatus.SUCCESS,
                 platform=self.platform,
                 message="GitHub user authorization verified",
-                metadata={**snapshot, "login": user.get("login")},
+                metadata={**snapshot, "state": "CONNECTED",
+                          "authorization_verification": "VERIFIED", "code": None,
+                          "login": user["login"]},
             )
         except GitHubConnectorError as exc:
             return self._error(exc, "healthcheck")

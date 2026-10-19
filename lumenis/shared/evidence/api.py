@@ -11,6 +11,8 @@ POST /api/evidence/replay-failed/approval，再 POST /api/evidence/replay-failed
 from __future__ import annotations
 from . import store as evidence_store
 import logging
+import re
+from contextlib import nullcontext
 import threading
 
 
@@ -22,6 +24,200 @@ _EVIDENCE_REPLAY_LOCK = threading.Lock()
 def _scope_error(code, message, status):
     from flask import jsonify
     return jsonify({"ok": False, "code": code, "error": message}), status
+
+
+
+_FACT_WALL_SCHEMA = "lumenis.fact-claim-review/v1"
+_FACT_WALL_CLAIM_ID = re.compile(r"[A-Za-z0-9_-]{1,80}")
+_FACT_WALL_JUDGMENTS = frozenset({"SUPPORTED", "CONFLICTED", "UNKNOWN"})
+
+
+def _normalize_fact_wall_claims(claims):
+    """Accept bounded human claim input; clients cannot submit verification flags."""
+    if not isinstance(claims, list) or not 1 <= len(claims) <= 50:
+        raise ValueError("FACT_WALL_CLAIMS_INVALID")
+    normalized, seen_ids = [], set()
+    citation_count = 0
+    for claim in claims:
+        required = {"claim_id", "text", "citations"}
+        if (not isinstance(claim, dict) or not required.issubset(claim)
+                or set(claim) - required - {"human_judgment"}):
+            raise ValueError("FACT_WALL_CLAIM_INVALID")
+        claim_id, text, citations = claim["claim_id"], claim["text"], claim["citations"]
+        if (not isinstance(claim_id, str) or not _FACT_WALL_CLAIM_ID.fullmatch(claim_id)
+                or claim_id in seen_ids or not isinstance(text, str)
+                or not text.strip() or len(text) > 2000
+                or not isinstance(citations, list) or len(citations) > 20):
+            raise ValueError("FACT_WALL_CLAIM_INVALID")
+        seen_ids.add(claim_id)
+        citation_count += len(citations)
+        if citation_count > 100:
+            raise ValueError("FACT_WALL_CITATIONS_INVALID")
+        for citation in citations:
+            keys = {"evidence_id", "start", "end", "quote"}
+            if (not isinstance(citation, dict) or not keys.issubset(citation)
+                    or set(citation) - keys - {"source_scope"}
+                    or type(citation["evidence_id"]) is not int or citation["evidence_id"] <= 0
+                    or type(citation["start"]) is not int or type(citation["end"]) is not int
+                    or not 0 <= citation["start"] < citation["end"]
+                    or not isinstance(citation["quote"], str) or not citation["quote"]
+                    or len(citation["quote"]) > 2000):
+                raise ValueError("FACT_WALL_CITATION_INVALID")
+        judgment = claim.get("human_judgment")
+        if judgment is not None:
+            if (not isinstance(judgment, dict) or set(judgment) - {"status", "note"}
+                    or not isinstance(judgment.get("status"), str)
+                    or judgment["status"] not in _FACT_WALL_JUDGMENTS):
+                raise ValueError("FACT_WALL_HUMAN_JUDGMENT_INVALID")
+            note = judgment.get("note")
+            if note is not None and (not isinstance(note, str) or not note.strip() or len(note) > 2000):
+                raise ValueError("FACT_WALL_HUMAN_JUDGMENT_INVALID")
+            if judgment["status"] in {"SUPPORTED", "CONFLICTED"} and not citations:
+                raise ValueError("FACT_WALL_JUDGMENT_REQUIRES_SOURCE")
+        normalized.append({"claim_id": claim_id, "text": text.strip(),
+                           "citations": [dict(citation) for citation in citations],
+                           "human_judgment": None if judgment is None else dict(judgment)})
+    return normalized
+
+
+def _fact_wall_source_check(con, citation, context, actor):
+    """Use the existing source owner for bytes, current rights and exact identity."""
+    from lumenis.shared.reporting import saved_work
+
+    evidence = saved_work._verified_evidence(con, citation["evidence_id"], context, actor)
+    provenance = evidence["provenance"]
+    # The pin and quoted text must describe the same source read, even if a
+    # permitted writer replaced it since the preceding citation validation.
+    source_scope = {key: provenance["context"][key] for key in saved_work._SCOPE_KEYS}
+    if citation["source_scope"] != source_scope:
+        raise saved_work.SavedWorkError("WORK_EVIDENCE_CONTEXT_MISMATCH")
+    start, end = citation["start"], citation["end"]
+    if (not 0 <= start < end <= len(evidence["raw_content"])
+            or evidence["raw_content"][start:end] != citation["quote"]):
+        raise saved_work.SavedWorkError("WORK_CITATION_UNGROUNDED")
+    declared = provenance["provenance"]
+    intended_use = declared.get("intended_use", "research_reference")
+    if (intended_use not in {"research_reference", "report_quote", "internal_draft"}
+            or intended_use == "internal_draft" and declared["rights"] != "owner-approved"):
+        raise ValueError("FACT_WALL_SOURCE_USE_DENIED")
+    return {
+        "evidence_id": citation["evidence_id"], "source_scope": citation["source_scope"],
+        "evidence_version": evidence["version"],
+        "integrity_digest": evidence["integrity_digest"],
+        "content_sha256": evidence["content_hash"],
+        "source_fingerprint": provenance["source_fingerprint"],
+        "source_artifact_ref": provenance["source_artifact_ref"],
+        "rights": declared["rights"], "intended_use": intended_use,
+        "evidence_integrity": "VERIFIED", "original_artifact_bytes": "VERIFIED",
+        "quote_binding": "EXACT_SOURCE_TEXT", "claim_relation": "NOT_ASSESSED",
+    }
+
+
+def _fact_wall_live_session(actor, connection):
+    # HTTP callers carry their server-resolved token; internal scoped principals
+    # retain their existing Source owner admission contract.
+    if isinstance(actor, dict) and actor.get('token'):
+        from lumenis.auth.service import get_current_user
+        from flask import has_request_context
+        if not has_request_context():
+            raise PermissionError('FACT_WALL_SERVER_SESSION_REQUIRED')
+        current = get_current_user(read_only=True, connection=connection)
+        if current is None or current.get('id') != actor.get('id') or current.get('token') != actor.get('token'):
+            raise PermissionError('FACT_WALL_SESSION_REVOKED')
+
+
+def verify_fact_wall_claims(*, actor, scope, claims, connection=None):
+    """Verify retained exact quotations, never the semantic truth of a claim.
+
+    Explicit human judgments remain user declarations. No model, Canonical
+    promotion, publication or permission grant is performed. Store both returned
+    ``fact_wall`` and ``citations`` in SavedWork; its owner must invoke
+    ``validate_fact_wall_saved_payload`` on save/revision/read/export.
+    ``connection`` permits those checks inside the owner's current transaction.
+    """
+    from lumenis.shared.reporting import saved_work
+
+    normalized = _normalize_fact_wall_claims(claims)
+    if connection is not None:
+        saved_work.permission._require_canonical_scope_connection(connection)
+    reader = (saved_work.get_repository().connection(read_only=True, wal=False)
+              if connection is None else nullcontext(connection))
+    with reader as con:
+        _fact_wall_live_session(actor, con)
+        context = saved_work.authorize_saved_work(actor, scope, action="read", connection=con)
+        citations = [citation for claim in normalized for citation in claim["citations"]]
+        checked = saved_work._validate_citations(con, citations, context, actor)
+        checks = [_fact_wall_source_check(con, citation, context, actor) for citation in checked]
+        # Reopen every original once more after the first complete source pass.
+        # A scope/session check alone cannot establish retained-byte freshness.
+        final_checks = [_fact_wall_source_check(con, citation, context, actor) for citation in checked]
+        if saved_work._json(final_checks) != saved_work._json(checks):
+            raise saved_work.SavedWorkError("WORK_FACT_WALL_VERIFICATION_CHANGED")
+        # Recheck after source processing so an account/scope revocation observed
+        # during the read cannot leave a successful response for the same actor.
+        if saved_work.authorize_saved_work(actor, scope, action="read", connection=con) != context:
+            raise ValueError("FACT_WALL_CONTEXT_CHANGED")
+        for source_check in checks:
+            saved_work.authorize(actor, source_check["source_scope"], action="read", connection=con)
+        _fact_wall_live_session(actor, con)
+
+    claim_results, cursor = [], 0
+    for claim in normalized:
+        size = len(claim["citations"])
+        judgment = claim["human_judgment"]
+        claim_results.append({
+            "claim_id": claim["claim_id"], "text": claim["text"],
+            "claim_status": judgment["status"] if judgment else "UNKNOWN",
+            "assessment_origin": "EXPLICIT_HUMAN_JUDGMENT" if judgment else "NOT_REVIEWED",
+            "machine_semantic_assessment": "NOT_PERFORMED", "human_judgment": judgment,
+            "citations": checked[cursor:cursor + size], "source_checks": checks[cursor:cursor + size],
+        })
+        cursor += size
+    return {"fact_wall": {"schema": _FACT_WALL_SCHEMA, "scope": saved_work._client_scope(context),
+                          "claim_assessment_authority": "HUMAN_ONLY", "claims": claim_results},
+            "citations": checked, "publication_state": "NOT_PERFORMED"}
+
+
+def validate_fact_wall_saved_payload(*, connection, payload, citations, context, actor):
+    """Fail closed on forged assessments, nested citation drift or stale sources.
+
+    This is an existing SavedWork integration hook, not another store. Source
+    checks are recomputed from current Evidence/Artifact/Permission, not trusted
+    from client output flags. Call after citation validation in the current save
+    transaction (including immediately before commit) and in verified reads.
+    """
+    from lumenis.shared.reporting import saved_work
+
+    if "fact_wall" not in payload:
+        return
+    wall = payload["fact_wall"]
+    keys = {"schema", "scope", "claim_assessment_authority", "claims"}
+    if (not isinstance(wall, dict) or set(wall) != keys
+            or wall.get("schema") != _FACT_WALL_SCHEMA
+            or wall.get("scope") != saved_work._client_scope(context)
+            or wall.get("claim_assessment_authority") != "HUMAN_ONLY"
+            or not isinstance(wall.get("claims"), list) or not 1 <= len(wall["claims"]) <= 50):
+        raise saved_work.SavedWorkError("WORK_FACT_WALL_INVALID")
+    inputs, flattened = [], []
+    for claim in wall["claims"]:
+        keys = {"claim_id", "text", "claim_status", "assessment_origin", "machine_semantic_assessment",
+                "human_judgment", "citations", "source_checks"}
+        if (not isinstance(claim, dict) or set(claim) != keys
+                or not isinstance(claim.get("citations"), list)
+                or not isinstance(claim.get("source_checks"), list)):
+            raise saved_work.SavedWorkError("WORK_FACT_WALL_CLAIM_INVALID")
+        inputs.append({key: claim[key] for key in ("claim_id", "text", "citations", "human_judgment")})
+        flattened.extend(claim["citations"])
+    if saved_work._json(flattened) != saved_work._json(citations):
+        raise saved_work.SavedWorkError("WORK_FACT_WALL_CITATIONS_MISMATCH")
+    actual_context = saved_work.authorize_saved_work(
+        actor, wall["scope"], action="read", connection=connection,
+    )
+    if actual_context != context:
+        raise saved_work.SavedWorkError("WORK_CONTEXT_MISMATCH")
+    verified = verify_fact_wall_claims(actor=actor, scope=wall["scope"], claims=inputs, connection=connection)
+    if saved_work._json(wall) != saved_work._json(verified["fact_wall"]):
+        raise saved_work.SavedWorkError("WORK_FACT_WALL_VERIFICATION_CHANGED")
 
 
 def resolve_evidence_request_scope(action="read"):

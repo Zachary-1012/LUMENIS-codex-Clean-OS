@@ -2,7 +2,7 @@
 
 These records are synthetic test inputs. They do not claim rights in, or facts
 about, the example URL stored by the older Source Brief fixture, and they do
-not execute the Importer or any model/provider.
+use the real Importer with exact approval, without executing a model/provider.
 """
 from __future__ import annotations
 
@@ -76,147 +76,90 @@ def _source_view(row, *, reference, body):
 
 
 def prepare_synthetic_content_sources(client, monkeypatch):
-    """Bind each current nonempty test Canonical body to signed retained bytes.
+    """Replace synthetic Canonical setup with actual authorized Importer sources.
 
-    The scope receipt remains untouched. A separate content Evidence and
-    Artifact are staged atomically in the disposable ``job_db`` database.
+    The disposable old IDs map to writer-issued DOC IDs; no test producer is
+    signed and no production verification hook is bypassed. Empty-body rows
+    remain empty so missing-material negative cases retain their meaning.
     """
+    from datetime import datetime, timezone
+    from lumenis.importer import documents
+    import shared_artifacts
+
     _api, app, db_path, _entry, gate = client
     db_path = Path(db_path).resolve()
-    artifact_root = db_path.parent / "business-brief-test-artifacts"
     monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
-    monkeypatch.setenv("ZBC_ARTIFACT_DIR", str(artifact_root))
+    monkeypatch.setenv("ZBC_ARTIFACT_DIR", str(db_path.parent / "business-brief-test-artifacts"))
     monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
     monkeypatch.setattr(permission, "_TESTING_BYPASS_ENABLED", False)
     gate.grant_permission(permission.PermissionLevel.COMMIT)
-
     repository = DatabaseRepository(str(db_path))
-    import shared_artifacts
-    monkeypatch.setattr(shared_artifacts, "get_repository", lambda: repository)
+    for module in (shared_artifacts, documents, saved_work, evidence_store):
+        monkeypatch.setattr(module, "get_repository", lambda: repository)
     shared_artifacts.ensure_artifact_table()
-
-    with app.test_request_context(
-        "/", headers={"Host": "localhost"},
-        environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
-    ):
+    aliases = app.extensions.setdefault("business_brief_fixture_source_ids", {})
+    sources = {}
+    with app.test_request_context("/", headers={"Host": "localhost"},
+                                  environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
         actor = permission.resolve_local_workspace_principal(module="reports", action="write")
-    if type(actor) is not permission.LocalWorkspacePrincipal:
-        raise AssertionError("the fixture requires the real loopback LocalWorkspacePrincipal")
-
-    created_paths = []
-    source_views = {}
-    try:
-        with repository.transaction() as connection:
-            connection.row_factory = sqlite3.Row
-            rows = connection.execute(
-                "SELECT canonical_id, source_id, product_id, domain_id, subject_id, brand_focus_id, "
-                "scope_status, scope_evidence_ref, source_type, source_platform, title, content, "
-                "publish_datetime, captured_at, raw_ref "
-                "FROM canonical_data WHERE source_id IS NOT NULL AND source_type != 'document_row' "
-                "ORDER BY source_id, canonical_id"
-            ).fetchall()
-            seen = set()
-            for row in rows:
-                source_id = row["source_id"]
-                body = row["content"]
-                if (not isinstance(source_id, str) or not source_id or source_id in seen
-                        or not isinstance(body, str) or not body.strip()):
-                    continue
-                seen.add(source_id)
-                try:
-                    raw_ref = json.loads(row["raw_ref"] or "{}")
-                except (TypeError, ValueError) as exc:
-                    raise AssertionError("the test Canonical raw_ref must remain readable") from exc
-                if not isinstance(raw_ref, dict):
-                    raise AssertionError("the test Canonical raw_ref must be an object")
-
-                scope = _source_scope(row)
-                write_context = saved_work.authorize(
-                    actor, scope, action="write", connection=connection,
-                )
-                current_ref = _existing_content_evidence(
-                    connection, row=row, raw_ref=raw_ref, actor=actor,
-                    context=write_context, body=body,
-                )
-                if current_ref is None:
-                    raw = body.encode("utf-8")
-                    body_hash = _sha(raw)
-                    safe_source = re.sub(r"[^A-Za-z0-9_-]", "-", source_id)[:80]
-                    origin_ref = "business-brief-test-" + (safe_source or "source")
-                    source_provenance = {
-                        "source_url": None,
-                        "published_at": None,
-                        "captured_at": _CAPTURED_AT,
-                        "rights": "owner-approved",
-                        "title": "Self-authored synthetic BusinessBrief source fixture",
-                        "intended_use": "research_reference",
-                        "source_origin": {"kind": "approved-file", "ref": origin_ref},
-                        "content_origin": {"kind": "self-authored", "claim_type": "synthetic_sample"},
-                    }
-                    from lumenis.importer import documents
-                    boundaries = documents.source_boundaries(source_provenance)
-                    metadata = {
-                        "context": write_context,
-                        "source_url": None,
-                        "source_fingerprint": body_hash,
-                        "parsed_text_sha256": body_hash,
-                        "provenance": source_provenance,
-                        "locators": [],
-                        "source_name": safe_source + ".txt",
-                        "owner": {key: value for key, value in write_context.items()
-                                  if key not in _SCOPE_KEYS},
-                        "parser": {"contract": "synthetic-test-source/1"},
-                        "parsed_text": body,
-                        "capture_mode": "synthetic_test_fixture",
-                        **boundaries,
-                        "autonomous_collection": False,
-                    }
-                    product = "CTH" if write_context["domain_id"] == "cth" else "ZBMP"
-                    artifact, path = saved_work._stage_bytes(
-                        connection, raw=raw, context=write_context,
-                        kind="imported_document_source", source_execution_id=source_id,
-                        extension=".txt", media_type="text/plain",
-                    )
-                    created_paths.append(path)
-                    metadata["source_artifact_ref"] = artifact["artifact_id"]
-                    evidence_id = evidence_store.record_evidence(
-                        connection=connection,
-                        source="test_fixture", project="LUMENIS", product=product,
-                        feature_id="BUSINESS_BRIEF_TEST_SOURCE_CONTENT", asset_id=source_id,
-                        version="synthetic-test-source/1", env="staging",
-                        test_name="business-brief-source:" + source_id,
-                        capture_mode="synthetic_test_fixture", captured_at=_CAPTURED_AT,
-                        inputs={"source_ids": [source_id], "fixture_only": True},
-                        outputs={"parsed_text_sha256": body_hash},
-                        result="PASS", status="verified", raw_content=body,
-                        collection_metadata=metadata, provider="test_fixture",
-                        publish_datetime="", domain_id=write_context["domain_id"],
-                        subject_id=write_context["subject_id"],
-                        brand_focus_id=write_context["brand_focus_id"],
-                        global_scope=write_context["global_scope"],
-                    )
-                    connection.execute(
-                        "UPDATE lumenis_shared_artifacts SET evidence_id=?, updated_at=? WHERE artifact_id=?",
-                        (str(evidence_id), _CAPTURED_AT, artifact["artifact_id"]),
-                    )
-                    read_context = saved_work.authorize(
-                        actor, scope, action="read", connection=connection,
-                    )
-                    saved_work._verified_evidence(connection, evidence_id, read_context, actor)
-                    current_ref = f"app_evidence_records:{evidence_id}"
-                    raw_ref["content_evidence_ref"] = current_ref
-                    connection.execute(
-                        "UPDATE canonical_data SET raw_ref=? WHERE canonical_id=? AND source_id=?",
-                        (json.dumps(raw_ref, ensure_ascii=False, sort_keys=True),
-                         row["canonical_id"], source_id),
-                    )
-                source_views[source_id] = _source_view(row, reference=current_ref, body=body)
-    except BaseException:
-        for path in created_paths:
-            path.unlink(missing_ok=True)
-        raise
-
-    return {"actor": actor, "sources": source_views, "db_path": db_path, "app": app}
+        if type(actor) is not permission.LocalWorkspacePrincipal:
+            raise AssertionError("real local workspace principal required")
+        with repository.connection(read_only=True) as con:
+            con.row_factory = sqlite3.Row
+            rows = [dict(row) for row in con.execute(
+                "SELECT * FROM canonical_data WHERE source_id IS NOT NULL "
+                "AND source_type != 'document_row' ORDER BY source_id,canonical_id")]
+        seen = set()
+        for row in rows:
+            old_id, body = row["source_id"], row["content"]
+            if not old_id or old_id in seen:
+                continue
+            seen.add(old_id)
+            aliases.setdefault(old_id, old_id)
+            if not isinstance(body, str) or not body.strip():
+                continue
+            scope = _source_scope(row)
+            if row['source_type'] == 'document':
+                with repository.connection(read_only=True) as con:
+                    context = saved_work.authorize(actor, scope, action='read', connection=con)
+                    ev = saved_work._verified_evidence(con, int(row['scope_evidence_ref']), context, actor)
+                assert ev['asset_id'] == old_id and ev['raw_content'] == body
+                sources[old_id] = _source_view(row, reference=f"app_evidence_records:{ev['id']}", body=body)
+                continue
+            safe_name = re.sub(r"[^A-Za-z0-9_-]", "-", old_id)[:80]
+            original = db_path.parent / (safe_name + '.txt')
+            original.write_text(body, encoding='utf-8')
+            captured = datetime.fromisoformat((row['captured_at'] or _CAPTURED_AT).replace('Z', '+00:00'))
+            if captured.tzinfo is None:
+                captured = captured.replace(tzinfo=timezone.utc)
+            provenance = {
+                'source_url': None, 'published_at': None, 'captured_at': captured.isoformat(),
+                'rights': 'owner-approved', 'title': row['title'] or 'Synthetic BusinessBrief fixture',
+                'intended_use': 'research_reference',
+                'source_origin': {'kind': 'approved-file', 'ref': 'business-brief-test-' + safe_name},
+                'content_origin': {'kind': 'self-authored', 'claim_type': 'synthetic_sample'},
+                'rights_statement': 'Self-authored isolated test text; no external source rights or real-world facts claimed.',
+            }
+            args = {'actor': actor, 'scope': scope, 'provenance': provenance}
+            resource = documents.document_import_resource(str(original), **args)
+            gate.grant_approval(permission.OperationType.DATA_IMPORT.value,
+                                resource=resource, granted_by='isolated-fixture-exact-owner-import')
+            imported = documents.import_document(str(original), **args)
+            new_id = imported['source_id']
+            aliases[old_id] = new_id
+            with repository.transaction() as con:
+                # Remove only the obsolete synthetic row, after real intake succeeds.
+                con.execute('DELETE FROM canonical_data WHERE canonical_id=? AND source_id=?',
+                            (row['canonical_id'], old_id))
+                con.row_factory = sqlite3.Row
+                stored = dict(con.execute('SELECT * FROM canonical_data WHERE canonical_id=?',
+                                          (imported['canonical_id'],)).fetchone())
+                context = saved_work.authorize(actor, scope, action='read', connection=con)
+                ev = saved_work._verified_evidence(con, imported['evidence_id'], context, actor)
+                assert ev['feature_id'] == 'DOCUMENT_IMPORT' and ev['asset_id'] == new_id
+                sources[new_id] = _source_view(stored, reference=f"app_evidence_records:{imported['evidence_id']}",
+                                               body=ev['raw_content'])
+    return {'actor': actor, 'sources': sources, 'source_ids': dict(aliases), 'db_path': db_path, 'app': app}
 
 
 def attach_legacy_brief_to_job(client, prepared, job, *, version, question, stored_analysis):
@@ -286,6 +229,22 @@ def attach_legacy_brief_to_job(client, prepared, job, *, version, question, stor
         snapshot = json.loads(source_snapshot)
         snapshot["business_question"] = question
         snapshot["business_analysis"] = historical
+        # The historical question is also input to the current deterministic
+        # research companion. Rebind it through the real Source owner rather
+        # than leaving an unrelated question/hash in this signed test snapshot.
+        if snapshot.get("research_analysis") is not None:
+            from agent_research.source_bound import analyze_source_records
+            with prepared["app"].test_request_context(
+                "/", headers={"Host": "localhost"},
+                environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
+            ):
+                admitted = jobs._resolve_source_records(
+                    {"source_brief": job["source_brief"]}, actor=actor, connection=connection,
+                )
+                snapshot["research_analysis"] = analyze_source_records(
+                    question, admitted["records"], actor_id=snapshot["actor_id"],
+                    scope=snapshot["scope"], **(snapshot.get("research") or {}),
+                )
         serialized = jobs._json(snapshot)
         artifact_hash = jobs._hash_artifact(
             report_id=job["job_id"], report_type=report_type,

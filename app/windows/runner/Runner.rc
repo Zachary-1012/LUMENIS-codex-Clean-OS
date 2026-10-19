@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.lumenis" "\0"
-            VALUE "FileDescription", "lumenis_app" "\0"
+            VALUE "FileDescription", "OEVIRA" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "lumenis_app" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.lumenis. All rights reserved." "\0"
             VALUE "OriginalFilename", "lumenis_app.exe" "\0"
-            VALUE "ProductName", "lumenis_app" "\0"
+            VALUE "ProductName", "OEVIRA" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

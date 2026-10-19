@@ -122,7 +122,7 @@ def parse_nbs_release(text, *, source_url):
         for match in re.finditer(r'From January to ' + month_name + r', the total retail sales of consumer goods reached (' + _NUMBER + r') billion yuan', text):
             add(match, 'retail_sales', Decimal(match[1].replace(',', '')) * Decimal(10**9), 1, 'national-total-nominal-retail-sales')
     else:
-        for match in re.finditer(r'In ' + month_name + ' ' + str(year) + r', the national consumer price index \(CPI\) (increased|decreased) by (' + _NUMBER + r') percent year on year', text):
+        for match in re.finditer(r'In ' + month_name + ' ' + str(year) + r", (?:the national consumer price index|China[’']s Consumer Price Index) \(CPI\) (increased|decreased) by (" + _NUMBER + r')(?: percent|%) year on year\b', text):
             add(match, 'cpi_yoy_percent', Decimal(match[2].replace(',', '')) * (-1 if match[1] == 'decreased' else 1), month, 'national-all-items-cpi-year-on-year-change')
     # Duplicate contradictory lead sentences are unsafe, even if one appears later.
     keys = [(f['metric'], f['period_start'], f['period_end']) for f in facts]

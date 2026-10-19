@@ -1,4 +1,6 @@
-# LUMENIS Source Owner Index — CURRENT
+# OEVIRA Source Owner Index — CURRENT
+
+Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canonical naming authority](CANONICAL-NAMING-AND-TWIN-SYNC.md) governs this rename. Technical identifiers, package names, environment variables, commands and source paths retain their compatibility spelling; dated records below preserve their original names and evidence.
 
 Copying Subject/BrandFocus or campaign configuration must not copy source/history data without an explicit authorized selection. Account/creator identity and content type remain separate; references and scope are preserved by their existing owners.
 
@@ -1023,3 +1025,27 @@ SOURCE 发布、受保护本地 Runtime、DB 获准派生成果、用户样本�
 完整源码、操作、静态构建、回滚及开放项见
 [evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md](evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md)
 的本批段落；证据文件内用同目录相对路径。旧时间采样仍为历史，不作为当前运行禁令。
+
+## 2026-10-18 完整研究能力源级采用接续（IN_PROGRESS）
+
+完整逐项映射归[LUMENIS-SOURCE-ADOPTION-V1.json](LUMENIS-SOURCE-ADOPTION-V1.json)，既有Owner不变。
+
+| 责任 | 唯一实际接线路径 | 交付边界 |
+|---|---|---|
+| C5/C6 research/task/scope | `lumenis/shared/reporting/source_brief_job.py`, `source_brief_tasks.py`, `saved_work.py`, `lumenis/importer/documents.py`, `ai_task_engine.py`, `experience_runtime.py`, `lumenis_app_api.py` | 授权Shared workspace、来源、taxonomy、保存/重开/修订/取消恢复；公共route/schema单writer |
+| C2 research | `agent_research/`、既有SYSTEM AI Gateway | 有来源的finding/hypothesis；AI可选，不造证据ID或事实 |
+| C3 domain | `api_dual_domain.py::BusinessDecisionWorkflow`, `cth_cases.py`, `lumenis/shared/database/cth_cases.py` | 合法域内方案/内部选择/行动owner读回/未知结果/评价，CAS与原scope不变 |
+| C2/C5 learning | `lumenis/shared/learning/{loop,memory,persistence,feedback,operations}.py` | 候选及最小化本地outbox；运输与admission分开，ACK非晋升，无自动外发 |
+| F four surfaces | 原SH-01/02/04/05/06、AI-01/02/03、CTH-10、BMP-03/04合同 | 本地Codex/GrokBot真实接线；旧HTML仅研究输入，不复制坏路由、脚本、注入或虚假状态 |
+
+API意图不要求照搬原路由；51项来源API全部映射，研究入口由`experience_runtime.py`原SourceBrief owner注册，业务决策仍归`lumenis_app_api.py`。裸user_id/approved_by不是主体，子对象必须验证task/source/version/actor/workspace/project及当前Permission。研究资料不覆盖Collector能力状态。已交付callable按真实源码和限定HTTP证据记录；未实际接线的UI保持OPEN，不能把文稿写成四表面实现成功。
+
+### Shared原源到真实业务域的明确采用
+
+POST `/api/experience/reports/source-brief/adopt-source`由`experience_runtime.adopt_research_source`→`lumenis.importer.documents.adopt_shared_research_source`，严格body为`job_id/source_id/provenance/mode`，mode为prepare/import，目标使用真实focused CTH/BMP headers。provenance需明确owner-approved rights_statement；prepare返回原Permission精确DATA_IMPORT resource，import须匹配批准。原Shared report/hash/附件字节成为live dependency，每次原Evidence读取重新核权；原源撤回或删除拒绝重开/重放，不能借已签报告绕过权益。
+
+两域实际Shared上传→研究→明确权益→精确批准导入→domain SourceBrief→B prepare/reopen及父源撤销反例已有固定依赖版本隔离HTTP证据。`BusinessDecisionWorkflow.read_learning_material`只向C提供精确revision、已记录评价/operator_review及新鲜原源权限，不声称业务增长或因果。前端以“采用到当前业务范围”解释，并保原Shared返回锚点、来源版本和明确确认；本地页面尚需构建/验收。
+
+## 完整基线到既有工单接续（2026-10-18）
+
+逐项执行输入见[既有Owner工单接续明细](evidence/round-15/source-adoption-20261018/EXISTING-OWNER-WORK-HANDOFF.json)，范围与具体方案仍归唯一完整规划及ScreenSpec。原29J与R01仅分组，195G/48RJU/新增能力各子项的目标、依赖、改动、交付、验收和状态独立保留。执行方可用集合统一Codex、Zack、阿康，不由此文件分配个人或恢复旧窗口；源码Owner归属不变。执行沿原continuity.delivery，不能把这个索引当已准入运行记录、第二队列或完成证明。

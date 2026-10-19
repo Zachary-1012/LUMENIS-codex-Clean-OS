@@ -17,6 +17,7 @@
 - alert_records     告警记录（状态机留痕）
 """
 import json
+import math
 import os
 import sqlite3
 import time
@@ -49,7 +50,7 @@ DEFAULT_ALERT_CONFIG = {
     "high_risk_count_med": 1,   # 高风险事件≥1 → medium
     "brand_health_high": 60.0,  # 品牌健康<60 → high（对齐既有 health<60）
     "brand_health_med": 75.0,   # 品牌健康<75 → medium
-    "mention_surge_pct": 200.0, # 提及量环比暴涨≥200%（AI Brand Monitoring 2026 参考）
+    "mention_surge_pct": None,  # 无经验证业务默认值；仅显式人工配置的旧启发式可用
     "sentiment_drop_pt": 20.0,  # 情绪得分骤降≥20pt
     "cooldown_hours": 6,        # 同类告警冷却时间（防刷屏）
     "crisis_threshold_factor": 0.8,  # IC-044 危机期阈值收紧系数（<1 表示收紧；对既有阈值×系数）
@@ -129,6 +130,65 @@ def _cfg_num(conn: sqlite3.Connection, key: str, default: float) -> float:
         return default
 
 
+
+def _mention_surge_rule(conn):
+    """Legacy explicit operator threshold, never a model or default business rule."""
+    row = conn.execute("SELECT value, source, updated_at FROM alert_configs WHERE key=?",
+                       ("mention_surge_pct",)).fetchone()
+    result = {"method": "legacy_heuristic", "state": "CONFIGURATION_REQUIRED",
+              "threshold_pct": None, "source": None, "updated_at": None,
+              "business_validation": "NOT_VERIFIED",
+              "scope_binding": "UNVERIFIED_LEGACY_INPUT", "window": None}
+    if row is None:
+        return result
+    result.update(source=row["source"], updated_at=row["updated_at"])
+    # Historical DEFAULT-IC020=200 rows remain untouched but are not approval.
+    if not isinstance(row["source"], str) or not row["source"].strip() or row["source"].startswith("DEFAULT"):
+        return result
+    try:
+        value = float(row["value"])
+    except (TypeError, ValueError, OverflowError):
+        return result
+    if not math.isfinite(value) or value <= 0:
+        return result
+    result.update(state="CONFIGURED_LEGACY_HEURISTIC", threshold_pct=value)
+    return result
+
+
+def read_cth_temporal_alerts(connection, *, start_date, end_date, authorize):
+    """Existing Alert Owner consumes an authorized native-time read, without writes.
+
+    Statistical readiness is not an approved business alert policy. Until an
+    existing scoped rule/approval owner supplies that policy, expose the missing
+    configuration and never invent a severity, cooldown, notification or receipt.
+    No caller-supplied series, snapshot or claimed PASS is accepted here.
+    """
+    from trend_api import read_cth_temporal_metrics
+    result = read_cth_temporal_metrics(connection, start_date=start_date,
+                                       end_date=end_date, authorize=authorize)
+    if authorize() != result["binding"]:
+        raise PermissionError("CTH alert read scope changed after analysis")
+    trend = result.get("statistics", {}).get("trend", {
+        "state": "UNAVAILABLE", "reason": result.get("code", "SOURCE_ANALYSIS_UNAVAILABLE")})
+    result["alert_evaluation"] = {
+        "state": "CONFIGURATION_REQUIRED", "reason": "APPROVED_SCOPED_BUSINESS_RULE_REQUIRED",
+        "alerts": [], "write_state": "NOT_PERFORMED", "notification_state": "NOT_PERFORMED",
+        "method": trend.get("method"), "model_state": trend["state"],
+        "model_reason": trend.get("reason"),
+        "monitoring_state": trend.get("monitoring", {}).get("state", "NOT_READY"),
+        "business_validation": "NOT_VERIFIED",
+        "context": {"binding": result["binding"], "window": result["window"],
+                    "source": result["source"], "snapshot_sha256": result["snapshot_sha256"],
+                    "recipe": result["recipe"]},
+        "rule": None, "threshold": None,
+        "cooldown": {"state": "NOT_APPLICABLE", "reason": "NO_COMMITTED_MODEL_ALERT"},
+        "limitations": ["Retrospective change points are not future alerts.",
+                        "Control-chart defaults are not calibrated business thresholds.",
+                        "Read authorization does not authorize alert writes or notifications."],
+    }
+    return result
+
+
 def is_enabled(conn: Optional[sqlite3.Connection] = None) -> bool:
     if conn is None:
         init_alert_tables()
@@ -152,8 +212,9 @@ def get_config(conn: Optional[sqlite3.Connection] = None) -> Dict[str, Any]:
         for r in c.execute("SELECT key, value, value_text FROM alert_configs"):
             if r["key"] == "enabled":
                 cfg["enabled"] = bool(r["value"])
-            else:
+            elif r["key"] != "mention_surge_pct":
                 cfg[r["key"]] = r["value"]
+        cfg["mention_surge_pct"] = _mention_surge_rule(c)["threshold_pct"]
         return cfg
     finally:
         if own:
@@ -271,7 +332,8 @@ def evaluate_alerts(notes: List[Dict[str, Any]], risk_index: Optional[float] = N
         hrc_m = _cfg_num(c, "high_risk_count_med", 1)
         bh_h = _cfg_num(c, "brand_health_high", 60.0)
         bh_m = _cfg_num(c, "brand_health_med", 75.0)
-        surge = _cfg_num(c, "mention_surge_pct", 200.0)
+        surge_rule = _mention_surge_rule(c)
+        surge = surge_rule["threshold_pct"]
 
         alerts = []
         if risk_index is not None:
@@ -316,11 +378,11 @@ def evaluate_alerts(notes: List[Dict[str, Any]], risk_index: Optional[float] = N
                                     f"{brand_health}", f"品牌健康分 {brand_health} 处下行区间（<{bh_m}），建议关注修复")
                 if aid: alerts.append({"id": aid, "type": "brand_health_declining", "severity": "medium", "metric": f"brand_health={brand_health}"})
 
-        if mention_baseline is not None and total > 0 and mention_baseline > 0:
+        if surge is not None and type(mention_baseline) in (int, float) and math.isfinite(mention_baseline) and total > 0 and mention_baseline > 0:
             surge_ratio = (total - mention_baseline) / mention_baseline * 100
             if surge_ratio >= surge:
                 aid = _record_alert(c, "mention_surge", "mention_surge", "high", "mention_surge_pct",
-                                    f"{surge_ratio:.1f}", f"提及量环比暴涨 {surge_ratio:.1f}%（≥{surge}%），警惕舆情爆发")
+                                    f"{surge_ratio:.1f}", f"[旧人工阈值启发式，非趋势模型] 提及量环比变化 {surge_ratio:.1f}%（≥{surge}%），需人工核验")
                 if aid: alerts.append({"id": aid, "type": "mention_surge", "severity": "high", "metric": f"mention_surge_pct={surge_ratio:.1f}"})
 
         # IC-044 耸动/合成内容风险信号（危机期联动；代理信号，明确标注，不编造平台原生能力）
@@ -358,7 +420,8 @@ def evaluate_alerts(notes: List[Dict[str, Any]], risk_index: Optional[float] = N
                                     f"{neg_ratio:.2%}", f"[危机期收紧] 负面占比 {neg_ratio:.2%} 达收紧阈值（≥{nr_h*crisis_factor:.0%}），原常规阈值{nr_h:.0%}")
                 if aid: alerts.append({"id": aid, "type": "negative_surge", "severity": "high", "metric": f"negative_pct={neg_ratio:.2%}"})
 
-        return {"enabled": True, "alerts": alerts, "message": f"评估完成，触发 {len(alerts)} 条新告警"}
+        return {"enabled": True, "alerts": alerts, "mention_surge_rule": surge_rule,
+                "message": f"评估完成，触发 {len(alerts)} 条新告警"}
     finally:
         if own:
             c.close()

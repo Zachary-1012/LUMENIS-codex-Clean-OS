@@ -5,6 +5,7 @@ import sqlite3
 
 import pytest
 
+from tests.test_saved_document_workflow import workspace
 from tests.test_source_brief_job import job_db
 from canonical_data import CanonicalRecord, persist_canonical
 from lumenis.shared.evidence import store
@@ -15,48 +16,68 @@ from tests.test_cth_case_routes import case_client
 
 
 @pytest.fixture(params=["CTH", "ZBMP"])
-def work(job_db, request, monkeypatch):
+def work(workspace, request, monkeypatch):
     from lumenis.shared.reporting.business_brief import ai_core
+    from lumenis.shared.database.business_schema import apply_business_schema
+    from lumenis.shared.evaluation.recorder import init_db
+    from lumenis.system.security import permission
+    import subject_registry
     monkeypatch.setattr(ai_core, "local_structured_chat", lambda *a, **k: pytest.fail("retired provider invoked"))
     product = request.param
     domain = "cth" if product == "CTH" else "zbmp"
+    entity, _ = subject_registry.add_subject({"domain_id": "CTH" if product == "CTH" else "BMP",
+        "subject_type": "company" if product == "CTH" else "brand",
+        "name_en": "Isolated focus", "name_zh": "隔离业务来源"})
+    media_scope = {"domain_id": domain, "global_scope": False,
+                  "subject_id": entity["subject_id"] if product == "CTH" else None,
+                  "brand_focus_id": entity["brand_focus_id"] if product == "ZBMP" else None}
     args = {"product_id": product, "global_scope": False, "entity_label": "Isolated focus",
-            "subject_id": "VENUE-A" if product == "CTH" else None,
-            "brand_focus_id": "BRAND-A" if product == "ZBMP" else None}
-    with sqlite3.connect(job_db) as con:
+            "subject_id": media_scope["subject_id"], "brand_focus_id": media_scope["brand_focus_id"]}
+    db = workspace["root"] / "isolated.sqlite3"
+    with workspace["repo"].transaction() as con:
+        apply_business_schema(con)
+    init_db()
+    path = workspace["root"] / "decision-source.txt"
+    path.write_text("The source reports zero participants.", encoding="utf-8")
+    provenance = {"source_url": "https://example.org/isolated-test", "published_at": None,
+                  "captured_at": "2026-10-02T00:00:00Z", "rights": "public-reference-only",
+                  "title": "Attributed test statement"}
+    import_args = {"actor": workspace["actor"], "scope": media_scope, "provenance": provenance}
+    resource = workspace["documents"].document_import_resource(str(path), **import_args)
+    workspace["gate"].grant_approval(permission.OperationType.DATA_IMPORT.value,
+        resource=resource, granted_by="isolated-test")
+    imported = workspace["documents"].import_document(str(path), **import_args)
+    source_id = imported["source_id"]
+    with sqlite3.connect(db) as con:
         con.row_factory = sqlite3.Row
+        # Preserve capture-role test annotation independently of the real
+        # Importer receipt and retained source bytes used by SourceUse.
         ref = store.record_evidence(connection=con, source="isolated_test", project="LUMENIS",
-                                    product=product, domain_id=domain, subject_id=args["subject_id"],
-                                    brand_focus_id=args["brand_focus_id"], global_scope=False,
-                                    feature_id="TEST_SOURCE", result="PASS", status="verified",
-                                    inputs={"source_ids": ["decision-source"],
-                                            "source_role": "OFFICIAL_BRAND_SELF_DESCRIPTION" if product == "ZBMP" else "VENUE_OPERATOR_DISCLOSURE"},
-                                    outputs={"test": True})
-        persist_canonical(con, CanonicalRecord(
-            canonical_id="decision-source-canonical", source_id="decision-source", product_id=product,
-            domain_id=domain, subject_id=args["subject_id"], brand_focus_id=args["brand_focus_id"],
-            scope_status="VERIFIED", scope_evidence_ref=str(ref), source_type="web_mention",
-            source_platform="web", title="Attributed test statement", content="The source reports zero participants.",
-            url="https://example.org/isolated-test", captured_at="2026-10-02T00:00:00Z"))
+            product=product, domain_id=domain, subject_id=args["subject_id"], brand_focus_id=args["brand_focus_id"],
+            global_scope=False, feature_id="TEST_SOURCE", result="PASS", status="verified",
+            inputs={"source_ids": [source_id], "source_role": "OFFICIAL_BRAND_SELF_DESCRIPTION" if product == "ZBMP" else "VENUE_OPERATOR_DISCLOSURE"},
+            outputs={"test": True})
+        con.execute("UPDATE canonical_data SET scope_evidence_ref=?,raw_ref=? WHERE source_id=?",
+            (str(ref), json.dumps({"content_evidence_ref": "app_evidence_records:" + str(imported["evidence_id"])}), source_id))
         con.commit()
-        report = create_source_brief_job(con, **args, actor_id="workspace:local", permission_audit_ref="audit:test",
-                                        trace_id="trace-test-decision", job_id="job-decision-test")
+        report = create_source_brief_job(con, **args, actor_id=workspace["actor"].principal_ref,
+            permission_audit_ref="audit:test", trace_id="trace-test-decision", job_id="job-decision-test")
     scope = report["source_brief"]["scope"]
     def authorize(operation):
-        return {"actor_id": "workspace:local", "scope": scope, "operation": operation,
+        return {"actor_id": workspace["actor"].principal_ref, "scope": scope, "operation": operation,
                 "permission_audit_ref": "audit:isolated-test", "operation_audit_ref": "effect:isolated-test"}
     options = [{"option_id": name, "proposal": "Proposed reversible research activity " + name,
-                "rationale": "One source does not establish consumer demand.", "source_ids": ["decision-source"],
+                "rationale": "One source does not establish consumer demand.", "source_ids": [source_id],
                 "assumptions": ["Participants might consent; not confirmed."],
                 "unknowns": ["Commercial material rights and actual demand are unknown."],
                 "check": "Record consenting participants' unaided reasons; stop if inputs are insufficient."}
                for name in ["A", "B"]]
-    service = BusinessDecisionWorkflow()
-    inputs = {"actor_ref": "workspace:local", "scope": scope, "submission_id": "prepare-request-01",
+    service = BusinessDecisionWorkflow(source_actor=workspace["actor"])
+    inputs = {"actor_ref": workspace["actor"].principal_ref, "scope": scope, "submission_id": "prepare-request-01",
               "source_job_id": report["job_id"], "kind": "venue_operations" if product == "CTH" else "brand_market",
               "question": "Which bounded option should the operator investigate next?",
               "options": options, "authorize": authorize}
-    return service, inputs, job_db
+    return service, inputs, db
 
 
 def step(service, inputs, current, operation, payload, submission_id):
@@ -444,7 +465,7 @@ def test_action_contract_source_claim_is_not_measured_effect_and_eval_tamper_rej
     service = BusinessDecisionWorkflow(internal_action_reader=reader, action_actor=actor)
     executed = _record_action(service, inputs, selected)
     result = step(service, inputs, executed, "outcome", {"source_job_id": inputs["source_job_id"],
-                  "source_id": "decision-source", "quote": "The source reports zero participants.",
+                  "source_id": inputs["options"][0]["source_ids"][0], "quote": "The source reports zero participants.",
                   "limits": "Attributed statement, not a measured consequence of this creation."}, "source-after-action")
     assert result["action_state"] == "EXECUTED" and result["outcome_state"] == "SOURCE_REPORTED"
     assert result["business_outcome"] == "NOT_OBSERVED" and result["evaluation"]["business_usefulness"] == "UNKNOWN"
@@ -514,7 +535,7 @@ def test_action_contract_continues_legacy_source_outcome_without_rewriting_histo
     service, inputs, db = work
     selected = choose(service, inputs, service.prepare(**inputs))
     legacy = step(service, inputs, selected, "outcome", {"source_job_id": inputs["source_job_id"],
-                  "source_id": "decision-source", "quote": "The source reports zero participants.",
+                  "source_id": inputs["options"][0]["source_ids"][0], "quote": "The source reports zero participants.",
                   "limits": "Source statement only, not a measured business effect."}, "legacy-source-outcome")
     with sqlite3.connect(db) as con:
         old_rows = con.execute("SELECT * FROM app_evidence_records WHERE feature_id=? ORDER BY id", (service.FEATURE,)).fetchall()
@@ -541,7 +562,7 @@ def test_prepare_choose_outcome_reopen_and_unknown_evaluation(work):
     assert original["return_context"]["global"] is True
     selected = choose(service, inputs, original)
     assert selected["decision"]["approval"] == "INTERNAL_SELECTION_ONLY"
-    payload = {"source_job_id": inputs["source_job_id"], "source_id": "decision-source",
+    payload = {"source_job_id": inputs["source_job_id"], "source_id": inputs["options"][0]["source_ids"][0],
                "quote": "The source reports zero participants.", "limits": "Not a measured campaign outcome or causal attribution."}
     result = step(service, inputs, selected, "outcome", payload, "outcome-request-01")
     assert result["state"] == "OUTCOME_RECORDED" and result["outcome_state"] == "SOURCE_REPORTED"
@@ -703,7 +724,7 @@ def test_final_permission_denial_rolls_back(work):
 def test_outcome_must_quote_selected_source_and_follow_decision(work):
     service, inputs, _ = work
     prepared = service.prepare(**inputs)
-    payload = {"source_job_id": inputs["source_job_id"], "source_id": "decision-source",
+    payload = {"source_job_id": inputs["source_job_id"], "source_id": inputs["options"][0]["source_ids"][0],
                "quote": "Invented sales growth.", "limits": "No measured impact."}
     with pytest.raises(RuntimeError, match="DECISION_REQUIRED"):
         step(service, inputs, prepared, "outcome", payload, "outcome-invalid-01")
@@ -740,7 +761,7 @@ def test_evaluation_failure_replay_repairs_exact_outcome(work, monkeypatch):
     from lumenis.shared.evaluation import recorder
     service, inputs, db = work
     selected = choose(service, inputs, service.prepare(**inputs))
-    payload = {"source_job_id": inputs["source_job_id"], "source_id": "decision-source",
+    payload = {"source_job_id": inputs["source_job_id"], "source_id": inputs["options"][0]["source_ids"][0],
                "quote": "The source reports zero participants.", "limits": "Not a campaign measurement."}
     real = recorder.record_evaluation
     with monkeypatch.context() as failure:
@@ -757,7 +778,7 @@ def test_evaluation_failure_replay_repairs_exact_outcome(work, monkeypatch):
 def test_later_source_rewrite_cannot_change_recorded_result(work):
     service, inputs, db = work
     selected = choose(service, inputs, service.prepare(**inputs))
-    payload = {"source_job_id": inputs["source_job_id"], "source_id": "decision-source",
+    payload = {"source_job_id": inputs["source_job_id"], "source_id": inputs["options"][0]["source_ids"][0],
                "quote": "The source reports zero participants.", "limits": "Not a causal attribution."}
     result = step(service, inputs, selected, "outcome", payload, "outcome-source-01")
     with sqlite3.connect(db) as con:
@@ -768,7 +789,15 @@ def test_later_source_rewrite_cannot_change_recorded_result(work):
 
 def test_existing_cth_case_continues_into_decision_without_replacing_case(case_client):
     from api_dual_domain import authorize_business_work_request
-    api, app, db, headers, body, _ = case_client
+    api, app, db, headers, body, gate = case_client
+    from tests.test_growth_business_fixture import prepare_owner_source
+    fixture_scope = {"domain_id": "cth", "subject_id": headers["X-Subject-ID"],
+                     "brand_focus_id": None, "global_scope": False}
+    ws = {"api": api, "app": app, "db": db, "headers": headers, "gate": gate,
+          "scope": fixture_scope, "source_id": body["source_ids"][0]}
+    prepare_owner_source(ws)
+    report = api.post(URL + "/generate", headers=headers, json={}).get_json()["result"]
+    body = {**body, "source_ids": [ws["source_id"]], "source_job_id": report["job_id"]}
     case = api.post("/api/experience/cth/cases", headers=headers, json=body).get_json()["result"]
     with sqlite3.connect(db) as con:
         actor = con.execute("SELECT actor_ref FROM lumenis_cth_cases").fetchone()[0]
@@ -815,13 +844,13 @@ def test_measured_zero_and_partial_engagement_have_distinct_meanings(work):
     current = service.prepare(**inputs)
     with sqlite3.connect(db) as con:
         con.execute("UPDATE canonical_data SET engagement_likes=0, engagement_comments=0, "
-                    "engagement_collects=0, engagement_shares=0 WHERE source_id='decision-source'")
+                    "engagement_collects=0, engagement_shares=0 WHERE source_id=?", (inputs["options"][0]["source_ids"][0],))
     reopened = service.reopen(current["work_id"], actor_ref=inputs["actor_ref"],
                               scope=inputs["scope"], authorize=inputs["authorize"])
     metric = reopened["material_review"]["sources"][0]["engagement"]
     assert metric["value"] == 0 and metric["state"] == "COMPLETE_INPUT"
     with sqlite3.connect(db) as con:
-        con.execute("UPDATE canonical_data SET engagement_shares=NULL WHERE source_id='decision-source'")
+        con.execute("UPDATE canonical_data SET engagement_shares=NULL WHERE source_id=?", (inputs["options"][0]["source_ids"][0],))
     reopened = service.reopen(current["work_id"], actor_ref=inputs["actor_ref"],
                               scope=inputs["scope"], authorize=inputs["authorize"])
     metric = reopened["material_review"]["sources"][0]["engagement"]
@@ -841,7 +870,7 @@ def test_readable_result_keeps_source_time_rights_and_missing_metrics_visible(wo
     assert "来源互动字段合计：未知（字段未齐）" in markdown
     with sqlite3.connect(db) as con:
         con.execute("UPDATE canonical_data SET engagement_likes=0, engagement_comments=0, "
-                    "engagement_collects=0, engagement_shares=0 WHERE source_id='decision-source'")
+                    "engagement_collects=0, engagement_shares=0 WHERE source_id=?", (inputs["options"][0]["source_ids"][0],))
     reopened = service.reopen(current["work_id"], actor_ref=inputs["actor_ref"],
                               scope=inputs["scope"], authorize=inputs["authorize"])
     assert "来源互动字段合计：0" in reopened["usable_result"]["markdown"]
@@ -851,8 +880,8 @@ def test_readable_result_keeps_source_time_rights_and_missing_metrics_visible(wo
 def test_readable_result_withholds_credential_or_unapproved_query_urls(work):
     service, inputs, db = work
     with sqlite3.connect(db) as con:
-        con.execute("UPDATE canonical_data SET url=? WHERE source_id='decision-source'",
-                    ("https://example.org/source?token=TEST_ONLY_CANARY",))
+        con.execute("UPDATE canonical_data SET url=? WHERE source_id=?",
+                    ("https://example.org/source?token=TEST_ONLY_CANARY", inputs["options"][0]["source_ids"][0]))
     result = service.prepare(**inputs)
     assert "TEST_ONLY_CANARY" not in result["usable_result"]["markdown"]
     assert "已隐去" in result["usable_result"]["markdown"]

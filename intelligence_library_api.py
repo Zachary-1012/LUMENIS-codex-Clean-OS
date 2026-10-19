@@ -587,3 +587,152 @@ def list_sub_libraries():
                         'catalog_binding_code': result['catalog_binding_code']})
     except Exception as exc:
         return _error(exc)
+
+# Actor-owned reference adaptations use the same signed Evidence and SavedWork
+# owners as the Library. They are not legacy globally-admitted catalog entries,
+# importer grants, full-source permissions, or Canonical/FACT records.
+_REFERENCE_BINDING_FEATURE = 'INTELLIGENCE_REFERENCE_WORK_BINDING'
+_REFERENCE_BINDING_VERSION = 'intelligence-reference-work-binding:v1'
+
+
+def _reference_binding_material(record, document, context):
+    body = document['payload']['research_reference']
+    return {'schema': _REFERENCE_BINDING_VERSION,
+            'reference': {'artifact_id': record['artifact_id'], 'sha256': record['sha256'],
+                          'work_id': document['work_id'], 'version': document['version']},
+            'context': context, 'asset_id': body['asset_id'],
+            'original_provenance': body['original']['provenance'],
+            'lifecycle': body['lifecycle'], 'rights': 'UNKNOWN', 'license': 'UNKNOWN',
+            'evidence_level': 'RAW', 'knowledge_status': 'REFERENCE',
+            'fact_verification': 'NOT_VERIFIED', 'learning_admission': 'NOT_ADMITTED'}
+
+
+def _write_reference_work_binding(connection, record, document, *, actor, scope):
+    """Called inside SavedWork's existing authorized commit transaction."""
+    from lumenis.shared.reporting.saved_work import authorize_saved_work
+    from lumenis.shared.evidence import store
+    context = authorize_saved_work(actor, scope, action='write', connection=connection)
+    if document['context'] != context:
+        raise PermissionError('REFERENCE_BINDING_CONTEXT_MISMATCH')
+    material = _reference_binding_material(record, document, context)
+    digest = hashlib.sha256(_binding_json(material).encode()).hexdigest()
+    evidence_id = store.record_evidence(
+        connection=connection, source='intelligence_library', product='SHARED',
+        feature_id=_REFERENCE_BINDING_FEATURE, asset_id=record['artifact_id'],
+        version=_REFERENCE_BINDING_VERSION, provider=__name__, result='REFERENCE',
+        status='raw_reference', env='local', level='RAW', authenticity_score=0.0,
+        raw_content=_binding_json(material), collection_metadata=material,
+        inputs={'reference': material['reference']}, outputs={'binding_sha256': digest})
+    if type(evidence_id) is not int or evidence_id < 1:
+        raise RuntimeError('REFERENCE_BINDING_WRITE_FAILED')
+    return evidence_id
+
+
+def read_reference_library_source(binding_evidence_id, *, actor, scope, connection=None):
+    """Verify signed catalog/source binding and its current exact actor version."""
+    from contextlib import nullcontext
+    from lumenis.shared.reporting.saved_work import authorize_saved_work
+    from lumenis.shared.evidence import store
+    from agent_research.reference_work import read_reference_work
+    if type(binding_evidence_id) is not int or binding_evidence_id <= 0:
+        raise ValueError('REFERENCE_BINDING_ID_INVALID')
+    reader = get_repository().connection(read_only=True, wal=False) if connection is None else nullcontext(connection)
+    with reader as con:
+        if connection is None:
+            con.execute('BEGIN')
+        context = authorize_saved_work(actor, scope, action='read', connection=con)
+        cursor = con.execute('SELECT * FROM app_evidence_records WHERE id=? AND feature_id=?',
+                             (binding_evidence_id, _REFERENCE_BINDING_FEATURE))
+        raw = cursor.fetchone()
+        receipt = dict(zip((column[0] for column in cursor.description), raw)) if raw else {}
+        try:
+            material = json.loads(receipt['collection_metadata'])
+            digest = hashlib.sha256(_binding_json(material).encode()).hexdigest()
+            valid = (store.classify_evidence_integrity(receipt).get('verified') is True
+                     and receipt['source'] == 'intelligence_library' and receipt['provider'] == __name__
+                     and receipt['version'] == _REFERENCE_BINDING_VERSION
+                     and receipt['result'] == 'REFERENCE' and receipt['status'] == 'raw_reference'
+                     and material['context'] == context and receipt['content_hash'] == digest
+                     and json.loads(receipt['outputs_json']) == {'binding_sha256': digest})
+        except (ValueError, TypeError, KeyError):
+            valid = False
+        if not valid:
+            raise ValueError('REFERENCE_BINDING_UNAVAILABLE')
+        ref = material['reference']
+        item = read_reference_work(ref['artifact_id'], actor=actor, scope=scope,
+                                   expected_sha256=ref['sha256'], connection=con)
+        if material != _reference_binding_material(item['artifact'], item['document'], context):
+            raise ValueError('REFERENCE_BINDING_CHANGED')
+        return {'binding_evidence_id': binding_evidence_id, 'reference': ref,
+                'asset_id': material['asset_id'], 'title': item['document']['title'],
+                'record': item, 'catalog_bound': True, 'evidence_level': 'RAW',
+                'knowledge_status': 'REFERENCE', 'rights': 'UNKNOWN', 'license': 'UNKNOWN',
+                'source_provenance': material['original_provenance'],
+                'fact_verification': 'NOT_VERIFIED', 'canonical': False,
+                'source_use': 'PRIVATE_REFERENCE_ONLY_NOT_EXTERNAL_SOURCE_AUTHORIZATION'}
+
+
+def _reference_binding_id(artifact_id, *, actor, scope):
+    from lumenis.shared.reporting.saved_work import authorize_saved_work
+    with get_repository().connection(read_only=True, wal=False) as con:
+        authorize_saved_work(actor, scope, action='read', connection=con)
+        rows = con.execute('SELECT id FROM app_evidence_records WHERE feature_id=? AND asset_id=?',
+                           (_REFERENCE_BINDING_FEATURE, artifact_id)).fetchall()
+        if len(rows) != 1:
+            raise ValueError('REFERENCE_BINDING_UNAVAILABLE')
+        return rows[0][0]
+
+
+def adopt_reference_library_asset(asset_id, *, actor, scope, request_id, edits=None):
+    from agent_research.reference_work import adopt_reference_asset
+    saved = adopt_reference_asset(asset_id, actor=actor, scope=scope, request_id=request_id, edits=edits)
+    evidence_id = _reference_binding_id(saved['reference']['artifact_id'], actor=actor, scope=scope)
+    return {**read_reference_library_source(evidence_id, actor=actor, scope=scope),
+            'replayed': saved['replayed']}
+
+
+def discover_reference_library_sources(*, actor, scope, query='', limit=30, cursor=None):
+    from agent_research.reference_work import list_reference_work
+    page = list_reference_work(actor=actor, scope=scope, query=query, limit=limit, cursor=cursor)
+    items, unavailable = [], 0
+    for row in page['items']:
+        try:
+            evidence_id = _reference_binding_id(row['artifact']['artifact_id'], actor=actor, scope=scope)
+            items.append(read_reference_library_source(evidence_id, actor=actor, scope=scope))
+        except ValueError as exc:
+            if str(exc) not in {'REFERENCE_NEEDS_REVISION', 'REFERENCE_WITHDRAWN'}:
+                unavailable += 1
+    return {'items': items, 'has_more': page['has_more'], 'next_cursor': page['next_cursor'],
+            'verification_complete': page['verification_complete'] and unavailable == 0,
+            'unavailable_count': page['unverified_candidates'] + unavailable,
+            'state': 'reference_catalog', 'canonical': False}
+
+
+def _verify_reference_work_binding(connection, item, context):
+    """Receipt check shared by direct reference reads and Library discovery.
+
+    Keep this below the source reader to avoid resolving a reference recursively.
+    A valid SavedWork blob alone cannot silently bypass its signed Library link.
+    """
+    from lumenis.shared.evidence import store
+    cursor = connection.execute('SELECT * FROM app_evidence_records WHERE feature_id=? AND asset_id=?',
+        (_REFERENCE_BINDING_FEATURE, item['artifact']['artifact_id']))
+    rows = cursor.fetchall()
+    if len(rows) != 1:
+        raise ValueError('REFERENCE_BINDING_UNAVAILABLE')
+    receipt = dict(zip((c[0] for c in cursor.description), rows[0]))
+    expected = _reference_binding_material(item['artifact'], item['document'], context)
+    digest = hashlib.sha256(_binding_json(expected).encode()).hexdigest()
+    try:
+        valid = (store.classify_evidence_integrity(receipt).get('verified') is True
+                 and receipt['source'] == 'intelligence_library' and receipt['provider'] == __name__
+                 and receipt['version'] == _REFERENCE_BINDING_VERSION
+                 and receipt['result'] == 'REFERENCE' and receipt['status'] == 'raw_reference'
+                 and json.loads(receipt['collection_metadata']) == expected
+                 and receipt['content_hash'] == digest
+                 and json.loads(receipt['outputs_json']) == {'binding_sha256': digest})
+    except (ValueError, TypeError, KeyError):
+        valid = False
+    if not valid:
+        raise ValueError('REFERENCE_BINDING_UNAVAILABLE')
+    return receipt['id']

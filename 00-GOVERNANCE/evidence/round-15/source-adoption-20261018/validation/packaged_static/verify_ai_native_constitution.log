@@ -1,0 +1,6 @@
+AI-NATIVE CONSTITUTION GATE: PASS
+ - 18 lightweight principles present
+ - AGENTS/README bootstrap routes through the constitution
+ - non-bypass status and dirty-worktree protections present
+ - missing!=0 and CI anti-bypass regression anchors present
+ - Product Gate executes this validator as BLOCKING

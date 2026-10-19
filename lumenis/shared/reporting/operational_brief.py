@@ -556,3 +556,31 @@ def build_scoped_source_brief(
     if include_analysis_text:
         result["_analysis_sources"] = analysis_sources
     return result
+
+
+def build_shared_source_brief(*, actor, source_ids=None, limit=30, question=None):
+    """Independent private research through existing verified SavedWork custody."""
+    from lumenis.shared.reporting.saved_work import authorize_saved_work
+    from lumenis.importer.documents import read_private_document_source
+    scope = {"scope_kind": "shared_workspace", "version": 1}
+    authorize_saved_work(actor, scope, action="read")
+    selected = canonical_data.validate_source_ids(source_ids, limit=limit)
+    records = [read_private_document_source(ref, actor=actor, scope=scope)
+               for ref in selected or []]
+    # Absence is actionable, never a completed study or market observation.
+    lines = ["# Private source research", "", question or "Source review", ""]
+    for record in records:
+        lines.extend(["## " + _markdown_text(record["title"]),
+                      "Source: " + record["source_id"],
+                      "Statement from uploaded material; factual verification not established.",
+                      _markdown_text(record["content_excerpt"]), ""])
+    lines.append("Rights UNKNOWN. Private analysis only. No external fact or permission grant.")
+    if not records:
+        lines.append("Add permitted source materials to continue. No findings established.")
+    markdown = "\n".join(lines)
+    return {"status": "source_review_ready" if records else "needs_sources", "scope": scope,
+            "coverage": "PARTIAL" if records else "UNKNOWN", "freshness": "UNKNOWN",
+            "collection_state": "private_custody", "records": records,
+            "sample": {"returned_verified_count": len(records),
+                       "verification_basis": "custody_and_bytes_only", "population_count": None},
+            "markdown": markdown, "content_hash": hashlib.sha256(markdown.encode()).hexdigest()}

@@ -219,9 +219,10 @@ def _screencast_offenders(root, paths):
 def test_no_screencast_stream_module_outside_owner():
     import os
     if (ROOT / '.git').exists():
-        out = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "--", "*.py"],
-                             cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=True)
-        paths = sorted(set(out.stdout.splitlines()))
+        out = subprocess.run(["git", "ls-files", "-z", "-co", "--exclude-standard", "--", "*.py"],
+                             cwd=ROOT, capture_output=True, check=True)
+        paths = sorted({path.decode("utf-8", errors="strict")
+                        for path in out.stdout.split(b"\0") if path})
     else:
         # Both values are supplied by the external runner; a mutable manifest alone is insufficient.
         paths = _verified_snapshot_paths(ROOT, os.environ['LUMENIS_VALIDATION_SOURCE_MANIFEST'],

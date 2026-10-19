@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Evidence Lineage — 证据血缘追踪
-确保每个结论可追溯到假设→专家→证据。纯内存追踪，无外部依赖。
+仅记录调用者提供的标识和路径；不解析外部证据、不验证来源存在性或授权。
+纯内存追踪，无外部依赖。真实SourceBrief分析见source_bound.py。
 """
 from __future__ import annotations
 

@@ -35,21 +35,21 @@
     "exit": 0
   },
   "publication": {
-    "status": "CANDIDATE_PR_PUBLISHED_PRODUCT_CHECK_FAILED_UNIFIED_REPAIR_LOCAL",
+    "status": "PUBLISHED_CANDIDATE_DEPENDENCY_CI_FAILURE_COMPATIBILITY_REPAIR_LOCAL",
     "candidate_branch": "zack/20261018-complete-candidate",
-    "candidate_head": "57e41b4ff276f03ce9b2efe874768c5defb2d413",
+    "candidate_head": "5160f638755c16b50c0fb84aa3317072175c9cd4",
     "pr_url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/83",
-    "verified_source_files": 3947,
-    "remote_tree_sha": "6a6bc9909be20b7e76b00e08e75b7d5f384d3411",
+    "verified_source_files": 3955,
+    "remote_tree_sha": "dcebff505d8879eeab8793d0e3289226cc9fca63",
     "remote_blob_and_mode_match": true,
     "main_readback": "4dab98ed6357133da9307de846180ed4f7bba5f5",
     "merged": false,
     "prior_tool_cancellation": "Historical tool result did not establish user cancellation; user explicitly requested continued completion; approved retry succeeded.",
-    "required_next": "Unified source regression and independent review; publish coherent repair; both mandatory new-head checks; normal merge and exact main readback",
+    "required_next": "Integrate owner-approved GGI absorption in this same main delivery; preserve compatibility repair; run unchanged required CI on final head before normal merge/readback",
     "latest_local_delta": "NOT_PUBLISHED",
     "required_checks_on_published_head": {
       "Flutter application foundation": "PASS",
-      "production source integrity + runtime prerequisites": "FAIL: 13 tracked path names"
+      "production source integrity + runtime prerequisites": "FAIL: CPython3.11 scipy1.18.1 Requires-Python>=3.12"
     }
   },
   "post_test_document_updates": "This dated receipt and later handoff/evidence-only edits are outside the frozen test source. No later production/test code change may inherit this pass without revalidation.",
@@ -100,6 +100,24 @@
       "merged": false,
       "prior_tool_cancellation": "Historical tool result did not establish user cancellation; user explicitly requested continued completion; approved retry succeeded.",
       "required_next": "Publish bounded CI repair; pass mandatory checks on the new head; normal protected merge and exact main readback"
+    },
+    {
+      "status": "PUBLISHED_CANDIDATE_DEPENDENCY_CI_FAILURE_COMPATIBILITY_REPAIR_LOCAL",
+      "candidate_branch": "zack/20261018-complete-candidate",
+      "candidate_head": "5160f638755c16b50c0fb84aa3317072175c9cd4",
+      "pr_url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/83",
+      "verified_source_files": 3955,
+      "remote_tree_sha": "dcebff505d8879eeab8793d0e3289226cc9fca63",
+      "remote_blob_and_mode_match": true,
+      "main_readback": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+      "merged": false,
+      "prior_tool_cancellation": "Historical tool result did not establish user cancellation; user explicitly requested continued completion; approved retry succeeded.",
+      "required_next": "Integrate owner-approved GGI absorption in this same main delivery; preserve compatibility repair; run unchanged required CI on final head before normal merge/readback",
+      "latest_local_delta": "NOT_PUBLISHED",
+      "required_checks_on_published_head": {
+        "Flutter application foundation": "PASS",
+        "production source integrity + runtime prerequisites": "FAIL: CPython3.11 scipy1.18.1 Requires-Python>=3.12"
+      }
     }
   ],
   "subsequent_repairs": [
@@ -239,5 +257,15 @@
         "private_redaction_receipt_sha256": "fc69b77a48fb5960aa990e471678770650f5711d7d2be3452e79b7045c0872c3"
       }
     }
-  ]
+  ],
+  "python_compatibility_validation": {
+    "receipt": "PYTHON-COMPAT-VALIDATION.json",
+    "receipt_sha256": "ee96293badc190a20331e902ae704d135480cc498a5f352517ce274264015ca5",
+    "primary_ci_tests": 603,
+    "unittest_subtests": 318,
+    "additional_primary_tests": 258,
+    "failure_error_skip": 0,
+    "independent_review_sha256": "2358cb24b4a014f58bc0fe298a09e56212f348129b8d5d8d707bdd27464239c0",
+    "limits": "Exact Python3.11 package tests; no adding counts to prior3136/3050; Python3.12 dependency resolution is not a new runtime test"
+  }
 }

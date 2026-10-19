@@ -29,10 +29,10 @@ _STOP_ACTIONS = {"pause_until_cooldown", "freeze_and_recover"}
 _PROBE_ACTION = "probe_only"
 
 
-def advice(lifecycle_action="schedule_normal", cpu_pct=None, ram_pct=None, queue_lag=0):
+def advice(lifecycle_action="schedule_normal", cpu_pct=None, ram_pct=None, queue_lag=None):
     """返回调度建议（ResourceGuard 四态 + 是否停止 + 排队策略）。"""
     d = _GUARD.decide(lifecycle_action, cpu_pct, ram_pct, queue_lag)
-    action = lifecycle_action or "schedule_normal"
+    action = lifecycle_action if isinstance(lifecycle_action, str) else None
     stop = action in _STOP_ACTIONS or (
         d["state"] == RESOURCE_GUARDED and d["queue_policy"] in ("backpressure", "queue"))
     if action == _PROBE_ACTION:
@@ -50,8 +50,6 @@ def advice(lifecycle_action="schedule_normal", cpu_pct=None, ram_pct=None, queue
 
 def should_stop_schedule(lifecycle_action):
     """六态 -> 是否停止后续采集请求（cooldown/freeze 停止；probe 放行）。"""
-    if not lifecycle_action:
-        return False
     return advice(lifecycle_action)["should_stop"]
 
 
@@ -60,7 +58,7 @@ def schedule_state(lifecycle_action):
     return advice(lifecycle_action)["resource_guard_state"]
 
 
-def schedule_sleep_seconds(lifecycle_action=None, base_interval=6.0):
+def schedule_sleep_seconds(lifecycle_action="schedule_normal", base_interval=6.0):
     """动态调度间隔（生产接线）：base × interval_multiplier（ResourceGuard 降频/恢复语义）。
 
     - schedule_normal(NORMAL)          -> 1.0x（常规频率）
@@ -69,7 +67,7 @@ def schedule_sleep_seconds(lifecycle_action=None, base_interval=6.0):
     - freeze_and_recover(FROZEN)       -> 5.0x（冻结深度降频）
     纯函数、无共享状态，供采集主循环在关键词间动态 sleep，服务基线 §9/§10「动态熔断联动」。
     """
-    mult = advice(lifecycle_action or "schedule_normal")["interval_multiplier"]
+    mult = advice(lifecycle_action)["interval_multiplier"]
     return max(0.5, float(base_interval) * float(mult))
 
 

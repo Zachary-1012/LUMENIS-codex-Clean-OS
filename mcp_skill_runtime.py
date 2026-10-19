@@ -182,6 +182,96 @@ def discover_registered_mcp(info: Dict[str, Any], *, timeout: float = 30.0) -> D
     )
 
 
+
+def package_tree_snapshot(install_path: Any) -> Dict[str, Any]:
+    """Bounded local byte identity; never return paths, file bytes or secrets.
+
+    Detect links, changing files/directories and secret-like entries before
+    including them. This is an admission snapshot, not an OS execution sandbox.
+    """
+    import os
+    import stat
+    maximum_files, maximum_bytes = 100_000, 1024 * 1024 * 1024
+    def identity(info):
+        return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+    def linked(info):
+        return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_file_attributes', 0) & 0x400)
+    try:
+        root = _package_path(install_path)
+        raw = Path(str(install_path)).absolute()
+        for component in (raw, *raw.parents):
+            if linked(os.lstat(component)):
+                raise ValueError('PACKAGE_LINK_BLOCKED')
+            if component == PACKAGE_ROOT:
+                break
+        pending, directories, files, total = [root], [], [], 0
+        while pending:
+            directory = pending.pop()
+            before = os.lstat(directory)
+            if linked(before):
+                raise ValueError('PACKAGE_LINK_BLOCKED')
+            entries = []
+            with os.scandir(directory) as scan:
+                for entry in scan:
+                    entries.append(entry)
+                    if len(entries) > maximum_files:
+                        raise ValueError('PACKAGE_SNAPSHOT_LIMIT_EXCEEDED')
+            entries.sort(key=lambda entry: entry.name)
+            directories.append((directory, before))
+            if len(directories) + len(pending) + len(files) > maximum_files:
+                raise ValueError('PACKAGE_SNAPSHOT_LIMIT_EXCEEDED')
+            for entry in entries:
+                name = entry.name.casefold()
+                if (name == '.git' or name.startswith('.env')
+                        or name in {'id_rsa','id_ed25519','credentials','credentials.json','secrets.json',
+                                    'cookies.json','cookies.txt','cookie.json','api_key','private_key','password'}
+                        or name.endswith(('.key','.p12','.pfx'))):
+                    raise ValueError('SENSITIVE_RUNTIME_CONTENT_BLOCKED')
+                info = entry.stat(follow_symlinks=False)
+                if linked(info):
+                    raise ValueError('PACKAGE_LINK_BLOCKED')
+                path = Path(entry.path)
+                if stat.S_ISDIR(info.st_mode):
+                    pending.append(path)
+                elif stat.S_ISREG(info.st_mode):
+                    files.append((path,info));total += info.st_size
+                else:
+                    raise ValueError('PACKAGE_NONREGULAR_FILE_BLOCKED')
+                if len(files) + len(directories) + len(pending) > maximum_files or total > maximum_bytes:
+                    raise ValueError('PACKAGE_SNAPSHOT_LIMIT_EXCEEDED')
+        digest, verified = hashlib.sha256(), 0
+        for directory,_ in sorted(directories,key=lambda item:str(item[0])):
+            digest.update(b'D\0'+directory.relative_to(root).as_posix().encode()+b'\0')
+        for path,before in sorted(files,key=lambda item:str(item[0])):
+            fd = os.open(path, os.O_RDONLY | getattr(os,'O_NOFOLLOW',0) | getattr(os,'O_BINARY',0))
+            with os.fdopen(fd,'rb') as stream:
+                if identity(os.fstat(stream.fileno())) != identity(before):
+                    raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+                count, file_hash = 0, hashlib.sha256()
+                while chunk := stream.read(1024*1024):
+                    count += len(chunk); verified += len(chunk)
+                    if count > before.st_size or verified > maximum_bytes:
+                        raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+                    file_hash.update(chunk)
+                if identity(os.fstat(stream.fileno())) != identity(before):
+                    raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+            after = os.lstat(path)
+            if linked(after) or identity(after) != identity(before) or count != before.st_size:
+                raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+            digest.update(b'F\0'+path.relative_to(root).as_posix().encode()+b'\0'+str(count).encode()+b'\0'+file_hash.digest())
+        # A later file read may mutate an earlier, already hashed file without
+        # touching its parent directory. Revalidate every captured file identity
+        # (including ctime/inode), not only directory membership, before return.
+        for path, before in files:
+            final = os.lstat(path)
+            if linked(final) or not stat.S_ISREG(final.st_mode) or identity(final) != identity(before):
+                raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+        if any(linked(os.lstat(path)) or identity(os.lstat(path)) != identity(before) for path,before in directories):
+            raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+        return {'ok':True,'package_tree_sha256':digest.hexdigest(),'file_count':len(files),'total_bytes':total}
+    except (OSError, ValueError, UnicodeError):
+        return {'ok':False,'state':'BLOCKED','errors':['MCP_PACKAGE_SNAPSHOT_UNAVAILABLE']}
+
 def runtime_contract_binding(info: Dict[str, Any]) -> str:
     """Bind reviewed schemas to the registered runtime, not an arbitrary process."""
     entry = info.get("entrypoint")
@@ -189,6 +279,10 @@ def runtime_contract_binding(info: Dict[str, Any]) -> str:
         entry = json.loads(entry)
     material = {key: info.get(key) for key in ("install_path", "version", "active_version")}
     material["entrypoint"] = entry
+    snapshot = package_tree_snapshot(info.get("install_path"))
+    if snapshot.get("ok") is not True:
+        raise ValueError("MCP_PACKAGE_SNAPSHOT_UNAVAILABLE")
+    material["package_tree_sha256"] = snapshot["package_tree_sha256"]
     return hashlib.sha256(
         json.dumps(
             material, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False

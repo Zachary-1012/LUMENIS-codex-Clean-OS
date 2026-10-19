@@ -40,15 +40,15 @@ def test_models_display_boundary_uses_current_identity(monkeypatch):
     response = app.test_client().get('/api/intelligence/models')
     assert response.status_code == 200
     body = response.get_json()
-    assert body['truth_boundary'] == 'AI is enhancement only; LUMENIS Canonical data and Evidence remain authoritative'
+    assert body['truth_boundary'] == 'AI is enhancement only; OEVIRA Canonical data and Evidence remain authoritative'
     assert body['runtime_available'] is False
     assert body['fallback_chain'] == []
 
 
 @pytest.mark.parametrize('signals,level,confidence,expected', [
-    ({'keyword': '展览', 'volume_notes': 12, 'risk_events': 2}, 'repeated', 0.52, 'LUMENIS 真实信号'),
-    ({'keyword': '展览', 'volume_notes': 1}, 'single_case', 0.41, 'LUMENIS 真实信号'),
-    ({'volume_notes': 0}, 'assumption', 0.35, '未接入 LUMENIS 真实样本'),
+    ({'keyword': '展览', 'volume_notes': 12, 'risk_events': 2}, 'repeated', 0.52, 'OEVIRA 真实信号'),
+    ({'keyword': '展览', 'volume_notes': 1}, 'single_case', 0.41, 'OEVIRA 真实信号'),
+    ({'volume_notes': 0}, 'assumption', 0.35, '未接入 OEVIRA 真实样本'),
 ])
 def test_idea_provenance_display_preserves_evidence_state(monkeypatch, signals, level, confidence, expected):
     from scripts import idea_generator as ig
@@ -67,7 +67,7 @@ def test_cli_help_uses_current_name():
     result = subprocess.run([sys.executable, str(ROOT / 'scripts/idea_generator.py'), '--help'],
                             capture_output=True, text=True, check=False, timeout=10)
     assert result.returncode == 0, result.stderr
-    assert 'LUMENIS 舆情关键词' in result.stdout
+    assert 'OEVIRA 舆情关键词' in result.stdout
     assert 'ZBC' not in result.stdout
 
 

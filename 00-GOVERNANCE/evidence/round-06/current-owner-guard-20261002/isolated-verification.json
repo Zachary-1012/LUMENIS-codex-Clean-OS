@@ -1,6 +1,6 @@
 {
   "schema": "current-guard-repair-verification:v1",
-  "clone": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-current-guard-20261002-_vllxj27\\main",
+  "clone": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-current-guard-20261002-_vllxj27\\main",
   "base_main": "7aa3b6935f43bb4aad45e2d8a714f44655a1cde4",
   "head_after_verification": "7aa3b6935f43bb4aad45e2d8a714f44655a1cde4",
   "candidate_patch_sha256_expected": "482c48f22dea70619ed3dea75db88193781fa5741f9ff87134195e563c05257d",

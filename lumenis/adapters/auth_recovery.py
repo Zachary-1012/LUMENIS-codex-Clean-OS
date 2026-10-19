@@ -40,8 +40,6 @@ from .risk_controller import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-SHOT_DIR = ROOT / "data" / "recovery"
-SHOT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---------- 登录态状态机 ----------
 AUTH_VALID = "AUTH_VALID"
@@ -180,12 +178,28 @@ def _proxy_for(cfg: dict) -> str:
     return raw.rstrip("/")
 
 
+def _shot_path(prefix: str, platform: str) -> Path:
+    """Use the current Registry lifecycle; refuse path aliases before IO."""
+    import re
+    from lumenis.shared.database.registry import get_registry
+    if type(platform) is not str or re.fullmatch(r"[A-Za-z0-9_-]{1,64}", platform) is None:
+        raise ValueError("RECOVERY_PLATFORM_INVALID")
+    root = get_registry().data_dir / "recovery"
+    if root.is_symlink() or (root.exists() and not root.is_dir()):
+        raise ValueError("RECOVERY_PATH_INVALID")
+    root.mkdir(parents=True, exist_ok=True)
+    target = root / f"{prefix}_{platform}.png"
+    if target.is_symlink() or target.resolve().parent != root.resolve():
+        raise ValueError("RECOVERY_PATH_INVALID")
+    return target
+
+
 def _full_shot(platform: str) -> Path:
-    return SHOT_DIR / f"login_{platform}.png"
+    return _shot_path("login", platform)
 
 
 def _qr_shot(platform: str) -> Path:
-    return SHOT_DIR / f"qr_{platform}.png"
+    return _shot_path("qr", platform)
 
 
 def classify_kind(platform: str, source_state: str = "", detail: str = "") -> str:

@@ -56,7 +56,7 @@ def run_once(*, post_intake_only=False) -> dict:
         )
 
         # No database is opened, or created, when the signed plan is disabled.
-        if load_prelaunch_baseline_config()["status"] == "DISABLED":
+        if load_prelaunch_baseline_config(expand_registry=False)["status"] == "DISABLED":
             return {"status": "DISABLED"}
         db = Path(main_db_path())
         if not db.is_file():

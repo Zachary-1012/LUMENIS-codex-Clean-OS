@@ -18,12 +18,18 @@ reviewed_at: 2026-09-20
 approval_reference: Product Owner instruction approving App / UX §§30–36 and requiring business-language UI copy; source baseline origin/main b4608331eacb868ff13ef74e770aa54c309ebef3
 ```
 
+## 当前实现读回与历史审计范围
+
+当前后端读回（2026-10-18）：`screen_viewmodel`为CTH屏取得原SYSTEM Permission的scope-read binding，`_build_cth01(binding=...)`要求contract=lumenis.scope-read-binding.v1及scope_verified/read_allowed，并接GLOBAL_ALL或FOCUS；GLOBAL_ALL不要求非空Subject，FOCUS才按绑定主体。源行经get_scoped_event_source_rows进入当前范围统计，截断/拒绝/错误保不完整，不能把旧“无actor授权/混入全局Evidence”审计当现后端结论。旧App仅接受非空Subject的历史控件/测试须对新合法GLOBAL_ALL路径单独适配验收，不因后端已接而声称App、四端或完整Golden Page通过。上下文、源lineage、事件详情与动作仍按实际返回和各自Owner逐项验。
+
+下面原首轮slice的“current/当前”实现观察、Widget测试和未接线结论保留为历史记录，不能覆盖本节新后端事实；其中有效产品目标/安全/布局要求继续有效。冲突的旧实现观察以本节为准，完整前端验收仍未由源码读回证明。
+
 ## 1. User problem and product invariant
 
-- **Role / authorized context:** CTH commercial operator. The screen reads only the Product Core's current Subject context from `GET /api/experience/runtime/identity`. It requires `domain == cth`, `subject.product == CTH`, and a non-empty `subject.subject_id`. It does not load the Subject registry or treat membership in a list as authorization.
+- **Role / authorized context:** CTH commercial operator. The screen reads only the Product Core's current Subject context from `GET /api/experience/runtime/identity`. The historical focused-only adapter required `domain == cth`, `subject.product == CTH`, and a non-empty `subject.subject_id`; the current authorized backend also accepts GLOBAL_ALL as described above. It does not load the Subject registry or treat membership in a list as authorization.
 - **User task:** understand current operating activity, inspect one returned event, and return to the same activity stream.
 - **Completion signal for this slice:** source-backed Subject context and real CTH fields render; unavailable, empty, error, and unscoped data remain explicit.
-- **Invariant:** CTH is Subject-first. The API's current Subject may label context, but the current contract does not bind an authenticated actor or a domain permission decision to that Subject. Do not label it “authorized” in the App.
+- **Invariant:** The historical Subject-first adapter alone did not prove authorization. Current backend authorization uses the verified server binding above; never infer it from a Subject label or registry membership.
 - **Out of scope:** changing Subject, creating a Case/Decision/Plan, notifying a team, report creation/export, event detail navigation, source navigation, and unverified trend visualization.
 
 ## 2. Route, entry, exit and return
@@ -120,7 +126,7 @@ All calls above are through the existing `LumenisCoreClient.runtimeIdentity()` a
 
 - **Decision:** BLOCKED for full Golden Page acceptance. A partial source-backed read-only implementation may render verified current-Subject metrics, signal fields and deterministic daily values with the limits above.
 - **Reviewer:** Codex implementation review against `origin/main` `b4608331eacb868ff13ef74e770aa54c309ebef3`; user-visible state copy avoids architecture and endpoint diagnostics.
-- **Open source dependencies:** (1) bind authenticated actor to current CTH Subject and a server-side CTH read decision; (2) add Subject-scoped Evidence query/lineage to this read contract; (3) return per-day trend error/state rather than zero-filling; (4) return a true active-event total or keep count omitted; (5) define action owners, requests, permission results, effects and Trace/Return.
+- **Historical first-slice dependencies (current scope/source fixes described above; remaining end-to-end acceptance separate):** (1) bind authenticated actor to current CTH Subject and a server-side CTH read decision; (2) add Subject-scoped Evidence query/lineage to this read contract; (3) return per-day trend error/state rather than zero-filling; (4) return a true active-event total or keep count omitted; (5) define action owners, requests, permission results, effects and Trace/Return.
 - **Changes required before full acceptance:** resolve those dependencies through existing owners, preserve current database/report/Evidence behavior, add API/integration coverage, and prove real Core auth plus desktop/mobile E2E.
 - **Acceptance evidence after implementation:** focused Flutter widget tests, existing Python CTH-01 runtime tests, actual Flutter build/runtime at PC/mobile widths, auth/access-denial acceptance, current-source trace, Evidence scope verification and CTH signal Trace/Return. Flutter 3.47.5 and Dart 3.13.4 are available in the workstation user toolchain.
 

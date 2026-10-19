@@ -1,6 +1,22 @@
-# 序境 / LUMENIS — Codex Takeover CURRENT
+# 寰意 / OEVIRA — Codex Takeover CURRENT
+
+Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canonical naming authority](CANONICAL-NAMING-AND-TWIN-SYNC.md) governs this rename. Technical identifiers, package names, environment variables, commands and source paths retain their compatibility spelling; dated records below preserve their original names and evidence.
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
+
+## 2026-10-18 source-adoption validation handoff
+
+Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,
+reference lifecycle, business review and local contribution capabilities. The
+single planning/screen-specification chain and all original requirements remain.
+Evidence: [source-adoption validation receipt](evidence/round-15/source-adoption-20261018/VALIDATION_README.md).
+The 4003-file tested source is preserved byte-for-byte for product and tests;
+this packaging adds documentation/evidence only. Static gates and six same-source
+real TCP nodes passed. The unified regression finished with 4087 passed, 6 deselected, 318 subtests passed
+in 556.07 seconds; all six deselected TCP nodes passed separately on the same
+source. Logs and prior failures are preserved. This record does
+not claim this candidate is published, remote checks passed, four-surface UI
+acceptance, external delivery, production activation or business results.
 
 ## 2026-10-17 README engineering-guide navigation
 
@@ -317,3 +333,14 @@ PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR
 
 - 抖音响应结构诊断与可选静态DLL导入观察：源码来自 `codex/reuse-diagnostics-20261013`（`72db140a`），经 PR #23 发布，按用户直接批准的复用ZIP有界接入，不从ZIP重新覆盖；原生指标、风控失败、来源和权限语义保留，无新增采集器、数据真相、模型或运行依赖；值隔离，失败恢复沿原适配器合同。
 - 现有证据为隔离工程回归（本地82项、隔离main候选59项适配器回归、各5+5项构建辅助回归），不是实际采集、新版本App构建、加载运行或真实用户验收；这些仍须各自核验。精确输入、哈希、失败恢复与未闭项见 [本批原位证据](evidence/round-15/REUSE-DIAGNOSTICS-20261013.md)。
+
+## 2026-10-18 Python runtime compatibility and approved integration continuation
+
+PR83 head `5160f638755c16b50c0fb84aa3317072175c9cd4` / tree `dcebff505d8879eeab8793d0e3289226cc9fca63` was read back with all 3,955 file blobs and modes matching the frozen candidate. Its App Gate passed; Product Gate passed static/architecture/compilation checks but failed dependency installation because the unchanged CI uses Python 3.11 while SciPy 1.18.1 requires 3.12. The local compatibility repair preserves the original 3.12 scientific pin, selects the official 1.17.1 pin for 3.11, and corrects two stale test fixtures without lowering production authorization or changing CI. Real isolated 3.11 validation passed 603 primary CI cases and 318 separate unittest subtests, plus 258 separate supplementary cases. See the exact scoped receipt in `evidence/round-15/bugfix-review-20261018/PYTHON-COMPAT-VALIDATION.json`; counts from different stages are not additive. This local increment still requires new-head remote checks.
+
+The Product Owner has additionally approved full global-growth-intelligence capability and four-product protocol absorption into LUMENIS in this same main delivery, including sanitized source/document publication. Existing candidate work and requirements remain intact. Follow current LUMENIS naming, directories, Owners, Source/Evidence/Permission and truth boundaries; reconcile earlier independent-product wording to this new direction without importing duplicate runtime/account/database stacks or automatically treating research as production fact. GGI absorption is in progress, not yet implemented or accepted by this continuation receipt. The current PR must not be merged as a substitute for completing the newly included integration scope.
+
+
+### 2026-10-18 研究采用交接
+
+采用范围、唯一Owner与完整逐文件/逐API/逐能力来源由[LUMENIS-SOURCE-ADOPTION-V1.json](LUMENIS-SOURCE-ADOPTION-V1.json)链接；同一完整规划与草图、原ScreenSpec已补接研究用户旅程。A/B/C后端已交付有界源码与隔离真实session/HTTP证据，最终合并门禁待root核验；F本地实际构建/四表面验收NOT_VERIFIED；任何后续实证只更新对应范围，不能据治理回归宣称产品完成。先核当前源码与调用、再接原接口，保全部旧成果和历史失败。外仓1.1.0/原指纹未改，不把本地附件冒称四仓共同发布。不得以旧候选合并代替本次新增范围闭环。

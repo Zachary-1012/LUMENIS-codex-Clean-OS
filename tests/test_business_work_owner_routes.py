@@ -65,6 +65,8 @@ def owners(client, request):
 
 
 def prepare_business(ws):
+    from tests.test_growth_business_fixture import prepare_owner_source
+    prepare_owner_source(ws)
     report = ws["api"].post(URL + "/generate", headers=ws["headers"], json={})
     assert report.status_code == 200, report.get_json()
     source_job = report.get_json()["result"]["job_id"]

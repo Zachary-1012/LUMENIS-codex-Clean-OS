@@ -1,0 +1,40 @@
+{
+  "node": "tests/test_content_media_license.py::test_real_loopback_http_and_independent_process_reopen",
+  "pytest_exit": 0,
+  "guard_blocks": [],
+  "self_test_denials": [
+    {
+      "event": "DNS",
+      "detail": "example.com"
+    },
+    {
+      "event": "socket.connect",
+      "detail": "('203.0.113.1', 9)"
+    },
+    {
+      "event": "socket.bind",
+      "detail": "('[LOCAL_TEST_ENDPOINT]', 0)"
+    },
+    {
+      "event": "socket.__new__",
+      "detail": "(1, 1, 0)"
+    },
+    {
+      "event": "non_whitelisted_spawn",
+      "detail": "['/bin/true']"
+    },
+    {
+      "event": "socket.sendto",
+      "detail": "datagram_send_forbidden"
+    },
+    {
+      "event": "socket.sendmsg",
+      "detail": "datagram_send_forbidden"
+    }
+  ],
+  "forbidden_modules_loaded": [],
+  "changed_source_paths": [],
+  "child_requests": 10,
+  "real_tcp_preserved": true,
+  "mocked_test_behavior": false
+}

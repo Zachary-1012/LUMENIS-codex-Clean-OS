@@ -151,7 +151,7 @@
     "authorized_selection": "LIVE_NOT_VERIFIED: real product session unavailable in this runtime"
   },
   "clipboard_comparison": "Windows CRLF normalized to LF; downloaded files compared as exact UTF-8 bytes",
-  "evidence_directory": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-acc02-recovery-20260928",
+  "evidence_directory": "C:\\Users\\private-user\\AppData\\Local\\Temp\\lumenis-acc02-recovery-20260928",
   "limits": [
     "Real authorized ACC-02 subject selection LIVE_NOT_VERIFIED",
     "Native Windows/macOS/Linux/Android/iOS E2E LIVE_NOT_VERIFIED",

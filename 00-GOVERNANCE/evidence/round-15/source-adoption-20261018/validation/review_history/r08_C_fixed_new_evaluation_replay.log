@@ -1,0 +1,21 @@
+{'namespace': 'net:[4026532467]', 'interfaces': ['lo'], 'routes': '', 'libc_reserved_test_address': '203.0.113.1', 'connect_result': -1, 'errno': 101, 'errno_name': 'ENETUNREACH'}
+[0;93m2026-10-18 06:04:50.355859296 [W:onnxruntime:Default, telemetry_1ds.cc:600 operator()] Failed to persist telemetry device ID; using an in-memory identifier[m
+ONNX Runtime explicit telemetry disable called inside network-isolated namespace
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- $WORKSPACE/python_compat_fix_20261018/testdeps/venv311/bin/python
+rootdir: $WORKSPACE/ggi_independent_review_20261018T1217Z/source_r08
+configfile: pytest.ini
+collecting ... collected 2 items
+
+tests/test_independent_hypothesis_consumers.py::test_real_session_counterevidence_blocks_stale_learning_even_after_reinstatement PASSED [ 50%]
+tests/test_independent_hypothesis_outbox.py::test_real_session_counterevidence_invalidates_staged_outbox_and_old_receipt_approval PASSED [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+============================== 2 passed in 9.07s ===============================

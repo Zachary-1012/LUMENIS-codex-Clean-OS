@@ -931,6 +931,42 @@ def write_scoped_graph_command(command,payload,*,actor,scope,request_id,resource
     return result
 
 
+def _scoped_title_topic_labels(rows):
+    """Presentation-only labels for already-authorized rows; never infer source facts.
+
+    Scoped description/summary fields have no native-source-summary contract, so
+    only title is supplied to the existing pure helper. Original rows stay intact.
+    """
+    enriched = []
+    for row in rows:
+        item = dict(row)
+        provenance = {
+            'claim_type': 'derived',
+            'method': 'scripts.topic_cluster.enrich_events_with_labels',
+            'input_fields': ['title'],
+            'limitation': 'title_only',
+            'top_k': 4,
+        }
+        try:
+            from scripts.topic_cluster import enrich_events_with_labels
+            labeled = enrich_events_with_labels([{'title': row.get('title')}], top_k=4)
+            label = labeled[0]['topic_label']
+            if not isinstance(label, str) or not label.strip():
+                raise ValueError('TOPIC_LABEL_INVALID')
+            provenance['status'] = 'unnamed' if label == '未命名主题' else 'available'
+            if provenance['status'] == 'unnamed':
+                provenance['reason'] = 'no_extractable_title_terms'
+            item['topic_label'] = label
+        except Exception:
+            # Keep the authorized graph readable without presenting failure as
+            # an empty/unnamed topic or leaking exception text/source content.
+            item['topic_label'] = None
+            provenance.update(status='unavailable', reason='topic_label_enrichment_failed')
+        item['topic_label_provenance'] = provenance
+        enriched.append(item)
+    return enriched
+
+
 def graph_http(mode, event_id=None):
     from flask import request, jsonify
     from experience_runtime import _shared_work_actor_scope, _content_source_same_origin
@@ -962,6 +998,7 @@ def graph_http(mode, event_id=None):
             if kind is not None and kind not in EVENT_TYPES:
                 raise ValueError('GRAPH_TYPE_INVALID')
             rows=[r for r in result['events'] if not kind or r['event_type']==kind]
+            rows=_scoped_title_topic_labels(rows)
             return jsonify({'ok':True,**result,'events':rows,'count':len(rows)})
         if not _content_source_same_origin():
             raise PermissionError('GRAPH_ORIGIN_DENIED')

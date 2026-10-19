@@ -20,6 +20,7 @@ Selection 2026）：甲方选乙方权重≈战略洞察30% / 创意25% / 团队
   vendor_view = adapt_plan(plan, "vendor")   # 给平台/媒介/执行方
 """
 import json
+import copy
 import argparse
 import sys
 import os
@@ -102,20 +103,27 @@ def perspective_brief(role):
     return PERSPECTIVES.get(role, PERSPECTIVES["agency"])
 
 
-def adapt_plan(plan, perspective="agency"):
+def adapt_plan(plan, perspective="agency", *, summary=False):
     """把统一方案 plan（campaign_plan.generate_plan 输出）转成指定视角的呈现视图。
 
-    不改变方案事实，只换语言、信息优先级与章节顺序（形可变，道不可移）。
+    默认保留全部原章节，包括用户自建章节；summary=True才显式生成摘要。
+    每个视图带完整原稿快照引用，不修改或共享可变原稿内容。
     """
+    if not isinstance(summary, bool):
+        raise ValueError("summary must be a boolean")
     p = perspective_brief(perspective)
     sections = plan.get("sections", {})
     order = _PERSPECTIVE_SECTION_ORDER.get(perspective, list(sections.keys()))
-    ordered = {k: sections[k] for k in order if k in sections}
+    selected = [k for k in order if k in sections]
+    remaining = [k for k in sections if k not in selected]
+    if not summary:
+        selected.extend(remaining)
+    ordered = {k: copy.deepcopy(sections[k]) for k in selected}
     # 视角专属补充（从 plan 的事实中提炼，不新增无据信息）
-    meta = plan.get("meta", {})
-    play = plan.get("category_playbook", "")
-    touch = plan.get("touchpoints", [])
-    risk = plan.get("risk", "")
+    meta = copy.deepcopy(plan.get("meta", {}))
+    play = copy.deepcopy(plan.get("category_playbook", ""))
+    touch = copy.deepcopy(plan.get("touchpoints", []))
+    risk = copy.deepcopy(plan.get("risk", ""))
     return {
         "role": p["role"],
         "role_name": p["role_name"],
@@ -131,6 +139,10 @@ def adapt_plan(plan, perspective="agency"):
         "budget": meta.get("budget", ""),
         "audience": meta.get("audience", ""),
         "sections": ordered,
+        "view_kind": "summary" if summary else "complete",
+        "omitted_sections": remaining if summary else [],
+        "source_plan_ref": {"kind": "inline_snapshot", "field": "source_plan"},
+        "source_plan": copy.deepcopy(plan),
         "category_playbook": play,
         "touchpoints": touch,
         "risk": risk,
@@ -191,11 +203,12 @@ def main():
     ap.add_argument("--goal", default="品牌声量提升")
     ap.add_argument("--budget", default="")
     ap.add_argument("--audience", default="目标人群")
+    ap.add_argument("--summary", action="store_true", help="显式摘要视图，保留完整原稿引用")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
     from scripts.campaign_plan import generate_plan
     plan = generate_plan(a.brand, a.category, a.goal, a.budget, a.audience)
-    view = adapt_plan(plan, a.perspective)
+    view = adapt_plan(plan, a.perspective, summary=a.summary)
     if a.json:
         print(json.dumps(view, ensure_ascii=False, indent=2))
     else:
@@ -206,8 +219,14 @@ def main():
         print("核心关切：%s" % p["perspective_lens"]["core_concern"])
         print("沟通语言：%s" % p["perspective_lens"]["language"])
         print("=" * 56)
+        if p["view_kind"] == "summary":
+            print("[摘要视图] 未展示章节：%s；完整原稿见下方。" % "、".join(p["omitted_sections"]))
         for k, v in p["sections"].items():
             print("\n【%s】\n%s" % (k, v))
+        if p["view_kind"] == "summary":
+            print("\n[完整原稿]")
+            for k, v in p["source_plan"]["sections"].items():
+                print("\n【%s】\n%s" % (k, v))
         print("\n[KPI 视角] %s" % p["kpi_lens"])
         print("[下一步] %s" % p["call_to_action"])
 

@@ -13,6 +13,7 @@ import hashlib
 import hmac
 import json
 import math
+import sqlite3
 import os
 from pathlib import Path
 import re
@@ -22,6 +23,10 @@ from urllib.parse import parse_qsl, urlsplit
 
 
 MAX_DUE_ATTEMPTS_PER_TICK = 8
+MAX_REGISTRY_EXPANSION_TARGETS = 5000
+MAX_REGISTRY_EXPANSION_QUERIES = 100000
+MAX_REGISTRY_EXPANSION_PAGES = 2000
+MAX_REGISTRY_SNAPSHOT_RETRIES = 3
 PUBLIC_POLICY = "public-read-only-exact-import-v1"
 PURPOSE_POLICY = "purpose-query-read-only-exact-import-v1"
 BASELINE_POLICIES = frozenset({PUBLIC_POLICY, PURPOSE_POLICY})
@@ -419,8 +424,11 @@ class PrelaunchMaintenanceAuthorization:
     policy_id: str
     signature_verified: bool = field(default=False, repr=False)
     post_intake_policy: Optional[dict] = None
+    recovery_only: bool = False
 
     def __post_init__(self) -> None:
+        if type(self.recovery_only) is not bool:
+            raise ValueError("recovery_only must be a boolean")
         policy = _validated_post_intake_policy(
             self.post_intake_policy, baseline_policy=self.policy_id,
         )
@@ -467,7 +475,9 @@ def _canonical_config(config: dict) -> bytes:
 
 
 def load_prelaunch_baseline_config(path: Optional[str] = None, *,
-                                   hmac_key: Optional[str] = None):
+                                   hmac_key: str | None = None,
+                                   registry_loader: Callable[[], Any] | None = None,
+                                   expand_registry: bool = True):
     """Load the one versioned config; enabled plans require an HMAC signature."""
     configured_path = path or os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG")
     config_path = (Path(configured_path) if configured_path else
@@ -490,9 +500,21 @@ def load_prelaunch_baseline_config(path: Optional[str] = None, *,
         raise BaselineConfigError("END_USER_AUTO_MUST_REMAIN_OFF")
     if config.get("policy_id") not in BASELINE_POLICIES:
         raise BaselineConfigError("POLICY_UNSUPPORTED")
-    sources = config.get("sources")
-    if not isinstance(sources, list) or not sources:
+    sources = config.get("sources", [])
+    expansion_raw = config.get("registry_expansion")
+    recovery_raw = config.get("recovery_sources", [])
+    if (not isinstance(sources, list)
+            or not isinstance(recovery_raw, list)
+            or (not sources and expansion_raw is None and not recovery_raw)):
         raise BaselineConfigError("SOURCE_SET_INVALID")
+    expansion = None
+    if expansion_raw is not None:
+        if config.get("policy_id") != PURPOSE_POLICY or config.get("internal_auto_opt_in") is not True:
+            raise BaselineConfigError("REGISTRY_EXPANSION_POLICY_INVALID")
+        expansion = _validated_registry_expansion(expansion_raw)
+    if recovery_raw and (config.get("policy_id") != PURPOSE_POLICY
+                         or config.get("internal_auto_opt_in") is not True):
+        raise BaselineConfigError("RECOVERY_POLICY_UNSUPPORTED")
     source_policies = []
     for source in sources:
         if not isinstance(source, dict):
@@ -503,15 +525,8 @@ def load_prelaunch_baseline_config(path: Optional[str] = None, *,
         if source_policy == PURPOSE_POLICY and config.get("internal_auto_opt_in") is not True:
             raise BaselineConfigError("INTERNAL_AUTO_OPT_IN_REQUIRED")
         source_policies.append(source_policy)
-    key = hmac_key if hmac_key is not None else os.environ.get("LUMENIS_PRELAUNCH_BASELINE_HMAC_KEY", "")
-    signature = config.get("hmac")
-    if not key or not isinstance(signature, dict):
-        raise BaselineConfigError("HMAC_UNAVAILABLE")
-    if signature.get("algorithm") != "HMAC-SHA256" or not isinstance(signature.get("value"), str):
-        raise BaselineConfigError("HMAC_INVALID")
-    expected = hmac.new(key.encode("utf-8"), _canonical_config(config), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected, signature["value"]):
-        raise BaselineConfigError("HMAC_MISMATCH")
+    key = _resolve_baseline_config_key(hmac_key)
+    _verify_config_hmac(config, key)
     version = config.get("plan_version")
     if not isinstance(version, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", version):
         raise BaselineConfigError("PLAN_VERSION_INVALID")
@@ -568,13 +583,76 @@ def load_prelaunch_baseline_config(path: Optional[str] = None, *,
             raise BaselineConfigError("SOURCE_ENTRY_DUPLICATE")
         seen.add(plan.plan_id)
         plans.append(plan)
-    return {"status": "READY", "plan_version": version, "plans": plans,
+    expansion_summary = None
+    if expansion is not None and expand_registry:
+        dynamic_sources, expansion_summary = _registry_expansion_sources(
+            expansion, config_plan_version=version, registry_loader=registry_loader,
+        )
+        for source in dynamic_sources:
+            try:
+                scope = {key: source.get(key) for key in
+                         ("domain_id", "subject_id", "brand_focus_id")}
+                plan = PublicBaselinePlan(
+                    source_key=source["source_key"], source_version=source["source_version"],
+                    exact_scope=json.dumps(scope, sort_keys=True, separators=(",", ":")),
+                    scope_version=source["scope_version"], cadence_seconds=source["cadence_seconds"],
+                    authorization_ref=source["authorization_ref"], enabled=True,
+                    prelaunch_authorized=True, end_user_auto=False,
+                    platform=source["platform"], source_url=source["source_url"],
+                    domain_id=source["domain_id"], subject_id=source.get("subject_id"),
+                    brand_focus_id=source.get("brand_focus_id"), max_results=source["max_results"],
+                    plan_version=source["plan_version"], policy_id=PURPOSE_POLICY,
+                    _signed_config_digest=digest, purpose_query=source["purpose_query"],
+                    internal_auto_opt_in=True,
+                )
+            except (KeyError, TypeError, ValueError):
+                raise BaselineConfigError("REGISTRY_EXPANSION_PLAN_INVALID") from None
+            if plan.plan_id in seen:
+                continue
+            seen.add(plan.plan_id)
+            plans.append(plan)
+    elif expansion is not None:
+        expansion_summary = {"status": "PENDING_CANONICAL_REGISTRY_READ"}
+
+    recovery_sources = recovery_raw
+    recovery_plans = []
+    for source in recovery_sources:
+        if not isinstance(source, dict):
+            raise BaselineConfigError("RECOVERY_SOURCE_ENTRY_INVALID")
+        source_policy = source.get("policy_id", config["policy_id"])
+        if source_policy != PURPOSE_POLICY:
+            raise BaselineConfigError("RECOVERY_POLICY_UNSUPPORTED")
+        source_plan_version = source.get("plan_version", version)
+        try:
+            plan = PublicBaselinePlan(
+                source_key=source["source_key"], source_version=source["source_version"],
+                exact_scope=json.dumps({k: source.get(k) for k in
+                    ("domain_id", "subject_id", "brand_focus_id")}, sort_keys=True, separators=(",", ":")),
+                scope_version=source["scope_version"], cadence_seconds=source["cadence_seconds"],
+                authorization_ref=source["authorization_ref"], enabled=True,
+                prelaunch_authorized=True, end_user_auto=False, platform=source["platform"],
+                source_url=source["source_url"], domain_id=source["domain_id"],
+                subject_id=source.get("subject_id"), brand_focus_id=source.get("brand_focus_id"),
+                max_results=source.get("max_results", 20), plan_version=source_plan_version,
+                policy_id=PURPOSE_POLICY, _signed_config_digest=digest,
+                purpose_query=source.get("purpose_query"), internal_auto_opt_in=True,
+            )
+        except (KeyError, TypeError, ValueError):
+            raise BaselineConfigError("RECOVERY_SOURCE_ENTRY_INVALID") from None
+        if plan.plan_id in {item.plan_id for item in recovery_plans}:
+            raise BaselineConfigError("RECOVERY_SOURCE_DUPLICATE")
+        recovery_plans.append(plan)
+    return {"status": "READY" if plans else "STAGED", "plan_version": version,
+            "plans": plans, "recovery_plans": recovery_plans,
+            "registry_expansion": expansion_summary,
             "signature_verified": True}
 
 
-def maintenance_authorization(plan: PublicBaselinePlan) -> PrelaunchMaintenanceAuthorization:
+def maintenance_authorization(plan: PublicBaselinePlan, *, recovery_only: bool = False) -> PrelaunchMaintenanceAuthorization:
     if not plan._signed_config_digest:
         raise BaselineConfigError("HMAC_UNAVAILABLE")
+    if type(recovery_only) is not bool:
+        raise BaselineConfigError("RECOVERY_MODE_INVALID")
     return PrelaunchMaintenanceAuthorization(
         plan_id=plan.plan_id, source_url=plan.source_url, platform=plan.platform,
         domain_id=plan.domain_id, subject_id=plan.subject_id,
@@ -582,6 +660,7 @@ def maintenance_authorization(plan: PublicBaselinePlan) -> PrelaunchMaintenanceA
         scope_version=plan.scope_version, cadence_seconds=plan.cadence_seconds,
         authorization_ref=plan.authorization_ref, policy_id=plan.policy_id,
         signature_verified=True, post_intake_policy=plan.post_intake_policy,
+        recovery_only=recovery_only,
     )
 
 
@@ -598,6 +677,12 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
         return {"status": "FAILED", "reason": exc.code, "runs": []}
     if loaded["status"] == "DISABLED":
         return {"status": "DISABLED", "runs": []}
+    if not loaded.get("plans"):
+        return {"status": "STAGED", "reason": "NO_ACTIVE_COLLECTION_PLANS",
+                "plan_version": loaded.get("plan_version"),
+                "summary": {"registry_expansion": loaded.get("registry_expansion"),
+                            "recovery_plan_count": len(loaded.get("recovery_plans", []))},
+                "runs": []}
     if store is None:
         from . import get_planner
         store = get_planner().store
@@ -799,6 +884,7 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
     return {"status": overall, "plan_version": loaded["plan_version"],
             "summary": {"succeeded": succeeded, "failed": failed,
                         "deferred": deferred,
+                        "registry_expansion": loaded.get("registry_expansion"),
                         "due_batch": {
                             "eligible_source_count": len(evaluated),
                             "selected_source_count": len(selected),
@@ -857,3 +943,282 @@ def purpose_baseline_config(query_pages, *, source_version, scope_version,
             "internal_auto_opt_in":True,"policy_id":PURPOSE_POLICY,
             "plan_version":plan_version,"sources":source_entries,
             "hmac":None,"admission_state":"OWNER_SCOPE_AND_SIGNATURE_PENDING"}
+
+
+def _resolve_baseline_config_key(hmac_key: str | None) -> str:
+    key = hmac_key if hmac_key is not None else os.environ.get(
+        "LUMENIS_PRELAUNCH_BASELINE_HMAC_KEY", "",
+    )
+    if not isinstance(key, str) or not key:
+        raise BaselineConfigError("HMAC_UNAVAILABLE")
+    return key
+
+
+def _verify_config_hmac(config: dict, hmac_key: str) -> None:
+    signature = config.get("hmac")
+    if not isinstance(signature, dict):
+        raise BaselineConfigError("HMAC_UNAVAILABLE")
+    if signature.get("algorithm") != "HMAC-SHA256" or not isinstance(signature.get("value"), str):
+        raise BaselineConfigError("HMAC_INVALID")
+    expected = hmac.new(
+        hmac_key.encode("utf-8"), _canonical_config(config), hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected, signature["value"]):
+        raise BaselineConfigError("HMAC_MISMATCH")
+
+
+def _registry_snapshot_fingerprint(rows) -> str:
+    """Hash only the current registry inputs that can change query targets."""
+    fields = ("domain_id", "subject_id", "brand_focus_id", "subject_type", "name_en",
+              "name_zh", "keywords", "aliases", "approved_aliases", "status")
+    snapshot = []
+    for row in rows:
+        if not isinstance(row, dict):
+            snapshot.append({"invalid_row": type(row).__name__})
+            continue
+        snapshot.append({field: row.get(field) for field in fields})
+    encoded = json.dumps(snapshot, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":"), default=str).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _registry_rows(loader=None):
+    try:
+        if loader is None:
+            from subject_registry import list_subjects
+            loader = list_subjects
+        rows = loader()
+    except (ImportError, OSError, RuntimeError, TypeError, ValueError, sqlite3.Error):
+        raise BaselineConfigError("REGISTRY_UNAVAILABLE") from None
+    if not isinstance(rows, (list, tuple)):
+        raise BaselineConfigError("REGISTRY_UNAVAILABLE")
+    return list(rows)
+
+
+def _validated_registry_expansion(value):
+    """Validate an HMAC-covered GLOBAL registered-entity query template."""
+    from ...acquisition_plan import (
+        _BUSINESS_DIMENSIONS,
+        AcquisitionPlanError,
+        _normalise_text,
+    )
+
+    if type(value) is not dict or set(value) != {
+            "schema_version", "source_version", "scope_version", "authorization_ref",
+            "cadence_seconds", "max_results", "templates"}:
+        raise BaselineConfigError("REGISTRY_EXPANSION_SCHEMA_INVALID")
+    if value.get("schema_version") != 1:
+        raise BaselineConfigError("REGISTRY_EXPANSION_SCHEMA_INVALID")
+    try:
+        source_version = _normalise_text(value.get("source_version"), field="source_version", max_length=64)
+        scope_version = _normalise_text(value.get("scope_version"), field="scope_version", max_length=64)
+        authorization_ref = _normalise_text(value.get("authorization_ref"), field="authorization_ref", max_length=200)
+    except (TypeError, ValueError):
+        raise BaselineConfigError("REGISTRY_EXPANSION_AUTHORITY_INVALID") from None
+    cadence = value.get("cadence_seconds")
+    max_results = value.get("max_results")
+    if (not source_version or not re.fullmatch(r"[A-Za-z0-9._:/-]{1,64}", source_version)
+            or not scope_version or not re.fullmatch(r"[A-Za-z0-9._:/-]{1,64}", scope_version)
+            or not authorization_ref or type(cadence) is not int or isinstance(cadence, bool)
+            or not 60 <= cadence <= 31 * 24 * 60 * 60):
+        raise BaselineConfigError("REGISTRY_EXPANSION_AUTHORITY_INVALID")
+    if type(max_results) is not int or isinstance(max_results, bool) or not 1 <= max_results <= 20:
+        raise BaselineConfigError("REGISTRY_EXPANSION_LIMIT_INVALID")
+    templates = value.get("templates")
+    if not isinstance(templates, list) or not 1 <= len(templates) <= 16:
+        raise BaselineConfigError("REGISTRY_EXPANSION_TEMPLATES_INVALID")
+    allowed_template_fields = {
+        "domain_id", "purpose", "dimension", "platforms", "acquisition_stage",
+        "geography_terms", "venue_boundary_terms",
+    }
+    normalized_templates = []
+    unsupported_platforms = set()
+    for template in templates:
+        if (type(template) is not dict or not {"domain_id", "purpose", "dimension", "platforms",
+                                               "acquisition_stage"}.issubset(template)
+                or set(template) - allowed_template_fields):
+            raise BaselineConfigError("REGISTRY_EXPANSION_TEMPLATE_INVALID")
+        domain = template.get("domain_id")
+        if (type(domain) is not str or domain not in {"CTH", "BMP"}
+                or template.get("acquisition_stage") != "SUBJECT_INTAKE"):
+            raise BaselineConfigError("REGISTRY_EXPANSION_TEMPLATE_INVALID")
+        try:
+            purpose = _normalise_text(template.get("purpose"), field="purpose", max_length=256)
+            dimension = template.get("dimension")
+            if not purpose or dimension not in _BUSINESS_DIMENSIONS:
+                raise ValueError
+            if dimension == "venue_operations" and domain != "CTH":
+                raise ValueError
+            platforms = template.get("platforms")
+            if not isinstance(platforms, list) or not 1 <= len(platforms) <= 32 or any(
+                    type(platform) is not str or not platform.strip() for platform in platforms):
+                raise ValueError
+            from ..platform_naming import normalize_platform
+            normalized_platforms = []
+            for platform in platforms:
+                normalized = normalize_platform(platform)
+                if normalized == "xiaohongshu":
+                    normalized = "xhs"
+                if normalized not in PURPOSE_PLATFORMS:
+                    unsupported_platforms.add((normalized or "UNKNOWN")[:40])
+                    continue
+                if normalized not in normalized_platforms:
+                    normalized_platforms.append(normalized)
+            geography = template.get("geography_terms", [])
+            venue = template.get("venue_boundary_terms", [])
+            if (not isinstance(geography, list) or not isinstance(venue, list)
+                    or len(geography) > 16 or len(venue) > 16
+                    or any(type(term) is not str or not term.strip() or len(term) > 80
+                           for term in geography + venue)):
+                raise ValueError
+        except (AcquisitionPlanError, TypeError, ValueError):
+            raise BaselineConfigError("REGISTRY_EXPANSION_TEMPLATE_INVALID") from None
+        normalized_templates.append({
+            "domain_id": domain, "purpose": purpose, "dimension": dimension,
+            "platforms": normalized_platforms, "acquisition_stage": "SUBJECT_INTAKE",
+            "geography_terms": geography, "venue_boundary_terms": venue,
+        })
+    return {
+        "schema_version": 1, "source_version": source_version,
+        "scope_version": scope_version, "authorization_ref": authorization_ref,
+        "cadence_seconds": cadence, "max_results": max_results,
+        "templates": normalized_templates,
+        "unsupported_platforms": sorted(unsupported_platforms),
+    }
+
+
+def _registry_expansion_sources(expansion, *, config_plan_version, registry_loader=None):
+    """Compile every current registry target from the signed template, without truncation."""
+    from ...acquisition_plan import (
+        AcquisitionPlanError,
+        _registry_aliases,
+        build_acquisition_plan,
+    )
+    from ..platform_naming import normalize_platform
+
+    def make_requests(rows, templates):
+        requests = []
+        targets = set()
+        blocked_rows = 0
+        for row in rows:
+            if not isinstance(row, dict):
+                blocked_rows += 1
+                continue
+            status = str(row.get("status") or "configured").strip().lower()
+            if status in {"archived", "disabled", "deleted"}:
+                continue
+            if status not in {"configured", "active"}:
+                blocked_rows += 1
+                continue
+            domain = row.get("domain_id")
+            expected_type = "company" if domain == "CTH" else "brand" if domain == "BMP" else None
+            registry_id = row.get("subject_id")
+            focus_id = row.get("brand_focus_id")
+            try:
+                aliases = _registry_aliases(row)
+            except AcquisitionPlanError:
+                blocked_rows += 1
+                continue
+            if (not expected_type or row.get("subject_type") != expected_type
+                    or not isinstance(registry_id, str) or not registry_id.strip()
+                    or (domain == "CTH" and focus_id is not None)
+                    or (domain == "BMP" and (not isinstance(focus_id, str) or not focus_id.strip()))
+                    or not aliases):
+                blocked_rows += 1
+                continue
+            target_key = (domain, registry_id)
+            if target_key in targets:
+                continue
+            targets.add(target_key)
+            if len(targets) > MAX_REGISTRY_EXPANSION_TARGETS:
+                raise BaselineConfigError("REGISTRY_EXPANSION_TARGET_LIMIT")
+            scope_key = focus_id if domain == "BMP" else registry_id
+            for template in templates:
+                if template["domain_id"] != domain:
+                    continue
+                for platform in template["platforms"]:
+                    for alias, _ in aliases:
+                        requests.append({
+                            "domain_id": domain, "scope_key": scope_key,
+                            "aliases": [alias],
+                            "purpose": template["purpose"], "dimension": template["dimension"],
+                            "platforms": [platform], "acquisition_stage": "SUBJECT_INTAKE",
+                            "geography_terms": template["geography_terms"],
+                            "venue_boundary_terms": template["venue_boundary_terms"],
+                        })
+                        if len(requests) > MAX_REGISTRY_EXPANSION_QUERIES:
+                            raise BaselineConfigError("REGISTRY_EXPANSION_QUERY_LIMIT")
+        return requests, len(targets), blocked_rows
+
+    for attempt in range(MAX_REGISTRY_SNAPSHOT_RETRIES):
+        snapshot = _registry_rows(registry_loader)
+        fingerprint = _registry_snapshot_fingerprint(snapshot)
+        requests, target_count, blocked_rows = make_requests(snapshot, expansion["templates"])
+        queries = []
+        staged_reasons = set()
+        if requests:
+            continuation = None
+            pages = 0
+            while True:
+                try:
+                    plan = build_acquisition_plan(
+                        business_requests=requests, registry_loader=lambda snapshot=snapshot: snapshot,
+                        max_queries=64, continuation=continuation,
+                    )
+                except AcquisitionPlanError as exc:
+                    raise BaselineConfigError("REGISTRY_EXPANSION_PLAN_INVALID") from exc
+                if plan.status not in {"READY", "STAGED"}:
+                    raise BaselineConfigError(plan.reason_code or "REGISTRY_EXPANSION_PLAN_UNAVAILABLE")
+                if plan.status == "STAGED" and plan.reason_code:
+                    staged_reasons.add(plan.reason_code)
+                queries.extend(plan.queries)
+                if len(queries) > MAX_REGISTRY_EXPANSION_QUERIES:
+                    raise BaselineConfigError("REGISTRY_EXPANSION_QUERY_LIMIT")
+                pages += 1
+                if pages > MAX_REGISTRY_EXPANSION_PAGES:
+                    raise BaselineConfigError("REGISTRY_EXPANSION_PAGE_LIMIT")
+                continuation = plan.next_cursor
+                if continuation is None:
+                    break
+
+        current = _registry_rows(registry_loader)
+        if _registry_snapshot_fingerprint(current) != fingerprint:
+            if attempt + 1 < MAX_REGISTRY_SNAPSHOT_RETRIES:
+                continue
+            raise BaselineConfigError("REGISTRY_CHANGED_DURING_PLAN")
+
+        entries = []
+        seen = set()
+        for query in queries:
+            platform = normalize_platform((query.business_context or {}).get("platform"))
+            identity = hashlib.sha256(json.dumps(
+                query.to_dict(), sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+            ).encode("utf-8")).hexdigest()
+            domain = "cth" if query.domain_id == "CTH" else "bmp"
+            source = {
+                "source_key": platform + ":" + identity,
+                "source_version": expansion["source_version"],
+                "scope_version": expansion["scope_version"],
+                "cadence_seconds": expansion["cadence_seconds"],
+                "authorization_ref": expansion["authorization_ref"],
+                "platform": platform, "source_url": query.keyword, "domain_id": domain,
+                "subject_id": query.subject_id, "brand_focus_id": query.brand_focus_id,
+                "max_results": expansion["max_results"], "plan_version": config_plan_version,
+                "purpose_query": query.to_dict(), "policy_id": PURPOSE_POLICY,
+            }
+            source_identity = hashlib.sha256(json.dumps(
+                source, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+            ).encode("utf-8")).hexdigest()
+            if source_identity not in seen:
+                seen.add(source_identity)
+                entries.append(source)
+        return entries, {
+            "status": "READY" if entries else "STAGED",
+            "snapshot_sha256": fingerprint,
+            "registered_target_count": target_count,
+            "blocked_registry_row_count": blocked_rows,
+            "generated_query_count": len(entries),
+            "unsupported_platforms": expansion.get("unsupported_platforms", []),
+            "staged_reasons": sorted(staged_reasons),
+        }
+    raise BaselineConfigError("REGISTRY_CHANGED_DURING_PLAN")

@@ -183,3 +183,129 @@ def test_actual_reviewed_100_seed_compiles_with_originals_and_no_implicit_admiss
     target=tmp_path/"unsigned-purpose-schedule.json"
     target.write_text(json.dumps(config,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     assert load_prelaunch_baseline_config(str(target),hmac_key=KEY)['status'] == 'DISABLED'
+
+
+def _registry_expansion():
+    return {
+        "schema_version": 1,
+        "source_version": "registered-subjects-v1",
+        "scope_version": "current-registry-v1",
+        "authorization_ref": "isolated-approved-purpose-scope",
+        "cadence_seconds": 3600,
+        "max_results": 1,
+        "templates": [
+            {"domain_id": "CTH", "purpose": "Review venue activity",
+             "dimension": "venue_operations", "platforms": ["x", "future_platform"],
+             "acquisition_stage": "SUBJECT_INTAKE"},
+            {"domain_id": "BMP", "purpose": "Review brand market activity",
+             "dimension": "market_activity", "platforms": ["x"],
+             "acquisition_stage": "SUBJECT_INTAKE"},
+        ],
+    }
+
+
+def test_signed_registry_expansion_is_current_complete_and_identity_stable(tmp_path):
+    rows = [
+        {"domain_id": "CTH", "subject_id": "SUBJ-ONE", "brand_focus_id": None,
+         "subject_type": "company", "name_en": "One Holdings", "name_zh": "甲商业",
+         "status": "configured"},
+        {"domain_id": "BMP", "subject_id": "SUBJ-BRAND", "brand_focus_id": "BRAND-ONE",
+         "subject_type": "brand", "name_en": "Brand One", "name_zh": "一号品牌",
+         "status": "active"},
+        {"domain_id": "CTH", "subject_id": "SUBJ-DISABLED", "brand_focus_id": None,
+         "subject_type": "company", "name_en": "Disabled Holdings", "name_zh": "停用主体",
+         "status": "disabled"},
+        {"domain_id": "CTH", "subject_id": "SUBJ-UNKNOWN", "brand_focus_id": None,
+         "subject_type": "company", "name_en": "Unknown Holdings", "name_zh": "未知主体",
+         "status": "pending-review"},
+    ]
+    path = tmp_path / "registry-expansion.json"
+    signed(path, [], registry_expansion=_registry_expansion())
+    loaded = load_prelaunch_baseline_config(
+        str(path), hmac_key=KEY, registry_loader=lambda: list(rows))
+    plans = loaded["plans"]
+    by_target = {}
+    for plan in plans:
+        target = plan.subject_id or plan.brand_focus_id
+        by_target.setdefault(target, set()).add(plan.plan_id)
+        assert plan.policy_id == PURPOSE_POLICY
+        assert plan.end_user_auto is False
+        assert plan.internal_auto_opt_in is True
+    assert set(by_target) == {"SUBJ-ONE", "BRAND-ONE"}
+    assert loaded["registry_expansion"]["blocked_registry_row_count"] == 1
+    assert loaded["registry_expansion"]["unsupported_platforms"] == ["UNKNOWN"]
+    assert all(plan.platform == "x" for plan in plans)
+
+    stable_ids = by_target["SUBJ-ONE"]
+    rows.append({"domain_id": "CTH", "subject_id": "SUBJ-TWO", "brand_focus_id": None,
+                 "subject_type": "company", "name_en": "Two Holdings", "name_zh": "乙商业",
+                 "status": "configured"})
+    expanded = load_prelaunch_baseline_config(
+        str(path), hmac_key=KEY, registry_loader=lambda: list(rows))
+    expanded_by_target = {}
+    for plan in expanded["plans"]:
+        expanded_by_target.setdefault(plan.subject_id or plan.brand_focus_id, set()).add(plan.plan_id)
+    assert stable_ids <= expanded_by_target["SUBJ-ONE"]
+    assert expanded_by_target["SUBJ-TWO"]
+    assert "SUBJ-DISABLED" not in expanded_by_target
+    assert "SUBJ-UNKNOWN" not in expanded_by_target
+
+
+def test_dynamic_plan_snapshot_change_and_invalid_signature_fail_closed(tmp_path):
+    path = tmp_path / "registry-expansion.json"
+    signed(path, [], registry_expansion=_registry_expansion())
+    first = {"domain_id": "CTH", "subject_id": "SUBJ-ONE", "brand_focus_id": None,
+             "subject_type": "company", "name_en": "One Holdings", "name_zh": "甲商业",
+             "status": "configured"}
+    second = {**first, "subject_id": "SUBJ-TWO", "name_en": "Two Holdings", "name_zh": "乙商业"}
+    calls = 0
+
+    def changing_registry():
+        nonlocal calls
+        calls += 1
+        return [first if calls % 2 else second]
+
+    with pytest.raises(BaselineConfigError, match="REGISTRY_CHANGED_DURING_PLAN"):
+        load_prelaunch_baseline_config(
+            str(path), hmac_key=KEY, registry_loader=changing_registry)
+    assert calls == 2 * 3
+
+    tampered = json.loads(path.read_text(encoding="utf-8"))
+    tampered["registry_expansion"]["authorization_ref"] = "changed-without-owner-signature"
+    path.write_text(json.dumps(tampered), encoding="utf-8")
+    calls_before = calls
+    with pytest.raises(BaselineConfigError, match="HMAC_MISMATCH"):
+        load_prelaunch_baseline_config(
+            str(path), hmac_key=KEY,
+            registry_loader=lambda: pytest.fail("unsigned config read the registry"))
+    assert calls == calls_before
+
+@pytest.mark.parametrize('budget,limit,reason', [
+    ('MAX_REGISTRY_EXPANSION_TARGETS', 1, 'REGISTRY_EXPANSION_TARGET_LIMIT'),
+    ('MAX_REGISTRY_EXPANSION_QUERIES', 1, 'REGISTRY_EXPANSION_QUERY_LIMIT'),
+    ('MAX_REGISTRY_EXPANSION_PAGES', 1, 'REGISTRY_EXPANSION_PAGE_LIMIT'),
+])
+def test_registry_expansion_budget_never_truncates_to_success(tmp_path, monkeypatch, budget, limit, reason):
+    from lumenis.system.collector.adapters.scheduling import prelaunch_baseline as owner
+    rows = [{'domain_id':'CTH','subject_id':f'SUBJ-{i}', 'brand_focus_id':None,
+             'subject_type':'company','name_en':f'Registered Example {i}',
+             'status':'active'} for i in range(70)]
+    path = tmp_path/'bounded.json'
+    signed(path, [], registry_expansion=_registry_expansion())
+    monkeypatch.setattr(owner, budget, limit)
+    with pytest.raises(BaselineConfigError, match=reason):
+        load_prelaunch_baseline_config(str(path), hmac_key=KEY, registry_loader=lambda: rows)
+
+
+def test_registry_complete_pagination_and_no_read_when_deferred(tmp_path):
+    rows = [{'domain_id':'CTH','subject_id':f'SUBJ-{i}', 'brand_focus_id':None,
+             'subject_type':'company','name_en':f'Registered Example {i}',
+             'status':'active'} for i in range(70)]
+    path = tmp_path/'pages.json'
+    signed(path, [], registry_expansion=_registry_expansion())
+    deferred = load_prelaunch_baseline_config(str(path), hmac_key=KEY, expand_registry=False,
+        registry_loader=lambda: pytest.fail('preflight must not read registry'))
+    assert deferred['status'] == 'STAGED' and deferred['plans'] == []
+    loaded = load_prelaunch_baseline_config(str(path), hmac_key=KEY, registry_loader=lambda: rows)
+    assert {p.subject_id for p in loaded['plans']} == {r['subject_id'] for r in rows}
+    assert loaded['registry_expansion']['registered_target_count'] == 70

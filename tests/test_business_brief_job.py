@@ -44,7 +44,10 @@ def _mock_model(monkeypatch, client, transform=lambda value: value):
     from tests.test_business_brief_typed_owned import _owned_result
 
     prepared = prepare_synthetic_content_sources(client, monkeypatch)
-    calls = []
+    class SourceCalls(list):
+        pass
+    calls = SourceCalls()
+    calls.source_ids = prepared["source_ids"]
     def run_owned(request):
         assert type(request) is OwnedServiceRequest
         assert request.operation == "business_brief"
@@ -102,7 +105,7 @@ def test_real_job_selects_task_material_beyond_article_prefix(client, monkeypatc
     calls = _mock_model(monkeypatch, client)
     focus = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
     response = api.post(URL + "/generate", headers=focus, json={
-        "source_ids": ["brief-job-source"], "business_question": question,
+        "source_ids": [calls.source_ids["brief-job-source"]], "business_question": question,
     })
     assert response.status_code == 200, response.get_json()
     job = response.get_json()["result"]
@@ -132,7 +135,7 @@ def test_explicit_materials_bind_model_input_or_fail_without_partial_analysis(cl
         if missing_body:
             con.execute("UPDATE canonical_data SET content='' WHERE source_id='selected-older'")
     calls = _mock_model(monkeypatch, client)
-    selected = ["selected-older", "brief-job-source"]
+    selected = [calls.source_ids[name] for name in ("selected-older", "brief-job-source")]
     focus = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
     response = api.post(URL + "/generate", headers=focus, json={
         "source_ids": selected, "limit": 2, "business_question": "Propose a content research direction.",
@@ -287,7 +290,7 @@ def test_previous_signed_artifact_remains_reopenable_after_upgrade(client, monke
         stored_analysis=historical_analysis,
     )
     reopened = api.get(URL + "/jobs/" + job["job_id"], headers=GLOBAL)
-    assert reopened.status_code == 200
+    assert reopened.status_code == 200, reopened.get_json()
     result = reopened.get_json()["result"]
     assert result["business_analysis"] == historical
     assert result["business_analysis"]["state"] == "draft"

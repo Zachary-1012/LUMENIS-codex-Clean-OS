@@ -2290,6 +2290,23 @@ def _source_brief_context(action, *, include_actor=False, module="reports"):
     from lumenis.shared.database import get_repository
     from subject_registry import TABLE_NAME
 
+    if _SHARED_WORKSPACE_SCOPE_HEADER in request.headers:
+        if module != "reports" or not _shared_research_route_allowed():
+            raise ValueError("SHARED_WORKSPACE_SCOPE_NOT_SUPPORTED")
+        from lumenis.auth.service import get_current_user
+        from lumenis.system.security import permission
+        scope = _parse_shared_workspace_scope_header()
+        actor = permission.resolve_local_workspace_principal(module="reports", action=action)
+        if actor is None:
+            actor = get_current_user(read_only=True)
+        if actor is None:
+            raise PermissionError("AUTH_REQUIRED")
+        identity, audit_id = permission.authorize_shared_workspace(
+            actor, scope, module="reports", action=action, _return_audit=True)
+        actor_ref = identity.get("principal_ref") or f"actor:{identity.get('actor_id')}"
+        result = actor_ref, audit_id, scope
+        return (*result, actor) if include_actor else result
+
     actor, scope, decision = _content_project_scope(
         action, module=module, include_decision=True,
     )
@@ -2323,7 +2340,7 @@ def _source_brief_job_error(exc):
     elif isinstance(exc, LookupError):
         status = 404
     elif isinstance(exc, RuntimeError):
-        status = 503
+        status = 409 if "CONFLICT" in code or "STOPPING" in code else 503
     else:
         return _content_project_error(exc)
     return jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status
@@ -2342,6 +2359,46 @@ _SHARED_WORKSPACE_CLIENT_IDENTITY_ARGS = frozenset({
     "workspace_id", "project_id", "domain_id", "product_id",
     "context_mode", "subject_id", "brand_focus_id", "global_scope",
 })
+
+
+def _shared_research_route_allowed():
+    if request.endpoint == 'experience_runtime.research_hypothesis_review':
+        return request.url_rule is not None and (request.url_rule.rule,request.method) in {
+            ('/api/experience/reports/source-brief/jobs/<job_id>/hypotheses','GET'),
+            ('/api/experience/reports/source-brief/jobs/<job_id>/hypotheses/review','POST')}
+    if request.endpoint == 'experience_runtime.research_reference_library':
+        return request.url_rule is not None and (request.url_rule.rule, request.method) in {
+            ('/api/experience/reports/source-brief/reference-library', 'GET'),
+            ('/api/experience/reports/source-brief/reference-library', 'POST'),
+            ('/api/experience/reports/source-brief/reference-library/<int:evidence_id>', 'GET')}
+    if request.endpoint == 'experience_runtime.research_learning':
+        return request.url_rule is not None and (request.url_rule.rule, request.method) in {
+            ('/api/experience/reports/source-brief/learning/<kind>', 'GET'),
+            ('/api/experience/reports/source-brief/learning/<kind>', 'POST'),
+            ('/api/experience/reports/source-brief/learning/<kind>/<object_id>', 'GET'),
+            ('/api/experience/reports/source-brief/learning/<kind>/<object_id>/<operation>', 'POST')}
+    if request.blueprint != "experience_runtime" or request.url_rule is None:
+        return False
+    routes = {
+        "generate_source_brief_job": ("/api/experience/reports/source-brief/generate", {"POST"}),
+        "reopen_source_brief_job": ("/api/experience/reports/source-brief/jobs/<job_id>", {"GET"}),
+        "submit_source_brief_review": ("/api/experience/reports/source-brief/jobs/<job_id>/reviews", {"POST"}),
+        "start_source_brief_task": ("/api/experience/reports/source-brief/start", {"POST"}),
+        "source_brief_task_status": ("/api/experience/reports/source-brief/tasks/<task_id>", {"GET"}),
+        "resume_source_brief_task": ("/api/experience/reports/source-brief/tasks/<task_id>/resume", {"POST"}),
+        "list_source_brief_tasks": ("/api/experience/reports/source-brief/tasks", {'GET'}),
+        "edit_source_brief_task": ("/api/experience/reports/source-brief/tasks/<task_id>", {'PATCH'}),
+        "change_source_brief_task_state": ("/api/experience/reports/source-brief/tasks/<task_id>/<operation>", {'POST'}),
+        "research_reference_catalog": ("/api/experience/reports/source-brief/references", {'GET'}),
+        "research_taxonomy": ("/api/experience/reports/source-brief/taxonomy", {'GET'}),
+        "save_source_brief_result": ("/api/experience/reports/source-brief/jobs/<job_id>/save", {'POST'}),
+        'research_reference_work': ('/api/experience/reports/source-brief/reference-work', {'POST', 'GET'}),
+        'research_reference_version': ('/api/experience/reports/source-brief/reference-work/<artifact_id>', {'POST', 'GET'}),
+        'research_match_rules': ('/api/experience/reports/source-brief/references/match-rules', {'POST'}),
+        "list_research_reports": ("/api/experience/reports/source-brief/jobs", {'GET'}),
+    }
+    expected = routes.get(request.endpoint.split(".")[-1])
+    return expected is not None and request.url_rule.rule == expected[0] and request.method in expected[1]
 
 
 def _shared_saved_work_route_allowed():
@@ -2384,6 +2441,9 @@ def _shared_content_project_route_allowed():
     routes = {
         "experience_runtime.screen_viewmodel": (
             "/api/experience/screen/<screen_id>", "GET", r"/api/experience/screen/SH-(?:01|05)"),
+        "experience_runtime.content_evidence_detail": (
+            "/api/experience/content/evidence/<evidence_id>", "GET",
+            r"/api/experience/content/evidence/CGE-[A-Za-z0-9_-]{1,96}"),
         "experience_runtime.inspect_content_project_media": (
             "/api/experience/shared-skills/shared.content_project/inspect", "POST",
             r"/api/experience/shared-skills/shared\.content_project/inspect"),
@@ -2757,13 +2817,25 @@ def import_shared_document():
     return _shared_work_response(execute)
 
 
+def _document_row_page_request(source_ref, actor, scope):
+    from lumenis.importer.documents import read_document_source_rows
+    if (set(request.args) != {"offset", "limit", "source_version", "source_sha256"}
+            or any(len(request.args.getlist(k)) != 1 for k in request.args)
+            or any(not request.args[k].isascii() or not request.args[k].isdecimal()
+                   or len(request.args[k]) > 6 for k in ("offset", "limit"))):
+        raise ValueError("DOCUMENT_ROW_PAGE_INVALID")
+    return read_document_source_rows(source_ref, actor=actor, scope=scope,
+        offset=int(request.args["offset"]), limit=int(request.args["limit"]),
+        source_version=request.args["source_version"], source_sha256=request.args["source_sha256"])
+
+
 @experience_bp.get("/api/experience/materials/documents/<int:evidence_id>")
 def read_shared_document(evidence_id):
     def execute():
         from lumenis.importer.documents import reopen_imported_source
-        if request.args:
-            raise ValueError("DOCUMENT_REQUEST_INVALID")
         actor, scope = _shared_work_actor_scope("read")
+        if request.args:
+            return _document_row_page_request(evidence_id, actor, scope)
         result = reopen_imported_source(evidence_id, actor=actor, scope=scope)
         return {**{key: value for key, value in result.items() if key != "content"},
                 "source_file_url": f"/api/experience/materials/documents/{evidence_id}/file"}
@@ -2809,6 +2881,19 @@ def save_shared_work():
         from lumenis.shared.reporting.saved_work import save_work
         from lumenis_app_api import _internal_pitch_body
         body = _internal_pitch_body()
+        if "verify_fact_wall_claims" in body:
+            if set(body) != {"verify_fact_wall_claims"}:
+                raise ValueError("WORK_FACT_WALL_REQUEST_INVALID")
+            from lumenis.shared.evidence.api import verify_fact_wall_claims
+            actor, scope = _shared_work_actor_scope("read")
+            return verify_fact_wall_claims(actor=actor, scope=scope, claims=body["verify_fact_wall_claims"])
+        if "adopt_source_brief_job_id" in body:
+            if set(body) != {"adopt_source_brief_job_id", "request_id", "mode"}:
+                raise ValueError("WORK_ADOPTION_REQUEST_INVALID")
+            from lumenis.shared.reporting.source_brief_job import adopt_domain_report
+            actor, scope = _shared_work_actor_scope("write")
+            return adopt_domain_report(job_id=body["adopt_source_brief_job_id"],
+                request_id=body["request_id"], mode=body["mode"], actor=actor, target_scope=scope)
         required = {"title", "markdown", "kind", "payload", "citations", "request_id"}
         allowed = required | {"work_id", "previous_artifact_id", "expected_draft_digest", "contract"}
         if not required.issubset(body) or set(body) - allowed:
@@ -2842,7 +2927,7 @@ def revise_shared_work(artifact_id):
 def search_shared_work():
     def execute():
         from lumenis.shared.reporting.saved_work import search_work
-        if set(request.args) - {"query", "limit", "cursor", "kind", "evidence_id"} or any(len(request.args.getlist(k)) != 1 for k in request.args):
+        if set(request.args) - {"query", "limit", "cursor", "kind", "evidence_id", "latest_only"} or any(len(request.args.getlist(k)) != 1 for k in request.args):
             raise ValueError("WORK_SEARCH_INVALID")
         limit = request.args.get("limit", "30")
         if not limit.isascii() or not limit.isdecimal():
@@ -2850,20 +2935,37 @@ def search_shared_work():
         evidence_id = request.args.get("evidence_id")
         if evidence_id is not None and (not evidence_id.isascii() or not evidence_id.isdecimal()):
             raise ValueError("WORK_SEARCH_INVALID")
+        latest = request.args.get("latest_only", "false")
+        if latest not in {"true", "false"}:
+            raise ValueError("WORK_SEARCH_INVALID")
         actor, scope = _shared_work_actor_scope("read")
         return search_work(actor=actor, scope=scope, query=request.args.get("query", ""), limit=int(limit),
                            cursor=request.args.get("cursor"), kind=request.args.get("kind"),
-                           evidence_id=int(evidence_id) if evidence_id is not None else None)
+                           evidence_id=int(evidence_id) if evidence_id is not None else None, latest_only=latest == "true")
     return _shared_work_response(execute)
 
 
 @experience_bp.get("/api/experience/saved-work/<artifact_id>")
 def read_shared_work(artifact_id):
     def execute():
-        from lumenis.shared.reporting.saved_work import reopen_work
-        if request.args:
+        from lumenis.shared.reporting.saved_work import reopen_work, prepare_work_selection, compare_work_versions
+        if set(request.args) & {"offset", "limit", "source_version", "source_sha256"}:
+            actor, scope = _shared_work_actor_scope("read")
+            return _document_row_page_request(artifact_id, actor, scope)
+        if (set(request.args) - {"selection_start", "selection_end", "compare_to"}
+                or any(len(request.args.getlist(k)) != 1 for k in request.args)):
             raise ValueError("WORK_REQUEST_INVALID")
         actor, scope = _shared_work_actor_scope("read")
+        if "compare_to" in request.args:
+            if set(request.args) != {"compare_to"} or not request.args["compare_to"]:
+                raise ValueError("WORK_REQUEST_INVALID")
+            return compare_work_versions(artifact_id, request.args["compare_to"], actor=actor, scope=scope)
+        if request.args:
+            if set(request.args) != {"selection_start", "selection_end"} or any(
+                    not value.isascii() or not value.isdecimal() for value in request.args.values()):
+                raise ValueError("WORK_SELECTION_RANGE_INVALID")
+            return prepare_work_selection(artifact_id, actor=actor, scope=scope,
+                start=int(request.args["selection_start"]), end=int(request.args["selection_end"]))
         return reopen_work(artifact_id, actor=actor, scope=scope)
     return _shared_work_response(execute)
 
@@ -2946,7 +3048,7 @@ def generate_source_brief_job():
 
     try:
         body = request.get_json(silent=True)
-        if not isinstance(body, dict) or set(body) - {"limit", "resume_job_id", "image_source_ref", "retry_media_job_id", "business_question", "source_ids"}:
+        if not isinstance(body, dict) or set(body) - {"limit", "resume_job_id", "image_source_ref", "retry_media_job_id", "business_question", "source_ids", "research", "reference"}:
             raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
         question = body.get("business_question")
         if "business_question" in body and (
@@ -2959,6 +3061,7 @@ def generate_source_brief_job():
             raise ValueError("SOURCE_BRIEF_LIMIT_INVALID")
         source_ids = _source_brief_material_ids(body, question=question, limit=limit)
         image_ref = body.get("image_source_ref")
+        research, reference = body.get("research"), body.get("reference")
         if "image_source_ref" in body and (
             not isinstance(image_ref, str) or not re.fullmatch(r"ART-[0-9a-f]{16}", image_ref)
             or "resume_job_id" in body
@@ -2967,16 +3070,20 @@ def generate_source_brief_job():
         if "retry_media_job_id" in body and ("resume_job_id" in body or "image_source_ref" in body):
             raise ValueError("SOURCE_BRIEF_RETRY_INPUT_INVALID")
         actor_ref, audit_ref, scope, actor = _source_brief_context("write", include_actor=True)
-        from domain_isolation import resolve_domain_identity
-        domain_id, _product_id = resolve_domain_identity(product_id=scope.get("product_id"))
-        if not domain_id:
-            raise ValueError("DOMAIN_REQUIRED")
-        allowed = get_permission_gate().check(
-            OperationType.REPORT_GENERATE, resource=request.path, caller=actor_ref,
-            domain_id=domain_id,
-        )
-        if not allowed.allowed:
-            raise PermissionError("SOURCE_BRIEF_GENERATE_DENIED")
+        if scope.get("scope_kind") == "shared_workspace":
+            domain_id = None
+            _report_task_authorize(actor_ref, scope)
+        else:
+            from domain_isolation import resolve_domain_identity
+            domain_id, _product_id = resolve_domain_identity(product_id=scope.get("product_id"))
+            if not domain_id:
+                raise ValueError("DOMAIN_REQUIRED")
+            allowed = get_permission_gate().check(
+                OperationType.REPORT_GENERATE, resource=request.path, caller=actor_ref,
+                domain_id=domain_id,
+            )
+            if not allowed.allowed:
+                raise PermissionError("SOURCE_BRIEF_GENERATE_DENIED")
         retry_of = body.get("retry_media_job_id")
         if "retry_media_job_id" in body:
             previous = get_source_brief_job(
@@ -3003,12 +3110,15 @@ def generate_source_brief_job():
                 raise PermissionError("SOURCE_BRIEF_ACTOR_MISMATCH")
             if _scope_material(**current_scope) != _scope_material(**scope):
                 raise PermissionError("SOURCE_BRIEF_SCOPE_MISMATCH")
-            allowed = get_permission_gate().check(
-                OperationType.REPORT_GENERATE, resource=request.path, caller=current_ref,
-                domain_id=domain_id,
-            )
-            if not allowed.allowed:
-                raise PermissionError("SOURCE_BRIEF_GENERATE_DENIED")
+            if scope.get("scope_kind") == "shared_workspace":
+                _report_task_authorize(actor_ref, scope)
+            else:
+                allowed = get_permission_gate().check(
+                    OperationType.REPORT_GENERATE, resource=request.path, caller=current_ref,
+                    domain_id=domain_id,
+                )
+                if not allowed.allowed:
+                    raise PermissionError("SOURCE_BRIEF_GENERATE_DENIED")
 
         con = get_repository().connect(read_only=True, wal=False)
         try:
@@ -3018,7 +3128,7 @@ def generate_source_brief_job():
                 image_source_ref=image_ref, image_actor=actor,
                 retry_of_job_id=retry_of,
                 business_question=question,
-                source_ids=source_ids,
+                source_ids=source_ids, research=body.get("research"), reference=body.get("reference"),
                 before_persist=before_persist,
             )
         finally:
@@ -3068,6 +3178,11 @@ def submit_source_brief_review(job_id):
             raise ValueError("SOURCE_BRIEF_REVIEW_INPUT_INVALID")
         actor_ref, _, scope = _source_brief_context("write")
         expected = _scope_material(**scope)
+        if scope.get("scope_kind") == "shared_workspace":
+            from lumenis.shared.reporting.source_brief_job import write_shared_report_review
+            _, _, _, actor = _source_brief_context("write", include_actor=True)
+            review = write_shared_report_review(job_id, actor=actor, actor_id=actor_ref, **body)
+            return jsonify({"ok": True, "review": review, "publish_status": "not_performed"})
 
         def authorize():
             current_ref, audit_ref, current_scope = _source_brief_context("write")
@@ -3175,6 +3290,8 @@ def _report_task_authorize(actor_ref, scope):
     current_ref, audit_ref, current_scope, actor = _source_brief_context("write", include_actor=True)
     if current_ref != actor_ref or current_scope != scope:
         raise PermissionError("SOURCE_BRIEF_TASK_SCOPE_DENIED")
+    if scope == {"scope_kind": "shared_workspace", "version": 1}:
+        return actor, audit_ref
     domain = "cth" if scope["product_id"] == "CTH" else "zbmp"
     resource = domain + ":" + (scope["subject_id"] or scope["brand_focus_id"] or "GLOBAL_ALL")
     allowed = get_permission_gate().check(
@@ -3193,7 +3310,7 @@ def start_source_brief_task():
 
     try:
         body = request.get_json(silent=True)
-        if not isinstance(body, dict) or set(body) - {"limit", "image_source_ref", "business_question", "source_ids", "revision"}:
+        if not isinstance(body, dict) or set(body) - {"limit", "image_source_ref", "business_question", "source_ids", "revision", "research", "defer", "request_id", "reference"}:
             raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
         if "revision" in body and set(body) != {"revision"}:
             raise ValueError("REPORT_REVISION_INHERITS_PARENT_INPUT")
@@ -3205,6 +3322,7 @@ def start_source_brief_task():
             raise ValueError("SOURCE_BRIEF_BUSINESS_QUESTION_INVALID")
         source_ids = _source_brief_material_ids(body, question=question, limit=limit)
         image_ref = body.get("image_source_ref")
+        research, reference = body.get("research"), body.get("reference")
         if "image_source_ref" in body and (not isinstance(image_ref, str) or not re.fullmatch(r"ART-[0-9a-f]{16}", image_ref)):
             raise ValueError("SOURCE_BRIEF_IMAGE_INPUT_INVALID")
         actor_ref, audit_ref, scope = _source_brief_context("write")
@@ -3213,21 +3331,39 @@ def start_source_brief_task():
         if "revision" in body:
             from lumenis.shared.reporting.operator_review import resolve_report_revision
             from lumenis.shared.reporting.source_brief_job import _scope_material
-            inherited = resolve_report_revision(body["revision"], actor_id=actor_ref,
-                                                 expected_scope=_scope_material(**scope))
+            if scope.get("scope_kind") == "shared_workspace":
+                from lumenis.shared.reporting.source_brief_job import resolve_shared_report_revision
+                actor, _ = authorize()
+                inherited = resolve_shared_report_revision(body["revision"], actor=actor, actor_id=actor_ref)
+            else:
+                inherited = resolve_report_revision(body["revision"], actor_id=actor_ref,
+                                                     expected_scope=_scope_material(**scope))
+            if scope.get("scope_kind") != "shared_workspace":
+                from lumenis.shared.reporting.source_brief_job import get_source_brief_job
+                parent = get_source_brief_job(body["revision"]["parent_job_id"], actor_id=actor_ref,
+                    expected_scope=_scope_material(**scope), actor=authorize()[0])
+                inherited = {**inherited, "research": parent.get("research"), "reference": parent.get("reference")}
             question, source_ids = inherited["business_question"], inherited["source_ids"]
             image_ref, limit = inherited["image_source_ref"], len(source_ids)
-        if source_ids is not None:
+            research, reference = inherited.get("research"), inherited.get("reference")
+        if source_ids is not None and scope.get("scope_kind") != "shared_workspace":
             from lumenis.shared.database import get_repository
             from lumenis.shared.reporting.operational_brief import build_scoped_source_brief
             with get_repository().connection(read_only=True, wal=False) as con:
                 build_scoped_source_brief(con, **scope, source_ids=source_ids, limit=limit)
+        if type(body.get("defer", False)) is not bool:
+            raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
+        from lumenis.shared.reporting.source_brief_job import _read_research_reference, _scope_material
+        _read_research_reference(reference, actor=authorize()[0], scope=_scope_material(**scope))
         task = tasks.create_task(actor_ref=actor_ref, scope=scope, permission_audit_ref=audit_ref,
                                  limit=limit, image_source_ref=image_ref, business_question=question,
-                                 source_ids=source_ids, revision=body.get("revision"))
-        tasks.dispatch(task, authorize=authorize, request_wrapper=copy_current_request_context)
+                                 source_ids=source_ids, revision=body.get("revision"), research=research, reference=reference, request_id=body.get("request_id"))
+        if type(body.get("defer", False)) is not bool:
+            raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
+        if not body.get("defer", False):
+            tasks.dispatch(task, authorize=authorize, request_wrapper=copy_current_request_context)
         # The worker may already have finished; 202 is admission, not job success.
-        result = tasks.status(tasks.scoped_task(task["task_id"], actor_ref=actor_ref, scope=scope))
+        result = tasks.status(tasks.scoped_task(task["task_id"], actor_ref=actor_ref, scope=scope), actor=authorize()[0])
         return jsonify({"ok": True, "task": result, "publish_status": "not_performed"}), 202
     except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
         return _source_brief_job_error(exc)
@@ -3240,9 +3376,9 @@ def source_brief_task_status(task_id):
     from lumenis.shared.reporting import source_brief_tasks as tasks
 
     try:
-        actor_ref, _audit, scope = _source_brief_context("read")
+        actor_ref, _audit, scope, actor = _source_brief_context("read", include_actor=True)
         task = tasks.scoped_task(task_id, actor_ref=actor_ref, scope=scope)
-        return jsonify({"ok": True, "task": tasks.status(task), "publish_status": "not_performed"})
+        return jsonify({"ok": True, "task": tasks.status(task, actor=actor), "publish_status": "not_performed"})
     except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
         return _source_brief_job_error(exc)
     except Exception:
@@ -3262,7 +3398,7 @@ def resume_source_brief_task(task_id):
         tasks.dispatch(task, authorize=lambda: _report_task_authorize(actor_ref, scope),
                        request_wrapper=copy_current_request_context)
         return jsonify({"ok": True, "task": tasks.status(tasks.scoped_task(
-            task_id, actor_ref=actor_ref, scope=scope)), "publish_status": "not_performed"}), 202
+            task_id, actor_ref=actor_ref, scope=scope), actor=_report_task_authorize(actor_ref, scope)[0]), "publish_status": "not_performed"}), 202
     except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
         return _source_brief_job_error(exc)
     except Exception:
@@ -4362,6 +4498,16 @@ def content_evidence_detail(evidence_id: str):
     if not re.fullmatch(r"CGE-[A-Za-z0-9_-]{1,96}", evidence_id):
         return jsonify({"ok": False, "error": "invalid evidence id"}), 400
     import content_generation
+    try:
+        expected_context = content_generation.authorize_content_root_request(strict=True)
+    except ValueError as exc:
+        if str(exc) == "AUTH_REQUIRED":
+            return jsonify({"ok": False, "code": "AUTH_REQUIRED"}), 401
+        return jsonify({"ok": False, "error": "invalid content scope"}), 400
+    except PermissionError:
+        return jsonify({"ok": False, "error": "content access denied"}), 403
+    except RuntimeError:
+        return jsonify({"ok": False, "error": "content authorization unavailable"}), 503
     record = _safe(content_generation.get_evidence, evidence_id, default={"__error__": "unavailable"})
     if _is_err(record):
         return jsonify({"ok": False, "error": "evidence runtime unavailable"}), 503
@@ -4375,6 +4521,20 @@ def content_evidence_detail(evidence_id: str):
         "relevance", "creativity", "brand_fit", "platform_fit", "overall",
         "eval_method", "human_rating", "created_at",
     )} for item in record.get("evaluations", [])]
+    # Re-read through the owner: signed receipt, actor/root and live source rights
+    # must still match. A changed record requires a fresh request, not stale output.
+    try:
+        if content_generation.authorize_content_root_request(strict=True) != expected_context:
+            raise PermissionError("CONTENT_CONTEXT_CHANGED")
+        current_record = content_generation.get_evidence(evidence_id)
+        if current_record != record or not current_record:
+            raise PermissionError("CONTENT_EVIDENCE_CHANGED_OR_REVOKED")
+        if content_generation.authorize_content_root_request(strict=True) != expected_context:
+            raise PermissionError("CONTENT_CONTEXT_CHANGED")
+    except (ValueError, PermissionError):
+        return jsonify({"ok": False, "error": "content access changed"}), 403
+    except Exception:
+        return jsonify({"ok": False, "error": "evidence runtime unavailable"}), 503
     return jsonify({"ok": True, "source": "runtime", "ai_is_derivative": True, "evidence": {
         "evidence_id": record.get("evidence_id"),
         "content_type": record.get("content_type"),
@@ -4854,7 +5014,7 @@ def _financial_material_response(*, save):
         from lumenis_app_api import _internal_pitch_body
 
         body = _internal_pitch_body()
-        allowed = {"evidence_id", "format", "annotations", "filing_id", "filed", "form", "identity_review_artifact_id"}
+        allowed = {"evidence_id", "format", "annotations", "filing_id", "filed", "form", "identity_review_artifact_id", "fs_div"}
         if save:
             allowed |= {"request_id", "work_id", "previous_artifact_id"}
         if (
@@ -5287,3 +5447,286 @@ def _artifact_experiment_route_matches():
     return (request.endpoint == 'experience_runtime.artifact_experiment_workflow'
             and request.method in {'GET', 'POST'} and request.url_rule is not None
             and request.url_rule.rule == '/api/experience/reports/artifact-experiments')
+
+
+@experience_bp.get("/api/experience/reports/source-brief/tasks")
+def list_source_brief_tasks():
+    from lumenis.shared.reporting import source_brief_tasks as tasks
+    try:
+        actor_ref, _, scope, actor = _source_brief_context("read", include_actor=True)
+        result = tasks.engine().list_report_tasks(actor_ref=actor_ref, scope=scope,
+            limit=int(request.args.get("limit", 30)), cursor=request.args.get("cursor"),
+            dimension=request.args.get("dimension"), state=request.args.get("state"))
+        result["items"] = [{**tasks.status(task, actor=actor), "snapshot_state":task["status"]} for task in result["items"]]
+        _source_brief_context("read")
+        return jsonify({"ok": True, "result": result})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.patch("/api/experience/reports/source-brief/tasks/<task_id>")
+def edit_source_brief_task(task_id):
+    return _mutate_source_brief_task(task_id, "edit")
+
+
+@experience_bp.post("/api/experience/reports/source-brief/tasks/<task_id>/<operation>")
+def change_source_brief_task_state(task_id, operation):
+    if operation not in {"cancel", "restore"}:
+        return jsonify({"ok": False, "code": "SOURCE_BRIEF_TASK_OPERATION_INVALID"}), 404
+    return _mutate_source_brief_task(task_id, operation)
+
+
+def _mutate_source_brief_task(task_id, operation):
+    from lumenis.shared.reporting import source_brief_tasks as tasks
+    try:
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or set(body) != ({"expected_revision", "changes"} if operation == "edit" else {"expected_revision"}):
+            raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
+        actor_ref, _, scope, actor = _source_brief_context("write", include_actor=True)
+        with tasks._lock:
+            current = tasks.scoped_task(task_id, actor_ref=actor_ref, scope=scope)
+            if operation in {"edit", "restore"}:
+                active = tasks._workers.get(task_id)
+                if ((active is not None and active.is_alive())
+                        or (current.get("parameters") and tasks._worker_alive(current))):
+                    raise RuntimeError("SOURCE_BRIEF_TASK_WORKER_STOPPING")
+            result = tasks.engine().mutate_report_task(task_id, actor_ref=actor_ref, scope=scope,
+                expected_revision=body["expected_revision"], operation=operation, changes=body.get("changes"))
+        return jsonify({"ok": True, "task": tasks.status(result, actor=actor)})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.get("/api/experience/reports/source-brief/taxonomy")
+def research_taxonomy():
+    from agent_research.taxonomy import get_research_taxonomy
+    try:
+        _source_brief_context("read")
+        return jsonify({"ok": True, "result": get_research_taxonomy(request.args.get("language", "en"))})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.get("/api/experience/reports/source-brief/references")
+def research_reference_catalog():
+    from agent_research.reference_assets import query_reference_assets
+    try:
+        _source_brief_context("read")
+        result = query_reference_assets(kind=request.args.get("kind"), query=request.args.get("query", ""),
+            region=request.args.get("region"), page=int(request.args.get("page", 1)),
+            page_size=int(request.args.get("limit", 20)))
+        return jsonify({"ok": True, "result": result})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.post("/api/experience/reports/source-brief/jobs/<job_id>/save")
+def save_source_brief_result(job_id):
+    from lumenis.shared.reporting.source_brief_job import get_source_brief_job, _scope_material, _media_scope
+    from lumenis.shared.reporting.saved_work import save_work
+    try:
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or set(body) != {"request_id", "title"}:
+            raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
+        actor_ref, _, scope, actor = _source_brief_context("write", include_actor=True)
+        report = get_source_brief_job(job_id, actor_id=actor_ref, expected_scope=_scope_material(**scope), actor=actor)
+        target = scope if scope.get("scope_kind") else _media_scope(_scope_material(**scope))
+        payload = {"source_brief_reference": {"job_id": job_id, "actor_id": actor_ref,
+            "scope": _scope_material(**scope), "artifact_hash": report["artifact_outcome"]["artifact_hash"]},
+            "hypothesis_review_reference": report.get("hypothesis_review"),
+            "research_result": report.get("research_analysis") or report.get("business_analysis")}
+        from agent_research.source_bound import decision_brief_markdown
+        appendix = decision_brief_markdown(payload['research_result'])
+        markdown = report['source_brief']['markdown'] + ('\n\n' + appendix if appendix else '')
+        result = save_work(title=body["title"], markdown=markdown, kind="research",
+            payload=payload, citations=[], request_id=body["request_id"], actor=actor, scope=target)
+        return jsonify({"ok": True, "result": result})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.get("/api/experience/reports/source-brief/jobs")
+def list_research_reports():
+    from lumenis.shared.reporting.source_brief_job import list_source_brief_jobs, _scope_material, _media_scope
+    try:
+        actor_ref, _, scope, actor = _source_brief_context("read", include_actor=True)
+        target = scope if scope.get("scope_kind") else _media_scope(_scope_material(**scope))
+        result = list_source_brief_jobs(actor=actor, scope=target, limit=int(request.args.get("limit", 30)),
+                                        cursor=request.args.get("cursor"))
+        return jsonify({"ok": True, "result": result})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.route('/api/experience/reports/source-brief/reference-work', methods=['GET', 'POST'])
+def research_reference_work():
+    from agent_research import reference_work as owner
+    from lumenis.shared.reporting.source_brief_job import _scope_material, _media_scope
+    try:
+        _, _, scope, actor = _source_brief_context('read' if request.method == 'GET' else 'write', include_actor=True)
+        scope = scope if scope.get('scope_kind') else _media_scope(_scope_material(**scope))
+        if request.method == 'GET':
+            result = owner.list_reference_work(actor=actor, scope=scope, query=request.args.get('query', ''),
+                limit=int(request.args.get('limit', 30)), cursor=request.args.get('cursor'))
+        else:
+            body = request.get_json(silent=True)
+            if not isinstance(body, dict) or not {'asset_id','request_id'} <= set(body) or set(body)-{'asset_id','request_id','edits'}:
+                raise ValueError('REFERENCE_INPUT_INVALID')
+            result = owner.adopt_reference_asset(actor=actor, scope=scope, **body)
+        return jsonify({'ok': True, 'result': result})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.route('/api/experience/reports/source-brief/reference-work/<artifact_id>', methods=['GET', 'POST'])
+def research_reference_version(artifact_id):
+    from agent_research import reference_work as owner
+    from lumenis.shared.reporting.source_brief_job import _scope_material, _media_scope
+    try:
+        _, _, scope, actor = _source_brief_context('read' if request.method == 'GET' else 'write', include_actor=True)
+        scope = scope if scope.get('scope_kind') else _media_scope(_scope_material(**scope))
+        if request.method == 'GET':
+            result = owner.read_reference_work(artifact_id, actor=actor, scope=scope,
+                expected_sha256=request.args.get('sha256'))
+        else:
+            body = request.get_json(silent=True)
+            if not isinstance(body, dict) or not {'request_id','expected_sha256','operation'} <= set(body) or set(body)-{'request_id','expected_sha256','operation','edits'}:
+                raise ValueError('REFERENCE_INPUT_INVALID')
+            result = owner.revise_reference_work(artifact_id, actor=actor, scope=scope, **body)
+        return jsonify({'ok': True, 'result': result})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.post('/api/experience/reports/source-brief/references/match-rules')
+def research_match_rules():
+    from agent_research.reference_assets import match_rule_references
+    try:
+        _source_brief_context('read')
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or 'content' not in body or set(body)-{'content','regions','industry','business','platform','as_of'}:
+            raise ValueError('REFERENCE_INPUT_INVALID')
+        return jsonify({'ok': True, 'result': match_rule_references(**body)})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.route('/api/experience/reports/source-brief/learning/<kind>', methods=['GET','POST'])
+@experience_bp.get('/api/experience/reports/source-brief/learning/<kind>/<object_id>')
+@experience_bp.post('/api/experience/reports/source-brief/learning/<kind>/<object_id>/<operation>')
+def research_learning(kind, object_id=None, operation=None):
+    from lumenis.shared.learning import contribution as owner
+    from lumenis.shared.reporting.source_brief_job import _scope_material
+    try:
+        if kind not in {'candidates','outbox'}:
+            raise LookupError('LEARNING_ROUTE_NOT_FOUND')
+        actor_ref, _, scope, actor = _source_brief_context('read' if request.method == 'GET' else 'write', include_actor=True)
+        scope = _scope_material(**scope)
+        args = dict(actor=actor, actor_id=actor_ref, expected_scope=scope)
+        def authorize():
+            fresh_ref, audit, fresh_scope = _source_brief_context('write')
+            if fresh_ref != actor_ref or _scope_material(**fresh_scope) != scope:
+                raise PermissionError('LEARNING_AUTHORIZATION_CHANGED')
+            return {'actor_id': actor_ref, 'scope': scope, 'permission_audit_ref': str(audit),
+                    'operation_audit_ref': str(audit)}
+        if request.method == 'GET':
+            if object_id:
+                result = (owner.get_candidate if kind == 'candidates' else owner.get_outbox)(object_id, **args)
+            else:
+                result = (owner.list_candidates if kind == 'candidates' else owner.list_outbox)(**args,
+                    limit=int(request.args.get('limit',30)), offset=int(request.args.get('offset',0)))
+        else:
+            body = request.get_json(silent=True)
+            if not isinstance(body, dict):
+                raise ValueError('LEARNING_INPUT_INVALID')
+            args['authorize'] = authorize
+            if not object_id and kind == 'candidates':
+                allowed = {'job_id','review_id','submission_id'}
+                business = {'work_id','expected_business_revision','job_id','submission_id'}
+                if set(body) not in (allowed, business):
+                    raise ValueError('LEARNING_INPUT_INVALID')
+                result = (owner.create_candidate if set(body)==allowed else owner.create_business_candidate)(**args, **body)
+            elif object_id and operation == 'enqueue' and kind == 'candidates':
+                if set(body) != {'expected_revision','submission_id','receiver'}:
+                    raise ValueError('LEARNING_INPUT_INVALID')
+                result = owner.enqueue_candidate(object_id, **args, **body)
+            elif object_id and kind == 'candidates' and operation in {'review','validate','adopt','withdraw','restore','reject'}:
+                if set(body) != {'expected_revision','submission_id','notes'}:
+                    raise ValueError('LEARNING_INPUT_INVALID')
+                result = owner.transition_candidate(object_id, action=operation, **args, **body)
+            elif object_id and kind == 'outbox' and operation in {'stage','fail','requeue','receive_local'}:
+                if set(body) != {'expected_revision','submission_id'}:
+                    raise ValueError('LEARNING_INPUT_INVALID')
+                result = (owner.receive_local_contribution(object_id, **args, **body) if operation == 'receive_local'
+                          else owner.transition_outbox(object_id, action=operation, **args, **body))
+            else:
+                raise LookupError('LEARNING_ROUTE_NOT_FOUND')
+        return jsonify({'ok': True, 'result': result})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.post('/api/experience/reports/source-brief/adopt-source')
+def adopt_research_source():
+    from lumenis.importer.documents import adopt_shared_research_source
+    from lumenis.shared.reporting.source_brief_job import _scope_material, _media_scope
+    try:
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or set(body) != {'job_id','source_id','provenance','mode'}:
+            raise ValueError('RESEARCH_ADOPTION_INPUT_INVALID')
+        _, _, scope, actor = _source_brief_context('write', include_actor=True)
+        if scope.get('scope_kind'):
+            raise ValueError('RESEARCH_ADOPTION_TARGET_DOMAIN_REQUIRED')
+        result = adopt_shared_research_source(actor=actor, target_scope=_media_scope(_scope_material(**scope)), **body)
+        return jsonify({'ok': True, 'result': result})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.route('/api/experience/reports/source-brief/reference-library', methods=['GET','POST'])
+@experience_bp.get('/api/experience/reports/source-brief/reference-library/<int:evidence_id>')
+def research_reference_library(evidence_id=None):
+    import intelligence_library_api as owner
+    from lumenis.shared.reporting.source_brief_job import _scope_material, _media_scope
+    try:
+        _, _, scope, actor = _source_brief_context('read' if request.method == 'GET' else 'write', include_actor=True)
+        scope = scope if scope.get('scope_kind') else _media_scope(_scope_material(**scope))
+        if evidence_id is not None:
+            result = owner.read_reference_library_source(evidence_id, actor=actor, scope=scope)
+        elif request.method == 'GET':
+            result = owner.discover_reference_library_sources(actor=actor, scope=scope, query=request.args.get('query',''),
+                limit=int(request.args.get('limit',30)), cursor=request.args.get('cursor'))
+        else:
+            body = request.get_json(silent=True)
+            if not isinstance(body, dict) or not {'asset_id','request_id'} <= set(body) or set(body)-{'asset_id','request_id','edits'}:
+                raise ValueError('REFERENCE_INPUT_INVALID')
+            result = owner.adopt_reference_library_asset(actor=actor, scope=scope, **body)
+        return jsonify({'ok': True, 'result': result})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.get('/api/experience/reports/source-brief/jobs/<job_id>/hypotheses')
+@experience_bp.post('/api/experience/reports/source-brief/jobs/<job_id>/hypotheses/review')
+def research_hypothesis_review(job_id):
+    from lumenis.shared.reporting.source_brief_job import get_hypothesis_review, write_hypothesis_review, _scope_material
+    try:
+        actor_id, _, scope, actor = _source_brief_context('read' if request.method == 'GET' else 'write', include_actor=True)
+        scope = _scope_material(**scope)
+        args = {'actor':actor,'actor_id':actor_id,'expected_scope':scope}
+        if request.method == 'GET':
+            result = get_hypothesis_review(job_id, **args)
+        else:
+            body = request.get_json(silent=True)
+            if not isinstance(body,dict) or set(body) != {'hypothesis_id','disposition','rationale','evidence_refs','request_id','expected_revision'}:
+                raise ValueError('HYPOTHESIS_REVIEW_INPUT_INVALID')
+            result = write_hypothesis_review(job_id, **args, **body)
+        return jsonify({'ok':True,'result':result})
+    except (ValueError,LookupError,PermissionError,RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+
+
+@experience_bp.route('/api/experience/propagation/classify', methods=['POST'])
+def propagation_classify():
+    from brand_propagation import classification_http
+    return classification_http()

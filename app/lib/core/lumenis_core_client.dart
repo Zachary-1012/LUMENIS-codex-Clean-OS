@@ -452,7 +452,7 @@ class LumenisCoreClient {
         response['contract'] != 'lumenis.context.v1' ||
         response['selection_only'] != true) {
       throw const FormatException(
-        'Invalid LUMENIS context selection contract.',
+        'Invalid OEVIRA context selection contract.',
       );
     }
     final rawContext = response['context'];
@@ -1596,7 +1596,7 @@ class LumenisCoreClient {
   void _requireLocalBrowserEndpoint() {
     if (!_isLoopback(_uri('/api/browser/sessions'))) {
       throw const LumenisCoreException(
-        'Controlled browser access is available only through local LUMENIS Core.',
+        'Controlled browser access is available only through local OEVIRA Core.',
         errorCode: 'BROWSER_LOCAL_CORE_REQUIRED',
       );
     }
@@ -1739,7 +1739,7 @@ class LumenisCoreClient {
       return decoded;
     } on LumenisTransportException catch (error) {
       throw LumenisCoreException(
-        'LUMENIS Core unavailable at $baseUrl for $method $path: '
+        'OEVIRA Core unavailable at $baseUrl for $method $path: '
         '$error',
       );
     }
@@ -1748,7 +1748,7 @@ class LumenisCoreClient {
   Uri _uri(String path) {
     final uri = Uri.parse('$baseUrl$path');
     if (uri.userInfo.isNotEmpty || uri.host.isEmpty) {
-      throw const LumenisCoreException('Invalid LUMENIS Core URL.');
+      throw const LumenisCoreException('Invalid OEVIRA Core URL.');
     }
     return uri;
   }

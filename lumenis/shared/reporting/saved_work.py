@@ -69,7 +69,7 @@ _CUSTODY_FORMATS = {
     "doc": {"media_type": "application/msword", "custody": "ole"},
     "xls": {"media_type": "application/vnd.ms-excel", "custody": "ole"},
 }
-_KINDS = {"research", "report", "podcast_episode", "delivery_preferences"}
+_KINDS = {"research", "report", "note", "podcast_episode", "delivery_preferences"}
 _SCOPE_KEYS = ("domain_id", "subject_id", "brand_focus_id", "global_scope")
 _SHARED_SCOPE_KEYS = ("scope_kind", "version")
 _SHARED_SCOPE_KIND = "shared_workspace"
@@ -539,6 +539,9 @@ def _verified_evidence(con, evidence_id: int, context: dict, actor: Any = None,
             purpose=purpose, connection=con)
         if decision.allowed is not True:
             raise SavedWorkError('BROWSER_SOURCE_USE_APPROVAL_REQUIRED')
+    if provenance.get('research_origin') is not None:
+        from lumenis.importer.documents import validate_shared_research_origin
+        validate_shared_research_origin(provenance['research_origin'], actor=actor, connection=con)
     return {**item, "raw_content": text, "provenance": provenance}
 
 
@@ -609,8 +612,22 @@ def _read(con, artifact_id: str, context: dict, actor: Any = None, *, verify_sou
         raise SavedWorkError("WORK_ATTACHMENT_INVALID")
     for binding in attachments:
         _read_attachment(con, binding, context, document["work_id"], actor=actor)
+    if verify_sources and 'domain_report_adoption' in document['payload']:
+        from .source_brief_job import validate_domain_report_adoption
+        try:
+            validate_domain_report_adoption(document['payload']['domain_report_adoption'], actor=actor, connection=con)
+        except (ValueError, PermissionError, LookupError, RuntimeError) as exc:
+            raise SavedWorkError('WORK_REPORT_ADOPTION_UNAVAILABLE') from exc
     if verify_sources:
         document["citations"] = _validate_citations(con, document["citations"], context, actor)
+        if 'fact_wall' in document['payload']:
+            from lumenis.shared.evidence.api import validate_fact_wall_saved_payload
+            validate_fact_wall_saved_payload(connection=con, payload=document['payload'],
+                citations=document['citations'], context=context, actor=actor)
+        if document["kind"] == "note":
+            if document["markdown"] != _note_markdown(document["payload"]):
+                raise SavedWorkError("WORK_NOTE_INTEGRITY_FAILED")
+            _validate_note_sources(con, document["payload"], document["citations"], context, actor)
     return {"artifact": record, "document": document, "_content_bytes": raw,
             "return_ref": {"artifact_id": artifact_id, "work_id": document["work_id"],
                            "version": document["version"], "scope": _client_scope(context)}}
@@ -684,6 +701,91 @@ def work_write_resource(*, title: str, markdown: str, kind: str, payload: dict,
                                      "task_id": task_id, "assertion_id": assertion_id})
 
 
+def _note_markdown(payload: dict) -> str:
+    """Typed user-owned notes; rendered labels never claim factual verification."""
+    note = payload.get("note")
+    if (not isinstance(note, dict) or set(note) != {"schema", "blocks"}
+            or note["schema"] != "lumenis.workspace-note/v1"
+            or not isinstance(note["blocks"], list) or not 1 <= len(note["blocks"]) <= 100):
+        raise SavedWorkError("WORK_NOTE_INVALID")
+    seen = set()
+    inputs = set()
+    rendered = ["Workspace note · user-owned, not verified facts"]
+    labels = {"user_text": "User note", "quoted_excerpt": "Source excerpt · unverified statement",
+              "derived_summary": "AI summary · user-supplied, unverified"}
+    for block in note["blocks"]:
+        if (not isinstance(block, dict) or not isinstance(block.get("id"), str)
+                or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", block["id"]) or block["id"] in seen
+                or not isinstance(block.get("type"), str) or block.get("type") not in labels or not isinstance(block.get("text"), str)
+                or not block["text"].strip() or len(block["text"]) > 64000):
+            raise SavedWorkError("WORK_NOTE_BLOCK_INVALID")
+        expected = {"id", "type", "text"}
+        if block["type"] == "quoted_excerpt":
+            expected.add("source")
+        if block["type"] == "derived_summary":
+            expected.add("input_block_ids")
+            refs = block.get("input_block_ids")
+            if (not isinstance(refs, list) or not refs or len(refs) > 100
+                    or any(not isinstance(ref, str) or ref not in inputs for ref in refs)
+                    or len(set(refs)) != len(refs)):
+                raise SavedWorkError("WORK_NOTE_SUMMARY_INPUT_INVALID")
+        else:
+            inputs.add(block["id"])
+        if set(block) != expected:
+            raise SavedWorkError("WORK_NOTE_BLOCK_INVALID")
+        seen.add(block["id"])
+        section = labels[block["type"]] + "\n\n" + block["text"]
+        if block["type"] == "quoted_excerpt":
+            section += "\n\nSource binding (Unicode offsets in saved document text): " + _json(block["source"]).decode("utf-8")
+        elif block["type"] == "derived_summary":
+            section += "\n\nInput blocks: " + ", ".join(block["input_block_ids"])
+        rendered.append(section)
+    return "\n\n---\n\n".join(rendered)
+
+
+def _validate_note_sources(con, payload, citations, context, actor):
+    _note_markdown(payload)
+    for block in payload["note"]["blocks"]:
+        if block["type"] != "quoted_excerpt":
+            continue
+        source = block["source"]
+        if not isinstance(source, dict):
+            raise SavedWorkError("WORK_NOTE_SOURCE_INVALID")
+        if source.get("type") == "saved_work":
+            if (set(source) != {"type", "artifact_id", "sha256", "version", "start", "end"}
+                    or not isinstance(source["artifact_id"], str) or not isinstance(source["sha256"], str)):
+                raise SavedWorkError("WORK_NOTE_SOURCE_INVALID")
+            # Notes cannot recursively cite notes. Original documents retain their
+            # existing owner checks, including live SourceUse/review dependencies.
+            item = _read(con, source["artifact_id"], context, actor, verify_sources=False)
+            if item["document"]["kind"] == "note":
+                raise SavedWorkError("WORK_NOTE_RECURSIVE_SOURCE_FORBIDDEN")
+            item = read_committed_work(source["artifact_id"], actor=actor,
+                                       scope=_client_scope(context), connection=con)
+            versions = _versions(con, item["document"]["work_id"], context, actor)
+            if (not versions or versions[-1]["artifact"]["artifact_id"] != source["artifact_id"]
+                    or source["sha256"] != item["artifact"]["sha256"]
+                    or type(source["version"]) is not int or source["version"] != item["document"]["version"]):
+                raise SavedWorkError("WORK_NOTE_SOURCE_CHANGED")
+            text = item["document"]["markdown"]
+            start, end = source["start"], source["end"]
+            if (type(start) is not int or type(end) is not int or not 0 <= start < end <= len(text)
+                    or text[start:end] != block["text"]):
+                raise SavedWorkError("WORK_NOTE_QUOTE_UNGROUNDED")
+        elif source.get("type") == "evidence":
+            if (set(source) != {"type", "citation_index", "version", "sha256"}
+                    or type(source["citation_index"]) is not int
+                    or not 0 <= source["citation_index"] < len(citations)):
+                raise SavedWorkError("WORK_NOTE_SOURCE_INVALID")
+            citation = citations[source["citation_index"]]
+            evidence = _verified_evidence(con, citation["evidence_id"], context, actor)
+            if (not isinstance(source["version"], str) or source["version"] != evidence["version"]
+                    or source["sha256"] != evidence["content_hash"] or citation["quote"] != block["text"]):
+                raise SavedWorkError("WORK_NOTE_SOURCE_CHANGED")
+        else:
+            raise SavedWorkError("WORK_NOTE_SOURCE_INVALID")
+
+
 def save_work(*, title: str, markdown: str, kind: str, payload: dict,
               citations: list, request_id: str, actor: Any, scope: Mapping,
               work_id: str | None = None, previous_artifact_id: str | None = None,
@@ -712,6 +814,10 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
            for value in (task_id, assertion_id)):
         raise SavedWorkError("WORK_ASSERTION_INVALID")
     _safe_payload(payload)
+    if 'domain_report_adoption' in payload and not callable(before_commit):
+        raise SavedWorkError('WORK_REPORT_ADOPTION_OWNER_REQUIRED')
+    if 'research_hypothesis_review' in payload and not callable(before_commit):
+        raise SavedWorkError('WORK_HYPOTHESIS_REVIEW_OWNER_REQUIRED')
     # These are server-owned execution outputs, never client file paths or
     # credentials. A binding may commit its existing Task row on this same
     # connection, serializing cancellation against the Artifact commit.
@@ -733,6 +839,8 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
     # Detach mutable caller data before hashing, validation and persistence.
     payload, citations = json.loads(_json(payload)), json.loads(_json(citations))
     contract = json.loads(_json(_validate_contract(contract, payload)))
+    if kind == "note":
+        markdown = _note_markdown(payload)
     if kind == "podcast_episode" and not contract["required_payload_paths"]:
         raise SavedWorkError("WORK_EPISODE_CONTRACT_REQUIRED")
     if kind == "podcast_episode" and "podcast_plan" in payload:
@@ -765,6 +873,12 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
         con.execute("BEGIN IMMEDIATE")
         try:
             checked_citations = _validate_citations(con, citations, context, actor)
+            if 'fact_wall' in payload:
+                from lumenis.shared.evidence.api import validate_fact_wall_saved_payload
+                validate_fact_wall_saved_payload(connection=con, payload=payload,
+                    citations=checked_citations, context=context, actor=actor)
+            if kind == "note":
+                _validate_note_sources(con, payload, checked_citations, context, actor)
             versions = _versions(con, assigned_work, context, actor)
             for existing in versions:
                 if existing["document"]["request_id"] == request_id:
@@ -772,12 +886,15 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
                         raise SavedWorkError("WORK_REQUEST_REUSE_CONFLICT")
                     con.rollback()
                     return {**reopen_work(existing["artifact"]["artifact_id"], actor=actor, scope=scope), "replayed": True}
+            if versions and 'domain_report_adoption' in versions[-1]['document']['payload']:
+                if payload.get('domain_report_adoption') != versions[-1]['document']['payload']['domain_report_adoption']:
+                    raise SavedWorkError('WORK_REPORT_ADOPTION_IMMUTABLE')
             parent = versions[-1]["artifact"]["artifact_id"] if versions else None
             if previous_artifact_id != parent:
                 raise SavedWorkError("WORK_REVISION_CONFLICT")
             prior_digest = versions[-1]["document"]["draft_digest"] if versions else None
             if (expected_draft_digest is not None and expected_draft_digest != prior_digest
-                    or kind == "podcast_episode" and versions and expected_draft_digest is None):
+                    or kind in {"podcast_episode", "note"} and versions and expected_draft_digest is None):
                 raise SavedWorkError("WORK_DRAFT_REVISION_CONFLICT")
             if versions and versions[-1]["document"]["kind"] != kind:
                 raise SavedWorkError("WORK_KIND_CHANGE_FORBIDDEN")
@@ -826,6 +943,18 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
             _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource, connection=con)
             authorize_saved_work(actor, scope, action="write", connection=con)
             _validate_citations(con, checked_citations, context, actor)
+            if kind == "note":
+                _validate_note_sources(con, payload, checked_citations, context, actor)
+            if 'fact_wall' in payload:
+                from lumenis.shared.evidence.api import validate_fact_wall_saved_payload
+                validate_fact_wall_saved_payload(connection=con, payload=payload,
+                    citations=checked_citations, context=context, actor=actor)
+            if 'domain_report_adoption' in payload:
+                from .source_brief_job import validate_domain_report_adoption
+                validate_domain_report_adoption(payload['domain_report_adoption'], actor=actor, connection=con)
+                if not versions and not permission.get_permission_gate().get_valid_approval_token(
+                        permission.OperationType.DATA_EXPORT.value, resource=resource, exact=True):
+                    raise SavedWorkError('WORK_REPORT_ADOPTION_APPROVAL_REVOKED')
             con.commit()
             committed = True
             # A receipt is issued only after an independent connection has
@@ -906,6 +1035,34 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connect
     authorize_saved_work(actor, scope, action="read", connection=connection)
     for source in sources:
         authorize(actor, source["scope"], action="read", connection=connection)
+    reference = result["document"]["payload"].get("source_brief_reference")
+    if reference is not None:
+        from .source_brief_job import get_source_brief_job
+        if not isinstance(reference, dict) or set(reference) != {"job_id", "actor_id", "scope", "artifact_hash"}:
+            raise SavedWorkError("WORK_RESEARCH_REFERENCE_INVALID")
+        report = get_source_brief_job(reference["job_id"], actor_id=reference["actor_id"],
+            expected_scope=reference["scope"], actor=actor, connection=connection)
+        if result['document']['payload'].get('hypothesis_review_reference') != report.get('hypothesis_review'):
+            raise SavedWorkError('WORK_RESEARCH_REVIEW_CHANGED')
+        if report["artifact_outcome"]["artifact_hash"] != reference["artifact_hash"]:
+            raise SavedWorkError("WORK_RESEARCH_REFERENCE_CHANGED")
+    hypothesis = result['document']['payload'].get('research_hypothesis_review')
+    if hypothesis is not None:
+        from .source_brief_job import get_source_brief_job, _hypothesis_analysis
+        report = get_source_brief_job(hypothesis['job_id'],actor=actor,actor_id=hypothesis['actor_id'],
+            expected_scope=hypothesis['scope'],connection=connection)
+        analysis,digest = _hypothesis_analysis(report,actor=actor,reviews=hypothesis['reviews'],connection=connection)
+        if (report['artifact_outcome']['artifact_hash'] != hypothesis['report_hash']
+                or digest != hypothesis['source_digest'] or analysis != hypothesis['analysis']):
+            raise SavedWorkError('WORK_RESEARCH_REVIEW_CHANGED')
+    if 'domain_report_adoption' in result['document']['payload']:
+        from .source_brief_job import validate_domain_report_adoption
+        validate_domain_report_adoption(result['document']['payload']['domain_report_adoption'],
+                                        actor=actor, connection=connection)
+    if 'fact_wall' in result['document']['payload']:
+        from lumenis.shared.evidence.api import validate_fact_wall_saved_payload
+        validate_fact_wall_saved_payload(connection=connection, payload=result['document']['payload'],
+            citations=result['document']['citations'], context=context, actor=actor)
     doc, record = result["document"], result["artifact"]
     receipt = {"schema": "lumenis.committed-saved-work/v1", "task_id": doc.get("task_id"),
                "assertion_id": doc.get("assertion_id"), "contract": doc["contract"],
@@ -938,6 +1095,68 @@ def reopen_work(artifact_id: str, *, actor: Any, scope: Mapping, connection=None
     result = read_committed_work(artifact_id, actor=actor, scope=scope, **options)
     result.pop("content")
     return result
+
+
+def prepare_work_selection(artifact_id: str, *, actor: Any, scope: Mapping,
+                           start: int, end: int) -> dict:
+    """Read-only selection handoff. Explicit ordinary POST is still required."""
+    context = authorize_saved_work(actor, scope, action="read")
+    with get_repository().connection(read_only=True, wal=False) as con:
+        item = reopen_work(artifact_id, actor=actor, scope=scope, connection=con)
+        document = item["document"]
+        if document["kind"] == "note":
+            raise SavedWorkError("WORK_NOTE_RECURSIVE_SOURCE_FORBIDDEN")
+        versions = _versions(con, document["work_id"], context, actor)
+        if versions[-1]["artifact"]["artifact_id"] != artifact_id:
+            raise SavedWorkError("WORK_SELECTION_VERSION_CHANGED")
+        text = document["markdown"]
+        if (type(start) is not int or type(end) is not int or not 0 <= start < end <= len(text)
+                or end-start > 64000 or not text[start:end].strip()):
+            raise SavedWorkError("WORK_SELECTION_RANGE_INVALID")
+        block = {"id": "selection", "type": "quoted_excerpt", "text": text[start:end],
+                 "source": {"type": "saved_work", "artifact_id": artifact_id,
+                    "sha256": item["artifact"]["sha256"], "version": document["version"],
+                    "start": start, "end": end}}
+        payload = {"note": {"schema": "lumenis.workspace-note/v1", "blocks": [block]}}
+        _validate_note_sources(con, payload, [], context, actor)
+        authorize_saved_work(actor, scope, action="read", connection=con)
+    return {"state": "preview_not_saved", "offset_unit": "unicode_codepoint",
+            "source": block["source"], "fact_verified": False, "execution": "not_started",
+            "save_draft": {"kind": "note", "title": document["title"][:280] + " · selection",
+                "markdown": _note_markdown(payload), "payload": payload, "citations": []},
+            "save_requires": ["explicit_confirmation", "request_id"]}
+
+
+def compare_work_versions(artifact_id: str, compare_to: str, *, actor: Any, scope: Mapping) -> dict:
+    """Compare authorized immutable versions, without a restore or other write."""
+    import difflib
+    context = authorize_saved_work(actor, scope, action="read")
+    with get_repository().connection(read_only=True, wal=False) as con:
+        target = reopen_work(artifact_id, actor=actor, scope=scope, connection=con)
+        previous = reopen_work(compare_to, actor=actor, scope=scope, connection=con)
+        if target["document"]["work_id"] != previous["document"]["work_id"]:
+            raise SavedWorkError("WORK_COMPARE_DIFFERENT_WORK")
+        current = _versions(con, target["document"]["work_id"], context, actor)[-1]
+        changes = []
+        for key in ("title", "markdown", "payload", "citations"):
+            before, after = previous["document"][key], target["document"][key]
+            if before != after:
+                # JSON pointers and originals keep machine-usable provenance;
+                # text unified diffs preserve ordering and repeated lines.
+                entry = {"pointer": "/" + key, "before": before, "after": after}
+                if isinstance(before, str) and isinstance(after, str):
+                    entry["unified_diff"] = "".join(difflib.unified_diff(before.splitlines(True), after.splitlines(True),
+                        fromfile="version-"+str(previous["document"]["version"]),
+                        tofile="version-"+str(target["document"]["version"])))
+                changes.append(entry)
+        authorize_saved_work(actor, scope, action="read", connection=con)
+    def reference(item):
+        return {"artifact_id": item["artifact"]["artifact_id"], "sha256": item["artifact"]["sha256"],
+                "version": item["document"]["version"]}
+    return {"state": "comparison_only", "work_id": target["document"]["work_id"],
+            "from": reference(previous), "to": reference(target), "current": reference(current),
+            "target_is_current": current["artifact"]["artifact_id"] == artifact_id,
+            "changed": bool(changes), "changes": changes, "execution": "not_started"}
 
 
 def _revision_target(document: dict, pointer: str):
@@ -1027,7 +1246,7 @@ def _prepare_work_revision(artifact_id: str, *, actor: Any, scope: Mapping, requ
     if item["artifact"]["sha256"] != expected_sha256:
         raise SavedWorkError("WORK_REVISION_SOURCE_CHANGED")
     document = json.loads(_json(item["document"]))
-    if (document["kind"] not in {"research", "report"} or document.get("task_id") is not None
+    if (document["kind"] not in {"research", "report", "note"} or document.get("task_id") is not None
             or document.get("assertion_id") is not None
             or document["contract"] != {"id": "lumenis.saved-work", "version": "1", "required_payload_paths": []}):
         raise SavedWorkError("WORK_REVISION_OWNER_REQUIRED")
@@ -1051,6 +1270,8 @@ def _prepare_work_revision(artifact_id: str, *, actor: Any, scope: Mapping, requ
     if ((new_ids - old_ids) - {adoption["to_evidence_id"] for adoption in adoptions}
             or (old_ids - new_ids) - {adoption["from_evidence_id"] for adoption in adoptions}):
         raise SavedWorkError("WORK_SOURCE_ADOPTION_REQUIRED")
+    if document["kind"] == "note" and any(isinstance(edit, dict) and edit.get("pointer") == "/markdown" for edit in edits):
+        raise SavedWorkError("WORK_NOTE_EDIT_BLOCK_REQUIRED")
     applied = _apply_work_edits(document, edits)
     document["payload"]["revision_note"] = {
         "schema": "lumenis.user-work-local-revision/v1", "reason": reason,
@@ -1069,17 +1290,28 @@ def revise_work(artifact_id: str, *, actor: Any, scope: Mapping, request_id: str
     item, document = _prepare_work_revision(artifact_id, actor=actor, scope=scope,
         request_id=request_id, expected_sha256=expected_sha256, reason=reason, edits=edits,
         citations=citations, source_adoptions=source_adoptions)
+    adoption_guard = None
+    if 'domain_report_adoption' in item['document']['payload']:
+        original = item['document']['payload']['domain_report_adoption']
+        if document['payload'].get('domain_report_adoption') != original:
+            raise SavedWorkError('WORK_REPORT_ADOPTION_IMMUTABLE')
+        def adoption_guard(con, _record, _document):
+            from .source_brief_job import validate_domain_report_adoption
+            validate_domain_report_adoption(original, actor=actor, connection=con)
     return save_work(title=document["title"], markdown=document["markdown"], kind=document["kind"],
                      payload=document["payload"], citations=document["citations"], request_id=request_id,
                      actor=actor, scope=scope, work_id=document["work_id"], previous_artifact_id=artifact_id,
-                     expected_draft_digest=item["document"]["draft_digest"], contract=document["contract"])
+                     expected_draft_digest=item["document"]["draft_digest"], contract=document["contract"],
+                     before_commit=adoption_guard)
 
 
 def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
                 cursor: str | None = None, kind: str | None = None,
-                evidence_id: int | None = None) -> dict:
+                evidence_id: int | None = None, latest_only: bool = False) -> dict:
     """Bounded, newest-first search; return a continuation even across hidden rows."""
     context = authorize_saved_work(actor, scope, action="read")
+    if type(latest_only) is not bool:
+        raise SavedWorkError("WORK_SEARCH_INVALID")
     if not isinstance(query, str) or len(query) > 200 or type(limit) is not int or not 1 <= limit <= 100:
         raise SavedWorkError("WORK_SEARCH_INVALID")
     if kind is not None and (not isinstance(kind, str) or kind not in _KINDS):
@@ -1090,6 +1322,8 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
     selectors = {"owner": "saved_work", "context": context, "query": query, "kind": kind}
     if evidence_id is not None:
         selectors["evidence_id"] = evidence_id
+    if latest_only:
+        selectors["latest_only"] = True
     identity = _digest(selectors)
     try:
         boundary_value = shared_artifacts._content_project_list_boundary(cursor, identity)
@@ -1105,13 +1339,16 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
         rows = con.execute(f"SELECT artifact_id,created_at FROM {_TABLE} WHERE kind=? AND product_id=? AND domain_id=?" + boundary +
                            " ORDER BY created_at DESC,artifact_id DESC LIMIT 201", params).fetchall()
         results, unavailable_count = [], 0
+        # Request-local identity hints only; no content or authorization cache.
+        # Returned revisions still undergo the fresh checks below.
+        verified_latest = {}
         last_scanned = None
         consumed = 0
         for row in rows[:200]:
             consumed += 1
             last_scanned = {"artifact_id": row[0], "created_at": row[1]}
             try:
-                item = _read(con, row[0], context, actor)
+                item = _read(con, row[0], context, actor, verify_sources=not latest_only)
             except SavedWorkError as exc:
                 if str(exc) == "WORK_CONTEXT_MISMATCH":
                     continue
@@ -1120,7 +1357,28 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
                 unavailable_count += 1
                 continue
             doc = item["document"]
-            item.pop("_content_bytes")
+            if latest_only:
+                try:
+                    known_latest = verified_latest.get(doc["work_id"])
+                    if known_latest is not None and doc["version"] < known_latest:
+                        continue
+                    versions = _versions(con, doc["work_id"], context, actor)
+                    if versions:
+                        verified_latest[doc["work_id"]] = versions[-1]["document"]["version"]
+                    if not versions or versions[-1]["artifact"]["artifact_id"] != row[0]:
+                        continue
+                    # A resume candidate must satisfy the complete current owner,
+                    # not merely its Artifact digest and citation syntax.
+                    item = reopen_work(row[0], actor=actor, scope=scope, connection=con)
+                except (SavedWorkError, PermissionError):
+                    unavailable_count += 1
+                    continue
+                item["resume"] = {"artifact_id": row[0], "work_id": doc["work_id"],
+                    "expected_sha256": item["artifact"]["sha256"],
+                    "expected_draft_digest": doc["draft_digest"], "version": doc["version"],
+                    "state": "ready_to_reopen", "execution": "not_started"}
+            else:
+                item.pop("_content_bytes")
             if evidence_id is not None:
                 matches = [citation for citation in doc["citations"] if citation["evidence_id"] == evidence_id]
                 if not matches:
@@ -1137,6 +1395,11 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
     with get_repository().connection(read_only=True, wal=False) as con:
         for item in results:
             _validate_citations(con, item["document"]["citations"], context, actor)
+            if latest_only:
+                reopen_work(item["artifact"]["artifact_id"], actor=actor, scope=scope, connection=con)
+                versions = _versions(con, item["document"]["work_id"], context, actor)
+                if versions[-1]["artifact"]["artifact_id"] != item["artifact"]["artifact_id"]:
+                    raise SavedWorkError("WORK_RESUME_VERSION_CHANGED")
         authorize_saved_work(actor, scope, action="read", connection=con)
     has_more = len(rows) > consumed
     return {"items": results, "unverified_candidates": unavailable_count, "has_more": has_more,

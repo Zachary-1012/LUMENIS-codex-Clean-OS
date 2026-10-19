@@ -49,7 +49,7 @@ class Ai01DraftFiles {
     final bytes = Uint8List.fromList(utf8.encode(text));
     decode(bytes);
     final fileName =
-        'lumenis-task-draft-${DateTime.now().millisecondsSinceEpoch}.txt';
+        'oevira-task-draft-${DateTime.now().millisecondsSinceEpoch}.txt';
     final file = XFile.fromData(bytes, mimeType: 'text/plain', name: fileName);
     if (kIsWeb) {
       await file.saveTo(fileName);

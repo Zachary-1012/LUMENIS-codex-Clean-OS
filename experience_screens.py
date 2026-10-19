@@ -559,13 +559,13 @@ def _cth_temporal_screen(screen_id: str, *, binding, authorize=None) -> Dict[str
     remains in contributions, while snapshot_sha256 pins the computation only.
     Missing publication/classification/coverage stays null, not an invented zero.
     """
-    from trend_api import read_cth_temporal_metrics
+    from alert_engine import read_cth_temporal_alerts
     from lumenis.shared.database import get_repository
 
     end = _dt.date.today()
     start = end - _dt.timedelta(days=13)
     with get_repository().connection(read_only=True) as connection:
-        result = read_cth_temporal_metrics(
+        result = read_cth_temporal_alerts(
             connection, start_date=start.isoformat(), end_date=end.isoformat(),
             authorize=authorize if callable(authorize) else lambda: binding,
         )
@@ -1965,6 +1965,21 @@ def _build_bmp09(*, binding=None) -> Dict[str, Any]:
         columns=[{"label": "报告", "key": "job_id"}, {"label": "评估状态", "key": "evaluation_state"}],
         rows=reports["items"]))
     response["truth"]["source_brief_reports"] = {key: value for key, value in reports.items() if key != "items"}
+    available = reports["state"] != "UNAVAILABLE"
+    counts = {status: sum(item["evaluation_counts"][status] for item in reports["items"])
+              if available else None for status in ("pass", "warn", "fail", "unknown")}
+    distribution = {"counts": counts, "unit": "artifact_bound_check",
+        "population": "returned_source_brief_page", "read_complete": reports["read_complete"],
+        "has_more": reports["has_more"], "next_cursor": reports.get("next_cursor"),
+        "missing_evaluation_count": sum(item["missing_evaluation_count"] for item in reports["items"])
+            if available else None,
+        "saved_work_evaluation": "NOT_ESTABLISHED", "business_effect": "NOT_ESTABLISHED"}
+    response["sections"].insert(1, section("table", reports["state"].lower(),
+        title="当前报告版本评价检查分布", resource_type="report_evaluation_distribution",
+        columns=[{"label": "状态", "key": "status"}, {"label": "检查数", "key": "count"}],
+        rows=[{"status": status, "count": count} for status, count in counts.items()],
+        basis=distribution))
+    response["truth"]["evaluation_distribution"] = distribution
     # Serialize the original reports owner's authorization result, not a new grant.
     response["report_artifact_contract"] = "lumenis.bmp09-report-artifacts.v1"
     response["report_screen_binding"] = dict(binding)
@@ -2184,12 +2199,45 @@ def _build_bmp04(*, binding=None) -> Dict[str, Any]:
     events = _events_items(_curated(data["events"]))
     event_state, event_read = _event_read_state(data["events"], events)
     state = "partial" if data["data_state"] == "PARTIAL" else STATE_READY if data["source_count"] or events else STATE_EMPTY
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    actor = resolve_local_workspace_principal(module="reports", action="read")
+    if actor is None:
+        actor = get_current_user(read_only=True)
+    scope = {"domain_id": "zbmp", "subject_id": None,
+             "brand_focus_id": binding.get("brand_focus_id"),
+             "global_scope": binding["canonical_scope"] == "GLOBAL_ALL"}
+    try:
+        classification = brand_propagation.read_scoped_classifications(actor=actor, scope=scope)
+    except (ValueError, PermissionError):
+        classification = {"rows": [], "rejected": None, "state": "UNAVAILABLE"}
+    # Counts describe only the current verified event sample, not the market population.
+    event_ids = {item["id"] for item in data["events"].get("featured", [])}
+    classified = [row for row in classification["rows"] if row["event"]["id"] in event_ids]
+    unknown_count = len(event_ids - {row["event"]["id"] for row in classified})
+    complete = data["event_read_complete"] and classification["state"] in {"READY", "EMPTY"} and not classification["rejected"]
+    dashboards = []
+    for category, title in (("brand_event", "品牌事件看板"), ("product_event", "产品事件看板"), ("industry_event", "行业事件看板")):
+        selected = [row for row in classified if row["category"] == category]
+        dashboards.append({"category": category, "title": title,
+            "observed_events": len(selected), "total_events": len(selected) if complete and not unknown_count else None,
+            "state": "ready" if selected and complete and not unknown_count else "empty" if complete and not unknown_count else "partial",
+            "claim_type": "human_business_classification", "source_refs": [{"event_id": row["event"]["id"],
+                "scope_evidence": row["source_evidence"]} for row in selected],
+            "events": _events_items([row["event"] for row in selected])})
+    data.update(total_events=data["event_returned_count"] if data["event_read_complete"] else None,
+        total_events_semantics="current_verified_curated_sample_not_population", dashboards=dashboards,
+        unclassified_event_count=unknown_count, classification_state=classification["state"],
+        classification_rejected=classification["rejected"])
     response = _envelope("BMP-04", [_head("BMP-04"),
         section("kpis", state, items=[metric("bmp04.total", "已观测源记录", value=data["source_count"], state=state,
                 source="brand_propagation.read_scoped_propagation", icon="trend"),
                 metric("bmp04.events", "当前范围策展事件", value=data["event_returned_count"] if data["event_read_complete"] else None, state=state,
                 source="database.get_events_curated", icon="event")]),
         section("events", event_state, items=events, read_status=event_read),
+        section("table", "partial" if not complete or unknown_count else state, title="品牌 / 产品 / 行业事件看板",
+                columns=[{"label": "看板", "key": "title"}, {"label": "已分类观测", "key": "observed_events"},
+                         {"label": "范围内完整计数", "key": "total_events"}], rows=dashboards),
         section("table", state, title="源记录平台分布", columns=[{"label": "平台", "key": "platform"},
                 {"label": "记录", "key": "count"}], rows=[{"platform": k, "count": v} for k,v in data["platform_counts"].items()])],
         truth={key: value for key, value in data.items() if key not in {"events", "source_observations"}})

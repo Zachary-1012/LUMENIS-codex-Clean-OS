@@ -29,6 +29,8 @@ class AnalyzedNote:
         self.raw_chunk: str = ""
         self.source_locator: Optional[Dict] = None
         self.source_row_sha256: Optional[str] = None
+        self.source_fields: List[Dict] = []
+        self.source_record: Optional[Dict] = None
 
 
 def analyze_text(text: str, context_keywords: List[str] = None, *, ai_enhancement: bool = False) -> List[AnalyzedNote]:
@@ -297,11 +299,104 @@ def analyze_table_rows(parsed, context_keywords=None) -> List[AnalyzedNote]:
 def analyze_parsed(parsed, context_keywords=None) -> List[AnalyzedNote]:
     """统一分析入口：表格型文件按行成稿，PDF/Word/TXT 走文本分块。"""
     fmt = parsed.metadata.get("format", "")
+    if ((fmt == "excel" and getattr(parsed, "source_tables", None))
+            or (fmt in ("pdf", "word") and getattr(parsed, "source_blocks", None))):
+        return extract_source_rows(parsed)
     if fmt in ("excel", "csv") and parsed.tables:
         rows = analyze_table_rows(parsed, context_keywords)
         if rows:
             return rows
     return analyze_text(parsed.text, context_keywords)
+
+
+def _retained_source_note(record, *, locator, content, title="", fields=None):
+    """Keep structured source bytes separate from derived/verified assertions."""
+    note = AnalyzedNote()
+    note.title = title
+    note.content = content
+    note.raw_chunk = json.dumps(record, ensure_ascii=False, sort_keys=True,
+                               separators=(",", ":"), allow_nan=False)
+    note.source_record = record
+    note.source_fields = fields or []
+    note.source_locator = locator
+    note.source_row_sha256 = hashlib.sha256(note.raw_chunk.encode("utf-8")).hexdigest()
+    note.analysis_status = "NOT_RUN"
+    note.analysis_code = "SOURCE_ROW_PROJECTION_NOT_ANALYZED"
+    note.keyword_method = "source_excerpt"
+    return note
+
+
+def _source_cell_text(cell):
+    value = cell["value"]
+    if value is None:
+        return ""
+    if type(value) is bool:
+        return "true" if value else "false"
+    return str(value)
+
+
+def _extract_typed_table_rows(parsed):
+    """All sheets, physical row/column identity and inert original typed values."""
+    result = []
+    for table_index, table in enumerate(parsed.source_tables):
+        if table.get("table_index") != table_index or not isinstance(table.get("sheet_name"), str):
+            raise ValueError("DOCUMENT_TYPED_TABLE_ORDER_INVALID")
+        rows = table["rows"]
+        # Header detection only affects friendly labels. Every row (including
+        # the header and blank rows) remains independently preserved below.
+        headers = rows[0]["values"] if rows and _looks_like_header(
+            [_source_cell_text(cell) for cell in rows[0]["values"]]) else []
+        columns = _map_columns([_source_cell_text(cell) for cell in headers]) if headers else {}
+        prior_row = 0
+        for row in rows:
+            physical_row = row.get("row_index")
+            if type(physical_row) is not int or physical_row <= prior_row:
+                raise ValueError("DOCUMENT_TYPED_ROW_ORDER_INVALID")
+            prior_row = physical_row
+            values = row["values"]
+            fields = [{"column_index": column + 1,
+                       "header": headers[column] if column < len(headers) else None,
+                       "value": value} for column, value in enumerate(values)]
+            locator = {"unit": "parsed_table_row", "table_index": table_index,
+                       "sheet_name": table["sheet_name"], "row_index": physical_row,
+                       "row_index_basis": "physical_one_based"}
+            record = {"schema": "xlsx-source-row/v1", "source_sha256": parsed.metadata["source_fingerprint"],
+                      "sheet_name": table["sheet_name"], "table_index": table_index,
+                      "row_index": physical_row, "headers": headers,
+                      "values": values, "source_fields": fields,
+                      "row_role": "header" if headers and row is rows[0] else "source_row"}
+            def mapped(key):
+                column = columns.get(key)
+                return _source_cell_text(values[column]) if column is not None and column < len(values) else ""
+            display = " | ".join(_source_cell_text(value) for value in values)
+            note = _retained_source_note(record, locator=locator,
+                                         content=mapped("content") or display,
+                                         title=mapped("title"), fields=fields)
+            note.author = mapped("author")
+            note.publish_date = mapped("date")
+            result.append(note)
+    return result
+
+
+def _extract_document_block_rows(parsed):
+    """Ordered physical blocks; no 800-character truncation or blank elision."""
+    result = []
+    for index, block in enumerate(parsed.source_blocks, 1):
+        content, locator = block["text"], block["locator"]
+        if not isinstance(content, str) or not isinstance(locator, dict):
+            raise ValueError("DOCUMENT_SOURCE_BLOCK_INVALID")
+        start, end = locator.get("start"), locator.get("end")
+        if (type(start) is not int or type(end) is not int or not 0 <= start <= end <= len(parsed.text)
+                or parsed.text[start:end] != content):
+            raise ValueError("DOCUMENT_SOURCE_BLOCK_LOCATOR_INVALID")
+        fields = block.get("source_fields", [])
+        record = {"schema": "document-source-block/v1",
+                  "source_sha256": parsed.metadata["source_fingerprint"], "block_index": index,
+                  "source_category": block["source_category"], "locator": locator,
+                  "text": content, "source_fields": fields}
+        result.append(_retained_source_note(record, locator=locator, content=content,
+                                            fields=fields))
+    return result
 
 
 def extract_source_rows(parsed) -> List[AnalyzedNote]:
@@ -311,6 +406,10 @@ def extract_source_rows(parsed) -> List[AnalyzedNote]:
     UNKNOWN/NOT_RUN; user-visible AI analysis is a separate owned-Gateway job.
     """
     fmt = parsed.metadata.get("format", "")
+    if fmt == "excel" and getattr(parsed, "source_tables", None):
+        return _extract_typed_table_rows(parsed)
+    if fmt in ("pdf", "word") and getattr(parsed, "source_blocks", None):
+        return _extract_document_block_rows(parsed)
     if fmt in ("excel", "csv") and parsed.tables:
         rows = analyze_table_rows(parsed, context_keywords=[])
         if rows:

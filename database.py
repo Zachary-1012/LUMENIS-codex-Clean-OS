@@ -489,7 +489,7 @@ def _apply_filters(query, params, filters):
     if filters.get('date_end'): query += ' AND publish_date<=?'; params.append(filters['date_end'])
     if filters.get('verified') is not None: query += ' AND is_taikoo_verified=?'; params.append(1 if filters['verified'] else 0)
     # GAP-06 双维度筛选：固定枚举白名单，拒绝任意列名/非法值，不接受旧 user_type=UGC 写法
-    _ST = {'official','kos','kol','koc','normal_user','media','institution'}
+    _ST = {'unknown', 'official','kos','kol','koc','normal_user','media','institution'}
     _CT = {'ugc','commercial','official','review','experience','complaint','event'}
     if filters.get('subject_type') in _ST: query += ' AND subject_type=?'; params.append(filters['subject_type'])
     if filters.get('content_type') in _CT: query += ' AND content_type=?'; params.append(filters['content_type'])

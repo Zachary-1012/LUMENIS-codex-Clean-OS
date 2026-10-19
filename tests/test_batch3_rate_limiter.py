@@ -84,6 +84,7 @@ class TestSuccessRecovery:
         assert rl.state == CollectState.COOLDOWN
         # 模拟冷却结束
         rl.cooldown_until = time.time() - 1
+        rl._local_not_before_monotonic = time.monotonic() - 1
         rl.on_success()
         assert rl.state == CollectState.HEALTHY
 
@@ -93,7 +94,8 @@ class TestSuccessRecovery:
         rl.on_failure(force_cooldown=True)
         assert rl.cooldown_until > 0
         rl.on_success()
-        assert rl.cooldown_until == 0.0
+        assert rl.remaining_cooldown() > 0
+        assert not rl.can_run()
 
 
 class TestFailureBackoff:
@@ -172,6 +174,7 @@ class TestCooldownAndPause:
         rl = AdaptiveRateLimiter()
         rl.on_failure(force_cooldown=True)
         rl.cooldown_until = time.time() - 1
+        rl._local_not_before_monotonic = time.monotonic() - 1
         assert rl.can_run() is True
 
     def test_force_pause(self):
@@ -194,20 +197,20 @@ class TestWaitSlot:
     def test_wait_slot_disabled(self):
         """disabled模式下wait_slot应返回0。"""
         rl = AdaptiveRateLimiter(enabled=False)
-        result = rl.wait_slot(sleep=lambda x: None)
+        result = _wait(rl, sleep=lambda x: None)
         assert result == 0.0
 
     def test_wait_slot_returns_positive(self):
         """正常模式下wait_slot应返回正数。"""
         rl = AdaptiveRateLimiter(base_interval=0.01, jitter=False)
-        result = rl.wait_slot(sleep=lambda x: None)
+        result = _wait(rl, sleep=lambda x: None)
         assert result > 0
 
     def test_wait_slot_calls_sleep(self):
         """wait_slot应调用sleep函数。"""
         rl = AdaptiveRateLimiter(base_interval=0.01, jitter=False)
         called = []
-        rl.wait_slot(sleep=lambda x: called.append(x))
+        _wait(rl, sleep=lambda x: called.append(x))
         assert len(called) == 1
         assert called[0] > 0
 
@@ -303,3 +306,17 @@ class TestThreadSafety:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+# A sleeper in this contract must advance elapsed time, not merely record a call.
+def _wait(limiter, sleep):
+    from unittest.mock import patch
+    from types import SimpleNamespace
+    from lumenis.system.collector.guard import rate_limiter as module
+    clock = [module.time.time(), module.time.monotonic()]
+    fake = SimpleNamespace(time=lambda: clock[0], monotonic=lambda: clock[1])
+    def elapsed(seconds):
+        sleep(seconds)
+        clock[0] += seconds
+        clock[1] += seconds
+    with patch.object(module, 'time', fake):
+        return limiter.wait_slot(sleep=elapsed)

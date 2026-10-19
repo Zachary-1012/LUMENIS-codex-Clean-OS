@@ -6,6 +6,7 @@
 import os
 import re
 import hashlib
+import json
 from typing import List, Dict
 from ..config import IMPORTER_CONFIG
 
@@ -18,6 +19,8 @@ class ParseResult:
         self.metadata: Dict = {}
         self.paragraphs: List[str] = []
         self.locators: List[Dict] = []
+        self.source_tables: List[Dict] = []
+        self.source_blocks: List[Dict] = []
 
 
 def parse_file(file_path: str) -> ParseResult:
@@ -247,39 +250,112 @@ def parse_pdf(file_path: str) -> ParseResult:
         import pdfplumber
         with pdfplumber.open(file_path) as pdf:
             result.metadata["pages"] = len(pdf.pages)
+            result.metadata["parser_version"] = "typed-source-v2"
+            result.metadata["document_block_projection"] = "pdf-page-text-block-v1"
             all_text = []
+            page_start = 0
             for i, page in enumerate(pdf.pages):
                 text = page.extract_text() or ""
                 all_text.append(text)
+                text_blocks = _pdf_text_block_locators(page, text)
+                locator = {
+                    "unit": "pdf_page", "index": i + 1, "page_index": i + 1,
+                    "source_category": "pdf_page",
+                    "start": page_start, "end": page_start + len(text),
+                    "text_blocks": text_blocks,
+                }
+                result.locators.append(locator)
+                result.source_blocks.append({
+                    "source_category": "pdf_page",
+                    "text": text,
+                    "source_fields": [],
+                    "locator": locator,
+                })
+                page_start += len(text) + 2
                 # 提取表格
                 tables = page.extract_tables()
                 for t in tables:
                     result.tables.append(t)
             result.text = "\n\n".join(all_text)
-            offset = 0
-            for index, text in enumerate(all_text, 1):
-                result.locators.append({"unit": "pdf_page", "index": index,
-                                        "start": offset, "end": offset + len(text)})
-                offset += len(text) + 2
             result.paragraphs = [p.strip() for p in result.text.split("\n") if p.strip()]
     except ImportError:
         try:
             from PyPDF2 import PdfReader
             reader = PdfReader(file_path)
             result.metadata["pages"] = len(reader.pages)
+            result.metadata["parser_version"] = "typed-source-v2"
+            result.metadata["document_block_projection"] = "pdf-page-text-block-v1"
             all_text = []
-            for page in reader.pages:
-                all_text.append(page.extract_text() or "")
+            page_start = 0
+            for i, page in enumerate(reader.pages):
+                text = page.extract_text() or ""
+                all_text.append(text)
+                locator = {
+                    "unit": "pdf_page", "index": i + 1, "page_index": i + 1,
+                    "source_category": "pdf_page",
+                    "start": page_start, "end": page_start + len(text),
+                    "text_blocks": _pdf_text_block_locators(None, text),
+                }
+                result.locators.append(locator)
+                result.source_blocks.append({
+                    "source_category": "pdf_page",
+                    "text": text,
+                    "source_fields": [],
+                    "locator": locator,
+                })
+                page_start += len(text) + 2
             result.text = "\n\n".join(all_text)
-            offset = 0
-            for index, text in enumerate(all_text, 1):
-                result.locators.append({"unit": "pdf_page", "index": index,
-                                        "start": offset, "end": offset + len(text)})
-                offset += len(text) + 2
             result.paragraphs = [p.strip() for p in result.text.split("\n") if p.strip()]
         except ImportError:
             raise ImportError("PDF解析需要 pdfplumber 或 PyPDF2，请运行: pip install pdfplumber")
     return result
+
+
+def _pdf_text_block_locators(page, page_text: str) -> list[dict]:
+    """Return page-local line locators without changing retained page text."""
+    line_records = None
+    extract_lines = getattr(page, "extract_text_lines", None) if page is not None else None
+    if callable(extract_lines):
+        try:
+            line_records = extract_lines(return_chars=False)
+        except (TypeError, NotImplementedError):
+            line_records = None
+
+    if not isinstance(line_records, list):
+        line_records = [{"text": line} for line in (page_text or "").splitlines()]
+
+    locators = []
+    search_from = 0
+    for index, record in enumerate(line_records, 1):
+        if not isinstance(record, dict):
+            continue
+        text = record.get("text")
+        if not isinstance(text, str):
+            continue
+        start = (page_text or "").find(text, search_from) if text else -1
+        if start < 0:
+            start = None
+            end = None
+        else:
+            end = start + len(text)
+            search_from = end
+        block = {
+            "unit": "pdf_text_block",
+            "offset_basis": "page_text",
+            "index": index,
+            "start": start,
+            "end": end,
+            "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        }
+        coordinates = {}
+        for key in ("x0", "top", "x1", "bottom"):
+            value = record.get(key)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                coordinates[key] = value
+        if coordinates:
+            block["bbox"] = coordinates
+        locators.append(block)
+    return locators
 
 
 def parse_word(file_path: str) -> ParseResult:
@@ -291,23 +367,35 @@ def parse_word(file_path: str) -> ParseResult:
     result.metadata["format"] = "word"
     try:
         from docx import Document
-        from docx.text.paragraph import Paragraph
         from docx.table import Table
+        from docx.text.paragraph import Paragraph
         doc = Document(file_path)
+        result.metadata["parser_version"] = "typed-source-v2"
+        result.metadata["document_block_projection"] = "docx-body-block-v1"
         all_text = []
         offset, paragraph_index, table_index = 0, 0, 0
         for element in doc.element.body:
             if element.tag.endswith("}p"):
                 paragraph_index += 1
                 text = Paragraph(element, doc).text
-                if text.strip():
-                    if all_text:
-                        offset += 2
-                    result.locators.append({"unit": "word_paragraph", "index": paragraph_index,
-                                            "start": offset, "end": offset + len(text)})
-                    all_text.append(text)
-                    result.paragraphs.append(text)
-                    offset += len(text)
+                block_index = len(result.source_blocks) + 1
+                start = offset + (2 if all_text else 0)
+                end = start + len(text)
+                locator = {"unit": "word_paragraph", "source_category": "docx_paragraph",
+                           "index": paragraph_index,
+                           "block_index": block_index, "start": start, "end": end}
+                result.locators.append(locator)
+                result.source_blocks.append({
+                    "source_category": "docx_paragraph",
+                    "text": text,
+                    "source_fields": [],
+                    "locator": locator,
+                })
+                if all_text:
+                    offset += 2
+                all_text.append(text)
+                result.paragraphs.append(text)
+                offset += len(text)
             elif element.tag.endswith("}tbl"):
                 table_index += 1
                 rows = [[cell.text for cell in row.cells] for row in Table(element, doc).rows]
@@ -316,12 +404,30 @@ def parse_word(file_path: str) -> ParseResult:
                     text = " | ".join(cells)
                     if all_text:
                         offset += 2
+                    block_index = len(result.source_blocks) + 1
+                    row_locator = {
+                        "unit": "word_table_row", "table": table_index,
+                        "source_category": "docx_table_row",
+                        "row": row_index, "block_index": block_index,
+                        "start": offset, "end": offset + len(text),
+                        "cell_count": len(cells),
+                    }
+                    result.locators.append(row_locator)
+                    result.source_blocks.append({
+                        "source_category": "docx_table_row",
+                        "text": text,
+                        "source_fields": [
+                            {"column_index": column, "value": cell,
+                             "cell_type": "string"}
+                            for column, cell in enumerate(cells, 1)
+                        ],
+                        "locator": row_locator,
+                    })
                     cell_offset = offset
                     for column, cell in enumerate(cells, 1):
-                        if cell:
-                            result.locators.append({"unit": "word_table_cell", "table": table_index,
-                                                    "row": row_index, "column": column,
-                                                    "start": cell_offset, "end": cell_offset + len(cell)})
+                        result.locators.append({"unit": "word_table_cell", "table": table_index,
+                                                "row": row_index, "column": column,
+                                                "start": cell_offset, "end": cell_offset + len(cell)})
                         cell_offset += len(cell) + 3
                     all_text.append(text)
                     offset += len(text)
@@ -334,7 +440,7 @@ def parse_word(file_path: str) -> ParseResult:
 def parse_excel(file_path: str) -> ParseResult:
     """
     Excel XLSX 解析
-    需要 openpyxl 或 pandas
+    需要 openpyxl（不以 pandas 推断替代物理单元格）
     """
     result = ParseResult()
     result.metadata["format"] = "excel"
@@ -343,47 +449,175 @@ def parse_excel(file_path: str) -> ParseResult:
         # Retain formula expressions as source statements. A missing cached
         # calculation is never silently converted to a blank or zero.
         wb = openpyxl.load_workbook(file_path, data_only=False, read_only=True, keep_links=False)
-        result.metadata["sheets"] = wb.sheetnames
-        all_text = []
-        offset = 0
-        for sheet_name in wb.sheetnames:
-            ws = wb[sheet_name]
-            table = []
-            for row_index, row in enumerate(ws.iter_rows(values_only=True), 1):
-                row_data = [str(cell) if cell is not None else "" for cell in row]
-                if any(cell.strip() for cell in row_data):
+        try:
+            result.metadata["sheets"] = wb.sheetnames
+            result.metadata["parser_version"] = "typed-source-v2"
+            result.metadata["formula_evaluation"] = "never"
+            result.metadata["excel_row_projection"] = "typed-xlsx-v1"
+            all_text = []
+            offset = 0
+            retained_cells = 0
+            # An 8 MB sparse workbook can declare billions of physical cells.
+            # Reject over-budget preservation explicitly; never silently trim it.
+            cell_limit = 100_000
+            extents = [_actual_excel_extent(wb, sheet, cell_limit) for sheet in wb]
+            if sum(rows * columns for rows, columns in extents) > cell_limit:
+                raise ValueError("DOCUMENT_EXCEL_CELL_LIMIT")
+            for table_index, sheet_name in enumerate(wb.sheetnames):
+                ws = wb[sheet_name]
+                table = []
+                source_rows = []
+                max_row, max_column = extents[table_index]
+                physical_rows = (ws.iter_rows(min_row=1, max_row=max_row, min_col=1, max_col=max_column)
+                                 if max_row else ())
+                for row_index, row in enumerate(physical_rows, 1):
+                    retained_cells += len(row)
+                    if retained_cells > cell_limit:
+                        raise ValueError("DOCUMENT_EXCEL_CELL_LIMIT")
+                    typed_values = [_typed_excel_cell(cell) for cell in row]
+                    row_data = [
+                        _legacy_excel_cell_text(cell.value) for cell in row
+                    ]
+                    source_row = {
+                        "row_index": row_index,
+                        "values": typed_values,
+                    }
+                    source_content_payload = json.dumps(
+                        {"values": typed_values}, ensure_ascii=False,
+                        sort_keys=True, separators=(",", ":"),
+                    )
+                    source_row["source_content_sha256"] = hashlib.sha256(
+                        source_content_payload.encode("utf-8"),
+                    ).hexdigest()
+                    source_row_payload = json.dumps(
+                        {"sheet_name": sheet_name, "table_index": table_index, **source_row},
+                        ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+                    )
+                    source_row["source_row_sha256"] = hashlib.sha256(
+                        source_row_payload.encode("utf-8"),
+                    ).hexdigest()
+                    source_rows.append(source_row)
                     table.append(row_data)
                     text = " | ".join(row_data)
                     if all_text:
                         offset += 1
                     cell_offset = offset
                     for column, cell in enumerate(row_data, 1):
-                        if cell:
-                            result.locators.append({"unit": "spreadsheet_cell", "sheet": sheet_name,
-                                                    "row": row_index, "column": column,
-                                                    "start": cell_offset, "end": cell_offset + len(cell)})
+                        result.locators.append({"unit": "spreadsheet_cell", "sheet": sheet_name,
+                                                "row": row_index, "column": column,
+                                                "start": cell_offset, "end": cell_offset + len(cell)})
                         cell_offset += len(cell) + 3
                     all_text.append(text)
                     offset += len(text)
-            result.tables.append(table)
-        result.text = "\n".join(all_text)
-        result.paragraphs = all_text
-        wb.close()
-    except ImportError:
-        try:
-            import pandas as pd
-            xls = pd.ExcelFile(file_path)
-            result.metadata["sheets"] = xls.sheet_names
-            all_text = []
-            for sheet in xls.sheet_names:
-                df = pd.read_excel(file_path, sheet_name=sheet)
-                result.tables.append(df.values.tolist())
-                all_text.append(df.to_string())
-            result.text = "\n\n".join(all_text)
+                result.tables.append(table)
+                result.source_tables.append({
+                    "sheet_name": sheet_name,
+                    "table_index": table_index,
+                    "sheet_state": ws.sheet_state,
+                    "rows": source_rows,
+                })
+            result.text = "\n".join(all_text)
             result.paragraphs = all_text
-        except ImportError:
-            raise ImportError("Excel解析需要 openpyxl 或 pandas，请运行: pip install openpyxl")
+        finally:
+            wb.close()
+
+    except ImportError as exc:
+        raise ImportError("Excel typed source preservation requires openpyxl") from exc
+
     return result
+
+
+def _actual_excel_extent(workbook, worksheet, cell_limit):
+    """Read actual XML positions, never trust the advisory dimension attribute.
+
+    Bound the rectangular preservation cost before openpyxl materializes gaps.
+    A missing/understated/overstated dimension cannot hide cells or evade bounds.
+    """
+    from xml.etree.ElementTree import iterparse
+    from openpyxl.utils.cell import coordinate_to_tuple
+    max_row = max_column = previous_row = 0
+    current_row = previous_column = 0
+    with workbook._archive.open(worksheet._worksheet_path) as source:
+        for event, element in iterparse(source, events=("start", "end")):
+            tag = element.tag.rsplit("}", 1)[-1]
+            if event == "start" and tag == "row":
+                raw = element.get("r")
+                if raw is None:
+                    current_row = previous_row + 1
+                elif not re.fullmatch(r"[1-9][0-9]*", raw):
+                    raise ValueError("DOCUMENT_EXCEL_COORDINATE_INVALID")
+                else:
+                    current_row = int(raw)
+                if current_row <= previous_row:
+                    raise ValueError("DOCUMENT_EXCEL_ROW_ORDER_INVALID")
+                previous_row = current_row
+                previous_column = 0
+                max_row = current_row
+            elif event == "start" and tag == "c":
+                coordinate = element.get("r")
+                if coordinate is None:
+                    row, column = current_row, previous_column + 1
+                else:
+                    if not re.fullmatch(r"[A-Z]{1,3}[1-9][0-9]*", coordinate):
+                        raise ValueError("DOCUMENT_EXCEL_COORDINATE_INVALID")
+                    row, column = coordinate_to_tuple(coordinate)
+                if not current_row or row != current_row or column <= previous_column:
+                    raise ValueError("DOCUMENT_EXCEL_CELL_ORDER_INVALID")
+                previous_column = column
+                max_column = max(max_column, column)
+            if max_row * max(1, max_column) > cell_limit:
+                raise ValueError("DOCUMENT_EXCEL_CELL_LIMIT")
+            if event == "end":
+                element.clear()
+    return max_row, max(1, max_column) if max_row else 0
+
+
+def _legacy_excel_cell_text(value) -> str:
+    """Keep the historical string table/text projection stable."""
+    return str(getattr(value, "text", value)) if value is not None else ""
+
+
+def _typed_excel_cell(cell) -> dict:
+    """Return a deterministic JSON-safe source value without evaluating formulas."""
+    import math
+    from datetime import date, datetime, time, timedelta
+
+    value = cell.value
+    cell_type = getattr(cell, "data_type", None)
+    if value is None:
+        kind, safe_value = "blank", None
+    elif cell_type == "f":
+        kind, safe_value = "formula", str(getattr(value, "text", value))
+    elif cell_type == "e":
+        kind, safe_value = "error", str(value)
+    elif isinstance(value, bool):
+        kind, safe_value = "boolean", value
+    elif isinstance(value, datetime):
+        kind, safe_value = "datetime", value.isoformat()
+    elif isinstance(value, date):
+        kind, safe_value = "date", value.isoformat()
+    elif isinstance(value, time):
+        kind, safe_value = "time", value.isoformat()
+    elif isinstance(value, timedelta):
+        kind, safe_value = "duration", str(value)
+    elif isinstance(value, int):
+        kind, safe_value = "integer", value
+    elif isinstance(value, float):
+        kind = "number"
+        safe_value = value if math.isfinite(value) else str(value)
+    elif isinstance(value, str):
+        kind, safe_value = "string", value
+    else:
+        # openpyxl's supported cell value types are covered above. Preserve an
+        # unexpected typed value as text instead of dropping it or coercing it
+        # to a numeric zero.
+        kind, safe_value = "other", str(value)
+
+    return {
+        "type": kind,
+        "value": safe_value,
+        "cell_type": str(cell_type or ""),
+    }
 
 
 def parse_legacy_word(file_path: str) -> ParseResult:
