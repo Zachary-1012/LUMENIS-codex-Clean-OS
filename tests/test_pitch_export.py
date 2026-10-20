@@ -4,8 +4,10 @@ import hashlib
 
 import pytest
 from docx import Document
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 
-from scripts.pitch_export import export_pitch_docx
+from scripts.pitch_export import _remove_title_borders, export_pitch_docx
 
 
 def manuscript(body="先确认需求中的预算与日期。\n\n保留未知信息。\nReview the source."):
@@ -21,6 +23,30 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def minimal_audiovisual_snapshot():
+    from lumenis.shared.content_creation.contracts import AudiovisualPlan
+
+    proposed = {"kind": "PLANNER_PROPOSAL", "locator": "synthetic-test-input"}
+    unknown = {"kind": "UNKNOWN", "locator": None}
+    plan = AudiovisualPlan.from_dict({
+        "schema": "lumenis.audiovisual-plan/v1",
+        "brief_text": "Synthetic style regression input",
+        "method_source": {"reference": "synthetic-method", "sha256": "0" * 64},
+        "outputs": [{
+            "output_id": "synthetic-video", "medium": "video", "purpose": "Style regression",
+            "canvas_ratio": "16:9",
+            "duration": {"min_seconds": None, "max_seconds": None, "tolerance_seconds": None},
+            "sound": {"original": "optional", "voice": "optional", "music": "optional"},
+            "languages": ["zh"], "constraints": {}, "plan": None,
+            "provenance": {"purpose": proposed, "canvas_ratio": proposed, "duration": unknown,
+                           "languages": proposed, "constraints": proposed, "original": proposed,
+                           "voice": proposed, "music": proposed},
+        }],
+        "rule_assessments": [],
+    })
+    return plan.snapshot()
+
+
 def test_actual_manuscript_survives_word_reopen(tmp_path):
     draft = manuscript()
     path = tmp_path / "proposal-v1.docx"
@@ -31,9 +57,37 @@ def test_actual_manuscript_survives_word_reopen(tmp_path):
     assert paragraphs[1] == draft["summary"]
     assert paragraphs[-3:] == [draft["sections"][0]["heading"], *draft["sections"][0]["body"].split("\n\n")]
     assert reopened.paragraphs[0].style.name == "Title"
+    assert reopened.styles["Normal"].paragraph_format.space_after.pt == 6
     assert "authorship=assisted" in reopened.core_properties.comments
     assert "approval=not_verified" in reopened.core_properties.comments
     assert not list(tmp_path.glob(".pitch-stage-*"))
+
+
+def test_normal_and_av_manuscripts_keep_six_point_body_spacing_and_plain_title(tmp_path):
+    for name, audiovisual_plan in (("normal", None), ("av", minimal_audiovisual_snapshot())):
+        path = tmp_path / f"{name}.docx"
+        export_pitch_docx({}, path, manuscript=manuscript(), audiovisual_plan=audiovisual_plan)
+        reopened = Document(path)
+        assert reopened.styles["Normal"].paragraph_format.space_after.pt == 6
+        assert not list(reopened.styles["Title"].element.iter(qn("w:pBdr")))
+        assert not list(reopened.paragraphs[0]._p.iter(qn("w:pBdr")))
+
+
+def test_title_border_cleanup_removes_style_and_direct_paragraph_borders():
+    doc = Document()
+    title = doc.add_paragraph("Synthetic title", style="Title")
+    for element in (doc.styles["Title"].element, title._p):
+        properties = element.get_or_add_pPr()
+        borders = OxmlElement("w:pBdr")
+        bottom = OxmlElement("w:bottom")
+        bottom.set(qn("w:val"), "single")
+        borders.append(bottom)
+        properties.append(borders)
+
+    _remove_title_borders(doc)
+
+    assert not list(doc.styles["Title"].element.iter(qn("w:pBdr")))
+    assert not list(title._p.iter(qn("w:pBdr")))
 
 
 def test_revision_preserves_original_and_reopens_new_prose(tmp_path):

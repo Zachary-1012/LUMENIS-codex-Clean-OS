@@ -28,7 +28,7 @@ def test_x_worker_requires_exact_opt_in_and_profile_binding(monkeypatch, tmp_pat
     bound.assert_called_once_with(9226, str(tmp_path / "private" / "profiles" / "x-readonly"))
 
     monkeypatch.setenv("X_READONLY_LOCAL_WORKER_ACCOUNT", "GENERAL_BROWSE")
-    with pytest.raises(RuntimeError, match="explicit account opt-in"):
+    with pytest.raises(RuntimeError, match="X_WORKER_FAILURE:NOT_CONFIGURED"):
         x_platform._configured_browser_worker_url()
 
 
@@ -165,10 +165,10 @@ class _FakeWorker:
 @pytest.mark.parametrize(
     "url,body,error,expected",
     [
-        ("https://x.com/i/flow/login", "", "", "login/session"),
-        ("https://x.com/challenge", "", "", "challenge"),
-        ("https://x.com/search", "", "net::ERR_CONNECTION_RESET", "network error"),
-        ("https://x.com/account/access", "", "", "blocked"),
+        ("https://x.com/i/flow/login", "", "", "X_PAGE_FAILURE:SESSION_EXPIRED"),
+        ("https://x.com/challenge", "", "", "X_PAGE_FAILURE:VERIFICATION_REQUIRED"),
+        ("https://x.com/search", "", "net::ERR_CONNECTION_RESET", "X_PAGE_FAILURE:NETWORK_UNAVAILABLE"),
+        ("https://x.com/account/access", "", "", "X_PAGE_FAILURE:RATE_LIMITED"),
     ],
 )
 def test_search_classifies_failure_and_always_cleans_up(monkeypatch, url, body, error, expected):
@@ -181,9 +181,55 @@ def test_search_classifies_failure_and_always_cleans_up(monkeypatch, url, body, 
 
     result = adapter.search("term")
     assert not result.success
-    assert expected in result.error.lower()
+    assert result.error == expected
     assert worker.stealth is False
     assert page.closed and worker.closed
+
+
+def test_fix_096_worker_exception_is_phase_coded_and_redacted(monkeypatch, caplog):
+    def fail_worker():
+        try:
+            raise RuntimeError("cookie=CAUSE_SECRET")
+        except RuntimeError as cause:
+            raise ValueError("token=WORKER_SECRET") from cause
+
+    monkeypatch.setattr(x_platform, "_new_browser_worker", fail_worker)
+    with caplog.at_level("WARNING", logger="lumenis.adapters.x_platform"):
+        result = x_platform.XAdapter(cookie_string="test-only").search("term")
+    assert result.error == "X_WORKER_FAILURE:UPSTREAM_FAILURE"
+    assert "WORKER_SECRET" not in result.error
+    assert "CAUSE_SECRET" not in caplog.text
+    assert "WORKER_SECRET" not in caplog.text
+
+
+def test_fix_096_page_exception_is_phase_coded_and_redacted(monkeypatch, caplog):
+    page = _FakePage()
+    worker = _FakeWorker(page)
+    monkeypatch.setattr(x_platform, "_new_browser_worker", lambda: worker)
+    monkeypatch.setattr(x_platform, "inject_into_context", lambda *_: 0)
+
+    def fail_goto(*_args, **_kwargs):
+        try:
+            raise RuntimeError("cookie=CAUSE_SECRET")
+        except RuntimeError as cause:
+            raise ValueError("token=PAGE_SECRET") from cause
+
+    page.goto = fail_goto
+    with caplog.at_level("WARNING", logger="lumenis.adapters.x_platform"):
+        result = x_platform.XAdapter(cookie_string="test-only").search("term")
+    assert result.error == "X_PAGE_FAILURE:UPSTREAM_FAILURE"
+    assert "PAGE_SECRET" not in result.error
+    assert "CAUSE_SECRET" not in caplog.text
+    assert "PAGE_SECRET" not in caplog.text
+    assert page.closed and worker.closed
+
+
+def test_fix_096_registered_backend_import_failure_is_sanitized(monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "lumenis.adapters.x_platform", None)
+    with pytest.raises(RuntimeError, match="^X_WORKER_FAILURE:UPSTREAM_FAILURE$"):
+        main_x.XAdapter()._load_backend()
 
 
 def test_empty_search_is_not_success(monkeypatch):
@@ -241,9 +287,9 @@ def test_comments_wait_for_provable_parent_relationship(monkeypatch):
 def test_post_text_with_state_words_does_not_trigger_access_failure():
     body = "The verification challenge blocked the connection; this is just quoted post text."
     assert x_platform._x_page_failure("https://x.com/search", body) == ""
-    assert "login/session" in x_platform._x_page_failure(
+    assert x_platform._x_page_failure(
         "https://x.com/search", title="Log in to X / X"
-    )
+    ) == "X_PAGE_FAILURE:SESSION_EXPIRED"
 
 
 
@@ -276,7 +322,7 @@ def test_existing_routes_fail_closed_on_login_page(monkeypatch):
     monkeypatch.setattr(x_platform, "inject_into_context", lambda *_: 0)
     adapter = x_platform.XAdapter(cookie_string="test-only")
     result = adapter.detail("123")
-    assert not result.success and "login/session" in result.error
+    assert not result.success and result.error == "X_PAGE_FAILURE:SESSION_EXPIRED"
     assert page.closed and worker.closed
 
 
@@ -356,7 +402,7 @@ def test_system_search_and_delegate_results_use_real_platform_contract():
     assert isinstance(search_result, main_x.CollectionResult)
     assert search_result.platform == "x"
     assert search_result.status == CollectionStatus.PROVIDER_UNAVAILABLE
-    assert search_result.message == "X network error"
+    assert search_result.message == "X_PAGE_FAILURE:NETWORK_UNAVAILABLE"
 
     detail_result = adapter.detail("123")
     assert isinstance(detail_result, main_x.CollectionResult)
@@ -370,4 +416,20 @@ def test_system_search_and_delegate_results_use_real_platform_contract():
     assert isinstance(delegate_error, main_x.CollectionResult)
     assert delegate_error.platform == "x"
     assert delegate_error.status == CollectionStatus.COLLECT_ERROR
-    assert "source parse failed" in delegate_error.message
+    assert delegate_error.message == "X_PAGE_FAILURE:UPSTREAM_FAILURE"
+
+
+def test_fix_096_registered_adapter_redacts_backend_error_text():
+    from lumenis.adapters.base import AdapterResult
+
+    secret = "token=PAGE_SECRET; source body=PRIVATE_SOURCE_TEXT"
+
+    class Backend:
+        def search(self, _keyword, **_kwargs):
+            return AdapterResult(success=False, error=secret)
+
+    result = main_x.XAdapter(backend=Backend()).search("term")
+    assert result.status == CollectionStatus.COLLECT_ERROR
+    assert result.message == "X_PAGE_FAILURE:UPSTREAM_FAILURE"
+    assert "PAGE_SECRET" not in result.message
+    assert "PRIVATE_SOURCE_TEXT" not in repr(result.metadata)

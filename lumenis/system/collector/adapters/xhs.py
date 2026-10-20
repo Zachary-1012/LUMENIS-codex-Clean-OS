@@ -26,6 +26,72 @@ class XiaohongshuAdapter(BasePlatformAdapter):
         super().__init__(**kwargs)
         self.backend = backend
 
+    @staticmethod
+    def _safe_search_diagnostics(value: Any) -> Optional[dict[str, Any]]:
+        """FIX-099: project only the existing bounded XHS search-state facts."""
+        if not isinstance(value, dict) or value.get("version") != "xhs-search-state-v1":
+            return None
+        phases = {
+            "search_submitted", "search_wait_failed", "search_ready", "landing",
+            "before_list_parse", "empty_list", "before_detail_select",
+        }
+        enum_fields = {
+            "query_encoding": {"literal", "percent_encoded_once", "unverified"},
+            "document_ready_state": {"loading", "interactive", "complete", "unknown"},
+        }
+        selector_names = ("section.note-item", "a.cover", ".feeds-container")
+        integer_fields = ("note_link_count", "body_character_count", "loading_element_count")
+        empty_markers = {"暂无搜索结果", "没有找到相关内容", "无搜索结果", "No results found"}
+        safe_error_types = {
+            "TimeoutError", "TypeError", "ValueError", "RuntimeError", "Error",
+        }
+        observations = value.get("observations")
+        if not isinstance(observations, list):
+            return {"version": "xhs-search-state-v1", "observations": []}
+        projected = []
+        for source in observations[-12:]:
+            if not isinstance(source, dict):
+                continue
+            phase = source.get("phase")
+            if not isinstance(phase, str) or phase not in phases:
+                continue
+            item = {"phase": phase}
+            observed_at = source.get("observed_at")
+            if isinstance(observed_at, str) and len(observed_at) <= 40:
+                try:
+                    datetime.datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+                    item["observed_at"] = observed_at
+                except ValueError:
+                    pass
+            for key in ("host_matches", "route_is_search", "query_matches", "input_matches"):
+                item[key] = source.get(key) if type(source.get(key)) is bool else None
+            for key, allowed in enum_fields.items():
+                enum_value = source.get(key)
+                item[key] = enum_value if isinstance(enum_value, str) and enum_value in allowed else (
+                    "unverified" if key == "query_encoding" else "unknown")
+            selector_counts = source.get("selector_counts")
+            selector_counts = selector_counts if isinstance(selector_counts, dict) else {}
+            item["selector_counts"] = {
+                selector: (selector_counts.get(selector)
+                           if type(selector_counts.get(selector)) is int
+                           and selector_counts.get(selector) >= 0 else None)
+                for selector in selector_names
+            }
+            for key in integer_fields:
+                count = source.get(key)
+                item[key] = count if type(count) is int and count >= 0 else None
+            markers = source.get("native_empty_indicators")
+            item["native_empty_indicators"] = (
+                [marker for marker in markers if isinstance(marker, str) and marker in empty_markers][:4]
+                if isinstance(markers, list) else [])
+            for key in ("diagnostic_error_type", "wait_error_type"):
+                error_type = source.get(key)
+                if error_type:
+                    item[key] = (error_type if isinstance(error_type, str)
+                                 and error_type in safe_error_types else "unknown")
+            projected.append(item)
+        return {"version": "xhs-search-state-v1", "observations": projected}
+
     def _load_backend(self) -> Any:
         if self.backend is not None:
             return self.backend
@@ -285,6 +351,7 @@ class XiaohongshuAdapter(BasePlatformAdapter):
             else:
                 status = CollectionStatus.NO_NEW_DATA
             channel = raw.get("channel") if isinstance(raw, dict) else None
+            search_diagnostics = self._safe_search_diagnostics(raw.get("search_diagnostics"))
             collected_at = (
                 (raw.get("collected_at") if isinstance(raw, dict) else None)
                 or next((item.get("captured_at") for item in notes if isinstance(item, dict) and item.get("captured_at")), None)
@@ -351,6 +418,8 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                         else (raw.get("checkpoint") or {}).get("run_id")
                     ),
                     "captured_at": captured_at,
+                    **({"search_diagnostics": search_diagnostics}
+                       if search_diagnostics is not None else {}),
                     **({"error_type": status.value} if status not in {CollectionStatus.SUCCESS, CollectionStatus.NO_NEW_DATA} else {}),
                 },
             )
