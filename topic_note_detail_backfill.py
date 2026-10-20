@@ -197,13 +197,12 @@ def update_note_detail(conn, note_id, campaign_key, topic, detail):
             updates[column] = encoded
 
     if not updates:
-        if accepted_fields:
-            return 0, 'unchanged'
-        if isinstance(statuses, dict) and all(
-                statuses.get(field) == 'EMPTY'
-                for field in ('content', 'media', 'comments_detail')):
-            return 0, 'empty'
-        return 0, 'failed'
+        if not accepted_fields:
+            if isinstance(statuses, dict) and all(
+                    statuses.get(field) == 'EMPTY'
+                    for field in ('content', 'media', 'comments_detail')):
+                return 0, 'empty'
+            return 0, 'failed'
 
     merged_content = updates.get('content', existing['content'])
     if 'media' in field_values:
@@ -242,9 +241,14 @@ def update_note_detail(conn, note_id, campaign_key, topic, detail):
     if quality != existing['evidence_quality']:
         updates['evidence_quality'] = quality
 
+    capture_quality = 'full' if len(accepted_fields) == 3 else 'partial'
     captured_at = detail.get('detail_captured_at')
-    if isinstance(captured_at, str) and captured_at and captured_at != existing['detail_captured_at']:
+    if (capture_quality == 'full' and isinstance(captured_at, str) and captured_at
+            and captured_at != existing['detail_captured_at']):
         updates['detail_captured_at'] = captured_at
+
+    if not updates:
+        return 0, 'unchanged'
 
     assignments = ', '.join(f'{column}=?' for column in updates)
     params = (*updates.values(), note_id, campaign_key, topic)
@@ -253,7 +257,6 @@ def update_note_detail(conn, note_id, campaign_key, topic, detail):
         "WHERE note_id=? AND campaign_key=? AND topic=?",
         params,
     )
-    capture_quality = 'full' if len(accepted_fields) == 3 else 'partial'
     return cur.rowcount, capture_quality
 
 

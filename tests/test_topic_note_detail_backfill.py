@@ -101,7 +101,7 @@ def test_partial_capture_merges_only_verified_fields_and_keeps_parent_evidence()
     assert json.loads(stored["media_json"]) == [{"url": "https://image.example/recovered"}]
     assert json.loads(stored["comments_json"]) == [{"content": "preserved comment"}]
     assert stored["evidence_quality"] == "full"
-    assert stored["detail_captured_at"] == "2026-10-20 02:30:00"
+    assert stored["detail_captured_at"] == "2026-10-01 12:00:00"
     assert conn.in_transaction  # the caller still owns the transaction
     conn.close()
 
@@ -144,6 +144,27 @@ def test_new_valid_json_fields_replace_corrupt_legacy_values_and_recompute_quali
     conn.close()
 
 
+def test_identical_verified_fields_recompute_stale_quality_without_advancing_timestamp():
+    conn = _connection_with_note()
+    conn.execute(
+        "UPDATE topic_campaign_notes SET evidence_quality='search_only' WHERE note_id='note-1'"
+    )
+    detail = _detail(
+        content="preserved body",
+        media=[{"url": "https://image.example/old"}],
+        comments_detail=[{"content": "preserved comment"}],
+        detail_captured_at="2026-10-01 12:00:00",
+    )
+
+    rowcount, outcome = update_note_detail(conn, "note-1", "campaign-1", "topic-1", detail)
+
+    stored = _read_note(conn)
+    assert (rowcount, outcome) == (1, "full")
+    assert stored["evidence_quality"] == "full"
+    assert stored["detail_captured_at"] == "2026-10-01 12:00:00"
+    conn.close()
+
+
 def test_successful_empty_capture_is_distinct_and_never_deletes_saved_detail():
     conn = _connection_with_note()
     before = _read_note(conn)
@@ -164,6 +185,7 @@ def test_identical_successful_capture_is_not_reported_as_a_failure_or_rewritten(
         content="preserved body",
         media=[{"url": "https://image.example/old"}],
         comments_detail=[{"content": "preserved comment"}],
+        detail_captured_at="2026-10-01 12:00:00",
     )
 
     assert update_note_detail(conn, "note-1", "campaign-1", "topic-1", same) == (0, "unchanged")
