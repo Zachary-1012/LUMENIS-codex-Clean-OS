@@ -4,6 +4,10 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-047 — preserve saved detail during backfill failures
+
+The existing `topic_note_detail_backfill.py` distinguishes failed, empty and available fields, merges only nonempty verified values into the exact row, and derives quality from the merged stored detail. Failed extraction cannot erase saved content/media/comments; oversized JSON is rejected intact and commit ownership remains with its caller. Supplied verified JSON fields now bypass parsing corrupt legacy values; unchanged verified payloads still recalculate stale quality, while partial merges preserve the prior aggregate capture timestamp. `tests/test_topic_note_detail_backfill.py` passed **9 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use an in-memory database and synthetic pages; no CDP, live collection or production DB was used.
+
 ## 2026-10-20 Issue #17 FIX-058 / FIX-060 — derived memory TTL and forget
 
 In the existing `agent_memory/base.py` owner, expired records are filtered
