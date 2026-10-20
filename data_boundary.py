@@ -54,8 +54,11 @@ _SOURCE_EXTS = {
 }
 _CRED_DATA_EXTS = {
     ".db", ".sqlite", ".sqlite3", ".db-wal", ".db-shm", ".db-journal",
-    ".pem", ".key", ".p12", ".pfx", ".keystore", ".jks", ".crt", ".cer",
+    ".pem", ".key", ".p12", ".pfx", ".keystore", ".jks",
 }
+# Public certificate formats: not private credentials, so the narrow
+# docs/tests/fixture whitelist may admit them; elsewhere they stay blocked.
+_PUBLIC_CERT_EXTS = {".crt", ".cer"}
 _DATA_TEXT_EXTS = {".json", ".txt", ".dat", ".bin", ".log", ".csv"}
 _CRED_WORD = re.compile(r"cookie|token|secret|credential|session|passwd|password|profile|login[_-]?state", re.I)
 
@@ -99,6 +102,8 @@ def _is_credential_path(rel_path: str) -> bool:
     for wl in _CRED_PATH_WHITELIST:
         if re.search(wl, p):
             return False
+    if ext in _PUBLIC_CERT_EXTS:
+        return True
     if ext in _SOURCE_EXTS:
         return False
     if ext in _DATA_TEXT_EXTS and _CRED_WORD.search(p):
@@ -177,6 +182,10 @@ def current_db_zone():
 def _redact_cookie(match):
     prefix = match.group(1)
     value = match.group(0)[len(prefix):]
+    if value == "null":
+        return match.group(0)
+    if re.fullmatch(r"true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?", value):
+        return f'{prefix}"[REDACTED]"'
     if len(value) >= 2 and value[0] in ("'", '"') and value[-1] == value[0]:
         quote = value[0]
         return f"{prefix}{quote}[REDACTED]{quote}"
@@ -190,7 +199,7 @@ _SAN_RULES = [
     ),
     (
         re.compile(
-            r'''(\b(?:[A-Za-z0-9]+[_-])*cookie["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|[^\n\r]*)''',
+            r'''(\b(?:[A-Za-z0-9]+[_-])*cookie["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|(?:null|true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?=\s*[,}\]])|[^\n\r]*)''',
             re.I,
         ),
         _redact_cookie,
@@ -222,7 +231,9 @@ _SENSITIVE_MAPPING_SUFFIXES = (
 
 
 def _is_sensitive_mapping_key(key):
-    normalized = re.sub(r"[^a-z0-9]+", "_", key.casefold()).strip("_")
+    # Split camelCase boundaries first (accessToken -> access_token).
+    separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+    normalized = re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
     return normalized in _SENSITIVE_MAPPING_KEYS or normalized.endswith(_SENSITIVE_MAPPING_SUFFIXES)
 
 

@@ -230,3 +230,31 @@ def test_attestation_written_and_redacted(tmp_path, monkeypatch):
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+def test_camelcase_credential_keys_are_redacted():
+    import data_boundary
+    out = data_boundary.sanitize_mapping({
+        "accessToken": "opaque-a", "sessionCookie": "opaque-b",
+        "apiKey": "opaque-c", "privateKey": "opaque-d", "safe": "visible",
+    })
+    assert out["safe"] == "visible"
+    assert all(out[k] == "[REDACTED]" for k in ("accessToken", "sessionCookie", "apiKey", "privateKey"))
+
+
+def test_public_certificates_allowed_only_in_exempt_paths():
+    import data_boundary
+    assert data_boundary._is_credential_path("docs/vendor.cer") is False
+    assert data_boundary._is_credential_path("tests/fixtures/root-ca.crt") is False
+    assert data_boundary._is_credential_path("certs/server.crt") is True
+    assert data_boundary._is_credential_path("tests/fixtures/server.pem") is True
+
+
+def test_json_cookie_literal_keeps_following_fields():
+    import json
+    import data_boundary
+    for raw in ('{"Cookie": null, "safe": "visible"}', '{"Cookie": 12345, "safe": "visible"}'):
+        out = data_boundary.sanitize_text(raw)
+        parsed = json.loads(out)
+        assert parsed["safe"] == "visible"
+        assert "12345" not in out
