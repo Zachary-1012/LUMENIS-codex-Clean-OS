@@ -14,11 +14,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lumenis.adapters.base import (  # noqa: E402
     CircuitBreaker, RateLimiter, AdapterMetrics, BaseAdapter, AdapterResult,
+    AdapterCacheContext,
 )
 from lumenis.adapters.dual_pool import (  # noqa: E402
     CookieItem, ProxyItem, CookieStatus, ProxyStatus,
     CookiePool, ProxyPool, DualPoolManager,
 )
+from lumenis.adapters.registry import AdapterRegistry  # noqa: E402
 
 
 # ---------- 全局：压掉生产 retry sleep（单测不真等12秒） ----------
@@ -71,6 +73,129 @@ class _BoomAdapter(BaseAdapter):
     platform_name = 'boom'
     def search(self, keyword, max_results=20):
         raise RuntimeError('network down')
+
+
+class _QueryAdapter(BaseAdapter):
+    platform_name = 'query-test'
+
+    def __init__(self):
+        super().__init__()
+        self.fail_queries = set()
+
+    def search(self, keyword, max_results=20):
+        if keyword in self.fail_queries:
+            return AdapterResult(success=False, error='backend unavailable')
+        if keyword == 'query-a':
+            return AdapterResult(
+                success=True,
+                notes=[self._make_note(title='A result', content='private A data')],
+            )
+        if keyword == 'query-recovered':
+            return AdapterResult(
+                success=True,
+                notes=[self._make_note(title='Fresh result', content='fresh data')],
+            )
+        return AdapterResult(success=False, error='backend unavailable')
+
+
+_CACHE_CONTEXT = AdapterCacheContext(
+    actor_id='actor-1', scope='workspace-1', task_id='task-1',
+    source_version='source-v1',
+)
+
+
+def test_failed_different_query_never_reuses_previous_success():
+    adapter = _QueryAdapter()
+    prior = adapter.collect('query-a')
+    failed = adapter.collect('query-b')
+
+    assert prior.success and prior.notes[0].content == 'private A data'
+    assert failed.success is False
+    assert failed.notes == []
+    assert 'backend unavailable' in failed.error
+
+
+def test_scoped_cache_fallback_requires_exact_complete_identity():
+    adapter = _QueryAdapter()
+    prior = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    adapter.fail_queries.add('query-a')
+    fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+
+    assert prior.success
+    assert fallback.success
+    assert fallback.notes == prior.notes
+    assert fallback.error.startswith('缓存降级:')
+
+
+@pytest.mark.parametrize(
+    'changed_context',
+    [
+        AdapterCacheContext('actor-2', 'workspace-1', 'task-1', 'source-v1'),
+        AdapterCacheContext('actor-1', 'workspace-2', 'task-1', 'source-v1'),
+        AdapterCacheContext('actor-1', 'workspace-1', 'task-2', 'source-v1'),
+        AdapterCacheContext('actor-1', 'workspace-1', 'task-1', 'source-v2'),
+        AdapterCacheContext('actor-1', '', 'task-1', 'source-v1'),
+    ],
+)
+def test_scoped_cache_fallback_rejects_changed_or_incomplete_identity(changed_context):
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    adapter.fail_queries.add('query-a')
+
+    failed = adapter.collect('query-a', cache_context=changed_context)
+
+    assert failed.success is False
+    assert failed.notes == []
+
+
+@pytest.mark.parametrize(
+    ('keyword', 'max_results'),
+    [('query-b', 20), ('query-a', 5)],
+)
+def test_scoped_cache_fallback_rejects_changed_query_or_limit(keyword, max_results):
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', max_results=20,
+                           cache_context=_CACHE_CONTEXT).success
+    adapter.fail_queries.add('query-a')
+
+    failed = adapter.collect(keyword, max_results=max_results,
+                             cache_context=_CACHE_CONTEXT)
+
+    assert failed.success is False
+    assert failed.notes == []
+
+
+def test_unscoped_success_invalidates_prior_scoped_cache_and_live_success_recovers():
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    # An unscoped request must not leave a previous scoped cache eligible.
+    assert adapter.collect('query-a').success
+    adapter.fail_queries.add('query-a')
+    failed = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    assert failed.success is False and failed.notes == []
+
+    recovered = adapter.collect('query-recovered', cache_context=_CACHE_CONTEXT)
+    assert recovered.success
+    assert [note.content for note in recovered.notes] == ['fresh data']
+
+
+def test_registry_forwards_complete_cache_context_to_existing_adapter():
+    adapter = _QueryAdapter()
+    registry = AdapterRegistry()
+    registry._adapters = {'query-test': adapter}
+
+    live = registry.search_all(
+        'query-a', 20, ['query-test'], cache_context=_CACHE_CONTEXT,
+    )['query-test']
+    adapter.fail_queries.add('query-a')
+    merged, status = registry.search_all_with_status(
+        'query-a', 20, ['query-test'], cache_context=_CACHE_CONTEXT,
+    )
+
+    assert live.success
+    assert [note.content for note in merged] == ['private A data']
+    assert status[0]['state'] == 'SUCCESS'
+    assert status[0]['error'].startswith('缓存降级:')
 
 
 def test_safe_collect_never_raises():
