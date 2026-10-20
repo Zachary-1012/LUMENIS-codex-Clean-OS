@@ -18,6 +18,7 @@ class BingSearchAdapter(BaseAdapter):
                 "Accept-Language": "zh-CN,zh;q=0.9",
             }
             resp = requests.get(url, headers=headers, timeout=self.config["request_timeout"])
+            resp.raise_for_status()
             notes = self._parse_results(resp.text)
             return AdapterResult(success=True, notes=notes[:max_results], raw_count=len(notes))
         except Exception as e:

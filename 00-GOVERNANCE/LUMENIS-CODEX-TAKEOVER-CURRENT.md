@@ -8,6 +8,40 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `topic_note_detail_backfill.py` distinguishes failed, empty and available fields, merges only nonempty verified values into the exact row, and derives quality from the merged stored detail. Failed extraction cannot erase saved content/media/comments; oversized JSON is rejected intact and commit ownership remains with its caller. Supplied verified JSON fields now bypass parsing corrupt legacy values; unchanged verified payloads still recalculate stale quality, while partial merges preserve the prior aggregate capture timestamp. `tests/test_topic_note_detail_backfill.py` passed **9 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use an in-memory database and synthetic pages; no CDP, live collection or production DB was used.
 
+## 2026-10-20 Issue #17 FIX-026 — incomplete source availability stays unknown
+
+`data_query_api.py` keeps source counts/availability unknown when a source result
+is incomplete or capped, instead of interpreting the visible partial count as a
+complete total. Normal complete and explicit-zero paths remain distinct. The
+focused regression is `tests/test_data_query_source_limit_semantics.py`. Exact-head
+offline command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_data_query_source_limit_semantics.py` — **4 passed**.
+`python -m py_compile data_query_api.py tests/test_data_query_source_limit_semantics.py`
+and `git diff --check` passed. These isolated tests do not establish live-source
+coverage or product-level acceptance.
+
+## 2026-10-20 Issue #17 FIX-038 — verify recovery against the affected notes database
+
+The existing `auto_recovery.py` verifies the notes-table invariant against the same resolved database path being recovered; a generic `SELECT 1` can no longer label a missing notes table fixed. `tests/test_auto_recovery_database_truth.py` passed **3 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use temporary SQLite only; no production recovery was executed.
+
+## 2026-10-20 Issue #17 FIX-090 — search HTTP result truth
+
+The existing Baidu and Bing search adapters now call `raise_for_status()` before
+parsing a response, so an HTTP error page remains a failed result instead of
+becoming a successful empty result. The existing `search()` error contract and
+normal HTTP 200 empty-result behavior are preserved. `tests/test_adapter_http_truth.py`
+covers both adapters against HTTP 503, ordinary HTTP 200 with no matches, and a
+transport timeout (6 passed) using offline response fixtures; no live source was
+queried. Verified with
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest --with requests python -m pytest -q tests/test_adapter_http_truth.py`
+(6 passed), `python -m compileall -q lumenis/adapters/baidu_search.py lumenis/adapters/bing_search.py tests/test_adapter_http_truth.py`, and
+`git diff --check`. This closes only the adapter-level state distinction in
+FIX-090; the W6-owned HTTP/API projections, live-provider behavior and actual
+collection remain unverified, and all other Issue #17 outcomes remain open.
+
+## 2026-10-20 Issue #17 FIX-049 — normalize ROI using both currencies
+
+The existing `ad_intelligence/platform_registry.py` computes each platform's rate as source-rate divided by the requested base-currency rate and rejects an unsupported base currency instead of returning an implicit fallback. `tests/test_platform_registry.py` passed **14 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use fixed synthetic rates; no live exchange rate was fetched.
 
 ## 2026-10-18 source-adoption validation handoff
 
@@ -229,7 +263,6 @@ Candidate source publication at [PR #83](https://github.com/Zachary-1012/LUMENIS
 
 前述工程钩子发布批次仅包含 M 的既有工程钩子、受影响回归和规则说明；该批不包含产品行为源码，不升级下述已发布产品回执的验收范围。原生注册与受保护主树中的实际钩子装载须在合并后独立读回。
 
-
 本次 PR #60 冲突收敛保留当前账号/免费登录、独立工作区、视觉和来源同权规则。规划继续只使用 `00-GOVERNANCE/LOOP-PLAN-20261014/` 的现行版本及 [唯一完整前端规划](LOOP-PLAN-20261014/product-plan-full.md)与[唯一视觉文字草图](LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)；不恢复旧目录下的重复规划。补入既有 Gibbs 训练/validation/holdout 三份原始日志并链接当前数学采用记录，状态仍为“已训练、未上线”，G163 仍 OPEN。这是规则与历史证据同步，不含新训练、产品运行或验收升级；下述 PR #77/#78 回执保留其原有范围。
 
 本批承接 Issue #17 正文及 33 条评论、#lumenis-dev 43 条频道消息及 7 个回复串的 53 条回复，共 136 条来源记录、122 条去重消息；逐条读取、映射并保留全部未闭项。Brio 两个新附件包的 10 份文档已读并映射；历史四份长 PDF 的既有部分阅读边界保留，消息全覆盖不等于全部研究材料读完。本批修复 KOS 三处未定义服务调用、AI 状态把分析模块导入误报为模型可用、Shared SavedWork 的独立工作区 Scope，以及视频工程因任意转场而全面禁用编辑的问题。独立 Shared 容器不继承 CTH/BMP 权限；所引用来源仍逐条保留原 Scope、SourceUse 与权益核验。媒体编辑按实际 Core 转场约束原子拒绝无效修改，保留撤销和版本，不用删除转场换取表面成功。当前前端规划和逐屏参考原位补齐完整任务、独立制作、返回/保存/恢复和四表面差异；44 个历史屏号不是范围上限，文档更新不证明实际界面已通过。
@@ -255,7 +288,6 @@ PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR
 本批通用业务搜索、分析、报告与导出不再隐式选择Subject/BrandFocus；业务读取沿服务端认证Scope，并逐条核验Canonical/Evidence/SourceUse。摘要截断、来源拒绝和覆盖不完整保留UNKNOWN/不完整，真实零值不变；`web_mention`与note进入同一统计链，不按来源类别改变权重。`/api/export/generate`保留JSON响应合同并复用SavedWork生成、读回；已保存报告下载在释放文件前重新核验保存时的来源绑定与当前SourceUse，并保留DATA_EXPORT；无归属旧平面文件不开放任意下载。AIHub与仍注册的`/api/ai/chat`兼容入口均只把静态功能元数据用于路由提示，普通聊天默认经现有Owned Gateway；用户明确选配user_api时，仅无业务库用户对话可显式调用该接口，未绑定逐来源SourceUse时不读取或外发品牌目录、案例、业务统计或Canonical日报。日报缺失的负面数量和情感保持UNKNOWN，不回退到风险事件数或合成中性。焦点报告保留daily/weekly/monthly/yearly。GLOBAL目前仅有精确日报支持；旧ReportGenerator与engine没有可复用的已授权GLOBAL多周期路径，周/月/年仍为NOT_VERIFIED并明确不可用，不以默认主体代替。此前31条代码与回归路径的Git blob清单SHA-256为`e84e2d2e674374cda4d46372e543cc6192d88e0c3a1d98791e31c12555422935`；该指纹只覆盖此前有界子批，不包含本次最终Permission/Reporting路由修复。
 
 定向回归196项通过、2项跳过；跳过的是既有导入器覆盖：`:920` 的XLS二进制解析要求可选 `xlrd` 与本机 `soffice`，`:951` 的旧DOC解析需要本机LibreOffice/`soffice`，与本批报告导出格式改动无关。31个改动Python文件编译通过。七个直接相关路径的所选Ruff规则为111项既有诊断，与同口径origin基线133项相比无新增；这是增量对照，不是全仓Ruff通过。`git diff --check`通过。Gateway源码复核通过；Runtime加载、生产DB和真实用户E2E仍NOT_VERIFIED，本批未操作它们。PR #76 的最终路由修复涉及 `app.py`、`lumenis/shared/reporting/routes.py`、`lumenis/system/security/permission.py` 与 `tests/test_reporting_route.py`：认证请求Scope解析归入SYSTEM Permission，`app.py`仅保留兼容包装，Shared Reporting直接调用该Owner。受影响路由回归8项、单产品架构守卫、Python编译与差异检查通过。PR审查发现的调用缺口已在原Owner修正：事件审核接收服务端签发的本地工作区身份；报告核验先按请求时间过滤；完整样本空日为真实0，未知覆盖或分类保持None；截断来源在事件持久化前返回PARTIAL并保留既有完整事件；采集后处理按每个已准入精确Scope独立分析/聚合，含糊关键词不猜主体；作者检索在已核Canonical来源内先按作者过滤再限量；canonical报告与Word/PDF导出沿相同Scope、SourceUse和DATA_EXPORT边界。最终组合的17个受影响回归函数（参数化后20项）通过，16个改动Python文件编译通过，架构和Database唯一Owner守卫通过；E9/F63/F7/F82静态检查仍有app的6项和KOS的3项既有诊断，与HEAD同口径结果相同，没有新增，不能报告全量Ruff通过。Word/PDF部分写入失败只清理本次唯一文件，保留已成功格式；导出保留用户日期。追加审查修复：CTH-04/08、BMP-10传递服务端核验Scope，读失败不伪为空；dashboard各业务聚合统一消费同一Scoped Canonical/Evidence样本，截断或未知时间不填零；关联笔记已知高风险分数优先；full_refresh写入前必须取得既有Shared数据库快照，失败时所有写阶段NOT_RUN；日报只分析已核相关记录，相关性不完整时保留UNKNOWN。ACT建议移除固定主体与退役Provider，保留可编辑确定性建议，AI增强绑定仍OPEN/UNAVAILABLE，不宣称已执行动作。该组合4份受影响回归共46项通过、10个Python文件编译通过；所选静态规则仍有app.py六项未变化的既有诊断，非全量Ruff通过。事件分组达到上限时保留PARTIAL及已处理/剩余数，full_refresh传播该结果；KOS使用Permission回执中的真实actor或本地工作区caller，审核动作绑定实际展示的suggested_reply，缺文本拒绝登记；作者未知或互动不完整/零分母不生成假归因百分比。这六项审查修复的隔离KOS定向29项、事件/刷新定向5项通过，目标Python编译通过；ACT入口另拒绝非对象、错误字段类型及纯空白问题，页面/ACT回归11项和该路径所选Ruff规则通过；新回归文件末尾空行已规范化，差异检查通过；遗留源码Ruff存量问题仍单独保留。此前回执只适用未变化范围，不自动成为当前组合验收。Runtime加载、生产DB与真实用户E2E仍NOT_VERIFIED。
-
 
 本文件呈现当前有效的交接入口和未闭要求；既有日期事实只作版本化证据，不成为旧指令或当前运行/完成声明。线上与本地研发读取同一套有效规则，云端dot按§1的2026-10-18直接PO分工接续。此前规则清理未包含dot接续的范围记录已被本次明确授权更新；不启动Brio产品开发，不修改用户管理的F/M原生Goal。
 
@@ -346,7 +378,6 @@ PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR
 PR83 head `5160f638755c16b50c0fb84aa3317072175c9cd4` / tree `dcebff505d8879eeab8793d0e3289226cc9fca63` was read back with all 3,955 file blobs and modes matching the frozen candidate. Its App Gate passed; Product Gate passed static/architecture/compilation checks but failed dependency installation because the unchanged CI uses Python 3.11 while SciPy 1.18.1 requires 3.12. The local compatibility repair preserves the original 3.12 scientific pin, selects the official 1.17.1 pin for 3.11, and corrects two stale test fixtures without lowering production authorization or changing CI. Real isolated 3.11 validation passed 603 primary CI cases and 318 separate unittest subtests, plus 258 separate supplementary cases. See the exact scoped receipt in `evidence/round-15/bugfix-review-20261018/PYTHON-COMPAT-VALIDATION.json`; counts from different stages are not additive. This local increment still requires new-head remote checks.
 
 The Product Owner has additionally approved full global-growth-intelligence capability and four-product protocol absorption into LUMENIS in this same main delivery, including sanitized source/document publication. Existing candidate work and requirements remain intact. Follow current LUMENIS naming, directories, Owners, Source/Evidence/Permission and truth boundaries; reconcile earlier independent-product wording to this new direction without importing duplicate runtime/account/database stacks or automatically treating research as production fact. GGI absorption is in progress, not yet implemented or accepted by this continuation receipt. The current PR must not be merged as a substitute for completing the newly included integration scope.
-
 
 ### 2026-10-18 研究采用交接
 
