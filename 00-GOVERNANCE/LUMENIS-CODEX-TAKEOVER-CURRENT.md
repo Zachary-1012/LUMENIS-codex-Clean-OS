@@ -4,6 +4,11 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-035 — distinguish empty XHS results from network failures
+
+The existing `network_adaptive.py` and `xhs_cookie_bridge.py` now keep a valid empty collection result distinct from transport failure and preserve the actual outcome in adaptive status. The offline combined regression across `tests/test_xhs_network_outcome_reporting.py`, `tests/test_xhs_child_worker_environment.py`, `tests/test_xhs_approved_local_worker_route.py` and `tests/test_xhs_lineage_persistence.py` passed **65 tests** with no thread leak. Changed-source compilation and `git diff --check` passed. Fixtures only; no real collection or account access was performed.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,
