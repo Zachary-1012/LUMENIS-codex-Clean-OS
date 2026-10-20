@@ -1,8 +1,8 @@
 # API 路由矩阵（由当前 Flask url_map 自动生成，勿手改）
 
-- Flask url_map rules：**843**（static：**1**；API routes：**842**）
-- 唯一路径：**802**；operation groups：**854**
-- route operation candidates：**866**；重复冲突组：**12**（候选项：**24**）
+- Flask url_map rules：**914**（static：**1**；API routes：**913**）
+- 唯一路径：**874**；operation groups：**943**
+- route operation candidates：**952**；重复冲突组：**9**（候选项：**18**）
 - 认证：public=/healthz；v4Auth=/v4/* 独立 token；其余 httpBasic 或 v4 会话。
 
 | 路径 | 方法 | Endpoint candidate | Flask rule | 认证 | 分组 |
@@ -54,6 +54,11 @@
 | `/api/ai/tasks/{task_id}/approve` | POST | ai_api.api_ai_tasks_approve | `/api/ai/tasks/<task_id>/approve` | basic/v4 | api/ai |
 | `/api/ai/tasks/{task_id}/cancel` | POST | ai_api.api_ai_tasks_cancel | `/api/ai/tasks/<task_id>/cancel` | basic/v4 | api/ai |
 | `/api/ai/tasks/{task_id}/evidence` | GET | ai_api.api_ai_tasks_evidence | `/api/ai/tasks/<task_id>/evidence` | basic/v4 | api/ai |
+| `/api/ai/tasks/{task_id}/learning` | GET | ai_api.api_ai_task_learning | `/api/ai/tasks/<task_id>/learning` | basic/v4 | api/ai |
+| `/api/ai/tasks/{task_id}/learning` | POST | ai_api.api_ai_task_learning | `/api/ai/tasks/<task_id>/learning` | basic/v4 | api/ai |
+| `/api/ai/tasks/{task_id}/memory` | DELETE | ai_api.api_ai_task_memory | `/api/ai/tasks/<task_id>/memory` | basic/v4 | api/ai |
+| `/api/ai/tasks/{task_id}/memory` | GET | ai_api.api_ai_task_memory | `/api/ai/tasks/<task_id>/memory` | basic/v4 | api/ai |
+| `/api/ai/tasks/{task_id}/memory` | POST | ai_api.api_ai_task_memory | `/api/ai/tasks/<task_id>/memory` | basic/v4 | api/ai |
 | `/api/ai/tasks/{task_id}/run` | POST | ai_api.api_ai_tasks_run | `/api/ai/tasks/<task_id>/run` | basic/v4 | api/ai |
 | `/api/ai/tasks/{task_id}/steps` | GET | ai_api.api_ai_tasks_steps | `/api/ai/tasks/<task_id>/steps` | basic/v4 | api/ai |
 | `/api/ai/test` | POST | ai_api.api_ai_test | `/api/ai/test` | basic/v4 | api/ai |
@@ -166,7 +171,9 @@
 | `/api/browser/sessions/{session_id}/action` | POST | ai_browser_runtime.execute_action | `/api/browser/sessions/<session_id>/action` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/agent/run` | POST | ai_browser_runtime.run_browser_agent_step | `/api/browser/sessions/<session_id>/agent/run` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/agent/status` | GET | ai_browser_runtime.browser_agent_status | `/api/browser/sessions/<session_id>/agent/status` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/capture` | POST | ai_browser_runtime.capture_component | `/api/browser/sessions/<session_id>/capture` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/evidence` | GET | ai_browser_runtime.get_evidence | `/api/browser/sessions/<session_id>/evidence` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/extract` | POST | ai_browser_runtime.extract_page | `/api/browser/sessions/<session_id>/extract` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/frame` | GET | ai_browser_runtime.read_session_frame | `/api/browser/sessions/<session_id>/frame` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/frames/stream` | GET | ai_browser_runtime.stream_session_frames | `/api/browser/sessions/<session_id>/frames/stream` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/human-approval` | POST | ai_browser_runtime.human_approval | `/api/browser/sessions/<session_id>/human-approval` | basic/v4 | api/browser |
@@ -233,12 +240,30 @@
 | `/api/config/emails` | POST | api_push_emails | `/api/config/emails` | basic/v4 | api/config |
 | `/api/content/ad-strategy` | POST | content_generation.api_ad_strategy | `/api/content/ad-strategy` | basic/v4 | api/content |
 | `/api/content/brand-report/generate` | POST | content_generation.api_brand_report_generate | `/api/content/brand-report/generate` | basic/v4 | api/content |
+| `/api/content/drafts` | POST | content_generation.api_save_content_draft | `/api/content/drafts` | basic/v4 | api/content |
+| `/api/content/drafts/{artifact_id}/reviews` | POST | content_generation.api_review_content_draft | `/api/content/drafts/<artifact_id>/reviews` | basic/v4 | api/content |
+| `/api/content/drafts/{artifact_id}/reviews/{review_id}` | GET | content_generation.api_content_review_status | `/api/content/drafts/<artifact_id>/reviews/<review_id>` | basic/v4 | api/content |
 | `/api/content/evidence` | GET | content_generation.api_list_evidence | `/api/content/evidence` | basic/v4 | api/content |
 | `/api/content/evidence/{evidence_id}` | GET | content_generation.api_get_evidence | `/api/content/evidence/<evidence_id>` | basic/v4 | api/content |
 | `/api/content/feedback` | POST | content_generation.api_feedback | `/api/content/feedback` | basic/v4 | api/content |
 | `/api/content/generate` | POST | content_generation.api_generate | `/api/content/generate` | basic/v4 | api/content |
 | `/api/content/generate/{content_type}` | POST | content_generation.api_generate_typed | `/api/content/generate/<content_type>` | basic/v4 | api/content |
 | `/api/content/modules` | GET | content_generation.api_modules | `/api/content/modules` | basic/v4 | api/content |
+| `/api/content/multiplatform/capabilities` | GET | content_generation.api_multiplatform_capabilities | `/api/content/multiplatform/capabilities` | basic/v4 | api/content |
+| `/api/content/multiplatform/drafts` | POST | content_generation.api_multiplatform_create | `/api/content/multiplatform/drafts` | basic/v4 | api/content |
+| `/api/content/multiplatform/drafts/{artifact_id}` | GET | content_generation.api_multiplatform_read | `/api/content/multiplatform/drafts/<artifact_id>` | basic/v4 | api/content |
+| `/api/content/multiplatform/drafts/{artifact_id}/revisions` | POST | content_generation.api_multiplatform_revise | `/api/content/multiplatform/drafts/<artifact_id>/revisions` | basic/v4 | api/content |
+| `/api/content/patterns` | GET | content_generation.api_pattern_candidates | `/api/content/patterns` | basic/v4 | api/content |
+| `/api/content/patterns` | POST | content_generation.api_create_pattern | `/api/content/patterns` | basic/v4 | api/content |
+| `/api/content/patterns/approvals/{approval_id}/revoke` | POST | content_generation.api_revoke_pattern_approval | `/api/content/patterns/approvals/<approval_id>/revoke` | basic/v4 | api/content |
+| `/api/content/patterns/learning` | GET | content_generation.api_pattern_learning_projection | `/api/content/patterns/learning` | basic/v4 | api/content |
+| `/api/content/patterns/{pattern_id}/apply` | POST | content_generation.api_apply_pattern | `/api/content/patterns/<pattern_id>/apply` | basic/v4 | api/content |
+| `/api/content/patterns/{pattern_id}/evaluations` | POST | content_generation.api_evaluate_pattern | `/api/content/patterns/<pattern_id>/evaluations` | basic/v4 | api/content |
+| `/api/content/patterns/{pattern_id}/evaluations/{evaluation_id}` | GET | content_generation.api_read_pattern_evaluation | `/api/content/patterns/<pattern_id>/evaluations/<evaluation_id>` | basic/v4 | api/content |
+| `/api/content/patterns/{pattern_id}/recovery` | POST | content_generation.api_recover_pattern | `/api/content/patterns/<pattern_id>/recovery` | basic/v4 | api/content |
+| `/api/content/patterns/{pattern_id}/retire` | POST | content_generation.api_retire_pattern | `/api/content/patterns/<pattern_id>/retire` | basic/v4 | api/content |
+| `/api/content/patterns/{pattern_id}/state` | GET | content_generation.api_pattern_state | `/api/content/patterns/<pattern_id>/state` | basic/v4 | api/content |
+| `/api/content/patterns/{pattern_id}/transitions` | POST | content_generation.api_pattern_transition | `/api/content/patterns/<pattern_id>/transitions` | basic/v4 | api/content |
 | `/api/content/podcast-research` | POST | content_generation.api_podcast_research | `/api/content/podcast-research` | basic/v4 | api/content |
 | `/api/content/research/search` | GET | content_generation.api_research_search | `/api/content/research/search` | basic/v4 | api/content |
 | `/api/content/resources` | GET | content_generation.api_resources | `/api/content/resources` | basic/v4 | api/content |
@@ -278,6 +303,7 @@
 | `/api/evaluation/run` | GET | system_features.evaluation_run | `/api/evaluation/run` | basic/v4 | api/evaluation |
 | `/api/evaluation/stability` | GET | system_features.evaluation_stability | `/api/evaluation/stability` | basic/v4 | api/evaluation |
 | `/api/evaluation/status` | GET | lumenis_agg.evaluation_status | `/api/evaluation/status` | basic/v4 | api/evaluation |
+| `/api/event-graph/approval/revoke` | POST | event_graph_revoke_approval | `/api/event-graph/approval/revoke` | basic/v4 | api/event-graph |
 | `/api/event-graph/chain/{event_id}` | GET | event_graph_chain | `/api/event-graph/chain/<event_id>` | basic/v4 | api/event-graph |
 | `/api/event-graph/events` | GET | event_graph_events | `/api/event-graph/events` | basic/v4 | api/event-graph |
 | `/api/event-graph/events` | POST | event_graph_create_event | `/api/event-graph/events` | basic/v4 | api/event-graph |
@@ -310,10 +336,13 @@
 | `/api/experience/content-projects` | GET | experience_runtime.content_project_list | `/api/experience/content-projects` | basic/v4 | api/experience |
 | `/api/experience/content-projects/export` | POST | experience_runtime.export_content_project | `/api/experience/content-projects/export` | basic/v4 | api/experience |
 | `/api/experience/content-projects/{artifact_id}` | GET | experience_runtime.content_project_detail | `/api/experience/content-projects/<artifact_id>` | basic/v4 | api/experience |
+| `/api/experience/content-projects/{artifact_id}/edl/apply` | POST | experience_runtime.apply_content_edl | `/api/experience/content-projects/<artifact_id>/edl/apply` | basic/v4 | api/experience |
+| `/api/experience/content-projects/{artifact_id}/edl/prepare` | POST | experience_runtime.prepare_content_edl | `/api/experience/content-projects/<artifact_id>/edl/prepare` | basic/v4 | api/experience |
 | `/api/experience/content-projects/{artifact_id}/media` | GET | experience_runtime.content_project_media | `/api/experience/content-projects/<artifact_id>/media` | basic/v4 | api/experience |
 | `/api/experience/content-projects/{artifact_id}/package` | GET | experience_runtime.content_project_package | `/api/experience/content-projects/<artifact_id>/package` | basic/v4 | api/experience |
 | `/api/experience/content-source-confirmations/{confirmation_id}` | POST | experience_runtime.confirm_content_source_import_request | `/api/experience/content-source-confirmations/<confirmation_id>` | basic/v4 | api/experience |
 | `/api/experience/content-sources` | POST | experience_runtime.import_content_source | `/api/experience/content-sources` | basic/v4 | api/experience |
+| `/api/experience/content-sources/tts/preview` | POST | experience_runtime.preview_content_speech | `/api/experience/content-sources/tts/preview` | basic/v4 | api/experience |
 | `/api/experience/content-sources/{artifact_id}` | GET | experience_runtime.content_source_detail | `/api/experience/content-sources/<artifact_id>` | basic/v4 | api/experience |
 | `/api/experience/content/evidence/{evidence_id}` | GET | experience_runtime.content_evidence_detail | `/api/experience/content/evidence/<evidence_id>` | basic/v4 | api/experience |
 | `/api/experience/creation/internal-pitches` | POST | domain_api.api_internal_pitch_prepare | `/api/experience/creation/internal-pitches` | basic/v4 | api/experience |
@@ -325,6 +354,8 @@
 | `/api/experience/cth/cases/{case_id}` | GET | experience_runtime.reopen_cth_work_case | `/api/experience/cth/cases/<case_id>` | basic/v4 | api/experience |
 | `/api/experience/cth/platform-collection` | GET | experience_runtime.cth_platform_collection_surface | `/api/experience/cth/platform-collection` | basic/v4 | api/experience |
 | `/api/experience/cth/platform-collection/search` | POST | experience_runtime.cth_platform_collection_search | `/api/experience/cth/platform-collection/search` | basic/v4 | api/experience |
+| `/api/experience/entity-profiles` | GET | experience_runtime.entity_profile_workflow | `/api/experience/entity-profiles` | basic/v4 | api/experience |
+| `/api/experience/entity-profiles` | POST | experience_runtime.entity_profile_workflow | `/api/experience/entity-profiles` | basic/v4 | api/experience |
 | `/api/experience/materials/documents` | POST | experience_runtime.import_shared_document | `/api/experience/materials/documents` | basic/v4 | api/experience |
 | `/api/experience/materials/documents/{evidence_id}` | GET | experience_runtime.read_shared_document | `/api/experience/materials/documents/<int:evidence_id>` | basic/v4 | api/experience |
 | `/api/experience/materials/documents/{evidence_id}/file` | GET | experience_runtime.download_shared_document | `/api/experience/materials/documents/<int:evidence_id>/file` | basic/v4 | api/experience |
@@ -342,12 +373,55 @@
 | `/api/experience/owned-training/review-exports` | POST | experience_runtime.export_owned_training_reviews | `/api/experience/owned-training/review-exports` | basic/v4 | api/experience |
 | `/api/experience/owned-training/review-resources` | POST | experience_runtime.prepare_owned_training_review_resource | `/api/experience/owned-training/review-resources` | basic/v4 | api/experience |
 | `/api/experience/owned-training/review-submissions` | POST | experience_runtime.submit_owned_training_review | `/api/experience/owned-training/review-submissions` | basic/v4 | api/experience |
+| `/api/experience/podcast/editorial/preview` | POST | experience_runtime.preview_podcast_editorial | `/api/experience/podcast/editorial/preview` | basic/v4 | api/experience |
+| `/api/experience/podcast/topics/preview` | POST | experience_runtime.preview_podcast_topics | `/api/experience/podcast/topics/preview` | basic/v4 | api/experience |
+| `/api/experience/propagation/classify` | POST | experience_runtime.propagation_classify | `/api/experience/propagation/classify` | basic/v4 | api/experience |
+| `/api/experience/reports/artifact-experiments` | GET | experience_runtime.artifact_experiment_workflow | `/api/experience/reports/artifact-experiments` | basic/v4 | api/experience |
+| `/api/experience/reports/artifact-experiments` | POST | experience_runtime.artifact_experiment_workflow | `/api/experience/reports/artifact-experiments` | basic/v4 | api/experience |
+| `/api/experience/reports/entity-candidates` | POST | experience_runtime.entity_candidate_review_workflow | `/api/experience/reports/entity-candidates` | basic/v4 | api/experience |
+| `/api/experience/reports/financial/analyze` | POST | experience_runtime.analyze_financial_material | `/api/experience/reports/financial/analyze` | basic/v4 | api/experience |
+| `/api/experience/reports/financial/capture` | POST | experience_runtime.import_financial_material_capture | `/api/experience/reports/financial/capture` | basic/v4 | api/experience |
+| `/api/experience/reports/financial/collect` | POST | experience_runtime.collect_financial_material | `/api/experience/reports/financial/collect` | basic/v4 | api/experience |
+| `/api/experience/reports/financial/identity-review` | POST | experience_runtime.save_financial_identity_association | `/api/experience/reports/financial/identity-review` | basic/v4 | api/experience |
+| `/api/experience/reports/financial/save` | POST | experience_runtime.save_financial_material | `/api/experience/reports/financial/save` | basic/v4 | api/experience |
+| `/api/experience/reports/financial/target` | POST | experience_runtime.save_financial_collection_target | `/api/experience/reports/financial/target` | basic/v4 | api/experience |
+| `/api/experience/reports/macro/analyze` | POST | experience_runtime.analyze_macro_material | `/api/experience/reports/macro/analyze` | basic/v4 | api/experience |
+| `/api/experience/reports/macro/capture` | POST | experience_runtime.import_macro_material_capture | `/api/experience/reports/macro/capture` | basic/v4 | api/experience |
+| `/api/experience/reports/macro/collect` | POST | experience_runtime.collect_macro_material | `/api/experience/reports/macro/collect` | basic/v4 | api/experience |
+| `/api/experience/reports/macro/save` | POST | experience_runtime.save_macro_material | `/api/experience/reports/macro/save` | basic/v4 | api/experience |
+| `/api/experience/reports/macro/target` | POST | experience_runtime.save_macro_collection_target | `/api/experience/reports/macro/target` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/adopt-source` | POST | experience_runtime.adopt_research_source | `/api/experience/reports/source-brief/adopt-source` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/generate` | POST | experience_runtime.generate_source_brief_job | `/api/experience/reports/source-brief/generate` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/jobs` | GET | experience_runtime.list_research_reports | `/api/experience/reports/source-brief/jobs` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/jobs/{job_id}` | GET | experience_runtime.reopen_source_brief_job | `/api/experience/reports/source-brief/jobs/<job_id>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/jobs/{job_id}/hypotheses` | GET | experience_runtime.research_hypothesis_review | `/api/experience/reports/source-brief/jobs/<job_id>/hypotheses` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/jobs/{job_id}/hypotheses/review` | POST | experience_runtime.research_hypothesis_review | `/api/experience/reports/source-brief/jobs/<job_id>/hypotheses/review` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/jobs/{job_id}/reviews` | POST | experience_runtime.submit_source_brief_review | `/api/experience/reports/source-brief/jobs/<job_id>/reviews` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/jobs/{job_id}/save` | POST | experience_runtime.save_source_brief_result | `/api/experience/reports/source-brief/jobs/<job_id>/save` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/learning/{kind}` | GET | experience_runtime.research_learning | `/api/experience/reports/source-brief/learning/<kind>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/learning/{kind}` | POST | experience_runtime.research_learning | `/api/experience/reports/source-brief/learning/<kind>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/learning/{kind}/{object_id}` | GET | experience_runtime.research_learning | `/api/experience/reports/source-brief/learning/<kind>/<object_id>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/learning/{kind}/{object_id}/{operation}` | POST | experience_runtime.research_learning | `/api/experience/reports/source-brief/learning/<kind>/<object_id>/<operation>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/reference-library` | GET | experience_runtime.research_reference_library | `/api/experience/reports/source-brief/reference-library` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/reference-library` | POST | experience_runtime.research_reference_library | `/api/experience/reports/source-brief/reference-library` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/reference-library/{evidence_id}` | GET | experience_runtime.research_reference_library | `/api/experience/reports/source-brief/reference-library/<int:evidence_id>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/reference-work` | GET | experience_runtime.research_reference_work | `/api/experience/reports/source-brief/reference-work` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/reference-work` | POST | experience_runtime.research_reference_work | `/api/experience/reports/source-brief/reference-work` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/reference-work/{artifact_id}` | GET | experience_runtime.research_reference_version | `/api/experience/reports/source-brief/reference-work/<artifact_id>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/reference-work/{artifact_id}` | POST | experience_runtime.research_reference_version | `/api/experience/reports/source-brief/reference-work/<artifact_id>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/references` | GET | experience_runtime.research_reference_catalog | `/api/experience/reports/source-brief/references` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/references/match-rules` | POST | experience_runtime.research_match_rules | `/api/experience/reports/source-brief/references/match-rules` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/start` | POST | experience_runtime.start_source_brief_task | `/api/experience/reports/source-brief/start` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/tasks` | GET | experience_runtime.list_source_brief_tasks | `/api/experience/reports/source-brief/tasks` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/tasks/{task_id}` | GET | experience_runtime.source_brief_task_status | `/api/experience/reports/source-brief/tasks/<task_id>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/tasks/{task_id}` | PATCH | experience_runtime.edit_source_brief_task | `/api/experience/reports/source-brief/tasks/<task_id>` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/tasks/{task_id}/resume` | POST | experience_runtime.resume_source_brief_task | `/api/experience/reports/source-brief/tasks/<task_id>/resume` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/tasks/{task_id}/{operation}` | POST | experience_runtime.change_source_brief_task_state | `/api/experience/reports/source-brief/tasks/<task_id>/<operation>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/taxonomy` | GET | experience_runtime.research_taxonomy | `/api/experience/reports/source-brief/taxonomy` | basic/v4 | api/experience |
+| `/api/experience/reports/staffing-options` | GET | experience_runtime.staffing_options_workflow | `/api/experience/reports/staffing-options` | basic/v4 | api/experience |
+| `/api/experience/reports/staffing-options` | POST | experience_runtime.staffing_options_workflow | `/api/experience/reports/staffing-options` | basic/v4 | api/experience |
+| `/api/experience/reports/statistics` | GET | experience_runtime.analyze_statistics_material | `/api/experience/reports/statistics` | basic/v4 | api/experience |
+| `/api/experience/reports/statistics` | POST | experience_runtime.analyze_statistics_material | `/api/experience/reports/statistics` | basic/v4 | api/experience |
 | `/api/experience/runtime/identity` | GET | experience_runtime.runtime_identity | `/api/experience/runtime/identity` | basic/v4 | api/experience |
 | `/api/experience/saved-work` | GET | experience_runtime.search_shared_work | `/api/experience/saved-work` | basic/v4 | api/experience |
 | `/api/experience/saved-work` | POST | experience_runtime.save_shared_work | `/api/experience/saved-work` | basic/v4 | api/experience |
@@ -355,6 +429,7 @@
 | `/api/experience/saved-work/preferences` | GET | experience_runtime.read_reporting_preferences | `/api/experience/saved-work/preferences` | basic/v4 | api/experience |
 | `/api/experience/saved-work/preferences` | POST | experience_runtime.save_reporting_preferences | `/api/experience/saved-work/preferences` | basic/v4 | api/experience |
 | `/api/experience/saved-work/{artifact_id}` | GET | experience_runtime.read_shared_work | `/api/experience/saved-work/<artifact_id>` | basic/v4 | api/experience |
+| `/api/experience/saved-work/{artifact_id}/attachments/{name}` | GET | experience_runtime.download_work_attachment | `/api/experience/saved-work/<artifact_id>/attachments/<name>` | basic/v4 | api/experience |
 | `/api/experience/saved-work/{artifact_id}/export` | GET | experience_runtime.export_shared_work | `/api/experience/saved-work/<artifact_id>/export` | basic/v4 | api/experience |
 | `/api/experience/saved-work/{artifact_id}/revise` | POST | experience_runtime.revise_shared_work | `/api/experience/saved-work/<artifact_id>/revise` | basic/v4 | api/experience |
 | `/api/experience/screen/{screen_id}` | GET | experience_runtime.screen_viewmodel | `/api/experience/screen/<screen_id>` | basic/v4 | api/experience |
@@ -363,6 +438,7 @@
 | `/api/experience/shared-skills/shared.video_shotcraft/render` | POST | experience_runtime.render_shared_video_artifact | `/api/experience/shared-skills/shared.video_shotcraft/render` | basic/v4 | api/experience |
 | `/api/experience/shared-skills/{skill_id}/run` | POST | experience_runtime.run_shared_skill_route | `/api/experience/shared-skills/<skill_id>/run` | basic/v4 | api/experience |
 | `/api/experience/subjects` | GET | experience_runtime.runtime_subjects | `/api/experience/subjects` | basic/v4 | api/experience |
+| `/api/experience/work-dependencies` | POST | experience_runtime.work_dependency_workflow | `/api/experience/work-dependencies` | basic/v4 | api/experience |
 | `/api/export/excel` | GET | export.export_excel | `/api/export/excel` | basic/v4 | api/export |
 | `/api/export/file/{filename}` | GET | export.export_file | `/api/export/file/<path:filename>` | basic/v4 | api/export |
 | `/api/export/generate` | GET | export.export_generate | `/api/export/generate` | basic/v4 | api/export |
@@ -429,6 +505,8 @@
 | `/api/internal-browser/type-into` | POST | internal_browser.api_type_into | `/api/internal-browser/type-into` | basic/v4 | api/internal-browser |
 | `/api/kos/account` | GET | kos.api_kos_account | `/api/kos/account` | basic/v4 | api/kos |
 | `/api/kos/ad-candidates` | GET | kos.api_ad_candidates | `/api/kos/ad-candidates` | basic/v4 | api/kos |
+| `/api/kos/approvals/confirm` | POST | kos.api_kos_approval_confirm | `/api/kos/approvals/confirm` | basic/v4 | api/kos |
+| `/api/kos/approvals/revoke` | POST | kos.api_kos_approval_revoke | `/api/kos/approvals/revoke` | basic/v4 | api/kos |
 | `/api/kos/attribution` | GET | kos.api_attribution | `/api/kos/attribution` | basic/v4 | api/kos |
 | `/api/kos/brand` | GET | kos.api_kos_brand | `/api/kos/brand` | basic/v4 | api/kos |
 | `/api/kos/campaign` | POST | kos.api_kos_campaign | `/api/kos/campaign` | basic/v4 | api/kos |
@@ -595,6 +673,8 @@
 | `/api/security/sensitive-info` | GET | system_features.security_sensitive_info | `/api/security/sensitive-info` | basic/v4 | api/security |
 | `/api/security/status` | GET | api_security_status | `/api/security/status` | basic/v4 | api/security |
 | `/api/settings` | GET | api_settings_get | `/api/settings` | basic/v4 | api/settings |
+| `/api/settings/ai` | GET | settings.user_ai_settings | `/api/settings/ai` | basic/v4 | api/settings |
+| `/api/settings/ai` | POST | settings.user_ai_settings | `/api/settings/ai` | basic/v4 | api/settings |
 | `/api/settings/config` | GET | settings.get_config | `/api/settings/config` | basic/v4 | api/settings |
 | `/api/settings/config` | POST | settings.update_config | `/api/settings/config` | basic/v4 | api/settings |
 | `/api/settings/context` | DELETE | domain_api.api_settings_context | `/api/settings/context` | basic/v4 | api/settings |
@@ -606,6 +686,7 @@
 | `/api/settings/domain/delete` | POST | settings.delete_domain_config | `/api/settings/domain/delete` | basic/v4 | api/settings |
 | `/api/settings/subjects` | GET | subject_registry.get_subjects | `/api/settings/subjects` | basic/v4 | api/settings |
 | `/api/settings/subjects` | POST | subject_registry.create_subject | `/api/settings/subjects` | basic/v4 | api/settings |
+| `/api/settings/subjects/batch` | POST | subject_registry.subject_batch_workflow | `/api/settings/subjects/batch` | basic/v4 | api/settings |
 | `/api/settings/system-info` | GET | settings.system_info | `/api/settings/system-info` | basic/v4 | api/settings |
 | `/api/skills` | GET | api_skills_list | `/api/skills` | basic/v4 | api/skills |
 | `/api/skills/list` | GET | api_skills_list | `/api/skills/list` | basic/v4 | api/skills |
@@ -669,11 +750,8 @@
 | `/api/system/account/skills/{skill_id}/enable` | POST | account.api_enable_skill | `/api/system/account/skills/<skill_id>/enable` | basic/v4 | api/system |
 | `/api/system/account/skills/{skill_id}/execute` | POST | account.api_execute_skill | `/api/system/account/skills/<skill_id>/execute` | basic/v4 | api/system |
 | `/api/system/account/skills/{skill_id}/executions` | GET | account.api_skill_executions | `/api/system/account/skills/<skill_id>/executions` | basic/v4 | api/system |
-| `/api/system/account/totp/confirm` | POST | account.api_totp_confirm | `/api/system/account/totp/confirm` | basic/v4 | api/system |
-| `/api/system/account/totp/reset` | POST | account.api_totp_reset | `/api/system/account/totp/reset` | basic/v4 | api/system |
-| `/api/system/account/totp/setup` | POST | account.api_totp_setup | `/api/system/account/totp/setup` | basic/v4 | api/system |
-| `/api/system/account/totp/status` | GET | account.api_totp_status | `/api/system/account/totp/status` | basic/v4 | api/system |
-| `/api/system/account/totp/verify` | POST | account.api_totp_verify | `/api/system/account/totp/verify` | basic/v4 | api/system |
+| `/api/system/account/skills/{skill_id}/mcp/contract/approve` | POST | account.api_approve_mcp_contract | `/api/system/account/skills/<skill_id>/mcp/contract/approve` | basic/v4 | api/system |
+| `/api/system/account/skills/{skill_id}/mcp/contract/prepare` | POST | account.api_prepare_mcp_contract | `/api/system/account/skills/<skill_id>/mcp/contract/prepare` | basic/v4 | api/system |
 | `/api/system/account/verification/pending` | GET | account.api_pending_codes | `/api/system/account/verification/pending` | basic/v4 | api/system |
 | `/api/system/account/verification/request` | POST | account.api_request_verification | `/api/system/account/verification/request` | basic/v4 | api/system |
 | `/api/system/account/verification/resend` | POST | account.api_resend_code | `/api/system/account/verification/resend` | basic/v4 | api/system |
@@ -734,11 +812,8 @@
 | `/api/v2/report-center/preview` | GET | report.shared_reporting_preview | `/api/v2/report-center/preview` | basic/v4 | api/v2 |
 | `/api/v2/report/export` | GET | report.api_report_export | `/api/v2/report/export` | basic/v4 | api/v2 |
 | `/api/v4/api-keys` | GET | account_compat.compat_api_keys_list | `/api/v4/api-keys` | basic/v4 | api/v4 |
-| `/api/v4/api-keys` | GET | api_v4_api_keys_list | `/api/v4/api-keys` | basic/v4 | api/v4 |
 | `/api/v4/api-keys/generate` | POST | account_compat.compat_api_keys_generate | `/api/v4/api-keys/generate` | basic/v4 | api/v4 |
-| `/api/v4/api-keys/generate` | POST | api_v4_api_keys_generate | `/api/v4/api-keys/generate` | basic/v4 | api/v4 |
 | `/api/v4/api-keys/revoke` | POST | account_compat.compat_api_keys_revoke | `/api/v4/api-keys/revoke` | basic/v4 | api/v4 |
-| `/api/v4/api-keys/revoke` | POST | api_v4_api_keys_revoke | `/api/v4/api-keys/revoke` | basic/v4 | api/v4 |
 | `/api/viz/overview.stats` | GET | api_viz_overview_stats | `/api/viz/overview.stats` | basic/v4 | api/viz |
 | `/api/viz/overview.trend` | GET | api_viz_overview_trend | `/api/viz/overview.trend` | basic/v4 | api/viz |
 | `/api/viz/registry` | GET | viz.api_viz_registry | `/api/viz/registry` | basic/v4 | api/viz |
@@ -778,6 +853,7 @@
 | `/api/xhs/cookie/sync/{task_id}` | GET | collection.api_xhs_cookie_sync_status | `/api/xhs/cookie/sync/<task_id>` | basic/v4 | api/xhs |
 | `/api/xhs/keepalive/mark` | POST | api_xhs_keepalive_mark | `/api/xhs/keepalive/mark` | basic/v4 | api/xhs |
 | `/api/xhs/keepalive/recheck` | POST | api_xhs_keepalive_recheck | `/api/xhs/keepalive/recheck` | basic/v4 | api/xhs |
+| `/api/xhs/login/cancel` | POST | api_xhs_login_cancel | `/api/xhs/login/cancel` | basic/v4 | api/xhs |
 | `/api/xhs/login/save` | POST | api_xhs_login_save | `/api/xhs/login/save` | basic/v4 | api/xhs |
 | `/api/xhs/login/start` | POST | api_xhs_login_start | `/api/xhs/login/start` | basic/v4 | api/xhs |
 | `/api/xhs/login/status` | GET | api_xhs_login_status | `/api/xhs/login/status` | basic/v4 | api/xhs |
@@ -820,9 +896,19 @@
 | `/v4/adapters/search` | POST | v4.api_adapter_search | `/v4/adapters/search` | v4Auth | v4 |
 | `/v4/adapters/search-merged` | POST | v4.api_adapter_search_merged | `/v4/adapters/search-merged` | v4Auth | v4 |
 | `/v4/adapters/task/{task_id}` | GET | v4.api_adapter_task | `/v4/adapters/task/<task_id>` | v4Auth | v4 |
+| `/v4/adapters/task/{task_id}/resume` | POST | v4.api_adapter_task_resume | `/v4/adapters/task/<task_id>/resume` | v4Auth | v4 |
 | `/v4/ai/analyze` | POST | v4.v4_ai.ai_analyze | `/v4/ai/analyze` | v4Auth | v4 |
 | `/v4/ai/chat` | POST | v4.v4_ai.ai_chat | `/v4/ai/chat` | v4Auth | v4 |
+| `/v4/ai/conversations` | GET | v4.v4_ai.ai_conversations_list_create | `/v4/ai/conversations` | v4Auth | v4 |
+| `/v4/ai/conversations` | POST | v4.v4_ai.ai_conversations_list_create | `/v4/ai/conversations` | v4Auth | v4 |
+| `/v4/ai/conversations/{conversation_id}` | GET | v4.v4_ai.ai_conversation_read_update | `/v4/ai/conversations/<conversation_id>` | v4Auth | v4 |
+| `/v4/ai/conversations/{conversation_id}` | PATCH | v4.v4_ai.ai_conversation_read_update | `/v4/ai/conversations/<conversation_id>` | v4Auth | v4 |
+| `/v4/ai/conversations/{conversation_id}/tasks` | POST | v4.v4_ai.ai_conversation_attach_task | `/v4/ai/conversations/<conversation_id>/tasks` | v4Auth | v4 |
+| `/v4/ai/conversations/{conversation_id}/turns` | POST | v4.v4_ai.ai_conversation_append | `/v4/ai/conversations/<conversation_id>/turns` | v4Auth | v4 |
+| `/v4/ai/conversations/{conversation_id}/turns/{turn_id}/respond` | POST | v4.v4_ai.ai_conversation_respond | `/v4/ai/conversations/<conversation_id>/turns/<turn_id>/respond` | v4Auth | v4 |
 | `/v4/ai/learn` | GET | v4.v4_ai.ai_learn | `/v4/ai/learn` | v4Auth | v4 |
+| `/v4/ai/settings` | GET | v4.v4_ai.ai_settings | `/v4/ai/settings` | v4Auth | v4 |
+| `/v4/ai/settings` | POST | v4.v4_ai.ai_settings | `/v4/ai/settings` | v4Auth | v4 |
 | `/v4/ai/shadow` | GET | v4.v4_ai.ai_shadow | `/v4/ai/shadow` | v4Auth | v4 |
 | `/v4/ai/shadow` | POST | v4.v4_ai.ai_shadow | `/v4/ai/shadow` | v4Auth | v4 |
 | `/v4/ai/shadow/stats` | GET | v4.v4_ai.ai_shadow_stats | `/v4/ai/shadow/stats` | v4Auth | v4 |

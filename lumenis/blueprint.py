@@ -12,7 +12,7 @@ from .auth import (
 )
 from .auth.workspace import (
     verify_workspace_key, issue_workspace_key, list_workspace_keys,
-    revoke_workspace_key, grant_session, session_can_access, open_owner_session,
+    revoke_workspace_key, grant_session, session_can_access,
 )
 from .settings import settings_bp
 from .collect import collect_bp
@@ -108,32 +108,36 @@ def create_v4_blueprint() -> Blueprint:
     # ---- 受限工作区（ZBMP）访问密钥 ----
     @v4_bp.route("/auth/workspace/unlock", methods=["POST"])
     def api_workspace_unlock():
-        from .config import AUTH_CONFIG, WORKSPACE_CONFIG
+        """Grant workspace access to an already logged-in session.
+
+        A shared workspace key never creates or upgrades a login: without a
+        session the request is refused, and failed key guesses are rate
+        limited per IP with the same lockout as login.
+        """
+        from .config import WORKSPACE_CONFIG
+        from .auth.security import check_login_attempts, record_login_attempt, normalize_login_ip
+        user = get_current_user()
+        if not user:
+            return jsonify({"success": False, "error": "请先登录，再输入工作区密钥"}), 401
         data = request.get_json(silent=True) or {}
         ws = (data.get("workspace") or "ZBMP").strip().upper()
         key = (data.get("key") or "").strip()
+        bucket = "__workspace_key__"
+        ip = normalize_login_ip(request.remote_addr)
+        check = check_login_attempts(bucket, ip)
+        if not check["allowed"]:
+            return jsonify({"success": False, "error": "尝试过多已锁定，请稍后再试", "remaining": 0}), 429
         rec = verify_workspace_key(ws, key)
         if not rec:
+            record_login_attempt(bucket, ip, False)
             log_audit("workspace_unlock_denied", "auth", ws, "workspace key invalid")
             return jsonify({"success": False, "error": "工作区密钥无效或已吊销/过期"}), 401
-        user = get_current_user()
-        resp_token = None
-        if not user:
-            sess = open_owner_session(request.remote_addr, request.headers.get("User-Agent", ""))
-            if not sess:
-                return jsonify({"success": False, "error": "主账号未初始化，请先登录一次"}), 409
-            user = {"id": sess["user_id"], "username": sess["username"], "role": sess["role"], "token": sess["token"]}
-            resp_token = sess["token"]
+        record_login_attempt(bucket, ip, True)
         gres = grant_session(user["id"], ws, rec["id"], user["token"], WORKSPACE_CONFIG["grant_hours"])
         log_audit("workspace_unlock", "auth", ws, "unlock workspace " + ws)
-        resp = jsonify({"success": True, "workspace": ws, "granted": True,
+        return jsonify({"success": True, "workspace": ws, "granted": True,
                         "expires_at": gres["expires_at"],
                         "user": {"username": user["username"], "role": user["role"]}})
-        if resp_token:
-            resp.set_cookie(AUTH_CONFIG["session_cookie_name"], resp_token,
-                            max_age=AUTH_CONFIG["token_expire_hours"] * 3600,
-                            httponly=True, samesite="Lax", path="/")
-        return resp
 
     @v4_bp.route("/auth/workspace/status", methods=["GET"])
     def api_workspace_status():
@@ -145,7 +149,7 @@ def create_v4_blueprint() -> Blueprint:
                         "user": ({"username": user["username"], "role": user["role"]} if user else None)})
 
     @v4_bp.route("/auth/workspace/keys", methods=["GET"])
-    @require_auth
+    @require_owner
     def api_workspace_keys_list():
         ws = (request.args.get("workspace") or "").strip().upper() or None
         return jsonify({"success": True, "keys": list_workspace_keys(ws)})

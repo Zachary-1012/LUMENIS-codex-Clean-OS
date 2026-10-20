@@ -178,27 +178,3 @@ def session_can_access(session_token, workspace):
         return row is not None
     finally:
         conn.close()
-
-
-def open_owner_session(ip="", user_agent=""):
-    """无现有会话、但密钥有效时：以 owner 身份建立一个 v4 会话（本地单机工作区门票即登录态）。"""
-    from ..config import AUTH_CONFIG
-    conn = get_db()
-    try:
-        row = conn.execute("SELECT * FROM v4_users WHERE role='owner' AND status='active' ORDER BY id LIMIT 1").fetchone()
-        if not row:
-            return None
-        token = generate_token(row["id"])
-        expires_at = time.strftime("%Y-%m-%d %H:%M:%S",
-                                   time.localtime(time.time() + AUTH_CONFIG["token_expire_hours"] * 3600))
-        conn.execute(
-            "INSERT INTO v4_sessions(user_id,token,ip,user_agent,expires_at) VALUES(?,?,?,?,?)",
-            (row["id"], token, ip, user_agent, expires_at),
-        )
-        conn.execute("UPDATE v4_users SET last_login_at=datetime('now','localtime'),last_login_ip=? WHERE id=?",
-                     (ip, row["id"]))
-        conn.commit()
-        return {"token": token, "user_id": row["id"], "username": row["username"],
-                "role": row["role"], "display_name": row["display_name"], "expires_at": expires_at}
-    finally:
-        conn.close()

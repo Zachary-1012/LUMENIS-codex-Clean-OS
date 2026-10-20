@@ -30,14 +30,19 @@ def _parse_attempt_timestamp(value: str) -> datetime:
     return datetime.strptime(value, _ATTEMPT_TIME_FORMAT)
 
 
-def _check_access_key_attempts(conn, ip: str) -> dict:
+def _is_ip_bucket(username) -> bool:
+    """Synthetic per-IP buckets (access key, workspace key) are named __name__."""
+    return isinstance(username, str) and len(username) > 4 and username.startswith("__") and username.endswith("__")
+
+
+def _check_access_key_attempts(conn, ip: str, bucket: str = None) -> dict:
     """Check the access-key/IP bucket using the existing attempt audit rows."""
     max_attempts = int(AUTH_CONFIG["max_login_attempts"])
     if max_attempts <= 0:
         return {"allowed": False, "remaining": 0, "locked_until": None}
 
     cooldown = timedelta(minutes=int(AUTH_CONFIG["lockout_minutes"]))
-    bucket = _ACCESS_KEY_ATTEMPT_USERNAME
+    bucket = bucket or _ACCESS_KEY_ATTEMPT_USERNAME
     last_success = conn.execute(
         """
         SELECT id
@@ -142,8 +147,8 @@ def check_login_attempts(username: str, ip: str, conn=None) -> dict:
     if owns_connection:
         conn = get_db()
     try:
-        if username == _ACCESS_KEY_ATTEMPT_USERNAME:
-            return _check_access_key_attempts(conn, normalize_login_ip(ip))
+        if _is_ip_bucket(username):
+            return _check_access_key_attempts(conn, normalize_login_ip(ip), username)
 
         # 检查账号锁定
         cur = conn.execute(
@@ -193,7 +198,7 @@ def record_login_attempt(username: str, ip: str, success: bool, conn=None):
         )
         # Access-key attempts have their own username/IP bucket in the shared
         # attempt log; they must not mutate the owner's password lockout state.
-        if username == _ACCESS_KEY_ATTEMPT_USERNAME:
+        if _is_ip_bucket(username):
             pass
         elif success:
             conn.execute(

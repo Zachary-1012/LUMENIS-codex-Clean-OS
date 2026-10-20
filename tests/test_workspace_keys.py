@@ -3,7 +3,7 @@
 工作区访问密钥（ZBMP）单元测试。
 用独立临时库（ZBC_DB_PATH），不接触任何生产/Staging 数据库。
 覆盖：建表幂等、签发只回一次明文、正确/错误密钥校验、过期、吊销连带失效、
-      会话授权 grant 与 session_can_access、无 owner 时 open_owner_session 行为。
+      会话授权 grant 与 session_can_access。
 运行：.venv\\Scripts\\python.exe -m pytest tests/test_workspace_keys.py -q
 """
 import os
@@ -101,11 +101,6 @@ def test_grant_and_session_access():
     assert ws.session_can_access("tok-abc", "ZBMP") is True
     assert ws.session_can_access("tok-other", "ZBMP") is False
     assert ws.session_can_access("", "ZBMP") is False
-
-
-def test_open_owner_session_without_configured_owner():
-    s = ws.open_owner_session("127.0.0.1", "pytest")
-    assert s is None
 
 
 if __name__ == "__main__":

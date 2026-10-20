@@ -157,26 +157,13 @@ CREATE TABLE IF NOT EXISTS v4_login_approvals (
 CREATE INDEX IF NOT EXISTS idx_la_status ON v4_login_approvals(status);
 """
 
-# ── 新增表：TOTP 种子 ──
-TOTP_TABLES_SQL = """
-CREATE TABLE IF NOT EXISTS v4_totp_secrets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    secret TEXT NOT NULL,                -- 混淆存储的TOTP种子
-    enabled INTEGER DEFAULT 0,           -- 0=待确认, 1=已启用
-    created_at TEXT DEFAULT (datetime('now','localtime')),
-    last_used_at TEXT,
-    UNIQUE(user_id, enabled)
-);
-"""
-
 # ── 新增表：产品保护配置 ──
 PROTECTION_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS v4_product_protection (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id TEXT UNIQUE NOT NULL,     -- ZBMP / CTH / SYSTEM
     enabled INTEGER DEFAULT 1,
-    method TEXT DEFAULT 'none',          -- totp / password / reauth / none
+    method TEXT DEFAULT 'none',          -- password / reauth / none
     config_json TEXT,
     updated_at TEXT DEFAULT (datetime('now','localtime'))
 );
@@ -213,7 +200,7 @@ CREATE TABLE IF NOT EXISTS skills_registry (
 
 ACCOUNT_TABLES_SQL = (BASE_TABLES_SQL + VERIFICATION_TABLES_SQL +
                       AUTHORIZATION_TABLES_SQL + APPROVAL_TABLES_SQL +
-                      TOTP_TABLES_SQL + PROTECTION_TABLES_SQL +
+                      PROTECTION_TABLES_SQL +
                       NAV_CONFIG_TABLES_SQL + SKILLS_TABLES_SQL)
 
 # 需要对 v4_users 新增的字段（幂等 ALTER）
@@ -319,6 +306,9 @@ def init_account_db():
     conn = get_db()
     try:
         conn.executescript(ACCOUNT_TABLES_SQL)
+        # TOTP was removed by product decision: drop its legacy seed table.
+        conn.execute("DROP TABLE IF EXISTS v4_totp_secrets")
+        conn.execute("UPDATE v4_product_protection SET method='password' WHERE method='totp'")
         conn.commit()
         # 幂等新增列
         ensure_auth_user_columns(conn)
