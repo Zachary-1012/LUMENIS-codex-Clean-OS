@@ -503,39 +503,65 @@ def aggregate_emv_by_platform(notes: list[dict], base_cpm: float | None = None) 
             invalid += 1
         elif r["status"] == "NOT_AVAILABLE":
             unavailable += 1
-        if r["emv_yuan"] is not None:
-            available += int(r["status"] != "OK")
+        has_amount = r["emv_yuan"] is not None
+        if has_amount:
+            if r["status"] != "OK":
+                available += 1
             grand_total_emv += r["emv_yuan"]
             grand_total_exposure += r["exposure"]
-            pkey = r["platform_normalized"]
-            if pkey not in platform_totals:
-                platform_totals[pkey] = {
-                    "platform_name": r["platform_name"],
-                    "emv_yuan": 0.0,
-                    "exposure": 0.0,
-                    "note_count": 0,
-                    "available_count": 0,
-                    "complete_count": 0,
-                    "partial_count": 0,
-                }
-            platform_totals[pkey]["emv_yuan"] += r["emv_yuan"]
-            platform_totals[pkey]["exposure"] += r["exposure"]
-            platform_totals[pkey]["note_count"] += 1
-            platform_totals[pkey]["available_count"] += 1
-            platform_totals[pkey]["complete_count"] += int(r["status"] == "OK")
-            platform_totals[pkey]["partial_count"] += int(r["status"] == "PARTIAL")
+
+        # Keep every observed platform group, including groups with no usable
+        # estimate. Group note_count must describe all notes, not just rows that
+        # contributed a monetary amount.
+        pkey = r["platform_normalized"]
+        if pkey not in platform_totals:
+            platform_totals[pkey] = {
+                "platform_name": r["platform_name"],
+                "emv_yuan": 0.0,
+                "exposure": 0.0,
+                "note_count": 0,
+                "available_count": 0,
+                "complete_count": 0,
+                "partial_count": 0,
+                "unavailable_count": 0,
+                "invalid_count": 0,
+            }
+        group = platform_totals[pkey]
+        group["note_count"] += 1
+        group["complete_count"] += int(r["status"] == "OK")
+        group["partial_count"] += int(r["status"] == "PARTIAL")
+        group["unavailable_count"] += int(r["status"] == "NOT_AVAILABLE")
+        group["invalid_count"] += int(r["status"] == "INVALID_INPUT")
+        if has_amount:
+            group["emv_yuan"] += r["emv_yuan"]
+            group["exposure"] += r["exposure"]
+            group["available_count"] += 1
 
     # Platform group sums may overflow even if every per-note estimate is finite.
     platform_overflow = False
     for pkey in platform_totals:
         group = platform_totals[pkey]
-        if not math.isfinite(group["emv_yuan"]) or not math.isfinite(group["exposure"]):
+        group_overflow = (
+            not math.isfinite(group["emv_yuan"]) or not math.isfinite(group["exposure"])
+        )
+        if group_overflow:
             platform_overflow = True
+        if group_overflow or group["invalid_count"] or group["available_count"] == 0:
             group["emv_yuan"] = None
             group["exposure"] = None
         else:
             group["emv_yuan"] = round(group["emv_yuan"], 2)
             group["exposure"] = round(group["exposure"], 1)
+        group["coverage"] = round(group["available_count"] / group["note_count"], 4)
+        group["complete_coverage"] = round(group["complete_count"] / group["note_count"], 4)
+        if group_overflow or group["invalid_count"]:
+            group["status"] = "INVALID_INPUT"
+        elif group["complete_count"] == group["note_count"]:
+            group["status"] = "OK"
+        elif group["available_count"] or group["partial_count"]:
+            group["status"] = "PARTIAL"
+        else:
+            group["status"] = "NOT_AVAILABLE"
 
     aggregate_invalid = (
         invalid > 0 or bool(base_error) or platform_overflow

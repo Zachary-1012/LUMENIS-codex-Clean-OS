@@ -310,6 +310,39 @@ class TestEMVPlatformCoefficients:
         assert zero["cpm_source"]
         assert zero["disclaimer"]
 
+    def test_emv_platform_aggregate_keeps_no_data_and_mixed_group_counts(self):
+        """FIX-101: group presence and counts include unavailable platform notes."""
+        from emv import aggregate_emv_by_platform
+
+        no_data = aggregate_emv_by_platform([
+            {"note_id": "xhs-missing", "source_platform": "xhs"},
+            {"note_id": "weibo-missing", "source_platform": "weibo"},
+        ])
+        xhs_missing = no_data["by_platform"]["xhs"]
+        assert no_data["status"] == "NOT_AVAILABLE"
+        assert no_data["platform_count"] == 2
+        assert xhs_missing["status"] == "NOT_AVAILABLE"
+        assert xhs_missing["emv_yuan"] is None
+        assert xhs_missing["note_count"] == 1
+        assert xhs_missing["available_count"] == 0
+        assert xhs_missing["unavailable_count"] == 1
+
+        mixed = aggregate_emv_by_platform([
+            {"note_id": "xhs-full", "source_platform": "xhs", "likes": 2,
+             "comments": 1, "collects": 0, "shares": 0},
+            {"note_id": "xhs-missing", "source_platform": "xhs"},
+        ])
+        xhs_mixed = mixed["by_platform"]["xhs"]
+        assert mixed["status"] == "PARTIAL"
+        assert xhs_mixed["status"] == "PARTIAL"
+        assert xhs_mixed["emv_yuan"] is not None
+        assert xhs_mixed["note_count"] == 2
+        assert xhs_mixed["available_count"] == 1
+        assert xhs_mixed["complete_count"] == 1
+        assert xhs_mixed["unavailable_count"] == 1
+        assert xhs_mixed["coverage"] == 0.5
+        assert xhs_mixed["complete_coverage"] == 0.5
+
     def test_emv_platform_aggregate_invalid_item_hides_top_total(self):
         """FIX-045：平台汇总中一条无效行时，顶层金额保持未知。"""
         from emv import aggregate_emv_by_platform
