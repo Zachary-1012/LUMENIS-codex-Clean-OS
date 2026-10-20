@@ -217,12 +217,31 @@ def test_scoped_execution_list_skips_row_whose_intact_payload_belongs_to_another
     assert owner.list_scoped_executions(actor=workspace["actor"], scope=scope) == []
 
 
-def test_intact_payload_for_unregistered_foreign_brand_does_not_block_list(workspace):
+def _corrupt_payload_context(workspace, created, **changes):
     import json
-    owner, scope, created = _scoped_list_record(workspace)
     with workspace["repo"].transaction() as con:
         payload = json.loads(created["payload"])
-        payload["context"]["brand_focus_id"] = "OTHER-BRAND"
+        payload["context"].update(changes)
         con.execute("UPDATE kos_executions SET payload=? WHERE execution_id=?",
                     (json.dumps(payload), created["execution_id"]))
-    assert owner.list_scoped_executions(actor=workspace["actor"], scope=scope) == []
+
+
+def test_intact_payload_for_unregistered_foreign_brand_stays_visible_corruption(workspace):
+    owner, scope, created = _scoped_list_record(workspace)
+    _corrupt_payload_context(workspace, created, brand_focus_id="OTHER-BRAND")
+    with pytest.raises(ValueError, match="KOS_EXECUTION_BINDING_INVALID"):
+        owner.list_scoped_executions(actor=workspace["actor"], scope=scope)
+
+
+def test_nonexistent_foreign_actor_in_payload_stays_visible_corruption(workspace):
+    owner, scope, created = _scoped_list_record(workspace)
+    _corrupt_payload_context(workspace, created, actor_id=987654321)
+    with pytest.raises(ValueError, match="KOS_EXECUTION_BINDING_INVALID"):
+        owner.list_scoped_executions(actor=workspace["actor"], scope=scope)
+
+
+def test_corrupted_principal_kind_in_payload_stays_visible_corruption(workspace):
+    owner, scope, created = _scoped_list_record(workspace)
+    _corrupt_payload_context(workspace, created, principal_kind="forged", principal_ref="workspace:local")
+    with pytest.raises(ValueError, match="KOS_EXECUTION_BINDING_INVALID"):
+        owner.list_scoped_executions(actor=workspace["actor"], scope=scope)

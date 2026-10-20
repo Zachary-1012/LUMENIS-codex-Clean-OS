@@ -283,8 +283,8 @@ def _payload_context_is_foreign(row, context, connection):
     """True when the row's intact payload binds to another *valid* owner.
 
     The payload must be the scoped schema with an unchanged request digest.
-    A different principal is foreign; a different brand is foreign only when
-    it names an active registered subject. Anything else (for example a
+    A different principal is foreign only when it is a valid distinct owner;
+    a different brand is foreign only when it names a registered subject. Anything else (for example a
     payload whose brand was overwritten with an unregistered value) remains
     corruption inside the caller's indexed scope.
     """
@@ -300,16 +300,46 @@ def _payload_context_is_foreign(row, context, connection):
     payload_context = payload.get("context")
     if not isinstance(payload_context, dict):
         return False
-    principal_keys = (["principal_kind", "principal_ref"] if "principal_ref" in context else ["actor_id"])
+    principal_keys = ("principal_kind", "principal_ref", "actor_id")
     if any(payload_context.get(key) != context.get(key) for key in principal_keys):
-        return bool(payload_context.get("principal_ref") or payload_context.get("actor_id"))
+        # The request digest does not authenticate the context, so a differing
+        # principal is foreign only when it is itself a valid, distinct owner.
+        return _is_valid_foreign_principal(payload_context, context, connection)
     foreign_brand = payload_context.get("brand_focus_id")
     if foreign_brand and foreign_brand != context.get("brand_focus_id"):
-        # The intact (schema + request digest) payload binds another brand.
-        # Whether or not that brand is still registered, the row is not this
-        # caller's, so it must not block the caller's whole list.
-        return True
+        # A differing brand is foreign only when it is a registered subject
+        # (any lifecycle status, so retired brands do not block the caller's
+        # list). An unregistered value is corruption inside this caller's
+        # indexed scope and must stay visible, not silently hidden.
+        if not isinstance(foreign_brand, str):
+            return False
+        try:
+            hit = connection.execute(
+                "SELECT 1 FROM lumenis_subject_registry WHERE brand_focus_id=? LIMIT 1",
+                (foreign_brand,),
+            ).fetchone()
+        except sqlite3.Error:
+            return False
+        return hit is not None
     return False
+
+
+def _is_valid_foreign_principal(payload_context, context, connection):
+    """Prove the payload names a real owner distinct from the caller."""
+    if "principal_ref" in payload_context or "principal_kind" in payload_context:
+        # Only one server-issued local principal exists.
+        return ("actor_id" not in payload_context
+                and payload_context.get("principal_kind") == "local_workspace"
+                and payload_context.get("principal_ref") == "workspace:local"
+                and context.get("principal_ref") != "workspace:local")
+    actor_id = payload_context.get("actor_id")
+    if type(actor_id) is not int or actor_id <= 0 or actor_id == context.get("actor_id"):
+        return False
+    try:
+        hit = connection.execute("SELECT 1 FROM users WHERE id=? LIMIT 1", (actor_id,)).fetchone()
+    except sqlite3.Error:
+        return False
+    return hit is not None
 
 
 def _check_scoped_source_binding(*, actor, scope, request, connection, expected_version=None):
