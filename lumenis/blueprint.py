@@ -117,7 +117,7 @@ def create_v4_blueprint() -> Blueprint:
         from .config import WORKSPACE_CONFIG
         from .auth.security import (
             check_login_attempts, record_login_attempt, normalize_login_ip,
-            WORKSPACE_KEY_ATTEMPT_USERNAME,
+            workspace_key_bucket,
         )
         user = get_current_user()
         if not user:
@@ -125,7 +125,10 @@ def create_v4_blueprint() -> Blueprint:
         data = request.get_json(silent=True) or {}
         ws = (data.get("workspace") or "ZBMP").strip().upper()
         key = (data.get("key") or "").strip()
-        bucket = WORKSPACE_KEY_ATTEMPT_USERNAME
+        try:
+            bucket = workspace_key_bucket(ws)
+        except ValueError:
+            return jsonify({"success": False, "error": "工作区无效"}), 400
         ip = normalize_login_ip(request.remote_addr)
         from .auth.models import get_db as _auth_db
         from .auth.workspace import ensure_workspace_tables

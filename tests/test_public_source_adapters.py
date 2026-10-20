@@ -905,6 +905,9 @@ def test_web_mentions_order_by_instant_across_legacy_and_iso_formats(tmp_path, m
             ("legacy-late", "2026-10-20 23:00:00"),
             ("iso-early", "2026-10-20T01:00:00+00:00"),
             ("iso-offset", "2026-10-21T06:00:00+08:00"),
+            ("micro-early", "2026-10-19T00:00:00.000100Z"),
+            ("micro-late", "2026-10-19T00:00:00.000400Z"),
+            ("max-year", "9999-12-31T23:59:59.999999Z"),
         ],
     )
     conn.commit()
@@ -924,4 +927,4 @@ def test_web_mentions_order_by_instant_across_legacy_and_iso_formats(tmp_path, m
     monkeypatch.setattr(database, "get_db", fixture_db)
     rows = database.get_web_mentions(limit=10)
     ids = [r["source_id"] if not isinstance(r, dict) else r["source_id"] for r in rows]
-    assert ids == ["legacy-late", "iso-offset", "iso-early"]
+    assert ids == ["max-year", "legacy-late", "iso-offset", "iso-early", "micro-late", "micro-early"]

@@ -157,3 +157,37 @@ def test_workspace_unlock_attempts_are_serialized_in_one_transaction(client, mon
     r = c.post("/v4/auth/workspace/unlock", json={"workspace": "ZBMP", "key": "wrong"})
     assert r.status_code == 401
     assert seen["check"] is seen["verify"] is seen["record"] is not None
+
+
+def test_workspace_key_buckets_are_per_workspace(tmp_path, monkeypatch):
+    import sqlite3
+    from lumenis.auth import security
+    conn = sqlite3.connect(tmp_path / "w.db")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE v4_login_attempts(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, ip TEXT, success INTEGER, created_at TEXT)")
+    conn.execute("CREATE TABLE v4_users(username TEXT, failed_attempts INTEGER, locked_until TEXT)")
+    monkeypatch.setitem(security.AUTH_CONFIG, "max_login_attempts", 2)
+    zbmp, other = security.workspace_key_bucket("ZBMP"), security.workspace_key_bucket("CTH")
+    assert zbmp != other and security._is_ip_bucket(zbmp) and security.is_reserved_username(zbmp)
+    ip = "203.0.113.9"
+    security.record_login_attempt(zbmp, ip, False, conn=conn)
+    security.record_login_attempt(other, ip, True, conn=conn)  # success elsewhere
+    security.record_login_attempt(zbmp, ip, False, conn=conn)
+    assert security.check_login_attempts(zbmp, ip, conn=conn)["allowed"] is False
+    with pytest.raises(ValueError):
+        security.workspace_key_bucket("bad ws/..")
+
+
+def test_operator_basic_auth_still_reaches_compat_key_routes(client, monkeypatch):
+    import base64
+    import app as app_module
+    c, _ = client
+    monkeypatch.setenv("TAIKOO_AUTH_USER", "operator")
+    monkeypatch.setenv("TAIKOO_AUTH_PASSWORD", "operator-secret-for-tests")
+    monkeypatch.setattr(app_module, "AUTH_USER", "operator")
+    monkeypatch.setattr(app_module, "AUTH_PASSWORD", "operator-secret-for-tests")
+    token = base64.b64encode(b"operator:operator-secret-for-tests").decode()
+    r = c.get("/api/v4/api-keys", headers={"Authorization": "Basic " + token})
+    assert r.status_code == 200 and r.get_json()["ok"] is True
+    bad = base64.b64encode(b"operator:wrong").decode()
+    assert c.get("/api/v4/api-keys", headers={"Authorization": "Basic " + bad}).status_code == 401

@@ -413,9 +413,10 @@ this repair closes them in existing owners. Credential P1s first:
 `subject_registry.py` rejects userinfo inside nested redirect URLs (#90).
 `historical_data_importer.py` clears rolled-back `inserted_id`/`log_id` and
 reclassifies rolled-back dedup skips as errors (#94). `data_center_api.py`
-compares text publication bounds as UTC instants via `julianday` (#96).
+compares text publication bounds as exact UTC instants in integer
+microseconds via `lumenis.shared.database.instants` (#96).
 `public_http.py` rejects form/navigation roots and skips nested roots before
-measuring them; `get_web_mentions` orders by instant across legacy/ISO values
+measuring them; `get_web_mentions` orders by exact microsecond instant across legacy/ISO values
 (#88). Regressions added in the existing test files. Offline only; runtime and
 user acceptance remain NOT_VERIFIED.
 
@@ -434,8 +435,10 @@ after the configured failure limit; only the exact reserved buckets
 listing is owner-only. `/v4/auth/login-by-key` (owner-configured
 `V4_ACCESS_KEY`, existing per-IP lockout) is unchanged. Text publication
 date bounds compare exact UTC instants in integer microseconds (offsets
-applied, no julianday millisecond rounding, no overflow at year 1/9999).
-Workspace-key check/verify/record run in one serialized transaction; reserved
+applied, no millisecond rounding, no overflow at year 1/9999).
+Workspace-key check/verify/record run in one serialized transaction with a
+per-workspace, per-IP bucket; legacy `/api/v4/api-keys*` keep operator Basic
+auth alongside account Bearer/session; reserved
 bucket names cannot be account usernames. Official source URLs reject nested
 encoded fragments; Git diagnostics accept `[user@]host:path` SCP remotes and
 fail closed when a password remains.

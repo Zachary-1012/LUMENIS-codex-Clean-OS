@@ -2,6 +2,7 @@
 安全工具：密码哈希、Token生成、安全问答验证、登录限流
 不依赖第三方库，全部用标准库实现。
 """
+import re
 import hashlib
 import hmac
 import secrets
@@ -41,10 +42,25 @@ def is_reserved_username(username) -> bool:
     return len(name) >= 4 and name.startswith("__") and name.endswith("__")
 
 
+_WORKSPACE_BUCKET_RE = re.compile(r"__workspace_key_[A-Z0-9_]{1,32}__")
+
+
+def workspace_key_bucket(workspace: str) -> str:
+    """Per-workspace bucket so success on one workspace never resets guesses
+    against another. Reserved ``__name__`` usernames cannot collide."""
+    ws = str(workspace or "").strip().upper()
+    if not re.fullmatch(r"[A-Z0-9_]{1,32}", ws):
+        raise ValueError("invalid workspace")
+    return f"__workspace_key_{ws}__"
+
+
 def _is_ip_bucket(username) -> bool:
-    """Only the exact reserved synthetic buckets are per-IP; real usernames
-    such as ``__alice__`` keep the normal account-wide lockout."""
-    return username in _IP_ATTEMPT_BUCKETS
+    """Only reserved synthetic buckets are per-IP; real usernames such as
+    ``__alice__`` keep the normal account-wide lockout (and are rejected at
+    account creation)."""
+    return username in _IP_ATTEMPT_BUCKETS or (
+        isinstance(username, str) and _WORKSPACE_BUCKET_RE.fullmatch(username) is not None
+    )
 
 
 def _check_access_key_attempts(conn, ip: str, bucket: str = None) -> dict:

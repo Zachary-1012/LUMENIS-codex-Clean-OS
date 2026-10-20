@@ -83,43 +83,11 @@ def _parse_date_bound(value: str) -> tuple[datetime, bool]:
     return parsed, date_only
 
 
-_EPOCH = datetime(1970, 1, 1)
-_ONE_US = timedelta(microseconds=1)
-_DAY_US = 86_400_000_000
-
-
-def _utc_microseconds(parsed: datetime) -> int:
-    """Exact UTC instant in integer microseconds since the Unix epoch.
-
-    Integer arithmetic on the naive wall time minus the declared offset never
-    leaves Python's datetime range, so offset-adjusted extremes such as
-    9999-12-31T23:59:59-05:00 or 0001-01-01T00:00+05:00 stay representable and
-    no millisecond rounding (SQLite julianday) can merge distinct instants.
-    """
-    offset = parsed.utcoffset() or timedelta(0)
-    return (parsed.replace(tzinfo=None) - _EPOCH) // _ONE_US - offset // _ONE_US
-
-
-def _stored_utc_microseconds(value):
-    """SQLite function: stored ISO text -> UTC microseconds, NULL if unparseable.
-
-    Naive stored values are UTC (as julianday() treated them); 'T' or space,
-    'Z' or numeric offsets and fractional seconds are accepted.
-    """
-    if value is None:
-        return None
-    text = str(value).strip()
-    if not text:
-        return None
-    try:
-        parsed = datetime.fromisoformat(text.replace("Z", "+00:00").replace("z", "+00:00"))
-    except ValueError:
-        return None
-    return _utc_microseconds(parsed)
-
-
-def _register_instant_function(conn) -> None:
-    conn.create_function("lumenis_utc_us", 1, _stored_utc_microseconds, deterministic=True)
+from lumenis.shared.database.instants import (  # noqa: E402
+    DAY_US as _DAY_US,
+    register_instant_function as _register_instant_function,
+    utc_microseconds as _utc_microseconds,
+)
 
 
 def _bound_microseconds(value: str, *, end: bool) -> tuple[str, int]:

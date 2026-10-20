@@ -7,7 +7,35 @@ account/compat.py — 旧路由兼容层（deprecated）
 import warnings
 from flask import Blueprint, request, jsonify
 
+import os
+import secrets
+from functools import wraps
+
+from flask import g
+
 from .service import require_admin_or_owner, require_owner
+
+
+def _operator_basic_or(account_guard):
+    """Legacy key routes keep the operator HTTP Basic credential (the global
+    TAIKOO_AUTH_* pair) as well as account Bearer/session plus role checks."""
+    def decorator(f):
+        guarded = account_guard(f)
+
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            user = os.environ.get("TAIKOO_AUTH_USER", "")
+            password = os.environ.get("TAIKOO_AUTH_PASSWORD", "")
+            auth = request.authorization
+            if (user and password and auth and auth.type == "basic"
+                    and secrets.compare_digest(auth.username or "", user)
+                    and secrets.compare_digest(auth.password or "", password)):
+                g.current_user = {"id": None, "username": user, "role": "owner",
+                                  "auth": "operator_basic"}
+                return f(*args, **kwargs)
+            return guarded(*args, **kwargs)
+        return decorated
+    return decorator
 
 compat_bp = Blueprint("account_compat", __name__)
 
@@ -16,7 +44,7 @@ DEPRECATED_HEADER = {"X-Deprecated": "true", "X-Successor": "/api/system/account
 
 
 @compat_bp.route("/api/v4/api-keys", methods=["GET"])
-@require_admin_or_owner
+@_operator_basic_or(require_admin_or_owner)
 def compat_api_keys_list():
     """[DEPRECATED] 转发到 /api/system/account/workspace-keys"""
     from .workspace_keys import list_workspace_keys, get_rotation_required_count
@@ -29,7 +57,7 @@ def compat_api_keys_list():
 
 
 @compat_bp.route("/api/v4/api-keys/generate", methods=["POST"])
-@require_owner
+@_operator_basic_or(require_owner)
 def compat_api_keys_generate():
     """[DEPRECATED] 转发到 /api/system/account/workspace-keys (POST)"""
     from .workspace_keys import create_workspace_key
@@ -51,7 +79,7 @@ def compat_api_keys_generate():
 
 
 @compat_bp.route("/api/v4/api-keys/revoke", methods=["POST"])
-@require_owner
+@_operator_basic_or(require_owner)
 def compat_api_keys_revoke():
     """[DEPRECATED] 转发到 /api/system/account/workspace-keys/<id> (DELETE)"""
     from .workspace_keys import revoke_workspace_key
