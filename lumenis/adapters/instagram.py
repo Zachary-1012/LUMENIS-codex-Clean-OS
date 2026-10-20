@@ -21,12 +21,82 @@ captured_at，二者严格分离。
 """
 import re
 import logging
+import traceback
+from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
 from .base import BaseAdapter, AdapterResult
 from .human_browser import HumanBrowser, PageState, configured_readonly_worker_url
 from .cookie_vault import inject_into_context
 
 logger = logging.getLogger(__name__)
+
+_INSTAGRAM_FAILURE_CODES = frozenset({
+    "AUTH_REQUIRED", "VERIFICATION_REQUIRED", "RATE_LIMITED",
+    "NETWORK_UNAVAILABLE", "NOT_CONFIGURED", "PROVIDER_UNAVAILABLE",
+    "UPSTREAM_FAILURE",
+})
+
+
+def instagram_failure_diagnostic(error, existing=None) -> dict:
+    """FIX-105: return a bounded code and source locations without exception text.
+
+    This deliberately ignores exception causes/contexts and traceback source
+    lines so credentials or page text cannot enter the API response or logs.
+    """
+    text = str(error or "").casefold()
+    name = type(error).__name__.casefold() if isinstance(error, BaseException) else ""
+    prior = re.fullmatch(r"instagram_failure:([a-z_]+)", text.strip())
+    if prior and prior.group(1).upper() in _INSTAGRAM_FAILURE_CODES:
+        reason = prior.group(1).upper()
+    elif any(marker in text for marker in ("login", "session", "cookie", "登录", "会话", "失效")):
+        reason = "AUTH_REQUIRED"
+    elif any(marker in text for marker in ("captcha", "challenge", "verify", "验证", "人机")):
+        reason = "VERIFICATION_REQUIRED"
+    elif any(marker in text for marker in ("rate limit", "429", "频控", "try again later", "blocked")):
+        reason = "RATE_LIMITED"
+    elif any(marker in text for marker in (
+            "not configured", "not_configured", "worker not registered",
+            "worker_not_registered", "not registered", "未配置")):
+        reason = "NOT_CONFIGURED"
+    elif any(marker in text for marker in (
+            "network", "timeout", "connection", "dns", "proxy", "不可达", "连接异常")) \
+            or "timeout" in name:
+        reason = "NETWORK_UNAVAILABLE"
+    elif any(marker in text for marker in (
+            "provider unavailable", "provider_unavailable", "worker unavailable",
+            "worker_unavailable", "unavailable", "不可用")):
+        reason = "PROVIDER_UNAVAILABLE"
+    else:
+        reason = "UPSTREAM_FAILURE"
+
+    frames = []
+    if isinstance(existing, dict) and existing.get("error_code") == f"INSTAGRAM_FAILURE:{reason}":
+        for frame in existing.get("stack", [])[:8] if isinstance(existing.get("stack"), list) else []:
+            if not isinstance(frame, dict):
+                continue
+            file_name = frame.get("file")
+            function = frame.get("function")
+            line = frame.get("line")
+            if (isinstance(file_name, str) and re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", file_name)
+                    and isinstance(function, str) and re.fullmatch(r"[A-Za-z0-9_<>.]{1,80}", function)
+                    and isinstance(line, int) and 0 < line < 10_000_000):
+                frames.append({"file": file_name, "line": line, "function": function})
+    if not frames and isinstance(error, BaseException) and error.__traceback__ is not None:
+        for frame in traceback.extract_tb(error.__traceback__)[-8:]:
+            file_name = Path(frame.filename).name
+            if not re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", file_name):
+                file_name = "unknown"
+            function = frame.name if re.fullmatch(r"[A-Za-z0-9_<>.]{1,80}", frame.name) else "unknown"
+            frames.append({"file": file_name, "line": int(frame.lineno), "function": function})
+    return {"error_code": f"INSTAGRAM_FAILURE:{reason}", "stack": frames}
+
+
+def log_instagram_failure(operation: str, error) -> dict:
+    diagnostic = instagram_failure_diagnostic(error)
+    operation_name = operation if operation in {"comments", "creator"} else "adapter"
+    logger.warning("Instagram %s failed code=%s stack=%s",
+                   operation_name, diagnostic["error_code"], diagnostic["stack"])
+    return diagnostic
 
 
 class InstagramAdapter(BaseAdapter):
@@ -977,8 +1047,8 @@ class InstagramAdapter(BaseAdapter):
         try:
             return self._comments_browser(shortcode.strip(), max_comments)
         except Exception as e:
-            logger.exception("Instagram 评论采集异常")
-            return AdapterResult(success=False, error=f"Instagram 评论采集异常: {e}")
+            diagnostic = log_instagram_failure("comments", e)
+            return AdapterResult(success=False, error=diagnostic["error_code"], diagnostics=diagnostic)
 
     def _comments_browser(self, shortcode, max_comments, proxy=None) -> AdapterResult:
         url = f"https://www.instagram.com/p/{shortcode}/"
@@ -1105,8 +1175,8 @@ class InstagramAdapter(BaseAdapter):
         try:
             return self._creator_browser(username.strip().lstrip("@"))
         except Exception as e:
-            logger.exception("Instagram 作者采集异常")
-            return AdapterResult(success=False, error=f"Instagram 作者采集异常: {e}")
+            diagnostic = log_instagram_failure("creator", e)
+            return AdapterResult(success=False, error=diagnostic["error_code"], diagnostics=diagnostic)
 
     def _creator_browser(self, username, proxy=None) -> AdapterResult:
         url = f"https://www.instagram.com/{username}/"
