@@ -15,6 +15,11 @@ in a dated [same-directory erratum](evidence/round-06/ERRATUM-GLOBAL-DATA-SOURCE
 Unpublished source-classification files, live availability, product bindings and
 production coverage remain NOT VERIFIED. This documentation correction is not a
 new dispatch source or a completion claim.
+## 2026-10-20 Issue #17 FIX-034 — redact credential-shaped diagnostics
+
+The existing `data_boundary.py` diagnostics sanitizer redacts prefixed cookie fields and credential-valued mapping keys while preserving metadata such as `token_count`, `token_budget`, `authorization_status` and `secret_scan_result`. The focused offline command `pytest -q tests/test_runtime_preflight.py -k 'sanitize or credential_path_classification'` passed **28 tests**. The full PR module run produced **33 passed, 2 failed** (`test_tracked_credentials_current_repo`, `test_current_repo_preflight_has_no_blocker`); both failures also reproduce on exact main SHA `3f6d67785752b465b5b022847cbbe75a55e1eb47`. Full main has those two failures plus an attestation test that still writes to the repository path; this PR isolates that output under `tmp_path`. Changed-source compilation and `git diff --check` passed. Tests use synthetic values only; no real credentials were read.
+
+Review follow-up: the text sanitizer now also redacts camelCase cookie labels (`sessionCookie=`, `xhsCookie:`), and the mapping sanitizer redacts credential keys followed by value/container descriptors (`cookie_header`, `authorization_header`) while metadata such as `token_count` and `authorization_status` stays visible. Superseding full-module result for this head: `python3 -m pytest tests/test_runtime_preflight.py` collected **42 cases: 40 passed, 2 failed** (after the second follow-up, which also redacts lowercase separatorless cookie labels such as `sessioncookie=` and separator-free credential keys such as `apikey`/`accesstoken`/`APIKEY`, while `tokencount` and `cookie_count` stay visible) (`test_tracked_credentials_current_repo`, `test_current_repo_preflight_has_no_blocker`). On main `2d41547e` the same module produced 25 passed, 3 failed, including both of those environment-dependent failures. The earlier 35-case count above described an older head.
 ## 2026-10-20 Issue #17 FIX-024 — partial note and analysis upsert truth
 
 `database.py::insert_note` now preserves stored note/source/analysis values when

@@ -34,6 +34,31 @@ def test_sanitize_authorization_and_cookie():
     assert "[REDACTED]" in out
 
 
+def test_sanitize_entire_cookie_session_and_quoted_header():
+    session = "session_" + "synthetic_value_91"
+    refresh = "refresh_" + "synthetic_value_27"
+    line = f"Cookie: sid={session}; refresh={refresh}; Path=/; SameSite=None; tail=visible"
+    out = dbm.sanitize_text(line)
+    assert session not in out and refresh not in out
+    assert "Path=/" not in out and "tail=visible" not in out
+
+    encoded = f'{{"Cookie": "sid={session}; refresh={refresh}", "safe": "visible"}}'
+    out = dbm.sanitize_text(encoded)
+    assert session not in out and refresh not in out
+    assert '"safe": "visible"' in out
+
+
+def test_sanitize_prefixed_cookie_fields():
+    session = "session_" + "synthetic_value_33"
+    xhs_cookie = "xhs_" + "synthetic_cookie_84"
+    out = dbm.sanitize_text(
+        f"session_cookie={session}; trailing metadata\nxhs_cookie: {xhs_cookie}"
+    )
+    assert session not in out
+    assert xhs_cookie not in out
+    assert "[REDACTED]" in out
+
+
 def test_sanitize_kv_and_pem():
     # 样本在源码层分段拼接，避免连续“疑似密钥”字面量触发仓库自身静态安全门禁
     _sk = "sk-" + "abcdef1234567890abcdef"
@@ -53,6 +78,52 @@ def test_sanitize_mapping_nested():
     flat = json.dumps(out, ensure_ascii=False)
     assert "abcd1234efgh5678" not in flat
     assert out["a"]["b"][1] == "clean" and out["a"]["c"] == 1
+
+
+def test_sanitize_mapping_sensitive_keys_values_and_key_contents():
+    session = "session_" + "synthetic_value_72"
+    api_value = "api_" + "synthetic_value_38"
+    embedded = "token=" + "synthetic_value_64"
+    payload = {
+        "Cookie": f"sid={session}; csrf=synthetic_csrf",
+        "api_key": api_value,
+        embedded: "opaque diagnostic label",
+        "safe": {"note": "visible"},
+    }
+
+    out = dbm.sanitize_mapping(payload)
+    flat = json.dumps(out, ensure_ascii=False)
+    assert session not in flat and api_value not in flat and embedded not in flat
+    assert out["Cookie"] == "[REDACTED]"
+    assert out["api_key"] == "[REDACTED]"
+    assert out["safe"]["note"] == "visible"
+
+
+def test_sanitize_credential_keys_without_redacting_metadata_fields():
+    opaque = "synthetic_" + "credential_value_482"
+    cookie = "synthetic_" + "cookie_value_713"
+    payload = {
+        "credential": opaque,
+        "credentials": [opaque],
+        "browser_session_cookie": cookie,
+        "token_count": 18,
+        "token_budget": "budget-v4",
+        "authorization_status": "verified",
+        "secret_scan_result": "clean",
+        "credential_status": "configured",
+    }
+
+    out = dbm.sanitize_mapping(payload)
+    flat = json.dumps(out, ensure_ascii=False)
+    assert opaque not in flat and cookie not in flat
+    assert out["credential"] == "[REDACTED]"
+    assert out["credentials"] == "[REDACTED]"
+    assert out["browser_session_cookie"] == "[REDACTED]"
+    assert out["token_count"] == 18
+    assert out["token_budget"] == "budget-v4"
+    assert out["authorization_status"] == "verified"
+    assert out["secret_scan_result"] == "clean"
+    assert out["credential_status"] == "configured"
 
 
 # ------------------------------------------------------------------ 2) 路径分层
@@ -76,6 +147,9 @@ def test_sanitize_mapping_nested():
     ("app/android/app/src/profile/AndroidManifest.xml", False),
     ("app/macos/Runner/DebugProfile.entitlements", False),
     (".env.example", False),
+    ("examples/credential-example.pem", True),
+    ("samples/session-example.key", True),
+    ("tests/fixtures/access-token-example.p12", True),
     ("docs/CAPABILITY_BASELINE.md", False),
 ])
 def test_credential_path_classification(path, expected):
@@ -138,11 +212,12 @@ def test_non_enforce_never_raises(monkeypatch):
 
 
 # ------------------------------------------------------------------ 6) Attestation
-def test_attestation_written_and_redacted():
+def test_attestation_written_and_redacted(tmp_path, monkeypatch):
+    monkeypatch.setattr(rp, "get_data_dir", lambda: str(tmp_path))
     rep = rp.run_preflight(write_attestation=True)
     att = rep.get("attestation", {})
     assert att.get("written") is True
-    latest = os.path.join(ROOT, att["latest"].replace("/", os.sep))
+    latest = tmp_path / att["latest"]
     assert os.path.exists(latest)
     raw = io.open(latest, "r", encoding="utf-8").read()
     data = json.loads(raw)
@@ -155,3 +230,74 @@ def test_attestation_written_and_redacted():
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+def test_camelcase_credential_keys_are_redacted():
+    import data_boundary
+    out = data_boundary.sanitize_mapping({
+        "accessToken": "opaque-a", "sessionCookie": "opaque-b",
+        "apiKey": "opaque-c", "privateKey": "opaque-d", "safe": "visible",
+    })
+    assert out["safe"] == "visible"
+    assert all(out[k] == "[REDACTED]" for k in ("accessToken", "sessionCookie", "apiKey", "privateKey"))
+
+
+def test_public_certificates_allowed_only_in_exempt_paths():
+    import data_boundary
+    assert data_boundary._is_credential_path("docs/vendor.cer") is False
+    assert data_boundary._is_credential_path("tests/fixtures/root-ca.crt") is False
+    assert data_boundary._is_credential_path("certs/server.crt") is True
+    assert data_boundary._is_credential_path("tests/fixtures/server.pem") is True
+
+
+def test_json_cookie_literal_keeps_following_fields():
+    import json
+    import data_boundary
+    for raw in ('{"Cookie": null, "safe": "visible"}', '{"Cookie": 12345, "safe": "visible"}'):
+        out = data_boundary.sanitize_text(raw)
+        parsed = json.loads(out)
+        assert parsed["safe"] == "visible"
+        assert "12345" not in out
+
+
+def test_sanitize_text_redacts_camelcase_cookie_labels():
+    from data_boundary import sanitize_text
+    for raw in ("sessionCookie=abc123secretvalue", "xhsCookie: abc123secretvalue"):
+        out = sanitize_text(raw)
+        assert "abc123secretvalue" not in out
+        assert "[REDACTED]" in out
+
+
+def test_sanitize_mapping_redacts_credential_keys_with_descriptors():
+    from data_boundary import sanitize_mapping
+    out = sanitize_mapping({
+        "cookie_header": "opaqueA1B2C3",
+        "authorization_header": "opaqueD4E5F6",
+        "token_count": 3,
+        "authorization_status": "missing",
+    })
+    assert out["cookie_header"] == "[REDACTED]"
+    assert out["authorization_header"] == "[REDACTED]"
+    assert out["token_count"] == 3
+    assert out["authorization_status"] == "missing"
+
+
+def test_sanitize_text_redacts_lowercase_separatorless_cookie_labels():
+    from data_boundary import sanitize_text
+    for raw in ("sessioncookie=abc123secretvalue", "xhscookie: abc123secretvalue"):
+        out = sanitize_text(raw)
+        assert "abc123secretvalue" not in out
+    assert sanitize_text("cookie_count=3") == "cookie_count=3"
+
+
+def test_sanitize_mapping_redacts_separatorless_credential_keys():
+    from data_boundary import sanitize_mapping
+    out = sanitize_mapping({
+        "apikey": "opaqueA1", "accesstoken": "opaqueB2",
+        "sessioncookie": "opaqueC3", "APIKEY": "opaqueD4",
+        "tokencount": 3, "token_budget": 9,
+    })
+    for key in ("apikey", "accesstoken", "sessioncookie", "APIKEY"):
+        assert out[key] == "[REDACTED]"
+    assert out["tokencount"] == 3
+    assert out["token_budget"] == 9
