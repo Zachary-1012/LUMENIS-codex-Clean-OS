@@ -35,10 +35,12 @@ _BLOCK_PATTERNS = [
     "访问过于频繁", "用户您好", "网络不给力", "unusual traffic",
 ]
 _MANUAL_VERIFICATION_PATTERNS = (
-    "anti.min.css", "verify.css", "imgcode", "unusual traffic",
+    "anti.min.css", "verify.css", "imgcode",
 )
+_RATE_LIMIT_PATTERNS = ("访问过于频繁", "unusual traffic")
 _MANUAL_VERIFICATION_PROMPTS = ("请输入验证码", "请您输入验证码")
-_MANUAL_VERIFICATION_PREFIX = "NEED_HUMAN_VERIFICATION:"
+# BaseAdapter recognizes NEED_VERIFY as terminal and bypasses cached fallback.
+_MANUAL_VERIFICATION_PREFIX = "NEED_VERIFY: NEED_HUMAN_VERIFICATION:"
 # 发布时间：2026年6月7日 / 2025-03-2 / 2025/03/02
 _DATE_CN = re.compile(r"(20\d{2})\s*[年/\-\.]\s*(\d{1,2})\s*[月/\-\.]\s*(\d{1,2})")
 # 用于从来源文本里整体抹掉日期（含年/月/日/号汉字与分隔符）
@@ -51,7 +53,7 @@ _REL_DAY = re.compile(r"(\d+)\s*天前")
 _URL_YEAR = re.compile(r"/(20\d{2})[/\-_.]")
 # JS / meta 跳转里的真实地址
 _JS_LOCATION = re.compile(
-    r"(?:(?:window\.)?location\.replace\s*\(\s*|(?:window\.)?location\.href\s*=\s*|URL=|url=)\s*[\"']?(https?://[^\"'\)\s>]+)",
+    r'''(?:(?:window\.)?location\.replace\s*\(\s*|(?:window\.)?location\.href\s*=\s*|URL\s*=\s*)\s*(?:"(?P<double>[^"]+)"|'(?P<single>[^']+)'|(?P<bare>[^"'\s)>;]+))''',
     re.IGNORECASE)
 
 
@@ -190,6 +192,8 @@ class SogouSearchAdapter(BaseAdapter):
             if attempt == 0:
                 time.sleep(random.uniform(4.0, 6.0))  # 首次被拦，冷却后仅再试一次
                 continue
+            if self._is_rate_limited(text):
+                return None, "RATE_LIMITED: 搜狗频控，已完成一次退避重试"
             return None, "命中搜狗反爬验证页(已退避重试仍受限)"
         return None, "命中搜狗反爬验证页"
 
@@ -202,23 +206,56 @@ class SogouSearchAdapter(BaseAdapter):
         return any(p.lower() in low for p in _BLOCK_PATTERNS)
 
     @staticmethod
+    def _is_rate_limited(text: str) -> bool:
+        low = (text or "").lower()
+        return any(marker.lower() in low for marker in _RATE_LIMIT_PATTERNS)
+
+    @staticmethod
     def _has_manual_verification(text: str) -> bool:
         """Detect challenge-page evidence without matching ordinary article wording."""
-        low = (text or "").lower()
-        if any(pattern in low for pattern in _MANUAL_VERIFICATION_PATTERNS):
+        if not text:
+            return False
+        low = text.lower()
+        challenge_assets = re.findall(r"<(?:link|script|img|input)\b[^>]*>", low)
+        if any(
+            pattern in tag
+            for tag in challenge_assets
+            for pattern in _MANUAL_VERIFICATION_PATTERNS
+        ):
             return True
-        if re.search(r"/antispider(?:[/?:\"']|$)", low):
+        form_tags = re.findall(r"<form\b[^>]*>", low)
+        if any(
+            any(
+                segment.lower() in {"antispider", "verify", "captcha"}
+                for value in re.findall(
+                    r"(?:action|id|class)\s*=\s*['\"]([^'\"]*)['\"]",
+                    tag,
+                )
+                for segment in re.split(r"[/\s?#]+", value)
+            )
+            for tag in form_tags
+        ):
             return True
+
+        visible_text = html.unescape(re.sub(r"<[^>]*>", " ", text))
+        visible_text = re.sub(r"\s+", "", visible_text)
+        visible_text = visible_text.strip("：:，,。.!！?？；;")
+        prompt_texts = {
+            re.sub(r"\s+", "", prompt) for prompt in _MANUAL_VERIFICATION_PROMPTS
+        }
+        if visible_text in prompt_texts or any(
+            visible_text == prompt + "antispider" for prompt in prompt_texts
+        ):
+            return True
+
         for prompt in _MANUAL_VERIFICATION_PROMPTS:
             start = low.find(prompt)
             while start >= 0:
                 end = start + len(prompt)
-                # Short prompt-only provider pages are unambiguous in this
-                # adapter; on a full article require nearby form evidence.
-                if len(text or "") < 800:
-                    return True
                 context = low[max(0, start - 500):end + 500]
-                if re.search(r"<(?:form|input|img)\b", context):
+                if re.search(
+                    r"<(?:input|img)\b[^>]*(?:captcha|verify|code|imgcode)", context
+                ):
                     return True
                 start = low.find(prompt, end)
         return False
@@ -414,17 +451,21 @@ class SogouSearchAdapter(BaseAdapter):
                         f"{_MANUAL_VERIFICATION_PREFIX} 搜狗 /link 跳转返回验证码/反爬挑战；"
                         "已停止后续链接请求，请完成人工验证后重新发起搜索"
                     )
-                m = _JS_LOCATION.search(r.text[:4000])
+                m = _JS_LOCATION.search(r.text or "")
                 if m:
-                    target = html.unescape(m.group(1))
-                    if self._is_manual_verification_url(target):
-                        return None, (
-                            f"{_MANUAL_VERIFICATION_PREFIX} 搜狗 /link 的 JS 目标为验证码验证页；"
-                            "已停止后续链接请求，请完成人工验证后重新发起搜索"
-                        )
-                    return target, None
+                    candidate = next((value for value in m.groups() if value), "")
+                    target = self._resolve_http_target(candidate, getattr(r, "url", "") or url)
+                    if target:
+                        if self._is_manual_verification_url(target):
+                            return None, (
+                                f"{_MANUAL_VERIFICATION_PREFIX} 搜狗 /link 的 JS 目标为验证码验证页；"
+                                "已停止后续链接请求，请完成人工验证后重新发起搜索"
+                            )
+                        return target, None
                 if r.url and "sogou.com/link" not in r.url:
-                    return r.url, None  # 极少数走 HTTP 302
+                    target = self._resolve_http_target(r.url, url)
+                    if target:
+                        return target, None  # 极少数走 HTTP 302
             except Exception:
                 return None, None
             return None, None
@@ -457,17 +498,51 @@ class SogouSearchAdapter(BaseAdapter):
     @classmethod
     def _is_manual_verification_response(cls, response) -> bool:
         """识别响应正文挑战或搜狗 anti-spider 最终跳转地址。"""
-        if cls._has_manual_verification((getattr(response, "text", "") or "")[:4000]):
+        if cls._has_manual_verification(getattr(response, "text", "") or ""):
             return True
         return cls._is_manual_verification_url(getattr(response, "url", "") or "")
+
+    @staticmethod
+    def _resolve_http_target(value: str, base_url: str) -> str | None:
+        """Resolve a literal redirect URL without executing JavaScript."""
+        try:
+            base = urllib.parse.urlsplit(str(base_url or ""))
+            if (
+                base.scheme.lower() not in {"http", "https"}
+                or not base.hostname
+                or base.username
+                or base.password
+            ):
+                return None
+            candidate = html.unescape(str(value or "").strip())
+            if not candidate:
+                return None
+            target = urllib.parse.urljoin(base_url, candidate)
+            parsed = urllib.parse.urlsplit(target)
+        except (TypeError, ValueError):
+            return None
+        if (
+            parsed.scheme.lower() not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+        ):
+            return None
+        return target
 
     @staticmethod
     def _is_manual_verification_url(url: str) -> bool:
         """只将搜狗域名下明确的验证路径作为验证目的地。"""
         if not isinstance(url, str):
             return False
-        parsed = urllib.parse.urlparse(url or "")
-        host = (parsed.hostname or "").lower()
+        try:
+            parsed = urllib.parse.urlparse(url)
+            host = (parsed.hostname or "").lower()
+            path = urllib.parse.unquote(parsed.path).lower()
+        except (TypeError, ValueError):
+            return False
         is_sogou_host = host == "sogou.com" or host.endswith(".sogou.com")
-        path = parsed.path.lower()
-        return is_sogou_host and any(marker in path for marker in ("antispider", "verify", "captcha"))
+        segments = [segment for segment in path.split("/") if segment]
+        return is_sogou_host and bool(
+            any(segment in {"antispider", "verify", "captcha"} for segment in segments)
+        )

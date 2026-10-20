@@ -178,6 +178,48 @@ class TestSogouWechatAdapter:
 # ============================================================
 # 搜狗搜索测试
 # ============================================================
+def _run_link_redirect_case(monkeypatch, target, entrypoint, response_url=None):
+    import requests
+
+    ad = SogouSearchAdapter()
+    monkeypatch.setattr(ad, "_load_cookies", lambda: {})
+    original_link = "https://www.sogou.com/link?url=redirect-fixture"
+    note = ad._make_note(
+        title="redirect fixture", url=original_link,
+        raw_data={"link_redirect": True},
+    )
+    channel_body = "<html><body>" + ("ordinary channel response " * 100) + "</body></html>"
+    channel_response = MagicMock(text=channel_body, encoding="utf-8")
+    redirect_response = MagicMock(
+        text=f'<script>location.href="{target}";</script>',
+        url=response_url or original_link,
+    )
+    session = MagicMock()
+    session.get.side_effect = [channel_response, channel_response, redirect_response]
+    monkeypatch.setattr(requests, "Session", lambda: session)
+    monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+    monkeypatch.setattr(
+        ad, "_parse_channel",
+        lambda _page, channel: [note] if channel == "news" else [],
+    )
+    context = AdapterCacheContext(
+        actor_id=f"actor-{entrypoint}-redirect-fixture",
+        scope="workspace-sogou-redirect-fixture",
+        task_id=f"task-{entrypoint}-redirect-fixture",
+        source_version="fixture-v1",
+    )
+
+    if entrypoint == "registry":
+        monkeypatch.setattr(registry, "_adapters", {ad.platform_name: ad})
+        _merged, statuses = registry.search_all_with_status(
+            "redirect fixture", platforms=[ad.platform_name], cache_context=context,
+        )
+        return statuses[0], note, session
+
+    result = ad.collect("redirect fixture", cache_context=context)
+    return result, note, session
+
+
 class TestSogouSearchAdapter:
 
     def test_platform_identity(self):
@@ -235,12 +277,165 @@ class TestSogouSearchAdapter:
         assert result.notes == [note]
         assert session.get.call_count == 2
 
-    def test_rate_limit_page_keeps_bounded_retry_and_other_channel(self, monkeypatch):
+    @pytest.mark.parametrize(
+        "body",
+        [
+            "<html><body>本文提到请输入验证码，只是在讲表单设计。</body></html>",
+            "<html><body>antispider</body></html>",
+            "<html><body>页面源码示例包含 anti.min.css、verify.css 和 /antispider 路径。</body></html>",
+            "<html><body>unusual traffic 是错误页面中可能出现的英文。</body></html>",
+            "<html><body><p>请输入验证码</p><p>这是一篇介绍验证码流程的普通短文。</p></body></html>",
+        ],
+    )
+    def test_short_article_and_plain_text_markers_are_not_challenges(self, body):
+        ad = SogouSearchAdapter()
+
+        assert ad._has_manual_verification(body) is False
+
+    def test_prompt_only_page_and_challenge_asset_tag_are_detected(self):
+        ad = SogouSearchAdapter()
+
+        assert ad._has_manual_verification("<html><body>请输入验证码</body></html>") is True
+        assert ad._has_manual_verification(
+            '<html><head><link rel="stylesheet" href="/anti.min.css"></head></html>'
+        ) is True
+        assert ad._has_manual_verification(
+            '<html><form class="login captcha"></form></html>'
+        ) is True
+        assert ad._has_manual_verification(
+            '<html><form action="/account/captcha-design"></form></html>'
+        ) is False
+        assert ad._is_manual_verification_url(
+            "https://www.sogou.com/articles/captcha-design"
+        ) is False
+        assert ad._is_manual_verification_url("https://www.sogou.com/[malformed") is False
+
+    @pytest.mark.parametrize("entrypoint", ["collect", "registry"])
+    def test_manual_verification_form_after_4000_character_prefix_is_terminal(
+        self, monkeypatch, entrypoint,
+    ):
         import requests
 
         ad = SogouSearchAdapter()
         monkeypatch.setattr(ad, "_load_cookies", lambda: {})
-        rate_page = "<html><body>" + ("访问过于频繁，请稍后再试。" * 100) + "</body></html>"
+        late_challenge = (
+            "<html><head><style>" + ("x" * 4100) +
+            "</style></head><body><form>请输入验证码<input name=code></form></body></html>"
+        )
+        assert ad._has_manual_verification(late_challenge) is True
+        assert ad._has_manual_verification(late_challenge[:4000]) is False
+        response = MagicMock(
+            text=late_challenge,
+            url="https://www.sogou.com/web?query=late-challenge",
+            encoding="utf-8",
+        )
+        session = MagicMock()
+        session.get.return_value = response
+        monkeypatch.setattr(requests, "Session", lambda: session)
+        monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+        monkeypatch.setattr(ad, "_parse_channel", lambda *_: [])
+        context = AdapterCacheContext(
+            actor_id=f"actor-{entrypoint}-late-challenge",
+            scope="workspace-sogou-late-challenge",
+            task_id=f"task-{entrypoint}-late-challenge",
+            source_version="fixture-v1",
+        )
+
+        if entrypoint == "registry":
+            monkeypatch.setattr(registry, "_adapters", {ad.platform_name: ad})
+            _merged, statuses = registry.search_all_with_status(
+                "late challenge", platforms=[ad.platform_name], cache_context=context,
+            )
+            assert statuses[0]["state"] == "FAIL"
+            assert statuses[0]["success"] is False
+            assert "NEED_HUMAN_VERIFICATION" in statuses[0]["error"]
+        else:
+            result = ad.collect("late challenge", cache_context=context)
+            assert result.success is False
+            assert result.notes == []
+            assert "NEED_HUMAN_VERIFICATION" in result.error
+
+        assert session.get.call_count == 1
+
+    @pytest.mark.parametrize("entrypoint", ["collect", "registry"])
+    @pytest.mark.parametrize(
+        ("target", "challenge", "expected_url"),
+        [
+            ("/captcha/", True, None),
+            ("captcha/", True, None),
+            ("../captcha/", True, None),
+            ("//www.sogou.com/verify/", True, None),
+            ("https://www.sogou.com/captcha/", True, None),
+            ("https://www.sogou.com/articles/captcha/", True, None),
+            ("https://www.sogou.com/articles/captcha-design", False,
+             "https://www.sogou.com/articles/captcha-design"),
+            ("https://www.sogou.com/articles/design", False,
+             "https://www.sogou.com/articles/design"),
+            ("https://www.sogou.com/articles/antispider-history", False,
+             "https://www.sogou.com/articles/antispider-history"),
+            ("https://example.org/story", False, "https://example.org/story"),
+            ("javascript:alert(1)", False, None),
+            ("file:///tmp/not-a-source", False, None),
+        ],
+    )
+    def test_static_js_target_resolution_preserves_challenges_and_rejects_false_paths(
+        self, monkeypatch, entrypoint, target, challenge, expected_url,
+    ):
+        state, note, session = _run_link_redirect_case(monkeypatch, target, entrypoint)
+
+        if challenge:
+            if entrypoint == "registry":
+                assert state["state"] == "FAIL"
+                assert state["success"] is False
+                assert "NEED_HUMAN_VERIFICATION" in state["error"]
+            else:
+                assert state.success is False
+                assert "NEED_HUMAN_VERIFICATION" in state.error
+            assert note.url == "https://www.sogou.com/link?url=redirect-fixture"
+            assert note.raw_data["link_redirect"] is True
+        else:
+            if entrypoint == "registry":
+                assert state["success"] is True
+                assert state["error"] == ""
+            else:
+                assert state.success is True
+                assert state.error == ""
+            if expected_url:
+                assert note.url == expected_url
+                assert note.raw_data["link_redirect"] is False
+            else:
+                assert note.url == "https://www.sogou.com/link?url=redirect-fixture"
+                assert note.raw_data["link_redirect"] is True
+        assert session.get.call_count == 3
+
+    @pytest.mark.parametrize("entrypoint", ["collect", "registry"])
+    def test_relative_js_target_uses_final_response_url(self, monkeypatch, entrypoint):
+        state, note, session = _run_link_redirect_case(
+            monkeypatch,
+            "../captcha/",
+            entrypoint,
+            response_url="https://www.sogou.com/redirect/base/page",
+        )
+
+        if entrypoint == "registry":
+            assert state["state"] == "FAIL"
+            assert state["success"] is False
+            assert "NEED_HUMAN_VERIFICATION" in state["error"]
+        else:
+            assert state.success is False
+            assert "NEED_HUMAN_VERIFICATION" in state.error
+        assert note.url == "https://www.sogou.com/link?url=redirect-fixture"
+        assert note.raw_data["link_redirect"] is True
+        assert session.get.call_count == 3
+
+    @pytest.mark.parametrize("marker", ["访问过于频繁，请稍后再试。", "unusual traffic"])
+    def test_rate_limit_page_keeps_bounded_retry_and_other_channel(self, monkeypatch, marker):
+        import requests
+
+        ad = SogouSearchAdapter()
+        monkeypatch.setattr(ad, "_load_cookies", lambda: {})
+        rate_page = "<html><body>" + (marker * 100) + "</body></html>"
+        assert ad._has_manual_verification(rate_page) is False
         healthy_page = "<html><body>" + ("healthy search response " * 80) + "</body></html>"
         session = MagicMock()
         session.get.side_effect = [
@@ -263,6 +458,27 @@ class TestSogouSearchAdapter:
         assert "NEED_HUMAN_VERIFICATION" not in result.error
         assert session.get.call_count == 3  # bounded news retry followed by the healthy web channel
 
+    @pytest.mark.parametrize("marker", ["访问过于频繁，请稍后再试。", "unusual traffic"])
+    def test_exhausted_rate_limit_has_distinct_non_manual_outcome(self, monkeypatch, marker):
+        ad = SogouSearchAdapter()
+        rate_page = "<html><body>" + (marker * 100) + "</body></html>"
+        response = MagicMock(
+            text=rate_page,
+            url="https://www.sogou.com/web?query=rate-limited",
+            encoding="utf-8",
+        )
+        session = MagicMock()
+        session.get.return_value = response
+        monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+
+        _page, error = ad._fetch_channel(
+            session, "https://www.sogou.com/web?query=rate-limited", "https://www.sogou.com/",
+        )
+
+        assert "RATE_LIMITED" in error
+        assert "NEED_HUMAN_VERIFICATION" not in error
+        assert session.get.call_count == 2
+
     def test_channels_defined(self):
         """新闻+网页两个频道。"""
         assert len(SogouSearchAdapter._CHANNELS) == 2
@@ -284,7 +500,7 @@ class TestSogouSearchAdapter:
         monkeypatch.setattr(requests, "Session", lambda: session)
         monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
 
-        r = ad.collect("太古汇", max_results=10, allow_fallback=False)
+        r = ad.collect("太古汇", max_results=10)
 
         assert r.success is False
         assert r.notes == []
@@ -355,7 +571,7 @@ class TestSogouSearchAdapter:
             lambda sess, found, workers=6: resolve_links(sess, found, workers=1),
         )
 
-        result = ad.collect("太古汇", max_results=10, allow_fallback=False)
+        result = ad.collect("太古汇", max_results=10)
 
         assert result.success is False
         assert "NEED_HUMAN_VERIFICATION" in result.error
@@ -364,6 +580,40 @@ class TestSogouSearchAdapter:
         assert notes[0].url == first_link
         assert notes[0].raw_data["link_redirect"] is True
         assert notes[1].url == second_link
+
+    def test_late_link_response_challenge_is_scanned_past_4000_characters(self, monkeypatch):
+        import requests
+
+        ad = SogouSearchAdapter()
+        monkeypatch.setattr(ad, "_load_cookies", lambda: {})
+        original_link = "https://www.sogou.com/link?url=late-challenge"
+        note = ad._make_note(
+            title="late challenge", url=original_link,
+            raw_data={"link_redirect": True},
+        )
+        normal_page = "<html><body>" + ("ordinary search response " * 100) + "</body></html>"
+        late_challenge = (
+            "<html><head><style>" + ("x" * 4100) +
+            "</style></head><body><form>请输入验证码<input name=code></form></body></html>"
+        )
+        assert ad._has_manual_verification(late_challenge) is True
+        assert ad._has_manual_verification(late_challenge[:4000]) is False
+        session = MagicMock()
+        session.get.side_effect = [
+            MagicMock(text=normal_page, encoding="utf-8"),
+            MagicMock(text=normal_page, encoding="utf-8"),
+            MagicMock(text=late_challenge, url=original_link),
+        ]
+        monkeypatch.setattr(requests, "Session", lambda: session)
+        monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+        monkeypatch.setattr(ad, "_parse_channel", lambda _page, channel: [note] if channel == "news" else [])
+
+        result = ad.collect("late link challenge")
+
+        assert result.success is False
+        assert result.notes == []
+        assert "NEED_HUMAN_VERIFICATION" in result.error
+        assert session.get.call_count == 3
 
     def test_normal_link_redirect_still_resolves(self):
         ad = SogouSearchAdapter()
