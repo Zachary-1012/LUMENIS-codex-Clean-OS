@@ -35,7 +35,7 @@ class TestOceanEngineCollector:
         )
 
         collector = OceanEngineCollector(OceanEngineConfig(
-            access_token="synthetic-token", advertiser_id="synthetic-advertiser",
+            access_token="synthetic-token", advertiser_id="12345",
         ))
         assert collector._has_api_access() is True
         calls = []
@@ -49,8 +49,48 @@ class TestOceanEngineCollector:
 
         assert calls == [
             ((OceanEngineEndpoint.BALANCE.value,), {}),
-            ((OceanEngineEndpoint.ADVERTISER_INFO.value,), {}),
+            ((OceanEngineEndpoint.ADVERTISER_INFO.value,), {
+                "params": {"advertiser_ids": ["12345"]},
+            }),
         ]
+
+    def test_get_advertiser_info_encodes_array_contract_on_real_request_path(
+            self, monkeypatch):
+        from urllib.parse import parse_qs, urlsplit
+        import requests
+        from ad_intelligence.platforms.ocean_engine import OceanEngineCollector, OceanEngineConfig
+
+        collector = OceanEngineCollector(OceanEngineConfig(
+            access_token="synthetic-token", advertiser_id="12345",
+        ))
+        monkeypatch.setattr(collector, "_rate_limit_wait", lambda: None)
+        captured = {}
+
+        class FakeResponse:
+            status_code = 200
+
+            @staticmethod
+            def json():
+                return {"code": 0, "data": {"advertiser_id": 12345}}
+
+        def fake_get(url, *, headers, params, timeout):
+            # Let requests perform its real query encoding, but never send it.
+            prepared = requests.Request("GET", url, headers=headers, params=params).prepare()
+            captured["url"] = prepared.url
+            captured["params"] = params
+            captured["timeout"] = timeout
+            return FakeResponse()
+
+        monkeypatch.setattr(requests, "get", fake_get)
+
+        result = collector.get_advertiser_info()
+
+        query = parse_qs(urlsplit(captured["url"]).query)
+        assert result["success"] is True
+        assert query["advertiser_ids"] == ["12345"]
+        assert "advertiser_id" not in query
+        assert captured["params"] == {"advertiser_ids": ["12345"]}
+        assert captured["timeout"] == 20
 
     def test_get_advertiser_info_without_credentials_stays_blocked(self):
         from ad_intelligence.platforms.ocean_engine import OceanEngineCollector

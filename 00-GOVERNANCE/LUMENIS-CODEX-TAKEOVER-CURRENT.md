@@ -6,7 +6,7 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 ## 2026-10-20 Issue #17 FIX-048 — use the existing Ocean Engine request signature
 
-The existing `ad_intelligence/platforms/ocean_engine.py` read-only balance and advertiser-info methods now call `_api_request` using its declared endpoint-first signature, preserving the existing missing-credentials blocked result. `tests/test_ad_platform_collectors.py` passed **16 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Requests were monkeypatched/synthetic; no live API or account was used.
+The existing `ad_intelligence/platforms/ocean_engine.py` read-only balance and advertiser-info methods now call `_api_request` using its declared endpoint-first signature, preserving the existing missing-credentials blocked result. Advertiser info sends the configured ID as the provider's `advertiser_ids` query array and does not also inject the unrelated singular parameter. `tests/test_ad_platform_collectors.py` passed **17 tests**, including a real Requests URL-preparation path with a fake transport and synthetic credentials. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No live API or account was used; provider acceptance remains unverified.
 
 
 ## 2026-10-18 source-adoption validation handoff

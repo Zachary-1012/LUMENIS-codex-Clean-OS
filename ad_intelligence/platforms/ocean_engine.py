@@ -122,8 +122,11 @@ class OceanEngineCollector:
 
         try:
             import requests
-            params = params or {}
-            params.setdefault("advertiser_id", self.config.advertiser_id)
+            params = dict(params or {})
+            # Advertiser-info uses the provider's array query contract
+            # (advertiser_ids); do not add the legacy single advertiser_id.
+            if "advertiser_ids" not in params:
+                params.setdefault("advertiser_id", self.config.advertiser_id)
 
             url = f"{self.config.api_base}{endpoint}"
             headers = self._build_headers()
@@ -220,7 +223,10 @@ class OceanEngineCollector:
 
     def get_advertiser_info(self) -> Dict[str, Any]:
         """获取广告主信息（只读）。"""
-        return self._api_request(OceanEngineEndpoint.ADVERTISER_INFO.value)
+        return self._api_request(
+            OceanEngineEndpoint.ADVERTISER_INFO.value,
+            params={"advertiser_ids": [self.config.advertiser_id]},
+        )
 
     def parse_report_response(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """解析巨量引擎报表 API 响应为标准化指标列表。
