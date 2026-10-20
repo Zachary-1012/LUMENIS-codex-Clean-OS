@@ -341,7 +341,7 @@ class TestImportTruthfulPersistence:
         ).fetchone()
         assert tuple(row) == (0, 0, 0, 0, "neutral", "low", 0)
 
-    def test_log_failure_rolls_back_the_note_without_claiming_commit(self, temp_db):
+    def test_log_failure_rolls_back_importer_owned_transaction(self, temp_db):
         temp_db.execute(
             """CREATE TRIGGER reject_historical_log BEFORE INSERT ON historical_import_log
                BEGIN SELECT RAISE(ABORT, 'isolated log write failure'); END"""
@@ -355,7 +355,8 @@ class TestImportTruthfulPersistence:
         result = hdi.import_historical_note(record, conn=temp_db, batch_id="partial-write")
 
         assert result["status"] == hdi.IMPORT_STATUS_ERROR
-        assert result["persistence_state"] == "ROLLED_BACK_TO_SAVEPOINT"
+        assert result["persistence_state"] == "ROLLED_BACK"
+        assert not temp_db.in_transaction
         assert result["inserted_id"] is None
         assert result["log_id"] is None
         assert temp_db.execute(
@@ -364,6 +365,72 @@ class TestImportTruthfulPersistence:
         assert temp_db.execute(
             "SELECT COUNT(*) FROM historical_import_log WHERE import_batch_id='partial-write'"
         ).fetchone()[0] == 0
+
+    def test_failure_preserves_a_transaction_owned_by_caller(self, temp_db):
+        temp_db.execute("BEGIN")
+        temp_db.execute(
+            """CREATE TRIGGER reject_historical_log BEFORE INSERT ON historical_import_log
+               BEGIN SELECT RAISE(ABORT, 'isolated log write failure'); END"""
+        )
+        result = hdi.import_historical_note({
+            "note_id": "caller-owned-failed-001",
+            "title": "广州太古汇临时记录", "content": "isolated synthetic row",
+        }, conn=temp_db, batch_id="caller-owned-failed")
+
+        assert result["status"] == hdi.IMPORT_STATUS_ERROR
+        assert result["persistence_state"] == "ROLLED_BACK_TO_SAVEPOINT"
+        assert temp_db.in_transaction
+        assert temp_db.execute("SELECT COUNT(*) FROM notes").fetchone()[0] == 0
+        temp_db.rollback()
+
+    def test_missing_note_id_reports_not_written(self, temp_db):
+        result = hdi.import_historical_note({"title": "no id"}, conn=temp_db)
+
+        assert result["status"] == hdi.IMPORT_STATUS_ERROR
+        assert result["persistence_state"] == "NOT_WRITTEN"
+        assert not temp_db.in_transaction
+
+    def test_batch_wide_sqlite_rollback_stops_and_reclassifies_pending_rows(
+            self, temp_db, tmp_path, monkeypatch):
+        db_path = tmp_path / "batch-rollback.sqlite"
+        temp_db.execute(
+            """CREATE TRIGGER rollback_selected_note BEFORE INSERT ON notes
+               WHEN NEW.note_id='rollback-trigger'
+               BEGIN SELECT RAISE(ROLLBACK, 'synthetic whole-transaction rollback'); END"""
+        )
+        temp_db.commit()
+        disk_conn = sqlite3.connect(db_path)
+        temp_db.backup(disk_conn)
+        disk_conn.close()
+
+        def open_fixture_database(path=None):
+            conn = sqlite3.connect(path or db_path)
+            conn.row_factory = sqlite3.Row
+            return conn
+
+        monkeypatch.setattr(hdi, "_get_connection", open_fixture_database)
+        records = [
+            {"note_id": "batch-first", "title": "广州太古汇首条", "content": "synthetic first"},
+            {"note_id": "rollback-trigger", "title": "广州太古汇触发", "content": "synthetic rollback"},
+            {"note_id": "batch-later", "title": "广州太古汇后续", "content": "synthetic later"},
+        ]
+
+        stats = hdi.import_historical_batch(records, db_path=str(db_path), rule_version="fixture-rule")
+
+        check = sqlite3.connect(db_path)
+        try:
+            assert check.execute("SELECT COUNT(*) FROM notes").fetchone()[0] == 0
+            assert check.execute(
+                "SELECT COUNT(*) FROM historical_import_log WHERE import_batch_id=?",
+                (stats["batch_id"],),
+            ).fetchone()[0] == 0
+        finally:
+            check.close()
+        assert stats["inserted"] == 0
+        assert stats["errors"] == 3
+        assert [row["persistence_state"] for row in stats["details"]] == [
+            "ROLLED_BACK", "ROLLED_BACK", "NOT_WRITTEN",
+        ]
 
     def test_caller_connection_remains_uncommitted_and_rollbackable(self, temp_db):
         record = {

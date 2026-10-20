@@ -230,19 +230,21 @@ def import_historical_note(raw, conn=None, batch_id="", product_id=DEFAULT_PRODU
     result = {
         "status": "", "note_id": "", "content_hash": "", "subject_hit": False,
         "subject_reason": "", "dedup": False, "dedup_type": "", "warnings": [],
-        "inserted_id": None, "log_id": None,
+        "inserted_id": None, "log_id": None, "persistence_state": "NOT_WRITTEN",
     }
     savepoint_open = False
     write_scope_started = False
+    transaction_started_here = False
 
     def _begin_write_scope():
-        nonlocal savepoint_open, write_scope_started
+        nonlocal savepoint_open, write_scope_started, transaction_started_here
         if savepoint_open:
             return
         # A caller-owned connection must retain control of COMMIT/ROLLBACK.
         # BEGIN first so releasing the outermost SAVEPOINT cannot auto-commit.
         if not conn.in_transaction:
             conn.execute("BEGIN")
+            transaction_started_here = True
         conn.execute("SAVEPOINT historical_import_note")
         savepoint_open = True
         write_scope_started = True
@@ -351,14 +353,18 @@ def import_historical_note(raw, conn=None, batch_id="", product_id=DEFAULT_PRODU
     except Exception as e:
         result["status"] = IMPORT_STATUS_ERROR
         result["warnings"].append(f"import error: {e}")
-        if write_scope_started:
+        if write_scope_started or transaction_started_here:
             try:
-                if savepoint_open:
+                if savepoint_open and conn.in_transaction:
                     conn.execute("ROLLBACK TO SAVEPOINT historical_import_note")
                     conn.execute("RELEASE SAVEPOINT historical_import_note")
                     savepoint_open = False
-                if own_conn:
+                if own_conn or transaction_started_here:
                     conn.rollback()
+                    result["persistence_state"] = "ROLLED_BACK"
+                elif not conn.in_transaction:
+                    # SQLite RAISE(ROLLBACK) may invalidate the savepoint and
+                    # abort the whole caller transaction before control returns.
                     result["persistence_state"] = "ROLLED_BACK"
                 else:
                     result["persistence_state"] = "ROLLED_BACK_TO_SAVEPOINT"
@@ -385,7 +391,8 @@ def import_historical_batch(records, db_path=None, product_id=DEFAULT_PRODUCT_ID
         ensure_baseline_rule_version(conn)
     stats = {"batch_id": batch_id, "total": len(records), "inserted": 0,
              "dedup_skipped": 0, "subject_rejected": 0, "errors": 0, "details": []}
-    for raw in records:
+    batch_rolled_back = False
+    for index, raw in enumerate(records):
         r = import_historical_note(raw, conn=conn, batch_id=batch_id,
                                    product_id=product_id, rule_version=rule_version,
                                    dry_run=dry_run)
@@ -398,12 +405,47 @@ def import_historical_batch(records, db_path=None, product_id=DEFAULT_PRODUCT_ID
             stats["subject_rejected"] += 1
         elif r["status"] == IMPORT_STATUS_ERROR:
             stats["errors"] += 1
+        if (r["status"] == IMPORT_STATUS_ERROR
+                and r.get("persistence_state") == "ROLLED_BACK"
+                and not conn.in_transaction):
+            # A transaction-wide rollback invalidates every earlier pending
+            # result. Stop so later rows cannot make this batch look partially
+            # committed after its shared write scope was aborted.
+            batch_rolled_back = True
+            for detail in stats["details"][:-1]:
+                if detail.get("persistence_state") == "PENDING_CALLER_COMMIT":
+                    detail["persistence_state"] = "ROLLED_BACK"
+                    if detail.get("status") == IMPORT_STATUS_INSERTED:
+                        detail["status"] = IMPORT_STATUS_ERROR
+                        detail["warnings"].append(
+                            "batch transaction rolled back after a later write failure"
+                        )
+                        stats["inserted"] -= 1
+                        stats["errors"] += 1
+            for pending in records[index + 1:]:
+                stats["details"].append({
+                    "status": IMPORT_STATUS_ERROR,
+                    "note_id": str(pending.get("note_id") or pending.get("source_id") or ""),
+                    "content_hash": "", "subject_hit": False, "subject_reason": "",
+                    "dedup": False, "dedup_type": "",
+                    "warnings": [
+                        "batch stopped after transaction-wide rollback; record not processed"
+                    ],
+                    "inserted_id": None, "log_id": None,
+                    "persistence_state": "NOT_WRITTEN",
+                })
+                stats["errors"] += 1
+            break
     try:
         if not dry_run:
-            conn.commit()
-            for detail in stats["details"]:
-                if detail.get("persistence_state") == "PENDING_CALLER_COMMIT":
-                    detail["persistence_state"] = "COMMITTED"
+            if batch_rolled_back:
+                if conn.in_transaction:
+                    conn.rollback()
+            else:
+                conn.commit()
+                for detail in stats["details"]:
+                    if detail.get("persistence_state") == "PENDING_CALLER_COMMIT":
+                        detail["persistence_state"] = "COMMITTED"
     finally:
         conn.close()
     return stats
