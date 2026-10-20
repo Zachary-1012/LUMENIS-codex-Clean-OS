@@ -7,8 +7,9 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 ## 2026-10-20 Issue #17 FIX-041–043 — KOS scope and completeness
 
 `kos_execution.py` now filters execution records by the existing scoped-v1,
-actor and BrandFocus identity; malformed in-scope bindings fail with an
-integrity error instead of leaking or being silently skipped (FIX-041).
+actor and BrandFocus identity, while exact-context payload matches remain
+visible for integrity checks if denormalized index columns drift; malformed
+in-scope bindings fail rather than leaking or being silently skipped (FIX-041).
 `kos_routes.py` preserves incomplete-coverage failure and returns existing
 coverage, truncation, rejected-row and classification-integrity metadata on
 author details (FIX-042). `kos_engine.py` handles low-interaction diagnostics
@@ -23,6 +24,13 @@ constitution passed. Tests use isolated fixtures; no production database,
 live source, model call or external effect was used. The existing KOS state
 contract has no separate cancellation state, so none was added; runtime and
 user acceptance remain NOT_VERIFIED.
+
+Review follow-up: signed current-context payload matches now remain candidates
+even if denormalized actor, target brand or version columns are corrupted;
+`_scoped_record` compares those columns back to the authoritative request and
+context. Regression cases cover each corrupted column. The same offline focused
+modules now report **26 passed in 1.80s**; `py_compile` and `git diff --check`
+pass. FIX-043 production caller verification remains OPEN.
 
 ## 2026-10-18 source-adoption validation handoff
 

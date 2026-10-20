@@ -205,6 +205,17 @@ def _scoped_record(row, context):
     from lumenis.shared.reporting.saved_work import _digest
     if payload.get("request_sha256") != _digest(payload.get("request")):
         raise ValueError("KOS_EXECUTION_REQUEST_CHANGED")
+    request = payload.get("request")
+    caller = context.get("principal_ref") or "actor:" + str(context["actor_id"])
+    expected_index = {
+        "actor": caller,
+        "target_brand": context["brand_focus_id"],
+        "version": "scoped-v1",
+        "action_type": request.get("action_type") if isinstance(request, dict) else None,
+        "target_author_id": request.get("target_author_id") if isinstance(request, dict) else None,
+    }
+    if any(record.get(key) != value for key, value in expected_index.items()):
+        raise ValueError("KOS_EXECUTION_BINDING_INVALID")
     return record, payload
 
 
@@ -217,9 +228,33 @@ def list_scoped_executions(*, actor, scope, status="", action_type="", target_au
         if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='kos_executions'").fetchone() is None:
             return []
         records = []
+        # The indexed columns are only an acceleration hint. Include rows whose
+        # persisted payload still binds to this exact scope so corruption of a
+        # denormalized actor/brand/version cannot hide audit history.
+        payload_scope = [
+            "json_extract(payload, '$.context.domain_id') IS ?",
+            "json_extract(payload, '$.context.subject_id') IS ?",
+            "json_extract(payload, '$.context.brand_focus_id') IS ?",
+            "json_extract(payload, '$.context.global_scope') IS ?",
+        ]
+        payload_params = [context.get(key) for key in (
+            "domain_id", "subject_id", "brand_focus_id", "global_scope",
+        )]
+        if "principal_ref" in context:
+            payload_scope.extend((
+                "json_extract(payload, '$.context.principal_kind') IS ?",
+                "json_extract(payload, '$.context.principal_ref') IS ?",
+            ))
+            payload_params.extend((context["principal_kind"], context["principal_ref"]))
+        else:
+            payload_scope.append("json_extract(payload, '$.context.actor_id') IS ?")
+            payload_params.append(context["actor_id"])
         cursor = con.execute(
-            "SELECT * FROM kos_executions WHERE version = ? AND actor = ? AND target_brand = ? ORDER BY id DESC",
-            ("scoped-v1", caller, context["brand_focus_id"]),
+            "SELECT * FROM kos_executions WHERE "
+            "(version = ? AND actor = ? AND target_brand = ?) OR "
+            "(CASE WHEN json_valid(payload) THEN " + " AND ".join(payload_scope) + " ELSE 0 END) "
+            "ORDER BY id DESC",
+            ("scoped-v1", caller, context["brand_focus_id"], *payload_params),
         )
         for row in cursor:
             try:

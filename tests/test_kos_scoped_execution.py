@@ -131,6 +131,23 @@ def test_scoped_execution_list_surfaces_corruption_inside_exact_scope(workspace,
         owner.list_scoped_executions(actor=workspace["actor"], scope=scope, status="SUCCESS")
 
 
+@pytest.mark.parametrize("column, corrupted", [
+    ("actor", "another-actor"),
+    ("target_brand", "OTHER-BRAND"),
+    ("version", "v1"),
+])
+def test_scoped_execution_list_detects_corrupt_denormalized_binding(workspace, column, corrupted):
+    import kos_execution as owner
+    owner, scope, created = _scoped_list_record(workspace)
+    # Keep the authoritative payload bound to this caller and alter only the
+    # query/index columns. The row must remain visible as an integrity failure.
+    with workspace["repo"].transaction() as con:
+        con.execute(f"UPDATE kos_executions SET {column}=? WHERE execution_id=?",
+                    (corrupted, created["execution_id"]))
+    with pytest.raises(ValueError, match="KOS_EXECUTION_BINDING_INVALID"):
+        owner.list_scoped_executions(actor=workspace["actor"], scope=scope)
+
+
 def test_scoped_execution_list_preserves_rejection_state(workspace):
     import kos_execution as owner
     owner, scope, created = _scoped_list_record(workspace, request_id="kos-list-0002")
