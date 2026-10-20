@@ -595,7 +595,7 @@ def test_git_info_preserves_local_remote_path_with_at_sign(tmp_path: Path) -> No
     repo_path = tmp_path / "local-path-remote-fixture"
     repo_path.mkdir()
     _new_local_git_repo(repo_path)
-    local_remote = "/mnt/users/alice@example.invalid/repository.git"
+    local_remote = "/srv/git/team@archive/repo.git"
     subprocess.run(
         ["git", "remote", "add", "origin", local_remote], cwd=repo_path, check=True
     )
@@ -622,6 +622,8 @@ def test_git_info_remote_sanitization_failure_is_incomplete(tmp_path: Path) -> N
     assert result["status"] == "ERROR"
     assert result["remote"] == "UNKNOWN"
     assert result["failed_commands"] == ["remote_sanitize"]
+    assert result["clean"] is True
+    assert result["dirty_files"] == 0
 
 
 def test_git_fixture_commit_ignores_inherited_gpg_sign_config(
