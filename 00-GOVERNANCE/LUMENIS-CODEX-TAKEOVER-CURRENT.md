@@ -4,6 +4,11 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-030 / FIX-031 — quality rule and enrichment truth
+
+The existing `data_quality_gate.py` now validates rule semantics truthfully, while the existing `database.py` enrichment caller surfaces failure rather than treating it as successful enrichment. `tests/test_data_quality_gate.py` passed **27 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use isolated fixtures; no production database or external effect was used.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

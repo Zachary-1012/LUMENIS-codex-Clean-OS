@@ -225,8 +225,14 @@ def insert_note(note_data, *, connection=None):
                 })
                 note_data['data_quality_status'] = _q['data_quality_status']
                 note_data['data_quality_score'] = _q['data_quality_score']
-            except Exception:
-                pass  # 软门失败绝不影响写入（数据零丢失红线）
+                note_data['data_quality_errors'] = _q['data_quality_errors']
+            except Exception as exc:
+                diagnostic = f"_enrichment.-:{type(exc).__name__}: {exc}"
+                note_data['data_quality_errors'] = diagnostic
+                logger.warning(
+                    "Data quality enrichment failed for note_id=%s; keeping the write soft: %s",
+                    nid, diagnostic,
+                )
         # 标题兜底：标题缺失时用正文首句(去空白/截24)补，再退作者昵称；保证列表不出现空标题(新增/更新均覆盖)
         if not (vals['title'] or '').strip():
             _t = ''

@@ -17,6 +17,7 @@ ZBC 三层数据治理分工：
 """
 import datetime
 import io
+import math
 import os
 import re
 
@@ -39,20 +40,47 @@ def _rule_regex(v, p):
 def _rule_min(v, p):
     if v is None:
         return False, "字段缺失"
-    return float(v) >= p["min"], "不能小于 %s" % p["min"]
+    number = _finite_number(v)
+    minimum = _finite_number(p.get("min"))
+    if number is None:
+        return False, "数值非法"
+    if minimum is None:
+        return False, "规则参数非法: min"
+    return number >= minimum, "不能小于 %s" % p["min"]
 
 
 def _rule_max(v, p):
     if v is None:
         return False, "字段缺失"
-    return float(v) <= p["max"], "不能大于 %s" % p["max"]
+    number = _finite_number(v)
+    maximum = _finite_number(p.get("max"))
+    if number is None:
+        return False, "数值非法"
+    if maximum is None:
+        return False, "规则参数非法: max"
+    return number <= maximum, "不能大于 %s" % p["max"]
 
 
 def _rule_range(v, p):
     if v is None:
         return False, "字段缺失"
-    n = float(v)
-    return p["min"] <= n <= p["max"], "须在 [%s,%s]" % (p["min"], p["max"])
+    number = _finite_number(v)
+    minimum = _finite_number(p.get("min"))
+    maximum = _finite_number(p.get("max"))
+    if number is None:
+        return False, "数值非法"
+    if minimum is None or maximum is None or minimum > maximum:
+        return False, "规则参数非法: range"
+    return minimum <= number <= maximum, "须在 [%s,%s]" % (p["min"], p["max"])
+
+
+def _finite_number(value):
+    """返回有限数值；非法类型和 NaN/Infinity 均返回 None。"""
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 def _rule_min_length(v, p):
@@ -132,16 +160,30 @@ class DataQualityGate:
         """校验一条记录。缺失与格式错误分列，均不得算完整有效。"""
         c = self._contracts.get(contract_name)
         if c is None:
-            return {"valid": False, "errors": [{"rule": "_contract", "message": "未知契约: %s" % contract_name}],
+            return {"valid": False, "errors": [{
+                        "rule": "_contract", "field": None,
+                        "message": "未知契约: %s" % contract_name,
+                        "severity": "error",
+                    }],
                     "missing": [], "warnings": [], "contract": contract_name, "version": None}
         errors, missing, warnings = [], [], []
         for rule in c.get("rules") or []:
+            if not isinstance(rule, dict):
+                errors.append({"rule": "_rule", "field": None,
+                               "message": "规则格式非法", "severity": "error"})
+                continue
             rname = rule.get("name", rule.get("type", "?"))
             rtype = rule.get("type")
             field = rule.get("field")
-            check = _RULES.get(rtype)
+            if rtype == "unique":
+                continue  # 唯一性依赖同批记录，仅在 validate_batch 中判定
+            check = _RULES.get(rtype) if isinstance(rtype, str) else None
             if check is None:
-                continue  # 未知规则跳过（对齐 OpenDQV：lint 时警告）
+                severity = rule.get("severity", "warning")
+                item = {"rule": rname, "field": field,
+                        "message": "未知规则类型: %s" % rtype, "severity": severity}
+                (errors if severity == "error" else warnings).append(item)
+                continue
             # condition：仅当条件字段等于某值时应用
             cond = rule.get("condition")
             if cond and record.get(cond.get("field")) != cond.get("equals"):
@@ -164,20 +206,31 @@ class DataQualityGate:
     def validate_batch(self, contract_name, records):
         """批量校验。unique 规则在此生效（批内去重）。"""
         c = self._contracts.get(contract_name) or {}
-        unique_fields = [r["field"] for r in c.get("rules") or [] if r.get("type") == "unique"]
+        unique_rules = [r for r in c.get("rules") or []
+                        if isinstance(r, dict) and r.get("type") == "unique"]
         seen = {}
         results = []
         for rec in records:
             res = self.validate(contract_name, rec)
-            for uf in unique_fields:
+            for rule in unique_rules:
+                uf = rule.get("field")
+                if not isinstance(uf, str) or not uf.strip():
+                    severity = rule.get("severity", "error")
+                    item = {"rule": rule.get("name", "unique"), "field": uf,
+                            "message": "唯一性规则缺少有效字段", "severity": severity}
+                    (res["errors"] if severity == "error" else res["warnings"]).append(item)
+                    if severity == "error":
+                        res["valid"] = False
+                    continue
                 if uf in rec:
                     key = str(rec[uf])
-                    if key in seen:
+                    field_values = seen.setdefault(uf, set())
+                    if key in field_values:
                         res["errors"].append({"rule": "unique", "field": uf,
                                               "message": "批内重复: %s" % key, "severity": "error"})
                         res["valid"] = False
                     else:
-                        seen[key] = True
+                        field_values.add(key)
             results.append(res)
         return results
 
@@ -202,7 +255,14 @@ class DataQualityGate:
         else:
             status, score = "warning", 90
         issues = res["errors"] + res["missing"]
-        brief = ["%s.%s:%s" % (e["rule"], e["field"], e["message"]) for e in issues[:5]]
+        brief = [
+            "%s.%s:%s" % (
+                issue.get("rule") or "?",
+                issue.get("field") or "-",
+                issue.get("message") or "未知质量问题",
+            )
+            for issue in issues[:5]
+        ]
         return {"data_quality_status": status, "data_quality_score": score,
                 "data_quality_errors": "|".join(brief)}
 
