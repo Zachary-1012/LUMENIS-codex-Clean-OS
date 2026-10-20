@@ -107,7 +107,10 @@ def read_scoped_legacy_note_rows(*, module="content", filters=None, limit=100,
 
     Normal pages walk only far enough through the legacy date-ordered candidate
     IDs to serve the requested page. Full aggregates opt into `scan_all`; no
-    1,000-source ceiling can make later pages or exact IDs unreachable.
+    1,000-source ceiling can make later pages or exact IDs unreachable. When
+    `max_sources` is supplied, it caps candidate IDs scanned in this request;
+    a cap that prevents complete verification leaves `total` unknown and marks
+    the result partial.
     """
     if module not in {"content", "reports"}:
         raise LegacyScopeReadError("INVALID_CTH_READ_MODULE", 400)
@@ -208,13 +211,16 @@ def read_scoped_legacy_note_rows(*, module="content", filters=None, limit=100,
             scan_all or require_complete
             or filtered_candidate_count <= max(100, target_count)
         )
+        candidate_scan_limit = filtered_candidate_count
+        if max_sources is not None:
+            candidate_scan_limit = min(candidate_scan_limit, max_sources)
         matching_count = 0
         candidate_offset = 0
         seen_candidates = set()
         truncated_by_change = False
-        while candidate_offset < filtered_candidate_count and (
+        while candidate_offset < candidate_scan_limit and (
                 must_scan_all or matching_count < target_count):
-            batch_limit = min(100, filtered_candidate_count - candidate_offset)
+            batch_limit = min(100, candidate_scan_limit - candidate_offset)
             try:
                 batch_ids = db.get_canonical_note_projection_candidate_page(
                     scope, projection_filters, limit=batch_limit, offset=candidate_offset,

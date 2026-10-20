@@ -4,6 +4,18 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-026 — incomplete source availability stays unknown
+
+`data_query_api.py` keeps source counts/availability unknown when a source result
+is incomplete or capped, instead of interpreting the visible partial count as a
+complete total. Normal complete and explicit-zero paths remain distinct. The
+focused regression is `tests/test_data_query_source_limit_semantics.py`. Exact-head
+offline command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_data_query_source_limit_semantics.py` — **4 passed**.
+`python -m py_compile data_query_api.py tests/test_data_query_source_limit_semantics.py`
+and `git diff --check` passed. These isolated tests do not establish live-source
+coverage or product-level acceptance.
+
 ## 2026-10-20 Issue #17 FIX-038 — verify recovery against the affected notes database
 
 The existing `auto_recovery.py` verifies the notes-table invariant against the same resolved database path being recovered; a generic `SELECT 1` can no longer label a missing notes table fixed. `tests/test_auto_recovery_database_truth.py` passed **3 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use temporary SQLite only; no production recovery was executed.
