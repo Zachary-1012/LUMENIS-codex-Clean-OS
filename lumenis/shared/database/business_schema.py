@@ -192,6 +192,9 @@ NOTE_MIGRATIONS.update({
     'publish_datetime': "ALTER TABLE notes ADD COLUMN publish_datetime TEXT DEFAULT ''",
     'captured_at': "ALTER TABLE notes ADD COLUMN captured_at TEXT DEFAULT ''",
     'detail_fetched_at': "ALTER TABLE notes ADD COLUMN detail_fetched_at TEXT DEFAULT ''",
+    # Metric observation provenance (separate from metric_snapshots trend history):
+    # set only when a writer explicitly supplies observed interaction metrics.
+    'metrics_observed_at': "ALTER TABLE notes ADD COLUMN metrics_observed_at TEXT DEFAULT ''",
     'comments_fetched_at': "ALTER TABLE notes ADD COLUMN comments_fetched_at TEXT DEFAULT ''",
     'comments_collected': "ALTER TABLE notes ADD COLUMN comments_collected INTEGER DEFAULT 0",
     'data_quality_status': "ALTER TABLE notes ADD COLUMN data_quality_status TEXT DEFAULT 'unknown'",
@@ -204,6 +207,18 @@ NOTE_MIGRATIONS.update({
     'subject_type': "ALTER TABLE notes ADD COLUMN subject_type TEXT DEFAULT ''",
     'content_type': "ALTER TABLE notes ADD COLUMN content_type TEXT DEFAULT ''",
 })
+
+NOTE_METRIC_PROVENANCE_TRIGGER = """
+CREATE TRIGGER IF NOT EXISTS trg_notes_metric_provenance_invalidate
+AFTER UPDATE OF likes, comments, collects, shares ON notes
+WHEN (OLD.likes IS NOT NEW.likes OR OLD.comments IS NOT NEW.comments
+      OR OLD.collects IS NOT NEW.collects OR OLD.shares IS NOT NEW.shares)
+     AND COALESCE(NEW.metrics_observed_at, '') <> ''
+     AND NEW.metrics_observed_at IS OLD.metrics_observed_at
+BEGIN
+    UPDATE notes SET metrics_observed_at = '' WHERE rowid = NEW.rowid;
+END
+"""
 
 WEB_MIGRATIONS = {
     'source_adapter': "ALTER TABLE web_mentions ADD COLUMN source_adapter TEXT DEFAULT ''",
@@ -307,6 +322,10 @@ def apply_business_schema(conn):
     for col, ddl in NOTE_MIGRATIONS.items():
         if col not in cols:
             conn.execute(ddl)
+    # Database-boundary invariant for every metric writer: changing any
+    # canonical counter without re-certifying in the same statement clears
+    # the row-wide observation provenance (certifying writers set it again).
+    conn.execute(NOTE_METRIC_PROVENANCE_TRIGGER)
     web_cols = {r[1] for r in conn.execute('PRAGMA table_info(web_mentions)').fetchall()}
     for col, ddl in WEB_MIGRATIONS.items():
         if col not in web_cols:

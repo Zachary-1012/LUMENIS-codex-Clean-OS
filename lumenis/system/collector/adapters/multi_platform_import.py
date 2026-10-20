@@ -165,6 +165,14 @@ def _normalize_douyin_publish_datetime(value: Any) -> str:
     raise ValueError("invalid Douyin create_time type")
 
 
+def _is_observed_counter(value) -> bool:
+    """A certifying counter is a finite non-negative number (never a bool)."""
+    import math
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    return math.isfinite(value) and value >= 0
+
+
 def _to_note_payload(canonical: Dict[str, Any], raw: Dict[str, Any]) -> Dict[str, Any]:
     """把 canonical 记录 + 原始 raw 转为 database.insert_note 期望的 note_data 结构。
 
@@ -249,6 +257,12 @@ def _to_note_payload(canonical: Dict[str, Any], raw: Dict[str, Any]) -> Dict[str
         "comments": canonical.get("comment_count"),
         "collects": canonical.get("collect_count"),
         "shares": canonical.get("share_count"),
+        # Imported files state every counter explicitly; only a fully present
+        # counter set certifies metric observation provenance.
+        "_lumenis_metric_observation_complete": all(
+            _is_observed_counter(canonical.get(key))
+            for key in ("like_count", "comment_count", "collect_count", "share_count")
+        ),
         "type": canonical.get("content_type") or raw.get("type") or "normal",
         "publish_datetime": published_at or "",
         "captured_at": (
