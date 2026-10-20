@@ -4,6 +4,11 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-032 / FIX-033 — preserve platform catalog availability
+
+The existing `data_center_api.py` query/catalog path now distinguishes unavailable or unknown platform source state from a real empty result, preserving source availability semantics for the existing caller. `tests/test_platform_catalog_schema.py` passed **69 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No production source, database or external effect was used.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

@@ -130,8 +130,10 @@ def get_platform_detail(platform_id: str):
                     try:
                         cnt = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
                         table_stats.append({"table": t, "count": cnt})
-                    except Exception:
-                        table_stats.append({"table": t, "count": 0, "error": "query_failed"})
+                    except sqlite3.Error:
+                        # Preserve the existing error field without presenting an
+                        # unavailable count as a real empty table.
+                        table_stats.append({"table": t, "count": None, "error": "query_failed"})
         p["table_stats"] = table_stats
         return jsonify({"ok": True, "platform": p})
     finally:
@@ -149,7 +151,7 @@ def query_table(table_name: str):
       content_type: 内容类型筛选
       sentiment: 情绪筛选
       risk_level: 风险筛选
-      start_date / end_date: 时间范围（published_at/created_at/time/create_time）
+      start_date / end_date: 来源发布时间范围（publish_date/published_at及平台原生发布时间字段）
       sort_by: 排序字段
       sort_order: asc/desc
       page: 页码（默认1）
@@ -202,14 +204,35 @@ def query_table(table_name: str):
                 where_clauses.append("content_type = ?")
                 params.append(content_type)
 
-        # 时间范围
-        time_col = None
-        for tc in ("published_at", "created_at", "time", "create_time", "pubdate", "created_utc", "taken_at"):
-            if tc in columns:
-                time_col = tc
-                break
+        # 情感与风险筛选只在对应数据字段真实存在时执行，不能静默忽略。
+        for filter_name in ("sentiment", "risk_level"):
+            filter_value = request.args.get(filter_name, "").strip()
+            if filter_value:
+                if filter_name not in columns:
+                    return jsonify({
+                        "ok": False,
+                        "error": f"{filter_name} filter unavailable for table {table_name}",
+                    }), 400
+                where_clauses.append(f"{filter_name} = ?")
+                params.append(filter_value)
+
+        # 仅用来源发布字段筛选。publish_date 优先于通用原生字段；绝不把
+        # collected_at/captured_at 等采集时间作为发布时间。
+        time_col = next((
+            candidate for candidate in (
+                "publish_date", "publish_datetime", "published_at", "time",
+                "create_time", "pubdate", "created_utc", "taken_at",
+                "created_time", "created_at",
+            )
+            if candidate in columns
+        ), None)
         start_date = request.args.get("start_date", "").strip()
         end_date = request.args.get("end_date", "").strip()
+        if (start_date or end_date) and time_col is None:
+            return jsonify({
+                "ok": False,
+                "error": f"publication date filter unavailable for table {table_name}",
+            }), 400
         if time_col:
             if start_date:
                 where_clauses.append(f"{time_col} >= ?")
@@ -283,6 +306,7 @@ def get_overview_stats():
         ).fetchall()
         stats = []
         total_records = 0
+        errors = []
         for p in platforms:
             raw_tables = []
             if p["raw_tables"]:
@@ -291,16 +315,28 @@ def get_overview_stats():
                 except (json.JSONDecodeError, TypeError):
                     pass
             table_counts = {}
+            table_errors = {}
             platform_total = 0
             for t in raw_tables:
                 if t in ALLOWED_TABLES:
                     try:
-                        cnt = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+                        row = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
+                        if row is None or row[0] is None:
+                            raise sqlite3.DatabaseError("COUNT query returned no value")
+                        cnt = row[0]
                         table_counts[t] = cnt
                         platform_total += cnt
-                    except Exception:
-                        table_counts[t] = 0
-            total_records += platform_total
+                    except sqlite3.Error:
+                        table_counts[t] = None
+                        table_errors[t] = "query_failed"
+                        errors.append({
+                            "platform_id": p["platform_id"],
+                            "table": t,
+                            "error": "query_failed",
+                        })
+            total_records_available = not table_errors
+            if total_records_available:
+                total_records += platform_total
             stats.append({
                 "platform_id": p["platform_id"],
                 "display_name": p["display_name"],
@@ -308,13 +344,15 @@ def get_overview_stats():
                 "ui_visible": bool(p["ui_visible"]),
                 "color": PLATFORM_COLORS.get(p["platform_id"], "#666"),
                 "table_counts": table_counts,
-                "total_records": platform_total,
+                "table_errors": table_errors,
+                "total_records": platform_total if total_records_available else None,
             })
         return jsonify({
-            "ok": True,
+            "ok": not errors,
             "total_platforms": len(stats),
             "ui_visible_count": sum(1 for s in stats if s["ui_visible"]),
-            "total_records": total_records,
+            "total_records": total_records if not errors else None,
+            "errors": errors,
             "platforms": stats,
         })
     finally:

@@ -534,6 +534,96 @@ class TestDataCenterAPI:
         assert result["total"] == 1
         assert result["data"][0]["liked_count"] == 17
 
+    def test_fix032_filters_sentiment_risk_and_source_publish_date(self, platform_db, monkeypatch):
+        """FIX-032: filter by source sentiment/risk/publication, never collection time."""
+        columns = {row["name"] for row in platform_db.execute("PRAGMA table_info(notes)")}
+        for name, data_type in (
+            ("sentiment", "TEXT"),
+            ("risk_level", "TEXT"),
+            ("publish_date", "TEXT"),
+            ("collected_at", "TEXT"),
+        ):
+            if name not in columns:
+                platform_db.execute(f"ALTER TABLE notes ADD COLUMN {name} {data_type}")
+        platform_db.execute("DELETE FROM notes")
+        platform_db.executemany(
+            "INSERT INTO notes (id, sentiment, risk_level, publish_date, collected_at) VALUES (?, ?, ?, ?, ?)",
+            [
+                (11, "negative", "high", "2026-10-10", "2026-11-10"),
+                (12, "negative", "high", "2026-11-01", "2026-10-10"),
+                (13, "positive", "high", "2026-10-12", "2026-10-12"),
+                (14, "negative", "low", "2026-10-13", "2026-10-13"),
+            ],
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get(
+            "/api/data-center/table/notes?sentiment=negative&risk_level=high"
+            "&start_date=2026-10-01&end_date=2026-10-31"
+        )
+        assert response.status_code == 200
+        result = response.get_json()
+        assert result["total"] == 1
+        assert [item["id"] for item in result["data"]] == [11]
+        assert result["data"][0]["publish_date"] == "2026-10-10"
+
+        empty = client.get(
+            "/api/data-center/table/notes?sentiment=neutral&risk_level=high"
+            "&start_date=2026-10-01&end_date=2026-10-31"
+        )
+        assert empty.status_code == 200
+        assert empty.get_json()["total"] == 0
+        assert empty.get_json()["data"] == []
+
+    def test_fix032_rejects_filters_without_source_fields(self, platform_db, monkeypatch):
+        """FIX-032: unsupported filters fail instead of silently returning unfiltered rows."""
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        sentiment = client.get("/api/data-center/table/xhs_users?sentiment=positive")
+        assert sentiment.status_code == 400
+        assert sentiment.get_json() == {
+            "ok": False,
+            "error": "sentiment filter unavailable for table xhs_users",
+        }
+
+        date_range = client.get("/api/data-center/table/xhs_users?start_date=2026-10-01")
+        assert date_range.status_code == 400
+        assert date_range.get_json() == {
+            "ok": False,
+            "error": "publication date filter unavailable for table xhs_users",
+        }
+
+    def test_fix032_database_query_error_does_not_return_success(self, platform_db, monkeypatch):
+        """FIX-032: a database query failure remains an HTTP error."""
+        import data_center_api
+
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        class FailingNotesConnection:
+            def __init__(self, wrapped):
+                self.wrapped = wrapped
+
+            def execute(self, sql, parameters=()):
+                if sql.startswith("SELECT COUNT(*) FROM notes"):
+                    raise sqlite3.OperationalError("synthetic FIX-032 query failure")
+                return self.wrapped.execute(sql, parameters)
+
+            def close(self):
+                self.wrapped.close()
+
+        def connect_with_one_synthetic_failure():
+            conn = sqlite3.connect(path)
+            conn.row_factory = sqlite3.Row
+            return FailingNotesConnection(conn)
+
+        monkeypatch.setattr(data_center_api, "_get_db", connect_with_one_synthetic_failure)
+        response = client.get("/api/data-center/table/notes")
+        assert response.status_code == 500
+
     def test_overview_endpoint_reads_migrated_registry(self, platform_db, monkeypatch):
         path = platform_db.execute("PRAGMA database_list").fetchone()[2]
         client = _data_center_client(monkeypatch, path)
@@ -542,6 +632,86 @@ class TestDataCenterAPI:
         payload = response.get_json()
         assert payload["total_platforms"] == len(get_platform_registry_catalog())
         assert payload["ui_visible_count"] == len(get_ui_visible_platforms())
+        assert payload["ok"] is True
+        assert payload["errors"] == []
+        assert payload["total_records"] is not None
+
+    def test_fix033_successful_count_and_real_empty_table_keep_zero(self, platform_db, monkeypatch):
+        """FIX-033: a real COUNT(*) result of zero remains a known zero."""
+        platform_db.execute(
+            "UPDATE platform_registry SET raw_tables=? WHERE platform_id='xiaohongshu'",
+            (json.dumps(["xhs_notes"]),),
+        )
+        platform_db.execute(
+            "INSERT INTO xhs_notes (note_id, title) VALUES ('fix033-note', 'counted')"
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        populated = client.get("/api/data-center/stats/overview").get_json()
+        xhs = next(item for item in populated["platforms"] if item["platform_id"] == "xiaohongshu")
+        assert populated["ok"] is True
+        assert populated["errors"] == []
+        assert xhs["table_counts"]["xhs_notes"] == 1
+        assert xhs["total_records"] == 1
+
+        platform_db.execute("DELETE FROM xhs_notes WHERE note_id='fix033-note'")
+        platform_db.commit()
+        empty = client.get("/api/data-center/stats/overview").get_json()
+        xhs = next(item for item in empty["platforms"] if item["platform_id"] == "xiaohongshu")
+        assert empty["ok"] is True
+        assert empty["errors"] == []
+        assert xhs["table_counts"]["xhs_notes"] == 0
+        assert xhs["total_records"] == 0
+
+    def test_fix033_query_failure_is_unavailable_and_preserves_error_field(self, platform_db, monkeypatch):
+        """FIX-033: a failed count cannot masquerade as zero or erase its error."""
+        import data_center_api
+
+        platform_db.execute(
+            "UPDATE platform_registry SET raw_tables=? WHERE platform_id='xiaohongshu'",
+            (json.dumps(["xhs_notes"]),),
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        class FailingCountConnection:
+            def __init__(self, wrapped):
+                self.wrapped = wrapped
+
+            def execute(self, sql, parameters=()):
+                if sql == "SELECT COUNT(*) FROM xhs_notes":
+                    raise sqlite3.OperationalError("synthetic FIX-033 query failure")
+                return self.wrapped.execute(sql, parameters)
+
+            def close(self):
+                self.wrapped.close()
+
+        def connect_with_one_synthetic_failure():
+            conn = sqlite3.connect(path)
+            conn.row_factory = sqlite3.Row
+            return FailingCountConnection(conn)
+
+        monkeypatch.setattr(data_center_api, "_get_db", connect_with_one_synthetic_failure)
+        overview = client.get("/api/data-center/stats/overview")
+        assert overview.status_code == 200
+        payload = overview.get_json()
+        xhs = next(item for item in payload["platforms"] if item["platform_id"] == "xiaohongshu")
+        assert payload["ok"] is False
+        assert payload["total_records"] is None
+        assert payload["errors"] == [
+            {"platform_id": "xiaohongshu", "table": "xhs_notes", "error": "query_failed"}
+        ]
+        assert xhs["table_counts"]["xhs_notes"] is None
+        assert xhs["table_errors"]["xhs_notes"] == "query_failed"
+        assert xhs["total_records"] is None
+
+        detail = client.get("/api/data-center/platform/xiaohongshu")
+        assert detail.status_code == 200
+        table_stats = detail.get_json()["platform"]["table_stats"]
+        assert table_stats == [{"table": "xhs_notes", "count": None, "error": "query_failed"}]
 
 
 class TestEngagement:
