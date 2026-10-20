@@ -88,7 +88,11 @@ def _text_date_filter(value: str, *, end: bool) -> tuple[str, str]:
     parsed, date_only = _parse_date_bound(value)
     utc = parsed.astimezone(timezone.utc)
     if date_only and end:
-        return "<", (utc + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            return "<", (utc + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+        except OverflowError:
+            # 9999-12-31 has no next day: use the inclusive end of that day.
+            return "<=", utc.strftime("%Y-%m-%d") + " 23:59:59.999"
     return ("<=" if end else ">="), utc.strftime("%Y-%m-%d %H:%M:%S.%f")
 
 

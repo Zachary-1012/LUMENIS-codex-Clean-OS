@@ -158,9 +158,11 @@ def _selected_substantive_nodes(soup: BeautifulSoup) -> list[Any]:
             continue
         # Apply the same chrome exclusions to the root itself as to its
         # descendants: forms and ARIA navigation regions are never content.
-        if str(node.get("role") or "").lower() == "navigation":
+        if "navigation" in str(node.get("role") or "").lower().split():
             continue
-        if node.find_parent(("nav", "header", "footer", "aside", "form")):
+        # A page-level <form> wrapper is common in server-rendered pages; only
+        # form roots are rejected, not semantic articles inside a form.
+        if node.find_parent(("nav", "header", "footer", "aside")):
             continue
         if node.find_parent(attrs={"role": re.compile(r"^\s*navigation\s*$", re.I)}):
             continue

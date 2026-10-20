@@ -498,6 +498,7 @@ def test_form_or_navigation_root_is_never_selected_as_article():
     soup = BeautifulSoup(
         "<html><body>"
         "<article role='navigation'>menu home about contact</article>"
+        "<article role=' navigation '>padded menu</article>"
         "<form class='content_article'>" + "login field " * 80 + "</form>"
         "<article>real story body</article>"
         "</body></html>",
@@ -530,3 +531,15 @@ def test_deeply_nested_articles_measure_only_the_outer_root(monkeypatch):
     selected = public_http._selected_substantive_nodes(soup)
     assert len(selected) == 1
     assert len(measured) == 1
+
+
+def test_semantic_article_inside_page_level_form_is_selected():
+    import lumenis.system.collector.adapters.public_http as public_http
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(
+        "<html><body><form id='aspnetForm'><article>wrapped story body</article></form></body></html>",
+        "html.parser",
+    )
+    nodes = public_http._selected_substantive_nodes(soup)
+    assert len(nodes) == 1 and nodes[0].name == "article"

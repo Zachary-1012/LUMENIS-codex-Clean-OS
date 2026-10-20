@@ -728,3 +728,9 @@ def test_git_info_accepts_dotted_and_plus_helper_transports(tmp_path: Path) -> N
     result = _remote_result(tmp_path, "dotted", "foo.bar+x::https://u:fixture-secret@host/repo")
     assert result["available"] is True
     assert result["remote"] == "foo.bar+x::https://host/repo"
+
+
+def test_git_info_preserves_windows_drive_letter_remote(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "windows", "C:/repos/example.git")
+    assert result["available"] is True
+    assert result["remote"] == "C:/repos/example.git"

@@ -691,6 +691,19 @@ class TestDataCenterAPI:
         assert response.status_code == 200
         assert {row["id"] for row in response.get_json()["data"]} == {9701, 9703}
 
+    def test_text_publication_max_end_date_is_inclusive_not_an_error(self, platform_db, monkeypatch):
+        columns = {row["name"] for row in platform_db.execute("PRAGMA table_info(notes)")}
+        if "publish_date" not in columns:
+            platform_db.execute("ALTER TABLE notes ADD COLUMN publish_date TEXT")
+        platform_db.execute("DELETE FROM notes")
+        platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9801, '9999-12-31T12:00:00Z')")
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+        response = client.get("/api/data-center/table/notes?end_date=9999-12-31")
+        assert response.status_code == 200
+        assert [row["id"] for row in response.get_json()["data"]] == [9801]
+
     @pytest.mark.parametrize(("parameter", "invalid_date"), [
         ("start_date", "2026-02-30"),
         ("end_date", "2026-13-01"),

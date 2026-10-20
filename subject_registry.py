@@ -100,7 +100,15 @@ def _validate_official_source_url(source_url: Any) -> str:
             nested_queries = []
             # Both the query-decoded and once-more-decoded forms are useful
             # when a redirect value was percent-encoded twice.
-            for candidate in dict.fromkeys((value, unquote(value))):
+            # Bounded iterative decoding: a redirect may be percent-encoded
+            # several times; inspect every layer until it stops changing.
+            layers = [value]
+            for _ in range(6):
+                decoded = unquote(layers[-1])
+                if decoded == layers[-1]:
+                    break
+                layers.append(decoded)
+            for candidate in dict.fromkeys(layers):
                 try:
                     nested_parts = urlsplit(candidate)
                     nested_query = nested_parts.query
