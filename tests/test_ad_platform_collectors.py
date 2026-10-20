@@ -29,6 +29,124 @@ class TestOceanEngineCollector:
         assert r["status"] == "blocked"
         assert "missing credentials" in r.get("reason", "")
 
+    def test_read_only_methods_pass_endpoint_as_first_request_argument(self, monkeypatch):
+        from ad_intelligence.platforms.ocean_engine import (
+            OceanEngineCollector, OceanEngineConfig, OceanEngineEndpoint,
+        )
+
+        collector = OceanEngineCollector(OceanEngineConfig(
+            access_token="synthetic-token", advertiser_id="12345",
+        ))
+        assert collector._has_api_access() is True
+        calls = []
+        monkeypatch.setattr(
+            collector, "_api_request",
+            lambda *args, **kwargs: calls.append((args, kwargs)) or {"success": True},
+        )
+
+        collector.get_balance()
+        collector.get_advertiser_info()
+
+        assert calls == [
+            ((OceanEngineEndpoint.BALANCE.value,), {}),
+            ((OceanEngineEndpoint.ADVERTISER_INFO.value,), {
+                "params": {"advertiser_ids": "[12345]"},
+            }),
+        ]
+
+    def test_get_balance_uses_documented_fund_endpoint_on_real_request_path(self, monkeypatch):
+        import requests
+        from ad_intelligence.platforms.ocean_engine import OceanEngineCollector, OceanEngineConfig
+
+        collector = OceanEngineCollector(OceanEngineConfig(
+            access_token="synthetic-token", advertiser_id="12345",
+        ))
+        seen = {}
+
+        class _Resp:
+            status_code = 200
+            def json(self):
+                return {"code": 0, "data": {}}
+            def raise_for_status(self):
+                return None
+
+        def fake_get(url, **kwargs):
+            seen["url"] = url
+            seen["params"] = kwargs.get("params")
+            return _Resp()
+
+        monkeypatch.setattr(requests, "get", fake_get)
+        collector.get_balance()
+        assert seen["url"] == "https://api.oceanengine.com/open_api/2/advertiser/fund/get/"
+        assert seen["params"]["advertiser_id"] == "12345"
+
+    def test_get_advertiser_info_encodes_array_contract_on_real_request_path(
+            self, monkeypatch):
+        from urllib.parse import parse_qs, urlsplit
+        import json
+        import requests
+        from ad_intelligence.platforms.ocean_engine import OceanEngineCollector, OceanEngineConfig
+
+        collector = OceanEngineCollector(OceanEngineConfig(
+            access_token="synthetic-token", advertiser_id="12345",
+        ))
+        monkeypatch.setattr(collector, "_rate_limit_wait", lambda: None)
+        captured = {}
+
+        class FakeResponse:
+            status_code = 200
+
+            @staticmethod
+            def json():
+                return {"code": 0, "data": {"advertiser_id": 12345}}
+
+        def fake_get(url, *, headers, params, timeout):
+            # Let requests perform its real query encoding, but never send it.
+            prepared = requests.Request("GET", url, headers=headers, params=params).prepare()
+            captured["url"] = prepared.url
+            captured["params"] = params
+            captured["timeout"] = timeout
+            return FakeResponse()
+
+        monkeypatch.setattr(requests, "get", fake_get)
+
+        result = collector.get_advertiser_info()
+
+        query = parse_qs(urlsplit(captured["url"]).query)
+        assert result["success"] is True
+        assert json.loads(query["advertiser_ids"][0]) == [12345]
+        assert "advertiser_id" not in query
+        assert captured["params"] == {"advertiser_ids": "[12345]"}
+        assert captured["timeout"] == 20
+
+    def test_get_advertiser_info_rejects_non_integer_id_without_request(self, monkeypatch):
+        from ad_intelligence.platforms.ocean_engine import OceanEngineCollector, OceanEngineConfig
+
+        collector = OceanEngineCollector(OceanEngineConfig(
+            access_token="synthetic-token", advertiser_id="not-an-integer",
+        ))
+        requests = []
+        monkeypatch.setattr(
+            collector, "_api_request",
+            lambda *args, **kwargs: requests.append((args, kwargs)),
+        )
+
+        result = collector.get_advertiser_info()
+
+        assert result["success"] is False
+        assert result["status"] == "blocked"
+        assert "integer" in result["reason"]
+        assert requests == []
+
+    def test_get_advertiser_info_without_credentials_stays_blocked(self):
+        from ad_intelligence.platforms.ocean_engine import OceanEngineCollector
+
+        result = OceanEngineCollector().get_advertiser_info()
+
+        assert result["success"] is False
+        assert result["status"] == "blocked"
+        assert "missing credentials" in result.get("reason", "")
+
     def test_actual_cost_with_rebate(self):
         from ad_intelligence.platforms.ocean_engine import OceanEngineCollector, OceanEngineConfig
         c = OceanEngineCollector(OceanEngineConfig(agency_rebate_rate=0.10))
