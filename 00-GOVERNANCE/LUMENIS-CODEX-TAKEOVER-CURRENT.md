@@ -18,6 +18,12 @@ legacy `DEFAULT 1.0` cannot turn unknown into a score; explicit `0.0` remains a
 numeric value. `subject_registry.py` records an unassessed official-name source
 as `NULL` while its recorded state remains `NOT_ASSESSED`.
 
+The reviewed `--apply` official-name path now also retains the exact successful
+Permission audit ID and caller in the signed Evidence inputs. An allowed result
+without a non-empty audit ID is refused before the first registry write. The
+isolated regression covers both the signed audit linkage and fail-closed
+missing-receipt behavior; no approval token is copied into Evidence.
+
 The exact-head offline command for those four modules passed **21 tests** with no
 daemon-thread leak. The test-only E2E fixture installs a synthetic HMAC key in
 its isolated process environment so the pre-existing Evidence signature gate
@@ -29,6 +35,11 @@ canonical Evidence regression command covering
 daemon-thread leak. The changed Python files compile and `git diff --check`
 passes. All database writes used per-test temporary databases; no production DB
 or external source was used.
+
+After the audit-linkage follow-up, the focused official-name, registry and
+synthetic E2E command passed **38 tests**. `py_compile` and `git diff --check`
+passed on the follow-up files; no production database or external source was
+used.
 
 
 ## 2026-10-18 source-adoption validation handoff

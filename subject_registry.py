@@ -394,6 +394,8 @@ def record_official_name(
     name_zh: Optional[str] = None,
     name_en: Optional[str] = None,
     keywords: Iterable[str] = (),
+    permission_audit_id: Optional[str] = None,
+    permission_caller: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Record a brand's own official name/aliases with a source declaration.
 
@@ -436,6 +438,14 @@ def record_official_name(
     extra = _keywords(list(keywords or ()))
     if not (new_zh or new_en or extra):
         raise SubjectValidationError("没有可记录的官方名称")
+    if permission_audit_id is not None:
+        permission_audit_id = _text(
+            permission_audit_id, field="permission_audit_id", max_len=200
+        )
+    if permission_caller is not None:
+        permission_caller = _text(
+            permission_caller, field="permission_caller", max_len=200
+        )
     _ensure_legacy_evidence_schema()
     with _db_ready() as conn:
         _require_registry_schema(conn)
@@ -501,6 +511,8 @@ def record_official_name(
                 "name_after": {"name_en": after["name_en"], "name_zh": after["name_zh"]},
                 "keywords_before": list(before["keywords"]),
                 "keywords_requested": list(extra),
+                "permission_audit_id": permission_audit_id,
+                "permission_caller": permission_caller,
             },
             outputs={
                 "subject_id": subject_id,

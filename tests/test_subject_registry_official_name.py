@@ -247,3 +247,43 @@ def test_import_official_names_apply_needs_approval(reg, monkeypatch):
         seed.import_official_names(rows, apply=True)
     with pytest.raises(seed.SeedIntegrityError):
         seed.import_official_names([{**rows[0], "source_url": ""}])
+
+
+def test_official_name_apply_binds_permission_audit_to_signed_evidence(reg, monkeypatch):
+    from scripts import import_subject_registry_seed as seed
+
+    sid = _add(reg)
+    approval = type("ApprovalReceipt", (), {
+        "allowed": True,
+        "audit_id": "permission-audit-123",
+        "caller": seed.APPROVAL_CALLER,
+    })()
+    monkeypatch.setattr(seed, "require_apply_approval", lambda: approval)
+    result = seed.import_official_names([{
+        "domain_id": "BMP", "subject_id": sid, "name_zh": "丝芙兰",
+        "source_url": "https://www.sephora.cn/",
+    }], apply=True)
+
+    evidence_ref = result["results"][0]["source_provenance"]["evidence_ref"]
+    evidence_id = int(evidence_ref.rsplit(":", 1)[1])
+    with reg._db_ready() as connection:
+        row = connection.execute(
+            "SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,)
+        ).fetchone()
+    inputs = json.loads(row["inputs_json"])
+    assert inputs["permission_audit_id"] == "permission-audit-123"
+    assert inputs["permission_caller"] == seed.APPROVAL_CALLER
+
+
+def test_apply_denies_missing_permission_audit_receipt(reg, monkeypatch):
+    from scripts import import_subject_registry_seed as seed
+
+    sid = _add(reg)
+    approval = type("ApprovalReceipt", (), {"allowed": True, "audit_id": None})()
+    monkeypatch.setattr(seed, "require_apply_approval", lambda: approval)
+    with pytest.raises(seed.SeedApprovalRequired, match="审计编号"):
+        seed.import_official_names([{
+            "domain_id": "BMP", "subject_id": sid, "name_zh": "丝芙兰",
+            "source_url": "https://www.sephora.cn/",
+        }], apply=True)
+    assert reg.get_subject_by_id("BMP", sid)["name_zh"] == "Sephora"

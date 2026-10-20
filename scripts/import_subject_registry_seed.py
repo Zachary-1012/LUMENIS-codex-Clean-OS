@@ -62,7 +62,7 @@ class SeedApprovalRequired(PermissionError):
     """--apply was requested without an exact CONFIG_MODIFY approval."""
 
 
-def require_apply_approval(gate: Any = None) -> None:
+def require_apply_approval(gate: Any = None) -> Any:
     """Reuse the registry write route's Permission/Approval boundary."""
     from lumenis.system.security import OperationType, RiskLevel
     from lumenis.system.security.permission import get_permission_gate
@@ -80,6 +80,11 @@ def require_apply_approval(gate: Any = None) -> None:
             "主体登记属于系统配置变更，需要人工审批 (CONFIG_MODIFY HIGH, "
             f"{APPROVAL_RESOURCE}): {getattr(result, 'reason', '')}"
         )
+    if not isinstance(getattr(result, "audit_id", None), str) or not result.audit_id.strip():
+        raise SeedApprovalRequired(
+            "主体登记审批缺少可核对的 Permission 审计编号；拒绝执行写入"
+        )
+    return result
 
 
 def _row_provenance_ok(row: Dict[str, Any], manifest: Dict[str, Any]) -> bool:
@@ -179,10 +184,18 @@ def import_official_names(rows: Iterable[Dict[str, Any]], *, apply: bool = False
             raise SeedIntegrityError(f"official name without official source URL: {r.get('subject_id')}")
     if not apply:
         return {"mode": "dry_run", "total": len(rows), "results": []}
-    require_apply_approval()
+    approval = require_apply_approval()
+    permission_audit_id = getattr(approval, "audit_id", None)
+    permission_caller = getattr(approval, "caller", None)
+    if not isinstance(permission_audit_id, str) or not permission_audit_id.strip():
+        raise SeedApprovalRequired(
+            "主体登记审批缺少可核对的 Permission 审计编号；拒绝执行写入"
+        )
     results = [registry.record_official_name(
         r["domain_id"], r["subject_id"], source_url=r["source_url"], name_zh=r.get("name_zh"),
-        name_en=r.get("name_en"), keywords=r.get("keywords", ())) for r in rows]
+        name_en=r.get("name_en"), keywords=r.get("keywords", ()),
+        permission_audit_id=permission_audit_id,
+        permission_caller=permission_caller) for r in rows]
     return {"mode": "apply", "total": len(rows),
             "changed": sum(1 for x in results if x["changed"]), "results": results}
 
