@@ -279,3 +279,35 @@ def test_platform_aggregate_overflow_is_reported_separately():
     assert r["invalid_count"] == 0
     assert r["emv_total_yuan"] is None
     assert "platform_calculation" in r["invalid_inputs"] or "calculation" in r["invalid_inputs"]
+
+
+def test_partial_metric_patch_does_not_certify_stored_zeros(monkeypatch, tmp_path):
+    import sqlite3
+    from contextlib import contextmanager
+    import database
+    from lumenis.shared.database.business_schema import apply_business_schema
+
+    path = tmp_path / "partial.db"
+    conn = sqlite3.connect(path)
+    apply_business_schema(conn)
+    conn.execute("INSERT INTO notes (note_id, title, likes, comments, collects, shares) VALUES ('p', 't', 0, 0, 0, 0)")
+    conn.commit()
+    conn.close()
+
+    @contextmanager
+    def fixture_db():
+        c = sqlite3.connect(path)
+        c.row_factory = sqlite3.Row
+        try:
+            yield c
+            c.commit()
+        finally:
+            c.close()
+
+    monkeypatch.setattr(database, "get_db", fixture_db)
+    database.insert_note({"note_id": "p", "title": "t", "likes": 0})
+    c = sqlite3.connect(path)
+    assert not c.execute("SELECT metrics_observed_at FROM notes WHERE note_id='p'").fetchone()[0]
+    c.close()
+    item = _client().get("/api/ic/emv").get_json()["items"][0]
+    assert item["status"] == "NOT_AVAILABLE"

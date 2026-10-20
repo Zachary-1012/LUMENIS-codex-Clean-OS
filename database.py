@@ -466,12 +466,14 @@ def insert_note(note_data, *, connection=None):
 def _record_metric_observation(conn, nid, note_data, vals, observation_complete, now):
     """Mark metric observation provenance without touching metric_snapshots.
 
-    Only a write that explicitly supplies at least one non-null canonical
-    metric as a complete observation sets ``metrics_observed_at``, so a genuine
+    Only a write that explicitly supplies all four non-null canonical
+    metrics as a complete observation sets ``metrics_observed_at``, so a genuine
     observed zero stays distinguishable from schema-default "never collected".
     Legacy databases without the column are left unchanged.
     """
-    if not observation_complete or not any(
+    # Row-wide marker: only a write that observes all four canonical metrics
+    # can certify the stored set (a partial patch would certify stale zeros).
+    if not observation_complete or not all(
             name in note_data and vals[name] is not None for name in _NOTE_METRIC_KEYS):
         return False
     try:

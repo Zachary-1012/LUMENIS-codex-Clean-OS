@@ -15,8 +15,8 @@ adds an injected non-finite result case; the targeted route and EMV gap-closure
 suite passed. Changed-source compilation, governance machine contract, AI-native
 constitution and `git diff --check` passed. The shared writer `database.insert_note` now records metric observation
 provenance in the additive `notes.metrics_observed_at` column (registered in
-`business_schema` note migrations) whenever a write explicitly supplies a
-non-null canonical metric as a complete observation; `metric_snapshots` trend
+`business_schema` note migrations) only when a write explicitly supplies all
+four non-null canonical metrics as a complete observation; `metric_snapshots` trend
 semantics are unchanged (no snapshot on insert). `/api/ic/emv` and the
 reporting engine publish an all-zero EMV only with that column,
 `detail_fetched_at` or a metric snapshot; otherwise the amount is
