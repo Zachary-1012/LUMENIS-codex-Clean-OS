@@ -8,6 +8,18 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `xhs_cookie_bridge.py` now applies the first BLOCKED/CAPTCHA/AUTH_FAILED pacing reduction immediately before continuing to another keyword, while suppressing a second task-summary report so one task still creates one risk event. `EMPTY` counts as a valid response in both the existing `network_adaptive` and `adaptive_engine` feedback paths. Regressions assert that the next search observes reduced pacing, the task records one risk event, and an EMPTY worker reports success with no error. The offline combined command across `tests/test_xhs_network_outcome_reporting.py`, `tests/test_xhs_child_worker_environment.py`, `tests/test_xhs_approved_local_worker_route.py` and `tests/test_xhs_lineage_persistence.py` passed **67 tests** with no thread leak. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Fixtures only; no real collection or account access was performed.
 
+## 2026-10-20 Issue #17 FIX-026 — incomplete source availability stays unknown
+
+`data_query_api.py` keeps source counts/availability unknown when a source result
+is incomplete or capped, instead of interpreting the visible partial count as a
+complete total. Normal complete and explicit-zero paths remain distinct. The
+focused regression is `tests/test_data_query_source_limit_semantics.py`. Exact-head
+offline command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_data_query_source_limit_semantics.py` — **4 passed**.
+`python -m py_compile data_query_api.py tests/test_data_query_source_limit_semantics.py`
+and `git diff --check` passed. These isolated tests do not establish live-source
+coverage or product-level acceptance.
+
 ## 2026-10-20 Issue #17 FIX-038 — verify recovery against the affected notes database
 
 The existing `auto_recovery.py` verifies the notes-table invariant against the same resolved database path being recovered; a generic `SELECT 1` can no longer label a missing notes table fixed. `tests/test_auto_recovery_database_truth.py` passed **3 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use temporary SQLite only; no production recovery was executed.
