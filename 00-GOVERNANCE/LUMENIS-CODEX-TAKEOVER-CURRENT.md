@@ -8,6 +8,17 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `data_center_api.py` query/catalog path now distinguishes unavailable or unknown platform source state from a real empty result, preserving source availability semantics for the existing caller. `tests/test_platform_catalog_schema.py` passed **69 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No production source, database or external effect was used.
 
+The review follow-up also converts ISO date bounds to Unix seconds for numeric
+publication columns and treats empty, malformed, or wholly uncountable platform
+catalog entries as unavailable. Supported tables may still show their measured
+counts, while an incomplete catalog total remains null; a real successful count
+of zero remains zero. The offline command
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_platform_catalog_schema.py`
+passed with no daemon-thread leak. Changed-source compilation, the governance
+machine contract, the AI-native constitution and `git diff --check` passed.
+Only temporary SQLite fixtures were used; no external service or production
+database was touched.
+
 
 ## 2026-10-18 source-adoption validation handoff
 

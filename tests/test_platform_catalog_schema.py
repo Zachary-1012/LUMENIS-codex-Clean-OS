@@ -750,9 +750,12 @@ class TestDataCenterAPI:
         table_stats = detail.get_json()["platform"]["table_stats"]
         assert table_stats == [{"table": "xhs_notes", "count": None, "error": "query_failed"}]
 
-    def test_fix033_empty_raw_table_catalog_is_unavailable_not_zero(self, platform_db, monkeypatch):
+    @pytest.mark.parametrize("raw_tables", ["[]", '["not_in_allowlist"]'])
+    def test_fix033_uncountable_raw_table_catalog_is_unavailable_not_zero(
+            self, platform_db, monkeypatch, raw_tables):
         platform_db.execute(
-            "UPDATE platform_registry SET raw_tables='[]' WHERE platform_id='xiaohongshu'"
+            "UPDATE platform_registry SET raw_tables=? WHERE platform_id='xiaohongshu'",
+            (raw_tables,),
         )
         platform_db.commit()
         path = platform_db.execute("PRAGMA database_list").fetchone()[2]

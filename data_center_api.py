@@ -350,7 +350,14 @@ def get_overview_stats():
             table_counts = {}
             table_errors = {}
             platform_total = 0
-            catalog_available = isinstance(raw_tables, list) and bool(raw_tables)
+            countable_tables = [
+                table for table in raw_tables if isinstance(table, str) and table in ALLOWED_TABLES
+            ] if isinstance(raw_tables, list) else []
+            catalog_available = (
+                isinstance(raw_tables, list)
+                and bool(raw_tables)
+                and len(countable_tables) == len(raw_tables)
+            )
             if not catalog_available:
                 table_errors["_catalog"] = "raw_tables_unavailable"
                 errors.append({
@@ -358,23 +365,22 @@ def get_overview_stats():
                     "table": None,
                     "error": "raw_tables_unavailable",
                 })
-            for t in raw_tables if isinstance(raw_tables, list) else []:
-                if t in ALLOWED_TABLES:
-                    try:
-                        row = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
-                        if row is None or row[0] is None:
-                            raise sqlite3.DatabaseError("COUNT query returned no value")
-                        cnt = row[0]
-                        table_counts[t] = cnt
-                        platform_total += cnt
-                    except sqlite3.Error:
-                        table_counts[t] = None
-                        table_errors[t] = "query_failed"
-                        errors.append({
-                            "platform_id": p["platform_id"],
-                            "table": t,
-                            "error": "query_failed",
-                        })
+            for t in countable_tables:
+                try:
+                    row = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
+                    if row is None or row[0] is None:
+                        raise sqlite3.DatabaseError("COUNT query returned no value")
+                    cnt = row[0]
+                    table_counts[t] = cnt
+                    platform_total += cnt
+                except sqlite3.Error:
+                    table_counts[t] = None
+                    table_errors[t] = "query_failed"
+                    errors.append({
+                        "platform_id": p["platform_id"],
+                        "table": t,
+                        "error": "query_failed",
+                    })
             total_records_available = catalog_available and not table_errors
             if total_records_available:
                 total_records += platform_total
