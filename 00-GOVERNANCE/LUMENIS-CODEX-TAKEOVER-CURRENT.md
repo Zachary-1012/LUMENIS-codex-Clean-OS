@@ -16,13 +16,14 @@ write after the forgotten tombstone, rather than reviving that record
 — **20 passed**, with no background-thread leak. The isolated FIX-060 SQLite
 regression confirmed the forgotten revision/tombstone rejects the stale write
 and remains unreadable after reopen. `compileall` and `git diff --check` passed.
-The added API/Agent regression in `tests/test_scoped_derived_memory.py` was not
-run to completion: its existing schema auto-migration stops at v12→v13 because
-`feedparser` is unavailable in the offline environment. No package was fetched
-or installed. Therefore FIX-058 API/Agent coverage remains OPEN; wider
-derived-dependency invalidation remains OPEN for FIX-060. FIX-059 still lacks a
-verified Agent retrieval/fusion caller; FIX-061 and FIX-084–088 remain OPEN
-because their Shared Learning files have no available exact write reservation.
+The full API/Agent regression module, including the FIX-058 TTL case, then passed
+with the existing offline `feedparser` cache:
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_scoped_derived_memory.py`
+— **12 passed in 12.58s**, with no background-thread leak. No package was
+fetched or installed. Wider derived-dependency invalidation remains OPEN for
+FIX-060. FIX-059 still lacks a verified Agent retrieval/fusion caller; FIX-061
+and FIX-084–088 remain OPEN because their Shared Learning files have no
+available exact write reservation.
 No W6 or production database was modified; runtime/product acceptance remains
 NOT_VERIFIED.
 
