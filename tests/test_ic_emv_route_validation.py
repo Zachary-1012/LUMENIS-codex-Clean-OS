@@ -174,3 +174,31 @@ def test_emv_route_reads_observation_provenance_from_real_schema(monkeypatch, tm
     body = _client().get("/api/ic/emv").get_json()
     assert body["status"] == "NOT_AVAILABLE"
     assert body["emv_total_yuan"] is None
+
+
+def test_emv_route_without_metric_snapshots_table_is_not_an_error(monkeypatch, tmp_path):
+    import sqlite3
+    from contextlib import contextmanager
+    import database
+
+    path = tmp_path / "legacy.db"
+    conn = sqlite3.connect(path)
+    conn.execute("CREATE TABLE notes (note_id TEXT, title TEXT, author_nickname TEXT, likes INT, comments INT,"
+                 " collects INT, shares INT, sentiment TEXT, publish_date TEXT, captured_at TEXT)")
+    conn.execute("INSERT INTO notes VALUES ('l', 't', 'a', 5, 1, 0, 0, 'neutral', '2026-10-01', '2026-10-01')")
+    conn.commit()
+    conn.close()
+
+    @contextmanager
+    def fixture_db():
+        c = sqlite3.connect(path)
+        c.row_factory = sqlite3.Row
+        try:
+            yield c
+        finally:
+            c.close()
+
+    monkeypatch.setattr(database, "get_db", fixture_db)
+    response = _client().get("/api/ic/emv")
+    assert response.status_code == 200
+    assert response.get_json()["status"] == "OK"

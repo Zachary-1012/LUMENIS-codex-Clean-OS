@@ -134,18 +134,37 @@ def ic_emv():
     limit = min(int(request.args.get("limit", 200)), 500)
     try:
         with db.get_db() as conn:
+            # Observation provenance: detail fetch time, plus metric snapshots
+            # when that table exists (legacy DBs may lack it; never 400 for it).
+            def _has(table):
+                try:
+                    return bool(conn.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+                    ).fetchall())
+                except Exception:
+                    return False
+            try:
+                note_cols = {r[1] for r in conn.execute("PRAGMA table_info(notes)").fetchall()}
+            except Exception:
+                note_cols = set()
+            observed_terms = []
+            if "detail_fetched_at" in note_cols:
+                observed_terms.append("COALESCE(TRIM(detail_fetched_at), '') <> ''")
+            if _has("metric_snapshots"):
+                observed_terms.append(
+                    "EXISTS (SELECT 1 FROM metric_snapshots ms "
+                    "WHERE ms.entity_type='note' AND ms.entity_key=notes.note_id)")
+            observed_sql = "(" + (" OR ".join(observed_terms) or "0") + ") AS metrics_observed "
             if start and end:
                 rows = conn.execute(
                     "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment, "
-                    "(COALESCE(TRIM(detail_fetched_at), '') <> '' OR EXISTS (SELECT 1 FROM metric_snapshots ms "
-                    "WHERE ms.entity_type='note' AND ms.entity_key=notes.note_id)) AS metrics_observed "
+                    + observed_sql +
                     "FROM notes WHERE publish_date BETWEEN ? AND ? ORDER BY captured_at DESC LIMIT ?",
                     (start, end, limit)).fetchall()
             else:
                 rows = conn.execute(
                     "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment, "
-                    "(COALESCE(TRIM(detail_fetched_at), '') <> '' OR EXISTS (SELECT 1 FROM metric_snapshots ms "
-                    "WHERE ms.entity_type='note' AND ms.entity_key=notes.note_id)) AS metrics_observed "
+                    + observed_sql +
                     "FROM notes ORDER BY captured_at DESC LIMIT ?", (limit,)).fetchall()
             notes = [dict(r) for r in rows]
             for note in notes:
