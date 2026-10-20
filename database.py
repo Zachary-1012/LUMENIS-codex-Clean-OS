@@ -213,22 +213,46 @@ def insert_note(note_data, *, connection=None):
                 )
 
         # 数据质量软门（写入门接线，enrich 标记不丢弃=数据零丢失）：
-        # 调用方未显式传 data_quality_status 时，自动用 DataQualityGate(note 契约) 校验并标记。
-        # INSERT/UPDATE 分支已消费 note_data 的这两个字段，此处统一填充，零侵入各采集入口。
-        if not (note_data.get('data_quality_status') or ''):
+        # FIX-024: 只在新增或质量来源字段变化、且调用方未提供质量值时自动校验；指标补丁不重算。
+        quality_input_fields = {
+            'title', 'url', 'publish_datetime', 'publish_date', 'risk_level',
+        }
+        should_enrich_quality = (
+            'data_quality_status' not in note_data
+            and 'data_quality_score' not in note_data
+            and (not existing or bool(quality_input_fields.intersection(note_data)))
+        )
+        if should_enrich_quality:
             try:
                 from data_quality_gate import DataQualityGate
+                quality_title = (
+                    vals['title'] if not existing or 'title' in note_data
+                    else existing['title'] or ''
+                )
+                quality_url = (
+                    vals['url'] if not existing or 'url' in note_data
+                    else existing['url'] or ''
+                )
+                quality_publish_date = (
+                    vals['publish_date']
+                    if not existing or {'publish_datetime', 'publish_date'}.intersection(note_data)
+                    else existing['publish_date'] or ''
+                )
+                quality_risk_level = note_data.get(
+                    'risk_level',
+                    existing['risk_level'] if existing else 'unconfirmed',
+                ) or 'unconfirmed'
                 _q = DataQualityGate().enrich_quality_record('note', {
-                    'title': vals['title'], 'url': vals['url'],
-                    'publish_date': vals['publish_date'],
-                    'risk_level': note_data.get('risk_level', '') or 'unconfirmed',
+                    'title': quality_title, 'url': quality_url,
+                    'publish_date': quality_publish_date,
+                    'risk_level': quality_risk_level,
                 })
                 note_data['data_quality_status'] = _q['data_quality_status']
                 note_data['data_quality_score'] = _q['data_quality_score']
             except Exception:
                 pass  # 软门失败绝不影响写入（数据零丢失红线）
-        # 标题兜底：标题缺失时用正文首句(去空白/截24)补，再退作者昵称；保证列表不出现空标题(新增/更新均覆盖)
-        if not (vals['title'] or '').strip():
+        # 标题兜底：新增或显式提供标题时，如缺失则用正文首句或作者昵称补齐。
+        if (not existing or 'title' in note_data) and not (vals['title'] or '').strip():
             _t = ''
             _ct = (vals['content'] or '').strip()
             if _ct:
@@ -240,18 +264,47 @@ def insert_note(note_data, *, connection=None):
         # 双时间铁律：publish_* 来自平台发布时间，captured_at 是本机采集时刻，二者来源不同、绝不互相顶替。
         # 真人通道通常只给到日期(publish_date)，用它回填缺失的 publish_datetime，保证发布时间不留空。
         # GAP-06 双维度标注（纯增强：失败兜底空串，不参与主体口径/风险/统计，不阻断采集）
+        classification_input_fields = {
+            'author_nickname', 'author_desc', 'followers', 'verified_type',
+            'title', 'content', 'body',
+        }
+        should_reclassify = not existing or bool(
+            classification_input_fields.intersection(note_data)
+        )
         try:
-            from subject_classifier import enrich_note_types as _enrich_types
-            _stype, _ctype = _enrich_types(
-                vals.get('author_nickname', ''), note_data.get('author_desc', ''),
-                note_data.get('followers', 0) or 0, int(vals.get('is_official', 0) or 0),
-                note_data.get('verified_type', ''), (vals.get('title', '') + ' ' + vals.get('body', '')))
+            if not should_reclassify:
+                _stype = _ctype = ''
+            else:
+                from subject_classifier import enrich_note_types as _enrich_types
+                if existing:
+                    classifier_author = (
+                        vals['author_nickname']
+                        if vals['author_nickname'] else existing['author_nickname'] or ''
+                    )
+                    classifier_title = (
+                        vals['title'] if 'title' in note_data
+                        else existing['title'] or ''
+                    )
+                    classifier_body = (
+                        vals['body']
+                        if vals['body'] else (existing['body'] or existing['content'] or '')
+                    )
+                else:
+                    classifier_author = vals['author_nickname']
+                    classifier_title = vals['title']
+                    classifier_body = vals['body']
+                _stype, _ctype = _enrich_types(
+                    classifier_author, note_data.get('author_desc', ''),
+                    note_data.get('followers', 0) or 0, 0,
+                    note_data.get('verified_type', ''),
+                    str(classifier_title or '') + ' ' + str(classifier_body or ''))
         except Exception:
             _stype = _ctype = ''
         pub_dt = (note_data.get('publish_datetime', '') or note_data.get('publish_date', '') or '').strip()
         coll_at = (note_data.get('collected_at', '') or note_data.get('captured_at', '') or '').strip()
         if existing:
-            conn.execute("""UPDATE notes SET source_platform=?, title=?, content=CASE WHEN ?<>'' THEN ? ELSE content END,
+            conn.execute("""UPDATE notes SET source_platform=?, title=CASE WHEN ? THEN ? ELSE title END,
+                content=CASE WHEN ?<>'' THEN ? ELSE content END,
                 url=CASE WHEN ?<>'' THEN ? ELSE url END, cover=CASE WHEN ?<>'' THEN ? ELSE cover END,
                 author_id=CASE WHEN ?<>'' THEN ? ELSE author_id END,
                 author_nickname=CASE WHEN ?<>'' THEN ? ELSE author_nickname END,
@@ -259,7 +312,8 @@ def insert_note(note_data, *, connection=None):
                 likes=CASE WHEN ? THEN ? ELSE likes END,
                 comments=CASE WHEN ? THEN ? ELSE comments END,
                 collects=CASE WHEN ? THEN ? ELSE collects END,
-                shares=CASE WHEN ? THEN ? ELSE shares END, note_type=?,
+                shares=CASE WHEN ? THEN ? ELSE shares END,
+                note_type=CASE WHEN ? THEN ? ELSE note_type END,
                 xsec_token=CASE WHEN ?<>'' THEN ? ELSE xsec_token END,
                 publish_date=CASE WHEN ?<>'' THEN ? ELSE publish_date END,
                 is_taikoo_verified=CASE WHEN ?=1 THEN 1 ELSE is_taikoo_verified END,
@@ -269,27 +323,29 @@ def insert_note(note_data, *, connection=None):
                 captured_at=CASE WHEN ?<>'' THEN ? ELSE captured_at END,
                 detail_fetched_at=CASE WHEN ?<>'' THEN ? ELSE detail_fetched_at END,
                 comments_fetched_at=CASE WHEN ?<>'' THEN ? ELSE comments_fetched_at END,
-                comments_collected=CASE WHEN ? >= 0 THEN ? ELSE comments_collected END,
-                data_quality_status=CASE WHEN ?<>'' THEN ? ELSE data_quality_status END,
+                comments_collected=CASE WHEN ? THEN ? ELSE comments_collected END,
+                data_quality_status=CASE WHEN ? THEN ? ELSE data_quality_status END,
                 data_quality_score=CASE WHEN ? THEN ? ELSE data_quality_score END,
                 collector_version=CASE WHEN ?<>'' THEN ? ELSE collector_version END,
                 status='active', last_seen_at=?
                 WHERE note_id=?""", (
-                vals['source_platform'], vals['title'], vals['content'], vals['content'], vals['url'], vals['url'], vals['cover'], vals['cover'],
+                vals['source_platform'], 'title' in note_data, vals['title'],
+                vals['content'], vals['content'], vals['url'], vals['url'], vals['cover'], vals['cover'],
                 vals['author_id'], vals['author_id'], vals['author_nickname'], vals['author_nickname'],
                 vals['author_avatar'], vals['author_avatar'],
                 _should_write_metric('likes'), vals['likes'],
                 _should_write_metric('comments'), vals['comments'],
                 _should_write_metric('collects'), vals['collects'],
                 _should_write_metric('shares'), vals['shares'],
-                vals['note_type'], vals['xsec_token'], vals['xsec_token'], vals['publish_date'], vals['publish_date'], vals['is_taikoo_verified'], vals['verify_reason'], vals['verify_reason'],
+                'type' in note_data, vals['note_type'],
+                vals['xsec_token'], vals['xsec_token'], vals['publish_date'], vals['publish_date'], vals['is_taikoo_verified'], vals['verify_reason'], vals['verify_reason'],
                 pub_dt, pub_dt,
                 coll_at, coll_at,
                 coll_at, coll_at,
                 note_data.get('detail_fetched_at','') or '', note_data.get('detail_fetched_at','') or '',
                 note_data.get('comments_fetched_at','') or '', note_data.get('comments_fetched_at','') or '',
-                vals['comments_collected'], vals['comments_collected'],
-                note_data.get('data_quality_status','') or '', note_data.get('data_quality_status','') or '',
+                _should_write_metric('comments_collected'), vals['comments_collected'],
+                'data_quality_status' in note_data, note_data.get('data_quality_status'),
                 'data_quality_score' in note_data, _nullable_analysis_score(note_data.get('data_quality_score')),
                 note_data.get('collector_version','') or '', note_data.get('collector_version','') or '', now, nid))
             conn.execute("UPDATE notes SET body=CASE WHEN ?<>'' THEN ? ELSE body END, source_keyword=CASE WHEN ?<>'' THEN ? ELSE source_keyword END, matched_keywords=CASE WHEN ?<>'' THEN ? ELSE matched_keywords END WHERE note_id=?", (vals['body'], vals['body'], vals['source_keyword'], vals['source_keyword'], vals['matched_keywords'], vals['matched_keywords'], nid))
