@@ -40,7 +40,8 @@ class OceanEngineEndpoint(str, Enum):
     REPORT_CREATIVE = "/2/report/creative/get/"
     ADVERTISER_INFO = "/2/advertiser/info/"
     CAMPAIGN_LIST = "/2/campaign/get/"
-    BALANCE = "/2/advertiser/balance/"
+    # Official SDK: GET /open_api/2/advertiser/fund/get/ (no /advertiser/balance/ route).
+    BALANCE = "/2/advertiser/fund/get/"
 
 
 @dataclass
@@ -122,8 +123,11 @@ class OceanEngineCollector:
 
         try:
             import requests
-            params = params or {}
-            params.setdefault("advertiser_id", self.config.advertiser_id)
+            params = dict(params or {})
+            # Advertiser-info uses the provider's array query contract
+            # (advertiser_ids); do not add the legacy single advertiser_id.
+            if "advertiser_ids" not in params:
+                params.setdefault("advertiser_id", self.config.advertiser_id)
 
             url = f"{self.config.api_base}{endpoint}"
             headers = self._build_headers()
@@ -187,7 +191,7 @@ class OceanEngineCollector:
 
     def get_balance(self) -> Dict[str, Any]:
         """获取账户余额（只读，真实API调用）。"""
-        return self._api_request("GET", OceanEngineEndpoint.BALANCE.value)
+        return self._api_request(OceanEngineEndpoint.BALANCE.value)
 
     def get_daily_report(self, start_date: str, end_date: str,
                           metrics: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -220,7 +224,21 @@ class OceanEngineCollector:
 
     def get_advertiser_info(self) -> Dict[str, Any]:
         """获取广告主信息（只读）。"""
-        return self._api_request("GET", OceanEngineEndpoint.ADVERTISER_INFO.value)
+        endpoint = OceanEngineEndpoint.ADVERTISER_INFO.value
+        if not self._has_api_access():
+            return self._api_request(endpoint)
+        try:
+            advertiser_id = int(self.config.advertiser_id)
+        except (TypeError, ValueError, OverflowError):
+            return _blocked_response(
+                reason="invalid advertiser_id: expected an integer",
+                required=["OCEAN_ENGINE_ADVERTISER_ID"],
+                note="广告主信息查询要求整数 advertiser_ids 数组；未发起请求",
+            )
+        return self._api_request(
+            endpoint,
+            params={"advertiser_ids": json.dumps([advertiser_id], separators=(",", ":"))},
+        )
 
     def parse_report_response(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """解析巨量引擎报表 API 响应为标准化指标列表。
