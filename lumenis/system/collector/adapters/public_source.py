@@ -410,7 +410,21 @@ class PublicSourceHTTPAdapter(HTTPAdapter):
         if port:
             authority = f"{authority}:{port}"
         request.headers["Host"] = authority
-        return super().send(request, **kwargs)
+        response = super().send(request, **kwargs)
+        # Session response hooks run after this method returns but before
+        # fetch_public_url can validate a redirect target or enforce the final
+        # response size. Redirect bodies are never consumed by this transport;
+        # close them here so caller hooks cannot read an unbounded 3xx body.
+        if 300 <= response.status_code < 400:
+            response.close()
+            # Requests' Session.send calls resolve_redirects even when the
+            # caller disabled automatic redirects. It reads ``response.content``
+            # to prepare ``_next``; mark the dropped body as consumed so that
+            # step cannot try to read the closed socket or buffer an unbounded
+            # redirect body.
+            response._content = b""
+            response._content_consumed = True
+        return response
 
 
 def fetch_public_url(

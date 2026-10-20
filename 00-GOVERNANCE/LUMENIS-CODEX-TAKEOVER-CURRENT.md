@@ -4,6 +4,17 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-101 — close redirect bodies before Session hooks
+
+The existing `PublicSourceHTTPAdapter.send` now closes every 3xx response
+before returning it to `requests.Session`. Session response hooks execute before
+`fetch_public_url` receives the response, so this prevents a caller hook from
+consuming a redirect body before the existing redirect target/address and final
+response-size checks. The outer redirect validation, pinning and bounded final
+body read remain in place. Regression: `tests/test_public_source_transport.py::test_redirect_body_is_closed_before_caller_response_hooks` checks that an
+offline response hook sees an empty, closed redirect; Requests can still prepare
+the next request and the redirect body is never read. `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_public_source_transport.py` — **24 passed**. Full `tests/test_public_source_adapters.py` — **22 passed**; `tests/test_public_http_article_extraction.py` — **11 passed**; five focused RSS nodes — **7 passed**. Changed-file `compileall`, governance machine contract, AI-native constitution and `git diff --check` passed. No live network was used. The body is not drained; redirect response headers remain available to Requests. Remote required checks, real-network behavior and product acceptance remain separate and unverified.
+
 ## 2026-10-20 Issue #17 FIX-094 / FIX-102 — public source content and lineage
 
 The existing `lumenis/system/collector/adapters/public_http.py` now retains
