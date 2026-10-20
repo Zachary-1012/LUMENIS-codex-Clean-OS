@@ -54,6 +54,32 @@ class TestOceanEngineCollector:
             }),
         ]
 
+    def test_get_balance_uses_documented_fund_endpoint_on_real_request_path(self, monkeypatch):
+        import requests
+        from ad_intelligence.platforms.ocean_engine import OceanEngineCollector, OceanEngineConfig
+
+        collector = OceanEngineCollector(OceanEngineConfig(
+            access_token="synthetic-token", advertiser_id="12345",
+        ))
+        seen = {}
+
+        class _Resp:
+            status_code = 200
+            def json(self):
+                return {"code": 0, "data": {}}
+            def raise_for_status(self):
+                return None
+
+        def fake_get(url, **kwargs):
+            seen["url"] = url
+            seen["params"] = kwargs.get("params")
+            return _Resp()
+
+        monkeypatch.setattr(requests, "get", fake_get)
+        collector.get_balance()
+        assert seen["url"] == "https://api.oceanengine.com/open_api/2/advertiser/fund/get/"
+        assert seen["params"]["advertiser_id"] == "12345"
+
     def test_get_advertiser_info_encodes_array_contract_on_real_request_path(
             self, monkeypatch):
         from urllib.parse import parse_qs, urlsplit

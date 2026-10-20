@@ -40,7 +40,8 @@ class OceanEngineEndpoint(str, Enum):
     REPORT_CREATIVE = "/2/report/creative/get/"
     ADVERTISER_INFO = "/2/advertiser/info/"
     CAMPAIGN_LIST = "/2/campaign/get/"
-    BALANCE = "/2/advertiser/balance/"
+    # Official SDK: GET /open_api/2/advertiser/fund/get/ (no /advertiser/balance/ route).
+    BALANCE = "/2/advertiser/fund/get/"
 
 
 @dataclass
