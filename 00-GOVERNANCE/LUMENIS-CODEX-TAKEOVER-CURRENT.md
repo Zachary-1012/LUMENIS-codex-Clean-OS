@@ -15,6 +15,19 @@ FIX-036/037 rollover follow-up: a prior-day task ledger retains `OBSERVED_TASK_S
 
 FIX-037 provenance follow-up: `record_run()` keeps the history `UNKNOWN` when it appends a real start to a same-day ledger that already contains unverified legacy counts, so observed starts cannot retroactively certify estimates. A clean empty ledger still becomes `OBSERVED_TASK_STARTS` on its first recorded start. The regression covers the mixed legacy-plus-new-start case in the same offline health-policy module; no login probe, collection or production database was used.
 
+Review follow-up for Issue #17 findings 4321861771 and 4321861781: the summary
+health endpoint now uses the same validated `OBSERVED_TASK_STARTS` task ledger
+as the detailed endpoint. Unmarked, unknown, malformed or unavailable history
+remains `null` and keeps collector health at warning; only observed task-start
+timestamps produce a count. `recent_success_rate` is returned only when its
+persisted observation timestamp is valid and within the health API's existing
+24-hour observation window; stale or future observations remain unknown. The
+offline `tests/test_hk_only_collection_policy.py` module passed **49 tests**;
+changed-source compilation, governance machine contract, AI-native constitution,
+takeover governance and `git diff --check` passed. Temporary stats files and
+isolated route fixtures only. The shared current-login verification finding
+remains OPEN; no live probe, collection or production DB was used.
+
 
 ## 2026-10-18 source-adoption validation handoff
 

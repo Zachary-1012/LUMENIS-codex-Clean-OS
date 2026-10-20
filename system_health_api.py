@@ -42,6 +42,7 @@ _SUCCESSFUL_KEYWORD_STATUSES = {
     CollectionStatus.NO_NEW_DATA.value,
     'EMPTY',
 }
+_ADAPTIVE_OBSERVATION_MAX_AGE = timedelta(hours=24)
 
 # 状态文件
 HEALTH_STATUS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'system_health_status.json')
@@ -72,6 +73,29 @@ def get_data_dir():
         if parent:
             return parent
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+
+
+def _observed_task_runs_today(stats, today=None):
+    """Return today's task-start count only for a validated observed ledger."""
+    today = today or datetime.now().strftime('%Y-%m-%d')
+    if (not isinstance(stats, dict)
+            or stats.get('date') != today
+            or stats.get('daily_run_history_state') != 'OBSERVED_TASK_STARTS'):
+        return None
+    daily_runs = stats.get('daily_runs')
+    if not isinstance(daily_runs, list):
+        return None
+    count = 0
+    try:
+        for value in daily_runs:
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))):
+                return None
+            if datetime.fromtimestamp(float(value)).strftime('%Y-%m-%d') == today:
+                count += 1
+    except (ValueError, TypeError, OverflowError, OSError):
+        return None
+    return count
 
 
 def get_production_collection_contract():
@@ -151,21 +175,23 @@ def check_collector():
         collection = get_production_collection_contract()
         # 检查采集计数文件
         stats_file = os.path.join(get_data_dir(), 'collector_stats.json')
-        today_runs = 0
+        today_runs = None
         last_run = None
         
         if os.path.exists(stats_file):
             with open(stats_file, 'r', encoding='utf-8') as f:
                 stats = json.load(f)
-            today = datetime.now().strftime('%Y-%m-%d')
-            if stats.get('date') == today:
-                today_runs = stats.get('manual_runs', 0) + stats.get('auto_runs', 0)
-            last_run = stats.get('updated_at')
+            today_runs = _observed_task_runs_today(stats)
+            if isinstance(stats, dict):
+                last_run = stats.get('updated_at')
         
         cdp_running = collection.get('worker_available') is True
         cookie_configured = collection.get('cookie_configured') is True
         
-        status = 'ok' if (cdp_running and cookie_configured and today_runs > 0) else 'warning'
+        status = 'ok' if (
+            cdp_running and cookie_configured
+            and today_runs is not None and today_runs > 0
+        ) else 'warning'
         if not cdp_running or not cookie_configured:
             status = 'error'
         
@@ -179,7 +205,7 @@ def check_collector():
             'browser_worker_state': collection['worker_state'],
             'cookie_configured': cookie_configured,
             'max_daily_runs': 12,
-            'remaining_runs': 12 - today_runs
+            'remaining_runs': 12 - today_runs if today_runs is not None else None
         }
     except Exception as e:
         return {'status': 'error', 'message': str(e)}
@@ -438,13 +464,21 @@ def get_adaptive_status():
                 current_params = current_params if isinstance(current_params, dict) else {}
                 result.update({
                     'current_strategy': status.get('current_strategy'),
-                    'recent_success_rate': (
-                        metrics.get('recent_success_rate')
-                        if metrics.get('last_collect_time') else None
-                    ),
+                    'recent_success_rate': None,
                     'current_delay_seconds': current_params.get('request_delay'),
                     'risk_level': status.get('risk_level'),
                 })
+                last_collect_time = metrics.get('last_collect_time')
+                if last_collect_time:
+                    try:
+                        observed_at = datetime.strptime(
+                            last_collect_time, '%Y-%m-%d %H:%M:%S'
+                        )
+                        age = datetime.now() - observed_at
+                        if timedelta(0) <= age <= _ADAPTIVE_OBSERVATION_MAX_AGE:
+                            result['recent_success_rate'] = metrics.get('recent_success_rate')
+                    except (TypeError, ValueError, OverflowError):
+                        pass
             else:
                 result['error'] = 'InvalidStatusPayload'
         return result
@@ -476,22 +510,7 @@ def get_collection_schedule():
             if os.path.isfile(stats_path):
                 with open(stats_path, 'r', encoding='utf-8') as handle:
                     stats = json.load(handle)
-                if (isinstance(stats, dict)
-                        and stats.get('date') == today
-                        and stats.get('daily_run_history_state') == 'OBSERVED_TASK_STARTS'):
-                    daily_runs = stats.get('daily_runs')
-                    if isinstance(daily_runs, list):
-                        observed_dates = []
-                        for value in daily_runs:
-                            if (isinstance(value, bool) or not isinstance(value, (int, float))
-                                    or not math.isfinite(float(value))):
-                                observed_dates = None
-                                break
-                            observed_dates.append(
-                                datetime.fromtimestamp(float(value)).strftime('%Y-%m-%d')
-                            )
-                        if observed_dates is not None:
-                            result['today_runs'] = sum(day == today for day in observed_dates)
+                result['today_runs'] = _observed_task_runs_today(stats, today)
         except (OSError, ValueError, TypeError, OverflowError, json.JSONDecodeError):
             # Corrupt or inaccessible run history is unknown; keyword records
             # remain independently reportable below.
@@ -766,7 +785,10 @@ def system_health_summary():
             elif not collector_status.get('cookie_configured'):
                 hints.append("采集：Cookie 缺失 → 登录小红书后扫码恢复")
             else:
-                hints.append(f"采集：今日已跑 {collector_status.get('today_runs',0)}/12，剩余 {collector_status.get('remaining_runs',0)}")
+                if collector_status.get('today_runs') is None:
+                    hints.append("采集：今日任务启动次数未核验；历史或不完整计数不用于健康结论。")
+                else:
+                    hints.append(f"采集：今日已跑 {collector_status['today_runs']}/12，剩余 {collector_status['remaining_runs']}")
         if xhs_light == 'warning':
             hints.append("小红书平台：最近24小时 0 条新笔记 → 可能风控拦截 / 验证码 / IP限制。若持续超过 6 小时，请前往 Auth Recovery Center 发起恢复任务。")
         if auth_light == 'unknown':
@@ -792,7 +814,7 @@ def system_health_summary():
                                 'collection_account': collector_status.get('collection_account'),
                                 'collection_region': collector_status.get('collection_region'),
                                 'cookie_ok': collector_status.get('cookie_configured', False),
-                                'today_runs': collector_status.get('today_runs', 0)},
+                                'today_runs': collector_status.get('today_runs')},
                 'auth':        {'light': auth_light,        'label': '登录态/Auth', 'status': login_status.get('status',''),
                                 'recent_7d': login_status.get('recent_7d_collects', 0),
                                 'cookie_file_exists': login_status.get('cookie_file_exists', False)},
@@ -807,8 +829,8 @@ def system_health_summary():
             # 原摘要字段（保持向后兼容，不破坏原前端）
             'notes_count': db_status.get('notes_count', 0),
             'today_collected': recent_24h,
-            'today_runs': collector_status.get('today_runs', 0),
-            'remaining_runs': collector_status.get('remaining_runs', 12),
+            'today_runs': collector_status.get('today_runs'),
+            'remaining_runs': collector_status.get('remaining_runs'),
             'cdp_running': collector_status.get('cdp_running', False),
             'diagnostic_hints': hints,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')

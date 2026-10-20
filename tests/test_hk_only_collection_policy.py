@@ -836,6 +836,7 @@ def test_missing_adaptive_status_does_not_invent_defaults(monkeypatch, tmp_path)
 
 def test_partial_adaptive_status_preserves_unknown_fields(monkeypatch, tmp_path):
     import json
+    from datetime import datetime, timedelta
 
     import system_health_api as health
 
@@ -848,7 +849,12 @@ def test_partial_adaptive_status_preserves_unknown_fields(monkeypatch, tmp_path)
             'current_strategy': 'cautious',
             'risk_level': 'medium',
             'current_params': {'request_delay': 9},
-            'metrics': {'recent_success_rate': 78, 'last_collect_time': '2026-10-20 01:00:00'},
+            'metrics': {
+                'recent_success_rate': 78,
+                'last_collect_time': (datetime.now() - timedelta(hours=1)).strftime(
+                    '%Y-%m-%d %H:%M:%S'
+                ),
+            },
         }), encoding='utf-8'
     )
 
@@ -858,6 +864,35 @@ def test_partial_adaptive_status_preserves_unknown_fields(monkeypatch, tmp_path)
     assert result['recent_success_rate'] == 78
     assert result['current_delay_seconds'] == 9
     assert result['risk_level'] == 'medium'
+
+
+@pytest.mark.parametrize(
+    ('age_hours', 'expected_rate'),
+    [(23, 78), (25, None), (-1, None)],
+    ids=['within-24-hours', 'stale-after-24-hours', 'future-timestamp'],
+)
+def test_adaptive_success_rate_requires_a_fresh_observation(
+        monkeypatch, tmp_path, age_hours, expected_rate):
+    import json
+    from datetime import datetime, timedelta
+
+    import system_health_api as health
+
+    monkeypatch.setattr(health, '__file__', str(tmp_path / 'system_health_api.py'))
+    (tmp_path / 'network_adaptive.py').write_text('', encoding='utf-8')
+    data_dir = tmp_path / 'data'
+    data_dir.mkdir()
+    observed_at = datetime.now() - timedelta(hours=age_hours)
+    (data_dir / 'adaptive_status.json').write_text(json.dumps({
+        'metrics': {
+            'recent_success_rate': 78,
+            'last_collect_time': observed_at.strftime('%Y-%m-%d %H:%M:%S'),
+        },
+    }), encoding='utf-8')
+
+    result = health.get_adaptive_status()
+
+    assert result['recent_success_rate'] == expected_rate
 
 
 def test_adaptive_defaults_are_not_reported_as_observed_success(monkeypatch, tmp_path):
@@ -890,6 +925,66 @@ def test_system_health_summary_has_no_mainland_cdp_hint():
     )
     assert "connect_ex(('127.0.0.1', 9222))" not in source
     assert 'Edge CDP 9222' not in source
+
+
+@pytest.mark.parametrize(
+    ('history_state', 'expected_runs'),
+    [(None, None), ('UNKNOWN', None), ('OBSERVED_TASK_STARTS', 2)],
+    ids=['legacy-unmarked', 'explicitly-unknown', 'observed-task-starts'],
+)
+def test_health_summary_keeps_task_run_counts_bound_to_observed_history(
+        monkeypatch, tmp_path, history_state, expected_runs):
+    import json
+    import time
+    from datetime import datetime
+
+    from flask import Flask
+    from lumenis.shared.evidence import store as evidence_store
+    import system_health_api as health
+
+    monkeypatch.setattr(health, 'get_data_dir', lambda: str(tmp_path))
+    stats = {
+        'date': datetime.now().strftime('%Y-%m-%d'),
+        'manual_runs': 4,
+        'auto_runs': 7,
+        'daily_runs': [time.time() - 3600, time.time() - 1800],
+    }
+    if history_state is not None:
+        stats['daily_run_history_state'] = history_state
+    (tmp_path / 'collector_stats.json').write_text(json.dumps(stats), encoding='utf-8')
+    monkeypatch.setattr(health, 'get_production_collection_contract', lambda: {
+        'worker_available': True, 'cookie_configured': True,
+        'account': 'XHS_RETINAUT', 'region': 'intl',
+        'worker_state': 'REGISTERED_BACKGROUND',
+    })
+    monkeypatch.setattr(health, 'check_database', lambda: {
+        'status': 'ok', 'notes_count': 1, 'recent_24h': 1,
+    })
+    monkeypatch.setattr(health, '_check_db_writable_fast', lambda: {
+        'status': 'ok', 'writable': True,
+    })
+    monkeypatch.setattr(health, 'check_login_status', lambda: {'status': 'unknown'})
+    monkeypatch.setattr(health, 'get_alerts', lambda: {
+        'active_alerts': 0, 'need_manual_intervention': 0,
+        'latest_alert': None,
+    })
+    monkeypatch.setattr(health, 'get_collection_schedule', lambda: {'next_collect': ''})
+    monkeypatch.setattr(
+        evidence_store, 'get_evidence_write_failure_count', lambda _hours: 0
+    )
+
+    app = Flask(__name__)
+    app.register_blueprint(health.system_health_bp)
+    summary = app.test_client().get('/api/system/health/summary').get_json()
+
+    assert summary['today_runs'] == expected_runs
+    assert summary['remaining_runs'] == (12 - expected_runs if expected_runs is not None else None)
+    assert summary['sub_lights']['collector']['today_runs'] == expected_runs
+    if expected_runs is None:
+        assert summary['sub_lights']['collector']['light'] == 'warning'
+        assert any('未核验' in hint for hint in summary['diagnostic_hints'])
+    else:
+        assert summary['sub_lights']['collector']['light'] == 'ok'
 
 
 def test_keepalive_status_projection_omits_worker_and_credential_details():
