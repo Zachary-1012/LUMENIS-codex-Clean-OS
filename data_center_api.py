@@ -74,16 +74,24 @@ def _get_db() -> sqlite3.Connection:
     return get_repository().connect()
 
 
-def _unix_date_filter(value: str, *, end: bool) -> tuple[str, float]:
-    """Convert an ISO date/time bound to a Unix timestamp comparison."""
+def _parse_date_bound(value: str) -> tuple[datetime, bool]:
+    """Parse an ISO date/time bound and reject invalid calendar values."""
     date_only = re.fullmatch(r"\d{4}-\d{2}-\d{2}", value) is not None
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed, date_only
+
+
+def _unix_date_filter(
+    value: str, *, end: bool, timestamp_multiplier: float = 1,
+) -> tuple[str, float]:
+    """Convert an ISO bound to a source-native Unix timestamp comparison."""
+    parsed, date_only = _parse_date_bound(value)
     if date_only and end:
         # Include the whole requested end date, including fractional seconds.
-        return "<", (parsed + timedelta(days=1)).timestamp()
-    return ("<=" if end else ">="), parsed.timestamp()
+        return "<", (parsed + timedelta(days=1)).timestamp() * timestamp_multiplier
+    return ("<=" if end else ">="), parsed.timestamp() * timestamp_multiplier
 
 
 @data_center_bp.route("/platforms", methods=["GET"])
@@ -240,11 +248,25 @@ def query_table(table_name: str):
             )
             if candidate in columns
         ), None)
+        time_expr = time_col
         time_col_type = next(
             (str(c["type"] or "").upper() for c in cols_info if c["name"] == time_col),
             "",
         )
+        if time_col == "publish_date" and "publish_datetime" in columns:
+            # Some imported rows have only the more precise source datetime.
+            # Use it only when this row has no date value; do not substitute
+            # capture/collection time or override a declared publish_date.
+            time_expr = (
+                "COALESCE(NULLIF(TRIM(publish_date), ''), "
+                "NULLIF(TRIM(publish_datetime), ''))"
+            )
+            time_col_type = ""
         numeric_time_col = any(kind in time_col_type for kind in ("INT", "REAL", "NUM", "FLOAT", "DOUBLE"))
+        timestamp_multiplier = (
+            1000 if time_col == "time" and table_name in {"xhs_notes", "xhs_note_comments"}
+            else 1
+        )
         start_date = request.args.get("start_date", "").strip()
         end_date = request.args.get("end_date", "").strip()
         if (start_date or end_date) and time_col is None:
@@ -254,24 +276,32 @@ def query_table(table_name: str):
             }), 400
         if time_col:
             if start_date:
-                if numeric_time_col:
-                    try:
-                        operator, value = _unix_date_filter(start_date, end=False)
-                    except ValueError:
-                        return jsonify({"ok": False, "error": "invalid start_date"}), 400
-                else:
-                    operator, value = ">=", start_date
-                where_clauses.append(f"{time_col} {operator} ?")
+                try:
+                    if numeric_time_col:
+                        operator, value = _unix_date_filter(
+                            start_date, end=False,
+                            timestamp_multiplier=timestamp_multiplier,
+                        )
+                    else:
+                        _parse_date_bound(start_date)
+                        operator, value = ">=", start_date
+                except ValueError:
+                    return jsonify({"ok": False, "error": "invalid start_date"}), 400
+                where_clauses.append(f"{time_expr} {operator} ?")
                 params.append(value)
             if end_date:
-                if numeric_time_col:
-                    try:
-                        operator, value = _unix_date_filter(end_date, end=True)
-                    except ValueError:
-                        return jsonify({"ok": False, "error": "invalid end_date"}), 400
-                else:
-                    operator, value = "<=", end_date
-                where_clauses.append(f"{time_col} {operator} ?")
+                try:
+                    if numeric_time_col:
+                        operator, value = _unix_date_filter(
+                            end_date, end=True,
+                            timestamp_multiplier=timestamp_multiplier,
+                        )
+                    else:
+                        _parse_date_bound(end_date)
+                        operator, value = "<=", end_date
+                except ValueError:
+                    return jsonify({"ok": False, "error": "invalid end_date"}), 400
+                where_clauses.append(f"{time_expr} {operator} ?")
                 params.append(value)
 
         where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
@@ -285,7 +315,7 @@ def query_table(table_name: str):
         if sort_by and sort_by in columns:
             order_sql = f" ORDER BY {sort_by} {'ASC' if sort_order == 'asc' else 'DESC'}"
         elif time_col:
-            order_sql = f" ORDER BY {time_col} DESC"
+            order_sql = f" ORDER BY {time_expr} DESC"
         else:
             order_sql = ""
 

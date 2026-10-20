@@ -601,6 +601,91 @@ class TestDataCenterAPI:
         assert payload["total"] == 1
         assert [row["answer_id"] for row in payload["data"]] == ["fix032-inside"]
 
+    @pytest.mark.parametrize(("table_name", "id_column", "inside_id", "outside_id"), [
+        ("xhs_notes", "note_id", "fix096-xhs-note-in", "fix096-xhs-note-out"),
+        ("xhs_note_comments", "comment_id", "fix096-xhs-comment-in", "fix096-xhs-comment-out"),
+    ])
+    def test_fix096_xhs_millisecond_publication_bounds(
+        self, platform_db, monkeypatch, table_name, id_column, inside_id, outside_id,
+    ):
+        """FIX-096: XHS native time is epoch milliseconds, not seconds."""
+        from datetime import datetime, timezone
+
+        inside = int(datetime(2026, 10, 31, 23, 59, 59, tzinfo=timezone.utc).timestamp() * 1000)
+        outside = int(datetime(2026, 11, 1, 0, 0, 0, tzinfo=timezone.utc).timestamp() * 1000)
+        platform_db.execute(f"DELETE FROM {table_name}")
+        platform_db.executemany(
+            f"INSERT INTO {table_name} ({id_column}, time) VALUES (?, ?)",
+            [(inside_id, inside), (outside_id, outside)],
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get(
+            f"/api/data-center/table/{table_name}?start_date=2026-10-31&end_date=2026-10-31"
+        )
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert payload["total"] == 1
+        assert [row[id_column] for row in payload["data"]] == [inside_id]
+
+    def test_fix096_empty_publish_date_falls_back_per_row_to_publish_datetime(
+        self, platform_db, monkeypatch,
+    ):
+        """FIX-096: each row falls back only when publish_date is null or blank."""
+        columns = {row["name"] for row in platform_db.execute("PRAGMA table_info(notes)")}
+        if "publish_date" not in columns:
+            platform_db.execute("ALTER TABLE notes ADD COLUMN publish_date TEXT")
+        if "publish_datetime" not in columns:
+            platform_db.execute("ALTER TABLE notes ADD COLUMN publish_datetime TEXT")
+        platform_db.execute("DELETE FROM notes")
+        platform_db.executemany(
+            "INSERT INTO notes (id, publish_date, publish_datetime) VALUES (?, ?, ?)",
+            [
+                (9601, "", "2026-10-15T10:00:00Z"),
+                (9602, None, "2026-10-16T10:00:00Z"),
+                (9603, "2026-10-17", "2026-11-15T10:00:00Z"),
+                (9604, "2026-11-01", "2026-10-18T10:00:00Z"),
+                (9605, None, "2026-11-01T00:00:00Z"),
+            ],
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get(
+            "/api/data-center/table/notes?start_date=2026-10-01&end_date=2026-10-31"
+        )
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert payload["total"] == 3
+        assert {row["id"] for row in payload["data"]} == {9601, 9602, 9603}
+
+    @pytest.mark.parametrize(("parameter", "invalid_date"), [
+        ("start_date", "2026-02-30"),
+        ("end_date", "2026-13-01"),
+    ])
+    def test_fix096_rejects_invalid_calendar_dates_for_text_columns(
+        self, platform_db, monkeypatch, parameter, invalid_date,
+    ):
+        """FIX-096: calendar validation applies before text-column filtering too."""
+        columns = {row["name"] for row in platform_db.execute("PRAGMA table_info(notes)")}
+        if "publish_date" not in columns:
+            platform_db.execute("ALTER TABLE notes ADD COLUMN publish_date TEXT")
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get(
+            f"/api/data-center/table/notes?{parameter}={invalid_date}"
+        )
+
+        assert response.status_code == 400
+        assert response.get_json() == {"ok": False, "error": f"invalid {parameter}"}
+
 
     def test_fix032_rejects_filters_without_source_fields(self, platform_db, monkeypatch):
         """FIX-032: unsupported filters fail instead of silently returning unfiltered rows."""
