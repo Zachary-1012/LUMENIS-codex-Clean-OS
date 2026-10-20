@@ -163,6 +163,9 @@ def test_requires_official_source_url(reg, url):
     "https://official.example/brand?API_KEY=secret",
     "https://official.example/brand?refresh_token=secret",
     "https://official.example/brand?client_secret=private-value",
+    "https://official.example/brand?clientSecret=private-value",
+    "https://official.example/brand?accessToken=private-value",
+    "https://official.example/brand?privateKey=private-value",
     "https://official.example/brand?secret=private-value",
     "https://official.example/brand?private_key=private-value",
     "https://official.example/brand?AWS-ACCESS-KEY=private-value",
@@ -251,6 +254,27 @@ def test_import_official_names_apply_needs_approval(reg, monkeypatch):
         seed.import_official_names(rows, apply=True)
     with pytest.raises(seed.SeedIntegrityError):
         seed.import_official_names([{**rows[0], "source_url": ""}])
+
+
+def test_official_name_batch_validates_all_rows_before_approval_or_writes(reg, monkeypatch):
+    from scripts import import_subject_registry_seed as seed
+
+    sid = _add(reg)
+    approval_calls = []
+    write_calls = []
+    monkeypatch.setattr(seed, "require_apply_approval", lambda: approval_calls.append(True))
+    monkeypatch.setattr(reg, "record_official_name", lambda *args, **kwargs: write_calls.append(args))
+    rows = [
+        {"domain_id": "BMP", "subject_id": sid, "name_zh": "丝芙兰", "source_url": "https://official.example/"},
+        {"domain_id": "BMP", "subject_id": sid, "name_zh": "Sephora", "source_url": "https://official.example/?clientSecret=synthetic"},
+    ]
+
+    with pytest.raises(seed.SeedIntegrityError, match="credential|source_url|凭证"):
+        seed.import_official_names(rows, apply=True)
+
+    assert approval_calls == []
+    assert write_calls == []
+    assert reg.get_subject_by_id("BMP", sid)["name_zh"] == "Sephora"
 
 
 def test_official_name_apply_binds_permission_audit_to_signed_evidence(reg, monkeypatch):

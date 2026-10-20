@@ -179,9 +179,32 @@ def import_official_names(rows: Iterable[Dict[str, Any]], *, apply: bool = False
     import subject_registry as registry
 
     rows = list(rows)
-    for r in rows:
-        if not str(r.get("source_url", "")).lower().startswith(("https://", "http://")):
-            raise SeedIntegrityError(f"official name without official source URL: {r.get('subject_id')}")
+    validated_rows = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise SeedIntegrityError("official name row must be an object")
+        try:
+            domain_id = registry.normalize_domain(row.get("domain_id"))
+            subject_id = row.get("subject_id")
+            if (not isinstance(subject_id, str) or not subject_id
+                    or subject_id != subject_id.strip()):
+                raise registry.SubjectValidationError("subject_id 无效")
+            source_url = registry._validate_official_source_url(row.get("source_url"))
+            name_zh = registry._text(row.get("name_zh"), field="name_zh") if row.get("name_zh") else None
+            name_en = registry._text(row.get("name_en"), field="name_en") if row.get("name_en") else None
+            keywords = registry._keywords(list(row.get("keywords", ()) or ()))
+            if not (name_zh or name_en or keywords):
+                raise registry.SubjectValidationError("没有可记录的官方名称")
+        except (TypeError, ValueError) as exc:
+            raise SeedIntegrityError(
+                f"invalid official name row: {row.get('subject_id')} ({exc})"
+            ) from exc
+        validated_rows.append({
+            **row, "domain_id": domain_id, "subject_id": subject_id,
+            "source_url": source_url, "name_zh": name_zh, "name_en": name_en,
+            "keywords": keywords,
+        })
+    rows = validated_rows
     if not apply:
         return {"mode": "dry_run", "total": len(rows), "results": []}
     approval = require_apply_approval()

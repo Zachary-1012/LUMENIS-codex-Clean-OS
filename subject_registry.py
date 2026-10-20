@@ -56,6 +56,39 @@ _SENSITIVE_SOURCE_QUERY_KEYS = {
 }
 
 
+def _validate_official_source_url(source_url: Any) -> str:
+    """Validate a declared official URL without reading or mutating the DB."""
+    url = _text(source_url, field="source_url", max_len=500)
+    if not url.lower().startswith(("https://", "http://")):
+        raise SubjectValidationError("source_url 必须是品牌官网 http(s) 地址")
+    try:
+        parts = urlsplit(url)
+        hostname = parts.hostname
+        username = parts.username
+        password = parts.password
+    except ValueError as exc:
+        raise SubjectValidationError("source_url 格式无效") from exc
+    if (parts.scheme.lower() not in {"http", "https"} or not hostname
+            or username is not None or password is not None):
+        raise SubjectValidationError("source_url 不得包含凭证或无效主机名")
+
+    def normalized_query_key(key: str) -> str:
+        # Separate camelCase before casefolding (clientSecret -> client_secret),
+        # then canonicalize punctuation so equivalent credential names match.
+        separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+        return re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
+
+    if any(
+        (normalized_key := normalized_query_key(key)) in _SENSITIVE_SOURCE_QUERY_KEYS
+        or bool(set(normalized_key.split("_")) & _SENSITIVE_SOURCE_QUERY_TERMS)
+        for key, _ in parse_qsl(parts.query, keep_blank_values=True)
+    ):
+        raise SubjectValidationError("source_url 不得包含凭证查询参数")
+    if parts.fragment:
+        raise SubjectValidationError("source_url 不得包含片段数据")
+    return url
+
+
 class SubjectValidationError(ValueError):
     """请求字段不满足主体契约。"""
 
@@ -418,28 +451,7 @@ def record_official_name(
     Returns {"before", "after", "changed", "source_url", "source_provenance"}.
     """
     normalized = normalize_domain(domain_id)
-    url = _text(source_url, field="source_url", max_len=500)
-    if not url.lower().startswith(("https://", "http://")):
-        raise SubjectValidationError("source_url 必须是品牌官网 http(s) 地址")
-    try:
-        parts = urlsplit(url)
-        hostname = parts.hostname
-        username = parts.username
-        password = parts.password
-    except ValueError as exc:
-        raise SubjectValidationError("source_url 格式无效") from exc
-    if (parts.scheme.lower() not in {"http", "https"} or not hostname
-            or username is not None or password is not None):
-        raise SubjectValidationError("source_url 不得包含凭证或无效主机名")
-    if any(
-        (normalized_key := re.sub(r"[^a-z0-9]+", "_", key.casefold()).strip("_"))
-        in _SENSITIVE_SOURCE_QUERY_KEYS
-        or bool(set(normalized_key.split("_")) & _SENSITIVE_SOURCE_QUERY_TERMS)
-        for key, _ in parse_qsl(parts.query, keep_blank_values=True)
-    ):
-        raise SubjectValidationError("source_url 不得包含凭证查询参数")
-    if parts.fragment:
-        raise SubjectValidationError("source_url 不得包含片段数据")
+    url = _validate_official_source_url(source_url)
     new_zh = _text(name_zh, field="name_zh") if name_zh else None
     new_en = _text(name_en, field="name_en") if name_en else None
     extra = _keywords(list(keywords or ()))
