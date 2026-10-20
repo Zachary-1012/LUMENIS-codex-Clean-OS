@@ -74,6 +74,35 @@ class TestLearningMemory:
         assert [s["sample_type"] for s in lm.get_positive_samples()] == ["positive"]
         assert [s["sample_type"] for s in lm.get_negative_samples()] == ["negative"]
 
+    def test_query_keeps_legacy_override_and_shares_ttl_clock(self, monkeypatch):
+        from datetime import datetime, timedelta, timezone
+        import agent_memory.base as memory_base
+        from agent_memory.base import MemoryRecord
+
+        lm = LearningMemory(enabled=True)
+        now = datetime.now(timezone.utc)
+        expired_at = (now - timedelta(seconds=1)).isoformat()
+        valid_at = (now - timedelta(seconds=10)).isoformat()
+        for index in range(51):
+            record = MemoryRecord(
+                layer="learning", key=f"expired-{index}", value={"ordinal": index},
+                timestamp=expired_at, ttl_seconds=0.1,
+            )
+            lm._in_memory[record.key] = record
+        valid = MemoryRecord(
+            layer="learning", key="valid-older", value={"source": "valid"},
+            timestamp=valid_at, ttl_seconds=60,
+        )
+        lm._in_memory[valid.key] = valid
+
+        clock_reads = []
+        query_time = now.timestamp()
+        monkeypatch.setattr(memory_base.time, "time",
+                            lambda: clock_reads.append(query_time) or query_time)
+
+        assert [record.key for record in lm.query(limit=1)] == ["valid-older"]
+        assert clock_reads == [query_time]
+
     def test_samples_follow_persisted_lifecycle_across_restart(self, seeded_db):
         lm = LearningMemory(db_path=seeded_db, enabled=True)
         rec = lm.record_correction(
