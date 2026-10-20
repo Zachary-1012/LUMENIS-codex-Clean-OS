@@ -439,6 +439,7 @@ def insert_note(note_data, *, connection=None):
             except Exception:
                 pass
             _write_analysis_values(new_record=False)
+            _record_metric_observation(conn, nid, note_data, vals, metric_observation_complete, now)
             return existing['id'], False
         cur = conn.execute("""INSERT INTO notes
             (note_id,source_platform,title,content,url,cover,author_id,author_nickname,author_avatar,likes,comments,collects,shares,
@@ -453,23 +454,36 @@ def insert_note(note_data, *, connection=None):
             _nullable_analysis_score(note_data.get('data_quality_score')) if quality_score_supplied else None,
             note_data.get('collector_version','') or '', now, 1 if vals['author_nickname']=='广州太古汇' else 0, vals['is_taikoo_verified'], vals['verify_reason']))
         _write_analysis_values(new_record=True)
-        # Initial canonical import: an explicitly observed metric set (including
-        # genuine all-zero values) gets its first snapshot so EMV/reporting can
-        # tell an observed zero from schema-default "never collected". Bypass only.
-        try:
-            if metric_observation_complete and any(
-                    name in note_data and vals[name] is not None for name in _NOTE_METRIC_KEYS):
-                record_note_metric_snapshot(
-                    conn, nid, {name: vals[name] for name in _NOTE_METRIC_KEYS},
-                    source='live', collector_version=note_data.get('collector_version', '') or '')
-        except Exception:
-            pass
         conn.execute('UPDATE notes SET body=?, source_keyword=?, matched_keywords=? WHERE note_id=?', (vals['body'], vals['source_keyword'], vals['matched_keywords'], nid))
         if _stype:
             conn.execute("UPDATE notes SET subject_type=CASE WHEN ?<>'' THEN ? ELSE subject_type END, "
                          "content_type=CASE WHEN ?<>'' THEN ? ELSE content_type END WHERE note_id=?",
                          (_stype, _stype, _ctype, _ctype, nid))
+        _record_metric_observation(conn, nid, note_data, vals, metric_observation_complete, now)
         return cur.lastrowid, True
+
+
+def _record_metric_observation(conn, nid, note_data, vals, observation_complete, now):
+    """Mark metric observation provenance without touching metric_snapshots.
+
+    Only a write that explicitly supplies at least one non-null canonical
+    metric as a complete observation sets ``metrics_observed_at``, so a genuine
+    observed zero stays distinguishable from schema-default "never collected".
+    Legacy databases without the column are left unchanged.
+    """
+    if not observation_complete or not any(
+            name in note_data and vals[name] is not None for name in _NOTE_METRIC_KEYS):
+        return False
+    try:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(notes)").fetchall()}
+    except Exception:
+        return False
+    if "metrics_observed_at" not in cols:
+        return False
+    observed_at = str(note_data.get('detail_fetched_at') or note_data.get('captured_at')
+                      or note_data.get('collected_at') or now).strip() or now
+    conn.execute("UPDATE notes SET metrics_observed_at=? WHERE note_id=?", (observed_at, nid))
+    return True
 
 
 def _metric_snapshot_enabled():

@@ -13,9 +13,17 @@ FIX-045/046 follow-up: `/api/ic/emv` also rejects a malformed or non-finite
 preserving finite zero and `None` result semantics. The route regression suite
 adds an injected non-finite result case; the targeted route and EMV gap-closure
 suite passed. Changed-source compilation, governance machine contract, AI-native
-constitution and `git diff --check` passed. The all-zero observation-provenance
-item remains OPEN because the existing persistence path does not retain that
-provenance; no shared writer was changed.
+constitution and `git diff --check` passed. The shared writer `database.insert_note` now records metric observation
+provenance in the additive `notes.metrics_observed_at` column (registered in
+`business_schema` note migrations) whenever a write explicitly supplies a
+non-null canonical metric as a complete observation; `metric_snapshots` trend
+semantics are unchanged (no snapshot on insert). `/api/ic/emv` and the
+reporting engine publish an all-zero EMV only with that column,
+`detail_fetched_at` or a metric snapshot; otherwise the amount is
+`NOT_AVAILABLE`. Legacy databases without the column keep the previous
+behaviour. Platform aggregation reports aggregate-only overflow in
+`invalid_inputs` and keeps `invalid_count` to invalid notes.
+
 ## 2026-10-20 Issue #17 FIX-001–003 — BMP scope and source research erratum
 
 FIX-001 updates the existing [BMP README](../lumenis/bmp/README.md) to match

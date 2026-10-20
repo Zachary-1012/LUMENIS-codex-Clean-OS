@@ -236,3 +236,46 @@ def test_initial_import_of_observed_zero_metrics_keeps_zero_amount(monkeypatch, 
     assert by_id["obs0"]["status"] == "OK"
     assert by_id["obs0"]["emv_yuan"] == 0
     assert by_id["absent"]["status"] != "OK"
+
+
+def test_initial_import_does_not_create_trend_snapshot(monkeypatch, tmp_path):
+    import sqlite3
+    from contextlib import contextmanager
+    import database
+    from lumenis.shared.database.business_schema import apply_business_schema
+
+    path = tmp_path / "snap.db"
+    conn = sqlite3.connect(path)
+    apply_business_schema(conn)
+    conn.commit()
+    conn.close()
+
+    @contextmanager
+    def fixture_db():
+        c = sqlite3.connect(path)
+        c.row_factory = sqlite3.Row
+        try:
+            yield c
+            c.commit()
+        finally:
+            c.close()
+
+    monkeypatch.setattr(database, "get_db", fixture_db)
+    database.insert_note({"note_id": "n1", "title": "t", "likes": 0, "comments": 0,
+                          "collects": 0, "shares": 0})
+    c = sqlite3.connect(path)
+    assert c.execute("SELECT COUNT(*) FROM metric_snapshots").fetchone()[0] == 0
+    assert c.execute("SELECT metrics_observed_at FROM notes WHERE note_id='n1'").fetchone()[0]
+    c.close()
+
+
+def test_platform_aggregate_overflow_is_reported_separately():
+    import emv
+    notes = [{"note_id": str(i), "likes": 10 ** 306, "comments": 0, "collects": 0, "shares": 0,
+              "source_platform": "xhs"} for i in range(1000)]
+    r = emv.aggregate_emv_by_platform(notes)
+    assert all(item["status"] == "OK" for item in r["items"])
+    assert r["status"] == "INVALID_INPUT"
+    assert r["invalid_count"] == 0
+    assert r["emv_total_yuan"] is None
+    assert "platform_calculation" in r["invalid_inputs"] or "calculation" in r["invalid_inputs"]

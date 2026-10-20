@@ -193,6 +193,7 @@ def aggregate_emv(notes: list[dict], cpm: float | None = None,
                           cpm=cpm, exposure_ratio=exposure_ratio)
         if (r["status"] == "OK" and r.get("weighted_interaction") == 0
                 and n.get("metrics_observed") is not True
+                and not str(n.get("metrics_observed_at") or "").strip()
                 and not str(n.get("detail_fetched_at") or "").strip()):
             # Schema DEFAULT 0 and persisters that materialize absent metrics
             # as 0 make an all-zero row indistinguishable from "never
@@ -581,10 +582,15 @@ def aggregate_emv_by_platform(notes: list[dict], base_cpm: float | None = None) 
         or not math.isfinite(grand_total_emv)
         or not math.isfinite(grand_total_exposure)
     )
+    aggregate_invalid_inputs = {"cpm": base_error} if base_error else {}
+    if platform_overflow:
+        aggregate_invalid_inputs["platform_calculation"] = "platform group sum is non-finite"
+    if not math.isfinite(grand_total_emv) or not math.isfinite(grand_total_exposure):
+        aggregate_invalid_inputs["calculation"] = "aggregate result is non-finite"
     if aggregate_invalid:
+        # invalid_count stays the number of invalid notes; aggregate-only
+        # calculation errors are reported separately in invalid_inputs.
         status = "INVALID_INPUT"
-        invalid += int(not math.isfinite(grand_total_emv) or not math.isfinite(grand_total_exposure))
-        invalid += int(bool(base_error) and invalid == 0)
     elif total == 0 or (available == 0 and partial == 0):
         status = "NOT_AVAILABLE"
     elif complete == total:
@@ -608,7 +614,7 @@ def aggregate_emv_by_platform(notes: list[dict], base_cpm: float | None = None) 
         "is_estimate": True,
         "disclaimer": f"{EMV_DISCLAIMER}；按平台系数计算（IC-021），自定义 CPM 时按假设处理",
         "cpm_base": base_value,
-        "invalid_inputs": {"cpm": base_error} if base_error else {},
+        "invalid_inputs": aggregate_invalid_inputs,
         "cpm_source": (
             f"{CUSTOM_CPM_ASSUMPTION_SOURCE}；各平台系数来源见 items.cpm_source"
             if base_cpm is not None else f"{CPM_REFERENCE_SOURCE}；各平台系数来源见 items.cpm_source"

@@ -192,6 +192,9 @@ NOTE_MIGRATIONS.update({
     'publish_datetime': "ALTER TABLE notes ADD COLUMN publish_datetime TEXT DEFAULT ''",
     'captured_at': "ALTER TABLE notes ADD COLUMN captured_at TEXT DEFAULT ''",
     'detail_fetched_at': "ALTER TABLE notes ADD COLUMN detail_fetched_at TEXT DEFAULT ''",
+    # Metric observation provenance (separate from metric_snapshots trend history):
+    # set only when a writer explicitly supplies observed interaction metrics.
+    'metrics_observed_at': "ALTER TABLE notes ADD COLUMN metrics_observed_at TEXT DEFAULT ''",
     'comments_fetched_at': "ALTER TABLE notes ADD COLUMN comments_fetched_at TEXT DEFAULT ''",
     'comments_collected': "ALTER TABLE notes ADD COLUMN comments_collected INTEGER DEFAULT 0",
     'data_quality_status': "ALTER TABLE notes ADD COLUMN data_quality_status TEXT DEFAULT 'unknown'",
