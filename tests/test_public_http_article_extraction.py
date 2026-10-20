@@ -543,3 +543,22 @@ def test_semantic_article_inside_page_level_form_is_selected():
     )
     nodes = public_http._selected_substantive_nodes(soup)
     assert len(nodes) == 1 and nodes[0].name == "article"
+
+
+def test_multi_token_navigation_role_on_ancestor_or_descendant_is_chrome():
+    import lumenis.system.collector.adapters.public_http as public_http
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(
+        "<html><body>"
+        "<div role='navigation presentation'><article>nav article menu</article></div>"
+        "<article>real story body"
+        "<div role='presentation navigation'><span>NAV_TOKEN_TEXT</span></div>"
+        "</article>"
+        "</body></html>",
+        "html.parser",
+    )
+    nodes = public_http._selected_substantive_nodes(soup)
+    assert [n.get_text(" ", strip=True).startswith("real story body") for n in nodes] == [True]
+    text = "".join(public_http._iter_node_text_parts(nodes[0]))
+    assert "NAV_TOKEN_TEXT" not in text
