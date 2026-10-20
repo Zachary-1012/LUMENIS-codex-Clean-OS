@@ -412,7 +412,7 @@ class TestImportTruthfulPersistence:
         records = [
             {"note_id": "batch-first", "title": "广州太古汇首条", "content": "synthetic first"},
             {"note_id": "rollback-trigger", "title": "广州太古汇触发", "content": "synthetic rollback"},
-            {"note_id": "batch-later", "title": "广州太古汇后续", "content": "synthetic later"},
+            None,
         ]
 
         stats = hdi.import_historical_batch(records, db_path=str(db_path), rule_version="fixture-rule")
@@ -431,6 +431,8 @@ class TestImportTruthfulPersistence:
         assert [row["persistence_state"] for row in stats["details"]] == [
             "ROLLED_BACK", "ROLLED_BACK", "NOT_WRITTEN",
         ]
+        assert stats["details"][2]["note_id"] == ""
+        assert "not processed" in stats["details"][2]["warnings"][0]
 
     def test_caller_connection_remains_uncommitted_and_rollbackable(self, temp_db):
         record = {

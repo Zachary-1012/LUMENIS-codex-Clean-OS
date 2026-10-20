@@ -423,9 +423,13 @@ def import_historical_batch(records, db_path=None, product_id=DEFAULT_PRODUCT_ID
                         stats["inserted"] -= 1
                         stats["errors"] += 1
             for pending in records[index + 1:]:
+                pending_id = (
+                    str(pending.get("note_id") or pending.get("source_id") or "")
+                    if isinstance(pending, dict) else ""
+                )
                 stats["details"].append({
                     "status": IMPORT_STATUS_ERROR,
-                    "note_id": str(pending.get("note_id") or pending.get("source_id") or ""),
+                    "note_id": pending_id,
                     "content_hash": "", "subject_hit": False, "subject_reason": "",
                     "dedup": False, "dedup_type": "",
                     "warnings": [
