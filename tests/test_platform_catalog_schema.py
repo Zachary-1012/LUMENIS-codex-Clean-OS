@@ -1066,3 +1066,15 @@ with patch.object(socket.socket, 'connect', side_effect=AssertionError('network 
         capability_matrix()['youtube']['raw_tables'].append('not-real')
         get_platform_capabilities('yt')['raw_tables'].append('not-real-either')
         assert PLATFORM_CAPABILITIES['youtube']['raw_tables'] == original
+
+
+
+def test_integer_timestamp_bounds_are_exact_source_units():
+    import data_center_api as d
+    lo = d._unix_date_filter("9999-12-31T23:59:59.000001Z", end=False,
+                             timestamp_multiplier=1000, integer_column=True)
+    at = d._unix_date_filter("9999-12-31T23:59:59Z", end=False,
+                             timestamp_multiplier=1000, integer_column=True)
+    assert lo == (">=", at[1] + 1) and isinstance(lo[1], int)
+    assert d._unix_date_filter("2026-01-01T00:00:00.5Z", end=True, integer_column=True) == ("<=", 1767225600)
+    assert d._unix_date_filter("2026-01-01", end=True, integer_column=True) == ("<", 1767312000)

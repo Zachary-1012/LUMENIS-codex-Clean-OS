@@ -498,6 +498,39 @@ class TestImportTruthfulPersistence:
         assert "not processed" in stats["details"][2]["warnings"][0]
         assert all(d["inserted_id"] is None and d["log_id"] is None for d in stats["details"])
 
+    def test_batch_rollback_keeps_dedup_of_previously_committed_row(
+            self, temp_db, tmp_path, monkeypatch):
+        db_path = tmp_path / "batch-rollback-committed-dedup.sqlite"
+        temp_db.execute(
+            """CREATE TRIGGER rollback_selected_note BEFORE INSERT ON notes
+               WHEN NEW.note_id='rollback-trigger'
+               BEGIN SELECT RAISE(ROLLBACK, 'synthetic whole-transaction rollback'); END"""
+        )
+        temp_db.commit()
+        disk_conn = sqlite3.connect(db_path)
+        temp_db.backup(disk_conn)
+        disk_conn.close()
+
+        def open_fixture_database(path=None):
+            conn = sqlite3.connect(path or db_path)
+            conn.row_factory = sqlite3.Row
+            return conn
+
+        monkeypatch.setattr(hdi, "_get_connection", open_fixture_database)
+        first = hdi.import_historical_batch(
+            [{"note_id": "committed-before", "title": "广州太古汇已存", "content": "synthetic committed"}],
+            db_path=str(db_path), rule_version="fixture-rule")
+        assert first["inserted"] == 1
+        stats = hdi.import_historical_batch([
+            {"note_id": "committed-dup", "title": "广州太古汇已存", "content": "synthetic committed"},
+            {"note_id": "new-row", "title": "广州太古汇新条", "content": "synthetic new"},
+            {"note_id": "rollback-trigger", "title": "广州太古汇触发", "content": "synthetic rollback"},
+        ], db_path=str(db_path), rule_version="fixture-rule")
+        assert stats["details"][0]["status"] == hdi.IMPORT_STATUS_DEDUP_SKIPPED
+        assert stats["dedup_skipped"] == 1
+        assert stats["details"][1]["status"] == hdi.IMPORT_STATUS_ERROR
+        assert stats["inserted"] == 0
+
     def test_batch_rollback_reclassifies_same_batch_dedup_skip(
             self, temp_db, tmp_path, monkeypatch):
         db_path = tmp_path / "batch-rollback-dedup.sqlite"

@@ -155,7 +155,10 @@ def _git_info(repo_path: Path):
                 head, colon, scp_path = value.partition(":")
                 if (colon and head and scp_path and "/" not in head and "\\" not in head
                         and head.lower() not in {"http", "https", "ssh", "git", "file"}):
-                    if "@" in scp_path:
+                    # Query/fragment-like suffixes can carry signed tokens and
+                    # are not part of an SCP path: drop them (as the URL path does).
+                    scp_path = scp_path.split("?", 1)[0].split("#", 1)[0]
+                    if "@" in scp_path or not scp_path:
                         return None
                     host = head.rsplit("@", 1)[-1]
                     return f"{host}:{scp_path}" if host else None

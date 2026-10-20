@@ -755,3 +755,9 @@ def test_git_info_accepts_scp_like_remote_with_optional_user(tmp_path: Path, url
 def test_git_info_fails_closed_for_scp_like_remote_with_password(tmp_path: Path) -> None:
     result = _remote_result(tmp_path, "scp-pw", "user:fixture-secret@host:org/repo.git")
     assert "fixture-secret" not in json.dumps(result)
+
+
+def test_git_info_strips_query_from_scp_like_remote(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "scp-q", "github.com:org/repo.git?access_token=fixture-secret")
+    assert "fixture-secret" not in json.dumps(result)
+    assert result["remote"] == "github.com:org/repo.git"

@@ -107,12 +107,21 @@ def _text_date_filter(value: str, *, end: bool) -> tuple[str, int]:
 
 def _unix_date_filter(
     value: str, *, end: bool, timestamp_multiplier: float = 1,
+    integer_column: bool = False,
 ) -> tuple[str, float]:
-    """Convert an ISO bound to a source-native Unix timestamp comparison."""
+    """Convert an ISO bound to a source-native Unix timestamp comparison.
+
+    Integer columns get exact integer source units with operator-aware
+    rounding (>=, < round up; <= rounds down) so no float collapse merges
+    distinct bounds. REAL columns keep fractional units.
+    """
     operator, instant = _bound_microseconds(value, end=end)
-    if timestamp_multiplier == 1000:
-        return operator, instant / 1000
-    return operator, instant / 1_000_000 * timestamp_multiplier
+    unit_us = 1000 if timestamp_multiplier == 1000 else int(1_000_000 // timestamp_multiplier)
+    if integer_column:
+        if operator == "<=":
+            return operator, instant // unit_us
+        return operator, -((-instant) // unit_us)
+    return operator, instant / unit_us
 
 
 @data_center_bp.route("/platforms", methods=["GET"])
@@ -302,6 +311,7 @@ def query_table(table_name: str):
                         operator, value = _unix_date_filter(
                             start_date, end=False,
                             timestamp_multiplier=timestamp_multiplier,
+                            integer_column="INT" in time_col_type,
                         )
                     else:
                         operator, value = _text_date_filter(start_date, end=False)
@@ -321,6 +331,7 @@ def query_table(table_name: str):
                         operator, value = _unix_date_filter(
                             end_date, end=True,
                             timestamp_multiplier=timestamp_multiplier,
+                            integer_column="INT" in time_col_type,
                         )
                     else:
                         operator, value = _text_date_filter(end_date, end=True)

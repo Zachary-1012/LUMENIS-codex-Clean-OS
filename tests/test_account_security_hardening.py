@@ -191,3 +191,19 @@ def test_operator_basic_auth_still_reaches_compat_key_routes(client, monkeypatch
     assert r.status_code == 200 and r.get_json()["ok"] is True
     bad = base64.b64encode(b"operator:wrong").decode()
     assert c.get("/api/v4/api-keys", headers={"Authorization": "Basic " + bad}).status_code == 401
+
+
+def test_existing_reserved_name_account_keeps_account_lockout(tmp_path, monkeypatch):
+    import sqlite3
+    from lumenis.auth import security
+    conn = sqlite3.connect(tmp_path / "legacy.db")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE v4_login_attempts(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, ip TEXT, success INTEGER, created_at TEXT)")
+    conn.execute("CREATE TABLE v4_users(username TEXT, failed_attempts INTEGER DEFAULT 0, locked_until TEXT, last_login_at TEXT, last_login_ip TEXT)")
+    conn.execute("INSERT INTO v4_users(username, failed_attempts) VALUES ('__workspace_key_ZBMP__', 0)")
+    monkeypatch.setitem(security.AUTH_CONFIG, "max_login_attempts", 3)
+    for i in range(3):
+        security.record_login_attempt("__workspace_key_ZBMP__", f"198.51.100.{i}", False, conn=conn)
+    row = conn.execute("SELECT failed_attempts FROM v4_users").fetchone()
+    assert row["failed_attempts"] == 3
+    assert security.check_login_attempts("__workspace_key_ZBMP__", "198.51.100.99", conn=conn)["allowed"] is False

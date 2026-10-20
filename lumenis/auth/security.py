@@ -63,6 +63,17 @@ def _is_ip_bucket(username) -> bool:
     )
 
 
+def _real_account_exists(conn, username) -> bool:
+    """A legacy account created before names were reserved keeps the normal
+    account-wide lockout; it is never treated as a synthetic per-IP bucket."""
+    try:
+        return conn.execute(
+            "SELECT 1 FROM v4_users WHERE username=? LIMIT 1", (username,)
+        ).fetchone() is not None
+    except sqlite3.OperationalError:
+        return False
+
+
 def _check_access_key_attempts(conn, ip: str, bucket: str = None) -> dict:
     """Check the access-key/IP bucket using the existing attempt audit rows."""
     max_attempts = int(AUTH_CONFIG["max_login_attempts"])
@@ -175,7 +186,7 @@ def check_login_attempts(username: str, ip: str, conn=None) -> dict:
     if owns_connection:
         conn = get_db()
     try:
-        if _is_ip_bucket(username):
+        if _is_ip_bucket(username) and not _real_account_exists(conn, username):
             return _check_access_key_attempts(conn, normalize_login_ip(ip), username)
 
         # 检查账号锁定
@@ -226,7 +237,7 @@ def record_login_attempt(username: str, ip: str, success: bool, conn=None):
         )
         # Access-key attempts have their own username/IP bucket in the shared
         # attempt log; they must not mutate the owner's password lockout state.
-        if _is_ip_bucket(username):
+        if _is_ip_bucket(username) and not _real_account_exists(conn, username):
             pass
         elif success:
             conn.execute(
