@@ -4,6 +4,21 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-090 — search HTTP result truth
+
+The existing Baidu and Bing search adapters now call `raise_for_status()` before
+parsing a response, so an HTTP error page remains a failed result instead of
+becoming a successful empty result. The existing `search()` error contract and
+normal HTTP 200 empty-result behavior are preserved. `tests/test_adapter_http_truth.py`
+covers both adapters against HTTP 503, ordinary HTTP 200 with no matches, and a
+transport timeout (6 passed) using offline response fixtures; no live source was
+queried. Verified with
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest --with requests python -m pytest -q tests/test_adapter_http_truth.py`
+(6 passed), `python -m compileall -q lumenis/adapters/baidu_search.py lumenis/adapters/bing_search.py tests/test_adapter_http_truth.py`, and
+`git diff --check`. This closes only the adapter-level state distinction in
+FIX-090; the W6-owned HTTP/API projections, live-provider behavior and actual
+collection remain unverified, and all other Issue #17 outcomes remain open.
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,
