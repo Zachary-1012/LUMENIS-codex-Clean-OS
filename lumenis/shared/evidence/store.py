@@ -1038,7 +1038,7 @@ def record_evidence(
 
     provider: str = "rule",
 
-    authenticity_score: float = 1.0,
+    authenticity_score: Optional[float] = None,
 
     publish_datetime: str = "",
 
@@ -1198,9 +1198,15 @@ def record_evidence(
 
     }
 
-    # 过滤掉 None 值（空字符串保留，因为是有意义的默认值）
-
-    fields = {k: v for k, v in fields.items() if v is not None}
+    # Most optional columns use omission to allow legacy SQLite defaults.
+    # authenticity_score is different: NULL means that no score was assessed,
+    # while a numeric zero is an explicit assessed value. Always include this
+    # column so SQLite's historical DEFAULT 1.0 cannot turn unknown into a
+    # fabricated score.
+    fields = {
+        k: v for k, v in fields.items()
+        if v is not None or k == "authenticity_score"
+    }
 
 
 

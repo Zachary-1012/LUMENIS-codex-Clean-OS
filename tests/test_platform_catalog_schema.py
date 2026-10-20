@@ -534,6 +534,206 @@ class TestDataCenterAPI:
         assert result["total"] == 1
         assert result["data"][0]["liked_count"] == 17
 
+    def test_fix032_filters_sentiment_risk_and_source_publish_date(self, platform_db, monkeypatch):
+        """FIX-032: filter by source sentiment/risk/publication, never collection time."""
+        columns = {row["name"] for row in platform_db.execute("PRAGMA table_info(notes)")}
+        for name, data_type in (
+            ("sentiment", "TEXT"),
+            ("risk_level", "TEXT"),
+            ("publish_date", "TEXT"),
+            ("collected_at", "TEXT"),
+        ):
+            if name not in columns:
+                platform_db.execute(f"ALTER TABLE notes ADD COLUMN {name} {data_type}")
+        platform_db.execute("DELETE FROM notes")
+        platform_db.executemany(
+            "INSERT INTO notes (id, sentiment, risk_level, publish_date, collected_at) VALUES (?, ?, ?, ?, ?)",
+            [
+                (11, "negative", "high", "2026-10-10", "2026-11-10"),
+                (12, "negative", "high", "2026-11-01", "2026-10-10"),
+                (13, "positive", "high", "2026-10-12", "2026-10-12"),
+                (14, "negative", "low", "2026-10-13", "2026-10-13"),
+            ],
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get(
+            "/api/data-center/table/notes?sentiment=negative&risk_level=high"
+            "&start_date=2026-10-01&end_date=2026-10-31"
+        )
+        assert response.status_code == 200
+        result = response.get_json()
+        assert result["total"] == 1
+        assert [item["id"] for item in result["data"]] == [11]
+        assert result["data"][0]["publish_date"] == "2026-10-10"
+
+        empty = client.get(
+            "/api/data-center/table/notes?sentiment=neutral&risk_level=high"
+            "&start_date=2026-10-01&end_date=2026-10-31"
+        )
+        assert empty.status_code == 200
+        assert empty.get_json()["total"] == 0
+        assert empty.get_json()["data"] == []
+
+    def test_fix032_filters_unix_timestamp_publication_fields(self, platform_db, monkeypatch):
+        """Numeric native publication times are compared as Unix seconds, not ISO text."""
+        from datetime import datetime, timezone
+
+        inside = datetime(2026, 10, 31, 23, 59, 59, tzinfo=timezone.utc).timestamp()
+        outside = datetime(2026, 11, 1, 0, 0, 0, tzinfo=timezone.utc).timestamp()
+        platform_db.execute("DELETE FROM zhihu_answers")
+        platform_db.executemany(
+            "INSERT INTO zhihu_answers (answer_id, created_time) VALUES (?, ?)",
+            [("fix032-inside", int(inside)), ("fix032-outside", int(outside))],
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get(
+            "/api/data-center/table/zhihu_answers?start_date=2026-10-01&end_date=2026-10-31"
+        )
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert payload["total"] == 1
+        assert [row["answer_id"] for row in payload["data"]] == ["fix032-inside"]
+
+    @pytest.mark.parametrize(("table_name", "id_column", "inside_id", "outside_id"), [
+        ("xhs_notes", "note_id", "fix096-xhs-note-in", "fix096-xhs-note-out"),
+        ("xhs_note_comments", "comment_id", "fix096-xhs-comment-in", "fix096-xhs-comment-out"),
+    ])
+    def test_fix096_xhs_millisecond_publication_bounds(
+        self, platform_db, monkeypatch, table_name, id_column, inside_id, outside_id,
+    ):
+        """FIX-096: XHS native time is epoch milliseconds, not seconds."""
+        from datetime import datetime, timezone
+
+        inside = int(datetime(2026, 10, 31, 23, 59, 59, tzinfo=timezone.utc).timestamp() * 1000)
+        outside = int(datetime(2026, 11, 1, 0, 0, 0, tzinfo=timezone.utc).timestamp() * 1000)
+        platform_db.execute(f"DELETE FROM {table_name}")
+        platform_db.executemany(
+            f"INSERT INTO {table_name} ({id_column}, time) VALUES (?, ?)",
+            [(inside_id, inside), (outside_id, outside)],
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get(
+            f"/api/data-center/table/{table_name}?start_date=2026-10-31&end_date=2026-10-31"
+        )
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert payload["total"] == 1
+        assert [row[id_column] for row in payload["data"]] == [inside_id]
+
+    def test_fix096_empty_publish_date_falls_back_per_row_to_publish_datetime(
+        self, platform_db, monkeypatch,
+    ):
+        """FIX-096: each row falls back only when publish_date is null or blank."""
+        columns = {row["name"] for row in platform_db.execute("PRAGMA table_info(notes)")}
+        if "publish_date" not in columns:
+            platform_db.execute("ALTER TABLE notes ADD COLUMN publish_date TEXT")
+        if "publish_datetime" not in columns:
+            platform_db.execute("ALTER TABLE notes ADD COLUMN publish_datetime TEXT")
+        platform_db.execute("DELETE FROM notes")
+        platform_db.executemany(
+            "INSERT INTO notes (id, publish_date, publish_datetime) VALUES (?, ?, ?)",
+            [
+                (9601, "", "2026-10-15T10:00:00Z"),
+                (9602, None, "2026-10-16T10:00:00Z"),
+                (9603, "2026-10-17", "2026-11-15T10:00:00Z"),
+                (9604, "2026-11-01", "2026-10-18T10:00:00Z"),
+                (9605, None, "2026-11-01T00:00:00Z"),
+            ],
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get(
+            "/api/data-center/table/notes?start_date=2026-10-01&end_date=2026-10-31"
+        )
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert payload["total"] == 3
+        assert {row["id"] for row in payload["data"]} == {9601, 9602, 9603}
+
+    @pytest.mark.parametrize(("parameter", "invalid_date"), [
+        ("start_date", "2026-02-30"),
+        ("end_date", "2026-13-01"),
+    ])
+    def test_fix096_rejects_invalid_calendar_dates_for_text_columns(
+        self, platform_db, monkeypatch, parameter, invalid_date,
+    ):
+        """FIX-096: calendar validation applies before text-column filtering too."""
+        columns = {row["name"] for row in platform_db.execute("PRAGMA table_info(notes)")}
+        if "publish_date" not in columns:
+            platform_db.execute("ALTER TABLE notes ADD COLUMN publish_date TEXT")
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get(
+            f"/api/data-center/table/notes?{parameter}={invalid_date}"
+        )
+
+        assert response.status_code == 400
+        assert response.get_json() == {"ok": False, "error": f"invalid {parameter}"}
+
+
+    def test_fix032_rejects_filters_without_source_fields(self, platform_db, monkeypatch):
+        """FIX-032: unsupported filters fail instead of silently returning unfiltered rows."""
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        sentiment = client.get("/api/data-center/table/xhs_users?sentiment=positive")
+        assert sentiment.status_code == 400
+        assert sentiment.get_json() == {
+            "ok": False,
+            "error": "sentiment filter unavailable for table xhs_users",
+        }
+
+        date_range = client.get("/api/data-center/table/xhs_users?start_date=2026-10-01")
+        assert date_range.status_code == 400
+        assert date_range.get_json() == {
+            "ok": False,
+            "error": "publication date filter unavailable for table xhs_users",
+        }
+
+    def test_fix032_database_query_error_does_not_return_success(self, platform_db, monkeypatch):
+        """FIX-032: a database query failure remains an HTTP error."""
+        import data_center_api
+
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        class FailingNotesConnection:
+            def __init__(self, wrapped):
+                self.wrapped = wrapped
+
+            def execute(self, sql, parameters=()):
+                if sql.startswith("SELECT COUNT(*) FROM notes"):
+                    raise sqlite3.OperationalError("synthetic FIX-032 query failure")
+                return self.wrapped.execute(sql, parameters)
+
+            def close(self):
+                self.wrapped.close()
+
+        def connect_with_one_synthetic_failure():
+            conn = sqlite3.connect(path)
+            conn.row_factory = sqlite3.Row
+            return FailingNotesConnection(conn)
+
+        monkeypatch.setattr(data_center_api, "_get_db", connect_with_one_synthetic_failure)
+        response = client.get("/api/data-center/table/notes")
+        assert response.status_code == 500
+
     def test_overview_endpoint_reads_migrated_registry(self, platform_db, monkeypatch):
         path = platform_db.execute("PRAGMA database_list").fetchone()[2]
         client = _data_center_client(monkeypatch, path)
@@ -542,6 +742,125 @@ class TestDataCenterAPI:
         payload = response.get_json()
         assert payload["total_platforms"] == len(get_platform_registry_catalog())
         assert payload["ui_visible_count"] == len(get_ui_visible_platforms())
+        empty_catalog_ids = []
+        for row in platform_db.execute("SELECT platform_id, raw_tables FROM platform_registry"):
+            try:
+                raw_tables = json.loads(row["raw_tables"]) if row["raw_tables"] else []
+            except (json.JSONDecodeError, TypeError):
+                raw_tables = None
+            if not isinstance(raw_tables, list) or not raw_tables:
+                empty_catalog_ids.append(row["platform_id"])
+        assert payload["ok"] is (not empty_catalog_ids)
+        assert {entry["platform_id"] for entry in payload["errors"]} == set(empty_catalog_ids)
+        assert (payload["total_records"] is None) is bool(empty_catalog_ids)
+
+    def test_fix033_successful_count_and_real_empty_table_keep_zero(self, platform_db, monkeypatch):
+        """FIX-033: a real COUNT(*) result of zero remains a known zero."""
+        platform_db.execute(
+            "UPDATE platform_registry SET raw_tables=? WHERE platform_id='xiaohongshu'",
+            (json.dumps(["xhs_notes"]),),
+        )
+        platform_db.execute(
+            "INSERT INTO xhs_notes (note_id, title) VALUES ('fix033-note', 'counted')"
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        populated = client.get("/api/data-center/stats/overview").get_json()
+        xhs = next(item for item in populated["platforms"] if item["platform_id"] == "xiaohongshu")
+        assert populated["ok"] is False
+        assert not any(error["platform_id"] == "xiaohongshu" for error in populated["errors"])
+        assert all(error["error"] == "raw_tables_unavailable" for error in populated["errors"])
+        assert xhs["table_counts"]["xhs_notes"] == 1
+        assert xhs["total_records"] == 1
+
+        platform_db.execute("DELETE FROM xhs_notes WHERE note_id='fix033-note'")
+        platform_db.commit()
+        empty = client.get("/api/data-center/stats/overview").get_json()
+        xhs = next(item for item in empty["platforms"] if item["platform_id"] == "xiaohongshu")
+        assert empty["ok"] is False
+        assert not any(error["platform_id"] == "xiaohongshu" for error in empty["errors"])
+        assert all(error["error"] == "raw_tables_unavailable" for error in empty["errors"])
+        assert xhs["table_counts"]["xhs_notes"] == 0
+        assert xhs["total_records"] == 0
+
+    def test_fix033_query_failure_is_unavailable_and_preserves_error_field(self, platform_db, monkeypatch):
+        """FIX-033: a failed count cannot masquerade as zero or erase its error."""
+        import data_center_api
+
+        platform_db.execute(
+            "UPDATE platform_registry SET raw_tables=? WHERE platform_id='xiaohongshu'",
+            (json.dumps(["xhs_notes"]),),
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        class FailingCountConnection:
+            def __init__(self, wrapped):
+                self.wrapped = wrapped
+
+            def execute(self, sql, parameters=()):
+                if sql == "SELECT COUNT(*) FROM xhs_notes":
+                    raise sqlite3.OperationalError("synthetic FIX-033 query failure")
+                return self.wrapped.execute(sql, parameters)
+
+            def close(self):
+                self.wrapped.close()
+
+        def connect_with_one_synthetic_failure():
+            conn = sqlite3.connect(path)
+            conn.row_factory = sqlite3.Row
+            return FailingCountConnection(conn)
+
+        monkeypatch.setattr(data_center_api, "_get_db", connect_with_one_synthetic_failure)
+        overview = client.get("/api/data-center/stats/overview")
+        assert overview.status_code == 200
+        payload = overview.get_json()
+        xhs = next(item for item in payload["platforms"] if item["platform_id"] == "xiaohongshu")
+        assert payload["ok"] is False
+        assert payload["total_records"] is None
+        assert {error["platform_id"] for error in payload["errors"] if error["error"] == "raw_tables_unavailable"}
+        assert {error["platform_id"] for error in payload["errors"] if error["error"] == "query_failed"} == {"xiaohongshu"}
+        assert next(error for error in payload["errors"] if error["platform_id"] == "xiaohongshu") == {
+            "platform_id": "xiaohongshu", "table": "xhs_notes", "error": "query_failed"
+        }
+        assert xhs["table_counts"]["xhs_notes"] is None
+        assert xhs["table_errors"]["xhs_notes"] == "query_failed"
+        assert xhs["total_records"] is None
+
+        detail = client.get("/api/data-center/platform/xiaohongshu")
+        assert detail.status_code == 200
+        table_stats = detail.get_json()["platform"]["table_stats"]
+        assert table_stats == [{"table": "xhs_notes", "count": None, "error": "query_failed"}]
+
+    @pytest.mark.parametrize("raw_tables", ["[]", '["not_in_allowlist"]'])
+    def test_fix033_uncountable_raw_table_catalog_is_unavailable_not_zero(
+            self, platform_db, monkeypatch, raw_tables):
+        platform_db.execute(
+            "UPDATE platform_registry SET raw_tables=? WHERE platform_id='xiaohongshu'",
+            (raw_tables,),
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get("/api/data-center/stats/overview")
+        payload = response.get_json()
+        xhs = next(item for item in payload["platforms"] if item["platform_id"] == "xiaohongshu")
+
+        assert response.status_code == 200
+        assert payload["ok"] is False
+        assert payload["total_records"] is None
+        xhs_error = next(error for error in payload["errors"] if error["platform_id"] == "xiaohongshu")
+        assert xhs_error == {
+            "platform_id": "xiaohongshu", "table": None,
+            "error": "raw_tables_unavailable",
+        }
+        assert xhs["table_counts"] == {}
+        assert xhs["table_errors"]["_catalog"] == "raw_tables_unavailable"
+        assert xhs["total_records"] is None
 
 
 class TestEngagement:

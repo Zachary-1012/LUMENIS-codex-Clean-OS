@@ -6,8 +6,8 @@ normalization used by both API and background analysis paths.
 """
 import os
 import json
-import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from urllib.parse import quote, urlparse
 
 
@@ -86,6 +86,50 @@ def feedback_keywords(items=None):
     return found
 
 
+def _known_publication_datetime(item):
+    """Return a UTC instant only when the source provides a timezone-aware date."""
+    if not isinstance(item, dict):
+        return None
+    state = str(item.get('publication_time_state') or '').strip().upper()
+    if state and state != 'KNOWN':
+        return None
+    for value in (item.get('published_at'), item.get('source_published_at')):
+        if isinstance(value, datetime):
+            parsed = value
+        elif isinstance(value, str) and value.strip():
+            raw = value.strip()
+            try:
+                parsed = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+            except ValueError:
+                try:
+                    parsed = parsedate_to_datetime(raw)
+                except (TypeError, ValueError, OverflowError):
+                    continue
+        else:
+            continue
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            continue
+        try:
+            return parsed.astimezone(timezone.utc)
+        except (OverflowError, ValueError):
+            continue
+    return None
+
+
+def _sort_publication_chronologically(items):
+    """Sort known publication instants newest-first and keep unknowns stable-last."""
+    known = []
+    unknown = []
+    for item in items:
+        published = _known_publication_datetime(item)
+        if published is None:
+            unknown.append(item)
+        else:
+            known.append((published, item))
+    known.sort(key=lambda entry: entry[0], reverse=True)
+    return [entry[1] for entry in known] + unknown
+
+
 # 品牌业态分类
 BRAND_CATEGORIES = {
     '零售品牌': ['奢侈品', '服饰', '美妆', '珠宝', '手表', '电子', '家居', '运动'],
@@ -152,8 +196,8 @@ def discover_brand_industry(brands=None, categories=None, batch=20, offset=0):
             # 搜索失败，跳过
             pass
     
-    # 按时间排序
-    items.sort(key=lambda x: x.get('published_at', ''), reverse=True)
+    # Lexical sorting is wrong when ISO and RFC dates carry different offsets.
+    items = _sort_publication_chronologically(items)
     
     return items, total
 
@@ -166,7 +210,7 @@ def fetch_google_news_rss(query, max_results=5):
     """
     import xml.etree.ElementTree as ET
 
-    collected_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    collected_at = datetime.now(timezone.utc).isoformat(timespec='seconds')
     outcome = {
         'ok': False,
         'items': [],
@@ -175,19 +219,30 @@ def fetch_google_news_rss(query, max_results=5):
         'collected_at': collected_at,
         'error_type': '',
     }
+    source_transport = None
     try:
+        from email.utils import parsedate_to_datetime
+        from lumenis.system.collector.adapters import public_source
+        source_transport = public_source
+
         query = str(query or '').strip()
         if not query or len(query) > 120:
             outcome['error_type'] = 'INVALID_QUERY'
             return outcome
         limit = max(1, min(int(max_results), 20))
         url = f"https://news.google.com/rss/search?q={quote(query)}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans"
-        headers = {
-            'User-Agent': 'LUMENIS-Collector/1.0 (+public RSS reader)'
-        }
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code != 200:
-            outcome['error_type'] = f'HTTP_{response.status_code}'
+        response = public_source.fetch_public_url(
+            url,
+            timeout=10,
+            max_bytes=public_source.MAX_RESPONSE_BYTES,
+            allowed_host_suffixes=('google.com',),
+        )
+        outcome['http_status'] = response.status_code
+        outcome.update(public_source.public_source_provenance(response, url))
+        if response.content_type not in {
+            'application/rss+xml', 'application/xml', 'text/xml',
+        }:
+            outcome['error_type'] = 'RSS_RESPONSE_TYPE_UNSUPPORTED'
             return outcome
 
         root = ET.fromstring(response.content)
@@ -196,35 +251,45 @@ def fetch_google_news_rss(query, max_results=5):
             outcome['error_type'] = 'RSS_CHANNEL_MISSING'
             return outcome
 
-        from email.utils import parsedate_to_datetime
         items = []
         for item in channel.findall('item')[:limit]:
             pub_date = item.findtext('pubDate', '')
             published_at = ''
+            publication_time_state = 'UNKNOWN'
             if pub_date:
                 try:
-                    published_at = parsedate_to_datetime(pub_date).strftime('%Y-%m-%d %H:%M:%S')
+                    parsed_time = parsedate_to_datetime(pub_date)
+                    if parsed_time.tzinfo is not None and parsed_time.utcoffset() is not None:
+                        # Keep the queryable value in one sortable timezone;
+                        # preserve the source's literal separately below.
+                        published_at = parsed_time.astimezone(timezone.utc).isoformat()
+                        publication_time_state = 'KNOWN'
                 except Exception:
-                    published_at = pub_date
+                    pass
+            source_element = item.find('source')
             items.append({
                 'title': item.findtext('title', ''),
                 'url': item.findtext('link', ''),
-                'source': item.findtext('source', ''),
+                'source': source_element.text if source_element is not None else '',
+                'source_url': (source_element.get('url', '')
+                               if source_element is not None else ''),
                 'published_at': published_at,
+                'source_published_at': pub_date,
+                'publication_time_state': publication_time_state,
                 'query': query,
                 'platform': 'google_news',
             })
         outcome['ok'] = True
         outcome['items'] = items
         return outcome
-    except requests.RequestException as exc:
-        outcome['error_type'] = type(exc).__name__
-        return outcome
     except ET.ParseError:
         outcome['error_type'] = 'RSS_PARSE_ERROR'
         return outcome
     except Exception as exc:
-        outcome['error_type'] = type(exc).__name__
+        if source_transport is not None:
+            outcome.update(source_transport.public_source_error_metadata(exc))
+        else:
+            outcome['error_type'] = type(exc).__name__
         return outcome
 
 
