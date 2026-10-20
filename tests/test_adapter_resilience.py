@@ -101,6 +101,26 @@ class _QueryAdapter(BaseAdapter):
         return AdapterResult(success=False, error='backend unavailable')
 
 
+class _ChallengeAdapter(BaseAdapter):
+    platform_name = 'challenge-test'
+
+    def __init__(self, *, empty=False, **kwargs):
+        super().__init__(**kwargs)
+        self.empty = empty
+        self.challenge = False
+
+    def search(self, keyword, max_results=20):
+        if self.challenge:
+            return AdapterResult(
+                success=False,
+                error='NEED_HUMAN_VERIFICATION: provider returned captcha',
+            )
+        notes = [] if self.empty else [self._make_note(
+            title='Fresh result', content='fresh provider data',
+        )]
+        return AdapterResult(success=True, notes=notes)
+
+
 _CACHE_CONTEXT = AdapterCacheContext(
     actor_id='actor-1', scope='workspace-1', task_id='task-1',
     source_version='source-v1',
@@ -207,6 +227,35 @@ def test_fallback_copy_failure_fails_closed_without_exposing_cached_notes(monkey
     assert fallback.success is False
     assert fallback.notes == []
     assert 'backend unavailable' in fallback.error
+
+
+@pytest.mark.parametrize('empty', [True, False])
+def test_terminal_verification_error_never_becomes_cached_success(empty):
+    adapter = _ChallengeAdapter(empty=empty)
+    assert adapter.collect('same query', cache_context=_CACHE_CONTEXT).success
+    adapter.challenge = True
+
+    result = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+
+    assert result.success is False
+    assert result.notes == []
+    assert 'NEED_HUMAN_VERIFICATION' in result.error
+
+
+def test_terminal_verification_error_does_not_call_custom_fallback():
+    calls = []
+    adapter = _ChallengeAdapter(
+        fallback_handler=lambda _keyword, _error: calls.append(True) or [
+            adapter._make_note(title='stale custom fallback'),
+        ],
+    )
+    adapter.challenge = True
+
+    result = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+
+    assert result.success is False
+    assert result.notes == []
+    assert calls == []
 
 
 @pytest.mark.parametrize(

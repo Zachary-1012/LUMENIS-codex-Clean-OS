@@ -360,7 +360,7 @@ class BaseAdapter(ABC):
                           cache_key: Optional[Tuple[str, ...]] = None) -> AdapterResult:
         """降级处理：优先用fallback_handler，其次用最近成功结果缓存，最后返回失败"""
         duration = time.time() - start
-        if not allow_fallback:
+        if not allow_fallback or self._is_terminal_provider_state(error):
             return AdapterResult(success=False, error=error, duration_seconds=duration)
         # 1. 用户自定义降级
         if self.fallback_handler:
