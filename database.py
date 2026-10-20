@@ -272,8 +272,16 @@ def insert_note(note_data, *, connection=None):
                 })
                 note_data['data_quality_status'] = _q['data_quality_status']
                 note_data['data_quality_score'] = _q['data_quality_score']
-            except Exception:
-                pass  # 软门失败绝不影响写入（数据零丢失红线）
+                note_data['data_quality_errors'] = _q['data_quality_errors']
+            except Exception as exc:
+                diagnostic = f"_enrichment.-:{type(exc).__name__}: {exc}"
+                note_data['data_quality_errors'] = diagnostic
+                note_data['data_quality_status'] = 'error'
+                note_data['data_quality_score'] = None
+                logger.warning(
+                    "Data quality enrichment failed for note_id=%s; keeping the write soft: %s",
+                    nid, diagnostic,
+                )
         quality_status_supplied = (
             'data_quality_status' in note_data
             and note_data.get('data_quality_status') != ''
