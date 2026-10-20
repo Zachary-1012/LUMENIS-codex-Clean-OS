@@ -21,6 +21,49 @@ missing inputs. Unknown labels continue to clear their derived scores. Regressio
 the rerun above used the local cache. This is a scoped SQLite regression result,
 not production database or end-to-end product acceptance.
 
+## 2026-10-20 Issue #17 FIX-032 / FIX-033 — preserve platform catalog availability
+
+The existing `data_center_api.py` query/catalog path now distinguishes unavailable or unknown platform source state from a real empty result, preserving source availability semantics for the existing caller. `tests/test_platform_catalog_schema.py` passed **69 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No production source, database or external effect was used.
+
+The review follow-up also converts ISO date bounds to Unix seconds for numeric
+publication columns and treats empty, malformed, or wholly uncountable platform
+catalog entries as unavailable. Supported tables may still show their measured
+counts, while an incomplete catalog total remains null; a real successful count
+of zero remains zero. The offline command
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_platform_catalog_schema.py`
+passed with no daemon-thread leak. Changed-source compilation, the governance
+machine contract, the AI-native constitution and `git diff --check` passed.
+Only temporary SQLite fixtures were used; no external service or production
+database was touched.
+
+## 2026-10-20 Issue #17 FIX-029 — preserve unknown historical import values
+
+The existing `historical_data_importer.py` now preserves unknown source values rather than defaulting them to neutral/low/zero and preserves caller transaction ownership and partial-commit truth. `tests/test_historical_data.py::TestImportTruthfulPersistence` passed **5 tests**. `python -m py_compile historical_data_importer.py tests/test_historical_data.py` and `git diff --check` passed. The broader `tests/test_historical_data.py` run on this branch produced **32 passed, 3 failed** (`TestSubjectFilter.test_cth_hit`, `test_exclude_veto`, `test_subject_recorded`); exact main SHA `3f6d67785752b465b5b022847cbbe75a55e1eb47` produced **27 passed, the same 3 failures**, with matching assertions. Their shared cause is that `subject_rules.get_active_brand()` intentionally returns no selected brand in these legacy tests, so `get_brand_config()` supplies empty focus words while the tests assume Guangzhou is the default. These unrelated failures remain open; the targeted five-test result is the FIX-029 evidence. Isolated synthetic data only; no production database or import was run.
+
+Follow-up regressions now cover missing-ID results as NOT_WRITTEN, rollback of an importer-owned outer transaction, preservation of a transaction already owned by its caller, and SQLite RAISE(ROLLBACK) aborting a multi-row batch. A transaction-wide abort stops later rows; pending inserts are no longer counted as inserted, and even a malformed unprocessed value is returned as NOT_WRITTEN. The six focused cases in
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_historical_data.py -k 'log_failure_rolls_back_importer_owned_transaction or failure_preserves_a_transaction_owned_by_caller or missing_note_id_reports_not_written or batch_wide_sqlite_rollback or caller_connection_remains_uncommitted or batch_owner_commits'`
+passed. Compilation, the governance machine contract, the AI-native constitution
+and `git diff --check` passed. Tests use temporary SQLite fixtures only.
+
+The review follow-up also covers FIX-029's isolated-first-row failure: a
+per-record rollback stops the batch only when earlier pending writes were
+invalidated by a transaction-wide rollback. Parameterized nonnumeric-metric and
+SQLite `RAISE(ABORT)` cases now continue to a later valid row; the original
+`RAISE(ROLLBACK)` batch test still stops and reclassifies pending writes. The
+focused `TestImportTruthfulPersistence` class passed **10 tests**; compilation
+and `git diff --check` passed. Only temporary SQLite fixtures were used.
+
+## 2026-10-20 Issue #17 FIX-027 — Git diagnostics preserve unknown and failure
+
+`lumenis_agg_api.py` reports Git state only from successful command output, does
+not infer a clean tree from failed status reads, and sanitizes remote diagnostics
+without stripping `@` from ordinary local paths. Regressions use a temporary local
+Git repository and cover failures, URL/SCP and remote-helper credentials, opaque
+helper fail-closed behavior, sensitive query removal, remote sanitization errors,
+and `/srv/git/team@archive/repo.git`. Exact-head offline
+command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_runtime_api_diagnostics.py` — **21 passed**. `python -m py_compile lumenis_agg_api.py tests/test_runtime_api_diagnostics.py`, governance machine contract, AI-native constitution and `git diff --check` passed. Temporary local Git fixtures only; no real remote repository or production system was accessed.
+
 ## 2026-10-20 Issue #17 FIX-025 — official-name evidence and exact scope
 
 `subject_registry.py` uses the canonical Evidence bootstrap for unversioned
