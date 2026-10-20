@@ -50,13 +50,14 @@ class TestOceanEngineCollector:
         assert calls == [
             ((OceanEngineEndpoint.BALANCE.value,), {}),
             ((OceanEngineEndpoint.ADVERTISER_INFO.value,), {
-                "params": {"advertiser_ids": ["12345"]},
+                "params": {"advertiser_ids": "[12345]"},
             }),
         ]
 
     def test_get_advertiser_info_encodes_array_contract_on_real_request_path(
             self, monkeypatch):
         from urllib.parse import parse_qs, urlsplit
+        import json
         import requests
         from ad_intelligence.platforms.ocean_engine import OceanEngineCollector, OceanEngineConfig
 
@@ -87,10 +88,29 @@ class TestOceanEngineCollector:
 
         query = parse_qs(urlsplit(captured["url"]).query)
         assert result["success"] is True
-        assert query["advertiser_ids"] == ["12345"]
+        assert json.loads(query["advertiser_ids"][0]) == [12345]
         assert "advertiser_id" not in query
-        assert captured["params"] == {"advertiser_ids": ["12345"]}
+        assert captured["params"] == {"advertiser_ids": "[12345]"}
         assert captured["timeout"] == 20
+
+    def test_get_advertiser_info_rejects_non_integer_id_without_request(self, monkeypatch):
+        from ad_intelligence.platforms.ocean_engine import OceanEngineCollector, OceanEngineConfig
+
+        collector = OceanEngineCollector(OceanEngineConfig(
+            access_token="synthetic-token", advertiser_id="not-an-integer",
+        ))
+        requests = []
+        monkeypatch.setattr(
+            collector, "_api_request",
+            lambda *args, **kwargs: requests.append((args, kwargs)),
+        )
+
+        result = collector.get_advertiser_info()
+
+        assert result["success"] is False
+        assert result["status"] == "blocked"
+        assert "integer" in result["reason"]
+        assert requests == []
 
     def test_get_advertiser_info_without_credentials_stays_blocked(self):
         from ad_intelligence.platforms.ocean_engine import OceanEngineCollector

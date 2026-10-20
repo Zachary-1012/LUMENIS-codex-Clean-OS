@@ -223,9 +223,20 @@ class OceanEngineCollector:
 
     def get_advertiser_info(self) -> Dict[str, Any]:
         """获取广告主信息（只读）。"""
+        endpoint = OceanEngineEndpoint.ADVERTISER_INFO.value
+        if not self._has_api_access():
+            return self._api_request(endpoint)
+        try:
+            advertiser_id = int(self.config.advertiser_id)
+        except (TypeError, ValueError, OverflowError):
+            return _blocked_response(
+                reason="invalid advertiser_id: expected an integer",
+                required=["OCEAN_ENGINE_ADVERTISER_ID"],
+                note="广告主信息查询要求整数 advertiser_ids 数组；未发起请求",
+            )
         return self._api_request(
-            OceanEngineEndpoint.ADVERTISER_INFO.value,
-            params={"advertiser_ids": [self.config.advertiser_id]},
+            endpoint,
+            params={"advertiser_ids": json.dumps([advertiser_id], separators=(",", ":"))},
         )
 
     def parse_report_response(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
