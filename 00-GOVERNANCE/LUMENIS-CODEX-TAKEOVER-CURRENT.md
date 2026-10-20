@@ -49,7 +49,13 @@ response. The unsupported media-type comparison remains a separate 200 response.
 
 Offline combined command covering `tests/test_public_http_article_extraction.py`,
 `tests/test_public_source_adapters.py` and `tests/test_public_source_transport.py`
-— **66 passed** (13, 29 and 24 by module). Changed-source `compileall`,
+— **67 passed** (14, 29 and 24 by module). The FIX-102 article-text follow-up
+corrects `_iter_node_text_parts` in `lumenis/system/collector/adapters/public_http.py`:
+BeautifulSoup's `stripped_strings` yields plain strings without ancestor links,
+so nested page chrome was not filtered. Extraction now checks each descendant
+text node's parent chain before normalization. The new offline regression nests
+large nav/footer/header/aside/form/noscript/ARIA-navigation text inside an article
+and verifies none enters returned text, hash, length or completeness. Changed-source `compileall`,
 governance machine contract, AI-native constitution and `git diff --check`
 passed. The tests use offline fixtures; no real public source was contacted. PR review, exact-head
 remote checks and live provider/runtime/user acceptance remain separate and

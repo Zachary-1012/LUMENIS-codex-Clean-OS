@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Any, Callable
 from urllib.parse import urljoin, urlsplit
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment, NavigableString
 
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .public_source import (
@@ -62,22 +62,28 @@ def _iter_node_text_parts(node: Any, *, include_chrome: bool = False):
     """Yield normalized text pieces without copying the selected DOM subtree."""
     excluded_tags = {"script", "style", "noscript", "nav", "header", "footer", "aside", "form"}
     first = True
-    for text_node in node.stripped_strings:
+    for text_node in node.descendants:
+        if not isinstance(text_node, NavigableString) or isinstance(text_node, Comment):
+            continue
+        text = str(text_node).strip()
+        if not text:
+            continue
         if not include_chrome:
             parent = getattr(text_node, "parent", None)
+            excluded = False
             while parent is not None:
                 if (getattr(parent, "name", None) in excluded_tags
                         or str(parent.get("role") or "").lower() == "navigation"):
+                    excluded = True
                     break
                 if parent is node:
-                    parent = None
                     break
                 parent = getattr(parent, "parent", None)
-            if parent is not None:
+            if excluded:
                 continue
         if not first:
             yield " "
-        yield str(text_node)
+        yield text
         first = False
 
 

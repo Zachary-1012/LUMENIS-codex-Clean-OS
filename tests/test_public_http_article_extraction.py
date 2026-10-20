@@ -225,6 +225,52 @@ def test_nested_semantic_article_is_not_counted_twice():
     assert "#outer" in observation["selected_locators"][0]
 
 
+def test_nested_page_chrome_does_not_enter_article_text_or_attestation():
+    article = "Verified publisher article text remains the selected source. " * 20
+    chrome = {
+        "nav": "NAVIGATION LEAK " * 120,
+        "footer": "FOOTER LEAK " * 120,
+        "header": "HEADER LEAK " * 120,
+        "aside": "ASIDE LEAK " * 120,
+        "form": "FORM LEAK " * 120,
+        "noscript": "NOSCRIPT LEAK " * 120,
+        "role-nav": "ARIA NAVIGATION LEAK " * 120,
+    }
+    response = PublicResponse(
+        url="https://public.example.test/article-with-page-chrome",
+        content=(
+            '<html><head><title>Article with page chrome</title></head><body>'
+            '<article id="story"><p>' + article + '</p>'
+            '<div><nav><div><span>' + chrome["nav"] + '</span></div></nav></div>'
+            '<div><footer><div><span>' + chrome["footer"] + '</span></div></footer></div>'
+            '<div><header><div><span>' + chrome["header"] + '</span></div></header></div>'
+            '<div><aside><div><span>' + chrome["aside"] + '</span></div></aside></div>'
+            '<div><form><div><span>' + chrome["form"] + '</span></div></form></div>'
+            '<div><noscript><div><span>' + chrome["noscript"] + '</span></div></noscript></div>'
+            '<div role="navigation"><div><span>' + chrome["role-nav"] + '</span></div></div>'
+            '</article></body></html>'
+        ).encode("utf-8"),
+        content_type="text/html",
+        status_code=200,
+    )
+
+    result = PublicHttpAdapter(fetcher=lambda _: response).search(response.url)
+    item = result.items[0]
+    observation = item["raw"]["content_observation"]
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert item["content"] == article.strip()
+    assert all(marker not in item["content"] for marker in (
+        "NAVIGATION LEAK", "FOOTER LEAK", "HEADER LEAK", "ASIDE LEAK",
+        "FORM LEAK", "NOSCRIPT LEAK", "ARIA NAVIGATION LEAK",
+    ))
+    assert observation["source_text_sha256"] == hashlib.sha256(article.strip().encode("utf-8")).hexdigest()
+    assert observation["source_text_char_length"] == len(article.strip())
+    assert observation["returned_text_char_length"] == len(article.strip())
+    assert observation["truncated"] is False
+    assert observation["completeness"] == "COMPLETE_SEMANTIC_TEXT"
+
+
 def test_long_semantic_preview_records_full_hash_length_and_truncation():
     first = ("alpha " * 1800).strip()
     second = ("beta " * 1800).strip()
