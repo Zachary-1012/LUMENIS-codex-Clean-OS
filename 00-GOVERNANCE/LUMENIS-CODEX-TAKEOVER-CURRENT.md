@@ -44,6 +44,15 @@ registry and synthetic E2E command passed **42 tests**. `py_compile` and `git di
 passed on the follow-up files; no production database or external source was
 used.
 
+The batch review follow-up also preflights each domain and subject ID before
+approval or any row write, in addition to validating the full source URL and
+official-name payload. This prevents a later missing or cross-domain subject
+from leaving an earlier row written. The offline command
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_subject_registry_official_name.py tests/test_subject_registry.py`
+passed with no daemon-thread leak. `py_compile`, the governance machine
+contract, the AI-native constitution and `git diff --check` passed. Only
+temporary database fixtures were used; exact remote checks remain separate.
+
 
 ## 2026-10-18 source-adoption validation handoff
 

@@ -189,6 +189,8 @@ def import_official_names(rows: Iterable[Dict[str, Any]], *, apply: bool = False
             if (not isinstance(subject_id, str) or not subject_id
                     or subject_id != subject_id.strip()):
                 raise registry.SubjectValidationError("subject_id 无效")
+            if registry.get_subject_by_id(domain_id, subject_id) is None:
+                raise registry.SubjectValidationError("subject_id 不存在于指定 domain")
             source_url = registry._validate_official_source_url(row.get("source_url"))
             name_zh = registry._text(row.get("name_zh"), field="name_zh") if row.get("name_zh") else None
             name_en = registry._text(row.get("name_en"), field="name_en") if row.get("name_en") else None
