@@ -393,6 +393,11 @@ _daily_manual_runs = 0  # 今日手动触发次数
 _daily_auto_runs = 0  # 今日自动采集次数
 _last_run_time = None  # 上次运行时间
 _daily_run_history_state = 'UNKNOWN'  # task-start count is not inferred from note/keyword rows
+# Session owner's last completed preflight verdict. Health projections read it
+# instead of probing on every poll; any new preflight clears it first.
+_last_session_verification = None  # {"account", "state", "verified_at"}
+SESSION_VERIFICATION_TTL_SECONDS = 30 * 60
+_stats_day = None  # local calendar day the in-memory day-scoped counters belong to
 _stats_loaded = False  # 是否已加载持久化统计
 _stats_init_lock = threading.RLock()
 
@@ -440,11 +445,12 @@ def _load_stats():
 def _load_stats_unlocked():
     """从持久化文件加载统计数据（优先），失败则从数据库恢复"""
     global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time
-    global _daily_run_history_state, _stats_loaded
+    global _daily_run_history_state, _stats_loaded, _stats_day
     if _stats_loaded:
         return
     try:
         today = datetime.now().strftime('%Y-%m-%d')
+        _stats_day = today
         if os.path.exists(STATS_FILE):
             with open(STATS_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -610,12 +616,34 @@ def verify_account():
         return False, "REGISTERED_IDENTITY_MISMATCH"
     return True, "REGISTERED_IDENTITY_VERIFIED"
 
+def _roll_over_day_counters():
+    """Reset every day-scoped counter when the in-memory local day changes.
+
+    A process alive across midnight must not carry yesterday's manual/auto
+    counts (or a legacy UNKNOWN classification derived from them) into today.
+    """
+    global _daily_runs, _daily_manual_runs, _daily_auto_runs, _stats_day
+    global _daily_run_history_state
+    today = datetime.now().strftime('%Y-%m-%d')
+    if _stats_day is None:
+        _stats_day = today
+        return
+    if _stats_day != today:
+        _daily_runs = [t for t in _daily_runs if datetime.fromtimestamp(t).strftime('%Y-%m-%d') == today]
+        _daily_manual_runs = 0
+        _daily_auto_runs = 0
+        if not _daily_runs:
+            _daily_run_history_state = 'UNKNOWN'
+        _stats_day = today
+
+
 def check_rate_limit(run_type='manual'):
     """检查频率限制，返回(是否允许, 提示信息)
     run_type: 'manual'（一键实时更新）或 'auto'（定时自动采集）
     """
     global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time
     _load_stats()
+    _roll_over_day_counters()
     now = time.time()
     today = datetime.now().strftime('%Y-%m-%d')
     # 清理非今日的记录
@@ -642,6 +670,7 @@ def record_run(run_type='manual'):
     global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time
     global _daily_run_history_state
     _load_stats()
+    _roll_over_day_counters()
     has_unverified_prior_counts = (
         _daily_run_history_state != 'OBSERVED_TASK_STARTS'
         and (bool(_daily_runs) or _daily_manual_runs or _daily_auto_runs)
@@ -657,6 +686,16 @@ def record_run(run_type='manual'):
         _daily_auto_runs += 1
     # 持久化保存
     _save_stats()
+
+def _current_session_state(account):
+    """Project the persisted preflight verdict; never probe from a status read."""
+    record = _last_session_verification
+    if (isinstance(record, dict) and record.get("account") == account
+            and isinstance(record.get("verified_at"), (int, float))
+            and 0 <= time.time() - record["verified_at"] <= SESSION_VERIFICATION_TTL_SECONDS):
+        return record.get("state") or "NOT_VERIFIED"
+    return "NOT_VERIFIED"
+
 
 def get_account_status(account=None):
     """Return safe status for the currently policy-approved XHS session.
@@ -733,7 +772,7 @@ def get_account_status(account=None):
         "diagnostic_ready": None,
         "can_use": None,
         "collection_enabled": bool(policy_ok and binding_valid),
-        "session_state": "NOT_VERIFIED",
+        "session_state": _current_session_state(visible_account),
         "cdp_online": worker_available,
     } if visible_account else None)
     safe_policy = {
@@ -802,6 +841,8 @@ def runtime_preflight_check(account: str | None = None,
         SessionState,
         XhsRuntimeState,
     )
+    global _last_session_verification
+    _last_session_verification = None
 
     state = XhsRuntimeState()
     checks: list = []
@@ -941,6 +982,12 @@ def runtime_preflight_check(account: str | None = None,
                 "collection_policy": safe_policy, "evidence": "DAILY_COLLECTION_LIMIT_REACHED"}
     _add("A7_RATE", "Collection pacing", "P0", "pass", "Collection pacing limits permit a new attempt.")
     state.session = SessionState.REAL_SESSION_VALID if cdp_online else SessionState.COOKIE_PRESENT
+    if state.session == SessionState.REAL_SESSION_VALID:
+        _last_session_verification = {
+            "account": public_account,
+            "state": SessionState.REAL_SESSION_VALID.value,
+            "verified_at": time.time(),
+        }
     return {"ok": True, "overall_state": "ready", "checks": checks,
             "account_status": acc_status, "circuit": circ, "active_account": public_account,
             "allowed_accounts": [public_account], "collection_policy": safe_policy,

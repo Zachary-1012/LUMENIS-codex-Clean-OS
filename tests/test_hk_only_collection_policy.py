@@ -1052,3 +1052,38 @@ def test_cdp_verification_result_is_not_misclassified_as_empty(monkeypatch):
     )
     assert result['status'] == 'CAPTCHA'
     assert seen[0][2] == 'CAPTCHA'
+
+
+def test_session_state_projects_persisted_preflight_verdict(monkeypatch):
+    import time as _time
+    import xhs_cookie_bridge as bridge
+    monkeypatch.setattr(bridge, '_last_session_verification', None)
+    assert bridge._current_session_state('acct') == 'NOT_VERIFIED'
+    monkeypatch.setattr(bridge, '_last_session_verification', {
+        'account': 'acct', 'state': 'real_session_valid', 'verified_at': _time.time(),
+    })
+    assert bridge._current_session_state('acct') == 'real_session_valid'
+    assert bridge._current_session_state('other') == 'NOT_VERIFIED'
+    monkeypatch.setattr(bridge, '_last_session_verification', {
+        'account': 'acct', 'state': 'real_session_valid',
+        'verified_at': _time.time() - bridge.SESSION_VERIFICATION_TTL_SECONDS - 5,
+    })
+    assert bridge._current_session_state('acct') == 'NOT_VERIFIED'
+
+
+def test_day_rollover_resets_manual_and_auto_counters(monkeypatch):
+    import xhs_cookie_bridge as bridge
+    monkeypatch.setattr(bridge, '_stats_day', '2000-01-01')
+    monkeypatch.setattr(bridge, '_daily_runs', [946684800.0])
+    monkeypatch.setattr(bridge, '_daily_manual_runs', 3)
+    monkeypatch.setattr(bridge, '_daily_auto_runs', 5)
+    monkeypatch.setattr(bridge, '_daily_run_history_state', 'UNKNOWN')
+    bridge._roll_over_day_counters()
+    assert bridge._daily_runs == []
+    assert bridge._daily_manual_runs == 0
+    assert bridge._daily_auto_runs == 0
+    has_unverified = (
+        bridge._daily_run_history_state != 'OBSERVED_TASK_STARTS'
+        and (bool(bridge._daily_runs) or bridge._daily_manual_runs or bridge._daily_auto_runs)
+    )
+    assert not has_unverified
