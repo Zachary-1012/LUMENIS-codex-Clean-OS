@@ -40,7 +40,8 @@ def test_explicit_health_checks_current_user_each_time():
     c.get_json=good
     r=GitHubAdapter(connector=c).health_check()
     assert r.status==CollectionStatus.SUCCESS and r.metadata['state']=='CONNECTED'
-    assert r.metadata['authorization_verification']=='VERIFIED'
+    assert r.metadata['authorization_verification']=='CURRENT_USER_VERIFIED'
+    assert r.metadata['repository_access_verification']=='NOT_VERIFIED'
     assert calls==['/user']
     def revoked(path):raise GitHubConnectorError('AUTHENTICATION_OR_PERMISSION_FAILED','Authorization failed')
     c.get_json=revoked
