@@ -209,7 +209,8 @@ def insert_note(note_data, *, connection=None):
                         _nullable_analysis_score(note_data.get("risk_score"), integer=True)
                         if risk_level != "unknown" else None
                     )
-                elif new_record or risk_level == "unknown":
+                elif (new_record or risk_level == "unknown"
+                      or risk_level != str(existing["risk_level"] or "unknown").strip().lower()):
                     updates["risk_score"] = None
             elif "risk_score" in note_data:
                 current_risk = str(existing["risk_level"] or "unknown").strip().lower()
@@ -234,9 +235,14 @@ def insert_note(note_data, *, connection=None):
             'data_quality_status' not in note_data
             or note_data.get('data_quality_status') == ''
         )
+        quality_score_is_placeholder_zero = (
+            note_data.get('data_quality_status') == ''
+            and 'data_quality_score' in note_data
+            and _nullable_analysis_score(note_data.get('data_quality_score')) == 0.0
+        )
         should_enrich_quality = (
             quality_status_missing
-            and 'data_quality_score' not in note_data
+            and ('data_quality_score' not in note_data or quality_score_is_placeholder_zero)
             and (not existing or bool(quality_input_fields.intersection(note_data)))
         )
         if should_enrich_quality:
@@ -271,6 +277,13 @@ def insert_note(note_data, *, connection=None):
         quality_status_supplied = (
             'data_quality_status' in note_data
             and note_data.get('data_quality_status') != ''
+        )
+        quality_score_supplied = (
+            'data_quality_score' in note_data
+            and not (
+                note_data.get('data_quality_status') == ''
+                and _nullable_analysis_score(note_data.get('data_quality_score')) == 0.0
+            )
         )
         # 标题兜底：新增或显式提供标题时，如缺失则用正文首句或作者昵称补齐。
         if (not existing or 'title' in note_data) and not (vals['title'] or '').strip():
@@ -372,7 +385,7 @@ def insert_note(note_data, *, connection=None):
                 note_data.get('comments_fetched_at','') or '', note_data.get('comments_fetched_at','') or '',
                 _should_write_metric('comments_collected'), vals['comments_collected'],
                 quality_status_supplied, note_data.get('data_quality_status'),
-                'data_quality_score' in note_data, _nullable_analysis_score(note_data.get('data_quality_score')),
+                quality_score_supplied, _nullable_analysis_score(note_data.get('data_quality_score')),
                 note_data.get('collector_version','') or '', note_data.get('collector_version','') or '', now, nid))
             conn.execute("UPDATE notes SET body=CASE WHEN ?<>'' THEN ? ELSE body END, source_keyword=CASE WHEN ?<>'' THEN ? ELSE source_keyword END, matched_keywords=CASE WHEN ?<>'' THEN ? ELSE matched_keywords END WHERE note_id=?", (vals['body'], vals['body'], vals['source_keyword'], vals['source_keyword'], vals['matched_keywords'], vals['matched_keywords'], nid))
             if _stype:
@@ -402,7 +415,8 @@ def insert_note(note_data, *, connection=None):
             vals['author_avatar'], vals['likes'], vals['comments'], vals['collects'], vals['shares'], vals['note_type'],
             vals['xsec_token'], vals['publish_date'], pub_dt, coll_at or now, coll_at or now,
             note_data.get('detail_fetched_at','') or '', note_data.get('comments_fetched_at','') or '', vals['comments_collected'],
-            note_data.get('data_quality_status','unknown') or 'unknown', _nullable_analysis_score(note_data.get('data_quality_score')),
+            note_data.get('data_quality_status','unknown') or 'unknown',
+            _nullable_analysis_score(note_data.get('data_quality_score')) if quality_score_supplied else None,
             note_data.get('collector_version','') or '', now, 1 if vals['author_nickname']=='广州太古汇' else 0, vals['is_taikoo_verified'], vals['verify_reason']))
         _write_analysis_values(new_record=True)
         conn.execute('UPDATE notes SET body=?, source_keyword=?, matched_keywords=? WHERE note_id=?', (vals['body'], vals['source_keyword'], vals['matched_keywords'], nid))

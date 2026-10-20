@@ -145,8 +145,8 @@ def test_fix_024_explicit_null_clears_only_present_nullable_fields(tmp_path):
         connection.close()
 
 
-def test_fix_024_label_only_analysis_upsert_preserves_omitted_scores(tmp_path):
-    """FIX-024: updating an analysis label leaves an omitted score untouched."""
+def test_fix_024_same_label_analysis_upsert_preserves_omitted_scores(tmp_path):
+    """FIX-024: an unchanged label keeps its previously paired score."""
     path = _new_notes_db(tmp_path)
     connection = _connect(path)
     try:
@@ -164,8 +164,8 @@ def test_fix_024_label_only_analysis_upsert_preserves_omitted_scores(tmp_path):
         note_database.insert_note(
             {
                 "note_id": "fix-024-label-only-analysis",
-                "sentiment": "negative",
-                "risk_level": "high",
+                "sentiment": "positive",
+                "risk_level": "low",
             },
             connection=connection,
         )
@@ -175,7 +175,29 @@ def test_fix_024_label_only_analysis_upsert_preserves_omitted_scores(tmp_path):
             "FROM notes WHERE note_id=?",
             ("fix-024-label-only-analysis",),
         ).fetchone()
-        assert tuple(row) == ("negative", 0.65, "high", 18)
+        assert tuple(row) == ("positive", 0.65, "low", 18)
+    finally:
+        connection.close()
+
+
+def test_fix_024_changed_risk_label_clears_omitted_stale_score(tmp_path):
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note(
+            {"note_id": "fix-024-risk-label", "risk_level": "low", "risk_score": 18},
+            connection=connection,
+        )
+        note_database.insert_note(
+            {"note_id": "fix-024-risk-label", "risk_level": "high"},
+            connection=connection,
+        )
+
+        row = connection.execute(
+            "SELECT risk_level, risk_score FROM notes WHERE note_id=?",
+            ("fix-024-risk-label",),
+        ).fetchone()
+        assert tuple(row) == ("high", None)
     finally:
         connection.close()
 
@@ -263,7 +285,12 @@ def test_fix_024_blank_quality_status_does_not_replace_saved_state(tmp_path):
             connection=connection,
         )
         note_database.insert_note(
-            {"note_id": "fix-024-blank-quality", "data_quality_status": ""},
+            {
+                "note_id": "fix-024-blank-quality",
+                "data_quality_status": "",
+                # Existing collectors synthesize this zero when source score is absent.
+                "data_quality_score": 0,
+            },
             connection=connection,
         )
 

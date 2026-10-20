@@ -8,12 +8,14 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 `database.py::insert_note` now preserves stored note/source/analysis values when
 a partial update omits them, distinguishes an explicit `null` from absence, and
-keeps valid sentiment/risk scores on label-only updates. Negative metric sentinels
-preserve prior measurements; incomplete observations do not replace known counts,
-and partial payloads do not recompute classifications from missing inputs. Unknown
-labels continue to clear their derived scores. Regressions are in
+keeps scores paired with unchanged sentiment/risk labels, and clears an omitted
+risk score when its label changes. Blank quality status with a synthesized zero
+score remains absent, while explicit null still clears nullable state. Negative
+metric sentinels preserve prior measurements; incomplete observations do not
+replace known counts, and partial payloads do not recompute classifications from
+missing inputs. Unknown labels continue to clear their derived scores. Regressions are in
 `tests/test_database_insert_note_transaction.py`. Exact-head offline command:
-`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_database_insert_note_transaction.py` — **18 passed**.
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_database_insert_note_transaction.py` — **19 passed**.
 `python -m py_compile database.py tests/test_database_insert_note_transaction.py` and
 `git diff --check` passed. The first isolated run lacked cached `beautifulsoup4`;
 the rerun above used the local cache. This is a scoped SQLite regression result,
