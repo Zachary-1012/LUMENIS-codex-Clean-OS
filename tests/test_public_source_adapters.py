@@ -242,7 +242,7 @@ def test_google_news_rss_uses_bounded_public_transport_and_keeps_timezone(monkey
     assert requested_url.startswith("https://news.google.com/rss/search?")
     assert options["max_bytes"] == public_source.MAX_RESPONSE_BYTES
     assert options["allowed_host_suffixes"] == ("google.com",)
-    assert outcome["items"][0]["published_at"] == "2026-09-17T04:00:00-07:00"
+    assert outcome["items"][0]["published_at"] == "2026-09-17T11:00:00+00:00"
     assert outcome["items"][0]["source_published_at"] == "Thu, 17 Sep 2026 04:00:00 -0700"
     assert outcome["items"][0]["publication_time_state"] == "KNOWN"
     assert outcome["items"][0]["source_url"] == "https://publisher.example.test/"

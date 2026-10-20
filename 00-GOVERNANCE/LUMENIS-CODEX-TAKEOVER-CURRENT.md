@@ -30,9 +30,11 @@ limits the document to the existing 2 MiB bound.
 The existing `web_discovery.fetch_google_news_rss` path uses
 `public_source.fetch_public_url` with the existing maximum response size and
 `google.com` host boundary instead of a separate direct HTTP call. Offset-aware
-RSS dates preserve their declared offset; naive or unparseable values remain
-unknown with the source value retained. Stable source URL, original publication
-date and time state pass through `WebRSSAdapter`, alongside the existing
+RSS dates are normalized to UTC in `published_at` for chronological sorting;
+`source_published_at` preserves the source literal and offset. Naive or
+unparseable values remain unknown with the source value retained. Stable
+source URL, original publication date and time state pass through
+`WebRSSAdapter`, alongside the existing
 sanitized request/final URL and access/license provenance. HTTP failure,
 unsupported media type, an empty successful feed and a safe-transport failure
 remain separate states.
@@ -77,6 +79,13 @@ An initial 80-article fixture did not exceed the total cap; that test setup
 failure was retained and the synthetic case was expanded to 200 articles. The
 focused regression then passed, verifying preserved source content and both
 locator limits.
+The RSS result now stores timezone-aware `published_at` in UTC while keeping
+the original literal and offset in `source_published_at`. The combined offline
+public-source extraction/adapter/transport suite passed after this correction;
+changed-file `py_compile`, governance machine contract, AI-native constitution
+and `git diff --check` passed. Shared Database's persisted mixed-format
+`get_web_mentions` ordering remains OPEN because its original Owner and shared
+write reservation are not available in this worktree.
 
 ## 2026-10-18 source-adoption validation handoff
 

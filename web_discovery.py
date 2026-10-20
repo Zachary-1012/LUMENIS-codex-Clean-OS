@@ -258,7 +258,9 @@ def fetch_google_news_rss(query, max_results=5):
                 try:
                     parsed_time = parsedate_to_datetime(pub_date)
                     if parsed_time.tzinfo is not None and parsed_time.utcoffset() is not None:
-                        published_at = parsed_time.isoformat()
+                        # Keep the queryable value in one sortable timezone;
+                        # preserve the source's literal separately below.
+                        published_at = parsed_time.astimezone(timezone.utc).isoformat()
                         publication_time_state = 'KNOWN'
                 except Exception:
                     pass
