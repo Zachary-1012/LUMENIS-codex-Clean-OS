@@ -4,6 +4,22 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-024 — partial note and analysis upsert truth
+
+`database.py::insert_note` now preserves stored note/source/analysis values when
+a partial update omits them, distinguishes an explicit `null` from absence, and
+keeps scores paired with unchanged sentiment/risk labels, and clears an omitted
+risk score when its label changes. Blank quality status with a synthesized zero
+score remains absent, while explicit null still clears nullable state. Negative
+metric sentinels preserve prior measurements; incomplete observations do not
+replace known counts, and partial payloads do not recompute classifications from
+missing inputs. Unknown labels continue to clear their derived scores. Regressions are in
+`tests/test_database_insert_note_transaction.py`. Exact-head offline command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_database_insert_note_transaction.py` — **19 passed** at the initial head (historical). After the review fixes (main merged, plus classification/sentiment/quality-score regressions), `python -m pytest tests/test_database_insert_note_transaction.py` — **22 passed** (2026-10-20 rerun). Second review follow-up: a score-only quality patch on an existing note now leaves the stored status/score pair unchanged (no `error`/`100` pairs), and the classifier receives the same `is_official` value the row stores; the same module now passes **24 tests**.
+`python -m py_compile database.py tests/test_database_insert_note_transaction.py` and
+`git diff --check` passed. The first isolated run lacked cached `beautifulsoup4`;
+the rerun above used the local cache. This is a scoped SQLite regression result,
+not production database or end-to-end product acceptance.
 ## 2026-10-20 Issue #17 FIX-048 — use the existing Ocean Engine request signature
 
 The existing `ad_intelligence/platforms/ocean_engine.py` read-only balance and advertiser-info methods now call `_api_request` using its declared endpoint-first signature, preserving the existing missing-credentials blocked result. Advertiser info validates the configured ID as an integer and serializes it as the provider's JSON `advertiser_ids` query array (for example, `[12345]`), without injecting the unrelated singular parameter. `tests/test_ad_platform_collectors.py` passed **18 tests**, including a real Requests URL-preparation path with a fake transport and synthetic credentials plus rejection of a non-integer ID before request dispatch. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No live API or account was used; provider acceptance remains unverified.
