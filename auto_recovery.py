@@ -252,7 +252,8 @@ class AutoRecoveryEngine:
             return False
 
     def check_database(self):
-        """检查数据库连接"""
+        """检查数据库连接及恢复健康所依赖的 notes 表。"""
+        conn = None
         try:
             db_path = main_db_path()
             if not os.path.exists(db_path):
@@ -262,10 +263,12 @@ class AutoRecoveryEngine:
             c = conn.cursor()
             c.execute("SELECT COUNT(*) FROM notes")
             count = c.fetchone()[0]
-            conn.close()
             return True, f'数据库正常，笔记数: {count}'
         except Exception as e:
             return False, f'数据库连接失败: {str(e)}'
+        finally:
+            if conn is not None:
+                conn.close()
 
     def check_cdp(self):
         """Check the exact registered BACKGROUND worker, not a listening port alone."""
@@ -331,24 +334,19 @@ class AutoRecoveryEngine:
             return False, f'进程重启失败: {str(e)}'
 
     def fix_database_connection(self, module='database'):
-        """修复数据库连接断开 - 重连并验证"""
+        """重连数据库，并按 health check 相同的 notes 表不变量验证。"""
         self.log('info', '检测到数据库连接断开，尝试重连...', module=module)
 
         for attempt in range(self.max_retries):
             try:
-                db_path = main_db_path()
-                conn = DatabaseRepository(db_path).connect(timeout=10)
-                c = conn.cursor()
-                c.execute("SELECT 1")
-                result = c.fetchone()
-                conn.close()
-
-                if result and result[0] == 1:
+                healthy, detail = self.check_database()
+                if healthy:
                     self.log('info', f'数据库重连成功（第{attempt+1}次尝试）', module=module)
                     return True, '数据库重连成功'
+                self.log('warning', f'数据库重连第{attempt+1}次失败: {detail}', module=module)
             except Exception as e:
                 self.log('warning', f'数据库重连第{attempt+1}次失败: {e}', module=module)
-                time.sleep(2 ** attempt)  # 指数退避
+            time.sleep(2 ** attempt)  # 指数退避
 
         return False, f'数据库重连失败，已重试{self.max_retries}次'
 
