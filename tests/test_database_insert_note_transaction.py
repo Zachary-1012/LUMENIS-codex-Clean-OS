@@ -676,3 +676,61 @@ def test_insert_note_holds_write_lock_until_caller_ends_transaction(tmp_path):
     finally:
         first.close()
         second.close()
+
+
+def _row(connection, note_id, cols):
+    return dict(connection.execute(f"SELECT {cols} FROM notes WHERE note_id=?", (note_id,)).fetchone())
+
+
+def test_sentiment_label_change_without_score_clears_old_score(tmp_path):
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note({"note_id": "s1", "title": "t", "content": "c"}, connection=connection)
+        connection.execute("UPDATE notes SET sentiment='positive', sentiment_score=0.8 WHERE note_id='s1'")
+        note_database.insert_note({"note_id": "s1", "sentiment": "negative"}, connection=connection)
+        row = _row(connection, "s1", "sentiment, sentiment_score")
+        assert row == {"sentiment": "negative", "sentiment_score": None}
+        connection.execute("UPDATE notes SET sentiment_score=-0.6 WHERE note_id='s1'")
+        note_database.insert_note({"note_id": "s1", "sentiment": "negative"}, connection=connection)
+        assert _row(connection, "s1", "sentiment_score")["sentiment_score"] == -0.6
+    finally:
+        connection.close()
+
+
+def test_quality_status_change_without_score_clears_stale_score(tmp_path):
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note(
+            {"note_id": "q1", "title": "t", "content": "c",
+             "data_quality_status": "reviewed", "data_quality_score": 0.87},
+            connection=connection,
+        )
+        note_database.insert_note({"note_id": "q1", "data_quality_status": "error"}, connection=connection)
+        row = _row(connection, "q1", "data_quality_status, data_quality_score")
+        assert row == {"data_quality_status": "error", "data_quality_score": None}
+    finally:
+        connection.close()
+
+
+def test_update_fills_missing_classification_without_author_trio(tmp_path, monkeypatch):
+    import subject_classifier
+    monkeypatch.setattr(subject_classifier, "enrich_note_types", lambda *a, **k: ("media", "review"))
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note({"note_id": "c1", "title": "t", "content": "c"}, connection=connection)
+        connection.execute("UPDATE notes SET subject_type='', content_type='' WHERE note_id='c1'")
+        note_database.insert_note(
+            {"note_id": "c1", "title": "new title", "author_nickname": "a"}, connection=connection,
+        )
+        assert _row(connection, "c1", "subject_type, content_type") == {
+            "subject_type": "media", "content_type": "review",
+        }
+        # A populated classification is not overwritten by an incomplete payload.
+        monkeypatch.setattr(subject_classifier, "enrich_note_types", lambda *a, **k: ("brand", "ad"))
+        note_database.insert_note({"note_id": "c1", "title": "again"}, connection=connection)
+        assert _row(connection, "c1", "subject_type")["subject_type"] == "media"
+    finally:
+        connection.close()

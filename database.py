@@ -192,7 +192,10 @@ def insert_note(note_data, *, connection=None):
                         _nullable_analysis_score(note_data.get("sentiment_score"))
                         if sentiment != "unknown" else None
                     )
-                elif new_record or sentiment == "unknown":
+                elif (new_record or sentiment == "unknown"
+                      or sentiment != str(existing["sentiment"] or "unknown").strip().lower()):
+                    # An omitted score survives only when the label is
+                    # unchanged; a new label would contradict the old sign.
                     updates["sentiment_score"] = None
             elif "sentiment_score" in note_data:
                 current_sentiment = str(existing["sentiment"] or "unknown").strip().lower()
@@ -293,6 +296,13 @@ def insert_note(note_data, *, connection=None):
                 and _nullable_analysis_score(note_data.get('data_quality_score')) == 0.0
             )
         )
+        quality_score_value = _nullable_analysis_score(note_data.get('data_quality_score'))
+        if (existing and quality_status_supplied and not quality_score_supplied
+                and note_data.get('data_quality_status') != existing['data_quality_status']):
+            # A status change without its paired score must not keep the old
+            # score (reviewed/0.87 -> error/0.87); clear it instead.
+            quality_score_supplied = True
+            quality_score_value = None
         # 标题兜底：新增或显式提供标题时，如缺失则用正文首句或作者昵称补齐。
         if (not existing or 'title' in note_data) and not (vals['title'] or '').strip():
             _t = ''
@@ -314,8 +324,16 @@ def insert_note(note_data, *, connection=None):
             all(field in note_data for field in ('author_desc', 'followers', 'verified_type'))
             and note_data.get('followers') is not None
         )
+        existing_keys = set(existing.keys()) if existing else set()
+        stored_classification_missing = bool(existing) and any(
+            key in existing_keys and not str(existing[key] or '').strip()
+            for key in ('subject_type', 'content_type')
+        )
+        # Missing stored classifications may be filled from ordinary collector
+        # payloads (which never send the author_desc/followers/verified_type
+        # trio); populated ones still need complete classifier context.
         should_reclassify = not existing or (
-            classifier_context_complete
+            (classifier_context_complete or stored_classification_missing)
             and bool(classification_input_fields.intersection(note_data))
         )
         try:
@@ -393,7 +411,7 @@ def insert_note(note_data, *, connection=None):
                 note_data.get('comments_fetched_at','') or '', note_data.get('comments_fetched_at','') or '',
                 _should_write_metric('comments_collected'), vals['comments_collected'],
                 quality_status_supplied, note_data.get('data_quality_status'),
-                quality_score_supplied, _nullable_analysis_score(note_data.get('data_quality_score')),
+                quality_score_supplied, quality_score_value,
                 note_data.get('collector_version','') or '', note_data.get('collector_version','') or '', now, nid))
             conn.execute("UPDATE notes SET body=CASE WHEN ?<>'' THEN ? ELSE body END, source_keyword=CASE WHEN ?<>'' THEN ? ELSE source_keyword END, matched_keywords=CASE WHEN ?<>'' THEN ? ELSE matched_keywords END WHERE note_id=?", (vals['body'], vals['body'], vals['source_keyword'], vals['source_keyword'], vals['matched_keywords'], vals['matched_keywords'], nid))
             if _stype:
