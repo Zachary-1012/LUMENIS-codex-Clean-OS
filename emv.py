@@ -191,6 +191,19 @@ def aggregate_emv(notes: list[dict], cpm: float | None = None,
         r = calculate_emv(n.get("likes"), n.get("comments"),
                           n.get("collects"), n.get("shares"),
                           cpm=cpm, exposure_ratio=exposure_ratio)
+        if (r["status"] == "OK" and r.get("weighted_interaction") == 0
+                and n.get("metrics_observed") is not True
+                and not str(n.get("detail_fetched_at") or "").strip()):
+            # Schema DEFAULT 0 and persisters that materialize absent metrics
+            # as 0 make an all-zero row indistinguishable from "never
+            # collected". Publish a zero amount only with observation
+            # provenance; otherwise the amount is unavailable.
+            r = _unavailable_emv(
+                "NOT_AVAILABLE", "互动全为 0 且缺少采集观测来源，EMV 金额不可用",
+                cpm=r.get("cpm"), cpm_source=r.get("cpm_source", ""),
+                exposure_ratio=r.get("exposure_ratio"),
+                missing_inputs=["metric_observation_provenance"],
+            )
         items.append({
             "note_id": n.get("note_id", ""),
             "author": n.get("author_nickname", ""),

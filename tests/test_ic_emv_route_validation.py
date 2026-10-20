@@ -124,3 +124,53 @@ def test_emv_route_rejects_nonfinite_total_from_calculation(monkeypatch):
         "error": "EMV total must be finite",
         "emv_total_yuan": None,
     }
+
+
+def test_all_zero_note_without_observation_provenance_is_not_a_zero_amount():
+    import emv
+
+    unobserved = emv.aggregate_emv([{"note_id": "a", "likes": 0, "comments": 0, "collects": 0, "shares": 0}])
+    assert unobserved["status"] == "NOT_AVAILABLE"
+    assert unobserved["emv_total_yuan"] is None
+    assert unobserved["complete_coverage"] == 0.0
+
+    observed = emv.aggregate_emv([{
+        "note_id": "b", "likes": 0, "comments": 0, "collects": 0, "shares": 0,
+        "metrics_observed": True,
+    }])
+    assert observed["status"] == "OK"
+    assert observed["emv_total_yuan"] == 0.0
+
+    detail = emv.aggregate_emv([{
+        "note_id": "c", "likes": 0, "comments": 0, "collects": 0, "shares": 0,
+        "detail_fetched_at": "2026-10-20 10:00:00",
+    }])
+    assert detail["status"] == "OK"
+
+
+def test_emv_route_reads_observation_provenance_from_real_schema(monkeypatch, tmp_path):
+    import sqlite3
+    from contextlib import contextmanager
+    import database
+    from lumenis.shared.database.business_schema import apply_business_schema
+
+    path = tmp_path / "emv.db"
+    conn = sqlite3.connect(path)
+    apply_business_schema(conn)
+    conn.execute("INSERT INTO notes (note_id, likes, comments, collects, shares) VALUES ('z', 0, 0, 0, 0)")
+    conn.commit()
+    conn.close()
+
+    @contextmanager
+    def fixture_db():
+        c = sqlite3.connect(path)
+        c.row_factory = sqlite3.Row
+        try:
+            yield c
+        finally:
+            c.close()
+
+    monkeypatch.setattr(database, "get_db", fixture_db)
+    body = _client().get("/api/ic/emv").get_json()
+    assert body["status"] == "NOT_AVAILABLE"
+    assert body["emv_total_yuan"] is None

@@ -136,14 +136,20 @@ def ic_emv():
         with db.get_db() as conn:
             if start and end:
                 rows = conn.execute(
-                    "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment "
+                    "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment, "
+                    "(COALESCE(TRIM(detail_fetched_at), '') <> '' OR EXISTS (SELECT 1 FROM metric_snapshots ms "
+                    "WHERE ms.entity_type='note' AND ms.entity_key=notes.note_id)) AS metrics_observed "
                     "FROM notes WHERE publish_date BETWEEN ? AND ? ORDER BY captured_at DESC LIMIT ?",
                     (start, end, limit)).fetchall()
             else:
                 rows = conn.execute(
-                    "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment "
+                    "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment, "
+                    "(COALESCE(TRIM(detail_fetched_at), '') <> '' OR EXISTS (SELECT 1 FROM metric_snapshots ms "
+                    "WHERE ms.entity_type='note' AND ms.entity_key=notes.note_id)) AS metrics_observed "
                     "FROM notes ORDER BY captured_at DESC LIMIT ?", (limit,)).fetchall()
             notes = [dict(r) for r in rows]
+            for note in notes:
+                note["metrics_observed"] = bool(note.get("metrics_observed"))
         r = _emv.aggregate_emv(notes, cpm=cpm)
         if r.get("status") == "INVALID_INPUT":
             return jsonify({"ok": False, **r}), 422
