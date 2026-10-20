@@ -61,6 +61,16 @@ passed. The tests use offline fixtures; no real public source was contacted. PR 
 remote checks and live provider/runtime/user acceptance remain separate and
 unverified. Other Issue #17 items remain open.
 
+FIX-094 fallback follow-up: `test_document_fallback_keeps_visible_layout_text_but_excludes_executable_markup`
+confirms the existing document-body fallback retains visible header/page copy
+while excluding script and style payloads. Re-ran the same offline combined
+pytest command above; all three modules passed with no background-thread leak.
+The added fixture is synthetic; no public source was contacted. Exact-head
+remote checks and product acceptance remain unverified.
+The accompanying source correction also rejects a script, style, noscript or
+template node when that node itself is passed as the extraction root, including
+the chrome-inclusive layout-text path; the focused regression covers all four.
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

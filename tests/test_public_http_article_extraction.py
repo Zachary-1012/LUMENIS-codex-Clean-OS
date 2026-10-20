@@ -296,6 +296,45 @@ def test_script_style_and_template_only_body_stays_empty_in_document_fallback():
     assert result.metadata["error_type"] == "EMPTY_CONTENT"
 
 
+def test_document_fallback_keeps_visible_layout_text_but_excludes_executable_markup():
+    response = PublicResponse(
+        url="https://public.example.test/layout-fallback",
+        content=(
+            "<html><head><title>Fallback source</title></head><body>"
+            "<header>Visible publisher heading</header>"
+            "<p>Visible page copy</p>"
+            "<script>SECRET_JS_PAYLOAD</script><style>STYLE_PAYLOAD</style>"
+            "</body></html>"
+        ).encode("utf-8"),
+        content_type="text/html",
+        status_code=200,
+    )
+
+    result = PublicHttpAdapter(fetcher=lambda _: response).search(response.url)
+    item = result.items[0]
+    observation = item["raw"]["content_observation"]
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert observation["selection"] == "document_body"
+    assert "Visible publisher heading" in item["content"]
+    assert "Visible page copy" in item["content"]
+    assert "SECRET_JS_PAYLOAD" not in item["content"]
+    assert "STYLE_PAYLOAD" not in item["content"]
+
+
+def test_never_content_roots_are_excluded_even_when_chrome_is_included():
+    from lumenis.system.collector.adapters import public_http
+
+    soup = public_http.BeautifulSoup(
+        "<script>SECRET_JS_PAYLOAD</script><style>STYLE_PAYLOAD</style>"
+        "<noscript>NOSCRIPT_PAYLOAD</noscript><template>TEMPLATE_PAYLOAD</template>",
+        "html.parser",
+    )
+
+    for root in soup.find_all(("script", "style", "noscript", "template")):
+        assert "".join(public_http._iter_node_text_parts(root, include_chrome=True)) == ""
+
+
 def test_long_semantic_preview_records_full_hash_length_and_truncation():
     first = ("alpha " * 1800).strip()
     second = ("beta " * 1800).strip()

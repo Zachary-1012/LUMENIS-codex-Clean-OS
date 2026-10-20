@@ -62,6 +62,8 @@ def _iter_node_text_parts(node: Any, *, include_chrome: bool = False):
     """Yield normalized text pieces without copying the selected DOM subtree."""
     excluded_tags = {"script", "style", "noscript", "nav", "header", "footer", "aside", "form"}
     never_content_tags = {"script", "style", "noscript", "template"}
+    if getattr(node, "name", None) in never_content_tags:
+        return
     first = True
     for text_node in node.descendants:
         if not isinstance(text_node, NavigableString) or isinstance(text_node, Comment):
