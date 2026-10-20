@@ -11,6 +11,8 @@ Keyword observation outcomes now use the existing canonical `CollectionStatus` v
 
 The remaining login-review finding stays **OPEN**: `get_account_status()` returns `NOT_VERIFIED`; `runtime_preflight_check()` builds a result for the active caller and does not persist a current verification record. No existing safe persisted source was found, so health keeps login UNKNOWN rather than probing on each poll or treating a historical verification cache as current.
 
+FIX-036/037 rollover follow-up: a prior-day task ledger retains `OBSERVED_TASK_STARTS` only if its stored provenance already carried that marker; an unverified legacy ledger remains `UNKNOWN` across date rollover. The parameterized midnight regression verifies both persisted marker outcomes while confirming that the previous actual run still enforces cooldown. The offline `tests/test_hk_only_collection_policy.py` module passed; changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No login probe, collection or production database was used.
+
 
 ## 2026-10-18 source-adoption validation handoff
 

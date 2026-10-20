@@ -469,6 +469,11 @@ def _load_stats_unlocked():
                 # A previous-day snapshot cannot establish how many keyword
                 # observations ran today. Start the task-start ledger at zero;
                 # its entries are written only by record_run().
+                # Keep an unverified legacy ledger unknown across rollover; a
+                # date change alone cannot upgrade its provenance.
+                prior_history_was_observed = (
+                    data.get('daily_run_history_state') == 'OBSERVED_TASK_STARTS'
+                )
                 _daily_runs = []
                 _daily_manual_runs = 0
                 _daily_auto_runs = 0
@@ -481,7 +486,9 @@ def _load_stats_unlocked():
                         _last_run_time = previous_last_run
                 except (TypeError, ValueError):
                     pass
-                _daily_run_history_state = 'OBSERVED_TASK_STARTS'
+                _daily_run_history_state = (
+                    'OBSERVED_TASK_STARTS' if prior_history_was_observed else 'UNKNOWN'
+                )
                 _stats_loaded = True
                 _save_stats()
                 return

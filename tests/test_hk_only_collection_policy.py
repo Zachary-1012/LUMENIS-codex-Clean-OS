@@ -590,7 +590,12 @@ def test_collector_task_start_stats_are_marked_as_observed(monkeypatch, tmp_path
     assert len(stats['daily_runs']) == 1
 
 
-def test_midnight_stats_reset_preserves_prior_actual_run_cooldown(monkeypatch, tmp_path):
+@pytest.mark.parametrize(("prior_history_state", "expected_history_state"), [
+    ("OBSERVED_TASK_STARTS", "OBSERVED_TASK_STARTS"),
+    ("UNKNOWN", "UNKNOWN"),
+])
+def test_midnight_stats_reset_preserves_prior_actual_run_cooldown(
+        monkeypatch, tmp_path, prior_history_state, expected_history_state):
     import json
     import time
     import xhs_cookie_bridge as bridge
@@ -601,7 +606,7 @@ def test_midnight_stats_reset_preserves_prior_actual_run_cooldown(monkeypatch, t
     stats_file.write_text(json.dumps({
         'date': (date.today() - timedelta(days=1)).strftime('%Y-%m-%d'),
         'daily_runs': [last_run], 'manual_runs': 1, 'auto_runs': 0,
-        'daily_run_history_state': 'OBSERVED_TASK_STARTS',
+        'daily_run_history_state': prior_history_state,
         'last_run_time': last_run,
     }), encoding='utf-8')
     monkeypatch.setattr(bridge, 'STATS_FILE', str(stats_file))
@@ -618,6 +623,10 @@ def test_midnight_stats_reset_preserves_prior_actual_run_cooldown(monkeypatch, t
     assert '不足' in reason
     assert bridge._daily_runs == []
     assert bridge._last_run_time == last_run
+    assert bridge._daily_run_history_state == expected_history_state
+    assert json.loads(stats_file.read_text(encoding='utf-8'))[
+        'daily_run_history_state'
+    ] == expected_history_state
 
 
 def test_unverified_task_history_does_not_turn_keyword_logs_into_task_runs(
