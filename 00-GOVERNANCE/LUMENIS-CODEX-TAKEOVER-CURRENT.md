@@ -8,6 +8,73 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `xhs_cookie_bridge.py` now applies the first BLOCKED/CAPTCHA/AUTH_FAILED pacing reduction immediately before continuing to another keyword, while suppressing a second task-summary report so one task still creates one risk event. `EMPTY` counts as a valid response in both the existing `network_adaptive` and `adaptive_engine` feedback paths. Regressions assert that the next search observes reduced pacing, the task records one risk event, and an EMPTY worker reports success with no error. The offline combined command across `tests/test_xhs_network_outcome_reporting.py`, `tests/test_xhs_child_worker_environment.py`, `tests/test_xhs_approved_local_worker_route.py` and `tests/test_xhs_lineage_persistence.py` passed **67 tests** with no thread leak. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Fixtures only; no real collection or account access was performed.
 
+## 2026-10-20 Issue #17 FIX-091 — Sogou challenge retry and link-resolution boundary
+
+The existing `lumenis/adapters/sogou_search.py` recognizes explicit
+verification/anti-bot challenge markers and returns `NEED_HUMAN_VERIFICATION`
+as a failed result, stopping same-channel retry, the next channel and link
+resolution. Link unwrapping now checks both response text and the final Sogou
+anti-spider URL. It processes links in bounded batches, cancels queued work on a
+challenge, and does not start a later batch; requests already running in the
+current batch may finish. `_resolve_links` reports the challenge to `search`,
+so the provider failure cannot be reported as a successful collection. The
+normal JS redirect path, ordinary empty search success, bounded ordinary retry,
+and a distinct explicit search after the fixture clears the challenge remain
+available.
+
+Follow-up against exact prior PR #87 head `a0c5f50f400ceb3bf0805d53614cec999aac2852`
+verified three conditional review cases (not evidence of a live-provider
+incident): discussion `r4321123508` showed that a verification form after the
+first 4,000 characters was ignored and could yield an EMPTY result;
+`r4321123513` showed relative and protocol-relative JS literals were not
+resolved; `r4321123518` showed a normal `/articles/captcha-design` path could
+be misclassified. The existing detector now scans the full returned response.
+Redirect literals are parsed statically and resolved against the response URL;
+only credential-free HTTP(S) targets are accepted, and JavaScript is never
+executed. Challenge recognition is limited to complete root path segments
+`/antispider`, `/verify` and `/captcha`, so article slugs remain ordinary links.
+Regression covers the exact late form through both `collect` and registry,
+nine redirect-target inputs through both entrypoints, ordinary article and
+absolute redirect controls, and `javascript:` / `file:` rejection. It verifies
+the intermediary URL stays in place when a target is rejected or challenged.
+
+Cross-PR review also found that a prior empty/non-empty cached result or custom
+fallback could turn a Sogou challenge into success, including after repeated
+challenges opened the adapter breaker. PR [#85](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/85) now guards terminal provider errors at the existing `BaseAdapter` fallback and open-breaker paths, retains the last provider cause while requests are blocked, and clears that state only when a new permitted request provides recovery evidence. Its regressions cover empty/non-empty cache, custom fallback, threshold opening, the no-request breaker shortcut, explicit recovery and ordinary transient fallback after breaker opening. PR #87 is stacked on the updated lower-adapter commit and adds public `collect` regressions with one complete `AdapterCacheContext` across prior empty/non-empty success then challenge, ordinary same-context network fallback, and `registry.search_all_with_status` reporting `FAIL`. Review also found two Sogou classification boundaries: the generic word `验证码` in an ordinary article is no longer a challenge/block marker, and rate-only `访问过于频繁` remains on the existing bounded retry path rather than manual verification. Both final channel URLs and JS-extracted destinations are now checked for Sogou verification paths; public `collect` and registry tests cover `/captcha/` without executing JavaScript or issuing another request. The W6-owned API/UI projection remains unmodified and unverified; remaining Issue #17 work remains open. At PR #87's initial submission, its restricted regression command passed (**25 passed**) and `tests/test_adapter_resilience.py` passed (**30 passed**); that result describes the earlier test set only. Existing tests include redirect challenge stopping later queued links, ordinary JavaScript redirect resolution, breaker-open terminal preservation and ordinary cached fallback after breaker opening. Full-file, exact-head CI/review, real-provider, runtime and user acceptance were not claimed. No live source or external effect was used.
+
+On the updated combined stack, full `TestSogouSearchAdapter` passes **63
+tests**; `tests/test_adapter_resilience.py` passes **30 tests**. Changed-source
+compilation, governance machine contract, AI-native constitution and `git diff
+--check` pass. These remain offline source regressions; exact-head remote checks,
+real Sogou behavior, W6-owned projection, runtime and user acceptance remain
+unverified.
+
+## 2026-10-20 Issue #17 FIX-107 / FIX-108 — pitch export and report readback
+
+The existing `scripts/pitch_export.py` sets Normal paragraph-after spacing to
+6 pt and removes template Title borders from both the style and direct title
+paragraphs for ordinary and audiovisual manuscripts (FIX-107). The existing
+`lumenis/shared/reporting/source_brief_job.py` attaches only evaluations whose
+stable ID, artifact, actor, scope, source/evidence references, fields, metadata
+and parseable ISO-8601 timestamp match the reopened report. Invalid or absent
+rows remain pending; explicit resume cannot label an incomplete readback as
+recorded. Report listings reuse those validated records and state instead of
+reattaching a mismatched row by stable ID. GET remains read-only (FIX-108).
+Existing `operational_brief.py` evidence/rights/source checks already cover the
+inspected path and required no change.
+
+Related offline regression command:
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/4N-meRHHaGHjU5wZ/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_pitch_export.py tests/test_source_brief_job.py tests/test_source_brief_job_routes.py tests/test_scoped_source_brief.py tests/test_entity_profile_lifecycle.py tests/test_source_brief_tasks.py tests/test_source_brief_listing.py tests/test_internal_pitch_shared_av.py tests/test_internal_pitch_workflow.py`
+— **297 passed in 42.06s**, including regressions for explicit recovery with an
+invalid timestamp and consistency between reopened reports and listings.
+`py_compile`, `git diff --check`, and local
+LibreOffice DOCX→PDF rendering for normal and AV manuscripts passed; generated
+artifacts were removed. No external model, production database or external
+effect was used. Exact write reservations remain unavailable for the separate
+`experience_runtime.py`, `saved_work.py` and `app.py` integration paths, so
+those FIX-108 owner/caller checks remain OPEN; runtime and user acceptance are
+NOT_VERIFIED.
+
 ## 2026-10-20 Issue #17 FIX-047 — preserve saved detail during backfill failures
 
 The existing `topic_note_detail_backfill.py` distinguishes failed, empty and available fields, merges only nonempty verified values into the exact row, and derives quality from the merged stored detail. Failed extraction cannot erase saved content/media/comments; oversized JSON is rejected intact and commit ownership remains with its caller. Supplied verified JSON fields now bypass parsing corrupt legacy values; unchanged verified payloads still recalculate stale quality, while partial merges preserve the prior aggregate capture timestamp. `tests/test_topic_note_detail_backfill.py` passed **9 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use an in-memory database and synthetic pages; no CDP, live collection or production DB was used.
