@@ -1,4 +1,4 @@
-"""record_official_name stores only official names with official-site evidence."""
+"""record_official_name preserves source declarations and scoped provenance."""
 from __future__ import annotations
 
 import json
@@ -67,6 +67,41 @@ def test_records_official_name_and_alias_keeps_id(reg):
 
     again = reg.record_official_name("BMP", sid, source_url=source_url, name_zh="丝芙兰")
     assert again["changed"] is False
+
+
+def test_existing_evidence_writer_cannot_represent_unknown_authenticity(reg):
+    from lumenis.shared.evidence.store import record_evidence
+
+    with reg._db_ready() as connection:
+        omitted_score_id = record_evidence(
+            connection=connection,
+            source="test",
+            feature_id="FIX-025-UNKNOWN-SCORE-OMITTED",
+            result="GAP",
+            status="pending",
+            authenticity_score=None,
+        )
+        zero_score_id = record_evidence(
+            connection=connection,
+            source="test",
+            feature_id="FIX-025-UNKNOWN-SCORE-ZERO",
+            result="GAP",
+            status="pending",
+            authenticity_score=0.0,
+        )
+        omitted_score = connection.execute(
+            "SELECT authenticity_score FROM app_evidence_records WHERE id=?",
+            (omitted_score_id,),
+        ).fetchone()[0]
+        zero_score = connection.execute(
+            "SELECT authenticity_score FROM app_evidence_records WHERE id=?",
+            (zero_score_id,),
+        ).fetchone()[0]
+
+    # None is removed by the existing writer and SQLite applies its 1.0
+    # default; storing 0.0 asserts a numeric score rather than unknown.
+    assert omitted_score == 1.0
+    assert zero_score == 0.0
 
 
 def test_evidence_failure_rolls_back_name_change_and_allows_retry(reg, monkeypatch):

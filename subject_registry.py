@@ -395,7 +395,7 @@ def record_official_name(
     name_en: Optional[str] = None,
     keywords: Iterable[str] = (),
 ) -> Dict[str, Any]:
-    """Record a brand's own official name/aliases, with official-site evidence.
+    """Record a brand's own official name/aliases with a source declaration.
 
     LUMENIS does not rename brands: callers pass only names shown on the
     brand's official site, and ``source_url`` (http/https) is required.
@@ -514,6 +514,10 @@ def record_official_name(
             },
             expected="Official source origin and identity require independent verification.",
             actual="URL was declared; no network request or identity verification was performed.",
+            # OPEN: the canonical writer requires a non-null numeric score and
+            # maps None to its 1.0 default. A numeric zero is not equivalent
+            # to NOT_ASSESSED; this owner cannot encode that score state until
+            # the Evidence contract supports it.
             authenticity_score=0.0,
             notes=(
                 "HTTP(S) scheme validation records syntax only. The existing "
