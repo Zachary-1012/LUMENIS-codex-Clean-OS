@@ -8,6 +8,47 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `xhs_cookie_bridge.py` now applies the first BLOCKED/CAPTCHA/AUTH_FAILED pacing reduction immediately before continuing to another keyword, while suppressing a second task-summary report so one task still creates one risk event. `EMPTY` counts as a valid response in both the existing `network_adaptive` and `adaptive_engine` feedback paths. Regressions assert that the next search observes reduced pacing, the task records one risk event, and an EMPTY worker reports success with no error. The offline combined command across `tests/test_xhs_network_outcome_reporting.py`, `tests/test_xhs_child_worker_environment.py`, `tests/test_xhs_approved_local_worker_route.py` and `tests/test_xhs_lineage_persistence.py` passed **67 tests** with no thread leak. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Fixtures only; no real collection or account access was performed.
 
+## 2026-10-20 Issue #17 FIX-096/098/099/105/106 — platform adapter outcomes
+
+The existing Facebook/X, Instagram, XHS and WeChat adapters now retain bounded
+failure/verification facts and source identity, redact unsafe exception or
+page data, and preserve explicit status instead of collapsing configured
+failure into success or an opaque message (FIX-096/098/099/105/106). These
+changes stay in their existing adapters and test owners; no collector,
+secondary collection, API composition or product module was added.
+
+This follow-up keeps each original issue ID at its source owner: FIX-096
+sanitizes the terminal X detail failure in
+`lumenis/system/collector/adapters/x_platform.py`; FIX-098 accepts a Facebook
+read-more control only after the exact native post body grows in
+`lumenis/adapters/facebook.py`; FIX-105 distinguishes missing Instagram worker
+configuration, provider/kernel unavailability, and network failure in
+`lumenis/adapters/instagram.py`, then maps raised comments/creator failures in
+`lumenis/system/collector/adapters/instagram.py` through the existing status
+mapper. Their regressions are in `tests/test_facebook_x_adapter.py` and
+`tests/test_instagram_main_adapter.py`.
+
+Exact offline focused commands on this candidate:
+
+- `PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_facebook_x_adapter.py -k 'fix_098_facebook_ or fix_096_x_sanitizes'` — **8 passed, 33 deselected**.
+- `PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_instagram_main_adapter.py -k 'fix_105_worker_configuration or fix_105_registered_instagram_raised_failures'` — **8 passed, 26 deselected**.
+- `PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_facebook_x_adapter.py tests/test_instagram_main_adapter.py` — **63 passed, 12 failed**. Those 12 failures were reproduced on a clean main worktree at the exact baseline; no new full-module pass is claimed.
+
+The 12 retained baseline failures are not silently counted as passing or fixed:
+Facebook/X has `test_facebook_parser_preserves_long_body_and_metric_display_through_canonical_adapter`, `test_facebook_comment_body_is_not_truncated_or_assigned_zero_metrics`, `test_x_parser_keeps_the_complete_observed_long_post`, `test_x_parser_preserves_native_id_explicit_zero_unknown_counts_and_publish_time`, `test_x_metric_parser_falls_back_to_text_and_rejects_approximate_or_bad_grouping`, `test_main_facebook_adapter_constructs_search_and_detail_results`, and `test_main_facebook_adapter_errors_keep_platform_and_health_unverified`; Instagram has `test_status_mapping_success`, `test_status_mapping_blocked`, `test_status_mapping_collect_error_proxy`, `test_status_mapping_collect_error_other`, and `test_health_check_no_cookie_no_proxy`. They exercise pre-existing parser fixtures, worker setup, and search/health status expectations, rather than the changed X terminal-detail message, Facebook exact-post expander, or Instagram raised comments/creator exception paths. Those separate behaviors remain unclaimed here and should be routed to their own original owner if the unified register maps them to an active finding.
+
+The earlier focused receipt remains: X read-only worker 24, XHS FIX-099 2,
+WeChat public sources 17, and the prior FIX-105/FIX-098 cases; those plus this
+follow-up are isolated fixture tests, not product acceptance. Python compilation,
+`git diff --check`, governance machine contract, AI-native constitution and
+takeover governance passed. No background-thread leak was detected. Real
+browsers, devices and external collection remain NOT_VERIFIED.
+
+FIX-100 remains OPEN because the `secondary_collection.py` write reservation
+is unavailable. FIX-092/093/097 and `platform_naming.py` coordination remain
+OPEN. Hidden/redacted XHS snippet effects, real devices, and external collection
+remain NOT_VERIFIED; tests used injected/offline fixtures only.
+
 ## 2026-10-20 Issue #17 FIX-091 — Sogou challenge retry and link-resolution boundary
 
 The existing `lumenis/adapters/sogou_search.py` recognizes explicit

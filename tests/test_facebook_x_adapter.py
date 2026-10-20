@@ -350,6 +350,193 @@ def test_main_facebook_adapter_constructs_search_and_detail_results():
     assert search.items[0]["likes"] is None
 
 
+def _facebook_detail_result(monkeypatch, article, final_url="https://www.facebook.com/page/posts/123456789"):
+    from lumenis.adapters.facebook import FacebookAdapter
+
+    page = MagicMock()
+    page.url = final_url
+    page.locator.return_value.inner_text.return_value = ""
+    page.query_selector_all.return_value = [article]
+    page.goto.return_value = None
+    worker = MagicMock()
+    worker.new_page.return_value = page
+    with patch("lumenis.adapters.human_browser.HumanBrowser", return_value=worker), \
+            patch("lumenis.adapters.human_browser.configured_readonly_worker_url", return_value="http://127.0.0.1:9223"), \
+            patch("lumenis.adapters.cookie_vault.inject_into_context"):
+        return FacebookAdapter(cookie_string="test-only").detail(final_url)
+
+
+class _FacebookTextNode:
+    def __init__(self, value="", *, href=None):
+        self.value = value
+        self.href = href
+
+    def inner_text(self):
+        return self.value
+
+    def get_attribute(self, name):
+        return self.href if name == "href" else None
+
+
+class _FacebookDetailArticle:
+    def __init__(self, body, preview, *, read_more=True, unrelated_read_more=False, post_id="123456789"):
+        self.body = body
+        self.preview = preview
+        self.expanded = False
+        self.read_more = read_more
+        self.unrelated_read_more = unrelated_read_more
+        self.anchor = _FacebookTextNode(href=f"/page/posts/{post_id}")
+        self.button = _FacebookTextNode("See more")
+        self.button.click = self._expand
+        self.unrelated_button = _FacebookTextNode("See more")
+        self.unrelated_button.click = lambda: None
+
+    def _expand(self):
+        self.expanded = True
+
+    def query_selector_all(self, selector):
+        if 'a[href*="/posts/"]' in selector:
+            return [self.anchor]
+        if selector == 'div[role="button"], button':
+            return ([self.unrelated_button] if self.unrelated_read_more else []) + (
+                [self.button] if self.read_more else []
+            )
+        return []
+
+    def query_selector(self, selector):
+        if selector == '[data-ad-preview="message"], [data-ad-comet-preview="message"]':
+            return (_FacebookTextNode(self.body if self.expanded else self.preview)
+                    if self.body or self.expanded else None)
+        if selector == '[data-ad-preview="message"], .x1iorvi4, .x1pi30zi':
+            return _FacebookTextNode(self.body if self.expanded else self.preview)
+        return None
+
+
+def test_fix_098_facebook_detail_expands_and_binds_native_body_to_exact_post(monkeypatch):
+    body = "Native post paragraph. " * 80 + "Full final paragraph."
+    article = _FacebookDetailArticle(body, "Truncated search preview…")
+    result = _facebook_detail_result(monkeypatch, article)
+    assert result.success is True
+    assert result.raw_count == 1
+    note = result.notes[0]
+    assert article.expanded is True
+    assert note.content == body
+    assert note.raw_data["body_kind"] == "NATIVE_POST_BODY"
+    assert note.raw_data["body_status"] == "NATIVE_DETAIL_BODY_OBSERVED_COMPLETENESS_UNKNOWN"
+    assert note.raw_data["body_state"] == "EXPANDED_NATIVE_ARTICLE_DOM_COMPLETENESS_UNKNOWN"
+    assert note.raw_data["native_identity"] == {
+        "post_id": "123456789", "requested_post_id": "123456789",
+        "observed_post_id": "123456789", "status": "OBSERVED_MATCH",
+        "locator": "article a[href]",
+    }
+    assert note.raw_data["body_sha256"]
+    assert "Truncated search preview" not in note.content
+
+
+def test_fix_098_facebook_ignores_unrelated_expander_and_checks_message_growth(monkeypatch):
+    body = "Native post paragraph. " * 30 + "Full final paragraph."
+    article = _FacebookDetailArticle(
+        body, "Truncated search preview…", unrelated_read_more=True,
+    )
+    result = _facebook_detail_result(monkeypatch, article)
+    assert result.success is True
+    assert article.expanded is True
+    assert result.notes[0].content == body
+
+
+def test_fix_098_facebook_rejects_unrelated_expander_without_body_growth(monkeypatch):
+    article = _FacebookDetailArticle(
+        "Native post body stays truncated", "Truncated preview…",
+        read_more=False, unrelated_read_more=True,
+    )
+    result = _facebook_detail_result(monkeypatch, article)
+    assert result.success is False
+    assert result.error == "DETAIL_NOT_RETURNED: NATIVE_POST_BODY_NOT_OBSERVED"
+    assert result.notes == []
+
+
+def test_fix_098_facebook_search_preview_is_not_detail_when_native_body_missing(monkeypatch):
+    article = _FacebookDetailArticle("", "Truncated search preview…", read_more=False)
+    result = _facebook_detail_result(monkeypatch, article)
+    assert result.success is False
+    assert result.error == "DETAIL_NOT_RETURNED: NATIVE_POST_BODY_NOT_OBSERVED"
+    assert result.diagnostics["body_status"] == "NATIVE_BODY_NOT_OBSERVED"
+    assert result.notes == []
+
+
+def test_fix_098_facebook_detail_rejects_other_post_article(monkeypatch):
+    article = _FacebookDetailArticle("Other post body", "Other preview", post_id="999999999")
+    result = _facebook_detail_result(monkeypatch, article)
+    assert result.success is False
+    assert result.error == "IDENTITY_MISMATCH: TARGET_ARTICLE_NOT_OBSERVED"
+    assert result.notes == []
+
+
+def test_fix_098_facebook_does_not_accept_preview_when_expansion_fails(monkeypatch):
+    article = _FacebookDetailArticle("Full native body", "Truncated search preview…")
+
+    def fail_click():
+        raise RuntimeError("synthetic click failure")
+
+    article.button.click = fail_click
+    result = _facebook_detail_result(monkeypatch, article)
+    assert result.success is False
+    assert result.error == "DETAIL_NOT_RETURNED: NATIVE_POST_BODY_NOT_OBSERVED"
+    assert result.notes == []
+
+
+def test_fix_096_x_sanitizes_terminal_detail_error_after_successful_search():
+    from types import SimpleNamespace
+    from lumenis.adapters.base import AdapterResult
+    from lumenis.system.collector.adapters.x_platform import XAdapter, CollectionStatus
+
+    tweet_id = "12345678901234567890"
+    note = SimpleNamespace(
+        raw_data={
+            "tweet_id": tweet_id,
+            "tweet_id_locator": "article a[href]",
+            "url": f"https://x.com/brand/status/{tweet_id}",
+            "native_identity": {"tweet_id": tweet_id, "status": "OBSERVED"},
+        },
+        title="Search preview", content="Preview only", author_id="@brand",
+        author="Brand", publish_date="", url=f"https://x.com/brand/status/{tweet_id}",
+        likes=0, comments=None, collects=None, shares=None,
+    )
+
+    class Backend:
+        def search(self, keyword, *, max_results):
+            return AdapterResult(success=True, notes=[note], raw_count=1)
+
+        def detail(self, content_id):
+            assert content_id == tweet_id
+            return AdapterResult(success=False, error="session expired token=TOP_SECRET")
+
+    result = XAdapter(backend=Backend()).search("brand")
+    assert result.status == CollectionStatus.SESSION_EXPIRED
+    assert result.message == "X_PAGE_FAILURE:SESSION_EXPIRED"
+    assert result.items[0]["raw"]["detail_observation"]["stop_reason"] == "SESSION_EXPIRED"
+    assert "TOP_SECRET" not in repr(result)
+
+
+def test_fix_098_facebook_post_permalink_canonicalization_uses_exact_native_identity():
+    from lumenis.adapters.facebook import FacebookAdapter
+
+    path_identity = FacebookAdapter.observed_post_permalink(
+        "https://m.facebook.com/page/posts/123456789?ref=search")
+    query_identity = FacebookAdapter.observed_post_permalink(
+        "https://facebook.com/permalink.php?story_fbid=123456789&id=987654321&ref=search")
+    assert path_identity == {
+        "post_id": "123456789",
+        "url": "https://www.facebook.com/page/posts/123456789",
+        "id_locator": "permalink_path.posts",
+    }
+    assert query_identity == {
+        "post_id": "123456789",
+        "url": "https://www.facebook.com/permalink.php?story_fbid=123456789&id=987654321",
+        "id_locator": "permalink_query.story_fbid",
+    }
+
+
 def test_main_facebook_adapter_errors_keep_platform_and_health_unverified(monkeypatch):
     from lumenis.system.collector.adapters.facebook import FacebookAdapter, CollectionStatus
 
