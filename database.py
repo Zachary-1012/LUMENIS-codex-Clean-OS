@@ -131,6 +131,8 @@ def insert_note(note_data, *, connection=None):
         existing = conn.execute('SELECT * FROM notes WHERE note_id=?', (nid,)).fetchone()
         source_platform = note_data.get('source_platform', 'xhs') or 'xhs'
         if existing:
+            if not note_data.get('source_platform'):
+                source_platform = existing['source_platform']
             from lumenis.system.collector.adapters.platform_naming import normalize_platform
 
             old_platform = normalize_platform(existing['source_platform'])
@@ -171,9 +173,14 @@ def insert_note(note_data, *, connection=None):
         ) is not False
 
         def _should_write_metric(name):
-            return name in note_data and (
-                metric_observation_complete or vals[name] is not None
-            )
+            if name not in note_data:
+                return False
+            if (existing and name == 'comments_collected'
+                    and vals[name] is not None and vals[name] < 0):
+                # Legacy collectors use negative comments_collected as a
+                # sentinel; an update must not replace a stored measurement.
+                return False
+            return metric_observation_complete or vals[name] is not None
 
         def _write_analysis_values(*, new_record):
             updates = {}
@@ -217,8 +224,12 @@ def insert_note(note_data, *, connection=None):
         quality_input_fields = {
             'title', 'url', 'publish_datetime', 'publish_date', 'risk_level',
         }
-        should_enrich_quality = (
+        quality_status_missing = (
             'data_quality_status' not in note_data
+            or note_data.get('data_quality_status') == ''
+        )
+        should_enrich_quality = (
+            quality_status_missing
             and 'data_quality_score' not in note_data
             and (not existing or bool(quality_input_fields.intersection(note_data)))
         )
@@ -251,6 +262,10 @@ def insert_note(note_data, *, connection=None):
                 note_data['data_quality_score'] = _q['data_quality_score']
             except Exception:
                 pass  # 软门失败绝不影响写入（数据零丢失红线）
+        quality_status_supplied = (
+            'data_quality_status' in note_data
+            and note_data.get('data_quality_status') != ''
+        )
         # 标题兜底：新增或显式提供标题时，如缺失则用正文首句或作者昵称补齐。
         if (not existing or 'title' in note_data) and not (vals['title'] or '').strip():
             _t = ''
@@ -268,8 +283,13 @@ def insert_note(note_data, *, connection=None):
             'author_nickname', 'author_desc', 'followers', 'verified_type',
             'title', 'content', 'body',
         }
-        should_reclassify = not existing or bool(
-            classification_input_fields.intersection(note_data)
+        classifier_context_complete = (
+            all(field in note_data for field in ('author_desc', 'followers', 'verified_type'))
+            and note_data.get('followers') is not None
+        )
+        should_reclassify = not existing or (
+            classifier_context_complete
+            and bool(classification_input_fields.intersection(note_data))
         )
         try:
             if not should_reclassify:
@@ -345,7 +365,7 @@ def insert_note(note_data, *, connection=None):
                 note_data.get('detail_fetched_at','') or '', note_data.get('detail_fetched_at','') or '',
                 note_data.get('comments_fetched_at','') or '', note_data.get('comments_fetched_at','') or '',
                 _should_write_metric('comments_collected'), vals['comments_collected'],
-                'data_quality_status' in note_data, note_data.get('data_quality_status'),
+                quality_status_supplied, note_data.get('data_quality_status'),
                 'data_quality_score' in note_data, _nullable_analysis_score(note_data.get('data_quality_score')),
                 note_data.get('collector_version','') or '', note_data.get('collector_version','') or '', now, nid))
             conn.execute("UPDATE notes SET body=CASE WHEN ?<>'' THEN ? ELSE body END, source_keyword=CASE WHEN ?<>'' THEN ? ELSE source_keyword END, matched_keywords=CASE WHEN ?<>'' THEN ? ELSE matched_keywords END WHERE note_id=?", (vals['body'], vals['body'], vals['source_keyword'], vals['source_keyword'], vals['matched_keywords'], vals['matched_keywords'], nid))

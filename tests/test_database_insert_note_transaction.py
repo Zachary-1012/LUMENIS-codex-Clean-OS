@@ -214,6 +214,128 @@ def test_fix_024_derived_body_update_keeps_omitted_original_title(tmp_path):
         connection.close()
 
 
+def test_fix_024_blank_quality_status_does_not_replace_saved_state(tmp_path):
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note(
+            {
+                "note_id": "fix-024-blank-quality",
+                "title": "Reviewed title",
+                "data_quality_status": "reviewed",
+                "data_quality_score": 0.87,
+            },
+            connection=connection,
+        )
+        note_database.insert_note(
+            {"note_id": "fix-024-blank-quality", "data_quality_status": ""},
+            connection=connection,
+        )
+
+        row = connection.execute(
+            "SELECT data_quality_status, data_quality_score FROM notes WHERE note_id=?",
+            ("fix-024-blank-quality",),
+        ).fetchone()
+        assert tuple(row) == ("reviewed", 0.87)
+    finally:
+        connection.close()
+
+
+def test_fix_024_negative_comments_collected_sentinel_preserves_measurement(tmp_path):
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note(
+            {"note_id": "fix-024-comments-sentinel", "comments_collected": 6},
+            connection=connection,
+        )
+        note_database.insert_note(
+            {"note_id": "fix-024-comments-sentinel", "comments_collected": -1},
+            connection=connection,
+        )
+        measured = connection.execute(
+            "SELECT comments_collected FROM notes WHERE note_id=?",
+            ("fix-024-comments-sentinel",),
+        ).fetchone()[0]
+        assert measured == 6
+
+        note_database.insert_note(
+            {"note_id": "fix-024-comments-sentinel", "comments_collected": None},
+            connection=connection,
+        )
+        explicit_unknown = connection.execute(
+            "SELECT comments_collected FROM notes WHERE note_id=?",
+            ("fix-024-comments-sentinel",),
+        ).fetchone()[0]
+        assert explicit_unknown is None
+    finally:
+        connection.close()
+
+
+def test_fix_024_missing_platform_keeps_existing_source_platform(tmp_path):
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note(
+            {
+                "note_id": "fix-024-existing-platform",
+                "source_platform": "douyin",
+                "title": "Original",
+            },
+            connection=connection,
+        )
+        note_database.insert_note(
+            {"note_id": "fix-024-existing-platform", "title": "Updated"},
+            connection=connection,
+        )
+
+        row = connection.execute(
+            "SELECT source_platform, title FROM notes WHERE note_id=?",
+            ("fix-024-existing-platform",),
+        ).fetchone()
+        assert tuple(row) == ("douyin", "Updated")
+    finally:
+        connection.close()
+
+
+def test_fix_024_partial_body_update_preserves_classification_without_context(tmp_path):
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note(
+            {
+                "note_id": "fix-024-classification-context",
+                "author_nickname": "Synthetic Creator",
+                "author_desc": "",
+                "followers": 25000,
+                "verified_type": "",
+                "title": "Original creator post",
+            },
+            connection=connection,
+        )
+        before = connection.execute(
+            "SELECT subject_type, content_type FROM notes WHERE note_id=?",
+            ("fix-024-classification-context",),
+        ).fetchone()
+        assert before["subject_type"] == "kol"
+
+        note_database.insert_note(
+            {
+                "note_id": "fix-024-classification-context",
+                "body": "Updated source body",
+            },
+            connection=connection,
+        )
+
+        after = connection.execute(
+            "SELECT subject_type, content_type, body FROM notes WHERE note_id=?",
+            ("fix-024-classification-context",),
+        ).fetchone()
+        assert tuple(after) == (before["subject_type"], before["content_type"], "Updated source body")
+    finally:
+        connection.close()
+
+
 def test_injected_connection_uses_caller_rollback_and_remains_open(tmp_path):
     path = _new_notes_db(tmp_path)
     connection = _connect(path)
