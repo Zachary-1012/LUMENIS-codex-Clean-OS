@@ -20,6 +20,22 @@ class _EmptyConnection:
         return _EmptyCursor()
 
 
+class _RowsCursor:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def fetchall(self):
+        return self.rows
+
+
+class _RowsConnection(_EmptyConnection):
+    def __init__(self, rows):
+        self.rows = rows
+
+    def execute(self, _sql, _params=()):
+        return _RowsCursor(self.rows)
+
+
 def _client():
     from ic_routes import ic_bp
 
@@ -71,3 +87,20 @@ def test_emv_route_preserves_default_and_valid_custom_cpm(monkeypatch, query, ex
     assert response.status_code == 200
     assert response.get_json()["ok"] is True
     assert aggregate_calls == [([], expected_cpm)]
+
+
+def test_emv_route_does_not_report_overflowed_estimate_as_success(monkeypatch):
+    import database
+
+    monkeypatch.setattr(database, "get_db", lambda: _RowsConnection([{
+        "note_id": "synthetic-overflow", "title": "",
+        "author_nickname": "", "likes": 100, "comments": 0,
+        "collects": 0, "shares": 0, "sentiment": "neutral",
+    }]))
+
+    response = _client().get("/api/ic/emv", query_string={"cpm": "1e308"})
+
+    assert response.status_code == 422
+    assert response.get_json()["ok"] is False
+    assert response.get_json()["status"] == "INVALID_INPUT"
+    assert response.get_json()["emv_total_yuan"] is None

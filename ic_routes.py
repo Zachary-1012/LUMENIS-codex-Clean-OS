@@ -145,6 +145,8 @@ def ic_emv():
                     "FROM notes ORDER BY captured_at DESC LIMIT ?", (limit,)).fetchall()
             notes = [dict(r) for r in rows]
         r = _emv.aggregate_emv(notes, cpm=cpm)
+        if r.get("status") == "INVALID_INPUT":
+            return jsonify({"ok": False, **r}), 422
         return jsonify({"ok": True, **r})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 400
