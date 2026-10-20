@@ -18,6 +18,7 @@ class BaiduSearchAdapter(BaseAdapter):
                 "Accept-Language": "zh-CN,zh;q=0.9",
             }
             resp = requests.get(url, headers=headers, timeout=self.config["request_timeout"])
+            resp.raise_for_status()
             resp.encoding = "utf-8"
             notes = self._parse_search_results(resp.text, keyword)
             return AdapterResult(success=True, notes=notes[:max_results], raw_count=len(notes))
