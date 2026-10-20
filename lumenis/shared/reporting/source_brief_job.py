@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -17,6 +18,7 @@ import database as report_database
 from lumenis.shared.database import get_repository
 from lumenis.shared.evaluation.recorder import (
     get_artifact_evaluations, get_evaluation_record, record_evaluation,
+    threshold_to_str,
 )
 from .artifact import compute_scoped_scope_key
 from .operational_brief import build_scoped_source_brief
@@ -244,16 +246,12 @@ def _evaluation_ids(job_id: str) -> dict[str, str]:
     }
 
 
-def _record_evaluations(verified: dict[str, Any], *, connection=None) -> list[dict[str, Any]]:
-    def read_evaluation(evaluation_id):
-        if connection is None:
-            return get_evaluation_record(evaluation_id)
-        cursor = connection.execute('SELECT * FROM evaluation_records WHERE evaluation_id=?', (evaluation_id,))
-        row = cursor.fetchone()
-        return dict(zip((column[0] for column in cursor.description), row)) if row else None
+def _evaluation_expectations(verified: dict[str, Any]) -> tuple[dict[str, Any], ...]:
     row, snapshot, brief = verified["row"], verified["snapshot"], verified["source_brief"]
     job_id = snapshot["job_id"]
-    evaluation_ids = snapshot["evaluation_ids"]
+    evaluation_ids = snapshot.get("evaluation_ids")
+    if evaluation_ids != _evaluation_ids(job_id):
+        raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
     refs = [record["scope_evidence_ref"] for record in brief["records"]]
     common = {
         "job_id": job_id, "report_id": row["report_id"], "artifact_hash": row["artifact_hash"],
@@ -270,30 +268,121 @@ def _record_evaluations(verified: dict[str, Any], *, connection=None) -> list[di
         ("source_evidence_grounding", source_value, "Verified private custody bytes, not external fact." if snapshot.get("schema") == SHARED_JOB_SCHEMA else "Verified Canonical source Evidence linkage; empty samples remain unknown."),
         ("multimodal_analysis_integrity", multi_value, "Real media input and analysis execution binding; unavailable stays unknown."),
     )
-    records = []
-    for metric, value, description in specifications:
-        if metric == "multimodal_analysis_integrity" and multi.get("historical_provider") is True:
-            evaluation_id = evaluation_ids[metric]
-            prior = read_evaluation(evaluation_id)
-            if prior:
-                expected_ref = f"daily_reports:{row['report_id']}:{row['artifact_hash']}"
-                if (prior.get("dimension") != "report" or prior.get("metric_name") != metric
-                        or prior.get("evidence_ref") != expected_ref):
-                    raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
-                records.append(prior)
-                continue
-        record = record_evaluation(
-            connection=connection,
-            dimension="report", metric_name=metric, metric_value=value,
-            pass_threshold=1.0, warn_threshold=0.8, source="daily_reports:source_brief_job",
-            evidence_ref=f"daily_reports:{row['report_id']}:{row['artifact_hash']}",
-            metadata={**common, "evaluation_basis": description}, evaluation_id=evaluation_ids[metric],
-        )
-        persisted = read_evaluation(record.evaluation_id)
-        if not persisted or persisted.get("evidence_ref") != record.evidence_ref:
+    return tuple({
+        "evaluation_id": evaluation_ids[metric],
+        "dimension": "report",
+        "metric_name": metric,
+        "metric_value": value,
+        "threshold": threshold_to_str(1.0, 0.8),
+        "status": _evaluation_status(value),
+        "source": "daily_reports:source_brief_job",
+        "evidence_ref": f"daily_reports:{row['report_id']}:{row['artifact_hash']}",
+        "metadata": {**common, "evaluation_basis": description},
+        "historical_media": metric == "multimodal_analysis_integrity" and multi.get("historical_provider") is True,
+    } for metric, value, description in specifications)
+
+
+def _evaluation_status(value: float | None) -> str:
+    if value is None:
+        return "unknown"
+    if type(value) not in {int, float} or not math.isfinite(value):
+        raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
+    return "pass" if value >= 1.0 else "warn" if value >= 0.8 else "fail"
+
+
+def _read_evaluation(evaluation_id: str, *, connection=None):
+    if connection is None:
+        return get_evaluation_record(evaluation_id)
+    cursor = connection.execute("SELECT * FROM evaluation_records WHERE evaluation_id=?", (evaluation_id,))
+    row = cursor.fetchone()
+    return dict(zip((column[0] for column in cursor.description), row)) if row else None
+
+
+def _validate_evaluation_record(record: dict[str, Any], expected: dict[str, Any]) -> None:
+    for field in ("evaluation_id", "dimension", "metric_name", "threshold", "source", "evidence_ref"):
+        if record.get(field) != expected[field]:
             raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
-        records.append(persisted)
+    evaluated_at = record.get("evaluated_at")
+    if (not isinstance(evaluated_at, str) or not evaluated_at
+            or evaluated_at != evaluated_at.strip() or "T" not in evaluated_at):
+        raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
+    try:
+        # EvaluationRecord's existing writer emits ISO-8601 with a ``T``
+        # separator. It currently uses a naive local timestamp, so validate
+        # parseability without inventing a timezone for historical records.
+        datetime.fromisoformat(evaluated_at)
+    except ValueError:
+        raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED") from None
+    try:
+        metadata = record.get("metadata")
+        if isinstance(metadata, str):
+            metadata = json.loads(metadata)
+    except (TypeError, ValueError):
+        raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED") from None
+    if metadata != expected["metadata"]:
+        raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
+
+    if (expected["metric_name"] == "multimodal_analysis_integrity"
+            and record.get("current_inference_verified") is False):
+        historical_value = record.get("historical_metric_value")
+        historical_status = record.get("historical_record_status")
+        if (historical_value is not None
+                and (type(historical_value) not in {int, float} or not math.isfinite(historical_value))):
+            raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
+        expected_historical_status = _evaluation_status(historical_value)
+        expected_projected_status = "unknown" if historical_status == "pass" else historical_status
+        if (historical_value not in (None, 1.0) or historical_status != expected_historical_status
+                or record.get("metric_value") is not None
+                or record.get("status") != expected_projected_status):
+            raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
+        return
+
+    if (record.get("metric_value") != expected["metric_value"]
+            or record.get("status") != expected["status"]):
+        raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
+
+
+def _read_verified_evaluations(verified: dict[str, Any], *, connection=None) -> list[dict[str, Any]]:
+    """Return only exact artifact-bound checks; malformed checks remain pending."""
+    records = []
+    for expected in _evaluation_expectations(verified):
+        record = _read_evaluation(expected["evaluation_id"], connection=connection)
+        if record is None:
+            continue
+        try:
+            _validate_evaluation_record(record, expected)
+        except RuntimeError as exc:
+            if str(exc) != "SOURCE_BRIEF_EVALUATION_REOPEN_FAILED":
+                raise
+            continue
+        records.append(record)
     return records
+
+
+def _record_evaluations(verified: dict[str, Any], *, connection=None) -> list[dict[str, Any]]:
+    for expected in _evaluation_expectations(verified):
+        prior = _read_evaluation(expected["evaluation_id"], connection=connection)
+        if expected["historical_media"] and prior:
+            # Historical provider results stay immutable; readback validates
+            # the recorded contract while projecting current assurance.
+            continue
+        record_evaluation(
+            connection=connection,
+            dimension=expected["dimension"], metric_name=expected["metric_name"],
+            metric_value=expected["metric_value"], pass_threshold=1.0, warn_threshold=0.8,
+            source=expected["source"], evidence_ref=expected["evidence_ref"],
+            metadata=expected["metadata"], evaluation_id=expected["evaluation_id"],
+        )
+    return _read_verified_evaluations(verified, connection=connection)
+
+
+def _evaluation_state(job_id: str, records: list[dict[str, Any]]) -> str:
+    expected = set(_evaluation_ids(job_id).values())
+    present = {
+        record.get("evaluation_id") for record in records
+        if isinstance(record, dict)
+    }
+    return "recorded" if expected <= present else "pending_recovery"
 
 
 def _quality_reviews(verified: dict[str, Any]) -> dict[str, Any]:
@@ -349,8 +438,11 @@ def _response(verified: dict[str, Any], evaluations: list[dict[str, Any]]) -> di
         "requested_source_ids": snapshot.get("requested_source_ids"),
         "revision": snapshot.get("revision"),
         "operator_review": read_operator_reviews(verified),
-        "evaluation": {"state": "recorded", "records": evaluations,
-                       "quality_review": _quality_reviews(verified)},
+        "evaluation": {
+            "state": _evaluation_state(snapshot["job_id"], evaluations),
+            "records": evaluations,
+            "quality_review": _quality_reviews(verified),
+        },
         "requested_image_source_ref": snapshot.get("requested_image_source_ref"),
         "retry_of_job_id": snapshot.get("retry_of_job_id"),
         "review_status": "HUMAN_PENDING",
@@ -583,8 +675,9 @@ def get_source_brief_job(job_id: str, *, actor_id: str,
     if verified["snapshot"].get("schema") == SHARED_JOB_SCHEMA:
         if actor is None:
             raise PermissionError("SOURCE_BRIEF_SERVER_ACTOR_REQUIRED")
-        view = _shared_response(verified, [record for record in
-            (get_evaluation_record(value) for value in verified["snapshot"]["evaluation_ids"].values()) if record])
+        view = _shared_response(verified, _read_verified_evaluations(verified, connection=connection))
+        if len(view["evaluation"]["records"]) != len(_evaluation_ids(job_id)):
+            view["evaluation"]["state"] = "pending_recovery"
         return _with_hypothesis_reviews(view, actor=actor, actor_id=actor_id, scope=SHARED_SCOPE, connection=connection)
 
     if connection is not None:
@@ -635,24 +728,8 @@ def get_source_brief_job(job_id: str, *, actor_id: str,
         if expected_analysis != verified["snapshot"]["research_analysis"]:
             raise PermissionError("SOURCE_BRIEF_RESEARCH_SOURCE_CHANGED")
     _read_research_reference(verified["snapshot"].get("reference"), actor=actor, scope=verified["snapshot"]["scope"], connection=connection)
-    evaluation_ids = verified["snapshot"].get("evaluation_ids")
-    evaluations = [get_evaluation_record(evaluation_ids[name]) for name in _evaluation_ids(job_id)]
-    present = [record for record in evaluations if record]
-    if verified["snapshot"].get("multimodal", {}).get("historical_provider") is True:
-        media_id = _evaluation_ids(job_id)["multimodal_analysis_integrity"]
-        expected_ref = f"daily_reports:{verified['row']['report_id']}:{verified['row']['artifact_hash']}"
-        projected = []
-        for record in present:
-            if record.get("evaluation_id") != media_id:
-                projected.append(record)
-                continue
-            if (record.get("dimension") != "report"
-                    or record.get("metric_name") != "multimodal_analysis_integrity"
-                    or record.get("evidence_ref") != expected_ref):
-                raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
-            projected.append(record)
-        present = projected
-    state = "recorded" if len(present) == len(evaluations) else "pending_recovery"
+    present = _read_verified_evaluations(verified)
+    state = "recorded" if len(present) == len(_evaluation_ids(job_id)) else "pending_recovery"
     result = _response(verified, present)
     result["evaluation"]["state"] = state
     if actor is not None:
@@ -760,18 +837,20 @@ def list_source_brief_jobs(*, actor, scope: dict[str, Any], limit: int = 30, cur
             job = get_source_brief_job(row["report_id"], actor_id=actor_ref,
                                       expected_scope=stored_scope, actor=actor)
             artifact = job["artifact_outcome"]
-            evaluations = get_artifact_evaluations(
-                job_id=job["job_id"], artifact_hash=artifact["artifact_hash"],
-                scope=stored_scope, actor_id=actor_ref,
-                evidence_refs={f"daily_reports:{job['job_id']}:{artifact['artifact_hash']}"},
-            )
             expected = set(_evaluation_ids(job["job_id"]).values())
-            matching = {item["evaluation_id"] for item in evaluations}
+            # Reuse the report owner's exact validated checks. A second broad
+            # artifact query could re-attach a stable ID whose metric fields or
+            # timestamp no longer match the persisted report contract.
+            job_evaluation = job["evaluation"]
+            checks = job_evaluation["records"]
+            matching = {item["evaluation_id"] for item in checks}
+            quality_review = job_evaluation.get("quality_review") or {}
+            evaluations = checks + list(quality_review.get("records") or [])
             # Counts are current artifact-bound evaluation checks, never report
             # quality, market effect, or a global evaluation-table population.
             counts = dict.fromkeys(("pass", "warn", "fail", "unknown"), 0)
-            for evaluation in evaluations:
-                status = evaluation.get("status")
+            for evaluation_record in evaluations:
+                status = evaluation_record.get("status")
                 counts[status if status in counts else "unknown"] += 1
             missing_evaluations = len(expected - matching)
             counts["unknown"] += missing_evaluations
@@ -784,7 +863,7 @@ def list_source_brief_jobs(*, actor, scope: dict[str, Any], limit: int = 30, cur
             items.append({"resource_type": "source_brief_job", "job_id": job["job_id"],
                 "artifact_hash": artifact["artifact_hash"], "revision": job.get("revision"),
                 "source_count": artifact["source_count"], "review_status": job["review_status"],
-                "evaluation_state": "recorded" if expected <= matching else "partial",
+                "evaluation_state": job_evaluation["state"],
                 "evaluation_counts": counts, "missing_evaluation_count": missing_evaluations,
                 "evaluation_count_unit": "artifact_bound_check",
                 "evaluations": [{key: item.get(key) for key in

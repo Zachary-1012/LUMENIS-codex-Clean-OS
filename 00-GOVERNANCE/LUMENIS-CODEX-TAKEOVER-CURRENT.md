@@ -15,6 +15,128 @@ Exact-head offline command:
 `git diff --check` passed. This focused result does not claim a full library or
 product acceptance run.
 
+## 2026-10-20 Issue #17 FIX-091 — Sogou challenge retry and link-resolution boundary
+
+The existing `lumenis/adapters/sogou_search.py` recognizes explicit
+verification/anti-bot challenge markers and returns `NEED_HUMAN_VERIFICATION`
+as a failed result, stopping same-channel retry, the next channel and link
+resolution. Link unwrapping now checks both response text and the final Sogou
+anti-spider URL. It processes links in bounded batches, cancels queued work on a
+challenge, and does not start a later batch; requests already running in the
+current batch may finish. `_resolve_links` reports the challenge to `search`,
+so the provider failure cannot be reported as a successful collection. The
+normal JS redirect path, ordinary empty search success, bounded ordinary retry,
+and a distinct explicit search after the fixture clears the challenge remain
+available.
+
+Follow-up against exact prior PR #87 head `a0c5f50f400ceb3bf0805d53614cec999aac2852`
+verified three conditional review cases (not evidence of a live-provider
+incident): discussion `r4321123508` showed that a verification form after the
+first 4,000 characters was ignored and could yield an EMPTY result;
+`r4321123513` showed relative and protocol-relative JS literals were not
+resolved; `r4321123518` showed a normal `/articles/captcha-design` path could
+be misclassified. The existing detector now scans the full returned response.
+Redirect literals are parsed statically and resolved against the response URL;
+only credential-free HTTP(S) targets are accepted, and JavaScript is never
+executed. Challenge recognition is limited to complete root path segments
+`/antispider`, `/verify` and `/captcha`, so article slugs remain ordinary links.
+Regression covers the exact late form through both `collect` and registry,
+nine redirect-target inputs through both entrypoints, ordinary article and
+absolute redirect controls, and `javascript:` / `file:` rejection. It verifies
+the intermediary URL stays in place when a target is rejected or challenged.
+
+Cross-PR review also found that a prior empty/non-empty cached result or custom
+fallback could turn a Sogou challenge into success, including after repeated
+challenges opened the adapter breaker. PR [#85](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/85) now guards terminal provider errors at the existing `BaseAdapter` fallback and open-breaker paths, retains the last provider cause while requests are blocked, and clears that state only when a new permitted request provides recovery evidence. Its regressions cover empty/non-empty cache, custom fallback, threshold opening, the no-request breaker shortcut, explicit recovery and ordinary transient fallback after breaker opening. PR #87 is stacked on the updated lower-adapter commit and adds public `collect` regressions with one complete `AdapterCacheContext` across prior empty/non-empty success then challenge, ordinary same-context network fallback, and `registry.search_all_with_status` reporting `FAIL`. Review also found two Sogou classification boundaries: the generic word `验证码` in an ordinary article is no longer a challenge/block marker, and rate-only `访问过于频繁` remains on the existing bounded retry path rather than manual verification. Both final channel URLs and JS-extracted destinations are now checked for Sogou verification paths; public `collect` and registry tests cover `/captcha/` without executing JavaScript or issuing another request. The W6-owned API/UI projection remains unmodified and unverified; remaining Issue #17 work remains open. At PR #87's initial submission, its restricted regression command passed (**25 passed**) and `tests/test_adapter_resilience.py` passed (**30 passed**); that result describes the earlier test set only. Existing tests include redirect challenge stopping later queued links, ordinary JavaScript redirect resolution, breaker-open terminal preservation and ordinary cached fallback after breaker opening. Full-file, exact-head CI/review, real-provider, runtime and user acceptance were not claimed. No live source or external effect was used.
+
+On the updated combined stack, full `TestSogouSearchAdapter` passes **63
+tests**; `tests/test_adapter_resilience.py` passes **30 tests**. Changed-source
+compilation, governance machine contract, AI-native constitution and `git diff
+--check` pass. These remain offline source regressions; exact-head remote checks,
+real Sogou behavior, W6-owned projection, runtime and user acceptance remain
+unverified.
+
+## 2026-10-20 Issue #17 FIX-107 / FIX-108 — pitch export and report readback
+
+The existing `scripts/pitch_export.py` sets Normal paragraph-after spacing to
+6 pt and removes template Title borders from both the style and direct title
+paragraphs for ordinary and audiovisual manuscripts (FIX-107). The existing
+`lumenis/shared/reporting/source_brief_job.py` attaches only evaluations whose
+stable ID, artifact, actor, scope, source/evidence references, fields, metadata
+and parseable ISO-8601 timestamp match the reopened report. Invalid or absent
+rows remain pending; explicit resume cannot label an incomplete readback as
+recorded. Report listings reuse those validated records and state instead of
+reattaching a mismatched row by stable ID. GET remains read-only (FIX-108).
+Existing `operational_brief.py` evidence/rights/source checks already cover the
+inspected path and required no change.
+
+Related offline regression command:
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/4N-meRHHaGHjU5wZ/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_pitch_export.py tests/test_source_brief_job.py tests/test_source_brief_job_routes.py tests/test_scoped_source_brief.py tests/test_entity_profile_lifecycle.py tests/test_source_brief_tasks.py tests/test_source_brief_listing.py tests/test_internal_pitch_shared_av.py tests/test_internal_pitch_workflow.py`
+— **297 passed in 42.06s**, including regressions for explicit recovery with an
+invalid timestamp and consistency between reopened reports and listings.
+`py_compile`, `git diff --check`, and local
+LibreOffice DOCX→PDF rendering for normal and AV manuscripts passed; generated
+artifacts were removed. No external model, production database or external
+effect was used. Exact write reservations remain unavailable for the separate
+`experience_runtime.py`, `saved_work.py` and `app.py` integration paths, so
+those FIX-108 owner/caller checks remain OPEN; runtime and user acceptance are
+NOT_VERIFIED.
+
+## 2026-10-20 Issue #17 FIX-047 — preserve saved detail during backfill failures
+
+The existing `topic_note_detail_backfill.py` distinguishes failed, empty and available fields, merges only nonempty verified values into the exact row, and derives quality from the merged stored detail. Failed extraction cannot erase saved content/media/comments; oversized JSON is rejected intact and commit ownership remains with its caller. Supplied verified JSON fields now bypass parsing corrupt legacy values; unchanged verified payloads still recalculate stale quality, while partial merges preserve the prior aggregate capture timestamp. `tests/test_topic_note_detail_backfill.py` passed **9 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use an in-memory database and synthetic pages; no CDP, live collection or production DB was used.
+
+## 2026-10-20 Issue #17 FIX-058 / FIX-060 — derived memory TTL and forget
+
+In the existing `agent_memory/base.py` owner, expired records are filtered
+before the caller limit and use one query-time clock value (FIX-058 E04-TTL).
+The existing derived-memory writer rejects a delayed implicit same-task/key
+write after the forgotten tombstone, rather than reviving that record
+(FIX-060 E04-FORGET). A user correction can intentionally restore a forgotten
+key only by matching the tombstone's current revision; stale revisions conflict.
+
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/4N-meRHHaGHjU5wZ/lib/python3.12/site-packages python -m pytest -q tests/agent_memory/test_working_memory.py`
+— **20 passed**, with no background-thread leak. The isolated FIX-060 SQLite
+regression confirmed the forgotten revision/tombstone rejects the stale write
+and remains unreadable after reopen. `compileall` and `git diff --check` passed.
+The full API/Agent regression module, including the FIX-058 TTL case, then passed
+with the existing offline `feedparser` cache:
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_scoped_derived_memory.py`
+— **12 passed in 12.58s**, with no background-thread leak. No package was
+fetched or installed. Wider derived-dependency invalidation remains OPEN for
+FIX-060. FIX-059 still lacks a verified Agent retrieval/fusion caller; FIX-061
+and FIX-084–088 remain OPEN because their Shared Learning files have no
+available exact write reservation.
+No W6 or production database was modified; runtime/product acceptance remains
+NOT_VERIFIED.
+
+Review follow-up at the PR branch head: `agent_memory/base.py` now preserves the
+existing `_query(filters, limit)` subclass call signature while passing the
+same TTL clock through a context-local value to the base implementation.
+`LearningMemory` in the separate Shared Learning owner therefore keeps its
+existing override unchanged. The prior review reproduction
+`TestLearningMemory.test_positive_negative_samples` and a regression for the
+legacy override plus single-clock TTL ordering pass (**2 passed in 0.21s**).
+The broader combined run of `tests/agent_memory/test_learning_memory.py`,
+`tests/agent_memory/test_working_memory.py` and
+`tests/test_scoped_derived_memory.py` passed **52 tests in 13.39s**, with no
+background-thread leak. A follow-up exact API regression verifies stale
+revision rejection and explicit restoration at the current forgotten revision;
+the same combined command now passes **53 tests in 14.24s**, with no
+background-thread leak.
+
+## 2026-10-20 Issue #17 FIX-026 — incomplete source availability stays unknown
+
+`data_query_api.py` keeps source counts/availability unknown when a source result
+is incomplete or capped, instead of interpreting the visible partial count as a
+complete total. Normal complete and explicit-zero paths remain distinct. The
+focused regression is `tests/test_data_query_source_limit_semantics.py`. Exact-head
+offline command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_data_query_source_limit_semantics.py` — **4 passed**.
+`python -m py_compile data_query_api.py tests/test_data_query_source_limit_semantics.py`
+and `git diff --check` passed. These isolated tests do not establish live-source
+coverage or product-level acceptance.
+
 ## 2026-10-20 Issue #17 FIX-038 — verify recovery against the affected notes database
 
 The existing `auto_recovery.py` verifies the notes-table invariant against the same resolved database path being recovered; a generic `SELECT 1` can no longer label a missing notes table fixed. `tests/test_auto_recovery_database_truth.py` passed **3 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use temporary SQLite only; no production recovery was executed.
@@ -219,6 +341,14 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 本次规划审查同步补正：23个迁移来源记录Git blob原始字节SHA-256与明确标注的本机CRLF读取指纹；SYS-05保留BACKEND-GAP-040只读snapshot，ACC-04注明既有registry别名，BMP-08注明Shared/C4-W4制作Owner。既有隔离PixiJS小探针完整HTML源码/观察JSON原文以UTF-8/LF及HTML末尾空行规范化后，在round15研究文档代码围栏中发布，可按围栏正文哈希提取复原；原hash/围栏正文hash与未保留截图等限制明确，未重跑。该文档批次按RULES_ONLY_PUBLICATION校验，未发布可执行HTML或任意JSON路径；当前组合的发布状态须按实际变更和同版证据另核。草图链接仅为视觉规划输入，不替代Experience或本屏实际合同；触控、营销budgeted/单项结果、学习资产筛选、移动返回与目录responsive/reduced-motion等原合同约束原位保留。不是前端或REA目标采用接受。
 
 ## 1. Online reader's current-state snapshot
+
+### 2026-10-20 Issue #17 first source repair — FIX-089
+
+PR [#85](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/85) is an open, unmerged source candidate from main `3f6d67785752b465b5b022847cbbe75a55e1eb47`; initial code head `dff5b4a4635dddfc288a5139dbbcda4039aced3d`. It addresses only `FIX-089 · LOWER_ADAPTER_CACHE_SCOPE`: `lumenis/adapters/base.py` now binds cached fallback to complete actor/scope/query/task/source-version/result-limit identity and writes result+identity atomically; `lumenis/adapters/registry.py` carries an optional keyword-only context through existing search methods. Existing callers without complete trusted context retain live searches but fail truthfully without cached fallback. The current V4 search callers have not yet been wired to an authenticated complete context; their degraded cached fallback remains unavailable until their existing caller owner closes that boundary. No W6 composition file changed.
+
+Exact source regressions are in `tests/test_adapter_resilience.py`: `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest python -m pytest -q tests/test_adapter_resilience.py` — 20 passed. `python -m compileall -q lumenis/adapters/base.py lumenis/adapters/registry.py tests/test_adapter_resilience.py`, `python scripts/audit_tools/verify_ai_native_constitution.py` and `git diff --check` passed locally. The first exact-head Product Gate run failed its blocking machine-governance step because the delivery commit omitted this required CURRENT co-publication; that failure is retained and this CURRENT update is the correction for the next exact-head run. Its advisory Boundary Check reported 28 existing findings; the same command on exact base `3f6d67785752b465b5b022847cbbe75a55e1eb47` reported the same 28 (not introduced by this PR). Latest-head required checks and review are still pending; neither source tests nor this record establish runtime, database, real-source or user acceptance. All other still-open Issue #17 work remains open; this first PR is not the complete repair scope.
+
+Independent review of exact head `34ecc470e0dc276dd06737044f919c2edc4fe811` found that callers could mutate the live success result and cached notes through shared object references, including nested `raw_data`. The existing cache owner now stores a detached deep snapshot and deep-copies cached notes for every fallback; if snapshot copying is unsupported, cached fallback is unavailable rather than aliased. Regressions mutate the first live result and first fallback, inject `TypeError` during snapshot storage and reads, and verify a fresh live success clears the older cache. The registry-forwarding test now restores the process-wide singleton through `monkeypatch`. FIX-091 integration review found terminal verification errors could be downgraded to cached or custom fallback success; `_fallback_or_fail` now returns the original terminal failure before consulting any fallback. A subsequent breaker review found the open-circuit shortcut replaced the provider error with a generic breaker message. `BaseAdapter` now retains the most recent provider failure in existing adapter state; while an open breaker follows a terminal response, it returns failure with that cause and bypasses both custom and cached fallback. Regressions warm both empty and non-empty same-identity caches, issue five challenges through the configured threshold, verify the sixth call makes no provider request and remains failed, and confirm an explicitly permitted normal request after cooldown recovers. A separate regression confirms repeated ordinary transient errors still use same-identity cached fallback after the breaker opens. The isolated adapter suite passes **30 tests** with `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest python -m pytest -q tests/test_adapter_resilience.py`; changed Python compilation and `git diff --check` pass. This closes only the cache alias, terminal/breaker-state and test-isolation paths; exact updated-head CI/review and all runtime, database, real-source, user and remaining Issue #17 outcomes remain pending/open.
 
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
