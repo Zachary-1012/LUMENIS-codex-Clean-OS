@@ -32,6 +32,17 @@ context. Regression cases cover each corrupted column. The same offline focused
 modules now report **26 passed in 1.80s**; `py_compile` and `git diff --check`
 pass. FIX-043 production caller verification remains OPEN.
 
+## 2026-10-20 Issue #17 FIX-028 — count newly synced resources only
+
+`resource_library.py` reports the count of resources newly added by the current
+sync operation, rather than the full retained library size. Existing resources
+and normal sync behavior remain intact. Regression: `tests/test_resource_library_sync.py`.
+Exact-head offline command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_resource_library_sync.py` — **1 passed**.
+`python -m py_compile resource_library.py tests/test_resource_library_sync.py` and
+`git diff --check` passed. This focused result does not claim a full library or
+product acceptance run.
+
 ## 2026-10-20 Issue #17 FIX-096/098/099/105/106 — platform adapter outcomes
 
 The existing Facebook/X, Instagram, XHS and WeChat adapters now retain bounded
