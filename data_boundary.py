@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 import re
+import secrets
 import subprocess
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -195,8 +196,7 @@ def _is_presence_metadata_key(key):
 # cookie_present=False. Only the exact boolean literal is protected; any other
 # value under the same key still goes through every redaction rule.
 _PRESENCE_TEXT_PAIR = re.compile(
-    r"""(?<![A-Za-z0-9_])["']?(?:(?:has|is)_[A-Za-z0-9_]+|[A-Za-z0-9_]+_(?:present|configured|available|exists))["']?\s*[:=]\s*(?:true|false)(?![A-Za-z0-9_])""",
-    re.I,
+    r"""(?<![A-Za-z0-9_=:/+.\-])["']?(?i:(?:has|is)_[A-Za-z0-9_]+|[A-Za-z0-9_]+_(?:present|configured|available|exists))["']?\s*[:=]\s*(?:true|false|True|False)(?=[\s,;}\])]|$)"""
 )
 
 
@@ -299,16 +299,25 @@ def sanitize_text(text):
     """把待写入日志/Evidence/Attestation 的文本中的凭证打码。非字符串原样返回。"""
     if not isinstance(text, str):
         return text
+    # Hold exact boolean presence pairs behind a per-call alphanumeric marker.
+    # The marker is ordinary token text, so an enclosing credential rule
+    # (token=..., Authorization: ...) still consumes and redacts it; only
+    # markers that survive every rule intact are restored.
+    nonce = secrets.token_hex(8)
+    while nonce in text:
+        nonce = secrets.token_hex(8)
     kept = []
 
     def _hold(match):
         kept.append(match.group(0))
-        return f"\x00PRESENCE{len(kept) - 1}\x00"
+        return f"zzpresence{nonce}n{len(kept) - 1}zz"
 
     out = _PRESENCE_TEXT_PAIR.sub(_hold, text)
     for rule, repl in _SAN_RULES:
         out = rule.sub(repl, out)
-    return re.sub(r"\x00PRESENCE(\d+)\x00", lambda m: kept[int(m.group(1))], out)
+    return re.sub(
+        rf"zzpresence{nonce}n(\d+)zz", lambda m: kept[int(m.group(1))], out
+    )
 
 
 def sanitize_mapping(obj):

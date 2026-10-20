@@ -338,3 +338,13 @@ def test_presence_metadata_handles_python_repr_suffix_and_all_credential_classes
     assert "'has_auth_cookie': True" in text and "'has_token': False" in text
     assert '"has_token": true' in text and '"cookie_present": false' in text
     assert "tok-abcdef" not in text and "cookie-leak" not in text
+
+
+def test_presence_exception_never_exposes_credentials_or_breaks_on_marker_text():
+    import data_boundary as d
+    assert "secret-material" not in d.sanitize_text("has_token=true-secret-material")
+    assert "tRuE" not in d.sanitize_text("has_token=tRuE")
+    assert d.sanitize_text("token=has_flag=true") == "token=[REDACTED]"
+    assert "has_password" not in d.sanitize_text("Authorization: Basic has_password=false")
+    marker = 'x \x00PRESENCE0\x00 zzpresence0zz {"has_token": true}'
+    assert d.sanitize_text(marker) == marker
