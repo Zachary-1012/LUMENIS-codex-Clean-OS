@@ -190,3 +190,28 @@ def test_scoped_execution_list_reports_verified_provider_failure(workspace, monk
     rows = owner.list_scoped_executions(actor=workspace["actor"], scope=scope, status="FAILED")
     assert [row["execution_id"] for row in rows] == [created["execution_id"]]
     assert rows[0]["evidence_ref"] == "synthetic-failure-receipt"
+
+
+def test_scoped_execution_list_skips_row_whose_intact_payload_belongs_to_another_brand(workspace):
+    import json
+    owner, scope, created = _scoped_list_record(workspace)
+    with workspace["repo"].transaction() as con:
+        cols = [r[1] for r in con.execute("PRAGMA table_info(lumenis_subject_registry)")]
+        row = con.execute("SELECT * FROM lumenis_subject_registry WHERE brand_focus_id=?",
+                          (scope["brand_focus_id"],)).fetchone()
+        values = dict(zip(cols, row))
+        values.pop("id", None)
+        values["brand_focus_id"] = "OTHER-VALID-BRAND"
+        for key in ("subject_id", "subject_key", "slug", "name_en_norm", "name_zh_norm", "name_en", "name_zh"):
+            if key in values and isinstance(values[key], str):
+                values[key] = values[key] + "-other"
+        con.execute(
+            f"INSERT INTO lumenis_subject_registry ({','.join(values)}) VALUES ({','.join('?' * len(values))})",
+            tuple(values.values()),
+        )
+        payload = json.loads(created["payload"])
+        payload["context"]["brand_focus_id"] = "OTHER-VALID-BRAND"
+        con.execute("UPDATE kos_executions SET payload=? WHERE execution_id=?",
+                    (json.dumps(payload), created["execution_id"]))
+    # The other brand's intact row must not block this caller's history.
+    assert owner.list_scoped_executions(actor=workspace["actor"], scope=scope) == []

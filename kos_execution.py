@@ -260,9 +260,13 @@ def list_scoped_executions(*, actor, scope, status="", action_type="", target_au
             try:
                 record, _payload = _scoped_record(row, context)
             except PermissionError as exc:
-                # The indexed owner fields placed this row inside the requested
-                # actor/scope, so contradictory signed context is corruption,
-                # not another actor's row to silently skip.
+                # A corrupted denormalized actor/target_brand can name this
+                # caller while the valid payload context belongs to another
+                # principal/scope. That foreign row is skipped so it cannot
+                # block this caller's history. Only when the authoritative
+                # payload owner is this caller is the mismatch corruption.
+                if _payload_context_is_foreign(row, context, con):
+                    continue
                 raise ValueError("KOS_EXECUTION_BINDING_INVALID") from exc
             if ((status and record["status"] != status)
                     or (action_type and record["action_type"] != action_type)
@@ -273,6 +277,43 @@ def list_scoped_executions(*, actor, scope, status="", action_type="", target_au
                 break
         _scoped_context(actor, scope, connection=con)
     return records
+
+
+def _payload_context_is_foreign(row, context, connection):
+    """True when the row's intact payload binds to another *valid* owner.
+
+    The payload must be the scoped schema with an unchanged request digest.
+    A different principal is foreign; a different brand is foreign only when
+    it names an active registered subject. Anything else (for example a
+    payload whose brand was overwritten with an unregistered value) remains
+    corruption inside the caller's indexed scope.
+    """
+    from lumenis.shared.reporting.saved_work import _digest
+    try:
+        payload = json.loads(row["payload"])
+    except (TypeError, ValueError, KeyError, IndexError):
+        return False
+    if (not isinstance(payload, dict)
+            or payload.get("schema") != "lumenis.kos-scoped-execution/v1"
+            or payload.get("request_sha256") != _digest(payload.get("request"))):
+        return False
+    payload_context = payload.get("context")
+    if not isinstance(payload_context, dict):
+        return False
+    principal_keys = (["principal_kind", "principal_ref"] if "principal_ref" in context else ["actor_id"])
+    if any(payload_context.get(key) != context.get(key) for key in principal_keys):
+        return bool(payload_context.get("principal_ref") or payload_context.get("actor_id"))
+    foreign_brand = payload_context.get("brand_focus_id")
+    if foreign_brand and foreign_brand != context.get("brand_focus_id"):
+        try:
+            hit = connection.execute(
+                "SELECT 1 FROM lumenis_subject_registry WHERE brand_focus_id=? AND status='active'",
+                (foreign_brand,),
+            ).fetchone()
+        except sqlite3.Error:
+            return False
+        return hit is not None
+    return False
 
 
 def _check_scoped_source_binding(*, actor, scope, request, connection, expected_version=None):
