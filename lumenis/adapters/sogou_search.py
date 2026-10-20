@@ -52,7 +52,7 @@ _REL_DAY = re.compile(r"(\d+)\s*天前")
 _URL_YEAR = re.compile(r"/(20\d{2})[/\-_.]")
 # JS / meta 跳转里的真实地址
 _JS_LOCATION = re.compile(
-    r"(?:location\.replace|location\.href|URL=|url=)\s*[\"']?(https?://[^\"'\)\s>]+)",
+    r"(?:(?:window\.)?location\.replace\s*\(\s*|(?:window\.)?location\.href\s*=\s*|URL=|url=)\s*[\"']?(https?://[^\"'\)\s>]+)",
     re.IGNORECASE)
 
 
@@ -133,7 +133,9 @@ class SogouSearchAdapter(BaseAdapter):
             return AdapterResult(success=False, error="；".join(blocked))
 
         # 还原 /link 中转真实地址（并发，温和限流）
-        self._resolve_links(session, collected, workers=6)
+        resolve_error = self._resolve_links(session, collected, workers=6)
+        if resolve_error:
+            return AdapterResult(success=False, error=resolve_error)
 
         # 按真实 URL 去重（新闻优先保留），再截断
         deduped, seen = [], set()
@@ -382,35 +384,62 @@ class SogouSearchAdapter(BaseAdapter):
 
     # ---------- 中链还原 ----------
     def _resolve_links(self, session, notes, workers: int = 6):
-        """并发把搜狗 /link 中转地址还原为真实 URL；失败保留原中转链。"""
+        """并发还原 /link 地址；命中挑战时停止发起后续链接请求。"""
         pending = {i: n.url for i, n in enumerate(notes)
                    if n.url.startswith("https://www.sogou.com/link")}
         if not pending:
-            return
+            return None
         headers = self._headers("https://www.sogou.com/")
 
         def resolve(url):
             try:
                 r = session.get(url, headers=headers, timeout=8, allow_redirects=True)
+                if self._is_manual_verification_response(r):
+                    return None, (
+                        f"{_MANUAL_VERIFICATION_PREFIX} 搜狗 /link 跳转返回验证码/反爬挑战；"
+                        "已停止后续链接请求，请完成人工验证后重新发起搜索"
+                    )
                 m = _JS_LOCATION.search(r.text[:4000])
                 if m:
-                    return html.unescape(m.group(1))
+                    return html.unescape(m.group(1)), None
                 if r.url and "sogou.com/link" not in r.url:
-                    return r.url  # 极少数走 HTTP 302
+                    return r.url, None  # 极少数走 HTTP 302
             except Exception:
-                return None
-            return None
+                return None, None
+            return None, None
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(resolve, u): i for i, u in pending.items()}
-            for fut in concurrent.futures.as_completed(futures):
-                i = futures[fut]
-                real = fut.result()
-                if real:
-                    notes[i].url = real
-                    notes[i].raw_data["link_redirect"] = False
-                    if notes[i].author in ("搜狗搜索", "搜狗新闻", "搜狗网页", "sogou"):
-                        real_src = self._domain_source(real)
-                        if real_src and real_src != "sogou":
-                            notes[i].author = real_src
-                # 还原失败：保留原中转链，raw_data 标记保持 True
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+            entries = list(pending.items())
+            for offset in range(0, len(entries), max(1, workers)):
+                batch = entries[offset:offset + max(1, workers)]
+                futures = {pool.submit(resolve, url): index for index, url in batch}
+                for future in concurrent.futures.as_completed(futures):
+                    index = futures[future]
+                    real, challenge_error = future.result()
+                    if challenge_error:
+                        # Requests already running in this bounded batch may finish,
+                        # but queued futures are cancelled and no later batch starts.
+                        for other in futures:
+                            if other is not future:
+                                other.cancel()
+                        return challenge_error
+                    if real:
+                        notes[index].url = real
+                        notes[index].raw_data["link_redirect"] = False
+                        if notes[index].author in ("搜狗搜索", "搜狗新闻", "搜狗网页", "sogou"):
+                            real_src = self._domain_source(real)
+                            if real_src and real_src != "sogou":
+                                notes[index].author = real_src
+                    # 还原失败：保留原中转链，raw_data 标记保持 True
+        return None
+
+    @classmethod
+    def _is_manual_verification_response(cls, response) -> bool:
+        """识别响应正文挑战或搜狗 anti-spider 最终跳转地址。"""
+        if cls._has_manual_verification((getattr(response, "text", "") or "")[:4000]):
+            return True
+        parsed = urllib.parse.urlparse(getattr(response, "url", "") or "")
+        host = (parsed.hostname or "").lower()
+        is_sogou_host = host == "sogou.com" or host.endswith(".sogou.com")
+        path = parsed.path.lower()
+        return is_sogou_host and any(marker in path for marker in ("antispider", "verify", "captcha"))

@@ -4,20 +4,22 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
-## 2026-10-20 Issue #17 FIX-091 — Sogou challenge retry boundary
+## 2026-10-20 Issue #17 FIX-091 — Sogou challenge retry and link-resolution boundary
 
-The existing `lumenis/adapters/sogou_search.py` now recognizes explicit
-verification/anti-bot challenge markers, returns the existing failed-result
-contract with `NEED_HUMAN_VERIFICATION`, and stops before retrying that channel,
-requesting the next channel, or resolving links. `BaseAdapter.collect` already
-treats the returned verification text as terminal; no outer retry is needed.
-Ordinary short empty shells keep their existing single retry. Existing tests in
-`tests/test_sogou_adapters.py` verify one request through `collect`, explicit
-manual re-entry after the fixture no longer presents a challenge, and normal
-empty search success. The adapter and same-owner regression do not add a token
-or bypass path. The W6-owned API/UI projection is unchanged and remains
-unverified; this repair does not close that display integration or remaining
-Issue #17 work. `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest --with requests --with beautifulsoup4 python -m pytest -q tests/test_sogou_adapters.py::TestSogouSearchAdapter` passed (**13 passed**); `python -m compileall -q lumenis/adapters/sogou_search.py tests/test_sogou_adapters.py`, both governance/constitution gates and `git diff --check` passed. A whole-file run was not accepted as a result: its first attempt lacked Flask and exposed a short normal-page fixture in the new recovery test; that fixture is corrected. A second whole-file attempt with Flask did not finish within the isolated run and was interrupted, so only the targeted adapter class is reported as passing. No real source or external effect was used.
+The existing `lumenis/adapters/sogou_search.py` recognizes explicit
+verification/anti-bot challenge markers and returns `NEED_HUMAN_VERIFICATION`
+as a failed result, stopping same-channel retry, the next channel and link
+resolution. Link unwrapping now checks both response text and the final Sogou
+anti-spider URL. It processes links in bounded batches, cancels queued work on a
+challenge, and does not start a later batch; requests already running in the
+current batch may finish. `_resolve_links` reports the challenge to `search`,
+so the provider failure cannot be reported as a successful collection. The
+normal JS redirect path, ordinary empty search success, bounded ordinary retry,
+and a distinct explicit search after the fixture clears the challenge remain
+available.
+
+Cross-PR review also found that a prior empty/non-empty cached result or custom
+fallback could turn a Sogou challenge into success. PR [#85](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/85) now guards terminal provider errors at the existing `BaseAdapter` fallback owner. PR #87 is stacked on that lower-adapter commit and adds public `collect` regressions with one complete `AdapterCacheContext` across prior empty/non-empty success then challenge, ordinary same-context network fallback, and `registry.search_all_with_status` reporting `FAIL`. The W6-owned API/UI projection remains unmodified and unverified; remaining Issue #17 work remains open. `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest --with requests --with beautifulsoup4 python -m pytest -q tests/test_sogou_adapters.py::TestSogouSearchAdapter` passed (**19 passed**). This includes redirect challenge stopping later queued links and ordinary JavaScript redirect resolution. Full-file, exact-head CI/review, real-provider, runtime and user acceptance are not claimed. No live source or external effect was used.
 
 ## 2026-10-18 source-adoption validation handoff
 
@@ -200,6 +202,14 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 本次规划审查同步补正：23个迁移来源记录Git blob原始字节SHA-256与明确标注的本机CRLF读取指纹；SYS-05保留BACKEND-GAP-040只读snapshot，ACC-04注明既有registry别名，BMP-08注明Shared/C4-W4制作Owner。既有隔离PixiJS小探针完整HTML源码/观察JSON原文以UTF-8/LF及HTML末尾空行规范化后，在round15研究文档代码围栏中发布，可按围栏正文哈希提取复原；原hash/围栏正文hash与未保留截图等限制明确，未重跑。该文档批次按RULES_ONLY_PUBLICATION校验，未发布可执行HTML或任意JSON路径；当前组合的发布状态须按实际变更和同版证据另核。草图链接仅为视觉规划输入，不替代Experience或本屏实际合同；触控、营销budgeted/单项结果、学习资产筛选、移动返回与目录responsive/reduced-motion等原合同约束原位保留。不是前端或REA目标采用接受。
 
 ## 1. Online reader's current-state snapshot
+
+### 2026-10-20 Issue #17 first source repair — FIX-089
+
+PR [#85](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/85) is an open, unmerged source candidate from main `3f6d67785752b465b5b022847cbbe75a55e1eb47`; initial code head `dff5b4a4635dddfc288a5139dbbcda4039aced3d`. It addresses only `FIX-089 · LOWER_ADAPTER_CACHE_SCOPE`: `lumenis/adapters/base.py` now binds cached fallback to complete actor/scope/query/task/source-version/result-limit identity and writes result+identity atomically; `lumenis/adapters/registry.py` carries an optional keyword-only context through existing search methods. Existing callers without complete trusted context retain live searches but fail truthfully without cached fallback. The current V4 search callers have not yet been wired to an authenticated complete context; their degraded cached fallback remains unavailable until their existing caller owner closes that boundary. No W6 composition file changed.
+
+Exact source regressions are in `tests/test_adapter_resilience.py`: `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest python -m pytest -q tests/test_adapter_resilience.py` — 20 passed. `python -m compileall -q lumenis/adapters/base.py lumenis/adapters/registry.py tests/test_adapter_resilience.py`, `python scripts/audit_tools/verify_ai_native_constitution.py` and `git diff --check` passed locally. The first exact-head Product Gate run failed its blocking machine-governance step because the delivery commit omitted this required CURRENT co-publication; that failure is retained and this CURRENT update is the correction for the next exact-head run. Its advisory Boundary Check reported 28 existing findings; the same command on exact base `3f6d67785752b465b5b022847cbbe75a55e1eb47` reported the same 28 (not introduced by this PR). Latest-head required checks and review are still pending; neither source tests nor this record establish runtime, database, real-source or user acceptance. All other still-open Issue #17 work remains open; this first PR is not the complete repair scope.
+
+Independent review of exact head `34ecc470e0dc276dd06737044f919c2edc4fe811` found that callers could mutate the live success result and cached notes through shared object references, including nested `raw_data`. The existing cache owner now stores a detached deep snapshot and deep-copies cached notes for every fallback; if snapshot copying is unsupported, cached fallback is unavailable rather than aliased. Regressions mutate the first live result and first fallback, inject `TypeError` during snapshot storage and reads, and verify a fresh live success clears the older cache. The registry-forwarding test now restores the process-wide singleton through `monkeypatch`. A subsequent FIX-091 integration review found terminal verification errors could still be downgraded to cached or custom fallback success. `_fallback_or_fail` now returns the original terminal failure before consulting any fallback; regressions cover a prior cached empty result, a prior cached non-empty result and a custom fallback handler. The isolated adapter suite passes **27 tests** with `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest python -m pytest -q tests/test_adapter_resilience.py`; changed Python compilation and `git diff --check` pass. This closes only the adapter fallback alias/terminal-state and test-isolation paths; exact updated-head CI/review and all runtime, database, real-source, user and remaining Issue #17 outcomes are still pending/open.
 
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`

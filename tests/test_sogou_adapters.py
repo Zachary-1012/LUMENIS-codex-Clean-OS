@@ -12,7 +12,8 @@ from unittest.mock import MagicMock, patch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from lumenis.adapters.base import AdapterResult, CollectedNote
+from lumenis.adapters.base import AdapterCacheContext, AdapterResult, CollectedNote
+from lumenis.adapters.registry import registry
 from lumenis.adapters.sogou_wechat import SogouWechatAdapter
 from lumenis.adapters.sogou_search import SogouSearchAdapter
 
@@ -265,6 +266,175 @@ class TestSogouSearchAdapter:
         assert resumed.success is True
         assert resumed.notes == []
         assert resumed_session.get.call_count == 2
+
+    def test_collect_stops_link_requests_when_redirect_lands_on_sogou_challenge(self, monkeypatch):
+        """A challenge at the final /link URL is FAIL and stops later link batches."""
+        import requests
+
+        ad = SogouSearchAdapter()
+        monkeypatch.setattr(ad, "_load_cookies", lambda: {})
+        first_link = "https://www.sogou.com/link?url=first"
+        second_link = "https://www.sogou.com/link?url=second"
+        notes = [
+            ad._make_note(title="first", url=first_link, raw_data={"link_redirect": True}),
+            ad._make_note(title="second", url=second_link, raw_data={"link_redirect": True}),
+        ]
+        normal_page = "<html><body>" + ("ordinary search response " * 100) + "</body></html>"
+        channel_response = MagicMock(text=normal_page, encoding="utf-8")
+        challenge_response = MagicMock(
+            text="<html><body>checking request</body></html>",
+            url="https://www.sogou.com/antispider/?from=link",
+        )
+        session = MagicMock()
+        session.get.side_effect = [channel_response, channel_response, challenge_response]
+        monkeypatch.setattr(requests, "Session", lambda: session)
+        monkeypatch.setattr(ad, "_parse_channel", lambda _page, channel: notes if channel == "news" else [])
+        monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+        resolve_links = ad._resolve_links
+        monkeypatch.setattr(
+            ad, "_resolve_links",
+            lambda sess, found, workers=6: resolve_links(sess, found, workers=1),
+        )
+
+        result = ad.collect("太古汇", max_results=10, allow_fallback=False)
+
+        assert result.success is False
+        assert "NEED_HUMAN_VERIFICATION" in result.error
+        assert "antispider" in result.error.lower() or "验证" in result.error
+        assert session.get.call_count == 3  # two channels and the first link only
+        assert notes[0].url == first_link
+        assert notes[0].raw_data["link_redirect"] is True
+        assert notes[1].url == second_link
+
+    def test_normal_link_redirect_still_resolves(self):
+        ad = SogouSearchAdapter()
+        note = ad._make_note(
+            title="ordinary result",
+            url="https://www.sogou.com/link?url=ordinary",
+            author="搜狗搜索",
+            raw_data={"link_redirect": True},
+        )
+        response = MagicMock(
+            text='<script>location.href="https://example.org/story";</script>',
+            url="https://www.sogou.com/link?url=ordinary",
+        )
+        session = MagicMock()
+        session.get.return_value = response
+
+        error = ad._resolve_links(session, [note], workers=1)
+
+        assert error is None
+        assert note.url == "https://example.org/story"
+        assert note.raw_data["link_redirect"] is False
+
+    @pytest.mark.parametrize("has_cached_note", [False, True])
+    def test_collect_challenge_bypasses_same_identity_cache(self, monkeypatch, has_cached_note):
+        """A later challenge remains FAIL after a cached empty or non-empty success."""
+        import requests
+
+        ad = SogouSearchAdapter()
+        monkeypatch.setattr(ad, "_load_cookies", lambda: {})
+        context = AdapterCacheContext(
+            actor_id="actor-sogou", scope="workspace-sogou", task_id="task-sogou",
+            source_version="fixture-v1",
+        )
+        normal_page = "<html><body>" + ("ordinary search response " * 100) + "</body></html>"
+        normal_response = MagicMock(text=normal_page, encoding="utf-8")
+        challenge_response = MagicMock(
+            text="<html><body>请输入验证码 antispider</body></html>", encoding="utf-8",
+        )
+        successful_session = MagicMock()
+        successful_session.get.return_value = normal_response
+        challenged_session = MagicMock()
+        challenged_session.get.return_value = challenge_response
+        sessions = iter((successful_session, challenged_session))
+        monkeypatch.setattr(requests, "Session", lambda: next(sessions))
+        monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+        fresh_note = ad._make_note(
+            title="fresh provider result", content="public result",
+            url="https://example.org/story",
+        )
+        monkeypatch.setattr(
+            ad, "_parse_channel",
+            lambda _page, channel: [fresh_note] if has_cached_note and channel == "news" else [],
+        )
+
+        first = ad.collect("same query", cache_context=context)
+        assert first.success is True
+        assert bool(first.notes) is has_cached_note
+
+        second = ad.collect("same query", cache_context=context)
+
+        assert second.success is False
+        assert second.notes == []
+        assert "NEED_HUMAN_VERIFICATION" in second.error
+        assert successful_session.get.call_count == 2
+        assert challenged_session.get.call_count == 1
+
+    def test_registry_reports_challenge_as_fail_not_empty(self, monkeypatch):
+        import requests
+
+        ad = SogouSearchAdapter()
+        monkeypatch.setattr(ad, "_load_cookies", lambda: {})
+        response = MagicMock(
+            text="<html><body>请输入验证码 antispider</body></html>", encoding="utf-8",
+        )
+        session = MagicMock()
+        session.get.return_value = response
+        monkeypatch.setattr(requests, "Session", lambda: session)
+        monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+        monkeypatch.setattr(registry, "_adapters", {ad.platform_name: ad})
+
+        _merged, status = registry.search_all_with_status(
+            "same query", platforms=[ad.platform_name],
+            cache_context=AdapterCacheContext(
+                actor_id="actor-sogou", scope="workspace-sogou", task_id="task-sogou",
+                source_version="fixture-v1",
+            ),
+        )
+
+        assert status[0]["state"] == "FAIL"
+        assert status[0]["success"] is False
+        assert status[0]["count"] == 0
+        assert "NEED_HUMAN_VERIFICATION" in status[0]["error"]
+
+    def test_ordinary_network_failure_keeps_same_identity_fallback(self, monkeypatch):
+        import requests
+
+        ad = SogouSearchAdapter()
+        monkeypatch.setattr(ad, "_load_cookies", lambda: {})
+        monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+        monkeypatch.setattr("lumenis.adapters.base.time.sleep", lambda *_: None)
+        context = AdapterCacheContext(
+            actor_id="actor-sogou", scope="workspace-sogou", task_id="task-sogou",
+            source_version="fixture-v1",
+        )
+        normal_page = "<html><body>" + ("ordinary search response " * 100) + "</body></html>"
+        normal_response = MagicMock(text=normal_page, encoding="utf-8")
+        initial_session = MagicMock()
+        initial_session.get.return_value = normal_response
+        failed_session = MagicMock()
+        failed_session.get.side_effect = OSError("connection unavailable")
+        sessions = iter((initial_session, failed_session))
+        monkeypatch.setattr(requests, "Session", lambda: next(sessions, failed_session))
+        fresh_note = ad._make_note(
+            title="fresh provider result", content="public result",
+            url="https://example.org/story",
+        )
+        monkeypatch.setattr(
+            ad, "_parse_channel",
+            lambda _page, channel: [fresh_note] if channel == "news" else [],
+        )
+
+        first = ad.collect("same query", cache_context=context)
+        assert first.success is True
+
+        fallback = ad.collect("same query", cache_context=context)
+
+        assert fallback.success is True
+        assert [note.title for note in fallback.notes] == ["fresh provider result"]
+        assert fallback.error.startswith("缓存降级:")
+        assert failed_session.get.call_count == 6
 
     def test_parse_channel_with_bs4(self):
         """BeautifulSoup 解析新闻频道结果。"""
