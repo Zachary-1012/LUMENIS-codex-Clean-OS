@@ -24,6 +24,33 @@ reporting engine publish an all-zero EMV only with that column,
 behaviour. Platform aggregation reports aggregate-only overflow in
 `invalid_inputs` and keeps `invalid_count` to invalid notes.
 
+## 2026-10-20 Issue #17 FIX-041–043 — KOS scope and completeness
+
+`kos_execution.py` now filters execution records by the existing scoped-v1,
+actor and BrandFocus identity, while exact-context payload matches remain
+visible for integrity checks if denormalized index columns drift; malformed
+in-scope bindings fail rather than leaking or being silently skipped (FIX-041).
+`kos_routes.py` preserves incomplete-coverage failure and returns existing
+coverage, truncation, rejected-row and classification-integrity metadata on
+author details (FIX-042). `kos_engine.py` handles low-interaction diagnostics
+without formatting errors and treats invalid/non-finite evidence as unknown
+(FIX-043); its production caller remains unverified and is still OPEN.
+
+Offline regression command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -vv tests/test_kos_scoped_execution.py tests/test_kos_scoped_profile_parity.py tests/test_kos_engine_classify_kol_tier.py`
+— **23 passed**, with no background-thread leak. Changed-file `py_compile`,
+`git diff --check HEAD^ HEAD`, governance machine contract and AI-native
+constitution passed. Tests use isolated fixtures; no production database,
+live source, model call or external effect was used. The existing KOS state
+contract has no separate cancellation state, so none was added; runtime and
+user acceptance remain NOT_VERIFIED.
+
+Review follow-up: signed current-context payload matches now remain candidates
+even if denormalized actor, target brand or version columns are corrupted;
+`_scoped_record` compares those columns back to the authoritative request and
+context. Regression cases cover each corrupted column. The same offline focused
+modules now report **26 passed in 1.80s**; `py_compile` and `git diff --check`
+pass. FIX-043 production caller verification remains OPEN.
 ## 2026-10-20 Issue #17 FIX-036 / FIX-037 — report only observed collection health
 
 The existing `system_health_api.py` no longer infers current scheduler/login state, historical schedule slots or adaptive health percentages from notes or defaults. `today_runs` now reads only task-start records marked as observed in the existing collector stats file; legacy or unverified totals remain unknown. Per-keyword `collection_logs` are exposed as `today_keyword_observations` and keyword failure/unknown observations, never added to task runs. Task-level failure totals stay unknown because the existing task-start ledger has no terminal outcome record. `tests/test_hk_only_collection_policy.py` passed **38 tests**, including one task with 20 keyword observations. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No real login probe, collection or production database was used.
