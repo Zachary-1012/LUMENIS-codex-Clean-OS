@@ -62,14 +62,14 @@ def test_records_official_name_and_alias_keeps_id(reg):
     assert outputs["network_fetch"] == "NOT_PERFORMED"
     assert evidence["domain_id"] == "zbmp" and evidence["product_id"] == "ZBMP"
     assert evidence["status"] == "pending" and evidence["result"] == "GAP"
-    assert evidence["authenticity_score"] == 0.0
+    assert evidence["authenticity_score"] is None
     assert verify_evidence_record_integrity(evidence) is True
 
     again = reg.record_official_name("BMP", sid, source_url=source_url, name_zh="丝芙兰")
     assert again["changed"] is False
 
 
-def test_existing_evidence_writer_cannot_represent_unknown_authenticity(reg):
+def test_existing_evidence_writer_preserves_unknown_authenticity(reg):
     from lumenis.shared.evidence.store import record_evidence
 
     with reg._db_ready() as connection:
@@ -80,6 +80,13 @@ def test_existing_evidence_writer_cannot_represent_unknown_authenticity(reg):
             result="GAP",
             status="pending",
             authenticity_score=None,
+        )
+        default_score_id = record_evidence(
+            connection=connection,
+            source="test",
+            feature_id="FIX-025-UNKNOWN-SCORE-DEFAULT",
+            result="GAP",
+            status="pending",
         )
         zero_score_id = record_evidence(
             connection=connection,
@@ -93,14 +100,19 @@ def test_existing_evidence_writer_cannot_represent_unknown_authenticity(reg):
             "SELECT authenticity_score FROM app_evidence_records WHERE id=?",
             (omitted_score_id,),
         ).fetchone()[0]
+        default_score = connection.execute(
+            "SELECT authenticity_score FROM app_evidence_records WHERE id=?",
+            (default_score_id,),
+        ).fetchone()[0]
         zero_score = connection.execute(
             "SELECT authenticity_score FROM app_evidence_records WHERE id=?",
             (zero_score_id,),
         ).fetchone()[0]
 
-    # None is removed by the existing writer and SQLite applies its 1.0
-    # default; storing 0.0 asserts a numeric score rather than unknown.
-    assert omitted_score == 1.0
+    # Explicit NULL overrides the legacy DEFAULT 1.0; a numeric zero remains
+    # a distinct measured value.
+    assert omitted_score is None
+    assert default_score is None
     assert zero_score == 0.0
 
 

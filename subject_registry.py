@@ -514,15 +514,12 @@ def record_official_name(
             },
             expected="Official source origin and identity require independent verification.",
             actual="URL was declared; no network request or identity verification was performed.",
-            # OPEN: the canonical writer requires a non-null numeric score and
-            # maps None to its 1.0 default. A numeric zero is not equivalent
-            # to NOT_ASSESSED; this owner cannot encode that score state until
-            # the Evidence contract supports it.
-            authenticity_score=0.0,
+            # No independent source or identity check was performed, so keep
+            # the canonical numeric score unknown instead of encoding 0.0.
+            authenticity_score=None,
             notes=(
                 "HTTP(S) scheme validation records syntax only. The existing "
-                "numeric authenticity field cannot represent unknown; "
-                "authenticity_score_state is authoritative for this declaration."
+                "numeric authenticity score remains unassessed."
             ),
         )
         if type(evidence_id) is not int or evidence_id <= 0:
