@@ -191,14 +191,19 @@ def _is_presence_metadata_key(key):
     return bool(_PRESENCE_KEY.search(normalized))
 
 
+# Boolean presence pairs in free text: "has_auth_cookie": true, 'has_token': True,
+# cookie_present=False. Only the exact boolean literal is protected; any other
+# value under the same key still goes through every redaction rule.
+_PRESENCE_TEXT_PAIR = re.compile(
+    r"""(?<![A-Za-z0-9_])["']?(?:(?:has|is)_[A-Za-z0-9_]+|[A-Za-z0-9_]+_(?:present|configured|available|exists))["']?\s*[:=]\s*(?:true|false)(?![A-Za-z0-9_])""",
+    re.I,
+)
+
+
 def _redact_cookie(match):
     prefix = match.group(1)
     value = match.group(0)[len(prefix):]
     if value == "null":
-        return match.group(0)
-    if value in ("true", "false") and _is_presence_metadata_key(
-        re.sub(r"[\"'\s:=]+$", "", prefix)
-    ):
         return match.group(0)
     if re.fullmatch(r"true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?", value):
         return f'{prefix}"[REDACTED]"'
@@ -209,6 +214,15 @@ def _redact_cookie(match):
 
 
 _SAN_RULES = [
+    (
+        # Credential presence fields with a non-boolean value (booleans were
+        # already held aside): the value is treated as credential material.
+        re.compile(
+            r"""(["']?[A-Za-z0-9_]*(?:cookie|token|secret|password|passwd|pwd|credential|api_?key|session|authorization)[A-Za-z0-9_]*_(?:present|configured|available|exists)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|[^\s,;}\]]+)""",
+            re.I,
+        ),
+        r'\1"[REDACTED]"',
+    ),
     (
         re.compile(r"(authorization\s*[:=]\s*)(bearer|basic|token)?\s*[A-Za-z0-9._\-/+=]{6,}", re.I),
         r"\1\2 [REDACTED]",
@@ -285,10 +299,16 @@ def sanitize_text(text):
     """把待写入日志/Evidence/Attestation 的文本中的凭证打码。非字符串原样返回。"""
     if not isinstance(text, str):
         return text
-    out = text
+    kept = []
+
+    def _hold(match):
+        kept.append(match.group(0))
+        return f"\x00PRESENCE{len(kept) - 1}\x00"
+
+    out = _PRESENCE_TEXT_PAIR.sub(_hold, text)
     for rule, repl in _SAN_RULES:
         out = rule.sub(repl, out)
-    return out
+    return re.sub(r"\x00PRESENCE(\d+)\x00", lambda m: kept[int(m.group(1))], out)
 
 
 def sanitize_mapping(obj):
@@ -297,8 +317,12 @@ def sanitize_mapping(obj):
         sanitized = {}
         for key, value in obj.items():
             safe_key = sanitize_text(key) if isinstance(key, str) else key
-            if (isinstance(key, str) and _is_sensitive_mapping_key(key)
-                    and not (isinstance(value, bool) and _is_presence_metadata_key(key))):
+            if isinstance(key, str) and _is_presence_metadata_key(key) and (
+                _CRED_WORD.search(key) or _is_sensitive_mapping_key(key)
+            ):
+                # Credential presence status: only an exact boolean is shown.
+                safe_value = value if isinstance(value, bool) else "[REDACTED]"
+            elif isinstance(key, str) and _is_sensitive_mapping_key(key):
                 safe_value = "[REDACTED]"
             else:
                 safe_value = sanitize_mapping(value)

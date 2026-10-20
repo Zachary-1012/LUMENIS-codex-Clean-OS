@@ -318,3 +318,23 @@ def test_cookie_presence_metadata_stays_visible_but_values_redacted():
     text = d.sanitize_text('{"has_auth_cookie": true, "has_cookie": "leak-me", "cookie": "abc"}')
     assert '"has_auth_cookie": true' in text
     assert "leak-me" not in text and "abc" not in text
+
+
+def test_presence_metadata_handles_python_repr_suffix_and_all_credential_classes():
+    import data_boundary as d
+    out = d.sanitize_mapping({
+        "cookie_present": "credential-material", "token_configured": "tok-xyz",
+        "has_token": True, "has_api_key": False, "is_password_set": "pw-123",
+    })
+    assert out["cookie_present"] == "[REDACTED]"
+    assert out["token_configured"] == "[REDACTED]"
+    assert out["has_token"] is True and out["has_api_key"] is False
+    assert out["is_password_set"] == "[REDACTED]"
+    text = d.sanitize_text(
+        "{'has_auth_cookie': True, 'has_token': False} "
+        '{"has_token": true, "cookie_present": false, "token": "tok-abcdef", '
+        '"cookie_present": "cookie-leak"}'
+    )
+    assert "'has_auth_cookie': True" in text and "'has_token': False" in text
+    assert '"has_token": true' in text and '"cookie_present": false' in text
+    assert "tok-abcdef" not in text and "cookie-leak" not in text
