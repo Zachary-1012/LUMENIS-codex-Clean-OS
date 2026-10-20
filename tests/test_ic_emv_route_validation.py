@@ -323,3 +323,62 @@ def test_partial_metric_patch_does_not_certify_stored_zeros(monkeypatch, tmp_pat
     c.close()
     item = _client().get("/api/ic/emv").get_json()["items"][0]
     assert item["status"] == "NOT_AVAILABLE"
+
+
+def _schema_db(monkeypatch, tmp_path, name):
+    import sqlite3
+    from contextlib import contextmanager
+    import database
+    from lumenis.shared.database.business_schema import apply_business_schema
+
+    path = tmp_path / name
+    conn = sqlite3.connect(path)
+    apply_business_schema(conn)
+    conn.commit()
+    conn.close()
+
+    @contextmanager
+    def fixture_db():
+        c = sqlite3.connect(path)
+        c.row_factory = sqlite3.Row
+        try:
+            yield c
+            c.commit()
+        finally:
+            c.close()
+
+    monkeypatch.setattr(database, "get_db", fixture_db)
+    return path
+
+
+def test_uncertified_overwrite_clears_previous_certification(monkeypatch, tmp_path):
+    import sqlite3
+    import database
+    path = _schema_db(monkeypatch, tmp_path, "clear.db")
+    database.insert_note({"note_id": "c", "title": "t", "likes": 5, "comments": 1, "collects": 1,
+                          "shares": 1, "_lumenis_metric_observation_complete": True})
+    database.insert_note({"note_id": "c", "title": "t", "likes": 0, "comments": 0, "collects": 0,
+                          "shares": 0})
+    c = sqlite3.connect(path)
+    assert not c.execute("SELECT metrics_observed_at FROM notes WHERE note_id='c'").fetchone()[0]
+    c.close()
+    assert _client().get("/api/ic/emv").get_json()["items"][0]["status"] == "NOT_AVAILABLE"
+
+
+def test_historical_snapshot_alone_is_not_current_provenance(monkeypatch, tmp_path):
+    import sqlite3
+    path = _schema_db(monkeypatch, tmp_path, "snaphist.db")
+    c = sqlite3.connect(path)
+    c.execute("INSERT INTO notes (note_id, title, likes, comments, collects, shares) VALUES ('h','t',0,0,0,0)")
+    c.execute("INSERT INTO metric_snapshots(entity_type,entity_key,likes,comments,collects,shares,source)"
+              " VALUES('note','h',3,0,0,0,'live')")
+    c.commit()
+    c.close()
+    assert _client().get("/api/ic/emv").get_json()["items"][0]["status"] == "NOT_AVAILABLE"
+
+
+def test_live_collector_completeness_uses_source_fields():
+    from lumenis.system.collector.runtime.xhs.live_engine import _source_counters_observed
+    assert _source_counters_observed({"likes": 0, "comments": "0", "collects": 0, "shares": 0}) is True
+    assert _source_counters_observed({"likes": 0, "comments": 0, "collects": 0}) is False
+    assert _source_counters_observed({"likes": "", "comments": 0, "collects": 0, "shares": 0}) is False

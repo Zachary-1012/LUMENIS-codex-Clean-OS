@@ -475,14 +475,23 @@ def _record_metric_observation(conn, nid, note_data, vals, observation_complete,
     # can certify the stored set (a partial patch would certify stale zeros).
     # Provenance requires an explicit upstream completeness signal; the
     # default (unset) only governs overwrite semantics, never certification.
-    if note_data.get('_lumenis_metric_observation_complete') is not True or not all(
-            name in note_data and vals[name] is not None for name in _NOTE_METRIC_KEYS):
+    certified = note_data.get('_lumenis_metric_observation_complete') is True and all(
+        name in note_data and vals[name] is not None for name in _NOTE_METRIC_KEYS)
+    replaced = any(
+        name in note_data and (observation_complete or vals[name] is not None)
+        for name in _NOTE_METRIC_KEYS)
+    if not certified and not replaced:
         return False
     try:
         cols = {row[1] for row in conn.execute("PRAGMA table_info(notes)").fetchall()}
     except Exception:
         return False
     if "metrics_observed_at" not in cols:
+        return False
+    if not certified:
+        # Any uncertified overwrite of a canonical metric invalidates the
+        # previous row-wide certification instead of inheriting it.
+        conn.execute("UPDATE notes SET metrics_observed_at='' WHERE note_id=?", (nid,))
         return False
     observed_at = str(note_data.get('detail_fetched_at') or note_data.get('captured_at')
                       or note_data.get('collected_at') or now).strip() or now

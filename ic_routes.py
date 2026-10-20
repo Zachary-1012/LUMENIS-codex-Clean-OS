@@ -134,15 +134,8 @@ def ic_emv():
     limit = min(int(request.args.get("limit", 200)), 500)
     try:
         with db.get_db() as conn:
-            # Observation provenance: detail fetch time, plus metric snapshots
-            # when that table exists (legacy DBs may lack it; never 400 for it).
-            def _has(table):
-                try:
-                    return bool(conn.execute(
-                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
-                    ).fetchall())
-                except Exception:
-                    return False
+            # Observation provenance is only the current certified metric set
+            # (notes.metrics_observed_at); legacy DBs without it stay unavailable.
             try:
                 note_cols = {r[1] for r in conn.execute("PRAGMA table_info(notes)").fetchall()}
             except Exception:
@@ -150,10 +143,6 @@ def ic_emv():
             observed_terms = []
             if "metrics_observed_at" in note_cols:
                 observed_terms.append("COALESCE(TRIM(metrics_observed_at), '') <> ''")
-            if _has("metric_snapshots"):
-                observed_terms.append(
-                    "EXISTS (SELECT 1 FROM metric_snapshots ms "
-                    "WHERE ms.entity_type='note' AND ms.entity_key=notes.note_id)")
             observed_sql = "(" + (" OR ".join(observed_terms) or "0") + ") AS metrics_observed "
             if start and end:
                 rows = conn.execute(

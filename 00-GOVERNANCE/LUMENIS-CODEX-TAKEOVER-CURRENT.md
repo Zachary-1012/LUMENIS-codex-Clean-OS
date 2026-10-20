@@ -21,7 +21,10 @@ provenance in the additive `notes.metrics_observed_at` column (registered in
 canonical metrics are non-null; `metric_snapshots` trend
 semantics are unchanged (no snapshot on insert). `/api/ic/emv` and the
 reporting engine publish an all-zero EMV only with that column
-or a metric snapshot (a generic `detail_fetched_at` is not provenance); otherwise the amount is
+(neither a generic `detail_fetched_at` nor a historical metric snapshot is
+provenance); any uncertified overwrite of a canonical metric clears it, and
+the live collector (`live_engine.persist_live`) certifies only when the source
+returned all four counters before normalization; otherwise the amount is
 `NOT_AVAILABLE`. Legacy databases without the column keep the previous
 behaviour. Platform aggregation reports aggregate-only overflow in
 `invalid_inputs` and keeps `invalid_count` to invalid notes.
