@@ -4,6 +4,11 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-049 — normalize ROI using both currencies
+
+The existing `ad_intelligence/platform_registry.py` computes each platform's rate as source-rate divided by the requested base-currency rate and rejects an unsupported base currency instead of returning an implicit fallback. `tests/test_platform_registry.py` passed **14 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use fixed synthetic rates; no live exchange rate was fetched.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,
