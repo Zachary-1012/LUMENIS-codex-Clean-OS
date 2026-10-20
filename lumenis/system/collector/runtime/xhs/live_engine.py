@@ -185,6 +185,26 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
     return result
 
 
+def _source_counters_observed(note) -> bool:
+    """True only when the source explicitly returned all four counters."""
+    import math
+    import re as _re
+    for key in ("likes", "comments", "collects", "shares"):
+        value = note.get(key)
+        if value is None or isinstance(value, bool):
+            return False
+        if isinstance(value, (int, float)):
+            if not math.isfinite(value) or value < 0:
+                return False
+            continue
+        # Only counter text the normalizer parses exactly ("12", "1.2万",
+        # "3.5k", "10w+") certifies; placeholders like "N/A"/"-" do not.
+        if not isinstance(value, str) or not _re.fullmatch(
+                r"\d+(\.\d+)?\s*(万|w|千|k)?\+?", value.strip().lower()):
+            return False
+    return True
+
+
 def persist_live(data: dict, subject_hit: Callable[[str], bool], *, domain_id=None,
                  product_id=None, subject_id=None, brand_focus_id=None) -> dict:
     try:
@@ -206,7 +226,13 @@ def persist_live(data: dict, subject_hit: Callable[[str], bool], *, domain_id=No
         return {'ok': False, 'status': 'source_unavailable', 'accepted': 0,
                 'reason': data.get('error') or '采集源不可用，本次不把0条当作正常空结果'}
     raw = data.get('notes') or []
-    notes = deduplicate([normalize_note(n) for n in raw])
+    # Completeness is judged on the source fields before normalization, which
+    # materializes missing counters as 0.
+    notes = deduplicate([
+        normalize_note({**n, '_lumenis_metric_observation_complete': _source_counters_observed(n)})
+        if isinstance(n, dict) else normalize_note(n)
+        for n in raw
+    ])
     # 红线：这里唯一调用现有 subject_hit；不在采集器内重写主体口径。
     accepted = filter_subject(notes, subject_hit)
     stats = {
