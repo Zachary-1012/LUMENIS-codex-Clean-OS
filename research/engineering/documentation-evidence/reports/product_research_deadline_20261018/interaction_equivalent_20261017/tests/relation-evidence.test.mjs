@@ -1,0 +1,6 @@
+import test from'node:test';import assert from'node:assert/strict';import{relationView,adjacentRelations}from'../src/relations.mjs';
+const data={nodes:[{id:'a'},{id:'b'},{id:'c'}],edges:[{id:'ab',from:'a',to:'b',kind:'转载',source:'fixture-ref-1'},{id:'ac',from:'a',to:'c',kind:'推断',source:null}]};
+test('missing evidence never becomes a dashed or ordinary graph edge',()=>{const v=relationView(data,{selected:'ac'});assert.deepEqual(v.edges.map(x=>x.id),['ab']);assert.equal(v.selected,null);assert.equal(v.unverified[0].id,'ac');assert.deepEqual(adjacentRelations(v,'a'),['ab'])});
+test('unverified-only filter remains truthful empty graph with a visible reason',()=>{const v=relationView(data,{kind:'推断'});assert.equal(v.edges.length,0);assert.equal(v.unverified.length,1);assert.match(v.notice,/未画边/)});
+test('blank source and missing endpoint cannot support an edge',()=>{const v=relationView({...data,edges:[{id:'x',from:'a',to:'missing',source:'ref'},{id:'y',from:'a',to:'b',source:'  '}]});assert.equal(v.edges.length,0);assert.equal(v.unverified.length,2)});
+test('revocation clears evidence and unverified candidates alike',()=>{const v=relationView(data,{permission:false});assert.deepEqual(v.nodes,[]);assert.deepEqual(v.edges,[]);assert.deepEqual(v.unverified,[])});

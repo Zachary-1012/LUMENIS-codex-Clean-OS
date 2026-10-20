@@ -186,11 +186,13 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Database state: `NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`
 Real user E2E: `NOT_VERIFIED`
+
+2026-10-20 Library evidence archival is a documentation-only publication: two packages cover 275 inventory entries, 273 files are byte-identical copies, one existing benchmark file is reused, and one `USER_REPORT.txt` derivative redacts a private Drive URL. No product source, runtime, rights, implementation, or acceptance state changed; the original source publication history above remains historical evidence. Per-file hashes and limits are recorded in `research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/LIBRARY_RECOVERY_RECEIPT_20261020.json`; rights/source-root mapping remains `UNKNOWN`.
 
 Candidate source publication at [PR #83](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/83) was verified first at `4c95faaaaa5fb52b676d2f63166968f097e7359f` (3,947 remote blobs and modes), then the bounded CI repair was published at `57e41b4ff276f03ce9b2efe874768c5defb2d413`, tree `6a6bc9909be20b7e76b00e08e75b7d5f384d3411`. On that second head Flutter analysis and Web build passed, while Product Gate failed on 13 tracked path names. Both rounds of failures remain evidence. The current local increment preserves bytes while normalizing those paths, repairs exact single-use approval in the trusted in-process compatibility library, and closes three compatibility API authorization gaps through existing account, Task, Source and Evidence owners. Its exact package identities and separate same-version validation are recorded in FINAL-VALIDATION.json and FILE-HASHES.json; bounded independent reviews and the 3136-case same-source regression passed, with exact limits and hashes recorded. The increment also addresses the four reviewed observation-replay/media-input findings, preserving real-source and export contracts, and repairs periodic fault-diagnostic frame traversal and sink lifecycle while retaining fatal handling; it requires a normal process restart and is not a hot runtime repair. This increment is not yet published and inherits no CI success. The publication status above refers only to the verified remote candidate baseline, not this increment, merged main, runtime load or product acceptance. Main remained `4dab98ed6357133da9307de846180ed4f7bba5f5` at readback. New-head required checks, substantive review, normal protected merge and exact main readback remain mandatory. Arbitrary OSAI/MCP producer SourceUse bindings and unowned historical-result migration remain open; unknown producers fail closed without deleting their product requirements or historical files.
 

@@ -1,0 +1,76 @@
+✔ risk judgment requires a reason and confirmation, then remains local and repeat-safe (1.656176ms)
+✔ risk edit, decision change and explicit cancel invalidate an already reviewed proposal (0.323334ms)
+✔ risk source withdrawal fences stale confirmation and marks history without rewriting it (0.924987ms)
+✔ risk revocation hides retained history and blocks both old and fresh confirmations (0.323301ms)
+✔ risk selection preserves an unsaved judgment and isolates each item history (0.271118ms)
+✔ version save preserves immutable parent bytes, and repeated save creates no version (0.670604ms)
+✔ version inspection does not overwrite editing; explicit old-content adoption creates a new child (0.291886ms)
+✔ concurrent head change blocks overwrite while allowing an explicit branch from the original base (0.179839ms)
+✖ saved branch becomes the next draft base and cannot silently overwrite the main head (1.222361ms)
+✖ validated restored IDs cannot collide with newly saved, branched or external versions (0.887091ms)
+✔ version readback rejects damaged ancestry, duplicate IDs, missing references and oversized data (0.559668ms)
+✔ chapter boundaries are half-open exact samples and extracting a chapter leaves audio unchanged (2.55273ms)
+✔ chapter time conversion accepts first and last samples, rounds explicitly, and rejects the endpoint (0.629521ms)
+✔ chapter validators reject invalid source units and duplicate, overlapping or out-of-range markers (0.661518ms)
+✔ chapter proposal reorders only metadata; apply stops the old session and undo restores exact markers (0.793236ms)
+✔ chapter cancel, no-change apply and repeated apply create no phantom revision or undo entry (0.450274ms)
+✔ chapter undo invalidates a proposal made after the saved edit instead of reapplying stale metadata (0.285793ms)
+✔ chapter source replacement rejects old playback and proposals and cannot undo into another source (0.265848ms)
+✔ chapter stale version checks independently fence revision, source identity and source version (0.203345ms)
+✔ chapter invalid replacement and playback failure stop playback while preserving usable edits (0.473847ms)
+✔ chapter loop readback is rejected when its session, version, source or sample range no longer matches (0.251519ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 19
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 116.603435
+
+✖ failing tests:
+
+test at tests/remaining-state-contracts.test.mjs:133:1
+✖ saved branch becomes the next draft base and cannot silently overwrite the main head (1.222361ms)
+  AssertionError [ERR_ASSERTION]: clean draft must identify the version that saved its bytes
+  + actual - expected
+  
+  + 'local-v1'
+  - 'local-v2'
+            ^
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/8d04d68e28f4/review_working/tests/remaining-state-contracts.test.mjs:136:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'local-v1',
+    expected: 'local-v2',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/remaining-state-contracts.test.mjs:147:1
+✖ validated restored IDs cannot collide with newly saved, branched or external versions (0.887091ms)
+  AssertionError [ERR_ASSERTION]: save
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/8d04d68e28f4/review_working/tests/remaining-state-contracts.test.mjs:154:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

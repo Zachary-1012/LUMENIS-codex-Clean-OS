@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {initialRecovery,recoveryReduce} from '../src/recovery.mjs';
+import {initialStream,streamReduce} from '../src/contracts.mjs';
+const ready=()=>{let s=initialRecovery([{id:'a',kind:'AUTH_REQUIRED'}]);s=recoveryReduce(s,{type:'open',id:'a'});return recoveryReduce(s,{type:'begin',id:'a'})};
+for(const kind of ['BLOCKED','IP_RISK','COOLDOWN','VERIFY'])test(`state change to ${kind} invalidates pending recovery`,()=>{const old=ready();let s=recoveryReduce(old,{type:'kind',id:'a',kind});assert.equal(old.items[0].kind,'AUTH_REQUIRED');assert.equal(s.items[0].status,'suspended');s=recoveryReduce(s,{type:'observe',id:'a',attempt:old.items[0].attempt,health:'verified'});assert.notEqual(s.items[0].status,'recovered')});
+test('invalid kind is ignored; unchanged kind does not reset current attempt',()=>{const s=ready();for(const kind of ['UNKNOWN','AUTH_REQUIRED'])assert.deepEqual(recoveryReduce(s,{type:'kind',id:'a',kind}).items,s.items)});
+test('new eligible attempt after kind change can recover, old round cannot',()=>{let s=ready();s=recoveryReduce(s,{type:'kind',id:'a',kind:'VERIFY'});s=recoveryReduce(s,{type:'begin',id:'a'});s=recoveryReduce(s,{type:'observe',id:'a',attempt:1,health:'verified'});assert.equal(s.items[0].status,'waiting');s=recoveryReduce(s,{type:'observe',id:'a',attempt:s.items[0].attempt,health:'verified'});assert.equal(s.items[0].status,'recovered')});
+const block=revision=>({type:'block',run:'r',id:'a',revision,kind:'text',text:`proposal ${revision}`});
+function edited(){let s=streamReduce(initialStream('r'),block(1));return streamReduce(s,{type:'edit',run:'r',id:'a',text:'my text'})}
+test('out-of-order suggestions never replace newer suggestion or human text',()=>{let s=streamReduce(edited(),block(3));s=streamReduce(s,block(2));assert.equal(s.blocks.a.suggestion.revision,3);assert.equal(s.blocks.a.text,'my text');assert.equal(s.rejected,1)});
+test('rejected proposal cannot reappear via delayed duplicate',()=>{let s=streamReduce(edited(),block(3));s=streamReduce(s,{type:'reject',run:'r',id:'a'});s=streamReduce(s,block(3));assert.equal(s.blocks.a.suggestion,null);s=streamReduce(s,block(4));assert.equal(s.blocks.a.suggestion.revision,4)});
+test('adoption preserves monotonic revision and resumes normal updates',()=>{let s=streamReduce(edited(),block(3));s=streamReduce(s,{type:'adopt',run:'r',id:'a'});assert.equal(s.blocks.a.revision,3);s=streamReduce(s,block(2));assert.equal(s.blocks.a.text,'proposal 3');s=streamReduce(s,block(4));assert.equal(s.blocks.a.text,'proposal 4')});
