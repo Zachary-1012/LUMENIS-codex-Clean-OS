@@ -111,7 +111,7 @@ def test_scoped_execution_list_ignores_unrelated_malformed_rows(workspace):
                                         action_type="outreach_send") == []
 
 
-@pytest.mark.parametrize("corruption", ["invalid_json", "different_context"])
+@pytest.mark.parametrize("corruption", ["invalid_json"])
 def test_scoped_execution_list_surfaces_corruption_inside_exact_scope(workspace, corruption):
     import json
     import kos_execution as owner
@@ -214,4 +214,15 @@ def test_scoped_execution_list_skips_row_whose_intact_payload_belongs_to_another
         con.execute("UPDATE kos_executions SET payload=? WHERE execution_id=?",
                     (json.dumps(payload), created["execution_id"]))
     # The other brand's intact row must not block this caller's history.
+    assert owner.list_scoped_executions(actor=workspace["actor"], scope=scope) == []
+
+
+def test_intact_payload_for_unregistered_foreign_brand_does_not_block_list(workspace):
+    import json
+    owner, scope, created = _scoped_list_record(workspace)
+    with workspace["repo"].transaction() as con:
+        payload = json.loads(created["payload"])
+        payload["context"]["brand_focus_id"] = "OTHER-BRAND"
+        con.execute("UPDATE kos_executions SET payload=? WHERE execution_id=?",
+                    (json.dumps(payload), created["execution_id"]))
     assert owner.list_scoped_executions(actor=workspace["actor"], scope=scope) == []

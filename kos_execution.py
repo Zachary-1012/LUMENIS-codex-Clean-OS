@@ -305,14 +305,10 @@ def _payload_context_is_foreign(row, context, connection):
         return bool(payload_context.get("principal_ref") or payload_context.get("actor_id"))
     foreign_brand = payload_context.get("brand_focus_id")
     if foreign_brand and foreign_brand != context.get("brand_focus_id"):
-        try:
-            hit = connection.execute(
-                "SELECT 1 FROM lumenis_subject_registry WHERE brand_focus_id=? AND status='active'",
-                (foreign_brand,),
-            ).fetchone()
-        except sqlite3.Error:
-            return False
-        return hit is not None
+        # The intact (schema + request digest) payload binds another brand.
+        # Whether or not that brand is still registered, the row is not this
+        # caller's, so it must not block the caller's whole list.
+        return True
     return False
 
 

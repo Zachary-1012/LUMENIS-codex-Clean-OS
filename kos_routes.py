@@ -357,7 +357,8 @@ def _scoped_profile_view(kind):
             result = {
                 **profiles[0],
                 **{
-                    key: data[key]
+                    # Missing metadata is reported as unknown (None), never a 500.
+                    key: data.get(key)
                     for key in (
                         "coverage",
                         "source_read_complete",
