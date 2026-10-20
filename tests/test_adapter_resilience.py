@@ -14,11 +14,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lumenis.adapters.base import (  # noqa: E402
     CircuitBreaker, RateLimiter, AdapterMetrics, BaseAdapter, AdapterResult,
+    AdapterCacheContext,
 )
 from lumenis.adapters.dual_pool import (  # noqa: E402
     CookieItem, ProxyItem, CookieStatus, ProxyStatus,
     CookiePool, ProxyPool, DualPoolManager,
 )
+from lumenis.adapters.registry import AdapterRegistry  # noqa: E402
 
 
 # ---------- 全局：压掉生产 retry sleep（单测不真等12秒） ----------
@@ -71,6 +73,322 @@ class _BoomAdapter(BaseAdapter):
     platform_name = 'boom'
     def search(self, keyword, max_results=20):
         raise RuntimeError('network down')
+
+
+class _QueryAdapter(BaseAdapter):
+    platform_name = 'query-test'
+
+    def __init__(self):
+        super().__init__()
+        self.fail_queries = set()
+
+    def search(self, keyword, max_results=20):
+        if keyword in self.fail_queries:
+            return AdapterResult(success=False, error='backend unavailable')
+        if keyword == 'query-a':
+            return AdapterResult(
+                success=True,
+                notes=[self._make_note(
+                    title='A result', content='private A data',
+                    raw_data={'provenance': {'source': 'source-v1'}},
+                )],
+            )
+        if keyword == 'query-recovered':
+            return AdapterResult(
+                success=True,
+                notes=[self._make_note(title='Fresh result', content='fresh data')],
+            )
+        return AdapterResult(success=False, error='backend unavailable')
+
+
+class _ChallengeAdapter(BaseAdapter):
+    platform_name = 'challenge-test'
+
+    def __init__(self, *, empty=False, **kwargs):
+        super().__init__(**kwargs)
+        self.empty = empty
+        self.challenge = False
+        self.search_calls = 0
+
+    def search(self, keyword, max_results=20):
+        self.search_calls += 1
+        if self.challenge:
+            return AdapterResult(
+                success=False,
+                error='NEED_HUMAN_VERIFICATION: provider returned captcha',
+            )
+        notes = [] if self.empty else [self._make_note(
+            title='Fresh result', content='fresh provider data',
+        )]
+        return AdapterResult(success=True, notes=notes)
+
+
+_CACHE_CONTEXT = AdapterCacheContext(
+    actor_id='actor-1', scope='workspace-1', task_id='task-1',
+    source_version='source-v1',
+)
+
+
+def test_failed_different_query_never_reuses_previous_success():
+    adapter = _QueryAdapter()
+    prior = adapter.collect('query-a')
+    failed = adapter.collect('query-b')
+
+    assert prior.success and prior.notes[0].content == 'private A data'
+    assert failed.success is False
+    assert failed.notes == []
+    assert 'backend unavailable' in failed.error
+
+
+def test_scoped_cache_fallback_requires_exact_complete_identity():
+    adapter = _QueryAdapter()
+    prior = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    adapter.fail_queries.add('query-a')
+    fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+
+    assert prior.success
+    assert fallback.success
+    assert fallback.notes == prior.notes
+    assert fallback.error.startswith('缓存降级:')
+
+
+def test_mutating_live_success_does_not_modify_cached_snapshot():
+    adapter = _QueryAdapter()
+    live = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    live.notes[0].content = 'caller changed content'
+    live.notes[0].raw_data['provenance']['source'] = 'caller changed source'
+    live.notes.append(adapter._make_note(title='caller-added note'))
+    adapter.fail_queries.add('query-a')
+
+    fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+
+    assert fallback.success
+    assert len(fallback.notes) == 1
+    assert fallback.notes[0].content == 'private A data'
+    assert fallback.notes[0].raw_data['provenance']['source'] == 'source-v1'
+    assert fallback.notes[0] is not live.notes[0]
+
+
+def test_mutating_first_fallback_does_not_modify_next_fallback():
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    adapter.fail_queries.add('query-a')
+    first_fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    first_fallback.notes[0].content = 'fallback caller changed content'
+    first_fallback.notes[0].raw_data['provenance']['source'] = 'fallback caller changed source'
+    first_fallback.notes.clear()
+    first_fallback.notes.append(adapter._make_note(title='fallback caller-added note'))
+
+    second_fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+
+    assert second_fallback.success
+    assert len(second_fallback.notes) == 1
+    assert second_fallback.notes[0].content == 'private A data'
+    assert second_fallback.notes[0].raw_data['provenance']['source'] == 'source-v1'
+    assert second_fallback.notes[0].title == 'A result'
+    assert second_fallback.notes[0] is not first_fallback.notes[0]
+
+
+def test_snapshot_copy_failure_keeps_live_success_and_clears_old_cache(monkeypatch):
+    import lumenis.adapters.base as base
+
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    assert adapter._last_result_cache_entry is not None
+
+    def fail_copy(_value):
+        raise TypeError('uncopyable snapshot fixture')
+
+    monkeypatch.setattr(base.copy, 'deepcopy', fail_copy)
+    live_success = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+
+    assert live_success.success
+    assert live_success.notes[0].content == 'private A data'
+    assert adapter._last_result_cache_entry is None
+
+    adapter.fail_queries.add('query-a')
+    failed = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    assert failed.success is False
+    assert failed.notes == []
+    assert 'backend unavailable' in failed.error
+
+
+def test_fallback_copy_failure_fails_closed_without_exposing_cached_notes(monkeypatch):
+    import lumenis.adapters.base as base
+
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    adapter.fail_queries.add('query-a')
+
+    def fail_copy(_value):
+        raise TypeError('uncopyable fallback fixture')
+
+    monkeypatch.setattr(base.copy, 'deepcopy', fail_copy)
+    fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+
+    assert fallback.success is False
+    assert fallback.notes == []
+    assert 'backend unavailable' in fallback.error
+
+
+@pytest.mark.parametrize('empty', [True, False])
+def test_terminal_verification_error_never_becomes_cached_success(empty):
+    adapter = _ChallengeAdapter(empty=empty)
+    assert adapter.collect('same query', cache_context=_CACHE_CONTEXT).success
+    adapter.challenge = True
+
+    result = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+
+    assert result.success is False
+    assert result.notes == []
+    assert 'NEED_HUMAN_VERIFICATION' in result.error
+
+
+def test_terminal_verification_error_does_not_call_custom_fallback():
+    calls = []
+    adapter = _ChallengeAdapter(
+        fallback_handler=lambda _keyword, _error: calls.append(True) or [
+            adapter._make_note(title='stale custom fallback'),
+        ],
+    )
+    adapter.challenge = True
+
+    result = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+
+    assert result.success is False
+    assert result.notes == []
+    assert calls == []
+
+
+@pytest.mark.parametrize('empty', [True, False])
+def test_open_breaker_preserves_terminal_challenge_and_allows_explicit_recovery(empty):
+    calls = []
+    adapter = None
+
+    def custom_fallback(_keyword, error):
+        calls.append(error)
+        return [adapter._make_note(title='stale custom fallback')]
+
+    adapter = _ChallengeAdapter(empty=empty, fallback_handler=custom_fallback)
+    cached = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+    assert cached.success is True
+    assert bool(cached.notes) is not empty
+
+    adapter.challenge = True
+    for _ in range(adapter.breaker.threshold):
+        challenged = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+        assert challenged.success is False
+        assert challenged.notes == []
+        assert 'NEED_HUMAN_VERIFICATION' in challenged.error
+    assert adapter.breaker.state == 'open'
+    assert calls == []
+
+    calls_before_shortcut = adapter.search_calls
+    shortcut = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+    assert shortcut.success is False
+    assert shortcut.notes == []
+    assert 'NEED_HUMAN_VERIFICATION' in shortcut.error
+    assert adapter.search_calls == calls_before_shortcut
+    assert calls == []
+
+    # A separately permitted provider request after cooldown is the recovery
+    # evidence; it must reach search and reset both breaker and terminal state.
+    adapter.challenge = False
+    adapter.breaker.last_fail_time = time.time() - adapter.breaker.reset_seconds - 1
+    recovered = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+
+    assert recovered.success is True
+    assert adapter.breaker.state == 'closed'
+    assert adapter._breaker_last_failure_error == ''
+    assert adapter.search_calls == calls_before_shortcut + 1
+
+
+def test_open_breaker_keeps_cached_fallback_for_ordinary_transient_failure():
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    adapter.fail_queries.add('query-a')
+
+    for _ in range(adapter.breaker.threshold):
+        fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+        assert fallback.success is True
+        assert fallback.error.startswith('缓存降级:')
+
+    assert adapter.breaker.state == 'open'
+    open_fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    assert open_fallback.success is True
+    assert open_fallback.error.startswith('缓存降级: 熔断器开启')
+    assert [note.content for note in open_fallback.notes] == ['private A data']
+
+
+@pytest.mark.parametrize(
+    'changed_context',
+    [
+        AdapterCacheContext('actor-2', 'workspace-1', 'task-1', 'source-v1'),
+        AdapterCacheContext('actor-1', 'workspace-2', 'task-1', 'source-v1'),
+        AdapterCacheContext('actor-1', 'workspace-1', 'task-2', 'source-v1'),
+        AdapterCacheContext('actor-1', 'workspace-1', 'task-1', 'source-v2'),
+        AdapterCacheContext('actor-1', '', 'task-1', 'source-v1'),
+    ],
+)
+def test_scoped_cache_fallback_rejects_changed_or_incomplete_identity(changed_context):
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    adapter.fail_queries.add('query-a')
+
+    failed = adapter.collect('query-a', cache_context=changed_context)
+
+    assert failed.success is False
+    assert failed.notes == []
+
+
+@pytest.mark.parametrize(
+    ('keyword', 'max_results'),
+    [('query-b', 20), ('query-a', 5)],
+)
+def test_scoped_cache_fallback_rejects_changed_query_or_limit(keyword, max_results):
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', max_results=20,
+                           cache_context=_CACHE_CONTEXT).success
+    adapter.fail_queries.add('query-a')
+
+    failed = adapter.collect(keyword, max_results=max_results,
+                             cache_context=_CACHE_CONTEXT)
+
+    assert failed.success is False
+    assert failed.notes == []
+
+
+def test_unscoped_success_invalidates_prior_scoped_cache_and_live_success_recovers():
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    # An unscoped request must not leave a previous scoped cache eligible.
+    assert adapter.collect('query-a').success
+    adapter.fail_queries.add('query-a')
+    failed = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    assert failed.success is False and failed.notes == []
+
+    recovered = adapter.collect('query-recovered', cache_context=_CACHE_CONTEXT)
+    assert recovered.success
+    assert [note.content for note in recovered.notes] == ['fresh data']
+
+
+def test_registry_forwards_complete_cache_context_to_existing_adapter(monkeypatch):
+    adapter = _QueryAdapter()
+    registry = AdapterRegistry()
+    monkeypatch.setattr(registry, '_adapters', {'query-test': adapter})
+
+    live = registry.search_all(
+        'query-a', 20, ['query-test'], cache_context=_CACHE_CONTEXT,
+    )['query-test']
+    adapter.fail_queries.add('query-a')
+    merged, status = registry.search_all_with_status(
+        'query-a', 20, ['query-test'], cache_context=_CACHE_CONTEXT,
+    )
+
+    assert live.success
+    assert [note.content for note in merged] == ['private A data']
+    assert status[0]['state'] == 'SUCCESS'
+    assert status[0]['error'].startswith('缓存降级:')
 
 
 def test_safe_collect_never_raises():
