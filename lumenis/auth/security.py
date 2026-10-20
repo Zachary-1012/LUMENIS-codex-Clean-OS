@@ -30,9 +30,14 @@ def _parse_attempt_timestamp(value: str) -> datetime:
     return datetime.strptime(value, _ATTEMPT_TIME_FORMAT)
 
 
+WORKSPACE_KEY_ATTEMPT_USERNAME = "__workspace_key__"
+_IP_ATTEMPT_BUCKETS = frozenset({_ACCESS_KEY_ATTEMPT_USERNAME, WORKSPACE_KEY_ATTEMPT_USERNAME})
+
+
 def _is_ip_bucket(username) -> bool:
-    """Synthetic per-IP buckets (access key, workspace key) are named __name__."""
-    return isinstance(username, str) and len(username) > 4 and username.startswith("__") and username.endswith("__")
+    """Only the exact reserved synthetic buckets are per-IP; real usernames
+    such as ``__alice__`` keep the normal account-wide lockout."""
+    return username in _IP_ATTEMPT_BUCKETS
 
 
 def _check_access_key_attempts(conn, ip: str, bucket: str = None) -> dict:

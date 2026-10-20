@@ -1,16 +1,15 @@
 """Regression: TOTP removed, account routes still register, key list needs login,
 workspace unlock never grants an owner session without login and is rate limited."""
-import os
-import tempfile
-
 import pytest
 
-os.environ.setdefault("ZBC_DB_PATH", os.path.join(tempfile.mkdtemp(), "hardening.db"))
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def client():
+    # Database isolation comes from tests/conftest.py (per-test disposable DB);
+    # this module never selects or inherits a database path itself.
     import app as app_module
+    from account.models import init_account_db
+    init_account_db()
     return app_module.app.test_client(), app_module.app
 
 
@@ -64,3 +63,10 @@ def test_workspace_key_bucket_locks_after_max_failures(tmp_path, monkeypatch):
         security.record_login_attempt("__workspace_key__", "203.0.113.5", False, conn=conn)
     assert security.check_login_attempts("__workspace_key__", "203.0.113.5", conn=conn)["allowed"] is False
     assert security.check_login_attempts("__workspace_key__", "203.0.113.6", conn=conn)["allowed"] is True
+
+
+def test_reserved_looking_username_keeps_account_lockout():
+    from lumenis.auth import security
+    assert security._is_ip_bucket("__access_key__")
+    assert security._is_ip_bucket("__workspace_key__")
+    assert not security._is_ip_bucket("__alice__")

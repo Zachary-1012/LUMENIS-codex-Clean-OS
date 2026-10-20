@@ -115,14 +115,17 @@ def create_v4_blueprint() -> Blueprint:
         limited per IP with the same lockout as login.
         """
         from .config import WORKSPACE_CONFIG
-        from .auth.security import check_login_attempts, record_login_attempt, normalize_login_ip
+        from .auth.security import (
+            check_login_attempts, record_login_attempt, normalize_login_ip,
+            WORKSPACE_KEY_ATTEMPT_USERNAME,
+        )
         user = get_current_user()
         if not user:
             return jsonify({"success": False, "error": "请先登录，再输入工作区密钥"}), 401
         data = request.get_json(silent=True) or {}
         ws = (data.get("workspace") or "ZBMP").strip().upper()
         key = (data.get("key") or "").strip()
-        bucket = "__workspace_key__"
+        bucket = WORKSPACE_KEY_ATTEMPT_USERNAME
         ip = normalize_login_ip(request.remote_addr)
         check = check_login_attempts(bucket, ip)
         if not check["allowed"]:

@@ -704,6 +704,9 @@ class TestDataCenterAPI:
         response = client.get("/api/data-center/table/notes?end_date=9999-12-31")
         assert response.status_code == 200
         assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
+        response = client.get("/api/data-center/table/notes?end_date=9999-12-31T23:59:59.999999Z")
+        assert response.status_code == 200
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
 
     @pytest.mark.parametrize(("parameter", "invalid_date"), [
         ("start_date", "2026-02-30"),

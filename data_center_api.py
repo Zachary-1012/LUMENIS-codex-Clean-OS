@@ -94,6 +94,9 @@ def _text_date_filter(value: str, *, end: bool) -> tuple[str, str]:
             # 9999-12-31 has no next day and SQLite's julianday() returns NULL
             # for fractional instants at that boundary: no upper bound exists.
             return None, None
+    if end and utc >= datetime(9999, 12, 31, 23, 59, 59, tzinfo=timezone.utc):
+        # SQLite julianday() is NULL at this boundary; nothing can be later.
+        return None, None
     return ("<=" if end else ">="), utc.strftime("%Y-%m-%d %H:%M:%S.%f")
 
 
