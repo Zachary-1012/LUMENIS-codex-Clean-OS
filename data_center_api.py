@@ -91,8 +91,9 @@ def _text_date_filter(value: str, *, end: bool) -> tuple[str, str]:
         try:
             return "<", (utc + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
         except OverflowError:
-            # 9999-12-31 has no next day: use the inclusive end of that day.
-            return "<=", utc.strftime("%Y-%m-%d") + " 23:59:59.999"
+            # 9999-12-31 has no next day and SQLite's julianday() returns NULL
+            # for fractional instants at that boundary: no upper bound exists.
+            return None, None
     return ("<=" if end else ">="), utc.strftime("%Y-%m-%d %H:%M:%S.%f")
 
 
@@ -103,7 +104,10 @@ def _unix_date_filter(
     parsed, date_only = _parse_date_bound(value)
     if date_only and end:
         # Include the whole requested end date, including fractional seconds.
-        return "<", (parsed + timedelta(days=1)).timestamp() * timestamp_multiplier
+        try:
+            return "<", (parsed + timedelta(days=1)).timestamp() * timestamp_multiplier
+        except OverflowError:
+            return None, None
     return ("<=" if end else ">="), parsed.timestamp() * timestamp_multiplier
 
 
@@ -317,13 +321,16 @@ def query_table(table_name: str):
                         operator, value = _text_date_filter(end_date, end=True)
                 except ValueError:
                     return jsonify({"ok": False, "error": "invalid end_date"}), 400
-                if not numeric_time_col:
+                if operator is None:
+                    pass  # maximum date: every stored instant is on or before it
+                elif not numeric_time_col:
                     # Compare instants, not strings: julianday() applies
                     # declared offsets (Z/+08:00) and accepts 'T' or space.
                     where_clauses.append(f"julianday({time_expr}) {operator} julianday(?)")
                 else:
                     where_clauses.append(f"{time_expr} {operator} ?")
-                params.append(value)
+                if operator is not None:
+                    params.append(value)
 
         where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 

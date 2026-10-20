@@ -108,6 +108,11 @@ def _validate_official_source_url(source_url: Any) -> str:
                 if decoded == layers[-1]:
                     break
                 layers.append(decoded)
+            else:
+                if unquote(layers[-1]) != layers[-1]:
+                    # Still encoded after the bound: it cannot be inspected,
+                    # so treat it as credential-bearing (fail closed).
+                    return True
             for candidate in dict.fromkeys(layers):
                 try:
                     nested_parts = urlsplit(candidate)

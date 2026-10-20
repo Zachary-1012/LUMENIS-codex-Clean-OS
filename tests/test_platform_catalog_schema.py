@@ -697,12 +697,13 @@ class TestDataCenterAPI:
             platform_db.execute("ALTER TABLE notes ADD COLUMN publish_date TEXT")
         platform_db.execute("DELETE FROM notes")
         platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9801, '9999-12-31T12:00:00Z')")
+        platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9802, '9999-12-31T23:59:59.999999Z')")
         platform_db.commit()
         path = platform_db.execute("PRAGMA database_list").fetchone()[2]
         client = _data_center_client(monkeypatch, path)
         response = client.get("/api/data-center/table/notes?end_date=9999-12-31")
         assert response.status_code == 200
-        assert [row["id"] for row in response.get_json()["data"]] == [9801]
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
 
     @pytest.mark.parametrize(("parameter", "invalid_date"), [
         ("start_date", "2026-02-30"),

@@ -734,3 +734,9 @@ def test_git_info_preserves_windows_drive_letter_remote(tmp_path: Path) -> None:
     result = _remote_result(tmp_path, "windows", "C:/repos/example.git")
     assert result["available"] is True
     assert result["remote"] == "C:/repos/example.git"
+
+
+def test_git_info_sanitizes_authority_in_drive_letter_shaped_remote(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "windows-auth", "C://user:secret@host/repo.git")
+    assert "secret" not in str(result.get("remote"))
+    assert "user:" not in str(result.get("remote"))

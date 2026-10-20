@@ -144,7 +144,8 @@ def _git_info(repo_path: Path):
             # Windows drive-letter local paths (C:/repo.git, C:\\repo) parse
             # as a one-letter scheme; they are local paths, not URLs.
             if (isinstance(value, str) and len(value) > 2 and value[0].isascii()
-                    and value[0].isalpha() and value[1] == ":" and value[2] in "/\\"):
+                    and value[0].isalpha() and value[1] == ":" and value[2] in "/\\"
+                    and not parsed.netloc):
                 return value
             if parsed.scheme or parsed.netloc:
                 # Only hierarchical URLs whose authority can be sanitized are
