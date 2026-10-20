@@ -360,7 +360,11 @@ def insert_note(note_data, *, connection=None):
                     classifier_body = vals['body']
                 _stype, _ctype = _enrich_types(
                     classifier_author, note_data.get('author_desc', ''),
-                    note_data.get('followers', 0) or 0, 0,
+                    note_data.get('followers', 0) or 0,
+                    # Same official flag the row stores: the persisted value
+                    # for updates, the insert rule for new records.
+                    int((existing['is_official'] if existing and 'is_official' in existing.keys()
+                         else (1 if classifier_author == '广州太古汇' else 0)) or 0),
                     note_data.get('verified_type', ''),
                     str(classifier_title or '') + ' ' + str(classifier_body or ''))
         except Exception:

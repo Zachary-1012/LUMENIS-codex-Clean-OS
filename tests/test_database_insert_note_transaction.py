@@ -734,3 +734,20 @@ def test_update_fills_missing_classification_without_author_trio(tmp_path, monke
         assert _row(connection, "c1", "subject_type")["subject_type"] == "media"
     finally:
         connection.close()
+
+
+def test_classifier_receives_real_is_official_flag(tmp_path, monkeypatch):
+    import subject_classifier
+    seen = []
+    monkeypatch.setattr(subject_classifier, "enrich_note_types",
+                        lambda *a, **k: seen.append(a[3]) or ("brand", "official"))
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note({"note_id": "o1", "title": "t", "content": "c",
+                                   "author_nickname": "广州太古汇"}, connection=connection)
+        connection.execute("UPDATE notes SET is_official=1, subject_type='' WHERE note_id='o1'")
+        note_database.insert_note({"note_id": "o1", "title": "t2"}, connection=connection)
+        assert seen and all(flag == 1 for flag in seen)
+    finally:
+        connection.close()
