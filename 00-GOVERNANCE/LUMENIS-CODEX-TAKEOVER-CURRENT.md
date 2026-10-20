@@ -4,6 +4,43 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-045 / FIX-046 — preserve EMV inputs and reject invalid route CPM
+
+The existing `emv.py` keeps source/aggregate values truthful; `ic_routes.py` applies default CPM only when the parameter is absent and rejects explicit nonnumeric, negative, nonfinite or overflow inputs before DB/EMV reads. Platform grouping now retains no-data groups and counts unavailable notes alongside amount-bearing notes, with per-platform status and coverage. Focused runs passed **34 tests** across `tests/test_ic_emv_route_validation.py` (9), `tests/test_ic_contracts_p1.py::TestIC021EMV` (15), and `tests/test_p1_gap_closure.py -k emv_platform` (10). The broader `tests/test_ic_contracts_p1.py tests/test_p1_gap_closure.py` run had **4 failures**, and the exact same four test IDs and outcomes reproduced on clean main SHA `3f6d67785752b465b5b022847cbbe75a55e1eb47`: three API smoke imports are blocked because migration refuses to overwrite the pre-existing `/tmp/backups/before_migration_v0_to_v21.db`, and the unrelated Track B test expects provider status `LEGACY` while receiving `DISABLED`. The broader result remains recorded, not represented as a passing regression. Changed-source compilation and `git diff --check` passed. Tests did not access production data or call an external service.
+
+FIX-045/046 follow-up: `/api/ic/emv` also rejects a malformed or non-finite
+`emv_total_yuan` from the existing calculation result with HTTP 422, while
+preserving finite zero and `None` result semantics. The route regression suite
+adds an injected non-finite result case; the targeted route and EMV gap-closure
+suite passed. Changed-source compilation, governance machine contract, AI-native
+constitution and `git diff --check` passed. The shared writer `database.insert_note` now records metric observation
+provenance in the additive `notes.metrics_observed_at` column (registered in
+`business_schema` note migrations) only when the caller passes an explicit
+`_lumenis_metric_observation_complete=True` signal (successful detail read in
+`app.py`; fully present counters in `multi_platform_import`) and all four
+canonical metrics are non-null; `metric_snapshots` trend
+semantics are unchanged (no snapshot on insert). `/api/ic/emv` and the
+reporting engine publish an all-zero EMV only with that column
+(neither a generic `detail_fetched_at` nor a historical metric snapshot is
+provenance); any uncertified overwrite of a canonical metric clears it, and
+the live collector (`live_engine.persist_live`) certifies only when the source
+returned all four counters before normalization; otherwise the amount is
+`NOT_AVAILABLE`. Legacy databases without the column keep the previous
+behaviour. A row is classified complete (`OK`) only with that current
+provenance: without it an all-zero row is `NOT_AVAILABLE` and a row with
+positive counters is `PARTIAL` (`metric_observation_provenance` missing), in
+both `aggregate_emv` and `aggregate_emv_by_platform`. The live collector
+certifies only finite non-negative numeric counters or parseable counter text
+(placeholders such as `N/A`/`-` do not certify). A `business_schema` trigger (`trg_notes_metric_provenance_invalidate`)
+clears that provenance whenever any writer changes a canonical counter without
+re-certifying in the same statement; imported counters certify only as finite
+non-negative numbers (booleans/strings do not). `/api/ic/emv` also validates `limit` (integer 1-500), paired full-value
+`YYYY-MM-DD[ HH:MM:SS]` `start`/`end` (start <= end) before any database read (400 `INVALID_INPUT`),
+reports a capped read as `truncated`/`source_read_complete=false` (an `OK`
+result becomes `PARTIAL`), and returns 503 `EMV_SOURCE_UNAVAILABLE` without
+internal error text when the source read fails. Platform aggregation reports aggregate-only overflow in
+`invalid_inputs` and keeps `invalid_count` to invalid notes.
+
 ## 2026-10-20 Issue #17 FIX-041–043 — KOS scope and completeness
 
 `kos_execution.py` now filters execution records by the existing scoped-v1,

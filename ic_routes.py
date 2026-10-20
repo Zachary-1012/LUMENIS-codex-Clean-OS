@@ -117,28 +117,99 @@ def register_ic_api(app):
 def ic_emv():
     """EMV 估算（估算口径，显式标注，非官方投放成本）。
     GET ?start=&end=&cpm=&limit= 基于真实 notes 互动数据汇总。"""
+    import math
     import database as db
     import emv as _emv
     start = request.args.get("start", "")
     end = request.args.get("end", "")
-    cpm = request.args.get("cpm", type=float)
-    limit = min(int(request.args.get("limit", 200)), 500)
+    cpm_raw = request.args.get("cpm")
+    cpm = None
+    if cpm_raw is not None:
+        try:
+            cpm = float(cpm_raw)
+        except (TypeError, ValueError, OverflowError):
+            return jsonify({"ok": False, "error": "cpm must be a finite non-negative number"}), 400
+        if not math.isfinite(cpm) or cpm < 0:
+            return jsonify({"ok": False, "error": "cpm must be a finite non-negative number"}), 400
+    limit_raw = request.args.get("limit", "200")
+    try:
+        limit = int(str(limit_raw).strip())
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "status": "INVALID_INPUT", "error": "limit must be an integer 1-500"}), 400
+    if not 1 <= limit <= 500:
+        return jsonify({"ok": False, "status": "INVALID_INPUT", "error": "limit must be an integer 1-500"}), 400
+    if bool(start) != bool(end):
+        return jsonify({"ok": False, "status": "INVALID_INPUT", "error": "start and end must be provided together"}), 400
+    if start:
+        from datetime import datetime as _dt
+
+        def _parse_bound(value):
+            # The whole value must be a supported date or datetime.
+            for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+                try:
+                    return _dt.strptime(value, fmt)
+                except ValueError:
+                    continue
+            return None
+
+        start_day = _parse_bound(start)
+        end_day = _parse_bound(end)
+        if start_day is None or end_day is None or start_day > end_day:
+            return jsonify({"ok": False, "status": "INVALID_INPUT",
+                            "error": "start/end must be ISO dates with start <= end"}), 400
     try:
         with db.get_db() as conn:
+            # Observation provenance is only the current certified metric set
+            # (notes.metrics_observed_at); legacy DBs without it stay unavailable.
+            try:
+                note_cols = {r[1] for r in conn.execute("PRAGMA table_info(notes)").fetchall()}
+            except Exception:
+                note_cols = set()
+            observed_terms = []
+            if "metrics_observed_at" in note_cols:
+                observed_terms.append("COALESCE(TRIM(metrics_observed_at), '') <> ''")
+            observed_sql = "(" + (" OR ".join(observed_terms) or "0") + ") AS metrics_observed "
             if start and end:
                 rows = conn.execute(
-                    "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment "
+                    "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment, "
+                    + observed_sql +
                     "FROM notes WHERE publish_date BETWEEN ? AND ? ORDER BY captured_at DESC LIMIT ?",
-                    (start, end, limit)).fetchall()
+                    (start, end, limit + 1)).fetchall()
             else:
                 rows = conn.execute(
-                    "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment "
-                    "FROM notes ORDER BY captured_at DESC LIMIT ?", (limit,)).fetchall()
-            notes = [dict(r) for r in rows]
+                    "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment, "
+                    + observed_sql +
+                    "FROM notes ORDER BY captured_at DESC LIMIT ?", (limit + 1,)).fetchall()
+            truncated = len(rows) > limit
+            notes = [dict(r) for r in rows[:limit]]
+            for note in notes:
+                note["metrics_observed"] = bool(note.get("metrics_observed"))
         r = _emv.aggregate_emv(notes, cpm=cpm)
+        if r.get("status") == "INVALID_INPUT":
+            return jsonify({"ok": False, **r}), 422
+        total = r.get("emv_total_yuan")
+        if total is not None:
+            try:
+                finite_total = math.isfinite(float(total))
+            except (TypeError, ValueError, OverflowError):
+                finite_total = False
+            if not finite_total:
+                return jsonify({
+                    "ok": False,
+                    "status": "INVALID_INPUT",
+                    "error": "EMV total must be finite",
+                    "emv_total_yuan": None,
+                }), 422
+        # A capped read is not the full population: never present it as complete.
+        r["truncated"] = truncated
+        r["source_read_complete"] = not truncated
+        if truncated and r.get("status") == "OK":
+            r["status"] = "PARTIAL"
         return jsonify({"ok": True, **r})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception:
+        # Source/database failure is not a client error and not an empty result.
+        return jsonify({"ok": False, "status": "SOURCE_UNAVAILABLE",
+                        "code": "EMV_SOURCE_UNAVAILABLE", "emv_total_yuan": None}), 503
 
 
 # ---------- IC-039 跨文化本地化守卫 ----------

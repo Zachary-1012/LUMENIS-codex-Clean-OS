@@ -439,6 +439,7 @@ def insert_note(note_data, *, connection=None):
             except Exception:
                 pass
             _write_analysis_values(new_record=False)
+            _record_metric_observation(conn, nid, note_data, vals, metric_observation_complete, now)
             return existing['id'], False
         cur = conn.execute("""INSERT INTO notes
             (note_id,source_platform,title,content,url,cover,author_id,author_nickname,author_avatar,likes,comments,collects,shares,
@@ -458,7 +459,44 @@ def insert_note(note_data, *, connection=None):
             conn.execute("UPDATE notes SET subject_type=CASE WHEN ?<>'' THEN ? ELSE subject_type END, "
                          "content_type=CASE WHEN ?<>'' THEN ? ELSE content_type END WHERE note_id=?",
                          (_stype, _stype, _ctype, _ctype, nid))
+        _record_metric_observation(conn, nid, note_data, vals, metric_observation_complete, now)
         return cur.lastrowid, True
+
+
+def _record_metric_observation(conn, nid, note_data, vals, observation_complete, now):
+    """Mark metric observation provenance without touching metric_snapshots.
+
+    Only a write that explicitly supplies all four non-null canonical
+    metrics as a complete observation sets ``metrics_observed_at``, so a genuine
+    observed zero stays distinguishable from schema-default "never collected".
+    Legacy databases without the column are left unchanged.
+    """
+    # Row-wide marker: only a write that observes all four canonical metrics
+    # can certify the stored set (a partial patch would certify stale zeros).
+    # Provenance requires an explicit upstream completeness signal; the
+    # default (unset) only governs overwrite semantics, never certification.
+    certified = note_data.get('_lumenis_metric_observation_complete') is True and all(
+        name in note_data and vals[name] is not None for name in _NOTE_METRIC_KEYS)
+    replaced = any(
+        name in note_data and (observation_complete or vals[name] is not None)
+        for name in _NOTE_METRIC_KEYS)
+    if not certified and not replaced:
+        return False
+    try:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(notes)").fetchall()}
+    except Exception:
+        return False
+    if "metrics_observed_at" not in cols:
+        return False
+    if not certified:
+        # Any uncertified overwrite of a canonical metric invalidates the
+        # previous row-wide certification instead of inheriting it.
+        conn.execute("UPDATE notes SET metrics_observed_at='' WHERE note_id=?", (nid,))
+        return False
+    observed_at = str(note_data.get('detail_fetched_at') or note_data.get('captured_at')
+                      or note_data.get('collected_at') or now).strip() or now
+    conn.execute("UPDATE notes SET metrics_observed_at=? WHERE note_id=?", (observed_at, nid))
+    return True
 
 
 def _metric_snapshot_enabled():
