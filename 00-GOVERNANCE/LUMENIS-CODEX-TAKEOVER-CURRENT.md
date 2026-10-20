@@ -4,6 +4,24 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-025 — official-name evidence and exact scope
+
+`subject_registry.py` uses the canonical Evidence bootstrap for unversioned
+registries, retains migration ownership for versioned databases, binds official
+names to the resolved CTH subject or BMP BrandFocus, records before/requested/after
+keyword values, and rejects credential-bearing or sensitive-query source URLs.
+Focused regressions are in `tests/test_subject_registry_official_name.py` plus
+subject batch concurrency/revocation coverage. Exact-head offline command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask python -m pytest --confcutdir=/tmp -q tests/test_subject_registry_official_name.py tests/test_subject_batch_revocation.py tests/test_subject_batch_identity_race.py` — **18 passed**. `python -m py_compile subject_registry.py tests/test_subject_registry_official_name.py` and `git diff --check` passed.
+
+The authenticity scalar remains **OPEN**: the current Evidence writer filters
+`None`, while the schema column is `REAL NOT NULL DEFAULT 1.0`; therefore an
+unassessed scalar may persist as `1.0` even when the separate state says
+`NOT_ASSESSED`. This branch documents and tests the limitation; it does not alter
+the shared Evidence writer/schema or claim the semantic gap is resolved. No
+production database or external source was used.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,
