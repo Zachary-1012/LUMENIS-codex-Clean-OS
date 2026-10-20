@@ -80,7 +80,7 @@ class FacebookAdapter(BaseAdapter):
         post_match = re.search(r"(?:^|/)posts/([A-Za-z0-9]+)$", path.rstrip("/"))
         if post_match:
             post_id = post_match.group(1)
-            canonical = urlunsplit(("https", "www.facebook.com", path.rstrip("/"), "", "", ""))
+            canonical = urlunsplit(("https", "www.facebook.com", path.rstrip("/"), "", ""))
             return {"post_id": post_id, "url": canonical, "id_locator": "permalink_path.posts"}
 
         if path.rstrip("/").lower() not in {"/permalink.php", "/story.php"}:
@@ -101,7 +101,7 @@ class FacebookAdapter(BaseAdapter):
         if page_id and cls._NATIVE_POST_ID.fullmatch(page_id):
             identity_query.append(("id", page_id))
         canonical_path = path.rstrip("/")
-        canonical = urlunsplit(("https", "www.facebook.com", canonical_path, "",
+        canonical = urlunsplit(("https", "www.facebook.com", canonical_path,
                                 urlencode(identity_query), ""))
         return {"post_id": post_id, "url": canonical,
                 "id_locator": "permalink_query.story_fbid"}
@@ -125,7 +125,7 @@ class FacebookAdapter(BaseAdapter):
         identity = cls.observed_post_permalink(candidate)
         if identity:
             return identity["url"]
-        return urlunsplit(("https", "www.facebook.com", parsed.path or "/", "", "", ""))
+        return urlunsplit(("https", "www.facebook.com", parsed.path or "/", "", ""))
 
     @staticmethod
     def _is_non_post_media_url(value: str) -> bool:
@@ -222,7 +222,7 @@ class FacebookAdapter(BaseAdapter):
                 or parsed.username is not None or parsed.password is not None
                 or port not in (None, 443)):
             return ""
-        return urlunsplit(("https", host, parsed.path or "/", "", "", ""))
+        return urlunsplit(("https", host, parsed.path or "/", "", ""))
 
     @classmethod
     def _media_hints(cls, card, base_url: str) -> list[dict]:
@@ -520,12 +520,14 @@ class FacebookAdapter(BaseAdapter):
                 return AdapterResult(success=False, error="IDENTITY_MISMATCH: FINAL_URL_POST_ID_MISMATCH")
 
             matching_note = None
+            matching_article_seen = False
             articles = page.query_selector_all('div[role="article"]')
             for article in articles:
                 identity = self._post_permalink_from_card(article, page.url)
                 if not identity or identity["post_id"] != requested["post_id"]:
                     continue
-                note = self._parse_facebook_card(article, page)
+                matching_article_seen = True
+                note = self._parse_facebook_detail_article(article, page, requested["post_id"])
                 if note and note.raw_data.get("post_id") == requested["post_id"]:
                     matching_note = note
                     break
@@ -535,6 +537,13 @@ class FacebookAdapter(BaseAdapter):
                 matching_note.raw_data["detail_post_id_status"] = "OBSERVED_AND_MATCHED"
                 matching_note.raw_data["detail_post_id_locator"] = "article a[href] (exact requested native id)"
                 return AdapterResult(success=True, notes=[matching_note], raw_count=1)
+            if matching_article_seen:
+                return AdapterResult(
+                    success=False,
+                    error="DETAIL_NOT_RETURNED: NATIVE_POST_BODY_NOT_OBSERVED",
+                    diagnostics={"post_id": requested["post_id"],
+                                 "body_status": "NATIVE_BODY_NOT_OBSERVED"},
+                )
             if articles:
                 return AdapterResult(success=False, error="IDENTITY_MISMATCH: TARGET_ARTICLE_NOT_OBSERVED")
             return AdapterResult(success=False, error="DETAIL_NOT_RETURNED: TARGET_ARTICLE_NOT_OBSERVED")
@@ -544,6 +553,100 @@ class FacebookAdapter(BaseAdapter):
         finally:
             if hb is not None:
                 hb.close()
+
+    @staticmethod
+    def _expand_detail_post_body(article) -> str:
+        """Expand only an explicit read-more control inside the exact post article."""
+        labels = {"see more", "see more…", "see more...", "查看更多", "查看全部", "显示更多"}
+        body_locator = '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+        try:
+            body_element = article.query_selector(body_locator)
+            before = body_element.inner_text().strip() if body_element else None
+        except Exception:
+            return "BODY_NOT_AVAILABLE"
+        if not isinstance(before, str):
+            return "BODY_NOT_AVAILABLE"
+        try:
+            controls = article.query_selector_all('div[role="button"], button')
+        except Exception:
+            return "CONTROLS_UNAVAILABLE"
+        inspection_failed = False
+        expansion_attempted = False
+        for control in controls:
+            try:
+                label = control.inner_text()
+                label = " ".join(label.split()).casefold() if isinstance(label, str) else ""
+                aria = control.get_attribute("aria-label")
+                aria = " ".join(aria.split()).casefold() if isinstance(aria, str) else ""
+            except Exception:
+                inspection_failed = True
+                continue
+            if label not in labels and aria not in labels:
+                continue
+            try:
+                control.click()
+                expansion_attempted = True
+            except Exception:
+                return "EXPANSION_FAILED"
+            try:
+                expanded_element = article.query_selector(body_locator)
+                after = expanded_element.inner_text().strip() if expanded_element else None
+            except Exception:
+                inspection_failed = True
+                continue
+            # A different attachment's "See more" button is not evidence that
+            # the post body expanded. Only accept a longer native message body.
+            if isinstance(after, str) and len(after) > len(before):
+                return "EXPANDED"
+        if expansion_attempted:
+            return "EXPANSION_UNVERIFIED"
+        return "CONTROLS_UNAVAILABLE" if inspection_failed else "NO_EXPANSION_CONTROL"
+
+    def _parse_facebook_detail_article(self, article, page, requested_post_id: str) -> CollectedNote | None:
+        """FIX-098: observe a native body only for the exact requested post."""
+        identity = self._post_permalink_from_card(article, page.url)
+        if not identity or identity.get("post_id") != requested_post_id:
+            return None
+        expansion_state = self._expand_detail_post_body(article)
+        if expansion_state not in {"EXPANDED", "NO_EXPANSION_CONTROL"}:
+            return None
+        body_locator = '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+        try:
+            body_element = article.query_selector(body_locator)
+            native_body = body_element.inner_text().strip() if body_element else ""
+        except Exception:
+            native_body = ""
+        if not native_body:
+            return None
+
+        # Reuse the existing native author, time, metrics and media observations,
+        # then replace the search-preview body with the exact article's visible body.
+        note = self._parse_facebook_card(article, page)
+        if not note or note.raw_data.get("post_id") != requested_post_id:
+            return None
+        note.content = native_body
+        note.title = native_body[:80].replace("\n", " ")
+        raw = dict(note.raw_data or {})
+        raw.update({
+            "body_kind": "NATIVE_POST_BODY",
+            "body_status": "NATIVE_DETAIL_BODY_OBSERVED_COMPLETENESS_UNKNOWN",
+            "body_sha256": hashlib.sha256(native_body.encode("utf-8")).hexdigest(),
+            "body_locator": body_locator,
+            "body_state": ("EXPANDED_NATIVE_ARTICLE_DOM_COMPLETENESS_UNKNOWN"
+                           if expansion_state == "EXPANDED"
+                           else "NATIVE_ARTICLE_DOM_COMPLETENESS_UNKNOWN"),
+            "detail_post_id_status": "OBSERVED_AND_MATCHED",
+            "detail_post_id_locator": "article a[href] (exact requested native id)",
+            "native_identity": {
+                "post_id": requested_post_id,
+                "requested_post_id": requested_post_id,
+                "observed_post_id": identity["post_id"],
+                "status": "OBSERVED_MATCH",
+                "locator": identity.get("permalink_locator"),
+            },
+        })
+        note.raw_data = raw
+        return note
 
     def comments(self, post_id: str, max_comments: int = 20) -> AdapterResult:
         """Facebook 评论采集（浏览器 CDP，滚动加载）。"""
