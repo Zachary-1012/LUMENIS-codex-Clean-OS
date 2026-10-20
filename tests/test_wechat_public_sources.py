@@ -46,6 +46,47 @@ def test_challenge_stops_original_follows_without_cookie_or_repeat():
     result=WechatPublicAdapter(fetcher=fetch).search('广州太古汇 停车')
     assert result.status is CollectionStatus.NEED_VERIFY and len(seen)==2
     assert result.items==[] and result.metadata['original_body_available'] is False
+    assert result.metadata['reason']=='SOURCE_VERIFICATION_REQUIRED'
+    assert result.metadata['provider']=='public_sogou_discovery_original_fetch'
+    assert result.metadata['request_final_status']=='NEED_VERIFY'
+    assert result.metadata['http_status']==200
+    assert result.metadata['accepted_count']==0
+    assert result.metadata['challenge_body_included'] is False
+
+
+def test_fix_106_search_challenge_reports_bounded_diagnostic_without_challenge_body():
+    challenge_text = '请完成安全验证 PRIVATE_CHALLENGE_TEXT'
+    challenge = response(f'<div>{challenge_text}</div>',
+                         'https://weixin.sogou.com/weixin?type=2&query=synthetic')
+    result = WechatPublicAdapter(fetcher=lambda _url: challenge).search('synthetic keyword')
+    assert result.status is CollectionStatus.NEED_VERIFY
+    assert result.message == 'Source verification required'
+    assert result.metadata == {
+        'reason': 'SOURCE_VERIFICATION_REQUIRED',
+        'provider': 'public_sogou_discovery_original_fetch',
+        'request_final_status': 'NEED_VERIFY',
+        'http_status': 200,
+        'accepted_count': 0,
+        'original_body_available': False,
+        'challenge_body_included': False,
+        'index_only': True,
+    }
+    assert 'PRIVATE_CHALLENGE_TEXT' not in repr(result.metadata)
+
+
+def test_fix_106_original_article_challenge_keeps_need_verify_and_final_status():
+    challenge_text = '请完成安全验证 PRIVATE_CHALLENGE_TEXT'
+    challenge = response(f'<div>{challenge_text}</div>')
+    result = WechatPublicAdapter(fetcher=lambda _url: challenge).detail(
+        'https://mp.weixin.qq.com/s/exact-article')
+    assert result.status is CollectionStatus.NEED_VERIFY
+    assert result.metadata['provider'] == 'public_original_article_fetch'
+    assert result.metadata['request_final_status'] == 'NEED_VERIFY'
+    assert result.metadata['accepted_count'] == 0
+    assert result.metadata['http_status'] == 200
+    assert result.metadata['challenge_body_included'] is False
+    assert 'PRIVATE_CHALLENGE_TEXT' not in result.message
+    assert 'PRIVATE_CHALLENGE_TEXT' not in repr(result.metadata)
 
 
 def test_native_query_tuple_does_not_change_with_referral_parameters():

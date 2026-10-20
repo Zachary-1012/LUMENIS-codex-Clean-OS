@@ -902,6 +902,22 @@ def runtime_preflight_check(account: str | None = None,
                              "circuit": (state.circuit.value if hasattr(state.circuit, "value") else str(state.circuit))},
             "evidence": "PRECHECK_READY"}
 
+_COLLECTION_RESULT_STATES = frozenset({
+    'SUCCESS', 'EMPTY', 'BLOCKED', 'AUTH_FAILED', 'CAPTCHA',
+    'NETWORK_ERROR', 'PARTIAL_BLOCKED',
+})
+_BLOCKED_RESULT_STATES = frozenset({'BLOCKED', 'AUTH_FAILED', 'CAPTCHA'})
+
+
+def _normalize_collection_state(value):
+    """Keep only explicit collection outcomes; unknown values fail conservatively."""
+    if isinstance(value, str):
+        state = value.strip().upper()
+        if state in _COLLECTION_RESULT_STATES:
+            return state
+    return 'NETWORK_ERROR'
+
+
 def _run_search(keyword,max_scroll=6):
     service_python = sys.executable
     if not isinstance(service_python, str) or not service_python or not os.path.isabs(service_python):
@@ -992,28 +1008,42 @@ def _run_search(keyword,max_scroll=6):
             # 风控检测
             risk = network_adaptive.detect_risk(error_msg=error_msg)
             if risk['is_risk']:
-                network_adaptive.report_collection_result(False, risk_info=risk)
+                risk_reason = risk.get('risk_type') or 'RISK'
+                if parsed is not None:
+                    parsed['state'] = 'BLOCKED'
+                    parsed['blocked_reason'] = parsed.get('blocked_reason') or risk_reason
+                    parsed['risk_info'] = risk
             if parsed:
                 parsed.setdefault('error', error_msg); return parsed
-            return {'keyword':keyword,'total':0,'notes':[],'state':'NETWORK_ERROR','error':error_msg,'risk_detected':risk['is_risk']}
+            return {'keyword':keyword,'total':0,'notes':[],
+                    'state':'BLOCKED' if risk['is_risk'] else 'NETWORK_ERROR',
+                    'blocked_reason':risk.get('risk_type') if risk['is_risk'] else '',
+                    'risk_info':risk if risk['is_risk'] else None,
+                    'error':error_msg,'risk_detected':risk['is_risk']}
         with open(out,encoding='utf-8') as f:
             result = json.load(f)
-        # 六态兜底：若旧版结果无 state，则按 blocked_reason/数量推导
+        # 六态兼容：旧结果仅凭明确拦截信息或“接口已响应且无结果”推导；
+        # 有数量但没有状态的载荷并不足以证明响应有效，按 NETWORK_ERROR 处理。
         if not result.get('state'):
             _br = result.get('blocked_reason','')
             if _br == 'LOGIN_REQUIRED': result['state']='AUTH_FAILED'
             elif _br: result['state']='BLOCKED'
             elif result.get('api_calls',0)>0 and result.get('total',0)==0: result['state']='EMPTY'
-            elif result.get('total',0)>0: result['state']='SUCCESS'
             else: result['state']='NETWORK_ERROR'
         # js 已基于 URL 重定向 / error_code / 验证码精确判定 state；
         # bridge 不再用“结果正文词频”覆盖成功态——搜“投诉/避雷”时正文本就含风险词，宽泛匹配会误杀成功采集
         if result.get('state') in (None, '', 'NETWORK_ERROR'):
             risk = network_adaptive.detect_risk(response_text=json.dumps(result, ensure_ascii=False))
             if risk['is_risk']:
-                result['state']='BLOCKED'; result['blocked_reason']=risk.get('type','RISK')
-        if result.get('state') in ('BLOCKED','AUTH_FAILED','CAPTCHA'):
-            network_adaptive.report_collection_result(False, risk_info={'type':result.get('blocked_reason') or result['state'],'is_risk':True})
+                result['state']='BLOCKED'
+                result['blocked_reason']=risk.get('risk_type') or 'RISK'
+                result['risk_info']=risk
+        if result.get('state') in _BLOCKED_RESULT_STATES:
+            result.setdefault('risk_info', {
+                'is_risk': True,
+                'risk_type': result.get('blocked_reason') or result['state'],
+                'severity': 'high',
+            })
         return result
     finally:
         try: os.remove(out)
@@ -1266,16 +1296,36 @@ def sync(keywords=None, max_scroll=6, account=None):
     if not cookie_configured():
         raise RuntimeError(f'未配置本机香港/国际 XHS Cookie。请在 {ACCOUNT_PROFILES[resolved_account][0]} 导入合法登录态。')
     keywords=list(dict.fromkeys(query_plan.keywords))[:32]
-    raw={}; results=[]; blocked={}; state_counts={}
+    raw={}; results=[]; blocked={}; state_counts={}; risk_infos=[]
     _consec_bad=0  # 连续被拦截/失败计数（成功或空结果清零），达到阈值即提前结束本轮保护账号
+    _network_result_reported = False
     for _ki, kw in enumerate(keywords):
         r=_run_search(kw,max_scroll)
-        st=r.get('state') or ('SUCCESS' if r.get('total',0)>0 else 'NETWORK_ERROR')
+        st=_normalize_collection_state(r.get('state'))
         state_counts[st]=state_counts.get(st,0)+1
         results.append({'keyword':kw,'fetched':r.get('total',0),'state':st,'error':r.get('error',''),'blocked':r.get('blocked_reason','')})
         _write_collection_log(kw, r.get('total',0), st, (r.get('blocked_reason') or r.get('error_code') or r.get('error') or '')[:200])
         br=r.get('blocked_reason')
         if br: blocked[br]=blocked.get(br,0)+1
+        risk_info = r.get('risk_info')
+        if st in _BLOCKED_RESULT_STATES:
+            if not isinstance(risk_info, dict) or risk_info.get('is_risk') is not True:
+                risk_info = {
+                    'is_risk': True,
+                    'risk_type': br or st,
+                    'severity': 'high',
+                }
+            risk_infos.append(risk_info)
+        elif isinstance(risk_info, dict) and risk_info.get('is_risk') is True:
+            # Keep an explicit risk signal even when the data outcome is separately EMPTY/SUCCESS.
+            risk_infos.append(risk_info)
+        if st in _BLOCKED_RESULT_STATES and not _network_result_reported:
+            # Apply risk pacing immediately so the next keyword observes it.
+            # This is the task's one risk event; the final summary must not count it again.
+            network_adaptive.report_collection_result(
+                success=False, risk_info=risk_info, notes_count=0, state=st,
+            )
+            _network_result_reported = True
         # 连续拦截/网络失败早停：已在被风控时继续打只会加重，立即结束本轮（半数熔断仍在下方统一判定）
         if st in ('SUCCESS','EMPTY'):
             _consec_bad=0
@@ -1294,16 +1344,12 @@ def sync(keywords=None, max_scroll=6, account=None):
         if _ki < len(keywords)-1 and not is_test_mode():
             _gap=max(KEYWORD_GAP_MIN_SEC, int(network_adaptive.get_adaptive_settings().get('current_delay_seconds',2)))
             time.sleep(_gap+random.randint(0,KEYWORD_GAP_JITTER_SEC))
-    # 若多数关键词被风控/登录墙拦截，上报网络自适应并在结果中明确标注（不再伪装成“0 条新笔记”）
+    # 若关键词被风控/登录墙拦截，在任务结果中明确标注（不再伪装成“0 条新笔记”）
     blocked_summary = ''
     if blocked:
         top_block=max(blocked,key=blocked.get)
         label={'IP_RISK_OR_CAPTCHA':'IP存在风险/出现验证码，已被小红书安全拦截','LOGIN_REQUIRED':'登录态失效，需要重新登录','EMPTY_NO_API':'未收到搜索接口响应（可能被风控）'}.get(top_block,top_block)
         blocked_summary=f'{label}（{sum(blocked.values())}/{len(keywords)} 个关键词被拦截）'
-        try:
-            network_adaptive.report_collection_result(False, risk_info={'type':top_block,'is_risk':True})
-        except Exception:
-            pass
         results.append({'stage':'blocked','reason':top_block,'detail':blocked_summary})
         if top_block=='LOGIN_REQUIRED' and not is_test_mode():
             # PO rule 2026-10-13 #1: in-product login popup, then resume this task.
@@ -1391,36 +1437,44 @@ def sync(keywords=None, max_scroll=6, account=None):
     except Exception as e:
         results.append({'stage':'post_process','error':str(e)})
     
-    # 网络自适应：报告采集结果
     total_new = inserted + updated
     if total_new > 0:
-        network_adaptive.report_collection_result(True, notes_count=total_new)
         # 成功采集后创建缓存快照
         try:
             cache_result = cache_manager.create_snapshot()
             results.append({'stage':'cache_snapshot','success':cache_result.get('success',False)})
         except Exception as e:
             results.append({'stage':'cache_snapshot','error':str(e)})
-    else:
-        network_adaptive.report_collection_result(False, notes_count=0)
-    
-    # 获取当前网络状态
+
+    # ===== 任务级六态汇总（关键：按响应状态，不按新增行数判断网络是否成功）=====
+    n=sum(state_counts.values())
+    n_ok=state_counts.get('SUCCESS',0); n_empty=state_counts.get('EMPTY',0)
+    n_block=sum(state_counts.get(state,0) for state in _BLOCKED_RESULT_STATES)
+    n_neterr=state_counts.get('NETWORK_ERROR',0)
+    n_partial=state_counts.get('PARTIAL_BLOCKED',0)
+    if n == 0: task_state='NETWORK_ERROR'
+    elif n_ok+n_empty==n: task_state='SUCCESS' if n_ok else 'EMPTY'
+    elif n_block==n: task_state='BLOCKED'
+    elif n_neterr==n: task_state='NETWORK_ERROR'
+    else: task_state='PARTIAL_BLOCKED'
+
+    # 一次任务只上报一次网络结果；EMPTY 和成功但零新增都由六态保留为有效响应。
+    network_risk = risk_infos[0] if risk_infos else None
+    if task_state in _BLOCKED_RESULT_STATES and network_risk is None:
+        network_risk = {'is_risk': True, 'risk_type': task_state, 'severity': 'high'}
+    if not _network_result_reported:
+        network_adaptive.report_collection_result(
+            success=task_state in ('SUCCESS', 'EMPTY'),
+            risk_info=network_risk,
+            notes_count=total_new,
+            state=task_state,
+        )
+
+    # 获取当前网络状态（包含上面的唯一一次任务结果更新）
     net_status = network_adaptive.get_network_status()
 
-    # ===== 任务级六态汇总（关键：被拦截不等于“0 条正常”）=====
-    n=len(keywords)
-    n_ok=state_counts.get('SUCCESS',0); n_empty=state_counts.get('EMPTY',0)
-    n_block=state_counts.get('BLOCKED',0)+state_counts.get('CAPTCHA',0)+state_counts.get('AUTH_FAILED',0)
-    n_neterr=state_counts.get('NETWORK_ERROR',0)
-    if n_ok==n: task_state='SUCCESS'
-    elif (n_ok+n_empty)==n and n_ok==0: task_state='EMPTY'
-    elif n_ok>0 and (n_block+n_neterr)>0: task_state='PARTIAL_BLOCKED'
-    elif n_block==n: task_state='BLOCKED'
-    elif (n_block+n_neterr)==n: task_state='NETWORK_ERROR'
-    elif n_ok==0 and n_empty>0: task_state='EMPTY'
-    else: task_state='PARTIAL_BLOCKED'
     # 半数以上关键词被拦截/失败：熔断自动调度（测试模式不熔断，便于端到端验证）
-    if not is_test_mode() and (n_block+n_neterr) >= max(1, n//2):
+    if not is_test_mode() and (n_block+n_neterr+n_partial) >= max(1, n//2):
         top=blocked_summary or task_state
         _trip_circuit(task_state, top, cool_minutes=_adaptive_cool_minutes())
     elif task_state=='SUCCESS':
@@ -1570,11 +1624,12 @@ def create_task(keywords=None,max_scroll=6,run_type='manual',account=None):
             # adaptive_engine 结果回写：滑动窗口成功率自动调整策略/参数
             try:
                 import adaptive_engine as _ae
+                valid_response = ts in ('SUCCESS', 'EMPTY')
                 _ae.adaptive_engine.report_collection_result(
-                    success=(ts == 'SUCCESS'),
+                    success=valid_response,
                     notes_count=int(result.get('inserted',0))+int(result.get('updated',0)),
                     duration=round(time.time()-_w_start, 1),
-                    error=result.get('blocked') or (None if ts=='SUCCESS' else ts))
+                    error=result.get('blocked') or (None if valid_response else ts))
             except Exception as _ae_e:
                 print('[xhs-bridge] adaptive feedback non-blocking:', _ae_e, flush=True)
         except Exception as e:

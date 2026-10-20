@@ -10,6 +10,7 @@ from lumenis.system.collector.adapters import get_adapter
 from lumenis.system.collector.adapters.base import BasePlatformAdapter, CollectionStatus
 from lumenis.system.collector.adapters.instagram import InstagramAdapter
 from lumenis.adapters.base import AdapterResult, CollectedNote
+from lumenis.adapters.instagram import InstagramAdapter as V4InstagramAdapter
 
 
 # ---------------------------------------------------------------------------
@@ -317,6 +318,105 @@ def test_creator_delegates_to_engine():
     assert cr.items[0]["author_nickname"] == "testcreator"
     assert cr.metadata["username"] == "testcreator"
     engine.creator.assert_called_once_with("testcreator")
+
+
+@pytest.mark.parametrize("method,operation", [
+    ("comments", "comments"),
+    ("creator", "creator"),
+])
+def test_fix_105_original_instagram_adapter_redacts_exception_and_cause(method, operation, monkeypatch, caplog):
+    engine = V4InstagramAdapter()
+
+    def fail(*args, **kwargs):
+        try:
+            raise RuntimeError("cookie=CAUSE_SECRET page=PRIVATE_PAGE_TEXT")
+        except RuntimeError as cause:
+            raise ValueError("token=TOP_SECRET session=EXCEPTION_TEXT") from cause
+
+    monkeypatch.setattr(engine, f"_{operation}_browser", fail)
+    with caplog.at_level("WARNING", logger="lumenis.adapters.instagram"):
+        result = getattr(engine, method)("ABC123" if method == "comments" else "testcreator")
+
+    assert result.success is False
+    assert result.error == "INSTAGRAM_FAILURE:AUTH_REQUIRED"
+    assert result.diagnostics["error_code"] == result.error
+    assert result.diagnostics["stack"]
+    assert "TOP_SECRET" not in result.error
+    assert "CAUSE_SECRET" not in repr(result.diagnostics)
+    assert "PRIVATE_PAGE_TEXT" not in caplog.text
+    assert "TOP_SECRET" not in caplog.text
+    assert "CAUSE_SECRET" not in caplog.text
+    assert "ValueError" not in caplog.text
+
+
+def test_fix_105_registered_comments_exception_is_redacted():
+    engine = MagicMock()
+
+    def fail(*args, **kwargs):
+        try:
+            raise RuntimeError("cookie=CAUSE_SECRET")
+        except RuntimeError as cause:
+            raise ValueError("token=TOP_SECRET page=PRIVATE_PAGE_TEXT") from cause
+
+    engine.comments.side_effect = fail
+    result = InstagramAdapter(engine=engine).comments("ABC123")
+    assert result.status == CollectionStatus.COLLECT_ERROR
+    assert result.message == "INSTAGRAM_FAILURE:UPSTREAM_FAILURE"
+    assert result.metadata["failure_diagnostic"]["stack"]
+    assert "TOP_SECRET" not in result.message
+    assert "CAUSE_SECRET" not in repr(result.metadata)
+    assert "PRIVATE_PAGE_TEXT" not in repr(result.metadata)
+
+
+def test_fix_105_registered_creator_sanitizes_engine_error_text():
+    engine = MagicMock()
+    engine.creator.return_value = AdapterResult(
+        success=False,
+        error="token=TOP_SECRET payload=PRIVATE_PAGE_TEXT",
+        diagnostics={"error_code": "INSTAGRAM_FAILURE:UPSTREAM_FAILURE",
+                     "stack": [{"file": "secret/path.py", "line": 2, "function": "bad\nframe"}]},
+    )
+    result = InstagramAdapter(engine=engine).creator("testcreator")
+    assert result.status == CollectionStatus.COLLECT_ERROR
+    assert result.message == "INSTAGRAM_FAILURE:UPSTREAM_FAILURE"
+    assert result.metadata["failure_diagnostic"] == {
+        "error_code": "INSTAGRAM_FAILURE:UPSTREAM_FAILURE", "stack": [],
+    }
+    assert "TOP_SECRET" not in result.message
+    assert "PRIVATE_PAGE_TEXT" not in repr(result.metadata)
+
+
+@pytest.mark.parametrize(('error','expected'), [
+    ('READONLY_WORKER_NOT_CONFIGURED', 'INSTAGRAM_FAILURE:NOT_CONFIGURED'),
+    ('READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE', 'INSTAGRAM_FAILURE:PROVIDER_UNAVAILABLE'),
+    ('network connection timeout', 'INSTAGRAM_FAILURE:NETWORK_UNAVAILABLE'),
+])
+@pytest.mark.parametrize('operation', ['comments', 'creator'])
+def test_fix_105_worker_configuration_and_unavailable_codes_stay_distinct(
+        monkeypatch, error, expected, operation):
+    from lumenis.adapters.instagram import InstagramAdapter as OriginalInstagramAdapter
+
+    def fail_before_browser(*_args, **_kwargs):
+        raise RuntimeError(error)
+
+    monkeypatch.setattr('lumenis.adapters.instagram.configured_readonly_worker_url', fail_before_browser)
+    engine = OriginalInstagramAdapter()
+    result = getattr(engine, operation)('ABC123' if operation == 'comments' else 'testcreator')
+    assert result.success is False
+    assert result.error == expected
+    assert result.diagnostics['error_code'] == expected
+
+
+@pytest.mark.parametrize('operation', ['comments', 'creator'])
+def test_fix_105_registered_instagram_raised_failures_use_sanitized_status(operation):
+    engine = MagicMock()
+    getattr(engine, operation).side_effect = TimeoutError('timeout token=TOP_SECRET')
+    result = getattr(InstagramAdapter(engine=engine), operation)(
+        'ABC123' if operation == 'comments' else 'testcreator'
+    )
+    assert result.status == CollectionStatus.PROVIDER_UNAVAILABLE
+    assert result.message == 'INSTAGRAM_FAILURE:NETWORK_UNAVAILABLE'
+    assert 'TOP_SECRET' not in repr(result)
 
 
 # ---------------------------------------------------------------------------
