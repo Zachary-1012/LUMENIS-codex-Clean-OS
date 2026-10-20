@@ -4,6 +4,28 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-096/098/099/105/106 — platform adapter outcomes
+
+The existing Facebook/X, Instagram, XHS and WeChat adapters now retain bounded
+failure/verification facts and source identity, redact unsafe exception or
+page data, and preserve explicit status instead of collapsing configured
+failure into success or an opaque message (FIX-096/098/099/105/106). These
+changes stay in their existing adapters and test owners; no collector,
+secondary collection, API composition or product module was added.
+
+Offline focused regressions passed: Instagram FIX-105, 4; X read-only worker,
+24; Facebook FIX-098, 5; XHS FIX-099, 2; WeChat public sources, 17 — **52
+passed**, no background-thread leak. Python compilation and `git diff --check`
+passed. The full Instagram module still has 5 failures and the full Facebook/X
+module 7 failures; both sets were reproduced on clean main at the exact same
+baseline. The focused additions passed and do not establish full module or
+product acceptance.
+
+FIX-100 remains OPEN because the `secondary_collection.py` write reservation
+is unavailable. FIX-092/093/097 and `platform_naming.py` coordination remain
+OPEN. Hidden/redacted XHS snippet effects, real devices, and external collection
+remain NOT_VERIFIED; tests used injected/offline fixtures only.
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

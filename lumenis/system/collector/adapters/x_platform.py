@@ -14,6 +14,11 @@ _TERMINAL_X_DETAIL_STATES = frozenset({
     "SESSION_EXPIRED", "RISK_WARNING", "BLOCKED", "PROVIDER_UNAVAILABLE",
     "NOT_CONFIGURED", "NOT_SUPPORTED",
 })
+_X_FAILURE_REASONS = frozenset({
+    "NOT_CONFIGURED", "SESSION_EXPIRED", "VERIFICATION_REQUIRED", "RATE_LIMITED",
+    "NETWORK_UNAVAILABLE", "PROVIDER_UNAVAILABLE", "NOT_SUPPORTED",
+    "IDENTITY_MISMATCH", "DETAIL_NOT_RETURNED", "UPSTREAM_FAILURE",
+})
 
 
 class XAdapter(BasePlatformAdapter):
@@ -37,13 +42,56 @@ class XAdapter(BasePlatformAdapter):
         try:
             from lumenis.adapters.x_platform import XAdapter as V4XAdapter
             return V4XAdapter()
-        except Exception as exc:
-            raise RuntimeError(f"无法加载 v4 X 采集引擎: {exc}") from exc
+        except Exception:
+            raise RuntimeError("X_WORKER_FAILURE:UPSTREAM_FAILURE") from None
+
+    @staticmethod
+    def _safe_failure_code(error: Any, *, phase: str = "page") -> str:
+        """FIX-096: retain only known X failure codes at the registered boundary."""
+        phase_name = "WORKER" if phase == "worker" else "PAGE"
+        text = str(error or "").casefold()
+        match = re.fullmatch(r"x_(worker|page)_failure:([a-z_]+)", text.strip())
+        if match and match.group(2).upper() in _X_FAILURE_REASONS:
+            return f"X_{match.group(1).upper()}_FAILURE:{match.group(2).upper()}"
+        if any(marker in text for marker in ("not configured", "not_configured", "not registered", "未配置")):
+            reason = "NOT_CONFIGURED"
+        elif any(marker in text for marker in ("not supported", "unsupported", "review required", "不支持")):
+            reason = "NOT_SUPPORTED"
+        elif any(marker in text for marker in ("identity mismatch", "identity_mismatch", "身份不匹配")):
+            reason = "IDENTITY_MISMATCH"
+        elif any(marker in text for marker in ("no verifiable post", "no unique matching target article")):
+            reason = "DETAIL_NOT_RETURNED"
+        elif any(marker in text for marker in ("login", "session", "cookie", "登录", "未登录", "失效")):
+            reason = "SESSION_EXPIRED"
+        elif any(marker in text for marker in ("challenge", "captcha", "verification", "verify", "验证")):
+            reason = "VERIFICATION_REQUIRED"
+        elif any(marker in text for marker in ("rate limit", "rate limited", "rate_limited", "too many",
+                                               "http 429", " 429", "blocked", "封禁", "频控")):
+            reason = "RATE_LIMITED"
+        elif any(marker in text for marker in ("network", "timeout", "connection", "dns", "net::err_", "不可达")):
+            reason = "NETWORK_UNAVAILABLE"
+        else:
+            reason = "UPSTREAM_FAILURE"
+        return f"X_{phase_name}_FAILURE:{reason}"
 
     @staticmethod
     def _v4_status_to_main(success: bool, notes: list, error: str) -> CollectionStatus:
         if success:
             return CollectionStatus.SUCCESS if notes else CollectionStatus.NO_NEW_DATA
+        failure = XAdapter._safe_failure_code(error, phase="page")
+        reason = failure.rsplit(":", 1)[-1]
+        if reason == "NOT_CONFIGURED":
+            return CollectionStatus.NOT_CONFIGURED
+        if reason == "SESSION_EXPIRED":
+            return CollectionStatus.SESSION_EXPIRED
+        if reason == "VERIFICATION_REQUIRED":
+            return CollectionStatus.RISK_WARNING
+        if reason == "RATE_LIMITED":
+            return CollectionStatus.BLOCKED
+        if reason in {"NETWORK_UNAVAILABLE", "PROVIDER_UNAVAILABLE"}:
+            return CollectionStatus.PROVIDER_UNAVAILABLE
+        if reason == "NOT_SUPPORTED":
+            return CollectionStatus.NOT_SUPPORTED
         err_lower = (error or "").lower()
         if any(k in err_lower for k in ("not supported", "unsupported", "review required")):
             return CollectionStatus.NOT_SUPPORTED
@@ -133,6 +181,19 @@ class XAdapter(BasePlatformAdapter):
     @staticmethod
     def _detail_failure_state(error: Any) -> str:
         text = str(error or "").casefold()
+        if text.startswith("x_worker_failure:") or text.startswith("x_page_failure:"):
+            reason = text.rsplit(":", 1)[-1]
+            return {
+                "session_expired": "SESSION_EXPIRED",
+                "verification_required": "RISK_WARNING",
+                "rate_limited": "BLOCKED",
+                "network_unavailable": "PROVIDER_UNAVAILABLE",
+                "provider_unavailable": "PROVIDER_UNAVAILABLE",
+                "not_configured": "NOT_CONFIGURED",
+                "not_supported": "NOT_SUPPORTED",
+                "identity_mismatch": "IDENTITY_MISMATCH",
+                "detail_not_returned": "DETAIL_NOT_RETURNED",
+            }.get(reason, "DETAIL_FAILED")
         if "identity mismatch" in text or "identity_mismatch" in text:
             return "IDENTITY_MISMATCH"
         if any(marker in text for marker in ("login", "session", "cookie", "登录", "未登录", "失效")):
@@ -290,6 +351,7 @@ class XAdapter(BasePlatformAdapter):
         checkpoint_used = False
         checkpoint_key = None
         checkpoint_id_count = 0
+        failure_phase = "worker"
         try:
             acquisition_fingerprint = kwargs.get("acquisition_fingerprint")
             if (acquisition_fingerprint is not None
@@ -310,6 +372,7 @@ class XAdapter(BasePlatformAdapter):
                 checkpoint_id_count = len(skip_tweet_ids)
 
             backend = self._load_backend()
+            failure_phase = "page"
             try:
                 requested_limit = int(kwargs.get("max_results", 20))
             except (TypeError, ValueError, OverflowError):
@@ -321,14 +384,15 @@ class XAdapter(BasePlatformAdapter):
                 )
             else:
                 result = backend.search(keyword, max_results=max_results)
-            status = self._v4_status_to_main(result.success, result.notes, result.error)
+            safe_error = self._safe_failure_code(result.error, phase="page") if result.error else ""
+            status = self._v4_status_to_main(result.success, result.notes, safe_error)
             items = self._v4_notes_to_items((result.notes or [])[:max_results])
             detail_counts = {"attempted": 0, "succeeded": 0, "failed": 0, "pending": 0,
                              "not_attempted_no_native_id": 0, "reused_same_native_id": 0}
             detail_stop_reason = None if result.success else self._detail_failure_state(result.error or "search failed")
             detail_cache = {}
             overall_status = status
-            overall_message = result.error or ""
+            overall_message = safe_error
 
             for item in items:
                 tweet_id, identity_conflict = self._observed_tweet_id(item)
@@ -464,12 +528,13 @@ class XAdapter(BasePlatformAdapter):
                 },
             )
         except Exception as exc:
-            logger.exception("X 主链路采集失败")
+            safe_error = self._safe_failure_code(exc, phase=failure_phase)
+            logger.warning("X main collection failed phase=%s code=%s", failure_phase, safe_error)
             return CollectionResult(
-                status=CollectionStatus.COLLECT_ERROR,
+                status=self._v4_status_to_main(False, [], safe_error),
                 platform=self.platform,
-                message=str(exc),
-                metadata={"continuation": self._continuation_metadata(
+                message=safe_error,
+                metadata={"failure_code": safe_error, "continuation": self._continuation_metadata(
                     checkpoint_used, checkpoint_key, checkpoint_id_count,
                 )},
             )
@@ -484,14 +549,21 @@ class XAdapter(BasePlatformAdapter):
         return self._delegate_v4("creator", creator_id)
 
     def _delegate_v4(self, method: str, *args, **kwargs) -> CollectionResult:
+        failure_phase = "worker"
         try:
             backend = self._load_backend()
+            failure_phase = "page"
             result = getattr(backend, method)(*args, **kwargs)
-            status = self._v4_status_to_main(result.success, result.notes, result.error)
+            safe_error = self._safe_failure_code(result.error, phase="page") if result.error else ""
+            status = self._v4_status_to_main(result.success, result.notes, safe_error)
             items = self._v4_notes_to_items(result.notes)
-            return CollectionResult(status=status, platform=self.platform, items=items, raw_count=result.raw_count, message=result.error or "")
+            return CollectionResult(status=status, platform=self.platform, items=items,
+                                    raw_count=result.raw_count, message=safe_error,
+                                    metadata={"failure_code": safe_error} if safe_error else {})
         except Exception as exc:
-            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, platform=self.platform, message=str(exc))
+            safe_error = self._safe_failure_code(exc, phase=failure_phase)
+            return CollectionResult(status=self._v4_status_to_main(False, [], safe_error), platform=self.platform,
+                                    message=safe_error, metadata={"failure_code": safe_error})
 
     def health_check(self) -> CollectionResult:
         """Check the existing vault's non-secret X authentication metadata."""

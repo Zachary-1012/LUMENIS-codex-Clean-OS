@@ -200,6 +200,18 @@ class InstagramAdapter(BasePlatformAdapter):
         if success:
             return CollectionStatus.SUCCESS if notes else CollectionStatus.NO_NEW_DATA
         err = (error or "").lower()
+        if "instagram_failure:not_configured" in err:
+            return CollectionStatus.NOT_CONFIGURED
+        if "instagram_failure:auth_required" in err:
+            return CollectionStatus.SESSION_EXPIRED
+        if "instagram_failure:verification_required" in err:
+            return CollectionStatus.NEED_VERIFY
+        if "instagram_failure:rate_limited" in err:
+            return CollectionStatus.BLOCKED
+        if any(code in err for code in (
+                "instagram_failure:network_unavailable",
+                "instagram_failure:provider_unavailable")):
+            return CollectionStatus.PROVIDER_UNAVAILABLE
         if "instagram_worker_not_registered" in err:
             return CollectionStatus.NOT_CONFIGURED
         if "登录态失效" in error or "session" in err and "expire" in err:
@@ -213,6 +225,12 @@ class InstagramAdapter(BasePlatformAdapter):
         if "代理" in error or "proxy" in err:
             return CollectionStatus.COLLECT_ERROR
         return CollectionStatus.COLLECT_ERROR
+
+    @staticmethod
+    def _failure_diagnostic(error: Any, existing: Any = None) -> Dict[str, Any]:
+        # Import the original adapter's shared sanitizer only on failure paths.
+        from lumenis.adapters.instagram import instagram_failure_diagnostic
+        return instagram_failure_diagnostic(error, existing=existing)
 
     # ------------------------------------------------------------------
     # v4 CollectedNote -> normalized item dict
@@ -648,7 +666,10 @@ class InstagramAdapter(BasePlatformAdapter):
             if result.notes:
                 raw = result.notes[0].raw_data or {}
                 comments_list = list(raw.get("comments", []))
-            status = self._map_status(result.success, result.notes, result.error)
+            diagnostic = (self._failure_diagnostic(result.error, getattr(result, "diagnostics", None))
+                          if result.error else None)
+            safe_error = diagnostic["error_code"] if diagnostic else ""
+            status = self._map_status(result.success, result.notes, safe_error)
             # If v4 returned success but no comments, that's NO_NEW_DATA for comments
             if status == CollectionStatus.SUCCESS and not comments_list:
                 status = CollectionStatus.NO_NEW_DATA
@@ -659,18 +680,21 @@ class InstagramAdapter(BasePlatformAdapter):
                 comments=comments_list,
                 raw_count=result.raw_count,
                 new_count=len(comments_list),
-                message=result.error or "",
+                message=safe_error,
                 metadata={
                     "engine": "v4_instagram",
                     "shortcode": content_id,
                     "include_replies": include_replies,
+                    **({"failure_diagnostic": diagnostic} if diagnostic else {}),
                 },
             )
         except Exception as exc:
+            diagnostic = self._failure_diagnostic(exc)
             return CollectionResult(
                 status=CollectionStatus.COLLECT_ERROR,
                 platform=self.platform,
-                message=str(exc),
+                message=diagnostic["error_code"],
+                metadata={"failure_diagnostic": diagnostic},
             )
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
@@ -685,24 +709,30 @@ class InstagramAdapter(BasePlatformAdapter):
             engine = self._get_engine()
             result = engine.creator(creator_id)
             items = self._notes_to_items(result.notes)
-            status = self._map_status(result.success, result.notes, result.error)
+            diagnostic = (self._failure_diagnostic(result.error, getattr(result, "diagnostics", None))
+                          if result.error else None)
+            safe_error = diagnostic["error_code"] if diagnostic else ""
+            status = self._map_status(result.success, result.notes, safe_error)
             return CollectionResult(
                 status=status,
                 platform=self.platform,
                 items=items,
                 raw_count=result.raw_count,
                 new_count=len(items),
-                message=result.error or "",
+                message=safe_error,
                 metadata={
                     "engine": "v4_instagram",
                     "username": creator_id,
+                    **({"failure_diagnostic": diagnostic} if diagnostic else {}),
                 },
             )
         except Exception as exc:
+            diagnostic = self._failure_diagnostic(exc)
             return CollectionResult(
                 status=CollectionStatus.COLLECT_ERROR,
                 platform=self.platform,
-                message=str(exc),
+                message=diagnostic["error_code"],
+                metadata={"failure_diagnostic": diagnostic},
             )
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
