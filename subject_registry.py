@@ -22,6 +22,7 @@ import sqlite3
 import re
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+from urllib.parse import parse_qsl, urlsplit
 
 from flask import Blueprint, jsonify, request
 
@@ -138,6 +139,25 @@ def _schema_version(conn):
         except (TypeError, ValueError):
             continue
     return max(versions) if versions else 0
+
+
+def _ensure_legacy_evidence_schema() -> None:
+    """Initialize canonical Evidence only for the supported unversioned DB."""
+    with _db_ready() as conn:
+        _require_registry_schema(conn)
+        unversioned = _schema_version(conn) is None
+    if not unversioned:
+        return
+
+    # Use the Shared Evidence owner's initializer so its additive contract,
+    # chain, and integrity columns stay in sync. Versioned databases remain
+    # exclusively owned by the Shared Database migrator.
+    import db_paths
+    from lumenis.shared.evidence.store import ensure_evidence_schema, init_evidence_store
+
+    init_evidence_store(db_paths.main_db_path())
+    with _db_ready() as conn:
+        ensure_evidence_schema(conn)
 
 
 def _require_registry_schema(conn) -> None:
@@ -389,11 +409,34 @@ def record_official_name(
     url = _text(source_url, field="source_url", max_len=500)
     if not url.lower().startswith(("https://", "http://")):
         raise SubjectValidationError("source_url 必须是品牌官网 http(s) 地址")
+    try:
+        parts = urlsplit(url)
+        hostname = parts.hostname
+        username = parts.username
+        password = parts.password
+    except ValueError as exc:
+        raise SubjectValidationError("source_url 格式无效") from exc
+    sensitive_query_keys = {
+        "key", "api_key", "apikey", "access_key", "appkey", "token",
+        "auth", "authorization", "cookie", "session", "session_id",
+        "password", "signature", "sign", "sig",
+    }
+    if (parts.scheme.lower() not in {"http", "https"} or not hostname
+            or username is not None or password is not None):
+        raise SubjectValidationError("source_url 不得包含凭证或无效主机名")
+    if any(
+        key.lower() in sensitive_query_keys or key.lower().endswith("_token")
+        for key, _ in parse_qsl(parts.query, keep_blank_values=True)
+    ):
+        raise SubjectValidationError("source_url 不得包含凭证查询参数")
+    if parts.fragment:
+        raise SubjectValidationError("source_url 不得包含片段数据")
     new_zh = _text(name_zh, field="name_zh") if name_zh else None
     new_en = _text(name_en, field="name_en") if name_en else None
     extra = _keywords(list(keywords or ()))
     if not (new_zh or new_en or extra):
         raise SubjectValidationError("没有可记录的官方名称")
+    _ensure_legacy_evidence_schema()
     with _db_ready() as conn:
         _require_registry_schema(conn)
         cols = ("subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, industry, "
@@ -449,15 +492,19 @@ def record_official_name(
             capture_mode="manual_declaration",
             result="GAP",
             status="pending",
+            subject_scope=(subject_id if normalized == "CTH" else before["brand_focus_id"]),
             inputs={
                 "subject_id": subject_id,
                 "source_url": url,
                 "source_claim": "official_site",
                 "name_before": {"name_en": before["name_en"], "name_zh": before["name_zh"]},
                 "name_after": {"name_en": after["name_en"], "name_zh": after["name_zh"]},
+                "keywords_before": list(before["keywords"]),
+                "keywords_requested": list(extra),
             },
             outputs={
                 "subject_id": subject_id,
+                "keywords_after": list(after["keywords"]),
                 "source_url": url,
                 "origin_verification": "NOT_INDEPENDENTLY_VERIFIED",
                 "identity_verification": "NOT_VERIFIED",
