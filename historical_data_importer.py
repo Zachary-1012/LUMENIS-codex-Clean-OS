@@ -405,9 +405,14 @@ def import_historical_batch(records, db_path=None, product_id=DEFAULT_PRODUCT_ID
             stats["subject_rejected"] += 1
         elif r["status"] == IMPORT_STATUS_ERROR:
             stats["errors"] += 1
+        prior_pending_writes = any(
+            detail.get("persistence_state") == "PENDING_CALLER_COMMIT"
+            for detail in stats["details"][:-1]
+        )
         if (r["status"] == IMPORT_STATUS_ERROR
                 and r.get("persistence_state") == "ROLLED_BACK"
-                and not conn.in_transaction):
+                and not conn.in_transaction
+                and prior_pending_writes):
             # A transaction-wide rollback invalidates every earlier pending
             # result. Stop so later rows cannot make this batch look partially
             # committed after its shared write scope was aborted.

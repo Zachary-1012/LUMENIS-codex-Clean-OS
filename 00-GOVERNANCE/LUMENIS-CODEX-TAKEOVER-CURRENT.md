@@ -13,6 +13,14 @@ Follow-up regressions now cover missing-ID results as NOT_WRITTEN, rollback of a
 passed. Compilation, the governance machine contract, the AI-native constitution
 and `git diff --check` passed. Tests use temporary SQLite fixtures only.
 
+The review follow-up also covers FIX-029's isolated-first-row failure: a
+per-record rollback stops the batch only when earlier pending writes were
+invalidated by a transaction-wide rollback. Parameterized nonnumeric-metric and
+SQLite `RAISE(ABORT)` cases now continue to a later valid row; the original
+`RAISE(ROLLBACK)` batch test still stops and reclassifies pending writes. The
+focused `TestImportTruthfulPersistence` class passed **10 tests**; compilation
+and `git diff --check` passed. Only temporary SQLite fixtures were used.
+
 
 ## 2026-10-18 source-adoption validation handoff
 

@@ -390,6 +390,69 @@ class TestImportTruthfulPersistence:
         assert result["persistence_state"] == "NOT_WRITTEN"
         assert not temp_db.in_transaction
 
+    @pytest.mark.parametrize(
+        "failed_record",
+        [
+            {"note_id": "bad-metric", "likes": "not-a-number"},
+            {"note_id": "abort-trigger"},
+        ],
+        ids=["nonnumeric-metric", "sqlite-abort-trigger"],
+    )
+    def test_first_isolated_failure_does_not_stop_later_valid_batch_rows(
+            self, temp_db, tmp_path, monkeypatch, failed_record):
+        db_path = tmp_path / "isolated-first-failure.sqlite"
+        temp_db.execute(
+            """CREATE TRIGGER abort_selected_note BEFORE INSERT ON notes
+               WHEN NEW.note_id='abort-trigger'
+               BEGIN SELECT RAISE(ABORT, 'synthetic isolated row failure'); END"""
+        )
+        temp_db.commit()
+        disk_conn = sqlite3.connect(db_path)
+        temp_db.backup(disk_conn)
+        disk_conn.close()
+
+        def open_fixture_database(path=None):
+            conn = sqlite3.connect(path or db_path)
+            conn.row_factory = sqlite3.Row
+            return conn
+
+        monkeypatch.setattr(hdi, "_get_connection", open_fixture_database)
+        failed_record = {
+            **failed_record,
+            "title": "广州太古汇失败样例",
+            "content": "synthetic isolated failure",
+        }
+        valid_record = {
+            "note_id": "later-valid-row",
+            "title": "广州太古汇后续有效记录",
+            "content": "synthetic valid row",
+        }
+
+        stats = hdi.import_historical_batch(
+            [failed_record, valid_record], db_path=str(db_path), rule_version="fixture-rule"
+        )
+
+        check = sqlite3.connect(db_path)
+        try:
+            assert check.execute(
+                "SELECT COUNT(*) FROM notes WHERE note_id=?",
+                (failed_record["note_id"],),
+            ).fetchone()[0] == 0
+            assert check.execute(
+                "SELECT COUNT(*) FROM notes WHERE note_id='later-valid-row'"
+            ).fetchone()[0] == 1
+        finally:
+            check.close()
+
+        assert stats["inserted"] == 1
+        assert stats["errors"] == 1
+        assert [detail["status"] for detail in stats["details"]] == [
+            hdi.IMPORT_STATUS_ERROR, hdi.IMPORT_STATUS_INSERTED,
+        ]
+        assert [detail["persistence_state"] for detail in stats["details"]] == [
+            "ROLLED_BACK", "COMMITTED",
+        ]
+
     def test_batch_wide_sqlite_rollback_stops_and_reclassifies_pending_rows(
             self, temp_db, tmp_path, monkeypatch):
         db_path = tmp_path / "batch-rollback.sqlite"
