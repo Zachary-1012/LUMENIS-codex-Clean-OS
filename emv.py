@@ -178,6 +178,37 @@ def calculate_emv(likes: Any = None, comments: Any = None,
     }
 
 
+def _has_observation_provenance(note: dict) -> bool:
+    return (note.get("metrics_observed") is True
+            or bool(str(note.get("metrics_observed_at") or "").strip()))
+
+
+def _apply_observation_provenance(note: dict, r: dict) -> dict:
+    """Only a currently certified metric set may be classified complete.
+
+    Schema DEFAULT 0 and persisters that materialize absent metrics as 0 make
+    stored counters indistinguishable from "never collected". Without
+    provenance an all-zero row is unavailable, and a row with positive
+    counters is PARTIAL (its unobserved zeros may be missing values).
+    """
+    if r.get("status") != "OK" or _has_observation_provenance(note):
+        return r
+    if not r.get("weighted_interaction"):
+        return {**r, **_unavailable_emv(
+            "NOT_AVAILABLE", "互动全为 0 且缺少采集观测来源，EMV 金额不可用",
+            cpm=r.get("cpm"), cpm_source=r.get("cpm_source", ""),
+            exposure_ratio=r.get("exposure_ratio"),
+            missing_inputs=["metric_observation_provenance"],
+        )}
+    return {
+        **r,
+        "status": "PARTIAL",
+        "message": "互动字段缺少采集观测来源，未认证的 0 值可能是缺失，结果不完整",
+        "missing_inputs": list(r.get("missing_inputs") or []) + ["metric_observation_provenance"],
+        "basis": "已存互动字段（缺少采集观测来源，不代表完整 EMV）× 互动-曝光折算 × CPM",
+    }
+
+
 def aggregate_emv(notes: list[dict], cpm: float | None = None,
                   exposure_ratio: float | None = None) -> dict:
     """汇总一批笔记的 EMV（用于周期报告：日报/周报/月报/年报）。
@@ -191,19 +222,7 @@ def aggregate_emv(notes: list[dict], cpm: float | None = None,
         r = calculate_emv(n.get("likes"), n.get("comments"),
                           n.get("collects"), n.get("shares"),
                           cpm=cpm, exposure_ratio=exposure_ratio)
-        if (r["status"] == "OK" and r.get("weighted_interaction") == 0
-                and n.get("metrics_observed") is not True
-                and not str(n.get("metrics_observed_at") or "").strip()):
-            # Schema DEFAULT 0 and persisters that materialize absent metrics
-            # as 0 make an all-zero row indistinguishable from "never
-            # collected". Publish a zero amount only with observation
-            # provenance; otherwise the amount is unavailable.
-            r = _unavailable_emv(
-                "NOT_AVAILABLE", "互动全为 0 且缺少采集观测来源，EMV 金额不可用",
-                cpm=r.get("cpm"), cpm_source=r.get("cpm_source", ""),
-                exposure_ratio=r.get("exposure_ratio"),
-                missing_inputs=["metric_observation_provenance"],
-            )
+        r = _apply_observation_provenance(n, r)
         items.append({
             "note_id": n.get("note_id", ""),
             "author": n.get("author_nickname", ""),
@@ -500,6 +519,7 @@ def aggregate_emv_by_platform(notes: list[dict], base_cpm: float | None = None) 
             n.get("collects"), n.get("shares"),
             platform=platform, base_cpm=base_cpm,
         )
+        r = _apply_observation_provenance(n, r)
         item = {
             "note_id": n.get("note_id", ""),
             "platform": platform,

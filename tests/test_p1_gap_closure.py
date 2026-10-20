@@ -294,6 +294,10 @@ class TestEMVPlatformCoefficients:
         missing = aggregate_emv_by_platform([{"source_platform": "xhs"}])
         zero = aggregate_emv_by_platform([{
             "source_platform": "xhs", "likes": 0, "comments": 0,
+            "collects": 0, "shares": 0, "metrics_observed": True,
+        }])
+        uncertified_zero = aggregate_emv_by_platform([{
+            "source_platform": "xhs", "likes": 0, "comments": 0,
             "collects": 0, "shares": 0,
         }])
         partial_zero = aggregate_emv_by_platform([{
@@ -305,6 +309,8 @@ class TestEMVPlatformCoefficients:
         assert missing["emv_total_yuan"] is None
         assert zero["status"] == "OK"
         assert zero["emv_total_yuan"] == 0
+        assert uncertified_zero["status"] == "NOT_AVAILABLE"
+        assert uncertified_zero["emv_total_yuan"] is None
         assert partial_zero["status"] == "PARTIAL"
         assert partial_zero["emv_total_yuan"] is None
         assert zero["cpm_source"]
@@ -329,7 +335,7 @@ class TestEMVPlatformCoefficients:
 
         mixed = aggregate_emv_by_platform([
             {"note_id": "xhs-full", "source_platform": "xhs", "likes": 2,
-             "comments": 1, "collects": 0, "shares": 0},
+             "comments": 1, "collects": 0, "shares": 0, "metrics_observed": True},
             {"note_id": "xhs-missing", "source_platform": "xhs"},
         ])
         xhs_mixed = mixed["by_platform"]["xhs"]

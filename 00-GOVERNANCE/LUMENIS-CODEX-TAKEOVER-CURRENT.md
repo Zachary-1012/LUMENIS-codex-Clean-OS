@@ -26,7 +26,12 @@ provenance); any uncertified overwrite of a canonical metric clears it, and
 the live collector (`live_engine.persist_live`) certifies only when the source
 returned all four counters before normalization; otherwise the amount is
 `NOT_AVAILABLE`. Legacy databases without the column keep the previous
-behaviour. `/api/ic/emv` also validates `limit` (integer 1-500), paired ISO
+behaviour. A row is classified complete (`OK`) only with that current
+provenance: without it an all-zero row is `NOT_AVAILABLE` and a row with
+positive counters is `PARTIAL` (`metric_observation_provenance` missing), in
+both `aggregate_emv` and `aggregate_emv_by_platform`. The live collector
+certifies only finite non-negative numeric counters or parseable counter text
+(placeholders such as `N/A`/`-` do not certify). `/api/ic/emv` also validates `limit` (integer 1-500), paired ISO
 `start`/`end` (start <= end) before any database read (400 `INVALID_INPUT`),
 reports a capped read as `truncated`/`source_read_complete=false` (an `OK`
 result becomes `PARTIAL`), and returns 503 `EMV_SOURCE_UNAVAILABLE` without

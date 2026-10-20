@@ -187,11 +187,20 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
 
 def _source_counters_observed(note) -> bool:
     """True only when the source explicitly returned all four counters."""
+    import math
+    import re as _re
     for key in ("likes", "comments", "collects", "shares"):
         value = note.get(key)
         if value is None or isinstance(value, bool):
             return False
-        if isinstance(value, str) and not value.strip():
+        if isinstance(value, (int, float)):
+            if not math.isfinite(value) or value < 0:
+                return False
+            continue
+        # Only counter text the normalizer parses exactly ("12", "1.2万",
+        # "3.5k", "10w+") certifies; placeholders like "N/A"/"-" do not.
+        if not isinstance(value, str) or not _re.fullmatch(
+                r"\d+(\.\d+)?\s*(万|w|千|k)?\+?", value.strip().lower()):
             return False
     return True
 

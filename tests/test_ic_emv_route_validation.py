@@ -208,7 +208,8 @@ def test_emv_route_without_metric_snapshots_table_is_not_an_error(monkeypatch, t
     monkeypatch.setattr(database, "get_db", fixture_db)
     response = _client().get("/api/ic/emv")
     assert response.status_code == 200
-    assert response.get_json()["status"] == "OK"
+    # Legacy rows carry no observation provenance: positive counters are PARTIAL.
+    assert response.get_json()["status"] == "PARTIAL"
 
 
 def test_initial_import_of_observed_zero_metrics_keeps_zero_amount(monkeypatch, tmp_path):
@@ -283,7 +284,7 @@ def test_initial_import_does_not_create_trend_snapshot(monkeypatch, tmp_path):
 def test_platform_aggregate_overflow_is_reported_separately():
     import emv
     notes = [{"note_id": str(i), "likes": 10 ** 306, "comments": 0, "collects": 0, "shares": 0,
-              "source_platform": "xhs"} for i in range(1000)]
+              "source_platform": "xhs", "metrics_observed": True} for i in range(1000)]
     r = emv.aggregate_emv_by_platform(notes)
     assert all(item["status"] == "OK" for item in r["items"])
     assert r["status"] == "INVALID_INPUT"
@@ -382,6 +383,9 @@ def test_live_collector_completeness_uses_source_fields():
     assert _source_counters_observed({"likes": 0, "comments": "0", "collects": 0, "shares": 0}) is True
     assert _source_counters_observed({"likes": 0, "comments": 0, "collects": 0}) is False
     assert _source_counters_observed({"likes": "", "comments": 0, "collects": 0, "shares": 0}) is False
+    assert _source_counters_observed({"likes": "N/A", "comments": "-", "collects": "0", "shares": "0"}) is False
+    assert _source_counters_observed({"likes": float("nan"), "comments": 0, "collects": 0, "shares": 0}) is False
+    assert _source_counters_observed({"likes": "1.2万", "comments": "3.5k", "collects": "10w+", "shares": 2}) is True
 
 
 @pytest.mark.parametrize("query", [
@@ -422,8 +426,8 @@ def test_emv_route_capped_read_is_not_reported_complete(monkeypatch, tmp_path):
     path = _schema_db(monkeypatch, tmp_path, "cap.db")
     c = sqlite3.connect(path)
     for i in range(3):
-        c.execute("INSERT INTO notes (note_id, title, likes, comments, collects, shares) VALUES (?,?,5,1,1,1)",
-                  (f"n{i}", "t"))
+        c.execute("INSERT INTO notes (note_id, title, likes, comments, collects, shares, metrics_observed_at)"
+                  " VALUES (?,?,5,1,1,1,'2026-10-20')", (f"n{i}", "t"))
     c.commit()
     c.close()
     body = _client().get("/api/ic/emv", query_string={"limit": "2"}).get_json()
@@ -432,3 +436,17 @@ def test_emv_route_capped_read_is_not_reported_complete(monkeypatch, tmp_path):
     assert body["status"] == "PARTIAL"
     full = _client().get("/api/ic/emv", query_string={"limit": "5"}).get_json()
     assert full["truncated"] is False and full["status"] == "OK"
+
+
+def test_uncertified_positive_counters_are_partial_not_complete():
+    import emv
+    r = emv.aggregate_emv([{"note_id": "u", "likes": 5, "comments": 0, "collects": 0, "shares": 0}])
+    assert r["status"] == "PARTIAL"
+    assert r["complete_count"] == 0
+    assert "metric_observation_provenance" in r["items"][0]["missing_inputs"]
+    certified = emv.aggregate_emv([{"note_id": "c", "likes": 5, "comments": 0, "collects": 0,
+                                    "shares": 0, "metrics_observed_at": "2026-10-20"}])
+    assert certified["status"] == "OK"
+    by_platform = emv.aggregate_emv_by_platform([{"note_id": "u", "likes": 5, "comments": 0,
+                                                  "collects": 0, "shares": 0}])
+    assert by_platform["complete_count"] == 0
