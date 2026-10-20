@@ -2,6 +2,7 @@
 
 import io
 import json
+import urllib.parse
 from urllib.error import HTTPError
 from urllib.request import Request
 
@@ -183,6 +184,83 @@ def test_result_limit_is_partial_when_provider_has_another_page():
     assert result.next_cursor["page"] == 2
     assert adapted.ok is False
     assert adapted.status == CollectionStatus.COLLECT_ERROR
+
+
+def test_result_limit_resumes_inside_provider_page_without_gaps_or_duplicates():
+    page_one = [{"id": i, "full_name": f"owner/repo-{i}"} for i in range(50)]
+    page_two = [{"id": i, "full_name": f"owner/repo-{i}"} for i in range(50, 100)]
+    page_three = [{"id": i, "full_name": f"owner/repo-{i}"} for i in range(100, 105)]
+    repos = tuple(f"owner/repo-{i}" for i in range(105))
+
+    def opener_for(pages):
+        def opener(request, timeout):
+            url = urllib.parse.urlsplit(request.full_url)
+            page = int(urllib.parse.parse_qs(url.query)["page"][0])
+            headers = _link(page + 1) if page < 3 else None
+            return _page(pages[page], total=105, headers=headers)
+        return opener
+
+    pages = {1: page_one, 2: page_two, 3: page_three}
+    first = _connector(opener_for(pages), repositories=repos).search_repositories_page_result(
+        "lumenis", limit=60,
+    )
+    assert [item["id"] for item in first.items] == list(range(60))
+    assert first.next_cursor == {
+        "version": 1, "request_fingerprint": first.next_cursor["request_fingerprint"],
+        "page": 2, "offset": 10,
+    }
+
+    second = _connector(opener_for(pages), repositories=repos).search_repositories_page_result(
+        "lumenis", limit=60, cursor=first.next_cursor,
+    )
+    assert [item["id"] for item in second.items] == list(range(60, 105))
+    assert second.coverage_complete is True
+    assert second.next_cursor is None
+
+
+def test_limit_60_with_100_results_resumes_page_tail_exactly_once():
+    page_one = [{"id": i, "full_name": f"owner/repo-{i}"} for i in range(50)]
+    page_two = [{"id": i, "full_name": f"owner/repo-{i}"} for i in range(50, 100)]
+    repos = tuple(f"owner/repo-{i}" for i in range(100))
+
+    def opener(request, timeout):
+        page = int(urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["page"][0])
+        return _page(page_one, total=100, headers=_link(2)) if page == 1 else _page(page_two, total=100)
+
+    connector = _connector(opener, repositories=repos)
+    first = connector.search_repositories_page_result("lumenis", limit=60)
+    assert [item["id"] for item in first.items] == list(range(60))
+    assert first.coverage_complete is False
+    assert first.next_cursor["page"] == 2 and first.next_cursor["offset"] == 10
+
+    resumed = connector.search_repositories_page_result(
+        "lumenis", limit=60, cursor=first.next_cursor,
+    )
+    assert [item["id"] for item in resumed.items] == list(range(60, 100))
+    assert resumed.coverage_complete is True
+    assert resumed.next_cursor is None
+    all_ids = [item["id"] for item in first.items + resumed.items]
+    assert all_ids == list(range(100))
+
+
+def test_continuation_total_count_still_detects_missing_provider_pages():
+    repos = tuple(f"owner/repo-{i}" for i in range(150))
+    first = _connector(lambda request, timeout: _page(
+        [{"id": i, "full_name": f"owner/repo-{i}"} for i in range(50)],
+        total=150, headers=_link(2),
+    ), repositories=repos).search_repositories_page_result("lumenis", limit=60)
+    assert first.next_cursor["page"] == 2
+    assert first.next_cursor["offset"] == 10
+
+    second = _connector(lambda request, timeout: _page(
+        [{"id": i, "full_name": f"owner/repo-{i}"} for i in range(50, 100)],
+        total=150,
+    ), repositories=repos).search_repositories_page_result(
+        "lumenis", limit=60, cursor=first.next_cursor,
+    )
+    assert second.coverage_complete is False
+    assert second.partial_reason == "PROVIDER_TOTAL_EXCEEDS_OBSERVED_ITEMS"
+    assert second.next_cursor is None
 
 
 def test_page_budget_returns_partial_cursor_and_resume_is_segment_scoped():
@@ -466,6 +544,16 @@ def test_pagination_bounds_reject_invalid_values_before_network(options, expecte
         connector.search_repositories_page_result("lumenis", **options)
     assert error.value.code == expected_code
     assert calls == []
+
+
+def test_malformed_port_in_pagination_link_is_a_bounded_connector_failure():
+    result = _connector(lambda request, timeout: _page(
+        [{"id": 1, "full_name": "owner/allowed"}], total=2,
+        headers={"Link": '<https://api.github.com:bad/search/repositories?q=lumenis&per_page=10&page=2>; rel="next"'},
+    )).search_repositories_page_result("lumenis", limit=10)
+    assert result.coverage_complete is False
+    assert result.error_code == "REDIRECT_BLOCKED"
+    assert result.partial_reason == "PAGINATION_LINK_REJECTED"
 
 
 def test_user_health_probe_does_not_claim_repository_permission():

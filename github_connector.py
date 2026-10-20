@@ -218,10 +218,11 @@ class GitHubConnector:
         try:
             target = urllib.parse.urlsplit(url)
             api = urllib.parse.urlsplit(self.config.api_base)
+            target_port = target.port
         except ValueError as exc:
             raise GitHubConnectorError("REDIRECT_BLOCKED", "GitHub redirect URL is invalid") from exc
         if (target.scheme != "https" or target.hostname != api.hostname
-                or target.port not in (None, 443) or target.username is not None
+                or target_port not in (None, 443) or target.username is not None
                 or target.password is not None or target.fragment):
             raise GitHubConnectorError("REDIRECT_BLOCKED", "GitHub redirect left the approved API origin")
         self._assert_path_allowed(target.path)
@@ -400,8 +401,11 @@ class GitHubConnector:
         return next_page
 
     @staticmethod
-    def _cursor(fingerprint: str, page: int) -> Dict[str, Any]:
-        return {"version": 1, "request_fingerprint": fingerprint, "page": page}
+    def _cursor(fingerprint: str, page: int, offset: int = 0) -> Dict[str, Any]:
+        cursor = {"version": 1, "request_fingerprint": fingerprint, "page": page}
+        if offset:
+            cursor["offset"] = offset
+        return cursor
 
     def _collect_pages(
         self,
@@ -434,16 +438,23 @@ class GitHubConnector:
             json.dumps(binding, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
         page = 1
+        offset = 0
         if cursor is not None:
+            base_cursor_fields = {"version", "request_fingerprint", "page"}
             if (not isinstance(cursor, dict)
-                    or set(cursor) != {"version", "request_fingerprint", "page"}
+                    or not base_cursor_fields <= set(cursor)
+                    or set(cursor) - base_cursor_fields - {"offset"}
                     or cursor.get("version") != 1
                     or cursor.get("request_fingerprint") != fingerprint
                     or type(cursor.get("page")) is not int
                     or cursor["page"] < 1):
                 raise GitHubConnectorError("INVALID_CURSOR", "GitHub continuation does not match this query and allowlist")
             page = cursor["page"]
+            offset = cursor.get("offset", 0)
+            if type(offset) is not int or not 0 <= offset < page_size:
+                raise GitHubConnectorError("INVALID_CURSOR", "GitHub continuation offset is invalid")
         start_page = page
+        start_offset = offset
 
         items: list[Dict[str, Any]] = []
         pages_fetched = 0
@@ -454,6 +465,7 @@ class GitHubConnector:
         incomplete_results = False
         invalid_page_item = False
         next_page = page
+        next_offset = offset
         partial_reason = None
         error_code = None
         retry_after_seconds = None
@@ -475,6 +487,8 @@ class GitHubConnector:
                     partial_reason = "INVALID_CANCELLATION_SIGNAL"
                     break
             page_query = {**base_query, "page": next_page}
+            current_page = next_page
+            current_offset = next_offset
             url = f"{self.config.api_base}{path}?{urllib.parse.urlencode(page_query, doseq=True)}"
             try:
                 raw, headers = self._request_json(url)
@@ -518,13 +532,26 @@ class GitHubConnector:
                 not isinstance(item, dict) for item in page_items
             )
             allowlist = set(self.config.repositories)
-            for item in page_items:
+            resume_offset = None
+            for item_index, item in enumerate(page_items):
+                if current_page == start_page and item_index < start_offset:
+                    continue
                 if not isinstance(item, dict):
                     continue
                 if filter_to_allowlist and str(item.get("full_name") or "").lower() not in allowlist:
                     continue
-                if len(items) < limit:
-                    items.append(item)
+                if len(items) >= limit:
+                    resume_offset = item_index
+                    break
+                items.append(item)
+
+            if resume_offset is not None:
+                # Keep the unread provider-page remainder in the same query
+                # cursor; advancing to the next page here would drop results.
+                next_page = current_page
+                next_offset = resume_offset
+                partial_reason = "RESULT_LIMIT_REACHED"
+                break
 
             try:
                 next_url = self._next_link(headers)
@@ -536,6 +563,7 @@ class GitHubConnector:
             if next_url is None:
                 pagination_exhausted = True
                 next_page = None
+                next_offset = 0
                 break
             try:
                 next_page = self._next_page_number(
@@ -545,7 +573,9 @@ class GitHubConnector:
                 error_code = exc.code
                 partial_reason = "PAGINATION_LINK_REJECTED"
                 next_page = None
+                next_offset = 0
                 break
+            next_offset = 0
 
             if len(items) >= limit:
                 partial_reason = "RESULT_LIMIT_REACHED"
@@ -558,19 +588,23 @@ class GitHubConnector:
         if invalid_page_item:
             error_code = error_code or "INVALID_PROVIDER_RESPONSE"
             partial_reason = partial_reason or "INVALID_PAGE_ITEM"
-        if (path == "/search/repositories" and start_page == 1
-                and pagination_exhausted and partial_reason is None):
+        if (path == "/search/repositories" and pagination_exhausted
+                and partial_reason is None):
+            # Search totals are global, while a resumed segment may begin after
+            # earlier pages. Compare against the global page offset plus this
+            # call's raw provider rows, including any re-read cursor page.
+            observed_through = (start_page - 1) * page_size + api_items_observed
             if provider_total_changed:
                 partial_reason = "PROVIDER_TOTAL_CHANGED_DURING_PAGING"
             elif not provider_total_valid:
                 partial_reason = "PROVIDER_TOTAL_UNAVAILABLE"
-            elif reported_total_count > api_items_observed:
+            elif reported_total_count > observed_through:
                 partial_reason = "PROVIDER_TOTAL_EXCEEDS_OBSERVED_ITEMS"
-            elif reported_total_count < api_items_observed:
+            elif reported_total_count < observed_through:
                 partial_reason = "PROVIDER_TOTAL_BELOW_OBSERVED_ITEMS"
 
         complete = pagination_exhausted and partial_reason is None and error_code is None
-        next_cursor = self._cursor(fingerprint, next_page) if next_page is not None else None
+        next_cursor = self._cursor(fingerprint, next_page, next_offset) if next_page is not None else None
         return GitHubCollectionPage(
             items=items,
             start_page=start_page,

@@ -8,18 +8,23 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `github_connector.py` now bounds collection paging and response
 size, binds continuation cursors to the request and repository allowlist,
-preserves partial results with explicit incomplete coverage, and distinguishes
-authentication, ordinary permission denial and rate limiting. Redirects are
-checked before bearer credentials can be forwarded. The existing collector
+preserves unread within-page results through a cursor offset, and validates
+provider totals for resumed segments. Malformed URL ports become bounded
+connector errors. It preserves partial results with explicit incomplete
+coverage and distinguishes authentication, ordinary permission denial and
+rate limiting. Redirects are checked before bearer credentials can be forwarded. The existing collector
 adapter exposes coverage and safe cursor state; the GitHub Skill/MCP contract
 was corrected to match those paths and boundaries.
 
 Offline regression command:
-`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -o addopts='' -q tests/test_github_connector_adapter.py tests/test_github_status_verification.py tests/test_account_skill_execution_scope.py tests/test_lumenis_shared_skills.py`
-- **53 passed in 0.88s** across adapter/status and related account/skill modules; no
-background-thread leak. `py_compile`, governance, constitution, takeover
-governance and `git diff --check` passed. Tests use offline synthetic responses;
-no live GitHub request was made.
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_github_connector_adapter.py tests/test_github_status_verification.py tests/test_account_skill_execution_scope.py tests/test_lumenis_shared_skills.py`
+- **57 passed in 0.99s** across adapter/status and related account/skill modules;
+no background-thread leak. Added regressions confirm a page-limit continuation
+including `limit=60 / total=100` returns every provider item exactly once,
+continuation totals expose missing pages, and malformed ports return a bounded
+pagination error. `py_compile`, governance,
+constitution, takeover governance and `git diff --check` passed. Tests use offline
+synthetic responses; no live GitHub request was made.
 
 Formal task/Evidence/UI wiring, persistent actor/task/source-version-bound
 pagination, OAuth callback/revocation, and actual repository permission remain
