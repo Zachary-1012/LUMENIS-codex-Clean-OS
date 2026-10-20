@@ -187,7 +187,7 @@ class OceanEngineCollector:
 
     def get_balance(self) -> Dict[str, Any]:
         """获取账户余额（只读，真实API调用）。"""
-        return self._api_request("GET", OceanEngineEndpoint.BALANCE.value)
+        return self._api_request(OceanEngineEndpoint.BALANCE.value)
 
     def get_daily_report(self, start_date: str, end_date: str,
                           metrics: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -220,7 +220,7 @@ class OceanEngineCollector:
 
     def get_advertiser_info(self) -> Dict[str, Any]:
         """获取广告主信息（只读）。"""
-        return self._api_request("GET", OceanEngineEndpoint.ADVERTISER_INFO.value)
+        return self._api_request(OceanEngineEndpoint.ADVERTISER_INFO.value)
 
     def parse_report_response(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """解析巨量引擎报表 API 响应为标准化指标列表。

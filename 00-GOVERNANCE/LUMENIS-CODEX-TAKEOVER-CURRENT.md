@@ -4,6 +4,11 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-048 — use the existing Ocean Engine request signature
+
+The existing `ad_intelligence/platforms/ocean_engine.py` read-only balance and advertiser-info methods now call `_api_request` using its declared endpoint-first signature, preserving the existing missing-credentials blocked result. `tests/test_ad_platform_collectors.py` passed **16 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Requests were monkeypatched/synthetic; no live API or account was used.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

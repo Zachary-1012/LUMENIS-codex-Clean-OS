@@ -29,6 +29,38 @@ class TestOceanEngineCollector:
         assert r["status"] == "blocked"
         assert "missing credentials" in r.get("reason", "")
 
+    def test_read_only_methods_pass_endpoint_as_first_request_argument(self, monkeypatch):
+        from ad_intelligence.platforms.ocean_engine import (
+            OceanEngineCollector, OceanEngineConfig, OceanEngineEndpoint,
+        )
+
+        collector = OceanEngineCollector(OceanEngineConfig(
+            access_token="synthetic-token", advertiser_id="synthetic-advertiser",
+        ))
+        assert collector._has_api_access() is True
+        calls = []
+        monkeypatch.setattr(
+            collector, "_api_request",
+            lambda *args, **kwargs: calls.append((args, kwargs)) or {"success": True},
+        )
+
+        collector.get_balance()
+        collector.get_advertiser_info()
+
+        assert calls == [
+            ((OceanEngineEndpoint.BALANCE.value,), {}),
+            ((OceanEngineEndpoint.ADVERTISER_INFO.value,), {}),
+        ]
+
+    def test_get_advertiser_info_without_credentials_stays_blocked(self):
+        from ad_intelligence.platforms.ocean_engine import OceanEngineCollector
+
+        result = OceanEngineCollector().get_advertiser_info()
+
+        assert result["success"] is False
+        assert result["status"] == "blocked"
+        assert "missing credentials" in result.get("reason", "")
+
     def test_actual_cost_with_rebate(self):
         from ad_intelligence.platforms.ocean_engine import OceanEngineCollector, OceanEngineConfig
         c = OceanEngineCollector(OceanEngineConfig(agency_rebate_rate=0.10))
