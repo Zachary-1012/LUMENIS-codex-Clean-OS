@@ -4,6 +4,65 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-025 — official-name evidence and exact scope
+
+`subject_registry.py` uses the canonical Evidence bootstrap for unversioned
+registries, retains migration ownership for versioned databases, binds official
+names to the resolved CTH subject or BMP BrandFocus, records before/requested/after
+keyword values, and rejects credential-bearing or sensitive-query source URLs.
+Focused regressions are in `tests/test_subject_registry_official_name.py`,
+subject batch concurrency/revocation tests, and
+`tests/test_e2e_new_subject_flow.py`. `lumenis/shared/evidence/store.py` now
+preserves an explicit SQL `NULL` for an unassessed `authenticity_score`, so the
+legacy `DEFAULT 1.0` cannot turn unknown into a score; explicit `0.0` remains a
+numeric value. `subject_registry.py` records an unassessed official-name source
+as `NULL` while its recorded state remains `NOT_ASSESSED`.
+
+The reviewed `--apply` official-name path now also retains the exact successful
+Permission audit ID and caller in the signed Evidence inputs. An allowed result
+without a non-empty audit ID is refused before the first registry write. The
+isolated regression covers both the signed audit linkage and fail-closed
+missing-receipt behavior; no approval token is copied into Evidence.
+Credential query names are normalized across separator/case variants and reject
+generic secret fields such as `secret`, `client_secret`, and `private_key`, while
+ordinary campaign/source query names remain available to the provenance path.
+
+The PR #90 query-validation follow-up also inspects bounded nested query values
+and semicolon-delimited assignments before persisting the source URL. The
+synthetic `redirect=...access_token=...` and `campaign=x;client_secret=...`
+forms are rejected before any Evidence write; ordinary campaign parameters
+remain accepted. On the candidate based on review head `6480017972c8e46721cf69b6b88a2440cef8350e`,
+offline `tests/test_subject_registry_official_name.py tests/test_subject_registry.py`
+passed **47 tests** with no background-thread leak. `py_compile` and
+`git diff --check` passed. Temporary database fixtures only; no source or
+production database was accessed.
+
+The exact-head offline command for those four modules passed **21 tests** with no
+daemon-thread leak. The test-only E2E fixture installs a synthetic HMAC key in
+its isolated process environment so the pre-existing Evidence signature gate
+remains enforced; no production key/configuration is read or changed. The
+canonical Evidence regression command covering
+`tests/test_shared_database_evidence_integrity.py`,
+`tests/test_evidence_scoped_write.py`, `tests/test_evidence_chain.py`, and
+`tests/test_evidence_write_failed_health.py` passed **84 tests**, also with no
+daemon-thread leak. The changed Python files compile and `git diff --check`
+passes. All database writes used per-test temporary databases; no production DB
+or external source was used.
+
+After the audit-linkage and query-secret follow-ups, the focused official-name,
+registry and synthetic E2E command passed **42 tests**. `py_compile` and `git diff --check`
+passed on the follow-up files; no production database or external source was
+used.
+
+The batch review follow-up also preflights each domain and subject ID before
+approval or any row write, in addition to validating the full source URL and
+official-name payload. This prevents a later missing or cross-domain subject
+from leaving an earlier row written. The offline command
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_subject_registry_official_name.py tests/test_subject_registry.py`
+passed with no daemon-thread leak. `py_compile`, the governance machine
+contract, the AI-native constitution and `git diff --check` passed. Only
+temporary database fixtures were used; exact remote checks remain separate.
+
 ## 2026-10-20 Issue #17 FIX-101 — close redirect bodies before Session hooks
 
 The existing `PublicSourceHTTPAdapter.send` now closes every 3xx response
