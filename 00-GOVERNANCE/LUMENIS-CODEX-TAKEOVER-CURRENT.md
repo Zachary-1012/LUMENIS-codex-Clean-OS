@@ -4,6 +4,47 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-091 — Sogou challenge retry and link-resolution boundary
+
+The existing `lumenis/adapters/sogou_search.py` recognizes explicit
+verification/anti-bot challenge markers and returns `NEED_HUMAN_VERIFICATION`
+as a failed result, stopping same-channel retry, the next channel and link
+resolution. Link unwrapping now checks both response text and the final Sogou
+anti-spider URL. It processes links in bounded batches, cancels queued work on a
+challenge, and does not start a later batch; requests already running in the
+current batch may finish. `_resolve_links` reports the challenge to `search`,
+so the provider failure cannot be reported as a successful collection. The
+normal JS redirect path, ordinary empty search success, bounded ordinary retry,
+and a distinct explicit search after the fixture clears the challenge remain
+available.
+
+Follow-up against exact prior PR #87 head `a0c5f50f400ceb3bf0805d53614cec999aac2852`
+verified three conditional review cases (not evidence of a live-provider
+incident): discussion `r4321123508` showed that a verification form after the
+first 4,000 characters was ignored and could yield an EMPTY result;
+`r4321123513` showed relative and protocol-relative JS literals were not
+resolved; `r4321123518` showed a normal `/articles/captcha-design` path could
+be misclassified. The existing detector now scans the full returned response.
+Redirect literals are parsed statically and resolved against the response URL;
+only credential-free HTTP(S) targets are accepted, and JavaScript is never
+executed. Challenge recognition is limited to complete root path segments
+`/antispider`, `/verify` and `/captcha`, so article slugs remain ordinary links.
+Regression covers the exact late form through both `collect` and registry,
+nine redirect-target inputs through both entrypoints, ordinary article and
+absolute redirect controls, and `javascript:` / `file:` rejection. It verifies
+the intermediary URL stays in place when a target is rejected or challenged.
+
+Cross-PR review also found that a prior empty/non-empty cached result or custom
+fallback could turn a Sogou challenge into success, including after repeated
+challenges opened the adapter breaker. PR [#85](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/85) now guards terminal provider errors at the existing `BaseAdapter` fallback and open-breaker paths, retains the last provider cause while requests are blocked, and clears that state only when a new permitted request provides recovery evidence. Its regressions cover empty/non-empty cache, custom fallback, threshold opening, the no-request breaker shortcut, explicit recovery and ordinary transient fallback after breaker opening. PR #87 is stacked on the updated lower-adapter commit and adds public `collect` regressions with one complete `AdapterCacheContext` across prior empty/non-empty success then challenge, ordinary same-context network fallback, and `registry.search_all_with_status` reporting `FAIL`. Review also found two Sogou classification boundaries: the generic word `验证码` in an ordinary article is no longer a challenge/block marker, and rate-only `访问过于频繁` remains on the existing bounded retry path rather than manual verification. Both final channel URLs and JS-extracted destinations are now checked for Sogou verification paths; public `collect` and registry tests cover `/captcha/` without executing JavaScript or issuing another request. The W6-owned API/UI projection remains unmodified and unverified; remaining Issue #17 work remains open. At PR #87's initial submission, its restricted regression command passed (**25 passed**) and `tests/test_adapter_resilience.py` passed (**30 passed**); that result describes the earlier test set only. Existing tests include redirect challenge stopping later queued links, ordinary JavaScript redirect resolution, breaker-open terminal preservation and ordinary cached fallback after breaker opening. Full-file, exact-head CI/review, real-provider, runtime and user acceptance were not claimed. No live source or external effect was used.
+
+On the updated combined stack, full `TestSogouSearchAdapter` passes **63
+tests**; `tests/test_adapter_resilience.py` passes **30 tests**. Changed-source
+compilation, governance machine contract, AI-native constitution and `git diff
+--check` pass. These remain offline source regressions; exact-head remote checks,
+real Sogou behavior, W6-owned projection, runtime and user acceptance remain
+unverified.
+
 ## 2026-10-20 Issue #17 FIX-107 / FIX-108 — pitch export and report readback
 
 The existing `scripts/pitch_export.py` sets Normal paragraph-after spacing to
