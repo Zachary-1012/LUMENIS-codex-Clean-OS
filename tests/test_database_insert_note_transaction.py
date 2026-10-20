@@ -241,7 +241,10 @@ def test_fix_024_blank_quality_status_does_not_replace_saved_state(tmp_path):
         connection.close()
 
 
-def test_fix_024_negative_comments_collected_sentinel_preserves_measurement(tmp_path):
+@pytest.mark.parametrize("observation_complete", [True, False])
+def test_fix_024_negative_comments_collected_sentinel_preserves_measurement(
+    tmp_path, observation_complete,
+):
     path = _new_notes_db(tmp_path)
     connection = _connect(path)
     try:
@@ -250,7 +253,11 @@ def test_fix_024_negative_comments_collected_sentinel_preserves_measurement(tmp_
             connection=connection,
         )
         note_database.insert_note(
-            {"note_id": "fix-024-comments-sentinel", "comments_collected": -1},
+            {
+                "note_id": "fix-024-comments-sentinel",
+                "comments_collected": -1,
+                "_lumenis_metric_observation_complete": observation_complete,
+            },
             connection=connection,
         )
         measured = connection.execute(
@@ -259,15 +266,16 @@ def test_fix_024_negative_comments_collected_sentinel_preserves_measurement(tmp_
         ).fetchone()[0]
         assert measured == 6
 
-        note_database.insert_note(
-            {"note_id": "fix-024-comments-sentinel", "comments_collected": None},
-            connection=connection,
-        )
-        explicit_unknown = connection.execute(
-            "SELECT comments_collected FROM notes WHERE note_id=?",
-            ("fix-024-comments-sentinel",),
-        ).fetchone()[0]
-        assert explicit_unknown is None
+        if observation_complete:
+            note_database.insert_note(
+                {"note_id": "fix-024-comments-sentinel", "comments_collected": None},
+                connection=connection,
+            )
+            explicit_unknown = connection.execute(
+                "SELECT comments_collected FROM notes WHERE note_id=?",
+                ("fix-024-comments-sentinel",),
+            ).fetchone()[0]
+            assert explicit_unknown is None
     finally:
         connection.close()
 
