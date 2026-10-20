@@ -4,6 +4,32 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-107 / FIX-108 — pitch export and report readback
+
+The existing `scripts/pitch_export.py` sets Normal paragraph-after spacing to
+6 pt and removes template Title borders from both the style and direct title
+paragraphs for ordinary and audiovisual manuscripts (FIX-107). The existing
+`lumenis/shared/reporting/source_brief_job.py` attaches only evaluations whose
+stable ID, artifact, actor, scope, source/evidence references, fields, metadata
+and parseable ISO-8601 timestamp match the reopened report. Invalid or absent
+rows remain pending; explicit resume cannot label an incomplete readback as
+recorded. Report listings reuse those validated records and state instead of
+reattaching a mismatched row by stable ID. GET remains read-only (FIX-108).
+Existing `operational_brief.py` evidence/rights/source checks already cover the
+inspected path and required no change.
+
+Related offline regression command:
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/4N-meRHHaGHjU5wZ/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_pitch_export.py tests/test_source_brief_job.py tests/test_source_brief_job_routes.py tests/test_scoped_source_brief.py tests/test_entity_profile_lifecycle.py tests/test_source_brief_tasks.py tests/test_source_brief_listing.py tests/test_internal_pitch_shared_av.py tests/test_internal_pitch_workflow.py`
+— **297 passed in 42.06s**, including regressions for explicit recovery with an
+invalid timestamp and consistency between reopened reports and listings.
+`py_compile`, `git diff --check`, and local
+LibreOffice DOCX→PDF rendering for normal and AV manuscripts passed; generated
+artifacts were removed. No external model, production database or external
+effect was used. Exact write reservations remain unavailable for the separate
+`experience_runtime.py`, `saved_work.py` and `app.py` integration paths, so
+those FIX-108 owner/caller checks remain OPEN; runtime and user acceptance are
+NOT_VERIFIED.
+
 ## 2026-10-20 Issue #17 FIX-047 — preserve saved detail during backfill failures
 
 The existing `topic_note_detail_backfill.py` distinguishes failed, empty and available fields, merges only nonempty verified values into the exact row, and derives quality from the merged stored detail. Failed extraction cannot erase saved content/media/comments; oversized JSON is rejected intact and commit ownership remains with its caller. Supplied verified JSON fields now bypass parsing corrupt legacy values; unchanged verified payloads still recalculate stale quality, while partial merges preserve the prior aggregate capture timestamp. `tests/test_topic_note_detail_backfill.py` passed **9 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use an in-memory database and synthetic pages; no CDP, live collection or production DB was used.
