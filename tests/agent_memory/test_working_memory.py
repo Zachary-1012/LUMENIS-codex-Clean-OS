@@ -3,10 +3,12 @@
 import os
 import sys
 import pytest
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from agent_memory.working import WorkingMemory
+from agent_memory.base import BaseMemoryLayer, MemoryRecord
 
 
 class TestWorkingMemory:
@@ -151,6 +153,35 @@ class TestWorkingMemory:
         wm.store("ttl_key", {"data": "temp"}, ttl_seconds=0.01)
         time.sleep(0.02)
         assert wm.retrieve("ttl_key") is None
+
+    def test_query_filters_expired_records_before_limit_stably(self, monkeypatch):
+        """FIX-058 E04-TTL: expired newer rows cannot hide valid older rows."""
+        import agent_memory.base as memory_base
+
+        now = 1_800_000_000.0
+        monkeypatch.setattr(memory_base.time, 'time', lambda: now)
+        def timestamp(epoch):
+            return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+
+        memory = BaseMemoryLayer(enabled=True)
+        memory._in_memory = {
+            'new-but-expired': MemoryRecord(
+                key='new-but-expired', timestamp=timestamp(now - 1), ttl_seconds=0.5),
+            'older-valid-a': MemoryRecord(
+                key='older-valid-a', timestamp=timestamp(now - 10), ttl_seconds=20),
+            'older-valid-b': MemoryRecord(
+                key='older-valid-b', timestamp=timestamp(now - 10), ttl_seconds=20),
+        }
+        assert [record.key for record in memory.query(limit=2)] == [
+            'older-valid-a', 'older-valid-b']
+
+        memory._in_memory = {
+            'at-boundary': MemoryRecord(
+                key='at-boundary', timestamp=timestamp(now - 1), ttl_seconds=1),
+        }
+        assert [record.key for record in memory.query(limit=1)] == ['at-boundary']
+        memory._in_memory.clear()
+        assert memory.query(limit=1) == []
 
     def test_query_by_keyword(self, temp_db):
         wm = WorkingMemory(db_path=temp_db, enabled=True)
