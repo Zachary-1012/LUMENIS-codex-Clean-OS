@@ -42,6 +42,7 @@ SUBJECT_TYPES: Dict[str, str] = {
 }
 
 TABLE_NAME = "lumenis_subject_registry"
+OFFICIAL_NAME_SOURCE_FEATURE_ID = "SUBJECT_OFFICIAL_NAME_SOURCE"
 
 
 class SubjectValidationError(ValueError):
@@ -379,7 +380,10 @@ def record_official_name(
     LUMENIS does not rename brands: callers pass only names shown on the
     brand's official site, and ``source_url`` (http/https) is required.
     The stable subject_id is unchanged; aliases are appended to keywords.
-    Returns {"before", "after", "changed", "source_url"}.
+    The declared URL and name transition are stored in scoped Shared Evidence
+    in the same transaction as the registry update. An HTTP(S) prefix is only
+    syntax validation: it does not verify the site or the entity's identity.
+    Returns {"before", "after", "changed", "source_url", "source_provenance"}.
     """
     normalized = normalize_domain(domain_id)
     url = _text(source_url, field="source_url", max_len=500)
@@ -420,7 +424,73 @@ def record_official_name(
                 raise SubjectValidationError("官方名称与另一已登记主体重复") from exc
         after = _row_to_dict(conn.execute(
             f"SELECT {cols} FROM {TABLE_NAME} WHERE subject_id=?", (subject_id,)).fetchone())
-    return {"before": before, "after": after, "changed": changed, "source_url": url}
+
+        # This operation records an assertion supplied to the registry. Do not
+        # turn a syntactically valid URL into site-origin or identity proof.
+        from lumenis.shared.evidence.store import record_evidence
+
+        evidence_scope = {"subject_id": subject_id} if normalized == "CTH" else {
+            "brand_focus_id": before.get("brand_focus_id"),
+        }
+        if normalized == "BMP" and not evidence_scope["brand_focus_id"]:
+            raise SubjectRegistryUnavailableError(
+                "canonical BrandFocus identity is unavailable for source Evidence"
+            )
+        evidence_id = record_evidence(
+            connection=conn,
+            source="subject_registry",
+            project="LUMENIS",
+            product=normalized,
+            domain_id=normalized.lower(),
+            **evidence_scope,
+            feature_id=OFFICIAL_NAME_SOURCE_FEATURE_ID,
+            level="L4",
+            test_name="official_name_source_declaration",
+            capture_mode="manual_declaration",
+            result="GAP",
+            status="pending",
+            inputs={
+                "subject_id": subject_id,
+                "source_url": url,
+                "source_claim": "official_site",
+                "name_before": {"name_en": before["name_en"], "name_zh": before["name_zh"]},
+                "name_after": {"name_en": after["name_en"], "name_zh": after["name_zh"]},
+            },
+            outputs={
+                "subject_id": subject_id,
+                "source_url": url,
+                "origin_verification": "NOT_INDEPENDENTLY_VERIFIED",
+                "identity_verification": "NOT_VERIFIED",
+                "authenticity_score_state": "NOT_ASSESSED",
+                "url_scheme_is_identity_proof": False,
+                "network_fetch": "NOT_PERFORMED",
+            },
+            expected="Official source origin and identity require independent verification.",
+            actual="URL was declared; no network request or identity verification was performed.",
+            authenticity_score=0.0,
+            notes=(
+                "HTTP(S) scheme validation records syntax only. The existing "
+                "numeric authenticity field cannot represent unknown; "
+                "authenticity_score_state is authoritative for this declaration."
+            ),
+        )
+        if type(evidence_id) is not int or evidence_id <= 0:
+            raise SubjectRegistryUnavailableError(
+                "official name source Evidence was not durably recorded"
+            )
+    source_provenance = {
+        "source_url": url,
+        "evidence_ref": f"app_evidence_records:{evidence_id}",
+        "origin_verification": "NOT_INDEPENDENTLY_VERIFIED",
+        "identity_verification": "NOT_VERIFIED",
+    }
+    return {
+        "before": before,
+        "after": after,
+        "changed": changed,
+        "source_url": url,
+        "source_provenance": source_provenance,
+    }
 
 
 def _country_subject_projection(domain_id, country_iso, relation_type):
