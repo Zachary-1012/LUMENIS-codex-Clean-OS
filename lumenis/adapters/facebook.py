@@ -558,11 +558,20 @@ class FacebookAdapter(BaseAdapter):
     def _expand_detail_post_body(article) -> str:
         """Expand only an explicit read-more control inside the exact post article."""
         labels = {"see more", "see more…", "see more...", "查看更多", "查看全部", "显示更多"}
+        body_locator = '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+        try:
+            body_element = article.query_selector(body_locator)
+            before = body_element.inner_text().strip() if body_element else None
+        except Exception:
+            return "BODY_NOT_AVAILABLE"
+        if not isinstance(before, str):
+            return "BODY_NOT_AVAILABLE"
         try:
             controls = article.query_selector_all('div[role="button"], button')
         except Exception:
             return "CONTROLS_UNAVAILABLE"
         inspection_failed = False
+        expansion_attempted = False
         for control in controls:
             try:
                 label = control.inner_text()
@@ -576,9 +585,21 @@ class FacebookAdapter(BaseAdapter):
                 continue
             try:
                 control.click()
-                return "EXPANDED"
+                expansion_attempted = True
             except Exception:
                 return "EXPANSION_FAILED"
+            try:
+                expanded_element = article.query_selector(body_locator)
+                after = expanded_element.inner_text().strip() if expanded_element else None
+            except Exception:
+                inspection_failed = True
+                continue
+            # A different attachment's "See more" button is not evidence that
+            # the post body expanded. Only accept a longer native message body.
+            if isinstance(after, str) and len(after) > len(before):
+                return "EXPANDED"
+        if expansion_attempted:
+            return "EXPANSION_UNVERIFIED"
         return "CONTROLS_UNAVAILABLE" if inspection_failed else "NO_EXPANSION_CONTROL"
 
     def _parse_facebook_detail_article(self, article, page, requested_post_id: str) -> CollectedNote | None:

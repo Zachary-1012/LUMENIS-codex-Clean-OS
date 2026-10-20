@@ -379,14 +379,17 @@ class _FacebookTextNode:
 
 
 class _FacebookDetailArticle:
-    def __init__(self, body, preview, *, read_more=True, post_id="123456789"):
+    def __init__(self, body, preview, *, read_more=True, unrelated_read_more=False, post_id="123456789"):
         self.body = body
         self.preview = preview
         self.expanded = False
         self.read_more = read_more
+        self.unrelated_read_more = unrelated_read_more
         self.anchor = _FacebookTextNode(href=f"/page/posts/{post_id}")
         self.button = _FacebookTextNode("See more")
         self.button.click = self._expand
+        self.unrelated_button = _FacebookTextNode("See more")
+        self.unrelated_button.click = lambda: None
 
     def _expand(self):
         self.expanded = True
@@ -395,12 +398,14 @@ class _FacebookDetailArticle:
         if 'a[href*="/posts/"]' in selector:
             return [self.anchor]
         if selector == 'div[role="button"], button':
-            return [self.button] if self.read_more else []
+            return ([self.unrelated_button] if self.unrelated_read_more else []) + (
+                [self.button] if self.read_more else []
+            )
         return []
 
     def query_selector(self, selector):
         if selector == '[data-ad-preview="message"], [data-ad-comet-preview="message"]':
-            return (_FacebookTextNode(self.body if self.expanded else self.body)
+            return (_FacebookTextNode(self.body if self.expanded else self.preview)
                     if self.body or self.expanded else None)
         if selector == '[data-ad-preview="message"], .x1iorvi4, .x1pi30zi':
             return _FacebookTextNode(self.body if self.expanded else self.preview)
@@ -426,6 +431,28 @@ def test_fix_098_facebook_detail_expands_and_binds_native_body_to_exact_post(mon
     }
     assert note.raw_data["body_sha256"]
     assert "Truncated search preview" not in note.content
+
+
+def test_fix_098_facebook_ignores_unrelated_expander_and_checks_message_growth(monkeypatch):
+    body = "Native post paragraph. " * 30 + "Full final paragraph."
+    article = _FacebookDetailArticle(
+        body, "Truncated search preview…", unrelated_read_more=True,
+    )
+    result = _facebook_detail_result(monkeypatch, article)
+    assert result.success is True
+    assert article.expanded is True
+    assert result.notes[0].content == body
+
+
+def test_fix_098_facebook_rejects_unrelated_expander_without_body_growth(monkeypatch):
+    article = _FacebookDetailArticle(
+        "Native post body stays truncated", "Truncated preview…",
+        read_more=False, unrelated_read_more=True,
+    )
+    result = _facebook_detail_result(monkeypatch, article)
+    assert result.success is False
+    assert result.error == "DETAIL_NOT_RETURNED: NATIVE_POST_BODY_NOT_OBSERVED"
+    assert result.notes == []
 
 
 def test_fix_098_facebook_search_preview_is_not_detail_when_native_body_missing(monkeypatch):
@@ -456,6 +483,39 @@ def test_fix_098_facebook_does_not_accept_preview_when_expansion_fails(monkeypat
     assert result.success is False
     assert result.error == "DETAIL_NOT_RETURNED: NATIVE_POST_BODY_NOT_OBSERVED"
     assert result.notes == []
+
+
+def test_fix_096_x_sanitizes_terminal_detail_error_after_successful_search():
+    from types import SimpleNamespace
+    from lumenis.adapters.base import AdapterResult
+    from lumenis.system.collector.adapters.x_platform import XAdapter, CollectionStatus
+
+    tweet_id = "12345678901234567890"
+    note = SimpleNamespace(
+        raw_data={
+            "tweet_id": tweet_id,
+            "tweet_id_locator": "article a[href]",
+            "url": f"https://x.com/brand/status/{tweet_id}",
+            "native_identity": {"tweet_id": tweet_id, "status": "OBSERVED"},
+        },
+        title="Search preview", content="Preview only", author_id="@brand",
+        author="Brand", publish_date="", url=f"https://x.com/brand/status/{tweet_id}",
+        likes=0, comments=None, collects=None, shares=None,
+    )
+
+    class Backend:
+        def search(self, keyword, *, max_results):
+            return AdapterResult(success=True, notes=[note], raw_count=1)
+
+        def detail(self, content_id):
+            assert content_id == tweet_id
+            return AdapterResult(success=False, error="session expired token=TOP_SECRET")
+
+    result = XAdapter(backend=Backend()).search("brand")
+    assert result.status == CollectionStatus.SESSION_EXPIRED
+    assert result.message == "X_PAGE_FAILURE:SESSION_EXPIRED"
+    assert result.items[0]["raw"]["detail_observation"]["stop_reason"] == "SESSION_EXPIRED"
+    assert "TOP_SECRET" not in repr(result)
 
 
 def test_fix_098_facebook_post_permalink_canonicalization_uses_exact_native_identity():

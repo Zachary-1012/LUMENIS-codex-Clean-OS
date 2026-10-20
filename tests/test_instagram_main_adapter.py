@@ -386,6 +386,39 @@ def test_fix_105_registered_creator_sanitizes_engine_error_text():
     assert "PRIVATE_PAGE_TEXT" not in repr(result.metadata)
 
 
+@pytest.mark.parametrize(('error','expected'), [
+    ('READONLY_WORKER_NOT_CONFIGURED', 'INSTAGRAM_FAILURE:NOT_CONFIGURED'),
+    ('READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE', 'INSTAGRAM_FAILURE:PROVIDER_UNAVAILABLE'),
+    ('network connection timeout', 'INSTAGRAM_FAILURE:NETWORK_UNAVAILABLE'),
+])
+@pytest.mark.parametrize('operation', ['comments', 'creator'])
+def test_fix_105_worker_configuration_and_unavailable_codes_stay_distinct(
+        monkeypatch, error, expected, operation):
+    from lumenis.adapters.instagram import InstagramAdapter as OriginalInstagramAdapter
+
+    def fail_before_browser(*_args, **_kwargs):
+        raise RuntimeError(error)
+
+    monkeypatch.setattr('lumenis.adapters.instagram.configured_readonly_worker_url', fail_before_browser)
+    engine = OriginalInstagramAdapter()
+    result = getattr(engine, operation)('ABC123' if operation == 'comments' else 'testcreator')
+    assert result.success is False
+    assert result.error == expected
+    assert result.diagnostics['error_code'] == expected
+
+
+@pytest.mark.parametrize('operation', ['comments', 'creator'])
+def test_fix_105_registered_instagram_raised_failures_use_sanitized_status(operation):
+    engine = MagicMock()
+    getattr(engine, operation).side_effect = TimeoutError('timeout token=TOP_SECRET')
+    result = getattr(InstagramAdapter(engine=engine), operation)(
+        'ABC123' if operation == 'comments' else 'testcreator'
+    )
+    assert result.status == CollectionStatus.PROVIDER_UNAVAILABLE
+    assert result.message == 'INSTAGRAM_FAILURE:NETWORK_UNAVAILABLE'
+    assert 'TOP_SECRET' not in repr(result)
+
+
 # ---------------------------------------------------------------------------
 # Additional: engine lazy-load does not import at construction
 # ---------------------------------------------------------------------------

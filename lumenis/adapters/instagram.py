@@ -55,11 +55,17 @@ def instagram_failure_diagnostic(error, existing=None) -> dict:
     elif any(marker in text for marker in ("rate limit", "429", "频控", "try again later", "blocked")):
         reason = "RATE_LIMITED"
     elif any(marker in text for marker in (
-            "network", "timeout", "connection", "dns", "proxy", "unavailable", "不可达", "连接异常")) \
+            "not configured", "not_configured", "worker not registered",
+            "worker_not_registered", "not registered", "未配置")):
+        reason = "NOT_CONFIGURED"
+    elif any(marker in text for marker in (
+            "network", "timeout", "connection", "dns", "proxy", "不可达", "连接异常")) \
             or "timeout" in name:
         reason = "NETWORK_UNAVAILABLE"
-    elif any(marker in text for marker in ("not configured", "worker not registered", "未配置")):
-        reason = "NOT_CONFIGURED"
+    elif any(marker in text for marker in (
+            "provider unavailable", "provider_unavailable", "worker unavailable",
+            "worker_unavailable", "unavailable", "不可用")):
+        reason = "PROVIDER_UNAVAILABLE"
     else:
         reason = "UPSTREAM_FAILURE"
 

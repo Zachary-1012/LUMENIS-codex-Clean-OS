@@ -13,13 +13,29 @@ failure into success or an opaque message (FIX-096/098/099/105/106). These
 changes stay in their existing adapters and test owners; no collector,
 secondary collection, API composition or product module was added.
 
-Offline focused regressions passed: Instagram FIX-105, 4; X read-only worker,
-24; Facebook FIX-098, 5; XHS FIX-099, 2; WeChat public sources, 17 — **52
-passed**, no background-thread leak. Python compilation and `git diff --check`
-passed. The full Instagram module still has 5 failures and the full Facebook/X
-module 7 failures; both sets were reproduced on clean main at the exact same
-baseline. The focused additions passed and do not establish full module or
-product acceptance.
+This follow-up keeps each original issue ID at its source owner: FIX-096
+sanitizes the terminal X detail failure in
+`lumenis/system/collector/adapters/x_platform.py`; FIX-098 accepts a Facebook
+read-more control only after the exact native post body grows in
+`lumenis/adapters/facebook.py`; FIX-105 distinguishes missing Instagram worker
+configuration, provider/kernel unavailability, and network failure in
+`lumenis/adapters/instagram.py`, then maps raised comments/creator failures in
+`lumenis/system/collector/adapters/instagram.py` through the existing status
+mapper. Their regressions are in `tests/test_facebook_x_adapter.py` and
+`tests/test_instagram_main_adapter.py`.
+
+Exact offline focused commands on this candidate:
+
+- `PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_facebook_x_adapter.py -k 'fix_098_facebook_ or fix_096_x_sanitizes'` — **8 passed, 33 deselected**.
+- `PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_instagram_main_adapter.py -k 'fix_105_worker_configuration or fix_105_registered_instagram_raised_failures'` — **8 passed, 26 deselected**.
+- `PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_facebook_x_adapter.py tests/test_instagram_main_adapter.py` — **63 passed, 12 failed**. Those 12 failures were reproduced on a clean main worktree at the exact baseline; no new full-module pass is claimed.
+
+The earlier focused receipt remains: X read-only worker 24, XHS FIX-099 2,
+WeChat public sources 17, and the prior FIX-105/FIX-098 cases; those plus this
+follow-up are isolated fixture tests, not product acceptance. Python compilation,
+`git diff --check`, governance machine contract, AI-native constitution and
+takeover governance passed. No background-thread leak was detected. Real
+browsers, devices and external collection remain NOT_VERIFIED.
 
 FIX-100 remains OPEN because the `secondary_collection.py` write reservation
 is unavailable. FIX-092/093/097 and `platform_naming.py` coordination remain

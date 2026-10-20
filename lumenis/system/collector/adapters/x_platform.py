@@ -449,8 +449,11 @@ class XAdapter(BasePlatformAdapter):
                 if failure_state in _TERMINAL_X_DETAIL_STATES:
                     detail_stop_reason = failure_state
                     overall_status = self._detail_failure_status(failure_state)
-                    overall_message = (detail_result.error if detail_result and detail_result.error
-                                       else "X native post detail was not verified")
+                    overall_message = (
+                        self._safe_failure_code(detail_result.error, phase="page")
+                        if detail_result and detail_result.error
+                        else "X native post detail was not verified"
+                    )
 
             detail_counts["pending"] = sum(
                 1 for item in items

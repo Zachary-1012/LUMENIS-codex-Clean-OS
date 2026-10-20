@@ -691,7 +691,7 @@ class InstagramAdapter(BasePlatformAdapter):
         except Exception as exc:
             diagnostic = self._failure_diagnostic(exc)
             return CollectionResult(
-                status=CollectionStatus.COLLECT_ERROR,
+                status=self._map_status(False, [], diagnostic["error_code"]),
                 platform=self.platform,
                 message=diagnostic["error_code"],
                 metadata={"failure_diagnostic": diagnostic},
@@ -729,7 +729,7 @@ class InstagramAdapter(BasePlatformAdapter):
         except Exception as exc:
             diagnostic = self._failure_diagnostic(exc)
             return CollectionResult(
-                status=CollectionStatus.COLLECT_ERROR,
+                status=self._map_status(False, [], diagnostic["error_code"]),
                 platform=self.platform,
                 message=diagnostic["error_code"],
                 metadata={"failure_diagnostic": diagnostic},
