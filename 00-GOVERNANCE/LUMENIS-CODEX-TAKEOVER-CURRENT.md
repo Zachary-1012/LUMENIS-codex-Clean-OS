@@ -4,6 +4,21 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-032 / FIX-033 — preserve platform catalog availability
+
+The existing `data_center_api.py` query/catalog path now distinguishes unavailable or unknown platform source state from a real empty result, preserving source availability semantics for the existing caller. `tests/test_platform_catalog_schema.py` passed **69 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No production source, database or external effect was used.
+
+The review follow-up also converts ISO date bounds to Unix seconds for numeric
+publication columns and treats empty, malformed, or wholly uncountable platform
+catalog entries as unavailable. Supported tables may still show their measured
+counts, while an incomplete catalog total remains null; a real successful count
+of zero remains zero. The offline command
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_platform_catalog_schema.py`
+passed with no daemon-thread leak. Changed-source compilation, the governance
+machine contract, the AI-native constitution and `git diff --check` passed.
+Only temporary SQLite fixtures were used; no external service or production
+database was touched.
+
 ## 2026-10-20 Issue #17 FIX-029 — preserve unknown historical import values
 
 The existing `historical_data_importer.py` now preserves unknown source values rather than defaulting them to neutral/low/zero and preserves caller transaction ownership and partial-commit truth. `tests/test_historical_data.py::TestImportTruthfulPersistence` passed **5 tests**. `python -m py_compile historical_data_importer.py tests/test_historical_data.py` and `git diff --check` passed. The broader `tests/test_historical_data.py` run on this branch produced **32 passed, 3 failed** (`TestSubjectFilter.test_cth_hit`, `test_exclude_veto`, `test_subject_recorded`); exact main SHA `3f6d67785752b465b5b022847cbbe75a55e1eb47` produced **27 passed, the same 3 failures**, with matching assertions. Their shared cause is that `subject_rules.get_active_brand()` intentionally returns no selected brand in these legacy tests, so `get_brand_config()` supplies empty focus words while the tests assume Guangzhou is the default. These unrelated failures remain open; the targeted five-test result is the FIX-029 evidence. Isolated synthetic data only; no production database or import was run.
