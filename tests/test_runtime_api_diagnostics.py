@@ -484,6 +484,7 @@ def _new_local_git_repo(repo_path: Path) -> None:
             "-c",
             "user.email=isolated-test@example.invalid",
             "commit",
+            "--no-gpg-sign",
             "--quiet",
             "--allow-empty",
             "-m",
@@ -537,6 +538,22 @@ def test_git_info_distinguishes_real_clean_output_from_git_failure(tmp_path: Pat
     assert "isolated-git-error-marker" not in json.dumps(failed_result)
 
 
+def test_git_info_preserves_observed_worktree_when_head_is_unavailable(tmp_path: Path) -> None:
+    repo_path = tmp_path / "unborn-repository"
+    repo_path.mkdir()
+    subprocess.run(["git", "init", "--quiet"], cwd=repo_path, check=True)
+    (repo_path / "untracked.txt").write_text("synthetic", encoding="utf-8")
+
+    result = _git_info()(repo_path)
+
+    assert result["available"] is False
+    assert result["status"] == "ERROR"
+    assert result["head_sha"] == "UNKNOWN"
+    assert result["clean"] is False
+    assert result["dirty_files"] == 1
+    assert "head_sha" in result["failed_commands"]
+
+
 def test_git_info_redacts_credentials_from_remote_url(tmp_path: Path) -> None:
     repo_path = tmp_path / "remote-fixture"
     repo_path.mkdir()
@@ -548,7 +565,8 @@ def test_git_info_redacts_credentials_from_remote_url(tmp_path: Path) -> None:
             "add",
             "origin",
             "https://fixture-user:fixture-password@github.com/example/repo.git"
-            "?access_token=query-secret&ref=main#fragment-secret",
+            "?access_token=query-secret&key=key-secret&signature=signature-secret"
+            "&code=code-secret&ref=main#fragment-secret",
         ],
         cwd=repo_path,
         check=True,
@@ -558,18 +576,70 @@ def test_git_info_redacts_credentials_from_remote_url(tmp_path: Path) -> None:
 
     assert result["available"] is True
     assert result["clean"] is True
-    assert result["remote"].startswith("https://github.com/example/repo.git?")
-    assert "access_token=REDACTED" in result["remote"]
-    assert "ref=main" in result["remote"]
+    assert result["remote"] == "https://github.com/example/repo.git"
     assert not any(
         secret in result["remote"]
         for secret in (
             "fixture-user",
             "fixture-password",
             "query-secret",
+            "key-secret",
+            "signature-secret",
+            "code-secret",
             "fragment-secret",
         )
     )
+
+
+def test_git_info_preserves_local_remote_path_with_at_sign(tmp_path: Path) -> None:
+    repo_path = tmp_path / "local-path-remote-fixture"
+    repo_path.mkdir()
+    _new_local_git_repo(repo_path)
+    local_remote = "/mnt/users/alice@example.invalid/repository.git"
+    subprocess.run(
+        ["git", "remote", "add", "origin", local_remote], cwd=repo_path, check=True
+    )
+
+    result = _git_info()(repo_path)
+
+    assert result["remote"] == local_remote
+    assert result["available"] is True
+
+
+def test_git_info_remote_sanitization_failure_is_incomplete(tmp_path: Path) -> None:
+    repo_path = tmp_path / "invalid-remote-fixture"
+    repo_path.mkdir()
+    _new_local_git_repo(repo_path)
+    subprocess.run(
+        ["git", "remote", "add", "origin", "https://[invalid"],
+        cwd=repo_path,
+        check=True,
+    )
+
+    result = _git_info()(repo_path)
+
+    assert result["available"] is False
+    assert result["status"] == "ERROR"
+    assert result["remote"] == "UNKNOWN"
+    assert result["failed_commands"] == ["remote_sanitize"]
+
+
+def test_git_fixture_commit_ignores_inherited_gpg_sign_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    global_config = tmp_path / "gitconfig"
+    global_config.write_text("[commit]\n\tgpgsign = true\n", encoding="utf-8")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(global_config))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    repo_path = tmp_path / "signing-fixture"
+    repo_path.mkdir()
+
+    _new_local_git_repo(repo_path)
+
+    assert subprocess.run(
+        ["git", "rev-parse", "--verify", "HEAD"], cwd=repo_path,
+        check=True, capture_output=True, text=True,
+    ).stdout.strip()
 
 
 def test_git_info_redacts_scp_style_remote_username(tmp_path: Path) -> None:

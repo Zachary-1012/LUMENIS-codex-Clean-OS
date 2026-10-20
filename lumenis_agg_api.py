@@ -111,32 +111,27 @@ def _git_info(repo_path: Path):
     def _sanitize_remote(value):
         try:
             parsed = urllib.parse.urlsplit(value)
-            if not parsed.scheme or not parsed.netloc:
-                # Git's scp-style SSH remotes have no URL scheme but still
-                # place the username (and sometimes a token) before ``@``.
-                return value.rsplit("@", 1)[-1] if "@" in value else value
-            # Drop all user-info (including username-only access tokens) while
-            # retaining the public host and repository path.
-            authority = parsed.netloc.rsplit("@", 1)[-1]
-            sensitive = {
-                "token", "password", "passwd", "secret", "apikey",
-                "credential", "authorization",
-            }
-            safe_query = []
-            for key, item in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True):
-                normalized = key.lower().replace("_", "").replace("-", "")
-                if any(name in normalized for name in sensitive):
-                    item = "REDACTED"
-                safe_query.append((key, item))
-            return urllib.parse.urlunsplit((
-                parsed.scheme,
-                authority,
-                parsed.path,
-                urllib.parse.urlencode(safe_query),
-                "",
-            ))
+            if parsed.scheme:
+                # Remove all query/fragment data: a denylist cannot recognize
+                # every signed-URL credential parameter (for example code/key).
+                authority = parsed.netloc.rsplit("@", 1)[-1]
+                return urllib.parse.urlunsplit((
+                    parsed.scheme, authority, parsed.path, "", "",
+                ))
+
+            # Preserve local paths (including file-like relative paths) that
+            # happen to contain @. Strip credentials only from the actual
+            # user@host:path form used by scp-style SSH remotes.
+            if value.startswith(("/", "./", "../")):
+                return value
+            username, separator, destination = value.partition("@")
+            host, colon, path = destination.partition(":")
+            if (separator and username and host and colon and path
+                    and "/" not in host and "\\" not in host):
+                return f"{host}:{path}"
+            return value
         except (TypeError, ValueError):
-            return "UNKNOWN"
+            return None
 
     sha = _run(["rev-parse", "--short", "HEAD"])
     branch = _run(["rev-parse", "--abbrev-ref", "HEAD"])
@@ -159,6 +154,9 @@ def _git_info(repo_path: Path):
         failed.append("remote")
     if remote["ok"] and not remote["value"]:
         failed.append("remote")
+    sanitized_remote = _sanitize_remote(remote["value"]) if remote["ok"] else None
+    if remote["ok"] and sanitized_remote is None:
+        failed.append("remote_sanitize")
 
     complete = not failed
     return {
@@ -166,12 +164,16 @@ def _git_info(repo_path: Path):
         "status": "READY" if complete else "ERROR",
         "head_sha": sha["value"] if sha["ok"] and sha["value"] else "UNKNOWN",
         "branch": branch["value"] if branch["ok"] and branch["value"] else "UNKNOWN",
-        "remote": _sanitize_remote(remote["value"]) if remote["ok"] else ("UNKNOWN" if not remote_missing else ""),
+        "remote": (
+            sanitized_remote
+            if remote["ok"] and sanitized_remote is not None
+            else ("UNKNOWN" if not remote_missing else "")
+        ),
         "dirty_files": (
             len([line for line in worktree["value"].splitlines() if line.strip()])
-            if complete else None
+            if worktree["ok"] else None
         ),
-        "clean": (not bool(worktree["value"])) if complete else None,
+        "clean": (not bool(worktree["value"])) if worktree["ok"] else None,
         **({"error": "GIT_INFO_COMMAND_FAILED", "failed_commands": failed} if failed else {}),
     }
 
