@@ -202,3 +202,37 @@ def test_emv_route_without_metric_snapshots_table_is_not_an_error(monkeypatch, t
     response = _client().get("/api/ic/emv")
     assert response.status_code == 200
     assert response.get_json()["status"] == "OK"
+
+
+def test_initial_import_of_observed_zero_metrics_keeps_zero_amount(monkeypatch, tmp_path):
+    import sqlite3
+    from contextlib import contextmanager
+    import database
+    from lumenis.shared.database.business_schema import apply_business_schema
+
+    path = tmp_path / "import.db"
+    conn = sqlite3.connect(path)
+    apply_business_schema(conn)
+    conn.commit()
+    conn.close()
+
+    @contextmanager
+    def fixture_db():
+        c = sqlite3.connect(path)
+        c.row_factory = sqlite3.Row
+        try:
+            yield c
+            c.commit()
+        finally:
+            c.close()
+
+    monkeypatch.setattr(database, "get_db", fixture_db)
+    monkeypatch.setenv("ZBC_METRIC_SNAPSHOT", "1")
+    database.insert_note({"note_id": "obs0", "title": "t", "likes": 0, "comments": 0,
+                          "collects": 0, "shares": 0})
+    database.insert_note({"note_id": "absent", "title": "t"})
+    body = _client().get("/api/ic/emv").get_json()
+    by_id = {item["note_id"]: item for item in body["items"]}
+    assert by_id["obs0"]["status"] == "OK"
+    assert by_id["obs0"]["emv_yuan"] == 0
+    assert by_id["absent"]["status"] != "OK"

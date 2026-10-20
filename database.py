@@ -331,6 +331,17 @@ def insert_note(note_data, *, connection=None):
             note_data.get('data_quality_status','unknown') or 'unknown', _nullable_analysis_score(note_data.get('data_quality_score')),
             note_data.get('collector_version','') or '', now, 1 if vals['author_nickname']=='广州太古汇' else 0, vals['is_taikoo_verified'], vals['verify_reason']))
         _write_analysis_values(new_record=True)
+        # Initial canonical import: an explicitly observed metric set (including
+        # genuine all-zero values) gets its first snapshot so EMV/reporting can
+        # tell an observed zero from schema-default "never collected". Bypass only.
+        try:
+            if metric_observation_complete and any(
+                    name in note_data and vals[name] is not None for name in _NOTE_METRIC_KEYS):
+                record_note_metric_snapshot(
+                    conn, nid, {name: vals[name] for name in _NOTE_METRIC_KEYS},
+                    source='live', collector_version=note_data.get('collector_version', '') or '')
+        except Exception:
+            pass
         conn.execute('UPDATE notes SET body=?, source_keyword=?, matched_keywords=? WHERE note_id=?', (vals['body'], vals['source_keyword'], vals['matched_keywords'], nid))
         if _stype:
             conn.execute("UPDATE notes SET subject_type=CASE WHEN ?<>'' THEN ? ELSE subject_type END, "
