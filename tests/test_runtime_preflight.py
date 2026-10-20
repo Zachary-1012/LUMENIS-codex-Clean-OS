@@ -258,3 +258,25 @@ def test_json_cookie_literal_keeps_following_fields():
         parsed = json.loads(out)
         assert parsed["safe"] == "visible"
         assert "12345" not in out
+
+
+def test_sanitize_text_redacts_camelcase_cookie_labels():
+    from data_boundary import sanitize_text
+    for raw in ("sessionCookie=abc123secretvalue", "xhsCookie: abc123secretvalue"):
+        out = sanitize_text(raw)
+        assert "abc123secretvalue" not in out
+        assert "[REDACTED]" in out
+
+
+def test_sanitize_mapping_redacts_credential_keys_with_descriptors():
+    from data_boundary import sanitize_mapping
+    out = sanitize_mapping({
+        "cookie_header": "opaqueA1B2C3",
+        "authorization_header": "opaqueD4E5F6",
+        "token_count": 3,
+        "authorization_status": "missing",
+    })
+    assert out["cookie_header"] == "[REDACTED]"
+    assert out["authorization_header"] == "[REDACTED]"
+    assert out["token_count"] == 3
+    assert out["authorization_status"] == "missing"

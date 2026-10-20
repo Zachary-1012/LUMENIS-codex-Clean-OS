@@ -199,7 +199,7 @@ _SAN_RULES = [
     ),
     (
         re.compile(
-            r'''(\b(?:[A-Za-z0-9]+[_-])*cookie["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|(?:null|true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?=\s*[,}\]])|[^\n\r]*)''',
+            r'''((?:\b|(?<=[a-z0-9])(?=(?-i:C)))(?:[A-Za-z0-9]+[_-])*cookie["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|(?:null|true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?=\s*[,}\]])|[^\n\r]*)''',
             re.I,
         ),
         _redact_cookie,
@@ -230,11 +230,28 @@ _SENSITIVE_MAPPING_SUFFIXES = (
 )
 
 
+_SENSITIVE_VALUE_DESCRIPTORS = (
+    "header", "headers", "value", "values", "string", "str", "raw", "data",
+    "line", "text", "jar",
+)
+
+
 def _is_sensitive_mapping_key(key):
     # Split camelCase boundaries first (accessToken -> access_token).
     separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
     normalized = re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
-    return normalized in _SENSITIVE_MAPPING_KEYS or normalized.endswith(_SENSITIVE_MAPPING_SUFFIXES)
+    if normalized in _SENSITIVE_MAPPING_KEYS or normalized.endswith(_SENSITIVE_MAPPING_SUFFIXES):
+        return True
+    # Credential field followed by a value/container descriptor
+    # (cookie_header, authorization_header, token_value). Metadata such as
+    # token_count or cookie_present is not a descriptor and stays visible.
+    parts = normalized.split("_")
+    while len(parts) > 1 and parts[-1] in _SENSITIVE_VALUE_DESCRIPTORS:
+        parts.pop()
+        stem = "_".join(parts)
+        if stem in _SENSITIVE_MAPPING_KEYS or stem.endswith(_SENSITIVE_MAPPING_SUFFIXES):
+            return True
+    return False
 
 
 def sanitize_text(text):
