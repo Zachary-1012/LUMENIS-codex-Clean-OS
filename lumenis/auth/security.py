@@ -34,6 +34,13 @@ WORKSPACE_KEY_ATTEMPT_USERNAME = "__workspace_key__"
 _IP_ATTEMPT_BUCKETS = frozenset({_ACCESS_KEY_ATTEMPT_USERNAME, WORKSPACE_KEY_ATTEMPT_USERNAME})
 
 
+def is_reserved_username(username) -> bool:
+    """Names shaped like ``__name__`` are reserved for synthetic attempt
+    buckets and can never be account usernames."""
+    name = str(username or "").strip()
+    return len(name) >= 4 and name.startswith("__") and name.endswith("__")
+
+
 def _is_ip_bucket(username) -> bool:
     """Only the exact reserved synthetic buckets are per-IP; real usernames
     such as ``__alice__`` keep the normal account-wide lockout."""

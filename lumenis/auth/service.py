@@ -267,7 +267,9 @@ def require_security_verification(f):
 def create_user(username: str, password: str, role: str = "user",
                 display_name: str = None, email: str = None, created_by: int = None) -> dict:
     """创建用户（主账号操作）"""
-    from .security import hash_password
+    from .security import hash_password, is_reserved_username
+    if is_reserved_username(username):
+        return {"success": False, "error": "用户名为系统保留名称"}
     ensure_initialized()
     conn = get_db()
     try:

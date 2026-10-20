@@ -91,3 +91,37 @@ def test_account_init_retains_legacy_totp_rows():
         assert conn.execute("SELECT COUNT(*) FROM v4_totp_secrets").fetchone()[0] >= 1
     finally:
         conn.close()
+
+
+def test_reserved_bucket_usernames_cannot_become_accounts(monkeypatch):
+    from lumenis.auth import security
+    from account import service as account_service
+    from account import models as account_models
+    for name in ("__workspace_key__", "__access_key__", "__alice__"):
+        assert security.is_reserved_username(name)
+        assert account_service.create_member(name, "x" * 20, role="user")["success"] is False
+    from lumenis.auth import service as auth_service
+    assert auth_service.create_user("__workspace_key__", "x" * 20)["success"] is False
+    monkeypatch.setenv("LUMENIS_BOOTSTRAP_OWNER_USERNAME", "__workspace_key__")
+    monkeypatch.setenv("LUMENIS_BOOTSTRAP_OWNER_PASSWORD", "y" * 20)
+
+    class _NoOwner:
+        def execute(self, *a, **k):
+            class _C:
+                def fetchone(self_inner):
+                    return {"cnt": 0}
+            return _C()
+    with pytest.raises(ValueError):
+        account_models._ensure_owner_account(_NoOwner())
+
+
+def test_owner_bearer_reaches_compat_key_routes_under_basic_auth(client, monkeypatch):
+    import app as app_module
+    c, _ = client
+    monkeypatch.setattr(app_module, "_auth_enabled", lambda: True)
+    from account import service as account_service
+    monkeypatch.setattr(account_service, "get_current_user",
+                        lambda *a, **k: {"id": 1, "username": "o", "role": "owner"})
+    r = c.get("/api/v4/api-keys", headers={"Authorization": "Bearer synthetic"})
+    assert r.status_code == 200
+    assert r.get_json()["ok"] is True

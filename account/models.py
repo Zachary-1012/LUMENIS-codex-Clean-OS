@@ -284,6 +284,9 @@ def _ensure_owner_account(conn):
             return
         if not username or len(password) < 16:
             raise ValueError("Initial owner requires an explicit username and password of at least 16 characters")
+        from lumenis.auth.security import is_reserved_username
+        if is_reserved_username(username):
+            raise ValueError("Initial owner username is reserved for system use")
         pwd_hash = hash_password(password)
         conn.execute(
             "INSERT INTO v4_users (username, password_hash, role, display_name, status, must_change_password) "

@@ -170,6 +170,10 @@ def create_member(username: str, password: str, role: str = "user",
     if not quota_check["allowed"]:
         return {"success": False, "error": quota_check["error"], "code": "QUOTA_EXCEEDED"}
 
+    from lumenis.auth.security import is_reserved_username
+    if is_reserved_username(username):
+        return {"success": False, "error": "用户名为系统保留名称"}
+
     conn = get_db()
     try:
         cur = conn.execute("SELECT COUNT(*) as cnt FROM v4_users WHERE username=?", (username,))

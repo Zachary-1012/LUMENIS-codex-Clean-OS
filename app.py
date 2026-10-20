@@ -1596,6 +1596,10 @@ def _owner_authorized_root_request():
                    for guard in current_app.before_request_funcs.get(request.blueprint, ()))
     routes = {
         'api_system_account_base': ('/api/system/account', {'GET'}),
+        # Legacy key routes: account_compat role decorators are the owner guard.
+        'account_compat.compat_api_keys_list': ('/api/v4/api-keys', {'GET'}),
+        'account_compat.compat_api_keys_generate': ('/api/v4/api-keys/generate', {'POST'}),
+        'account_compat.compat_api_keys_revoke': ('/api/v4/api-keys/revoke', {'POST'}),
         'api_zbmp_entry_status': ('/api/auth/zbmp-entry/status', {'GET'}),
         'api_domain_identity': ('/api/auth/domain-identity', {'GET'}),
         'api_zbmp_entry_unlock': ('/api/auth/zbmp-entry/unlock', {'POST'}),

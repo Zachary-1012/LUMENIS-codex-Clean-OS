@@ -714,6 +714,13 @@ class TestDataCenterAPI:
         response = client.get("/api/data-center/table/notes?start_date=0001-01-01T00:00:00%2B05:00")
         assert response.status_code == 200
         assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
+        platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9803, '9999-12-31T23:59:59.500000Z')")
+        platform_db.commit()
+        response = client.get("/api/data-center/table/notes?end_date=9999-12-31T23:59:59Z")
+        assert response.status_code == 200
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801]
+        response = client.get("/api/data-center/table/notes?end_date=9999-12-31T23:59:59.999999Z")
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802, 9803]
         response = client.get("/api/data-center/table/notes?start_date=9999-12-31T23:59:59-05:00")
         assert response.status_code == 400
         assert response.get_json() == {"ok": False, "error": "invalid start_date"}
