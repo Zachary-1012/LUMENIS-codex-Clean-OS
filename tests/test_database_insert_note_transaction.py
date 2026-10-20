@@ -751,3 +751,30 @@ def test_classifier_receives_real_is_official_flag(tmp_path, monkeypatch):
         assert seen and all(flag == 1 for flag in seen)
     finally:
         connection.close()
+
+
+def test_fix_024_score_only_quality_patch_keeps_status_score_pair(tmp_path):
+    """A score-only patch must not create a contradictory status/score pair."""
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note(
+            {
+                "note_id": "fix-024-score-only",
+                "title": "Errored title",
+                "data_quality_status": "error",
+                "data_quality_score": 10,
+            },
+            connection=connection,
+        )
+        note_database.insert_note(
+            {"note_id": "fix-024-score-only", "data_quality_score": 100},
+            connection=connection,
+        )
+        row = connection.execute(
+            "SELECT data_quality_status, data_quality_score FROM notes WHERE note_id=?",
+            ("fix-024-score-only",),
+        ).fetchone()
+        assert tuple(row) == ("error", 10)
+    finally:
+        connection.close()

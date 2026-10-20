@@ -303,6 +303,10 @@ def insert_note(note_data, *, connection=None):
             # score (reviewed/0.87 -> error/0.87); clear it instead.
             quality_score_supplied = True
             quality_score_value = None
+        if existing and quality_score_supplied and not quality_status_supplied:
+            # A score-only patch must not pair a new score with the stored
+            # status (error/100); status and score change together or not at all.
+            quality_score_supplied = False
         # 标题兜底：新增或显式提供标题时，如缺失则用正文首句或作者昵称补齐。
         if (not existing or 'title' in note_data) and not (vals['title'] or '').strip():
             _t = ''
