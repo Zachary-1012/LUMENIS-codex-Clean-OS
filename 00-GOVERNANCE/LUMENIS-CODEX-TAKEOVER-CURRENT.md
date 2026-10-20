@@ -4,6 +4,12 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 HANDOFF — open-PR merge pass (阿康, PO-approved)
+
+Squash-merged into main, each after merging latest main into the PR branch (only the shared CURRENT-file conflict was resolved, keeping both sections; no PR content was changed) and both required checks passing: #104, #86, #100, #91, #106, #85, #102, #87 (retargeted to main after #85), #109, #92, #107, #98, #108, #95.
+Not merged because they still have unresolved Codex review findings that would require new code beyond each PR's own content: #88, #89, #90, #93, #94, #96, #97, #99, #101, #103, #105, #110. #111 is held: it fails the `RULES_ONLY_PUBLICATION` gate (research/ paths are not allowed under the current publication mode) and carries `v2_1` duplicate copies.
+Follow-up: after merge, the Codex reviewer opened new findings on #98 (xhs_cookie_bridge.py:1467) and #108 (github_connector.py:519). Merged-in CI is not product acceptance; all Issue #17 outcomes not named above remain open.
+
 ## 2026-10-20 Issue #17 FIX-030 / FIX-031 — quality rule and enrichment truth
 
 The existing `data_quality_gate.py::_finite_number` keeps integer bounds exact with finite `Decimal` comparisons, and `DataQualityGate.validate` evaluates a rule's condition before diagnosing an unknown rule type. The existing `database.py::insert_note` enrichment failure path remains a soft write but now persists `data_quality_status="error"` and clears a stale score. Regressions cover both sides of a conditional future rule, min/max bounds above 2^53, and an existing `ok`/100 note refreshed by a failing validator becoming `error`/NULL. `tests/test_data_quality_gate.py` passed **30 tests**; combined with `tests/test_database_insert_note_transaction.py`, **38 passed** using the offline cached pytest environment. `python -m py_compile database.py data_quality_gate.py tests/test_data_quality_gate.py`, governance machine contract, AI-native constitution and `git diff --check` passed. The database regression uses an in-memory SQLite database; no production database or external effect was used.
