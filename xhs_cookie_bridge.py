@@ -642,10 +642,15 @@ def record_run(run_type='manual'):
     global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time
     global _daily_run_history_state
     _load_stats()
+    has_unverified_prior_counts = (
+        _daily_run_history_state != 'OBSERVED_TASK_STARTS'
+        and (bool(_daily_runs) or _daily_manual_runs or _daily_auto_runs)
+    )
     now = time.time()
     _daily_runs.append(now)
     _last_run_time = now
-    _daily_run_history_state = 'OBSERVED_TASK_STARTS'
+    if not has_unverified_prior_counts:
+        _daily_run_history_state = 'OBSERVED_TASK_STARTS'
     if run_type == 'manual':
         _daily_manual_runs += 1
     else:

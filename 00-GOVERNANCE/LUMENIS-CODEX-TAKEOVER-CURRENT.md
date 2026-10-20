@@ -13,6 +13,8 @@ The remaining login-review finding stays **OPEN**: `get_account_status()` return
 
 FIX-036/037 rollover follow-up: a prior-day task ledger retains `OBSERVED_TASK_STARTS` only if its stored provenance already carried that marker; an unverified legacy ledger remains `UNKNOWN` across date rollover. The parameterized midnight regression verifies both persisted marker outcomes while confirming that the previous actual run still enforces cooldown. The offline `tests/test_hk_only_collection_policy.py` module passed; changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No login probe, collection or production database was used.
 
+FIX-037 provenance follow-up: `record_run()` keeps the history `UNKNOWN` when it appends a real start to a same-day ledger that already contains unverified legacy counts, so observed starts cannot retroactively certify estimates. A clean empty ledger still becomes `OBSERVED_TASK_STARTS` on its first recorded start. The regression covers the mixed legacy-plus-new-start case in the same offline health-policy module; no login probe, collection or production database was used.
+
 
 ## 2026-10-18 source-adoption validation handoff
 

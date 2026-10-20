@@ -590,6 +590,38 @@ def test_collector_task_start_stats_are_marked_as_observed(monkeypatch, tmp_path
     assert len(stats['daily_runs']) == 1
 
 
+def test_record_run_does_not_promote_unverified_legacy_counts(monkeypatch, tmp_path):
+    import json
+    import time
+    from datetime import date
+    import xhs_cookie_bridge as bridge
+
+    prior_runs = [time.time() - 600, time.time() - 300]
+    stats_file = tmp_path / 'collector_stats.json'
+    stats_file.write_text(json.dumps({
+        'date': date.today().strftime('%Y-%m-%d'),
+        'daily_runs': prior_runs,
+        'manual_runs': 1,
+        'auto_runs': 1,
+        'daily_run_history_state': 'UNKNOWN',
+        'last_run_time': prior_runs[-1],
+    }), encoding='utf-8')
+    monkeypatch.setattr(bridge, 'STATS_FILE', str(stats_file))
+    monkeypatch.setattr(bridge, '_stats_loaded', False)
+    monkeypatch.setattr(bridge, '_daily_runs', [])
+    monkeypatch.setattr(bridge, '_daily_manual_runs', 0)
+    monkeypatch.setattr(bridge, '_daily_auto_runs', 0)
+    monkeypatch.setattr(bridge, '_last_run_time', None)
+    monkeypatch.setattr(bridge, '_daily_run_history_state', 'UNKNOWN')
+
+    bridge.record_run('manual')
+
+    stats = json.loads(stats_file.read_text(encoding='utf-8'))
+    assert stats['daily_run_history_state'] == 'UNKNOWN'
+    assert stats['daily_runs'][:2] == prior_runs
+    assert len(stats['daily_runs']) == 3
+
+
 @pytest.mark.parametrize(("prior_history_state", "expected_history_state"), [
     ("OBSERVED_TASK_STARTS", "OBSERVED_TASK_STARTS"),
     ("UNKNOWN", "UNKNOWN"),
