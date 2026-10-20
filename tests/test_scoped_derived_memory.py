@@ -109,6 +109,32 @@ def test_http_memory_write_permission_revision_and_terminal_archive(agent_client
     assert api.get(url, headers=own).get_json()['records'] == []
 
 
+def test_http_memory_explicit_correction_can_restore_current_forgotten_revision(agent_client):
+    api, _app, _path = agent_client
+    task_id = submit(api)
+    url = f'/api/ai/tasks/{task_id}/memory'
+    own = {'Authorization': 'Bearer fixture-session-one'}
+
+    created = api.post(url, json={'key': 'restore', 'value': {'text': 'before'},
+                                 'expected_revision': 0}, headers=own)
+    assert created.status_code == 200, created.get_json()
+    forgotten = api.delete(url, json={'key': 'restore', 'expected_revision': 1}, headers=own)
+    assert forgotten.status_code == 200, forgotten.get_json()
+
+    stale = api.post(url, json={'key': 'restore', 'value': {'text': 'stale'},
+                                'expected_revision': 1}, headers=own)
+    assert stale.status_code == 409
+    assert api.get(url + '?key=restore', headers=own).get_json()['records'] == []
+
+    corrected = api.post(url, json={'key': 'restore', 'value': {'text': 'restored'},
+                                    'expected_revision': 2}, headers=own)
+    assert corrected.status_code == 200, corrected.get_json()
+    record = corrected.get_json()['record']
+    assert record['value'] == {'text': 'restored'}
+    assert record['metadata']['memory_revision'] == 3
+    assert api.get(url + '?key=restore', headers=own).get_json()['records'][0]['value'] == {'text': 'restored'}
+
+
 def test_memory_ttl_filter_precedes_limit_for_api_and_agent(agent_client, monkeypatch):
     """FIX-058: expired rows must not hide valid bound memory from either caller."""
     from datetime import datetime, timedelta, timezone

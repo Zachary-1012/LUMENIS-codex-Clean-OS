@@ -10,7 +10,8 @@ In the existing `agent_memory/base.py` owner, expired records are filtered
 before the caller limit and use one query-time clock value (FIX-058 E04-TTL).
 The existing derived-memory writer rejects a delayed implicit same-task/key
 write after the forgotten tombstone, rather than reviving that record
-(FIX-060 E04-FORGET).
+(FIX-060 E04-FORGET). A user correction can intentionally restore a forgotten
+key only by matching the tombstone's current revision; stale revisions conflict.
 
 `PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/4N-meRHHaGHjU5wZ/lib/python3.12/site-packages python -m pytest -q tests/agent_memory/test_working_memory.py`
 — **20 passed**, with no background-thread leak. The isolated FIX-060 SQLite
@@ -37,6 +38,9 @@ legacy override plus single-clock TTL ordering pass (**2 passed in 0.21s**).
 The broader combined run of `tests/agent_memory/test_learning_memory.py`,
 `tests/agent_memory/test_working_memory.py` and
 `tests/test_scoped_derived_memory.py` passed **52 tests in 13.39s**, with no
+background-thread leak. A follow-up exact API regression verifies stale
+revision rejection and explicit restoration at the current forgotten revision;
+the same combined command now passes **53 tests in 14.24s**, with no
 background-thread leak.
 
 ## 2026-10-18 source-adoption validation handoff

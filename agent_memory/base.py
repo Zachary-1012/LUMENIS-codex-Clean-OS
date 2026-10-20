@@ -164,10 +164,13 @@ class BaseMemoryLayer:
             prior = json.loads(old[0]) if old else {}
             if old and (prior.get("schema_version") != 1 or prior.get("binding") != binding):
                 raise PermissionError("MEMORY_BINDING_CHANGED")
-            if old and prior.get("state") == "forgotten" and not forgotten:
+            if (old and prior.get("state") == "forgotten" and not forgotten
+                    and expected_revision is None):
                 # FIX-060 E04-FORGET: a delayed writer may finish after a user forgets this key.
                 # Keep the tombstone authoritative; a fresh implicit store is
                 # not proof that the old derived work was intentionally restored.
+                # An explicit correction can restore it only by matching the
+                # current tombstone revision checked immediately below.
                 raise PermissionError("MEMORY_FORGET_TOMBSTONE")
             if expected_revision is not None and prior.get("revision", 0) != expected_revision:
                 raise RuntimeError("MEMORY_REVISION_CONFLICT")
