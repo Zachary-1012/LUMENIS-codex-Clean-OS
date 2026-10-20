@@ -189,6 +189,74 @@ def test_body_limit_and_redirect_are_checked_before_returning_content(monkeypatc
     assert session.adapters == original_adapters
 
 
+def test_redirect_body_is_closed_before_caller_response_hooks(monkeypatch):
+    monkeypatch.setattr(
+        transport,
+        "load_public_source_host_pins",
+        lambda: {"example.test": ("93.184.216.34",)},
+    )
+    monkeypatch.setattr(
+        transport,
+        "_validate_public_url_and_pin",
+        lambda value, **_kwargs: (value, {"example.test": ("93.184.216.34",)}),
+    )
+
+    class TrackingRaw:
+        def __init__(self):
+            self.closed = False
+            self.read_calls = 0
+
+        def close(self):
+            self.closed = True
+
+        def read(self, _chunk_size):
+            self.read_calls += 1
+            if self.closed:
+                raise AssertionError("closed redirect body must not be read")
+            return b"unbounded synthetic redirect body"
+
+    def response(request, status, headers, content=b"", *, consumed=True):
+        result = requests.Response()
+        result.status_code = status
+        result.headers = requests.structures.CaseInsensitiveDict(headers)
+        result.url = request.url
+        result.request = request
+        result.raw = TrackingRaw()
+        raws.append(result.raw)
+        result._content = content if consumed else False
+        result._content_consumed = consumed
+        return result
+
+    observations = []
+    raws = []
+
+    def inspect_response(result, **_kwargs):
+        redirect_body = result.content if 300 <= result.status_code < 400 else None
+        observations.append((result.status_code, result.raw.closed, redirect_body))
+        return result
+
+    def offline_send(_adapter, request, **_kwargs):
+        if request.url.endswith("/start"):
+            return response(
+                request,
+                302,
+                {"Location": "https://example.test/final"},
+                consumed=False,
+            )
+        return response(request, 200, {"Content-Type": "text/plain"}, b"safe")
+
+    monkeypatch.setattr(requests.adapters.HTTPAdapter, "send", offline_send)
+    session = requests.Session()
+    session.trust_env = False
+    session.hooks["response"].append(inspect_response)
+
+    result = transport.fetch_public_url("https://example.test/start", session=session)
+
+    assert result.content == b"safe"
+    assert observations == [(302, True, b""), (200, False, None)]
+    assert raws[0].read_calls == 0
+
+
 @pytest.mark.parametrize("status", [304, 301, 302, 307, 308])
 def test_not_modified_and_redirect_without_location_are_not_content(status, monkeypatch):
     monkeypatch.setattr(transport, "_resolved_addresses", lambda hostname: ["39.96.251.100"])

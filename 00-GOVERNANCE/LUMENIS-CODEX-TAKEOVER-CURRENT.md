@@ -32,6 +32,226 @@ context. Regression cases cover each corrupted column. The same offline focused
 modules now report **26 passed in 1.80s**; `py_compile` and `git diff --check`
 pass. FIX-043 production caller verification remains OPEN.
 
+## 2026-10-20 Issue #17 FIX-032 / FIX-033 — preserve platform catalog availability
+
+The existing `data_center_api.py` query/catalog path now distinguishes unavailable or unknown platform source state from a real empty result, preserving source availability semantics for the existing caller. `tests/test_platform_catalog_schema.py` passed **69 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No production source, database or external effect was used.
+
+The review follow-up also converts ISO date bounds to Unix seconds for numeric
+publication columns and treats empty, malformed, or wholly uncountable platform
+catalog entries as unavailable. Supported tables may still show their measured
+counts, while an incomplete catalog total remains null; a real successful count
+of zero remains zero. The offline command
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_platform_catalog_schema.py`
+passed with no daemon-thread leak. Changed-source compilation, the governance
+machine contract, the AI-native constitution and `git diff --check` passed.
+Only temporary SQLite fixtures were used; no external service or production
+database was touched.
+
+## 2026-10-20 Issue #17 FIX-029 — preserve unknown historical import values
+
+The existing `historical_data_importer.py` now preserves unknown source values rather than defaulting them to neutral/low/zero and preserves caller transaction ownership and partial-commit truth. `tests/test_historical_data.py::TestImportTruthfulPersistence` passed **5 tests**. `python -m py_compile historical_data_importer.py tests/test_historical_data.py` and `git diff --check` passed. The broader `tests/test_historical_data.py` run on this branch produced **32 passed, 3 failed** (`TestSubjectFilter.test_cth_hit`, `test_exclude_veto`, `test_subject_recorded`); exact main SHA `3f6d67785752b465b5b022847cbbe75a55e1eb47` produced **27 passed, the same 3 failures**, with matching assertions. Their shared cause is that `subject_rules.get_active_brand()` intentionally returns no selected brand in these legacy tests, so `get_brand_config()` supplies empty focus words while the tests assume Guangzhou is the default. These unrelated failures remain open; the targeted five-test result is the FIX-029 evidence. Isolated synthetic data only; no production database or import was run.
+
+Follow-up regressions now cover missing-ID results as NOT_WRITTEN, rollback of an importer-owned outer transaction, preservation of a transaction already owned by its caller, and SQLite RAISE(ROLLBACK) aborting a multi-row batch. A transaction-wide abort stops later rows; pending inserts are no longer counted as inserted, and even a malformed unprocessed value is returned as NOT_WRITTEN. The six focused cases in
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_historical_data.py -k 'log_failure_rolls_back_importer_owned_transaction or failure_preserves_a_transaction_owned_by_caller or missing_note_id_reports_not_written or batch_wide_sqlite_rollback or caller_connection_remains_uncommitted or batch_owner_commits'`
+passed. Compilation, the governance machine contract, the AI-native constitution
+and `git diff --check` passed. Tests use temporary SQLite fixtures only.
+
+The review follow-up also covers FIX-029's isolated-first-row failure: a
+per-record rollback stops the batch only when earlier pending writes were
+invalidated by a transaction-wide rollback. Parameterized nonnumeric-metric and
+SQLite `RAISE(ABORT)` cases now continue to a later valid row; the original
+`RAISE(ROLLBACK)` batch test still stops and reclassifies pending writes. The
+focused `TestImportTruthfulPersistence` class passed **10 tests**; compilation
+and `git diff --check` passed. Only temporary SQLite fixtures were used.
+
+## 2026-10-20 Issue #17 FIX-027 — Git diagnostics preserve unknown and failure
+
+`lumenis_agg_api.py` reports Git state only from successful command output, does
+not infer a clean tree from failed status reads, and sanitizes remote diagnostics
+without stripping `@` from ordinary local paths. Regressions use a temporary local
+Git repository and cover failures, URL/SCP and remote-helper credentials, opaque
+helper fail-closed behavior, sensitive query removal, remote sanitization errors,
+and `/srv/git/team@archive/repo.git`. Exact-head offline
+command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_runtime_api_diagnostics.py` — **21 passed**. `python -m py_compile lumenis_agg_api.py tests/test_runtime_api_diagnostics.py`, governance machine contract, AI-native constitution and `git diff --check` passed. Temporary local Git fixtures only; no real remote repository or production system was accessed.
+
+## 2026-10-20 Issue #17 FIX-025 — official-name evidence and exact scope
+
+`subject_registry.py` uses the canonical Evidence bootstrap for unversioned
+registries, retains migration ownership for versioned databases, binds official
+names to the resolved CTH subject or BMP BrandFocus, records before/requested/after
+keyword values, and rejects credential-bearing or sensitive-query source URLs.
+Focused regressions are in `tests/test_subject_registry_official_name.py`,
+subject batch concurrency/revocation tests, and
+`tests/test_e2e_new_subject_flow.py`. `lumenis/shared/evidence/store.py` now
+preserves an explicit SQL `NULL` for an unassessed `authenticity_score`, so the
+legacy `DEFAULT 1.0` cannot turn unknown into a score; explicit `0.0` remains a
+numeric value. `subject_registry.py` records an unassessed official-name source
+as `NULL` while its recorded state remains `NOT_ASSESSED`.
+
+The reviewed `--apply` official-name path now also retains the exact successful
+Permission audit ID and caller in the signed Evidence inputs. An allowed result
+without a non-empty audit ID is refused before the first registry write. The
+isolated regression covers both the signed audit linkage and fail-closed
+missing-receipt behavior; no approval token is copied into Evidence.
+Credential query names are normalized across separator/case variants and reject
+generic secret fields such as `secret`, `client_secret`, and `private_key`, while
+ordinary campaign/source query names remain available to the provenance path.
+
+The PR #90 query-validation follow-up also inspects bounded nested query values
+and semicolon-delimited assignments before persisting the source URL. The
+synthetic `redirect=...access_token=...` and `campaign=x;client_secret=...`
+forms are rejected before any Evidence write; ordinary campaign parameters
+remain accepted. On the candidate based on review head `6480017972c8e46721cf69b6b88a2440cef8350e`,
+offline `tests/test_subject_registry_official_name.py tests/test_subject_registry.py`
+passed **47 tests** with no background-thread leak. `py_compile` and
+`git diff --check` passed. Temporary database fixtures only; no source or
+production database was accessed.
+
+The exact-head offline command for those four modules passed **21 tests** with no
+daemon-thread leak. The test-only E2E fixture installs a synthetic HMAC key in
+its isolated process environment so the pre-existing Evidence signature gate
+remains enforced; no production key/configuration is read or changed. The
+canonical Evidence regression command covering
+`tests/test_shared_database_evidence_integrity.py`,
+`tests/test_evidence_scoped_write.py`, `tests/test_evidence_chain.py`, and
+`tests/test_evidence_write_failed_health.py` passed **84 tests**, also with no
+daemon-thread leak. The changed Python files compile and `git diff --check`
+passes. All database writes used per-test temporary databases; no production DB
+or external source was used.
+
+After the audit-linkage and query-secret follow-ups, the focused official-name,
+registry and synthetic E2E command passed **42 tests**. `py_compile` and `git diff --check`
+passed on the follow-up files; no production database or external source was
+used.
+
+The batch review follow-up also preflights each domain and subject ID before
+approval or any row write, in addition to validating the full source URL and
+official-name payload. This prevents a later missing or cross-domain subject
+from leaving an earlier row written. The offline command
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_subject_registry_official_name.py tests/test_subject_registry.py`
+passed with no daemon-thread leak. `py_compile`, the governance machine
+contract, the AI-native constitution and `git diff --check` passed. Only
+temporary database fixtures were used; exact remote checks remain separate.
+
+## 2026-10-20 Issue #17 FIX-101 — close redirect bodies before Session hooks
+
+The existing `PublicSourceHTTPAdapter.send` now closes every 3xx response
+before returning it to `requests.Session`. Session response hooks execute before
+`fetch_public_url` receives the response, so this prevents a caller hook from
+consuming a redirect body before the existing redirect target/address and final
+response-size checks. The outer redirect validation, pinning and bounded final
+body read remain in place. Regression: `tests/test_public_source_transport.py::test_redirect_body_is_closed_before_caller_response_hooks` checks that an
+offline response hook sees an empty, closed redirect; Requests can still prepare
+the next request and the redirect body is never read. `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_public_source_transport.py` — **24 passed**. Full `tests/test_public_source_adapters.py` — **22 passed**; `tests/test_public_http_article_extraction.py` — **11 passed**; five focused RSS nodes — **7 passed**. Changed-file `compileall`, governance machine contract, AI-native constitution and `git diff --check` passed. No live network was used. The body is not drained; redirect response headers remain available to Requests. Remote required checks, real-network behavior and product acceptance remain separate and unverified.
+
+## 2026-10-20 Issue #17 FIX-094 / FIX-102 — public source content and lineage
+
+The existing `lumenis/system/collector/adapters/public_http.py` now retains
+each independent best-priority semantic article block rather than selecting
+only one same-priority block, while nested semantic blocks are included once.
+Each public HTML item records selected locators,
+the full selected-text hash/character count, returned preview length,
+truncation/completeness state and response-document hash/byte count. The
+existing 16,000-character output bound remains; meta description is explicitly
+an excerpt and incomplete-body fallbacks are labeled. Safe transport still
+limits the document to the existing 2 MiB bound.
+
+The existing `web_discovery.fetch_google_news_rss` path uses
+`public_source.fetch_public_url` with the existing maximum response size and
+`google.com` host boundary instead of a separate direct HTTP call. Offset-aware
+RSS dates are normalized to UTC in `published_at` for chronological sorting;
+`source_published_at` preserves the source literal and offset. Naive or
+unparseable values remain unknown with the source value retained. Stable
+source URL, original publication date and time state pass through
+`WebRSSAdapter`, alongside the existing
+sanitized request/final URL and access/license provenance. HTTP failure,
+unsupported media type, an empty successful feed and a safe-transport failure
+remain separate states.
+
+Follow-up review found that non-2xx responses are rejected inside
+`fetch_public_url`, before the former RSS status branch could run. The transport
+now raises `PublicSourceHTTPError` with its exact integer status; the existing
+RSS result and `WebRSSAdapter` metadata preserve `HTTP_503` / `http_status=503`.
+The status discriminator lives in the existing `except Exception` branch at
+`web_discovery.py:239–246` (the HTTP-status check is at lines 241–243).
+The regression goes through the real `fetch_public_url` and
+`fetch_google_news_rss` path and fakes only the lowest `HTTPAdapter.send`
+response. The unsupported media-type comparison remains a separate 200 response.
+
+Offline combined command covering `tests/test_public_http_article_extraction.py`,
+`tests/test_public_source_adapters.py` and `tests/test_public_source_transport.py`
+— **67 passed** (14, 29 and 24 by module). The FIX-102 article-text follow-up
+corrects `_iter_node_text_parts` in `lumenis/system/collector/adapters/public_http.py`:
+BeautifulSoup's `stripped_strings` yields plain strings without ancestor links,
+so nested page chrome was not filtered. Extraction now checks each descendant
+text node's parent chain before normalization. The new offline regression nests
+large nav/footer/header/aside/form/noscript/ARIA-navigation text inside an article
+and verifies none enters returned text, hash, length or completeness. Changed-source `compileall`,
+governance machine contract, AI-native constitution and `git diff --check`
+passed. The tests use offline fixtures; no real public source was contacted. PR review, exact-head
+remote checks and live provider/runtime/user acceptance remain separate and
+unverified. Other Issue #17 items remain open.
+
+FIX-094 fallback follow-up: `test_document_fallback_keeps_visible_layout_text_but_excludes_executable_markup`
+confirms the existing document-body fallback retains visible header/page copy
+while excluding script and style payloads. Re-ran the same offline combined
+pytest command above; all three modules passed with no background-thread leak.
+The added fixture is synthetic; no public source was contacted. Exact-head
+remote checks and product acceptance remain unverified.
+The accompanying source correction also rejects a script, style, noscript or
+template node when that node itself is passed as the extraction root, including
+the chrome-inclusive layout-text path; the focused regression covers all four.
+Locator metadata is now bounded to 512 characters per path and 16,384 total
+characters per capture; oversized locator values are shortened with a hash,
+and omitted locators are reported with an explicit truncation marker/count.
+An initial 80-article fixture did not exceed the total cap; that test setup
+failure was retained and the synthetic case was expanded to 200 articles. The
+focused regression then passed, verifying preserved source content and both
+locator limits.
+The RSS result now stores timezone-aware `published_at` in UTC while keeping
+the original literal and offset in `source_published_at`. The combined offline
+public-source extraction/adapter/transport suite passed after this correction;
+changed-file `py_compile`, governance machine contract, AI-native constitution
+and `git diff --check` passed. Shared Database's persisted mixed-format
+`get_web_mentions` ordering remains OPEN because its original Owner and shared
+write reservation are not available in this worktree.
+
+## 2026-10-20 Issue #17 FIX-030 / FIX-031 — quality rule and enrichment truth
+
+The existing `data_quality_gate.py::_finite_number` keeps integer bounds exact with finite `Decimal` comparisons, and `DataQualityGate.validate` evaluates a rule's condition before diagnosing an unknown rule type. The existing `database.py::insert_note` enrichment failure path remains a soft write but now persists `data_quality_status="error"` and clears a stale score. Regressions cover both sides of a conditional future rule, min/max bounds above 2^53, and an existing `ok`/100 note refreshed by a failing validator becoming `error`/NULL. `tests/test_data_quality_gate.py` passed **30 tests**; combined with `tests/test_database_insert_note_transaction.py`, **38 passed** using the offline cached pytest environment. `python -m py_compile database.py data_quality_gate.py tests/test_data_quality_gate.py`, governance machine contract, AI-native constitution and `git diff --check` passed. The database regression uses an in-memory SQLite database; no production database or external effect was used.
+
+## 2026-10-20 Issue #17 FIX-055–057 — bounded GitHub source paging
+
+The existing `github_connector.py` now bounds collection paging and response
+size, binds continuation cursors to the request and repository allowlist,
+preserves unread within-page results through a cursor offset, and validates
+provider totals for resumed segments. Malformed URL ports become bounded
+connector errors. It preserves partial results with explicit incomplete
+coverage and distinguishes authentication, ordinary permission denial and
+rate limiting. Redirects are checked before bearer credentials can be forwarded. The existing collector
+adapter exposes coverage and safe cursor state; the GitHub Skill/MCP contract
+was corrected to match those paths and boundaries.
+
+Offline regression command:
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_github_connector_adapter.py tests/test_github_status_verification.py tests/test_account_skill_execution_scope.py tests/test_lumenis_shared_skills.py`
+- **57 passed in 0.99s** across adapter/status and related account/skill modules;
+no background-thread leak. Added regressions confirm a page-limit continuation
+including `limit=60 / total=100` returns every provider item exactly once,
+continuation totals expose missing pages, and malformed ports return a bounded
+pagination error. `py_compile`, governance,
+constitution, takeover governance and `git diff --check` passed. Tests use offline
+synthetic responses; no live GitHub request was made.
+
+Formal task/Evidence/UI wiring, persistent actor/task/source-version-bound
+pagination, OAuth callback/revocation, and actual repository permission remain
+OPEN or NOT_VERIFIED. `account/api.py` remains untouched because the exact
+shared write reservation is unavailable.
+
+## 2026-10-20 Issue #17 FIX-035 — distinguish empty XHS results from network failures
+
+The existing `xhs_cookie_bridge.py` now applies the first BLOCKED/CAPTCHA/AUTH_FAILED pacing reduction immediately before continuing to another keyword, while suppressing a second task-summary report so one task still creates one risk event. `EMPTY` counts as a valid response in both the existing `network_adaptive` and `adaptive_engine` feedback paths. Regressions assert that the next search observes reduced pacing, the task records one risk event, and an EMPTY worker reports success with no error. The offline combined command across `tests/test_xhs_network_outcome_reporting.py`, `tests/test_xhs_child_worker_environment.py`, `tests/test_xhs_approved_local_worker_route.py` and `tests/test_xhs_lineage_persistence.py` passed **67 tests** with no thread leak. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Fixtures only; no real collection or account access was performed.
+
 ## 2026-10-20 Issue #17 FIX-028 — count newly synced resources only
 
 `resource_library.py` reports the count of resources newly added by the current
