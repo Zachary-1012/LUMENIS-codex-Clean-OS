@@ -348,3 +348,11 @@ def test_presence_exception_never_exposes_credentials_or_breaks_on_marker_text()
     assert "has_password" not in d.sanitize_text("Authorization: Basic has_password=false")
     marker = 'x \x00PRESENCE0\x00 zzpresence0zz {"has_token": true}'
     assert d.sanitize_text(marker) == marker
+
+
+def test_presence_exception_only_starts_at_a_field_boundary():
+    import data_boundary as d
+    for text in ("refresh_has_token=true", "x_has_token=True", '"session_has_cookie": false'):
+        out = d.sanitize_text(text)
+        assert "[REDACTED]" in out, out
+    assert d.sanitize_mapping({"refresh_has_token": True})["refresh_has_token"] == "[REDACTED]"
