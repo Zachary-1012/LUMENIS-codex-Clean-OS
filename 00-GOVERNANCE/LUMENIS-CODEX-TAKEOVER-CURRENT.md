@@ -27,6 +27,18 @@ available exact write reservation.
 No W6 or production database was modified; runtime/product acceptance remains
 NOT_VERIFIED.
 
+Review follow-up at the PR branch head: `agent_memory/base.py` now preserves the
+existing `_query(filters, limit)` subclass call signature while passing the
+same TTL clock through a context-local value to the base implementation.
+`LearningMemory` in the separate Shared Learning owner therefore keeps its
+existing override unchanged. The prior review reproduction
+`TestLearningMemory.test_positive_negative_samples` and a regression for the
+legacy override plus single-clock TTL ordering pass (**2 passed in 0.21s**).
+The broader combined run of `tests/agent_memory/test_learning_memory.py`,
+`tests/agent_memory/test_working_memory.py` and
+`tests/test_scoped_derived_memory.py` passed **52 tests in 13.39s**, with no
+background-thread leak.
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

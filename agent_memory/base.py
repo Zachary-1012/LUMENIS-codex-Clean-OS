@@ -11,9 +11,15 @@ from __future__ import annotations
 import json
 import time
 import uuid
+from contextvars import ContextVar
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+
+_MEMORY_QUERY_TIME: ContextVar[Optional[float]] = ContextVar(
+    "lumenis_memory_query_time", default=None,
+)
 
 
 def _utc_now_iso() -> str:
@@ -224,7 +230,15 @@ class BaseMemoryLayer:
         # Apply TTL before limiting so newer short-lived records cannot hide
         # older still-valid records from API/Agent callers. Pass one clock
         # reading through both layers so an expiry-boundary query is stable.
-        results = self._query(filters or {}, limit, valid_at=now)
+        # Keep the long-standing subclass hook signature. Scope-aware owners
+        # can wrap `_query(filters, limit)` and call `super()`; the base hook
+        # reads this context-local clock without requiring those owners to
+        # change their method signature.
+        query_time_token = _MEMORY_QUERY_TIME.set(now)
+        try:
+            results = self._query(filters or {}, limit)
+        finally:
+            _MEMORY_QUERY_TIME.reset(query_time_token)
         return [r for r in results if not r.is_expired(now)][:limit]
 
     def forget(self, key: str) -> bool:
@@ -284,7 +298,8 @@ class BaseMemoryLayer:
                *, valid_at: Optional[float] = None) -> List[MemoryRecord]:
         results = []
         records = self._derived_rows() if self._task_binding is not None else self._in_memory.values()
-        now = time.time() if valid_at is None else valid_at
+        query_time = _MEMORY_QUERY_TIME.get() if valid_at is None else valid_at
+        now = time.time() if query_time is None else query_time
         for rec in records:
             if rec.is_expired(now):
                 continue
