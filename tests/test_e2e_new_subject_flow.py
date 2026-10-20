@@ -18,6 +18,11 @@ import pytest
 @pytest.fixture
 def reg(tmp_path, monkeypatch):
     monkeypatch.setenv("ZBC_DB_PATH", str(tmp_path / "e2e.sqlite3"))
+    monkeypatch.setenv(
+        "LUMENIS_EVIDENCE_HMAC_KEY_RING",
+        json.dumps({"subject-e2e-test": "synthetic-isolated-test-signing-key"}),
+    )
+    monkeypatch.setenv("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID", "subject-e2e-test")
     import subject_registry as registry
     registry._NAMES_CACHE.update(at=0.0, names=())
     return registry
