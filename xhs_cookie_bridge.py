@@ -1298,6 +1298,7 @@ def sync(keywords=None, max_scroll=6, account=None):
     keywords=list(dict.fromkeys(query_plan.keywords))[:32]
     raw={}; results=[]; blocked={}; state_counts={}; risk_infos=[]
     _consec_bad=0  # 连续被拦截/失败计数（成功或空结果清零），达到阈值即提前结束本轮保护账号
+    _network_result_reported = False
     for _ki, kw in enumerate(keywords):
         r=_run_search(kw,max_scroll)
         st=_normalize_collection_state(r.get('state'))
@@ -1318,6 +1319,13 @@ def sync(keywords=None, max_scroll=6, account=None):
         elif isinstance(risk_info, dict) and risk_info.get('is_risk') is True:
             # Keep an explicit risk signal even when the data outcome is separately EMPTY/SUCCESS.
             risk_infos.append(risk_info)
+        if st in _BLOCKED_RESULT_STATES and not _network_result_reported:
+            # Apply risk pacing immediately so the next keyword observes it.
+            # This is the task's one risk event; the final summary must not count it again.
+            network_adaptive.report_collection_result(
+                success=False, risk_info=risk_info, notes_count=0, state=st,
+            )
+            _network_result_reported = True
         # 连续拦截/网络失败早停：已在被风控时继续打只会加重，立即结束本轮（半数熔断仍在下方统一判定）
         if st in ('SUCCESS','EMPTY'):
             _consec_bad=0
@@ -1454,12 +1462,13 @@ def sync(keywords=None, max_scroll=6, account=None):
     network_risk = risk_infos[0] if risk_infos else None
     if task_state in _BLOCKED_RESULT_STATES and network_risk is None:
         network_risk = {'is_risk': True, 'risk_type': task_state, 'severity': 'high'}
-    network_adaptive.report_collection_result(
-        success=task_state in ('SUCCESS', 'EMPTY'),
-        risk_info=network_risk,
-        notes_count=total_new,
-        state=task_state,
-    )
+    if not _network_result_reported:
+        network_adaptive.report_collection_result(
+            success=task_state in ('SUCCESS', 'EMPTY'),
+            risk_info=network_risk,
+            notes_count=total_new,
+            state=task_state,
+        )
 
     # 获取当前网络状态（包含上面的唯一一次任务结果更新）
     net_status = network_adaptive.get_network_status()
@@ -1615,11 +1624,12 @@ def create_task(keywords=None,max_scroll=6,run_type='manual',account=None):
             # adaptive_engine 结果回写：滑动窗口成功率自动调整策略/参数
             try:
                 import adaptive_engine as _ae
+                valid_response = ts in ('SUCCESS', 'EMPTY')
                 _ae.adaptive_engine.report_collection_result(
-                    success=(ts == 'SUCCESS'),
+                    success=valid_response,
                     notes_count=int(result.get('inserted',0))+int(result.get('updated',0)),
                     duration=round(time.time()-_w_start, 1),
-                    error=result.get('blocked') or (None if ts=='SUCCESS' else ts))
+                    error=result.get('blocked') or (None if valid_response else ts))
             except Exception as _ae_e:
                 print('[xhs-bridge] adaptive feedback non-blocking:', _ae_e, flush=True)
         except Exception as e:

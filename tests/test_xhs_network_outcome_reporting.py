@@ -30,7 +30,7 @@ def _synthetic_plan(keywords):
     )
 
 
-def _run_synthetic_sync(monkeypatch, tmp_path, outcomes):
+def _run_synthetic_sync(monkeypatch, tmp_path, outcomes, search_runner=None):
     keywords = [f'synthetic-query-{index}' for index in range(len(outcomes))]
     plan = _synthetic_plan(keywords)
     monkeypatch.setattr(bridge, '_resolve_acquisition_plan', lambda *_args, **_kwargs: plan)
@@ -59,7 +59,10 @@ def _run_synthetic_sync(monkeypatch, tmp_path, outcomes):
     health_dir = tmp_path / 'network-cache'
     monkeypatch.setattr(network_adaptive, 'HEALTH_LOG', health_dir / 'health.json')
     monkeypatch.setattr(network_adaptive, 'CACHE_DIR', health_dir)
-    monkeypatch.setattr(bridge, '_run_search', lambda keyword, _max_scroll: dict(outcomes[keywords.index(keyword)]))
+    runner = search_runner or (
+        lambda keyword, _max_scroll: dict(outcomes[keywords.index(keyword)])
+    )
+    monkeypatch.setattr(bridge, '_run_search', runner)
 
     return bridge.sync(keywords=keywords, max_scroll=1, account=bridge.XHS_RETINAUT_NAME)
 
@@ -120,6 +123,92 @@ def test_blocked_keywords_record_one_risk_event_per_task(tmp_path, monkeypatch):
     assert health['consecutive_failures'] == 1
     assert len(health['risk_events']) == 1
     assert health['risk_events'][0]['type'] == 'synthetic-risk'
+
+
+def test_blocked_keyword_reduces_pacing_before_next_search(tmp_path, monkeypatch):
+    seen_settings = []
+
+    def search_runner(_keyword, _max_scroll):
+        seen_settings.append(network_adaptive._load_health()['adaptive_settings'].copy())
+        if len(seen_settings) == 1:
+            return {
+                'state': 'BLOCKED', 'total': 0, 'notes': [],
+                'blocked_reason': 'SYNTHETIC_BLOCK',
+                'risk_info': {
+                    'is_risk': True, 'risk_type': 'synthetic-risk', 'severity': 'high',
+                },
+            }
+        return {'state': 'SUCCESS', 'total': 0, 'notes': []}
+
+    result = _run_synthetic_sync(
+        monkeypatch,
+        tmp_path,
+        [{'state': 'BLOCKED'}, {'state': 'SUCCESS'}],
+        search_runner=search_runner,
+    )
+
+    health = network_adaptive._load_health()
+    assert result['task_state'] == 'PARTIAL_BLOCKED'
+    assert seen_settings[0]['current_scroll_limit'] == 6
+    assert seen_settings[1]['current_scroll_limit'] == 4
+    assert seen_settings[1]['current_delay_seconds'] == 5
+    assert seen_settings[1]['auto_reduced'] is True
+    assert health['consecutive_failures'] == 1
+    assert len(health['risk_events']) == 1
+
+
+def test_empty_create_task_reports_valid_response_to_adaptive_engine(monkeypatch):
+    import adaptive_engine
+
+    bridge_module = bridge
+    monkeypatch.setattr(bridge_module, '_resolve_acquisition_plan', lambda *_args: _synthetic_plan(['empty-query']))
+    monkeypatch.setattr(bridge_module, 'collection_policy_gate', lambda **_kwargs: {'ok': True})
+    monkeypatch.setattr(bridge_module, 'select_account', lambda _account: (True, 'synthetic identity'))
+    monkeypatch.setattr(bridge_module, 'verify_account', lambda: (True, 'synthetic identity'))
+    monkeypatch.setattr(bridge_module, 'is_user_paused', lambda: None)
+    monkeypatch.setattr(bridge_module, 'is_test_mode', lambda: True)
+    monkeypatch.setattr(bridge_module, 'record_run', lambda _run_type: None)
+    monkeypatch.setattr(bridge_module, 'get_circuit_state', lambda: {'open': False})
+    monkeypatch.setattr(bridge_module, 'sync', lambda *_args, **_kwargs: {
+        'task_state': 'EMPTY', 'inserted': 0, 'updated': 0, 'blocked': '',
+    })
+    monkeypatch.setattr(bridge_module, '_shadow_record_result', lambda *_args, **_kwargs: None)
+
+    class ImmediateThread:
+        def __init__(self, *, target, **_kwargs):
+            self.target = target
+
+        def start(self):
+            self.target()
+
+    class IsolatedLock:
+        def acquire(self, *, blocking):
+            assert blocking is False
+            return True
+
+        def release(self):
+            return None
+
+    monkeypatch.setattr(bridge_module.threading, 'Thread', ImmediateThread)
+    monkeypatch.setattr(bridge_module, '_lock', IsolatedLock())
+    feedback = []
+    monkeypatch.setattr(
+        adaptive_engine.adaptive_engine,
+        'report_collection_result',
+        lambda **kwargs: feedback.append(kwargs),
+    )
+
+    task_id = bridge_module.create_task(
+        keywords=['empty-query'], account=bridge_module.XHS_RETINAUT_NAME,
+    )
+    try:
+        assert bridge_module.get_task(task_id)['status'] == 'done'
+        assert len(feedback) == 1
+        assert feedback[0]['success'] is True
+        assert feedback[0]['notes_count'] == 0
+        assert feedback[0]['error'] is None
+    finally:
+        bridge_module._tasks.pop(task_id, None)
 
 
 def test_search_preserves_block_risk_without_reporting_before_task_summary(tmp_path, monkeypatch):
