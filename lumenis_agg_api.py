@@ -147,6 +147,18 @@ def _git_info(repo_path: Path):
                     and value[0].isalpha() and value[1] == ":" and value[2] in "/\\"
                     and not parsed.netloc):
                 return value
+            # Git SCP-like syntax "[user@]host:path" applies only when no slash
+            # precedes the first colon and the value is not a URL ("://").
+            # Known URL schemes keep the URL rules below. A path still holding
+            # "@" after the colon is credential-shaped: fail closed.
+            if isinstance(value, str) and "://" not in value and not value.startswith(("/", "./", "../")):
+                head, colon, scp_path = value.partition(":")
+                if (colon and head and scp_path and "/" not in head and "\\" not in head
+                        and head.lower() not in {"http", "https", "ssh", "git", "file"}):
+                    if "@" in scp_path:
+                        return None
+                    host = head.rsplit("@", 1)[-1]
+                    return f"{host}:{scp_path}" if host else None
             if parsed.scheme or parsed.netloc:
                 # Only hierarchical URLs whose authority can be sanitized are
                 # accepted. Opaque/malformed forms (https:user:pw@host/repo)

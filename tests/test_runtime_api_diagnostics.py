@@ -740,3 +740,18 @@ def test_git_info_sanitizes_authority_in_drive_letter_shaped_remote(tmp_path: Pa
     result = _remote_result(tmp_path, "windows-auth", "C://user:secret@host/repo.git")
     assert "secret" not in str(result.get("remote"))
     assert "user:" not in str(result.get("remote"))
+
+
+@pytest.mark.parametrize(("url", "expected"), [
+    ("github.com:org/repo.git", "github.com:org/repo.git"),
+    ("git@github.com:org/repo.git", "github.com:org/repo.git"),
+])
+def test_git_info_accepts_scp_like_remote_with_optional_user(tmp_path: Path, url, expected) -> None:
+    result = _remote_result(tmp_path, "scp", url)
+    assert result["available"] is True
+    assert result["remote"] == expected
+
+
+def test_git_info_fails_closed_for_scp_like_remote_with_password(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "scp-pw", "user:fixture-secret@host:org/repo.git")
+    assert "fixture-secret" not in json.dumps(result)

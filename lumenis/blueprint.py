@@ -127,15 +127,31 @@ def create_v4_blueprint() -> Blueprint:
         key = (data.get("key") or "").strip()
         bucket = WORKSPACE_KEY_ATTEMPT_USERNAME
         ip = normalize_login_ip(request.remote_addr)
-        check = check_login_attempts(bucket, ip)
-        if not check["allowed"]:
-            return jsonify({"success": False, "error": "尝试过多已锁定，请稍后再试", "remaining": 0}), 429
-        rec = verify_workspace_key(ws, key)
+        from .auth.models import get_db as _auth_db
+        from .auth.workspace import ensure_workspace_tables
+        conn = _auth_db()
+        try:
+            ensure_workspace_tables(conn)
+            conn.commit()
+            # Serialize check -> verify -> record (as login_by_key does) so
+            # concurrent guesses cannot all pass the final allowed attempt.
+            conn.execute("BEGIN IMMEDIATE")
+            check = check_login_attempts(bucket, ip, conn=conn)
+            if not check["allowed"]:
+                conn.rollback()
+                return jsonify({"success": False, "error": "尝试过多已锁定，请稍后再试", "remaining": 0}), 429
+            rec = verify_workspace_key(ws, key, conn=conn)
+            record_login_attempt(bucket, ip, bool(rec), conn=conn)
+            conn.commit()
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+        finally:
+            conn.close()
         if not rec:
-            record_login_attempt(bucket, ip, False)
             log_audit("workspace_unlock_denied", "auth", ws, "workspace key invalid")
             return jsonify({"success": False, "error": "工作区密钥无效或已吊销/过期"}), 401
-        record_login_attempt(bucket, ip, True)
         gres = grant_session(user["id"], ws, rec["id"], user["token"], WORKSPACE_CONFIG["grant_hours"])
         log_audit("workspace_unlock", "auth", ws, "unlock workspace " + ws)
         return jsonify({"success": True, "workspace": ws, "granted": True,

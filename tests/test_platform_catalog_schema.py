@@ -721,9 +721,19 @@ class TestDataCenterAPI:
         assert sorted(row["id"] for row in response.get_json()["data"]) == [9801]
         response = client.get("/api/data-center/table/notes?end_date=9999-12-31T23:59:59.999999Z")
         assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802, 9803]
+        # A start after every representable stored instant is valid and empty.
         response = client.get("/api/data-center/table/notes?start_date=9999-12-31T23:59:59-05:00")
-        assert response.status_code == 400
-        assert response.get_json() == {"ok": False, "error": "invalid start_date"}
+        assert response.status_code == 200
+        assert response.get_json()["data"] == []
+        # Sub-millisecond precision is preserved on both bounds.
+        platform_db.execute("DELETE FROM notes")
+        platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9811, '2026-01-01T00:00:00.000100Z')")
+        platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9812, '2026-01-01T00:00:00.000400Z')")
+        platform_db.commit()
+        response = client.get("/api/data-center/table/notes?end_date=2026-01-01T00:00:00.000100Z")
+        assert [row["id"] for row in response.get_json()["data"]] == [9811]
+        response = client.get("/api/data-center/table/notes?start_date=2026-01-01T00:00:00.000400Z")
+        assert [row["id"] for row in response.get_json()["data"]] == [9812]
 
     @pytest.mark.parametrize(("parameter", "invalid_date"), [
         ("start_date", "2026-02-30"),

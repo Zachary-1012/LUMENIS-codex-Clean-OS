@@ -121,6 +121,11 @@ def _validate_official_source_url(source_url: Any) -> str:
                     # when it has no query of its own.
                     if nested_parts.netloc and "@" in nested_parts.netloc:
                         return True
+                    # The outer URL may not carry a fragment; an encoded
+                    # nested fragment (#access_token=...) is held to the same
+                    # rule: fail closed rather than persist it as Evidence.
+                    if nested_parts.fragment:
+                        return True
                 except ValueError:
                     nested_query = ""
                 if nested_query:

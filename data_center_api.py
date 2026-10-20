@@ -83,54 +83,68 @@ def _parse_date_bound(value: str) -> tuple[datetime, bool]:
     return parsed, date_only
 
 
-def _out_of_range_bound(parsed: datetime, *, end: bool):
-    """A valid ISO bound whose UTC instant leaves Python's year range.
+_EPOCH = datetime(1970, 1, 1)
+_ONE_US = timedelta(microseconds=1)
+_DAY_US = 86_400_000_000
 
-    An end bound past year 9999 or a start bound before year 1 excludes
-    nothing (no bound). The opposite cases cannot be represented, so they are
-    rejected as a controlled validation error instead of a 500.
+
+def _utc_microseconds(parsed: datetime) -> int:
+    """Exact UTC instant in integer microseconds since the Unix epoch.
+
+    Integer arithmetic on the naive wall time minus the declared offset never
+    leaves Python's datetime range, so offset-adjusted extremes such as
+    9999-12-31T23:59:59-05:00 or 0001-01-01T00:00+05:00 stay representable and
+    no millisecond rounding (SQLite julianday) can merge distinct instants.
     """
-    beyond_max = parsed.year == 9999
-    if end == beyond_max:
-        return None, None
-    raise ValueError("date bound outside representable range")
+    offset = parsed.utcoffset() or timedelta(0)
+    return (parsed.replace(tzinfo=None) - _EPOCH) // _ONE_US - offset // _ONE_US
 
 
-def _text_date_filter(value: str, *, end: bool) -> tuple[str, str]:
-    """Validate an ISO bound and return a UTC literal for julianday() comparison."""
-    parsed, date_only = _parse_date_bound(value)
+def _stored_utc_microseconds(value):
+    """SQLite function: stored ISO text -> UTC microseconds, NULL if unparseable.
+
+    Naive stored values are UTC (as julianday() treated them); 'T' or space,
+    'Z' or numeric offsets and fractional seconds are accepted.
+    """
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
     try:
-        utc = parsed.astimezone(timezone.utc)
-    except OverflowError:
-        return _out_of_range_bound(parsed, end=end)
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00").replace("z", "+00:00"))
+    except ValueError:
+        return None
+    return _utc_microseconds(parsed)
+
+
+def _register_instant_function(conn) -> None:
+    conn.create_function("lumenis_utc_us", 1, _stored_utc_microseconds, deterministic=True)
+
+
+def _bound_microseconds(value: str, *, end: bool) -> tuple[str, int]:
+    """Validated ISO bound -> (operator, inclusive/exclusive UTC microseconds)."""
+    parsed, date_only = _parse_date_bound(value)
+    instant = _utc_microseconds(parsed)
     if date_only and end:
-        try:
-            return "<", (utc + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
-        except OverflowError:
-            # 9999-12-31 has no next day and SQLite's julianday() returns NULL
-            # for fractional instants at that boundary: no upper bound exists.
-            return None, None
-    if (end and utc >= datetime(9999, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
-            and utc.microsecond >= 999500):
-        # SQLite rounds to milliseconds; this rounds past 9999-12-31 and
-        # julianday() becomes NULL. Nothing representable is later, so the
-        # bound excludes nothing. Second-precision bounds stay active.
-        return None, None
-    return ("<=" if end else ">="), utc.strftime("%Y-%m-%d %H:%M:%S.%f")
+        # Include the whole requested end date, including fractional seconds.
+        return "<", instant + _DAY_US
+    return ("<=" if end else ">="), instant
+
+
+def _text_date_filter(value: str, *, end: bool) -> tuple[str, int]:
+    """Bound for text columns, compared through lumenis_utc_us()."""
+    return _bound_microseconds(value, end=end)
 
 
 def _unix_date_filter(
     value: str, *, end: bool, timestamp_multiplier: float = 1,
 ) -> tuple[str, float]:
     """Convert an ISO bound to a source-native Unix timestamp comparison."""
-    parsed, date_only = _parse_date_bound(value)
-    try:
-        if date_only and end:
-            # Include the whole requested end date, including fractional seconds.
-            return "<", (parsed + timedelta(days=1)).timestamp() * timestamp_multiplier
-        return ("<=" if end else ">="), parsed.timestamp() * timestamp_multiplier
-    except (OverflowError, ValueError):
-        return _out_of_range_bound(parsed, end=end)
+    operator, instant = _bound_microseconds(value, end=end)
+    if timestamp_multiplier == 1000:
+        return operator, instant / 1000
+    return operator, instant / 1_000_000 * timestamp_multiplier
 
 
 @data_center_bp.route("/platforms", methods=["GET"])
@@ -325,16 +339,14 @@ def query_table(table_name: str):
                         operator, value = _text_date_filter(start_date, end=False)
                 except ValueError:
                     return jsonify({"ok": False, "error": "invalid start_date"}), 400
-                if operator is None:
-                    pass  # earliest representable date: nothing is earlier
-                elif not numeric_time_col:
-                    # Compare instants, not strings: julianday() applies
-                    # declared offsets (Z/+08:00) and accepts 'T' or space.
-                    where_clauses.append(f"julianday({time_expr}) {operator} julianday(?)")
+                if not numeric_time_col:
+                    # Compare exact UTC instants (microseconds), not strings:
+                    # declared offsets (Z/+08:00), 'T' or space are applied.
+                    _register_instant_function(conn)
+                    where_clauses.append(f"lumenis_utc_us({time_expr}) {operator} ?")
                 else:
                     where_clauses.append(f"{time_expr} {operator} ?")
-                if operator is not None:
-                    params.append(value)
+                params.append(value)
             if end_date:
                 try:
                     if numeric_time_col:
@@ -346,16 +358,14 @@ def query_table(table_name: str):
                         operator, value = _text_date_filter(end_date, end=True)
                 except ValueError:
                     return jsonify({"ok": False, "error": "invalid end_date"}), 400
-                if operator is None:
-                    pass  # maximum date: every stored instant is on or before it
-                elif not numeric_time_col:
-                    # Compare instants, not strings: julianday() applies
-                    # declared offsets (Z/+08:00) and accepts 'T' or space.
-                    where_clauses.append(f"julianday({time_expr}) {operator} julianday(?)")
+                if not numeric_time_col:
+                    # Compare exact UTC instants (microseconds), not strings:
+                    # declared offsets (Z/+08:00), 'T' or space are applied.
+                    _register_instant_function(conn)
+                    where_clauses.append(f"lumenis_utc_us({time_expr}) {operator} ?")
                 else:
                     where_clauses.append(f"{time_expr} {operator} ?")
-                if operator is not None:
-                    params.append(value)
+                params.append(value)
 
         where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 

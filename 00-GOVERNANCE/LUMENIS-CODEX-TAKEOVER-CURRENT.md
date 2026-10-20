@@ -432,8 +432,13 @@ opens an owner session from a shared workspace key) and locks a per-IP bucket
 after the configured failure limit; only the exact reserved buckets
 `__access_key__`/`__workspace_key__` are per-IP. `/v4/auth/workspace/keys`
 listing is owner-only. `/v4/auth/login-by-key` (owner-configured
-`V4_ACCESS_KEY`, existing per-IP lockout) is unchanged. Publication date
-bounds at the representable extremes no longer return 500 or drop rows.
+`V4_ACCESS_KEY`, existing per-IP lockout) is unchanged. Text publication
+date bounds compare exact UTC instants in integer microseconds (offsets
+applied, no julianday millisecond rounding, no overflow at year 1/9999).
+Workspace-key check/verify/record run in one serialized transaction; reserved
+bucket names cannot be account usernames. Official source URLs reject nested
+encoded fragments; Git diagnostics accept `[user@]host:path` SCP remotes and
+fail closed when a password remains.
 Regressions: `tests/test_account_security_hardening.py` and existing test
 files. Offline only; runtime, database and user acceptance remain NOT_VERIFIED.
 

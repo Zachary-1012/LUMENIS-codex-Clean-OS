@@ -125,3 +125,35 @@ def test_owner_bearer_reaches_compat_key_routes_under_basic_auth(client, monkeyp
     r = c.get("/api/v4/api-keys", headers={"Authorization": "Bearer synthetic"})
     assert r.status_code == 200
     assert r.get_json()["ok"] is True
+
+
+def test_workspace_unlock_attempts_are_serialized_in_one_transaction(client, monkeypatch):
+    """check -> verify -> record share one BEGIN IMMEDIATE connection."""
+    import lumenis.blueprint as bp_module  # noqa: F401
+    from lumenis.auth import security, workspace, service
+    seen = {}
+    real_check, real_verify, real_record = (
+        security.check_login_attempts, workspace.verify_workspace_key, security.record_login_attempt)
+
+    def check(bucket, ip, conn=None):
+        seen["check"] = conn
+        assert conn is not None and conn.in_transaction
+        return real_check(bucket, ip, conn=conn)
+
+    def verify(ws, key, conn=None):
+        seen["verify"] = conn
+        return real_verify(ws, key, conn=conn)
+
+    def record(bucket, ip, ok, conn=None):
+        seen["record"] = conn
+        return real_record(bucket, ip, ok, conn=conn)
+
+    monkeypatch.setattr(security, "check_login_attempts", check)
+    monkeypatch.setattr(security, "record_login_attempt", record)
+    monkeypatch.setattr(bp_module, "verify_workspace_key", verify)
+    monkeypatch.setattr(bp_module, "get_current_user",
+                        lambda *a, **k: {"id": 1, "username": "o", "role": "owner", "token": "t"})
+    c, _ = client
+    r = c.post("/v4/auth/workspace/unlock", json={"workspace": "ZBMP", "key": "wrong"})
+    assert r.status_code == 401
+    assert seen["check"] is seen["verify"] is seen["record"] is not None

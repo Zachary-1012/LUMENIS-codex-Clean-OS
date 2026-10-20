@@ -87,14 +87,22 @@ def issue_workspace_key(workspace, label="", created_by=None, expires_days=None,
         conn.close()
 
 
-def verify_workspace_key(workspace, key):
-    """校验明文密钥是否为该工作区的有效(active/未过期)密钥；命中回写 last_used_at，返回记录 dict，否则 None。"""
+def verify_workspace_key(workspace, key, conn=None):
+    """校验明文密钥是否为该工作区的有效(active/未过期)密钥；命中回写 last_used_at，返回记录 dict，否则 None。
+
+    With a caller-owned ``conn`` the lookup and last_used_at write join the
+    caller's transaction (no commit/close here), so attempt limiting can be
+    serialized with verification.
+    """
     workspace = (workspace or "").strip().upper()
     if not workspace or not key:
         return None
-    conn = get_db()
+    owns_connection = conn is None
+    if owns_connection:
+        conn = get_db()
     try:
-        ensure_workspace_tables(conn)
+        if owns_connection:
+            ensure_workspace_tables(conn)
         rows = conn.execute(
             "SELECT * FROM v4_workspace_keys WHERE workspace=? AND status='active'",
             (workspace,),
@@ -106,11 +114,13 @@ def verify_workspace_key(workspace, key):
             if verify_password(key.strip(), r["key_hash"]):
                 conn.execute("UPDATE v4_workspace_keys SET last_used_at=datetime('now','localtime') WHERE id=?",
                              (r["id"],))
-                conn.commit()
+                if owns_connection:
+                    conn.commit()
                 return dict(r)
         return None
     finally:
-        conn.close()
+        if owns_connection:
+            conn.close()
 
 
 def list_workspace_keys(workspace=None):
