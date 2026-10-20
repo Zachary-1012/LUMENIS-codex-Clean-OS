@@ -11,8 +11,10 @@ import ast
 import base64
 import json
 import secrets
+import subprocess
 import sys
 import types
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 
@@ -469,3 +471,118 @@ def test_system_runtime_requires_basic_auth_and_keeps_other_public_route() -> No
         "ok": True,
         "source": "existing-public-status",
     }
+
+
+def _new_local_git_repo(repo_path: Path) -> None:
+    """Create a committed local fixture without contacting any remote."""
+    subprocess.run(["git", "init", "--quiet"], cwd=repo_path, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Isolated Test",
+            "-c",
+            "user.email=isolated-test@example.invalid",
+            "commit",
+            "--quiet",
+            "--allow-empty",
+            "-m",
+            "fixture",
+        ],
+        cwd=repo_path,
+        check=True,
+    )
+
+
+def _git_info(subprocess_module=subprocess):
+    function, _ = _load_function(
+        _AGG_SOURCE,
+        "_git_info",
+        subprocess=subprocess_module,
+        urllib=urllib,
+    )
+    return function
+
+
+def test_git_info_distinguishes_real_clean_output_from_git_failure(tmp_path: Path) -> None:
+    repo_path = tmp_path / "clean-repository"
+    repo_path.mkdir()
+    _new_local_git_repo(repo_path)
+
+    clean_result = _git_info()(repo_path)
+
+    assert clean_result["available"] is True
+    assert clean_result["status"] == "READY"
+    assert clean_result["clean"] is True
+    assert clean_result["dirty_files"] == 0
+    assert clean_result["head_sha"] != "UNKNOWN"
+    assert clean_result["branch"] != "UNKNOWN"
+
+    class FailingStatusSubprocess:
+        @staticmethod
+        def run(args, **kwargs):
+            if args == ["git", "status", "--porcelain"]:
+                return subprocess.CompletedProcess(
+                    args, 128, stdout="", stderr="isolated-git-error-marker"
+                )
+            return subprocess.run(args, **kwargs)
+
+    failed_result = _git_info(FailingStatusSubprocess)(repo_path)
+
+    assert failed_result["available"] is False
+    assert failed_result["status"] == "ERROR"
+    assert failed_result["clean"] is None
+    assert failed_result["dirty_files"] is None
+    assert failed_result["failed_commands"] == ["worktree_status"]
+    assert "isolated-git-error-marker" not in json.dumps(failed_result)
+
+
+def test_git_info_redacts_credentials_from_remote_url(tmp_path: Path) -> None:
+    repo_path = tmp_path / "remote-fixture"
+    repo_path.mkdir()
+    _new_local_git_repo(repo_path)
+    subprocess.run(
+        [
+            "git",
+            "remote",
+            "add",
+            "origin",
+            "https://fixture-user:fixture-password@github.com/example/repo.git"
+            "?access_token=query-secret&ref=main#fragment-secret",
+        ],
+        cwd=repo_path,
+        check=True,
+    )
+
+    result = _git_info()(repo_path)
+
+    assert result["available"] is True
+    assert result["clean"] is True
+    assert result["remote"].startswith("https://github.com/example/repo.git?")
+    assert "access_token=REDACTED" in result["remote"]
+    assert "ref=main" in result["remote"]
+    assert not any(
+        secret in result["remote"]
+        for secret in (
+            "fixture-user",
+            "fixture-password",
+            "query-secret",
+            "fragment-secret",
+        )
+    )
+
+
+def test_git_info_redacts_scp_style_remote_username(tmp_path: Path) -> None:
+    repo_path = tmp_path / "scp-remote-fixture"
+    repo_path.mkdir()
+    _new_local_git_repo(repo_path)
+    subprocess.run(
+        ["git", "remote", "add", "origin", "fixture-secret@github.com:org/repo.git"],
+        cwd=repo_path,
+        check=True,
+    )
+
+    result = _git_info()(repo_path)
+
+    assert result["remote"] == "github.com:org/repo.git"
+    assert "fixture-secret" not in result["remote"]

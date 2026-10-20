@@ -18,6 +18,7 @@ import sys
 import sqlite3
 import subprocess
 import platform
+import urllib.parse
 from pathlib import Path
 from lumenis.shared.database import DatabaseRepository, main_db_path
 from datetime import datetime
@@ -74,27 +75,104 @@ def _osai_module(name):
 
 
 def _git_info(repo_path: Path):
-    """只读读取 git HEAD SHA / branch / 工作区状态。"""
+    """只读读取 Git 状态；命令失败保持未知，并脱敏远端凭据。"""
+    unknown = {
+        "available": False,
+        "status": "UNAVAILABLE",
+        "head_sha": "UNKNOWN",
+        "branch": "UNKNOWN",
+        "remote": "",
+        "dirty_files": None,
+        "clean": None,
+    }
     if not repo_path or not repo_path.exists():
-        return {"available": False, "status": "UNAVAILABLE"}
+        return unknown
+
     def _run(args):
         try:
-            out = subprocess.run(["git"] + args, cwd=str(repo_path),
-                                 capture_output=True, text=True, timeout=8)
-            return out.stdout.strip() if out.returncode == 0 else ""
-        except Exception:
-            return ""
+            result = subprocess.run(
+                ["git"] + args,
+                cwd=str(repo_path),
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+        except Exception as exc:
+            return {"ok": False, "value": "", "returncode": None, "error": type(exc).__name__}
+        if result.returncode != 0:
+            return {
+                "ok": False,
+                "value": "",
+                "returncode": result.returncode,
+                "error": "GIT_COMMAND_FAILED",
+            }
+        return {"ok": True, "value": result.stdout.strip(), "returncode": 0, "error": ""}
+
+    def _sanitize_remote(value):
+        try:
+            parsed = urllib.parse.urlsplit(value)
+            if not parsed.scheme or not parsed.netloc:
+                # Git's scp-style SSH remotes have no URL scheme but still
+                # place the username (and sometimes a token) before ``@``.
+                return value.rsplit("@", 1)[-1] if "@" in value else value
+            # Drop all user-info (including username-only access tokens) while
+            # retaining the public host and repository path.
+            authority = parsed.netloc.rsplit("@", 1)[-1]
+            sensitive = {
+                "token", "password", "passwd", "secret", "apikey",
+                "credential", "authorization",
+            }
+            safe_query = []
+            for key, item in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True):
+                normalized = key.lower().replace("_", "").replace("-", "")
+                if any(name in normalized for name in sensitive):
+                    item = "REDACTED"
+                safe_query.append((key, item))
+            return urllib.parse.urlunsplit((
+                parsed.scheme,
+                authority,
+                parsed.path,
+                urllib.parse.urlencode(safe_query),
+                "",
+            ))
+        except (TypeError, ValueError):
+            return "UNKNOWN"
+
     sha = _run(["rev-parse", "--short", "HEAD"])
     branch = _run(["rev-parse", "--abbrev-ref", "HEAD"])
-    status = _run(["status", "--porcelain"])
+    worktree = _run(["status", "--porcelain"])
     remote = _run(["config", "--get", "remote.origin.url"])
+
+    # A missing origin is a valid local repository state (git config exits 1);
+    # other remote-inspection failures make the aggregate diagnostic incomplete.
+    remote_missing = remote["returncode"] == 1 and not remote["value"]
+    failed = []
+    if not sha["ok"] or not sha["value"]:
+        failed.append("head_sha")
+    if not branch["ok"] or not branch["value"]:
+        failed.append("branch")
+    # Empty porcelain output is the authoritative representation of a clean
+    # worktree, so only command failure makes this diagnostic unknown.
+    if not worktree["ok"]:
+        failed.append("worktree_status")
+    if not remote["ok"] and not remote_missing:
+        failed.append("remote")
+    if remote["ok"] and not remote["value"]:
+        failed.append("remote")
+
+    complete = not failed
     return {
-        "available": bool(sha),
-        "head_sha": sha or "UNKNOWN",
-        "branch": branch or "UNKNOWN",
-        "remote": remote or "",
-        "dirty_files": len([l for l in status.splitlines() if l.strip()]) if status else 0,
-        "clean": not bool(status),
+        "available": complete,
+        "status": "READY" if complete else "ERROR",
+        "head_sha": sha["value"] if sha["ok"] and sha["value"] else "UNKNOWN",
+        "branch": branch["value"] if branch["ok"] and branch["value"] else "UNKNOWN",
+        "remote": _sanitize_remote(remote["value"]) if remote["ok"] else ("UNKNOWN" if not remote_missing else ""),
+        "dirty_files": (
+            len([line for line in worktree["value"].splitlines() if line.strip()])
+            if complete else None
+        ),
+        "clean": (not bool(worktree["value"])) if complete else None,
+        **({"error": "GIT_INFO_COMMAND_FAILED", "failed_commands": failed} if failed else {}),
     }
 
 
