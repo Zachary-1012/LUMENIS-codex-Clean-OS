@@ -4,6 +4,28 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-058 / FIX-060 — derived memory TTL and forget
+
+In the existing `agent_memory/base.py` owner, expired records are filtered
+before the caller limit and use one query-time clock value (FIX-058 E04-TTL).
+The existing derived-memory writer rejects a delayed implicit same-task/key
+write after the forgotten tombstone, rather than reviving that record
+(FIX-060 E04-FORGET).
+
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/4N-meRHHaGHjU5wZ/lib/python3.12/site-packages python -m pytest -q tests/agent_memory/test_working_memory.py`
+— **20 passed**, with no background-thread leak. The isolated FIX-060 SQLite
+regression confirmed the forgotten revision/tombstone rejects the stale write
+and remains unreadable after reopen. `compileall` and `git diff --check` passed.
+The added API/Agent regression in `tests/test_scoped_derived_memory.py` was not
+run to completion: its existing schema auto-migration stops at v12→v13 because
+`feedparser` is unavailable in the offline environment. No package was fetched
+or installed. Therefore FIX-058 API/Agent coverage remains OPEN; wider
+derived-dependency invalidation remains OPEN for FIX-060. FIX-059 still lacks a
+verified Agent retrieval/fusion caller; FIX-061 and FIX-084–088 remain OPEN
+because their Shared Learning files have no available exact write reservation.
+No W6 or production database was modified; runtime/product acceptance remains
+NOT_VERIFIED.
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

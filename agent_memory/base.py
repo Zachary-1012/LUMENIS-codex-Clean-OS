@@ -158,6 +158,11 @@ class BaseMemoryLayer:
             prior = json.loads(old[0]) if old else {}
             if old and (prior.get("schema_version") != 1 or prior.get("binding") != binding):
                 raise PermissionError("MEMORY_BINDING_CHANGED")
+            if old and prior.get("state") == "forgotten" and not forgotten:
+                # FIX-060 E04-FORGET: a delayed writer may finish after a user forgets this key.
+                # Keep the tombstone authoritative; a fresh implicit store is
+                # not proof that the old derived work was intentionally restored.
+                raise PermissionError("MEMORY_FORGET_TOMBSTONE")
             if expected_revision is not None and prior.get("revision", 0) != expected_revision:
                 raise RuntimeError("MEMORY_REVISION_CONFLICT")
             revision = int(prior.get("revision", 0)) + 1
@@ -215,8 +220,11 @@ class BaseMemoryLayer:
               limit: int = 50) -> List[MemoryRecord]:
         if not self.enabled:
             return []
-        results = self._query(filters or {}, limit)
         now = time.time()
+        # Apply TTL before limiting so newer short-lived records cannot hide
+        # older still-valid records from API/Agent callers. Pass one clock
+        # reading through both layers so an expiry-boundary query is stable.
+        results = self._query(filters or {}, limit, valid_at=now)
         return [r for r in results if not r.is_expired(now)][:limit]
 
     def forget(self, key: str) -> bool:
@@ -272,10 +280,14 @@ class BaseMemoryLayer:
             return next((r for r in self._derived_rows() if r.key == key), None)
         return self._in_memory.get(key)
 
-    def _query(self, filters: Dict[str, Any], limit: int) -> List[MemoryRecord]:
+    def _query(self, filters: Dict[str, Any], limit: int,
+               *, valid_at: Optional[float] = None) -> List[MemoryRecord]:
         results = []
         records = self._derived_rows() if self._task_binding is not None else self._in_memory.values()
+        now = time.time() if valid_at is None else valid_at
         for rec in records:
+            if rec.is_expired(now):
+                continue
             match = True
             for fk, fv in filters.items():
                 if fk == "keyword":

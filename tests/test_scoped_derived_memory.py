@@ -31,11 +31,17 @@ def test_derived_restart_correction_forget_and_scope(agent_client):
     assert fresh.retrieve('preference').value == original
     assert fresh.store('preference', {'text': 'corrected'})
     assert memory.retrieve('preference').value == {'text': 'corrected'}
+    stale_inflight = memory.retrieve('preference')
     other_task = submit(api)
     assert BaseMemoryLayer(path, enabled=True).bind_task(other_task, 1).retrieve('preference') is None
     with pytest.raises(PermissionError):
         BaseMemoryLayer(path, enabled=True).bind_task(task_id, 2)
     assert memory.forget('preference')
+    assert fresh.retrieve('preference') is None
+    with pytest.raises(PermissionError, match='MEMORY_FORGET_TOMBSTONE'):
+        memory._write_derived(stale_inflight)
+    with pytest.raises(PermissionError, match='MEMORY_FORGET_TOMBSTONE'):
+        fresh.store('preference', {'text': 'late background write'})
     assert fresh.retrieve('preference') is None
     with sqlite3.connect(path) as con:
         row = con.execute("SELECT content_json,lifecycle_stage FROM agent_learning_records WHERE learning_type='derived_memory_base'").fetchone()
@@ -101,6 +107,49 @@ def test_http_memory_write_permission_revision_and_terminal_archive(agent_client
     assert reopened_skills.select_best_skill(['not-authorized']) is None
     assert api.delete(url, json={'key': 'writing', 'expected_revision': 1}, headers=own).status_code == 200
     assert api.get(url, headers=own).get_json()['records'] == []
+
+
+def test_memory_ttl_filter_precedes_limit_for_api_and_agent(agent_client, monkeypatch):
+    """FIX-058: expired rows must not hide valid bound memory from either caller."""
+    from datetime import datetime, timedelta, timezone
+    from agent_memory.base import MemoryRecord
+    from agent_memory.episodic import EpisodicMemory
+    from agent_runtime.task_binding import AgentLoop
+
+    api, app, path = agent_client
+    task_id = submit(api)
+    memory = EpisodicMemory(path, enabled=True).bind_task(task_id, 1)
+    now = datetime.now(timezone.utc)
+    expired_at = (now - timedelta(seconds=1)).isoformat()
+    valid_at = (now - timedelta(seconds=10)).isoformat()
+    for index in range(51):
+        assert memory._write_derived(MemoryRecord(
+            layer='episodic', key=f'expired-{index}', value={'ordinal': index},
+            timestamp=expired_at, ttl_seconds=0.1))
+    assert memory._write_derived(MemoryRecord(
+        layer='episodic', key='valid-older', value={'source': 'still-valid'},
+        timestamp=valid_at, ttl_seconds=60))
+
+    headers = {'Authorization': 'Bearer fixture-session-one'}
+    api_result = api.get(f'/api/ai/tasks/{task_id}/memory?layer=episodic', headers=headers)
+    assert api_result.status_code == 200, api_result.get_json()
+    assert [row['key'] for row in api_result.get_json()['records']] == ['valid-older']
+
+    captured_contexts = []
+    original_run = AgentLoop.run
+
+    def capture_context(self, goal, context=None, agent_id=None, _resume_state=None,
+                        _existing_task_id=None):
+        captured_contexts.append(context)
+        return original_run(self, goal, context=context, agent_id=agent_id,
+                            _resume_state=_resume_state, _existing_task_id=_existing_task_id)
+
+    monkeypatch.setattr(AgentLoop, 'run', capture_context)
+    run_result = api.post(f'/api/ai/tasks/{task_id}/run', headers=headers)
+    assert run_result.status_code == 200, run_result.get_json()
+    assert run_result.get_json()['task']['status'] == 'succeeded'
+    assert len(captured_contexts) == 1
+    assert [row['key'] for row in captured_contexts[0]['derived_memory']] == ['valid-older']
 
 
 def test_authorized_memory_methods_use_real_signed_sources_and_task_owner(agent_client, monkeypatch):
