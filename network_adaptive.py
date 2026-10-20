@@ -97,7 +97,8 @@ def detect_risk(response_text: str = "", error_msg: str = "", status_code: int =
     
     return {"is_risk": False, "risk_type": None, "matched_keyword": None, "severity": "low"}
 
-def report_collection_result(success: bool, risk_info: Optional[Dict] = None, notes_count: int = 0):
+def report_collection_result(success: bool, risk_info: Optional[Dict] = None, notes_count: int = 0,
+                             state: Optional[str] = None):
     """
     报告一次采集结果，更新网络健康状态
     
@@ -105,6 +106,7 @@ def report_collection_result(success: bool, risk_info: Optional[Dict] = None, no
         success: 是否成功采集到数据
         risk_info: detect_risk()返回的风控信息
         notes_count: 采集到的笔记数量
+        state: 采集六态；SUCCESS/EMPTY 表示获得有效响应，即使没有新增笔记
     """
     health = _load_health()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -112,7 +114,31 @@ def report_collection_result(success: bool, risk_info: Optional[Dict] = None, no
     
     health["last_check"] = now
     
-    if success and notes_count > 0:
+    result_state = state.strip().upper() if isinstance(state, str) else None
+    blocked_states = {"BLOCKED", "CAPTCHA", "AUTH_FAILED"}
+    is_risk = isinstance(risk_info, dict) and risk_info.get("is_risk") is True
+    if result_state in blocked_states and not is_risk:
+        risk_info = {"is_risk": True, "risk_type": result_state}
+        is_risk = True
+
+    if is_risk:
+        # 风险信息独立于数据计数和聚合状态；一次任务只会经调用方汇总后记录一次。
+        health["consecutive_failures"] += 1
+        health["current_status"] = NetworkStatus.BLOCKED
+        risk_type = risk_info.get("risk_type") or risk_info.get("type") or result_state or "unknown"
+        event = {
+            "time": now,
+            "type": risk_type,
+            "severity": risk_info.get("severity"),
+            "consecutive": health["consecutive_failures"]
+        }
+        health["risk_events"].append(event)
+        health["risk_events"] = health["risk_events"][-20:]
+        health["adaptive_settings"]["current_scroll_limit"] = max(1, health["adaptive_settings"]["current_scroll_limit"] - 2)
+        health["adaptive_settings"]["current_delay_seconds"] = min(30, health["adaptive_settings"]["current_delay_seconds"] + 3)
+        health["adaptive_settings"]["auto_reduced"] = True
+    elif result_state in {"SUCCESS", "EMPTY"} or (
+            result_state is None and success and notes_count > 0):
         # 成功采集
         health["last_successful_collection"] = now
         health["consecutive_failures"] = 0
@@ -122,26 +148,8 @@ def report_collection_result(success: bool, risk_info: Optional[Dict] = None, no
             health["adaptive_settings"]["current_scroll_limit"] = 6
             health["adaptive_settings"]["current_delay_seconds"] = 2
             health["adaptive_settings"]["auto_reduced"] = False
-    elif risk_info and risk_info.get("is_risk"):
-        # 检测到风控
-        health["consecutive_failures"] += 1
-        health["current_status"] = NetworkStatus.BLOCKED
-        # 记录风控事件
-        event = {
-            "time": now,
-            "type": risk_info.get("risk_type"),
-            "severity": risk_info.get("severity"),
-            "consecutive": health["consecutive_failures"]
-        }
-        health["risk_events"].append(event)
-        # 只保留最近20条
-        health["risk_events"] = health["risk_events"][-20:]
-        # 自动降低频率
-        health["adaptive_settings"]["current_scroll_limit"] = max(1, health["adaptive_settings"]["current_scroll_limit"] - 2)
-        health["adaptive_settings"]["current_delay_seconds"] = min(30, health["adaptive_settings"]["current_delay_seconds"] + 3)
-        health["adaptive_settings"]["auto_reduced"] = True
     else:
-        # 其他失败（网络问题等）
+        # 网络错误、部分失败及未知状态都按失败处理；没有显式六态不能冒充成功。
         health["consecutive_failures"] += 1
         if health["consecutive_failures"] >= 3:
             health["current_status"] = NetworkStatus.OFFLINE
