@@ -171,11 +171,20 @@ def test_web_rss_normalizes_existing_public_reader_and_provenance(monkeypatch):
             "collected_at": "2026-09-18T04:00:00+00:00",
             "provider": "google_news_rss",
             "source": "news.google.com/rss/search",
+            "requested_source_url": "https://news.google.com/rss/search",
+            "final_source_url": "https://news.google.com/rss/search",
+            "redirect_chain": "[]",
+            "resolution_trace": "[]",
+            "source_access_mode": "public_read_only",
+            "commercial_license_state": "pending_review",
             "items": [{
                 "title": "Public RSS result",
                 "url": "https://public.example.test/rss-1",
                 "source": "Example Publisher",
+                "source_url": "https://public.example.test/",
                 "published_at": "2026-09-18T03:00:00+00:00",
+                "source_published_at": "Thu, 17 Sep 2026 20:00:00 -0700",
+                "publication_time_state": "KNOWN",
             }],
         },
     )
@@ -190,6 +199,126 @@ def test_web_rss_normalizes_existing_public_reader_and_provenance(monkeypatch):
     assert result.metadata["provider"] == "google_news_rss"
     assert result.metadata["source"] == "news.google.com/rss/search"
     assert result.metadata["collected_at"]
+    assert result.metadata["requested_source_url"] == "https://news.google.com/rss/search"
+    assert result.metadata["final_source_url"] == "https://news.google.com/rss/search"
+    assert result.metadata["source_access_mode"] == "public_read_only"
+    assert result.metadata["commercial_license_state"] == "pending_review"
+    assert result.items[0]["raw"]["source_url"] == "https://public.example.test/"
+    assert result.items[0]["raw"]["source_published_at"] == "Thu, 17 Sep 2026 20:00:00 -0700"
+    assert result.items[0]["raw"]["publication_time_state"] == "KNOWN"
+
+
+def test_google_news_rss_uses_bounded_public_transport_and_keeps_timezone(monkeypatch):
+    import web_discovery
+    from lumenis.system.collector.adapters import public_source
+
+    xml = """<rss version="2.0"><channel><title>Google News</title><item>
+      <title>Public result</title><link>https://publisher.example.test/item</link>
+      <pubDate>Thu, 17 Sep 2026 04:00:00 -0700</pubDate>
+      <source url="https://publisher.example.test/">Example Publisher</source>
+    </item></channel></rss>"""
+    response = PublicResponse(
+        url="https://news.google.com/rss/search?q=lumenis",
+        requested_url="https://news.google.com/rss/search?q=lumenis",
+        content=xml.encode("utf-8"),
+        content_type="application/rss+xml",
+        status_code=200,
+    )
+    calls = []
+
+    def fetch(url, **kwargs):
+        calls.append((url, kwargs))
+        return response
+
+    monkeypatch.setattr(public_source, "fetch_public_url", fetch)
+
+    outcome = web_discovery.fetch_google_news_rss("lumenis", max_results=1)
+
+    assert outcome["ok"] is True
+    assert len(calls) == 1
+    requested_url, options = calls[0]
+    assert requested_url.startswith("https://news.google.com/rss/search?")
+    assert options["max_bytes"] == public_source.MAX_RESPONSE_BYTES
+    assert options["allowed_host_suffixes"] == ("google.com",)
+    assert outcome["items"][0]["published_at"] == "2026-09-17T04:00:00-07:00"
+    assert outcome["items"][0]["source_published_at"] == "Thu, 17 Sep 2026 04:00:00 -0700"
+    assert outcome["items"][0]["publication_time_state"] == "KNOWN"
+    assert outcome["items"][0]["source_url"] == "https://publisher.example.test/"
+    assert outcome["source_access_mode"] == "public_read_only"
+    assert outcome["final_source_url"] == "https://news.google.com/rss/search"
+
+
+@pytest.mark.parametrize(
+    ("status_code", "content_type", "expected_error"),
+    [
+        (503, "application/rss+xml", "HTTP_503"),
+        (200, "text/html", "RSS_RESPONSE_TYPE_UNSUPPORTED"),
+    ],
+)
+def test_google_news_rss_keeps_http_failure_distinct_from_media_type_failure(
+    monkeypatch, status_code, content_type, expected_error,
+):
+    import web_discovery
+    from lumenis.system.collector.adapters import public_source
+
+    response = PublicResponse(
+        url="https://news.google.com/rss/search?q=lumenis",
+        content=b"<rss></rss>", content_type=content_type, status_code=status_code,
+    )
+    monkeypatch.setattr(public_source, "fetch_public_url", lambda *_args, **_kwargs: response)
+
+    outcome = web_discovery.fetch_google_news_rss("lumenis", max_results=1)
+
+    assert outcome["ok"] is False
+    assert outcome["items"] == []
+    assert outcome["error_type"] == expected_error
+
+
+def test_empty_rss_is_no_new_data_but_transport_failure_is_unavailable(monkeypatch):
+    import web_discovery
+    from lumenis.system.collector.adapters import public_source
+
+    response = PublicResponse(
+        url="https://news.google.com/rss/search?q=lumenis",
+        content=b"<rss><channel></channel></rss>",
+        content_type="application/rss+xml", status_code=200,
+    )
+    monkeypatch.setattr(public_source, "fetch_public_url", lambda *_args, **_kwargs: response)
+    empty = WebRSSAdapter().search("lumenis", max_results=1)
+
+    def unavailable(*_args, **_kwargs):
+        raise public_source.PublicSourceError("offline fixture")
+
+    monkeypatch.setattr(public_source, "fetch_public_url", unavailable)
+    failed = WebRSSAdapter().search("lumenis", max_results=1)
+
+    assert empty.status is CollectionStatus.NO_NEW_DATA
+    assert empty.metadata.get("error_type") is None
+    assert failed.status is CollectionStatus.PROVIDER_UNAVAILABLE
+    assert failed.items == []
+    assert failed.metadata["error_type"] == "PublicSourceError"
+
+
+@pytest.mark.parametrize("pub_date", ["2026-09-17 04:00:00", "not-a-date"])
+def test_rss_date_without_timezone_or_parseable_value_remains_unknown(monkeypatch, pub_date):
+    import web_discovery
+    from lumenis.system.collector.adapters import public_source
+
+    xml = f"""<rss><channel><item><title>Undated result</title>
+      <link>https://publisher.example.test/undated</link><pubDate>{pub_date}</pubDate>
+    </item></channel></rss>"""
+    response = PublicResponse(
+        url="https://news.google.com/rss/search?q=lumenis",
+        content=xml.encode("utf-8"), content_type="application/rss+xml", status_code=200,
+    )
+    monkeypatch.setattr(public_source, "fetch_public_url", lambda *_args, **_kwargs: response)
+
+    outcome = web_discovery.fetch_google_news_rss("lumenis", max_results=1)
+
+    assert outcome["ok"] is True
+    assert outcome["items"][0]["published_at"] == ""
+    assert outcome["items"][0]["source_published_at"] == pub_date
+    assert outcome["items"][0]["publication_time_state"] == "UNKNOWN"
 
 
 def test_sitemap_discovers_urls_without_creating_content_store():

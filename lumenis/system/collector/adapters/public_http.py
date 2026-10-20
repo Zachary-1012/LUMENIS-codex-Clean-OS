@@ -24,10 +24,40 @@ _CONTENT_SELECTORS = (
 _CHROME_MARKERS = ("header", "footer", "menu", "navigation", "breadcrumb")
 
 
-def _substantive_body(soup: BeautifulSoup) -> str:
-    """Select article content without mistaking a site menu/footer for the article."""
-    candidates: list[tuple[int, int, str]] = []
-    for node in soup.select(_CONTENT_SELECTORS):
+def _node_locator(node) -> str:
+    """Return a stable tag/id/class path for one selected source block."""
+    segments = []
+    current = node
+    while getattr(current, "name", None) not in {None, "[document]"}:
+        segment = str(current.name)
+        element_id = str(current.get("id") or "")
+        if element_id and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", element_id):
+            segment += f"#{element_id}"
+        else:
+            classes = sorted(
+                value for value in (current.get("class") or [])
+                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", str(value))
+            )
+            if classes:
+                segment += "." + ".".join(classes)
+        parent = getattr(current, "parent", None)
+        if parent is not None:
+            siblings = parent.find_all(current.name, recursive=False)
+            if len(siblings) > 1:
+                sibling_index = next(
+                    index for index, sibling in enumerate(siblings, start=1)
+                    if sibling is current
+                )
+                segment += f":nth-of-type({sibling_index})"
+        segments.append(segment)
+        current = parent
+    return " > ".join(reversed(segments))
+
+
+def _substantive_blocks(soup: BeautifulSoup) -> list[dict[str, str]]:
+    """Select all independent best-priority article blocks, avoiding nested duplicates."""
+    candidates: list[tuple[int, int, Any, str]] = []
+    for order, node in enumerate(soup.select(_CONTENT_SELECTORS)):
         if node.name in {"script", "style", "nav", "header", "footer", "aside"}:
             continue
         if node.find_parent(("nav", "header", "footer", "aside")):
@@ -44,17 +74,35 @@ def _substantive_body(soup: BeautifulSoup) -> str:
             chrome.decompose()
         body = cleaned.get_text(" ", strip=True)
         semantic = node.name in {"article", "main"} or node.get("itemprop") == "articleBody" or node.get("role") == "main"
-        if not body or len(body) > 100_000 or (not semantic and len(body) < 500):
+        if not body or len(body) > 2 * 1024 * 1024 or (not semantic and len(body) < 500):
             continue
         priority = (
             0 if node.name == "article" or node.get("itemprop") == "articleBody"
             else 1 if "content_article" in labels or node.find_parent(class_="block-text-only")
             else 2 if node.name != "main" else 3
         )
-        candidates.append((priority, len(body), body))
-    if candidates:
-        return min(candidates, key=lambda item: (item[0], item[1]))[2]
-    return ""
+        candidates.append((priority, order, node, body))
+    if not candidates:
+        return []
+
+    best_priority = min(candidate[0] for candidate in candidates)
+    preferred = [candidate for candidate in candidates if candidate[0] == best_priority]
+    selected: list[tuple[Any, str]] = []
+    for _, _, node, body in preferred:
+        # An enclosing semantic element already contains this block. Keep the
+        # enclosing source once; sibling articles remain separate selections.
+        if any(parent is existing for parent in node.parents for existing, _ in selected):
+            continue
+        selected.append((node, body))
+    return [
+        {"text": body, "locator": _node_locator(node)}
+        for node, body in selected
+    ]
+
+
+def _substantive_body(soup: BeautifulSoup) -> str:
+    """Compatibility projection of the selected article blocks."""
+    return "\n\n".join(block["text"] for block in _substantive_blocks(soup))
 
 
 def _publication_signals(soup: BeautifulSoup) -> tuple[str, str, str]:
@@ -187,16 +235,39 @@ class PublicHttpAdapter(BasePlatformAdapter):
         description = soup.find("meta", attrs={"name": re.compile("^description$", re.I)})
         # Semantic main/article content remains authoritative even when short;
         # a site-wide description must not replace a directory or address.
-        article_text = _substantive_body(soup)
-        text = article_text or (soup.body.get_text(" ", strip=True) if soup.body else "")
-        if len(text) > MAX_PUBLIC_BODY_CHARS:
-            text = text[:MAX_PUBLIC_BODY_CHARS].rstrip() + "…"
+        blocks = _substantive_blocks(soup)
+        article_text = "\n\n".join(block["text"] for block in blocks)
+        if article_text:
+            full_text = article_text
+            selection = "semantic_blocks"
+            locators = [block["locator"] for block in blocks]
+        elif description and str(description.get("content") or "").strip():
+            full_text = str(description.get("content") or "").strip()
+            selection = "meta_description"
+            locators = ["meta[name=description][content]"]
+        else:
+            full_text = soup.body.get_text(" ", strip=True) if soup.body else ""
+            selection = "document_body" if full_text else "none"
+            locators = ["body"] if full_text else []
+        truncated = len(full_text) > MAX_PUBLIC_BODY_CHARS
+        text = (
+            full_text[:MAX_PUBLIC_BODY_CHARS].rstrip() + "…"
+            if truncated else full_text
+        )
+        if selection == "semantic_blocks":
+            completeness = "TRUNCATED_SEMANTIC_PREVIEW" if truncated else "COMPLETE_SEMANTIC_TEXT"
+        elif selection == "meta_description":
+            completeness = "TRUNCATED_DESCRIPTION" if truncated else "DESCRIPTION_EXCERPT"
+        elif selection == "document_body":
+            completeness = "TRUNCATED_DOCUMENT_BODY" if truncated else "DOCUMENT_BODY_TEXT"
+        else:
+            completeness = "EMPTY"
         published, date_source, date_state = _publication_signals(soup)
         item_id = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()[:32]
         return {
             "platform_content_id": f"public-http:{item_id}",
             "title": title,
-            "content": str(text if article_text or not description else description.get("content")),
+            "content": str(text),
             "author_id": None,
             "author_nickname": None,
             "publish_datetime": published,
@@ -210,6 +281,18 @@ class PublicHttpAdapter(BasePlatformAdapter):
                 "content_type": "text/html", "canonical_url": canonical_url,
                 "publication_date_source": date_source,
                 "publication_date_state": date_state,
+                "content_observation": {
+                    "selection": selection,
+                    "selected_locators": locators,
+                    "selected_block_count": len(blocks),
+                    "source_text_sha256": hashlib.sha256(full_text.encode("utf-8")).hexdigest(),
+                    "source_text_char_length": len(full_text),
+                    "returned_text_char_length": len(text),
+                    "truncated": truncated,
+                    "completeness": completeness,
+                    "document_sha256": hashlib.sha256(response.content).hexdigest(),
+                    "document_byte_length": len(response.content),
+                },
             },
         }
 

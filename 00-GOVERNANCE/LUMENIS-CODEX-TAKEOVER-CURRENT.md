@@ -4,6 +4,44 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-094 / FIX-102 — public source content and lineage
+
+The existing `lumenis/system/collector/adapters/public_http.py` now retains
+each independent best-priority semantic article block rather than selecting
+only one same-priority block, while nested semantic blocks are included once.
+Each public HTML item records selected locators,
+the full selected-text hash/character count, returned preview length,
+truncation/completeness state and response-document hash/byte count. The
+existing 16,000-character output bound remains; meta description is explicitly
+an excerpt and incomplete-body fallbacks are labeled. Safe transport still
+limits the document to the existing 2 MiB bound.
+
+The existing `web_discovery.fetch_google_news_rss` path uses
+`public_source.fetch_public_url` with the existing maximum response size and
+`google.com` host boundary instead of a separate direct HTTP call. Offset-aware
+RSS dates preserve their declared offset; naive or unparseable values remain
+unknown with the source value retained. Stable source URL, original publication
+date and time state pass through `WebRSSAdapter`, alongside the existing
+sanitized request/final URL and access/license provenance. HTTP failure,
+unsupported media type, an empty successful feed and a safe-transport failure
+remain separate states.
+
+Offline evidence: `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with
+pytest --with requests --with beautifulsoup4 --with feedparser python -m pytest -q
+tests/test_public_http_article_extraction.py` — **11 passed**. The focused RSS
+command `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest
+--with requests --with beautifulsoup4 --with feedparser python -m pytest -q
+tests/test_public_source_adapters.py::test_web_rss_normalizes_existing_public_reader_and_provenance
+tests/test_public_source_adapters.py::test_google_news_rss_uses_bounded_public_transport_and_keeps_timezone
+tests/test_public_source_adapters.py::test_rss_date_without_timezone_or_parseable_value_remains_unknown
+tests/test_public_source_adapters.py::test_google_news_rss_keeps_http_failure_distinct_from_media_type_failure
+tests/test_public_source_adapters.py::test_empty_rss_is_no_new_data_but_transport_failure_is_unavailable` —
+**7 passed**. Changed Python compilation, governance machine contract, AI-native
+constitution and `git diff --check` passed. The tests replace the public fetcher
+with offline fixtures; no real public source was contacted. PR review, exact-head
+remote checks and live provider/runtime/user acceptance remain separate and
+unverified. Other Issue #17 items remain open.
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

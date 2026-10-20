@@ -6,8 +6,7 @@ normalization used by both API and background analysis paths.
 """
 import os
 import json
-import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlparse
 
 
@@ -166,7 +165,7 @@ def fetch_google_news_rss(query, max_results=5):
     """
     import xml.etree.ElementTree as ET
 
-    collected_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    collected_at = datetime.now(timezone.utc).isoformat(timespec='seconds')
     outcome = {
         'ok': False,
         'items': [],
@@ -176,18 +175,28 @@ def fetch_google_news_rss(query, max_results=5):
         'error_type': '',
     }
     try:
+        from email.utils import parsedate_to_datetime
+        from lumenis.system.collector.adapters import public_source
+
         query = str(query or '').strip()
         if not query or len(query) > 120:
             outcome['error_type'] = 'INVALID_QUERY'
             return outcome
         limit = max(1, min(int(max_results), 20))
         url = f"https://news.google.com/rss/search?q={quote(query)}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans"
-        headers = {
-            'User-Agent': 'LUMENIS-Collector/1.0 (+public RSS reader)'
-        }
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code != 200:
+        response = public_source.fetch_public_url(
+            url,
+            timeout=10,
+            max_bytes=public_source.MAX_RESPONSE_BYTES,
+            allowed_host_suffixes=('google.com',),
+        )
+        if response.status_code < 200 or response.status_code >= 300:
             outcome['error_type'] = f'HTTP_{response.status_code}'
+            return outcome
+        if response.content_type not in {
+            'application/rss+xml', 'application/xml', 'text/xml',
+        }:
+            outcome['error_type'] = 'RSS_RESPONSE_TYPE_UNSUPPORTED'
             return outcome
 
         root = ET.fromstring(response.content)
@@ -196,29 +205,35 @@ def fetch_google_news_rss(query, max_results=5):
             outcome['error_type'] = 'RSS_CHANNEL_MISSING'
             return outcome
 
-        from email.utils import parsedate_to_datetime
         items = []
         for item in channel.findall('item')[:limit]:
             pub_date = item.findtext('pubDate', '')
             published_at = ''
+            publication_time_state = 'UNKNOWN'
             if pub_date:
                 try:
-                    published_at = parsedate_to_datetime(pub_date).strftime('%Y-%m-%d %H:%M:%S')
+                    parsed_time = parsedate_to_datetime(pub_date)
+                    if parsed_time.tzinfo is not None and parsed_time.utcoffset() is not None:
+                        published_at = parsed_time.isoformat()
+                        publication_time_state = 'KNOWN'
                 except Exception:
-                    published_at = pub_date
+                    pass
+            source_element = item.find('source')
             items.append({
                 'title': item.findtext('title', ''),
                 'url': item.findtext('link', ''),
-                'source': item.findtext('source', ''),
+                'source': source_element.text if source_element is not None else '',
+                'source_url': (source_element.get('url', '')
+                               if source_element is not None else ''),
                 'published_at': published_at,
+                'source_published_at': pub_date,
+                'publication_time_state': publication_time_state,
                 'query': query,
                 'platform': 'google_news',
             })
         outcome['ok'] = True
         outcome['items'] = items
-        return outcome
-    except requests.RequestException as exc:
-        outcome['error_type'] = type(exc).__name__
+        outcome.update(public_source.public_source_provenance(response, url))
         return outcome
     except ET.ParseError:
         outcome['error_type'] = 'RSS_PARSE_ERROR'

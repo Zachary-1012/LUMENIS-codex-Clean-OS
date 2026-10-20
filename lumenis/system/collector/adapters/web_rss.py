@@ -41,6 +41,13 @@ class WebRSSAdapter(BasePlatformAdapter):
             "collected_at": collected_at,
             "healthcheck_scope": "public_endpoint_configuration",
         }
+        for field in (
+            "requested_source_url", "final_source_url", "redirect_chain",
+            "resolution_trace", "source_access_mode", "commercial_license_state",
+        ):
+            value = outcome.get(field)
+            if value is not None:
+                metadata[field] = value
         if not outcome.get("ok"):
             metadata["error_type"] = outcome.get("error_type") or "PROVIDER_UNAVAILABLE"
             return CollectionResult(
@@ -82,7 +89,10 @@ class WebRSSAdapter(BasePlatformAdapter):
                 "raw": {
                     "provider": "google_news_rss",
                     "source_name": source_item.get("source") or "",
+                    "source_url": source_item.get("source_url") or "",
                     "source_keyword": query,
+                    "source_published_at": source_item.get("source_published_at") or "",
+                    "publication_time_state": source_item.get("publication_time_state") or "UNKNOWN",
                 },
             }))
         return CollectionResult(
