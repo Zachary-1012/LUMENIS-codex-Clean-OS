@@ -1477,7 +1477,9 @@ def sync(keywords=None, max_scroll=6, account=None):
     if not is_test_mode() and (n_block+n_neterr+n_partial) >= max(1, n//2):
         top=blocked_summary or task_state
         _trip_circuit(task_state, top, cool_minutes=_adaptive_cool_minutes())
-    elif task_state=='SUCCESS':
+    elif task_state=='SUCCESS' or (task_state=='EMPTY' and not risk_infos):
+        # A risk-free EMPTY probe is a healthy response: recover the scheduler
+        # circuit too, but never when the run reported network risk.
         clear_circuit()
 
     return {
