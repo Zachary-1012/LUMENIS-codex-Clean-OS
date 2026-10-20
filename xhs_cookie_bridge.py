@@ -472,7 +472,15 @@ def _load_stats_unlocked():
                 _daily_runs = []
                 _daily_manual_runs = 0
                 _daily_auto_runs = 0
-                _last_run_time = None
+                # The previous-day file still carries the last actual start.
+                # Keep that timestamp so a midnight rollover cannot bypass
+                # the account cooldown.
+                try:
+                    previous_last_run = float(data.get('last_run_time'))
+                    if previous_last_run > 0:
+                        _last_run_time = previous_last_run
+                except (TypeError, ValueError):
+                    pass
                 _daily_run_history_state = 'OBSERVED_TASK_STARTS'
                 _stats_loaded = True
                 _save_stats()
@@ -625,10 +633,12 @@ def record_run(run_type='manual'):
     run_type: 'manual'（一键实时更新）或 'auto'（定时自动采集）
     """
     global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time
+    global _daily_run_history_state
     _load_stats()
     now = time.time()
     _daily_runs.append(now)
     _last_run_time = now
+    _daily_run_history_state = 'OBSERVED_TASK_STARTS'
     if run_type == 'manual':
         _daily_manual_runs += 1
     else:

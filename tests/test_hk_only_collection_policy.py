@@ -581,13 +581,43 @@ def test_collector_task_start_stats_are_marked_as_observed(monkeypatch, tmp_path
     monkeypatch.setattr(bridge, '_daily_manual_runs', 0)
     monkeypatch.setattr(bridge, '_daily_auto_runs', 0)
     monkeypatch.setattr(bridge, '_last_run_time', None)
-    monkeypatch.setattr(bridge, '_daily_run_history_state', 'OBSERVED_TASK_STARTS')
+    monkeypatch.setattr(bridge, '_daily_run_history_state', 'UNKNOWN')
 
     bridge.record_run('manual')
 
     stats = json.loads((tmp_path / 'collector_stats.json').read_text(encoding='utf-8'))
     assert stats['daily_run_history_state'] == 'OBSERVED_TASK_STARTS'
     assert len(stats['daily_runs']) == 1
+
+
+def test_midnight_stats_reset_preserves_prior_actual_run_cooldown(monkeypatch, tmp_path):
+    import json
+    import time
+    import xhs_cookie_bridge as bridge
+    from datetime import date, timedelta
+
+    last_run = time.time() - 5 * 60
+    stats_file = tmp_path / 'collector_stats.json'
+    stats_file.write_text(json.dumps({
+        'date': (date.today() - timedelta(days=1)).strftime('%Y-%m-%d'),
+        'daily_runs': [last_run], 'manual_runs': 1, 'auto_runs': 0,
+        'daily_run_history_state': 'OBSERVED_TASK_STARTS',
+        'last_run_time': last_run,
+    }), encoding='utf-8')
+    monkeypatch.setattr(bridge, 'STATS_FILE', str(stats_file))
+    monkeypatch.setattr(bridge, '_stats_loaded', False)
+    monkeypatch.setattr(bridge, '_daily_runs', [])
+    monkeypatch.setattr(bridge, '_daily_manual_runs', 0)
+    monkeypatch.setattr(bridge, '_daily_auto_runs', 0)
+    monkeypatch.setattr(bridge, '_last_run_time', None)
+    monkeypatch.setattr(bridge, '_daily_run_history_state', 'UNKNOWN')
+
+    allowed, reason = bridge.check_rate_limit('manual')
+
+    assert not allowed
+    assert '不足' in reason
+    assert bridge._daily_runs == []
+    assert bridge._last_run_time == last_run
 
 
 def test_unverified_task_history_does_not_turn_keyword_logs_into_task_runs(
