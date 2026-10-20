@@ -8,6 +8,33 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `data_quality_gate.py::_finite_number` keeps integer bounds exact with finite `Decimal` comparisons, and `DataQualityGate.validate` evaluates a rule's condition before diagnosing an unknown rule type. The existing `database.py::insert_note` enrichment failure path remains a soft write but now persists `data_quality_status="error"` and clears a stale score. Regressions cover both sides of a conditional future rule, min/max bounds above 2^53, and an existing `ok`/100 note refreshed by a failing validator becoming `error`/NULL. `tests/test_data_quality_gate.py` passed **30 tests**; combined with `tests/test_database_insert_note_transaction.py`, **38 passed** using the offline cached pytest environment. `python -m py_compile database.py data_quality_gate.py tests/test_data_quality_gate.py`, governance machine contract, AI-native constitution and `git diff --check` passed. The database regression uses an in-memory SQLite database; no production database or external effect was used.
 
+## 2026-10-20 Issue #17 FIX-055–057 — bounded GitHub source paging
+
+The existing `github_connector.py` now bounds collection paging and response
+size, binds continuation cursors to the request and repository allowlist,
+preserves unread within-page results through a cursor offset, and validates
+provider totals for resumed segments. Malformed URL ports become bounded
+connector errors. It preserves partial results with explicit incomplete
+coverage and distinguishes authentication, ordinary permission denial and
+rate limiting. Redirects are checked before bearer credentials can be forwarded. The existing collector
+adapter exposes coverage and safe cursor state; the GitHub Skill/MCP contract
+was corrected to match those paths and boundaries.
+
+Offline regression command:
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_github_connector_adapter.py tests/test_github_status_verification.py tests/test_account_skill_execution_scope.py tests/test_lumenis_shared_skills.py`
+- **57 passed in 0.99s** across adapter/status and related account/skill modules;
+no background-thread leak. Added regressions confirm a page-limit continuation
+including `limit=60 / total=100` returns every provider item exactly once,
+continuation totals expose missing pages, and malformed ports return a bounded
+pagination error. `py_compile`, governance,
+constitution, takeover governance and `git diff --check` passed. Tests use offline
+synthetic responses; no live GitHub request was made.
+
+Formal task/Evidence/UI wiring, persistent actor/task/source-version-bound
+pagination, OAuth callback/revocation, and actual repository permission remain
+OPEN or NOT_VERIFIED. `account/api.py` remains untouched because the exact
+shared write reservation is unavailable.
+
 ## 2026-10-20 Issue #17 FIX-035 — distinguish empty XHS results from network failures
 
 The existing `xhs_cookie_bridge.py` now applies the first BLOCKED/CAPTCHA/AUTH_FAILED pacing reduction immediately before continuing to another keyword, while suppressing a second task-summary report so one task still creates one risk event. `EMPTY` counts as a valid response in both the existing `network_adaptive` and `adaptive_engine` feedback paths. Regressions assert that the next search observes reduced pacing, the task records one risk event, and an EMPTY worker reports success with no error. The offline combined command across `tests/test_xhs_network_outcome_reporting.py`, `tests/test_xhs_child_worker_environment.py`, `tests/test_xhs_approved_local_worker_route.py` and `tests/test_xhs_lineage_persistence.py` passed **67 tests** with no thread leak. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Fixtures only; no real collection or account access was performed.

@@ -13,7 +13,7 @@ from typing import Any, Dict
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .platform_naming import map_raw_to_normalized
 from .registry import register_adapter
-from github_connector import GitHubConnector, GitHubConnectorError
+from github_connector import GitHubCollectionPage, GitHubConnector, GitHubConnectorError
 
 logger = logging.getLogger(__name__)
 
@@ -61,19 +61,79 @@ class GitHubAdapter(BasePlatformAdapter):
             "NOT_CONFIGURED": CollectionStatus.NOT_CONFIGURED,
             "REPOSITORY_NOT_ALLOWLISTED": CollectionStatus.BLOCKED,
             "ENDPOINT_NOT_ALLOWLISTED": CollectionStatus.BLOCKED,
+            "API_ORIGIN_NOT_ALLOWLISTED": CollectionStatus.BLOCKED,
+            "REDIRECT_BLOCKED": CollectionStatus.BLOCKED,
+            "AUTHENTICATION_FAILED": CollectionStatus.SESSION_EXPIRED,
             "AUTHENTICATION_OR_PERMISSION_FAILED": CollectionStatus.SESSION_EXPIRED,
+            "PERMISSION_DENIED": CollectionStatus.BLOCKED,
+            "RATE_LIMITED": CollectionStatus.COOLING_DOWN,
             "PROVIDER_UNAVAILABLE": CollectionStatus.PROVIDER_UNAVAILABLE,
         }
+        metadata = {
+            "provider": "github_app_user_authorization",
+            "capability": capability,
+            "error_code": exc.code,
+            "write_enabled": False,
+        }
+        if exc.retry_after_seconds is not None:
+            metadata["retry_after_seconds"] = exc.retry_after_seconds
         return CollectionResult(
             status=status_map.get(exc.code, CollectionStatus.COLLECT_ERROR),
             platform="github",
             message=str(exc),
-            metadata={
-                "provider": "github_app_user_authorization",
-                "capability": capability,
-                "error_code": exc.code,
-                "write_enabled": False,
-            },
+            metadata=metadata,
+        )
+
+    @staticmethod
+    def _page_result(
+        page: GitHubCollectionPage,
+        capability: str,
+        *,
+        comments: bool = False,
+    ) -> CollectionResult:
+        mapped = [GitHubAdapter._map_item(item) for item in page.items]
+        if page.coverage_complete:
+            status = CollectionStatus.SUCCESS if mapped else CollectionStatus.NO_NEW_DATA
+        else:
+            status = {
+                "AUTHENTICATION_FAILED": CollectionStatus.SESSION_EXPIRED,
+                "PERMISSION_DENIED": CollectionStatus.BLOCKED,
+                "REPOSITORY_NOT_ALLOWLISTED": CollectionStatus.BLOCKED,
+                "ENDPOINT_NOT_ALLOWLISTED": CollectionStatus.BLOCKED,
+                "API_ORIGIN_NOT_ALLOWLISTED": CollectionStatus.BLOCKED,
+                "REDIRECT_BLOCKED": CollectionStatus.BLOCKED,
+                "RATE_LIMITED": CollectionStatus.COOLING_DOWN,
+                "PROVIDER_UNAVAILABLE": CollectionStatus.PROVIDER_UNAVAILABLE,
+            }.get(page.error_code, CollectionStatus.COLLECT_ERROR)
+        metadata = {
+            "provider": "github_app_user_authorization",
+            "capability": capability,
+            "write_enabled": False,
+            "coverage_complete": page.coverage_complete,
+            "coverage_scope": page.coverage_scope,
+            "start_page": page.start_page,
+            "pages_fetched": page.pages_fetched,
+            "api_items_observed": page.api_items_observed,
+            "reported_total_count": page.reported_total_count,
+            "next_cursor": page.next_cursor,
+            "partial_reason": page.partial_reason,
+        }
+        if page.error_code:
+            metadata["error_code"] = page.error_code
+        if page.retry_after_seconds is not None:
+            metadata["retry_after_seconds"] = page.retry_after_seconds
+        message = ""
+        if not page.coverage_complete:
+            message = f"GitHub returned partial results ({page.partial_reason or page.error_code or 'incomplete coverage'})"
+        return CollectionResult(
+            status=status,
+            platform="github",
+            items=mapped,
+            comments=mapped if comments else [],
+            message=message,
+            raw_count=page.api_items_observed,
+            new_count=len(mapped),
+            metadata=metadata,
         )
 
     def normalize_to_platform_contents(self, raw_record: Dict[str, Any]) -> Dict[str, Any]:
@@ -81,16 +141,14 @@ class GitHubAdapter(BasePlatformAdapter):
 
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
         try:
-            items = self.connector.search_repositories(keyword, limit=kwargs.get("max_results", 20))
-            mapped = [self._map_item(item) for item in items]
-            return CollectionResult(
-                status=CollectionStatus.SUCCESS if mapped else CollectionStatus.NO_NEW_DATA,
-                platform=self.platform,
-                items=mapped,
-                raw_count=len(items),
-                new_count=len(items),
-                metadata={"provider": "github_app_user_authorization", "write_enabled": False},
+            page = self.connector.search_repositories_page_result(
+                keyword,
+                limit=kwargs.get("max_results", 20),
+                max_pages=kwargs.get("max_pages", 5),
+                cursor=kwargs.get("cursor"),
+                cancel_check=kwargs.get("cancel_check"),
             )
+            return self._page_result(page, "search")
         except GitHubConnectorError as exc:
             return self._error(exc, "search")
 
@@ -111,33 +169,31 @@ class GitHubAdapter(BasePlatformAdapter):
 
     def comments(self, content_id: str, *, include_replies: bool = False, **kwargs: Any) -> CollectionResult:
         """GitHub的comments对应issues，非传统评论。"""
-        return self._collection(content_id, "issues", "comments")
+        return self._collection(content_id, "issues", "comments", **kwargs)
 
     def list_issues(self, repo_full_name: str, **kwargs: Any) -> CollectionResult:
         """GitHub特有：获取仓库Issues列表。"""
-        return self._collection(repo_full_name, "issues", "issues")
+        return self._collection(repo_full_name, "issues", "issues", **kwargs)
 
     def list_pull_requests(self, repo_full_name: str, **kwargs: Any) -> CollectionResult:
         """GitHub特有：获取仓库PR列表。"""
-        return self._collection(repo_full_name, "pulls", "author_posts")
+        return self._collection(repo_full_name, "pulls", "author_posts", **kwargs)
 
     def list_releases(self, repo_full_name: str, **kwargs: Any) -> CollectionResult:
         """GitHub特有：获取仓库Releases列表。"""
-        return self._collection(repo_full_name, "releases", "releases")
+        return self._collection(repo_full_name, "releases", "releases", **kwargs)
 
-    def _collection(self, repo_full_name: str, suffix: str, capability: str) -> CollectionResult:
+    def _collection(self, repo_full_name: str, suffix: str, capability: str, **kwargs: Any) -> CollectionResult:
         try:
-            items = self.connector.repository_collection(repo_full_name, suffix)
-            mapped = [self._map_item(item) for item in items]
-            return CollectionResult(
-                status=CollectionStatus.SUCCESS if mapped else CollectionStatus.NO_NEW_DATA,
-                platform=self.platform,
-                items=mapped,
-                comments=mapped if capability == "comments" else [],
-                raw_count=len(items),
-                new_count=len(items),
-                metadata={"provider": "github_app_user_authorization", "write_enabled": False},
+            page = self.connector.repository_collection_page_result(
+                repo_full_name,
+                suffix,
+                limit=kwargs.get("max_results", 250),
+                max_pages=kwargs.get("max_pages", 5),
+                cursor=kwargs.get("cursor"),
+                cancel_check=kwargs.get("cancel_check"),
             )
+            return self._page_result(page, capability, comments=capability == "comments")
         except GitHubConnectorError as exc:
             return self._error(exc, capability)
 
@@ -163,7 +219,9 @@ class GitHubAdapter(BasePlatformAdapter):
                 platform=self.platform,
                 message="GitHub user authorization verified",
                 metadata={**snapshot, "state": "CONNECTED",
-                          "authorization_verification": "VERIFIED", "code": None,
+                          "authorization_verification": "CURRENT_USER_VERIFIED",
+                          "repository_access_verification": "NOT_VERIFIED",
+                          "code": None,
                           "login": user["login"]},
             )
         except GitHubConnectorError as exc:
