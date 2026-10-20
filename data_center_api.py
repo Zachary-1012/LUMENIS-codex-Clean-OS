@@ -7,7 +7,9 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
@@ -70,6 +72,18 @@ PLATFORM_COLORS: Dict[str, str] = {
 
 def _get_db() -> sqlite3.Connection:
     return get_repository().connect()
+
+
+def _unix_date_filter(value: str, *, end: bool) -> tuple[str, float]:
+    """Convert an ISO date/time bound to a Unix timestamp comparison."""
+    date_only = re.fullmatch(r"\d{4}-\d{2}-\d{2}", value) is not None
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    if date_only and end:
+        # Include the whole requested end date, including fractional seconds.
+        return "<", (parsed + timedelta(days=1)).timestamp()
+    return ("<=" if end else ">="), parsed.timestamp()
 
 
 @data_center_bp.route("/platforms", methods=["GET"])
@@ -226,6 +240,11 @@ def query_table(table_name: str):
             )
             if candidate in columns
         ), None)
+        time_col_type = next(
+            (str(c["type"] or "").upper() for c in cols_info if c["name"] == time_col),
+            "",
+        )
+        numeric_time_col = any(kind in time_col_type for kind in ("INT", "REAL", "NUM", "FLOAT", "DOUBLE"))
         start_date = request.args.get("start_date", "").strip()
         end_date = request.args.get("end_date", "").strip()
         if (start_date or end_date) and time_col is None:
@@ -235,11 +254,25 @@ def query_table(table_name: str):
             }), 400
         if time_col:
             if start_date:
-                where_clauses.append(f"{time_col} >= ?")
-                params.append(start_date)
+                if numeric_time_col:
+                    try:
+                        operator, value = _unix_date_filter(start_date, end=False)
+                    except ValueError:
+                        return jsonify({"ok": False, "error": "invalid start_date"}), 400
+                else:
+                    operator, value = ">=", start_date
+                where_clauses.append(f"{time_col} {operator} ?")
+                params.append(value)
             if end_date:
-                where_clauses.append(f"{time_col} <= ?")
-                params.append(end_date)
+                if numeric_time_col:
+                    try:
+                        operator, value = _unix_date_filter(end_date, end=True)
+                    except ValueError:
+                        return jsonify({"ok": False, "error": "invalid end_date"}), 400
+                else:
+                    operator, value = "<=", end_date
+                where_clauses.append(f"{time_col} {operator} ?")
+                params.append(value)
 
         where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
@@ -313,11 +346,19 @@ def get_overview_stats():
                 try:
                     raw_tables = json.loads(p["raw_tables"])
                 except (json.JSONDecodeError, TypeError):
-                    pass
+                    raw_tables = None
             table_counts = {}
             table_errors = {}
             platform_total = 0
-            for t in raw_tables:
+            catalog_available = isinstance(raw_tables, list) and bool(raw_tables)
+            if not catalog_available:
+                table_errors["_catalog"] = "raw_tables_unavailable"
+                errors.append({
+                    "platform_id": p["platform_id"],
+                    "table": None,
+                    "error": "raw_tables_unavailable",
+                })
+            for t in raw_tables if isinstance(raw_tables, list) else []:
                 if t in ALLOWED_TABLES:
                     try:
                         row = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
@@ -334,7 +375,7 @@ def get_overview_stats():
                             "table": t,
                             "error": "query_failed",
                         })
-            total_records_available = not table_errors
+            total_records_available = catalog_available and not table_errors
             if total_records_available:
                 total_records += platform_total
             stats.append({

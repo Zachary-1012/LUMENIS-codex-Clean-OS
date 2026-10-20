@@ -577,6 +577,31 @@ class TestDataCenterAPI:
         assert empty.get_json()["total"] == 0
         assert empty.get_json()["data"] == []
 
+    def test_fix032_filters_unix_timestamp_publication_fields(self, platform_db, monkeypatch):
+        """Numeric native publication times are compared as Unix seconds, not ISO text."""
+        from datetime import datetime, timezone
+
+        inside = datetime(2026, 10, 31, 23, 59, 59, tzinfo=timezone.utc).timestamp()
+        outside = datetime(2026, 11, 1, 0, 0, 0, tzinfo=timezone.utc).timestamp()
+        platform_db.execute("DELETE FROM zhihu_answers")
+        platform_db.executemany(
+            "INSERT INTO zhihu_answers (answer_id, created_time) VALUES (?, ?)",
+            [("fix032-inside", int(inside)), ("fix032-outside", int(outside))],
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get(
+            "/api/data-center/table/zhihu_answers?start_date=2026-10-01&end_date=2026-10-31"
+        )
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert payload["total"] == 1
+        assert [row["answer_id"] for row in payload["data"]] == ["fix032-inside"]
+
+
     def test_fix032_rejects_filters_without_source_fields(self, platform_db, monkeypatch):
         """FIX-032: unsupported filters fail instead of silently returning unfiltered rows."""
         path = platform_db.execute("PRAGMA database_list").fetchone()[2]
@@ -632,9 +657,17 @@ class TestDataCenterAPI:
         payload = response.get_json()
         assert payload["total_platforms"] == len(get_platform_registry_catalog())
         assert payload["ui_visible_count"] == len(get_ui_visible_platforms())
-        assert payload["ok"] is True
-        assert payload["errors"] == []
-        assert payload["total_records"] is not None
+        empty_catalog_ids = []
+        for row in platform_db.execute("SELECT platform_id, raw_tables FROM platform_registry"):
+            try:
+                raw_tables = json.loads(row["raw_tables"]) if row["raw_tables"] else []
+            except (json.JSONDecodeError, TypeError):
+                raw_tables = None
+            if not isinstance(raw_tables, list) or not raw_tables:
+                empty_catalog_ids.append(row["platform_id"])
+        assert payload["ok"] is (not empty_catalog_ids)
+        assert {entry["platform_id"] for entry in payload["errors"]} == set(empty_catalog_ids)
+        assert (payload["total_records"] is None) is bool(empty_catalog_ids)
 
     def test_fix033_successful_count_and_real_empty_table_keep_zero(self, platform_db, monkeypatch):
         """FIX-033: a real COUNT(*) result of zero remains a known zero."""
@@ -651,8 +684,9 @@ class TestDataCenterAPI:
 
         populated = client.get("/api/data-center/stats/overview").get_json()
         xhs = next(item for item in populated["platforms"] if item["platform_id"] == "xiaohongshu")
-        assert populated["ok"] is True
-        assert populated["errors"] == []
+        assert populated["ok"] is False
+        assert not any(error["platform_id"] == "xiaohongshu" for error in populated["errors"])
+        assert all(error["error"] == "raw_tables_unavailable" for error in populated["errors"])
         assert xhs["table_counts"]["xhs_notes"] == 1
         assert xhs["total_records"] == 1
 
@@ -660,8 +694,9 @@ class TestDataCenterAPI:
         platform_db.commit()
         empty = client.get("/api/data-center/stats/overview").get_json()
         xhs = next(item for item in empty["platforms"] if item["platform_id"] == "xiaohongshu")
-        assert empty["ok"] is True
-        assert empty["errors"] == []
+        assert empty["ok"] is False
+        assert not any(error["platform_id"] == "xiaohongshu" for error in empty["errors"])
+        assert all(error["error"] == "raw_tables_unavailable" for error in empty["errors"])
         assert xhs["table_counts"]["xhs_notes"] == 0
         assert xhs["total_records"] == 0
 
@@ -701,9 +736,11 @@ class TestDataCenterAPI:
         xhs = next(item for item in payload["platforms"] if item["platform_id"] == "xiaohongshu")
         assert payload["ok"] is False
         assert payload["total_records"] is None
-        assert payload["errors"] == [
-            {"platform_id": "xiaohongshu", "table": "xhs_notes", "error": "query_failed"}
-        ]
+        assert {error["platform_id"] for error in payload["errors"] if error["error"] == "raw_tables_unavailable"}
+        assert {error["platform_id"] for error in payload["errors"] if error["error"] == "query_failed"} == {"xiaohongshu"}
+        assert next(error for error in payload["errors"] if error["platform_id"] == "xiaohongshu") == {
+            "platform_id": "xiaohongshu", "table": "xhs_notes", "error": "query_failed"
+        }
         assert xhs["table_counts"]["xhs_notes"] is None
         assert xhs["table_errors"]["xhs_notes"] == "query_failed"
         assert xhs["total_records"] is None
@@ -712,6 +749,30 @@ class TestDataCenterAPI:
         assert detail.status_code == 200
         table_stats = detail.get_json()["platform"]["table_stats"]
         assert table_stats == [{"table": "xhs_notes", "count": None, "error": "query_failed"}]
+
+    def test_fix033_empty_raw_table_catalog_is_unavailable_not_zero(self, platform_db, monkeypatch):
+        platform_db.execute(
+            "UPDATE platform_registry SET raw_tables='[]' WHERE platform_id='xiaohongshu'"
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+
+        response = client.get("/api/data-center/stats/overview")
+        payload = response.get_json()
+        xhs = next(item for item in payload["platforms"] if item["platform_id"] == "xiaohongshu")
+
+        assert response.status_code == 200
+        assert payload["ok"] is False
+        assert payload["total_records"] is None
+        xhs_error = next(error for error in payload["errors"] if error["platform_id"] == "xiaohongshu")
+        assert xhs_error == {
+            "platform_id": "xiaohongshu", "table": None,
+            "error": "raw_tables_unavailable",
+        }
+        assert xhs["table_counts"] == {}
+        assert xhs["table_errors"]["_catalog"] == "raw_tables_unavailable"
+        assert xhs["total_records"] is None
 
 
 class TestEngagement:
