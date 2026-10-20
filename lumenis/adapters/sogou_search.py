@@ -32,13 +32,12 @@ from .base import BaseAdapter, AdapterResult
 # 命中即视为搜狗反爬/人机校验，需按 BLOCKED 处理而非“无结果”
 _BLOCK_PATTERNS = [
     "antispider", "anti.min.css", "verify.css", "imgcode",
-    "请输入验证码", "访问过于频繁", "用户您好", "网络不给力",
-    "验证码", "unusual traffic", "请您输入验证码",
+    "访问过于频繁", "用户您好", "网络不给力", "unusual traffic",
 ]
 _MANUAL_VERIFICATION_PATTERNS = (
-    "antispider", "anti.min.css", "verify.css", "imgcode", "请输入验证码",
-    "访问过于频繁", "验证码", "unusual traffic", "请您输入验证码",
+    "anti.min.css", "verify.css", "imgcode", "unusual traffic",
 )
+_MANUAL_VERIFICATION_PROMPTS = ("请输入验证码", "请您输入验证码")
 _MANUAL_VERIFICATION_PREFIX = "NEED_HUMAN_VERIFICATION:"
 # 发布时间：2026年6月7日 / 2025-03-2 / 2025/03/02
 _DATE_CN = re.compile(r"(20\d{2})\s*[年/\-\.]\s*(\d{1,2})\s*[月/\-\.]\s*(\d{1,2})")
@@ -181,7 +180,7 @@ class SogouSearchAdapter(BaseAdapter):
                 text = resp.text
             except Exception as e:
                 return None, f"网络异常 {e}"
-            if self._has_manual_verification(text):
+            if self._is_manual_verification_response(resp):
                 return None, (
                     f"{_MANUAL_VERIFICATION_PREFIX} 搜狗返回验证码/反爬挑战；"
                     "已停止自动请求，请完成人工验证后重新发起搜索"
@@ -204,9 +203,25 @@ class SogouSearchAdapter(BaseAdapter):
 
     @staticmethod
     def _has_manual_verification(text: str) -> bool:
-        """Detect explicit provider challenge markers without guessing from page length."""
+        """Detect challenge-page evidence without matching ordinary article wording."""
         low = (text or "").lower()
-        return any(pattern.lower() in low for pattern in _MANUAL_VERIFICATION_PATTERNS)
+        if any(pattern in low for pattern in _MANUAL_VERIFICATION_PATTERNS):
+            return True
+        if re.search(r"/antispider(?:[/?:\"']|$)", low):
+            return True
+        for prompt in _MANUAL_VERIFICATION_PROMPTS:
+            start = low.find(prompt)
+            while start >= 0:
+                end = start + len(prompt)
+                # Short prompt-only provider pages are unambiguous in this
+                # adapter; on a full article require nearby form evidence.
+                if len(text or "") < 800:
+                    return True
+                context = low[max(0, start - 500):end + 500]
+                if re.search(r"<(?:form|input|img)\b", context):
+                    return True
+                start = low.find(prompt, end)
+        return False
 
     def _parse_channel(self, page_html: str, channel: str) -> list:
         """解析单个频道结果页为标准化笔记列表。"""
@@ -401,7 +416,13 @@ class SogouSearchAdapter(BaseAdapter):
                     )
                 m = _JS_LOCATION.search(r.text[:4000])
                 if m:
-                    return html.unescape(m.group(1)), None
+                    target = html.unescape(m.group(1))
+                    if self._is_manual_verification_url(target):
+                        return None, (
+                            f"{_MANUAL_VERIFICATION_PREFIX} 搜狗 /link 的 JS 目标为验证码验证页；"
+                            "已停止后续链接请求，请完成人工验证后重新发起搜索"
+                        )
+                    return target, None
                 if r.url and "sogou.com/link" not in r.url:
                     return r.url, None  # 极少数走 HTTP 302
             except Exception:
@@ -438,7 +459,14 @@ class SogouSearchAdapter(BaseAdapter):
         """识别响应正文挑战或搜狗 anti-spider 最终跳转地址。"""
         if cls._has_manual_verification((getattr(response, "text", "") or "")[:4000]):
             return True
-        parsed = urllib.parse.urlparse(getattr(response, "url", "") or "")
+        return cls._is_manual_verification_url(getattr(response, "url", "") or "")
+
+    @staticmethod
+    def _is_manual_verification_url(url: str) -> bool:
+        """只将搜狗域名下明确的验证路径作为验证目的地。"""
+        if not isinstance(url, str):
+            return False
+        parsed = urllib.parse.urlparse(url or "")
         host = (parsed.hostname or "").lower()
         is_sogou_host = host == "sogou.com" or host.endswith(".sogou.com")
         path = parsed.path.lower()
