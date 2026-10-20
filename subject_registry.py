@@ -22,7 +22,7 @@ import sqlite3
 import re
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Tuple
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qsl, unquote, urlsplit
 
 from flask import Blueprint, jsonify, request
 
@@ -78,11 +78,43 @@ def _validate_official_source_url(source_url: Any) -> str:
         separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
         return re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
 
-    if any(
-        (normalized_key := normalized_query_key(key)) in _SENSITIVE_SOURCE_QUERY_KEYS
-        or bool(set(normalized_key.split("_")) & _SENSITIVE_SOURCE_QUERY_TERMS)
-        for key, _ in parse_qsl(parts.query, keep_blank_values=True)
-    ):
+    def contains_sensitive_assignment(query: str, *, depth: int = 0, seen=frozenset()) -> bool:
+        """Inspect direct and bounded nested query values before persisting a URL.
+
+        `parse_qsl` decodes one level of a value but does not expose credentials
+        hidden inside redirect URLs or semicolon-delimited query assignments.
+        The URL itself is capped at 500 characters; this additional depth bound
+        keeps nested inspection small even for deliberately recursive values.
+        """
+        if not query or depth > 4 or query in seen:
+            return False
+        seen = seen | {query}
+        for key, value in parse_qsl(query.replace(";", "&"), keep_blank_values=True):
+            normalized_key = normalized_query_key(key)
+            if (normalized_key in _SENSITIVE_SOURCE_QUERY_KEYS
+                    or set(normalized_key.split("_")) & _SENSITIVE_SOURCE_QUERY_TERMS):
+                return True
+            if depth >= 4 or not value:
+                continue
+
+            nested_queries = []
+            # Both the query-decoded and once-more-decoded forms are useful
+            # when a redirect value was percent-encoded twice.
+            for candidate in dict.fromkeys((value, unquote(value))):
+                try:
+                    nested_query = urlsplit(candidate).query
+                except ValueError:
+                    nested_query = ""
+                if nested_query:
+                    nested_queries.append(nested_query)
+                elif re.search(r"(?:^|[?&;])[^?&;=]+=", candidate):
+                    nested_queries.append(candidate)
+            for nested in dict.fromkeys(nested_queries):
+                if contains_sensitive_assignment(nested, depth=depth + 1, seen=seen):
+                    return True
+        return False
+
+    if contains_sensitive_assignment(parts.query):
         raise SubjectValidationError("source_url 不得包含凭证查询参数")
     if parts.fragment:
         raise SubjectValidationError("source_url 不得包含片段数据")

@@ -27,6 +27,16 @@ Credential query names are normalized across separator/case variants and reject
 generic secret fields such as `secret`, `client_secret`, and `private_key`, while
 ordinary campaign/source query names remain available to the provenance path.
 
+The PR #90 query-validation follow-up also inspects bounded nested query values
+and semicolon-delimited assignments before persisting the source URL. The
+synthetic `redirect=...access_token=...` and `campaign=x;client_secret=...`
+forms are rejected before any Evidence write; ordinary campaign parameters
+remain accepted. On the candidate based on review head `6480017972c8e46721cf69b6b88a2440cef8350e`,
+offline `tests/test_subject_registry_official_name.py tests/test_subject_registry.py`
+passed **47 tests** with no background-thread leak. `py_compile` and
+`git diff --check` passed. Temporary database fixtures only; no source or
+production database was accessed.
+
 The exact-head offline command for those four modules passed **21 tests** with no
 daemon-thread leak. The test-only E2E fixture installs a synthetic HMAC key in
 its isolated process environment so the pre-existing Evidence signature gate
