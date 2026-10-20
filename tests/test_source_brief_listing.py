@@ -68,7 +68,26 @@ def test_wrong_actor_hash_and_scope_evaluations_never_attach(listing):
         else:meta['scope']={**meta['scope'],'entity_label':'wrong-scope'}
         ws['repo'].execute('UPDATE evaluation_records SET metadata=? WHERE evaluation_id=?',(json.dumps(meta),row['evaluation_id']))
     row=read(ws)['items'][0]
-    assert row['evaluation_state']=='partial' and row['evaluations']==[]
+    assert row['evaluation_state']=='pending_recovery' and row['evaluations']==[]
+
+
+@pytest.mark.parametrize(('field','value'),[
+    ('metric_name','tampered_metric'), ('metric_value',0.25),
+    ('threshold','{}'), ('status','fail'), ('source','tampered_source'),
+    ('evaluated_at','not-a-time'),
+])
+def test_listing_reuses_only_exactly_validated_report_evaluations(listing,field,value):
+    ws=listing;made=make(ws)
+    evaluation_id=jobs._evaluation_ids(made['job_id'])['report_artifact_integrity']
+    ws['repo'].execute(f'UPDATE evaluation_records SET {field}=? WHERE evaluation_id=?',(value,evaluation_id))
+
+    actor={'id':1,'role':'owner'}
+    reopened=jobs.get_source_brief_job(made['job_id'],actor_id='actor:1',actor=actor)
+    listed=read(ws)['items'][0]
+
+    assert reopened['evaluation']['state']=='pending_recovery'
+    assert listed['evaluation_state']==reopened['evaluation']['state']
+    assert evaluation_id not in {item['evaluation_id'] for item in listed['evaluations']}
 
 def test_empty_missing_storage_and_revocation_distinct(listing):
     ws=listing

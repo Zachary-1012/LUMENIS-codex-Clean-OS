@@ -1087,3 +1087,17 @@ def test_day_rollover_resets_manual_and_auto_counters(monkeypatch):
         and (bool(bridge._daily_runs) or bridge._daily_manual_runs or bridge._daily_auto_runs)
     )
     assert not has_unverified
+
+
+def test_preflight_never_caches_login_from_browser_reachability(monkeypatch):
+    import inspect
+    import xhs_cookie_bridge as bridge
+    source = inspect.getsource(bridge.runtime_preflight_check)
+    assert "REAL_SESSION_VALID" not in source
+    monkeypatch.setattr(bridge, '_last_session_verification', None)
+    assert bridge.record_real_session_verification('acct', authenticated_readback=False) is False
+    assert bridge._current_session_state('acct') == 'NOT_VERIFIED'
+    assert bridge.record_real_session_verification('acct', authenticated_readback='yes') is False
+    assert bridge._current_session_state('acct') == 'NOT_VERIFIED'
+    assert bridge.record_real_session_verification('acct', authenticated_readback=True) is True
+    assert bridge._current_session_state('acct') == 'real_session_valid'
