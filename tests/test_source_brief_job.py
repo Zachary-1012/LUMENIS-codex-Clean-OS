@@ -322,6 +322,16 @@ def test_legacy_report_resolves_document_by_type_and_evidence_after_row_projecti
             "UPDATE daily_reports SET source_snapshot=?,artifact_hash=? WHERE report_id=?",
             (source_snapshot, artifact_hash, result["job_id"]),
         )
+        for evaluation_id in jobs._evaluation_ids(result["job_id"]).values():
+            evaluation = conn.execute(
+                "SELECT metadata FROM evaluation_records WHERE evaluation_id=?", (evaluation_id,),
+            ).fetchone()
+            metadata = json.loads(evaluation[0])
+            metadata["artifact_hash"] = artifact_hash
+            conn.execute(
+                "UPDATE evaluation_records SET evidence_ref=?,metadata=? WHERE evaluation_id=?",
+                (f"daily_reports:{result['job_id']}:{artifact_hash}", json.dumps(metadata, ensure_ascii=False), evaluation_id),
+            )
         _document_row(conn, source_id, evidence_id)
         conn.commit()
 
@@ -411,6 +421,53 @@ def test_retry_recovers_evaluation_after_artifact_was_already_persisted(job_db, 
         assert conn.execute(
             "SELECT COUNT(*) FROM daily_reports WHERE report_id='job-brief-00000003'"
         ).fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM evaluation_records").fetchone()[0] == 3
+
+
+@pytest.mark.parametrize("field,value", [
+    ("dimension", "data"),
+    ("metric_name", "foreign_metric"),
+    ("metric_value", 0.5),
+    ("threshold", "{}"),
+    ("status", "fail"),
+    ("source", "foreign_source"),
+    ("evidence_ref", "foreign_artifact"),
+    ("metadata", "{}"),
+    ("evaluated_at", ""),
+])
+def test_reopen_omits_non_equivalent_evaluation_and_keeps_it_pending(job_db, field, value):
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        result = _request(conn)
+    evaluation_id = jobs._evaluation_ids(result["job_id"])["report_artifact_integrity"]
+    with sqlite3.connect(job_db) as conn:
+        conn.execute(f"UPDATE evaluation_records SET {field}=? WHERE evaluation_id=?", (value, evaluation_id))
+        conn.commit()
+
+    reopened = jobs.get_source_brief_job(result["job_id"], actor_id="workspace:local")
+    assert reopened["evaluation"]["state"] == "pending_recovery"
+    assert all(record["metric_name"] != "report_artifact_integrity"
+               for record in reopened["evaluation"]["records"])
+
+
+def test_missing_evaluation_readback_stays_pending_until_explicit_recovery(job_db):
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        result = _request(conn, job_id="job-brief-readback-recovery-01")
+    evaluation_id = jobs._evaluation_ids(result["job_id"])["source_evidence_grounding"]
+    with sqlite3.connect(job_db) as conn:
+        conn.execute("DELETE FROM evaluation_records WHERE evaluation_id=?", (evaluation_id,))
+        conn.commit()
+
+    reopened = jobs.get_source_brief_job(result["job_id"], actor_id="workspace:local")
+    assert reopened["evaluation"]["state"] == "pending_recovery"
+    assert len(reopened["evaluation"]["records"]) == 2
+    with sqlite3.connect(job_db) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM evaluation_records").fetchone()[0] == 2
+        conn.row_factory = sqlite3.Row
+        recovered = _request(conn, job_id=result["job_id"])
+        assert recovered["evaluation"]["state"] == "recorded"
+        assert len(recovered["evaluation"]["records"]) == 3
         assert conn.execute("SELECT COUNT(*) FROM evaluation_records").fetchone()[0] == 3
 
 
