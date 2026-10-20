@@ -19,6 +19,7 @@
 | C-009 | [Apple Store 零售店，中国大陆](https://www.apple.com.cn/retail/storelist/) | VERIFIED_PUBLIC | 原 sitemap 地址拼写/路径不完整；改为当前官方门店列表页，不声称它是 sitemap。 |
 | D-003 | [Places API (New) overview — Google Maps Platform](https://developers.google.com/maps/documentation/places/web-service/overview) | VERIFIED_AUTHORIZED | 原 API 文档 URL 被截断；更正为当前官方概览页。 |
 | D-009 | [Consumer Sentinel Network — FTC](https://www.ftc.gov/enforcement/consumer-sentinel-network) | RESTRICTED | 原 URL 被截断；官方说明页指出访问限于获准的执法机构成员，保留原受限标签。 |
+| D-010 | [Safety Gate: the EU rapid alert system for dangerous non-food products](https://ec.europa.eu/safety-gate-alerts/screen/search) | VERIFIED_PUBLIC | 原 URL 截断为 `/screen/sea`；更正为官方检索入口 `/screen/search`。原可用性标签保留。 |
 | D-019 | 无可确认入口 | NOT VERIFIED | 原链接实际指向 Trustpilot 上的 Amazon 评论，与“黑猫投诉企业舆情/数据服务”不符；删除错链，不拿 D-006 黑猫公开投诉页替代该商业服务。 |
 | F-006 | [Eurostat Database](https://ec.europa.eu/eurostat/web/main/data/database) | VERIFIED_PUBLIC | 原 URL 被截断；更正为 Eurostat 官方数据库页。 |
 | F-016 | [Euro foreign exchange reference rates — ECB](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.eu.html) | VERIFIED_PUBLIC | 原 URL 被截断；更正为 ECB 官方参考汇率页。 |
