@@ -212,17 +212,25 @@ def list_scoped_executions(*, actor, scope, status="", action_type="", target_au
     if type(limit) is not int or not 1 <= limit <= 200:
         raise ValueError("KOS_EXECUTION_LIMIT_INVALID")
     context = _scoped_context(actor, scope)
+    caller = context.get("principal_ref") or "actor:" + str(context["actor_id"])
     with get_repository().connection(read_only=True, wal=False) as con:
         if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='kos_executions'").fetchone() is None:
             return []
         records = []
-        cursor = con.execute("SELECT * FROM kos_executions ORDER BY id DESC")
+        cursor = con.execute(
+            "SELECT * FROM kos_executions WHERE version = ? AND actor = ? AND target_brand = ? ORDER BY id DESC",
+            ("scoped-v1", caller, context["brand_focus_id"]),
+        )
         for row in cursor:
             try:
                 record, _payload = _scoped_record(row, context)
-            except PermissionError:
-                continue
-            if ((status and record["status"] != status) or (action_type and record["action_type"] != action_type)
+            except PermissionError as exc:
+                # The indexed owner fields placed this row inside the requested
+                # actor/scope, so contradictory signed context is corruption,
+                # not another actor's row to silently skip.
+                raise ValueError("KOS_EXECUTION_BINDING_INVALID") from exc
+            if ((status and record["status"] != status)
+                    or (action_type and record["action_type"] != action_type)
                     or (target_author_id and record["target_author_id"] != target_author_id)):
                 continue
             records.append(record)

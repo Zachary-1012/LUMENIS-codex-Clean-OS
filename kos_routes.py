@@ -281,7 +281,8 @@ def _scoped_profile_view(kind):
             profiles = [row for row in profiles if row["source_platform"] == platform]
         if kind in {"detail", "account", "content_dna", "identity"}:
             if not profiles:
-                if data.get("truncated") or data.get("rejected_count"):
+                if (not data.get("source_read_complete", True)
+                        or data.get("truncated") or data.get("rejected_count")):
                     return jsonify({"ok": False, "code": "AUTHOR_SEARCH_INCOMPLETE"}), 503
                 return jsonify({"ok": False, "code": "AUTHOR_NOT_FOUND_IN_SCOPE"}), 404
             if len(profiles) != 1:
@@ -353,7 +354,21 @@ def _scoped_profile_view(kind):
                                  for value in sorted({row.get("lifecycle_stage") or "UNKNOWN" for row in profiles})},
             }
         elif kind in {"detail", "account"}:
-            result = profiles[0]
+            result = {
+                **profiles[0],
+                **{
+                    key: data[key]
+                    for key in (
+                        "coverage",
+                        "source_read_complete",
+                        "truncated",
+                        "source_count",
+                        "rejected_count",
+                        "classification_unknown_count",
+                        "classification_coverage",
+                    )
+                },
+            }
         elif kind in {"identity", "ownership"}:
             result = {
                 "profiles": [
