@@ -4,6 +4,21 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-091 — Sogou challenge retry boundary
+
+The existing `lumenis/adapters/sogou_search.py` now recognizes explicit
+verification/anti-bot challenge markers, returns the existing failed-result
+contract with `NEED_HUMAN_VERIFICATION`, and stops before retrying that channel,
+requesting the next channel, or resolving links. `BaseAdapter.collect` already
+treats the returned verification text as terminal; no outer retry is needed.
+Ordinary short empty shells keep their existing single retry. Existing tests in
+`tests/test_sogou_adapters.py` verify one request through `collect`, explicit
+manual re-entry after the fixture no longer presents a challenge, and normal
+empty search success. The adapter and same-owner regression do not add a token
+or bypass path. The W6-owned API/UI projection is unchanged and remains
+unverified; this repair does not close that display integration or remaining
+Issue #17 work. `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest --with requests --with beautifulsoup4 python -m pytest -q tests/test_sogou_adapters.py::TestSogouSearchAdapter` passed (**13 passed**); `python -m compileall -q lumenis/adapters/sogou_search.py tests/test_sogou_adapters.py`, both governance/constitution gates and `git diff --check` passed. A whole-file run was not accepted as a result: its first attempt lacked Flask and exposed a short normal-page fixture in the new recovery test; that fixture is corrected. A second whole-file attempt with Flask did not finish within the isolated run and was interrupted, so only the targeted adapter class is reported as passing. No real source or external effect was used.
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

@@ -210,20 +210,61 @@ class TestSogouSearchAdapter:
         assert "news" in names
         assert "web" in names
 
-    @patch("lumenis.adapters.sogou_search.SogouSearchAdapter._load_cookies", return_value={})
-    def test_search_all_channels_blocked(self, mock_cookies):
-        """两个频道都被拦 → success=False，不返回空成功。"""
+    def test_collect_stops_all_automatic_requests_on_verification_challenge(self, monkeypatch):
+        """验证码挑战不触发同频道重试、下个频道请求或BaseAdapter外层重试。"""
+        import requests
+
         ad = SogouSearchAdapter()
-        with patch("requests.Session") as mock_session_cls:
-            mock_session = MagicMock()
-            mock_resp = MagicMock()
-            mock_resp.text = "<html>请输入验证码 antispider</html>"
-            mock_resp.encoding = "utf-8"
-            mock_session.get.return_value = mock_resp
-            mock_session_cls.return_value = mock_session
-            r = ad.search("太古汇", max_results=10)
+        monkeypatch.setattr(ad, "_load_cookies", lambda: {})
+        session = MagicMock()
+        response = MagicMock()
+        response.text = "<html>请输入验证码 antispider</html>"
+        response.encoding = "utf-8"
+        session.get.return_value = response
+        monkeypatch.setattr(requests, "Session", lambda: session)
+        monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+
+        r = ad.collect("太古汇", max_results=10, allow_fallback=False)
+
         assert r.success is False
         assert r.notes == []
+        assert "NEED_HUMAN_VERIFICATION" in r.error
+        assert "已停止自动请求" in r.error
+        assert session.get.call_count == 1
+
+    def test_explicit_search_after_challenge_is_cleared_resumes_existing_flow(self, monkeypatch):
+        """After manual verification, a separately initiated normal search uses the same path."""
+        import requests
+
+        ad = SogouSearchAdapter()
+        monkeypatch.setattr(ad, "_load_cookies", lambda: {})
+        blocked_session = MagicMock()
+        blocked_response = MagicMock()
+        blocked_response.text = "<html>请输入验证码 antispider</html>"
+        blocked_response.encoding = "utf-8"
+        blocked_session.get.return_value = blocked_response
+
+        resumed_session = MagicMock()
+        normal_response = MagicMock()
+        normal_response.text = "<html><body>" + ("正常搜索页面内容 " * 120) + "</body></html>"
+        normal_response.encoding = "utf-8"
+        resumed_session.get.return_value = normal_response
+        sessions = iter([blocked_session, resumed_session])
+        monkeypatch.setattr(requests, "Session", lambda: next(sessions))
+        monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+
+        blocked = ad.search("太古汇", max_results=10)
+        assert blocked.success is False
+        assert "NEED_HUMAN_VERIFICATION" in blocked.error
+        assert blocked_session.get.call_count == 1
+
+        # This second call models a new user-initiated search after the provider
+        # challenge has been resolved outside this adapter; no token or bypass is supplied.
+        resumed = ad.search("太古汇", max_results=10)
+
+        assert resumed.success is True
+        assert resumed.notes == []
+        assert resumed_session.get.call_count == 2
 
     def test_parse_channel_with_bs4(self):
         """BeautifulSoup 解析新闻频道结果。"""

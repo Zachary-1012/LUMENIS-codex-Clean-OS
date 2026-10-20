@@ -35,6 +35,11 @@ _BLOCK_PATTERNS = [
     "请输入验证码", "访问过于频繁", "用户您好", "网络不给力",
     "验证码", "unusual traffic", "请您输入验证码",
 ]
+_MANUAL_VERIFICATION_PATTERNS = (
+    "antispider", "anti.min.css", "verify.css", "imgcode", "请输入验证码",
+    "访问过于频繁", "验证码", "unusual traffic", "请您输入验证码",
+)
+_MANUAL_VERIFICATION_PREFIX = "NEED_HUMAN_VERIFICATION:"
 # 发布时间：2026年6月7日 / 2025-03-2 / 2025/03/02
 _DATE_CN = re.compile(r"(20\d{2})\s*[年/\-\.]\s*(\d{1,2})\s*[月/\-\.]\s*(\d{1,2})")
 # 用于从来源文本里整体抹掉日期（含年/月/日/号汉字与分隔符）
@@ -114,6 +119,12 @@ class SogouSearchAdapter(BaseAdapter):
             page, err = self._fetch_channel(session, tmpl.format(q=urllib.parse.quote(keyword)), referer)
             if err:
                 blocked.append(f"{channel}:{err}")
+                if err.startswith(_MANUAL_VERIFICATION_PREFIX):
+                    # A provider challenge is terminal for this explicit search:
+                    # do not try another channel or resolve links after it.
+                    return AdapterResult(
+                        success=False, notes=collected, error="；".join(blocked),
+                    )
                 continue
             collected.extend(self._parse_channel(page, channel))
 
@@ -155,10 +166,10 @@ class SogouSearchAdapter(BaseAdapter):
         }
 
     def _fetch_channel(self, session, url: str, referer: str):
-        """抓取单个频道结果页；命中风控时退避后最多重试一次。
+        """抓取单个频道页；验证挑战立即停止，其他短暂空壳最多重试一次。
 
         返回 (html, error)：成功 error 为 None；被拦/网络异常返回 (None, 原因)。
-        不做多次硬撞，符合“被拦即退避、不硬刚风控”的原则。
+        验证挑战不自动重试，要求用户完成验证后显式重新发起搜索。
         """
         for attempt in range(2):
             try:
@@ -168,6 +179,11 @@ class SogouSearchAdapter(BaseAdapter):
                 text = resp.text
             except Exception as e:
                 return None, f"网络异常 {e}"
+            if self._has_manual_verification(text):
+                return None, (
+                    f"{_MANUAL_VERIFICATION_PREFIX} 搜狗返回验证码/反爬挑战；"
+                    "已停止自动请求，请完成人工验证后重新发起搜索"
+                )
             if not self._is_blocked(text):
                 return text, None
             if attempt == 0:
@@ -183,6 +199,12 @@ class SogouSearchAdapter(BaseAdapter):
             return True  # 异常空壳页同样视为被拦，避免“假成功 0 条”
         low = text.lower()
         return any(p.lower() in low for p in _BLOCK_PATTERNS)
+
+    @staticmethod
+    def _has_manual_verification(text: str) -> bool:
+        """Detect explicit provider challenge markers without guessing from page length."""
+        low = (text or "").lower()
+        return any(pattern.lower() in low for pattern in _MANUAL_VERIFICATION_PATTERNS)
 
     def _parse_channel(self, page_html: str, channel: str) -> list:
         """解析单个频道结果页为标准化笔记列表。"""
