@@ -245,3 +245,19 @@ def test_corrupted_principal_kind_in_payload_stays_visible_corruption(workspace)
     _corrupt_payload_context(workspace, created, principal_kind="forged", principal_ref="workspace:local")
     with pytest.raises(ValueError, match="KOS_EXECUTION_BINDING_INVALID"):
         owner.list_scoped_executions(actor=workspace["actor"], scope=scope)
+
+
+def test_intact_payload_for_existing_foreign_user_is_skipped(workspace):
+    import json
+    owner, scope, created = _scoped_list_record(workspace)
+    with workspace["repo"].transaction() as con:
+        con.execute("CREATE TABLE IF NOT EXISTS v4_users (id INTEGER PRIMARY KEY, username TEXT, status TEXT)")
+        con.execute("INSERT INTO v4_users (id, username, status) VALUES (424242, 'other', 'active')")
+        payload = json.loads(created["payload"])
+        for key in ("principal_kind", "principal_ref"):
+            payload["context"].pop(key, None)
+        payload["context"]["actor_id"] = 424242
+        con.execute("UPDATE kos_executions SET payload=? WHERE execution_id=?",
+                    (json.dumps(payload), created["execution_id"]))
+    # Another real user's intact row must not block this caller's history.
+    assert owner.list_scoped_executions(actor=workspace["actor"], scope=scope) == []

@@ -335,9 +335,23 @@ def _is_valid_foreign_principal(payload_context, context, connection):
     actor_id = payload_context.get("actor_id")
     if type(actor_id) is not int or actor_id <= 0 or actor_id == context.get("actor_id"):
         return False
+    # v4_users is the authentication owner's table (account.models); check the
+    # current connection first, then the account owner database.
     try:
-        hit = connection.execute("SELECT 1 FROM users WHERE id=? LIMIT 1", (actor_id,)).fetchone()
+        hit = connection.execute("SELECT 1 FROM v4_users WHERE id=? LIMIT 1", (actor_id,)).fetchone()
+        return hit is not None
     except sqlite3.Error:
+        pass
+    try:
+        from account.models import get_db as _account_db
+        account_conn = _account_db()
+        try:
+            hit = account_conn.execute("SELECT 1 FROM v4_users WHERE id=? LIMIT 1", (actor_id,)).fetchone()
+        finally:
+            close = getattr(account_conn, "close", None)
+            if callable(close):
+                close()
+    except Exception:
         return False
     return hit is not None
 
