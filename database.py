@@ -473,7 +473,9 @@ def _record_metric_observation(conn, nid, note_data, vals, observation_complete,
     """
     # Row-wide marker: only a write that observes all four canonical metrics
     # can certify the stored set (a partial patch would certify stale zeros).
-    if not observation_complete or not all(
+    # Provenance requires an explicit upstream completeness signal; the
+    # default (unset) only governs overwrite semantics, never certification.
+    if note_data.get('_lumenis_metric_observation_complete') is not True or not all(
             name in note_data and vals[name] is not None for name in _NOTE_METRIC_KEYS):
         return False
     try:

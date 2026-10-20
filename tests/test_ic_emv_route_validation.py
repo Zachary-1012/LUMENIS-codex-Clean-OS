@@ -145,7 +145,14 @@ def test_all_zero_note_without_observation_provenance_is_not_a_zero_amount():
         "note_id": "c", "likes": 0, "comments": 0, "collects": 0, "shares": 0,
         "detail_fetched_at": "2026-10-20 10:00:00",
     }])
-    assert detail["status"] == "OK"
+    # A generic detail timestamp is not metric-completeness provenance.
+    assert detail["status"] == "NOT_AVAILABLE"
+
+    marked = emv.aggregate_emv([{
+        "note_id": "d", "likes": 0, "comments": 0, "collects": 0, "shares": 0,
+        "metrics_observed_at": "2026-10-20 10:00:00",
+    }])
+    assert marked["status"] == "OK"
 
 
 def test_emv_route_reads_observation_provenance_from_real_schema(monkeypatch, tmp_path):
@@ -229,6 +236,8 @@ def test_initial_import_of_observed_zero_metrics_keeps_zero_amount(monkeypatch, 
     monkeypatch.setattr(database, "get_db", fixture_db)
     monkeypatch.setenv("ZBC_METRIC_SNAPSHOT", "1")
     database.insert_note({"note_id": "obs0", "title": "t", "likes": 0, "comments": 0,
+                          "collects": 0, "shares": 0, "_lumenis_metric_observation_complete": True})
+    database.insert_note({"note_id": "synth", "title": "t", "likes": 0, "comments": 0,
                           "collects": 0, "shares": 0})
     database.insert_note({"note_id": "absent", "title": "t"})
     body = _client().get("/api/ic/emv").get_json()
@@ -236,6 +245,8 @@ def test_initial_import_of_observed_zero_metrics_keeps_zero_amount(monkeypatch, 
     assert by_id["obs0"]["status"] == "OK"
     assert by_id["obs0"]["emv_yuan"] == 0
     assert by_id["absent"]["status"] != "OK"
+    # Counters materialized without an explicit completeness signal stay unavailable.
+    assert by_id["synth"]["status"] == "NOT_AVAILABLE"
 
 
 def test_initial_import_does_not_create_trend_snapshot(monkeypatch, tmp_path):
@@ -262,7 +273,7 @@ def test_initial_import_does_not_create_trend_snapshot(monkeypatch, tmp_path):
 
     monkeypatch.setattr(database, "get_db", fixture_db)
     database.insert_note({"note_id": "n1", "title": "t", "likes": 0, "comments": 0,
-                          "collects": 0, "shares": 0})
+                          "collects": 0, "shares": 0, "_lumenis_metric_observation_complete": True})
     c = sqlite3.connect(path)
     assert c.execute("SELECT COUNT(*) FROM metric_snapshots").fetchone()[0] == 0
     assert c.execute("SELECT metrics_observed_at FROM notes WHERE note_id='n1'").fetchone()[0]
@@ -305,7 +316,8 @@ def test_partial_metric_patch_does_not_certify_stored_zeros(monkeypatch, tmp_pat
             c.close()
 
     monkeypatch.setattr(database, "get_db", fixture_db)
-    database.insert_note({"note_id": "p", "title": "t", "likes": 0})
+    database.insert_note({"note_id": "p", "title": "t", "likes": 0,
+                          "_lumenis_metric_observation_complete": True})
     c = sqlite3.connect(path)
     assert not c.execute("SELECT metrics_observed_at FROM notes WHERE note_id='p'").fetchone()[0]
     c.close()

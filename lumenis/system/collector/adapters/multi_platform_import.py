@@ -249,6 +249,12 @@ def _to_note_payload(canonical: Dict[str, Any], raw: Dict[str, Any]) -> Dict[str
         "comments": canonical.get("comment_count"),
         "collects": canonical.get("collect_count"),
         "shares": canonical.get("share_count"),
+        # Imported files state every counter explicitly; only a fully present
+        # counter set certifies metric observation provenance.
+        "_lumenis_metric_observation_complete": all(
+            canonical.get(key) is not None
+            for key in ("like_count", "comment_count", "collect_count", "share_count")
+        ),
         "type": canonical.get("content_type") or raw.get("type") or "normal",
         "publish_datetime": published_at or "",
         "captured_at": (

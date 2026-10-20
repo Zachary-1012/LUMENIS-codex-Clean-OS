@@ -15,11 +15,13 @@ adds an injected non-finite result case; the targeted route and EMV gap-closure
 suite passed. Changed-source compilation, governance machine contract, AI-native
 constitution and `git diff --check` passed. The shared writer `database.insert_note` now records metric observation
 provenance in the additive `notes.metrics_observed_at` column (registered in
-`business_schema` note migrations) only when a write explicitly supplies all
-four non-null canonical metrics as a complete observation; `metric_snapshots` trend
+`business_schema` note migrations) only when the caller passes an explicit
+`_lumenis_metric_observation_complete=True` signal (successful detail read in
+`app.py`; fully present counters in `multi_platform_import`) and all four
+canonical metrics are non-null; `metric_snapshots` trend
 semantics are unchanged (no snapshot on insert). `/api/ic/emv` and the
-reporting engine publish an all-zero EMV only with that column,
-`detail_fetched_at` or a metric snapshot; otherwise the amount is
+reporting engine publish an all-zero EMV only with that column
+or a metric snapshot (a generic `detail_fetched_at` is not provenance); otherwise the amount is
 `NOT_AVAILABLE`. Legacy databases without the column keep the previous
 behaviour. Platform aggregation reports aggregate-only overflow in
 `invalid_inputs` and keeps `invalid_count` to invalid notes.

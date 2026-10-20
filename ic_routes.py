@@ -150,8 +150,6 @@ def ic_emv():
             observed_terms = []
             if "metrics_observed_at" in note_cols:
                 observed_terms.append("COALESCE(TRIM(metrics_observed_at), '') <> ''")
-            if "detail_fetched_at" in note_cols:
-                observed_terms.append("COALESCE(TRIM(detail_fetched_at), '') <> ''")
             if _has("metric_snapshots"):
                 observed_terms.append(
                     "EXISTS (SELECT 1 FROM metric_snapshots ms "

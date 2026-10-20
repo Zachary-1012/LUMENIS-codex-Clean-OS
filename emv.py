@@ -193,8 +193,7 @@ def aggregate_emv(notes: list[dict], cpm: float | None = None,
                           cpm=cpm, exposure_ratio=exposure_ratio)
         if (r["status"] == "OK" and r.get("weighted_interaction") == 0
                 and n.get("metrics_observed") is not True
-                and not str(n.get("metrics_observed_at") or "").strip()
-                and not str(n.get("detail_fetched_at") or "").strip()):
+                and not str(n.get("metrics_observed_at") or "").strip()):
             # Schema DEFAULT 0 and persisters that materialize absent metrics
             # as 0 make an all-zero row indistinguishable from "never
             # collected". Publish a zero amount only with observation
