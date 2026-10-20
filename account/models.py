@@ -306,9 +306,10 @@ def init_account_db():
     conn = get_db()
     try:
         conn.executescript(ACCOUNT_TABLES_SQL)
-        # TOTP was removed by product decision: drop its legacy seed table.
-        conn.execute("DROP TABLE IF EXISTS v4_totp_secrets")
-        conn.execute("UPDATE v4_product_protection SET method='password' WHERE method='totp'")
+        # TOTP was removed by product decision. Existing v4_totp_secrets rows and
+        # stored 'totp' protection methods are retained untouched (AGENTS.md §9:
+        # no silent destructive migration); nothing reads them any more and
+        # product_protection maps a stored 'totp' method to password on read.
         conn.commit()
         # 幂等新增列
         ensure_auth_user_columns(conn)

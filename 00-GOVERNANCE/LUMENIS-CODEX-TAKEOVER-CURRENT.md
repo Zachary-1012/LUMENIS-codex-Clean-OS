@@ -369,6 +369,24 @@ measuring them; `get_web_mentions` orders by instant across legacy/ISO values
 (#88). Regressions added in the existing test files. Offline only; runtime and
 user acceptance remain NOT_VERIFIED.
 
+## 2026-10-20 Account security repair: TOTP removed, key and unlock routes require login
+
+Product Owner decision: no TOTP and no passkey. `account/totp.py` and every
+`/api/system/account/totp/*` route are removed; ZBMP protection uses password,
+and a stored legacy `totp` method reads as password. Existing
+`v4_totp_secrets` rows are retained untouched (no silent destructive
+migration); nothing reads them. `/api/v4/api-keys*` has one registration
+(`account/compat.py`): list needs admin/owner login, generate/revoke need owner.
+`/v4/auth/workspace/unlock` refuses requests without a login (it no longer
+opens an owner session from a shared workspace key) and locks a per-IP bucket
+after the configured failure limit; only the exact reserved buckets
+`__access_key__`/`__workspace_key__` are per-IP. `/v4/auth/workspace/keys`
+listing is owner-only. `/v4/auth/login-by-key` (owner-configured
+`V4_ACCESS_KEY`, existing per-IP lockout) is unchanged. Publication date
+bounds at the representable extremes no longer return 500 or drop rows.
+Regressions: `tests/test_account_security_hardening.py` and existing test
+files. Offline only; runtime, database and user acceptance remain NOT_VERIFIED.
+
 ## 2026-10-20 Issue #17 FIX-107 / FIX-108 — pitch export and report readback
 
 The existing `scripts/pitch_export.py` sets Normal paragraph-after spacing to
@@ -663,7 +681,7 @@ Exact source regressions are in `tests/test_adapter_resilience.py`: `UV_CACHE_DI
 
 Independent review of exact head `34ecc470e0dc276dd06737044f919c2edc4fe811` found that callers could mutate the live success result and cached notes through shared object references, including nested `raw_data`. The existing cache owner now stores a detached deep snapshot and deep-copies cached notes for every fallback; if snapshot copying is unsupported, cached fallback is unavailable rather than aliased. Regressions mutate the first live result and first fallback, inject `TypeError` during snapshot storage and reads, and verify a fresh live success clears the older cache. The registry-forwarding test now restores the process-wide singleton through `monkeypatch`. FIX-091 integration review found terminal verification errors could be downgraded to cached or custom fallback success; `_fallback_or_fail` now returns the original terminal failure before consulting any fallback. A subsequent breaker review found the open-circuit shortcut replaced the provider error with a generic breaker message. `BaseAdapter` now retains the most recent provider failure in existing adapter state; while an open breaker follows a terminal response, it returns failure with that cause and bypasses both custom and cached fallback. Regressions warm both empty and non-empty same-identity caches, issue five challenges through the configured threshold, verify the sixth call makes no provider request and remains failed, and confirm an explicitly permitted normal request after cooldown recovers. A separate regression confirms repeated ordinary transient errors still use same-identity cached fallback after the breaker opens. The isolated adapter suite passes **30 tests** with `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest python -m pytest -q tests/test_adapter_resilience.py`; changed Python compilation and `git diff --check` pass. This closes only the cache alias, terminal/breaker-state and test-isolation paths; exact updated-head CI/review and all runtime, database, real-source, user and remaining Issue #17 outcomes remain pending/open.
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Database state: `NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`

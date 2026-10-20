@@ -70,3 +70,24 @@ def test_reserved_looking_username_keeps_account_lockout():
     assert security._is_ip_bucket("__access_key__")
     assert security._is_ip_bucket("__workspace_key__")
     assert not security._is_ip_bucket("__alice__")
+
+
+def test_account_init_retains_legacy_totp_rows():
+    """TOTP removal must not silently destroy existing security data."""
+    from account.models import get_db, init_account_db
+    conn = get_db()
+    try:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS v4_totp_secrets (id INTEGER PRIMARY KEY, "
+            "user_id INTEGER, secret TEXT, enabled INTEGER)"
+        )
+        conn.execute("INSERT INTO v4_totp_secrets(user_id, secret, enabled) VALUES (1, 'legacy', 1)")
+        conn.commit()
+    finally:
+        conn.close()
+    init_account_db()
+    conn = get_db()
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM v4_totp_secrets").fetchone()[0] >= 1
+    finally:
+        conn.close()

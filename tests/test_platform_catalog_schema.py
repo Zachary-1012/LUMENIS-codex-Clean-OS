@@ -707,6 +707,16 @@ class TestDataCenterAPI:
         response = client.get("/api/data-center/table/notes?end_date=9999-12-31T23:59:59.999999Z")
         assert response.status_code == 200
         assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
+        # Offset-adjusted extremes leave Python's UTC range: no 500.
+        response = client.get("/api/data-center/table/notes?end_date=9999-12-31T23:59:59-05:00")
+        assert response.status_code == 200
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
+        response = client.get("/api/data-center/table/notes?start_date=0001-01-01T00:00:00%2B05:00")
+        assert response.status_code == 200
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
+        response = client.get("/api/data-center/table/notes?start_date=9999-12-31T23:59:59-05:00")
+        assert response.status_code == 400
+        assert response.get_json() == {"ok": False, "error": "invalid start_date"}
 
     @pytest.mark.parametrize(("parameter", "invalid_date"), [
         ("start_date", "2026-02-30"),

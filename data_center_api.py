@@ -83,10 +83,26 @@ def _parse_date_bound(value: str) -> tuple[datetime, bool]:
     return parsed, date_only
 
 
+def _out_of_range_bound(parsed: datetime, *, end: bool):
+    """A valid ISO bound whose UTC instant leaves Python's year range.
+
+    An end bound past year 9999 or a start bound before year 1 excludes
+    nothing (no bound). The opposite cases cannot be represented, so they are
+    rejected as a controlled validation error instead of a 500.
+    """
+    beyond_max = parsed.year == 9999
+    if end == beyond_max:
+        return None, None
+    raise ValueError("date bound outside representable range")
+
+
 def _text_date_filter(value: str, *, end: bool) -> tuple[str, str]:
     """Validate an ISO bound and return a UTC literal for julianday() comparison."""
     parsed, date_only = _parse_date_bound(value)
-    utc = parsed.astimezone(timezone.utc)
+    try:
+        utc = parsed.astimezone(timezone.utc)
+    except OverflowError:
+        return _out_of_range_bound(parsed, end=end)
     if date_only and end:
         try:
             return "<", (utc + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
@@ -105,13 +121,13 @@ def _unix_date_filter(
 ) -> tuple[str, float]:
     """Convert an ISO bound to a source-native Unix timestamp comparison."""
     parsed, date_only = _parse_date_bound(value)
-    if date_only and end:
-        # Include the whole requested end date, including fractional seconds.
-        try:
+    try:
+        if date_only and end:
+            # Include the whole requested end date, including fractional seconds.
             return "<", (parsed + timedelta(days=1)).timestamp() * timestamp_multiplier
-        except OverflowError:
-            return None, None
-    return ("<=" if end else ">="), parsed.timestamp() * timestamp_multiplier
+        return ("<=" if end else ">="), parsed.timestamp() * timestamp_multiplier
+    except (OverflowError, ValueError):
+        return _out_of_range_bound(parsed, end=end)
 
 
 @data_center_bp.route("/platforms", methods=["GET"])
@@ -306,13 +322,16 @@ def query_table(table_name: str):
                         operator, value = _text_date_filter(start_date, end=False)
                 except ValueError:
                     return jsonify({"ok": False, "error": "invalid start_date"}), 400
-                if not numeric_time_col:
+                if operator is None:
+                    pass  # earliest representable date: nothing is earlier
+                elif not numeric_time_col:
                     # Compare instants, not strings: julianday() applies
                     # declared offsets (Z/+08:00) and accepts 'T' or space.
                     where_clauses.append(f"julianday({time_expr}) {operator} julianday(?)")
                 else:
                     where_clauses.append(f"{time_expr} {operator} ?")
-                params.append(value)
+                if operator is not None:
+                    params.append(value)
             if end_date:
                 try:
                     if numeric_time_col:
