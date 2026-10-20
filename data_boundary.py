@@ -199,7 +199,7 @@ _SAN_RULES = [
     ),
     (
         re.compile(
-            r'''((?:\b|(?<=[a-z0-9])(?=(?-i:C)))(?:[A-Za-z0-9]+[_-])*cookie["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|(?:null|true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?=\s*[,}\]])|[^\n\r]*)''',
+            r'''(\b[A-Za-z0-9_-]*?cookie["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|(?:null|true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?=\s*[,}\]])|[^\n\r]*)''',
             re.I,
         ),
         _redact_cookie,
@@ -236,11 +236,22 @@ _SENSITIVE_VALUE_DESCRIPTORS = (
 )
 
 
+_COMPACT_SENSITIVE_KEYS = frozenset(k.replace("_", "") for k in _SENSITIVE_MAPPING_KEYS)
+_COMPACT_SENSITIVE_SUFFIXES = tuple(
+    sfx.replace("_", "") for sfx in _SENSITIVE_MAPPING_SUFFIXES
+)
+
+
 def _is_sensitive_mapping_key(key):
     # Split camelCase boundaries first (accessToken -> access_token).
     separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
     normalized = re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
     if normalized in _SENSITIVE_MAPPING_KEYS or normalized.endswith(_SENSITIVE_MAPPING_SUFFIXES):
+        return True
+    # Separator-free forms (apikey, accesstoken, SESSIONCOOKIE) compare on a
+    # compact canonical form; metadata such as tokencount still has no match.
+    compact = normalized.replace("_", "")
+    if compact in _COMPACT_SENSITIVE_KEYS or compact.endswith(_COMPACT_SENSITIVE_SUFFIXES):
         return True
     # Credential field followed by a value/container descriptor
     # (cookie_header, authorization_header, token_value). Metadata such as

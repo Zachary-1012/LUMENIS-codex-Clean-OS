@@ -280,3 +280,24 @@ def test_sanitize_mapping_redacts_credential_keys_with_descriptors():
     assert out["authorization_header"] == "[REDACTED]"
     assert out["token_count"] == 3
     assert out["authorization_status"] == "missing"
+
+
+def test_sanitize_text_redacts_lowercase_separatorless_cookie_labels():
+    from data_boundary import sanitize_text
+    for raw in ("sessioncookie=abc123secretvalue", "xhscookie: abc123secretvalue"):
+        out = sanitize_text(raw)
+        assert "abc123secretvalue" not in out
+    assert sanitize_text("cookie_count=3") == "cookie_count=3"
+
+
+def test_sanitize_mapping_redacts_separatorless_credential_keys():
+    from data_boundary import sanitize_mapping
+    out = sanitize_mapping({
+        "apikey": "opaqueA1", "accesstoken": "opaqueB2",
+        "sessioncookie": "opaqueC3", "APIKEY": "opaqueD4",
+        "tokencount": 3, "token_budget": 9,
+    })
+    for key in ("apikey", "accesstoken", "sessioncookie", "APIKEY"):
+        assert out[key] == "[REDACTED]"
+    assert out["tokencount"] == 3
+    assert out["token_budget"] == 9
