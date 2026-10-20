@@ -186,6 +186,12 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
+### 2026-10-20 Issue #17 first source repair — FIX-089
+
+PR [#85](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/85) is an open, unmerged source candidate from main `3f6d67785752b465b5b022847cbbe75a55e1eb47`; initial code head `dff5b4a4635dddfc288a5139dbbcda4039aced3d`. It addresses only `FIX-089 · LOWER_ADAPTER_CACHE_SCOPE`: `lumenis/adapters/base.py` now binds cached fallback to complete actor/scope/query/task/source-version/result-limit identity and writes result+identity atomically; `lumenis/adapters/registry.py` carries an optional keyword-only context through existing search methods. Existing callers without complete trusted context retain live searches but fail truthfully without cached fallback. The current V4 search callers have not yet been wired to an authenticated complete context; their degraded cached fallback remains unavailable until their existing caller owner closes that boundary. No W6 composition file changed.
+
+Exact source regressions are in `tests/test_adapter_resilience.py`: `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest python -m pytest -q tests/test_adapter_resilience.py` — 20 passed. `python -m compileall -q lumenis/adapters/base.py lumenis/adapters/registry.py tests/test_adapter_resilience.py`, `python scripts/audit_tools/verify_ai_native_constitution.py` and `git diff --check` passed locally. The first exact-head Product Gate run failed its blocking machine-governance step because the delivery commit omitted this required CURRENT co-publication; that failure is retained and this CURRENT update is the correction for the next exact-head run. Its advisory Boundary Check reported 28 existing findings; the same command on exact base `3f6d67785752b465b5b022847cbbe75a55e1eb47` reported the same 28 (not introduced by this PR). Latest-head required checks and review are still pending; neither source tests nor this record establish runtime, database, real-source or user acceptance. All other still-open Issue #17 work remains open; this first PR is not the complete repair scope.
+
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Database state: `NOT_VERIFIED`
