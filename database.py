@@ -187,10 +187,13 @@ def insert_note(note_data, *, connection=None):
             if new_record or "sentiment" in note_data:
                 sentiment = _analysis_label(note_data, "sentiment", _NOTE_SENTIMENTS)
                 updates["sentiment"] = sentiment
-                updates["sentiment_score"] = (
-                    _nullable_analysis_score(note_data.get("sentiment_score"))
-                    if sentiment != "unknown" else None
-                )
+                if "sentiment_score" in note_data:
+                    updates["sentiment_score"] = (
+                        _nullable_analysis_score(note_data.get("sentiment_score"))
+                        if sentiment != "unknown" else None
+                    )
+                elif new_record or sentiment == "unknown":
+                    updates["sentiment_score"] = None
             elif "sentiment_score" in note_data:
                 current_sentiment = str(existing["sentiment"] or "unknown").strip().lower()
                 updates["sentiment_score"] = (
@@ -201,10 +204,13 @@ def insert_note(note_data, *, connection=None):
             if new_record or "risk_level" in note_data:
                 risk_level = _analysis_label(note_data, "risk_level", _NOTE_RISK_LEVELS)
                 updates["risk_level"] = risk_level
-                updates["risk_score"] = (
-                    _nullable_analysis_score(note_data.get("risk_score"), integer=True)
-                    if risk_level != "unknown" else None
-                )
+                if "risk_score" in note_data:
+                    updates["risk_score"] = (
+                        _nullable_analysis_score(note_data.get("risk_score"), integer=True)
+                        if risk_level != "unknown" else None
+                    )
+                elif new_record or risk_level == "unknown":
+                    updates["risk_score"] = None
             elif "risk_score" in note_data:
                 current_risk = str(existing["risk_level"] or "unknown").strip().lower()
                 updates["risk_score"] = (

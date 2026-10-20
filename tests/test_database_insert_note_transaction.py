@@ -145,6 +145,41 @@ def test_fix_024_explicit_null_clears_only_present_nullable_fields(tmp_path):
         connection.close()
 
 
+def test_fix_024_label_only_analysis_upsert_preserves_omitted_scores(tmp_path):
+    """FIX-024: updating an analysis label leaves an omitted score untouched."""
+    path = _new_notes_db(tmp_path)
+    connection = _connect(path)
+    try:
+        note_database.insert_note(
+            {
+                "note_id": "fix-024-label-only-analysis",
+                "sentiment": "positive",
+                "sentiment_score": 0.65,
+                "risk_level": "low",
+                "risk_score": 18,
+            },
+            connection=connection,
+        )
+
+        note_database.insert_note(
+            {
+                "note_id": "fix-024-label-only-analysis",
+                "sentiment": "negative",
+                "risk_level": "high",
+            },
+            connection=connection,
+        )
+
+        row = connection.execute(
+            "SELECT sentiment, sentiment_score, risk_level, risk_score "
+            "FROM notes WHERE note_id=?",
+            ("fix-024-label-only-analysis",),
+        ).fetchone()
+        assert tuple(row) == ("negative", 0.65, "high", 18)
+    finally:
+        connection.close()
+
+
 def test_fix_024_incomplete_observation_preserves_explicit_unknown_metrics(tmp_path):
     """FIX-024: incomplete reads cannot turn old measurements into nulls."""
     path = _new_notes_db(tmp_path)
