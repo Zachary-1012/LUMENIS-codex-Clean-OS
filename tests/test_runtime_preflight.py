@@ -301,3 +301,20 @@ def test_sanitize_mapping_redacts_separatorless_credential_keys():
         assert out[key] == "[REDACTED]"
     assert out["tokencount"] == 3
     assert out["token_budget"] == 9
+
+
+def test_cookie_presence_metadata_stays_visible_but_values_redacted():
+    import data_boundary as d
+    out = d.sanitize_mapping({
+        "has_auth_cookie": True, "has_cookie": False, "cookie_present": True,
+        "has_cookie_value": "secret-abc", "cookie": True, "session_cookie": "s3cr3t",
+    })
+    assert out["has_auth_cookie"] is True
+    assert out["has_cookie"] is False
+    assert out["cookie_present"] is True
+    assert out["cookie"] == "[REDACTED]"
+    assert out["session_cookie"] == "[REDACTED]"
+    assert "secret-abc" not in str(out)
+    text = d.sanitize_text('{"has_auth_cookie": true, "has_cookie": "leak-me", "cookie": "abc"}')
+    assert '"has_auth_cookie": true' in text
+    assert "leak-me" not in text and "abc" not in text

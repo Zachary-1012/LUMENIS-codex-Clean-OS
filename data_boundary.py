@@ -179,10 +179,26 @@ def current_db_zone():
     return info
 
 
+_PRESENCE_KEY = re.compile(
+    r"^(?:has|is)_|_(?:present|configured|available|exists)$"
+)
+
+
+def _is_presence_metadata_key(key):
+    """has_cookie / has_auth_cookie / cookie_present: boolean status, not a value."""
+    separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+    normalized = re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
+    return bool(_PRESENCE_KEY.search(normalized))
+
+
 def _redact_cookie(match):
     prefix = match.group(1)
     value = match.group(0)[len(prefix):]
     if value == "null":
+        return match.group(0)
+    if value in ("true", "false") and _is_presence_metadata_key(
+        re.sub(r"[\"'\s:=]+$", "", prefix)
+    ):
         return match.group(0)
     if re.fullmatch(r"true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?", value):
         return f'{prefix}"[REDACTED]"'
@@ -281,7 +297,8 @@ def sanitize_mapping(obj):
         sanitized = {}
         for key, value in obj.items():
             safe_key = sanitize_text(key) if isinstance(key, str) else key
-            if isinstance(key, str) and _is_sensitive_mapping_key(key):
+            if (isinstance(key, str) and _is_sensitive_mapping_key(key)
+                    and not (isinstance(value, bool) and _is_presence_metadata_key(key))):
                 safe_value = "[REDACTED]"
             else:
                 safe_value = sanitize_mapping(value)
