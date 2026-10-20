@@ -97,6 +97,12 @@ class TestPlatformRegistry:
         assert rates["xhs"] == 1.0
         assert rates["facebook"] > 1.0  # USD -> CNY
 
+    def test_roi_normalization_uses_source_and_target_rates(self):
+        from ad_intelligence.platform_registry import get_cross_platform_roi_normalization, Currency
+        rates = get_cross_platform_roi_normalization(["xhs", "facebook"], base_currency=Currency.USD)
+        assert rates["facebook"] == pytest.approx(1.0)  # USD -> USD
+        assert rates["xhs"] == pytest.approx(1.0 / 7.25)  # CNY -> USD
+
     def test_all_profiles_have_required_fields(self):
         """确保所有平台画像都有完整的商业属性字段。"""
         from ad_intelligence.platform_registry import PLATFORM_COMMERCIAL_REGISTRY
