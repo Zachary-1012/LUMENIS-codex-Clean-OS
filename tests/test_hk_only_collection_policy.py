@@ -363,6 +363,559 @@ def test_system_health_uses_safe_registered_worker_contract(monkeypatch, tmp_pat
     assert not {'cdp_port', 'cdp_url', 'profile_path'} & result.keys()
 
 
+def _system_health_login_fixture(monkeypatch, tmp_path, *, session_state,
+                                 recent_collect=False, create_notes=True):
+    import sqlite3
+
+    import system_health_api as health
+    import xhs_cookie_bridge as bridge
+
+    db_path = tmp_path / 'isolated-health.sqlite3'
+    with sqlite3.connect(db_path) as connection:
+        if create_notes:
+            connection.execute('CREATE TABLE notes (collected_at TEXT)')
+            if recent_collect:
+                connection.execute(
+                    "INSERT INTO notes VALUES (datetime('now', '-1 day', 'localtime'))"
+                )
+
+    monkeypatch.setattr(health, 'get_db_path', lambda: str(db_path))
+    monkeypatch.setattr(bridge, 'get_account_status', lambda account=None: {
+        'active_account': bridge.XHS_RETINAUT_NAME,
+        'collection_policy': {'ok': True, 'region': 'intl'},
+        'worker_available': True,
+        'cookie_configured': True,
+        'accounts': [{
+            'account': bridge.XHS_RETINAUT_NAME,
+            'session_state': session_state,
+        }],
+    })
+    return health
+
+
+def test_recent_collection_history_does_not_prove_current_login(monkeypatch, tmp_path):
+    health = _system_health_login_fixture(
+        monkeypatch, tmp_path, session_state='NOT_VERIFIED', recent_collect=True
+    )
+
+    result = health.check_login_status()
+
+    assert result['recent_7d_collects'] == 1
+    assert result['cookie_file_exists'] is True
+    assert result['status'] == 'unknown'
+
+
+def test_synthetic_current_session_is_reported_independently_of_zero_history(
+        monkeypatch, tmp_path):
+    health = _system_health_login_fixture(
+        monkeypatch, tmp_path, session_state='real_session_valid'
+    )
+
+    result = health.check_login_status()
+
+    assert result['recent_7d_collects'] == 0
+    assert result['status'] == 'ok'
+
+
+def test_no_history_and_no_current_session_remains_unknown(monkeypatch, tmp_path):
+    health = _system_health_login_fixture(
+        monkeypatch, tmp_path, session_state='NOT_VERIFIED'
+    )
+
+    result = health.check_login_status()
+
+    assert result['recent_7d_collects'] == 0
+    assert result['status'] == 'unknown'
+
+
+def test_history_query_failure_is_not_misreported_as_zero(monkeypatch, tmp_path):
+    health = _system_health_login_fixture(
+        monkeypatch, tmp_path, session_state='NOT_VERIFIED', create_notes=False
+    )
+
+    result = health.check_login_status()
+
+    assert result['recent_7d_collects'] is None
+    assert result['status'] == 'unknown'
+    assert result['message'] == '采集历史读取失败: OperationalError'
+
+
+def test_health_aggregates_do_not_promote_unknown_login_to_healthy(monkeypatch):
+    from flask import Flask
+
+    import system_health_api as health
+    import lumenis.shared.evidence.store as evidence_store
+
+    monkeypatch.setattr(health, 'check_database', lambda: {
+        'status': 'ok', 'notes_count': 1, 'recent_24h': 1,
+    })
+    monkeypatch.setattr(health, '_check_db_writable_fast', lambda: {
+        'status': 'ok', 'writable': True,
+    })
+    monkeypatch.setattr(health, 'check_collector', lambda: {
+        'status': 'ok', 'cdp_running': True, 'cookie_configured': True,
+        'today_runs': 1, 'remaining_runs': 11,
+    })
+    monkeypatch.setattr(health, 'check_login_status', lambda: {
+        'status': 'unknown', 'recent_7d_collects': 1,
+        'cookie_file_exists': True,
+    })
+    monkeypatch.setattr(health, 'get_alerts', lambda: {
+        'active_alerts': 0, 'need_manual_intervention': 0,
+        'recent_alerts': [], 'latest_alert': None,
+    })
+    monkeypatch.setattr(health, 'get_collection_schedule', lambda: {'next_collect': ''})
+    monkeypatch.setattr(health, 'get_adaptive_status', lambda: {})
+    monkeypatch.setattr(evidence_store, 'get_evidence_write_failure_count', lambda _hours: 0)
+    for name in (
+        'check_dedup_module', 'check_subject_filter', 'check_risk_engine',
+        'check_report_generator', 'check_wechat_push', 'check_email_push',
+        'check_scheduler',
+    ):
+        monkeypatch.setattr(health, name, lambda: {'status': 'ok'})
+
+    app = Flask(__name__)
+    app.register_blueprint(health.system_health_bp)
+    client = app.test_client()
+
+    summary = client.get('/api/system/health/summary').get_json()
+    assert summary['sub_lights']['auth']['light'] == 'unknown'
+    assert summary['overall_status'] == 'warning'
+    assert any('历史记录' in hint for hint in summary['diagnostic_hints'])
+
+    detailed = client.get('/api/system/health/detailed').get_json()
+    assert detailed['modules']['login_status']['status'] == 'unknown'
+    assert detailed['status_counts']['unknown'] == 1
+    assert detailed['overall_status'] == 'warning'
+
+
+def _system_health_schedule_fixture(monkeypatch, tmp_path, *, notes=(), runs=None,
+                                    task_runs=None):
+    import json
+    import sqlite3
+    from datetime import datetime
+
+    import system_health_api as health
+
+    db_path = tmp_path / 'isolated-schedule.sqlite3'
+    with sqlite3.connect(db_path) as connection:
+        if notes is not None:
+            connection.execute('CREATE TABLE notes (collected_at TEXT)')
+            for collected_at in notes:
+                if collected_at is None:
+                    connection.execute(
+                        "INSERT INTO notes VALUES (datetime('now','localtime'))"
+                    )
+                else:
+                    connection.execute(
+                        'INSERT INTO notes VALUES (?)', (collected_at,)
+                    )
+        if runs is not None:
+            connection.execute(
+                'CREATE TABLE collection_logs '
+                '(status TEXT, started_at TEXT, finished_at TEXT)'
+            )
+            connection.executemany(
+                "INSERT INTO collection_logs VALUES (?, "
+                "datetime('now','localtime'), datetime('now','localtime'))",
+                [(status,) for status in runs],
+            )
+    monkeypatch.setattr(health, 'get_db_path', lambda: str(db_path))
+    monkeypatch.setattr(health, 'get_data_dir', lambda: str(tmp_path))
+    if task_runs is not None:
+        (tmp_path / 'collector_stats.json').write_text(json.dumps({
+            'date': datetime.now().strftime('%Y-%m-%d'),
+            'daily_runs': task_runs,
+            'daily_run_history_state': 'OBSERVED_TASK_STARTS',
+        }), encoding='utf-8')
+    return health
+
+
+def test_schedule_separates_notes_from_keyword_observations_and_unknown_task_runs(
+        monkeypatch, tmp_path):
+    health = _system_health_schedule_fixture(
+        monkeypatch, tmp_path,
+        notes=[None],
+        runs=['SUCCESS', 'EMPTY'],
+    )
+
+    result = health.get_collection_schedule()
+
+    assert result['today_collected_notes'] == 1
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] == 2
+    assert result['last_24h_failures'] is None
+    assert result['last_24h_unknown_runs'] is None
+    assert result['last_24h_failed_keyword_observations'] == 0
+    assert result['last_24h_degraded_keyword_observations'] == 0
+    assert result['last_24h_unknown_keyword_observations'] == 0
+    assert result['next_collect'] is None
+
+
+def test_one_task_with_many_keywords_counts_one_run_and_many_observations(
+        monkeypatch, tmp_path):
+    import time
+
+    health = _system_health_schedule_fixture(
+        monkeypatch, tmp_path,
+        notes=[], runs=['SUCCESS'] * 19 + ['BLOCKED'],
+        task_runs=[time.time()],
+    )
+
+    result = health.get_collection_schedule()
+
+    assert result['today_runs'] == 1
+    assert result['today_keyword_observations'] == 20
+    assert result['last_24h_failures'] is None
+    assert result['last_24h_failed_keyword_observations'] == 0
+    assert result['last_24h_degraded_keyword_observations'] == 1
+
+
+def test_collector_task_start_stats_are_marked_as_observed(monkeypatch, tmp_path):
+    import json
+    import xhs_cookie_bridge as bridge
+
+    monkeypatch.setattr(bridge, 'STATS_FILE', str(tmp_path / 'collector_stats.json'))
+    monkeypatch.setattr(bridge, '_stats_loaded', True)
+    monkeypatch.setattr(bridge, '_daily_runs', [])
+    monkeypatch.setattr(bridge, '_daily_manual_runs', 0)
+    monkeypatch.setattr(bridge, '_daily_auto_runs', 0)
+    monkeypatch.setattr(bridge, '_last_run_time', None)
+    monkeypatch.setattr(bridge, '_daily_run_history_state', 'UNKNOWN')
+
+    bridge.record_run('manual')
+
+    stats = json.loads((tmp_path / 'collector_stats.json').read_text(encoding='utf-8'))
+    assert stats['daily_run_history_state'] == 'OBSERVED_TASK_STARTS'
+    assert len(stats['daily_runs']) == 1
+
+
+def test_record_run_does_not_promote_unverified_legacy_counts(monkeypatch, tmp_path):
+    import json
+    import time
+    from datetime import date
+    import xhs_cookie_bridge as bridge
+
+    prior_runs = [time.time() - 600, time.time() - 300]
+    stats_file = tmp_path / 'collector_stats.json'
+    stats_file.write_text(json.dumps({
+        'date': date.today().strftime('%Y-%m-%d'),
+        'daily_runs': prior_runs,
+        'manual_runs': 1,
+        'auto_runs': 1,
+        'daily_run_history_state': 'UNKNOWN',
+        'last_run_time': prior_runs[-1],
+    }), encoding='utf-8')
+    monkeypatch.setattr(bridge, 'STATS_FILE', str(stats_file))
+    monkeypatch.setattr(bridge, '_stats_loaded', False)
+    monkeypatch.setattr(bridge, '_daily_runs', [])
+    monkeypatch.setattr(bridge, '_daily_manual_runs', 0)
+    monkeypatch.setattr(bridge, '_daily_auto_runs', 0)
+    monkeypatch.setattr(bridge, '_last_run_time', None)
+    monkeypatch.setattr(bridge, '_daily_run_history_state', 'UNKNOWN')
+
+    bridge.record_run('manual')
+
+    stats = json.loads(stats_file.read_text(encoding='utf-8'))
+    assert stats['daily_run_history_state'] == 'UNKNOWN'
+    assert stats['daily_runs'][:2] == prior_runs
+    assert len(stats['daily_runs']) == 3
+
+
+@pytest.mark.parametrize(("prior_history_state", "expected_history_state"), [
+    ("OBSERVED_TASK_STARTS", "OBSERVED_TASK_STARTS"),
+    ("UNKNOWN", "UNKNOWN"),
+])
+def test_midnight_stats_reset_preserves_prior_actual_run_cooldown(
+        monkeypatch, tmp_path, prior_history_state, expected_history_state):
+    import json
+    import time
+    import xhs_cookie_bridge as bridge
+    from datetime import date, timedelta
+
+    last_run = time.time() - 5 * 60
+    stats_file = tmp_path / 'collector_stats.json'
+    stats_file.write_text(json.dumps({
+        'date': (date.today() - timedelta(days=1)).strftime('%Y-%m-%d'),
+        'daily_runs': [last_run], 'manual_runs': 1, 'auto_runs': 0,
+        'daily_run_history_state': prior_history_state,
+        'last_run_time': last_run,
+    }), encoding='utf-8')
+    monkeypatch.setattr(bridge, 'STATS_FILE', str(stats_file))
+    monkeypatch.setattr(bridge, '_stats_loaded', False)
+    monkeypatch.setattr(bridge, '_daily_runs', [])
+    monkeypatch.setattr(bridge, '_daily_manual_runs', 0)
+    monkeypatch.setattr(bridge, '_daily_auto_runs', 0)
+    monkeypatch.setattr(bridge, '_last_run_time', None)
+    monkeypatch.setattr(bridge, '_daily_run_history_state', 'UNKNOWN')
+
+    allowed, reason = bridge.check_rate_limit('manual')
+
+    assert not allowed
+    assert '不足' in reason
+    assert bridge._daily_runs == []
+    assert bridge._last_run_time == last_run
+    assert bridge._daily_run_history_state == expected_history_state
+    assert json.loads(stats_file.read_text(encoding='utf-8'))[
+        'daily_run_history_state'
+    ] == expected_history_state
+
+
+def test_unverified_task_history_does_not_turn_keyword_logs_into_task_runs(
+        monkeypatch, tmp_path):
+    import json
+    import sqlite3
+    import time
+    from datetime import datetime
+    import system_health_api as health
+
+    db_path = tmp_path / 'isolated-schedule.sqlite3'
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            'CREATE TABLE collection_logs (status TEXT, started_at TEXT, finished_at TEXT)'
+        )
+        connection.executemany(
+            "INSERT INTO collection_logs VALUES (?, datetime('now','localtime'), datetime('now','localtime'))",
+            [('SUCCESS',)] * 20,
+        )
+    (tmp_path / 'collector_stats.json').write_text(json.dumps({
+        'date': datetime.now().strftime('%Y-%m-%d'),
+        'daily_runs': [time.time() for _ in range(4)],
+        'daily_run_history_state': 'UNKNOWN',
+    }), encoding='utf-8')
+    monkeypatch.setattr(health, 'get_db_path', lambda: str(db_path))
+    monkeypatch.setattr(health, 'get_data_dir', lambda: str(tmp_path))
+
+    result = health.get_collection_schedule()
+
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] == 20
+
+
+def test_schedule_counts_explicit_failure_records(monkeypatch, tmp_path):
+    health = _system_health_schedule_fixture(
+        monkeypatch, tmp_path, notes=[],
+        runs=['SUCCESS', 'BLOCKED', 'AUTH_FAILED', 'NETWORK_ERROR'],
+    )
+
+    result = health.get_collection_schedule()
+
+    assert result['today_collected_notes'] == 0
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] == 4
+    assert result['last_24h_failures'] is None
+    assert result['last_24h_unknown_runs'] is None
+    assert result['last_24h_failed_keyword_observations'] == 2
+    assert result['last_24h_degraded_keyword_observations'] == 1
+    assert result['last_24h_unknown_keyword_observations'] == 0
+
+
+def test_schedule_missing_run_records_are_unknown_not_zero(monkeypatch, tmp_path):
+    health = _system_health_schedule_fixture(
+        monkeypatch, tmp_path, notes=[], runs=None
+    )
+
+    result = health.get_collection_schedule()
+
+    assert result['today_collected_notes'] == 0
+    assert result['today_runs'] is None
+    assert result['last_24h_failures'] is None
+    assert result['last_24h_unknown_runs'] is None
+
+
+def test_schedule_unrecognized_run_status_is_not_called_success_or_failure(
+        monkeypatch, tmp_path):
+    health = _system_health_schedule_fixture(
+        monkeypatch, tmp_path, notes=[], runs=['ACCEPTED']
+    )
+
+    result = health.get_collection_schedule()
+
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] == 1
+    assert result['last_24h_failures'] is None
+    assert result['last_24h_unknown_runs'] is None
+    assert result['last_24h_failed_keyword_observations'] == 0
+    assert result['last_24h_degraded_keyword_observations'] == 0
+    assert result['last_24h_unknown_keyword_observations'] == 1
+
+
+def test_schedule_classifies_canonical_degraded_and_failed_statuses(
+        monkeypatch, tmp_path):
+    health = _system_health_schedule_fixture(
+        monkeypatch, tmp_path, notes=[],
+        runs=[
+            'NEED_VERIFY', 'SESSION_EXPIRED', 'COOLING_DOWN', 'RISK_WARNING',
+            'COLLECT_ERROR', 'ACCEPTED',
+        ],
+    )
+
+    result = health.get_collection_schedule()
+
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] == 6
+    assert result['last_24h_failed_keyword_observations'] == 2
+    assert result['last_24h_degraded_keyword_observations'] == 3
+    assert result['last_24h_unknown_keyword_observations'] == 1
+
+
+def test_schedule_missing_database_keeps_counts_unknown(monkeypatch, tmp_path):
+    import system_health_api as health
+
+    monkeypatch.setattr(health, 'get_db_path', lambda: str(tmp_path / 'absent.sqlite3'))
+
+    result = health.get_collection_schedule()
+
+    assert result['today_collected_notes'] is None
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] is None
+    assert result['last_24h_failures'] is None
+
+
+def test_scheduler_status_uses_current_thread_observation(monkeypatch):
+    import threading
+
+    import system_health_api as health
+
+    with monkeypatch.context() as isolated_patch:
+        isolated_patch.setattr(threading, 'enumerate', lambda: [
+            SimpleNamespace(name='scheduler', is_alive=lambda: True),
+        ])
+        result = health.check_scheduler()
+
+    assert result['status'] == 'ok'
+    assert result['scheduler_started'] is True
+    assert result['auto_collect_hours'] is None
+    assert result['daily_auto_runs'] is None
+
+
+def test_missing_scheduler_thread_is_unknown(monkeypatch):
+    import threading
+
+    import system_health_api as health
+
+    with monkeypatch.context() as isolated_patch:
+        isolated_patch.setattr(threading, 'enumerate', lambda: [])
+        result = health.check_scheduler()
+
+    assert result['status'] == 'unknown'
+    assert result['scheduler_started'] is None
+    assert result['auto_collect_hours'] is None
+    assert result['daily_auto_runs'] is None
+
+
+def test_scheduler_observation_failure_is_not_reported_as_running(monkeypatch):
+    import threading
+
+    import system_health_api as health
+
+    def fail_enumeration():
+        raise RuntimeError('synthetic thread-list failure')
+
+    with monkeypatch.context() as isolated_patch:
+        isolated_patch.setattr(threading, 'enumerate', fail_enumeration)
+        result = health.check_scheduler()
+
+    assert result['status'] == 'error'
+    assert result['scheduler_started'] is None
+
+
+def test_missing_adaptive_status_does_not_invent_defaults(monkeypatch, tmp_path):
+    import system_health_api as health
+
+    monkeypatch.setattr(health, '__file__', str(tmp_path / 'system_health_api.py'))
+
+    result = health.get_adaptive_status()
+
+    assert result['adaptive_engine_exists'] is False
+    assert result['current_strategy'] is None
+    assert result['recent_success_rate'] is None
+    assert result['current_delay_seconds'] is None
+    assert result['risk_level'] is None
+
+
+def test_partial_adaptive_status_preserves_unknown_fields(monkeypatch, tmp_path):
+    import json
+    from datetime import datetime, timedelta
+
+    import system_health_api as health
+
+    monkeypatch.setattr(health, '__file__', str(tmp_path / 'system_health_api.py'))
+    (tmp_path / 'network_adaptive.py').write_text('', encoding='utf-8')
+    data_dir = tmp_path / 'data'
+    data_dir.mkdir()
+    (data_dir / 'adaptive_status.json').write_text(
+        json.dumps({
+            'current_strategy': 'cautious',
+            'risk_level': 'medium',
+            'current_params': {'request_delay': 9},
+            'metrics': {
+                'recent_success_rate': 78,
+                'last_collect_time': (datetime.now() - timedelta(hours=1)).strftime(
+                    '%Y-%m-%d %H:%M:%S'
+                ),
+            },
+        }), encoding='utf-8'
+    )
+
+    result = health.get_adaptive_status()
+
+    assert result['current_strategy'] == 'cautious'
+    assert result['recent_success_rate'] == 78
+    assert result['current_delay_seconds'] == 9
+    assert result['risk_level'] == 'medium'
+
+
+@pytest.mark.parametrize(
+    ('age_hours', 'expected_rate'),
+    [(23, 78), (25, None), (-1, None)],
+    ids=['within-24-hours', 'stale-after-24-hours', 'future-timestamp'],
+)
+def test_adaptive_success_rate_requires_a_fresh_observation(
+        monkeypatch, tmp_path, age_hours, expected_rate):
+    import json
+    from datetime import datetime, timedelta
+
+    import system_health_api as health
+
+    monkeypatch.setattr(health, '__file__', str(tmp_path / 'system_health_api.py'))
+    (tmp_path / 'network_adaptive.py').write_text('', encoding='utf-8')
+    data_dir = tmp_path / 'data'
+    data_dir.mkdir()
+    observed_at = datetime.now() - timedelta(hours=age_hours)
+    (data_dir / 'adaptive_status.json').write_text(json.dumps({
+        'metrics': {
+            'recent_success_rate': 78,
+            'last_collect_time': observed_at.strftime('%Y-%m-%d %H:%M:%S'),
+        },
+    }), encoding='utf-8')
+
+    result = health.get_adaptive_status()
+
+    assert result['recent_success_rate'] == expected_rate
+
+
+def test_adaptive_defaults_are_not_reported_as_observed_success(monkeypatch, tmp_path):
+    import json
+    import system_health_api as health
+
+    monkeypatch.setattr(health, '__file__', str(tmp_path / 'system_health_api.py'))
+    (tmp_path / 'network_adaptive.py').write_text('', encoding='utf-8')
+    data_dir = tmp_path / 'data'
+    data_dir.mkdir()
+    (data_dir / 'adaptive_status.json').write_text(json.dumps({
+        'current_strategy': 'normal',
+        'risk_level': 'none',
+        'current_params': {'request_delay': 55},
+        'metrics': {'recent_success_rate': 100, 'last_collect_time': None},
+    }), encoding='utf-8')
+
+    result = health.get_adaptive_status()
+
+    assert result['recent_success_rate'] is None
+    assert result['current_delay_seconds'] == 55
+
+
 def test_system_health_summary_has_no_mainland_cdp_hint():
     """健康摘要的生产提示不得再引导用户启动 9222。"""
     from pathlib import Path
@@ -372,6 +925,66 @@ def test_system_health_summary_has_no_mainland_cdp_hint():
     )
     assert "connect_ex(('127.0.0.1', 9222))" not in source
     assert 'Edge CDP 9222' not in source
+
+
+@pytest.mark.parametrize(
+    ('history_state', 'expected_runs'),
+    [(None, None), ('UNKNOWN', None), ('OBSERVED_TASK_STARTS', 2)],
+    ids=['legacy-unmarked', 'explicitly-unknown', 'observed-task-starts'],
+)
+def test_health_summary_keeps_task_run_counts_bound_to_observed_history(
+        monkeypatch, tmp_path, history_state, expected_runs):
+    import json
+    import time
+    from datetime import datetime
+
+    from flask import Flask
+    from lumenis.shared.evidence import store as evidence_store
+    import system_health_api as health
+
+    monkeypatch.setattr(health, 'get_data_dir', lambda: str(tmp_path))
+    stats = {
+        'date': datetime.now().strftime('%Y-%m-%d'),
+        'manual_runs': 4,
+        'auto_runs': 7,
+        'daily_runs': [time.time() - 3600, time.time() - 1800],
+    }
+    if history_state is not None:
+        stats['daily_run_history_state'] = history_state
+    (tmp_path / 'collector_stats.json').write_text(json.dumps(stats), encoding='utf-8')
+    monkeypatch.setattr(health, 'get_production_collection_contract', lambda: {
+        'worker_available': True, 'cookie_configured': True,
+        'account': 'XHS_RETINAUT', 'region': 'intl',
+        'worker_state': 'REGISTERED_BACKGROUND',
+    })
+    monkeypatch.setattr(health, 'check_database', lambda: {
+        'status': 'ok', 'notes_count': 1, 'recent_24h': 1,
+    })
+    monkeypatch.setattr(health, '_check_db_writable_fast', lambda: {
+        'status': 'ok', 'writable': True,
+    })
+    monkeypatch.setattr(health, 'check_login_status', lambda: {'status': 'unknown'})
+    monkeypatch.setattr(health, 'get_alerts', lambda: {
+        'active_alerts': 0, 'need_manual_intervention': 0,
+        'latest_alert': None,
+    })
+    monkeypatch.setattr(health, 'get_collection_schedule', lambda: {'next_collect': ''})
+    monkeypatch.setattr(
+        evidence_store, 'get_evidence_write_failure_count', lambda _hours: 0
+    )
+
+    app = Flask(__name__)
+    app.register_blueprint(health.system_health_bp)
+    summary = app.test_client().get('/api/system/health/summary').get_json()
+
+    assert summary['today_runs'] == expected_runs
+    assert summary['remaining_runs'] == (12 - expected_runs if expected_runs is not None else None)
+    assert summary['sub_lights']['collector']['today_runs'] == expected_runs
+    if expected_runs is None:
+        assert summary['sub_lights']['collector']['light'] == 'warning'
+        assert any('未核验' in hint for hint in summary['diagnostic_hints'])
+    else:
+        assert summary['sub_lights']['collector']['light'] == 'ok'
 
 
 def test_keepalive_status_projection_omits_worker_and_credential_details():
@@ -439,3 +1052,52 @@ def test_cdp_verification_result_is_not_misclassified_as_empty(monkeypatch):
     )
     assert result['status'] == 'CAPTCHA'
     assert seen[0][2] == 'CAPTCHA'
+
+
+def test_session_state_projects_persisted_preflight_verdict(monkeypatch):
+    import time as _time
+    import xhs_cookie_bridge as bridge
+    monkeypatch.setattr(bridge, '_last_session_verification', None)
+    assert bridge._current_session_state('acct') == 'NOT_VERIFIED'
+    monkeypatch.setattr(bridge, '_last_session_verification', {
+        'account': 'acct', 'state': 'real_session_valid', 'verified_at': _time.time(),
+    })
+    assert bridge._current_session_state('acct') == 'real_session_valid'
+    assert bridge._current_session_state('other') == 'NOT_VERIFIED'
+    monkeypatch.setattr(bridge, '_last_session_verification', {
+        'account': 'acct', 'state': 'real_session_valid',
+        'verified_at': _time.time() - bridge.SESSION_VERIFICATION_TTL_SECONDS - 5,
+    })
+    assert bridge._current_session_state('acct') == 'NOT_VERIFIED'
+
+
+def test_day_rollover_resets_manual_and_auto_counters(monkeypatch):
+    import xhs_cookie_bridge as bridge
+    monkeypatch.setattr(bridge, '_stats_day', '2000-01-01')
+    monkeypatch.setattr(bridge, '_daily_runs', [946684800.0])
+    monkeypatch.setattr(bridge, '_daily_manual_runs', 3)
+    monkeypatch.setattr(bridge, '_daily_auto_runs', 5)
+    monkeypatch.setattr(bridge, '_daily_run_history_state', 'UNKNOWN')
+    bridge._roll_over_day_counters()
+    assert bridge._daily_runs == []
+    assert bridge._daily_manual_runs == 0
+    assert bridge._daily_auto_runs == 0
+    has_unverified = (
+        bridge._daily_run_history_state != 'OBSERVED_TASK_STARTS'
+        and (bool(bridge._daily_runs) or bridge._daily_manual_runs or bridge._daily_auto_runs)
+    )
+    assert not has_unverified
+
+
+def test_preflight_never_caches_login_from_browser_reachability(monkeypatch):
+    import inspect
+    import xhs_cookie_bridge as bridge
+    source = inspect.getsource(bridge.runtime_preflight_check)
+    assert "REAL_SESSION_VALID" not in source
+    monkeypatch.setattr(bridge, '_last_session_verification', None)
+    assert bridge.record_real_session_verification('acct', authenticated_readback=False) is False
+    assert bridge._current_session_state('acct') == 'NOT_VERIFIED'
+    assert bridge.record_real_session_verification('acct', authenticated_readback='yes') is False
+    assert bridge._current_session_state('acct') == 'NOT_VERIFIED'
+    assert bridge.record_real_session_verification('acct', authenticated_readback=True) is True
+    assert bridge._current_session_state('acct') == 'real_session_valid'

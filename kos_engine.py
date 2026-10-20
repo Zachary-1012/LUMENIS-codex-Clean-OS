@@ -1329,8 +1329,16 @@ def classify_kol_tier(followers=None, engagement_rate=None,
         config = load_kol_tier_config()
 
     # 数据可得性检查
-    followers_available = followers is not None and isinstance(followers, (int, float)) and followers >= 0
-    engagement_available = engagement_rate is not None and isinstance(engagement_rate, (int, float)) and engagement_rate >= 0
+    def _finite_nonnegative(value):
+        if type(value) not in (int, float) or value < 0:
+            return False
+        try:
+            return math.isfinite(float(value))
+        except (OverflowError, ValueError):
+            return False
+
+    followers_available = _finite_nonnegative(followers)
+    engagement_available = _finite_nonnegative(engagement_rate)
 
     if not followers_available:
         # 粉丝量缺失 → unknown（不伪造）
@@ -1351,6 +1359,7 @@ def classify_kol_tier(followers=None, engagement_rate=None,
     eng_rate = float(engagement_rate) if engagement_available else None
 
     # 按粉丝量+互动率分层
+    follower_band_available = False
     for tier_name in ["head", "waist", "tail", "koc"]:
         tier_cfg = config.get(tier_name, {})
         min_f = tier_cfg.get("min_followers", 0)
@@ -1360,6 +1369,7 @@ def classify_kol_tier(followers=None, engagement_rate=None,
         # 粉丝量范围检查
         if followers < min_f or followers > max_f:
             continue
+        follower_band_available = True
 
         # 互动率检查（如果有数据）
         if eng_rate is not None and eng_rate < min_er:
@@ -1387,6 +1397,12 @@ def classify_kol_tier(followers=None, engagement_rate=None,
 
     # 未命中任何分层（如粉丝量在区间但互动率不达标）
     tier_cfg = config.get("unknown", {})
+    if follower_band_available and eng_rate is not None:
+        reason = f"粉丝量 {followers:,} 对应的互动率 {eng_rate:.2%} 未达到适用分层阈值"
+    elif eng_rate is None:
+        reason = f"粉丝量 {followers:,} 未匹配已配置分层区间，互动率未知，无法确认分层"
+    else:
+        reason = f"粉丝量 {followers:,} 未匹配已配置分层区间"
     return {
         "tier": "unknown",
         "label": "互动率不达标/未分层",
@@ -1395,7 +1411,7 @@ def classify_kol_tier(followers=None, engagement_rate=None,
         "actions": tier_cfg.get("actions", []),
         "priority": tier_cfg.get("priority", 99),
         "data_available": True,
-        "reason": f"粉丝量 {followers:,} 但互动率 {eng_rate:.2% if eng_rate else 'N/A'} 未达分层阈值",
+        "reason": reason,
         "engagement_unknown": eng_rate is None,
     }
 
