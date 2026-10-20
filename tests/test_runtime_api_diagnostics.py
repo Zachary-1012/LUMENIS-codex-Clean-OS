@@ -591,6 +591,47 @@ def test_git_info_redacts_credentials_from_remote_url(tmp_path: Path) -> None:
     )
 
 
+def test_git_info_sanitizes_nested_remote_helper_address_and_fails_closed(
+    tmp_path: Path,
+) -> None:
+    repo_path = tmp_path / "remote-helper-fixture"
+    repo_path.mkdir()
+    _new_local_git_repo(repo_path)
+    subprocess.run(
+        [
+            "git", "remote", "add", "origin",
+            "foo::https://fixture-user:fixture-password@github.com/example/repo.git"
+            "?token=query-secret&key=key-secret#fragment-secret",
+        ],
+        cwd=repo_path,
+        check=True,
+    )
+
+    result = _git_info()(repo_path)
+
+    assert result["available"] is True
+    assert result["remote"] == "foo::https://github.com/example/repo.git"
+    assert not any(
+        secret in json.dumps(result)
+        for secret in (
+            "fixture-user", "fixture-password", "query-secret", "key-secret",
+            "fragment-secret",
+        )
+    )
+
+    subprocess.run(
+        ["git", "remote", "set-url", "origin", "custom::opaque-helper-secret"],
+        cwd=repo_path,
+        check=True,
+    )
+    opaque_result = _git_info()(repo_path)
+
+    assert opaque_result["available"] is False
+    assert opaque_result["status"] == "ERROR"
+    assert opaque_result["remote"] == "UNKNOWN"
+    assert "opaque-helper-secret" not in json.dumps(opaque_result)
+
+
 def test_git_info_preserves_local_remote_path_with_at_sign(tmp_path: Path) -> None:
     repo_path = tmp_path / "local-path-remote-fixture"
     repo_path.mkdir()

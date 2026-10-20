@@ -108,9 +108,39 @@ def _git_info(repo_path: Path):
             }
         return {"ok": True, "value": result.stdout.strip(), "returncode": 0, "error": ""}
 
-    def _sanitize_remote(value):
+    def _sanitize_remote(value, depth=0):
+        if depth > 8:
+            return None
         try:
             parsed = urllib.parse.urlsplit(value)
+            # Git remote-helper syntax is <transport>::<address>. Its nested
+            # address can itself be a URL, SCP remote, or local path. Sanitize
+            # only recognized address shapes; opaque helper commands stay
+            # unknown so credentials cannot leak from an arbitrary string.
+            helper_separator = value.find("::")
+            if helper_separator > 0:
+                transport = value[:helper_separator]
+                address = value[helper_separator + 2:]
+                valid_transport = (
+                    bool(transport) and transport[0].isalpha()
+                    and all(char.isalnum() or char in "-_" for char in transport)
+                )
+                if valid_transport:
+                    address_parts = urllib.parse.urlsplit(address)
+                    username, separator, destination = address.partition("@")
+                    host, colon, remote_path = destination.partition(":")
+                    is_scp = (
+                        separator and username and host and colon and remote_path
+                        and "/" not in host and "\\" not in host
+                    )
+                    if not (address_parts.scheme or address.startswith(("/", "./", "../")) or is_scp):
+                        return None
+                    sanitized_address = _sanitize_remote(address, depth + 1)
+                    if sanitized_address is None:
+                        return None
+                    return f"{transport}::{sanitized_address}"
+                if parsed.scheme.lower() not in {"http", "https", "ssh", "git", "file"}:
+                    return None
             if parsed.scheme:
                 # Remove all query/fragment data: a denylist cannot recognize
                 # every signed-URL credential parameter (for example code/key).
