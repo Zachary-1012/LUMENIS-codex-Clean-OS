@@ -10,6 +10,7 @@ v5.9.9 增量增强：
 - 新增 safe_collect() 永不抛异常入口
 - 保留原有 search()/collect() 接口完全不变，20个适配器零改动
 """
+import copy
 import time
 import logging
 from abc import ABC, abstractmethod
@@ -287,7 +288,18 @@ class BaseAdapter(ABC):
                     self._last_result = result
                     # An unscoped success invalidates the previous cache
                     # identity; it must not leave an older scoped result live.
-                    self._last_result_cache_entry = (result, cache_key)
+                    # Keep the fallback snapshot detached from the live result
+                    # returned to the caller, including nested raw_data values.
+                    cache_entry = None
+                    if cache_key is not None:
+                        try:
+                            cache_entry = (copy.deepcopy(result), cache_key)
+                        except Exception as e:
+                            logger.warning(
+                                "[%s] cache snapshot unavailable (%s)",
+                                self.platform_name, type(e).__name__,
+                            )
+                    self._last_result_cache_entry = cache_entry
                     if self.metrics:
                         self.metrics.record_call(True, result.duration_seconds)
                     return result
@@ -365,12 +377,20 @@ class BaseAdapter(ABC):
         if (cache_key is not None and cache_entry is not None
                 and cache_key == cache_entry[1]
                 and cache_entry[0].success):
-            if self.metrics:
-                self.metrics.record_call(True, duration, fallback=True)
-            return AdapterResult(
-                success=True, notes=cache_entry[0].notes,
-                error=f"缓存降级: {error}", duration_seconds=duration
-            )
+            try:
+                cached_notes = copy.deepcopy(cache_entry[0].notes)
+            except Exception as e:
+                logger.warning(
+                    "[%s] cache fallback copy unavailable (%s)",
+                    self.platform_name, type(e).__name__,
+                )
+            else:
+                if self.metrics:
+                    self.metrics.record_call(True, duration, fallback=True)
+                return AdapterResult(
+                    success=True, notes=cached_notes,
+                    error=f"缓存降级: {error}", duration_seconds=duration
+                )
         # 3. 返回失败
         return AdapterResult(success=False, error=error, duration_seconds=duration)
 

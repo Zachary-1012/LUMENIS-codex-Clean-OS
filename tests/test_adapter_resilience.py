@@ -88,7 +88,10 @@ class _QueryAdapter(BaseAdapter):
         if keyword == 'query-a':
             return AdapterResult(
                 success=True,
-                notes=[self._make_note(title='A result', content='private A data')],
+                notes=[self._make_note(
+                    title='A result', content='private A data',
+                    raw_data={'provenance': {'source': 'source-v1'}},
+                )],
             )
         if keyword == 'query-recovered':
             return AdapterResult(
@@ -125,6 +128,43 @@ def test_scoped_cache_fallback_requires_exact_complete_identity():
     assert fallback.success
     assert fallback.notes == prior.notes
     assert fallback.error.startswith('缓存降级:')
+
+
+def test_mutating_live_success_does_not_modify_cached_snapshot():
+    adapter = _QueryAdapter()
+    live = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    live.notes[0].content = 'caller changed content'
+    live.notes[0].raw_data['provenance']['source'] = 'caller changed source'
+    live.notes.append(adapter._make_note(title='caller-added note'))
+    adapter.fail_queries.add('query-a')
+
+    fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+
+    assert fallback.success
+    assert len(fallback.notes) == 1
+    assert fallback.notes[0].content == 'private A data'
+    assert fallback.notes[0].raw_data['provenance']['source'] == 'source-v1'
+    assert fallback.notes[0] is not live.notes[0]
+
+
+def test_mutating_first_fallback_does_not_modify_next_fallback():
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    adapter.fail_queries.add('query-a')
+    first_fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    first_fallback.notes[0].content = 'fallback caller changed content'
+    first_fallback.notes[0].raw_data['provenance']['source'] = 'fallback caller changed source'
+    first_fallback.notes.clear()
+    first_fallback.notes.append(adapter._make_note(title='fallback caller-added note'))
+
+    second_fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+
+    assert second_fallback.success
+    assert len(second_fallback.notes) == 1
+    assert second_fallback.notes[0].content == 'private A data'
+    assert second_fallback.notes[0].raw_data['provenance']['source'] == 'source-v1'
+    assert second_fallback.notes[0].title == 'A result'
+    assert second_fallback.notes[0] is not first_fallback.notes[0]
 
 
 @pytest.mark.parametrize(
