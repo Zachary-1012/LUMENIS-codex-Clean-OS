@@ -204,6 +204,7 @@ def sync_from_legacy_tables() -> dict:
     """从原三张表增量同步到 resources 表（物理并表后的兼容同步）。
 
     原表保留供旧代码写入；每次查询前可调用此函数确保 resources 表数据最新。
+    重复资源采用 INSERT OR IGNORE：保留已存资源及出处元数据，不刷新既有行。
     返回同步统计。
     """
     conn = _get_conn()
@@ -214,7 +215,7 @@ def sync_from_legacy_tables() -> dict:
             d = dict(row)
             extra = json.dumps({"relevance_score": d.get("relevance_score"), "content_hash": d.get("content_hash"),
                                  "category_original": d.get("category")}, ensure_ascii=False)
-            conn.execute("""INSERT OR IGNORE INTO resources
+            insert_result = conn.execute("""INSERT OR IGNORE INTO resources
                 (resource_uid, resource_category, title, content, tags, source, url,
                  provenance, pipeline_stage, evidence_id, normalized_at, dedup_hash,
                  is_production_rule, product_context, extra_json, created_at, updated_at)
@@ -224,7 +225,7 @@ def sync_from_legacy_tables() -> dict:
                  d.get("provenance"), d.get("pipeline_stage"), d.get("evidence_id"), d.get("normalized_at"),
                  d.get("dedup_hash") or d.get("content_hash"), d.get("is_production_rule") or 0,
                  d.get("product_context") or "CTH", extra, d.get("created_at"), d.get("updated_at")))
-            if conn.total_changes > 0:
+            if insert_result.rowcount == 1:
                 synced["brand_theory"] += 1
 
         # case_deep_analysis → case_study
@@ -241,7 +242,7 @@ def sync_from_legacy_tables() -> dict:
                 "execution", "results", "success_factors", "system_insights", "case_type", "industry",
                 "brand", "created_at", "updated_at"}
             extra = json.dumps({k: d[k] for k in extra_keys}, ensure_ascii=False)
-            conn.execute("""INSERT OR IGNORE INTO resources
+            insert_result = conn.execute("""INSERT OR IGNORE INTO resources
                 (resource_uid, resource_category, title, content, tags, source, url,
                  provenance, pipeline_stage, evidence_id, normalized_at, dedup_hash,
                  is_production_rule, product_context, extra_json, created_at, updated_at)
@@ -251,7 +252,7 @@ def sync_from_legacy_tables() -> dict:
                  d.get("provenance"), d.get("pipeline_stage"), d.get("evidence_id"), d.get("normalized_at"),
                  d.get("dedup_hash") or f"case_{d.get('case_id') or d['id']}", d.get("is_production_rule") or 0,
                  d.get("product_context") or "CTH", extra, d.get("created_at"), d.get("updated_at")))
-            if conn.total_changes > 0:
+            if insert_result.rowcount == 1:
                 synced["case_study"] += 1
 
         # brand_industry_monitor → industry_monitor
@@ -265,7 +266,7 @@ def sync_from_legacy_tables() -> dict:
                 "product_context", "brand_name", "brand_name_cn", "industry", "floor", "shop_number",
                 "risk_level", "last_updated", "created_at", "updated_at"}
             extra = json.dumps({k: d[k] for k in extra_keys}, ensure_ascii=False)
-            conn.execute("""INSERT OR IGNORE INTO resources
+            insert_result = conn.execute("""INSERT OR IGNORE INTO resources
                 (resource_uid, resource_category, title, content, tags, source, url,
                  provenance, pipeline_stage, evidence_id, normalized_at, dedup_hash,
                  is_production_rule, product_context, extra_json, created_at, updated_at)
@@ -276,11 +277,13 @@ def sync_from_legacy_tables() -> dict:
                  d.get("dedup_hash") or f"brand_{d.get('brand_name') or d['id']}", d.get("is_production_rule") or 0,
                  d.get("product_context") or "CTH", extra, d.get("last_updated") or d.get("created_at"),
                  d.get("last_updated") or d.get("updated_at")))
-            if conn.total_changes > 0:
+            if insert_result.rowcount == 1:
                 synced["industry_monitor"] += 1
 
         conn.commit()
-        synced["total"] = sum(synced.values())
+        synced["total"] = sum(
+            synced[category] for category in ("brand_theory", "case_study", "industry_monitor")
+        )
         return synced
     except Exception as e:
         conn.rollback()

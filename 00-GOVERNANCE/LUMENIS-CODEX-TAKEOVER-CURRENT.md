@@ -8,6 +8,17 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `xhs_cookie_bridge.py` now applies the first BLOCKED/CAPTCHA/AUTH_FAILED pacing reduction immediately before continuing to another keyword, while suppressing a second task-summary report so one task still creates one risk event. `EMPTY` counts as a valid response in both the existing `network_adaptive` and `adaptive_engine` feedback paths. Regressions assert that the next search observes reduced pacing, the task records one risk event, and an EMPTY worker reports success with no error. The offline combined command across `tests/test_xhs_network_outcome_reporting.py`, `tests/test_xhs_child_worker_environment.py`, `tests/test_xhs_approved_local_worker_route.py` and `tests/test_xhs_lineage_persistence.py` passed **67 tests** with no thread leak. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Fixtures only; no real collection or account access was performed.
 
+## 2026-10-20 Issue #17 FIX-028 — count newly synced resources only
+
+`resource_library.py` reports the count of resources newly added by the current
+sync operation, rather than the full retained library size. Existing resources
+and normal sync behavior remain intact. Regression: `tests/test_resource_library_sync.py`.
+Exact-head offline command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_resource_library_sync.py` — **1 passed**.
+`python -m py_compile resource_library.py tests/test_resource_library_sync.py` and
+`git diff --check` passed. This focused result does not claim a full library or
+product acceptance run.
+
 ## 2026-10-20 Issue #17 FIX-096/098/099/105/106 — platform adapter outcomes
 
 The existing Facebook/X, Instagram, XHS and WeChat adapters now retain bounded
