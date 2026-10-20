@@ -6,7 +6,10 @@ from typing import Any, Callable
 from xml.etree import ElementTree
 
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
-from .public_source import PublicResponse, PublicSourceError, fetch_public_url
+from .public_source import (
+    PublicResponse, PublicSourceError, fetch_public_url,
+    public_source_error_metadata,
+)
 from .registry import register_adapter
 
 
@@ -79,7 +82,7 @@ class SitemapAdapter(BasePlatformAdapter):
                 status=CollectionStatus.PROVIDER_UNAVAILABLE,
                 platform=self.platform,
                 message="public Sitemap source is unavailable",
-                metadata={"provider": "public_sitemap_xml", "error_type": type(exc).__name__},
+                metadata={"provider": "public_sitemap_xml", **public_source_error_metadata(exc)},
             )
 
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:

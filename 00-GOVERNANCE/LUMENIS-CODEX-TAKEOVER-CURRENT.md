@@ -4,6 +4,89 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-101 — close redirect bodies before Session hooks
+
+The existing `PublicSourceHTTPAdapter.send` now closes every 3xx response
+before returning it to `requests.Session`. Session response hooks execute before
+`fetch_public_url` receives the response, so this prevents a caller hook from
+consuming a redirect body before the existing redirect target/address and final
+response-size checks. The outer redirect validation, pinning and bounded final
+body read remain in place. Regression: `tests/test_public_source_transport.py::test_redirect_body_is_closed_before_caller_response_hooks` checks that an
+offline response hook sees an empty, closed redirect; Requests can still prepare
+the next request and the redirect body is never read. `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_public_source_transport.py` — **24 passed**. Full `tests/test_public_source_adapters.py` — **22 passed**; `tests/test_public_http_article_extraction.py` — **11 passed**; five focused RSS nodes — **7 passed**. Changed-file `compileall`, governance machine contract, AI-native constitution and `git diff --check` passed. No live network was used. The body is not drained; redirect response headers remain available to Requests. Remote required checks, real-network behavior and product acceptance remain separate and unverified.
+
+## 2026-10-20 Issue #17 FIX-094 / FIX-102 — public source content and lineage
+
+The existing `lumenis/system/collector/adapters/public_http.py` now retains
+each independent best-priority semantic article block rather than selecting
+only one same-priority block, while nested semantic blocks are included once.
+Each public HTML item records selected locators,
+the full selected-text hash/character count, returned preview length,
+truncation/completeness state and response-document hash/byte count. The
+existing 16,000-character output bound remains; meta description is explicitly
+an excerpt and incomplete-body fallbacks are labeled. Safe transport still
+limits the document to the existing 2 MiB bound.
+
+The existing `web_discovery.fetch_google_news_rss` path uses
+`public_source.fetch_public_url` with the existing maximum response size and
+`google.com` host boundary instead of a separate direct HTTP call. Offset-aware
+RSS dates are normalized to UTC in `published_at` for chronological sorting;
+`source_published_at` preserves the source literal and offset. Naive or
+unparseable values remain unknown with the source value retained. Stable
+source URL, original publication date and time state pass through
+`WebRSSAdapter`, alongside the existing
+sanitized request/final URL and access/license provenance. HTTP failure,
+unsupported media type, an empty successful feed and a safe-transport failure
+remain separate states.
+
+Follow-up review found that non-2xx responses are rejected inside
+`fetch_public_url`, before the former RSS status branch could run. The transport
+now raises `PublicSourceHTTPError` with its exact integer status; the existing
+RSS result and `WebRSSAdapter` metadata preserve `HTTP_503` / `http_status=503`.
+The status discriminator lives in the existing `except Exception` branch at
+`web_discovery.py:239–246` (the HTTP-status check is at lines 241–243).
+The regression goes through the real `fetch_public_url` and
+`fetch_google_news_rss` path and fakes only the lowest `HTTPAdapter.send`
+response. The unsupported media-type comparison remains a separate 200 response.
+
+Offline combined command covering `tests/test_public_http_article_extraction.py`,
+`tests/test_public_source_adapters.py` and `tests/test_public_source_transport.py`
+— **67 passed** (14, 29 and 24 by module). The FIX-102 article-text follow-up
+corrects `_iter_node_text_parts` in `lumenis/system/collector/adapters/public_http.py`:
+BeautifulSoup's `stripped_strings` yields plain strings without ancestor links,
+so nested page chrome was not filtered. Extraction now checks each descendant
+text node's parent chain before normalization. The new offline regression nests
+large nav/footer/header/aside/form/noscript/ARIA-navigation text inside an article
+and verifies none enters returned text, hash, length or completeness. Changed-source `compileall`,
+governance machine contract, AI-native constitution and `git diff --check`
+passed. The tests use offline fixtures; no real public source was contacted. PR review, exact-head
+remote checks and live provider/runtime/user acceptance remain separate and
+unverified. Other Issue #17 items remain open.
+
+FIX-094 fallback follow-up: `test_document_fallback_keeps_visible_layout_text_but_excludes_executable_markup`
+confirms the existing document-body fallback retains visible header/page copy
+while excluding script and style payloads. Re-ran the same offline combined
+pytest command above; all three modules passed with no background-thread leak.
+The added fixture is synthetic; no public source was contacted. Exact-head
+remote checks and product acceptance remain unverified.
+The accompanying source correction also rejects a script, style, noscript or
+template node when that node itself is passed as the extraction root, including
+the chrome-inclusive layout-text path; the focused regression covers all four.
+Locator metadata is now bounded to 512 characters per path and 16,384 total
+characters per capture; oversized locator values are shortened with a hash,
+and omitted locators are reported with an explicit truncation marker/count.
+An initial 80-article fixture did not exceed the total cap; that test setup
+failure was retained and the synthetic case was expanded to 200 articles. The
+focused regression then passed, verifying preserved source content and both
+locator limits.
+The RSS result now stores timezone-aware `published_at` in UTC while keeping
+the original literal and offset in `source_published_at`. The combined offline
+public-source extraction/adapter/transport suite passed after this correction;
+changed-file `py_compile`, governance machine contract, AI-native constitution
+and `git diff --check` passed. Shared Database's persisted mixed-format
+`get_web_mentions` ordering remains OPEN because its original Owner and shared
+write reservation are not available in this worktree.
+
 ## 2026-10-20 Issue #17 FIX-030 / FIX-031 — quality rule and enrichment truth
 
 The existing `data_quality_gate.py::_finite_number` keeps integer bounds exact with finite `Decimal` comparisons, and `DataQualityGate.validate` evaluates a rule's condition before diagnosing an unknown rule type. The existing `database.py::insert_note` enrichment failure path remains a soft write but now persists `data_quality_status="error"` and clears a stale score. Regressions cover both sides of a conditional future rule, min/max bounds above 2^53, and an existing `ok`/100 note refreshed by a failing validator becoming `error`/NULL. `tests/test_data_quality_gate.py` passed **30 tests**; combined with `tests/test_database_insert_note_transaction.py`, **38 passed** using the offline cached pytest environment. `python -m py_compile database.py data_quality_gate.py tests/test_data_quality_gate.py`, governance machine contract, AI-native constitution and `git diff --check` passed. The database regression uses an in-memory SQLite database; no production database or external effect was used.
