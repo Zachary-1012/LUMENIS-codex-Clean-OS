@@ -248,6 +248,8 @@ def test_nested_page_chrome_does_not_enter_article_text_or_attestation():
             '<div><form><div><span>' + chrome["form"] + '</span></div></form></div>'
             '<div><noscript><div><span>' + chrome["noscript"] + '</span></div></noscript></div>'
             '<div role="navigation"><div><span>' + chrome["role-nav"] + '</span></div></div>'
+            '<script>SECRET_JS_PAYLOAD</script><style>STYLE_PAYLOAD</style>'
+            '<template>TEMPLATE_PAYLOAD</template>'
             '</article></body></html>'
         ).encode("utf-8"),
         content_type="text/html",
@@ -263,12 +265,35 @@ def test_nested_page_chrome_does_not_enter_article_text_or_attestation():
     assert all(marker not in item["content"] for marker in (
         "NAVIGATION LEAK", "FOOTER LEAK", "HEADER LEAK", "ASIDE LEAK",
         "FORM LEAK", "NOSCRIPT LEAK", "ARIA NAVIGATION LEAK",
+        "SECRET_JS_PAYLOAD", "STYLE_PAYLOAD", "TEMPLATE_PAYLOAD",
     ))
     assert observation["source_text_sha256"] == hashlib.sha256(article.strip().encode("utf-8")).hexdigest()
     assert observation["source_text_char_length"] == len(article.strip())
     assert observation["returned_text_char_length"] == len(article.strip())
     assert observation["truncated"] is False
     assert observation["completeness"] == "COMPLETE_SEMANTIC_TEXT"
+
+
+def test_script_style_and_template_only_body_stays_empty_in_document_fallback():
+    response = PublicResponse(
+        url="https://public.example.test/script-only",
+        content=(
+            "<html><head><title>Publisher title</title></head><body>"
+            "<script>SECRET_JS_PAYLOAD</script>"
+            "<style>STYLE_PAYLOAD</style>"
+            "<noscript>NOSCRIPT_PAYLOAD</noscript>"
+            "<template>TEMPLATE_PAYLOAD</template>"
+            "</body></html>"
+        ).encode("utf-8"),
+        content_type="text/html",
+        status_code=200,
+    )
+
+    result = PublicHttpAdapter(fetcher=lambda _: response).search(response.url)
+
+    assert result.status is CollectionStatus.PROVIDER_UNAVAILABLE
+    assert result.items == []
+    assert result.metadata["error_type"] == "EMPTY_CONTENT"
 
 
 def test_long_semantic_preview_records_full_hash_length_and_truncation():

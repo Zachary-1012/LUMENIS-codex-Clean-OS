@@ -61,26 +61,30 @@ def _node_locator(node) -> str:
 def _iter_node_text_parts(node: Any, *, include_chrome: bool = False):
     """Yield normalized text pieces without copying the selected DOM subtree."""
     excluded_tags = {"script", "style", "noscript", "nav", "header", "footer", "aside", "form"}
+    never_content_tags = {"script", "style", "noscript", "template"}
     first = True
     for text_node in node.descendants:
         if not isinstance(text_node, NavigableString) or isinstance(text_node, Comment):
             continue
+        parent = getattr(text_node, "parent", None)
+        excluded = False
+        while parent is not None and parent is not node:
+            parent_name = getattr(parent, "name", None)
+            if parent_name in never_content_tags:
+                excluded = True
+                break
+            if not include_chrome and (
+                parent_name in excluded_tags
+                or str(parent.get("role") or "").lower() == "navigation"
+            ):
+                excluded = True
+                break
+            parent = getattr(parent, "parent", None)
+        if excluded:
+            continue
         text = str(text_node).strip()
         if not text:
             continue
-        if not include_chrome:
-            parent = getattr(text_node, "parent", None)
-            excluded = False
-            while parent is not None:
-                if (getattr(parent, "name", None) in excluded_tags
-                        or str(parent.get("role") or "").lower() == "navigation"):
-                    excluded = True
-                    break
-                if parent is node:
-                    break
-                parent = getattr(parent, "parent", None)
-            if excluded:
-                continue
         if not first:
             yield " "
         yield text
