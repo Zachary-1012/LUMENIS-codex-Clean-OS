@@ -167,6 +167,48 @@ def test_mutating_first_fallback_does_not_modify_next_fallback():
     assert second_fallback.notes[0] is not first_fallback.notes[0]
 
 
+def test_snapshot_copy_failure_keeps_live_success_and_clears_old_cache(monkeypatch):
+    import lumenis.adapters.base as base
+
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    assert adapter._last_result_cache_entry is not None
+
+    def fail_copy(_value):
+        raise TypeError('uncopyable snapshot fixture')
+
+    monkeypatch.setattr(base.copy, 'deepcopy', fail_copy)
+    live_success = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+
+    assert live_success.success
+    assert live_success.notes[0].content == 'private A data'
+    assert adapter._last_result_cache_entry is None
+
+    adapter.fail_queries.add('query-a')
+    failed = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    assert failed.success is False
+    assert failed.notes == []
+    assert 'backend unavailable' in failed.error
+
+
+def test_fallback_copy_failure_fails_closed_without_exposing_cached_notes(monkeypatch):
+    import lumenis.adapters.base as base
+
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    adapter.fail_queries.add('query-a')
+
+    def fail_copy(_value):
+        raise TypeError('uncopyable fallback fixture')
+
+    monkeypatch.setattr(base.copy, 'deepcopy', fail_copy)
+    fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+
+    assert fallback.success is False
+    assert fallback.notes == []
+    assert 'backend unavailable' in fallback.error
+
+
 @pytest.mark.parametrize(
     'changed_context',
     [
