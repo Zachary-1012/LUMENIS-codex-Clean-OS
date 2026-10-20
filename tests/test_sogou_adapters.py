@@ -433,6 +433,45 @@ class TestSogouSearchAdapter:
         assert note.url == original_link
         assert note.raw_data["link_redirect"] is True
 
+    @pytest.mark.parametrize("entrypoint", ["collect", "registry"])
+    def test_channel_redirect_to_sogou_captcha_without_body_marker_stops_search(
+        self, monkeypatch, entrypoint,
+    ):
+        import requests
+
+        ad = SogouSearchAdapter()
+        monkeypatch.setattr(ad, "_load_cookies", lambda: {})
+        response = MagicMock(
+            text="<html><body>" + ("ordinary page body " * 100) + "</body></html>",
+            url="https://www.sogou.com/captcha/",
+            encoding="utf-8",
+        )
+        session = MagicMock()
+        session.get.return_value = response
+        monkeypatch.setattr(requests, "Session", lambda: session)
+        monkeypatch.setattr("lumenis.adapters.sogou_search.time.sleep", lambda *_: None)
+        monkeypatch.setattr(ad, "_parse_channel", lambda *_: [])
+        context = AdapterCacheContext(
+            actor_id="actor-sogou-channel", scope="workspace-sogou-channel",
+            task_id="task-sogou-channel", source_version="fixture-v1",
+        )
+
+        if entrypoint == "registry":
+            monkeypatch.setattr(registry, "_adapters", {ad.platform_name: ad})
+            _merged, statuses = registry.search_all_with_status(
+                "channel redirect", platforms=[ad.platform_name], cache_context=context,
+            )
+            assert statuses[0]["state"] == "FAIL"
+            assert "NEED_HUMAN_VERIFICATION" in statuses[0]["error"]
+        else:
+            result = ad.collect("channel redirect", cache_context=context)
+            assert result.success is False
+            assert result.notes == []
+            assert "NEED_HUMAN_VERIFICATION" in result.error
+
+        assert ad._has_manual_verification(response.text) is False
+        assert session.get.call_count == 1  # final URL blocks before parsing or next channel
+
     @pytest.mark.parametrize("has_cached_note", [False, True])
     def test_collect_challenge_bypasses_same_identity_cache(self, monkeypatch, has_cached_note):
         """A later challenge remains FAIL after a cached empty or non-empty success."""
