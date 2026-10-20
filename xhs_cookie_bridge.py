@@ -392,6 +392,7 @@ _daily_runs = []  # 今日运行时间戳列表
 _daily_manual_runs = 0  # 今日手动触发次数
 _daily_auto_runs = 0  # 今日自动采集次数
 _last_run_time = None  # 上次运行时间
+_daily_run_history_state = 'UNKNOWN'  # task-start count is not inferred from note/keyword rows
 _stats_loaded = False  # 是否已加载持久化统计
 _stats_init_lock = threading.RLock()
 
@@ -401,6 +402,8 @@ _tasks={}
 def _load_stats_from_db():
     """从数据库统计今天的采集次数（兜底恢复）"""
     global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time
+    global _daily_run_history_state
+    _daily_run_history_state = 'UNKNOWN'
     try:
         today = datetime.now().strftime('%Y-%m-%d')
         with db.get_db() as conn:
@@ -436,7 +439,8 @@ def _load_stats():
 
 def _load_stats_unlocked():
     """从持久化文件加载统计数据（优先），失败则从数据库恢复"""
-    global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time, _stats_loaded
+    global _daily_runs, _daily_manual_runs, _daily_auto_runs, _last_run_time
+    global _daily_run_history_state, _stats_loaded
     if _stats_loaded:
         return
     try:
@@ -449,8 +453,29 @@ def _load_stats_unlocked():
                 _daily_manual_runs = data.get('manual_runs', 0)
                 _daily_auto_runs = data.get('auto_runs', 0)
                 _last_run_time = data.get('last_run_time')
+                _daily_run_history_state = (
+                    'OBSERVED_TASK_STARTS'
+                    if data.get('daily_run_history_state') == 'OBSERVED_TASK_STARTS'
+                    else 'UNKNOWN'
+                )
                 print(f'[Stats] 从文件恢复今日计数: 总{len(_daily_runs)}/手动{_daily_manual_runs}/自动{_daily_auto_runs}')
                 _stats_loaded = True
+                return
+            try:
+                stored_day = datetime.strptime(str(data.get('date') or ''), '%Y-%m-%d').date()
+            except ValueError:
+                stored_day = None
+            if stored_day is not None and stored_day < datetime.now().date():
+                # A previous-day snapshot cannot establish how many keyword
+                # observations ran today. Start the task-start ledger at zero;
+                # its entries are written only by record_run().
+                _daily_runs = []
+                _daily_manual_runs = 0
+                _daily_auto_runs = 0
+                _last_run_time = None
+                _daily_run_history_state = 'OBSERVED_TASK_STARTS'
+                _stats_loaded = True
+                _save_stats()
                 return
         # 文件不存在或不是今天的数据，从数据库恢复
         _load_stats_from_db()
@@ -470,6 +495,7 @@ def _save_stats():
             'daily_runs': _daily_runs[-50:],  # 只保留最近50条
             'manual_runs': _daily_manual_runs,
             'auto_runs': _daily_auto_runs,
+            'daily_run_history_state': _daily_run_history_state,
             'last_run_time': _last_run_time,
             'updated_at': datetime.now().isoformat()
         }

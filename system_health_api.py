@@ -10,6 +10,7 @@ import sys
 import time
 import json
 import sqlite3
+import math
 from datetime import datetime, timedelta
 from flask import jsonify, Blueprint
 from lumenis.shared.database import DatabaseRepository, main_db_path
@@ -429,12 +430,42 @@ def get_collection_schedule():
         'next_collect': None,
         'today_collected_notes': None,
         'today_runs': None,
+        'today_keyword_observations': None,
         'max_daily_runs': 12,
         'last_24h_failures': None,
         'last_24h_unknown_runs': None,
+        'last_24h_failed_keyword_observations': None,
+        'last_24h_unknown_keyword_observations': None,
     }
     conn = None
     try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        stats_path = os.path.join(get_data_dir(), 'collector_stats.json')
+        try:
+            if os.path.isfile(stats_path):
+                with open(stats_path, 'r', encoding='utf-8') as handle:
+                    stats = json.load(handle)
+                if (isinstance(stats, dict)
+                        and stats.get('date') == today
+                        and stats.get('daily_run_history_state') == 'OBSERVED_TASK_STARTS'):
+                    daily_runs = stats.get('daily_runs')
+                    if isinstance(daily_runs, list):
+                        observed_dates = []
+                        for value in daily_runs:
+                            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                                    or not math.isfinite(float(value))):
+                                observed_dates = None
+                                break
+                            observed_dates.append(
+                                datetime.fromtimestamp(float(value)).strftime('%Y-%m-%d')
+                            )
+                        if observed_dates is not None:
+                            result['today_runs'] = sum(day == today for day in observed_dates)
+        except (OSError, ValueError, TypeError, OverflowError, json.JSONDecodeError):
+            # Corrupt or inaccessible run history is unknown; keyword records
+            # remain independently reportable below.
+            result['today_runs'] = None
+
         db_path = get_db_path()
         if db_path and os.path.exists(db_path):
             conn = DatabaseRepository(db_path).connect()
@@ -476,7 +507,7 @@ def get_collection_schedule():
                     today_status_counts = {
                         str(status or ''): count for status, count in c.fetchall()
                     }
-                    result['today_runs'] = sum(today_status_counts.values())
+                    result['today_keyword_observations'] = sum(today_status_counts.values())
 
                     c.execute(
                         "SELECT UPPER(TRIM(COALESCE(status, ''))), COUNT(*) "
@@ -493,11 +524,11 @@ def get_collection_schedule():
                         'PARTIAL_BLOCKED',
                     }
                     non_failures = {'EMPTY', 'SUCCESS'}
-                    result['last_24h_failures'] = sum(
+                    result['last_24h_failed_keyword_observations'] = sum(
                         count for status, count in recent_status_counts.items()
                         if status in known_failures
                     )
-                    result['last_24h_unknown_runs'] = sum(
+                    result['last_24h_unknown_keyword_observations'] = sum(
                         count for status, count in recent_status_counts.items()
                         if status not in known_failures | non_failures
                     )

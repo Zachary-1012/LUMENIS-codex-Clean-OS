@@ -6,7 +6,7 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 ## 2026-10-20 Issue #17 FIX-036 / FIX-037 — report only observed collection health
 
-The existing `system_health_api.py` no longer infers current scheduler/login state, historical schedule slots or adaptive health percentages from notes or defaults. Run/failure/unknown counts come from observed run records, and notes remain a distinct count. `tests/test_hk_only_collection_policy.py` passed **35 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No real login probe, collection or production database was used.
+The existing `system_health_api.py` no longer infers current scheduler/login state, historical schedule slots or adaptive health percentages from notes or defaults. `today_runs` now reads only task-start records marked as observed in the existing collector stats file; legacy or unverified totals remain unknown. Per-keyword `collection_logs` are exposed as `today_keyword_observations` and keyword failure/unknown observations, never added to task runs. Task-level failure totals stay unknown because the existing task-start ledger has no terminal outcome record. `tests/test_hk_only_collection_policy.py` passed **38 tests**, including one task with 20 keyword observations. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No real login probe, collection or production database was used.
 
 
 ## 2026-10-18 source-adoption validation handoff

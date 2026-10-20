@@ -489,8 +489,11 @@ def test_health_aggregates_do_not_promote_unknown_login_to_healthy(monkeypatch):
     assert detailed['overall_status'] == 'warning'
 
 
-def _system_health_schedule_fixture(monkeypatch, tmp_path, *, notes=(), runs=None):
+def _system_health_schedule_fixture(monkeypatch, tmp_path, *, notes=(), runs=None,
+                                    task_runs=None):
+    import json
     import sqlite3
+    from datetime import datetime
 
     import system_health_api as health
 
@@ -518,10 +521,17 @@ def _system_health_schedule_fixture(monkeypatch, tmp_path, *, notes=(), runs=Non
                 [(status,) for status in runs],
             )
     monkeypatch.setattr(health, 'get_db_path', lambda: str(db_path))
+    monkeypatch.setattr(health, 'get_data_dir', lambda: str(tmp_path))
+    if task_runs is not None:
+        (tmp_path / 'collector_stats.json').write_text(json.dumps({
+            'date': datetime.now().strftime('%Y-%m-%d'),
+            'daily_runs': task_runs,
+            'daily_run_history_state': 'OBSERVED_TASK_STARTS',
+        }), encoding='utf-8')
     return health
 
 
-def test_schedule_counts_notes_and_collection_runs_from_separate_records(
+def test_schedule_separates_notes_from_keyword_observations_and_unknown_task_runs(
         monkeypatch, tmp_path):
     health = _system_health_schedule_fixture(
         monkeypatch, tmp_path,
@@ -532,10 +542,81 @@ def test_schedule_counts_notes_and_collection_runs_from_separate_records(
     result = health.get_collection_schedule()
 
     assert result['today_collected_notes'] == 1
-    assert result['today_runs'] == 2
-    assert result['last_24h_failures'] == 0
-    assert result['last_24h_unknown_runs'] == 0
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] == 2
+    assert result['last_24h_failures'] is None
+    assert result['last_24h_unknown_runs'] is None
+    assert result['last_24h_failed_keyword_observations'] == 0
+    assert result['last_24h_unknown_keyword_observations'] == 0
     assert result['next_collect'] is None
+
+
+def test_one_task_with_many_keywords_counts_one_run_and_many_observations(
+        monkeypatch, tmp_path):
+    import time
+
+    health = _system_health_schedule_fixture(
+        monkeypatch, tmp_path,
+        notes=[], runs=['SUCCESS'] * 19 + ['BLOCKED'],
+        task_runs=[time.time()],
+    )
+
+    result = health.get_collection_schedule()
+
+    assert result['today_runs'] == 1
+    assert result['today_keyword_observations'] == 20
+    assert result['last_24h_failures'] is None
+    assert result['last_24h_failed_keyword_observations'] == 1
+
+
+def test_collector_task_start_stats_are_marked_as_observed(monkeypatch, tmp_path):
+    import json
+    import xhs_cookie_bridge as bridge
+
+    monkeypatch.setattr(bridge, 'STATS_FILE', str(tmp_path / 'collector_stats.json'))
+    monkeypatch.setattr(bridge, '_stats_loaded', True)
+    monkeypatch.setattr(bridge, '_daily_runs', [])
+    monkeypatch.setattr(bridge, '_daily_manual_runs', 0)
+    monkeypatch.setattr(bridge, '_daily_auto_runs', 0)
+    monkeypatch.setattr(bridge, '_last_run_time', None)
+    monkeypatch.setattr(bridge, '_daily_run_history_state', 'OBSERVED_TASK_STARTS')
+
+    bridge.record_run('manual')
+
+    stats = json.loads((tmp_path / 'collector_stats.json').read_text(encoding='utf-8'))
+    assert stats['daily_run_history_state'] == 'OBSERVED_TASK_STARTS'
+    assert len(stats['daily_runs']) == 1
+
+
+def test_unverified_task_history_does_not_turn_keyword_logs_into_task_runs(
+        monkeypatch, tmp_path):
+    import json
+    import sqlite3
+    import time
+    from datetime import datetime
+    import system_health_api as health
+
+    db_path = tmp_path / 'isolated-schedule.sqlite3'
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            'CREATE TABLE collection_logs (status TEXT, started_at TEXT, finished_at TEXT)'
+        )
+        connection.executemany(
+            "INSERT INTO collection_logs VALUES (?, datetime('now','localtime'), datetime('now','localtime'))",
+            [('SUCCESS',)] * 20,
+        )
+    (tmp_path / 'collector_stats.json').write_text(json.dumps({
+        'date': datetime.now().strftime('%Y-%m-%d'),
+        'daily_runs': [time.time() for _ in range(4)],
+        'daily_run_history_state': 'UNKNOWN',
+    }), encoding='utf-8')
+    monkeypatch.setattr(health, 'get_db_path', lambda: str(db_path))
+    monkeypatch.setattr(health, 'get_data_dir', lambda: str(tmp_path))
+
+    result = health.get_collection_schedule()
+
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] == 20
 
 
 def test_schedule_counts_explicit_failure_records(monkeypatch, tmp_path):
@@ -547,9 +628,12 @@ def test_schedule_counts_explicit_failure_records(monkeypatch, tmp_path):
     result = health.get_collection_schedule()
 
     assert result['today_collected_notes'] == 0
-    assert result['today_runs'] == 4
-    assert result['last_24h_failures'] == 3
-    assert result['last_24h_unknown_runs'] == 0
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] == 4
+    assert result['last_24h_failures'] is None
+    assert result['last_24h_unknown_runs'] is None
+    assert result['last_24h_failed_keyword_observations'] == 3
+    assert result['last_24h_unknown_keyword_observations'] == 0
 
 
 def test_schedule_missing_run_records_are_unknown_not_zero(monkeypatch, tmp_path):
@@ -573,9 +657,12 @@ def test_schedule_unrecognized_run_status_is_not_called_success_or_failure(
 
     result = health.get_collection_schedule()
 
-    assert result['today_runs'] == 1
-    assert result['last_24h_failures'] == 0
-    assert result['last_24h_unknown_runs'] == 1
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] == 1
+    assert result['last_24h_failures'] is None
+    assert result['last_24h_unknown_runs'] is None
+    assert result['last_24h_failed_keyword_observations'] == 0
+    assert result['last_24h_unknown_keyword_observations'] == 1
 
 
 def test_schedule_missing_database_keeps_counts_unknown(monkeypatch, tmp_path):
@@ -587,6 +674,7 @@ def test_schedule_missing_database_keeps_counts_unknown(monkeypatch, tmp_path):
 
     assert result['today_collected_notes'] is None
     assert result['today_runs'] is None
+    assert result['today_keyword_observations'] is None
     assert result['last_24h_failures'] is None
 
 
