@@ -104,3 +104,23 @@ def test_emv_route_does_not_report_overflowed_estimate_as_success(monkeypatch):
     assert response.get_json()["ok"] is False
     assert response.get_json()["status"] == "INVALID_INPUT"
     assert response.get_json()["emv_total_yuan"] is None
+
+
+def test_emv_route_rejects_nonfinite_total_from_calculation(monkeypatch):
+    import database
+    import emv
+
+    monkeypatch.setattr(database, "get_db", _EmptyConnection)
+    monkeypatch.setattr(emv, "aggregate_emv", lambda _notes, *, cpm: {
+        "status": "SUCCESS", "emv_total_yuan": float("inf"),
+    })
+
+    response = _client().get("/api/ic/emv")
+
+    assert response.status_code == 422
+    assert response.get_json() == {
+        "ok": False,
+        "status": "INVALID_INPUT",
+        "error": "EMV total must be finite",
+        "emv_total_yuan": None,
+    }

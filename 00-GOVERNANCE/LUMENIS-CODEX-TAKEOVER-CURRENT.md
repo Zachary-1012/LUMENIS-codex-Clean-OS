@@ -8,6 +8,14 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `emv.py` keeps source/aggregate values truthful; `ic_routes.py` applies default CPM only when the parameter is absent and rejects explicit nonnumeric, negative, nonfinite or overflow inputs before DB/EMV reads. Platform grouping now retains no-data groups and counts unavailable notes alongside amount-bearing notes, with per-platform status and coverage. Focused runs passed **34 tests** across `tests/test_ic_emv_route_validation.py` (9), `tests/test_ic_contracts_p1.py::TestIC021EMV` (15), and `tests/test_p1_gap_closure.py -k emv_platform` (10). The broader `tests/test_ic_contracts_p1.py tests/test_p1_gap_closure.py` run had **4 failures**, and the exact same four test IDs and outcomes reproduced on clean main SHA `3f6d67785752b465b5b022847cbbe75a55e1eb47`: three API smoke imports are blocked because migration refuses to overwrite the pre-existing `/tmp/backups/before_migration_v0_to_v21.db`, and the unrelated Track B test expects provider status `LEGACY` while receiving `DISABLED`. The broader result remains recorded, not represented as a passing regression. Changed-source compilation and `git diff --check` passed. Tests did not access production data or call an external service.
 
+FIX-045/046 follow-up: `/api/ic/emv` also rejects a malformed or non-finite
+`emv_total_yuan` from the existing calculation result with HTTP 422, while
+preserving finite zero and `None` result semantics. The route regression suite
+adds an injected non-finite result case; the targeted route and EMV gap-closure
+suite passed. Changed-source compilation, governance machine contract, AI-native
+constitution and `git diff --check` passed. The all-zero observation-provenance
+item remains OPEN because the existing persistence path does not retain that
+provenance; no shared writer was changed.
 
 ## 2026-10-18 source-adoption validation handoff
 

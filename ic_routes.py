@@ -147,6 +147,19 @@ def ic_emv():
         r = _emv.aggregate_emv(notes, cpm=cpm)
         if r.get("status") == "INVALID_INPUT":
             return jsonify({"ok": False, **r}), 422
+        total = r.get("emv_total_yuan")
+        if total is not None:
+            try:
+                finite_total = math.isfinite(float(total))
+            except (TypeError, ValueError, OverflowError):
+                finite_total = False
+            if not finite_total:
+                return jsonify({
+                    "ok": False,
+                    "status": "INVALID_INPUT",
+                    "error": "EMV total must be finite",
+                    "emv_total_yuan": None,
+                }), 422
         return jsonify({"ok": True, **r})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 400
