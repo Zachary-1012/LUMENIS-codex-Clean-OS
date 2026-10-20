@@ -184,12 +184,66 @@ def test_fix_031_database_keeps_soft_write_and_surfaces_exception(caplog, monkey
             (note["note_id"],),
         ).fetchone()
         assert row_id > 0 and inserted is True
-        assert row["data_quality_status"] == "unknown"
+        assert row["data_quality_status"] == "error"
         assert row["data_quality_score"] is None
         assert note["data_quality_errors"] == (
             "_enrichment.-:RuntimeError: synthetic gate failure"
         )
         assert "synthetic gate failure" in caplog.text
+    finally:
+        connection.close()
+
+
+def test_fix_031_enrichment_failure_replaces_stale_quality_success(
+    caplog, monkeypatch,
+):
+    """FIX-031: a failed refresh must not leave stale ok/100 state on an existing note."""
+    import sqlite3
+
+    import data_quality_gate
+    import database
+    from lumenis.shared.database.business_schema import apply_business_schema
+
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    apply_business_schema(connection)
+    note_id = "fix-031-refresh-failure"
+    try:
+        row_id, inserted = database.insert_note(
+            {
+                "note_id": note_id,
+                "title": "Known-good title",
+                "url": "https://example.test/article",
+                "publish_date": "2026-10-20",
+                "risk_level": "low",
+            },
+            connection=connection,
+        )
+        assert row_id > 0 and inserted is True
+        before = connection.execute(
+            "SELECT data_quality_status, data_quality_score FROM notes WHERE note_id=?",
+            (note_id,),
+        ).fetchone()
+        assert tuple(before) == ("ok", 100)
+
+        class BrokenGate:
+            def enrich_quality_record(self, _contract_name, _record):
+                raise RuntimeError("synthetic refresh failure")
+
+        monkeypatch.setattr(data_quality_gate, "DataQualityGate", BrokenGate)
+        refreshed = {"note_id": note_id, "title": "Updated title"}
+        row_id, inserted = database.insert_note(refreshed, connection=connection)
+        row = connection.execute(
+            "SELECT data_quality_status, data_quality_score FROM notes WHERE note_id=?",
+            (note_id,),
+        ).fetchone()
+
+        assert row_id > 0 and inserted is False
+        assert tuple(row) == ("error", None)
+        assert refreshed["data_quality_errors"] == (
+            "_enrichment.-:RuntimeError: synthetic refresh failure"
+        )
+        assert "synthetic refresh failure" in caplog.text
     finally:
         connection.close()
 
@@ -266,6 +320,32 @@ def test_unknown_rules_return_structured_diagnostics(gate):
     assert malformed["errors"][0]["message"] == "未知规则类型: ['future_check']"
 
 
+def test_fix_031_false_condition_skips_unknown_error_rule(gate):
+    gate._contracts["conditional_unknown_rule"] = {
+        "version": "test",
+        "rules": [{
+            "name": "video_only_future_rule",
+            "type": "future_check",
+            "field": "content",
+            "severity": "error",
+            "condition": {"field": "media_type", "equals": "video"},
+        }],
+    }
+
+    text_record = gate.validate("conditional_unknown_rule", {
+        "media_type": "text", "content": "plain text",
+    })
+    video_record = gate.validate("conditional_unknown_rule", {
+        "media_type": "video", "content": "video text",
+    })
+
+    assert text_record["valid"] is True
+    assert text_record["errors"] == []
+    assert video_record["valid"] is False
+    assert video_record["errors"][0]["rule"] == "video_only_future_rule"
+    assert video_record["errors"][0]["severity"] == "error"
+
+
 @pytest.mark.parametrize("value", ["not-a-number", float("nan"), float("inf"), float("-inf")])
 def test_numeric_rules_return_structured_errors_for_illegal_values(gate, value):
     gate._contracts["finite_number"] = {
@@ -296,6 +376,26 @@ def test_invalid_numeric_rule_parameters_are_diagnosed(gate):
         "rule": "score_range", "field": "score",
         "message": "规则参数非法: range", "severity": "error",
     }]
+
+
+def test_fix_031_integer_bounds_above_float_precision_remain_exact(gate):
+    gate._contracts["large_integer_bounds"] = {
+        "version": "test",
+        "rules": [
+            {"name": "large_min", "type": "min", "field": "lower",
+             "min": 9007199254740993, "severity": "error"},
+            {"name": "large_max", "type": "max", "field": "upper",
+             "max": 9007199254740995, "severity": "error"},
+        ],
+    }
+
+    result = gate.validate("large_integer_bounds", {
+        "lower": 9007199254740992,
+        "upper": 9007199254740996,
+    })
+
+    assert result["valid"] is False
+    assert {item["rule"] for item in result["errors"]} == {"large_min", "large_max"}
 
 
 def test_unique_rule_without_field_returns_structured_error(gate):

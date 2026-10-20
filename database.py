@@ -229,6 +229,8 @@ def insert_note(note_data, *, connection=None):
             except Exception as exc:
                 diagnostic = f"_enrichment.-:{type(exc).__name__}: {exc}"
                 note_data['data_quality_errors'] = diagnostic
+                note_data['data_quality_status'] = 'error'
+                note_data['data_quality_score'] = None
                 logger.warning(
                     "Data quality enrichment failed for note_id=%s; keeping the write soft: %s",
                     nid, diagnostic,

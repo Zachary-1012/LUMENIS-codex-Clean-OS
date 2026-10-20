@@ -16,8 +16,8 @@ ZBC 三层数据治理分工：
   res = gate.validate("note", {...})   # -> {"valid":bool,"errors":[],"warnings":[]}
 """
 import datetime
+from decimal import Decimal, InvalidOperation
 import io
-import math
 import os
 import re
 
@@ -76,11 +76,13 @@ def _rule_range(v, p):
 
 def _finite_number(value):
     """返回有限数值；非法类型和 NaN/Infinity 均返回 None。"""
-    try:
-        number = float(value)
-    except (TypeError, ValueError, OverflowError):
+    if isinstance(value, bool):
         return None
-    return number if math.isfinite(number) else None
+    try:
+        number = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError, OverflowError):
+        return None
+    return number if number.is_finite() else None
 
 
 def _rule_min_length(v, p):
@@ -177,16 +179,17 @@ class DataQualityGate:
             field = rule.get("field")
             if rtype == "unique":
                 continue  # 唯一性依赖同批记录，仅在 validate_batch 中判定
+            # Conditions gate the rule itself, including future rule types
+            # whose implementation is not registered yet.
+            cond = rule.get("condition")
+            if cond and record.get(cond.get("field")) != cond.get("equals"):
+                continue
             check = _RULES.get(rtype) if isinstance(rtype, str) else None
             if check is None:
                 severity = rule.get("severity", "warning")
                 item = {"rule": rname, "field": field,
                         "message": "未知规则类型: %s" % rtype, "severity": severity}
                 (errors if severity == "error" else warnings).append(item)
-                continue
-            # condition：仅当条件字段等于某值时应用
-            cond = rule.get("condition")
-            if cond and record.get(cond.get("field")) != cond.get("equals"):
                 continue
             v = record.get(field)
             if rule.get("missing_state") == "missing" and (v is None or str(v).strip() == ""):
