@@ -4,6 +4,11 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-034 — redact credential-shaped diagnostics
+
+The existing `data_boundary.py` diagnostics sanitizer preserves credential-bearing values as redacted rather than leaking them through path or mapping forms. The focused offline command `pytest -q tests/test_runtime_preflight.py -k 'sanitize or credential_path_classification'` passed **26 tests**. The full `tests/test_runtime_preflight.py` run produced **31 passed, 2 failed** (`test_tracked_credentials_current_repo`, `test_current_repo_preflight_has_no_blocker`); both failures reproduced on the main baseline and are not claimed as repaired. Changed-file compilation and `git diff --check` passed. Tests use synthetic values only; no real credentials were read.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

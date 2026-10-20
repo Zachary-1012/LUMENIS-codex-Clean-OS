@@ -83,15 +83,22 @@ def _is_credential_path(rel_path: str) -> bool:
     处理凭证的源码允许入库；路径层只拦截真正的凭证/数据载体。
     """
     p = rel_path.replace("\\", "/").lower()
-    for wl in _CRED_PATH_WHITELIST:
-        if re.search(wl, p):
-            return False
     base = os.path.basename(p)
     _, ext = os.path.splitext(base)
+
+    # The generic sample/test/document exemptions must never override a known
+    # credential container. Keep the one intentional env template exception
+    # exact, then reject credential suffixes before consulting broader names.
+    if base == ".env.example":
+        return False
     if base == ".env" or re.match(r"\.env\.[\w-]+$", base):
         return True
     if ext in _CRED_DATA_EXTS:
         return True
+
+    for wl in _CRED_PATH_WHITELIST:
+        if re.search(wl, p):
+            return False
     if ext in _SOURCE_EXTS:
         return False
     if ext in _DATA_TEXT_EXTS and _CRED_WORD.search(p):
@@ -167,12 +174,27 @@ def current_db_zone():
     return info
 
 
+def _redact_cookie(match):
+    prefix = match.group(1)
+    value = match.group(0)[len(prefix):]
+    if len(value) >= 2 and value[0] in ("'", '"') and value[-1] == value[0]:
+        quote = value[0]
+        return f"{prefix}{quote}[REDACTED]{quote}"
+    return f"{prefix}[REDACTED]"
+
+
 _SAN_RULES = [
     (
         re.compile(r"(authorization\s*[:=]\s*)(bearer|basic|token)?\s*[A-Za-z0-9._\-/+=]{6,}", re.I),
         r"\1\2 [REDACTED]",
     ),
-    (re.compile(r"(cookie\s*[:=]\s*)[^;\n\r]{0,4096}", re.I), r"\1[REDACTED]"),
+    (
+        re.compile(
+            r'''(\b["']?cookie["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|[^\n\r]*)''',
+            re.I,
+        ),
+        _redact_cookie,
+    ),
     (
         re.compile(
             r"([\"']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|session[_-]?secret|xsec[_-]?token|token|secret|password|passwd|pwd|private[_-]?key)[\"']?\s*[:=]\s*[\"']?)[^\s\"',;}&]{3,}[\"']?",
@@ -186,6 +208,13 @@ _SAN_RULES = [
     ),
 ]
 
+_SENSITIVE_MAPPING_KEY = re.compile(
+    r"authorization|set[_-]?cookie|cookie|api[_-]?key|access[_-]?token|"
+    r"refresh[_-]?token|session(?:[_-]?(?:secret|token|cookie))?|"
+    r"xsec[_-]?token|token|secret|password|passwd|pwd|private[_-]?key",
+    re.I,
+)
+
 
 def sanitize_text(text):
     """把待写入日志/Evidence/Attestation 的文本中的凭证打码。非字符串原样返回。"""
@@ -198,9 +227,25 @@ def sanitize_text(text):
 
 
 def sanitize_mapping(obj):
-    """递归脱敏 dict/list 内的字符串值。"""
+    """递归脱敏 mapping 中的敏感键值及所有字符串内容。"""
     if isinstance(obj, dict):
-        return {k: sanitize_mapping(v) for k, v in obj.items()}
+        sanitized = {}
+        for key, value in obj.items():
+            safe_key = sanitize_text(key) if isinstance(key, str) else key
+            if isinstance(key, str) and _SENSITIVE_MAPPING_KEY.search(key):
+                safe_value = "[REDACTED]"
+            else:
+                safe_value = sanitize_mapping(value)
+            # Redacting a secret embedded in a key can make two keys equal.
+            # Preserve both entries without retaining any part of that secret.
+            if safe_key in sanitized:
+                base_key = safe_key
+                suffix = 2
+                while safe_key in sanitized:
+                    safe_key = f"{base_key} [{suffix}]"
+                    suffix += 1
+            sanitized[safe_key] = safe_value
+        return sanitized
     if isinstance(obj, (list, tuple)):
         return [sanitize_mapping(v) for v in obj]
     if isinstance(obj, str):

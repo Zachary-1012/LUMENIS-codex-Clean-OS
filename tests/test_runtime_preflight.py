@@ -34,6 +34,20 @@ def test_sanitize_authorization_and_cookie():
     assert "[REDACTED]" in out
 
 
+def test_sanitize_entire_cookie_session_and_quoted_header():
+    session = "session_" + "synthetic_value_91"
+    refresh = "refresh_" + "synthetic_value_27"
+    line = f"Cookie: sid={session}; refresh={refresh}; Path=/; SameSite=None; tail=visible"
+    out = dbm.sanitize_text(line)
+    assert session not in out and refresh not in out
+    assert "Path=/" not in out and "tail=visible" not in out
+
+    encoded = f'{{"Cookie": "sid={session}; refresh={refresh}", "safe": "visible"}}'
+    out = dbm.sanitize_text(encoded)
+    assert session not in out and refresh not in out
+    assert '"safe": "visible"' in out
+
+
 def test_sanitize_kv_and_pem():
     # 样本在源码层分段拼接，避免连续“疑似密钥”字面量触发仓库自身静态安全门禁
     _sk = "sk-" + "abcdef1234567890abcdef"
@@ -53,6 +67,25 @@ def test_sanitize_mapping_nested():
     flat = json.dumps(out, ensure_ascii=False)
     assert "abcd1234efgh5678" not in flat
     assert out["a"]["b"][1] == "clean" and out["a"]["c"] == 1
+
+
+def test_sanitize_mapping_sensitive_keys_values_and_key_contents():
+    session = "session_" + "synthetic_value_72"
+    api_value = "api_" + "synthetic_value_38"
+    embedded = "token=" + "synthetic_value_64"
+    payload = {
+        "Cookie": f"sid={session}; csrf=synthetic_csrf",
+        "api_key": api_value,
+        embedded: "opaque diagnostic label",
+        "safe": {"note": "visible"},
+    }
+
+    out = dbm.sanitize_mapping(payload)
+    flat = json.dumps(out, ensure_ascii=False)
+    assert session not in flat and api_value not in flat and embedded not in flat
+    assert out["Cookie"] == "[REDACTED]"
+    assert out["api_key"] == "[REDACTED]"
+    assert out["safe"]["note"] == "visible"
 
 
 # ------------------------------------------------------------------ 2) 路径分层
@@ -76,6 +109,9 @@ def test_sanitize_mapping_nested():
     ("app/android/app/src/profile/AndroidManifest.xml", False),
     ("app/macos/Runner/DebugProfile.entitlements", False),
     (".env.example", False),
+    ("examples/credential-example.pem", True),
+    ("samples/session-example.key", True),
+    ("tests/fixtures/access-token-example.p12", True),
     ("docs/CAPABILITY_BASELINE.md", False),
 ])
 def test_credential_path_classification(path, expected):
@@ -138,11 +174,12 @@ def test_non_enforce_never_raises(monkeypatch):
 
 
 # ------------------------------------------------------------------ 6) Attestation
-def test_attestation_written_and_redacted():
+def test_attestation_written_and_redacted(tmp_path, monkeypatch):
+    monkeypatch.setattr(rp, "get_data_dir", lambda: str(tmp_path))
     rep = rp.run_preflight(write_attestation=True)
     att = rep.get("attestation", {})
     assert att.get("written") is True
-    latest = os.path.join(ROOT, att["latest"].replace("/", os.sep))
+    latest = tmp_path / att["latest"]
     assert os.path.exists(latest)
     raw = io.open(latest, "r", encoding="utf-8").read()
     data = json.loads(raw)
