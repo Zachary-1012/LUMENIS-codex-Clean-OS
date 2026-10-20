@@ -2,7 +2,7 @@
 
 本索引只定位候选交付物与证据，不是产品规则、任务派工或验收声明。2026-10-18批准的规划和研究与产品实现、运行和验收分别记录。录音采集不在本候选范围；现有ASR、字幕、播客、语音交互与授权声音导入保留。
 
-两批Library原件覆盖275项清单：109份首包内嵌文件与166份补充原件的路径、字节数和SHA-256均逐项核对，无缺项或重复源hash。273份按原字节写入既有研究/evidence Owner路径；1份与仓库竞品基准字节相同，复用既有文件；1份`USER_REPORT.txt`仅将私有Google Drive链接替换为`[PRIVATE DRIVE LINK REDACTED]`。明细和去敏前后hash见[Library恢复回执](../../../../research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/LIBRARY_RECOVERY_RECEIPT_20261020.json)。来源根路径与独立许可映射仍为`UNKNOWN`；所有材料仅作研究/审核证据，不代表产品实现、正式前端或验收。
+两批Library原件覆盖275项清单：109份首包内嵌文件与166份补充原件的路径、字节数和SHA-256逐项核对，无缺项或重复源hash。当前回执区分265份逐字副本、7份来源派生的引用/范围修正、1份复用的既有竞品基准、2份私有Google Drive链接已去敏的派生文件（`MASTER_REGISTER.md`与`USER_REPORT.txt`）。六张空间图沿用规划中已存在且hash一致的原件，不重复复制。明细、去敏前后hash及当前仓库文件hash见[Library恢复回执](../../../../research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/LIBRARY_RECOVERY_RECEIPT_20261020.json)。来源根路径与独立许可映射仍为`UNKNOWN`；所有材料仅作研究/审核证据，不代表产品实现、正式前端或验收。
 
 ## 唯一产品规划与完整研究
 

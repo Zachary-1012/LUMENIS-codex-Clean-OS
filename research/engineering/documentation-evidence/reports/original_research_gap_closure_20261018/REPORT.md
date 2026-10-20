@@ -13,7 +13,7 @@
 ## 怎么读取索引
 
 - 01_FULL_REQUIREMENT_PRESERVATION.json：原逐行要求与宪章，不做缩编。原行的历史措辞不代表今天运行状态。
-- `historical_requirements_20261017/`：保留2026-10-17 16:25:32Z恢复快照中的14份原始文本/JSON及补充包中的7份审阅原件；其中`USER_REPORT.txt`仅将1条私有Google Drive链接替换为`[PRIVATE DRIVE LINK REDACTED]`，去敏前后hash见[恢复回执](LIBRARY_RECOVERY_RECEIPT_20261020.json)。原总账记录的基线为`4dab98ed6357133da9307de846180ed4f7bba5f5`、审计时间为14:49Z。它们是有日期的历史要求/审计记录，不是第二份现行规划、派工或验收。来源根路径和独立许可映射仍为`UNKNOWN`；现行产品规划仍以唯一的`00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md`为准。
+- `historical_requirements_20261017/`：保留2026-10-17 16:25:32Z来源快照中的14份原始文本/JSON及补充包中的7份审阅原件；`MASTER_REGISTER.md`与`USER_REPORT.txt`各有1条私有Google Drive链接，当前树以`[PRIVATE DRIVE LINK REDACTED]`代替。去敏前后hash、来源派生修正和当前文件hash见[恢复回执](LIBRARY_RECOVERY_RECEIPT_20261020.json)。`RESTORATION_HASHES.json`保留旧总账中基于`4dab98ed6357133da9307de846180ed4f7bba5f5`、14:49Z审计的原始hash，并明确标注它们不是16:25:32Z恢复源件或当前仓库hash。它们是有日期的历史要求/审计记录，不是第二份现行规划、派工或验收。来源根路径和独立许可映射仍为`UNKNOWN`；现行产品规划仍以唯一的`00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md`为准。
 - 02_G_R_J_U_REPORT_CROSSWALK.json：原ID、原文、Owner和已保存报告显式提及。全部NOT_VERIFIED表示本轮未据此自动认证，不能解读为推翻已有独立证据。
 - 03_SAVED_REPORT_CATALOG.json：20份研究路径、hash、行数和提及ID；本轮结构索引与实质阅读全文范围分别说明。
 - 04–08：原始引用定位、源hash、结构检查、反引号路径、材料manifest。

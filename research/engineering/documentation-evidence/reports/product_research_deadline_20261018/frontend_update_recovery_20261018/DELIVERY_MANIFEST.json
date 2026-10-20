@@ -35,9 +35,11 @@
     "sha256": "c769d9a4f3f32ad436f0d6aada5ba9e5cccfbf9efb650c7114ab794c020cb74a"
   },
   {
-    "path": "BENCHMARK_OFFICIAL_RESEARCH.md",
+    "path": "../../competitor_research_20261018/01_official_competitor_benchmark.md",
     "bytes": 17760,
-    "sha256": "86bd37e7e6a13414c23eab949c736d2cc0e636c8f7dc5bb30d66256be5419a4d"
+    "sha256": "86bd37e7e6a13414c23eab949c736d2cc0e636c8f7dc5bb30d66256be5419a4d",
+    "source_path": "BENCHMARK_OFFICIAL_RESEARCH.md",
+    "mapping_status": "REUSED_EXISTING_IDENTICAL_FILE"
   },
   {
     "path": "DOCUMENT_VALIDATION.json",

@@ -1,78 +1,287 @@
 [
   {
     "path": "REQUIREMENTS_LEDGER.json",
-    "sha256": "07cb2d765b2a4ea69473a5d4aefc4935bd91c9c8cfe3073138dbe101a3905efc"
+    "sha256": "07cb2d765b2a4ea69473a5d4aefc4935bd91c9c8cfe3073138dbe101a3905efc",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 4074985,
+    "recovered_source_sha256": "14d7211357deb344553bd7bf6d0368ffecdc3b8260fe78008254590bec14ef84",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/REQUIREMENTS_LEDGER.json",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "ORIGINAL_G_REQUIREMENTS.json",
-    "sha256": "2d26c247760dc4c5f1b64702e23afdcc2a181be75054a5af65269e857df9c860"
+    "sha256": "2d26c247760dc4c5f1b64702e23afdcc2a181be75054a5af65269e857df9c860",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 108015,
+    "recovered_source_sha256": "2d26c247760dc4c5f1b64702e23afdcc2a181be75054a5af65269e857df9c860",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/ORIGINAL_G_REQUIREMENTS.json",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "COVERAGE_CHECK.json",
-    "sha256": "b341fa50d4688fa0160e947b527d8f2fb4150b25e1a2a9016b9928c9cd2d712d"
+    "sha256": "b341fa50d4688fa0160e947b527d8f2fb4150b25e1a2a9016b9928c9cd2d712d",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 8858,
+    "recovered_source_sha256": "ddb583e68f17f06888bfde7c5d509d6c475cd3b04c9b836221dc046000a03c4d",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/COVERAGE_CHECK.json",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "USER_REPORT.txt",
-    "sha256": "55eaac563c34d8f6f5df4c5e61715bd99ddcdd149bf567a66d88f57e5a1c3836"
+    "sha256": "55eaac563c34d8f6f5df4c5e61715bd99ddcdd149bf567a66d88f57e5a1c3836",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 25101,
+    "recovered_source_sha256": "eb95973be0c201fe6a07c3c3fa3ba95ace24861c411ff22364eb95e66831f336",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/USER_REPORT.txt",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "G_EXTRACTION_CHECK.json",
-    "sha256": "a0ea6f8022925b831a8466d50e37faea839c75186c5bdcee0b25e2ce883220db"
+    "sha256": "a0ea6f8022925b831a8466d50e37faea839c75186c5bdcee0b25e2ce883220db",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 462,
+    "recovered_source_sha256": "a0ea6f8022925b831a8466d50e37faea839c75186c5bdcee0b25e2ce883220db",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/G_EXTRACTION_CHECK.json",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "build_register.py",
-    "sha256": "79e4a20c7c4dcd05644505f99d58867d82364f77a31dcab24792212f4802d54e"
+    "sha256": "79e4a20c7c4dcd05644505f99d58867d82364f77a31dcab24792212f4802d54e",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 14716,
+    "recovered_source_sha256": "79e4a20c7c4dcd05644505f99d58867d82364f77a31dcab24792212f4802d54e",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/build_register.py",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "MASTER_REGISTER.md",
-    "sha256": "b379b016f8c990e744c5729d2305df04ae2f768acc63d68c90ae1c0f44068356"
+    "sha256": "b379b016f8c990e744c5729d2305df04ae2f768acc63d68c90ae1c0f44068356",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 199202,
+    "recovered_source_sha256": "9bf922803c75bbbec0311ade188c6b3e8cc7bf58f917b2db06e6a1c5f08df2d3",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/MASTER_REGISTER.md",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "DELIVERY_MANIFEST.json",
-    "sha256": "f5f5be1e75e040221eeff5f0c2b986bae33b7d5a5e30cd8ecb4ac47a608d7325"
+    "sha256": "f5f5be1e75e040221eeff5f0c2b986bae33b7d5a5e30cd8ecb4ac47a608d7325",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 2677,
+    "recovered_source_sha256": "f5f5be1e75e040221eeff5f0c2b986bae33b7d5a5e30cd8ecb4ac47a608d7325",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/DELIVERY_MANIFEST.json",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "v2_1/DELIVERY_MANIFEST_V2_1.json",
-    "sha256": "d8bc7cc4df1906de49f33e93d36590c4c553fabc4a3b72dfdce8c4cc138ae429"
+    "sha256": "d8bc7cc4df1906de49f33e93d36590c4c553fabc4a3b72dfdce8c4cc138ae429",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 1265,
+    "recovered_source_sha256": "d8bc7cc4df1906de49f33e93d36590c4c553fabc4a3b72dfdce8c4cc138ae429",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/v2_1/DELIVERY_MANIFEST_V2_1.json",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "v2_1/SOURCE_EXCERPTS_V2_1.json",
-    "sha256": "758464d42fedac208cc38b42b29d7a139d216dee15e435aac8807b3aca0b411a"
+    "sha256": "758464d42fedac208cc38b42b29d7a139d216dee15e435aac8807b3aca0b411a",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 24967,
+    "recovered_source_sha256": "758464d42fedac208cc38b42b29d7a139d216dee15e435aac8807b3aca0b411a",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/v2_1/SOURCE_EXCERPTS_V2_1.json",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "v2_1/CORRECTION_V2_1.md",
-    "sha256": "92fbc78e40cb904cebaa4d221000e6c96fb6aa9eb518785296221aff97db5e07"
+    "sha256": "92fbc78e40cb904cebaa4d221000e6c96fb6aa9eb518785296221aff97db5e07",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 6359,
+    "recovered_source_sha256": "0b84722eed7527089d275340e8d416e50edc79ded340a625e3f1d0a26bbc1606",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/v2_1/CORRECTION_V2_1.md",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "v2_1/REQUIREMENTS_LEDGER_V2_1_DELTA.json",
-    "sha256": "1f1fa991ce868d3779bb717071e4cb01beb7eda03c51cdfe66b41ef9b80121f9"
+    "sha256": "1f1fa991ce868d3779bb717071e4cb01beb7eda03c51cdfe66b41ef9b80121f9",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 3627,
+    "recovered_source_sha256": "0f894ba9872d5874651b18b4b1eccd7b2bfd0ef8cfe41e30a0371d77747ea643",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/v2_1/REQUIREMENTS_LEDGER_V2_1_DELTA.json",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "evidence/browser_capture_review/REVIEW.md",
-    "sha256": "0560790733d8f70e9dabb11ef7e9b1f018a914ab0f1d9f51b6bb1436610ab933"
+    "sha256": "0560790733d8f70e9dabb11ef7e9b1f018a914ab0f1d9f51b6bb1436610ab933",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 7636,
+    "recovered_source_sha256": "0560790733d8f70e9dabb11ef7e9b1f018a914ab0f1d9f51b6bb1436610ab933",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/evidence/browser_capture_review/REVIEW.md",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "evidence/browser_capture_review/forged_note.log",
-    "sha256": "fea284f31c6c0df0516894d48a34b0ba3739302ec31d0e0705946b88da329d55"
+    "sha256": "fea284f31c6c0df0516894d48a34b0ba3739302ec31d0e0705946b88da329d55",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 84,
+    "recovered_source_sha256": "fea284f31c6c0df0516894d48a34b0ba3739302ec31d0e0705946b88da329d55",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/evidence/browser_capture_review/forged_note.log",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "evidence/browser_capture_review/test_review.py",
-    "sha256": "13c9b127c96b9bc0c6a625eb511f57f70ed89f4d7b4b4786bb4018d97410a8fe"
+    "sha256": "13c9b127c96b9bc0c6a625eb511f57f70ed89f4d7b4b4786bb4018d97410a8fe",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 920,
+    "recovered_source_sha256": "13c9b127c96b9bc0c6a625eb511f57f70ed89f4d7b4b4786bb4018d97410a8fe",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/evidence/browser_capture_review/test_review.py",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "evidence/browser_capture_review/targeted-correct-cwd.log",
-    "sha256": "d182f1f4de5c891d8ffea441e84a803118f5240faf3e2f312e5e752ae67b60c8"
+    "sha256": "d182f1f4de5c891d8ffea441e84a803118f5240faf3e2f312e5e752ae67b60c8",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 378,
+    "recovered_source_sha256": "d182f1f4de5c891d8ffea441e84a803118f5240faf3e2f312e5e752ae67b60c8",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/evidence/browser_capture_review/targeted-correct-cwd.log",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "evidence/browser_capture_review/repro.py",
-    "sha256": "77e0eafd79b16d23777f82e144f5ce3ccf2456f2888276f8c54a6fcf74c27fa4"
+    "sha256": "77e0eafd79b16d23777f82e144f5ce3ccf2456f2888276f8c54a6fcf74c27fa4",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 1551,
+    "recovered_source_sha256": "77e0eafd79b16d23777f82e144f5ce3ccf2456f2888276f8c54a6fcf74c27fa4",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/evidence/browser_capture_review/repro.py",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "evidence/browser_capture_review/repro.log",
-    "sha256": "3fe1d90492a104cbc3c8a6db967fa699b4c2ad20bec3343c6222446044c09b3c"
+    "sha256": "3fe1d90492a104cbc3c8a6db967fa699b4c2ad20bec3343c6222446044c09b3c",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 525,
+    "recovered_source_sha256": "3fe1d90492a104cbc3c8a6db967fa699b4c2ad20bec3343c6222446044c09b3c",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/evidence/browser_capture_review/repro.log",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   },
   {
     "path": "evidence/browser_capture_review/PACKAGING_VERIFICATION.json",
-    "sha256": "98d249b21b0242a6a41a6b2d226a007789778d2559bb28524c9dfdfad0579539"
+    "sha256": "98d249b21b0242a6a41a6b2d226a007789778d2559bb28524c9dfdfad0579539",
+    "sha256_scope": "Legacy repository baseline hash from the 2026-10-17 14:49Z audit; not the 16:25:32.599586Z recovered source or current repository hash.",
+    "baseline_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "baseline_audit_time_utc": "2026-10-17T14:49Z",
+    "recovered_source_bytes": 2568,
+    "recovered_source_sha256": "98d249b21b0242a6a41a6b2d226a007789778d2559bb28524c9dfdfad0579539",
+    "current_repository_readback": {
+      "receipt": "../LIBRARY_RECOVERY_RECEIPT_20261020.json",
+      "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/evidence/browser_capture_review/PACKAGING_VERIFICATION.json",
+      "bytes_field": "repository_bytes",
+      "sha256_field": "repository_sha256"
+    }
   }
 ]

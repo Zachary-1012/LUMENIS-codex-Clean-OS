@@ -11,14 +11,16 @@
     "missing_or_unmapped_entries": 0,
     "duplicate_source_paths": 0,
     "duplicate_original_hashes": 0,
-    "byte_identical_new_repository_copies": 273,
+    "byte_identical_new_repository_copies": 265,
     "existing_identical_file_reused": 1,
-    "privacy_redacted_derivatives": 1,
+    "privacy_redacted_derivatives": 2,
     "first_batch_embedded_entries": 109,
     "remaining_batch_entries": 166,
     "text_files": 274,
     "image_files": 1,
-    "excluded_files": 0
+    "excluded_files": 0,
+    "source_derived_reference_or_scope_corrections": 7,
+    "reference_only_existing_image_mappings": 6
   },
   "library_packages": [
     {
@@ -53,13 +55,14 @@
         "credential assignments"
       ]
     },
-    "private_drive_url_redactions": 1,
-    "redaction": "Replaced the single private Google Drive URL in USER_REPORT.txt with [PRIVATE DRIVE LINK REDACTED]. The original URL and private path are not included in this receipt.",
+    "private_drive_url_redactions": 2,
+    "redaction": "One private Google Drive URL each in MASTER_REGISTER.md and USER_REPORT.txt was replaced by [PRIVATE DRIVE LINK REDACTED]. Original URLs and private paths are not included in this receipt.",
     "user_report_transcript_marker_checks": {
       "speaker_label_lines": 0,
       "transcript_fences": 0,
       "conversation_transcript_terms": 0
-    }
+    },
+    "publication_history_note": "The earlier public PR head e31b24f4 included the MASTER_REGISTER.md URL before this follow-up redaction. This follow-up preserves commit history; the current tree is redacted."
   },
   "image_review": {
     "repository_relative_path": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/assets/aigc-paper-study.png",
@@ -70,6 +73,68 @@
       "evidence/offline-bundle.js",
       "historical/offline-v12-recovered.html",
       "offline.html"
+    ],
+    "spatial_review_plate_references": [
+      {
+        "markdown_file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/source_freeze/09_SPATIAL_REVIEW_PLATES.md",
+        "name": "cth.png",
+        "markdown_reference": "../../../../../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/cth.png",
+        "repository_relative_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/cth.png",
+        "bytes": 133539,
+        "sha256": "9da29edc33d1000143ab40c593dbb89a5d12e4ede5b99297ed8acacec2c41180",
+        "disposition": "reused_existing_identical_asset",
+        "copied": false
+      },
+      {
+        "markdown_file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/source_freeze/09_SPATIAL_REVIEW_PLATES.md",
+        "name": "bmp.png",
+        "markdown_reference": "../../../../../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/bmp.png",
+        "repository_relative_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/bmp.png",
+        "bytes": 144354,
+        "sha256": "218bdfceea930bd3bf82f38b5116a95467bb64ac00d3357994ff627e3b3bc11c",
+        "disposition": "reused_existing_identical_asset",
+        "copied": false
+      },
+      {
+        "markdown_file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/source_freeze/09_SPATIAL_REVIEW_PLATES.md",
+        "name": "research.png",
+        "markdown_reference": "../../../../../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/research.png",
+        "repository_relative_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/research.png",
+        "bytes": 139772,
+        "sha256": "0391227c9cbff2407fc7c6bbd187dfdd394c0490c26fb7330266577c0a9ba6eb",
+        "disposition": "reused_existing_identical_asset",
+        "copied": false
+      },
+      {
+        "markdown_file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/source_freeze/09_SPATIAL_REVIEW_PLATES.md",
+        "name": "media.png",
+        "markdown_reference": "../../../../../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/media.png",
+        "repository_relative_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/media.png",
+        "bytes": 150500,
+        "sha256": "5700c279fff4c2d653bea33411f11e03d7c36f003d1d18b11c8dc6d221b6343c",
+        "disposition": "reused_existing_identical_asset",
+        "copied": false
+      },
+      {
+        "markdown_file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/source_freeze/09_SPATIAL_REVIEW_PLATES.md",
+        "name": "ai.png",
+        "markdown_reference": "../../../../../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/ai.png",
+        "repository_relative_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/ai.png",
+        "bytes": 152770,
+        "sha256": "cb739f1936676384dc1f6ba6238f428884ef4525d4f7b975ea46ce24a9d174a5",
+        "disposition": "reused_existing_identical_asset",
+        "copied": false
+      },
+      {
+        "markdown_file": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/source_freeze/09_SPATIAL_REVIEW_PLATES.md",
+        "name": "system.png",
+        "markdown_reference": "../../../../../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/system.png",
+        "repository_relative_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/system.png",
+        "bytes": 154951,
+        "sha256": "b0de3c6b886c5ae4321e0294a8d5233084a299a544d759b7661f1ac948d0b230",
+        "disposition": "reused_existing_identical_asset",
+        "copied": false
+      }
     ]
   },
   "files": [
@@ -113,9 +178,14 @@
       "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/MASTER_REGISTER.md",
       "original_bytes": 199202,
       "original_sha256": "9bf922803c75bbbec0311ade188c6b3e8cc7bf58f917b2db06e6a1c5f08df2d3",
-      "repository_bytes": 199202,
-      "repository_sha256": "9bf922803c75bbbec0311ade188c6b3e8cc7bf58f917b2db06e6a1c5f08df2d3",
-      "disposition": "byte_identical"
+      "repository_bytes": 199159,
+      "repository_sha256": "21bff107e3bdb2739ab4469196613698809daa03459cbd053e377dc69262542e",
+      "disposition": "private_drive_url_redacted",
+      "redaction": {
+        "type": "private_google_drive_url",
+        "occurrences": 1,
+        "replacement": "[PRIVATE DRIVE LINK REDACTED]"
+      }
     },
     {
       "batch": "embedded_109",
@@ -146,9 +216,10 @@
       "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/RESTORATION_HASHES.json",
       "original_bytes": 2637,
       "original_sha256": "49021f707ac4465c693c4e6ffd3c46f2a40f3de094a89d203654fcf46a2949cc",
-      "repository_bytes": 2637,
-      "repository_sha256": "49021f707ac4465c693c4e6ffd3c46f2a40f3de094a89d203654fcf46a2949cc",
-      "disposition": "byte_identical"
+      "repository_bytes": 17779,
+      "repository_sha256": "dfbf79bb8a508e9f802bc505eed0bcbdc49daa467e85aa291f8483350e2f4feb",
+      "disposition": "source_derived_reference_or_scope_correction",
+      "correction": "Preserves original baseline fields and adds explicit baseline/recovery/current-readback scope."
     },
     {
       "batch": "embedded_109",
@@ -157,9 +228,10 @@
       "repository_relative_path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/RESTORATION_NOTICE.md",
       "original_bytes": 490,
       "original_sha256": "867f4187b4bbc434d689bcffee0303dbb206ba96eba62d3635de421292483da7",
-      "repository_bytes": 490,
-      "repository_sha256": "867f4187b4bbc434d689bcffee0303dbb206ba96eba62d3635de421292483da7",
-      "disposition": "byte_identical"
+      "repository_bytes": 972,
+      "repository_sha256": "abaafba500f1dcb25ce7080e36214669ca6cf53e4e6a1e23fce4f1f2ea813b8d",
+      "disposition": "source_derived_reference_or_scope_correction",
+      "correction": "Clarifies legacy baseline versus recovered-source and current repository hash scope."
     },
     {
       "batch": "embedded_109",
@@ -289,9 +361,10 @@
       "repository_relative_path": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/22_COMPETITOR_TASK_BENCHMARK_ADOPTION.md",
       "original_bytes": 4039,
       "original_sha256": "aaef28a2e146fb0bda55435eafc9213ef745a446de9dbd13751aa4ac1480ab61",
-      "repository_bytes": 4039,
-      "repository_sha256": "aaef28a2e146fb0bda55435eafc9213ef745a446de9dbd13751aa4ac1480ab61",
-      "disposition": "byte_identical"
+      "repository_bytes": 4134,
+      "repository_sha256": "9e09880c8a68c835024797f3cf364c44d9edc2a7883126bcb8c4e2fdae84c6f8",
+      "disposition": "source_derived_reference_or_scope_correction",
+      "correction": "Points to the existing byte-identical competitor benchmark."
     },
     {
       "batch": "embedded_109",
@@ -322,9 +395,10 @@
       "repository_relative_path": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/DELIVERY_MANIFEST.json",
       "original_bytes": 7067,
       "original_sha256": "f09a8dc8ab9715940b06a45a7b687edf54f7d69420b401b5c67aadfa6f5b1668",
-      "repository_bytes": 7067,
-      "repository_sha256": "f09a8dc8ab9715940b06a45a7b687edf54f7d69420b401b5c67aadfa6f5b1668",
-      "disposition": "byte_identical"
+      "repository_bytes": 7217,
+      "repository_sha256": "02e21dddcad9cbe3d84cb787c6f0d44792764bf14f2d07b126290840fa4b074e",
+      "disposition": "source_derived_reference_or_scope_correction",
+      "correction": "Maps the deduplicated benchmark source entry to the existing identical repository file."
     },
     {
       "batch": "embedded_109",
@@ -509,9 +583,10 @@
       "repository_relative_path": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/source_freeze/09_SPATIAL_REVIEW_PLATES.md",
       "original_bytes": 3267,
       "original_sha256": "1ffd31460dbc25f37250700973fd1edd253d1575934374946e5122c46552393f",
-      "repository_bytes": 3267,
-      "repository_sha256": "1ffd31460dbc25f37250700973fd1edd253d1575934374946e5122c46552393f",
-      "disposition": "byte_identical"
+      "repository_bytes": 3675,
+      "repository_sha256": "b8857e56a6a7ab65acbce99c045b349018054843bde89092c017526b6bf2e4c4",
+      "disposition": "source_derived_reference_or_scope_correction",
+      "correction": "Repairs six relative image references to existing verified source assets."
     },
     {
       "batch": "embedded_109",
@@ -608,9 +683,10 @@
       "repository_relative_path": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/source_freeze/CONTENT_MANIFEST.json",
       "original_bytes": 9222,
       "original_sha256": "4ac66929a3f5941585626a04c82ee595f20d981926471cd81f957d3dca339125",
-      "repository_bytes": 9222,
-      "repository_sha256": "4ac66929a3f5941585626a04c82ee595f20d981926471cd81f957d3dca339125",
-      "disposition": "byte_identical"
+      "repository_bytes": 10953,
+      "repository_sha256": "c59a3b94daed6c197f50369c54ac6ed666abda92b2cb7acaafc867ed79222c1a",
+      "disposition": "source_derived_reference_or_scope_correction",
+      "correction": "Maps six original image manifest entries to their existing identical repository assets."
     },
     {
       "batch": "embedded_109",
@@ -619,9 +695,10 @@
       "repository_relative_path": "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/source_freeze/CONTENT_STRUCTURE_CHECK.json",
       "original_bytes": 544,
       "original_sha256": "f58515627767109c0fd5d60fdf2e98f47658f56f97e8a13c48462d34f7c5de7c",
-      "repository_bytes": 544,
-      "repository_sha256": "f58515627767109c0fd5d60fdf2e98f47658f56f97e8a13c48462d34f7c5de7c",
-      "disposition": "byte_identical"
+      "repository_bytes": 958,
+      "repository_sha256": "21845a5ec81972ef787267baaf1f20e2cf0441d950005eaa7c573c1b873cc364",
+      "disposition": "source_derived_reference_or_scope_correction",
+      "correction": "Records path-resolution and source-hash validation scope for six image links."
     },
     {
       "batch": "embedded_109",

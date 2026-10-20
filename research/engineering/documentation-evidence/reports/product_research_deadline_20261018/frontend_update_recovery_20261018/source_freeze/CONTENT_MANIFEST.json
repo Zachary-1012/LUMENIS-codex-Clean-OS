@@ -171,7 +171,11 @@
     {
       "path": "figures/ai.png",
       "bytes": 152770,
-      "sha256": "cb739f1936676384dc1f6ba6238f428884ef4525d4f7b975ea46ce24a9d174a5"
+      "sha256": "cb739f1936676384dc1f6ba6238f428884ef4525d4f7b975ea46ce24a9d174a5",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/ai.png",
+      "repository_bytes": 152770,
+      "repository_sha256": "cb739f1936676384dc1f6ba6238f428884ef4525d4f7b975ea46ce24a9d174a5",
+      "repository_disposition": "reused_existing_identical_asset"
     },
     {
       "path": "figures/ai.svg",
@@ -186,7 +190,11 @@
     {
       "path": "figures/bmp.png",
       "bytes": 144354,
-      "sha256": "218bdfceea930bd3bf82f38b5116a95467bb64ac00d3357994ff627e3b3bc11c"
+      "sha256": "218bdfceea930bd3bf82f38b5116a95467bb64ac00d3357994ff627e3b3bc11c",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/bmp.png",
+      "repository_bytes": 144354,
+      "repository_sha256": "218bdfceea930bd3bf82f38b5116a95467bb64ac00d3357994ff627e3b3bc11c",
+      "repository_disposition": "reused_existing_identical_asset"
     },
     {
       "path": "figures/bmp.svg",
@@ -201,7 +209,11 @@
     {
       "path": "figures/cth.png",
       "bytes": 133539,
-      "sha256": "9da29edc33d1000143ab40c593dbb89a5d12e4ede5b99297ed8acacec2c41180"
+      "sha256": "9da29edc33d1000143ab40c593dbb89a5d12e4ede5b99297ed8acacec2c41180",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/cth.png",
+      "repository_bytes": 133539,
+      "repository_sha256": "9da29edc33d1000143ab40c593dbb89a5d12e4ede5b99297ed8acacec2c41180",
+      "repository_disposition": "reused_existing_identical_asset"
     },
     {
       "path": "figures/cth.svg",
@@ -221,7 +233,11 @@
     {
       "path": "figures/media.png",
       "bytes": 150500,
-      "sha256": "5700c279fff4c2d653bea33411f11e03d7c36f003d1d18b11c8dc6d221b6343c"
+      "sha256": "5700c279fff4c2d653bea33411f11e03d7c36f003d1d18b11c8dc6d221b6343c",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/media.png",
+      "repository_bytes": 150500,
+      "repository_sha256": "5700c279fff4c2d653bea33411f11e03d7c36f003d1d18b11c8dc6d221b6343c",
+      "repository_disposition": "reused_existing_identical_asset"
     },
     {
       "path": "figures/media.svg",
@@ -236,7 +252,11 @@
     {
       "path": "figures/research.png",
       "bytes": 139772,
-      "sha256": "0391227c9cbff2407fc7c6bbd187dfdd394c0490c26fb7330266577c0a9ba6eb"
+      "sha256": "0391227c9cbff2407fc7c6bbd187dfdd394c0490c26fb7330266577c0a9ba6eb",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/research.png",
+      "repository_bytes": 139772,
+      "repository_sha256": "0391227c9cbff2407fc7c6bbd187dfdd394c0490c26fb7330266577c0a9ba6eb",
+      "repository_disposition": "reused_existing_identical_asset"
     },
     {
       "path": "figures/research.svg",
@@ -251,7 +271,11 @@
     {
       "path": "figures/system.png",
       "bytes": 154951,
-      "sha256": "b0de3c6b886c5ae4321e0294a8d5233084a299a544d759b7661f1ac948d0b230"
+      "sha256": "b0de3c6b886c5ae4321e0294a8d5233084a299a544d759b7661f1ac948d0b230",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/system.png",
+      "repository_bytes": 154951,
+      "repository_sha256": "b0de3c6b886c5ae4321e0294a8d5233084a299a544d759b7661f1ac948d0b230",
+      "repository_disposition": "reused_existing_identical_asset"
     },
     {
       "path": "figures/system.svg",
