@@ -4,6 +4,10 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-030 / FIX-031 — quality rule and enrichment truth
+
+The existing `data_quality_gate.py::_finite_number` keeps integer bounds exact with finite `Decimal` comparisons, and `DataQualityGate.validate` evaluates a rule's condition before diagnosing an unknown rule type. The existing `database.py::insert_note` enrichment failure path remains a soft write but now persists `data_quality_status="error"` and clears a stale score. Regressions cover both sides of a conditional future rule, min/max bounds above 2^53, and an existing `ok`/100 note refreshed by a failing validator becoming `error`/NULL. `tests/test_data_quality_gate.py` passed **30 tests**; combined with `tests/test_database_insert_note_transaction.py`, **38 passed** using the offline cached pytest environment. `python -m py_compile database.py data_quality_gate.py tests/test_data_quality_gate.py`, governance machine contract, AI-native constitution and `git diff --check` passed. The database regression uses an in-memory SQLite database; no production database or external effect was used.
+
 ## 2026-10-20 Issue #17 FIX-055–057 — bounded GitHub source paging
 
 The existing `github_connector.py` now bounds collection paging and response
