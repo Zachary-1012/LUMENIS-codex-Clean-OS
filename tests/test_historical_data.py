@@ -299,6 +299,137 @@ class TestHistoricalProtection:
         assert rows[1]["dedup_hit"] == 1
 
 
+class TestImportTruthfulPersistence:
+    def test_missing_metrics_and_analysis_remain_null(self, temp_db):
+        record = {
+            "note_id": "missing-metrics-001",
+            "title": "广州太古汇日常记录",
+            "content": "临时合成导入记录",
+        }
+
+        result = hdi.import_historical_note(record, conn=temp_db, batch_id="missing-values")
+
+        assert result["status"] == hdi.IMPORT_STATUS_INSERTED
+        row = temp_db.execute(
+            """SELECT likes, comments, collects, shares, sentiment, risk_level, risk_score
+               FROM notes WHERE note_id=?""",
+            (record["note_id"],),
+        ).fetchone()
+        assert tuple(row) == (None, None, None, None, None, None, None)
+
+    def test_explicit_zero_neutral_and_low_values_are_preserved(self, temp_db):
+        record = {
+            "note_id": "explicit-values-001",
+            "title": "广州太古汇日常记录",
+            "content": "临时合成导入记录",
+            "likes": 0,
+            "comments": 0,
+            "collects": 0,
+            "shares": 0,
+            "sentiment": "neutral",
+            "risk_level": "low",
+            "risk_score": 0,
+        }
+
+        result = hdi.import_historical_note(record, conn=temp_db, batch_id="explicit-values")
+
+        assert result["status"] == hdi.IMPORT_STATUS_INSERTED
+        row = temp_db.execute(
+            """SELECT likes, comments, collects, shares, sentiment, risk_level, risk_score
+               FROM notes WHERE note_id=?""",
+            (record["note_id"],),
+        ).fetchone()
+        assert tuple(row) == (0, 0, 0, 0, "neutral", "low", 0)
+
+    def test_log_failure_rolls_back_the_note_without_claiming_commit(self, temp_db):
+        temp_db.execute(
+            """CREATE TRIGGER reject_historical_log BEFORE INSERT ON historical_import_log
+               BEGIN SELECT RAISE(ABORT, 'isolated log write failure'); END"""
+        )
+        record = {
+            "note_id": "partial-write-001",
+            "title": "广州太古汇日常记录",
+            "content": "临时合成导入记录",
+        }
+
+        result = hdi.import_historical_note(record, conn=temp_db, batch_id="partial-write")
+
+        assert result["status"] == hdi.IMPORT_STATUS_ERROR
+        assert result["persistence_state"] == "ROLLED_BACK_TO_SAVEPOINT"
+        assert result["inserted_id"] is None
+        assert result["log_id"] is None
+        assert temp_db.execute(
+            "SELECT COUNT(*) FROM notes WHERE note_id=?", (record["note_id"],)
+        ).fetchone()[0] == 0
+        assert temp_db.execute(
+            "SELECT COUNT(*) FROM historical_import_log WHERE import_batch_id='partial-write'"
+        ).fetchone()[0] == 0
+
+    def test_caller_connection_remains_uncommitted_and_rollbackable(self, temp_db):
+        record = {
+            "note_id": "caller-transaction-001",
+            "title": "广州太古汇日常记录",
+            "content": "临时合成导入记录",
+        }
+
+        result = hdi.import_historical_note(record, conn=temp_db, batch_id="caller-transaction")
+
+        assert result["status"] == hdi.IMPORT_STATUS_INSERTED
+        assert result["persistence_state"] == "PENDING_CALLER_COMMIT"
+        assert temp_db.in_transaction
+        assert temp_db.execute(
+            "SELECT COUNT(*) FROM notes WHERE note_id=?", (record["note_id"],)
+        ).fetchone()[0] == 1
+        assert temp_db.execute(
+            "SELECT COUNT(*) FROM historical_import_log WHERE import_batch_id='caller-transaction'"
+        ).fetchone()[0] == 1
+
+        temp_db.rollback()
+
+        assert temp_db.execute(
+            "SELECT COUNT(*) FROM notes WHERE note_id=?", (record["note_id"],)
+        ).fetchone()[0] == 0
+        assert temp_db.execute(
+            "SELECT COUNT(*) FROM historical_import_log WHERE import_batch_id='caller-transaction'"
+        ).fetchone()[0] == 0
+
+    def test_batch_owner_commits_and_marks_import_results(self, temp_db, tmp_path, monkeypatch):
+        db_path = tmp_path / "batch-owner.sqlite"
+        disk_conn = sqlite3.connect(db_path)
+        temp_db.backup(disk_conn)
+        disk_conn.close()
+
+        def open_fixture_database(path=None):
+            conn = sqlite3.connect(path or db_path)
+            conn.row_factory = sqlite3.Row
+            return conn
+
+        monkeypatch.setattr(hdi, "_get_connection", open_fixture_database)
+        record = {
+            "note_id": "batch-owner-001",
+            "title": "广州太古汇日常记录",
+            "content": "临时合成导入记录",
+        }
+
+        stats = hdi.import_historical_batch(
+            [record], db_path=str(db_path), rule_version="fixture-rule"
+        )
+
+        check = sqlite3.connect(db_path)
+        try:
+            assert check.execute(
+                "SELECT COUNT(*) FROM notes WHERE note_id=?", (record["note_id"],)
+            ).fetchone()[0] == 1
+            assert check.execute(
+                "SELECT COUNT(*) FROM historical_import_log WHERE import_batch_id=?",
+                (stats["batch_id"],),
+            ).fetchone()[0] == 1
+        finally:
+            check.close()
+        assert stats["inserted"] == 1
+        assert stats["details"][0]["persistence_state"] == "COMMITTED"
+
+
 class TestSilentOverwriteRisk:
     def test_reprocess_has_audit_trail(self):
         path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reprocess.py")

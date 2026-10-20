@@ -4,6 +4,11 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-029 — preserve unknown historical import values
+
+The existing `historical_data_importer.py` now preserves unknown source values rather than defaulting them to neutral/low/zero and preserves caller transaction ownership and partial-commit truth. `tests/test_historical_data.py::TestImportTruthfulPersistence` passed **5 tests**. `python -m py_compile historical_data_importer.py tests/test_historical_data.py` and `git diff --check` passed. The broader `tests/test_historical_data.py` run produced **32 passed, 3 failed** (`TestSubjectFilter.test_cth_hit`, `test_exclude_veto`, `test_subject_recorded`); the same three failures were reproduced on the main baseline, so the targeted five-test result is the repair evidence and the broader failures remain recorded. Isolated synthetic data only; no production database or import was run.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,
