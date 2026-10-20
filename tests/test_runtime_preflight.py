@@ -48,6 +48,17 @@ def test_sanitize_entire_cookie_session_and_quoted_header():
     assert '"safe": "visible"' in out
 
 
+def test_sanitize_prefixed_cookie_fields():
+    session = "session_" + "synthetic_value_33"
+    xhs_cookie = "xhs_" + "synthetic_cookie_84"
+    out = dbm.sanitize_text(
+        f"session_cookie={session}; trailing metadata\nxhs_cookie: {xhs_cookie}"
+    )
+    assert session not in out
+    assert xhs_cookie not in out
+    assert "[REDACTED]" in out
+
+
 def test_sanitize_kv_and_pem():
     # 样本在源码层分段拼接，避免连续“疑似密钥”字面量触发仓库自身静态安全门禁
     _sk = "sk-" + "abcdef1234567890abcdef"
@@ -86,6 +97,33 @@ def test_sanitize_mapping_sensitive_keys_values_and_key_contents():
     assert out["Cookie"] == "[REDACTED]"
     assert out["api_key"] == "[REDACTED]"
     assert out["safe"]["note"] == "visible"
+
+
+def test_sanitize_credential_keys_without_redacting_metadata_fields():
+    opaque = "synthetic_" + "credential_value_482"
+    cookie = "synthetic_" + "cookie_value_713"
+    payload = {
+        "credential": opaque,
+        "credentials": [opaque],
+        "browser_session_cookie": cookie,
+        "token_count": 18,
+        "token_budget": "budget-v4",
+        "authorization_status": "verified",
+        "secret_scan_result": "clean",
+        "credential_status": "configured",
+    }
+
+    out = dbm.sanitize_mapping(payload)
+    flat = json.dumps(out, ensure_ascii=False)
+    assert opaque not in flat and cookie not in flat
+    assert out["credential"] == "[REDACTED]"
+    assert out["credentials"] == "[REDACTED]"
+    assert out["browser_session_cookie"] == "[REDACTED]"
+    assert out["token_count"] == 18
+    assert out["token_budget"] == "budget-v4"
+    assert out["authorization_status"] == "verified"
+    assert out["secret_scan_result"] == "clean"
+    assert out["credential_status"] == "configured"
 
 
 # ------------------------------------------------------------------ 2) 路径分层

@@ -6,7 +6,7 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 ## 2026-10-20 Issue #17 FIX-034 — redact credential-shaped diagnostics
 
-The existing `data_boundary.py` diagnostics sanitizer preserves credential-bearing values as redacted rather than leaking them through path or mapping forms. The focused offline command `pytest -q tests/test_runtime_preflight.py -k 'sanitize or credential_path_classification'` passed **26 tests**. The full `tests/test_runtime_preflight.py` run produced **31 passed, 2 failed** (`test_tracked_credentials_current_repo`, `test_current_repo_preflight_has_no_blocker`); both failures reproduced on the main baseline and are not claimed as repaired. Changed-file compilation and `git diff --check` passed. Tests use synthetic values only; no real credentials were read.
+The existing `data_boundary.py` diagnostics sanitizer redacts prefixed cookie fields and credential-valued mapping keys while preserving metadata such as `token_count`, `token_budget`, `authorization_status` and `secret_scan_result`. The focused offline command `pytest -q tests/test_runtime_preflight.py -k 'sanitize or credential_path_classification'` passed **28 tests**. The full PR module run produced **33 passed, 2 failed** (`test_tracked_credentials_current_repo`, `test_current_repo_preflight_has_no_blocker`); both failures also reproduce on exact main SHA `3f6d67785752b465b5b022847cbbe75a55e1eb47`. Full main has those two failures plus an attestation test that still writes to the repository path; this PR isolates that output under `tmp_path`. Changed-source compilation and `git diff --check` passed. Tests use synthetic values only; no real credentials were read.
 
 
 ## 2026-10-18 source-adoption validation handoff

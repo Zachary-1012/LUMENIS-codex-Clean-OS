@@ -190,7 +190,7 @@ _SAN_RULES = [
     ),
     (
         re.compile(
-            r'''(\b["']?cookie["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|[^\n\r]*)''',
+            r'''(\b(?:[A-Za-z0-9]+[_-])*cookie["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|[^\n\r]*)''',
             re.I,
         ),
         _redact_cookie,
@@ -208,12 +208,22 @@ _SAN_RULES = [
     ),
 ]
 
-_SENSITIVE_MAPPING_KEY = re.compile(
-    r"authorization|set[_-]?cookie|cookie|api[_-]?key|access[_-]?token|"
-    r"refresh[_-]?token|session(?:[_-]?(?:secret|token|cookie))?|"
-    r"xsec[_-]?token|token|secret|password|passwd|pwd|private[_-]?key",
-    re.I,
+_SENSITIVE_MAPPING_KEYS = frozenset({
+    "authorization", "cookie", "cookies", "set_cookie", "api_key",
+    "access_token", "refresh_token", "session_secret", "session_token",
+    "session_cookie", "xsec_token", "token", "secret", "password",
+    "passwd", "pwd", "private_key", "credential", "credentials",
+})
+_SENSITIVE_MAPPING_SUFFIXES = (
+    "_authorization", "_cookie", "_cookies", "_api_key", "_token",
+    "_secret", "_password", "_passwd", "_pwd", "_private_key",
+    "_credential", "_credentials",
 )
+
+
+def _is_sensitive_mapping_key(key):
+    normalized = re.sub(r"[^a-z0-9]+", "_", key.casefold()).strip("_")
+    return normalized in _SENSITIVE_MAPPING_KEYS or normalized.endswith(_SENSITIVE_MAPPING_SUFFIXES)
 
 
 def sanitize_text(text):
@@ -232,7 +242,7 @@ def sanitize_mapping(obj):
         sanitized = {}
         for key, value in obj.items():
             safe_key = sanitize_text(key) if isinstance(key, str) else key
-            if isinstance(key, str) and _SENSITIVE_MAPPING_KEY.search(key):
+            if isinstance(key, str) and _is_sensitive_mapping_key(key):
                 safe_value = "[REDACTED]"
             else:
                 safe_value = sanitize_mapping(value)
