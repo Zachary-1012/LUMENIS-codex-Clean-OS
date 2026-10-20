@@ -234,6 +234,10 @@ class BaseAdapter(ABC):
         self.fallback_handler = fallback_handler  # 降级回调：(keyword, error) -> List[CollectedNote]
         self.config = ADAPTER_CONFIG
         self._last_result: Optional[AdapterResult] = None
+        # Preserve the latest provider outcome so an open-circuit shortcut can
+        # retain terminal verification/risk state instead of inventing a plain
+        # "breaker open" error that would make cached fallback look safe.
+        self._breaker_last_failure_error = ""
         # Store result and identity in one assignment. Adapter instances are
         # shared across threads, so separate result/key writes can cross-bind.
         self._last_result_cache_entry = None
@@ -272,18 +276,31 @@ class BaseAdapter(ABC):
         if not self.breaker.allow():
             if self.metrics:
                 self.metrics.record_call(False, time.time() - start, circuit_open=True)
+            breaker_error = f"熔断器开启，平台{self.platform_name}暂不可用"
+            if self._is_terminal_provider_state(self._breaker_last_failure_error):
+                # Keep the provider's terminal cause visible and bypass both
+                # custom and cached fallback while this breaker remains open.
+                return AdapterResult(
+                    success=False,
+                    error=f"{breaker_error}; 最近终态 provider 响应: {self._breaker_last_failure_error}",
+                    duration_seconds=time.time() - start,
+                )
             return self._fallback_or_fail(
-                keyword, f"熔断器开启，平台{self.platform_name}暂不可用", start,
+                keyword, breaker_error, start,
                 allow_fallback=allow_fallback,
                 cache_key=cache_key,
             )
 
+        # A permitted provider attempt is the only evidence that can replace a
+        # prior terminal outcome. Re-record its result below if it fails.
+        self._breaker_last_failure_error = ""
         last_error = ""
         for attempt in range(self.config["max_retries"]):
             try:
                 result = self.search(keyword, max_results)
                 if result.success:
                     self.breaker.record_success()
+                    self._breaker_last_failure_error = ""
                     result.duration_seconds = time.time() - start
                     self._last_result = result
                     # An unscoped success invalidates the previous cache
@@ -317,6 +334,7 @@ class BaseAdapter(ABC):
             time.sleep(self.config["retry_delay"] * (attempt + 1))
 
         self.breaker.record_failure()
+        self._breaker_last_failure_error = last_error
         duration = time.time() - start
         if self.metrics:
             self.metrics.record_call(False, duration, last_error)
@@ -360,7 +378,14 @@ class BaseAdapter(ABC):
                           cache_key: Optional[Tuple[str, ...]] = None) -> AdapterResult:
         """降级处理：优先用fallback_handler，其次用最近成功结果缓存，最后返回失败"""
         duration = time.time() - start
-        if not allow_fallback or self._is_terminal_provider_state(error):
+        if (not allow_fallback or self._is_terminal_provider_state(error)
+                or self._is_terminal_provider_state(self._breaker_last_failure_error)):
+            if (self._is_terminal_provider_state(self._breaker_last_failure_error)
+                    and not self._is_terminal_provider_state(error)):
+                error = (
+                    f"{error}; 最近终态 provider 响应: "
+                    f"{self._breaker_last_failure_error}"
+                )
             return AdapterResult(success=False, error=error, duration_seconds=duration)
         # 1. 用户自定义降级
         if self.fallback_handler:

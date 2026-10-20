@@ -108,8 +108,10 @@ class _ChallengeAdapter(BaseAdapter):
         super().__init__(**kwargs)
         self.empty = empty
         self.challenge = False
+        self.search_calls = 0
 
     def search(self, keyword, max_results=20):
+        self.search_calls += 1
         if self.challenge:
             return AdapterResult(
                 success=False,
@@ -256,6 +258,66 @@ def test_terminal_verification_error_does_not_call_custom_fallback():
     assert result.success is False
     assert result.notes == []
     assert calls == []
+
+
+@pytest.mark.parametrize('empty', [True, False])
+def test_open_breaker_preserves_terminal_challenge_and_allows_explicit_recovery(empty):
+    calls = []
+    adapter = None
+
+    def custom_fallback(_keyword, error):
+        calls.append(error)
+        return [adapter._make_note(title='stale custom fallback')]
+
+    adapter = _ChallengeAdapter(empty=empty, fallback_handler=custom_fallback)
+    cached = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+    assert cached.success is True
+    assert bool(cached.notes) is not empty
+
+    adapter.challenge = True
+    for _ in range(adapter.breaker.threshold):
+        challenged = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+        assert challenged.success is False
+        assert challenged.notes == []
+        assert 'NEED_HUMAN_VERIFICATION' in challenged.error
+    assert adapter.breaker.state == 'open'
+    assert calls == []
+
+    calls_before_shortcut = adapter.search_calls
+    shortcut = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+    assert shortcut.success is False
+    assert shortcut.notes == []
+    assert 'NEED_HUMAN_VERIFICATION' in shortcut.error
+    assert adapter.search_calls == calls_before_shortcut
+    assert calls == []
+
+    # A separately permitted provider request after cooldown is the recovery
+    # evidence; it must reach search and reset both breaker and terminal state.
+    adapter.challenge = False
+    adapter.breaker.last_fail_time = time.time() - adapter.breaker.reset_seconds - 1
+    recovered = adapter.collect('same query', cache_context=_CACHE_CONTEXT)
+
+    assert recovered.success is True
+    assert adapter.breaker.state == 'closed'
+    assert adapter._breaker_last_failure_error == ''
+    assert adapter.search_calls == calls_before_shortcut + 1
+
+
+def test_open_breaker_keeps_cached_fallback_for_ordinary_transient_failure():
+    adapter = _QueryAdapter()
+    assert adapter.collect('query-a', cache_context=_CACHE_CONTEXT).success
+    adapter.fail_queries.add('query-a')
+
+    for _ in range(adapter.breaker.threshold):
+        fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+        assert fallback.success is True
+        assert fallback.error.startswith('缓存降级:')
+
+    assert adapter.breaker.state == 'open'
+    open_fallback = adapter.collect('query-a', cache_context=_CACHE_CONTEXT)
+    assert open_fallback.success is True
+    assert open_fallback.error.startswith('缓存降级: 熔断器开启')
+    assert [note.content for note in open_fallback.notes] == ['private A data']
 
 
 @pytest.mark.parametrize(
