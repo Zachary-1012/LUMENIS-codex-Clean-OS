@@ -699,3 +699,32 @@ def test_git_info_redacts_scp_style_remote_username(tmp_path: Path) -> None:
 
     assert result["remote"] == "github.com:org/repo.git"
     assert "fixture-secret" not in result["remote"]
+
+
+def _remote_result(tmp_path: Path, name: str, url: str) -> dict:
+    repo_path = tmp_path / name
+    repo_path.mkdir()
+    _new_local_git_repo(repo_path)
+    subprocess.run(["git", "remote", "add", "origin", url], cwd=repo_path, check=True)
+    return _git_info()(repo_path)
+
+
+def test_git_info_fails_closed_for_opaque_scheme_remote_with_credentials(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "opaque", "https:fixture-user:fixture-secret@host/repo")
+    assert result["available"] is False
+    assert result["remote"] == "UNKNOWN"
+    assert "fixture-secret" not in json.dumps(result)
+
+
+def test_git_info_sanitizes_network_path_remotes(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "netpath", "//fixture-user:fixture-secret@host/repo")
+    assert result["remote"] == "//host/repo"
+    assert "fixture-secret" not in json.dumps(result)
+    helper = _remote_result(tmp_path, "netpath-helper", "foo:://fixture-user:fixture-secret@host/repo")
+    assert "fixture-secret" not in json.dumps(helper)
+
+
+def test_git_info_accepts_dotted_and_plus_helper_transports(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "dotted", "foo.bar+x::https://u:fixture-secret@host/repo")
+    assert result["available"] is True
+    assert result["remote"] == "foo.bar+x::https://host/repo"

@@ -664,6 +664,33 @@ class TestDataCenterAPI:
         assert payload["total"] == 3
         assert {row["id"] for row in payload["data"]} == {9601, 9602, 9603}
 
+    def test_text_publication_bounds_compare_instants_not_strings(
+        self, platform_db, monkeypatch,
+    ):
+        """Offset-bearing text timestamps are compared as UTC instants."""
+        columns = {row["name"] for row in platform_db.execute("PRAGMA table_info(notes)")}
+        if "publish_date" not in columns:
+            platform_db.execute("ALTER TABLE notes ADD COLUMN publish_date TEXT")
+        platform_db.execute("DELETE FROM notes")
+        platform_db.executemany(
+            "INSERT INTO notes (id, publish_date) VALUES (?, ?)",
+            [
+                (9701, "2026-10-31T05:00:00Z"),        # == 13:00+08:00, inside
+                (9702, "2026-10-31 03:00:00"),         # == 11:00+08:00, before
+                (9703, "2026-10-31T12:30:00+08:00"),   # inside
+            ],
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+        from urllib.parse import quote
+        response = client.get(
+            "/api/data-center/table/notes?start_date="
+            + quote("2026-10-31T12:00:00+08:00") + "&end_date=2026-10-31"
+        )
+        assert response.status_code == 200
+        assert {row["id"] for row in response.get_json()["data"]} == {9701, 9703}
+
     @pytest.mark.parametrize(("parameter", "invalid_date"), [
         ("start_date", "2026-02-30"),
         ("end_date", "2026-13-01"),

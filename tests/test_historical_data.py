@@ -496,6 +496,38 @@ class TestImportTruthfulPersistence:
         ]
         assert stats["details"][2]["note_id"] == ""
         assert "not processed" in stats["details"][2]["warnings"][0]
+        assert all(d["inserted_id"] is None and d["log_id"] is None for d in stats["details"])
+
+    def test_batch_rollback_reclassifies_same_batch_dedup_skip(
+            self, temp_db, tmp_path, monkeypatch):
+        db_path = tmp_path / "batch-rollback-dedup.sqlite"
+        temp_db.execute(
+            """CREATE TRIGGER rollback_selected_note BEFORE INSERT ON notes
+               WHEN NEW.note_id='rollback-trigger'
+               BEGIN SELECT RAISE(ROLLBACK, 'synthetic whole-transaction rollback'); END"""
+        )
+        temp_db.commit()
+        disk_conn = sqlite3.connect(db_path)
+        temp_db.backup(disk_conn)
+        disk_conn.close()
+
+        def open_fixture_database(path=None):
+            conn = sqlite3.connect(path or db_path)
+            conn.row_factory = sqlite3.Row
+            return conn
+
+        monkeypatch.setattr(hdi, "_get_connection", open_fixture_database)
+        records = [
+            {"note_id": "batch-first", "title": "广州太古汇首条", "content": "synthetic same"},
+            {"note_id": "batch-dup", "title": "广州太古汇首条", "content": "synthetic same"},
+            {"note_id": "rollback-trigger", "title": "广州太古汇触发", "content": "synthetic rollback"},
+        ]
+        stats = hdi.import_historical_batch(records, db_path=str(db_path), rule_version="fixture-rule")
+        assert stats["inserted"] == 0
+        assert stats["dedup_skipped"] == 0
+        assert stats["errors"] == 3
+        assert [d["status"] for d in stats["details"]] == [hdi.IMPORT_STATUS_ERROR] * 3
+        assert all(d["inserted_id"] is None and d["log_id"] is None for d in stats["details"])
 
     def test_caller_connection_remains_uncommitted_and_rollbackable(self, temp_db):
         record = {

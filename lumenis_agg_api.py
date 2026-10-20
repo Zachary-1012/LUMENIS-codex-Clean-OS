@@ -123,7 +123,7 @@ def _git_info(repo_path: Path):
                 address = value[helper_separator + 2:]
                 valid_transport = (
                     bool(transport) and transport[0].isalpha()
-                    and all(char.isalnum() or char in "-_" for char in transport)
+                    and all(char.isalnum() or char in "-_.+" for char in transport)
                 )
                 if valid_transport:
                     address_parts = urllib.parse.urlsplit(address)
@@ -141,7 +141,16 @@ def _git_info(repo_path: Path):
                     return f"{transport}::{sanitized_address}"
                 if parsed.scheme.lower() not in {"http", "https", "ssh", "git", "file"}:
                     return None
-            if parsed.scheme:
+            if parsed.scheme or parsed.netloc:
+                # Only hierarchical URLs whose authority can be sanitized are
+                # accepted. Opaque/malformed forms (https:user:pw@host/repo)
+                # keep credential-shaped data in the path: fail closed.
+                if parsed.scheme and not parsed.netloc:
+                    if parsed.scheme.lower() == "file" and "@" not in parsed.path:
+                        return urllib.parse.urlunsplit((parsed.scheme, "", parsed.path, "", ""))
+                    return None
+                if "://" in parsed.path:
+                    return None
                 # Remove all query/fragment data: a denylist cannot recognize
                 # every signed-URL credential parameter (for example code/key).
                 authority = parsed.netloc.rsplit("@", 1)[-1]

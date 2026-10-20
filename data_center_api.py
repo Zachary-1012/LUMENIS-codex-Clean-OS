@@ -83,6 +83,15 @@ def _parse_date_bound(value: str) -> tuple[datetime, bool]:
     return parsed, date_only
 
 
+def _text_date_filter(value: str, *, end: bool) -> tuple[str, str]:
+    """Validate an ISO bound and return a UTC literal for julianday() comparison."""
+    parsed, date_only = _parse_date_bound(value)
+    utc = parsed.astimezone(timezone.utc)
+    if date_only and end:
+        return "<", (utc + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+    return ("<=" if end else ">="), utc.strftime("%Y-%m-%d %H:%M:%S.%f")
+
+
 def _unix_date_filter(
     value: str, *, end: bool, timestamp_multiplier: float = 1,
 ) -> tuple[str, float]:
@@ -283,11 +292,15 @@ def query_table(table_name: str):
                             timestamp_multiplier=timestamp_multiplier,
                         )
                     else:
-                        _parse_date_bound(start_date)
-                        operator, value = ">=", start_date
+                        operator, value = _text_date_filter(start_date, end=False)
                 except ValueError:
                     return jsonify({"ok": False, "error": "invalid start_date"}), 400
-                where_clauses.append(f"{time_expr} {operator} ?")
+                if not numeric_time_col:
+                    # Compare instants, not strings: julianday() applies
+                    # declared offsets (Z/+08:00) and accepts 'T' or space.
+                    where_clauses.append(f"julianday({time_expr}) {operator} julianday(?)")
+                else:
+                    where_clauses.append(f"{time_expr} {operator} ?")
                 params.append(value)
             if end_date:
                 try:
@@ -297,11 +310,15 @@ def query_table(table_name: str):
                             timestamp_multiplier=timestamp_multiplier,
                         )
                     else:
-                        _parse_date_bound(end_date)
-                        operator, value = "<=", end_date
+                        operator, value = _text_date_filter(end_date, end=True)
                 except ValueError:
                     return jsonify({"ok": False, "error": "invalid end_date"}), 400
-                where_clauses.append(f"{time_expr} {operator} ?")
+                if not numeric_time_col:
+                    # Compare instants, not strings: julianday() applies
+                    # declared offsets (Z/+08:00) and accepts 'T' or space.
+                    where_clauses.append(f"julianday({time_expr}) {operator} julianday(?)")
+                else:
+                    where_clauses.append(f"{time_expr} {operator} ?")
                 params.append(value)
 
         where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""

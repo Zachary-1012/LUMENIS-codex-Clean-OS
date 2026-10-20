@@ -1017,7 +1017,9 @@ def log_web_run(adapter,query,started,finished,fetched,accepted,rejected,error='
 def get_web_mentions(limit=100, relevant_only=True):
     q='SELECT * FROM web_mentions'
     if relevant_only: q += " WHERE relevance='relevant'"
-    q += ' ORDER BY COALESCE(published_at,fetched_at) DESC LIMIT ?'
+    # Order by instant, not text: legacy 'YYYY-MM-DD HH:MM:SS' and new
+    # offset-bearing ISO values must interleave chronologically.
+    q += " ORDER BY COALESCE(julianday(NULLIF(TRIM(published_at),'')),julianday(fetched_at)) DESC LIMIT ?"
     with get_db() as conn:
         rows=conn.execute(q,(limit,)).fetchall()
         out=[]

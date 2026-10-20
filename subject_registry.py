@@ -102,7 +102,12 @@ def _validate_official_source_url(source_url: Any) -> str:
             # when a redirect value was percent-encoded twice.
             for candidate in dict.fromkeys((value, unquote(value))):
                 try:
-                    nested_query = urlsplit(candidate).query
+                    nested_parts = urlsplit(candidate)
+                    nested_query = nested_parts.query
+                    # A nested redirect authority can carry userinfo even
+                    # when it has no query of its own.
+                    if nested_parts.netloc and "@" in nested_parts.netloc:
+                        return True
                 except ValueError:
                     nested_query = ""
                 if nested_query:

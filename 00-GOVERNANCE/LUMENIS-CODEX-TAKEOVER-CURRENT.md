@@ -317,6 +317,22 @@ compilation, governance machine contract, AI-native constitution and `git diff
 real Sogou behavior, W6-owned projection, runtime and user acceptance remain
 unverified.
 
+## 2026-10-20 Review-finding repair for merged PRs #88/#90/#93/#94/#96
+
+PRs #88, #90, #93, #94 and #96 were merged with open Codex review findings;
+this repair closes them in existing owners. Credential P1s first:
+`lumenis_agg_api.py` fails closed for opaque scheme remotes
+(`https:user:pw@host`), sanitizes network-path authorities (`//user:pw@host`,
+`foo:://...`) and accepts `.`/`+` helper transports (#93);
+`subject_registry.py` rejects userinfo inside nested redirect URLs (#90).
+`historical_data_importer.py` clears rolled-back `inserted_id`/`log_id` and
+reclassifies rolled-back dedup skips as errors (#94). `data_center_api.py`
+compares text publication bounds as UTC instants via `julianday` (#96).
+`public_http.py` rejects form/navigation roots and skips nested roots before
+measuring them; `get_web_mentions` orders by instant across legacy/ISO values
+(#88). Regressions added in the existing test files. Offline only; runtime and
+user acceptance remain NOT_VERIFIED.
+
 ## 2026-10-20 Issue #17 FIX-107 / FIX-108 — pitch export and report readback
 
 The existing `scripts/pitch_export.py` sets Normal paragraph-after spacing to
