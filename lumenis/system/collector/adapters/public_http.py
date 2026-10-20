@@ -21,6 +21,8 @@ from ..guard.rate_limiter import AdaptiveRateLimiter
 
 
 MAX_PUBLIC_BODY_CHARS = 16_000
+MAX_PUBLIC_LOCATOR_CHARS = 512
+MAX_PUBLIC_LOCATOR_TOTAL_CHARS = 16_384
 _CONTENT_SELECTORS = (
     'article, [itemprop="articleBody"], .zw, [class*="-body-"], '
     '.float100, .content_article, .block-text-only .container-sm, main, [role="main"]'
@@ -31,19 +33,23 @@ _CHROME_MARKERS = ("header", "footer", "menu", "navigation", "breadcrumb")
 def _node_locator(node) -> str:
     """Return a stable tag/id/class path for one selected source block."""
     segments = []
+    segment_chars = 0
+    truncated = False
     current = node
     while getattr(current, "name", None) not in {None, "[document]"}:
         segment = str(current.name)
         element_id = str(current.get("id") or "")
         if element_id and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", element_id):
-            segment += f"#{element_id}"
+            segment += f"#{_locator_token(element_id)}"
         else:
-            classes = sorted(
-                value for value in (current.get("class") or [])
+            classes = [
+                str(value) for value in (current.get("class") or [])[:8]
                 if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", str(value))
-            )
+            ]
             if classes:
-                segment += "." + ".".join(classes)
+                segment += "." + ".".join(sorted(_locator_token(value) for value in classes))
+                if len(current.get("class") or []) > len(classes):
+                    segment += ".more"
         parent = getattr(current, "parent", None)
         if parent is not None:
             siblings = parent.find_all(current.name, recursive=False)
@@ -53,9 +59,55 @@ def _node_locator(node) -> str:
                     if sibling is current
                 )
                 segment += f":nth-of-type({sibling_index})"
+        if len(segment) > 128:
+            suffix = "~" + hashlib.sha256(segment.encode("utf-8")).hexdigest()[:12]
+            segment = segment[:128 - len(suffix)] + suffix
+        addition = len(segment) + (3 if segments else 0)
+        path_budget = MAX_PUBLIC_LOCATOR_CHARS - len("… > ")
+        if segment_chars + addition > path_budget:
+            truncated = True
+            break
         segments.append(segment)
+        segment_chars += addition
         current = parent
-    return " > ".join(reversed(segments))
+    locator = " > ".join(reversed(segments))
+    if truncated:
+        prefix = "… > "
+        locator = prefix + locator
+    return locator
+
+
+def _locator_token(value: str) -> str:
+    if len(value) <= 80:
+        return value
+    suffix = "~" + hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+    return value[:80 - len(suffix)] + suffix
+
+
+def _bounded_node_locators(nodes) -> tuple[list[str], bool]:
+    locators: list[str] = []
+    retained_chars = 0
+    truncated = False
+    for node in nodes:
+        locator = _node_locator(node)
+        separator_chars = 1 if locators else 0
+        remaining = MAX_PUBLIC_LOCATOR_TOTAL_CHARS - retained_chars - separator_chars
+        if remaining <= 0:
+            truncated = True
+            break
+        if len(locator) > remaining:
+            if remaining > 13:
+                suffix = "~" + hashlib.sha256(locator.encode("utf-8")).hexdigest()[:12]
+                locator = locator[:remaining - len(suffix)] + suffix
+                locators.append(locator)
+                retained_chars += separator_chars + len(locator)
+            truncated = True
+            break
+        locators.append(locator)
+        retained_chars += separator_chars + len(locator)
+    if len(locators) < len(nodes):
+        truncated = True
+    return locators, truncated
 
 
 def _iter_node_text_parts(node: Any, *, include_chrome: bool = False):
@@ -310,7 +362,7 @@ class PublicHttpAdapter(BasePlatformAdapter):
         selected_nodes = _selected_substantive_nodes(soup)
         if selected_nodes:
             selection = "semantic_blocks"
-            locators = [_node_locator(node) for node in selected_nodes]
+            locators, locators_truncated = _bounded_node_locators(selected_nodes)
             text, source_text_sha256, source_text_char_length = _capture_bounded_text(
                 _joined_node_text(selected_nodes), MAX_PUBLIC_BODY_CHARS,
             )
@@ -318,6 +370,7 @@ class PublicHttpAdapter(BasePlatformAdapter):
             description_text = str(description.get("content") or "").strip()
             selection = "meta_description"
             locators = ["meta[name=description][content]"]
+            locators_truncated = False
             text, source_text_sha256, source_text_char_length = _capture_bounded_text(
                 (description_text,), MAX_PUBLIC_BODY_CHARS,
             )
@@ -328,6 +381,7 @@ class PublicHttpAdapter(BasePlatformAdapter):
             )
             selection = "document_body" if source_text_char_length else "none"
             locators = ["body"] if source_text_char_length else []
+            locators_truncated = False
         truncated = source_text_char_length > MAX_PUBLIC_BODY_CHARS
         if selection == "semantic_blocks":
             completeness = "TRUNCATED_SEMANTIC_PREVIEW" if truncated else "COMPLETE_SEMANTIC_TEXT"
@@ -359,6 +413,8 @@ class PublicHttpAdapter(BasePlatformAdapter):
                 "content_observation": {
                     "selection": selection,
                     "selected_locators": locators,
+                    "selected_locator_count": len(locators),
+                    "selected_locators_truncated": locators_truncated,
                     "selected_block_count": len(selected_nodes),
                     "source_text_sha256": source_text_sha256,
                     "source_text_char_length": source_text_char_length,

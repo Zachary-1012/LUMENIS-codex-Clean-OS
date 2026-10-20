@@ -335,6 +335,35 @@ def test_never_content_roots_are_excluded_even_when_chrome_is_included():
         assert "".join(public_http._iter_node_text_parts(root, include_chrome=True)) == ""
 
 
+def test_selected_locators_have_bounded_per_item_and_total_metadata():
+    from lumenis.system.collector.adapters.public_http import (
+        MAX_PUBLIC_LOCATOR_CHARS,
+        MAX_PUBLIC_LOCATOR_TOTAL_CHARS,
+    )
+
+    shared_id = "shared" * 900
+    articles = "".join(f"<article>Story {index}.</article>" for index in range(200))
+    response = PublicResponse(
+        url="https://public.example.test/locator-budget",
+        content=(
+            f'<html><body><section id="{shared_id}">{articles}</section></body></html>'
+        ).encode("utf-8"),
+        content_type="text/html",
+        status_code=200,
+    )
+
+    item = PublicHttpAdapter(fetcher=lambda _: response).search(response.url).items[0]
+    observation = item["raw"]["content_observation"]
+    locators = observation["selected_locators"]
+
+    assert observation["selected_block_count"] == 200
+    assert observation["selected_locator_count"] == len(locators)
+    assert observation["selected_locators_truncated"] is True
+    assert all(len(locator) <= MAX_PUBLIC_LOCATOR_CHARS for locator in locators)
+    assert sum(map(len, locators)) + max(0, len(locators) - 1) <= MAX_PUBLIC_LOCATOR_TOTAL_CHARS
+    assert "Story 199." in item["content"]
+
+
 def test_long_semantic_preview_records_full_hash_length_and_truncation():
     first = ("alpha " * 1800).strip()
     second = ("beta " * 1800).strip()

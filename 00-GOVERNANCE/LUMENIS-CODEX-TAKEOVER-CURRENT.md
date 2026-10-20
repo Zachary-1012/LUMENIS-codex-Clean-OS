@@ -70,6 +70,13 @@ remote checks and product acceptance remain unverified.
 The accompanying source correction also rejects a script, style, noscript or
 template node when that node itself is passed as the extraction root, including
 the chrome-inclusive layout-text path; the focused regression covers all four.
+Locator metadata is now bounded to 512 characters per path and 16,384 total
+characters per capture; oversized locator values are shortened with a hash,
+and omitted locators are reported with an explicit truncation marker/count.
+An initial 80-article fixture did not exceed the total cap; that test setup
+failure was retained and the synthetic case was expanded to 200 articles. The
+focused regression then passed, verifying preserved source content and both
+locator limits.
 
 ## 2026-10-18 source-adoption validation handoff
 
