@@ -203,6 +203,7 @@ def _is_product_behavior_source(path: str) -> bool:
         ".codex/hooks/lumenis_hooks.py", ".codex/engineering.py",
         ".codex/local_workflow.py", ".codex/mcp/server.mjs",
         ".codex/tests/test_engineering.py",  # Same engineering owner regression.
+        "lumenis/bmp/README.md",  # Exact owner documentation path; not product behavior.
         "scripts/production_baseline_check.py", "scripts/lean_footprint.py",
     }:
         return False
@@ -222,6 +223,7 @@ def _is_rules_only_publication_path(path: str) -> bool:
         "app/README.md",
         "website/README.md",
         "contracts/experience/README.md",
+        "lumenis/bmp/README.md",  # Existing BMP scope/navigation owner document, not runtime behavior.
         ".agents/skills/lumenis-flutter-experience/SKILL.md",
         ".agents/skills/lumenis-progressive-context/SKILL.md",
         "scripts/audit_tools/verify_codex_takeover_governance.py",
