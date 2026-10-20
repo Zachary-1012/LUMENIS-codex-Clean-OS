@@ -247,11 +247,11 @@ class TestEMVPlatformCoefficients:
     def test_emv_no_data_not_available(self):
         """无互动数据返回 NOT_AVAILABLE，禁止估 0。"""
         from emv import calculate_emv_by_platform
-        result = calculate_emv_by_platform(
-            likes=0, comments=0, collects=0, shares=0, platform="xhs",
-        )
+        result = calculate_emv_by_platform(platform="xhs")
         assert result["status"] == "NOT_AVAILABLE"
         assert result["emv_yuan"] is None
+        assert result["cpm_source"]
+        assert result["disclaimer"]
 
     def test_emv_always_estimate(self):
         """EMV 永远是估算口径。"""
@@ -259,6 +259,70 @@ class TestEMVPlatformCoefficients:
         result = calculate_emv_by_platform(likes=100, platform="xhs")
         assert result["is_estimate"] is True
         assert "disclaimer" in result
+        assert result["status"] == "PARTIAL"
+        assert "comments" in result["missing_inputs"]
+
+    def test_emv_platform_observed_zero_is_available(self):
+        """FIX-046：四类互动均观测为零时返回真实零金额。"""
+        from emv import calculate_emv_by_platform
+        result = calculate_emv_by_platform(
+            likes=0, comments=0, collects=0, shares=0, platform="xhs",
+        )
+        assert result["status"] == "OK"
+        assert result["emv_yuan"] == 0
+        assert result["input_coverage"] == 1.0
+
+    @pytest.mark.parametrize("bad", [-1, float("nan"), float("inf"), -float("inf")])
+    def test_emv_platform_rejects_invalid_inputs(self, bad):
+        """FIX-045：平台计算拒绝无效 CPM 和互动值，并保留恢复能力。"""
+        from emv import calculate_emv_by_platform
+        invalid_cpm = calculate_emv_by_platform(1, 1, 1, 1, platform="xhs", base_cpm=bad)
+        invalid_interaction = calculate_emv_by_platform(bad, 0, 0, 0, platform="xhs")
+        recovered = calculate_emv_by_platform(1, 0, 0, 0, platform="xhs")
+        assert invalid_cpm["status"] == "INVALID_INPUT"
+        assert invalid_cpm["emv_yuan"] is None
+        assert "假设" in invalid_cpm["cpm_source"]
+        assert invalid_interaction["status"] == "INVALID_INPUT"
+        assert invalid_interaction["emv_yuan"] is None
+        assert recovered["status"] == "OK"
+        assert recovered["emv_yuan"] > 0
+
+    def test_emv_platform_empty_aggregate_is_unknown(self):
+        """FIX-046：空/全缺失平台汇总金额保持未知，零观测保留为零。"""
+        from emv import aggregate_emv_by_platform
+        empty = aggregate_emv_by_platform([])
+        missing = aggregate_emv_by_platform([{"source_platform": "xhs"}])
+        zero = aggregate_emv_by_platform([{
+            "source_platform": "xhs", "likes": 0, "comments": 0,
+            "collects": 0, "shares": 0,
+        }])
+        partial_zero = aggregate_emv_by_platform([{
+            "source_platform": "xhs", "likes": 0,
+        }])
+        assert empty["status"] == "NOT_AVAILABLE"
+        assert empty["emv_total_yuan"] is None
+        assert missing["status"] == "NOT_AVAILABLE"
+        assert missing["emv_total_yuan"] is None
+        assert zero["status"] == "OK"
+        assert zero["emv_total_yuan"] == 0
+        assert partial_zero["status"] == "PARTIAL"
+        assert partial_zero["emv_total_yuan"] is None
+        assert zero["cpm_source"]
+        assert zero["disclaimer"]
+
+    def test_emv_platform_aggregate_invalid_item_hides_top_total(self):
+        """FIX-045：平台汇总中一条无效行时，顶层金额保持未知。"""
+        from emv import aggregate_emv_by_platform
+        result = aggregate_emv_by_platform([
+            {"source_platform": "xhs", "likes": 1, "comments": 0, "collects": 0, "shares": 0},
+            {"source_platform": "xhs", "likes": -1, "comments": 0, "collects": 0, "shares": 0},
+        ])
+        assert result["status"] == "INVALID_INPUT"
+        assert result["invalid_count"] == 1
+        assert result["items"][0]["emv_yuan"] > 0
+        assert result["items"][1]["emv_yuan"] is None
+        assert result["emv_total_yuan"] is None
+        assert result["exposure_total"] is None
 
     def test_normalize_platform_aliases(self):
         from emv import normalize_platform
@@ -278,8 +342,9 @@ class TestEMVPlatformCoefficients:
             {"note_id": "3", "likes": 50, "comments": 20, "source_platform": "xhs"},
         ]
         result = aggregate_emv_by_platform(notes)
-        assert result["status"] == "OK"
+        assert result["status"] == "PARTIAL"
         assert result["emv_total_yuan"] > 0
+        assert result["partial_count"] == 3
         assert "xhs" in result["by_platform"]
         assert "weibo" in result["by_platform"]
         assert result["by_platform"]["xhs"]["note_count"] == 2

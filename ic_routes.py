@@ -117,11 +117,20 @@ def register_ic_api(app):
 def ic_emv():
     """EMV 估算（估算口径，显式标注，非官方投放成本）。
     GET ?start=&end=&cpm=&limit= 基于真实 notes 互动数据汇总。"""
+    import math
     import database as db
     import emv as _emv
     start = request.args.get("start", "")
     end = request.args.get("end", "")
-    cpm = request.args.get("cpm", type=float)
+    cpm_raw = request.args.get("cpm")
+    cpm = None
+    if cpm_raw is not None:
+        try:
+            cpm = float(cpm_raw)
+        except (TypeError, ValueError, OverflowError):
+            return jsonify({"ok": False, "error": "cpm must be a finite non-negative number"}), 400
+        if not math.isfinite(cpm) or cpm < 0:
+            return jsonify({"ok": False, "error": "cpm must be a finite non-negative number"}), 400
     limit = min(int(request.args.get("limit", 200)), 500)
     try:
         with db.get_db() as conn:

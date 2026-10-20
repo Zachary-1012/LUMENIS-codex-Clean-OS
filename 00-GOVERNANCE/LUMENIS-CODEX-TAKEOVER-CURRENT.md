@@ -4,6 +4,11 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-045 / FIX-046 — preserve EMV inputs and reject invalid route CPM
+
+The existing `emv.py` keeps source/aggregate values truthful; `ic_routes.py` applies default CPM only when the parameter is absent and rejects explicit nonnumeric, negative, nonfinite or overflow inputs before DB/EMV reads. `tests/test_ic_emv_route_validation.py` plus `tests/test_ic_contracts_p1.py::TestIC021EMV` passed **24 tests**. The broader `tests/test_ic_contracts_p1.py tests/test_p1_gap_closure.py` run had **4 failures** (three migration fixture failures involving `/tmp/backups/before_migration_v0_to_v21.db`, one legacy provider expectation); this broader result is retained and not represented as a passing regression. Changed-source compilation and `git diff --check` passed. Tests did not access production data or call an external service.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,
