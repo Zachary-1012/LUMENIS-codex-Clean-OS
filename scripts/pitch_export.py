@@ -90,6 +90,16 @@ def _save_new_document(doc, out_path, check_continue):
         os.unlink(staged)
 
 
+def _remove_title_borders(doc):
+    """Remove template borders from both the Title style and its paragraphs."""
+    from docx.oxml.ns import qn
+
+    for element in [doc.styles["Title"].element,
+                    *[paragraph._p for paragraph in doc.paragraphs if paragraph.style.name == "Title"]]:
+        for border in list(element.iter(qn("w:pBdr"))):
+            border.getparent().remove(border)
+
+
 def _manuscript_document(manuscript):
     """Export supplied final prose. This function neither generates nor approves it."""
     if not isinstance(manuscript, dict):
@@ -125,6 +135,7 @@ def _manuscript_document(manuscript):
     for name in ("Title", "Heading 1", "Normal"):
         doc.styles[name].font.color.rgb = RGBColor(0, 0, 0)
     doc.styles["Normal"].font.size = Pt(11)
+    doc.styles["Normal"].paragraph_format.space_after = Pt(6)
     doc.add_paragraph(title, style="Title")
     doc.add_paragraph(summary)
     doc.add_paragraph(labels[language][authorship])
@@ -136,6 +147,7 @@ def _manuscript_document(manuscript):
     doc.core_properties.title = title
     doc.core_properties.language = language
     doc.core_properties.comments = "authorship=%s; approval=not_verified" % authorship
+    _remove_title_borders(doc)
     return doc
 
 
@@ -199,10 +211,7 @@ def _append_audiovisual_plan(doc, snapshot, language, check_continue=None):
         "original_text": ("原始文字", "Original text"), "corrected_text": ("修订文字", "Revised text"),
         "speaker": ("说话人", "Speaker"),
     }
-    from docx.oxml.ns import qn
-    for element in [doc.styles["Title"].element, *[p._p for p in doc.paragraphs if p.style.name == "Title"]]:
-        for border in list(element.iter(qn("w:pBdr"))):
-            border.getparent().remove(border)
+    _remove_title_borders(doc)
     doc.add_page_break()
     doc.add_heading(text[0], level=1)
     doc.add_paragraph(text[1])
