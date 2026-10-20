@@ -124,6 +124,26 @@ def test_successful_full_capture_updates_all_fields_and_recovers_after_failure()
     conn.close()
 
 
+def test_new_valid_json_fields_replace_corrupt_legacy_values_and_recompute_quality():
+    conn = _connection_with_note()
+    conn.execute(
+        """UPDATE topic_campaign_notes
+           SET media_json='not-json', comments_json='{broken', evidence_quality='search_only'
+           WHERE note_id='note-1'"""
+    )
+    detail = _detail()
+
+    rowcount, outcome = update_note_detail(conn, "note-1", "campaign-1", "topic-1", detail)
+
+    stored = _read_note(conn)
+    assert (rowcount, outcome) == (1, "full")
+    assert stored["content"] == detail["content"]
+    assert json.loads(stored["media_json"]) == detail["media"]
+    assert json.loads(stored["comments_json"]) == detail["comments_detail"]
+    assert stored["evidence_quality"] == "full"
+    conn.close()
+
+
 def test_successful_empty_capture_is_distinct_and_never_deletes_saved_detail():
     conn = _connection_with_note()
     before = _read_note(conn)

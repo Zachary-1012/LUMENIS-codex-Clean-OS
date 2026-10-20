@@ -206,18 +206,25 @@ def update_note_detail(conn, note_id, campaign_key, topic, detail):
         return 0, 'failed'
 
     merged_content = updates.get('content', existing['content'])
-    try:
-        merged_media = field_values.get('media', json.loads(existing['media_json'] or '[]'))
+    if 'media' in field_values:
+        merged_media = field_values['media']
         media_known = isinstance(merged_media, list)
-    except (TypeError, ValueError):
-        merged_media, media_known = [], False
-    try:
-        merged_comments = field_values.get(
-            'comments_detail', json.loads(existing['comments_json'] or '[]')
-        )
+    else:
+        try:
+            merged_media = json.loads(existing['media_json'] or '[]')
+            media_known = isinstance(merged_media, list)
+        except (TypeError, ValueError):
+            merged_media, media_known = [], False
+
+    if 'comments_detail' in field_values:
+        merged_comments = field_values['comments_detail']
         comments_known = isinstance(merged_comments, list)
-    except (TypeError, ValueError):
-        merged_comments, comments_known = [], False
+    else:
+        try:
+            merged_comments = json.loads(existing['comments_json'] or '[]')
+            comments_known = isinstance(merged_comments, list)
+        except (TypeError, ValueError):
+            merged_comments, comments_known = [], False
 
     has_content = isinstance(merged_content, str) and bool(merged_content.strip())
     has_media = bool(merged_media) if media_known else False
