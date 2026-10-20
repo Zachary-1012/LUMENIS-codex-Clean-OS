@@ -26,7 +26,11 @@ provenance); any uncertified overwrite of a canonical metric clears it, and
 the live collector (`live_engine.persist_live`) certifies only when the source
 returned all four counters before normalization; otherwise the amount is
 `NOT_AVAILABLE`. Legacy databases without the column keep the previous
-behaviour. Platform aggregation reports aggregate-only overflow in
+behaviour. `/api/ic/emv` also validates `limit` (integer 1-500), paired ISO
+`start`/`end` (start <= end) before any database read (400 `INVALID_INPUT`),
+reports a capped read as `truncated`/`source_read_complete=false` (an `OK`
+result becomes `PARTIAL`), and returns 503 `EMV_SOURCE_UNAVAILABLE` without
+internal error text when the source read fails. Platform aggregation reports aggregate-only overflow in
 `invalid_inputs` and keeps `invalid_count` to invalid notes.
 
 ## 2026-10-20 Issue #17 FIX-041–043 — KOS scope and completeness

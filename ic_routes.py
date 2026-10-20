@@ -131,7 +131,25 @@ def ic_emv():
             return jsonify({"ok": False, "error": "cpm must be a finite non-negative number"}), 400
         if not math.isfinite(cpm) or cpm < 0:
             return jsonify({"ok": False, "error": "cpm must be a finite non-negative number"}), 400
-    limit = min(int(request.args.get("limit", 200)), 500)
+    limit_raw = request.args.get("limit", "200")
+    try:
+        limit = int(str(limit_raw).strip())
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "status": "INVALID_INPUT", "error": "limit must be an integer 1-500"}), 400
+    if not 1 <= limit <= 500:
+        return jsonify({"ok": False, "status": "INVALID_INPUT", "error": "limit must be an integer 1-500"}), 400
+    if bool(start) != bool(end):
+        return jsonify({"ok": False, "status": "INVALID_INPUT", "error": "start and end must be provided together"}), 400
+    if start:
+        from datetime import date
+        try:
+            start_day = date.fromisoformat(start[:10]) if len(start) in (10, 19) else None
+            end_day = date.fromisoformat(end[:10]) if len(end) in (10, 19) else None
+        except ValueError:
+            start_day = end_day = None
+        if start_day is None or end_day is None or start_day > end_day:
+            return jsonify({"ok": False, "status": "INVALID_INPUT",
+                            "error": "start/end must be ISO dates with start <= end"}), 400
     try:
         with db.get_db() as conn:
             # Observation provenance is only the current certified metric set
@@ -149,13 +167,14 @@ def ic_emv():
                     "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment, "
                     + observed_sql +
                     "FROM notes WHERE publish_date BETWEEN ? AND ? ORDER BY captured_at DESC LIMIT ?",
-                    (start, end, limit)).fetchall()
+                    (start, end, limit + 1)).fetchall()
             else:
                 rows = conn.execute(
                     "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment, "
                     + observed_sql +
-                    "FROM notes ORDER BY captured_at DESC LIMIT ?", (limit,)).fetchall()
-            notes = [dict(r) for r in rows]
+                    "FROM notes ORDER BY captured_at DESC LIMIT ?", (limit + 1,)).fetchall()
+            truncated = len(rows) > limit
+            notes = [dict(r) for r in rows[:limit]]
             for note in notes:
                 note["metrics_observed"] = bool(note.get("metrics_observed"))
         r = _emv.aggregate_emv(notes, cpm=cpm)
@@ -174,9 +193,16 @@ def ic_emv():
                     "error": "EMV total must be finite",
                     "emv_total_yuan": None,
                 }), 422
+        # A capped read is not the full population: never present it as complete.
+        r["truncated"] = truncated
+        r["source_read_complete"] = not truncated
+        if truncated and r.get("status") == "OK":
+            r["status"] = "PARTIAL"
         return jsonify({"ok": True, **r})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception:
+        # Source/database failure is not a client error and not an empty result.
+        return jsonify({"ok": False, "status": "SOURCE_UNAVAILABLE",
+                        "code": "EMV_SOURCE_UNAVAILABLE", "emv_total_yuan": None}), 503
 
 
 # ---------- IC-039 跨文化本地化守卫 ----------

@@ -382,3 +382,53 @@ def test_live_collector_completeness_uses_source_fields():
     assert _source_counters_observed({"likes": 0, "comments": "0", "collects": 0, "shares": 0}) is True
     assert _source_counters_observed({"likes": 0, "comments": 0, "collects": 0}) is False
     assert _source_counters_observed({"likes": "", "comments": 0, "collects": 0, "shares": 0}) is False
+
+
+@pytest.mark.parametrize("query", [
+    {"limit": "abc"}, {"limit": "0"}, {"limit": "501"}, {"limit": "-3"},
+    {"start": "2026-10-01"}, {"end": "2026-10-01"},
+    {"start": "2026-13-01", "end": "2026-10-02"}, {"start": "2026-10-05", "end": "2026-10-01"},
+])
+def test_emv_route_rejects_invalid_query_before_reading_database(monkeypatch, query):
+    import database
+
+    def unexpected_db_access():
+        raise AssertionError("invalid query must be rejected before database access")
+
+    monkeypatch.setattr(database, "get_db", unexpected_db_access)
+    response = _client().get("/api/ic/emv", query_string=query)
+    assert response.status_code == 400
+    assert response.get_json()["status"] == "INVALID_INPUT"
+
+
+def test_emv_route_database_failure_is_unavailable_not_client_error(monkeypatch):
+    import database
+
+    def broken_db():
+        raise RuntimeError("disk I/O error at /secret/path")
+
+    monkeypatch.setattr(database, "get_db", broken_db)
+    response = _client().get("/api/ic/emv")
+    assert response.status_code == 503
+    body = response.get_json()
+    assert body["status"] == "SOURCE_UNAVAILABLE"
+    assert body["emv_total_yuan"] is None
+    assert "secret" not in str(body)
+
+
+def test_emv_route_capped_read_is_not_reported_complete(monkeypatch, tmp_path):
+    import sqlite3
+    import database
+    path = _schema_db(monkeypatch, tmp_path, "cap.db")
+    c = sqlite3.connect(path)
+    for i in range(3):
+        c.execute("INSERT INTO notes (note_id, title, likes, comments, collects, shares) VALUES (?,?,5,1,1,1)",
+                  (f"n{i}", "t"))
+    c.commit()
+    c.close()
+    body = _client().get("/api/ic/emv", query_string={"limit": "2"}).get_json()
+    assert body["note_count"] == 2
+    assert body["truncated"] is True and body["source_read_complete"] is False
+    assert body["status"] == "PARTIAL"
+    full = _client().get("/api/ic/emv", query_string={"limit": "5"}).get_json()
+    assert full["truncated"] is False and full["status"] == "OK"
