@@ -14,11 +14,34 @@ import math
 from datetime import datetime, timedelta
 from flask import jsonify, Blueprint
 from lumenis.shared.database import DatabaseRepository, main_db_path
+from lumenis.system.collector.adapters.base import CollectionStatus
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 system_health_bp = Blueprint('system_health', __name__)
+
+_FAILED_KEYWORD_STATUSES = {
+    CollectionStatus.SESSION_EXPIRED.value,
+    CollectionStatus.COLLECT_ERROR.value,
+    'AUTH_FAILED', 'AUTH_REQUIRED', 'ERROR', 'FAILED', 'FAILURE', 'NETWORK_ERROR',
+}
+_DEGRADED_KEYWORD_STATUSES = {
+    CollectionStatus.NEED_VERIFY.value,
+    CollectionStatus.QR_REQUIRED.value,
+    CollectionStatus.RISK_WARNING.value,
+    CollectionStatus.BLOCKED.value,
+    CollectionStatus.COOLING_DOWN.value,
+    CollectionStatus.NOT_SUPPORTED.value,
+    CollectionStatus.NOT_CONFIGURED.value,
+    CollectionStatus.PROVIDER_UNAVAILABLE.value,
+    'CAPTCHA', 'PARTIAL_BLOCKED', 'IDENTITY_MISMATCH',
+}
+_SUCCESSFUL_KEYWORD_STATUSES = {
+    CollectionStatus.SUCCESS.value,
+    CollectionStatus.NO_NEW_DATA.value,
+    'EMPTY',
+}
 
 # 状态文件
 HEALTH_STATUS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'system_health_status.json')
@@ -409,10 +432,17 @@ def get_adaptive_status():
             with open(status_file, 'r', encoding='utf-8') as f:
                 status = json.load(f)
             if isinstance(status, dict):
+                metrics = status.get('metrics')
+                metrics = metrics if isinstance(metrics, dict) else {}
+                current_params = status.get('current_params')
+                current_params = current_params if isinstance(current_params, dict) else {}
                 result.update({
                     'current_strategy': status.get('current_strategy'),
-                    'recent_success_rate': status.get('recent_success_rate'),
-                    'current_delay_seconds': status.get('current_delay_seconds'),
+                    'recent_success_rate': (
+                        metrics.get('recent_success_rate')
+                        if metrics.get('last_collect_time') else None
+                    ),
+                    'current_delay_seconds': current_params.get('request_delay'),
                     'risk_level': status.get('risk_level'),
                 })
             else:
@@ -435,6 +465,7 @@ def get_collection_schedule():
         'last_24h_failures': None,
         'last_24h_unknown_runs': None,
         'last_24h_failed_keyword_observations': None,
+        'last_24h_degraded_keyword_observations': None,
         'last_24h_unknown_keyword_observations': None,
     }
     conn = None
@@ -518,19 +549,20 @@ def get_collection_schedule():
                     recent_status_counts = {
                         str(status or ''): count for status, count in c.fetchall()
                     }
-                    known_failures = {
-                        'AUTH_FAILED', 'AUTH_REQUIRED', 'BLOCKED', 'CAPTCHA',
-                        'ERROR', 'FAILED', 'FAILURE', 'NETWORK_ERROR',
-                        'PARTIAL_BLOCKED',
-                    }
-                    non_failures = {'EMPTY', 'SUCCESS'}
                     result['last_24h_failed_keyword_observations'] = sum(
                         count for status, count in recent_status_counts.items()
-                        if status in known_failures
+                        if status in _FAILED_KEYWORD_STATUSES
+                    )
+                    result['last_24h_degraded_keyword_observations'] = sum(
+                        count for status, count in recent_status_counts.items()
+                        if status in _DEGRADED_KEYWORD_STATUSES
                     )
                     result['last_24h_unknown_keyword_observations'] = sum(
                         count for status, count in recent_status_counts.items()
-                        if status not in known_failures | non_failures
+                        if status not in (
+                            _FAILED_KEYWORD_STATUSES | _DEGRADED_KEYWORD_STATUSES
+                            | _SUCCESSFUL_KEYWORD_STATUSES
+                        )
                     )
 
         return result

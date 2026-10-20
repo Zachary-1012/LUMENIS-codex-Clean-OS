@@ -547,6 +547,7 @@ def test_schedule_separates_notes_from_keyword_observations_and_unknown_task_run
     assert result['last_24h_failures'] is None
     assert result['last_24h_unknown_runs'] is None
     assert result['last_24h_failed_keyword_observations'] == 0
+    assert result['last_24h_degraded_keyword_observations'] == 0
     assert result['last_24h_unknown_keyword_observations'] == 0
     assert result['next_collect'] is None
 
@@ -566,7 +567,8 @@ def test_one_task_with_many_keywords_counts_one_run_and_many_observations(
     assert result['today_runs'] == 1
     assert result['today_keyword_observations'] == 20
     assert result['last_24h_failures'] is None
-    assert result['last_24h_failed_keyword_observations'] == 1
+    assert result['last_24h_failed_keyword_observations'] == 0
+    assert result['last_24h_degraded_keyword_observations'] == 1
 
 
 def test_collector_task_start_stats_are_marked_as_observed(monkeypatch, tmp_path):
@@ -632,7 +634,8 @@ def test_schedule_counts_explicit_failure_records(monkeypatch, tmp_path):
     assert result['today_keyword_observations'] == 4
     assert result['last_24h_failures'] is None
     assert result['last_24h_unknown_runs'] is None
-    assert result['last_24h_failed_keyword_observations'] == 3
+    assert result['last_24h_failed_keyword_observations'] == 2
+    assert result['last_24h_degraded_keyword_observations'] == 1
     assert result['last_24h_unknown_keyword_observations'] == 0
 
 
@@ -662,6 +665,26 @@ def test_schedule_unrecognized_run_status_is_not_called_success_or_failure(
     assert result['last_24h_failures'] is None
     assert result['last_24h_unknown_runs'] is None
     assert result['last_24h_failed_keyword_observations'] == 0
+    assert result['last_24h_degraded_keyword_observations'] == 0
+    assert result['last_24h_unknown_keyword_observations'] == 1
+
+
+def test_schedule_classifies_canonical_degraded_and_failed_statuses(
+        monkeypatch, tmp_path):
+    health = _system_health_schedule_fixture(
+        monkeypatch, tmp_path, notes=[],
+        runs=[
+            'NEED_VERIFY', 'SESSION_EXPIRED', 'COOLING_DOWN', 'RISK_WARNING',
+            'COLLECT_ERROR', 'ACCEPTED',
+        ],
+    )
+
+    result = health.get_collection_schedule()
+
+    assert result['today_runs'] is None
+    assert result['today_keyword_observations'] == 6
+    assert result['last_24h_failed_keyword_observations'] == 2
+    assert result['last_24h_degraded_keyword_observations'] == 3
     assert result['last_24h_unknown_keyword_observations'] == 1
 
 
@@ -750,15 +773,41 @@ def test_partial_adaptive_status_preserves_unknown_fields(monkeypatch, tmp_path)
     data_dir = tmp_path / 'data'
     data_dir.mkdir()
     (data_dir / 'adaptive_status.json').write_text(
-        json.dumps({'current_strategy': 'slow'}), encoding='utf-8'
+        json.dumps({
+            'current_strategy': 'cautious',
+            'risk_level': 'medium',
+            'current_params': {'request_delay': 9},
+            'metrics': {'recent_success_rate': 78, 'last_collect_time': '2026-10-20 01:00:00'},
+        }), encoding='utf-8'
     )
 
     result = health.get_adaptive_status()
 
-    assert result['current_strategy'] == 'slow'
+    assert result['current_strategy'] == 'cautious'
+    assert result['recent_success_rate'] == 78
+    assert result['current_delay_seconds'] == 9
+    assert result['risk_level'] == 'medium'
+
+
+def test_adaptive_defaults_are_not_reported_as_observed_success(monkeypatch, tmp_path):
+    import json
+    import system_health_api as health
+
+    monkeypatch.setattr(health, '__file__', str(tmp_path / 'system_health_api.py'))
+    (tmp_path / 'network_adaptive.py').write_text('', encoding='utf-8')
+    data_dir = tmp_path / 'data'
+    data_dir.mkdir()
+    (data_dir / 'adaptive_status.json').write_text(json.dumps({
+        'current_strategy': 'normal',
+        'risk_level': 'none',
+        'current_params': {'request_delay': 55},
+        'metrics': {'recent_success_rate': 100, 'last_collect_time': None},
+    }), encoding='utf-8')
+
+    result = health.get_adaptive_status()
+
     assert result['recent_success_rate'] is None
-    assert result['current_delay_seconds'] is None
-    assert result['risk_level'] is None
+    assert result['current_delay_seconds'] == 55
 
 
 def test_system_health_summary_has_no_mainland_cdp_hint():
