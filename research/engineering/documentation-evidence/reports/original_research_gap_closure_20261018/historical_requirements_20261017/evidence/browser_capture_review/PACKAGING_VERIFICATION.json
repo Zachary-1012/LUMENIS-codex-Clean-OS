@@ -1,0 +1,54 @@
+{
+  "review_mode": "Read-only inspection of all six files and their imported test fixtures; no scripts or product tests executed by this packaging step.",
+  "result": "No real credential value identified in the six copied evidence files. Credential-looking values are explicitly constructed synthetic fixtures.",
+  "synthetic_values": {
+    "opaqueSecret123": "Literal constructed directly in repro.py and printed by the sanitizer; not read from account/environment/browser.",
+    "held": "Literal fake human-control lease marker assigned in repro.py.",
+    "session-test/target-test/evidence 7": "Mock runtime fixture from tests/test_browser_extract.py; not a live browser/account.",
+    "browser_evidence_id 999999/FORGED/example.com": "Invented values directly built in test_review.py to test persistence authenticity.",
+    "operation UUID": "Synthetic fixture operation identifier, not an authentication secret."
+  },
+  "fixture_inspection": [
+    "lumenis_working_20261017/runtime_validation/browser-addon-candidate/tests/test_browser_extract.py:1-38",
+    "lumenis_working_20261017/runtime_validation/browser-addon-candidate/tests/test_saved_document_workflow.py:17-51"
+  ],
+  "privacy_boundary": "Only the six requested text/code/log files copied. No databases, credential stores, browser profiles, cookies, real account records or environment dumps included. Source provenance paths in the report refer to development evidence; report is retained without rewriting findings.",
+  "copied_files": [
+    {
+      "file": "REVIEW.md",
+      "bytes": 7636,
+      "sha256": "0560790733d8f70e9dabb11ef7e9b1f018a914ab0f1d9f51b6bb1436610ab933",
+      "copy_verified": true
+    },
+    {
+      "file": "repro.py",
+      "bytes": 1551,
+      "sha256": "77e0eafd79b16d23777f82e144f5ce3ccf2456f2888276f8c54a6fcf74c27fa4",
+      "copy_verified": true
+    },
+    {
+      "file": "repro.log",
+      "bytes": 525,
+      "sha256": "3fe1d90492a104cbc3c8a6db967fa699b4c2ad20bec3343c6222446044c09b3c",
+      "copy_verified": true
+    },
+    {
+      "file": "test_review.py",
+      "bytes": 920,
+      "sha256": "13c9b127c96b9bc0c6a625eb511f57f70ed89f4d7b4b4786bb4018d97410a8fe",
+      "copy_verified": true
+    },
+    {
+      "file": "forged_note.log",
+      "bytes": 84,
+      "sha256": "fea284f31c6c0df0516894d48a34b0ba3739302ec31d0e0705946b88da329d55",
+      "copy_verified": true
+    },
+    {
+      "file": "targeted-correct-cwd.log",
+      "bytes": 378,
+      "sha256": "d182f1f4de5c891d8ffea441e84a803118f5240faf3e2f312e5e752ae67b60c8",
+      "copy_verified": true
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "path": "AGENTS.md",
+    "archive": "f748d46d7a18c357d27576f44c345023601e452344f5da56f74106f52e850367",
+    "working": "f748d46d7a18c357d27576f44c345023601e452344f5da56f74106f52e850367",
+    "same": true
+  },
+  {
+    "path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "archive": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+    "working": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+    "same": true
+  },
+  {
+    "path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "archive": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+    "working": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+    "same": true
+  },
+  {
+    "path": "podcast/intelligence/topic_scoring.py",
+    "archive": "967326021ba30b678667a9cb51f0a8a30b89229a83382f551f3b743a35d4011d",
+    "working": "967326021ba30b678667a9cb51f0a8a30b89229a83382f551f3b743a35d4011d",
+    "same": true
+  },
+  {
+    "path": "podcast_routes.py",
+    "archive": "6df1ec9e67f4ff81d533cfe7e813f60e9b97490b80cf56d3b131491f60fa6636",
+    "working": "ce0e14e11c75951f7ce311f6cadf105e17e288aa3fbf5d4d31956c0612c9719d",
+    "same": false
+  },
+  {
+    "path": "podcast/intelligence/research_levels.py",
+    "archive": "fdd96cad2b15712e2751af487718ab3e331b6d1c0b55b0aafd8f7bb43db8c290",
+    "working": "fdd96cad2b15712e2751af487718ab3e331b6d1c0b55b0aafd8f7bb43db8c290",
+    "same": true
+  },
+  {
+    "path": "podcast/intelligence/learning.py",
+    "archive": "89bda65d9f5fabb2505c315d3a937990d4c9b87f527f3cdaf72a8a4d68c93c04",
+    "working": "89bda65d9f5fabb2505c315d3a937990d4c9b87f527f3cdaf72a8a4d68c93c04",
+    "same": true
+  },
+  {
+    "path": "podcast/intelligence/research_pipeline.py",
+    "archive": "5eafc630d9eb3e4d84bd7650f5bb8a95870e24f9c0b6d2aebb08e24155d38118",
+    "working": "52a4c5b254d7daa2021bb3c0b4c03d5e9297da42e9595cb9c95094c799f73ca4",
+    "same": false
+  }
+]

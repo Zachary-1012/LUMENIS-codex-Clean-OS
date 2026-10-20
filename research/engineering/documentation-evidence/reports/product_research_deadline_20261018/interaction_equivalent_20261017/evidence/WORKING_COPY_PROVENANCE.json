@@ -1,0 +1,34 @@
+{
+  "created": "2026-10-17T12:34:11.197679+00:00",
+  "type": "NEW_CONTROLLED_WORKING_COPY_NOT_FULL_LATEST_RECOVERY",
+  "source": "frozen site v12 dist eb60b7a7294ef7d505ecb6e5695a7f906d61b624",
+  "test_source": "v5 Library original archive",
+  "restored_test_files": [
+    {
+      "path": "package.json",
+      "sha256": "32eca548ca57fffbd0c3ecf3f1ae807e9839c16c9c6f179ee6c83618d8028920"
+    },
+    {
+      "path": "tests/artifact.test.mjs",
+      "sha256": "4f23ae27450c948302e47309940ddf18728544a2827a3abd50ad659493002c42"
+    },
+    {
+      "path": "tests/artifacts.test.mjs",
+      "sha256": "c8e7f92fb62aa4fc45bb508c7ff05a34cd1f39f10ca1d03144c2ebcf32353373"
+    },
+    {
+      "path": "tests/contracts.test.mjs",
+      "sha256": "5c9e29e5301f30a7ed1a20fd60997a6982b4d41f64ac22c2a6a4cff848838453"
+    },
+    {
+      "path": "tests/direct-input.test.mjs",
+      "sha256": "4a2e6f07af18347591204f84c488291433653be1813c41e26d16495356a15ce7"
+    },
+    {
+      "path": "tests/physics.test.mjs",
+      "sha256": "c893ae02a74713c3d73fd2b3f7981c4b3555fe3860000d54082e5e5fb8689bd4"
+    }
+  ],
+  "not_restored": "40–68 missing code; demo69 dependencies incomplete",
+  "external_effects": "NONE; no browser/deployment/backend"
+}

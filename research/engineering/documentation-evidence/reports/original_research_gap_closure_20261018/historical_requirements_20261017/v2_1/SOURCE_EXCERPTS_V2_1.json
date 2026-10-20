@@ -1,0 +1,92 @@
+[
+  {
+    "evidence_id": "V21-SRC-01",
+    "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "source_sha256": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+    "line_start": 753,
+    "line_end": 759,
+    "original_text": "line13050, distinguishes AIGC/3D frontend presentation from a request to add an\nAIGC-production feature. The current four-surface direction requires original\ngenerated visuals, creative composition and rich interactive/motion presentation;\nit is not limited to a static illustration. Do not infer a new generation module\nfrom this frontend requirement. Separately approved AI/content-creation business\ncapabilities retain their own full owners and acceptance. Preserve existing\nPermission, material/version and real-state bindings; no second AI owner is added.",
+    "evidence_type": "REQUIREMENT_SOURCE_NOT_IMPLEMENTATION_PROOF"
+  },
+  {
+    "evidence_id": "V21-SRC-02",
+    "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "source_sha256": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+    "line_start": 1485,
+    "line_end": 1496,
+    "original_text": "visual AND functional presentation, composition, UI/UX/AIGC and task-specific\nuseful interaction. Define UI/AIGC balance by screen/task/purpose, not a generic\npercentage or replacement of factual controls. Keep the existing approved\noriginal LUMENIS mark consistent across App, Website, favicon and native/package\nuses under §23; reuse the existing mark and do not design a replacement here.\nKeep functional line glyphs, the five painted identity icons and third-party\nsource marks distinct under this section. Startup/re-entry and task progress\nmust show the actual approved state, next action and useful result; user-facing\nAIGC effects must serve the current task/Brief and real supported capability,\nwith inspect/edit/accept/reject paths where applicable, never decorative\nplaceholders or claims of work not performed. The Website has\ntext, interaction and original creative operation videos showing actual intended",
+    "evidence_type": "REQUIREMENT_SOURCE_NOT_IMPLEMENTATION_PROOF"
+  },
+  {
+    "evidence_id": "V21-SRC-03",
+    "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "source_sha256": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+    "line_start": 1330,
+    "line_end": 1382,
+    "original_text": "1. Choose presentation for the user's task and actual available data: direct\n   text, comparison, chart, map, editable plan, form or media timeline. Keep\n   plain text when it is sufficient. Do not force every result into chat cards,\n   generic swapped-title pages, or a universal schema-driven screen renderer.\n2. Preserve one Task/Brief, actor, domain, subject/brand focus, time range,\n   budget/constraints, Evidence/citations and result version across research,\n   comparison, proposal and creation. A screen transition must not require\n   re-entering the same Brief or reselecting the same permitted materials.\n3. AI may propose a typed presentation/interaction plan using the existing\n   screen's supported components and actions. The existing Core/ViewModel,\n   Permission and Effect Fence remain authoritative. Do not execute generated\n   HTML/JavaScript, invented endpoints, model-authored authorization, or a\n   pending action merely because it is rendered as a button.\n4. Bind each actionable result to source/result version, action contract and\n   applicable permission. Scope/version changes invalidate stale actions;\n   failed or partial streams stay honestly partial. Show only validated pieces\n   progressively, preserve focus/selection and reduced-motion preferences, and\n   do not label a partial response as a saved/complete result.\n5. Budget, date or source changes first produce an explicit proposed delta.\n   Use existing affected-only revision, parent-version, save/reopen and rollback\n   owners. Deterministic arithmetic uses actual typed units/currency/time; a\n   scenario or model estimate is labeled as such, never Canonical observation.\n6. Follow approved research and task contracts for overall visuals; use painted\n   icons and suitable page elements without a fixed 2D/3D style. Preserve useful\n   interaction, four-surface roles and no unnecessary operational page-level\n   scrolling. A website explains the capability with\n   truthful approved examples; Web/Desktop execute work, and Mobile exposes\n   appropriate review/adjustment/approval. Do not copy ChatGPT's visual system\n   or transplant its plugin-card limits into the whole LUMENIS product.\n\n| Owner | Existing work to apply this to | Concrete handoff to F / other owners |\n|---|---|---|\n| C1 | Six-platform collected-result and topic/trend exploration | Typed native fields, source/time/scope/coverage, official-vs-sample heat, honest missing states, exact SourceTarget; selectable sources remain the same references downstream. No client-side invented popularity. |\n| C2 | Existing AI Gateway/Agent explanation and action proposal | Grounded typed presentation/action proposals, actual model/recipe state, component/action compatibility and quality evaluation. Model output proposes; Core resolves and authorizes. No claim of UI-model training or OpenAI compiler reuse. |\n| C3 | CTH/BMP comparison, decision, campaign and budget planning | Comparable units/periods/markets; editable scenario constraints; explicit revision delta and actual Action/Outcome state. Preserve the same task and sources through business use. |\n| C4 | Existing pitch, video and podcast workbenches | Structured editable sections, scene/segment references, horizontal timeline, selection/edit/preview/reopen state and real media status. System Read Aloud previews authorized text; it does not become a final voice asset. |\n| C5 | Research, citations, reports, SavedWork and Artifact | Click-through provenance, side-by-side source conflict/revision comparison, precise selected text, source correction impact and existing saved parent versions. No repeated import or detached display-only report. |\n| C6 | Core/API/ViewModel and runtime integration | Versioned response/action contracts, bounded progressive updates, cancellation/reconnect, idempotence, stale-version/permission rejection and same-version integration evidence. No second runtime or DB. |\n| F | Existing screen-specific four-surface UI/UX/AIGC | Select task-appropriate composition; integrate C1-C6 contracts; preserve context and interaction state, keyboard/screen-reader access, responsive layout and visual identity. Build directly and update the existing specification alongside code; no separate design draft or M DESIGN_READY prerequisite. |\n\nAcceptance in each existing outcome: actual authorized material → task-shaped\ninteractive result → user changes a constraint/selection → correct affected\nresult → save/reopen with unchanged provenance → recovery and applicable\nrevocation. Verify normal success as well as missing data, stale result,\ninterrupted stream and permission denial. Compare task correctness, user\nre-entry burden and time to useful result; layout novelty, animations, mock\nwidgets or a schema-valid model response alone do not pass. Reuse applicable\nhistorical evidence when source and environment remain applicable. Under the\ncurrent root AGENTS.md and machine contract, targeted isolated unit/integration\nregressions may be used for relevant defects; they are not a blanket requirement\nand never replace genuine complete-product operations/recovery. Preserve actual\nhistorical failures. Apply retained build/static/security/data guards and the\napplicable real user E2E under the formal PO verification policy.",
+    "evidence_type": "REQUIREMENT_SOURCE_NOT_IMPLEMENTATION_PROOF"
+  },
+  {
+    "evidence_id": "V21-SRC-04",
+    "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "source_sha256": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+    "line_start": 1384,
+    "line_end": 1402,
+    "original_text": "### 智能UI的逐步交付与组件选择合同（2026-10-08）\n\n用户提供的论述是研究输入，官方发布来源与原始材料分别保留。以下为既有Owner内的采用要求，不包含任何窗口启停命令；实际执行以最新直接PO指令和新鲜事实为准。研究采用不代表实现完成，不宣称获得OpenAI内部编译器、权重或训练方法。\n\n1. **选择表达，而非固定模板。** C2根据任务、现有证据、用户调整需求和设备能力提出表现计划；F以本屏已有原生组件、设计Token及动作合同承接。简短事实用文字，比较用带同口径的表/图，参数变化用可解释计算器，复杂创作保持专用编辑器/横向时间轴。用户可查看文字/数据依据并继续原任务；模型不重写导航或制造新业务动作。\n2. **先给第一份有用内容。** 有可信输入时先展示已成立的事实、明确限定的比较或可读段落，再逐步补齐相关部分。空卡、骨架、重复“正在分析”和假进度不算首个有用结果。证据尚不足时显示缺口与实际进度，不先猜结论；只展示可供用户使用的解释和结果，不输出内部推理链或私密工具内容。\n3. **在既有边界增量渲染。** 优先扩展现有Gateway/Task→Core/ViewModel→Flutter Screen/组件映射；所谓编译/解码只校验有类型的组件与数据提案，不新建UI平台、通用换标题渲染器、第二注册表或AI Runtime。组件类型、字段、单位、引用和动作必须由当前支持合同解析；未完成的结构片段不能作为可点击控件执行。无效块局部给出可读降级/错误，不丢其他有效内容；安全相关失败仍阻断对应动作。\n4. **一个响应、可追溯的分段。** 沿原Task/run/attempt与结果版本绑定块身份、顺序/修订号、来源与数据状态；这些字段映射到现有合同或在原Owner内补齐，不建立新Truth。重复/乱序/旧run片段不重复追加、不覆盖当前版本；断线重连从服务端已确认进度继续，终止事件与连接关闭分开。只流式打印旧完整答案或播放假动画不能验收此能力。\n5. **已展示内容可以纠正。** 后续来源改变结论时定位原块及依据，明确提示更正与影响；最终回答统一核对事实、数值、引用和结论，不能留下相互冲突的段落。阶段性信息标明其覆盖与未完成项，不能把局部成功标成整个Job完成。\n6. **用户操作优先且不丢失。** 流入新内容不得抢焦点、强制滚动、重置选区/播放头/用户输入或覆盖已编辑块。用户改参数后绑定新的输入版本；迟到的旧计算结果失效。纯筛选和公式计算复用确定性Owner/单位与精度，不让每次拖动都重启模型或全任务；涉及保存/执行的变化仍走现有版本和Permission合同。\n7. **草稿、保存、执行分清。** 分段预览可读可编辑不等于已正式保存；草稿若可恢复，必须真实有原Owner持久化回执。用户采用后通过SavedWork/Artifact或对应媒体Owner保存父版本与来源。暂停阅读、取消任务、取消外部动作分别处理；浏览器关掉不能假称任务已停止或持续执行。撤权/切换scope后旧内容及动作依当前读取权限处理，断线重试不重复效果。\n8. **等待时间进入质量判断。** 同时记录请求受理、首个有用且有依据结果、首个实际可操作块、完整结果、保存成功耗时，以及事实/引用错误、修订成功、人工补救、总成本。用同任务/同材料/同预算对比原路径，兼顾p50/p95与慢设备；没有测量不承诺提速比例。不通过删内容、降准确度、偷偷换模型或开启1.5x来缩短等待。\n9. **四端熟悉且连贯。** 遵循用户已批准研究及本屏视觉动线，手绘彩绘限于图标及适合页面元素；保留本屏任务结构、中英韩与可访问性，增量更新保持稳定布局，屏幕阅读器按有用段落受控播报，减少动效设置生效。必要长内容可滚动，操作端无无意义整页纵向堆叠；官网仅演示已证行为，不能执行客户私有任务。\n\n**真实验收场景：**品牌同口径比较逐步呈现且缺值为“—”；活动预算修改后只更新受影响部分并保留人工修改；研究多来源陆续到达且矛盾被标明、更正可追溯；视频/播客参数调整保持轨道/选区/播放头并得到实际产物；中断/重连/旧run迟到/撤权/格式损坏时无重复效果。每Owner选择相关风险进行有意义验收，不全屏重复同一套测试。\n\n**职责：**C1提供真实可得字段与时间/覆盖状态；C2在唯一Gateway内产出带来源的分段结果及受支持表现提案并评价选择质量；C3维护可比业务语义和可解释计算；C4维护真实媒体编辑与预览；C5维护引用、结果分段与版本保存/更正；C6承接既有Task/API的顺序、流式传输、取消和恢复；F实现本屏组件、稳定增量布局、直接编辑与四端无障碍。C2/C6修复AI-01真实提交与Gateway执行路径的后端断点，同时F完成该屏完整界面、其他模块继续独立建设；仅依赖该后端动作的验收保持OPEN，不阻塞整屏、其他能力或确定性路径。\n\nC2后续可将经准入的“任务→表现选择→操作结果→评价”作为已有学习流程的样例。采用UI规则不自动授权第三方内容训练，不以模型训练完成替代产品运行。",
+    "evidence_type": "REQUIREMENT_SOURCE_NOT_IMPLEMENTATION_PROOF"
+  },
+  {
+    "evidence_id": "V21-SRC-05",
+    "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "source_path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "source_sha256": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+    "line_start": 1409,
+    "line_end": 1429,
+    "original_text": "适用范围是全部现有能力与四个入口：44个App屏幕、官网已有内容家族，以及贯穿其中的导航、检索、列表、详情、编辑、设置、通知、导入导出、任务接续、错误与恢复。不能只在首页、AI聊天或少数展示卡片采用。该要求改进现有能力的呈现和操作，不新增业务、页面家族或第二渲染系统。\n\n**每个现有屏幕规范必须明确以下八项，并在本屏真实用户任务中验收：**\n\n1. **用户任务与最合适的表达。** 写清这屏要让用户理解或完成的事情，以及表格、图、时间线、对照、表单、阅读器、画布或直接文字的选择理由。简单信息保留简单表达；复杂编辑给足操作空间。解释图先按真实关系选择流程、比较、结构或时序，同一图保持清楚的主要阅读顺序；静态内容完整，必要交互帮助理解真实结果。开源等距图解/图表方法可二次适配现有组件，但不指定全局二维/三维风格、不复制供应商界面、不增加图表运行系统。不能把“每个角落”解释成处处自动生成或处处加聊天框。\n2. **可理解的真实数据。** 每个事实可追踪原来源、主体/城市、出版/发生/采集时点、样本范围、单位/币种与版本。平台热度、内部样本计算、模型估计分别标明；缺失、零、未采集、过期与不可访问不混合。图表筛选不会偷偷改变统计口径。图形、标签、说明、可访问文本与导出共享同一已核验结果/版本，禁止手工重填数值造成漂移；图示的几何与连接关系需有数据依据，不以精美结构暗示未经证实的因果。检查三语长标签、遮挡/裁切、连线归属、窄屏、缩放和静态导出。原有动效完整保留，用户可跳过或选择减少动态；跳过不丢结果或操作。\n3. **用户可以直接操作。** 用户能选择、对比、筛选、调整参数、检查引用、局部编辑或启动本屏已有动作。按当前功能确定实际控件，不以装饰动画代替操作；结果和操作就近出现，有明确的返回、撤销和后续工作入口。\n4. **同一任务连续使用。** 将当前Task/Brief、actor、GLOBAL/Focus、材料选择、时间/预算约束、Evidence、版本、选区/播放头随当前合同传递。研究→方案→文稿/视频/播客不重复输入。跨端重开恢复到该任务允许的状态；不得仅携带页面标题而丢失业务上下文。\n5. **变化可解释、可采用。** 调整预算、时间、来源或作品局部后，显示影响范围和建议差异；用户明确采用后由原Owner保存新版本、父版本与原因。未受影响内容保持；旧成果可重开/回滚。预测场景不覆盖真实观测，来源更正不改原Evidence。\n6. **执行真实且可恢复。** 可交互项绑定现有服务动作、版本与Permission。加载/部分/无记录/未知/离线/拒绝/失败/取消/重试有本屏含义；可安全恢复同一任务，不重复外部效果。只有Core确认的保存/执行回执才能显示成功。AI不可用时保留仍可工作的确定性阅读、筛选、编辑与保存，不假装AI已执行。\n7. **四端与无障碍。** 官网解释和演示须对应实证状态；Web/Desktop承载完整工作；Mobile按已有职责重排查看、审阅、调整和接续，不缩小PC画面。键盘、触控、屏幕阅读器、焦点、缩放和减少动效均可用；保留中英韩。操作端无必要的整页上下滚动，必要长文/表格/无障碍区域仍能滚动，视频与播客有实际横向时间轴。\n8. **序境自己的视觉。** 五位架构身份与功能对象可用原创手绘彩绘图标；部分适合的页面元素也可用彩绘。整体视觉空间、层级、布局、动效和交互依用户已批准研究、当前任务及本屏合同，不限定二维，也不预设全三维。功能glyph清晰，身份图标、功能图标和第三方来源icon分层；颜色丰富但有语义节制，图像不表示数据或权限状态。人物按当前脚本描述创造，不复制参考照片人物。不复制ChatGPT、社交平台或通用SaaS模板。外来方法、组件、工具及采集/导入内容的产品外壳、阅读视图、反馈、结果与编辑器遵循适用研究和任务合同，不直接暴露供应商控制台或开发诊断。保留原文、署名、真实封面/媒体和原始网页；内置浏览器的来源页面不是可为统一风格改写的证据。\n\n**真实世界验收至少覆盖：**不同城市同名主体、不同期间/币种不可直接比较、来源撤回、预算变更、长任务中断、权限收回、模型不可用、资料不足及跨端继续。每个屏幕挑其实际相关风险，不在不相关页面硬加控件或重复全部测试。验收同时证明正常成功路径：有用结果→用户调整→正确局部结果→保存→重开/恢复；仅能拒绝错误输入仍不交付。\n\n**统一交付记录：**每个屏幕在自己的既有规范中记录任务、对应Source/Core输入与动作、四端差异、视觉动线、上述验收证据和未闭项；44屏索引统一放在 `contracts/experience/screen-specifications/README.md`。既有文字视觉草图保留历史，并以日期标明本次任务动线增补；不建立另一份执行蓝图或复制另一套UI引擎。蓝图、Experience、Owner、屏幕规范、草图与README同批发布，按同一提交核对；历史草图不是已实现视觉资产，也不能自动获得DESIGN_READY。\n\n**实现准入：**最新PO允许依既有Experience/ScreenSpec与真实合同直接构建，不以独立设计稿、Figma或M逐屏DESIGN_READY审批作为编码前置。必要设计决定和证据随代码回写原规范。未知Owner/callable/Permission/lineage仍阻塞其依赖行为；真实完成、质量与用户验收标准不变。授权状态服从最新直接PO与实际依赖，不从历史设计流程推导停工。\n\nResearch evidence and exact source/owner mapping:\n`evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md`.",
+    "evidence_type": "REQUIREMENT_SOURCE_NOT_IMPLEMENTATION_PROOF"
+  },
+  {
+    "evidence_id": "V21-SRC-06",
+    "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "source_sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+    "line_start": 155,
+    "line_end": 155,
+    "original_text": "| G14 | 智能UI | 9 条逐步交付合同（首个有用结果、分段身份/修订号、旧 run 不覆盖、延迟计量）；新增结果到达动效按Experience §19：原有动效全部保留，真实结果/字体/布局就绪后测量点阵线框并一次揭示；等待用普通骨架，不在切页/每行列表重复；独立全量/随减少动态偏好/关闭选择及立即跳过，未生成/重开不冒充生成 | EXP:1343-1359 | 阿康1(C2/C6)/阿康 | 闭环内 |",
+    "evidence_type": "REQUIREMENT_SOURCE_NOT_IMPLEMENTATION_PROOF"
+  },
+  {
+    "evidence_id": "V21-SRC-07",
+    "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "source_sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+    "line_start": 347,
+    "line_end": 347,
+    "original_text": "| G116 | **聊天智能 UI（交互卡片）**（另见 evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008） | 首页聊天按任务渲染已注册文字/决策/表格/表单/图表/证据/比较组件，流式交付已成立的有用内容；长任务期间输入仍可用，多任务结果明确归属，旧回调不覆盖新修订。schema校验，不执行生成HTML/JS，局部操作不强制再调模型，数值由后端提供；保留简洁模式、检查依据、停止/恢复/保存/修订/重开，卡片动作经Permission+Evidence | X @llqoli 2109977435597103363、OpenAI《GPT-6 and Intelligent UI》与 Help 20001598、MCP Apps(SEP-1865)、EXP:1297-1350、evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008 | 阿康（前端）/阿康1 |",
+    "evidence_type": "REQUIREMENT_SOURCE_NOT_IMPLEMENTATION_PROOF"
+  },
+  {
+    "evidence_id": "V21-SRC-08",
+    "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "source_sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+    "line_start": 629,
+    "line_end": 629,
+    "original_text": "| F4 | AI-01/首页同一对话多任务、智能卡片与工具确认；AI-02真实任务状态；AI-03来源优先成果 | 流式渲染、类型化卡片（不执行生成的 HTML/JS） | 输入不中断；长任务后台交付、结果归属清楚；草稿与已保存成果分开，刷新后可续接；仅必要通知，高风险确定确认 | 全部回答标「AI 生成」，引用可点开来源；可停止/重生成 | 流式不抢焦点；卡片内操作；停止按钮 | 流式文字无逐字动画抖动，新块 200ms 淡入；卡片展开 300ms；减少动态→无位移 |",
+    "evidence_type": "REQUIREMENT_SOURCE_NOT_IMPLEMENTATION_PROOF"
+  },
+  {
+    "evidence_id": "V21-SRC-09",
+    "main_commit": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+    "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+    "source_sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+    "line_start": 876,
+    "line_end": 903,
+    "original_text": "#### 聊天智能 UI 卡片\n\n##### Desktop细部\n\n```\n用户：…\n序境：[决策卡：选项A/B 依据▸ 证据▸ (采纳)(修改)]\n      [表格卡] [表单卡] [图表卡] [证据卡 来源↗]\n顶部切换：(卡片模式)(简洁模式)\n```\n\n##### Web细部\n\nWeb：输入区与正在完成的任务独立，流式更新不抢输入焦点；卡片按宽度重排，刷新后由服务端读回任务与成果，未保存输入明确保留。\n\n##### iOS细部\n\n卡片全宽按任务分段，复杂比较用可逆详情，composer不被挤掉；读屏逐项定位，返回恢复焦点和未发输入。\n\n##### 补充状态\n\nReady / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显示原因，不自动回退）/ 权限不足。\n\n##### 应验收操作\n\n- 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。\n- 用户可选简洁模式。\n",
+    "evidence_type": "REQUIREMENT_SOURCE_NOT_IMPLEMENTATION_PROOF"
+  }
+]

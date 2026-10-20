@@ -1,0 +1,84 @@
+{
+  "generatedAt": "2026-10-17T13:03:47.739Z",
+  "runtime": {
+    "node": "v24.19.0",
+    "icu": "78.3",
+    "unicode": "17.0"
+  },
+  "scope": "synthetic local contract benchmark, no real business data or upload",
+  "noP95Claim": "Sample count is too small for a useful tail-latency guarantee; raw repetitions/median/max only.",
+  "results": [
+    {
+      "name": "120000 bounded spring integration steps",
+      "repetitions": 7,
+      "milliseconds": [
+        15.930073000000007,
+        6.720534999999998,
+        5.995377000000005,
+        5.755821000000012,
+        7.054052999999996,
+        6.242649,
+        5.964432000000002
+      ],
+      "medianMs": 6.242649,
+      "maxMs": 15.930073000000007,
+      "notMeasured": "browser frames, real backend, mobile memory, native input latency"
+    },
+    {
+      "name": "Unicode diagnostics on long filename fixture",
+      "repetitions": 7,
+      "milliseconds": [
+        12.339541000000011,
+        0.8837100000000078,
+        1.073960999999997,
+        0.5523150000000214,
+        0.5993719999999882,
+        0.816533000000021,
+        0.5224439999999788
+      ],
+      "medianMs": 0.816533000000021,
+      "maxMs": 12.339541000000011,
+      "notMeasured": "browser frames, real backend, mobile memory, native input latency"
+    },
+    {
+      "name": "CSV parse and statistics 10000 multilingual records",
+      "repetitions": 7,
+      "milliseconds": [
+        40.124491999999975,
+        21.080821000000014,
+        17.566744999999997,
+        20.199793999999997,
+        22.47897900000001,
+        18.20829199999997,
+        19.364953000000014
+      ],
+      "medianMs": 20.199793999999997,
+      "maxMs": 40.124491999999975,
+      "notMeasured": "browser frames, real backend, mobile memory, native input latency"
+    },
+    {
+      "name": "actual SHA256/local byte readback 1048576 bytes",
+      "repetitions": 3,
+      "milliseconds": [
+        62.600706,
+        59.072978999999975,
+        53.81069400000001
+      ],
+      "medianMs": 59.072978999999975,
+      "maxMs": 62.600706,
+      "notMeasured": "browser frames, real backend, mobile memory, native input latency"
+    },
+    {
+      "name": "actual SHA256/local byte readback 16777216 bytes",
+      "repetitions": 3,
+      "milliseconds": [
+        944.824253,
+        923.1859800000002,
+        881.5626849999999
+      ],
+      "medianMs": 923.1859800000002,
+      "maxMs": 944.824253,
+      "notMeasured": "browser frames, real backend, mobile memory, native input latency"
+    }
+  ]
+}

@@ -2,6 +2,8 @@
 
 本索引只定位候选交付物与证据，不是产品规则、任务派工或验收声明。2026-10-18批准的规划和研究与产品实现、运行和验收分别记录。录音采集不在本候选范围；现有ASR、字幕、播客、语音交互与授权声音导入保留。
 
+本次Library第一批恢复仅覆盖275项清单中随包嵌入的109份原件：其中1份与仓库既有竞品基准字节重复、未重复复制，另108份文本/JSON原件按既有研究/evidence Owner路径保存。其余166项未嵌入原文件仍待原字节恢复，当前不宣称275项已收齐；所有本批文件均为研究/证据，不是产品代码或正式前端。
+
 ## 唯一产品规划与完整研究
 
 - [唯一完整前后端规划](../../../LOOP-PLAN-20261014/product-plan-full.md)：完整v010正文及主线独有要求，195G、311步骤、213合同保全；精确修订和正文覆盖回执另存。
@@ -36,6 +38,10 @@
 - [platform_capability_research_20261018](../../../../research/intelligence/02_platform_intelligence/research-20261018/platform_capability_research_20261018/README.md)
 - [platform_evidence_gap_research_20261018](../../../../research/intelligence/02_platform_intelligence/research-20261018/platform_evidence_gap_research_20261018/README.md)
 - [product_research_deadline_20261018](../../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/review_final/01_WHOLE_PRODUCT_UPGRADE_REVIEW.md)
+- [frontend_update_recovery_20261018](../../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/00_README_CURRENT_UPDATE.md)：恢复的候选前端研究文稿，非实现验收；来源根路径及独立许可映射为`UNKNOWN`。
+- [interaction_equivalent_20261017](../../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)：仅为交互审核工作副本，不是正式产品前端；本次只恢复清单中嵌入的52份文本/JSON原件，不表示210项清单已完整恢复。
+- [historical_requirements_20261017](../../../../research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/RESTORATION_NOTICE.md)：14份有日期的历史要求/审计记录，不是第二份现行规划、派工或验收；来源根路径及独立许可映射为`UNKNOWN`。
+- 恢复包内与[既有官方竞品基准](../../../../research/engineering/documentation-evidence/reports/competitor_research_20261018/01_official_competitor_benchmark.md)字节完全相同的文稿已由仓库现有原件覆盖，本次未重复添加。
 - [rea_research_frozen_20261018_2136](../../../../research/engineering/documentation-evidence/reports/rea_research_frozen_20261018_2136/README.md)
 - [real_public_validation_research_20261018](../../../../research/intelligence/12_tests_regression_memory/research-20261018/real_public_validation_research_20261018/README.md)
 - [slashui_research_20261018](../../../../research/engineering/documentation-evidence/reports/slashui_research_20261018/01_SLASHUI_LUMENIS_RESEARCH.md)

@@ -1,0 +1,50 @@
+{
+  "main": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+  "files": [
+    {
+      "path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+      "bytes": 176045,
+      "sha256": "ccc2e93e52bafde51e2b41e1c61003d6f67d436e27b72a06f8193566c15830fc",
+      "role": "current requirements; not runtime proof"
+    },
+    {
+      "path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+      "bytes": 250700,
+      "sha256": "8ab5a992502df46bf1c32cbffa3b167d8ee3bffa1a0f54edd76f024ea72bc954",
+      "role": "current requirements; not runtime proof"
+    },
+    {
+      "path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+      "bytes": 126724,
+      "sha256": "b3c6b6b67b4d2e6a6f731f323cb1e909eb2f76acbac0c03ec618aece72bef07d",
+      "role": "current requirements; not runtime proof"
+    },
+    {
+      "path": "contracts/experience/screen-specifications/README.md",
+      "bytes": 28051,
+      "sha256": "1eda47dad32e0a027b5595fe6808349256ee3ae52fcc64ee8b5fe3abe76f7219",
+      "role": "current requirements; not runtime proof"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+      "bytes": 108216,
+      "sha256": "04edb41316f6b9576fdcc021d82c26843c2d543ff0ba316d24c8082f2189f1e4",
+      "role": "source anchor; read scope governed by exact citations, hash alone is not full reading proof"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+      "bytes": 182919,
+      "sha256": "7c67042b5ff8aecc36b7d48abf799cf8678fec774178ec54a4bf89cdba486efc",
+      "role": "source anchor; read scope governed by exact citations, hash alone is not full reading proof"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-API-OWNER-MAP.md",
+      "bytes": 2490,
+      "sha256": "76d009c504c3f154a9d688d8a9337339f36485cc9dfbad9db6039873e142eaea",
+      "role": "source anchor; read scope governed by exact citations, hash alone is not full reading proof"
+    }
+  ],
+  "exact_220_rows": "SOURCE_ROW_READBACK.json",
+  "screen_index": "SCREEN_SOURCE_INDEX.json",
+  "notes": "Source ownership remains in product; these independent review documents are proposals and do not alter authority."
+}

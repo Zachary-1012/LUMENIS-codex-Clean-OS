@@ -1,0 +1,142 @@
+[
+  {
+    "path": "00_HOW_TO_REVIEW.md",
+    "sha256": "74b4fa26b656ed21baa7b980ec1e8cdead6dc8ff3eaf90db4ad54abddc1e9c4a",
+    "bytes": 1859
+  },
+  {
+    "path": "01_CHANGES_FOR_REVIEW.md",
+    "sha256": "b1473e578fde984cc79e628982d369f9460e1c71dacd4bc52a533b8d56fd5e0a",
+    "bytes": 14055
+  },
+  {
+    "path": "02_WORKSPACE_AND_DEFAULTS.md",
+    "sha256": "ba444b0bc34db335e8cb3a3b13bd097d29c4683912e24973bdd70f625c2105e4",
+    "bytes": 10462
+  },
+  {
+    "path": "03_JOURNEYS_01_08.md",
+    "sha256": "b467998e80b9a6ece612b7fcc66637a2dcb17fc430fe5ae657a6436f42610198",
+    "bytes": 9972
+  },
+  {
+    "path": "04_JOURNEYS_09_17.md",
+    "sha256": "7ee6c9dbcba4efacd8c9edfae9fa42bcded9eb16217067953cec2613c64c3324",
+    "bytes": 10293
+  },
+  {
+    "path": "05_JOURNEYS_18_29.md",
+    "sha256": "cfa259e874d15b3b135dcf0c187fe7efe6daf2fbf6f0953958d020b6f6527622",
+    "bytes": 15605
+  },
+  {
+    "path": "06_CRITICAL_STEP_EXPANSIONS.md",
+    "sha256": "cd2f8fe6498e443f850bc75b73c8890237688fb8d02fd4400446f5dcd61f9596",
+    "bytes": 9369
+  },
+  {
+    "path": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md",
+    "sha256": "8b809a0d86a1e1e5a8d8482dd042613a7318a8d8ae0daa085cf3474f72cab957",
+    "bytes": 14147
+  },
+  {
+    "path": "08_CREATION_CONTINUITY_AND_ACCEPTANCE.md",
+    "sha256": "5126bb646cf4f2055c95cb332ddd138b9b6238b57869d827a4a52270d86587aa",
+    "bytes": 7522
+  },
+  {
+    "path": "09_SPATIAL_REVIEW_PLATES.md",
+    "sha256": "1ffd31460dbc25f37250700973fd1edd253d1575934374946e5122c46552393f",
+    "bytes": 3267
+  },
+  {
+    "path": "10_RESEARCH_DECISIONS_AND_OPEN_ITEMS.md",
+    "sha256": "13ba604fb4c36ee362fe160c0df4fef97c5c0944eb7aeef67e672ff43654723f",
+    "bytes": 8433
+  },
+  {
+    "path": "11_COMPLETE_REVIEW_STEPS.md",
+    "sha256": "a163a78b031421b4cf3ce52c43d950ab0e4ac06c7150d1a09ffadbd51fc826f7",
+    "bytes": 32927
+  },
+  {
+    "path": "12_CURRENT_REQUIREMENTS_G.md",
+    "sha256": "6d8fb81905a138cbeb4366a01c808156a0e66527d748f07d5208291633b0b38f",
+    "bytes": 88596
+  },
+  {
+    "path": "13_MEDIA_COMPLETE_REQUIREMENTS.md",
+    "sha256": "f43c0f1d67acbc0d3e45ee36debf5af17a0ec3403811514d6eb2f54c9fd65323",
+    "bytes": 10008
+  },
+  {
+    "path": "14_INTERACTION_CONTRACT_REVIEW.md",
+    "sha256": "a6b0fa23616d8794adcfa884544900bce0e8c2b8fbfd9fbc49c0e56e29e9aadf",
+    "bytes": 17449
+  },
+  {
+    "path": "15_REUSABLE_LOGIC_AND_DEFAULT_SELECTION.md",
+    "sha256": "512fab8d788f98158470d63ccc4a4b792594ad2c050e5c08a49919d75deae57b",
+    "bytes": 5453
+  },
+  {
+    "path": "16_IMPLEMENTATION_HANDOFF_INDEX.md",
+    "sha256": "53ed67404ea7a1ebcb57b7e94f779a5f0fc03ef6c340cfbdf89f365a8f3fbf9e",
+    "bytes": 4215
+  },
+  {
+    "path": "17_DESIGN_SEMANTIC_DECISIONS.md",
+    "sha256": "e4d1a01b15841734578d98d6d6507683d8d2a42d3c2aa7291e0f636b7a71a833",
+    "bytes": 49010
+  },
+  {
+    "path": "CONTENT_MANIFEST.json",
+    "sha256": "4ac66929a3f5941585626a04c82ee595f20d981926471cd81f957d3dca339125",
+    "bytes": 9222
+  },
+  {
+    "path": "CONTENT_STRUCTURE_CHECK.json",
+    "sha256": "f58515627767109c0fd5d60fdf2e98f47658f56f97e8a13c48462d34f7c5de7c",
+    "bytes": 544
+  },
+  {
+    "path": "CURRENT_SOURCE_MANIFEST.json",
+    "sha256": "c41662d3dd671a146f08760cb18e2b5eb8ea501f50487179af9e9ad45d6d505e",
+    "bytes": 2166
+  },
+  {
+    "path": "DELIVERY_STRUCTURE.md",
+    "sha256": "977de062cda0114466d23fe10a7ff2ff3b12bd613edabeb85eed3135132e23f6",
+    "bytes": 1449
+  },
+  {
+    "path": "DESIGN_SEMANTIC_DECISIONS.json",
+    "sha256": "ae3aa42ab25f4044cd6a72012d047c20c769f694b7e51c8f2574ee135b342f44",
+    "bytes": 422407
+  },
+  {
+    "path": "INTERACTION_CONTRACTS.json",
+    "sha256": "6ebe52ceb9c759e84abbde0891ea951f27b5454102f16bf46b16e71e1e28eff5",
+    "bytes": 580727
+  },
+  {
+    "path": "SCREEN_SOURCE_INDEX.json",
+    "sha256": "35ca3c0e1e6c2081ee3c5ed77d19b25727337b807b08b98c0866450adc658e7e",
+    "bytes": 25276
+  },
+  {
+    "path": "SOURCE_ROW_READBACK.json",
+    "sha256": "14be7e3b1988ba4e5aeea24fbd136fc0b28df86ca89d8cd2a40e6ee38034711e",
+    "bytes": 15935
+  },
+  {
+    "path": "SPATIAL_ACCESSIBILITY_RESEARCH.md",
+    "sha256": "0f5bbd5d330099e04249d29cf00f0e278c203bc26b5cae3c12ead0be7e1eae0a",
+    "bytes": 3672
+  },
+  {
+    "path": "interaction_names_zh.txt",
+    "sha256": "6bcbc21ef800b9b81cc9229227f7eedfaae4e8ac36f38b05f34d717d340e81d1",
+    "bytes": 4401
+  }
+]
