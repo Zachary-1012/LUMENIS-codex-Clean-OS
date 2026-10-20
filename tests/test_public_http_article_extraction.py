@@ -63,6 +63,36 @@ def test_title_only_page_is_not_reported_as_captured_content():
     assert result.metadata["error_type"] == "EMPTY_CONTENT"
 
 
+def test_fix094_sibling_article_selection_scales_linearly(monkeypatch):
+    """FIX-094: sibling article dedup checks selected ancestors in linear work."""
+    import builtins
+    import lumenis.system.collector.adapters.public_http as public_http
+    from bs4 import BeautifulSoup
+
+    article_count = 500
+    soup = BeautifulSoup(
+        "<html><body>" + "".join(
+            f"<article>article {index}</article>" for index in range(article_count)
+        ) + "</body></html>",
+        "html.parser",
+    )
+    yielded = 0
+
+    def counting_any(values):
+        nonlocal yielded
+        for value in values:
+            yielded += 1
+            if value:
+                return True
+        return False
+
+    monkeypatch.setattr(public_http, "any", counting_any, raising=False)
+    selected = public_http._selected_substantive_nodes(soup)
+
+    assert len(selected) == article_count
+    assert yielded < article_count * 25
+
+
 def test_meta_description_is_marked_as_an_excerpt():
     response = PublicResponse(
         url="https://public.example.test/description-only",

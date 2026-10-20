@@ -219,9 +219,11 @@ def fetch_google_news_rss(query, max_results=5):
         'collected_at': collected_at,
         'error_type': '',
     }
+    source_transport = None
     try:
         from email.utils import parsedate_to_datetime
         from lumenis.system.collector.adapters import public_source
+        source_transport = public_source
 
         query = str(query or '').strip()
         if not query or len(query) > 120:
@@ -284,11 +286,8 @@ def fetch_google_news_rss(query, max_results=5):
         outcome['error_type'] = 'RSS_PARSE_ERROR'
         return outcome
     except Exception as exc:
-        status_code = getattr(exc, 'status_code', None)
-        if (getattr(exc, 'failure_type', None) == 'HTTP_STATUS'
-                and isinstance(status_code, int) and not isinstance(status_code, bool)):
-            outcome['http_status'] = status_code
-            outcome['error_type'] = f'HTTP_{status_code}'
+        if source_transport is not None:
+            outcome.update(source_transport.public_source_error_metadata(exc))
         else:
             outcome['error_type'] = type(exc).__name__
         return outcome

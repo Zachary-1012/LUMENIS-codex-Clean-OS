@@ -54,8 +54,25 @@ class PublicSourceHTTPError(PublicSourceError):
 
     failure_type = "HTTP_STATUS"
 
-    def __init__(self, status_code: int):
+    def __init__(
+        self,
+        status_code: int,
+        *,
+        requested_url: str = "",
+        final_url: str = "",
+        redirect_chain: Iterable[str] = (),
+        resolution_trace: Iterable[dict[str, str]] = (),
+    ):
         self.status_code = int(status_code)
+        redirects = tuple(redirect_chain)
+        resolutions = tuple(resolution_trace)
+        self.provenance = (
+            _public_source_lineage(
+                requested_url, final_url, redirects, resolutions,
+            )
+            if requested_url or final_url or redirects or resolutions
+            else {}
+        )
         super().__init__(f"public source returned HTTP {self.status_code}")
 
 
@@ -64,7 +81,16 @@ def public_source_error_metadata(error: BaseException) -> dict[str, str | int]:
     status_code = getattr(error, "status_code", None)
     if (getattr(error, "failure_type", None) == "HTTP_STATUS"
             and isinstance(status_code, int) and not isinstance(status_code, bool)):
-        return {"error_type": f"HTTP_{status_code}", "http_status": status_code}
+        metadata: dict[str, str | int] = {
+            "error_type": f"HTTP_{status_code}", "http_status": status_code,
+        }
+        provenance = getattr(error, "provenance", None)
+        if isinstance(provenance, Mapping):
+            metadata.update({
+                key: value for key, value in provenance.items()
+                if isinstance(key, str) and isinstance(value, str)
+            })
+        return metadata
     return {"error_type": type(error).__name__}
 
 
@@ -87,22 +113,40 @@ def _is_blocked_youtube_feed(url: str) -> bool:
 
 def public_source_provenance(response: PublicResponse, requested_url: str) -> dict[str, str]:
     """Return bounded transport lineage without URL query or response body."""
-    def safe_url(value: str) -> str:
-        parsed = urlsplit(value)
+    return _public_source_lineage(
+        response.requested_url or requested_url,
+        response.url,
+        response.redirect_chain,
+        response.resolution_trace,
+    )
+
+
+def _safe_public_source_url(value: str) -> str:
+    try:
+        parsed = urlsplit(str(value or ""))
         authority = parsed.hostname or ""
         if ":" in authority:
             authority = f"[{authority}]"
         if parsed.port:
             authority = f"{authority}:{parsed.port}"
         return urlunsplit((parsed.scheme, authority, parsed.path, "", ""))[:240]
+    except ValueError:
+        return ""
 
+
+def _public_source_lineage(
+    requested_url: str,
+    final_url: str,
+    redirect_chain: Iterable[str],
+    resolution_trace: Iterable[dict[str, str]],
+) -> dict[str, str]:
     return {
-        "requested_source_url": safe_url(response.requested_url or requested_url),
-        "final_source_url": safe_url(response.url),
+        "requested_source_url": _safe_public_source_url(requested_url),
+        "final_source_url": _safe_public_source_url(final_url),
         "redirect_chain": json.dumps(
-            [safe_url(url) for url in response.redirect_chain], ensure_ascii=False,
+            [_safe_public_source_url(url) for url in redirect_chain], ensure_ascii=False,
         ),
-        "resolution_trace": json.dumps(response.resolution_trace, ensure_ascii=False),
+        "resolution_trace": json.dumps(tuple(resolution_trace), ensure_ascii=False),
         "source_access_mode": "public_read_only",
         "commercial_license_state": "pending_review",
     }
@@ -522,7 +566,13 @@ def fetch_public_url(
                         adapter.host_pins = host_pins
                     continue
                 if not 200 <= response.status_code < 300:
-                    raise PublicSourceHTTPError(response.status_code)
+                    raise PublicSourceHTTPError(
+                        response.status_code,
+                        requested_url=url,
+                        final_url=getattr(response, "url", None) or current,
+                        redirect_chain=tuple(redirect_chain),
+                        resolution_trace=tuple(resolution_trace),
+                    )
                 content_length = response.headers.get("Content-Length")
                 if content_length:
                     try:

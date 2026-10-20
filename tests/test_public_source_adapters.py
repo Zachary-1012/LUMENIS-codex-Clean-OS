@@ -295,6 +295,62 @@ def test_google_news_rss_preserves_http_failure_from_real_bounded_transport(monk
     assert collected.metadata["http_status"] == 503
 
 
+def test_google_news_rss_http_failure_retains_sanitized_transport_lineage(monkeypatch):
+    import json
+    import web_discovery
+    import requests
+    from types import SimpleNamespace
+    from lumenis.system.collector.adapters import public_source
+
+    monkeypatch.setattr(public_source, "load_public_source_host_pins", lambda: {})
+    monkeypatch.setattr(
+        public_source, "_resolved_addresses", lambda _hostname: ["93.184.216.34"],
+    )
+    requests_made = []
+
+    def offline_http_send(_adapter, request, **_kwargs):
+        requests_made.append(request.url)
+        response = requests.Response()
+        response.status_code = 302 if len(requests_made) == 1 else 503
+        response.headers = requests.structures.CaseInsensitiveDict()
+        if len(requests_made) == 1:
+            response.headers["Location"] = "https://news.google.com/rss/final?secret=redirect-token"
+        response.url = request.url
+        response.request = request
+        response.reason = "Synthetic response"
+        response._content = b""
+        response._content_consumed = True
+        response.raw = SimpleNamespace(close=lambda: None)
+        return response
+
+    monkeypatch.setattr(requests.adapters.HTTPAdapter, "send", offline_http_send)
+
+    outcome = web_discovery.fetch_google_news_rss("lumenis", max_results=1)
+
+    assert outcome["ok"] is False
+    assert outcome["items"] == []
+    assert outcome["error_type"] == "HTTP_503"
+    assert outcome["http_status"] == 503
+    assert len(requests_made) == 2
+    assert outcome["requested_source_url"].startswith("https://news.google.com/rss/search")
+    assert outcome["final_source_url"] == "https://news.google.com/rss/final"
+    assert json.loads(outcome["redirect_chain"]) == [
+        "https://news.google.com/rss/search",
+    ]
+    assert len(json.loads(outcome["resolution_trace"])) == 2
+    assert outcome["source_access_mode"] == "public_read_only"
+    assert outcome["commercial_license_state"] == "pending_review"
+    assert "redirect-token" not in str(outcome)
+    assert "secret" not in str(outcome)
+
+    requests_made.clear()
+    collected = WebRSSAdapter().search("lumenis", max_results=1)
+    assert collected.status is CollectionStatus.PROVIDER_UNAVAILABLE
+    assert collected.metadata["error_type"] == "HTTP_503"
+    assert collected.metadata["final_source_url"] == outcome["final_source_url"]
+    assert collected.metadata["redirect_chain"] == outcome["redirect_chain"]
+
+
 @pytest.mark.parametrize("adapter,keyword,options", [
     (PublicHttpAdapter, "https://public.example.test/article", {}),
     (AtomAdapter, "https://public.example.test/feed.atom", {}),
@@ -310,6 +366,32 @@ def test_public_source_http_error_keeps_observed_status(adapter, keyword, option
     assert result.items == []
     assert result.metadata["error_type"] == "HTTP_429"
     assert result.metadata["http_status"] == 429
+
+
+@pytest.mark.parametrize("adapter", [PublicHttpAdapter, AtomAdapter, SitemapAdapter])
+def test_public_source_http_error_keeps_safe_lineage(adapter):
+    def fail(_url):
+        raise PublicSourceHTTPError(
+            503,
+            requested_url="https://public.example.test/start?private=query",
+            final_url="https://public.example.test/final?token=secret",
+            redirect_chain=("https://public.example.test/start?private=query",),
+            resolution_trace=({"host": "public.example.test", "address": "93.184.216.34"},),
+        )
+
+    result = adapter(fetcher=fail).search("https://public.example.test/start")
+
+    assert result.status is CollectionStatus.PROVIDER_UNAVAILABLE
+    assert result.metadata["error_type"] == "HTTP_503"
+    assert result.metadata["http_status"] == 503
+    assert result.metadata["requested_source_url"] == "https://public.example.test/start"
+    assert result.metadata["final_source_url"] == "https://public.example.test/final"
+    assert result.metadata["redirect_chain"] == '["https://public.example.test/start"]'
+    assert result.metadata["resolution_trace"] == (
+        '[{"host": "public.example.test", "address": "93.184.216.34"}]'
+    )
+    assert result.metadata["source_access_mode"] == "public_read_only"
+    assert result.metadata["commercial_license_state"] == "pending_review"
 
 
 def test_google_news_rss_keeps_media_type_failure_distinct_from_http_status(monkeypatch):

@@ -178,12 +178,14 @@ def _selected_substantive_nodes(soup: BeautifulSoup) -> list[Any]:
     best_priority = min(candidate[0] for candidate in candidates)
     preferred = [node for priority, node in candidates if priority == best_priority]
     selected: list[Any] = []
+    selected_ids: set[int] = set()
     for node in preferred:
         # An enclosing semantic element already contains this block. Keep the
         # enclosing source once; sibling articles remain separate selections.
-        if any(parent is existing for parent in node.parents for existing in selected):
+        if any(id(parent) in selected_ids for parent in node.parents):
             continue
         selected.append(node)
+        selected_ids.add(id(node))
     return selected
 
 
