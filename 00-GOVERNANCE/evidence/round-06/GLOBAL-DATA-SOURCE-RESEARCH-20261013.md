@@ -1,5 +1,7 @@
 # LUMENIS-全球数据源与采集目标完整研究总表-20261013
 
+> **勘误（2026-10-20）**：本报告部分来源链接、可用性列含义和汇总统计有误，阅读或引用前先看 [ERRATUM-GLOBAL-DATA-SOURCE-RESEARCH-20261013-20261020.md](ERRATUM-GLOBAL-DATA-SOURCE-RESEARCH-20261013-20261020.md)。以下正文作为 2026-10-13 历史记录原样保留。
+
 **发布人**：Zachary Zhang｜Product Owner
 **研究负责人**：Brio（Muse）｜全球数据源研究负责人
 **研究日期**：2026-10-13
