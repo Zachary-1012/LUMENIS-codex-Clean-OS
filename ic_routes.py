@@ -141,12 +141,19 @@ def ic_emv():
     if bool(start) != bool(end):
         return jsonify({"ok": False, "status": "INVALID_INPUT", "error": "start and end must be provided together"}), 400
     if start:
-        from datetime import date
-        try:
-            start_day = date.fromisoformat(start[:10]) if len(start) in (10, 19) else None
-            end_day = date.fromisoformat(end[:10]) if len(end) in (10, 19) else None
-        except ValueError:
-            start_day = end_day = None
+        from datetime import datetime as _dt
+
+        def _parse_bound(value):
+            # The whole value must be a supported date or datetime.
+            for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+                try:
+                    return _dt.strptime(value, fmt)
+                except ValueError:
+                    continue
+            return None
+
+        start_day = _parse_bound(start)
+        end_day = _parse_bound(end)
         if start_day is None or end_day is None or start_day > end_day:
             return jsonify({"ok": False, "status": "INVALID_INPUT",
                             "error": "start/end must be ISO dates with start <= end"}), 400

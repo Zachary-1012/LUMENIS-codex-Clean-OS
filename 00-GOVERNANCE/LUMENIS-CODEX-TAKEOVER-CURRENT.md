@@ -31,8 +31,11 @@ provenance: without it an all-zero row is `NOT_AVAILABLE` and a row with
 positive counters is `PARTIAL` (`metric_observation_provenance` missing), in
 both `aggregate_emv` and `aggregate_emv_by_platform`. The live collector
 certifies only finite non-negative numeric counters or parseable counter text
-(placeholders such as `N/A`/`-` do not certify). `/api/ic/emv` also validates `limit` (integer 1-500), paired ISO
-`start`/`end` (start <= end) before any database read (400 `INVALID_INPUT`),
+(placeholders such as `N/A`/`-` do not certify). A `business_schema` trigger (`trg_notes_metric_provenance_invalidate`)
+clears that provenance whenever any writer changes a canonical counter without
+re-certifying in the same statement; imported counters certify only as finite
+non-negative numbers (booleans/strings do not). `/api/ic/emv` also validates `limit` (integer 1-500), paired full-value
+`YYYY-MM-DD[ HH:MM:SS]` `start`/`end` (start <= end) before any database read (400 `INVALID_INPUT`),
 reports a capped read as `truncated`/`source_read_complete=false` (an `OK`
 result becomes `PARTIAL`), and returns 503 `EMV_SOURCE_UNAVAILABLE` without
 internal error text when the source read fails. Platform aggregation reports aggregate-only overflow in

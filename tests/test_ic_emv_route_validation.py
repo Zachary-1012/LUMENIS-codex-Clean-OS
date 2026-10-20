@@ -450,3 +450,38 @@ def test_uncertified_positive_counters_are_partial_not_complete():
     by_platform = emv.aggregate_emv_by_platform([{"note_id": "u", "likes": 5, "comments": 0,
                                                   "collects": 0, "shares": 0}])
     assert by_platform["complete_count"] == 0
+
+
+def test_direct_metric_writer_invalidates_provenance(monkeypatch, tmp_path):
+    import sqlite3
+    path = _schema_db(monkeypatch, tmp_path, "trigger.db")
+    c = sqlite3.connect(path)
+    c.execute("INSERT INTO notes (note_id, title, likes, comments, collects, shares, metrics_observed_at)"
+              " VALUES ('d','t',5,1,1,1,'2026-10-20')")
+    c.execute("UPDATE notes SET likes=0, comments=0, collects=0, shares=0 WHERE note_id='d'")
+    assert c.execute("SELECT metrics_observed_at FROM notes WHERE note_id='d'").fetchone()[0] == ""
+    c.execute("UPDATE notes SET likes=2, metrics_observed_at='2026-10-21' WHERE note_id='d'")
+    assert c.execute("SELECT metrics_observed_at FROM notes WHERE note_id='d'").fetchone()[0] == "2026-10-21"
+    c.execute("UPDATE notes SET title='x' WHERE note_id='d'")
+    assert c.execute("SELECT metrics_observed_at FROM notes WHERE note_id='d'").fetchone()[0] == "2026-10-21"
+    c.close()
+
+
+@pytest.mark.parametrize("bounds", [("2026-10-01garbagexx", "2026-10-02"), ("2026-10-01", "2026-10-02 25:00:00")])
+def test_emv_route_rejects_malformed_full_date_value(monkeypatch, bounds):
+    import database
+
+    def unexpected_db_access():
+        raise AssertionError("malformed dates must be rejected before database access")
+
+    monkeypatch.setattr(database, "get_db", unexpected_db_access)
+    response = _client().get("/api/ic/emv", query_string={"start": bounds[0], "end": bounds[1]})
+    assert response.status_code == 400
+
+
+def test_import_boolean_counters_do_not_certify():
+    from lumenis.system.collector.adapters.multi_platform_import import _is_observed_counter
+    assert _is_observed_counter(0) and _is_observed_counter(3.0)
+    assert not _is_observed_counter(False) and not _is_observed_counter(True)
+    assert not _is_observed_counter(float("nan")) and not _is_observed_counter(-1)
+    assert not _is_observed_counter("5")
