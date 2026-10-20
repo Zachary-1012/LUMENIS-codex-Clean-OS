@@ -544,6 +544,61 @@ def test_system_xhs_adapter_preserves_session_expired_status():
     assert result.metadata['error_type'] == 'SESSION_EXPIRED'
 
 
+def test_fix_099_xhs_search_diagnostics_reach_registered_adapter_as_bounded_facts():
+    from lumenis.system.collector.adapters.xhs import XiaohongshuAdapter
+
+    class Backend:
+        def search_xiaohongshu(self, *_args, **_kwargs):
+            return {
+                'notes': [], 'total': 0, 'channel': 'isolated_fixture',
+                'search_diagnostics': {
+                    'version': 'xhs-search-state-v1',
+                    'raw_query': 'PRIVATE_QUERY_TEXT',
+                    'observations': [{
+                        'phase': 'search_ready',
+                        'observed_at': '2026-10-20T00:00:00+00:00',
+                        'host_matches': True,
+                        'route_is_search': True,
+                        'query_matches': True,
+                        'input_matches': True,
+                        'query_encoding': 'literal',
+                        'document_ready_state': 'complete',
+                        'selector_counts': {
+                            'section.note-item': 2,
+                            'a.cover': 1,
+                            '.feeds-container': 'unknown',
+                            'private-selector': 99,
+                        },
+                        'note_link_count': 2,
+                        'body_character_count': 731,
+                        'loading_element_count': -1,
+                        'native_empty_indicators': ['暂无搜索结果', 'PRIVATE_PAGE_TEXT'],
+                        'diagnostic_error_type': 'ValueError',
+                        'wait_error_type': 'PrivateErrorName',
+                        'exception': 'PRIVATE_EXCEPTION_TEXT',
+                    }],
+                },
+            }
+
+    result = XiaohongshuAdapter(backend=Backend()).search('synthetic keyword')
+    diagnostics = result.metadata['search_diagnostics']
+    assert diagnostics['version'] == 'xhs-search-state-v1'
+    assert diagnostics['observations'][0]['phase'] == 'search_ready'
+    assert diagnostics['observations'][0]['query_matches'] is True
+    assert diagnostics['observations'][0]['selector_counts'] == {
+        'section.note-item': 2, 'a.cover': 1, '.feeds-container': None,
+    }
+    assert diagnostics['observations'][0]['loading_element_count'] is None
+    assert diagnostics['observations'][0]['native_empty_indicators'] == ['暂无搜索结果']
+    assert diagnostics['observations'][0]['diagnostic_error_type'] == 'ValueError'
+    assert diagnostics['observations'][0]['wait_error_type'] == 'unknown'
+    assert 'raw_query' not in diagnostics
+    assert 'exception' not in diagnostics['observations'][0]
+    assert 'PRIVATE_QUERY_TEXT' not in repr(result.metadata)
+    assert 'PRIVATE_PAGE_TEXT' not in repr(result.metadata)
+    assert 'PRIVATE_EXCEPTION_TEXT' not in repr(result.metadata)
+
+
 def test_denied_identity_stops_before_new_page_creation():
     import xhs_cdp_collector as worker
 

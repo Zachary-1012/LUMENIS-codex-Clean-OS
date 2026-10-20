@@ -118,6 +118,28 @@ class WechatPublicAdapter(BasePlatformAdapter):
         super().__init__(**kwargs)
         self.fetcher = fetcher or fetch_public_url
 
+    @staticmethod
+    def _verification_diagnostic(provider: str, response: PublicResponse,
+                                 accepted_count: int) -> dict[str, Any]:
+        """FIX-106: expose bounded verification facts without the response body."""
+        providers = {
+            "public_original_article_fetch",
+            "public_sogou_discovery_original_fetch",
+        }
+        status_code = getattr(response, "status_code", None)
+        if type(status_code) is not int or not 100 <= status_code <= 599:
+            status_code = None
+        accepted = accepted_count if type(accepted_count) is int and accepted_count >= 0 else 0
+        return {
+            "reason": "SOURCE_VERIFICATION_REQUIRED",
+            "provider": provider if provider in providers else "unknown_public_source",
+            "request_final_status": CollectionStatus.NEED_VERIFY.value,
+            "http_status": status_code,
+            "accepted_count": accepted,
+            "original_body_available": accepted > 0,
+            "challenge_body_included": False,
+        }
+
     def health_check(self, **kwargs):
         return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
             message='Public original-article route requires an actual source observation',
@@ -144,8 +166,10 @@ class WechatPublicAdapter(BasePlatformAdapter):
             soup = BeautifulSoup(response.content, 'html.parser')
             if _challenge(soup):
                 return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
-                    metadata={'reason': 'DISCOVERY_REDIRECT_VERIFICATION_REQUIRED',
-                              'original_body_available': False})
+                    message='Source verification required',
+                    metadata={**self._verification_diagnostic(
+                        'public_sogou_discovery_original_fetch', response, 0),
+                        'reason': 'DISCOVERY_REDIRECT_VERIFICATION_REQUIRED'})
             item = parse_public_article(response)
             if item is None and urlsplit(response.url).hostname == 'weixin.sogou.com':
                 # A visible link is usable discovery. Opaque script arithmetic,
@@ -180,7 +204,9 @@ class WechatPublicAdapter(BasePlatformAdapter):
             soup = BeautifulSoup(response.content, 'html.parser')
             if _challenge(soup):
                 return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
-                    message='Source verification required', metadata={'original_body_available': False})
+                    message='Source verification required',
+                    metadata=self._verification_diagnostic(
+                        route.backend, response, 0))
             item = parse_public_article(response)
             return CollectionResult(CollectionStatus.SUCCESS if item else CollectionStatus.PROVIDER_UNAVAILABLE,
                 self.platform, items=[item] if item else [], raw_count=1 if item else 0,
@@ -210,7 +236,9 @@ class WechatPublicAdapter(BasePlatformAdapter):
             soup = BeautifulSoup(response.content, 'html.parser')
             if _challenge(soup):
                 return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
-                    metadata={'index_only': True, 'original_body_available': False})
+                    message='Source verification required',
+                    metadata={**self._verification_diagnostic(route.backend, response, 0),
+                              'index_only': True})
             candidates, next_url = parse_sogou_discovery(response)
             items = []
             original_outcomes = []
@@ -222,7 +250,14 @@ class WechatPublicAdapter(BasePlatformAdapter):
                     return CollectionResult(result.status, self.platform, items=items, raw_count=len(candidates),
                 metadata={'discovery_candidates': candidates, 'original_outcomes': original_outcomes,
                           'provider': route.backend,
-                          'next_search_url': next_url, 'partial': True, 'original_body_available': bool(items)})
+                          'next_search_url': next_url, 'partial': True, 'original_body_available': bool(items),
+                          **({"request_final_status": CollectionStatus.NEED_VERIFY.value,
+                              "http_status": (result.metadata.get("http_status")
+                                              if type(result.metadata.get("http_status")) is int
+                                              and 100 <= result.metadata.get("http_status") <= 599 else None),
+                              "accepted_count": len(items), "reason": "SOURCE_VERIFICATION_REQUIRED",
+                              "challenge_body_included": False}
+                             if result.status is CollectionStatus.NEED_VERIFY else {})})
             status = CollectionStatus.SUCCESS if items else CollectionStatus.PROVIDER_UNAVAILABLE if candidates else CollectionStatus.NO_NEW_DATA
             return CollectionResult(status, self.platform, items=items, raw_count=len(candidates),
                 metadata={'discovery_candidates': candidates, 'original_outcomes': original_outcomes,

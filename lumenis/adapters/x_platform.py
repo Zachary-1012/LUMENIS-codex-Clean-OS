@@ -31,6 +31,39 @@ from .human_browser import HumanBrowser
 logger = logging.getLogger(__name__)
 
 _X_READONLY_CDP_URL = "http://127.0.0.1:9226"
+_X_FAILURE_REASONS = frozenset({
+    "NOT_CONFIGURED", "SESSION_EXPIRED", "VERIFICATION_REQUIRED", "RATE_LIMITED",
+    "NETWORK_UNAVAILABLE", "PROVIDER_UNAVAILABLE", "NOT_SUPPORTED",
+    "IDENTITY_MISMATCH", "DETAIL_NOT_RETURNED", "UPSTREAM_FAILURE",
+})
+
+
+def _x_failure_code(error, *, phase: str = "page") -> str:
+    """FIX-096: collapse backend failures to a phase-bound allowlisted code."""
+    phase_name = "WORKER" if str(phase).lower() == "worker" else "PAGE"
+    text = str(error or "").casefold()
+    match = re.fullmatch(r"x_(worker|page)_failure:([a-z_]+)", text.strip())
+    if match and match.group(2).upper() in _X_FAILURE_REASONS:
+        return f"X_{match.group(1).upper()}_FAILURE:{match.group(2).upper()}"
+    if any(marker in text for marker in ("not configured", "not_configured", "not registered", "未配置")):
+        reason = "NOT_CONFIGURED"
+    elif any(marker in text for marker in ("not supported", "unsupported", "review required", "不支持")):
+        reason = "NOT_SUPPORTED"
+    elif any(marker in text for marker in ("identity mismatch", "identity_mismatch", "身份不匹配")):
+        reason = "IDENTITY_MISMATCH"
+    elif any(marker in text for marker in ("no verifiable post", "no unique matching target article")):
+        reason = "DETAIL_NOT_RETURNED"
+    elif any(marker in text for marker in ("login", "session", "cookie", "登录", "未登录", "失效")):
+        reason = "SESSION_EXPIRED"
+    elif any(marker in text for marker in ("challenge", "captcha", "verification", "verify", "验证")):
+        reason = "VERIFICATION_REQUIRED"
+    elif any(marker in text for marker in ("rate limit", "rate limited", "too many", "blocked", "封禁", "http 429", " 429", "频控")):
+        reason = "RATE_LIMITED"
+    elif any(marker in text for marker in ("network", "timeout", "connection", "dns", "net::err_", "不可达")):
+        reason = "NETWORK_UNAVAILABLE"
+    else:
+        reason = "UPSTREAM_FAILURE"
+    return f"X_{phase_name}_FAILURE:{reason}"
 
 
 def _configured_browser_worker_url() -> str:
@@ -39,9 +72,9 @@ def _configured_browser_worker_url() -> str:
     enabled = str(os.getenv("X_READONLY_LOCAL_WORKER_ENABLED") or "").strip().lower()
     account = str(os.getenv("X_READONLY_LOCAL_WORKER_ACCOUNT") or "").strip().upper()
     if value != _X_READONLY_CDP_URL:
-        raise RuntimeError("X_READONLY_CDP_URL must be the fixed loopback worker endpoint")
+        raise RuntimeError("X_WORKER_FAILURE:NOT_CONFIGURED")
     if enabled not in {"1", "true", "yes"} or account != "X_READONLY":
-        raise RuntimeError("X_READONLY worker requires explicit account opt-in")
+        raise RuntimeError("X_WORKER_FAILURE:NOT_CONFIGURED")
 
     from pathlib import Path
     from .cookie_vault import _current_data_dir
@@ -49,7 +82,7 @@ def _configured_browser_worker_url() -> str:
 
     profile_dir = Path(_current_data_dir()) / "private" / "profiles" / "x-readonly"
     if not cdp_helper.is_cdp_profile_running(9226, str(profile_dir)):
-        raise RuntimeError("X_READONLY worker profile is not bound to the configured loopback port")
+        raise RuntimeError("X_WORKER_FAILURE:NOT_CONFIGURED")
     return _X_READONLY_CDP_URL
 
 
@@ -69,17 +102,19 @@ def _x_page_failure(url: str, _body: str = "", error: str = "", *, title: str = 
     if "/i/flow/login" in route or route.rstrip("/") == "/login" or any(
         marker in page_title for marker in ("log in to x", "sign in to x", "login to x")
     ):
-        return "X login/session required or expired"
+        return "X_PAGE_FAILURE:SESSION_EXPIRED"
     if "/challenge" in route or any(
         marker in page_title for marker in ("captcha challenge", "verify your account", "verification required")
     ):
-        return "X verification challenge detected"
+        return "X_PAGE_FAILURE:VERIFICATION_REQUIRED"
     if any(marker in route for marker in ("/blocked", "/account/access")) or any(
         marker in page_title for marker in ("account suspended", "account locked", "temporarily blocked")
     ):
-        return "X access blocked or rate limited"
+        return "X_PAGE_FAILURE:RATE_LIMITED"
     if any(value in browser_error for value in ("net::err_", "timed out", "timeout", "connection", "dns", "network", "无法访问此网站")):
-        return "X network error"
+        return "X_PAGE_FAILURE:NETWORK_UNAVAILABLE"
+    if browser_error:
+        return _x_failure_code(browser_error, phase="page")
     return ""
 
 
@@ -183,6 +218,7 @@ class XAdapter(BaseAdapter):
 
         hb = None
         page = None
+        phase = "worker"
         try:
             from urllib.parse import quote
 
@@ -190,11 +226,12 @@ class XAdapter(BaseAdapter):
             hb.connect()
             inject_into_context(hb._context, "x")
             page = hb.new_page(stealth=False)
+            phase = "page"
             url = f"https://x.com/search?q={quote(keyword.strip())}&src=typed_query"
             try:
                 page.goto(url, wait_until="domcontentloaded", timeout=30000)
             except Exception as exc:
-                message = _x_page_failure("", "", str(exc)) or f"X network error: {exc}"
+                message = _x_page_failure("", "", str(exc)) or _x_failure_code(exc, phase="page")
                 return attach_continuation_metadata(
                     AdapterResult(success=False, error=message),
                 )
@@ -275,11 +312,11 @@ class XAdapter(BaseAdapter):
             )
 
         except Exception as e:
-            logger.exception("X 浏览器采集异常")
-            failure = _x_page_failure("", "", str(e))
+            failure = _x_failure_code(e, phase=phase)
+            logger.warning("X browser collection failed phase=%s code=%s", phase, failure)
             return attach_continuation_metadata(
                 AdapterResult(success=False, notes=notes,
-                              error=failure or f"X collection error: {e}",
+                              error=failure,
                               raw_count=len(visited_tweet_ids)),
             )
         finally:
@@ -605,11 +642,13 @@ class XAdapter(BaseAdapter):
     def _open_readonly_page(self, url: str, wait_seconds: float):
         worker = None
         page = None
+        phase = "worker"
         try:
             worker = _new_browser_worker()
             worker.connect()
             inject_into_context(worker._context, "x")
             page = worker.new_page(stealth=False)
+            phase = "page"
             page.goto(url, wait_until="domcontentloaded", timeout=30000)
             worker.pause(wait_seconds, wait_seconds)
             page_title = page.title()
@@ -618,7 +657,7 @@ class XAdapter(BaseAdapter):
         except Exception as exc:
             self._close_worker_page(worker, page)
             failure = _x_page_failure(str(getattr(page, "url", "") or ""), "", str(exc))
-            return None, None, failure or "X network error"
+            return None, None, failure or _x_failure_code(exc, phase=phase)
 
     def detail(self, tweet_id: str) -> AdapterResult:
         """Read a post through the explicitly configured X read-only worker."""
@@ -663,7 +702,7 @@ class XAdapter(BaseAdapter):
             return AdapterResult(success=False, error="X detail identity mismatch: target article was not unique by timestamp permalink ID")
         except Exception as exc:
             failure = _x_page_failure(str(getattr(page, "url", "") or ""), "", str(exc))
-            return AdapterResult(success=False, error=failure or "X detail collection failed")
+            return AdapterResult(success=False, error=failure or _x_failure_code(exc, phase="page"))
         finally:
             self._close_worker_page(worker, page)
 
@@ -701,6 +740,6 @@ class XAdapter(BaseAdapter):
             )], raw_count=1)
         except Exception as exc:
             failure = _x_page_failure(str(getattr(page, "url", "") or ""), "", str(exc))
-            return AdapterResult(success=False, error=failure or "X creator collection failed")
+            return AdapterResult(success=False, error=failure or _x_failure_code(exc, phase="page"))
         finally:
             self._close_worker_page(worker, page)
