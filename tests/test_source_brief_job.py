@@ -434,6 +434,7 @@ def test_retry_recovers_evaluation_after_artifact_was_already_persisted(job_db, 
     ("evidence_ref", "foreign_artifact"),
     ("metadata", "{}"),
     ("evaluated_at", ""),
+    ("evaluated_at", "not-a-time"),
 ])
 def test_reopen_omits_non_equivalent_evaluation_and_keeps_it_pending(job_db, field, value):
     with sqlite3.connect(job_db) as conn:
@@ -448,6 +449,24 @@ def test_reopen_omits_non_equivalent_evaluation_and_keeps_it_pending(job_db, fie
     assert reopened["evaluation"]["state"] == "pending_recovery"
     assert all(record["metric_name"] != "report_artifact_integrity"
                for record in reopened["evaluation"]["records"])
+
+
+def test_explicit_resume_keeps_invalid_timestamp_pending(job_db):
+    job_id = "job-brief-resume-invalid-time"
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        result = _request(conn, job_id=job_id)
+    evaluation_id = jobs._evaluation_ids(job_id)["report_artifact_integrity"]
+    with sqlite3.connect(job_db) as conn:
+        conn.execute("UPDATE evaluation_records SET evaluated_at='not-a-time' WHERE evaluation_id=?",
+                     (evaluation_id,))
+        conn.commit()
+        conn.row_factory = sqlite3.Row
+        resumed = _request(conn, job_id=job_id)
+
+    assert resumed["evaluation"]["state"] == "pending_recovery"
+    assert len(resumed["evaluation"]["records"]) == 2
+    assert result["evaluation"]["state"] == "recorded"
 
 
 def test_missing_evaluation_readback_stays_pending_until_explicit_recovery(job_db):

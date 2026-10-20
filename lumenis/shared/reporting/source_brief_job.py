@@ -303,8 +303,16 @@ def _validate_evaluation_record(record: dict[str, Any], expected: dict[str, Any]
         if record.get(field) != expected[field]:
             raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
     evaluated_at = record.get("evaluated_at")
-    if not isinstance(evaluated_at, str) or not evaluated_at.strip():
+    if (not isinstance(evaluated_at, str) or not evaluated_at
+            or evaluated_at != evaluated_at.strip() or "T" not in evaluated_at):
         raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED")
+    try:
+        # EvaluationRecord's existing writer emits ISO-8601 with a ``T``
+        # separator. It currently uses a naive local timestamp, so validate
+        # parseability without inventing a timezone for historical records.
+        datetime.fromisoformat(evaluated_at)
+    except ValueError:
+        raise RuntimeError("SOURCE_BRIEF_EVALUATION_REOPEN_FAILED") from None
     try:
         metadata = record.get("metadata")
         if isinstance(metadata, str):
@@ -368,6 +376,15 @@ def _record_evaluations(verified: dict[str, Any], *, connection=None) -> list[di
     return _read_verified_evaluations(verified, connection=connection)
 
 
+def _evaluation_state(job_id: str, records: list[dict[str, Any]]) -> str:
+    expected = set(_evaluation_ids(job_id).values())
+    present = {
+        record.get("evaluation_id") for record in records
+        if isinstance(record, dict)
+    }
+    return "recorded" if expected <= present else "pending_recovery"
+
+
 def _quality_reviews(verified: dict[str, Any]) -> dict[str, Any]:
     row, snapshot = verified["row"], verified["snapshot"]
     evidence_refs = {f"daily_reports:{row['report_id']}:{row['artifact_hash']}"}
@@ -421,8 +438,11 @@ def _response(verified: dict[str, Any], evaluations: list[dict[str, Any]]) -> di
         "requested_source_ids": snapshot.get("requested_source_ids"),
         "revision": snapshot.get("revision"),
         "operator_review": read_operator_reviews(verified),
-        "evaluation": {"state": "recorded", "records": evaluations,
-                       "quality_review": _quality_reviews(verified)},
+        "evaluation": {
+            "state": _evaluation_state(snapshot["job_id"], evaluations),
+            "records": evaluations,
+            "quality_review": _quality_reviews(verified),
+        },
         "requested_image_source_ref": snapshot.get("requested_image_source_ref"),
         "retry_of_job_id": snapshot.get("retry_of_job_id"),
         "review_status": "HUMAN_PENDING",
@@ -817,18 +837,20 @@ def list_source_brief_jobs(*, actor, scope: dict[str, Any], limit: int = 30, cur
             job = get_source_brief_job(row["report_id"], actor_id=actor_ref,
                                       expected_scope=stored_scope, actor=actor)
             artifact = job["artifact_outcome"]
-            evaluations = get_artifact_evaluations(
-                job_id=job["job_id"], artifact_hash=artifact["artifact_hash"],
-                scope=stored_scope, actor_id=actor_ref,
-                evidence_refs={f"daily_reports:{job['job_id']}:{artifact['artifact_hash']}"},
-            )
             expected = set(_evaluation_ids(job["job_id"]).values())
-            matching = {item["evaluation_id"] for item in evaluations}
+            # Reuse the report owner's exact validated checks. A second broad
+            # artifact query could re-attach a stable ID whose metric fields or
+            # timestamp no longer match the persisted report contract.
+            job_evaluation = job["evaluation"]
+            checks = job_evaluation["records"]
+            matching = {item["evaluation_id"] for item in checks}
+            quality_review = job_evaluation.get("quality_review") or {}
+            evaluations = checks + list(quality_review.get("records") or [])
             # Counts are current artifact-bound evaluation checks, never report
             # quality, market effect, or a global evaluation-table population.
             counts = dict.fromkeys(("pass", "warn", "fail", "unknown"), 0)
-            for evaluation in evaluations:
-                status = evaluation.get("status")
+            for evaluation_record in evaluations:
+                status = evaluation_record.get("status")
                 counts[status if status in counts else "unknown"] += 1
             missing_evaluations = len(expected - matching)
             counts["unknown"] += missing_evaluations
@@ -841,7 +863,7 @@ def list_source_brief_jobs(*, actor, scope: dict[str, Any], limit: int = 30, cur
             items.append({"resource_type": "source_brief_job", "job_id": job["job_id"],
                 "artifact_hash": artifact["artifact_hash"], "revision": job.get("revision"),
                 "source_count": artifact["source_count"], "review_status": job["review_status"],
-                "evaluation_state": "recorded" if expected <= matching else "partial",
+                "evaluation_state": job_evaluation["state"],
                 "evaluation_counts": counts, "missing_evaluation_count": missing_evaluations,
                 "evaluation_count_unit": "artifact_bound_check",
                 "evaluations": [{key: item.get(key) for key in
