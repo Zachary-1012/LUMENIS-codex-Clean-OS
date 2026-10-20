@@ -4,6 +4,17 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-027 — Git diagnostics preserve unknown and failure
+
+`lumenis_agg_api.py` reports Git state only from successful command output, does
+not infer a clean tree from failed status reads, and sanitizes remote diagnostics
+without stripping `@` from ordinary local paths. Regressions use a temporary local
+Git repository and cover failures, URL/SCP and remote-helper credentials, opaque
+helper fail-closed behavior, sensitive query removal, remote sanitization errors,
+and `/srv/git/team@archive/repo.git`. Exact-head offline
+command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_runtime_api_diagnostics.py` — **21 passed**. `python -m py_compile lumenis_agg_api.py tests/test_runtime_api_diagnostics.py`, governance machine contract, AI-native constitution and `git diff --check` passed. Temporary local Git fixtures only; no real remote repository or production system was accessed.
+
 ## 2026-10-20 Issue #17 FIX-025 — official-name evidence and exact scope
 
 `subject_registry.py` uses the canonical Evidence bootstrap for unversioned
