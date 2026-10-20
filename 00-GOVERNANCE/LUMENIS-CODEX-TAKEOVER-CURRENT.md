@@ -4,6 +4,11 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-036 / FIX-037 — report only observed collection health
+
+The existing `system_health_api.py` no longer infers current scheduler/login state, historical schedule slots or adaptive health percentages from notes or defaults. Run/failure/unknown counts come from observed run records, and notes remain a distinct count. `tests/test_hk_only_collection_policy.py` passed **35 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No real login probe, collection or production database was used.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,

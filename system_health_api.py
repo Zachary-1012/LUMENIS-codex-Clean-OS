@@ -57,11 +57,20 @@ def get_production_collection_contract():
         status = bridge.get_account_status(account=bridge.DEFAULT_COLLECTION_ACCOUNT)
         worker_available = status.get('worker_available') is True
         policy = status.get('collection_policy') or {}
+        session_state = status.get('session_state')
+        if session_state is None and isinstance(status.get('accounts'), list):
+            active_account = status.get('active_account')
+            for account_status in status['accounts']:
+                if (isinstance(account_status, dict)
+                        and account_status.get('account') == active_account):
+                    session_state = account_status.get('session_state')
+                    break
         return {
             'account': status.get('active_account'),
             'region': policy.get('region'),
             'worker_available': worker_available,
             'cookie_configured': status.get('cookie_configured'),
+            'session_state': session_state,
             'worker_state': ('REGISTERED_BACKGROUND' if worker_available
                              else 'UNAVAILABLE_OR_UNVERIFIED'),
         }
@@ -71,6 +80,7 @@ def get_production_collection_contract():
             'region': None,
             'worker_available': False,
             'cookie_configured': None,
+            'session_state': None,
             'worker_state': 'UNAVAILABLE_OR_UNVERIFIED',
         }
 
@@ -152,33 +162,43 @@ def check_collector():
 
 
 def check_login_status():
-    """检查登录态状态"""
+    """Report verified current session state separately from recent history."""
+    collection = get_production_collection_contract()
+    session_state = str(collection.get('session_state') or '').strip().lower()
+    session_verified = session_state == 'real_session_valid'
+
+    recent_7d = None
+    history_error = None
+    conn = None
     try:
-        collection = get_production_collection_contract()
-        # 检查Cookie是否有效（通过最近采集是否成功判断）
         db_path = get_db_path()
-        if not os.path.exists(db_path):
-            return {'status': 'error', 'message': '数据库不存在'}
-        
-        conn = DatabaseRepository(db_path).connect()
-        c = conn.cursor()
-        c.execute("SELECT COUNT(*) FROM notes WHERE collected_at >= datetime('now', '-7 days', 'localtime')")
-        recent_7d = c.fetchone()[0]
-        conn.close()
-        
-        status = 'ok' if recent_7d > 0 else 'warning'
-        if recent_7d == 0:
-            status = 'error'
-        
-        return {
-            'status': status,
-            'recent_7d_collects': recent_7d,
-            'cookie_file_exists': collection.get('cookie_configured'),
-            'collection_account': collection['account'],
-            'collection_region': collection['region'],
-        }
+        if not db_path or not os.path.exists(db_path):
+            history_error = '数据库不存在，采集历史不可用'
+        else:
+            conn = DatabaseRepository(db_path).connect()
+            c = conn.cursor()
+            c.execute("SELECT COUNT(*) FROM notes WHERE collected_at >= datetime('now', '-7 days', 'localtime')")
+            recent_7d = c.fetchone()[0]
     except Exception as e:
-        return {'status': 'error', 'message': str(e)}
+        history_error = f'采集历史读取失败: {type(e).__name__}'
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception as e:
+                if history_error is None:
+                    history_error = f'采集历史读取失败: {type(e).__name__}'
+
+    result = {
+        'status': 'ok' if session_verified else 'unknown',
+        'recent_7d_collects': recent_7d,
+        'cookie_file_exists': collection.get('cookie_configured'),
+        'collection_account': collection.get('account'),
+        'collection_region': collection.get('region'),
+    }
+    if history_error:
+        result['message'] = history_error
+    return result
 
 
 def check_dedup_module():
@@ -342,106 +362,156 @@ def check_email_push():
 def check_scheduler():
     """检查定时任务状态"""
     try:
-        # 检查调度器配置（系统内置调度器，不依赖smart_scheduler.py文件）
-        # 系统启动时会初始化智能调度器，自动采集时间点已配置
-        auto_hours = [8, 10, 12, 14, 16, 18, 20, 22, 23]
-        
-        # 检查系统启动日志，确认调度器已启动
-        startup_log = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'system_startup.log')
-        scheduler_started = False
-        if os.path.exists(startup_log):
-            with open(startup_log, 'r', encoding='utf-8', errors='replace') as f:
-                content = f.read()
-                scheduler_started = '调度器' in content or 'Scheduler' in content or 'scheduler' in content
-        
-        # 系统内置调度器始终运行，状态为ok
-        status = 'ok'
-        detail = f"智能调度器运行中，每日{len(auto_hours)}次自动采集: {','.join(map(str, auto_hours))}点"
-        
+        import threading
+
+        # A startup log is historical evidence only. Observe the scheduler
+        # thread owned by the current process instead of assuming it is active.
+        scheduler_running = any(
+            thread.name == 'scheduler' and thread.is_alive()
+            for thread in threading.enumerate()
+        )
+        status = 'ok' if scheduler_running else 'unknown'
+        detail = ('当前进程的 scheduler 线程正在运行'
+                  if scheduler_running else '当前进程未观测到 scheduler 线程，状态未知')
+
         return {
             'status': status,
             'detail': detail,
-            'scheduler_started': scheduler_started,
-            'auto_collect_hours': auto_hours,
-            'daily_auto_runs': len(auto_hours)
+            'scheduler_started': True if scheduler_running else None,
+            'auto_collect_hours': None,
+            'daily_auto_runs': None,
         }
     except Exception as e:
-        return {'status': 'error', 'detail': str(e), 'message': str(e)}
+        return {
+            'status': 'error',
+            'detail': f'调度器状态检查失败: {type(e).__name__}',
+            'message': type(e).__name__,
+            'scheduler_started': None,
+            'auto_collect_hours': None,
+            'daily_auto_runs': None,
+        }
 
 
 def get_adaptive_status():
     """获取自适应状态"""
+    adaptive_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'network_adaptive.py')
+    status_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'adaptive_status.json')
+    result = {
+        'adaptive_engine_exists': os.path.exists(adaptive_file),
+        'current_strategy': None,
+        'recent_success_rate': None,
+        'current_delay_seconds': None,
+        'risk_level': None,
+    }
     try:
-        # 检查网络自适应模块
-        adaptive_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'network_adaptive.py')
-        adaptive_exists = os.path.exists(adaptive_file)
-        
-        # 读取自适应状态
-        status_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'adaptive_status.json')
-        current_strategy = 'normal'
-        recent_success_rate = 100
-        current_delay = 2
-        risk_level = 0
-        
         if os.path.exists(status_file):
             with open(status_file, 'r', encoding='utf-8') as f:
                 status = json.load(f)
-            current_strategy = status.get('current_strategy', 'normal')
-            recent_success_rate = status.get('recent_success_rate', 100)
-            current_delay = status.get('current_delay_seconds', 2)
-            risk_level = status.get('risk_level', 0)
-        
-        return {
-            'adaptive_engine_exists': adaptive_exists,
-            'current_strategy': current_strategy,
-            'recent_success_rate': recent_success_rate,
-            'current_delay_seconds': current_delay,
-            'risk_level': risk_level
-        }
+            if isinstance(status, dict):
+                result.update({
+                    'current_strategy': status.get('current_strategy'),
+                    'recent_success_rate': status.get('recent_success_rate'),
+                    'current_delay_seconds': status.get('current_delay_seconds'),
+                    'risk_level': status.get('risk_level'),
+                })
+            else:
+                result['error'] = 'InvalidStatusPayload'
+        return result
     except Exception as e:
-        return {'error': str(e)}
+        result['error'] = type(e).__name__
+        return result
 
 
 def get_collection_schedule():
     """获取采集调度信息"""
+    result = {
+        'last_collect': None,
+        'next_collect': None,
+        'today_collected_notes': None,
+        'today_runs': None,
+        'max_daily_runs': 12,
+        'last_24h_failures': None,
+        'last_24h_unknown_runs': None,
+    }
+    conn = None
     try:
         db_path = get_db_path()
-        last_collect = None
-        today_runs = 0
-        
-        if os.path.exists(db_path):
+        if db_path and os.path.exists(db_path):
             conn = DatabaseRepository(db_path).connect()
             c = conn.cursor()
-            c.execute("SELECT MAX(collected_at) FROM notes")
-            last_collect = c.fetchone()[0]
-            c.execute("SELECT COUNT(*) FROM notes WHERE date(collected_at)=date('now','localtime')")
-            today_runs = c.fetchone()[0]
-            conn.close()
-        
-        # 计算下一次采集时间
-        now = datetime.now()
-        auto_hours = [8, 10, 12, 14, 16, 18, 20, 22, 23]
-        next_collect = None
-        for h in auto_hours:
-            if h > now.hour:
-                next_collect = now.replace(hour=h, minute=0, second=0, microsecond=0)
-                break
-        if next_collect is None:
-            next_collect = (now + timedelta(days=1)).replace(hour=auto_hours[0], minute=0, second=0, microsecond=0)
-        
-        # 最近24h失败次数
-        last_24h_failures = 0
-        
-        return {
-            'last_collect': last_collect,
-            'next_collect': next_collect.strftime('%Y-%m-%d %H:%M:%S'),
-            'today_collected_notes': today_runs,
-            'today_runs': today_runs,
-            'max_daily_runs': 12,
-            'last_24h_failures': last_24h_failures
-        }
+            tables = {
+                row[0] for row in c.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+            if 'notes' in tables:
+                c.execute("SELECT MAX(collected_at) FROM notes")
+                result['last_collect'] = c.fetchone()[0]
+                c.execute(
+                    "SELECT COUNT(*) FROM notes "
+                    "WHERE date(collected_at)=date('now','localtime')"
+                )
+                result['today_collected_notes'] = c.fetchone()[0]
+
+            if 'collection_logs' in tables:
+                columns = {
+                    row[1] for row in c.execute(
+                        "PRAGMA table_info(collection_logs)"
+                    ).fetchall()
+                }
+                timestamp_columns = [
+                    column for column in ('finished_at', 'started_at')
+                    if column in columns
+                ]
+                if 'status' in columns and timestamp_columns:
+                    timestamp_expr = 'COALESCE(' + ','.join(
+                        f"NULLIF({column}, '')" for column in timestamp_columns
+                    ) + ')'
+                    c.execute(
+                        "SELECT UPPER(TRIM(COALESCE(status, ''))), COUNT(*) "
+                        f"FROM collection_logs WHERE {timestamp_expr} "
+                        "IS NOT NULL AND date(" + timestamp_expr + ")="
+                        "date('now','localtime') GROUP BY 1"
+                    )
+                    today_status_counts = {
+                        str(status or ''): count for status, count in c.fetchall()
+                    }
+                    result['today_runs'] = sum(today_status_counts.values())
+
+                    c.execute(
+                        "SELECT UPPER(TRIM(COALESCE(status, ''))), COUNT(*) "
+                        f"FROM collection_logs WHERE {timestamp_expr} "
+                        f"IS NOT NULL AND {timestamp_expr} >= "
+                        "datetime('now','-24 hours','localtime') GROUP BY 1"
+                    )
+                    recent_status_counts = {
+                        str(status or ''): count for status, count in c.fetchall()
+                    }
+                    known_failures = {
+                        'AUTH_FAILED', 'AUTH_REQUIRED', 'BLOCKED', 'CAPTCHA',
+                        'ERROR', 'FAILED', 'FAILURE', 'NETWORK_ERROR',
+                        'PARTIAL_BLOCKED',
+                    }
+                    non_failures = {'EMPTY', 'SUCCESS'}
+                    result['last_24h_failures'] = sum(
+                        count for status, count in recent_status_counts.items()
+                        if status in known_failures
+                    )
+                    result['last_24h_unknown_runs'] = sum(
+                        count for status, count in recent_status_counts.items()
+                        if status not in known_failures | non_failures
+                    )
+
+        return result
     except Exception as e:
-        return {'error': str(e)}
+        result['error'] = type(e).__name__
+        return result
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 def get_alerts():
@@ -465,7 +535,7 @@ def get_alerts():
         
         login_status = check_login_status()
         if login_status['status'] == 'error':
-            alerts.append({'level': 'warning', 'module': 'login', 'message': '最近7天无采集，登录态可能失效', 'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+            alerts.append({'level': 'warning', 'module': 'login', 'message': '当前登录态检查失败，状态未核验', 'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
             active_alerts += 1
             need_manual_intervention += 1
         
@@ -501,7 +571,7 @@ def system_health():
         statuses = [m.get('status', 'unknown') for m in modules.values()]
         if 'error' in statuses:
             overall_status = 'error'
-        elif 'warning' in statuses:
+        elif 'warning' in statuses or 'unknown' in statuses:
             overall_status = 'warning'
         else:
             overall_status = 'ok'
@@ -510,7 +580,8 @@ def system_health():
         status_counts = {
             'ok': statuses.count('ok'),
             'warning': statuses.count('warning'),
-            'error': statuses.count('error')
+            'error': statuses.count('error'),
+            'unknown': statuses.count('unknown'),
         }
         
         return jsonify({
@@ -595,7 +666,7 @@ def system_health_summary():
         need_manual = alerts_info.get('need_manual_intervention', 0)
         if 'error' in module_statuses or need_manual >= 1:
             overall = 'critical'
-        elif 'warning' in module_statuses:
+        elif 'warning' in module_statuses or 'unknown' in module_statuses:
             overall = 'warning'
         else:
             overall = 'ok'
@@ -635,8 +706,10 @@ def system_health_summary():
                 hints.append(f"采集：今日已跑 {collector_status.get('today_runs',0)}/12，剩余 {collector_status.get('remaining_runs',0)}")
         if xhs_light == 'warning':
             hints.append("小红书平台：最近24小时 0 条新笔记 → 可能风控拦截 / 验证码 / IP限制。若持续超过 6 小时，请前往 Auth Recovery Center 发起恢复任务。")
-        if auth_light == 'error':
-            hints.append("登录态：最近 7 天无采集 → 登录态大概率已失效 → 扫码重登")
+        if auth_light == 'unknown':
+            hints.append("登录态：当前会话未核验；最近 7 天采集仅为历史记录，不能证明当前登录。")
+        elif auth_light == 'error':
+            hints.append("登录态：检查失败，当前状态未核验。")
         if alerts_info.get('latest_alert'):
             la = alerts_info['latest_alert']
             hints.append(f"最近告警 [{la['level']}] {la['module']}: {la['message']}")
