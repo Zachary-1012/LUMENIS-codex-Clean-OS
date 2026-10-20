@@ -4,6 +4,18 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-028 — count newly synced resources only
+
+`resource_library.py` reports the count of resources newly added by the current
+sync operation, rather than the full retained library size. Existing resources
+and normal sync behavior remain intact. Regression: `tests/test_resource_library_sync.py`.
+Exact-head offline command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -q tests/test_resource_library_sync.py` — **1 passed**.
+`python -m py_compile resource_library.py tests/test_resource_library_sync.py` and
+`git diff --check` passed. This focused result does not claim a full library or
+product acceptance run.
+
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,
