@@ -23,6 +23,9 @@ Permission audit ID and caller in the signed Evidence inputs. An allowed result
 without a non-empty audit ID is refused before the first registry write. The
 isolated regression covers both the signed audit linkage and fail-closed
 missing-receipt behavior; no approval token is copied into Evidence.
+Credential query names are normalized across separator/case variants and reject
+generic secret fields such as `secret`, `client_secret`, and `private_key`, while
+ordinary campaign/source query names remain available to the provenance path.
 
 The exact-head offline command for those four modules passed **21 tests** with no
 daemon-thread leak. The test-only E2E fixture installs a synthetic HMAC key in
@@ -36,8 +39,8 @@ daemon-thread leak. The changed Python files compile and `git diff --check`
 passes. All database writes used per-test temporary databases; no production DB
 or external source was used.
 
-After the audit-linkage follow-up, the focused official-name, registry and
-synthetic E2E command passed **38 tests**. `py_compile` and `git diff --check`
+After the audit-linkage and query-secret follow-ups, the focused official-name,
+registry and synthetic E2E command passed **42 tests**. `py_compile` and `git diff --check`
 passed on the follow-up files; no production database or external source was
 used.
 

@@ -44,6 +44,16 @@ SUBJECT_TYPES: Dict[str, str] = {
 
 TABLE_NAME = "lumenis_subject_registry"
 OFFICIAL_NAME_SOURCE_FEATURE_ID = "SUBJECT_OFFICIAL_NAME_SOURCE"
+_SENSITIVE_SOURCE_QUERY_TERMS = {
+    "auth", "authorization", "bearer", "cookie", "credential", "credentials",
+    "key", "password", "passwd", "pwd", "secret", "session", "sign",
+    "signature", "sig", "token",
+}
+_SENSITIVE_SOURCE_QUERY_KEYS = {
+    "access_key", "access_token", "api_key", "apikey", "appkey", "aws_access_key",
+    "aws_secret_key", "client_id", "client_secret", "oauth_token", "private_key",
+    "refresh_token", "secret_key", "session_id",
+}
 
 
 class SubjectValidationError(ValueError):
@@ -418,16 +428,13 @@ def record_official_name(
         password = parts.password
     except ValueError as exc:
         raise SubjectValidationError("source_url 格式无效") from exc
-    sensitive_query_keys = {
-        "key", "api_key", "apikey", "access_key", "appkey", "token",
-        "auth", "authorization", "cookie", "session", "session_id",
-        "password", "signature", "sign", "sig",
-    }
     if (parts.scheme.lower() not in {"http", "https"} or not hostname
             or username is not None or password is not None):
         raise SubjectValidationError("source_url 不得包含凭证或无效主机名")
     if any(
-        key.lower() in sensitive_query_keys or key.lower().endswith("_token")
+        (normalized_key := re.sub(r"[^a-z0-9]+", "_", key.casefold()).strip("_"))
+        in _SENSITIVE_SOURCE_QUERY_KEYS
+        or bool(set(normalized_key.split("_")) & _SENSITIVE_SOURCE_QUERY_TERMS)
         for key, _ in parse_qsl(parts.query, keep_blank_values=True)
     ):
         raise SubjectValidationError("source_url 不得包含凭证查询参数")

@@ -162,6 +162,10 @@ def test_requires_official_source_url(reg, url):
     "https://official.example/brand?token=secret",
     "https://official.example/brand?API_KEY=secret",
     "https://official.example/brand?refresh_token=secret",
+    "https://official.example/brand?client_secret=private-value",
+    "https://official.example/brand?secret=private-value",
+    "https://official.example/brand?private_key=private-value",
+    "https://official.example/brand?AWS-ACCESS-KEY=private-value",
     "https://official.example/brand#private-fragment",
 ])
 def test_rejects_credential_bearing_source_url(reg, url):
