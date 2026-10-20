@@ -219,10 +219,10 @@ def test_unscoped_success_invalidates_prior_scoped_cache_and_live_success_recove
     assert [note.content for note in recovered.notes] == ['fresh data']
 
 
-def test_registry_forwards_complete_cache_context_to_existing_adapter():
+def test_registry_forwards_complete_cache_context_to_existing_adapter(monkeypatch):
     adapter = _QueryAdapter()
     registry = AdapterRegistry()
-    registry._adapters = {'query-test': adapter}
+    monkeypatch.setattr(registry, '_adapters', {'query-test': adapter})
 
     live = registry.search_all(
         'query-a', 20, ['query-test'], cache_context=_CACHE_CONTEXT,
