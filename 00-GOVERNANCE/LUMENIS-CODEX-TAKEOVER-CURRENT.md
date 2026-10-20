@@ -8,6 +8,45 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `topic_note_detail_backfill.py` distinguishes failed, empty and available fields, merges only nonempty verified values into the exact row, and derives quality from the merged stored detail. Failed extraction cannot erase saved content/media/comments; oversized JSON is rejected intact and commit ownership remains with its caller. Supplied verified JSON fields now bypass parsing corrupt legacy values; unchanged verified payloads still recalculate stale quality, while partial merges preserve the prior aggregate capture timestamp. `tests/test_topic_note_detail_backfill.py` passed **9 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use an in-memory database and synthetic pages; no CDP, live collection or production DB was used.
 
+## 2026-10-20 Issue #17 FIX-058 / FIX-060 — derived memory TTL and forget
+
+In the existing `agent_memory/base.py` owner, expired records are filtered
+before the caller limit and use one query-time clock value (FIX-058 E04-TTL).
+The existing derived-memory writer rejects a delayed implicit same-task/key
+write after the forgotten tombstone, rather than reviving that record
+(FIX-060 E04-FORGET). A user correction can intentionally restore a forgotten
+key only by matching the tombstone's current revision; stale revisions conflict.
+
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/4N-meRHHaGHjU5wZ/lib/python3.12/site-packages python -m pytest -q tests/agent_memory/test_working_memory.py`
+— **20 passed**, with no background-thread leak. The isolated FIX-060 SQLite
+regression confirmed the forgotten revision/tombstone rejects the stale write
+and remains unreadable after reopen. `compileall` and `git diff --check` passed.
+The full API/Agent regression module, including the FIX-058 TTL case, then passed
+with the existing offline `feedparser` cache:
+`PYTHONPATH=/tmp/lumenis-uv-cache/archive-v0/-QTsH0Xz_HA1q_rC/lib/python3.12/site-packages python -m pytest -o addopts='' -q tests/test_scoped_derived_memory.py`
+— **12 passed in 12.58s**, with no background-thread leak. No package was
+fetched or installed. Wider derived-dependency invalidation remains OPEN for
+FIX-060. FIX-059 still lacks a verified Agent retrieval/fusion caller; FIX-061
+and FIX-084–088 remain OPEN because their Shared Learning files have no
+available exact write reservation.
+No W6 or production database was modified; runtime/product acceptance remains
+NOT_VERIFIED.
+
+Review follow-up at the PR branch head: `agent_memory/base.py` now preserves the
+existing `_query(filters, limit)` subclass call signature while passing the
+same TTL clock through a context-local value to the base implementation.
+`LearningMemory` in the separate Shared Learning owner therefore keeps its
+existing override unchanged. The prior review reproduction
+`TestLearningMemory.test_positive_negative_samples` and a regression for the
+legacy override plus single-clock TTL ordering pass (**2 passed in 0.21s**).
+The broader combined run of `tests/agent_memory/test_learning_memory.py`,
+`tests/agent_memory/test_working_memory.py` and
+`tests/test_scoped_derived_memory.py` passed **52 tests in 13.39s**, with no
+background-thread leak. A follow-up exact API regression verifies stale
+revision rejection and explicit restoration at the current forgotten revision;
+the same combined command now passes **53 tests in 14.24s**, with no
+background-thread leak.
+
 ## 2026-10-20 Issue #17 FIX-026 — incomplete source availability stays unknown
 
 `data_query_api.py` keeps source counts/availability unknown when a source result
