@@ -8,6 +8,10 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 The existing `xhs_cookie_bridge.py` now applies the first BLOCKED/CAPTCHA/AUTH_FAILED pacing reduction immediately before continuing to another keyword, while suppressing a second task-summary report so one task still creates one risk event. `EMPTY` counts as a valid response in both the existing `network_adaptive` and `adaptive_engine` feedback paths. Regressions assert that the next search observes reduced pacing, the task records one risk event, and an EMPTY worker reports success with no error. The offline combined command across `tests/test_xhs_network_outcome_reporting.py`, `tests/test_xhs_child_worker_environment.py`, `tests/test_xhs_approved_local_worker_route.py` and `tests/test_xhs_lineage_persistence.py` passed **67 tests** with no thread leak. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Fixtures only; no real collection or account access was performed.
 
+## 2026-10-20 Issue #17 FIX-047 — preserve saved detail during backfill failures
+
+The existing `topic_note_detail_backfill.py` distinguishes failed, empty and available fields, merges only nonempty verified values into the exact row, and derives quality from the merged stored detail. Failed extraction cannot erase saved content/media/comments; oversized JSON is rejected intact and commit ownership remains with its caller. Supplied verified JSON fields now bypass parsing corrupt legacy values; unchanged verified payloads still recalculate stale quality, while partial merges preserve the prior aggregate capture timestamp. `tests/test_topic_note_detail_backfill.py` passed **9 tests**. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. Tests use an in-memory database and synthetic pages; no CDP, live collection or production DB was used.
+
 ## 2026-10-20 Issue #17 FIX-058 / FIX-060 — derived memory TTL and forget
 
 In the existing `agent_memory/base.py` owner, expired records are filtered

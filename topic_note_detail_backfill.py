@@ -51,6 +51,12 @@ def extract_note_detail(page, note_url):
         'media': [],
         'comments_detail': [],
         'detail_captured_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'field_status': {
+            'content': 'FAILED',
+            'media': 'FAILED',
+            'comments_detail': 'FAILED',
+        },
+        'field_errors': {},
     }
     try:
         page.goto(note_url, wait_until='domcontentloaded', timeout=20000)
@@ -81,8 +87,10 @@ def extract_note_detail(page, note_url):
                 return '';
             }""") or ''
             result['content'] = content.strip()[:5000]
+            result['field_status']['content'] = 'AVAILABLE' if result['content'] else 'EMPTY'
         except Exception as e:
-            print(f'    正文提取失败: {e}')
+            result['field_errors']['content'] = type(e).__name__
+            print(f'    正文提取失败: {type(e).__name__}')
 
         # 提取媒体图片
         try:
@@ -97,8 +105,10 @@ def extract_note_detail(page, note_url):
                 return imgs;
             }""") or []
             result['media'] = media
+            result['field_status']['media'] = 'AVAILABLE' if result['media'] else 'EMPTY'
         except Exception as e:
-            print(f'    媒体提取失败: {e}')
+            result['field_errors']['media'] = type(e).__name__
+            print(f'    媒体提取失败: {type(e).__name__}')
 
         # 提取评论（滚动加载前几条）
         try:
@@ -114,40 +124,140 @@ def extract_note_detail(page, note_url):
                 return list;
             }""") or []
             result['comments_detail'] = comments
+            result['field_status']['comments_detail'] = (
+                'AVAILABLE' if result['comments_detail'] else 'EMPTY'
+            )
         except Exception as e:
-            print(f'    评论提取失败: {e}')
+            result['field_errors']['comments_detail'] = type(e).__name__
+            print(f'    评论提取失败: {type(e).__name__}')
 
     except RuntimeError:
         raise
     except Exception as e:
-        print(f'    详情页加载失败: {e}')
+        result['field_errors']['page'] = type(e).__name__
+        print(f'    详情页加载失败: {type(e).__name__}')
 
     return result
 
 
 def update_note_detail(conn, note_id, campaign_key, topic, detail):
-    """更新笔记详情到数据库。"""
-    has_content = bool(detail.get('content'))
-    has_media = bool(detail.get('media'))
-    has_comments = bool(detail.get('comments_detail'))
-    if has_content and has_media and has_comments:
-        eq = 'full'
-    elif has_content or has_media:
-        eq = 'partial'
-    else:
-        eq = 'search_only'
+    """Merge verified non-empty fields without erasing prior detail on failure.
 
-    media_json = json.dumps(detail.get('media', []), ensure_ascii=False)[:50000]
-    comments_json = json.dumps(detail.get('comments_detail', []), ensure_ascii=False)[:50000]
-
-    cur = conn.execute(
-        """UPDATE topic_campaign_notes
-           SET content=?, media_json=?, comments_json=?, evidence_quality=?, detail_captured_at=?
+    This owner is an additive backfill: an empty extraction is not evidence that
+    a previously captured field should be deleted. The caller retains transaction
+    ownership and decides when to commit.
+    """
+    row = conn.execute(
+        """SELECT content, media_json, comments_json, evidence_quality, detail_captured_at
+           FROM topic_campaign_notes
            WHERE note_id=? AND campaign_key=? AND topic=?""",
-        (detail.get('content', ''), media_json, comments_json, eq,
-         detail.get('detail_captured_at', ''), note_id, campaign_key, topic)
+        (note_id, campaign_key, topic),
+    ).fetchone()
+    if row is None:
+        return 0, 'failed'
+
+    columns = ('content', 'media_json', 'comments_json', 'evidence_quality', 'detail_captured_at')
+    existing = dict(zip(columns, row))
+    statuses = detail.get('field_status')
+    updates = {}
+    accepted_fields = set()
+
+    def status_for(field):
+        if isinstance(statuses, dict):
+            return statuses.get(field, 'FAILED')
+        # Keep the former helper call shape usable for non-extractor callers;
+        # only non-empty values are evidence that can be merged.
+        return 'AVAILABLE' if detail.get(field) else 'EMPTY'
+
+    content = detail.get('content')
+    if (status_for('content') == 'AVAILABLE'
+            and isinstance(content, str) and content.strip()):
+        content = content.strip()[:5000]
+        accepted_fields.add('content')
+        if content != (existing['content'] or ''):
+            updates['content'] = content
+
+    field_values = {}
+    for field, column in (('media', 'media_json'), ('comments_detail', 'comments_json')):
+        value = detail.get(field, [])
+        if status_for(field) != 'AVAILABLE' or not isinstance(value, list) or not value:
+            continue
+        encoded = json.dumps(value, ensure_ascii=False)
+        if len(encoded) > 50000:
+            detail.setdefault('field_errors', {})[field] = 'StorageLimitExceeded'
+            continue
+        accepted_fields.add(field)
+        field_values[field] = value
+        old_encoded = existing[column]
+        try:
+            same_value = json.loads(old_encoded or '[]') == value
+        except (TypeError, ValueError):
+            same_value = False
+        if not same_value:
+            updates[column] = encoded
+
+    if not updates:
+        if not accepted_fields:
+            if isinstance(statuses, dict) and all(
+                    statuses.get(field) == 'EMPTY'
+                    for field in ('content', 'media', 'comments_detail')):
+                return 0, 'empty'
+            return 0, 'failed'
+
+    merged_content = updates.get('content', existing['content'])
+    if 'media' in field_values:
+        merged_media = field_values['media']
+        media_known = isinstance(merged_media, list)
+    else:
+        try:
+            merged_media = json.loads(existing['media_json'] or '[]')
+            media_known = isinstance(merged_media, list)
+        except (TypeError, ValueError):
+            merged_media, media_known = [], False
+
+    if 'comments_detail' in field_values:
+        merged_comments = field_values['comments_detail']
+        comments_known = isinstance(merged_comments, list)
+    else:
+        try:
+            merged_comments = json.loads(existing['comments_json'] or '[]')
+            comments_known = isinstance(merged_comments, list)
+        except (TypeError, ValueError):
+            merged_comments, comments_known = [], False
+
+    has_content = isinstance(merged_content, str) and bool(merged_content.strip())
+    has_media = bool(merged_media) if media_known else False
+    has_comments = bool(merged_comments) if comments_known else False
+    if has_content and has_media and has_comments:
+        quality = 'full'
+    elif has_content or has_media:
+        quality = 'partial'
+    else:
+        quality = 'search_only'
+    # If untouched legacy payloads are unreadable, retain their prior quality
+    # instead of downgrading it based on an unknown parse result.
+    if (not media_known or not comments_known) and existing['evidence_quality'] in ('full', 'partial'):
+        quality = existing['evidence_quality']
+    if quality != existing['evidence_quality']:
+        updates['evidence_quality'] = quality
+
+    capture_quality = 'full' if len(accepted_fields) == 3 else 'partial'
+    captured_at = detail.get('detail_captured_at')
+    if (capture_quality == 'full' and isinstance(captured_at, str) and captured_at
+            and captured_at != existing['detail_captured_at']):
+        updates['detail_captured_at'] = captured_at
+
+    if not updates:
+        return 0, 'unchanged'
+
+    assignments = ', '.join(f'{column}=?' for column in updates)
+    params = (*updates.values(), note_id, campaign_key, topic)
+    cur = conn.execute(
+        f"UPDATE topic_campaign_notes SET {assignments} "
+        "WHERE note_id=? AND campaign_key=? AND topic=?",
+        params,
     )
-    return cur.rowcount, eq
+    return cur.rowcount, capture_quality
 
 
 def main():
@@ -205,6 +315,8 @@ def main():
 
     success = 0
     partial = 0
+    unchanged = 0
+    empty = 0
     failed = 0
     stopped_by_captcha = False
 
@@ -229,15 +341,23 @@ def main():
                 detail = extract_note_detail(page, url)
                 updated, eq = update_note_detail(conn, nid, r['campaign_key'], r['topic'], detail)
                 conn.commit()
+                for field, error_type in detail.get('field_errors', {}).items():
+                    print(f'    {field} 未核验: {error_type}；原有字段保留')
                 if eq == 'full':
                     success += 1
                     print(f'    OK full (content={len(detail["content"])}字, media={len(detail["media"])}, comments={len(detail["comments_detail"])})')
                 elif eq == 'partial':
                     partial += 1
                     print(f'    OK partial (content={len(detail["content"])}字, media={len(detail["media"])})')
+                elif eq == 'unchanged':
+                    unchanged += 1
+                    print('    详情已读取，但与已有字段相同；保留原记录')
+                elif eq == 'empty':
+                    empty += 1
+                    print('    本次详情为空；原有字段与质量状态保留')
                 else:
                     failed += 1
-                    print(f'    未获取到详情')
+                    print(f'    未写入新详情 (matched={updated})；原有字段与质量状态保留')
             except RuntimeError as e:
                 if 'DETAIL_CAPTCHA' in str(e):
                     print(f'    [触发验证] 停止补抓，已处理 {i} 条')
@@ -264,7 +384,7 @@ def main():
 
     conn.close()
     print(f'\n===== 补抓完成 =====')
-    print(f'  full: {success}, partial: {partial}, failed: {failed}')
+    print(f'  full: {success}, partial: {partial}, unchanged: {unchanged}, empty: {empty}, failed: {failed}')
     if stopped_by_captcha:
         print('  因触发验证提前停止，请完成验证后继续。')
 
