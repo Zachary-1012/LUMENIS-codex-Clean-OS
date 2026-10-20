@@ -4,6 +4,28 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-055–057 — bounded GitHub source paging
+
+The existing `github_connector.py` now bounds collection paging and response
+size, binds continuation cursors to the request and repository allowlist,
+preserves partial results with explicit incomplete coverage, and distinguishes
+authentication, ordinary permission denial and rate limiting. Redirects are
+checked before bearer credentials can be forwarded. The existing collector
+adapter exposes coverage and safe cursor state; the GitHub Skill/MCP contract
+was corrected to match those paths and boundaries.
+
+Offline regression command:
+`UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --offline --no-project --with pytest --with flask --with requests --with beautifulsoup4 --with feedparser python -m pytest -o addopts='' -q tests/test_github_connector_adapter.py tests/test_github_status_verification.py tests/test_account_skill_execution_scope.py tests/test_lumenis_shared_skills.py`
+- **53 passed in 0.88s** across adapter/status and related account/skill modules; no
+background-thread leak. `py_compile`, governance, constitution, takeover
+governance and `git diff --check` passed. Tests use offline synthetic responses;
+no live GitHub request was made.
+
+Formal task/Evidence/UI wiring, persistent actor/task/source-version-bound
+pagination, OAuth callback/revocation, and actual repository permission remain
+OPEN or NOT_VERIFIED. `account/api.py` remains untouched because the exact
+shared write reservation is unavailable.
+
 ## 2026-10-18 source-adoption validation handoff
 
 Existing CTH/BMP/Shared/SYSTEM Owners now carry the source-level research,
