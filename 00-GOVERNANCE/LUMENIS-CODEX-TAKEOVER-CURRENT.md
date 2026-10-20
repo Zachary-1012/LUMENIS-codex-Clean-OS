@@ -4,6 +4,29 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-20 Issue #17 FIX-036 / FIX-037 — report only observed collection health
+
+The existing `system_health_api.py` no longer infers current scheduler/login state, historical schedule slots or adaptive health percentages from notes or defaults. `today_runs` now reads only task-start records marked as observed in the existing collector stats file; legacy or unverified totals remain unknown. Per-keyword `collection_logs` are exposed as `today_keyword_observations` and keyword failure/unknown observations, never added to task runs. Task-level failure totals stay unknown because the existing task-start ledger has no terminal outcome record. `tests/test_hk_only_collection_policy.py` passed **38 tests**, including one task with 20 keyword observations. Changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No real login probe, collection or production database was used.
+Keyword observation outcomes now use the existing canonical `CollectionStatus` values plus documented legacy status values: failure, degraded (verification/risk/cooldown), successful/no-new-data, and unrecognized states are reported separately. Adaptive status reads `metrics.recent_success_rate` and `current_params.request_delay` from the persisted engine schema; a default 100% without an observation timestamp remains unknown. The focused health suite now passes **40 tests**, including canonical status classification and the persisted nested adaptive schema.
+
+Login state: health projects `xhs_cookie_bridge._current_session_state()`, which is `real_session_valid` only for the same account within a 30-minute TTL and only when `record_real_session_verification(..., authenticated_readback=True)` was called from an authenticated platform readback. Preflight no longer caches a verdict: browser (CDP) reachability plus a cookie-file user ID yields `browser_connected`, never `real_session_valid`. No production caller performs an authenticated readback yet, so login stays `NOT_VERIFIED` (UNKNOWN in health) and that caller remains **OPEN**; health never probes on poll. The verdict is in-memory and is lost on restart, which also yields `NOT_VERIFIED`.
+
+FIX-036/037 rollover follow-up: a prior-day task ledger retains `OBSERVED_TASK_STARTS` only if its stored provenance already carried that marker; an unverified legacy ledger remains `UNKNOWN` across date rollover. The parameterized midnight regression verifies both persisted marker outcomes while confirming that the previous actual run still enforces cooldown. The offline `tests/test_hk_only_collection_policy.py` module passed; changed-source compilation, governance machine contract, AI-native constitution and `git diff --check` passed. No login probe, collection or production database was used.
+
+FIX-037 provenance follow-up: `record_run()` keeps the history `UNKNOWN` when it appends a real start to a same-day ledger that already contains unverified legacy counts, so observed starts cannot retroactively certify estimates. A clean empty ledger still becomes `OBSERVED_TASK_STARTS` on its first recorded start. The regression covers the mixed legacy-plus-new-start case in the same offline health-policy module; no login probe, collection or production database was used.
+
+Review follow-up for Issue #17 findings 4321861771 and 4321861781: the summary
+health endpoint now uses the same validated `OBSERVED_TASK_STARTS` task ledger
+as the detailed endpoint. Unmarked, unknown, malformed or unavailable history
+remains `null` and keeps collector health at warning; only observed task-start
+timestamps produce a count. `recent_success_rate` is returned only when its
+persisted observation timestamp is valid and within the health API's existing
+24-hour observation window; stale or future observations remain unknown. The
+offline `tests/test_hk_only_collection_policy.py` module passed **49 tests**;
+changed-source compilation, governance machine contract, AI-native constitution,
+takeover governance and `git diff --check` passed. Temporary stats files and
+isolated route fixtures only. The authenticated-readback login caller
+remains OPEN; no live probe, collection or production DB was used.
 ## 2026-10-20 Issue #17 FIX-001–003 — BMP scope and source research erratum
 
 FIX-001 updates the existing [BMP README](../lumenis/bmp/README.md) to match
@@ -647,7 +670,7 @@ Exact source regressions are in `tests/test_adapter_resilience.py`: `UV_CACHE_DI
 
 Independent review of exact head `34ecc470e0dc276dd06737044f919c2edc4fe811` found that callers could mutate the live success result and cached notes through shared object references, including nested `raw_data`. The existing cache owner now stores a detached deep snapshot and deep-copies cached notes for every fallback; if snapshot copying is unsupported, cached fallback is unavailable rather than aliased. Regressions mutate the first live result and first fallback, inject `TypeError` during snapshot storage and reads, and verify a fresh live success clears the older cache. The registry-forwarding test now restores the process-wide singleton through `monkeypatch`. FIX-091 integration review found terminal verification errors could be downgraded to cached or custom fallback success; `_fallback_or_fail` now returns the original terminal failure before consulting any fallback. A subsequent breaker review found the open-circuit shortcut replaced the provider error with a generic breaker message. `BaseAdapter` now retains the most recent provider failure in existing adapter state; while an open breaker follows a terminal response, it returns failure with that cause and bypasses both custom and cached fallback. Regressions warm both empty and non-empty same-identity caches, issue five challenges through the configured threshold, verify the sixth call makes no provider request and remains failed, and confirm an explicitly permitted normal request after cooldown recovers. A separate regression confirms repeated ordinary transient errors still use same-identity cached fallback after the breaker opens. The isolated adapter suite passes **30 tests** with `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest python -m pytest -q tests/test_adapter_resilience.py`; changed Python compilation and `git diff --check` pass. This closes only the cache alias, terminal/breaker-state and test-isolation paths; exact updated-head CI/review and all runtime, database, real-source, user and remaining Issue #17 outcomes remain pending/open.
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Database state: `NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`
