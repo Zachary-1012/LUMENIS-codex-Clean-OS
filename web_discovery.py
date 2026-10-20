@@ -6,7 +6,8 @@ normalization used by both API and background analysis paths.
 """
 import os
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from urllib.parse import quote, urlparse
 
 
@@ -85,6 +86,50 @@ def feedback_keywords(items=None):
     return found
 
 
+def _known_publication_datetime(item):
+    """Return a UTC instant only when the source provides a timezone-aware date."""
+    if not isinstance(item, dict):
+        return None
+    state = str(item.get('publication_time_state') or '').strip().upper()
+    if state and state != 'KNOWN':
+        return None
+    for value in (item.get('published_at'), item.get('source_published_at')):
+        if isinstance(value, datetime):
+            parsed = value
+        elif isinstance(value, str) and value.strip():
+            raw = value.strip()
+            try:
+                parsed = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+            except ValueError:
+                try:
+                    parsed = parsedate_to_datetime(raw)
+                except (TypeError, ValueError, OverflowError):
+                    continue
+        else:
+            continue
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            continue
+        try:
+            return parsed.astimezone(timezone.utc)
+        except (OverflowError, ValueError):
+            continue
+    return None
+
+
+def _sort_publication_chronologically(items):
+    """Sort known publication instants newest-first and keep unknowns stable-last."""
+    known = []
+    unknown = []
+    for item in items:
+        published = _known_publication_datetime(item)
+        if published is None:
+            unknown.append(item)
+        else:
+            known.append((published, item))
+    known.sort(key=lambda entry: entry[0], reverse=True)
+    return [entry[1] for entry in known] + unknown
+
+
 # 品牌业态分类
 BRAND_CATEGORIES = {
     '零售品牌': ['奢侈品', '服饰', '美妆', '珠宝', '手表', '电子', '家居', '运动'],
@@ -151,8 +196,8 @@ def discover_brand_industry(brands=None, categories=None, batch=20, offset=0):
             # 搜索失败，跳过
             pass
     
-    # 按时间排序
-    items.sort(key=lambda x: x.get('published_at', ''), reverse=True)
+    # Lexical sorting is wrong when ISO and RFC dates carry different offsets.
+    items = _sort_publication_chronologically(items)
     
     return items, total
 
@@ -190,9 +235,8 @@ def fetch_google_news_rss(query, max_results=5):
             max_bytes=public_source.MAX_RESPONSE_BYTES,
             allowed_host_suffixes=('google.com',),
         )
-        if response.status_code < 200 or response.status_code >= 300:
-            outcome['error_type'] = f'HTTP_{response.status_code}'
-            return outcome
+        outcome['http_status'] = response.status_code
+        outcome.update(public_source.public_source_provenance(response, url))
         if response.content_type not in {
             'application/rss+xml', 'application/xml', 'text/xml',
         }:
@@ -233,13 +277,18 @@ def fetch_google_news_rss(query, max_results=5):
             })
         outcome['ok'] = True
         outcome['items'] = items
-        outcome.update(public_source.public_source_provenance(response, url))
         return outcome
     except ET.ParseError:
         outcome['error_type'] = 'RSS_PARSE_ERROR'
         return outcome
     except Exception as exc:
-        outcome['error_type'] = type(exc).__name__
+        status_code = getattr(exc, 'status_code', None)
+        if (getattr(exc, 'failure_type', None) == 'HTTP_STATUS'
+                and isinstance(status_code, int) and not isinstance(status_code, bool)):
+            outcome['http_status'] = status_code
+            outcome['error_type'] = f'HTTP_{status_code}'
+        else:
+            outcome['error_type'] = type(exc).__name__
         return outcome
 
 

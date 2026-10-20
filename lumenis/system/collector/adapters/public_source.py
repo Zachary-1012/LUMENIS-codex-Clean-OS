@@ -49,6 +49,25 @@ class PublicSourceError(RuntimeError):
     """A public-source request was rejected or could not be read safely."""
 
 
+class PublicSourceHTTPError(PublicSourceError):
+    """A non-success HTTP response rejected by the bounded transport."""
+
+    failure_type = "HTTP_STATUS"
+
+    def __init__(self, status_code: int):
+        self.status_code = int(status_code)
+        super().__init__(f"public source returned HTTP {self.status_code}")
+
+
+def public_source_error_metadata(error: BaseException) -> dict[str, str | int]:
+    """Preserve an observed HTTP status while keeping other failures typed."""
+    status_code = getattr(error, "status_code", None)
+    if (getattr(error, "failure_type", None) == "HTTP_STATUS"
+            and isinstance(status_code, int) and not isinstance(status_code, bool)):
+        return {"error_type": f"HTTP_{status_code}", "http_status": status_code}
+    return {"error_type": type(error).__name__}
+
+
 @dataclass(frozen=True)
 class PublicResponse:
     url: str
@@ -503,7 +522,7 @@ def fetch_public_url(
                         adapter.host_pins = host_pins
                     continue
                 if not 200 <= response.status_code < 300:
-                    raise PublicSourceError(f"public source returned HTTP {response.status_code}")
+                    raise PublicSourceHTTPError(response.status_code)
                 content_length = response.headers.get("Content-Length")
                 if content_length:
                     try:

@@ -9,7 +9,10 @@ from urllib.parse import parse_qs, urlsplit, urlunsplit
 import feedparser
 
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
-from .public_source import PublicResponse, PublicSourceError, fetch_public_url, public_source_provenance
+from .public_source import (
+    PublicResponse, PublicSourceError, fetch_public_url,
+    public_source_error_metadata, public_source_provenance,
+)
 from .registry import register_adapter
 
 
@@ -143,7 +146,10 @@ class AtomAdapter(BasePlatformAdapter):
                 status=CollectionStatus.PROVIDER_UNAVAILABLE,
                 platform=self.platform,
                 message="当前 Atom 订阅暂时无法读取，请稍后重试",
-                metadata={"provider": "feedparser_atom", "source": source_url, "error_type": type(exc).__name__},
+                metadata={
+                    "provider": "feedparser_atom", "source": source_url,
+                    **public_source_error_metadata(exc),
+                },
             )
 
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:

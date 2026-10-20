@@ -41,6 +41,8 @@ class WebRSSAdapter(BasePlatformAdapter):
             "collected_at": collected_at,
             "healthcheck_scope": "public_endpoint_configuration",
         }
+        if outcome.get("http_status") is not None:
+            metadata["http_status"] = outcome["http_status"]
         for field in (
             "requested_source_url", "final_source_url", "redirect_chain",
             "resolution_trace", "source_access_mode", "commercial_license_state",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from io import StringIO
 import json
 import re
 import threading
@@ -11,7 +12,10 @@ from urllib.parse import urljoin, urlsplit
 from bs4 import BeautifulSoup
 
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
-from .public_source import PublicResponse, PublicSourceError, fetch_public_url, public_source_provenance
+from .public_source import (
+    PublicResponse, PublicSourceError, fetch_public_url,
+    public_source_error_metadata, public_source_provenance,
+)
 from .registry import register_adapter
 from ..guard.rate_limiter import AdaptiveRateLimiter
 
@@ -54,10 +58,37 @@ def _node_locator(node) -> str:
     return " > ".join(reversed(segments))
 
 
-def _substantive_blocks(soup: BeautifulSoup) -> list[dict[str, str]]:
-    """Select all independent best-priority article blocks, avoiding nested duplicates."""
-    candidates: list[tuple[int, int, Any, str]] = []
-    for order, node in enumerate(soup.select(_CONTENT_SELECTORS)):
+def _iter_node_text_parts(node: Any, *, include_chrome: bool = False):
+    """Yield normalized text pieces without copying the selected DOM subtree."""
+    excluded_tags = {"script", "style", "noscript", "nav", "header", "footer", "aside", "form"}
+    first = True
+    for text_node in node.stripped_strings:
+        if not include_chrome:
+            parent = getattr(text_node, "parent", None)
+            while parent is not None:
+                if (getattr(parent, "name", None) in excluded_tags
+                        or str(parent.get("role") or "").lower() == "navigation"):
+                    break
+                if parent is node:
+                    parent = None
+                    break
+                parent = getattr(parent, "parent", None)
+            if parent is not None:
+                continue
+        if not first:
+            yield " "
+        yield str(text_node)
+        first = False
+
+
+def _node_text_length(node: Any) -> int:
+    return sum(len(part) for part in _iter_node_text_parts(node))
+
+
+def _selected_substantive_nodes(soup: BeautifulSoup) -> list[Any]:
+    """Select independent article roots before producing or retaining their text."""
+    candidates: list[tuple[int, Any]] = []
+    for node in soup.select(_CONTENT_SELECTORS):
         if node.name in {"script", "style", "nav", "header", "footer", "aside"}:
             continue
         if node.find_parent(("nav", "header", "footer", "aside")):
@@ -67,42 +98,71 @@ def _substantive_blocks(soup: BeautifulSoup) -> list[dict[str, str]]:
         )).lower()
         if any(marker in labels for marker in _CHROME_MARKERS):
             continue
-        cleaned = BeautifulSoup(str(node), "html.parser")
-        for chrome in cleaned.select(
-            "script, style, noscript, nav, header, footer, aside, form, [role=navigation]"
-        ):
-            chrome.decompose()
-        body = cleaned.get_text(" ", strip=True)
         semantic = node.name in {"article", "main"} or node.get("itemprop") == "articleBody" or node.get("role") == "main"
-        if not body or len(body) > 2 * 1024 * 1024 or (not semantic and len(body) < 500):
+        text_length = _node_text_length(node)
+        if not text_length or text_length > 2 * 1024 * 1024 or (not semantic and text_length < 500):
             continue
         priority = (
             0 if node.name == "article" or node.get("itemprop") == "articleBody"
             else 1 if "content_article" in labels or node.find_parent(class_="block-text-only")
             else 2 if node.name != "main" else 3
         )
-        candidates.append((priority, order, node, body))
+        candidates.append((priority, node))
     if not candidates:
         return []
 
     best_priority = min(candidate[0] for candidate in candidates)
-    preferred = [candidate for candidate in candidates if candidate[0] == best_priority]
-    selected: list[tuple[Any, str]] = []
-    for _, _, node, body in preferred:
+    preferred = [node for priority, node in candidates if priority == best_priority]
+    selected: list[Any] = []
+    for node in preferred:
         # An enclosing semantic element already contains this block. Keep the
         # enclosing source once; sibling articles remain separate selections.
-        if any(parent is existing for parent in node.parents for existing, _ in selected):
+        if any(parent is existing for parent in node.parents for existing in selected):
             continue
-        selected.append((node, body))
+        selected.append(node)
+    return selected
+
+
+def _substantive_blocks(soup: BeautifulSoup) -> list[dict[str, str]]:
+    """Compatibility projection of selected blocks, after nested-root removal."""
     return [
-        {"text": body, "locator": _node_locator(node)}
-        for node, body in selected
+        {"text": "".join(_iter_node_text_parts(node)), "locator": _node_locator(node)}
+        for node in _selected_substantive_nodes(soup)
     ]
 
 
 def _substantive_body(soup: BeautifulSoup) -> str:
     """Compatibility projection of the selected article blocks."""
     return "\n\n".join(block["text"] for block in _substantive_blocks(soup))
+
+
+def _capture_bounded_text(parts, max_chars: int) -> tuple[str, str, int]:
+    """Hash/count the full normalized text while retaining only its bounded preview."""
+    digest = hashlib.sha256()
+    preview = StringIO()
+    preview_length = 0
+    full_length = 0
+    for part in parts:
+        if not part:
+            continue
+        digest.update(part.encode("utf-8"))
+        full_length += len(part)
+        remaining = max_chars - preview_length
+        if remaining > 0:
+            kept = part[:remaining]
+            preview.write(kept)
+            preview_length += len(kept)
+    text = preview.getvalue()
+    if full_length > max_chars:
+        text = text.rstrip() + "…"
+    return text, digest.hexdigest(), full_length
+
+
+def _joined_node_text(nodes):
+    for index, node in enumerate(nodes):
+        if index:
+            yield "\n\n"
+        yield from _iter_node_text_parts(node)
 
 
 def _publication_signals(soup: BeautifulSoup) -> tuple[str, str, str]:
@@ -235,25 +295,28 @@ class PublicHttpAdapter(BasePlatformAdapter):
         description = soup.find("meta", attrs={"name": re.compile("^description$", re.I)})
         # Semantic main/article content remains authoritative even when short;
         # a site-wide description must not replace a directory or address.
-        blocks = _substantive_blocks(soup)
-        article_text = "\n\n".join(block["text"] for block in blocks)
-        if article_text:
-            full_text = article_text
+        selected_nodes = _selected_substantive_nodes(soup)
+        if selected_nodes:
             selection = "semantic_blocks"
-            locators = [block["locator"] for block in blocks]
+            locators = [_node_locator(node) for node in selected_nodes]
+            text, source_text_sha256, source_text_char_length = _capture_bounded_text(
+                _joined_node_text(selected_nodes), MAX_PUBLIC_BODY_CHARS,
+            )
         elif description and str(description.get("content") or "").strip():
-            full_text = str(description.get("content") or "").strip()
+            description_text = str(description.get("content") or "").strip()
             selection = "meta_description"
             locators = ["meta[name=description][content]"]
+            text, source_text_sha256, source_text_char_length = _capture_bounded_text(
+                (description_text,), MAX_PUBLIC_BODY_CHARS,
+            )
         else:
-            full_text = soup.body.get_text(" ", strip=True) if soup.body else ""
-            selection = "document_body" if full_text else "none"
-            locators = ["body"] if full_text else []
-        truncated = len(full_text) > MAX_PUBLIC_BODY_CHARS
-        text = (
-            full_text[:MAX_PUBLIC_BODY_CHARS].rstrip() + "…"
-            if truncated else full_text
-        )
+            text_parts = _iter_node_text_parts(soup.body, include_chrome=True) if soup.body else ()
+            text, source_text_sha256, source_text_char_length = _capture_bounded_text(
+                text_parts, MAX_PUBLIC_BODY_CHARS,
+            )
+            selection = "document_body" if source_text_char_length else "none"
+            locators = ["body"] if source_text_char_length else []
+        truncated = source_text_char_length > MAX_PUBLIC_BODY_CHARS
         if selection == "semantic_blocks":
             completeness = "TRUNCATED_SEMANTIC_PREVIEW" if truncated else "COMPLETE_SEMANTIC_TEXT"
         elif selection == "meta_description":
@@ -284,9 +347,9 @@ class PublicHttpAdapter(BasePlatformAdapter):
                 "content_observation": {
                     "selection": selection,
                     "selected_locators": locators,
-                    "selected_block_count": len(blocks),
-                    "source_text_sha256": hashlib.sha256(full_text.encode("utf-8")).hexdigest(),
-                    "source_text_char_length": len(full_text),
+                    "selected_block_count": len(selected_nodes),
+                    "source_text_sha256": source_text_sha256,
+                    "source_text_char_length": source_text_char_length,
                     "returned_text_char_length": len(text),
                     "truncated": truncated,
                     "completeness": completeness,
@@ -340,7 +403,7 @@ class PublicHttpAdapter(BasePlatformAdapter):
                 status=CollectionStatus.PROVIDER_UNAVAILABLE,
                 platform=self.platform,
                 message="当前公开页面暂时无法读取，请稍后重试",
-                metadata={"provider": "public_http", "error_type": type(exc).__name__},
+                metadata={"provider": "public_http", **public_source_error_metadata(exc)},
             )
         except Exception as exc:
             return CollectionResult(

@@ -37,19 +37,21 @@ sanitized request/final URL and access/license provenance. HTTP failure,
 unsupported media type, an empty successful feed and a safe-transport failure
 remain separate states.
 
-Offline evidence: `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with
-pytest --with requests --with beautifulsoup4 --with feedparser python -m pytest -q
-tests/test_public_http_article_extraction.py` — **11 passed**. The focused RSS
-command `UV_CACHE_DIR=/tmp/lumenis-uv-cache uv run --no-project --with pytest
---with requests --with beautifulsoup4 --with feedparser python -m pytest -q
-tests/test_public_source_adapters.py::test_web_rss_normalizes_existing_public_reader_and_provenance
-tests/test_public_source_adapters.py::test_google_news_rss_uses_bounded_public_transport_and_keeps_timezone
-tests/test_public_source_adapters.py::test_rss_date_without_timezone_or_parseable_value_remains_unknown
-tests/test_public_source_adapters.py::test_google_news_rss_keeps_http_failure_distinct_from_media_type_failure
-tests/test_public_source_adapters.py::test_empty_rss_is_no_new_data_but_transport_failure_is_unavailable` —
-**7 passed**. Changed Python compilation, governance machine contract, AI-native
-constitution and `git diff --check` passed. The tests replace the public fetcher
-with offline fixtures; no real public source was contacted. PR review, exact-head
+Follow-up review found that non-2xx responses are rejected inside
+`fetch_public_url`, before the former RSS status branch could run. The transport
+now raises `PublicSourceHTTPError` with its exact integer status; the existing
+RSS result and `WebRSSAdapter` metadata preserve `HTTP_503` / `http_status=503`.
+The status discriminator lives in the existing `except Exception` branch at
+`web_discovery.py:239–246` (the HTTP-status check is at lines 241–243).
+The regression goes through the real `fetch_public_url` and
+`fetch_google_news_rss` path and fakes only the lowest `HTTPAdapter.send`
+response. The unsupported media-type comparison remains a separate 200 response.
+
+Offline combined command covering `tests/test_public_http_article_extraction.py`,
+`tests/test_public_source_adapters.py` and `tests/test_public_source_transport.py`
+— **66 passed** (13, 29 and 24 by module). Changed-source `compileall`,
+governance machine contract, AI-native constitution and `git diff --check`
+passed. The tests use offline fixtures; no real public source was contacted. PR review, exact-head
 remote checks and live provider/runtime/user acceptance remain separate and
 unverified. Other Issue #17 items remain open.
 

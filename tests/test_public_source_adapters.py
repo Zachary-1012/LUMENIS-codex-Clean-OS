@@ -4,7 +4,9 @@ import pytest
 
 from lumenis.system.collector.adapters.base import CollectionStatus
 from lumenis.system.collector.adapters.public_http import PublicHttpAdapter
-from lumenis.system.collector.adapters.public_source import PublicResponse, PublicSourceError, validate_public_url
+from lumenis.system.collector.adapters.public_source import (
+    PublicResponse, PublicSourceError, PublicSourceHTTPError, validate_public_url,
+)
 from lumenis.system.collector.adapters.sitemap import SitemapAdapter
 from lumenis.system.collector.adapters.web_atom import AtomAdapter
 from lumenis.system.collector.adapters.web_rss import WebRSSAdapter
@@ -248,22 +250,77 @@ def test_google_news_rss_uses_bounded_public_transport_and_keeps_timezone(monkey
     assert outcome["final_source_url"] == "https://news.google.com/rss/search"
 
 
-@pytest.mark.parametrize(
-    ("status_code", "content_type", "expected_error"),
-    [
-        (503, "application/rss+xml", "HTTP_503"),
-        (200, "text/html", "RSS_RESPONSE_TYPE_UNSUPPORTED"),
-    ],
-)
-def test_google_news_rss_keeps_http_failure_distinct_from_media_type_failure(
-    monkeypatch, status_code, content_type, expected_error,
-):
+def test_google_news_rss_preserves_http_failure_from_real_bounded_transport(monkeypatch):
+    import web_discovery
+    import requests
+    from types import SimpleNamespace
+    from lumenis.system.collector.adapters import public_source
+
+    monkeypatch.setattr(public_source, "load_public_source_host_pins", lambda: {})
+    monkeypatch.setattr(
+        public_source, "_resolved_addresses", lambda _hostname: ["93.184.216.34"],
+    )
+    requests_made = []
+
+    def offline_http_send(_adapter, request, **_kwargs):
+        requests_made.append(request.url)
+        response = requests.Response()
+        response.status_code = 503
+        response.headers = requests.structures.CaseInsensitiveDict({
+            "Content-Type": "application/rss+xml",
+        })
+        response.url = request.url
+        response.request = request
+        response.reason = "Synthetic unavailable"
+        response._content = b"<rss><channel></channel></rss>"
+        response._content_consumed = True
+        response.raw = SimpleNamespace(close=lambda: None)
+        return response
+
+    monkeypatch.setattr(requests.adapters.HTTPAdapter, "send", offline_http_send)
+
+    outcome = web_discovery.fetch_google_news_rss("lumenis", max_results=1)
+
+    assert outcome["ok"] is False
+    assert outcome["items"] == []
+    assert outcome["error_type"] == "HTTP_503"
+    assert outcome["http_status"] == 503
+    assert len(requests_made) == 1
+    assert requests_made[0].startswith("https://news.google.com/rss/search?")
+
+    collected = WebRSSAdapter().search("lumenis", max_results=1)
+    assert collected.status is CollectionStatus.PROVIDER_UNAVAILABLE
+    assert collected.items == []
+    assert collected.metadata["error_type"] == "HTTP_503"
+    assert collected.metadata["http_status"] == 503
+
+
+@pytest.mark.parametrize("adapter,keyword,options", [
+    (PublicHttpAdapter, "https://public.example.test/article", {}),
+    (AtomAdapter, "https://public.example.test/feed.atom", {}),
+    (SitemapAdapter, "https://public.example.test/sitemap.xml", {}),
+])
+def test_public_source_http_error_keeps_observed_status(adapter, keyword, options):
+    def fail(_url):
+        raise PublicSourceHTTPError(429)
+
+    result = adapter(fetcher=fail).search(keyword, **options)
+
+    assert result.status is CollectionStatus.PROVIDER_UNAVAILABLE
+    assert result.items == []
+    assert result.metadata["error_type"] == "HTTP_429"
+    assert result.metadata["http_status"] == 429
+
+
+def test_google_news_rss_keeps_media_type_failure_distinct_from_http_status(monkeypatch):
     import web_discovery
     from lumenis.system.collector.adapters import public_source
 
     response = PublicResponse(
         url="https://news.google.com/rss/search?q=lumenis",
-        content=b"<rss></rss>", content_type=content_type, status_code=status_code,
+        content=b"<html>not an RSS feed</html>",
+        content_type="text/html",
+        status_code=200,
     )
     monkeypatch.setattr(public_source, "fetch_public_url", lambda *_args, **_kwargs: response)
 
@@ -271,7 +328,108 @@ def test_google_news_rss_keeps_http_failure_distinct_from_media_type_failure(
 
     assert outcome["ok"] is False
     assert outcome["items"] == []
+    assert outcome["error_type"] == "RSS_RESPONSE_TYPE_UNSUPPORTED"
+    assert outcome["http_status"] == 200
+
+
+@pytest.mark.parametrize(("content", "content_type", "expected_error"), [
+    (b"<html>not an RSS feed</html>", "text/html", "RSS_RESPONSE_TYPE_UNSUPPORTED"),
+    (b"<rss><channel><item>", "application/rss+xml", "RSS_PARSE_ERROR"),
+    (b"<rss><items/></rss>", "application/rss+xml", "RSS_CHANNEL_MISSING"),
+])
+def test_rss_parse_failures_keep_safe_transport_provenance(
+    monkeypatch, content, content_type, expected_error,
+):
+    import json
+    import web_discovery
+    from lumenis.system.collector.adapters import public_source
+
+    response = PublicResponse(
+        url="https://news.google.com/rss/search?token=private",
+        requested_url="https://news.google.com/rss/search?q=private-query",
+        redirect_chain=("https://news.google.com/redirect?secret=1",),
+        resolution_trace=({"host": "news.google.com", "address": "93.184.216.34"},),
+        content=content,
+        content_type=content_type,
+        status_code=200,
+    )
+    monkeypatch.setattr(public_source, "fetch_public_url", lambda *_args, **_kwargs: response)
+
+    outcome = web_discovery.fetch_google_news_rss("lumenis", max_results=1)
+    result = WebRSSAdapter().search("lumenis", max_results=1)
+
+    assert outcome["ok"] is False
+    assert outcome["items"] == []
     assert outcome["error_type"] == expected_error
+    assert outcome["http_status"] == 200
+    assert outcome["requested_source_url"] == "https://news.google.com/rss/search"
+    assert outcome["final_source_url"] == "https://news.google.com/rss/search"
+    assert json.loads(outcome["redirect_chain"]) == ["https://news.google.com/redirect"]
+    assert json.loads(outcome["resolution_trace"]) == [
+        {"host": "news.google.com", "address": "93.184.216.34"},
+    ]
+    assert outcome["source_access_mode"] == "public_read_only"
+    assert outcome["commercial_license_state"] == "pending_review"
+    assert result.status is CollectionStatus.PROVIDER_UNAVAILABLE
+    assert result.items == []
+    assert result.metadata["error_type"] == expected_error
+    assert result.metadata["requested_source_url"] == outcome["requested_source_url"]
+    assert result.metadata["final_source_url"] == outcome["final_source_url"]
+    assert result.metadata["source_access_mode"] == outcome["source_access_mode"]
+    assert result.metadata["commercial_license_state"] == outcome["commercial_license_state"]
+    assert "private" not in outcome["requested_source_url"]
+    assert "secret" not in outcome["redirect_chain"]
+
+
+def test_legacy_and_current_rss_publication_values_sort_by_actual_instant(monkeypatch):
+    import web_discovery
+
+    records = [
+        {
+            "id": "first-equal-instant",
+            "published_at": "2026-09-18T03:00:00+00:00",
+            "source_published_at": "2026-09-18T03:00:00Z",
+            "publication_time_state": "KNOWN",
+        },
+        {
+            "id": "second-equal-instant",
+            "published_at": "Thu, 17 Sep 2026 20:00:00 -0700",
+            "source_published_at": "Thu, 17 Sep 2026 20:00:00 -0700",
+        },
+        {
+            "id": "later-instant",
+            "published_at": "2026-09-18T04:00:00+00:00",
+            "source_published_at": "2026-09-18T04:00:00+00:00",
+            "publication_time_state": "KNOWN",
+        },
+        {
+            "id": "naive-unknown",
+            "published_at": "2026-09-18 05:00:00",
+            "source_published_at": "2026-09-18 05:00:00",
+        },
+        {
+            "id": "declared-unknown",
+            "published_at": "",
+            "source_published_at": "Thu, 17 Sep 2026 20:00:00 -0700",
+            "publication_time_state": "UNKNOWN",
+        },
+    ]
+    original_raw_publication = [record["source_published_at"] for record in records]
+    monkeypatch.setattr(web_discovery, "brand_queries", lambda *_args, **_kwargs: ["query"])
+    monkeypatch.setattr(
+        web_discovery, "_search_google_news_rss",
+        lambda _query: [dict(record) for record in records],
+    )
+
+    items, total = web_discovery.discover_brand_industry(brands=["brand"])
+
+    assert total == 1
+    assert [item["id"] for item in items] == [
+        "later-instant", "first-equal-instant", "second-equal-instant",
+        "naive-unknown", "declared-unknown",
+    ]
+    assert [record["source_published_at"] for record in records] == original_raw_publication
+    assert items[-1]["publication_time_state"] == "UNKNOWN"
 
 
 def test_empty_rss_is_no_new_data_but_transport_failure_is_unavailable(monkeypatch):

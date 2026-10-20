@@ -257,3 +257,66 @@ def test_long_semantic_preview_records_full_hash_length_and_truncation():
     assert observation["completeness"] == "TRUNCATED_SEMANTIC_PREVIEW"
     assert observation["document_sha256"] == hashlib.sha256(response.content).hexdigest()
     assert observation["document_byte_length"] == len(response.content)
+
+
+def test_fix_094_nested_blocks_are_deduplicated_before_any_subtree_reparse(monkeypatch):
+    import lumenis.system.collector.adapters.public_http as public_http
+
+    original_parser = public_http.BeautifulSoup
+    parsed_inputs = []
+
+    def count_parser(source, *args, **kwargs):
+        parsed_inputs.append(source)
+        return original_parser(source, *args, **kwargs)
+
+    monkeypatch.setattr(public_http, "BeautifulSoup", count_parser)
+    outer = "Outer report text. " * 80
+    inner = "Nested correction text. " * 80
+    response = PublicResponse(
+        url="https://public.example.test/nested-large-article",
+        content=(
+            '<html><head><title>Nested report</title></head><body>'
+            f'<article id="outer">{outer}<section><article id="inner">{inner}'
+            '</article></section></article></body></html>'
+        ).encode("utf-8"),
+        content_type="text/html",
+        status_code=200,
+    )
+
+    result = PublicHttpAdapter(fetcher=lambda _: response).search(response.url)
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert len(parsed_inputs) == 1
+    observation = result.items[0]["raw"]["content_observation"]
+    assert observation["selected_block_count"] == 1
+    assert "Outer report text." in result.items[0]["content"]
+    assert result.items[0]["content"].count(inner.strip()) == 1
+
+
+def test_fix_094_article_aggregate_retains_only_bounded_output():
+    from lumenis.system.collector.adapters.public_http import MAX_PUBLIC_BODY_CHARS
+
+    first = "alpha " * 40_000
+    second = "beta " * 40_000
+    expected = first.strip() + "\n\n" + second.strip()
+    response = PublicResponse(
+        url="https://public.example.test/large-aggregate",
+        content=(
+            '<html><head><title>Large aggregate</title></head><body>'
+            f'<article>{first}</article><article>{second}</article>'
+            '</body></html>'
+        ).encode("utf-8"),
+        content_type="text/html",
+        status_code=200,
+    )
+
+    result = PublicHttpAdapter(fetcher=lambda _: response).search(response.url)
+    item = result.items[0]
+    observation = item["raw"]["content_observation"]
+
+    assert len(item["content"]) <= MAX_PUBLIC_BODY_CHARS + 1
+    assert observation["source_text_char_length"] == len(expected)
+    assert observation["source_text_sha256"] == hashlib.sha256(expected.encode("utf-8")).hexdigest()
+    assert observation["returned_text_char_length"] == len(item["content"])
+    assert observation["truncated"] is True
+    assert observation["completeness"] == "TRUNCATED_SEMANTIC_PREVIEW"
