@@ -3063,3 +3063,332 @@
 ## 转换附注
 
 原文页脚仅含 Word PAGE 自动页码字段，无正文文字。Markdown 不保留分页及动态页码；正文段落、表格单元格内容、换行和超链接按原文顺序完整保留。
+
+
+## Obelisk 原研究与实验回执恢复复核（2026-10-21）
+
+### 结论与证据分账
+
+本节在既有第三方研究报告原位补齐，不新建研究权威或产品Owner。此前“原完整研究报告/实验回执未恢复”的缺源状态已经关闭：原报告全文及历史实验回执均从官方Google Drive接口重新读取的历史归档中恢复，并与2026-10-18来源清单及2026-10-19恢复清单逐件SHA-256核对。不是依据总账摘要重造实验，也不是2026-10-21重新运行Obelisk。
+
+- 原研究对象明确为 https://github.com/tommy0103/obelisk ，npm https://www.npmjs.com/package/@obelisk-apps/cli ，固定版本0.3.0；不是其他同名工作流引擎。原package-lock固定tarball与SHA-512，见下方完整锁文件。
+- 历史研究：2026-10-17独立HOME、合成Claude格式输入，基本检索、追加、半行补全、快照恢复与无害文件权限边界实验；保留源缩短/替换导致旧索引及坏行静默跳过的反例。
+- 本次新增证据：归档/成员哈希核对、原JSON解析与结果核读、现有Owner源码静态映射。没有安装、运行归档脚本、重跑实验、打开私人会话、调用模型、写数据库、修改产品代码或运行环境。
+- 研究恢复与当前采用裁决完成；真实产品接线、授权日志收益及运行验收仍未建立，不能用历史合成成功声称完成。这些属于后续明确授权的产品工作，不再属于“报告找不到”。
+
+### 来源、恢复与安全边界
+
+原归档：`LUMENIS_20261017T1620Z_dot-zack_COMPLETE_STAGE_NOT_FINAL.zip`，93,337,724 bytes，SHA-256 `4e9929e2d0607e7ec9e717f662c81fcfbea39216038b9f0cb8372f6353fd621a`。仅下载与读取指定成员；未执行归档代码。原成员共同前缀为 `LUMENIS_20261017T1620Z_dot-zack_NOT_FINAL/auxiliary_tools/obelisk_tools_20261017/`。旧路径仅为历史定位，不在本仓新建顶层auxiliary_tools。
+
+EVALUATION原hash同时匹配本仓 `research/engineering/documentation-evidence/reports/product_research_deadline_20261018/SOURCE_REVIEW_MANIFEST.json`；其余成员匹配已恢复历史RESTORATION_RECEIPT中的清单。下面保留必要只读回执的去敏展示派生件，没有把脚本、包、SQLite或运行时纳入产品。所有结果内容均标识SYNTHETIC，不含真实用户会话、凭据、私人推理或产品业务数据；实验路径不是运行指令。
+
+可浏览备份的test-results和rewrite-results曾将字面目录`.obelisk`替换为`LOCAL_USER`，导致字节/hash变化；本次核对采用此次原归档成员，不将去敏副本冒充原字节。下方公开JSON展示另将唯一云端scratch根统一替换为`[REDACTED_CLOUD_ROOT]`，不更改合成数据、测试名称、结果或退出码；展示是派生文本，不声称展示字节或hash等于原件。表中原hash只指独立核对过的下载原件；完整原字节保留于原私人归档，公开报告不披露其Drive定位符。Drive归档是历史材料而非当前版本/权限或可公开分享授权；本节不改变Drive共享设置。
+
+| 原文件 | 原字节数 | SHA-256 | 本次处理 |
+| --- | ---: | --- | --- |
+| EVALUATION.md | 3081 | `a5badffa7683a137d045869ff5b093b8cb0f415942c6a1685016c9ce74dc3040` | 下方全文展示（JSON路径已去敏） |
+| test-results.json | 14727 | `0ada6f2b8d8ba31f4344993598beb3d243253be842eef9a3f213abfd29f39a9c` | 下方全文展示（JSON路径已去敏） |
+| rewrite-results.json | 3583 | `cfa218b668c98fe8be0c6065ec302701ecdbb099370cb85132e295a23966b164` | 下方全文展示（JSON路径已去敏） |
+| final-smoke.json | 1693 | `1e194db5044c2c107d8c89d6211fe2e0dc1629d2446fdbfa6920bced0ed7bb2a` | 下方全文展示（JSON路径已去敏） |
+| package-lock.json | 615 | `5ea4dde5b6483c6580a5bd37bad376d940eeb87abf4ac5bc7186193af8ad08da` | 下方全文展示（JSON路径已去敏） |
+| pack.json | 4579 | `c57734501e9f5d3bb5932ebbaa18932b62bfa9dbb7eb5c48e95a47c83c09d6be` | 核读包身份/文件清单；原归档保留 |
+
+### 原实验结果核读（不是本次重跑）
+
+16条test-results记录与4条rewrite-results记录全量读取。退出码0不是质量PASS：help的1为原CLI用法行为；源改写、坏行的0与complete:true恰是反例，不能掩盖内容丢失或陈旧结果。
+
+| 历史用例 | 观察与裁决 |
+| --- | --- |
+| version / help | 0.3.0；help返回usage且code=1，未视作测试失败或索引行为。 |
+| initial_build / search_source / source_detail | 合成消息1可检索，源路径与UUID可回查；不证明真实业务适配。 |
+| incremental_append / search_incremental | 合成消息2追加可检索；原实验绕过30秒recent-build防抖，不代表默认实时性。 |
+| malformed_and_partial_tail / search_after_bad_line | complete:true且skipped=0；坏JSON行之后合法消息3可见，未报告坏行丢失。 |
+| complete_partial_tail / search_completed_tail | 半行补全后消息4可见。 |
+| rewrite_source / search_old_after_rewrite | complete:true但旧Aurora仍命中，不代表源仍有效。 |
+| snapshot_restored_search / snapshot_integrity | 结束进程后复制合成源/设置/SQLite，恢复查询成功，integrity_check=ok、n=4；未验证热备份/并发一致性。 |
+| filesystem_boundary | 对新建无害测试文件返回ERR_ACCESS_DENIED；没有尝试访问受限真实资料，不证明任意恶意代码安全。 |
+| incremental / stale_source | strict增量complete:true；旧命中1、raw source=null、新Vega命中0。 |
+| force_build / after_force | 全量重建后旧命中0、新Vega命中1；只证明这组固定合成反例的纠正。 |
+
+### 现有Owner逐项适配裁决
+
+以下为2026-10-21在本仓源码的静态研究映射，不是已接线、任务派发或修改授权。检索lumenis、agent_memory及tests未找到obelisk字面引用，这只支持本次检索范围内未建立直接接线，不能证明整个产品没有相似机制或完全无影响。
+
+1. Shared Learning / Memory：`lumenis/shared/learning/memory.py` 的LearningMemory、bind_source_task、_scoped_check及 `agent_memory/base.py` 的bind_task/_binding_context负责既有actor/task范围。可借鉴来源可追溯检索，不搬入第二记忆真相库；不得默认扫描真实HOME、Codex或其他私有会话，不把搜索结果自动提升为规则或训练样本。
+2. Shared Evidence：`lumenis/shared/evidence/store.py` 的compute_full_content_hash、classify_evidence_integrity、verify_evidence_record_integrity是既有证据完整性入口。适配时搜索命中必须回读原文、绑定版本/内容hash、处理撤权/删除/替换；raw=null或内容不一致应拒绝作为当前证据。当前文件有完整性机制不等于Obelisk陈旧索引已在产品修复。
+3. SYSTEM Permission：`lumenis/system/security/permission.py` 是已有权限Owner。受控日志检索需明确actor、task、来源格式/路径白名单、最小读取与撤权；Node白名单只能作为原隔离试验附加防线，不能取代产品Permission。研究不提供私人会话持续访问权。
+4. Shared Evaluation：`lumenis/shared/evaluation/runner.py` 的EvaluationRunner以真实指标、unknown不得默认pass为边界。保留上述陈旧、坏行、半行、恢复反例作未来授权验证条件；增加删除/同尺寸替换、权限撤回、跨actor隔离、并发写/热恢复、输入缺损计数及来源版本一致性。未来测试前须冻结被测版本，不能把0.3.0历史问题推断为当前上游仍存在或已修复。
+5. 已有日志Owner：`lumenis/unified_logger.py` 的UnifiedLogger/get_logger保留产品日志职责。原CLI不支持通用Markdown/任意JSONL导入，不将交付文档伪装成agent对话；若需检索授权去敏开发日志，在现有日志/Source/Evidence链研究显式文档适配器，不宣告已实现。
+6. 依赖与许可：原包AGPL-3.0、原源码标记AGPL-3.0-only为历史核读结论，未做新的法律裁决。复制/修改/分发/网络服务等具体集成方案须单独审阅；本次不安装、分发其可执行代码，不接受新服务协议。合成Claude格式只是fixture，既不要求Groq-only，也不授权Claude或任意模型API调用；BYOK范围勘误不改变上述索引/完整性反例。
+
+采用结论：保留“可核来源检索、显式隔离、重建与恢复验证”的方法参考；不采用默认全HOME发现、将complete:true当输入完整、源变更后未核原文的旧索引作为当前事实，也不整套接入其运行时。研究与反例已经补齐到现有Owner；实现、真实日志性能/收益、商业集成许可及同版端到端验收仍需各自证据。没有以这次恢复替代原29项Claude/EvoOntology或其他研究任务。
+
+### 原评估全文（2026-10-17，原字节保留）
+
+```text
+# Obelisk 0.3.0 隔离验证
+
+日期：2026-10-17。状态：已安装并完成合成样例验证；未接入任何真实 agent 历史、私人推理、产品代码、数据库或运行环境。
+
+## 固定来源
+
+- 官方仓库：https://github.com/tommy0103/obelisk
+- 官方 npm：https://www.npmjs.com/package/@obelisk-apps/cli
+- 固定版本：0.3.0；Node 要求 ≥22.13.0，本次 v24.19.0。
+- npm 包标注 AGPL-3.0，源文件标注 AGPL-3.0-only。未做商业集成许可判断。
+- 仅本目录本地安装，无第三方运行依赖，禁用 npm 生命周期脚本。package-lock.json 保存 tarball 地址和完整性校验值。
+
+## 数据与运行边界
+
+独立 HOME、显式 providerRoots、Node 文件读写权限白名单。只启用自造 Claude 格式的 SYNTHETIC-NOT-REAL-HISTORY 样例，其余九个提供方禁用。边界测试只用新建无害测试文件验证 ERR_ACCESS_DENIED，未尝试读取受限真实数据。
+
+不运行 `obelisk install`（它会调用外部 skills 安装器），不更改全局技能、MCP、记忆，不启动 watcher。检查已发布源码，没有发现核心检索路径的联网请求；未进行系统级网络抓包。Node 权限模式是额外防线，不宣称可抵抗任意恶意程序。
+
+CLI 的 --version 直接返回版本；--help 没有独立命令，输出 usage 并返回 1。两者源码入口不会索引。--search 和 --query 会先尝试刷新本地索引，默认设置会发现多个 agent 历史，绝不能在真实 HOME 裸跑。
+
+## 结果
+
+- 基础搜索：通过。
+- 来源：通过；session 提供原始文件路径，消息 UUID 可回查原文。
+- 追加增量：通过。测试显式绕过 30 秒 recent-build 防抖，仅为验证更新逻辑。
+- 损坏 JSON 行：后续合法行仍可检索，但坏行被静默忽略，complete:true 不代表没有丢失输入。
+- 未终止半行：补全后可检索。
+- 快照：在所有进程结束后复制合成源、设置和 SQLite，恢复后查询成功，integrity_check=ok、4 条消息。
+- 源文件缩短/替换：发现问题。strict 增量返回 complete:true，但旧搜索命中仍在、raw(uuid)=null，新行未入库；--build 全量重建后纠正。不能把搜索结果当作当前事实。
+- 普通 Markdown 或任意 JSONL 开发日志：本 CLI 没有通用文档导入入口。没有伪装用户交付文档为真实 agent 会话。
+
+## 保留方式
+
+这是辅助检索工具的隔离试验，不是已经启用的持续记忆。源改写时应全量重建；引用前核对原文存在且内容一致；源格式、路径和内容需明确白名单。若以后需要检索交付级去敏日志，应使用明确标注来源的文档适配器或独立日志检索方案，另行验证，不接入真实私有会话。
+
+本目录 `obelisk-safe.py` 仅允许固定合成源的 version/help/search/build；禁止 install/query/attune。`test-results.json`、`rewrite-results.json` 保留完整测试输出；`validate.py` 和 `rewrite-check.py` 为可重现的隔离测试，重跑会覆盖本试验合成数据。
+```
+
+### 历史回执去敏展示：test-results.json
+
+```json
+[
+  {
+    "test": "version",
+    "code": 0,
+    "stdout": "0.3.0\n",
+    "stderr": ""
+  },
+  {
+    "test": "help",
+    "code": 1,
+    "stdout": "",
+    "stderr": "Usage:\n  obelisk install [skills options]\n  obelisk --build\n  obelisk --search \"text\" [--nonce <token>]\n  obelisk --query <file.js>\n  obelisk --attune <file.js>\n"
+  },
+  {
+    "test": "initial_build",
+    "code": 0,
+    "stdout": "{\"ok\":true,\"db\":\"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/home/.obelisk/obelisk.sqlite\"}\n",
+    "stderr": ""
+  },
+  {
+    "test": "search_source",
+    "code": 0,
+    "stdout": "[\n  {\n    \"message\": {\n      \"uuid\": \"synthetic-message-1\",\n      \"text\": \"SYNTHETIC FIXTURE: Aurora restore validation succeeded. No real project facts.\",\n      \"content_type\": \"text\",\n      \"is_meta\": 0,\n      \"role\": \"assistant\",\n      \"timestamp\": \"2026-10-17T00:00:01Z\",\n      \"model\": null,\n      \"cwd\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only\",\n      \"visibility\": \"visible\",\n      \"source\": \"claude\"\n    },\n    \"session\": {\n      \"id\": \"synthetic-session\",\n      \"title\": null,\n      \"project\": \"SYNTHETIC-NOT-REAL-HISTORY\",\n      \"started_at\": \"2026-10-17T00:00:01Z\",\n      \"source\": \"claude\"\n    },\n    \"rank\": -0.000001,\n    \"context\": []\n  }\n]\n",
+    "stderr": ""
+  },
+  {
+    "test": "source_detail",
+    "code": 0,
+    "stdout": "{\n  \"sessions\": [\n    {\n      \"id\": \"synthetic-session\",\n      \"title\": null,\n      \"project\": \"SYNTHETIC-NOT-REAL-HISTORY\",\n      \"project_path\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only\",\n      \"started_at\": \"2026-10-17T00:00:01Z\",\n      \"ended_at\": \"2026-10-17T00:00:01Z\",\n      \"git_branch\": null,\n      \"version\": null,\n      \"message_count\": 1,\n      \"jsonl_path\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only/projects/SYNTHETIC-NOT-REAL-HISTORY/synthetic-session.jsonl\",\n      \"source\": \"claude\"\n    }\n  ],\n  \"messages\": {\n    \"anchor\": {\n      \"uuid\": \"synthetic-message-1\",\n      \"session_id\": \"synthetic-session\",\n      \"type\": \"assistant\",\n      \"parent_uuid\": null,\n      \"timestamp\": \"2026-10-17T00:00:01Z\",\n      \"role\": \"assistant\",\n      \"text\": \"SYNTHETIC FIXTURE: Aurora restore validation succeeded. No real project facts.\",\n      \"content_type\": \"text\",\n      \"is_meta\": 0,\n      \"visibility\": \"visible\",\n      \"model\": null,\n      \"is_sidechain\": 0,\n      \"agent_id\": null,\n      \"input_tokens\": null,\n      \"output_tokens\": null,\n      \"cwd\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only\",\n      \"skill\": null,\n      \"turn_duration_ms\": null,\n      \"source\": \"claude\"\n    },\n    \"messages\": [\n      {\n        \"uuid\": \"synthetic-message-1\",\n        \"session_id\": \"synthetic-session\",\n        \"type\": \"assistant\",\n        \"parent_uuid\": null,\n        \"timestamp\": \"2026-10-17T00:00:01Z\",\n        \"role\": \"assistant\",\n        \"text\": \"SYNTHETIC FIXTURE: Aurora restore validation succeeded. No real project facts.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"visibility\": \"visible\",\n        \"model\": null,\n        \"is_sidechain\": 0,\n        \"agent_id\": null,\n        \"input_tokens\": null,\n        \"output_tokens\": null,\n        \"cwd\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only\",\n        \"skill\": null,\n        \"turn_duration_ms\": null,\n        \"source\": \"claude\"\n      }\n    ],\n    \"session\": null,\n    \"hasMore\": false,\n    \"nextCursor\": null\n  },\n  \"counts\": [\n    {\n      \"n\": 1\n    }\n  ]\n}\n",
+    "stderr": ""
+  },
+  {
+    "test": "incremental_append",
+    "code": 0,
+    "stdout": "{\"skip\":false,\"complete\":true,\"incompleteProviders\":[],\"inventoryIssues\":[],\"skipped\":0,\"skippedFiles\":[],\"watchHints\":[\"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only/projects/SYNTHETIC-NOT-REAL-HISTORY/synthetic-session.jsonl\"]}\n",
+    "stderr": ""
+  },
+  {
+    "test": "search_incremental",
+    "code": 0,
+    "stdout": "[\n  {\n    \"message\": {\n      \"uuid\": \"synthetic-message-2\",\n      \"text\": \"SYNTHETIC FIXTURE: Nebula incremental append.\",\n      \"content_type\": \"text\",\n      \"is_meta\": 0,\n      \"role\": \"assistant\",\n      \"timestamp\": \"2026-10-17T00:00:02Z\",\n      \"model\": null,\n      \"cwd\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only\",\n      \"visibility\": \"visible\",\n      \"source\": \"claude\"\n    },\n    \"session\": {\n      \"id\": \"synthetic-session\",\n      \"title\": null,\n      \"project\": \"SYNTHETIC-NOT-REAL-HISTORY\",\n      \"started_at\": \"2026-10-17T00:00:01Z\",\n      \"source\": \"claude\"\n    },\n    \"rank\": -0.0000011578947368421053,\n    \"context\": [\n      {\n        \"uuid\": \"synthetic-message-1\",\n        \"text\": \"SYNTHETIC FIXTURE: Aurora restore validation succeeded. No real project facts.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:01Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      }\n    ]\n  }\n]\n",
+    "stderr": ""
+  },
+  {
+    "test": "malformed_and_partial_tail",
+    "code": 0,
+    "stdout": "{\"skip\":false,\"complete\":true,\"incompleteProviders\":[],\"inventoryIssues\":[],\"skipped\":0,\"skippedFiles\":[],\"watchHints\":[\"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only/projects/SYNTHETIC-NOT-REAL-HISTORY/synthetic-session.jsonl\"]}\n",
+    "stderr": ""
+  },
+  {
+    "test": "search_after_bad_line",
+    "code": 0,
+    "stdout": "[\n  {\n    \"message\": {\n      \"uuid\": \"synthetic-message-3\",\n      \"text\": \"SYNTHETIC FIXTURE: Comet after malformed line.\",\n      \"content_type\": \"text\",\n      \"is_meta\": 0,\n      \"role\": \"assistant\",\n      \"timestamp\": \"2026-10-17T00:00:03Z\",\n      \"model\": null,\n      \"cwd\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only\",\n      \"visibility\": \"visible\",\n      \"source\": \"claude\"\n    },\n    \"session\": {\n      \"id\": \"synthetic-session\",\n      \"title\": null,\n      \"project\": \"SYNTHETIC-NOT-REAL-HISTORY\",\n      \"started_at\": \"2026-10-17T00:00:01Z\",\n      \"source\": \"claude\"\n    },\n    \"rank\": -0.5425320417928454,\n    \"context\": [\n      {\n        \"uuid\": \"synthetic-message-1\",\n        \"text\": \"SYNTHETIC FIXTURE: Aurora restore validation succeeded. No real project facts.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:01Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      },\n      {\n        \"uuid\": \"synthetic-message-2\",\n        \"text\": \"SYNTHETIC FIXTURE: Nebula incremental append.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:02Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      }\n    ]\n  }\n]\n",
+    "stderr": ""
+  },
+  {
+    "test": "complete_partial_tail",
+    "code": 0,
+    "stdout": "{\"skip\":false,\"complete\":true,\"incompleteProviders\":[],\"inventoryIssues\":[],\"skipped\":0,\"skippedFiles\":[],\"watchHints\":[\"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only/projects/SYNTHETIC-NOT-REAL-HISTORY/synthetic-session.jsonl\"]}\n",
+    "stderr": ""
+  },
+  {
+    "test": "search_completed_tail",
+    "code": 0,
+    "stdout": "[\n  {\n    \"message\": {\n      \"uuid\": \"synthetic-message-4\",\n      \"text\": \"SYNTHETIC FIXTURE: Orion completed tail.\",\n      \"content_type\": \"text\",\n      \"is_meta\": 0,\n      \"role\": \"assistant\",\n      \"timestamp\": \"2026-10-17T00:00:04Z\",\n      \"model\": null,\n      \"cwd\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only\",\n      \"visibility\": \"visible\",\n      \"source\": \"claude\"\n    },\n    \"session\": {\n      \"id\": \"synthetic-session\",\n      \"title\": null,\n      \"project\": \"SYNTHETIC-NOT-REAL-HISTORY\",\n      \"started_at\": \"2026-10-17T00:00:01Z\",\n      \"source\": \"claude\"\n    },\n    \"rank\": -0.9356262087673369,\n    \"context\": [\n      {\n        \"uuid\": \"synthetic-message-1\",\n        \"text\": \"SYNTHETIC FIXTURE: Aurora restore validation succeeded. No real project facts.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:01Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      },\n      {\n        \"uuid\": \"synthetic-message-2\",\n        \"text\": \"SYNTHETIC FIXTURE: Nebula incremental append.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:02Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      },\n      {\n        \"uuid\": \"synthetic-message-3\",\n        \"text\": \"SYNTHETIC FIXTURE: Comet after malformed line.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:03Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      }\n    ]\n  }\n]\n",
+    "stderr": ""
+  },
+  {
+    "test": "rewrite_source",
+    "code": 0,
+    "stdout": "{\"skip\":false,\"complete\":true,\"incompleteProviders\":[],\"inventoryIssues\":[],\"skipped\":0,\"skippedFiles\":[],\"watchHints\":[\"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only/projects/SYNTHETIC-NOT-REAL-HISTORY/synthetic-session.jsonl\"]}\n",
+    "stderr": ""
+  },
+  {
+    "test": "search_old_after_rewrite",
+    "code": 0,
+    "stdout": "[\n  {\n    \"message\": {\n      \"uuid\": \"synthetic-message-1\",\n      \"text\": \"SYNTHETIC FIXTURE: Aurora restore validation succeeded. No real project facts.\",\n      \"content_type\": \"text\",\n      \"is_meta\": 0,\n      \"role\": \"assistant\",\n      \"timestamp\": \"2026-10-17T00:00:01Z\",\n      \"model\": null,\n      \"cwd\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only\",\n      \"visibility\": \"visible\",\n      \"source\": \"claude\"\n    },\n    \"session\": {\n      \"id\": \"synthetic-session\",\n      \"title\": null,\n      \"project\": \"SYNTHETIC-NOT-REAL-HISTORY\",\n      \"started_at\": \"2026-10-17T00:00:01Z\",\n      \"source\": \"claude\"\n    },\n    \"rank\": -0.6943472437557029,\n    \"context\": [\n      {\n        \"uuid\": \"synthetic-message-2\",\n        \"text\": \"SYNTHETIC FIXTURE: Nebula incremental append.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:02Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      },\n      {\n        \"uuid\": \"synthetic-message-3\",\n        \"text\": \"SYNTHETIC FIXTURE: Comet after malformed line.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:03Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      },\n      {\n        \"uuid\": \"synthetic-message-4\",\n        \"text\": \"SYNTHETIC FIXTURE: Orion completed tail.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:04Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      }\n    ]\n  }\n]\n",
+    "stderr": ""
+  },
+  {
+    "test": "snapshot_restored_search",
+    "code": 0,
+    "stdout": "[\n  {\n    \"message\": {\n      \"uuid\": \"synthetic-message-1\",\n      \"text\": \"SYNTHETIC FIXTURE: Aurora restore validation succeeded. No real project facts.\",\n      \"content_type\": \"text\",\n      \"is_meta\": 0,\n      \"role\": \"assistant\",\n      \"timestamp\": \"2026-10-17T00:00:01Z\",\n      \"model\": null,\n      \"cwd\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only\",\n      \"visibility\": \"visible\",\n      \"source\": \"claude\"\n    },\n    \"session\": {\n      \"id\": \"synthetic-session\",\n      \"title\": null,\n      \"project\": \"SYNTHETIC-NOT-REAL-HISTORY\",\n      \"started_at\": \"2026-10-17T00:00:01Z\",\n      \"source\": \"claude\"\n    },\n    \"rank\": -0.6943472437557029,\n    \"context\": [\n      {\n        \"uuid\": \"synthetic-message-2\",\n        \"text\": \"SYNTHETIC FIXTURE: Nebula incremental append.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:02Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      },\n      {\n        \"uuid\": \"synthetic-message-3\",\n        \"text\": \"SYNTHETIC FIXTURE: Comet after malformed line.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:03Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      },\n      {\n        \"uuid\": \"synthetic-message-4\",\n        \"text\": \"SYNTHETIC FIXTURE: Orion completed tail.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:04Z\",\n        \"model\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      }\n    ]\n  }\n]\n",
+    "stderr": ""
+  },
+  {
+    "test": "snapshot_integrity",
+    "code": 0,
+    "stdout": "{\"integrity\":[{\"integrity_check\":\"ok\"}],\"count\":{\"n\":4},\"sessions\":[{\"id\":\"synthetic-session\",\"jsonl_path\":\"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only/projects/SYNTHETIC-NOT-REAL-HISTORY/synthetic-session.jsonl\"}]}\n",
+    "stderr": ""
+  },
+  {
+    "test": "filesystem_boundary",
+    "code": 0,
+    "stdout": "ERR_ACCESS_DENIED\n",
+    "stderr": ""
+  }
+]
+```
+
+### 历史回执去敏展示：rewrite-results.json
+
+```json
+[
+  {
+    "test": "incremental",
+    "stdout": "{\"skip\":false,\"complete\":true,\"incompleteProviders\":[],\"inventoryIssues\":[],\"skipped\":0,\"skippedFiles\":[],\"watchHints\":[\"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only/projects/SYNTHETIC-NOT-REAL-HISTORY/synthetic-session.jsonl\"]}\n",
+    "stderr": "",
+    "code": 0
+  },
+  {
+    "test": "stale_source",
+    "stdout": "{\n  \"hits\": [\n    {\n      \"message\": {\n        \"uuid\": \"synthetic-message-1\",\n        \"text\": \"SYNTHETIC FIXTURE: Aurora restore validation succeeded. No real project facts.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:01Z\",\n        \"model\": null,\n        \"cwd\": \"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only\",\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      },\n      \"session\": {\n        \"id\": \"synthetic-session\",\n        \"title\": null,\n        \"project\": \"SYNTHETIC-NOT-REAL-HISTORY\",\n        \"started_at\": \"2026-10-17T00:00:01Z\",\n        \"source\": \"claude\"\n      },\n      \"rank\": -0.6943472437557029,\n      \"context\": [\n        {\n          \"uuid\": \"synthetic-message-2\",\n          \"text\": \"SYNTHETIC FIXTURE: Nebula incremental append.\",\n          \"content_type\": \"text\",\n          \"is_meta\": 0,\n          \"role\": \"assistant\",\n          \"timestamp\": \"2026-10-17T00:00:02Z\",\n          \"model\": null,\n          \"visibility\": \"visible\",\n          \"source\": \"claude\"\n        },\n        {\n          \"uuid\": \"synthetic-message-3\",\n          \"text\": \"SYNTHETIC FIXTURE: Comet after malformed line.\",\n          \"content_type\": \"text\",\n          \"is_meta\": 0,\n          \"role\": \"assistant\",\n          \"timestamp\": \"2026-10-17T00:00:03Z\",\n          \"model\": null,\n          \"visibility\": \"visible\",\n          \"source\": \"claude\"\n        },\n        {\n          \"uuid\": \"synthetic-message-4\",\n          \"text\": \"SYNTHETIC FIXTURE: Orion completed tail.\",\n          \"content_type\": \"text\",\n          \"is_meta\": 0,\n          \"role\": \"assistant\",\n          \"timestamp\": \"2026-10-17T00:00:04Z\",\n          \"model\": null,\n          \"visibility\": \"visible\",\n          \"source\": \"claude\"\n        }\n      ]\n    }\n  ],\n  \"source\": null,\n  \"newHits\": []\n}\n",
+    "stderr": "",
+    "code": 0
+  },
+  {
+    "test": "force_build",
+    "stdout": "{\"ok\":true,\"db\":\"[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/home/.obelisk/obelisk.sqlite\"}\n",
+    "stderr": "",
+    "code": 0
+  },
+  {
+    "test": "after_force",
+    "stdout": "{\n  \"hits\": [],\n  \"source\": null,\n  \"newHits\": [\n    {\n      \"message\": {\n        \"uuid\": \"synthetic-message-5\",\n        \"text\": \"SYNTHETIC FIXTURE: Vega replacement.\",\n        \"content_type\": \"text\",\n        \"is_meta\": 0,\n        \"role\": \"assistant\",\n        \"timestamp\": \"2026-10-17T00:00:05Z\",\n        \"model\": null,\n        \"cwd\": null,\n        \"visibility\": \"visible\",\n        \"source\": \"claude\"\n      },\n      \"session\": {\n        \"id\": \"synthetic-session\",\n        \"title\": null,\n        \"project\": \"SYNTHETIC-NOT-REAL-HISTORY\",\n        \"started_at\": \"2026-10-17T00:00:05Z\",\n        \"source\": \"claude\"\n      },\n      \"rank\": -0.000001,\n      \"context\": []\n    }\n  ]\n}\n",
+    "stderr": "",
+    "code": 0
+  }
+]
+```
+
+### 历史回执去敏展示：final-smoke.json
+
+```json
+[
+  {
+    "message": {
+      "uuid": "synthetic-message-1",
+      "text": "SYNTHETIC FIXTURE: Aurora restore validation succeeded. No real project facts.",
+      "content_type": "text",
+      "is_meta": 0,
+      "role": "assistant",
+      "timestamp": "2026-10-17T00:00:01Z",
+      "model": null,
+      "cwd": "[REDACTED_CLOUD_ROOT]/obelisk_tools_20261017/synthetic-only",
+      "visibility": "visible",
+      "source": "claude"
+    },
+    "session": {
+      "id": "synthetic-session",
+      "title": null,
+      "project": "SYNTHETIC-NOT-REAL-HISTORY",
+      "started_at": "2026-10-17T00:00:01Z",
+      "source": "claude"
+    },
+    "rank": -0.6943472437557029,
+    "context": [
+      {
+        "uuid": "synthetic-message-2",
+        "text": "SYNTHETIC FIXTURE: Nebula incremental append.",
+        "content_type": "text",
+        "is_meta": 0,
+        "role": "assistant",
+        "timestamp": "2026-10-17T00:00:02Z",
+        "model": null,
+        "visibility": "visible",
+        "source": "claude"
+      },
+      {
+        "uuid": "synthetic-message-3",
+        "text": "SYNTHETIC FIXTURE: Comet after malformed line.",
+        "content_type": "text",
+        "is_meta": 0,
+        "role": "assistant",
+        "timestamp": "2026-10-17T00:00:03Z",
+        "model": null,
+        "visibility": "visible",
+        "source": "claude"
+      },
+      {
+        "uuid": "synthetic-message-4",
+        "text": "SYNTHETIC FIXTURE: Orion completed tail.",
+        "content_type": "text",
+        "is_meta": 0,
+        "role": "assistant",
+        "timestamp": "2026-10-17T00:00:04Z",
+        "model": null,
+        "visibility": "visible",
+        "source": "claude"
+      }
+    ]
+  }
+]
+
+```
+
+### 历史回执去敏展示：package-lock.json
+
+```json
+{
+  "name": "obelisk_tools_20261017",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": {
+      "dependencies": {
+        "@obelisk-apps/cli": "0.3.0"
+      }
+    },
+    "node_modules/@obelisk-apps/cli": {
+      "version": "0.3.0",
+      "resolved": "https://registry.npmjs.org/@obelisk-apps/cli/-/cli-0.3.0.tgz",
+      "integrity": "sha512-FUbA/PowSyfgU4ejfc4HFbtn+BPGZc/CvCLhtguskXbyU4TIhPcZ/tFxQXZTJtJxLkzS3jT0231mDluE0ftepA==",
+      "license": "AGPL-3.0",
+      "bin": {
+        "obelisk": "dist/cli/src/obelisk.js"
+      },
+      "engines": {
+        "node": ">=22.13.0"
+      }
+    }
+  }
+}
+
+```

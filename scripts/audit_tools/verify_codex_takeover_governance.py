@@ -339,6 +339,11 @@ def _is_rules_only_publication_path(path: str) -> bool:
 
         "tests/test_online_progress_governance.py",
         "tests/test_audit_inventory_boundaries.py",  # Existing audit inventory boundary regressions.
+        "tests/test_source_adoption_governance.py",  # Existing source/owner evidence regression.
+        "scripts/audit_tools/verify_source_adoption.py",  # Existing adoption provenance validator, not runtime.
+        "00-GOVERNANCE/evidence/round-15/source-adoption-20261018/EXISTING-OWNER-WORK-HANDOFF.json",  # Exact current developer handoff document.
+        "research/engineering/third-party-review-20261018/third-party-review-full-v11.md",  # Existing research report with verified historical evidence.
+        "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",  # Exact preserved-material reconciliation document, not runtime.
         "tests/test_governance_machine_contract.py",  # This policy owner's regression, not product behavior.
         # These exact JSON files are material/approved-target documentation,
         # not runtime configuration. Keep arbitrary JSON outside this allowlist.
