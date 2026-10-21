@@ -84,7 +84,14 @@ void main() {
       final media =
           ui_web.platformViewRegistry.getViewById(surface.controller.viewId)
               as web.HTMLMediaElement;
-      if (!media.isConnected) web.document.body!.appendChild(media);
+      if (!media.isConnected) {
+        // The registry resolves the first child of its engine-owned wrapper.
+        // Moving only the media would empty that wrapper and break the next
+        // getViewById call when the same source is mounted again.
+        final platformView = media.parentElement!;
+        web.document.body!.appendChild(platformView);
+        addTearDown(platformView.remove);
+      }
       return media;
     }
 
@@ -223,8 +230,9 @@ void main() {
     expect(media.getAttribute('src'), startsWith('blob:'));
     // Browser tests do not paint the platform view. Attach its real element to
     // exercise focusin and browser ownership without mocking the focus bridge.
-    web.document.body!.appendChild(media);
-    addTearDown(() => media.remove());
+    final platformView = media.parentElement!;
+    web.document.body!.appendChild(platformView);
+    addTearDown(platformView.remove);
     triggerFocus.requestFocus();
     await tester.pump();
     expectNoFrameworkException('trigger button focus');
