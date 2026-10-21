@@ -1,0 +1,30 @@
+{
+  "schema": "oevira.source-equivalence.v1",
+  "captured_utc": "2026-10-21T12:01:33.797719+00:00",
+  "previous_bridge": "SKIP_CLOSURE_WORKFLOW_EQUIVALENCE.json",
+  "previous_bridge_sha256": "48693ce11580b0248b50cdce324dcd18ad5636b9b1540e543da6484e64884818",
+  "from_local_head": "2ecf05001adb37742449a1664ae2025a0cb9dbe5",
+  "to_local_head": "b0d253eb11dd9b0743183173bfaa72e85ddac382",
+  "to_local_tree": "4f119b6a672f65954629544e879a511fab225849",
+  "changed_paths": [
+    {
+      "path": ".github/workflows/platform-verify.yml",
+      "before": "100644 blob 0521332400c15e53b89f8a063a11d9b20c94d19e",
+      "after": "100644 blob 1a2f51cd6909c093263ea202c0abda14677c3ea4"
+    }
+  ],
+  "unchanged_blob_entries": 4583,
+  "product_and_test_blobs_identical": true,
+  "change_boundary": "Offline pytest console verbosity -vv to -q and explanatory comments only; original JUnit XML retention remains.",
+  "claim_boundary": "No product test rerun needed for unchanged bytes; exact head CI and browser terminal evidence remain pending. Large console logs are an observed risk, not a proven unique hang cause.",
+  "publication_derivation": {
+    "status": "DERIVED_PUBLIC_RECEIPT",
+    "original_file": "SKIP_CLOSURE_WORKFLOW_EQUIVALENCE_20AD.json",
+    "original_sha256": "253f94c5ff5966638181a85a91881ecc63ab71b5fc7596b38b3caf7e4f000531",
+    "removed_fields": [
+      "reported_remote_commit",
+      "remote_identity_evidence"
+    ],
+    "reason": "Remove internally reported, not independently verified remote identity. Preserve local object comparison."
+  }
+}

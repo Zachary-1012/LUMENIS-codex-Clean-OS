@@ -1,0 +1,121 @@
+{
+  "schema": "oevira.ci-node-overlay.v1",
+  "generated_utc": "2026-10-21T12:13:34.629301+00:00",
+  "base_delta": {
+    "path": "SKIP_CLOSURE_NODE_DELTA.json",
+    "sha256": "a0756c79a7ee5632c8661f8d378faec4c936b42847731f1906a0e59a26be3347"
+  },
+  "source_bridge_chain": [
+    {
+      "original_source_name": "SKIP_CLOSURE_WORKFLOW_EQUIVALENCE.json",
+      "original_source_sha256": "48693ce11580b0248b50cdce324dcd18ad5636b9b1540e543da6484e64884818",
+      "path": "SKIP_CLOSURE_WORKFLOW_EQUIVALENCE_PUBLIC.json",
+      "sha256": "99592df26b6a2a764958c496946c610cc0ebb0b74d0bda3bd6c8b7c007f9e81f",
+      "status": "DERIVED_PUBLIC_RECEIPT"
+    },
+    {
+      "original_source_name": "SKIP_CLOSURE_WORKFLOW_EQUIVALENCE_20AD.json",
+      "original_source_sha256": "253f94c5ff5966638181a85a91881ecc63ab71b5fc7596b38b3caf7e4f000531",
+      "path": "SKIP_CLOSURE_WORKFLOW_EQUIVALENCE_20AD_PUBLIC.json",
+      "sha256": "ffb65bbad8fea56bd4d7ababd051dd5b86a4dbac2833e0546100bc21321ebc84",
+      "status": "DERIVED_PUBLIC_RECEIPT"
+    }
+  ],
+  "ci": {
+    "run_id": 39596291255,
+    "job_id": 119211473851,
+    "url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39596291255/job/119211473851",
+    "pull_request_head": "20ad82d432f8b8953f3f600be6d1f0341862e57d",
+    "actual_merge_checkout": "cb978a27e8f0e17f103cf36a6b340ed9cb4dcfba",
+    "tree": "4f119b6a672f65954629544e879a511fab225849",
+    "local_identical_tree_commit": "b0d253eb11dd9b0743183173bfaa72e85ddac382",
+    "identity_provenance": {
+      "path": "ci-20ad/OFFICIAL_CI_READBACK.json",
+      "sha256": "145909a1a5d3d2da321804575fe6f33cc6e385d76cc8c0a0fe77db788ae06353",
+      "source": "Official authenticated GitHub API readback and downloaded artifact; exact checkout/tree recorded there."
+    }
+  },
+  "execution": {
+    "python": "3.11.17",
+    "playwright": "1.64.0",
+    "chromium": "156.0.8078.4",
+    "isolation": "Actual sudo unshare --net then runuser fixture execution; no external network interfaces. Browser downloads occur before namespace; no fallback to online execution.",
+    "timestamp_utc": "2026-10-21T12:10:18.482941+00:00",
+    "duration_seconds": "1.088"
+  },
+  "updates": [
+    {
+      "node_id": "tests/test_browser_extract.py::test_real_chromium_visible_capture_without_network",
+      "prior_local_status": "SKIP",
+      "status": "PASS",
+      "evidence": "ci-20ad/oevira-browser.xml",
+      "evidence_sha256": "dbb5e9d2853b8db20dfd04fb7b42290166728bb2273b5ef3080d975e91f9596b",
+      "scope": "Real Chromium synthetic visible capture fixture, not production website/user account/whole frontend acceptance."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "ci-20ad/OFFICIAL_CI_READBACK.json",
+      "bytes": 1916,
+      "sha256": "145909a1a5d3d2da321804575fe6f33cc6e385d76cc8c0a0fe77db788ae06353"
+    },
+    {
+      "bytes": 32269,
+      "sha256": "dae0222643bd742307c7b9f835645b0b89730c0a62e6bf86ff4ab14c25d0687d",
+      "original_source_name": "ci-20ad/artifact.zip",
+      "availability": "EXTERNAL_OFFICIAL_ACTIONS_ARTIFACT_OR_JOB_LOG_NOT_EMBEDDED",
+      "run_id": 39596291255,
+      "artifact_id": 12343569530
+    },
+    {
+      "path": "ci-20ad/oevira-browser.xml",
+      "bytes": 371,
+      "sha256": "dbb5e9d2853b8db20dfd04fb7b42290166728bb2273b5ef3080d975e91f9596b"
+    },
+    {
+      "path": "ci-20ad/oevira-http.xml",
+      "bytes": 870,
+      "sha256": "8652ed33857aa6143faf1941a859774455228e9ddd2719bb691aa5fe02e2ce34"
+    },
+    {
+      "path": "ci-20ad/oevira-offline.log",
+      "bytes": 1628,
+      "sha256": "d1006734fb48e7b56c070f10e6b482897d004ae1edf7853b63618ad4bfbb2e86"
+    },
+    {
+      "path": "ci-20ad/oevira-offline.xml",
+      "bytes": 3973286,
+      "sha256": "6de5c79930ec148cc6695fcb59d38da74e5e610f660ae31840b0b82675e2da16"
+    },
+    {
+      "bytes": 181255,
+      "sha256": "660e19582f810c5d83f010c9349953c4a8514211889d029d10cae93274fa9d1e",
+      "original_source_name": "ci-20ad/product-job.log",
+      "availability": "EXTERNAL_OFFICIAL_ACTIONS_ARTIFACT_OR_JOB_LOG_NOT_EMBEDDED",
+      "run_id": 39596291255
+    }
+  ],
+  "artifact_zip_crc": "PASS",
+  "resolved_unique_nodes": 12816,
+  "resolved_counts": {
+    "PASS": 12816
+  },
+  "resolved_node_status_sha256": "636a59d686a41dd5152febcef4d55ec9e8489208df5d4a3153bd6e5352bc04b7",
+  "aggregation_rule": "Apply original FINAL_BOUND_NODE_LEDGER, then immutable SKIP_CLOSURE_NODE_DELTA updates, then this one-node overlay; count unique canonical IDs once. Subtest results are separate, not additional canonical nodes.",
+  "history": "Original ten SKIP receipts and local browser SKIP remain unchanged. Retired ARK and external OSAI tests retain explicit semantic migration boundaries from delta ledger.",
+  "claim_limit": "Current applicable engineering test universe only. Does not assert production runtime, deployment, full product acceptance, or PR merge.",
+  "publication": {
+    "status": "DERIVED_PUBLIC_RECEIPT",
+    "original_sha256": "336b887d109e155b0f53617cb72eaff4c9ec9b117a867d4d99deea386f30d33e",
+    "changes": [
+      "Internal identity_provenance replaced by official readback reference.",
+      "Private source-bridge paths replaced by admitted public derived mapping, retaining original hashes.",
+      "ZIP and full job-log references explicitly external, not repository files.",
+      "Base ledger relative location made explicit."
+    ]
+  },
+  "base_ledger": {
+    "path": "../followup-receipts/FINAL_BOUND_NODE_LEDGER.json",
+    "sha256": "4ea148291bf1567776511db8da174e90b607551c48386e66ecd0d52985221108"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "schema": "oevira-official-ci-readback/v1",
+  "readback_utc": "2026-10-21T12:12:56.018Z",
+  "source": "Official authenticated GitHub API and downloaded Actions artifact",
+  "repository": "Zachary-1012/LUMENIS-codex-Clean-OS",
+  "pr": 118,
+  "head": "20ad82d432f8b8953f3f600be6d1f0341862e57d",
+  "checkout": "cb978a27e8f0e17f103cf36a6b340ed9cb4dcfba",
+  "tree": "4f119b6a672f65954629544e879a511fab225849",
+  "checkout_parents": [
+    "7c261229731c9b2e22f267b6455f024ab8861f83",
+    "20ad82d432f8b8953f3f600be6d1f0341862e57d"
+  ],
+  "runs": [
+    {
+      "id": 39596291255,
+      "name": "LUMENIS Product Gate",
+      "head_sha": "20ad82d432f8b8953f3f600be6d1f0341862e57d",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-21T12:01:07Z",
+      "updated_at": "2026-10-21T12:10:40Z",
+      "run_started_at": "2026-10-21T12:01:07Z",
+      "url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39596291255"
+    },
+    {
+      "id": 39596291275,
+      "name": "LUMENIS App Gate",
+      "head_sha": "20ad82d432f8b8953f3f600be6d1f0341862e57d",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-21T12:01:07Z",
+      "updated_at": "2026-10-21T12:04:35Z",
+      "run_started_at": "2026-10-21T12:01:07Z",
+      "url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39596291275"
+    }
+  ],
+  "artifact": {
+    "id": 12343569530,
+    "size": 32269,
+    "sha256": "dae0222643bd742307c7b9f835645b0b89730c0a62e6bf86ff4ab14c25d0687d",
+    "zip_crc": "PASS",
+    "members": [
+      "oevira-offline.log",
+      "oevira-offline.xml",
+      "oevira-http.xml",
+      "oevira-browser.xml"
+    ]
+  },
+  "boundary": "Source and isolated synthetic tests only; no real platform, production DB, model training or user-device acceptance. Not a merge receipt.",
+  "readback_beijing": "2026-10-21T20:12:56.018000+08:00"
+}

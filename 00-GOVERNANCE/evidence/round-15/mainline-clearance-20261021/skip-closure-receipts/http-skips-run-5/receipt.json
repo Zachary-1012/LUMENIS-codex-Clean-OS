@@ -1,0 +1,48 @@
+{
+  "head": "f2cd1e660b7f4cd87e7914ef2c4cbf1bcc197a72",
+  "tree": "a6af7dd3e234f1dce94360bc27b02829b7366f12",
+  "dirty": "M tests/test_cross_surface_consistency.py\n M tests/test_refscan_consistency.py\n?? tests/http_consistency_fixture.py",
+  "started_utc": "2026-10-21T11:30:01.307656+00:00",
+  "finished_utc": "2026-10-21T11:30:04.604930+00:00",
+  "argv": [
+    "/tmp/oevira-pr-repair-venv/bin/python",
+    "-m",
+    "pytest",
+    "tests/test_cross_surface_consistency.py",
+    "tests/test_refscan_consistency.py",
+    "-o",
+    "addopts=",
+    "-q",
+    "--junitxml=/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/http-skips-run-5/results.xml"
+  ],
+  "environment": {
+    "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/override:/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin:/opt/codex/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/fallback",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "HOME": "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/http-skips-run-5/home",
+    "PYTHONPATH": "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/final-owner-impact/guard",
+    "ORT_DISABLE_TELEMETRY": "1",
+    "ZBC_ALLOW_NETWORK": "0",
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "LUMENIS_TEST_SEED_DB": "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/final-owner-impact/synthetic-seed.sqlite3",
+    "LUMENIS_ESPEAK_BINARY": "/workspace/scratch/8d04d68e28f4/espeak_isolated/root/usr/bin/espeak-ng",
+    "LD_LIBRARY_PATH": "/workspace/scratch/8d04d68e28f4/espeak_isolated/root/usr/lib/x86_64-linux-gnu",
+    "ESPEAK_DATA_PATH": "/workspace/scratch/8d04d68e28f4/espeak_isolated/root/usr/lib/x86_64-linux-gnu/espeak-ng-data",
+    "LUMENIS_FFMPEG_PATH": "/usr/bin/ffmpeg",
+    "LUMENIS_FFPROBE_PATH": "/usr/bin/ffprobe"
+  },
+  "source_before": {
+    "tests/http_consistency_fixture.py": "86339ef6a10e3187dabac4f19ebaf5aeb18383054afdeb27de3d6a942b47d815",
+    "tests/test_cross_surface_consistency.py": "e3461ad1c6b29a4d1a7d4721f18c372178c16e7b9aa1aa86baea13ea7e32f18b",
+    "tests/test_refscan_consistency.py": "c533cde4f0167d016f8bf0f3b0e9e4cdc91cbebdc19bb3066e1981a39fae20d5"
+  },
+  "source_after": {
+    "tests/http_consistency_fixture.py": "86339ef6a10e3187dabac4f19ebaf5aeb18383054afdeb27de3d6a942b47d815",
+    "tests/test_cross_surface_consistency.py": "e3461ad1c6b29a4d1a7d4721f18c372178c16e7b9aa1aa86baea13ea7e32f18b",
+    "tests/test_refscan_consistency.py": "c533cde4f0167d016f8bf0f3b0e9e4cdc91cbebdc19bb3066e1981a39fae20d5"
+  },
+  "exit_code": 0,
+  "xml_sha256": "062f35953d82ea2419ab3ecf36898017ce719e8ba77e458e75dbc9670c344a82",
+  "scope": "Synthetic current-owner DB/registry/evidence; real owned loopback HTTP. No external or production service."
+}

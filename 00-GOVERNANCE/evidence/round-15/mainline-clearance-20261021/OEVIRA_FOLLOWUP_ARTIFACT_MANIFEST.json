@@ -678,8 +678,198 @@
     },
     {
       "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/OEVIRA_CLEARANCE_FOLLOWUP.md",
-      "bytes": 11361,
-      "sha256": "918d24ced0f64f3e67b4c3788ec0f55d1c8f621045bdba2916f644b1207e7784"
+      "bytes": 23303,
+      "sha256": "6b0e2e51b4f05fe4a0f8b0bde4758d84e4a3e48b1a1a9fa743c87cef603bd910"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook/SOURCE_RECEIPT.json",
+      "bytes": 2248,
+      "sha256": "a1b617587b3f89198571f1b107c6cf3d1b59d0da29bbb5b30ebf5c40103d918a"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook/official-headers.txt",
+      "bytes": 159,
+      "sha256": "2de2bbcf902734eae5f1d42ff75b34ec59cd9c3ce0cc19c80c891de176da6700"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook-candidate/results.xml",
+      "bytes": 4796,
+      "sha256": "fb021762f3bc5c2b9a434dbb0fb65970f8fdaf9d5f6fb9ec5572bbf17f3f4009"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook-candidate/receipt.json",
+      "bytes": 1198,
+      "sha256": "ebe12611e13e091546d881fb6f43c309fe1a13b7cc64fc03fe78da89785519aa"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook-candidate/output.log",
+      "bytes": 397,
+      "sha256": "1098bfc0c0474efed7cf1e26524255875ce42d5473df78f785d00682d3c92828"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/export-independent-review/results.xml",
+      "bytes": 6948,
+      "sha256": "c5aae9e9c1437644e67a75a1e3e516c2ba200ec68feb4e8131181b397fda8867"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/export-independent-review/receipt.json",
+      "bytes": 1406,
+      "sha256": "0ae07c25d8cedb601fdc4a57be67d28c695426a2d8f6e649242c850ff2b31dea"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/export-independent-review/output.log",
+      "bytes": 398,
+      "sha256": "550846d5a57498f4bb3bfd8705aa50af3bbe5a4a6889e5c9bd55557791cc2aff"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/http-skips-run-5/results.xml",
+      "bytes": 869,
+      "sha256": "062f35953d82ea2419ab3ecf36898017ce719e8ba77e458e75dbc9670c344a82"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/http-skips-run-5/receipt.json",
+      "bytes": 2974,
+      "sha256": "7b22beaeafc6dfe0d8ea84d47bbb652230b7982fe742782029d55f6c72107a85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/http-skips-run-5/output.log",
+      "bytes": 396,
+      "sha256": "60ddaf497732b1ac100810791fa320bae576f8b930c6dc1a4199976180500806"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ark-osai-exporter/legacy_exporter_collision.json",
+      "bytes": 379,
+      "sha256": "26095c9eb234967324a5ae50bb1e885de9e10258f45f93e06058a31be098979b"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ark-osai-exporter/node-semantic-map.json",
+      "bytes": 3677,
+      "sha256": "03e921de2e16db40e4272adb772cae9dd310aedf5de70bd42e6448ebaf61f1a2"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ark-osai-exporter/export-final.xml",
+      "bytes": 9649,
+      "sha256": "ceca54d41b3c33548b12da096dd222682a24b895e91c781ad8827b4567e4b1af"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ark-osai-exporter/export-final.log",
+      "bytes": 378,
+      "sha256": "f9c8be735bf955741a2ef5f87c79c05a0e947cf4e8efef53934b38cc2369e309"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook-original-verified/receipt.json",
+      "bytes": 2183739,
+      "sha256": "78c7a4a39835cf4bfd386f492b1a9065c9b88024f4c8e1f033684e55600917f8"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook-original-verified/results.xml",
+      "bytes": 4529,
+      "sha256": "bcc927cfa2ca933f372626d704a2f53800aaac13a682ae9e4f4d56cfdf9067e5"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook-original-verified/pip-freeze.txt",
+      "bytes": 2210,
+      "sha256": "315ebf029e3a5408bfee4c7c84a57e8076195daa49413fe0c7aa9e813ceecb85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook-original-verified/pip-freeze-after.txt",
+      "bytes": 2210,
+      "sha256": "315ebf029e3a5408bfee4c7c84a57e8076195daa49413fe0c7aa9e813ceecb85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-close-impact/receipt.json",
+      "bytes": 2187081,
+      "sha256": "4a8bebb1855d1ffad993dc9830b2e61d0279ea8853f4bca58ab019cdb6a9dda9"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-close-impact/results.xml",
+      "bytes": 1966902,
+      "sha256": "ff6b814c8922c591774a8af76e5db05fe02ad09d13727da65e248ec9e8ba2246"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-close-impact/pip-freeze.txt",
+      "bytes": 2210,
+      "sha256": "315ebf029e3a5408bfee4c7c84a57e8076195daa49413fe0c7aa9e813ceecb85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-close-impact/pip-freeze-after.txt",
+      "bytes": 2210,
+      "sha256": "315ebf029e3a5408bfee4c7c84a57e8076195daa49413fe0c7aa9e813ceecb85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-close-collection/receipt.json",
+      "bytes": 1931,
+      "sha256": "44eb2e435b27512acf8e6a361eb5035403a56bec362f67ecfa6a222de2fefef4"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-close-collection/collection.log",
+      "bytes": 5100361,
+      "sha256": "2fac1354d448b1e477489bd589a67319a679c4f730fbf5c2c995d13833358b75"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-close-collection/nodeids.txt",
+      "bytes": 5100031,
+      "sha256": "76c2ec097924094a9df9caa622f76770711ac01b9fc1ea1dce7d80974f50c7cc"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/SKIP_CLOSURE_NODE_DELTA.json",
+      "bytes": 2267282,
+      "sha256": "a0756c79a7ee5632c8661f8d378faec4c936b42847731f1906a0e59a26be3347"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/offline-ci-diagnostic/output.log",
+      "bytes": 3959366,
+      "sha256": "2a2025f5e042ea797e3ab6c801530bfde20cd879bd2c4ff3008d0aaa883c76fe"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/offline-ci-diagnostic/seeded-output.log",
+      "bytes": 3946514,
+      "sha256": "ea906a9724331dd7d36590a636d07ae9f7624781ffc9d4b351b60eefc13c61c3"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/SKIP_CLOSURE_WORKFLOW_EQUIVALENCE_PUBLIC.json",
+      "bytes": 1991,
+      "sha256": "99592df26b6a2a764958c496946c610cc0ebb0b74d0bda3bd6c8b7c007f9e81f"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/OFFLINE_CI_DIAGNOSTIC_PUBLIC.json",
+      "bytes": 1773,
+      "sha256": "649a2ea00c00960038d42263ea5d52ed4e299c464947ce1011eca00df6da2132"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/SKIP_CLOSURE_WORKFLOW_EQUIVALENCE_20AD_PUBLIC.json",
+      "bytes": 1558,
+      "sha256": "ffb65bbad8fea56bd4d7ababd051dd5b86a4dbac2833e0546100bc21321ebc84"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ci-20ad/oevira-offline.log",
+      "bytes": 1628,
+      "sha256": "d1006734fb48e7b56c070f10e6b482897d004ae1edf7853b63618ad4bfbb2e86"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ci-20ad/oevira-offline.xml",
+      "bytes": 3973286,
+      "sha256": "6de5c79930ec148cc6695fcb59d38da74e5e610f660ae31840b0b82675e2da16"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ci-20ad/oevira-http.xml",
+      "bytes": 870,
+      "sha256": "8652ed33857aa6143faf1941a859774455228e9ddd2719bb691aa5fe02e2ce34"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ci-20ad/oevira-browser.xml",
+      "bytes": 371,
+      "sha256": "dbb5e9d2853b8db20dfd04fb7b42290166728bb2273b5ef3080d975e91f9596b"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ci-20ad/OFFICIAL_CI_READBACK.json",
+      "bytes": 1916,
+      "sha256": "145909a1a5d3d2da321804575fe6f33cc6e385d76cc8c0a0fe77db788ae06353"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/SKIP_CLOSURE_CI_FINAL_OVERLAY_PUBLIC.json",
+      "bytes": 5530,
+      "sha256": "8df3a6f30995664a66852ff367a7adb4fcb78fe9e910e3b4f3028e2a1da0a029"
     }
   ]
 }
