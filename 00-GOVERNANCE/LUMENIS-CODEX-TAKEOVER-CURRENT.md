@@ -845,9 +845,9 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 
-This closing candidate changes the existing managed-worker interpreter launch path and its isolated regression/CI coverage, alongside evidence provenance. The source-publication label applies only after the normal reviewed PR, required checks and remote readback; while this branch is in progress, final clearance remains NOT_READY. Preserve the original PR #116/#117 artifacts and their historical scope. This is not a production runtime load, a training run, or full product acceptance.
+This publication only archives PR #118 final merge/readback and raw CI receipts in the existing evidence owner, updates its finite manifest and exact validator pin, and corrects this publication classification. It changes no product behavior source. PR #118 already published and merged the managed-worker interpreter repair and its regression/CI coverage; that source verification remains recorded in the linked final receipt and is not revoked by this documentation-only classification. Preserve the original PR #116/#117/#118 evidence and historical scope. This is not a production runtime load, a training run, or full product acceptance. This archive PR still requires its own exact-head checks and normal merge/readback.
 
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Database state: `NOT_VERIFIED`
