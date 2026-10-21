@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS v4_login_attempts (
     username TEXT,
     ip TEXT,
     success INTEGER,
+    attempt_kind TEXT NOT NULL DEFAULT 'legacy',
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
 
@@ -269,6 +270,24 @@ def ensure_auth_user_columns(conn):
             conn.execute(f"ALTER TABLE v4_users ADD COLUMN {col} {col_type}")
 
 
+def ensure_login_attempt_kind_column(conn):
+    """Add provenance without reclassifying or deleting historical audit rows.
+
+    Legacy failures remain eligible for conservative key throttling; legacy
+    successes cannot reset it because their original caller is unknown.
+    """
+    if not _column_exists(conn, "v4_login_attempts", "attempt_kind"):
+        try:
+            conn.execute("ALTER TABLE v4_login_attempts ADD COLUMN "
+                         "attempt_kind TEXT NOT NULL DEFAULT 'legacy'")
+        except sqlite3.OperationalError as exc:
+            # Another startup may have added it after our PRAGMA. Suppress
+            # only that verified race, not locked/read-only/corrupt DB errors.
+            if ("duplicate column name" not in str(exc).lower()
+                    or not _column_exists(conn, "v4_login_attempts", "attempt_kind")):
+                raise
+
+
 def _ensure_owner_account(conn):
     """Provision an initial owner only from explicit operator injection.
 
@@ -316,6 +335,7 @@ def init_account_db():
         conn.commit()
         # 幂等新增列
         ensure_auth_user_columns(conn)
+        ensure_login_attempt_kind_column(conn)
         for col, col_type in _WS_KEY_NEW_COLUMNS:
             if not _column_exists(conn, "v4_workspace_keys", col):
                 conn.execute(f"ALTER TABLE v4_workspace_keys ADD COLUMN {col} {col_type}")

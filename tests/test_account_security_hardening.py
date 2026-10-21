@@ -55,14 +55,14 @@ def test_workspace_key_bucket_locks_after_max_failures(tmp_path, monkeypatch):
     db = tmp_path / "b.db"
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
-    conn.execute("CREATE TABLE v4_login_attempts(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, ip TEXT, success INTEGER, created_at TEXT)")
+    conn.execute("CREATE TABLE v4_login_attempts(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, ip TEXT, success INTEGER, created_at TEXT, attempt_kind TEXT NOT NULL DEFAULT 'legacy')")
     conn.execute("CREATE TABLE v4_users(username TEXT, failed_attempts INTEGER, locked_until TEXT)")
     monkeypatch.setitem(security.AUTH_CONFIG, "max_login_attempts", 3)
     for _ in range(3):
-        assert security.check_login_attempts("__workspace_key__", "203.0.113.5", conn=conn)["allowed"]
-        security.record_login_attempt("__workspace_key__", "203.0.113.5", False, conn=conn)
-    assert security.check_login_attempts("__workspace_key__", "203.0.113.5", conn=conn)["allowed"] is False
-    assert security.check_login_attempts("__workspace_key__", "203.0.113.6", conn=conn)["allowed"] is True
+        assert security.check_login_attempts("__workspace_key__", "203.0.113.5", conn=conn, attempt_kind="key")["allowed"]
+        security.record_login_attempt("__workspace_key__", "203.0.113.5", False, conn=conn, attempt_kind="key")
+    assert security.check_login_attempts("__workspace_key__", "203.0.113.5", conn=conn, attempt_kind="key")["allowed"] is False
+    assert security.check_login_attempts("__workspace_key__", "203.0.113.6", conn=conn, attempt_kind="key")["allowed"] is True
 
 
 def test_reserved_looking_username_keeps_account_lockout():
@@ -135,18 +135,18 @@ def test_workspace_unlock_attempts_are_serialized_in_one_transaction(client, mon
     real_check, real_verify, real_record = (
         security.check_login_attempts, workspace.verify_workspace_key, security.record_login_attempt)
 
-    def check(bucket, ip, conn=None):
+    def check(bucket, ip, conn=None, *, attempt_kind="account"):
         seen["check"] = conn
         assert conn is not None and conn.in_transaction
-        return real_check(bucket, ip, conn=conn)
+        return real_check(bucket, ip, conn=conn, attempt_kind=attempt_kind)
 
     def verify(ws, key, conn=None):
         seen["verify"] = conn
         return real_verify(ws, key, conn=conn)
 
-    def record(bucket, ip, ok, conn=None):
+    def record(bucket, ip, ok, conn=None, *, attempt_kind="account"):
         seen["record"] = conn
-        return real_record(bucket, ip, ok, conn=conn)
+        return real_record(bucket, ip, ok, conn=conn, attempt_kind=attempt_kind)
 
     monkeypatch.setattr(security, "check_login_attempts", check)
     monkeypatch.setattr(security, "record_login_attempt", record)
@@ -164,16 +164,16 @@ def test_workspace_key_buckets_are_per_workspace(tmp_path, monkeypatch):
     from lumenis.auth import security
     conn = sqlite3.connect(tmp_path / "w.db")
     conn.row_factory = sqlite3.Row
-    conn.execute("CREATE TABLE v4_login_attempts(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, ip TEXT, success INTEGER, created_at TEXT)")
+    conn.execute("CREATE TABLE v4_login_attempts(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, ip TEXT, success INTEGER, created_at TEXT, attempt_kind TEXT NOT NULL DEFAULT 'legacy')")
     conn.execute("CREATE TABLE v4_users(username TEXT, failed_attempts INTEGER, locked_until TEXT)")
     monkeypatch.setitem(security.AUTH_CONFIG, "max_login_attempts", 2)
     zbmp, other = security.workspace_key_bucket("ZBMP"), security.workspace_key_bucket("CTH")
     assert zbmp != other and security._is_ip_bucket(zbmp) and security.is_reserved_username(zbmp)
     ip = "203.0.113.9"
-    security.record_login_attempt(zbmp, ip, False, conn=conn)
-    security.record_login_attempt(other, ip, True, conn=conn)  # success elsewhere
-    security.record_login_attempt(zbmp, ip, False, conn=conn)
-    assert security.check_login_attempts(zbmp, ip, conn=conn)["allowed"] is False
+    security.record_login_attempt(zbmp, ip, False, conn=conn, attempt_kind="key")
+    security.record_login_attempt(other, ip, True, conn=conn, attempt_kind="key")  # success elsewhere
+    security.record_login_attempt(zbmp, ip, False, conn=conn, attempt_kind="key")
+    assert security.check_login_attempts(zbmp, ip, conn=conn, attempt_kind="key")["allowed"] is False
     with pytest.raises(ValueError):
         security.workspace_key_bucket("bad ws/..")
 
@@ -198,7 +198,7 @@ def test_existing_reserved_name_account_keeps_account_lockout(tmp_path, monkeypa
     from lumenis.auth import security
     conn = sqlite3.connect(tmp_path / "legacy.db")
     conn.row_factory = sqlite3.Row
-    conn.execute("CREATE TABLE v4_login_attempts(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, ip TEXT, success INTEGER, created_at TEXT)")
+    conn.execute("CREATE TABLE v4_login_attempts(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, ip TEXT, success INTEGER, created_at TEXT, attempt_kind TEXT NOT NULL DEFAULT 'legacy')")
     conn.execute("CREATE TABLE v4_users(username TEXT, failed_attempts INTEGER DEFAULT 0, locked_until TEXT, last_login_at TEXT, last_login_ip TEXT)")
     conn.execute("INSERT INTO v4_users(username, failed_attempts) VALUES ('__workspace_key_ZBMP__', 0)")
     monkeypatch.setitem(security.AUTH_CONFIG, "max_login_attempts", 3)

@@ -139,12 +139,12 @@ def create_v4_blueprint() -> Blueprint:
             # Serialize check -> verify -> record (as login_by_key does) so
             # concurrent guesses cannot all pass the final allowed attempt.
             conn.execute("BEGIN IMMEDIATE")
-            check = check_login_attempts(bucket, ip, conn=conn)
+            check = check_login_attempts(bucket, ip, conn=conn, attempt_kind="key")
             if not check["allowed"]:
                 conn.rollback()
                 return jsonify({"success": False, "error": "尝试过多已锁定，请稍后再试", "remaining": 0}), 429
             rec = verify_workspace_key(ws, key, conn=conn)
-            record_login_attempt(bucket, ip, bool(rec), conn=conn)
+            record_login_attempt(bucket, ip, bool(rec), conn=conn, attempt_kind="key")
             conn.commit()
         except Exception:
             if conn.in_transaction:

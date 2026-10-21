@@ -157,7 +157,7 @@ def record_login_attempt(username: str, ip: str, success: bool):
     conn = get_db()
     try:
         conn.execute(
-            "INSERT INTO v4_login_attempts (username, ip, success) VALUES (?,?,?)",
+            "INSERT INTO v4_login_attempts (username, ip, success, attempt_kind) VALUES (?,?,?, 'account')",
             (username, ip, 1 if success else 0)
         )
         if success:
