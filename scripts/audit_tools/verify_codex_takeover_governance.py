@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import posixpath
 import json
 import os
 import re
@@ -274,6 +275,45 @@ def _is_recovered_evidence_path(path: str) -> bool:
     return False
 
 
+# PO-approved immutable clearance deliverables; byte admission only, never execution.
+CLEARANCE_EVIDENCE_DIRECTORY = "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021"
+CLEARANCE_EVIDENCE_SHA256 = {
+    '00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/OEVIRA_TEST_EVIDENCE_APPENDIX.md': '7b276e7668bad8e7ddb7d2c36381d40468763554b8d294bd9a186113698adb4d',
+    '00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/OEVIRA_TEST_NODE_LEDGER.json': 'cec4d251188da0ea42c7bad9332b4e621ba7cd12755632984337b816ba846d63',
+    '00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/OEVIRA_TEST_REPRODUCTION.json': '1e7f510b7a681b0e4030d55202e0ca840b02dd6e955555119a71ae0b9f4b5547',
+    '00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/OEVIRA_合并读回.json': '24e90c422b471e0e83e28979a91e2f97668f0e1ada089ded86665be353e9266b',
+    '00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/OEVIRA_源码身份核验.json': '8df1d93cc9f7fd60aed49ddca5b81f771aa9de2fca7f2c8a70de1dd11618e7ed',
+    '00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/OEVIRA_线上主线清障回执_20261021.md': '78df91a61fc00c7e1113da273cfa04a8e535ceba594b65da498c02225e3dcd70',
+    '00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/oevira_test_offline_guard.py': 'e3813c7d18fa960c6cdeecb67907bdd378eb9a1143ad097c5e7e3c546efdce88',
+}
+
+
+def _touches_clearance_evidence(path: str) -> bool:
+    normalized = posixpath.normpath(path.replace("\\", "/"))
+    return normalized == CLEARANCE_EVIDENCE_DIRECTORY or normalized.startswith(CLEARANCE_EVIDENCE_DIRECTORY + "/")
+
+
+def _assert_clearance_evidence_integrity() -> None:
+    """Read the complete finite approved artifact set; never import archive code."""
+    directory = ROOT / CLEARANCE_EVIDENCE_DIRECTORY
+    assert directory.resolve(strict=True) == ROOT.resolve() / CLEARANCE_EVIDENCE_DIRECTORY, "clearance evidence symlink"
+    actual = {CLEARANCE_EVIDENCE_DIRECTORY + "/" + item.name for item in directory.iterdir()}
+    assert actual == set(CLEARANCE_EVIDENCE_SHA256), "clearance evidence missing or unknown member"
+    for path, digest in CLEARANCE_EVIDENCE_SHA256.items():
+        content = _recovered_evidence_file(path).read_bytes()
+        assert hashlib.sha256(content).hexdigest() == digest, f"clearance evidence SHA256 mismatch: {path}"
+
+
+def _is_clearance_evidence_path(path: str) -> bool:
+    if not _canonical_recovery_path(path) or path not in CLEARANCE_EVIDENCE_SHA256:
+        return False
+    try:
+        _assert_clearance_evidence_integrity()
+    except (AssertionError, OSError, ValueError, TypeError):
+        return False
+    return True
+
+
 def _is_product_behavior_source(path: str) -> bool:
     if _is_recovered_evidence_path(path):
         return False  # Independent archived review code is not product implementation.
@@ -295,6 +335,8 @@ def _is_product_behavior_source(path: str) -> bool:
 
 
 def _is_rules_only_publication_path(path: str) -> bool:
+    if _touches_clearance_evidence(path):
+        return _is_clearance_evidence_path(path)
     if _is_recovered_evidence_path(path):
         return True
     path = path.replace("\\", "/")
@@ -402,6 +444,9 @@ def _assert_current_publication_truth(
 
     paths = _publication_changed_paths() if changed_paths is None else set(changed_paths)
     current_path = str(PATHS["takeover"].relative_to(ROOT)).replace("\\", "/")
+    if any(_touches_clearance_evidence(path) for path in paths):
+        assert all(not _touches_clearance_evidence(path) or path in CLEARANCE_EVIDENCE_SHA256 for path in paths), "unknown clearance evidence path"
+        _assert_clearance_evidence_integrity()
     if any(_is_recovered_evidence_path(path) for path in paths):
         # A receipt-only publication must not conceal corruption in unchanged
         # archive members. Check the entire pinned set, never execute its code.
