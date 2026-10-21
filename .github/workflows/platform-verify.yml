@@ -146,8 +146,10 @@ jobs:
               connection.commit()
           finally:
               connection.close()
+          # Keep full node identities in XML, not multi-megabyte parameter IDs
+          # on the runner live log transport. Selection and assertions unchanged.
           import pytest
-          raise SystemExit(pytest.main(['-vv', '--tb=short', '-p', 'no:cacheprovider',
+          raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-offline.xml'),
               'tests/test_rectification_truth_chain_20261010.py',
               'tests/test_governance_machine_contract.py', 'tests/test_online_progress_governance.py', '.codex/tests/test_engineering.py',
